@@ -199,14 +199,42 @@ teaches how to choose a record engine without shipping the code, and points at a
 Left unchanged, per *do not silently fix behavioural differences during migration*. It is a
 candidate for `resources/engines/` in Phase 3.
 
-### 5.5 Nothing else was modified
+### 5.5 The published repository resolves as a GitHub-hosted marketplace
+
+Run against a **fresh `git clone` of the pushed repository**, so nothing could depend on the local
+working copy. This exercises the whole data path of
+`/plugin marketplace add silkansraivis3-tech/factory-mjaso` — everything except the installer binary
+itself.
+
+```
+marketplace name : novikontas-course-factory
+owner            : Novikontas Academy
+plugin entry     : course-factory  source=./plugin
+  resolves to    : OK  (inside marketplace root: True)
+  plugin.json    : name=course-factory  version=2.0.0
+  skills found   : 5
+     /course-factory:course-factory             SKILL.md OK
+     /course-factory:course-module-ui           SKILL.md OK
+     /course-factory:course-module-ux           SKILL.md OK
+     /course-factory:course-tablet-publisher    SKILL.md OK
+     /course-factory:course-task-ux             SKILL.md OK
+```
+
+From that same fresh clone, `audit_ui.py` read its sibling `knowledge/tokens.json` and reported
+`1 stylesheets read - 0 defects`, and `publish.py` resolved the sibling `course-factory` skill with
+`tablet/GUIDE.md` reachable. **The five skills will be namespaced `/course-factory:<skill>` once
+installed** — worth knowing before looking for the old unnamespaced names.
+
+### 5.6 Nothing else was modified
 
 | | |
 |---|---|
-| GAS BASIC course tree | **untouched** — not opened for writing in this phase |
-| Android project | **untouched** — not opened for writing in this phase |
-| `course-factory` repository | **untouched** — working copy still clean at `4dc5ff9` |
-| `~/.claude/skills/` | **untouched** — the five personal skills are as the installer left them |
+| GAS BASIC course tree | **untouched** — never opened for writing |
+| Android project | **untouched** — `git status` clean, `HEAD 24b35f0` |
+| `course-factory` repository | **untouched** — `git status` clean, still at `4dc5ff9` |
+| `~/.claude/skills/` | **untouched** — no file modified since the session began |
+
+All four verified after the push, not assumed.
 
 ---
 
