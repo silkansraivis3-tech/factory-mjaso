@@ -1,0 +1,18 @@
+# OS / editor
+Thumbs.db
+.DS_Store
+*~
+
+# scratch and backups - never in this repository
+*.bak
+*.bak_*
+*.orig
+*.rej
+__pycache__/
+.venv/
+
+# never bring course content or assets here
+/course/
+/knowledge_base/
+/source_files/
+/tablet_package/
