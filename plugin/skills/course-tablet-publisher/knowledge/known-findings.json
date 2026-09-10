@@ -1,0 +1,17 @@
+{
+  "_what": "Pre-existing findings in the platform as it stands on 2026-09-08. A finding listed here is reported as KNOWN and downgraded from FAIL to WARN, so the working course can still be published while the debt is visible in every single report. A finding NOT listed here fails and stops publication. That is the whole point: this file is a record of accepted debt, never a way to silence a new problem.",
+  "_written": "2026-09-08",
+  "_rules": [
+    "Adding an entry is a decision a human makes, not something a script does.",
+    "Every entry states WHY it is accepted and WHAT would fix it. An entry with no fix is a bug in this file.",
+    "`gates.py --strict` ignores this file entirely and fails on everything. Run it before a release to see the true state.",
+    "Entries are matched on check + path (exact, repository-relative). A pattern is never used - a wildcard here would silence future files nobody has looked at."
+  ],
+  "findings": [],
+  "not_baselined_on_purpose": [
+    "The Supabase ANON key in gb_config.js - it is publishable by design, and the gate already treats it as safe rather than as accepted debt.",
+    "The Google Fonts dependency on ~105 pages - the gate warns on it by rule, because every font stack ends in a generic family.",
+    "The classroom laptop server (local_live/server) serving the whole course tree, answer keys included, to any device on the classroom Wi-Fi. That is a real exposure, but it is the TEST server and not part of what is published to the platform, so it is out of this gate's scope. It is written down here so it is not forgotten."
+  ],
+  "_fixed_2026-09-09": "All 17 role findings from 2026-09-08 were fixed on 2026-09-09: the answer key, marking criteria, paper check, skills record, observation checklist, both case analyses, the M3/M4/M7 check pages and the M5/M6 instructor doors moved to instructor_terminal/checks/<module>/, together with the gb_roster/gb_observe/gb_score marking engines. Trainee-side links to them were removed; instructor-side links repointed; a hub at instructor_terminal/checks/index.html is reachable from the instructor front page."
+}

@@ -1,0 +1,128 @@
+{
+  "_authority": "This file is the authority on accredited time. hours/GUIDE.md points at it and must not restate these numbers in prose.",
+  "_written": "2026-09-07",
+  "academic_hour": {
+    "rule": "Read the minute value from the approved programme itself. Never assume 60.",
+    "known": {
+      "GAS BASIC (Program Basic Training Gas Rev. 01)": 40
+    },
+    "on_absence": "UNKNOWN - ask the operator, do not guess. Every downstream number depends on it."
+  },
+  "budget": {
+    "rule": "built_minutes == allocated_minutes, exactly, per module and in total",
+    "tolerance_min": 0,
+    "why_zero": "A tolerance is a licence to drift. GAS BASIC drifted 535 min because nothing counted.",
+    "overflow": {
+      "destination": "handout self-study",
+      "rule": "Class time is fixed by the programme. Content that will not fit is moved to the handout, never squeezed into the minutes and never silently cut.",
+      "ruled_by": "owner, 2026-09-07",
+      "must_record": "every item moved, with its source topic, in the companion file"
+    },
+    "underrun": {
+      "rule": "Also a defect. A module that teaches 120 min against 160 allocated is under-delivering an accredited hour and the operator must be told."
+    }
+  },
+  "scope": {
+    "modules_only": "Topics whose hours sit outside the modules are excluded from the module budget. On GAS BASIC that is the final assessment (topic 23, 2 h), which is separate from every module check.",
+    "detect": "A topic is outside the modules when no module claims it in the module->topics map. List these explicitly at the gate rather than letting them vanish."
+  },
+  "practical_ratio": {
+    "target": 0.8,
+    "measured_on": "allocated minutes, not activity count",
+    "when_unreachable": {
+      "rule": "Deliver the theory hours as active learning - a trainee activity inside the theory block.",
+      "mandatory": true,
+      "defect": "A theory block with no trainee activity in it.",
+      "record": "achieved ratio + the reason it is below target, in the companion file"
+    },
+    "known": {
+      "GAS BASIC": {
+        "theory_h": 35,
+        "practical_h": 8,
+        "ratio": 0.186,
+        "note": "fixed by the programme's own table - topics 8, 9, 16, 17 carry all 8 practical hours"
+      }
+    }
+  },
+  "ilo": {
+    "main": {
+      "mutable": false,
+      "rule": "verbatim, never edited, never renumbered"
+    },
+    "sub": {
+      "mutable": true,
+      "purpose": "re-express to make a topic digital or practical",
+      "constraints": [
+        "marked PROVISIONAL until the owner ratifies",
+        "never renumbered in anything a trainee sees"
+      ]
+    },
+    "programme_vs_model_course": "The approved programme governs. An IMO model course is guidance and is cited as support, never as authority."
+  },
+  "timetable": {
+    "rule": "The programme's own timetable bounds the day. Derive slots from it; do not invent a day shape.",
+    "known": {
+      "GAS BASIC": {
+        "days": 4,
+        "slots_per_day": 11,
+        "slot_min": 40,
+        "window": "0815-1800",
+        "capacity_min": 1760,
+        "delivery_days": 5
+      }
+    },
+    "check": "sum(module minutes) + outside-module minutes <= days * slots_per_day * slot_min. If it does not fit, the course cannot be delivered in the accredited days and that is a finding, not a rounding error.",
+    "delivery_days": "The days a school SELLS may exceed the days the programme was accredited with. Transcribe days from the programme and NEVER edit it to make a check pass - that falsifies the record the check verifies against. Put the delivered figure in delivery_days. If delivery_days > days, the timetable being run is not the one the accreditation describes and the accreditor must be told: a finding to report, not a number to adjust. GAS BASIC, 2026-09-07: accredited 4 days = 1760 min, built 2100, sold as 5 days = 2200."
+  },
+  "artefacts": {
+    "one_plan_per_module": {
+      "rule": "Every module carries exactly one plan document that states its allocated and built minutes on its own face.",
+      "why": "GAS BASIC has no plan for modules 1 and 8 and a differently-marked one for 7, so its timings could not be summed from a single source.",
+      "good_example": "the M5 plan's own header - '8 academic hours = 320 min | Teaching below: 330 min' - which self-reports the gap where anyone can see it"
+    },
+    "minutes_live_in": {
+      "primary": "the module plan, as a per-activity figure",
+      "mirrored_in": "START_HERE / the module entry page, as step durations",
+      "rule": "One of these is the source of truth and the other is generated from it. Two hand-maintained copies drift."
+    }
+  },
+  "course_start_extension": {
+    "note": "COURSE_START.json (owned by novikontas-course-start) has NO hours field. This skill writes an additive block and never alters the existing schema.",
+    "block": "hours",
+    "shape": {
+      "academic_hour_min": "integer, from the programme",
+      "programme": {
+        "theory_h": "number",
+        "practical_h": "number",
+        "total_h": "number",
+        "source": "document name + edition"
+      },
+      "outside_modules": [
+        {
+          "topic": "string",
+          "hours": "number",
+          "why": "string"
+        }
+      ],
+      "modules": [
+        {
+          "module": "integer",
+          "topics": [
+            "string"
+          ],
+          "allocated_min": "integer",
+          "built_min": "integer",
+          "practical_min": "integer"
+        }
+      ],
+      "moved_to_handout": [
+        {
+          "item": "string",
+          "from_topic": "string",
+          "minutes": "integer"
+        }
+      ],
+      "achieved_practical_ratio": "number"
+    }
+  }
+}

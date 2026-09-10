@@ -1,0 +1,21 @@
+{
+  "name": "course-factory",
+  "displayName": "NOVIKONTAS Course Factory",
+  "version": "2.0.0",
+  "description": "Build an accredited instructor-led course as one-page HTML modules on trainee and instructor Android tablets, then publish it: the build order, the accredited-hours law, ILO immutability, screen craft, the Module_01-derived visual system, trainee task screens, the verification suite, and a publisher that separates trainee from instructor content.",
+  "author": {
+    "name": "Raivis Silkans",
+    "email": "raivis.silkans@novikontas.org"
+  },
+  "homepage": "https://github.com/silkansraivis3-tech/factory-mjaso",
+  "repository": "https://github.com/silkansraivis3-tech/factory-mjaso",
+  "keywords": [
+    "course",
+    "training",
+    "accredited",
+    "maritime",
+    "android",
+    "tablet",
+    "novikontas"
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "_authority": "This file is the authority on where a course's files live and how they reach a tablet. tablet/GUIDE.md points at it and must not restate the paths in prose.",
+  "_written": "2026-09-07",
+
+  "architecture": {
+    "chosen": "one app, courses as data packs",
+    "rule": "The two terminals are ONE codebase. A new course adds a content folder and one registry entry. It never adds app code, never forks a terminal, and never changes a shared engine.",
+    "why": [
+      "The owner's requirement is that every course has the SAME UX. Shared code is the only thing that actually enforces that; a copied terminal drifts the first time one course is fixed.",
+      "A shared fix reaches every course at once. With one APK per course it has to be applied N times and one will be missed.",
+      "It keeps the offline guarantee: a data pack is files, so nothing needs a network at class time."
+    ],
+    "rejected": {
+      "separate APK per course": "UX drifts between courses and a shared fix must be applied N times",
+      "tablets pull at runtime": "needs the tablets online in a classroom; the terminals are deliberately offline-capable"
+    }
+  },
+
+  "source_of_truth": {
+    "path": "the Android project - app/src/**/assets",
+    "rule": "The Android project is authoritative. Any Desktop copy of the terminals is a working area, not a source, and diverges silently.",
+    "known_stale": "gas_basic/GAS Basic/tablet_package - do not edit"
+  },
+
+  "build_flavours": {
+    "trainee": { "assets": "app/src/main/assets", "contains": ["training_terminal", "courses"] },
+    "instructor": { "assets": "app/src/instructor/assets", "contains": ["instructor_terminal"] },
+    "merged_at_build": true,
+    "consequence": "Gradle merges the source sets into ONE asset root, so at runtime the two terminals are SIBLINGS. A cross-terminal link is written relative to that merged root and is unresolvable in the split source tree - which makes a correct link look broken. Verify links against a merged view, never against one source set.",
+    "example": "from instructor_terminal/prepare/m05/practicals/, the trainee tree is ../../../../training_terminal/..."
+  },
+
+  "course_pack": {
+    "_note": "One folder per course, self-contained. Paths below are relative to the trainee asset root.",
+    "root": "courses/<course_id>/",
+    "required": [
+      "course.json            registry entry - id, title, modules, academic_hour_min, programme source",
+      "module_NN/             one folder per module",
+      "module_NN/index.html   the one-page module - open, Start, Next to the end",
+      "module_NN/tasks/       trainee task pages announced by that module's screens",
+      "module_NN/assets/      that module's photos and figures, with _photo_meta.json",
+      "handout/index.html     the trainee's take-home, and the overflow valve for the hours",
+      "assessment/            the final assessment, separate from every module check"
+    ],
+    "optional": [
+      "module_NN/documents/   reference cards a trainee keeps",
+      "module_NN/simulator/   simulator briefs where a simulator is used"
+    ],
+    "rules": [
+      "A course pack never reaches outside itself except to the shared engines.",
+      "Shared engines (gb_*.js, gb_*.css) live once at the terminal root and are NEVER copied into a course pack - a copy goes stale the first time the engine is fixed.",
+      "Every photo carries a licence and credit in _photo_meta.json, and the file is opened and looked at before use."
+    ]
+  },
+
+  "instructor_pack": {
+    "root": "instructor_terminal/",
+    "per_course": [
+      "it_run.js        GENERATED from the decks' own markup - never hand-edited",
+      "plans/           one Advanced module plan per module, stating its allocated and built minutes",
+      "prepare/         pre-class setup for modules whose practical needs a facility booked",
+      "record/          the practical skills record - the only copy, and nothing backs it up"
+    ]
+  },
+
+  "generated_files": {
+    "rule": "A generated file carries DO NOT HAND-EDIT in its header and is regenerated after ANY deck change. Slide numbers move whenever a deck is cut, and a stale number lies silently.",
+    "files": {
+      "it_run.js": {
+        "from": "each deck's <section class=\"slide\"> order plus data-kind / data-activity / data-title / data-cue",
+        "generator": "the course's own gen_it_run.py",
+        "overrides": "Anything the generator cannot derive goes in an OVERRIDES table INSIDE the generator, checked on every run, never hand-edited into the output. A rotted override must stop the run rather than ship a wrong slide number."
+      }
+    }
+  },
+
+  "offline": {
+    "rule": "A classroom tablet may have no network. Nothing at class time may depend on one.",
+    "checks": [
+      "no CDN script, style or font that the page needs in order to be readable",
+      "web fonts: bundle the files and declare @font-face, or accept the system fallback deliberately - every stack must end in a generic family so the degradation is chosen, not arbitrary",
+      "no runtime fetch that gates content"
+    ],
+    "known_gap": "GAS BASIC pulls Raleway from Google Fonts on 105 pages with no bundled copy. All three stacks end in sans-serif so it degrades gracefully, but the brand typeface is lost offline."
+  },
+
+  "git": {
+    "rule": "The owner commits and pushes. Never commit or push on their behalf; stage only when asked.",
+    "before_handover": [
+      "every NEW file staged - an untracked asset ships as a missing file and the failure appears only on the tablet",
+              "no .bak, .orig or editor state inside an asset tree - it is packaged into the APK",
+      "CLI/tool local state gitignored (e.g. supabase/.temp/)",
+      "scan every staged file for credentials before a push: PEM blocks, service-account JSON, service_role keys, hardcoded passwords. Secrets belong in the platform's env, never in the repo."
+    ],
+    "diff_hygiene": "Compare `git diff -U0 | grep -c '^[-+]'` with the same under --ignore-all-space. A large gap means an edit reformatted files it was not asked to touch - fix that before handover."
+  },
+
+  "verification_order": [
+    "hours/scripts/check_hours.py        minutes are 1:1 with the programme",
+    "tablet/scripts/verify_course.py     structure, counts, check->hand-off order",
+    "tablet/scripts/verify_links.py      every link resolves in the MERGED asset root",
+    "tablet/scripts/crosscheck_tasks.py  deck <-> run script <-> tablet manifest agree",
+    "course-module-ux measurement lane   the screens themselves, at every delivery size"
+  ]
+}

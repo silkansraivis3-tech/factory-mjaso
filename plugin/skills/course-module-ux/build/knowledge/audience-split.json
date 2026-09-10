@@ -1,0 +1,27 @@
+{
+  "_authority": "This file is the authority on where an item goes: the projected screen the room reads, or the instructor's own channel (data-cue / the instructor's device). Read it and route each item; do not restate the table in prose.",
+  "_rule": "Per item, never per screen. Owner, verbatim: \"if there is info that is necessary for trainee leave there, if its strictly for instcutor, put in instcutors tablet.\"",
+  "_test": "A second-person \"you\" on a projected screen that actually means the instructor is a defect. \"the technique you demonstrated\" reads to a trainee as if they demonstrated it. Rewrite in the third person or move the item.",
+  "_default": "cue. When it is genuinely borderline, data-cue costs nothing and a wrong guess on the projected screen costs the room's attention.",
+  "routing": [
+    { "item": "the criteria a trainee is judged on", "goes": "screen", "why": "they have a right to know what they are being judged on, in their own hearing" },
+    { "item": "the pass threshold", "goes": "screen", "why": "same; and it changes what a trainee does" },
+    { "item": "a set point, limit, reading or state to load", "goes": "screen", "why": "it is the content, and their hands are busy" },
+    { "item": "the grouping, the device, the station", "goes": "screen", "why": "the room acts on it immediately" },
+    { "item": "how long an activity runs", "goes": "screen", "why": "trainees pace themselves against it" },
+    { "item": "what to do if they cannot finish", "goes": "screen", "why": "removes a question the instructor would otherwise answer five times" },
+
+    { "item": "marking technique — how strictly, what counts as prompted, what to let go", "goes": "cue", "why": "strictly instructor craft; on screen it teaches trainees how to game it" },
+    { "item": "the reference answer or model answer", "goes": "cue", "why": "obvious" },
+    { "item": "remediation routes if a trainee does not pass", "goes": "cue", "why": "a private matter, and it is not needed while the task runs" },
+    { "item": "\"say this once, then stop talking\"", "goes": "cue", "why": "a stage direction. On screen the room reads the direction instead of doing the task" },
+    { "item": "the common error to watch for", "goes": "cue", "why": "naming it on screen removes the exercise" },
+    { "item": "what to do if the equipment fails / the contingency mode", "goes": "cue", "why": "instructor decision, and announcing it invites it" },
+    { "item": "role-play or scenario injects the instructor introduces on a beat", "goes": "cue", "why": "the surprise is the exercise" },
+
+    { "item": "ILO codes, sub-ILO numbers, block codes", "goes": "neither — markup and footer only", "why": "audit trail, not instruction. Keep data-block in the markup because the deep link and the run script need it; keep the code out of the visible slide-kind line" },
+    { "item": "programme equipment item numbers (M14, R-11 and similar)", "goes": "collapsed disclosure plus footer mapping", "why": "somebody has to prove compliance later. Name the physical thing on the screen — \"two portable foam applicators, each with its concentrate tank\" — not \"M14 x 2\"" },
+    { "item": "provenance and sourcing", "goes": "footer only", "why": "never in the body of a delivery screen" },
+    { "item": "item counts, score recording, \"n of N\"", "goes": "instructor's device", "why": "a trainee screen that counts items teaches the trainee to count instead of to answer" }
+  ]
+}

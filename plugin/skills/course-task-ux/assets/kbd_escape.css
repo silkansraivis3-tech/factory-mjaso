@@ -1,0 +1,49 @@
+/* ==========================================================================
+   kbd_escape.css — the "Done" pill that puts the soft keyboard away.
+   Pairs with kbd_escape.js. Load both, in the head, on every task page that
+   has a text field. Nothing else on the page needs to know it exists.
+
+   WHY TOP RIGHT, NOT BOTTOM: the soft keyboard covers the bottom third of a
+   portrait tablet, so a dismiss control down there sits underneath the very
+   thing it is meant to dismiss.
+
+   The resting state is hidden by `display`, never by opacity or a transition.
+   In an offline WebView the compositor can be stalled, animations throttled,
+   and a control animated into visibility stays at its `from` state: present,
+   correct, and invisible. Anything that decides whether a trainee can SEE a
+   control must not depend on a frame ever being painted.
+
+   WHAT A NEW COURSE CHANGES
+     - --task-accent / --task-accent-soft: the brand colour. Defaults are
+       Novikontas navy; see the novikontas-brandbook skill for the palette.
+     - Nothing else. Do not lower min-height/min-width below 44px — the
+       measurable floor in SKILL.md §11 is why this pill exists at that size.
+
+   PREVIOUS COURSE: shipped as gb_kbd.css, id #gbkbd-done.
+   ========================================================================== */
+
+:root{
+  --task-accent:#0A2463;
+  --task-accent-soft:#eef4fa;
+  --task-surface:#ffffff;
+}
+
+#kbd-done{
+  display:none;                       /* resting state — see note above */
+  position:fixed; top:8px; right:12px; z-index:1200;
+  min-height:48px; min-width:96px;    /* measured 97 x 48 on the reference build */
+  padding:0 20px; border-radius:12px;
+  border:1.5px solid var(--task-accent); background:var(--task-surface);
+  color:var(--task-accent);
+  font-family:inherit; font-weight:700; font-size:15px; letter-spacing:.02em;
+  box-shadow:0 6px 20px rgba(10,36,99,.22);
+  cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+}
+#kbd-done.on{ display:block; }
+#kbd-done:active{ background:var(--task-accent-soft); }
+
+/* z-index 1200 clears a sticky back bar (900) and any tab strip. If the new
+   course stacks something higher, raise this — the pill being behind another
+   element is the same failure as not having it. */
+
+@media print{ #kbd-done{ display:none !important; } }

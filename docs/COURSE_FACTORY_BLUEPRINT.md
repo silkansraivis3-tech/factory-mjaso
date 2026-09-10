@@ -1,8 +1,13 @@
 # Course Factory blueprint
 
-**The architecture to build in Phase 2.** Proposal, for review. Nothing here is implemented.
+**The architecture to build.** Phase 1 · 2026-09-10.
 
-Phase 1 · 2026-09-10.
+> **Phase 2 status (2026-09-10).** The container in §2 is **built**, and the five proven skills are
+> migrated at plugin version **2.0.0** (64 of 66 files byte-identical; two additively extended
+> for D-3). **D-1 and D-3 are resolved** (§9).
+> Still to build: `course-visuals`, `course-evidence`, the three agents, the hooks and the
+> `resources/` inventory. See `PHASE2_MIGRATION_REPORT.md` for what was migrated, what was
+> validated, and what is blocking Phase 3.
 
 ---
 
@@ -361,28 +366,35 @@ The colleague never types a script name, never chooses an agent, and never learn
 
 | | Decision | Recommendation |
 |---|---|---|
-| **D-1** | Does `factory-mjaso` **supersede** `course-factory`, or sit beside it? | Supersede. Two repositories holding the same skills will diverge, and the existing repo has no plugin manifest at its root for `/plugin marketplace add`. Freeze `course-factory`, migrate, and point its README here. **Colleagues who already installed by file copy must be told once** — the old copies in `~/.claude/skills/` will shadow nothing but will go stale. |
+| **D-1** ✅ **RESOLVED 2026-09-10** | Does `factory-mjaso` **supersede** `course-factory`, or sit beside it? | **Supersede** — but `factory-mjaso` becomes authoritative only once migration parity **and** installation validation both pass. The old repository is a **read-only migration source**: not deleted, not archived, not modified. Provenance preserved in `docs/PHASE2_MIGRATION_REPORT.md` §1. **Parity is proven (66/66 byte-identical); installation is not yet verified**, so the switchover is not complete. |
 | **D-2** | One plugin or several? | **One.** The seven skills share `build-order.json`, the token set and the platform description. Splitting them means versioning six things in lockstep. |
-| **D-3** | The `novikontas-*` dependency. Four required build steps are owned by skills that are not in the plugin and reach this machine through a different channel. | Publish the `novikontas-*` family through the same marketplace as a second plugin, so `course-factory` can declare a real dependency. Until then, make each reference conditional: use the org skill if present, otherwise fall back to a short in-plugin section, and **say which happened** in `factory-notes.md`. Do not duplicate the org skills into this plugin — a copy goes stale silently. |
+| **D-3** ✅ **RESOLVED 2026-09-10** | The `novikontas-*` dependency. Four required build steps are owned by skills that are not in the plugin and reach this machine through a different channel. | **Do not copy the organisation skills into the plugin.** Use the org skill when installed; otherwise use a small documented fallback owned by the Course Factory; record the route in `factory-notes.md` §0 either way. Implemented in `plugin/skills/course-factory/org/ORG_DEPENDENCIES.md` — three blocking dependencies with one minimal fallback each, ten soft ones as pointer rows. The future organisation plugin is **not** created yet; it may later be published through the same marketplace. |
 | **D-4** | Where does a deck live, and must the tablet be able to open it? | Owner's call. Today the decks are in the desktop course tree only, the instructor terminal describes them, and the tablet cannot open them. If that is intentional, write it into `delivery-contract.json`. If not, it is a packaging change. |
 | **D-5** | Raise the remote-font check to `FAIL`? | Yes, for new courses; keep it a warning for GAS BASIC so the working course stays publishable. The app returns 403, so this is not a degradation question. |
 | **D-6** | Is `gb_tasks.js` generated or authored? | Decide and write it in the header. It currently claims both. |
 
 ---
 
-## 10 · Suggested Phase 2 sequence
+## 10 · Build sequence
 
-Not part of this deliverable — recorded so the review has something to react to.
+1. ~~Scaffold the plugin and marketplace in this repository; migrate the five proven skills
+   unchanged.~~ **Done 2026-09-10** — 64/66 files byte-identical (2 additively extended for
+   D-3, 1 file added), plugin at 2.0.0, 22 structural
+   checks pass, validators re-run and still behave. **`claude plugin validate --strict` and the
+   marketplace install are still outstanding** — the CLI is not installable on this machine
+   (`PHASE2_MIGRATION_REPORT.md` §5.1, §7).
+2. ~~Write `CLAUDE.md` from §1 of `FACTORY_RULE_CLASSIFICATION.md`.~~ **Done** — with finding
+   **F-1**: a plugin-root `CLAUDE.md` is not loaded by Claude Code, so how the laws reach a session
+   is an open decision.
+3. **Verify the installation** (checklist in `PHASE2_MIGRATION_REPORT.md` §7). This closes D-1 and
+   is the condition for `factory-mjaso` becoming authoritative.
+4. Build `course-visuals` — the largest genuine gap, and the stated reason for the factory. It also
+   gives laws **L12** and **L13** their first enforcing owner.
+5. Build `course-evidence` by generalising `gas-basic-kb-retrieval`.
+6. Add `hooks/hooks.json` and its six scripts.
+7. Add the three agents.
+8. Consolidate `resources/` — one canonical engine set, the schemas, the patterns.
+9. **Prove it on one real module of a second course**, end to end.
 
-1. Scaffold the plugin and marketplace in this repository; migrate the five proven skills unchanged;
-   `claude plugin validate --strict`; install from the marketplace and confirm the seven surfaces load.
-2. Write `CLAUDE.md` from §1 of `FACTORY_RULE_CLASSIFICATION.md`.
-3. Build `course-visuals` — the largest genuine gap, and the stated reason for the factory.
-4. Build `course-evidence` by generalising `gas-basic-kb-retrieval`.
-5. Add `hooks/hooks.json` and its six scripts.
-6. Add the three agents.
-7. Consolidate `resources/` — one canonical engine set, the token file, the schemas, the templates.
-8. **Prove it on one real module of a second course**, end to end, and only then declare v2.0.0.
-
-Step 8 is the acceptance test. A factory that has only ever built the course it was extracted from has
-not been shown to be a factory.
+Step 9 is the acceptance test. A factory that has only ever built the course it was extracted from
+has not been shown to be a factory.

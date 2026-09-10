@@ -1,0 +1,61 @@
+{
+  "_authority": "This file is the authority on the sign-off floor. The probes read these numbers; the guide points here rather than restating them. Change a threshold here and the probes follow.",
+  "_note": "The floor is a floor, not a target. Passing it is the minimum for shipping, not evidence the screen is good.",
+  "text_size": {
+    "min_px": 12.5,
+    "applies_to": "every rendered text node, anywhere in the document — including the footer, corner tags, the landing screen and inside SVG",
+    "svg_rule": "effective px = declared font-size x (rendered width / viewBox width). Never the declared value."
+  },
+  "contrast": {
+    "standard": "WCAG AA",
+    "normal_text_ratio": 4.5,
+    "large_text_ratio": 3.0,
+    "large_text_definition": ">= 24 px, or >= 18.66 px when bold",
+    "note": "Measure after the settle, not before — see traps.json#transition-settle."
+  },
+  "controls": {
+    "min_width_px": 44,
+    "min_height_px": 44,
+    "exemptions": [
+      "an inline link inside a sentence of prose",
+      "a visually hidden input behind a label that is itself above the minimum",
+      "an element in a hidden overlay, which measures 0 and is not a defect"
+    ]
+  },
+  "layout": {
+    "spill": "none — no element may escape its slide body",
+    "document_h_scroll": "none — documentElement.scrollWidth must not exceed innerWidth",
+    "wide_content": "a wide table, diagram or code block scrolls inside its own overflow-x container; the page body never scrolls sideways",
+    "collision": "no element may overlap the header band or another element; run the collision probe as well as the fill probe — see traps.json#flex-centred-overflow"
+  },
+  "fill": {
+    "target_min_pct": 85,
+    "target_max_pct": 100,
+    "legitimately_sparer": ["opener", "summary", "check"],
+    "note": "Fill above 100 % is overflow even when the spill probe is silent, because a flex-centred body pushes it upward rather than off the bottom."
+  },
+  "console": {
+    "errors_allowed": 0,
+    "note": "Read the console on every page after any scripted edit to inline JavaScript. See traps.json#console-after-scripted-edit."
+  },
+  "viewports": [
+    { "w": 1366, "h": 768, "why": "the classroom projector and the common laptop" },
+    { "w": 1024, "h": 768, "why": "an older projector" },
+    { "w": 800,  "h": 1280, "why": "the primary device: an Android tablet in portrait" },
+    { "w": 360,  "h": 740, "why": "a phone — not a delivery device, but the geometry floor" }
+  ],
+  "structural": {
+    "links_inside_slide": 0,
+    "_links_inside_slide_note": "Zero, with ONE ruled exception: the hand-off screen's <button> to the next module. A button, not an <a href>; it opens the next instructor deck, never a trainee page; it records nothing.",
+
+    "check_screen_is_last": false,
+    "_check_screen_is_last_note": "Was true until 2026-09-03. The owner then asked for a hand-off screen AFTER the module check, so Next cannot skip a room into the next module by accident. The check is now second-to-last and the hand-off is last. A checker still asserting the old rule reports a false defect on every deck — it did, on seven of eight.",
+    "check_screen_is_second_to_last": true,
+    "handoff_screen_is_last": true,
+
+    "check_screen_forbidden_words": ["record", "score"],
+    "_check_screen_forbidden_words_note": "Match on the SCREEN FACE only, and expect two false positives seen in a real sweep: 'check and zero' is a maritime procedure, so the word 'record' inside it is part of that procedure rather than score-recording; and Module 2's check is an observation checklist by design, so it will not look like the others.",
+
+    "runner_steps_all_have_mins": true
+  }
+}

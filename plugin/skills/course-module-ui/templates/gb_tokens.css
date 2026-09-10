@@ -1,0 +1,41 @@
+/* Canonical module tokens - generated from Module_01/presentation/presentation.css on 2026-09-09.
+   Paste this at the top of a new deck's stylesheet. Never edit a value here to suit
+   one screen; if a screen needs a colour this set does not have, that is an owner
+   decision - see knowledge/tokens.json #open_questions. */
+:root{
+  --navy: #0A2463;
+  --deep: #0A182E;
+  --blue: #2EB6F8;
+  --blue2: #53A7DB;
+  --steel: #415C8F;
+  --amber: #E9A51E;
+  --amber-ink: #7A5300;
+  --white: #FFFFFF;
+  --ink: #011111;
+  --grey: #E7EBF0;
+  --deep-2: #0C1E3A;
+  --deep-3: #122A52;
+  --line-d: rgba(46,182,248,.18);
+  --line-l: #D3DBE5;
+  --txt-d: #F3F8FD;
+  --dim-d: #A2B7CF;
+  --faint-d: #71879F;
+  --dim-l: #41556A;
+  --faint-l: #415C8F;
+  --blue-wash-d: rgba(46,182,248,.13);
+  --blue-wash-l: #E6F5FE;
+  --amber-wash-d: rgba(233,165,30,.14);
+  --amber-wash-l: #FDF4DE;
+  --good: #12805A;
+  --good-d: #4FD6A0;
+  --warn: #B4453A;
+  --warn-d: #FF8C82;
+  --cold: #8FC2FF;
+  --sh: 0 14px 40px rgba(10,24,46,.16);
+  --sh-d: 0 20px 54px rgba(0,0,0,.45);
+  --r-l: 20px;
+  --r-m: 13px;
+  --r-s: 8px;
+  --font: "Raleway","Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono: "Cascadia Code",Consolas,"Roboto Mono",ui-monospace,monospace;
+}

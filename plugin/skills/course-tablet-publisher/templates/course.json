@@ -1,0 +1,28 @@
+{
+  "_template": "Copy to app/src/main/assets/training_terminal/courses/<course_id>/course.json and fill it in. Delete every underscore-prefixed line - they are notes to you, not fields.",
+
+  "id": "example-course",
+  "_id": "lowercase slug. MUST equal the folder name. It becomes the branch name and the registry key, so pick it once.",
+
+  "title": "EXAMPLE COURSE",
+  "_title": "as the course is called on the certificate.",
+
+  "version": "1.0.0",
+  "_version": "MAJOR.MINOR.PATCH. Bump MINOR for a content change after release, PATCH for a fix, MAJOR for a restructure.",
+
+  "status": "draft",
+  "_status": "draft while it is being built; released once a class has been taught from it. A released version is never silently overwritten.",
+
+  "modules": 8,
+  "_modules": "how many module_NN folders the pack contains.",
+
+  "programme": "Programme document, revision and date - the accredited source this course implements",
+  "academic_hour_min": 40,
+  "_hours": "Hours are course-factory's business, not this skill's. Recorded here so the pack can be traced to its programme.",
+
+  "published": [],
+  "_published": "Append {version, date, branch} on each publication. Nobody else edits this file, so it never conflicts.",
+
+  "notes": "",
+  "_notes": "Anything a colleague picking this course up would need to know."
+}

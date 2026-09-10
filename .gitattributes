@@ -1,0 +1,8 @@
+# Deterministic line endings, so a migrated skill stays byte-identical to its
+# source on every machine and a parity check means something.
+* text=auto eol=lf
+
+# Binary
+*.png binary
+*.jpg binary
+*.woff2 binary

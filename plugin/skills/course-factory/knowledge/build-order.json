@@ -1,0 +1,154 @@
+{
+  "_authority": "The ordered pipeline and who owns each step. SKILL.md points here and must not restate the order in prose.",
+  "_written": "2026-09-07",
+  "_revised": "2026-09-10 - the visual layer became an explicit required step (8) owned by course-module-ui, and its audit joined verify. Before this the pipeline named no owner for how a module LOOKS, so a module could pass every UX check and still ship as default white HTML. Steps renumbered from 8 onwards.",
+  "steps": [
+    {
+      "n": 1,
+      "step": "programme",
+      "owner": "course-factory/hours",
+      "does": "transcribe the approved topic/hours table; read the academic-hour length off the programme",
+      "blocked_without": "the approved programme document",
+      "output": "programme.json, reconciled against the table's own total row"
+    },
+    {
+      "n": 2,
+      "step": "model course syllabus",
+      "owner": "course-factory/coverage",
+      "does": "transcribe the IMO model course's detailed syllabus - its Knowledge, Understanding and Proficiency column - one row per item, its own numbering as the id. These are the itemised outcomes the programme's topics only summarise.",
+      "blocked_without": "the model course document behind the programme",
+      "why": "the programme gives topics; the model course gives the outcomes INSIDE each topic. A course can cover every topic and still miss outcomes, and only this transcription lets that be checked. Transcribe, never summarise: the value is that the wording is the model course's own."
+    },
+    {
+      "n": 3,
+      "step": "knowledge base",
+      "owner": "the project's docling extraction",
+      "does": "sources for the subject, extracted and searchable",
+      "note": "search the extracted text before declaring a source unreadable"
+    },
+    {
+      "n": 4,
+      "step": "ILO map",
+      "owner": "novikontas-pedagogy-toolkit (wording) + course-factory/hours (immutability)",
+      "does": "Main ILOs verbatim; Sub-ILOs re-expressed for digital/practical delivery, each marked PROVISIONAL",
+      "rule": "never renumber a Sub-ILO anywhere a trainee can see"
+    },
+    {
+      "n": 5,
+      "step": "module split",
+      "owner": "course-factory/hours",
+      "does": "assign topics to modules; sum each module's allocated minutes; declare the topics that sit outside the modules",
+      "output": "plan.json"
+    },
+    {
+      "n": 6,
+      "step": "GATE",
+      "owner": "course-factory (SKILL.md)",
+      "does": "present programme + split + minutes + ratio + per-module shape + markers, and STOP",
+      "why": "changing a table row is free; changing eight built modules is not"
+    },
+    {
+      "n": 7,
+      "step": "screen inventory",
+      "owner": "course-module-ux",
+      "does": "per module, the ordered list of screens with kind and purpose, approved before any HTML exists",
+      "blocked_without": "the GATE (6) approved"
+    },
+    {
+      "n": 8,
+      "step": "visual system",
+      "owner": "course-module-ui",
+      "does": "establish the module's visual layer BEFORE any HTML: read knowledge/tokens.json, paste templates/gb_tokens.css as the deck's :root, and read references/anatomy.md for the header band, cards, pills, photo screens and the takeaway. Every colour, radius, shadow and font in new work comes from a token.",
+      "blocked_without": "the screen inventory approved at step 7",
+      "rule": "REQUIRED for every new module - the visual layer is not optional and is not course-module-ux's to invent. A new deck that hardcodes its own colours has started a second visual dialect.",
+      "why": "course-module-ux is a floor (contrast, tap size, fill, overflow), not an identity. Two modules can pass every check in floor.json and look nothing alike - that already happened across the eight GAS BASIC modules. Routing the look to its owner is what stops it happening again.",
+      "reference": "GAS BASIC Module_01 is the canonical visual reference. Canonical means the LOOK - palette, typography, light/dark-photo modes, header band, card geometry, pills, spacing, radius, shadow, takeaway treatment, semantic status colour. It is NOT a template: see no_fixed_slide_count.",
+      "applies_to": "the deck screens, and the shared token layer the task pages and handout draw from"
+    },
+    {
+      "n": 9,
+      "step": "task pages",
+      "owner": "course-task-ux",
+      "does": "the trainee task pages the screens will announce",
+      "rule": "BEFORE the deck announces them - a screen announcing a task the tablet lacks is the worst failure in the room"
+    },
+    {
+      "n": 10,
+      "step": "screens",
+      "owner": "course-module-ux",
+      "does": "the one-page module: open, Start, Next to the end",
+      "rule": "the deck announces a task and never launches it"
+    },
+    {
+      "n": 11,
+      "step": "handout",
+      "owner": "novikontas-handouts",
+      "does": "the trainee's take-home, AND the overflow valve for anything that will not fit the accredited minutes",
+      "rule": "every moved item recorded in the companion file with its source topic"
+    },
+    {
+      "n": 12,
+      "step": "assessment",
+      "owner": "course-task-ux",
+      "does": "the final assessment, separate from every module check; the programme's own question count and pass mark",
+      "rule": "no answer key on a trainee page; a re-sit needs a different paper"
+    },
+    {
+      "n": 13,
+      "step": "module plans",
+      "owner": "course-factory/hours",
+      "does": "one plan per module, stating its allocated and built minutes on its own face",
+      "goes_to": "the instructor terminal"
+    },
+    {
+      "n": 14,
+      "step": "terminals",
+      "owner": "course-factory/tablet",
+      "does": "course pack into the trainee terminal; plans, prepare and record into the instructor terminal; regenerate the run script",
+      "rule": "no app code, no forked terminal, no copied shared engine"
+    },
+    {
+      "n": 15,
+      "step": "verify",
+      "owner": "course-factory/tablet + course-module-ux + course-module-ui",
+      "does": "run every check and READ the output: hours, model-course outcome coverage, structure, links, navigation reachability, task crosscheck, and the visual audit of the module's own stylesheets. A green exit is not proof the work happened - inspect the line for the thing you changed.",
+      "rule": "a green exit is not proof; read the line for the thing you changed",
+      "scripts": [
+        "hours/scripts/check_hours.py",
+        "coverage/scripts/check_syllabus_coverage.py",
+        "tablet/scripts/verify_course.py",
+        "tablet/scripts/verify_links.py",
+        "tablet/scripts/audit_navigation.py",
+        "tablet/scripts/crosscheck_tasks.py",
+        "course-module-ui/scripts/audit_ui.py --strict   (NEW modules only)"
+      ],
+      "why_two_were_added": "check_syllabus_coverage.py and audit_navigation.py were added 2026-09-07 because every other check passed on a course that was missing an accredited outcome (IMO 1.04 item 9.2.7) and shipping a 28-page section nothing linked to.",
+      "visual_signoff": "A new module is not signed off until course-module-ui/scripts/audit_ui.py has been run over its stylesheets with --strict and read. --strict is correct for new work and WRONG for shipped material: never point it at an already-delivered GAS BASIC or Electrical Technician module. Existing modules carry known drift (course-module-ui/SKILL.md records it) - report it, name the files, and leave the repaint to the owner. The purpose is that new work does not start a new visual dialect, not that history gets repainted."
+    },
+    {
+      "n": 16,
+      "step": "companion file",
+      "owner": "course-factory",
+      "does": "write factory-notes.md into the course folder - what was produced, every marker, the achieved ratio, what moved to the handout, and feedback on this skill"
+    }
+  ],
+  "non_negotiable_orderings": [
+    "the GATE (6) before anything is built (7+)",
+    "hours (1) and the ILO map (4) before the module split (5) is believed",
+    "the model-course syllabus (2) is transcribed before the GATE, because the module split has to be able to say which module carries which outcome - not only which topic",
+    "screen inventory (7) before any screen exists (10)",
+    "the visual system (8) before any screen exists (10), so the first screen is already tokenised - retro-fitting tokens onto a finished deck is how drift gets signed off",
+    "task pages (9) before the deck announces them (10) - a screen announcing a task the tablet lacks is the worst failure in the room",
+    "the visual audit runs at verify (15), never against a shipped module"
+  ],
+  "roles": {
+    "course-factory": "programme, hours law, build order, ILO immutability, ratio rule, traceability, terminal contract",
+    "course-module-ux": "one-page module behaviour, screen architecture, fill, overflow, instructor delivery UX, deck measurement, run-script generation",
+    "course-module-ui": "the visual identity derived from GAS BASIC Module_01 - tokens, the two slide modes, header band, cards, pills, photo, takeaway, semantic status colour. The LOOK only",
+    "course-task-ux": "trainee task behaviour and usability - answering, navigation, typed input, completion",
+    "course-tablet-publisher": "publication to the trainee and instructor terminals and the shared repository",
+    "novikontas-*": "intake, course plan document, COURSE_START contract, pedagogy, exercise forms, handouts, written tests, corporate brand"
+  },
+  "no_fixed_slide_count": "There is NO canonical screen count. A module's screen count is derived from the learning need, the delivery method, the content depth, the practical work, the activities and what actually has to be explained - a legitimate module may be 10 screens, 25, 50, almost no presentation, or practical-only. Module_01 is a quality and UX/UI reference, not a numeric template. Never add filler screens to resemble it numerically, and never cut real teaching to resemble it either. What must match across modules is the SYSTEM: visual language, UI quality, UX behaviour, tablet-first delivery, the Start -> Next -> Next one-page delivery model where it applies, component styling, responsive behaviour, visual hierarchy, task usability and functional quality.",
+  "density_is_not_depth": "Low visible density does not mean low learning depth, and not every screen has to be interactive. Progressive disclosure, layered cards, diagrams, animation and interactive figures can carry serious teaching depth without a wall of text - 'compact' (course-module-ux law 3) must never be read as 'almost no teaching content'. course-module-ui is not responsible for pedagogy; it only has to not stand in the way of rich instructional design."
+}

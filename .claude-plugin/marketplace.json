@@ -1,0 +1,15 @@
+{
+  "name": "novikontas-course-factory",
+  "owner": {
+    "name": "Novikontas Academy",
+    "email": "raivis.silkans@novikontas.org",
+    "url": "https://github.com/silkansraivis3-tech/factory-mjaso"
+  },
+  "plugins": [
+    {
+      "name": "course-factory",
+      "source": "./plugin",
+      "description": "Turn an approved training programme into a finished course on the NOVIKONTAS Android tablets: the accredited-hours law, ILO immutability, the one-page instructor module, the locked visual system, trainee task screens, the verification suite, and a publisher that separates trainee from instructor material."
+    }
+  ]
+}

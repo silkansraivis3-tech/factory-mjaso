@@ -1,0 +1,115 @@
+/* ==========================================================================
+   task_complete.css — the finished-a-task panel. Pairs with task_complete.js.
+
+   Tablet-first: 52px controls, safe-area padding, and a backdrop dark enough
+   to read against but light enough to show there is still a page behind it —
+   because the trainee is about to go back to that page and read the reasons
+   for each answer, which is where the learning is.
+
+   WHAT A NEW COURSE CHANGES
+     - --task-accent / --task-font-display: brand colour and display face.
+       Defaults are Novikontas navy and Raleway; the novikontas-brandbook
+       skill is the authority on both.
+     - Nothing structural. Keep .taskdone-btn at min-height 52px.
+
+   PREVIOUS COURSE: shipped as gb_done.css, classes .gbdone*.
+   ========================================================================== */
+
+:root{
+  --task-accent:#0A2463;
+  --task-ink:#011111;
+  --task-surface:#ffffff;
+  --task-font-display:Raleway,"Segoe UI",system-ui,sans-serif;
+}
+
+.taskdone{
+  position:fixed; inset:0; z-index:9000;
+  display:flex; align-items:center; justify-content:center;
+  padding:24px calc(24px + env(safe-area-inset-right,0px))
+          calc(24px + env(safe-area-inset-bottom,0px)) calc(24px + env(safe-area-inset-left,0px));
+  background:rgba(1,17,17,.58);
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* The panel is VISIBLE the moment it is in the DOM: no opacity animation, no
+   JS class flip, no requestAnimationFrame.
+
+   Two approaches were tried on the reference build and both failed the same
+   way — a transition waiting on a class added in rAF, then a keyframe fade.
+   Wherever the compositor is stalled or animations are throttled, the
+   animation sits at its `from` state and the panel is present, correct, and
+   invisible. It was measured at opacity 0 twice before the cause was found.
+
+   The card below keeps a transform animation: if that one never plays the card
+   is simply 10px lower and a hair smaller, which nobody notices. That is the
+   test for whether motion is safe here — ask what it looks like frozen. */
+
+.taskdone-card{
+  width:100%; max-width:520px;
+  background:var(--task-surface); border-radius:20px;
+  padding:30px 26px 24px;
+  box-shadow:0 24px 60px rgba(1,17,17,.34);
+  text-align:center;
+  max-height:100%; overflow-y:auto;
+  animation:taskdoneCard .24s cubic-bezier(.2,.7,.3,1);
+}
+@keyframes taskdoneCard{ from{ transform:translateY(10px) scale(.985); } }
+
+.taskdone-tick{
+  width:60px; height:60px; margin:0 auto 16px;
+  border-radius:50%; background:#e3f5ea; color:#12805a;
+  display:flex; align-items:center; justify-content:center;
+  font-size:31px; font-weight:700; line-height:1;
+}
+.taskdone-card h2{
+  margin:0 0 12px;
+  font-family:var(--task-font-display);
+  font-size:clamp(21px,3.2vw,26px); font-weight:700; color:var(--task-accent);
+  line-height:1.25;
+}
+.taskdone-line{
+  margin:0 0 12px; font-size:15.5px; line-height:1.55; color:#4a6076;
+}
+.taskdone-line b{ color:var(--task-ink); }
+
+/* The score line. Anything a record sheet later asks the instructor for has to
+   be readable HERE, on the trainee's screen, at the moment it is asked for —
+   SKILL.md §10. */
+.taskdone-next{
+  margin:0 0 14px; font-size:16px; line-height:1.55; color:var(--task-ink);
+}
+.taskdone-next b{ color:var(--task-accent); }
+
+/* The quiet notice: ordinary type, no colour block, no capitals. The owner's
+   rule was "maybe small notice but not like contrast info" — a self-check is
+   not something to shout about. */
+.taskdone-note{
+  margin:0 0 22px; padding-top:13px;
+  border-top:1px solid #e7edf4;
+  font-size:13.5px; line-height:1.5; color:#7b8ca0;
+}
+
+.taskdone-acts{ display:flex; flex-direction:column; gap:10px; }
+.taskdone-btn{
+  -webkit-appearance:none; appearance:none;
+  display:flex; align-items:center; justify-content:center;
+  min-height:52px; padding:0 22px;
+  border:0; border-radius:999px;
+  background:var(--task-accent); color:#fff;
+  font-family:inherit; font-size:16px; font-weight:700;
+  text-decoration:none; cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.taskdone-btn:active{ transform:translateY(1px); }
+.taskdone-btn.ghost{
+  background:var(--task-surface); color:var(--task-accent);
+  border:1.5px solid #cfdae6;
+}
+
+@media (min-width:480px){
+  .taskdone-acts{ flex-direction:row; }
+  .taskdone-btn{ flex:1 1 0; }
+}
+@media (prefers-reduced-motion: reduce){
+  .taskdone, .taskdone-card{ animation:none; }
+}

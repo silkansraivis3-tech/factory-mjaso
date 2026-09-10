@@ -1,0 +1,153 @@
+{
+  "_authority": "This file is the authority on the measurement traps. Read it before trusting any measured number; do not restate it in prose. Every entry below produced a real, wrong, confident report.",
+  "_why": "A measurement discipline is not pedantry here. Every trap in this file produced a report that looked clean and was not, or reported failures that did not exist. Both waste a whole pass, and the false-clean one ships.",
+  "traps": [
+    {
+      "id": "transition-settle",
+      "title": "The slide transition hides everything from a probe",
+      "mechanism": "A .slide rests at opacity:0; visibility:hidden with a 0.42 s transition. Activate a slide and measure 150 ms later and every element inside it still computes visibility:hidden.",
+      "symptom": "A probe that skips hidden elements measures NOTHING and reports a clean sweep.",
+      "real_cost": "A false report of 'zero contrast failures across all 16 slides'. The real number was 40, including body text at 1.08:1.",
+      "rule": "Settle >= 520 ms after activating a slide before measuring. And prefer filtering on display:none alone rather than on visibility, so a mid-transition slide is not silently skipped."
+    },
+    {
+      "id": "collapsed-pane",
+      "title": "A hidden or unfocused browser pane lays out at 0x0",
+      "mechanism": "A collapsed, hidden or backgrounded preview pane gives the document a zero-sized viewport. Every geometry number computed against it is garbage.",
+      "symptom": "Spills, overflow and sub-floor text reported everywhere, all of it fictional.",
+      "real_cost": "A full report of spills and sub-floor text that did not exist.",
+      "rule": "Read window.innerWidth FIRST and abort the probe loudly if it is small. Never let a probe silently proceed from a bad viewport."
+    },
+    {
+      "id": "svg-text-size",
+      "title": "SVG text size is not the declared font-size",
+      "mechanism": "effective px = declared font-size x (rendered width / viewBox width). An SVG is scaled by its container.",
+      "symptom": "A label reads as tiny in the source and is large on screen, or the reverse.",
+      "real_cost": "A label declared at 12 px measured 28.9 px, because a 340-unit viewBox rendered at 820 px. Reading the declared value alone nearly caused a 'fix' to correct type.",
+      "rule": "Compute the effective size. Never read the declared value and call it the measurement."
+    },
+    {
+      "id": "which-clamp-dial",
+      "title": "Diagnose which clamp() dial is binding before turning any of them",
+      "mechanism": "clamp(min, coefficient, max) has three dials and only one binds at a given viewport. At a 768-line viewport 1 vmin is 7.68 px, so ANY coefficient below about 1.63vmin paints under a 12.5 px floor whatever the minimum says.",
+      "symptom": "Raising the minimum changes nothing, because the coefficient was binding. Or raising the coefficient changes nothing, because the ceiling was.",
+      "real_cost": "One deck had 65 sub-floor instances caused by coefficients, not minimums. Elsewhere the ceiling bound and the coefficient never engaged at all: 43 rules capped under 20 px.",
+      "rule": "Work out which of minimum / coefficient / ceiling is binding at the target viewport, then turn that one. Turning the wrong dial is a no-op that reads as 'the fix did not work'."
+    },
+    {
+      "id": "flex-centred-overflow",
+      "title": "Flex-centred overflow floats upward, so fill and spill disagree",
+      "mechanism": "The slide body is flex-centred. Residual overflow does not appear at the bottom; it pushes the top element up into the header band.",
+      "symptom": "One probe reports 100-102 % fill and ZERO spill while a collision probe finds a real overlap.",
+      "real_cost": "A screen signed off as fitting while its first heading sat under the header.",
+      "rule": "Run both probes. Fill alone is not evidence of fit, and no-spill alone is not evidence of no-collision."
+    },
+    {
+      "id": "clamp-needs-reload",
+      "title": "clamp() does not recompute on resize",
+      "mechanism": "Resizing the viewport does not re-resolve a clamp() that was already computed.",
+      "symptom": "Measurements taken after a resize describe the previous viewport.",
+      "real_cost": "Type-size numbers attributed to the wrong viewport.",
+      "rule": "Resize, THEN reload. Every time."
+    },
+    {
+      "id": "stale-cache",
+      "title": "Disk cache hands you the previous build",
+      "mechanism": "Serving an edited file over the same port lets the browser's disk cache answer.",
+      "symptom": "A fix that measurably did nothing, because the old file was measured.",
+      "real_cost": "Repeated re-fixing of an already-fixed problem.",
+      "rule": "Serve on a fresh, previously-unused port after every edit. measure/scripts/serve_fresh.py picks one."
+    },
+    {
+      "id": "frags-hidden",
+      "title": "Progressive-reveal fragments are not measured until revealed",
+      "mechanism": "A .frag element is hidden until the instructor advances it.",
+      "symptom": "Fill measures low and contrast failures inside fragments are invisible.",
+      "rule": "Reveal every .frag before measuring."
+    },
+    {
+      "id": "rect-vs-offset",
+      "title": "getBoundingClientRect lies under a transform",
+      "mechanism": "A slide deck moves off-stage slides with transforms. getBoundingClientRect reports the transformed box.",
+      "symptom": "Off-stage slides report as overflow at every viewport.",
+      "rule": "Prefer offsetTop / offsetWidth / offsetHeight when transforms are in play."
+    },
+    {
+      "id": "kill-only-your-own",
+      "title": "Kill only your own servers, by PID — and confirm the port actually freed",
+      "mechanism": "A broad pattern kill matches every process of that name on the machine. And the exit code of whatever you used to stop a server tells you the stop command ran, not that the process is gone and the port is free.",
+      "real_cost": "A broad pkill once destroyed about 40 unrelated servers.",
+      "rule": "Record the PID you started and kill that one. Never a name pattern, never a port sweep. Then CONFIRM the stop by probing the port — try to bind it, or request the URL and expect a connection failure. A zero exit code from kill is not evidence the port is free.",
+      "windows_note": "Do NOT read this as 'kill does not work on Windows' — tested directly, plain `kill <pid>` frees the port there. The failure mode actually observed is narrower and is a PID-namespace mismatch: a server started with `&` from one tool-call shell reports its Windows PID via os.getpid(), and a LATER shell's `kill` cannot see that pid at all (`kill: (25380) - No such process`, exit 1) while the port stays bound. That is an argument for confirming by probing the port, not for reaching for taskkill by default. If the port is still bound after kill, `taskkill //F //PID <pid>` is the Windows fallback — and it is a fallback, not the first move, because taskkill does not exist on other platforms."
+    },
+    {
+      "id": "outside-the-slide",
+      "title": "Elements outside the slide never get measured",
+      "mechanism": "Every probe walks .slide, so a footer, a corner tag, a header band or a landing screen is never visited.",
+      "symptom": "A page passes every probe while carrying visible defects.",
+      "real_cost": "A footer and a corner tag sat capped at 11.5 px for the life of a deck.",
+      "rule": "Measure the whole document at least once per pass, not only the slides."
+    },
+    {
+      "id": "console-after-scripted-edit",
+      "title": "After any scripted edit to inline JS, load the page and read the console",
+      "mechanism": "A regex edit inside a <script> block can leave syntactically valid-looking wreckage.",
+      "real_cost": "A comment replacement left the old comment's tail as bare JavaScript and killed an entire script while the page still looked fine. A missing comma in a generated object literal silently disabled every button on two task pages.",
+      "rule": "Load the page and read the console. `node` may not be installed, in which case the browser console is the only syntax check available."
+    },
+    {
+      "id": "weak-verdict-not-wrong-data",
+      "title": "A probe that PRINTS a field it does not ENFORCE invites you to assume enforcement",
+      "mechanism": "A probe assembled `linksInsideSlides` and `docHScroll` into its output object and emitted `fills` as a list, while its failure predicate tested only six other categories. Neither the two fields nor any fill threshold was ever referenced by the totals or by the failing predicate.",
+      "symptom": "A deck whose only fault was a link inside a slide printed VERDICT: PASS, with the link count visible in the output right next to the pass.",
+      "real_cost": "Reproduced here: one injected <a href> inside a slide left the verdict at PASS. Confirmed in the original — totals tracked low/small/spill/tap/svgSmall/collide, the failing predicate tested exactly those six, and the two structural fields were assembled into the output and never read.",
+      "nuance": "The displayed numbers were still TRUE. querySelectorAll('.slide a[href]').length is a correct count of anchors inside slides, so a reported 0 was genuine evidence — it simply could not make the verdict fail. This was a WEAK VERDICT, not wrong data, and the distinction is the lesson: the fix is to enforce the field, not to distrust it.",
+      "rule": "For every field a probe prints, ask whether the verdict can fail on it. If not, either wire it into the failure count or label it advisory in the output. A selftest against a deliberately broken fixture is what catches this — it is the same principle as selector-matches-nothing: a check nobody can see failing has never been observed to work."
+    },
+    {
+      "id": "selector-matches-nothing",
+      "title": "A CONFIG selector that matches nothing reports a silent pass",
+      "mechanism": "A probe's selector list is per-project accretion. Point it at a different deck and some entries match zero elements. The check then runs against an empty set and reports clean.",
+      "symptom": "A whole category of defect is never looked for, and the report says it passed.",
+      "real_cost": "Four selectors in the original probe set matched nothing on any module in the project they came from — those checks had been passing vacuously for the life of the deck.",
+      "rule": "On a new course, print the match count for every CONFIG selector BEFORE trusting a pass. Zero matches is a finding about the config, not a pass about the page. This is the same principle as check_static.py's selftest."
+    },
+    {
+      "id": "chrome-selectors-not-discoverable",
+      "title": "The collision probe's third check cannot find its own targets",
+      "mechanism": "audit_collide.js check 3 looks for slide text sliding under page furniture — the header band, the counter, the footer. There is no way to discover from the DOM which elements are furniture overlaying slides.",
+      "symptom": "On a deck whose furniture has different ids, check 3 matches nothing and quietly reports an unearned pass.",
+      "rule": "Set the chrome selectors in the probe's CONFIG for the deck at hand, or you lose check 3 without being warned. It also accepts a [data-audit-chrome] opt-in attribute."
+    },
+    {
+      "id": "collide-not-repeatable",
+      "title": "The collision count can alternate between runs, and neither number is wrong",
+      "mechanism": "An element sized with viewport units and a clamped font rewraps when a scrollbar appears or disappears between sweeps, which changes how many ink lines collide.",
+      "symptom": "Two consecutive runs of the same probe on the same unmodified page give different counts, with period 2.",
+      "real_cost": "Observed as 93 / 67+22 / 93 across three identical runs, on both the original probe and its rewrite.",
+      "rule": "Run the collision probe once, from a fresh reload. Do not read a plus-or-minus-one change as a fix or a regression."
+    },
+    {
+      "id": "sibling-painted-background",
+      "title": "A contrast probe walks ancestors, so a sibling-painted background is invisible to it",
+      "mechanism": "Effective background is found by walking up the ancestor chain for the first non-transparent background. A background painted by a SIBLING element sitting behind the text is never visited.",
+      "symptom": "A comfortable ratio is reported for text that is in fact almost unreadable.",
+      "real_cost": "7.4:1 reported where the real ratio was 1.95:1.",
+      "rule": "Where a design paints backgrounds with absolutely positioned siblings, check those areas by eye or with a zoomed screenshot. And note that SVG text contrast is not measured at all — SVG has no CSS background, so an ancestor walk returns a meaningless ~1.09:1."
+    },
+    {
+      "id": "backgrounded-tab-throttling",
+      "title": "A backgrounded tab throttles timers, so a sweep looks hung",
+      "mechanism": "Chrome throttles setTimeout in tabs that are not fronted. Every settle in the probe stretches.",
+      "symptom": "A sweep that takes about 16 seconds fronted appears to hang indefinitely while the tab is hidden.",
+      "rule": "Front the tab before concluding anything about a deck, and before deciding a probe is broken."
+    },
+    {
+      "id": "never-animate-into-visibility",
+      "title": "Never animate into visibility",
+      "mechanism": "A preview pane stalls requestAnimationFrame and CSS animations, so an element that starts at opacity:0 and animates in may never arrive.",
+      "symptom": "A blank screen that is indistinguishable from a build failure.",
+      "rule": "The resting CSS state must already be visible and correct. Always add @media (prefers-reduced-motion: reduce)."
+    }
+  ]
+}
