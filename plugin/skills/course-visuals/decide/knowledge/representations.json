@@ -1,0 +1,159 @@
+{
+  "_authority": "Every representation this factory may use, what it costs, what it needs, and how it behaves on a tablet. Reached from learning-needs.json. decide/GUIDE.md points here and must not restate it.",
+  "_written": "2026-09-10",
+  "_tablet_floor": "Every entry assumes the tablet contract: touch-first, no hover dependency, no precision pointing, targets >= 44 px, labels legible at arm's length on 800x1280, offline assets, works in landscape and degrades sanely in portrait. See review/knowledge/visual-floor.json for the measurable numbers.",
+
+  "representations": {
+    "real_photograph": {
+      "teaches": ["physical_appearance", "location", "comparison", "hazard"],
+      "tech": "img + course-module-ui photo treatment",
+      "source_level": "1-3, never generated",
+      "needs": ["a licence", "visual verification that the file shows what its filename claims"],
+      "tablet": "full-bleed on a dark slide; never framed in white",
+      "fails_when": "the subject is inside a sealed system, or no correctly-licensed image of the right equipment exists",
+      "trap": "a plausible photograph of the WRONG equipment is worse than no photograph - it teaches false recognition"
+    },
+    "annotated_photograph": {
+      "teaches": ["location", "physical_appearance", "hazard", "comparison"],
+      "tech": "img + live HTML/SVG pin overlay positioned in IMAGE coordinates",
+      "source_level": "1-3 for the photo; annotation is authored",
+      "needs": ["pins in image space, never baked into the pixels"],
+      "tablet": "pin dots >= 44 px touch target; labels must not overlap body copy",
+      "why_live_overlay": "annotation in the DOM survives any crop, aspect change or replaced photograph. Baked-in annotation invalidates the teaching the moment the image is re-cropped.",
+      "pattern": "resources/patterns/photo-pins/"
+    },
+    "source_technical_drawing": {
+      "teaches": ["internal_structure", "system_relationships", "location"],
+      "tech": "img, cited on the page it appears on",
+      "source_level": "1 (project) or 3 (publisher)",
+      "needs": ["figure number, section, page, and a RIGHTS state"],
+      "trap": "publisher figures are frequently NOT cleared for issue. An uncleared figure can block a whole course from being issued. Escalate, never quietly use.",
+      "prefer_instead": "redraw as svg_diagram when the drawing is a relationship rather than an artefact"
+    },
+    "manufacturer_diagram": {
+      "teaches": ["internal_structure", "mechanism", "system_relationships"],
+      "tech": "img, cited",
+      "source_level": "1 or 3",
+      "needs": ["the equipment must be the equipment the course actually uses"],
+      "trap": "never generalise one manufacturer's figures to another make"
+    },
+    "simplified_schematic": {
+      "teaches": ["system_relationships", "flow", "location"],
+      "tech": "authored SVG, built from a typed topology, not drawn by hand",
+      "source_level": "4",
+      "needs": ["component identity", "connection", "flow direction", "state per element"],
+      "tablet": "one system per screen; label every element the learner is asked about",
+      "rule": "Simplification is allowed. Misleading simplification is not. Dropping a branch is simplification; drawing a branch that does not exist, or implying a direction that is wrong, is not.",
+      "pattern": "resources/patterns/system-schematic/"
+    },
+    "cutaway_section": {
+      "teaches": ["internal_structure", "location", "comparison"],
+      "tech": "authored SVG, or a sourced drawing",
+      "source_level": "1, 3 or 4",
+      "needs": ["a declared cut plane", "an on-screen statement that it is a drawing"],
+      "pairs_with": "photograph the outside, illustrate the inside, and say which is which"
+    },
+    "svg_diagram": {
+      "teaches": ["system_relationships", "internal_structure", "comparison"],
+      "tech": "inline SVG",
+      "source_level": "4",
+      "needs": ["role=img and an aria-label describing the whole figure"],
+      "tablet": "text >= 12.5 px at the rendered size; scale with viewBox, never with fixed px",
+      "why_inline": "inline SVG is themeable, annotatable, translatable and diffable. A PNG of a diagram is none of those."
+    },
+    "svg_animation": {
+      "teaches": ["mechanism", "state_change", "flow", "cause_and_effect"],
+      "tech": "inline SVG + CSS/JS, stepped reveal",
+      "source_level": "4",
+      "needs": ["a motion declaration (see animate rules)", "play/pause/step/replay", "instructor pacing - never autoplay-and-move-on"],
+      "gate": "must answer the four questions in SKILL.md before it is built",
+      "pattern": "resources/patterns/stepped-process/"
+    },
+    "html_process_visualisation": {
+      "teaches": ["state_change", "flow", "mechanism", "sequence"],
+      "tech": "HTML/CSS/JS with explicit states",
+      "source_level": "4",
+      "when_over_svg": "when the states are discrete and the learner drives them, rather than a continuous drawn geometry"
+    },
+    "canvas_visualisation": {
+      "teaches": ["mechanism", "trend"],
+      "tech": "canvas 2d",
+      "source_level": "4",
+      "use_only_when": "the element count or per-frame maths genuinely defeats SVG",
+      "cost": "not inspectable, not themeable, not accessible without a parallel text description, and invisible to every static check in this factory",
+      "note": "the reference course uses canvas nowhere in its teaching visuals. Treat reaching for it as a signal to re-read the learning need."
+    },
+    "interactive_exploration": {
+      "teaches": ["location", "system_relationships", "comparison", "troubleshooting", "decision"],
+      "tech": "SVG or HTML with tap targets and revealed detail",
+      "source_level": "4",
+      "tablet": "two-stage tap on dense grids; every target >= 44 px; no hover-only detail",
+      "boundary": "if the learner is being SCORED, it is a task screen - route to course-task-ux"
+    },
+    "flow_visualisation": {
+      "teaches": ["flow", "system_relationships"],
+      "tech": "SVG path with a traced or dashed progression along the real route",
+      "source_level": "4",
+      "rule": "the path must follow the actual topology; a straight line between two icons is a box-and-arrow chain wearing a costume"
+    },
+    "before_after": {
+      "teaches": ["state_change", "cause_and_effect", "comparison", "hazard"],
+      "tech": "two states, same viewpoint, same scale, one control",
+      "source_level": "1-4",
+      "rule": "only ONE thing may differ between the two states, or the learner cannot tell which difference mattered"
+    },
+    "cause_effect_sequence": {
+      "teaches": ["cause_and_effect", "sequence", "hazard", "state_change"],
+      "tech": "stepped reveal, one caption per step",
+      "source_level": "4",
+      "strongest_use": "correcting a specific wrong mental model - name the misconception in a step of its own"
+    },
+    "timeline": {
+      "teaches": ["sequence", "procedure"],
+      "tech": "SVG or HTML axis",
+      "source_level": "4",
+      "rule": "if the intervals carry meaning, the axis must be to scale; if they do not, do not draw an axis"
+    },
+    "comparison": {
+      "teaches": ["comparison", "physical_appearance", "internal_structure"],
+      "tech": "grid of variants at one viewpoint and scale, tap to enlarge",
+      "source_level": "1-4",
+      "rule": "hold the viewpoint and the scale constant. A comparison where the images differ in framing teaches framing."
+    },
+    "sourced_chart": {
+      "teaches": ["trend", "comparison"],
+      "tech": "authored SVG",
+      "source_level": "4, from sourced values only",
+      "needs": ["every plotted value traceable to a named source"],
+      "rule": "mark interpolated points distinctly (the reference course prefixes them with '~') so nothing invented is presented as measured",
+      "cite": "axis units and the source, on the figure"
+    },
+    "generated_illustration": {
+      "teaches": ["physical_appearance", "internal_structure"],
+      "tech": "raster image produced from a GENERATED_ASSET_REQUIRED brief",
+      "source_level": "4, last resort",
+      "hard_limits": [
+        "NEVER for safety-critical equipment a learner must recognise in real life",
+        "NEVER as a substitute for an accurate technical schematic",
+        "labels are added in HTML/SVG afterwards, never generated into the pixels"
+      ],
+      "needs": ["origin: generated illustration", "generated_by", "depicts_what_no_photograph_can", "a visible on-page statement that it is an illustration"]
+    },
+    "plain_text": {
+      "teaches": ["procedure", "decision", "any need where the exact wording IS the content"],
+      "tech": "type, from course-module-ui",
+      "source_level": "n/a",
+      "rule": "a legitimate, recordable outcome - see learning-needs.json plain_text_is_a_valid_decision"
+    }
+  },
+
+  "rejected_representations": {
+    "_note": "These are not representations. They are what generic AI course material produces instead of one. Named so a review can point at the name.",
+    "card_grid_of_prose": "three to six boxes of sentences. Carries no relationship, no location, no order, no change. It is a paragraph with borders. course-module-ui owns the card as a COMPONENT; using cards as the answer to a teaching need is this skill's failure to name.",
+    "box_and_arrow_chain": "[BOX] -> [BOX] -> [BOX]. Asserts a linear sequence that real systems rarely have, and hides topology, direction, service and state. If the thing has spatial or system structure, draw the structure.",
+    "decorative_icon_row": "a row of glyphs standing in for concepts. An icon can label a thing the learner already knows; it cannot teach one they do not.",
+    "gradient_hero": "a coloured panel with a heading. Decoration presented as a screen.",
+    "smartart_pyramid_or_cycle": "a shape borrowed from presentation software, imposing a geometry the content does not have.",
+    "stock_photograph_of_people": "generic people in hard hats. Teaches nothing about the equipment or the hazard, and dates badly."
+  }
+}

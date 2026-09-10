@@ -2,13 +2,13 @@
 
 **The architecture to build.** Phase 1 · 2026-09-10.
 
-> **Phase 2B status (2026-09-10).** The container in §2 is **built**, the five proven skills are
-> migrated at plugin version **2.0.0** (64 of 66 files byte-identical; two additively extended for
-> D-3), and the plugin is **installed and verified from the GitHub marketplace** on Claude Code CLI
-> 2.1.267. **D-1 is VERIFIED and D-3 is resolved** (§9).
-> Still to build: `course-visuals`, `course-evidence`, the three agents, the hooks and the
-> `resources/` inventory. See `PHASE2_MIGRATION_REPORT.md` for what was migrated, what was
-> validated, and what is blocking Phase 3.
+> **Phase 3 status (2026-09-10).** Plugin **2.1.0**. The container is built, the five proven skills
+> are migrated and installed from the GitHub marketplace, and **`course-visuals` + `visual-sourcer`
+> are built** — closing the two holes this project was started for. `claude plugin validate --strict`
+> passes; **F-1 and F-4 are resolved**. **D-1 VERIFIED, D-3 resolved** (§9).
+> Still to build: `course-evidence`, the `evidence-retriever` and `module-producer` agents, the
+> hooks, and `resources/engines/`. See `PHASE3_VISUAL_SYSTEM.md`, then
+> `PHASE2_MIGRATION_REPORT.md`.
 
 ---
 
@@ -390,12 +390,13 @@ The colleague never types a script name, never chooses an agent, and never learn
 3. ~~**Verify the installation.**~~ **Done 2026-09-10 (Phase 2B)** — CLI 2.1.267, GitHub marketplace
    add, plugin install at 2.0.0, five skills enumerated, validators re-run from the installed cache,
    legacy personal copies removed. **D-1 closed; `factory-mjaso` is authoritative.**
-4. Build `course-visuals` — the largest genuine gap, and the stated reason for the factory. It also
-   gives laws **L12** and **L13** their first enforcing owner.
+4. ~~Build `course-visuals`.~~ **Done 2026-09-10 (Phase 3)** — three lanes, five knowledge files,
+   three scripts, two templates, plus the `visual-sourcer` agent and three reusable engines in
+   `resources/patterns/`. Laws **L12** and **L13** now have an enforcing owner.
 5. Build `course-evidence` by generalising `gas-basic-kb-retrieval`.
 6. Add `hooks/hooks.json` and its six scripts.
-7. Add the three agents.
-8. Consolidate `resources/` — one canonical engine set, the schemas, the patterns.
+7. Add the remaining two agents — `evidence-retriever`, `module-producer`.
+8. Consolidate `resources/engines/` — one canonical shared-engine set (also closes **F-2**).
 9. **Prove it on one real module of a second course**, end to end.
 
 Step 9 is the acceptance test. A factory that has only ever built the course it was extracted from

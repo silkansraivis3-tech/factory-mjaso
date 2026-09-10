@@ -1,0 +1,125 @@
+{
+  "_authority": "The first question is always LEARNING, never format. This file maps what a learner must understand to the representations that can carry it. decide/GUIDE.md points here and must not restate the table in prose.",
+  "_written": "2026-09-10",
+  "_rule": "Name the learning need BEFORE naming a representation. A concept whose need cannot be named does not need a visual - it needs clearer text, or it does not belong on the screen.",
+  "_reading": "candidates are ordered strongest-first for that need. 'avoid' is not a ban; it is what usually teaches worse for THIS need and needs a reason if chosen.",
+
+  "needs": {
+    "physical_appearance": {
+      "question": "What does this actually look like, so I recognise it on a ship?",
+      "candidates": ["real_photograph", "annotated_photograph", "generated_illustration"],
+      "avoid": ["svg_diagram", "simplified_schematic"],
+      "why": "A trainee who learns to recognise equipment from a stylised icon has learned something false. Recognition needs the real object.",
+      "test": "Could the learner pick this out of a row of similar equipment after seeing it?"
+    },
+    "location": {
+      "question": "Where is it, on the ship or in the system?",
+      "candidates": ["annotated_photograph", "cutaway_section", "simplified_schematic", "interactive_exploration"],
+      "avoid": ["card_grid", "plain_text"],
+      "why": "Location is spatial. A list of place names does not build a spatial model.",
+      "test": "Could the learner point at it on a drawing they have not seen before?"
+    },
+    "internal_structure": {
+      "question": "What is inside it, that I cannot see from outside?",
+      "candidates": ["cutaway_section", "source_technical_drawing", "manufacturer_diagram", "svg_diagram", "generated_illustration"],
+      "avoid": ["real_photograph"],
+      "why": "No camera can see inside a sealed containment system. This is the classic case for a drawing - and the page must say on its face that it is a drawing.",
+      "test": "Does the learner understand what is behind the surface they can see?"
+    },
+    "system_relationships": {
+      "question": "How do these parts connect, and what depends on what?",
+      "candidates": ["simplified_schematic", "svg_diagram", "interactive_exploration"],
+      "avoid": ["card_grid", "box_and_arrow_chain"],
+      "why": "A real system has topology - services, headers, branches, direction. Boxes in a row assert a false linearity.",
+      "test": "Could the learner say what happens downstream if one element is shut?"
+    },
+    "flow": {
+      "question": "What moves, where does it go, and in which direction?",
+      "candidates": ["flow_visualisation", "svg_animation", "simplified_schematic", "html_process_visualisation"],
+      "avoid": ["plain_text", "static_arrow_diagram"],
+      "why": "Direction and path are the content. A static arrow states a conclusion; a traced path lets the learner follow it.",
+      "test": "Could the learner trace the route with a finger and say where it ends?"
+    },
+    "sequence": {
+      "question": "What happens in what order, and why that order?",
+      "candidates": ["stepped_process", "cause_effect_sequence", "timeline", "svg_animation"],
+      "avoid": ["card_grid"],
+      "why": "Order is the content. Cards side by side imply simultaneity.",
+      "test": "Could the learner say why step 3 cannot come before step 2?"
+    },
+    "state_change": {
+      "question": "What is different before and after, and what caused the change?",
+      "candidates": ["before_after", "svg_animation", "stepped_process", "html_process_visualisation"],
+      "avoid": ["plain_text", "single_static_image"],
+      "why": "A single state cannot show a change. Two states, or a controlled transition between them, can.",
+      "test": "Could the learner name the two states and the thing that moved between them?"
+    },
+    "mechanism": {
+      "question": "How does it actually work, internally?",
+      "candidates": ["svg_animation", "cutaway_section", "html_process_visualisation", "interactive_exploration"],
+      "avoid": ["real_photograph", "card_grid"],
+      "why": "Mechanism is the strongest case for animation in the whole system: several properties changing together, causally.",
+      "test": "Could the learner predict what happens if one input changes?"
+    },
+    "cause_and_effect": {
+      "question": "What follows from what, and what breaks the chain?",
+      "candidates": ["cause_effect_sequence", "stepped_process", "svg_animation", "before_after"],
+      "avoid": ["card_grid", "box_and_arrow_chain"],
+      "why": "Causation needs an ordered reveal so the learner sees the link form, not a finished diagram of it.",
+      "test": "Could the learner say where an intervention would stop it?"
+    },
+    "comparison": {
+      "question": "How do these differ, and which do I have in front of me?",
+      "candidates": ["comparison", "annotated_photograph", "cutaway_section", "interactive_exploration"],
+      "avoid": ["plain_text"],
+      "why": "Differences are seen, not read. Show the variants against the same viewpoint and scale so the difference is the only thing that changes.",
+      "test": "Could the learner tell two of them apart in a photograph?"
+    },
+    "hazard": {
+      "question": "What is dangerous here, and what does it do to me?",
+      "candidates": ["annotated_photograph", "cause_effect_sequence", "svg_animation", "before_after"],
+      "avoid": ["decorative_icon", "card_grid"],
+      "why": "A hazard icon names a category. It does not teach recognition or consequence. Use semantic hazard colour from course-module-ui, never a stock warning glyph as the whole content.",
+      "test": "Could the learner spot it in a scene that was not staged for them?"
+    },
+    "trend": {
+      "question": "How does one quantity move with another?",
+      "candidates": ["sourced_chart", "svg_animation"],
+      "avoid": ["plain_text", "generated_illustration"],
+      "why": "A relationship between two quantities is a chart. Never draw a curve that is not built from sourced values.",
+      "test": "Could the learner read a value off it, and say where the source stops and interpolation begins?"
+    },
+    "decision": {
+      "question": "Given this situation, what do I do, and why?",
+      "candidates": ["interactive_exploration", "stepped_process", "comparison", "plain_text"],
+      "avoid": ["box_and_arrow_chain"],
+      "why": "A decision is practised, not watched. This is usually a task screen, not a deck screen - route it to course-task-ux.",
+      "test": "Did the learner have to commit to an answer?"
+    },
+    "troubleshooting": {
+      "question": "It is not behaving. What is wrong?",
+      "candidates": ["interactive_exploration", "before_after", "simplified_schematic", "cause_effect_sequence"],
+      "avoid": ["plain_text", "card_grid"],
+      "why": "Troubleshooting needs a system the learner can perturb and a readable symptom. Usually a task screen.",
+      "test": "Could the learner localise the fault rather than name it?"
+    },
+    "procedure": {
+      "question": "What are the steps, in order, and what does 'done' look like?",
+      "candidates": ["stepped_process", "annotated_photograph", "timeline", "plain_text"],
+      "avoid": ["svg_animation"],
+      "why": "A procedure a learner will perform is often best as clear ordered text plus one photograph per non-obvious step. Animating it adds nothing they can carry to the deck.",
+      "test": "Could the learner follow it with their hands, without the screen?"
+    }
+  },
+
+  "plain_text_is_a_valid_decision": {
+    "rule": "Choosing NO visual is a real outcome of this process and must be recorded in the storyboard with its reason, exactly like any other choice.",
+    "when": [
+      "the content is a definition, a limit, a name or a rule - text carries it exactly and a picture would only decorate it",
+      "the learner needs the exact wording (a regulatory phrase, a set point, a criterion)",
+      "a visual would restate the sentence beside it without adding a relationship, a location or a change",
+      "the concept is genuinely abstract and every candidate visual would be a metaphor the learner then has to unlearn"
+    ],
+    "anti_rule": "Never add a visual to fill space, to make a screen look finished, or because a screen 'needs' an image. An empty area is cheaper than a misleading one."
+  }
+}

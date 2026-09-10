@@ -1,6 +1,6 @@
 # NOVIKONTAS Course Factory — read me first
 
-**Phase 2B complete: the plugin is published, installed and verified from GitHub.**
+**Phase 3 complete: the instructional visual system is built. Plugin 2.1.0.**
 
 This repository is the Course Factory — a Claude Code plugin that turns an approved training
 programme, a set of source documents and a sentence from a colleague into a finished course running
@@ -11,8 +11,12 @@ the existing skill bundle. Phase 2 built the plugin container and migrated the f
 from `course-factory` 1.3.0 (`4dc5ff9`) to `course-factory` **2.0.0** here — 64 of 66 files
 byte-identical, the other two additively extended for decision D-3 and nothing else.
 
-**Still to build:** `course-visuals`, `course-evidence`, the three agents, the hooks, and the shared
-`resources/` inventory.
+Phase 3 added **`course-visuals`** — the skill that decides what representation actually teaches a
+concept — the **`visual-sourcer`** agent, the four-level asset pipeline with provenance and rights,
+three reusable visual engines, and the visual quality gate.
+
+**Still to build:** `course-evidence`, the `evidence-retriever` and `module-producer` agents, the
+deterministic hooks, and the canonical shared-engine set in `resources/engines/`.
 
 ---
 
@@ -23,14 +27,17 @@ byte-identical, the other two additively extended for decision D-3 and nothing e
 /plugin install course-factory@novikontas-course-factory
 ```
 
+Colleague-facing instructions, for someone who does not use a terminal:
+[`docs/INSTALL_FOR_COLLEAGUES.md`](docs/INSTALL_FOR_COLLEAGUES.md).
+
 **Verified 2026-09-10** on Claude Code CLI **2.1.267** — marketplace added from GitHub, plugin
 installed at **2.0.0**, all five skills enumerated, scripts and resources working from the installed
 cache, and the superseded personal copies removed. Full results in
 [`docs/PHASE2_MIGRATION_REPORT.md`](docs/PHASE2_MIGRATION_REPORT.md) §9.
 
-One known warning: `claude plugin validate --strict` fails on a single item — the plugin-root
-`CLAUDE.md`, which Claude Code does not load (finding **F-1**). Non-strict validation passes. It is
-a Phase 3 decision and was deliberately left alone.
+`claude plugin validate --strict` now **passes clean** — finding **F-1** was resolved in Phase 3 by
+moving the laws to [`docs/FACTORY_LAWS.md`](docs/FACTORY_LAWS.md), where they are documentation, and
+giving L12 and L13 a real enforcing skill.
 
 ---
 
@@ -59,12 +66,11 @@ terminals with zero dead links, zero dead ends, 64/64 programme topics and 266/2
 outcomes. Every rule in them is the scar tissue of a specific recorded failure. **Do not simplify,
 reword or tidy one** — if it looks arbitrary, find out what it cost before touching it.
 
-**2 · The four holes are real, and one of them is the reason this project was started.**
-There is no owner for **instructional visuals** — which representation a concept should take, and what
-makes an animation teach rather than decorate. There is no owner for the **asset pipeline** —
-sourcing, licences, provenance, rights. There is no **general evidence retrieval** (the existing one is
-GAS-BASIC-only). And there is **no deterministic protection** — every law currently depends on the
-model remembering it.
+**2 · Two of the four holes are now closed.**
+`course-visuals` owns **what representation teaches a concept** and the **asset pipeline** — the two
+gaps that produced generic AI course graphics, and the reason this project was started. Still open:
+**general evidence retrieval** (the existing one is GAS-BASIC-only) and **deterministic protection**
+(most laws still depend on the model remembering them).
 
 **3 · One Android constraint changes what a course may contain, and it is not written down anywhere
 else.** The app's WebView answers **403 to every host except the classroom backend**, only navigates

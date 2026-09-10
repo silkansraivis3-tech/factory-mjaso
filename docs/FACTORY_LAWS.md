@@ -1,14 +1,20 @@
-# Course Factory — global laws
+# Factory laws
 
-The rules that hold across the **whole** factory. Each names the skill that owns and enforces it;
-the detail lives there, never here. Procedures do not belong in this file.
+The rules that hold across the **whole** Course Factory. Each names the skill that owns and
+enforces it; the detail lives there, never here.
 
-> **How this file is loaded.** Claude Code documents that a `CLAUDE.md` at a plugin root is **not**
-> loaded as project context (`code.claude.com/docs/en/plugins-reference`, *Key Rules*). This file is
-> therefore the canonical human-readable statement of the laws, and the **skills are what actually
-> reach a session** — every law below is already enforced in its owning skill. Recorded as finding
-> **F-1** in `docs/PHASE2_MIGRATION_REPORT.md`; making the laws load automatically is a Phase 3
-> decision, not a migration change.
+> **This file is documentation, not enforcement — and that is deliberate.**
+>
+> It used to live at `plugin/CLAUDE.md`. Claude Code does not load a plugin-root `CLAUDE.md` as
+> project context, and `claude plugin validate --strict` fails on one that exists
+> (finding **F-1**, confirmed by the official validator on 2026-09-10). A file that looks
+> authoritative and is never read is exactly the class of defect this project keeps recording, so
+> in Phase 3 it was moved here and the two laws that had no enforcing skill were given one.
+>
+> **Every law below is enforced by a skill that does load.** This page exists so a human can read
+> the whole set on one screen. Changing a law here changes nothing; change it in the owning skill.
+
+---
 
 ---
 
@@ -55,12 +61,12 @@ regenerated after any change to its input. Overrides live inside the generator.
 → `course-module-ux` (run script), `course-tablet-publisher` (registry)
 
 **L12 · Every asset carries provenance, a licence and a visual verification**, in a metadata file
-beside the file. Open and look at every image before using it.
-→ *no owning skill yet — `course-visuals`, Phase 3*
+beside the file. Open and look at every image before using it. Unclear rights are
+`RIGHTS_REVIEW_REQUIRED` and block shipping. → `course-visuals`
 
 **L13 · A visualisation must explain a mechanism, state change, relationship, flow, sequence or
-cause/effect.** Decorative movement is not sufficient.
-→ *no owning skill yet — `course-visuals`, Phase 3*
+cause/effect.** Decorative movement is not sufficient, and the first question is always what the
+learner must understand — never what visual goes here. → `course-visuals`
 
 **L14 · The reference course, `source_files/`, the knowledge base and the Android application are
 read-only to the factory.** → `course-tablet-publisher`
@@ -74,8 +80,8 @@ Nothing is built until the gate table is approved. Published is not installed.
 
 ---
 
-**L12 and L13 have no enforcing skill in this release.** They are stated here because they are
-already laws of the house, and their owner (`course-visuals`) arrives in Phase 3. Until then they
-depend on the operator.
+**All sixteen laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; before that they depended on the operator remembering them.
 
-Organisation-skill dependencies and their fallbacks: `resources/org-dependencies/ORG_DEPENDENCIES.md`.
+Organisation-skill dependencies and their fallbacks:
+`plugin/skills/course-factory/org/ORG_DEPENDENCIES.md`.

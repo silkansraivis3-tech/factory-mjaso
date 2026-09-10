@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "_figure_meta.json",
+  "description": "Provenance for drawings, schematics, publisher figures and generated illustrations. One file per asset folder, keyed by filename. Validated by scripts/check_assets.py.",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": [
+      "origin",
+      "rights_state",
+      "shows",
+      "teaching_purpose",
+      "used_in",
+      "visually_verified"
+    ],
+    "properties": {
+      "origin": {
+        "enum": [
+          "authored diagram",
+          "source technical drawing",
+          "manufacturer diagram",
+          "publisher figure",
+          "generated illustration"
+        ]
+      },
+      "rights_state": {
+        "enum": [
+          "CLEARED",
+          "PROJECT_OWNED",
+          "PUBLIC_DOMAIN",
+          "ATTRIBUTION_REQUIRED",
+          "RIGHTS_REVIEW_REQUIRED",
+          "REJECTED"
+        ]
+      },
+      "shows": {
+        "type": "string",
+        "description": "what the figure depicts and what it labels"
+      },
+      "teaching_purpose": {
+        "type": "string"
+      },
+      "used_in": {
+        "type": "string"
+      },
+      "visually_verified": {
+        "type": "string"
+      },
+      "declared_as_drawing_on_page": {
+        "type": "boolean",
+        "description": "REQUIRED true when the figure depicts something no camera can see - the page must say on its face that it is a drawing"
+      },
+      "source_document": {
+        "type": "string",
+        "description": "publisher figures: the document, edition"
+      },
+      "figure": {
+        "type": "string"
+      },
+      "section": {
+        "type": "string"
+      },
+      "page": {
+        "type": [
+          "integer",
+          "string"
+        ]
+      },
+      "extracted_from": {
+        "type": "string"
+      },
+      "generated_by": {
+        "type": "string",
+        "description": "generated illustrations: the model or tool"
+      },
+      "generation_brief": {
+        "type": "string",
+        "description": "generated illustrations: path to the GENERATED_ASSET brief this was produced from"
+      },
+      "depicts_what_no_photograph_can": {
+        "type": "string",
+        "description": "generated illustrations: the justification for generating rather than photographing"
+      },
+      "sourced_values": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "charts: every plotted value with its source"
+      },
+      "interpolation_marked": {
+        "type": "boolean",
+        "description": "charts: interpolated points are visually distinguished from sourced ones"
+      },
+      "RIGHTS": {
+        "type": "string",
+        "description": "free-text rights warning carried through from the source, if any"
+      }
+    }
+  }
+}

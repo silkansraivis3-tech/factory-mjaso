@@ -51,6 +51,7 @@ where one real gap was waiting.
 |---|---|
 | Screen craft, one-page architecture, deck measurement, run-script generation | `course-module-ux` |
 | **The visual layer** — palette, typography, light/dark-photo modes, header band, cards, pills, takeaway, semantic status colour | **`course-module-ui`** |
+| **What representation teaches a concept** — photo, schematic, animation, chart, cutaway, or no visual at all; the asset pipeline, provenance and rights | **`course-visuals`** |
 | Trainee task screens — answering, navigation, typed input, completion | `course-task-ux` |
 | Publishing a finished course to the two terminals and the shared repository | `course-tablet-publisher` |
 | Course intake — course type, accreditation, equipment, regulations | `novikontas-course-intake` |
@@ -243,7 +244,10 @@ the line for the thing you changed.
    and practical write-up — with `verify_links.py` green.
 6. `tablet/scripts/crosscheck_tasks.py` — deck ↔ run script ↔ tablet manifest agree
 7. `course-module-ux`'s measurement lane for the screens themselves
-8. `course-module-ui/scripts/audit_ui.py --strict` over a **new** module's stylesheets — the
+8. `course-visuals/scripts/check_visuals.py` and `check_assets.py` — the deterministic visual
+   checks and the provenance record. Then `course-visuals/review/GUIDE.md`, which asks the question
+   no script can: **does this visual actually teach?** Nothing at `RIGHTS_REVIEW_REQUIRED` may ship.
+9. `course-module-ui/scripts/audit_ui.py --strict` over a **new** module's stylesheets — the
    visual sign-off. `--strict` is right for new work and wrong for shipped material: never point
    it at a delivered GAS BASIC or Electrical Technician module. Those carry known drift that
    `course-module-ui` records by name; **report drift, do not repaint a signed-off deck.** The

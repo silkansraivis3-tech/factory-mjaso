@@ -1,0 +1,72 @@
+/* ==========================================================================
+   cv_schematic - system schematic rendered from a typed topology
+   Tokens come from course-module-ui.
+   ========================================================================== */
+
+.cv-schem {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--deep, #0A182E);
+  border-radius: var(--r-m, 13px);
+}
+
+/* --- segment states ------------------------------------------------------
+   State is carried in data-state so it is queryable and testable, and shown
+   by opacity AND dash - never by colour alone. */
+
+.cv-seg[data-state="idle"]     { opacity: .30; }
+.cv-seg[data-state="active"]   { opacity: 1; }
+.cv-seg[data-state="isolated"] { opacity: .30; stroke-dasharray: 3 9; }
+
+/* --- flow ----------------------------------------------------------------
+   Flow is a dash travelling along the REAL route. It only ever appears on a
+   segment whose state is active, and it is declared data-motion="teaching"
+   because the movement is the content: it shows direction. */
+
+.cv-flow {
+  animation: cvFlow 1.5s linear infinite;
+}
+
+.cv-flow[data-dir="reverse"] {
+  animation-direction: reverse;
+}
+
+@keyframes cvFlow {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -36; }
+}
+
+/* --- valve state ---------------------------------------------------------
+   Shape and fill both change, so the state survives greyscale and colour
+   vision deficiency. */
+
+.cv-valve[data-state="open"]  { opacity: 1; }
+.cv-valve[data-state="shut"]  { opacity: .85; }
+
+/* --- interactive exploration --------------------------------------------
+   Any tappable element gets a 44px target via a transparent hit area, not by
+   growing the drawn component. */
+
+.cv-schem .cv-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.cv-schem .cv-n.is-selected circle,
+.cv-schem .cv-n.is-selected rect,
+.cv-schem .cv-n.is-selected path {
+  stroke: var(--blue, #2EB6F8);
+  stroke-width: 3;
+}
+
+/* No hover-only affordance: hover is a desktop nicety, never the only signal. */
+@media (hover: hover) {
+  .cv-schem .cv-hit:hover + .cv-n { opacity: .9; }
+}
+
+/* Motion stops under reduced motion. The schematic still reads: state is
+   carried by opacity and dash, not by the animation. */
+@media (prefers-reduced-motion: reduce) {
+  .cv-flow { animation: none; }
+}

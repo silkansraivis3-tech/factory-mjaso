@@ -1,0 +1,90 @@
+{
+  "_authority": "Laws L12 and L13 in enforceable form: what motion is allowed, what it must declare, and what is rejected by name. SKILL.md carries the law; this file carries the mechanics and the reject list. scripts/check_visuals.py reads the vocabularies below.",
+  "_written": "2026-09-10",
+  "_owner_note": "course-visuals is the owning skill for L12 (asset provenance) and L13 (animation must explain a mechanism). Before this file they had no owner and depended on a plugin-root CLAUDE.md that Claude Code does not load.",
+
+  "categories": {
+    "_rule": "Every animation in a course declares exactly one category. An animation that cannot be categorised is not built.",
+    "teaching": {
+      "means": "the motion IS the content - it shows a change the learner must understand",
+      "must_explain_one_of": ["movement", "flow", "state_change", "sequence", "mechanism", "cause_and_effect", "spatial_relationship", "progression_over_time", "system_response"],
+      "requires": [
+        "learner or instructor control - play, pause, step, replay",
+        "a caption per step saying what changed and why",
+        "no autoplay that runs past the point being made",
+        "a resting state that is readable with the animation stopped"
+      ],
+      "gate": "must answer the four questions before it is built"
+    },
+    "affordance": {
+      "means": "motion that teaches the INTERACTION, not the content - a tap hint on a first-use control",
+      "requires": ["it stops once the learner has interacted", "it is not the only signal that a control exists"],
+      "note": "legitimate, and a different thing from teaching motion. Do not count it as instructional."
+    },
+    "ambient": {
+      "means": "scene motion that makes an illustration read as a scene - drifting water, a slow vapour puff",
+      "requires": [
+        "declared as ambient in the storyboard",
+        "it must not compete with a teaching animation on the same screen",
+        "it must not imply a process the learner might read as content",
+        "slow, low contrast, peripheral"
+      ],
+      "budget": "at most one ambient effect per screen, and none on a screen that carries a teaching animation",
+      "honesty": "if it cannot be described as ambient without embarrassment, it is decoration - remove it"
+    },
+    "chrome": {
+      "means": "interface transitions - a panel opening, a card settling, a progress dot filling",
+      "owner": "course-module-ui and course-module-ux own chrome motion; it is out of scope here",
+      "note": "listed so a review does not mistake chrome for content"
+    }
+  },
+
+  "four_questions": {
+    "_rule": "Every substantial animation answers all four IN THE STORYBOARD, before implementation. An animation that cannot answer them is decoration with a budget.",
+    "q1": "What changes?",
+    "q2": "Why does it change?",
+    "q3": "What should the learner notice?",
+    "q4": "What should the learner understand afterwards, that they did not before?",
+    "failure_signature": "If q4 can be answered by the caption alone, with the motion removed, the motion is not carrying the teaching. Ship the caption and a static figure."
+  },
+
+  "rejected_patterns": {
+    "_note": "Named so a review can point at the name instead of arguing about taste. Each is rejected because it moves without explaining.",
+    "random_floating": "elements drifting with no referent - nothing in the subject is floating",
+    "decorative_pulsing": "a glow or scale loop on something that is not changing state",
+    "bouncing_icons": "attention-seeking motion on a static concept",
+    "unnecessary_fade_sequences": "content fading in on load because it looked flat - this delays reading and teaches nothing",
+    "moving_arrows_without_process": "an arrow animating along a path where no process was explained; motion asserting a flow the screen never established",
+    "meaningless_autoplay_loops": "a loop that restarts forever, so the learner cannot tell where the sequence begins or ends",
+    "animation_because_animation_was_requested": "motion added to satisfy a request for animation rather than a learning need. The correct response to 'add an animation' is to find the state change worth animating - or to say there is not one.",
+    "parallax_and_scroll_reveal": "motion driven by scrolling rather than by the content's own logic",
+    "spinning_loaders_on_local_content": "everything is packaged locally and loads instantly; a spinner invents a wait"
+  },
+
+  "decorative_vocabulary": {
+    "_use": "scripts/check_visuals.py flags a CSS @keyframes or animation-name matching these when it is infinite and has no motion declaration. A match is a QUESTION, not proof - the script warns, a human decides.",
+    "names": ["float", "floating", "pulse", "pulsate", "bounce", "shimmer", "glow", "sparkle", "spin", "rotate", "wobble", "jiggle", "shake", "breathe", "hover", "flash", "blink", "zoom", "wiggle", "swing", "twinkle"]
+  },
+
+  "teaching_vocabulary": {
+    "_use": "these names, and a motion declaration, are what a teaching animation looks like in the markup",
+    "markup_signals": ["data-step", "data-motion", "data-anim-category", "aria-live"],
+    "control_signals": ["play", "pause", "step", "replay", "reset"]
+  },
+
+  "motion_declaration": {
+    "_rule": "Any element carrying a non-chrome animation declares its category in the markup, so a static check and a human review can both see the author's intent.",
+    "attribute": "data-motion",
+    "values": ["teaching", "affordance", "ambient"],
+    "example": "<g class=\"vapour\" data-motion=\"ambient\">",
+    "on_a_teaching_animation": "also carry data-step on each revealed layer, and provide play/pause/step/replay controls",
+    "why": "without a declaration, a reviewer cannot distinguish a deliberate ambient puff from a decorative pulse somebody added to fill a screen - and neither can a script"
+  },
+
+  "accessibility_and_tablet": {
+    "reduced_motion": "any screen with an infinite animation must honour prefers-reduced-motion: reduce by stopping ambient motion. Teaching animation may remain, because it is content - but it must not autoplay under reduced motion.",
+    "offscreen": "animation pauses when its screen is not visible. A loop running behind a slide the class is not on burns battery and desynchronises a replay.",
+    "controls": "play/pause/step/replay are touch targets >= 44 px",
+    "no_hover": "no animation may be triggered only by hover"
+  }
+}

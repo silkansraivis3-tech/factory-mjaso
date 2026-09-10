@@ -1,0 +1,121 @@
+{
+  "_authority": "The mandatory asset hierarchy, the source-authority ranking, the rights states and the provenance contract. source/GUIDE.md and scripts/resolve_asset.py both read this. Do not restate its levels in prose elsewhere.",
+  "_written": "2026-09-10",
+  "_law": "Levels run in order. A level is only exhausted when it has been SEARCHED, not when it has been assumed empty. 'I could not think of one' is not a search.",
+
+  "levels": [
+    {
+      "level": 1,
+      "name": "PROJECT",
+      "search": [
+        "source_files/",
+        "any assets the operator supplied with the brief",
+        "project manuals, technical drawings, schematics, photographs",
+        "the course's own existing assets (module_NN/assets/**)",
+        "the knowledge base's extracted figure artefacts, where a figure is genuinely needed"
+      ],
+      "search_terms_rule": "Search by MORE than the words in the request. Expand to: the equipment name, the manufacturer, alternate and older terminology, the system name, the document title, likely figure captions, and the abbreviation. A single failed grep for the requester's phrasing is not a search.",
+      "term_expansion_examples": [
+        "one word -> its plural, its hyphenated and unhyphenated forms, its abbreviation",
+        "a component -> the system it belongs to, and the document that would document that system",
+        "a modern term -> the term a manual from twenty years earlier would have used",
+        "British and American spellings both"
+      ],
+      "wins_because": "a project asset is already cleared, already correct for this operator's equipment, and needs no rights decision"
+    },
+    {
+      "level": 2,
+      "name": "FACTORY",
+      "search": ["${CLAUDE_PLUGIN_ROOT}/resources/", "the approved reusable visual library"],
+      "reuse_test": "Reuse only if it is BOTH technically correct for this subject and pedagogically right for this learning need. A near-miss reused to save time teaches the near-miss.",
+      "wins_because": "already reviewed, already licence-clean, already tablet-tested"
+    },
+    {
+      "level": 3,
+      "name": "INTERNET",
+      "gate": "only after 1 and 2 have actually been searched and the search recorded",
+      "authority_ranking": [
+        {"rank": 1, "source": "the manufacturer of the actual equipment"},
+        {"rank": 2, "source": "an official organisation or regulator"},
+        {"rank": 3, "source": "the original manual or standard"},
+        {"rank": 4, "source": "a recognised maritime or technical organisation"},
+        {"rank": 5, "source": "another credible technical source (a university, a national laboratory, a technical museum)"},
+        {"rank": 6, "source": "an open media repository with per-file licence and author metadata"}
+      ],
+      "not_authority": [
+        "SEO content farms and listicles",
+        "Pinterest-style aggregators and image scrapers",
+        "stock-photo preview thumbnails",
+        "personal blogs without a named technical author",
+        "AI-generated image sites",
+        "any page that does not name where the image itself came from"
+      ],
+      "record_per_candidate": [
+        "source organisation",
+        "url_or_origin",
+        "rights_state",
+        "technical_relevance",
+        "intended_use",
+        "modification_permitted",
+        "attribution_required"
+      ],
+      "offline_law": "A legally usable internet asset is DOWNLOADED and packaged locally. The tablet has no network at class time and the app returns 403 to every host but the classroom backend. A remote image reference is a broken image on a tablet, not a slow one."
+    },
+    {
+      "level": 4,
+      "name": "CREATE",
+      "gate": "only when no suitable asset exists at 1-3",
+      "choose_by_teaching_need": {
+        "svg": "technical diagrams, systems, piping, valves, tanks, component relationships - anything with topology, labels or state",
+        "html_css_js": "state-based process explanations and controlled interactive behaviour",
+        "canvas": "only where element count or per-frame maths genuinely defeats SVG - and accept that it is invisible to every static check here",
+        "programmatic": "where precision or repeatability matters - generate the geometry from a data structure, not by hand",
+        "generated_illustration": "only when a realistic or illustrative SCENE is genuinely the right educational medium"
+      },
+      "hard_rule": "Do NOT use generated imagery in place of a structured technical schematic. A diagram that must be accurate is authored, not sampled."
+    }
+  ],
+
+  "rights_states": {
+    "CLEARED": "licence identified, permits this use, attribution requirement recorded and satisfied on the page",
+    "PROJECT_OWNED": "supplied by the operator from their own material - no external licence question",
+    "PUBLIC_DOMAIN": "verified public domain or CC0",
+    "ATTRIBUTION_REQUIRED": "usable, and the credit line must appear wherever the asset appears",
+    "RIGHTS_REVIEW_REQUIRED": "usage rights unclear, restricted, or a publisher figure that is not cleared for issue. BLOCKS shipping. Escalate to the owner; never resolve it by assumption.",
+    "REJECTED": "found and deliberately not used - record why, so the next search does not repeat it"
+  },
+  "rights_law": [
+    "Unclear rights are RIGHTS_REVIEW_REQUIRED, never a silent ship.",
+    "An uncleared publisher figure can block an entire course from being issued. That has already happened once in this system.",
+    "Acceptable for photographs: public domain, CC0, CC BY, CC BY-SA, or explicit permission. Not acceptable: NC, ND, 'free to use' with no named licence, stock previews, or anything scraped from a manufacturer site or a PDF without a rights decision.",
+    "Record the licence per file, beside the file, not in a central register that goes stale."
+  ],
+
+  "verification_law": {
+    "rule": "Open and look at every image before using it. Record that you looked, and when.",
+    "why": "A file named for one ship type turned out to show a completely different vessel. A caption is not evidence of content.",
+    "field": "visually_verified must read 'yes - <what was seen> <date>' or state plainly that it was not verified. Never write yes for a file nobody opened."
+  },
+
+  "honesty_rules": [
+    "Never contradict named equipment. If the course names a manufacturer, the image must show that manufacturer's kit or must not be captioned as it.",
+    "Caption a near-miss honestly. 'A product tanker, not a gas carrier' is a usable caption; silence is not.",
+    "Never present a generated illustration as a photograph.",
+    "Never present an interpolated value as a measured one."
+  ],
+
+  "provenance_files": {
+    "photographs": {"file": "_photo_meta.json", "schema": "source/schemas/_photo_meta.schema.json"},
+    "figures_and_drawings": {"file": "_figure_meta.json", "schema": "source/schemas/_figure_meta.schema.json"},
+    "rule": "one metadata file per asset folder, keyed by filename, sitting beside the files it describes"
+  },
+
+  "naming_and_format": {
+    "naming": "lower snake_case, subject first, no module number, no spaces",
+    "photographs": "JPEG, quality ~82, max 2200 px on the long edge",
+    "line_art_and_flat_colour": "PNG, or better, inline SVG",
+    "diagrams": "inline SVG wherever the diagram is authored",
+    "allowed_extensions": ["jpg", "jpeg", "png", "svg", "webp", "gif", "mp4", "webm"],
+    "why_extensions_matter": "the Android WebView serves a fixed MIME allowlist; anything outside it is served as application/octet-stream and will not render"
+  }
+}

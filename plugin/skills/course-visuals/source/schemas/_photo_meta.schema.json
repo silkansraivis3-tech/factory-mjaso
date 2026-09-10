@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "_photo_meta.json",
+  "description": "Provenance for real photographs. One file per asset folder, keyed by filename, sitting beside the images it describes. Validated by scripts/check_assets.py.",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": [
+      "source",
+      "rights_state",
+      "description",
+      "teaching_purpose",
+      "used_in",
+      "visually_verified"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "description": "organisation or repository the file came from"
+      },
+      "url_or_origin": {
+        "type": "string",
+        "description": "page URL, or the project path for a PROJECT_OWNED asset"
+      },
+      "author": {
+        "type": "string"
+      },
+      "licence": {
+        "type": "string",
+        "description": "e.g. CC BY-SA 4.0, CC0, public domain, written permission"
+      },
+      "licence_url": {
+        "type": "string"
+      },
+      "attribution_required": {
+        "type": "boolean"
+      },
+      "modification_permitted": {
+        "type": "boolean"
+      },
+      "rights_state": {
+        "enum": [
+          "CLEARED",
+          "PROJECT_OWNED",
+          "PUBLIC_DOMAIN",
+          "ATTRIBUTION_REQUIRED",
+          "RIGHTS_REVIEW_REQUIRED",
+          "REJECTED"
+        ]
+      },
+      "description": {
+        "type": "string",
+        "description": "what the photograph LITERALLY shows - not what it is used to teach"
+      },
+      "teaching_purpose": {
+        "type": "string",
+        "description": "the learning need it serves"
+      },
+      "used_in": {
+        "type": "string"
+      },
+      "date_original": {
+        "type": "string"
+      },
+      "downloaded": {
+        "type": "string"
+      },
+      "orig_size": {
+        "type": "string"
+      },
+      "stored_size": {
+        "type": "string"
+      },
+      "visually_verified": {
+        "type": "string",
+        "description": "'yes - <what was seen> <date>', or a plain statement that it was not verified. Never 'yes' for a file nobody opened."
+      },
+      "caption_caveat": {
+        "type": "string",
+        "description": "an honest near-miss note, e.g. 'a product tanker, not a gas carrier'"
+      }
+    }
+  }
+}

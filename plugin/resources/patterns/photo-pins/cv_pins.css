@@ -1,0 +1,98 @@
+/* ==========================================================================
+   cv_pins - annotation overlay for a photograph
+   Colours come from course-module-ui's token set. Nothing here hardcodes one.
+   ========================================================================== */
+
+.cv-photo {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-m, 13px);
+  background: var(--deep, #0A182E);
+}
+
+.cv-photo > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* the dot. 44px touch target, drawn smaller. */
+.cv-pin {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+
+.cv-pin::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  margin-left: 14px;
+  border-radius: 50%;
+  background: var(--blue, #2EB6F8);
+  box-shadow: 0 0 0 3px rgba(10, 24, 46, .55);
+  flex: 0 0 auto;
+}
+
+.cv-pin > span {
+  position: absolute;
+  left: 34px;
+  white-space: nowrap;
+  padding: 5px 10px;
+  border-radius: var(--r-s, 8px);
+  background: rgba(10, 24, 46, .88);
+  color: var(--txt-d, #F3F8FD);
+  font: 600 14px/1.2 var(--font, "Raleway", "Segoe UI", Arial, sans-serif);
+  pointer-events: none;
+}
+
+.cv-pin-flip > span {
+  left: auto;
+  right: 34px;
+}
+
+/* the pin is the answer on a photo screen: keep it visible on any ground */
+.cv-photo.is-light .cv-pin::before {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .7);
+}
+
+/* No hover dependency anywhere: the label is always shown.
+   Hover only lifts it, for a desktop reviewer. */
+@media (hover: hover) {
+  .cv-pin:hover > span { background: rgba(10, 24, 46, .96); }
+}
+
+/* Caption and credit sit outside the frame so a crop never eats them. */
+.cv-photo-cap {
+  margin-top: 8px;
+  color: var(--dim-d, #A2B7CF);
+  font: 500 13px/1.4 var(--font, "Raleway", "Segoe UI", Arial, sans-serif);
+}
+
+.cv-photo-cap .cv-credit {
+  color: var(--faint-d, #71879F);
+  font-size: 12px;
+}
+
+/* A drawing must say on its face that it is a drawing. */
+.cv-drawtag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--amber-wash-d, rgba(233, 165, 30, .14));
+  color: var(--amber, #E9A51E);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}

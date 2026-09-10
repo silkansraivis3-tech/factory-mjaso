@@ -1,0 +1,53 @@
+{
+  "_authority": "The measurable floor for a visual on a NOVIKONTAS tablet, and the named failure modes a human review must look for. scripts/check_visuals.py enforces the measurable half; review/GUIDE.md runs the half that needs eyes.",
+  "_written": "2026-09-10",
+  "_boundary": "course-module-ux owns the SCREEN floor (contrast >= 4.5, text >= 12.5 px, targets >= 44 px, fill, overflow). This file adds only what is specific to a VISUAL and is not already measured there. Where they overlap, course-module-ux wins and this file must not restate it.",
+
+  "measurable": {
+    "svg_label_min_px": {
+      "value": 12.5,
+      "measured_at": "the rendered size on 800x1280 portrait, not the viewBox units",
+      "why": "an SVG label authored at font-size 10 in a 1000-unit viewBox scaled into a 380 px column is 3.8 px on the tablet",
+      "how": "rendered_px = font_size_in_viewBox_units * (rendered_width / viewBox_width)"
+    },
+    "raster_min_long_edge_px": {
+      "value": 1200,
+      "why": "below this a photograph is visibly soft full-bleed on a tablet",
+      "note": "max 2200 on the long edge is the storage rule in asset-pipeline.json; this is the floor"
+    },
+    "interactive_target_min_px": 44,
+    "remote_assets_allowed": false,
+    "allowed_extensions": ["jpg", "jpeg", "png", "svg", "webp", "gif", "mp4", "webm"],
+    "requires_alt_or_arialabel": true,
+    "requires_reduced_motion_guard_when_infinite": true,
+    "max_ambient_effects_per_screen": 1
+  },
+
+  "human_review_questions": {
+    "_rule": "A visual does not pass because the HTML validates, the links work, the CSS fits and no JavaScript errors. The review must answer the question the checks cannot.",
+    "the_question": "DOES THIS VISUAL ACTUALLY TEACH? Name what the learner can do after it that they could not before.",
+    "checklist": [
+      {"id": "generic_ai_appearance", "ask": "Could this screen belong to any course on any subject? If the subject were swapped, would only the words change?"},
+      {"id": "unnecessary_cards", "ask": "Are these cards carrying a relationship, or are they a paragraph with borders?"},
+      {"id": "text_that_should_be_visual", "ask": "Is a spatial, sequential or causal relationship being described in a sentence instead of shown?"},
+      {"id": "visual_that_should_be_text", "ask": "Does the figure restate the sentence beside it without adding location, relationship or change?"},
+      {"id": "decorative_animation", "ask": "Remove the motion. Is anything lost? If not, remove it."},
+      {"id": "weak_hierarchy", "ask": "What does the eye land on first? Is that the thing that matters?"},
+      {"id": "misleading_relationships", "ask": "Does the drawing imply a connection, direction or order that the real system does not have?"},
+      {"id": "tiny_labels", "ask": "Read it at arm's length on the tablet, not zoomed on a desktop."},
+      {"id": "low_resolution", "ask": "Is the raster soft, upscaled, or a screenshot of a screenshot?"},
+      {"id": "awkward_crop", "ask": "Is the subject cut, off-centre, or competing with background clutter?"},
+      {"id": "tablet_readability", "ask": "Landscape AND portrait. Does anything overlap, clip or reflow into a stripe?"},
+      {"id": "repeated_mechanic", "ask": "Is this the same interaction the previous three screens used? Variety is a teaching decision, not decoration."},
+      {"id": "fake_complexity", "ask": "Does the figure look sophisticated while carrying two facts?"},
+      {"id": "technically_ambiguous", "ask": "Could a subject-matter expert read this two ways? Ambiguity in a technical figure is an error, not a style."}
+    ]
+  },
+
+  "verdicts": {
+    "PASS": "teaches something nameable, technically unambiguous, readable on the tablet, and motion (if any) is declared and earns its place",
+    "REWORK": "the learning need is right but the representation or the execution is not - say which, and which representation to try instead",
+    "REJECT": "the visual should not exist - the need is better served by plain text, or by an asset that does not exist yet",
+    "BLOCKED": "rights unresolved (RIGHTS_REVIEW_REQUIRED) or the asset is missing - not a quality verdict"
+  }
+}

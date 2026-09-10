@@ -1,0 +1,86 @@
+/* ==========================================================================
+   cv_steps - the stepped process reveal
+   Tokens come from course-module-ui. Every control is a 44px target.
+   ========================================================================== */
+
+.cv-steps { margin: 0; }
+
+.cv-steps svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The reveal itself. Short, because the CHANGE is the content and a long
+   fade delays reading it. */
+.cv-steps svg [data-step] {
+  transition: opacity .45s ease;
+}
+
+.cv-steps-cap {
+  min-height: 3.2em;                 /* reserve, so captions do not jump the layout */
+  margin: 10px 0 8px;
+  color: var(--txt-d, #F3F8FD);
+  font: 500 16px/1.45 var(--font, "Raleway", "Segoe UI", Arial, sans-serif);
+}
+
+.cv-steps-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cv-steps-bar button {
+  min-width: 88px;
+  min-height: 44px;                  /* the tablet floor */
+  padding: 0 16px;
+  border: 1px solid var(--line-d, rgba(46, 182, 248, .18));
+  border-radius: var(--r-s, 8px);
+  background: var(--deep-2, #0C1E3A);
+  color: var(--txt-d, #F3F8FD);
+  font: 600 15px/1 var(--font, "Raleway", "Segoe UI", Arial, sans-serif);
+  cursor: pointer;
+}
+
+.cv-steps-bar button:active { transform: translateY(1px); }
+
+.cv-steps-dots {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 4px;
+}
+
+.cv-steps-dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--faint-d, #71879F);
+  opacity: .4;
+}
+
+.cv-steps-dots i.on {
+  background: var(--blue, #2EB6F8);
+  opacity: 1;
+}
+
+.cv-steps-n {
+  margin-left: auto;
+  color: var(--dim-d, #A2B7CF);
+  font: 600 14px/1 var(--font, "Raleway", "Segoe UI", Arial, sans-serif);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ambient motion, if a figure carries any, is declared and capped at one
+   per screen. It stops entirely under reduced motion; the teaching reveal
+   stays, because it is content - it simply does not autoplay. */
+@media (prefers-reduced-motion: reduce) {
+  .cv-steps svg [data-step] { transition: none; }
+  .cv-steps [data-motion="ambient"] { animation: none !important; }
+}
+
+/* Portrait: the caption leads, controls wrap under it. */
+@media (max-width: 720px) {
+  .cv-steps-cap { font-size: 15px; }
+  .cv-steps-n { margin-left: 0; width: 100%; }
+}
