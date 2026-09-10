@@ -1,6 +1,6 @@
 # NOVIKONTAS Course Factory — read me first
 
-**Phase 2 complete: the plugin exists and the five proven skills are migrated. Not yet installed.**
+**Phase 2B complete: the plugin is published, installed and verified from GitHub.**
 
 This repository is the Course Factory — a Claude Code plugin that turns an approved training
 programme, a set of source documents and a sentence from a colleague into a finished course running
@@ -23,10 +23,14 @@ byte-identical, the other two additively extended for decision D-3 and nothing e
 /plugin install course-factory@novikontas-course-factory
 ```
 
-**Not yet verified** — the Claude Code CLI is not installable on the machine Phase 2 ran on, so the
-install flow has never been executed. The acceptance checklist is in
-[`docs/PHASE2_MIGRATION_REPORT.md`](docs/PHASE2_MIGRATION_REPORT.md) §7, and running it is the first
-job of Phase 3.
+**Verified 2026-09-10** on Claude Code CLI **2.1.267** — marketplace added from GitHub, plugin
+installed at **2.0.0**, all five skills enumerated, scripts and resources working from the installed
+cache, and the superseded personal copies removed. Full results in
+[`docs/PHASE2_MIGRATION_REPORT.md`](docs/PHASE2_MIGRATION_REPORT.md) §9.
+
+One known warning: `claude plugin validate --strict` fails on a single item — the plugin-root
+`CLAUDE.md`, which Claude Code does not load (finding **F-1**). Non-strict validation passes. It is
+a Phase 3 decision and was deliberately left alone.
 
 ---
 
@@ -88,13 +92,9 @@ Android application. This repository is the only write target.
 
 ## Recommended next phase
 
-**Verify the installation**, in an interactive `claude` terminal, using the checklist in
-`docs/PHASE2_MIGRATION_REPORT.md` §7. Decision **D-1** makes `factory-mjaso` authoritative only once
-migration parity *and* installation both pass — parity is proven, installation is not. Until then
-the old `course-factory` repository stays as it is: read-only, not archived, not modified.
-
-Then build `course-visuals`. It is the largest genuine gap, it is the stated reason the factory
+**Build `course-visuals`.** It is the largest genuine gap, it is the stated reason the factory
 exists, and it is the first owner for laws **L12** and **L13**, which currently have none.
 
-**D-1** and **D-3** are resolved. **D-2, D-4, D-5 and D-6** in `COURSE_FACTORY_BLUEPRINT.md` §9 are
-still open.
+**D-1 is verified** — `factory-mjaso` is the authoritative Course Factory. The old `course-factory`
+repository stays as it is: read-only, not archived, not modified. **D-3** is resolved.
+**D-2, D-4, D-5 and D-6** in `COURSE_FACTORY_BLUEPRINT.md` §9 are still open.

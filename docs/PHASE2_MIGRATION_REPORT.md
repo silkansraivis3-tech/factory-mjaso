@@ -126,18 +126,21 @@ No organisation-skill content was duplicated.
 
 ## 5 · Validation
 
-### 5.1 What could not be run, and why
+### 5.1 What could not be run at the time, and why
 
-**`claude plugin validate --strict` was not run.** The Claude Code CLI is not installed on this
-machine: it is not on `PATH` for either shell, and the only `claude.exe` present
+> **Superseded by Phase 2B (§9).** The Claude Code CLI was installed later the same day and
+> everything below was then executed for real. Kept as the record of what was and was not proven
+> at the time of the migration commit.
+
+**`claude plugin validate --strict` was not run.** The Claude Code CLI was not installed on this
+machine: it was not on `PATH` for either shell, and the only `claude.exe` present
 (`%LOCALAPPDATA%\AnthropicClaude\claude.exe`, version 1.49585.0) is the desktop application, which
 does not implement the `plugin` subcommands — invoking `plugin validate --help` produced no output
 and no exit code.
 
-**Marketplace installation was not performed.** `ListPlugins` returns empty, `~/.claude/plugins/`
-does not exist, and there is no `settings.json` — this machine has never installed a Claude Code
-plugin. The documented flow (`/plugin marketplace add`) needs an interactive session, which this is
-not. **Installation is therefore unverified and is the first thing to confirm in Phase 3.**
+**Marketplace installation was not performed.** `ListPlugins` returned empty, `~/.claude/plugins/`
+did not exist, and there was no `settings.json` — the machine had never installed a Claude Code
+plugin.
 
 Nothing was faked. No Claude configuration file was edited to simulate an install.
 
@@ -267,9 +270,10 @@ of confirming the switchover, and it is the owner's action, not the factory's.
 
 ---
 
-## 7 · Installation — the exact flow, for the owner to run
+## 7 · Installation — the exact flow
 
-Not yet executed (§5.1). In an interactive `claude` terminal:
+**Executed and passed in Phase 2B — see §9 for the results.** The flow, for reference and for a
+colleague's machine:
 
 ```bash
 claude plugin validate <path-to>/factory-mjaso/plugin --strict
@@ -286,16 +290,14 @@ Then, from the published repository:
 /plugin install course-factory@novikontas-course-factory
 ```
 
-### Acceptance checklist
+### Acceptance checklist — all met in Phase 2B
 
-- [ ] `claude plugin validate --strict` prints `✔ Validation passed`
-- [ ] `/plugin` shows **course-factory 2.0.0** from **novikontas-course-factory**
-- [ ] all five skills appear namespaced: `/course-factory:course-factory`,
-      `:course-module-ux`, `:course-module-ui`, `:course-task-ux`, `:course-tablet-publisher`
-- [ ] the **Errors** tab in `/plugin` is empty
-- [ ] `python <plugin>/skills/course-factory/hours/scripts/check_hours.py --help` runs from the
-      installed cache path
-- [ ] the five personal copies in `~/.claude/skills/` are removed once the plugin is confirmed (F-3)
+- [x] `claude plugin validate` passes — **with one warning**, which `--strict` turns into a failure.
+      The warning is F-1 and nothing else. See §9.
+- [x] `claude plugin list` shows **course-factory 2.0.0** from **novikontas-course-factory**, enabled
+- [x] all five skills enumerated by `claude plugin details`
+- [x] scripts run from the installed cache path
+- [x] the five personal copies in `~/.claude/skills/` removed (F-3)
 
 **Versioning note.** Claude Code pins a git-sourced plugin to its `version` string. Every release
 must bump `plugin.json`'s `version` or installed copies will not update.
@@ -304,10 +306,140 @@ must bump `plugin.json`'s `version` or installed copies will not update.
 
 ## 8 · Blocking Phase 3
 
-1. **Installation is unverified** (§5.1). Confirm it before treating `factory-mjaso` as
-   authoritative — D-1 makes parity *and* installation the condition, and only parity is proven.
-2. **F-1** — decide how the global laws reach a session.
+1. ~~**Installation is unverified.**~~ **Closed by Phase 2B (§9).** D-1's condition — parity *and*
+   installation — is now met, so `factory-mjaso` is the authoritative Course Factory.
+2. **F-1** — decide how the global laws reach a session. Now also the **only** thing standing
+   between the plugin and a clean `--strict` validation.
 3. **L12 and L13 have no enforcing skill** until `course-visuals` exists.
 4. **D-2, D-4, D-5, D-6** from the blueprint remain open. D-5 (raise the remote-font check to
    `FAIL` for new courses) is a change to `course-tablet-publisher` and was deliberately **not**
    made here — Phase 2 was migration only.
+
+---
+
+## 9 · Phase 2B — installation and switchover, verified
+
+**2026-09-10.** Executed on the owner's Windows machine. Documentation-only changes; no plugin
+behaviour was altered.
+
+### 9.1 The Claude Code CLI
+
+Phase 2 could not install the plugin because no CLI existed. Installed with the current official
+Windows method from `code.claude.com/docs/en/setup` — the native PowerShell installer,
+`irm https://claude.ai/install.ps1 | iex`. No obsolete installer and no unofficial package.
+
+| | |
+|---|---|
+| Version | **2.1.267 (Claude Code)**, commit `a9e1808c8204`, `win32-x64` |
+| Location | `C:\Users\raiviss\.local\bin\claude.exe` |
+| Install method | native (auto-updates disabled by a pre-existing `DISABLE_AUTOUPDATER` env var) |
+| `claude doctor` | **No installation issues found** |
+
+This is a genuinely different binary from `%LOCALAPPDATA%\AnthropicClaude\claude.exe` (the desktop
+app, 1.49585.0), which is what Phase 2 correctly refused to treat as the CLI.
+
+### 9.2 Official validation
+
+```
+claude plugin validate .../factory-mjaso/plugin
+  ‼ 1 warning: root: CLAUDE.md at the plugin root is not loaded as project context.
+               To ship context with your plugin, use a skill (skills/<name>/SKILL.md) instead.
+  √ Validation passed with warnings          exit 0
+
+claude plugin validate .../factory-mjaso/plugin --strict
+  × Validation failed (--strict treats warnings as errors)     exit 1
+```
+
+**The official validator independently confirms F-1**, in almost the words Phase 2 predicted from
+the documentation. It is the **only** finding — there is no other warning and no error. Fixing it
+is a Phase 3 item and was deliberately left alone here.
+
+### 9.3 Marketplace and install — the colleague's path, not a manual copy
+
+```
+claude plugin marketplace add silkansraivis3-tech/factory-mjaso
+  SSH not configured, cloning via HTTPS
+  Clone complete, validating marketplace…
+  √ Successfully added marketplace: novikontas-course-factory (declared in user settings)
+
+claude plugin install course-factory@novikontas-course-factory
+  √ Successfully installed plugin: course-factory@novikontas-course-factory (scope: user)
+```
+
+Nothing was hand-copied into the plugin directory.
+
+```
+claude plugin list
+  > course-factory@novikontas-course-factory
+    Version: 2.0.0   Scope: user   Status: √ enabled
+```
+
+`claude plugin details course-factory` reports the component inventory:
+
+| | |
+|---|---|
+| Skills (5) | `course-factory`, `course-module-ui`, `course-module-ux`, `course-tablet-publisher`, `course-task-ux` |
+| Agents / Hooks / MCP / LSP | 0 / 0 / 0 / 0 — as intended for 2.0.0 |
+| Always-on token cost | **~1,202 tok** per session |
+| On-invoke cost | course-factory ~3.4k · course-task-ux ~6.2k · course-module-ux ~2.4k · course-tablet-publisher ~1.8k · course-module-ui ~1.6k |
+
+Installed to
+`~/.claude/plugins/cache/novikontas-course-factory/course-factory/2.0.0/` — **70 files, matching
+the repository exactly.**
+
+### 9.4 Smoke test, run from the installed cache
+
+Not from the working copy — from `~/.claude/plugins/cache/...`, which is what a colleague gets.
+
+| Test | Expected | Result |
+|---|---|---|
+| `build-order.json`, `delivery-contract.json`, `hours-rules.json` load | 16 steps, step 8 owner `course-module-ui` | **PASS** |
+| D-3 fallback present | `org/ORG_DEPENDENCIES.md` (125 lines) and `factory-notes.md` §0 | **PASS** |
+| `course-module-ui` resources | `tokens.json` loads, `gb_tokens.css` present | **PASS** |
+| All 12 entry-point scripts execute | import and parse args | **12/12 PASS** |
+| Cross-skill sibling resolution | `publish.py` → `.../2.0.0/skills/course-factory`, `tablet/GUIDE.md` reachable, `platform.json` loaded | **PASS** |
+| `check_hours.py`, exact plan | exit 0, *"minutes are 1:1 with the accredited programme"* | **PASS** |
+| `check_hours.py`, plan 40 min short | exit 1, *"module 1 is -40 min against its allocation"* | **INTENTIONAL FAIL, as designed** |
+| `verify_links.py`, clean tree | exit 0, *"every static link resolves in the merged asset root"* | **PASS** |
+| `verify_links.py`, planted dead link | exit 1, *"1 dead link target(s)"* | **INTENTIONAL FAIL, as designed** |
+| `audit_ui.py --strict` on the token template | exit 0, 0 defects | **PASS** |
+
+All fixtures were synthetic and were deleted. No course was created. No knowledge base was read.
+
+### 9.5 Legacy personal skills removed
+
+The five folders in `~/.claude/skills/` were checked before anything was touched:
+
+- the installer stamp `.course-tools-version.json` declared exactly those five, at v1.3.0, revision
+  `4dc5ff9`
+- the directory listing was an **exact match** to that list — no unrelated personal or organisation
+  skill was present
+- all 66 files were compared against source `4dc5ff9`: **zero local edits**, and no extra file
+
+Backed up in full to `Desktop/factory-work/_legacy_personal_skills_backup_2026-09-10/` (68 files,
+with a README explaining why restoring them is a bad idea), then removed. `~/.claude/skills/` is now
+empty, and the only copies of the five skills on the machine are inside the plugin cache. **F-3 is
+closed.**
+
+The organisation `novikontas-*` skills arrive through a different channel and were never in that
+directory, so nothing about them changed. D-3's conditional-fallback design still applies.
+
+### 9.6 Nothing production was modified
+
+Verified after the fact, not assumed: old `course-factory` repo `0` changes at `4dc5ff9`; Android
+project `0` changes at `24b35f0`; GAS BASIC course `0` files modified; `source_files` and the
+knowledge bases never opened.
+
+### 9.7 D-1 — switchover **VERIFIED**
+
+D-1 made `factory-mjaso` authoritative only once **migration parity** and **installation
+validation** both passed. Parity was proven in Phase 2 (§1); installation is proven here.
+
+**`factory-mjaso` is now the authoritative Course Factory.** The old `course-factory` repository
+remains untouched, not deleted and not archived, as instructed.
+
+One consequence worth stating: the old file-copy installer
+(`Desktop/course-factory-handover/install.ps1` and `FOR-YOUR-COLLEAGUE.md`) now installs a
+superseded 1.3.0 copy into a directory the plugin no longer uses. It should be retired or repointed
+at the marketplace before another colleague follows it — not done here, because Phase 2B was
+documentation-only outside the plugin system.

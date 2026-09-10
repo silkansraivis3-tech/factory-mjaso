@@ -2,9 +2,10 @@
 
 **The architecture to build.** Phase 1 · 2026-09-10.
 
-> **Phase 2 status (2026-09-10).** The container in §2 is **built**, and the five proven skills are
-> migrated at plugin version **2.0.0** (64 of 66 files byte-identical; two additively extended
-> for D-3). **D-1 and D-3 are resolved** (§9).
+> **Phase 2B status (2026-09-10).** The container in §2 is **built**, the five proven skills are
+> migrated at plugin version **2.0.0** (64 of 66 files byte-identical; two additively extended for
+> D-3), and the plugin is **installed and verified from the GitHub marketplace** on Claude Code CLI
+> 2.1.267. **D-1 is VERIFIED and D-3 is resolved** (§9).
 > Still to build: `course-visuals`, `course-evidence`, the three agents, the hooks and the
 > `resources/` inventory. See `PHASE2_MIGRATION_REPORT.md` for what was migrated, what was
 > validated, and what is blocking Phase 3.
@@ -366,7 +367,7 @@ The colleague never types a script name, never chooses an agent, and never learn
 
 | | Decision | Recommendation |
 |---|---|---|
-| **D-1** ✅ **RESOLVED 2026-09-10** | Does `factory-mjaso` **supersede** `course-factory`, or sit beside it? | **Supersede** — but `factory-mjaso` becomes authoritative only once migration parity **and** installation validation both pass. The old repository is a **read-only migration source**: not deleted, not archived, not modified. Provenance preserved in `docs/PHASE2_MIGRATION_REPORT.md` §1. **Parity is proven (66/66 byte-identical); installation is not yet verified**, so the switchover is not complete. |
+| **D-1** ✅ **VERIFIED 2026-09-10** | Does `factory-mjaso` **supersede** `course-factory`, or sit beside it? | **Supersede — and the switchover is complete.** Both conditions are met: migration parity (64/66 blobs identical, the rest the three deliberate D-3 changes) and installation validation (CLI 2.1.267, marketplace added from GitHub, plugin installed at 2.0.0, five skills enumerated, scripts working from the installed cache, legacy personal copies removed). See `docs/PHASE2_MIGRATION_REPORT.md` §9. The old repository stays a **read-only source**: not deleted, not archived, not modified. |
 | **D-2** | One plugin or several? | **One.** The seven skills share `build-order.json`, the token set and the platform description. Splitting them means versioning six things in lockstep. |
 | **D-3** ✅ **RESOLVED 2026-09-10** | The `novikontas-*` dependency. Four required build steps are owned by skills that are not in the plugin and reach this machine through a different channel. | **Do not copy the organisation skills into the plugin.** Use the org skill when installed; otherwise use a small documented fallback owned by the Course Factory; record the route in `factory-notes.md` §0 either way. Implemented in `plugin/skills/course-factory/org/ORG_DEPENDENCIES.md` — three blocking dependencies with one minimal fallback each, ten soft ones as pointer rows. The future organisation plugin is **not** created yet; it may later be published through the same marketplace. |
 | **D-4** | Where does a deck live, and must the tablet be able to open it? | Owner's call. Today the decks are in the desktop course tree only, the instructor terminal describes them, and the tablet cannot open them. If that is intentional, write it into `delivery-contract.json`. If not, it is a packaging change. |
@@ -386,8 +387,9 @@ The colleague never types a script name, never chooses an agent, and never learn
 2. ~~Write `CLAUDE.md` from §1 of `FACTORY_RULE_CLASSIFICATION.md`.~~ **Done** — with finding
    **F-1**: a plugin-root `CLAUDE.md` is not loaded by Claude Code, so how the laws reach a session
    is an open decision.
-3. **Verify the installation** (checklist in `PHASE2_MIGRATION_REPORT.md` §7). This closes D-1 and
-   is the condition for `factory-mjaso` becoming authoritative.
+3. ~~**Verify the installation.**~~ **Done 2026-09-10 (Phase 2B)** — CLI 2.1.267, GitHub marketplace
+   add, plugin install at 2.0.0, five skills enumerated, validators re-run from the installed cache,
+   legacy personal copies removed. **D-1 closed; `factory-mjaso` is authoritative.**
 4. Build `course-visuals` — the largest genuine gap, and the stated reason for the factory. It also
    gives laws **L12** and **L13** their first enforcing owner.
 5. Build `course-evidence` by generalising `gas-basic-kb-retrieval`.
