@@ -70,7 +70,7 @@ factory-mjaso/
   plugin/
     .claude-plugin/plugin.json             course-factory 2.0.0
     CLAUDE.md                              16 global laws, one line each
-    skills/                                the five migrated skills, byte-identical
+    skills/                                the five migrated skills (64/66 blobs identical)
       course-factory/org/ORG_DEPENDENCIES.md    NEW - the D-3 fallback
     resources/README.md                    what belongs here, and why it is empty in 2.0.0
 ```
