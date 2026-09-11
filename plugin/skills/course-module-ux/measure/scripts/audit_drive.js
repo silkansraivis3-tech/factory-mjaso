@@ -63,8 +63,13 @@
     dispatchResize: true,          /* re-run resize-bound per-slide layout */
 
     /* --- refuse-to-run guards --- */
-    minViewportWidth: 900,         /* CHANGE for a tablet/phone deck */
-    minViewportHeight: 400,
+    /* A DEGENERACY guard, not a size preference. A hidden or collapsed pane lays out
+       at 0x0 and every geometry number below becomes garbage - that is what this
+       catches. It is deliberately NOT set to a landscape minimum: 900 wide rejected
+       800x1280, a NOVIKONTAS tablet in portrait, which is a viewport the retrofit
+       guide tells the operator to measure at. */
+    minViewportWidth: 320,
+    minViewportHeight: 320,
 
     /* --- click guards: a deck that will not advance must not spin for ever --- */
     maxSeekClicks: 400,            /* clicks allowed to reach a target slide */
@@ -126,7 +131,9 @@
     var msg = "!!! AUDIT ABORTED — VIEWPORT TOO SMALL: " + w + "x" + h +
       " (minimum " + CONFIG.minViewportWidth + "x" + CONFIG.minViewportHeight +
       "). A hidden or collapsed browser pane lays out at 0x0 and EVERY " +
-      "geometry number becomes garbage. Front the tab, then re-run.";
+      "geometry number becomes garbage. This is a degeneracy guard, not a " +
+      "size preference - a real portrait tablet passes it. Front the tab, " +
+      "then re-run.";
     if (global.console) { console.error(msg); }
     return { ABORTED: msg, viewport: [w, h] };
   }

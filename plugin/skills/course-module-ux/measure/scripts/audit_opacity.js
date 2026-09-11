@@ -82,8 +82,10 @@
     startSettleMs: 400,
 
     /* --- refuse-to-run guards --- */
-    minViewportWidth: 900,         /* CHANGE for a tablet/phone deck */
-    minViewportHeight: 400,
+    /* A DEGENERACY guard, not a size preference - see audit_drive.js. 900 wide
+       rejected 800x1280, a NOVIKONTAS tablet in portrait. */
+    minViewportWidth: 320,
+    minViewportHeight: 320,
 
     /* --- measurement thresholds (same as audit_deck.js) --- */
     opacityFloor: 0.995,           /* at or above this, audit_deck.js owns it */

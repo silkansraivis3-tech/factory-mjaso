@@ -99,8 +99,13 @@
     dispatchResize: true,          /* re-run resize-bound per-slide layout */
 
     /* --- refuse-to-run guards --- */
-    minViewportWidth: 900,         /* CHANGE for a tablet/phone deck */
-    minViewportHeight: 400,
+    /* A DEGENERACY guard, not a size preference. A hidden or collapsed pane lays out
+       at 0x0 and every geometry number below becomes garbage - that is what this
+       catches. It is deliberately NOT set to a landscape minimum: 900 wide rejected
+       800x1280, a NOVIKONTAS tablet in portrait, which is a viewport the retrofit
+       guide tells the operator to measure at. */
+    minViewportWidth: 320,
+    minViewportHeight: 320,
 
     /* --- measurement thresholds --- */
     minFontPx: 12.5,
@@ -454,8 +459,8 @@
       " (minimum " + CONFIG.minViewportWidth + "x" + CONFIG.minViewportHeight +
       "). A hidden, collapsed or unfocused browser pane lays out at 0x0 and " +
       "EVERY geometry number becomes garbage. Front the tab / widen the pane, " +
-      "or lower CONFIG.minViewportWidth if this deck is genuinely narrow, " +
-      "then re-run.";
+      "then re-run. This is a degeneracy guard, not a size preference - " +
+      "a real portrait tablet passes it.";
     if (global.console) { console.error(msg); }
     return { ABORTED: msg, viewport: [w, h] };
   }
