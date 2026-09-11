@@ -1,18 +1,6 @@
-# OS / editor
-Thumbs.db
-.DS_Store
-*~
-
-# scratch and backups - never in this repository
-*.bak
-*.bak_*
-*.orig
-*.rej
+# Python bytecode. Running a validator or a test suite from inside the plugin
+# tree creates these; they are build output, they are platform- and
+# version-specific, and a plugin that ships them makes every installed copy
+# differ from the repo for no reason.
 __pycache__/
-.venv/
-
-# never bring course content or assets here
-/course/
-/knowledge_base/
-/source_files/
-/tablet_package/
+*.py[cod]
