@@ -43,6 +43,7 @@
   font-weight:700;color:var(--navy)}
 .q .num{color:var(--blue)}
 .q .stem{font-weight:500;color:var(--ink)}
+.stem{font-weight:500;color:var(--ink)}
 
 /* ---- the answer control -------------------------------------------------
    52 px, not 44: a task option is pressed under time pressure with a thumb. */
@@ -53,9 +54,31 @@
   color:var(--ink);cursor:pointer;text-align:left;font-family:var(--font)}
 .opt:active{transform:translateY(1px)}
 .opt:focus{outline:3px solid var(--blue);outline-offset:2px}
-.opt.ok{background:var(--good-wash-l);border-color:var(--good)}
-.opt.no{background:var(--warn-wash-l);border-color:var(--warn)}
+/* THE ANSWER STATES. A task has four, and all four must be visible from the back of a
+   room on a tablet lying flat.
+
+     sel            chosen, not yet judged
+     right / ok     correct
+     wrong / no     incorrect
+     dim            eliminated, still readable
+
+   `right`, `wrong`, `sel` and `on` are the names GAS BASIC's own task pages use and the
+   names the shipped engine sets; `ok` and `no` were what this file was extracted with
+   and are kept so nothing already wired to them breaks. A state the engine sets and no
+   sheet styles is invisible to every static check, because the class is added at the
+   moment the trainee taps - that is how a right answer came to look exactly like a wrong
+   one on a page whose every check was green. */
+.opt.sel{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue);
+  background:var(--blue-wash-l)}
+.opt.right,.opt.ok{background:var(--good-wash-l);border-color:var(--good);
+  box-shadow:inset 0 0 0 1px var(--good)}
+.opt.wrong,.opt.no{background:var(--warn-wash-l);border-color:var(--warn);
+  box-shadow:inset 0 0 0 1px var(--warn)}
 .opt.dim{opacity:.55}
+.opt.right::after,.opt.ok::after{content:"✓";margin-left:auto;font-weight:700;
+  color:var(--good)}
+.opt.wrong::after,.opt.no::after{content:"✕";margin-left:auto;font-weight:700;
+  color:var(--warn)}
 
 /* ---- why it was right or wrong: the feedback that teaches ---------------- */
 .why{display:none;border-radius:var(--r-m);padding:11px 14px;margin:0 0 18px;
@@ -63,6 +86,29 @@
   background:var(--blue-wash-l);border:1px solid var(--blue);color:var(--ink)}
 .why.on{display:block}
 .why b{color:var(--navy)}
+/* the same panel, coloured by what it is explaining */
+.why.good{background:var(--good-wash-l);border-color:var(--good)}
+.why.good b{color:var(--good-d)}
+.why.bad{background:var(--warn-wash-l);border-color:var(--warn)}
+.why.bad b{color:var(--warn-d)}
+
+/* ---- committing an answer ------------------------------------------------
+   `.sub` is the CONFIRM button, not a subtitle: full width, 56px, pressed with a
+   thumb to commit. It is disabled until something is chosen. */
+.sub{display:block;width:100%;min-height:56px;margin:6px 0 0;
+  font:700 18px/1.2 var(--font);border-radius:var(--r-m);
+  border:2px solid var(--navy);background:var(--navy);color:var(--white);cursor:pointer}
+.sub:active{transform:translateY(1px)}
+.sub:focus{outline:3px solid var(--blue);outline-offset:2px}
+.sub[disabled]{opacity:.4;cursor:default}
+.opt[disabled]{cursor:default;opacity:.85}
+
+/* ---- the second half of a predict-then-check task ------------------------
+   HIDDEN until the engine reveals it. This is not decoration: a visible .part2 puts
+   the answer on the screen before the trainee has predicted anything, which is the
+   only thing the task is for. */
+.part2{display:none}
+.part2.on{display:block}
 
 /* ---- figures inside a task ---------------------------------------------- */
 .sv,.drawn{display:block;width:100%;max-width:520px;height:auto;margin:0 auto 10px;

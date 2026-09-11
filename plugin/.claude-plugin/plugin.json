@@ -1,7 +1,7 @@
 {
   "name": "course-factory",
   "displayName": "NOVIKONTAS Course Factory",
-  "version": "2.5.2",
+  "version": "2.5.3",
   "description": "Build an accredited instructor-led course on the NOVIKONTAS Android tablets, or UPGRADE an existing one. New build: programme, hours, ILOs, screens, tasks, handout, assessment, both terminals. Retrofit: the course CONTENT is locked and the existing DELIVERY implementation is not - screens, layout, visuals, animation and interaction are rebuilt to the canonical product. Owns the accredited-hours law in two tracks, ILO immutability, the content-lock/delivery-freedom law, COURSE_LANGUAGE, the canonical presentation framework - shell, screen-composition vocabulary and document page - what representation actually teaches a concept, the instructional-animation law, the four-level asset pipeline, trainee task screens, and a verification suite that tests the render and whether a screen is composed rather than merely fitting.",
   "author": {
     "name": "Raivis Silkans",

@@ -51,7 +51,7 @@ import tempfile
 FLOOR_TEXT_PX = 12.5
 FLOOR_TAP_PX = 44.0
 
-CHECKS = ("syntax", "deadmarkup", "numbers", "floor", "kbd")
+CHECKS = ("syntax", "deadmarkup", "numbers", "floor", "kbd", "states")
 
 # Identifiers that read as "a number a RECORD SHEET might ask for".
 #
@@ -558,12 +558,64 @@ def check_kbd(html_files, _ctx):
     return findings, None
 
 
+
+def check_states(html_files, ctx):
+    """A class the ENGINE adds at run time that no stylesheet styles.
+
+    The states a task page actually has - chosen, right, wrong, explanation revealed -
+    are set by script at the moment the trainee taps. They never appear in the HTML, so
+    every markup-reading check is blind to them. A sheet that styles `.ok` under an
+    engine that sets `right` gives the room no feedback at all, and reports green: that
+    is exactly what the ETPA4 pilot shipped, past syntax, deadmarkup, numbers, floor and
+    kbd.
+
+    Structural names a script also sets (`opt`, `q`, `wrap`) are checked the same way -
+    if nothing styles them either, the page is not on a stylesheet at all, which is
+    worth knowing.
+    """
+    findings = []
+    sheets = [read(p) for p in ctx["css"]]
+    for page in html_files:
+        html = read(page)
+        for m in re.finditer(r"<style\b[^>]*>(.*?)</style\s*>", html, re.I | re.S):
+            sheets.append(m.group(1))
+    css = strip_comments_css(" ".join(sheets))
+
+    units = [(p, strip_comments_js(read(p))) for p in ctx["js"]]
+    for page in html_files:
+        for _off, code in inline_scripts(read(page)):
+            units.append((page, strip_comments_js(code)))
+
+    seen = {}
+    for path, code in units:
+        for m in re.finditer(
+                r"""classList\s*\.\s*(?:add|toggle)\s*\(\s*["']([^"'\s]+)["']""", code):
+            seen.setdefault(m.group(1), (path, m.start()))
+        for m in re.finditer(r"""className\s*=\s*["']([^"']+)["']""", code):
+            for one in m.group(1).split():
+                seen.setdefault(one, (path, m.start()))
+
+    for name in sorted(seen):
+        if re.search(r"\." + re.escape(name) + r"(?![\w-])", css):
+            continue
+        path, pos = seen[name]
+        body = strip_comments_js(read(path))
+        findings.append((path, line_of(body, pos),
+                         'the engine sets class "%s" at run time and no stylesheet '
+                         'styles it. A class added the moment a trainee taps never '
+                         'appears in the markup, so every check that reads markup is '
+                         'blind to it - this is how a right answer comes to look '
+                         'exactly like a wrong one on a page that reports green.' % name))
+    return findings, None
+
+
 RUNNERS = {
     "syntax": check_syntax,
     "deadmarkup": check_deadmarkup,
     "numbers": check_numbers,
     "floor": check_floor,
     "kbd": check_kbd,
+    "states": check_states,
 }
 
 

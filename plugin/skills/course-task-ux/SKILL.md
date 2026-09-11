@@ -407,7 +407,20 @@ Dead markup accumulates and then misleads the next person into preserving it.
   pages carried `<span id="gb-home">` / `<span id="gb-deck">` that nothing read;
 - a **class styled in stylesheets but present in no markup in scope is deleted from those
   stylesheets**. One class was styled in seven stylesheets and existed in exactly one page's
-  markup — dead in six.
+  markup — dead in six;
+- and the mirror of that, `--only states`: **a class the ENGINE adds at run time that no
+  stylesheet styles**. The states that decide whether a task teaches anything — chosen,
+  right, wrong, explanation revealed — are set the instant a trainee taps, so they appear in
+  no markup and every other check here is blind to them. The ETPA4 pilot shipped a page whose
+  sheet styled `.ok`/`.no` under an engine that sets `right`/`wrong`: a right answer looked
+  exactly like a wrong one, and syntax, deadmarkup, numbers, floor and kbd were all green.
+
+  The answer states are `sel`, `right`/`ok`, `wrong`/`no`, `dim`, with `why.good`/`why.bad`
+  for the explanation and `.sub` for the confirm button — `assets/gb_task.css` carries them
+  all. Read the engine before styling a name: `.sub` reads like a subtitle and is a
+  full-width 56px button, and `.part2` reads like a divider and is `display:none` until the
+  engine reveals it. Styling that one as visible puts the answer on screen before the
+  trainee has predicted anything.
 
 And the direction that matters more:
 
