@@ -155,7 +155,7 @@
                      viewport: [window.innerWidth || 0, window.innerHeight || 0] });
   }
 
-  var KINDS = ["low", "small", "spill", "tap", "svgSmall", "collide"];
+  var KINDS = ["low", "small", "spill", "tap", "svgSmall", "collide", "scroll"];
 
   function run(from, to) {
     from = from || 0;
@@ -195,7 +195,7 @@
       var hi = Math.min(to === undefined ? slides.length : to, slides.length);
       var rows = [], coll = [], stalled = [];
       var totals = { low: 0, small: 0, spill: 0, tap: 0,
-                     svgSmall: 0, collide: 0, xcollide: 0 };
+                     svgSmall: 0, collide: 0, xcollide: 0, scroll: 0 };
 
       function activeIdx() {
         for (var i = 0; i < slides.length; i++) {
@@ -280,6 +280,7 @@
                      spill: r.spill.slice(0, CONFIG.maxExamples - 1),
                      tap: r.tap.slice(0, CONFIG.maxTapExamples),
                      svgSmall: r.svgSmall.slice(0, CONFIG.maxExamples - 1),
+                     scroll: (r.scroll || []).slice(0, CONFIG.maxExamples - 1),
                      collide: r.collide.slice(0, CONFIG.maxExamples - 1) };
           }),
           collisions: coll

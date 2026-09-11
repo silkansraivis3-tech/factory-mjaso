@@ -129,6 +129,76 @@ def carve(path, findings):
 # checks
 # --------------------------------------------------------------------------
 
+BLOCK_TAGS = ("div", "section", "table", "ul", "ol", "figure", "svg")
+
+
+def check_balance(path, findings):
+    """Every block element a screen opens, it closes.
+
+    A browser repairs an unmatched closing tag without a word, which is why this is
+    invisible to every probe that measures the RENDER: the deck looks right, so the
+    probes report a rendering that happens to be right and a file that is not. Two
+    scripted edits to one pilot left 33 orphaned </div> and an unclosed .slide-body
+    across ten screens, and the whole suite stayed green.
+
+    Counting, not parsing. It will not catch crossed tags; it catches every unmatched
+    one, and unmatched is the shape a scripted edit produces.
+    """
+    try:
+        with io.open(path, encoding="utf-8", errors="replace") as fh:
+            src = fh.read()
+    except Exception as exc:                                  # noqa: BLE001
+        sys.stderr.write("cannot read %s: %s\n" % (path, exc))
+        return 1
+
+    # comments and <script>/<style> bodies are not markup for this purpose
+    clean = re.sub(r"<!--.*?-->", " ", src, flags=re.S)
+    clean = re.sub(r"<script\b.*?</script\s*>", " ", clean, flags=re.S | re.I)
+    clean = re.sub(r"<style\b.*?</style\s*>", " ", clean, flags=re.S | re.I)
+
+    bad = 0
+    for tag in BLOCK_TAGS:
+        opens = len(re.findall(r"<%s\b(?![^>]*/>)" % tag, clean, re.I))
+        closes = len(re.findall(r"</%s\s*>" % tag, clean, re.I))
+        if opens != closes:
+            findings.append(
+                "<%s> opened %d time(s) and closed %d — the markup is unbalanced by %d. "
+                "A browser repairs this silently, so the deck renders and every probe "
+                "that measures the RENDER reports green; the next tool to PARSE the "
+                "file will not be so forgiving."
+                % (tag, opens, closes, abs(opens - closes))
+            )
+            bad = 1
+
+    # and per screen, so the report names where to look
+    for m in re.finditer(r"<section\b[^>]*class=\"[^\"]*\bslide\b[^\"]*\"[^>]*>",
+                         clean, re.I):
+        start = m.start()
+        depth, end = 0, None
+        for t in re.finditer(r"<section\b|</section\s*>", clean[start:], re.I):
+            if t.group(0).startswith("</"):
+                depth -= 1
+                if depth == 0:
+                    end = start + t.end()
+                    break
+            else:
+                depth += 1
+        if end is None:
+            continue
+        sec = clean[start:end]
+        title = re.search(r'data-title="([^"]*)"', sec)
+        o = len(re.findall(r"<div\b(?![^>]*/>)", sec, re.I))
+        c = len(re.findall(r"</div\s*>", sec, re.I))
+        if o != c:
+            findings.append(
+                "screen \u201c%s\u201d: %d <div> opened, %d closed"
+                % (title.group(1) if title else "?", o, c)
+            )
+            bad = 1
+
+    return bad
+
+
 def check_slide_links(path, findings):
     """Zero <a href> inside any slide.
 
@@ -388,6 +458,7 @@ def selftest():
         return 2
     ok = True
     for name, fn, expect in (
+        ("balance", lambda f: check_balance(fixture, f), 1),
         ("slide-links", lambda f: check_slide_links(fixture, f), 2),
         ("check-screen", lambda f: check_check_screen(fixture, f, floor), 2),
         ("mins", lambda f: check_mins(fixture, f), 1),
@@ -412,6 +483,7 @@ def main(argv=None):
     p.add_argument(
         "check",
         choices=[
+            "balance",
             "slide-links",
             "check-screen",
             "mins",
@@ -456,7 +528,9 @@ def main(argv=None):
                     findings[i] = "%s: %s" % (tag, findings[i])
         return out
 
-    if args.check == "slide-links":
+    if args.check == "balance":
+        rc = over(lambda t: check_balance(t, findings), "balance")
+    elif args.check == "slide-links":
         rc = over(lambda t: check_slide_links(t, findings), "slide-links")
     elif args.check == "check-screen":
         rc = over(lambda t: check_check_screen(t, findings, floor), "check-screen")
@@ -468,6 +542,7 @@ def main(argv=None):
         rc = over(lambda t: check_links(t, findings), "links")
     else:
         for fn in (
+            lambda t: check_balance(t, findings),
             lambda t: check_slide_links(t, findings),
             lambda t: check_check_screen(t, findings, floor),
             lambda t: check_paper([t], findings),

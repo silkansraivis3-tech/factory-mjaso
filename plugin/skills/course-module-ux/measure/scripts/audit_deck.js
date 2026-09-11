@@ -9,6 +9,8 @@
        spill     elements overhanging the slide box
        tap       controls below the minimum touch-target px
        svgSmall  SVG <text> whose EFFECTIVE px (declared x render scale) is small
+       scroll    a slide body taller than the screen - the deck has no scrollbar,
+                 so whatever is below the fold is simply never delivered
        collide   absolutely-positioned labels printing over each other
      plus per-slide weighted-median font px, content fill %, in-slide link
      count, and whether the document scrolls horizontally.
@@ -104,6 +106,9 @@
        catches. It is deliberately NOT set to a landscape minimum: 900 wide rejected
        800x1280, a NOVIKONTAS tablet in portrait, which is a viewport the retrofit
        guide tells the operator to measure at. */
+    /* a couple of px of overflow is sub-pixel rounding, not lost content */
+    scrollTolPx: 8,
+
     minViewportWidth: 320,
     minViewportHeight: 320,
 
@@ -315,7 +320,7 @@
   function auditSlide(s, n) {
     var ext = rootExtent(s);
     var out = { slide: n, low: [], small: [], spill: [], tap: [],
-                svgSmall: [], collide: [] };
+                svgSmall: [], collide: [], scroll: [] };
     var sizes = [], chars = 0;
 
     qa(s, "*").forEach(function (el) {
@@ -428,11 +433,42 @@
       if (kb && kb.bottom > bot) { bot = kb.bottom; }
     });
     out.fillPct = bext.h ? Math.round(100 * bot / bext.h) : null;
+
+    /* A SCROLLING slide. The deck is Start, Next, Next - there is no scrollbar in an
+       instructor's hand and no gesture for one in the run script, so whatever is below
+       the fold is not delivered. It is also always the BOTTOM of the screen, which is
+       where the takeaway, the source line and "pabeigts, kad" live.
+
+       Found the hard way: a figure built without its --fig-max overflowed its screen by
+       130px, putting its controls and its teaching note out of reach, and this file
+       reported 0 low, 0 small, 0 spill, 0 tap, 0 collide. `spill` catches an element
+       painted outside its box; this catches the box being taller than the screen. */
+    [body].concat(kids).forEach(function (el) {
+      if (!el) { return; }
+      var over = el.scrollHeight - el.clientHeight;
+      if (over > CONFIG.scrollTolPx) {
+        /* A DESCENDANT that declares itself a scroll box - the .scroll wrapper a wide
+           reference table sits in - is a design decision and is left alone. The slide
+           BODY is not: the shell gives it overflow:auto so a stray pixel cannot break
+           the layout, which means the body silently absorbs overflow instead of showing
+           it. Exempting it on the same rule would make this check unable to fire at all,
+           which is how it was very nearly shipped. */
+        if (el !== body) {
+          var st = getComputedStyle(el);
+          if (/(auto|scroll)/.test(st.overflowY + st.overflow)) { return; }
+        }
+        out.scroll.push({ el: el.tagName.toLowerCase() +
+                              (el.className && el.className.baseVal === undefined &&
+                               el.className ? "." + String(el.className).split(" ")[0] : ""),
+                          overflowPx: over,
+                          clientPx: el.clientHeight });
+      }
+    });
     return out;
   }
 
   /* ------------------------------- the sweep ------------------------------ */
-  var KINDS = ["low", "small", "spill", "tap", "svgSmall", "collide"];
+  var KINDS = ["low", "small", "spill", "tap", "svgSmall", "collide", "scroll"];
 
   function spec() {
     return {
@@ -489,7 +525,8 @@
   }
 
   function report(rows, slides, from, to) {
-    var totals = { low: 0, small: 0, spill: 0, tap: 0, svgSmall: 0, collide: 0 };
+    var totals = { low: 0, small: 0, spill: 0, tap: 0, svgSmall: 0, collide: 0,
+                   scroll: 0 };
     rows.forEach(function (r) {
       KINDS.forEach(function (k) { totals[k] += r[k].length; });
     });
@@ -548,6 +585,7 @@
                  spill: r.spill.slice(0, CONFIG.maxExamples),
                  tap: r.tap.slice(0, CONFIG.maxTapExamples),
                  svgSmall: r.svgSmall.slice(0, CONFIG.maxExamples),
+                 scroll: r.scroll.slice(0, CONFIG.maxExamples),
                  collide: r.collide.slice(0, CONFIG.maxExamples) };
       })
     };
