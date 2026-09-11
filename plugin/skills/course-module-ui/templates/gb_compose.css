@@ -219,6 +219,14 @@
    ========================================================================== */
 .slide-body.activity{flex:1;display:flex;flex-direction:column;
   align-items:center;justify-content:center;text-align:center}
+/* The eyebrow stays LEFT, unlike the golden deck's, and that is a decision
+   rather than an oversight. Centring it was tried: `.slide-kind` is
+   position:absolute and full width, so the centred label lands directly above
+   the centred `.act-code` and the driven sweep measured their painted lines
+   overlapping by 15 px on ten screens. The golden gets away with it because
+   its activity body starts lower. A left eyebrow also matches every other
+   screen in the deck, and internal consistency is worth more here than this
+   one detail of fidelity. */
 .act-code{margin:0;font-family:var(--mono);font-size:clamp(38px,9vmin,110px);font-weight:700;
   color:var(--amber);letter-spacing:.06em;line-height:1}
 .act-title{margin:2.4vmin 0 0;font-size:clamp(20px,3.6vmin,42px);font-weight:700;color:var(--white)}
