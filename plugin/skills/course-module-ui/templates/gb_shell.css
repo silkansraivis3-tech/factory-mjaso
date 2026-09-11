@@ -311,27 +311,38 @@ body:not(.dark-active) #counter{color:var(--dim-l)}
   text-transform:uppercase;letter-spacing:.12em;font-size:.78em}
 .slide.dark .takeaway .tk{color:var(--amber)}
 
-/* activity launch: the one treatment that must read the same in every course */
+/* ==========================================================================
+   ACTIVITY LAUNCH - the one treatment that must read the same in every course.
+
+   Taken from the golden deck, whose own stylesheet carries the note that
+   settled this:  ".act-now - the deck ANNOUNCES a task; it no longer opens
+   one."  GAS BASIC made this correction before we did; ETPB3 shipped 17
+   launch BUTTONS and nearly wrote them into this file.
+
+   The code is the loudest thing on the screen because it is what the room has
+   to type or find. The announcement is a quiet bordered line, not a button -
+   nothing here is clickable, and it must not look as though it is.
+   ========================================================================== */
 .act{background:var(--navy);color:var(--white);border-radius:var(--r-m);
-  padding:min(3vmin,28px);display:flex;flex-direction:column;gap:min(1.6vmin,14px)}
-.act .act-code{font:700 clamp(13px,1.7vmin,18px)/1 var(--mono);color:var(--blue);
-  letter-spacing:.18em}
-.act h3{margin:0;font-size:clamp(18px,2.9vmin,34px);font-weight:700;line-height:1.2}
-.act p{margin:0;font-size:clamp(13.5px,1.8vmin,20px);line-height:1.5;color:#CFE2F5}
-/* THE DECK ANNOUNCES A TASK. IT NEVER LAUNCHES ONE.
-   There is no link here, and adding one is not a styling decision.
-   The module is ONE page: an <a href> inside a slide navigates it away
-   mid-session and the instructor loses the deck, the progress, the cue and the
-   place. The golden deck carries 27 slides and zero links; its launch screens
-   say it in words - "Now a task. Open the tablets, task GAS101." The route to
-   the task lives on START_HERE and the landing, both outside the deck.
-   This block was briefly an `a.act-open` button copied from the pilot's own
-   markup. That was the pilot's deviation on its way to becoming the rule. */
-.act .act-now{align-self:flex-start;margin:0;padding:min(1.4vmin,12px) min(2.2vmin,20px);
-  border-radius:var(--r-s);background:var(--blue);color:var(--on-blue);
-  font:600 clamp(14px,1.85vmin,20px)/1.4 var(--font)}
-.act .act-now b{font-weight:700}
-.act .act-now code{font-family:var(--mono);font-weight:700;letter-spacing:.06em}
+  padding:min(4vmin,38px);display:flex;flex-direction:column;
+  gap:min(1.4vmin,12px);flex-grow:1;justify-content:center}
+.act .act-code{font-family:var(--mono);font-size:clamp(30px,7.4vmin,92px);
+  font-weight:700;color:var(--amber);letter-spacing:.06em;line-height:1}
+.act h3{margin:min(1.6vmin,14px) 0 0;font-size:clamp(20px,3.6vmin,42px);
+  font-weight:700;line-height:1.15;color:var(--white)}
+.act .act-sub{margin:min(1vmin,9px) 0 0;font-size:clamp(12.5px,1.55vmin,20px);
+  font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
+.act p{margin:min(1.4vmin,12px) 0 0;font-size:clamp(13px,2.05vmin,30.8px);
+  line-height:1.45;color:var(--dim-d);max-width:34em}
+
+/* the announcement. A left rule, not a button: there is nothing to press. */
+.act .act-now{margin:min(2.4vmin,22px) 0 0;border-left:3px solid var(--blue);
+  padding-left:min(1.8vmin,18px);font-size:clamp(12.5px,1.66vmin,22.8px);
+  line-height:1.45;color:var(--dim-d);max-width:34em}
+.act .act-now b{color:var(--white);font-weight:700}
+.act .act-now code{font-family:var(--mono);background:var(--amber-wash-d);
+  color:var(--amber);border:1px solid rgba(233,165,30,.45);border-radius:6px;
+  padding:0 .4em;font-size:max(12.5px,.94em);font-weight:700;white-space:nowrap}
 
 @media (prefers-reduced-motion: reduce){
   .slide{animation:none}

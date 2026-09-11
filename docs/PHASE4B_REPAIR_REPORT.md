@@ -155,6 +155,18 @@ both outside the deck. Recorded in `screen-kinds.json` on all four activity kind
 evidence; the first was a `check_visuals.py` warning triaged away as an architecture artefact, and
 it was right too.
 
+The golden's own stylesheet turned out to carry the note that settles it:
+
+```
+   .act-now - the deck ANNOUNCES a task; it no longer opens one.
+```
+
+GAS BASIC made this correction before we did. So the whole activity treatment in `gb_shell.css`
+was rebuilt from the reference rather than from the pilot: the code set large in amber because it
+is what the room has to find, a white title, and the announcement as a quiet **left rule** with the
+code in an amber chip — deliberately not a button, because nothing on the screen is pressable. The
+panel now grows to fill the body; median screen fill across the module went from 68 % to 90 %.
+
 ---
 
 ## 6 · Practical-first, measured as two tracks
@@ -195,7 +207,7 @@ kind and their own cards in `practicals.html`:
 | V6 | 40 | "reserve" | three named routes at the stand; nobody sits |
 
 Two screens carrying both a figure and a drill launch were split — one idea per screen, the way
-P1–P7 already worked. 34 → 36 screens, minutes unchanged.
+P1–P7 already worked. 34 → 37 screens, minutes unchanged.
 
 **Result, with the programme's 12/20 untouched:**
 
@@ -223,9 +235,13 @@ corresponding row in the instructor plan; if a row says "listens", the declarati
 | `audit_ui.py` | 0 defects (2 drift notes: alpha scrims that are not flat colours) |
 | `check_static.py all` | 0 findings |
 | `check_visuals.py` | 0 failures, 10 warnings (design review, not mechanics) |
-| `AuditDrive.run()` 1280 × 800 | **PASS** |
-| `AuditDrive.run()` 800 × 1280 | **PASS** |
+| `AuditDrive.run()` 1280 × 800 | **PASS** — 0 low, 0 small, 0 spill, 0 tap, 0 collide, 0 links inside slides |
+| `AuditDrive.run()` 800 × 1280 | **PASS**, no horizontal scroll |
 | `verify_figures.js` | 3/3 present, 0 console errors |
+
+37 screens, 1280 minutes. Three screens were split along the way — each had carried both a figure
+and a drill launch, which is two ideas on one screen and measured as a 231 px, an 88 px and a 34 px
+overflow. One idea per screen, the way P1–P7 already worked.
 
 A clean run is not a pass. It means nothing mechanical is wrong.
 
