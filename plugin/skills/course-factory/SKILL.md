@@ -1,17 +1,22 @@
 ---
 name: course-factory
 description: >
-  Use when someone asks for a WHOLE accredited course to be built, converted or signed off as
-  the GAS BASIC system: one-page HTML modules an instructor drives with Next, interactive
-  trainee tasks, a handout, a final assessment, and both Android tablet terminals. Owns the
-  build order, the accredited-hours law (minutes must match the approved programme exactly),
-  the ILO immutability rule, the 80/20-or-active-learning rule, and the contract for adding a
-  course to the two terminals without touching app code. Trigger on "make a new course",
-  "build course X like GAS BASIC", "add a course to the tablets", "how many hours does this
-  module get", "is this 1:1 with the programme", "course data pack", or a typed course brief.
-  Course-agnostic and delivery-target specific. NOT the deck's screen craft (course-module-ux),
-  NOT the module's visual layer (course-module-ui), NOT trainee task screens (course-task-ux),
-  NOT Word/pptx artefacts or intake (the novikontas-* family), and never what a course teaches.
+  Use for a WHOLE accredited course on the NOVIKONTAS tablets - building one from an approved
+  programme, or UPGRADING an existing one. Trigger on "make a new course", "build course X like
+  GAS BASIC", "add a course to the tablets", "how many hours does this module get", "is this 1:1
+  with the programme"; and equally on RETROFIT requests about material that already exists:
+  "redesign Module 1 using the Course Factory", "upgrade this existing module", "make my existing
+  module like GAS BASIC", "make these modules presentable", "make this module production-ready",
+  "improve the existing presentation / course UX", "modernise this existing course", "apply Course
+  Factory to this module", "make this module more visual and interactive", or the same intent in
+  Latvian or Russian. In retrofit the course CONTENT is locked and the existing DELIVERY
+  implementation is not - screens, layout, visuals, animation and interaction are rebuilt to the
+  canonical product, and the operator never has to name a skill, a validator or a folder. Owns
+  mode selection, the accredited-hours law, ILO immutability, the content-lock/delivery-freedom
+  law, COURSE_LANGUAGE, and the contract for adding a course to both terminals. NOT the deck's
+  screen craft (course-module-ux), NOT the visual layer (course-module-ui), NOT what representation
+  teaches a concept (course-visuals), NOT trainee task screens (course-task-ux), and never what a
+  course teaches.
 ---
 
 # Course factory — an accredited programme becomes two tablets
@@ -33,12 +38,26 @@ routes. It does not itself write screens, tasks, or content.
 | Mode | You are asked to | Read |
 |---|---|---|
 | **plan** | turn an accredited programme into a module set with hours that add up | `hours/GUIDE.md` |
+| **retrofit** | upgrade, redesign, modernise or "make presentable" material that **already exists** | `retrofit/GUIDE.md` |
+| **restyle** | make one **narrow** cosmetic change and nothing else | `retrofit/knowledge/routing.json` § restyle |
 | **ship** | put a built course onto the trainee and instructor terminals | `tablet/GUIDE.md` |
 | **audit** | check an existing course against the programme and the terminals | `coverage/GUIDE.md`, then both lanes' verify sections |
 
+`retrofit/knowledge/routing.json` is the authority on which mode a free-form request selects, and
+on telling **retrofit** apart from **restyle**. Match the operator's *intent*, never a phrase — a
+colleague in Cowork types "Redesign Module 1 using the NOVIKONTAS Course Factory" and that has to
+be enough, with no skill name, validator name, folder path or git in it.
+
+Restyle needs **both** a narrow cosmetic target *and* a scope limiter: "only change the colours" is
+a restyle; "change the colours and make it like GAS BASIC" is a retrofit. When someone asks for a
+restyle, give them a restyle — say in one line what a full retrofit would additionally do, and
+stop. Doing more than was asked is not generosity.
+
 Never load a lane the mode does not need. `hours/` answers "how long may this be"; `tablet/`
 answers "where does it live and how is it wired"; `coverage/` answers "is everything the programme
-**and the model course** ask for actually taught". They never run together.
+**and the model course** ask for actually taught"; `retrofit/` answers "what of this existing
+module survives, and what gets rebuilt". They never run together — except that a retrofit still
+obeys the hours law, so `retrofit/` reads `hours/` for Track A and nothing else.
 
 `coverage/` exists because the other two cannot see its failure. A course can have exact hours and
 perfect wiring and still not teach an outcome. On GAS BASIC the topic-level record was green at
@@ -94,9 +113,10 @@ intake — not in the brief, programme or knowledge base means `UNKNOWN`.
 
 ---
 
-## The four laws
+## The six laws
 
-These are not preferences. Each one is here because breaking it cost real rework on GAS BASIC.
+These are not preferences. Each one is here because breaking it cost real rework — the first four
+on GAS BASIC, the last two on the first two real pilots.
 
 ### 1 · The approved programme is law, and minutes are the law's units
 
@@ -166,6 +186,47 @@ Before removing any control, label, field or file: grep its id, class, label and
 instructor to press, print buttons on hand-out documents, and hrefless `<span id="gb-home">`
 elements that are how a page declares it has no way back. Unused today is not useless: data a
 planned system will read is not dead.
+
+### 5 · Content is locked. The delivery implementation is not.
+
+> **PRESERVE THE COURSE CONTENT. DO NOT PRESERVE THE EXISTING DELIVERY IMPLEMENTATION BY DEFAULT.**
+
+`retrofit/knowledge/content-lock.json` is the authority — read it, do not restate it.
+
+**Locked**, needing explicit authorisation: technical meaning, programme requirements, ILOs and
+Sub-ILOs, official hours, assessment intent, intended practical exercises, course terminology,
+source-supported facts, COURSE_LANGUAGE.
+
+**Free**, redesign on the evidence without asking: screen count, screen order, HTML structure,
+layouts, card arrangements, density, progressive disclosure, visual implementation, animation,
+interactive mechanics, task presentation, navigation, CSS/JS, hierarchy, composition.
+
+**What this law is for.** A colleague asked for an existing module to be brought up to GAS BASIC
+quality and got back a technically correct retrofit that still felt weaker than GAS BASIC — because
+Claude treated the existing HTML as something to preserve. Conservatism looks like diligence.
+Keeping a layout feels safer than replacing it, every single decision to keep something is
+defensible, and the sum of them is a module that passes every check and is not the product. **The
+existing module is source material plus learning intent, not the presentation template**, and "the
+HTML works" is not an argument for keeping it.
+
+An existing visual is *evidence of a teaching decision*: preserve the decision, rebuild the
+implementation. The star/delta figure's claim — the supply never moves, only the bridges change —
+survives; its small SVG does not have to.
+
+### 6 · COURSE_LANGUAGE is declared, and the operator's language is not it
+
+Mandatory in **plan** and **retrofit** alike. Detect it from the authoritative course-facing
+material, state it back in one line, and lock it.
+
+Course-facing — slides, tasks, handout, assessment, feedback, instructor cues, practical cards,
+START_HERE, the run script — stays in COURSE_LANGUAGE unless translation is **explicitly**
+requested. The chat report, `factory-notes.md`, code comments and validator output follow the
+operator.
+
+A Latvian operator asking, in Latvian, to redesign an English module gets a Latvian report and an
+English module. Translating an accredited artefact because the request arrived in another language
+destroys it, and it happens one screen at a time. `retrofit/scripts/check_language.py` is the
+drift check.
 
 ---
 
@@ -276,6 +337,10 @@ the line for the thing you changed.
 (2) and (5) exist because (1), (3), (4) and (6) all passed on a course that was missing an
 accredited outcome and shipping a dead section. **Every check here was added after something got
 through the others.**
+
+10. **In retrofit only** — `retrofit/scripts/check_language.py <course> --declare <LANG>` (the
+    course did not change language), and `retrofit/scripts/classify_module.py` **again**. A
+    retrofit that started at C and still classifies C has not finished.
 
 Then write `templates/factory-notes.md` into the course folder: what was produced, every marker
 with its source, the achieved ratio, what was moved to the handout and why, and a final section

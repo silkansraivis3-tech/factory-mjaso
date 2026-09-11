@@ -1,0 +1,68 @@
+{
+  "_authority": "How much delivery redesign an existing module needs. retrofit/scripts/classify_module.py implements exactly these signals and thresholds.",
+
+  "_the_rule_that_matters": "CLASSIFY ON DELIVERY QUALITY, NEVER ON WHETHER THE HTML WORKS. A module whose markup is valid, whose links resolve and whose checks pass can still be educationally and visually weak, and that module is a B or a C. 'It works' is not a reason to preserve it.",
+
+  "_do_not_ask": "Decide this yourself from the signals. Ask the operator only if the module is genuinely ambiguous - not to make them own the decision.",
+
+  "levels": {
+    "A": { "name": "preserve mostly as-is",
+           "means": "the module is already on the canonical system and composed. Fix the named defects, leave the delivery alone.",
+           "typical": "a module built by the current Factory that has drifted slightly" },
+    "B": { "name": "moderate delivery redesign",
+           "means": "the system is present but the delivery is thin: composition is uniform, visuals are undersized or absent, activity screens are cards rather than screens.",
+           "typical": "an earlier Factory module, or a careful hand-build that never had a visual system" },
+    "C": { "name": "substantial delivery redesign",
+           "means": "the delivery implementation is not evidence of anything. Take the content and the learning intent; rebuild the delivery.",
+           "typical": "a module predating the Factory - default HTML, a wall of text, no shell, no composition, no tablet behaviour" }
+  },
+
+  "signals": {
+    "_note": "Each returns a score 0..1 where 1 is 'already at product quality'. Absent data scores 0 - a module with no shell has no shell, and that is a finding, not a missing measurement.",
+    "canonical_shell": {
+      "asks": "does it load gb_tokens + gb_shell (+ gb_compose) and use #stage/.slide/#btnNext?",
+      "weight": 0.22 },
+    "composition_vocabulary": {
+      "asks": "what share of screens declare a named composition on .slide-body, and how many DISTINCT ones does the module use?",
+      "weight": 0.20,
+      "note": "a module where every screen is default flow scores 0 here even if each screen is tidy - uniformity is the defect" },
+    "teaching_visuals": {
+      "asks": "what share of substantial teaching screens carry a figure, photograph, schematic or interactive component rather than text alone?",
+      "weight": 0.20 },
+    "activity_screens": {
+      "asks": "are activity launches whole screens using the canonical treatment, or cards inside an ordinary screen?",
+      "weight": 0.14 },
+    "tablet_behaviour": {
+      "asks": "touch navigation present, back hook present, tap targets at the floor, no links inside slides",
+      "weight": 0.14 },
+    "token_adherence": {
+      "asks": "does it paint from the canonical tokens rather than its own dialect?",
+      "weight": 0.10 }
+  },
+
+  "thresholds": {
+    "_scale": "weighted sum of the signals, 0..1",
+    "A": ">= 0.80",
+    "B": ">= 0.45 and < 0.80",
+    "C": "< 0.45",
+    "overrides": [
+      { "if": "no canonical shell at all", "then": "C",
+        "why": "there is nothing to preserve at the delivery layer" },
+      { "if": "every screen is default flow AND teaching_visuals < 0.25", "then": "at most B",
+        "why": "a uniform text module is the case this whole law exists for" },
+      { "if": "links inside slides > 0", "then": "at most B",
+        "why": "the one-page architecture is broken, which is a delivery rebuild however good the rest looks" }
+    ]
+  },
+
+  "not_signals": {
+    "_rule": "These must never move the classification.",
+    "items": [
+      "the HTML parses",
+      "the links resolve",
+      "the existing checks pass",
+      "the file is large, or recent, or was hand-written with care",
+      "somebody would be disappointed if it changed"
+    ]
+  }
+}

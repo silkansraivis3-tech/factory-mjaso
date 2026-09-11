@@ -3,12 +3,18 @@
 <head>
 <meta charset="utf-8">
 <title>PASS fixture — every class has a rule</title>
-<!-- The same screen, linking the real canonical shell, which since 2.2.0
-     carries the content furniture. EXPECT: no findings.
+<!-- The same screen, linking the real canonical shell AND the composition
+     layer. Both are needed: 2.3.0 split gb_shell.css so the frame and what sits
+     on it have one owner each, which moved .law, .warnbox, .fin, .cap, .src and
+     the table rules into gb_compose.css. This fixture kept linking only the
+     shell and started reporting 8 defects - correctly. The fixture was stale,
+     not the checker. A fixture is only a control if it is kept current.
+     EXPECT: no findings.
      The <g class="fx-group"> is a drawing-structure class and must be reported
      as a note, never as a defect. -->
 <link rel="stylesheet" href="../../templates/gb_tokens.css">
 <link rel="stylesheet" href="../../templates/gb_shell.css">
+<link rel="stylesheet" href="../../templates/gb_compose.css">
 </head>
 <body>
 <div class="slide">

@@ -102,6 +102,44 @@ Every check in this bundle was added after something got through the ones before
 | `COURSE_START.json` has no hours field, but is owned elsewhere | Additive `hours` block only. The existing schema is never altered. Shape in `hours-rules.json`. |
 | Memory said "exactly one `.slide-body` per section" | Wrong as a universal: photo, launch and check screens use other body classes. Corrected to **at most one**; two is the destructive bug. |
 
+## 4b · The retrofit lane (added 2026-09-11)
+
+`retrofit/` exists because of one failure mode that no check could see: a colleague asked for an
+existing module to be brought up to GAS BASIC quality, and got back a technically correct retrofit
+that still felt weaker than GAS BASIC. Nothing was broken. Every individual decision to keep an
+existing layout was defensible. The sum was a module that passed everything and was not the product.
+
+**Conservatism looks like diligence.** That is why the law had to be written down rather than left
+to judgement:
+
+> PRESERVE THE COURSE CONTENT. DO NOT PRESERVE THE EXISTING DELIVERY IMPLEMENTATION BY DEFAULT.
+
+| file | is |
+|---|---|
+| `retrofit/GUIDE.md` | the lane — nine steps, from COURSE_LANGUAGE to the acceptance question |
+| `retrofit/knowledge/routing.json` | which mode a free-form request selects, and retrofit vs restyle |
+| `retrofit/knowledge/content-lock.json` | what is locked, what is free, and why an existing visual is evidence rather than implementation |
+| `retrofit/knowledge/classify.json` | the A/B/C signals, and the `not_signals` list that keeps "the HTML works" out of the decision |
+| `retrofit/scripts/classify_module.py` | measures the six signals and returns the level |
+| `retrofit/scripts/check_language.py` | COURSE_LANGUAGE drift over course-facing files |
+| `retrofit/scripts/test_routing.py` | 42 deterministic assertions over all three knowledge files |
+
+**Two things the classifier got wrong before it was right**, both worth keeping in mind if it is
+ever extended:
+
+1. It scored `canonical_shell` and `token_adherence` on **filenames** — and classified GAS BASIC
+   Module_01, the design authority, as "needs moderate redesign", because it loads
+   `presentation.css` rather than `gb_shell.css`. Those files were extracted *from* it. Both
+   signals now measure the system: the shell's structural landmarks wherever they live, and a
+   declared token set wherever it is declared.
+2. It scored composition against **our vocabulary**, and marked the golden down for using
+   `exp-stage`, `sil-row` and `handover` — the names ours was derived from. Any modifier class on
+   `.slide-body` now counts; what is measured is whether the author chose a composition per screen,
+   not whether they chose ours.
+
+The test suite is mutation-tested: removing the `only` scope limiter and removing `the HTML parses`
+from `not_signals` each produce exactly one failure.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

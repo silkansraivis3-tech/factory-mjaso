@@ -1,0 +1,62 @@
+{
+  "_authority": "The two categories a retrofit must keep apart. This is the law the ETPB3 colleague pilot was missing: Claude treated the existing HTML as something to preserve, produced a technically correct retrofit, and the result was still weaker than GAS BASIC.",
+
+  "_the_law": "PRESERVE THE COURSE CONTENT. DO NOT PRESERVE THE EXISTING DELIVERY IMPLEMENTATION BY DEFAULT.",
+
+  "_why_it_has_to_be_written_down": "Conservatism looks like diligence. Keeping an existing layout feels safer than replacing it, and every individual decision to keep something is defensible. The sum of those decisions is a module that passes every check and still does not look like the product. The existing module is SOURCE MATERIAL plus learning intent. It is not the presentation template.",
+
+  "locked": {
+    "_rule": "Changing any of these needs explicit authorisation from the owner, named in the report. Silence is not authorisation.",
+    "items": [
+      { "what": "authoritative technical meaning", "note": "a claim about how equipment behaves survives verbatim in substance; its wording may tighten, its meaning may not move" },
+      { "what": "approved programme requirements", "note": "the programme is law - see law 1" },
+      { "what": "ILOs and Sub-ILOs", "note": "Main ILOs verbatim always. A Sub-ILO may be re-expressed only under the existing PROVISIONAL rule, never silently" },
+      { "what": "official hours", "note": "Track A allocation, exact. A retrofit that changes the hours has changed the accreditation" },
+      { "what": "assessment intent", "note": "what is being assessed and to what standard. The SCREEN it is assessed on is delivery" },
+      { "what": "intended practical exercises", "note": "what the trainee physically does, and with what. How it is announced is delivery" },
+      { "what": "course-specific terminology", "note": "the vocabulary IS the competence. Do not simplify a term because a sentence reads better without it" },
+      { "what": "source-supported technical facts", "note": "L4 - no source, no claim. A retrofit never upgrades a fact's authority tier" },
+      { "what": "authoritative course language", "note": "COURSE_LANGUAGE - see routing.json. Course-facing output does not change language because the request arrived in another one" }
+    ]
+  },
+
+  "free": {
+    "_rule": "Redesign these on the evidence, without asking. The operator asked for the module to be made good; these are how.",
+    "items": [
+      "screen count - split an overloaded screen, merge two redundant ones, add a dedicated visual or debrief screen",
+      "presentation screen order inside the teaching flow",
+      "HTML structure",
+      "existing layouts and card arrangements",
+      "information density and progressive disclosure",
+      "technical visual implementation",
+      "animation implementation",
+      "interactive presentation mechanics",
+      "task visual presentation",
+      "navigation implementation",
+      "CSS and JS implementation",
+      "visual hierarchy",
+      "composition"
+    ]
+  },
+
+  "existing_visuals": {
+    "_rule": "A technically meaningful visual is EVIDENCE of a teaching decision. Preserve the decision; the implementation is free.",
+    "right": "The star/delta figure teaches that the supply never moves and only the bridges change. Keep that claim and that interaction. Rebuild it larger, clearer, better composed.",
+    "wrong": "A small SVG exists, therefore keep that exact SVG and centre it.",
+    "applies_to": ["diagrams", "animations", "figures", "task mechanics", "process visuals"],
+    "test": "Ask what the visual CLAIMS. If the claim is sound, it survives. If the only reason to keep the implementation is that it already exists, that is not a reason."
+  },
+
+  "screen_count": {
+    "_rule": "Not locked, and not a target either.",
+    "may": ["split overloaded screens", "merge redundant screens",
+            "introduce a dedicated visual or animation screen",
+            "introduce a dedicated debrief screen",
+            "move supporting detail to the handout as self-study"],
+    "must_not": ["add filler to look busier", "target the GAS BASIC screen count",
+                 "cut real teaching to look leaner"],
+    "governs": "the learning need, and the minutes law. Minutes are locked; screens are not."
+  },
+
+  "the_acceptance_question": "If the course title and subject were hidden, would a reviewer believe this module and GAS BASIC were produced by the same NOVIKONTAS Course Factory? Judge composition, visual rhythm, typography, spacing, shell, interaction language, animation quality, activity screens, technical visual scale, tablet behaviour and overall polish. Matching tokens alone is NOT enough - a module can use every correct colour and still read as a different product."
+}

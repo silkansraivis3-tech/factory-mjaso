@@ -95,9 +95,28 @@ vertical balance, content centroid, dead halves, and whether a teaching visual i
 read from the back of a room. A warning here is a call for human review, not an automatic failure.
 → `course-module-ui` (the vocabulary), `course-module-ux` (`measure/scripts/audit_compose.js`)
 
+**L18 · Content is locked. The delivery implementation is not.**
+**Preserve the course content; do not preserve the existing delivery implementation by default.**
+Locked, needing explicit authorisation: technical meaning, programme requirements, ILOs, official
+hours, assessment intent, intended practical exercises, course terminology, source-supported facts,
+COURSE_LANGUAGE. Free, redesigned on the evidence without asking: screen count, screen order, HTML,
+layouts, density, progressive disclosure, visual and animation implementation, interactive
+mechanics, task presentation, navigation, CSS/JS, hierarchy, composition.
+
+An existing visual is *evidence of a teaching decision*: preserve the decision, rebuild the
+implementation. "The HTML works" is not an argument for keeping it, and a module's delivery is
+classified on quality, never on validity. → `course-factory` (`retrofit/`)
+
+**L19 · COURSE_LANGUAGE is declared, and the operator's language is not it.**
+Mandatory in every mode. Course-facing output — slides, tasks, handout, assessment, feedback,
+instructor cues, practical cards, START_HERE, run script — stays in COURSE_LANGUAGE unless
+translation is explicitly requested. The chat report, companion file, comments and validator output
+follow the operator. A Latvian request to redesign an English module produces a Latvian report and
+an English module. → `course-factory` (`retrofit/scripts/check_language.py`)
+
 ---
 
-**All seventeen laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+**All nineteen laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
 `course-visuals` was built; before that they depended on the operator remembering them.
 
 Organisation-skill dependencies and their fallbacks:

@@ -1,0 +1,136 @@
+{
+  "_authority": "How a free-form request picks a mode, and how RETROFIT is told apart from RESTYLE. SKILL.md points here; it must not restate the table in prose. The rules below are executable: retrofit/scripts/test_routing.py implements exactly this file and asserts the named cases.",
+  "_why": "The pilot failure was not that Claude refused to upgrade a module. It was that the operator had to know the word 'retrofit' and which skills to route to. A colleague in Cowork types 'Redesign Module 1 using the NOVIKONTAS Course Factory' and that has to be enough - no skill names, no validator names, no folder architecture, no git.",
+  "modes": {
+    "plan": "an accredited programme exists, the modules do not. Design the delivery from scratch.",
+    "retrofit": "the course content exists as a built module. Keep the content; rebuild the delivery.",
+    "restyle": "the operator has named a NARROW cosmetic change and nothing else. Do that and stop.",
+    "ship": "a built course goes onto the two terminals.",
+    "audit": "check an existing course against the programme and the terminals; change nothing."
+  },
+  "retrofit_triggers": {
+    "_match": "Any ONE of these intents, in any language, about material that already exists. The phrases are examples, not a whitelist - match the intent.",
+    "intents": [
+      {
+        "intent": "upgrade an existing module",
+        "examples": [
+          "upgrade this existing module",
+          "apply Course Factory to this module",
+          "make this existing module production-ready",
+          "uzlabo šo moduli",
+          "обнови этот модуль"
+        ]
+      },
+      {
+        "intent": "make it like the reference product",
+        "examples": [
+          "make my existing module like GAS BASIC",
+          "make it look like GAS BASIC",
+          "same quality as GAS BASIC",
+          "make these modules presentable"
+        ]
+      },
+      {
+        "intent": "redesign the delivery",
+        "examples": [
+          "redesign this module using Course Factory",
+          "redesign Module 1",
+          "modernise this existing course",
+          "pārtaisi šo moduli"
+        ]
+      },
+      {
+        "intent": "improve the presentation or UX",
+        "examples": [
+          "improve the existing course UX",
+          "improve the existing presentation",
+          "make this module much more visual and interactive",
+          "I already have the content, make it better"
+        ]
+      }
+    ],
+    "requires": "existing built material to work on - a module.html, a deck, a course folder. Without it this is a `plan` request about content that does not exist yet."
+  },
+  "restyle_triggers": {
+    "_match": "RESTYLE needs BOTH a narrow cosmetic target AND a scope limiter. Either one alone is not enough: 'change the colours and make it like GAS BASIC' is a retrofit; 'only change the colours' is a restyle.",
+    "narrow_targets": [
+      "colour",
+      "colours",
+      "color",
+      "colors",
+      "palette",
+      "krāsas",
+      "font",
+      "fonts",
+      "typeface",
+      "fontu",
+      "logo",
+      "brand mark",
+      "spacing",
+      "padding",
+      "margins",
+      "wording",
+      "typo",
+      "typos"
+    ],
+    "scope_limiters": [
+      "only",
+      "just",
+      "nothing else",
+      "don't change anything else",
+      "do not change anything else",
+      "leave everything else",
+      "tikai",
+      "nemaini neko citu",
+      "только",
+      "no other changes",
+      "keep everything else"
+    ],
+    "behaviour": "Do exactly the named change. Do not migrate the shell, do not re-compose screens, do not add visuals. Say in one line what a full retrofit would additionally do, and stop. The operator asked for a restyle; giving them a retrofit is not generosity, it is ignoring them."
+  },
+  "ambiguous": {
+    "_rule": "Ask only when the request is genuinely ambiguous about SCOPE, never about the A/B/C level - that is this skill's job to decide.",
+    "examples": [
+      "make it better (no target named, no material identified)",
+      "fix the module (fix what - a defect, or the delivery?)"
+    ],
+    "ask": "one batched question naming the two readings, then proceed"
+  },
+  "language_lock": {
+    "_law": "COURSE_LANGUAGE is mandatory in plan and retrofit alike. Course-facing output stays in it unless translation is explicitly requested.",
+    "detect_from": [
+      "the existing course-facing files - module.html lang attribute, screen titles, task text",
+      "the approved programme document",
+      "the operator's explicit statement"
+    ],
+    "values": "a language name or a combination: English, Latvian, Norwegian, English+Latvian",
+    "course_facing": [
+      "slides",
+      "tasks",
+      "handout",
+      "assessment",
+      "feedback text",
+      "instructor cues",
+      "practical cards",
+      "START_HERE",
+      "run script"
+    ],
+    "not_course_facing": [
+      "the chat report",
+      "factory-notes.md",
+      "code comments",
+      "commit messages",
+      "validator output"
+    ],
+    "the_case_this_exists_for": "A Latvian operator asks, in Latvian, to redesign an English module. The chat report may be Latvian. Every slide, task, handout, assessment and instructor cue stays English. Translating a course because the request arrived in another language destroys an accredited artefact.",
+    "drift_check": "retrofit/scripts/check_language.py compares course-facing files against the declared COURSE_LANGUAGE and reports files whose script or common-word profile disagrees."
+  },
+  "routing_targets": {
+    "_rule": "course-factory orchestrates. It does not write screens, visuals or tasks itself, and the operator never names these.",
+    "shell_tokens_composition": "course-module-ui",
+    "screen_craft_navigation_measurement": "course-module-ux",
+    "representation_assets_animation": "course-visuals",
+    "trainee_task_screens": "course-task-ux (only when the module has tasks)",
+    "runtime_browser_qa": "course-module-ux/measure (audit_drive.js, audit_compose.js) + course-visuals/scripts/verify_figures.js"
+  }
+}

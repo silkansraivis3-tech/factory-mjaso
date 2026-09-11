@@ -21,6 +21,40 @@ Definitions and fallbacks: `org/ORG_DEPENDENCIES.md`.
 | `novikontas-course-start` | yes / no | org skill / fallback F/A | |
 | <any soft dependency the run touched> | | pointed at it / answered in-factory | |
 
+## 0b · Language — COURSE_LANGUAGE
+
+**COURSE_LANGUAGE:** `<English | Latvian | Norwegian | English+Latvian>`
+**Determined from:** `<the existing course-facing files | the approved programme | the operator>`
+**Drift check:** `check_language.py --declare <LANG>` → `<n course-facing files, 0 disagreements>`
+
+The operator's language is separate and may differ. This report follows the operator; every slide,
+task, handout, assessment, feedback line and instructor cue follows COURSE_LANGUAGE.
+
+## 0c · Retrofit — only when the material already existed
+
+*Delete this section for a new build.*
+
+| | |
+|---|---|
+| **Classification** | `<A / B / C>` — score `<0.00>` from `classify_module.py` |
+| **Signals that drove it** | `<shell 0.00 · composition 0.00 · visuals 0.00 · activity 0.00 · tablet 0.00 · tokens 0.00>` |
+| **Re-classified after** | `<A / B / C>` — score `<0.00>` |
+
+**Preserved — the content lock.** What survived and why. Technical meaning, programme requirements,
+ILOs, hours, assessment intent, practical exercises, terminology, sourced facts, language.
+
+**Rebuilt — the delivery.** What was replaced and why. Screens, order, layout, density, visual and
+animation implementation, interaction, navigation, composition. *Name the weak implementation that
+was discarded; "kept because it existed" is not a reason and must not appear here.*
+
+**Representation upgrades.** Per screen: what is taught, what the learner should notice, what the
+old representation was, what it became, and what the new one teaches that the old one did not.
+
+**Blocked.** Every `GENERATED_ASSET_REQUIRED` / `REAL_PHOTO_REQUIRED` raised, and what it blocks.
+
+**Screen count.** `<before>` → `<after>`, with the reason for each split, merge or addition.
+Minutes unchanged at `<n>`.
+
 ## 1 · Hours — is it 1:1 with the programme?
 
 | module | topics | allocated min | built min | diff |

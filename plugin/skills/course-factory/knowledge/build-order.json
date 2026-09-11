@@ -1,7 +1,7 @@
 {
   "_authority": "The ordered pipeline and who owns each step. SKILL.md points here and must not restate the order in prose.",
   "_written": "2026-09-07",
-  "_revised": "2026-09-10 - the visual layer became an explicit required step (8) owned by course-module-ui, and its audit joined verify. Before this the pipeline named no owner for how a module LOOKS, so a module could pass every UX check and still ship as default white HTML. Steps renumbered from 8 onwards. | 2026-09-10 (Phase 3) - a VISUAL PLAN step (9) owned by course-visuals was inserted after the visual system and before task pages, and course-visuals joined verify. Before this the pipeline named an owner for how a module LOOKS but none for WHAT THE PICTURE SHOULD BE, so a module could pass every check and still ship card grids and boxes joined by arrows. Steps renumbered from 9 on.",
+  "_revised": "2026-09-10 - the visual layer became an explicit required step (8) owned by course-module-ui, and its audit joined verify. Before this the pipeline named no owner for how a module LOOKS, so a module could pass every UX check and still ship as default white HTML. Steps renumbered from 8 onwards. | 2026-09-10 (Phase 3) - a VISUAL PLAN step (9) owned by course-visuals was inserted after the visual system and before task pages, and course-visuals joined verify. Before this the pipeline named an owner for how a module LOOKS but none for WHAT THE PICTURE SHOULD BE, so a module could pass every check and still ship card grids and boxes joined by arrows. Steps renumbered from 9 on. | 2026-09-11 - a RETROFIT pipeline was added beside the build pipeline. The steps are not the same: a retrofit starts from existing material, so it classifies the delivery first and its content steps are reads rather than writes.",
   "steps": [
     {
       "n": 1,
@@ -166,5 +166,82 @@
     "course-visuals": "what representation teaches a concept; the instructional-animation law (L13); the four-level asset pipeline, provenance, licences and rights (L12); the visual quality gate"
   },
   "no_fixed_slide_count": "There is NO canonical screen count. A module's screen count is derived from the learning need, the delivery method, the content depth, the practical work, the activities and what actually has to be explained - a legitimate module may be 10 screens, 25, 50, almost no presentation, or practical-only. Module_01 is a quality and UX/UI reference, not a numeric template. Never add filler screens to resemble it numerically, and never cut real teaching to resemble it either. What must match across modules is the SYSTEM: visual language, UI quality, UX behaviour, tablet-first delivery, the Start -> Next -> Next one-page delivery model where it applies, component styling, responsive behaviour, visual hierarchy, task usability and functional quality.",
-  "density_is_not_depth": "Low visible density does not mean low learning depth, and not every screen has to be interactive. Progressive disclosure, layered cards, diagrams, animation and interactive figures can carry serious teaching depth without a wall of text - 'compact' (course-module-ux law 3) must never be read as 'almost no teaching content'. course-module-ui is not responsible for pedagogy; it only has to not stand in the way of rich instructional design."
+  "density_is_not_depth": "Low visible density does not mean low learning depth, and not every screen has to be interactive. Progressive disclosure, layered cards, diagrams, animation and interactive figures can carry serious teaching depth without a wall of text - 'compact' (course-module-ux law 3) must never be read as 'almost no teaching content'. course-module-ui is not responsible for pedagogy; it only has to not stand in the way of rich instructional design.",
+  "retrofit_order": {
+    "_authority": "The ordered pipeline when the material already exists. course-factory/retrofit/GUIDE.md is the lane; this is the order.",
+    "_law": "Content locked, delivery free. retrofit/knowledge/content-lock.json is the authority on which is which.",
+    "steps": [
+      {
+        "n": 1,
+        "step": "COURSE_LANGUAGE",
+        "owner": "course-factory/retrofit",
+        "does": "detect from the existing course-facing files and the programme; state it back; lock it",
+        "blocked_without": "nothing - if it cannot be determined, say UNKNOWN and ask once"
+      },
+      {
+        "n": 2,
+        "step": "authoritative record",
+        "owner": "course-factory/hours",
+        "does": "programme, ILO map, Track A hours - READ, never rewritten by a retrofit",
+        "note": "if the existing module is the only record of the hours, say so"
+      },
+      {
+        "n": 3,
+        "step": "classify the delivery",
+        "owner": "course-factory/retrofit",
+        "does": "classify_module.py -> A, B or C, decided here and not asked of the operator",
+        "note": "on delivery quality only. Valid HTML, resolving links and green checks are not signals"
+      },
+      {
+        "n": 4,
+        "step": "content inventory",
+        "owner": "course-factory/retrofit",
+        "does": "what the module teaches, screen by screen, and what each screen CLAIMS - this is what survives"
+      },
+      {
+        "n": 5,
+        "step": "system migration",
+        "owner": "course-module-ui + course-module-ux",
+        "does": "canonical shell, tokens, composition vocabulary, engine, navigation",
+        "note": "necessary and never sufficient - a retrofit that stops here validates and still looks like a different product"
+      },
+      {
+        "n": 6,
+        "step": "instructional enhancement pass",
+        "owner": "course-visuals",
+        "does": "every substantial teaching screen gets a representation review; build the stronger representation where the evidence supports it",
+        "note": "do not report 'animation recommended' when the evidence is enough to build it"
+      },
+      {
+        "n": 7,
+        "step": "composition pass",
+        "owner": "course-module-ui",
+        "does": "a composition per screen from the vocabulary; split, merge or add screens as the learning needs",
+        "note": "minutes are locked, screens are not"
+      },
+      {
+        "n": 8,
+        "step": "tasks",
+        "owner": "course-task-ux",
+        "does": "only when the module has tasks - the task surface, mechanics preserved, presentation free"
+      },
+      {
+        "n": 9,
+        "step": "verify",
+        "owner": "course-factory/retrofit",
+        "does": "every new-build check, plus check_language.py and a re-classification",
+        "note": "a retrofit that started at C and still classifies C has not finished"
+      }
+    ],
+    "not_relaxed": [
+      "Track A hours exact",
+      "ILO immutability",
+      "L4 no source no claim",
+      "navigation checks",
+      "figure runtime checks",
+      "composition QA",
+      "no links inside presentation screens",
+      "plugin version bump"
+    ]
+  }
 }
