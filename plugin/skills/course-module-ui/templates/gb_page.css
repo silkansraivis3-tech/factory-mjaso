@@ -100,6 +100,17 @@ code{font-family:var(--mono);font-size:.92em;background:var(--white);
 .law p{margin:0 0 5px;color:var(--amber-ink)}
 .law .ref{margin:0;font-size:clamp(12.5px,1.6vmin,14px);font-weight:700;color:var(--amber-ink)}
 
+/* SUPERSCRIPT, SUBSCRIPT AND small - THE READABLE FLOOR.
+   The browser shrinks these to ~0.6em on its own, which on a 15px caption is 9px, under
+   the 12.5px floor, on a tablet, held at arm's length. gb_compose.css carries the same
+   three lines for the deck; a document page loads this file instead and saw none of it,
+   so a handout full of 10^6 and mm^2 rendered them at browser default. One rule, one
+   reason, two owners - a floor that only half the system respects is not a floor. */
+sup,sub,small{font-size:max(12.5px,.78em)}
+sup,sub{line-height:0}
+sup{vertical-align:.42em}
+sub{vertical-align:-.28em}
+
 .src{margin:0 0 12px;font-size:clamp(12.5px,1.6vmin,14px);line-height:1.45;color:var(--faint-l)}
 
 /* --------------------------------------------------------------------------
