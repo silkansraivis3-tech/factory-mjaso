@@ -1,6 +1,6 @@
 # Phase 4B — repairing the Factory from the ETPB3 pilot
 
-Plugin **2.2.0**. Two jobs: fix the reusable problems the first real pilot exposed, and rebuild
+Plugin **2.2.1**. Two jobs: fix the reusable problems the first real pilot exposed, and rebuild
 ETPB3 with the corrected Factory. No new skills and no new agents were created; every change lands
 in `course-factory`, `course-module-ui`, `course-module-ux`, `course-task-ux` or `course-visuals`.
 
@@ -244,6 +244,19 @@ and a drill launch, which is two ideas on one screen and measured as a 231 px, a
 overflow. One idea per screen, the way P1–P7 already worked.
 
 A clean run is not a pass. It means nothing mechanical is wrong.
+
+---
+
+## One more thing the phase learned about shipping
+
+The activity-launch rebuild went out as a content change under an unchanged `2.2.0`.
+`claude plugin update` answered *"already at the latest version"* and the installed cache kept the
+old `gb_shell.css`. Verified by diffing the cache against the repo, then fixed by shipping
+**2.2.1**.
+
+Claude Code pins a git-sourced plugin to its **version string**, not to the commit. Any content
+change needs a bump, however small, or every installed copy silently keeps the previous file —
+and `plugin update` will tell you it is current while doing so.
 
 ---
 
