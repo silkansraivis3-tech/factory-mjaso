@@ -350,9 +350,13 @@ h2.bigcall{font-size:clamp(28px,6vmin,86px);line-height:1.02}
    the canonical files were extracted without it and the floor was lost. A technical course
    is full of them - 10⁶, mm², R_ie, cos φ - and ETPA4 alone renders 28.
    0.78em keeps the typographic effect and clears the floor at every size the deck uses. */
-sup,sub{font-size:max(12.5px,.78em);line-height:0}
+sup,sub,small{font-size:max(12.5px,.78em)}
+sup,sub{line-height:0}
 sup{vertical-align:.42em}
 sub{vertical-align:-.28em}
+/* `small` was missed on the first pass of this fix and the new check caught it on the
+   very next run - the same browser mechanism shrinks all three, so all three get the
+   same floor. A fix that covers two of three cases is a fix that will be rediscovered. */
 
 .src,.srcline{margin:0;font-size:clamp(12.5px,1.2vmin,16.8px);line-height:1.45;color:var(--faint-l)}
 .slide.dark .src,.slide.dark .srcline{color:var(--faint-d)}
