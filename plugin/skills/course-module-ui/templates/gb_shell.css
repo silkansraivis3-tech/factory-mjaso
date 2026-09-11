@@ -7,15 +7,23 @@
    overview grid and the instructor cue. Every course inherits it so a trainee
    picking up any tablet meets the same product.
 
-   It is NOT a template for what a screen contains. A course's own technical
-   figures, cards and layouts sit inside `.slide-body` and are the course's to
-   design. What must not vary is the chrome around them.
+   It is NOT how content is composed inside a screen. That is
+   `gb_compose.css`, which owns the composition vocabulary - opener, two-col,
+   stage, cards, activity, check, summary - and every content block. The split
+   is deliberate: this file decides what a screen IS, that one decides what
+   goes ON it, and no rule appears in both.
+
+   A course's own technical figures are the course's to design. What must not
+   vary is the frame around them and the vocabulary they sit in.
 
    REQUIRES gb_tokens.css loaded first. Every colour here is a token; the only
    raw values are alpha composites of tokens that CSS cannot express as one.
 
-   PAIRS WITH  course-module-ux/assets/gb_deck.js  (behaviour)
-               course-module-ui/templates/gb_shell.html  (markup skeleton)
+   PAIRS WITH  course-module-ui/templates/gb_compose.css  (composition)
+               course-module-ux/assets/gb_deck.js         (behaviour)
+               course-module-ui/templates/gb_shell.html   (markup skeleton)
+
+   LOAD ORDER  gb_tokens.css -> gb_shell.css -> gb_compose.css
    ========================================================================== */
 
 *{box-sizing:border-box}
@@ -277,150 +285,6 @@ body:not(.dark-active) #counter{color:var(--dim-l)}
 }
 
 /* ==========================================================================
-   SHARED SCREEN FURNITURE
-   The few components every course needs; anything subject-specific belongs to
-   the course, not here.
-   ========================================================================== */
-.lead{font-size:clamp(14px,2.15vmin,32.2px);line-height:1.5;color:var(--dim-l);margin:0}
-.slide.dark .lead{color:var(--dim-d)}
-
-.grid{display:grid;gap:min(2.2vmin,20px)}
-.grid.c2{grid-template-columns:1fr}
-.grid.c3{grid-template-columns:1fr}
-@media (min-width:820px){
-  .grid.c2{grid-template-columns:repeat(2,1fr)}
-  .grid.c3{grid-template-columns:repeat(3,1fr)}
-}
-
-.card{background:var(--white);border:1px solid var(--line-l);border-radius:var(--r-m);
-  padding:min(2.2vmin,20px);box-shadow:var(--sh)}
-.card h4{margin:0 0 .5em;font-size:clamp(14.5px,1.9vmin,21px);color:var(--navy);font-weight:700}
-.card p{margin:0;font-size:clamp(13.5px,1.75vmin,19px);line-height:1.5;color:var(--ink)}
-.card.key{border-left:4px solid var(--blue)}
-.card.step{border-left:4px solid var(--amber)}
-.card.warn{border-left:4px solid var(--warn)}
-.slide.dark .card{background:var(--deep-2);border-color:var(--line-d);box-shadow:var(--sh-d)}
-.slide.dark .card h4{color:var(--blue)}
-.slide.dark .card p{color:var(--txt-d)}
-
-.takeaway{margin-top:auto;background:var(--amber-wash-l);border-left:4px solid var(--amber);
-  border-radius:var(--r-s);padding:min(1.8vmin,16px) min(2.2vmin,20px);
-  font-size:clamp(14px,1.85vmin,20px);line-height:1.45;color:var(--ink)}
-.slide.dark .takeaway{background:var(--amber-wash-d);color:var(--txt-d)}
-.takeaway .tk{display:inline-block;margin-right:10px;color:var(--amber-ink);font-weight:700;
-  text-transform:uppercase;letter-spacing:.12em;font-size:.78em}
-.slide.dark .takeaway .tk{color:var(--amber)}
-
-/* ==========================================================================
-   ACTIVITY LAUNCH - the one treatment that must read the same in every course.
-
-   Taken from the golden deck, whose own stylesheet carries the note that
-   settled this:  ".act-now - the deck ANNOUNCES a task; it no longer opens
-   one."  GAS BASIC made this correction before we did; ETPB3 shipped 17
-   launch BUTTONS and nearly wrote them into this file.
-
-   The code is the loudest thing on the screen because it is what the room has
-   to type or find. The announcement is a quiet bordered line, not a button -
-   nothing here is clickable, and it must not look as though it is.
-   ========================================================================== */
-.act{background:var(--navy);color:var(--white);border-radius:var(--r-m);
-  padding:min(4vmin,38px);display:flex;flex-direction:column;
-  gap:min(1.4vmin,12px);flex-grow:1;justify-content:center}
-.act .act-code{font-family:var(--mono);font-size:clamp(30px,7.4vmin,92px);
-  font-weight:700;color:var(--amber);letter-spacing:.06em;line-height:1}
-.act h3{margin:min(1.6vmin,14px) 0 0;font-size:clamp(20px,3.6vmin,42px);
-  font-weight:700;line-height:1.15;color:var(--white)}
-.act .act-sub{margin:min(1vmin,9px) 0 0;font-size:clamp(12.5px,1.55vmin,20px);
-  font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
-.act p{margin:min(1.4vmin,12px) 0 0;font-size:clamp(13px,2.05vmin,30.8px);
-  line-height:1.45;color:var(--dim-d);max-width:34em}
-
-/* the announcement. A left rule, not a button: there is nothing to press. */
-.act .act-now{margin:min(2.4vmin,22px) 0 0;border-left:3px solid var(--blue);
-  padding-left:min(1.8vmin,18px);font-size:clamp(12.5px,1.66vmin,22.8px);
-  line-height:1.45;color:var(--dim-d);max-width:34em}
-.act .act-now b{color:var(--white);font-weight:700}
-.act .act-now code{font-family:var(--mono);background:var(--amber-wash-d);
-  color:var(--amber);border:1px solid rgba(233,165,30,.45);border-radius:6px;
-  padding:0 .4em;font-size:max(12.5px,.94em);font-weight:700;white-space:nowrap}
-
-@media (prefers-reduced-motion: reduce){
-  .slide{animation:none}
-  #landing,#progress,#chrome{transition:none}
-}
-
-/* ==========================================================================
-   CONTENT FURNITURE
-   Added in 2.2.0 after the ETPB3 pilot. When a module moved onto this shell
-   it lost its callouts, captions and tables, because those rules only ever
-   existed in a per-course file (etpb3_ui.css, itself headed "ETPB2"). That is
-   the shell-drift defect from the other end: the shell was incomplete, so
-   every course wrote its own. These are the blocks GAS BASIC and the ETPB
-   modules actually use. A course adds a rule here only by owner decision.
-   ========================================================================== */
-
-/* the source line under a claim - L4 lives or dies on this being visible */
-.src{margin:0;font-size:clamp(12.5px,1.45vmin,15px);line-height:1.45;color:var(--faint-l)}
-.slide.dark .src{color:var(--faint-d)}
-
-/* figure caption */
-.cap{margin:0;font-size:clamp(12.5px,1.5vmin,16px);line-height:1.4;color:var(--dim-l);
-  text-align:center}
-.slide.dark .cap{color:var(--dim-d)}
-
-/* the regulation / standard box */
-.law{background:var(--amber-wash-l);border:1px solid var(--amber);border-left:4px solid var(--amber);
-  border-radius:0 var(--r-s) var(--r-s) 0;padding:min(1.8vmin,16px) min(2.2vmin,20px)}
-.law p{margin:0 0 .4em;font-size:clamp(13.5px,1.8vmin,19px);line-height:1.45;color:var(--amber-ink)}
-.law .ref{margin:0;font-size:clamp(12.5px,1.5vmin,15px);font-weight:700;color:var(--amber-ink)}
-.slide.dark .law{background:var(--amber-wash-d);border-color:var(--amber)}
-.slide.dark .law p{color:var(--txt-d)}
-.slide.dark .law .ref{color:var(--amber)}
-
-/* the hazard box - red, and never used for merely important things */
-.warnbox{background:var(--white);border:1px solid var(--warn);border-left:4px solid var(--warn);
-  border-radius:0 var(--r-s) var(--r-s) 0;padding:min(1.6vmin,14px) min(2.2vmin,20px)}
-.warnbox p{margin:0 0 .4em;font-size:clamp(13.5px,1.8vmin,19px);line-height:1.45}
-.warnbox b{color:var(--warn)}
-.slide.dark .warnbox{background:var(--deep-2);border-color:var(--warn-d)}
-.slide.dark .warnbox b{color:var(--warn-d)}
-
-/* the closing statement of a block */
-.fin{background:var(--white);border:1px solid var(--good);border-left:4px solid var(--good);
-  border-radius:0 var(--r-s) var(--r-s) 0;padding:min(1.6vmin,14px) min(2.2vmin,20px);
-  margin:0;font-size:clamp(14px,1.85vmin,20px);line-height:1.45;color:var(--ink)}
-.fin b{color:var(--good)}
-.slide.dark .fin{background:var(--deep-2);border-color:var(--good-d);color:var(--txt-d)}
-.slide.dark .fin b{color:var(--good-d)}
-
-/* pill row - hours, day, outcome */
-.meta{display:flex;gap:8px;flex-wrap:wrap;margin:0}
-.meta span{background:var(--blue-wash-l);border:1px solid var(--line-l);border-radius:var(--r-s);
-  padding:4px 12px;font-size:clamp(12.5px,1.55vmin,16px);color:var(--dim-l)}
-.slide.dark .meta span{background:var(--blue-wash-d);border-color:var(--line-d);color:var(--dim-d)}
-
-/* numbered step marker inside running text */
-.num{display:inline-block;min-width:2.2em;font-family:var(--mono);font-weight:700;color:var(--navy)}
-.slide.dark .num{color:var(--blue)}
-
-/* tables. A tablet is 1280 px wide in landscape and 800 in portrait, so a
-   wide table scrolls in its own box rather than pushing the page sideways. */
-.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--r-m)}
-table{border-collapse:collapse;width:100%;background:var(--white);
-  font-size:clamp(13px,1.65vmin,17px)}
-th,td{border:1px solid var(--line-l);padding:7px 11px;text-align:left;vertical-align:top}
-th{background:var(--blue-wash-l);color:var(--navy);font-weight:700}
-td.n{font-family:var(--mono);white-space:nowrap}
-.slide.dark table{background:var(--deep-2);color:var(--txt-d)}
-.slide.dark th{background:var(--deep-3);color:var(--txt-d);border-color:var(--line-d)}
-.slide.dark td{border-color:var(--line-d)}
-
-/* an SVG drawn straight into a screen rather than mounted as a fragment */
-svg.fig{display:block;max-width:100%;height:auto;margin:0 auto;background:var(--white);
-  border:1px solid var(--line-l);border-radius:var(--r-m)}
-.slide.dark svg.fig{background:var(--deep-2);border-color:var(--line-d)}
-
-/* ==========================================================================
    THE ANDROID BACK CONTRACT
    The hardware Back button clicks `a.gbt-topback[href]`. On a deck the anchor
    carries `hidden` - Back leaves the module, but nothing should sit on top of
@@ -430,3 +294,8 @@ svg.fig{display:block;max-width:100%;height:auto;margin:0 auto;background:var(--
 a.gbt-topback[hidden]{display:none}
 a.gbt-topback{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 14px;
   background:var(--navy);color:var(--white);font:700 15px/1 var(--font);text-decoration:none}
+
+@media (prefers-reduced-motion: reduce){
+  .slide{animation:none}
+  #landing,#progress,#chrome{transition:none}
+}

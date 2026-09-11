@@ -90,15 +90,50 @@ it**, never the one that matches the last screen you wrote.
 | Choosing any colour, radius, shadow, font | `knowledge/tokens.json` |
 | Building the header band, a card, a pill, a photo screen, a takeaway | `references/anatomy.md` |
 | Marking something correct, wrong, hazardous | `references/anatomy.md` § Semantic colour |
-| Starting a new deck | `templates/gb_tokens.css` + `templates/gb_shell.css` + `templates/gb_shell.html` — copy them, do not retype or re-derive them |
+| Starting a new deck | `templates/gb_tokens.css` + `gb_shell.css` + `gb_compose.css` + `gb_shell.html` — copy them, do not retype or re-derive them |
+| Deciding how a screen should be laid out | `templates/gb_compose.css` — pick a composition, do not invent one |
 | Building START_HERE, a handout, practical cards, an instructor plan | `templates/gb_page.css` |
 | Checking a deck before sign-off | `scripts/audit_ui.py` — pass the **course folder**, not only stylesheets |
+
+### L17 · Every screen must look intentionally composed
+
+A screen is not finished because it fits. **A big empty box is not a composition.** The fix is not
+a percentage rule — it is a vocabulary, and it lives in `templates/gb_compose.css`. Put the
+composition on the slide body:
+
+| composition | when | what it does |
+|---|---|---|
+| `opener` | a cover, a day opener, a question left hanging | one statement, vertically centred, deliberately spare |
+| *(none)* | lead → cards → takeaway | the ordinary flow. If you reach for it twice running, stop |
+| `two-col` (+`wide-left`/`wide-right`) | explanation beside a visual | the single most useful one; it is what stops a figure being adrift in a wide screen |
+| `stage` | one dominant teaching visual | the drawing is `flex:1` and eats every pixel the caption and controls leave |
+| `activity` | announcing a task, drill or practical | centred, the code set large, **nothing clickable** |
+| `checkbody` | a knowledge check | one big question, centred |
+| `sum` | the closing grid | one column per block |
+
+Every one of them shares a single mechanic: **the composition claims the stage.** `flex:1`,
+`min-height:0`, content placed deliberately. Nothing is left where the normal flow happened to drop
+it.
+
+Pick the one the CONTENT needs. Different learning needs get different compositions; a module built
+from one repeated card grid is a different failure from a badly balanced screen and just as visible.
+ETPB3 arrived with 14 of 37 screens in default flow, most of them a lead sentence over a row of
+cards.
+
+**Sparse is allowed** when the sparsity IS the composition — one statement, one question, one
+dominant visual, one activity code. It never means a cluster in a corner. Choosing a named
+composition declares intent; `data-compose="sparse"` declares it for a flow screen.
+
+Checked at runtime by `course-module-ux/measure/scripts/audit_compose.js`, which measures
+**meaningful content** — headings, copy, diagrams, controls — and never the container rectangles a
+fill percentage counts.
 
 ### The three surfaces, and who owns what
 
 | surface | file | owns |
 |---|---|---|
-| the deck | `templates/gb_shell.css` | landing, stage, header band, footer strip, progress, chrome, overview, cue, and the shared content furniture (`.card` `.law` `.warnbox` `.fin` `.src` `.cap` `.meta` `.scroll` tables) |
+| the deck FRAME | `templates/gb_shell.css` | landing, stage, header band, footer strip, progress, chrome, overview, cue, `.slide`, the type scale |
+| what sits ON a screen | `templates/gb_compose.css` | the composition vocabulary, cards, callouts, tables, figures, activity launch, knowledge check, summary, photo screens |
 | a document page | `templates/gb_page.css` | `.gbt-topback`, `.wrap`, headings, cards, tables, `.links`, `.jump`, `.bigstart`, `.foot` |
 | a task page | `course-task-ux/assets/gb_task.css` | the task controls only, layered **on top of** `gb_page.css` |
 

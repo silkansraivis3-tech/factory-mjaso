@@ -1,0 +1,455 @@
+/* ==========================================================================
+   gb_compose.css — the canonical NOVIKONTAS screen-composition vocabulary.
+
+   gb_shell.css gives a screen its frame: the stage, the header band, the
+   footer strip, the chrome. This file decides HOW CONTENT SITS INSIDE IT.
+
+   WHY IT EXISTS
+   Phase 4B extracted the shell and stopped there, and the result was screens
+   that passed every check and still looked wrong: a large container filling
+   the viewport with a small cluster of text in its top-left corner and two
+   thirds of the screen doing nothing. The validator called that a high "screen
+   fill", because it measured the BOX. A big empty box is not a composition.
+
+   The fix is not a percentage rule. It is a vocabulary. Every composition
+   below is taken from GAS BASIC, where the same problem was solved once and
+   properly, and every one of them shares a single mechanic:
+
+       THE COMPOSITION CLAIMS THE STAGE. `flex:1`, `min-height:0`, and content
+       positioned deliberately within it — centred, split, or filled. Nothing
+       is left to fall wherever the normal flow happens to drop it.
+
+   HOW TO USE IT
+   Put the composition class on `.slide-body`:
+
+       <div class="slide-body opener">        one strong statement
+       <div class="slide-body two-col">       explanation | visual
+       <div class="slide-body two-col wide-left">
+       <div class="slide-body stage">         one dominant teaching visual
+       <div class="slide-body activity">      an activity announcement
+       <div class="slide-body checkbody">     a knowledge check
+       <div class="slide-body sum">           the closing summary
+       <div class="slide-body">               ordinary flow: lead, cards, takeaway
+
+   Pick the composition the CONTENT needs. Do not reach for the same one twice
+   in a row out of habit — a module built from one repeated card grid is a
+   different kind of failure from a badly balanced screen, and just as visible.
+
+   REQUIRES gb_tokens.css, then gb_shell.css, then this file.
+   OWNS     composition, cards, callouts, tables, figures, activity launch,
+            knowledge check, summary, photo screens.
+   NOT HERE course-specific technical drawings. Those belong to the course.
+   ========================================================================== */
+
+/* ==========================================================================
+   1 · OPENER — one strong statement, vertically centred, nothing else.
+   The module cover, a day opener, a block opener, a question the room is
+   left holding. Deliberately sparse: the sparsity IS the composition.
+   ========================================================================== */
+.slide-body.opener{flex:1;display:flex;flex-direction:column;justify-content:center;
+  max-width:min(1180px,88vw)}
+.opener .tagline{color:var(--amber);letter-spacing:.24em;text-transform:uppercase;
+  font-weight:600;font-size:clamp(12.5px,1.6vmin,22.8px);margin:0 0 2vmin}
+.slide:not(.dark):not(.photo) .opener .tagline{color:var(--amber-ink)}
+.opener h2{margin:0;font-size:clamp(32px,7vmin,84px);line-height:1.04;letter-spacing:-.015em}
+.opener .q{margin:3vmin 0 0;font-size:clamp(15px,2.5vmin,38.9px);line-height:1.45;
+  color:var(--dim-d);max-width:24em}
+.slide:not(.dark):not(.photo) .opener .q{color:var(--dim-l)}
+.opener .q b{color:var(--white)}
+.slide:not(.dark):not(.photo) .opener .q b{color:var(--navy)}
+
+/* the centred variant: nothing to the left, nothing to the right */
+.slide-body.opener.mid{align-items:center;text-align:center;margin:0 auto}
+.slide-body.opener.mid .q{max-width:30em}
+
+/* ==========================================================================
+   2 · STATEMENT + SUPPORT — one claim, then the evidence under it.
+   The workhorse for "here is the idea, here is why".
+   ========================================================================== */
+.statement{margin:0;font-size:clamp(17px,3vmin,48.2px);line-height:1.32;font-weight:600;
+  color:var(--navy);max-width:22em}
+.slide.dark .statement,.slide.photo .statement{color:var(--white)}
+.statement em{font-style:normal;color:var(--amber-ink);font-weight:700}
+.slide.dark .statement em{color:var(--amber)}
+
+.support{display:grid;gap:min(1.4vmin,14px);max-width:46em;margin:0;padding:0}
+/* NOT display:flex. A flex container makes every child its own flex item, so an
+   inline <b> mid-sentence lays out as a separate column and the line becomes
+   unreadable. The bullet is positioned; the text flows normally. */
+.support li{list-style:none;position:relative;padding-left:1.45em;
+  font-size:clamp(12.5px,1.78vmin,25.5px);line-height:1.5;color:var(--dim-l)}
+.slide.dark .support li{color:var(--dim-d)}
+.support li::before{content:"";position:absolute;left:0;top:.62em;width:.55em;height:.55em;
+  border-radius:2px;background:var(--blue)}
+.support li b{color:var(--ink)}
+.slide.dark .support li b{color:var(--white)}
+
+/* ==========================================================================
+   3 · TWO-COL — explanation beside a visual. The single most useful
+   composition in the system, and the one that stops a figure from being a
+   small object adrift in a wide screen.
+   ========================================================================== */
+.slide-body.two-col{display:grid;grid-template-columns:1.05fr .95fr;gap:min(4vmin,48px);
+  flex:1;align-items:center;min-height:0}
+.slide-body.two-col.wide-left{grid-template-columns:1.35fr .65fr}
+.slide-body.two-col.wide-right{grid-template-columns:.65fr 1.35fr}
+.slide-body.two-col > *{min-width:0}
+
+/* the column that holds the visual. It takes the height it is given. */
+.fill{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+  align-self:stretch}
+/* `max-height:100%` alone was wrong here: a `.fill` inside a two-col is a grid
+   item with align-items:center, so its height is content-based and 100% has
+   nothing to resolve against. The component then grew past its own cap and its
+   control row landed under the chrome. The cap still applies inside a column. */
+/* height:auto, not 100%. A percentage height resolves against the column's
+   content-based height, which is indefinite, so `min(100%, …)` silently gave
+   up and the figure grew to its natural 490 px - 45 px past the screen, with
+   its control row under the chrome. The cap is the one knob; let it be the
+   one knob. */
+.fill svg,.fill img,.fill canvas{width:100%;height:auto;object-fit:contain;
+  max-height:var(--fig-max, 100%)}
+
+/* ==========================================================================
+   4 · STAGE — one dominant teaching visual, as large as the screen allows.
+   This is the answer to a terminal board floating in a big empty panel: the
+   drawing is `flex:1` and eats every pixel the caption and controls leave.
+   ========================================================================== */
+.slide-body.stage{flex:1;display:flex;flex-direction:column;gap:min(2vmin,20px);min-height:0}
+.slide-body.stage > svg,
+.slide-body.stage > .fill,
+.slide-body.stage > [data-stage]{flex:1;width:100%;min-height:0}
+.slide-body.stage > svg{height:auto;max-height:100%}
+/* a mounted component on a stage: the component's own root grows, and the
+   --fig-max cap the shell applies to a loose figure is lifted, because a stage
+   figure is sized BY the stage rather than by a guess about the furniture. */
+.slide-body.stage > div{flex:1;min-height:0;display:flex;flex-direction:column}
+/* A stage screen carries the figure and almost nothing else, so the shell's
+   cap - sized for a figure sharing a screen with text - is too tight here.
+   The cap is RAISED, not removed: `max-height:none` was tried and the three
+   stage screens immediately overflowed by 40, 197 and 218 px, because a
+   mounted component's own furniture (head, caption, control row, note) is
+   below the drawing and the drawing had stopped leaving room for it. */
+.slide-body.stage{--fig-max:max(220px, calc(100vh - 300px))}
+
+/* a caption or control row under a stage must not be allowed to grow */
+.slide-body.stage > .cap,
+.slide-body.stage > .srcline,
+.slide-body.stage > .mediabar{flex:0 0 auto}
+
+/* ==========================================================================
+   5 · CARDS — two, three or four. Never one, never five.
+   A single card is a paragraph with a border; five is a table.
+   ========================================================================== */
+.cards{display:grid;gap:min(2.2vmin,22px);margin:0}
+.cards.c2{grid-template-columns:repeat(2,1fr)}
+.cards.c3{grid-template-columns:repeat(3,1fr)}
+.cards.c4{grid-template-columns:repeat(4,1fr)}
+/* a card row that is the screen's main content centres itself in the stage
+   instead of sitting against the top edge */
+.slide-body > .cards{align-content:center}
+
+.card{background:var(--white);border:1px solid var(--line-l);border-radius:var(--r-m);
+  padding:min(2.6vmin,26px);box-shadow:var(--sh);display:flex;flex-direction:column;gap:.7em}
+.slide.dark .card{background:var(--deep-2);border-color:var(--line-d);box-shadow:var(--sh-d)}
+.card .n{width:2.1em;height:2.1em;border-radius:9px;background:var(--blue-wash-l);
+  color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;
+  font-size:clamp(13px,1.9vmin,26.8px);flex:none}
+.slide.dark .card .n{background:var(--blue-wash-d);color:var(--blue)}
+.card h3,.card h4{margin:0;color:var(--navy);font-size:clamp(14px,1.95vmin,26px);font-weight:700}
+.slide.dark .card h3,.slide.dark .card h4{color:var(--txt-d)}
+.card p{margin:0;font-size:clamp(12.5px,1.72vmin,24.1px);line-height:1.5;color:var(--dim-l)}
+.slide.dark .card p{color:var(--dim-d)}
+.card ul,.card ol{margin:0;padding-left:1.2em}
+.card li{font-size:clamp(12.5px,1.65vmin,22px);line-height:1.5;color:var(--dim-l)}
+.slide.dark .card li{color:var(--dim-d)}
+.card .tag{font-size:clamp(12.5px,1.25vmin,16.8px);letter-spacing:.16em;text-transform:uppercase;
+  font-weight:700;color:var(--amber-ink)}
+.slide.dark .card .tag{color:var(--amber)}
+.card.key{border-left:4px solid var(--blue)}
+.card.step{border-left:4px solid var(--amber)}
+.card.warn{border-left:4px solid var(--warn)}
+.card.good{border-left:4px solid var(--good)}
+
+/* ==========================================================================
+   6 · TRIO — three photographs or three framed figures, filling the stage.
+   ========================================================================== */
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:min(2.2vmin,22px);flex:1;
+  min-height:0;max-height:100%;margin:0}
+.trio figure{display:flex;flex-direction:column;border-radius:var(--r-m);overflow:hidden;
+  border:1px solid var(--line-l);box-shadow:var(--sh);background:var(--white);min-height:0;margin:0}
+.slide.dark .trio figure{background:var(--deep-2);border-color:var(--line-d);box-shadow:var(--sh-d)}
+.trio img,.trio svg{width:100%;flex:1;object-fit:cover;min-height:0}
+.trio figcaption{padding:min(1.7vmin,17px) min(1.8vmin,18px);
+  font-size:clamp(12.5px,1.55vmin,21.4px);line-height:1.45;color:var(--dim-l)}
+.slide.dark .trio figcaption{color:var(--dim-d)}
+.trio figcaption b{display:block;color:var(--navy);font-size:1.06em;margin-bottom:.3em}
+.slide.dark .trio figcaption b{color:var(--txt-d)}
+
+/* ==========================================================================
+   7 · PHOTOGRAPH — full bleed, copy over a scrim. The photograph IS the
+   screen; the copy sits on it. Never a photograph in a box with text below.
+   ========================================================================== */
+.photo-wrap{position:absolute;inset:0;overflow:hidden}
+.photo-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-scrim{position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(6,14,28,.92) 0%,rgba(6,14,28,.62) 34%,rgba(6,14,28,.05) 62%),
+             linear-gradient(0deg,rgba(6,14,28,.72),transparent 42%)}
+.photo-scrim.right{
+  background:linear-gradient(270deg,rgba(6,14,28,.92) 0%,rgba(6,14,28,.6) 34%,rgba(6,14,28,.05) 62%),
+             linear-gradient(0deg,rgba(6,14,28,.72),transparent 42%)}
+.photo-copy{position:absolute;left:min(7vmin,86px);top:50%;transform:translateY(-50%);
+  max-width:min(38vw,540px);z-index:3}
+.photo-copy.right{left:auto;right:min(7vmin,86px)}
+.photo-copy h2{margin:0;font-size:clamp(24px,4.4vmin,50px);color:var(--white);line-height:1.1}
+.photo-copy .lead{margin-top:1.4vmin;color:#C9DAEB}
+.photo-badge{display:inline-block;background:var(--amber);color:#22190A;font-weight:700;
+  border-radius:6px;padding:.42em .95em;font-size:clamp(12.5px,1.4vmin,18.8px);
+  letter-spacing:.14em;text-transform:uppercase;margin-bottom:1.6vmin}
+/* the credit clears #chrome, which owns the bottom 60px and never goes away */
+.credit{position:absolute;right:12px;bottom:max(70px,calc(min(3.4vmin,30px) + 10px));z-index:4;
+  background:rgba(6,14,28,.72);color:#B9CBDD;font-size:clamp(12.5px,1.12vmin,15.4px);
+  padding:.42em .8em;border-radius:5px;max-width:min(52vw,620px);line-height:1.35}
+
+/* ==========================================================================
+   8 · ACTIVITY LAUNCH — centred, the code dominant, and nothing clickable.
+   The deck ANNOUNCES an activity; it never opens one. A link inside a slide
+   navigates the single page away mid-session.
+   The whole screen is the announcement: `.slide.dark.activity`, no card.
+   ========================================================================== */
+.slide-body.activity{flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center}
+.act-code{margin:0;font-family:var(--mono);font-size:clamp(38px,9vmin,110px);font-weight:700;
+  color:var(--amber);letter-spacing:.06em;line-height:1}
+.act-title{margin:2.4vmin 0 0;font-size:clamp(20px,3.6vmin,42px);font-weight:700;color:var(--white)}
+.slide:not(.dark):not(.photo) .act-title{color:var(--navy)}
+.act-inst{margin:2vmin 0 0;font-size:clamp(13px,2.05vmin,30.8px);color:var(--dim-d);max-width:26em}
+.slide:not(.dark):not(.photo) .act-inst{color:var(--dim-l)}
+.act-steps{display:flex;gap:min(2.4vmin,26px);margin-top:4vmin;flex-wrap:wrap;justify-content:center}
+.act-step{border:1px solid var(--line-d);border-radius:var(--r-m);padding:1.1em 1.4em;
+  min-width:180px;background:rgba(255,255,255,.035);text-align:left}
+.slide:not(.dark):not(.photo) .act-step{border-color:var(--line-l);background:var(--white)}
+.act-step .s{color:var(--blue);font-weight:700;font-size:clamp(12.5px,1.4vmin,17.4px);
+  letter-spacing:.18em;text-transform:uppercase}
+.act-step p{margin-top:.4em;font-size:clamp(12.5px,1.65vmin,22.8px);color:var(--dim-d);
+  line-height:1.45}
+.slide:not(.dark):not(.photo) .act-step p{color:var(--dim-l)}
+.act-note{margin-top:2.2vmin;font-size:clamp(12.5px,1.4vmin,18.1px);color:var(--faint-d)}
+
+/* the announcement line. A left rule, not a button - nothing here is pressable. */
+.act-now{margin:3vmin 0 0;border-left:3px solid var(--blue);padding-left:min(1.8vmin,18px);
+  font-size:clamp(12.5px,1.66vmin,22.8px);line-height:1.45;color:var(--dim-d);
+  text-align:left;max-width:34em}
+.slide:not(.dark):not(.photo) .act-now{color:var(--dim-l)}
+.act-now b{color:var(--white);font-weight:700}
+.slide:not(.dark):not(.photo) .act-now b{color:var(--navy)}
+.act-now code{font-family:var(--mono);background:var(--amber-wash-d);color:var(--amber);
+  border:1px solid rgba(233,165,30,.45);border-radius:6px;padding:0 .4em;
+  font-size:max(12.5px,.94em);font-weight:700;white-space:nowrap}
+.slide:not(.dark):not(.photo) .act-now code{background:var(--amber-wash-l);color:var(--amber-ink)}
+
+/* ==========================================================================
+   9 · KNOWLEDGE CHECK and DEBRIEF
+   ========================================================================== */
+.slide-body.checkbody{display:flex;flex-direction:column;gap:min(3vmin,32px);
+  align-items:flex-start;justify-content:center;flex:1;min-height:0}
+h2.bigcall{font-size:clamp(28px,6vmin,86px);line-height:1.02}
+.checkbody .bigq{font-size:clamp(15px,2.5vmin,36px);line-height:1.3;margin:0;color:var(--dim-d)}
+.slide:not(.dark):not(.photo) .checkbody .bigq{color:var(--dim-l)}
+
+.quiz{flex:1;display:flex;flex-direction:column;gap:min(2vmin,20px);min-height:0}
+.q-head{display:flex;align-items:baseline;gap:14px}
+.q-head .qn{color:var(--blue);font-weight:700;font-size:clamp(12.5px,1.5vmin,18.8px);
+  letter-spacing:.16em;text-transform:uppercase}
+.q-text{font-size:clamp(15px,2.5vmin,38.9px);font-weight:600;color:var(--navy);line-height:1.3}
+.slide.dark .q-text{color:var(--white)}
+.q-opts{display:grid;gap:min(1.4vmin,14px);margin-top:min(1vmin,10px)}
+.q-opt{text-align:left;border:1.5px solid var(--line-l);background:var(--white);
+  border-radius:var(--r-m);padding:min(1.9vmin,19px) min(2.2vmin,22px);cursor:pointer;
+  font-size:clamp(12.5px,1.82vmin,25.5px);color:var(--ink);font-weight:500;line-height:1.4;
+  transition:border-color .14s ease,background .14s ease;min-height:52px;
+  display:flex;gap:.9em;align-items:center;font-family:var(--font)}
+.q-opt .mk{width:1.85em;height:1.85em;border-radius:8px;background:var(--grey);color:var(--steel);
+  display:flex;align-items:center;justify-content:center;font-weight:700;flex:none;
+  font-size:max(12.5px,.88em)}
+.q-opt.right{border-color:var(--good);background:var(--good-wash-l)}
+.q-opt.right .mk{background:var(--good);color:var(--white)}
+.q-opt.wrong{border-color:var(--warn);background:var(--warn-wash-l)}
+.q-opt.wrong .mk{background:var(--warn);color:var(--white)}
+.q-why{margin-top:min(1.6vmin,16px);border-left:3px solid var(--amber);
+  background:var(--amber-wash-l);padding:min(1.7vmin,17px) min(2vmin,20px);
+  border-radius:0 var(--r-s) var(--r-s) 0;font-size:clamp(12.5px,1.7vmin,24.1px);
+  line-height:1.5;color:var(--ink);display:none}
+.q-why.on{display:block}
+.q-why b{color:var(--navy)}
+
+.ans-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:min(2vmin,20px);flex:1;
+  align-content:center;min-height:0}
+.ans{border:1px solid var(--line-l);border-left:4px solid var(--blue);border-radius:var(--r-s);
+  padding:min(2vmin,20px);background:#F7FAFD}
+.slide.dark .ans{background:var(--deep-2);border-color:var(--line-d);border-left-color:var(--blue)}
+.ans.key{border-left-color:var(--amber)}
+.ans h3{margin:0;color:var(--navy);font-size:clamp(13.5px,1.95vmin,26.8px)}
+.slide.dark .ans h3{color:var(--txt-d)}
+.ans p{margin-top:.5em;font-size:clamp(12.5px,1.6vmin,22.8px);line-height:1.5;color:var(--dim-l)}
+.slide.dark .ans p{color:var(--dim-d)}
+
+/* ==========================================================================
+   10 · SUMMARY — the closing grid. One column per block, rules on top.
+   ========================================================================== */
+.slide-body.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:min(1.8vmin,18px);flex:1;align-content:center}
+.sum .item{border-top:3px solid var(--blue);padding-top:min(1.8vmin,18px);display:flex;
+  flex-direction:column;gap:.6em}
+.sum .item:nth-child(even){border-top-color:var(--amber)}
+.sum .k{font-family:var(--mono);color:var(--steel);font-size:clamp(12.5px,1.5vmin,20.1px);
+  font-weight:700}
+.slide.dark .sum .k{color:var(--blue)}
+.sum .item h3{margin:0;color:var(--navy);font-size:clamp(13px,1.95vmin,28.1px)}
+.slide.dark .sum .item h3{color:var(--txt-d)}
+.sum .item p{margin:0;font-size:clamp(12.5px,1.55vmin,21.4px);line-height:1.45;color:var(--dim-l)}
+.slide.dark .sum .item p{color:var(--dim-d)}
+
+/* ==========================================================================
+   11 · TAKEAWAY — the line the room should leave with, pinned above the
+   chrome so it reads as a conclusion rather than as the next paragraph.
+   ========================================================================== */
+.takeaway{position:absolute;left:min(7vmin,86px);right:min(7vmin,86px);bottom:max(72px,6.4vmin);
+  border-left:3px solid var(--amber);padding:.85em 1.2em;background:rgba(255,255,255,.04);
+  border-radius:0 var(--r-s) var(--r-s) 0;font-size:clamp(12.5px,1.75vmin,24.1px);
+  color:var(--dim-d);margin:0}
+.takeaway .tk{color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:.15em;
+  font-size:max(12.5px,.78em);margin-right:.7em}
+/* On a light slide rgba(255,255,255,.04) is white and --dim-d measures 2.06:1.
+   The light variant gets the amber wash the system already uses for a note. */
+.slide:not(.dark):not(.photo) .takeaway{background:var(--amber-wash-l);color:var(--dim-l)}
+.slide:not(.dark):not(.photo) .takeaway .tk{color:var(--amber-ink)}
+.slide:not(.dark):not(.photo) .takeaway b{color:var(--ink)}
+/* a body that shares its screen with a pinned takeaway leaves room for it */
+.slide:has(> .takeaway) .slide-body{padding-bottom:max(140px,14vmin)}
+
+/* ==========================================================================
+   12 · CONTENT BLOCKS — callouts, tables, figures, meta.
+   The vocabulary a screen body is written in, whatever composition holds it.
+   ========================================================================== */
+.lead{margin:0;font-size:clamp(14px,2.15vmin,32.2px);line-height:1.5;color:var(--dim-l)}
+.slide.dark .lead{color:var(--dim-d)}
+
+.src,.srcline{margin:0;font-size:clamp(12.5px,1.2vmin,16.8px);line-height:1.45;color:var(--faint-l)}
+.slide.dark .src,.slide.dark .srcline{color:var(--faint-d)}
+
+.cap{margin:0;font-size:clamp(12.5px,1.5vmin,20px);line-height:1.4;color:var(--dim-l);
+  text-align:center}
+.slide.dark .cap{color:var(--dim-d)}
+
+.law{background:var(--amber-wash-l);border:1px solid var(--amber);border-left:4px solid var(--amber);
+  border-radius:0 var(--r-s) var(--r-s) 0;padding:min(1.8vmin,16px) min(2.2vmin,20px);margin:0}
+.law p{margin:0 0 .4em;font-size:clamp(13.5px,1.8vmin,24px);line-height:1.45;color:var(--amber-ink)}
+.law .ref{margin:0;font-size:clamp(12.5px,1.5vmin,18px);font-weight:700;color:var(--amber-ink)}
+.slide.dark .law{background:var(--amber-wash-d);border-color:var(--amber)}
+.slide.dark .law p{color:var(--txt-d)}
+.slide.dark .law .ref{color:var(--amber)}
+
+.warnbox{background:var(--white);border:1px solid var(--warn);border-left:4px solid var(--warn);
+  border-radius:0 var(--r-s) var(--r-s) 0;padding:min(1.6vmin,14px) min(2.2vmin,20px);margin:0}
+.warnbox p{margin:0 0 .4em;font-size:clamp(13.5px,1.8vmin,24px);line-height:1.45}
+.warnbox b{color:var(--warn)}
+.slide.dark .warnbox{background:var(--deep-2);border-color:var(--warn-d)}
+.slide.dark .warnbox b{color:var(--warn-d)}
+
+.fin{background:var(--white);border:1px solid var(--good);border-left:4px solid var(--good);
+  border-radius:0 var(--r-s) var(--r-s) 0;padding:min(1.6vmin,14px) min(2.2vmin,20px);margin:0;
+  font-size:clamp(14px,1.85vmin,26px);line-height:1.45;color:var(--ink)}
+.fin b{color:var(--good)}
+.slide.dark .fin{background:var(--deep-2);border-color:var(--good-d);color:var(--txt-d)}
+.slide.dark .fin b{color:var(--good-d)}
+
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin:0}
+.meta span{background:var(--blue-wash-l);border:1px solid var(--line-l);border-radius:var(--r-s);
+  padding:4px 12px;font-size:clamp(12.5px,1.55vmin,20px);color:var(--dim-l)}
+.slide.dark .meta span{background:var(--blue-wash-d);border-color:var(--line-d);color:var(--dim-d)}
+
+.num{display:inline-block;min-width:2.2em;font-family:var(--mono);font-weight:700;color:var(--navy)}
+.slide.dark .num{color:var(--blue)}
+
+.steps{margin:0;padding-left:1.4em;display:grid;gap:min(1.4vmin,12px)}
+.steps li{font-size:clamp(13.5px,1.8vmin,25px);line-height:1.45;color:var(--ink)}
+.slide.dark .steps li{color:var(--txt-d)}
+.steps li strong{color:var(--navy)}
+.slide.dark .steps li strong{color:var(--blue)}
+
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--r-m)}
+table,.tbl{border-collapse:collapse;width:100%;background:var(--white);
+  font-size:clamp(12.5px,1.55vmin,22.8px)}
+th,td{padding:min(1.2vmin,12px) min(1.4vmin,14px);text-align:left;vertical-align:top;
+  border-bottom:1px solid var(--line-l)}
+th{background:var(--navy);color:var(--white);font-weight:700;font-size:max(12.5px,.92em);
+  letter-spacing:.06em;text-transform:uppercase}
+td{color:var(--dim-l)}
+td:first-child{color:var(--ink);font-weight:600}
+tr:nth-child(even) td{background:#F7FAFD}
+td.n,.tbl .num{font-family:var(--mono);color:var(--navy)}
+.slide.dark table,.slide.dark .tbl{background:var(--deep-2);color:var(--txt-d)}
+.slide.dark th{background:var(--deep-3);color:var(--txt-d);border-color:var(--line-d)}
+.slide.dark td{border-color:var(--line-d);color:var(--dim-d)}
+.slide.dark tr:nth-child(even) td{background:rgba(255,255,255,.03)}
+.slide.dark td:first-child{color:var(--txt-d)}
+
+svg.fig{display:block;max-width:100%;height:auto;margin:0 auto;background:var(--white);
+  border:1px solid var(--line-l);border-radius:var(--r-m)}
+.slide.dark svg.fig{background:var(--deep-2);border-color:var(--line-d)}
+figure{margin:0}
+
+/* ==========================================================================
+   13 · CONTROLS UNDER A GRAPHIC — the bar that steps an animation.
+   Centred under the figure, 44 px minimum, never hover-only.
+   ========================================================================== */
+.mediabar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;margin:0}
+.mediabar .fbtn{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line-d);
+  background:rgba(46,182,248,.1);color:var(--txt-d);border-radius:10px;padding:.7em 1.25em;
+  font-size:clamp(12.5px,1.62vmin,21.4px);font-weight:600;cursor:pointer;min-height:44px;
+  font-family:var(--font)}
+.slide:not(.dark) .mediabar .fbtn{border-color:var(--line-l);background:var(--blue-wash-l);
+  color:var(--navy)}
+.mediabar .fbtn.primary{background:var(--navy);color:var(--white);border-color:var(--navy)}
+.mediabar .fbtn:active{transform:translateY(1px)}
+.dots{display:flex;gap:6px}
+.dots i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.16);display:block;
+  transition:background .3s ease}
+.slide:not(.dark) .dots i{background:var(--line-l)}
+.dots i.on{background:var(--blue)}
+.caption{text-align:center;font-size:clamp(12.5px,1.85vmin,26.8px);line-height:1.45;
+  color:var(--dim-d);max-width:44em;margin:0 auto}
+.slide:not(.dark) .caption{color:var(--dim-l)}
+.caption b{color:var(--white)}
+.slide:not(.dark) .caption b{color:var(--navy)}
+
+/* progressive reveal */
+.frag{opacity:0;transform:translateY(10px);transition:opacity .4s ease,transform .4s ease}
+.frag.on{opacity:1;transform:none}
+
+/* ==========================================================================
+   14 · NARROW FALLBACK — a portrait tablet is 800 px wide.
+   Multi-column compositions collapse; nothing is allowed to squeeze.
+   ========================================================================== */
+@media (max-width:900px){
+  /* A collapsed two-col is still a composition. `align-items:start` stacked
+     both columns against the top of a 1280 px portrait screen and left the
+     lower third empty - measured at centroid y=0.29. The rows size to their
+     content; the STACK centres. */
+  .slide-body.two-col,
+  .slide-body.two-col.wide-left,
+  .slide-body.two-col.wide-right{grid-template-columns:1fr;
+    grid-auto-rows:min-content;align-content:center;align-items:start}
+  .cards.c3,.cards.c4{grid-template-columns:repeat(2,1fr)}
+  .trio{grid-template-columns:1fr;max-height:none}
+  .ans-grid{grid-template-columns:1fr}
+  .photo-copy{max-width:min(78vw,620px)}
+}
+@media (max-width:620px){
+  .cards.c2,.cards.c3,.cards.c4{grid-template-columns:1fr}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .frag{transition:none}
+}

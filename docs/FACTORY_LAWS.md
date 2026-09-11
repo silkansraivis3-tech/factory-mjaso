@@ -78,9 +78,26 @@ thing you changed. Report what failed as plainly as what passed. → `course-fac
 Nothing is built until the gate table is approved. Published is not installed.
 → `course-factory`, `course-tablet-publisher`
 
+**L17 · Every screen must look intentionally composed.**
+A screen is not finished because its elements fit, nothing overflows, the contrast passes and a
+large container occupies most of the viewport. **A big empty box is not a composition.** Meaningful
+content — headings, copy, diagrams, photographs, controls — must deliberately use the screen it is
+given. A small cluster of text in one corner of an otherwise purposeless screen is a design defect,
+however green the checks are.
+
+Sparse is allowed when the sparsity is the composition and is visually strong: one statement, one
+question, one dominant visual, one photograph, one activity code centred. Sparse never means
+"a huddle top-left". Choosing a named composition from `gb_compose.css` counts as declaring intent;
+`data-compose="sparse"` declares it for an ordinary flow screen.
+
+Measured on **meaningful content**, never on container rectangles: ink share, horizontal and
+vertical balance, content centroid, dead halves, and whether a teaching visual is large enough to
+read from the back of a room. A warning here is a call for human review, not an automatic failure.
+→ `course-module-ui` (the vocabulary), `course-module-ux` (`measure/scripts/audit_compose.js`)
+
 ---
 
-**All sixteen laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+**All seventeen laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
 `course-visuals` was built; before that they depended on the operator remembering them.
 
 Organisation-skill dependencies and their fallbacks:

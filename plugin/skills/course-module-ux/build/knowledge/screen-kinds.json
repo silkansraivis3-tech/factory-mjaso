@@ -4,6 +4,8 @@
     "slide": "section.slide — one per screen, in delivery order. Inactive slides are display:none.",
     "data-title": "required. The screen's own title. The run-script generator reads this.",
     "data-kind": "required. One of the ids below. Drives styling and the generated run script's per-screen line.",
+    "_composition": "Put a composition class on the .slide-body, from the vocabulary in course-module-ui/templates/gb_compose.css: opener | two-col (+wide-left/wide-right) | stage | activity | checkbody | sum, or nothing for the ordinary lead->cards->takeaway flow. L17: every screen must look intentionally composed, and a large empty container is not a composition. Different learning needs take different compositions - a module built from one repeated card grid is its own defect. Checked by course-module-ux/measure/scripts/audit_compose.js.",
+    "data-compose": "optional. \"sparse\" declares that an ordinary flow screen is thin ON PURPOSE and suppresses the ink floor. A named composition already declares intent and does not need it. Sparse never excuses a cluster in a corner: the balance and dead-half checks apply to every screen.",
     "data-block": "required. The timetable block this screen belongs to, e.g. \"Block A2\". The stable reference — slide NUMBERS move, blocks do not.",
     "data-mins": "on the FIRST screen of a block only. The block's minutes.",
     "data-track": "required wherever data-mins is. \"theory\" or \"practice\" - which allocation bucket this block's minutes are claimed against. This is the Track A audit trail: the sum per bucket must equal what the programme allocated. It is not a styling hint and it is not editable to make a build look better.",

@@ -23,7 +23,8 @@
      GBVerifyFigures.run({ minPx: 80 })     raise the size floor
 
    WHAT COUNTS AS PRESENT
-     the mount exists · it has rendered children · the figure element
+     the mount exists · it has no loose text in it · it has rendered children ·
+     the figure element
      (svg/canvas/img) has non-zero laid-out size · it is not display:none or
      opacity:0 at the root · no console error was recorded for its script
 
@@ -102,6 +103,26 @@ var GBVerifyFigures = (function (w, d) {
       var kids = el.children.length;
       if (!kids) {
         res.why = "mount #" + id + " is EMPTY - the component never populated it";
+        return res;
+      }
+
+      /* Stray text directly inside a mount means the fragment paste is broken.
+         A fragment header comment says `Mount into <div id="f1-lauks">`, and
+         any regex run over module.html can match that tag INSIDE the comment
+         instead of the real one - which splits the comment open and prints its
+         body on the slide. It shipped that way once, and every other check was
+         green because the component still rendered underneath. */
+      var stray = [];
+      for (var si = 0; si < el.childNodes.length; si++) {
+        var nd = el.childNodes[si];
+        if (nd.nodeType === 3 && nd.nodeValue && nd.nodeValue.trim().length > 2) {
+          stray.push(nd.nodeValue.trim().slice(0, 60));
+        }
+      }
+      if (stray.length) {
+        res.why = "mount #" + id + " has loose text in it - the fragment paste is " +
+                  "broken and part of its header comment is rendering: \"" +
+                  stray[0] + "…\"";
         return res;
       }
 

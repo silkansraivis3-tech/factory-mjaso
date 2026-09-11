@@ -194,6 +194,7 @@ Three distinct layers, and passing one says nothing about the others:
 |---|---|---|
 | STATIC | `measure/scripts/check_static.py all <module.html>`, `measure/scripts/check_navigation.py <course>` | minutes, links inside slides, missing nav, missing back hook, declared tap sizes |
 | RUNTIME | `measure/scripts/audit_drive.js` (+ `audit_deck.js`, `audit_collide.js` loaded first), `course-visuals/scripts/verify_figures.js` | contrast as painted, real laid-out size, spill, overlap, anything under the chrome, whether a figure rendered at all, whether a control can actually be tapped |
+| COMPOSITION | `measure/scripts/audit_compose.js` | whether the screen is COMPOSED or merely fits — see below |
 | HUMAN | `review/GUIDE.md`, the side-by-side against the reference deck | whether it teaches |
 
 Serve over http — `measure/scripts/serve_fresh.py <course>`, a fresh port after every edit — then
@@ -201,8 +202,39 @@ in the page:
 
 ```js
 await AuditDrive.run()          // every slide, driven by the deck's own Next button
+await AuditCompose.run()        // every slide, is it composed or does it just fit
 GBVerifyFigures.run({})         // every figure mount, measured
 ```
+
+### Composed, or merely fitting?
+
+`audit_deck.js` reports a `fill` percentage computed from container boxes. **A large empty
+container scores a high fill while the only thing a learner can read sits in its corner.** That
+number is not evidence of composition and must never be reported as if it were.
+
+`audit_compose.js` measures **meaningful content** — headings, copy, list items, table cells, svg,
+img, canvas, controls — and ignores the div, panel or card holding them. Furniture inherits its
+right to the space from what it contains. It reports:
+
+| | |
+|---|---|
+| `ink` | union area of meaningful content, as a share of the stage |
+| `centroid` | where the weight actually sits, x and y, 0..1 |
+| dead half | a half holding under 8 % of the ink — the corner-cluster detector |
+| `focal` / `focalW` | the largest single element, by area and by width |
+| verdict | COMPOSED · REVIEW · WEAK |
+
+Two calibrations worth knowing, both learned the hard way:
+
+- **Vertical drift is the one the eye notices first.** The first version checked only x, and a
+  deck whose content stopped at 60 % of every screen passed.
+- **Area alone is a landscape assumption.** A wide drawing at the full width of an 800 × 1280
+  portrait screen covers 20 % of its area and is using the screen as well as it can. A figure is
+  undersized only when it is small in its own dominant axis too.
+
+A WEAK verdict is a defect. A REVIEW is a call for a human to look, not an automatic failure —
+`data-compose="sparse"`, or a named composition on the body, declares intent and the ink floor
+is not applied.
 
 Run it at **1280 × 800 and 800 × 1280**. The defaults already match the canonical shell
 (`.slide`, `active`, `#startBtn`, `#btnNext`), so a deck built on it needs no CONFIG edit.
