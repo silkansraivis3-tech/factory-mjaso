@@ -1,0 +1,158 @@
+/* ==========================================================================
+   gb_page.css — the canonical NOVIKONTAS document page.
+
+   A course is not only its deck. It is also START_HERE, the handout, the
+   practical cards, the instructor plan, the assessment record — pages a
+   learner or instructor reads and scrolls rather than presents.
+
+   Until 2.2.0 the Factory shipped no surface for these, so every course wrote
+   its own. The ETPB3 pilot arrived carrying `etpb3_ui.css`, whose first line
+   read "ETPB2 — shared visual layer": a document surface copied from the
+   previous course, renamed, and drifting. Its sibling `task.css` said
+   "ETPA1". Two courses back, and still spreading.
+
+   OWNS   the shared NOVIKONTAS identity of a non-deck page.
+   PAIRS  gb_shell.css owns the deck. gb_task.css (course-task-ux) layers task
+          mechanics on top of this file.
+   NEEDS  gb_tokens.css loaded first. No raw hex below except the two semantic
+          grounds this file defines and names.
+
+   Load order on a document page:   gb_tokens.css → gb_page.css
+   Load order on a task page:       gb_tokens.css → gb_page.css → gb_task.css
+   ========================================================================== */
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--grey);color:var(--ink);
+  font-family:var(--font);-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+
+/* --------------------------------------------------------------------------
+   THE ANDROID BACK CONTRACT
+   The hardware Back button clicks `a.gbt-topback[href]`. On a document page it
+   is a real, visible, sticky bar: a tablet user reading a handout must be able
+   to leave with a thumb, not only with a hardware key. 48 px, top of the page,
+   above everything, and it never scrolls away.
+   -------------------------------------------------------------------------- */
+.gbt-topback{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:8px;
+  min-height:48px;padding:0 14px;background:var(--navy);color:var(--white);
+  font:700 15px/1 var(--font);text-decoration:none}
+.gbt-topback .gbt-ico{font-size:13px;line-height:1}
+.gbt-topback:active{background:var(--deep-3)}
+.gbt-topback:focus{outline:3px solid var(--blue);outline-offset:-3px}
+
+/* --------------------------------------------------------------------------
+   PAGE FRAME
+   960 px: wide enough for a table, narrow enough that a line of body text on a
+   1280 px tablet does not run past comfortable reading length.
+   -------------------------------------------------------------------------- */
+.wrap{max-width:960px;margin:0 auto;padding:16px 16px 64px}
+
+h1,.wrap h1{margin:8px 0 4px;font-size:clamp(21px,3vmin,27px);line-height:1.2;
+  font-weight:700;color:var(--navy)}
+h2,.wrap h2{margin:26px 0 10px;font-size:clamp(17px,2.2vmin,21px);line-height:1.25;
+  font-weight:700;color:var(--navy)}
+h3,.wrap h3{margin:0 0 6px;font-size:clamp(15px,1.95vmin,18px);line-height:1.3;
+  font-weight:700;color:var(--navy)}
+p,li{font-size:clamp(14px,1.85vmin,16px);line-height:1.5}
+.sub{margin:0 0 16px;font-size:clamp(14px,1.85vmin,16px);line-height:1.5;color:var(--dim-l)}
+.lead{margin:0 0 16px;font-size:clamp(15px,2vmin,17px);line-height:1.55;color:var(--dim-l)}
+.note{margin:0 0 14px;font-size:14.5px;line-height:1.5;color:var(--dim-l)}
+code{font-family:var(--mono);font-size:.92em;background:var(--white);
+  border:1px solid var(--line-l);border-radius:5px;padding:1px 5px}
+
+/* --------------------------------------------------------------------------
+   BLOCKS — the same vocabulary the deck uses, so a handout and a screen read
+   as one product. Names deliberately match gb_shell.css.
+   -------------------------------------------------------------------------- */
+.card{background:var(--white);border:1px solid var(--line-l);border-radius:var(--r-m);
+  padding:13px 16px;margin:0 0 14px;box-shadow:var(--sh)}
+.card h3{margin:0 0 6px}
+.card h4{margin:0 0 6px;font-size:clamp(14px,1.85vmin,17px);color:var(--navy);font-weight:700}
+.card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0}
+.card.key{border-left:5px solid var(--blue)}
+.card.step{border-left:5px solid var(--amber)}
+.card.hot{border-left:5px solid var(--amber)}
+.card.good{border-left:5px solid var(--good)}
+.card.warn{border-left:5px solid var(--warn)}
+
+.grid{display:grid;gap:12px;grid-template-columns:1fr;margin:0 0 14px}
+@media (min-width:720px){
+  .grid.c2{grid-template-columns:repeat(2,1fr)}
+  .grid.c3{grid-template-columns:repeat(3,1fr)}
+}
+
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.meta span{background:var(--blue-wash-l);border:1px solid var(--line-l);border-radius:var(--r-s);
+  padding:5px 12px;font-size:clamp(12.5px,1.6vmin,15px);color:var(--dim-l)}
+
+/* what the instructor is judging — blue, because it is information */
+.crit{background:var(--blue-wash-l);border-left:4px solid var(--blue);border-radius:0 8px 8px 0;
+  padding:10px 14px;margin:10px 0 0;font-size:clamp(14px,1.8vmin,16px);line-height:1.5}
+.crit b{color:var(--navy)}
+
+/* a hard stop — red, and never used for merely important things */
+.stop{background:var(--warn-wash-l);border-left:4px solid var(--warn);border-radius:0 8px 8px 0;
+  padding:10px 14px;margin:10px 0 0;font-size:clamp(14px,1.8vmin,16px);line-height:1.5}
+.stop b{color:var(--warn)}
+
+.law{background:var(--amber-wash-l);border:1px solid var(--amber);border-left:4px solid var(--amber);
+  border-radius:0 var(--r-s) var(--r-s) 0;padding:11px 15px;margin:0 0 14px}
+.law p{margin:0 0 5px;color:var(--amber-ink)}
+.law .ref{margin:0;font-size:clamp(12.5px,1.6vmin,14px);font-weight:700;color:var(--amber-ink)}
+
+.src{margin:0 0 12px;font-size:clamp(12.5px,1.6vmin,14px);line-height:1.45;color:var(--faint-l)}
+
+/* --------------------------------------------------------------------------
+   TABLES — the instructor plan is mostly table. It must scroll in its own box
+   and its header must stay put while the body scrolls.
+   -------------------------------------------------------------------------- */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 0 16px;border-radius:var(--r-m)}
+table{border-collapse:collapse;width:100%;background:var(--white);
+  font-size:clamp(13px,1.7vmin,16px)}
+th,td{border:1px solid var(--line-l);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--navy);color:var(--white);font-weight:700;position:sticky;top:48px}
+td.n,td.m{font-family:var(--mono);white-space:nowrap;font-weight:700;color:var(--navy)}
+tr.p td{background:var(--blue-wash-l)}
+
+img,svg.fig{display:block;max-width:100%;height:auto}
+svg.fig{margin:0 auto 8px;background:var(--white);border:1px solid var(--line-l);
+  border-radius:var(--r-m)}
+.cap{margin:0 0 12px;font-size:clamp(12.5px,1.6vmin,14px);color:var(--dim-l);text-align:center}
+
+/* --------------------------------------------------------------------------
+   NAVIGATION OUT OF A PAGE
+   Every target below is >= 44 px. No hover-only affordance anywhere: a tablet
+   has no hover state, so anything that only appears on hover does not exist.
+   -------------------------------------------------------------------------- */
+.bigstart{display:flex;align-items:center;justify-content:center;width:100%;min-height:68px;
+  padding:10px 16px;margin:0 0 20px;border-radius:var(--r-l);border:2px solid var(--good);
+  background:var(--good);color:var(--white);text-align:center;text-decoration:none;
+  font:700 clamp(17px,2.4vmin,21px)/1.2 var(--font)}
+.bigstart:active{transform:translateY(1px)}
+
+.links{display:grid;gap:10px;grid-template-columns:1fr;margin:0 0 16px}
+@media (min-width:640px){.links{grid-template-columns:1fr 1fr}}
+.links a{display:flex;align-items:center;min-height:56px;padding:12px 15px;
+  background:var(--white);border:1px solid var(--line-l);border-radius:var(--r-m);
+  box-shadow:var(--sh);color:var(--navy);text-decoration:none;
+  font:600 clamp(14px,1.85vmin,16px)/1.35 var(--font)}
+.links a:focus{outline:3px solid var(--blue);outline-offset:2px}
+
+/* jump strip — P1 P2 P3 … at the top of a long card page */
+.jump,.toc{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px}
+.jump a,.toc a{display:inline-flex;align-items:center;justify-content:center;
+  min-width:56px;min-height:48px;padding:0 14px;border-radius:var(--r-s);
+  background:var(--navy);color:var(--white);text-decoration:none;
+  font:700 clamp(13px,1.7vmin,15px)/1 var(--font)}
+.jump a:active,.toc a:active{transform:translateY(1px)}
+
+.back{display:inline-flex;align-items:center;min-height:48px;padding:0 18px;
+  border-radius:var(--r-s);background:var(--navy);color:var(--white);
+  font:700 15px/1 var(--font);text-decoration:none}
+.back:active{transform:translateY(1px)}
+
+.foot{margin-top:26px;padding-top:14px;border-top:1px solid var(--line-l)}
+.foot p{margin:8px 0 0;font-size:clamp(12.5px,1.6vmin,14px);line-height:1.5;color:var(--faint-l)}
+
+/* scroll-margin so an anchored card is not hidden under the sticky back bar */
+[id]{scroll-margin-top:60px}

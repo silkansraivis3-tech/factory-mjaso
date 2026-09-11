@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FAIL fixture — a page that lost a stylesheet link</title>
+<!-- This reproduces the exact ETPB3 pilot defect. The page was moved onto the
+     canonical shell, so it links gb_tokens + gb_shell. But .fin, .law, .src and
+     .warnbox only ever existed in the per-course stylesheet the rebuild dropped.
+     Static HTML checks pass. Navigation checks pass. Token audit passes.
+     The learner sees unstyled paragraphs where the callouts should be.
+     EXPECT: DEFECT naming .fin .law .src .warnbox -->
+<link rel="stylesheet" href="../../templates/gb_tokens.css">
+<link rel="stylesheet" href="fixture_shell_partial.css">
+</head>
+<body>
+<div class="slide">
+  <div class="slide-body">
+    <p class="lead">A screen that reads correctly in the source and renders wrong.</p>
+    <div class="law"><p>Regulation text.</p><p class="ref">SOLAS II-2</p></div>
+    <div class="warnbox"><p><b>Hazard.</b> Do not energise.</p></div>
+    <p class="src">Source: the programme.</p>
+    <p class="fin">Block complete.</p>
+  </div>
+</div>
+</body>
+</html>

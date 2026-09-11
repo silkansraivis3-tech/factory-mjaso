@@ -60,16 +60,26 @@ Record every moved item — what it was, which topic it came from, how many minu
 companion file. A trainee keeps the handout, so the content is still delivered; what changed is
 that it is no longer claimed as class time it never had.
 
-## Step 5 · The ratio, and the fallback that is mandatory
+## Step 5 · Two tracks, measured separately
 
-Target 80 % practical. Measure it on **allocated minutes**, not on how many activities exist.
+**Track A — allocation.** Put `data-track="theory"` or `data-track="practice"` on every screen
+that carries `data-mins`. The sum per bucket must equal what the programme allocated, exactly.
+This is not a target; it is what the operator is claiming on an accredited programme. ETPB3
+reached this only after 170 minutes of work that was already happening at the bench — reading
+real plates, sorting real instruments, crimping, taking a megohmmeter reading, setting a relay —
+stopped being delivered under a theory label and became drills V1–V6 in the practice allocation.
+Nothing about the programme changed; the build stopped misdescribing itself.
 
-Where the programme forbids it — GAS BASIC allocates 19 % practical, fixed by its own table —
-the theory hours are **delivered as active learning**: a trainee activity inside the theory
-block. A theory block with no trainee activity in it is a defect in this system, and that is the
-rule the 80/20 target degrades into, not an excuse to stop trying.
+**Track B — modality.** Put `data-active="N"` on the same screens: the minutes of that block in
+which the trainee does, decides, produces or says something. Target 80 % across the module. Where
+the programme's *practical* share is small — GAS BASIC allocates 19 % — the theory hours are
+**delivered as active learning**: a trainee activity inside the theory block. A theory block with
+no trainee activity in it is a defect, and that is the rule the target degrades into, not an
+excuse to stop trying.
 
-Record the achieved ratio and the reason it is below target.
+Record both figures and the reason for any shortfall. The instructor plan's Trainee column is
+what substantiates each declared active minute; if a block's row says "listens", the declaration
+is wrong, not the plan.
 
 ## Step 6 · ILOs
 
@@ -86,6 +96,7 @@ Wording, verbs and constructive alignment are `novikontas-pedagogy-toolkit`'s �
 ```bash
 python hours/scripts/check_hours.py --spec COURSE_START.json
 python hours/scripts/check_hours.py --programme prog.json --plan plan.json   # before COURSE_START exists
+python hours/scripts/check_balance.py course/ETPB3/module.html --programme _work/programme.json
 ```
 
 It exits non-zero when the transcription does not reconcile, when any module's built minutes do

@@ -1,0 +1,137 @@
+<!-- ==========================================================================
+     gb_shell.html — the canonical NOVIKONTAS module skeleton
+
+     Paste this. Fill the CAPITALISED placeholders. Add your own screens.
+     Do not re-invent the chrome: every course inherits the same front door,
+     the same header band, the same footer strip, the same navigation.
+
+     REQUIRES  assets/gb_tokens.css   (the token set)
+               assets/gb_shell.css    (this shell)
+               assets/gb_deck.js      (the engine)
+
+     THE CHROME BLOCK IS NOT OPTIONAL. A module with more than one screen and
+     no #btnNext / #btnPrev cannot be advanced on a tablet.
+     check_navigation.py fails the build; gb_deck.js paints a red banner.
+     ========================================================================== -->
+<!DOCTYPE html>
+<html lang="LANG">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CODE — TITLE</title>
+<link rel="stylesheet" href="assets/gb_tokens.css">
+<link rel="stylesheet" href="assets/gb_shell.css">
+<!-- module-local styles and figure component stylesheets go here -->
+</head>
+<body>
+
+<!-- back to the module's own front door; also the hook the Android hardware
+     Back button clicks (see the Android integration contract) -->
+<a class="gbt-topback" href="START_HERE.html" hidden>Back</a>
+
+<!-- ============================ LANDING ============================ -->
+<div id="landing">
+  <div class="landing-card">
+    <div class="brand-chip"><img src="assets/novikontas_logo.svg" alt="Novikontas Academy"></div>
+    <div class="landing-rule">PROGRAMME · QUALIFICATION</div>
+    <div class="landing-mod">CODE · MODULE POSITION</div>
+    <h1 class="landing-title">MODULE<br>TITLE <em>HIGHLIGHT</em></h1>
+    <div class="landing-meta">
+      <span class="chip">N academic hours</span>
+      <span class="chip">1 ak. st. = N min</span>
+      <span class="chip">N min</span>
+      <span class="chip">N days</span>
+      <span class="chip">N theory / N practice</span>
+    </div>
+    <button id="startBtn" type="button">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <span class="btn-label">START</span>
+    </button>
+    <div class="landing-hint">→ / Space next · ← back · F fullscreen · G all screens · N instructor cue</div>
+    <div class="landing-links">
+      <a href="handout/handout.html">Handout</a>
+      <a href="practicals/practicals.html">Practicals</a>
+      <a href="plan/PLAN.html">Instructor plan</a>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CHROME ============================= -->
+<div id="progress"></div>
+<div id="blockTag"></div>
+
+<div id="overview">
+  <div class="ov-head">
+    <b>All screens</b><span>Tap a screen to jump there · G closes this view</span>
+    <button class="fbtn" id="ovClose" type="button" style="margin-left:auto">Close</button>
+  </div>
+  <div class="ov-grid" id="ovGrid"></div>
+</div>
+
+<div id="cue"></div>
+
+<div id="chrome">
+  <button class="cbtn" id="btnGrid" type="button" title="All screens (G)" aria-label="All screens">
+    <svg viewBox="0 0 24 24"><path d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z"/></svg></button>
+  <button class="cbtn" id="btnCue" type="button" title="Instructor cue (N)" aria-label="Instructor cue">
+    <svg viewBox="0 0 24 24"><path d="M4 5h16v2H4zm0 4h16v2H4zm0 4h11v2H4zm0 4h11v2H4z"/></svg></button>
+  <button class="cbtn" id="btnPrev" type="button" title="Back (←)" aria-label="Back">
+    <svg viewBox="0 0 24 24"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg></button>
+  <span id="counter"><b>1</b> / 1</span>
+  <button class="cbtn" id="btnNext" type="button" title="Next (→)" aria-label="Next">
+    <svg viewBox="0 0 24 24"><path d="M8.6 16.6 10 18l6-6-6-6-1.4 1.4L13.2 12z"/></svg></button>
+  <button class="cbtn" id="btnFull" type="button" title="Fullscreen (F)" aria-label="Fullscreen">
+    <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7zm-2-4h2V7h3V5H5zm12 7h-3v2h5v-5h-2zM14 5v2h3v3h2V5z"/></svg></button>
+  <button class="cbtn" id="btnExit" type="button" title="Leave" aria-label="Leave">
+    <svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button>
+</div>
+
+<!-- ============================= STAGE ============================= -->
+<main id="stage">
+
+  <!-- every screen carries the six-attribute contract -->
+  <section class="slide dark"
+           data-title="SHORT TITLE FOR THE OVERVIEW GRID"
+           data-kind="KIND"
+           data-block="A1"
+           data-mins="20"
+           data-day="1"
+           data-foot="CODE · MODULE TITLE · NOVIKONTAS"
+           data-cue="What the instructor does here. Never rendered on the projected screen.">
+    <div class="slide-kind"><b>KIND</b> · BLOCK</div>
+    <h2>SCREEN HEADING</h2>
+    <div class="slide-body">
+      <p class="lead">One sentence that says why this screen exists.</p>
+      <!-- cards, figures, activity launches -->
+    </div>
+    <div class="takeaway"><span class="tk">Take away</span> The one thing to remember.</div>
+  </section>
+
+  <!-- an activity-launch screen: the deck ANNOUNCES a task, never launches it -->
+  <section class="slide"
+           data-title="TASK NAME" data-kind="Task" data-block="A2" data-mins="40" data-day="1"
+           data-foot="CODE · MODULE TITLE · NOVIKONTAS"
+           data-cue="Hand out the tablets. Say the task once, then stop talking.">
+    <div class="slide-kind"><b>Task</b> · BLOCK</div>
+    <div class="slide-body">
+      <div class="act">
+        <span class="act-code">T1</span>
+        <h3>TASK TITLE</h3>
+        <p>What the trainee does, in one or two sentences.</p>
+        <a class="act-open" href="tasks/T1_name.html">Open the task ▸</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script src="assets/gb_deck.js"></script>
+<!-- figure component scripts go here, before the init call -->
+<script>
+  GBDeck.init({
+    text: { cue: "Instructor cue", start: "Start" },
+    hooks: {}   /* slideId: { enter: fn, leave: fn } for figures that animate */
+  });
+</script>
+</body>
+</html>

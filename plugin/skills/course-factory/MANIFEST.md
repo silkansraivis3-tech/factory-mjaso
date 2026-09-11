@@ -96,7 +96,7 @@ Every check in this bundle was added after something got through the ones before
 
 | conflict | resolution |
 |---|---|
-| Owner wants 80/20 practical; the accredited programme allocates 19 % and the split is fixed by its own table | 80/20 is the target; where the programme forbids it the theory hours are **delivered as active learning**, and a theory block with no trainee activity is a defect. Owner's own fallback, made mandatory. |
+| Owner wants 80/20 practical; the accredited programme allocates 19 % and the split is fixed by its own table | Two tracks. **Track A** is the programme's allocation, not editable, and the build must deliver it bucket for bucket (`data-track`, `check_balance.py`). **Track B** is delivery modality (`data-active`) and is where the 80 % target lives: theory hours are **delivered as active learning**, and a theory block with no trainee activity is a defect. Owner's own fallback, made mandatory and now measured. |
 | `novikontas-course-plan` owns "theory/practice ratio"; this skill also rules on ratio | Boundary: that skill **designs** the plan and states the ratio; this skill **enforces** the accredited arithmetic and owns the active-learning fallback. Named in the router's boundary table. |
 | IMO model course vs approved programme | The programme governs. The model course is guidance, cited as support, never as authority. |
 | `COURSE_START.json` has no hours field, but is owned elsewhere | Additive `hours` block only. The existing schema is never altered. Shape in `hours-rules.json`. |

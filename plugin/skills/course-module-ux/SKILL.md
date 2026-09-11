@@ -163,6 +163,17 @@ real use reaches it.
 
 ---
 
+## The engine and the shell
+
+Do not write a deck engine. `assets/gb_deck.js` is it: `GBDeck.init({text, hooks})` owns
+start/exit, next/prev, progress, counter, block tag, overview, instructor cue, fullscreen,
+keyboard (with a keyCode fallback), guarded swipe, idle chrome and per-screen enter/leave hooks.
+It pairs with `course-module-ui/templates/gb_shell.css` and `gb_shell.html`.
+
+If a deck has more than one slide and no `#btnNext`/`#btnPrev`, the engine paints a red banner
+across the page saying so. That is deliberate: the pilot shipped a module a finger could not
+advance, and a silent failure is how it got that far.
+
 ## Verify before reporting done
 
 Run the checks; do not assert them. The probes, their exit codes and the measurement traps
@@ -174,3 +185,31 @@ transition, not the design.
 
 Report what failed as plainly as what passed. If something cannot be verified in the session,
 say so and name what would verify it.
+
+### Static is not enough. Run the deck.
+
+Three distinct layers, and passing one says nothing about the others:
+
+| layer | tool | what only it can see |
+|---|---|---|
+| STATIC | `measure/scripts/check_static.py all <module.html>`, `measure/scripts/check_navigation.py <course>` | minutes, links inside slides, missing nav, missing back hook, declared tap sizes |
+| RUNTIME | `measure/scripts/audit_drive.js` (+ `audit_deck.js`, `audit_collide.js` loaded first), `course-visuals/scripts/verify_figures.js` | contrast as painted, real laid-out size, spill, overlap, anything under the chrome, whether a figure rendered at all, whether a control can actually be tapped |
+| HUMAN | `review/GUIDE.md`, the side-by-side against the reference deck | whether it teaches |
+
+Serve over http — `measure/scripts/serve_fresh.py <course>`, a fresh port after every edit — then
+in the page:
+
+```js
+await AuditDrive.run()          // every slide, driven by the deck's own Next button
+GBVerifyFigures.run({})         // every figure mount, measured
+```
+
+Run it at **1280 × 800 and 800 × 1280**. The defaults already match the canonical shell
+(`.slide`, `active`, `#startBtn`, `#btnNext`), so a deck built on it needs no CONFIG edit.
+
+The first real pilot passed every static check and shipped with 75 runtime failures, including
+seventeen headings at contrast 1.00, a figure whose step buttons sat below the fold behind the
+chrome, and a dismissed landing screen that was still swallowing taps across the lower half of
+every slide. None of that is visible in the source.
+
+**A number in a report is a finding.** `linksInsideSlides: 17` was printed and read past.

@@ -90,8 +90,34 @@ it**, never the one that matches the last screen you wrote.
 | Choosing any colour, radius, shadow, font | `knowledge/tokens.json` |
 | Building the header band, a card, a pill, a photo screen, a takeaway | `references/anatomy.md` |
 | Marking something correct, wrong, hazardous | `references/anatomy.md` § Semantic colour |
-| Starting a new deck | `templates/gb_tokens.css` — paste it, do not retype it |
-| Checking a deck before sign-off | `scripts/audit_ui.py` |
+| Starting a new deck | `templates/gb_tokens.css` + `templates/gb_shell.css` + `templates/gb_shell.html` — copy them, do not retype or re-derive them |
+| Building START_HERE, a handout, practical cards, an instructor plan | `templates/gb_page.css` |
+| Checking a deck before sign-off | `scripts/audit_ui.py` — pass the **course folder**, not only stylesheets |
+
+### The three surfaces, and who owns what
+
+| surface | file | owns |
+|---|---|---|
+| the deck | `templates/gb_shell.css` | landing, stage, header band, footer strip, progress, chrome, overview, cue, and the shared content furniture (`.card` `.law` `.warnbox` `.fin` `.src` `.cap` `.meta` `.scroll` tables) |
+| a document page | `templates/gb_page.css` | `.gbt-topback`, `.wrap`, headings, cards, tables, `.links`, `.jump`, `.bigstart`, `.foot` |
+| a task page | `course-task-ux/assets/gb_task.css` | the task controls only, layered **on top of** `gb_page.css` |
+
+A course that writes its own version of any of these has started a dialect. ETPB3 arrived with
+`etpb3_ui.css` headed *"ETPB2 — shared visual layer"* and `task.css` headed *"ETPA1"*: two courses
+back and still spreading. The shell was incomplete, which is **why** they wrote their own — so if
+something genuinely shared is missing here, add it here.
+
+### What `audit_ui.py` checks, and why each one exists
+
+| check | the defect it was written for |
+|---|---|
+| raw chrome colour outside `:root` | drift |
+| a token whose value differs from canon | drift |
+| a local name that is not canonical | drift — unless its value is `var(--canonical, fallback)`, which is *following*, and is reported as such |
+| **a class the markup uses that no loaded stylesheet defines** | a module moved onto the canonical shell and silently lost every callout, caption and table rule. Everything else was green. |
+| **a `var(--x)` nothing defines for that page** | a retired dialect. An unresolvable custom property voids the **whole declaration** — the colour does not fall back, it disappears. Both answer states on a task page rendered transparent. Looks inside `<style>` *and* `style=""`. |
+
+Fixtures for the last two are in `scripts/fixtures/`. Run them if you change the checks.
 
 ## Boundaries
 

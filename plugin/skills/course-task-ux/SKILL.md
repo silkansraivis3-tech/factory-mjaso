@@ -212,6 +212,30 @@ This is engine-level, not per-page: bundle it once and load it. Read
 
 ---
 
+## The look of a task page is not this skill's to invent
+
+Load, in this order:
+
+```html
+<link rel="stylesheet" href="../assets/gb_tokens.css">   <!-- course-module-ui -->
+<link rel="stylesheet" href="../assets/gb_page.css">     <!-- course-module-ui: the page frame -->
+<link rel="stylesheet" href="../assets/gb_task.css">     <!-- here: the task controls -->
+```
+
+`gb_task.css` owns the state bar, the question stem, the 52 px option, the why panel and the
+in-task figure. It owns **nothing else** — a task page is a document page with a task on it.
+
+Every task page also carries `<a class="gbt-topback" href="…">`, which is what the Android
+hardware Back button clicks. Without it, Back exits the app.
+
+**Do not copy these rules into a page's own `<style>`.** ETPB3's task pages each kept a private
+copy written against the retired ETPA1 dialect — `var(--okbg)`, `var(--ok)`. When the dialect was
+removed those names stopped resolving, and an unresolvable custom property voids the whole
+declaration: the correct answer and the wrong answer both rendered with a transparent ground and a
+black border. Every static check passed. `course-module-ui/scripts/audit_ui.py` now catches it.
+
+---
+
 ## 6 · Tap-to-locate tasks
 
 - **Cap the taps at the number asked for.** "Find 6 hazards" accepts 6 taps, not 20.

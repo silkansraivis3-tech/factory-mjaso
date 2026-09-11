@@ -6,10 +6,12 @@
     "data-kind": "required. One of the ids below. Drives styling and the generated run script's per-screen line.",
     "data-block": "required. The timetable block this screen belongs to, e.g. \"Block A2\". The stable reference — slide NUMBERS move, blocks do not.",
     "data-mins": "on the FIRST screen of a block only. The block's minutes.",
+    "data-track": "required wherever data-mins is. \"theory\" or \"practice\" - which allocation bucket this block's minutes are claimed against. This is the Track A audit trail: the sum per bucket must equal what the programme allocated. It is not a styling hint and it is not editable to make a build look better.",
+    "data-active": "required wherever data-mins is. Integer minutes of this block in which the trainee does, decides, produces or says something rather than receives. Track B, a design metric; it changes nothing in Track A. 0 is legal and sometimes honest. Checked by hours/scripts/check_balance.py, which rejects a value above data-mins, a practice block under half active, and a theory block claiming 100 %.",
     "data-activity": "on launch screens only. The activity/task code exactly as the task manifest knows it, bare and undecorated, e.g. \"T1\" or \"GAS601\". Never put it on a screen that merely talks about the activity.",
     "data-cue": "optional, instructor-only. Never rendered. Revealed on the instructor's own key. Anything borderline under the audience rule goes here.",
     "data-foot": "optional. Footer line.",
-    "_why_no_href": "A slide is a delivery screen inside the single page. An <a href> inside one navigates away mid-session, which is the model this architecture replaced."
+    "_why_no_href": "A slide is a delivery screen inside the single page. An <a href> inside one navigates away mid-session, which is the model this architecture replaced - the instructor loses the deck, the progress, the cue and the place. THE DECK ANNOUNCES A TASK; IT NEVER LAUNCHES ONE. The golden deck carries 27 slides and zero links, and says it in words: \"Now a task. Open the tablets - Module 1, task GAS101.\" Use .act-now for that line. The route to the task lives on START_HERE and on the landing, both OUTSIDE the deck. ETPB3 shipped 17 launch buttons inside slides and the treatment was on its way into the shell before check_static.py caught it; the driven sweep had already printed linksInsideSlides: 17 and it was read past. A count in a report is a finding."
   },
   "kinds": [
     {
@@ -17,48 +19,108 @@
       "purpose": "What this module is and what the day looks like. One per module.",
       "links_inside_slide": false,
       "fill_target": "sparer than the floor is allowed — an opener that fills 95% is shouting",
-      "must_have": ["the module name", "the day's shape in one line", "the minute total"],
-      "must_not_have": ["a document index", "a list of what is coming, screen by screen"]
+      "must_have": [
+        "the module name",
+        "the day's shape in one line",
+        "the minute total"
+      ],
+      "must_not_have": [
+        "a document index",
+        "a list of what is coming, screen by screen"
+      ]
     },
     {
       "id": "teaching",
       "purpose": "The subject. Full professional register; the vocabulary is the competence.",
       "links_inside_slide": false,
       "fill_target": "85-100% of the slide body",
-      "must_have": ["one idea"],
-      "must_not_have": ["instructor cue text", "an internal code in the visible slide-kind line"]
+      "must_have": [
+        "one idea"
+      ],
+      "must_not_have": [
+        "instructor cue text",
+        "an internal code in the visible slide-kind line"
+      ]
     },
     {
       "id": "activity-launch",
       "purpose": "Announce a task or drill and tell the room what to open. Carries data-activity.",
       "links_inside_slide": false,
       "fill_target": "85-100%; a launch screen is usually at ceiling",
-      "must_have": ["the activity code as the room will see it", "what the trainees do", "the grouping", "the device or station"],
-      "must_not_have": ["how it is marked in detail — that is the marking screen", "the count of screens in this block, which will not fit; the generated run script carries it instead"]
+      "must_have": [
+        "the activity code as the room will see it",
+        "what the trainees do",
+        "the grouping",
+        "the device or station",
+        "an .act-now line naming what to open and its code - NOT a link"
+      ],
+      "must_not_have": [
+        "how it is marked in detail — that is the marking screen",
+        "the count of screens in this block, which will not fit; the generated run script carries it instead",
+        "an <a href> of any kind - see _markup_contract._why_no_href"
+      ]
     },
     {
       "id": "practical-run",
       "purpose": "The run of a practical, paged across as many screens as it takes. In the old model this was a separate document; now it is screens.",
       "links_inside_slide": false,
       "fill_target": "85-100%",
-      "must_have": ["the kit as a physical list first", "numbered steps, one line each", "the abort conditions at the foot of the run"],
-      "must_not_have": ["setup below the steps — a person who has never run this works left to right"]
+      "must_have": [
+        "the kit as a physical list first",
+        "numbered steps, one line each",
+        "the abort conditions at the foot of the run",
+        "an .act-now line naming what to open and its code - NOT a link"
+      ],
+      "must_not_have": [
+        "setup below the steps — a person who has never run this works left to right",
+        "an <a href> of any kind - see _markup_contract._why_no_href"
+      ]
+    },
+    {
+      "id": "drill",
+      "purpose": "A short piece of bench or bench-adjacent work that happens inside the teaching flow rather than in its own practical hour. Observed, not graded. Carries data-activity and data-track=\"practice\".",
+      "links_inside_slide": false,
+      "fill_target": "85-100%",
+      "must_have": [
+        "the drill code as the room will see it",
+        "what the trainees physically do and with what",
+        "the output the instructor observes",
+        "an .act-now line naming what to open and its code - NOT a link"
+      ],
+      "must_not_have": [
+        "a grade or a pass mark - that is what practical-run is for",
+        "minutes that are really exposition wearing a drill label",
+        "an <a href> of any kind - see _markup_contract._why_no_href"
+      ],
+      "_why": "Added after ETPB3. Four of its blocks were already bench work delivered under a theory label, which under-claimed the practice allocation and made the active-learning figure look worse than the module actually was. Without this kind the only honest options were to mislabel them or to inflate P1-P7 with 20-minute entries that are nothing like an 80-minute build."
     },
     {
       "id": "marking",
       "purpose": "What is marked, in the trainee's own hearing. The criteria stay; the craft of marking moves to data-cue.",
       "links_inside_slide": false,
       "fill_target": "85-100%",
-      "must_have": ["the criteria, quoted, not paraphrased", "the one firm threshold"],
-      "must_not_have": ["marking technique", "remediation routes", "a second-person \"you\" that means the instructor"]
+      "must_have": [
+        "the criteria, quoted, not paraphrased",
+        "the one firm threshold"
+      ],
+      "must_not_have": [
+        "marking technique",
+        "remediation routes",
+        "a second-person \"you\" that means the instructor"
+      ]
     },
     {
       "id": "debrief",
       "purpose": "What the room concluded. A screen, not an unrecorded conversation — otherwise the block has no screen and vanishes from the day.",
       "links_inside_slide": false,
       "fill_target": "85-100%",
-      "must_have": ["the two or three questions", "the stop condition"],
-      "must_not_have": ["a script of what to say"]
+      "must_have": [
+        "the two or three questions",
+        "the stop condition"
+      ],
+      "must_not_have": [
+        "a script of what to say"
+      ]
     },
     {
       "id": "summary",
@@ -73,13 +135,19 @@
       "purpose": "The module check. ALWAYS the last screen.",
       "links_inside_slide": false,
       "fill_target": "sparer than the floor is allowed",
-      "must_have": ["what the check is", "how long", "the pass rule as the trainee needs it"],
+      "must_have": [
+        "what the check is",
+        "how long",
+        "the pass rule as the trainee needs it",
+        "an .act-now line naming what to open and its code - NOT a link"
+      ],
       "must_not_have": [
         "any link",
         "anything recorded on this screen",
         "the word \"record\"",
         "the word \"score\"",
-        "an ILO code or a provenance note"
+        "an ILO code or a provenance note",
+        "an <a href> of any kind - see _markup_contract._why_no_href"
       ],
       "_why": "The check screen is read by the room while they are being assessed. Marking and recording are the instructor's job on the instructor's own device."
     }

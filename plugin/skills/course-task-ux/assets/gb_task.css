@@ -1,0 +1,75 @@
+/* ==========================================================================
+   gb_task.css - the canonical NOVIKONTAS trainee task surface.
+
+   Replaces the per-course `task.css` dialect. That file declared itself
+   "shared look for ETPA1 trainee task screens" and carried its own :root
+   (--ink #10202e, --line #c8d6e2, --ok #0a7d55 ...) - a second colour and type
+   system sitting beside gb_tokens.css. Two dialects in one product is how a
+   course stops looking like the product.
+
+   WHAT CHANGED   only the colour and type SOURCE. Every mechanic
+                  course-task-ux owns is preserved byte-for-byte in behaviour:
+                  the sticky state bar, part / got / progress, the option
+                  button, the why panel, the completion panel.
+
+   WHAT DID NOT   the task floor. Targets >= 44 px, text >= 12.5 px,
+                  no horizontal scroll, no hover-only affordance, explicit
+                  submit, feedback that explains.
+
+   SCOPE          task MECHANICS only. The page frame - body, .wrap, headings,
+                  .gbt-topback, .foot, .back - belongs to the shared identity
+                  and lives in gb_page.css (course-module-ui). This file no
+                  longer restates it; a task page is a document page with a
+                  task on it, and must not become a third dialect.
+
+   LOAD ORDER     gb_tokens.css -> gb_page.css -> gb_task.css
+   OWNS           the look of the task controls.
+                  course-task-ux owns their behaviour.
+   ========================================================================== */
+
+/* ---- the persistent state bar: 4 "state visible at all times" ----------
+   Sits under the back bar, which is also sticky and 48 px tall. */
+.state{position:sticky;top:48px;z-index:20;background:var(--white);
+  border-bottom:2px solid var(--line-l);
+  display:flex;align-items:center;gap:10px;padding:10px 14px;flex-wrap:wrap}
+.state .part{font-weight:700;font-size:15px;color:var(--navy)}
+.state .got{margin-left:auto;font-size:15px;color:var(--dim-l)}
+.state .bar{flex:0 0 100%;height:8px;background:var(--grey);border-radius:99px;overflow:hidden}
+.state .bar i{display:block;height:100%;width:0;background:var(--blue);
+  border-radius:99px;transition:width .3s ease}
+
+/* ---- question / stem ---------------------------------------------------- */
+.q{margin:0 0 8px;font-size:clamp(15.5px,2vmin,17.5px);line-height:1.45;
+  font-weight:700;color:var(--navy)}
+.q .num{color:var(--blue)}
+.q .stem{font-weight:500;color:var(--ink)}
+
+/* ---- the answer control -------------------------------------------------
+   52 px, not 44: a task option is pressed under time pressure with a thumb. */
+.opts{display:grid;gap:8px;margin:0 0 12px}
+.opt{min-height:52px;display:flex;align-items:center;gap:10px;
+  padding:10px 14px;border:1px solid var(--line-l);border-radius:var(--r-m);
+  background:var(--white);font-size:clamp(15px,1.95vmin,16.5px);line-height:1.4;
+  color:var(--ink);cursor:pointer;text-align:left;font-family:var(--font)}
+.opt:active{transform:translateY(1px)}
+.opt:focus{outline:3px solid var(--blue);outline-offset:2px}
+.opt.ok{background:var(--good-wash-l);border-color:var(--good)}
+.opt.no{background:var(--warn-wash-l);border-color:var(--warn)}
+.opt.dim{opacity:.55}
+
+/* ---- why it was right or wrong: the feedback that teaches ---------------- */
+.why{display:none;border-radius:var(--r-m);padding:11px 14px;margin:0 0 18px;
+  font-size:clamp(14.5px,1.9vmin,16px);line-height:1.55;
+  background:var(--blue-wash-l);border:1px solid var(--blue);color:var(--ink)}
+.why.on{display:block}
+.why b{color:var(--navy)}
+
+/* ---- figures inside a task ---------------------------------------------- */
+.sv,.drawn{display:block;width:100%;max-width:520px;height:auto;margin:0 auto 10px;
+  background:var(--white);border:1px solid var(--line-l);border-radius:var(--r-m)}
+.samples{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.samples span{border:1px solid var(--line-l);border-radius:999px;padding:.35em .85em;
+  font:600 13.5px/1.4 var(--font);color:var(--dim-l);background:var(--white)}
+
+/* ---- a task page runs longer than a screen; leave room for the thumb ---- */
+.wrap{padding-bottom:120px}

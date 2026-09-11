@@ -1,5 +1,6 @@
 {
   "name": "novikontas-course-factory",
+  "description": "The NOVIKONTAS Academy course factory: turn an approved maritime training programme into a finished, accredited course running on the company's Android training tablets.",
   "owner": {
     "name": "Novikontas Academy",
     "email": "raivis.silkans@novikontas.org",

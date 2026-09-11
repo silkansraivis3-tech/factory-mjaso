@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FAIL fixture — a page still speaking a retired dialect</title>
+<!-- The ETPB3 task pages, exactly. task.css was replaced by gb_task.css, but the
+     page's own <style> kept the old dialect's variable names. --okbg no longer
+     resolves, so `background:var(--okbg)` is invalid at computed-value time and
+     the declaration vanishes: the correct answer and the wrong answer render
+     identically. EXPECT: DEFECT naming --okbg --nobg --ok --no --ink2 -->
+<link rel="stylesheet" href="../../templates/gb_tokens.css">
+<style>
+  .opt{min-height:52px;border:1px solid var(--line-l);background:var(--white)}
+  .opt.ok{background:var(--okbg);border-color:var(--ok)}
+  .opt.no{background:var(--nobg);border-color:var(--no)}
+</style>
+</head>
+<body>
+<div class="opt ok">Correct</div>
+<div class="opt no">Wrong</div>
+<p style="color:var(--ink2)">A dead name hiding in a style attribute.</p>
+</body>
+</html>

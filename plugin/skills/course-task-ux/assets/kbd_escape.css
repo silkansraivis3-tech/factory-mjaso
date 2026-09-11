@@ -22,10 +22,13 @@
    PREVIOUS COURSE: shipped as gb_kbd.css, id #gbkbd-done.
    ========================================================================== */
 
+/* Follows gb_tokens.css when it is loaded; the literals are the standalone
+   fallback only. See the same note in task_complete.css. */
 :root{
-  --task-accent:#0A2463;
-  --task-accent-soft:#eef4fa;
-  --task-surface:#ffffff;
+  --task-accent:var(--navy,#0A2463);
+  --task-accent-soft:var(--blue-wash-l,#E6F5FE);
+  --task-surface:var(--white,#FFFFFF);
+  --task-shadow:var(--sh,0 6px 20px rgba(10,36,99,.22));
 }
 
 #kbd-done{
@@ -36,7 +39,7 @@
   border:1.5px solid var(--task-accent); background:var(--task-surface);
   color:var(--task-accent);
   font-family:inherit; font-weight:700; font-size:15px; letter-spacing:.02em;
-  box-shadow:0 6px 20px rgba(10,36,99,.22);
+  box-shadow:var(--task-shadow);
   cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;
 }
 #kbd-done.on{ display:block; }

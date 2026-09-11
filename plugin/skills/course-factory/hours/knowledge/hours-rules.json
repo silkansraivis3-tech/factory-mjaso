@@ -27,20 +27,45 @@
     "detect": "A topic is outside the modules when no module claims it in the module->topics map. List these explicitly at the gate rather than letting them vanish."
   },
   "practical_ratio": {
-    "target": 0.8,
-    "measured_on": "allocated minutes, not activity count",
-    "when_unreachable": {
-      "rule": "Deliver the theory hours as active learning - a trainee activity inside the theory block.",
-      "mandatory": true,
-      "defect": "A theory block with no trainee activity in it.",
-      "record": "achieved ratio + the reason it is below target, in the companion file"
+    "_two_tracks": "These are two different measurements and confusing them is how the ETPB3 pilot went wrong. Track A is the programme's allocation and is not ours to move. Track B is how those minutes are delivered and is a design metric. The 80 % target belongs to Track B.",
+    "track_a_allocation": {
+      "what": "The theory/practice hours the approved programme allocates.",
+      "mutable": false,
+      "rule": "The module as BUILT must claim those same minutes against those same buckets. A module claiming 20 practice academic hours puts 800 minutes of trainee practice in front of the room.",
+      "measured_on": "data-track on every block-opening screen",
+      "found_by": "hours/scripts/check_balance.py",
+      "why": "ETPB3 built 650 theory / 630 practice against an allocated 480 / 800 and check_hours.py passed, because the TOTAL was right. A total-only check cannot see a bucket swap."
+    },
+    "track_b_modality": {
+      "what": "Of the minutes in front of the room, how many have the trainee doing, deciding, producing or saying something rather than receiving.",
+      "target": 0.8,
+      "measured_on": "data-active minutes on every block-opening screen",
+      "affects_track_a": false,
+      "note": "A theory-allocated minute delivered as an activity is still a theory minute. Track B is the difference between a theory hour that teaches and one that is talked at - not a way to reclassify hours.",
+      "when_unreachable": {
+        "rule": "Record the achieved figure and the reason. Do not reach the target by renaming screens.",
+        "defect": "A theory block with nothing for the trainee to do."
+      },
+      "anti_gaming": [
+        "data-active may not exceed data-mins",
+        "a practice block with under half its minutes active is not a practice block",
+        "a theory block declaring 100 % active is a rename, not a redesign - somebody sets the task",
+        "the instructor plan's Trainee column must substantiate every declared active minute"
+      ]
     },
     "known": {
       "GAS BASIC": {
         "theory_h": 35,
         "practical_h": 8,
-        "ratio": 0.186,
+        "track_a_ratio": 0.186,
         "note": "fixed by the programme's own table - topics 8, 9, 16, 17 carry all 8 practical hours"
+      },
+      "ETPB3": {
+        "theory_h": 12,
+        "practical_h": 20,
+        "track_a_ratio": 0.625,
+        "track_b_ratio": 0.77,
+        "note": "Track A reconciles exactly after 170 minutes of bench work were moved out of theory delivery into the practice allocation as drills V1-V6. Track B is 77 %: 54 % inside the theory blocks, 91 % inside the practice blocks. The remaining passive minutes are the opener and the two day-closing blocks."
       }
     }
   },

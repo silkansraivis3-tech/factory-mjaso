@@ -1,0 +1,421 @@
+/* ==========================================================================
+   gb_shell.css — the canonical NOVIKONTAS module shell
+   Extracted from GAS BASIC Module_01 on 2026-09-11 and generalised.
+
+   This is the PRODUCT FOUNDATION: the branded landing, the full-screen stage,
+   the header band, the footer strip, the progress bar, the touch chrome, the
+   overview grid and the instructor cue. Every course inherits it so a trainee
+   picking up any tablet meets the same product.
+
+   It is NOT a template for what a screen contains. A course's own technical
+   figures, cards and layouts sit inside `.slide-body` and are the course's to
+   design. What must not vary is the chrome around them.
+
+   REQUIRES gb_tokens.css loaded first. Every colour here is a token; the only
+   raw values are alpha composites of tokens that CSS cannot express as one.
+
+   PAIRS WITH  course-module-ux/assets/gb_deck.js  (behaviour)
+               course-module-ui/templates/gb_shell.html  (markup skeleton)
+   ========================================================================== */
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;
+  font-family:var(--font);background:var(--deep);color:var(--ink);
+  -webkit-text-size-adjust:100%}
+
+/* the brand mark used as a watermark on dark screens.
+   A module supplies it by setting --na-mark to a data: URI; if it does not,
+   the watermark simply does not paint. */
+:root{--na-mark:none}
+
+/* ==========================================================================
+   LANDING — the branded front door
+   ========================================================================== */
+#landing{
+  position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  background:
+    radial-gradient(1200px 700px at 78% -12%,rgba(46,182,248,.15),transparent 60%),
+    radial-gradient(900px 600px at 10% 112%,rgba(233,165,30,.08),transparent 55%),
+    linear-gradient(180deg,var(--deep),#070F1F);
+  transition:opacity .45s ease,visibility .45s;overflow:auto;color:var(--txt-d);
+}
+/* pointer-events, not just opacity and visibility.
+   The dismissed landing was measured still intercepting taps across the whole
+   lower half of every slide: #landing carries `transition: opacity .45s,
+   visibility .45s`, and where the compositor is stalled or animations are
+   throttled - a backgrounded WebView, a tablet saving power - the transition
+   never runs and the computed value stays at the FROM state. The element is
+   then invisible to the eye in every normal case and fully present to the hit
+   test in the bad one. Five figure controls tested unreachable this way.
+   `pointer-events:none` is not something a missed frame can leave behind.
+   Same lesson as gb_done/task_complete: never let whether a control can be
+   USED depend on a frame having been painted. */
+#landing.gone{opacity:0;visibility:hidden;pointer-events:none}
+.landing-card{max-width:min(900px,93vw);text-align:center;padding:4vmin 4vmin 5vmin}
+.brand-chip{
+  display:inline-flex;align-items:center;justify-content:center;background:var(--white);
+  border-radius:14px;padding:2.2vmin 3vmin;box-shadow:0 10px 34px rgba(0,0,0,.36);
+  margin-bottom:2.6vmin;
+}
+.brand-chip img,.brand-chip svg{width:clamp(120px,15vmin,182px);height:auto;display:block}
+.landing-rule{
+  display:flex;gap:14px;align-items:center;justify-content:center;color:var(--faint-d);
+  font-size:clamp(12.5px,1.5vmin,18.8px);letter-spacing:.3em;text-transform:uppercase;font-weight:600;
+}
+.landing-rule::before,.landing-rule::after{content:"";height:1px;width:min(120px,13vw);
+  background:linear-gradient(90deg,transparent,var(--line-d))}
+.landing-rule::after{transform:scaleX(-1)}
+.landing-mod{margin-top:3vmin;color:var(--amber);font-size:clamp(12.5px,1.85vmin,24.1px);
+  letter-spacing:.22em;text-transform:uppercase;font-weight:600}
+.landing-title{margin-top:1.2vmin;font-size:clamp(30px,6.4vmin,74px);font-weight:700;
+  line-height:1.05;letter-spacing:-.015em}
+.landing-title em{font-style:normal;color:var(--blue)}
+.landing-meta{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:3vmin}
+.chip{
+  border:1px solid var(--line-d);background:rgba(46,182,248,.07);border-radius:999px;
+  padding:.55em 1.1em;font-size:clamp(12.5px,1.55vmin,20.1px);color:var(--dim-d);font-weight:600;
+}
+#startBtn{
+  margin-top:4.4vmin;display:inline-flex;align-items:center;justify-content:center;gap:16px;
+  background:var(--navy);color:var(--white);border:0;border-radius:14px;cursor:pointer;
+  padding:1.05em 2.8em;font-size:clamp(15px,2.1vmin,29.5px);font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;
+  box-shadow:0 14px 40px rgba(10,36,99,.6);transition:transform .16s ease,box-shadow .16s ease;
+  min-height:62px;min-width:min(420px,80vw);
+}
+#startBtn:active{transform:translateY(1px)}
+#startBtn svg{width:1.15em;height:1.15em;fill:currentColor}
+#startBtn .btn-label{display:inline-block}
+.landing-hint{margin-top:2.6vmin;color:var(--faint-d);font-size:clamp(12.5px,1.5vmin,18.8px)}
+.landing-links{margin-top:1.6vmin;font-size:clamp(12.5px,1.5vmin,18.8px);
+  display:flex;gap:18px;flex-wrap:wrap;justify-content:center}
+.landing-links a{color:var(--blue);text-decoration:none;border-bottom:1px solid var(--line-d);
+  min-height:44px;display:inline-flex;align-items:center}
+.landing-note{
+  margin:3.4vmin auto 0;max-width:640px;border:1px solid var(--line-d);border-radius:var(--r-m);
+  padding:1.1em 1.3em;color:var(--faint-d);font-size:clamp(12.5px,1.42vmin,18.1px);line-height:1.55;
+  text-align:left;background:rgba(255,255,255,.02);
+}
+.landing-note b{color:var(--dim-d)}
+
+/* ==========================================================================
+   STAGE / CHROME
+   ========================================================================== */
+#stage{position:fixed;inset:0}
+#progress{position:fixed;top:0;left:0;height:3px;background:var(--blue);z-index:40;
+  width:0;transition:width .32s ease;box-shadow:0 0 12px rgba(46,182,248,.7)}
+#blockTag{
+  position:fixed;top:16px;left:20px;z-index:38;font-size:12.5px;letter-spacing:.18em;
+  text-transform:uppercase;font-weight:600;color:var(--faint-d);
+  transition:opacity .4s ease;pointer-events:none;
+}
+body:not(.dark-active) #blockTag{color:var(--faint-l)}
+#blockTag.idle{opacity:0}
+
+/* The touch navigation strip. It fades when idle but NEVER disappears and never
+   stops accepting taps below the fade - a tablet user has no mouse to "wake" it
+   with, so on touch it must always be reachable. gb_deck.js clears .idle on any
+   pointer or key event. */
+#chrome{
+  position:fixed;right:18px;bottom:16px;z-index:42;display:flex;align-items:center;gap:10px;
+  transition:opacity .4s ease;
+}
+#chrome.idle{opacity:.34}
+.cbtn{
+  width:52px;height:52px;min-width:52px;border-radius:12px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(10,24,46,.82);color:var(--white);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .15s ease,transform .15s ease;backdrop-filter:blur(6px);
+}
+body:not(.dark-active) .cbtn{background:rgba(10,36,99,.94);border-color:rgba(255,255,255,.1)}
+.cbtn:active{transform:translateY(1px)}
+.cbtn svg{width:23px;height:23px;fill:currentColor;pointer-events:none}
+.cbtn[disabled]{opacity:.4;pointer-events:none}
+/* the two primary controls are wider: they are the ones pressed all day */
+#btnNext,#btnPrev{min-width:64px}
+#btnNext{background:var(--navy);border-color:var(--navy)}
+body:not(.dark-active) #btnNext{background:var(--navy)}
+#counter{
+  font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;color:var(--dim-d);
+  padding:0 12px;min-width:78px;text-align:center;letter-spacing:.04em;
+}
+body:not(.dark-active) #counter{color:var(--dim-l)}
+#counter b{color:var(--blue);font-size:18px}
+
+/* ---------- overview grid (G, or the grid button) ---------- */
+#overview{
+  position:fixed;inset:0;z-index:55;background:rgba(6,14,28,.96);display:none;
+  padding:34px 26px;overflow:auto;backdrop-filter:blur(4px);color:var(--txt-d);
+}
+#overview.on{display:block}
+.ov-head{display:flex;align-items:baseline;gap:16px;margin-bottom:20px;color:var(--dim-d);
+  flex-wrap:wrap}
+.ov-head b{color:var(--white);font-size:19px}
+.ov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.ov-item{
+  border:1px solid var(--line-d);border-radius:12px;padding:12px 13px;cursor:pointer;
+  background:rgba(255,255,255,.035);text-align:left;color:var(--dim-d);transition:all .14s ease;
+  min-height:76px;display:flex;flex-direction:column;gap:5px;font-family:var(--font);
+}
+.ov-item.cur{background:var(--deep-3);border-color:var(--blue);color:var(--white)}
+.ov-item .n{font-size:12.5px;color:var(--blue);font-weight:700;letter-spacing:.12em}
+.ov-item .t{font-size:13.5px;font-weight:600;line-height:1.3}
+.ov-item .k{font-size:12.5px;color:var(--faint-d);text-transform:uppercase;letter-spacing:.1em}
+.fbtn{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line-d);
+  background:var(--deep-3);color:var(--txt-d);font:700 15px/1 var(--font);cursor:pointer}
+
+/* ---------- instructor cue (N, or the cue button) ---------- */
+#cue{
+  position:fixed;left:0;right:0;bottom:0;z-index:41;background:rgba(6,14,28,.94);
+  border-top:2px solid var(--amber);padding:13px 90px 13px 22px;display:none;
+  font-size:14.5px;line-height:1.5;color:var(--on-navy);backdrop-filter:blur(6px);
+}
+#cue.on{display:block}
+#cue .tag{color:var(--amber);font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  font-size:12.5px;margin-right:10px}
+
+/* ==========================================================================
+   SLIDES
+   padding-bottom clears #chrome at every delivery size. The chrome owns the
+   bottom ~68px of the viewport and never leaves the layout.
+   ========================================================================== */
+.slide{
+  position:absolute;inset:0;display:none;flex-direction:column;
+  padding:min(6vmin,64px) min(7vmin,86px) max(88px,8vmin);
+  background:var(--white);color:var(--ink);
+  /* The stage never scrolls. `overflow:auto` here let the slide itself scroll
+     177 px in portrait, carrying its own header band and title off the top -
+     the two things the shell exists to keep fixed. Only .slide-body scrolls. */
+  overflow:hidden;
+  animation:slideIn .38s cubic-bezier(.22,.7,.28,1);
+}
+.slide.active{display:flex}
+@keyframes slideIn{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
+.slide.dark,.slide.photo{background:var(--deep);color:var(--txt-d)}
+.slide.dark::before{
+  content:"";position:absolute;right:-4%;bottom:-14%;width:46vmin;height:46vmin;
+  background:var(--na-mark) center/contain no-repeat;opacity:.045;pointer-events:none;
+}
+.slide.photo{padding:0}
+
+/* header band */
+.slide-kind{
+  position:absolute;left:0;right:0;top:0;height:min(7.4vmin,62px);background:var(--navy);
+  color:var(--white);display:flex;align-items:center;gap:14px;padding:0 min(7vmin,86px);
+  font-size:clamp(12.5px,1.55vmin,20.1px);letter-spacing:.14em;text-transform:uppercase;
+  font-weight:600;z-index:2;
+}
+.slide-kind b{color:var(--blue);font-weight:700}
+.slide-kind::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:min(22vmin,190px);
+  background:var(--amber)}
+.slide.dark .slide-kind{background:transparent;color:var(--faint-d)}
+.slide.photo .slide-kind{background:transparent;color:var(--dim-d)}
+.slide.dark .slide-kind::after,.slide.photo .slide-kind::after{
+  background:var(--line-d);width:min(14vmin,120px)}
+
+/* The type scale is the golden deck's, verbatim. It was copied smaller once -
+   h2 at 3.5vmin against the reference's 4.6vmin - and on a 1280 x 800 tablet
+   that is 28 px where the product reads 37 px. A module set two steps below
+   the rest of the range does not look restrained; it looks like a different
+   product. vmin, not vw, so it survives a projector's aspect ratio. */
+.slide > h2{margin-top:min(4.8vmin,44px);font-size:clamp(24px,4.6vmin,54px);
+  font-weight:700;line-height:1.08;letter-spacing:-.01em}
+.slide.dark > h2{color:var(--txt-d)}
+.slide h3{font-size:clamp(16px,2.4vmin,34.8px);font-weight:700;line-height:1.2;margin:0}
+/* Colour is set only where the ground is known. An unscoped `.slide h3{color}`
+   overrode the white a filled surface passes down by inheritance and printed
+   navy on navy at contrast 1.00 across all eleven activity screens - caught by
+   the driven sweep, invisible to every static check. Never colour a heading
+   without saying which ground it is on. */
+.slide:not(.dark):not(.photo) > h3,
+.slide:not(.dark):not(.photo) .slide-body > h3,
+.slide:not(.dark):not(.photo) .card h3{color:var(--navy)}
+.slide.dark > h3,.slide.dark .slide-body > h3{color:var(--blue)}
+.slide-body{flex:1;display:flex;flex-direction:column;gap:min(2.6vmin,26px);min-height:0;
+  margin-top:min(2.2vmin,22px);justify-content:safe center;
+  /* The net. A body taller than its slide must stay reachable rather than
+     disappear under the chrome. The golden deck only did this below 820px,
+     because its own content was authored to fit a projector; a tablet deck
+     with a tall figure overflows at 1280 x 800 and the golden rule never
+     fires. Scrolling here is a safety net, not a licence - check_render.js
+     still reports a body that needs it. */
+  overflow-y:auto;-webkit-overflow-scrolling:touch}
+/* Never let a body child shrink below its content. `min-height:0` seems the
+   natural companion to a scrolling flex column, and it is exactly wrong here:
+   a shrunk mount keeps painting its figure at full size, so the drawing runs
+   straight over the block below it. Measured as a 1153 x 125 px overlap of the
+   figure on the activity card. Children keep their height; the BODY scrolls. */
+.slide-body > *{flex-shrink:0}
+
+/* The chrome floats over the body's bottom-right corner. Anything the last
+   child owns - a caption, a row of step buttons - has to clear it, or it is
+   present and untappable, which is the same as absent. */
+.slide-body{padding-bottom:min(8vmin,64px)}
+
+/* A component sized only by width grows as tall as its aspect ratio demands.
+   A 900 x 516 drawing across a 1131 px body is 648 px tall; on an 800 px
+   tablet its own step buttons then sit below the fold, behind the chrome,
+   where no finger reaches them. Cap the drawing and let preserveAspectRatio
+   scale it down - the figure gets smaller, the controls stay on the screen.
+   The subtracted 380 px is the slide's own furniture: padding, header band,
+   title, caption and control row. */
+.slide-body{--fig-max:max(180px, calc(100vh - 380px))}
+.slide-body svg{max-height:var(--fig-max)}
+/* A component that carries its own furniture - a caption, a control row, a
+   note - needs a tighter cap than the generic one, and `.slide-body svg` wins
+   on specificity over any `.thing-svg` a component could write. So the cap is
+   a variable: the component sets --fig-max on its own root and inheritance
+   does the rest. No specificity war, and the shell keeps the outer bound. */
+
+/* footer strip, from data-foot */
+.slide::after{
+  content:attr(data-foot);position:absolute;left:0;right:0;bottom:0;height:min(3.4vmin,30px);
+  background:var(--blue);color:var(--on-blue);display:flex;align-items:center;
+  padding:0 min(7vmin,86px);font-size:clamp(12.5px,1.18vmin,16.1px);letter-spacing:.2em;
+  text-transform:uppercase;font-weight:700;
+}
+
+/* ==========================================================================
+   SHARED SCREEN FURNITURE
+   The few components every course needs; anything subject-specific belongs to
+   the course, not here.
+   ========================================================================== */
+.lead{font-size:clamp(14px,2.15vmin,32.2px);line-height:1.5;color:var(--dim-l);margin:0}
+.slide.dark .lead{color:var(--dim-d)}
+
+.grid{display:grid;gap:min(2.2vmin,20px)}
+.grid.c2{grid-template-columns:1fr}
+.grid.c3{grid-template-columns:1fr}
+@media (min-width:820px){
+  .grid.c2{grid-template-columns:repeat(2,1fr)}
+  .grid.c3{grid-template-columns:repeat(3,1fr)}
+}
+
+.card{background:var(--white);border:1px solid var(--line-l);border-radius:var(--r-m);
+  padding:min(2.2vmin,20px);box-shadow:var(--sh)}
+.card h4{margin:0 0 .5em;font-size:clamp(14.5px,1.9vmin,21px);color:var(--navy);font-weight:700}
+.card p{margin:0;font-size:clamp(13.5px,1.75vmin,19px);line-height:1.5;color:var(--ink)}
+.card.key{border-left:4px solid var(--blue)}
+.card.step{border-left:4px solid var(--amber)}
+.card.warn{border-left:4px solid var(--warn)}
+.slide.dark .card{background:var(--deep-2);border-color:var(--line-d);box-shadow:var(--sh-d)}
+.slide.dark .card h4{color:var(--blue)}
+.slide.dark .card p{color:var(--txt-d)}
+
+.takeaway{margin-top:auto;background:var(--amber-wash-l);border-left:4px solid var(--amber);
+  border-radius:var(--r-s);padding:min(1.8vmin,16px) min(2.2vmin,20px);
+  font-size:clamp(14px,1.85vmin,20px);line-height:1.45;color:var(--ink)}
+.slide.dark .takeaway{background:var(--amber-wash-d);color:var(--txt-d)}
+.takeaway .tk{display:inline-block;margin-right:10px;color:var(--amber-ink);font-weight:700;
+  text-transform:uppercase;letter-spacing:.12em;font-size:.78em}
+.slide.dark .takeaway .tk{color:var(--amber)}
+
+/* activity launch: the one treatment that must read the same in every course */
+.act{background:var(--navy);color:var(--white);border-radius:var(--r-m);
+  padding:min(3vmin,28px);display:flex;flex-direction:column;gap:min(1.6vmin,14px)}
+.act .act-code{font:700 clamp(13px,1.7vmin,18px)/1 var(--mono);color:var(--blue);
+  letter-spacing:.18em}
+.act h3{margin:0;font-size:clamp(18px,2.9vmin,34px);font-weight:700;line-height:1.2}
+.act p{margin:0;font-size:clamp(13.5px,1.8vmin,20px);line-height:1.5;color:#CFE2F5}
+/* THE DECK ANNOUNCES A TASK. IT NEVER LAUNCHES ONE.
+   There is no link here, and adding one is not a styling decision.
+   The module is ONE page: an <a href> inside a slide navigates it away
+   mid-session and the instructor loses the deck, the progress, the cue and the
+   place. The golden deck carries 27 slides and zero links; its launch screens
+   say it in words - "Now a task. Open the tablets, task GAS101." The route to
+   the task lives on START_HERE and the landing, both outside the deck.
+   This block was briefly an `a.act-open` button copied from the pilot's own
+   markup. That was the pilot's deviation on its way to becoming the rule. */
+.act .act-now{align-self:flex-start;margin:0;padding:min(1.4vmin,12px) min(2.2vmin,20px);
+  border-radius:var(--r-s);background:var(--blue);color:var(--on-blue);
+  font:600 clamp(14px,1.85vmin,20px)/1.4 var(--font)}
+.act .act-now b{font-weight:700}
+.act .act-now code{font-family:var(--mono);font-weight:700;letter-spacing:.06em}
+
+@media (prefers-reduced-motion: reduce){
+  .slide{animation:none}
+  #landing,#progress,#chrome{transition:none}
+}
+
+/* ==========================================================================
+   CONTENT FURNITURE
+   Added in 2.2.0 after the ETPB3 pilot. When a module moved onto this shell
+   it lost its callouts, captions and tables, because those rules only ever
+   existed in a per-course file (etpb3_ui.css, itself headed "ETPB2"). That is
+   the shell-drift defect from the other end: the shell was incomplete, so
+   every course wrote its own. These are the blocks GAS BASIC and the ETPB
+   modules actually use. A course adds a rule here only by owner decision.
+   ========================================================================== */
+
+/* the source line under a claim - L4 lives or dies on this being visible */
+.src{margin:0;font-size:clamp(12.5px,1.45vmin,15px);line-height:1.45;color:var(--faint-l)}
+.slide.dark .src{color:var(--faint-d)}
+
+/* figure caption */
+.cap{margin:0;font-size:clamp(12.5px,1.5vmin,16px);line-height:1.4;color:var(--dim-l);
+  text-align:center}
+.slide.dark .cap{color:var(--dim-d)}
+
+/* the regulation / standard box */
+.law{background:var(--amber-wash-l);border:1px solid var(--amber);border-left:4px solid var(--amber);
+  border-radius:0 var(--r-s) var(--r-s) 0;padding:min(1.8vmin,16px) min(2.2vmin,20px)}
+.law p{margin:0 0 .4em;font-size:clamp(13.5px,1.8vmin,19px);line-height:1.45;color:var(--amber-ink)}
+.law .ref{margin:0;font-size:clamp(12.5px,1.5vmin,15px);font-weight:700;color:var(--amber-ink)}
+.slide.dark .law{background:var(--amber-wash-d);border-color:var(--amber)}
+.slide.dark .law p{color:var(--txt-d)}
+.slide.dark .law .ref{color:var(--amber)}
+
+/* the hazard box - red, and never used for merely important things */
+.warnbox{background:var(--white);border:1px solid var(--warn);border-left:4px solid var(--warn);
+  border-radius:0 var(--r-s) var(--r-s) 0;padding:min(1.6vmin,14px) min(2.2vmin,20px)}
+.warnbox p{margin:0 0 .4em;font-size:clamp(13.5px,1.8vmin,19px);line-height:1.45}
+.warnbox b{color:var(--warn)}
+.slide.dark .warnbox{background:var(--deep-2);border-color:var(--warn-d)}
+.slide.dark .warnbox b{color:var(--warn-d)}
+
+/* the closing statement of a block */
+.fin{background:var(--white);border:1px solid var(--good);border-left:4px solid var(--good);
+  border-radius:0 var(--r-s) var(--r-s) 0;padding:min(1.6vmin,14px) min(2.2vmin,20px);
+  margin:0;font-size:clamp(14px,1.85vmin,20px);line-height:1.45;color:var(--ink)}
+.fin b{color:var(--good)}
+.slide.dark .fin{background:var(--deep-2);border-color:var(--good-d);color:var(--txt-d)}
+.slide.dark .fin b{color:var(--good-d)}
+
+/* pill row - hours, day, outcome */
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin:0}
+.meta span{background:var(--blue-wash-l);border:1px solid var(--line-l);border-radius:var(--r-s);
+  padding:4px 12px;font-size:clamp(12.5px,1.55vmin,16px);color:var(--dim-l)}
+.slide.dark .meta span{background:var(--blue-wash-d);border-color:var(--line-d);color:var(--dim-d)}
+
+/* numbered step marker inside running text */
+.num{display:inline-block;min-width:2.2em;font-family:var(--mono);font-weight:700;color:var(--navy)}
+.slide.dark .num{color:var(--blue)}
+
+/* tables. A tablet is 1280 px wide in landscape and 800 in portrait, so a
+   wide table scrolls in its own box rather than pushing the page sideways. */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--r-m)}
+table{border-collapse:collapse;width:100%;background:var(--white);
+  font-size:clamp(13px,1.65vmin,17px)}
+th,td{border:1px solid var(--line-l);padding:7px 11px;text-align:left;vertical-align:top}
+th{background:var(--blue-wash-l);color:var(--navy);font-weight:700}
+td.n{font-family:var(--mono);white-space:nowrap}
+.slide.dark table{background:var(--deep-2);color:var(--txt-d)}
+.slide.dark th{background:var(--deep-3);color:var(--txt-d);border-color:var(--line-d)}
+.slide.dark td{border-color:var(--line-d)}
+
+/* an SVG drawn straight into a screen rather than mounted as a fragment */
+svg.fig{display:block;max-width:100%;height:auto;margin:0 auto;background:var(--white);
+  border:1px solid var(--line-l);border-radius:var(--r-m)}
+.slide.dark svg.fig{background:var(--deep-2);border-color:var(--line-d)}
+
+/* ==========================================================================
+   THE ANDROID BACK CONTRACT
+   The hardware Back button clicks `a.gbt-topback[href]`. On a deck the anchor
+   carries `hidden` - Back leaves the module, but nothing should sit on top of
+   a full-screen presentation. On a document page it is a visible navy bar;
+   that presentation lives in gb_page.css. Same contract, two contexts.
+   ========================================================================== */
+a.gbt-topback[hidden]{display:none}
+a.gbt-topback{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 14px;
+  background:var(--navy);color:var(--white);font:700 15px/1 var(--font);text-decoration:none}

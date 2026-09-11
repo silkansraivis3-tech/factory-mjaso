@@ -126,17 +126,37 @@ the point of the exercise — but:
 IMO model courses are **guidance**; the approved programme **governs**. Where they disagree, the
 programme wins and the model course is cited as support, never as authority.
 
-### 3 · 80/20 practical, or active learning instead
+### 3 · Two tracks, and only one of them is yours
 
-Aim for 80 % practical / 20 % theory. On an accredited programme this is often **arithmetically
-impossible** — GAS BASIC allocates 8 practical hours of 43, i.e. 19 %, fixed by the programme's
-own table. When the split cannot be reached:
+This is one rule that reads like two numbers, and the ETPB3 pilot got it wrong by treating them
+as the same number. Keep them apart.
+
+**Track A — the allocation.** The approved programme says how many academic hours are theory and
+how many are practice. That is external, auditable and **not editable**. Your job is that the
+module as *built* claims those same minutes against those same buckets: a module claiming 20
+practice hours puts 800 minutes of trainee practice in front of the room. ETPB3 built 650 theory
+/ 630 practice against an allocated 480 / 800 and nothing caught it, because `check_hours.py`
+only compares the **total**. A total-only check cannot see a bucket swap. Declare the bucket per
+block with `data-track` and run `check_balance.py`.
+
+**Track B — the delivery modality.** Of the minutes in front of the room, how many have the
+trainee *doing, deciding, producing or saying* something, and how many have them receiving? This
+is a **design metric**. It changes nothing in Track A — a theory-allocated minute delivered as an
+activity is still a theory minute. Declare it per block with `data-active`.
+
+**The 80 % target belongs to Track B.** Aim for 80 % of class minutes learner-active. Where the
+programme makes the *practical* share small — GAS BASIC allocates 8 practical hours of 43 — the
+answer is not to give up but to make the theory hours active:
 
 > the theory hours are **delivered as active learning** — a tablet task inside the theory block,
 > not a longer lecture.
 
-That is the fallback, and it is mandatory, not optional. A theory block with no trainee activity
-in it is a defect in this system. Record the achieved ratio in the companion file with the reason.
+Mandatory, not optional. A theory block with no trainee activity in it is a defect.
+
+Record both figures in the companion file with the reason for any shortfall. **Do not reach the
+target by renaming screens.** `check_balance.py` rejects the three ways people try: an active
+count above the block's own minutes, a practice block whose room is receiving for most of it, and
+a theory block claiming 100 % active — somebody has to set the task.
 
 ### 4 · Nothing is useless until you have grepped for what depends on it
 

@@ -1,8 +1,8 @@
 {
   "name": "course-factory",
   "displayName": "NOVIKONTAS Course Factory",
-  "version": "2.1.0",
-  "description": "Build an accredited instructor-led course as one-page HTML modules on trainee and instructor Android tablets, then publish it: the build order, the accredited-hours law, ILO immutability, screen craft, the Module_01-derived visual system, what representation actually teaches a concept, the instructional-animation law, the four-level asset pipeline, trainee task screens, the verification suite, and a publisher that separates trainee from instructor content.",
+  "version": "2.2.0",
+  "description": "Build an accredited instructor-led course as one-page HTML modules on trainee and instructor Android tablets, then publish it: the build order, the accredited-hours law in two tracks (the programme's allocation and how those minutes are delivered), ILO immutability, the canonical module shell and document page, screen craft, what representation actually teaches a concept, the instructional-animation law, the four-level asset pipeline, trainee task screens, a verification suite that tests the RENDER and not only the source, and a publisher that separates trainee from instructor content.",
   "author": {
     "name": "Raivis Silkans",
     "email": "raivis.silkans@novikontas.org"

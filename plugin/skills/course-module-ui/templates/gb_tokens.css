@@ -31,6 +31,16 @@
   --warn: #B4453A;
   --warn-d: #FF8C82;
   --cold: #8FC2FF;
+  /* 2.2.0 owner decision. The amber and blue washes existed; the good/warn
+     washes did not, so gb_task.css hand-rolled --okbg/--nobg and gb_page.css
+     wanted a third. Three files inventing the same two greens and reds is how
+     a token set stops being one. Added here, named, and used everywhere. */
+  --good-wash-l: #E9F5EF;
+  /* text ON a filled blue or navy surface. Hard-coded in five places in the
+     golden deck before 2.2.0, which is five chances to pick a different one. */
+  --on-blue: #04263A;
+  --on-navy: #DCE7F3;
+  --warn-wash-l: #FBECEA;
   --sh: 0 14px 40px rgba(10,24,46,.16);
   --sh-d: 0 20px 54px rgba(0,0,0,.45);
   --r-l: 20px;

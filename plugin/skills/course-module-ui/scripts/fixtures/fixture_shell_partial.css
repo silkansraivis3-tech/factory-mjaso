@@ -1,0 +1,5 @@
+/* A deliberately incomplete shell, standing in for a canonical shell that does
+   not carry the content furniture. Used only by fail_lost_link.html. */
+.slide{display:block}
+.slide-body{padding:16px}
+.lead{font-size:18px;color:var(--dim-l)}
