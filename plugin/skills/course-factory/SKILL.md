@@ -326,7 +326,9 @@ the line for the thing you changed.
 6. `tablet/scripts/crosscheck_tasks.py` — deck ↔ run script ↔ tablet manifest agree
 7. `course-module-ux`'s measurement lane for the screens themselves
 8. `course-visuals/scripts/check_visuals.py` and `check_assets.py` — the deterministic visual
-   checks and the provenance record. Then `course-visuals/review/GUIDE.md`, which asks the question
+   checks and the provenance record. Then, in the page, `GBVerifyFigures.run()` and
+   `await GBVerifyFigures.motion()` — every figure rendered, and every figure alive rather
+   than a picture (L20). Then `course-visuals/review/GUIDE.md`, which asks the question
    no script can: **does this visual actually teach?** Nothing at `RIGHTS_REVIEW_REQUIRED` may ship.
 9. `course-module-ui/scripts/audit_ui.py --strict` over a **new** module's stylesheets — the
    visual sign-off. `--strict` is right for new work and wrong for shipped material: never point

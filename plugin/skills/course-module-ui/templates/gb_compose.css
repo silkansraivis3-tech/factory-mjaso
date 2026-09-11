@@ -123,7 +123,16 @@
 /* a mounted component on a stage: the component's own root grows, and the
    --fig-max cap the shell applies to a loose figure is lifted, because a stage
    figure is sized BY the stage rather than by a guess about the furniture. */
-.slide-body.stage > div{flex:1;min-height:0;display:flex;flex-direction:column}
+/* A mounted component takes its own height and the STAGE centres it.
+   `flex:1` (= 1 1 0%) squeezed a component whose own furniture made it taller than the
+   stage - measured at 42 px on a real course - and its last element painted over the
+   caption below. `1 0 auto` fixed that and created the opposite problem in portrait: the
+   mount grew to fill a tall stage while the component inside kept its own height, so the
+   bottom half of three screens was empty. `0 0 auto` plus a centred stage is right in
+   both: the figure is sized by --fig-max, and whatever slack is left is shared above and
+   below it rather than dumped underneath. */
+.slide-body.stage{justify-content:center}
+.slide-body.stage > div{flex:0 0 auto;min-height:0;display:flex;flex-direction:column}
 /* A stage screen carries the figure and almost nothing else, so the shell's
    cap - sized for a figure sharing a screen with text - is too tight here.
    The cap is RAISED, not removed: `max-height:none` was tried and the three
@@ -465,12 +474,23 @@ figure{margin:0}
   .slide-body.two-col.wide-right{grid-template-columns:1fr;
     grid-auto-rows:min-content;align-content:center;align-items:start}
   .cards.c3,.cards.c4{grid-template-columns:repeat(2,1fr)}
+  /* `repeat(auto-fit,minmax(150px,1fr))` produced a FOURTH COLUMN OF ZERO WIDTH on an
+     800 px portrait screen - 219.7px x 3 plus 0px - and the item in it collapsed onto its
+     neighbour. Measured as four overlapping text pairs on a real hand-off screen. At this
+     width the summary is two columns, stated rather than derived. */
+  .slide-body.sum{grid-template-columns:repeat(2,1fr)}
+  /* An activity body stays CENTRED here, and that is deliberate. Anchoring it under its
+     title was tried, to close a 350 px gap on one screen, and it emptied the bottom of
+     every tall portrait activity screen instead - the composition probe went from one
+     weak screen to twelve in a single run. A gap above the content is a smaller defect
+     than a dead half below it, and the probe was right about which. */
   .trio{grid-template-columns:1fr;max-height:none}
   .ans-grid{grid-template-columns:1fr}
   .photo-copy{max-width:min(78vw,620px)}
 }
 @media (max-width:620px){
   .cards.c2,.cards.c3,.cards.c4{grid-template-columns:1fr}
+  .slide-body.sum{grid-template-columns:1fr}
 }
 
 @media (prefers-reduced-motion: reduce){

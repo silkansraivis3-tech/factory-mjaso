@@ -114,9 +114,25 @@ translation is explicitly requested. The chat report, companion file, comments a
 follow the operator. A Latvian request to redesign an English module produces a Latvian report and
 an English module. → `course-factory` (`retrofit/scripts/check_language.py`)
 
+**L20 · A figure that claims to teach a dynamic idea is proven to be alive, and a probe
+that cannot see is never read as a verdict.**
+Every teaching figure must be one of three things, and the third is a defect:
+`MOVES` (it animates on its own), `RESPONDS` (it changes when its own controls are used), or
+`STATIC` (it could have been a PNG). A series/parallel toggle should *not* animate, so
+"does it animate" is the wrong question; "is this drawing alive at all" is the right one.
+
+The second half of the law is the expensive half. A hidden page suspends
+`requestAnimationFrame` completely, and a motion probe run against one measures zero
+movement and reports it as a property of the course. That cost an afternoon on the ETPA4
+pilot: the deck's hook contract was re-read, the engine was changed and the course was
+rewired, and the figure had been correct the whole time. A probe now states the
+scheduler it measured under, pumps frames when the page is hidden, and never returns a
+bare "does not move".
+→ `course-visuals` (`scripts/verify_figures.js`, `GBVerifyFigures.motion()`)
+
 ---
 
-**All nineteen laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+**All twenty laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
 `course-visuals` was built; before that they depended on the operator remembering them.
 
 Organisation-skill dependencies and their fallbacks:

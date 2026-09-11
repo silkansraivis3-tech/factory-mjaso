@@ -60,14 +60,42 @@ var GBDeck = (function (w, d) {
       d.body.appendChild(warn);
     }
 
-    var HOOKS = opts.hooks || {};     /* slide id -> {enter, leave} */
+    /* slide id OR zero-based index -> {enter, leave}. Both are accepted because both
+       are what people reach for; a key matching neither is announced rather than
+       ignored, because a hook that never fires looks exactly like a figure that has
+       no animation. */
+    var HOOKS = opts.hooks || {};
+
+    function hookFor(i) {
+      var s = slides[i];
+      if (s && s.id && HOOKS[s.id]) { return HOOKS[s.id]; }
+      if (HOOKS[i]) { return HOOKS[i]; }
+      return null;
+    }
+
+    (function warnUnmatchedHooks() {
+      var k, i, ok, keys = [];
+      for (k in HOOKS) {
+        if (!Object.prototype.hasOwnProperty.call(HOOKS, k)) { continue; }
+        ok = false;
+        for (i = 0; i < slides.length; i++) {
+          if ((slides[i].id && slides[i].id === k) || String(i) === String(k)) {
+            ok = true; break;
+          }
+        }
+        if (!ok) { keys.push(k); }
+      }
+      if (keys.length && w.console && w.console.warn) {
+        w.console.warn("GBDeck: " + keys.length + " hook key(s) match no slide id or " +
+          "index and will never fire: " + keys.join(", ") +
+          ". Key hooks by the slide's id attribute, or by its zero-based index.");
+      }
+    })();
 
     function show(idx) {
       idx = Math.max(0, Math.min(slides.length - 1, idx));
-      var prevSlide = slides[cur];
-      if (prevSlide && prevSlide.id && HOOKS[prevSlide.id] && HOOKS[prevSlide.id].leave) {
-        HOOKS[prevSlide.id].leave();
-      }
+      var prevHook = hookFor(cur);
+      if (prevHook && prevHook.leave) { prevHook.leave(); }
       each(slides, function (s, i) {
         if (i === idx) { s.classList.add("active"); } else { s.classList.remove("active"); }
       });
@@ -87,7 +115,8 @@ var GBDeck = (function (w, d) {
       }
       if (btnPrev) { btnPrev.disabled = (idx === 0); }
       if (btnNext) { btnNext.disabled = (idx === slides.length - 1); }
-      if (s.id && HOOKS[s.id] && HOOKS[s.id].enter) { HOOKS[s.id].enter(); }
+      var h = hookFor(idx);
+      if (h && h.enter) { h.enter(); }
       markOverview();
       s.scrollTop = 0;
     }

@@ -156,7 +156,23 @@ and in a browser, over http, at **1280×800 and 800×1280**:
 await AuditDrive.run()        // the render
 await AuditCompose.run()      // composed, or merely fitting
 GBVerifyFigures.run({})       // every figure actually rendered
+await GBVerifyFigures.motion()  // and every figure actually ALIVE
 ```
+
+`motion()` is where the retrofit's animation law stops being an aspiration. Each figure comes
+back `MOVES`, `RESPONDS` or `STATIC`, and only `STATIC` fails — a series/parallel toggle is
+supposed to sit still until someone touches it. Read the `scheduler` field before you read a
+verdict: a hidden page suspends `requestAnimationFrame` entirely, so the probe pumps frames
+itself and says `"pumped"` to tell you the browser's own scheduler was never exercised.
+
+For it to run with no arguments, the module publishes its figures once:
+
+```js
+window.GBFigures = { "f1-oma": F1Oma("#f1-oma"), "f2-slegums": F2Slegums("#f2-slegums") };
+```
+
+and the deck's enter/leave hooks are derived from that same object, so a figure cannot be
+built and silently never hooked.
 
 Re-run `classify_module.py` at the end. **A retrofit that started at C and still classifies C has
 not finished.**

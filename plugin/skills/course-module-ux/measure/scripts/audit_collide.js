@@ -153,15 +153,52 @@
       return n.nodeType === 3 && n.textContent.trim();
     });
   }
-  /* one rect per rendered LINE of this element's OWN text */
+  /* The box an element is actually visible within, after every scrolling or hidden
+     ancestor has had its say.
+
+     getClientRects() returns LAYOUT rects and knows nothing about an ancestor with
+     overflow:auto|hidden|scroll. A 14-row reference table inside a scroll box reported
+     its last two rows as sitting under the navigation; they are not painted at all, and
+     document.elementFromPoint at their position returns the slide. A validator that
+     reports a defect which is not there costs the same time as one that misses a defect
+     which is, and it teaches people to distrust the tool. */
+  function clipBox(el) {
+    var box = { left: -1e6, top: -1e6, right: 1e6, bottom: 1e6 };
+    var n = el.parentElement;
+    while (n && n !== document.body) {
+      var st = window.getComputedStyle(n);
+      if (/(auto|hidden|scroll|clip)/.test(st.overflow + st.overflowX + st.overflowY)) {
+        var r = n.getBoundingClientRect();
+        if (r.left > box.left) { box.left = r.left; }
+        if (r.top > box.top) { box.top = r.top; }
+        if (r.right < box.right) { box.right = r.right; }
+        if (r.bottom < box.bottom) { box.bottom = r.bottom; }
+      }
+      n = n.parentElement;
+    }
+    return box;
+  }
+
+  function clipRect(b, box) {
+    var left = Math.max(b.left, box.left), top = Math.max(b.top, box.top);
+    var right = Math.min(b.right, box.right), bottom = Math.min(b.bottom, box.bottom);
+    if (right <= left || bottom <= top) { return null; }
+    return { left: left, top: top, right: right, bottom: bottom,
+             width: right - left, height: bottom - top,
+             x: left, y: top };
+  }
+
+  /* one rect per rendered LINE of this element's OWN text, clipped to what is visible */
   function inkRects(el) {
     var out = [];
+    var box = clipBox(el);
     ownTextNodes(el).forEach(function (n) {
       var r = document.createRange();
       r.selectNodeContents(n);
       Array.prototype.forEach.call(r.getClientRects(), function (b) {
-        if (b.width > CONFIG.minInkPx && b.height > CONFIG.minInkPx) {
-          out.push(b);
+        var v = clipRect(b, box);
+        if (v && v.width > CONFIG.minInkPx && v.height > CONFIG.minInkPx) {
+          out.push(v);
         }
       });
       if (r.detach) { r.detach(); }

@@ -201,7 +201,13 @@ screens in a row use the same interaction, that is a finding, not a house style.
 2. `scripts/check_assets.py <assets dir>` — provenance: every image has a metadata entry, every
    entry has its required fields, `visually_verified` is real, rights states are valid, and nothing
    sits at `RIGHTS_REVIEW_REQUIRED`.
-3. `review/GUIDE.md` — the half no script can do. **A visual does not pass because the HTML
+3. `scripts/verify_figures.js` **in the page**, over http — `run()` proves each figure
+   rendered at all, and `await motion()` proves it is alive: `MOVES`, `RESPONDS` or `STATIC`.
+   Only `STATIC` fails. A figure that answers its own toggle, slider or tap is doing its job
+   and must not be reported as a picture. Always read the `scheduler` field — a hidden page
+   suspends `requestAnimationFrame`, and a probe that cannot see frames must never be read as
+   a verdict about the course (L20).
+4. `review/GUIDE.md` — the half no script can do. **A visual does not pass because the HTML
    validates.** Fourteen named failure modes, and one question: *does this actually teach?*
 
 Then write `templates/visual-notes.md` next to the module: every representation chosen and why,
