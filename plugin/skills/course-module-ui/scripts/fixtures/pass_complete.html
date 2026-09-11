@@ -9,6 +9,9 @@
      the table rules into gb_compose.css. This fixture kept linking only the
      shell and started reporting 8 defects - correctly. The fixture was stale,
      not the checker. A fixture is only a control if it is kept current.
+     It also carries a superscript and a subscript, so it proves the canonical system
+     sets a floor for them - that rule was lost once when the per-course dialects were
+     retired, and a real course shipped 28 superscripts at 10.4 px before anyone looked.
      EXPECT: no findings.
      The <g class="fx-group"> is a drawing-structure class and must be reported
      as a note, never as a defect. -->
@@ -24,6 +27,7 @@
     <div class="warnbox"><p><b>Hazard.</b> Do not energise.</p></div>
     <svg class="fig" viewBox="0 0 100 40"><g class="fx-group"><rect x="2" y="2" width="40" height="20"/></g></svg>
     <p class="cap">A drawing.</p>
+    <p class="cap">2 M&Omega; = 2 &times; 10<sup>6</sup> &Omega; · R<sub>ie</sub></p>
     <p class="src">Source: the programme.</p>
     <p class="fin">Block complete.</p>
   </div>

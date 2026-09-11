@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FAIL fixture — superscripts with no floor</title>
+<!-- A technical screen using powers of ten and a unit subscript, on a page whose
+     stylesheets never set a size for <sup>/<sub>. The browser shrinks them to ~0.6em,
+     which on a caption is about 9 px. Every per-course dialect the canonical system
+     replaced carried sub,sup{font-size:13px}; the extraction dropped it.
+     EXPECT: DEFECT naming sup and sub. -->
+<link rel="stylesheet" href="../../templates/gb_tokens.css">
+<style>
+  .cap{font-size:15px}
+</style>
+</head>
+<body>
+<div>
+  <p class="cap">2 M&Omega; = 2 &times; 10<sup>6</sup> &Omega;, un 10 nF = 10<sup>&minus;9</sup> F.</p>
+  <p class="cap">Avota ieksejaa pretestiba R<sub>ie</sub> kritums zem slodzes.</p>
+</div>
+</body>
+</html>

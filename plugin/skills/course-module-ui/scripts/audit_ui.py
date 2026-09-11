@@ -197,6 +197,55 @@ VAR_USE = re.compile(r"var\(\s*(--[a-z][\w-]*)")
 VAR_DEF = re.compile(r"(--[a-z][\w-]*)\s*:")
 
 
+SHRUNK = ["sup", "sub", "small"]
+# A rule and its selector list. `sup,sub{font-size:…}` sets BOTH - matching the rule
+# with one regex and reading group(1) only ever saw the first name, because the match
+# consumed the comma the second one needed.
+CSS_RULE = re.compile(r"([^{}]+)\{([^}]*)\}", re.S)
+
+
+def page_shrunk_type(html_path):
+    """Elements the BROWSER shrinks, on a page that never sets their size.
+
+    sup, sub and small default to about 0.6em. On a 15 px caption that is 9 px - under
+    the readable floor, on a tablet, at the back of a room.
+
+    The unstyled-class check cannot see this: the element IS styled, just not by us.
+    Every per-course dialect the canonical system replaced carried sub,sup{font-size};
+    the extraction dropped it and nothing noticed until a technical course with 28
+    superscripts was measured in a browser."""
+    raw = html_path.read_text(encoding="utf-8", errors="replace")
+    head = raw[:2000].lower()
+    if "<!doctype" not in head and "<html" not in head and "<body" not in head:
+        return None
+
+    body = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", raw, flags=re.S | re.I)
+    used = [t for t in SHRUNK if re.search("<" + t + r"[\s>]", body, re.I)]
+    if not used:
+        return []
+
+    css = "".join(STYLE_BLOCK.findall(raw))
+    for tag in LINK.findall(raw):
+        if not IS_SHEET.search(tag):
+            continue
+        m = HREF.search(tag)
+        if not m or "://" in m.group(1):
+            continue
+        f = (html_path.parent / m.group(1).split("?")[0].split("#")[0]).resolve()
+        if f.exists():
+            css += chr(10) + f.read_text(encoding="utf-8", errors="replace")
+    css = mask_comments(css)
+    sized = set()
+    for m in CSS_RULE.finditer(css):
+        if "font-size" not in m.group(2) and "font:" not in m.group(2):
+            continue
+        for one in m.group(1).split(","):
+            last = re.split(r"[\s>+~]+", one.strip())[-1].strip()
+            bare = re.sub(r"[:\[].*$", "", last).lower()
+            if bare in SHRUNK:
+                sized.add(bare)
+    return [t for t in used if t not in sized]
+
 def page_dead_vars(html_path, canon):
     """Custom properties a page references that nothing will define for it.
 
@@ -286,6 +335,15 @@ def main():
             continue
         n_page += 1
         unstyled, structural, n_used = r
+        shrunk = page_shrunk_type(pg)
+        if shrunk:
+            n_def += len(shrunk)
+            print("\n%s" % pg)
+            print("   DEFECT  uses <%s> but no loaded stylesheet sets their size"
+                  % ">, <".join(shrunk))
+            print("           The browser shrinks these to about 0.6em on its own, which")
+            print("           on a caption is under the readable floor. Set one, e.g.")
+            print("           sup,sub{font-size:max(12.5px,.78em)}")
         dead = page_dead_vars(pg, canon)
         if dead:
             n_def += len(dead)
