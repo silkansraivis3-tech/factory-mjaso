@@ -472,6 +472,104 @@ def check_rights(repo: str, plat: dict, sets: dict, out: list) -> None:
 
 
 # -------------------------------------------------------------------- the runner
+# ------------------------------------------------------------------- 9 runtime
+RUNTIME_RULES = [
+    # (regex, verdict, why) - matched against HTML and JS that ships
+    (re.compile(r'target\s*=\s*["\']_blank["\']', re.I), FAIL,
+     'target="_blank" opens nothing in the tablet WebView - there are no tabs, so the '
+     "trainee taps and the page sits there"),
+    (re.compile(r"\bwindow\.open\s*\("), FAIL,
+     "window.open() opens nothing in the tablet WebView - there is no window manager"),
+    (re.compile(r"""["'(]\s*file:///"""), FAIL,
+     "an absolute file:/// address - it resolves to nothing on a tablet"),
+    (re.compile(r"""["'(]\s*[A-Za-z]:[\\/]"""), FAIL,
+     "an absolute Windows path - it is the author's machine, not the tablet"),
+    (re.compile(r'(?:src|href)\s*=\s*["\']/(?!/)'), FAIL,
+     "a root-relative URL (/...) - the WebView serves the course from an asset "
+     "sub-path, so a leading slash leaves the course"),
+    (re.compile(r"\bfetch\s*\("), FAIL,
+     "fetch() - a browser blocks it for a local file, so the course cannot be reviewed "
+     "by opening it, and an offline tablet has nothing to fetch from"),
+    (re.compile(r"\bnew\s+XMLHttpRequest\b"), FAIL,
+     "XMLHttpRequest - a browser blocks it for a local file"),
+    (re.compile(r'<script[^>]+type\s*=\s*["\']module["\']', re.I), FAIL,
+     "an ES module - a browser blocks it for a local file"),
+]
+
+# PLATFORM code may talk to the classroom backend; COURSE content may not.
+#
+# That is the line, and it is not a list of filenames. The terminal shell, the live-class
+# dashboard and the local-live test pages exist precisely to reach Supabase or the
+# classroom laptop, and MainActivity passes exactly those hosts through. A course's own
+# pages must work with no network at all - a classroom may have none, and a colleague
+# reviewing the course by opening a file has none either.
+#
+# So: a file sitting AT a terminal root, or under live/ or local_live/, is platform.
+# Anything deeper - modules/, courses/, tasks/, handout/ - is course content and is checked.
+LIVE_AREAS = re.compile(r"(^|/)(live|local_live)/")
+
+
+def _is_platform_file(repo: str, plat: dict, path: str) -> bool:
+    p = rel(repo, path).replace(os.sep, "/")
+    if LIVE_AREAS.search(p):
+        return True
+    for root in plat["asset_roots"].values():
+        r = str(root).replace(os.sep, "/").rstrip("/")
+        if p.startswith(r + "/"):
+            tail = p[len(r) + 1:]
+            # one segment past a terminal root = the shell itself
+            if tail.count("/") <= 1:
+                return True
+    return False
+
+
+def check_runtime(repo: str, plat: dict, sets: dict, out: list) -> None:
+    """Does this course run in the two places it has to - the tablet WebView, and a
+    colleague's browser opening a file?
+
+    Every rule here is something that fails SILENTLY. A target="_blank" does not raise;
+    it simply does nothing, and the report from the classroom is "the tablet froze".
+    """
+    backs = 0
+    pages = 0
+    for root in sets["trainee"] + sets["instructor"]:
+        for f in walk(root):
+            ext = os.path.splitext(f)[1].lower()
+            if ext not in (".html", ".htm", ".js"):
+                continue
+            r = rel(repo, f)
+            if _is_platform_file(repo, plat, f):
+                continue
+            txt = read_text(f)
+            body = re.sub(r"<!--.*?-->", " ", txt, flags=re.S)
+            body = re.sub(r"/\*.*?\*/", " ", body, flags=re.S)
+            body = re.sub(r"(?m)^\s*//.*$", " ", body)
+            for rx, verdict, why in RUNTIME_RULES:
+                m = rx.search(body)
+                if m:
+                    out.append(Finding("runtime", verdict, r,
+                                       body.count("\n", 0, m.start()) + 1, why))
+            if ext in (".html", ".htm") and _is_page(txt):
+                pages += 1
+                if "gbt-topback" in txt or "gb-home" in txt or "gbn-back" in txt:
+                    backs += 1
+
+    # A page a trainee can enter and not leave is the worst of these, so it is counted
+    # rather than pattern-matched: the question is how many pages have no way back.
+    if pages and backs < pages:
+        out.append(Finding(
+            "runtime", WARN, "(%d of %d pages)" % (pages - backs, pages), 0,
+            "no Back affordance found (a.gbt-topback / .gbn-back / #gb-home). Hardware "
+            "Back clicks that element; a page without one is a page a trainee can enter "
+            "and not leave"))
+
+
+def _is_page(txt: str) -> bool:
+    """A fragment is markup pasted into a page, not a page - it has no Back of its own."""
+    head = txt[:2000].lower()
+    return "<!doctype" in head or "<html" in head or "<body" in head
+
+
 def run(a) -> int:
     repo = os.path.abspath(a.repo)
     plat = load_platform(a.platform)
@@ -486,6 +584,7 @@ def run(a) -> int:
     check_junk(repo, plat, sets, out)
     check_assets(repo, plat, sets, out, a.simulate_missing_asset)
     check_rights(repo, plat, sets, out)
+    check_runtime(repo, plat, sets, out)
 
     # ---- accepted debt -------------------------------------------------
     # A finding recorded in the baseline is downgraded to a warning and says

@@ -39,8 +39,9 @@ routes. It does not itself write screens, tasks, or content.
 |---|---|---|
 | **plan** | turn an accredited programme into a module set with hours that add up | `hours/GUIDE.md` |
 | **retrofit** | upgrade, redesign, modernise or "make presentable" material that **already exists** | `retrofit/GUIDE.md` |
+| **preview** | let a colleague SEE the course — "how does it look", "let me review it", "open it in the browser" | `course-tablet-publisher` → `references/preview-and-approval.md` |
 | **restyle** | make one **narrow** cosmetic change and nothing else | `retrofit/knowledge/routing.json` § restyle |
-| **ship** | put a built course onto the trainee and instructor terminals | `tablet/GUIDE.md` |
+| **ship** | put an **approved** course onto the trainee and instructor terminals | `tablet/GUIDE.md`, and `course-tablet-publisher` owns the act |
 | **audit** | check an existing course against the programme and the terminals | `coverage/GUIDE.md`, then both lanes' verify sections |
 
 `retrofit/knowledge/routing.json` is the authority on which mode a free-form request selects, and
@@ -113,7 +114,7 @@ intake — not in the brief, programme or knowledge base means `UNKNOWN`.
 
 ---
 
-## The six laws
+## The seven laws
 
 These are not preferences. Each one is here because breaking it cost real rework — the first four
 on GAS BASIC, the last two on the first two real pilots.
@@ -213,7 +214,25 @@ An existing visual is *evidence of a teaching decision*: preserve the decision, 
 implementation. The star/delta figure's claim — the supply never moves, only the bridges change —
 survives; its small SVG does not have to.
 
-### 6 · COURSE_LANGUAGE is declared, and the operator's language is not it
+### 6 · The production Android application is a publish target, not a workspace
+
+> **Without explicit human approval, the Android repository is READ ONLY.**
+
+A course lives in the colleague's own folder. It is reviewed there, in the normal browser,
+with no tablet and no Android Studio — `course-tablet-publisher`'s `preview.py` writes a
+`REVIEW.html` beside it and opens it. A course reaches
+`AndroidStudioProjects/NOVIKONTASTraining` only after a person has said so about that named
+course, in their own words: *"Approved. Publish this course to the NOVIKONTAS training app."*
+
+**"Make this module better" is course work.** So is "fix the tasks", "redesign module 1" and
+every other improvement request. None of them may write a byte into the Android project, and
+an approval given for a previous version is not approval for this one.
+
+Enforced, not merely stated: `publish.py --publish` refuses without `--approved-by`, before
+it opens the platform file, and records the approver in the commit.
+→ `course-tablet-publisher` (`references/preview-and-approval.md`)
+
+### 7 · COURSE_LANGUAGE is declared, and the operator's language is not it
 
 Mandatory in **plan** and **retrofit** alike. Detect it from the authoritative course-facing
 material, state it back in one line, and lock it.

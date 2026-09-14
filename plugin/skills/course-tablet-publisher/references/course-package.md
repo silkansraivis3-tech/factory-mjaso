@@ -115,6 +115,14 @@ in an offline WebView.
 
 ## 6 · What still blocks a truly generic 20-course platform
 
+**Update 2026-09-14.** Verified end to end against the real project: the Kotlin carries
+**no course-specific logic at all** (MainActivity serves whatever is under the allowed asset
+roots and derives Back from `a.gbt-topback[href]` / `.gbn-back`), and a second course
+registers itself from its own `course.json` with the right `trainee`/`instructor` prefixes —
+tested on a synthetic pack, two courses in the generated registry, no Gradle or Kotlin file
+touched. **Adding a course requires no application-code change.** What remains below is
+points 2 and 3.
+
 **Update 2026-09-09.** The shells now read their course from data: `gb_config.js` names it once (`COURSE`, `COURSE_ID`), the generated `courses/registry.js` lists what the APK holds, the instructor's course chooser derives its installed list from that registry, and every title in the two shells comes from `GB_CONFIG`. The live-class server lists its courses in `server/courses.json`. Points 1 and 3 below are done; 2 and 4 remain and are what a second pack still needs.
 
 **Update 2026-09-09 (evening) — the manifest loader.** `training_terminal/gb_courses.js` now
@@ -144,10 +152,20 @@ list. The substance:
 2. **The module list exists six times** (`GB_TASKS`, `IT_MODULES`, `IT_RECORD`, `live.js`'s
    `MODULES`, a printable record page, and `handout.js`) and the six already disagree — the
    handout list has seven modules and a glossary where the others have eight.
-3. **Two structural collisions.** `gb_sync.js` derives its unlock scope with
-   `/^modules\/(m\d)\//`: single-digit, and *two* courses would both produce scope `m1`, so
-   their unlocks would collide in the backend. And `RUN_CODE` `GAS101` is also a task code —
-   one string meaning two things.
+3. **The unlock-scope collision — verified again 2026-09-14, and now the biggest
+   remaining blocker.** `gb_sync.js` line 398 derives the scope as
+   `core(ref).match(/^modules\/(m\d+)\//)`, and `core()` (line 297) *deliberately strips*
+   `courses/<id>/` first. Multi-digit module numbers work; the course segment does not
+   survive. So a second course's Module 1 produces scope `m1` exactly as GAS BASIC's does,
+   and an instructor unlocking one would unlock the other in the backend.
+
+   It bites only when a **second course is taught live with the backend enabled** — it is
+   not a blocker for publishing, and not one for offline delivery, where unlocks are local.
+   The fix is small and obvious (carry the course id into the scope, e.g.
+   `<course_id>:m1`, and migrate the `unlocks` rows), and it is deliberately **not** done
+   blind: it is live-class code, so it needs its own session, a tablet, a live backend and
+   the owner's go-ahead. `RUN_CODE` `GAS101` is also a task code — one string meaning two
+   things — and belongs in the same session.
 4. **GAS BASIC is not in a pack.** Its files are at the terminal roots, so a second course
    cannot reuse those locations.
 

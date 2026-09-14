@@ -26,14 +26,31 @@ description: >
 tablet terminals and into the shared repository, safely, while several colleagues do the
 same thing for different courses.
 
-**What this must never do:** change what a course teaches. No rewriting ILOs, no inventing
+**What this must never do:** write to the Android project without a human's approval, or
+change what a course teaches. No rewriting ILOs, no inventing
 maritime facts, no "improving" an answer key, no redesigning an approved screen. If content
 is wrong, say so and stop — do not fix it under the heading of publishing it.
 
 ```
-authoritative course outputs → identify tablet-relevant → validate → separate roles
-    → package/register → test → git branch → pull request → shared default branch
+working course → PREVIEW → (a person approves) → validate → package/register
+    → git branch → pull request → shared default branch → owner builds the APK
 ```
+
+**Three states, and only one of them may write to the Android project.** A course is in
+PREVIEW by default and stays there until a human says, in their own words, that it is ready.
+`references/preview-and-approval.md` is the contract; the short form:
+
+- **PREVIEW** — the course stays in the colleague's own folder and is reviewed in the normal
+  browser. `preview.py` writes `REVIEW.html` beside it and opens it. No Android Studio, no
+  tablet, no terminal, no server: `file://` was measured and is enough.
+- **APPROVAL** — a sentence from a person, about a named course and version. "Make this
+  module better" is not approval. Approval for a previous version is not approval for this
+  one.
+- **PUBLISH** — only then. `publish.py --publish` refuses without `--approved-by`, before it
+  opens the platform file, so an unapproved run cannot read or write the Android project at
+  all. The approver is recorded in the commit.
+
+> **Without explicit approval, the production Android repository is READ ONLY.**
 
 ---
 
@@ -45,6 +62,9 @@ name. When the platform changes, that file changes — not the scripts, and not 
 
 | The ask | Do |
 |---|---|
+| "let me see it", "how does it look", "review this course", "open it in the browser" | **PREVIEW** — `scripts/preview.py --course <folder> --open`. Never touches the Android project. |
+| "make this module better", "fix the tasks", "redesign module 1" | **course work, not publishing.** The Android project stays READ ONLY. Route to `course-factory`. |
+| "Approved. Publish this course", "send it to the training app" | the **publish flow** below, with `--approved-by` |
 | "publish / sync / package this course", "ready for tablets" | the **publish flow** below |
 | "add a NEW course to the platform" | `references/course-package.md` first, then the publish flow |
 | "will this pass?", "check it without publishing" | the publish flow, dry run only — stop after step 3 |
@@ -78,11 +98,36 @@ python scripts/publish.py --repo <android project> --course-id <slug> --publish 
 Run the scripts. Do not re-implement their checks in conversation, and do not talk a human
 through git by hand — the rails in `gitpub.py` are the point (see §4).
 
+## 1a · Reviewing, which is not publishing
+
+```bash
+python scripts/preview.py --course <course folder> --open
+```
+
+Writes `REVIEW.html` beside the course and opens it in the default browser: every surface the
+course actually has, grouped and linked, plus the checklist of what to look at. It reads the
+course folder and writes one file into it. It does not know where the Android project is.
+
+`REVIEW.html` is INTERNAL by pattern (`role_rules.internal_globs`), so it can never reach a
+tablet even if someone copies a whole folder.
+
 ## 2 · The gate, and the one rule that matters
 
 `gates.py` classifies every published file as **TRAINEE**, **INSTRUCTOR**, **SHARED** or
 **INTERNAL**, then runs: identity · roles · secrets · offline · addresses · junk · assets ·
-rights.
+rights · **runtime**.
+
+**`runtime` asks whether the course actually runs where it has to** — in the tablet WebView,
+and in a colleague's browser opening a file. Both forbid things, and neither complains: a
+`target="_blank"` or a `window.open` opens *nothing* in a WebView with no tabs, so the
+trainee taps and the tablet appears to freeze; an absolute path resolves to nothing; `fetch`,
+`XMLHttpRequest` and ES modules are blocked for a local file, which is what PREVIEW rests on.
+It also counts pages with no Back affordance — hardware Back clicks `a.gbt-topback[href]`,
+and a page without one is a page a trainee can enter and not leave.
+
+The platform shell is exempt and course content is not: the terminal's own pages, `live/` and
+`local_live/` exist precisely to reach the classroom backend. Anything deeper than a terminal
+root is course content and must work with no network at all.
 
 **The hard requirement: instructor-only material never ships in the trainee package.** The
 platform enforces this structurally — the trainee flavour does not package the instructor

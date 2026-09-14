@@ -84,6 +84,28 @@ def run(cmd: list[str], label: str) -> tuple[int, str]:
     return p.returncode, out
 
 
+APPROVAL_REFUSAL = """
+STOPPED - this course has not been approved for publication.
+
+Nothing was read from the Android project and nothing was written to it.
+
+The Android application is a PUBLISH TARGET, not a place courses are developed. A course
+lives in its own folder, is reviewed in a normal browser, and reaches the app only after a
+person has said, in their own words, that it is ready. For example:
+
+    Approved. Publish this course to the NOVIKONTAS training app.
+
+If the course has not been reviewed yet, review it first - that needs no tablet, no Android
+Studio and no terminal:
+
+    python preview.py --course <course folder> --open
+
+Then re-run this with the approval recorded:
+
+    --publish --approved-by "<the person who approved it>"
+"""
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--repo", help="the platform repository; found automatically "
@@ -92,11 +114,24 @@ def main(argv=None) -> int:
     ap.add_argument("--version")
     ap.add_argument("--platform", default=PLATFORM)
     ap.add_argument("--publish", action="store_true", help="actually branch, commit and push")
+    ap.add_argument("--approved-by", metavar="NAME",
+                    help="who approved this course for the tablets. REQUIRED with "
+                         "--publish: the Android project is a publish target, not a "
+                         "development workspace, and nothing reaches it without a "
+                         "human having said so in as many words.")
     ap.add_argument("--merge", action="store_true", help="also merge into the default branch")
     ap.add_argument("--strict", action="store_true")
     ap.add_argument("--skip-links", action="store_true")
     ap.add_argument("--report", help="where to write the gate report (default: beside the repo)")
     a = ap.parse_args(argv)
+
+    # ---- 0. the approval gate ------------------------------------------
+    # PREVIEW is the default state of a course. PUBLISH is a separate act that needs a
+    # human to have said so. This runs before the platform file is even opened, so a
+    # mistyped publish cannot read, write or touch the Android project at all.
+    if a.publish and not (a.approved_by or "").strip():
+        print(APPROVAL_REFUSAL)
+        return 2
 
     with open(a.platform, "r", encoding="utf-8") as fh:
         plat = json.load(fh)
@@ -164,6 +199,8 @@ def main(argv=None) -> int:
     common = [py, gp, "--repo", repo, "--slug", a.course_id, "--version", version,
               "--course-title", (rep.get("course") or {}).get("title", a.course_id),
               "--gate-report", report]
+    if (a.approved_by or "").strip():
+        common += ["--approved-by", a.approved_by.strip()]
     for p in paths:
         common += ["--path", p]
 
@@ -173,7 +210,8 @@ def main(argv=None) -> int:
         print("DRY RUN COMPLETE. Nothing was committed, pushed or merged.")
         print("  course   " + a.course_id + " " + version)
         print("  gate     " + rep["verdict"])
-        print("  re-run with --publish to branch, commit and push.")
+        print("  re-run with --publish --approved-by \"<name>\" to branch, commit and push.")
+        print("  (publishing needs a human's approval; reviewing does not - see preview.py)")
         print("=" * 72)
         return 0
 

@@ -1,374 +1,378 @@
 {
-  "_authority": "Machine-readable description of the NOVIKONTAS tablet platform AS IT IS, discovered 2026-09-08 by inspection of the Android project and the live course. The scripts read this file; SKILL.md and the references must not restate its paths in prose. When the platform changes, change this file - not the scripts.",
-  "_written": "2026-09-08",
-  "_related": "course-factory/knowledge/delivery-contract.json is the authority on how a course is BUILT and what shape it must have. This file describes how it is PUBLISHED and what the app looks like today. Where they overlap, delivery-contract.json wins on the target design and this file wins on present-day fact.",
-  "repository": {
-    "_path_note": "There is no fixed path. Every colleague clones the platform repository somewhere different, so the scripts take --repo, and publish.py finds it by looking for a git repository whose origin URL matches remote_match - first from the working directory upwards, then in the usual places below.",
-    "remote_match": "novikontas-training-app",
-    "path_hints": [
-      "~/AndroidStudioProjects/NOVIKONTASTraining",
-      "~/Desktop/NOVIKONTASTraining",
-      "~/Documents/NOVIKONTASTraining",
-      "~/projects/NOVIKONTASTraining"
+ "_authority": "Machine-readable description of the NOVIKONTAS tablet platform AS IT IS, discovered 2026-09-08 by inspection of the Android project and the live course. The scripts read this file; SKILL.md and the references must not restate its paths in prose. When the platform changes, change this file - not the scripts.",
+ "_written": "2026-09-08",
+ "_related": "course-factory/knowledge/delivery-contract.json is the authority on how a course is BUILT and what shape it must have. This file describes how it is PUBLISHED and what the app looks like today. Where they overlap, delivery-contract.json wins on the target design and this file wins on present-day fact.",
+ "repository": {
+  "_path_note": "There is no fixed path. Every colleague clones the platform repository somewhere different, so the scripts take --repo, and publish.py finds it by looking for a git repository whose origin URL matches remote_match - first from the working directory upwards, then in the usual places below.",
+  "remote_match": "novikontas-training-app",
+  "path_hints": [
+   "~/AndroidStudioProjects/NOVIKONTASTraining",
+   "~/Desktop/NOVIKONTASTraining",
+   "~/Documents/NOVIKONTASTraining",
+   "~/projects/NOVIKONTASTraining"
+  ],
+  "remote": "origin",
+  "url": "https://github.com/silkansraivis3-tech/novikontas-training-app.git",
+  "default_branch": "master",
+  "_default_branch_note": "DETECTED, not assumed. The remote's HEAD is `master`. Colleagues and prompts often say 'main'; the scripts detect it at run time and never hard-code either name.",
+  "branch_pattern": "course/<course-slug>/<version>",
+  "github_cli": false,
+  "_github_cli_note": "`gh` is not installed on this machine and no GH token is in the environment, so a pull request cannot be opened by API. The publisher pushes the branch and prints the GitHub compare URL for a human to click. If `gh` is installed later, the flow does not change - only the last step gets automated.",
+  "ci": null,
+  "_ci_note": "No .github/workflows. Nothing validates on the server side, so the local gate IS the gate."
+ },
+ "asset_roots": {
+  "trainee": "app/src/main/assets/training_terminal",
+  "instructor": "app/src/instructor/assets/instructor_terminal",
+  "_merge_note": "Gradle merges the flavour source sets into ONE asset root at build time, so at runtime the two terminals are SIBLINGS. A cross-terminal link is written relative to that merged root and looks dead in the split source tree. Never 'fix' a link without checking it against a merged view (course-factory/tablet/scripts/verify_links.py builds one)."
+ },
+ "flavours": {
+  "trainee": {
+   "assets": [
+    "app/src/main/assets"
+   ],
+   "start": "training_terminal/index.html",
+   "allowed_roots": [
+    "training_terminal/"
+   ],
+   "role": "TRAINEE"
+  },
+  "instructor": {
+   "assets": [
+    "app/src/main/assets",
+    "app/src/instructor/assets"
+   ],
+   "start": "instructor_terminal/index.html",
+   "allowed_roots": [
+    "instructor_terminal/",
+    "training_terminal/"
+   ],
+   "role": "INSTRUCTOR"
+  },
+  "traineeLocal": {
+   "test_only": true,
+   "start": "training_terminal/local_live/index.html"
+  },
+  "instructorLocal": {
+   "test_only": true,
+   "start": "instructor_terminal/local_live/index.html"
+  },
+  "_separation": "The role separation is STRUCTURAL and this is the whole reason it holds: the trainee flavour never packages src/instructor/assets, so instructor material cannot reach a trainee tablet by accident. The one thing that defeats it is an instructor-only FILE placed inside the trainee tree by hand - which is exactly what the roles gate looks for."
+ },
+ "layouts": {
+  "pack": {
+   "status": "target - use for every NEW course",
+   "trainee_root": "app/src/main/assets/training_terminal/courses/<course_id>/",
+   "instructor_root": "app/src/instructor/assets/instructor_terminal/courses/<course_id>/",
+   "manifest": "course.json at the trainee pack root",
+   "why": "One folder per course means two colleagues publishing two courses touch no file in common. It is also what course-factory/knowledge/delivery-contract.json already specifies."
+  },
+  "legacy": {
+   "status": "GAS BASIC only - do not create another",
+   "why": "GAS BASIC predates the pack layout. Its files sit directly at the terminal roots with no course segment in any path, so a second course cannot use the same locations. Converting it is a separate, human-authorised job: it moves ~400 files and every relative link with them.",
+   "conversion_owner": "not scheduled"
+  }
+ },
+ "legacy_courses": {
+  "gas-basic": {
+   "title": "GAS BASIC",
+   "version": "1.0.0",
+   "modules": 8,
+   "trainee_paths": [
+    "app/src/main/assets/training_terminal"
+   ],
+   "instructor_paths": [
+    "app/src/instructor/assets/instructor_terminal"
+   ],
+   "note": "The whole of both terminals IS this course today. That is why publishing it stages the entire terminal tree, and why a second course must not be added in this layout."
+  }
+ },
+ "course_identity_surface": {
+  "_what": "Where a course name was baked into code. As of 2026-09-09 the SHELLS read it from data: gb_config.js (COURSE, COURSE_ID, RUN_CODE) is the one place a build names its course, courses/registry.js (generated by this skill's registry.py) lists the courses the APK holds, it_auth.js derives INSTALLED from it, and gb_nav/it_nav/radar/record/run read the title from GB_CONFIG. What still needs a human when a SECOND course pack is added is listed in `still_manual`.",
+  "files": [
+   "app/src/main/assets/training_terminal/gb_config.js               COURSE, COURSE_ID, RUN_CODE - the one place a build names its course",
+   "app/src/main/assets/training_terminal/courses/registry.js        GENERATED list of installed courses (registry.py); loaded by both shells",
+   "app/src/instructor/assets/instructor_terminal/it_content.js      10 'GAS BASIC - Module N' eyebrow literals - course DATA, moves with the pack"
+  ],
+  "duplicated_module_lists": [
+   "training_terminal/gb_tasks.js            GB_TASKS      8 modules",
+   "instructor_terminal/it_content.js        IT_MODULES    8 modules",
+   "instructor_terminal/it_record.js         IT_RECORD     8 modules",
+   "instructor_terminal/live/live.js         MODULES       8 modules",
+   "instructor_terminal/record/practical_skills_record.html  MODS",
+   "training_terminal/handout/handout.js     MODS          7 + glossary - ALREADY DISAGREES with the other five"
+  ],
+  "structural_blockers": [
+   "gb_sync.js pageRef() strips the literal prefix 'training_terminal/'; since 2026-09-09 core(ref) also strips courses/<id>/ before kind and scope are derived, so a pack's pages get the same kind/scope as root pages (the stored ref keeps the prefix)",
+   "gb_sync.js derives the unlock scope with /^modules\\/(m\\d)\\// - single digit, and TWO courses would both produce scope 'm1', so their unlocks would collide in the backend",
+   "gb_config.js RUN_CODE 'GAS101' is also a task code in gb_tasks.js - the same string means two things"
+  ],
+  "still_manual": [
+   "LOADER BUILT 2026-09-09: training_terminal/gb_courses.js loads gb_tasks.js / it_run.js / it_content.js / it_record.js from the registry entry's trainee|instructor prefix (courses/<id>/ for a pack, '' for GAS BASIC at the root). Pages carry <script src=gb_courses.js data-load=...> after gb_config.js and courses/registry.js. A pack still needs its PAGES under courses/<id>/, and the module lists (next line) are still root data",
+   "the six module lists (GB_TASKS, IT_MODULES, IT_RECORD, live.js MODULES, practical_skills_record.html MODS, handout.js MODS) are still per-course data at the root, not per pack",
+   "gb_sync.js unlock scope /^modules\\/(m\\d)\\// is per run, so two courses in two runs do not collide; a course with 10+ modules would",
+   "GAS BASIC itself is not in a pack (legacy layout)"
+  ]
+ },
+ "role_rules": {
+  "shared_engine_globs": [
+   "gb_*.js",
+   "gb_*.css",
+   "style.css",
+   "radar.js",
+   "index.html"
+  ],
+  "_shared_note": "Shared engines live ONCE at the terminal root and are referenced, never copied into a course. A copy goes stale the first time the engine is fixed - that has already happened here: the per-module gb_done.js exists in five identical copies.",
+  "internal_globs": [
+   "(^|/)_claude_working_area/",
+   "(^|/)tablet_package/",
+   "(^|/)oldversion/",
+   "(^|/)test_area/",
+   "(^|/)_full_decks",
+   "(^|/)knowledge_base/",
+   "(^|/)source_files/",
+   "\\.bak(_[^/]*)?$",
+   "\\.orig$",
+   "(^|/)__pycache__/",
+   "(^|/)\\.git/",
+   "(^|/)REVIEW\\.html$",
+   "(^|/)PREVIEW\\.html$",
+   "(^|/)REVIEW_FIRST\\.html$"
+  ],
+  "instructor_only_filename_patterns": [
+   [
+    "answer[_-]?key",
+    "an answer key"
+   ],
+   [
+    "model[_-]?answer",
+    "model answers"
+   ],
+   [
+    "_criteria\\.html$",
+    "marking criteria"
+   ],
+   [
+    "instructor[_-]analysis",
+    "the instructor's analysis of a case"
+   ],
+   [
+    "ADVANCED_MODULE_PLAN|MODULE_\\d+_PLAN",
+    "an instructor module plan"
+   ],
+   [
+    "ROTATION_PLAN|SAFETY_BRIEF",
+    "instructor practical planning"
+   ],
+   [
+    "observation_checklist",
+    "an assessor's observation record"
+   ],
+   [
+    "practical_skills_record",
+    "the assessor's skills record"
+   ],
+   [
+    "^gb_answers\\.js$",
+    "the deck's answer payload"
+   ],
+   [
+    "^gb_review\\.(js|css)$",
+    "the answer-reveal engine"
+   ],
+   [
+    "^gb_roster\\.js$",
+    "the per-trainee marking roster"
+   ],
+   [
+    "^gb_observe\\.js$",
+    "the observed-criteria record engine"
+   ],
+   [
+    "_paper\\.html$",
+    "the printable paper check, whose last page is the marking key"
+   ],
+   [
+    "^START_HERE\\.html$",
+    "the instructor's timed pre-flight"
+   ]
+  ],
+  "_content_pattern_note": "Filename patterns are reliable and FAIL. CONTENT patterns are signals, not proof, so they WARN: on this platform every broad content match turned out to be prose - 'Answer keys trace to: SIGTTO...' is a provenance line, 'one instructor only' is a staffing note. The scanner also strips HTML and JavaScript comments first, because a comment citing the answer key as a source is not a leak.",
+  "instructor_only_content_patterns": [
+   [
+    "(?:>|\"|')\\s*INSTRUCTOR[ -]ONLY",
+    "WARN",
+    "the page carries an INSTRUCTOR ONLY banner"
+   ],
+   [
+    "class=\"[^\"]*instructor-only",
+    "WARN",
+    "an instructor-only styled block"
+   ],
+   [
+    "(?:>|\"|')\\s*(?:MODEL )?ANSWER KEY\\s*(?:<|\"|')",
+    "WARN",
+    "an answer-key heading or link label"
+   ],
+   [
+    "do not issue (?:it |this )?(?:with|to) (?:the )?(?:candidate|trainee)",
+    "WARN",
+    "an instruction not to issue the document to trainees"
+   ],
+   [
+    "[Aa]ssessor signature",
+    "WARN",
+    "an assessor signature block - this is a marking form"
+   ]
+  ],
+  "trainee_allowlist": [
+   {
+    "path": "app/src/main/assets/training_terminal/modules/m4/documents/INHIBITOR_RECORD.html",
+    "reason": "a cargo record FORM the trainee reads as reference material; 'record' in the name is the ship's record, not an assessor's"
+   },
+   {
+    "path": "app/src/main/assets/training_terminal/modules/m6/documents/SHIP_SHORE_CHECKLIST.html",
+    "reason": "the ship/shore safety checklist is a real operational document the trainee must be able to read"
+   },
+   {
+    "path": "app/src/main/assets/training_terminal/modules/m6/tasks/T4_checklist_what_it_prevents.html",
+    "reason": "a trainee task ABOUT the checklist"
+   },
+   {
+    "path": "app/src/main/assets/training_terminal/modules/m1/assessment/module_01_check.html",
+    "reason": "the trainee's own result sheet prints a line for the assessor to sign so the paper record can be completed in the room; the marking criteria and key themselves live on the instructor terminal"
+   }
+  ],
+  "_internal_note": "REVIEW.html is the PREVIEW surface the colleague reads in a browser. It is generated beside the course, is not course content, and must never reach a tablet - so it is internal by pattern rather than by anyone remembering to delete it."
+ },
+ "safety_rules": {
+  "secrets": {
+   "patterns": [
+    [
+     "service_role",
+     "FAIL",
+     "a Supabase SERVICE-ROLE key bypasses row-level security entirely"
     ],
-    "remote": "origin",
-    "url": "https://github.com/silkansraivis3-tech/novikontas-training-app.git",
-    "default_branch": "master",
-    "_default_branch_note": "DETECTED, not assumed. The remote's HEAD is `master`. Colleagues and prompts often say 'main'; the scripts detect it at run time and never hard-code either name.",
-    "branch_pattern": "course/<course-slug>/<version>",
-    "github_cli": false,
-    "_github_cli_note": "`gh` is not installed on this machine and no GH token is in the environment, so a pull request cannot be opened by API. The publisher pushes the branch and prints the GitHub compare URL for a human to click. If `gh` is installed later, the flow does not change - only the last step gets automated.",
-    "ci": null,
-    "_ci_note": "No .github/workflows. Nothing validates on the server side, so the local gate IS the gate."
-  },
-  "asset_roots": {
-    "trainee": "app/src/main/assets/training_terminal",
-    "instructor": "app/src/instructor/assets/instructor_terminal",
-    "_merge_note": "Gradle merges the flavour source sets into ONE asset root at build time, so at runtime the two terminals are SIBLINGS. A cross-terminal link is written relative to that merged root and looks dead in the split source tree. Never 'fix' a link without checking it against a merged view (course-factory/tablet/scripts/verify_links.py builds one)."
-  },
-  "flavours": {
-    "trainee": {
-      "assets": [
-        "app/src/main/assets"
-      ],
-      "start": "training_terminal/index.html",
-      "allowed_roots": [
-        "training_terminal/"
-      ],
-      "role": "TRAINEE"
-    },
-    "instructor": {
-      "assets": [
-        "app/src/main/assets",
-        "app/src/instructor/assets"
-      ],
-      "start": "instructor_terminal/index.html",
-      "allowed_roots": [
-        "instructor_terminal/",
-        "training_terminal/"
-      ],
-      "role": "INSTRUCTOR"
-    },
-    "traineeLocal": {
-      "test_only": true,
-      "start": "training_terminal/local_live/index.html"
-    },
-    "instructorLocal": {
-      "test_only": true,
-      "start": "instructor_terminal/local_live/index.html"
-    },
-    "_separation": "The role separation is STRUCTURAL and this is the whole reason it holds: the trainee flavour never packages src/instructor/assets, so instructor material cannot reach a trainee tablet by accident. The one thing that defeats it is an instructor-only FILE placed inside the trainee tree by hand - which is exactly what the roles gate looks for."
-  },
-  "layouts": {
-    "pack": {
-      "status": "target - use for every NEW course",
-      "trainee_root": "app/src/main/assets/training_terminal/courses/<course_id>/",
-      "instructor_root": "app/src/instructor/assets/instructor_terminal/courses/<course_id>/",
-      "manifest": "course.json at the trainee pack root",
-      "why": "One folder per course means two colleagues publishing two courses touch no file in common. It is also what course-factory/knowledge/delivery-contract.json already specifies."
-    },
-    "legacy": {
-      "status": "GAS BASIC only - do not create another",
-      "why": "GAS BASIC predates the pack layout. Its files sit directly at the terminal roots with no course segment in any path, so a second course cannot use the same locations. Converting it is a separate, human-authorised job: it moves ~400 files and every relative link with them.",
-      "conversion_owner": "not scheduled"
-    }
-  },
-  "legacy_courses": {
-    "gas-basic": {
-      "title": "GAS BASIC",
-      "version": "1.0.0",
-      "modules": 8,
-      "trainee_paths": [
-        "app/src/main/assets/training_terminal"
-      ],
-      "instructor_paths": [
-        "app/src/instructor/assets/instructor_terminal"
-      ],
-      "note": "The whole of both terminals IS this course today. That is why publishing it stages the entire terminal tree, and why a second course must not be added in this layout."
-    }
-  },
-  "course_identity_surface": {
-    "_what": "Where a course name was baked into code. As of 2026-09-09 the SHELLS read it from data: gb_config.js (COURSE, COURSE_ID, RUN_CODE) is the one place a build names its course, courses/registry.js (generated by this skill's registry.py) lists the courses the APK holds, it_auth.js derives INSTALLED from it, and gb_nav/it_nav/radar/record/run read the title from GB_CONFIG. What still needs a human when a SECOND course pack is added is listed in `still_manual`.",
-    "files": [
-      "app/src/main/assets/training_terminal/gb_config.js               COURSE, COURSE_ID, RUN_CODE - the one place a build names its course",
-      "app/src/main/assets/training_terminal/courses/registry.js        GENERATED list of installed courses (registry.py); loaded by both shells",
-      "app/src/instructor/assets/instructor_terminal/it_content.js      10 'GAS BASIC - Module N' eyebrow literals - course DATA, moves with the pack"
+    [
+     "SUPABASE_SERVICE",
+     "FAIL",
+     "a Supabase service credential"
     ],
-    "duplicated_module_lists": [
-      "training_terminal/gb_tasks.js            GB_TASKS      8 modules",
-      "instructor_terminal/it_content.js        IT_MODULES    8 modules",
-      "instructor_terminal/it_record.js         IT_RECORD     8 modules",
-      "instructor_terminal/live/live.js         MODULES       8 modules",
-      "instructor_terminal/record/practical_skills_record.html  MODS",
-      "training_terminal/handout/handout.js     MODS          7 + glossary - ALREADY DISAGREES with the other five"
+    [
+     "-----BEGIN [A-Z ]*PRIVATE KEY-----",
+     "FAIL",
+     "a private key"
     ],
-    "structural_blockers": [
-      "gb_sync.js pageRef() strips the literal prefix 'training_terminal/'; since 2026-09-09 core(ref) also strips courses/<id>/ before kind and scope are derived, so a pack's pages get the same kind/scope as root pages (the stored ref keeps the prefix)",
-      "gb_sync.js derives the unlock scope with /^modules\\/(m\\d)\\// - single digit, and TWO courses would both produce scope 'm1', so their unlocks would collide in the backend",
-      "gb_config.js RUN_CODE 'GAS101' is also a task code in gb_tasks.js - the same string means two things"
+    [
+     "\"type\"\\s*:\\s*\"service_account\"",
+     "FAIL",
+     "a Google service-account JSON"
     ],
-    "still_manual": [
-      "LOADER BUILT 2026-09-09: training_terminal/gb_courses.js loads gb_tasks.js / it_run.js / it_content.js / it_record.js from the registry entry's trainee|instructor prefix (courses/<id>/ for a pack, '' for GAS BASIC at the root). Pages carry <script src=gb_courses.js data-load=...> after gb_config.js and courses/registry.js. A pack still needs its PAGES under courses/<id>/, and the module lists (next line) are still root data",
-      "the six module lists (GB_TASKS, IT_MODULES, IT_RECORD, live.js MODULES, practical_skills_record.html MODS, handout.js MODS) are still per-course data at the root, not per pack",
-      "gb_sync.js unlock scope /^modules\\/(m\\d)\\// is per run, so two courses in two runs do not collide; a course with 10+ modules would",
-      "GAS BASIC itself is not in a pack (legacy layout)"
+    [
+     "[a-z0-9-]+@[a-z0-9-]+\\.iam\\.gserviceaccount\\.com",
+     "FAIL",
+     "a Google service-account identity"
+    ],
+    [
+     "client_secret",
+     "FAIL",
+     "an OAuth client secret"
+    ],
+    [
+     "(?<![A-Za-z_])(password|passwd|pwd)\\s*[:=]\\s*[\"'][^\"']{4,}",
+     "FAIL",
+     "a hardcoded password"
+    ],
+    [
+     "AKIA[0-9A-Z]{16}",
+     "FAIL",
+     "an AWS access key id"
+    ],
+    [
+     "ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}",
+     "FAIL",
+     "a GitHub token"
+    ],
+    [
+     "sk-[A-Za-z0-9]{20,}",
+     "FAIL",
+     "an API secret key"
+    ],
+    [
+     "eyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}",
+     "WARN",
+     "a JWT. A Supabase ANON key here is publishable by design; anything else is not - decode it and check the 'role' claim"
     ]
+   ],
+   "allow_patterns": [
+    "SUPABASE_ANON_KEY",
+    "anon public key",
+    "role\\\\?\":\\\\?\"anon"
+   ],
+   "_anon_key_note": "gb_config.js carries the Supabase ANON key. That key is designed to be shipped in a client and is not a leak. Its safety rests entirely on row-level security being correct in backend/ - the tablets make unauthenticated writes to course_runs and unlocks, so anyone who unzips the APK can reach those endpoints. An RLS audit is worth doing; it is not this gate's job."
   },
-  "role_rules": {
-    "shared_engine_globs": [
-      "gb_*.js",
-      "gb_*.css",
-      "style.css",
-      "radar.js",
-      "index.html"
-    ],
-    "_shared_note": "Shared engines live ONCE at the terminal root and are referenced, never copied into a course. A copy goes stale the first time the engine is fixed - that has already happened here: the per-module gb_done.js exists in five identical copies.",
-    "internal_globs": [
-      "(^|/)_claude_working_area/",
-      "(^|/)tablet_package/",
-      "(^|/)oldversion/",
-      "(^|/)test_area/",
-      "(^|/)_full_decks",
-      "(^|/)knowledge_base/",
-      "(^|/)source_files/",
-      "\\.bak(_[^/]*)?$",
-      "\\.orig$",
-      "(^|/)__pycache__/",
-      "(^|/)\\.git/"
-    ],
-    "instructor_only_filename_patterns": [
-      [
-        "answer[_-]?key",
-        "an answer key"
-      ],
-      [
-        "model[_-]?answer",
-        "model answers"
-      ],
-      [
-        "_criteria\\.html$",
-        "marking criteria"
-      ],
-      [
-        "instructor[_-]analysis",
-        "the instructor's analysis of a case"
-      ],
-      [
-        "ADVANCED_MODULE_PLAN|MODULE_\\d+_PLAN",
-        "an instructor module plan"
-      ],
-      [
-        "ROTATION_PLAN|SAFETY_BRIEF",
-        "instructor practical planning"
-      ],
-      [
-        "observation_checklist",
-        "an assessor's observation record"
-      ],
-      [
-        "practical_skills_record",
-        "the assessor's skills record"
-      ],
-      [
-        "^gb_answers\\.js$",
-        "the deck's answer payload"
-      ],
-      [
-        "^gb_review\\.(js|css)$",
-        "the answer-reveal engine"
-      ],
-      [
-        "^gb_roster\\.js$",
-        "the per-trainee marking roster"
-      ],
-      [
-        "^gb_observe\\.js$",
-        "the observed-criteria record engine"
-      ],
-      [
-        "_paper\\.html$",
-        "the printable paper check, whose last page is the marking key"
-      ],
-      [
-        "^START_HERE\\.html$",
-        "the instructor's timed pre-flight"
-      ]
-    ],
-    "_content_pattern_note": "Filename patterns are reliable and FAIL. CONTENT patterns are signals, not proof, so they WARN: on this platform every broad content match turned out to be prose - 'Answer keys trace to: SIGTTO...' is a provenance line, 'one instructor only' is a staffing note. The scanner also strips HTML and JavaScript comments first, because a comment citing the answer key as a source is not a leak.",
-    "instructor_only_content_patterns": [
-      [
-        "(?:>|\"|')\\s*INSTRUCTOR[ -]ONLY",
-        "WARN",
-        "the page carries an INSTRUCTOR ONLY banner"
-      ],
-      [
-        "class=\"[^\"]*instructor-only",
-        "WARN",
-        "an instructor-only styled block"
-      ],
-      [
-        "(?:>|\"|')\\s*(?:MODEL )?ANSWER KEY\\s*(?:<|\"|')",
-        "WARN",
-        "an answer-key heading or link label"
-      ],
-      [
-        "do not issue (?:it |this )?(?:with|to) (?:the )?(?:candidate|trainee)",
-        "WARN",
-        "an instruction not to issue the document to trainees"
-      ],
-      [
-        "[Aa]ssessor signature",
-        "WARN",
-        "an assessor signature block - this is a marking form"
-      ]
-    ],
-    "trainee_allowlist": [
-      {
-        "path": "app/src/main/assets/training_terminal/modules/m4/documents/INHIBITOR_RECORD.html",
-        "reason": "a cargo record FORM the trainee reads as reference material; 'record' in the name is the ship's record, not an assessor's"
-      },
-      {
-        "path": "app/src/main/assets/training_terminal/modules/m6/documents/SHIP_SHORE_CHECKLIST.html",
-        "reason": "the ship/shore safety checklist is a real operational document the trainee must be able to read"
-      },
-      {
-        "path": "app/src/main/assets/training_terminal/modules/m6/tasks/T4_checklist_what_it_prevents.html",
-        "reason": "a trainee task ABOUT the checklist"
-      },
-      {
-        "path": "app/src/main/assets/training_terminal/modules/m1/assessment/module_01_check.html",
-        "reason": "the trainee's own result sheet prints a line for the assessor to sign so the paper record can be completed in the room; the marking criteria and key themselves live on the instructor terminal"
-      }
-    ]
+  "offline": {
+   "font_hosts": [
+    "fonts.googleapis.com",
+    "fonts.gstatic.com"
+   ],
+   "_rule": "A remote SCRIPT or a remote STYLESHEET the page needs in order to be readable is a FAIL: a classroom may have no network. A remote FONT whose stacks end in a generic family is a WARN, because the degradation is a chosen fallback rather than a broken page.",
+   "_known_gap": "GAS BASIC pulls Raleway from Google Fonts on ~105 pages with no bundled copy. Every stack ends in a generic family, so it degrades gracefully and the brand typeface is lost offline. This is why fonts warn instead of failing - a FAIL here would block every publication of the working course."
   },
-  "safety_rules": {
-    "secrets": {
-      "patterns": [
-        [
-          "service_role",
-          "FAIL",
-          "a Supabase SERVICE-ROLE key bypasses row-level security entirely"
-        ],
-        [
-          "SUPABASE_SERVICE",
-          "FAIL",
-          "a Supabase service credential"
-        ],
-        [
-          "-----BEGIN [A-Z ]*PRIVATE KEY-----",
-          "FAIL",
-          "a private key"
-        ],
-        [
-          "\"type\"\\s*:\\s*\"service_account\"",
-          "FAIL",
-          "a Google service-account JSON"
-        ],
-        [
-          "[a-z0-9-]+@[a-z0-9-]+\\.iam\\.gserviceaccount\\.com",
-          "FAIL",
-          "a Google service-account identity"
-        ],
-        [
-          "client_secret",
-          "FAIL",
-          "an OAuth client secret"
-        ],
-        [
-          "(?<![A-Za-z_])(password|passwd|pwd)\\s*[:=]\\s*[\"'][^\"']{4,}",
-          "FAIL",
-          "a hardcoded password"
-        ],
-        [
-          "AKIA[0-9A-Z]{16}",
-          "FAIL",
-          "an AWS access key id"
-        ],
-        [
-          "ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}",
-          "FAIL",
-          "a GitHub token"
-        ],
-        [
-          "sk-[A-Za-z0-9]{20,}",
-          "FAIL",
-          "an API secret key"
-        ],
-        [
-          "eyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}",
-          "WARN",
-          "a JWT. A Supabase ANON key here is publishable by design; anything else is not - decode it and check the 'role' claim"
-        ]
-      ],
-      "allow_patterns": [
-        "SUPABASE_ANON_KEY",
-        "anon public key",
-        "role\\\\?\":\\\\?\"anon"
-      ],
-      "_anon_key_note": "gb_config.js carries the Supabase ANON key. That key is designed to be shipped in a client and is not a leak. Its safety rests entirely on row-level security being correct in backend/ - the tablets make unauthenticated writes to course_runs and unlocks, so anyone who unzips the APK can reach those endpoints. An RLS audit is worth doing; it is not this gate's job."
-    },
-    "offline": {
-      "font_hosts": [
-        "fonts.googleapis.com",
-        "fonts.gstatic.com"
-      ],
-      "_rule": "A remote SCRIPT or a remote STYLESHEET the page needs in order to be readable is a FAIL: a classroom may have no network. A remote FONT whose stacks end in a generic family is a WARN, because the degradation is a chosen fallback rather than a broken page.",
-      "_known_gap": "GAS BASIC pulls Raleway from Google Fonts on ~105 pages with no bundled copy. Every stack ends in a generic family, so it degrades gracefully and the brand typeface is lost offline. This is why fonts warn instead of failing - a FAIL here would block every publication of the working course."
-    },
-    "addresses": {
-      "patterns": [
-        "https?://localhost",
-        "https?://127\\.0\\.0\\.1",
-        "https?://10\\.\\d+\\.\\d+\\.\\d+",
-        "https?://192\\.168\\.\\d+\\.\\d+",
-        "file:///[A-Za-z]:"
-      ],
-      "test_only_path_patterns": [
-        "(^|/)local_live/"
-      ],
-      "_note": "Only the local_live pages may name a laptop address, and there they are placeholder text in a field the instructor types into. Those pages are packaged only by the traineeLocal/instructorLocal TEST flavours."
-    },
-    "junk_patterns": [
-      "\\.bak(_[^/]*)?$",
-      "\\.orig$",
-      "\\.rej$",
-      "~$",
-      "^Thumbs\\.db$",
-      "^\\.DS_Store$"
-    ],
-    "rights": {
-      "not_cleared_patterns": [
-        "not cleared",
-        "do not (re)?distribute",
-        "no reuse",
-        "all rights reserved"
-      ],
-      "_note": "_figure_meta.json carries a RIGHTS field per figure, and some ICS figures are marked 'NOT cleared for issue or publication'. Pushing those to a shared repository is a distribution decision. The gate names them and lets a human decide; it does not block, because the repository is private and the figures are already in the APK."
-    }
+  "addresses": {
+   "patterns": [
+    "https?://localhost",
+    "https?://127\\.0\\.0\\.1",
+    "https?://10\\.\\d+\\.\\d+\\.\\d+",
+    "https?://192\\.168\\.\\d+\\.\\d+",
+    "file:///[A-Za-z]:"
+   ],
+   "test_only_path_patterns": [
+    "(^|/)local_live/"
+   ],
+   "_note": "Only the local_live pages may name a laptop address, and there they are placeholder text in a field the instructor types into. Those pages are packaged only by the traineeLocal/instructorLocal TEST flavours."
   },
-  "validation": {
-    "_order": "Run the publisher's own gate first (it is fast and catches the dangerous things), then the course-factory checks, which know about decks and hours.",
-    "external_scripts": {
-      "_root_note": "course-factory sits BESIDE this skill - both as user skills in ~/.claude/skills/ and inside a plugin's skills/ folder - so the scripts resolve it as a sibling of the skill directory. Nothing here is an absolute path.",
-      "sibling_skill": "course-factory",
-      "links": "tablet/scripts/verify_links.py --assets app/src/main/assets --assets app/src/instructor/assets",
-      "structure": "tablet/scripts/verify_course.py --deck <deck> [--deck ...] --last-module <n>",
-      "crosscheck": "tablet/scripts/crosscheck_tasks.py --deck <deck> --manifest <gb_tasks.js> --run <it_run.js> --tablet-root <trainee root>",
-      "navigation": "tablet/scripts/audit_navigation.py --assets app/src/main/assets --assets app/src/instructor/assets",
-      "hours": "hours/scripts/check_hours.py"
-    }
+  "junk_patterns": [
+   "\\.bak(_[^/]*)?$",
+   "\\.orig$",
+   "\\.rej$",
+   "~$",
+   "^Thumbs\\.db$",
+   "^\\.DS_Store$"
+  ],
+  "rights": {
+   "not_cleared_patterns": [
+    "not cleared",
+    "do not (re)?distribute",
+    "no reuse",
+    "all rights reserved"
+   ],
+   "_note": "_figure_meta.json carries a RIGHTS field per figure, and some ICS figures are marked 'NOT cleared for issue or publication'. Pushing those to a shared repository is a distribution decision. The gate names them and lets a human decide; it does not block, because the repository is private and the figures are already in the APK."
+  }
+ },
+ "validation": {
+  "_order": "Run the publisher's own gate first (it is fast and catches the dangerous things), then the course-factory checks, which know about decks and hours.",
+  "external_scripts": {
+   "_root_note": "course-factory sits BESIDE this skill - both as user skills in ~/.claude/skills/ and inside a plugin's skills/ folder - so the scripts resolve it as a sibling of the skill directory. Nothing here is an absolute path.",
+   "sibling_skill": "course-factory",
+   "links": "tablet/scripts/verify_links.py --assets app/src/main/assets --assets app/src/instructor/assets",
+   "structure": "tablet/scripts/verify_course.py --deck <deck> [--deck ...] --last-module <n>",
+   "crosscheck": "tablet/scripts/crosscheck_tasks.py --deck <deck> --manifest <gb_tasks.js> --run <it_run.js> --tablet-root <trainee root>",
+   "navigation": "tablet/scripts/audit_navigation.py --assets app/src/main/assets --assets app/src/instructor/assets",
+   "hours": "hours/scripts/check_hours.py"
+  }
+ },
+ "generated_files": {
+  "it_run.js": {
+   "path": "app/src/instructor/assets/instructor_terminal/it_run.js",
+   "generator": "the course's own gen_it_run.py",
+   "rule": "GENERATED - never hand-edited, and regenerated after ANY deck change. A stale slide number lies silently: the instructor announces the wrong task and finds out in the room."
   },
-  "generated_files": {
-    "it_run.js": {
-      "path": "app/src/instructor/assets/instructor_terminal/it_run.js",
-      "generator": "the course's own gen_it_run.py",
-      "rule": "GENERATED - never hand-edited, and regenerated after ANY deck change. A stale slide number lies silently: the instructor announces the wrong task and finds out in the room."
-    },
-    "courses/registry.js": {
-      "path": "app/src/main/assets/training_terminal/courses/registry.js",
-      "generator": "this skill's scripts/registry.py",
-      "rule": "GENERATED by scanning courses/*/course.json. Deterministic and sorted, so two colleagues who both regenerate it produce the same bytes and a textual conflict is resolved by re-running the generator, never by hand-merging."
-    }
-  },
-  "packaging_note": "There is no working automated copy from the authoring course folder into the Android assets. build_tablet_package.py exists in the course's working area but its own output file (gb_tasks.js) carries a warning that running it would revert hand-made corrections. Treat the Android project as the source of truth for what ships, and the course folder as the source of truth for what the course SAYS."
+  "courses/registry.js": {
+   "path": "app/src/main/assets/training_terminal/courses/registry.js",
+   "generator": "this skill's scripts/registry.py",
+   "rule": "GENERATED by scanning courses/*/course.json. Deterministic and sorted, so two colleagues who both regenerate it produce the same bytes and a textual conflict is resolved by re-running the generator, never by hand-merging."
+  }
+ },
+ "packaging_note": "There is no working automated copy from the authoring course folder into the Android assets. build_tablet_package.py exists in the course's working area but its own output file (gb_tasks.js) carries a warning that running it would revert hand-made corrections. Treat the Android project as the source of truth for what ships, and the course folder as the source of truth for what the course SAYS."
 }

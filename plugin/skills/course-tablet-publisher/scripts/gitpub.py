@@ -288,10 +288,14 @@ def cmd_commit(a, repo: str) -> int:
     if len(files) > 40:
         print(f"    ... and {len(files) - 40} more")
 
+    approved = (a.approved_by or "").strip()
     msg = a.message or (
         f"{a.course_title or a.slug} {a.version}: publish to the tablet platform\n\n"
         f"course: {a.slug}\nversion: {a.version}\n"
         "Validated by course-tablet-publisher (roles, safety, links, structure).\n"
+        # Who approved it belongs in the repository, not only in someone's memory of a
+        # conversation. A course reaches the tablets because a person said it was ready.
+        + (f"Approved-by: {approved}\n" if approved else "")
     )
     if a.dry_run:
         print("\nDRY RUN - not committing. Message would be:\n" + msg)
@@ -384,6 +388,10 @@ def main(argv=None) -> int:
     ap.add_argument("--remote", default="origin")
     ap.add_argument("--branch", help="branch to act on (status/merge); default HEAD")
     ap.add_argument("--message", help="commit message")
+    ap.add_argument("--approved-by", default="",
+                    help="who approved this course for the tablets. Recorded as an "
+                         "Approved-by trailer, so the repository says who approved a "
+                         "course and not only who ran a script.")
     ap.add_argument("--merge", action="store_true",
                     help="authorise merging into the default branch")
     ap.add_argument("--allow-base-commit", action="store_true",

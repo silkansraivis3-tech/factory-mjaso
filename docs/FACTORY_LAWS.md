@@ -130,9 +130,24 @@ scheduler it measured under, pumps frames when the page is hidden, and never ret
 bare "does not move".
 → `course-visuals` (`scripts/verify_figures.js`, `GBVerifyFigures.motion()`)
 
+**L21 · The production Android application is a publish target, not a workspace.**
+Without explicit human approval, `AndroidStudioProjects/NOVIKONTASTraining` is READ ONLY.
+
+A course lives in the colleague's own folder and is reviewed there, in the normal default
+browser — no tablet, no Android Studio, no terminal, no server. It reaches the application
+only after a person has said so about that named course and version, in their own words:
+*"Approved. Publish this course to the NOVIKONTAS training app."*
+
+"Make this module better" is course work, and so is every other improvement request; none of
+them may write a byte into the Android project. Approval given for a previous version is not
+approval for this one. Enforced rather than stated: `publish.py --publish` refuses without
+`--approved-by` before it even opens the platform file, and the approver is recorded in the
+commit — the repository should say who approved a course, not only who ran a script.
+→ `course-tablet-publisher` (`references/preview-and-approval.md`, `scripts/preview.py`)
+
 ---
 
-**All twenty laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+**All twenty-one laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
 `course-visuals` was built; before that they depended on the operator remembering them.
 
 Organisation-skill dependencies and their fallbacks:
