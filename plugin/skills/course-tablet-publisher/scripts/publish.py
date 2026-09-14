@@ -106,6 +106,31 @@ Then re-run this with the approval recorded:
 """
 
 
+def live_prerequisite(course_id: str, plat: dict) -> str:
+    """What a PACKED course still needs before it can be taught live.
+
+    A course publishes fine today and would then fail in a classroom, because the
+    database still has to learn two things: that an unlock scope may carry a course
+    prefix (005), and that a live run belongs to a course (006). Both are owner
+    actions in the Supabase SQL editor, and the failure without them arrives at the
+    worst possible moment - the instructor presses UNLOCK and nothing happens.
+
+    GAS BASIC is exempt: it is the root-layout course, its scopes are the nine bare
+    literals the database has always accepted, and its run lookup falls back to the
+    old query. It needs neither migration to keep working.
+    """
+    if course_id in (plat.get("legacy_courses") or {}):
+        return ""
+    return (
+        "\nBEFORE THIS COURSE IS TAUGHT LIVE, the owner must run these once in "
+        "the Supabase SQL editor, in order:\n"
+        "    backend/supabase/migrations/005_course_scoped_unlocks.sql\n"
+        "    backend/supabase/migrations/006_course_scoped_runs.sql\n"
+        "Until then this course cannot store an unlock or find its own class - "
+        "it refuses rather than attaching to another course's run. Publishing "
+        "is fine; teaching live is not. GAS BASIC is unaffected either way.\n")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--repo", help="the platform repository; found automatically "
@@ -213,6 +238,7 @@ def main(argv=None) -> int:
         print("  re-run with --publish --approved-by \"<name>\" to branch, commit and push.")
         print("  (publishing needs a human's approval; reviewing does not - see preview.py)")
         print("=" * 72)
+        print(live_prerequisite(a.course_id, plat), end="")
         return 0
 
     for sub in ("branch", "commit", "push"):
@@ -231,6 +257,7 @@ def main(argv=None) -> int:
         print("\nPublished and merged.")
     else:
         print("\nPublished on a branch. Open the pull request with the URL above.")
+    print(live_prerequisite(a.course_id, plat), end="")
     return 0
 
 
