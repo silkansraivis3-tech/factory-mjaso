@@ -570,6 +570,100 @@ def _is_page(txt: str) -> bool:
     return "<!doctype" in head or "<html" in head or "<body" in head
 
 
+# -------------------------------------------------------------------- 10 scopes
+# The slug the database will accept inside a scope. Kept identical to the regex in
+# backend/supabase/migrations/005_course_scoped_unlocks.sql - if these two ever disagree,
+# a course passes here and is refused by Postgres in a live classroom.
+COURSE_SLUG = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+
+
+def check_scopes(repo: str, plat: dict, out: list) -> None:
+    """Two courses may never resolve to the same live unlock scope.
+
+    The scope is what an instructor's unlock is stored under. A collision does not throw
+    and does not show: the lock button goes green, and a different course's trainees find
+    their assessment open.
+    """
+    troot = plat["asset_roots"]["trainee"]
+    packs = os.path.join(repo, troot, "courses")
+    legacy = dict(plat.get("legacy_courses") or {})
+
+    # ---- every published course, with the scope prefix it will actually use ----
+    courses = []                      # (id, layout, where)
+    for cid in sorted(legacy):
+        courses.append((cid, "legacy", "knowledge/platform.json legacy_courses"))
+    if os.path.isdir(packs):
+        for name in sorted(os.listdir(packs)):
+            cj = os.path.join(packs, name, "course.json")
+            if not os.path.isfile(cj):
+                continue
+            try:
+                meta = json.loads(read_text(cj))
+            except ValueError:
+                out.append(Finding("scopes", FAIL, rel(repo, cj), 0,
+                                   "course.json is not valid JSON, so this course's "
+                                   "identity cannot be established"))
+                continue
+            cid = str(meta.get("id") or "")
+            if cid != name:
+                out.append(Finding(
+                    "scopes", FAIL, rel(repo, cj), 0,
+                    'id is "%s" but the folder is "%s". The folder name is what ends up '
+                    "in the unlock scope, so the two must be the same string." % (cid, name)))
+            courses.append((cid or name, "pack", rel(repo, cj)))
+
+    # ---- 1 · ids are unique --------------------------------------------------
+    seen = {}
+    for cid, layout, where in courses:
+        if cid in seen:
+            out.append(Finding(
+                "scopes", FAIL, where, 0,
+                'duplicate course id "%s" (also at %s). Every module of both courses '
+                "would share one unlock scope." % (cid, seen[cid])))
+        else:
+            seen[cid] = where
+
+    # ---- 2 · only one course may use the bare scopes -------------------------
+    legacies = [c for c in courses if c[1] == "legacy"]
+    if len(legacies) > 1:
+        names = ", ".join(c[0] for c in legacies)
+        out.append(Finding(
+            "scopes", FAIL, "courses/registry.js", 0,
+            "%d courses use the legacy root layout (%s). A legacy course's scopes are "
+            "BARE ('m1'), so every one of their modules collides. Exactly one course may "
+            "be legacy, and it is GAS BASIC." % (len(legacies), names)))
+
+    # ---- 3 · the id must survive the database's own check --------------------
+    for cid, layout, where in courses:
+        if layout == "legacy":
+            continue
+        if not COURSE_SLUG.match(cid):
+            out.append(Finding(
+                "scopes", FAIL, where, 0,
+                'course id "%s" is not a lowercase slug (a-z, 0-9, single hyphens). Its '
+                "unlock scopes would be refused by the database at run time, in a "
+                "classroom - see migration 005." % cid))
+
+    # ---- 4 · and the scopes themselves, spelled out --------------------------
+    # Cheap, and it turns an abstract rule into something a person can read back.
+    built = {}
+    for cid, layout, _w in courses:
+        for key in ("m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "final"):
+            scope = key if layout == "legacy" else cid + ":" + key
+            if scope in built and built[scope] != cid:
+                out.append(Finding(
+                    "scopes", FAIL, "courses/registry.js", 0,
+                    'scope "%s" is produced by BOTH "%s" and "%s"'
+                    % (scope, built[scope], cid)))
+            built[scope] = cid
+
+    if courses and not any(f.check == "scopes" and f.level == FAIL for f in out):
+        out.append(Finding(
+            "scopes", "NOTE", "-", 0,
+            "%d course(s) produce %d distinct live unlock scopes, none shared"
+            % (len(courses), len(built))))
+
+
 def run(a) -> int:
     repo = os.path.abspath(a.repo)
     plat = load_platform(a.platform)
@@ -585,6 +679,7 @@ def run(a) -> int:
     check_assets(repo, plat, sets, out, a.simulate_missing_asset)
     check_rights(repo, plat, sets, out)
     check_runtime(repo, plat, sets, out)
+    check_scopes(repo, plat, out)
 
     # ---- accepted debt -------------------------------------------------
     # A finding recorded in the baseline is downgraded to a warning and says

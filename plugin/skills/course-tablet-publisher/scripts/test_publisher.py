@@ -163,6 +163,44 @@ def main() -> int:
         check("preview warns when a page would not work as a file",
               "will NOT work" in out7, out7[-200:])
 
+        # ---- 3b · live unlock scopes cannot collide ----------------------
+        # The scope is what an instructor's unlock is stored under. A collision does
+        # not throw and does not show: the lock button goes green either way, and a
+        # different course's trainees find their assessment open.
+        sc = os.path.join(tmp, "scopes")
+        tt = os.path.join(sc, "app", "src", "main", "assets",
+                          "training_terminal", "courses")
+
+        def course(folder, cid):
+            os.makedirs(os.path.join(tt, folder), exist_ok=True)
+            io.open(os.path.join(tt, folder, "course.json"), "w",
+                    encoding="utf-8").write(json.dumps(
+                        {"id": cid, "title": folder, "version": "1.0.0",
+                         "status": "draft", "modules": 2}))
+
+        course("course-a", "course-b")          # id does not match its folder
+        rc8, out8 = run([os.path.join(HERE, "gates.py"), "--repo", sc,
+                         "--course-id", "course-a"])
+        check("scope gate: an id that disagrees with its folder fails",
+              "[FAIL] scopes" in out8 and "folder" in out8, out8[-200:])
+
+        shutil.rmtree(os.path.join(tt, "course-a"))
+        course("Course_A", "Course_A")          # not a slug the database accepts
+        rc9, out9 = run([os.path.join(HERE, "gates.py"), "--repo", sc,
+                         "--course-id", "Course_A"])
+        check("scope gate: an id the database would refuse fails",
+              "not a lowercase slug" in out9, out9[-200:])
+
+        shutil.rmtree(os.path.join(tt, "Course_A"))
+        course("course-a", "course-a")
+        course("course-b", "course-b")
+        rc10, out10 = run([os.path.join(HERE, "gates.py"), "--repo", sc,
+                           "--course-id", "course-a"])
+        check("scope gate: two well-formed courses do NOT collide",
+              "[FAIL] scopes" not in out10, out10[-200:])
+        check("scope gate: and it says how many distinct scopes exist",
+              "distinct live unlock scopes" in out10)
+
         # ---- 4 · the review surface can never be published ----------------
         plat = json.load(io.open(os.path.join(HERE, "..", "knowledge", "platform.json"),
                                  encoding="utf-8"))

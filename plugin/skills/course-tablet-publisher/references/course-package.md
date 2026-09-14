@@ -152,8 +152,21 @@ list. The substance:
 2. **The module list exists six times** (`GB_TASKS`, `IT_MODULES`, `IT_RECORD`, `live.js`'s
    `MODULES`, a printable record page, and `handout.js`) and the six already disagree — the
    handout list has seven modules and a glossary where the others have eight.
-3. **The unlock-scope collision — verified again 2026-09-14, and now the biggest
-   remaining blocker.** `gb_sync.js` line 398 derives the scope as
+3. **The unlock-scope collision — FIXED 2026-09-14 (client), one owner action left.**
+   A packed course's live unlock scope is now `<course_id>:<module>`
+   (`electrical-basics:m1`); GAS BASIC keeps its bare `m1`..`m8`/`final` permanently.
+   `training_terminal/gb_scope.js` owns the format and is loaded by **both** terminals, so
+   the instructor and the tablet cannot disagree. `gates.py --only scopes` refuses a
+   duplicate course id, a second legacy course, an id that disagrees with its folder, and
+   any id the database's CHECK would reject.
+
+   **The one thing left for the owner:** run
+   `backend/supabase/migrations/005_course_scoped_unlocks.sql` in the Supabase SQL editor
+   before a second course is taught live. Until then the `unlocks` CHECK constraint accepts
+   only the nine bare literals, so a packed course's unlock write is refused — visibly, in
+   the instructor's toast, which is the safe direction to fail.
+
+   *The original finding, for the record:* `gb_sync.js` line 398 derives the scope as
    `core(ref).match(/^modules\/(m\d+)\//)`, and `core()` (line 297) *deliberately strips*
    `courses/<id>/` first. Multi-digit module numbers work; the course segment does not
    survive. So a second course's Module 1 produces scope `m1` exactly as GAS BASIC's does,

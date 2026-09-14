@@ -115,7 +115,15 @@ tablet even if someone copies a whole folder.
 
 `gates.py` classifies every published file as **TRAINEE**, **INSTRUCTOR**, **SHARED** or
 **INTERNAL**, then runs: identity · roles · secrets · offline · addresses · junk · assets ·
-rights · **runtime**.
+rights · **runtime** · **scopes**.
+
+**`scopes` keeps two courses from sharing one live unlock.** An instructor unlocks "Module
+1's check" and it is stored under a scope; if two courses produce the same string, unlocking
+one opens the other in front of a class, and the lock button goes green either way. A packed
+course's scope is `<course_id>:<module>` — so the check refuses a duplicate course id, an id
+that disagrees with its folder name (the folder is what ends up in the scope), a **second**
+legacy-layout course (legacy scopes are bare, so all nine would collide with GAS BASIC), and
+any id the database's own CHECK constraint would reject at run time.
 
 **`runtime` asks whether the course actually runs where it has to** — in the tablet WebView,
 and in a colleague's browser opening a file. Both forbid things, and neither complains: a
