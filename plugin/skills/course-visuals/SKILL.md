@@ -49,6 +49,39 @@ to make a screen look finished. An empty area is cheaper than a misleading figur
 
 ---
 
+## L23 — a topic screen leads with the thing that shows it
+
+The law above says *never add a visual to fill space*. This one says the opposite failure is just as
+real and was the more common one: modules kept leaving this factory as **text with pictures added
+afterwards**, which is the order in which a picture becomes decoration.
+
+> **For a topic screen, find the visual first.** Search the operator's source files and knowledge
+> base for a scheme, drawing or photograph. If there is none, search the internet for a **real
+> photograph** of the actual thing. Author it if it is structural. Generate only when all of that
+> genuinely comes back empty — not when nobody felt like looking.
+
+And **lead** means the reading order, not merely presence: a screen that explains a cargo pump in
+three paragraphs and then shows one has a picture, but the trainee stopped reading before it.
+
+The two laws do not conflict, because L23 does not say every screen carries a figure. It says a
+topic screen is **built around a representation**, and a screen without one is a *declared decision*
+— `data-novisual="definition"`, `"quotation"`, `"activity"`, `"structural"`, `"summary"`,
+`"no_honest_representation"` — not the silence that happens when nobody looked. Closing a finding by
+pasting in an icon fails `check_visuals.py` instead, which is the correct outcome.
+
+`knowledge/visual-first-rules.json` is the authority; `scripts/check_visual_first.py` reads it.
+
+### When this model cannot make the picture
+
+Build the module as far as it goes, then **leave the request with it**.
+`scripts/write_visual_handoff.py` writes one `VISUAL_HANDOFF.md`: a paste-ready prompt, every brief
+in full, the destination path and mount line for each asset, and the verification command. Where the
+environment allows a model override, the factory spawns the work instead of writing a note —
+`Agent(model: "fable", …)` — and the run continues. A module never stops because one image is
+missing, and a missing image is never closed by inventing a schematic.
+
+---
+
 ## Pick the mode, then read one lane
 
 | Mode — what the task actually is | Read |
@@ -207,7 +240,11 @@ screens in a row use the same interaction, that is a finding, not a house style.
    and must not be reported as a picture. Always read the `scheduler` field — a hidden page
    suspends `requestAnimationFrame`, and a probe that cannot see frames must never be read as
    a verdict about the course (L20).
-4. `review/GUIDE.md` — the half no script can do. **A visual does not pass because the HTML
+4. `scripts/check_visual_first.py <module> --strict` — L23. Every topic screen either leads with
+   a figure or declares, in writing, why it has none.
+5. `scripts/write_visual_handoff.py <module>` — only if anything is still unbuilt. It prints
+   "nothing to hand off" when the visuals are complete, which is the outcome you want.
+6. `review/GUIDE.md` — the half no script can do. **A visual does not pass because the HTML
    validates.** Fourteen named failure modes, and one question: *does this actually teach?*
 
 Then write `templates/visual-notes.md` next to the module: every representation chosen and why,

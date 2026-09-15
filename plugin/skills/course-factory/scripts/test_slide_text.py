@@ -171,6 +171,26 @@ def main() -> int:
         check("factory-notes.md is not course-facing and is never scanned",
               not run(r)["findings"])
 
+        # ---- 5b · one citation is one finding --------------------------
+        # "IMO Model Course 1.04" is matched by BOTH patterns in the rule. Counting
+        # it twice turned 24 real citations on GAS BASIC into a report of 47, and a
+        # reviewer sent to chase 47 sites finds 24 and stops believing the number.
+        print("\n-- the same words are not two findings")
+        r = os.path.join(tmp, "n")
+        write(r, "module.html", deck(src="Source: IMO Model Course 1.04, Appendix 3."))
+        d = run(r)
+        s = rules_of(d, "source", "FAIL")
+        check("one citation matched by two patterns is reported once",
+              len(s) == 1, "reported %d times" % len(s))
+
+        r = os.path.join(tmp, "o")
+        write(r, "module.html",
+              deck(src="From IMO Model Course 1.04 and also from IMO Model Course 1.01."))
+        d = run(r)
+        s = rules_of(d, "source", "FAIL")
+        check("two separate citations are still two findings",
+              len(s) == 2, "reported %d" % len(s))
+
         # ---- 6 · the line number must be the FILE's line number --------
         print("\n-- a reported line is the line in the file")
         r = os.path.join(tmp, "m")

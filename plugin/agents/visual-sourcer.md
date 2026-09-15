@@ -123,7 +123,14 @@ WRITTEN      <files added, provenance entries written>
 NOTE         <anything the requester must decide>
 ```
 
-If the outcome is `GENERATED_ASSET_REQUIRED`, write the brief to a file and give its path rather
-than pasting it into the report.
+If the outcome is `GENERATED_ASSET_REQUIRED`, write the brief to
+`<module>/_visual_briefs/<slug>.md` and give its path rather than pasting it into the report. That
+path is not decoration: `course-visuals/scripts/write_visual_handoff.py` collects every brief in
+that folder into one paste-ready file, so a brief written anywhere else is a brief nobody acts on.
+
+**You never generate, and you never block the build.** The module is finished as far as it goes
+without this asset. Whoever called you decides what happens next — spawn the generation on a model
+that can (`Agent(model: "fable", …)`), or leave the handoff file for the owner. Your job ends at
+an honest brief.
 
 Never pad the report. Three usable lines beat a page of process.

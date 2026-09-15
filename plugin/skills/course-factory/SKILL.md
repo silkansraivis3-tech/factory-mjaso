@@ -43,6 +43,7 @@ routes. It does not itself write screens, tasks, or content.
 | **restyle** | make one **narrow** cosmetic change and nothing else | `retrofit/knowledge/routing.json` § restyle |
 | **ship** | put an **approved** course onto the trainee and instructor terminals | `tablet/GUIDE.md`, and `course-tablet-publisher` owns the act |
 | **audit** | check an existing course against the programme and the terminals | `coverage/GUIDE.md`, then both lanes' verify sections |
+| **orchestrate** | build a WHOLE course from a knowledge base, with one agent per module | `orchestration/GUIDE.md` |
 
 `retrofit/knowledge/routing.json` is the authority on which mode a free-form request selects, and
 on telling **retrofit** apart from **restyle**. Match the operator's *intent*, never a phrase — a
@@ -59,6 +60,13 @@ answers "where does it live and how is it wired"; `coverage/` answers "is everyt
 **and the model course** ask for actually taught"; `retrofit/` answers "what of this existing
 module survives, and what gets rebuilt". They never run together — except that a retrofit still
 obeys the hours law, so `retrofit/` reads `hours/` for Track A and nothing else.
+
+`orchestration/` answers "eight modules, eight agents at once — how?". It is the only lane that is
+about the *run* rather than the course: what has to be decided before a fan-out (the minutes, the
+module split, the language, the visual system, the task-code ranges), what the reader agent writes
+to a **file and never to a slide** (`MODULE_MAP.md`, `ILO_MAP.md`), and the one rule that keeps a
+parallel build from losing work — **one agent, one folder**, with everything shared assembled
+afterwards by one process.
 
 `coverage/` exists because the other two cannot see its failure. A course can have exact hours and
 perfect wiring and still not teach an outcome. On GAS BASIC the topic-level record was green at
@@ -349,7 +357,11 @@ the line for the thing you changed.
    `await GBVerifyFigures.motion()` — every figure rendered, and every figure alive rather
    than a picture (L20). Then `course-visuals/review/GUIDE.md`, which asks the question
    no script can: **does this visual actually teach?** Nothing at `RIGHTS_REVIEW_REQUIRED` may ship.
-9. `course-module-ui/scripts/audit_ui.py --strict` over a **new** module's stylesheets — the
+9. `course-visuals/scripts/check_visual_first.py <module> --strict` — L23. Every topic screen
+   leads with a figure, or says in writing why it has none. Then
+   `course-visuals/scripts/write_visual_handoff.py <module>`, which should print "nothing to hand
+   off"; if it does not, the module is finished as far as it goes and the handoff leaves with it.
+10. `course-module-ui/scripts/audit_ui.py --strict` over a **new** module's stylesheets — the
    visual sign-off. `--strict` is right for new work and wrong for shipped material: never point
    it at a delivered GAS BASIC or Electrical Technician module. Those carry known drift that
    `course-module-ui` records by name; **report drift, do not repaint a signed-off deck.** The
@@ -359,14 +371,14 @@ the line for the thing you changed.
 accredited outcome and shipping a dead section. **Every check here was added after something got
 through the others.**
 
-10. `scripts/check_slide_text.py <course>` — **what the pages SAY**. Internal shorthand,
+11. `scripts/check_slide_text.py <course>` — **what the pages SAY**. Internal shorthand,
     version control on a title slide, and an IMO model course cited as a source or credited
     for a figure. A model course governs what a course must COVER; it is not a source of
     fact, and a slide that cites one tells the room a syllabus is where the fact came from.
     The factory's own markers are caught here too — they belong in `factory-notes.md`.
     Instructor plans may cite a model course and are reported, never failed (L22).
 
-11. **In retrofit only** — `retrofit/scripts/check_language.py <course> --declare <LANG>` (the
+12. **In retrofit only** — `retrofit/scripts/check_language.py <course> --declare <LANG>` (the
     course did not change language), and `retrofit/scripts/classify_module.py` **again**. A
     retrofit that started at C and still classifies C has not finished.
 

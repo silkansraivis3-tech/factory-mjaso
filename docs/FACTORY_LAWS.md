@@ -173,7 +173,26 @@ knows why a topic is in the course - so there it is reported and never failed.
 
 ---
 
-**All twenty-two laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+**L23 · A topic screen leads with the thing that shows it.**
+Not "every screen has a picture" - a definition, an exact limit or a quoted regulation is carried
+better by text, and a visual added to fill space is still the defect L12 rejects. The law is about
+ORDER, in two senses. In the reading order: the figure is above the prose, not appended under the
+paragraph that already said it. And in the build order: for a topic screen the visual is looked for
+FIRST - the source files and the knowledge base, then the internet for a real photograph of the
+actual equipment, then authored, and only then generated. A screen that honestly needs no figure
+says which reason applies; a silent exemption is the finding, because it is indistinguishable from
+nobody having looked.
+
+When the model building the module cannot produce the image, the module is finished as far as it
+goes and the request leaves with it: `write_visual_handoff.py` writes one paste-ready file naming
+what to find, what to generate and exactly where each file belongs. Where the environment allows it,
+that work is spawned on a model that can generate - `Agent(model: "fable", ...)` - rather than
+waiting for a human to change models. A module never stops because one picture is missing.
+→ `course-visuals` (`scripts/check_visual_first.py`, `knowledge/visual-first-rules.json`)
+
+---
+
+**All twenty-three laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
 `course-visuals` was built; before that they depended on the operator remembering them.
 
 Organisation-skill dependencies and their fallbacks:

@@ -1,0 +1,91 @@
+{
+  "_authority": "L23 - a topic screen leads with the thing that shows it. Read by scripts/check_visual_first.py. Edit this file, not the script.",
+  "_written": "2026-09-15",
+  "_why": "Modules kept coming out of this factory as text with pictures added afterwards, which is the order in which a picture becomes decoration. The owner's instruction was the opposite order: for a topic screen, find the visual FIRST - search the source files and the knowledge base for a scheme, drawing or photograph; if there is none, search the internet for a real photograph; and only if there is genuinely none anywhere, generate one. This file is that instruction, and the part that makes it a law rather than a preference is the LEDE: the visual comes first in the reading order, not below the paragraph that already said it.",
+  "_not_a_contradiction": "course-visuals already says 'plain text is a valid outcome' and 'never add a visual to fill space'. Both still hold. L23 does not say every screen carries a picture - it says a TOPIC screen is built around a representation, and that a screen without one is a DECLARED decision with a reason, not the default that happens when nobody looked. A visual chosen to fill a space still fails the review lane, and adding one to satisfy this law is the failure this law is most likely to cause.",
+
+  "lead_visual": {
+    "_what": "What it means for a screen to LEAD with a graphic.",
+    "in_reading_order": "The figure is above or beside the body text, not appended under it. On a tablet in portrait, 'beside' means it is in the first screenful.",
+    "carries_the_point": "The screen's teaching point is legible FROM the figure. If the figure could be deleted and the screen would teach exactly the same thing, it was decoration and the screen has no lead visual.",
+    "is_not": [
+      "an icon",
+      "a row of cards",
+      "three boxes joined by arrows",
+      "a gradient, a photo used as a background wash, a stock scene of people in hard hats",
+      "a screenshot of text"
+    ],
+    "counts_as": [
+      "a photograph of the real equipment, space or document",
+      "an authored schematic, cutaway, section or system diagram",
+      "an interactive or state-driven figure",
+      "a chart or plot where the shape of the data is the teaching point",
+      "a scanned or extracted figure from a source publication, with provenance"
+    ]
+  },
+
+  "search_order": {
+    "_what": "The ladder. It is the same ladder as source/knowledge/asset-pipeline.json - this key exists so the law and the pipeline can never drift apart.",
+    "_authority": "source/knowledge/asset-pipeline.json",
+    "levels": [
+      { "n": 1, "name": "SOURCE FILES AND KNOWLEDGE BASE", "search": "the operator's source_files/, the docling knowledge base, manuals, drawings, the course's own assets", "note": "The most common failure in this factory is declaring a level empty after one narrow search. Expand the terms before concluding anything, and record the terms tried." },
+      { "n": 2, "name": "FACTORY LIBRARY", "search": "${CLAUDE_PLUGIN_ROOT}/resources/" },
+      { "n": 3, "name": "THE INTERNET - real photographs first", "search": "licensed real-world photographs and manufacturer figures, via the visual-sourcer agent", "note": "A real photograph of the actual equipment outranks a beautiful invention of it, every time." },
+      { "n": 4, "name": "CREATE", "search": "authored SVG / HTML / Canvas for anything structural; a generated illustration only where a realistic scene is genuinely the right medium", "note": "A schematic is authored, never sampled. Generated imagery never replaces a structured technical drawing." }
+    ],
+    "exhausted_means": "searched, not assumed empty. 'I could not think of one' is not a search."
+  },
+
+  "declared_exemptions": {
+    "_what": "Screens that legitimately have no lead visual. Each must SAY which one it is, in the storyboard - a silent exemption is the defect.",
+    "_how": "Record in templates/VISUAL_STORYBOARD.md, and mark the screen in the deck with data-novisual=\"<reason>\".",
+    "reasons": [
+      { "key": "definition", "why": "an exact term, limit, set point or regulatory phrase - text carries it precisely and a picture only decorates it" },
+      { "key": "quotation", "why": "a regulation or procedure quoted verbatim, where the wording is the content" },
+      { "key": "activity", "why": "the screen sets a task, a discussion or a practical; the trainee is looking at equipment, a document or each other" },
+      { "key": "structural", "why": "opener, outcomes, running order, timing, hand-off - the screen is navigation, not a topic" },
+      { "key": "summary", "why": "a takeaway that deliberately restates in words what the figures already showed" },
+      { "key": "no_honest_representation", "why": "the need was named, all four levels were searched, and nothing represents it truthfully. Carries the search record and, where relevant, GENERATED_ASSET_REQUIRED." }
+    ]
+  },
+
+  "not_course_facing": {
+    "_what": "Paths this law never judges. A retrofit keeps the ORIGINAL module beside the new one, and the original is the thing being replaced - reporting its screens as findings doubles the count and points the operator at work that is already finished.",
+    "_found_by": "the first real run, against the ETPA4 retrofit: 35 of 65 findings were the pre-retrofit legacy deck in _work/.",
+    "paths": [
+      "_work/", "oldversion", "retired", ".bak", "__pycache__",
+      "REVIEW.html", "README", "MANIFEST", "factory-notes.md", "visual-notes.md"
+    ]
+  },
+
+  "topic_screen": {
+    "_what": "Which screens the law bites on. A screen is a TOPIC screen unless it is one of these.",
+    "not_a_topic_screen": [
+      "opener", "title", "outcomes", "running order", "agenda", "timing",
+      "handoff", "hand-off", "closing", "break", "answers", "debrief",
+      "task", "task-gate", "summary", "sum", "takeaway", "recap"
+    ],
+    "_task_note": "\"task\" is matched as a whole word because a task-gate screen is titled TASK 1 - WHAT BURNS, not \"task-gate\". It costs a false negative on a topic screen that happens to have the word task in its title, which is rarer than the false alarm it prevents - and a rule that fires on every task gate in a deck is a rule somebody switches off.",
+    "_markers": "Matched against the screen's data-title, its heading, and its composition class (opener, sum, activity, checkbody)."
+  },
+
+  "handoff": {
+    "_what": "What happens when the model building the module cannot produce the visual itself.",
+    "_why": "The owner's instruction: build the module as far as it can go, then leave ONE file that another model can act on - what to find, what to generate, and exactly where it goes. A module that stops dead because one picture is missing wastes everything else that was ready.",
+    "file": "VISUAL_HANDOFF.md, written into the module folder beside factory-notes.md",
+    "written_by": "scripts/write_visual_handoff.py",
+    "contains": [
+      "one paste-ready prompt, addressed to the model that will do the work",
+      "every GENERATED_ASSET_REQUIRED brief in the module, in full",
+      "the exact destination path and filename for each asset",
+      "the one-line HTML that mounts it, so the module needs no re-reading",
+      "the provenance entry to write beside each file",
+      "the verification command to run when the assets are in place"
+    ],
+    "automatic_route": {
+      "_what": "The factory does not have to wait for a human to switch models.",
+      "how": "Spawn a subagent with an explicit model override - Agent(model: \"fable\", prompt: <the handoff prompt>). The subagent returns the assets; the main run continues.",
+      "when_not": "If the environment gives no model override, or the override fails, write the file and tell the owner which model to open it in. Never silently skip the visual and never generate a schematic that should have been authored."
+    }
+  }
+}

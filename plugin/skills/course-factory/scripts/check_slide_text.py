@@ -125,9 +125,23 @@ def line_of(text, pos):
 MAX_PER_RULE_PER_FILE = 6
 
 
-def each(rx, text):
-    for i, m in enumerate(rx.finditer(text)):
-        if i >= MAX_PER_RULE_PER_FILE:
+def each(rx, text, claimed=None):
+    """Matches, capped - and never the same words twice.
+
+    Two patterns in the same rule legitimately overlap: "IMO Model Course" and
+    "Model Course 1.04" are both true of the same seven words. Reporting both turned
+    24 real citations into 47 findings on GAS BASIC, and a reviewer sent to chase 47
+    sites finds 24 and stops trusting the count. `claimed` is the character span
+    already reported for this rule in this file; an overlap is the same finding.
+    """
+    n = 0
+    for m in rx.finditer(text):
+        if claimed is not None:
+            if any(m.start() < e and s < m.end() for s, e in claimed):
+                continue
+            claimed.append((m.start(), m.end()))
+        n += 1
+        if n > MAX_PER_RULE_PER_FILE:
             break
         yield m
 
@@ -161,18 +175,20 @@ def scan_file(path, rel, kind, rules, out):
     presentation = kind == "presentation"
 
     # ---- 1 · internal shorthand -------------------------------------------
+    claimed_abbrev = []
     for t in rules["internal_abbreviations"]["terms"]:
         rx = re.compile(r"\b" + re.escape(t["term"]) + r"\b", re.I)
-        for m in each(rx, text):
+        for m in each(rx, text, claimed_abbrev):
             out.append(Finding(
                 "abbrev", FAIL if presentation else NOTE, rel, line_of(text, m.start()),
                 '"%s" is %s' % (t["term"], t["why"]),
                 t["instead"] if presentation else ""))
 
     # ---- 2 · what may be cited as a source --------------------------------
+    claimed_source = []
     for p in rules["never_cite_as_source"]["patterns"]:
         rx = re.compile(p["pattern"], re.I)
-        for m in each(rx, text):
+        for m in each(rx, text, claimed_source):
             out.append(Finding(
                 "source", FAIL if presentation else NOTE, rel, line_of(text, m.start()),
                 "%s is cited on a course-facing page - %s. Cite the publication the "
@@ -183,6 +199,7 @@ def scan_file(path, rel, kind, rules, out):
 
     # ---- 3 · internal version control -------------------------------------
     if presentation:
+        claimed_version = []
         for p in rules["no_version_control_on_slides"]["patterns"]:
             rx = re.compile(p["pattern"], re.I)
             m = rx.search(opening)
@@ -195,16 +212,17 @@ def scan_file(path, rel, kind, rules, out):
             if p.get("title_only"):
                 # legitimate prose elsewhere - see _title_only_note in the rules
                 continue
-            for m in each(rx, text):
+            for m in each(rx, text, claimed_version):
                 out.append(Finding(
                     "version", WARN, rel, line_of(text, m.start()),
                     "%s appears on a course-facing page. Approval and revision belong "
                     "in the course plan and factory-notes.md." % p["label"]))
 
     # ---- 4 · the factory's own markers ------------------------------------
+    claimed_marker = []
     for p in rules["honesty_markers"]["patterns"]:
         rx = re.compile(p["pattern"])
-        for m in each(rx, text):
+        for m in each(rx, text, claimed_marker):
             out.append(Finding(
                 "markers", FAIL if presentation else WARN, rel, line_of(text, m.start()),
                 "%s is on a course-facing page. Markers are a message to the owner and "
