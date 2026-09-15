@@ -30,6 +30,41 @@ do not re-derive it here. The short form:
 
 ---
 
+## Step 0 · Whose change is this? — before anything else
+
+**Run this first. Not after classifying, not after reading the module — first.**
+
+```
+python retrofit/scripts/detect_expert_edits.py <module>
+```
+
+Law 5 says the existing delivery implementation is not preserved by default. That is right for
+material nobody has touched since it was generated, and **exactly wrong for a screen a maritime
+expert went into and changed on purpose**. The difference is not how the code looks — good expert
+edits often look untidy and generated filler often looks deliberate — it is *who last touched it*,
+and that is the only question this step answers.
+
+Four answers, and each one changes what happens next:
+
+| The script says | What it means | What you do |
+|---|---|---|
+| **THE EXPERT SAID SO** | a `data-sme` marker, an `<!-- SME: … -->` comment, or a file in `_sme/` | protected. Read the reason if they left one. |
+| **CHANGED SINCE THE FACTORY WROTE IT** | the hash in `_factory/build.json` no longer matches | protected |
+| **TOUCHED BY SOMEBODY ELSE'S COMMIT** | version control, where the course is in git | protected |
+| **NO EVIDENCE EITHER WAY** | this factory has never seen this module | **ask, in one line** — never read this as "untouched" |
+
+A protected region is **locked content**. Restyle it: tokens, typography, the layout shell,
+accessibility, broken markup, anything that stops it working on the tablet. Do not rewrite the
+words, reorder the points, change a value, delete a screen they added, or restore a screen they
+deleted.
+
+Where a protected region breaks another factory law — their screen has no lead visual (L23), their
+citation names a model course (L22) — **name the law, quote the text and propose the fix in the
+report. Do not apply it.** An expert who finds their change quietly corrected stops making changes,
+and then the course has no maritime judgement left in it.
+
+`knowledge/expert-edits.json` is the authority.
+
 ## Step 1 · Establish the two facts before touching anything
 
 **COURSE_LANGUAGE.** Detect it from the existing course-facing files and the programme, state it

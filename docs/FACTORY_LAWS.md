@@ -192,7 +192,39 @@ waiting for a human to change models. A module never stops because one picture i
 
 ---
 
-**All twenty-three laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+**L24 · Where the expert has already changed something, that change is content.**
+L5 says the existing delivery implementation is not preserved by default. That is right for
+material nobody has touched since it was generated and exactly wrong for a screen a maritime
+expert went into and changed on purpose — which is the most expensive information in a module,
+because it is the one place somebody who actually sails ships disagreed with what was produced,
+and they almost never write down why. The difference between the two laws is not what the code
+looks like but **who last touched it**, so the first question of a retrofit becomes "which parts
+of this are somebody's decision", asked before anything is rewritten. It is answered from
+evidence, never by judging the code: a marker the expert left, the factory's own build record, a
+commit the factory did not author — and if none of those exist, **ask**. "I cannot prove it was
+touched" is never "it was untouched". A protected region is locked content: restyle it, never
+rewrite it, and where it breaks another law name the law and propose the fix rather than applying
+it. An expert who finds their change quietly corrected stops making changes.
+→ `course-factory` (`retrofit/scripts/detect_expert_edits.py`, `retrofit/knowledge/expert-edits.json`)
+
+---
+
+**L25 · The person reading this does not work in IT.**
+Every message that leaves this factory is read by a maritime professional with no IT background.
+`FAIL check_visual_first.py module.html:412 missing lead figure` is not a report to them, it is a
+wall: they cannot act on it, so they either ignore it or come and ask, and both are the factory
+failing to finish its own job. **A finding nobody can act on is the same as a finding nobody
+made.** Every problem message carries five things — what is wrong, in the words of the course;
+where it is, as a full path plus the human landmark; how to see it, in literal steps; what to do,
+with an offer to do it; and what they will see when it is right. This is not dumbing down: the
+maritime content stays exactly as technical as it is, and what changes is the language about
+computers and this tool. A chief officer knows what an inert gas generator is and does not know
+what a stylesheet is.
+→ `course-factory` (`scripts/check_plain_language.py`, `knowledge/plain-language.json`)
+
+---
+
+**All twenty-five laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
 `course-visuals` was built; before that they depended on the operator remembering them.
 
 Organisation-skill dependencies and their fallbacks:

@@ -32,7 +32,7 @@ task, handout, assessment, feedback line and instructor cue follows COURSE_LANGU
 
 ## 0c · Retrofit — only when the material already existed
 
-*Delete this section for a new build.*
+*Delete this section when the course is being made from nothing, rather than from material that already existed.*
 
 | | |
 |---|---|
@@ -50,7 +50,9 @@ was discarded; "kept because it existed" is not a reason and must not appear her
 **Representation upgrades.** Per screen: what is taught, what the learner should notice, what the
 old representation was, what it became, and what the new one teaches that the old one did not.
 
-**Blocked.** Every `GENERATED_ASSET_REQUIRED` / `REAL_PHOTO_REQUIRED` raised, and what it blocks.
+**Waiting on a picture.** Every place a picture, drawing or photograph is still missing, what it
+was needed for, and which screen is unfinished without it. Say what happens next for each one -
+who finds it, or whether the factory should generate it.
 
 **Screen count.** `<before>` → `<after>`, with the reason for each split, merge or addition.
 Minutes unchanged at `<n>`.
@@ -97,13 +99,14 @@ or the sentence "nothing had to be moved".
 | task pages | | codes |
 | handout | | |
 | assessment | | question count, pass mark, and where the pass mark comes from |
-| module plans | instructor terminal `plans/` | one per module — if any module has none, say which |
-| prepare material | instructor terminal `prepare/` | only modules whose practical needs a facility |
+| module plans | the instructor tablet, `plans/` folder | one per module — if any module has none, say which |
+| prepare material | the instructor tablet, `prepare/` folder | only modules whose practical needs a facility |
 
 ## 6 · Markers
 
-Every one raised during the run, with its source. A marker used and not reported here is the
-failure this section exists to stop.
+Every one raised during the run, with its source, and what would close it. A marker used and not
+reported here is the failure this section exists to stop - so for each one, say who answers it and
+what happens to the course until they do.
 
 | marker | what | source / why |
 |---|---|---|
@@ -112,9 +115,10 @@ failure this section exists to stop.
 | `PROVISIONAL` | | |
 | `[VERIFY: …]` | | |
 
-## 7 · Verify list — what a human should check
+## 7 · Verify list — what a person should check with their own eyes
 
-Not everything can be checked by script. Name the things that need eyes, and be specific:
+Not everything can be checked automatically. Name the things that need a human to look, and be
+specific about where to look and what right looks like:
 
 - [ ] every numeric claim on a projected screen matches the page it points at
 - [ ] each module's screens at every delivery size (projector and tablet)
@@ -124,8 +128,9 @@ Not everything can be checked by script. Name the things that need eyes, and be 
 
 ## 8 · What was NOT done
 
-Gaps, and why. Blocked on an asset, blocked on a decision, out of scope. Be plain — an
-unreported gap becomes a surprise in a classroom.
+Gaps, and why: waiting on a picture, waiting on somebody's decision, or outside what was asked
+for. For each gap say what it means for the class and what would close it - an unreported gap
+becomes a surprise in a classroom. Where the factory can close it, offer to.
 
 ## 9 · Feedback on the skill
 

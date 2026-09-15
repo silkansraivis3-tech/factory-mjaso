@@ -84,80 +84,86 @@ def collect(module):
     return briefs, declared, markers
 
 
-HEAD = """# VISUAL HANDOFF — {module}
+HEAD = """# PICTURES STILL NEEDED — {module}
 
-*Written {today} by the NOVIKONTAS Course Factory. The module is built; these are the
-visuals it could not produce itself.*
+*Written {today} by the NOVIKONTAS Course Factory.*
 
-**Nothing in this module is broken.** Every screen validates, every hour is allocated and
-every task works. What is missing is {n} image(s), listed below with the exact place each
-one goes.
-
----
-
-## How to use this file
-
-**If you can generate images:** read the PROMPT below, produce the assets, save each one at
-the path given, paste the mount line into the screen named, write the provenance entry, then
-run the verification command at the end.
-
-**If you are the owner:** open a chat with a model that can generate images — {model} — and
-paste everything between the two `=====` lines. It contains the full brief, so the model
-needs nothing else from you and no access to this repository beyond the file paths.
-
-**Do not accept a plausible invention of safety-critical equipment.** If a brief says a
-trainee must recognise this thing in real life, a generated image teaches false recognition.
-Find a real photograph or leave the screen with its declared exemption.
+**Nothing in this module is broken.** Every screen works, the hours are right and every task
+runs. {n} picture(s) could not be made here, and this page is everything somebody needs to
+finish them — you do not have to look through the course to work out what is missing.
 
 ---
 
-=====  PASTE FROM HERE  =====
+## What to do with this page
+
+**If you want the factory to keep trying:** say so, and it will hand the work to a model that
+can make pictures and carry on by itself. You do not have to do anything else.
+
+**If you would rather do it yourself:** open a new chat with {model}, then copy everything
+between the two lines of `=` signs below and paste it in. It contains the full description of
+each picture, so {model} needs nothing else from you.
+
+**One thing to watch.** If a description says a trainee has to recognise this equipment in
+real life, do not accept a made-up picture of it. A convincing invention teaches somebody to
+recognise the wrong thing. Find a real photograph, or leave that screen without a picture.
+
+---
+
+=====  COPY FROM HERE  =====
 
 ## PROMPT
 
-You are finishing the visual layer of an accredited maritime training module. The module is
-complete except for the images described below. For each one:
+You are finishing the pictures for an accredited maritime training module. Everything else in
+the module is done. For each picture described below:
 
-1. **Search before you generate.** Look for a real photograph or a published figure first —
-   the module's own `source_files/` and knowledge base, then the open internet under a
-   licence we may use. A real photograph of the actual equipment beats a beautiful
-   invention of it every time. Only generate when the search genuinely comes back empty.
-2. **Never generate a technical schematic.** If the brief describes system relationships,
-   flow, internal structure or a mechanism, author it as SVG instead. A diagram that must
-   be accurate is drawn, not sampled.
-3. **Obey the forbidden-inaccuracies list in every brief.** It names the errors a generator
-   is likely to make with that subject, and it is the field that stops an image teaching
-   something false.
-4. **Save each file at the exact path given**, write the provenance entry beside it, and
-   paste the mount line into the screen named. Nothing else in the module changes.
+1. **Look before you make anything.** Search for a real photograph or a published drawing
+   first — the course's own source files and knowledge base, then the open internet under a
+   licence we may use. A real photograph of the actual equipment beats a beautiful invention
+   of it every time. Only create one when the search genuinely comes back empty.
+2. **Never invent a technical drawing.** If the description is about how a system connects,
+   how something flows, what is inside a piece of equipment, or how a mechanism works, draw it
+   properly as SVG instead. A drawing that has to be accurate is drawn, not guessed.
+3. **Obey the "must NOT show" list in every description.** It names the mistakes a generator
+   is likely to make with that subject, and it is what stops a picture teaching something
+   false.
+4. **Save each file exactly where the description says**, write the small record of where it
+   came from beside it, and put the one line of code given into the screen named. Nothing else
+   in the module changes.
 
 """
-
 TAIL = """
-=====  PASTE UP TO HERE  =====
+=====  COPY UP TO HERE  =====
 
 ---
 
-## When the assets are in place
+## When the pictures are in place
+
+Ask the factory to check them, or run these three checks:
 
 ```
-python {skill}/scripts/check_assets.py <module_dir>
-python {skill}/scripts/check_visuals.py <module_dir> --strict
-python {skill}/scripts/check_visual_first.py <module_dir> --strict
+python {skill}/scripts/check_assets.py <module folder>
+python {skill}/scripts/check_visuals.py <module folder> --strict
+python {skill}/scripts/check_visual_first.py <module folder> --strict
 ```
 
-Then remove any `data-novisual="no_honest_representation"` attribute from a screen that now
-has its figure, and delete this file. A handoff left behind after it was acted on is the next
-person's false alarm.
+A good result says nothing is missing and nothing is unclear about where a picture came from.
+If it says anything else, copy the whole message and send it back.
+
+Then two last things: on any screen that now has its picture, remove the
+`data-novisual="no_honest_representation"` setting from the screen, and **delete this page**.
+A page like this left behind after the work is done is the next person's false alarm.
 
 ---
 
-## Provenance — write one of these beside every file
+## Where each picture came from — write this beside every file
 
-A photograph takes `_photo_meta.json`, a drawing or schematic takes `_figure_meta.json`.
-The schemas are in `{skill}/source/schemas/`. A generated image records `generated` as its
-origin, the model that made it, and the brief it was made from — never a fabricated source.
-**Nothing at `RIGHTS_REVIEW_REQUIRED` may ship.**
+A photograph takes a small file called `_photo_meta.json` beside it; a drawing takes
+`_figure_meta.json`. The shape of both is in `{skill}/source/schemas/`. A picture that was
+generated records that honestly — that it was generated, which model made it, and from which
+description. Never write a source that is not real.
+
+**If the rights to a picture are unclear, it does not ship.** Say so instead, and the screen
+keeps its declared reason for having no picture.
 """
 
 
@@ -184,41 +190,46 @@ def main(argv=None) -> int:
     parts = [HEAD.format(module=name, today=date.today().isoformat(), n=n, model=a.model)]
 
     if briefs:
-        parts.append("### The briefs\n")
+        parts.append("### The pictures, described one by one\n")
         for slug, body in briefs:
             parts.append("\n#### %s\n\n%s\n\n"
-                         "**Destination:** `assets/img/%s.<ext>` in the module folder.  \n"
-                         "**Mount:** `<img src=\"assets/img/%s.<ext>\" alt=\"<describe the "
-                         "whole figure>\">` in the screen the brief names.\n" %
+                         "**Save the finished file here:** `assets/img/%s.<jpg or png or "
+                         "svg>`, inside the module folder.  \n"
+                         "**Then put this one line into the screen named above:** "
+                         "`<img src=\"assets/img/%s.<jpg or png or svg>\" alt=\"<one "
+                         "sentence saying what the picture shows>\">`\n" %
                          (slug, body, slug, slug))
 
     if declared:
-        parts.append("\n### Screens that declared they could not be illustrated\n\n"
-                     "Each of these was searched at every level and came back empty. If you "
-                     "can find or produce an honest representation, it belongs here — and the "
-                     "`data-novisual` attribute comes off.\n\n")
+        parts.append("\n### Screens that say, in writing, that no honest picture was found\n\n"
+                     "Somebody already searched everywhere for these and came back empty. If "
+                     "you can find or make one that is genuinely true to the subject, it "
+                     "belongs here — and then the screen's written reason for having no "
+                     "picture is removed.\n\n")
         for rel, title, line in declared:
             slug = slugify(title)
-            parts.append("- `%s:%d` — **%s**  \n  destination `assets/img/%s.<ext>`\n"
-                         % (rel, line, title, slug))
+            parts.append("- **%s** — in the file `%s`, line %d  \n"
+                         "  save the picture as `assets/img/%s.<jpg or png or svg>`\n"
+                         % (title, rel, line, slug))
 
     if markers:
-        parts.append("\n### GENERATED_ASSET_REQUIRED left in the deck\n\n"
-                     "These were noted during the build and never written up as a brief. "
-                     "**A marker is not a brief** — anything here needs the missing fields "
-                     "filled in before it can be acted on.\n\n")
+        parts.append("\n### Notes left in the slides that were never written up properly\n\n"
+                     "Somebody marked these during the build and never wrote the full "
+                     "description. **A note is not a description** — each one needs finishing "
+                     "before anybody can act on it, because a request for \"a picture of a "
+                     "pump\" produces exactly that and nothing useful.\n\n")
         for rel, line, text in markers:
-            parts.append("- `%s:%d` — %s\n" % (rel, line, text))
+            parts.append("- in the file `%s`, line %d — %s\n" % (rel, line, text))
 
     parts.append(TAIL.format(skill="${CLAUDE_PLUGIN_ROOT}/skills/course-visuals"))
 
     out = os.path.join(a.module, a.out)
     io.open(out, "w", encoding="utf-8", newline="\n").write("".join(parts))
-    print("%s\n  %d brief(s), %d declared gap(s), %d bare marker(s)."
+    print("%s\n  %d described, %d screen(s) waiting, %d unfinished note(s)."
           % (out, len(briefs), len(declared), len(markers)))
     if markers:
-        print("\n  %d marker(s) have no brief. Write them up before handing this over -\n"
-              "  a generator asked for 'a picture of a pump' produces exactly that."
+        print("\n  %d note(s) were never written up properly. Finish them before handing\n"
+              "  this over - a request for 'a picture of a pump' produces exactly that."
               % len(markers))
     return 0
 

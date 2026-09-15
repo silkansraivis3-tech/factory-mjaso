@@ -1,0 +1,84 @@
+{
+  "_authority": "L24 - a subject-matter expert's change survives the rebuild. Read by scripts/detect_expert_edits.py. Edit this file, not the script.",
+  "_written": "2026-09-15",
+
+  "_the_law": "WHERE THE EXPERT HAS ALREADY CHANGED SOMETHING, THAT CHANGE IS CONTENT. Bring it up to the factory's standard; never overwrite it, never tidy it away, and never decide it was a mistake.",
+
+  "_why": "Law 5 says the existing delivery implementation is not preserved by default - rebuild it. That is right for material nobody has touched since it was generated, and it is exactly wrong for a screen a maritime expert went in and changed on purpose. An expert edit is the most expensive information in the module: it is the one place where somebody who actually sails ships disagreed with what was produced, and they rarely write down why. Rebuilding over it destroys the disagreement silently, and the expert finds out in front of a class.",
+
+  "_the_tension": "L5 and L24 point opposite ways, and the difference between them is not what the code looks like - it is WHO LAST TOUCHED IT. So the first question in a retrofit is no longer 'how good is this module', it is 'which parts of it are somebody's decision'. Everything downstream depends on getting that question asked before anything is rewritten.",
+
+  "how_a_deliberate_change_is_RECOGNISED": {
+    "_order": "Strongest evidence first. Stop at the first one that answers.",
+    "_never": "Never decide by reading the code and judging whether it looks intentional. Good expert edits often look untidy, and generated filler often looks deliberate. That judgement is exactly the one this factory keeps getting wrong.",
+    "signals": [
+      {
+        "n": 1,
+        "name": "THE EXPERT SAID SO",
+        "what": "An explicit marker left by a person: data-sme on an element, an <!-- SME: ... --> comment, or a file in _sme/.",
+        "verdict": "protected",
+        "note": "Cheapest and most reliable. Tell the expert this exists - a marker takes three seconds and saves the whole argument."
+      },
+      {
+        "n": 2,
+        "name": "THE FACTORY'S OWN BUILD RECORD",
+        "what": "_factory/build.json records a hash of every file the factory wrote, and when. A file whose hash no longer matches was changed by a person afterwards.",
+        "verdict": "protected",
+        "note": "Deterministic and needs nothing from the expert. Written by detect_expert_edits.py --record at the end of every build and every retrofit."
+      },
+      {
+        "n": 3,
+        "name": "VERSION CONTROL",
+        "what": "The file was touched by a commit the factory did not author.",
+        "verdict": "protected",
+        "note": "Only where the course is in git. A course folder on a desktop usually is not."
+      },
+      {
+        "n": 4,
+        "name": "NOTHING TO GO ON",
+        "what": "No marker, no build record, no history - the factory has never seen this module before.",
+        "verdict": "ask",
+        "note": "ASK, in one line, and list what you would otherwise rebuild. Do not assume it is untouched because you cannot prove it was touched. This is the state a first retrofit is always in, and it is why the record is written at the end of the very first run."
+      }
+    ]
+  },
+
+  "what_happens_to_a_protected_region": {
+    "_rule": "Treat it as LOCKED CONTENT - the same tier as a technical fact or an ILO. It may be restyled. It may not be rewritten, reordered away, shortened, merged, or deleted.",
+    "may_change": [
+      "the stylesheet it inherits - tokens, typography, colour, spacing, radius, the header band",
+      "the container it sits in, so it uses the canonical layout shell",
+      "the figure's presentation - size, caption placement, how it behaves on a portrait tablet",
+      "accessibility: alt text, contrast, tap-target size, reading order",
+      "broken markup, dead links, and anything that stops it working on the tablet"
+    ],
+    "may_NOT_change": [
+      "the words - not shortened, not 'tightened', not re-phrased",
+      "which screen it is on, or the order of the points inside it",
+      "a fact, a figure, a limit, a value or a citation the expert put there",
+      "a screen the expert added - it stays, even if the factory would not have added it",
+      "a screen the expert deleted - it stays deleted",
+      "anything the expert marked, for any reason, including reasons they did not give"
+    ],
+    "_the_hard_case": "A protected region that breaks a factory law - a screen the expert filled with text that now has no lead visual (L23), or a citation they added that names a model course (L22). REPORT IT. Name the law, name the screen, quote the text, and propose the fix. Do not apply it. An expert who finds their change quietly 'corrected' stops making changes, and then the course loses the only maritime judgement in it."
+  },
+
+  "what_the_report_must_say": {
+    "_why": "The operator has to be able to see, in one place, what was kept because a person put it there rather than because the factory liked it.",
+    "lines": [
+      "how the protected regions were recognised - which signal, per region",
+      "every protected region, by screen and by what it is",
+      "what was restyled around them",
+      "every place a protected region conflicts with a factory law, with the law named and a proposed fix that was NOT applied",
+      "whether a build record existed, and that one has now been written"
+    ]
+  },
+
+  "the_build_record": {
+    "file": "_factory/build.json",
+    "written_by": "scripts/detect_expert_edits.py --record",
+    "when": "at the END of every build and every retrofit, after verification passes",
+    "contains": "the factory version, the timestamp, and a sha256 of every course-facing file the run produced",
+    "_why_at_the_end": "A record written before verification records work that may still be rolled back, and then the next run protects a file the factory itself broke."
+  }
+}

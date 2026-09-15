@@ -1,0 +1,130 @@
+{
+  "_authority": "L25 - the person reading this does not work in IT. Read by scripts/check_plain_language.py. Edit this file, not the script.",
+  "_written": "2026-09-15",
+
+  "_the_law": "EVERY MESSAGE THAT LEAVES THIS FACTORY IS READ BY A MARITIME PROFESSIONAL WITH NO IT BACKGROUND. If it names a problem, it must also say where the thing is, how to open it, what to change, and how they will know it worked.",
+
+  "_why": "The owner said it plainly: this person does not know the IT world at all. A report that says 'FAIL: check_visual_first.py - module.html:412 missing lead figure' is not a report to them; it is a wall. They cannot act on it, so they either ignore it or come and ask, and both of those are the factory failing to finish its own job. A finding nobody can act on is the same as a finding nobody made.",
+
+  "_this_is_not_dumbing_down": "The maritime content stays exactly as technical as it is - cargo tank types, flammable limits, the IGC Code. What changes is the language about COMPUTERS AND THIS TOOL. A chief officer knows what an inert gas generator is and does not know what a stylesheet is, and nothing about the first fact excuses the second word.",
+
+  "every_problem_message_has_five_parts": {
+    "_rule": "All five. A message missing any one of them sends the reader to find somebody who can read it.",
+    "parts": [
+      { "n": 1, "name": "WHAT IS WRONG", "how": "One sentence, in the words of the course, not the words of the software. 'Slide 12 explains the cargo pump but has no picture of one.'" },
+      { "n": 2, "name": "WHERE IT IS", "how": "The FULL path, exactly as it appears on their computer, and the human landmark beside it: which module, which slide number, which heading. 'C:\\Users\\...\\Module_04\\module.html - slide 12, the one headed \"The cargo pump\".'" },
+      { "n": 3, "name": "HOW TO SEE IT", "how": "The literal steps to open it and look. Double-click, which program opens, what they will see on screen. Never assume they know how to open an HTML file, run a command, or use a terminal." },
+      { "n": 4, "name": "WHAT TO DO", "how": "The actual fix, in steps. If the factory can do it, offer to do it and say so: 'tell me to fix it and I will'. If a person must decide, say exactly what the decision is and what each option means." },
+      { "n": 5, "name": "HOW THEY KNOW IT WORKED", "how": "What they should see afterwards. 'Slide 12 now opens with the pump drawing at the top.' Never end on 'run the check again' as the only proof." }
+    ]
+  },
+
+  "never_say_without_explaining": {
+    "_rule": "These words are fine ONCE the sentence has said what they mean in ordinary words. Used bare, they are the wall. The plain form goes first; the technical word, if it is needed at all, goes in brackets after it.",
+    "_example_good": "the file that controls how the slides look (its stylesheet)",
+    "_example_bad": "a CSS drift in the token layer",
+    "terms": [
+      { "term": "HTML", "plain": "the file the slides are made of - it opens in a web browser" },
+      { "term": "CSS", "plain": "the file that controls how the slides look - colours, sizes, spacing" },
+      { "term": "stylesheet", "plain": "the file that controls how the slides look" },
+      { "term": "JavaScript", "plain": "the small program inside a slide that makes a picture move or a button work" },
+      { "term": "JSON", "plain": "a settings file - plain text, opens in Notepad" },
+      { "term": "repository", "plain": "the folder where this course is kept" },
+      { "term": "repo", "plain": "the folder where this course is kept" },
+      { "term": "commit", "plain": "a saved version of the folder" },
+      { "term": "git", "plain": "the tool that keeps the saved versions of the folder" },
+      { "term": "branch", "plain": "a separate copy of the work" },
+      { "term": "terminal", "plain": "the black window where commands are typed" },
+      { "term": "command line", "plain": "the black window where commands are typed" },
+      { "term": "CLI", "plain": "the black window where commands are typed" },
+      { "term": "script", "plain": "a small program this tool runs by itself" },
+      { "term": "validator", "plain": "an automatic check" },
+      { "term": "linter", "plain": "an automatic check" },
+      { "term": "exit code", "plain": "whether the check passed or failed" },
+      { "term": "regex", "plain": "a search pattern" },
+      { "term": "parse", "plain": "read" },
+      { "term": "render", "plain": "draw on the screen" },
+      { "term": "deploy", "plain": "put onto the tablets" },
+      { "term": "build", "plain": "make the finished files" },
+      { "term": "asset", "plain": "a picture, drawing or photograph" },
+      { "term": "markup", "plain": "the text the slide is written in" },
+      { "term": "attribute", "plain": "a setting written inside the slide" },
+      { "term": "DOM", "plain": "the slide as the browser sees it" },
+      { "term": "path", "plain": "where the file is on the computer" },
+      { "term": "directory", "plain": "folder" },
+      { "term": "root", "plain": "the top folder" },
+      { "term": "hash", "plain": "a fingerprint the tool uses to spot a changed file" },
+      { "term": "manifest", "plain": "the list of what is in the course" },
+      { "term": "schema", "plain": "the shape a settings file has to have" },
+      { "term": "API", "plain": "the way two programs talk to each other" },
+      { "term": "cache", "plain": "the tool's own saved copy" },
+      { "term": "null", "plain": "empty" },
+      { "term": "boolean", "plain": "a yes/no setting" },
+      { "term": "string", "plain": "a piece of text" },
+      { "term": "deprecated", "plain": "no longer used" },
+      { "term": "refactor", "plain": "rewrite without changing what it does" },
+      { "term": "edge case", "plain": "a rare situation" },
+      { "term": "false positive", "plain": "the check complaining about something that is actually fine" },
+      { "term": "stack trace", "plain": "the error message the program printed" }
+    ]
+  },
+
+  "a_problem_with_no_way_out": {
+    "_what": "The third check: a paragraph that names something wrong and never says what happens next. The reader is left holding it.",
+    "_why_the_lists_are_here": "Both vocabularies started inside the script and both were too narrow. The next-step list missed 'find a real photograph' and 'somebody needs to finish them', so the checker complained about text that was already perfectly actionable - the cry-wolf failure this factory has a law about. They live here so widening them is an edit, not a code change.",
+    "something_is_wrong": [
+      "fail", "failed", "failure", "fails", "error", "broken", "missing", "wrong",
+      "cannot", "could not", "unable", "not found", "invalid", "conflict",
+      "blocked", "rejected", "problem", "issue"
+    ],
+    "and_here_is_what_happens_next": [
+      "open", "double-click", "right-click", "click", "type", "paste", "copy",
+      "replace", "change", "add", "remove", "delete", "tell me", "ask me", "ask",
+      "say", "choose", "decide", "confirm", "send", "give", "check that",
+      "you will see", "should see", "then", "next", "instead",
+      "find", "finish", "fix", "make", "save", "put", "write", "run", "search",
+      "use", "keep", "leave", "look", "offer", "i will", "i can", "we will",
+      "needs to", "belongs here", "comes off"
+    ]
+  },
+
+  "how_to_write_a_path": {
+    "_rule": "A person cannot act on a path they cannot find. Give the whole thing, from the drive letter, and say what to do with it.",
+    "good": "C:\\Users\\raiviss\\Desktop\\gas basic\\course\\Module 04\\module.html  -  copy that line, paste it into the address bar of a File Explorer window and press Enter; the folder opens with the file inside.",
+    "bad": ["module.html:412", "./modules/m4/", "the deck", "the module root"],
+    "_also": "Say which program opens it. A slide file opens in a web browser by double-clicking. A settings file opens in Notepad by right-click, Open with, Notepad."
+  },
+
+  "how_to_write_a_command": {
+    "_rule": "Most operators should never be given a command at all - offer to run it instead. When one is genuinely needed, it is one line, complete, copy-pasteable, with the steps to reach the window it goes in and what a good result looks like.",
+    "_prefer": "Say: 'tell me to run the check and I will, and I will tell you what it found.'",
+    "if_you_must": [
+      "one command, on its own line, nothing to fill in",
+      "how to open the window it is typed into, in clicks",
+      "what a good result looks like, in words - not 'exit code 0'",
+      "what to do if it says something else: come back and paste the whole message"
+    ]
+  },
+
+  "tone": {
+    "_rule": "Write to a competent professional in an unfamiliar subject, not to a beginner and not to a colleague in IT.",
+    "do": [
+      "say what happened and what it means for the course",
+      "give the decision, not the diagnosis, when a person has to choose",
+      "offer to do the work: most fixes belong to the factory, not to them",
+      "keep the maritime vocabulary exactly as precise as it already is"
+    ],
+    "do_not": [
+      "apologise, hedge, or explain the internals of the tool",
+      "say 'simply', 'just', or 'obviously'",
+      "print raw tool output as if it were a report",
+      "leave the reader with a problem and no next step"
+    ]
+  },
+
+  "surfaces": {
+    "_what": "Where this law is enforced. Anything a person other than the factory reads.",
+    "operator_facing": ["factory-notes.md", "visual-notes.md", "VISUAL_HANDOFF.md", "REVIEW.html", "REPORT", "the chat report"],
+    "_not": "Code comments, test names and the scripts' own internal docstrings are written for whoever maintains the factory, and stay technical."
+  }
+}

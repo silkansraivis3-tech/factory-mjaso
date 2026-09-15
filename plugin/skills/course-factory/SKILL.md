@@ -106,23 +106,46 @@ and say so. Never paraphrase an absent organisation skill from memory and presen
 
 ---
 
-## The brief — what the operator types, and what you must not ask
+## The brief — a call and a folder, and that is the whole contract
 
-The operator types free-form. Extract these; **ask only for what is genuinely absent**, batched
-2–4 at a time:
+> **The operator calls the factory and gives a folder. Nothing else is required of them.**
+> Everything after that is either derived, or found inside that folder. They type a correction
+> only when they want something other than what the factory would do on its own.
+
+That is the acceptance test for this section. A colleague who types
+
+    Redesign this module using the NOVIKONTAS Course Factory.
+    C:\courses\Module_04
+
+has given a complete brief. No skill name, no validator, no script, no flag, no folder layout,
+no module split, no screen count — and none of those may be asked back.
+
+**Look in the folder before asking anybody anything.** The programme, the sources, the existing
+module, the expert's notes and the factory's own build record are usually all in there or one
+level up, and a question whose answer was sitting in the folder is the fastest way to teach an
+operator that this tool is hard work.
+
+Only these three can genuinely be missing, and only these three may be asked — batched, never
+one at a time, and never after the answer has been found on disk:
 
 1. **Which accredited programme governs** — the approved document, by name or path. Without it
    there is no hours law and no ILOs, so this is the one blocking question.
 2. **The knowledge base** — the docling-extracted sources for the subject.
-3. **What is different from GAS BASIC** — simulator? live-fire facility? group size? days?
+3. **Has anyone edited this by hand?** — and only when `detect_expert_edits.py` says
+   `nothing-to-go-on`. See L24; this question disappears permanently after the first run,
+   because that run writes the build record.
 
-Never ask: the module split, the screen count, the task codes, the pass marks, or the file
-layout. Those are **derived**, and deriving them is this skill's job. Never web-search during
-intake — not in the brief, programme or knowledge base means `UNKNOWN`.
+Never ask: the module split, the screen count, the task codes, the pass marks, the file layout,
+or which lane to load. Those are **derived**, and deriving them is this skill's job. Never
+web-search during intake — not in the brief, programme or knowledge base means `UNKNOWN`.
+
+**Corrections are the operator's only other input, and they arrive in their words.** "Too much
+text on screen 4", "keep the old pump drawing", "this should be two screens" — act on them, and
+do not turn a correction into an interview.
 
 ---
 
-## The seven laws
+## The nine laws
 
 These are not preferences. Each one is here because breaking it cost real rework — the first four
 on GAS BASIC, the last two on the first two real pilots.
@@ -222,6 +245,42 @@ An existing visual is *evidence of a teaching decision*: preserve the decision, 
 implementation. The star/delta figure's claim — the supply never moves, only the bridges change —
 survives; its small SVG does not have to.
 
+### 5b · Where the expert has already changed something, that change is content
+
+> **BRING IT UP TO STANDARD. NEVER OVERWRITE IT, NEVER TIDY IT AWAY, NEVER DECIDE IT WAS A
+> MISTAKE.**
+
+`retrofit/knowledge/expert-edits.json` is the authority; `retrofit/scripts/detect_expert_edits.py`
+answers the question. This is the exception law 5 needs, and it points the other way: law 5 is
+right about material nobody has touched since it was generated, and exactly wrong about a screen a
+maritime expert went into and changed on purpose.
+
+An expert edit is the most expensive information in a module. It is the one place where somebody
+who actually sails ships disagreed with what was produced, and they almost never write down why.
+Rebuilding over it destroys the disagreement silently, and the expert finds out in front of a
+class.
+
+**The difference between the two laws is not what the code looks like — it is who last touched
+it.** So the first question of a retrofit is no longer "how good is this", it is "which parts of
+this are somebody's decision", and it is asked before anything is rewritten. Good expert edits
+often look untidy and generated filler often looks deliberate, so that judgement is never made by
+reading the code. It is made from evidence, in this order: a marker the expert left (`data-sme`,
+`<!-- SME: … -->`, a file in `_sme/`) · the factory's own build record (`_factory/build.json`,
+whose hash no longer matches) · a commit the factory did not author · **and if none of those
+exist, ask.** Never read "I cannot prove it was touched" as "it was untouched".
+
+A protected region is **locked content**, the same tier as a technical fact. Restyle it — tokens,
+typography, the layout shell, accessibility, broken markup. Do not rewrite the words, reorder the
+points, change a value, delete a screen they added or restore a screen they deleted.
+
+**Where a protected region breaks another factory law, name the law and propose the fix in the
+report. Do not apply it.** An expert who finds their change quietly corrected stops making
+changes, and then the course has no maritime judgement in it at all.
+
+Every run writes the record at the end, after verification passes. That is what makes the
+question disappear for good: the first retrofit asks it once, and no retrofit after that ever
+needs to.
+
 ### 6 · The production Android application is a publish target, not a workspace
 
 > **Without explicit human approval, the Android repository is READ ONLY.**
@@ -257,6 +316,38 @@ drift check.
 
 ---
 
+### 8 · The person reading this does not work in IT
+
+> **EVERY MESSAGE THAT LEAVES THIS FACTORY IS READ BY A MARITIME PROFESSIONAL WITH NO IT
+> BACKGROUND.**
+
+`knowledge/plain-language.json` is the authority; `scripts/check_plain_language.py` enforces it.
+
+A line reading `FAIL check_visual_first.py module.html:412 missing lead figure` is not a report to
+them, it is a wall. They cannot act on it, so they either ignore it or come and ask — and both of
+those are the factory failing to finish its own job. **A finding nobody can act on is the same as
+a finding nobody made.**
+
+Every problem message carries five things, and all five:
+
+| | |
+|---|---|
+| **What is wrong** | one sentence, in the words of the course, not of the software |
+| **Where it is** | the full path from the drive letter, plus the human landmark — which module, which slide, which heading |
+| **How to see it** | the literal steps. Double-click what, opens in what, what appears |
+| **What to do** | the fix in steps — and if the factory can do it, offer: *"tell me to fix it and I will"* |
+| **How they know it worked** | what they will see afterwards. Never *"run the check again"* as the only proof |
+
+**This is not dumbing down.** The maritime content stays exactly as technical as it is — tank
+types, flammable limits, the IGC Code. What changes is the language about *computers and this
+tool*. A chief officer knows what an inert gas generator is and does not know what a stylesheet
+is, and nothing about the first fact excuses the second word.
+
+Most fixes belong to the factory, not to them. **Offer to do the work before explaining how they
+could.**
+
+---
+
 ## The gate — approved before anything is built
 
 Changing a table row is free. Changing eight built modules is not. Present this and **stop**:
@@ -271,8 +362,6 @@ Changing a table row is free. Changing eight built modules is not. Present this 
 
 Nothing is built until the operator approves that table. The module split and the minutes are
 the expensive things to get wrong.
-
----
 
 ## Build order
 
@@ -378,7 +467,17 @@ through the others.**
     The factory's own markers are caught here too — they belong in `factory-notes.md`.
     Instructor plans may cite a model course and are reported, never failed (L22).
 
-12. **In retrofit only** — `retrofit/scripts/check_language.py <course> --declare <LANG>` (the
+12. `scripts/check_plain_language.py <course>` — **L25, and it is the last one for a reason.**
+    Everything above checks the course; this checks the report you are about to hand over. The
+    person reading it does not work in IT: no bare jargon, no path they cannot find, and no
+    problem named without a way out. Read your own report against it before sending it.
+
+13. `retrofit/scripts/detect_expert_edits.py <module> --record --version <v>` — **last of all,
+    after everything else passes.** It records a fingerprint of every file this run produced, so
+    the next retrofit can tell the expert's later changes from the factory's own work (L24). A
+    record written before verification records work that may still be rolled back.
+
+14. **In retrofit only** — `retrofit/scripts/check_language.py <course> --declare <LANG>` (the
     course did not change language), and `retrofit/scripts/classify_module.py` **again**. A
     retrofit that started at C and still classifies C has not finished.
 

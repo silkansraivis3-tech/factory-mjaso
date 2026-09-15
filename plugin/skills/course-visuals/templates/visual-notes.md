@@ -14,7 +14,8 @@ fill in. The honest record of what was built, what was not, and what somebody mu
 | | | | | | PASS / REWORK / REJECT / BLOCKED |
 
 **The one-sentence test**, per figure — *"after this, the learner can ___, which they could not
-before."* A figure whose sentence could not be finished should not be in the table above.
+before."* If that sentence cannot be finished for a figure, take the figure out and say here what
+the screen needs instead.
 
 | # | After this, the learner can… |
 |---|---|
@@ -44,7 +45,7 @@ not.
 
 Blocks shipping. The owner decides, not the factory.
 
-| Asset | Why unclear | What would clear it |
+| Picture, drawing or photograph | Why the rights are unclear | What would clear it |
 |---|---|---|
 
 ### `GENERATED_ASSET_REQUIRED`
@@ -99,8 +100,8 @@ A green exit is not proof. Say which figure you actually looked at.
 
 ## 7 · Markers
 
-Every marker written into an artefact must appear here. A marker used and never reported is the
-failure this section exists to stop.
+Write every marker down here, with who answers it and what happens to the course until they do. A
+marker used and never written down is the failure this section exists to stop.
 
 | Marker | What | Why |
 |---|---|---|
@@ -115,8 +116,10 @@ failure this section exists to stop.
 
 ## 8 · What was NOT done
 
-Gaps and why — blocked on an asset, blocked on a rights decision, blocked on a photograph somebody
-has to take. Be plain; an unreported gap becomes a surprise in a classroom.
+Gaps and why — waiting on a picture, waiting on a decision about who owns one, waiting on a
+photograph somebody has to go and take. For each gap say what it means for the class and what would
+close it. Where the factory can close it, offer to. An unreported gap becomes a surprise in a
+classroom.
 
 ---
 
