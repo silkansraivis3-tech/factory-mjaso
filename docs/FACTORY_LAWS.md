@@ -145,9 +145,35 @@ approval for this one. Enforced rather than stated: `publish.py --publish` refus
 commit — the repository should say who approved a course, not only who ran a script.
 → `course-tablet-publisher` (`references/preview-and-approval.md`, `scripts/preview.py`)
 
+**L22 · A slide is not an internal document.**
+Four rules, from a maritime subject-matter reviewer reading a finished module. None is
+about one course; each is about the difference between a file the Training Centre keeps
+and a page a trainee reads.
+
+- **Internal shorthand never reaches a slide.** A Training Centre abbreviation printed on
+  a screen implies it is an IMO title or an industry term. It is neither. Write the course
+  out in full.
+- **The title slide carries no version control.** No revision number, no approval status,
+  no internal authority designation. It is the first thing a room sees and it should look
+  like training material.
+- **An IMO model course is never cited as a source.** It is a training REQUIREMENT and a
+  guide to what a course must cover - not a source of factual information. A slide reading
+  "Source: IMO Model Course 1.01" tells the room a syllabus is where the fact came from.
+  Cite the publication the fact actually came from, or cite nothing.
+- **Figures too.** "Figure: IMO Model Course 1.01, 1.2" is the same error wearing a
+  caption. Do not credit a model course for a drawing.
+
+And one the factory owes itself: **its own honesty markers never appear on a slide.**
+PLACEHOLDER, PROVISIONAL, TBD, [VERIFY: …] are a message to the owner and belong in
+`factory-notes.md`, which exists for exactly that. No second file is needed.
+
+An instructor's own plan or run sheet may cite a model course - that is how an instructor
+knows why a topic is in the course - so there it is reported and never failed.
+→ `course-factory` (`scripts/check_slide_text.py`, `knowledge/slide-text-rules.json`)
+
 ---
 
-**All twenty-one laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+**All twenty-two laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
 `course-visuals` was built; before that they depended on the operator remembering them.
 
 Organisation-skill dependencies and their fallbacks:

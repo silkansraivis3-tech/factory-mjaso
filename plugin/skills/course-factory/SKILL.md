@@ -359,7 +359,14 @@ the line for the thing you changed.
 accredited outcome and shipping a dead section. **Every check here was added after something got
 through the others.**
 
-10. **In retrofit only** — `retrofit/scripts/check_language.py <course> --declare <LANG>` (the
+10. `scripts/check_slide_text.py <course>` — **what the pages SAY**. Internal shorthand,
+    version control on a title slide, and an IMO model course cited as a source or credited
+    for a figure. A model course governs what a course must COVER; it is not a source of
+    fact, and a slide that cites one tells the room a syllabus is where the fact came from.
+    The factory's own markers are caught here too — they belong in `factory-notes.md`.
+    Instructor plans may cite a model course and are reported, never failed (L22).
+
+11. **In retrofit only** — `retrofit/scripts/check_language.py <course> --declare <LANG>` (the
     course did not change language), and `retrofit/scripts/classify_module.py` **again**. A
     retrofit that started at C and still classifies C has not finished.
 

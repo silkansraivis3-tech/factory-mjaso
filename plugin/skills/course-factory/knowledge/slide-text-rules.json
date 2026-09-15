@@ -1,0 +1,152 @@
+{
+  "_authority": "What a course-facing page may SAY. Read by scripts/check_slide_text.py. Edit this file, not the script.",
+  "_written": "2026-09-15",
+  "_why": "A maritime subject-matter reviewer read a finished module and returned four rules. None of them is about any one course: each is about the difference between a document the Training Centre keeps for itself and a page a trainee reads. Internal shorthand, internal version control, and a training-requirement document cited as if it were a technical reference all make a course look like an internal working file instead of teaching material - and the last one is worse than untidy, because it tells a trainee that a syllabus is a source of fact.",
+  "surfaces": {
+    "_what": "Which pages these rules bite on. A rule that fires everywhere would flag an instructor's own planning notes, where citing a training requirement is exactly right.",
+    "presentation": [
+      "module.html",
+      "modules/",
+      "tasks/",
+      "handout/",
+      "START_HERE.html",
+      "index.html",
+      "assessment/",
+      "practicals/",
+      "simulator/",
+      "documents/",
+      "case_materials/"
+    ],
+    "_presentation_note": "Everything a TRAINEE sees, plus the deck an instructor drives in front of them. The rules are enforced here.",
+    "instructor_only": [
+      "plan/",
+      "plans/",
+      "checks/",
+      "run/",
+      "prepare/",
+      "record/",
+      "live/",
+      "instructor/",
+      "_instructor_",
+      "_PLAN.html",
+      "answers/",
+      "MODULE_0"
+    ],
+    "_instructor_note": "An instructor's plan, run sheet or analysis. Citing a training requirement HERE is legitimate and useful - it is how an instructor knows why a topic is in the course. Reported as a note, never a failure.",
+    "not_course_facing": [
+      "factory-notes.md",
+      "visual-notes.md",
+      "design.md",
+      "_work/",
+      "REVIEW.html",
+      "README",
+      "MANIFEST",
+      ".bak",
+      "oldversion",
+      "retired",
+      "__pycache__"
+    ]
+  },
+  "internal_abbreviations": {
+    "_what": "Shorthand used inside the Training Centre. It is not an IMO title, not an international standard and not an industry abbreviation, and printing it on a slide implies all three. Write the course out in full instead.",
+    "_add_one": "Add {term, instead, why}. The term is matched as a whole word, case-insensitively.",
+    "terms": [
+      {
+        "term": "OCFAM",
+        "instead": "Basic Training for Oil and Chemical Tanker Cargo Operations (Familiarization)",
+        "why": "an internal Training Centre abbreviation; it is not an IMO or industry term"
+      }
+    ]
+  },
+  "never_cite_as_source": {
+    "_what": "Documents that govern what a course must COVER, and are not references for what a course TEACHES.",
+    "_why": "An IMO model course is a training requirement and a guideline for course content. It is not a source of factual information, and a slide that says 'Source: IMO Model Course 1.01' tells the room that a syllabus is where the fact came from. Cite the publication the fact actually came from - the books, codes and documents in the source files - or cite nothing.",
+    "_figures_too": "This includes figure and diagram attributions: 'Figure: IMO Model Course 1.01, 1.2'. Do not redraw a model-course figure and credit the model course; credit the publication the model course itself drew on, or leave the figure uncredited.",
+    "patterns": [
+      {
+        "pattern": "IMO\\s+Model\\s+Course",
+        "label": "an IMO model course",
+        "why": "a training requirement, not a source of fact"
+      },
+      {
+        "pattern": "Model\\s+Course\\s+\\d+\\.\\d+",
+        "label": "a model course by number",
+        "why": "a training requirement, not a source of fact"
+      }
+    ]
+  },
+  "no_version_control_on_slides": {
+    "_what": "Revision numbers, approval status and internal programme designations.",
+    "_why": "A title slide is the first thing a room sees. It should look like training material, not like an internal version-control record. The programme's approval is real and belongs in the course plan and the companion file - not on the screen in front of trainees.",
+    "_hardest_on": "the opening slide, where it fails; elsewhere on a slide it is a warning",
+    "patterns": [
+      {
+        "pattern": "revision\\s*\\d+",
+        "label": "a revision number"
+      },
+      {
+        "pattern": "\\brev\\.?\\s*\\d+\\b",
+        "label": "a revision number"
+      },
+      {
+        "pattern": "approved\\s+\\w{0,12}\\s*programme",
+        "label": "an approval statement",
+        "title_only": true
+      },
+      {
+        "pattern": "approved\\s+\\w{0,12}\\s*program\\b",
+        "label": "an approval statement",
+        "title_only": true
+      },
+      {
+        "pattern": "apstiprin\\w*\\s+programm\\w*",
+        "label": "an approval statement (lv)",
+        "title_only": true
+      },
+      {
+        "pattern": "redakcij\\w*\\s*\\d+",
+        "label": "a revision number (lv)"
+      },
+      {
+        "pattern": "\\bLJA\\b",
+        "label": "an internal authority designation"
+      }
+    ],
+    "_title_only_note": "Some of these are only wrong as a STAMP. 'The approved programme allows a maximum of 24 trainees' is useful prose in a handout; 'Approved LJA programme, revision 3' on a title slide is a version-control record. Patterns marked title_only fail on the opening slide and are ignored in body text; the rest - a revision number, an internal authority designation - are wrong anywhere a trainee reads them."
+  },
+  "honesty_markers": {
+    "_what": "The factory's own markers for work that is not finished or not ratified.",
+    "_why": "They are a message from the build to the owner, and they belong in factory-notes.md where the owner reads them. On a slide they are noise to a trainee and an admission of doubt in front of a class. The companion file already exists for exactly this - no second file is needed.",
+    "patterns": [
+      {
+        "pattern": "\\bPLACEHOLDER\\b",
+        "label": "PLACEHOLDER"
+      },
+      {
+        "pattern": "\\bPROVISIONAL\\b",
+        "label": "PROVISIONAL"
+      },
+      {
+        "pattern": "\\[VERIFY:",
+        "label": "a [VERIFY: ...] marker"
+      },
+      {
+        "pattern": "\\bTODO\\b",
+        "label": "TODO"
+      },
+      {
+        "pattern": "\\bTBD\\b",
+        "label": "TBD"
+      },
+      {
+        "pattern": "WAITING FOR DECISION",
+        "label": "an internal decision note"
+      },
+      {
+        "pattern": "\\bAPPROVED\\s*\\.\\.\\.",
+        "label": "an internal approval note"
+      }
+    ],
+    "_unknown_note": "UNKNOWN is deliberately NOT listed: it is an ordinary English word that appears in real teaching text ('the cargo is unknown'). The marker form is caught by the others."
+  }
+}

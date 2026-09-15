@@ -148,6 +148,7 @@ python ../course-module-ux/measure/scripts/check_static.py all <module.html>
 python ../course-module-ui/scripts/audit_ui.py <course>
 python ../course-visuals/scripts/check_visuals.py <course>
 python retrofit/scripts/check_language.py <course> --declare <LANG>   # retrofit adds this
+python scripts/check_slide_text.py <course>          # what the pages SAY (L22)
 ```
 
 and in a browser, over http, at **1280×800 and 800×1280**:
