@@ -36,7 +36,10 @@ the rest.
 
 Do not ask for, read, print or store the API key. With no key, the first generation opens a key
 window on the user's screen by itself. If a tool still reports no key (the window was closed, or
-could not open), stop and report `NO_KEY` with the tool's message.
+could not open), stop and report `NO_KEY` with the tool's message. If a tool reports
+*free tier* or *billing*, stop generating and report `BILLING_OFF`. Give the finished prompt,
+aspect ratio and destination path for each visual, so the main conversation can hand them to the
+user for the manual Gemini-app route.
 
 ## Report — short
 

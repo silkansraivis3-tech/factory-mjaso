@@ -41,6 +41,28 @@ If they want to change the key, call `setup_api_key`. If a tool reports the wind
 could not open, pass its message on. **Never ask for the key in the chat, never write it into a
 file yourself, never echo it.**
 
+### When Google says *free tier* or *billing*: the manual route
+
+The API has no free quota for image or video models, so a key without billing on its project comes
+back `HTTP 429 … free_tier … limit: 0`. **After that error, stop calling the tools for the rest of
+the session.** Retrying cannot help. **Do not fall back to drawing the picture in SVG.** Switch to
+the manual route instead. A Google AI Pro subscription includes Nano Banana in the Gemini app at no
+extra cost, so the user makes the picture and Claude runs everything around it:
+
+1. Do the work as normal: decide, write the full prompt (§2), and pick the aspect ratio and the
+   exact destination file.
+2. Give the user **one copy-ready block per picture**: the prompt, the aspect ratio, and the exact
+   path to save it to. For example:
+   > Open **gemini.google.com** → *Create image* → paste the prompt → download the picture and save
+   > it as `…/assets/lng_carrier_starboard_quarter.png`. Say **done** when it is there.
+3. When they say done, pick up from §4. **Open the file and check it**, ask for a redo with a
+   corrected prompt if it is wrong, then place it (§6) and write provenance with
+   `"generated_by": "Gemini app (manual), Nano Banana"`.
+
+Say once, in one line, why: *"Automatic generation is waiting for billing on the Gemini key, so this
+time you make the picture in the Gemini app and I take it from there."* Never ask for the key and
+never suggest a way around billing.
+
 ---
 
 ## 1 · Decide: generate, or draw?
