@@ -4,6 +4,7 @@
 
     python nano_banana_mcp.py            # speaks MCP over stdio (Claude Code starts it)
     python nano_banana_mcp.py --selftest # checks the key and lists the image/video models
+    python nano_banana_mcp.py --setup    # opens the key window (set or change the key)
 
 WHY THIS EXISTS
 Asked for a "realistic" or "3D" picture, a language model draws vectors: a gradient,
@@ -14,14 +15,15 @@ prompt, looking at the result, rejecting it, packaging it and placing it.
 
 STANDARD LIBRARY ONLY. No pip install, nothing to break on a colleague's machine.
 
-THE KEY - first one found wins:
-  1. NANO_BANANA_API_KEY  (the plugin's userConfig fills this in)
-  2. GEMINI_API_KEY       (a Windows/user environment variable)
-  3. GOOGLE_API_KEY
-  4. the file  <CLAUDE_PLUGIN_DATA>/gemini_api_key
-  5. the file  ~/.config/nano-banana/gemini_api_key
-The userConfig value has its own variable name on purpose: an empty userConfig
-must never blank out a GEMINI_API_KEY the user set in their environment.
+THE KEY - nobody configures anything. The first time a picture is asked for and
+there is no key, this server opens a small window on the user's own screen, the
+user pastes the key, it is checked against Google, and it is saved. The key never
+passes through the chat and Claude never sees it.
+
+First one found wins:
+  1. the file  ~/.config/nano-banana/gemini_api_key   (what the window writes)
+  2. GEMINI_API_KEY    environment variable
+  3. GOOGLE_API_KEY    environment variable
 The key is never printed, logged or returned in a tool result.
 """
 from __future__ import annotations
@@ -35,7 +37,7 @@ import time
 import urllib.error
 import urllib.request
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 API = "https://generativelanguage.googleapis.com/v1beta"
 
 DEFAULT_IMAGE_MODEL = "gemini-3.1-flash-image"   # Nano Banana 2 - the generalist
@@ -67,22 +69,154 @@ def _read_file(p):
         return ""
 
 
+KEY_FILE = os.path.join(os.path.expanduser("~"), ".config", "nano-banana", "gemini_api_key")
+
+
 def api_key():
-    for var in ("NANO_BANANA_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+    v = _read_file(KEY_FILE)
+    if v:
+        return v, KEY_FILE
+    for var in ("GEMINI_API_KEY", "GOOGLE_API_KEY"):
         v = os.environ.get(var, "").strip()
-        if v and not v.startswith("${"):          # an unsubstituted ${user_config.x}
+        if v and not v.startswith("${"):
             return v, var
-    candidates = []
-    data = os.environ.get("CLAUDE_PLUGIN_DATA", "")
-    if data:
-        candidates.append(os.path.join(data, "gemini_api_key"))
-    candidates.append(os.path.join(os.path.expanduser("~"), ".config", "nano-banana",
-                                   "gemini_api_key"))
-    for p in candidates:
-        v = _read_file(p)
-        if v:
-            return v, p
     return "", ""
+
+
+def _save_key(key):
+    os.makedirs(os.path.dirname(KEY_FILE), exist_ok=True)
+    with open(KEY_FILE, "w", encoding="utf-8") as f:
+        f.write(key.strip())
+    try:
+        os.chmod(KEY_FILE, 0o600)
+    except OSError:
+        pass
+
+
+# ---------------------------------------------------------------- the key window
+
+DIALOG_TITLE = "NOVIKONTAS - Nano Banana"
+DIALOG_TEXT = ("Lai Claude varētu veidot reālistiskas bildes, ievadi Gemini API atslēgu.\n"
+               "NOVIKONTAS kopīgā atslēga - prasi Raivim.\n\n"
+               "Enter the Gemini API key (the NOVIKONTAS shared key - ask Raivis).")
+
+
+def _dialog_tk(message):
+    import tkinter as tk
+    result = {"key": None}
+    root = tk.Tk()
+    root.title(DIALOG_TITLE)
+    root.attributes("-topmost", True)
+    root.resizable(False, False)
+    frm = tk.Frame(root, padx=22, pady=18)
+    frm.pack()
+    tk.Label(frm, text=DIALOG_TEXT, justify="left", font=("Segoe UI", 10)).pack(anchor="w")
+    if message:
+        tk.Label(frm, text=message, fg="#b3261e", justify="left",
+                 font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(10, 0))
+    entry = tk.Entry(frm, show="\u2022", width=52, font=("Consolas", 11))
+    entry.pack(pady=(12, 4), fill="x")
+    show = tk.IntVar()
+    tk.Checkbutton(frm, text="Rādīt / show", variable=show,
+                   command=lambda: entry.config(show="" if show.get() else "\u2022")).pack(anchor="w")
+    btns = tk.Frame(frm)
+    btns.pack(anchor="e", pady=(12, 0))
+
+    def ok(_e=None):
+        result["key"] = entry.get().strip()
+        root.destroy()
+
+    tk.Button(btns, text="Atcelt / Cancel", width=14, command=root.destroy).pack(side="right", padx=(8, 0))
+    tk.Button(btns, text="Saglabāt / Save", width=14, command=ok, default="active").pack(side="right")
+    root.bind("<Return>", ok)
+    root.bind("<Escape>", lambda _e: root.destroy())
+    root.after(600000, root.destroy)                 # never hang a tool call forever
+    root.update_idletasks()
+    w, h = root.winfo_width(), root.winfo_height()
+    root.geometry("+%d+%d" % ((root.winfo_screenwidth() - w) // 2,
+                              (root.winfo_screenheight() - h) // 3))
+    root.lift()
+    root.focus_force()
+    entry.focus_set()
+    root.mainloop()
+    return result["key"]
+
+
+def _dialog_powershell(message):
+    import subprocess
+    text = (DIALOG_TEXT + ("\n\n" + message if message else "")).replace("'", "''")
+    ps = (
+        "Add-Type -AssemblyName System.Windows.Forms;"
+        "$f=New-Object Windows.Forms.Form;$f.Text='%s';$f.TopMost=$true;"
+        "$f.Width=560;$f.Height=260;$f.StartPosition='CenterScreen';"
+        "$l=New-Object Windows.Forms.Label;$l.Text='%s';$l.Left=16;$l.Top=12;$l.Width=510;$l.Height=110;"
+        "$t=New-Object Windows.Forms.TextBox;$t.UseSystemPasswordChar=$true;$t.Left=16;$t.Top=128;$t.Width=510;"
+        "$b=New-Object Windows.Forms.Button;$b.Text='Saglabat / Save';$b.Left=396;$b.Top=164;$b.Width=130;"
+        "$b.DialogResult='OK';$f.AcceptButton=$b;$f.Controls.AddRange(@($l,$t,$b));"
+        "if($f.ShowDialog() -eq 'OK'){[Console]::Out.Write($t.Text)}"
+    ) % (DIALOG_TITLE, text)
+    r = subprocess.run(["powershell", "-NoProfile", "-STA", "-Command", ps],
+                       capture_output=True, text=True, timeout=660)
+    return r.stdout.strip() or None
+
+
+def _dialog_osascript(message):
+    import subprocess
+    text = (DIALOG_TEXT + ("\n\n" + message if message else "")).replace('"', "'")
+    r = subprocess.run(["osascript", "-e",
+                        'text returned of (display dialog "%s" default answer "" with hidden answer '
+                        'with title "%s")' % (text, DIALOG_TITLE)],
+                       capture_output=True, text=True, timeout=660)
+    return r.stdout.strip() or None
+
+
+def _open_dialog(message=""):
+    for fn in (_dialog_tk,
+               _dialog_powershell if os.name == "nt" else None,
+               _dialog_osascript if sys.platform == "darwin" else None):
+        if fn is None:
+            continue
+        try:
+            return fn(message), True
+        except Exception as e:           # no display, no Tk - try the next way
+            log("key window via %s failed: %r" % (fn.__name__, e))
+    return None, False
+
+
+def _key_works(key):
+    """True / False, or None when Google could not be reached at all."""
+    try:
+        http("GET", API + "/models?pageSize=1", timeout=30, key=key)
+        return True
+    except ApiError as e:
+        return None if e.status == 0 else False
+
+
+def ask_for_key():
+    """Open the key window, check the key, save it. Returns (ok, message)."""
+    message = ""
+    for _ in range(3):
+        key, shown = _open_dialog(message)
+        if not shown:
+            return False, NO_WINDOW
+        if not key:
+            return False, NO_KEY
+        works = _key_works(key)
+        if works is False:
+            message = "Šī atslēga nederēja - pārbaudi un ielīmē vēlreiz. / That key was rejected."
+            continue
+        _save_key(key)
+        return True, ("Key saved and checked." if works else
+                      "Key saved, but Google could not be reached to check it (network?).")
+    return False, "The key was rejected three times. Check it with Raivis, then ask again."
+
+
+def ensure_key():
+    if api_key()[0]:
+        return
+    ok, msg = ask_for_key()
+    if not ok:
+        raise ApiError(0, msg)
 
 
 def cfg(name, default):
@@ -103,8 +237,8 @@ def _redact(text):
     return text.replace(k, "***") if k else text
 
 
-def http(method, url, body=None, timeout=300, raw=False):
-    key, _ = api_key()
+def http(method, url, body=None, timeout=300, raw=False, key=None):
+    key = key or api_key()[0]
     if not key:
         raise ApiError(0, NO_KEY)
     data = json.dumps(body).encode("utf-8") if body is not None else None
@@ -133,10 +267,13 @@ def http(method, url, body=None, timeout=300, raw=False):
     return json.loads(payload.decode("utf-8")) if payload else {}
 
 
-NO_KEY = ("No Gemini API key yet. NOVIKONTAS uses one shared key - ask Raivis "
-          "(raivis.silkans@novikontas.org) for it, then paste it yourself in "
-          "/plugin -> nano-banana -> Configure (or set the Windows environment variable "
-          "GEMINI_API_KEY) and restart Claude Code. Never paste the key into the chat.")
+NO_KEY = ("No Gemini API key yet - the key window was closed without one. NOVIKONTAS uses one "
+          "shared key: ask Raivis (raivis.silkans@novikontas.org), then ask Claude again for the "
+          "picture, or say 'set the nano banana key' - the window opens again. "
+          "Never paste the key into the chat.")
+NO_WINDOW = ("No Gemini API key, and the key window could not be opened on this computer. "
+             "Set the environment variable GEMINI_API_KEY to the NOVIKONTAS shared key "
+             "(ask Raivis) and restart Claude Code. Never paste the key into the chat.")
 
 
 # ---------------------------------------------------------------- helpers
@@ -262,6 +399,7 @@ def generate_image(a):
     out_path = a.get("out_path") or ""
     if not out_path:
         raise ValueError("out_path is required - the file the image is saved to")
+    ensure_key()
     model = a.get("model") or cfg("NANO_BANANA_IMAGE_MODEL", DEFAULT_IMAGE_MODEL)
     if model in ("pro", "nano-banana-pro"):
         model = PRO_IMAGE_MODEL
@@ -363,6 +501,7 @@ def generate_video(a):
     out_path = a.get("out_path") or ""
     if not out_path:
         raise ValueError("out_path is required - the .mp4 the video is saved to")
+    ensure_key()
     model = a.get("model") or cfg("NANO_BANANA_VIDEO_MODEL", DEFAULT_VIDEO_MODEL)
     params = {
         "aspectRatio": a.get("aspect_ratio") or "16:9",
@@ -418,10 +557,18 @@ def get_video(a):
 
 # ---------------------------------------------------------------- status
 
+def setup_key(_a=None):
+    ok, msg = ask_for_key()
+    if not ok:
+        raise ApiError(0, msg)
+    return {"ok": True, "message": msg, "saved_to": KEY_FILE}
+
+
 def status(_a=None):
     key, src = api_key()
     info = {"server": VERSION, "key_configured": bool(key),
             "key_source": ("env " + src) if src.isupper() else (src and "file " + src),
+            "set_or_change_key": "tool setup_api_key opens the key window",
             "image_model": cfg("NANO_BANANA_IMAGE_MODEL", DEFAULT_IMAGE_MODEL),
             "video_model": cfg("NANO_BANANA_VIDEO_MODEL", DEFAULT_VIDEO_MODEL)}
     if not key:
@@ -511,6 +658,16 @@ TOOLS = [
         },
     },
     {
+        "name": "setup_api_key",
+        "description": ("Open a small window on the user's screen where THEY paste the Gemini API key "
+                        "(set it the first time, or change it). The key is checked and saved locally; "
+                        "it never passes through the chat and is not returned. generate_image and "
+                        "generate_video open this window by themselves when no key exists, so call this "
+                        "only when the user asks to set or change the key, or the key stopped working. "
+                        "Never ask the user to type the key into the chat."),
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
         "name": "nano_banana_status",
         "description": "Check that the Gemini API key is configured and works, and list the image and video models this key can use. Run it first if a generation fails.",
         "inputSchema": {"type": "object", "properties": {}},
@@ -518,7 +675,7 @@ TOOLS = [
 ]
 
 HANDLERS = {"generate_image": generate_image, "generate_video": generate_video,
-            "get_video": get_video, "nano_banana_status": status}
+            "get_video": get_video, "setup_api_key": setup_key, "nano_banana_status": status}
 
 
 def send(msg):
@@ -581,7 +738,10 @@ def serve():
 
 
 if __name__ == "__main__":
-    if "--selftest" in sys.argv:
+    if "--setup" in sys.argv:
+        ok, msg = ask_for_key()
+        OUT.write(msg + "\n")
+    elif "--selftest" in sys.argv:
         OUT.write(json.dumps(status(), indent=2) + "\n")
     else:
         serve()

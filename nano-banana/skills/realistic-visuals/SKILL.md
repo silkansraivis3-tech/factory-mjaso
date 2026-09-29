@@ -30,12 +30,16 @@ Tools (MCP server `nano-banana`):
 | `generate_image` | still image — text-to-image, or edit/restyle/combine with `reference_images` |
 | `generate_video` | 4–8 s mp4 clip with Veo 3.1, optionally starting from an approved still |
 | `get_video` | collects a clip that was still rendering |
+| `setup_api_key` | opens the key window, to set or change the key |
 | `nano_banana_status` | is the key set, does it work, which models can it reach |
 
-If a tool says there is no key: tell the user to add it themselves — `/plugin` → **nano-banana** →
-**Configure** (the key goes to the system credential store), or set the `GEMINI_API_KEY`
-environment variable — then restart Claude Code. **Never ask for the key in chat, never write it
-into a file, never echo it.**
+**The key looks after itself.** The first time `generate_image` or `generate_video` runs without a
+key, a small window opens on the user's screen. The user pastes the NOVIKONTAS shared key, and the
+server checks and saves it. Before the first generation, tell the user in one line:
+*"A small window will open asking for the Gemini key — paste it there (ask Raivis if you don't have it)."*
+If they want to change the key, call `setup_api_key`. If a tool reports the window was closed or
+could not open, pass its message on. **Never ask for the key in the chat, never write it into a
+file yourself, never echo it.**
 
 ---
 

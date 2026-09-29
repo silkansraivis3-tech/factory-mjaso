@@ -1,43 +1,31 @@
 {
   "name": "nano-banana",
   "displayName": "NOVIKONTAS Nano Banana",
-  "version": "1.0.0",
-  "description": "Realistic, 3D and photo-like images (Google Nano Banana) and short realistic or 3D animation clips (Google Veo) for presentations, decks, handouts and course screens. Claude writes the brief and the prompt, generates, opens and checks the result, rejects and retries, then packages the file locally and places it - instead of drawing a fake 'realistic' picture in SVG. Needs one Gemini API key.",
+  "version": "1.1.0",
+  "description": "Realistic, 3D and photo-like images (Google Nano Banana) and short realistic or 3D animation clips (Google Veo) for presentations, decks, handouts and course screens. Claude writes the brief and the prompt, generates, opens and checks the result, rejects and retries, then packages the file locally and places it - instead of drawing a fake 'realistic' picture in SVG. Needs one Gemini API key: the first time a picture is asked for, a small window opens and the user pastes it there - never into the chat.",
   "author": {
     "name": "Raivis Silkans",
     "email": "raivis.silkans@novikontas.org"
   },
   "homepage": "https://github.com/silkansraivis3-tech/factory-mjaso",
   "repository": "https://github.com/silkansraivis3-tech/factory-mjaso",
-  "keywords": ["image-generation", "nano-banana", "gemini", "veo", "3d", "photorealistic", "presentation", "slides"],
-  "userConfig": {
-    "gemini_api_key": {
-      "type": "string",
-      "title": "Gemini API key",
-      "description": "NOVIKONTAS shared key - ask Raivis. Paste it once; it is kept in the system's secure credential store, never in settings.json. Leave empty to skip: the course tools still work, only realistic image generation waits for a key.",
-      "sensitive": true
-    },
-    "image_model": {
-      "type": "string",
-      "title": "Default image model",
-      "description": "gemini-3.1-flash-image (Nano Banana 2, fast, default) or gemini-3-pro-image (Nano Banana Pro, best quality, slower and dearer).",
-      "default": "gemini-3.1-flash-image"
-    },
-    "video_model": {
-      "type": "string",
-      "title": "Default video model",
-      "description": "veo-3.1-fast-generate-preview (default), veo-3.1-generate-preview (best) or veo-3.1-lite-generate-preview (cheapest).",
-      "default": "veo-3.1-fast-generate-preview"
-    }
-  },
+  "keywords": [
+    "image-generation",
+    "nano-banana",
+    "gemini",
+    "veo",
+    "3d",
+    "photorealistic",
+    "presentation",
+    "slides"
+  ],
   "mcpServers": {
     "nano-banana": {
       "command": "python",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/server/nano_banana_mcp.py"],
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/server/nano_banana_mcp.py"
+      ],
       "env": {
-        "NANO_BANANA_API_KEY": "${user_config.gemini_api_key}",
-        "NANO_BANANA_IMAGE_MODEL": "${user_config.image_model}",
-        "NANO_BANANA_VIDEO_MODEL": "${user_config.video_model}",
         "PYTHONIOENCODING": "utf-8"
       }
     }

@@ -52,8 +52,10 @@ Agent: **`visual-sourcer`** — isolated-context asset investigation only.
 for Gemini image (Nano Banana) and Veo video generation, the `realistic-visuals` skill and the
 `image-director` agent. `course-factory` 2.10.0 declares it as a **dependency**, so it installs with
 the factory. It is level 4 *generated illustration* of the `course-visuals` pipeline, never a
-replacement for an authored schematic. One shared Gemini key, entered by each colleague in the
-plugin's `userConfig` (sensitive, optional); **never commit a key to this public repo.**
+replacement for an authored schematic. One shared Gemini key. There is no `userConfig`: on first
+use without a key, the server opens a tkinter window (PowerShell/osascript fallback), the user
+pastes the key, it is checked, and it is saved to `~/.config/nano-banana/gemini_api_key`. The key
+never passes through the chat. **Never commit a key to this public repo.**
 
 The boundary that gets blurred: `course-module-ui` owns the **card as a component**. Using cards as
 the *answer to a teaching need* is `course-visuals` failing to name the need. Neither restates the

@@ -45,13 +45,13 @@ The course tools bring a second plugin, **nano-banana**, with them — you do no
 separately. It lets Claude make real photo-like and 3D pictures, and short realistic animations,
 for slides and course screens.
 
-It needs **one key**, which NOVIKONTAS shares. **Ask Raivis for it.** During the install Claude Code
-shows a box called **Gemini API key** — paste it there, once. It is kept in Windows' secure
-storage. If the box did not appear, or you skipped it: `/plugin` → **nano-banana** → **Configure**.
+It needs **one key**, which NOVIKONTAS shares. **Ask Raivis for it.** You don't set anything up in
+advance. The first time you ask for a realistic picture, a small window called
+**NOVIKONTAS - Nano Banana** opens. Paste the key there and press **Save**. That is the only time.
 
 **Never paste the key into the chat, an email to anyone else, or a file in a course folder.**
 
-Check it: type *nano banana status*. It should say `key_works: true`.
+To change the key later, just say *"change the nano banana key"* and the window opens again.
 
 Then just ask in plain words, e.g. *"make the title slide a photorealistic picture of an LNG carrier
 at sea"* or *"I want realistic explanatory photos on these slides"*. Claude makes the picture, looks

@@ -34,8 +34,9 @@ Follow the `realistic-visuals` skill exactly. For each requested visual:
 Keep the style consistent across a set: after the first approved image, pass it as a reference for
 the rest.
 
-Do not ask for, read, print or store the API key. If a tool reports no key, stop and report
-`NO_KEY` — the user sets it themselves.
+Do not ask for, read, print or store the API key. With no key, the first generation opens a key
+window on the user's screen by itself. If a tool still reports no key (the window was closed, or
+could not open), stop and report `NO_KEY` with the tool's message.
 
 ## Report — short
 

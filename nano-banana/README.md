@@ -13,7 +13,7 @@ places it.
 | `skills/realistic-visuals/` | when to generate and when to draw, the prompt shot-list, the check-every-image loop, embedding in HTML and PPTX, provenance |
 | `agents/image-director.md` | does a whole set of images or clips in isolated context and returns paths only |
 
-Tools: `generate_image` · `generate_video` · `get_video` · `nano_banana_status`.
+Tools: `generate_image` · `generate_video` · `get_video` · `setup_api_key` · `nano_banana_status`.
 
 ## Install
 
@@ -23,17 +23,17 @@ marketplace auto-update (or `/reload-plugins`).
 
 Standalone, if ever needed: `/plugin install nano-banana@novikontas-course-factory`.
 
-**The key.** NOVIKONTAS uses one shared Gemini key, handed out by Raivis privately. Claude Code asks
-for it when the plugin is enabled and keeps it in the system credential store (never in
-`settings.json`, never in this repo — the repo is public). The key is optional at install time, so
-skipping it never disables the course factory; generation just reports that a key is missing. To
-set or change it later: `/plugin` → **nano-banana** → **Configure**.
+**The key.** NOVIKONTAS uses one shared Gemini key, which Raivis hands out privately. Nobody
+configures anything in advance. The first time someone asks for a realistic picture, a small window
+opens on their screen. They paste the key there, the key is checked against Google, and it is saved
+to `~/.config/nano-banana/gemini_api_key` in their own user profile. It never goes through the chat
+and never goes into this repo (the repo is public). To change it: *"change the nano banana key"*
+(tool `setup_api_key`).
+Without a window, e.g. on a headless machine, set the environment variable `GEMINI_API_KEY` instead.
+The course factory works with or without a key.
 
 For the owner of the shared key: in Google AI Studio / Cloud Console, restrict the key to the
 Generative Language API, set a budget alert, and rotate it if it ever leaks or someone leaves.
-
-Alternative (e.g. the key is shared by several tools): set the environment variable
-`GEMINI_API_KEY` for your user, and restart Claude Code.
 
 Needs `python` on the PATH (3.8+).
 
