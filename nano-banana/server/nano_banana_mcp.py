@@ -37,7 +37,7 @@ import time
 import urllib.error
 import urllib.request
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 API = "https://generativelanguage.googleapis.com/v1beta"
 
 DEFAULT_IMAGE_MODEL = "gemini-3.1-flash-image"   # Nano Banana 2 - the generalist
@@ -259,7 +259,12 @@ def http(method, url, body=None, timeout=300, raw=False, key=None):
             detail = j.get("error", {}).get("message", detail)
         except (ValueError, AttributeError):
             pass
-        raise ApiError(e.code, _redact("HTTP %s: %s" % (e.code, detail[:800])))
+        if e.code == 429 and "free_tier" in detail:
+            detail = ("The Gemini key is on Google's FREE tier, which gives image and video models "
+                      "no quota at all. The key's owner (Raivis) must turn on billing for its project "
+                      "at https://aistudio.google.com/apikey - the key itself stays the same. "
+                      "| " + detail)
+        raise ApiError(e.code, _redact("HTTP %s: %s" % (e.code, detail[:1200])))
     except urllib.error.URLError as e:
         raise ApiError(0, "network error: %s" % e.reason)
     if raw:

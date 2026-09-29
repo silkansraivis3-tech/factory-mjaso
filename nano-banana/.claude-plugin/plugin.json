@@ -1,7 +1,7 @@
 {
   "name": "nano-banana",
   "displayName": "NOVIKONTAS Nano Banana",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Realistic, 3D and photo-like images (Google Nano Banana) and short realistic or 3D animation clips (Google Veo) for presentations, decks, handouts and course screens. Claude writes the brief and the prompt, generates, opens and checks the result, rejects and retries, then packages the file locally and places it - instead of drawing a fake 'realistic' picture in SVG. Needs one Gemini API key: the first time a picture is asked for, a small window opens and the user pastes it there - never into the chat.",
   "author": {
     "name": "Raivis Silkans",
