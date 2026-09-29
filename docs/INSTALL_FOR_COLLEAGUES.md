@@ -39,6 +39,25 @@ Start Claude Code by typing `claude`, then type these two lines:
 
 **Done.** Check it worked — `/plugin` should list **course-factory 2.1.0**, enabled.
 
+### Realistic and 3D pictures come with it
+
+The course tools bring a second plugin, **nano-banana**, with them — you do not install it
+separately. It lets Claude make real photo-like and 3D pictures, and short realistic animations,
+for slides and course screens.
+
+It needs **one key**, which NOVIKONTAS shares. **Ask Raivis for it.** During the install Claude Code
+shows a box called **Gemini API key** — paste it there, once. It is kept in Windows' secure
+storage. If the box did not appear, or you skipped it: `/plugin` → **nano-banana** → **Configure**.
+
+**Never paste the key into the chat, an email to anyone else, or a file in a course folder.**
+
+Check it: type *nano banana status*. It should say `key_works: true`.
+
+Then just ask in plain words, e.g. *"make the title slide a photorealistic picture of an LNG carrier
+at sea"* or *"I want realistic explanatory photos on these slides"*. Claude makes the picture, looks
+at it, redoes it if it is wrong, and puts it on the slide. Labelled diagrams and charts it still
+draws itself — a picture generator invents pipes that do not exist.
+
 ---
 
 ## Updates

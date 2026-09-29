@@ -157,9 +157,11 @@ and state; **HTML/CSS/JS** for state-driven process; **Canvas** only where SVG g
 When nothing suitable exists at any level and a realistic illustration genuinely is the right
 medium, emit the marker **with a complete brief** — `schemas/GENERATED_ASSET_BRIEF.md`.
 
-There is **no image-generation MCP in this plugin**, deliberately. The brief is the contract for
-when there is one, and it is useful immediately: a human can take it to any generator, or
-commission a photograph from it.
+There is **no image-generation MCP in this plugin**, deliberately — it lives in the sibling
+**`nano-banana`** plugin of the same marketplace. When that is installed, turn the brief into its
+prompt and generate with `generate_image` (`realistic-visuals` skill, or the `image-director`
+agent for a set). When it is not, the brief is still useful immediately: a human can take it to
+any generator, or commission a photograph from it.
 
 A brief without every field is not a brief. The forbidden-inaccuracies field is the one that stops
 a generated image teaching something false, and it is the one most often left empty.

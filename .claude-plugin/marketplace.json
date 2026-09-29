@@ -11,6 +11,11 @@
       "name": "course-factory",
       "source": "./plugin",
       "description": "Turn an approved training programme into a finished course on the NOVIKONTAS Android tablets: the accredited-hours law, ILO immutability, the one-page instructor module, the locked visual system, what representation actually teaches a concept, the asset pipeline with provenance and rights, trainee task screens, and a publisher that separates trainee from instructor material."
+    },
+    {
+      "name": "nano-banana",
+      "source": "./nano-banana",
+      "description": "Realistic, 3D and photo-like images (Google Nano Banana) and short realistic/3D animation clips (Google Veo) for presentations, decks and course screens. Claude writes the prompt, generates, checks every result, retries, and places the file locally - instead of faking realism in SVG. Needs a Gemini API key, asked for once and kept in the system credential store."
     }
   ]
 }

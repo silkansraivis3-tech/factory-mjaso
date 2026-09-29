@@ -48,6 +48,13 @@ will not update without it), push, then `claude plugin marketplace update` and `
 
 Agent: **`visual-sourcer`** — isolated-context asset investigation only.
 
+**Second plugin, `nano-banana`** (`./nano-banana`, 1.0.0, 2026-09-29) — a stdlib-Python MCP server
+for Gemini image (Nano Banana) and Veo video generation, the `realistic-visuals` skill and the
+`image-director` agent. `course-factory` 2.10.0 declares it as a **dependency**, so it installs with
+the factory. It is level 4 *generated illustration* of the `course-visuals` pipeline, never a
+replacement for an authored schematic. One shared Gemini key, entered by each colleague in the
+plugin's `userConfig` (sensitive, optional); **never commit a key to this public repo.**
+
 The boundary that gets blurred: `course-module-ui` owns the **card as a component**. Using cards as
 the *answer to a teaching need* is `course-visuals` failing to name the need. Neither restates the
 other, and `course-visuals` deliberately contains no colour, radius, contrast or tap-size rule.

@@ -195,8 +195,9 @@ Two escalations, and neither is silent:
 - **`RIGHTS_REVIEW_REQUIRED`** — rights unclear or restricted. **Blocks shipping.** An uncleared
   publisher figure has already blocked a whole course in this system once.
 - **`GENERATED_ASSET_REQUIRED`** — nothing suitable exists at any level. Emit the full generation
-  brief in `source/schemas/GENERATED_ASSET_BRIEF.md`. There is no image-generation MCP yet; the
-  brief is the contract for when there is.
+  brief in `source/schemas/GENERATED_ASSET_BRIEF.md`. If the **`nano-banana`** plugin is installed,
+  the brief is fed to its `generate_image` / `generate_video` tools (its `realistic-visuals` skill
+  runs the prompt → generate → open and check → retry loop); otherwise the brief is the handoff.
 
 `scripts/resolve_asset.py` runs levels 1 and 2 mechanically. Level 3 is judgement and belongs to the
 **`visual-sourcer`** agent, which works in isolated context and returns a short report.

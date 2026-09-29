@@ -3,9 +3,11 @@
 Emitted when levels 1–3 of the asset pipeline found nothing suitable **and** a realistic or
 illustrative image is genuinely the right medium for the learning need.
 
-**There is no image-generation MCP in this plugin.** This brief is the contract for when there is
-one, and it is useful immediately — a human can take it to any generator, or commission a
-photograph or an illustrator from it.
+**There is no image-generation MCP in this plugin** — it is the sibling **`nano-banana`** plugin.
+With that installed, this brief is the source of the prompt for its `generate_image` tool, and §7
+is the checklist every result is opened and checked against. Without it, the brief is still useful
+immediately — a human can take it to any generator, or commission a photograph or an illustrator
+from it.
 
 **A brief missing any field is not a brief.** The two that get left empty are *forbidden
 inaccuracies* and *what must be visible*, and they are the two that stop a generated image teaching
