@@ -273,18 +273,28 @@ could.
 
 ## The gate — approved before anything is built
 
-Changing a table row is free. Changing eight built modules is not. Present this and **stop**:
+Changing a table row is free. Changing eight built modules is not. This is **Stage 2 → STOP**, and
+the operator reviews it as **one page**:
+
+    python scripts/make_architecture_page.py --course <course folder>
+
+It reads `programme.json`, `plan.json` and `architecture.json` from the course folder and writes
+`ARCHITECTURE_REVIEW.html` — one file that opens with a double-click and prints to PDF. On it:
 
 | | |
 |---|---|
-| **Programme** | document, edition, academic-hour length, total hours (theory / practical) |
-| **Module split** | module → topic numbers → allocated minutes, with the column summing to the programme total |
-| **Ratio** | practical % achieved, and if under target, where active learning carries the theory |
-| **Per module** | screen count, task codes, what the module check is, whether a practical needs a facility |
-| **Markers** | every `UNKNOWN`, `PLACEHOLDER`, `PROVISIONAL`, `[VERIFY: …]` raised so far |
+| **Hours** | every module → the **programme topics and rows** its minutes come from → theory / practice → minutes; the plan checked against them (L1) |
+| **Main ILOs** | exactly as the programme writes them, in COURSE_LANGUAGE (L2) |
+| **Sub-ILOs** | every one beside the programme's own wording, marked **kept / re-expressed / added**, with the reason — the operator's "next" ratifies them |
+| **Per module** | where theory is taught as activity (L5) · practical tasks and their equipment (L28) · self-checks and the module check, not graded (L27) |
+| **Final assessment** | graded, with the programme's pass mark |
 
-Nothing is built until the operator approves that table. The module split and the minutes are
-the expensive things to get wrong.
+Programme text appears verbatim in COURSE_LANGUAGE; the headings and explanations are in the
+operator's language (`architecture.json` → `operator_language`: `en` / `lv` / `ru`,
+`knowledge/page-labels.json`). Run it with `--check` first: anything the page would flag — hours
+that disagree, a Sub-ILO change without the programme wording, a graded module check — is fixed or
+shown at the top. Markers stay in `factory-notes.md` (L31). Nothing is built until the operator
+says "next"; then record it in `COURSE_STATE.md` (L32).
 
 ## Build order
 

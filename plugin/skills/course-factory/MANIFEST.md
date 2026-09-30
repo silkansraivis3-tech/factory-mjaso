@@ -52,6 +52,8 @@ course-factory/
 │   ├── COURSE_PATTERN.md                 what a finished course teaches the next one - approved by the operator (L32, 2.14.0)
 │   └── factory-notes.md                  companion file, written by the skill during the run
 ├── scripts/course_memory.py, test_course_memory.py   start / check the state; draft and approve a pattern; list approved patterns
+├── scripts/make_architecture_page.py, test_architecture_page.py   the Stage 2 STOP as one page (2.15.0)
+├── knowledge/page-labels.json            the review pages' own words in the operator's language (en / lv / ru)
 ├── hours/                                READ IN: plan mode, and audit
 │   ├── GUIDE.md
 │   ├── knowledge/hours-rules.json        every number and rule (authority)
@@ -241,6 +243,29 @@ The publisher now sorts `COURSE_STATE.md`, `FEEDBACK_LOG.md`, `COURSE_PATTERN_*.
 covered before; no file of any of these names exists in the Android project, so GAS BASIC's
 publishing is unchanged. The first attempt at that publisher change failed silently on shell escaping;
 the new test caught it before anything was reported, and every edit since is re-read after saving.
+
+## 4g · The architecture page (2.15.0, 2026-09-30, Phase 5 step 4)
+
+The Stage 2 STOP used to be a table in the chat. It is now `ARCHITECTURE_REVIEW.html`, written by
+`scripts/make_architecture_page.py` from `programme.json` and `plan.json` (the same files
+`check_hours.py` reads, with optional verbatim topic `title` and programme `ref` per topic, and
+optional `main_ilos`) plus `architecture.json` (ILOs, Sub-ILO changes, active learning, practicals,
+test plan). One self-contained file: the style is inlined from `gb_tokens.css` and `gb_page.css`,
+nothing is fetched, and it prints to PDF.
+
+The owner's three conditions: **every Sub-ILO beside the programme's own wording, marked kept /
+re-expressed / added**, with the reason, because "next" ratifies them; **programme text and Main ILOs
+verbatim in COURSE_LANGUAGE** (marked with its `lang`), headings and explanations in the operator's
+language (`knowledge/page-labels.json`, en / lv / ru, every label present in all three); **each
+module's hours with the programme topics and rows they come from**, checked against the plan.
+`--check` catches hours that disagree, unclaimed topics, a Sub-ILO change with no programme wording,
+an added one with no reason, a Main ILO that is not word for word, a graded module check and an
+ungraded final (L1, L2, L27) — and the page puts them at the top, before what "next" approves.
+
+The page and its three input files are INTERNAL to the publisher. The page was checked in headless
+Chrome (screenshot) and prints to a 4-page PDF for the example; the printed pages themselves were not
+looked at, because no PDF renderer is installed on this machine. Stage 2 does not show a screen count
+any more — screens come out of the Stage 3 script.
 
 ## 5 · Known gaps / before this goes live
 

@@ -142,7 +142,9 @@
    "(^|/)COURSE_STATE\\.md$",
    "(^|/)FEEDBACK_LOG\\.md$",
    "(^|/)COURSE_PATTERN_[^/]*\\.md$",
-   "(^|/)factory-notes\\.md$"
+   "(^|/)factory-notes\\.md$",
+   "(^|/)ARCHITECTURE_REVIEW\\.html$",
+   "(^|/)(programme|plan|architecture)\\.json$"
   ],
   "instructor_only_filename_patterns": [
    [
