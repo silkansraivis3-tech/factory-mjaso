@@ -23,7 +23,8 @@
     }
   },
   "scope": {
-    "modules_only": "Topics whose hours sit outside the modules are excluded from the module budget. On GAS BASIC that is the final assessment (topic 23, 2 h), which is separate from every module check.",
+    "one_module_per_topic": "L34 (owner, 2026-09-30, 2.17.0): every programme topic is its own module, in the programme's order, with exactly its hours; the final-assessment topic is the LAST module and the assessment only (GAS BASIC: module 23, 2 h = 80 min). Topics are never merged or split. This supersedes modules_only below for the final assessment.",
+    "modules_only": "Topics whose hours sit outside the modules are excluded from the module budget. On GAS BASIC that is the final assessment (topic 23, 2 h), which is separate from every module check. [Superseded for the final assessment by one_module_per_topic - 2.17.0.]",
     "detect": "A topic is outside the modules when no module claims it in the module->topics map. List these explicitly at the gate rather than letting them vanish."
   },
   "practical_ratio": {

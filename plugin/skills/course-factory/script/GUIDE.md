@@ -7,8 +7,19 @@ built module obeys it is `scripts/check_script_match.py`.
 
 ## 1 · Write the script
 
-`<course>/_factory/script/M01.json` — every screen **in the order the trainee meets it**. Each
-self-check and each module-check question is **its own screen**, where it will appear.
+`<course>/_factory/script/M01.json` — the whole lesson **in the order it is taught**. It runs on two
+tablets (L35, owner 2026-09-30), and the script says which screen is where:
+
+- **Instructor tablet** - `slide`, `task-slide` and `activity` screens: what the classroom screen shows,
+  with the notes on the instructor's panel. A task is **never** on a slide. Where a task begins there is
+  a `task-slide`: its words only say that a task starts now and what it is about; `"opens"` names the
+  task; on the instructor's panel it is the OPEN TASK button, and its `minutes` are the task's time.
+- **Trainee tablet** - `self-check`, `module-check` and `final` questions, each with `"set"` (SC1, SC2 …,
+  MC, FA). A set's questions come **straight after** the task slide that opens it. One question per
+  screen; at the end the trainee sees their own score - it is for them, and a self-check or module
+  check never counts (L27). No task list, no browsing, no "back to tasks".
+- `minutes_allocated` is the module's minutes from the programme (L1, L34); the instructor-tablet
+  minutes must add up to it exactly.
 
 ```json
 {"module": 1, "title": "<module title, course language>", "course_language": "English",
@@ -16,18 +27,29 @@ self-check and each module-check question is **its own screen**, where it will a
  "operator_facts": [{"fact": "<what the operator said>", "where": "s03", "said": "2026-10-01"}],
  "screens": [
   {"id": "s01", "kind": "slide", "title": "…", "text": "line one\nline two",
-   "visual": "<the picture planned, and where it comes from>", "notes": "<instructor only>", "minutes": 3},
-  {"id": "q01", "kind": "self-check", "question": "…", "options": ["…", "…", "…"], "correct": "A",
+   "visual": "<the picture planned, and where it comes from>", "notes": "<instructor only>", "minutes": 5},
+  {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - …",
+   "text": "<only: a task starts now, and what it is about>", "notes": "…", "minutes": 4},
+  {"id": "q01", "kind": "self-check", "set": "SC1", "question": "…", "options": ["…", "…", "…"], "correct": "A",
    "feedback": "<what the trainee sees after answering>", "mechanic": "tap to choose"},
-  {"id": "m01", "kind": "module-check", "question": "…", "options": ["…", "…"], "correct": "B",
+  {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Module check - …", "text": "…", "notes": "…", "minutes": 6},
+  {"id": "m01", "kind": "module-check", "set": "MC", "question": "…", "options": ["…", "…"], "correct": "B",
    "feedback": "…", "mechanic": "tap to choose", "graded": false}]}
 ```
 
 - `text` is the **exact visible words** of the slide, not a description of them. One line per line.
+- **Enough theory (L36, `knowledge/theory-rules.json`).** A slide carries the teaching itself - the facts,
+  numbers, names and reasons its Sub-ILO needs - not a headline (50-150 words, title included); the notes
+  carry what the instructor explains, adds or asks beyond it (30 words or more); the module's slides and
+  notes together fill its theory minutes (40 words a minute or more). A self-check comes only after a
+  block of new theory (10 min and 400 words since the last task), and every question's correct answer
+  must already be in the slides before it - write the slide that teaches it first, then the question.
+  A module with less theory than that has no self-check; its module check covers it.
 - Course text (titles, text, questions, answers, feedback) is in COURSE_LANGUAGE; the notes on the
   page and in the Word file around it are in the operator's language.
-- Kinds: `slide`, `self-check`, `module-check`, `final`, `activity`. Module checks are never graded
-  (L27) and come at the end of the module; a final-assessment script holds `final` questions.
+- Kinds: `slide`, `task-slide`, `activity` (instructor tablet); `self-check`, `module-check`, `final`
+  (trainee tablet). Module checks are never graded (L27) and come at the end of the module; a
+  final-assessment script (`--module final`, the last module, L34) holds a task slide and `final` questions.
 - Every fact the operator stated is listed once, at the top of the review — from `operator_facts`
   and from `FEEDBACK_LOG.md` rows marked *operator-stated* for this module.
 - NEW_ENTRANT or EXPERIENCED changes how much is explained and how (`knowledge/course-type.json`).
@@ -39,6 +61,10 @@ python scripts/content_script.py render <course> --module 1
 ```
 
 writes `review/M01_SCRIPT_REVIEW.html` (opens with a double-click, prints to PDF) and
+`review/M01_SCRIPT.docx`, both in two parts: **part 1, the instructor tablet** (every slide, and the
+OPEN TASK button on each task slide) and **part 2, the trainee tablet** (every task, one question per
+screen, each showing the slide that teaches its answer). At the top: the module in numbers - minutes
+against the programme's, words per theory minute - and the findings of both checks. It writes
 `review/M01_SCRIPT.docx` — **the operator's copy is the Word file** (owner, 2026-09-30). Every
 editable text is its own grey box, locked against deletion, open for typing. Fix every problem
 `render` lists before showing it.
@@ -86,6 +112,12 @@ python scripts/content_script.py approve <course> --module 1 --by "<name>"
 
 Refused while a pending list waits or the script has problems. **Any change after approval makes it a
 draft again.** Record the approval in `COURSE_STATE.md` (L32). `status` says where a module stands.
+
+**The theory check runs on the script, before any HTML** (2.17.0, L36): a slide too thin to teach from,
+notes too thin to explain from, a module whose words do not fill its minutes, a self-check after too
+little theory or with too few questions, a question whose answer the trainee has not been taught yet,
+and a task written onto its slide. A slide longer than the room can read from the screen is a note.
+Its findings head the review page and the Word file, and block approval the same way as the text check.
 
 **The text check runs on the script, before any HTML** (2.16.1). `render` puts the same four rules
 the finished slides get (`scripts/check_slide_text.py`, L22) over every screen: internal abbreviations,

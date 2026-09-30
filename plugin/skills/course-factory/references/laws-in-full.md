@@ -209,7 +209,7 @@ could.**
 
 ---
 
-## Phase 5 — the owner's decision record (L26–L33, 2.12.0)
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0)
 
 Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
 these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
@@ -246,14 +246,19 @@ one line and do what was asked.
 
 **L27 · Three test levels, all on the tablet, and only the final assessment is graded.**
 
+*Revised by the owner, 2026-09-30 (2.17.0): the tests are on the **trainee tablet only**, never inside the
+slides (L35); a self-check **does** show the trainee a score — "it's for himself"; the module check does too.
+Neither counts. The table below is the 2.12.0 text; where it says otherwise, this note wins.*
+
 | Level | Where | Graded |
 |---|---|---|
-| Self-check | inside the presentation, after key concepts | no |
+| Self-check | inside the presentation, after key concepts *(2.17.0: on the trainee tablet, opened by the instructor after the theory it tests — L35, L36)* | no |
 | Module check | the end of every module | **no** — a self-check that the module was understood |
 | Final assessment | the end of the course | **yes** — the only graded test |
 
 One task per screen, large touch targets, Next → Next, clear feedback on every self-check; no score
-shown on an ungraded check unless the score itself helps the trainee learn. The ungraded module
+shown on an ungraded check unless the score itself helps the trainee learn. *(2.17.0, owner: it does —
+every self-check and module check ends on the trainee's own score.)* The ungraded module
 check **still waits for the instructor's unlock**. The instructor's screen shows *done / not done*
 and the result as information — never pass or fail, never red. The tablet app's own web files
 colour a check red today; the factory writes the exact change list and the owner applies it (L21).
@@ -265,7 +270,8 @@ The course type is declared at intake and changes the build:
 
 - `NEW_ENTRANT` — no prior knowledge. More theory and explanation, more screens, more worked
   examples, step-by-step build-up. When in doubt, explain more: missing an important point is worse
-  than one extra slide. More explanation means **more screens**, not denser ones.
+  than one extra slide. More explanation means **more screens**, not denser ones — and every one of
+  them still carries enough theory to teach from (L36).
 - `EXPERIENCED` — upgrade, advanced, revalidation. Theory still present, shorter, anchored in real
   experience — incidents, scenarios, "what would you do". More digital tasks and scenario exercises.
 
@@ -279,7 +285,8 @@ Novikontas**. Practical tasks are designed for it; the factory does not ask whet
 **L29 · The words are approved before the HTML.**
 Before any HTML, each module gets a **content script**: the exact, word-for-word text of every
 slide (not a description of it), the visual planned for each, the instructor notes — key points
-and cues, not a speech — and every self-check and module-check question with its correct answer
+and cues, not a speech *(2.17.0, owner: the notes carry what the instructor explains, adds or asks
+beyond the slide, enough to teach from — L36)* — and every self-check and module-check question with its correct answer
 and feedback; for the course, the final-assessment bank with answers. It is delivered as a page
 that opens with a double-click and prints to PDF, plus an editable twin. The operator corrects it
 in chat, in comments or in the twin; the corrections are applied back. **Nothing moves to HTML
@@ -299,7 +306,8 @@ As the owner set it for step 5 (2026-09-30):
   a short plain list of what was understood (*"slide 7: X becomes Y; question 3: answer changed to B"*),
   and it is applied only after they confirm;
 - **self-checks and the module check are shown in screen order, one task per screen**, as the trainee
-  will see them.
+  will see them. *(2.17.0: shown on the trainee tablet part of the review, each opened by its "task
+  starts" slide - L35.)*
 
 → built out in 2.16.0: `script/GUIDE.md`, `scripts/content_script.py`, `scripts/check_script_match.py`.
 
@@ -365,3 +373,67 @@ sake of it.
 
 Never stop at "I can't make this picture": find it, generate it where that is allowed, or finish
 everything else and leave the ready-to-run handoff (L23). → built out in `course-visuals` (step 8).
+
+---
+
+### Added by the owner after reviewing the example pages (2026-09-30, 2.17.0)
+
+**L34 · One module per programme topic; the final assessment is the last module, and nothing else.**
+*"Modules need to be as many as in the study programme - GAS BASIC has 22 modules/topics, each with its
+own academic hours, and an academic hour is 40 min. Module 23 is the assessment task, only the task."*
+
+- Every topic of the approved programme's topic/hours table is its own module, numbered and ordered as
+  the programme numbers it, with exactly that topic's theory and practice hours. Topics are never merged
+  into one module and never split across two.
+- The programme's final-assessment topic (GAS BASIC: topic 23, 2 h) is the **last module** and is the
+  assessment only: no slides, no teaching, no self-check. It is not "outside the modules".
+- An academic hour is what the programme says; at Novikontas it is 40 minutes, used when the programme
+  is silent - and the architecture page says so.
+- This replaces `hours/GUIDE.md` step 3's "you may combine topics into a module freely" and step 2's
+  final assessment "outside the modules"; both are marked there.
+- → `scripts/make_architecture_page.py`, `scripts/test_architecture_page.py`.
+
+**L35 · Two tablets: the slides on the instructor's, the tasks on the trainee's, and the instructor opens every task.**
+*"I have tablets: one for the instructor, with a terminal that mirrors the screen on the web, and a tablet
+for the trainee where there are only tests."* And: *"When it is time for a task, the slide only explains
+that there will now be a task, and on the instructor's panel there is a button OPEN TASK; after that it
+opens automatically on each trainee tablet. The trainee cannot see all tasks on one page or navigate
+through them - only when the instructor opens that task - and there are no other buttons like ALL TASKS
+or back to all module tasks."*
+
+- **Instructor tablet:** the slides, mirrored to the classroom screen; the notes on the instructor's panel
+  only. A task is never on a slide. At task time the slide is a *task starts* slide - what the task is
+  about, nothing more - and the panel has one button, OPEN TASK.
+- **Trainee tablet:** tasks only - self-checks, module checks, the final assessment. A task opens on every
+  trainee tablet by itself when the instructor presses OPEN TASK, and only then. No task list, no
+  browsing, no way to open another task, no "all tasks", "module tasks" or "back to tasks" button.
+  One question per screen, Next → Next, and at the end the trainee's own score.
+- **Scores:** self-checks and module checks show the trainee their own score - it is for them - and do not
+  count. The instructor sees done / not done and the result as information, never pass/fail, never red.
+  The final assessment is the only graded test.
+- This supersedes the trainee-side task list, "module tasks" page and task-to-task navigation in
+  `course-task-ux` §3; those rulings are marked there. The tablet app's web files do not work this way
+  yet: the factory writes the exact change list and the owner applies it (L21, Q1) - step 6.
+- → `scripts/content_script.py` (task slides, the two parts of the review), `knowledge/theory-rules.json`
+  (`tablets`), `scripts/make_architecture_page.py`.
+
+**L36 · Enough theory before any task.**
+*"Slide text is too small - a little amount of words; I doubt the instructor will get through it, and with
+that little information can the topic be taught?"* And: *"Before a self-check there should be enough
+theory so the trainee can actually do that task and understand it - not 100 words of theory and the task
+already."*
+
+- A slide carries the teaching itself - the facts, numbers, names and reasons the Sub-ILO needs - not a
+  headline for the instructor to fill in; the instructor notes carry what the instructor explains, adds or
+  asks beyond it.
+- A module's words fill its minutes; a self-check comes only after a block of new theory; every question's
+  answer is in the slides the trainee has already seen; a module too short for a self-check has only its
+  module check.
+- The numbers are in `knowledge/theory-rules.json` (50-150 words on a slide, 30 in the notes, 40 words per
+  theory minute, 10 min and 400 words before a self-check, 60 % of an answer's key words already taught)
+  and nowhere else. Every finding is shown on the review page; approval is refused while a must-fix one
+  stands, unless the operator approves despite it (L26), which is recorded.
+- This refines `course-module-ux`'s compactness budgets: those govern the instructor's *working* screens
+  during a session (runner cards, pre-flight), not a theory slide, which must carry the theory.
+- → `scripts/content_script.py` (`theory_findings`), `scripts/make_architecture_page.py` (whether the
+  planned self-checks fit).

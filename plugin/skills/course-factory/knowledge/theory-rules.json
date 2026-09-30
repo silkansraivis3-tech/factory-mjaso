@@ -1,0 +1,44 @@
+{
+  "_authority": "How much theory a module carries, and how much must be taught before a trainee is asked anything (L36). The owner, 2026-09-30: 'slide text is too small ... with that low info can [the] topic/ILO be taught?' and 'before [a self-check] there should be enough theory so the trainee can actually do that task and understand it - not 100 words of theory and the task already.' Read by scripts/content_script.py (Stage 3 - every finding is shown on the review page and must be fixed before approval, unless the operator approves despite it, L26) and scripts/make_architecture_page.py (Stage 2 - whether the planned self-checks fit the module's theory time). Change a number here and both follow; nothing else restates them.",
+
+  "slide": {
+    "min_words": 50,
+    "max_words": 150,
+    "_why": "A slide carries the teaching itself - the facts, numbers, names and reasons the Sub-ILO needs - not a headline for the instructor to fill in. The title counts. Under min_words the slide is too thin to teach from (must fix). Over max_words the room cannot read it from the classroom screen: split it into two slides (a note, not a must - NEW_ENTRANT wants more slides, L28)."
+  },
+  "notes": {
+    "min_words": 30,
+    "_why": "The instructor notes are what the instructor explains, adds or asks beyond the slide - the depth behind it, a real example, the question to put to the room. Under min_words the instructor has nothing to teach from but the slide (must fix)."
+  },
+  "module": {
+    "min_words_per_theory_minute": 40,
+    "_why": "Across a module, the slides' own words plus the instructor notes, divided by the slides' minutes. Under this the module's hours are claimed but not filled: the instructor runs out of material long before the time does (must fix). 40 words a minute is a slow, explained delivery - far below reading speed, so it is a floor, not a target."
+  },
+  "before_self_check": {
+    "min_minutes": 10,
+    "min_words": 400,
+    "_why": "A self-check comes only after a block of new theory: at least this many minutes of slides and this many words (slides + notes) since the module began or since the last task. A module whose theory is shorter than this has no self-check - its module check covers it."
+  },
+  "answers_taught_first": {
+    "min_share": 0.6,
+    "_why": "Every question's correct answer must be found in the slides the trainee has already seen - in their text or the instructor notes - before the task opens. The check compares the correct answer's key words (numbers exactly, words by their first five letters, so Latvian and Russian endings still match) with those slides; under this share of them, the question asks for something not yet taught (must fix). The review page shows, for every question, the slide that teaches its answer."
+  },
+  "self_check": {
+    "min_questions": 3,
+    "max_questions": 6,
+    "minutes_per_question": 1,
+    "_why": "Enough questions for the trainee's own score to mean something, few enough that the lesson keeps its pace."
+  },
+  "module_check": {
+    "min_questions": 5,
+    "minutes_per_question": 1,
+    "_why": "Every teaching module ends with one. It covers the whole module, so a short module (under before_self_check.min_minutes of theory) still has one."
+  },
+
+  "tablets": {
+    "_law": "L35 (owner, 2026-09-30). The course runs on two tablets.",
+    "instructor_tablet": "Shows the slides; the instructor terminal mirrors them to the classroom screen through the web view. The instructor notes are on the instructor's panel only. When it is time for a task, the slide on the screen only says that a task starts now and what it is about - the task itself is never on a slide - and the instructor's panel carries one button, OPEN TASK.",
+    "trainee_tablet": "Carries only tasks: self-checks, the module check and the final assessment. A task opens on every trainee tablet automatically when the instructor presses OPEN TASK - and only then. The trainee cannot see a list of tasks, cannot browse or open another task, and there is no 'all tasks', 'module tasks' or 'back to tasks' button. One question per screen, Next -> Next; at the end the trainee sees their own score.",
+    "scores": "Self-check and module check: the trainee sees their own score - it is for them - and it does not count towards the certificate. The instructor sees done / not done and the result, as information, never pass/fail, never red. The final assessment is the only graded test."
+  }
+}

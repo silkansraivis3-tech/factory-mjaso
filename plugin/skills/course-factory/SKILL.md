@@ -55,13 +55,16 @@ row wins** — even before its step has been built out. Full text: `references/l
 
 | | The rule | Built out in |
 |---|---|---|
-| **L27** | Three test levels on the tablet: self-checks and the **module check are ungraded**; the **final assessment is the only graded test**. The module check still waits for the instructor's unlock; the instructor sees done / not done and the result as information, never pass/fail or red | step 6 |
+| **L27** | Three test levels, all on the **trainee tablet**: self-checks and the module check show the trainee **their own score** — it is for them and does not count; the **final assessment is the only graded test**. Every task opens only when the instructor opens it (L35); the instructor sees done / not done and the result as information, never pass/fail or red | step 6 |
 | **L28** | Course type `NEW_ENTRANT` or `EXPERIENCED` is declared at intake and shapes the build (new entrants: more explanation, more screens, more worked examples). Every instrument and simulator in the IMO model course is assumed available — never asked | steps 2, 7 |
 | **L29** | Before any HTML, a word-for-word **content script** per module is approved by the operator; the slides then say exactly that. Facts the operator stated are listed there once per module, marked *operator-stated*, so they are checked before HTML — see *Stage 3* below | now |
 | **L30** | **Module 1 is a pilot**, built by five roles and approved before any other module is built | step 10 |
 | **L31** | Ask like a colleague: real expert questions batched as **one pop-up with options** at the next STOP, then carry on. No "needs SME review" spam. Honesty markers live in `factory-notes.md`, never on a slide, never a reason to stop; "next" at a STOP ratifies what it showed | now |
 | **L32** | `COURSE_STATE.md` updated at the end of every stage; every operator correction in `FEEDBACK_LOG.md`; a pattern file offered when the operator is happy — see *The course remembers* below | now |
 | **L33** | Pictures: KB → old course → source files → internet → authored → generated; keep legit old schematics; textbook figures redrawn **technically identical**, credited "after <book>", listed in `factory-notes.md`; equipment a trainee must recognise is **never** an AI image — schematic plus the "photos to take at Novikontas" list | step 8 |
+| **L34** | **One module per programme topic** — in the programme's order, with the programme's hours (GAS BASIC: 22 teaching modules). The programme's final-assessment topic is the **last module, and the assessment only**: no slides, no teaching. Topics are never merged or split. An academic hour is the programme's; at Novikontas 40 min when it is silent | now (2.17.0) |
+| **L35** | **Two tablets.** The slides run on the instructor tablet, mirrored to the classroom screen; the notes stay on the instructor's panel. Tasks are **only** on the trainee tablet. At task time the slide only says a task starts now and what it is about, and the instructor's panel has one button, **OPEN TASK**; the task then opens on every trainee tablet by itself. No task list, no browsing, no "all tasks" or "back to tasks" button | now in the script and architecture; the app's change list in step 6 |
+| **L36** | **Enough theory before any task.** A slide carries the teaching itself, not a headline; the notes carry what the instructor explains; a module's words fill its minutes; a self-check comes only after a block of new theory; every answer is taught before its task opens. Floors: `knowledge/theory-rules.json`, checked on the content script | now (2.17.0) |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
 predict-then-reveal, worked example then own attempt. More practice than theory; theory never removed.
@@ -278,18 +281,19 @@ the operator reviews it as **one page**:
 
     python scripts/make_architecture_page.py --course <course folder>
 
-It reads `programme.json`, `plan.json` and `architecture.json` from the course folder and writes
+It reads `programme.json` and `architecture.json` (and `plan.json`, optional) from the course folder and writes
 `ARCHITECTURE_REVIEW.html` — one file that opens with a double-click and prints to PDF. On it:
 
 | | |
 |---|---|
-| **Hours** | every module → the **programme topics and rows** its minutes come from → theory / practice → minutes; the plan checked against them (L1) |
+| **Modules** | **one per programme topic** (L34), in the programme's order: the topic and its sub-topics word for word → theory / practice → minutes → where they go (slides, self-checks, module check, practice); the last module is the final assessment only; the total checked against the programme's own total row (L1) |
+| **Tablets** | how the course runs: slides on the instructor tablet, tasks only on the trainee tablet, opened with OPEN TASK (L35) |
 | **Main ILOs** | exactly as the programme writes them, in COURSE_LANGUAGE (L2) |
 | **Sub-ILOs** | every one beside the programme's own wording, marked **kept / re-expressed / added**, with the reason — the operator's "next" ratifies them |
-| **Per module** | where theory is taught as activity (L5) · practical tasks and their equipment (L28) · self-checks and the module check, not graded (L27) |
+| **Per module** | where theory is taught as activity (L5) · practical tasks and their equipment (L28) · self-checks — only where the theory time allows one (L36) — and the module check: the trainee's own score, not counted (L27) |
 | **Final assessment** | graded, with the programme's pass mark |
 
-Programme text appears verbatim in COURSE_LANGUAGE; the headings and explanations are in the
+Programme text appears verbatim in the programme's own language, module titles in COURSE_LANGUAGE; the headings and explanations are in the
 operator's language (`architecture.json` → `operator_language`: `en` / `lv` / `ru`,
 `knowledge/page-labels.json`). Run it with `--check` first: anything the page would flag — hours
 that disagree, a Sub-ILO change without the programme wording, a graded module check — is fixed or
@@ -298,15 +302,20 @@ says "next"; then record it in `COURSE_STATE.md` (L32).
 
 ## Stage 3 — the content script, approved before any HTML (L29)
 
-`script/GUIDE.md` is the lane; `scripts/content_script.py` does it. Per module, the exact words of
-every screen **in trainee order — one task per screen** — with the planned picture, the instructor
-notes, every question with its answers, correct answer and feedback, and the operator-stated facts
-listed once. The operator gets a review page (prints to PDF) and a **Word file**; they correct by
+`script/GUIDE.md` is the lane; `scripts/content_script.py` does it. Per module, the whole lesson in
+teaching order, shown on the two tablets it runs on (L35): **part 1, the instructor tablet** — every
+slide's exact words, planned picture, minutes and instructor notes, and a *task starts* slide with
+OPEN TASK wherever a task begins; **part 2, the trainee tablet** — every task, one question per
+screen, with its answers, correct answer and feedback, ending on the trainee's own score. The
+operator-stated facts are listed once. The operator gets a review page (prints to PDF) and a **Word file**; they correct by
 typing, by Word comment or in the chat.
 
 **Every correction is shown before it is applied.** `read` / `propose` only print what was
 understood and leave it pending; show that list, and `apply --confirmed` only after the operator says
-yes. The slide-text check (L22) runs on the script first and its findings head the review page;
+yes. The theory check (L36 — thin slides, thin notes, words that do not fill the minutes, a self-check
+after too little theory, an answer not yet taught, a task written onto a slide) and the slide-text
+check (L22) run on the script first, and their findings head the review page; every question shows
+the slide that teaches its answer;
 approval is refused while a must-fix one stands, unless the operator approves `--despite-findings`.
 Approval is `approve --by <name>`; any later change makes it a draft again. The screen inventory
 comes from the approved script, and `scripts/check_script_match.py` proves the built module says

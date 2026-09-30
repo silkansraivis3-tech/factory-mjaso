@@ -46,14 +46,14 @@
       "n": 5,
       "step": "module split",
       "owner": "course-factory/hours",
-      "does": "assign topics to modules; sum each module's allocated minutes; declare the topics that sit outside the modules",
+      "does": "one module per programme topic, in the programme's order (L34, 2.17.0) - the final-assessment topic is the last module, assessment only; sum each module's allocated minutes. (Before 2.17.0: assign topics to modules and declare the topics outside them.)",
       "output": "plan.json"
     },
     {
       "n": 6,
       "step": "GATE",
       "owner": "course-factory (SKILL.md)",
-      "does": "Stage 2 STOP: write architecture.json beside programme.json and plan.json, run scripts/make_architecture_page.py --check, then write ARCHITECTURE_REVIEW.html and STOP. The page shows each module's hours with the programme topics and rows they come from, the Main ILOs verbatim, every Sub-ILO beside the programme wording (kept / re-expressed / added), active learning, practical tasks with equipment and the test plan. The operator's 'next' approves it and ratifies the Sub-ILO changes.",
+      "does": "Stage 2 STOP: write architecture.json beside programme.json and plan.json, run scripts/make_architecture_page.py --check, then write ARCHITECTURE_REVIEW.html and STOP. The page shows every module - one per programme topic (L34), the final assessment last - with its hours and where its minutes go, how the course runs on the two tablets (L35), the Main ILOs verbatim, every Sub-ILO beside the programme wording (kept / re-expressed / added), active learning, practical tasks with equipment and the test plan. The operator's 'next' approves it and ratifies the Sub-ILO changes.",
       "output": "architecture.json, ARCHITECTURE_REVIEW.html (2.15.0)",
       "why": "changing a table row is free; changing eight built modules is not"
     },

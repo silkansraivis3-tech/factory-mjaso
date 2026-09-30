@@ -251,7 +251,8 @@ edit mode, `content-lock.json`, `expert-edits.json`)
 
 **L27 · Three test levels, and only the final assessment is graded.** Self-check in the presentation
 and the module check at the end of every module are **ungraded**; the final assessment is the only
-graded test. One task per screen, Next → Next. The module check still waits for the instructor's
+graded test. *(2.17.0: all three on the trainee tablet, each opened by the instructor (L35); self-checks
+and module checks show the trainee their own score, which does not count.)* One task per screen, Next → Next. The module check still waits for the instructor's
 unlock; the instructor sees done / not done and the result as information — never pass/fail, never
 red. → `course-task-ux` (built out in step 6)
 
@@ -289,10 +290,27 @@ Textbook figures are redrawn technically identical, credited "after <book>" and 
 check. Equipment a trainee must recognise is never an AI image: an accurate schematic, and the
 "photos to take at Novikontas" list. ICS/SIGTTO "not cleared" stays out. → `course-visuals` (step 8)
 
+**L34 · One module per programme topic.** Every topic of the programme's topic/hours table is its own
+module, in the programme's order, with its own hours - GAS BASIC: 22 teaching modules. The final-assessment
+topic is the last module and the assessment only. Never merged, never split. Academic hour: the
+programme's; 40 min at Novikontas when it is silent. Replaces `hours/GUIDE.md` "combine topics freely".
+→ `course-factory` (`scripts/make_architecture_page.py`, 2.17.0)
+
+**L35 · Two tablets.** Slides on the instructor tablet, mirrored to the classroom screen; tasks only on the
+trainee tablet. At task time the slide only announces the task and the instructor presses OPEN TASK; the
+task opens on every trainee tablet by itself. No task list, no browsing, no "all tasks" / "back to
+tasks". The trainee sees their own score on self-checks and module checks. Supersedes `course-task-ux`'s
+trainee task list. → `course-factory` (`scripts/content_script.py`, 2.17.0); the app change list in step 6
+
+**L36 · Enough theory before any task.** A slide carries the teaching; the notes carry the explanation;
+the words fill the minutes; a self-check only after a block of new theory; every answer taught before
+its task opens. Floors in `course-factory/knowledge/theory-rules.json`, checked on the content script.
+→ `course-factory` (`scripts/content_script.py`, 2.17.0)
+
 ---
 
-**All thirty-three laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L33 are enforced first through `course-factory/SKILL.md`'s
+**All thirty-six laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L36 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

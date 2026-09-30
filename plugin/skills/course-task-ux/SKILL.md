@@ -127,6 +127,14 @@ answers slide.
 
 ## 3 · Navigation — the rules broken most often
 
+> **Owner, 2026-09-30 (L35, 2.17.0) - this wins over the rest of §3 where they differ.** The trainee tablet
+> has **no task list**. A task opens on every trainee tablet by itself when the instructor presses OPEN
+> TASK on the instructor's panel, and only then. The trainee cannot see all tasks on one page, cannot
+> browse or open another task, and there is **no "all tasks", "module tasks" or "back to tasks"
+> button**. The slide on the classroom screen only says that a task starts now. At the end of a self-check
+> or module check the trainee sees their own score (it does not count). The "task list" rulings below are
+> kept for the old app until its change list (step 6) is applied, and never used for a new build.
+
 - **Every route out has a route back** — to the exact page it came from, never via the module list.
 - **Never end a task with a row of unexplained buttons**, and never offer to jump to a different
   numbered task.

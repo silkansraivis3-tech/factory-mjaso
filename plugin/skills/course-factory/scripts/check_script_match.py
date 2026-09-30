@@ -144,9 +144,9 @@ def main(argv=None):
     ids = {s["id"] for s in script["screens"]}
     for sid in sorted(set(found) - ids):
         probs.append("%s (%s) claims script id %s, which the approved script does not have" % (found[sid]["file"], sid, sid))
-    for n, s in enumerate(script["screens"], 1):
+    for s in script["screens"]:
         sid = s["id"]
-        where = "screen %d (%s)" % (n, sid)
+        where = "%s (%s)" % (cs.place(script, sid), sid)
         if sid not in found:
             probs.append("%s is not built - no page in the module carries data-script=\"%s\"" % (where, sid))
             continue

@@ -63,6 +63,13 @@ reasoning lives in the task, which is why the deck needs no answers slide.
 
 ## 3 · Navigation — the rules broken most often
 
+> **Superseded in part by L35 (owner, 2026-09-30, 2.17.0):** *"when it is time for a task, the slide only
+> explains that there will now be a task, and on the instructor's panel there is a button OPEN TASK; after
+> that it opens automatically on each trainee tablet. The trainee would not be able to see all tasks on one
+> page, or navigate through them - only when the instructor opens that task - and no other buttons like
+> ALL TASKS, go back to all module tasks."* The task list and every route back to it, below, belong to the
+> old app; a new build has neither. Kept as it was.
+
 **Every route out has a route back.** If a task opens a second page, that page returns to the
 exact page it came from. A trainee must never have to go up to the module list and re-enter
 the task to get back to where they were.

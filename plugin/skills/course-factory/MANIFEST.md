@@ -52,7 +52,8 @@ course-factory/
 │   ├── COURSE_PATTERN.md                 what a finished course teaches the next one - approved by the operator (L32, 2.14.0)
 │   └── factory-notes.md                  companion file, written by the skill during the run
 ├── scripts/course_memory.py, test_course_memory.py   start / check the state; draft and approve a pattern; list approved patterns
-├── scripts/make_architecture_page.py, test_architecture_page.py   the Stage 2 STOP as one page (2.15.0)
+├── scripts/make_architecture_page.py, test_architecture_page.py   the Stage 2 STOP as one page (2.15.0); one module per topic (2.17.0)
+├── knowledge/theory-rules.json           how much theory before any task, and the two tablets (L35, L36, 2.17.0)
 ├── knowledge/page-labels.json            the review pages' own words in the operator's language (en / lv / ru)
 ├── script/GUIDE.md                       READ IN: Stage 3 - the content script (2.16.0)
 ├── scripts/content_script.py, check_script_match.py, test_content_script.py   the script, the Word copy, corrections on confirmation, the word-for-word match
@@ -308,6 +309,48 @@ file; `approve` refuses while a must-fix one stands, unless the operator approve
 the same second gave the archive the same file name, the rename failed and the pending list stayed
 behind, blocking approval. Archive names are now unique (`archive_name`), a test pins it, and six
 consecutive runs passed clean.
+
+## 4i · The owner's review of the example pages (2.17.0, 2026-09-30)
+
+The owner read the two example pages and rejected three things; each became a law, and both tools were
+rebuilt around it.
+
+- **"Why only 2 modules?" - L34.** The modules are the programme's topics, one each, with the
+  programme's hours; the final-assessment topic is the last module and the assessment only. The
+  architecture page now builds the modules straight from `programme.json` (`plan.json` is optional,
+  for built minutes only), shows an overview of all of them totalled against the programme's own total
+  row, and gives every module a *where the minutes go* table. It catches merged topics, teaching inside
+  the assessment, an assessment that is not last, a module the programme does not have, a teaching module
+  with no module check, more self-checks than the theory time allows, and a total that disagrees with the
+  programme. The academic hour is 40 min when the programme is silent, and the page says so. Programme
+  text is marked with the programme's own language, module titles with the course language.
+- **"Why did you put tests inside slides?" - L35.** Two tablets: slides on the instructor's, mirrored to
+  the classroom screen; tasks only on the trainee's. And, from the owner mid-step: a task opens only when
+  the instructor presses OPEN TASK, on every trainee tablet at once; no task list, no browsing, no "all
+  tasks" or "back". The content script gained the `task-slide` kind (the slide that only announces the
+  task, and carries OPEN TASK on the panel) and task sets (`"set"`); the review page and the Word file
+  are now in two parts, instructor tablet and trainee tablet, and every set ends on the trainee's own
+  score - "self-check does not mean there is no score for the trainee; it's for himself". Questions are
+  named "Self-check 1, question 2", slides "Slide 7", in every message. `course-task-ux` §3's task-list
+  rulings are marked as the old app's. The tablet app does not work this way yet - its change list is
+  step 6 (L21).
+- **"Slide text is too small" and "enough theory before the self-check" - L36.** `knowledge/theory-rules.json`
+  holds the floors and `theory_findings` checks them on the script: 50-150 words on a slide, 30 in the
+  notes, 40 words per theory minute across the module, 10 min and 400 words of new theory before a
+  self-check, 3-6 questions in a self-check and 5 or more in a module check, no task written onto its
+  slide, and every question's correct answer already taught - its key words (numbers exactly, words by
+  their first five letters, leaving out words the wrong answers share) found in the slides before it.
+  The page shows, for every question, the slide that teaches its answer. Findings block approval unless
+  the operator approves despite them (L26).
+
+Found on the way: the test module the factory wrote for itself failed its own new floors (34 words a
+minute, 357 words before the self-check) and was rewritten to them; and the first answer check let an
+untaught answer pass because the wrong options shared its words - fixed by comparing only the words that
+make the right answer right.
+
+The example pages were remade: the architecture from the real GAS Basic programme (Rev. 01.07.2026, read
+from the pilot knowledge base, read-only) - 23 modules; the content script as a full 80-minute Module 1
+written to the floors, and a second copy with six planted problems.
 
 ## 5 · Known gaps / before this goes live
 

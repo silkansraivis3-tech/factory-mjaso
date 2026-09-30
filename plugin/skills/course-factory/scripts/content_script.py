@@ -12,10 +12,26 @@
 WHY THIS EXISTS
 Until 2.16.0 the operator saw the real words of a module for the first time in finished HTML, and
 every correction landed on built pages. Now the words are approved first. The script is a file -
-_factory/script/M01.json - holding every screen in the order the trainee meets it: each slide's exact
-visible text, its planned picture and the instructor notes, and every self-check and module-check
-question - ONE TASK PER SCREEN, as on the tablet - with its answers, the correct one and the feedback.
-The final-assessment bank is the same, as --module final.
+_factory/script/M01.json - holding the whole lesson in the order it is taught.
+
+TWO TABLETS (owner, 2026-09-30 - L35)
+The course runs on two tablets, and the script is shown the same way:
+  * INSTRUCTOR TABLET - the slides, mirrored to the classroom screen: each slide's exact text, its
+    planned picture, its minutes and the instructor notes (on the instructor's panel only). When it
+    is time for a task, the slide is a TASK SLIDE (kind "task-slide", "opens": "SC1"): its words only
+    say that a task starts now and what it is about, and the instructor's panel has one button,
+    OPEN TASK. The task itself is never on a slide.
+  * TRAINEE TABLET - only the tasks: self-checks, the module check, the final assessment. A task
+    opens on every trainee tablet when the instructor presses OPEN TASK, and only then; no task list,
+    no browsing, no "all tasks" or "back" button. One question per screen ("set": "SC1"), and at the
+    end the trainee sees their own score - for them, not counted. Only the final assessment is graded.
+
+ENOUGH THEORY BEFORE ANY TASK (owner, 2026-09-30 - L36)
+knowledge/theory-rules.json sets the floors, and every finding is shown at the top of the review
+page: a slide too thin to teach from, instructor notes too thin to explain from, a module whose words
+do not fill its minutes, a self-check with too little theory before it, a question whose answer is
+not in the slides already taught, a task written onto a slide, minutes that do not add up to the
+programme's. For every question the page names the slide that teaches its answer.
 
 THE OPERATOR'S COPY IS A WORD FILE (owner, 2026-09-30)
 render writes review/M01_SCRIPT.docx beside a review page that prints to PDF. Every editable text is
@@ -27,10 +43,10 @@ boxes, a comment it cannot place on a screen.
 
 NOTHING IS APPLIED UNTIL THE OPERATOR SAYS YES (owner, 2026-09-30)
 read and propose never change the script. They write _factory/script/M01.pending.json and print the
-plain list of what was understood - "screen 7: X becomes Y; question 3: the correct answer becomes B".
-The factory shows that list to the operator, in their language. Only apply --confirmed changes the
-script, logs each change in FEEDBACK_LOG.md, and re-renders both files. Any change after approval
-puts the module back to draft; approve records who approved which version.
+plain list of what was understood - "slide 7: X becomes Y; self-check 1, question 3: the correct
+answer becomes B". Only apply --confirmed changes the script, logs each change in FEEDBACK_LOG.md,
+and re-renders both files. Any change after approval puts the module back to draft; approve records
+who approved which version.
 
 Standard library only - it runs on any colleague's computer. PDF comments need the pypdf package;
 without it, read says so and asks for the comments in Word or in the chat instead.
@@ -56,16 +72,20 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
 SKILLS = os.path.dirname(SKILL)
 LABELS = json.load(io.open(os.path.join(SKILL, "knowledge", "page-labels.json"), encoding="utf-8"))
+RULES = json.load(io.open(os.path.join(SKILL, "knowledge", "theory-rules.json"), encoding="utf-8"))
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 Q = lambda t: "{%s}%s" % (W, t)
 
 sys.path.insert(0, HERE)
 import check_slide_text as slide_text  # noqa: E402  - the same four rules the built slides get (L22)
 
-KINDS = ("slide", "self-check", "module-check", "final", "activity")
-TASKS = ("self-check", "module-check", "final")
+KINDS = ("slide", "task-slide", "activity", "self-check", "module-check", "final")
+TASKS = ("self-check", "module-check", "final")          # trainee tablet - one question per screen
+INSTRUCTOR = ("slide", "task-slide", "activity")          # instructor tablet - the classroom screen
 SLIDE_FIELDS = ("title", "text", "visual", "notes", "minutes")
+TASK_SLIDE_FIELDS = ("title", "text", "notes", "minutes")
 TASK_FIELDS = ("question", "options", "correct", "feedback", "mechanic")
+FAIL, NOTE = slide_text.FAIL, slide_text.NOTE
 
 
 # ------------------------------------------------------------------ files
@@ -108,6 +128,50 @@ def course_lang(script):
     return LABELS["course_language_codes"].get(script.get("course_language", ""), "en")
 
 
+# ------------------------------------------------------------------ where things are, in words
+def plan_of(script):
+    """Slide numbers on the instructor tablet, and the task sets on the trainee tablet, in order."""
+    slide_no, sets, set_of = {}, [], {}
+    n = 0
+    for s in script.get("screens", []):
+        if s.get("kind") in INSTRUCTOR:
+            n += 1
+            slide_no[s["id"]] = n
+        elif s.get("kind") in TASKS:
+            k = s.get("set") or {"self-check": "SC", "module-check": "MC", "final": "FA"}[s["kind"]]
+            if k not in set_of:
+                set_of[k] = {"id": k, "kind": s["kind"], "questions": [], "opened_by": None}
+                sets.append(set_of[k])
+            set_of[k]["questions"].append(s)
+    for s in script.get("screens", []):
+        if s.get("kind") == "task-slide" and s.get("opens") in set_of and not set_of[s["opens"]]["opened_by"]:
+            set_of[s["opens"]]["opened_by"] = s["id"]
+    k = 0
+    for st in sets:
+        if st["kind"] == "self-check":
+            k += 1
+            st["no"] = k
+    return slide_no, sets, set_of
+
+
+def set_name(script, st):
+    if st["kind"] == "self-check":
+        return T(script, "s_sc_name", k=st.get("no", "?"))
+    return T(script, "s_mc_name" if st["kind"] == "module-check" else "s_fa_name")
+
+
+def place(script, sid):
+    """'slide 7' or 'self-check 1, question 3' - how the operator finds it on the page."""
+    slide_no, sets, _ = plan_of(script)
+    if sid in slide_no:
+        return T(script, "s_slide_n", n=slide_no[sid])
+    for st in sets:
+        for q, s in enumerate(st["questions"], 1):
+            if s["id"] == sid:
+                return T(script, "s_question_in", set=set_name(script, st), q=q)
+    return sid
+
+
 # ------------------------------------------------------------------ fields
 def letters(n):
     return [chr(ord("A") + i) for i in range(n)]
@@ -123,7 +187,8 @@ def fields_of(screen):
         out += [("correct", screen.get("correct", "")), ("feedback", screen.get("feedback", "")),
                 ("mechanic", screen.get("mechanic", "tap to choose"))]
     else:
-        out += [(f, str(screen.get(f, "")) if screen.get(f, "") is not None else "") for f in SLIDE_FIELDS]
+        names = TASK_SLIDE_FIELDS if screen["kind"] == "task-slide" else SLIDE_FIELDS
+        out += [(f, str(screen.get(f, "")) if screen.get(f, "") is not None else "") for f in names]
     return out
 
 
@@ -152,6 +217,13 @@ def set_field(screen, f, value):
         screen[f] = value
 
 
+def minutes(s):
+    try:
+        return float(s.get("minutes") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def validate(script):
     probs, seen = [], set()
     screens = script.get("screens", [])
@@ -165,19 +237,178 @@ def validate(script):
         if s.get("kind") in TASKS:
             opts = s.get("options", [])
             if len(opts) < 2:
-                probs.append("screen %s: a task needs at least two answers to choose from" % sid)
+                probs.append("%s: a task needs at least two answers to choose from" % sid)
             if s.get("correct") not in letters(len(opts)):
-                probs.append("screen %s: the correct answer %r is not one of %s" % (sid, s.get("correct"), "/".join(letters(len(opts)))))
+                probs.append("%s: the correct answer %r is not one of %s" % (sid, s.get("correct"), "/".join(letters(len(opts)))))
             if not s.get("feedback"):
-                probs.append("screen %s: no feedback for the trainee after answering" % sid)
+                probs.append("%s: no feedback for the trainee after answering" % sid)
             if s.get("kind") == "module-check" and s.get("graded"):
-                probs.append("screen %s: a module check is not graded (L27)" % sid)
+                probs.append("%s: a module check is not graded (L27)" % sid)
+    slide_no, sets, set_of = plan_of(script)
     kinds = [s.get("kind") for s in screens]
-    if "module-check" in kinds:
-        first = kinds.index("module-check")
-        if any(k == "slide" for k in kinds[first:]):
-            probs.append("a slide comes after the module check starts - the module check is the end of the module")
+    index = {s.get("id"): i for i, s in enumerate(screens)}
+    for s in screens:
+        if s.get("kind") == "task-slide" and s.get("opens") not in set_of:
+            probs.append("%s: a task slide must say which task it opens (\"opens\": the task's set) - %r opens nothing" % (s["id"], s.get("opens")))
+    for st in sets:
+        name = set_name(script, st)
+        if not st["opened_by"]:
+            probs.append("%s: no task slide opens it - on the tablet a task opens only when the instructor presses "
+                         "OPEN TASK on a task slide (L35)" % name)
+            continue
+        start = index[st["opened_by"]]
+        qi = [index[q["id"]] for q in st["questions"]]
+        if qi != list(range(start + 1, start + 1 + len(qi))):
+            probs.append("%s: its questions must come straight after the task slide that opens it (%s), one after another"
+                         % (name, st["opened_by"]))
+    if script.get("module") != "final" and str(script.get("module")).lower() != "final":
+        if "module-check" not in kinds:
+            probs.append("the module has no module check - every teaching module ends with one (L27)")
+        else:
+            first = kinds.index("module-check")
+            if any(k in ("slide", "activity") for k in kinds[first:]):
+                probs.append("a slide comes after the module check starts - the module check is the end of the module")
+    alloc = script.get("minutes_allocated")
+    if alloc:
+        got = sum(minutes(s) for s in screens if s.get("kind") in INSTRUCTOR)
+        if abs(got - float(alloc)) > 0.5:
+            probs.append("the minutes add up to %g, the programme gives this module %g - they must be equal (L1)" % (got, float(alloc)))
     return probs
+
+
+# ------------------------------------------------------------------ enough theory (L36)
+STOP = set("""about above after again against also among another around because been before being below between both
+could does doing down during each either every from further have having here into itself just least less made make
+many more most much must near never only other over same should since some such than that their them then there these
+they this those through under until upon very were what when where which while will with within without would your
+kas kad kur kurš kura kuri kuras kuru tiek tikt tiem tās tajā tiek būt būs bija arī tikai ļoti starp pirms pēc
+vairāk mazāk visi visas viss katrs katra tāpēc tomēr nevis gan kādā kāda kādi
+это этот эта эти если когда также только между может может быть более менее очень после перед который которая
+которые которых""".split())
+NUM = re.compile(r"[-−–]?\d+(?:[.,]\d+)?")
+
+
+def words(text):
+    return re.findall(r"\w+", text or "", re.UNICODE)
+
+
+def wc(*texts):
+    return sum(len(words(t)) for t in texts)
+
+
+def terms(text):
+    t = (text or "").lower()
+    nums = {n.replace("−", "-").replace("–", "-").replace(",", ".") for n in NUM.findall(t)}
+    ws = {w[:5] for w in re.findall(r"[^\W\d_]{4,}", t, re.UNICODE) if w not in STOP}
+    return nums, ws
+
+
+def taught_share(answer, taught, others=()):
+    """How much of an answer's key words are in the taught text: numbers exactly, words by their first
+    five letters (so 'membrane' finds 'membranes', and Latvian and Russian endings still match). Words
+    the wrong answers share are left out when anything is left - 'semi-refrigerated' is taught by
+    'semi', not by 'refrigerated', which every option about cold cargo has."""
+    an, aw = terms(answer)
+    on, ow = set(), set()
+    for o in others:
+        n, w = terms(o)
+        on |= n
+        ow |= w
+    if (an - on) or (aw - ow):
+        an, aw = an - on, aw - ow
+    if not an and not aw:
+        return None
+    tn, tw = taught
+    tn_abs = {x.lstrip("-") for x in tn}
+    hit = sum(1 for n in an if n in tn or n.lstrip("-") in tn_abs) + sum(1 for w in aw if w in tw)
+    return hit / float(len(an) + len(aw))
+
+
+def slide_terms(s):
+    return terms("%s\n%s\n%s" % (s.get("title", ""), s.get("text", ""), s.get("notes", "")))
+
+
+def theory_findings(script):
+    """Everything L36 asks, as findings shown at the top of the review page. Also returns, for every
+    question, the slide(s) that teach its answer - the page shows them beside the question."""
+    R = RULES
+    screens = script.get("screens", [])
+    slide_no, sets, set_of = plan_of(script)
+    found, taught_on = [], {}
+    final = str(script.get("module")).lower() == "final"
+
+    def add(sid, field, level, key, **kw):
+        found.append({"where": place(script, sid) if sid else T(script, "s_the_module"), "screen": sid or "", "field": field,
+                      "level": level, "rule": key, "detail": T(script, key, **kw), "fix": ""})
+
+    th_words = th_min = 0.0
+    for s in screens:
+        if s.get("kind") != "slide":
+            continue
+        w_slide = wc(s.get("title", ""), s.get("text", ""))
+        w_notes = wc(s.get("notes", ""))
+        th_words += w_slide + w_notes
+        th_min += minutes(s)
+        if w_slide < R["slide"]["min_words"]:
+            add(s["id"], "text", FAIL, "t_thin_slide", w=w_slide, min=R["slide"]["min_words"])
+        elif w_slide > R["slide"]["max_words"]:
+            add(s["id"], "text", NOTE, "t_long_slide", w=w_slide, max=R["slide"]["max_words"])
+        if w_notes < R["notes"]["min_words"]:
+            add(s["id"], "notes", FAIL, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
+    if th_min and not final:
+        rate = th_words / th_min
+        if rate < R["module"]["min_words_per_theory_minute"]:
+            add(None, "", FAIL, "t_density", w=int(th_words), min="%g" % th_min, rate="%.0f" % rate,
+                floor=R["module"]["min_words_per_theory_minute"])
+
+    # a block of new theory before every self-check; every answer taught before its task opens
+    since_min = since_words = 0.0
+    seen_slides = []
+    for s in screens:
+        k = s.get("kind")
+        if k == "slide":
+            since_min += minutes(s)
+            since_words += wc(s.get("title", ""), s.get("text", ""), s.get("notes", ""))
+            seen_slides.append(s)
+        elif k == "task-slide":
+            st = set_of.get(s.get("opens"))
+            if st and st["kind"] == "self-check":
+                rb = R["before_self_check"]
+                if since_min < rb["min_minutes"] or since_words < rb["min_words"]:
+                    add(s["id"], "", FAIL, "t_before_sc", set=set_name(script, st), min="%g" % since_min, w=int(since_words),
+                        fmin=rb["min_minutes"], fw=rb["min_words"])
+                n = len(st["questions"])
+                if n < R["self_check"]["min_questions"]:
+                    add(s["id"], "", FAIL, "t_sc_small", set=set_name(script, st), q=n, lo=R["self_check"]["min_questions"])
+                elif n > R["self_check"]["max_questions"]:
+                    add(s["id"], "", NOTE, "t_sc_big", set=set_name(script, st), q=n, hi=R["self_check"]["max_questions"])
+            if st and st["kind"] == "module-check" and len(st["questions"]) < R["module_check"]["min_questions"]:
+                add(s["id"], "", FAIL, "t_mc_small", q=len(st["questions"]), lo=R["module_check"]["min_questions"])
+            if st:
+                slide_words = terms("%s %s" % (s.get("title", ""), s.get("text", "")))[1]
+                for q in st["questions"]:
+                    qw = terms(q.get("question", ""))[1]
+                    if len(qw) >= 3 and len(qw & slide_words) >= 0.8 * len(qw):
+                        add(s["id"], "text", FAIL, "t_task_on_slide", set=set_name(script, st))
+                        break
+                if not final:
+                    for q in st["questions"]:
+                        ans = q.get("options", [])
+                        i = ord(str(q.get("correct", "A"))[:1] or "A") - ord("A")
+                        answer = ans[i] if 0 <= i < len(ans) else ""
+                        others = [o for j, o in enumerate(ans) if j != i]
+                        if not any(terms(answer)):
+                            answer, others = q.get("feedback", ""), []
+                        each = [(taught_share(answer, slide_terms(x), others) or 0, x) for x in seen_slides]
+                        union = (set().union(*[slide_terms(x)[0] for x in seen_slides]) if seen_slides else set(),
+                                 set().union(*[slide_terms(x)[1] for x in seen_slides]) if seen_slides else set())
+                        share = taught_share(answer, union, others)
+                        best = sorted([e for e in each if e[0] >= 0.3], key=lambda e: -e[0])[:2]
+                        taught_on[q["id"]] = sorted(slide_no[x["id"]] for _, x in best)
+                        if share is not None and share < R["answers_taught_first"]["min_share"]:
+                            add(q["id"], "question", FAIL, "t_not_taught")
+            since_min = since_words = 0.0
+    return found, taught_on
 
 
 # ------------------------------------------------------------------ the text check, before HTML (2.16.1)
@@ -187,9 +418,9 @@ def text_findings(script):
     What the trainee sees is checked as a presentation page (a finding must be fixed); the
     instructor notes and the planned-picture note are instructor-only (reported, never failed)."""
     rules = slide_text.load_rules(slide_text.RULES)
-    first_slide = next((s["id"] for s in script.get("screens", []) if s.get("kind") == "slide"), None)
+    first_slide = next((s["id"] for s in script.get("screens", []) if s.get("kind") in INSTRUCTOR), None)
     found, seen = [], set()
-    for n, s in enumerate(script.get("screens", []), 1):
+    for s in script.get("screens", []):
         course_facing = ["title", "text"] if s["kind"] not in TASKS else \
             ["question"] + ["opt." + L for L in letters(len(s.get("options", [])))] + ["feedback"]
         opening = ("%s\n%s" % (s.get("title", ""), s.get("text", ""))) if s["id"] == first_slide else ""
@@ -203,13 +434,18 @@ def text_findings(script):
                 key = (s["id"], f, x.rule, x.detail)
                 if key not in seen:
                     seen.add(key)
-                    found.append({"n": n, "screen": s["id"], "field": f, "level": x.level, "rule": x.rule,
-                                  "detail": x.detail, "fix": x.fix})
+                    found.append({"where": place(script, s["id"]), "screen": s["id"], "field": f, "level": x.level,
+                                  "rule": x.rule, "detail": x.detail, "fix": x.fix})
     return found
 
 
+def all_findings(script):
+    th, _ = theory_findings(script)
+    return th + text_findings(script)
+
+
 def blocking(findings):
-    return [f for f in findings if f["level"] == slide_text.FAIL]
+    return [f for f in findings if f["level"] == FAIL]
 
 
 # ------------------------------------------------------------------ operator-stated facts
@@ -225,6 +461,18 @@ def operator_facts(course, script):
     return facts
 
 
+def summary(script):
+    screens = script.get("screens", [])
+    sl = [s for s in screens if s.get("kind") == "slide"]
+    th_min = sum(minutes(s) for s in sl)
+    return {"slides": len([s for s in screens if s.get("kind") in INSTRUCTOR]), "theory_min": th_min,
+            "task_min": sum(minutes(s) for s in screens if s.get("kind") == "task-slide"),
+            "practice_min": sum(minutes(s) for s in screens if s.get("kind") == "activity"),
+            "slide_words": sum(wc(s.get("title", ""), s.get("text", "")) for s in sl),
+            "note_words": sum(wc(s.get("notes", "")) for s in sl),
+            "total_min": sum(minutes(s) for s in screens if s.get("kind") in INSTRUCTOR)}
+
+
 # ------------------------------------------------------------------ the review page
 def render_html(course, script):
     e = lambda s: html.escape(str(s if s is not None else ""))
@@ -232,62 +480,120 @@ def render_html(course, script):
     V = lambda s: '<span class="verb" lang="%s">%s</span>' % (cl, e(s).replace("\n", "<br>")) if s else "—"
     css = "".join(io.open(os.path.join(SKILLS, "course-module-ui", "templates", n), encoding="utf-8").read() + "\n"
                   for n in ("gb_tokens.css", "gb_page.css"))
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)   # the style files' comments are for maintainers (L25)
     css += """
 .verb{font-family:var(--font)} .screen{page-break-inside:avoid;break-inside:avoid}
 .sid{font-family:var(--mono);color:var(--faint-l);font-size:13px}
 .kind{display:inline-block;padding:.15em .6em;border-radius:var(--r-s);font-size:13px;font-weight:700;background:var(--grey)}
-.k-slide{background:var(--blue-wash-l);color:var(--navy)} .k-self-check,.k-module-check{background:var(--good-wash-l);color:var(--good)}
-.k-final{background:var(--amber-wash-l);color:var(--amber-ink)}
+.k-slide,.k-activity{background:var(--blue-wash-l);color:var(--navy)} .k-task-slide{background:var(--amber-wash-l);color:var(--amber-ink)}
+.k-self-check,.k-module-check{background:var(--good-wash-l);color:var(--good)} .k-final{background:var(--amber-wash-l);color:var(--amber-ink)}
+.part{border-top:4px solid var(--navy);margin-top:34px;padding-top:4px}
+.slidetext{font-size:17px;line-height:1.5;background:var(--white);border:1px solid var(--line-l);border-radius:var(--r-m);padding:12px 16px}
+.slidetext h3{margin:0 0 8px;color:var(--navy)}
 .tablet{border:1px solid var(--line-l);border-radius:var(--r-l);padding:16px;max-width:520px;background:var(--white)}
 .opt{display:flex;gap:10px;align-items:center;min-height:52px;border:1.5px solid var(--line-l);border-radius:var(--r-m);padding:10px 14px;margin:8px 0}
 .opt.right{border-color:var(--good);background:var(--good-wash-l)} .opt b{min-width:1.6em}
-dl{display:grid;grid-template-columns:12em 1fr;gap:6px 14px;margin:0} dt{color:var(--dim-l);font-weight:700} dd{margin:0}
+.openbtn{display:inline-block;background:var(--navy);color:var(--white);font-weight:700;letter-spacing:.04em;padding:10px 22px;border-radius:var(--r-m)}
+.panel{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.result{border:2px dashed var(--line-l);border-radius:var(--r-l);padding:12px 16px;max-width:520px}
+dl{display:grid;grid-template-columns:12em 1fr;gap:6px 14px;margin:8px 0 0} dt{color:var(--dim-l);font-weight:700} dd{margin:0}
 .instr{border-left:4px solid var(--amber);background:var(--amber-wash-l);padding:8px 12px;border-radius:0 var(--r-s) var(--r-s) 0}
-h1,h2{color:var(--navy)} @media print{body{background:#fff}.card{box-shadow:none}}
+.nums td{padding:4px 12px 4px 0}
+h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}} @media print{body{background:#fff}.card{box-shadow:none}}
 """
     status = (T(script, "s_status_approved", by=script.get("approved_by", ""), on=script.get("approved_on", ""))
               if script.get("status") == "approved" and script.get("approved_hash") == content_hash(script)
               else T(script, "s_status_draft"))
     title = T(script, "s_page_title", m=script.get("module"))
+    slide_no, sets, set_of = plan_of(script)
+    th_found, taught_on = theory_findings(script)
     o = ['<!DOCTYPE html><html lang="%s"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
          '<title>%s</title><style>%s</style></head><body><div class="wrap">' % (e(script.get("operator_language", "en")), e(title), css),
          "<h1>%s</h1><p class=\"sub\">%s · <b>%s</b></p><p class=\"lead\">%s</p>" % (e(title), V(script.get("title", "")), e(status), e(T(script, "s_intro")))]
+    sm = summary(script)
+    alloc = script.get("minutes_allocated")
+    o.append('<div class="card key"><h3>%s</h3><table class="nums">'
+             '<tr><td>%s</td><td><b>%d</b></td></tr><tr><td>%s</td><td><b>%g</b> %s</td></tr><tr><td>%s</td><td><b>%g</b> %s</td></tr>%s'
+             '<tr><td>%s</td><td><b>%g</b> %s%s</td></tr><tr><td>%s</td><td><b>%d</b> + <b>%d</b> = <b>%d</b> (%s)</td></tr></table></div>' % (
+                 e(T(script, "s_sum_title")), e(T(script, "s_sum_slides")), sm["slides"],
+                 e(T(script, "s_sum_theory")), sm["theory_min"], e(T(script, "s_min")),
+                 e(T(script, "s_sum_tasks")), sm["task_min"], e(T(script, "s_min")),
+                 ("<tr><td>%s</td><td><b>%g</b> %s</td></tr>" % (e(T(script, "s_sum_practice")), sm["practice_min"], e(T(script, "s_min")))) if sm["practice_min"] else "",
+                 e(T(script, "s_sum_total")), sm["total_min"], e(T(script, "s_min")),
+                 (" — " + e(T(script, "s_sum_alloc", a="%g" % float(alloc)))) if alloc else "",
+                 e(T(script, "s_sum_words")), sm["slide_words"], sm["note_words"], sm["slide_words"] + sm["note_words"],
+                 e(T(script, "s_sum_rate", r="%.0f" % ((sm["slide_words"] + sm["note_words"]) / sm["theory_min"]) if sm["theory_min"] else "—",
+                     f=RULES["module"]["min_words_per_theory_minute"]))))
     facts = operator_facts(course, script)
     if facts:
         o.append('<div class="card hot"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
             e(T(script, "s_facts_title")), e(T(script, "s_facts_intro")),
             "".join("<li>%s <span class=\"sid\">(%s%s)</span></li>" % (V(f.get("fact")), e(f.get("where", "")),
                     (", " + e(f["said"])) if f.get("said") else "") for f in facts)))
+    row = lambda f: '<li><b>%s%s</b> — %s%s <i>(%s)</i></li>' % (
+        e(f["where"]), (" · " + e(f["field"])) if f["field"] else "", e(f["detail"]),
+        (" <b>%s:</b> %s" % (e(T(script, "s_textcheck_instead")), e(f["fix"]))) if f["fix"] else "",
+        e(T(script, "s_textcheck_must") if f["level"] == FAIL else T(script, "s_textcheck_note")))
+    if th_found:
+        o.append('<div class="card warn"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
+            e(T(script, "s_theory_title")), e(T(script, "s_theory_intro")), "".join(row(f) for f in th_found)))
+    else:
+        o.append('<p class="note">%s</p>' % e(T(script, "s_theory_clean")))
     tf = text_findings(script)
     if tf:
-        rows = "".join('<li><b>%s %d · %s · %s</b> — %s%s <i>(%s)</i></li>' % (
-            e(T(script, "s_screen")), f["n"], e(f["screen"]), e(f["field"]), e(f["detail"]),
-            (" <b>%s:</b> %s" % (e(T(script, "s_textcheck_instead")), e(f["fix"]))) if f["fix"] else "",
-            e(T(script, "s_textcheck_must") if f["level"] == slide_text.FAIL else T(script, "s_textcheck_note"))) for f in tf)
         o.append('<div class="card warn"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
-            e(T(script, "s_textcheck_title")), e(T(script, "s_textcheck_intro")), rows))
+            e(T(script, "s_textcheck_title")), e(T(script, "s_textcheck_intro")), "".join(row(f) for f in tf)))
     else:
         o.append('<p class="note">%s</p>' % e(T(script, "s_textcheck_clean")))
-    o.append('<p class="note">%s</p>' % e(T(script, "s_one_per_screen")))
-    kind_label = {"slide": "s_slide", "self-check": "s_self_check", "module-check": "s_module_check", "final": "s_final", "activity": "s_activity"}
-    for n, s in enumerate(script.get("screens", []), 1):
+
+    # ---- part 1: the instructor tablet
+    o.append('<div class="part"><h2>%s</h2><p class="note">%s</p></div>' % (e(T(script, "s_part1")), e(T(script, "s_part1_intro"))))
+    for s in script.get("screens", []):
         k = s.get("kind")
-        o.append('<div class="card screen"><h2>%s %d <span class="kind k-%s">%s</span> <span class="sid">%s</span></h2>' % (
-            e(T(script, "s_screen")), n, e(k), e(T(script, kind_label.get(k, "s_slide"))), e(s.get("id"))))
-        if k in TASKS:
+        if k not in INSTRUCTOR:
+            continue
+        label = {"slide": "s_slide", "task-slide": "s_task_slide", "activity": "s_activity"}[k]
+        o.append('<div class="card screen"><h2>%s <span class="kind k-%s">%s</span> <span class="sid">%s</span></h2>' % (
+            e(T(script, "s_slide_n", n=slide_no[s["id"]])), e(k), e(T(script, label)), e(s.get("id"))))
+        o.append('<div class="slidetext"><h3>%s</h3>%s</div>' % (V(s.get("title")), V(s.get("text"))))
+        if k == "task-slide":
+            st = set_of.get(s.get("opens"))
+            o.append('<div class="panel"><span class="openbtn">%s</span><span>%s</span></div>' % (
+                e(T(script, "s_open_task")), e(T(script, "s_opens", set=set_name(script, st) if st else "?",
+                                                 q=len(st["questions"]) if st else 0))))
+            o.append('<dl><dt>%s</dt><dd>%s</dd></dl>' % (e(T(script, "s_minutes_task")), e(s.get("minutes", "—"))))
+        else:
+            o.append('<dl><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd></dl>' % (
+                e(T(script, "s_visual")), V(s.get("visual")), e(T(script, "s_minutes")), e(s.get("minutes", "—")),
+                e(T(script, "s_words")), e(T(script, "s_words_n", a=wc(s.get("title", ""), s.get("text", "")), b=wc(s.get("notes", ""))))))
+        if s.get("notes"):
+            o.append('<p class="instr"><b>%s:</b> %s</p>' % (e(T(script, "s_notes")), V(s.get("notes"))))
+        o.append("</div>")
+
+    # ---- part 2: the trainee tablet
+    o.append('<div class="part"><h2>%s</h2><p class="note">%s</p></div>' % (e(T(script, "s_part2")), e(T(script, "s_part2_intro"))))
+    for st in sets:
+        opener = st["opened_by"]
+        o.append('<h2>%s <span class="kind k-%s">%s</span></h2><p class="note">%s</p>' % (
+            e(set_name(script, st)), e(st["kind"]),
+            e(T(script, {"self-check": "s_self_check", "module-check": "s_module_check", "final": "s_final"}[st["kind"]])),
+            e(T(script, "s_set_intro", slide=slide_no.get(opener, "?"), q=len(st["questions"])))))
+        for qn, s in enumerate(st["questions"], 1):
+            o.append('<div class="card screen"><h3>%s <span class="sid">%s</span></h3>' % (
+                e(T(script, "s_question_n", q=qn, of=len(st["questions"]))), e(s["id"])))
             opts = "".join('<div class="opt%s"><b>%s</b> %s</div>' % (" right" if L == s.get("correct") else "", L, V(x))
                            for L, x in zip(letters(len(s.get("options", []))), s.get("options", [])))
             o.append('<div class="tablet"><p><b>%s</b></p>%s</div>' % (V(s.get("question")), opts))
-            o.append('<dl><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd></dl>' % (
+            tn = taught_on.get(s["id"])
+            o.append('<dl><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd>%s</dl></div>' % (
                 e(T(script, "s_correct")), e(s.get("correct", "")), e(T(script, "s_feedback")), V(s.get("feedback")),
-                e(T(script, "s_mechanic")), e(s.get("mechanic", "tap to choose"))))
-        else:
-            o.append('<dl><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd></dl>' % (
-                e(T(script, "s_title")), V(s.get("title")), e(T(script, "s_text")), V(s.get("text")),
-                e(T(script, "s_visual")), V(s.get("visual")), e(T(script, "s_minutes")), e(s.get("minutes", "—"))))
-            if s.get("notes"):
-                o.append('<p class="instr"><b>%s:</b> %s</p>' % (e(T(script, "s_notes")), V(s.get("notes"))))
-        o.append("</div>")
+                e(T(script, "s_mechanic")), e(s.get("mechanic", "tap to choose")),
+                "" if st["kind"] == "final" else "<dt>%s</dt><dd>%s</dd>" % (
+                    e(T(script, "s_taught_on")),
+                    e(", ".join(T(script, "s_slide_n", n=n) for n in tn)) if tn else "<b>%s</b>" % e(T(script, "s_taught_nowhere")))))
+        o.append('<div class="result"><b>%s</b> %s</div>' % (
+            e(T(script, "s_result", q=len(st["questions"]))),
+            e(T(script, "s_result_graded" if st["kind"] == "final" else "s_result_own"))))
     o.append('<p class="foot">%s %s %s</p></div></body></html>' % (e(T(script, "s_prepared")), date.today().isoformat(), e(T(script, "s_by_factory"))))
     return "\n".join(o)
 
@@ -343,24 +649,52 @@ def build_docx(course, script):
         label(T(script, "s_facts_title"), style="Heading1")
         for f in facts:
             body.append(_para("• " + f.get("fact", ""), lang=cl))
-    tf = text_findings(script)
-    if tf:
-        label(T(script, "s_textcheck_title"), style="Heading1")
-        for f in tf:
-            label("%s %d · %s · %s — %s%s (%s)" % (
-                T(script, "s_screen"), f["n"], f["screen"], f["field"], f["detail"],
-                (" %s: %s" % (T(script, "s_textcheck_instead"), f["fix"])) if f["fix"] else "",
-                T(script, "s_textcheck_must") if f["level"] == slide_text.FAIL else T(script, "s_textcheck_note")), color="B4453A")
-    kind_label = {"slide": "s_slide", "self-check": "s_self_check", "module-check": "s_module_check", "final": "s_final", "activity": "s_activity"}
+    th_found, taught_on = theory_findings(script)
+    for head, found in (("s_theory_title", th_found), ("s_textcheck_title", text_findings(script))):
+        if found:
+            label(T(script, head), style="Heading1")
+            for f in found:
+                label("%s%s — %s%s (%s)" % (
+                    f["where"], (" · " + f["field"]) if f["field"] else "", f["detail"],
+                    (" %s: %s" % (T(script, "s_textcheck_instead"), f["fix"])) if f["fix"] else "",
+                    T(script, "s_textcheck_must") if f["level"] == FAIL else T(script, "s_textcheck_note")), color="B4453A")
     names = {"title": "s_title", "text": "s_text", "visual": "s_visual", "notes": "s_notes", "minutes": "s_minutes",
              "question": "s_question", "correct": "s_correct", "feedback": "s_feedback", "mechanic": "s_mechanic"}
-    for n, s in enumerate(script.get("screens", []), 1):
-        head = "%s %d · %s · %s" % (T(script, "s_screen"), n, T(script, kind_label.get(s["kind"], "s_slide")), s["id"])
-        label(head, style="Heading1")
+    slide_no, sets, set_of = plan_of(script)
+
+    def boxes(s):
         for f, v in fields_of(s):
             nm = T(script, "s_options") + " " + f[4] if f.startswith("opt.") else T(script, names[f])
+            if s["kind"] == "task-slide" and f == "minutes":
+                nm = T(script, "s_minutes_task")
             label(nm, bold=True, color="0A2463")
             body.append(_box("%s.%s" % (s["id"], f), "%s · %s" % (s["id"], nm), v, cl))
+
+    label(T(script, "s_part1"), style="Title")
+    label(T(script, "s_part1_intro"), color="41556A")
+    for s in script.get("screens", []):
+        if s["kind"] not in INSTRUCTOR:
+            continue
+        label("%s · %s · %s" % (T(script, "s_slide_n", n=slide_no[s["id"]]),
+                                T(script, {"slide": "s_slide", "task-slide": "s_task_slide", "activity": "s_activity"}[s["kind"]]), s["id"]),
+              style="Heading1")
+        if s["kind"] == "task-slide":
+            st = set_of.get(s.get("opens"))
+            label("%s — %s" % (T(script, "s_open_task"), T(script, "s_opens", set=set_name(script, st) if st else "?",
+                                                           q=len(st["questions"]) if st else 0)), color="41556A")
+        boxes(s)
+    label(T(script, "s_part2"), style="Title")
+    label(T(script, "s_part2_intro"), color="41556A")
+    for st in sets:
+        label(set_name(script, st), style="Heading1")
+        label(T(script, "s_set_intro", slide=slide_no.get(st["opened_by"], "?"), q=len(st["questions"])), color="41556A")
+        for qn, s in enumerate(st["questions"], 1):
+            label("%s · %s" % (T(script, "s_question_n", q=qn, of=len(st["questions"])), s["id"]), bold=True)
+            if st["kind"] != "final":
+                tn = taught_on.get(s["id"])
+                label("%s: %s" % (T(script, "s_taught_on"), ", ".join(T(script, "s_slide_n", n=n) for n in tn) if tn
+                                  else T(script, "s_taught_nowhere")), color="41556A")
+            boxes(s)
     doc = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="%s"><w:body>%s'
            '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>'
            '</w:body></w:document>' % (W, "".join(body)))
@@ -469,7 +803,7 @@ def read_pdf(path):
     found = []
     r = pypdf.PdfReader(path)
     for n, page in enumerate(r.pages, 1):
-        ids = sorted(set(re.findall(r"\b([smqf]\d{2,3})\b", page.extract_text() or "")))
+        ids = sorted(set(re.findall(r"\b([smqftca]\d{2,3})\b", page.extract_text() or "")))
         for a in (page.get("/Annots") or []):
             a = a.get_object()
             txt = a.get("/Contents")
@@ -479,11 +813,11 @@ def read_pdf(path):
 
 
 # ------------------------------------------------------------------ pending changes
-def screen_no(script, sid):
-    for n, s in enumerate(script.get("screens", []), 1):
+def screen_of(script, sid):
+    for s in script.get("screens", []):
         if s["id"] == sid:
-            return n, s
-    return None, None
+            return s
+    return None
 
 
 def short(s, n=90):
@@ -506,8 +840,8 @@ def changed_words(old, new):
 
 
 def describe(script, ch):
-    n, s = screen_no(script, ch["screen"])
-    where = "screen %s (%s, %s)" % (n, ch["screen"], s["kind"] if s else "?")
+    s = screen_of(script, ch["screen"])
+    where = "%s (%s)" % (place(script, ch["screen"]), ch["screen"]) if s else ch["screen"]
     f = ch["field"]
     if f == "correct":
         return "%s: the correct answer becomes %s (was %s)" % (where, ch["new"], ch["old"])
@@ -531,8 +865,6 @@ def write_pending(p, script, changes, notes, source):
             "changes": changes, "notes": notes}
     save(p["pending"], pend)
     print("What I understood - nothing has been changed yet:\n")
-    if not changes and not notes:
-        print("  nothing: the file says exactly what the script says.")
     for ch in changes:
         print("  - " + describe(script, ch))
     for nt in notes:
@@ -591,7 +923,7 @@ def cmd_propose(course, module, changes_file):
     changes = []
     for c in load(changes_file):
         sid, f = c["field"].split(".", 1) if "." in c["field"] and not c["field"].startswith("opt.") else (c.get("screen"), c["field"])
-        n, s = screen_no(script, sid)
+        s = screen_of(script, sid)
         if s is None:
             print("Stopped - there is no screen %r in this module's script." % sid)
             return 2
@@ -640,8 +972,7 @@ def cmd_apply(course, module, confirmed):
         print("Stopped - the script changed after the list was made. Read the corrections again, and show the new list.")
         return 1
     for ch in pend["changes"]:
-        n, s = screen_no(script, ch["screen"])
-        set_field(s, ch["field"], ch["new"])
+        set_field(screen_of(script, ch["screen"]), ch["field"], ch["new"])
     was_approved = script.get("status") == "approved"
     if pend["changes"]:
         script["status"] = "draft"
@@ -680,12 +1011,12 @@ def cmd_approve(course, module, by, despite=False):
     if probs:
         print("Not approved - the script still has problems:\n" + "\n".join("  - " + x for x in probs))
         return 1
-    must = blocking(text_findings(script))
+    must = blocking(all_findings(script))
     if must and not despite:
-        print("Not approved - the text check found %d thing(s) the trainee must not see:\n%s\n\n"
+        print("Not approved - the checks found %d thing(s) that must be fixed first:\n%s\n\n"
               "  Fix them in the script (propose, confirm, apply) - or, if the operator has read them and wants the\n"
-              "  words as they are (L26), approve with --despite-findings; that decision is recorded with the approval."
-              % (len(must), "\n".join("  - screen %d (%s), %s: %s" % (f["n"], f["screen"], f["field"], f["detail"]) for f in must)))
+              "  script as it is (L26), approve with --despite-findings; that decision is recorded with the approval."
+              % (len(must), "\n".join("  - %s%s: %s" % (f["where"], (", " + f["field"]) if f["field"] else "", f["detail"]) for f in must)))
         return 1
     script["approved_despite_findings"] = [dict(f, date=date.today().isoformat()) for f in must] if must else []
     script.update({"status": "approved", "approved_by": by, "approved_on": date.today().isoformat(), "approved_hash": content_hash(script)})
@@ -718,12 +1049,14 @@ def render(course, module, quiet=False):
               % (p["review"], p["docx"]))
         if probs:
             print("\nThe script still has problems - fix them before showing it:\n" + "\n".join("  - " + x for x in probs))
-        tf = text_findings(script)
-        if tf:
-            print("\nThe text check found %d thing(s) - they are at the top of the review page and the Word file:" % len(tf))
-            for f in tf:
-                print("  - [%s] screen %d (%s), %s: %s%s" % ("must fix" if f["level"] == slide_text.FAIL else "note", f["n"],
-                                                          f["screen"], f["field"], f["detail"], (" - use instead: " + f["fix"]) if f["fix"] else ""))
+        th, _ = theory_findings(script)
+        for head, found in (("The theory check", th), ("The text check", text_findings(script))):
+            if found:
+                print("\n%s found %d thing(s) - they are at the top of the review page and the Word file:" % (head, len(found)))
+                for f in found:
+                    print("  - [%s] %s%s: %s%s" % ("must fix" if f["level"] == FAIL else "note", f["where"],
+                                                  (", " + f["field"]) if f["field"] else "", f["detail"],
+                                                  (" - use instead: " + f["fix"]) if f["fix"] else ""))
     return 1 if probs else 0
 
 
@@ -743,7 +1076,7 @@ def main(argv=None):
         if name == "approve":
             s.add_argument("--by", required=True)
             s.add_argument("--despite-findings", action="store_true",
-                           help="the operator read the text check's findings and wants the words as they are")
+                           help="the operator read the findings and wants the script as it is")
     a = ap.parse_args(argv)
     if not os.path.isfile(paths(a.course, a.module)["script"]):
         print("Stopped - there is no content script for module %s yet:\n    %s" % (a.module, paths(a.course, a.module)["script"]))
