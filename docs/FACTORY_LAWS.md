@@ -264,7 +264,10 @@ is assumed available. → `course-factory` (steps 2, 7)
 **L29 · The words are approved before the HTML.** A word-for-word content script per module — every
 slide's exact text, its planned visual, instructor notes, every question with answer and feedback —
 approved by the operator before any HTML; the built slides then say exactly that. Facts the operator
-stated are listed once per module in that review, marked operator-stated. → `course-factory` (step 5)
+stated are listed once per module in that review, marked operator-stated. The operator's copy is a
+Word file (typing and comments both read; tracked changes read as accepted); every correction is shown
+as a plain list and applied only after they confirm; tasks appear in screen order, one per screen.
+→ `course-factory` (`script/GUIDE.md`, `scripts/content_script.py`, `check_script_match.py`, 2.16.0)
 
 **L30 · Module 1 is a pilot.** Built by five roles and approved before any other module is built;
 then the rest may run in parallel, each with its own script and review STOP. → `course-factory`

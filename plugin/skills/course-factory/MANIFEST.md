@@ -54,6 +54,8 @@ course-factory/
 ├── scripts/course_memory.py, test_course_memory.py   start / check the state; draft and approve a pattern; list approved patterns
 ├── scripts/make_architecture_page.py, test_architecture_page.py   the Stage 2 STOP as one page (2.15.0)
 ├── knowledge/page-labels.json            the review pages' own words in the operator's language (en / lv / ru)
+├── script/GUIDE.md                       READ IN: Stage 3 - the content script (2.16.0)
+├── scripts/content_script.py, check_script_match.py, test_content_script.py   the script, the Word copy, corrections on confirmation, the word-for-word match
 ├── hours/                                READ IN: plan mode, and audit
 │   ├── GUIDE.md
 │   ├── knowledge/hours-rules.json        every number and rule (authority)
@@ -266,6 +268,35 @@ The page and its three input files are INTERNAL to the publisher. The page was c
 Chrome (screenshot) and prints to a 4-page PDF for the example; the printed pages themselves were not
 looked at, because no PDF renderer is installed on this machine. Stage 2 does not show a screen count
 any more — screens come out of the Stage 3 script.
+
+## 4h · The content script (2.16.0, 2026-09-30, Phase 5 step 5)
+
+L29 built out. `_factory/script/M01.json` holds every screen in trainee order — slides with their exact
+words, planned picture, notes and minutes; each self-check and module-check question its own screen —
+and `content_script.py render` turns it into a review page and **a Word file**, the operator's copy
+(owner: colleagues do not use Markdown). Every editable text is a Word content control tagged
+`<screen>.<field>` and locked against deletion (`sdtLocked`), so typing works and deleting a box does not.
+The file is written and read with the standard library only.
+
+The owner's conditions: typed text and Word comments are both read; tracked changes are read as if
+accepted and reported as tracked, with the author; a deleted box and text typed outside the boxes are
+reported, never guessed. **Nothing is applied from reading**: `read` and `propose` write a pending list
+and print what was understood, only in the changed words ("'rely on' becomes 'are supported by'");
+`apply --confirmed` applies it after the operator says yes, logs every change in `FEEDBACK_LOG.md`,
+keeps the old Word file and writes a fresh one; comments are instructions and are never applied as
+edits. Approval refuses while anything waits; any change after approval makes the module a draft
+again. `check_script_match.py` proves the built slides and tasks carry exactly the approved words, via
+`data-script` / `data-script-field`, and fails any module built from an unapproved script.
+
+**Proved with real Word** (Microsoft Word on this machine, driven through its automation interface,
+2026-09-30): Word opened the generated file (36 boxes), a box's text was retyped, a comment added on a
+title, an answer reworded with Track Changes on, and deleting a box was **refused by the lock**; after
+Word saved, `read` found all three, placed the comment on the right field and named the tracked change's
+author. **PDF comments**: a review page printed to PDF by Chrome, with a reader-style comment added,
+was read back with its page and the screens on that page — approximate by nature, and it needs the
+`pypdf` package. `test_content_script.py` simulates the Word edits in the file's XML so it runs on any
+computer. Not done: the slide-text check (L22) does not read the review page; it runs on the built deck,
+which the match then ties to the script.
 
 ## 5 · Known gaps / before this goes live
 

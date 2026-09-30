@@ -85,6 +85,12 @@ and get approval before writing markup:
 The **Numbers** column is the one people skip and the one that has already caused a defect.
 Fill it from the record sheet, not from the task.
 
+Since 2.16.0 the words of every task — question, answers, correct answer, feedback, and the
+mechanic — are approved by the operator in the module's content script first (`course-factory`
+`script/GUIDE.md`, L29). This table then comes from the approved script; it is not a second
+approval of the content. Every task page built from it carries `data-script` and
+`data-script-field`, so `check_script_match.py` can prove the words are the approved ones.
+
 ---
 
 > **The owner's rulings behind every section below — the quotes, the failures and the numbers —

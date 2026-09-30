@@ -57,7 +57,7 @@ row wins** — even before its step has been built out. Full text: `references/l
 |---|---|---|
 | **L27** | Three test levels on the tablet: self-checks and the **module check are ungraded**; the **final assessment is the only graded test**. The module check still waits for the instructor's unlock; the instructor sees done / not done and the result as information, never pass/fail or red | step 6 |
 | **L28** | Course type `NEW_ENTRANT` or `EXPERIENCED` is declared at intake and shapes the build (new entrants: more explanation, more screens, more worked examples). Every instrument and simulator in the IMO model course is assumed available — never asked | steps 2, 7 |
-| **L29** | Before any HTML, a word-for-word **content script** per module is approved by the operator; the slides then say exactly that. Facts the operator stated are listed there once per module, marked *operator-stated*, so they are checked before HTML | step 5 |
+| **L29** | Before any HTML, a word-for-word **content script** per module is approved by the operator; the slides then say exactly that. Facts the operator stated are listed there once per module, marked *operator-stated*, so they are checked before HTML — see *Stage 3* below | now |
 | **L30** | **Module 1 is a pilot**, built by five roles and approved before any other module is built | step 10 |
 | **L31** | Ask like a colleague: real expert questions batched as **one pop-up with options** at the next STOP, then carry on. No "needs SME review" spam. Honesty markers live in `factory-notes.md`, never on a slide, never a reason to stop; "next" at a STOP ratifies what it showed | now |
 | **L32** | `COURSE_STATE.md` updated at the end of every stage; every operator correction in `FEEDBACK_LOG.md`; a pattern file offered when the operator is happy — see *The course remembers* below | now |
@@ -296,6 +296,20 @@ that disagree, a Sub-ILO change without the programme wording, a graded module c
 shown at the top. Markers stay in `factory-notes.md` (L31). Nothing is built until the operator
 says "next"; then record it in `COURSE_STATE.md` (L32).
 
+## Stage 3 — the content script, approved before any HTML (L29)
+
+`script/GUIDE.md` is the lane; `scripts/content_script.py` does it. Per module, the exact words of
+every screen **in trainee order — one task per screen** — with the planned picture, the instructor
+notes, every question with its answers, correct answer and feedback, and the operator-stated facts
+listed once. The operator gets a review page (prints to PDF) and a **Word file**; they correct by
+typing, by Word comment or in the chat.
+
+**Every correction is shown before it is applied.** `read` / `propose` only print what was
+understood and leave it pending; show that list, and `apply --confirmed` only after the operator says
+yes. Approval is `approve --by <name>`; any later change makes it a draft again. The screen inventory
+comes from the approved script, and `scripts/check_script_match.py` proves the built module says
+exactly those words.
+
 ## Build order
 
 `knowledge/build-order.json` is the authority. Read it; it names the owning skill for each step
@@ -362,7 +376,8 @@ the line for the thing you changed. **Why each check exists, and what got throug
    `course-visuals/scripts/write_visual_handoff.py <module>`
 10. `course-module-ui/scripts/design_system.py check <module>`, then `audit_ui.py --strict` over a
     **new** module's stylesheets — never a delivered deck
-11. `scripts/check_slide_text.py <course>` — what the pages SAY (L22)
+11. `scripts/check_slide_text.py <course>` — what the pages SAY (L22); then
+    `scripts/check_script_match.py <course> --module <n>` — the words are exactly the approved script (L29)
 12. `scripts/check_plain_language.py <course>` — your own report, last before sending it (L25)
 13. `retrofit/scripts/detect_expert_edits.py <module> --record --version <v>` — **last of all**, after everything else passes (L24)
 14. **In retrofit only** — `retrofit/scripts/check_language.py <course> --declare <LANG>`, and

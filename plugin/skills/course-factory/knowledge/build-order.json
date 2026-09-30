@@ -58,11 +58,20 @@
       "why": "changing a table row is free; changing eight built modules is not"
     },
     {
+      "n": "6b",
+      "step": "content script",
+      "owner": "course-factory (script/GUIDE.md, scripts/content_script.py)",
+      "does": "Stage 3 STOP, per module: the exact words of every screen in trainee order - one task per screen - with the planned picture, instructor notes, every question with answers, correct answer and feedback, and the operator-stated facts listed once. A review page and a Word file for the operator. Every correction is shown as an understood list before it is applied (apply --confirmed only after the operator says yes). The final-assessment bank the same way (--module final).",
+      "blocked_without": "the GATE (6) approved",
+      "output": "_factory/script/M<nn>.json approved; review/M<nn>_SCRIPT_REVIEW.html, review/M<nn>_SCRIPT.docx",
+      "added": "2.16.0 (Phase 5 step 5). Numbered 6b so no later step moves."
+    },
+    {
       "n": 7,
       "step": "screen inventory",
       "owner": "course-module-ux",
-      "does": "per module, the ordered list of screens with kind and purpose, approved before any HTML exists",
-      "blocked_without": "the GATE (6) approved"
+      "does": "per module, the ordered list of screens with kind and purpose - DERIVED from the approved content script (6b), not approved separately. Every screen built from it carries data-script=<id>.",
+      "blocked_without": "the content script (6b) approved"
     },
     {
       "n": 8,

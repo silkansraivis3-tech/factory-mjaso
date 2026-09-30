@@ -146,6 +146,12 @@ So before writing any HTML, present **one table** and wait for approval:
 Every row of the timetable must appear. A block with no row is the 90-missing-minutes defect,
 and the table is the only place it is cheap to notice.
 
+Since 2.16.0 this table is **derived from the module's approved content script** (`course-factory`
+`script/GUIDE.md`, L29) — one row per script screen, in its order — and is not a second approval of
+the words. Build every screen with `data-script="<id>"` and the approved text in
+`data-script-field` elements; `check_script_match.py` proves the deck says exactly that. A block of
+the timetable the script has no screen for is still the defect above: send it back to the script.
+
 ---
 
 ## Honesty markers — the set, and where they land

@@ -288,7 +288,20 @@ until the operator approves it**, and the built slides must then say exactly wha
 Every fact the operator stated rather than a source (L26) appears in that module's review **once, in
 one short list, marked *operator-stated*** — so it is checked before the HTML, not discovered in front
 of a class. One list per module; not a warning beside each one. (Owner, 2026-09-30.)
-→ built out in step 5.
+
+As the owner set it for step 5 (2026-09-30):
+
+- **the editable copy is a Word file**, not Markdown — colleagues do not use Markdown. Corrections may
+  be typed into the text or made as Word comments; both are read. Tracked changes are read as they
+  would stand if accepted, and the list says which were tracked and by whom; what cannot be read
+  reliably (a box deleted outright, text typed outside the boxes) is said plainly, never guessed;
+- **before any correction is applied** — from the Word file, a PDF or the chat — the operator is shown
+  a short plain list of what was understood (*"slide 7: X becomes Y; question 3: answer changed to B"*),
+  and it is applied only after they confirm;
+- **self-checks and the module check are shown in screen order, one task per screen**, as the trainee
+  will see them.
+
+→ built out in 2.16.0: `script/GUIDE.md`, `scripts/content_script.py`, `scripts/check_script_match.py`.
 
 **L30 · Module 1 is a pilot.**
 After the architecture is approved, Module 1 alone is scripted, built and approved before any other

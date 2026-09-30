@@ -144,7 +144,8 @@
    "(^|/)COURSE_PATTERN_[^/]*\\.md$",
    "(^|/)factory-notes\\.md$",
    "(^|/)ARCHITECTURE_REVIEW\\.html$",
-   "(^|/)(programme|plan|architecture)\\.json$"
+   "(^|/)(programme|plan|architecture)\\.json$",
+   "(^|/)review/[^/]*_SCRIPT(_REVIEW)?\\.(html|docx)$"
   ],
   "instructor_only_filename_patterns": [
    [
