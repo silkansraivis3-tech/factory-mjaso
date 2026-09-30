@@ -19,7 +19,15 @@ the ILOs out of it. Without it there is no hours law and no ILOs.
 
 ## The sources
 
-**Where is the knowledge base?** The docling-extracted folder for this subject.
+**Where is the knowledge base?** The folder the Course Source Processor made (it has
+`SOURCE_MANIFEST.json` and a `sources` folder), or an older docling one. The factory finds it if it
+is in the course folder.
+
+**Is there an old version of this course?** A folder on this computer is best. A Google Drive link
+works only if it can be read; otherwise the factory asks you to download it.
+
+**Who is the course for?** New entrants (no prior knowledge) or experienced seafarers (upgrade,
+advanced, revalidation). The factory proposes one from the programme; you confirm it.
 
 **Any IMO model course that applies?** It is guidance — the approved programme still governs.
 Name it and it will be cited as support.
@@ -33,7 +41,9 @@ Write only what differs. Silence means "same as GAS BASIC".
 - **Days and group size** —
 - **Simulator?** which one, and what is it used for —
 - **Practical facility?** live fire, enclosed-space rig, bench equipment —
-- **Anything the school does not have** — say so; a gap gets logged, never invented
+
+Everything the IMO model course lists is assumed to be at Novikontas. Only if something is **not**
+available, say so here.
 
 ---
 
@@ -46,8 +56,9 @@ opinion decides an argument.
 
 <!--
   What the skill does with this, in order (knowledge/build-order.json is the authority):
-    programme -> hours -> ILO map -> module split -> GATE (you approve) -> screen inventory
-    -> task pages -> screens -> handout -> assessment -> module plans -> terminals -> verify
+    intake (one batch of pop-up questions) -> programme -> hours -> ILO map -> module split
+    -> GATE (you approve) -> screen inventory -> task pages -> screens -> handout -> assessment
+    -> module plans -> terminals -> verify
 
   Three things it will hold you to, because each one cost real rework on GAS BASIC:
     1  every module's teaching minutes equal its accredited minutes EXACTLY; the overflow

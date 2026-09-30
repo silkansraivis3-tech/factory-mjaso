@@ -1,0 +1,26 @@
+{
+  "_authority": "L28 - the course type is declared at intake and changes the build. Read at Stage 2 (architecture), Stage 3 (the content script) and when screens are built. Written 2026-09-30 (2.13.0, Phase 5 step 2); the build-side detail lands in step 7.",
+  "_never": "Neither type changes the course language: real terminology, real abbreviations, real procedures, exactly as used at sea and in the regulations. Plain language (L25) is for the operator, never for the course. Neither type changes the programme, the Main ILOs or the hours (L1-L3). Theory is never removed (L5).",
+
+  "NEW_ENTRANT": {
+    "who": "trainees with no prior knowledge of the subject",
+    "theory": "more of it, and explained more: definitions before use, one idea per screen, step-by-step build-up from what a trainee can see to what they must understand",
+    "screens": "more screens rather than denser ones - when in doubt, explain more; missing an important point is worse than one extra slide",
+    "worked_examples": "many: a worked example before every first own attempt, then a faded example, then the trainee alone",
+    "active_learning": "self-check after every key concept; explain-then-reveal and predict-then-reveal to turn explanation into activity (L5)",
+    "practice": "guided first, then independent; the instructor models the procedure before the trainee performs it",
+    "terminology": "every term and abbreviation introduced and shown on first use, then used exactly as the regulations and the industry use it"
+  },
+
+  "EXPERIENCED": {
+    "who": "upgrade, advanced, refresher or revalidation - trainees who already work with the subject",
+    "theory": "present but shorter, anchored in real experience: incidents, near misses, 'what would you do', what changed in the rules",
+    "screens": "fewer explanation screens; more scenario, decision and troubleshooting screens",
+    "worked_examples": "fewer; replaced by cases the trainee reasons through",
+    "active_learning": "scenario exercises and digital decision tasks carry the theory; predict-then-reveal on incidents",
+    "practice": "more digital tasks and scenario exercises; simulator time used for abnormal and emergency situations",
+    "terminology": "assumed known; new or changed terms flagged"
+  },
+
+  "how_it_is_decided": "Proposed from the programme's title and entry requirements (knowledge/intake.json look_first), shown to the operator as the (Recommended) option in the intake pop-up, and recorded in _factory/intake.json. Never decided silently."
+}

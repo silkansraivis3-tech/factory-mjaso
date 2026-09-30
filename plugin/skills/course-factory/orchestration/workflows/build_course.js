@@ -4,7 +4,7 @@
  *
  *   { course: "<absolute path to the course folder>",
  *     programme: "<path to the approved programme>",
- *     kb: "<path to the docling knowledge base>",
+ *     kb: "<path to the knowledge base - Course Source Processor or docling>",
  *     modules: [ { id: "m1", title: "...", minutes: 240, theory: 200, practical: 40 }, ... ] }
  *
  * `modules` is deliberately an INPUT, not something the script discovers. The reader
@@ -106,7 +106,8 @@ const build = (m) => `Invoke ${SKILL} and follow it. Build ONE module.
   Your minutes:    ${m.minutes} total (${m.theory} theory / ${m.practical} practical)
 
 Read ONLY your own rows of ${A.course}/MODULE_MAP.md and ${A.course}/ILO_MAP.md, plus
-the source extracts they name. Do not read the whole knowledge base.
+the source extracts they name. Do not read the whole knowledge base: search it with
+course-factory/kb/scripts/kb_tool.py search, which writes into the course folder only.
 
 YOU MAY WRITE ONLY INSIDE  ${A.course}/modules/${m.id}/
 Never the registry, never course.json, never the handout, never another module. Those

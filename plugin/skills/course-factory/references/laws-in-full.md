@@ -230,8 +230,9 @@ Five limits are hard, and only five:
 1. the Novikontas brand;
 2. the approved programme and its Main ILOs, copied verbatim (L1, L2);
 3. the official hours (L1, L3);
-4. no source, no maritime claim (L4) — a fact the operator states **is** a source: use it and
-   record it in `factory-notes.md` as theirs, with the date;
+4. no source, no maritime claim (L4) — a fact the operator states **is** a source: use it, record
+   it in `factory-notes.md` as theirs with the date, and list it in the module's content-script
+   review (L29);
 5. the offline tablet (L6) — everything bundled, nothing fetched at class time.
 
 When a request truly hits one of them, say why in one or two plain sentences, offer the closest
@@ -258,7 +259,8 @@ and the result as information — never pass or fail, never red. The tablet app'
 colour a check red today; the factory writes the exact change list and the owner applies it (L21).
 → built out in `course-task-ux` (Phase 5 step 6).
 
-**L28 · Who the course is for, and what the school has.**
+**L28 · Who the course is for, and what the school has.** *(Intake: `knowledge/intake.json`; the
+effects of each type: `knowledge/course-type.json`.)*
 The course type is declared at intake and changes the build:
 
 - `NEW_ENTRANT` — no prior knowledge. More theory and explanation, more screens, more worked
@@ -282,6 +284,10 @@ and feedback; for the course, the final-assessment bank with answers. It is deli
 that opens with a double-click and prints to PDF, plus an editable twin. The operator corrects it
 in chat, in comments or in the twin; the corrections are applied back. **Nothing moves to HTML
 until the operator approves it**, and the built slides must then say exactly what was approved.
+
+Every fact the operator stated rather than a source (L26) appears in that module's review **once, in
+one short list, marked *operator-stated*** — so it is checked before the HTML, not discovered in front
+of a class. One list per module; not a warning beside each one. (Owner, 2026-09-30.)
 → built out in step 5.
 
 **L30 · Module 1 is a pilot.**

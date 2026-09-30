@@ -4,6 +4,15 @@
   "_revised": "2026-09-10 - the visual layer became an explicit required step (8) owned by course-module-ui, and its audit joined verify. Before this the pipeline named no owner for how a module LOOKS, so a module could pass every UX check and still ship as default white HTML. Steps renumbered from 8 onwards. | 2026-09-10 (Phase 3) - a VISUAL PLAN step (9) owned by course-visuals was inserted after the visual system and before task pages, and course-visuals joined verify. Before this the pipeline named an owner for how a module LOOKS but none for WHAT THE PICTURE SHOULD BE, so a module could pass every check and still ship card grids and boxes joined by arrows. Steps renumbered from 9 on. | 2026-09-11 - a RETROFIT pipeline was added beside the build pipeline. The steps are not the same: a retrofit starts from existing material, so it classifies the delivery first and its content steps are reads rather than writes.",
   "steps": [
     {
+      "n": 0,
+      "step": "intake",
+      "owner": "course-factory (knowledge/intake.json) + course-factory/kb",
+      "does": "Stage 1. Look in the folder first; sort the knowledge base's sources (kb_tool.py sources - exact copies, format copies, editions); ask what is still missing in one batch of pop-up questions - programme, knowledge base, old course, course type, model course and language only if not found, which edition is current; record everything in _factory/intake.json",
+      "blocked_without": "nothing - the programme is the one blocking ANSWER, and it is asked here",
+      "output": "_factory/intake.json, _factory/kb_sources.json",
+      "added": "2.13.0 (Phase 5 step 2). Numbered 0 so no later step moves."
+    },
+    {
       "n": 1,
       "step": "programme",
       "owner": "course-factory/hours",
@@ -22,9 +31,9 @@
     {
       "n": 3,
       "step": "knowledge base",
-      "owner": "the project's docling extraction",
-      "does": "sources for the subject, extracted and searchable",
-      "note": "search the extracted text before declaring a source unreadable"
+      "owner": "course-factory/kb (kb/GUIDE.md, kb/scripts/kb_tool.py)",
+      "does": "sources for the subject, extracted and searchable - a Course Source Processor knowledge base or an older docling one, told apart by their files. Searched with kb_tool.py search; retrieval packs are written into the course folder's _factory/retrieval/, never into the knowledge base. Only the current edition of a publication is cited (intake).",
+      "note": "search the extracted text before declaring a source unreadable; never read a document.md or content.md whole"
     },
     {
       "n": 4,

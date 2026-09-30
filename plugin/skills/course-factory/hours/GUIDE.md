@@ -22,7 +22,7 @@ without the check.
 
 Two traps, both real:
 
-- **A docling-extracted table loses columns.** Rows where practical hours are zero can come out
+- **An extracted table (docling or the Course Source Processor) can lose columns.** Rows where practical hours are zero can come out
   with the total sitting in the practical column. Read the `Total` row and reconcile; never take
   a single row's shape as the pattern.
 - **The academic hour is not 60 minutes.** GAS BASIC's is 40. Read it from the programme. If the

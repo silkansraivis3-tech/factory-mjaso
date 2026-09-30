@@ -1,0 +1,69 @@
+{
+  "_authority": "Stage 1 - intake. What the factory looks for in the folder first, the questions it may ask when something is genuinely missing, how they are asked, and what it records. SKILL.md 'The brief' points here. Written 2026-09-30 (2.13.0, Phase 5 step 2), replacing the old rule that only three questions could ever be asked.",
+  "_law": "Look in the folder before asking anybody anything. Ask only what the folder could not answer - batched, as pop-up questions with options (the ask-question tool: up to 4 questions per pop-up, 2-4 options each, a short header), most important first, never one question at a time and never a question whose answer is already on disk (L31). An option the factory would pick on the evidence goes first, marked (Recommended).",
+
+  "look_first": [
+    {"for": "the approved programme", "how": "file names containing programme / program / programma / study programme / mācību programma / программа, in the operator's folder and one level up. Read the hours table from the ORIGINAL document, never from a knowledge-base copy (an extraction can lose a row)."},
+    {"for": "the IMO model course", "how": "file names containing 'model course' / 'IMO' and a number like 1.04 or 1.35; the programme usually names it."},
+    {"for": "the knowledge base", "how": "run kb/scripts/kb_tool.py detect on the folder and its sub-folders - a Course Source Processor knowledge base (SOURCE_MANIFEST.json + sources/) or an older docling one (00_INDEX/SOURCE_MANIFEST.json)."},
+    {"for": "the old course", "how": "sub-folders named old / previous / existing / current course / iepriekšējais / vecais / старый, or any folder holding module HTML, decks (.pptx) or handouts for the same course."},
+    {"for": "COURSE_LANGUAGE", "how": "the language of the programme and of the old course's course-facing files (L19)."},
+    {"for": "the course type", "how": "the programme's title and entry requirements: Basic / Familiarisation / no prior experience point to NEW_ENTRANT; Advanced / Refresher / Revalidation / Upgrade / required sea service point to EXPERIENCED. This is a proposal, shown to the operator as the (Recommended) option - never decided silently."},
+    {"for": "duplicate sources and editions", "how": "run kb/scripts/kb_tool.py sources <kb> --course <course>. Exact copies and .doc/.docx pairs need no question; each edition group becomes one pop-up question."}
+  ],
+
+  "questions": [
+    {"n": 1, "id": "programme", "header": "Programme", "ask_when": "no approved programme was found, or more than one candidate was",
+     "question": "Which document is the approved study programme for this course?",
+     "options": "the candidate files found (up to 3); the operator types a path with Other",
+     "blocking": "yes - without it there are no hours and no Main ILOs (L1, L2). Everything else can proceed around a missing answer; this cannot."},
+    {"n": 2, "id": "knowledge_base", "header": "Sources", "ask_when": "no knowledge base was detected",
+     "question": "Where is the knowledge base for this course?",
+     "options": ["the candidate folders found", "No knowledge base - use the source files directly"]},
+    {"n": 3, "id": "old_course", "header": "Old course", "ask_when": "no old course was found and the operator has not said there is none",
+     "question": "Is there an old version of this course the factory should learn from?",
+     "options": ["the candidate folders found", "No old course", "A Google Drive link (I will paste it)"],
+     "rule": "A local folder is preferred. A Google Drive link is optional: if it cannot be read reliably, say so in one sentence and ask the operator to download it and point to the folder. The old course is source material and a picture source (L33); it is never edited."},
+    {"n": 4, "id": "course_type", "header": "Course type", "ask_when": "always, unless the operator already said it",
+     "question": "Who is this course for?",
+     "options": [
+       {"label": "New entrants", "description": "No prior knowledge. More explanation, more screens, more worked examples, step-by-step (NEW_ENTRANT)."},
+       {"label": "Experienced seafarers", "description": "Upgrade, advanced or revalidation. Shorter theory anchored in real incidents; more scenario and digital tasks (EXPERIENCED)."}
+     ],
+     "rule": "Put the one the programme points to first, marked (Recommended). knowledge/course-type.json says what each changes."},
+    {"n": 5, "id": "model_course", "header": "Model course", "ask_when": "the programme names none and none was found, or several were found",
+     "question": "Which IMO model course sits behind this programme?",
+     "options": "the candidates found (up to 3); 'None - this programme has no model course'"},
+    {"n": 6, "id": "course_language", "header": "Language", "ask_when": "only when it cannot be read off the programme or the old course (L19)",
+     "question": "Which language are the slides, tasks and assessment in?",
+     "options": ["English", "Latvian", "English + Latvian"]},
+    {"n": 7, "id": "editions", "header": "Edition", "ask_when": "kb_tool.py sources found edition groups",
+     "question": "taken as written from _factory/kb_sources.json - one question per group, 'which edition is current?'",
+     "options": "taken as written from _factory/kb_sources.json",
+     "rule": "Record the answer with kb_tool.py decide. From then on the factory cites only the current edition; a search leaves the other out."},
+    {"n": 8, "id": "expert_edits", "header": "Hand edits", "ask_when": "retrofit only, and only when retrofit/scripts/detect_expert_edits.py says nothing-to-go-on (L24)",
+     "question": "Has anyone changed this module by hand since it was made?",
+     "options": ["No - nobody touched it", "Yes - I will say which screens"]}
+  ],
+
+  "never_ask": ["the module split", "the screen count", "the task codes", "the pass marks", "the file layout", "which lane or skill to load", "whether the school has an instrument or simulator the IMO model course lists - it is assumed available (L28)"],
+  "equipment": "Every instrument and simulator the IMO model course lists for this course is assumed available at Novikontas (L28). Practical tasks are designed for it. The factory asks only if the operator says something is not available.",
+  "no_web_search": "Never web-search during intake. Something not in the brief, the folder, the programme or the knowledge base is asked in the pop-up; UNKNOWN means it was asked and the operator did not know.",
+
+  "record": {
+    "file": "_factory/intake.json in the course folder (internal - never shipped, see course-tablet-publisher internal_globs)",
+    "written": "at the end of Stage 1, before the architecture is designed; kb_tool.py decide adds the editions to it",
+    "fields": {
+      "programme": "path of the approved programme",
+      "model_course": "path, or 'none'",
+      "knowledge_base": {"path": "folder", "format": "course_source_processor | docling | none"},
+      "old_course": "folder path, a Drive link that was downloaded to a folder, or 'none'",
+      "course_type": "NEW_ENTRANT | EXPERIENCED",
+      "course_language": "as L19",
+      "equipment": "assumed: everything the IMO model course lists - or the operator's stated exceptions",
+      "editions": "written by kb_tool.py decide",
+      "asked": "every question put to the operator, with the answer and the date - so nothing is asked twice",
+      "found_on_disk": "what was found without asking, with the path"
+    }
+  }
+}

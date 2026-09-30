@@ -40,6 +40,11 @@ course-factory/
 ├── knowledge/
 │   ├── build-order.json                  the 15 ordered steps + who owns each (authority)
 │   └── delivery-contract.json            paths, flavours, course pack, git, offline (authority)
+├── knowledge/intake.json                 Stage 1: look first, the pop-up questions, the intake record (2.13.0)
+├── knowledge/course-type.json            NEW_ENTRANT / EXPERIENCED - what each changes (L28, 2.13.0)
+├── kb/                                   READ IN: intake, and whenever sources are needed (2.13.0)
+│   ├── GUIDE.md
+│   └── scripts/kb_tool.py, test_kb.py    both knowledge-base kinds; copies, editions, search - never writes into the KB
 ├── templates/
 │   ├── COURSE_BRIEF.md                   what the operator types
 │   └── factory-notes.md                  companion file, written by the skill during the run
@@ -178,6 +183,32 @@ ignoring colleague requests as "not in the style":
 
 The five hard limits are the only exceptions: brand, programme + Main ILOs, hours, no source no
 claim (an operator's stated fact is a source), offline tablet.
+
+## 4e · Intake and the knowledge base (2.13.0, 2026-09-30, Phase 5 step 2)
+
+The old brief allowed **three questions, ever** — programme, knowledge base, hand edits — and assumed
+every knowledge base was a docling extraction. The owner's process needs more at intake (old course,
+course type, model course, which edition is current) and the owner's own tool, the Course Source
+Processor, was unknown to the factory.
+
+- `knowledge/intake.json` — look in the folder first, then **one batch of pop-up questions with
+  options** for what is still missing, then `_factory/intake.json`. Equipment the IMO model course
+  lists is assumed available (L28) and never asked.
+- `kb/scripts/kb_tool.py` — reads both kinds by their files. `sources` sorts the knowledge base
+  before anything is cited: exact copies (cited once), the same document as .doc/.docx (newer format
+  cited), and **editions of one publication** — by name with the year and edition removed, by
+  acronym (LGHP, ISGOTT), by typo (SIGGTO/SIGTTO) — each written as a ready "which edition is
+  current?" question. Different numbers mean different documents (exercise 14.2.4 is not 14.2.5, model
+  course 1.04 is not 1.35); a short differing word is not a typo (LNG/LPG). `decide` records the answer;
+  `search` then leaves the old edition out. Packs go to `<course>/_factory/retrieval/`, **never into the
+  knowledge base**.
+- Run read-only on the two real knowledge bases on this machine: GAS BASIC (docling, 48 sources) —
+  3 exact copies (the SIGTTO book three times), 1 .doc/.docx pair, and 2 edition questions (MARPOL
+  2022 against an older MARPOL; ICS Tanker Safety Guide 3rd ed. against an undated one). The electrical
+  course (Course Source Processor, 565 sources) — 53 exact copies and 7 edition questions. Search took
+  1–3 seconds; both knowledge bases were fingerprinted before and after and did not change.
+- The first matching rules grouped LNG with LPG, two numbered exercises and the two IMO model
+  courses; the real run caught all three before they reached a test, and `test_kb.py` now pins them.
 
 ## 5 · Known gaps / before this goes live
 

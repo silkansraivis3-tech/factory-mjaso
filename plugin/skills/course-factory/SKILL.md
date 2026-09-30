@@ -44,7 +44,7 @@ too (L24 protects an expert's change from the factory, not from the operator).
 
 Only five limits are hard: **the brand · the programme and its Main ILOs (L1, L2) · the official
 hours (L1, L3) · no source, no maritime claim (L4) · the offline tablet (L6)**. A fact the operator
-states is a source — use it, and record it as theirs. When a request truly hits a hard limit: one
+states is a source — use it, record it as theirs, and list it in that module's content-script review (L29). When a request truly hits a hard limit: one
 or two plain sentences why, the closest option that works, and then do that. Every other "never"
 in this factory governs the factory's own choices, not the operator's requests.
 
@@ -57,7 +57,7 @@ row wins** — even before its step has been built out. Full text: `references/l
 |---|---|---|
 | **L27** | Three test levels on the tablet: self-checks and the **module check are ungraded**; the **final assessment is the only graded test**. The module check still waits for the instructor's unlock; the instructor sees done / not done and the result as information, never pass/fail or red | step 6 |
 | **L28** | Course type `NEW_ENTRANT` or `EXPERIENCED` is declared at intake and shapes the build (new entrants: more explanation, more screens, more worked examples). Every instrument and simulator in the IMO model course is assumed available — never asked | steps 2, 7 |
-| **L29** | Before any HTML, a word-for-word **content script** per module is approved by the operator; the slides then say exactly that | step 5 |
+| **L29** | Before any HTML, a word-for-word **content script** per module is approved by the operator; the slides then say exactly that. Facts the operator stated are listed there once per module, marked *operator-stated*, so they are checked before HTML | step 5 |
 | **L30** | **Module 1 is a pilot**, built by five roles and approved before any other module is built | step 10 |
 | **L31** | Ask like a colleague: real expert questions batched as **one pop-up with options** at the next STOP, then carry on. No "needs SME review" spam. Honesty markers live in `factory-notes.md`, never on a slide, never a reason to stop; "next" at a STOP ratifies what it showed | now |
 | **L32** | `COURSE_STATE.md` updated at the end of every stage; every operator correction in `FEEDBACK_LOG.md`; a pattern file offered when the operator is happy | step 3 |
@@ -116,7 +116,7 @@ for, and the one rule that keeps a parallel build from losing work: `references/
 | ILO wording, verbs, constructive alignment, assessment design | `novikontas-pedagogy-toolkit` |
 | Exercise forms, handouts, written tests, decks as pptx | the `novikontas-*` material skills |
 | Visual identity — logo, colour, type | `novikontas-brandbook` |
-| Getting text and figures out of source PDFs | the project's own docling knowledge base |
+| Getting text and figures out of source PDFs | the operator's knowledge base — Course Source Processor or docling — read only through `kb/scripts/kb_tool.py` (`kb/GUIDE.md`) |
 
 If a question belongs to a row above, say so and point. Do not re-derive it here.
 
@@ -153,19 +153,25 @@ module, the expert's notes and the factory's own build record are usually all in
 level up, and a question whose answer was sitting in the folder is the fastest way to teach an
 operator that this tool is hard work.
 
-Only these three can genuinely be missing, and only these three may be asked — batched, never
-one at a time, and never after the answer has been found on disk:
+**Stage 1 — intake.** `knowledge/intake.json` is the authority: what to look for first, the
+questions, and what to record. In order:
 
-1. **Which accredited programme governs** — the approved document, by name or path. Without it
-   there is no hours law and no ILOs, so this is the one blocking question.
-2. **The knowledge base** — the docling-extracted sources for the subject.
-3. **Has anyone edited this by hand?** — and only when `detect_expert_edits.py` says
-   `nothing-to-go-on`. See L24; this question disappears permanently after the first run,
-   because that run writes the build record.
+1. **Look in the folder** for the programme, the IMO model course, the knowledge base, the old
+   course and the language; propose the course type from the programme.
+2. **Sort the sources** — `kb/scripts/kb_tool.py sources <kb> --course <course>` (read `kb/GUIDE.md`):
+   exact copies and .doc/.docx pairs are settled without asking; each publication found in more than
+   one edition becomes a "which edition is current?" question.
+3. **Ask what is still missing — once, as pop-up questions with options** (the ask-question tool; up
+   to four per pop-up, most important first): the programme if not found (the one blocking answer),
+   the knowledge base, the old course (a local folder; a Drive link only if it reads reliably), the
+   course type (`NEW_ENTRANT` / `EXPERIENCED`, the programme's pointer first as *Recommended*), the
+   model course and the language only if not found, the edition questions, and — in retrofit, only
+   when `detect_expert_edits.py` says `nothing-to-go-on` — whether anyone edited it by hand (L24).
+4. **Record** it in `_factory/intake.json`, editions via `kb_tool.py decide`. Nothing is asked twice.
 
-Never ask: the module split, the screen count, the task codes, the pass marks, the file layout,
-or which lane to load. Those are **derived**, and deriving them is this skill's job. Never
-web-search during intake — not in the brief, programme or knowledge base means `UNKNOWN`.
+Every instrument and simulator in the IMO model course is **assumed available** (L28) — never asked.
+Never ask the module split, screen count, task codes, pass marks, file layout or which lane to
+load: those are derived. Never web-search during intake; `UNKNOWN` means asked and not known.
 
 **Corrections are the operator's only other input, and they arrive in their words.** "Too much
 text on screen 4", "keep the old pump drawing", "this should be two screens" — act on them, and

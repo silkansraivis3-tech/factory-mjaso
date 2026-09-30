@@ -2,7 +2,7 @@
 
 For the next Claude session. Read this before touching anything in this repository.
 
-**Status 2026-09-30: `course-factory` 2.12.0 + `nano-banana` 1.1.2. Phase 5 in progress.**
+**Status 2026-09-30: `course-factory` 2.13.0 + `nano-banana` 1.1.2. Phase 5 in progress.**
 Phase 5 upgrades the factory to the owner's six-stage production process (intake → architecture
 STOP → word-for-word content script STOP → pilot Module 1 with five roles → remaining modules →
 final assessment and handover). The owner's decision record, the gap analysis and the approved
@@ -13,7 +13,7 @@ in the owning skill and in `docs/FACTORY_LAWS.md`.
 Approved order: step 0 (clean-up, **done in 2.10.1**) → step 11 (lighter loading, **done in
 2.11.0**) → step 11b (style files copied, not read, **done in 2.11.1**) → step 11c (the factory's own style
 files pass the strict look check, **done in 2.11.2**) → step 1 (the owner's decisions as laws
-L26–L33, **done in 2.12.0**) → steps 2–5 →
+L26–L33, **done in 2.12.0**) → step 2 (intake + knowledge base, **done in 2.13.0**) → steps 3–5 →
 STOP for the pilot course → Stages 1–3 on it → steps 6–10 → build the pilot Module 1. After every
 step: stop, give the owner a short plain summary and the exact commit/push commands.
 
@@ -43,6 +43,7 @@ Not built yet: `course-evidence`, the `evidence-retriever` agent, the determinis
 | 2.11.1 | 2026-09-30 | Phase 5 step 11b — `course-module-ui/scripts/design_system.py` copies the style files and engines into a module and proves them identical; the model reads `references/vocabulary.md` instead of ~58 KB of CSS |
 | 2.11.2 | 2026-09-30 | Phase 5 step 11c — 128 raw colours in four shared style files became file-local named tokens with identical values; the strict look check passes on the factory's own files; look proven unchanged (computed styles and screenshots) |
 | 2.12.0 | 2026-09-30 | Phase 5 step 1 — laws L26–L33 (owner's decision record); L26 built out: the operator's request wins, style means brand only, a new **edit** routing mode |
+| 2.13.0 | 2026-09-30 | Phase 5 step 2 — intake as one batch of pop-up questions (`knowledge/intake.json`), course type (`knowledge/course-type.json`), and the `kb/` lane: both knowledge-base kinds, exact copies and editions sorted before anything is cited, search packs into the course folder only |
 
 ---
 

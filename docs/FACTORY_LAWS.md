@@ -263,8 +263,8 @@ is assumed available. → `course-factory` (steps 2, 7)
 
 **L29 · The words are approved before the HTML.** A word-for-word content script per module — every
 slide's exact text, its planned visual, instructor notes, every question with answer and feedback —
-approved by the operator before any HTML; the built slides then say exactly that. → `course-factory`
-(step 5)
+approved by the operator before any HTML; the built slides then say exactly that. Facts the operator
+stated are listed once per module in that review, marked operator-stated. → `course-factory` (step 5)
 
 **L30 · Module 1 is a pilot.** Built by five roles and approved before any other module is built;
 then the rest may run in parallel, each with its own script and review STOP. → `course-factory`
