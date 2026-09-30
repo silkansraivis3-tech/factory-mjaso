@@ -1,6 +1,6 @@
 # Run-script lane — derive the instructor's running order, never type it
 
-**v1 (2026-09-03) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v1 (2026-09-03) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Read this only when the task is producing or refreshing the instructor's running order for a
 module page.

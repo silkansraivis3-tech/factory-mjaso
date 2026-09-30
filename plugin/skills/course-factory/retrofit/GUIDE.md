@@ -38,7 +38,7 @@ do not re-derive it here. The short form:
 python retrofit/scripts/detect_expert_edits.py <module>
 ```
 
-Law 5 says the existing delivery implementation is not preserved by default. That is right for
+L18 says the existing delivery implementation is not preserved by default. That is right for
 material nobody has touched since it was generated, and **exactly wrong for a screen a maritime
 expert went into and changed on purpose**. The difference is not how the code looks — good expert
 edits often look untidy and generated filler often looks deliberate — it is *who last touched it*,

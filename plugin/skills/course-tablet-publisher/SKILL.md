@@ -20,7 +20,7 @@ description: >
 
 # NOVIKONTAS course tablet publisher
 
-**v1 (2026-09-08) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v1 (2026-09-08) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 **What this owns:** getting validated course content from an author's folder onto the two
 tablet terminals and into the shared repository, safely, while several colleagues do the

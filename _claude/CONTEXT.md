@@ -2,13 +2,39 @@
 
 For the next Claude session. Read this before touching anything in this repository.
 
-**Status: Phase 3 complete, 2026-09-10. Plugin 2.1.0.** The instructional visual system is built:
-`course-visuals`, the `visual-sourcer` agent, the four-level asset pipeline, three reusable visual
-engines, and the visual quality gate. **F-1 and F-4 resolved.** `claude plugin validate --strict`
-passes clean.
+**Status 2026-09-30: `course-factory` 2.10.1 + `nano-banana` 1.1.2. Phase 5 in progress.**
+Phase 5 upgrades the factory to the owner's six-stage production process (intake → architecture
+STOP → word-for-word content script STOP → pilot Module 1 with five roles → remaining modules →
+final assessment and handover). The owner's decision record, the gap analysis and the approved
+step plan are in **`docs/PHASE5_GAP_REPORT.md`** — read it before changing anything. Where the
+owner's Phase 5 decisions conflict with an older rule, the Phase 5 decision wins and is recorded
+in the owning skill and in `docs/FACTORY_LAWS.md`.
 
-Not built yet, and deliberately so: `course-evidence`, the `evidence-retriever` and
-`module-producer` agents, the deterministic hooks, `resources/engines/`.
+Approved order: step 0 (clean-up, **done in 2.10.1**) → step 11 (lighter loading) → steps 1–5 →
+STOP for the pilot course → Stages 1–3 on it → steps 6–10 → build the pilot Module 1. After every
+step: stop, give the owner a short plain summary and the exact commit/push commands.
+
+`claude plugin validate --strict` passes for both plugins and the marketplace; 6 test files,
+139 tests, all passing at 2.10.0.
+
+Not built yet: `course-evidence`, the `evidence-retriever` agent, the deterministic hooks,
+`resources/engines/`.
+
+### How it got here
+
+| Version | Date | What |
+|---|---|---|
+| 2.0.0 | 2026-09-10 | Phase 2 — five proven skills migrated from `course-factory` 1.3.0 |
+| 2.1.0 | 2026-09-10 | Phase 3 — `course-visuals`, `visual-sourcer`, the asset pipeline |
+| 2.2 | 2026-09-11 | Phase 4B — repairs from the ETPB3 pilot |
+| 2.3 | 2026-09-11 | Phase 4C — the composition system (`gb_compose.css`, L17) |
+| 2.4 | 2026-09-11 | RETROFIT as a first-class mode (L18) |
+| 2.5 | 2026-09-11 | figures proven alive (L20), task-page states |
+| 2.6 | 2026-09-14 | PREVIEW → APPROVAL → PUBLISH (L21) |
+| 2.7 | 2026-09-15 | a slide is not an internal document (L22) |
+| 2.8 | 2026-09-15 | the picture comes first (L23); parallel module build |
+| 2.9 | 2026-09-15 | a call and a folder; expert edits (L24); plain-language reports (L25) |
+| 2.10 | 2026-09-29 | the `nano-banana` plugin as a dependency |
 
 ---
 
@@ -22,8 +48,8 @@ claude plugin install course-factory@novikontas-course-factory
 | | |
 |---|---|
 | CLI | 2.1.267, native install at `%USERPROFILE%\.local\bin\claude.exe` |
-| Plugin | `course-factory` **2.1.0** @ `novikontas-course-factory`, scope user |
-| Installed cache | `~/.claude/plugins/cache/novikontas-course-factory/course-factory/2.1.0/` |
+| Plugin | `course-factory` **2.10.x** + `nano-banana` 1.1.x @ `novikontas-course-factory`, scope user |
+| Installed cache | `~/.claude/plugins/cache/novikontas-course-factory/course-factory/<version>/` |
 | Colleague instructions | `docs/INSTALL_FOR_COLLEAGUES.md` (authoritative copy) |
 
 **Do not confuse the two binaries.** `%LOCALAPPDATA%\AnthropicClaude\claude.exe` is the desktop app
@@ -46,7 +72,9 @@ will not update without it), push, then `claude plugin marketplace update` and `
 | `course-task-ux` | how a trainee answers or completes |
 | `course-tablet-publisher` | publishing to the two terminals and the shared repository |
 
-Agent: **`visual-sourcer`** — isolated-context asset investigation only.
+Agents: **`visual-sourcer`** — isolated-context asset investigation only; **`nano-banana:image-director`**
+— generates realistic pictures and short clips. Picture generation goes to `image-director`, never to
+a model override (until 2.10.1 four files said `Agent(model: "fable")`, which cannot make a picture).
 
 **Second plugin, `nano-banana`** (`./nano-banana`, 1.0.0, 2026-09-29) — a stdlib-Python MCP server
 for Gemini image (Nano Banana) and Veo video generation, the `realistic-visuals` skill and the
@@ -92,8 +120,9 @@ The Phase 1 brief gave the reference course path as `docling\gas\_basic\GAS Basi
 ## Findings
 
 **F-1 · RESOLVED.** `plugin/CLAUDE.md` removed; the laws are now `docs/FACTORY_LAWS.md`, marked as
-documentation, each naming its enforcing skill. L12 and L13 gained `course-visuals`. **All sixteen
-laws have an enforcing skill.** `--strict` passes clean.
+documentation, each naming its enforcing skill. L12 and L13 gained `course-visuals`. **All
+twenty-five laws have an enforcing skill** (L1–L25; `course-factory/SKILL.md` uses the same
+L-numbers since 2.10.1). `--strict` passes clean.
 
 **F-2 · STILL OPEN.** `course-module-ux/build/GUIDE.md` §8 and `MANIFEST.md` line 158 say the record
 engines live in `gas-basic-module-ux/assets/` "as the only copies". That skill is gone.
@@ -120,30 +149,22 @@ authoritative instructions are `docs/INSTALL_FOR_COLLEAGUES.md`.
 
 ---
 
-## What Phase 3 proved, and what it did not
+## What has and has not been proved
 
-**Proved, on synthetic fixtures:** the asset hierarchy in all three states (project wins · factory
-wins when project absent · `GENERATED_ASSET_REQUIRED` when nothing exists) · provenance validation
-clean and broken · **rights escalation blocks** · **animation rejection** catches decorative motion,
-missing reduced-motion guard, box-and-arrow chains, card grids, remote assets and tiny SVG labels ·
-a well-built teaching animation passes clean · the shipped patterns pass their own checks · all 15
-existing scripts still execute · `check_hours.py` and `audit_ui.py` unchanged in behaviour.
+**Proved, on synthetic fixtures (Phase 3 onward):** the asset hierarchy, provenance and rights
+escalation, animation rejection, the figure-alive probe, routing, expert-edit detection, the
+slide-text and plain-language checks, the publisher gates — the six test files.
 
-**Not proved: any of it against a real course.** Everything was synthetic. The first real module is
-the test. `check_visuals.py` also reads only **static** markup — a figure built by JavaScript at
-runtime is invisible to it, which is why the human review in `review/GUIDE.md` is not optional.
+**Proved on real material:** retrofit pilots of ETPB3 / ETPA4 modules (Phases 4B–4C).
+
+**Not proved:** a new course built end to end from a knowledge base. The Phase 5 pilot is that test.
+`check_visuals.py` reads only **static** markup — a figure built by JavaScript at runtime is
+invisible to it, which is why the human review in `course-visuals/review/GUIDE.md` is not optional.
 
 ---
 
 ## Next session
 
-**Build `course-evidence`** by generalising the project-local `gas-basic-kb-retrieval`: authority
-tiers, the four-level escalation, the citation format, GREEN/YELLOW/RED, and the rule that a
-`content.md` over about a megabyte is never read whole. `NO SOURCE = NO MARITIME CLAIM` is the
-strongest rule in the system and still has no general owner.
-
-Then the `evidence-retriever` agent, then the hooks, then `resources/engines/` (which closes F-2).
-
-**Before any of that, if the owner is ready:** run one real module of a second course end to end.
-The blueprint's step 9 is the acceptance test, and every phase so far has been validated on
-fixtures rather than on a course.
+Continue the Phase 5 step plan in `docs/PHASE5_GAP_REPORT.md` §4, in the owner's approved order
+(above). The owner's answers to Q1–Q5 and the approved order are in that report's **§6** — they
+override the §4 proposals where they differ.

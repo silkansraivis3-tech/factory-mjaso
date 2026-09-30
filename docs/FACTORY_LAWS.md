@@ -32,11 +32,13 @@ attendance, delivered contact time or a compliance record. → `course-factory`
 **L4 · NO SOURCE = NO MARITIME CLAIM.**
 Never fill a gap from memory. A stated gap is a good answer; an invented fact is a failure however
 plausible. Authority tiers are never upgraded. Check every source's edition on its own cover page.
-→ every skill; markers defined by `novikontas-course-start`, fallback in `resources/org-dependencies/`
+→ every skill; markers defined by `novikontas-course-start`, fallback in `plugin/skills/course-factory/org/ORG_DEPENDENCIES.md`
 
-**L5 · 80/20 practical, or theory delivered as active learning.**
-Where the programme's own table makes 80 % impossible, theory hours are delivered as active
-learning. A theory block with no trainee activity in it is a defect. → `course-factory`
+**L5 · 80 % of class minutes learner-active; theory delivered as active learning.**
+The 80 % is Track B — minutes where the trainee is doing, deciding or producing something — not
+the programme's practical share, which is Track A and is never changed. Where the programme
+allocates little practical time, the theory hours are delivered as active learning. A theory
+block with no trainee activity in it is a defect. → `course-factory`
 
 **L6 · Tablet-first, touch-first, offline.**
 An 800×1280 portrait finger target first, then landscape, then the projector. Targets ≥ 44 px, no
@@ -186,14 +188,14 @@ nobody having looked.
 When the model building the module cannot produce the image, the module is finished as far as it
 goes and the request leaves with it: `write_visual_handoff.py` writes one paste-ready file naming
 what to find, what to generate and exactly where each file belongs. Where the environment allows it,
-that work is spawned on a model that can generate - `Agent(model: "fable", ...)` - rather than
-waiting for a human to change models. A module never stops because one picture is missing.
+that work is spawned on the agent that owns it - `nano-banana:image-director` to generate,
+`course-factory:visual-sourcer` to find a real one - rather than waiting for a human. A module never stops because one picture is missing.
 → `course-visuals` (`scripts/check_visual_first.py`, `knowledge/visual-first-rules.json`)
 
 ---
 
 **L24 · Where the expert has already changed something, that change is content.**
-L5 says the existing delivery implementation is not preserved by default. That is right for
+L18 says the existing delivery implementation is not preserved by default. That is right for
 material nobody has touched since it was generated and exactly wrong for a screen a maritime
 expert went into and changed on purpose — which is the most expensive information in a module,
 because it is the one place somebody who actually sails ships disagreed with what was produced,

@@ -21,7 +21,7 @@ description: >
 
 # Course factory — an accredited programme becomes two tablets
 
-**v1.1 (2026-09-10) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v1.1 (2026-09-10) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 **The acceptance test.** Someone who has never seen the course opens the instructor terminal,
 types their ID, picks the module, presses **Start**, and presses **Next** to the end — and a real
@@ -148,9 +148,10 @@ do not turn a correction into an interview.
 ## The nine laws
 
 These are not preferences. Each one is here because breaking it cost real rework — the first four
-on GAS BASIC, the last two on the first two real pilots.
+on GAS BASIC, the last two on the first two real pilots. Numbered as in `docs/FACTORY_LAWS.md`,
+the one numbering the whole factory uses.
 
-### 1 · The approved programme is law, and minutes are the law's units
+### L1 · The approved programme is law, and minutes are the law's units
 
 `hours/knowledge/hours-rules.json` is the authority — read it, do not restate it. The short form:
 
@@ -166,7 +167,7 @@ on GAS BASIC, the last two on the first two real pilots.
 until someone thought to. The contract that orders the whole course factory
 (`COURSE_START.json`) has **no hours field at all**. This lane adds one.
 
-### 2 · Main ILOs are untouchable
+### L2 · Main ILOs are untouchable
 
 Main ILOs and the approved study programme are copied **verbatim** and never edited, renumbered
 or "improved". Sub-ILOs **may** be re-expressed to make a topic digital or practical — that is
@@ -178,7 +179,7 @@ the point of the exercise — but:
 IMO model courses are **guidance**; the approved programme **governs**. Where they disagree, the
 programme wins and the model course is cited as support, never as authority.
 
-### 3 · Two tracks, and only one of them is yours
+### L5 · Two tracks, and only one of them is yours
 
 This is one rule that reads like two numbers, and the ETPB3 pilot got it wrong by treating them
 as the same number. Keep them apart.
@@ -210,7 +211,7 @@ target by renaming screens.** `check_balance.py` rejects the three ways people t
 count above the block's own minutes, a practice block whose room is receiving for most of it, and
 a theory block claiming 100 % active — somebody has to set the task.
 
-### 4 · Nothing is useless until you have grepped for what depends on it
+### L7 · Nothing is useless until you have grepped for what depends on it
 
 Before removing any control, label, field or file: grep its id, class, label and filename across
 **both terminals, the course tree and every generated script**. On GAS BASIC, three of four
@@ -219,7 +220,7 @@ instructor to press, print buttons on hand-out documents, and hrefless `<span id
 elements that are how a page declares it has no way back. Unused today is not useless: data a
 planned system will read is not dead.
 
-### 5 · Content is locked. The delivery implementation is not.
+### L18 · Content is locked. The delivery implementation is not.
 
 > **PRESERVE THE COURSE CONTENT. DO NOT PRESERVE THE EXISTING DELIVERY IMPLEMENTATION BY DEFAULT.**
 
@@ -245,13 +246,13 @@ An existing visual is *evidence of a teaching decision*: preserve the decision, 
 implementation. The star/delta figure's claim — the supply never moves, only the bridges change —
 survives; its small SVG does not have to.
 
-### 5b · Where the expert has already changed something, that change is content
+### L24 · Where the expert has already changed something, that change is content
 
 > **BRING IT UP TO STANDARD. NEVER OVERWRITE IT, NEVER TIDY IT AWAY, NEVER DECIDE IT WAS A
 > MISTAKE.**
 
 `retrofit/knowledge/expert-edits.json` is the authority; `retrofit/scripts/detect_expert_edits.py`
-answers the question. This is the exception law 5 needs, and it points the other way: law 5 is
+answers the question. This is the exception L18 needs, and it points the other way: L18 is
 right about material nobody has touched since it was generated, and exactly wrong about a screen a
 maritime expert went into and changed on purpose.
 
@@ -281,7 +282,7 @@ Every run writes the record at the end, after verification passes. That is what 
 question disappear for good: the first retrofit asks it once, and no retrofit after that ever
 needs to.
 
-### 6 · The production Android application is a publish target, not a workspace
+### L21 · The production Android application is a publish target, not a workspace
 
 > **Without explicit human approval, the Android repository is READ ONLY.**
 
@@ -299,7 +300,7 @@ Enforced, not merely stated: `publish.py --publish` refuses without `--approved-
 it opens the platform file, and records the approver in the commit.
 → `course-tablet-publisher` (`references/preview-and-approval.md`)
 
-### 7 · COURSE_LANGUAGE is declared, and the operator's language is not it
+### L19 · COURSE_LANGUAGE is declared, and the operator's language is not it
 
 Mandatory in **plan** and **retrofit** alike. Detect it from the authoritative course-facing
 material, state it back in one line, and lock it.
@@ -316,7 +317,7 @@ drift check.
 
 ---
 
-### 8 · The person reading this does not work in IT
+### L25 · The person reading this does not work in IT
 
 > **EVERY MESSAGE THAT LEAVES THIS FACTORY IS READ BY A MARITIME PROFESSIONAL WITH NO IT
 > BACKGROUND.**
@@ -368,9 +369,10 @@ the expensive things to get wrong.
 `knowledge/build-order.json` is the authority. Read it; it names the owning skill for each step
 and what each step must not start without.
 
-The shape, for orientation only: programme → hours → module split → **gate** → ILO map →
-per-module screen inventory → **visual system** → tasks → screens → handout → assessment →
-module plans → terminals → verify.
+The shape, for orientation only (the file wins if this line ever disagrees with it): programme →
+model-course syllabus → knowledge base → ILO map → module split → **gate** → per-module screen
+inventory → **visual system** → **visual plan** → tasks → screens → handout → assessment → module
+plans → terminals → verify.
 
 Three orderings that are not negotiable, all three learned by getting them wrong:
 

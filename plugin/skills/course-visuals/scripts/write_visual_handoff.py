@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """The module is finished except for the pictures. Leave one file that finishes it.
 
-    write_visual_handoff.py <module_dir> [--model fable] [--out VISUAL_HANDOFF.md]
+    write_visual_handoff.py <module_dir> [--model "<who does it>"] [--out VISUAL_HANDOFF.md]
 
 WHY THIS EXISTS
 A module that stops dead because one image cannot be produced wastes everything
@@ -20,12 +20,14 @@ WHAT GOES IN
   * one paste-ready prompt at the top, addressed to the model that will do the work
 
 THE AUTOMATIC ROUTE
-This file is the fallback, not the plan. Where the environment allows a model
-override, the factory spawns the work instead of writing a note:
+This file is the fallback, not the plan. Where the environment has the agents, the
+factory spawns the work instead of writing a note:
 
-    Agent(model="fable", prompt=<the PROMPT section of this file>)
+    Agent(subagent_type="course-factory:visual-sourcer", ...)   finding a real one
+    Agent(subagent_type="nano-banana:image-director", ...)      generating one
 
-and the run continues. Write the file anyway - it is the record of what was asked,
+and the run continues. (Until 2.10.1 this said Agent(model="fable") - a text model,
+which cannot make a picture. Generation is the nano-banana plugin's job.) Write the file anyway - it is the record of what was asked,
 and it is what the owner reads if the subagent comes back empty.
 """
 from __future__ import annotations
@@ -170,8 +172,9 @@ keeps its declared reason for having no picture.
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("module", help="the module folder")
-    ap.add_argument("--model", default="Fable 5",
-                    help="the model the owner should paste this into (default: Fable 5)")
+    ap.add_argument("--model", default="Claude Code",
+                    help="where the owner should paste this (default: Claude Code, which has "
+                         "the nano-banana picture tools)")
     ap.add_argument("--out", default="VISUAL_HANDOFF.md")
     a = ap.parse_args(argv)
 

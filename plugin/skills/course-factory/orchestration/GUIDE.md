@@ -43,8 +43,8 @@ has to be settled by the reader and frozen at the gate:
 |---|---|
 | **The minutes per module** | Two agents both "rounding up to fit" is how a course built to 2175 minutes against an accredited 1640. L1. |
 | **The module split and numbering** | A module that renumbers itself breaks every cross-reference in every other module. |
-| **COURSE_LANGUAGE** | L6. One agent quietly translating is the drift this factory already has a check for. |
-| **The visual system** | L12 and the token set. Eight agents inventing eight dialects is exactly what `audit_ui.py --strict` exists to stop. |
+| **COURSE_LANGUAGE** | L19. One agent quietly translating is the drift this factory already has a check for. |
+| **The visual system** | The token set (`course-module-ui`). Eight agents inventing eight dialects is exactly what `audit_ui.py --strict` exists to stop. |
 | **Task code ranges** | Module 3 owning `GAS3xx` and nobody else touching it. |
 | **The ILO map** | Below. This is the one that actually makes parallelism work. |
 
@@ -117,14 +117,14 @@ asked to check its own work confirms it.
 |---|---|---|---|---|
 | **Reader** | the strongest available | read + search only | programme, model course, KB | `MODULE_MAP.md`, `ILO_MAP.md` |
 | **Module** | the strongest available | full | its own rows of the two maps, the visual system, its source extracts | `modules/mN/` only |
-| **Visual** | one that can generate — `model: "fable"` | read, write, web | a `GENERATED_ASSET_REQUIRED` brief | the asset files named in the brief |
+| **Visual** | the `nano-banana:image-director` agent (generates) or `course-factory:visual-sourcer` (finds) | read, write, web, the nano-banana tools | a `GENERATED_ASSET_REQUIRED` brief | the asset files named in the brief |
 | **QA** | strong; never the builder | read + run checks | the module, the two maps | a findings list — **never a fix** |
 
-**The visual agent is how the model switch happens automatically.** The `Agent` tool takes a `model`
-override, so when a module reaches an image this model cannot produce, the factory does not stop and
-does not ask the owner to change models by hand — it spawns that one piece of work on a model that
-can, and carries on. `course-visuals/scripts/write_visual_handoff.py` writes the same request to a
-file as the fallback, for the case where no override is available. Build the module as far as it
+**The visual agent is how a missing picture gets made without stopping.** When a module reaches an
+image it cannot produce, the factory does not stop and does not ask the owner — it spawns that one
+piece of work on `nano-banana:image-director` (which generates with Nano Banana / Veo) and carries
+on. `course-visuals/scripts/write_visual_handoff.py` writes the same request to a file as the
+fallback, for when the agent is unavailable or generation is blocked (no key, billing off). Build the module as far as it
 goes either way; never leave it unfinished because one picture is missing.
 
 ---

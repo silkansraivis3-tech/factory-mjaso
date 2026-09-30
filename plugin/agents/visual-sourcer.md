@@ -129,8 +129,8 @@ path is not decoration: `course-visuals/scripts/write_visual_handoff.py` collect
 that folder into one paste-ready file, so a brief written anywhere else is a brief nobody acts on.
 
 **You never generate, and you never block the build.** The module is finished as far as it goes
-without this asset. Whoever called you decides what happens next — spawn the generation on a model
-that can (`Agent(model: "fable", …)`), or leave the handoff file for the owner. Your job ends at
+without this asset. Whoever called you decides what happens next — spawn the generation on the
+`nano-banana:image-director` agent, or leave the handoff file for the owner. Your job ends at
 an honest brief.
 
 Never pad the report. Three usable lines beat a page of process.

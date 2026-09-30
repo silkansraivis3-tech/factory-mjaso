@@ -5,7 +5,7 @@ description: Use whenever building, converting or signing off the delivered HTML
 
 # Course module UX — one page, press Next to the end
 
-**v1 (2026-09-03) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v1 (2026-09-03) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 **The acceptance test.** A person who has never seen the material opens the module's one HTML
 file, presses **Start**, and presses **Next** until the session is over — and a real class gets

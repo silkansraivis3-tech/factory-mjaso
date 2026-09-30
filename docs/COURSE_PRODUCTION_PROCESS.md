@@ -24,7 +24,7 @@ PRODUCTION    screen inventory → visual system → visual plan → tasks → s
    ↓
 DELIVERY      course pack into the terminals · run script regenerated · registry
    ↓
-VERIFY        seven checks, output read, not asserted
+VERIFY        every check, output read, not asserted
    ↓
 HANDOVER      companion notes · branch and pull request · owner installs
 ```
@@ -238,11 +238,11 @@ Course pack into the trainee terminal; plans, prepare and record into the instru
 regenerate the run script and the registry. **No app code, no forked terminal, no copied shared
 engine.**
 
-Then run all seven checks and **read the output**:
-
-`check_hours.py` · `check_syllabus_coverage.py` · `verify_course.py` · `verify_links.py`
-(merged asset root) · `audit_navigation.py` · `crosscheck_tasks.py` · `audit_ui.py --strict`
-(new modules only), plus the in-page measurement lane in a real engine.
+Then run every check in the verify list of `plugin/skills/course-factory/SKILL.md` (fourteen, at
+2.10) and **read the output** — among them `check_hours.py` · `check_syllabus_coverage.py` ·
+`verify_course.py` · `verify_links.py` (merged asset root) · `audit_navigation.py` ·
+`crosscheck_tasks.py` · `audit_ui.py --strict` (new modules only) · the visual, slide-text and
+plain-language checks, plus the in-page measurement lane in a real engine.
 
 Two traps: a clean report can be false (a 0.42 s CSS transition produced "zero contrast failures"
 where there were 40, including body text at 1.08:1), and a green exit is not proof the work happened —

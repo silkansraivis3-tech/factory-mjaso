@@ -84,8 +84,8 @@
     ],
     "automatic_route": {
       "_what": "The factory does not have to wait for a human to switch models.",
-      "how": "Spawn a subagent with an explicit model override - Agent(model: \"fable\", prompt: <the handoff prompt>). The subagent returns the assets; the main run continues.",
-      "when_not": "If the environment gives no model override, or the override fails, write the file and tell the owner which model to open it in. Never silently skip the visual and never generate a schematic that should have been authored."
+      "how": "Spawn the agent that owns the job - Agent(subagent_type: \"course-factory:visual-sourcer\") to find a real asset, Agent(subagent_type: \"nano-banana:image-director\") to generate one. The agent returns the files; the main run continues. (Until 2.10.1 this said Agent(model: \"fable\") - a text model, which cannot make a picture.)",
+      "when_not": "If the agents are not available, or generation is blocked (no key, billing off - see nano-banana's realistic-visuals skill for the manual Gemini-app route), write the file and tell the owner where to open it. Never silently skip the visual and never generate a schematic that should have been authored."
     }
   }
 }

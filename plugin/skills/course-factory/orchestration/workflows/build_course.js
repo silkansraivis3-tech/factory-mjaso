@@ -80,7 +80,7 @@ and no slides:
                   practical. One row per outcome. Main ILOs are copied VERBATIM (L2).
                   Any Sub-ILO you re-express is marked PROVISIONAL.
 
-Detect and state COURSE_LANGUAGE (L6). Raise every UNKNOWN rather than inventing an
+Detect and state COURSE_LANGUAGE (L19). Raise every UNKNOWN rather than inventing an
 hour, a pass mark or a citation, and never web-search during intake.
 
 Then return the module table as JSON. Do not build anything.`

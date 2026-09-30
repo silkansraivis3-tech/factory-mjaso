@@ -1,6 +1,6 @@
 # Typed input on a tablet task screen
 
-**v2 (2026-09-03) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v2 (2026-09-03) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Read this only when a task legitimately has a text field. `SKILL.md` §2 permits that in one
 place: a simulator or field **reporting** task, where reporting what you did or saw is the

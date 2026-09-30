@@ -134,7 +134,7 @@
     },
     {
       "id": "check",
-      "purpose": "The module check. ALWAYS the last screen.",
+      "purpose": "The module check. ALWAYS the second-to-last screen - the hand-off screen is last (owner, 2026-09-03; measure/knowledge/floor.json).",
       "links_inside_slide": false,
       "fill_target": "sparer than the floor is allowed",
       "must_have": [

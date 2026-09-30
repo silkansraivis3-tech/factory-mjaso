@@ -18,8 +18,9 @@ requester's exact phrasing.
 4 CREATE    SVG · HTML/CSS/JS · Canvas · programmatic · generated illustration
 ```
 
-`scripts/resolve_asset.py` mechanises levels 1 and 2 and will emit `GENERATED_ASSET_REQUIRED` when
-both come back empty. Level 3 is judgement — hand it to the **`visual-sourcer`** agent, which works
+`scripts/resolve_asset.py` mechanises levels 1 and 2 and says `GENERATED_ASSET_REQUIRED` when both
+come back empty — provisional until level 3 has also been searched, which is what
+`source/schemas/GENERATED_ASSET_BRIEF.md` requires before a brief is written. Level 3 is judgement — hand it to the **`visual-sourcer`** agent, which works
 in isolated context so a long search does not fill the main conversation.
 
 ---

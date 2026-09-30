@@ -15,7 +15,7 @@ like**, so they cannot.
 Step **8** of `course-factory`'s build order — *establish the visual system* — is this
 skill, and for a new module it is **required**, not a polish pass. It sits after the screen
 inventory and before the first line of HTML, because retro-fitting tokens onto a finished deck
-is how drift gets signed off. `scripts/audit_ui.py --strict` then runs again at verify (step 15)
+is how drift gets signed off. `scripts/audit_ui.py --strict` then runs again at verify (step 16)
 as part of sign-off. A new module does not reach sign-off without both.
 
 ## The one law
@@ -181,7 +181,8 @@ Measured across the eight GAS BASIC modules on 2026-09-09:
 
 **Do not silently normalise a shipped module.** Repainting a signed-off deck is a content
 decision. Report the drift, name the files, and let the owner decide. New work uses the
-reference set.
+reference set. A retrofit the operator asked for **is** that decision for the module it names
+(L18): its rebuilt files get the reference set and the strict check; nothing else is repainted.
 
 `--red` / `--flame` / `--toxic` are a real gap: a gas course needs hazard colours and the
 reference set has none. Adding them is an owner decision, not a fix to apply quietly.

@@ -1,6 +1,6 @@
 # Hours — the accredited programme is law
 
-**v1 (2026-09-07) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v1 (2026-09-07) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Read this in **plan** mode, or when auditing an existing course's time.
 `knowledge/hours-rules.json` is the authority on every number and rule below — read it, and do

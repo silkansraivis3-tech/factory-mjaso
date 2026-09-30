@@ -1,6 +1,6 @@
 # MANIFEST — course-module-ux
 
-**v1 (2026-09-03) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v1 (2026-09-03) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Maintainer file. **Never read at runtime.** It exists so a session six months from now can pick
 this bundle up cold, including a session with no memory of why any of it is the way it is.

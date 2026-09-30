@@ -18,7 +18,7 @@ description: >
 
 # Course visuals — what representation actually teaches this?
 
-**v1 (2026-09-10) · plugin `course-factory` 2.1.0**
+**v1 (2026-09-10) · plugin `course-factory` (since 2.1.0)**
 
 Technically working HTML is not the bar. A screen can validate, fit, contrast correctly and still
 teach nothing. This skill exists because the default output of a language model asked for a course
@@ -76,8 +76,8 @@ pasting in an icon fails `check_visuals.py` instead, which is the correct outcom
 Build the module as far as it goes, then **leave the request with it**.
 `scripts/write_visual_handoff.py` writes one `VISUAL_HANDOFF.md`: a paste-ready prompt, every brief
 in full, the destination path and mount line for each asset, and the verification command. Where the
-environment allows a model override, the factory spawns the work instead of writing a note —
-`Agent(model: "fable", …)` — and the run continues. A module never stops because one image is
+agents are available, the factory spawns the work instead of writing a note —
+`nano-banana:image-director` to generate, `visual-sourcer` to find — and the run continues. A module never stops because one image is
 missing, and a missing image is never closed by inventing a schematic.
 
 ---

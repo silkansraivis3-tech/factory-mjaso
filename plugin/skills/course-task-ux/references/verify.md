@@ -1,6 +1,6 @@
 # Verifying a task screen
 
-**v2 (2026-09-03) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v2 (2026-09-03) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Read this before reporting any measurement, and before signing off any task page. The floor
 itself is `SKILL.md` §11; this is how to establish it truthfully.

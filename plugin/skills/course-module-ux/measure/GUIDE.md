@@ -1,6 +1,6 @@
 # Measure lane — the discipline that makes a number trustworthy
 
-**v1 (2026-09-03) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v1 (2026-09-03) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Read this whenever anything is being measured, audited or signed off.
 

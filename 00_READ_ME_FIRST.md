@@ -1,6 +1,7 @@
 # NOVIKONTAS Course Factory — read me first
 
-**Phase 3 complete: the instructional visual system is built. Plugin 2.1.0.**
+**`course-factory` 2.10.1 + `nano-banana` 1.1.2 · Phase 5 in progress (2026-09-30).**
+The current plan and the owner's decisions: [`docs/PHASE5_GAP_REPORT.md`](docs/PHASE5_GAP_REPORT.md).
 
 This repository is the Course Factory — a Claude Code plugin that turns an approved training
 programme, a set of source documents and a sentence from a colleague into a finished course running
@@ -15,8 +16,12 @@ Phase 3 added **`course-visuals`** — the skill that decides what representatio
 concept — the **`visual-sourcer`** agent, the four-level asset pipeline with provenance and rights,
 three reusable visual engines, and the visual quality gate.
 
-**Still to build:** `course-evidence`, the `evidence-retriever` and `module-producer` agents, the
-deterministic hooks, and the canonical shared-engine set in `resources/engines/`.
+Phases 4B–4C and 2.4–2.10 added the composition system, RETROFIT mode, PREVIEW → APPROVAL →
+PUBLISH, the slide-text and plain-language checks, the parallel build and the `nano-banana`
+picture plugin. Phase 5 turns the factory into the owner's six-stage production process.
+
+**Still to build:** `course-evidence`, the `evidence-retriever` agent, the deterministic hooks,
+and the canonical shared-engine set in `resources/engines/`.
 
 ---
 
@@ -45,14 +50,14 @@ giving L12 and L13 a real enforcing skill.
 
 | | | |
 |---|---|---|
-| 1 | [`docs/PHASE2_MIGRATION_REPORT.md`](docs/PHASE2_MIGRATION_REPORT.md) | **Start here if you are continuing the work.** What was migrated, from which commit, what was validated, what could not be, and what blocks Phase 3. |
+| 1 | [`_claude/CONTEXT.md`](_claude/CONTEXT.md) and [`docs/PHASE5_GAP_REPORT.md`](docs/PHASE5_GAP_REPORT.md) | **Start here if you are continuing the work.** The current state, the owner's Phase 5 decisions and the step plan. |
 | 2 | [`docs/COURSE_FACTORY_BLUEPRINT.md`](docs/COURSE_FACTORY_BLUEPRINT.md) | The architecture: why each skill and agent exists, and the decisions still open. |
 | 3 | [`docs/COURSE_PRODUCTION_PROCESS.md`](docs/COURSE_PRODUCTION_PROCESS.md) | How a course is actually made, gate to handover. |
 | 4 | [`docs/GOLDEN_COURSE_EXTRACTION.md`](docs/GOLDEN_COURSE_EXTRACTION.md) | What GAS BASIC is, how it was produced, which parts are reusable and which are not. |
 | 5 | [`docs/ANDROID_INTEGRATION_CONTRACT.md`](docs/ANDROID_INTEGRATION_CONTRACT.md) | What a generated course must satisfy to work inside the app. Read directly from the Kotlin, not from documentation. |
 | 6 | [`docs/FACTORY_RULE_CLASSIFICATION.md`](docs/FACTORY_RULE_CLASSIFICATION.md) | Every rule sorted into law / skill / agent / hook / component / reference / Android / specific / discard, plus eight named contradictions. |
-| — | [`plugin/CLAUDE.md`](plugin/CLAUDE.md) | The sixteen global laws, one line each, each naming the skill that enforces it. |
-| — | [`_claude/CONTEXT.md`](_claude/CONTEXT.md) | Working context for the next Claude session. Read this before touching anything. |
+| — | [`docs/FACTORY_LAWS.md`](docs/FACTORY_LAWS.md) | The global laws L1–L25, each naming the skill that enforces it. Documentation — the skill is what enforces. |
+| — | [`docs/PHASE2_MIGRATION_REPORT.md`](docs/PHASE2_MIGRATION_REPORT.md) | History: what was migrated in Phase 2, from which commit, and how it was validated. |
 
 ---
 
@@ -98,8 +103,7 @@ Android application. This repository is the only write target.
 
 ## Recommended next phase
 
-**Build `course-visuals`.** It is the largest genuine gap, it is the stated reason the factory
-exists, and it is the first owner for laws **L12** and **L13**, which currently have none.
+Continue Phase 5 in the owner's approved order — `docs/PHASE5_GAP_REPORT.md` §4 and §6.
 
 **D-1 is verified** — `factory-mjaso` is the authoritative Course Factory. The old `course-factory`
 repository stays as it is: read-only, not archived, not modified. **D-3** is resolved.

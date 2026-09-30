@@ -1,6 +1,6 @@
 # course-factory — MANIFEST
 
-**v1 (2026-09-07) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v1 (2026-09-07) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Maintainer file. **Not read at runtime.** It exists so a session six months from now can pick
 this up cold, including one with no memory of why any of it is the way it is.

@@ -12,7 +12,8 @@ marks: those are derived, and deriving them is the skill's job.*
 Name it, or give the path. The skill reads the academic-hour length, the topic/hours table and
 the ILOs out of it. Without it there is no hours law and no ILOs.
 
-> e.g. `knowledge_base/Programms and IMO Models/1. Program Basic Training Gas - Rev. 01/content.md`
+> e.g. `source_files/Programmes/<the approved programme>.pdf` — the original document, not a
+> knowledge-base copy of it: an extraction can lose a row of the hours table.
 
 ---
 

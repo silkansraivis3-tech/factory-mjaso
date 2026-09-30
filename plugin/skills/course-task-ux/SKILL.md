@@ -15,7 +15,7 @@ description: >
 
 # Course task UX — the standard
 
-**v2 (2026-09-03) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v2 (2026-09-03) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Ruled by a course owner across 2026-09-01/03 while reviewing a tablet build of 32 task
 screens across eight modules. The owner quotes in this file are the evidence — they are why

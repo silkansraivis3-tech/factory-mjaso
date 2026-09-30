@@ -1,6 +1,6 @@
 # Build lane — one page, and every block on it
 
-**v1 (2026-09-03) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v1 (2026-09-03) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Read this only when the task is building a module page from scratch, or adding screens to one.
 Converting an existing multi-page module is `convert/GUIDE.md`; measuring is `measure/GUIDE.md`.
@@ -51,7 +51,7 @@ and each becomes screens now:
 | A practical write-up document | **practical-run** screens — as many as the run needs |
 | A marking sheet's criteria section | a **marking** screen — the criteria in the trainee's hearing, the craft in `data-cue` |
 | A debrief the instructor was trusted to remember | a **debrief** screen with the questions and the stop condition |
-| The module check as a separate assessment page | the **last screen**, always |
+| The module check as a separate assessment page | the **second-to-last screen**, always — the hand-off screen is last |
 
 A launch screen that is already at 100 % fill cannot also tell the instructor *"the next five
 screens are the description of P1, screens 4–8."* That line belongs in the generated instructor
@@ -134,9 +134,11 @@ as if they demonstrated it. Rewrite in the third person, or move the item.
 
 ---
 
-## 6 · The module check is the last screen
+## 6 · The module check is the second-to-last screen
 
-From `screen-kinds.json`, and worth repeating because it is the screen most often got wrong:
+The hand-off screen comes after it, so Next cannot skip a room into the next module by accident
+(owner, 2026-09-03; `measure/knowledge/floor.json` records the change). From `screen-kinds.json`,
+and worth repeating because it is the screen most often got wrong:
 zero links, nothing recorded on it, and **the words "record" and "score" do not appear.** No
 ILO codes, no provenance note, no item count. It is read by the room while they are being
 assessed; recording is the instructor's job on the instructor's own device.

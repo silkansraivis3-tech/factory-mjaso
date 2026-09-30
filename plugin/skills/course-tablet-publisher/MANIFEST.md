@@ -1,6 +1,6 @@
 # MANIFEST — course-tablet-publisher
 
-**v1 (2026-09-08) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v1 (2026-09-08) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Maintainer file. **Never read at runtime.** It exists so a session with no memory of this
 work can pick the skill up cold and not undo its decisions.

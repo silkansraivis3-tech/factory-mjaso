@@ -220,7 +220,7 @@ def check_slide_links(path, findings):
 
 
 def check_check_screen(path, findings, floor):
-    """The module check is the last screen, has no links, and never says
+    """The module check is second-to-last (hand-off last), has no links, and never says
     'record' or 'score' — it is read by the room while they are being assessed."""
     slides = carve(path, findings)
     if slides is None:

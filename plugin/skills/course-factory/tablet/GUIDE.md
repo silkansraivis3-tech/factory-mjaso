@@ -1,6 +1,6 @@
 # Tablet — a course becomes a data pack on two terminals
 
-**v1 (2026-09-07) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v1 (2026-09-07) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Read this in **ship** mode. `../knowledge/delivery-contract.json` is the authority on every path,
 folder and rule below — read it, and do not restate its paths here.
@@ -111,6 +111,8 @@ Read the git section of the contract. The two that cost real time:
   Fix that before handover; a diff the owner cannot read is a diff they cannot review.
 
 Never commit or push — that is the owner's. Stage when asked, and say exactly what you staged.
+The one exception is `course-tablet-publisher`, and only after the owner's own approval sentence
+for that named course and version (L21) — its `publish.py --publish` refuses without it.
 
 ---
 

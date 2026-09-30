@@ -1,6 +1,6 @@
 # Convert lane — off the chained multi-page model, onto one page
 
-**v1 (2026-09-03) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v1 (2026-09-03) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Read this only when an existing module has to be brought onto the one-page architecture. If
 you are building new, read `build/GUIDE.md` instead — you will never need most of what is

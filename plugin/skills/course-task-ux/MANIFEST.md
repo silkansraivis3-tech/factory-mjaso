@@ -1,6 +1,6 @@
 # MANIFEST — course-task-ux
 
-**v2 (2026-09-03) · Maintained by Raivis · Personal — installed for Raivis only, not org-published**
+**v2 (2026-09-03) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Maintainer file. **Never read at runtime.** It exists so a session six months from now — one
 with no memory of why any of this is the way it is — can pick the skill up cold.
@@ -130,7 +130,7 @@ The dedup check was performed before drafting; this is its result.
    the sibling skills carry Ritvars. First resolved in favour of the family, then **corrected
    on review to `Maintained by Raivis`** — the quotes are his and he owns the course; matching
    the family is a later cosmetic concern if anyone asks. Status
-   `Personal — installed for Raivis only, not org-published`.
+   `part of the `course-factory` plugin, shared with colleagues through the marketplace`.
 3. **Course-agnostic vs brand-agnostic.** Genericising the engines could have meant stripping
    Novikontas navy and Raleway. It does not: a different *study programme* is still the same
    organisation. The colours moved behind CSS custom properties with the brand values as

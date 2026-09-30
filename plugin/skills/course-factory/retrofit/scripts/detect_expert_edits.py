@@ -7,7 +7,7 @@
     detect_expert_edits.py <module_dir> --json
 
 WHY THIS EXISTS
-Law 5 says the existing delivery implementation is not preserved by default - rebuild
+L18 says the existing delivery implementation is not preserved by default - rebuild
 it. That is right for material nobody has touched since it was generated, and exactly
 wrong for a screen a maritime expert went in and changed on purpose.
 
@@ -245,7 +245,7 @@ Then run this again with --record at the end, so the next retrofit never has to 
 
     if not found:
         print("\nNothing protected. Every file still matches the record the factory wrote"
-              "\n%s, so nothing here is a person's later decision. Law 5 applies in full:"
+              "\n%s, so nothing here is a person's later decision. L18 applies in full:"
               "\nrebuild the delivery." % ("on " + record.get("written", "?") if record else ""))
         return 0
 
