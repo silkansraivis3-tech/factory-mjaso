@@ -162,6 +162,10 @@ Load, in this order:
 <link rel="stylesheet" href="../assets/gb_task.css">     <!-- here: the task controls -->
 ```
 
+All three — and the task engines `kbd_escape.*` and `task_complete.*` — are already in the module's
+`assets/`: `course-module-ui/scripts/design_system.py install` copies them. Do not open them to use
+them; the class names are in `course-module-ui/references/vocabulary.md` §7.
+
 `gb_task.css` owns the state bar, the question stem, the 52 px option, the why panel and the
 in-task figure. It owns **nothing else** — a task page is a document page with a task on it.
 

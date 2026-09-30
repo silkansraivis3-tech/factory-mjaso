@@ -1,0 +1,26 @@
+{
+  "_authority": "The canonical files every module carries in its own assets/ folder - copied byte for byte by scripts/design_system.py, never retyped and never read in full by the model. references/vocabulary.md is what the model reads instead. Edit this list, not the script.",
+  "_written": "2026-09-30",
+  "_why": "Phase 5 step 11b. Establishing the visual system used to mean the model read about 82 KB of style files (~20,000 tokens) it only needed to copy. Reading them buys nothing: a copy is either identical or it is a second dialect. The script copies, the check proves identity, and the vocabulary keeps every composition and component in view.",
+  "_rule": "A module's copy is never edited. If something genuinely shared is missing, add it to the canonical file in the plugin and re-install; course-specific styling goes in the module's own stylesheet, loaded after these.",
+  "_not_the_terminal_engines": "These are the MODULE's own delivery files, which modules have always carried in their own assets/ (course-module-ux build/GUIDE.md, course-task-ux section 14). They are not the tablet terminal's shared engines - gb_nav.js, gb_sync.js, gb_tasks.js, gb_config.js and the rest at the terminal root - which live once in the app and are never copied into a course (course-tablet-publisher knowledge/platform.json shared_engine_globs). No name below is one of those.",
+  "destination": "assets",
+  "files": [
+    {"name": "gb_tokens.css",       "from": "course-module-ui/templates/gb_tokens.css",   "for": "every page - the token set, loaded first"},
+    {"name": "gb_shell.css",        "from": "course-module-ui/templates/gb_shell.css",    "for": "the deck frame"},
+    {"name": "gb_compose.css",      "from": "course-module-ui/templates/gb_compose.css",  "for": "what sits on a deck screen - compositions and blocks"},
+    {"name": "gb_page.css",         "from": "course-module-ui/templates/gb_page.css",     "for": "document pages and the frame of task pages"},
+    {"name": "gb_task.css",         "from": "course-task-ux/assets/gb_task.css",          "for": "task controls, on top of gb_page.css"},
+    {"name": "kbd_escape.css",      "from": "course-task-ux/assets/kbd_escape.css",       "for": "the Done pill"},
+    {"name": "kbd_escape.js",       "from": "course-task-ux/assets/kbd_escape.js",        "for": "the three ways out of the soft keyboard"},
+    {"name": "task_complete.css",   "from": "course-task-ux/assets/task_complete.css",    "for": "the completion panel"},
+    {"name": "task_complete.js",    "from": "course-task-ux/assets/task_complete.js",     "for": "the one shared task ending"},
+    {"name": "gb_deck.js",          "from": "course-module-ux/assets/gb_deck.js",         "for": "the deck engine"},
+    {"name": "gb_run.js",           "from": "course-module-ux/assets/gb_run.js",          "for": "the START_HERE step runner"},
+    {"name": "gb_run.css",          "from": "course-module-ux/assets/gb_run.css",         "for": "the step runner's look"},
+    {"name": "novikontas_logo.svg", "from": "../resources/brand/novikontas_logo.svg",     "for": "the landing screen"}
+  ],
+  "starter_deck": {"from": "course-module-ui/templates/gb_shell.html", "to": "module.html",
+                   "_note": "written only when the module has no module.html yet, and never checked for identity afterwards - it is the deck the module is built in"},
+  "record": "_factory/design_system.json"
+}

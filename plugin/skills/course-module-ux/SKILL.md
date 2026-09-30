@@ -168,7 +168,9 @@ real use reaches it.
 Do not write a deck engine. `assets/gb_deck.js` is it: `GBDeck.init({text, hooks})` owns
 start/exit, next/prev, progress, counter, block tag, overview, instructor cue, fullscreen,
 keyboard (with a keyCode fallback), guarded swipe, idle chrome and per-screen enter/leave hooks.
-It pairs with `course-module-ui/templates/gb_shell.css` and `gb_shell.html`.
+It pairs with `course-module-ui/templates/gb_shell.css` and `gb_shell.html`. All three reach the
+module through `course-module-ui/scripts/design_system.py install` — copied, never retyped, and the
+engine is not read to use it: its API is the line above.
 
 If a deck has more than one slide and no `#btnNext`/`#btnPrev`, the engine paints a red banner
 across the page saying so. That is deliberate: the pilot shipped a module a finger could not

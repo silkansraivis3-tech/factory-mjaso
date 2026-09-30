@@ -243,9 +243,9 @@ Three orderings that are not negotiable, all three learned by getting them wrong
 
 ### The visual layer is routed, never improvised
 
-When a new module reaches visual production, **route it to `course-module-ui`** — it owns the look
-(`knowledge/tokens.json`, `templates/gb_tokens.css`, `references/anatomy.md`), and this skill
-restates none of it. GAS BASIC **Module_01 is the canonical visual reference** for the look, and
+When a new module reaches visual production, **route it to `course-module-ui`** — it owns the look,
+and this skill restates none of it. Its `scripts/design_system.py install` copies the style files
+(never read them); its `references/vocabulary.md` is what to read. GAS BASIC **Module_01 is the canonical visual reference** for the look, and
 **not** a template: there is no canonical screen count, and low visible density is not low
 learning depth. `build-order.json` step 8, `no_fixed_slide_count` and `density_is_not_depth` are
 the contract; the reasoning is in `references/routing-notes.md`.
@@ -286,7 +286,8 @@ the line for the thing you changed. **Why each check exists, and what got throug
    `course-visuals/review/GUIDE.md`. Nothing at `RIGHTS_REVIEW_REQUIRED` may ship.
 9. `course-visuals/scripts/check_visual_first.py <module> --strict` (L23), then
    `course-visuals/scripts/write_visual_handoff.py <module>`
-10. `course-module-ui/scripts/audit_ui.py --strict` over a **new** module's stylesheets — never a delivered deck
+10. `course-module-ui/scripts/design_system.py check <module>`, then `audit_ui.py --strict` over a
+    **new** module's stylesheets — never a delivered deck
 11. `scripts/check_slide_text.py <course>` — what the pages SAY (L22)
 12. `scripts/check_plain_language.py <course>` — your own report, last before sending it (L25)
 13. `retrofit/scripts/detect_expert_edits.py <module> --record --version <v>` — **last of all**, after everything else passes (L24)

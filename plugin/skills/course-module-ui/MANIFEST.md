@@ -63,6 +63,28 @@ It is now step **8** of that build order (*establish the visual system*, before 
 and part of step **15** (verify), where `audit_ui.py --strict` is the visual sign-off for new
 work. See the repository README for the change record.
 
+## Copied, never read — 2.11.1 (2026-09-30, Phase 5 step 11b)
+
+Setting up a module's look used to mean reading about 82 KB of files (this `SKILL.md`,
+`tokens.json`, `anatomy.md`, and the style files `gb_tokens.css`, `gb_shell.css`, `gb_compose.css`,
+`gb_shell.html`) — roughly 20,600 tokens — of which the style files, about 58 KB, only ever needed
+to be **copied**. Owner decision: a script copies them, the model reads a short vocabulary instead,
+and a check proves the copies identical.
+
+| file | job |
+|---|---|
+| `knowledge/design-system.json` | the list of canonical files every module carries in `assets/`, and where each comes from (edit the list, not the script) |
+| `scripts/design_system.py install` | copies them byte for byte; `--start-deck` writes `module.html` from the frame if there is none; refuses to overwrite a differing file without `--update`; refuses anything inside the Android project (L21); writes `_factory/design_system.json` |
+| `scripts/design_system.py check` | OK / MISSING / OUTDATED (the factory's file improved since) / CHANGED (edited in the module) |
+| `references/vocabulary.md` | every composition, component, page and task class and every token, by name and when to use it |
+| `scripts/test_design_system.py` | copy, catch, never-overwrite, Android refusal, the record is INTERNAL to the publisher — and **vocabulary completeness**: every class and token in the style files is named, nothing named is invented |
+
+The completeness test earned its place on its first run: it found `.caption` in `gb_compose.css`,
+which the hand-written vocabulary had missed. `course-tablet-publisher`'s `internal_globs` gained
+`(^|/)_factory/` in the same change — the expert-edit build record already lived there and was not
+covered. `anatomy.md` and `tokens.json` stay: read only when a component itself is being built or
+changed, or when a value itself is the question.
+
 ## Known gaps
 
 1. **Not eval-tested.** No `evals/` directory, consistent with the rest of the family — and the

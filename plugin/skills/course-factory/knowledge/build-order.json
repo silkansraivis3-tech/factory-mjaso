@@ -58,7 +58,7 @@
       "n": 8,
       "step": "visual system",
       "owner": "course-module-ui",
-      "does": "establish the module's visual layer BEFORE any HTML: read knowledge/tokens.json, paste templates/gb_tokens.css as the deck's :root, and read references/anatomy.md for the header band, cards, pills, photo screens and the takeaway. Every colour, radius, shadow and font in new work comes from a token.",
+      "does": "establish the module's visual layer BEFORE any HTML: run course-module-ui/scripts/design_system.py install <module> --start-deck, which copies every canonical style file and engine into the module's assets/ byte for byte - the files are copied, never read - then read course-module-ui/references/vocabulary.md, the full list of compositions, components and tokens by name and when to use each. Every colour, radius, shadow and font in new work comes from a token.",
       "blocked_without": "the screen inventory approved at step 7",
       "rule": "REQUIRED for every new module - the visual layer is not optional and is not course-module-ux's to invent. A new deck that hardcodes its own colours has started a second visual dialect.",
       "why": "course-module-ux is a floor (contrast, tap size, fill, overflow), not an identity. Two modules can pass every check in floor.json and look nothing alike - that already happened across the eight GAS BASIC modules. Routing the look to its owner is what stops it happening again.",
@@ -130,6 +130,7 @@
         "tablet/scripts/verify_links.py",
         "tablet/scripts/audit_navigation.py",
         "tablet/scripts/crosscheck_tasks.py",
+        "course-module-ui/scripts/design_system.py check <module>   (NEW modules only - the copied style files are identical)",
         "course-module-ui/scripts/audit_ui.py --strict   (NEW modules only)",
         "course-visuals/scripts/check_visuals.py   (deterministic visual checks)",
         "course-visuals/scripts/check_assets.py    (provenance, licences, rights)"

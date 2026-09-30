@@ -79,8 +79,8 @@ a screen that had one.
 
 ## 4 · The landing screen keeps a step runner, and it collapses to about two steps
 
-Use the bundled engine: copy `assets/gb_run.js` and `assets/gb_run.css` into the module's own
-`assets/`. Do not rewrite the engine per module.
+Use the bundled engine: `assets/gb_run.js` and `assets/gb_run.css` are copied into the module's own
+`assets/` by `course-module-ui/scripts/design_system.py install`. Do not rewrite the engine per module.
 
 ```js
 GBRunStart({ key:"m5", steps:STEPS, button:"#gbStart" });

@@ -137,7 +137,8 @@
    "(^|/)\\.git/",
    "(^|/)REVIEW\\.html$",
    "(^|/)PREVIEW\\.html$",
-   "(^|/)REVIEW_FIRST\\.html$"
+   "(^|/)REVIEW_FIRST\\.html$",
+   "(^|/)_factory/"
   ],
   "instructor_only_filename_patterns": [
    [

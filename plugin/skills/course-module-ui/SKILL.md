@@ -18,6 +18,19 @@ inventory and before the first line of HTML, because retro-fitting tokens onto a
 is how drift gets signed off. `scripts/audit_ui.py --strict` then runs again at verify (step 16)
 as part of sign-off. A new module does not reach sign-off without both.
 
+**Copy the style files; never read them.** Setting up a module's look is one command:
+
+    python scripts/design_system.py install <module folder> --start-deck
+
+It copies every canonical style file and engine into the module's `assets/`, byte for byte
+(the list is `knowledge/design-system.json`), and starts `module.html` from the deck frame if the
+module has none. Then read **`references/vocabulary.md`** — every composition, component, page and
+task class and every token, by name and when to use it. That page *is* the design vocabulary;
+the style files hold nothing a builder needs beyond it. `scripts/design_system.py check <module>`
+proves the copies are still identical, and runs at verify. A module's copy is never edited: a
+genuinely shared gap is fixed in the canonical file here, course-specific styling goes in the
+module's own stylesheet loaded after them. *(2.11.1 — this replaced reading ~82 KB of style files.)*
+
 ## The one law
 
 **Module 1's `:root` is the reference. Every other screen matches it.**
@@ -87,13 +100,13 @@ it**, never the one that matches the last screen you wrote.
 
 | You are doing | Read |
 |---|---|
-| Choosing any colour, radius, shadow, font | `knowledge/tokens.json` |
-| Building the header band, a card, a pill, a photo screen, a takeaway | `references/anatomy.md` |
-| Marking something correct, wrong, hazardous | `references/anatomy.md` § Semantic colour |
-| Starting a new deck | `templates/gb_tokens.css` + `gb_shell.css` + `gb_compose.css` + `gb_shell.html` — copy them, do not retype or re-derive them |
-| Deciding how a screen should be laid out | `templates/gb_compose.css` — pick a composition, do not invent one |
-| Building START_HERE, a handout, practical cards, an instructor plan | `templates/gb_page.css` |
-| Checking a deck before sign-off | `scripts/audit_ui.py` — pass the **course folder**, not only stylesheets |
+| Starting a new deck | `scripts/design_system.py install <module> --start-deck` — the script copies the files; do not open, retype or re-derive them |
+| Deciding how a screen should be laid out | `references/vocabulary.md` §1 — pick a composition, do not invent one |
+| Choosing any colour, radius, shadow, font | `references/vocabulary.md` §8 (the names); `knowledge/tokens.json` only when a value itself is the question |
+| Building the header band, a card, a pill, a photo screen, a takeaway | `references/vocabulary.md`; `references/anatomy.md` only when building or changing a component itself |
+| Marking something correct, wrong, hazardous | `references/anatomy.md` § Semantic colour (the rule), `references/vocabulary.md` §3 (the classes) |
+| Building START_HERE, a handout, practical cards, an instructor plan | `references/vocabulary.md` §6 — `gb_page.css` is already in `assets/` |
+| Checking a deck before sign-off | `scripts/design_system.py check <module>` (the copies are identical), then `scripts/audit_ui.py` — pass the **course folder**, not only stylesheets |
 
 ### L17 · Every screen must look intentionally composed
 

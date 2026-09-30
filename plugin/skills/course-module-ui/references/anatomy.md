@@ -161,6 +161,8 @@ an owner decision. See `knowledge/tokens.json` § open_questions.
 
 ## What a new deck starts from
 
-1. Paste `templates/gb_tokens.css` at the top of the stylesheet. Do not retype it.
+1. Run `scripts/design_system.py install <module folder> --start-deck` — it copies `gb_tokens.css`
+   and every other canonical file into `assets/`. Do not retype or paste them. (Before 2.11.1 this
+   step said: paste `templates/gb_tokens.css` at the top of the stylesheet.)
 2. Build with `var(--…)` only. Any raw hex below the `:root` block is a defect.
 3. Run `scripts/audit_ui.py` before sign-off.
