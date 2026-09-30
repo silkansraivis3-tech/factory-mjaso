@@ -59,6 +59,9 @@ LABELS = json.load(io.open(os.path.join(SKILL, "knowledge", "page-labels.json"),
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 Q = lambda t: "{%s}%s" % (W, t)
 
+sys.path.insert(0, HERE)
+import check_slide_text as slide_text  # noqa: E402  - the same four rules the built slides get (L22)
+
 KINDS = ("slide", "self-check", "module-check", "final", "activity")
 TASKS = ("self-check", "module-check", "final")
 SLIDE_FIELDS = ("title", "text", "visual", "notes", "minutes")
@@ -177,6 +180,38 @@ def validate(script):
     return probs
 
 
+# ------------------------------------------------------------------ the text check, before HTML (2.16.1)
+def text_findings(script):
+    """check_slide_text's four rules on every screen of the script - internal abbreviations, a model
+    course cited as a source, version control on the opening slide, the factory's own markers.
+    What the trainee sees is checked as a presentation page (a finding must be fixed); the
+    instructor notes and the planned-picture note are instructor-only (reported, never failed)."""
+    rules = slide_text.load_rules(slide_text.RULES)
+    first_slide = next((s["id"] for s in script.get("screens", []) if s.get("kind") == "slide"), None)
+    found, seen = [], set()
+    for n, s in enumerate(script.get("screens", []), 1):
+        course_facing = ["title", "text"] if s["kind"] not in TASKS else \
+            ["question"] + ["opt." + L for L in letters(len(s.get("options", [])))] + ["feedback"]
+        opening = ("%s\n%s" % (s.get("title", ""), s.get("text", ""))) if s["id"] == first_slide else ""
+        for f, kind in [(x, "presentation") for x in course_facing] + [("notes", "instructor"), ("visual", "instructor")]:
+            text = get_field(s, f) or ""
+            if not text.strip():
+                continue
+            out = []
+            slide_text.scan_text(text, opening if f in ("title", "question") else "", "%s.%s" % (s["id"], f), kind, rules, out)
+            for x in out:
+                key = (s["id"], f, x.rule, x.detail)
+                if key not in seen:
+                    seen.add(key)
+                    found.append({"n": n, "screen": s["id"], "field": f, "level": x.level, "rule": x.rule,
+                                  "detail": x.detail, "fix": x.fix})
+    return found
+
+
+def blocking(findings):
+    return [f for f in findings if f["level"] == slide_text.FAIL]
+
+
 # ------------------------------------------------------------------ operator-stated facts
 def operator_facts(course, script):
     facts = [dict(f) for f in script.get("operator_facts", [])]
@@ -223,6 +258,16 @@ h1,h2{color:var(--navy)} @media print{body{background:#fff}.card{box-shadow:none
             e(T(script, "s_facts_title")), e(T(script, "s_facts_intro")),
             "".join("<li>%s <span class=\"sid\">(%s%s)</span></li>" % (V(f.get("fact")), e(f.get("where", "")),
                     (", " + e(f["said"])) if f.get("said") else "") for f in facts)))
+    tf = text_findings(script)
+    if tf:
+        rows = "".join('<li><b>%s %d · %s · %s</b> — %s%s <i>(%s)</i></li>' % (
+            e(T(script, "s_screen")), f["n"], e(f["screen"]), e(f["field"]), e(f["detail"]),
+            (" <b>%s:</b> %s" % (e(T(script, "s_textcheck_instead")), e(f["fix"]))) if f["fix"] else "",
+            e(T(script, "s_textcheck_must") if f["level"] == slide_text.FAIL else T(script, "s_textcheck_note"))) for f in tf)
+        o.append('<div class="card warn"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
+            e(T(script, "s_textcheck_title")), e(T(script, "s_textcheck_intro")), rows))
+    else:
+        o.append('<p class="note">%s</p>' % e(T(script, "s_textcheck_clean")))
     o.append('<p class="note">%s</p>' % e(T(script, "s_one_per_screen")))
     kind_label = {"slide": "s_slide", "self-check": "s_self_check", "module-check": "s_module_check", "final": "s_final", "activity": "s_activity"}
     for n, s in enumerate(script.get("screens", []), 1):
@@ -298,6 +343,14 @@ def build_docx(course, script):
         label(T(script, "s_facts_title"), style="Heading1")
         for f in facts:
             body.append(_para("• " + f.get("fact", ""), lang=cl))
+    tf = text_findings(script)
+    if tf:
+        label(T(script, "s_textcheck_title"), style="Heading1")
+        for f in tf:
+            label("%s %d · %s · %s — %s%s (%s)" % (
+                T(script, "s_screen"), f["n"], f["screen"], f["field"], f["detail"],
+                (" %s: %s" % (T(script, "s_textcheck_instead"), f["fix"])) if f["fix"] else "",
+                T(script, "s_textcheck_must") if f["level"] == slide_text.FAIL else T(script, "s_textcheck_note")), color="B4453A")
     kind_label = {"slide": "s_slide", "self-check": "s_self_check", "module-check": "s_module_check", "final": "s_final", "activity": "s_activity"}
     names = {"title": "s_title", "text": "s_text", "visual": "s_visual", "notes": "s_notes", "minutes": "s_minutes",
              "question": "s_question", "correct": "s_correct", "feedback": "s_feedback", "mechanic": "s_mechanic"}
@@ -563,6 +616,17 @@ def append_feedback(course, script, changes, source):
         f.write(("\n" if not text.endswith("\n") else "") + "\n".join(rows) + "\n")
 
 
+def archive_name(folder, stem, ext):
+    """A name in the archive folder that is not taken. A timestamp alone is not enough: two corrections
+    applied in the same second gave the same name, the rename failed, and the pending list stayed behind
+    and blocked the approval (found by the 2.16.1 test, one run in five)."""
+    base = "%s_%s" % (stem, datetime.now().strftime("%Y%m%d_%H%M%S"))
+    path, n = os.path.join(folder, base + ext), 2
+    while os.path.exists(path):
+        path, n = os.path.join(folder, "%s_%d%s" % (base, n, ext)), n + 1
+    return path
+
+
 def cmd_apply(course, module, confirmed):
     p = paths(course, module)
     if not confirmed:
@@ -585,8 +649,8 @@ def cmd_apply(course, module, confirmed):
     append_feedback(course, script, pend["changes"], {"word": "Word file", "pdf": "PDF", "chat": "chat"}.get(pend["source"], pend["source"]))
     os.makedirs(p["old"], exist_ok=True)
     if os.path.isfile(p["docx"]):
-        shutil.move(p["docx"], os.path.join(p["old"], "%s_SCRIPT_%s.docx" % (mid(module), datetime.now().strftime("%Y%m%d_%H%M%S"))))
-    os.rename(p["pending"], os.path.join(p["old"], "%s.applied_%s.json" % (mid(module), datetime.now().strftime("%Y%m%d_%H%M%S"))))
+        shutil.move(p["docx"], archive_name(p["old"], "%s_SCRIPT" % mid(module), ".docx"))
+    os.replace(p["pending"], archive_name(p["old"], "%s.applied" % mid(module), ".json"))
     render(course, module, quiet=True)
     print("Applied %d change(s), logged in FEEDBACK_LOG.md, and made a fresh review page and Word file.%s%s"
           % (len(pend["changes"]), " The module is back to draft: it needs the operator's \"next\" again." if was_approved and pend["changes"] else "",
@@ -601,12 +665,12 @@ def cmd_discard(course, module):
         print("Nothing is waiting - there is nothing to discard.")
         return 0
     os.makedirs(p["old"], exist_ok=True)
-    os.rename(p["pending"], os.path.join(p["old"], "%s.discarded_%s.json" % (mid(module), datetime.now().strftime("%Y%m%d_%H%M%S"))))
+    os.replace(p["pending"], archive_name(p["old"], "%s.discarded" % mid(module), ".json"))
     print("Discarded - the list of understood changes was not applied. The script is unchanged.")
     return 0
 
 
-def cmd_approve(course, module, by):
+def cmd_approve(course, module, by, despite=False):
     p = paths(course, module)
     script = load(p["script"])
     if os.path.isfile(p["pending"]):
@@ -616,6 +680,14 @@ def cmd_approve(course, module, by):
     if probs:
         print("Not approved - the script still has problems:\n" + "\n".join("  - " + x for x in probs))
         return 1
+    must = blocking(text_findings(script))
+    if must and not despite:
+        print("Not approved - the text check found %d thing(s) the trainee must not see:\n%s\n\n"
+              "  Fix them in the script (propose, confirm, apply) - or, if the operator has read them and wants the\n"
+              "  words as they are (L26), approve with --despite-findings; that decision is recorded with the approval."
+              % (len(must), "\n".join("  - screen %d (%s), %s: %s" % (f["n"], f["screen"], f["field"], f["detail"]) for f in must)))
+        return 1
+    script["approved_despite_findings"] = [dict(f, date=date.today().isoformat()) for f in must] if must else []
     script.update({"status": "approved", "approved_by": by, "approved_on": date.today().isoformat(), "approved_hash": content_hash(script)})
     save(p["script"], script)
     render(course, module, quiet=True)
@@ -646,6 +718,12 @@ def render(course, module, quiet=False):
               % (p["review"], p["docx"]))
         if probs:
             print("\nThe script still has problems - fix them before showing it:\n" + "\n".join("  - " + x for x in probs))
+        tf = text_findings(script)
+        if tf:
+            print("\nThe text check found %d thing(s) - they are at the top of the review page and the Word file:" % len(tf))
+            for f in tf:
+                print("  - [%s] screen %d (%s), %s: %s%s" % ("must fix" if f["level"] == slide_text.FAIL else "note", f["n"],
+                                                          f["screen"], f["field"], f["detail"], (" - use instead: " + f["fix"]) if f["fix"] else ""))
     return 1 if probs else 0
 
 
@@ -664,6 +742,8 @@ def main(argv=None):
             s.add_argument("--confirmed", action="store_true")
         if name == "approve":
             s.add_argument("--by", required=True)
+            s.add_argument("--despite-findings", action="store_true",
+                           help="the operator read the text check's findings and wants the words as they are")
     a = ap.parse_args(argv)
     if not os.path.isfile(paths(a.course, a.module)["script"]):
         print("Stopped - there is no content script for module %s yet:\n    %s" % (a.module, paths(a.course, a.module)["script"]))
@@ -671,7 +751,7 @@ def main(argv=None):
     return {"render": lambda: render(a.course, a.module), "read": lambda: cmd_read(a.course, a.module, a.docx, a.pdf),
             "propose": lambda: cmd_propose(a.course, a.module, a.changes), "apply": lambda: cmd_apply(a.course, a.module, a.confirmed),
             "discard": lambda: cmd_discard(a.course, a.module),
-            "approve": lambda: cmd_approve(a.course, a.module, a.by), "status": lambda: cmd_status(a.course, a.module)}[a.cmd]()
+            "approve": lambda: cmd_approve(a.course, a.module, a.by, a.despite_findings), "status": lambda: cmd_status(a.course, a.module)}[a.cmd]()
 
 
 if __name__ == "__main__":

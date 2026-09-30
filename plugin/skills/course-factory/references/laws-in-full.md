@@ -303,6 +303,11 @@ As the owner set it for step 5 (2026-09-30):
 
 → built out in 2.16.0: `script/GUIDE.md`, `scripts/content_script.py`, `scripts/check_script_match.py`.
 
+And, as the owner added in 2.16.1: the slide-text check (L22 — internal abbreviations, a model course
+cited as a source, version control on the opening slide, the factory's own markers) runs **on the
+content script, before approval**, and its findings are shown on the review page. The point of
+Stage 3 is to catch these before HTML.
+
 **L30 · Module 1 is a pilot.**
 After the architecture is approved, Module 1 alone is scripted, built and approved before any other
 module is built. Five roles build it, each an agent with its own context: deck builder, test

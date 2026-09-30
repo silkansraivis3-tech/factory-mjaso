@@ -306,7 +306,9 @@ typing, by Word comment or in the chat.
 
 **Every correction is shown before it is applied.** `read` / `propose` only print what was
 understood and leave it pending; show that list, and `apply --confirmed` only after the operator says
-yes. Approval is `approve --by <name>`; any later change makes it a draft again. The screen inventory
+yes. The slide-text check (L22) runs on the script first and its findings head the review page;
+approval is refused while a must-fix one stands, unless the operator approves `--despite-findings`.
+Approval is `approve --by <name>`; any later change makes it a draft again. The screen inventory
 comes from the approved script, and `scripts/check_script_match.py` proves the built module says
 exactly those words.
 

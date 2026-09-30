@@ -87,6 +87,16 @@ python scripts/content_script.py approve <course> --module 1 --by "<name>"
 Refused while a pending list waits or the script has problems. **Any change after approval makes it a
 draft again.** Record the approval in `COURSE_STATE.md` (L32). `status` says where a module stands.
 
+**The text check runs on the script, before any HTML** (2.16.1). `render` puts the same four rules
+the finished slides get (`scripts/check_slide_text.py`, L22) over every screen: internal abbreviations,
+an IMO model course cited as a source, version control on the opening slide, and the factory's own
+markers. What the trainee sees — titles, slide text, questions, answers, feedback — is checked as a
+course-facing page; the instructor notes and the planned-picture note are instructor-only, so a model
+course there is a note, never a failure. The findings are at the top of the review page and the Word
+file. `approve` is refused while a must-fix finding stands: fix it in the script (propose → confirm →
+apply), or, if the operator has read it and wants the words as they are (L26), approve with
+`--despite-findings` — the findings are recorded with the approval.
+
 ## 5 · Building from it, and proving it
 
 The screen inventory is **derived from the approved script** — not a separate approval. Every screen

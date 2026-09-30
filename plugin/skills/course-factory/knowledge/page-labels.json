@@ -122,7 +122,13 @@
     "s_one_per_screen": "One task per screen, as on the tablet.",
     "s_docx_help": "Change any text inside the grey boxes, or select text and add a comment (Review → New Comment). Do not delete the boxes themselves. Save the file, and tell me it is saved.",
     "s_prepared": "Prepared",
-    "s_by_factory": "by the NOVIKONTAS Course Factory"
+    "s_by_factory": "by the NOVIKONTAS Course Factory",
+    "s_textcheck_title": "Before you approve — the text check found these",
+    "s_textcheck_intro": "The same check the finished slides get: internal abbreviations, an IMO model course cited as a source, version control on the opening slide, and the factory's own markers. Better fixed here than in the built module.",
+    "s_textcheck_must": "must be fixed before the trainee sees it",
+    "s_textcheck_note": "for your information (instructor-only text)",
+    "s_textcheck_instead": "Use instead",
+    "s_textcheck_clean": "The text check found nothing: no internal abbreviations, no model course cited as a source, no markers."
   },
   "lv": {
     "page_title": "Kursa uzbūve — jūsu pārskatīšanai",
@@ -233,7 +239,13 @@
     "s_one_per_screen": "Viens uzdevums vienā ekrānā, kā planšetē.",
     "s_docx_help": "Mainiet jebkuru tekstu pelēkajos lodziņos vai iezīmējiet tekstu un pievienojiet komentāru (Pārskatīšana → Jauns komentārs). Nedzēsiet pašus lodziņus. Saglabājiet failu un pasakiet man, ka tas ir saglabāts.",
     "s_prepared": "Sagatavots",
-    "s_by_factory": "ar NOVIKONTAS Course Factory"
+    "s_by_factory": "ar NOVIKONTAS Course Factory",
+    "s_textcheck_title": "Pirms apstiprināt — teksta pārbaude atrada šo",
+    "s_textcheck_intro": "Tā pati pārbaude, ko saņem gatavie slaidi: iekšējie saīsinājumi, IMO paraugkurss kā avots, versiju informācija sākuma slaidā un rūpnīcas pašas atzīmes. Labāk to izlabot šeit, nevis gatavajā modulī.",
+    "s_textcheck_must": "jāizlabo, pirms to redz apmācāmais",
+    "s_textcheck_note": "informācijai (teksts tikai instruktoram)",
+    "s_textcheck_instead": "Lietojiet",
+    "s_textcheck_clean": "Teksta pārbaude neko neatrada: nav iekšējo saīsinājumu, paraugkurss nav minēts kā avots, nav atzīmju."
   },
   "ru": {
     "page_title": "Структура курса — на ваше рассмотрение",
@@ -344,6 +356,12 @@
     "s_one_per_screen": "Одно задание на экран, как на планшете.",
     "s_docx_help": "Меняйте любой текст в серых полях или выделите текст и добавьте комментарий (Рецензирование → Создать примечание). Не удаляйте сами поля. Сохраните файл и скажите мне, что он сохранён.",
     "s_prepared": "Подготовлено",
-    "s_by_factory": "NOVIKONTAS Course Factory"
+    "s_by_factory": "NOVIKONTAS Course Factory",
+    "s_textcheck_title": "Перед утверждением — проверка текста нашла следующее",
+    "s_textcheck_intro": "Та же проверка, что и для готовых слайдов: внутренние сокращения, типовой курс ИМО как источник, сведения о версии на первом слайде и собственные пометки фабрики. Лучше исправить здесь, чем в готовом модуле.",
+    "s_textcheck_must": "нужно исправить до того, как это увидит обучаемый",
+    "s_textcheck_note": "для сведения (текст только для инструктора)",
+    "s_textcheck_instead": "Используйте",
+    "s_textcheck_clean": "Проверка текста ничего не нашла: нет внутренних сокращений, типовой курс не указан как источник, нет пометок."
   }
 }

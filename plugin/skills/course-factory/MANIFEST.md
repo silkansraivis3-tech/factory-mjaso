@@ -295,8 +295,19 @@ Word saved, `read` found all three, placed the comment on the right field and na
 author. **PDF comments**: a review page printed to PDF by Chrome, with a reader-style comment added,
 was read back with its page and the screens on that page — approximate by nature, and it needs the
 `pypdf` package. `test_content_script.py` simulates the Word edits in the file's XML so it runs on any
-computer. Not done: the slide-text check (L22) does not read the review page; it runs on the built deck,
-which the match then ties to the script.
+computer.
+
+**2.16.1 — the slide-text check runs on the script.** At 2.16.0 the L22 check only read built pages, so an
+internal abbreviation or a model course cited as a source was caught after the HTML — the thing Stage 3
+exists to prevent. `check_slide_text.py` was split into `scan_file` (reads a page) and `scan_text` (the
+four rules on text), with no change in behaviour — its 16 tests pass unchanged. `content_script.py`
+feeds every screen's fields to `scan_text`: trainee-facing text as a presentation page, the instructor
+notes and the planned-picture note as instructor-only. The findings head the review page and the Word
+file; `approve` refuses while a must-fix one stands, unless the operator approves `--despite-findings`
+(L26), which is recorded. The new test ran one time in five into a real bug: two corrections applied in
+the same second gave the archive the same file name, the rename failed and the pending list stayed
+behind, blocking approval. Archive names are now unique (`archive_name`), a test pins it, and six
+consecutive runs passed clean.
 
 ## 5 · Known gaps / before this goes live
 

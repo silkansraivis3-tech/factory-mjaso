@@ -189,6 +189,12 @@ def main():
         cs_run("propose", c, "--module", "1", "--changes", ch)
         cs_run("apply", c, "--module", "1", "--confirmed")
         check("any change after approval makes it a draft again", cs_run("status", c, "--module", "1")[0] == 1)
+        for v in ("6", "3"):          # two corrections in the same second: the archive names must not collide
+            io.open(ch, "w", encoding="utf-8").write(json.dumps([{"field": "s01.minutes", "new": v}]))
+            cs_run("propose", c, "--module", "1", "--changes", ch)
+            code, out = cs_run("apply", c, "--module", "1", "--confirmed")
+        check("two corrections applied in the same second both succeed, and nothing is left waiting",
+              code == 0 and not os.path.isfile(p["pending"]) and cs.load(p["script"])["screens"][0]["minutes"] == 3, out)
         cs_run("approve", c, "--module", "1", "--by", "Anna")
 
         print("\n-- problems in a script are caught before it is shown")
@@ -202,6 +208,42 @@ def main():
         check("a correct answer that is not an option is caught", "the correct answer 'D'" in out, out)
         check("a slide after the module check is caught", "slide comes after the module check" in out, out)
         check("... and approval is refused", cs_run("approve", cb, "--module", "1", "--by", "x")[0] == 1)
+
+        print("\n-- 2.16.1: the slide-text check runs on the script, before any HTML")
+        dirty = copy.deepcopy(SCRIPT)
+        dirty["screens"][0]["title"] = "Why gas tankers are different - Revision 3"
+        dirty["screens"][0]["text"] = "Liquefied gas is carried cold or under pressure.\nSource: IMO Model Course 1.04"
+        dirty["screens"][0]["notes"] = "The IMO Model Course 1.04 covers this in section 2."
+        dirty["screens"][1]["question"] = "What does OCFAM require here?"
+        dirty["screens"][1]["feedback"] = "LNG is fully refrigerated. [VERIFY: the exact temperature]"
+        cd = new_course(tmp, "dirty", dirty)
+        code, out = cs_run("render", cd, "--module", "1")
+        pd = cs.paths(cd, 1)
+        dpage = io.open(pd["review"], encoding="utf-8").read()
+        for what, needle in (("a model course cited as a source on a slide", "s01 · text"),
+                             ("version control on the opening slide", "s01 · title"),
+                             ("an internal abbreviation in a question", "q01 · question"),
+                             ("a factory marker in the feedback", "q01 · feedback")):
+            check("found and shown on the review page: " + what, needle in dpage and "teksta pārbaude atrada" in dpage, needle)
+        check("each must-fix finding is marked as such", dpage.count("jāizlabo, pirms to redz apmācāmais") >= 4)
+        notes_li = re.search(r"<li><b>[^<]*s01 · notes</b>.*?</li>", dpage)
+        check("a model course in the INSTRUCTOR notes is only a note, never a must-fix",
+              notes_li is not None and "informācijai" in notes_li.group(0) and "jāizlabo" not in notes_li.group(0),
+              notes_li and notes_li.group(0))
+        check("render reports the findings", "The text check found" in out and "[must fix] screen 1 (s01), text" in out, out)
+        ddoc = zipfile.ZipFile(pd["docx"]).read("word/document.xml").decode("utf-8")
+        check("the findings are in the Word file too", "teksta pārbaude atrada" in ddoc and "q01 · feedback" in ddoc)
+        code, out = cs_run("read", cd, "--module", "1")
+        check("the findings in the Word file are not mistaken for the operator's own text", "outside the boxes" not in out and code == 0, out)
+        code, out = cs_run("approve", cd, "--module", "1", "--by", "Anna")
+        check("approval is refused while a must-fix finding stands", code == 1 and "text check found" in out, out)
+        code, out = cs_run("approve", cd, "--module", "1", "--by", "Anna", "--despite-findings")
+        rec = cs.load(pd["script"])
+        check("the operator may approve despite them (L26) - and that is recorded",
+              code == 0 and len(rec.get("approved_despite_findings", [])) >= 4, out)
+        code, out = cs_run("render", c, "--module", "1")
+        check("a clean script says the text check found nothing",
+              "Teksta pārbaude neko neatrada" in io.open(p["review"], encoding="utf-8").read())
 
         print("\n-- the built module says exactly the approved words")
         s = cs.load(p["script"])

@@ -171,7 +171,12 @@ def scan_file(path, rel, kind, rules, out):
     text = visible_text(raw)
     first_s, first_e = opening_slide_span(raw)
     opening = visible_text(raw[first_s:first_e]) if first_s is not None else ""
+    scan_text(text, opening, rel, kind, rules, out)
 
+
+def scan_text(text, opening, rel, kind, rules, out):
+    """The four rules, on text. scan_file feeds it a page; since 2.16.1 content_script.py feeds it
+    each screen of a content script, so the same words are caught before any HTML exists (L22, L29)."""
     presentation = kind == "presentation"
 
     # ---- 1 · internal shorthand -------------------------------------------

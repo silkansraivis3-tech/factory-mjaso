@@ -2,7 +2,7 @@
 
 For the next Claude session. Read this before touching anything in this repository.
 
-**Status 2026-09-30: `course-factory` 2.16.0 + `nano-banana` 1.1.2. Phase 5 in progress — steps 0–5 done; next is the pilot, Stages 1–3.**
+**Status 2026-09-30: `course-factory` 2.16.1 + `nano-banana` 1.1.2. Phase 5 in progress — steps 0–5 done; next is the pilot, Stages 1–3.**
 Phase 5 upgrades the factory to the owner's six-stage production process (intake → architecture
 STOP → word-for-word content script STOP → pilot Module 1 with five roles → remaining modules →
 final assessment and handover). The owner's decision record, the gap analysis and the approved
@@ -48,6 +48,7 @@ Not built yet: `course-evidence`, the `evidence-retriever` agent, the determinis
 | 2.14.0 | 2026-09-30 | Phase 5 step 3 — the course remembers: `COURSE_STATE.md` at every STOP, `FEEDBACK_LOG.md` for every correction, pattern files shown and approved by the operator before they are saved (`scripts/course_memory.py`); the publisher keeps all of them and `factory-notes.md` off the tablets |
 | 2.15.0 | 2026-09-30 | Phase 5 step 4 — the Stage 2 STOP as one page, `ARCHITECTURE_REVIEW.html` (`scripts/make_architecture_page.py`): hours with their programme rows, Main ILOs verbatim, every Sub-ILO beside its programme wording, active learning, practicals, test plan; course text in the course language, the page in the operator's (en / lv / ru) |
 | 2.16.0 | 2026-09-30 | Phase 5 step 5 — the Stage 3 content script (`script/GUIDE.md`, `scripts/content_script.py`): every screen word for word in trainee order, a review page and a **Word file** for the operator, corrections shown as an understood list and applied only on confirmation, `check_script_match.py` for the built module. Proved with real Word |
+| 2.16.1 | 2026-09-30 | The slide-text check (L22) runs on the content script before approval; its findings head the review page and the Word file, and block approval unless the operator approves despite them. Fixed: two corrections applied in the same second no longer leave a pending list behind |
 
 ---
 
