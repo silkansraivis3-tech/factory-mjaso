@@ -138,7 +138,11 @@
    "(^|/)REVIEW\\.html$",
    "(^|/)PREVIEW\\.html$",
    "(^|/)REVIEW_FIRST\\.html$",
-   "(^|/)_factory/"
+   "(^|/)_factory/",
+   "(^|/)COURSE_STATE\\.md$",
+   "(^|/)FEEDBACK_LOG\\.md$",
+   "(^|/)COURSE_PATTERN_[^/]*\\.md$",
+   "(^|/)factory-notes\\.md$"
   ],
   "instructor_only_filename_patterns": [
    [

@@ -52,7 +52,7 @@
 
   "record": {
     "file": "_factory/intake.json in the course folder (internal - never shipped, see course-tablet-publisher internal_globs)",
-    "written": "at the end of Stage 1, before the architecture is designed; kb_tool.py decide adds the editions to it",
+    "written": "at the end of Stage 1, before the architecture is designed; kb_tool.py decide adds the editions to it. At the same moment COURSE_STATE.md is started (scripts/course_memory.py start) and its course table and 'Decided' list are filled from these answers (L32).",
     "fields": {
       "programme": "path of the approved programme",
       "model_course": "path, or 'none'",

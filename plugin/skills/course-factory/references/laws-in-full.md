@@ -312,7 +312,21 @@ what is settled. Every correction the operator makes is logged in the course's `
 When the course is finished and the operator says they are happy, the factory offers to save the
 lessons as a pattern file (what they preferred, what they changed, examples). Future courses read
 the available patterns as a starting reference — guidance, not law, and never above the
-operator's current request. → built out in step 3.
+operator's current request.
+
+The pattern file, as the owner set it (2026-09-30):
+
+- it is **shown to the operator in plain language before it is saved**, and saved only after they
+  approve it; they may edit or remove any point;
+- it **names the course, the course type and who made it** (and the subject), so a later course
+  can judge whether it fits at all — approval is refused until those are filled in;
+- the approver's name and the date are written into it; a draft, or a file with no approval, is
+  never offered to a later course;
+- patterns stay **guidance for future courses, never rules**, and never above the current
+  operator's request.
+
+→ built out in 2.14.0 (step 3): `scripts/course_memory.py`, `templates/COURSE_STATE.md`,
+`templates/FEEDBACK_LOG.md`, `templates/COURSE_PATTERN.md`, `resources/course-patterns/`.
 
 **L33 · Pictures: find first, keep what teaches, never invent what a trainee must recognise.**
 Sourcing order: knowledge base → old course → source files → internet (real photographs,

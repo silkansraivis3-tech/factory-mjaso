@@ -9,7 +9,7 @@
       "owner": "course-factory (knowledge/intake.json) + course-factory/kb",
       "does": "Stage 1. Look in the folder first; sort the knowledge base's sources (kb_tool.py sources - exact copies, format copies, editions); ask what is still missing in one batch of pop-up questions - programme, knowledge base, old course, course type, model course and language only if not found, which edition is current; record everything in _factory/intake.json",
       "blocked_without": "nothing - the programme is the one blocking ANSWER, and it is asked here",
-      "output": "_factory/intake.json, _factory/kb_sources.json",
+      "output": "_factory/intake.json, _factory/kb_sources.json, and COURSE_STATE.md + FEEDBACK_LOG.md started (scripts/course_memory.py start) with the course table and every intake decision filled in",
       "added": "2.13.0 (Phase 5 step 2). Numbered 0 so no later step moves."
     },
     {
@@ -155,6 +155,10 @@
       "does": "write factory-notes.md into the course folder - what was produced, every marker, the achieved ratio, what moved to the handout, and feedback on this skill"
     }
   ],
+  "memory": {
+    "_law": "L32 (2.14.0). Every stage ends by updating COURSE_STATE.md - the stage, what was approved, open questions, the next step, the file map - and running scripts/course_memory.py check. Every operator correction is written into FEEDBACK_LOG.md when it is made. A session that opens a course folder with a COURSE_STATE.md reads it first and does not re-ask or re-decide anything under 'Decided'.",
+    "at_the_end": "When the operator says they are happy with the finished course: course_memory.py draft-pattern, show the draft to the operator in plain language, let them change or remove any point, and only on their approval course_memory.py approve-pattern --by <name>."
+  },
   "non_negotiable_orderings": [
     "the GATE (6) before anything is built (7+)",
     "hours (1) and the ILO map (4) before the module split (5) is believed",

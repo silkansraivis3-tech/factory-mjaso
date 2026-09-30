@@ -275,8 +275,10 @@ batched as one pop-up with options at the next STOP, then work continues. Honest
 `factory-notes.md`, never on a slide, and never stop the work. → `course-factory`
 
 **L32 · The factory remembers.** `COURSE_STATE.md` at the end of every stage; every operator
-correction in `FEEDBACK_LOG.md`; a pattern file offered when the operator is happy — guidance for
-later courses, never law. → `course-factory` (step 3)
+correction in `FEEDBACK_LOG.md`; a pattern file offered when the operator is happy — shown to them in
+plain language and saved only on their approval, naming the course, course type and who made it;
+guidance for later courses, never law, never above the operator's request. → `course-factory`
+(`scripts/course_memory.py`, 2.14.0)
 
 **L33 · Pictures: find first, keep what teaches, never invent what a trainee must recognise.**
 KB → old course → source files → internet → authored → generated. Legit old schematics are kept.

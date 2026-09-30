@@ -60,11 +60,31 @@ row wins** — even before its step has been built out. Full text: `references/l
 | **L29** | Before any HTML, a word-for-word **content script** per module is approved by the operator; the slides then say exactly that. Facts the operator stated are listed there once per module, marked *operator-stated*, so they are checked before HTML | step 5 |
 | **L30** | **Module 1 is a pilot**, built by five roles and approved before any other module is built | step 10 |
 | **L31** | Ask like a colleague: real expert questions batched as **one pop-up with options** at the next STOP, then carry on. No "needs SME review" spam. Honesty markers live in `factory-notes.md`, never on a slide, never a reason to stop; "next" at a STOP ratifies what it showed | now |
-| **L32** | `COURSE_STATE.md` updated at the end of every stage; every operator correction in `FEEDBACK_LOG.md`; a pattern file offered when the operator is happy | step 3 |
+| **L32** | `COURSE_STATE.md` updated at the end of every stage; every operator correction in `FEEDBACK_LOG.md`; a pattern file offered when the operator is happy — see *The course remembers* below | now |
 | **L33** | Pictures: KB → old course → source files → internet → authored → generated; keep legit old schematics; textbook figures redrawn **technically identical**, credited "after <book>", listed in `factory-notes.md`; equipment a trainee must recognise is **never** an AI image — schematic plus the "photos to take at Novikontas" list | step 8 |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
 predict-then-reveal, worked example then own attempt. More practice than theory; theory never removed.
+
+## The course remembers — L32
+
+`scripts/course_memory.py` runs it; the templates are `templates/COURSE_STATE.md`,
+`FEEDBACK_LOG.md` and `COURSE_PATTERN.md`. All three stay in the course folder and never ship.
+
+- **Every session starts by reading `COURSE_STATE.md`** if the course folder has one, and never
+  re-asks or re-decides what it lists under *Decided*. A new course: `course_memory.py start`.
+- **At every STOP**, update it: stage, what was approved, open questions, next step, file map. Then
+  `course_memory.py check` — it says whether a new session could resume from it.
+- **Every correction the operator makes** goes into `FEEDBACK_LOG.md` straight away, in their words,
+  with what changed; a fact they state is marked *operator-stated* (L29).
+- **At the end, when the operator says they are happy**, offer a pattern file. `draft-pattern` drafts
+  it from the log; **show it to the operator in plain language**, and let them change or remove any
+  point. Save it only when they approve: `approve-pattern --by "<name>"`, which refuses until it
+  names the course, the course type and who made it. The owner copies it into
+  `resources/course-patterns/`, and every colleague gets it with the next update.
+- **A new course** lists the approved patterns (`course_memory.py patterns --course-type <type>`)
+  and reads the ones that fit. They are guidance, never rules, and never above the current
+  operator's request. Drafts are never read.
 
 ---
 

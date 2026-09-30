@@ -47,7 +47,11 @@ course-factory/
 │   └── scripts/kb_tool.py, test_kb.py    both knowledge-base kinds; copies, editions, search - never writes into the KB
 ├── templates/
 │   ├── COURSE_BRIEF.md                   what the operator types
+│   ├── COURSE_STATE.md                   where the course stands - read first by every session (L32, 2.14.0)
+│   ├── FEEDBACK_LOG.md                   every operator correction, in their words (L32, 2.14.0)
+│   ├── COURSE_PATTERN.md                 what a finished course teaches the next one - approved by the operator (L32, 2.14.0)
 │   └── factory-notes.md                  companion file, written by the skill during the run
+├── scripts/course_memory.py, test_course_memory.py   start / check the state; draft and approve a pattern; list approved patterns
 ├── hours/                                READ IN: plan mode, and audit
 │   ├── GUIDE.md
 │   ├── knowledge/hours-rules.json        every number and rule (authority)
@@ -216,6 +220,27 @@ Processor, was unknown to the factory.
   the owner's pilot folder (`Desktop\mjaso-factory-test`): one Course Source Processor knowledge base,
   47 sources, found from the folder and from its `old_course` sub-folder; the folder was fingerprinted
   before and after and did not change.
+
+## 4f · The course remembers (2.14.0, 2026-09-30, Phase 5 step 3)
+
+L32 built out. `COURSE_STATE.md` is started at intake and updated at every STOP; `course_memory.py
+check` says whether a new session could resume from it (every section, a named stage, a next step, a
+date, a feedback log beside it). `FEEDBACK_LOG.md` takes every operator correction in their words, and
+marks the facts they stated so step 5's content-script review can list them (L29).
+
+The pattern file follows the owner's three conditions: it is **shown to the operator in plain language
+and saved only on their approval** (`draft-pattern`, then `approve-pattern --by <name>`; they may change
+or remove any point); it **names the course, the course type, the subject and who made it**, and
+approval is refused until it does; and patterns are **guidance, never rules, never above the current
+operator's request** — the listing says so every time, and never shows a draft or an unapproved file.
+Approved patterns live in `plugin/resources/course-patterns/` (the owner copies them there and
+commits); the name `resources/patterns/` was already taken by the visual engines.
+
+The publisher now sorts `COURSE_STATE.md`, `FEEDBACK_LOG.md`, `COURSE_PATTERN_*.md` and
+`factory-notes.md` as INTERNAL, like `REVIEW.html` and `_factory/`. `factory-notes.md` had not been
+covered before; no file of any of these names exists in the Android project, so GAS BASIC's
+publishing is unchanged. The first attempt at that publisher change failed silently on shell escaping;
+the new test caught it before anything was reported, and every edit since is re-read after saving.
 
 ## 5 · Known gaps / before this goes live
 
