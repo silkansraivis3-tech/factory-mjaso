@@ -65,6 +65,8 @@ row wins** — even before its step has been built out. Full text: `references/l
 | **L34** | **One module per programme topic** — in the programme's order, with the programme's hours (GAS BASIC: 22 teaching modules). The programme's final-assessment topic is the **last module, and the assessment only**: no slides, no teaching. Topics are never merged or split. An academic hour is the programme's; at Novikontas 40 min when it is silent | now (2.17.0) |
 | **L35** | **Two tablets.** The slides run on the instructor tablet, mirrored to the classroom screen; the notes stay on the instructor's panel. Tasks are **only** on the trainee tablet. At task time the slide only says a task starts now and what it is about, and the instructor's panel has one button, **OPEN TASK**; the task then opens on every trainee tablet by itself. No task list, no browsing, no "all tasks" or "back to tasks" button | now in the script and architecture; the app's change list in step 6 |
 | **L36** | **Enough theory before any task.** A slide carries the teaching itself, not a headline; the notes carry what the instructor explains; a module's words fill its minutes; a self-check comes only after a block of new theory; every answer is taught before its task opens. Floors: `knowledge/theory-rules.json`, checked on the content script | now (2.17.0) |
+| **L37** | **Every slide leaves room for its picture** and names it: the kind (photograph, schematic, cutaway, chart, step / flow / process animation, interactive diagram, 3D model, 3D scan, video, AI illustration ...), what it shows, the layout - and **who makes it**: the factory, the image/video generator (context only), the sources, **Novikontas** (a photo, a film, a phone 3D scan) or outside help. 40+ min of theory: something that moves, turns or can be explored. `knowledge/media-and-tasks.json` | now in the script and architecture; built in steps 8-9 |
+| **L38** | **Tasks are varied and hands-on** - 14 ways of answering, none typing: choose one / all, choose-and-justify, order, match, sort, complete the sentence, tap the place, label the drawing, find the hazards, read the instrument, set the value, operate the panel, scenario. A self-check uses 2+, a module check 3+; "choose one" at most 40 %; one hands-on question per module | now in the script and architecture; built in step 6 |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
 predict-then-reveal, worked example then own attempt. More practice than theory; theory never removed.
@@ -180,7 +182,7 @@ operator that this tool is hard work.
 questions, and what to record. In order:
 
 1. **Look in the folder** for the programme, the IMO model course, the knowledge base, the old
-   course and the language; propose the course type from the programme.
+   course; propose the course type from the programme. The course language is always English.
 2. **Sort the sources** — `kb/scripts/kb_tool.py sources <kb> --course <course>` (read `kb/GUIDE.md`):
    exact copies and .doc/.docx pairs are settled without asking; each publication found in more than
    one edition becomes a "which edition is current?" question.
@@ -188,7 +190,7 @@ questions, and what to record. In order:
    to four per pop-up, most important first): the programme if not found (the one blocking answer),
    the knowledge base, the old course (a local folder; a Drive link only if it reads reliably), the
    course type (`NEW_ENTRANT` / `EXPERIENCED`, the programme's pointer first as *Recommended*), the
-   model course and the language only if not found, the edition questions, and — in retrofit, only
+   model course only if not found, the edition questions, and — in retrofit, only
    when `detect_expert_edits.py` says `nothing-to-go-on` — whether anyone edited it by hand (L24).
 4. **Record** it in `_factory/intake.json`, editions via `kb_tool.py decide`. Nothing is asked twice.
 
@@ -255,7 +257,8 @@ course to the NOVIKONTAS training app."* Review happens in the colleague's own f
 **L19 · COURSE_LANGUAGE is declared, and the operator's language is not it.** Detect it, state it
 back in one line, lock it — in plan and retrofit alike. Course-facing material stays in it unless
 translation is explicitly requested; the chat report and `factory-notes.md` follow the operator.
-`retrofit/scripts/check_language.py` is the drift check.
+`retrofit/scripts/check_language.py` is the drift check. **Every Novikontas course is in English**
+(owner, 2026-09-30) - COURSE_LANGUAGE is English and is never asked.
 
 **L25 · The person reading this does not work in IT.** `knowledge/plain-language.json` is the
 authority; `scripts/check_plain_language.py` enforces it. Every problem message carries all five:

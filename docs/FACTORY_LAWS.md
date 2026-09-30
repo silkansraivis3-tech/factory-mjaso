@@ -114,7 +114,8 @@ implementation. "The HTML works" is not an argument for keeping it, and a module
 classified on quality, never on validity. The operator's request in chat is the explicit
 authorisation (L26). → `course-factory` (`retrofit/`)
 
-**L19 · COURSE_LANGUAGE is declared, and the operator's language is not it.**
+**L19 · COURSE_LANGUAGE is declared, and the operator's language is not it.** *(Owner, 2026-09-30: every
+Novikontas course is in English - COURSE_LANGUAGE is English and is never asked.)*
 Mandatory in every mode. Course-facing output — slides, tasks, handout, assessment, feedback,
 instructor cues, practical cards, START_HERE, run script — stays in COURSE_LANGUAGE unless
 translation is explicitly requested. The chat report, companion file, comments and validator output
@@ -307,10 +308,19 @@ the words fill the minutes; a self-check only after a block of new theory; every
 its task opens. Floors in `course-factory/knowledge/theory-rules.json`, checked on the content script.
 → `course-factory` (`scripts/content_script.py`, 2.17.0)
 
+**L37 · Every slide leaves room for its picture.** Each slide names the kind of visual, what it shows, its layout,
+and who makes it - the factory, the image/video generator (context only), the sources, Novikontas (photo, film, phone
+3D scan) or outside help. 40+ min of theory: something that moves, turns or can be explored.
+→ `course-factory` (`knowledge/media-and-tasks.json`, `scripts/content_script.py`, 2.18.0); built by `course-visuals` (steps 8-9)
+
+**L38 · Tasks are varied and hands-on.** Fourteen ways of answering, none typing; 2+ per self-check, 3+ per module
+check, "choose one" at most 40 %, a hands-on question in every module. Widens `course-task-ux` §2.
+→ `course-factory` (`knowledge/media-and-tasks.json`, `scripts/content_script.py`, 2.18.0); built by `course-task-ux` (step 6)
+
 ---
 
-**All thirty-six laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L36 are enforced first through `course-factory/SKILL.md`'s
+**All thirty-eight laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L38 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

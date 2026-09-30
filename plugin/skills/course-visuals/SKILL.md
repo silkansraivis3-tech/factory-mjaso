@@ -228,6 +228,14 @@ accessibility, semantic colour, quality level.
 procedure and a human-factors scenario should not reach for the same layout mechanic. If three
 screens in a row use the same interaction, that is a finding, not a house style.
 
+**Planned before it is built (L37, owner 2026-09-30, 2.18.0).** Every slide's visual - its kind, what it
+shows, its layout and who makes it - is already named in the operator-approved content script
+(`course-factory/knowledge/media-and-tasks.json`, which adds `model_3d`, `model_3d_scan`,
+`model_3d_licensed`, `video_real` and `video_generated` to the representations here). Build what was
+approved; a better choice found while building goes back to the operator as a change to the script.
+A 3D model is three.js from geometry the factory can state exactly; the exact look of a named piece of
+equipment is a phone 3D scan at Novikontas, a manufacturer's or licensed model - never an AI model.
+
 ---
 
 ## Verify before reporting done

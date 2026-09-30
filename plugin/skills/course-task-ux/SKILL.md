@@ -116,6 +116,13 @@ approval of the content. Every task page built from it carries `data-script` and
 locate** (§6) · **order / sequence** · **match** · **choose-and-justify** (pick the action, then the
 reason from a set — both must be right).
 
+> **Widened by the owner, 2026-09-30 (L38, 2.18.0):** as many ways of answering as possible, realistic and
+> technical - fourteen, none of them typing: choose one · choose all that are right · choose-and-justify · order ·
+> match · sort into groups · complete the sentence · tap the place · drag labels onto a drawing · find the hazards ·
+> read the instrument · set the value (slider or dial) · operate the panel / line up the valves · scenario. The list,
+> how each answer is written and the variety floors are `course-factory/knowledge/media-and-tasks.json`; the
+> operator approves every task's words in the content script first.
+
 **Free typing is allowed in exactly one place:** a simulator or field reporting task. If it is
 allowed, §5 becomes mandatory.
 

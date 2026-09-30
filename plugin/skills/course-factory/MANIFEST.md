@@ -54,6 +54,7 @@ course-factory/
 ├── scripts/course_memory.py, test_course_memory.py   start / check the state; draft and approve a pattern; list approved patterns
 ├── scripts/make_architecture_page.py, test_architecture_page.py   the Stage 2 STOP as one page (2.15.0); one module per topic (2.17.0)
 ├── knowledge/theory-rules.json           how much theory before any task, and the two tablets (L35, L36, 2.17.0)
+├── knowledge/media-and-tasks.json        the kinds of picture and the ways of answering, who makes each, the variety floors (L37, L38, 2.18.0)
 ├── knowledge/page-labels.json            the review pages' own words in the operator's language (en / lv / ru)
 ├── script/GUIDE.md                       READ IN: Stage 3 - the content script (2.16.0)
 ├── scripts/content_script.py, check_script_match.py, test_content_script.py   the script, the Word copy, corrections on confirmation, the word-for-word match
@@ -351,6 +352,40 @@ make the right answer right.
 The example pages were remade: the architecture from the real GAS Basic programme (Rev. 01.07.2026, read
 from the pilot knowledge base, read-only) - 23 modules; the content script as a full 80-minute Module 1
 written to the floors, and a second copy with six planted problems.
+
+## 4j · Pictures, animation, 3D, and tasks that are not A, B, C, D (2.18.0, 2026-09-30)
+
+The owner, on the rebuilt examples: *"leave place for animations, images, 3D illustrations ... and mention what
+kind would be used"*, and *"make these tests more variable ... as much variable as possible ... if you cannot
+perform, explain why and advise how"*. And, mid-step: *"courses are only in English"*.
+
+- **L37.** `knowledge/media-and-tasks.json` lists 18 kinds of picture (each tied to a `course-visuals`
+  representation) and five makers - the factory itself, the image/video generator (nano-banana: Gemini images,
+  Veo video; the key was checked working on 2026-09-30), the sources, Novikontas, outside help - with how each
+  is made. The content script gained `visual_kind` (an editable Word box in the operator's words, read back to
+  its id) and `layout`; the review page draws each slide with its picture area beside the text, and lists what
+  Novikontas or outside help must provide. The architecture page gained a per-module picture plan, a Pictures
+  column in the overview, and a course-wide *who makes them* list.
+- **L38.** Fourteen ways of answering, none typing, each with a one-box text form the operator can edit in Word
+  (`answer`, one line per item, `*` for right). `read_answer` checks each form and gives the right and wrong
+  words to the was-it-taught check (L36), so it now works for ordering, matching, sorting, scenarios and the
+  rest. `media_findings` checks the floors. The review page draws each task as the tablet will: a sorting board,
+  a slider, a numbered order, a pairs table, gap choices, scenario steps. `check_script_match` compares an
+  answer's pieces as a set (the tablet shuffles them) and checks what is marked right.
+- **What the factory cannot make itself, and how it gets made** (said on the pages and here): the exact look of
+  a named piece of equipment in 3D - scan the real one at Novikontas with a phone photogrammetry app (Polycam,
+  KIRI Engine, RealityScan) to a .glb, or use a manufacturer's CAD or a licensed model, or a 3D artist; AI
+  image-to-3D services (Meshy, Tripo, Rodin) through their own API key for context objects only. Real procedure
+  video - film it at Novikontas (no video editor is installed here; short clips can be used as filmed).
+  Everything else - SVG, animation, interactive diagrams, three.js 3D from geometry, every task mechanic - the
+  factory builds, bundled for the offline tablet. The trainee-tablet side of the new tasks and OPEN TASK is the
+  app change list of step 6.
+- **English only.** Every Novikontas course is in English: COURSE_LANGUAGE is never asked (`intake.json`), and
+  L19 carries the owner's note. Review pages still follow the operator's language.
+
+The examples were remade: Module 1 now has 13 slides with 8 kinds of picture (3 of them 3D models, 2 step
+animations, an interactive drawing) and 14 questions answered 10 different ways; the architecture plans pictures
+and ways of answering for all 22 modules and lists what Novikontas must photograph, film or scan.
 
 ## 5 · Known gaps / before this goes live
 

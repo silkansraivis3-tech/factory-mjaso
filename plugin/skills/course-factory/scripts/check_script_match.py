@@ -21,6 +21,10 @@ its field:
     <div data-script="q01"> <p data-script-field="question">…</p>
       <button data-script-field="opt.A" data-correct="true">…</button> <p data-script-field="feedback">…</p>
 
+    a task answered by ordering, matching, locating, a scenario ... (2.18.0) carries each visible piece
+    of its answer as <span data-script-field="answer">…</span> - in any order, since the tablet shuffles
+    them - and the pieces marked right in the script carry data-correct="true" too.
+
 WHAT IT CHECKS
   1  the script is approved, and has not changed since it was approved
   2  every screen in the script is built somewhere in the module folder, and nothing else claims a
@@ -80,7 +84,7 @@ class Collect(HTMLParser):
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
         if "data-script" in a:
-            self.screens.setdefault(a["data-script"], {"fields": {}, "loose": [], "ignored": 0, "correct": []})
+            self.screens.setdefault(a["data-script"], {"fields": {}, "flags": {}, "loose": [], "ignored": 0, "correct": []})
         if "data-script-ignore" in a:
             sid = self._ctx()[0] or a.get("data-script")
             if sid in self.screens:
@@ -95,6 +99,7 @@ class Collect(HTMLParser):
                 sid = self._ctx()[0]
                 if sid in self.screens:
                     self.screens[sid]["fields"].setdefault(a["data-script-field"], []).append("")
+                    self.screens[sid]["flags"].setdefault(a["data-script-field"], []).append(a.get("data-correct") == "true")
 
     def handle_endtag(self, tag):
         for i in range(len(self.stack) - 1, -1, -1):
@@ -154,15 +159,29 @@ def main(argv=None):
         fields = {k: [norm(x) for x in v] for k, v in got["fields"].items()}
         if s["kind"] in cs.TASKS:
             want = {"question": s.get("question", ""), "feedback": s.get("feedback", "")}
-            for L, o in zip(cs.letters(len(s.get("options", []))), s.get("options", [])):
-                want["opt." + L] = o
+            if cs.uses(s, "options"):
+                for L, o in zip(cs.letters(len(s.get("options", []))), s.get("options", [])):
+                    want["opt." + L] = o
             for f, w in want.items():
                 g = " ".join(fields.get(f, []))
                 if norm(w) != g:
                     probs.append("%s in %s: %s says \"%s\" - approved: \"%s\"" % (where, got["file"], f, g or "(missing)", norm(w)))
-            if got["correct"] != ["opt." + s.get("correct", "")]:
-                probs.append("%s in %s: the answer marked correct is %s - approved: %s" % (
-                    where, got["file"], ", ".join(x[4:] for x in got["correct"]) or "none", s.get("correct")))
+            if cs.uses(s, "options"):
+                marked = sorted(x[4:] for x in got["correct"] if x.startswith("opt."))
+                if marked != sorted(cs.correct_letters(s)):
+                    probs.append("%s in %s: the answer marked correct is %s - approved: %s" % (
+                        where, got["file"], ", ".join(marked) or "none", s.get("correct")))
+            if cs.uses(s, "answer") and cs.mech(s) != "set_value":
+                items, right = cs.answer_items(s)
+                built = fields.get("answer", [])
+                if sorted(norm(x) for x in items) != sorted(built):
+                    probs.append("%s in %s: the answer's items are not the approved ones - approved: \"%s\" / built: \"%s\"" % (
+                        where, got["file"], " / ".join(norm(x) for x in items), " / ".join(built) or "(missing)"))
+                elif right:
+                    flagged = sorted(t for t, f in zip(built, got["flags"].get("answer", [])) if f)
+                    if flagged != sorted(norm(x) for x in right):
+                        probs.append("%s in %s: the items marked right are %s - approved: %s" % (
+                            where, got["file"], " / ".join(flagged) or "none", " / ".join(norm(x) for x in right)))
         else:
             if norm(s.get("title", "")) != " ".join(fields.get("title", [])):
                 probs.append("%s in %s: the title says \"%s\" - approved: \"%s\"" % (

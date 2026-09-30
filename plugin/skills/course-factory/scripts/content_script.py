@@ -33,6 +33,18 @@ do not fill its minutes, a self-check with too little theory before it, a questi
 not in the slides already taught, a task written onto a slide, minutes that do not add up to the
 programme's. For every question the page names the slide that teaches its answer.
 
+PICTURES AND TASKS (owner, 2026-09-30 - L37, L38)
+Every slide leaves room for its picture and says what it is: "visual_kind" (a photograph, a schematic, a
+step animation, a 3D model, a video ... - knowledge/media-and-tasks.json), "visual" (what it shows) and
+"layout". The review page draws that place on the slide, says who makes each picture - the factory, the
+image generator, the sources, Novikontas (a photo, a film, a 3D scan) or outside help - and lists what
+Novikontas has to capture. Every task says how the trainee answers ("mechanic"): choose one, choose all
+that are right, choose-and-justify, order, match, sort into groups, complete the sentence, tap the place,
+label the drawing, find the hazards, read the instrument, set the value, operate the panel, a scenario.
+The answer of all but the choosing ones is one editable text box, one line per item, "*" marking what is
+right. The floors - no module of plain "choose one", a hands-on question in every module, something that
+moves where the theory is long - are checked like the theory.
+
 THE OPERATOR'S COPY IS A WORD FILE (owner, 2026-09-30)
 render writes review/M01_SCRIPT.docx beside a review page that prints to PDF. Every editable text is
 its own Word box (a content control, tagged with the screen and field, locked against deletion but
@@ -79,13 +91,32 @@ Q = lambda t: "{%s}%s" % (W, t)
 sys.path.insert(0, HERE)
 import check_slide_text as slide_text  # noqa: E402  - the same four rules the built slides get (L22)
 
+MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json"), encoding="utf-8"))
 KINDS = ("slide", "task-slide", "activity", "self-check", "module-check", "final")
 TASKS = ("self-check", "module-check", "final")          # trainee tablet - one question per screen
 INSTRUCTOR = ("slide", "task-slide", "activity")          # instructor tablet - the classroom screen
-SLIDE_FIELDS = ("title", "text", "visual", "notes", "minutes")
+SLIDE_FIELDS = ("title", "text", "visual_kind", "visual", "notes", "minutes")
 TASK_SLIDE_FIELDS = ("title", "text", "notes", "minutes")
-TASK_FIELDS = ("question", "options", "correct", "feedback", "mechanic")
 FAIL, NOTE = slide_text.FAIL, slide_text.NOTE
+
+# how a trainee answers (L38) - which parts of a task each mechanic uses; knowledge/media-and-tasks.json names them
+MECHANICS = [k for k in MEDIA["mechanics"] if not k.startswith("_")]
+USES = {"single_choice": {"options"}, "multi_select": {"options"}, "choose_and_justify": {"options", "answer"},
+        "order": {"answer"}, "match": {"answer"}, "categorise": {"answer"}, "cloze": {"answer"},
+        "hotspot": {"answer", "visual"}, "label_diagram": {"answer", "visual"}, "spot_the_hazard": {"answer", "visual"},
+        "read_instrument": {"options", "visual"}, "set_value": {"answer", "visual"}, "panel_operate": {"answer", "visual"},
+        "scenario": {"answer"}}
+OLD_MECHANIC = {"tap to choose": "single_choice", "": "single_choice", None: "single_choice"}
+VISUAL_KINDS = [k for k in MEDIA["visual_kinds"] if not k.startswith("_")]
+
+
+def mech(s):
+    m = s.get("mechanic")
+    return OLD_MECHANIC.get(m, m)
+
+
+def uses(s, part):
+    return part in USES.get(mech(s), {"options"})
 
 
 # ------------------------------------------------------------------ files
@@ -177,27 +208,65 @@ def letters(n):
     return [chr(ord("A") + i) for i in range(n)]
 
 
-def fields_of(screen):
-    """Every editable field of one screen as (field id, value) - options become opt.A, opt.B ..."""
+def kind_label(kind, lang="en"):
+    """The operator's words for a kind of visual - 'none' and an unknown kind are shown as written."""
+    k = MEDIA["visual_kinds"].get(kind)
+    if kind == "none":
+        return {"lv": "nav - kopsavilkuma slaids", "ru": "нет - итоговый слайд"}.get(lang, "none - a summary slide")
+    return (k.get(lang) or k["en"]) if k else (kind or "")
+
+
+def parse_kind(text):
+    """A kind as the operator typed it - its id or its name in any language - back to its id."""
+    t = (text or "").strip().lower()
+    if t in MEDIA["visual_kinds"] or t == "none":
+        return t
+    for k in VISUAL_KINDS:
+        for lang in ("en", "lv", "ru"):
+            if MEDIA["visual_kinds"][k].get(lang, "").lower() == t:
+                return k
+    if t.startswith(("none", "nav", "нет")):
+        return "none"
+    return text
+
+
+def mech_label(m, lang="en"):
+    k = MEDIA["mechanics"].get(m) or {}
+    return k.get(lang) or k.get("en") or m
+
+
+def fields_of(screen, lang="en"):
+    """Every editable field of one screen as (field id, value) - options become opt.A, opt.B ...; the kind of
+    visual is shown in the operator's words. How the trainee answers is not a box: changing it changes what the
+    answer is, so it goes through the chat."""
     out = []
     if screen["kind"] in TASKS:
         out.append(("question", screen.get("question", "")))
-        for L, o in zip(letters(len(screen.get("options", []))), screen.get("options", [])):
-            out.append(("opt." + L, o))
-        out += [("correct", screen.get("correct", "")), ("feedback", screen.get("feedback", "")),
-                ("mechanic", screen.get("mechanic", "tap to choose"))]
+        if uses(screen, "visual"):
+            out += [("visual_kind", kind_label(screen.get("visual_kind", ""), lang)), ("visual", screen.get("visual", ""))]
+        if uses(screen, "options"):
+            for L, o in zip(letters(len(screen.get("options", []))), screen.get("options", [])):
+                out.append(("opt." + L, o))
+            out.append(("correct", screen.get("correct", "")))
+        if uses(screen, "answer"):
+            out.append(("answer", screen.get("answer", "")))
+        out.append(("feedback", screen.get("feedback", "")))
     else:
         names = TASK_SLIDE_FIELDS if screen["kind"] == "task-slide" else SLIDE_FIELDS
-        out += [(f, str(screen.get(f, "")) if screen.get(f, "") is not None else "") for f in names]
+        for f in names:
+            v = screen.get(f, "")
+            out.append((f, kind_label(v, lang) if f == "visual_kind" else ("" if v is None else str(v))))
     return out
 
 
-def get_field(screen, f):
+def get_field(screen, f, lang="en"):
     if f.startswith("opt."):
         i = ord(f[4]) - ord("A")
         opts = screen.get("options", [])
         return opts[i] if 0 <= i < len(opts) else None
     v = screen.get(f, "")
+    if f == "visual_kind":
+        return kind_label(v, lang)
     return "" if v is None else str(v)
 
 
@@ -208,6 +277,8 @@ def set_field(screen, f, value):
         while len(opts) <= i:
             opts.append("")
         opts[i] = value
+    elif f == "visual_kind":
+        screen[f] = parse_kind(value)
     elif f == "minutes":
         try:
             screen[f] = float(value) if "." in value else int(value)
@@ -224,6 +295,149 @@ def minutes(s):
         return 0.0
 
 
+SET_VALUE = re.compile(r"^\s*(-?\d+(?:[.,]\d+)?)\s*([^\s±+]*)\s*(?:±|\+/-)\s*(\d+(?:[.,]\d+)?)\s*,\s*range\s+"
+                       r"(-?\d+(?:[.,]\d+)?)\s*(?:to|–|-)\s*(-?\d+(?:[.,]\d+)?)\s*$", re.I)
+
+
+def lines_of(text):
+    return [x.strip() for x in (text or "").split("\n") if x.strip()]
+
+
+def starred(line):
+    return line.rstrip().endswith("*") or line.lstrip().startswith("*")
+
+
+def unstar(line):
+    return line.strip().strip("*").strip()
+
+
+def correct_letters(s):
+    return [x.strip().upper() for x in re.split(r"[,\s;]+", str(s.get("correct", ""))) if x.strip()]
+
+
+def read_answer(s):
+    """A task's answer as the operator wrote it, taken apart: (problems, the right answer's words, the wrong
+    answers' words). The right answer's words feed the 'was it taught?' check (L36); the wrong ones are left out
+    of it, so a word every option shares does not count as taught."""
+    m, sid, probs, right, wrong = mech(s), s.get("id"), [], [], []
+    opts = s.get("options", [])
+    if m not in USES:
+        return ["%s: unknown way of answering %r - use one of: %s" % (sid, s.get("mechanic"), ", ".join(MECHANICS))], [], []
+    if uses(s, "options"):
+        L = correct_letters(s)
+        if len(opts) < 2:
+            probs.append("%s: a task needs at least two answers to choose from" % sid)
+        if not L or any(x not in letters(len(opts)) for x in L):
+            probs.append("%s: the correct answer %r is not one of %s" % (sid, s.get("correct"), "/".join(letters(len(opts)))))
+        elif m != "multi_select" and len(L) != 1:
+            probs.append("%s: '%s' has exactly one correct answer, not %s" % (sid, mech_label(m), ", ".join(L)))
+        elif m == "multi_select" and len(L) == len(opts):
+            probs.append("%s: in 'choose all that are right', not every answer may be right" % sid)
+        right += [o for x, o in zip(letters(len(opts)), opts) if x in L]
+        wrong += [o for x, o in zip(letters(len(opts)), opts) if x not in L]
+    if uses(s, "visual") and not (s.get("visual") or "").strip():
+        probs.append("%s: '%s' needs the picture, drawing or panel it is done on - say what it shows" % (sid, mech_label(m)))
+    if not uses(s, "answer"):
+        return probs, right, wrong
+    ls = lines_of(s.get("answer"))
+    if m in ("order", "label_diagram"):
+        if len(ls) < 3:
+            probs.append("%s: '%s' needs at least three items, one per line" % (sid, mech_label(m)))
+        right += ls
+    elif m == "match":
+        bad = [x for x in ls if x.count("=") != 1]
+        if len(ls) < 3 or bad:
+            probs.append("%s: 'match the pairs' needs at least three lines written as: left = right" % sid)
+        right += ls
+    elif m == "categorise":
+        groups = [x.split(":", 1) for x in ls]
+        if len(groups) < 2 or any(len(g) != 2 or not [i for i in g[1].split(";") if i.strip()] for g in groups):
+            probs.append("%s: 'sort into groups' needs at least two lines written as: Group: item; item" % sid)
+        right += ls
+    elif m in ("hotspot", "spot_the_hazard", "choose_and_justify"):
+        good = [unstar(x) for x in ls if starred(x)]
+        if len(ls) < 3 or not good:
+            probs.append("%s: '%s' needs at least three lines, the right one(s) marked *" % (sid, mech_label(m)))
+        if m == "choose_and_justify" and len(good) != 1:
+            probs.append("%s: 'choose the action, then the reason' needs exactly one reason marked *" % sid)
+        right += good
+        wrong += [unstar(x) for x in ls if not starred(x)]
+    elif m == "cloze":
+        gaps = re.findall(r"\[([^\]]+)\]", s.get("answer", ""))
+        if not gaps:
+            probs.append("%s: 'complete the sentence' needs at least one gap written as [right* | wrong | wrong]" % sid)
+        for g in gaps:
+            parts = [p.strip() for p in g.split("|")]
+            good = [unstar(p) for p in parts if starred(p)]
+            if len(parts) < 2 or len(good) != 1:
+                probs.append("%s: every gap needs two or more choices, exactly one marked * - [%s]" % (sid, g))
+            right += good
+            wrong += [unstar(p) for p in parts if not starred(p)]
+    elif m == "set_value":
+        mm = SET_VALUE.match(s.get("answer", "") or "")
+        if not mm:
+            probs.append("%s: 'set the value' is written as one line: value unit ± tolerance, range low to high "
+                         "(e.g. -42 °C ± 2, range -60 to 20)" % sid)
+        else:
+            v, lo, hi = (float(mm.group(i).replace(",", ".")) for i in (1, 4, 5))
+            if not lo <= v <= hi:
+                probs.append("%s: the value %g is outside its own range %g to %g" % (sid, v, lo, hi))
+            right.append("%s %s" % (mm.group(1), mm.group(2)))
+    elif m == "panel_operate":
+        if not ls or any(x.count("=") != 1 for x in ls):
+            probs.append("%s: 'operate the panel' needs one line per control: control = the state it must end in" % sid)
+        right += ls
+    elif m == "scenario":
+        if len(ls) < 2:
+            probs.append("%s: a scenario needs at least two steps, one per line" % sid)
+        for x in ls:
+            if "=>" not in x:
+                probs.append("%s: each scenario step is written as: situation => right action* | wrong | wrong" % sid)
+                continue
+            acts = [a.strip() for a in x.split("=>", 1)[1].split("|")]
+            good = [unstar(a) for a in acts if starred(a)]
+            if len(acts) < 2 or len(good) != 1:
+                probs.append("%s: every scenario step needs two or more actions, exactly one marked *" % sid)
+            right += good
+            wrong += [unstar(a) for a in acts if not starred(a)]
+    return probs, right, wrong
+
+
+def answer_items(s):
+    """The visible pieces of an answer-box task - what a built task page shows, one element each with
+    data-script-field="answer" - and the ones marked right (data-correct="true"). check_script_match compares
+    them as a set, since the tablet shuffles them."""
+    m, ls, items, right = mech(s), lines_of(s.get("answer")), [], []
+    if m in ("order", "label_diagram"):
+        items = [unstar(x) for x in ls]
+    elif m in ("hotspot", "spot_the_hazard", "choose_and_justify"):
+        items = [unstar(x) for x in ls]
+        right = [unstar(x) for x in ls if starred(x)]
+    elif m in ("match", "panel_operate"):
+        items = [p.strip() for x in ls for p in x.split("=", 1)]
+    elif m == "categorise":
+        for x in ls:
+            g, _, rest = x.partition(":")
+            items += [g.strip()] + [i.strip() for i in rest.split(";") if i.strip()]
+    elif m == "cloze":
+        text = s.get("answer", "")
+        items = [t.strip() for t in re.split(r"\[[^\]]+\]", text) if t.strip()]
+        for g in re.findall(r"\[([^\]]+)\]", text):
+            parts = [p.strip() for p in g.split("|")]
+            items += [unstar(p) for p in parts]
+            right += [unstar(p) for p in parts if starred(p)]
+    elif m == "scenario":
+        for x in ls:
+            sit, _, acts = x.partition("=>")
+            items.append(sit.strip())
+            for a in acts.split("|"):
+                if a.strip():
+                    items.append(unstar(a))
+                    if starred(a):
+                        right.append(unstar(a))
+    return items, right
+
+
 def validate(script):
     probs, seen = [], set()
     screens = script.get("screens", [])
@@ -234,12 +448,10 @@ def validate(script):
         seen.add(sid)
         if s.get("kind") not in KINDS:
             probs.append("screen %s: unknown kind %r" % (sid, s.get("kind")))
+        if s.get("kind") == "slide" and s.get("visual_kind") and parse_kind(s["visual_kind"]) not in VISUAL_KINDS + ["none"]:
+            probs.append("%s: unknown kind of visual %r - use one of: %s" % (sid, s["visual_kind"], ", ".join(VISUAL_KINDS)))
         if s.get("kind") in TASKS:
-            opts = s.get("options", [])
-            if len(opts) < 2:
-                probs.append("%s: a task needs at least two answers to choose from" % sid)
-            if s.get("correct") not in letters(len(opts)):
-                probs.append("%s: the correct answer %r is not one of %s" % (sid, s.get("correct"), "/".join(letters(len(opts)))))
+            probs += read_answer(s)[0]
             if not s.get("feedback"):
                 probs.append("%s: no feedback for the trainee after answering" % sid)
             if s.get("kind") == "module-check" and s.get("graded"):
@@ -393,10 +605,8 @@ def theory_findings(script):
                         break
                 if not final:
                     for q in st["questions"]:
-                        ans = q.get("options", [])
-                        i = ord(str(q.get("correct", "A"))[:1] or "A") - ord("A")
-                        answer = ans[i] if 0 <= i < len(ans) else ""
-                        others = [o for j, o in enumerate(ans) if j != i]
+                        _, right, others = read_answer(q)
+                        answer = "\n".join(right)
                         if not any(terms(answer)):
                             answer, others = q.get("feedback", ""), []
                         each = [(taught_share(answer, slide_terms(x), others) or 0, x) for x in seen_slides]
@@ -422,7 +632,7 @@ def text_findings(script):
     found, seen = [], set()
     for s in script.get("screens", []):
         course_facing = ["title", "text"] if s["kind"] not in TASKS else \
-            ["question"] + ["opt." + L for L in letters(len(s.get("options", [])))] + ["feedback"]
+            ["question"] + ["opt." + L for L in letters(len(s.get("options", [])))] + (["answer"] if uses(s, "answer") else []) + ["feedback"]
         opening = ("%s\n%s" % (s.get("title", ""), s.get("text", ""))) if s["id"] == first_slide else ""
         for f, kind in [(x, "presentation") for x in course_facing] + [("notes", "instructor"), ("visual", "instructor")]:
             text = get_field(s, f) or ""
@@ -439,9 +649,68 @@ def text_findings(script):
     return found
 
 
+def media_findings(script):
+    """L37, L38 - every slide leaves room for a named visual, a module moves where it can, and the tasks are
+    varied and hands-on. Floors: knowledge/media-and-tasks.json."""
+    F = MEDIA["floors"]
+    found = []
+    lang = script.get("operator_language", "en")
+
+    def add(sid, field, level, key, **kw):
+        found.append({"where": place(script, sid) if sid else T(script, "s_the_module"), "screen": sid or "", "field": field,
+                      "level": level, "rule": key, "detail": T(script, key, **kw), "fix": ""})
+
+    slides = [s for s in script.get("screens", []) if s.get("kind") == "slide"]
+    kinds = []
+    for s in slides:
+        k = parse_kind(s.get("visual_kind", ""))
+        if k == "none":
+            if s is not slides[-1]:          # the last slide - the summary - may have none; any other gets a note
+                add(s["id"], "visual_kind", NOTE, "v_none")
+            continue
+        if k not in VISUAL_KINDS:
+            add(s["id"], "visual_kind", FAIL, "v_no_kind")
+        elif not (s.get("visual") or "").strip():
+            add(s["id"], "visual", FAIL, "v_no_what", kind=kind_label(k, lang))
+        if k in VISUAL_KINDS:
+            kinds.append(k)
+            if MEDIA["visual_kinds"][k]["made_by"] == "nano_banana":
+                add(s["id"], "visual_kind", NOTE, "v_generated", kind=kind_label(k, lang))
+    final = str(script.get("module")).lower() == "final"
+    th_min = sum(minutes(s) for s in slides)
+    if not final and slides:
+        moving = [k for k in kinds if MEDIA["visual_kinds"][k]["family"] in ("moving", "interactive", "3d", "video")]
+        if th_min >= F["moving_or_3d_per_module_from_min"] and not moving:
+            add(None, "", FAIL, "v_no_motion", min="%g" % th_min)
+        if len(slides) >= F["min_visual_kinds_from_slides"] and len(set(kinds)) < F["min_visual_kinds"]:
+            add(None, "", FAIL, "v_few_kinds", n=len(set(kinds)), lo=F["min_visual_kinds"])
+
+    slide_no, sets, set_of = plan_of(script)
+    qs = [q for st in sets if st["kind"] != "final" for q in st["questions"]]
+    for st in sets:
+        if st["kind"] == "final":
+            continue
+        ms = {mech(q) for q in st["questions"]}
+        lo = F["self_check_min_mechanics"] if st["kind"] == "self-check" else F["module_check_min_mechanics"]
+        if len(st["questions"]) >= lo and len(ms) < lo:
+            add(st["opened_by"], "", FAIL, "m_mix", set=set_name(script, st), n=len(ms), lo=lo)
+    if qs and not final:
+        share = sum(1 for q in qs if mech(q) == "single_choice") / float(len(qs))
+        if share > F["single_choice_max_share"]:
+            add(None, "", FAIL, "m_too_much_choice", pct="%.0f" % (100 * share), max="%.0f" % (100 * F["single_choice_max_share"]))
+        if sum(1 for q in qs if MEDIA["mechanics"].get(mech(q), {}).get("hands_on")) < F["hands_on_min_per_module"]:
+            add(None, "", FAIL, "m_no_hands_on")
+        run = 1
+        for a, b in zip(qs, qs[1:]):
+            run = run + 1 if mech(a) == mech(b) else 1
+            if run == F["max_same_in_a_row"] + 1:
+                add(b["id"], "", NOTE, "m_same_in_a_row", n=run, how=mech_label(mech(b), lang))
+    return found
+
+
 def all_findings(script):
     th, _ = theory_findings(script)
-    return th + text_findings(script)
+    return th + media_findings(script) + text_findings(script)
 
 
 def blocking(findings):
@@ -474,6 +743,119 @@ def summary(script):
 
 
 # ------------------------------------------------------------------ the review page
+FAMILY_MARK = {"still": "▣", "moving": "▶", "interactive": "☝", "3d": "⬢", "video": "●"}
+
+
+def media_summary(script):
+    """What the module shows and asks, counted - and every picture someone outside the factory has to make."""
+    lang = script.get("operator_language", "en")
+    slide_no, sets, _ = plan_of(script)
+    kinds, who, mechs = {}, {}, {}
+    for s in script.get("screens", []):
+        if s.get("kind") in ("slide",) or (s.get("kind") in TASKS and uses(s, "visual")):
+            k = parse_kind(s.get("visual_kind", ""))
+            if k in VISUAL_KINDS:
+                kinds[k] = kinds.get(k, 0) + 1
+                who.setdefault(MEDIA["visual_kinds"][k]["made_by"], []).append(
+                    (place(script, s["id"]), kind_label(k, lang), s.get("visual", "")))
+        if s.get("kind") in TASKS and s.get("kind") != "final":
+            mechs[mech(s)] = mechs.get(mech(s), 0) + 1
+    return {"kinds": kinds, "who": who, "mechs": mechs}
+
+
+def media_summary_html(e, V, script):
+    lang = script.get("operator_language", "en")
+    sm = media_summary(script)
+    fam = lambda k: MEDIA["visual_kinds"][k]["family"]
+    kinds = ", ".join("%s %s × %d" % (FAMILY_MARK[fam(k)], kind_label(k, lang), n) for k, n in sorted(sm["kinds"].items(), key=lambda x: -x[1]))
+    mechs = ", ".join("%s × %d" % (mech_label(m, lang), n) for m, n in sorted(sm["mechs"].items(), key=lambda x: -x[1]))
+    o = ['<div class="card"><h3>%s</h3><table class="nums"><tr><td>%s</td><td>%s</td></tr><tr><td>%s</td><td>%s</td></tr></table>' % (
+        e(T(script, "s_msum_title")), e(T(script, "s_msum_kinds")), e(kinds) or "—", e(T(script, "s_msum_mechs")), e(mechs) or "—")]
+    for key in ("novikontas", "outside", "nano_banana"):
+        items = sm["who"].get(key)
+        if not items:
+            continue
+        mb = MEDIA["made_by"][key]
+        o.append('<h4>%s (%d)</h4><p class="note">%s</p><ul>%s</ul>' % (
+            e(mb.get(lang) or mb["en"]), len(items), e(mb["how"]),
+            "".join("<li><b>%s</b> · %s — %s</li>" % (e(w), e(k), V(d)) for w, k, d in items)))
+    made_here = sum(len(sm["who"].get(k, [])) for k in ("factory", "sources"))
+    o.append('<p class="note">%s</p></div>' % e(T(script, "s_msum_factory", n=made_here)))
+    return "".join(o)
+
+
+def visual_box(e, V, script, kind, desc, small=False):
+    """The place the picture takes on the slide or the task, with what it is and who makes it (L37)."""
+    lang = script.get("operator_language", "en")
+    k = parse_kind(kind)
+    info = MEDIA["visual_kinds"].get(k)
+    if k == "none":
+        return '<div class="vbox none"><span class="vk">%s</span></div>' % e(kind_label("none", lang))
+    who = MEDIA["made_by"].get(info["made_by"], {}) if info else {}
+    return ('<div class="vbox%s%s"><span class="vk">%s %s</span><span class="vd">%s</span><span class="vw">%s</span></div>' % (
+        " small" if small else "", " f-" + info["family"] if info else " unknown",
+        FAMILY_MARK.get(info["family"], "?") if info else "?", e(kind_label(k, lang) if info else kind or T(script, "v_no_kind_short")),
+        V(desc) if desc else "<b>%s</b>" % e(T(script, "v_no_what_short")), e(who.get(lang) or who.get("en") or "")))
+
+
+def task_body(e, V, script, s):
+    """The task as the trainee's tablet shows it - one mock per way of answering (L38)."""
+    m, L, lang = mech(s), correct_letters(s), script.get("operator_language", "en")
+    ls = lines_of(s.get("answer"))
+    out = []
+    if uses(s, "visual"):
+        out.append(visual_box(e, V, script, s.get("visual_kind", ""), s.get("visual"), small=True))
+    if uses(s, "options"):
+        box = "☐" if m == "multi_select" else ""
+        out.append("".join('<div class="opt%s"><b>%s%s</b> %s</div>' % (" right" if x in L else "", box, x, V(o))
+                           for x, o in zip(letters(len(s.get("options", []))), s.get("options", []))))
+    if m == "choose_and_justify":
+        out.append('<p class="mh">%s</p>%s' % (e(T(script, "mm_reason")), "".join(
+            '<div class="opt%s">%s</div>' % (" right" if starred(x) else "", V(unstar(x))) for x in ls)))
+    elif m == "order":
+        out.append('<p class="mh">%s</p><ol class="steps">%s</ol>' % (e(T(script, "mm_order")), "".join("<li>%s</li>" % V(x) for x in ls)))
+    elif m == "match":
+        out.append('<p class="mh">%s</p><table class="pairs">%s</table>' % (e(T(script, "mm_match")), "".join(
+            "<tr><td>%s</td><td>⟷</td><td>%s</td></tr>" % (V(x.split("=", 1)[0].strip()), V(x.split("=", 1)[-1].strip())) for x in ls)))
+    elif m == "categorise":
+        cols = []
+        for x in ls:
+            g, _, items = x.partition(":")
+            cols.append('<div class="grp"><b>%s</b>%s</div>' % (V(g.strip()), "".join(
+                '<span class="chip">%s</span>' % V(i.strip()) for i in items.split(";") if i.strip())))
+        out.append('<p class="mh">%s</p><div class="grps">%s</div>' % (e(T(script, "mm_categorise")), "".join(cols)))
+    elif m == "cloze":
+        def gap(mo):
+            parts = [p.strip() for p in mo.group(1).split("|")]
+            return '<span class="gap">%s</span>' % " / ".join(
+                ('<b class="ok">%s</b>' if starred(p) else "%s") % html.escape(unstar(p)) for p in parts)
+        out.append('<p class="mh">%s</p><p class="cloze" lang="%s">%s</p>' % (
+            e(T(script, "mm_cloze")), course_lang(script), re.sub(r"\[([^\]]+)\]", gap, html.escape(s.get("answer", "")))))
+    elif m in ("hotspot", "spot_the_hazard", "label_diagram"):
+        key = {"hotspot": "mm_hotspot", "spot_the_hazard": "mm_hazard", "label_diagram": "mm_label"}[m]
+        out.append('<p class="mh">%s</p>%s' % (e(T(script, key)), "".join(
+            '<span class="chip%s">%s</span>' % (" ok" if (starred(x) or m == "label_diagram") else "", V(unstar(x))) for x in ls)))
+    elif m == "set_value":
+        mm = SET_VALUE.match(s.get("answer", "") or "")
+        if mm:
+            v, lo, hi = (float(mm.group(i).replace(",", ".")) for i in (1, 4, 5))
+            pos = 0 if hi == lo else 100.0 * (v - lo) / (hi - lo)
+            out.append('<p class="mh">%s</p><div class="slider"><span class="lo">%s</span><span class="track"><span class="knob" style="left:%.1f%%"></span></span>'
+                       '<span class="hi">%s</span></div><p><b>%s %s</b> ± %s</p>' % (
+                           e(T(script, "mm_set")), e(mm.group(4)), pos, e(mm.group(5)), e(mm.group(1)), e(mm.group(2)), e(mm.group(3))))
+    elif m == "panel_operate":
+        out.append('<p class="mh">%s</p><table class="pairs">%s</table>' % (e(T(script, "mm_panel")), "".join(
+            "<tr><td>%s</td><td>→</td><td><b>%s</b></td></tr>" % (V(x.split("=", 1)[0].strip()), V(x.split("=", 1)[-1].strip())) for x in ls)))
+    elif m == "scenario":
+        steps = []
+        for n, x in enumerate(ls, 1):
+            sit, _, acts = x.partition("=>")
+            steps.append('<div class="step"><p><b>%d.</b> %s</p>%s</div>' % (n, V(sit.strip()), "".join(
+                '<div class="opt%s">%s</div>' % (" right" if starred(a) else "", V(unstar(a))) for a in acts.split("|") if a.strip())))
+        out.append('<p class="mh">%s</p>%s' % (e(T(script, "mm_scenario")), "".join(steps)))
+    return "".join(out)
+
+
 def render_html(course, script):
     e = lambda s: html.escape(str(s if s is not None else ""))
     cl = course_lang(script)
@@ -499,7 +881,28 @@ def render_html(course, script):
 dl{display:grid;grid-template-columns:12em 1fr;gap:6px 14px;margin:8px 0 0} dt{color:var(--dim-l);font-weight:700} dd{margin:0}
 .instr{border-left:4px solid var(--amber);background:var(--amber-wash-l);padding:8px 12px;border-radius:0 var(--r-s) var(--r-s) 0}
 .nums td{padding:4px 12px 4px 0}
-h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}} @media print{body{background:#fff}.card{box-shadow:none}}
+.slidebox{display:grid;grid-template-columns:55fr 45fr;gap:12px;align-items:stretch}
+.slidebox.l-visual_wide{grid-template-columns:35fr 65fr} .slidebox.l-visual_full{grid-template-columns:1fr}
+.slidebox.l-visual_full .vbox{min-height:220px;order:-1}
+.vbox{display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:170px;border:2px dashed var(--line-l);
+  border-radius:var(--r-m);padding:12px 14px;background:var(--grey);font-size:14.5px}
+.vbox.small{min-height:110px;margin:0 0 10px} .vbox.f-moving,.vbox.f-3d,.vbox.f-video,.vbox.f-interactive{border-color:var(--navy)}
+.vbox.unknown{border-color:var(--warn)} .vbox.none{min-height:60px;opacity:.7}
+.vk{font-weight:700;color:var(--navy)} .vw{color:var(--dim-l);font-size:13px}
+.mh{margin:10px 0 4px;color:var(--dim-l);font-size:13.5px;font-weight:700}
+.steps li{border:1.5px solid var(--line-l);border-radius:var(--r-m);padding:8px 12px;margin:6px 0;list-style-position:inside}
+.pairs td{padding:6px 8px;border-bottom:1px solid var(--line-l)}
+.grps{display:flex;gap:10px;flex-wrap:wrap} .grp{flex:1 1 140px;border:1.5px solid var(--line-l);border-radius:var(--r-m);padding:8px}
+.grp b{display:block;margin-bottom:6px;color:var(--navy)}
+.chip{display:inline-block;border:1.5px solid var(--line-l);border-radius:var(--r-m);padding:4px 10px;margin:3px}
+.chip.ok{border-color:var(--good);background:var(--good-wash-l)}
+.gap{border-bottom:2px solid var(--navy);padding:0 4px} .ok{color:var(--good)}
+.slider{display:flex;align-items:center;gap:10px} .track{position:relative;flex:1;height:8px;background:var(--line-l);border-radius:4px}
+.knob{position:absolute;top:-7px;width:22px;height:22px;margin-left:-11px;border-radius:50%;background:var(--navy)}
+.step{border-left:3px solid var(--line-l);padding-left:10px;margin:8px 0}
+.mech{display:inline-block;padding:.15em .6em;border-radius:var(--r-s);font-size:13px;font-weight:700;background:var(--blue-wash-l);color:var(--navy)}
+.mech.hands{background:var(--amber-wash-l);color:var(--amber-ink)}
+h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.slidebox{grid-template-columns:1fr}} @media print{body{background:#fff}.card{box-shadow:none}}
 """
     status = (T(script, "s_status_approved", by=script.get("approved_by", ""), on=script.get("approved_on", ""))
               if script.get("status") == "approved" and script.get("approved_hash") == content_hash(script)
@@ -539,12 +942,19 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}}
             e(T(script, "s_theory_title")), e(T(script, "s_theory_intro")), "".join(row(f) for f in th_found)))
     else:
         o.append('<p class="note">%s</p>' % e(T(script, "s_theory_clean")))
+    mf = media_findings(script)
+    if mf:
+        o.append('<div class="card warn"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
+            e(T(script, "s_media_title")), e(T(script, "s_media_intro")), "".join(row(f) for f in mf)))
+    else:
+        o.append('<p class="note">%s</p>' % e(T(script, "s_media_clean")))
     tf = text_findings(script)
     if tf:
         o.append('<div class="card warn"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
             e(T(script, "s_textcheck_title")), e(T(script, "s_textcheck_intro")), "".join(row(f) for f in tf)))
     else:
         o.append('<p class="note">%s</p>' % e(T(script, "s_textcheck_clean")))
+    o.append(media_summary_html(e, V, script))
 
     # ---- part 1: the instructor tablet
     o.append('<div class="part"><h2>%s</h2><p class="note">%s</p></div>' % (e(T(script, "s_part1")), e(T(script, "s_part1_intro"))))
@@ -555,7 +965,12 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}}
         label = {"slide": "s_slide", "task-slide": "s_task_slide", "activity": "s_activity"}[k]
         o.append('<div class="card screen"><h2>%s <span class="kind k-%s">%s</span> <span class="sid">%s</span></h2>' % (
             e(T(script, "s_slide_n", n=slide_no[s["id"]])), e(k), e(T(script, label)), e(s.get("id"))))
-        o.append('<div class="slidetext"><h3>%s</h3>%s</div>' % (V(s.get("title")), V(s.get("text"))))
+        if k == "task-slide":
+            o.append('<div class="slidetext"><h3>%s</h3>%s</div>' % (V(s.get("title")), V(s.get("text"))))
+        else:
+            o.append('<div class="slidebox l-%s"><div class="slidetext"><h3>%s</h3>%s</div>%s</div>' % (
+                e(s.get("layout") or "split"), V(s.get("title")), V(s.get("text")),
+                visual_box(e, V, script, s.get("visual_kind", ""), s.get("visual"))))
         if k == "task-slide":
             st = set_of.get(s.get("opens"))
             o.append('<div class="panel"><span class="openbtn">%s</span><span>%s</span></div>' % (
@@ -564,7 +979,8 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}}
             o.append('<dl><dt>%s</dt><dd>%s</dd></dl>' % (e(T(script, "s_minutes_task")), e(s.get("minutes", "—"))))
         else:
             o.append('<dl><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd></dl>' % (
-                e(T(script, "s_visual")), V(s.get("visual")), e(T(script, "s_minutes")), e(s.get("minutes", "—")),
+                e(T(script, "s_layout")), e((MEDIA["layouts"].get(s.get("layout") or "split") or {}).get(script.get("operator_language", "en"), s.get("layout", ""))),
+                e(T(script, "s_minutes")), e(s.get("minutes", "—")),
                 e(T(script, "s_words")), e(T(script, "s_words_n", a=wc(s.get("title", ""), s.get("text", "")), b=wc(s.get("notes", ""))))))
         if s.get("notes"):
             o.append('<p class="instr"><b>%s:</b> %s</p>' % (e(T(script, "s_notes")), V(s.get("notes"))))
@@ -579,15 +995,16 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}}
             e(T(script, {"self-check": "s_self_check", "module-check": "s_module_check", "final": "s_final"}[st["kind"]])),
             e(T(script, "s_set_intro", slide=slide_no.get(opener, "?"), q=len(st["questions"])))))
         for qn, s in enumerate(st["questions"], 1):
-            o.append('<div class="card screen"><h3>%s <span class="sid">%s</span></h3>' % (
-                e(T(script, "s_question_n", q=qn, of=len(st["questions"]))), e(s["id"])))
-            opts = "".join('<div class="opt%s"><b>%s</b> %s</div>' % (" right" if L == s.get("correct") else "", L, V(x))
-                           for L, x in zip(letters(len(s.get("options", []))), s.get("options", [])))
-            o.append('<div class="tablet"><p><b>%s</b></p>%s</div>' % (V(s.get("question")), opts))
+            hands = MEDIA["mechanics"].get(mech(s), {}).get("hands_on")
+            o.append('<div class="card screen"><h3>%s <span class="mech%s">%s</span> <span class="sid">%s</span></h3>' % (
+                e(T(script, "s_question_n", q=qn, of=len(st["questions"]))), " hands" if hands else "",
+                e(mech_label(mech(s), script.get("operator_language", "en"))), e(s["id"])))
+            o.append('<div class="tablet"><p><b>%s</b></p>%s</div>' % (V(s.get("question")), task_body(e, V, script, s)))
             tn = taught_on.get(s["id"])
-            o.append('<dl><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd>%s</dl></div>' % (
-                e(T(script, "s_correct")), e(s.get("correct", "")), e(T(script, "s_feedback")), V(s.get("feedback")),
-                e(T(script, "s_mechanic")), e(s.get("mechanic", "tap to choose")),
+            o.append('<dl>%s<dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd>%s</dl></div>' % (
+                ("<dt>%s</dt><dd>%s</dd>" % (e(T(script, "s_correct")), e(s.get("correct", "")))) if uses(s, "options") else "",
+                e(T(script, "s_feedback")), V(s.get("feedback")),
+                e(T(script, "s_mechanic")), e(mech_label(mech(s), script.get("operator_language", "en"))),
                 "" if st["kind"] == "final" else "<dt>%s</dt><dd>%s</dd>" % (
                     e(T(script, "s_taught_on")),
                     e(", ".join(T(script, "s_slide_n", n=n) for n in tn)) if tn else "<b>%s</b>" % e(T(script, "s_taught_nowhere")))))
@@ -644,13 +1061,16 @@ def build_docx(course, script):
     labels.append(script.get("title", ""))
     body.append(_para(script.get("title", ""), lang=cl, bold=True))
     label(T(script, "s_docx_help"), color="41556A")
+    lang = script.get("operator_language", "en")
+    label("%s %s" % (T(script, "s_docx_kinds"), "; ".join(kind_label(k, lang) for k in VISUAL_KINDS)), color="41556A")
     facts = operator_facts(course, script)
     if facts:
         label(T(script, "s_facts_title"), style="Heading1")
         for f in facts:
             body.append(_para("• " + f.get("fact", ""), lang=cl))
     th_found, taught_on = theory_findings(script)
-    for head, found in (("s_theory_title", th_found), ("s_textcheck_title", text_findings(script))):
+    for head, found in (("s_theory_title", th_found), ("s_media_title", media_findings(script)),
+                        ("s_textcheck_title", text_findings(script))):
         if found:
             label(T(script, head), style="Heading1")
             for f in found:
@@ -659,11 +1079,12 @@ def build_docx(course, script):
                     (" %s: %s" % (T(script, "s_textcheck_instead"), f["fix"])) if f["fix"] else "",
                     T(script, "s_textcheck_must") if f["level"] == FAIL else T(script, "s_textcheck_note")), color="B4453A")
     names = {"title": "s_title", "text": "s_text", "visual": "s_visual", "notes": "s_notes", "minutes": "s_minutes",
-             "question": "s_question", "correct": "s_correct", "feedback": "s_feedback", "mechanic": "s_mechanic"}
+             "question": "s_question", "correct": "s_correct", "feedback": "s_feedback", "mechanic": "s_mechanic",
+             "visual_kind": "s_visual_kind", "answer": "s_answer"}
     slide_no, sets, set_of = plan_of(script)
 
     def boxes(s):
-        for f, v in fields_of(s):
+        for f, v in fields_of(s, lang):
             nm = T(script, "s_options") + " " + f[4] if f.startswith("opt.") else T(script, names[f])
             if s["kind"] == "task-slide" and f == "minutes":
                 nm = T(script, "s_minutes_task")
@@ -689,7 +1110,9 @@ def build_docx(course, script):
         label(set_name(script, st), style="Heading1")
         label(T(script, "s_set_intro", slide=slide_no.get(st["opened_by"], "?"), q=len(st["questions"])), color="41556A")
         for qn, s in enumerate(st["questions"], 1):
-            label("%s · %s" % (T(script, "s_question_n", q=qn, of=len(st["questions"])), s["id"]), bold=True)
+            label("%s · %s · %s" % (T(script, "s_question_n", q=qn, of=len(st["questions"])), mech_label(mech(s), lang), s["id"]), bold=True)
+            if uses(s, "answer"):
+                label("%s %s" % (T(script, "s_answer_how"), T(script, "fmt_" + mech(s))), color="41556A")
             if st["kind"] != "final":
                 tn = taught_on.get(s["id"])
                 label("%s: %s" % (T(script, "s_taught_on"), ", ".join(T(script, "s_slide_n", n=n) for n in tn) if tn
@@ -848,7 +1271,8 @@ def describe(script, ch):
     if f.startswith("opt."):
         return "%s: answer %s becomes \"%s\" (was \"%s\")" % (where, f[4], short(ch["new"]), short(ch["old"]))
     name = {"title": "the title", "text": "the slide text", "visual": "the planned picture", "notes": "the instructor notes",
-            "minutes": "the minutes", "question": "the question", "feedback": "the feedback", "mechanic": "how the trainee answers"}.get(f, f)
+            "minutes": "the minutes", "question": "the question", "feedback": "the feedback", "mechanic": "how the trainee answers",
+            "visual_kind": "the kind of picture", "answer": "the answer"}.get(f, f)
     if len(ch["old"] or "") > 60 or len(ch["new"] or "") > 60:
         return "%s, %s: %s" % (where, name, changed_words(ch["old"], ch["new"]))
     return "%s: %s becomes \"%s\" (was \"%s\")" % (where, name, ch["new"], ch["old"])
@@ -882,7 +1306,7 @@ def cmd_read(course, module, docx, pdf):
         got = read_docx(docx or p["docx"], docx_labels(course, script))
         expected = {}
         for s in script["screens"]:
-            for f, v in fields_of(s):
+            for f, v in fields_of(s, script.get("operator_language", "en")):
                 expected["%s.%s" % (s["id"], f)] = str(v)
         for tag, old in expected.items():
             if tag not in got["fields"]:
@@ -927,7 +1351,7 @@ def cmd_propose(course, module, changes_file):
         if s is None:
             print("Stopped - there is no screen %r in this module's script." % sid)
             return 2
-        changes.append({"screen": sid, "field": f, "old": get_field(s, f) or "", "new": c["new"]})
+        changes.append({"screen": sid, "field": f, "old": get_field(s, f, script.get("operator_language", "en")) or "", "new": c["new"]})
     return write_pending(p, script, changes, [], "chat")
 
 
@@ -1050,7 +1474,8 @@ def render(course, module, quiet=False):
         if probs:
             print("\nThe script still has problems - fix them before showing it:\n" + "\n".join("  - " + x for x in probs))
         th, _ = theory_findings(script)
-        for head, found in (("The theory check", th), ("The text check", text_findings(script))):
+        for head, found in (("The theory check", th), ("The pictures-and-tasks check", media_findings(script)),
+                            ("The text check", text_findings(script))):
             if found:
                 print("\n%s found %d thing(s) - they are at the top of the review page and the Word file:" % (head, len(found)))
                 for f in found:

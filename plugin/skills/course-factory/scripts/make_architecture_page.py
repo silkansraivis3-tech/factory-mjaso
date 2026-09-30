@@ -63,6 +63,9 @@ SKILL = os.path.dirname(HERE)
 SKILLS = os.path.dirname(SKILL)
 LABELS = json.load(io.open(os.path.join(SKILL, "knowledge", "page-labels.json"), encoding="utf-8"))
 RULES = json.load(io.open(os.path.join(SKILL, "knowledge", "theory-rules.json"), encoding="utf-8"))
+MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json"), encoding="utf-8"))
+FAMILY_MARK = {"still": "▣", "moving": "▶", "interactive": "☝", "3d": "⬢", "video": "●"}
+MOVING = ("moving", "interactive", "3d", "video")
 TECHNIQUES = ["self-check", "explain-then-reveal", "predict-then-reveal", "worked-example", "scenario"]
 NOVIKONTAS_ACADEMIC_HOUR = 40
 
@@ -105,7 +108,7 @@ def self_check_list(am):
     for x in sc:
         q = int(x.get("questions") or RULES["self_check"]["min_questions"])
         out.append({"questions": q, "minutes": num(x.get("minutes")) or q * RULES["self_check"]["minutes_per_question"],
-                    "after": x.get("after", "")})
+                    "after": x.get("after", ""), "mechanics": list(x.get("mechanics") or [])})
     return out
 
 
@@ -115,7 +118,12 @@ def module_check_of(am):
         return {}
     q = int(mc.get("questions") or RULES["module_check"]["min_questions"])
     return {"questions": q, "minutes": num(mc.get("minutes")) or q * RULES["module_check"]["minutes_per_question"],
-            "graded": bool(mc.get("graded"))}
+            "graded": bool(mc.get("graded")), "mechanics": list(mc.get("mechanics") or [])}
+
+
+def media_of(am):
+    """architecture.json "media": [{"kind", "what"}] - the pictures, animation and 3D a module plans (L37)."""
+    return [x for x in (am.get("media") or []) if isinstance(x, dict)]
 
 
 def analyse(prog, arch, plan=None):
@@ -176,6 +184,28 @@ def analyse(prog, arch, plan=None):
                                                       "hi": RULES["self_check"]["max_questions"]}))
         if m["mc"] and m["mc"]["questions"] < RULES["module_check"]["min_questions"]:
             problems.append(("p_modcheck_size", {"m": n, "q": m["mc"]["questions"], "lo": RULES["module_check"]["min_questions"]}))
+        # L37 - the pictures, animation and 3D; L38 - the ways of answering
+        F = MEDIA["floors"]
+        md = media_of(am)
+        for x in md:
+            if x.get("kind") not in MEDIA["visual_kinds"]:
+                problems.append(("p_media_kind", {"m": n, "k": x.get("kind")}))
+        if not md:
+            problems.append(("p_no_media", {"m": n}))
+        elif m["th_min"] >= F["moving_or_3d_per_module_from_min"] and not any(
+                MEDIA["visual_kinds"].get(x.get("kind"), {}).get("family") in MOVING for x in md):
+            problems.append(("p_no_motion", {"m": n, "min": "%g" % m["th_min"]}))
+        planned = [x for s in m["sc"] for x in s["mechanics"]] + (m["mc"].get("mechanics") or [])
+        for x in planned:
+            if x not in MEDIA["mechanics"] or x.startswith("_"):
+                problems.append(("p_mech_unknown", {"m": n, "x": x}))
+        for k, s in enumerate(m["sc"], 1):
+            if s["mechanics"] and len(set(s["mechanics"])) < F["self_check_min_mechanics"]:
+                problems.append(("p_sc_mix", {"m": n, "k": k, "lo": F["self_check_min_mechanics"]}))
+        if m["mc"].get("mechanics") and len(set(m["mc"]["mechanics"])) < F["module_check_min_mechanics"]:
+            problems.append(("p_mc_mix", {"m": n, "lo": F["module_check_min_mechanics"]}))
+        if planned and not any(MEDIA["mechanics"].get(x, {}).get("hands_on") for x in planned):
+            problems.append(("p_no_hands_on", {"m": n}))
 
     if assess_topic is None:
         problems.append(("p_no_assessment", {}))
@@ -283,6 +313,11 @@ def build(prog, arch, a):
     e = lambda s: html.escape(str(s if s is not None else ""))
     V = lambda s, lang=None: '<span class="verb" lang="%s">%s</span>' % (lang or cl, e(s)) if s else ""
     VP = lambda s: V(s, pl)
+    L = P.lang
+    kl = lambda k: (MEDIA["visual_kinds"].get(k) or {}).get(L) or (MEDIA["visual_kinds"].get(k) or {}).get("en") or str(k)
+    ml = lambda x: (MEDIA["mechanics"].get(x) or {}).get(L) or (MEDIA["mechanics"].get(x) or {}).get("en") or str(x)
+    fam = lambda k: (MEDIA["visual_kinds"].get(k) or {}).get("family", "still")
+    who = lambda k: MEDIA["made_by"].get((MEDIA["visual_kinds"].get(k) or {}).get("made_by"), {})
     out = ['<!DOCTYPE html><html lang="%s"><head><meta charset="utf-8">' % P.lang,
            '<meta name="viewport" content="width=device-width,initial-scale=1">',
            "<title>%s</title><style>%s</style></head><body><div class=\"wrap\">" % (e(P.t("page_title")), style())]
@@ -297,11 +332,11 @@ def build(prog, arch, a):
     assess = next((m for m in mods if m["assessment"]), None)
     subs = [s for m in mods for s in m["arch"].get("sub_ilos", [])]
     cnt = {k: sum(1 for s in subs if s.get("status", "original") == k) for k in ("original", "re-expressed", "added")}
-    out.append('<div class="card key approves"><h3>%s</h3><ul><li>%s</li><li>%s</li><li>%s</li><li>%s</li><li>%s</li></ul></div>' % (
+    out.append('<div class="card key approves"><h3>%s</h3><ul><li>%s</li><li>%s</li><li>%s</li><li>%s</li><li>%s</li><li>%s</li></ul></div>' % (
         e(P.t("approves_title")),
         e(P.t("approves_split", n=len(mods), t=len(teaching), last=assess["n"] if assess else "—")),
         e(P.t("approves_subilo", re=cnt["re-expressed"], add=cnt["added"], orig=cnt["original"])),
-        e(P.t("approves_tests")), e(P.t("approves_tablets")), e(P.t("approves_practice"))))
+        e(P.t("approves_tests")), e(P.t("approves_media")), e(P.t("approves_tablets")), e(P.t("approves_practice"))))
     out.append('<p class="note">%s %s</p>' % (VP("Aa"), e(P.t("verbatim_note"))))
 
     ctype = c.get("course_type", "")
@@ -322,12 +357,36 @@ def build(prog, arch, a):
                    e(P.t("tab_trainee")), "".join("<li>%s</li>" % e(P.t(k)) for k in ("tab_t1", "tab_t2", "tab_t3", "tab_t4")),
                    e(P.t("tab_scores"))))
 
+    # ---- pictures, animation and 3D - who makes them (L37)
+    plan = [(m["n"], x) for m in mods for x in media_of(m["arch"])]
+    if plan:
+        by = {}
+        for n, x in plan:
+            by.setdefault((MEDIA["visual_kinds"].get(x.get("kind")) or {}).get("made_by", "?"), []).append((n, x))
+        rows = "".join("<tr><td>%s</td><td class=\"n\">%d</td></tr>" % (
+            e((MEDIA["made_by"].get(k) or {}).get(L) or (MEDIA["made_by"].get(k) or {}).get("en") or k), len(v))
+            for k, v in sorted(by.items(), key=lambda kv: -len(kv[1])))
+        moving = sum(1 for _, x in plan if fam(x.get("kind")) in MOVING)
+        out.append('<h2>%s</h2><p>%s</p><table>%s</table>' % (
+            e(P.t("media_title")), e(P.t("media_intro", n=len(plan), mv=moving)), rows))
+        for key in ("novikontas", "outside"):
+            if by.get(key):
+                mb = MEDIA["made_by"][key]
+                out.append('<div class="card hot"><h3>%s (%d)</h3><p class="note">%s</p><ul>%s</ul></div>' % (
+                    e(mb.get(L) or mb["en"]), len(by[key]), e(mb["how"]),
+                    "".join("<li><b>%s %d</b> · %s — %s</li>" % (e(P.t("module")), n, e(kl(x.get("kind"))), V(x.get("what")))
+                            for n, x in by[key])))
+
     # ---- overview: one module per programme topic
     out.append("<h2>%s</h2><p>%s</p><table><tr><th class=\"n\">%s</th><th>%s</th><th class=\"n\">%s</th><th class=\"n\">%s</th>"
                "<th class=\"n\">%s</th><th>%s</th><th>%s</th></tr>" % (
                    e(P.t("overview_title")), e(P.t("overview_intro", ahm="%g" % a["ahm"])), e(P.t("module")),
                    e(P.t("col_topic")), e(P.t("col_theory")), e(P.t("col_practical")), e(P.t("col_minutes")),
                    e(P.t("self_checks_short")), e(P.t("module_check"))))
+    out[-1] = out[-1].replace("</tr>", "<th>%s</th></tr>" % e(P.t("col_media")), 1)
+    marks = lambda am: " ".join("%s%d" % (FAMILY_MARK[f], c) for f, c in sorted(
+        {f: sum(1 for x in media_of(am) if fam(x.get("kind")) == f) for f in FAMILY_MARK}.items(),
+        key=lambda fc: list(FAMILY_MARK).index(fc[0])) if c) or "—"
     for m in mods:
         badge = ""
         if m["built"]:
@@ -336,17 +395,17 @@ def build(prog, arch, a):
         if m["assessment"]:
             fa = arch.get("final_assessment") or {}
             out.append('<tr class="assess"><td class="n">%d</td><td>%s <span class="badge b-assess">%s</span></td><td class="n">%s</td>'
-                       '<td class="n">%s</td><td class="n">%g%s</td><td colspan="2">%s</td></tr>' % (
+                       '<td class="n">%s</td><td class="n">%g%s</td><td colspan="3">%s</td></tr>' % (
                            m["n"], VP(m["title"]), e(P.t("assessment_only")), fmt_h(m["th"]), fmt_h(m["pr"]), m["alloc"], badge,
                            e(P.t("final_short", q=fa.get("questions", "—"), pm=fa.get("pass_mark", "—")))))
             continue
         own = m["arch"].get("title")
-        out.append('<tr><td class="n">%d</td><td>%s%s</td><td class="n">%s</td><td class="n">%s</td><td class="n">%g%s</td><td>%s</td><td>%s</td></tr>' % (
+        out.append('<tr><td class="n">%d</td><td>%s%s</td><td class="n">%s</td><td class="n">%s</td><td class="n">%g%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (
             m["n"], VP(m["title"]), ('<div class="own">%s</div>' % V(own)) if own and own != m["title"] else "", fmt_h(m["th"]), fmt_h(m["pr"]), m["alloc"], badge,
             e(len(m["sc"])) if m["arch"] else "—",
-            e(P.t("mc_short", q=m["mc"]["questions"])) if m["mc"] else "—"))
+            e(P.t("mc_short", q=m["mc"]["questions"])) if m["mc"] else "—", e(marks(m["arch"]))))
     tot_min = (a["tot_th"] + a["tot_pr"]) * a["ahm"]
-    out.append('<tr class="total"><td></td><td>%s</td><td class="n">%s</td><td class="n">%s</td><td class="n">%g</td><td>%d</td><td>%d</td></tr></table>' % (
+    out.append('<tr class="total"><td></td><td>%s</td><td class="n">%s</td><td class="n">%s</td><td class="n">%g</td><td>%d</td><td>%d</td><td></td></tr></table>' % (
         e(P.t("course_total")), fmt_h(a["tot_th"]), fmt_h(a["tot_pr"]), tot_min,
         sum(len(m["sc"]) for m in teaching), sum(1 for m in teaching if m["mc"])))
     tr = prog.get("total_row") or {}
@@ -431,6 +490,12 @@ def build(prog, arch, a):
                     e(x.get("where", "")), e(x.get("instead_of", "")),
                     e(P.t("tech_" + (tech if tech in TECHNIQUES else "other"))), (" — " + e(x["note"])) if x.get("note") else ""))
             out.append("</table>")
+        if media_of(am):
+            out.append("<h3>%s</h3><table><tr><th>%s</th><th>%s</th><th>%s</th></tr>%s</table>" % (
+                e(P.t("media_module_title")), e(P.t("col_kind")), e(P.t("col_what")), e(P.t("col_who")),
+                "".join("<tr><td>%s %s</td><td>%s</td><td>%s</td></tr>" % (
+                    FAMILY_MARK.get(fam(x.get("kind")), "?"), e(kl(x.get("kind"))), V(x.get("what")),
+                    e(who(x.get("kind")).get(L) or who(x.get("kind")).get("en") or "")) for x in media_of(am))))
         if am.get("practicals"):
             out.append("<h3>%s</h3><p class=\"note\">%s</p><table><tr><th>%s</th><th>%s</th><th>%s</th><th>%s</th></tr>" % (
                 e(P.t("practice_title")), e(P.t("equipment_note")), e(P.t("col_task")), e(P.t("col_equipment")),
@@ -441,12 +506,14 @@ def build(prog, arch, a):
             out.append("</table>")
         items = []
         for k, s in enumerate(m["sc"], 1):
-            items.append("<li>%s</li>" % e(P.t("test_sc", k=k, q=s["questions"])))
+            items.append("<li>%s%s</li>" % (e(P.t("test_sc", k=k, q=s["questions"])),
+                                            ("<br><span class=\"note\">%s: %s</span>" % (e(P.t("how_answered")), e(", ".join(ml(x) for x in s["mechanics"])))) if s["mechanics"] else ""))
         if not m["sc"]:
             items.append("<li>%s</li>" % e(P.t("test_no_sc", min=rb["min_minutes"])))
         if m["mc"]:
-            items.append("<li>%s — <b>%s</b></li>" % (e(P.t("test_mc", q=m["mc"]["questions"])),
-                                                     e(P.t("graded") if m["mc"]["graded"] else P.t("not_graded"))))
+            items.append("<li>%s — <b>%s</b>%s</li>" % (e(P.t("test_mc", q=m["mc"]["questions"])),
+                                                       e(P.t("graded") if m["mc"]["graded"] else P.t("not_graded")),
+                                                       ("<br><span class=\"note\">%s: %s</span>" % (e(P.t("how_answered")), e(", ".join(ml(x) for x in m["mc"]["mechanics"])))) if m["mc"].get("mechanics") else ""))
         out.append("<h3>%s</h3><ul>%s</ul></div>" % (e(P.t("tests_title")), "".join(items)))
 
     if arch.get("notes"):

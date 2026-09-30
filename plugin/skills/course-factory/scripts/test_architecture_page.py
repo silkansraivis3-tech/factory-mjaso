@@ -67,12 +67,19 @@ ARCH = {
                        "why": "Lai to varētu apgūt praktiski, pie rasējuma"},
                       {"id": "1.1.b", "status": "added", "text": "Recognise the tank type from a photograph", "why": "Operatora lūgums"}],
          "active_learning": [{"where": "tank types", "instead_of": "lecture", "technique": "predict-then-reveal"}],
-         "self_checks": [{"questions": 4, "after": "after 1.1"}, {"questions": 4}], "module_check": {"questions": 6}},
+         "media": [{"kind": "photo", "what": "an LNG carrier alongside"}, {"kind": "model_3d", "what": "the four tank types in a hull section"},
+                   {"kind": "photo_to_take", "what": "the manifold of the training rig"}],
+         "self_checks": [{"questions": 4, "after": "after 1.1", "mechanics": ["single_choice", "categorise"]},
+                         {"questions": 4, "mechanics": ["hotspot", "order"]}],
+         "module_check": {"questions": 6, "mechanics": ["match", "hotspot", "single_choice"]}},
         {"module": 2, "title": "Gas measuring instruments", "main_ilos": ["1"],
          "sub_ilos": [{"id": "1.3", "status": "original"}],
          "practicals": [{"task": "Take an oxygen reading", "equipment": "Pārnēsājamais skābekļa mēraparāts", "place": "bench", "minutes": 40}],
-         "self_checks": 1, "module_check": {"questions": 5}},
-        {"module": 3, "title": "Extinguishing agents", "main_ilos": ["1"], "module_check": {"questions": 5}}],
+         "media": [{"kind": "model_3d_scan", "what": "the portable gas detector used at Novikontas"},
+                   {"kind": "step_animation", "what": "how the sensor reading rises"}],
+         "self_checks": 1, "module_check": {"questions": 5, "mechanics": ["read_instrument", "set_value", "single_choice"]}},
+        {"module": 3, "title": "Extinguishing agents", "main_ilos": ["1"], "media": [{"kind": "comparison", "what": "foam, powder and water on a gas fire"}],
+         "module_check": {"questions": 5}}],
     "final_assessment": {"questions": 30, "pass_mark": "70 %", "graded": True, "ref": "3. p. 4"},
     "notes": ["Piezīme operatoram."]}
 
@@ -137,6 +144,32 @@ def main():
               and LV["budget_mc"].format(q=6) in m1 and "80 min" in m1, m1[:1200])
         check("a module with practice shows the practice minutes", LV["budget_practice"] in page)
         check("a 10-minute module has no self-check - its module check covers it", LV["test_no_sc"].format(min=10) in page)
+
+        print("\n-- 2.18.0: pictures, animation and 3D, and how the trainee answers (L37, L38)")
+        check("the page says who makes the pictures, and lists what Novikontas has to capture",
+              LV["media_title"] in page and html.escape(json.loads(io.open(os.path.join(os.path.dirname(HERE), "knowledge", "media-and-tasks.json"),
+                                                                            encoding="utf-8").read())["made_by"]["novikontas"]["lv"]) in page
+              and "the portable gas detector used at Novikontas" in page and "the manifold of the training rig" in page)
+        check("every module shows its planned pictures, with who makes each", LV["media_module_title"] in page and LV["col_who"] in page)
+        check("the overview counts the pictures per module by kind", LV["col_media"] in page and "▣2 ⬢1" in page)
+        check("each test says how the trainee answers", LV["how_answered"] in page and "Sašķiro grupās" in page)
+        am = copy.deepcopy(ARCH); am["course"]["operator_language"] = "en"
+        am["modules"][0]["media"] = [{"kind": "photo", "what": "x"}, {"kind": "sparkles", "what": "y"}]
+        am["modules"][0]["self_checks"][0]["mechanics"] = ["single_choice", "single_choice"]
+        am["modules"][0]["module_check"]["mechanics"] = ["single_choice", "order"]
+        am["modules"][1]["module_check"]["mechanics"] = ["single_choice", "order", "match"]
+        am["modules"][1]["self_checks"] = [{"questions": 3, "mechanics": ["single_choice", "multi_select"]}]
+        am["modules"][2].pop("media")
+        am["modules"][2]["module_check"]["mechanics"] = ["guess"]
+        code, out = run("--course", write_course(os.path.join(tmp, "media"), PROGRAMME, am), "--check")
+        for what, needle in (("a kind of picture the factory does not know", en("p_media_kind", m=1, k="sparkles")),
+                             ("80 min of theory and nothing that moves", en("p_no_motion", m=1, min="80")),
+                             ("a self-check with one way of answering", en("p_sc_mix", m=1, k=1, lo=2)),
+                             ("a module check with fewer than three ways", en("p_mc_mix", m=1, lo=3)),
+                             ("a module with nothing hands-on", en("p_no_hands_on", m=2)),
+                             ("a module with no pictures planned", en("p_no_media", m=3)),
+                             ("a way of answering the factory does not know", en("p_mech_unknown", m=3, x="guess"))):
+            check("caught: " + what, needle in out, out)
 
         print("\n-- two languages that never mix")
         check("the page is in the operator's language (lv)", '<html lang="lv">' in page and LV["page_title"] in page)

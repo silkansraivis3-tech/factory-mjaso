@@ -54,6 +54,44 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   and from `FEEDBACK_LOG.md` rows marked *operator-stated* for this module.
 - NEW_ENTRANT or EXPERIENCED changes how much is explained and how (`knowledge/course-type.json`).
 
+### Pictures, and how the trainee answers (L37, L38 — 2.18.0)
+
+`knowledge/media-and-tasks.json` is the list, and who makes each thing. On every **slide**:
+
+- `"visual_kind"` — `photo`, `annotated_photo`, `photo_to_take`, `technical_drawing`, `schematic`,
+  `cutaway`, `chart`, `comparison`, `step_animation`, `flow_animation`, `process_animation`,
+  `interactive_diagram`, `model_3d`, `model_3d_scan`, `model_3d_licensed`, `video_real`,
+  `video_generated`, `ai_illustration` — or `none`, only on the closing summary. Pick it from what the
+  slide must teach (`course-visuals`, `decide/knowledge/learning-needs.json`): what moves or changes state
+  is animated; what has an inside is a cutaway or a 3D model; what must be recognised on board is a real
+  photograph, a scan or a photo to take at Novikontas — never an AI picture (L33).
+- `"visual"` — what it shows and why, in one or two sentences; `"layout"` — `split` (text left, picture
+  right), `visual_wide` or `visual_full`.
+- A module with 40 min of theory or more has something that moves, turns or can be explored; six slides
+  or more use at least three kinds.
+
+On every **task question**, `"mechanic"` is how the trainee answers. `single_choice`, `multi_select`
+(`"correct": "A, C"`) and `read_instrument` use `options` + `correct`; the rest use `"answer"` — one box,
+one line per item, `*` marking what is right:
+
+| mechanic | `answer` |
+|---|---|
+| `order`, `label_diagram` | one item per line (for `order`, in the right order — the tablet shuffles) |
+| `match` | `left = right` per line |
+| `categorise` | `Group: item; item` per line |
+| `cloze` | the sentence, each gap `[right* \| wrong \| wrong]` |
+| `hotspot`, `spot_the_hazard` | one area per line, the right one(s) `*` |
+| `choose_and_justify` | options + correct for the action; `answer` = the reasons, the right one `*` |
+| `set_value` | `-42 °C ± 3, range -170 to 20` |
+| `panel_operate` | `control = end state` per line |
+| `scenario` | `situation => right action* \| wrong \| wrong` per step |
+
+`hotspot`, `label_diagram`, `spot_the_hazard`, `read_instrument`, `set_value` and `panel_operate` also
+name their picture (`visual_kind`, `visual`). A self-check uses 2+ mechanics, a module check 3+,
+`single_choice` is at most 40 % of the module, and every module has a hands-on one (locate, read, set,
+operate, scenario). Prefer the one that looks like the job: a valve line-up for a valve question, a
+detector display for a reading, the GA drawing for "where is it".
+
 ## 2 · Show it to the operator
 
 ```
@@ -118,6 +156,12 @@ notes too thin to explain from, a module whose words do not fill its minutes, a 
 little theory or with too few questions, a question whose answer the trainee has not been taught yet,
 and a task written onto its slide. A slide longer than the room can read from the screen is a note.
 Its findings head the review page and the Word file, and block approval the same way as the text check.
+
+**The pictures-and-tasks check runs on the script too** (2.18.0, L37, L38): a slide with no kind of
+picture or no word of what it shows, a long module where nothing moves, too few kinds of picture, a task
+set answered only one way, too much "choose one", no hands-on question. The review page draws each
+slide's picture area, lists the kinds and ways of answering, and lists what Novikontas or outside help
+must provide — a photograph, a film, a 3D scan.
 
 **The text check runs on the script, before any HTML** (2.16.1). `render` puts the same four rules
 the finished slides get (`scripts/check_slide_text.py`, L22) over every screen: internal abbreviations,

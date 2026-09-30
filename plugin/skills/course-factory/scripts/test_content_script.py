@@ -83,9 +83,9 @@ SCRIPT = {
     "minutes_allocated": 23,
     "operator_facts": [{"fact": "On our simulator the ESD button is on the left console.", "where": "s03"}],
     "screens": [
-        {"id": "s01", "kind": "slide", "title": "Why gas tankers are different", "text": S01_TEXT,
+        {"id": "s01", "kind": "slide", "title": "Why gas tankers are different", "text": S01_TEXT, "visual_kind": "photo",
          "visual": "Photograph of a membrane LNG carrier alongside", "notes": S01_NOTES, "minutes": 5},
-        {"id": "s02", "kind": "slide", "title": "Three ways to keep the cargo liquid", "text": S02_TEXT,
+        {"id": "s02", "kind": "slide", "title": "Three ways to keep the cargo liquid", "text": S02_TEXT, "visual_kind": "chart",
          "visual": "Pressure-temperature line for propane with the three ship types marked", "notes": S02_NOTES, "minutes": 5},
         {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - keeping the cargo liquid",
          "text": "A short self-check opens on your tablet now: three questions on why gas is carried cold or under pressure.",
@@ -93,28 +93,31 @@ SCRIPT = {
         {"id": "q01", "kind": "self-check", "set": "SC1", "question": "At what temperature is LNG carried near atmospheric pressure?",
          "options": ["About -162 °C", "At room temperature, under pressure", "About -42 °C"], "correct": "A",
          "feedback": "LNG is fully refrigerated: about -162 °C, just above atmospheric pressure.", "mechanic": "tap to choose"},
-        {"id": "q02", "kind": "self-check", "set": "SC1", "question": "Which ships carry LPG at ambient temperature?",
-         "options": ["Fully refrigerated ships", "Fully pressurised ships", "Membrane LNG carriers"], "correct": "B",
-         "feedback": "Fully pressurised ships hold LPG at ambient temperature in pressure vessels.", "mechanic": "tap to choose"},
-        {"id": "q03", "kind": "self-check", "set": "SC1", "question": "Which ship type carries ethylene at about -104 °C?",
-         "options": ["Fully pressurised", "Semi-pressurised, semi-refrigerated", "None - ethylene is not carried"], "correct": "B",
-         "feedback": "Ethylene is carried on semi-refrigerated ships, at about -104 °C.", "mechanic": "tap to choose"},
-        {"id": "s03", "kind": "slide", "title": "Four containment systems", "text": S03_TEXT,
-         "visual": "Cutaway of type A, B, C and membrane tanks", "notes": S03_NOTES, "minutes": 5},
+        {"id": "q02", "kind": "self-check", "set": "SC1", "question": "Sort the cargoes by the ship that usually carries them.",
+         "mechanic": "categorise", "answer": "Fully pressurised: LPG in small ships; ammonia\nFully refrigerated: LNG; large LPG cargoes",
+         "feedback": "Small LPG ships and ammonia carriers hold the cargo under pressure; LNG and large LPG cargoes are carried cold."},
+        {"id": "q03", "kind": "self-check", "set": "SC1", "question": "Set the temperature at which ethylene is carried.",
+         "mechanic": "set_value", "visual_kind": "schematic", "visual": "A thermometer scale from -170 °C to +20 °C with a slider",
+         "answer": "-104 °C ± 4, range -170 to 20", "feedback": "Ethylene is carried on semi-refrigerated ships, at about -104 °C."},
+        {"id": "s03", "kind": "slide", "title": "Four containment systems", "text": S03_TEXT, "visual_kind": "model_3d", "layout": "visual_wide",
+         "visual": "3D model of the four tank types in a hull section - turn it, and cut each one open", "notes": S03_NOTES, "minutes": 5},
         {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Module check - gas tankers",
          "text": "The module check opens on your tablet now: five questions on the whole module. Your score is for you.",
          "notes": "Press OPEN TASK when the room is ready.", "minutes": 5},
-        {"id": "m01", "kind": "module-check", "set": "MC", "question": "Which tank type relies on the hull for its strength?",
-         "options": ["Type C", "Membrane", "Type A"], "correct": "B", "feedback": "Membrane tanks are supported by the hull.", "mechanic": "tap to choose"},
-        {"id": "m02", "kind": "module-check", "set": "MC", "question": "What is LNG mostly?",
-         "options": ["Propane", "Methane", "Ammonia"], "correct": "B", "feedback": "LNG is mostly methane.", "mechanic": "tap to choose"},
-        {"id": "m03", "kind": "module-check", "set": "MC", "question": "Which independent tank needs no secondary barrier?",
-         "options": ["Type A", "Type B", "Type C"], "correct": "C", "feedback": "Type C tanks are pressure vessels.", "mechanic": "tap to choose"},
+        {"id": "m01", "kind": "module-check", "set": "MC", "question": "Tap the tank that relies on the hull for its strength.",
+         "mechanic": "hotspot", "visual_kind": "model_3d", "visual": "The same 3D hull section with the four tank types",
+         "answer": "Type A prismatic tank\nType B Moss sphere\nMembrane tank *\nType C cylinder",
+         "feedback": "Membrane tanks are supported by the hull."},
+        {"id": "m02", "kind": "module-check", "set": "MC", "question": "What is LNG mostly?", "mechanic": "single_choice",
+         "options": ["Propane", "Methane", "Ammonia"], "correct": "B", "feedback": "LNG is mostly methane."},
+        {"id": "m03", "kind": "module-check", "set": "MC", "question": "Match each tank type with the secondary barrier it needs.",
+         "mechanic": "match", "answer": "Type A = full secondary barrier\nType B = partial secondary barrier\nType C = no secondary barrier",
+         "feedback": "The more is known about how a tank would fail, the less secondary barrier it needs."},
         {"id": "m04", "kind": "module-check", "set": "MC", "question": "Roughly what pressure are fully pressurised LPG tanks designed for?",
-         "options": ["About 18 bar", "About 0.25 bar", "About 1 bar"], "correct": "A", "feedback": "About 18 bar.", "mechanic": "tap to choose"},
-        {"id": "m05", "kind": "module-check", "set": "MC", "question": "What forms when liquefied gas escapes its containment?",
-         "options": ["A cold vapour cloud", "Solid ice only", "Nothing - it stays liquid"], "correct": "A",
-         "feedback": "It boils off at once into a heavy, cold vapour cloud.", "mechanic": "tap to choose"}]}
+         "mechanic": "single_choice", "options": ["About 18 bar", "About 0.25 bar", "About 1 bar"], "correct": "A", "feedback": "About 18 bar."},
+        {"id": "m05", "kind": "module-check", "set": "MC", "question": "Put these cargoes in order, coldest first, as they are carried.",
+         "mechanic": "order", "answer": "LNG at about -162 °C\nEthylene at about -104 °C\nPropane at about -42 °C",
+         "feedback": "LNG is the coldest; propane on a fully refrigerated ship is carried at about -42 °C."}]}
 
 W = cs.W
 
@@ -202,6 +205,7 @@ def main():
         check("the module in numbers: minutes against the programme's, words per theory minute",
               lv("s_sum_alloc", a="23") in page and lv("s_sum_title") in page)
         check("a clean module: the theory check found nothing", lv("s_theory_clean") in page and lv("s_textcheck_clean") in page)
+        check("... and the pictures-and-tasks check found nothing", lv("s_media_clean") in page)
         check("operator-stated facts listed once - from the script and from FEEDBACK_LOG.md",
               "left console" in page and "tested to 7 bar" in page and page.count(lv("s_facts_title")) == 1)
         doc = zipfile.ZipFile(p["docx"]).read("word/document.xml").decode("utf-8")
@@ -262,6 +266,74 @@ def main():
         rec = cs.load(cs.paths(cb, 1)["script"])
         check("the operator may approve despite them (L26) - and that is recorded",
               code == 0 and {"t_thin_slide", "t_thin_notes"} <= {f["rule"] for f in rec.get("approved_despite_findings", [])}, out)
+
+        print("\n-- 2.18.0: every slide leaves room for a named picture, and the tasks are varied (L37, L38)")
+        mrules = lambda sc: [f["rule"] for f in cs.media_findings(sc)]
+        check("the example module passes the pictures-and-tasks check", mrules(SCRIPT) == [], mrules(SCRIPT))
+        check("the review page draws the picture's place on every slide, with its kind and who makes it",
+              page.count('<div class="vbox') >= 3 and lv("s_layout") in page and html.escape(cs.MEDIA["visual_kinds"]["model_3d"]["lv"]) in page
+              and html.escape(cs.MEDIA["made_by"]["factory"]["lv"]) in page)
+        check("each task says how the trainee answers, and is drawn that way",
+              html.escape(cs.MEDIA["mechanics"]["categorise"]["lv"]) in page and '<div class="grps">' in page and '<div class="slider">' in page
+              and '<ol class="steps">' in page and '<table class="pairs">' in page and '<span class="chip ok">' in page)
+        check("the module lists its kinds of picture and ways of answering", lv("s_msum_title") in page and lv("s_msum_mechs") in page)
+        nok = copy.deepcopy(SCRIPT)
+        screen(nok, "s02")["visual_kind"] = ""
+        screen(nok, "s01")["visual"] = ""
+        rs = mrules(nok)
+        check("a slide with no kind of picture, or no word of what it shows, is found", "v_no_kind" in rs and "v_no_what" in rs, rs)
+        still = copy.deepcopy(SCRIPT)
+        for x in ("s01", "s02", "s03"):
+            screen(still, x)["visual_kind"] = "photo"
+            screen(still, x)["minutes"] = 14
+        check("40 min of theory with nothing that moves, turns or can be explored is found", "v_no_motion" in mrules(still), mrules(still))
+        many = copy.deepcopy(SCRIPT)
+        extra = [dict(screen(SCRIPT, "s03"), id="s1%d" % i, visual_kind="photo") for i in range(4)]
+        many["screens"][6:6] = extra
+        for x in ("s01", "s02", "s03"):
+            screen(many, x)["visual_kind"] = "photo" if x != "s03" else "step_animation"
+        check("six slides with only two kinds of picture is found", "v_few_kinds" in mrules(many), mrules(many))
+        gen = copy.deepcopy(SCRIPT)
+        screen(gen, "s01")["visual_kind"] = "ai_illustration"
+        f = [x for x in cs.media_findings(gen) if x["rule"] == "v_generated"]
+        check("an AI picture is allowed, with a note that it is for context only", f and f[0]["level"] == cs.NOTE, f)
+        boring = copy.deepcopy(SCRIPT)
+        for q in [x for x in boring["screens"] if x["kind"] in cs.TASKS]:
+            q.update(mechanic="single_choice", options=["About -162 °C", "Methane", "Membrane tank"], correct="A")
+            q.pop("answer", None)
+        rs = mrules(boring)
+        check("a module of nothing but 'choose one answer' is found - too much choosing, one way per task, nothing hands-on",
+              {"m_too_much_choice", "m_mix", "m_no_hands_on"} <= set(rs) and "m_same_in_a_row" in rs, rs)
+        bad_ans = copy.deepcopy(SCRIPT)
+        screen(bad_ans, "m03")["answer"] = "Type A full\nType B = partial"
+        screen(bad_ans, "m05")["answer"] = "LNG\nPropane"
+        screen(bad_ans, "q03")["answer"] = "-250 °C ± 4, range -170 to 20"
+        screen(bad_ans, "m01")["answer"] = "Type A\nType B\nMembrane\nType C"
+        probs = cs.validate(bad_ans)
+        for what, needle in (("a pair not written as left = right", "m03: 'match the pairs'"),
+                             ("fewer than three steps to order", "m05:"), ("a value outside its own range", "q03: the value -250"),
+                             ("no place marked right", "m01:")):
+            check("caught in the answer: " + what, any(needle in x for x in probs), probs)
+        cb3 = new_course(tmp, "kind", copy.deepcopy(SCRIPT))
+        io.open(os.path.join(tmp, "k.json"), "w", encoding="utf-8").write(json.dumps(
+            [{"field": "s02.visual_kind", "new": cs.MEDIA["visual_kinds"]["flow_animation"]["lv"]}], ensure_ascii=False))
+        cs_run("render", cb3, "--module", "1")
+        code, out = cs_run("propose", cb3, "--module", "1", "--changes", os.path.join(tmp, "k.json"))
+        check("the kind of picture is changed in the operator's own words", "the kind of picture becomes" in out, out)
+        cs_run("apply", cb3, "--module", "1", "--confirmed")
+        check("... and stored as the kind the factory builds", screen(cs.load(cs.paths(cb3, 1)["script"]), "s02")["visual_kind"] == "flow_animation")
+        kd = zipfile.ZipFile(cs.paths(cb3, 1)["docx"]).read("word/document.xml").decode("utf-8")
+        check("the Word file has a box for the kind of picture, in the operator's words, and says how to write each answer",
+              'w:val="s02.visual_kind"' in kd and html.escape(LV["fmt_match"], quote=False) in kd and html.escape(LV["s_docx_kinds"], quote=False) in kd)
+        code, out = cs_run("read", cb3, "--module", "1")
+        check("an untouched Word file with the new boxes still reads back as nothing changed", code == 0 and "nothing" in out, out)
+        scan = copy.deepcopy(SCRIPT)
+        screen(scan, "s03")["visual_kind"] = "model_3d_scan"
+        cb4 = new_course(tmp, "scan", scan)
+        cs_run("render", cb4, "--module", "1")
+        spage = io.open(cs.paths(cb4, 1)["review"], encoding="utf-8").read()
+        check("a picture only Novikontas can make is listed, with how to make it",
+              html.escape(cs.MEDIA["made_by"]["novikontas"]["lv"]) in spage and "Polycam" in spage)
 
         print("\n-- the lesson's structure is checked before it is shown")
         bad = copy.deepcopy(SCRIPT)
@@ -337,12 +409,12 @@ def main():
 
         print("\n-- a chat correction, then 'no'")
         ch = os.path.join(tmp, "changes.json")
-        io.open(ch, "w", encoding="utf-8").write(json.dumps([{"field": "m01.correct", "new": "C"}]))
+        io.open(ch, "w", encoding="utf-8").write(json.dumps([{"field": "m02.correct", "new": "C"}]))
         code, out = cs_run("propose", c, "--module", "1", "--changes", ch)
         check("a chat correction is shown as understood, not applied", "the correct answer becomes C (was B)" in out and os.path.isfile(p["pending"]), out)
         code, out = cs_run("discard", c, "--module", "1")
         check("'no' discards it and the script is unchanged",
-              not os.path.isfile(p["pending"]) and screen(cs.load(p["script"]), "m01")["correct"] == "B", out)
+              not os.path.isfile(p["pending"]) and screen(cs.load(p["script"]), "m02")["correct"] == "B", out)
 
         print("\n-- approval, and what undoes it")
         code, out = cs_run("approve", c, "--module", "1", "--by", "Anna")
@@ -393,12 +465,19 @@ def main():
             return ('<section class="slide" data-script="%s" data-cue="instructor only"><div class="slide-kind">Theory · A1</div>'
                     '<h2 data-script-field="title">%s</h2>%s<svg><text>label</text></svg><p class="src">Source: SIGTTO</p>%s</section>'
                     % (x["id"], x["title"], lines, extra))
-        def task(x, correct=None):
-            opts = "".join('<button data-script-field="opt.%s"%s>%s</button>' % (L, ' data-correct="true"' if L == (correct or x["correct"]) else "", o)
-                           for L, o in zip(cs.letters(len(x["options"])), x["options"]))
+        def task(x, correct=None, drop_item=False, flip=False):
+            opts = "".join('<button data-script-field="opt.%s"%s>%s</button>' % (L, ' data-correct="true"' if L in (correct or cs.correct_letters(x)) else "", o)
+                           for L, o in zip(cs.letters(len(x.get("options", []))), x.get("options", []))) if cs.uses(x, "options") else ""
+            if cs.uses(x, "answer") and cs.mech(x) != "set_value":
+                items, right = cs.answer_items(x)
+                items = list(reversed(items))                    # the tablet shuffles them
+                if drop_item:
+                    items = items[1:]
+                mark = (lambda t: t not in right) if flip else (lambda t: t in right)
+                opts += "".join('<span data-script-field="answer"%s>%s</span>' % (' data-correct="true"' if right and mark(t) else "", t) for t in items)
             return ('<div data-script="%s"><p data-script-field="question">%s</p>%s<p data-script-field="feedback">%s</p></div>'
                     % (x["id"], x["question"], opts, x["feedback"]))
-        def build(slides_extra="", drop=None, correct=None, word=None):
+        def build(slides_extra="", drop=None, correct=None, word=None, drop_item=False, flip=False):
             sl = [x for x in s["screens"] if x["kind"] in cs.INSTRUCTOR and x["id"] != drop]
             deck = "<html><body>%s</body></html>" % "".join(slide(x, slides_extra if x["id"] == "s01" else "") for x in sl)
             if word:
@@ -406,7 +485,7 @@ def main():
             io.open(os.path.join(mdir, "module.html"), "w", encoding="utf-8").write(deck)
             tk = [x for x in s["screens"] if x["kind"] in cs.TASKS]
             io.open(os.path.join(mdir, "tasks", "t1.html"), "w", encoding="utf-8").write(
-                "<html><body>%s</body></html>" % "".join(task(x, correct if x["id"] == "m01" else None) for x in tk))
+                "<html><body>%s</body></html>" % "".join(task(x, correct if x["id"] == "m02" else None, drop_item and x["id"] == "m03", flip and x["id"] == "m01") for x in tk))
             return run(MATCH, c, "--module", "1")
         code, out = build()
         check("a module that says exactly the approved words passes", code == 0, out)
@@ -418,6 +497,10 @@ def main():
         check("a screen that was not built fails", code == 1 and "s02) is not built" in out, out)
         code, out = build(correct="A")
         check("a wrong correct answer fails", code == 1 and "marked correct is A - approved: B" in out, out)
+        code, out = build(drop_item=True)
+        check("a matching task missing one of its approved items fails", code == 1 and "m03" in out and "items are not the approved ones" in out, out)
+        code, out = build(flip=True)
+        check("a tap-the-place task with the wrong place marked right fails", code == 1 and "marked right are" in out, out)
         code, out = build(slides_extra='<p data-script-ignore="decor">Deck furniture</p>')
         check("data-script-ignore is allowed but counted for QA", code == 0 and "data-script-ignore" in out, out)
         io.open(ch, "w", encoding="utf-8").write(json.dumps([{"field": "s01.visual", "new": "Another photograph"}]))

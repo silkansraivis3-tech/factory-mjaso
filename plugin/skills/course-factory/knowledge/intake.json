@@ -7,7 +7,7 @@
     {"for": "the IMO model course", "how": "file names containing 'model course' / 'IMO' and a number like 1.04 or 1.35; the programme usually names it."},
     {"for": "the knowledge base", "how": "run kb/scripts/kb_tool.py find <course folder> - it checks the folder, every sub-folder and one level up, and recognises a Course Source Processor knowledge base (SOURCE_MANIFEST.json + sources/) or an older docling one (00_INDEX/SOURCE_MANIFEST.json) by its files. It writes nothing. One found: use it; several: its --json output carries the ready question (2.13.1)."},
     {"for": "the old course", "how": "sub-folders named old / previous / existing / current course / iepriekšējais / vecais / старый, or any folder holding module HTML, decks (.pptx) or handouts for the same course."},
-    {"for": "COURSE_LANGUAGE", "how": "the language of the programme and of the old course's course-facing files (L19)."},
+    {"for": "COURSE_LANGUAGE", "how": "always English - every Novikontas course is in English (owner, 2026-09-30). Not looked for and not asked; the programme may be in another language and is still quoted in it word for word (L19)."},
     {"for": "the course type", "how": "the programme's title and entry requirements: Basic / Familiarisation / no prior experience point to NEW_ENTRANT; Advanced / Refresher / Revalidation / Upgrade / required sea service point to EXPERIENCED. This is a proposal, shown to the operator as the (Recommended) option - never decided silently."},
     {"for": "duplicate sources and editions", "how": "run kb/scripts/kb_tool.py sources <kb> --course <course>. Exact copies and .doc/.docx pairs need no question; each edition group becomes one pop-up question."}
   ],
@@ -34,7 +34,7 @@
     {"n": 5, "id": "model_course", "header": "Model course", "ask_when": "the programme names none and none was found, or several were found",
      "question": "Which IMO model course sits behind this programme?",
      "options": "the candidates found (up to 3); 'None - this programme has no model course'"},
-    {"n": 6, "id": "course_language", "header": "Language", "ask_when": "only when it cannot be read off the programme or the old course (L19)",
+    {"n": 6, "id": "course_language", "header": "Language", "ask_when": "never - every Novikontas course is in English (owner, 2026-09-30). Kept here so nobody adds the question back.",
      "question": "Which language are the slides, tasks and assessment in?",
      "options": ["English", "Latvian", "English + Latvian"]},
     {"n": 7, "id": "editions", "header": "Edition", "ask_when": "kb_tool.py sources found edition groups",

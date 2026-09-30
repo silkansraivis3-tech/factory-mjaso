@@ -175,6 +175,11 @@ English module. Translating an accredited artefact because the request arrived i
 destroys it, and it happens one screen at a time. `retrofit/scripts/check_language.py` is the
 drift check.
 
+*Owner, 2026-09-30 (2.18.0): **every Novikontas course is in English.** COURSE_LANGUAGE is English -
+never asked at intake, never detected as anything else. The programme is still quoted word for word in
+its own language (a Latvian programme stays Latvian where it is quoted), and the operator's review pages,
+chat and notes still follow the operator.*
+
 ---
 
 ### L25 · The person reading this does not work in IT
@@ -209,7 +214,7 @@ could.**
 
 ---
 
-## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0)
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0)
 
 Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
 these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
@@ -437,3 +442,43 @@ already."*
   during a session (runner cards, pre-flight), not a theory slide, which must carry the theory.
 - → `scripts/content_script.py` (`theory_findings`), `scripts/make_architecture_page.py` (whether the
   planned self-checks fit).
+
+### Added by the owner after reviewing the rebuilt example pages (2026-09-30, 2.18.0)
+
+**L37 · Every slide leaves room for its picture, and says what kind it is and who makes it.**
+*"Leave place for animations, images, 3D illustrations - graphic things in slides - and mention what kind would be
+used."*
+
+- Every theory slide names its visual in the content script: the **kind** (photograph, annotated photograph,
+  photograph to take at Novikontas, technical drawing, schematic, cutaway, chart, comparison, step animation, flow
+  animation, process animation, interactive diagram, 3D model, 3D scan, licensed 3D model, real video, AI video,
+  AI illustration), **what it shows and why**, and the **layout** (text left and picture right; picture wide; picture
+  full). The review page draws that place on the slide. Only the closing summary may have none.
+- A module with 40 minutes of theory or more has at least one visual that moves, turns or can be explored; a module
+  with six slides or more uses at least three kinds.
+- **Who makes it** is said for every one: the factory itself (SVG, HTML/JS animation, interactive diagrams, three.js
+  3D from geometry - all bundled, offline); the image and video generator (nano-banana: Gemini images, Veo video -
+  context only, labelled, never equipment a trainee must recognise, L33); the sources; **Novikontas** (a photograph,
+  a short film, or a 3D scan of the real equipment with a free phone app - Polycam, KIRI Engine, RealityScan -
+  exported as .glb); or **outside help** (a manufacturer's CAD file, a licensed model, a 3D artist; AI image-to-3D
+  services such as Meshy, Tripo or Rodin through their own API key, for context objects only). What Novikontas or
+  outside help must provide is listed on the architecture page and on each module's review page.
+- The list and the floors are `knowledge/media-and-tasks.json`; what each kind teaches best stays with
+  `course-visuals` (`decide/knowledge/representations.json`). Building them is Phase 5 steps 8 and 9.
+
+**L38 · Tasks are varied, realistic and hands-on - not a row of A, B, C, D.**
+*"Make these tests more variable, not only choose A B C D - as much variable as possible ... more digitalized, more
+realistic, more detailed, more technical."*
+
+- Fourteen ways of answering, none of them typing: choose one; choose all that are right; choose the action, then
+  the reason; put in order; match pairs; sort into groups; complete the sentence; tap the place on a picture, drawing
+  or 3D model; drag labels onto a drawing; find the hazards in a scene; read the instrument; set the value on a
+  slider or dial; operate the panel or line up the valves; a scenario that asks, shows what happens and asks again.
+- A self-check uses at least two of them and a module check at least three; "choose one" is at most 40 % of a
+  module's questions; every module has at least one hands-on question (locate, read, set, operate, decide); never
+  more than two answered the same way in a row.
+- Each is written in the content script so the operator can read and correct it in Word: the answer of all but the
+  choosing ones is one box, one line per item, `*` marking what is right. The was-it-taught check (L36) reads every
+  one of them.
+- This widens `course-task-ux` §2's list (tap to choose, tap to locate, order, match, choose-and-justify). Building
+  the task screens on the trainee tablet is Phase 5 step 6.
