@@ -77,10 +77,18 @@ def route(prompt, has_existing_material=True):
                 break
     retrofit_shaped = bool(hits)
 
+    # EDIT (L26, 2.12.0): a change word and a course object, and nothing that
+    # asks for the whole module to be rebuilt. The operator named the change.
+    et = ROUTING["edit_triggers"]
+    has = lambda words: any((" " + w) in p for w in words)
+    edit_shaped = has(et["change_words"]) and has(et["course_objects"]) and not has(et["whole_module_words"])
+
     # RESTYLE needs BOTH a narrow target AND a limiter. Either alone is not
     # enough - "change the colours and make it like GAS BASIC" is a retrofit.
     if narrow and limited:
         return "restyle", hits
+    if edit_shaped:
+        return "edit", hits
     if retrofit_shaped:
         return ("retrofit" if has_existing_material else "plan"), hits
     if narrow and not limited:
@@ -225,6 +233,40 @@ def main():
               "improve the existing presentation"]:
         m, _ = route(p)
         check("cowork     · %-44s -> retrofit" % p[:44], m, "retrofit")
+
+    # L26 - the operator names a content or structure change: it is DONE, not
+    # questioned, not refused, and not inflated into a whole-module rebuild
+    for p in ["add two more slides about cargo pumps",
+              "delete slide 5",
+              "put more examples in module 2",
+              "this should be two screens",
+              "keep the old pump drawing",
+              "too much text on screen 4",
+              "add a worked example before the self-check",
+              "replace the photo on screen 7 with the one from the old course",
+              "add an example to this existing module",
+              "pievieno vēl vienu slaidu par kravas sūkņiem",
+              "добавь ещё один слайд про насосы"]:
+        m, _ = route(p)
+        check("L26 edit   · %-44s -> edit" % p[:44], m, "edit")
+    # ...and the neighbours keep their own modes
+    m, _ = route("make it better", has_existing_material=True)
+    check("L26 edit   · no change named, no object -> still ambiguous", m, "ambiguous")
+    m, _ = route("just fix the typos, nothing else")
+    check("L26 edit   · a narrow cosmetic change is still a restyle", m, "restyle")
+    check("L26 edit   · the mode exists and says to do it", "Do it as asked" in ROUTING["modes"]["edit"], True)
+    check("L26 lock   · the operator's request is the authorisation",
+          "operator's own request in chat IS that authorisation" in LOCK["locked"]["_rule"], True)
+
+    # the owner's Phase 5 decisions are where a session actually reads them
+    cf = HERE.parents[1]
+    skill = (cf / "SKILL.md").read_text(encoding="utf-8")
+    full = (cf / "references" / "laws-in-full.md").read_text(encoding="utf-8")
+    check("L26-L33    · SKILL.md carries the precedence block",
+          "## The operator's request wins — L26" in skill and "## Owner decisions in force" in skill, True)
+    for n in range(26, 34):
+        check("L%d        · operative line in SKILL.md, full text in references/" % n,
+              ("**L%d**" % n in skill or "L%d" % n in skill) and ("**L%d ·" % n) in full, True)
 
     # the same intent with nothing built yet is a plan, not a retrofit
     m, _ = route("Redesign Module 1 using the NOVIKONTAS Course Factory.",

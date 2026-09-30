@@ -20,7 +20,9 @@ description: >
 Ruled by a course owner across 2026-09-01/03 while reviewing a tablet build of 32 task
 screens across eight modules. The owner quotes that are the evidence — why each rule exists and
 why it is not negotiable on style grounds — are in `references/rulings-in-full.md`. They are
-quoted from a previous course; **none of them are about your course's content.**
+quoted from a previous course; **none of them are about your course's content.** "Not negotiable"
+means the factory never relaxes them on its own; it never means refusing an operator's request (L26).
+If a request collides with one, say which in a sentence, offer the closest option that works, do it.
 
 ## The delivery target is a parameter, not a fact
 

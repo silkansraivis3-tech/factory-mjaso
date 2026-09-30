@@ -43,6 +43,9 @@ have been built.
    candidates for that need, what each costs, and how each behaves on a tablet.
 3. **Record the decision** in the storyboard, including a decision of *no visual*.
 
+**When the operator asks for a picture, the screen gets one (L26)** — this skill decides what kind
+and where it comes from, never whether.
+
 **Plain text is a valid outcome.** A definition, a limit, an exact regulatory phrase, a set point —
 text carries those precisely and a picture only decorates them. Never add a visual to fill space or
 to make a screen look finished. An empty area is cheaper than a misleading figure.

@@ -206,3 +206,124 @@ is, and nothing about the first fact excuses the second word.
 
 Most fixes belong to the factory, not to them. **Offer to do the work before explaining how they
 could.**
+
+---
+
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0)
+
+Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
+these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
+has landed. The one-line operative form of each is in `SKILL.md`; this is the full text.
+
+**L26 · The operator's request wins, and "the style" means the brand system only.**
+Fixed: the Novikontas brand — its colours, typography and logo use — and the product it is built
+into: the shell, the tokens, the components, the navigation, the tablet system. Nothing else is
+"the style". Everything a colleague asks for about content, structure, emphasis, the number of
+slides, examples, visuals, tasks or wording is **done** — never refused, never watered down, never
+quietly left out because it is "not in the style".
+
+The operator's request in chat **is** the explicit authorisation L18 asks for. It reaches regions an
+expert edited, too: L24 protects an expert's change from the *factory*, not from the operator.
+
+Five limits are hard, and only five:
+
+1. the Novikontas brand;
+2. the approved programme and its Main ILOs, copied verbatim (L1, L2);
+3. the official hours (L1, L3);
+4. no source, no maritime claim (L4) — a fact the operator states **is** a source: use it and
+   record it in `factory-notes.md` as theirs, with the date;
+5. the offline tablet (L6) — everything bundled, nothing fetched at class time.
+
+When a request truly hits one of them, say why in one or two plain sentences, offer the closest
+option that works, and do that. *"The Main ILO has to stay word for word, so I added your wording
+as a Sub-ILO under it"* — not a refusal, and not an essay.
+
+Every other rule in this factory written as "never", "must not" or "not negotiable" is a rule for
+the factory's **own** choices — what it does when nobody has asked for anything. None of them is a
+reason to refuse the operator. Where one would make the result worse for what was asked, say so in
+one line and do what was asked.
+
+**L27 · Three test levels, all on the tablet, and only the final assessment is graded.**
+
+| Level | Where | Graded |
+|---|---|---|
+| Self-check | inside the presentation, after key concepts | no |
+| Module check | the end of every module | **no** — a self-check that the module was understood |
+| Final assessment | the end of the course | **yes** — the only graded test |
+
+One task per screen, large touch targets, Next → Next, clear feedback on every self-check; no score
+shown on an ungraded check unless the score itself helps the trainee learn. The ungraded module
+check **still waits for the instructor's unlock**. The instructor's screen shows *done / not done*
+and the result as information — never pass or fail, never red. The tablet app's own web files
+colour a check red today; the factory writes the exact change list and the owner applies it (L21).
+→ built out in `course-task-ux` (Phase 5 step 6).
+
+**L28 · Who the course is for, and what the school has.**
+The course type is declared at intake and changes the build:
+
+- `NEW_ENTRANT` — no prior knowledge. More theory and explanation, more screens, more worked
+  examples, step-by-step build-up. When in doubt, explain more: missing an important point is worse
+  than one extra slide. More explanation means **more screens**, not denser ones.
+- `EXPERIENCED` — upgrade, advanced, revalidation. Theory still present, shorter, anchored in real
+  experience — incidents, scenarios, "what would you do". More digital tasks and scenario exercises.
+
+Either way the course's own language stays fully professional — real terminology, real
+abbreviations, real procedures. Plain language (L25) is for the operator, never for the course.
+
+Every instrument and simulator the IMO model course lists for the course is **assumed available at
+Novikontas**. Practical tasks are designed for it; the factory does not ask whether the school has it.
+→ built out at intake (step 2) and in the build (step 7).
+
+**L29 · The words are approved before the HTML.**
+Before any HTML, each module gets a **content script**: the exact, word-for-word text of every
+slide (not a description of it), the visual planned for each, the instructor notes — key points
+and cues, not a speech — and every self-check and module-check question with its correct answer
+and feedback; for the course, the final-assessment bank with answers. It is delivered as a page
+that opens with a double-click and prints to PDF, plus an editable twin. The operator corrects it
+in chat, in comments or in the twin; the corrections are applied back. **Nothing moves to HTML
+until the operator approves it**, and the built slides must then say exactly what was approved.
+→ built out in step 5.
+
+**L30 · Module 1 is a pilot.**
+After the architecture is approved, Module 1 alone is scripted, built and approved before any other
+module is built. Five roles build it, each an agent with its own context: deck builder, test
+builder, visual sourcer, motion and 3D, QA. Only then may the remaining modules run in parallel —
+each still with its own script STOP and its own review STOP. → built out in step 10.
+
+**L31 · Ask like a colleague, not like a form.**
+The operator knows the subject and will correct what is wrong. So: no "needs SME review" on every
+item, and no waiting for them to confirm things they will simply correct. When a real expert
+question would clearly improve the result, collect it and ask it at the next STOP — **batched, as
+a pop-up question with options** (the ask-question tool), then carry on. Honesty markers —
+`UNKNOWN`, `PLACEHOLDER`, `PROVISIONAL`, `[VERIFY: …]` — are written in `factory-notes.md`, never on
+a slide (L22), and are **never a reason to stop the work**. The operator's "next" at a STOP ratifies
+what that STOP showed, re-expressed Sub-ILOs included.
+
+**L32 · The factory remembers.**
+Each course keeps `COURSE_STATE.md` — current stage, approved decisions, open questions, next
+step, file map — updated at the end of every stage, so a new session resumes without re-analysing
+what is settled. Every correction the operator makes is logged in the course's `FEEDBACK_LOG.md`.
+When the course is finished and the operator says they are happy, the factory offers to save the
+lessons as a pattern file (what they preferred, what they changed, examples). Future courses read
+the available patterns as a starting reference — guidance, not law, and never above the
+operator's current request. → built out in step 3.
+
+**L33 · Pictures: find first, keep what teaches, never invent what a trainee must recognise.**
+Sourcing order: knowledge base → old course → source files → internet (real photographs,
+legitimate schematics) → authored → generated. Legitimate schematics and example pictures from the
+knowledge base or the old course are **kept and used** where they teach well, not redrawn for the
+sake of it.
+
+- Novikontas's own material — old courses, own manuals, own photographs — is used freely.
+- A textbook or publisher figure is **redrawn** as Novikontas's own drawing, **technically
+  identical to the original — never simplified**, credited *"after <book>"*, and listed in
+  `factory-notes.md` so the owner can check the licence with management. If Novikontas is licensed,
+  the original replaces the redraw.
+- ICS/SIGTTO figures marked *not cleared for issue or publication* stay out.
+- Equipment the trainee must recognise in real life — markings, controls, valves, PPE — is **never**
+  an AI image: use an accurate schematic, and add the item to the **"photos to take at Novikontas"**
+  list, because the school has the equipment.
+- AI illustrations, labelled *"AI-generated illustration"*, are for general context images only.
+
+Never stop at "I can't make this picture": find it, generate it where that is allowed, or finish
+everything else and leave the ready-to-run handoff (L23). → built out in `course-visuals` (step 8).

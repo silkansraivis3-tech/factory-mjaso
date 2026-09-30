@@ -85,13 +85,16 @@ prose is the defect this system exists to remove, and it returns on every module
 actively cut. But **visible must be sufficient, not merely short** — a 60-word screen that
 cannot be acted on without opening a `<details>` is worse than the 300-word screen it replaced,
 because it now hides the thing you need *and* looks finished. A set point, a limit or a
-maritime term in a visible line is the content, not clutter.
+maritime term in a visible line is the content, not clutter. Compact never overrides an operator
+who asks for more explanation (L26): the extra explanation goes onto **more screens**, not denser ones.
 
 **4 · Navigate; do not narrate.** Say what to open, what the trainees do, and when it is
 finished. Do not write out what the instructor should say — they know their subject and their
 room, speech scripts double the length of everything and get skipped in delivery.
 *Finished when* is the highest-value line there is: without it nobody knows when to press Next,
-and that is the whole mechanism.
+and that is the whole mechanism. The instructor notes in an approved content script (L29) are key
+points and cues on the instructor's channel — this law is about not writing speeches, never about
+leaving out what the operator asked the instructor to be told.
 
 **5 · Paperless.** Nothing in the delivery path may require a printer. Purge the wording as
 well as the behaviour — "print one per group", `☐ yes ☐ no` glyphs, blank ruled rows,
@@ -112,7 +115,9 @@ to where that job happens. **Cutting usable material to satisfy a complaint is a
 than the clutter was**, because the clutter was visible and the loss is not. The three moves:
 a safety-critical document becomes a ticked line in the work's own pre-flight; an audit code
 becomes a collapsed labelled disclosure plus a footer mapping; a number with no delivery use
-goes to the footer.
+goes to the footer. This law is for a *question or a complaint*. When the operator **tells** you to
+remove something, remove it (L26) — grep first for what depends on it (L7) and say in one line what
+else that touched.
 
 **Do not restyle.** When a module feels wrong the cause is almost always information
 architecture or word count, not colour. Diff the design tokens before touching them.

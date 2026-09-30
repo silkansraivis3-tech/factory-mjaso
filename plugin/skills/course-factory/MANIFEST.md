@@ -156,6 +156,29 @@ Proof it was a move: a line-by-line comparison of the old file against the new f
 three references found every line except the version stamp. Future detail goes into a lane or
 `references/`, never back into `SKILL.md` — that is the point of the exercise.
 
+## 4d · The owner's decision record (2.12.0, 2026-09-30, Phase 5 step 1)
+
+Eight laws, **L26–L33**, from the owner's Phase 5 decision record — full text appended to
+`references/laws-in-full.md`, one-line operative form in `SKILL.md`'s *Owner decisions in force*
+block, which says that where any older rule disagrees, the decision wins, even before the step that
+builds it out has landed. That block is how a decision reaches a session before its step exists:
+`SKILL.md` is read at the start of every course job.
+
+**L26 is the one built out now**, because the owner's reviewer found the factory refusing or
+ignoring colleague requests as "not in the style":
+
+- a new **edit** mode in `retrofit/knowledge/routing.json` (`edit_triggers`): a change word plus a
+  course object, with no whole-module intent, is done as asked. Before, "add two slides on cargo
+  pumps" matched no mode and fell to *ambiguous* — a clear instruction answered with a question.
+  `test_routing.py` implements and asserts it, in English, Latvian and Russian;
+- `content-lock.json`: the operator's request in chat **is** the explicit authorisation;
+- `expert-edits.json`: a protected region is protected from the factory, never from the operator;
+- one line each where a rule read like grounds to refuse: `course-module-ux` laws 3, 4 and 7,
+  `course-task-ux`'s "not negotiable", `course-visuals`' "never add a visual to fill space".
+
+The five hard limits are the only exceptions: brand, programme + Main ILOs, hours, no source no
+claim (an operator's stated fact is a source), offline tablet.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

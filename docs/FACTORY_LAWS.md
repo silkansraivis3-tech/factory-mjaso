@@ -38,7 +38,9 @@ plausible. Authority tiers are never upgraded. Check every source's edition on i
 The 80 % is Track B — minutes where the trainee is doing, deciding or producing something — not
 the programme's practical share, which is Track A and is never changed. Where the programme
 allocates little practical time, the theory hours are delivered as active learning. A theory
-block with no trainee activity in it is a defect. → `course-factory`
+block with no trainee activity in it is a defect. Theory is never removed; it is delivered as
+activity — self-check, explain-then-reveal (no typing), predict-then-reveal, worked example then own
+attempt (owner, 2026-09-30). → `course-factory`
 
 **L6 · Tablet-first, touch-first, offline.**
 An 800×1280 portrait finger target first, then landscape, then the projector. Targets ≥ 44 px, no
@@ -51,7 +53,9 @@ script before removing anything. → `course-factory`
 
 **L8 · Explain and relocate; do not delete.**
 "Why is this here?" is a report about the presentation, not proof the thing is useless. Cutting
-usable material to satisfy a complaint is a worse defect than the clutter was. → `course-module-ux`
+usable material to satisfy a complaint is a worse defect than the clutter was. This is for a
+question or a complaint; when the operator *tells* the factory to remove something, it is removed
+(L26), after L7's grep. → `course-module-ux`
 
 **L9 · Edit; do not regenerate.** Freeze stable artefacts and patch them. → `course-factory`
 
@@ -107,7 +111,8 @@ mechanics, task presentation, navigation, CSS/JS, hierarchy, composition.
 
 An existing visual is *evidence of a teaching decision*: preserve the decision, rebuild the
 implementation. "The HTML works" is not an argument for keeping it, and a module's delivery is
-classified on quality, never on validity. → `course-factory` (`retrofit/`)
+classified on quality, never on validity. The operator's request in chat is the explicit
+authorisation (L26). → `course-factory` (`retrofit/`)
 
 **L19 · COURSE_LANGUAGE is declared, and the operator's language is not it.**
 Mandatory in every mode. Course-facing output — slides, tasks, handout, assessment, feedback,
@@ -206,7 +211,9 @@ evidence, never by judging the code: a marker the expert left, the factory's own
 commit the factory did not author — and if none of those exist, **ask**. "I cannot prove it was
 touched" is never "it was untouched". A protected region is locked content: restyle it, never
 rewrite it, and where it breaks another law name the law and propose the fix rather than applying
-it. An expert who finds their change quietly corrected stops making changes.
+it. An expert who finds their change quietly corrected stops making changes. A protected region
+is protected from the factory, never from the operator: when they ask for a change there, it is made
+(L26).
 → `course-factory` (`retrofit/scripts/detect_expert_edits.py`, `retrofit/knowledge/expert-edits.json`)
 
 ---
@@ -226,8 +233,62 @@ what a stylesheet is.
 
 ---
 
-**All twenty-five laws now have an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; before that they depended on the operator remembering them.
+## Phase 5 — the owner's decision record (2026-09-30)
+
+**Where any older rule disagrees with one of these, this one wins**, from 2.12.0 on, before the step
+that builds each one out has landed. The full text of each is in
+`plugin/skills/course-factory/references/laws-in-full.md` — inside the plugin, because this `docs/`
+folder is not installed with it.
+
+**L26 · The operator's request wins, and "the style" means the brand system only.** Fixed: brand
+colours, typography, logo use, and the shell, tokens, components, navigation and tablet system.
+Everything else a colleague asks for — content, structure, emphasis, number of slides, examples,
+visuals, tasks, wording — is done, never refused as "not in the style". Five hard limits only: the
+brand · the programme and its Main ILOs · the official hours · no source, no maritime claim (a fact
+the operator states is a source) · the offline tablet. Hitting one: one or two plain sentences why,
+the closest option that works, then do it. → `course-factory` (`SKILL.md`, `retrofit/knowledge/routing.json`
+edit mode, `content-lock.json`, `expert-edits.json`)
+
+**L27 · Three test levels, and only the final assessment is graded.** Self-check in the presentation
+and the module check at the end of every module are **ungraded**; the final assessment is the only
+graded test. One task per screen, Next → Next. The module check still waits for the instructor's
+unlock; the instructor sees done / not done and the result as information — never pass/fail, never
+red. → `course-task-ux` (built out in step 6)
+
+**L28 · Who the course is for, and what the school has.** `NEW_ENTRANT` or `EXPERIENCED`, declared at
+intake, changes the build: new entrants get more explanation, more screens, more worked examples;
+experienced get shorter theory anchored in real incidents and more scenario tasks. The course
+language stays fully professional either way. Every instrument and simulator in the IMO model course
+is assumed available. → `course-factory` (steps 2, 7)
+
+**L29 · The words are approved before the HTML.** A word-for-word content script per module — every
+slide's exact text, its planned visual, instructor notes, every question with answer and feedback —
+approved by the operator before any HTML; the built slides then say exactly that. → `course-factory`
+(step 5)
+
+**L30 · Module 1 is a pilot.** Built by five roles and approved before any other module is built;
+then the rest may run in parallel, each with its own script and review STOP. → `course-factory`
+`orchestration/` (step 10)
+
+**L31 · Ask like a colleague, not like a form.** No "needs SME review" spam. Real expert questions are
+batched as one pop-up with options at the next STOP, then work continues. Honesty markers live in
+`factory-notes.md`, never on a slide, and never stop the work. → `course-factory`
+
+**L32 · The factory remembers.** `COURSE_STATE.md` at the end of every stage; every operator
+correction in `FEEDBACK_LOG.md`; a pattern file offered when the operator is happy — guidance for
+later courses, never law. → `course-factory` (step 3)
+
+**L33 · Pictures: find first, keep what teaches, never invent what a trainee must recognise.**
+KB → old course → source files → internet → authored → generated. Legit old schematics are kept.
+Textbook figures are redrawn technically identical, credited "after <book>" and listed for a licence
+check. Equipment a trainee must recognise is never an AI image: an accurate schematic, and the
+"photos to take at Novikontas" list. ICS/SIGTTO "not cleared" stays out. → `course-visuals` (step 8)
+
+---
+
+**All thirty-three laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L33 are enforced first through `course-factory/SKILL.md`'s
+"Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:
 `plugin/skills/course-factory/org/ORG_DEPENDENCIES.md`.

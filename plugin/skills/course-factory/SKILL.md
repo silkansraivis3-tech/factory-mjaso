@@ -33,6 +33,41 @@ routes. It does not itself write screens, tasks, or content.
 
 ---
 
+## The operator's request wins — L26
+
+**"The style" means the Novikontas brand system only** — brand colours, typography, logo use, and
+the shell, tokens, components, navigation and tablet system it is built into. Anything a colleague
+asks for about content, structure, emphasis, number of slides, examples, visuals, tasks or wording
+is **done**: never refused, never watered down, never quietly ignored as "not in the style". Their
+request in chat is the explicit authorisation L18 asks for, and it reaches expert-edited regions
+too (L24 protects an expert's change from the factory, not from the operator).
+
+Only five limits are hard: **the brand · the programme and its Main ILOs (L1, L2) · the official
+hours (L1, L3) · no source, no maritime claim (L4) · the offline tablet (L6)**. A fact the operator
+states is a source — use it, and record it as theirs. When a request truly hits a hard limit: one
+or two plain sentences why, the closest option that works, and then do that. Every other "never"
+in this factory governs the factory's own choices, not the operator's requests.
+
+## Owner decisions in force — Phase 5
+
+Decided 2026-09-30. **Where an older rule anywhere in this factory disagrees with a row below, the
+row wins** — even before its step has been built out. Full text: `references/laws-in-full.md`.
+
+| | The rule | Built out in |
+|---|---|---|
+| **L27** | Three test levels on the tablet: self-checks and the **module check are ungraded**; the **final assessment is the only graded test**. The module check still waits for the instructor's unlock; the instructor sees done / not done and the result as information, never pass/fail or red | step 6 |
+| **L28** | Course type `NEW_ENTRANT` or `EXPERIENCED` is declared at intake and shapes the build (new entrants: more explanation, more screens, more worked examples). Every instrument and simulator in the IMO model course is assumed available — never asked | steps 2, 7 |
+| **L29** | Before any HTML, a word-for-word **content script** per module is approved by the operator; the slides then say exactly that | step 5 |
+| **L30** | **Module 1 is a pilot**, built by five roles and approved before any other module is built | step 10 |
+| **L31** | Ask like a colleague: real expert questions batched as **one pop-up with options** at the next STOP, then carry on. No "needs SME review" spam. Honesty markers live in `factory-notes.md`, never on a slide, never a reason to stop; "next" at a STOP ratifies what it showed | now |
+| **L32** | `COURSE_STATE.md` updated at the end of every stage; every operator correction in `FEEDBACK_LOG.md`; a pattern file offered when the operator is happy | step 3 |
+| **L33** | Pictures: KB → old course → source files → internet → authored → generated; keep legit old schematics; textbook figures redrawn **technically identical**, credited "after <book>", listed in `factory-notes.md`; equipment a trainee must recognise is **never** an AI image — schematic plus the "photos to take at Novikontas" list | step 8 |
+
+Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
+predict-then-reveal, worked example then own attempt. More practice than theory; theory never removed.
+
+---
+
 ## Mode first, then read one lane
 
 | Mode | You are asked to | Read |
@@ -40,6 +75,7 @@ routes. It does not itself write screens, tasks, or content.
 | **plan** | turn an accredited programme into a module set with hours that add up | `hours/GUIDE.md` |
 | **retrofit** | upgrade, redesign, modernise or "make presentable" material that **already exists** | `retrofit/GUIDE.md` |
 | **preview** | let a colleague SEE the course — "how does it look", "let me review it", "open it in the browser" | `course-tablet-publisher` → `references/preview-and-approval.md` |
+| **edit** | make the content or structure change the operator named — add, remove, split, merge, reword, keep, more examples. **Do it** (L26) | `retrofit/knowledge/routing.json` § edit_triggers |
 | **restyle** | make one **narrow** cosmetic change and nothing else | `retrofit/knowledge/routing.json` § restyle |
 | **ship** | put an **approved** course onto the trainee and instructor terminals | `tablet/GUIDE.md`, and `course-tablet-publisher` owns the act |
 | **audit** | check an existing course against the programme and the terminals | `coverage/GUIDE.md`, then both lanes' verify sections |
@@ -172,13 +208,15 @@ technical meaning, programme requirements, ILOs and Sub-ILOs, official hours, as
 intended practical exercises, course terminology, source-supported facts, COURSE_LANGUAGE. Free:
 screen count and order, HTML, layouts, density, visuals, animation, interaction, navigation,
 CSS/JS, composition. An existing visual is evidence of a teaching decision — preserve the
-decision, rebuild the implementation.
+decision, rebuild the implementation. The operator's request in chat **is** the explicit
+authorisation (L26).
 
 **L24 · Where the expert has already changed something, that change is content.**
 `retrofit/knowledge/expert-edits.json` and `retrofit/scripts/detect_expert_edits.py`. Decided from
 evidence — a marker the expert left, the factory's build record, a commit the factory did not
 author — and if none exist, **ask**. A protected region is restyled, never rewritten; where it
-breaks another law, name the law and propose the fix in the report — do not apply it.
+breaks another law, name the law and propose the fix in the report — do not apply it. It is
+protected from the factory, never from the operator: when they ask for a change there, make it (L26).
 
 **L21 · The production Android application is a publish target, not a workspace.** READ ONLY
 without a person's own approval for that named course and version: *"Approved. Publish this
