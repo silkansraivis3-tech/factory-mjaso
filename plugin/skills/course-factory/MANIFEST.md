@@ -209,6 +209,13 @@ Processor, was unknown to the factory.
   1–3 seconds; both knowledge bases were fingerprinted before and after and did not change.
 - The first matching rules grouped LNG with LPG, two numbered exercises and the two IMO model
   courses; the real run caught all three before they reached a test, and `test_kb.py` now pins them.
+- **2.13.1 — `find`.** The operator gives a course folder, not a knowledge-base path, and the intake
+  rule said "the folder and its sub-folders" while the script checked one folder. `find` walks the
+  course folder, its sub-folders and one level up, recognises each knowledge base by its files, never
+  walks inside one, and writes nothing; several found become one ready question. Tested read-only on
+  the owner's pilot folder (`Desktop\mjaso-factory-test`): one Course Source Processor knowledge base,
+  47 sources, found from the folder and from its `old_course` sub-folder; the folder was fingerprinted
+  before and after and did not change.
 
 ## 5 · Known gaps / before this goes live
 

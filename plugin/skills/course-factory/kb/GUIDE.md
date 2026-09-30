@@ -15,6 +15,18 @@ are over a megabyte. Search, then read the pieces the search returns.
 
 ## At intake
 
+First find it — the operator gives a course folder, not a knowledge-base path:
+
+```
+python kb/scripts/kb_tool.py find <course folder>
+```
+
+It looks in the course folder, every sub-folder and one level up, recognises each knowledge base by
+its files, never walks inside one, and **writes nothing**. One found: use it. Several: `--json` gives
+a ready pop-up question, "which one is this course's?". None: ask where it is in the intake pop-up.
+
+Then sort its sources:
+
 ```
 python kb/scripts/kb_tool.py sources <knowledge base> --course <course folder>
 ```

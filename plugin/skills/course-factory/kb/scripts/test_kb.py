@@ -232,6 +232,34 @@ def main():
             check("a course folder inside the knowledge base is refused", code == 2 and not os.path.exists(inner), out)
             check("nothing inside the knowledge base changed", snapshot(kb) == before)
 
+        print("\n-- find (2.13.1): every knowledge base, by its files, writing nothing")
+        course = os.path.join(tmp, "a_course")
+        os.makedirs(os.path.join(course, "materials", "deep"))
+        build_csp(os.path.join(course, "materials"))            # a_course/materials/KNOWLEDGE_BASE
+        build_docling(tmp)                                       # knowledge_base right beside a_course
+        before_all = snapshot(tmp)
+        code, out = run("find", course, "--json")
+        r = json.loads(out)
+        paths = [os.path.normcase(k["path"]) for k in r["found"]]
+        check("a knowledge base in a sub-folder is found", code == 0 and
+              os.path.normcase(os.path.join(course, "materials", "KNOWLEDGE_BASE")) in paths, out)
+        check("... and one beside the course folder (one level up), but nothing further away",
+              len(r["found"]) == 2 and os.path.normcase(os.path.join(tmp, "knowledge_base")) in paths, [k["path"] for k in r["found"]])
+        check("several found -> one ready question with an option each", r.get("question") and
+              len(r["question"]["options"]) == 2 and len(r["question"]["header"]) <= 12, r.get("question"))
+        check("it never walks inside a knowledge base",
+              not any("sources" in os.path.normcase(p).split(os.sep) for p in paths), paths)
+        code, out = run("find", os.path.join(course, "materials", "deep"), "--json")
+        check("from a sub-folder, the knowledge base next to it is found (one level up)",
+              any(p.endswith(os.path.normcase(os.path.join("materials", "KNOWLEDGE_BASE"))) for p in
+                  [os.path.normcase(k["path"]) for k in json.loads(out)["found"]]), out)
+        empty = os.path.join(tmp, "nothing", "here")
+        os.makedirs(empty)
+        code, out = run("find", empty)
+        check("none found -> it says the question goes into the intake pop-up", code == 1 and "intake pop-up" in out, out)
+        os.rmdir(empty); os.rmdir(os.path.dirname(empty))
+        check("find wrote nothing anywhere", snapshot(tmp) == before_all)
+
         print("\n-- not a knowledge base")
         code, out = run("detect", tmp)
         check("a plain folder is refused plainly", code == 2, out)

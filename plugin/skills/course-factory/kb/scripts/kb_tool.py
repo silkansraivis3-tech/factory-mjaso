@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Read a course knowledge base - either kind - without ever writing into it.
 
+    kb_tool.py find    <course folder> [--json]
     kb_tool.py detect  <kb folder>
     kb_tool.py sources <kb folder> --course <course folder> [--json]
     kb_tool.py decide  <course folder> --keep "<source path>" [--keep ...] [--different "<group id>" ...]
@@ -20,6 +21,8 @@ own tool - the Course Source Processor - was unknown to it. Both are read here, 
                             megabyte and is never read whole.
 
 WHAT IT DOES
+  find      every knowledge base in the course folder, its sub-folders and one level up - by its
+            files, never by its name. Writes nothing. One found: used. Several: a ready question. (2.13.1)
   sources   lists every source; groups EXACT duplicates (same file content - cited once, no
             question needed) and LIKELY EDITIONS of one publication (MARPOL 2022 beside an older
             MARPOL; "SIGGTO LGHP (4th)" beside "SIGTTO liquified gas handling principles"). For
@@ -444,6 +447,86 @@ def cmd_search(kb, q, course, top, keep_all):
     return 0
 
 
+# ------------------------------------------------------------------ find
+SKIP_DIRS = {".git", "node_modules", "__pycache__", "_factory", ".venv", "venv", "$recycle.bin"}
+
+
+def kb_summary(path, fmt):
+    try:
+        if fmt == "course_source_processor":
+            m = load_json(os.path.join(path, "SOURCE_MANIFEST.json"))
+            n = m.get("source_count") or len(m.get("sources") or [])
+        else:
+            n = len(load_json(os.path.join(path, "00_INDEX", "SOURCE_MANIFEST.json")).get("sources") or {})
+    except (OSError, ValueError):
+        n = None
+    return {"path": os.path.abspath(path), "format": fmt, "sources": n}
+
+
+def find_kbs(folder, max_depth=5, up=1):
+    """Every knowledge base in the folder, its sub-folders, and `up` levels above. Read-only."""
+    found, seen = [], set()
+
+    def walk(top, depth_limit, exclude=None):
+        top_depth = os.path.abspath(top).rstrip("\\/").count(os.sep)
+        for dirpath, dirnames, _ in os.walk(top):
+            here = os.path.abspath(dirpath)
+            if exclude and os.path.normcase(here) == os.path.normcase(exclude):
+                dirnames[:] = []
+                continue
+            fmt = detect(here)
+            if fmt:
+                key = os.path.normcase(here)
+                if key not in seen:
+                    seen.add(key)
+                    found.append(kb_summary(here, fmt))
+                dirnames[:] = []                      # never walk inside a knowledge base
+                continue
+            depth = here.rstrip("\\/").count(os.sep) - top_depth
+            dirnames[:] = [d for d in dirnames if d.lower() not in SKIP_DIRS and not d.startswith(".")] \
+                if depth < depth_limit else []
+
+    walk(folder, max_depth)
+    above, prev = os.path.abspath(folder), None
+    for _ in range(up):
+        prev, above = above, os.path.dirname(above)
+        if not above or above == prev:
+            break
+        walk(above, 1, exclude=prev)                  # the folder above and its direct sub-folders only
+    return found
+
+
+def cmd_find(folder, as_json):
+    if not os.path.isdir(folder):
+        print("Stopped - that folder does not exist:\n    %s" % folder)
+        return 2
+    kbs = find_kbs(folder)
+    result = {"looked_in": os.path.abspath(folder), "found": kbs}
+    if len(kbs) > 1:
+        result["question"] = {
+            "header": "Sources", "multiSelect": False,
+            "question": "More than one knowledge base was found. Which one is this course's?",
+            "options": [{"label": os.path.basename(k["path"]) or k["path"],
+                         "description": "%s - %s sources - %s" % (
+                             {"course_source_processor": "Course Source Processor", "docling": "docling"}[k["format"]],
+                             k["sources"] if k["sources"] is not None else "?", k["path"])} for k in kbs[:4]]}
+    if as_json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if kbs else 1
+    if not kbs:
+        print("No knowledge base was found in\n    %s\n  or its sub-folders, or one level up. It goes into the intake pop-up as\n"
+              "  \"Where is the knowledge base for this course?\"" % os.path.abspath(folder))
+        return 1
+    print("Found %d knowledge base(s) - nothing was written anywhere:\n" % len(kbs))
+    for k in kbs:
+        print("  - %s\n      %s · %s sources" % (k["path"], {"course_source_processor": "Course Source Processor",
+                                                             "docling": "docling (older)"}[k["format"]],
+                                               k["sources"] if k["sources"] is not None else "?"))
+    print("\n  %s" % ("One found - it is used, no question needed." if len(kbs) == 1 else
+                      "More than one - the intake pop-up asks which is this course's (the question is ready with --json)."))
+    return 0
+
+
 # ------------------------------------------------------------------ plain messages
 def no_kb(kb):
     print("Stopped - this folder is not a knowledge base the factory can read:\n    %s\n"
@@ -463,6 +546,7 @@ def refuse_inside(course, kb):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
+    fi = sub.add_parser("find"); fi.add_argument("folder"); fi.add_argument("--json", action="store_true")
     d = sub.add_parser("detect"); d.add_argument("kb")
     s = sub.add_parser("sources"); s.add_argument("kb"); s.add_argument("--course", required=True); s.add_argument("--json", action="store_true")
     c = sub.add_parser("decide"); c.add_argument("course"); c.add_argument("--keep", action="append", default=[])
@@ -470,6 +554,8 @@ def main(argv=None):
     q = sub.add_parser("search"); q.add_argument("kb"); q.add_argument("query"); q.add_argument("--course", required=True)
     q.add_argument("--top", type=int, default=12); q.add_argument("--all", action="store_true")
     a = ap.parse_args(argv)
+    if a.cmd == "find":
+        return cmd_find(a.folder, a.json)
     if a.cmd == "detect":
         fmt = detect(a.kb)
         print(fmt or "not a knowledge base")
