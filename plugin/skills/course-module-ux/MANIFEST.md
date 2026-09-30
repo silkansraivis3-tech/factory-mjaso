@@ -175,7 +175,13 @@ in `gas-basic-module-ux/assets/` as the only copies, and the stub says so.
 
 ## 5 · Known gaps / before this goes live
 
-**1 · `assets/gb_run.css` is brand-coupled, not course-coupled.** It carries ~37 distinct
+**1 · RESOLVED 2.11.2 (2026-09-30, Phase 5 step 11c).** Every colour `gb_run.css` paints with is now
+a named custom property in its own `:root` (`--run-*`), with exactly the text that used to be
+inline; the five that equal a canonical token follow it (`--run-navy: var(--navy, #0A2463)`), so
+the file still works standalone. Verified exactly as this entry asked: before/after computed styles
+and screenshots in headless Chrome, identical. A non-Novikontas course now swaps values in one
+block. The original entry, kept for the record: **`assets/gb_run.css` is brand-coupled, not
+course-coupled.** It carries ~37 distinct
 Novikontas colour literals inline rather than as custom properties. Course-agnostic it is;
 brand-agnostic it is not. For a non-Novikontas course the six load-bearing values to swap are
 `#0A2463` (navy), `#0A182E`/`#06182b` (deep navy), `#2EB6F8` (screen blue), `#E9A51E` (amber,

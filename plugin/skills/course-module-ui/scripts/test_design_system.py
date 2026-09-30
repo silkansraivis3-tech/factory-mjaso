@@ -132,6 +132,15 @@ def main():
         check("install refuses a folder inside the Android project",
               code == 2 and not os.path.exists(os.path.join(a, "assets")), out)
 
+        print("\n-- the factory's own files pass its own strict look check (2.11.2)")
+        fresh = os.path.join(tmp, "course", "modules", "m2")
+        os.makedirs(fresh)
+        tool("install", fresh)
+        p = subprocess.run([sys.executable, os.path.join(HERE, "audit_ui.py"), "--strict", fresh],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        check("audit_ui.py --strict finds no defect in a freshly set-up module",
+              p.returncode == 0 and "0 defects" in p.stdout, p.stdout[-600:])
+
         print("\n-- the install record never ships to a tablet")
         sys.path.insert(0, os.path.join(SKILLS, "course-tablet-publisher", "scripts"))
         import gates

@@ -41,6 +41,22 @@
    NOT HERE course-specific technical drawings. Those belong to the course.
    ========================================================================== */
 
+:root{
+  /* Phase 5 step 11c (2.11.2): every colour this file paints with, named. Values are the
+     exact text that used to be written inline, so nothing renders differently. Names that
+     equal a canonical token follow it, with the old value as fallback so the file still
+     works on its own. */
+  --cmp-amber-45: rgba(233,165,30,.45);
+  --cmp-blue-1: rgba(46,182,248,.1);
+  --cmp-credit-text: #B9CBDD;
+  --cmp-night-72: rgba(6,14,28,.72);
+  --cmp-on-amber: #22190A;
+  --cmp-white-035: rgba(255,255,255,.035);
+  --cmp-white-04: rgba(255,255,255,.04);
+  --cmp-white-16: rgba(255,255,255,.16);
+}
+
+
 /* ==========================================================================
    1 · OPENER — one strong statement, vertically centred, nothing else.
    The module cover, a day opener, a block opener, a question the room is
@@ -212,12 +228,12 @@
 .photo-copy.right{left:auto;right:min(7vmin,86px)}
 .photo-copy h2{margin:0;font-size:clamp(24px,4.4vmin,50px);color:var(--white);line-height:1.1}
 .photo-copy .lead{margin-top:1.4vmin;color:#C9DAEB}
-.photo-badge{display:inline-block;background:var(--amber);color:#22190A;font-weight:700;
+.photo-badge{display:inline-block;background:var(--amber);color:var(--cmp-on-amber);font-weight:700;
   border-radius:6px;padding:.42em .95em;font-size:clamp(12.5px,1.4vmin,18.8px);
   letter-spacing:.14em;text-transform:uppercase;margin-bottom:1.6vmin}
 /* the credit clears #chrome, which owns the bottom 60px and never goes away */
 .credit{position:absolute;right:12px;bottom:max(70px,calc(min(3.4vmin,30px) + 10px));z-index:4;
-  background:rgba(6,14,28,.72);color:#B9CBDD;font-size:clamp(12.5px,1.12vmin,15.4px);
+  background:var(--cmp-night-72);color:var(--cmp-credit-text);font-size:clamp(12.5px,1.12vmin,15.4px);
   padding:.42em .8em;border-radius:5px;max-width:min(52vw,620px);line-height:1.35}
 
 /* ==========================================================================
@@ -244,7 +260,7 @@
 .slide:not(.dark):not(.photo) .act-inst{color:var(--dim-l)}
 .act-steps{display:flex;gap:min(2.4vmin,26px);margin-top:4vmin;flex-wrap:wrap;justify-content:center}
 .act-step{border:1px solid var(--line-d);border-radius:var(--r-m);padding:1.1em 1.4em;
-  min-width:180px;background:rgba(255,255,255,.035);text-align:left}
+  min-width:180px;background:var(--cmp-white-035);text-align:left}
 .slide:not(.dark):not(.photo) .act-step{border-color:var(--line-l);background:var(--white)}
 .act-step .s{color:var(--blue);font-weight:700;font-size:clamp(12.5px,1.4vmin,17.4px);
   letter-spacing:.18em;text-transform:uppercase}
@@ -261,7 +277,7 @@
 .act-now b{color:var(--white);font-weight:700}
 .slide:not(.dark):not(.photo) .act-now b{color:var(--navy)}
 .act-now code{font-family:var(--mono);background:var(--amber-wash-d);color:var(--amber);
-  border:1px solid rgba(233,165,30,.45);border-radius:6px;padding:0 .4em;
+  border:1px solid var(--cmp-amber-45);border-radius:6px;padding:0 .4em;
   font-size:max(12.5px,.94em);font-weight:700;white-space:nowrap}
 .slide:not(.dark):not(.photo) .act-now code{background:var(--amber-wash-l);color:var(--amber-ink)}
 
@@ -332,7 +348,7 @@ h2.bigcall{font-size:clamp(28px,6vmin,86px);line-height:1.02}
    chrome so it reads as a conclusion rather than as the next paragraph.
    ========================================================================== */
 .takeaway{position:absolute;left:min(7vmin,86px);right:min(7vmin,86px);bottom:max(72px,6.4vmin);
-  border-left:3px solid var(--amber);padding:.85em 1.2em;background:rgba(255,255,255,.04);
+  border-left:3px solid var(--amber);padding:.85em 1.2em;background:var(--cmp-white-04);
   border-radius:0 var(--r-s) var(--r-s) 0;font-size:clamp(12.5px,1.75vmin,24.1px);
   color:var(--dim-d);margin:0}
 .takeaway .tk{color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:.15em;
@@ -438,7 +454,7 @@ figure{margin:0}
    ========================================================================== */
 .mediabar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;margin:0}
 .mediabar .fbtn{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line-d);
-  background:rgba(46,182,248,.1);color:var(--txt-d);border-radius:10px;padding:.7em 1.25em;
+  background:var(--cmp-blue-1);color:var(--txt-d);border-radius:10px;padding:.7em 1.25em;
   font-size:clamp(12.5px,1.62vmin,21.4px);font-weight:600;cursor:pointer;min-height:44px;
   font-family:var(--font)}
 .slide:not(.dark) .mediabar .fbtn{border-color:var(--line-l);background:var(--blue-wash-l);
@@ -446,7 +462,7 @@ figure{margin:0}
 .mediabar .fbtn.primary{background:var(--navy);color:var(--white);border-color:var(--navy)}
 .mediabar .fbtn:active{transform:translateY(1px)}
 .dots{display:flex;gap:6px}
-.dots i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.16);display:block;
+.dots i{width:9px;height:9px;border-radius:50%;background:var(--cmp-white-16);display:block;
   transition:background .3s ease}
 .slide:not(.dark) .dots i{background:var(--line-l)}
 .dots i.on{background:var(--blue)}

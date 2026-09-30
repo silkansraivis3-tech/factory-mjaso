@@ -2,6 +2,72 @@
    Visual language is unchanged: Novikontas navy, deep navy, screen blue,
    amber as accent only. What changes is the behaviour, not the look. */
 
+:root{
+  /* Phase 5 step 11c (2.11.2): every colour this file paints with, named. Values are the
+     exact text that used to be written inline, so nothing renders differently. Names that
+     equal a canonical token follow it, with the old value as fallback so the file still
+     works on its own. */
+  --run-amber: var(--amber, #E9A51E);
+  --run-amber-16: rgba(233,165,30,.16);
+  --run-amber-2: rgba(233,165,30,.2);
+  --run-amber-hover: #f2b53c;
+  --run-bar-where: #9fc6f5;
+  --run-blue: var(--blue, #2EB6F8);
+  --run-blue-1: rgba(46,182,248,.1);
+  --run-blue-14: rgba(46,182,248,.14);
+  --run-blue-16: rgba(46,182,248,.16);
+  --run-blue-2: rgba(46,182,248,.2);
+  --run-blue-22: rgba(46,182,248,.22);
+  --run-blue-28: rgba(46,182,248,.28);
+  --run-blue-3: rgba(46,182,248,.3);
+  --run-blue-hover: #5cc7fa;
+  --run-deep-28: rgba(10,24,46,.28);
+  --run-fin-text: #c9e9dc;
+  --run-fire: #ff8177;
+  --run-fire-09: rgba(255,129,119,.09);
+  --run-fire-14: rgba(255,129,119,.14);
+  --run-fire-18: rgba(255,129,119,.18);
+  --run-fire-22: rgba(255,129,119,.22);
+  --run-fire-32: rgba(255,129,119,.32);
+  --run-fire-hover: #ff9a92;
+  --run-good: var(--good-d, #4fd6a0);
+  --run-good-14: rgba(79,214,160,.14);
+  --run-good-3: rgba(79,214,160,.3);
+  --run-heading: #eaf2f9;
+  --run-ink: var(--ink, #011111);
+  --run-label: #6e83a0;
+  --run-muted: #9fb4c8;
+  --run-navy: var(--navy, #0A2463);
+  --run-on-amber: #2b1f04;
+  --run-on-blue: #04222b;
+  --run-on-fire: #2b0f0c;
+  --run-resume-text: #dce8f5;
+  --run-say-bg: #f7fafd;
+  --run-say-line: #dbe5ee;
+  --run-say-text: #2c3f52;
+  --run-steps-text: #cfe0f2;
+  --run-warn-link: #ffd9d5;
+  --run-watch-text: #e8d7b0;
+  --run-what-bg: #eaf7ff;
+  --run-what-fire-bg: #fdeeec;
+  --run-what-fire-chip-line: #f0c4be;
+  --run-what-fire-line: #cf4f44;
+  --run-what-fire-text: #5e211a;
+  --run-what-fire-title: #8f2c22;
+  --run-what-line: #bfe0f5;
+  --run-what-strong: #06182b;
+  --run-what-text: #0d2b45;
+  --run-white: var(--white, #fff);
+  --run-white-04: rgba(255,255,255,.04);
+  --run-white-05: rgba(255,255,255,.05);
+  --run-white-1: rgba(255,255,255,.1);
+  --run-white-12: rgba(255,255,255,.12);
+  --run-white-22: rgba(255,255,255,.22);
+  --run-white-28: rgba(255,255,255,.28);
+  --run-white-34: rgba(255,255,255,.34);
+}
+
+
 /* ==================================================================
    THE BAR — on every page the runner opens.
    Light-page palette, because that is where content pages live.
@@ -10,24 +76,24 @@
   position:sticky; top:0; z-index:60;
   display:flex; align-items:center; gap:10px;
   padding:8px clamp(10px,3vw,22px);
-  background:#0A2463; color:#fff;
-  box-shadow:0 2px 14px rgba(10,24,46,.28);
+  background:var(--run-navy); color:var(--run-white);
+  box-shadow:0 2px 14px var(--run-deep-28);
 }
 .gbrun-bar .gbrun-b{
   display:inline-flex; align-items:center; gap:7px;
   min-height:48px; padding:0 16px; border-radius:999px;
   font-family:inherit; font-weight:700; font-size:clamp(12.5px,1.75vw,14.5px);
-  text-decoration:none; color:#fff;
-  background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.28);
+  text-decoration:none; color:var(--run-white);
+  background:var(--run-white-12); border:1px solid var(--run-white-28);
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
 }
-.gbrun-bar .gbrun-b:hover{background:rgba(255,255,255,.22);}
-.gbrun-bar .gbrun-b.next{background:#E9A51E; border-color:#E9A51E; color:#2b1f04;}
-.gbrun-bar .gbrun-b.next:hover{background:#f2b53c;}
+.gbrun-bar .gbrun-b:hover{background:var(--run-white-22);}
+.gbrun-bar .gbrun-b.next{background:var(--run-amber); border-color:var(--run-amber); color:var(--run-on-amber);}
+.gbrun-bar .gbrun-b.next:hover{background:var(--run-amber-hover);}
 .gbrun-bar .gbrun-where{
   flex:1; min-width:0; text-align:center;
   font-size:clamp(10.5px,1.5vw,12.5px); letter-spacing:.14em; text-transform:uppercase;
-  font-weight:700; color:#9fc6f5;
+  font-weight:700; color:var(--run-bar-where);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 @media (max-width:620px){
@@ -43,7 +109,7 @@
 .gbrun{margin-top:22px;}
 
 .gbrun-rail{
-  height:6px; border-radius:99px; background:rgba(46,182,248,.14); overflow:hidden;
+  height:6px; border-radius:99px; background:var(--run-blue-14); overflow:hidden;
 }
 .gbrun-rail i{
   display:block; height:100%; width:0; border-radius:99px;
@@ -54,7 +120,7 @@
 .gbrun-card{
   margin-top:16px;
   background:linear-gradient(180deg,#10264F,#0C1E3A);
-  border:1px solid rgba(46,182,248,.16); border-radius:20px;
+  border:1px solid var(--run-blue-16); border-radius:20px;
   padding:clamp(18px,3.4vw,30px);
 }
 .gbrun-meta{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
@@ -62,16 +128,16 @@
   font-size:11px; letter-spacing:.16em; text-transform:uppercase; font-weight:700;
   border-radius:999px; padding:5px 11px;
 }
-.gbrun-day{color:#6e83a0; border:1px solid rgba(46,182,248,.16);}
-.gbrun-code{background:#2EB6F8; color:#04222b; font-family:"Cascadia Code",Consolas,monospace;}
-.gbrun-min{color:#9fb4c8; border:1px solid rgba(46,182,248,.16);}
-.gbrun-tag{background:rgba(233,165,30,.16); color:#E9A51E;}
-.gbrun-tag.fire{background:rgba(255,129,119,.14); color:#ff8177;}
-.gbrun-tag.marked{background:rgba(79,214,160,.14); color:#4fd6a0;}
+.gbrun-day{color:var(--run-label); border:1px solid var(--run-blue-16);}
+.gbrun-code{background:var(--run-blue); color:var(--run-on-blue); font-family:"Cascadia Code",Consolas,monospace;}
+.gbrun-min{color:var(--run-muted); border:1px solid var(--run-blue-16);}
+.gbrun-tag{background:var(--run-amber-16); color:var(--run-amber);}
+.gbrun-tag.fire{background:var(--run-fire-14); color:var(--run-fire);}
+.gbrun-tag.marked{background:var(--run-good-14); color:var(--run-good);}
 
 .gbrun-card h2{
   margin:14px 0 0; font-size:clamp(21px,3.6vw,34px); line-height:1.15;
-  letter-spacing:-.015em; color:#eaf2f9;
+  letter-spacing:-.015em; color:var(--run-heading);
 }
 
 /* the one button that matters */
@@ -79,20 +145,20 @@
   display:flex; align-items:center; justify-content:center; gap:10px;
   margin-top:18px; min-height:62px; padding:14px 22px;
   border-radius:16px; text-decoration:none; text-align:center;
-  background:#2EB6F8; color:#04222b;
+  background:var(--run-blue); color:var(--run-on-blue);
   font-weight:700; font-size:clamp(15px,2.4vw,20px); line-height:1.25;
-  box-shadow:0 10px 26px rgba(46,182,248,.22);
+  box-shadow:0 10px 26px var(--run-blue-22);
   touch-action:manipulation; -webkit-tap-highlight-color:transparent;
 }
-.gbrun-open:hover{background:#5cc7fa;}
-.gbrun-open.fire{background:#ff8177; color:#2b0f0c; box-shadow:0 10px 26px rgba(255,129,119,.22);}
-.gbrun-open.fire:hover{background:#ff9a92;}
-.gbrun-open.doc{background:#E9A51E; color:#2b1f04; box-shadow:0 10px 26px rgba(233,165,30,.2);}
-.gbrun-open.doc:hover{background:#f2b53c;}
+.gbrun-open:hover{background:var(--run-blue-hover);}
+.gbrun-open.fire{background:var(--run-fire); color:var(--run-on-fire); box-shadow:0 10px 26px var(--run-fire-22);}
+.gbrun-open.fire:hover{background:var(--run-fire-hover);}
+.gbrun-open.doc{background:var(--run-amber); color:var(--run-on-amber); box-shadow:0 10px 26px var(--run-amber-2);}
+.gbrun-open.doc:hover{background:var(--run-amber-hover);}
 .gbrun-noopen{
   margin-top:18px; min-height:56px; display:flex; align-items:center;
   padding:14px 18px; border-radius:16px;
-  border:1px dashed rgba(46,182,248,.3); color:#9fb4c8;
+  border:1px dashed var(--run-blue-3); color:var(--run-muted);
   font-size:clamp(13.5px,2vw,16px); line-height:1.45;
 }
 
@@ -103,14 +169,14 @@
 }
 .gbrun-facts dt{
   font-size:10.5px; letter-spacing:.18em; text-transform:uppercase; font-weight:700;
-  color:#6e83a0; white-space:nowrap;
+  color:var(--run-label); white-space:nowrap;
 }
-.gbrun-facts dt.fin{color:#4fd6a0;}
-.gbrun-facts dt.watch{color:#E9A51E;}
-.gbrun-facts dd{color:#9fb4c8; font-size:clamp(13.5px,2vw,16.5px); line-height:1.5;}
-.gbrun-facts dd b{color:#eaf2f9;}
-.gbrun-facts dd.fin{color:#c9e9dc;}
-.gbrun-facts dd.watch{color:#e8d7b0;}
+.gbrun-facts dt.fin{color:var(--run-good);}
+.gbrun-facts dt.watch{color:var(--run-amber);}
+.gbrun-facts dd{color:var(--run-muted); font-size:clamp(13.5px,2vw,16.5px); line-height:1.5;}
+.gbrun-facts dd b{color:var(--run-heading);}
+.gbrun-facts dd.fin{color:var(--run-fin-text);}
+.gbrun-facts dd.watch{color:var(--run-watch-text);}
 @media (max-width:560px){
   .gbrun-facts{grid-template-columns:1fr; gap:2px 0;}
   .gbrun-facts dt{margin-top:11px;}
@@ -120,13 +186,13 @@
 .gbrun-also a{
   display:inline-flex; align-items:center; min-height:44px;
   padding:8px 15px; border-radius:999px; text-decoration:none;
-  font-size:13px; font-weight:700; color:#eaf2f9;
-  background:rgba(46,182,248,.1); border:1px solid rgba(46,182,248,.3);
+  font-size:13px; font-weight:700; color:var(--run-heading);
+  background:var(--run-blue-1); border:1px solid var(--run-blue-3);
 }
-.gbrun-also a:hover{background:rgba(46,182,248,.2);}
-.gbrun-also a.warn{background:rgba(255,129,119,.09); border-color:rgba(255,129,119,.32);
-  color:#ffd9d5;}
-.gbrun-also a.warn:hover{background:rgba(255,129,119,.18);}
+.gbrun-also a:hover{background:var(--run-blue-2);}
+.gbrun-also a.warn{background:var(--run-fire-09); border-color:var(--run-fire-32);
+  color:var(--run-warn-link);}
+.gbrun-also a.warn:hover{background:var(--run-fire-18);}
 
 /* Back / Next */
 .gbrun-nav{
@@ -135,19 +201,19 @@
 .gbrun-n{
   min-height:56px; padding:0 24px; border-radius:999px; cursor:pointer;
   font-family:inherit; font-weight:700; font-size:clamp(14px,2vw,17px);
-  background:rgba(255,255,255,.05); color:#eaf2f9;
-  border:1px solid rgba(46,182,248,.28);
+  background:var(--run-white-05); color:var(--run-heading);
+  border:1px solid var(--run-blue-28);
   touch-action:manipulation; -webkit-tap-highlight-color:transparent;
 }
-.gbrun-n:hover{background:rgba(255,255,255,.1);}
+.gbrun-n:hover{background:var(--run-white-1);}
 .gbrun-n[disabled]{opacity:.3; pointer-events:none;}
 .gbrun-n.go{
-  margin-left:auto; background:#E9A51E; border-color:#E9A51E; color:#2b1f04;
+  margin-left:auto; background:var(--run-amber); border-color:var(--run-amber); color:var(--run-on-amber);
   padding:0 32px;
 }
-.gbrun-n.go:hover{background:#f2b53c;}
-.gbrun-count{font-size:13px; color:#6e83a0; font-weight:600;}
-.gbrun-count b{color:#eaf2f9;}
+.gbrun-n.go:hover{background:var(--run-amber-hover);}
+.gbrun-count{font-size:13px; color:var(--run-label); font-weight:600;}
+.gbrun-count b{color:var(--run-heading);}
 @media (max-width:520px){
   .gbrun-nav{flex-wrap:wrap;}
   .gbrun-count{order:3; width:100%; text-align:center;}
@@ -159,13 +225,13 @@
 .gbrun-dot{
   min-width:44px; min-height:44px; padding:0 10px; border-radius:11px; cursor:pointer;
   font-family:"Cascadia Code",Consolas,monospace; font-size:12.5px; font-weight:700;
-  background:rgba(255,255,255,.04); color:#6e83a0;
-  border:1px solid rgba(46,182,248,.14);
+  background:var(--run-white-04); color:var(--run-label);
+  border:1px solid var(--run-blue-14);
   touch-action:manipulation; -webkit-tap-highlight-color:transparent;
 }
-.gbrun-dot:hover{color:#eaf2f9;}
-.gbrun-dot.past{color:#4fd6a0; border-color:rgba(79,214,160,.3);}
-.gbrun-dot.on{background:#2EB6F8; border-color:#2EB6F8; color:#04222b;}
+.gbrun-dot:hover{color:var(--run-heading);}
+.gbrun-dot.past{color:var(--run-good); border-color:var(--run-good-3);}
+.gbrun-dot.on{background:var(--run-blue); border-color:var(--run-blue); color:var(--run-on-blue);}
 
 @media (prefers-reduced-motion:reduce){
   .gbrun-rail i{transition:none;}
@@ -178,29 +244,29 @@
    ================================================================== */
 .gb-what{
   margin:0 auto; max-width:1000px;
-  border:2px solid #2EB6F8; border-radius:16px; background:#eaf7ff;
+  border:2px solid var(--run-blue); border-radius:16px; background:var(--run-what-bg);
   padding:clamp(13px,2.6vw,20px) clamp(14px,3vw,24px);
 }
 .gb-what .wt{
   font-size:11px; letter-spacing:.2em; text-transform:uppercase;
-  color:#0A2463; font-weight:700;
+  color:var(--run-navy); font-weight:700;
 }
 .gb-what p{
-  margin-top:7px; color:#0d2b45; font-weight:600;
+  margin-top:7px; color:var(--run-what-text); font-weight:600;
   font-size:clamp(14.5px,2.2vw,19px); line-height:1.4;
 }
-.gb-what p b{color:#06182b;}
+.gb-what p b{color:var(--run-what-strong);}
 .gb-what .wnums{
   margin-top:11px; display:flex; gap:8px; flex-wrap:wrap;
 }
 .gb-what .wnums span{
-  font-size:12px; font-weight:700; color:#0A2463;
-  background:#fff; border:1px solid #bfe0f5; border-radius:999px; padding:5px 12px;
+  font-size:12px; font-weight:700; color:var(--run-navy);
+  background:var(--run-white); border:1px solid var(--run-what-line); border-radius:999px; padding:5px 12px;
 }
-.gb-what.fire{border-color:#cf4f44; background:#fdeeec;}
-.gb-what.fire .wt{color:#8f2c22;}
-.gb-what.fire p{color:#5e211a;}
-.gb-what.fire .wnums span{color:#8f2c22; border-color:#f0c4be;}
+.gb-what.fire{border-color:var(--run-what-fire-line); background:var(--run-what-fire-bg);}
+.gb-what.fire .wt{color:var(--run-what-fire-title);}
+.gb-what.fire p{color:var(--run-what-fire-text);}
+.gb-what.fire .wnums span{color:var(--run-what-fire-title); border-color:var(--run-what-fire-chip-line);}
 
 /* ==================================================================
    THE RESUME STRIP - on the entry screen, when the stored step is not 0.
@@ -208,45 +274,45 @@
    ================================================================== */
 .gbrun-resume{
   margin-top:12px; padding:12px 16px; border-radius:14px;
-  background:#0A2463; color:#fff;
+  background:var(--run-navy); color:var(--run-white);
   display:flex; align-items:center; gap:10px 14px; flex-wrap:wrap;
 }
 .gbrun-resume[hidden]{display:none;}
 .gbrun-resume .rt{
   font-size:10.5px; letter-spacing:.18em; text-transform:uppercase;
-  font-weight:700; color:#E9A51E; flex:0 0 auto;
+  font-weight:700; color:var(--run-amber); flex:0 0 auto;
 }
 .gbrun-resume .rw{
   flex:1 1 220px; font-size:clamp(12.5px,1.8vw,14.5px); font-weight:600;
-  line-height:1.45; color:#dce8f5;
+  line-height:1.45; color:var(--run-resume-text);
 }
 .gbrun-resume .rb{
   flex:0 0 auto; min-height:46px; padding:0 18px; border-radius:11px;
-  border:1.5px solid rgba(255,255,255,.34); background:transparent; color:#fff;
+  border:1.5px solid var(--run-white-34); background:transparent; color:var(--run-white);
   font-family:inherit; font-weight:700; font-size:clamp(12.5px,1.8vw,14px);
   touch-action:manipulation; -webkit-tap-highlight-color:transparent;
 }
-.gbrun-resume .rb:hover{background:rgba(255,255,255,.12); border-color:#fff;}
+.gbrun-resume .rb:hover{background:var(--run-white-12); border-color:var(--run-white);}
 
 /* the verbatim words for one step - closed until the instructor wants them */
-.gbrun-say{margin-top:12px;border:1px solid var(--gbr-line,#dbe5ee);border-radius:12px;
-  background:#f7fafd;}
+.gbrun-say{margin-top:12px;border:1px solid var(--gbr-line,var(--run-say-line));border-radius:12px;
+  background:var(--run-say-bg);}
 .gbrun-say > summary{list-style:none;cursor:pointer;min-height:48px;display:flex;
   align-items:center;gap:8px;padding:0 14px;font-weight:700;
-  font-size:clamp(12.5px,1.8vw,14.5px);color:var(--gbr-navy,#0A2463);
+  font-size:clamp(12.5px,1.8vw,14.5px);color:var(--gbr-navy,var(--run-navy));
   -webkit-tap-highlight-color:transparent;}
 .gbrun-say > summary::-webkit-details-marker{display:none;}
 .gbrun-say > summary::after{content:"\25be";margin-left:auto;font-size:15px;}
 .gbrun-say[open] > summary::after{content:"\25b4";}
-.gbrun-say > summary .n{background:var(--gbr-navy,#0A2463);color:#fff;border-radius:999px;
+.gbrun-say > summary .n{background:var(--gbr-navy,var(--run-navy));color:var(--run-white);border-radius:999px;
   min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;
   font-size:11.5px;}
 .gbrun-say ol{margin:0 16px 14px 34px;display:flex;flex-direction:column;gap:8px;}
-.gbrun-say li{font-size:clamp(13px,1.9vw,15.5px);line-height:1.5;color:#2c3f52;}
-.gbrun-say li b{color:#011111;}
+.gbrun-say li{font-size:clamp(13px,1.9vw,15.5px);line-height:1.5;color:var(--run-say-text);}
+.gbrun-say li b{color:var(--run-ink);}
 
 /* the step-list door, when the back button is busy naming somewhere else */
-.gbrun-bar .gbrun-b.steps{background:transparent;border:1px solid rgba(255,255,255,.28);
-  color:#cfe0f2;flex:0 0 auto;padding:0 14px;font-weight:600;}
-.gbrun-bar .gbrun-b.steps:hover{background:rgba(255,255,255,.1);color:#fff;}
+.gbrun-bar .gbrun-b.steps{background:transparent;border:1px solid var(--run-white-28);
+  color:var(--run-steps-text);flex:0 0 auto;padding:0 14px;font-weight:600;}
+.gbrun-bar .gbrun-b.steps:hover{background:var(--run-white-1);color:var(--run-white);}
 @media (max-width:520px){ .gbrun-bar .gbrun-b.steps{display:none;} }

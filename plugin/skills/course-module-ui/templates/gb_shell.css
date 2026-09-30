@@ -34,7 +34,22 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
 /* the brand mark used as a watermark on dark screens.
    A module supplies it by setting --na-mark to a data: URI; if it does not,
    the watermark simply does not paint. */
-:root{--na-mark:none}
+:root{--na-mark:none;
+  /* Phase 5 step 11c (2.11.2): every colour this file paints with, named. Values are the
+     exact text that used to be written inline, so nothing renders differently. Names that
+     equal a canonical token follow it, with the old value as fallback so the file still
+     works on its own. */
+  --shl-black-36: rgba(0,0,0,.36);
+  --shl-blue-07: rgba(46,182,248,.07);
+  --shl-deep-82: rgba(10,24,46,.82);
+  --shl-navy-6: rgba(10,36,99,.6);
+  --shl-navy-94: rgba(10,36,99,.94);
+  --shl-night-94: rgba(6,14,28,.94);
+  --shl-night-96: rgba(6,14,28,.96);
+  --shl-white-02: rgba(255,255,255,.02);
+  --shl-white-035: rgba(255,255,255,.035);
+  --shl-white-16: rgba(255,255,255,.16);
+}
 
 /* ==========================================================================
    LANDING — the branded front door
@@ -62,7 +77,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
 .landing-card{max-width:min(900px,93vw);text-align:center;padding:4vmin 4vmin 5vmin}
 .brand-chip{
   display:inline-flex;align-items:center;justify-content:center;background:var(--white);
-  border-radius:14px;padding:2.2vmin 3vmin;box-shadow:0 10px 34px rgba(0,0,0,.36);
+  border-radius:14px;padding:2.2vmin 3vmin;box-shadow:0 10px 34px var(--shl-black-36);
   margin-bottom:2.6vmin;
 }
 .brand-chip img,.brand-chip svg{width:clamp(120px,15vmin,182px);height:auto;display:block}
@@ -80,7 +95,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
 .landing-title em{font-style:normal;color:var(--blue)}
 .landing-meta{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:3vmin}
 .chip{
-  border:1px solid var(--line-d);background:rgba(46,182,248,.07);border-radius:999px;
+  border:1px solid var(--line-d);background:var(--shl-blue-07);border-radius:999px;
   padding:.55em 1.1em;font-size:clamp(12.5px,1.55vmin,20.1px);color:var(--dim-d);font-weight:600;
 }
 #startBtn{
@@ -88,7 +103,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
   background:var(--navy);color:var(--white);border:0;border-radius:14px;cursor:pointer;
   padding:1.05em 2.8em;font-size:clamp(15px,2.1vmin,29.5px);font-weight:700;
   letter-spacing:.12em;text-transform:uppercase;
-  box-shadow:0 14px 40px rgba(10,36,99,.6);transition:transform .16s ease,box-shadow .16s ease;
+  box-shadow:0 14px 40px var(--shl-navy-6);transition:transform .16s ease,box-shadow .16s ease;
   min-height:62px;min-width:min(420px,80vw);
 }
 #startBtn:active{transform:translateY(1px)}
@@ -102,7 +117,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
 .landing-note{
   margin:3.4vmin auto 0;max-width:640px;border:1px solid var(--line-d);border-radius:var(--r-m);
   padding:1.1em 1.3em;color:var(--faint-d);font-size:clamp(12.5px,1.42vmin,18.1px);line-height:1.55;
-  text-align:left;background:rgba(255,255,255,.02);
+  text-align:left;background:var(--shl-white-02);
 }
 .landing-note b{color:var(--dim-d)}
 
@@ -131,12 +146,12 @@ body:not(.dark-active) #blockTag{color:var(--faint-l)}
 #chrome.idle{opacity:.34}
 .cbtn{
   width:52px;height:52px;min-width:52px;border-radius:12px;
-  border:1px solid rgba(255,255,255,.16);
-  background:rgba(10,24,46,.82);color:var(--white);
+  border:1px solid var(--shl-white-16);
+  background:var(--shl-deep-82);color:var(--white);
   display:flex;align-items:center;justify-content:center;
   cursor:pointer;transition:background .15s ease,transform .15s ease;backdrop-filter:blur(6px);
 }
-body:not(.dark-active) .cbtn{background:rgba(10,36,99,.94);border-color:rgba(255,255,255,.1)}
+body:not(.dark-active) .cbtn{background:var(--shl-navy-94);border-color:rgba(255,255,255,.1)}
 .cbtn:active{transform:translateY(1px)}
 .cbtn svg{width:23px;height:23px;fill:currentColor;pointer-events:none}
 .cbtn[disabled]{opacity:.4;pointer-events:none}
@@ -153,7 +168,7 @@ body:not(.dark-active) #counter{color:var(--dim-l)}
 
 /* ---------- overview grid (G, or the grid button) ---------- */
 #overview{
-  position:fixed;inset:0;z-index:55;background:rgba(6,14,28,.96);display:none;
+  position:fixed;inset:0;z-index:55;background:var(--shl-night-96);display:none;
   padding:34px 26px;overflow:auto;backdrop-filter:blur(4px);color:var(--txt-d);
 }
 #overview.on{display:block}
@@ -163,7 +178,7 @@ body:not(.dark-active) #counter{color:var(--dim-l)}
 .ov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
 .ov-item{
   border:1px solid var(--line-d);border-radius:12px;padding:12px 13px;cursor:pointer;
-  background:rgba(255,255,255,.035);text-align:left;color:var(--dim-d);transition:all .14s ease;
+  background:var(--shl-white-035);text-align:left;color:var(--dim-d);transition:all .14s ease;
   min-height:76px;display:flex;flex-direction:column;gap:5px;font-family:var(--font);
 }
 .ov-item.cur{background:var(--deep-3);border-color:var(--blue);color:var(--white)}
@@ -175,7 +190,7 @@ body:not(.dark-active) #counter{color:var(--dim-l)}
 
 /* ---------- instructor cue (N, or the cue button) ---------- */
 #cue{
-  position:fixed;left:0;right:0;bottom:0;z-index:41;background:rgba(6,14,28,.94);
+  position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--shl-night-94);
   border-top:2px solid var(--amber);padding:13px 90px 13px 22px;display:none;
   font-size:14.5px;line-height:1.5;color:var(--on-navy);backdrop-filter:blur(6px);
 }

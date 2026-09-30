@@ -29,6 +29,13 @@
   --task-faint:var(--faint-l,#7B8CA0);
   --task-good:var(--good,#12805A);
   --task-good-wash:var(--good-wash-l,#E3F5EA);
+
+  /* Phase 5 step 11c (2.11.2): every colour this file paints with, named. Values are the
+     exact text that used to be written inline, so nothing renders differently. Names that
+     equal a canonical token follow it, with the old value as fallback so the file still
+     works on its own. */
+  --task-ink-34: rgba(1,17,17,.34);
+  --task-ink-58: rgba(1,17,17,.58);
 }
 
 .taskdone{
@@ -36,7 +43,7 @@
   display:flex; align-items:center; justify-content:center;
   padding:24px calc(24px + env(safe-area-inset-right,0px))
           calc(24px + env(safe-area-inset-bottom,0px)) calc(24px + env(safe-area-inset-left,0px));
-  background:rgba(1,17,17,.58);
+  background:var(--task-ink-58);
   -webkit-tap-highlight-color:transparent;
 }
 
@@ -57,7 +64,7 @@
   width:100%; max-width:520px;
   background:var(--task-surface); border-radius:20px;
   padding:30px 26px 24px;
-  box-shadow:0 24px 60px rgba(1,17,17,.34);
+  box-shadow:0 24px 60px var(--task-ink-34);
   text-align:center;
   max-height:100%; overflow-y:auto;
   animation:taskdoneCard .24s cubic-bezier(.2,.7,.3,1);

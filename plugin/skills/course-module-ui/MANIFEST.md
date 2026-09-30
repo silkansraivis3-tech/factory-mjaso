@@ -85,6 +85,24 @@ which the hand-written vocabulary had missed. `course-tablet-publisher`'s `inter
 covered. `anatomy.md` and `tokens.json` stay: read only when a component itself is being built or
 changed, or when a value itself is the question.
 
+## The factory's own files pass the strict check — 2.11.2 (2026-09-30, Phase 5 step 11c)
+
+Until 2.11.2 the factory's own shared files failed `audit_ui.py --strict`, which meant every
+correctly built new module failed its sign-off on files it did not write. Owner decision: fix at
+the source, never teach the check to skip files. 128 raw chrome colour uses in four files
+(`gb_compose.css` 8, `gb_shell.css` 10, `course-module-ux/assets/gb_run.css` 108,
+`course-task-ux/assets/task_complete.css` 2) became 78 named custom properties in each file's own
+`:root` — prefixes `--cmp-`, `--shl-`, `--run-`, `--task-` — holding the exact text that was inline.
+They are file-local, not canonical tokens: each file keeps working on its own, and the canonical
+set (and `references/vocabulary.md` §8) did not grow by 78 names nobody builds with.
+
+Proven identical three ways: (1) putting each token's value back reproduces every original file
+exactly; (2) specimen pages with an element for every selector those files style, opened before
+and after in headless Chrome — 0 of ~464,000 computed values differ; (3) the same pages'
+screenshots are identical pixel for pixel. A deliberate one-shade change to one token was caught by
+both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
+module, so this cannot quietly return.
+
 ## Known gaps
 
 1. **Not eval-tested.** No `evals/` directory, consistent with the rest of the family — and the
