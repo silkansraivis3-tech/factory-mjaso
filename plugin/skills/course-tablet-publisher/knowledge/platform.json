@@ -153,6 +153,10 @@
     "an answer key"
    ],
    [
+    "_INSTRUCTOR_NOTES\\.md$",
+    "the instructor's notes for the panel (2.18.1) - they belong on the instructor tablet, never in the trainee tree or on a slide"
+   ],
+   [
     "model[_-]?answer",
     "model answers"
    ],

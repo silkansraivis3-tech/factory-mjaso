@@ -130,7 +130,8 @@ def paths(course, module):
     r = os.path.join(course, "review")
     return {"script": os.path.join(d, m + ".json"), "pending": os.path.join(d, m + ".pending.json"),
             "old": os.path.join(d, "old"), "review": os.path.join(r, m + "_SCRIPT_REVIEW.html"),
-            "docx": os.path.join(r, m + "_SCRIPT.docx"), "dir": d, "rdir": r}
+            "docx": os.path.join(r, m + "_SCRIPT.docx"), "dir": d, "rdir": r,
+            "notes_md": os.path.join(course, "instructor_notes", m + "_INSTRUCTOR_NOTES.md")}
 
 
 def load(p):
@@ -567,6 +568,8 @@ def theory_findings(script):
             add(s["id"], "text", NOTE, "t_long_slide", w=w_slide, max=R["slide"]["max_words"])
         if w_notes < R["notes"]["min_words"]:
             add(s["id"], "notes", FAIL, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
+        elif w_notes > R["notes"]["max_words"]:
+            add(s["id"], "notes", FAIL, "t_long_notes", w=w_notes, max=R["notes"]["max_words"])
     if th_min and not final:
         rate = th_words / th_min
         if rate < R["module"]["min_words_per_theory_minute"]:
@@ -664,8 +667,9 @@ def media_findings(script):
     kinds = []
     for s in slides:
         k = parse_kind(s.get("visual_kind", ""))
-        if k == "none":
-            if s is not slides[-1]:          # the last slide - the summary - may have none; any other gets a note
+        if k == "none" or not (k or "").strip():
+            # no quota (owner, 2.18.1): a slide with no picture is a suggestion - the summary slide not even that
+            if s is not slides[-1]:
                 add(s["id"], "visual_kind", NOTE, "v_none")
             continue
         if k not in VISUAL_KINDS:
@@ -680,10 +684,10 @@ def media_findings(script):
     th_min = sum(minutes(s) for s in slides)
     if not final and slides:
         moving = [k for k in kinds if MEDIA["visual_kinds"][k]["family"] in ("moving", "interactive", "3d", "video")]
-        if th_min >= F["moving_or_3d_per_module_from_min"] and not moving:
-            add(None, "", FAIL, "v_no_motion", min="%g" % th_min)
+        if th_min >= F["moving_or_3d_per_module_from_min"] and not moving:      # suggestions, not rules (2.18.1)
+            add(None, "", NOTE, "v_no_motion", min="%g" % th_min)
         if len(slides) >= F["min_visual_kinds_from_slides"] and len(set(kinds)) < F["min_visual_kinds"]:
-            add(None, "", FAIL, "v_few_kinds", n=len(set(kinds)), lo=F["min_visual_kinds"])
+            add(None, "", NOTE, "v_few_kinds", n=len(set(kinds)), lo=F["min_visual_kinds"])
 
     slide_no, sets, set_of = plan_of(script)
     qs = [q for st in sets if st["kind"] != "final" for q in st["questions"]]
@@ -983,7 +987,8 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
                 e(T(script, "s_minutes")), e(s.get("minutes", "—")),
                 e(T(script, "s_words")), e(T(script, "s_words_n", a=wc(s.get("title", ""), s.get("text", "")), b=wc(s.get("notes", ""))))))
         if s.get("notes"):
-            o.append('<p class="instr"><b>%s:</b> %s</p>' % (e(T(script, "s_notes")), V(s.get("notes"))))
+            o.append('<div class="instr"><b>%s</b><ul lang="%s">%s</ul></div>' % (
+                e(T(script, "s_notes")), cl, "".join("<li>%s</li>" % e(x[2:]) for x in note_lines(s.get("notes")))))
         o.append("</div>")
 
     # ---- part 2: the trainee tablet
@@ -1459,6 +1464,44 @@ def cmd_status(course, module):
     return 0 if ok else 1
 
 
+def note_lines(text):
+    """Instructor notes as short points, one per line - '- ' added where the line has none."""
+    out = []
+    for x in (text or "").split("\n"):
+        x = x.strip()
+        if x:
+            out.append(x if x.startswith(("- ", "* ")) else "- " + x)
+    return out
+
+
+def instructor_notes_md(script):
+    """The module's instructor notes as the instructor's panel shows them (owner, 2026-09-30, 2.18.1): compact
+    points per slide, the OPEN TASK prompt at every task - in the course language, and never on a slide.
+    Made from the content script, so the approved script stays the one source."""
+    slide_no, sets, set_of = plan_of(script)
+    ok = script.get("status") == "approved" and script.get("approved_hash") == content_hash(script)
+    total = sum(minutes(s) for s in script.get("screens", []) if s.get("kind") in INSTRUCTOR)
+    o = ["# Module %s · %s — instructor notes" % (script.get("module"), script.get("title", "")), "",
+         "<!-- Made from the content script (_factory/script/%s.json) by content_script.py. It is shown on the "
+         "instructor's panel, never on a slide. Corrections go through the review Word file or the chat, not "
+         "this file. -->" % mid(script.get("module")), "",
+         "%s · %g min" % ("Approved by %s on %s" % (script.get("approved_by"), script.get("approved_on")) if ok else "Draft - not yet approved", total), ""]
+    for s in script.get("screens", []):
+        k = s.get("kind")
+        if k not in INSTRUCTOR:
+            continue
+        o.append("## Slide %d · %s · %g min" % (slide_no[s["id"]], s.get("title", ""), minutes(s)))
+        if k == "task-slide":
+            st = set_of.get(s.get("opens"))
+            if st:
+                o.append("**OPEN TASK** → %s, %d question%s, on every trainee tablet." % (
+                    {"self-check": "Self-check %s" % st.get("no", ""), "module-check": "Module check",
+                     "final": "Final assessment"}[st["kind"]], len(st["questions"]), "" if len(st["questions"]) == 1 else "s"))
+        o += note_lines(s.get("notes"))
+        o.append("")
+    return "\n".join(o).rstrip() + "\n"
+
+
 def render(course, module, quiet=False):
     p = paths(course, module)
     script = load(p["script"])
@@ -1466,11 +1509,14 @@ def render(course, module, quiet=False):
     os.makedirs(p["rdir"], exist_ok=True)
     io.open(p["review"], "w", encoding="utf-8", newline="\n").write(render_html(course, script))
     render_docx(course, script, p["docx"])
+    os.makedirs(os.path.dirname(p["notes_md"]), exist_ok=True)
+    io.open(p["notes_md"], "w", encoding="utf-8", newline="\n").write(instructor_notes_md(script))
     script["docx_hash"] = content_hash(script)
     save(p["script"], script)
     if not quiet:
         print("Ready for the operator:\n    %s   (opens in the browser, prints to PDF)\n    %s   (Word - correct it here)"
-              % (p["review"], p["docx"]))
+              "\n    %s   (the instructor's panel - short notes per slide, never on a slide)"
+              % (p["review"], p["docx"], p["notes_md"]))
         if probs:
             print("\nThe script still has problems - fix them before showing it:\n" + "\n".join("  - " + x for x in probs))
         th, _ = theory_findings(script)

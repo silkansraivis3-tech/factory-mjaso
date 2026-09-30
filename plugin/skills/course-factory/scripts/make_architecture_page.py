@@ -139,7 +139,7 @@ def analyse(prog, arch, plan=None):
     fa = arch.get("final_assessment") or {}
     assess_topic = str(fa.get("topic")) if fa.get("topic") else next(
         (t for t in order if topics[t].get("assessment")), None)
-    problems, modules = [], []
+    problems, modules, suggestions = [], [], []   # suggestions never stop the course (owner, 2.18.1)
 
     for pm in plan.get("modules", []) + arch.get("modules", []):
         ts = pm.get("topics")
@@ -191,10 +191,10 @@ def analyse(prog, arch, plan=None):
             if x.get("kind") not in MEDIA["visual_kinds"]:
                 problems.append(("p_media_kind", {"m": n, "k": x.get("kind")}))
         if not md:
-            problems.append(("p_no_media", {"m": n}))
+            suggestions.append(("p_no_media", {"m": n}))
         elif m["th_min"] >= F["moving_or_3d_per_module_from_min"] and not any(
                 MEDIA["visual_kinds"].get(x.get("kind"), {}).get("family") in MOVING for x in md):
-            problems.append(("p_no_motion", {"m": n, "min": "%g" % m["th_min"]}))
+            suggestions.append(("p_no_motion", {"m": n, "min": "%g" % m["th_min"]}))
         planned = [x for s in m["sc"] for x in s["mechanics"]] + (m["mc"].get("mechanics") or [])
         for x in planned:
             if x not in MEDIA["mechanics"] or x.startswith("_"):
@@ -248,7 +248,7 @@ def analyse(prog, arch, plan=None):
     if tr and (abs(num(tr.get("theory")) - tot_th) > 0.01 or abs(num(tr.get("practical")) - tot_pr) > 0.01):
         problems.append(("p_total_row", {"th": fmt_h(tot_th), "pr": fmt_h(tot_pr),
                                          "pth": fmt_h(num(tr.get("theory"))), "ppr": fmt_h(num(tr.get("practical")))}))
-    return {"ahm": ahm, "ahm_assumed": ahm_assumed, "modules": modules, "problems": problems,
+    return {"ahm": ahm, "ahm_assumed": ahm_assumed, "modules": modules, "problems": problems, "suggestions": suggestions,
             "tot_th": tot_th, "tot_pr": tot_pr, "outcomes": outcomes}
 
 
@@ -323,6 +323,10 @@ def build(prog, arch, a):
            "<title>%s</title><style>%s</style></head><body><div class=\"wrap\">" % (e(P.t("page_title")), style())]
     out.append("<h1>%s</h1><p class=\"lead\">%s</p>" % (e(P.t("page_title")), e(P.t("intro"))))
 
+    if a["suggestions"]:
+        out.append('<div class="card"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
+            e(P.t("suggestions_title")), e(P.t("suggestions_intro")),
+            "".join("<li>%s</li>" % e(P.t(k, **kw)) for k, kw in a["suggestions"])))
     if a["problems"]:
         out.append('<div class="card warn"><h3>%s</h3><ul>%s</ul></div>' % (
             e(P.t("problems_title")), "".join("<li>%s</li>" % e(P.t(k, **kw)) for k, kw in a["problems"])))
@@ -541,6 +545,8 @@ def main(argv=None):
     a = analyse(prog, arch, plan)
     P = Page((arch.get("course") or {}).get("operator_language", "en"))
     if x.check:
+        for k, kw in a["suggestions"]:
+            print("  (suggestion) " + P.t(k, **kw))
         for k, kw in a["problems"]:
             print("  - " + P.t(k, **kw))
         print("%d problem(s)." % len(a["problems"]))

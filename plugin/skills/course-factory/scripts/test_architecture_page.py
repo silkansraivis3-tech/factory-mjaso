@@ -171,6 +171,16 @@ def main():
                              ("a way of answering the factory does not know", en("p_mech_unknown", m=3, x="guess"))):
             check("caught: " + what, needle in out, out)
 
+        sg = copy.deepcopy(ARCH); sg["course"]["operator_language"] = "en"
+        sg["modules"][2].pop("media")
+        cs_ = write_course(os.path.join(tmp, "suggest"), PROGRAMME, sg)
+        code, out = run("--course", cs_, "--check")
+        check("2.18.1: a module with no pictures planned is a suggestion - --check still passes",
+              code == 0 and "(suggestion) " + en("p_no_media", m=3) in out, out)
+        run("--course", cs_)
+        check("... and the page shows it under 'Suggestions - not required', not with the problems",
+              EN["suggestions_title"] in page_of(cs_) and EN["problems_title"] not in page_of(cs_))
+
         print("\n-- two languages that never mix")
         check("the page is in the operator's language (lv)", '<html lang="lv">' in page and LV["page_title"] in page)
         check("programme text is word for word, marked with the programme's language",

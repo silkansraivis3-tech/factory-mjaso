@@ -387,6 +387,22 @@ The examples were remade: Module 1 now has 13 slides with 8 kinds of picture (3 
 animations, an interactive drawing) and 14 questions answered 10 different ways; the architecture plans pictures
 and ways of answering for all 22 modules and lists what Novikontas must photograph, film or scan.
 
+## 4k · Short instructor notes, pictures without a quota, and who tests where (2.18.1, 2026-09-30)
+
+- **Notes.** *"Compact and smaller, and keep them in a .md file - it will be in the instructor's panel, not in the
+  slides."* `theory-rules.json` notes: 10-50 words (a ceiling is new); `content_script.py` writes
+  `instructor_notes/M01_INSTRUCTOR_NOTES.md` on every render - one section per slide, the OPEN TASK prompt at every
+  task, in the course language. The review page shows them as points under *Instructor panel only*. The publisher's
+  roles gate now names `*_INSTRUCTOR_NOTES.md` as instructor-only. With the notes short, the density floor fell from 40
+  to 25 words a theory minute and the block before a self-check from 400 to 250 words - the slides are unchanged.
+- **Pictures.** The owner, asked how to treat the pasted proposal to turn the variety rules into warnings: no quota for
+  pictures - as many as show the theory, animation and realistic 3D always welcome. So a slide with no picture, a long
+  module with nothing moving and few kinds of picture are notes on the review page, and on the architecture page they
+  move to a *Suggestions - not required* box that does not fail `--check`. The task rules were left as they are - the
+  owner did not ask to change them. The final assessment was already outside them.
+- **L39.** The real-tablet test is the owner's, at the end; colleagues get only the HTML to check in their own browser;
+  the build makes every file ready for the tablet system. Recorded in the laws, `tablet/GUIDE.md` and the pilot's state.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

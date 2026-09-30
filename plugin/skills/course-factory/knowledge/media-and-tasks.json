@@ -94,17 +94,17 @@
 
   "floors": {
     "every_slide_has_a_visual": true,
-    "_every_slide": "A theory slide names its visual: the kind, what it shows and why. The only slide that may have none is a summary, and it says so (visual_kind 'none'). The review page draws the place for it on the slide.",
+    "_every_slide": "Owner, 2026-09-30 (2.18.1): no quota. As many pictures as the theory and the experience call for - wherever a picture, an animation or a realistic 3D illustration reflects what is being taught at that point, put it in; animation and 3D especially. A slide with none gets a suggestion, never a block. A picture that is named must say what it shows (must fix), and an unknown kind is a mistake to correct.",
     "moving_or_3d_per_module_from_min": 40,
-    "_moving": "A module with at least this many minutes of theory has at least one moving, interactive, 3D or video visual - where something moves, changes state or has an inside, a still picture teaches it worse (course-visuals, learning-needs.json).",
+    "_moving": "A suggestion, not a rule (2.18.1): a module with this many minutes of theory and nothing that moves, turns or can be explored is pointed out, because where something moves, changes state or has an inside, a still picture teaches it worse (course-visuals, learning-needs.json).",
     "min_visual_kinds_from_slides": 6,
     "min_visual_kinds": 3,
-    "_kinds": "A module with at least 6 slides uses at least 3 kinds of visual - not a row of photographs.",
+    "_kinds": "A suggestion, not a rule (2.18.1): a module of 6 slides or more with fewer than 3 kinds of picture is pointed out - but a picture is never added only for variety (L13).",
     "self_check_min_mechanics": 2,
     "module_check_min_mechanics": 3,
     "single_choice_max_share": 0.4,
     "hands_on_min_per_module": 1,
     "max_same_in_a_row": 2,
-    "_tasks": "A self-check uses at least 2 different mechanics and a module check at least 3; 'choose one answer' is at most 40 % of a module's questions; every module has at least one hands-on question - locate, operate or decide on something that looks like the real thing; never more than 2 questions of the same mechanic in a row."
+    "_tasks": "A self-check uses at least 2 different mechanics and a module check at least 3; 'choose one answer' is at most 40 % of a module's questions; every module has at least one hands-on question - locate, operate or decide on something that looks like the real thing; never more than 2 questions of the same mechanic in a row. These stay rules (owner, 2026-09-30). The final assessment follows the programme's own format - none of them applies to it."
   }
 }

@@ -214,7 +214,7 @@ could.**
 
 ---
 
-## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0)
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1)
 
 Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
 these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
@@ -443,6 +443,15 @@ already."*
 - → `scripts/content_script.py` (`theory_findings`), `scripts/make_architecture_page.py` (whether the
   planned self-checks fit).
 
+**Revised 2.18.1 (owner, 2026-09-30): the instructor notes are compact, and live in their own `.md` file.**
+*"These instructor-only scripts - a little compact and smaller - and keep them in a .md file, because it will be in
+the instructor's panel, not in the slides."* Two to four short points per slide (10-50 words): what to ask, the one
+example to give, what to stress. The theory itself is on the slide. `content_script.py render` writes
+`instructor_notes/M01_INSTRUCTOR_NOTES.md` from the script - one section per slide, the OPEN TASK prompt at every task -
+for the instructor's panel; the publisher treats `*_INSTRUCTOR_NOTES.md` as instructor-only, and the word-for-word
+check fails a slide that carries the notes. The density floor became 25 words a theory minute and the block before a
+self-check 250 words, because the long notes no longer count towards them.
+
 ### Added by the owner after reviewing the rebuilt example pages (2026-09-30, 2.18.0)
 
 **L37 · Every slide leaves room for its picture, and says what kind it is and who makes it.**
@@ -482,3 +491,26 @@ realistic, more detailed, more technical."*
   one of them.
 - This widens `course-task-ux` §2's list (tap to choose, tap to locate, order, match, choose-and-justify). Building
   the task screens on the trainee tablet is Phase 5 step 6.
+
+**Revised 2.18.1 (owner, 2026-09-30): no quota.** *"Not a strict policy to be an exact amount of pictures in the
+presentation or at an exact moment - as much as possible, so the theory and the user experience are proper. If there is
+a chance to put an image in, go for it, if it reflects the theory or the idea of what is talked about in that part of
+the module; if animation, go for it; if it is a realistic 3D illustration, 100 % go for it."* So: every chance a
+picture, an animation or a realistic 3D illustration has to show what is being taught, it is taken. A slide with no
+picture, a long module where nothing moves, few kinds of picture - these are **suggestions** on the review pages, never
+blocks. A picture that is named must still say what it shows, and nothing is added only for variety (L13). The task
+rules of L38 stay rules; the final assessment follows the programme's own format and none of them applies to it.
+
+**L39 · Who tests where: colleagues in a browser, the owner on the tablet, at the end.**
+*"The real tablet test will be at the end, because only I can do that for now; my colleagues will not be able to.
+Make all files ready to put in the system and be tested, but give a colleague access only to the HTML itself, so they
+can check all of this in their own browser; later I will test it on the tablet."*
+
+- The build (Phase 5 steps 6-10) makes **every file ready for the tablet system** - the course pack for both terminals,
+  the instructor notes for the panel, the tasks for the trainee tablet - so the owner can put it in and test it.
+- A colleague gets **the HTML only**: a browser preview folder that opens with a double-click in any desktop browser and
+  shows every slide and every task working, with a stand-in for OPEN TASK - no app, no tablet, nothing to install, and
+  none of the factory's own files (script, review, notes of the build).
+- **The real-tablet test is the owner's, and it comes at the end** - by touch, every task type, and the results the app
+  records. Until then nothing is called tablet-tested. The app stays read-only (L21); what it needs is listed for the
+  owner.

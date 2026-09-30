@@ -7,16 +7,17 @@
     "_why": "A slide carries the teaching itself - the facts, numbers, names and reasons the Sub-ILO needs - not a headline for the instructor to fill in. The title counts. Under min_words the slide is too thin to teach from (must fix). Over max_words the room cannot read it from the classroom screen: split it into two slides (a note, not a must - NEW_ENTRANT wants more slides, L28)."
   },
   "notes": {
-    "min_words": 30,
-    "_why": "The instructor notes are what the instructor explains, adds or asks beyond the slide - the depth behind it, a real example, the question to put to the room. Under min_words the instructor has nothing to teach from but the slide (must fix)."
+    "min_words": 10,
+    "max_words": 50,
+    "_why": "Owner, 2026-09-30 (2.18.1): the instructor notes are compact - two to four short points, one per line starting '- ' - because they live on the instructor's panel, in the module's own INSTRUCTOR_NOTES.md file, never on a slide. What to ask the room, the one example to give, what to stress. Under min_words there is nothing to go on; over max_words it is a speech, not a prompt - the theory belongs on the slide (both must fix). Before 2.18.1 the floor was 30 words and there was no ceiling."
   },
   "module": {
-    "min_words_per_theory_minute": 40,
-    "_why": "Across a module, the slides' own words plus the instructor notes, divided by the slides' minutes. Under this the module's hours are claimed but not filled: the instructor runs out of material long before the time does (must fix). 40 words a minute is a slow, explained delivery - far below reading speed, so it is a floor, not a target."
+    "min_words_per_theory_minute": 25,
+    "_why": "Across a module, the slides' own words plus the instructor notes, divided by the slides' minutes. Under this the module's hours are claimed but not filled: the instructor runs out of material long before the time does (must fix). 25 words a minute, now that the notes are short points and the teaching sits on the slide (2.18.1; it was 40 while the notes were long)."
   },
   "before_self_check": {
     "min_minutes": 10,
-    "min_words": 400,
+    "min_words": 250,
     "_why": "A self-check comes only after a block of new theory: at least this many minutes of slides and this many words (slides + notes) since the module began or since the last task. A module whose theory is shorter than this has no self-check - its module check covers it."
   },
   "answers_taught_first": {

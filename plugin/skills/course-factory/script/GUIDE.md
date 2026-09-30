@@ -47,6 +47,9 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   A module with less theory than that has no self-check; its module check covers it.
 - Course text (titles, text, questions, answers, feedback) is in COURSE_LANGUAGE; the notes on the
   page and in the Word file around it are in the operator's language.
+- **Instructor notes are short** (2.18.1): two to four points per slide, one per line starting `- `, 10-50 words -
+  what to ask, the one example to give, what to stress. The theory is on the slide. `render` writes them to
+  `instructor_notes/M01_INSTRUCTOR_NOTES.md` for the instructor's panel; they are never on a slide.
 - Kinds: `slide`, `task-slide`, `activity` (instructor tablet); `self-check`, `module-check`, `final`
   (trainee tablet). Module checks are never graded (L27) and come at the end of the module; a
   final-assessment script (`--module final`, the last module, L34) holds a task slide and `final` questions.
@@ -67,8 +70,9 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   photograph, a scan or a photo to take at Novikontas — never an AI picture (L33).
 - `"visual"` — what it shows and why, in one or two sentences; `"layout"` — `split` (text left, picture
   right), `visual_wide` or `visual_full`.
-- A module with 40 min of theory or more has something that moves, turns or can be explored; six slides
-  or more use at least three kinds.
+- **No quota** (2.18.1): wherever a picture, an animation or a realistic 3D illustration can show what the slide
+  teaches, put it in. A slide with none, a long module where nothing moves, few kinds of picture - these come
+  back as suggestions, never blocks; nothing is added only for variety (L13).
 
 On every **task question**, `"mechanic"` is how the trainee answers. `single_choice`, `multi_select`
 (`"correct": "A, C"`) and `read_instrument` use `options` + `correct`; the rest use `"answer"` — one box,

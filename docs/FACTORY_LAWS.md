@@ -316,11 +316,17 @@ and who makes it - the factory, the image/video generator (context only), the so
 **L38 · Tasks are varied and hands-on.** Fourteen ways of answering, none typing; 2+ per self-check, 3+ per module
 check, "choose one" at most 40 %, a hands-on question in every module. Widens `course-task-ux` §2.
 → `course-factory` (`knowledge/media-and-tasks.json`, `scripts/content_script.py`, 2.18.0); built by `course-task-ux` (step 6)
+*(2.18.1: L37 has no quota - pictures, animation and realistic 3D wherever they show the theory; the picture floors are
+suggestions. Instructor notes are short points in their own .md file for the instructor's panel.)*
+
+**L39 · Who tests where.** Every file is made ready for the tablet system; a colleague gets only the HTML, to check in
+their own browser; the real-tablet test - by touch, every task type, the results the app records - is the owner's, at
+the end. → `course-factory` (build, Phase 5 steps 6-10), `course-tablet-publisher`
 
 ---
 
-**All thirty-eight laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L38 are enforced first through `course-factory/SKILL.md`'s
+**All thirty-nine laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L39 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

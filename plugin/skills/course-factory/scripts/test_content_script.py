@@ -53,30 +53,24 @@ S01_TEXT = ("Liquefied gases are carried as liquids only because the ship keeps 
             "Propane boils at -42 °C and butane at -0.5 °C; small ships carry them fully pressurised at ambient temperature.\n"
             "If the containment fails, the liquid boils off at once and forms a heavy, cold vapour cloud that can burn, explode or displace oxygen.\n"
             "Tanks, pipes, valves, gas detection and emergency shutdown all exist to keep the cargo liquid and inside its containment.")
-S01_NOTES = ("Start by asking who has sailed on a gas tanker and what cargo it carried. Write the three boiling points on the board and ask the room "
-             "what happens to a liquid at -162 °C when it touches a warm steel deck. Make the point that boil-off never stops and must be managed. "
-             "Link each piece of equipment named on the slide to the module where it is taught in detail, so trainees see one system, not separate topics. "
-             "Finish with a real case: a small leak at a manifold flange during discharge, the white cloud on deck, the gas alarm, and the ESD "
-             "that stopped the pumps and closed the valves within seconds - that is what the next modules teach them to understand.")
+S01_NOTES = ("- Ask who has sailed on a gas tanker, and with which cargo.\n"
+             "- Ask: what happens to liquid at -162 °C on a warm steel deck?\n"
+             "- Stress: boil-off never stops; it is managed.")
 S02_TEXT = ("Fully pressurised ships carry LPG and ammonia at ambient temperature in pressure vessels designed for about 18 bar; most are under 5,000 m³.\n"
             "Semi-pressurised, semi-refrigerated ships cool the cargo and hold it at about 5 to 7 bar, down to about -48 °C, or -104 °C for ethylene.\n"
             "Fully refrigerated ships carry large LPG cargoes at about -50 °C and LNG at about -162 °C, just above atmospheric pressure.\n"
             "The colder the cargo, the less pressure the tank must hold - and the more insulation and boil-off handling the ship needs.")
-S02_NOTES = ("Draw a simple pressure-temperature line for propane and mark the three ship types on it, so the room sees that one cargo can be carried "
-             "in three ways. Ask which type suits a short coastal trade and which a long ocean voyage, and why. Point out the ethylene carrier as the "
-             "special case of the semi-refrigerated ship, and say that the IGC Code sets the design standard for all three. "
-             "Close by asking one trainee to explain, in their own words, why a fully refrigerated LNG tank needs no heavy pressure vessel "
-             "while a small LPG ship does - if they can, the room is ready for the self-check.")
+S02_NOTES = ("- Draw the propane pressure-temperature line; mark the three ship types on it.\n"
+             "- Ask which type suits a short coastal trade, and which an ocean voyage.\n"
+             "- Point out the ethylene carrier.")
 S03_TEXT = ("The IGC Code names four cargo containment systems.\n"
             "Independent type A tanks are prismatic, built for less than 0.7 bar, and need a full secondary barrier.\n"
             "Independent type B tanks - spherical Moss tanks or prismatic SPB tanks - are designed in such detail that a partial secondary barrier is enough.\n"
             "Independent type C tanks are pressure vessels, cylindrical or bilobe, and need no secondary barrier at all.\n"
             "Membrane tanks are thin metal barriers that rely on the hull, through the insulation, for their strength, and need a full secondary barrier.")
-S03_NOTES = ("Show the cutaway and let the room name each tank type before you do. Ask why a pressure vessel needs no secondary barrier while a membrane "
-             "tank needs a full one. The answer - how likely a leak is, and how far it could spread - is the idea the whole IGC Code is built on, "
-             "so spend the time here. "
-             "Then ask where on the ship they would expect the secondary barrier to be for each type, and correct the answers against the cutaway; "
-             "trainees who later work on membrane ships will meet interbarrier spaces and their gas detection every day.")
+S03_NOTES = ("- Let the room name each tank type on the model first.\n"
+             "- Ask: why does a pressure vessel need no secondary barrier?\n"
+             "- Stress: how likely a leak is decides the barrier.")
 
 SCRIPT = {
     "module": 1, "title": "Gas tankers", "course_language": "English", "operator_language": "lv", "status": "draft",
@@ -280,19 +274,47 @@ def main():
         nok = copy.deepcopy(SCRIPT)
         screen(nok, "s02")["visual_kind"] = ""
         screen(nok, "s01")["visual"] = ""
-        rs = mrules(nok)
-        check("a slide with no kind of picture, or no word of what it shows, is found", "v_no_kind" in rs and "v_no_what" in rs, rs)
+        screen(nok, "s03")["visual_kind"] = "sparkles"
+        lv_ = {f["rule"]: f["level"] for f in cs.media_findings(nok)}
+        check("2.18.1: a slide with no picture planned is a suggestion, never a block (no quota)", lv_.get("v_none") == cs.NOTE, lv_)
+        check("... but a picture named without what it shows, or of an unknown kind, must be fixed",
+              lv_.get("v_no_what") == cs.FAIL and lv_.get("v_no_kind") == cs.FAIL, lv_)
         still = copy.deepcopy(SCRIPT)
         for x in ("s01", "s02", "s03"):
             screen(still, x)["visual_kind"] = "photo"
             screen(still, x)["minutes"] = 14
-        check("40 min of theory with nothing that moves, turns or can be explored is found", "v_no_motion" in mrules(still), mrules(still))
+        f = [x for x in cs.media_findings(still) if x["rule"] == "v_no_motion"]
+        check("40 min of theory with nothing that moves, turns or can be explored is suggested, not blocked", f and f[0]["level"] == cs.NOTE, f)
         many = copy.deepcopy(SCRIPT)
         extra = [dict(screen(SCRIPT, "s03"), id="s1%d" % i, visual_kind="photo") for i in range(4)]
         many["screens"][6:6] = extra
         for x in ("s01", "s02", "s03"):
             screen(many, x)["visual_kind"] = "photo" if x != "s03" else "step_animation"
-        check("six slides with only two kinds of picture is found", "v_few_kinds" in mrules(many), mrules(many))
+        f = [x for x in cs.media_findings(many) if x["rule"] == "v_few_kinds"]
+        check("six slides with only two kinds of picture is suggested, not blocked", f and f[0]["level"] == cs.NOTE, f)
+        check("... so a module with only suggestions can still be approved", not cs.blocking(cs.media_findings(many)), cs.blocking(cs.media_findings(many)))
+
+        print("\n-- 2.18.1: the instructor notes are short, and live in their own .md file for the instructor's panel")
+        code, out = cs_run("render", c, "--module", "1")
+        md = io.open(p["notes_md"], encoding="utf-8").read()
+        check("render writes the module's INSTRUCTOR_NOTES.md", p["notes_md"].endswith(os.path.join("instructor_notes", "M01_INSTRUCTOR_NOTES.md")) and "INSTRUCTOR_NOTES.md" in out, out)
+        check("... one short section per slide, its notes as points", "## Slide 1 · Why gas tankers are different · 5 min" in md
+              and "- Ask who has sailed on a gas tanker, and with which cargo." in md and md.count("## Slide ") == 5)
+        check("... and the OPEN TASK prompt where each task opens", "**OPEN TASK** → Self-check 1, 3 questions, on every trainee tablet." in md
+              and "**OPEN TASK** → Module check, 5 questions" in md)
+        check("... in the course language, whatever the operator's", "instructor notes" in md and "slaids" not in md)
+        longn = copy.deepcopy(SCRIPT)
+        screen(longn, "s02")["notes"] = S01_TEXT
+        f = [x for x in cs.theory_findings(longn)[0] if x["rule"] == "t_long_notes"]
+        check("notes that are a speech, not points, must be shortened", f and f[0]["level"] == cs.FAIL and f[0]["screen"] == "s02", f)
+        shortn = copy.deepcopy(SCRIPT)
+        screen(shortn, "s02")["notes"] = "- Draw it."
+        check("notes with nothing to go on are found too", "t_thin_notes" in rules_of(shortn), rules_of(shortn))
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-tablet-publisher", "scripts"))
+        import gates
+        pats = gates.load_platform()["role_rules"]["instructor_only_filename_patterns"]
+        check("the tablet publisher treats an INSTRUCTOR_NOTES.md as instructor-only - it can never reach a trainee tablet",
+              any(re.search(pt, "M01_INSTRUCTOR_NOTES.md", re.I) for pt, _ in pats))
         gen = copy.deepcopy(SCRIPT)
         screen(gen, "s01")["visual_kind"] = "ai_illustration"
         f = [x for x in cs.media_findings(gen) if x["rule"] == "v_generated"]
@@ -436,7 +458,7 @@ def main():
         dirty = copy.deepcopy(SCRIPT)
         screen(dirty, "s01")["title"] = "Why gas tankers are different - Revision 3"
         screen(dirty, "s01")["text"] = S01_TEXT + "\nSource: IMO Model Course 1.04"
-        screen(dirty, "s01")["notes"] = S01_NOTES + " The IMO Model Course 1.04 covers this in section 2."
+        screen(dirty, "s01")["notes"] = "- The IMO Model Course 1.04 covers this in section 2.\n- Ask who has sailed on one."
         screen(dirty, "q01")["question"] = "What does OCFAM require here?"
         screen(dirty, "q01")["feedback"] = "LNG is fully refrigerated. [VERIFY: the exact temperature]"
         cd = new_course(tmp, "dirty", dirty)
@@ -493,6 +515,8 @@ def main():
         check("one changed word fails", code == 1 and "s03" in out, out)
         code, out = build(slides_extra="<p>An extra sentence nobody approved.</p>")
         check("an extra sentence on a slide fails", code == 1 and "not in the approved script" in out, out)
+        code, out = build(slides_extra="<p>%s</p>" % cs.note_lines(S01_NOTES)[0][2:])
+        check("the instructor notes put onto a slide fail - they belong on the instructor's panel", code == 1 and "not in the approved script" in out, out)
         code, out = build(drop="s02")
         check("a screen that was not built fails", code == 1 and "s02) is not built" in out, out)
         code, out = build(correct="A")

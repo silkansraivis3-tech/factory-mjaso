@@ -100,6 +100,19 @@ must end in a generic family, so the degradation is a decision rather than an ac
 
 ---
 
+## Who tests where (L39, owner 2026-09-30)
+
+Every file is made ready for the tablet system, and **the owner tests on the tablet, at the end** - by touch, every
+task type, and the results the app records. A colleague who reviews the course gets **only the HTML**: a browser
+preview folder that opens with a double-click in any desktop browser, every slide and task working, OPEN TASK stood in
+for by a button on the page - and none of the factory's internal files. Nothing is called tablet-tested before the
+owner has done it.
+
+The instructor notes travel as `M<nn>_INSTRUCTOR_NOTES.md` to the instructor terminal only (the publisher's roles gate
+fails one in the trainee tree).
+
+---
+
 ## Before handover
 
 Read the git section of the contract. The two that cost real time:
