@@ -2,7 +2,7 @@
 
 For the next Claude session. Read this before touching anything in this repository.
 
-**Status 2026-09-30: `course-factory` 2.10.1 + `nano-banana` 1.1.2. Phase 5 in progress.**
+**Status 2026-09-30: `course-factory` 2.11.0 + `nano-banana` 1.1.2. Phase 5 in progress.**
 Phase 5 upgrades the factory to the owner's six-stage production process (intake → architecture
 STOP → word-for-word content script STOP → pilot Module 1 with five roles → remaining modules →
 final assessment and handover). The owner's decision record, the gap analysis and the approved
@@ -10,7 +10,8 @@ step plan are in **`docs/PHASE5_GAP_REPORT.md`** — read it before changing any
 owner's Phase 5 decisions conflict with an older rule, the Phase 5 decision wins and is recorded
 in the owning skill and in `docs/FACTORY_LAWS.md`.
 
-Approved order: step 0 (clean-up, **done in 2.10.1**) → step 11 (lighter loading) → steps 1–5 →
+Approved order: step 0 (clean-up, **done in 2.10.1**) → step 11 (lighter loading, **done in
+2.11.0**) → steps 1–5 →
 STOP for the pilot course → Stages 1–3 on it → steps 6–10 → build the pilot Module 1. After every
 step: stop, give the owner a short plain summary and the exact commit/push commands.
 
@@ -35,6 +36,8 @@ Not built yet: `course-evidence`, the `evidence-retriever` agent, the determinis
 | 2.8 | 2026-09-15 | the picture comes first (L23); parallel module build |
 | 2.9 | 2026-09-15 | a call and a folder; expert edits (L24); plain-language reports (L25) |
 | 2.10 | 2026-09-29 | the `nano-banana` plugin as a dependency |
+| 2.10.1 | 2026-09-30 | Phase 5 step 0 — stale pointers fixed, one law numbering |
+| 2.11.0 | 2026-09-30 | Phase 5 step 11 — the long reasoning in `course-factory` and `course-task-ux` moved (word for word) into `references/`; new detail goes into lanes, never back into a SKILL.md |
 
 ---
 

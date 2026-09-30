@@ -13,8 +13,9 @@ this up cold, including one with no memory of why any of it is the way it is.
   immutability, the ratio rule and the terminal contract. It writes no screens and no tasks —
   `course-module-ux` and `course-task-ux` do that, and they existed first.
 - **Every rule in here is here because breaking it cost real rework on GAS BASIC.** Nothing is
-  aspirational. Where a rule has a story, the story is in the file, because a rule nobody can
-  trace is a rule nobody follows.
+  aspirational. Where a rule has a story, the story is in the skill, because a rule nobody can
+  trace is a rule nobody follows. Since 2.11.0 the stories live in `references/`, word for word,
+  one pointer away from the rule — see §4c.
 - **The hours law is the reason this skill exists.** `COURSE_START.json` — the contract that
   orders the whole Novikontas course factory — has **no hours field at all**, and GAS BASIC was
   built 535 minutes (33 %) over its accredited allocation before anyone counted. This skill adds
@@ -30,8 +31,12 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ```
 course-factory/
-├── SKILL.md                              router: mode, brief, the four laws, gate, build order
+├── SKILL.md                              router: mode, brief, the laws (operative rule each), gate, build order, verify list
 ├── MANIFEST.md                           this file
+├── references/                           READ WHEN NAMED — the full text moved out of SKILL.md in 2.11.0
+│   ├── laws-in-full.md                   every law with its reasons and cases, word for word
+│   ├── verify-in-full.md                 why each verify check exists
+│   └── routing-notes.md                  what orchestration/ and coverage/ are for; the visual-layer routing
 ├── knowledge/
 │   ├── build-order.json                  the 15 ordered steps + who owns each (authority)
 │   └── delivery-contract.json            paths, flavours, course pack, git, offline (authority)
@@ -139,6 +144,17 @@ ever extended:
 
 The test suite is mutation-tested: removing the `only` scope limiter and removing `the HTML parses`
 from `not_signals` each produce exactly one failure.
+
+## 4c · Lighter loading (2.11.0, 2026-09-30, Phase 5 step 11)
+
+The owner approved moving — never deleting — the long reasoning out of the file every session
+reads. `SKILL.md` went from **30,444 to 19,068 bytes (≈7,600 → ≈4,800 tokens)**. What moved, word
+for word: the full text of every law (`references/laws-in-full.md`), the reason each verify check
+exists (`references/verify-in-full.md`), and the orchestration / coverage / visual-layer notes
+(`references/routing-notes.md`). Each law keeps its operative rule in `SKILL.md` and a pointer.
+Proof it was a move: a line-by-line comparison of the old file against the new file plus the
+three references found every line except the version stamp. Future detail goes into a lane or
+`references/`, never back into `SKILL.md` — that is the point of the exercise.
 
 ## 5 · Known gaps / before this goes live
 

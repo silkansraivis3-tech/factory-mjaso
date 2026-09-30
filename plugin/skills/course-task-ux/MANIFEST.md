@@ -65,8 +65,11 @@ course-task-ux/
 ├── references/
 │   ├── typed-input.md           read only when a task has a text field: wiring,
 │   │                            failure modes, the 7-step manual check
-│   └── verify.md                read before signing off any page: order of work,
-│                                the script's exit codes, the false-result traps
+│   ├── verify.md                read before signing off any page: order of work,
+│   │                            the script's exit codes, the false-result traps
+│   └── rulings-in-full.md       read when a rule is in question: the owner's
+│                                rulings, quotes and failures behind §§1–16, word
+│                                for word, same section numbers (moved in 2.11.0)
 ├── templates/
 │   └── task-notes.md            the companion notes file, written during the run.
 │                                Routes all four honesty markers and ends in the
@@ -370,3 +373,15 @@ and both named with a "read when". Prose restating a declared-authority JSON fil
 bundle declares no JSON authority. Bulk reads not routed through a subagent: none; the skill
 reads no knowledge base. Indexes read but never written back: none; the skill keeps no index.
 Scripts the skill tells you to read: none, grep-confirmed.
+
+## 7a · Lighter loading (2.11.0, 2026-09-30, Phase 5 step 11)
+
+The owner approved moving — never deleting — the evidence out of the always-read file. `SKILL.md`
+went from **28,273 to 16,805 bytes (≈7,070 → ≈4,200 tokens)**. Every numbered section keeps its
+rule and its number; the owner's quotes, the failures and the numbers behind each moved word for
+word to `references/rulings-in-full.md` under the **same section numbers**, so every existing
+`SKILL.md §N` reference (the scripts, the engines, `task-notes.md`) still lands on the same rule.
+The 'look of a task page' section, the honesty markers and §11's floor table stayed whole.
+Proof it was a move: a line-by-line comparison of the old file against the new file plus the
+reference found every line except the three-line intro sentence that now says where the quotes
+went. §2's decision stands: still no lanes — a reference loaded on demand is not a mode split.
