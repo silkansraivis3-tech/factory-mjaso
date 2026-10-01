@@ -55,6 +55,7 @@ course-factory/
 ├── scripts/make_architecture_page.py, test_architecture_page.py   the Stage 2 STOP as one page (2.15.0); one module per topic (2.17.0)
 ├── knowledge/theory-rules.json           how much theory before any task, and the two tablets (L35, L36, 2.17.0)
 ├── scripts/workspace.py                 the work folder: course\ beside the operator's material (L40, 2.19.0)
+├── scripts/check_module_folder.py, test_module_folder.py   every module folder complete and self-contained (L43, 2.19.3)
 ├── scripts/old_course.py, test_workspace.py   the old course read whole, its pictures copied out (L41, 2.19.0)
 ├── knowledge/media-and-tasks.json        the kinds of picture and the ways of answering, who makes each, the variety floors (L37, L38, 2.18.0)
 ├── knowledge/page-labels.json            the review pages' own words in the operator's language (en / lv / ru)
@@ -443,6 +444,19 @@ understandable - so people even with zero tablet experience do the tasks, and th
 tap and drag only, the gesture hint, bigger controls and text (the §11 floor raised for answer controls on the trainee
 tablet), alive feedback, real equipment, forgiving, offline, and how it is proved. The numbers are in
 `media-and-tasks.json` → `trainee_tablet_experience`; building it is step 6.
+
+## 4o · Every module in its own folder (2.19.3, 2026-10-01)
+
+*"Put all modules in one folder, each module has its own folder, and all assets and scripts needed for that module to
+start are inside each module folder; there is a START HERE HTML where it opens the presentation straight away, but the
+extended start has fast access with buttons for all tasks, the module plan, the presentation and so on."*
+
+The layout is in `delivery-contract.json` → `module_folders`, `course-module-ux` and `tablet/GUIDE.md`.
+`check_module_folder.py` finds `M01_...` folders from the master, course or modules folder and checks each: both start
+pages, START HERE going to the presentation (a redirect or a link), a button on the extended start for the
+presentation, every task page and the plan and notes, every referenced file inside the module and present (src, href,
+inline and `<style>` url()), nothing from the internet. The publisher now also names `START_HERE_EXTENDED.html`
+instructor-only. `check_script_match.py` looks for `modules\M01_*` first and the older `modules\m1` after.
 
 ## 5 · Known gaps / before this goes live
 

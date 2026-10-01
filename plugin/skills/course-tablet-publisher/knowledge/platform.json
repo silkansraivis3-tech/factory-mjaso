@@ -207,6 +207,10 @@
    [
     "^START_HERE\\.html$",
     "the instructor's timed pre-flight"
+   ],
+   [
+    "^START_HERE_EXTENDED\\.html$",
+    "the instructor's extended start - a button for the presentation, every task, the plan and the notes (L43)"
    ]
   ],
   "_content_pattern_note": "Filename patterns are reliable and FAIL. CONTENT patterns are signals, not proof, so they WARN: on this platform every broad content match turned out to be prose - 'Answer keys trace to: SIGTTO...' is a provenance line, 'one instructor only' is a staffing note. The scanner also strips HTML and JavaScript comments first, because a comment citing the answer key as a source is not a leak.",

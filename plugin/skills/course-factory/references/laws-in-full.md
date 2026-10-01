@@ -219,7 +219,7 @@ and the words to replace are in `SKILL.md` (*Every reply to the operator*) and `
 
 ---
 
-## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2)
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3)
 
 Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
 these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
@@ -593,3 +593,34 @@ gesture once; answer controls at least 56 px, question text 18 px; instant, aliv
 photographs and working panels; forgiving - nothing breaks, no timers, no error messages; offline and fast; proved
 in a colleague's browser and, at the end, on the owner's tablet. The full rule: `course-task-ux` SKILL.md §0; the
 numbers: `knowledge/media-and-tasks.json` → `trainee_tablet_experience`. Built in Phase 5 step 6.
+
+**L43 · Every module in its own folder - complete, and starting with a double-click.**
+*"Put all modules in one folder, each module has its own folder, and all assets and scripts needed for that module to
+start are inside each module folder; there is a START HERE HTML where it opens the presentation straight away, but the
+extended start has fast access with buttons for all tasks, the module plan, the presentation and so on."*
+
+```
+    course\modules\
+        M01_Gas_tankers\
+            START_HERE.html            opens the presentation straight away
+            START_HERE_EXTENDED.html   a button for: the presentation, every task, the module plan,
+                                       the instructor notes, the practical cards, the handout pages
+            presentation\             the module's one-page presentation
+            tasks\                    every task of the module (self-checks, module check, practicals)
+            instructor\               the module plan, M01_INSTRUCTOR_NOTES.md, the practical cards
+            assets\                   every picture, 3D model, film, style and script the module uses
+        M02_...\  ...  M23_Final_assessment\
+```
+
+- **Self-contained.** Every file a module uses is inside its own folder - styles, scripts, fonts, pictures, 3D models
+  and films are copied in, even when another module has the same one. Nothing reaches outside the module folder,
+  nothing is fetched from the internet (L6). A module folder can be copied anywhere - to a colleague (L39), onto a
+  stick, into the tablet system - and opened as it is.
+- **`START_HERE.html` opens the presentation straight away.** No menu in between.
+- **`START_HERE_EXTENDED.html` is the fast-access page:** one big button each for the presentation, every task, the
+  module plan, the instructor notes and anything else the module has. Both start pages are the instructor's
+  (the publisher keeps them off the trainee tablet).
+- **Proved:** `scripts/check_module_folder.py` checks every module folder - both start pages there, START HERE
+  going to the presentation, a button for everything, every file inside and present, nothing from the internet.
+- When the course is published, the tablet publisher makes the app's course package from these folders: the
+  trainee's parts to the trainee tablet, the instructor's to the instructor tablet. Built in Phase 5 steps 6-10.

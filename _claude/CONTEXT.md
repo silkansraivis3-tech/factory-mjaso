@@ -2,7 +2,7 @@
 
 For the next Claude session. Read this before touching anything in this repository.
 
-**Status 2026-10-01: `course-factory` 2.19.2 + `nano-banana` 1.1.2. Phase 5 in progress — steps 0–5 done, and redone after the owner's review of the example pages (L34–L36); next is the pilot, Stages 1–3.**
+**Status 2026-10-01: `course-factory` 2.19.3 + `nano-banana` 1.1.2. Phase 5 in progress — steps 0–5 done, and redone after the owner's review of the example pages (L34–L36); next is the pilot, Stages 1–3.**
 Phase 5 upgrades the factory to the owner's six-stage production process (intake → architecture
 STOP → word-for-word content script STOP → pilot Module 1 with five roles → remaining modules →
 final assessment and handover). The owner's decision record, the gap analysis and the approved
@@ -51,6 +51,7 @@ Not built yet: `course-evidence`, the `evidence-retriever` agent, the determinis
 | 2.16.1 | 2026-09-30 | The slide-text check (L22) runs on the content script before approval; its findings head the review page and the Word file, and block approval unless the operator approves despite them. Fixed: two corrections applied in the same second no longer leave a pending list behind |
 | 2.17.0 | 2026-09-30 | The owner's review of the example pages - **L34** one module per programme topic, the final assessment last and alone (GAS Basic: 22 + 1); **L35** two tablets - slides on the instructor's, tasks only on the trainee's, opened with OPEN TASK, no task list, the trainee's own score on every self-check and module check; **L36** enough theory before any task (`knowledge/theory-rules.json`, checked on the script). Architecture page and content script rebuilt; examples remade from the real programme |
 | 2.18.0 | 2026-09-30 | **L37** every slide leaves room for a named picture - kind, what it shows, layout, who makes it (factory / image-video generator / sources / Novikontas photo, film or phone 3D scan / outside help); **L38** 14 ways of answering, none typing, with variety floors and a hands-on question in every module; **English only** - COURSE_LANGUAGE is never asked. `knowledge/media-and-tasks.json` |
+| 2.19.3 | 2026-10-01 | **L43** every module in its own complete folder `course\modules\M01_<title>\` - START_HERE.html opens the presentation straight away, START_HERE_EXTENDED.html has a button for everything; `scripts/check_module_folder.py` proves it |
 | 2.19.2 | 2026-10-01 | **L42** trainee-tablet tasks: modern, exciting, usable by someone who has never held a tablet (`course-task-ux` §0; numbers in `media-and-tasks.json` → `trainee_tablet_experience`) |
 | 2.19.1 | 2026-10-01 | Every reply to the operator is human: **Done · Check now · Next**, short points, everyday words about computers, maritime terms unchanged (L25; `SKILL.md` top, `plain-language.json` → `every_reply`, a pointer in every skill) |
 | 2.19.0 | 2026-10-01 | **L40** the factory works in `course\` beside the operator's material (`scripts/workspace.py`); **L41** the old course is read whole and is the foundation - every module says what it keeps, modernises and adds (`scripts/old_course.py`); **L33 revised** - every picture in the knowledge base and old course is usable, the internet is searched and downloaded from when something is missing, the download list confirmed once per module |
@@ -204,7 +205,8 @@ matching, sorting, set-a-value within a tolerance, panel end states and scenario
 change needed. The app is not edited (L21, Q1); the owner applies the change list. Build every task screen to
 `course-task-ux` §0 (L42): the *try the tablet* first screen, tap-and-drag only with tap-then-tap, the once-only
 gesture hint, 56 px controls, instant feedback, the animated score ring - and run the *never used a tablet*
-walkthrough in a browser. The real-tablet touch test is the
+walkthrough in a browser. Build every module into its own complete folder (L43) and run
+`scripts/check_module_folder.py` on `course\modules`. The real-tablet touch test is the
 owner's, at the end (L39).
 
 Continue the Phase 5 step plan in `docs/PHASE5_GAP_REPORT.md` §4, in the owner's approved order

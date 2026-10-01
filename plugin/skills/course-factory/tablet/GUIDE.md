@@ -100,6 +100,13 @@ must end in a generic family, so the degradation is a decision rather than an ac
 
 ---
 
+## Module folders first (L43, owner 2026-10-01)
+
+The build puts every module into its own complete folder, `course\modules\M01_<title>\` - START_HERE.html opens
+the presentation, START_HERE_EXTENDED.html gives a button for everything, every asset and script inside. This is what
+a colleague opens in their browser (L39), and what the publisher turns into the app's course package. Run
+`scripts/check_module_folder.py course\modules` before handing anything over.
+
 ## Who tests where (L39, owner 2026-09-30)
 
 Every file is made ready for the tablet system, and **the owner tests on the tablet, at the end** - by touch, every

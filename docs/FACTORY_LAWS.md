@@ -343,8 +343,13 @@ tap and drag only (drag also tap-then-tap), a once-only animated gesture hint, c
 feedback, real equipment in 3D and working panels, forgiving, offline, proved by a novice walkthrough and the owner's
 tablet test. → `course-task-ux` (§0, 2.19.2; built in step 6)
 
-**All forty-two laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L42 are enforced first through `course-factory/SKILL.md`'s
+**L43 · Every module in its own folder, complete, starting with a double-click.** `course\modules\M01_<title>\` holds
+the presentation, the tasks, the instructor files and every asset and script it uses; nothing outside it, nothing
+fetched. `START_HERE.html` opens the presentation straight away; `START_HERE_EXTENDED.html` has a button for
+everything. → `course-factory` (`scripts/check_module_folder.py`, 2.19.3), `course-module-ux`, `course-tablet-publisher`
+
+**All forty-three laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L43 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

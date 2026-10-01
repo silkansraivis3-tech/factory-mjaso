@@ -33,6 +33,13 @@ This is a **delivery-UX skill**. It never decides what a module teaches.
 
 ---
 
+## Where a module lives, and how it starts (L43, owner 2026-10-01)
+
+Every module is built into its own folder, `course\modules\M01_<title>\`, with everything it needs inside it
+(`presentation\`, `tasks\`, `instructor\`, `assets\` - styles and scripts copied in). **`START_HERE.html` opens the
+presentation straight away**; **`START_HERE_EXTENDED.html`** is the fast-access page - a button for the presentation,
+every task, the module plan, the instructor notes. `course-factory/scripts/check_module_folder.py` proves it.
+
 ## Pick the mode, then read one lane
 
 Read this router fully. Then read **only** the lane the task needs. The lanes never run

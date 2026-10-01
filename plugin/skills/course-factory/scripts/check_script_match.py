@@ -124,7 +124,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("course")
     ap.add_argument("--module", required=True)
-    ap.add_argument("--module-dir", help="the built module's folder (default: <course>/modules/m<N>)")
+    ap.add_argument("--module-dir", help="the built module's folder (default: <course>/modules/M01_<title>, or the older <course>/modules/m<N>)")
     a = ap.parse_args(argv)
     import workspace
     a.course = workspace.work_folder(a.course, create=False)   # course\ beside the material (L40)
@@ -133,7 +133,12 @@ def main(argv=None):
         print("Stopped - there is no content script for module %s:\n    %s" % (a.module, p["script"]))
         return 2
     script = cs.load(p["script"])
-    mdir = a.module_dir or os.path.join(a.course, "modules", "m%s" % a.module)
+    mdir = a.module_dir
+    if not mdir:                                   # L43: modules\M01_<title>\ - the older modules\m1\ still found
+        mods = os.path.join(a.course, "modules")
+        new = sorted(glob.glob(os.path.join(mods, "%s_*" % cs.mid(a.module)))) if str(a.module).lower() != "final" else \
+            sorted(glob.glob(os.path.join(mods, "M*_Final*")))
+        mdir = new[0] if new else os.path.join(mods, "m%s" % a.module)
     files = [f for f in glob.glob(os.path.join(mdir, "**", "*.html"), recursive=True)]
     if not files:
         print("Stopped - no built pages were found in\n    %s" % mdir)

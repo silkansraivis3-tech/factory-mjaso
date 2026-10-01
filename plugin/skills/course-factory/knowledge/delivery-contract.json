@@ -30,6 +30,17 @@
     "example": "from instructor_terminal/prepare/m05/practicals/, the trainee tree is ../../../../training_terminal/..."
   },
 
+  "module_folders": {
+    "_law": "L43 (owner, 2026-10-01): every module in its own folder under course\\modules\\, complete and self-contained; the app's course pack is made from these folders when the course is published.",
+    "layout": ["modules/M01_<title>/START_HERE.html - opens the presentation straight away",
+               "modules/M01_<title>/START_HERE_EXTENDED.html - a button for the presentation, every task, the module plan, the instructor notes, everything else the module has",
+               "modules/M01_<title>/presentation/ - the one-page presentation",
+               "modules/M01_<title>/tasks/ - every task page of the module",
+               "modules/M01_<title>/instructor/ - the module plan, M01_INSTRUCTOR_NOTES.md, practical cards",
+               "modules/M01_<title>/assets/ - every picture, 3D model, film, style, font and script the module uses - copied in, never shared from outside"],
+    "rules": ["nothing in a module folder reaches outside it", "nothing is fetched from the internet (L6)", "both start pages are instructor-only"],
+    "check": "course-factory/scripts/check_module_folder.py"
+  },
   "course_pack": {
     "_note": "One folder per course, self-contained. Paths below are relative to the trainee asset root.",
     "root": "courses/<course_id>/",
