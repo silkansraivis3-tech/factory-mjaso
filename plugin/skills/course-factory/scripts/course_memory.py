@@ -230,6 +230,10 @@ def main(argv=None):
     d = sub.add_parser("approve-pattern"); d.add_argument("course"); d.add_argument("--by", required=True)
     e = sub.add_parser("patterns"); e.add_argument("--course-type", default=""); e.add_argument("--also", action="append", default=[])
     n = ap.parse_args(argv)
+    if getattr(n, "course", None):
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import workspace
+        n.course = workspace.work_folder(n.course)    # course\ beside the operator's material (L40)
     return {"start": lambda: cmd_start(n.course, n.title), "check": lambda: cmd_check(n.course),
             "draft-pattern": lambda: cmd_draft(n.course), "approve-pattern": lambda: cmd_approve(n.course, n.by),
             "patterns": lambda: cmd_patterns(n.course_type, n.also)}[n.cmd]()

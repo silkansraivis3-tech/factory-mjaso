@@ -45,6 +45,11 @@ unhyphenated forms; the abbreviation; the manufacturer and model; older and alte
 the system the component belongs to; likely figure captions; both British and American spellings.
 **Record the terms you tried** — that record is half the value of the report.
 
+**Owner, 2026-10-01:** every picture in the course's **knowledge base** (`KNOWLEDGE_BASE/sources/*/images`) and **old
+course** (`course/_factory/old_course_images/`, with `_index.json` saying which deck and slide) is usable as it is -
+rights_state `OWNER_CLEARED`, credited where the source is known. Search those first. When neither has what the slide
+needs, you **must** go to the internet and download it.
+
 **2 · Level 1, PROJECT.** `source_files/`, operator-supplied assets, manuals, drawings, the
 course's own existing assets. Search filenames *and* content — a drawing inside a document is found
 by its caption, not its filename. `scripts/resolve_asset.py` does the mechanical pass; extend it by
@@ -73,7 +78,8 @@ not say where the image itself came from.
 URL, rights_state, technical relevance, intended use, whether modification is permitted, whether
 attribution is required.
 
-**Rights unclear or restricted → `RIGHTS_REVIEW_REQUIRED`.** Report it; never resolve it by
+**Rights unclear or restricted on a download → `RIGHTS_REVIEW_REQUIRED`** (since 2.19.0: listed for the owner, not a
+block; the knowledge base and old course are `OWNER_CLEARED`). Report it; never resolve it by
 assumption. An uncleared publisher figure has blocked a whole course in this system before.
 
 **7 · If nothing suitable exists, return `GENERATED_ASSET_REQUIRED`** with a complete brief from
@@ -94,6 +100,10 @@ If a candidate is a near-miss but still useful, say exactly how it differs, so t
 it honestly: *"a product tanker, not a gas carrier"* is a usable caption; silence is not.
 
 ## Downloading
+
+**The download list first (owner, 2026-10-01).** Return the files you would download - what each shows, the page, the
+site, the size - as one list; whoever called you shows it to the operator once per module and, on their yes, you
+download all of them into the course work folder (`course\assets\<module>\`). Nothing is downloaded unseen.
 
 Anything recommended and legally usable must be **downloaded and packaged locally** into the asset
 folder you were given — the tablet has no network and the app returns 403 to every external host.

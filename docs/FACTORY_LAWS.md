@@ -219,6 +219,9 @@ is protected from the factory, never from the operator: when they ask for a chan
 
 ---
 
+*(2.19.1, owner: every reply to the operator has three parts - Done · Check now · Next - as short points in
+everyday words, for someone who knows nothing about IT; maritime terms stay professional.)*
+
 **L25 · The person reading this does not work in IT.**
 Every message that leaves this factory is read by a maritime professional with no IT background.
 `FAIL check_visual_first.py module.html:412 missing lead figure` is not a report to them, it is a
@@ -290,6 +293,9 @@ KB → old course → source files → internet → authored → generated. Legi
 Textbook figures are redrawn technically identical, credited "after <book>" and listed for a licence
 check. Equipment a trainee must recognise is never an AI image: an accurate schematic, and the
 "photos to take at Novikontas" list. ICS/SIGTTO "not cleared" stays out. → `course-visuals` (step 8)
+*(Revised 2.19.0, owner: every picture in the knowledge base and the old course is usable as it is - credited where
+known and listed, no longer redrawn or held back; what is missing is searched on the internet and downloaded, the list
+confirmed once per module. Equipment a trainee must recognise is still never an AI image.)*
 
 **L34 · One module per programme topic.** Every topic of the programme's topic/hours table is its own
 module, in the programme's order, with its own hours - GAS BASIC: 22 teaching modules. The final-assessment
@@ -323,10 +329,22 @@ suggestions. Instructor notes are short points in their own .md file for the ins
 their own browser; the real-tablet test - by touch, every task type, the results the app records - is the owner's, at
 the end. → `course-factory` (build, Phase 5 steps 6-10), `course-tablet-publisher`
 
+**L40 · The factory works in `course\`, beside the course material.** The folder given is the master folder; its
+source files, knowledge base and old course are read only; everything the factory makes goes into `course\` next to
+them. → `course-factory` (`scripts/workspace.py`, every tool, 2.19.0)
+
+**L41 · The old course is the foundation.** Read whole at intake; every module says what it keeps, modernises and
+makes digital, and adds. → `course-factory` (`scripts/old_course.py`, `scripts/make_architecture_page.py`, 2.19.0)
+
 ---
 
-**All thirty-nine laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L39 are enforced first through `course-factory/SKILL.md`'s
+**L42 · Trainee-tablet tasks: modern, exciting, usable with zero tablet experience.** A first *try the tablet* screen,
+tap and drag only (drag also tap-then-tap), a once-only animated gesture hint, controls of 56 px and more, instant
+feedback, real equipment in 3D and working panels, forgiving, offline, proved by a novice walkthrough and the owner's
+tablet test. → `course-task-ux` (§0, 2.19.2; built in step 6)
+
+**All forty-two laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L42 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

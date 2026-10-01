@@ -6,7 +6,8 @@
     {"for": "the approved programme", "how": "file names containing programme / program / programma / study programme / mācību programma / программа, in the operator's folder and one level up. Read the hours table from the ORIGINAL document, never from a knowledge-base copy (an extraction can lose a row)."},
     {"for": "the IMO model course", "how": "file names containing 'model course' / 'IMO' and a number like 1.04 or 1.35; the programme usually names it."},
     {"for": "the knowledge base", "how": "run kb/scripts/kb_tool.py find <course folder> - it checks the folder, every sub-folder and one level up, and recognises a Course Source Processor knowledge base (SOURCE_MANIFEST.json + sources/) or an older docling one (00_INDEX/SOURCE_MANIFEST.json) by its files. It writes nothing. One found: use it; several: its --json output carries the ready question (2.13.1)."},
-    {"for": "the old course", "how": "sub-folders named old / previous / existing / current course / iepriekšējais / vecais / старый, or any folder holding module HTML, decks (.pptx) or handouts for the same course."},
+    {"for": "the work folder", "how": "the folder the operator gives is the MASTER folder - the course material (L40, owner 2026-10-01). Run scripts/workspace.py <folder>: it names course\\ beside the material and makes it. Everything the factory writes goes there; source_files, the knowledge base and the old course are read only."},
+    {"for": "the old course", "how": "sub-folders named old / previous / existing / current course / iepriekšējais / vecais / старый, or any folder holding module HTML, decks (.pptx) or handouts for the same course. When found, READ IT WHOLE (L41): scripts/old_course.py inventory <old course> --course <folder> lists every slide, exercise, handout, test and film; scripts/old_course.py images copies out every picture. It is the foundation the architecture is planned from."},
     {"for": "COURSE_LANGUAGE", "how": "always English - every Novikontas course is in English (owner, 2026-09-30). Not looked for and not asked; the programme may be in another language and is still quoted in it word for word (L19)."},
     {"for": "the course type", "how": "the programme's title and entry requirements: Basic / Familiarisation / no prior experience point to NEW_ENTRANT; Advanced / Refresher / Revalidation / Upgrade / required sea service point to EXPERIENCED. This is a proposal, shown to the operator as the (Recommended) option - never decided silently."},
     {"for": "duplicate sources and editions", "how": "run kb/scripts/kb_tool.py sources <kb> --course <course>. Exact copies and .doc/.docx pairs need no question; each edition group becomes one pop-up question."}
@@ -51,7 +52,7 @@
   "no_web_search": "Never web-search during intake. Something not in the brief, the folder, the programme or the knowledge base is asked in the pop-up; UNKNOWN means it was asked and the operator did not know.",
 
   "record": {
-    "file": "_factory/intake.json in the course folder (internal - never shipped, see course-tablet-publisher internal_globs)",
+    "file": "course\\_factory\\intake.json - in the work folder beside the material (L40; internal - never shipped, see course-tablet-publisher internal_globs)",
     "written": "at the end of Stage 1, before the architecture is designed; kb_tool.py decide adds the editions to it. At the same moment COURSE_STATE.md is started (scripts/course_memory.py start) and its course table and 'Decided' list are filled from these answers (L32).",
     "fields": {
       "programme": "path of the approved programme",

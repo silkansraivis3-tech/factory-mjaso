@@ -126,6 +126,8 @@ def main(argv=None):
     ap.add_argument("--module", required=True)
     ap.add_argument("--module-dir", help="the built module's folder (default: <course>/modules/m<N>)")
     a = ap.parse_args(argv)
+    import workspace
+    a.course = workspace.work_folder(a.course, create=False)   # course\ beside the material (L40)
     p = cs.paths(a.course, a.module)
     if not os.path.isfile(p["script"]):
         print("Stopped - there is no content script for module %s:\n    %s" % (a.module, p["script"]))

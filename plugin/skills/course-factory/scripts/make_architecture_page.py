@@ -184,6 +184,9 @@ def analyse(prog, arch, plan=None):
                                                       "hi": RULES["self_check"]["max_questions"]}))
         if m["mc"] and m["mc"]["questions"] < RULES["module_check"]["min_questions"]:
             problems.append(("p_modcheck_size", {"m": n, "q": m["mc"]["questions"], "lo": RULES["module_check"]["min_questions"]}))
+        # L41 - the old course is the foundation: what each module takes from it, and how it moves it on
+        if (arch.get("course") or {}).get("old_course") and not am.get("from_old_course"):
+            problems.append(("p_no_old_course", {"m": n}))
         # L37 - the pictures, animation and 3D; L38 - the ways of answering
         F = MEDIA["floors"]
         md = media_of(am)
@@ -348,6 +351,7 @@ def build(prog, arch, a):
     for k, v in (("course", V(c.get("title"))), ("course_type", e(P.t(ctype)) if ctype else "—"),
                  ("course_language", e(c.get("course_language", ""))), ("programme", e(c.get("programme_file", ""))),
                  ("model_course", e(c.get("model_course", "")) or "—"),
+                 ("old_course_row", e(c.get("old_course", "")) or "—"),
                  ("academic_hour", "%g %s%s" % (a["ahm"], e(P.t("minutes")),
                                                 (" — " + e(P.t("ahm_assumed"))) if a["ahm_assumed"] else ""))):
         out.append("<tr><th>%s</th><td>%s</td></tr>" % (e(P.t(k)), v))
@@ -494,6 +498,12 @@ def build(prog, arch, a):
                     e(x.get("where", "")), e(x.get("instead_of", "")),
                     e(P.t("tech_" + (tech if tech in TECHNIQUES else "other"))), (" — " + e(x["note"])) if x.get("note") else ""))
             out.append("</table>")
+        oc = am.get("from_old_course") or {}
+        if oc:
+            rows = "".join("<tr><td><b>%s</b></td><td>%s</td></tr>" % (e(P.t(k)), "<br>".join(V(x) for x in oc.get(f) or []) or "—")
+                           for k, f in (("old_keep", "keep"), ("old_modernise", "modernise"), ("old_add", "add")))
+            out.append("<h3>%s</h3><p>%s %s</p><table>%s</table>" % (
+                e(P.t("old_title")), e(P.t("old_had")), V(oc.get("had", "")) or "—", rows))
         if media_of(am):
             out.append("<h3>%s</h3><table><tr><th>%s</th><th>%s</th><th>%s</th></tr>%s</table>" % (
                 e(P.t("media_module_title")), e(P.t("col_kind")), e(P.t("col_what")), e(P.t("col_who")),
@@ -533,6 +543,9 @@ def main(argv=None):
     ap.add_argument("--out", default="ARCHITECTURE_REVIEW.html")
     ap.add_argument("--check", action="store_true", help="write nothing; exit 1 if the page would show problems")
     x = ap.parse_args(argv)
+    sys.path.insert(0, HERE)
+    import workspace
+    x.course = workspace.work_folder(x.course)        # course\ beside the operator's material (L40)
     path = lambda given, name: given or os.path.join(x.course, name)
     try:
         prog, arch = load(path(x.programme, "programme.json")), load(path(x.architecture, "architecture.json"))

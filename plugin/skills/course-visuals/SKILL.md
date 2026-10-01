@@ -18,6 +18,9 @@ description: >
 
 # Course visuals — what representation actually teaches this?
 
+> **Every reply to the operator** (owner, 2026-10-01, L25): three parts as short points - **Done · Check now · Next** -
+> in everyday words, for someone who knows nothing about IT. The full rule: `course-factory/SKILL.md`.
+
 **v1 (2026-09-10) · plugin `course-factory` (since 2.1.0)**
 
 Technically working HTML is not the bar. A screen can validate, fit, contrast correctly and still
@@ -178,6 +181,12 @@ generic HTML, which is where the card grids come from.
 
 `source/knowledge/asset-pipeline.json` is the authority. The short form:
 
+> **Owner, 2026-10-01 (L33 revised):** every picture in the course's **knowledge base and old course is usable as it
+> is** (`OWNER_CLEARED`) - including textbook and publisher figures and the old decks' pictures
+> (`course-factory/scripts/old_course.py images`). When a slide needs a picture neither has, the factory **must search
+> the internet and download it** into the course folder; the downloads are shown once per module as a list and made on
+> the operator's yes. An unclear licence on a download goes on the owner's licence list; it no longer blocks the build.
+
 **1 PROJECT** — `source_files/`, operator-supplied assets, manuals, drawings, the course's own
 existing assets. Search by more than the requester's phrasing: equipment name, manufacturer,
 alternate and older terminology, system name, likely figure captions, abbreviations, both
@@ -195,7 +204,8 @@ scene is the right medium. **Never generated imagery in place of a structured te
 
 Two escalations, and neither is silent:
 
-- **`RIGHTS_REVIEW_REQUIRED`** — rights unclear or restricted. **Blocks shipping.** An uncleared
+- **`RIGHTS_REVIEW_REQUIRED`** — rights unclear or restricted on a **download** (since 2.19.0 it goes on the owner's
+  licence list and does not stop the build; the knowledge base and the old course are `OWNER_CLEARED`). Before: **Blocks shipping.** An uncleared
   publisher figure has already blocked a whole course in this system once.
 - **`GENERATED_ASSET_REQUIRED`** — nothing suitable exists at any level. Emit the full generation
   brief in `source/schemas/GENERATED_ASSET_BRIEF.md`. If the **`nano-banana`** plugin is installed,

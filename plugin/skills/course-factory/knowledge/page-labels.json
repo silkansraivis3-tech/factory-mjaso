@@ -278,7 +278,15 @@
     "fmt_scenario": "one step per line: situation => right action* | wrong | wrong.",
     "t_long_notes": "{w} words in the instructor notes - keep them to {max} at most, as short points for the instructor's panel; the theory itself belongs on the slide.",
     "suggestions_title": "Suggestions - not required",
-    "suggestions_intro": "Worth a look before you approve. None of them stops the course."
+    "suggestions_intro": "Worth a look before you approve. None of them stops the course.",
+    "old_title": "From the old course - kept, modernised, added",
+    "old_had": "The old course had:",
+    "old_keep": "Kept as it was",
+    "old_modernise": "Modernised and made digital",
+    "old_add": "Added - the old course did not have it",
+    "p_no_old_course": "Module {m}: the old course was read, but this module does not say what it takes from it - what is kept, modernised and added (L41).",
+    "old_course_row": "Old course (read whole, read only)",
+    "s_from_old": "From the old course"
   },
   "lv": {
     "page_title": "Kursa uzbūve — jūsu pārskatīšanai",
@@ -545,7 +553,15 @@
     "fmt_scenario": "viens solis katrā rindā: situācija => pareiza rīcība* | nepareiza | nepareiza.",
     "t_long_notes": "{w} vārdi instruktora piezīmēs - ne vairāk par {max}, īsos punktos instruktora panelim; pati teorija pieder slaidam.",
     "suggestions_title": "Ieteikumi - nav obligāti",
-    "suggestions_intro": "Vērts apskatīt pirms apstiprināšanas. Neviens no tiem kursu neaptur."
+    "suggestions_intro": "Vērts apskatīt pirms apstiprināšanas. Neviens no tiem kursu neaptur.",
+    "old_title": "No vecā kursa - saglabāts, modernizēts, pievienots",
+    "old_had": "Vecajā kursā bija:",
+    "old_keep": "Saglabāts, kā bija",
+    "old_modernise": "Modernizēts un digitalizēts",
+    "old_add": "Pievienots - vecajā kursā tā nebija",
+    "p_no_old_course": "{m}. modulis: vecais kurss ir izlasīts, bet modulis nesaka, ko no tā ņem - kas saglabāts, modernizēts un pievienots (L41).",
+    "old_course_row": "Vecais kurss (izlasīts viss, netiek mainīts)",
+    "s_from_old": "No vecā kursa"
   },
   "ru": {
     "page_title": "Структура курса — на ваше рассмотрение",
@@ -812,6 +828,14 @@
     "fmt_scenario": "один шаг в строке: ситуация => верное действие* | неверное | неверное.",
     "t_long_notes": "{w} слов в заметках инструктора - не более {max}, короткими пунктами для панели инструктора; сама теория - на слайде.",
     "suggestions_title": "Советы - не обязательно",
-    "suggestions_intro": "Стоит посмотреть перед утверждением. Ни один из них не останавливает курс."
+    "suggestions_intro": "Стоит посмотреть перед утверждением. Ни один из них не останавливает курс.",
+    "old_title": "Из старого курса - сохранено, модернизировано, добавлено",
+    "old_had": "В старом курсе было:",
+    "old_keep": "Сохранено как было",
+    "old_modernise": "Модернизировано и переведено в цифру",
+    "old_add": "Добавлено - в старом курсе этого не было",
+    "p_no_old_course": "Модуль {m}: старый курс прочитан, но модуль не говорит, что из него берёт - что сохранено, модернизировано и добавлено (L41).",
+    "old_course_row": "Старый курс (прочитан целиком, не изменяется)",
+    "s_from_old": "Из старого курса"
   }
 }

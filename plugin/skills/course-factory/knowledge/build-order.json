@@ -43,6 +43,13 @@
       "rule": "never renumber a Sub-ILO anywhere a trainee can see"
     },
     {
+      "n": "4b",
+      "step": "old course, read whole",
+      "owner": "course-factory (scripts/old_course.py)",
+      "does": "L41 (owner, 2026-10-01): every file of the old course read - slides, exercises, handouts, tests, films - and every picture copied out; then, per module, what is kept, modernised and made digital, and added. It is the foundation the architecture is planned from.",
+      "output": "course\\_factory\\OLD_COURSE_INVENTORY.md, old_course_inventory.json, old_course_images\\ (2.19.0)"
+    },
+    {
       "n": 5,
       "step": "module split",
       "owner": "course-factory/hours",

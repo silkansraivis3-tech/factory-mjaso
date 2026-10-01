@@ -7,7 +7,7 @@
     "nano_banana": {"en": "the factory makes it with the image / video generator (nano-banana)", "lv": "fabrika to izveido ar attēlu / video ģeneratoru (nano-banana)", "ru": "фабрика делает генератором изображений / видео (nano-banana)",
                     "how": "Gemini images and Veo video through the nano-banana plugin, with the owner's key (configured and working on 2026-09-30). Context and atmosphere only - never equipment a trainee must recognise (L33, Q3) - and labelled 'AI-generated illustration'."},
     "sources": {"en": "taken from the knowledge base, the old course or the source files", "lv": "ņemts no zināšanu bāzes, vecā kursa vai avota failiem", "ru": "берётся из базы знаний, старого курса или исходных файлов",
-                "how": "found, checked and credited by course-visuals (L33)"},
+                "how": "every picture in the knowledge base and the old course is usable as it is (owner, 2026-10-01) - found, checked, credited where known by course-visuals; what is missing is searched on the internet and downloaded into the course folder, the list confirmed once per module (L33)"},
     "novikontas": {"en": "needs Novikontas: a photo, a short film or a 3D scan of the real equipment", "lv": "vajag Novikontas: fotogrāfiju, īsu video vai reālā aprīkojuma 3D skenējumu", "ru": "нужна Novikontas: фото, короткое видео или 3D-скан реального оборудования",
                    "how": "the school has the equipment the IMO model course lists (L28). A phone is enough: photographs; a short video; or a 3D scan with a free photogrammetry app (Polycam, KIRI Engine, RealityScan) exported as a .glb file. The factory lists exactly what to capture, from which side, and puts the file into the slide."},
     "outside": {"en": "needs outside help: a licensed model or a 3D artist", "lv": "vajag ārēju palīdzību: licencētu modeli vai 3D mākslinieku", "ru": "нужна помощь извне: лицензированная модель или 3D-художник",
@@ -92,6 +92,20 @@
                            "answer": "one step per line: the situation => right action* | wrong | wrong"}
   },
 
+  "trainee_tablet_experience": {
+    "_law": "L42 (owner, 2026-10-01): 'tablet-friendly UI/UX, user-friendly, but max modern, max technology and max understandable - so people even with zero tablet experience do the tasks, and they are excited.' The full rule: course-task-ux SKILL.md section 0.",
+    "first_try_screen_seconds": 20,
+    "gestures_allowed": ["tap", "drag - always also tap-then-tap"],
+    "gestures_never_the_only_way": ["double-tap", "long-press", "swipe to move on", "pinch"],
+    "answer_control_min_px": 56,
+    "question_text_min_px": 18,
+    "answer_text_min_px": 16,
+    "feedback_within_ms": 100,
+    "first_time_gesture_hint": "a short animated hand, once per kind of task",
+    "result_screen": "the trainee's own score as an animated ring - rewarding, professional, never childish",
+    "never": ["an error message to the trainee", "a timer on a self-check or module check", "a loading spinner", "anything fetched from the network"],
+    "proved_by": ["step 6: every task type at tablet size in a browser", "QA: a 'never used a tablet' walkthrough in a colleague's browser", "the owner's real-tablet touch test at the end (L39)"]
+  },
   "floors": {
     "every_slide_has_a_visual": true,
     "_every_slide": "Owner, 2026-09-30 (2.18.1): no quota. As many pictures as the theory and the experience call for - wherever a picture, an animation or a realistic 3D illustration reflects what is being taught at that point, put it in; animation and 3D especially. A slide with none gets a suggestion, never a block. A picture that is named must say what it shows (must fix), and an unknown kind is a mistake to correct.",

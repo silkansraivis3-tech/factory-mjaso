@@ -68,4 +68,6 @@ is a stated gap, and a stated gap is a good answer (L4).
   into the knowledge base's own `retrieval/` folder; the factory writes into the course folder only,
   and refuses a course folder that sits inside the knowledge base.
 - An IMO model course is a training requirement, never a source of fact (L22).
-- A figure or table from a textbook or publisher is not copied — see L33.
+- A figure from the knowledge base - a textbook or publisher figure too - **is usable as it is** (owner, 2026-10-01;
+  L33 revised): credit it where the source is known and list it in `factory-notes.md`. Its images are in each
+  source's `images\` folder.

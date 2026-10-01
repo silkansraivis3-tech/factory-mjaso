@@ -212,9 +212,14 @@ is, and nothing about the first fact excuses the second word.
 Most fixes belong to the factory, not to them. **Offer to do the work before explaining how they
 could.**
 
+*Owner, 2026-10-01 (2.19.1): every reply is humanized - by points: **what's done, what to check now, what's next** -
+for a person who knows nothing about IT and its terms. The shape, the three headings in English, Latvian and Russian,
+and the words to replace are in `SKILL.md` (*Every reply to the operator*) and `knowledge/plain-language.json` →
+`every_reply`. The maritime terms stay professional (L28); only the computer words become everyday words.*
+
 ---
 
-## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1)
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2)
 
 Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
 these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
@@ -366,6 +371,29 @@ The pattern file, as the owner set it (2026-09-30):
 `templates/FEEDBACK_LOG.md`, `templates/COURSE_PATTERN.md`, `resources/course-patterns/`.
 
 **L33 · Pictures: find first, keep what teaches, never invent what a trainee must recognise.**
+
+**Revised by the owner, 2026-10-01 (2.19.0): every image is usable, and the internet is used.** *"All images he can
+find in the knowledge base and the old course are usable, and if it is needed, he MUST go to the internet and
+download all images needed."*
+
+- **Every picture in the knowledge base and in the old course may be used as it is** - photographs, drawings,
+  textbook and publisher figures, the old decks' pictures (`old_course.py images` copies them out, slide by slide).
+  Nothing is redrawn only to avoid using it, and nothing from these two is held back for its licence. Its source is
+  still credited on the slide where a credit is known ("after <book>, fig. N"), and listed in `factory-notes.md`,
+  so the owner can see what came from where. This replaces the 2.12.0 rule that textbook figures are redrawn and
+  that ICS/SIGTTO figures marked *not cleared* stay out.
+- **When a picture the slide needs is in neither, the factory searches the internet and downloads it** - real
+  photographs and drawings, by the authority order of `course-visuals` (manufacturer, official body, original manual,
+  technical body ...; never SEO farms or scraped image sites). It is downloaded into the course work folder, never
+  hot-linked (the tablet is offline, L6), with its page, licence and date beside it. A licence that is unclear is put
+  on the owner's licence list - it does not stop the build.
+- **The downloads are confirmed once, as a list.** Per module, one pop-up shows every file to download - what it
+  shows, the site, the size - and on the operator's yes all of them are downloaded. Nothing is downloaded unseen.
+- What stays: equipment a trainee must recognise is never an AI image (Q3); the real thing - a found or downloaded
+  photograph, a scan, or a photo to take at Novikontas.
+
+*The 2.12.0 text, kept as it was:*
+
 Sourcing order: knowledge base → old course → source files → internet (real photographs,
 legitimate schematics) → authored → generated. Legitimate schematics and example pictures from the
 knowledge base or the old course are **kept and used** where they teach well, not redrawn for the
@@ -520,3 +548,48 @@ can check all of this in their own browser; later I will test it on the tablet."
 - **The real-tablet test is the owner's, and it comes at the end** - by touch, every task type, and the results the app
   records. Until then nothing is called tablet-tested. The app stays read-only (L21); what it needs is listed for the
   owner.
+
+### Added by the owner when the pilot folder was set up (2026-10-01, 2.19.0)
+
+**L40 · The factory works in its own folder, beside the course material.**
+*"After I choose the folder where all the course info is (source_files, knowledge base, old course if possible), do
+all the work in another folder inside the master folder - alongside these folders add a course folder and do the job
+there."*
+
+- The folder the operator gives is the **master folder**. Its `source_files\`, knowledge base and old course are read,
+  never written into.
+- Everything the factory makes goes into **`course\`** beside them: `COURSE_STATE.md`, `FEEDBACK_LOG.md`, `_factory\`,
+  `programme.json`, `architecture.json`, the review pages and Word files, `instructor_notes\`, the built modules.
+- `scripts/workspace.py` decides it, and every tool calls it - so the operator may name the master folder or
+  `course\` and the result is the same. A folder with no course material in it is used as it is (an old layout keeps
+  working).
+
+**L41 · The old course is the foundation.**
+*"He needs to check all of the old course, take it as fundamentals, and from there think how it can be optimised,
+modernised and digitalised."*
+
+- At intake the **whole** old course is read - `old_course.py inventory`: every deck slide by slide (title, words,
+  pictures, speaker notes), every exercise in its trainee and instructor versions, every handout, test and training
+  film; an old `.doc` it cannot open is flagged, never skipped in silence. `old_course.py images` copies every picture
+  out of the decks. Both write into `course\_factory\` only.
+- It is the **starting point**, not a picture library: what the old course teaches, in what order, with which
+  examples and exercises, is what the new course builds on.
+- At the Stage 2 STOP, **every module says what it takes from the old course**: what it had, what is **kept**, what is
+  **modernised and made digital** (a static picture becomes an animation or a 3D model, a paper exercise a tablet task,
+  a dense slide one idea per slide, a long film a short clip at the right moment) and what is **added**. The
+  architecture page refuses a module without it once the old course has been read. A slide built from the old course
+  may say where it came from (`from_old` in the content script). Nothing of it is deleted: what is not used is said
+  to be moved, and where to (Q4).
+- The finished GAS BASIC course at `Desktop\docling\gas_basic\GAS Basic` is not the old course and stays out of
+  the pilot (owner, 2026-09-30).
+
+**L42 · Trainee-tablet tasks: modern, exciting, and usable by someone who has never held a tablet.**
+*"For tablet tasks I need tablet-friendly UI/UX, user-friendly as well, but max modern, max technology and max
+understandable - so people even with zero tablet experience do the tasks, and they are excited."*
+
+Someone who has never used a tablet does every task without help, and enjoys it. A 20-second *try the tablet*
+screen before the first task; only tap and drag (every drag also tap-then-tap); an animated hand shows each new
+gesture once; answer controls at least 56 px, question text 18 px; instant, alive feedback; real equipment in 3D,
+photographs and working panels; forgiving - nothing breaks, no timers, no error messages; offline and fast; proved
+in a colleague's browser and, at the end, on the owner's tablet. The full rule: `course-task-ux` SKILL.md §0; the
+numbers: `knowledge/media-and-tasks.json` → `trainee_tablet_experience`. Built in Phase 5 step 6.

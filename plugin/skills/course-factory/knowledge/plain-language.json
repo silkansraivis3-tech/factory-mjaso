@@ -106,6 +106,34 @@
     ]
   },
 
+  "every_reply": {
+    "_owner": "2026-10-01: 'every response needs to be humanized and understandable - by points: what's done, what's next, what to check now - understandable for a person who knows zero about IT and all these terms, just humanized.'",
+    "parts": [
+      {"en": "Done", "lv": "Izdarīts", "ru": "Сделано", "what": "what was done, and what it means for the course"},
+      {"en": "Check now", "lv": "Pārbaudiet tagad", "ru": "Проверьте сейчас", "what": "what to open or look at now - the full path, and what it opens in"},
+      {"en": "Next", "lv": "Tālāk", "ru": "Дальше", "what": "what happens next, and what the factory needs from the operator, if anything"}
+    ],
+    "rules": [
+      "short points, one idea each, in the operator's language",
+      "everyday words about computers - a technical word that cannot be avoided gets its plain meaning beside it, once",
+      "the maritime terms stay exactly as professional as they are (L28)",
+      "numbers the operator counts by - modules, minutes, slides - not file sizes or test counts unless asked; checks in one line: 'all checks passed'",
+      "a question is a choice with options (L31); a problem always says what to do (every_problem_message_has_five_parts)",
+      "a command the operator must run comes ready to copy, with one sentence on what it does",
+      "offer to do the work: 'tell me and I will'"
+    ],
+    "words_to_replace": {
+      "script / JSON file": "the file that holds ... (say what it holds)",
+      "commit and push": "save the change and publish it to the shared copy",
+      "plugin update": "update the factory on this computer",
+      "render": "make the review page",
+      "validate / the test suite passed": "the checks found nothing wrong",
+      "repository / repo": "the factory's shared copy online",
+      "pipeline / build": "the steps that make the course",
+      "folder tree / directory": "folder",
+      "flag": "point out"
+    }
+  },
   "tone": {
     "_rule": "Write to a competent professional in an unfamiliar subject, not to a beginner and not to a colleague in IT.",
     "do": [
@@ -124,7 +152,7 @@
 
   "surfaces": {
     "_what": "Where this law is enforced. Anything a person other than the factory reads.",
-    "operator_facing": ["factory-notes.md", "visual-notes.md", "VISUAL_HANDOFF.md", "REVIEW.html", "REPORT", "the chat report"],
+    "operator_facing": ["factory-notes.md", "visual-notes.md", "VISUAL_HANDOFF.md", "REVIEW.html", "REPORT", "the chat report", "every reply in the chat - Done / Check now / Next (every_reply)"],
     "_not": "Code comments, test names and the scripts' own internal docstrings are written for whoever maintains the factory, and stay technical."
   }
 }

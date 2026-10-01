@@ -23,6 +23,34 @@ description: >
 
 **v1.2 (2026-09-30) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
+## Every reply to the operator — human, and in three parts (L25, owner 2026-10-01)
+
+*"Every response needs to be humanized and understandable - by points: what's done, what's next, what to check
+now - understandable for a person who knows zero about IT and all these terms."*
+
+Every message the operator reads - in the chat, at every STOP, after every step - is written for someone who knows
+the sea and the course, and nothing about computers. It has these three parts, as short points, in the operator's
+language:
+
+| | English | Latviešu | Русский |
+|---|---|---|---|
+| what was done, and what it means for the course | **Done** | **Izdarīts** | **Сделано** |
+| what to open or look at now, and exactly where (the full path, and what it opens in) | **Check now** | **Pārbaudiet tagad** | **Проверьте сейчас** |
+| what happens next, and what the factory needs from them, if anything | **Next** | **Tālāk** | **Дальше** |
+
+- **Everyday words.** No *script, JSON, commit, push, repo, plugin, render, flag, hash, schema, validate, pipeline,
+  build, folder tree* - say what it is: *"the file that holds the module's words"*, *"save and publish the factory"*,
+  *"the check found nothing wrong"*. A technical word that truly cannot be avoided gets its plain meaning beside it,
+  once. The maritime terms stay exactly as professional as they are (L28) - this is about computer words only.
+- **Short.** A few points per part, one idea a point. Numbers as the operator counts them: *"23 modules"*, *"80
+  minutes"*, not file sizes or test counts unless they asked. Test results in one plain line: *"all checks passed"*.
+- **Nothing to decode.** A question is a choice with options (the pop-up, L31), not an essay. A problem always says
+  what to do about it (the five parts below). Commands the operator must run are given ready to copy, with one
+  sentence on what they do - never as the only explanation.
+- **Offer, don't instruct.** If the factory can do it, say *"tell me and I will"*.
+
+`knowledge/plain-language.json` → `every_reply` holds the same rule for the checks.
+
 **The acceptance test.** Someone who has never seen the course opens the instructor terminal,
 types their ID, picks the module, presses **Start**, and presses **Next** to the end — and a real
 accredited class gets taught, in the minutes the approved programme allows, with the trainees'
@@ -61,13 +89,16 @@ row wins** — even before its step has been built out. Full text: `references/l
 | **L30** | **Module 1 is a pilot**, built by five roles and approved before any other module is built | step 10 |
 | **L31** | Ask like a colleague: real expert questions batched as **one pop-up with options** at the next STOP, then carry on. No "needs SME review" spam. Honesty markers live in `factory-notes.md`, never on a slide, never a reason to stop; "next" at a STOP ratifies what it showed | now |
 | **L32** | `COURSE_STATE.md` updated at the end of every stage; every operator correction in `FEEDBACK_LOG.md`; a pattern file offered when the operator is happy — see *The course remembers* below | now |
-| **L33** | Pictures: KB → old course → source files → internet → authored → generated; keep legit old schematics; textbook figures redrawn **technically identical**, credited "after <book>", listed in `factory-notes.md`; equipment a trainee must recognise is **never** an AI image — schematic plus the "photos to take at Novikontas" list | step 8 |
+| **L33** | Pictures: KB → old course → source files → internet → authored → generated; keep legit old schematics; **every picture in the knowledge base and the old course is usable as it is** (credited where known, listed); what is missing is **searched on the internet and downloaded** into the course folder, the download list confirmed once per module (owner, 2.19.0); equipment a trainee must recognise is **never** an AI image — schematic plus the "photos to take at Novikontas" list | step 8 |
 | **L34** | **One module per programme topic** — in the programme's order, with the programme's hours (GAS BASIC: 22 teaching modules). The programme's final-assessment topic is the **last module, and the assessment only**: no slides, no teaching. Topics are never merged or split. An academic hour is the programme's; at Novikontas 40 min when it is silent | now (2.17.0) |
 | **L35** | **Two tablets.** The slides run on the instructor tablet, mirrored to the classroom screen; the notes stay on the instructor's panel. Tasks are **only** on the trainee tablet. At task time the slide only says a task starts now and what it is about, and the instructor's panel has one button, **OPEN TASK**; the task then opens on every trainee tablet by itself. No task list, no browsing, no "all tasks" or "back to tasks" button | now in the script and architecture; the app's change list in step 6 |
 | **L36** | **Enough theory before any task.** A slide carries the teaching itself, not a headline; the notes carry what the instructor explains; a module's words fill its minutes; a self-check comes only after a block of new theory; every answer is taught before its task opens. Floors: `knowledge/theory-rules.json`, checked on the content script | now (2.17.0) |
 | **L37** | **Every slide leaves room for its picture** and names it: the kind (photograph, schematic, cutaway, chart, step / flow / process animation, interactive diagram, 3D model, 3D scan, video, AI illustration ...), what it shows, the layout - and **who makes it**: the factory, the image/video generator (context only), the sources, **Novikontas** (a photo, a film, a phone 3D scan) or outside help. 40+ min of theory: something that moves, turns or can be explored. `knowledge/media-and-tasks.json` | now in the script and architecture; built in steps 8-9 |
 | **L38** | **Tasks are varied and hands-on** - 14 ways of answering, none typing: choose one / all, choose-and-justify, order, match, sort, complete the sentence, tap the place, label the drawing, find the hazards, read the instrument, set the value, operate the panel, scenario. A self-check uses 2+, a module check 3+; "choose one" at most 40 %; one hands-on question per module | now in the script and architecture; built in step 6 |
 | **L39** | **Who tests where.** The build makes every file ready for the tablet system; a colleague gets **only the HTML**, to check in their own browser; **the real-tablet test is the owner's, at the end**. Instructor notes are short points in `instructor_notes/M01_INSTRUCTOR_NOTES.md`, for the panel - never on a slide (2.18.1). Pictures have no quota: every chance to show the theory is taken, and the picture floors are suggestions | now (2.18.1) |
+| **L40** | **The factory works in `course\`** beside the operator's material: the folder given is the master folder (source_files, knowledge base, old course - read only); everything the factory makes goes into `course\` next to them. `scripts/workspace.py`; every tool accepts either folder | now (2.19.0) |
+| **L42** | **Trainee-tablet tasks are modern, exciting, and usable with zero tablet experience** - a first *try the tablet* screen; tap and drag only (drag also tap-then-tap); an animated hand shows each new gesture once; big controls (56 px), big text; instant, alive feedback; real equipment in 3D and working panels; forgiving, no timers, no error messages. `course-task-ux` §0 | built in step 6 |
+| **L41** | **The old course is the foundation.** Read it whole at intake (`scripts/old_course.py inventory`, and `images` for its pictures); at the Stage 2 STOP every module says what it **keeps**, what it **modernises and makes digital**, and what it **adds** | now (2.19.0) |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
 predict-then-reveal, worked example then own attempt. More practice than theory; theory never removed.
@@ -182,8 +213,12 @@ operator that this tool is hard work.
 **Stage 1 — intake.** `knowledge/intake.json` is the authority: what to look for first, the
 questions, and what to record. In order:
 
+0. **The folder given is the master folder** (L40): work in `course\` beside the material - `python scripts/workspace.py
+   <folder>` says where. Never write into `source_files\`, the knowledge base or the old course.
 1. **Look in the folder** for the programme, the IMO model course, the knowledge base, the old
    course; propose the course type from the programme. The course language is always English.
+   **Read the old course whole** (L41): `python scripts/old_course.py inventory <old course> --course <folder>`
+   and `... images ...` - it is the foundation the architecture is planned from.
 2. **Sort the sources** — `kb/scripts/kb_tool.py sources <kb> --course <course>` (read `kb/GUIDE.md`):
    exact copies and .doc/.docx pairs are settled without asking; each publication found in more than
    one edition becomes a "which edition is current?" question.
@@ -261,7 +296,8 @@ translation is explicitly requested; the chat report and `factory-notes.md` foll
 `retrofit/scripts/check_language.py` is the drift check. **Every Novikontas course is in English**
 (owner, 2026-09-30) - COURSE_LANGUAGE is English and is never asked.
 
-**L25 · The person reading this does not work in IT.** `knowledge/plain-language.json` is the
+**L25 · The person reading this does not work in IT.** Every reply has three parts - **Done · Check now · Next** -
+in everyday words (see *Every reply to the operator* at the top). `knowledge/plain-language.json` is the
 authority; `scripts/check_plain_language.py` enforces it. Every problem message carries all five:
 
 | | |

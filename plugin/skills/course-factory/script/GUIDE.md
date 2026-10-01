@@ -68,6 +68,8 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   slide must teach (`course-visuals`, `decide/knowledge/learning-needs.json`): what moves or changes state
   is animated; what has an inside is a cutaway or a 3D model; what must be recognised on board is a real
   photograph, a scan or a photo to take at Novikontas — never an AI picture (L33).
+- `"from_old"` (optional, L41) — where in the old course the slide comes from and what changed: *"1. Liquefied Gas
+  tankers.pptx, slides 37-40 - the photographs became a 3D model"*. Shown on the review page.
 - `"visual"` — what it shows and why, in one or two sentences; `"layout"` — `split` (text left, picture
   right), `visual_wide` or `visual_full`.
 - **No quota** (2.18.1): wherever a picture, an animation or a realistic 3D illustration can show what the slide

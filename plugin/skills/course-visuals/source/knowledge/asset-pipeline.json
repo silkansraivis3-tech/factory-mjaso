@@ -12,7 +12,9 @@
         "any assets the operator supplied with the brief",
         "project manuals, technical drawings, schematics, photographs",
         "the course's own existing assets (module_NN/assets/**)",
-        "the knowledge base's extracted figure artefacts, where a figure is genuinely needed"
+        "the knowledge base's extracted figures (KNOWLEDGE_BASE/sources/*/images) - all usable as they are (owner, 2026-10-01)",
+        "the old course's pictures - course/_factory/old_course_images/, copied out slide by slide by course-factory/scripts/old_course.py images - all usable as they are (owner, 2026-10-01)",
+        "the old course's training films, for a real video (L37)"
       ],
       "search_terms_rule": "Search by MORE than the words in the request. Expand to: the equipment name, the manufacturer, alternate and older terminology, the system name, the document title, likely figure captions, and the abbreviation. A single failed grep for the requester's phrasing is not a search.",
       "term_expansion_examples": [
@@ -81,11 +83,13 @@
     "PROJECT_OWNED": "supplied by the operator from their own material - no external licence question",
     "PUBLIC_DOMAIN": "verified public domain or CC0",
     "ATTRIBUTION_REQUIRED": "usable, and the credit line must appear wherever the asset appears",
-    "RIGHTS_REVIEW_REQUIRED": "usage rights unclear, restricted, or a publisher figure that is not cleared for issue. BLOCKS shipping. Escalate to the owner; never resolve it by assumption.",
+    "OWNER_CLEARED": "in the course's knowledge base or old course - the owner declared all of these usable (2026-10-01). Credited where the source is known, listed in factory-notes.md; no licence question for the factory.",
+    "RIGHTS_REVIEW_REQUIRED": "usage rights unclear or restricted on something downloaded from the internet. Since 2.19.0 it does NOT stop the build: it goes on the owner's licence list (factory-notes.md) with the page and what is known, for the owner to decide before publishing. Never resolved by assumption.",
     "REJECTED": "found and deliberately not used - record why, so the next search does not repeat it"
   },
   "rights_law": [
-    "Unclear rights are RIGHTS_REVIEW_REQUIRED, never a silent ship.",
+    "Owner, 2026-10-01: every image in the knowledge base and the old course is usable (OWNER_CLEARED); when something is still missing, the factory MUST search the internet and download it into the course folder. Per module, the files to download are shown once as a list (what, site, size) and downloaded on the operator's yes.",
+    "Unclear rights on a download are RIGHTS_REVIEW_REQUIRED - listed for the owner, never a silent ship.",
     "An uncleared publisher figure can block an entire course from being issued. That has already happened once in this system.",
     "Acceptable for photographs: public domain, CC0, CC BY, CC BY-SA, or explicit permission. Not acceptable: NC, ND, 'free to use' with no named licence, stock previews, or anything scraped from a manufacturer site or a PDF without a rights decision.",
     "Record the licence per file, beside the file, not in a central register that goes stale."

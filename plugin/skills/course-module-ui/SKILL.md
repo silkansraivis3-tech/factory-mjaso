@@ -5,6 +5,9 @@ description: The locked LOOK of a course module - the token set every deck, task
 
 # The look of a module
 
+> **Every reply to the operator** (owner, 2026-10-01, L25): three parts as short points - **Done · Check now · Next** -
+> in everyday words, for someone who knows nothing about IT. The full rule: `course-factory/SKILL.md`.
+
 `course-module-ux` owns whether a screen **works** — fill, overflow, contrast ratio, tap
 targets. It is a floor, not an identity: two people can pass every check in `floor.json` and
 produce courses that look nothing alike. That happened. This skill owns what a screen **looks

@@ -32,7 +32,8 @@ re-decide anything listed under "Decided". Internal — never shipped to a table
 | | |
 |---|---|
 | Course | <title> |
-| Course folder | <full path> |
+| Course material (master folder, read only) | <full path> - source_files, knowledge base, old course |
+| Work folder | <master folder>\course - everything the factory makes (L40) |
 | Approved programme | <path> |
 | IMO model course | <path, or none> |
 | Knowledge base | <path> — <Course Source Processor / docling> |

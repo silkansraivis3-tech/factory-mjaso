@@ -554,6 +554,10 @@ def main(argv=None):
     q = sub.add_parser("search"); q.add_argument("kb"); q.add_argument("query"); q.add_argument("--course", required=True)
     q.add_argument("--top", type=int, default=12); q.add_argument("--all", action="store_true")
     a = ap.parse_args(argv)
+    if getattr(a, "course", None):                 # what the factory writes goes to course\ (L40)
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "scripts"))
+        import workspace
+        a.course = workspace.work_folder(a.course)
     if a.cmd == "find":
         return cmd_find(a.folder, a.json)
     if a.cmd == "detect":

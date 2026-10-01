@@ -15,6 +15,9 @@ description: >
 
 # Course task UX — the standard
 
+> **Every reply to the operator** (owner, 2026-10-01, L25): three parts as short points - **Done · Check now · Next** -
+> in everyday words, for someone who knows nothing about IT. The full rule: `course-factory/SKILL.md`.
+
 **v2 (2026-09-03) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 Ruled by a course owner across 2026-09-01/03 while reviewing a tablet build of 32 task
@@ -96,6 +99,41 @@ approval of the content. Every task page built from it carries `data-script` and
 > **The owner's rulings behind every section below — the quotes, the failures and the numbers —
 > are in `references/rulings-in-full.md`, word for word, under the same section numbers.** Read a
 > section in full before arguing with it, relaxing it or changing it.
+
+## 0 · The trainee who has never held a tablet (L42, owner 2026-10-01) - this comes first
+
+*"For tablet tasks I need tablet-friendly UI/UX, user-friendly as well, but max modern, max technology and max
+understandable - so people even with zero tablet experience do the tasks, and they are excited."*
+
+The test for every task screen: **someone who has never used a tablet does it without help, and enjoys it.** Both
+halves count - a task that is clear but dull fails, and so does one that is impressive but confusing.
+
+1. **A first try, before the first task.** The course's first task opens with a 20-second *"try the tablet"*
+   screen - tap this, drag this here - with a friendly check mark. Not scored, never repeated.
+2. **Only tap and drag.** Every drag also works as *tap the item, then tap where it goes*. Never double-tap,
+   long-press, swipe-to-move-on or pinch as the only way; a 3D model has turn and zoom buttons as well as gestures.
+3. **Show, don't tell.** The first time a kind of task appears, a short animated hand shows the gesture once, then
+   goes. The screen itself shows what to do - the slots for the answer, the item that can be moved (it lifts slightly
+   and has a grip), the one button that matters.
+4. **Big, and one thing at a time.** Answer controls at least **56 × 56 px**, the question at least **18 px**, answer
+   text at least **16 px**, the Next / Check button big and in the same place on every screen (bottom, full width).
+   One question per screen (L35), plenty of space, nothing small to aim at.
+5. **Alive, instant feedback.** Every touch answers within a tenth of a second: a press state, a soft snap when a
+   dragged item lands, a calm shake and a hint on a wrong try, a check mark and the reason on a right one. The last
+   screen shows the trainee's own score as an animated ring - rewarding and professional, never childish.
+6. **Modern and real.** Real equipment on the screen - 3D models that turn, real photographs, panels and gauges that
+   look and behave like the ones on board; smooth motion between steps; the module's own look (`course-module-ui`).
+   Nothing may look or feel like an old web form.
+7. **Forgiving.** Nothing can be broken or lost: a wrong drag can be moved again, an answer can be changed until Check
+   is pressed, no timer on a self-check or module check. The trainee is never stuck and never sees an error message.
+8. **Fast and offline.** No loading spinners, nothing fetched (L6) - every picture, model and sound is in the pack.
+9. **Proved, not assumed.** Step 6 checks every task type at tablet size in a browser; QA adds a *"never used a
+   tablet"* walkthrough - a colleague doing every task in their own browser with no explanation (L39); the owner's
+   real-tablet touch test comes at the end.
+
+`course-factory/knowledge/media-and-tasks.json` → `trainee_tablet_experience` holds the numbers.
+
+---
 
 ## 1 · What a task screen must NOT have
 
@@ -259,7 +297,8 @@ At the target viewport (**800 × 1280 portrait** for the reference build), on ev
 
 | | Requirement |
 |---|---|
-| Tap targets | **≥ 44 × 44 CSS px**, no exceptions |
+| Tap targets | **≥ 44 × 44 CSS px**, no exceptions - and **≥ 56 × 56** for every answer control on the trainee tablet (§0, L42) |
+| Question / answer text | **≥ 18 px / ≥ 16 px** on the trainee tablet (§0, L42) |
 | Text size | **≥ 12.5 px** for anything a trainee reads |
 | Contrast | **≥ 4.5 : 1** (3 : 1 for large text) against the *resolved* background |
 | Horizontal scroll | **none** — wide tables and drawings scroll inside their own container |

@@ -54,6 +54,8 @@ course-factory/
 ├── scripts/course_memory.py, test_course_memory.py   start / check the state; draft and approve a pattern; list approved patterns
 ├── scripts/make_architecture_page.py, test_architecture_page.py   the Stage 2 STOP as one page (2.15.0); one module per topic (2.17.0)
 ├── knowledge/theory-rules.json           how much theory before any task, and the two tablets (L35, L36, 2.17.0)
+├── scripts/workspace.py                 the work folder: course\ beside the operator's material (L40, 2.19.0)
+├── scripts/old_course.py, test_workspace.py   the old course read whole, its pictures copied out (L41, 2.19.0)
 ├── knowledge/media-and-tasks.json        the kinds of picture and the ways of answering, who makes each, the variety floors (L37, L38, 2.18.0)
 ├── knowledge/page-labels.json            the review pages' own words in the operator's language (en / lv / ru)
 ├── script/GUIDE.md                       READ IN: Stage 3 - the content script (2.16.0)
@@ -402,6 +404,45 @@ and ways of answering for all 22 modules and lists what Novikontas must photogra
   owner did not ask to change them. The final assessment was already outside them.
 - **L39.** The real-tablet test is the owner's, at the end; colleagues get only the HTML to check in their own browser;
   the build makes every file ready for the tablet system. Recorded in the laws, `tablet/GUIDE.md` and the pilot's state.
+
+## 4l · The work folder, the old course as the foundation, every picture usable (2.19.0, 2026-10-01)
+
+- **L40.** *"After I choose the folder ... do all the work in another folder inside the master folder."*
+  `scripts/workspace.py` tells a master folder (it holds source_files, a knowledge base or an old course) from the
+  factory's own work folder and returns `<master>\course\`, made on first use. Every tool that writes - the content
+  script, the architecture page, the course memory, the knowledge-base decisions - calls it, and the match check
+  reads through it, so either folder may be named. A folder with no material in it is used as it is.
+- **L41.** *"Check all of the old course, take it as fundamentals, and from there think how it can be optimised,
+  modernised and digitalised."* `scripts/old_course.py inventory` reads every file of the old course - each deck
+  slide by slide (title, words, pictures, speaker notes), each document's headings and words, PDFs' pages, the films -
+  flags an old `.doc` as not read and leaves lock files out; `images` copies every picture out of the decks, each named
+  by its slide, a repeated logo kept once. On the pilot's old course: 79 files in 17 sections, 438 slides, 653 distinct
+  pictures (1,624 placed), 23 training films, read in about a second, the old course unchanged (fingerprinted). The
+  architecture page gained a per-module *from the old course - kept, modernised, added* table, required once
+  `course.old_course` is set; a slide may carry `from_old`.
+- **L33 revised.** *"All images he can find in the knowledge base and the old course are usable, and if needed, he
+  MUST go to the internet and download all images needed."* `OWNER_CLEARED` is a new rights state for both;
+  `RIGHTS_REVIEW_REQUIRED` on an internet download now goes on the owner's licence list instead of blocking the build;
+  the sourcer returns its download list first, shown once per module, and downloads on the operator's yes. Equipment a
+  trainee must recognise is still never an AI image.
+- **Found on the way:** the pilot had already been started in another session (2026-10-01, 09:36) and was already
+  working in `course\` - the layout this release makes the rule. Nothing in the pilot folder was touched by this release.
+
+## 4m · Every reply is human (2.19.1, 2026-10-01)
+
+*"Every response needs to be humanized and understandable - by points: what's done, what's next, what to check now -
+for a person who knows zero about IT."* `SKILL.md` now opens with the rule - three parts, **Done · Check now ·
+Next**, short points, everyday computer words, maritime terms unchanged - with the headings in English, Latvian and
+Russian; `plain-language.json` → `every_reply` holds it with a list of words to replace; the five other skills carry
+one line pointing to it, so a session that starts in any of them follows it too.
+
+## 4n · Tasks for someone who has never held a tablet (2.19.2, 2026-10-01)
+
+*"For tablet tasks I need tablet-friendly UI/UX, user-friendly as well, but max modern, max technology and max
+understandable - so people even with zero tablet experience do the tasks, and they are excited."* `course-task-ux` §0 is new and comes first: the zero-experience test, the *try the tablet* screen,
+tap and drag only, the gesture hint, bigger controls and text (the §11 floor raised for answer controls on the trainee
+tablet), alive feedback, real equipment, forgiving, offline, and how it is proved. The numbers are in
+`media-and-tasks.json` → `trainee_tablet_experience`; building it is step 6.
 
 ## 5 · Known gaps / before this goes live
 

@@ -90,6 +90,7 @@ Q = lambda t: "{%s}%s" % (W, t)
 
 sys.path.insert(0, HERE)
 import check_slide_text as slide_text  # noqa: E402  - the same four rules the built slides get (L22)
+import workspace  # noqa: E402  - the factory works in course\ beside the operator's material (L40)
 
 MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json"), encoding="utf-8"))
 KINDS = ("slide", "task-slide", "activity", "self-check", "module-check", "final")
@@ -986,6 +987,8 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
                 e(T(script, "s_layout")), e((MEDIA["layouts"].get(s.get("layout") or "split") or {}).get(script.get("operator_language", "en"), s.get("layout", ""))),
                 e(T(script, "s_minutes")), e(s.get("minutes", "—")),
                 e(T(script, "s_words")), e(T(script, "s_words_n", a=wc(s.get("title", ""), s.get("text", "")), b=wc(s.get("notes", ""))))))
+        if s.get("from_old"):        # L41 - where in the old course this slide comes from, and what changed
+            o.append('<p class="note"><b>%s:</b> %s</p>' % (e(T(script, "s_from_old")), e(s["from_old"])))
         if s.get("notes"):
             o.append('<div class="instr"><b>%s</b><ul lang="%s">%s</ul></div>' % (
                 e(T(script, "s_notes")), cl, "".join("<li>%s</li>" % e(x[2:]) for x in note_lines(s.get("notes")))))
@@ -1549,6 +1552,7 @@ def main(argv=None):
             s.add_argument("--despite-findings", action="store_true",
                            help="the operator read the findings and wants the script as it is")
     a = ap.parse_args(argv)
+    a.course = workspace.work_folder(a.course)
     if not os.path.isfile(paths(a.course, a.module)["script"]):
         print("Stopped - there is no content script for module %s yet:\n    %s" % (a.module, paths(a.course, a.module)["script"]))
         return 2

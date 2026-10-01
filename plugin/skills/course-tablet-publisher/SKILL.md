@@ -20,6 +20,9 @@ description: >
 
 # NOVIKONTAS course tablet publisher
 
+> **Every reply to the operator** (owner, 2026-10-01, L25): three parts as short points - **Done · Check now · Next** -
+> in everyday words, for someone who knows nothing about IT. The full rule: `course-factory/SKILL.md`.
+
 **v1 (2026-09-08) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 **What this owns:** getting validated course content from an author's folder onto the two
