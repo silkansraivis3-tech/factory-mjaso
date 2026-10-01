@@ -283,6 +283,12 @@ The course type is declared at intake and changes the build:
 Either way the course's own language stays fully professional — real terminology, real
 abbreviations, real procedures. Plain language (L25) is for the operator, never for the course.
 
+*Owner, 2026-09-30 (2.18.2): a basic-level course does not change terminology or names because it is entry level -
+a trainee who goes to sea using names nobody on board uses has been taught wrong. Strictly professional language, but
+easy to understand: the real term, explained in plain words the first time it is used, so the trainee can communicate
+and explain their actions in real situations. What a new entrant gets more of is explanation, never easier words. The
+theory numbers are the same for both course types (`knowledge/course-type.json` → `_professional_names`).*
+
 Every instrument and simulator the IMO model course lists for the course is **assumed available at
 Novikontas**. Practical tasks are designed for it; the factory does not ask whether the school has it.
 → built out at intake (step 2) and in the build (step 7).

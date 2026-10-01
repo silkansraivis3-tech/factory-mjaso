@@ -2,7 +2,7 @@
 
 For the next Claude session. Read this before touching anything in this repository.
 
-**Status 2026-09-30: `course-factory` 2.18.1 + `nano-banana` 1.1.2. Phase 5 in progress — steps 0–5 done, and redone after the owner's review of the example pages (L34–L36); next is the pilot, Stages 1–3.**
+**Status 2026-09-30: `course-factory` 2.18.2 + `nano-banana` 1.1.2. Phase 5 in progress — steps 0–5 done, and redone after the owner's review of the example pages (L34–L36); next is the pilot, Stages 1–3.**
 Phase 5 upgrades the factory to the owner's six-stage production process (intake → architecture
 STOP → word-for-word content script STOP → pilot Module 1 with five roles → remaining modules →
 final assessment and handover). The owner's decision record, the gap analysis and the approved
@@ -51,6 +51,7 @@ Not built yet: `course-evidence`, the `evidence-retriever` agent, the determinis
 | 2.16.1 | 2026-09-30 | The slide-text check (L22) runs on the content script before approval; its findings head the review page and the Word file, and block approval unless the operator approves despite them. Fixed: two corrections applied in the same second no longer leave a pending list behind |
 | 2.17.0 | 2026-09-30 | The owner's review of the example pages - **L34** one module per programme topic, the final assessment last and alone (GAS Basic: 22 + 1); **L35** two tablets - slides on the instructor's, tasks only on the trainee's, opened with OPEN TASK, no task list, the trainee's own score on every self-check and module check; **L36** enough theory before any task (`knowledge/theory-rules.json`, checked on the script). Architecture page and content script rebuilt; examples remade from the real programme |
 | 2.18.0 | 2026-09-30 | **L37** every slide leaves room for a named picture - kind, what it shows, layout, who makes it (factory / image-video generator / sources / Novikontas photo, film or phone 3D scan / outside help); **L38** 14 ways of answering, none typing, with variety floors and a hands-on question in every module; **English only** - COURSE_LANGUAGE is never asked. `knowledge/media-and-tasks.json` |
+| 2.18.2 | 2026-09-30 | Confirmed: the slide-text floor did not drop in 2.18.1 (50-150 words a slide unchanged; notes now capped, so the slides carry more of the per-minute floor). Same theory numbers for both course types, by the owner's choice; recorded instead that **a basic course never uses easier names** - professional terms, explained so a new entrant understands (L28, `course-type.json`). Step 6 note below |
 | 2.18.1 | 2026-09-30 | Instructor notes short (10-50 words) and written to `instructor_notes/M01_INSTRUCTOR_NOTES.md` for the panel, never on a slide; pictures without a quota - the picture floors became suggestions; **L39** colleagues check the HTML in a browser, the owner tests on the tablet at the end |
 
 ---
@@ -193,6 +194,12 @@ invisible to it, which is why the human review in `course-visuals/review/GUIDE.m
 ---
 
 ## Next session
+
+**For Phase 5 step 6 (owner, 2026-09-30):** check **read-only** that the tablet app records final-assessment results
+correctly for every new answer type (all fourteen ways of answering, L38 - including multiple right answers, order,
+matching, sorting, set-a-value within a tolerance, panel end states and scenario steps), and list for the owner any app
+change needed. The app is not edited (L21, Q1); the owner applies the change list. The real-tablet touch test is the
+owner's, at the end (L39).
 
 Continue the Phase 5 step plan in `docs/PHASE5_GAP_REPORT.md` §4, in the owner's approved order
 (above). The owner's answers to Q1–Q5 and the approved order are in that report's **§6** — they

@@ -1,6 +1,7 @@
 {
   "_authority": "L28 - the course type is declared at intake and changes the build. Read at Stage 2 (architecture), Stage 3 (the content script) and when screens are built. Written 2026-09-30 (2.13.0, Phase 5 step 2); the build-side detail lands in step 7.",
   "_never": "Neither type changes the course language: real terminology, real abbreviations, real procedures, exactly as used at sea and in the regulations. Plain language (L25) is for the operator, never for the course. Neither type changes the programme, the Main ILOs or the hours (L1-L3). Theory is never removed (L5).",
+  "_professional_names": "Owner, 2026-09-30 (2.18.2): 'if it is a basic-level course, that does not mean you can change terminology or names just because it is an entry-level course - if he then goes to sea and uses our basic names for things, and it turns out nobody talks like that, it is bad. We need to stick to professional language, but still make sure it is understandable - no need to make it hard professional; strictly professional, but easy for the trainee to understand, and able to communicate and explain his actions in real-life situations.' So in EVERY course type: the names, terms and abbreviations are the ones used on board, by terminals and in the regulations - never an invented 'easy' name, never a simplified word in place of the real one. What changes for a new entrant is the explanation around the term, not the term: say it, explain it in plain words the first time, show it, then use it exactly as the industry does - so the trainee can talk to a crew and explain what they are doing. The theory numbers (knowledge/theory-rules.json) are the same for both types.",
 
   "NEW_ENTRANT": {
     "who": "trainees with no prior knowledge of the subject",
@@ -9,7 +10,7 @@
     "worked_examples": "many: a worked example before every first own attempt, then a faded example, then the trainee alone",
     "active_learning": "self-check after every key concept; explain-then-reveal and predict-then-reveal to turn explanation into activity (L5)",
     "practice": "guided first, then independent; the instructor models the procedure before the trainee performs it",
-    "terminology": "every term and abbreviation introduced and shown on first use, then used exactly as the regulations and the industry use it"
+    "terminology": "every term and abbreviation introduced and shown on first use, explained in plain words, then used exactly as the regulations and the industry use it - never replaced by an easier name (see _professional_names)"
   },
 
   "EXPERIENCED": {
