@@ -37,7 +37,7 @@ It lists every source and sorts out what would otherwise be cited twice or cited
 - **the same document in two file formats** (`.doc` and `.docx`) — the newer format is cited; no question;
 - **editions of one publication** (MARPOL 2022 beside an older MARPOL; an acronym beside the full
   title; a misspelt publisher) — each becomes **one pop-up question, "which edition is current?"**,
-  written ready to ask in `<course>/_factory/kb_sources.json`. Every question has a *"Different
+  written ready to ask in `<course>/working_claude/kb_sources.json`. Every question has a *"Different
   publications — keep all"* option, because two files can look alike and be two books.
 
 Put the edition questions into the intake pop-up with the others (`knowledge/intake.json`). Record
@@ -58,7 +58,7 @@ python kb/scripts/kb_tool.py search <knowledge base> "<what you are looking for>
 
 It ranks the pieces with the knowledge base's own index and writes a **retrieval pack** — the
 matching extracts in the source's own words, each with its file and page — into
-`<course>/_factory/retrieval/`. Cite the file and page shown, never the pack. Search by more than one
+`<course>/working_claude/retrieval/`. Cite the file and page shown, never the pack. Search by more than one
 phrasing: the equipment's other names, the abbreviation, the older term. A search that finds nothing
 is a stated gap, and a stated gap is a good answer (L4).
 

@@ -81,8 +81,16 @@ def inside_android_project(path):
     return "/androidstudioprojects/" in p
 
 
+def record_path(module, spec):
+    """Where the record of the copied style files lives. A module in course/modules/ keeps its folder clean (L43, L44):
+    course-factory/scripts/workspace.py puts it in working_claude/modules/<module>/; anywhere else, <module>/_factory/."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "course-factory", "scripts"))
+    import workspace
+    return workspace.module_record(module, os.path.basename(spec["record"]))
+
+
 def read_record(module, spec):
-    p = os.path.join(module, spec["record"])
+    p = record_path(module, spec)
     try:
         with io.open(p, encoding="utf-8") as f:
             return json.load(f)
@@ -149,7 +157,7 @@ def install(module, start_deck=False, update=False):
         "files": {item["name"]: sha(os.path.join(dest, item["name"]))
                   for item in spec["files"] if os.path.exists(os.path.join(dest, item["name"]))},
     }
-    rp = os.path.join(module, spec["record"])
+    rp = record_path(module, spec)
     os.makedirs(os.path.dirname(rp), exist_ok=True)
     with io.open(rp, "w", encoding="utf-8", newline="\n") as f:
         json.dump(record, f, indent=2)

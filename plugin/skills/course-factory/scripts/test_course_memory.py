@@ -52,7 +52,7 @@ def main():
         os.makedirs(c)
         print("-- start, and never overwrite")
         code, out = run("start", c, "--title", "Basic Training for Liquefied Gas Tanker Cargo Operations")
-        st, fb = os.path.join(c, "COURSE_STATE.md"), os.path.join(c, "FEEDBACK_LOG.md")
+        st, fb = os.path.join(c, "working_claude", "COURSE_STATE.md"), os.path.join(c, "working_claude", "FEEDBACK_LOG.md")   # L44
         check("start writes both files", code == 0 and os.path.isfile(st) and os.path.isfile(fb), out)
         wr(fb, rd(fb) + "| 2 | 2026-10-01 | 3 · M1 · slide 4 | too much text, split it | split into two screens | no |\n")
         run("start", c, "--title", "x")
@@ -80,9 +80,10 @@ def main():
         wr(fb, rd(fb) + "| 1 | 2026-10-01 | 3 · M1 · slide 4 | keep the old pump drawing, it shows the relief valve | kept it | no |\n"
                       "| 2 | 2026-10-02 | 3 · M1 · slide 9 | the relief valve on these ships lifts at 0.25 bar | used it | yes |\n")
         code, out = run("draft-pattern", c)
-        drafts = [f for f in os.listdir(c) if f.endswith(".draft.md")]
-        check("draft-pattern writes a DRAFT, not a pattern", code == 0 and len(drafts) == 1, out)
-        d = os.path.join(c, drafts[0])
+        rv = os.path.join(c, "to_review")
+        drafts = [f for f in os.listdir(rv) if f.endswith(".draft.md")]
+        check("draft-pattern writes a DRAFT, not a pattern - into to_review, for the operator to read", code == 0 and len(drafts) == 1, out)
+        d = os.path.join(rv, drafts[0])
         t = rd(d)
         check("the draft carries the course and course type from the state file",
               "| **Course** | Basic Training for Liquefied Gas Tanker Cargo Operations |" in t and "| **Course type** | NEW_ENTRANT |" in t, t[:600])
@@ -96,9 +97,10 @@ def main():
         wr(d, rd(d).replace("| **Made by** | <the operator who worked on the course> |", "| **Made by** | A. Colleague |")
                    .replace("| **Subject area** | <e.g. liquefied gas tankers, electrical, fire fighting> |", "| **Subject area** | liquefied gas tankers |"))
         code, out = run("approve-pattern", c, "--by", "Raivis Silkans")
-        final = [f for f in os.listdir(c) if f.startswith("COURSE_PATTERN_") and not f.endswith(".draft.md")]
-        check("approval saves it and removes the draft", code == 0 and len(final) == 1 and not os.path.exists(d), out)
-        check("the approver and the date are written into it", "| **Approved by** | Raivis Silkans on 20" in rd(os.path.join(c, final[0])))
+        wc = os.path.join(c, "working_claude")
+        final = [f for f in os.listdir(wc) if f.startswith("COURSE_PATTERN_") and not f.endswith(".draft.md")]
+        check("approval saves it into working_claude and removes the draft", code == 0 and len(final) == 1 and not os.path.exists(d), out)
+        check("the approver and the date are written into it", "| **Approved by** | Raivis Silkans on 20" in rd(os.path.join(wc, final[0])))
 
         code, out = run("patterns", "--also", c, "--course-type", "NEW_ENTRANT")
         check("an approved pattern is listed with course, type, subject and author",

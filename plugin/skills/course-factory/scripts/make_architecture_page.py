@@ -6,6 +6,9 @@
         [--programme programme.json] [--architecture architecture.json] [--plan plan.json]
         [--out ARCHITECTURE_REVIEW.html] [--check]
 
+    The inputs are read from <course>/working_claude/ (an older course's copies in the course folder are found too);
+    the page is written to <course>/to_review/ (L44).
+
 WHY THIS EXISTS
 The Stage 2 STOP used to be a table in the chat. The operator could not print it, forward it or
 read it next to the programme. This page is the STOP: the operator's "next" approves everything
@@ -546,7 +549,7 @@ def main(argv=None):
     sys.path.insert(0, HERE)
     import workspace
     x.course = workspace.work_folder(x.course)        # course\ beside the operator's material (L40)
-    path = lambda given, name: given or os.path.join(x.course, name)
+    path = lambda given, name: given or workspace.claude_path(x.course, name)     # working_claude\ (L44)
     try:
         prog, arch = load(path(x.programme, "programme.json")), load(path(x.architecture, "architecture.json"))
         pp = path(x.plan, "plan.json")
@@ -564,7 +567,8 @@ def main(argv=None):
             print("  - " + P.t(k, **kw))
         print("%d problem(s)." % len(a["problems"]))
         return 1 if a["problems"] else 0
-    out = x.out if os.path.isabs(x.out) else os.path.join(x.course, x.out)
+    out = x.out if os.path.isabs(x.out) else os.path.join(workspace.review_dir(x.course), x.out)   # to_review\ (L44)
+    os.makedirs(os.path.dirname(out), exist_ok=True)
     with io.open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(build(prog, arch, a))
     print("The architecture page is ready:\n    %s\n  %d modules - one per programme topic, the last is the final assessment only.\n"

@@ -348,8 +348,12 @@ the presentation, the tasks, the instructor files and every asset and script it 
 fetched. `START_HERE.html` opens the presentation straight away; `START_HERE_EXTENDED.html` has a button for
 everything. → `course-factory` (`scripts/check_module_folder.py`, 2.19.3), `course-module-ux`, `course-tablet-publisher`
 
-**All forty-three laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L43 are enforced first through `course-factory/SKILL.md`'s
+**L44 · Three places in the work folder.** `to_review\` - only what the operator checks; `modules\` - the finished
+modules; `working_claude\` - everything only the factory uses, all kept (state, logs, notes, data, checkpoints).
+Nothing loose. → `course-factory` (`scripts/workspace.py`, every tool, `tidy` for older courses, 2.20.0)
+
+**All forty-four laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L44 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

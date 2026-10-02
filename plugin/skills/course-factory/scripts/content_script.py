@@ -12,7 +12,8 @@
 WHY THIS EXISTS
 Until 2.16.0 the operator saw the real words of a module for the first time in finished HTML, and
 every correction landed on built pages. Now the words are approved first. The script is a file -
-_factory/script/M01.json - holding the whole lesson in the order it is taught.
+working_claude/script/M01.json - holding the whole lesson in the order it is taught. What the operator checks -
+the review page, the Word file, the instructor notes - goes into to_review/ (L44).
 
 TWO TABLETS (owner, 2026-09-30 - L35)
 The course runs on two tablets, and the script is shown the same way:
@@ -54,7 +55,7 @@ whom. What it cannot read reliably, it says plainly: a box deleted outright, tex
 boxes, a comment it cannot place on a screen.
 
 NOTHING IS APPLIED UNTIL THE OPERATOR SAYS YES (owner, 2026-09-30)
-read and propose never change the script. They write _factory/script/M01.pending.json and print the
+read and propose never change the script. They write working_claude/script/M01.pending.json and print the
 plain list of what was understood - "slide 7: X becomes Y; self-check 1, question 3: the correct
 answer becomes B". Only apply --confirmed changes the script, logs each change in FEEDBACK_LOG.md,
 and re-renders both files. Any change after approval puts the module back to draft; approve records
@@ -127,12 +128,12 @@ def mid(module):
 
 def paths(course, module):
     m = mid(module)
-    d = os.path.join(course, "_factory", "script")
-    r = os.path.join(course, "review")
+    d = workspace.claude_path(course, "script")          # the factory's own copy (L44)
+    r = workspace.review_dir(course)                     # what the operator checks (L44)
     return {"script": os.path.join(d, m + ".json"), "pending": os.path.join(d, m + ".pending.json"),
             "old": os.path.join(d, "old"), "review": os.path.join(r, m + "_SCRIPT_REVIEW.html"),
             "docx": os.path.join(r, m + "_SCRIPT.docx"), "dir": d, "rdir": r,
-            "notes_md": os.path.join(course, "instructor_notes", m + "_INSTRUCTOR_NOTES.md")}
+            "notes_md": os.path.join(r, m + "_INSTRUCTOR_NOTES.md")}
 
 
 def load(p):
@@ -725,7 +726,7 @@ def blocking(findings):
 # ------------------------------------------------------------------ operator-stated facts
 def operator_facts(course, script):
     facts = [dict(f) for f in script.get("operator_facts", [])]
-    fb = os.path.join(course, "FEEDBACK_LOG.md")
+    fb = workspace.claude_path(course, "FEEDBACK_LOG.md")
     if os.path.isfile(fb):
         for line in io.open(fb, encoding="utf-8").read().splitlines():
             cells = [c.strip() for c in line.strip().strip("|").split("|")]
@@ -1310,8 +1311,9 @@ def cmd_read(course, module, docx, pdf):
     p = paths(course, module)
     script = load(p["script"])
     changes, notes = [], []
-    if docx or os.path.isfile(p["docx"]):
-        got = read_docx(docx or p["docx"], docx_labels(course, script))
+    p["docx"] = docx or workspace.review_path(course, os.path.basename(p["docx"]), for_reading=True)
+    if os.path.isfile(p["docx"]):
+        got = read_docx(p["docx"], docx_labels(course, script))
         expected = {}
         for s in script["screens"]:
             for f, v in fields_of(s, script.get("operator_language", "en")):
@@ -1346,7 +1348,7 @@ def cmd_read(course, module, docx, pdf):
             for a in found:
                 notes.append("PDF comment on page %d (screens on that page: %s) from %s: \"%s\"" % (
                     a["page"], ", ".join(a["screens_on_page"]) or "not found", a["author"] or "the operator", short(a["text"], 200)))
-    return write_pending(p, script, changes, notes, "word" if (docx or os.path.isfile(p["docx"])) else "pdf")
+    return write_pending(p, script, changes, notes, "word" if os.path.isfile(p["docx"]) else "pdf")
 
 
 def cmd_propose(course, module, changes_file):
@@ -1364,7 +1366,7 @@ def cmd_propose(course, module, changes_file):
 
 
 def append_feedback(course, script, changes, source):
-    fb = os.path.join(course, "FEEDBACK_LOG.md")
+    fb = workspace.claude_path(course, "FEEDBACK_LOG.md")
     if not os.path.isfile(fb):
         return
     text = io.open(fb, encoding="utf-8").read()
@@ -1485,7 +1487,7 @@ def instructor_notes_md(script):
     ok = script.get("status") == "approved" and script.get("approved_hash") == content_hash(script)
     total = sum(minutes(s) for s in script.get("screens", []) if s.get("kind") in INSTRUCTOR)
     o = ["# Module %s · %s — instructor notes" % (script.get("module"), script.get("title", "")), "",
-         "<!-- Made from the content script (_factory/script/%s.json) by content_script.py. It is shown on the "
+         "<!-- Made from the content script (working_claude/script/%s.json) by content_script.py. It is shown on the "
          "instructor's panel, never on a slide. Corrections go through the review Word file or the chat, not "
          "this file. -->" % mid(script.get("module")), "",
          "%s · %g min" % ("Approved by %s on %s" % (script.get("approved_by"), script.get("approved_on")) if ok else "Draft - not yet approved", total), ""]

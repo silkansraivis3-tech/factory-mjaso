@@ -43,6 +43,8 @@ from datetime import date
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import workspace  # noqa: E402  - working_claude\ and to_review\ (L44)
 SKILL = os.path.dirname(HERE)
 TEMPLATES = os.path.join(SKILL, "templates")
 PLUGIN = os.path.dirname(os.path.dirname(SKILL))
@@ -87,20 +89,21 @@ def cmd_start(course, title):
         return 2
     made = []
     for name in ("COURSE_STATE.md", "FEEDBACK_LOG.md"):
-        p = os.path.join(course, name)
+        p = workspace.claude_path(course, name)                 # working_claude\ (L44)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
         if os.path.exists(p):
             continue
         s = rd(os.path.join(TEMPLATES, name)).replace("<COURSE>", title)
         s = s.replace("<YYYY-MM-DD>", date.today().isoformat(), 1).replace("<version>", plugin_version(), 1)
         wr(p, s)
         made.append(name)
-    print(("Started %s in\n    %s" % (" and ".join(made), course)) if made else
+    print(("Started %s in\n    %s" % (" and ".join(made), os.path.dirname(workspace.claude_path(course, "COURSE_STATE.md")))) if made else
           "Both files were already there and were left exactly as they are:\n    %s" % course)
     return 0
 
 
 def cmd_check(course):
-    p = os.path.join(course, "COURSE_STATE.md")
+    p = workspace.claude_path(course, "COURSE_STATE.md")
     if not os.path.isfile(p):
         print("There is no COURSE_STATE.md in\n    %s\n  so a new session would have to start from nothing.\n"
               "  What to do: tell me to start it and I will (course_memory.py start)." % course)
@@ -117,7 +120,7 @@ def cmd_check(course):
     m = re.search(r"\*\*Last updated\*\*\s*(\d{4}-\d{2}-\d{2})", s)
     if not m:
         problems.append("there is no \"Last updated\" date")
-    if not os.path.isfile(os.path.join(course, "FEEDBACK_LOG.md")):
+    if not os.path.isfile(workspace.claude_path(course, "FEEDBACK_LOG.md")):
         problems.append("FEEDBACK_LOG.md is missing - corrections have nowhere to go")
     if problems:
         print("COURSE_STATE.md is not yet enough for a new session to pick up from:\n    %s\n" % p)
@@ -132,7 +135,7 @@ def cmd_check(course):
 
 # ------------------------------------------------------------------ patterns
 def cmd_draft(course):
-    sp, fp = os.path.join(course, "COURSE_STATE.md"), os.path.join(course, "FEEDBACK_LOG.md")
+    sp, fp = workspace.claude_path(course, "COURSE_STATE.md"), workspace.claude_path(course, "FEEDBACK_LOG.md")
     if not os.path.isfile(sp):
         print("Stopped - there is no COURSE_STATE.md yet, so the course and its type are unknown.")
         return 2
@@ -156,7 +159,8 @@ def cmd_draft(course):
         t = t.replace("## What they changed, and why\n", "## What they changed, and why\n\n*All %d corrections from FEEDBACK_LOG.md, for the factory "
                       "to sort: keep the ones that say how a course should be made, drop the one-off fixes.*\n\n%s\n"
                       % (len(corrections), "\n".join(corrections)), 1)
-    out = os.path.join(course, "COURSE_PATTERN_%s.draft.md" % slug(title or os.path.basename(os.path.abspath(course))))
+    out = os.path.join(workspace.review_dir(course), "COURSE_PATTERN_%s.draft.md" % slug(title or os.path.basename(os.path.abspath(course))))
+    os.makedirs(os.path.dirname(out), exist_ok=True)       # the operator reads the draft: to_review\ (L44)
     wr(out, t)
     print("A draft pattern is ready, not yet saved as a pattern:\n    %s\n  Next: the factory finishes it and shows it to "
           "the operator in plain language. They may change or remove any point. Only their approval makes it a pattern."
@@ -165,7 +169,8 @@ def cmd_draft(course):
 
 
 def cmd_approve(course, by):
-    drafts = glob.glob(os.path.join(course, "COURSE_PATTERN_*.draft.md"))
+    drafts = glob.glob(os.path.join(workspace.review_dir(course), "COURSE_PATTERN_*.draft.md")) + \
+        glob.glob(os.path.join(course, "COURSE_PATTERN_*.draft.md"))
     if not drafts:
         print("Stopped - there is no draft pattern in\n    %s\n  Make one first (course_memory.py draft-pattern)." % course)
         return 2
@@ -181,7 +186,8 @@ def cmd_approve(course, by):
         return 1
     t = re.sub(r"^\|\s*\*\*Approved by\*\*\s*\|.*\|\s*$", "| **Approved by** | %s on %s |" % (by.strip(), date.today().isoformat()),
                t, count=1, flags=re.M)
-    final = d.replace(".draft.md", ".md")
+    final = workspace.claude_path(course, os.path.basename(d).replace(".draft.md", ".md"))   # working_claude\ (L44)
+    os.makedirs(os.path.dirname(final), exist_ok=True)
     wr(final, t)
     os.remove(d)
     print("Saved, approved by %s:\n    %s\n  A later course reads it as guidance once it is in the factory's pattern folder "
@@ -197,7 +203,9 @@ def read_pattern(p):
 
 
 def cmd_patterns(ctype, also):
-    files = glob.glob(os.path.join(LIBRARY, "COURSE_PATTERN_*.md")) + sum((glob.glob(os.path.join(a, "COURSE_PATTERN_*.md")) for a in also), [])
+    files = glob.glob(os.path.join(LIBRARY, "COURSE_PATTERN_*.md")) + sum((
+        glob.glob(os.path.join(a, "COURSE_PATTERN_*.md")) + glob.glob(os.path.join(a, workspace.CLAUDE, "COURSE_PATTERN_*.md"))
+        + glob.glob(os.path.join(a, workspace.REVIEW, "COURSE_PATTERN_*.md")) for a in also), [])   # L44 places too
     usable, skipped = [], []
     for f in sorted(set(files)):
         if f.endswith(".draft.md"):

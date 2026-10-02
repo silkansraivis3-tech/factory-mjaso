@@ -7,7 +7,7 @@ built module obeys it is `scripts/check_script_match.py`.
 
 ## 1 · Write the script
 
-`<course>/_factory/script/M01.json` — the whole lesson **in the order it is taught**. It runs on two
+`<course>/working_claude/script/M01.json` — the whole lesson **in the order it is taught**. It runs on two
 tablets (L35, owner 2026-09-30), and the script says which screen is where:
 
 - **Instructor tablet** - `slide`, `task-slide` and `activity` screens: what the classroom screen shows,
@@ -49,7 +49,7 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   page and in the Word file around it are in the operator's language.
 - **Instructor notes are short** (2.18.1): two to four points per slide, one per line starting `- `, 10-50 words -
   what to ask, the one example to give, what to stress. The theory is on the slide. `render` writes them to
-  `instructor_notes/M01_INSTRUCTOR_NOTES.md` for the instructor's panel; they are never on a slide.
+  `to_review/M01_INSTRUCTOR_NOTES.md` for the instructor's panel; they are never on a slide.
 - Kinds: `slide`, `task-slide`, `activity` (instructor tablet); `self-check`, `module-check`, `final`
   (trainee tablet). Module checks are never graded (L27) and come at the end of the module; a
   final-assessment script (`--module final`, the last module, L34) holds a task slide and `final` questions.
@@ -104,12 +104,12 @@ detector display for a reading, the GA drawing for "where is it".
 python scripts/content_script.py render <course> --module 1
 ```
 
-writes `review/M01_SCRIPT_REVIEW.html` (opens with a double-click, prints to PDF) and
-`review/M01_SCRIPT.docx`, both in two parts: **part 1, the instructor tablet** (every slide, and the
+writes `to_review/M01_SCRIPT_REVIEW.html` (opens with a double-click, prints to PDF) and
+`to_review/M01_SCRIPT.docx`, both in two parts: **part 1, the instructor tablet** (every slide, and the
 OPEN TASK button on each task slide) and **part 2, the trainee tablet** (every task, one question per
 screen, each showing the slide that teaches its answer). At the top: the module in numbers - minutes
 against the programme's, words per theory minute - and the findings of both checks. It writes
-`review/M01_SCRIPT.docx` — **the operator's copy is the Word file** (owner, 2026-09-30). Every
+`to_review/M01_SCRIPT.docx` — **the operator's copy is the Word file** (owner, 2026-09-30). Every
 editable text is its own grey box, locked against deletion, open for typing. Fix every problem
 `render` lists before showing it.
 
@@ -133,7 +133,7 @@ python scripts/content_script.py discard <course> --module 1               they 
 ```
 
 `apply` changes the script, logs every change in `FEEDBACK_LOG.md`, keeps the old Word file in
-`_factory/script/old/`, and writes a fresh page and Word file. Comments are **instructions, not
+`working_claude/script/old/`, and writes a fresh page and Word file. Comments are **instructions, not
 edits**: `apply` does not act on them — propose what you would change for each, show it, and apply
 that when the operator confirms.
 

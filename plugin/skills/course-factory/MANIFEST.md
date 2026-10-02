@@ -458,6 +458,24 @@ presentation, every task page and the plan and notes, every referenced file insi
 inline and `<style>` url()), nothing from the internet. The publisher now also names `START_HERE_EXTENDED.html`
 instructor-only. `check_script_match.py` looks for `modules\M01_*` first and the older `modules\m1` after.
 
+## 4p · Three places in the work folder (2.20.0, 2026-10-02)
+
+*"All files the instructor can see and check go into a to_review folder - all scripts, the architecture,
+everything - and all other stuff that is useful only for Claude himself goes into his own folder, working_claude, so
+each module has a normal folder structure and every file that needs to be checked by the instructor is in one place.
+That does not mean you remove or stop adding checkpoint and context .md files - just put them in the folder for files
+only Claude uses."*
+
+`workspace.py` gained `review_dir`, `claude_path` (finds an older course's file where it is until it is tidied),
+`review_path`, `module_record` and `tidy`. Every tool that writes now uses them: the content script (its data in
+`working_claude\script\`, the page, Word file and instructor notes in `to_review\`), the architecture page (inputs
+from `working_claude\`, the page to `to_review\`), the course memory (state and log in `working_claude\`, a pattern
+draft in `to_review\`), the knowledge-base tool, the old-course reader, the style copier and the hand-edit detector
+(their per-module records to `working_claude\modules\<module>\` for modules in `course\modules\`). The publisher
+treats `to_review/` and `working_claude/` as internal. Found on the way: two notes I had written with backslashes in
+them made Python print a warning into a tool's output, which broke a machine-read answer - fixed, and every script
+now compiles with warnings as errors.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

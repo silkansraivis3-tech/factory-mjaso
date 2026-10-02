@@ -219,7 +219,7 @@ and the words to replace are in `SKILL.md` (*Every reply to the operator*) and `
 
 ---
 
-## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3)
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0)
 
 Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
 these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
@@ -624,3 +624,35 @@ extended start has fast access with buttons for all tasks, the module plan, the 
   going to the presentation, a button for everything, every file inside and present, nothing from the internet.
 - When the course is published, the tablet publisher makes the app's course package from these folders: the
   trainee's parts to the trainee tablet, the instructor's to the instructor tablet. Built in Phase 5 steps 6-10.
+
+**L44 · Three places in the work folder: to_review, modules, working_claude.**
+*"All files the instructor can see and check go into a to_review folder - all scripts, the architecture,
+everything - and all other stuff that is useful only for Claude himself goes into his own folder, working_claude, so
+each module has a normal folder structure and every file that needs to be checked by the instructor is in one place.
+That does not mean you remove or stop adding checkpoint and context .md files - just put them in the folder for files
+only Claude uses."*
+
+```
+    <master folder>\
+        source_files\  KNOWLEDGE_BASE\  old_course\       the course material - read only
+        course\
+            to_review\        what the operator / instructor opens and checks - and nothing else:
+                              ARCHITECTURE_REVIEW.html, M01_SCRIPT_REVIEW.html, M01_SCRIPT.docx,
+                              M01_INSTRUCTOR_NOTES.md, a pattern draft
+            modules\          the finished modules, one complete folder each (L43)
+            working_claude\   everything only the factory uses - all of it kept, none of it in the way:
+                              COURSE_STATE.md, FEEDBACK_LOG.md, factory-notes.md, programme.json,
+                              architecture.json, script\ (the scripts' own data), intake.json, kb_sources.json,
+                              retrieval\, research\, the old-course inventory and pictures, modules\ (per-module
+                              records), checkpoint and context notes
+```
+
+- **`to_review\`** holds only what a person checks. Nothing of the factory's own goes there.
+- **`working_claude\`** holds everything only the factory uses - and keeps all of it: state, logs, notes, data,
+  checkpoints, context files. The factory keeps writing them as before (L32), only here.
+- **`modules\`** holds the finished modules (L43); a tool's own record about a module goes to
+  `working_claude\modules\<module>\`, so a module folder holds only the module.
+- Nothing else sits loose in `course\`.
+- `scripts/workspace.py` decides every path. A course started before 2.20.0 keeps working - its files are found
+  where they are - and `python scripts/workspace.py tidy <folder>` moves it into the three places: moved, never
+  deleted, never overwritten, and anything it does not know is left and named.

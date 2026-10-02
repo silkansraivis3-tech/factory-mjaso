@@ -103,7 +103,7 @@ def run(*a):
 
 
 def page_of(c):
-    return io.open(os.path.join(c, "ARCHITECTURE_REVIEW.html"), encoding="utf-8").read()
+    return io.open(os.path.join(c, "to_review", "ARCHITECTURE_REVIEW.html"), encoding="utf-8").read()   # L44
 
 
 def en(key, **kw):

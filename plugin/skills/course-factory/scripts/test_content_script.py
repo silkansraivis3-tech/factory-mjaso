@@ -132,9 +132,9 @@ def cs_run(*a):
 
 def new_course(tmp, name, script=SCRIPT):
     c = os.path.join(tmp, name)
-    os.makedirs(os.path.join(c, "_factory", "script"))
-    io.open(os.path.join(c, "_factory", "script", "M01.json"), "w", encoding="utf-8").write(json.dumps(script, ensure_ascii=False))
-    io.open(os.path.join(c, "FEEDBACK_LOG.md"), "w", encoding="utf-8").write(
+    os.makedirs(os.path.join(c, "working_claude", "script"))       # L44: the factory's own files
+    io.open(os.path.join(c, "working_claude", "script", "M01.json"), "w", encoding="utf-8").write(json.dumps(script, ensure_ascii=False))
+    io.open(os.path.join(c, "working_claude", "FEEDBACK_LOG.md"), "w", encoding="utf-8").write(
         "# log\n\n| # | Date | Stage · module · where | What the operator said | What changed | Operator-stated fact? |\n|---|---|---|---|---|---|\n"
         "| 1 | 2026-10-01 | 3 · M01 · s02 | type C tanks here are tested to 7 bar | used it | yes |\n")
     return c
@@ -297,7 +297,7 @@ def main():
         print("\n-- 2.18.1: the instructor notes are short, and live in their own .md file for the instructor's panel")
         code, out = cs_run("render", c, "--module", "1")
         md = io.open(p["notes_md"], encoding="utf-8").read()
-        check("render writes the module's INSTRUCTOR_NOTES.md", p["notes_md"].endswith(os.path.join("instructor_notes", "M01_INSTRUCTOR_NOTES.md")) and "INSTRUCTOR_NOTES.md" in out, out)
+        check("render writes the module's INSTRUCTOR_NOTES.md", p["notes_md"].endswith(os.path.join("to_review", "M01_INSTRUCTOR_NOTES.md")) and "INSTRUCTOR_NOTES.md" in out, out)
         check("... one short section per slide, its notes as points", "## Slide 1 · Why gas tankers are different · 5 min" in md
               and "- Ask who has sailed on a gas tanker, and with which cargo." in md and md.count("## Slide ") == 5)
         check("... and the OPEN TASK prompt where each task opens", "**OPEN TASK** → Self-check 1, 3 questions, on every trainee tablet." in md
@@ -424,7 +424,7 @@ def main():
         check("the edits are applied", code == 0 and "are supported by the hull" in screen(s, "s03")["text"]
               and screen(s, "q01")["options"][1] == "At ambient temperature, under pressure", out)
         check("comments and notes are NOT applied - they come back as proposals", "were NOT applied" in out and screen(s, "s01")["title"] == "Why gas tankers are different", out)
-        fb = io.open(os.path.join(c, "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        fb = io.open(os.path.join(c, "working_claude", "FEEDBACK_LOG.md"), encoding="utf-8").read()
         check("each applied change is logged in FEEDBACK_LOG.md", fb.count("| 3 · M01 ·") == 1 + 2 and fb.count("(Word file)") == 2, fb[-400:])
         check("the old Word file is kept, and a fresh one written",
               any(f.endswith(".docx") for f in os.listdir(p["old"])) and os.path.isfile(p["docx"]))
@@ -539,7 +539,8 @@ def main():
         plat = gates.load_platform()
         repo = os.path.join(tmp, "repo")
         base = os.path.join(repo, plat["asset_roots"]["trainee"], "courses", "x", "review", "")
-        for n in ("M01_SCRIPT_REVIEW.html", "M01_SCRIPT.docx"):
+        for n in ("M01_SCRIPT_REVIEW.html", "M01_SCRIPT.docx", "../to_review/M01_SCRIPT_REVIEW.html", "../to_review/M01_INSTRUCTOR_NOTES.md",
+                  "../working_claude/script/M01.json", "../working_claude/COURSE_STATE.md"):
             check("the publisher sorts %s as INTERNAL" % n, gates.classify(repo, plat, base + n) == "INTERNAL", gates.classify(repo, plat, base + n))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

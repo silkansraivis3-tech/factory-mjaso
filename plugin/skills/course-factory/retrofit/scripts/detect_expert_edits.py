@@ -149,7 +149,9 @@ def main(argv=None) -> int:
     load_rules()  # fail loudly if the authority file is broken
 
     files = list(course_files(a.module))
-    rec_path = os.path.join(a.module, RECORD)
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "scripts"))
+    import workspace
+    rec_path = workspace.module_record(a.module, os.path.basename(RECORD))   # working_claude/ for course/modules/ (L44)
 
     if a.record:
         os.makedirs(os.path.dirname(rec_path), exist_ok=True)

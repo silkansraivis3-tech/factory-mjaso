@@ -135,7 +135,7 @@ def main():
         print("\n-- the tools write into course\\ when given the master folder")
         code, out = run("course_memory.py", "start", master, "--title", "GAS Basic")
         check("the course memory starts in course\\, not in the master folder",
-              code == 0 and os.path.isfile(os.path.join(w, "COURSE_STATE.md")) and not os.path.exists(os.path.join(master, "COURSE_STATE.md")), out)
+              code == 0 and os.path.isfile(os.path.join(w, "working_claude", "COURSE_STATE.md")) and not os.path.exists(os.path.join(master, "COURSE_STATE.md")), out)
         prog = {"academic_hour_min": 40, "topics": {"1": {"title": "Gas tankers", "theory": 1, "practical": 0},
                                                     "2": {"title": "Final assessment", "theory": 1, "practical": 0, "assessment": True}},
                 "main_ilos": {"1": "Contribute to safe cargo operations"}}
@@ -146,7 +146,7 @@ def main():
                              "module_check": {"questions": 5, "mechanics": ["hotspot", "order", "match"]}}],
                 "final_assessment": {"topic": "2", "questions": 30, "pass_mark": "70 %", "graded": True}}
         for n, v in (("programme.json", prog), ("architecture.json", arch)):
-            io.open(os.path.join(w, n), "w", encoding="utf-8").write(json.dumps(v))
+            io.open(os.path.join(w, "working_claude", n), "w", encoding="utf-8").write(json.dumps(v))
         code, out = run("make_architecture_page.py", "--course", master, "--check")
         check("the architecture page asks what each module takes from the old course, once it is read",
               code == 1 and "the old course was read, but this module does not say" in out, out)
@@ -154,28 +154,34 @@ def main():
                                                  "keep": ["the tanker types and the containment systems"],
                                                  "modernise": ["the static tank photographs become a 3D model of the four tank types"],
                                                  "add": ["a tap-the-place task on the general arrangement"]}
-        io.open(os.path.join(w, "architecture.json"), "w", encoding="utf-8").write(json.dumps(arch))
+        io.open(os.path.join(w, "working_claude", "architecture.json"), "w", encoding="utf-8").write(json.dumps(arch))
         code, out = run("make_architecture_page.py", "--course", master)
-        page = io.open(os.path.join(w, "ARCHITECTURE_REVIEW.html"), encoding="utf-8").read() if os.path.isfile(os.path.join(w, "ARCHITECTURE_REVIEW.html")) else ""
+        ap = os.path.join(w, "to_review", "ARCHITECTURE_REVIEW.html")
+        page = io.open(ap, encoding="utf-8").read() if os.path.isfile(ap) else ""
         check("... and shows it: kept, modernised and made digital, added",
               code == 0 and "From the old course - kept, modernised, added" in page and "a 3D model of the four tank types" in page
               and not os.path.exists(os.path.join(master, "ARCHITECTURE_REVIEW.html")), out)
-        os.makedirs(os.path.join(w, "_factory", "script"), exist_ok=True)
-        io.open(os.path.join(w, "_factory", "script", "M01.json"), "w", encoding="utf-8").write(json.dumps(
+        os.makedirs(os.path.join(w, "working_claude", "script"), exist_ok=True)
+        io.open(os.path.join(w, "working_claude", "script", "M01.json"), "w", encoding="utf-8").write(json.dumps(
             {"module": 1, "title": "Gas tankers", "course_language": "English", "operator_language": "en", "screens": [
                 {"id": "s01", "kind": "slide", "title": "Gas tankers", "text": "x", "notes": "- y", "minutes": 1,
                  "from_old": "1. Liquefied Gas tankers.pptx, slides 1-2 - the photographs become a 3D model"}]}))
         code, out = run("content_script.py", "render", master, "--module", "1")
-        rp = os.path.join(w, "review", "M01_SCRIPT_REVIEW.html")
-        check("the content script renders into course\\review and course\\instructor_notes",
-              os.path.isfile(rp) and os.path.isfile(os.path.join(w, "instructor_notes", "M01_INSTRUCTOR_NOTES.md"))
-              and not os.path.exists(os.path.join(master, "review")), out)
+        rp = os.path.join(w, "to_review", "M01_SCRIPT_REVIEW.html")
+        check("the content script renders its page, Word file and instructor notes into course\\to_review",
+              os.path.isfile(rp) and os.path.isfile(os.path.join(w, "to_review", "M01_INSTRUCTOR_NOTES.md"))
+              and os.path.isfile(os.path.join(w, "to_review", "M01_SCRIPT.docx")) and not os.path.exists(os.path.join(master, "to_review")), out)
+        check("to_review holds only what the operator checks - nothing of the factory's own",
+              sorted(os.listdir(os.path.join(w, "to_review"))) == ["ARCHITECTURE_REVIEW.html", "M01_INSTRUCTOR_NOTES.md", "M01_SCRIPT.docx", "M01_SCRIPT_REVIEW.html"],
+              os.listdir(os.path.join(w, "to_review")))
+        check("the course folder itself holds only the three places",
+              sorted(os.listdir(w)) == ["to_review", "working_claude"], os.listdir(w))
         check("... and a slide says where in the old course it comes from", "the photographs become a 3D model" in io.open(rp, encoding="utf-8").read())
 
         print("\n-- the old course, read whole")
         code, out = run("old_course.py", "inventory", old, "--course", master)
-        inv = json.load(io.open(os.path.join(w, "_factory", "old_course_inventory.json"), encoding="utf-8"))
-        md = io.open(os.path.join(w, "_factory", "OLD_COURSE_INVENTORY.md"), encoding="utf-8").read()
+        inv = json.load(io.open(os.path.join(w, "working_claude", "old_course_inventory.json"), encoding="utf-8"))
+        md = io.open(os.path.join(w, "working_claude", "OLD_COURSE_INVENTORY.md"), encoding="utf-8").read()
         deck = [f for s in inv["sections"] for f in s["files"] if f["type"] == "pptx"][0]
         check("every slide of a deck is read, in slide order: its title and words", [x["title"] for x in deck["slides"]] ==
               ["Gas tankers", "Type C tanks", "Membrane tanks"] and deck["slides"][1]["words"] >= 10, deck["slides"])
@@ -188,14 +194,40 @@ def main():
         check("lock files are left out, and counted", inv["lock_files_left_out"] == 1 and ".~lock" not in md)
         check("the summary counts it all", "4 files in 2 sections: 3 slides with 4 pictures, 1 training films; 1 could not be read" in out, out)
         code, out = run("old_course.py", "images", old, "--course", master)
-        idx = json.load(io.open(os.path.join(w, "_factory", "old_course_images", "_index.json"), encoding="utf-8"))
-        got = sorted(os.listdir(os.path.join(w, "_factory", "old_course_images", "1. Gas tankers", "1. Liquefied Gas tankers")))
+        idx = json.load(io.open(os.path.join(w, "working_claude", "old_course_images", "_index.json"), encoding="utf-8"))
+        got = sorted(os.listdir(os.path.join(w, "working_claude", "old_course_images", "1. Gas tankers", "1. Liquefied Gas tankers")))
         check("every picture in the old decks is copied out, named by its slide - a repeated logo kept once",
               got == ["slide01_logo.png", "slide02_a.png", "slide02_b.png"] and sum(1 for x in idx if x.get("repeat")) == 1, (got, idx))
         check("... marked usable as the owner decided (2026-10-01), with the deck and slide it came from",
               all(x.get("rights", "").startswith("OWNER_CLEARED") for x in idx if not x.get("repeat")) and idx[0]["deck"].endswith(".pptx"), idx)
-        check("the lists are written into course\\_factory only", not os.path.exists(os.path.join(old, "_factory"))
-              and not os.path.exists(os.path.join(master, "_factory")))
+        check("the lists are written into course\\working_claude only", not os.path.exists(os.path.join(old, "working_claude"))
+              and not os.path.exists(os.path.join(master, "working_claude")) and not os.path.exists(os.path.join(w, "_factory")))
+
+        print("\n-- an older course is tidied into the three places - moved, never deleted")
+        legacy = os.path.join(tmp, "older", "course")
+        for rel, txt in (("COURSE_STATE.md", "state"), ("FEEDBACK_LOG.md", "log"), ("factory-notes.md", "notes"), ("architecture.json", "{}"),
+                         ("programme.json", "{}"), ("ARCHITECTURE_REVIEW.html", "<p>page</p>"), ("_factory/script/M01.json", "{}"),
+                         ("_factory/intake.json", "{}"), ("review/M01_SCRIPT.docx", "docx"), ("review/M01_SCRIPT_REVIEW.html", "page"),
+                         ("instructor_notes/M01_INSTRUCTOR_NOTES.md", "notes"), ("build/BUILD_BRIEF.md", "brief"),
+                         ("COURSE_PATTERN_Gas.draft.md", "draft"), ("my own notes.txt", "mine")):
+            os.makedirs(os.path.dirname(os.path.join(legacy, rel)), exist_ok=True)
+            io.open(os.path.join(legacy, rel), "w", encoding="utf-8").write(txt)
+        check("before tidying, the tools still find an older course's files where they are",
+              workspace.claude_path(legacy, "COURSE_STATE.md") == os.path.join(legacy, "COURSE_STATE.md")
+              and workspace.claude_path(legacy, "script", "M01.json") == os.path.join(legacy, "_factory", "script", "M01.json")
+              and workspace.review_path(legacy, "M01_SCRIPT.docx", for_reading=True) == os.path.join(legacy, "review", "M01_SCRIPT.docx"))
+        n_before = sum(len(f) for _, _, f in os.walk(legacy))
+        code, out = run("workspace.py", "tidy", legacy)
+        check("tidy moves every file the factory made into to_review and working_claude", code == 0
+              and sorted(os.listdir(os.path.join(legacy, "to_review"))) == ["ARCHITECTURE_REVIEW.html", "COURSE_PATTERN_Gas.draft.md", "M01_INSTRUCTOR_NOTES.md", "M01_SCRIPT.docx", "M01_SCRIPT_REVIEW.html"]
+              and os.path.isfile(os.path.join(legacy, "working_claude", "script", "M01.json"))
+              and os.path.isfile(os.path.join(legacy, "working_claude", "COURSE_STATE.md"))
+              and os.path.isfile(os.path.join(legacy, "working_claude", "build", "BUILD_BRIEF.md")), out)
+        check("... deletes nothing - every file is still there, and what it does not know it leaves and names",
+              sum(len(f) for _, _, f in os.walk(legacy)) == n_before and os.path.isfile(os.path.join(legacy, "my own notes.txt"))
+              and "my own notes.txt" in out, out)
+        check("... and afterwards the tools find everything in its new place",
+              workspace.claude_path(legacy, "script", "M01.json") == os.path.join(legacy, "working_claude", "script", "M01.json"))
 
         print("\n-- the material is never changed")
         check("every file in source_files, the knowledge base and the old course is exactly as it was", fingerprint(master) == before)
@@ -206,7 +238,7 @@ def main():
         plat = gates.load_platform()
         repo = os.path.join(tmp, "repo")
         base = os.path.join(repo, plat["asset_roots"]["trainee"], "courses", "x", "")
-        for n in ("_factory/old_course_inventory.json", "_factory/OLD_COURSE_INVENTORY.md"):
+        for n in ("working_claude/old_course_inventory.json", "working_claude/OLD_COURSE_INVENTORY.md", "to_review/ARCHITECTURE_REVIEW.html"):
             check("the publisher sorts %s as INTERNAL" % n, gates.classify(repo, plat, base + n) == "INTERNAL", gates.classify(repo, plat, base + n))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

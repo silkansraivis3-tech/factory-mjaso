@@ -99,6 +99,7 @@ row wins** — even before its step has been built out. Full text: `references/l
 | **L40** | **The factory works in `course\`** beside the operator's material: the folder given is the master folder (source_files, knowledge base, old course - read only); everything the factory makes goes into `course\` next to them. `scripts/workspace.py`; every tool accepts either folder | now (2.19.0) |
 | **L42** | **Trainee-tablet tasks are modern, exciting, and usable with zero tablet experience** - a first *try the tablet* screen; tap and drag only (drag also tap-then-tap); an animated hand shows each new gesture once; big controls (56 px), big text; instant, alive feedback; real equipment in 3D and working panels; forgiving, no timers, no error messages. `course-task-ux` §0 | built in step 6 |
 | **L43** | **Every module in its own folder** - `course\modules\M01_<title>\` holds everything it needs (presentation, tasks, instructor files, every asset and script), reaches nothing outside it, fetches nothing; `START_HERE.html` opens the presentation straight away; `START_HERE_EXTENDED.html` has a button for the presentation, every task, the module plan, the notes. `scripts/check_module_folder.py` | built in steps 6-10 |
+| **L44** | **Three places in `course\`:** `to_review\` - only what the operator checks (architecture page, content scripts and their Word files, instructor notes); `modules\` - the finished modules; `working_claude\` - everything only the factory uses (state, logs, notes, data, checkpoints - all kept). Nothing loose. An older course: `scripts/workspace.py tidy` | now (2.20.0) |
 | **L41** | **The old course is the foundation.** Read it whole at intake (`scripts/old_course.py inventory`, and `images` for its pictures); at the Stage 2 STOP every module says what it **keeps**, what it **modernises and makes digital**, and what it **adds** | now (2.19.0) |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
@@ -107,7 +108,8 @@ predict-then-reveal, worked example then own attempt. More practice than theory;
 ## The course remembers — L32
 
 `scripts/course_memory.py` runs it; the templates are `templates/COURSE_STATE.md`,
-`FEEDBACK_LOG.md` and `COURSE_PATTERN.md`. All three stay in the course folder and never ship.
+`FEEDBACK_LOG.md` and `COURSE_PATTERN.md`. They live in `course\working_claude\` (a pattern draft the operator reads in
+`course\to_review\`) and never ship (L44).
 
 - **Every session starts by reading `COURSE_STATE.md`** if the course folder has one, and never
   re-asks or re-decides what it lists under *Decided*. A new course: `course_memory.py start`.
@@ -229,7 +231,7 @@ questions, and what to record. In order:
    course type (`NEW_ENTRANT` / `EXPERIENCED`, the programme's pointer first as *Recommended*), the
    model course only if not found, the edition questions, and — in retrofit, only
    when `detect_expert_edits.py` says `nothing-to-go-on` — whether anyone edited it by hand (L24).
-4. **Record** it in `_factory/intake.json`, editions via `kb_tool.py decide`. Nothing is asked twice.
+4. **Record** it in `working_claude\intake.json`, editions via `kb_tool.py decide`. Nothing is asked twice.
 
 Every instrument and simulator in the IMO model course is **assumed available** (L28) — never asked.
 Never ask the module split, screen count, task codes, pass marks, file layout or which lane to

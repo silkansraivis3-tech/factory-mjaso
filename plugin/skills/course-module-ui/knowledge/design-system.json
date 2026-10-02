@@ -22,5 +22,6 @@
   ],
   "starter_deck": {"from": "course-module-ui/templates/gb_shell.html", "to": "module.html",
                    "_note": "written only when the module has no module.html yet, and never checked for identity afterwards - it is the deck the module is built in"},
-  "record": "_factory/design_system.json"
+  "record": "_factory/design_system.json",
+  "_record_note": "For a module in course/modules/ the record goes to course/working_claude/modules/<module>/design_system.json, so the module folder holds only the module (L44, 2.20.0) - course-factory/scripts/workspace.py module_record()"
 }

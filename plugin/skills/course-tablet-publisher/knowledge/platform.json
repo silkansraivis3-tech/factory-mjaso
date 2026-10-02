@@ -124,6 +124,8 @@
   ],
   "_shared_note": "Shared engines live ONCE at the terminal root and are referenced, never copied into a course. A copy goes stale the first time the engine is fixed - that has already happened here: the per-module gb_done.js exists in five identical copies.",
   "internal_globs": [
+   "(^|/)working_claude/",
+   "(^|/)to_review/",
    "(^|/)_claude_working_area/",
    "(^|/)tablet_package/",
    "(^|/)oldversion/",

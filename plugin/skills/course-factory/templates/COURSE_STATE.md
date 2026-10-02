@@ -33,7 +33,7 @@ re-decide anything listed under "Decided". Internal — never shipped to a table
 |---|---|
 | Course | <title> |
 | Course material (master folder, read only) | <full path> - source_files, knowledge base, old course |
-| Work folder | <master folder>\course - everything the factory makes (L40) |
+| Work folder | <master folder>\course - to_review\ (what you check), modules\ (the modules), working_claude\ (the factory's own files) (L40, L44) |
 | Approved programme | <path> |
 | IMO model course | <path, or none> |
 | Knowledge base | <path> — <Course Source Processor / docling> |
@@ -67,9 +67,9 @@ Where everything is. Paths are relative to the course folder.
 |---|---|
 | This file | `COURSE_STATE.md` |
 | Every correction the operator made | `FEEDBACK_LOG.md` |
-| Intake answers, edition choices | `_factory/intake.json` |
-| Knowledge-base sources, copies, editions | `_factory/kb_sources.json` |
-| Retrieval packs | `_factory/retrieval/` |
+| Intake answers, edition choices | `working_claude/intake.json` |
+| Knowledge-base sources, copies, editions | `working_claude/kb_sources.json` |
+| Retrieval packs | `working_claude/retrieval/` |
 | Architecture review page | <path, once Stage 2 has run> |
 | Content scripts | <path per module, once Stage 3 has run> |
 | Modules | <path per module> |

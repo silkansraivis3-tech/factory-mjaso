@@ -14,7 +14,7 @@ what the architecture's "from the old course" plan per module is written from: w
 what is MODERNISED (a static picture becomes an animation or a 3D model, a paper exercise becomes a
 tablet task, a film becomes a short clip at the right moment) and what is ADDED that it never had.
 
-It reads only. It writes _factory/old_course_inventory.json and _factory/OLD_COURSE_INVENTORY.md in the work
+It reads only. It writes working_claude/old_course_inventory.json and OLD_COURSE_INVENTORY.md in the work
 folder (internal - never shipped). Standard library, plus pypdf for PDF page counts when it is installed.
 
 WHAT IS READ, AND HOW
@@ -226,7 +226,7 @@ def extract_images(old, work):
     """Every picture in the old course's decks, copied out with the slide it sits on (owner, 2026-10-01: every
     image in the old course is usable). Read only on the old course; the copies go to
     course\\_factory\\old_course_images\\<section>\\<deck>\\slideNN_<name>, with an index."""
-    out_dir = os.path.join(work, "_factory", "old_course_images")
+    out_dir = workspace.claude_path(work, "old_course_images")
     index, n, seen = [], 0, {}
     for dirpath, _, files in os.walk(old):
         for f in sorted(files, key=num_key):
@@ -286,7 +286,7 @@ def main(argv=None):
         return 0
     inv = inventory(a.old)
     md, tot = summary_md(inv)
-    d = os.path.join(work, "_factory")
+    d = os.path.join(work, workspace.CLAUDE)
     os.makedirs(d, exist_ok=True)
     with io.open(os.path.join(d, "old_course_inventory.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(inv, f, ensure_ascii=False, indent=1)

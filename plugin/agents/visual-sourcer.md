@@ -46,7 +46,7 @@ the system the component belongs to; likely figure captions; both British and Am
 **Record the terms you tried** — that record is half the value of the report.
 
 **Owner, 2026-10-01:** every picture in the course's **knowledge base** (`KNOWLEDGE_BASE/sources/*/images`) and **old
-course** (`course/_factory/old_course_images/`, with `_index.json` saying which deck and slide) is usable as it is -
+course** (`course/working_claude/old_course_images/`, with `_index.json` saying which deck and slide) is usable as it is -
 rights_state `OWNER_CLEARED`, credited where the source is known. Search those first. When neither has what the slide
 needs, you **must** go to the internet and download it.
 
@@ -103,7 +103,8 @@ it honestly: *"a product tanker, not a gas carrier"* is a usable caption; silenc
 
 **The download list first (owner, 2026-10-01).** Return the files you would download - what each shows, the page, the
 site, the size - as one list; whoever called you shows it to the operator once per module and, on their yes, you
-download all of them into the course work folder (`course\assets\<module>\`). Nothing is downloaded unseen.
+download all of them into the module's own folder (`course\modules\M01_<title>\assets\`, L43), and the provenance
+beside them. Nothing is downloaded unseen.
 
 Anything recommended and legally usable must be **downloaded and packaged locally** into the asset
 folder you were given — the tablet has no network and the app returns 403 to every external host.

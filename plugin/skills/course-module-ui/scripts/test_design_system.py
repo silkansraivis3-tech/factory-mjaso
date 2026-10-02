@@ -86,8 +86,10 @@ def main():
         check("check says every file is identical", code == 0 and set(st.values()) == {"OK"}, st)
         check("all %d listed files were copied" % len(SPEC["files"]), len(st) == len(SPEC["files"]), st)
         check("the starter deck was written", os.path.exists(os.path.join(m, "module.html")))
-        rec = json.load(io.open(os.path.join(m, "_factory", "design_system.json"), encoding="utf-8"))
+        rec = json.load(io.open(os.path.join(tmp, "course", "working_claude", "modules", "m1", "design_system.json"), encoding="utf-8"))
         check("the record holds a fingerprint for every file", len(rec["files"]) == len(SPEC["files"]), rec)
+        check("the record is kept with the factory's own files, not inside the module folder (L44)",
+              not os.path.exists(os.path.join(m, "_factory")))
 
         print("\n-- the check catches every way a copy stops being the factory's")
         css = os.path.join(m, "assets", "gb_compose.css")
@@ -115,7 +117,7 @@ def main():
               b"<!-- my work -->" in open(deck, "rb").read())
 
         print("\n-- a copy the factory has since improved is OUTDATED, not CHANGED")
-        recp = os.path.join(m, "_factory", "design_system.json")
+        recp = os.path.join(tmp, "course", "working_claude", "modules", "m1", "design_system.json")
         rec = json.load(io.open(recp, encoding="utf-8"))
         old = b"/* an older factory version */\n"
         tok = os.path.join(m, "assets", "gb_tokens.css")

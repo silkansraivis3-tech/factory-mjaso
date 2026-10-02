@@ -13,7 +13,7 @@
         "project manuals, technical drawings, schematics, photographs",
         "the course's own existing assets (module_NN/assets/**)",
         "the knowledge base's extracted figures (KNOWLEDGE_BASE/sources/*/images) - all usable as they are (owner, 2026-10-01)",
-        "the old course's pictures - course/_factory/old_course_images/, copied out slide by slide by course-factory/scripts/old_course.py images - all usable as they are (owner, 2026-10-01)",
+        "the old course's pictures - course/working_claude/old_course_images/, copied out slide by slide by course-factory/scripts/old_course.py images - all usable as they are (owner, 2026-10-01)",
         "the old course's training films, for a real video (L37)"
       ],
       "search_terms_rule": "Search by MORE than the words in the request. Expand to: the equipment name, the manufacturer, alternate and older terminology, the system name, the document title, likely figure captions, and the abbreviation. A single failed grep for the requester's phrasing is not a search.",

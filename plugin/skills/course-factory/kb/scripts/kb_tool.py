@@ -256,7 +256,7 @@ def cmd_sources(kb, course, as_json):
         "format_copies": [[r["path"] for r in g] for g in fmt_copies],
         "edition_groups": [question_for(g) for g in editions],
     }
-    out = os.path.join(course, "_factory", "kb_sources.json")
+    out = _claude(course, "kb_sources.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with io.open(out, "w", encoding="utf-8", newline="\n") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
@@ -293,12 +293,12 @@ def cmd_sources(kb, course, as_json):
 
 # ------------------------------------------------------------------ decisions
 def cmd_decide(course, keep, different):
-    rep_p = os.path.join(course, "_factory", "kb_sources.json")
+    rep_p = _claude(course, "kb_sources.json")
     if not os.path.isfile(rep_p):
         print("Stopped - run `kb_tool.py sources <kb> --course %s` first; there is nothing to decide yet." % course)
         return 2
     rep = load_json(rep_p)
-    ip = os.path.join(course, "_factory", "intake.json")
+    ip = _claude(course, "intake.json")
     intake = load_json(ip) if os.path.isfile(ip) else {}
     ed = intake.setdefault("editions", {})
     done = []
@@ -323,7 +323,7 @@ def cmd_decide(course, keep, different):
 
 
 def superseded(course):
-    ip = os.path.join(course, "_factory", "intake.json")
+    ip = _claude(course, "intake.json")
     if not os.path.isfile(ip):
         return set()
     return {p for d in load_json(ip).get("editions", {}).values() for p in d.get("superseded", [])}
@@ -418,7 +418,7 @@ def cmd_search(kb, q, course, top, keep_all):
     exact, _, fmt_copies = group_sources(rows)
     skip = set() if keep_all else (superseded(course) | {r["path"] for g in exact + fmt_copies for r in g[1:]})
     hits = (search_csp if fmt == "course_source_processor" else search_docling)(kb, q, top, skip)
-    outdir = os.path.join(course, "_factory", "retrieval")
+    outdir = _claude(course, "retrieval")
     os.makedirs(outdir, exist_ok=True)
     out = os.path.join(outdir, "%s_%s.md" % (date.today().isoformat(), slug(q)))
     L = ["# Retrieval pack — %s" % q, "",
@@ -448,7 +448,7 @@ def cmd_search(kb, q, course, top, keep_all):
 
 
 # ------------------------------------------------------------------ find
-SKIP_DIRS = {".git", "node_modules", "__pycache__", "_factory", ".venv", "venv", "$recycle.bin"}
+SKIP_DIRS = {".git", "node_modules", "__pycache__", "_factory", "working_claude", "to_review", ".venv", "venv", "$recycle.bin"}
 
 
 def kb_summary(path, fmt):
@@ -461,6 +461,13 @@ def kb_summary(path, fmt):
     except (OSError, ValueError):
         n = None
     return {"path": os.path.abspath(path), "format": fmt, "sources": n}
+
+
+def _claude(course, *parts):
+    """working_claude/<parts> in the work folder - an older course's _factory/ copy is found too (L44)."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "scripts"))
+    import workspace
+    return workspace.claude_path(course, *parts)
 
 
 def find_kbs(folder, max_depth=5, up=1):

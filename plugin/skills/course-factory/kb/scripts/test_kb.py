@@ -162,7 +162,7 @@ def snapshot(folder):
 
 
 def groups(course):
-    r = json.load(io.open(os.path.join(course, "_factory", "kb_sources.json"), encoding="utf-8"))
+    r = json.load(io.open(os.path.join(course, "working_claude", "kb_sources.json"), encoding="utf-8"))
     names = lambda paths: sorted(os.path.basename(p) for p in paths)
     return r, [names(g["members"]) for g in r["edition_groups"]]
 
@@ -206,25 +206,25 @@ def main():
                   and len(q["header"]) <= 12, q)
 
             code, out = run("search", kb, "sulphur content fuel oil", "--course", course, "--top", "3")
-            pack = [os.path.join(course, "_factory", "retrieval", f) for f in os.listdir(os.path.join(course, "_factory", "retrieval"))]
+            pack = [os.path.join(course, "working_claude", "retrieval", f) for f in os.listdir(os.path.join(course, "working_claude", "retrieval"))]
             txt = io.open(pack[0], encoding="utf-8").read() if pack else ""
             check("search writes its pack into the COURSE folder", code == 0 and len(pack) == 1, out)
             check("before any decision, both MARPOL editions are found", "MARPOL-2022.pdf" in txt and "marpol.pdf" in txt, txt[:400])
             check("an exact copy is never cited twice", txt.count("SIGTTO liquified gas handling principles.pdf") == 0, txt[:300])
 
             code, out = run("decide", course, "--keep", q["members"][[i for i, m in enumerate(q["members"]) if m.endswith("MARPOL-2022.pdf")][0]])
-            intake = json.load(io.open(os.path.join(course, "_factory", "intake.json"), encoding="utf-8"))
+            intake = json.load(io.open(os.path.join(course, "working_claude", "intake.json"), encoding="utf-8"))
             check("the operator's answer is recorded in intake.json",
                   code == 0 and any(d["superseded"] and d["superseded"][0].endswith("marpol.pdf")
                                     for d in intake["editions"].values()), intake)
             os.remove(pack[0])
             run("search", kb, "sulphur content fuel oil", "--course", course, "--top", "3")
-            pack = [os.path.join(course, "_factory", "retrieval", f) for f in os.listdir(os.path.join(course, "_factory", "retrieval"))]
+            pack = [os.path.join(course, "working_claude", "retrieval", f) for f in os.listdir(os.path.join(course, "working_claude", "retrieval"))]
             txt = io.open(pack[0], encoding="utf-8").read()
             check("after it, only the current edition is cited", "MARPOL-2022.pdf" in txt and "## 2 · marpol.pdf" not in txt and "· marpol.pdf" not in txt, txt[:500])
             code, out = run("search", kb, "inerting dew point", "--course", course, "--top", "1")
             check("the right piece ranks first", "SIGGTO LGHP (4th).pdf" in io.open(
-                os.path.join(course, "_factory", "retrieval", [f for f in os.listdir(os.path.join(course, "_factory", "retrieval")) if "inerting" in f][0]),
+                os.path.join(course, "working_claude", "retrieval", [f for f in os.listdir(os.path.join(course, "working_claude", "retrieval")) if "inerting" in f][0]),
                 encoding="utf-8").read().split("## 1 ·")[1].split("\n")[0])
 
             inner = os.path.join(kb, "my_course")

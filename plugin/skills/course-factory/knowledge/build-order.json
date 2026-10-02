@@ -9,7 +9,7 @@
       "owner": "course-factory (knowledge/intake.json) + course-factory/kb",
       "does": "Stage 1. Look in the folder first; sort the knowledge base's sources (kb_tool.py sources - exact copies, format copies, editions); ask what is still missing in one batch of pop-up questions - programme, knowledge base, old course, course type, model course and language only if not found, which edition is current; record everything in _factory/intake.json",
       "blocked_without": "nothing - the programme is the one blocking ANSWER, and it is asked here",
-      "output": "_factory/intake.json, _factory/kb_sources.json, and COURSE_STATE.md + FEEDBACK_LOG.md started (scripts/course_memory.py start) with the course table and every intake decision filled in",
+      "output": "working_claude/intake.json, working_claude/kb_sources.json, and working_claude/COURSE_STATE.md + FEEDBACK_LOG.md started (scripts/course_memory.py start) with the course table and every intake decision filled in",
       "added": "2.13.0 (Phase 5 step 2). Numbered 0 so no later step moves."
     },
     {
@@ -47,7 +47,7 @@
       "step": "old course, read whole",
       "owner": "course-factory (scripts/old_course.py)",
       "does": "L41 (owner, 2026-10-01): every file of the old course read - slides, exercises, handouts, tests, films - and every picture copied out; then, per module, what is kept, modernised and made digital, and added. It is the foundation the architecture is planned from.",
-      "output": "course\\_factory\\OLD_COURSE_INVENTORY.md, old_course_inventory.json, old_course_images\\ (2.19.0)"
+      "output": "course\\working_claude\\OLD_COURSE_INVENTORY.md, old_course_inventory.json, old_course_images\\ (2.19.0)"
     },
     {
       "n": 5,
@@ -70,7 +70,7 @@
       "owner": "course-factory (script/GUIDE.md, scripts/content_script.py)",
       "does": "Stage 3 STOP, per module: the exact words of every screen in trainee order - one task per screen - with the planned picture, instructor notes, every question with answers, correct answer and feedback, and the operator-stated facts listed once. A review page and a Word file for the operator. Every correction is shown as an understood list before it is applied (apply --confirmed only after the operator says yes). The final-assessment bank the same way (--module final).",
       "blocked_without": "the GATE (6) approved",
-      "output": "_factory/script/M<nn>.json approved; review/M<nn>_SCRIPT_REVIEW.html, review/M<nn>_SCRIPT.docx",
+      "output": "working_claude/script/M<nn>.json approved; to_review/M<nn>_SCRIPT_REVIEW.html, to_review/M<nn>_SCRIPT.docx, to_review/M<nn>_INSTRUCTOR_NOTES.md",
       "added": "2.16.0 (Phase 5 step 5). Numbered 6b so no later step moves."
     },
     {

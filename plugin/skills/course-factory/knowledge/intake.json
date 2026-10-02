@@ -39,8 +39,8 @@
      "question": "Which language are the slides, tasks and assessment in?",
      "options": ["English", "Latvian", "English + Latvian"]},
     {"n": 7, "id": "editions", "header": "Edition", "ask_when": "kb_tool.py sources found edition groups",
-     "question": "taken as written from _factory/kb_sources.json - one question per group, 'which edition is current?'",
-     "options": "taken as written from _factory/kb_sources.json",
+     "question": "taken as written from working_claude/kb_sources.json - one question per group, 'which edition is current?'",
+     "options": "taken as written from working_claude/kb_sources.json",
      "rule": "Record the answer with kb_tool.py decide. From then on the factory cites only the current edition; a search leaves the other out."},
     {"n": 8, "id": "expert_edits", "header": "Hand edits", "ask_when": "retrofit only, and only when retrofit/scripts/detect_expert_edits.py says nothing-to-go-on (L24)",
      "question": "Has anyone changed this module by hand since it was made?",
@@ -52,7 +52,7 @@
   "no_web_search": "Never web-search during intake. Something not in the brief, the folder, the programme or the knowledge base is asked in the pop-up; UNKNOWN means it was asked and the operator did not know.",
 
   "record": {
-    "file": "course\\_factory\\intake.json - in the work folder beside the material (L40; internal - never shipped, see course-tablet-publisher internal_globs)",
+    "file": "course\\working_claude\\intake.json - in the work folder beside the material (L40; internal - never shipped, see course-tablet-publisher internal_globs)",
     "written": "at the end of Stage 1, before the architecture is designed; kb_tool.py decide adds the editions to it. At the same moment COURSE_STATE.md is started (scripts/course_memory.py start) and its course table and 'Decided' list are filled from these answers (L32).",
     "fields": {
       "programme": "path of the approved programme",
