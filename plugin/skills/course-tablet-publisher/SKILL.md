@@ -23,6 +23,12 @@ description: >
 > **Every reply to the operator** (owner, 2026-10-01, L25): three parts as short points - **Done · Check now · Next** -
 > in everyday words, for someone who knows nothing about IT. The full rule: `course-factory/SKILL.md`.
 
+> **The classroom system (L45, owner 2026-10-05).** The new online classroom takes a whole course folder through its
+> admin panel's **+**. Its rules are `course-factory/knowledge/classroom-system.json`, and its importer is copied here
+> unchanged: `vendor/package-core.mjs` (from `tablet-system-win/admin/package-core.mjs`), run by
+> `vendor/import_check.mjs`. `course-factory/scripts/check_course_package.py` runs it before a course is handed over.
+> The Android-app publishing below still holds for the app.
+
 **v1 (2026-09-08) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
 **What this owns:** getting validated course content from an author's folder onto the two

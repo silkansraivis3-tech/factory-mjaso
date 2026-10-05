@@ -628,9 +628,10 @@ def main(argv=None):
     ap.add_argument("--css", action="append", default=[], metavar="DIR")
     ap.add_argument("--js", action="append", default=[], metavar="DIR")
     ap.add_argument("--only", action="append", default=[], choices=CHECKS)
-    ap.add_argument("--viewport", default="800x1280", metavar="WxH",
+    ap.add_argument("--viewport", default="1280x800", metavar="WxH",
                     help="target viewport for resolving vw/vh/clamp in the floor "
-                         "check (default 800x1280, the portrait tablet this standard "
+                         "check (default 1280x800, the classroom's landscape WebView since 2.21.0 - L45; "
+                         "the old app's 800x1280 portrait tablet is the one this standard "
                          "was ruled for). A different device re-measures its floor — "
                          "SKILL.md, 'the delivery target is a parameter'.")
     ap.add_argument("--quiet", action="store_true",

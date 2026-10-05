@@ -34,6 +34,12 @@ do not fill its minutes, a self-check with too little theory before it, a questi
 not in the slides already taught, a task written onto a slide, minutes that do not add up to the
 programme's. For every question the page names the slide that teaches its answer.
 
+WHERE IT GOES IN THE CLASSROOM (owner, 2026-10-05 - L45, knowledge/classroom-system.json)
+Each slide becomes a .slide in module01/presentation/index.html with its title as data-title and its instructor notes as
+data-cue - that is how the notes reach the instructor's panel. A task slide becomes data-kind="Task" (a module check
+"Check") with data-activity=<its set: SC1, MC, FA> and data-task-href to the set's one page: tasks/sc1_<slug>.html,
+assessment/check.html, assessment/final.html. check_script_match.py proves the built words are the approved ones.
+
 PICTURES AND TASKS (owner, 2026-09-30 - L37, L38)
 Every slide leaves room for its picture and says what it is: "visual_kind" (a photograph, a schematic, a
 step animation, a 3D model, a video ... - knowledge/media-and-tasks.json), "visual" (what it shows) and

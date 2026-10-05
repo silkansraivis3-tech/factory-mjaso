@@ -219,7 +219,7 @@ and the words to replace are in `SKILL.md` (*Every reply to the operator*) and `
 
 ---
 
-## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0)
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0; L45, 2.21.0)
 
 Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
 these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
@@ -255,6 +255,11 @@ reason to refuse the operator. Where one would make the result worse for what wa
 one line and do what was asked.
 
 **L27 · Three test levels, all on the tablet, and only the final assessment is graded.**
+
+*(Owner, 2026-10-05, 2.21.0 - L45: a module check reports **PASSED or NOT PASSED** with a score, the pass mark stated
+on the page - for the trainee and the instructor to know whether the module was understood, not an official grade. The
+final assessment is the official one. Where this text says "never pass/fail, never red" for a module check, that is
+replaced.)*
 
 *Revised by the owner, 2026-09-30 (2.17.0): the tests are on the **trainee tablet only**, never inside the
 slides (L35); a self-check **does** show the trainee a score — "it's for himself"; the module check does too.
@@ -656,3 +661,44 @@ only Claude uses."*
 - `scripts/workspace.py` decides every path. A course started before 2.20.0 keeps working - its files are found
   where they are - and `python scripts/workspace.py tidy <folder>` moves it into the three places: moved, never
   deleted, never overwritten, and anything it does not know is left and named.
+
+**L45 · The course folder is built to the classroom system's own rules.**
+*"Here is the way the course file structure should look, so it can be added to the system properly."* - the owner,
+2026-10-05, giving `tablet-system-win/COURSE_FACTORY_PROMPT.md`: *"Give this whole file to the course factory at the start
+of a new course ... follow the rules and a course imports with no errors, every task opens on the trainee tablets from its
+slide, and every result reaches the instructor and the admin panel."*
+
+```
+    course\modules\                       the course folder that is added to the classroom
+        COURSE.html                       the course start page - its <title> is the course title (and makes its ID)
+        _course_shell\course_map.js       window.COURSE_MAP = [...] - module order and titles
+        module01\
+            presentation\index.html       the deck: every screen a .slide with data-title; data-cue = the instructor notes
+            START_HERE.html               opens the presentation straight away (L43)
+            START_HERE_EXTENDED.html      a button for everything (L43)
+            tasks\sc1_<slug>.html         one page per task, opened by its slide's data-task-href
+            assessment\check.html         the module check;  check_answer_key.html - instructor-only
+            handout\index.html            optional
+            instructor\                   the module plan, practical cards - instructor-only
+            assets\                       everything the module uses
+        module02\ ... module23\           the last one is the final assessment: assessment\final.html
+```
+
+- **`knowledge/classroom-system.json`** holds the rules: the folder, the names (no spaces; `module01` ...; task files
+  `sc1_<slug>.html` that never change name), the limits (6 MB a file, 300 MB, 6000 files, nothing from the internet),
+  the deck (`.slide`, `data-title`, `data-kind`, `data-cue`, and for a task slide `data-activity` + `data-task-href` - that
+  is what puts **▶ Start** on the instructor's panel and opens the page on every trainee tablet, L35), the task page (title
+  `SC1 — <title>`, one `gb-task-done` report with `ok`, `total`, `items`, `head`; it listens for the classroom's timer;
+  no retry inside the classroom), which files are instructor-only, and what the importer skips.
+- **The instructor notes reach the panel as each slide's `data-cue`** - the importer skips `.md` files. The short notes
+  of 2.18.1 are exactly that; the `.md` copy stays in `to_review\` for the operator to read.
+- **Module checks report PASSED or NOT PASSED** with a score and the pass mark on the page (owner, 2026-10-05: *"it can be
+  passed, it can be not passed, it can be graded, but that grade only for the trainee and instructor to know if the
+  trainee understood"*) - not an official grade; the final assessment is the official one. Self-checks: no pass mark.
+- **Task pages are built for 1280 x 800 landscape** - the classroom's WebView - with L42's sizes.
+- **Proved:** `scripts/check_course_package.py` runs the classroom's whole before-handover list and then the admin
+  panel's own importer (`course-tablet-publisher/vendor/package-core.mjs`, a byte-identical copy of
+  `admin/package-core.mjs`, run with Node) on the same folder. A course passes only when both say it is ready. Its test
+  also checks that the copy is still identical to the classroom's, whenever that repository is on the computer.
+- Where L43 named module folders `M01_<title>` and the deck `presentation\module.html`, this replaces it. Built in
+  Phase 5 steps 6-10.

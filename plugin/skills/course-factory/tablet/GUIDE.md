@@ -102,8 +102,11 @@ must end in a generic family, so the degradation is a decision rather than an ac
 
 ## Module folders first (L43, owner 2026-10-01)
 
-The build puts every module into its own complete folder, `course\modules\M01_<title>\` - START_HERE.html opens
-the presentation, START_HERE_EXTENDED.html gives a button for everything, every asset and script inside. This is what
+The build puts every module into its own complete folder, `course\modules\module01\` (L45 - the classroom's own
+rules, `knowledge/classroom-system.json`) - the deck in `presentation\index.html`, START_HERE.html opening it,
+START_HERE_EXTENDED.html with a button for everything, every asset and script inside. `course\modules\` itself is the
+course folder added to the classroom (COURSE.html, `_course_shell\course_map.js`). Run
+`scripts/check_course_package.py` - it runs the classroom's own importer too - before anything is handed over. This is what
 a colleague opens in their browser (L39), and what the publisher turns into the app's course package. Run
 `scripts/check_module_folder.py course\modules` before handing anything over.
 

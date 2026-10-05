@@ -55,7 +55,9 @@ course-factory/
 ├── scripts/make_architecture_page.py, test_architecture_page.py   the Stage 2 STOP as one page (2.15.0); one module per topic (2.17.0)
 ├── knowledge/theory-rules.json           how much theory before any task, and the two tablets (L35, L36, 2.17.0)
 ├── scripts/workspace.py                 the work folder: course\ beside the operator's material (L40, 2.19.0)
-├── scripts/check_module_folder.py, test_module_folder.py   every module folder complete and self-contained (L43, 2.19.3)
+├── scripts/check_course_package.py, test_course_package.py   the course folder to the classroom's rules + its own importer (L45, 2.21.0)
+├── scripts/check_module_folder.py       kept as a short way in: runs check_course_package.py (2.21.0)
+├── knowledge/classroom-system.json      the classroom system's own course-folder rules (L45, 2.21.0)
 ├── scripts/old_course.py, test_workspace.py   the old course read whole, its pictures copied out (L41, 2.19.0)
 ├── knowledge/media-and-tasks.json        the kinds of picture and the ways of answering, who makes each, the variety floors (L37, L38, 2.18.0)
 ├── knowledge/page-labels.json            the review pages' own words in the operator's language (en / lv / ru)
@@ -475,6 +477,26 @@ draft in `to_review\`), the knowledge-base tool, the old-course reader, the styl
 treats `to_review/` and `working_claude/` as internal. Found on the way: two notes I had written with backslashes in
 them made Python print a warning into a tool's output, which broke a machine-read answer - fixed, and every script
 now compiles with warnings as errors.
+
+## 4q · The classroom system's own rules (2.21.0, 2026-10-05)
+
+*"Here is the way the course file structure should look, so it can be added to the system properly."* - the owner,
+2026-10-05, giving `tablet-system-win/COURSE_FACTORY_PROMPT.md`: *"Give this whole file to the course factory at the start
+of a new course ... follow the rules and a course imports with no errors, every task opens on the trainee tablets from its
+slide, and every result reaches the instructor and the admin panel."*
+
+Read alongside the rules: the admin importer `admin/package-core.mjs` (read only), which decides what is skipped (`_`
+folders except `_course_shell`, `test_`, `.md` `.txt` `.py` `.zip` ...), what is instructor-only (folders and names), what
+reaches the trainee (`tasks|handout|documents|assets|assessment/`), and when an import fails (a required link that does
+not resolve, a file over 6 MB, an external script, a key-like string). It is copied byte-identical to
+`course-tablet-publisher/vendor/` and run with Node by `check_course_package.py`, after the factory's own checks of
+the rulebook's handover list plus L35 and L43. The test builds a two-module course to the rules - it passes both, the
+importer would add it as `gas-basic` 1.0.0 with 10 trainee files and the answer key not among them - then breaks it
+seventeen ways, each caught. Changed by it: module folders `module01` (not `M01_<title>`), the deck
+`presentation\index.html`, the instructor notes reaching the panel as `data-cue` (the importer skips `.md`), module
+checks PASSED / NOT PASSED (owner: for understanding, not an official grade - L27 annotated), task pages measured at
+1280 × 800 landscape (`check_task_pages.py --viewport` default). The old `check_module_folder.py` now hands over to the
+new check; its test was replaced by the new one.
 
 ## 5 · Known gaps / before this goes live
 

@@ -40,6 +40,6 @@
     "_law": "L35 (owner, 2026-09-30). The course runs on two tablets.",
     "instructor_tablet": "Shows the slides; the instructor terminal mirrors them to the classroom screen through the web view. The instructor notes are on the instructor's panel only. When it is time for a task, the slide on the screen only says that a task starts now and what it is about - the task itself is never on a slide - and the instructor's panel carries one button, OPEN TASK.",
     "trainee_tablet": "Carries only tasks: self-checks, the module check and the final assessment. A task opens on every trainee tablet automatically when the instructor presses OPEN TASK - and only then. The trainee cannot see a list of tasks, cannot browse or open another task, and there is no 'all tasks', 'module tasks' or 'back to tasks' button. One question per screen, Next -> Next; at the end the trainee sees their own score.",
-    "scores": "Self-check and module check: the trainee sees their own score - it is for them - and it does not count towards the certificate. The instructor sees done / not done and the result, as information, never pass/fail, never red. The final assessment is the only graded test."
+    "scores": "Self-check: the trainee sees their own score, no pass mark. Module check: PASSED or NOT PASSED with the score and the pass mark on the page - for the trainee and the instructor to know whether the module was understood, not an official grade (owner, 2026-10-05, L45). The final assessment is the only official grade."
   }
 }

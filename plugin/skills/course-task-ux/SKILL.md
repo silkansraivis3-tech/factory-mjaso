@@ -33,6 +33,12 @@ Everything measurable below was ruled for:
 
 > **Android tablet, 800 × 1280 portrait, offline, in a WebView, operated by a trainee's
 > finger. Plain HTML/CSS/ES5. No build step, no frameworks, no network.**
+>
+> **2.21.0 (L45):** the classroom system now opens a task inside a frame - an Android WebView in **landscape, about
+> 1280 × 800**, touch only. New task pages are built and measured for that. Each page reports its result once with
+> `gb-task-done` (code, title, ok, total, items, head), listens for the classroom's `gb-timer`, offers no retry inside
+> the classroom, and never shows the answers in its source - `course-factory/knowledge/classroom-system.json` →
+> `task_page`.
 
 A different programme on a different device **re-measures the floor** (§11) rather than
 assuming these numbers. What does not change with the device: choosing over typing (§2), a
@@ -293,7 +299,8 @@ the page. `scripts/check_task_pages.py` flags candidates; the record sheet is th
 
 ## 11 · Measurable floor — verify, do not assume
 
-At the target viewport (**800 × 1280 portrait** for the reference build), on every task screen:
+At the target viewport (**1280 × 800 landscape** for the classroom since 2.21.0; 800 × 1280 portrait for the old app's
+reference build), on every task screen:
 
 | | Requirement |
 |---|---|
@@ -313,7 +320,7 @@ any measurement.
 
 **11.1 · `clamp(MIN, COEFFICIENT, CEILING)` resolves to exactly one of the three.** Compute all three
 at the target viewport, take whichever binds, and judge only that. `scripts/check_task_pages.py
---only floor` does this and names the binding dial; `--viewport WxH` defaults to `800x1280`.
+--only floor` does this and names the binding dial; `--viewport WxH` defaults to `1280x800` (2.21.0; it was `800x1280`).
 
 ---
 

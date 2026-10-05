@@ -31,8 +31,10 @@
   },
 
   "module_folders": {
-    "_law": "L43 (owner, 2026-10-01): every module in its own folder under course\\modules\\, complete and self-contained; the app's course pack is made from these folders when the course is published.",
-    "layout": ["modules/M01_<title>/START_HERE.html - opens the presentation straight away",
+    "_law": "L43 (owner, 2026-10-01): every module in its own folder under course\\modules\\, complete and self-contained. L45 (2026-10-05): the folder names and files follow the classroom system's own rules - knowledge/classroom-system.json wins wherever this block differs.",
+    "layout": ["modules/COURSE.html and modules/_course_shell/course_map.js - the course start page and the module list (L45)",
+               "modules/module01/presentation/index.html - the deck (L45; before 2.21.0: modules/M01_<title>/presentation/)",
+               "modules/module01/START_HERE.html - opens the presentation straight away",
                "modules/M01_<title>/START_HERE_EXTENDED.html - a button for the presentation, every task, the module plan, the instructor notes, everything else the module has",
                "modules/M01_<title>/presentation/ - the one-page presentation",
                "modules/M01_<title>/tasks/ - every task page of the module",

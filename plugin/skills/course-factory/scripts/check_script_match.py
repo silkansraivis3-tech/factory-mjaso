@@ -136,8 +136,8 @@ def main(argv=None):
     mdir = a.module_dir
     if not mdir:                                   # L43: modules\M01_<title>\ - the older modules\m1\ still found
         mods = os.path.join(a.course, "modules")
-        new = sorted(glob.glob(os.path.join(mods, "%s_*" % cs.mid(a.module)))) if str(a.module).lower() != "final" else \
-            sorted(glob.glob(os.path.join(mods, "M*_Final*")))
+        new = (sorted(glob.glob(os.path.join(mods, "module%02d" % int(a.module)))) + sorted(glob.glob(os.path.join(mods, "%s_*" % cs.mid(a.module))))) \
+            if str(a.module).lower() != "final" else sorted(glob.glob(os.path.join(mods, "M*_Final*")))     # L45: module01 first
         mdir = new[0] if new else os.path.join(mods, "m%s" % a.module)
     files = [f for f in glob.glob(os.path.join(mdir, "**", "*.html"), recursive=True)]
     if not files:

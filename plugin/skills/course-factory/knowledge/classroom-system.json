@@ -1,0 +1,71 @@
+{
+  "_authority": "L45 (owner, 2026-10-05): the NOVIKONTAS classroom system's own rules for a course folder - from tablet-system-win/COURSE_FACTORY_PROMPT.md ('Give this whole file to the course factory at the start of a new course') and the admin panel's importer, admin/package-core.mjs, of which course-tablet-publisher/vendor/package-core.mjs is a byte-identical copy. Where any older layout rule in this factory differs (L43's module names, the presentation file, the instructor notes file), THIS wins: it is what the classroom reads. scripts/check_course_package.py checks a folder against it and then runs the importer itself.",
+
+  "where": "course\\modules\\ in the work folder (L44) IS the course folder that is added to the classroom: COURSE.html, _course_shell\\, module01\\ ... moduleNN\\. to_review\\ and working_claude\\ stay beside it and are never uploaded.",
+
+  "layout": {
+    "COURSE.html": "the course start page; its <title> is the course title - and the course ID is made from that title, so the title never changes once the course is added. Optional <meta name=\"description\" content=\"...\">. Instructor-only.",
+    "_course_shell/course_map.js": "window.COURSE_MAP = [{\"code\":\"module01\",\"title\":\"Gas tankers\",\"entry\":\"presentation/index.html\"}, ...]; - the module order and titles, read as data, never run. The factory always writes it.",
+    "moduleNN/": "two digits, taught in that order: module01, module02 ... the final assessment is the last one (L34).",
+    "moduleNN/presentation/index.html": "the instructor's deck (projector). The system finds a module by this file. Instructor-only.",
+    "moduleNN/START_HERE.html": "instructor-only; opens the presentation straight away (L43).",
+    "moduleNN/START_HERE_EXTENDED.html": "instructor-only; a button for the presentation, every task, the module check, the plan, the handout (L43).",
+    "moduleNN/tasks/<code>_<slug>.html": "one page per trainee task (a self-check is one page with all its questions). No tasks/index.html: the trainee never sees a task list (L35).",
+    "moduleNN/assessment/check.html": "the module check (trainee-facing). The final assessment: assessment/final.html in the last module.",
+    "moduleNN/assessment/check_answer_key.html": "answers and marking - instructor-only by its name.",
+    "moduleNN/handout/index.html": "optional reading the trainee may open at any time.",
+    "moduleNN/instructor/": "the module plan, practical cards - instructor-only by its folder name.",
+    "moduleNN/assets/": "every picture, model, film, style, font and script the module uses (L43: the module needs nothing outside its own folder)."
+  },
+
+  "names": {
+    "no_spaces": "never a space in a folder or file name - pictures copied from the old course are renamed",
+    "task_file": "<code lower-case>_<title as a slug>.html, e.g. sc1_keeping_the_cargo_liquid.html - and the name never changes in later versions: results are filed under it",
+    "codes": "the code on the slide (data-activity), in the page title and in the result is the same: SC1, SC2 ... for the self-checks of a module, MC for its module check, P1, P2 ... for work in the room, FA for the final assessment"
+  },
+
+  "limits": {"file_bytes": 6291456, "course_bytes_distinct": 314572800, "files": 6000,
+             "pictures": "JPEG or WebP, 1600 px on the long side is plenty; a 3D model or a film over 6 MB does not import - shorten, compress or split it",
+             "offline": "no http(s) source, script, style or font; every link relative and inside the course; no Google Fonts - every font has a system fallback"},
+
+  "deck": {
+    "slide": "<section class=\"slide\" id=\"s07\" data-title=\"...\" data-kind=\"Theory\" data-day=\"1\" data-block=\"A1\" data-cue=\"...\">",
+    "required_on_every_slide": ["class slide", "data-title"],
+    "data_cue": "the instructor notes of that slide (2.18.1: short points) - the instructor's panel shows them; the projector never does. This, not a .md file, is how the notes reach the panel: the importer skips .md files.",
+    "task_slide": "data-kind=\"Task\" data-activity=\"SC1\" data-task-href=\"../tasks/sc1_keeping_the_cargo_liquid.html\" data-title=\"SC1 — Keeping the cargo liquid\", with <p class=\"act-code\">SC1</p><h2 class=\"act-title\">...</h2> - the panel shows ▶ Start and opens exactly that page on every trainee tablet (L35's OPEN TASK)",
+    "check_slide": "data-kind=\"Check\" data-activity=\"MC\" data-task-href=\"../assessment/check.html\"",
+    "room_slide": "work on paper or in the room: data-kind=\"Task\" data-activity=\"P1\", NO data-task-href, data-link-hint=\"Work in pairs at the simulator\"",
+    "one_slide_one_page": true,
+    "navigation": "the visible slide has class 'slide active'; ArrowRight / ArrowLeft move, each press shows the next .frag first; F may go fullscreen with document.documentElement.requestFullscreen(); no countdown of the deck's own - the classroom runs the timer and hides .act-timer / .act-note on the projector"
+  },
+
+  "task_page": {
+    "viewport": "Android WebView, landscape, about 1280 x 800 CSS px, touch only (L42's numbers apply: 56 px controls, 18 px question text)",
+    "title": "<title>SC1 — Keeping the cargo liquid</title> - the code, then the title",
+    "standalone": "works on its own - never depends on the deck or another page",
+    "result": "show the result on the page, then report it ONCE: window.parent.postMessage({type:'gb-task-done', code:'SC1', title:'Keeping the cargo liquid', ok:7, total:9, head:'', items:[{t:'1. ...', ok:true}, ...], answered:8, of:9, timeout:false}, '*')",
+    "head": "self-check: '' (no pass mark). Module check and final assessment: 'PASSED' or 'NOT PASSED', with the pass mark stated on the page and applied there (owner, 2026-10-05: a module check can be passed or not passed - it is for the trainee and the instructor to know whether the module was understood, not an official grade; only the final assessment is the official one)",
+    "timer": "the instructor's timer arrives as {type:'gb-timer', endsAt, remaining}; at 0 the page marks what was done and reports it with timeout:true. The page never shows a countdown of its own.",
+    "no_retry_in_class": "after the report, no 'Start again' inside the classroom frame - one opening, one result. Retries only outside it (window.parent === window).",
+    "answers_hidden": "never put the answers in a trainee page's source where they can be read without doing the task; marking sheets are separate instructor-only files"
+  },
+
+  "instructor_only": {
+    "folders": ["presentation", "instructor*", "plan", "plans", "prepare", "record", "answers", "instructor_screens"],
+    "names": ["answer_key", "model_answer", "_criteria", "instructor_analysis", "observation_checklist", "practical_skills_record", "gb_answers", "gb_review", "gb_roster", "gb_observe", "_paper.html", "START_HERE.html", "START_COURSE.html", "COURSE.html", "module.html", "MODULE_NN_PLAN", "ROTATION_PLAN", "SAFETY_BRIEF"],
+    "trainee_copy": "only files in tasks/, handout/, documents/, assets/, assessment/ (and _course_shell/course_bridge.js, gb_tokens.css) reach the trainee tablet - and never one of the instructor-only names",
+    "rule": "a trainee page (tasks/, assessment/check.html, handout/) never links to an instructor-only file - the link would not open on the tablet; a 'back to the guide' link to START_HERE.html is the commonest mistake"
+  },
+
+  "skipped_by_the_importer": "folders starting with _ (except _course_shell), test_..., knowledge_base, source_files; files .md .txt .py .zip .tgz .bak ... - so nothing of the factory's own may sit inside course\\modules\\, and nothing the course needs may be one of these",
+
+  "versions": "the course ID is fixed when the course is first added; an update is the same ID and a higher version - 1.0.0 to 1.0.1 for fixes, 1.1.0 for new content. A task page keeps its file name across versions.",
+
+  "before_handover": ["every module has moduleNN/presentation/index.html and every .slide has data-title",
+                      "every slide that sends trainees to their tablets has data-task-href pointing at a page that exists",
+                      "every task page reports one gb-task-done with ok, total and items; checks also report head",
+                      "no external URL, no CDN script, no file over 6 MB",
+                      "no working folders inside the course folder (or they start with _)",
+                      "no trainee page links to START_HERE.html or any other instructor-only file",
+                      "every page works by touch alone at 1280 x 800 landscape - in a browser by a colleague, on the tablet by the owner at the end (L39)"]
+}

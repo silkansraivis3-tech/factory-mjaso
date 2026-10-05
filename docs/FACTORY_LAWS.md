@@ -352,8 +352,14 @@ everything. → `course-factory` (`scripts/check_module_folder.py`, 2.19.3), `co
 modules; `working_claude\` - everything only the factory uses, all kept (state, logs, notes, data, checkpoints).
 Nothing loose. → `course-factory` (`scripts/workspace.py`, every tool, `tidy` for older courses, 2.20.0)
 
-**All forty-four laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L44 are enforced first through `course-factory/SKILL.md`'s
+**L45 · The course folder is built to the classroom system's own rules.** `course\modules\` is the folder added to the
+classroom: COURSE.html, `_course_shell\course_map.js`, `module01\` ... with `presentation\index.html` (slides with
+`data-title`, notes in `data-cue`, task slides with `data-activity` + `data-task-href`), `tasks\`, `assessment\`; task
+pages report `gb-task-done`; module checks PASSED / NOT PASSED for understanding, not an official grade. Proved by the
+classroom's own importer. → `course-factory` (`knowledge/classroom-system.json`, `scripts/check_course_package.py`, 2.21.0)
+
+**All forty-five laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L45 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:
