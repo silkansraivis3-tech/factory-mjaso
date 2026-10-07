@@ -75,6 +75,13 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 - **No quota** (2.18.1): wherever a picture, an animation or a realistic 3D illustration can show what the slide
   teaches, put it in. A slide with none, a long module where nothing moves, few kinds of picture - these come
   back as suggestions, never blocks; nothing is added only for variety (L13).
+- **3D: at most half, only where it makes sense, at full quality** (L46, owner 2026-10-07: *"don't make it in all
+  slides ... but also don't cut quality"*). At most half of the presentation's teaching slides are `model_3d`,
+  `model_3d_scan` or `model_3d_licensed` (must fix once there are two or more). 3D is for what has a shape, an inside or a layout in space - tanks, hull sections, pumps,
+  valves, manifolds, piping, an enclosed space; a chart, a table, a symbol, a document or an idea (Swiss cheese, the
+  steps of a risk assessment) is a drawing, a chart or an animation. Not more than two 3D slides in a row. Each 3D
+  model that stays is a main picture: true proportions, real materials, labels, a cut-open view where the inside is
+  taught. The built slide carries the kind as `data-visual="model_3d"`, so the finished deck is counted too.
 
 On every **task question**, `"mechanic"` is how the trainee answers. `single_choice`, `multi_select`
 (`"correct": "A, C"`) and `read_instrument` use `options` + `correct`; the rest use `"answer"` — one box,

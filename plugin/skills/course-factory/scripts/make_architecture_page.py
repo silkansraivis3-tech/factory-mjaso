@@ -201,6 +201,11 @@ def analyse(prog, arch, plan=None):
         elif m["th_min"] >= F["moving_or_3d_per_module_from_min"] and not any(
                 MEDIA["visual_kinds"].get(x.get("kind"), {}).get("family") in MOVING for x in md):
             suggestions.append(("p_no_motion", {"m": n, "min": "%g" % m["th_min"]}))
+        TD = MEDIA["three_d"]                                 # L46 - 3D where it makes sense, at most half
+        three = [x for x in md if MEDIA["visual_kinds"].get(x.get("kind"), {}).get("family") in TD["families"]]
+        if len(three) >= TD["count_from"] and len(three) > TD["max_share"] * len(md):
+            problems.append(("p_3d_many", {"m": n, "n": len(three), "tot": len(md), "pct": "%.0f" % (100.0 * len(three) / len(md)),
+                                           "max": "%.0f" % (100 * TD["max_share"])}))
         planned = [x for s in m["sc"] for x in s["mechanics"]] + (m["mc"].get("mechanics") or [])
         for x in planned:
             if x not in MEDIA["mechanics"] or x.startswith("_"):

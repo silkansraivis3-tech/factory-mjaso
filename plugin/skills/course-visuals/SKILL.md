@@ -246,6 +246,17 @@ approved; a better choice found while building goes back to the operator as a ch
 A 3D model is three.js from geometry the factory can state exactly; the exact look of a named piece of
 equipment is a phone 3D scan at Novikontas, a manufacturer's or licensed model - never an AI model.
 
+**3D: on fewer slides, never at a lower quality, and smooth (L46, owner 2026-10-07).** At most half of a
+presentation's teaching slides are 3D, and only where a shape, an inside or a layout in space is the lesson - never a
+chart, a symbol, a document, an idea, or 3D only because it can be. The cap is on how many, never how good: each 3D
+scene that stays is made at full quality and built to `course-factory/knowledge/media-and-tasks.json` →
+`three_d.performance`, where the speed comes from how the scene runs: one shared renderer for the deck; the scene
+built when its slide comes up and disposed two slides later (two alive at most); no frame drawn while nothing moves or
+is touched; soft shadows kept, and worked out once while the model is still (`shadowMap.autoUpdate = false`); the
+environment light made once; repeats instanced; models and textures compressed without visible loss; pixel ratio
+`Math.min(devicePixelRatio, 2)`; preserveDrawingBuffer off; a still poster first. Before reporting a 3D slide done,
+open it in the browser with the CPU slowed 4x: the first frame within a second, 30 frames a second while turning.
+
 ---
 
 ## Verify before reporting done

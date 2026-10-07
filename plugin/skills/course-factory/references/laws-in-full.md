@@ -219,7 +219,7 @@ and the words to replace are in `SKILL.md` (*Every reply to the operator*) and `
 
 ---
 
-## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0; L45, 2.21.0)
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0; L45, 2.21.0; L46, 2.22.0)
 
 Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
 these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
@@ -539,6 +539,7 @@ picture, an animation or a realistic 3D illustration has to show what is being t
 picture, a long module where nothing moves, few kinds of picture - these are **suggestions** on the review pages, never
 blocks. A picture that is named must still say what it shows, and nothing is added only for variety (L13). The task
 rules of L38 stay rules; the final assessment follows the programme's own format and none of them applies to it.
+*(Owner, 2026-10-07, 2.22.0: 3D is now capped at half of a module's pictures, and only where it makes sense - L46.)*
 
 **L39 · Who tests where: colleagues in a browser, the owner on the tablet, at the end.**
 *"The real tablet test will be at the end, because only I can do that for now; my colleagues will not be able to.
@@ -685,7 +686,7 @@ slide, and every result reaches the instructor and the admin panel."*
 ```
 
 - **`knowledge/classroom-system.json`** holds the rules: the folder, the names (no spaces; `module01` ...; task files
-  `sc1_<slug>.html` that never change name), the limits (6 MB a file, 300 MB, 6000 files, nothing from the internet),
+  `sc1_<slug>.html` that never change name), the limits (15 MB a file - 6 MB until the importer of 2026-10-06 - 300 MB, 6000 files, nothing from the internet),
   the deck (`.slide`, `data-title`, `data-kind`, `data-cue`, and for a task slide `data-activity` + `data-task-href` - that
   is what puts **▶ Start** on the instructor's panel and opens the page on every trainee tablet, L35), the task page (title
   `SC1 — <title>`, one `gb-task-done` report with `ok`, `total`, `items`, `head`; it listens for the classroom's timer;
@@ -702,3 +703,33 @@ slide, and every result reaches the instructor and the admin panel."*
   also checks that the copy is still identical to the classroom's, whenever that repository is on the computer.
 - Where L43 named module folders `M01_<title>` and the deck `presentation\module.html`, this replaces it. Built in
   Phase 5 steps 6-10.
+
+**L46 · 3D where it makes sense - at most half of a module's pictures - and smooth on the tablet.**
+*"Now he does 3D models almost every slide - cut it down to 50%, better not quantity but quality, use it only where it
+makes sense. And it lags a little in these 3D models, maybe optimisation can be considered - but mainly I love these 3D
+models, just cut it a little."* - the owner, 2026-10-07, after the pilot's first modules (in Module 2, nineteen of twenty
+figures were 3D). And the same day: *"I also don't need you to cut the quality of 3D models - don't make it in all slides,
+about 50% of the presentation is the max that can be 3D models, but also don't cut quality, and put it only on slides
+where it makes sense, not only because you can."*
+
+- **At most half.** At most half of the presentation's teaching slides are 3D - a factory model, a scan or a licensed
+  model. Counted once a module has two 3D slides or more. A must-fix in the content script (`v_3d_share`) and in the built
+  deck, where every `.slide` carries `data-visual` with its approved kind; the architecture page counts the plan
+  (`p_3d_many`). More than two 3D slides in a row is a suggestion.
+- **Only where it makes sense.** 3D is for equipment and structures whose shape, inside or arrangement in space is what is
+  taught - tanks and containment, hull sections and spaces, pumps, compressors, valves, manifolds, piping, the
+  reliquefaction plant, an enclosed space - and for what the trainee must later recognise or operate on board. Not for
+  charts, curves, tables and matrices, symbols and documents, ideas such as Swiss cheese or the steps of a risk
+  assessment, or decoration. A 3D slide whose description sounds flat gets a suggestion (`v_3d_flat`).
+- **The cap is on how many, never on how good.** Every 3D model that stays is made at full quality, with the care of a
+  main picture: true proportions, real materials, soft light and shadows, clear labels, a cut-open view where the
+  inside is taught, a starting view that already shows the point.
+- **Smooth on the tablet - without a lesser look.** The speed comes from how the scenes run, not from fewer details:
+  one shared renderer for the whole deck; a scene built when its slide comes up and freed two slides later (at most
+  two alive); no frame drawn while nothing moves or is touched; the soft shadows worked out once while the model is
+  still, not on every frame; the environment light made once for the deck; repeated parts instanced; models and
+  textures compressed without visible loss; pixel ratio `Math.min(devicePixelRatio, 2)` - sharp on the tablet, where 1
+  looks blurry; preserveDrawingBuffer off; a still poster first. Measured in the browser with the CPU slowed 4x: the
+  first frame within a second, 30 frames a second while turning, at full quality; the owner confirms on the tablet.
+  `check_course_package.py` notes what it can read in the module's own scripts.
+- The numbers are `knowledge/media-and-tasks.json` → `three_d`. Building the scenes is Phase 5 step 9.

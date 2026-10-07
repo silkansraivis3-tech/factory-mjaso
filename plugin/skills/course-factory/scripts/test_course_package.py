@@ -133,8 +133,8 @@ def main():
         broken("a script from the internet", lambda b: w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
                (TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "done(1,1,[],'');")).replace("../assets/js/task.js", "https://cdn.example.com/x.js")),
                "loads a script from the internet")
-        broken("a file over 6 MB", lambda b: open(os.path.join(b, "module01", "assets", "img", "big.jpg"), "wb").write(b"\0" * (6 * 1024 * 1024 + 1)),
-               "the classroom takes at most 6 MB per file")
+        broken("a file over 15 MB", lambda b: open(os.path.join(b, "module01", "assets", "img", "big.jpg"), "wb").write(b"\0" * (15 * 1024 * 1024 + 1)),
+               "the classroom takes at most 15 MB per file")
         broken("a working folder inside the course", lambda b: w(os.path.join(b, "notes", "draft.html"), "x"), "notes\\ is not a module")
         broken("a trainee page linking back to START_HERE.html", lambda b: w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
                (TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "done(1,1,[],'');")).replace("<body>", "<body><a href=\"../START_HERE.html\">Back</a>")),
@@ -159,6 +159,36 @@ def main():
         broken("the course map not matching the modules", lambda b: w(os.path.join(b, "_course_shell", "course_map.js"),
                'window.COURSE_MAP = [{"code":"module01","title":"Gas tankers","entry":"presentation/index.html"}];'), "_course_shell/course_map.js lists module01, the folder has module01, module02")
         broken("no START_HERE_EXTENDED.html (L43)", lambda b: os.remove(os.path.join(b, "module02", "START_HERE_EXTENDED.html")), "module02/START_HERE_EXTENDED.html is missing")
+
+        print("\n-- 2.22.0: 3D where it makes sense, and smooth on the tablet (L46)")
+        deck = io.open(os.path.join(c, "module01", "presentation", "index.html"), encoding="utf-8").read()
+        three = lambda b, kinds: w(os.path.join(b, "module01", "presentation", "index.html"), deck.replace(
+            '<section class="slide active" id="s01"', "".join('<section class="slide" id="v%d" data-title="Tanks %d" data-kind="Theory" data-cue="- x"'
+                                                             ' data-visual="%s"></section>' % (i, i, k) for i, k in enumerate(kinds)) + '<section class="slide active" id="s01"'))
+        broken("three of five teaching slides in 3D", lambda b: three(b, ["model_3d", "model_3d_scan", "model_3d", "photo"]),
+               "module01: 3 of the 5 teaching slides are 3D (60 %) - at most 50 %")
+        b = os.path.join(tmp, "half", "modules")
+        shutil.copytree(c, b)
+        three(b, ["model_3d", "photo", "model_3d", "schematic"])
+        code, out = run(b, "--no-importer")
+        check("... two of five is fine", code == 0, out)
+        w(os.path.join(b, "module01", "assets", "lib", "three.min.js"), "/* three */")
+        w(os.path.join(b, "module01", "assets", "fig", "tanks3d.js"), "var r = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});"
+          " r.setPixelRatio(window.devicePixelRatio); r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap; light.shadow.mapSize.set(2048, 2048);")
+        w(os.path.join(b, "module01", "assets", "fig", "pump3d.js"), "var r2 = new THREE.WebGLRenderer({antialias: true}); r2.setPixelRatio(1);"
+          " r2.shadowMap.enabled = true; r2.shadowMap.autoUpdate = false;")
+        code, out = run(b, "--no-importer")
+        for what, needle in (("two separate renderers", "makes 2 separate 3D renderers"), ("preserveDrawingBuffer on", "keeps preserveDrawingBuffer on"),
+                             ("shadows worked out again on every frame", "tanks3d.js works out its shadows again on every frame"),
+                             ("an uncapped pixel ratio", "tanks3d.js draws at an uncapped pixel ratio"), ("a blurry pixel ratio of 1", "pump3d.js draws at pixel ratio 1")):
+            check("noted, not blocked: " + what, code == 0 and needle in out, out)
+        check("... and the quality itself is never questioned: soft shadows and a 2048 px shadow map pass without a word",
+              "PCFSoftShadowMap" not in out and "1024" not in out and "pump3d.js works out its shadows" not in out, out)
+        nov = os.path.join(tmp, "novis", "modules")
+        shutil.copytree(c, nov)
+        w(os.path.join(nov, "module01", "assets", "lib", "three.min.js"), "/* three */")
+        code, out = run(nov, "--no-importer")
+        check("3D in a module whose slides do not say their kind of picture is noted", code == 0 and "the 3D share cannot be counted" in out, out)
         if node:
             print("\n-- the classroom's importer itself")
             broken("a missing style the importer refuses", lambda b: os.remove(os.path.join(b, "module01", "assets", "css", "task.css")),

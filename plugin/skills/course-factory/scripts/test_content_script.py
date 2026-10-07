@@ -294,6 +294,26 @@ def main():
         check("six slides with only two kinds of picture is suggested, not blocked", f and f[0]["level"] == cs.NOTE, f)
         check("... so a module with only suggestions can still be approved", not cs.blocking(cs.media_findings(many)), cs.blocking(cs.media_findings(many)))
 
+        print("\n-- 2.22.0: 3D where it makes sense - at most half of the pictures, quality not quantity (L46)")
+        check("the test module: one 3D slide of three is fine", not [x for x in cs.media_findings(SCRIPT) if x["rule"].startswith("v_3d")],
+              [x for x in cs.media_findings(SCRIPT) if x["rule"].startswith("v_3d")])
+        d3 = copy.deepcopy(SCRIPT)
+        for x in ("s01", "s02", "s03"):
+            screen(d3, x)["visual_kind"] = "model_3d"
+        screen(d3, "s02")["visual"] = "A 3D vapour-pressure chart of the three cargoes"
+        f3 = {x["rule"]: x for x in cs.media_findings(d3)}
+        check("three slides of three in 3D must be fixed - at most half", f3.get("v_3d_share", {}).get("level") == cs.FAIL
+              and "3 of the 3" in cs.T(dict(d3, operator_language="en"), "v_3d_share", n=3, tot=3, pct="100", max="50"), f3.get("v_3d_share"))
+        check("... three in a row is a suggestion, on the third", f3.get("v_3d_in_a_row", {}).get("level") == cs.NOTE and f3["v_3d_in_a_row"]["screen"] == "s03", f3.get("v_3d_in_a_row"))
+        check("... a 3D model of a chart is a suggestion: it is flat", f3.get("v_3d_flat", {}).get("level") == cs.NOTE and f3["v_3d_flat"]["screen"] == "s02", f3.get("v_3d_flat"))
+        two = copy.deepcopy(SCRIPT)
+        screen(two, "s01")["visual_kind"] = "model_3d_scan"
+        f2 = [x for x in cs.media_findings(two) if x["rule"] == "v_3d_share"]
+        check("two of three in 3D (a scan counts too) is over half - must be fixed", f2 and f2[0]["level"] == cs.FAIL, f2)
+        half = copy.deepcopy(two)
+        half["screens"][1:1] = [dict(screen(SCRIPT, "s02"), id="s0%d" % i, visual_kind="photo") for i in (4, 5)]
+        check("... two of five is fine", not [x for x in cs.media_findings(half) if x["rule"] == "v_3d_share"])
+
         print("\n-- 2.18.1: the instructor notes are short, and live in their own .md file for the instructor's panel")
         code, out = cs_run("render", c, "--module", "1")
         md = io.open(p["notes_md"], encoding="utf-8").read()

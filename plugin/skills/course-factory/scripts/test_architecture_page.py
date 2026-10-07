@@ -161,6 +161,8 @@ def main():
         am["modules"][1]["self_checks"] = [{"questions": 3, "mechanics": ["single_choice", "multi_select"]}]
         am["modules"][2].pop("media")
         am["modules"][2]["module_check"]["mechanics"] = ["guess"]
+        am["modules"][1]["media"] = [{"kind": "model_3d", "what": "the detector cut open"}, {"kind": "model_3d_scan", "what": "the detector"},
+                                     {"kind": "photo", "what": "the bench"}]
         code, out = run("--course", write_course(os.path.join(tmp, "media"), PROGRAMME, am), "--check")
         for what, needle in (("a kind of picture the factory does not know", en("p_media_kind", m=1, k="sparkles")),
                              ("80 min of theory and nothing that moves", en("p_no_motion", m=1, min="80")),
@@ -168,6 +170,7 @@ def main():
                              ("a module check with fewer than three ways", en("p_mc_mix", m=1, lo=3)),
                              ("a module with nothing hands-on", en("p_no_hands_on", m=2)),
                              ("a module with no pictures planned", en("p_no_media", m=3)),
+                             ("2.22.0: two of three pictures planned in 3D - at most half (L46)", en("p_3d_many", m=2, n=2, tot=3, pct="67", max="50")),
                              ("a way of answering the factory does not know", en("p_mech_unknown", m=3, x="guess"))):
             check("caught: " + what, needle in out, out)
 

@@ -58,6 +58,7 @@ course-factory/
 ├── scripts/check_course_package.py, test_course_package.py   the course folder to the classroom's rules + its own importer (L45, 2.21.0)
 ├── scripts/check_module_folder.py       kept as a short way in: runs check_course_package.py (2.21.0)
 ├── knowledge/classroom-system.json      the classroom system's own course-folder rules (L45, 2.21.0)
+│                                          knowledge/media-and-tasks.json three_d: 3D on at most half the slides, where it makes sense, full quality, smooth (L46, 2.22.0)
 ├── scripts/old_course.py, test_workspace.py   the old course read whole, its pictures copied out (L41, 2.19.0)
 ├── knowledge/media-and-tasks.json        the kinds of picture and the ways of answering, who makes each, the variety floors (L37, L38, 2.18.0)
 ├── knowledge/page-labels.json            the review pages' own words in the operator's language (en / lv / ru)
@@ -488,7 +489,7 @@ slide, and every result reaches the instructor and the admin panel."*
 Read alongside the rules: the admin importer `admin/package-core.mjs` (read only), which decides what is skipped (`_`
 folders except `_course_shell`, `test_`, `.md` `.txt` `.py` `.zip` ...), what is instructor-only (folders and names), what
 reaches the trainee (`tasks|handout|documents|assets|assessment/`), and when an import fails (a required link that does
-not resolve, a file over 6 MB, an external script, a key-like string). It is copied byte-identical to
+not resolve, a file over 15 MB (6 MB until 2026-10-06), an external script, a key-like string). It is copied byte-identical to
 `course-tablet-publisher/vendor/` and run with Node by `check_course_package.py`, after the factory's own checks of
 the rulebook's handover list plus L35 and L43. The test builds a two-module course to the rules - it passes both, the
 importer would add it as `gas-basic` 1.0.0 with 10 trainee files and the answer key not among them - then breaks it
@@ -497,6 +498,22 @@ seventeen ways, each caught. Changed by it: module folders `module01` (not `M01_
 checks PASSED / NOT PASSED (owner: for understanding, not an official grade - L27 annotated), task pages measured at
 1280 × 800 landscape (`check_task_pages.py --viewport` default). The old `check_module_folder.py` now hands over to the
 new check; its test was replaced by the new one.
+
+## 4r · 3D where it makes sense, at most half, full quality, and smooth (2.22.0, 2026-10-07)
+
+*"Now he does 3D models almost every slide - cut it down to 50%, better not quantity but quality, use it only where it
+makes sense ... it lags a little ... but mainly I love these 3D models."* and *"don't cut quality"* - the owner,
+2026-10-07. Read-only look at the pilot first: in its Module 2, nineteen of twenty figures were 3D; each figure kit made
+its own renderer with `preserveDrawingBuffer`, worked its soft shadows out again on every frame, drew at pixel ratio 1
+(blurry on a tablet), and every figure was built when the deck opened. So: `knowledge/media-and-tasks.json` gained
+`three_d` - the cap (half of the presentation's teaching slides, counted from two 3D slides; never a cap on quality),
+where 3D fits and where it does not, the words that sound flat, the quality bar, and the performance budget with how
+it is measured. `content_script.py` reports `v_3d_share` (must fix), `v_3d_in_a_row` and `v_3d_flat` (suggestions);
+the architecture page `p_3d_many`; `check_course_package.py` counts each built deck by the slides' `data-visual` (a
+problem over half) and notes, from the module's own scripts, what would lag - more than one renderer,
+shadows worked out again on every frame, preserveDrawingBuffer, a pixel ratio of 1 or uncapped, a 3D file over 5 MB.
+Nothing in it asks for a plainer look: soft shadows and big shadow maps pass without a word.
+Law L46; `course-visuals` and `script/GUIDE.md` say how; `classroom-system.json` names `data-visual` as the factory's own.
 
 ## 5 · Known gaps / before this goes live
 

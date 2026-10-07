@@ -24,8 +24,9 @@
     "codes": "the code on the slide (data-activity), in the page title and in the result is the same: SC1, SC2 ... for the self-checks of a module, MC for its module check, P1, P2 ... for work in the room, FA for the final assessment"
   },
 
-  "limits": {"file_bytes": 6291456, "course_bytes_distinct": 314572800, "files": 6000,
-             "pictures": "JPEG or WebP, 1600 px on the long side is plenty; a 3D model or a film over 6 MB does not import - shorten, compress or split it",
+  "limits": {"file_bytes": 15728640, "course_bytes_distinct": 314572800, "files": 6000,
+             "pictures": "JPEG or WebP, 1600 px on the long side is plenty; a file over 15 MB does not import - shorten, compress or split it. A 3D model is compressed without visible loss (gltf-transform: meshopt, KTX2) - never made plainer (L46)",
+             "_file_bytes": "15 MB since the classroom importer of 2026-10-06 (tablet-system-win 6f44b1f: a short video is ordinary course material; a big file travels in parts). COURSE_FACTORY_PROMPT.md still says 6 MB - the importer is what decides.",
              "offline": "no http(s) source, script, style or font; every link relative and inside the course; no Google Fonts - every font has a system fallback"},
 
   "deck": {
@@ -36,6 +37,7 @@
     "check_slide": "data-kind=\"Check\" data-activity=\"MC\" data-task-href=\"../assessment/check.html\"",
     "room_slide": "work on paper or in the room: data-kind=\"Task\" data-activity=\"P1\", NO data-task-href, data-link-hint=\"Work in pairs at the simulator\"",
     "one_slide_one_page": true,
+  "data_visual": "the factory's own: every .slide carries data-visual=\"<visual_kind>\" from the approved content script (photo, schematic, model_3d ... or none) - the classroom ignores it; check_course_package.py counts the 3D share by it (L46)",
     "navigation": "the visible slide has class 'slide active'; ArrowRight / ArrowLeft move, each press shows the next .frag first; F may go fullscreen with document.documentElement.requestFullscreen(); no countdown of the deck's own - the classroom runs the timer and hides .act-timer / .act-note on the projector"
   },
 
@@ -64,7 +66,7 @@
   "before_handover": ["every module has moduleNN/presentation/index.html and every .slide has data-title",
                       "every slide that sends trainees to their tablets has data-task-href pointing at a page that exists",
                       "every task page reports one gb-task-done with ok, total and items; checks also report head",
-                      "no external URL, no CDN script, no file over 6 MB",
+                      "no external URL, no CDN script, no file over 15 MB",
                       "no working folders inside the course folder (or they start with _)",
                       "no trainee page links to START_HERE.html or any other instructor-only file",
                       "every page works by touch alone at 1280 x 800 landscape - in a browser by a colleague, on the tablet by the owner at the end (L39)"]

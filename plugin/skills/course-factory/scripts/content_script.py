@@ -696,6 +696,23 @@ def media_findings(script):
             add(None, "", NOTE, "v_no_motion", min="%g" % th_min)
         if len(slides) >= F["min_visual_kinds_from_slides"] and len(set(kinds)) < F["min_visual_kinds"]:
             add(None, "", NOTE, "v_few_kinds", n=len(set(kinds)), lo=F["min_visual_kinds"])
+        # L46 (owner, 2026-10-07): 3D where it makes sense, at most half of the pictures - quality, not quantity
+        TD = MEDIA["three_d"]
+        is3d = lambda s: MEDIA["visual_kinds"].get(parse_kind(s.get("visual_kind", "")), {}).get("family") in TD["families"]
+        three = [s for s in slides if is3d(s)]
+        if len(three) >= TD["count_from"] and len(three) > TD["max_share"] * len(slides):     # half of the presentation's teaching slides
+            add(None, "visual_kind", FAIL, "v_3d_share", n=len(three), tot=len(slides), pct="%.0f" % (100.0 * len(three) / len(slides)),
+                max="%.0f" % (100 * TD["max_share"]))
+        run = 0
+        for s in slides:
+            run = run + 1 if is3d(s) else 0
+            if run == TD["max_in_a_row"] + 1:
+                add(s["id"], "visual_kind", NOTE, "v_3d_in_a_row", n=run)
+        for s in three:
+            said = " %s %s " % (s.get("visual", ""), s.get("title", ""))
+            word = next((x for x in TD["flat_words"] if re.search(r"(?i)\b%s\b" % re.escape(x), said)), None)
+            if word:
+                add(s["id"], "visual", NOTE, "v_3d_flat", word=word)
 
     slide_no, sets, set_of = plan_of(script)
     qs = [q for st in sets if st["kind"] != "final" for q in st["questions"]]

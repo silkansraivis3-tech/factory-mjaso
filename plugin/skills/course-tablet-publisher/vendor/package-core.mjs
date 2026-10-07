@@ -1,5 +1,7 @@
 // Shared by the browser, upload gate and filesystem regression tests. Never executes course JS.
-export const LIMITS = { files: 6000, bytes: 300 * 1024 * 1024, file: 6 * 1024 * 1024, batch: 3 * 1024 * 1024, batchFiles: 24 };
+// A file up to 15 MB: a short video is ordinary course material. Anything bigger than one
+// request comfortably carries (part) travels in parts and is put together on the server.
+export const LIMITS = { files: 6000, bytes: 300 * 1024 * 1024, file: 15 * 1024 * 1024, batch: 3 * 1024 * 1024, batchFiles: 24, part: 4 * 1024 * 1024 };
 export const HASH = /^[a-f0-9]{64}$/;
 export function safePath(path) {
   return typeof path === 'string' && path.length < 500 && !/[\\\x00-\x1f\x7f%?#:]/.test(path)

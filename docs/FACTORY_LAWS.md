@@ -358,8 +358,15 @@ classroom: COURSE.html, `_course_shell\course_map.js`, `module01\` ... with `pre
 pages report `gb-task-done`; module checks PASSED / NOT PASSED for understanding, not an official grade. Proved by the
 classroom's own importer. → `course-factory` (`knowledge/classroom-system.json`, `scripts/check_course_package.py`, 2.21.0)
 
-**All forty-five laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L45 are enforced first through `course-factory/SKILL.md`'s
+**L46 · 3D where it makes sense - at most half of the presentation - at full quality, and smooth on the tablet.**
+Owner, 2026-10-07: not on every slide, never at a lower quality, only where it makes sense. 3D for what has a shape, an
+inside or a layout in space; at most half of a presentation's teaching slides; speed from how scenes run - one shared
+renderer, scenes built and freed with their slide, no frame while nothing moves, shadows worked out once while still -
+never from a lesser look; 30 frames a second with the CPU slowed 4x. → `course-factory` (`knowledge/media-and-tasks.json` three_d,
+`scripts/content_script.py`, `scripts/check_course_package.py`, 2.22.0)
+
+**All forty-six laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L46 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

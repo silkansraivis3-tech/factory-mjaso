@@ -106,9 +106,55 @@
     "never": ["an error message to the trainee", "a timer on a self-check or module check", "a loading spinner", "anything fetched from the network"],
     "proved_by": ["step 6: every task type at tablet size in a browser", "QA: a 'never used a tablet' walkthrough in a colleague's browser", "the owner's real-tablet touch test at the end (L39)"]
   },
+  "three_d": {
+    "_authority": "Owner, 2026-10-07 (L46, 2.22.0): 'now he does 3D models almost every slide - cut it down to 50%, better not quantity but quality, use it only where it makes sense; and it lags a little in these 3D models, maybe optimisation can be considered - but mainly I love these 3D models.' Second message, same day: 'I also don't need you to cut the quality of 3D models - don't make it in all slides, about 50% of the presentation is the max that can be 3D models, but also don't cut quality, and put it only on slides where it makes sense, not only because you can.'",
+    "families": ["3d"],
+    "max_share": 0.5,
+    "count_from": 2,
+    "_max_share": "At most half of the presentation's teaching slides are 3D (model_3d, model_3d_scan, model_3d_licensed). Counted once a module has 2 slides with 3D or more - one 3D model in a short module is always fine. A must-fix in the content script and in the built deck (each .slide carries data-visual); the architecture page counts the plan. The cap is on how many - never on how good: every 3D model that stays is made at full quality.",
+    "max_in_a_row": 2,
+    "_in_a_row": "A suggestion: more than 2 slides in a row with a 3D model - a photograph, a drawing or an animation between them gives the eye a rest.",
+    "fits": [
+      "equipment and structures whose shape, inside or arrangement in space is what is taught - cargo tanks and containment systems, hull sections and spaces, pumps, compressors, valves, manifolds, piping runs, the reliquefaction plant, an enclosed space and its access",
+      "something the trainee must later recognise or operate on board, seen from every side",
+      "a cut-open view, where the inside is the lesson"
+    ],
+    "does_not_fit": [
+      "charts, curves, tables and matrices - a risk matrix, a vapour-pressure curve",
+      "symbols, signs, documents and binders - the SMS, a checklist, a permit",
+      "ideas and models of thinking - Swiss cheese, the steps of a risk assessment, the order of a procedure",
+      "a flat process that a flow or step animation shows better",
+      "decoration - 3D added only because it can be"
+    ],
+    "flat_words": ["chart", "graph", "curve", "table", "matrix", "list", "symbol", "pictogram", "document", "binder", "checklist", "permit", "timeline", "flowchart", "cheese", "steps of"],
+    "_flat_words": "A 3D slide whose picture description uses one of these words gets a suggestion: a 3D model of something flat adds weight, not understanding.",
+    "quality": "Each 3D model that stays gets the care of a main picture: true proportions, real materials (steel, insulation, paint), clear labels, a cut-open view where the inside is taught, and a starting view that already shows the point. Fewer, better.",
+    "performance": {
+      "_principle": "Never a lesser look to make it faster (owner, 2026-10-07: 'don't cut quality'). The speed comes from how the scenes run - one renderer, built and freed with their slide, nothing drawn or recomputed while nothing changes - not from fewer details, blurrier pictures or plainer light.",
+      "target_fps": 30,
+      "first_frame_ms": 1000,
+      "max_scenes_alive": 2,
+      "pixel_ratio": "Math.min(devicePixelRatio, 2) - sharp on the tablet's screen; 1 looks blurry there, an uncapped ratio of 3 costs more than the eye can see",
+      "rules": [
+        "One WebGL renderer for the whole deck, shared by every 3D slide - never one per figure or per kit.",
+        "A scene is built when its slide comes up (or the slide before it), not when the deck opens; it is freed (geometry, materials, textures disposed) once the deck is two slides past it - at most two scenes alive.",
+        "Draw only while the slide is on screen and something moves or is being touched; when nothing changes, no frame is drawn. An automatic turn stops at the first touch.",
+        "Shadows keep their full, soft look - and are worked out once while the model is still (renderer.shadowMap.autoUpdate = false; shadowMap.needsUpdate = true only when something in the scene moves). Same picture, a fraction of the work.",
+        "The environment light (PMREM) is made once for the whole deck and shared, not once per scene.",
+        "Pixel ratio Math.min(devicePixelRatio, 2); antialias on; preserveDrawingBuffer off (it changes nothing on screen).",
+        "Detail stays where the eye sees it; repeated parts (bolts, rungs, pipe supports) are one instanced mesh - the same look, drawn in one go.",
+        "Textures and .glb models compressed without visible loss (KTX2 / meshopt via gltf-transform), their decoders bundled in the module's assets; any file at most 15 MB (the classroom's limit).",
+        "Labels over the model move only when the view changes, not on every frame.",
+        "A still picture of the model (a poster) shows at once; the 3D takes over when it is ready - and the poster stays if the tablet has no WebGL.",
+        "prefers-reduced-motion: nothing moves by itself."
+      ],
+      "measured": "In Chrome DevTools with the CPU slowed 4x (a stand-in for the classroom tablet): each 3D slide shows its first frame in under a second and turns at 30 frames a second or more - at full quality. The owner confirms on the real tablet at the end (L39).",
+      "checked_by": "check_course_package.py notes, from the module's own scripts: more than one renderer, shadows recomputed on every frame, preserveDrawingBuffer on, a pixel ratio of 1 (blurry) or uncapped"
+    }
+  },
   "floors": {
     "every_slide_has_a_visual": true,
-    "_every_slide": "Owner, 2026-09-30 (2.18.1): no quota. As many pictures as the theory and the experience call for - wherever a picture, an animation or a realistic 3D illustration reflects what is being taught at that point, put it in; animation and 3D especially. A slide with none gets a suggestion, never a block. A picture that is named must say what it shows (must fix), and an unknown kind is a mistake to correct.",
+    "_every_slide": "Owner, 2026-09-30 (2.18.1): no quota. As many pictures as the theory and the experience call for - wherever a picture, an animation or a realistic 3D illustration reflects what is being taught at that point, put it in; animation and 3D especially. A slide with none gets a suggestion, never a block. A picture that is named must say what it shows (must fix), and an unknown kind is a mistake to correct. 3D is the exception (owner, 2026-10-07, L46): at most half of a module's pictures, and only where it makes sense - see three_d.",
     "moving_or_3d_per_module_from_min": 40,
     "_moving": "A suggestion, not a rule (2.18.1): a module with this many minutes of theory and nothing that moves, turns or can be explored is pointed out, because where something moves, changes state or has an inside, a still picture teaches it worse (course-visuals, learning-needs.json).",
     "min_visual_kinds_from_slides": 6,

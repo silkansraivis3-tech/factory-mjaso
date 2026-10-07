@@ -21,9 +21,11 @@ WHAT IT CHECKS - the course folder is course\\modules\\ (L44, L45)
     teaching slides carry the instructor notes in data-cue
   per task page: <title> "CODE — Title" with the slide's code; reports gb-task-done with ok, total and items;
     module checks and the final assessment report head PASSED / NOT PASSED; no task list page (L35)
-  every file: no space in its name, at most 6 MB, nothing from the internet, every src/href/url() inside the module
+  every file: no space in its name, at most 15 MB, nothing from the internet, every src/href/url() inside the module
     folder (or _course_shell) and present; no trainee page links to an instructor-only file
   the whole course: at most 6000 files and 300 MB of distinct files
+  3D (L46): at most half of a presentation's teaching slides are 3D (each .slide says its kind in data-visual); and
+    notes from the module's own scripts where a 3D scene would lag on the tablet (knowledge/media-and-tasks.json three_d)
   then the importer itself (needs Node): its errors are problems, its warnings notes
 Exit 0 when the classroom will take it as it is, 1 when anything must be fixed, 2 on bad input. Read only.
 """
@@ -49,6 +51,17 @@ import workspace  # noqa: E402
 
 CONTRACT = json.load(io.open(os.path.join(os.path.dirname(HERE), "knowledge", "classroom-system.json"), encoding="utf-8"))
 LIM = CONTRACT["limits"]
+MEDIA = json.load(io.open(os.path.join(os.path.dirname(HERE), "knowledge", "media-and-tasks.json"), encoding="utf-8"))
+TD = MEDIA["three_d"]
+THREE_LIB = re.compile(r"^three(\.module)?(\.min)?\.js$|^draco|^meshopt", re.I)
+SLOW = (   # what makes a 3D scene lag on the classroom tablet - each a note, with the fix (L46)
+    (re.compile(r"preserveDrawingBuffer\s*:\s*true"), "keeps preserveDrawingBuffer on - every frame is kept in memory; leave it off"),
+    (re.compile(r"setPixelRatio\(\s*(?:window\.|w\.)?devicePixelRatio\s*\)"), "draws at an uncapped pixel ratio - Math.min(devicePixelRatio, 2) looks the same and costs less"),
+    (re.compile(r"setPixelRatio\(\s*1(?:\.0)?\s*\)"), "draws at pixel ratio 1 - blurry on the tablet's sharp screen; Math.min(devicePixelRatio, 2)"),
+)
+SHADOWS_ON = re.compile(r"shadowMap\.enabled\s*=\s*true")
+SHADOWS_ONCE = re.compile(r"shadowMap\.autoUpdate\s*=\s*false")
+RENDERER = re.compile(r"new\s+[\w.]*WebGLRenderer\s*\(")
 IMPORTER = os.path.join(SKILLS, "course-tablet-publisher", "vendor", "import_check.mjs")
 MODULE = re.compile(r"^module\d{2}$")
 # the importer's own two rules, word for word from package-core.mjs
@@ -188,7 +201,7 @@ def check(folder):
             count += 1
             size = os.path.getsize(p)
             if size > LIM["file_bytes"]:
-                probs.append("%s is %.1f MB - the classroom takes at most 6 MB per file" % (rel(p), size / 1048576.0))
+                probs.append("%s is %.1f MB - the classroom takes at most %d MB per file" % (rel(p), size / 1048576.0, LIM["file_bytes"] // 1048576))
             h = hashlib.sha256(open(p, "rb").read()).hexdigest()
             if h not in seen:
                 seen.add(h)
@@ -236,6 +249,38 @@ def check(folder):
                         probs.append("%s sends the room to work but says neither where (data-task-href) nor how (data-link-hint)" % where)
                 elif kind in ("", "Theory") and not s.get("data-cue", "").strip():
                     notes.append("%s has no instructor notes (data-cue) - the instructor's panel shows them" % where)
+            # L46 - 3D where it makes sense: at most half of the presentation's teaching slides
+            vis = [s.get("data-visual", "").strip() for s in pg.slides if s.get("data-visual", "").strip() not in ("", "none")]
+            teach = [s for s in pg.slides if s.get("data-kind", "") in ("", "Theory")]
+            three = [s for s in teach if MEDIA["visual_kinds"].get(s.get("data-visual", "").strip(), {}).get("family") in TD["families"]]
+            if len(three) >= TD["count_from"] and len(three) > TD["max_share"] * len(teach):
+                probs.append("%s: %d of the %d teaching slides are 3D (%.0f %%) - at most %.0f %%; keep 3D where a shape, an inside or a "
+                             "layout in space is taught, the rest a photograph, a drawing or an animation - at full quality (L46)"
+                             % (mod, len(three), len(teach), 100.0 * len(three) / len(teach), 100 * TD["max_share"]))
+            uses3d = any(THREE_LIB.match(f) for _, _, fn in os.walk(md) for f in fn)
+            if uses3d and not vis:
+                notes.append("%s uses 3D, but its slides do not say their kind of picture (data-visual) - the 3D share cannot be counted" % mod)
+        # L46 - would a 3D scene lag on the tablet? read from the module's own scripts
+        slow, renderers = {}, []
+        for dp, _, fn in os.walk(md):
+            for f in fn:
+                p = os.path.join(dp, f)
+                if f.lower().endswith((".glb", ".gltf")) and os.path.getsize(p) > 5 * 1048576:
+                    notes.append("%s is %.1f MB - compress it without visible loss (gltf-transform: meshopt, KTX2)" % (rel(p), os.path.getsize(p) / 1048576.0))
+                if not f.lower().endswith((".js", ".html", ".htm")) or THREE_LIB.match(f):
+                    continue
+                text = read(p)
+                renderers += [rel(p)] * len(RENDERER.findall(text))
+                for rx, why in SLOW:
+                    if rx.search(text):
+                        slow.setdefault(why, []).append(rel(p))
+                if SHADOWS_ON.search(text) and not SHADOWS_ONCE.search(text):
+                    slow.setdefault("works out its shadows again on every frame - keep them as they are and work them out once while the model "
+                                    "is still (shadowMap.autoUpdate = false, needsUpdate when something moves): the same look, far less work", []).append(rel(p))
+        if len(renderers) > 1:
+            notes.append("%s makes %d separate 3D renderers (%s) - one shared renderer for the whole deck runs smoother" % (mod, len(renderers), ", ".join(sorted(set(renderers)))))
+        for why, files in slow.items():
+            notes.append("%s %s (L46)" % (", ".join(files), why))
         for sub in ("tasks", "assessment"):
             d = os.path.join(md, sub)
             if not os.path.isdir(d):
