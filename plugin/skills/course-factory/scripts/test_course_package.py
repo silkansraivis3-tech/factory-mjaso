@@ -45,9 +45,13 @@ def w(path, text):
 
 TASK = ("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>%s</title><link rel=\"stylesheet\" href=\"../assets/css/task.css\"></head>"
         "<body><img src=\"../assets/img/hull.jpg\"><script src=\"../assets/js/task.js\"></script><script>"
-        "addEventListener('message', e => { if (e.data && e.data.type === 'gb-timer') {} });"
+        "var late = false; addEventListener('message', e => { if (e.data && e.data.type === 'gb-timer' && e.data.remaining <= 0) { late = true; } });"
         "function done(ok, total, items, head) { window.parent.postMessage({type: 'gb-task-done', code: '%s', title: 'x', ok: ok, total: total,"
-        " head: head, items: items, answered: total, of: total, timeout: false}, '*'); }%s</script></body></html>")
+        " head: head, items: items, answered: total, of: total, timeout: late}, '*'); }%s</script></body></html>")
+TEAM_HEAD = ('<meta name="task-mode" content="team"><meta name="task-roles" content="Leader|Recorder|Checker"><meta name="task-scope" content="team">')
+TEAM_JS = ("var team = null; addEventListener('message', e => { if (e.data && e.data.type === 'gb-team') { team = e.data.team; } });"
+           "setTimeout(() => { if (!team) { document.body.dataset.solo = '1'; } }, 2000);"
+           "window.parent.postMessage({type: 'gb-task-done', scope: 'team', code: 'TT1', title: 'x', ok: 7, total: 9, head: '', items: [{t: '1.', ok: true}]}, '*');")
 
 
 def good_course(c):
@@ -65,12 +69,15 @@ def good_course(c):
       "<section class=\"slide\" id=\"t01\" data-kind=\"Task\" data-activity=\"SC1\" data-task-href=\"../tasks/sc1_keeping_the_cargo_liquid.html\""
       " data-title=\"SC1 " + D + " Keeping the cargo liquid\"><p class=\"act-code\">SC1</p><h2 class=\"act-title\">Keeping the cargo liquid</h2></section>"
       "<section class=\"slide\" id=\"p01\" data-kind=\"Task\" data-activity=\"P1\" data-link-hint=\"At the gas-measurement bench\" data-title=\"P1 " + D + " Take a reading\"></section>"
+      "<section class=\"slide\" id=\"tt1\" data-kind=\"Task\" data-activity=\"TT1\" data-task-href=\"../tasks/tt1_plan_the_loading.html\" data-mode=\"team\""
+      " data-team-size=\"3\" data-roles=\"Leader|Recorder|Checker\" data-title=\"TT1 " + D + " Plan the loading as a team\"></section>"
       "<section class=\"slide\" id=\"t02\" data-kind=\"Check\" data-activity=\"MC\" data-task-href=\"../assessment/check.html\" data-title=\"MC " + D + " Module check\"></section>"
       "<script src=\"../assets/js/deck.js\"></script></body></html>")
     w(os.path.join(m, "START_HERE.html"), "<meta http-equiv=\"refresh\" content=\"0; url=presentation/index.html\"><a href=\"presentation/index.html\">Open</a>")
     w(os.path.join(m, "START_HERE_EXTENDED.html"), "<a href=\"presentation/index.html\">Presentation</a><a href=\"tasks/sc1_keeping_the_cargo_liquid.html\">SC1</a>"
       "<a href=\"assessment/check.html\">Module check</a><a href=\"instructor/module_plan.html\">Plan</a>")
     w(os.path.join(m, "tasks", "sc1_keeping_the_cargo_liquid.html"), TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "done(3, 4, [{t: '1.', ok: true}], '');"))
+    w(os.path.join(m, "tasks", "tt1_plan_the_loading.html"), (TASK % ("TT1 " + D + " Plan the loading as a team", "TT1", TEAM_JS)).replace("<head>", "<head>" + TEAM_HEAD))
     w(os.path.join(m, "assessment", "check.html"), TASK % ("MC " + D + " Module check", "MC", "var pass = 4; done(5, 6, [{t: '1.', ok: true}], 5 >= pass ? 'PASSED' : 'NOT PASSED');"))
     w(os.path.join(m, "assessment", "check_answer_key.html"), "<p>1 A, 2 C</p>")
     w(os.path.join(m, "instructor", "module_plan.html"), "<p>plan</p>")
@@ -159,6 +166,38 @@ def main():
         broken("the course map not matching the modules", lambda b: w(os.path.join(b, "_course_shell", "course_map.js"),
                'window.COURSE_MAP = [{"code":"module01","title":"Gas tankers","entry":"presentation/index.html"}];'), "_course_shell/course_map.js lists module01, the folder has module01, module02")
         broken("no START_HERE_EXTENDED.html (L43)", lambda b: os.remove(os.path.join(b, "module02", "START_HERE_EXTENDED.html")), "module02/START_HERE_EXTENDED.html is missing")
+
+        print("\n-- 2.23.0: the classroom rulebook of 2026-10-12")
+        team = os.path.join("module01", "tasks", "tt1_plan_the_loading.html")
+        teamsrc = io.open(os.path.join(c, team), encoding="utf-8").read()
+        deck1 = io.open(os.path.join(c, "module01", "presentation", "index.html"), encoding="utf-8").read()
+        broken("a team-task slide whose page does not say task-mode team", lambda b: w(os.path.join(b, team), teamsrc.replace(TEAM_HEAD, "")),
+               "is opened by a team-task slide (data-mode=\"team\") but has no <meta name=\"task-mode\"")
+        broken("a team page whose slide does not say data-mode team", lambda b: w(os.path.join(b, "module01", "presentation", "index.html"), deck1.replace(' data-mode="team"', "")),
+               "its slide has no data-mode=\"team\"")
+        broken("a team page with no task-scope", lambda b: w(os.path.join(b, team), teamsrc.replace('<meta name="task-scope" content="team">', "")),
+               "must be team (one answer per team) or member")
+        broken("a team page that never listens for its team", lambda b: w(os.path.join(b, team), teamsrc.replace("'gb-team'", "'other'")),
+               "never listens for gb-team")
+        broken("one answer per team handed in without scope: 'team'", lambda b: w(os.path.join(b, team), teamsrc.replace("scope: 'team', ", "")),
+               "has no scope: 'team'")
+        broken("a team size that is not a number", lambda b: w(os.path.join(b, "module01", "presentation", "index.html"), deck1.replace('data-team-size="3"', 'data-team-size="three"')),
+               'data-team-size is "three"')
+        broken("an answer readable in a trainee page", lambda b: w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
+               (TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "done(1,1,[],'');")).replace("<body>", '<body><button data-correct="true">-162 °C</button>')),
+               "carries its answers in the page (data-correct / data-answer)")
+        broken("a link into a _ folder", lambda b: (w(os.path.join(b, "module01", "_photos_raw", "a.jpg"), "x"), w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
+               (TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "done(1,1,[],'');")).replace("../assets/img/hull.jpg", "../_photos_raw/a.jpg"))),
+               "a folder starting with _ is skipped by the classroom")
+        nt = os.path.join(tmp, "notes23", "modules")
+        shutil.copytree(c, nt)
+        w(os.path.join(nt, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
+          (TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "done(1,1,[],'');")).replace("timeout: late", "timeout: false").replace("<body>", "<body><button>Try again</button>"))
+        code, out = run(nt, "--no-importer")
+        check("noted, not blocked: a page that hears the timer but never reports timeout: true", code == 0 and "never reports timeout: true" in out, out)
+        check("noted, not blocked: 'Try again' inside the classroom", code == 0 and "offers to try again" in out, out)
+        code, out = run(c, "--no-importer")
+        check("the good course has a team task and no notes about it", "tt1_plan_the_loading" not in out, out)
 
         print("\n-- 2.22.0: 3D where it makes sense, and smooth on the tablet (L46)")
         deck = io.open(os.path.join(c, "module01", "presentation", "index.html"), encoding="utf-8").read()

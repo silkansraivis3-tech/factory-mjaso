@@ -53,6 +53,11 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 - Kinds: `slide`, `task-slide`, `activity` (instructor tablet); `self-check`, `module-check`, `final`
   (trainee tablet). Module checks are never graded (L27) and come at the end of the module; a
   final-assessment script (`--module final`, the last module, L34) holds a task slide and `final` questions.
+- **A team task** (2.23.0, the classroom rulebook 4b) is a task slide with `"team": {"size": "3", "roles":
+  ["Leader", "Recorder", "Checker"], "scope": "team"}` - `"3-4"` for a range; `"scope"` `team` (one answer per team)
+  or `member` (everyone answers, the team's average shown); roles are optional. The review page and the Word file say
+  it in a line under OPEN TASK; changing it goes through the chat, like the way a question is answered. A module check
+  and the final assessment are always answered alone. Its code on the tablets is TT1, TT2 ...
 - Every fact the operator stated is listed once, at the top of the review — from `operator_facts`
   and from `FEEDBACK_LOG.md` rows marked *operator-stated* for this module.
 - NEW_ENTRANT or EXPERIENCED changes how much is explained and how (`knowledge/course-type.json`).

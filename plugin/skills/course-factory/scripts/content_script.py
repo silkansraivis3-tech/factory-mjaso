@@ -447,6 +447,52 @@ def answer_items(s):
     return items, right
 
 
+def gb_key(sid, text, value):
+    """The answer key a trainee page carries instead of the answer itself (classroom-system.json task_page.answer_keys):
+    FNV-1a, 32 bits, over "<screen id>|<text, spaces collapsed>|<value>", as 8 hex digits - the page's gbKey() is the same."""
+    h = 0x811c9dc5
+    for b in ("%s|%s|%s" % (sid, re.sub(r"\s+", " ", str(text)).strip(), value)).encode("utf-8"):
+        h = ((h ^ b) * 0x01000193) & 0xffffffff
+    return "%08x" % h
+
+
+TEAM_SCOPES = ("team", "member")
+
+
+def team_problems(script, s, set_of):
+    """A task slide's "team" (classroom rulebook 4b): {"size": "3" or "3-4", "roles": ["Leader", ...], "scope": "team" | "member"}."""
+    t = s.get("team")
+    if t is None:
+        return []
+    sid, probs = s.get("id"), []
+    if not isinstance(t, dict):
+        return ["%s: \"team\" is {\"size\": \"3\", \"roles\": [\"Leader\", \"Recorder\"], \"scope\": \"team\" or \"member\"}" % sid]
+    if not re.match(r"^\d+(-\d+)?$", str(t.get("size", "")).strip()):
+        probs.append("%s: the team size is %r - a number, or a range such as 3-4" % (sid, t.get("size")))
+    if t.get("scope") not in TEAM_SCOPES:
+        probs.append("%s: a team task says how it hands in - \"scope\": \"team\" (one answer per team) or \"member\" (everyone answers)" % sid)
+    roles = t.get("roles", [])
+    if isinstance(roles, str):
+        roles = [x for x in roles.split("|")]
+    if any(not str(x).strip() or "|" in str(x) for x in roles):
+        probs.append("%s: every team role has a name, and none contains |" % sid)
+    st = set_of.get(s.get("opens"))
+    if st and st["kind"] in ("module-check", "final"):
+        probs.append("%s: %s is answered by each trainee alone - it cannot be a team task" % (sid, set_name(script, st)))
+    return probs
+
+
+def team_roles(t):
+    r = (t or {}).get("roles", [])
+    return [x.strip() for x in (r.split("|") if isinstance(r, str) else r) if str(x).strip()]
+
+
+def team_line(script, t):
+    roles = team_roles(t)
+    return T(script, "s_team", size=t.get("size", "?"), roles=T(script, "s_team_roles", roles=", ".join(roles)) if roles else "",
+             scope=T(script, "s_scope_" + (t.get("scope") if t.get("scope") in TEAM_SCOPES else "team")))
+
+
 def validate(script):
     probs, seen = [], set()
     screens = script.get("screens", [])
@@ -471,6 +517,8 @@ def validate(script):
     for s in screens:
         if s.get("kind") == "task-slide" and s.get("opens") not in set_of:
             probs.append("%s: a task slide must say which task it opens (\"opens\": the task's set) - %r opens nothing" % (s["id"], s.get("opens")))
+        if s.get("kind") == "task-slide":
+            probs += team_problems(script, s, set_of)
     for st in sets:
         name = set_name(script, st)
         if not st["opened_by"]:
@@ -1005,6 +1053,8 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
             o.append('<div class="panel"><span class="openbtn">%s</span><span>%s</span></div>' % (
                 e(T(script, "s_open_task")), e(T(script, "s_opens", set=set_name(script, st) if st else "?",
                                                  q=len(st["questions"]) if st else 0))))
+            if isinstance(s.get("team"), dict):                                   # rulebook 4b - a team task
+                o.append('<p class="teamline">%s</p>' % e(team_line(script, s["team"])))
             o.append('<dl><dt>%s</dt><dd>%s</dd></dl>' % (e(T(script, "s_minutes_task")), e(s.get("minutes", "—"))))
         else:
             o.append('<dl><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd></dl>' % (
@@ -1135,6 +1185,8 @@ def build_docx(course, script):
             st = set_of.get(s.get("opens"))
             label("%s — %s" % (T(script, "s_open_task"), T(script, "s_opens", set=set_name(script, st) if st else "?",
                                                            q=len(st["questions"]) if st else 0)), color="41556A")
+            if isinstance(s.get("team"), dict):
+                label(team_line(script, s["team"]), color="41556A")
         boxes(s)
     label(T(script, "s_part2"), style="Title")
     label(T(script, "s_part2_intro"), color="41556A")

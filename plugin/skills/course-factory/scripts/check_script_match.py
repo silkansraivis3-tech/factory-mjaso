@@ -25,6 +25,10 @@ its field:
     of its answer as <span data-script-field="answer">…</span> - in any order, since the tablet shuffles
     them - and the pieces marked right in the script carry data-correct="true" too.
 
+    In a page that goes to the trainee tablets (2.23.0, the classroom rulebook: an answer is never readable in
+    the page) the right answer is not data-correct but data-key="<gbKey(screen id, its text, 1)>" - wrong ones
+    carry the key with 0 (content_script.gb_key; classroom-system.json task_page.answer_keys). Both are read.
+
 WHAT IT CHECKS
   1  the script is approved, and has not changed since it was approved
   2  every screen in the script is built somewhere in the module folder, and nothing else claims a
@@ -84,22 +88,18 @@ class Collect(HTMLParser):
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
         if "data-script" in a:
-            self.screens.setdefault(a["data-script"], {"fields": {}, "flags": {}, "loose": [], "ignored": 0, "correct": []})
+            self.screens.setdefault(a["data-script"], {"fields": {}, "flags": {}, "loose": [], "ignored": 0})
         if "data-script-ignore" in a:
             sid = self._ctx()[0] or a.get("data-script")
             if sid in self.screens:
                 self.screens[sid]["ignored"] += 1
-        if "data-script-field" in a and a.get("data-correct") == "true":
-            sid = self._ctx()[0]
-            if sid in self.screens:
-                self.screens[sid]["correct"].append(a["data-script-field"])
         if tag not in VOID:
             self.stack.append((tag, a))
             if "data-script-field" in a:
                 sid = self._ctx()[0]
                 if sid in self.screens:
                     self.screens[sid]["fields"].setdefault(a["data-script-field"], []).append("")
-                    self.screens[sid]["flags"].setdefault(a["data-script-field"], []).append(a.get("data-correct") == "true")
+                    self.screens[sid]["flags"].setdefault(a["data-script-field"], []).append((a.get("data-correct"), a.get("data-key")))
 
     def handle_endtag(self, tag):
         for i in range(len(self.stack) - 1, -1, -1):
@@ -118,6 +118,14 @@ class Collect(HTMLParser):
             s["fields"][field][-1] += data
         elif not exempt:
             s["loose"].append(norm(data))
+
+
+def marked_right(sid, got, field):
+    """which pieces of one field are marked right: data-key = gbKey(id, text, 1), or (the factory's own QA copy) data-correct"""
+    out = []
+    for text, (dc, dk) in zip(got["fields"].get(field, []), got["flags"].get(field, [])):
+        out.append(dk.strip().lower() == cs.gb_key(sid, norm(text), 1) if dk else dc == "true")
+    return out
 
 
 def main(argv=None):
@@ -174,7 +182,7 @@ def main(argv=None):
                 if norm(w) != g:
                     probs.append("%s in %s: %s says \"%s\" - approved: \"%s\"" % (where, got["file"], f, g or "(missing)", norm(w)))
             if cs.uses(s, "options"):
-                marked = sorted(x[4:] for x in got["correct"] if x.startswith("opt."))
+                marked = sorted(f[4:] for f in got["fields"] if f.startswith("opt.") and any(marked_right(sid, got, f)))
                 if marked != sorted(cs.correct_letters(s)):
                     probs.append("%s in %s: the answer marked correct is %s - approved: %s" % (
                         where, got["file"], ", ".join(marked) or "none", s.get("correct")))
@@ -185,7 +193,7 @@ def main(argv=None):
                     probs.append("%s in %s: the answer's items are not the approved ones - approved: \"%s\" / built: \"%s\"" % (
                         where, got["file"], " / ".join(norm(x) for x in items), " / ".join(built) or "(missing)"))
                 elif right:
-                    flagged = sorted(t for t, f in zip(built, got["flags"].get("answer", [])) if f)
+                    flagged = sorted(t for t, f in zip(built, marked_right(sid, got, "answer")) if f)
                     if flagged != sorted(norm(x) for x in right):
                         probs.append("%s in %s: the items marked right are %s - approved: %s" % (
                             where, got["file"], " / ".join(flagged) or "none", " / ".join(norm(x) for x in right)))

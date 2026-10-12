@@ -515,6 +515,21 @@ shadows worked out again on every frame, preserveDrawingBuffer, a pixel ratio of
 Nothing in it asks for a plainer look: soft shadows and big shadow maps pass without a word.
 Law L46; `course-visuals` and `script/GUIDE.md` say how; `classroom-system.json` names `data-visual` as the factory's own.
 
+## 4s · The classroom rulebook of 2026-10-12: team tasks, hidden answers (2.23.0)
+
+The owner pasted the newer `COURSE_FACTORY_PROMPT.md` (the copy on disk was still the 2026-10-05 one; the importer was
+unchanged since 2.22.0). New in it: files up to 15 MB (already followed), **team tasks** (§4b) and "no link into `_`
+folders"; the rest was already in `classroom-system.json`. Built: `classroom-system.json` `team_task` and
+`task_page.answer_keys`; `check_course_package.py` checks a team task in both places (slide `data-mode`, page metas,
+`gb-team`, `scope: 'team'`, `data-team-size`), refuses an answer readable in a trainee page (`data-correct`,
+`data-answer`) and a link into a `_` folder, and notes a page that hears the timer but never reports `timeout: true` or
+offers "try again" inside the classroom. The factory's own word-for-word marking moved off `data-correct`: a trainee page
+marks answers with `data-key = gbKey(id, text, value)` (FNV-1a; `content_script.gb_key`, the page's own function in
+the contract, the two checked equal), and `check_script_match.py` reads both. The content script plans a team task (a
+task slide's `"team"`: size, roles, scope - validated; never on a module check or the final), shown on the review page
+and in Word. `course-task-ux` §9a, `script/GUIDE.md`. Not taken over: the rulebook's optional `tasks/index.html` menu -
+L35 keeps the trainee to the one task the instructor opens.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

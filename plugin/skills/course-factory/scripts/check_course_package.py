@@ -26,6 +26,10 @@ WHAT IT CHECKS - the course folder is course\\modules\\ (L44, L45)
   the whole course: at most 6000 files and 300 MB of distinct files
   3D (L46): at most half of a presentation's teaching slides are 3D (each .slide says its kind in data-visual); and
     notes from the module's own scripts where a 3D scene would lag on the tablet (knowledge/media-and-tasks.json three_d)
+  team tasks (rulebook 4b): a slide with data-mode="team" and its page with task-mode / task-scope metas, both or
+    neither; the page listens for gb-team; scope team hands in with scope: 'team'; a sensible data-team-size
+  every trainee page: no answer readable in its source (data-correct, data-answer); no link into a _ folder;
+    notes when a page that hears the timer never reports timeout: true, or offers "try again" inside the classroom
   then the importer itself (needs Node): its errors are problems, its warnings notes
 Exit 0 when the classroom will take it as it is, 1 when anything must be fixed, 2 on bad input. Read only.
 """
@@ -62,6 +66,11 @@ SLOW = (   # what makes a 3D scene lag on the classroom tablet - each a note, wi
 SHADOWS_ON = re.compile(r"shadowMap\.enabled\s*=\s*true")
 SHADOWS_ONCE = re.compile(r"shadowMap\.autoUpdate\s*=\s*false")
 RENDERER = re.compile(r"new\s+[\w.]*WebGLRenderer\s*\(")
+ANSWER_ATTR = re.compile(r"<[^>]*\sdata-(?:correct|answer|right|solution)\s*=", re.I)
+RETRY = re.compile(r"(?i)\b(?:try|start|play)\s+again\b|m\u0113\u0123in\u0101t v\u0113lreiz|s\u0101kt no jauna")
+IN_FRAME = re.compile(r"(?:window\.)?parent\s*[!=]==?\s*(?:window|self)|(?:window\.)?self\s*[!=]==?\s*(?:window\.)?top|(?:window\.)?top\s*[!=]==?\s*(?:window|self)")
+TIMEOUT_TRUE = re.compile(r"timeout\s*:\s*(?!false\b)[\w!(]")
+TEAM_SIZE = re.compile(r"^\d+(?:-\d+)?$")
 IMPORTER = os.path.join(SKILLS, "course-tablet-publisher", "vendor", "import_check.mjs")
 MODULE = re.compile(r"^module\d{2}$")
 # the importer's own two rules, word for word from package-core.mjs
@@ -79,7 +88,7 @@ DASH = "—"
 class Page(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
-        self.refs, self.links, self.slides, self.title, self._t, self.css = [], [], [], "", False, []
+        self.refs, self.links, self.slides, self.title, self._t, self.css, self.metas = [], [], [], "", False, [], {}
         self._style = False
 
     def handle_starttag(self, tag, attrs):
@@ -93,6 +102,8 @@ class Page(HTMLParser):
             self.slides.append(a)
         if a.get("style"):
             self.css.append(a["style"])
+        if tag == "meta" and a.get("name"):
+            self.metas[a["name"].lower()] = a.get("content", "").strip()
         if tag == "title":
             self._t = True
         if tag == "style":
@@ -242,7 +253,7 @@ def check(folder):
                         elif rel(target) in opened:
                             probs.append("%s and %s open the same page %s - one slide, one task page" % (opened[rel(target)][0], where, rel(target)))
                         else:
-                            opened[rel(target)] = (where, code, kind)
+                            opened[rel(target)] = (where, code, kind, s)
                     elif kind == "Check":
                         probs.append("%s is the module check slide but has no data-task-href (../assessment/check.html)" % where)
                     elif not s.get("data-link-hint"):
@@ -291,11 +302,12 @@ def check(folder):
                     continue
                 if rel(p) not in opened:
                     probs.append("%s is opened by no slide - add data-task-href on its slide" % rel(p))
-                    code, kind = "", "Task" if sub == "tasks" else "Check"
+                    code, kind, sa = "", "Task" if sub == "tasks" else "Check", {}
                 else:
-                    _, code, kind = opened[rel(p)]
+                    _, code, kind, sa = opened[rel(p)]
                 txt = read(p)
-                title = parse(p).title.strip()
+                tp = parse(p)
+                title = tp.title.strip()
                 if code and not title.startswith(code + " " + DASH + " "):
                     probs.append("%s: its <title> must be \"%s %s <title>\" - it is \"%s\"" % (rel(p), code, DASH, title))
                 if "gb-task-done" not in txt:
@@ -308,6 +320,35 @@ def check(folder):
                         probs.append("%s is a check: it must report head 'PASSED' or 'NOT PASSED', with the pass mark on the page" % rel(p))
                 if "gb-timer" not in txt:
                     notes.append("%s does not listen for the instructor's timer (gb-timer)" % rel(p))
+                elif not TIMEOUT_TRUE.search(txt):
+                    notes.append("%s hears the timer but never reports timeout: true - when the time is up it marks what was done and reports it" % rel(p))
+                if RETRY.search(txt) and not IN_FRAME.search(txt):
+                    notes.append("%s offers to try again - inside the classroom one opening gives one result; allow it only outside the frame (window.parent === window)" % rel(p))
+                # rulebook 4b - a team task is marked in both places, and works without teams too
+                slide_team, page_team = sa.get("data-mode", "") == "team", tp.metas.get("task-mode", "") == "team"
+                if slide_team and not page_team:
+                    probs.append("%s is opened by a team-task slide (data-mode=\"team\") but has no <meta name=\"task-mode\" content=\"team\">" % rel(p))
+                if page_team and not slide_team:
+                    probs.append("%s says it is a team task (task-mode) but its slide has no data-mode=\"team\" - the classroom would not sort it into teams" % rel(p))
+                if slide_team or page_team:
+                    scope = tp.metas.get("task-scope", "")
+                    if kind == "Check":
+                        probs.append("%s: a check is answered by each trainee alone - it cannot be a team task" % rel(p))
+                    if scope not in ("team", "member"):
+                        probs.append("%s: <meta name=\"task-scope\"> must be team (one answer per team) or member (everyone answers) - it is \"%s\"" % (rel(p), scope))
+                    if "gb-team" not in txt:
+                        probs.append("%s is a team task but never listens for gb-team - it cannot show the team and the trainee's role" % rel(p))
+                    elif "setTimeout" not in txt:
+                        notes.append("%s: when no team arrives within about 2 seconds the task runs alone - no timer for that fallback was found" % rel(p))
+                    if scope == "team" and not re.search(r"scope\s*:\s*['\"]team['\"]", txt):
+                        probs.append("%s hands in one answer per team (task-scope team) but its gb-task-done has no scope: 'team'" % rel(p))
+                    size = sa.get("data-team-size", "").strip()
+                    if slide_team and not size:
+                        notes.append("%s has no data-team-size on its slide - the instructor splits the class by it" % rel(p))
+                    elif slide_team and not TEAM_SIZE.match(size):
+                        probs.append("%s: data-team-size is \"%s\" - a number, or a range such as 3-4" % (rel(p), size))
+                    if sa.get("data-roles") and tp.metas.get("task-roles") and sa["data-roles"] != tp.metas["task-roles"]:
+                        notes.append("%s: the roles on the slide (%s) and on the page (%s) differ" % (rel(p), sa["data-roles"], tp.metas["task-roles"]))
         # ---- every page and style of the module: inside the module, present, offline, no trainee link to instructor files
         for dp, _, fn in os.walk(md):
             for f in fn:
@@ -322,6 +363,9 @@ def check(folder):
                 if re.search(r"fonts\.(?:googleapis|gstatic)\.com", text):
                     notes.append("%s asks for Google Fonts - they are not loaded; it falls back to a system font" % rel(p))
                 trainee = TRAINEE_FOLDERS.search(rel(p)) and not INSTRUCTOR_ONLY.search(rel(p))
+                if trainee and f.lower().endswith((".html", ".htm")) and ANSWER_ATTR.search(text):
+                    probs.append("%s (a trainee page) carries its answers in the page (data-correct / data-answer) - they can be read without doing "
+                                 "the task; mark answers with data-key (classroom-system.json task_page.answer_keys)" % rel(p))
                 for ref in refs:
                     path, kind = local(ref)
                     if kind == "internet":
@@ -334,6 +378,8 @@ def check(folder):
                     shell = os.path.commonpath([os.path.abspath(target), os.path.abspath(os.path.join(folder, "_course_shell"))]) == os.path.abspath(os.path.join(folder, "_course_shell"))
                     if not (inside_mod or shell):
                         probs.append("%s reaches outside its module: %s - the module needs everything in its own folder (L43)" % (rel(p), ref))
+                    elif re.search(r"(^|/)_(?!course_shell/)[^/]*/", rel(target)):
+                        probs.append("%s links into %s - a folder starting with _ is skipped by the classroom" % (rel(p), rel(target)))
                     elif not os.path.exists(target):
                         probs.append("%s uses %s, which is not there" % (rel(p), ref))
                     elif trainee and INSTRUCTOR_ONLY.search(rel(target)):

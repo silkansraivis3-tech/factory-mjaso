@@ -21,7 +21,8 @@
   "names": {
     "no_spaces": "never a space in a folder or file name - pictures copied from the old course are renamed",
     "task_file": "<code lower-case>_<title as a slug>.html, e.g. sc1_keeping_the_cargo_liquid.html - and the name never changes in later versions: results are filed under it",
-    "codes": "the code on the slide (data-activity), in the page title and in the result is the same: SC1, SC2 ... for the self-checks of a module, MC for its module check, P1, P2 ... for work in the room, FA for the final assessment"
+    "codes": "the code on the slide (data-activity), in the page title and in the result is the same: SC1, SC2 ... for the self-checks of a module, TT1, TT2 ... for team tasks on the tablets, MC for its module check, P1, P2 ... for work in the room, FA for the final assessment",
+    "task_menu": "the rulebook allows an optional tasks/index.html menu; the factory never makes one - the owner's L35: a trainee sees only the task the instructor opens"
   },
 
   "limits": {"file_bytes": 15728640, "course_bytes_distinct": 314572800, "files": 6000,
@@ -49,9 +50,28 @@
     "head": "self-check: '' (no pass mark). Module check and final assessment: 'PASSED' or 'NOT PASSED', with the pass mark stated on the page and applied there (owner, 2026-10-05: a module check can be passed or not passed - it is for the trainee and the instructor to know whether the module was understood, not an official grade; only the final assessment is the official one)",
     "timer": "the instructor's timer arrives as {type:'gb-timer', endsAt, remaining}; at 0 the page marks what was done and reports it with timeout:true. The page never shows a countdown of its own.",
     "no_retry_in_class": "after the report, no 'Start again' inside the classroom frame - one opening, one result. Retries only outside it (window.parent === window).",
-    "answers_hidden": "never put the answers in a trainee page's source where they can be read without doing the task; marking sheets are separate instructor-only files"
+    "answers_hidden": "never put the answers in a trainee page's source where they can be read without doing the task; marking sheets are separate instructor-only files",
+  "answer_keys": "the factory's way (2.23.0): a trainee page never carries data-correct, data-answer or a plain list of right answers. Each answer element carries data-key = gbKey(screen id, its text, value) - the FNV-1a hash below - where value is 1 for right and 0 for wrong (an order task: the 1-based place; sort into groups: the group's name; match: the partner's text; a value on a dial: one key per accepted step). The page grades by working out the key of what the trainee did and comparing; check_script_match.py checks the keys against the approved script. function gbKey(id, text, value) { var s = id + '|' + String(text).replace(/\\s+/g, ' ').trim() + '|' + value, b = new TextEncoder().encode(s), h = 0x811c9dc5; for (var i = 0; i < b.length; i++) { h ^= b[i]; h = Math.imul(h, 0x01000193) >>> 0; } return ('0000000' + h.toString(16)).slice(-8); }",
+  "team": "a team task (section team_task) also reads the team the classroom sends, shows the team name and the trainee's role at the top, and runs as an individual task when no team arrives within about 2 seconds"
   },
 
+  "team_task": {
+    "_authority": "the classroom rulebook of 2026-10-12, section 4b (the owner pasted it into the factory session): some practical tasks are done by a team, not one trainee - a cargo plan drawn up by three people, a drill with a leader, a recorder and a checker. The classroom splits a class into Team A, Team B ...; a team task is planned, run and scored per team. Mark it in both places, so the system sorts it into teams without guessing.",
+    "slide": "<section class=\"slide\" data-kind=\"Task\" data-activity=\"TT1\" data-task-href=\"../tasks/tt1_plan_the_loading.html\" data-mode=\"team\" data-team-size=\"3\" data-roles=\"Leader|Recorder|Checker\" data-title=\"TT1 — Plan the loading as a team\">",
+    "data_mode": "team - without it a task is individual",
+    "data_team_size": "the size the task is designed for: 3, or 3-4. The instructor splits the class by it; the system refuses no other size",
+    "data_roles": "optional, separated by |; members get them in order, round and round",
+    "page_head": "<meta name=\"task-mode\" content=\"team\"> <meta name=\"task-roles\" content=\"Leader|Recorder|Checker\"> <meta name=\"task-scope\" content=\"team\">  (task-scope: team or member)",
+    "gb_team": "shortly after the page opens: {type:'gb-team', team:{name:'Team A', colour:'#4fd1c5', members:[...], me:'...', role:'Recorder'}}. Show the team name and the trainee's role at the top. A page may give each role its own part (only the Recorder has Submit). No gb-team within about 2 seconds: the class has no teams - run it as an individual task.",
+    "scope_team": "the team hands in one answer: the member who submits (normally the Recorder) sends the usual gb-task-done with scope:'team'; the classroom records it for every member; the others' pages show 'Handed in by Olena for Team A'",
+    "scope_member": "every member answers on their own tablet and sends gb-task-done as usual; the classroom shows each person's score and the team's average",
+    "rules": ["the team works in one room and the pages do not sync - design for talking: one tablet hands in (team), or everyone answers and the scores are compared (member)",
+              "never require a fixed team size - a team of 2 or 5 must still be able to finish",
+              "a role never locks a trainee out: every member reads the whole scenario; roles decide only who does which step and who submits",
+              "marking as for individual tasks: items per question, so the debrief shows what the team chose"],
+    "codes": "TT1, TT2 ... - the factory's code for a team task on the tablets (P1, P2 ... stay work on paper or in the room)",
+    "factory": "a team task is planned in the content script (a task slide's \"team\": size, roles, scope) and approved with the words; a module check and the final assessment are always answered by each trainee alone"
+  },
   "instructor_only": {
     "folders": ["presentation", "instructor*", "plan", "plans", "prepare", "record", "answers", "instructor_screens"],
     "names": ["answer_key", "model_answer", "_criteria", "instructor_analysis", "observation_checklist", "practical_skills_record", "gb_answers", "gb_review", "gb_roster", "gb_observe", "_paper.html", "START_HERE.html", "START_COURSE.html", "COURSE.html", "module.html", "MODULE_NN_PLAN", "ROTATION_PLAN", "SAFETY_BRIEF"],
@@ -67,6 +87,8 @@
                       "every slide that sends trainees to their tablets has data-task-href pointing at a page that exists",
                       "every task page reports one gb-task-done with ok, total and items; checks also report head",
                       "no external URL, no CDN script, no file over 15 MB",
+                      "every team task has data-mode=\"team\" on its slide and task-mode / task-scope metas on its page, and works without teams too",
+                      "no link into a folder whose name starts with _ (except _course_shell)",
                       "no working folders inside the course folder (or they start with _)",
                       "no trainee page links to START_HERE.html or any other instructor-only file",
                       "every page works by touch alone at 1280 x 800 landscape - in a browser by a colleague, on the tablet by the owner at the end (L39)"]

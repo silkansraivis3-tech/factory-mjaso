@@ -286,6 +286,23 @@ task's own finish handler.
 - **Never animate it into visibility.** Its resting CSS state must already be visible — a 10px
   transform is safe; a fade is not.
 
+### 9a · The classroom's rulebook of 2026-10-12 (`classroom-system.json` → `task_page`, `team_task`)
+
+- **The answer is never readable in the page.** No `data-correct`, `data-answer` or plain list of right answers in
+  a trainee page. Every answer element carries `data-key="<gbKey(screen id, its text, value)>"` - value 1 for right,
+  0 for wrong (the place in an order task, the group in a sort, the partner in a match). The page grades by working
+  out the key of what the trainee did; `check_script_match.py` checks the keys against the approved script. The
+  function, the same in the page and in the factory, is in `task_page.answer_keys`.
+- **When the time is up** (`gb-timer` with `remaining` 0), mark what was done and report it with `timeout: true`.
+- **One opening, one result.** No "Try again" while the page is inside the classroom's frame; outside it
+  (`window.parent === window`, revision at home) a retry is fine.
+- **A team task** (`data-mode="team"` on its slide; `task-mode`, `task-roles`, `task-scope` metas on the page) shows
+  the team's name and the trainee's role at the top, as large as the question. It never needs a fixed team size, a
+  role never locks anyone out of reading the whole scenario, and with no `gb-team` within about 2 seconds it runs as
+  an ordinary task. `task-scope` `team`: one member (normally the Recorder) hands in with `scope: 'team'` and the
+  others' pages say who handed in for the team; `member`: everyone answers and the team's average is shown.
+  L42 applies in full: a role's part is as plain and as big as everything else.
+
 ---
 
 ## 10 · Never ask a trainee to record a number the screen does not show

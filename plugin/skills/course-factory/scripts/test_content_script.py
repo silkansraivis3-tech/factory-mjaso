@@ -294,6 +294,21 @@ def main():
         check("six slides with only two kinds of picture is suggested, not blocked", f and f[0]["level"] == cs.NOTE, f)
         check("... so a module with only suggestions can still be approved", not cs.blocking(cs.media_findings(many)), cs.blocking(cs.media_findings(many)))
 
+        print("\n-- 2.23.0: team tasks, planned with the words (classroom rulebook 4b)")
+        tm = copy.deepcopy(SCRIPT)
+        screen(tm, "t01")["team"] = {"size": "3", "roles": ["Leader", "Recorder", "Checker"], "scope": "team"}
+        check("a team self-check with a size, roles and a scope is valid", not [x for x in cs.validate(tm) if "team" in x], cs.validate(tm))
+        page = cs.render_html(c, tm)
+        check("the review page says it is a team task, its size, roles and how it hands in",
+              html.escape(LV["s_team"].format(size="3", roles=LV["s_team_roles"].format(roles="Leader, Recorder, Checker"), scope=LV["s_scope_team"])) in page)
+        bad = copy.deepcopy(SCRIPT)
+        screen(bad, "t01")["team"] = {"size": "three", "scope": "together"}
+        screen(bad, "t02")["team"] = {"size": "3", "scope": "member"}
+        pb = cs.validate(bad)
+        check("caught: a team size that is not a number", any("team size is 'three'" in x for x in pb), pb)
+        check("caught: no team or member scope", any("\"scope\": \"team\"" in x for x in pb), pb)
+        check("caught: the module check as a team task - each trainee answers it alone", any("t02" in x and "answered by each trainee alone" in x for x in pb), pb)
+
         print("\n-- 2.22.0: 3D where it makes sense - at most half of the pictures, quality not quantity (L46)")
         check("the test module: one 3D slide of three is fine", not [x for x in cs.media_findings(SCRIPT) if x["rule"].startswith("v_3d")],
               [x for x in cs.media_findings(SCRIPT) if x["rule"].startswith("v_3d")])
@@ -507,8 +522,9 @@ def main():
             return ('<section class="slide" data-script="%s" data-cue="instructor only"><div class="slide-kind">Theory · A1</div>'
                     '<h2 data-script-field="title">%s</h2>%s<svg><text>label</text></svg><p class="src">Source: SIGTTO</p>%s</section>'
                     % (x["id"], x["title"], lines, extra))
-        def task(x, correct=None, drop_item=False, flip=False):
-            opts = "".join('<button data-script-field="opt.%s"%s>%s</button>' % (L, ' data-correct="true"' if L in (correct or cs.correct_letters(x)) else "", o)
+        def task(x, correct=None, drop_item=False, flip=False, keys=False):
+            mk = (lambda t, r: ' data-key="%s"' % cs.gb_key(x["id"], t, 1 if r else 0)) if keys else (lambda t, r: ' data-correct="true"' if r else "")
+            opts = "".join('<button data-script-field="opt.%s"%s>%s</button>' % (L, mk(o, L in (correct or cs.correct_letters(x))), o)
                            for L, o in zip(cs.letters(len(x.get("options", []))), x.get("options", []))) if cs.uses(x, "options") else ""
             if cs.uses(x, "answer") and cs.mech(x) != "set_value":
                 items, right = cs.answer_items(x)
@@ -516,10 +532,10 @@ def main():
                 if drop_item:
                     items = items[1:]
                 mark = (lambda t: t not in right) if flip else (lambda t: t in right)
-                opts += "".join('<span data-script-field="answer"%s>%s</span>' % (' data-correct="true"' if right and mark(t) else "", t) for t in items)
+                opts += "".join('<span data-script-field="answer"%s>%s</span>' % (mk(t, bool(right and mark(t))), t) for t in items)
             return ('<div data-script="%s"><p data-script-field="question">%s</p>%s<p data-script-field="feedback">%s</p></div>'
                     % (x["id"], x["question"], opts, x["feedback"]))
-        def build(slides_extra="", drop=None, correct=None, word=None, drop_item=False, flip=False):
+        def build(slides_extra="", drop=None, correct=None, word=None, drop_item=False, flip=False, keys=False):
             sl = [x for x in s["screens"] if x["kind"] in cs.INSTRUCTOR and x["id"] != drop]
             deck = "<html><body>%s</body></html>" % "".join(slide(x, slides_extra if x["id"] == "s01" else "") for x in sl)
             if word:
@@ -527,7 +543,7 @@ def main():
             io.open(os.path.join(mdir, "module.html"), "w", encoding="utf-8").write(deck)
             tk = [x for x in s["screens"] if x["kind"] in cs.TASKS]
             io.open(os.path.join(mdir, "tasks", "t1.html"), "w", encoding="utf-8").write(
-                "<html><body>%s</body></html>" % "".join(task(x, correct if x["id"] == "m02" else None, drop_item and x["id"] == "m03", flip and x["id"] == "m01") for x in tk))
+                "<html><body>%s</body></html>" % "".join(task(x, correct if x["id"] == "m02" else None, drop_item and x["id"] == "m03", flip and x["id"] == "m01", keys) for x in tk))
             return run(MATCH, c, "--module", "1")
         code, out = build()
         check("a module that says exactly the approved words passes", code == 0, out)
@@ -545,6 +561,14 @@ def main():
         check("a matching task missing one of its approved items fails", code == 1 and "m03" in out and "items are not the approved ones" in out, out)
         code, out = build(flip=True)
         check("a tap-the-place task with the wrong place marked right fails", code == 1 and "marked right are" in out, out)
+        code, out = build(keys=True)
+        check("2.23.0: answers marked by key (data-key = gbKey), not readable in the page, pass the same check", code == 0, out)
+        code, out = build(keys=True, correct="A")
+        check("... and a key on the wrong answer is caught", code == 1 and "marked correct is A - approved: B" in out, out)
+        code, out = build(keys=True, flip=True)
+        check("... for tap-the-place tasks too", code == 1 and "marked right are" in out, out)
+        check("gbKey is FNV-1a over id|text|value - the same as the page's own", cs.gb_key("q01", "  About  -162 °C ", 1) == cs.gb_key("q01", "About -162 °C", 1)
+              and len(cs.gb_key("q01", "x", 1)) == 8 and cs.gb_key("q01", "x", 1) != cs.gb_key("q01", "x", 0), cs.gb_key("q01", "x", 1))
         code, out = build(slides_extra='<p data-script-ignore="decor">Deck furniture</p>')
         check("data-script-ignore is allowed but counted for QA", code == 0 and "data-script-ignore" in out, out)
         io.open(ch, "w", encoding="utf-8").write(json.dumps([{"field": "s01.visual", "new": "Another photograph"}]))
