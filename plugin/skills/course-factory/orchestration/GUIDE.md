@@ -120,10 +120,11 @@ asked to check its own work confirms it.
 | **Visual** | the `nano-banana:image-director` agent (generates) or `course-factory:visual-sourcer` (finds) | read, write, web, the nano-banana tools | a `GENERATED_ASSET_REQUIRED` brief | the asset files named in the brief |
 | **QA** | strong; never the builder | read + run checks | the module, the two maps | a findings list — **never a fix** |
 
-**The visual agent is how a missing picture gets made without stopping.** When a module reaches an
-image it cannot produce, the factory does not stop and does not ask the owner — it spawns that one
-piece of work on `nano-banana:image-director` (which generates with Nano Banana / Veo) and carries
-on. `course-visuals/scripts/write_visual_handoff.py` writes the same request to a file as the
+**The visual agent is how a missing picture gets made without stopping the build.** When a module
+reaches an image it cannot produce, it carries on. A real picture is searched for by `visual-sourcer`
+without asking. A **generated** one is never made automatically (L47 - every picture costs about
+€0.10): the person describes it and says yes to the prompt first (`scripts/picture_briefs.py`), and
+only then is it spawned on `nano-banana:image-director`, which makes it once. `course-visuals/scripts/write_visual_handoff.py` writes the same request to a file as the
 fallback, for when the agent is unavailable or generation is blocked (no key, billing off). Build the module as far as it
 goes either way; never leave it unfinished because one picture is missing.
 

@@ -219,7 +219,7 @@ and the words to replace are in `SKILL.md` (*Every reply to the operator*) and `
 
 ---
 
-## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0; L45, 2.21.0; L46, 2.22.0)
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0; L45, 2.21.0; L46, 2.22.0; L47, 2.24.0)
 
 Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
 these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
@@ -739,3 +739,24 @@ where it makes sense, not only because you can."*
   first frame within a second, 30 frames a second while turning, at full quality; the owner confirms on the tablet.
   `check_course_package.py` notes what it can read in the module's own scripts.
 - The numbers are `knowledge/media-and-tasks.json` → `three_d`. Building the scenes is Phase 5 step 9.
+
+**L47 · A generated picture is made only after the person described it and said yes.**
+*"It costs approx 0.10 euro per generation, and if there are 4 developers, and they use fixes and redoings of these
+pictures like 10-15x, it's already all billing gone. So ... you don't automatically connect to Nano Banana and do all
+images: you first find places where these images can be placed ... and then you ask for each place ... 'In slide 3, I
+want to put a Nano Banana generated image, please help me get from Nano Banana the best result on the first try by
+explaining in detail what you want to see.' This will reduce failed attempts and save money."* - the owner, 2026-10-14.
+
+- **Places first.** The factory lists every place a generated picture fits - the content script's AI illustrations and
+  AI videos (`scripts/picture_briefs.py list`), and any other place a realistic picture would truly help - and lets
+  the person strike any.
+- **One place at a time, the person describes it.** Eight plain questions (`knowledge/media-and-tasks.json` →
+  `generation_brief`): the main thing; what must be visible; from where we look; where and when; photo or 3D look; what
+  must not be in it; where the slide's text goes; a reference photo. Each comes with a suggestion from the slide, so the
+  person only corrects.
+- **The prompt is shown, and only a yes generates - once.** The nano-banana tools (1.2.0) refuse to run without the
+  person's own words in `approved_by_user`; a redo is a new paid picture and needs a new yes; an edit of the good picture
+  is preferred to a new one; no draft-then-final. The `image-director` agent makes approved pictures only, each once.
+- **What it cost is said every time.** Each picture is logged on the computer (`~/.config/nano-banana/usage.jsonl`) and
+  per module (`working_claude/picture_briefs/M01.json`); each result says the count and the estimate (about €0.10 a
+  picture, `NANO_BANANA_EUR_PER_IMAGE`); a video clip costs much more and says so.

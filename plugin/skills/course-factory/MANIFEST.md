@@ -58,6 +58,7 @@ course-factory/
 ├── scripts/check_course_package.py, test_course_package.py   the course folder to the classroom's rules + its own importer (L45, 2.21.0)
 ├── scripts/check_module_folder.py       kept as a short way in: runs check_course_package.py (2.21.0)
 ├── knowledge/classroom-system.json      the classroom system's own course-folder rules (L45, 2.21.0)
+├── scripts/picture_briefs.py, test_picture_briefs.py   generated pictures: places, the person's description, cost (L47, 2.24.0)
 │                                          knowledge/media-and-tasks.json three_d: 3D on at most half the slides, where it makes sense, full quality, smooth (L46, 2.22.0)
 ├── scripts/old_course.py, test_workspace.py   the old course read whole, its pictures copied out (L41, 2.19.0)
 ├── knowledge/media-and-tasks.json        the kinds of picture and the ways of answering, who makes each, the variety floors (L37, L38, 2.18.0)
@@ -529,6 +530,21 @@ the contract, the two checked equal), and `check_script_match.py` reads both. Th
 task slide's `"team"`: size, roles, scope - validated; never on a module check or the final), shown on the review page
 and in Word. `course-task-ux` §9a, `script/GUIDE.md`. Not taken over: the rulebook's optional `tasks/index.html` menu -
 L35 keeps the trainee to the one task the instructor opens.
+
+## 4t · A generated picture only after the person described it (2.24.0, nano-banana 1.2.0, 2026-10-14)
+
+The owner: every Nano Banana picture costs about €0.10, and four developers redoing pictures 10-15 times use the
+budget up. Until now the factory spawned `nano-banana:image-director` on its own, and that agent retried up to five
+times by itself. Now: `knowledge/media-and-tasks.json` `generation_brief` (the flow, eight questions in en/lv/ru, the
+price); `scripts/picture_briefs.py` lists a module's places from the approved script, prints the questions with the
+script's words as the suggestion, keeps the answers and the agreed prompt, and records every picture made with the
+person's words. In `nano-banana` 1.2.0 `generate_image` / `generate_video` refuse without `approved_by_user` (checked
+before the key and before anything is sent), log every generation to `~/.config/nano-banana/usage.jsonl`, and return
+the count and estimate; `nano_banana_status` shows them; `realistic-visuals` §0 is the ask-first flow, the auto-retry
+loop and the 1K draft are gone; the `image-director` agent makes approved pictures once and reports `NEEDS_CHANGE`
+instead of retrying. The hand-offs in `course-visuals` (rules, SKILL, GUIDE, the brief schema, the hand-off script),
+`orchestration/GUIDE.md` and the `visual-sourcer` agent say the same. Tests: `nano-banana/server/test_nano_banana.py`,
+`scripts/test_picture_briefs.py`.
 
 ## 5 · Known gaps / before this goes live
 

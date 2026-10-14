@@ -25,6 +25,12 @@ First one found wins:
   2. GEMINI_API_KEY    environment variable
   3. GOOGLE_API_KEY    environment variable
 The key is never printed, logged or returned in a tool result.
+
+EVERY PICTURE COSTS MONEY (1.2.0, owner 2026-10-14) - about EUR 0.10 a picture on the NOVIKONTAS
+Google account, a video clip much more. So generate_image and generate_video refuse to run without
+approved_by_user: the person's own words saying yes to this exact picture, after they described it
+and saw the prompt. Every generation is written to ~/.config/nano-banana/usage.jsonl, and each
+result reports how many pictures were made today and this month, and roughly what they cost.
 """
 from __future__ import annotations
 
@@ -37,7 +43,7 @@ import time
 import urllib.error
 import urllib.request
 
-VERSION = "1.1.2"
+VERSION = "1.2.0"
 API = "https://generativelanguage.googleapis.com/v1beta"
 
 DEFAULT_IMAGE_MODEL = "gemini-3.1-flash-image"   # Nano Banana 2 - the generalist
@@ -224,6 +230,70 @@ def cfg(name, default):
     return default if (not v or v.startswith("${")) else v
 
 
+# ---------------------------------------------------------------- the person's yes, and what it cost
+
+NEED_YES = ("Not generated - every picture costs money (about EUR %.2f; a video clip much more). Ask the person "
+            "first: show the place, the description they gave and the prompt, and ask \"Generate this one picture?\". "
+            "Then call again with their own words of approval in approved_by_user. Never fill it in yourself, and "
+            "never reuse an earlier yes for a different picture or a redo.")
+
+
+def eur_per_image():
+    try:
+        return float(cfg("NANO_BANANA_EUR_PER_IMAGE", "0.10"))
+    except ValueError:
+        return 0.10
+
+
+def usage_file():
+    return cfg("NANO_BANANA_USAGE_FILE", os.path.join(os.path.dirname(KEY_FILE), "usage.jsonl"))
+
+
+def approval(a):
+    words = (a.get("approved_by_user") or "").strip()
+    if len(words) < 2:
+        raise ValueError(NEED_YES % eur_per_image())
+    return words[:300]
+
+
+def record_use(kind, model, out_path, words):
+    p = usage_file()
+    try:
+        os.makedirs(os.path.dirname(p) or ".", exist_ok=True)
+        with open(p, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"when": time.strftime("%Y-%m-%dT%H:%M:%S"), "kind": kind, "model": model,
+                                "out_path": out_path, "approved_by_user": words}, ensure_ascii=False) + "\n")
+    except OSError as e:
+        log("could not write the usage log:", e)
+
+
+def usage_summary():
+    today, month = time.strftime("%Y-%m-%d"), time.strftime("%Y-%m")
+    n = {"images_today": 0, "images_this_month": 0, "videos_today": 0, "videos_this_month": 0}
+    try:
+        with open(usage_file(), encoding="utf-8") as f:
+            for line in f:
+                try:
+                    r = json.loads(line)
+                except ValueError:
+                    continue
+                k = "images" if r.get("kind") == "image" else "videos"
+                when = r.get("when", "")
+                if when.startswith(month):
+                    n[k + "_this_month"] += 1
+                    if when.startswith(today):
+                        n[k + "_today"] += 1
+    except OSError:
+        pass
+    e = eur_per_image()
+    n.update({"eur_per_image": e, "images_today_eur": round(n["images_today"] * e, 2),
+              "images_this_month_eur": round(n["images_this_month"] * e, 2),
+              "note": "on this computer; an estimate - Google's billing page has the real amount; videos cost much more than pictures",
+              "tell_the_person": "Picture %d today on this computer, about EUR %.2f; this month %d, about EUR %.2f." % (
+                  n["images_today"], n["images_today"] * e, n["images_this_month"], n["images_this_month"] * e)})
+    return n
+
+
 # ---------------------------------------------------------------- HTTP
 
 class ApiError(Exception):
@@ -407,6 +477,7 @@ def generate_image(a):
     out_path = a.get("out_path") or ""
     if not out_path:
         raise ValueError("out_path is required - the file the image is saved to")
+    words = approval(a)                 # before the key and before anything is sent: it costs money
     ensure_key()
     model = a.get("model") or cfg("NANO_BANANA_IMAGE_MODEL", DEFAULT_IMAGE_MODEL)
     if model in ("pro", "nano-banana-pro"):
@@ -460,6 +531,7 @@ def generate_image(a):
         dims = _dims(b)
         written.append({"path": p, "mime": mime, "bytes": len(b),
                         "size": ("%dx%d" % dims) if dims else "unknown"})
+    record_use("image", model, out_path, words)
 
     return {
         "saved": written,
@@ -469,7 +541,10 @@ def generate_image(a):
         "image_size": size,
         "model_text": " ".join(texts)[:1000],
         "watermark": "SynthID (invisible) - this is an AI-generated image",
-        "next": "Open each saved file with Read and check it against the brief before using it.",
+        "cost": usage_summary(),
+        "next": ("Open each saved file with Read and check it against the brief. Then show it to the person and ask: "
+                 "use it, or what should change? A change is a new paid generation and needs their yes again - "
+                 "prefer an edit of this picture (reference_images + 'change only X') to a new one."),
     }
 
 
@@ -509,6 +584,7 @@ def generate_video(a):
     out_path = a.get("out_path") or ""
     if not out_path:
         raise ValueError("out_path is required - the .mp4 the video is saved to")
+    words = approval(a)
     ensure_key()
     model = a.get("model") or cfg("NANO_BANANA_VIDEO_MODEL", DEFAULT_VIDEO_MODEL)
     params = {
@@ -531,9 +607,10 @@ def generate_video(a):
     op = http("POST", "%s/models/%s:predictLongRunning" % (API, model),
               {"instances": [inst], "parameters": params})
     name = op.get("name", "")
+    record_use("video", model, out_path, words)          # billed once it starts
     wait = int(a.get("wait_seconds") if a.get("wait_seconds") is not None else 360)
     result = _poll_video(name, out_path, wait)
-    result.update({"model": model, "parameters": params})
+    result.update({"model": model, "parameters": params, "cost": usage_summary()})
     return result
 
 
@@ -578,7 +655,8 @@ def status(_a=None):
             "key_source": ("env " + src) if src.isupper() else (src and "file " + src),
             "set_or_change_key": "tool setup_api_key opens the key window",
             "image_model": cfg("NANO_BANANA_IMAGE_MODEL", DEFAULT_IMAGE_MODEL),
-            "video_model": cfg("NANO_BANANA_VIDEO_MODEL", DEFAULT_VIDEO_MODEL)}
+            "video_model": cfg("NANO_BANANA_VIDEO_MODEL", DEFAULT_VIDEO_MODEL),
+            "usage": usage_summary()}
     if not key:
         info["fix"] = NO_KEY
         return info
@@ -606,6 +684,8 @@ TOOLS = [
     {
         "name": "generate_image",
         "description": (
+            "COSTS MONEY (about EUR 0.10 a picture): call it only after the person described this picture and said "
+            "yes to the prompt you showed them - pass their words in approved_by_user. "
             "Generate a photorealistic, 3D-rendered or illustrated still image with Google Nano Banana "
             "(Gemini image models) and save it to disk. Use this - never hand-drawn SVG - whenever a "
             "slide, deck, handout or course screen needs a realistic photo-like picture, a 3D render, a "
@@ -623,13 +703,16 @@ TOOLS = [
                 "model": {"type": "string", "description": "Default gemini-3.1-flash-image (Nano Banana 2). Use gemini-3-pro-image (or 'pro') for complex scenes, fine detail or when Flash failed twice."},
                 "reference_images": {"type": "array", "items": {"type": "string"}, "description": "Local image paths to edit, restyle, keep consistent with, or combine (max 14)."},
                 "format": {"type": "string", "enum": ["png", "jpeg"], "description": "Default png."},
+                "approved_by_user": {"type": "string", "description": "The person's own words approving THIS picture after seeing the prompt, e.g. 'yes, generate it'. Required - never write it yourself, never reuse an earlier yes for a redo."},
             },
-            "required": ["prompt", "out_path"],
+            "required": ["prompt", "out_path", "approved_by_user"],
         },
     },
     {
         "name": "generate_video",
         "description": (
+            "COSTS MUCH MORE THAN A PICTURE: call it only after the person agreed to this clip - pass their words in "
+            "approved_by_user. "
             "Generate a short realistic or 3D-animated video clip (4-8 s, mp4, with sound) with Google Veo 3.1 "
             "and save it to disk. Use for a realistic or 3D animation a slide or course screen needs - a "
             "camera move around equipment, a process in motion. Best practice: first make the key frame with "
@@ -648,8 +731,9 @@ TOOLS = [
                 "negative_prompt": {"type": "string"},
                 "model": {"type": "string", "description": "Default veo-3.1-fast-generate-preview. veo-3.1-generate-preview for best quality, veo-3.1-lite-generate-preview for cheapest."},
                 "wait_seconds": {"type": "integer", "description": "How long to wait before returning. Default 360."},
+                "approved_by_user": {"type": "string", "description": "The person's own words approving THIS clip. Required - never write it yourself."},
             },
-            "required": ["prompt", "out_path"],
+            "required": ["prompt", "out_path", "approved_by_user"],
         },
     },
     {
@@ -677,7 +761,7 @@ TOOLS = [
     },
     {
         "name": "nano_banana_status",
-        "description": "Check that the Gemini API key is configured and works, and list the image and video models this key can use. Run it first if a generation fails.",
+        "description": "Check that the Gemini API key is configured and works, list the image and video models this key can use, and show how many pictures and clips this computer made today and this month, with the estimated cost. Run it first if a generation fails.",
         "inputSchema": {"type": "object", "properties": {}},
     },
 ]

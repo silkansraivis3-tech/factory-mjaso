@@ -40,6 +40,21 @@ Needs `python` on the PATH (3.8+).
 Check it works — ask Claude: *"nano banana status"*. It should report `key_works: true` and list
 the image and Veo models your key can use.
 
+## Every picture costs money - so Claude asks first
+
+About **€0.10 a picture** on the NOVIKONTAS Google account; a video clip costs much more. Nothing is
+generated automatically:
+
+1. Claude finds the places where a generated picture really helps, and lists them.
+2. For each place it asks you to describe the picture: the main thing, what must be visible, from where we
+   look, where and when, photo or 3D look, what must not be in it, where the slide's text goes, and whether
+   you have a reference photo. It fills in a suggestion for each, so you only correct.
+3. It shows the prompt and asks: *"Generate this one picture?"* Only your yes starts it; the tool refuses
+   to run without your words.
+4. It shows you the result. A change is a new paid picture, so it asks again.
+5. It tells you how many pictures this computer made today and this month, and roughly what they cost
+   (the log is `~/.config/nano-banana/usage.jsonl`). Ask *"nano banana status"* at any time.
+
 ## Use
 
 Just ask in plain words:

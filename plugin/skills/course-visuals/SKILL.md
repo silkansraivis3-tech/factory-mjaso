@@ -82,8 +82,9 @@ pasting in an icon fails `check_visuals.py` instead, which is the correct outcom
 Build the module as far as it goes, then **leave the request with it**.
 `scripts/write_visual_handoff.py` writes one `VISUAL_HANDOFF.md`: a paste-ready prompt, every brief
 in full, the destination path and mount line for each asset, and the verification command. Where the
-agents are available, the factory spawns the work instead of writing a note —
-`nano-banana:image-director` to generate, `visual-sourcer` to find — and the run continues. A module never stops because one image is
+agents are available, the factory spawns the work instead of writing a note — `visual-sourcer` to find,
+and, **only for a picture the person has described and said yes to** (L47: every picture costs about
+€0.10), `nano-banana:image-director` to generate it once — and the run continues. A module never stops because one image is
 missing, and a missing image is never closed by inventing a schematic.
 
 ---
@@ -209,8 +210,9 @@ Two escalations, and neither is silent:
   publisher figure has already blocked a whole course in this system once.
 - **`GENERATED_ASSET_REQUIRED`** — nothing suitable exists at any level. Emit the full generation
   brief in `source/schemas/GENERATED_ASSET_BRIEF.md`. If the **`nano-banana`** plugin is installed,
-  the brief is fed to its `generate_image` / `generate_video` tools (its `realistic-visuals` skill
-  runs the prompt → generate → open and check → retry loop); otherwise the brief is the handoff.
+  the person is asked to describe the picture first (its `realistic-visuals` §0, L47: every picture
+  costs money), shown the prompt, and only their yes sends it to `generate_image` / `generate_video` -
+  once; a redo needs a new yes. Otherwise the brief is the handoff.
 
 `scripts/resolve_asset.py` runs levels 1 and 2 mechanically. Level 3 is judgement and belongs to the
 **`visual-sourcer`** agent, which works in isolated context and returns a short report.

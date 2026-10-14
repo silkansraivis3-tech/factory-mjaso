@@ -3,8 +3,9 @@ name: realistic-visuals
 description: >
   Make REAL realistic, 3D, photo-like or cinematic pictures and short realistic/3D animation clips
   with Google Nano Banana (images) and Veo (video) through this plugin's MCP tools, and manage the
-  whole job - brief, prompt, generate, open and check, reject and retry, package locally, place on
-  the slide or screen, record provenance. Use whenever a presentation, deck, pptx, HTML slide,
+  whole job - every picture costs money, so first find the places a picture fits and ask the person
+  to describe each one, show the prompt, generate only after their yes, open and check, package
+  locally, place on the slide or screen, record provenance. Use whenever a presentation, deck, pptx, HTML slide,
   handout, poster or course screen asks for "3D", "realistic", "photorealistic", "render",
   "3D realistic animation", "cinematic", "like a photo", "product shot", "cutaway render", "hero
   image", "nano banana", "veo", or when a realistic scene is the right medium and no real
@@ -15,7 +16,7 @@ description: >
 
 # Realistic visuals — let the image model paint, and Claude run the job
 
-**v1 · plugin `nano-banana` 1.0.0**
+**v2 · plugin `nano-banana` 1.2.0 - ask first, every picture costs money**
 
 When somebody asks for a realistic or 3D picture, a language model's reflex is to draw one in SVG:
 a gradient, some rounded boxes, a glow, a drop shadow. That is not a render, and everybody can see
@@ -31,7 +32,48 @@ Tools (MCP server `nano-banana`):
 | `generate_video` | 4–8 s mp4 clip with Veo 3.1, optionally starting from an approved still |
 | `get_video` | collects a clip that was still rendering |
 | `setup_api_key` | opens the key window, to set or change the key |
-| `nano_banana_status` | is the key set, does it work, which models can it reach |
+| `nano_banana_status` | is the key set, does it work, which models can it reach, how many pictures were made today and this month |
+
+## 0 · Ask first - every picture costs money (owner, 2026-10-14)
+
+Every generation is billed to the NOVIKONTAS Google account: **about €0.10 a picture**, and a video clip
+costs much more. Four colleagues redoing pictures 10-15 times each use the budget up fast, and most redos
+come from a vague first description. So **nothing is generated automatically.** The order is always:
+
+1. **Find the places first.** Go through the deck or module and list every place where a generated picture
+   really helps: a realistic scene that no real photograph shows, and that is not a schematic (§1). For each
+   one: the slide number, the slide title, what the picture would show, and why it is generated rather than a
+   photograph or a drawing. Show the list and let the person strike any place.
+2. **Ask about one place at a time**, in plain words. For example:
+   > On slide 3, *"Why gases are carried as liquids"*, I'd like to put a Nano Banana picture. Each picture
+   > costs about €0.10, so please help me get the best result on the first try. Tell me what you want to
+   > see. I've filled in my suggestion for each question; correct anything:
+
+   1. **What is the main thing in the picture?** Exactly which ship, equipment or place: its type, size, condition.
+   2. **Which parts must be clearly visible?**
+   3. **From where do we look?** From above, from the side, close up, from the deck, from inside.
+   4. **Where and when?** At sea, in port, in a workshop; day or night; the weather.
+   5. **A real photograph look, or a 3D render look?**
+   6. **What must not be in it?** People, text, the wrong kind of equipment, anything that would be untrue.
+   7. **Where does the slide's text go?** Which part of the picture stays empty?
+   8. **Do you have a photo that shows what you mean?** A reference picture helps the model more than anything.
+
+   Give a suggestion for every question, drawn from the slide's own words, so the person only corrects.
+   *"Your suggestion is fine"* is an answer.
+3. **Write the prompt from their answers (§2) and show it** in one block, with the aspect ratio and the file it
+   is saved to. Ask: *"Generate this one picture (about €0.10)?"*
+4. **Generate only after a clear yes, and only once.** Pass their own words in `approved_by_user`; the tool
+   refuses to run without them. Never write that field yourself, and never reuse an earlier yes for another
+   picture or a redo.
+5. **Show the result and ask:** use it, or what should change? A change is a new paid picture. Say what you
+   would change and ask again. Prefer an edit of the good picture (`reference_images` and *"change only X"*) to
+   a new one from scratch.
+6. **Say what it cost so far**, in one line, from the tool's `cost.tell_the_person`:
+   *"That's picture 4 today on this computer, about €0.40."*
+
+A video clip follows the same steps. Say that it costs much more than a picture, and make and approve its
+still first (§5). Inside a Course Factory course, `course-factory/scripts/picture_briefs.py` keeps each
+module's places, the person's answers and every picture made, so a redo next week does not ask everything again.
 
 **The key looks after itself.** The first time `generate_image` or `generate_video` runs without a
 key, a small window opens on the user's screen. The user pastes the NOVIKONTAS shared key, and the
@@ -139,7 +181,8 @@ logo file afterwards.
 | half-slide image beside text | `4:3` or `3:4` | `2K` |
 | tablet portrait screen | `3:4` or `9:16` | `2K` |
 | square card, social | `1:1` | `1K`–`2K` |
-| draft while iterating | any | `1K` |
+
+Generate **once, at the final size**. A 1K draft and then a 2K final is two paid pictures.
 
 Model: default Nano Banana 2 (`gemini-3.1-flash-image`). Switch to `model: "pro"`
 (`gemini-3-pro-image`) for crowded scenes, fine mechanical detail, or after Flash failed twice.
@@ -159,10 +202,11 @@ Save **straight into the deck's or module's own assets folder**, lower snake_cas
   impossible geometry, melted hands, floating objects?
 - Is there space where the title/labels go?
 
-Wrong → say what is wrong, fix the prompt (be more specific, add the violated item to the
-exclusions, or pass the bad image as a reference with *"change only X"*), and regenerate. **Three
-attempts, then switch to `pro`; two more, then stop** and tell the user what the model cannot do —
-do not ship a near-miss, and do not fall back to drawing it in SVG.
+Wrong → **tell the person** what is wrong and what you would change (a more specific prompt, the
+violated item added to the exclusions, or an edit of this picture with *"change only X"*), and **ask
+before generating again** (§0). Never regenerate on your own. If two pictures on the default model
+missed, say that Pro (`model: "pro"`) handles fine detail better but costs more, and let them choose.
+If it still cannot be done, say so. Do not ship a near-miss, and do not fall back to drawing it in SVG.
 
 Small fixes are edits, not re-rolls: pass the good image in `reference_images` and describe only the
 change (*"remove the text on the hull"*, *"make the sky overcast"*).
@@ -233,5 +277,6 @@ Per image or clip: path · model · attempts · what was checked · any caveat (
 generic, not a specific yard design"*). If something could not be generated honestly, say so and say
 what would unblock it (usually a real photograph).
 
-Cost awareness: images are cheap, video is not. Do not generate video unless motion was asked for or
-is clearly the right medium, and draft stills at `1K` before the final `2K`/`4K`.
+Cost: every picture costs about €0.10 and a clip much more (§0). Nothing is generated without the
+person's yes, nothing is redone without a new yes, no drafts before the final, and no video unless
+motion was asked for or is clearly the right medium. Report the count and cost the tool returns.

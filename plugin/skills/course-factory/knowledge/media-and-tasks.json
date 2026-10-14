@@ -106,6 +106,30 @@
     "never": ["an error message to the trainee", "a timer on a self-check or module check", "a loading spinner", "anything fetched from the network"],
     "proved_by": ["step 6: every task type at tablet size in a browser", "QA: a 'never used a tablet' walkthrough in a colleague's browser", "the owner's real-tablet touch test at the end (L39)"]
   },
+  "generation_brief": {
+    "_authority": "Owner, 2026-10-14 (L47, 2.24.0): 'it costs approx 0.10 euro per generation, and if there is 4 developers, and they use fixes and redoings of these pictures like 10-15x, its already all billing gone ... you dont automatically connect to nano banana and do all images, you first find places where these images can be placed ... and then you ask for each place ... help me get from nano banana best result in first try by explaining in details what you want to see.'",
+    "eur_per_image": 0.10,
+    "video": "a clip costs much more than a picture - say so, and make and approve its still first",
+    "flow": [
+      "find the places first: every slide whose picture the generator makes (picture_briefs.py list), and any other place where a realistic picture would truly help - show the list, let the person strike any",
+      "one place at a time, ask the questions below in plain words, each with a suggestion drawn from the slide, so the person only corrects",
+      "write the prompt from the answers (nano-banana realistic-visuals 2) and show it with the size and the file; ask 'Generate this one picture (about EUR 0.10)?'",
+      "generate only after a clear yes, once, with the person's words in approved_by_user - the tool refuses without them; never reuse a yes",
+      "show the result: use it, or what should change? a change is a new paid picture and needs a new yes - prefer an edit of the good picture ('change only X')",
+      "record it (picture_briefs.py done) and say the count and cost in one line"
+    ],
+    "questions": [
+      {"id": "subject", "en": "What is the main thing in the picture - exactly which ship, equipment or place, its type, size and condition?", "lv": "Kas ir galvenais attēlā - tieši kurš kuģis, aprīkojums vai vieta, tā tips, izmērs un stāvoklis?", "ru": "Что главное на картинке - какое именно судно, оборудование или место, его тип, размер и состояние?"},
+      {"id": "visible", "en": "Which parts must be clearly visible?", "lv": "Kurām daļām jābūt skaidri redzamām?", "ru": "Какие части должны быть хорошо видны?"},
+      {"id": "view", "en": "From where do we look - from above, from the side, close up, from the deck, from inside?", "lv": "No kurienes skatāmies - no augšas, no sāniem, tuvplānā, no klāja, no iekšpuses?", "ru": "Откуда смотрим - сверху, сбоку, крупным планом, с палубы, изнутри?"},
+      {"id": "setting", "en": "Where and when - at sea, in port, in a workshop; day or night; the weather?", "lv": "Kur un kad - jūrā, ostā, darbnīcā; diena vai nakts; laikapstākļi?", "ru": "Где и когда - в море, в порту, в мастерской; день или ночь; погода?"},
+      {"id": "style", "en": "A real photograph look, or a 3D render look?", "lv": "Kā īsta fotogrāfija vai kā 3D attēls?", "ru": "Как настоящая фотография или как 3D-рендер?"},
+      {"id": "exclude", "en": "What must not be in it - people, text, the wrong kind of equipment, anything that would be untrue?", "lv": "Kam attēlā nedrīkst būt - cilvēki, teksts, nepareizs aprīkojums, kaut kas, kas neatbilst patiesībai?", "ru": "Чего не должно быть - людей, текста, не того оборудования, чего-то неправдивого?"},
+      {"id": "space", "en": "Where does the slide's text go - which part of the picture stays empty?", "lv": "Kur atradīsies slaida teksts - kura attēla daļa paliek tukša?", "ru": "Где будет текст слайда - какая часть картинки остаётся пустой?"},
+      {"id": "reference", "en": "Do you have a photo that shows what you mean? It helps the model more than anything.", "lv": "Vai jums ir foto, kas parāda, ko domājat? Tas modelim palīdz visvairāk.", "ru": "Есть ли фото, которое показывает, что вы имеете в виду? Это помогает модели больше всего."}
+    ],
+    "kept_in": "working_claude/picture_briefs/M01.json - the answers, the agreed prompt, every picture made and the person's words; scripts/picture_briefs.py"
+  },
   "three_d": {
     "_authority": "Owner, 2026-10-07 (L46, 2.22.0): 'now he does 3D models almost every slide - cut it down to 50%, better not quantity but quality, use it only where it makes sense; and it lags a little in these 3D models, maybe optimisation can be considered - but mainly I love these 3D models.' Second message, same day: 'I also don't need you to cut the quality of 3D models - don't make it in all slides, about 50% of the presentation is the max that can be 3D models, but also don't cut quality, and put it only on slides where it makes sense, not only because you can.'",
     "families": ["3d"],

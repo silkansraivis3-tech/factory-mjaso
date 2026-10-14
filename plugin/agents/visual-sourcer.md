@@ -140,7 +140,8 @@ path is not decoration: `course-visuals/scripts/write_visual_handoff.py` collect
 that folder into one paste-ready file, so a brief written anywhere else is a brief nobody acts on.
 
 **You never generate, and you never block the build.** The module is finished as far as it goes
-without this asset. Whoever called you decides what happens next — spawn the generation on the
+without this asset. Whoever called you decides what happens next — ask the person to describe the
+picture and approve its prompt (L47: every generated picture costs money), then spawn it on the
 `nano-banana:image-director` agent, or leave the handoff file for the owner. Your job ends at
 an honest brief.
 

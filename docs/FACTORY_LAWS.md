@@ -365,8 +365,14 @@ renderer, scenes built and freed with their slide, no frame while nothing moves,
 never from a lesser look; 30 frames a second with the CPU slowed 4x. → `course-factory` (`knowledge/media-and-tasks.json` three_d,
 `scripts/content_script.py`, `scripts/check_course_package.py`, 2.22.0)
 
-**All forty-six laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L46 are enforced first through `course-factory/SKILL.md`'s
+**L47 · A generated picture only after the person described it and said yes.** About €0.10 a picture (owner,
+2026-10-14): the places are listed first, the person describes each in eight plain questions, sees the prompt, and
+only their yes generates it - once; the nano-banana tools refuse without their words; the count and cost are said every
+time. → `course-factory` (`scripts/picture_briefs.py`, `knowledge/media-and-tasks.json` generation_brief) and
+`nano-banana` 1.2.0 (`approved_by_user`, the usage log)
+
+**All forty-seven laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L47 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:
