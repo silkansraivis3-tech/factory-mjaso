@@ -621,7 +621,7 @@ part), `GALLERY.html` (every part moving; s03, s04, s14 rebuilt from specs), `sc
 checks), `scripts/kit_parts.py` (list; promote into the factory's kit after the module is complete - prints the git and
 merge-request steps, never pushes), `scripts/test_kit.py` (30 checks). Compiler: a `*.kit.json` figure goes into the
 page as data with the deck's `.mediabar`, `kit.css`/`kit.js` (+ `assets/kit_parts.js`) load before `GBDeck.init`, each
-step lights its slide line; `test_compile_module.py` +8 checks (57). `design-system.json` installs `kit.js`/`kit.css`.
+step lights its slide line; `test_compile_module.py` +8 checks (59 on top of 2.25.3). `design-system.json` installs `kit.js`/`kit.css`.
 Orchestration Rule 3: module agents write only their own `kit_parts.js`; the orchestrator promotes at assembly.
 Tested on IGF Basic M02 compiled from a copy of the course (s03, s04, s14): steps, lines, slide enter/leave, buttons
 steady under the finger. Found on the way, not changed: the shared `.slide.dark::before` watermark reaches 112 px below
