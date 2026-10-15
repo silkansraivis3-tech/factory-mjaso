@@ -49,6 +49,19 @@ same parent (or in the nearest `[data-kit-scope]`) are wired automatically.
 | `text` | `text style(h, cap, tick) anchor`; `\n` breaks lines | - |
 | `log` | `w rows label empty` - alarm list, newest first | - |
 
+Parts added from courses (merged by `kit_parts.py promote`; each block's `example` is its card in `GALLERY.html`):
+
+| type | options | value |
+|---|---|---|
+| `ga` | `w h view(side/plan) draft water house:{x,w,h} funnel:{x,w,h} frames label` - a ship's hull; named spaces are `space` parts on it | 0..1 picked out |
+| `zone` | `zone(0/1/2)` and `w h rx` or `r`, `from:[x,y]` - a hazardous-zone overlay | 0..1 grown from `from` |
+| `scale` | `h w min max every unit reach limits:[{at,label}] markers:[{label,note,at}]` - a vertical scale | 0..n: marker k slides into place from k to k+1 |
+| `bands` | `w rowH chip axis rows:[{label,tone(z0/z1/z2),caption,gas:[[from,to]]}]` - time bands with a clock | 0..n: row k sweeps from k to k+1 |
+| `cylinder` | `w h labels` - a dual-fuel engine cylinder, injectors at 0.22 w and 0.78 w | 0 stopped · 1 gas mode · 1.5 gas supply stopped · 2 fuel-oil mode |
+| `boil_off` | `w h insulation level liquidLabel vapourLabel heatLabel` - an insulated LNG tank cutaway | 0..1 heat in, boiling |
+| `gas_cloud` | `w h from:[x,y]` - a pale cloud growing in a space | 0..1 how much gas |
+| `integral_tank` | `w h cofferdam label cofferdamLabel hullLabel` - a hull tank in its cofferdam | liquid level 0..1 |
+
 ## Marks - the heart of it
 ```json
 {"at": 98, "label": "shut-off", "kind": "trip", "dir": "up", "stop": true,
@@ -84,10 +97,10 @@ exist yet, the part is added to its family here, never drawn once on a slide.
 |---|---|---|---|---|
 | 1 | Instruments | panel, level, gauge (+ repeater), readout, well, log | **built** | M02 s14, s15, q11 · M01 s07 · M09 |
 | 2 | Piping and flow | pipe (liquid/gas, double-walled, fill and drain), valve, tank, space, exchanger, pump, engine, vent, badge, wire | **built** | M02 s03, s04, s05, m01, m04 · M03 · M07 · M14 · M15 |
-| 3 | Ship and spaces | general arrangement, deck plan, side view, named spaces, zone overlay | planned | M01 s04 · M02 s12 · M07 · M11 |
-| 4 | Cutaways | tank types A/B/C, insulation layers, heat in, boil-off | planned | M02 s07 · M01 s07 · M03 |
-| 5 | Gas, fire and machinery | spreading gas cloud, pool fire, jet fire, spray, engine cylinder | planned | M02 s15 · M01 s06 · M06 · M13 |
-| 6 | Charts | curve with a moving point, range bar (LEL-UEL), composition bar | planned | M04 · M06 · M07 |
+| 3 | Ship and spaces | ga (side view, deck plan), zone overlay - from IGF M01/M02; named spaces are `space` | **started** | M01 s04, s09 · M02 s12 · M07 · M11 |
+| 4 | Cutaways | boil_off (from IGF M01); tank types A/B/C, insulation layers still planned | **started** | M01 s07 · M02 s07 · M03 |
+| 5 | Gas, fire and machinery | gas_cloud, cylinder (from IGF M01/M02); pool fire, jet fire, spray still planned | **started** | M02 s15 · M01 s06 · M06 · M13 |
+| 6 | Charts | scale, bands (from IGF M01/M02); curve with a moving point, range bar, composition bar still planned | **started** | M01 s02 · M02 s11 · M04 · M06 · M07 |
 | 7 | Procedures | step track, flowchart, cause-and-effect matrix, checklist | planned | M05 · M11 · M14 · M15 |
 
 Planned for every family: **task mode** - the same spec with labels hidden and parts tappable, so a

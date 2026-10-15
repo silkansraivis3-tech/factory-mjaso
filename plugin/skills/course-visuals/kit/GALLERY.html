@@ -94,6 +94,11 @@
 
   <h3 class="sub">Piping parts</h3>
   <div class="parts" id="parts2"></div>
+
+  <h1 class="family">Parts added from courses</h1>
+  <p class="lede">Each card is a part a course needed and made to <code>PARTS.md</code>, then merged into <code>kit.js</code> by
+    <code>kit_parts.py promote</code>. The card is the part's own example spec; the line above it says where it came from and why.</p>
+  <div class="parts" id="parts-added"></div>
 </main>
 
 <script type="application/json" id="spec-s14">
@@ -319,6 +324,12 @@
   }
   cards('parts', CARDS);
   cards('parts2', CARDS2);
+  /* the parts merged from courses: their own example spec is the card (PARTS.md) */
+  cards('parts-added', Object.keys(KIT.added).map(function (name) {
+    var m = KIT.added[name];
+    return { title: name + ' · ' + m.family, spec: m.example,
+             note: (m.merged_from || m.course || '') + ' - ' + (m.why || '') + ' Value: ' + (m.value || '') };
+  }));
 
   function addCard(grid, c) {
     var card = document.createElement('article');

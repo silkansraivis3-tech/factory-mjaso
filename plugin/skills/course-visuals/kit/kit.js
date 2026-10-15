@@ -422,7 +422,7 @@
     });
     var tx = x1 - 10;
     el('line', { x1: tx, y1: top - 8, x2: tx, y2: bot - 6, 'class': 'kit-probe' }, g);
-    el('circle', { cx: tx, cy: top - 20, r: 13, 'class': 'kit-bubble' }, g);
+    el('circle', { cx: tx, cy: top - 20, r: 17, 'class': 'kit-bubble' }, g);   // 17: "TT" keeps its 4 px clear of the ring (audit_drawing)
     el('text', { x: tx, y: top - 15.5, 'text-anchor': 'middle', 'class': 'kit-bubble-t' }, g, p.tag || 'TT');
     part.render = function (v) {
       var ly = bot - clamp(v, 0, 1) * (bot - top) * 0.75;
@@ -571,8 +571,8 @@
 
   /* badge - a numbered step marker. value 0..1 = lit */
   TYPES.badge = function (fig, part, g, p) {
-    el('circle', { r: 13, 'class': 'kit-badge-o' }, g);
-    var disc = el('circle', { r: 13, 'class': 'kit-badge' }, g);
+    el('circle', { r: 15, 'class': 'kit-badge-o' }, g);       // 15: every digit keeps its 4 px clear of the ring at any scale
+    var disc = el('circle', { r: 15, 'class': 'kit-badge' }, g);
     el('text', { y: 5, 'text-anchor': 'middle', 'class': 'kit-badge-t' }, g, String(p.n != null ? p.n : ''));
     part.render = function (v) { disc.style.opacity = clamp(v, 0, 1).toFixed(2); g.classList.toggle('kit-lit', v > 0.5); };
   };
@@ -713,4 +713,341 @@
    merged here by a reviewed merge request (scripts/kit_parts.py promote). Same contract as the
    parts above - PARTS.md. Never edit a block here to suit one course: change it for every course.
    ========================================================================== */
+/* kit-part: ga */
+KIT.define('ga', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 600, d = p.h || 80, plan = p.view === 'plan';
+  var wl = p.draft != null ? p.draft : 0.55, hull;
+  if (plan) {
+    var b = w * 0.16;
+    hull = 'M0 0 H' + (w - b) + ' Q' + w + ' 0 ' + w + ' ' + (d / 2) + ' Q' + w + ' ' + d + ' ' + (w - b) + ' ' + d + ' H0 Z';
+  } else {
+    hull = 'M0 0 H' + w + ' Q' + (w * 0.97) + ' ' + (d * 0.62) + ' ' + (w * 0.87) + ' ' + d +
+      ' H' + (w * 0.1) + ' L' + (w * 0.03) + ' ' + (d * 0.5) + ' Z';
+    if (p.water !== false) {
+      h.el('rect', { x: -12, y: d * wl, width: w + 24, height: d * (1 - wl) + 10, 'class': 'kit-ga-sea', 'data-no-contain': '', 'data-may-overlap': '' }, g);   // a backdrop: the hull covers it
+    }
+  }
+  h.el('path', { d: hull, 'class': 'kit-ga-hull' }, g);
+  var wash = h.el('path', { d: hull, 'class': 'kit-wash', 'data-no-contain': '' }, g);
+  (p.frames || []).forEach(function (x) {
+    h.el('line', { x1: x, x2: x, y1: 3, y2: d - 3, 'class': 'kit-ga-frame' }, g);
+  });
+  if (!plan && p.house) {
+    var hs = p.house;
+    h.el('rect', { x: hs.x, y: -hs.h, width: hs.w, height: hs.h, rx: 3, 'class': 'kit-ga-house' }, g);
+    if (p.funnel) {
+      var f = p.funnel, fh = f.h || 22;
+      h.el('rect', { x: f.x, y: -hs.h - fh, width: f.w || 18, height: fh, rx: 2, 'class': 'kit-ga-house' }, g);
+    }
+  }
+  if (p.label) h.lines(g, { x: w / 2, y: d + (plan ? 22 : 30), 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) {
+    wash.style.opacity = h.clamp(v, 0, 1).toFixed(3);
+    g.classList.toggle('kit-lit', v > 0.5);
+  };
+}, {
+  family: 'spaces',
+  status: 'kit', merged_from: "IGF Basic M02",
+  course: 'IGF Basic', module: 'M02', made: '2026-10-15',
+  why: 'M02 s12 zones on an IGF ship, M01 s04 the five new spaces and s09 two ships compared: the ship the named spaces sit in',
+  value: 'how strongly the ship is picked out, 0..1 (named spaces are space parts placed on it)',
+  css: '.kit-ga-hull{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2;stroke-linejoin:round;transition:stroke .3s}.kit-ga-sea{fill:var(--cold);opacity:.12}.kit-ga-house{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:1.5}.kit-ga-frame{stroke:var(--faint-d);stroke-width:1;stroke-dasharray:3 4}.kit-lit .kit-ga-hull{stroke:var(--blue)}',
+  example: { size: [420, 200], parts: [
+    { id: 'G', type: 'ga', x: 30, y: 80, w: 360, h: 64, house: { x: 30, w: 60, h: 40 }, funnel: { x: 50, w: 16, h: 18 }, label: 'side view' },
+    { id: 'S', type: 'space', x: 140, y: 88, w: 150, h: 46, label: 'FUEL TANK HOLD' } ],
+    steps: [ { title: 'The ship', play: [['G', 1, 500]] }, { title: 'A space in it', play: [['G', 0, 400], ['S', 1, 500]] } ] }
+});
+/* end kit-part */
+/* kit-part: scale */
+KIT.define('scale', function (fig, part, g, p) {
+  var h = KIT.h, H = p.h || 300, bw = p.w || 22, lo = p.min != null ? p.min : 0, hi = p.max != null ? p.max : 100;
+  var every = p.every || 20, reach = p.reach || bw + 300;
+  function y(v) { return H - h.clamp((v - lo) / (hi - lo), 0, 1) * H; }
+  h.el('rect', { width: bw, height: H, rx: bw / 2, 'class': 'kit-vessel' }, g);
+  for (var t = Math.ceil(lo / every) * every; t <= hi; t += every) {
+    h.el('line', { x1: -7, x2: 0, y1: y(t), y2: y(t), 'class': 'kit-tickl' }, g);
+    h.el('text', { x: -11, y: y(t) + 4.5, 'text-anchor': 'end', 'class': 'kit-tick' }, g, h.num(t, 0));
+  }
+  if (p.unit) h.el('text', { x: bw / 2, y: -12, 'text-anchor': 'middle', 'class': 'kit-tick' }, g, p.unit);
+  (p.limits || []).forEach(function (m) {
+    var lg = h.el('g', { 'class': 'kit-scale-limit' }, g);
+    h.el('line', { x1: -4, x2: reach, y1: y(m.at), y2: y(m.at) }, lg);
+    if (m.label) h.el('text', { x: reach, y: y(m.at) - 11, 'text-anchor': 'end', 'class': 'kit-h' }, lg, m.label);
+  });
+  var made = (p.markers || []).map(function (m) {
+    var mg = h.el('g', {}, g);
+    h.el('path', { d: 'M' + (bw + 2) + ' 0 L' + (bw + 12) + ' -6 V6 Z', 'class': 'kit-scale-pointer' }, mg);
+    h.el('path', { d: 'M' + (bw + 18) + ' -9 H' + (bw + 30) + ' L' + (bw + 34) + ' -5 V11 H' + (bw + 18) + ' Z', 'class': 'kit-scale-can' }, mg);
+    h.el('text', { x: bw + 44, y: m.note ? -2 : 5, 'class': 'kit-h' }, mg, m.label || '');
+    if (m.note) h.lines(mg, { x: bw + 44, y: 14, 'class': 'kit-cap' }, m.note);
+    return { g: mg, at: y(m.at) };
+  });
+  part.render = function (v) {
+    made.forEach(function (m, k) {
+      var c = h.clamp(v - k, 0, 1), from = 0;            // from the top of the scale
+      m.g.setAttribute('transform', 'translate(0 ' + (from + (m.at - from) * c).toFixed(1) + ')');
+      m.g.style.opacity = c > 0.001 ? '1' : '0';
+    });
+  };
+}, {
+  family: 'charts',
+  status: 'kit', merged_from: "IGF Basic M01",
+  course: 'IGF Basic', module: 'M01', made: '2026-10-15',
+  why: 'M01 s02: oil fuel, methanol and LNG slide to their places on a temperature scale either side of the 60 °C line',
+  value: '0..number of markers - marker k slides from the top of the scale to its place while the value goes from k to k+1',
+  css: '.kit-scale-limit line{stroke:var(--blue);stroke-width:2.5;stroke-dasharray:8 5}.kit-scale-limit text{fill:var(--blue)}.kit-scale-pointer{fill:var(--txt-d)}.kit-scale-can{fill:var(--deep-3);stroke:var(--txt-d);stroke-width:1.5;stroke-linejoin:round}',
+  example: { size: [360, 300], parts: [
+    { id: 'S', type: 'scale', x: 60, y: 40, h: 220, min: -40, max: 100, every: 20, unit: '°C', reach: 270,
+      limits: [{ at: 60, label: '60 °C' }],
+      markers: [{ label: 'oil fuel', at: 75 }, { label: 'methanol', note: 'flashpoint about 12 °C', at: 12 }] } ],
+    steps: [ { title: 'Oil fuel', play: [['S', 1, 1500]] }, { title: 'Methanol', play: [['S', 2, 1500]] } ] }
+});
+/* end kit-part */
+/* kit-part: cylinder */
+KIT.define('cylinder', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 140, H = p.h || 230, cov = 26, ox = w * 0.22, gx = w * 0.78, top = cov + 6;
+  var pTop = cov + (H - cov) * 0.34, ph = 46;
+  var moving = h.el('g', { 'class': 'kit-cylinder-moving' }, g);
+  h.el('line', { x1: w / 2, x2: w / 2, y1: pTop + ph, y2: H - 36, 'class': 'kit-cylinder-rod' }, moving);   // stays in the liner at the bottom of the stroke
+  h.el('rect', { x: 4, y: pTop, width: w - 8, height: ph, rx: 4, 'class': 'kit-cylinder-piston' }, moving);
+  [10, 18, 26].forEach(function (dy) { h.el('line', { x1: 6, x2: w - 6, y1: pTop + dy, y2: pTop + dy, 'class': 'kit-cylinder-ring' }, moving); });
+  h.el('rect', { x: -12, y: cov, width: 12, height: H - cov, 'class': 'kit-cylinder-wall' }, g);
+  h.el('rect', { x: w, y: cov, width: 12, height: H - cov, 'class': 'kit-cylinder-wall' }, g);
+  h.el('rect', { x: -16, y: 0, width: w + 32, height: cov, rx: 4, 'class': 'kit-cylinder-wall' }, g);
+  h.el('line', { x1: w / 2, x2: w / 2, y1: -26, y2: cov + 2, 'class': 'kit-stem' }, g);
+  h.el('path', { d: 'M' + (w / 2 - 18) + ' ' + (cov + 6) + ' Q' + (w / 2) + ' ' + (cov - 2) + ' ' + (w / 2 + 18) + ' ' + (cov + 6) + ' Z', 'class': 'kit-cylinder-inj' }, g);
+  [ox, gx].forEach(function (x) {                       // an injector passes through the cover by design
+    h.el('rect', { x: x - 5, y: -6, width: 10, height: cov + 12, rx: 2, 'class': 'kit-cylinder-inj', 'data-may-cross': '' }, g);
+  });
+  function fan(x, cls, ends) {
+    var fg = h.el('g', { 'class': cls }, g);
+    ends.forEach(function (e) { h.el('line', { x1: x, y1: top, x2: x + e[0], y2: top + e[1] }, fg); });
+    return fg;
+  }
+  var gas = fan(gx, 'kit-cylinder-gas', [[-62, 30], [-50, 44], [-34, 52]]);
+  var pilot = fan(ox, 'kit-cylinder-pilot', [[16, 14], [22, 8]]);
+  var oil = fan(ox, 'kit-cylinder-oil', [[58, 30], [48, 44], [32, 52], [64, 16]]);
+  var fire = h.el('g', { 'class': 'kit-cylinder-fire' }, g), fx = w * 0.46, fy = top + 26;
+  h.el('circle', { cx: fx, cy: fy, r: 9 }, fire);
+  [0, 45, 90, 135, 180, 225, 270, 315].forEach(function (a) {
+    var q0 = h.polar(13, a), q1 = h.polar(20, a);
+    h.el('line', { x1: fx + q0[0], y1: fy + q0[1], x2: fx + q1[0], y2: fy + q1[1] }, fire);
+  });
+  if (p.labels !== false) {
+    h.el('text', { x: -24, y: 16, 'text-anchor': 'end', 'class': 'kit-cap' }, g, 'oil injector');
+    h.el('text', { x: w + 24, y: 16, 'text-anchor': 'start', 'class': 'kit-cap' }, g, 'gas injector');
+    h.el('text', { x: w / 2, y: -36, 'text-anchor': 'middle', 'class': 'kit-cap' }, g, 'exhaust valve');
+    h.el('text', { x: -24, y: pTop + ph / 2 + 4, 'text-anchor': 'end', 'class': 'kit-cap' }, g, 'piston');
+  }
+  var st = h.el('text', { x: w / 2, y: H + 24, 'text-anchor': 'middle', 'class': 'kit-state' }, g);
+  part.render = function (v) {
+    var gs = v <= 1 ? h.clamp(v, 0, 1) : h.clamp(1 - (v - 1) * 2, 0, 1);
+    var pl = v <= 1 ? h.clamp(v, 0, 1) : h.clamp(1 - (v - 1.5) * 2, 0, 1);
+    var oi = h.clamp((v - 1.5) * 2, 0, 1);
+    gas.style.opacity = gs.toFixed(2); pilot.style.opacity = pl.toFixed(2); oil.style.opacity = oi.toFixed(2);
+    fire.style.opacity = Math.max(Math.min(gs, pl), oi).toFixed(2);
+    g.classList.toggle('kit-cylinder-run', v > 0.05);
+    g.classList.toggle('kit-cylinder-trip', v > 1.25 && v < 1.75);
+    st.textContent = v < 0.05 ? 'STOPPED' : v <= 1.25 ? 'GAS MODE' : v < 1.75 ? 'GAS SUPPLY STOPPED' : 'FUEL-OIL MODE';
+  };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Basic M01",
+  course: 'IGF Basic', module: 'M01', made: '2026-10-15',
+  why: 'M01 s06: a dual-fuel engine cylinder in gas mode (gas jet lit by a pilot oil spray), on a gas trip, and in fuel-oil mode; M06 and M13 need it too',
+  value: '0 stopped · 1 gas mode (gas jet + pilot spray) · 1.5 gas supply stopped (pilot only) · 2 fuel-oil mode (oil spray)',
+  css: '.kit-cylinder-wall{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2}.kit-cylinder-piston{fill:var(--steel);stroke:var(--dim-d);stroke-width:1.5}.kit-cylinder-ring{stroke:var(--deep);stroke-width:2}.kit-cylinder-rod{stroke:var(--steel);stroke-width:10}.kit-cylinder-inj{fill:var(--deep);stroke:var(--dim-d);stroke-width:1.5}.kit-cylinder-gas line{stroke:var(--txt-d);stroke-width:3;stroke-linecap:round;stroke-dasharray:2 6}.kit-cylinder-pilot line,.kit-cylinder-oil line{stroke:var(--cold);stroke-width:2.5;stroke-dasharray:5 4}.kit-cylinder-fire{fill:var(--txt-d);stroke:var(--txt-d);stroke-width:2;opacity:0}.kit-cylinder-run .kit-cylinder-moving{animation:kit-cylinder-stroke .9s ease-in-out infinite alternate}.kit-cylinder-run .kit-cylinder-gas line,.kit-cylinder-run .kit-cylinder-pilot line,.kit-cylinder-run .kit-cylinder-oil line{animation:kit-flow .8s linear infinite}.kit-cylinder-run .kit-state{fill:var(--txt-d)}.kit-cylinder-trip .kit-state{fill:var(--warn-d)}@keyframes kit-cylinder-stroke{to{transform:translateY(34px)}}',
+  example: { size: [420, 330], parts: [
+    { id: 'C', type: 'cylinder', x: 140, y: 50, w: 140, h: 230 } ],
+    steps: [ { title: 'Gas mode', play: [['C', 1, 900]] }, { title: 'Gas trip', play: [['C', 1.5, 900]] },
+             { title: 'Fuel-oil mode', play: [['C', 2, 900]] } ] }
+});
+/* end kit-part */
+/* kit-part: boil_off */
+KIT.define('boil_off', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 260, ht = p.h || 150, ins = p.insulation || 12, lv = p.level != null ? p.level : 0.6;
+  var iw = w - 2 * ins, ih = ht - 2 * ins, r = ih / 2, sy = ins + ih * (1 - lv), cid = fig.uid + '-' + p.id + '-bo';
+  h.el('rect', { width: w, height: ht, rx: ht / 2, 'class': 'kit-boil-off-ins' }, g);
+  h.el('rect', { x: ins, y: ins, width: iw, height: ih, rx: r }, h.el('clipPath', { id: cid }, h.el('defs', {}, g)));
+  h.el('rect', { x: ins, y: ins, width: iw, height: ih, rx: r, 'class': 'kit-vessel' }, g);
+  var inside = h.el('g', { 'clip-path': 'url(#' + cid + ')' }, g);
+  h.el('rect', { x: ins, y: sy, width: iw, height: ins + ih - sy, 'class': 'kit-liquid' }, inside);
+  h.el('line', { x1: ins, x2: ins + iw, y1: sy, y2: sy, 'class': 'kit-surface' }, inside);
+  var bub = h.el('g', { 'class': 'kit-boil-off-bubbles' }, inside);
+  [0.3, 0.42, 0.55, 0.66, 0.78].forEach(function (fx, i) {
+    h.el('circle', { cx: ins + iw * fx, cy: ins + ih - 6, r: 3 + (i % 2), style: 'animation-delay:' + (-0.37 * i) + 's;--rise:' + (sy - (ins + ih - 6)).toFixed(0) + 'px' }, bub);
+  });
+  var heat = h.el('g', { 'class': 'kit-boil-off-heat' }, g);
+  [[-30, ht / 2, 0], [w + 30, ht / 2, 180], [w * 0.38, ht + 30, -90], [w * 0.62, ht + 30, -90]].forEach(function (a) {
+    var hg = h.el('g', { transform: 'translate(' + a[0] + ' ' + a[1] + ') rotate(' + a[2] + ')' }, heat);
+    h.el('path', { d: 'M-14 0 q4 -5 8 0 t8 0 t8 0 M10 -6 L18 0 L10 6' }, hg);
+  });
+  var lx = ins + r * 0.75;                                 // clear of the rounded ends
+  if (p.liquidLabel !== false) h.el('text', { x: lx, y: ins + ih - 18, 'class': 'kit-h' }, g, p.liquidLabel || 'LNG');
+  if (p.vapourLabel !== false) h.el('text', { x: lx, y: ins + 26, 'class': 'kit-h' }, g, p.vapourLabel || 'vapour');
+  if (p.heatLabel) h.el('text', { x: w * 0.5, y: ht + 58, 'text-anchor': 'middle', 'class': 'kit-cap' }, g, p.heatLabel);
+  part.render = function (v) {
+    var k = h.clamp(v, 0, 1);
+    heat.style.opacity = k.toFixed(2); bub.style.opacity = k.toFixed(2);
+    g.classList.toggle('kit-boil-off-on', k > 0.05);
+  };
+}, {
+  family: 'cutaways',
+  status: 'kit', merged_from: "IGF Basic M01",
+  course: 'IGF Basic', module: 'M01', made: '2026-10-15',
+  why: 'M01 s07: heat leaks through the insulation into a cold LNG tank and some of the liquid boils off as vapour',
+  value: 'how much heat leaks in and boils the liquid, 0..1 (arrows and rising bubbles)',
+  css: '.kit-boil-off-ins{fill:var(--deep-3);stroke:var(--faint-d);stroke-width:1.5;stroke-dasharray:4 3}.kit-boil-off-bubbles circle{fill:none;stroke:var(--txt-d);stroke-width:1.5}.kit-boil-off-heat path{fill:none;stroke:var(--txt-d);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}.kit-boil-off-on .kit-boil-off-bubbles circle{animation:kit-boil-off-rise 1.6s ease-in infinite}.kit-boil-off-on .kit-boil-off-heat g path{animation:kit-boil-off-in 1.2s ease-in-out infinite alternate}@keyframes kit-boil-off-rise{to{transform:translateY(var(--rise,-60px))}}@keyframes kit-boil-off-in{to{transform:translateX(6px)}}',
+  example: { size: [360, 260], parts: [
+    { id: 'B', type: 'boil_off', x: 50, y: 40, w: 260, h: 140, heatLabel: 'heat leaks in' } ],
+    steps: [ { title: 'Heat leaks in and some LNG boils off', play: [['B', 1, 1500]] } ] }
+});
+/* end kit-part */
+/* kit-part: zone */
+KIT.define('zone', function (fig, part, g, p) {
+  var h = KIT.h, z = p.zone != null ? p.zone : 1, round = p.r != null;
+  var w = round ? p.r * 2 : (p.w || 80), ht = round ? p.r * 2 : (p.h || 60);
+  var ox = p.from ? p.from[0] : w / 2, oy = p.from ? p.from[1] : ht / 2;
+  var grow = h.el('g', {}, g);
+  var at = round ? { cx: p.r, cy: p.r, r: p.r } : { width: w, height: ht, rx: p.rx != null ? p.rx : 6 };
+  at['class'] = 'kit-zone-area kit-zone-z' + z;
+  at['data-may-cross'] = '';                       // a zone reaches over walls and decks by its nature
+  at['data-no-contain'] = '';
+  h.el(round ? 'circle' : 'rect', at, grow);
+  part.render = function (v) {
+    var k = h.clamp(v, 0, 1);
+    grow.setAttribute('transform', 'translate(' + ox + ' ' + oy + ') scale(' + Math.max(k, 0.001).toFixed(3) + ') translate(' + (-ox) + ' ' + (-oy) + ')');
+    grow.style.opacity = k > 0.01 ? '1' : '0';
+  };
+}, {
+  family: 'spaces',
+  status: 'kit', merged_from: "IGF Basic M02",
+  course: 'IGF Basic', module: 'M02', made: '2026-10-15',
+  why: 'M02 s12: hazardous zones 0, 1 and 2 growing around tanks, spaces and openings on an IGF ship',
+  value: 'how far the zone has grown from its origin, 0..1',
+  css: '.kit-zone-area{stroke-width:2;stroke-dasharray:6 4}.kit-zone-z0{fill:var(--warn-d);fill-opacity:.38;stroke:var(--warn-d)}.kit-zone-z1{fill:var(--amber);fill-opacity:.3;stroke:var(--amber)}.kit-zone-z2{fill:var(--amber);fill-opacity:.1;stroke:var(--amber);stroke-dasharray:2 4}',
+  example: { size: [320, 190], parts: [
+    { id: 'Z2', type: 'zone', zone: 2, x: 100, y: 35, r: 60 },
+    { id: 'Z1', type: 'zone', zone: 1, x: 130, y: 65, r: 30 },
+    { id: 'Z0', type: 'zone', zone: 0, x: 150, y: 85, w: 20, h: 70, from: [10, 10] },
+    { type: 'text', x: 160, y: 182, text: 'zones growing around a vent outlet' } ],
+    steps: [ { title: 'Zone 0', play: [['Z0', 1, 600]] }, { title: 'Zone 1', play: [['Z1', 1, 700]] },
+             { title: 'Zone 2', play: [['Z2', 1, 800]] } ] }
+});
+/* end kit-part */
+/* kit-part: bands */
+KIT.define('bands', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 520, rows = p.rows || [], rh = p.rowH || 72, cw = p.chip || 96, r = 15;
+  var x0 = cw + 16, L = w - x0 - 2 * r - 14, top = p.axis ? 26 : 0;
+  if (p.axis) h.el('text', { x: x0, y: 12, 'class': 'kit-tl' }, g, p.axis);
+  var made = rows.map(function (row, k) {
+    var gr = h.el('g', { transform: 'translate(0 ' + (top + k * rh) + ')', 'class': 'kit-bands-row' + (row.tone ? ' kit-bands-' + row.tone : '') }, g);
+    h.el('rect', { width: cw, height: 34, rx: 8, 'class': 'kit-bands-chip' }, gr);
+    h.el('text', { x: cw / 2, y: 22, 'text-anchor': 'middle', 'class': 'kit-h' }, gr, row.label || '');
+    h.el('rect', { x: x0, y: 6, width: L, height: 22, rx: 4, 'class': 'kit-bands-track' }, gr);
+    var segs = (row.gas || []).map(function (s) {
+      return { s: s[0], e: s[1], n: h.el('rect', { x: x0 + 2 + s[0] * (L - 4), y: 8, width: 0, height: 18, 'class': 'kit-bands-gas' }, gr) };
+    });
+    var cur = h.el('line', { x1: x0 + 2, x2: x0 + 2, y1: 8, y2: 26, 'class': 'kit-bands-cursor' }, gr);
+    var cx = w - r - 2;
+    h.el('circle', { cx: cx, cy: 17, r: r, 'class': 'kit-bands-clock' }, gr);
+    var pie = h.el('path', { 'class': 'kit-bands-pie' }, gr);
+    if (row.caption) h.lines(gr, { x: x0 + L / 2, y: 50, 'text-anchor': 'middle', 'class': 'kit-cap' }, row.caption);
+    return { segs: segs, cur: cur, pie: pie, cx: cx };
+  });
+  function sector(cx, f) {
+    if (f <= 0.001) return 'M' + cx + ' 17';
+    if (f >= 0.999) return 'M' + cx + ' 4 A13 13 0 1 1 ' + cx + ' 30 A13 13 0 1 1 ' + cx + ' 4 Z';
+    var q = h.polar(13, -90 + 360 * f);
+    return 'M' + cx + ' 17 L' + cx + ' 4 A13 13 0 ' + (f > 0.5 ? 1 : 0) + ' 1 ' + (cx + q[0]).toFixed(2) + ' ' + (17 + q[1]).toFixed(2) + ' Z';
+  }
+  part.render = function (v) {
+    made.forEach(function (m, k) {
+      var c = h.clamp(v - k, 0, 1), on = 0;
+      m.segs.forEach(function (s) {
+        var seen = h.clamp(c - s.s, 0, s.e - s.s);
+        on += seen;
+        s.n.setAttribute('width', (seen * (L - 4)).toFixed(1));
+      });
+      var cx = x0 + 2 + c * (L - 4);
+      m.cur.setAttribute('x1', cx.toFixed(1)); m.cur.setAttribute('x2', cx.toFixed(1));
+      m.cur.style.opacity = c > 0.001 && c < 0.999 ? '1' : '0';
+      m.pie.setAttribute('d', sector(m.cx, on));
+    });
+  };
+}, {
+  family: 'charts',
+  status: 'kit', merged_from: "IGF Basic M02",
+  course: 'IGF Basic', module: 'M02', made: '2026-10-15',
+  why: 'M02 s11: zones 0, 1 and 2 told apart by how often and how long gas is present; the start of the Charts family M04 and M06 need',
+  value: '0..number of rows - row k sweeps its time line while the value goes from k to k+1; its clock fills with the share of time gas is there',
+  css: '.kit-bands-chip{fill:var(--deep);stroke:var(--faint-d);stroke-width:2}.kit-bands-track{fill:var(--deep);stroke:var(--faint-d);stroke-width:1.5}.kit-bands-gas{fill:var(--txt-d);opacity:.55}.kit-bands-cursor{stroke:var(--txt-d);stroke-width:2}.kit-bands-clock{fill:var(--deep);stroke:var(--dim-d);stroke-width:1.5}.kit-bands-pie{fill:var(--dim-d)}.kit-bands-z0 .kit-bands-chip{stroke:var(--warn-d)}.kit-bands-z0 .kit-bands-gas,.kit-bands-z0 .kit-bands-pie{fill:var(--warn-d);opacity:.9}.kit-bands-z1 .kit-bands-chip{stroke:var(--amber)}.kit-bands-z1 .kit-bands-gas,.kit-bands-z1 .kit-bands-pie{fill:var(--amber);opacity:.9}.kit-bands-z2 .kit-bands-chip{stroke:var(--amber);stroke-dasharray:4 3}.kit-bands-z2 .kit-bands-gas,.kit-bands-z2 .kit-bands-pie{fill:var(--amber);opacity:.5}',
+  example: { size: [420, 180], parts: [
+    { id: 'B', type: 'bands', x: 10, y: 10, w: 400, axis: 'present - over time', rows: [
+      { label: 'Often', caption: 'most of the time', gas: [[0, 0.8]] },
+      { label: 'Rarely', caption: 'once, and short', gas: [[0.5, 0.56]] } ] } ],
+    steps: [ { title: 'Row 1', play: [['B', 1, 2000, 0, 'linear']] }, { title: 'Row 2', play: [['B', 2, 2000, 0, 'linear']] } ] }
+});
+/* end kit-part */
+/* kit-part: gas_cloud */
+KIT.define('gas_cloud', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 200, ht = p.h || 120;
+  var ox = p.from ? p.from[0] : w / 2, oy = p.from ? p.from[1] : ht * 0.6, fid = fig.uid + '-' + p.id + '-soft';
+  h.el('feGaussianBlur', { stdDeviation: Math.max(4, Math.min(w, ht) * 0.05) },
+       h.el('filter', { id: fid, x: '-20%', y: '-20%', width: '140%', height: '140%' }, h.el('defs', {}, g)));
+  var grow = h.el('g', { filter: 'url(#' + fid + ')' }, g);
+  [[0.5, 0.56, 0.34, 0.3], [0.29, 0.62, 0.21, 0.25], [0.71, 0.6, 0.23, 0.26], [0.42, 0.4, 0.22, 0.2], [0.61, 0.42, 0.2, 0.2]]
+    .forEach(function (b, i) {
+      h.el('ellipse', { cx: b[0] * w, cy: b[1] * ht, rx: b[2] * w, ry: b[3] * ht, 'class': 'kit-gas-cloud-puff',
+                        'data-no-contain': '', 'data-may-overlap': '', style: 'animation-delay:' + (-0.7 * i) + 's' }, grow);
+    });
+  part.render = function (v) {
+    var k = h.clamp(v, 0, 1), s = 0.2 + 0.8 * k;
+    grow.setAttribute('transform', 'translate(' + ox + ' ' + oy + ') scale(' + s.toFixed(3) + ') translate(' + (-ox) + ' ' + (-oy) + ')');
+    grow.style.opacity = k > 0.005 ? (0.45 + 0.55 * k).toFixed(2) : '0';
+  };
+  part.motion = function (d) { g.classList.toggle('kit-gas-cloud-spreading', d > 0); };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Basic M02",
+  course: 'IGF Basic', module: 'M02', made: '2026-10-15',
+  why: 'M02 s15: leaked gas gathering in the tank connection space until the detectors alarm and the gas is shut off; M06 and M13 need it too',
+  value: 'how much gas has gathered, 0..1 (the cloud grows from its leak point, pale - methane vapour has no colour)',
+  css: '.kit-gas-cloud-puff{fill:var(--txt-d);opacity:.2;transform-box:fill-box;transform-origin:center}.kit-gas-cloud-spreading .kit-gas-cloud-puff{animation:kit-gas-cloud-drift 2.4s ease-in-out infinite alternate}@keyframes kit-gas-cloud-drift{to{transform:scale(1.06)}}',
+  example: { size: [320, 190], parts: [
+    { id: 'R', type: 'space', x: 20, y: 20, w: 280, h: 150, label: 'TANK CONNECTION SPACE' },
+    { id: 'C', type: 'gas_cloud', x: 20, y: 20, w: 280, h: 150, from: [90, 110] } ],
+    steps: [ { title: 'A leak: gas gathers', play: [['C', 1, 4000, 0, 'linear']] } ] }
+});
+/* end kit-part */
+/* kit-part: integral_tank */
+KIT.define('integral_tank', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 160, ht = p.h || 110, c = p.cofferdam != null ? p.cofferdam : 14;
+  var tx = c, ty = c, tw = w - 2 * c, th = ht - c, cid = fig.uid + '-' + p.id + '-it';
+  h.el('rect', { width: w, height: ht, rx: 3, 'class': 'kit-integral-tank-cd' }, g);
+  h.el('rect', { x: tx, y: ty, width: tw, height: th }, h.el('clipPath', { id: cid }, h.el('defs', {}, g)));
+  h.el('rect', { x: tx, y: ty, width: tw, height: th, 'class': 'kit-vessel' }, g);
+  var liq = h.el('rect', { x: tx, width: tw, 'class': 'kit-liquid', 'clip-path': 'url(#' + cid + ')' }, g);
+  var surf = h.el('line', { x1: tx, x2: tx + tw, 'class': 'kit-surface', 'clip-path': 'url(#' + cid + ')' }, g);
+  h.el('rect', { x: -10, y: ht, width: w + 20, height: 8, 'class': 'kit-steel' }, g);
+  if (p.label) h.el('text', { x: tx + 10, y: ty + 20, 'class': 'kit-sl' }, g, p.label);
+  if (p.cofferdamLabel !== false) h.el('text', { x: w / 2, y: -8, 'text-anchor': 'middle', 'class': 'kit-cap' }, g, p.cofferdamLabel || 'cofferdam');
+  if (p.hullLabel !== false) h.el('text', { x: w / 2, y: ht + 26, 'text-anchor': 'middle', 'class': 'kit-cap' }, g, p.hullLabel || 'hull');
+  part.render = function (v) {
+    var y = ty + th - h.clamp(v, 0, 1) * th;
+    liq.setAttribute('y', y); liq.setAttribute('height', ty + th - y);
+    surf.setAttribute('y1', y); surf.setAttribute('y2', y);
+  };
+}, {
+  family: 'piping',
+  status: 'kit', merged_from: "IGF Basic M02",
+  course: 'IGF Basic', module: 'M02', made: '2026-10-15',
+  why: 'M02 s05: the methanol path starts in an integral fuel tank - part of the hull, surrounded by a cofferdam',
+  value: 'liquid level 0..1',
+  css: '.kit-integral-tank-cd{fill:var(--deep-3);stroke:var(--faint-d);stroke-width:1.5;stroke-dasharray:5 4}',
+  example: { size: [300, 220], parts: [
+    { id: 'T', type: 'integral_tank', x: 70, y: 40, w: 160, h: 120, label: 'methanol', value: 0.7 } ],
+    steps: [ { title: 'Fuel is drawn off', play: [['T', 0.45, 3000]] } ] }
+});
+/* end kit-part */
 /* kit-parts: end */
