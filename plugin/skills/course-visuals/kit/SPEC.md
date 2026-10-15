@@ -55,7 +55,7 @@ Parts added from courses (merged by `kit_parts.py promote`; each block's `exampl
 |---|---|---|
 | `ga` | `w h view(side/plan) draft water house:{x,w,h} funnel:{x,w,h} frames label` - a ship's hull; named spaces are `space` parts on it | 0..1 picked out |
 | `zone` | `zone(0/1/2)` and `w h rx` or `r`, `from:[x,y]` - a hazardous-zone overlay | 0..1 grown from `from` |
-| `scale` | `h w min max every unit reach limits:[{at,label}] markers:[{label,note,at}]` - a vertical scale | 0..n: marker k slides into place from k to k+1 |
+| `scale` | `h w min max every unit reach limits:[{at,label,side}] markers:[{label,note,at}]` - a vertical scale; `orient:"h"` with `len` runs it across, each marker on a stem at its `rise`, words to its `side` (left/right) | 0..n: marker k slides (vertical) or drops (across) into place from k to k+1 |
 | `bands` | `w rowH chip axis rows:[{label,tone(z0/z1/z2),caption,gas:[[from,to]]}]` - time bands with a clock | 0..n: row k sweeps from k to k+1 |
 | `cylinder` | `w h labels` - a dual-fuel engine cylinder, injectors at 0.22 w and 0.78 w | 0 stopped · 1 gas mode · 1.5 gas supply stopped · 2 fuel-oil mode |
 | `boil_off` | `w h insulation level liquidLabel vapourLabel heatLabel` - an insulated LNG tank cutaway | 0..1 heat in, boiling |
@@ -105,6 +105,17 @@ exist yet, the part is added to its family here, never drawn once on a slide.
 
 Planned for every family: **task mode** - the same spec with labels hidden and parts tappable, so a
 slide and the task built from it ("the GA from slide 4, no labels") can never drift apart.
+
+## Fill the frame, and the words do the explaining (L49, operator 2026-10-15)
+- **Draw to the panel.** `size` has the shape of the panel the figure is shown in (the wide column of a `two-col`
+  slide: about 640 × 390, a dark slide 680 × 415), and the drawing covers it: `audit_drawing.js` EMPTY allows at most
+  half of the panel blank and no blank piece over a fifth, judged at the last step too. A whole ship for five spaces,
+  one pipe with three valves, a small scale in a big panel - crop to what the steps show, spread the parts, add the
+  context the slide's lines name (the master valve before the gas valve unit, the engine-room boundary).
+- **The words stay beside the figure at reading size.** A figure whose steps light the slide's lines goes in a `two-col`
+  slide (`compile/GUIDE.md`), never above a row of small legend cards.
+- **A lit line is a button.** Every line a step lights (or the box a line heads) becomes a tap target: tap it or press
+  Enter and that step plays (`.kit-tap`, 44 px). The first step that lights a line owns it.
 
 ## Rules of the look (ISA-101)
 Grey and blue at rest. Colour appears only for something abnormal: amber for an alarm, red for a trip.

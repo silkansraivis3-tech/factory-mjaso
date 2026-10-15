@@ -12,16 +12,24 @@
 
 /* in a deck: the figure is a dark screen on a dark or a light slide alike (a monitor in the room),
    with the slide's own .mediabar under it */
-.kit-fig{display:flex;flex-direction:column;align-items:stretch;gap:14px;min-height:0;width:100%}
-.kit-screen{flex:1 1 0;min-height:0;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+.kit-fig{display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:14px;min-height:0;width:100%}
+/* the panel hugs the drawing's own shape and centres in the column: a panel stretched to a narrower, taller column
+   (1024 x 768) left blank bands above and below the drawing (L49, audit_drawing EMPTY) */
+.kit-screen{flex:0 1 auto;min-height:0;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
   background:var(--deep-2);border-radius:var(--r-l,20px);padding:12px}
 .slide.dark .kit-screen{background:transparent;padding:0}
-.kit-screen > .kit{width:100%;height:100%;max-height:100%}     /* the viewBox keeps its shape inside */
+.kit-screen > .kit{width:100%;height:auto;max-height:100%}     /* the viewBox keeps its shape inside */
 .kit-fig > .mediabar{flex:0 0 auto}
 /* the figure's row is the slide body's full height, never the text's: the current line turns bold
    and can wrap, and a row that followed the text moved the step buttons from under the presenter's finger */
 .slide-body:has(> .kit-fig){grid-template-rows:minmax(0,100%)}
 .kit-error{color:var(--warn);font-weight:700}
+/* a slide line a step lights: tap it to play that step (kit.js deck) */
+.kit-tap{cursor:pointer;min-height:44px;box-sizing:border-box}   /* a control: the 44 px touch target (audit_deck) */
+/* a one-line text line reaches 44 px partly with padding the negative margin gives back (5 px: within the list's own
+   gap, so neighbouring lines never overlap), so the words keep most of their layout */
+.copy .kit-tap:not(.box){padding-top:5px;padding-bottom:5px;margin-top:-5px;margin-bottom:-5px}
+.kit-tap:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 
 /* frame */
 .kit-panel{fill:var(--deep-2,#0C1E3A);stroke:var(--line-d,rgba(46,182,248,.18));stroke-width:1.5}

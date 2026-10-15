@@ -9,7 +9,7 @@
    overflowed the slide and no HTML text collided - these are all INSIDE one
    <svg>, where no other probe looks.
 
-   THREE CHECKS, in every visible <svg> (and every <img>/<canvas> on a slide):
+   FOUR CHECKS, in every visible <svg> (and every <img>/<canvas> on a slide):
 
      1  INSIDE       a part (a closed shape, a label, a picture) whose centre lies
                      inside an OUTLINED closed shape - a hull, a tank, a room, a box,
@@ -25,6 +25,14 @@
                      label - unless the label sits INSIDE that shape, and then it
                      keeps the same clearance from the shape's edge. A leader line
                      may end at its label (CONFIG.leaderPx around its ends).
+
+     4  EMPTY        the drawing fills the frame it is shown in (a kit figure's
+                     panel, or the <svg> box): at most CONFIG.emptyMaxBlank of the
+                     frame more than one grid cell from any content, and no blank
+                     piece over CONFIG.emptyMaxShare. Letterbox bands count; a large
+                     shape (a hull, a room) fills only along its outline; a figure
+                     that steps is judged at its last step as well (operator,
+                     2026-10-15: "the visual is too big, much empty space").
 
      Shapes inside <defs> drawn with <use> (a shared hull, a symbol) are copied
      in, invisibly, for the measurement and removed after.
@@ -63,6 +71,14 @@
     samples: 28,             /* points along a part's outline */
     textPadPx: 4,            /* a label's own safe zone, screen px */
     leaderPx: 9,             /* a line may touch a label this close to the line's own end */
+    emptyGrid: 60,           /* EMPTY: cells along the frame's longer side */
+    emptyMaxShare: 0.2,      /* EMPTY: the largest blank rectangle may take at most this share of the frame */
+    emptyMinSide: 0.2,       /* EMPTY: ... and counts only when it is this wide AND this tall (a share of the frame) */
+    emptyMinFramePx: 160,    /* EMPTY: frames smaller than this are not judged */
+    emptyMaxBlank: 0.5,      /* EMPTY: at most this share of the frame may be more than one cell from any content
+                                (calibrated on the IGF pilot, 2026-10-15: well-filled figures 24-33 %, the ones the
+                                operator called empty 53-74 %) */
+    emptyBigPart: 0.06,      /* EMPTY: a shape larger than this share of the frame fills only along its outline */
     maxExamples: 40
   };
   if (global.__auditDrawingConfig) {
@@ -202,8 +218,11 @@
         /* a point every ~5 screen px along a long outline (a hull, a deck line), never fewer than CONFIG.samples */
         var m = el.getScreenCTM(), sc = m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : 1;
         var N = Math.min(600, Math.max(CONFIG.samples, Math.ceil(L * sc / 5)));
+        /* a closed outline is sampled half a step off its seam: Chrome's isPointInFill misreads a circle's own
+           start point at some scales (a gauge hub "poking out" of its dial at 1920 x 1080) */
+        var off = closed(el) ? 0.5 : 0;
         for (i = 0; i < N; i++) {
-          var a = el.getPointAtLength(L * i / N);
+          var a = el.getPointAtLength(L * (i + off) / N);
           pts.push(toScreen(el, a.x, a.y));
         }
         if (!closed(el)) { var z = el.getPointAtLength(L); pts.push(toScreen(el, z.x, z.y)); }
@@ -258,6 +277,17 @@
     return Math.max(0, c.x0 - b.x, c.y0 - b.y, b.x + b.w - c.x1, b.y + b.h - c.y1);
   }
 
+  /* every painted part of a drawing that is laid out, with its outline as screen points and its box */
+  function painted(svg) {
+    return qa(svg, PARTS).filter(function (el) {
+      return !inHiddenRoot(el, svg) && laidOut(el) && (fills(el) || strokes(el));
+    }).map(function (el) {
+      var pts;
+      try { pts = outline(el); } catch (e) { pts = []; }
+      return { el: el, t: tag(el), pts: pts, b: box(pts), copy: upFlag(el, "data-audit-copy", svg) };
+    }).filter(function (it) { return it.pts.length && (it.b.w >= CONFIG.minPartPx || it.b.h >= CONFIG.minPartPx); });
+  }
+
   function checkSvg(svg, where, out, stop) {
     if (svg.hasAttribute("data-audit-ignore") || svg.ownerSVGElement) { return; }
     var r = svg.getBoundingClientRect();
@@ -266,13 +296,7 @@
     try {
       /* every painted part that is laid out - also one faded out now that a later step of the figure shows
          (a zone ring, a highlight): it must not be cut off when it appears. Checks 1 and 3 judge what shows now. */
-      var geom = qa(svg, PARTS).filter(function (el) {
-        return !inHiddenRoot(el, svg) && laidOut(el) && (fills(el) || strokes(el));
-      }).map(function (el) {
-        var pts;
-        try { pts = outline(el); } catch (e) { pts = []; }
-        return { el: el, t: tag(el), pts: pts, b: box(pts), copy: upFlag(el, "data-audit-copy", svg) };
-      }).filter(function (it) { return it.pts.length && (it.b.w >= CONFIG.minPartPx || it.b.h >= CONFIG.minPartPx); });
+      var geom = painted(svg);
       var items = geom.filter(function (it) { return shown(it.el, svg); });
 
       /* ---- 1 INSIDE ---- */
@@ -381,9 +405,92 @@
           }
         });
       });
+      /* ---- 4 EMPTY ---- the drawing fills the frame it is given: no large blank area inside it */
+      var E4 = emptySpace(svg, geom);
+      if (E4) {
+        report(out, { check: "empty", where: where, part: "blank " + Math.round(E4.blank * 100) + " % of the frame, largest piece " +
+                      Math.round(E4.w) + " x " + Math.round(E4.h) + " px = " + Math.round(E4.share * 100) + " %", other: E4.frame,
+                      detail: "too much empty space (limits: " + Math.round(CONFIG.emptyMaxBlank * 100) + " % blank, " +
+                      Math.round(CONFIG.emptyMaxShare * 100) + " % in one piece) - draw to the frame, crop the drawing, or give the room to the words" }, [svg]);
+      }
     } finally {
       copies.forEach(function (c) { c.parentNode.removeChild(c); });
     }
+  }
+
+  /* the largest blank rectangle in the frame a drawing is shown in (its .kit-screen panel, or the <svg> box), on a
+     grid of the painted parts' boxes. Letterbox bands count: a short drawing in a tall panel leaves them blank too.
+     A part as large as the frame (a panel, a background) is not content. Returns null when the frame is filled. */
+  function emptySpace(svg, geom) {
+    var host = svg.closest ? svg.closest(".kit-screen") : null, fr, name;
+    if (host) {
+      var hb = host.getBoundingClientRect(), cs = getComputedStyle(host);
+      fr = { x: hb.left + parseFloat(cs.paddingLeft), y: hb.top + parseFloat(cs.paddingTop),
+             w: hb.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+             h: hb.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) };
+      name = "the figure's panel";
+    } else {
+      var sb = svg.getBoundingClientRect();
+      fr = { x: sb.left, y: sb.top, w: sb.width, h: sb.height };
+      name = "the drawing's box";
+    }
+    if (fr.w < CONFIG.emptyMinFramePx || fr.h < CONFIG.emptyMinFramePx) { return null; }
+    var cell = Math.max(fr.w, fr.h) / CONFIG.emptyGrid, cols = Math.ceil(fr.w / cell), rows = Math.ceil(fr.h / cell), r, c;
+    var full = [];
+    for (r = 0; r < rows; r++) { full.push([]); for (c = 0; c < cols; c++) { full[r].push(0); } }
+    function mark(x0, y0, x1, y1) {
+      var c0 = Math.max(0, Math.floor((x0 - fr.x) / cell)), c1 = Math.min(cols - 1, Math.floor((x1 - fr.x) / cell));
+      var r0 = Math.max(0, Math.floor((y0 - fr.y) / cell)), r1 = Math.min(rows - 1, Math.floor((y1 - fr.y) / cell));
+      for (r = r0; r <= r1; r++) { for (c = c0; c <= c1; c++) { full[r][c] = 1; } }
+    }
+    /* a figure that steps is judged complete - its last step - as well as now: parts that arrive later are content */
+    var parts = geom, f = svg.__kit;
+    if (f && f.steps && f.steps() && f.n !== f.steps()) {
+      var n0 = f.n;
+      try { f.go(f.steps(), true); parts = geom.concat(painted(svg)); } finally { f.go(n0, true); }
+    }
+    parts.forEach(function (it) {
+      var b = it.b, a = b.w * b.h;
+      if (a >= 0.8 * fr.w * fr.h) { return; }                    /* a panel or background is not content */
+      if (a < CONFIG.emptyBigPart * fr.w * fr.h || it.t === "text") { mark(b.x, b.y, b.x + b.w, b.y + b.h); return; }
+      /* a large shape (a hull, a room, a tank) carries information along its outline, not across its blank inside */
+      it.pts.forEach(function (p) { mark(p.x, p.y, p.x, p.y); });
+    });
+    /* largest all-blank rectangle: one histogram of blank cells per row, the largest rectangle under each */
+    var hgt = [], best = { a: 0 };
+    for (c = 0; c < cols; c++) { hgt.push(0); }
+    for (r = 0; r < rows; r++) {
+      for (c = 0; c < cols; c++) { hgt[c] = full[r][c] ? 0 : hgt[c] + 1; }
+      var st = [];
+      for (c = 0; c <= cols; c++) {
+        var hh = c < cols ? hgt[c] : 0;
+        while (st.length && hgt[st[st.length - 1]] >= hh) {
+          var top = st.pop(), height = hgt[top], left = st.length ? st[st.length - 1] + 1 : 0, width = c - left;
+          if (height * width > best.a) { best = { a: height * width, w: width, h: height }; }
+        }
+        st.push(c);
+      }
+    }
+    /* and the blank share overall: cells more than one cell away from any content */
+    var blank = 0;
+    for (r = 0; r < rows; r++) {
+      for (c = 0; c < cols; c++) {
+        var near = false;
+        for (var dr = -1; dr <= 1 && !near; dr++) {
+          for (var dc = -1; dc <= 1 && !near; dc++) {
+            var rr = r + dr, cc = c + dc;
+            if (rr >= 0 && rr < rows && cc >= 0 && cc < cols && full[rr][cc]) { near = true; }
+          }
+        }
+        if (!near) { blank++; }
+      }
+    }
+    blank /= rows * cols;
+    var w = best.w * cell, h = best.h * cell, share = best.a ? (w * h) / (fr.w * fr.h) : 0;
+    /* a margin strip along an edge is not a hole: it must be large both ways to count */
+    var hole = share > CONFIG.emptyMaxShare && w >= CONFIG.emptyMinSide * fr.w && h >= CONFIG.emptyMinSide * fr.h;
+    if (!hole && blank <= CONFIG.emptyMaxBlank) { return null; }
+    return { w: w, h: h, share: share, blank: blank, hole: hole, frame: name };
   }
 
   function checkPictures(root, where, out, stop) {

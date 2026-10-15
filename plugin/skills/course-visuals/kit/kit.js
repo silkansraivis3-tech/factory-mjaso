@@ -633,6 +633,26 @@
         });
       });
     });
+    /* a line a step lights is also the way to that step: the presenter taps "3 Fuel preparation room" (or
+       focuses it and presses Enter) and step 3 plays - the hand-built decks did this, and a legend card that
+       looks like a button and does nothing reads as broken (operator, 2026-10-15). The first step that
+       lights a line owns it. */
+    (f.spec.steps || []).forEach(function (s, i) {
+      ids(s).forEach(function (k) {
+        var line = slide.querySelector('[data-i="' + k + '"]');
+        /* a line that heads a grouped box ("Zone 1:" over its list) - the whole box is what the presenter taps */
+        var tap = line && line.parentNode && line.parentNode.matches && line.parentNode.matches('.copy > div.box') ? line.parentNode : line;
+        if (!tap || tap.__kitStep) return;
+        tap.__kitStep = i + 1;
+        tap.classList.add('kit-tap');
+        tap.setAttribute('tabindex', '0');
+        tap.setAttribute('role', 'button');
+        tap.addEventListener('click', function () { f.go(tap.__kitStep); });
+        tap.addEventListener('keydown', function (e) {
+          if ((e.key || '') === 'Enter') { e.preventDefault(); e.stopPropagation(); f.go(tap.__kitStep); }
+        });
+      });
+    });
   }
 
   /* a part a course needed that the kit did not have yet. It is built to the same contract as the
@@ -762,6 +782,7 @@ KIT.define('ga', function (fig, part, g, p) {
 KIT.define('scale', function (fig, part, g, p) {
   var h = KIT.h, H = p.h || 300, bw = p.w || 22, lo = p.min != null ? p.min : 0, hi = p.max != null ? p.max : 100;
   var every = p.every || 20, reach = p.reach || bw + 300;
+  if (p.orient === 'h') return across(h, part, g, p, lo, hi, every);
   function y(v) { return H - h.clamp((v - lo) / (hi - lo), 0, 1) * H; }
   h.el('rect', { width: bw, height: H, rx: bw / 2, 'class': 'kit-vessel' }, g);
   for (var t = Math.ceil(lo / every) * every; t <= hi; t += every) {
@@ -789,13 +810,49 @@ KIT.define('scale', function (fig, part, g, p) {
       m.g.style.opacity = c > 0.001 ? '1' : '0';
     });
   };
+  /* orient "h": the scale runs across (len wide, w thick), each marker stands on a stem at its own height
+     (rise) so the labels fill the panel above the axis instead of stacking in one column; side "left" puts a
+     marker's words to the left of its stem */
+  function across(h, part, g, p, lo, hi, every) {
+    var L = p.len || 560, th = p.w || 18, reach = p.reach || 260;
+    function x(v) { return h.clamp((v - lo) / (hi - lo), 0, 1) * L; }
+    h.el('rect', { width: L, height: th, rx: th / 2, 'class': 'kit-vessel' }, g);
+    for (var t = Math.ceil(lo / every) * every; t <= hi; t += every) {
+      h.el('line', { x1: x(t), x2: x(t), y1: th, y2: th + 7, 'class': 'kit-tickl' }, g);
+      h.el('text', { x: x(t), y: th + 24, 'text-anchor': 'middle', 'class': 'kit-tick' }, g, h.num(t, 0));
+    }
+    if (p.unit) h.el('text', { x: L + 12, y: th / 2 + 4.5, 'class': 'kit-tick' }, g, p.unit);
+    (p.limits || []).forEach(function (m) {
+      var lg = h.el('g', { 'class': 'kit-scale-limit' }, g);
+      h.el('line', { x1: x(m.at), x2: x(m.at), y1: -reach, y2: th + 4 }, lg);
+      if (m.label) h.el('text', { x: x(m.at) + (m.side === 'left' ? -10 : 10), y: -reach + 14, 'text-anchor': m.side === 'left' ? 'end' : 'start',
+                                  'class': 'kit-h' }, lg, m.label);
+    });
+    var made = (p.markers || []).map(function (m, k) {
+      var rise = m.rise || 60 + 70 * k, left = m.side === 'left', ax = left ? 'end' : 'start', tx = left ? -16 : 16;
+      var mg = h.el('g', {}, g);
+      h.el('path', { d: 'M0 -2 L-6 -12 H6 Z', 'class': 'kit-scale-pointer' }, mg);
+      h.el('line', { x1: 0, x2: 0, y1: -12, y2: -rise + 12, 'class': 'kit-scale-stem' }, mg);
+      h.el('path', { d: 'M-6 ' + (-rise - 10) + ' H6 L10 ' + (-rise - 6) + ' V' + (-rise + 10) + ' H-6 Z', 'class': 'kit-scale-can' }, mg);
+      h.el('text', { x: tx, y: -rise + (m.note ? -2 : 5), 'text-anchor': ax, 'class': 'kit-h' }, mg, m.label || '');
+      if (m.note) h.lines(mg, { x: tx, y: -rise + 14, 'text-anchor': ax, 'class': 'kit-cap' }, m.note);
+      return { g: mg, at: x(m.at) };
+    });
+    part.render = function (v) {
+      made.forEach(function (m, k) {
+        var c = h.clamp(v - k, 0, 1);                     // drops onto its own place on the axis
+        m.g.setAttribute('transform', 'translate(' + m.at.toFixed(1) + ' ' + (-(1 - c) * 40).toFixed(1) + ')');
+        m.g.style.opacity = c > 0.001 ? Math.min(1, c * 2).toFixed(2) : '0';
+      });
+    };
+  }
 }, {
   family: 'charts',
   status: 'kit', merged_from: "IGF Basic M01",
   course: 'IGF Basic', module: 'M01', made: '2026-10-15',
   why: 'M01 s02: oil fuel, methanol and LNG slide to their places on a temperature scale either side of the 60 °C line',
   value: '0..number of markers - marker k slides from the top of the scale to its place while the value goes from k to k+1',
-  css: '.kit-scale-limit line{stroke:var(--blue);stroke-width:2.5;stroke-dasharray:8 5}.kit-scale-limit text{fill:var(--blue)}.kit-scale-pointer{fill:var(--txt-d)}.kit-scale-can{fill:var(--deep-3);stroke:var(--txt-d);stroke-width:1.5;stroke-linejoin:round}',
+  css: '.kit-scale-limit line{stroke:var(--blue);stroke-width:2.5;stroke-dasharray:8 5}.kit-scale-limit text{fill:var(--blue)}.kit-scale-stem{stroke:var(--dim-d);stroke-width:1.5}.kit-scale-pointer{fill:var(--txt-d)}.kit-scale-can{fill:var(--deep-3);stroke:var(--txt-d);stroke-width:1.5;stroke-linejoin:round}',
   example: { size: [360, 300], parts: [
     { id: 'S', type: 'scale', x: 60, y: 40, h: 220, min: -40, max: 100, every: 20, unit: '°C', reach: 270,
       limits: [{ at: 60, label: '60 °C' }],

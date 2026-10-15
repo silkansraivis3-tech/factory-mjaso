@@ -386,6 +386,15 @@ screen keeps its padding and the chrome's safe area, and nothing spills. A deck 
 (`compile/`), and passes the browser audits before it is shown: `audit_compose.js` (every screen composed, none
 weak), `audit_deck.js` (no spill, no overfill), `audit_collide.js`. → `course-factory` (`compile/`) and
 `course-module-ui` (`gb_compose.css` §13b, 2.25.1)
+*Inside the figure too* (operator, 2026-10-15, after M01 s04: "the visual is too big, much empty space, the
+information about it too small and too little, the buttons aren't clickable"). (1) A figure is drawn to the frame it is
+shown in and fills it: at most half of the frame blank, no blank piece over a fifth (`audit_drawing.js` EMPTY, judged
+at the figure's last step too) - crop a sparse drawing to what its steps show, or give the room to the words.
+(2) The words that explain a figure are at reading size: a figure whose steps are the slide's lines sits beside them
+(`two-col`), never as a large stage drawing over a row of small cards. (3) A line a step lights is the way to that
+step - tap it (or Enter) and the step plays; anything that looks like a button works like one. Checked at
+1280 × 800, 1024 × 768 and 1920 × 1080. → `course-visuals/kit` (`kit.js`, `kit.css`, `SPEC.md`), `course-module-ux`
+(`audit_drawing.js`), `course-module-ui` (`gb_compose.css`), 2.26.3
 
 **L50 · Every drawing whole and clean.** Owner, 2026-10-15, after the IGF pilot: an engine room poking out through
 the ship's sloping stern, a cargo area through the curved bow, a fuel tank and a vent-mast top cut off at the edge, labels

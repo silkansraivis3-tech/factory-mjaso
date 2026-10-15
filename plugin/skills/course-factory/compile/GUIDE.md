@@ -66,6 +66,13 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   like `gb_deck.js`) and, when the course made parts of its own, `assets\kit_parts.js` after them. Each spec step lights
   its slide line (`"line": 2` -> `[data-i="2"]` `.cur`, earlier steps `.lit`); entering the slide starts the figure at
   step 0. Check the specs first: `course-visuals\kit\scripts\check_kit.py module <module> --figures <figures\M02>`.
+- **A kit figure is laid out beside its words, and drawn to its panel (L49, operator 2026-10-15).** A figure whose
+  steps light the slide's lines takes `"composition": "two-col"` (the words at reading size in the left column, each
+  lit line a tap target for its step; `"boxes"` when the lines are separate items) - not `stage` with a `legend`, where a
+  large drawing left the explanation in a row of small cards. Draw the spec to the panel's own shape (about 640 × 390 in
+  the wide column, `scales()` in a deck reports the real scale), crop what the steps do not show, and run
+  `audit_drawing.js` (its EMPTY check) at 1280 × 800, 1024 × 768 and 1920 × 1080, at step 0 and at the last step.
+  `stage` stays for a figure that is the whole screen and has no lines to light.
 
 ## 2c · More build-sheet choices (2.25.3, proved on the pilot's Module 2)
 

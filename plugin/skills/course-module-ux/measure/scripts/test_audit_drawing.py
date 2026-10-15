@@ -80,6 +80,9 @@ def main():
               not [x for x in f if x["svg"] == "good"], [x for x in f if x["svg"] == "good"])
         check("a clean drawing through a shared <use> is silent", not [x for x in f if x["svg"] == "good-use"],
               [x for x in f if x["svg"] == "good-use"])
+        check("a drawing that leaves most of its frame blank (empty)", has("empty", "bad-empty"), f)
+        check("a drawing that fills its frame is silent", not [x for x in f if x["svg"] == "good-full"],
+              [x for x in f if x["svg"] == "good-full"])
         check("the verdict fails the page", (out or {}).get("verdict", "").startswith("VERDICT: FAIL"), out)
 
         fit = page_out(exe, FIX / "drawing_fit.html", prof) or {}

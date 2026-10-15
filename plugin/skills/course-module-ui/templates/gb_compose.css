@@ -546,7 +546,9 @@ figure{margin:0}
 .slide-body.stage > .copy,.slide-body.stage > p{flex:0 0 auto}
 .slide-body.stage:has(> .legend){gap:min(1.2vmin,12px)}
 .slide-body.stage > .fill.fig{gap:min(1vmin,10px)}
-.slide-body.stage > .legend li{padding-top:.4em;padding-bottom:.4em;font-size:clamp(13px,1.65vmin,21px)}
+/* the legend is the words of the screen, so it is set at reading size (the .copy size) - at 13-15 px the
+   information under a large drawing was too small to read from the room (operator, 2026-10-15, M01 s04) */
+.slide-body.stage > .legend li{padding-top:.4em;padding-bottom:.4em;font-size:clamp(15px,2.3vmin,30px)}
 /* a 3D model or a live component in the wide column takes the column's height, not a guess */
 .slide-body.two-col.fig-wide [data-stage]{height:max(320px,calc(100vh - 300px));width:100%}
 /* a numbered legend row under a stage drawing - its numbers match the drawing's */
@@ -554,7 +556,7 @@ figure{margin:0}
   gap:min(1.2vmin,12px)}
 .legend li{position:relative;min-height:44px;padding:.55em .75em .55em 2.5em;border:1.5px solid var(--line-l);
   border-radius:var(--r-s);background:var(--white);color:var(--ink);cursor:pointer;
-  font-size:clamp(13px,1.75vmin,22px);line-height:1.35}
+  font-size:clamp(15px,2.3vmin,30px);line-height:1.35}
 .legend.own-numbers li{padding-left:.75em}
 .legend.own-numbers li::before{content:none}
 .legend li::before{content:attr(data-n);position:absolute;left:.65em;top:.55em;width:1.45em;height:1.45em;
