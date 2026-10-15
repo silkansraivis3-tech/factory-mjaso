@@ -420,8 +420,47 @@ photographs still come first for anything a trainee must recognise (L48). → `c
 `kit.css`, `SPEC.md`, `PARTS.md`, `scripts/check_kit.py`, `scripts/kit_parts.py`, `GALLERY.html`), `course-factory`
 (the compiler places a kit spec and ships the kit) and `course-module-ui` (`design-system.json` installs it), 2.26.0
 
-**All fifty-one laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L51 are enforced first through `course-factory/SKILL.md`'s
+**L52 · Every photograph opens - large, with what it shows - and the factory does it unasked.** Operator,
+2026-10-15, from Aigars's review of the IGF pilot: *"we need images to be expandable, so a lightbox with maybe more
+explanation about the photo"*, and *"the factory needs to make it on its own"*. (1) Every photograph on a slide - the
+slide's picture, a photo beside the words, an inset - opens on a tap into a panel: the photograph whole and large, the
+slide's title, what the photograph shows, its credit; a tap on it there fills the screen. A slide that is a photograph
+with the words over it gets a Photo button. Close button, the dimmed screen, Escape; the deck does not move while it
+is open. (2) Nobody asks for it per slide and no build-sheet key turns it on: every compiled deck loads it.
+(3) What the panel says is the photo's own `description` in `assets\img\_photo_meta.json`, written when the photo is
+brought in: what is in the picture and what to look at, for a trainee, and never more than the picture evidences (a
+caption, like its credit line). A photo with no description is reported at build. Ported from the definition panel and
+full-screen figure of the oil/chemical course (Modules 6 and 10). → `course-module-ux` (`assets/gb_photo.js`,
+`gb_photo.css`), `course-module-ui` (`design-system.json` installs them), `course-factory` (`compile/` writes
+`data-about` / `data-credit` on every photograph), 2.27.0
+
+**L53 · A drawing of real things carries their real photographs - unasked.** Operator, 2026-10-15, looking at the
+IGF pilot's "five new spaces" drawing: *"if there is an illustration like this, there would also be a real image of it,
+maybe smaller, somewhere close, which you can click and see the real one"*. (1) Every drawn slide's real things - the
+parts its lines name ("Tank connection space - ...") and the labels the drawing writes on itself ("vent mast") - get
+their real photographs in a row under the drawing: small, numbered like the drawing's own steps, each opening in the
+L52 panel. At most four. (2) Matched by the photo's `shows` in `_photo_meta.json` - the plain names of what the picture
+really shows, written when the photo is brought in; a photo with no `shows` is pointed out. A cleared photo of another
+module of the course is copied in with its record (`copied_from`); one awaiting a rights review is never used. (3) A
+real thing with no photo is reported at build and listed in `working_claude\PHOTOS_TO_TAKE.md` (each module's section
+rewritten on every build, the operator's `## Notes` kept) - it is a photo to take at Novikontas, never a reason to
+stop the build. A thing counts as real when its name ends in one of `knowledge/media-and-tasks.json` `photo_things`.
+→ `course-factory` (`compile/`), `course-module-ux` (`gb_photo.css` `.photo-strip`, `gb_photo.js` `data-name`),
+`course-visuals` (`_photo_meta.schema.json` `shows`), 2.27.0
+
+**L54 · Every photograph once in the whole course.** Operator, 2026-10-15, after the same Viking Grace deck-tank photo
+came up under five drawings of IGF Module 3: *"don't have duplicate images - either a different one or none, on all
+modules"*. (1) A photograph is shown on one screen of the course only - as a slide's picture, an inset, a photo in a
+drawing or an L53 thumbnail. The same picture copied under another name in another module is the same photograph
+(the compiler compares where it came from, `url_or_origin`, else the file's bytes). (2) A thumbnail never repeats a
+photograph the course already shows: it takes a different photo of that thing, or none, and the thing goes on
+`PHOTOS_TO_TAKE.md` - another real photo of it lets it be shown. (3) A photograph placed by hand twice - on two slides,
+or on a slide of a later module than one that already shows it - is a problem the build reports, to fix with a different
+photo or none; the earlier module keeps it. A thumbnail elsewhere gives way on its module's next build, so build every
+module again after photos change. → `course-factory` (`compile/`), 2.27.0
+
+**All fifty-four laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L54 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

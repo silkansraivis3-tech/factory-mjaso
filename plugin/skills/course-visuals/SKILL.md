@@ -166,6 +166,8 @@ inactive state · changing conditions · the labels the learner is asked about �
 **Every asset carries provenance, a licence and a visual verification**, in a metadata file beside
 the file. Open and look at every image before using it, and record that you looked. A plausible
 photograph of the wrong equipment teaches false recognition and is worse than no photograph.
+A photograph's record also says, for the trainee, what it shows (`description` - the text of its panel, L52) and
+names the things in it (`shows` - the compiler puts the photo beside every drawing that names one of them, L53).
 
 Never present a generated illustration as a photograph, an interpolated value as a measured one, or
 one manufacturer's equipment as another's.

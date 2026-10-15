@@ -143,6 +143,13 @@ def main():
         check("visual_full + a photograph -> .slide.photo with photo-wrap and photo-copy",
               'class="slide photo"' in s01 and '<div class="photo-wrap"><img src="../assets/img/ship.jpg"' in s01 and "photo-copy" in s01)
         check("the photo's credit comes from _photo_meta.json", '<div class="credit">Photo: Jane Doe · Wikimedia Commons · CC BY-SA 4.0</div>' in s01, s01)
+        check("L52: the photograph carries what it shows and its credit for its panel, unasked",
+              'data-about="A ship taking gas." data-credit="Photo: Jane Doe · Wikimedia Commons · CC BY-SA 4.0"' in s01, s01)
+        check("L52: every deck loads the photo panel, after the deck engine",
+              'href="../assets/gb_photo.css"' in page and
+              page.find('src="../assets/gb_deck.js"') < page.find('src="../assets/gb_photo.js"') < page.find("GBDeck.init"))
+        check("design_system.py ships gb_photo.js and gb_photo.css with every module",
+              all(os.path.isfile(os.path.join(md, "assets", x)) for x in ("gb_photo.js", "gb_photo.css")))
         sys.path.insert(0, HERE)
         import compile_module as cm
         bl = "\n".join(cm.words_html(["Ways named in the Code:", "• reliquefy", "• burn it", "Venting: not acceptable."]))
@@ -275,6 +282,10 @@ def main():
         sheet = cs.load(bp)
         sheet["screens"]["s02"] = {"figure": "assets/img/ship.jpg"}
         sheet["screens"]["s03"]["legend"] = True
+        sheet["screens"]["s03"]["figure"] = "cards.html"
+        io.open(os.path.join(c6, "working_claude", "figures", "M01", "cards.html"), "w", encoding="utf-8").write(
+            '<div class="fig-cards"><img src="../assets/img/ship.jpg" alt="Truck to ship"><img src="../assets/img/ship.jpg" '
+            'alt="Logo" data-no-zoom /></div>')
         sheet["screens"]["s04"].update(inset={"photo": "assets/img/ship.jpg", "caption": "On board: the tanks."}, boxes=[2, 3])
         cs.save(bp, sheet)
         code, out = run(COMPILE, c6, "--module", "1")
@@ -285,12 +296,129 @@ def main():
         check("legend: true -> the lines as a numbered row under the drawing", '<ol class="legend">' in a3, a3)
         check("inset: a real photograph under the words, its caption and credit marked data-script-ignore",
               '<figure class="inset"><img src="../assets/img/ship.jpg"' in a4 and "<figcaption data-script-ignore>On board: the tanks. Photo:" in a4, a4)
+        check("L52: a photograph inside a drawing fragment gets its description and credit; data-no-zoom is left alone",
+              '<img src="../assets/img/ship.jpg" alt="Truck to ship" data-about="A ship taking gas." data-credit="Photo:' in a3
+              and '<img src="../assets/img/ship.jpg" alt="Logo" data-no-zoom />' in a3, a3)
+        check("L52: an inset photograph opens too, with what it shows and its credit",
+              'data-about="A ship taking gas."' in a4.split('<figure class="inset">')[1], a4)
         code, out = run(MATCH, c6, "--module", "1", "--part", "instructor")
         check("... and the words still match the approved script", code == 0, out)
+        cs.save(os.path.join(md6, "assets", "img", "_photo_meta.json"),
+                {"ship.jpg": dict(PHOTO_META["ship.jpg"], description="")})
+        code, out = run(COMPILE, c6, "--module", "1")
+        check("L52: a photograph with no description is reported - its panel would say nothing",
+              code == 1 and 'has no "description"' in out, out)
+        cs.save(os.path.join(md6, "assets", "img", "_photo_meta.json"), PHOTO_META)
+        io.open(os.path.join(md6, "assets", "gb_photo.js"), "a", encoding="utf-8").write("/* old */")
+        code, out = run(COMPILE, c6, "--module", "1")
+        check("a module whose gb_photo.js is not the factory's current one is told to update it",
+              code == 1 and "gb_photo.js is not the factory's current one" in out, out)
         io.open(os.path.join(md6, "assets", "gb_compose.css"), "a", encoding="utf-8").write("/* old */")
         code, out = run(COMPILE, c6, "--module", "1")
         check("a module whose shared style files are not the factory's current ones is told to update them",
               code == 1 and "design_system.py install --update" in out, out)
+
+        # ---- L53: a drawing of real things carries their real photographs, unasked
+        os.makedirs(os.path.join(tmp, "h"))
+        c8, md8 = new_course(os.path.join(tmp, "h"), script())
+        io.open(os.path.join(md8, "assets", "img", "room.jpg"), "wb").write(b"\xff\xd8room\xff\xd9")
+        cs.save(os.path.join(md8, "assets", "img", "_photo_meta.json"),
+                dict(PHOTO_META, **{"room.jpg": dict(PHOTO_META["ship.jpg"], shows=["gas safe machinery spaces"])}))
+        sib = os.path.join(c8, "modules", "module02", "assets", "img")
+        os.makedirs(sib)
+        io.open(os.path.join(sib, "esd.jpg"), "wb").write(b"\xff\xd8esd\xff\xd9")
+        cs.save(os.path.join(sib, "_photo_meta.json"), {
+            "esd.jpg": {"source": "Wikimedia Commons", "author": "Ann Roe", "licence": "CC0", "description": "An ESD room.",
+                        "shows": ["esd-protected machinery space"]},
+            "held.jpg": {"description": "x", "shows": ["fuel tank"], "rights_state": "RIGHTS_REVIEW_REQUIRED"}})
+        io.open(os.path.join(sib, "held.jpg"), "wb").write(b"\xff\xd8\xff\xd9")
+        code, out = run(COMPILE, c8, "--module", "1")
+        p8 = deck(md8)
+        h4 = section(p8, "s04")
+        check("L53: each real thing a drawing names gets its photo under the drawing, matched by 'shows' (plural or not)",
+              '<div class="photo-strip" data-script-ignore>' in h4 and 'data-name="Gas safe machinery space"' in h4
+              and 'data-about="A ship taking gas."' in h4, h4[-900:])
+        check("L53: a photo from another module of the course is copied in with its record",
+              'src="../assets/img/esd.jpg"' in h4 and os.path.isfile(os.path.join(md8, "assets", "img", "esd.jpg"))
+              and cs.load(os.path.join(md8, "assets", "img", "_photo_meta.json"))["esd.jpg"].get("copied_from") == "module02", out)
+        check("L54: the slide's own photograph is never shown again as a thumbnail", p8.count('src="../assets/img/ship.jpg"') == 1, p8.count("ship.jpg"))
+        check("L53: a photo awaiting a rights review is never used", "held.jpg" not in p8 and
+              not os.path.isfile(os.path.join(md8, "assets", "img", "held.jpg")))
+        check("L53: the photo strip's words are marked data-script-ignore, and the deck still matches the script",
+              run(MATCH, c8, "--module", "1", "--part", "instructor")[0] == 0)
+        check("L53: a slide that is a photograph gets no strip", "photo-strip" not in section(p8, "s01"))
+        take = os.path.join(c8, "working_claude", "PHOTOS_TO_TAKE.md")
+        check("L53: a build with every drawn thing photographed says so in PHOTOS_TO_TAKE.md",
+              os.path.isfile(take) and "every drawn thing has its photograph" in io.open(take, encoding="utf-8").read(), out)
+        cs.save(os.path.join(md8, "assets", "img", "_photo_meta.json"), PHOTO_META)
+        io.open(take, "a", encoding="utf-8").write("- my own note\n")
+        code, out = run(COMPILE, c8, "--module", "1", "--force")
+        t = io.open(take, encoding="utf-8").read()
+        check("L53: a drawn thing with no photo is reported and listed for Novikontas; the operator's notes are kept",
+              "Gas safe machinery space · s04" in out and "- Gas safe machinery space · s04" in t and "- my own note" in t
+              and t.count("## M01") == 1, t)
+        check("L53: a photo without 'shows' is pointed out - no drawing can use it", 'without "shows"' in out and "ship.jpg" in out, out)
+        check("L53: the build is not blocked by a photo still to take (exit 0)", code == 0, out)
+        os.makedirs(os.path.join(tmp, "i"))
+        c9, md9 = new_course(os.path.join(tmp, "i"), script())
+        cs.save(os.path.join(md9, "assets", "img", "_photo_meta.json"),
+                {"ship.jpg": dict(PHOTO_META["ship.jpg"], shows=["gas safe machinery space"])})
+        io.open(os.path.join(c9, "working_claude", "figures", "M01", "row3d.html"), "w", encoding="utf-8").write(
+            '<div class="fill m-3d-col"><canvas></canvas><div class="m-ctl">x</div></div>')
+        bp9 = os.path.join(c9, "working_claude", "script", "M01.build.json")
+        sh9 = cs.load(bp9)
+        sh9["screens"]["s04"] = {"figure": "row3d.html", "inset": {"photo": "assets/img/ship.jpg", "under": "figure"}}
+        cs.save(bp9, sh9)
+        run(COMPILE, c9, "--module", "1")
+        i4 = section(deck(md9), "s04")
+        frag = i4[i4.find('<div class="fill m-3d-col">'):i4.find("</div></div>", i4.find('<div class="fill m-3d-col">'))]
+        check("a 3D fragment that lays itself out keeps its row: the inset and the L53 strip go with the words, never beside the canvas",
+              "<figure" not in frag and "photo-strip" not in frag and '<figure class="inset">' in i4, i4[-900:])
+        # ---- L54: every photograph once in the whole course
+        os.makedirs(os.path.join(tmp, "j"))
+        c10, md10 = new_course(os.path.join(tmp, "j"), script())
+        io.open(os.path.join(md10, "assets", "img", "room.jpg"), "wb").write(b"\xff\xd8room\xff\xd9")
+        cs.save(os.path.join(md10, "assets", "img", "_photo_meta.json"), dict(PHOTO_META, **{"room.jpg": {
+            "description": "A machinery space.", "shows": ["gas safe machinery space"]}}))
+        m0 = os.path.join(c10, "modules", "module00")              # an earlier module, already built
+        os.makedirs(os.path.join(m0, "assets", "img"))
+        os.makedirs(os.path.join(m0, "presentation"))
+        io.open(os.path.join(m0, "assets", "img", "m00_room.jpg"), "wb").write(b"\xff\xd8room\xff\xd9")       # the same bytes
+        io.open(os.path.join(m0, "assets", "img", "m00_ship.jpg"), "wb").write(b"\xff\xd8\xff\xd9")
+        io.open(os.path.join(m0, "presentation", "index.html"), "w", encoding="utf-8").write(
+            '<section class="slide" id="s07"><img src="../assets/img/m00_ship.jpg"></section>'
+            '<section class="slide" id="s08"><div class="photo-strip" data-script-ignore><figure class="pthumb">'
+            '<img src="../assets/img/m00_room.jpg"></figure></div></section>')
+        bp10 = os.path.join(c10, "working_claude", "script", "M01.build.json")
+        sh10 = cs.load(bp10)
+        sh10["screens"]["s02"] = {"figure": "assets/img/ship.jpg"}
+        cs.save(bp10, sh10)
+        code, out = run(COMPILE, c10, "--module", "1")
+        p10 = deck(md10)
+        check("L54: one photograph placed by hand on two slides is a problem to fix (exit 1)",
+              code == 1 and "already shown on M01 s01" in out and "(s02)" in out, out)
+        check("L54: a photograph an earlier module already shows (the same file under another name) is a problem here",
+              "already shown on M00 s07" in out, out)
+        check("L54: a thumbnail never repeats a photograph another module shows - it gives way and the thing is listed",
+              "room.jpg" not in p10 and "Gas safe machinery space · s04" in out, out)
+        check("L54: a thumbnail elsewhere is not a problem for a photo placed by hand here - that thumbnail gives way",
+              "M00 s08" not in out, out)
+        kitfig = ('<div class="fill fig kit-fig"><script type="application/json" id="k">' + json.dumps(
+            {"parts": [{"type": "space", "label": "ENGINE\nROOM"}, {"type": "space", "label": "TCS"}, {"type": "text", "text": "up the vent mast"},
+                       {"type": "text", "text": "LNG LIQUID LINE"}, {"type": "text", "text": "Tank"}, {"type": "text", "text": "0 % LEL"}],
+             "steps": [{"line": 2}, {"line": [1, 3]}]}) + "</script></div>")
+        got = cm.drawn_parts(["Tank connection space - around the valves.", "Fuel tank - in the hold.", "Gas mode: pilot oil."], kitfig)
+        check("L53: parts come from the slide's terms with the drawing's own step numbers (one line or several), then its labels;"
+              " an abbreviation, a bare 'Tank', a reading and a leading 'up the' are dropped",
+              got == [(2, "Tank connection space"), (1, "Fuel tank"), (2, "Gas mode"), (None, "Engine room"), (None, "Vent mast"),
+                      (None, "LNG liquid line")], got)
+        check("L53: a photo of an 'LNG fuel tank' shows a 'fuel tank', but a 'fuel tank' photo is never an 'oil fuel tank'",
+              cm.shows_it("LNG fuel tanks", "Fuel tank") and not cm.shows_it("fuel tank", "Oil fuel tank")
+              and not cm.shows_it("fuel tank", "Tank") and cm.shows_it("vent mast", "Vent masts"))
+        check("L53: the list is one row per thing, with every slide that draws it",
+              cm.by_thing([("s04", 2, "Vent mast"), ("s09", None, "vent masts"), ("s09", None, "Vent mast")]) == ["Vent mast · s04 (2), s09"])
+        check("L53: only a real thing is listed as a photo to take - 'Gas mode' is not",
+              cm.is_thing("Fuel tank") and cm.is_thing("Engine room") and not cm.is_thing("Gas mode"))
 
         # ---- a figure-kit spec (L51): data in the page, the kit shipped, the deck's own step buttons
         os.makedirs(os.path.join(tmp, "g"))

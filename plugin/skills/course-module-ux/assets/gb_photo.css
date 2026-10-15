@@ -1,0 +1,105 @@
+/* ==========================================================================
+   gb_photo.css — the look of gb_photo.js: every photograph on a deck screen
+   opens in a panel, and from there full screen.
+
+   The geometry keeps the panel's promise that nothing spills out of it
+   (ported from the definition panel of the oil/chemical course, Modules 6
+   and 10, owner rule 2026-09-15):
+     - the panel is at most 94vw wide and 90vh tall, so it can never be larger
+       than the screen it is centred in;
+     - the photograph is shown WHOLE (contain, never cropped) and takes the
+       larger column; the words scroll inside their own column;
+     - the close button is 56 px on the panel's corner (course-task-ux §8.3);
+     - portrait or narrow: the photograph above, the words under it.
+   Motion: one short settle on open, none under prefers-reduced-motion.
+   ========================================================================== */
+:root{
+  --gbp-scrim: rgba(1,17,17,.8);          /* the dimmed screen around the panel (--ink at 80 %) */
+  --gbp-scrim-full: rgba(1,17,17,.96);    /* behind a photograph shown full screen */
+  --gbp-shadow: 0 30px 80px rgba(1,17,17,.42);
+  --gbp-shadow-d: 0 30px 80px rgba(0,0,0,.65);
+  --gbp-btn: rgba(1,17,17,.55);           /* the Photo button over a photograph */
+  --gbp-btn-hover: rgba(1,17,17,.75);
+  --gbp-btn-line: rgba(255,255,255,.55);
+}
+.slide img.gbphoto-can{cursor:zoom-in}
+
+/* L53: the real photographs of what a drawing shows, in a row under it - small, numbered like the drawing,
+   each one opening in the panel. Labels stay at the 12.5 px floor (course-module-ux audit_deck.js). */
+.photo-strip{flex:0 0 auto;display:flex;justify-content:center;gap:min(1.4vmin,14px);width:100%;margin:0}
+.photo-strip .pthumb{margin:0;flex:0 1 min(19vmin,180px);min-width:0;display:flex;flex-direction:column;gap:.35em}
+.slide .photo-strip .pthumb img{display:block;width:100%;height:min(11vh,104px);max-height:none;object-fit:cover;border-radius:var(--r-s);
+  border:1px solid var(--line-l);box-shadow:var(--sh);background:var(--ink)}
+.copy .photo-strip{justify-content:flex-start}
+.slide.dark .photo-strip .pthumb img{border-color:var(--line-d);box-shadow:var(--sh-d)}
+.photo-strip figcaption{display:flex;align-items:baseline;gap:.4em;font-size:clamp(12.5px,1.3vmin,16px);line-height:1.25;
+  color:var(--dim-l);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slide.dark .photo-strip figcaption{color:var(--dim-d)}
+.photo-strip figcaption b{flex:0 0 auto;display:inline-grid;place-items:center;width:1.6em;height:1.6em;border-radius:50%;
+  background:var(--navy);color:var(--white);font-size:.9em}
+.slide.dark .photo-strip figcaption b{background:var(--blue);color:var(--ink)}
+.slide.photo .photo-scrim{cursor:zoom-in}
+
+/* a slide that IS a photograph: the words lie over it, so it gets a button */
+.photo-open{position:absolute;top:calc(min(7.4vmin,62px) + min(1.6vmin,14px));right:min(1.6vmin,14px);z-index:5;
+  display:inline-flex;align-items:center;gap:.45em;min-height:48px;min-width:48px;padding:0 1em;
+  border-radius:999px;border:1px solid var(--gbp-btn-line);background:var(--gbp-btn);color:var(--white);
+  font:700 clamp(12.5px,1.55vmin,18px)/1 var(--font);letter-spacing:.06em;cursor:zoom-in}
+.photo-open:hover{background:var(--gbp-btn-hover);border-color:var(--white)}
+.photo-open:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+
+.gbphoto{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;
+  background:var(--gbp-scrim);padding:min(3vmin,30px);cursor:zoom-out;animation:gbp-fade .18s ease-out}
+.gbphoto-panel{position:relative;cursor:auto;box-sizing:border-box;outline:none;
+  display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;
+  grid-template-areas:"shot say" "hint hint";column-gap:min(3vmin,30px);row-gap:min(1.4vmin,14px);
+  width:min(1280px,94vw);max-height:90vh;overflow:hidden;padding:min(3vmin,30px);
+  background:var(--white);border:1px solid var(--line-l);border-radius:var(--r-l);
+  box-shadow:var(--gbp-shadow);animation:gbp-settle .18s ease-out}
+.gbphoto.on-dark .gbphoto-panel{background:var(--deep-2);border-color:var(--line-d);box-shadow:var(--gbp-shadow-d)}
+@keyframes gbp-fade{from{opacity:0}to{opacity:1}}
+@keyframes gbp-settle{from{transform:translateY(10px) scale(.985)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.gbphoto,.gbphoto-panel{animation:none}}
+
+.gbphoto-shot{grid-area:shot;margin:0;min-width:0;min-height:0;display:flex;flex-direction:column;gap:.5em;align-self:center}
+.gbphoto-shot img{display:block;width:100%;height:auto;max-height:calc(90vh - min(6vmin,60px) - 4.5em);
+  object-fit:contain;border-radius:var(--r-m);background:var(--ink);cursor:zoom-in}
+.gbphoto-cue{font-size:clamp(12.5px,1.3vmin,16px);color:var(--faint-l);text-align:center}
+.gbphoto.on-dark .gbphoto-cue{color:var(--faint-d)}
+
+.gbphoto-say{grid-area:say;min-width:0;min-height:0;max-height:calc(90vh - min(6vmin,60px) - 3em);
+  overflow-y:auto;overscroll-behavior:contain;padding-top:min(5vmin,52px);padding-right:.2em}
+.gbphoto-kicker{margin:0 0 .35em;font-size:clamp(12.5px,1.35vmin,17px);letter-spacing:.16em;
+  text-transform:uppercase;font-weight:700;color:var(--amber-ink)}
+.gbphoto.on-dark .gbphoto-kicker{color:var(--amber)}
+.gbphoto-name{margin:0 0 .5em;font-size:clamp(20px,2.8vmin,36px);font-weight:800;line-height:1.12;color:var(--navy)}
+.gbphoto.on-dark .gbphoto-name{color:var(--txt-d)}
+.gbphoto-about{margin:0 0 1em;font-size:clamp(14px,1.95vmin,24px);line-height:1.55;color:var(--dim-l);overflow-wrap:break-word}
+.gbphoto.on-dark .gbphoto-about{color:var(--dim-d)}
+.gbphoto-credit{margin:0;font-size:clamp(12.5px,1.3vmin,16px);line-height:1.4;color:var(--faint-l);overflow-wrap:anywhere}
+.gbphoto.on-dark .gbphoto-credit{color:var(--faint-d)}
+.gbphoto-hint{grid-area:hint;margin:0;text-align:center;font-size:clamp(12.5px,1.3vmin,16px);color:var(--faint-l)}
+.gbphoto.on-dark .gbphoto-hint{color:var(--faint-d)}
+
+.gbphoto-x{position:absolute;top:min(1.6vmin,16px);right:min(1.6vmin,16px);z-index:2;
+  width:56px;height:56px;border-radius:var(--r-s);cursor:pointer;
+  border:1px solid var(--line-l);background:var(--white);color:var(--navy);font:700 28px/1 var(--font)}
+.gbphoto-x:hover{border-color:var(--blue)}
+.gbphoto-x:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.gbphoto.on-dark .gbphoto-x{background:var(--deep-3);border-color:var(--line-d);color:var(--txt-d)}
+
+/* full screen: the photograph alone, the close button over it */
+.gbphoto.is-full{background:var(--gbp-scrim-full);padding:min(2vmin,20px)}
+.gbphoto.is-full .gbphoto-panel{display:flex;align-items:center;justify-content:center;width:100%;height:100%;max-height:none;
+  padding:0;background:transparent;border:0;box-shadow:none;animation:none}
+.gbphoto.is-full .gbphoto-say,.gbphoto.is-full .gbphoto-hint,.gbphoto.is-full .gbphoto-cue{display:none}
+.gbphoto.is-full .gbphoto-shot{width:100%;height:100%;justify-content:center}
+.gbphoto.is-full .gbphoto-shot img{width:auto;max-width:100%;max-height:calc(100vh - min(4vmin,40px));margin:0 auto;cursor:zoom-out}
+.gbphoto.is-full .gbphoto-x{position:fixed;top:min(2vmin,20px);right:min(2vmin,20px)}
+
+@media (max-width:820px),(orientation:portrait){
+  .gbphoto-panel{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto;
+    grid-template-areas:"shot" "say" "hint";overflow-y:auto;padding-top:min(10vmin,76px)}
+  .gbphoto-shot img{max-height:46vh}
+  .gbphoto-say{max-height:none;overflow:visible;padding-top:0}
+}

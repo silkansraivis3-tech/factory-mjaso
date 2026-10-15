@@ -74,6 +74,22 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   `audit_drawing.js` (its EMPTY check) at 1280 × 800, 1024 × 768 and 1920 × 1080, at step 0 and at the last step.
   `stage` stays for a figure that is the whole screen and has no lines to light.
 
+- **Every photograph opens (L52) - nothing to ask for.** Every compiled deck loads `gb_photo.js`: a tap on any photo
+  (the slide's picture, a split photo, an inset) opens it large with the slide's title, what it shows and its credit, and
+  from there full screen; a full-screen photo slide gets a Photo button. The words come from the photo's `description` in
+  `_photo_meta.json` - write it for the trainee when the photo comes in; a photo without one is reported at build.
+- **A drawing carries the real photos of what it shows (L53) - nothing to ask for.** The compiler takes the real things a
+  drawn slide names - the term before " - " in its lines (with the kit figure's step number) and the drawing's own labels -
+  and puts the matching photos in a row under the drawing (`.photo-strip`, at most four), each opening in the panel.
+  Matched by `"shows"` in `_photo_meta.json`: give every photo the plain names of what it really shows, e.g.
+  `"shows": ["bunkering station", "LNG bunker hose"]`. A photo of another module is copied in with `copied_from`; one
+  awaiting a rights review is never used. Every real thing still without a photo is printed and written to
+  `working_claude\PHOTOS_TO_TAKE.md` (the module's section is rewritten each build; `## Notes` is yours).
+- **Every photograph once in the whole course (L54).** No photo is shown on two screens - in this module or any other;
+  a copy under another name is the same photo (same `url_or_origin`, or the same bytes). A thumbnail takes a different
+  photo or none; a photo you placed (picture, inset, photo in a drawing) that is already shown is reported - choose a
+  different one or none (the earlier module keeps it). After photos change, build every module again.
+
 ## 2c · More build-sheet choices (2.25.3, proved on the pilot's Module 2)
 
 | Key | What it does |

@@ -533,6 +533,9 @@ figure{margin:0}
    a module's own height cap for them is lifted here, where they are the main picture */
 .fill.fig > div:not(.mediabar):not(.inset){width:100%}
 .fill.fig figure svg,.fill.fig figure img{width:100%;height:auto;max-height:max(220px,calc(100vh - 360px))}
+/* an inset photo under a drawing keeps its inset size - the figure rule above would grow it to the column and squash
+   a kit drawing to nothing (IGF M02 s15, M03 s14, 2026-10-15) */
+.fill.fig figure.inset img{width:44%;max-height:min(26vh,230px)}
 .fill.fig figure figcaption{font-size:clamp(12.5px,1.6vmin,18px)}
 /* `.fill svg{width:100%}` above is for the drawing; a control's icon inside the box keeps its own size -
    measured: without this the step buttons' chevrons grew to 40 px and their labels broke onto two lines */

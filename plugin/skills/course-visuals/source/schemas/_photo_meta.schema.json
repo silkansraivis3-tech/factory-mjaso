@@ -50,7 +50,16 @@
       },
       "description": {
         "type": "string",
-        "description": "what the photograph LITERALLY shows - not what it is used to teach"
+        "description": "what the photograph LITERALLY shows - not what it is used to teach. Trainees read it: it is the text of the photo's panel on every slide (L52, gb_photo.js), so write it for them - what is in the picture and where to look, in plain words, never more than the picture evidences"
+      },
+      "shows": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "L53: the plain names of the on-board things the photograph really shows, as slides and drawings name them, lower case, no abbreviations - e.g. [\"fuel tank\", \"type C tank\"], [\"bunkering station\"]. The compiler puts the photo beside every drawing that names one of them. Only what the picture evidences: a cargo tank of an LNG carrier is a \"membrane tank\", never a \"fuel tank\""
+      },
+      "copied_from": {
+        "type": "string",
+        "description": "set by the compiler when it copied the photo in from another module of the course (L53)"
       },
       "teaching_purpose": {
         "type": "string",

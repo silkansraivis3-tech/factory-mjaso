@@ -627,6 +627,44 @@ Tested on IGF Basic M02 compiled from a copy of the course (s03, s04, s14): step
 steady under the finger. Found on the way, not changed: the shared `.slide.dark::before` watermark reaches 112 px below
 a dark slide, which an `overflow:hidden` slide can still be scrolled by (`overflow:clip` would close it).
 
+## 4z · Every photograph opens, unasked (2.27.0, 2026-10-15)
+
+Aigars's review of the IGF pilot: real photos for the illustrations, and *"images expandable - a lightbox with more
+explanation about the photo"*; the operator: *"the factory needs to make it on its own"*. **L52**. New
+`course-module-ux/assets/gb_photo.js` + `gb_photo.css` (ported from the definition panel and full-screen figure of the
+oil/chemical course, Modules 6 and 10, `course_deck_ext.js`): a tap on any photograph on a slide opens a panel - the
+photo whole, the slide's title, what it shows, its credit - and a tap there fills the screen; a `.slide.photo` gets a
+48 px Photo button; close button 56 px, the dimmed screen, Escape (one layer at a time); keys and swipes stay with the
+panel. `design-system.json` installs both. Compiler: every photograph `<img>` - slide picture, split, inset, and photos
+inside drawing fragments and asides - gets `data-about` (the photo's `_photo_meta.json` `description`) and
+`data-credit`; a photo with no description is reported; the module's copies are checked like the kit's.
+`test_compile_module.py` +7 checks (66). `_photo_meta.schema.json`: the description is now trainee-facing. IGF Basic
+M01–M03 recompiled: 12 photographs open, `check_script_match` and `check_course_package` pass. Not done: tap-to-open
+*cards* from the same course - automatic cards would hide the lines L49 lights from the figure's steps; they wait for
+the script rewrite (claim titles, one lead line) that Aigars asked for.
+
+**L53**, the same day - the operator, at M01 s04 ("five new spaces"): a drawing of real things should also show the real
+thing, small and close, to tap. The compiler's `drawn_parts` takes a drawn slide's real things - the term before " - "
+in each line (numbered from the kit figure's step whose `line` it is) and the labels the drawing writes on itself (kit
+`label`/`text`, SVG `<text>`; an abbreviation alone skipped) - matches photos by the new `shows` field
+(`_photo_meta.schema.json`; plural-insensitive, a one-word name only exactly), and puts up to four in a `.photo-strip`
+under the drawing, each opening in the L52 panel headed by its part (`data-name`). The pool is the module's photos, then
+the course's other modules' (copied in with `copied_from`); `RIGHTS_REVIEW` / `REJECTED` never. A real thing - its last
+word in `knowledge/media-and-tasks.json` `photo_things` - with no photo is printed and written to
+`working_claude\PHOTOS_TO_TAKE.md` (per-module sections, `## Notes` kept); a photo without `shows` is pointed out; the
+build is never blocked. `test_compile_module.py` +11 checks (77).
+
+**L54**, the same day - the operator, seeing the one Viking Grace tank photo under five M03 drawings: *"no duplicate
+images - a different one or none, on all modules"*. `photo_id` (the photo's `url_or_origin`, else its bytes) makes a copy
+in another module the same photograph; `compile_deck` builds in two passes - first the photos placed by hand (one shown
+twice in the module, or shown by an earlier module's deck by hand, is a problem), then the thumbnails, which take only
+what no built deck of the course shows (`shown_elsewhere`; another deck's thumbnails give way on that deck's next build).
+Fixed in the same pass, from the photo session's measurements at 1280 × 800: the strip and an `"under": "figure"` inset
+inside a fragment that is its own row-flex `.fill` (3D model + controls) squeezed the canvas to 0 px - they now go with
+the words unless the drawing's box is the compiler's own (`OWN_BOX`); the stage-with-legend layout no longer drops what
+goes with the words; `gb_compose.css` `.fill.fig figure.inset img` keeps an inset under a kit figure at inset size (it
+grew to ~590 × 440 and squashed `.kit-screen`). `test_compile_module.py` 85.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

@@ -92,6 +92,7 @@ IMAGES = (".jpg", ".jpeg", ".png", ".webp", ".gif")
 KIT_SPEC = ".kit.json"                       # a figure made from the figure kit (course-visuals/kit)
 KIT_FILES = ("kit.css", "kit.js")             # shipped with the module by design_system.py, like gb_deck.js
 KIT_PARTS = "assets/kit_parts.js"             # parts this course added to the kit, until they are merged
+PHOTO_FILES = ("gb_photo.css", "gb_photo.js")  # every photograph opens (L52) - in every deck, shipped like gb_deck.js
 COMPOSITIONS = ("opener", "flow", "two-col", "wide-left", "wide-right", "stage")
 STAGE_MAX_WORDS = 45
 STATEMENT_MAX_WORDS = 22
@@ -371,13 +372,306 @@ def figure_html(mdir, figdir, s, b, probs, where):
     if rel.lower().endswith(KIT_SPEC):
         return kit_figure(body, s, probs, where), "", False
     if body is not None:
-        return body, "", False
+        return photos_in(body, mdir, probs, where), "", False
     meta = photo_meta(mdir, rel)
     alt = b.get("alt") or first_sentence(s.get("visual")) or first_sentence(meta.get("description"))
     credit = b.get("credit") or credit_line(meta)
     if meta.get("attribution_required") and not credit:
         probs.append("%s: the photograph %s needs a credit line, and assets\\img\\_photo_meta.json does not give one" % (where, rel))
-    return '<img src="../%s" alt="%s">' % (a(rel), a(alt)), credit, True
+    return '<img src="../%s" alt="%s"%s>' % (a(rel), a(alt), photo_panel(meta, credit, rel, probs, where)), credit, True
+
+
+def photo_panel(meta, credit, rel, probs, where):
+    """L52: every photograph opens (gb_photo.js) - large, with what it shows and its credit. What it shows is the
+    photo's own record, written when the photo was brought in: its "description" says what is in the picture and
+    never more than the picture evidences, like a caption."""
+    about = (meta.get("description") or "").strip()
+    if not about:
+        probs.append("%s: the photograph %s has no \"description\" in its _photo_meta.json - its panel (L52) would say "
+                     "nothing about what it shows" % (where, rel))
+    return "".join(' %s="%s"' % (k, a(v)) for k, v in (("data-about", about), ("data-credit", credit)) if v)
+
+
+IMG_TAG = re.compile(r'<img\b(?![^>]*\bdata-(?:about|no-zoom)\b)[^>]*\bsrc="\.\./([^"]+)"[^>]*?(/?)>', re.I)
+
+
+def photos_in(body, mdir, probs, where):
+    """a photograph inside a drawing fragment (four photo cards, a photo in an aside) opens like any other (L52):
+    its <img> gets the photo's description and credit from the module's own _photo_meta.json"""
+    def one(m):
+        rel = m.group(1)
+        if not rel.lower().endswith(IMAGES) or not os.path.isfile(os.path.join(mdir, rel)):
+            return m.group(0)
+        meta = photo_meta(mdir, rel)
+        if not meta:
+            return m.group(0)
+        tag, close = m.group(0), m.group(2)
+        cut = len(tag) - (2 if close else 1)
+        return tag[:cut].rstrip() + photo_panel(meta, credit_line(meta), rel, probs, where) + tag[cut:]
+    return IMG_TAG.sub(one, body)
+
+
+# ------------------------------------------------------------------ L53: a drawing of real things carries their photos
+THINGS = None
+JSON_DATA = re.compile(r'<script type="application/json"[^>]*>(.*?)</script>', re.S)
+SVG_TEXT = re.compile(r"<text\b[^>]*>(.*?)</text>", re.S | re.I)
+IMG_SRC = re.compile(r'<img\b[^>]*\bsrc="\.\./([^"]+)"', re.I)
+NOT_CLEARED = ("REVIEW", "REJECT")
+GENERIC = {"tank", "space", "room", "engine", "pipe", "line", "valve", "pump", "unit", "deck", "panel", "station", "door",
+           "hold", "vessel", "ship", "gas", "fuel", "button", "hose", "arm", "fan", "door"}
+ACRONYMS = {"LNG", "CNG", "LPG", "ESD", "GVU", "TCS", "FPR", "IGF", "LEL", "BOG", "GCU", "PRV", "ERS", "QCDC", "IMO"}
+TO_TAKE = "PHOTOS_TO_TAKE.md"
+
+
+def norm(s):
+    """lower case, plain words, a plural made singular - "Fuel tanks" and "fuel tank" are one thing"""
+    words = re.sub(r"[^a-z0-9 ]+", " ", (s or "").lower()).split()
+    return [w[:-1] if len(w) > 3 and w.endswith("s") and not w.endswith("ss") else w for w in words]
+
+
+def same_thing(a_, b_):
+    """one name is the other, or the longer holds the shorter whole when the shorter has two words or more
+    ("LNG fuel tank" holds "fuel tank"; "tank" alone never matches every tank)"""
+    x, y = norm(a_), norm(b_)
+    if not x or not y:
+        return False
+    if x == y:
+        return True
+    short, long_ = sorted((x, y), key=len)
+    return len(short) >= 2 and any(long_[i:i + len(short)] == short for i in range(len(long_) - len(short) + 1))
+
+
+def shows_it(shown, name):
+    """the photo shows the drawn thing: the same name, or the photo's name is MORE specific and holds the drawn one
+    whole ("LNG fuel tank" shows a "fuel tank"). Never the other way: a photo of a "fuel tank" is no "oil fuel tank"."""
+    x, y = norm(name), norm(shown)
+    if not x or not y:
+        return False
+    return x == y or (len(x) >= 2 and any(y[i:i + len(x)] == x for i in range(len(y) - len(x) + 1)))
+
+
+def is_thing(name):
+    global THINGS
+    if THINGS is None:
+        THINGS = {" ".join(norm(w)) for w in cs.MEDIA["floors"].get("photo_things") or []}
+    w = norm(name)
+    return 1 <= len(w) <= 5 and w[-1] in THINGS
+
+
+def drawn_labels(fig):
+    """the names a drawing writes on itself: a kit spec's part labels and text, an SVG's <text>"""
+    out = []
+    for m in JSON_DATA.finditer(fig):
+        try:
+            spec = json.loads(m.group(1).replace("<\\/", "</"))
+        except ValueError:
+            continue
+        for p in spec.get("parts") or [] if isinstance(spec, dict) else []:
+            out += [p[k] for k in ("label", "text") if isinstance(p.get(k), str)]
+    out += [re.sub(r"<[^>]+>", " ", m.group(1)) for m in SVG_TEXT.finditer(JSON_DATA.sub("", fig))]
+    return [" ".join(html.unescape(x).split()) for x in out]
+
+
+def step_numbers(fig):
+    """a kit figure's numbered steps: {slide line: step number}, so a thumbnail carries the drawing's own number"""
+    nums = {}
+    for m in JSON_DATA.finditer(fig):
+        try:
+            spec = json.loads(m.group(1).replace("<\\/", "</"))
+        except ValueError:
+            continue
+        for k, st in enumerate(spec.get("steps") or [] if isinstance(spec, dict) else [], 1):
+            ln = st.get("line") if isinstance(st, dict) else None
+            for x in ln if isinstance(ln, list) else [ln]:       # a step may light one line or several
+                if isinstance(x, int) or (isinstance(x, str) and x.isdigit()):
+                    nums.setdefault(int(x), k)
+    return nums
+
+
+def drawn_parts(lines, fig):
+    """the real things a drawn slide names, in order: the slide's own terms ("Tank connection space - ...") with the
+    drawing's step number, then the labels the drawing writes on itself. An abbreviation alone (TCS) is skipped -
+    the slide or the key names it in full."""
+    nums, parts = step_numbers(fig), []
+
+    def add(num, name):
+        name = re.sub(r"^\d+\s*[.)·:-]?\s*", "", name)
+        name = re.sub(r"(?i)^(?:(?:in|to|from|at|on|of|into|up|down|over|through|via)\s+)?(?:(?:the|a|an|its|two|three|four|both)\s+)+",
+                      "", name)
+        name = name.strip(" .·,;:-–")
+        if not name or (name.isupper() and " " not in name and len(name) <= 5) or len(name.split()) > 5:
+            return
+        if " " not in name and norm(name) and norm(name)[0] in GENERIC:
+            return                                         # "Tank", "Engine" alone - the slide names which one
+        if any(w in name for w in "=→/%°") or re.search(r"\d", name):
+            return                                         # a key or a reading, not a thing
+        if name.isupper():                                 # "LNG LIQUID LINE" -> "LNG liquid line"
+            name = " ".join(w if w in ACRONYMS else w.lower() for w in name.split())
+        if not any(same_thing(name, n) for _, n in parts):
+            parts.append((num, name[:1].upper() + name[1:]))
+
+    for i, x in enumerate(lines, 1):
+        m = TERM.match(x.lstrip("•").strip())
+        if m and 1 <= len(m.group(1).split()) <= 5:
+            add(nums.get(i), m.group(1))
+    for lab in drawn_labels(fig):
+        add(None, lab)
+    return parts
+
+
+def photo_pool(mdir):
+    """every cleared photograph that says what it shows: the module's own first, then the other modules' of the
+    course (a match there is copied in with its record)"""
+    def of(d):
+        p = os.path.join(d, "assets", "img", "_photo_meta.json")
+        try:
+            meta = json.load(io.open(p, encoding="utf-8"))
+        except (OSError, ValueError):
+            return []
+        return [(name, m, d, photo_id(d, "assets/img/" + name, m)) for name, m in sorted(meta.items()) if isinstance(m, dict)
+                and not any(x in str(m.get("rights_state") or "").upper() for x in NOT_CLEARED)
+                and os.path.isfile(os.path.join(d, "assets", "img", name))]
+    return of(mdir) + [x for d in other_modules(mdir) for x in of(d)]
+
+
+def other_modules(mdir):
+    root = os.path.dirname(os.path.abspath(mdir))
+    return sorted(os.path.join(root, x) for x in os.listdir(root)
+                  if os.path.join(root, x) != os.path.abspath(mdir) and os.path.isdir(os.path.join(root, x, "assets")))
+
+
+# ------------------------------------------------------------------ L54: every photograph once in the whole course
+def photo_id(d, rel, meta=None):
+    """what makes two files the same photograph: where it came from (url_or_origin), else the same bytes - so a
+    copy under another name in another module is still the same picture"""
+    meta = meta if meta is not None else photo_meta(d, rel)
+    u = str((meta or {}).get("url_or_origin") or "").strip().lower()
+    if u:
+        return "u:" + u
+    try:
+        return "h:" + hashlib.sha256(io.open(os.path.join(d, rel), "rb").read()).hexdigest()
+    except OSError:
+        return "f:" + rel
+
+
+def module_label(d):
+    m = re.search(r"(\d+)$", os.path.basename(os.path.abspath(d)))
+    return "M%02d" % int(m.group(1)) if m else os.path.basename(d)
+
+
+STRIP = re.compile(r'<div class="photo-strip".*?</div>', re.S)
+
+
+def shown_in(d, page):
+    """{photo: ("M01 s04", placed by hand?)} for every photograph a built deck shows. A thumbnail (L53) is not placed
+    by hand: it gives way on its module's next build"""
+    out = {}
+    for sec in re.finditer(r'<section [^>]*\bid="([^"]+)".*?</section>', page, re.S):
+        thumbs = set(IMG_SRC.findall("".join(STRIP.findall(sec.group(0)))))
+        for rel in IMG_SRC.findall(sec.group(0)):
+            if rel.startswith("assets/img/"):
+                out.setdefault(photo_id(d, rel), ("%s %s" % (module_label(d), sec.group(1)), rel not in thumbs))
+    return out
+
+
+def shown_elsewhere(mdir):
+    """the photographs the course's other built decks already show"""
+    out = {}
+    for d in other_modules(mdir):
+        p = os.path.join(d, "presentation", "index.html")
+        if os.path.isfile(p):
+            for k, v in shown_in(d, io.open(p, encoding="utf-8").read()).items():
+                out.setdefault(k, v)
+    return out
+
+
+def bring_in(mdir, name, meta, src):
+    """a photograph of another module of the course, copied into this one with its record, so the module ships whole"""
+    import shutil
+    dst = os.path.join(mdir, "assets", "img", name)
+    if not os.path.isfile(dst):
+        shutil.copyfile(os.path.join(src, "assets", "img", name), dst)
+    p = os.path.join(mdir, "assets", "img", "_photo_meta.json")
+    own = json.load(io.open(p, encoding="utf-8")) if os.path.isfile(p) else {}
+    if name not in own:
+        own[name] = dict(meta, copied_from=os.path.basename(src))
+        cs.save(p, own)
+
+
+def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None):
+    """L53: each real thing a drawing names gets its real photograph beside the drawing - a small tappable photo
+    that opens in the L52 panel. Matched by the photo's "shows"; a thing with no photo is noted for the list.
+    L54: a photograph the course already shows anywhere (`taken`) is never shown again - a different one, or none"""
+    strip, taken = [], taken if taken is not None else {}
+    for num, name in drawn_parts(lines, fig):
+        if any("assets/img/" + n in on_slide and any(shows_it(x, name) for x in m.get("shows") or []) for n, m, _, _ in pool):
+            continue                                      # its photograph is already on the slide
+        hit = next(((n, m, d, pid) for n, m, d, pid in pool if pid not in taken
+                    and any(shows_it(x, name) for x in m.get("shows") or [])), None)
+        if not hit:
+            if is_thing(name):
+                notes.append((where, num, name))
+            continue
+        if len(strip) >= cs.MEDIA["floors"].get("photo_strip_max", 4):
+            continue
+        n, meta, d, pid = hit
+        if os.path.abspath(d) != os.path.abspath(mdir):
+            bring_in(mdir, n, meta, d)
+        rel = "assets/img/" + n
+        taken[pid] = where
+        label = ("%d · " % num if num else "") + name
+        alt = first_sentence(meta.get("description")) or name
+        strip.append('<figure class="pthumb"><img src="../%s" alt="%s" data-name="%s"%s><figcaption>%s%s</figcaption></figure>'
+                     % (a(rel), a(alt), a(label), photo_panel(meta, credit_line(meta), rel, [], where),
+                        '<b>%d</b> ' % num if num else "", e(name)))
+    return ('<div class="photo-strip" data-script-ignore>%s</div>' % "".join(strip)) if strip else ""
+
+
+FILL_BOX = re.compile(r'\s*<\w+\b[^>]*\bclass="[^"]*\bfill\b')
+OWN_BOX = re.compile(r'\s*<div class="fill fig\b')            # the compiler's own column (fill(), a kit figure)
+
+
+def under_figure(fig, extra):
+    """put something under the drawing, inside its box when the drawing is its own .fill"""
+    if not FILL_BOX.match(fig):
+        return fig + "\n" + extra
+    return re.sub(r"</div>\s*$", extra + "\n</div>", fig.rstrip(), count=1)
+
+
+def by_thing(notes):
+    """one row per thing, with every slide that draws it: "Tank connection space · s04 (2), s05, s10" """
+    rows = []
+    for w, num, name in notes:
+        row = next((r for r in rows if same_thing(r[0], name)), None)
+        if row is None:
+            row = (name, [])
+            rows.append(row)
+        ref = "%s (%d)" % (w, num) if num else w
+        if ref not in row[1] and not any(x.split(" ")[0] == w for x in row[1]):
+            row[1].append(ref)
+    return ["%s · %s" % (name, ", ".join(refs)) for name, refs in rows]
+
+
+def write_to_take(course, script, notes):
+    """working_claude\\PHOTOS_TO_TAKE.md - this module's section rewritten on every build, the rest kept"""
+    p = os.path.join(course, workspace.CLAUDE, TO_TAKE)
+    m = cs.mid(script.get("module"))
+    head = ("# Photos to take at Novikontas\n\n"
+            "Every real thing a drawing names that has no real photograph yet (L53). The `## Mnn` sections are written by\n"
+            "compile_module.py on every build - add a photo with its `shows` in `_photo_meta.json` and build again.\n"
+            "Notes of your own go under `## Notes`, which is never touched.\n")
+    text = io.open(p, encoding="utf-8").read() if os.path.isfile(p) else head + "\n## Notes\n"
+    rows = ["- " + r for r in by_thing(notes)] or ["- every drawn thing has its photograph"]
+    sec = "## %s · %s\n\n%s\n" % (m, script.get("title") or "", "\n".join(rows))
+    parts = re.split(r"(?m)^(?=## )", text)
+    keep = [x for x in parts if not x.startswith("## %s " % m) and not x.startswith("## %s\n" % m)]
+    i = next((k for k, x in enumerate(keep) if x.startswith("## ")), len(keep))
+    sections = sorted([x for x in keep[i:] if not x.startswith("## Notes")] + [sec], key=lambda x: x[:7])
+    notes_sec = [x for x in keep[i:] if x.startswith("## Notes")] or ["## Notes\n"]
+    out = "".join(keep[:i]).rstrip() + "\n\n" + "\n".join(x.rstrip() + "\n" for x in sections + notes_sec)
+    with io.open(p, "w", encoding="utf-8", newline="\n") as f:
+        f.write(out)
+    return p
 
 
 # ------------------------------------------------------------------ one slide
@@ -413,17 +707,18 @@ def inset_html(mdir, ins, probs, where):
         probs.append("%s: its inset photograph %s is not in the module folder" % (where, rel or "(none named)"))
         return ""
     meta = photo_meta(mdir, rel)
-    cap = " ".join(x for x in (ins.get("caption") or "", ins.get("credit") or credit_line(meta, with_title=not ins.get("caption"))) if x)
+    credit = ins.get("credit") or credit_line(meta, with_title=not ins.get("caption"))
+    cap = " ".join(x for x in (ins.get("caption") or "", credit) if x)
     alt = ins.get("alt") or first_sentence(ins.get("caption")) or first_sentence(meta.get("description"))
-    return ('<figure class="inset"><img src="../%s" alt="%s"><figcaption data-script-ignore>%s</figcaption></figure>'
-            % (a(rel), a(alt), e(cap)))
+    return ('<figure class="inset"><img src="../%s" alt="%s"%s><figcaption data-script-ignore>%s</figcaption></figure>'
+            % (a(rel), a(alt), photo_panel(meta, credit_line(meta) or credit, rel, probs, where), e(cap)))
 
 
 def attrs(d):
     return " ".join('%s="%s"' % (k, a(str(v))) for k, v in d.items() if v not in (None, ""))
 
 
-def slide_html(script, s, n, total, b, mdir, figdir, foot, probs):
+def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, pool=None, taken=None):
     m = cs.mid(script.get("module"))
     sid, kind = s["id"], s["kind"]
     where = "%s (%s)" % (cs.place(script, sid), sid)
@@ -486,13 +781,23 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs):
             probs.append("%s: its aside %s %s" % (where, b["aside"], err))
             aside = ""
         elif aside:
-            aside = '<div class="aside">%s</div>' % aside
+            aside = '<div class="aside">%s</div>' % photos_in(aside, mdir, probs, where)
     # an inset photo goes under the words - or under the drawing ("under": "figure") when the words fill their column
-    if inset and (b.get("inset") or {}).get("under") == "figure" and fig and not is_photo:
-        fig = fig + "\n" + inset if not re.match(r'\s*<\w+\b[^>]*\bclass="[^"]*\bfill\b', fig) else \
-            re.sub(r"</div>\s*$", inset + "\n</div>", fig.rstrip(), count=1)
+    on_slide = set(IMG_SRC.findall(fig + inset + aside))
+    # under the drawing only when the drawing's box is the compiler's own column; a fragment that is its own .fill and
+    # lays itself out (a 3D model beside its controls, a row) would put it beside the canvas and squeeze it to 0 px -
+    # there it goes with the words
+    room_under = fig and not is_photo and (OWN_BOX.match(fig) or not FILL_BOX.match(fig))
+    if inset and (b.get("inset") or {}).get("under") == "figure" and room_under:
+        fig = under_figure(fig, inset)
         inset = ""
-    extra = [x for x in (inset, aside) if x]
+    # L53: a drawing of real things carries their real photographs, under the drawing - unasked
+    strip = ""
+    if fig and not is_photo and comp != "photo" and notes is not None:
+        strip = part_photos(lines, fig, on_slide, mdir, pool or [], notes, sid, taken)
+        if strip and room_under:
+            fig, strip = under_figure(fig, strip), ""
+    extra = [x for x in (inset, aside, strip) if x]
     own = re.sub(r"[^\w -]", "", b.get("class") or "")          # a hook for the module's drawing styles, never a look
     d = {"class": "slide" + (" photo split" if split_photo else " photo" if comp == "photo" else " dark" if b.get("dark") else "")
                   + (" " + own if own else ""),
@@ -529,11 +834,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs):
             part = lambda ps, **kw: words_html([x for _, x in ps], first_statement=False, emph=emph,
                                                idx=[i for i, _ in ps], **kw) if ps else []
             above = ind(part(pre), 4) if pre else ""
-            below = "\n    ".join(y for y in (ind(part(mid, legend=True), 4), ind(part(post), 4)) if y)
+            below = "\n    ".join(y for y in (ind(part(mid, legend=True), 4), ind(part(post), 4), ind(extra, 4)) if y)
             body = "\n    ".join(y for y in (above, fill(fig), below) if y)
         else:
             words = words_html(lines, first_statement=False, emph=emph, legend=bool(leg))
-            body = fill(fig) + "\n    " + (ind(words, 4) if leg else copy(words, 4))
+            body = fill(fig) + "\n    " + (ind(words + extra, 4) if leg else copy(words, 4))
         return ('<section %s>\n%s\n  %s\n  <div class="slide-body stage">\n    %s\n  </div>%s\n</section>'
                 % (attrs(d), head, h2, body, credit_html))
     if comp in ("two-col", "wide-left", "wide-right"):
@@ -577,10 +882,36 @@ def compile_deck(script, build, mdir, figdir, version, approved):
     total = len(screens)
     slides = []
     teach = 0
+    notes, pool = [], photo_pool(mdir)
+    # L54 - every photograph once in the whole course. First the photographs placed by hand (slide pictures, insets,
+    # photos in drawings): one shown twice, or already shown by an EARLIER module, is a problem to fix. Then the L53
+    # thumbnails take only what no deck of the course shows yet.
+    here, me = {}, module_label(mdir)
+    for s in screens:
+        b = (build.get("screens") or {}).get(s["id"]) or {}
+        page = slide_html(script, s, 0, total, b, mdir, figdir, foot, [])
+        for rel in IMG_SRC.findall(page):
+            if rel.startswith("assets/img/"):
+                pid, at = photo_id(mdir, rel), "%s %s" % (me, s["id"])
+                if pid in here and here[pid] != at:
+                    probs.append("%s (%s): the photograph %s is already shown on %s - a photograph is shown once in the "
+                                 "course (L54): choose a different one, or none" % (cs.place(script, s["id"]), s["id"], rel, here[pid]))
+                here.setdefault(pid, at)
+    elsewhere = shown_elsewhere(mdir)
+    for pid, at in sorted(here.items(), key=lambda x: x[1]):
+        other, by_hand = elsewhere.get(pid, ("", False))
+        if by_hand and other.split()[0] < me:      # the earlier module keeps it; a thumbnail there gives way instead
+            probs.append("%s: its photograph is already shown on %s - a photograph is shown once in the course (L54): "
+                         "choose a different one, or none" % (at, other))
+    taken = dict({k: v[0] for k, v in elsewhere.items()}, **here)
     for n, s in enumerate(screens, 1):
         b = (build.get("screens") or {}).get(s["id"]) or {}
         teach += s["kind"] == "slide"
-        slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs))
+        slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken))
+    blind = sorted(n for n, m, d, _ in pool if os.path.abspath(d) == os.path.abspath(mdir) and not m.get("shows"))
+    if blind:
+        notes.append((None, None, "%d photograph(s) without \"shows\" in _photo_meta.json, so no drawing can use them (L53): %s"
+                      % (len(blind), ", ".join(blind))))
     for x in STYLES:                    # the compiled layouts need the factory's current style files in the module
         mine, canon = os.path.join(mdir, "assets", x), os.path.join(SKILLS, "course-module-ui", "templates", x)
         if os.path.isfile(canon) and (not os.path.isfile(mine) or io.open(mine, "rb").read() != io.open(canon, "rb").read()):
@@ -588,8 +919,10 @@ def compile_deck(script, build, mdir, figdir, version, approved):
                          "design_system.py install --update on the module folder" % x)
     uses_kit = any(' data-kit="' in x for x in slides)
     kit_parts = uses_kit and os.path.isfile(os.path.join(mdir, KIT_PARTS))
-    for x in KIT_FILES if uses_kit else ():   # the figure kit ships like the deck engine: the factory's copy, byte for byte
-        mine, canon = os.path.join(mdir, "assets", x), os.path.join(SKILLS, "course-visuals", "kit", x)
+    shipped = [(x, os.path.join(SKILLS, "course-module-ux", "assets", x)) for x in PHOTO_FILES]
+    shipped += [(x, os.path.join(SKILLS, "course-visuals", "kit", x)) for x in (KIT_FILES if uses_kit else ())]
+    for x, canon in shipped:                  # shipped like the deck engine: the factory's copy, byte for byte
+        mine = os.path.join(mdir, "assets", x)
         if os.path.isfile(canon) and (not os.path.isfile(mine) or io.open(mine, "rb").read() != io.open(canon, "rb").read()):
             probs.append("the module's copy of %s is not the factory's current one - run course-module-ui\\scripts\\"
                          "design_system.py install --update on the module folder" % x)
@@ -615,7 +948,7 @@ def compile_deck(script, build, mdir, figdir, version, approved):
             "<!-- %s -->" % stamp, '<meta charset="utf-8">',
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
             "<title>%s — %s</title>" % (m, e(title))]
-    head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in STYLES]
+    head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in STYLES + ("gb_photo.css",)]
     if uses_kit:
         head.append('<link rel="stylesheet" href="../assets/kit.css">')
     head += ['<link rel="stylesheet" href="../%s">' % a(x) for x in build.get("styles", [])]
@@ -634,7 +967,8 @@ def compile_deck(script, build, mdir, figdir, version, approved):
     body = ["<body>", '<a class="gbt-topback" href="../START_HERE_EXTENDED.html" hidden>Back</a>']
     body += inline + landing + [chrome_block(), '<main id="stage">', "\n\n".join(slides), "</main>",
                                 '<script src="../assets/gb_deck.js"></script>',
-                                '<script src="../assets/gb_fit.js"></script>']
+                                '<script src="../assets/gb_fit.js"></script>',
+                                '<script src="../assets/gb_photo.js"></script>']
     if uses_kit:                        # before GBDeck.init: kit.js registers each figure's slide hooks
         body.append('<script src="../assets/kit.js"></script>')
     if kit_parts:
@@ -643,7 +977,7 @@ def compile_deck(script, build, mdir, figdir, version, approved):
     body += ["<script>",
              'GBDeck.init({ text: { cue: "Instructor cue", start: "Start" }, hooks: window.GB_HOOKS || {} });',
              "</script>", "</body>", "</html>", ""]
-    return "\n".join(head + body), probs
+    return "\n".join(head + body), probs, notes
 
 
 def main(argv=None):
@@ -692,7 +1026,7 @@ def main(argv=None):
                   "  build sheet, then compile again with --force." % out)
             return 2
     figdir = os.path.join(o.course, workspace.CLAUDE, "figures", cs.mid(o.module))
-    page, probs = compile_deck(script, build, mdir, figdir, plugin_version(), approved)
+    page, probs, notes = compile_deck(script, build, mdir, figdir, plugin_version(), approved)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with io.open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(page)
@@ -702,6 +1036,12 @@ def main(argv=None):
     if not approved:
         probs.insert(0, "the script is not approved - this deck is a preview only, never handed over")
     print("Built %s - %d screens from the %s script.\n    %s" % (cs.mid(o.module), n, "approved" if approved else "DRAFT", out))
+    parts = [x for x in notes if x[0]]
+    listed = write_to_take(o.course, script, parts)
+    if notes:
+        print("\nReal photographs still missing for what the drawings show (L53) - listed in\n    %s" % listed)
+        for r in by_thing(parts) + [x[2] for x in notes if not x[0]]:
+            print("  - " + r)
     if probs:
         print("\nTo fix before it is shown:")
         for x in probs:
