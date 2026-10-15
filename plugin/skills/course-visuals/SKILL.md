@@ -207,9 +207,24 @@ original manual → recognised technical body → other credible source. **Not**
 scraped image sites or blogs. Record source, origin, rights, relevance, intended use, whether
 modification is permitted, whether attribution is required. **Legally usable assets are downloaded
 and packaged locally** — the tablet has no network and the app 403s every external host.
-**4 CREATE** — SVG for anything with topology, labels or state; HTML/CSS/JS for state-driven
-process; Canvas only where SVG genuinely fails; a generated illustration only when a realistic
-scene is the right medium. **Never generated imagery in place of a structured technical schematic.**
+**4 CREATE** — **from the figure kit first (L51).** Anything with topology, labels, state, flow or
+sequence is a kit spec, `NAME.kit.json` in `working_claude/figures/MNN/` (`kit/SPEC.md`), never a
+one-off SVG; a part the kit lacks is made into the kit (below). Hand-written SVG/HTML only for what
+the kit's families cannot be (a 3D model, a photo annotation); Canvas only where SVG genuinely fails;
+a generated illustration only when a realistic scene is the right medium. **Never generated imagery
+in place of a structured technical schematic.**
+
+> **The figure kit (L51, owner 2026-10-15):** *use the kit; if there is no element in the kit, the AI creates the
+> element, puts it in the kit, and asks for a merge after the module is complete.*
+> 1. **Write the spec.** `kit/SPEC.md` lists the seven families and every part. A step names the slide line it
+>    lights (`"line": 2`); an alarm is a mark on a value, so it fires when the value crosses it - never a second picture.
+> 2. **A part is missing?** Make it to `kit/PARTS.md` in the module's `assets/kit_parts.js` (status `new`, kit helpers,
+>    tokens only, an `example` spec), run `kit/scripts/check_kit.py module <module> --figures <figures/MNN>`, use it.
+> 3. **The module is complete** (QA passed, deck compiled) → `kit/scripts/kit_parts.py promote <module> --factory
+>    <factory-mjaso clone>`; it prints the branch, commit, push and merge-request steps - **ask the operator before the
+>    push**; the owner merges. In an orchestrated build module agents never touch the factory's `kit.js` - the
+>    orchestrator promotes every module's parts together at assembly and merges duplicates.
+> 4. **Review surface:** `kit/GALLERY.html` shows every part moving; a promoted part shows there with its example.
 
 Two escalations, and neither is silent:
 

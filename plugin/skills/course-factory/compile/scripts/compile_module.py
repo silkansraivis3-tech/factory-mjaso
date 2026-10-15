@@ -41,6 +41,9 @@ TWO FILES IN, ONE PAGE OUT
   are shipped too (module folder). A figure script that animates registers its per-slide hooks as
       window.GB_HOOKS = window.GB_HOOKS || {};  GB_HOOKS.s05 = {enter: fn, leave: fn};
   and finds the slide's own lines by number: document.querySelector('#s04 [data-i="2"]').
+  A figure named *.kit.json is a FIGURE KIT spec (course-visuals/kit/SPEC.md): parts and steps, no drawing.
+  It goes into the page as data, with the deck's step buttons; kit.js and kit.css are shipped with the
+  module like gb_deck.js, and assets/kit_parts.js too when the course has added parts of its own.
 
 HOW A SLIDE IS LAID OUT (the same for every module)
   layout visual_full  + a photograph   -> .slide.photo, the photo is the screen, the words over it
@@ -86,6 +89,9 @@ import workspace  # noqa: E402
 SHELL = os.path.join(SKILLS, "course-module-ui", "templates", "gb_shell.html")
 STYLES = ("gb_tokens.css", "gb_shell.css", "gb_compose.css")
 IMAGES = (".jpg", ".jpeg", ".png", ".webp", ".gif")
+KIT_SPEC = ".kit.json"                       # a figure made from the figure kit (course-visuals/kit)
+KIT_FILES = ("kit.css", "kit.js")             # shipped with the module by design_system.py, like gb_deck.js
+KIT_PARTS = "assets/kit_parts.js"             # parts this course added to the kit, until they are merged
 COMPOSITIONS = ("opener", "flow", "two-col", "wide-left", "wide-right", "stage")
 STAGE_MAX_WORDS = 45
 STATEMENT_MAX_WORDS = 22
@@ -319,6 +325,37 @@ def first_sentence(s):
     return s.strip()
 
 
+def kit_figure(text, s, probs, where):
+    """a figure made from the figure kit (course-visuals/kit): its spec goes into the page as it is, and
+    kit.js draws it there. The step buttons are the deck's own .mediabar. course-visuals/kit/scripts/
+    check_kit.py checks the spec itself; here only what would stop the page from drawing it."""
+    try:
+        spec = json.loads(text)
+    except ValueError as err:
+        probs.append("%s: its kit figure is not valid JSON - %s" % (where, err))
+        return ""
+    if not isinstance(spec, dict) or not spec.get("parts"):
+        probs.append("%s: its kit figure has no parts" % where)
+        return ""
+    if not spec.get("label"):
+        spec["label"] = first_sentence(s.get("visual")) or s.get("title") or ""
+    sid = "kit-" + s["id"]
+    data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    out = ['<div class="fill fig kit-fig" data-kit-scope>',
+           '<div class="kit-screen"><svg data-kit="#%s"></svg></div>' % sid,
+           '<script type="application/json" id="%s">%s</script>' % (sid, data)]
+    if spec.get("steps"):
+        chev = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="%s"/></svg>'
+        out.append('<div class="mediabar">'
+                   '<button class="fbtn" type="button" data-act="prev">%s Previous step</button>'
+                   '<span class="dots"></span>'
+                   '<button class="fbtn primary" type="button" data-act="next">Next step %s</button>'
+                   '<button class="fbtn" type="button" data-act="replay">Replay</button></div>'
+                   % (chev % "M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z", chev % "M8.6 16.6 10 18l6-6-6-6-1.4 1.4L13.2 12z"))
+    out.append("</div>")
+    return "".join(out)
+
+
 def figure_html(mdir, figdir, s, b, probs, where):
     """the slide's picture, as it goes into the page, and its credit line"""
     rel = (b.get("figure") or "").replace("\\", "/")
@@ -331,6 +368,8 @@ def figure_html(mdir, figdir, s, b, probs, where):
     if err:
         probs.append("%s: its picture file %s %s" % (where, rel, err))
         return "", "", False
+    if rel.lower().endswith(KIT_SPEC):
+        return kit_figure(body, s, probs, where), "", False
     if body is not None:
         return body, "", False
     meta = photo_meta(mdir, rel)
@@ -547,6 +586,13 @@ def compile_deck(script, build, mdir, figdir, version, approved):
         if os.path.isfile(canon) and (not os.path.isfile(mine) or io.open(mine, "rb").read() != io.open(canon, "rb").read()):
             probs.append("the module's copy of %s is not the factory's current one - run course-module-ui\\scripts\\"
                          "design_system.py install --update on the module folder" % x)
+    uses_kit = any(' data-kit="' in x for x in slides)
+    kit_parts = uses_kit and os.path.isfile(os.path.join(mdir, KIT_PARTS))
+    for x in KIT_FILES if uses_kit else ():   # the figure kit ships like the deck engine: the factory's copy, byte for byte
+        mine, canon = os.path.join(mdir, "assets", x), os.path.join(SKILLS, "course-visuals", "kit", x)
+        if os.path.isfile(canon) and (not os.path.isfile(mine) or io.open(mine, "rb").read() != io.open(canon, "rb").read()):
+            probs.append("the module's copy of %s is not the factory's current one - run course-module-ui\\scripts\\"
+                         "design_system.py install --update on the module folder" % x)
     for rel in build.get("styles", []) + build.get("scripts", []):
         if not os.path.isfile(os.path.join(mdir, rel)):
             probs.append("the build sheet names %s, which is not in the module folder" % rel)
@@ -570,6 +616,8 @@ def compile_deck(script, build, mdir, figdir, version, approved):
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
             "<title>%s — %s</title>" % (m, e(title))]
     head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in STYLES]
+    if uses_kit:
+        head.append('<link rel="stylesheet" href="../assets/kit.css">')
     head += ['<link rel="stylesheet" href="../%s">' % a(x) for x in build.get("styles", [])]
     head.append("</head>")
     rule = build.get("landing_rule") or ""
@@ -587,6 +635,10 @@ def compile_deck(script, build, mdir, figdir, version, approved):
     body += inline + landing + [chrome_block(), '<main id="stage">', "\n\n".join(slides), "</main>",
                                 '<script src="../assets/gb_deck.js"></script>',
                                 '<script src="../assets/gb_fit.js"></script>']
+    if uses_kit:                        # before GBDeck.init: kit.js registers each figure's slide hooks
+        body.append('<script src="../assets/kit.js"></script>')
+    if kit_parts:
+        body.append('<script src="../%s"></script>' % KIT_PARTS)
     body += ['<script src="../%s"></script>' % a(x) for x in build.get("scripts", [])]
     body += ["<script>",
              'GBDeck.init({ text: { cue: "Instructor cue", start: "Start" }, hooks: window.GB_HOOKS || {} });',

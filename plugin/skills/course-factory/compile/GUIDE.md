@@ -60,6 +60,12 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   keeps 4 px clear of other shapes, lines and labels. A crossing that is meant is marked in the drawing:
   `data-may-cross`, `data-no-contain`, `data-may-overlap`. Every compiled deck also loads `gb_fit.js`, which widens a
   frame a drawing still reaches past and names it in the console - fix the drawing, then compile again.
+- **Figures from the figure kit (L51).** `"s14": {"figure": "s14.kit.json", "dark": true}` - the spec lives in
+  `working_claude\figures\M02\` like any drawing source. The compiler puts it into the page as data with the deck's own
+  step buttons (`.mediabar`: previous, next, replay), and loads `kit.css` and `kit.js` (installed by `design_system.py`
+  like `gb_deck.js`) and, when the course made parts of its own, `assets\kit_parts.js` after them. Each spec step lights
+  its slide line (`"line": 2` -> `[data-i="2"]` `.cur`, earlier steps `.lit`); entering the slide starts the figure at
+  step 0. Check the specs first: `course-visuals\kit\scripts\check_kit.py module <module> --figures <figures\M02>`.
 
 ## 2c · More build-sheet choices (2.25.3, proved on the pilot's Module 2)
 

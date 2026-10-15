@@ -292,6 +292,40 @@ def main():
         check("a module whose shared style files are not the factory's current ones is told to update them",
               code == 1 and "design_system.py install --update" in out, out)
 
+        # ---- a figure-kit spec (L51): data in the page, the kit shipped, the deck's own step buttons
+        os.makedirs(os.path.join(tmp, "g"))
+        c7, md7 = new_course(os.path.join(tmp, "g"), script())
+        kit_spec = {"size": [300, 200], "label": "A valve closes on a pipe.",
+                    "parts": [{"id": "F", "type": "pipe", "d": "M10 100 H290", "value": 1},
+                              {"id": "V", "type": "valve", "x": 150, "y": 100, "value": 1, "label": "valve </script>"}],
+                    "steps": [{"title": "The valve closes", "line": 2, "play": [["V", 0, 800], ["F", 0, 400]]}]}
+        cs.save(os.path.join(c7, "working_claude", "figures", "M01", "valve.kit.json"), kit_spec)
+        bp = os.path.join(c7, "working_claude", "script", "M01.build.json")
+        sheet = cs.load(bp)
+        sheet["screens"]["s04"] = {"figure": "valve.kit.json", "dark": True}
+        cs.save(bp, sheet)
+        code, out = run(COMPILE, c7, "--module", "1")
+        p7 = deck(md7)
+        k4 = section(p7, "s04")
+        check("a .kit.json figure goes in as data for kit.js, never as a drawing",
+              '<svg data-kit="#kit-s04"></svg>' in k4 and '<script type="application/json" id="kit-s04">' in k4, k4[:600])
+        check("... with the deck's own step buttons (.mediabar, prev / next / replay)",
+              'class="mediabar"' in k4 and 'data-act="next"' in k4 and 'data-act="replay"' in k4, k4[-600:])
+        check("... a '</script>' inside the spec cannot end the page's script early", "valve <\\/script>" in k4, k4)
+        check("kit.css and kit.js are loaded, kit.js before GBDeck.init so its slide hooks are seen",
+              '<link rel="stylesheet" href="../assets/kit.css">' in p7
+              and p7.index('src="../assets/kit.js"') < p7.index("GBDeck.init"), p7[-900:])
+        check("design_system.py ships kit.js and kit.css with every module, so the copy is the factory's",
+              code == 0 and os.path.isfile(os.path.join(md7, "assets", "kit.js")), out)
+        check("a deck with no kit figure loads no kit", "kit.js" not in page and "kit.css" not in page)
+        io.open(os.path.join(md7, "assets", "kit_parts.js"), "w", encoding="utf-8").write("/* a course's new parts */")
+        code, out = run(COMPILE, c7, "--module", "1", "--force")
+        check("a course's own new parts (assets/kit_parts.js) load after kit.js",
+              deck(md7).index("../assets/kit.js") < deck(md7).index("../assets/kit_parts.js"), out)
+        cs.save(os.path.join(c7, "working_claude", "figures", "M01", "valve.kit.json"), {"size": [1, 1]})
+        code, out = run(COMPILE, c7, "--module", "1", "--force")
+        check("a kit spec with no parts is reported, not shipped blank", code == 1 and "has no parts" in out, out)
+
         # ---- a changed word is still caught on a compiled deck
         p = os.path.join(md, "presentation", "index.html")
         io.open(p, "w", encoding="utf-8").write(page.replace("Mandatory since 2017.", "Mandatory since 2016."))

@@ -87,6 +87,11 @@ touches is written by the orchestrator after the fan-out, alone:
   for L1, so it cannot be assembled until every module knows what it could not fit
 - the instructor run content, the task manifest, the cross-module checks
 - anything under the terminals
+- **the figure kit (L51).** A module agent that needs a part the kit lacks makes it in its own
+  `modules/mN/assets/kit_parts.js` and uses it - it never edits the factory's `kit.js`. At assembly the
+  orchestrator runs `course-visuals/kit/scripts/kit_parts.py promote` on **all** modules at once: a part two
+  modules both made is promoted once and the difference merged by hand, then one merge request for the owner
+  (the operator is asked before the push)
 
 This is not tidiness. Two agents writing the same file is a lost write that no test catches,
 because the file is still valid HTML afterwards — it is just missing one agent's work.

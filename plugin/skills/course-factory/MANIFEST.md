@@ -608,6 +608,25 @@ for its code. Shared look (`gb_compose.css` §13b): a packed stage, `.aside`, a 
 or scrolls), a box's heading in bold. `gb_fit.js` adds room only on the side that overflows. Known: at 1024x768 the
 drawings' labels, drawn for 1280, fall under 12.5 px - before and after alike; needs labels sized for small screens.
 
+## 4y · Figures from the figure kit; a missing part made into the kit (2.26.0, 2026-10-15)
+
+The pilot's M02 tank-monitoring slide shipped as four hand-drawn snapshots swapped with `display:none` - no motion,
+and a look of its own. The owner: *use the kit; if there is no element in the kit, the AI creates the element, puts it
+in the kit, and asks for a merge after the module is complete.* **L51**. New `course-visuals/kit/`: `kit.js` (parts that
+draw themselves from a spec, a step engine that tweens values, marks that fire an alarm as their value crosses them -
+in the order the value meets them - hold a value at a shut-off and start other moves; a fallback timer so a step ends
+when a WebView stops sending frames), `kit.css` (ISA-101: grey at rest, amber alarm, red trip; tokens only),
+`SPEC.md` (the format; seven families, two built: instruments, piping and flow), `PARTS.md` (the contract for a new
+part), `GALLERY.html` (every part moving; s03, s04, s14 rebuilt from specs), `scripts/check_kit.py` (spec and part
+checks), `scripts/kit_parts.py` (list; promote into the factory's kit after the module is complete - prints the git and
+merge-request steps, never pushes), `scripts/test_kit.py` (30 checks). Compiler: a `*.kit.json` figure goes into the
+page as data with the deck's `.mediabar`, `kit.css`/`kit.js` (+ `assets/kit_parts.js`) load before `GBDeck.init`, each
+step lights its slide line; `test_compile_module.py` +8 checks (57). `design-system.json` installs `kit.js`/`kit.css`.
+Orchestration Rule 3: module agents write only their own `kit_parts.js`; the orchestrator promotes at assembly.
+Tested on IGF Basic M02 compiled from a copy of the course (s03, s04, s14): steps, lines, slide enter/leave, buttons
+steady under the finger. Found on the way, not changed: the shared `.slide.dark::before` watermark reaches 112 px below
+a dark slide, which an `overflow:hidden` slide can still be scrolled by (`overflow:clip` would close it).
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

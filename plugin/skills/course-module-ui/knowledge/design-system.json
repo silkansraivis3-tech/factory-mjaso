@@ -17,7 +17,9 @@
     {"name": "task_complete.js",    "from": "course-task-ux/assets/task_complete.js",     "for": "the one shared task ending"},
     {"name": "gb_deck.js",          "from": "course-module-ux/assets/gb_deck.js",         "for": "the deck engine"},
     {"name": "gb_fit.js",           "from": "course-module-ux/assets/gb_fit.js",          "for": "no drawing cut off at its edges - the frame grows to hold it (L49)"},
-    {"name": "gb_run.js",           "from": "course-module-ux/assets/gb_run.js",          "for": "the START_HERE step runner"},
+    {"name": "kit.js",              "from": "course-visuals/kit/kit.js",                  "for": "the figure kit - draws and moves every *.kit.json figure (L51)"},
+    {"name": "kit.css",             "from": "course-visuals/kit/kit.css",                 "for": "the figure kit's look"},
+    {"name": "gb_run.js",          "from": "course-module-ux/assets/gb_run.js",          "for": "the START_HERE step runner"},
     {"name": "gb_run.css",          "from": "course-module-ux/assets/gb_run.css",         "for": "the step runner's look"},
     {"name": "novikontas_logo.svg", "from": "../resources/brand/novikontas_logo.svg",     "for": "the landing screen"}
   ],

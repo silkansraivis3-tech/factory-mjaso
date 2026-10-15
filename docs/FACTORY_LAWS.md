@@ -398,8 +398,21 @@ crossing is marked in the drawing (`data-may-cross`, `data-no-contain`, `data-ma
 deck that widens a frame a drawing still reaches past) and `course-visuals` (`review/knowledge/visual-floor.json`
 `drawing_geometry`), 2.25.2
 
-**All fifty laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L50 are enforced first through `course-factory/SKILL.md`'s
+**L51 · Figures come from the figure kit; a missing part is made into the kit.** Owner, 2026-10-15, after the IGF
+pilot's tank-monitoring slide shipped as four hand-drawn snapshots that swapped instead of moving: *use the kit; if
+the kit has no element for what the module needs, the AI creates the element, puts it in the kit, and asks for a merge
+once the module is complete.* (1) A drawn figure that shows a system, a state, a flow or a sequence is a figure-kit
+spec (`NAME.kit.json`: parts and steps), never a one-off SVG; the kit draws it, moves its values between steps, fires
+each alarm as its value crosses its mark, and lights the slide's lines. (2) A part the kit lacks is made to the kit's
+contract in the module's own `assets/kit_parts.js` - kit helpers, course tokens, ISA-101 colour, an example spec - and
+used at once. (3) Once the module is complete it is promoted into the factory's kit and a merge request goes to the
+owner; in a parallel build only the orchestrator promotes, at assembly, so no two modules write the kit. Real
+photographs still come first for anything a trainee must recognise (L48). → `course-visuals` (`kit/`: `kit.js`,
+`kit.css`, `SPEC.md`, `PARTS.md`, `scripts/check_kit.py`, `scripts/kit_parts.py`, `GALLERY.html`), `course-factory`
+(the compiler places a kit spec and ships the kit) and `course-module-ui` (`design-system.json` installs it), 2.26.0
+
+**All fifty-one laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L51 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

@@ -1,0 +1,175 @@
+/* kit.css - the look of the figure kit.
+   Colours come only from gb_tokens.css (course-module-ui); each fallback is the same
+   value, so a figure still reads if the tokens are missing.
+   ISA-101 "high-performance HMI", the convention modern ship alarm and monitoring
+   screens follow: calm greys and blues at rest; colour appears only when something is
+   abnormal - amber for an alarm, red for a trip. A screen that is colourful at rest
+   has nothing left to say when something goes wrong. */
+
+.kit{display:block;width:100%;height:auto;overflow:visible;
+  font-family:var(--font,"Raleway","Segoe UI",Arial,sans-serif)}
+.kit text{font-family:inherit}
+
+/* in a deck: the figure is a dark screen on a dark or a light slide alike (a monitor in the room),
+   with the slide's own .mediabar under it */
+.kit-fig{display:flex;flex-direction:column;align-items:stretch;gap:14px;min-height:0;width:100%}
+.kit-screen{flex:1 1 0;min-height:0;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+  background:var(--deep-2);border-radius:var(--r-l,20px);padding:12px}
+.slide.dark .kit-screen{background:transparent;padding:0}
+.kit-screen > .kit{width:100%;height:100%;max-height:100%}     /* the viewBox keeps its shape inside */
+.kit-fig > .mediabar{flex:0 0 auto}
+/* the figure's row is the slide body's full height, never the text's: the current line turns bold
+   and can wrap, and a row that followed the text moved the step buttons from under the presenter's finger */
+.slide-body:has(> .kit-fig){grid-template-rows:minmax(0,100%)}
+.kit-error{color:var(--warn);font-weight:700}
+
+/* frame */
+.kit-panel{fill:var(--deep-2,#0C1E3A);stroke:var(--line-d,rgba(46,182,248,.18));stroke-width:1.5}
+.kit-rule{stroke:var(--line-d,rgba(46,182,248,.18));stroke-width:1}
+.kit-ptitle{font-size:14px;font-weight:700;letter-spacing:.08em;fill:var(--dim-d,#A2B7CF)}
+.kit-chip rect{fill:var(--deep,#0A182E);stroke:var(--line-d,rgba(46,182,248,.18))}
+.kit-chip text{font-size:12.5px;font-weight:700;letter-spacing:.06em;fill:var(--dim-d,#A2B7CF)}
+.kit-chip.kit-on-alarm rect{fill:var(--amber-wash-d,rgba(233,165,30,.14));stroke:var(--amber,#E9A51E)}
+.kit-chip.kit-on-alarm text{fill:var(--amber,#E9A51E)}
+.kit-chip.kit-on-trip rect{fill:rgba(255,140,130,.14);stroke:var(--warn-d,#FF8C82)}
+.kit-chip.kit-on-trip text{fill:var(--warn-d,#FF8C82)}
+
+/* type */
+.kit-h{font-size:15px;font-weight:700;fill:var(--txt-d,#F3F8FD)}
+.kit-cap{font-size:12.5px;fill:var(--dim-d,#A2B7CF)}
+.kit-tick{font-size:12.5px;fill:var(--faint-d,#71879F)}
+.kit-tickl{stroke:var(--faint-d,#71879F);stroke-width:1.5}
+.kit-num{font-family:var(--mono,Consolas,monospace);font-size:16px;font-weight:700;fill:var(--txt-d,#F3F8FD)}
+.kit-dig{fill:var(--deep,#0A182E);stroke:var(--line-d,rgba(46,182,248,.18))}
+.kit-tl{font-size:12.5px;font-weight:700;letter-spacing:.06em;fill:var(--dim-d,#A2B7CF)}
+.kit-big{font-family:var(--mono,Consolas,monospace);font-size:22px;font-weight:700;fill:var(--txt-d,#F3F8FD)}
+
+/* process fluid */
+.kit-vessel{fill:var(--deep,#0A182E);stroke:var(--faint-d,#71879F);stroke-width:2}
+.kit-liquid,.kit-pool{fill:var(--cold,#8FC2FF);opacity:.5}
+.kit-surface{stroke:var(--cold,#8FC2FF);stroke-width:2}
+
+/* marks: present but quiet at rest; lit, solid and briefly flashing once crossed */
+.kit-mark line{stroke-width:2;stroke-dasharray:5 4;opacity:.6}
+.kit-mark text{font-size:12.5px;fill:var(--dim-d,#A2B7CF)}
+.kit-mark.kit-alarm line{stroke:var(--amber,#E9A51E)}
+.kit-mark.kit-trip line{stroke:var(--warn-d,#FF8C82)}
+.kit-mark.kit-limit line{stroke:var(--dim-d,#A2B7CF)}
+.kit-mark.on line{stroke-dasharray:none;stroke-width:3;opacity:1}
+.kit-mark.on text{font-weight:700}
+.kit-mark.kit-alarm.on text{fill:var(--amber,#E9A51E)}
+.kit-mark.kit-trip.on text{fill:var(--warn-d,#FF8C82)}
+.kit-mark.on{animation:kit-blink .5s steps(1) 6}
+
+/* dial */
+.kit-dial{fill:var(--deep,#0A182E);stroke:var(--faint-d,#71879F);stroke-width:2}
+.kit-track{fill:none;stroke:var(--deep-3,#122A52)}
+.kit-band{fill:none;stroke:var(--steel,#415C8F)}
+.kit-zone{fill:none;opacity:.35;transition:opacity .3s}
+.kit-zone.kit-alarm{stroke:var(--amber,#E9A51E)}
+.kit-zone.kit-trip{stroke:var(--warn-d,#FF8C82)}
+.kit-zone.on{opacity:1}
+.kit-needle path{fill:var(--txt-d,#F3F8FD)}
+.kit-hub{fill:var(--txt-d,#F3F8FD);stroke:var(--deep,#0A182E);stroke-width:2}
+
+/* readout tile */
+.kit-tile{fill:var(--deep,#0A182E);stroke:var(--line-d,rgba(46,182,248,.18));stroke-width:1.5;transition:stroke .2s}
+.kit-on-alarm .kit-tile{stroke:var(--amber,#E9A51E);stroke-width:2.5}
+.kit-on-alarm .kit-big{fill:var(--amber,#E9A51E)}
+.kit-on-trip .kit-tile{stroke:var(--warn-d,#FF8C82);stroke-width:2.5}
+.kit-on-trip .kit-big{fill:var(--warn-d,#FF8C82)}
+.kit-on-trip,.kit-on-alarm{animation:kit-blink .5s steps(1) 6}
+
+/* structure, instruments */
+.kit-steel{fill:var(--deep-3,#122A52);stroke:var(--faint-d,#71879F);stroke-width:2;stroke-linejoin:round}
+.kit-pipe-s{stroke:var(--faint-d,#71879F);stroke-width:6}
+.kit-flange{stroke:var(--dim-d,#A2B7CF);stroke-width:4;stroke-linecap:round}
+.kit-probe{stroke:var(--dim-d,#A2B7CF);stroke-width:3;stroke-linecap:round}
+.kit-bubble{fill:var(--deep,#0A182E);stroke:var(--dim-d,#A2B7CF);stroke-width:1.5}
+.kit-bubble-t{font-size:12.5px;font-weight:700;fill:var(--dim-d,#A2B7CF)}
+.kit-wire{fill:none;stroke:var(--faint-d,#71879F);stroke-width:1.5;stroke-dasharray:6 4}
+.kit-drop{fill:var(--cold,#8FC2FF);opacity:0}
+.kit-dripping .kit-drop{animation:kit-fall .9s ease-in infinite}
+
+/* piping and valves */
+.kit-pipe{fill:none;stroke:var(--faint-d,#71879F);stroke-width:10}
+.kit-bore{fill:none;stroke:var(--deep,#0A182E);stroke-width:6}
+.kit-flow{fill:none;stroke:var(--cold,#8FC2FF);stroke-width:2.5;stroke-dasharray:7 9;
+  animation:kit-flow .8s linear infinite;transition:opacity .3s}
+.kit-valve{fill:none;stroke:var(--dim-d,#A2B7CF);stroke-width:2;stroke-linejoin:round}
+.kit-vfill{fill:var(--dim-d,#A2B7CF)}
+.kit-valve-bg{fill:var(--deep-2,#0C1E3A)}
+.kit-stem{stroke:var(--dim-d,#A2B7CF);stroke-width:2}
+.kit-act{fill:var(--deep,#0A182E);stroke:var(--dim-d,#A2B7CF);stroke-width:1.5}
+.kit-state{font-size:12.5px;font-weight:700;letter-spacing:.06em;fill:var(--dim-d,#A2B7CF)}
+.kit-shut .kit-state{fill:var(--warn-d,#FF8C82)}
+.kit-shut .kit-valve{stroke:var(--warn-d,#FF8C82)}
+.kit-shut .kit-vfill{fill:var(--warn-d,#FF8C82)}
+
+/* contents of a pipe: liquid is the cold blue, gas is pale (methane vapour has no colour;
+   amber stays reserved for alarms). The fill mask only shows what has reached that far. */
+.kit-jacket{fill:none;stroke:var(--faint-d,#71879F);stroke-width:20}
+.kit-annulus{fill:none;stroke:var(--deep-2,#0C1E3A);stroke-width:16}
+.kit-reach{fill:none;stroke:#fff;stroke-width:24;stroke-linecap:butt}
+.kit-content{fill:none;stroke-width:6}
+.kit-fl-liquid .kit-content{stroke:var(--cold,#8FC2FF);opacity:.55}
+.kit-fl-gas .kit-content{stroke:var(--txt-d,#F3F8FD);opacity:.22}
+.kit-fl-gas .kit-flow{stroke:var(--txt-d,#F3F8FD);stroke-dasharray:2 6;stroke-linecap:round;stroke-width:3}
+.kit-vessel-o{fill:none;stroke:var(--faint-d,#71879F);stroke-width:2}
+.kit-quiet.kit-shut .kit-state{fill:var(--dim-d,#A2B7CF)}
+.kit-quiet.kit-shut .kit-valve{stroke:var(--dim-d,#A2B7CF)}
+.kit-quiet.kit-shut .kit-vfill{fill:var(--dim-d,#A2B7CF)}
+
+/* spaces */
+.kit-wash{fill:var(--blue-wash-d,rgba(46,182,248,.13));opacity:0}
+.kit-space{fill:none;stroke:var(--faint-d,#71879F);stroke-width:1.5;transition:stroke .3s}
+.kit-room{stroke-dasharray:7 5}
+.kit-enclosure{stroke:var(--dim-d,#A2B7CF)}
+.kit-lit .kit-space{stroke:var(--blue,#2EB6F8);stroke-width:2}
+.kit-sl{font-size:12.5px;font-weight:700;letter-spacing:.06em;fill:var(--faint-d,#71879F);transition:fill .3s}
+.kit-lit .kit-sl{fill:var(--txt-d,#F3F8FD)}
+
+/* machinery */
+.kit-shell{fill:var(--deep,#0A182E);stroke:var(--dim-d,#A2B7CF);stroke-width:2}
+.kit-shell-o{fill:none;stroke:var(--dim-d,#A2B7CF);stroke-width:2}
+.kit-coil{fill:none;stroke:var(--dim-d,#A2B7CF);stroke-width:2;stroke-linejoin:round}
+.kit-active .kit-coil{stroke:var(--txt-d,#F3F8FD);stroke-dasharray:6 3;animation:kit-flow 1.2s linear infinite}
+.kit-hm{stroke:var(--faint-d,#71879F);stroke-width:2}
+.kit-imp path{stroke:var(--dim-d,#A2B7CF);stroke-width:2.5;stroke-linecap:round}
+.kit-running .kit-imp{animation:kit-spin .7s linear infinite}
+.kit-block{fill:var(--deep-3,#122A52);stroke:var(--dim-d,#A2B7CF);stroke-width:2}
+.kit-head{fill:var(--deep,#0A182E);stroke:var(--dim-d,#A2B7CF);stroke-width:1.5}
+.kit-piston{fill:var(--faint-d,#71879F)}
+.kit-running .kit-piston{animation:kit-piston .5s ease-in-out infinite alternate}
+.kit-running .kit-state{fill:var(--txt-d,#F3F8FD)}
+.kit-puffs circle{fill:var(--txt-d,#F3F8FD);opacity:0;transform-box:fill-box;transform-origin:center}
+.kit-venting .kit-puffs circle{animation:kit-puff 1.35s ease-out infinite}
+
+/* step badges */
+.kit-badge-o{fill:var(--deep,#0A182E);stroke:var(--faint-d,#71879F);stroke-width:1.5}
+.kit-badge{fill:var(--blue,#2EB6F8);opacity:0}
+.kit-badge-t{font-size:13px;font-weight:700;fill:var(--dim-d,#A2B7CF)}
+.kit-lit .kit-badge-t{fill:var(--on-blue,#04263A)}
+
+/* alarm log */
+.kit-logbox{fill:var(--deep,#0A182E);stroke:var(--line-d,rgba(46,182,248,.18))}
+.kit-empty{font-size:13px;fill:var(--faint-d,#71879F)}
+.kit-row rect{fill:var(--deep-3,#122A52)}
+.kit-row.kit-alarm .kit-sev{fill:var(--amber,#E9A51E)}
+.kit-row.kit-trip .kit-sev{fill:var(--warn-d,#FF8C82)}
+.kit-time{font-family:var(--mono,Consolas,monospace);font-size:13px;fill:var(--dim-d,#A2B7CF)}
+.kit-msg{font-size:13.5px;font-weight:700;fill:var(--txt-d,#F3F8FD)}
+.kit-row.kit-alarm .kit-msg{fill:var(--amber,#E9A51E)}
+.kit-row.kit-trip .kit-msg{fill:var(--warn-d,#FF8C82)}
+.kit-row.kit-new{animation:kit-in .35s ease-out,kit-blink .5s steps(1) .35s 5}
+
+@keyframes kit-blink{50%{opacity:.3}}
+@keyframes kit-flow{to{stroke-dashoffset:-32}}
+@keyframes kit-fall{0%{transform:translateY(0);opacity:0}15%{opacity:1}85%{opacity:1}100%{transform:translateY(var(--fall,60px));opacity:0}}
+@keyframes kit-spin{to{transform:rotate(360deg)}}
+@keyframes kit-piston{to{transform:translateY(5px)}}
+@keyframes kit-puff{0%{transform:translateY(0) scale(.5);opacity:0}20%{opacity:.6}100%{transform:translateY(-34px) scale(1.5);opacity:0}}
+@keyframes kit-in{from{opacity:0;transform:translateX(-14px)}}
+
+/* reduced motion: every figure jumps to its end state (kit.js), and nothing flashes or flows */
+@media (prefers-reduced-motion:reduce){.kit *{animation:none!important;transition:none!important}}
