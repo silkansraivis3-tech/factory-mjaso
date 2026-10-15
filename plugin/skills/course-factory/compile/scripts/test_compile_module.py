@@ -163,8 +163,15 @@ def main():
         check("the build sheet's boxes and conclusion: .box, .box.alt, .call - in script order",
               re.findall(r'class="(box(?: alt)?|call|lead)"', tb) == ["lead", "box", "box alt", "lead", "call"], tb)
         lg = "\n".join(cm.words_html(["Fuel tank - in a hold.", "Vent mast - high above deck."], legend=True))
-        check("a legend: a numbered row, the numbers are the lines' data-i",
-              lg.startswith('<ol class="legend">') and '<li data-script-field="text" data-i="2"><b>Vent mast</b> - high above deck.</li>' in lg, lg)
+        check("a legend: a numbered row counting 1, 2 ... (data-n), the script number kept as data-i",
+              lg.startswith('<ol class="legend">') and '<li data-script-field="text" data-i="2" data-n="2"><b>Vent mast</b> - high above deck.</li>' in lg, lg)
+        lg2 = "\n".join(cm.words_html(["Five steps:", "1 Fuel tank - cold.", "2 TCS - valves."], legend=False, first_statement=False,
+                                      idx=[1, 2, 3]))
+        lg3 = "\n".join(cm.words_html(["1 Fuel tank - cold.", "2 TCS - valves."], legend=True, idx=[2, 3]))
+        check("a legend whose words already carry their numbers draws no second number; badges count within the row",
+              lg3.startswith('<ol class="legend own-numbers">') and 'data-i="2" data-n="1"' in lg3, lg3)
+        check("around a stage drawing one line is reading text, not a headline",
+              '<p class="lead" data-script-field="text" data-i="1">Five steps:</p>' in "\n".join(cm.words_html(["Five steps:"], first_statement=False)), lg2)
         meta = {"author": "Tholme (Wikimedia Commons user), own work", "source": "Wikimedia Commons", "licence": "CC BY-SA 4.0",
                 "url_or_origin": "https://commons.wikimedia.org/wiki/File:MF_Bergensfjord_filling_LNG_in_Arsv%C3%A5gen.jpg",
                 "orig_size": "4032x3024 px", "stored_size": "1600x1200 px JPEG q82 (resized, not cropped)", "attribution_required": True}

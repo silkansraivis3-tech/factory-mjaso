@@ -63,11 +63,12 @@
     var orig = svg.getAttribute("data-fit-orig");
     if (!orig) { orig = vb.x + " " + vb.y + " " + vb.width + " " + vb.height; }
     var o = orig.split(/[\s,]+/).map(parseFloat);
-    var m = Math.max(3, MARGIN * Math.max(o[2], o[3]));
-    var x0 = Math.min(o[0], b.x - m), y0 = Math.min(o[1], b.y - m);
-    var x1 = Math.max(o[0] + o[2], b.x + b.width + m), y1 = Math.max(o[1] + o[3], b.y + b.height + m);
+    var m = Math.max(3, MARGIN * Math.max(o[2], o[3])), p = 0.25;
+    /* room is added only on the side that overflows - the other sides keep the drawing's own frame */
+    var x0 = b.x < o[0] - p ? b.x - m : o[0], y0 = b.y < o[1] - p ? b.y - m : o[1];
+    var x1 = b.x + b.width > o[0] + o[2] + p ? b.x + b.width + m : o[0] + o[2];
+    var y1 = b.y + b.height > o[1] + o[3] + p ? b.y + b.height + m : o[1] + o[3];
     /* everything painted is inside the original frame (a background drawn edge to edge is fine): keep it */
-    var p = 0.25;
     if (b.x >= o[0] - p && b.y >= o[1] - p && b.x + b.width <= o[0] + o[2] + p && b.y + b.height <= o[1] + o[3] + p) {
       if (svg.getAttribute("data-fit-orig")) { svg.setAttribute("viewBox", orig); }
       return;

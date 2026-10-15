@@ -88,6 +88,7 @@ STYLES = ("gb_tokens.css", "gb_shell.css", "gb_compose.css")
 IMAGES = (".jpg", ".jpeg", ".png", ".webp", ".gif")
 COMPOSITIONS = ("opener", "flow", "two-col", "wide-left", "wide-right", "stage")
 STAGE_MAX_WORDS = 45
+STATEMENT_MAX_WORDS = 22
 CHECK_PAGES = {"MC": "../assessment/check.html", "FA": "../assessment/final.html"}
 RECORD = "compiled.json"
 TABLET_ICON = ('<svg class="act-ico" viewBox="0 0 64 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" '
@@ -140,45 +141,118 @@ def marked(x, bold=True):
     return e(x)
 
 
-def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=False):
+HOOK_ATTR = re.compile(r"^data-[a-z0-9-]+$")
+
+
+def hook_attrs(h):
+    """a figure script's hook on a line: extra class words and data-* attributes - never a look of its own"""
+    out = []
+    for k, v in sorted((h or {}).items()):
+        if k == "class":
+            continue
+        if HOOK_ATTR.match(k):
+            out.append(' %s="%s"' % (k, a(str(v))))
+    return "".join(out), re.sub(r"[^\w -]", "", (h or {}).get("class") or "").strip()
+
+
+def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=False, idx=None):
     """the slide's lines, each one marked as approved text (check_script_match reads data-script-field) and
     numbered data-i="1", "2" ... in script order, so a figure that steps can light up its line
-    (document.querySelector('#s04 [data-i="3"]')). emph (from the build sheet): {"boxes": [2, 3], "conclusion": 5}"""
+    (document.querySelector('#s04 [data-i="3"]')). `idx` gives the script numbers when only some lines are drawn here.
+
+    emph (from the build sheet):
+      "boxes": [2, 3]            each line in a box (blue; without "box_alt" every second one is amber)
+      "box_alt": [4]             these boxes amber
+      "conclusion": 5            the line the room leaves with (navy)
+      "groups": [{"lines": [2, 7], "class": "box z1"}]   lines 2-7 in one box: the first as its heading
+      "hooks": {"3": {"class": "m02-steptext", "data-step": "2"}}   a figure script's hook on a line"""
     emph = emph or {}
+    idx = list(idx or range(1, len(lines) + 1))
     boxes, concl = list(emph.get("boxes") or []), emph.get("conclusion")
-    line = lambda tag, cls, i, x, bold=True: '<%s%s data-script-field="text" data-i="%d">%s</%s>' % (
-        tag, ' class="%s"' % cls if cls else "", i, marked(x, bold), tag)
+    alts = emph.get("box_alt")
+    hooks = {str(k): v for k, v in (emph.get("hooks") or {}).items()}
+
+    def line(tag, cls, i, x, bold=True):
+        extra, hcls = hook_attrs(hooks.get(str(i)))
+        cls = " ".join(c for c in (cls, hcls) if c)
+        return '<%s%s data-script-field="text" data-i="%d"%s>%s</%s>' % (
+            tag, ' class="%s"' % cls if cls else "", i, extra, marked(x, bold), tag)
+
+    pairs = list(zip(idx, lines))
     if legend:
-        return ['<ol class="legend">'] + ["  " + line("li", "", i, x) for i, x in enumerate(lines, 1)] + ["</ol>"]
+        # the badge counts 1, 2, 3 in the row (data-n); when the approved words already start with their own
+        # number ("1 Fuel tank ...") the row shows those and draws no second number
+        own = all(re.match(r"^\d+[ .)]", x) for _, x in pairs)
+        rows = [line("li", "", i, x).replace(' data-i="%d"' % i, ' data-i="%d" data-n="%d"' % (i, n), 1)
+                for n, (i, x) in enumerate(pairs, 1)]
+        return ['<ol class="legend%s">' % (" own-numbers" if own else "")] + ["  " + r for r in rows] + ["</ol>"]
     if dark_photo:            # the shared look styles .lead over a photograph, not a list - a bullet stays a lead line
-        return [line("p", "lead", i, x, bold=False) for i, x in enumerate(lines, 1)]
-    if len(lines) == 1:
-        return [line("p", "statement", 1, lines[0], bold=False)]
+        return [line("p", "lead", i, x, bold=False) for i, x in pairs]
+    if len(pairs) == 1 and not boxes and not concl and not emph.get("groups"):
+        # one line is a statement - except around a stage drawing, where it is reading text and the drawing is the point
+        return [line("p", "statement" if first_statement else "lead", pairs[0][0], pairs[0][1], bold=not first_statement)]
+    group_of = {}
+    for g in emph.get("groups") or []:
+        lo, hi = (g.get("lines") or [0, 0])[0], (g.get("lines") or [0, 0])[-1]
+        for k in range(lo, hi + 1):
+            group_of[k] = (lo, hi, re.sub(r"[^\w -]", "", g.get("class") or "box"))
     bullets = any(x.startswith("•") for x in lines)
+    # a first line is the headline only when it is short - a long opening paragraph set as a headline fills the column
+    plain = first_statement and not bullets and not boxes and not group_of and cs.wc(lines[0]) <= STATEMENT_MAX_WORDS
     roles = []
-    for i, x in enumerate(lines, 1):
-        if i == concl:
-            roles.append(("call", x))
+    for n, (i, x) in enumerate(pairs):
+        if i in group_of:
+            roles.append(("group", i, x))
+        elif i == concl:
+            roles.append(("call", i, x))
         elif i in boxes:
-            roles.append(("box alt" if boxes.index(i) % 2 else "box", x))
+            alt = (i in alts) if alts is not None else boxes.index(i) % 2 == 1
+            roles.append(("box alt" if alt else "box", i, x))
         elif x.startswith("•"):
-            roles.append(("li", x.lstrip("•").strip()))
-        elif first_statement and not bullets and i == 1 and not boxes:
-            roles.append(("statement", x))
-        elif first_statement and not bullets and not boxes:
-            roles.append(("li", x))
+            roles.append(("li", i, x.lstrip("•").strip()))
+        elif plain and n == 0:
+            roles.append(("statement", i, x))
+        elif plain:
+            roles.append(("li", i, x))
         else:
-            roles.append(("lead", x))
-    out, run = [], []
-    for i, (role, x) in enumerate(roles + [(None, None)], 1):
+            roles.append(("lead", i, x))
+    out, run, grp = [], [], []
+
+    def flush_run(dest):
+        if run:
+            dest.append('<ul class="support">')
+            dest.extend("  " + line("li", "", k, r) for k, r in run)
+            dest.append("</ul>")
+            del run[:]
+
+    def flush_group():
+        if grp:
+            lo, hi, cls = group_of[grp[0][0]]
+            inner = []
+            for n, (i, x) in enumerate(grp):
+                if x.startswith("•"):
+                    run.append((i, x.lstrip("•").strip()))
+                    continue
+                flush_run(inner)
+                inner.append(line("p", "lead" if n else "", i, x))
+            flush_run(inner)
+            out.append('<div class="%s">' % cls)
+            out.extend("  " + y for y in inner)
+            out.append("</div>")
+            del grp[:]
+
+    for role, i, x in roles + [(None, None, None)]:
+        if role == "group":
+            if grp and group_of[grp[0][0]][0] != group_of[i][0]:
+                flush_group()
+            flush_run(out)
+            grp.append((i, x))
+            continue
+        flush_group()
         if role == "li":
             run.append((i, x))
             continue
-        if run:
-            out.append('<ul class="support">')
-            out += ["  " + line("li", "", k, r) for k, r in run]
-            out.append("</ul>")
-            run = []
+        flush_run(out)
         if role:
             out.append(line("p", role, i, x, bold=role != "statement"))
     return out
@@ -318,7 +392,10 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs):
     base = {"id": sid, "data-script": sid, "data-track": "theory", "data-mins": ("%g" % cs.minutes(s)) if cs.minutes(s) else "",
             "data-foot": foot, "data-cue": (s.get("notes") or "").strip()}
 
-    if kind in ("task-slide", "activity"):
+    # a room activity that has its own figure (trace a path on a drawing) is laid out like a teaching slide,
+    # and keeps the classroom's Task marks: its code and how the room works
+    act = kind == "activity" and bool(b.get("figure"))
+    if kind in ("task-slide", "activity") and not act:
         code = (s.get("opens") or "").strip() or sid.upper()
         title = s.get("title") or ""
         short = title.split(" - ", 1)[1] if " - " in title else title
@@ -327,7 +404,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs):
              "data-kind": "Check" if is_check else "Task", "data-block": "%s · %s" % (m, code), "data-visual": "none",
              "data-activity": code}
         if kind == "task-slide":
-            d["data-task-href"] = CHECK_PAGES.get(code) or "../tasks/%s_%s.html" % (code.lower(), slug(short))
+            # the set's one page; until task pages are compiled too, an existing page for this code is the one
+            have = sorted(f for f in (os.listdir(os.path.join(mdir, "tasks")) if os.path.isdir(os.path.join(mdir, "tasks")) else [])
+                          if f.lower().startswith(code.lower() + "_") and f.lower().endswith(".html"))
+            d["data-task-href"] = CHECK_PAGES.get(code) or ("../tasks/" + have[0] if len(have) == 1 else
+                                                            "../tasks/%s_%s.html" % (code.lower(), slug(short)))
             team = s.get("team") or {}
             if team:
                 d.update({"data-mode": "team", "data-team-size": team.get("size", ""),
@@ -357,35 +438,74 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs):
     split_photo = is_photo and comp in ("two-col", "wide-left", "wide-right")
     if split_photo:
         comp = "photo"
-    emph = {k: b[k] for k in ("boxes", "conclusion") if k in b}
+    emph = {k: b[k] for k in ("boxes", "box_alt", "conclusion", "groups", "hooks") if k in b}
     inset = inset_html(mdir, b["inset"], probs, where) if b.get("inset") else ""
+    aside = ""
+    if b.get("aside"):                    # a small drawing that belongs with the words (two mini figures on a photo)
+        aside, err = read_figure(mdir, b["aside"], figdir)
+        if err:
+            probs.append("%s: its aside %s %s" % (where, b["aside"], err))
+            aside = ""
+        elif aside:
+            aside = '<div class="aside">%s</div>' % aside
+    # an inset photo goes under the words - or under the drawing ("under": "figure") when the words fill their column
+    if inset and (b.get("inset") or {}).get("under") == "figure" and fig and not is_photo:
+        fig = fig + "\n" + inset if not re.match(r'\s*<\w+\b[^>]*\bclass="[^"]*\bfill\b', fig) else \
+            re.sub(r"</div>\s*$", inset + "\n</div>", fig.rstrip(), count=1)
+        inset = ""
+    extra = [x for x in (inset, aside) if x]
     own = re.sub(r"[^\w -]", "", b.get("class") or "")          # a hook for the module's drawing styles, never a look
     d = {"class": "slide" + (" photo split" if split_photo else " photo" if comp == "photo" else " dark" if b.get("dark") else "")
                   + (" " + own if own else ""),
          "data-title": s.get("title"), "data-kind": "Theory", "data-block": "%s · %d" % (m, n),
          "data-visual": s.get("visual_kind") or "none"}
     d.update(base)
-    head = '  <div class="slide-kind"><b>Theory</b> · %s · %d / %d</div>' % (m, n, total)
+    label = "Theory"
+    if act:
+        code = (s.get("opens") or "").strip() or sid.upper()
+        d.update({"data-kind": "Task", "data-activity": code, "data-track": "practice", "data-block": "%s · %s" % (m, code),
+                  "data-link-hint": b.get("link_hint") or (lines[0] if lines else "")})
+        label = "Task"
+    head = '  <div class="slide-kind"><b>%s</b> · %s · %d / %d</div>' % (label, m, n, total)
     h2 = '<h2 data-script-field="title">%s</h2>' % e(s.get("title"))
     credit_html = '\n  <div class="credit">%s</div>' % e(credit) if credit else ""
     ind = lambda xs, k: ("\n" + " " * k).join(xs)
-    copy = lambda xs, k: ('<div class="copy">\n' + " " * (k + 2) + ind(xs + ([inset] if inset else []), k + 2)
+    copy = lambda xs, k: ('<div class="copy">\n' + " " * (k + 2) + ind(xs + extra, k + 2)
                           + "\n" + " " * k + "</div>")
 
     if comp == "photo":
         return ('<section %s>\n  <div class="photo-wrap">%s</div>\n  <div class="photo-scrim"></div>\n%s\n'
                 '  <div class="photo-copy">\n    %s\n    %s\n  </div>%s\n</section>'
-                % (attrs(d), fig, head, h2, ind(words_html(lines, dark_photo=True), 4), credit_html))
+                % (attrs(d), fig, head, h2, ind(words_html(lines, dark_photo=True) + extra, 4), credit_html))
     if comp == "stage":
-        words = words_html(lines, first_statement=False, emph=emph, legend=bool(b.get("legend")))
-        below = ind(words, 4) if b.get("legend") else copy(words, 4)
-        return ('<section %s>\n%s\n  %s\n  <div class="slide-body stage">\n    %s\n    %s\n  </div>%s\n</section>'
-                % (attrs(d), head, h2, fill(fig), below, credit_html))
+        leg = b.get("legend")
+        if isinstance(leg, list) and len(leg) == 2:
+            # "legend": [2, 6] - lines 2-6 are the numbered row under the drawing; the lines before it go above,
+            # the lines after it below
+            lo, hi = leg
+            nums = list(range(1, len(lines) + 1))
+            pre = [(i, x) for i, x in zip(nums, lines) if i < lo]
+            mid = [(i, x) for i, x in zip(nums, lines) if lo <= i <= hi]
+            post = [(i, x) for i, x in zip(nums, lines) if i > hi]
+            part = lambda ps, **kw: words_html([x for _, x in ps], first_statement=False, emph=emph,
+                                               idx=[i for i, _ in ps], **kw) if ps else []
+            above = ind(part(pre), 4) if pre else ""
+            below = "\n    ".join(y for y in (ind(part(mid, legend=True), 4), ind(part(post), 4)) if y)
+            body = "\n    ".join(y for y in (above, fill(fig), below) if y)
+        else:
+            words = words_html(lines, first_statement=False, emph=emph, legend=bool(leg))
+            body = fill(fig) + "\n    " + (ind(words, 4) if leg else copy(words, 4))
+        return ('<section %s>\n%s\n  %s\n  <div class="slide-body stage">\n    %s\n  </div>%s\n</section>'
+                % (attrs(d), head, h2, body, credit_html))
     if comp in ("two-col", "wide-left", "wide-right"):
         # a drawing, an animation or a 3D model gets the wider column (owner, 2026-10-15: bigger pictures)
         cls = "two-col " + (comp if comp != "two-col" else "fig-wide")
+        cols = [copy(words_html(lines, emph=emph), 4), fill(fig)]
+        if b.get("figure_first"):          # the drawing on the left, the words on the right
+            cols.reverse()
+            cls = cls.replace("fig-wide", "fig-wide fig-first")
         return ('<section %s>\n%s\n  %s\n  <div class="slide-body %s">\n    %s\n    %s\n  </div>%s\n</section>'
-                % (attrs(d), head, h2, cls, copy(words_html(lines, emph=emph), 4), fill(fig), credit_html))
+                % (attrs(d), head, h2, cls, cols[0], cols[1], credit_html))
     if comp == "opener":
         return ('<section %s>\n%s\n  <div class="slide-body opener mid">\n    %s\n    %s\n  </div>%s\n</section>'
                 % (attrs(d), head, h2, ind(words_html(lines, first_statement=False), 4), credit_html))

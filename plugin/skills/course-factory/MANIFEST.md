@@ -596,6 +596,18 @@ Pilot M01 (compiled): 35 findings -> 0 at 1280x800, 1024x768 and 800x1280 after 
 stern, the vent-mast frame, the liquid clipped to the tank, labels moved; valve stems and the thermometer's dots marked).
 M02 (hand-built in the pilot, not changed): 64 findings, 5 of them cut-offs that `gb_fit` removes.
 
+## 4x · The second module compiled (2.25.3, 2026-10-15)
+
+The pilot's Module 2 (20 instructor screens, its deck hand-built) compiled in a scratch copy: its drawings moved into
+figure files, the emphasis read from its markup into a build sheet, then every drawing fixed to L50. Result at 1280x800:
+words 38/38, classroom importer Ready, navigation clean, `audit_drawing` 64 -> 0, `audit_deck` / `audit_collide` clean,
+`audit_compose` 20/20. New build-sheet keys (`compile/GUIDE.md` §2c): `legend` as a line range, `box_alt`, `groups`,
+`hooks`, `inset.under`, `aside`, `figure_first`; a room activity with a drawing; a task slide links to the existing page
+for its code. Shared look (`gb_compose.css` §13b): a packed stage, `.aside`, a group of small figures as the picture,
+`.legend.own-numbers` / `data-n`, a small-projector rule (1024 px: words half the width, a step smaller - nothing spills
+or scrolls), a box's heading in bold. `gb_fit.js` adds room only on the side that overflows. Known: at 1024x768 the
+drawings' labels, drawn for 1280, fall under 12.5 px - before and after alike; needs labels sized for small screens.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

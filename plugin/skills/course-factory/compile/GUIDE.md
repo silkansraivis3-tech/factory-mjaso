@@ -61,6 +61,22 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   `data-may-cross`, `data-no-contain`, `data-may-overlap`. Every compiled deck also loads `gb_fit.js`, which widens a
   frame a drawing still reaches past and names it in the console - fix the drawing, then compile again.
 
+## 2c · More build-sheet choices (2.25.3, proved on the pilot's Module 2)
+
+| Key | What it does |
+|---|---|
+| `"legend": [2, 6]` | on a stage slide only lines 2-6 form the numbered row; the lines before go above the drawing, the rest below. Words that already start with their own number get no second badge |
+| `"box_alt": [4]` | which boxes are amber (otherwise every second one) |
+| `"groups": [{"lines": [2, 7], "class": "box z1"}]` | lines 2-7 in one box, the first as its bold heading (a zone with its list) |
+| `"hooks": {"3": {"class": "m02-steptext", "data-step": "2"}}` | a figure script's handle on a line - a class word and `data-*`, never a look |
+| `"inset": {..., "under": "figure"}` | the real photo goes under the drawing when the words fill their column |
+| `"aside": "m02_s08_minis.html"` | small drawings that belong with the words |
+| `"figure_first": true` | the drawing on the left, the words on the right |
+| `"class": "m02-s3d"` | a hook for the module's drawing styles on the slide |
+
+A room activity with a drawing of its own (trace a path) is laid out like a teaching slide and keeps the classroom's
+Task marks. A task slide links to the existing page for its code (`tasks\sc2_*.html`) while task pages are not compiled.
+
 ## 3 · When the look is not enough
 
 If a slide needs something the shared style files cannot do, the answer is **never** a module style
