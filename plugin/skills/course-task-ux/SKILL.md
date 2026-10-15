@@ -27,6 +27,15 @@ quoted from a previous course; **none of them are about your course's content.**
 means the factory never relaxes them on its own; it never means refusing an operator's request (L26).
 If a request collides with one, say which in a sentence, offer the closest option that works, do it.
 
+## The person decides the design — L26 (course-factory, 2.30.0)
+
+Every rule in this skill about how a course **looks or behaves** is a rule for the factory's own choices. When the
+person asks for something else: if nothing conflicts, just do it; if it goes against a rule here, say which rule and
+the risk in one or two plain sentences and ask **once** - *your way* / *the factory's way*; on *your way*, do it fully,
+record it (`course-factory/scripts/design_choices.py add <course> --rule <id> ...`), and **never change it back** - not
+in a later build, fix or session, and not because a check flagged it. The course material (programme, Main ILOs,
+hours, sources, the approved words) keeps its own rules: `course-factory` SKILL.md, L26.
+
 ## The delivery target is a parameter, not a fact
 
 Everything measurable below was ruled for:
@@ -279,14 +288,14 @@ in the **feedback**, not beside the data the trainee is meant to read.
 
 Prefer a real photograph; draw only what no photograph can show and **say on the page that it is a
 drawing**. Licence and credit on the page · **open the file and look at it** first · a caption claims
-only what the photograph evidences · photographs a trainee identifies from are tappable to full size.
+only what the photograph evidences · **every picture opens full screen and closes again** - load `../assets/gb_zoom.js` + `gb_zoom.css` on every task page with a picture (L51; a picture the trainee answers on gets a ⤢ corner button by itself, so a tap stays the answer).
 
 ---
 
 ## 8 · Two-stage tap, and close buttons
 
 1. **First tap opens the card and nothing else** — including a tap on the picture.
-2. **Only an open card lets its picture go full screen.**
+2. **Only an open card lets its picture go full screen** (the shared viewer, `gb_zoom.js`, does this by itself).
 3. **Always a close button**, at least 48 × 48, on the opened card and the full-screen view.
 4. **The tap hint never sits on top of content** — "tap to open" in normal flow beneath a closed
    card's picture; a badge over the picture only on an opened card.

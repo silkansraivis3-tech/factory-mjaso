@@ -126,11 +126,27 @@
     },
     {
       "id": "summary",
-      "purpose": "What was covered. One per module or one per day.",
+      "purpose": "What was covered - a day or a block. The MODULE closes with the recap screen instead (L51).",
       "links_inside_slide": false,
       "fill_target": "sparer than the floor is allowed",
       "must_have": [],
       "must_not_have": []
+    },
+    {
+      "id": "recap",
+      "purpose": "\"What to take away\" - the module's closing slide, straight before the check screen, the same design in every module (L51, owner 2026-10-15). Built from the approved script's recap slide; markup in build/GUIDE.md 6a, look in gb_compose.css 15.",
+      "links_inside_slide": false,
+      "fill_target": "the boxes fill the stage",
+      "must_have": [
+        "class slide dark recap and data-kind Summary",
+        "3 to 6 li.rc-item, one per approved line, each data-script-field text",
+        "the p.rc-next line naming the module check, data-script-ignore"
+      ],
+      "must_not_have": [
+        "a picture - the design is the picture",
+        "a module's own styling of the recap",
+        "any link"
+      ]
     },
     {
       "id": "check",

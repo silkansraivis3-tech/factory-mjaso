@@ -38,6 +38,14 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 ```
 
 - `text` is the **exact visible words** of the slide, not a description of them. One line per line.
+- **The recap closes the module (L51, 2.30.0).** The slide straight before the module check's task slide is the
+  recap: `{"id": "s24", "kind": "slide", "recap": true, "title": "What to take away", "text": "Kept liquid - cold,
+  under pressure, or both
+...", "visual_kind": "none", "notes": "...", "minutes": 2}` - 3 to 6 points, one line
+  each, *"Short title - one sentence"*, 24 words or fewer, the module's main points in the words its slides used.
+  The slide word floor does not apply to it; the notes floor does. It is built in the one shared design (every
+  module the same). Missing or misplaced, it is a must-fix - unless the person chose otherwise after hearing the
+  risk (L26, `design_choices.py`), and then approval passes and names their choice.
 - **20 / 80 in class (L49, 2.26.0).** A slide where the trainees do something gets `"active"`:
   `explain-then-reveal`, `predict-then-reveal`, `worked-example`, `scenario` or `explore` (they work the
   model or diagram themselves) - and its notes say what they do. Never mark a slide that is only shown.

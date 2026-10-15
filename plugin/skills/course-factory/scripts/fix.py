@@ -7,7 +7,8 @@
     fix.py apply    <course> --confirmed                 after the operator's one yes: scripts AND built slides
     fix.py approve  <course> --by "<name>" [--despite-findings]   one approval for every module in the batch
     fix.py check    <course> --kind words|layout|package [--modules ...] [--slides s03,s07]
-    fix.py standard <course> [--add "<rule>" --said "<operator's words>"]   the course's house decisions
+    fix.py standard <course> [--add "<rule>" --said "<operator's words>" [--departs <design rule> --risk "..."]]
+                                                         the course's house decisions; --departs: a design choice (L26)
     fix.py sync-shared <course> [--confirmed]            one shared file -> every module's own copy
 
 WHY THIS EXISTS
@@ -56,6 +57,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import content_script as cs  # noqa: E402
 import workspace  # noqa: E402
+import design_choices  # noqa: E402  - the operator's design choices (L26, 2.30.0)
 
 SKILL = os.path.dirname(HERE)
 RULES = json.load(io.open(os.path.join(SKILL, "knowledge", "fix-rules.json"), encoding="utf-8"))
@@ -608,15 +610,19 @@ def cmd_check(course, kind, modules, slides=None, floor=None):
 
 # ---------------------------------------------------------------- the course's house decisions
 
-STANDARDS_HEAD = """# Course standards - what the operator decided once for every module
-
-Every module is built to these, and every fix keeps them. Newest last. Written by `fix.py standard`;
-the operator's own words in quotes. A standard is never silently dropped - the operator removes it.
-
-"""
+STANDARDS_HEAD = design_choices.STANDARDS_HEAD       # one head for the file, whoever writes it first
 
 
-def cmd_standard(course, add=None, said=None):
+def cmd_standard(course, add=None, said=None, departs=None, risk=""):
+    if departs:            # L26 (2.30.0): a design choice against a factory rule - the risk was told, the operator kept it
+        try:
+            n = design_choices.add(course, departs, add or "", said or "", risk)
+        except ValueError as e:
+            print("Stopped - %s" % e)
+            return 2
+        print("Standard S%d written - the operator's design choice against \"%s\". Every check reports it as their choice, "
+              "and no build or fix changes it back." % (n, departs))
+        return 0
     p = workspace.claude_path(course, RULES["standards"]["file"])
     text = io.open(p, encoding="utf-8").read() if os.path.isfile(p) else STANDARDS_HEAD
     if not add:
@@ -645,6 +651,8 @@ def main(argv=None):
     s = sub.add_parser("check"); s.add_argument("course"); s.add_argument("--kind", required=True)
     s.add_argument("--modules"); s.add_argument("--slides"); s.add_argument("--floor", type=float)
     s = sub.add_parser("standard"); s.add_argument("course"); s.add_argument("--add"); s.add_argument("--said")
+    s.add_argument("--departs", help="the design rule (knowledge/design-rules.json) this standard departs from - L26")
+    s.add_argument("--risk", default="", help="the risk the operator was told before they chose")
     s = sub.add_parser("sync-shared"); s.add_argument("course"); s.add_argument("--confirmed", action="store_true")
     s.add_argument("--from", dest="source")
     a = ap.parse_args(argv)
@@ -660,7 +668,7 @@ def main(argv=None):
     if a.cmd == "check":
         return cmd_check(a.course, a.kind, a.modules, a.slides, a.floor)
     if a.cmd == "standard":
-        return cmd_standard(a.course, a.add, a.said)
+        return cmd_standard(a.course, a.add, a.said, a.departs, a.risk)
     return cmd_sync_shared(a.course, a.confirmed, a.source)
 
 

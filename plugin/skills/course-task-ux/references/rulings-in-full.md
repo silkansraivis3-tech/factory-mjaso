@@ -193,7 +193,9 @@ inside insulation, below deck) and **say on the page that it is a drawing**.
 - **A caption may only claim what the photograph evidences.** If the source says the picture
   is of oil tankers, the caption says oil tankers — even when it is illustrating something
   else.
-- Photographs a trainee is asked to identify from should be **tappable to full size**.
+- **Every picture opens full screen and closes again** (L51, 2.30.0): the shared viewer `gb_zoom.js` + `gb_zoom.css`
+  on every task page with a picture. A picture the trainee answers on (hotspots or labels laid over it) gets a ⤢ corner
+  button instead of opening on a tap, so the tap stays the answer; a closed card still opens first (§8).
 
 ---
 

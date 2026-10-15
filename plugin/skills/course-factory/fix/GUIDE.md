@@ -23,7 +23,7 @@ re-checking it, a whole-course QA, a visual sweep, up to six agents at once unti
 `fix/GUIDE.md` (this page), the course's `working_claude\COURSE_STATE.md` and `working_claude\STANDARDS.md`. Not
 SKILL.md's laws in full, not the build lanes, not every module's notes. Open a lane guide only if the fix needs its
 craft — `course-module-ui` for a colour or a component's look, `course-task-ux` for a task page — and then only the
-part you need. The approved words are still locked (L29) and the five hard limits still hold (L26); everything
+part you need. The approved words are still locked (L29) and the four material limits still hold (L26); everything
 else about a fix is in this page.
 
 ## 1 · Find — every place at once
@@ -83,6 +83,11 @@ their approval (L26): `approve --by` with their name, once.
 - **Hand work** (re-composing a slide, a bigger picture, less padding): do it in this session. Agents only when the
   hand work spans more than three modules — **at most two at once**, each given its modules, the sweep's list and
   this page; **no QA agent after them**.
+- **A design wish against a factory rule** — *"no recap in my modules"*, *"our own blue"*, *"smaller text here"* —
+  is the person's to make (L26): say the rule and the risk once (`design_choices.py rules`), and on *their way* do it
+  and record it: `fix.py standard <course> --add "<the choice>" --said "<their words>" --departs <rule> --risk "..."`.
+  Every check then reports it as their choice. **Never "fix" a recorded choice** - a sweep or check that lists one
+  lists it as theirs.
 - **A wish for every module** — *"the last slide like this"*, *"text bigger"*, *"all buttons 56 px"* — is also a
   **standard**, written once so new modules are built to it and it is never repaired again:
   `python scripts/fix.py standard <course> --add "<the rule>" --said "<their words>"`.

@@ -71,6 +71,8 @@ course-factory/
 ├── knowledge/fix-rules.json             the sweeps and their thresholds, the check for each kind of change, what never runs in a fix, standards, shared parts
 ├── scripts/fix.py, test_fix.py          sweep / propose / apply / approve / check / standard / sync-shared - every module at once, one yes for all of it
 ├── scripts/measure_slides.py            every slide of many modules at 1280 x 800 in a hidden Chrome or Edge, animations finished, ~4 s a module
+├── knowledge/design-rules.json          the DESIGN rules a person may choose against after one warning, each with the risk to say (L26, 2.30.0)
+├── scripts/design_choices.py, test_design_choices.py   rules / list / add - a choice recorded in STANDARDS.md, obeyed by every check
 │                                          knowledge/media-and-tasks.json three_d: 3D on at most half the slides, where it makes sense, full quality, smooth (L46, 2.22.0)
 ├── scripts/old_course.py, test_workspace.py   the old course read whole, its pictures copied out (L41, 2.19.0)
 ├── knowledge/media-and-tasks.json        the kinds of picture and the ways of answering, who makes each, the variety floors (L37, L38, 2.18.0)
@@ -211,7 +213,8 @@ ignoring colleague requests as "not in the style":
   `course-task-ux`'s "not negotiable", `course-visuals`' "never add a visual to fill space".
 
 The five hard limits are the only exceptions: brand, programme + Main ILOs, hours, no source no
-claim (an operator's stated fact is a source), offline tablet.
+claim (an operator's stated fact is a source), offline tablet. *(2.30.0: the brand moved to the design side - the
+person's after one warning, see 4z; the material keeps the other four.)*
 
 ## 4e · Intake and the knowledge base (2.13.0, 2026-09-30, Phase 5 step 2)
 
@@ -642,6 +645,45 @@ every entrance animation and transition is run to its end first; and the thresho
 numbers (ink 45 %, text 16 px) and S9's "space up and down", not the factory's sign-off minimum (12.5 px). The full
 sign-off - the 14 checks in `SKILL.md` *Verify before reporting done* - stays for builds, retrofits and handover.
 Tests: `scripts/test_fix.py`.
+
+## 4z · Every picture full screen, one recap for every module, and the person decides the design (2.30.0, 2026-10-15)
+
+The owner: "all images, every picture, illustration, explanitory image e.c., can be clicked and be full screened, and
+later you can close it as well"; "each module should of course end in module check, but before it it should be
+beautiful summary in same design, like beautiful animation, boxes, main points what to take away from this module,
+and all modules should be same closing slide design"; and "if person who uses plugin somehow tells you that he does
+not like it, you need to listen to this ... claude should tell person about this risk, but still after person reviews
+and tells that he wants his way, plugin listens to that" - "only design ... no course material side".
+
+What was there before: a two-stage tap on card grids (course-module-ui anatomy) and "photographs a trainee identifies
+from should be tappable" (course-task-ux) - no viewer for any other picture, nothing in the deck engine, no check. A
+`sum` summary grid with no requirement, no place, no animation. L26 already said the operator's request wins - but
+fixed the brand and the components as "the style", had no step where the person hears the risk and confirms, and the
+checks did not know what the person chose, so the next build or fix flagged the wish and quietly put it back.
+
+- **L51 the viewer** - `course-module-ux/assets/gb_zoom.js` + `.css`, in `course-module-ui/knowledge/design-system.json`
+  (copied into every module) and `gb_shell.html`. ES5, starts by itself, delegated: every `img` and outermost inline
+  `svg` of 64 px or more. Closes on X, tap outside, Esc, swipe down, Back (history entry), or the active slide changing;
+  arrows close it and still turn the slide; touches never reach the deck's swipe. Pinch, double-tap, + / −, wheel, drag.
+  Answer surfaces (`[data-key]` / `[data-zone]` / `[data-hotspot]` inside the picture or laid over it, absolutely
+  placed) get a ⤢ corner button; a closed `.cmp-card` opens first. Only movement is animated (build/GUIDE.md 9).
+  Tried in a browser on a deck: photo, drawing, hotspot frame, each way of closing.
+- **L51 the recap** - `theory-rules.json` `recap`; `content_script.recap_findings` (no recap / not straight before the
+  module check / twice / 3-6 points: must-fix; a long point: a note); the recap is exempt from the slide word floor,
+  the picture note and the 3D-share denominator; `gb_compose.css` section 15 `.slide.dark.recap` (numbered boxes rising
+  in, a blue-to-amber rule drawn across, "Next: the module check"; movement only; reduced motion); markup in
+  `course-module-ux/build/GUIDE.md` 6a and `screen-kinds.json` `recap`; `check_course_package.py` checks the slide
+  before the module check and that every page with a picture loads the viewer.
+- **L26 revised** - `knowledge/design-rules.json` (recap, picture-viewer, brand, shared-design, text-size, free-space,
+  three-d-share, motion, layout - each with the risk to say; no material rule is in it); `scripts/design_choices.py`
+  writes a choice as a standard tagged `[departs from: <id>; risk told: ...]` in `STANDARDS.md` (`fix.py standard
+  --departs` too), finds it from any folder, and `check_course_package.py`, `content_script.py approve` and
+  `course-module-ui design_system.py check` (state CHOSEN) report it as the operator's choice instead of a problem.
+  The same short block sits near the top of all six SKILL.md files (`test_design_choices.py` checks it), and every
+  session reads `STANDARDS.md` and the feedback log after `COURSE_STATE.md`.
+
+Not verified: the viewer and the recap on the real classroom tablet and the projector (L39 - the owner's test). Whether
+the projector shows an opened picture depends on how the classroom mirrors the instructor's deck.
 
 ## 5 · Known gaps / before this goes live
 

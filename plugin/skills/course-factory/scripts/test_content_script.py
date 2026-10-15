@@ -72,6 +72,14 @@ S03_NOTES = ("- Let the room name each tank type on the model first.\n"
              "- Ask: why does a pressure vessel need no secondary barrier?\n"
              "- Stress: how likely a leak is decides the barrier.")
 
+RECAP_TEXT = ("Kept liquid - cold, under pressure, or both\n"
+              "Three ship types - fully pressurised, semi-refrigerated, fully refrigerated\n"
+              "Tank types - independent A, B, C and membrane\n"
+              "The barrier follows the risk - the more likely a leak, the fuller the secondary barrier")
+RECAP_NOTES = ("- Read each point aloud and ask the room for one example from their own ships.\n"
+               "- Point back to the 3D model of the tank types before the module check.\n"
+               "- Then press Next: the module check opens on the trainee tablets.")
+
 SCRIPT = {
     "module": 1, "title": "Gas tankers", "course_language": "English", "operator_language": "lv", "status": "draft",
     "minutes_allocated": 23,
@@ -94,7 +102,9 @@ SCRIPT = {
          "mechanic": "set_value", "visual_kind": "schematic", "visual": "A thermometer scale from -170 °C to +20 °C with a slider",
          "answer": "-104 °C ± 4, range -170 to 20", "feedback": "Ethylene is carried on semi-refrigerated ships, at about -104 °C."},
         {"id": "s03", "kind": "slide", "title": "Four containment systems", "text": S03_TEXT, "visual_kind": "model_3d", "layout": "visual_wide",
-         "visual": "3D model of the four tank types in a hull section - turn it, and cut each one open", "notes": S03_NOTES, "minutes": 5},
+         "visual": "3D model of the four tank types in a hull section - turn it, and cut each one open", "notes": S03_NOTES, "minutes": 3},
+        {"id": "s04", "kind": "slide", "recap": True, "title": "What to take away", "text": RECAP_TEXT, "visual_kind": "none",
+         "visual": "", "notes": RECAP_NOTES, "minutes": 2},
         {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Module check - gas tankers",
          "text": "The module check opens on your tablet now: five questions on the whole module. Your score is for you.",
          "notes": "Press OPEN TASK when the room is ready.", "minutes": 5},
@@ -332,12 +342,44 @@ def main():
         half["screens"][1:1] = [dict(screen(SCRIPT, "s02"), id="s0%d" % i, visual_kind="photo") for i in (4, 5)]
         check("... two of five is fine", not [x for x in cs.media_findings(half) if x["rule"] == "v_3d_share"])
 
+        print("\n-- L51 (2.30.0): every module closes with one recap slide, straight before the module check")
+        rules = lambda sc: {x["rule"]: x for x in cs.recap_findings(sc)}
+        check("the example module's recap passes", not rules(SCRIPT), cs.recap_findings(SCRIPT))
+        none = copy.deepcopy(SCRIPT)
+        none["screens"] = [x for x in none["screens"] if x["id"] != "s04"]
+        check("no recap slide must be fixed", rules(none).get("r_no_recap", {}).get("level") == cs.FAIL, cs.recap_findings(none))
+        check("... and it blocks approval like any other must-fix", "r_no_recap" in [x["rule"] for x in cs.blocking(cs.all_findings(none))])
+        early = copy.deepcopy(SCRIPT)
+        rc = screen(early, "s04")
+        early["screens"].remove(rc)
+        early["screens"].insert(0, rc)
+        check("a recap anywhere but straight before the module check must be fixed", rules(early).get("r_recap_place", {}).get("level") == cs.FAIL)
+        few = copy.deepcopy(SCRIPT)
+        screen(few, "s04")["text"] = "Kept liquid\nThree ship types"
+        check("two points are too few", rules(few).get("r_recap_points", {}).get("level") == cs.FAIL)
+        wordy = copy.deepcopy(SCRIPT)
+        screen(wordy, "s04")["text"] += "\n" + " ".join(["word"] * 30)
+        check("... a long point is a suggestion only", rules(wordy).get("r_recap_long", {}).get("level") == cs.NOTE)
+        check("the recap is not held to the slide word floor, nor asked for a picture",
+              not [x for x in cs.theory_findings(SCRIPT)[0] + cs.media_findings(SCRIPT) if x["screen"] == "s04"])
+        check("the final assessment needs no recap", not cs.recap_findings(dict(none, module="final")))
+        none["minutes_allocated"] = 21
+        nc = new_course(tmp, "own_way", none)
+        code, out = cs_run("approve", nc, "--module", "1", "--by", "Raivis")
+        check("without a recap the script is not approved", code == 1 and "(L51)" in out, out)
+        import design_choices as dc
+        dc.add(nc, "recap", "No recap slide - the module check follows the last teaching slide",
+               "the instructor sums up himself", "the modules end differently")
+        code, out = cs_run("approve", nc, "--module", "1", "--by", "Raivis")
+        check("... and after the operator chose so, having heard the risk, it is - the choice named, no --despite-findings needed",
+              code == 0 and "the operator's choice S1" in out, out)
+
         print("\n-- 2.18.1: the instructor notes are short, and live in their own .md file for the instructor's panel")
         code, out = cs_run("render", c, "--module", "1")
         md = io.open(p["notes_md"], encoding="utf-8").read()
         check("render writes the module's INSTRUCTOR_NOTES.md", p["notes_md"].endswith(os.path.join("to_review", "M01_INSTRUCTOR_NOTES.md")) and "INSTRUCTOR_NOTES.md" in out, out)
         check("... one short section per slide, its notes as points", "## Slide 1 · Why gas tankers are different · 5 min" in md
-              and "- Ask who has sailed on a gas tanker, and with which cargo." in md and md.count("## Slide ") == 5)
+              and "- Ask who has sailed on a gas tanker, and with which cargo." in md and md.count("## Slide ") == 6)
         check("... and the OPEN TASK prompt where each task opens", "**OPEN TASK** → Self-check 1, 3 questions, on every trainee tablet." in md
               and "**OPEN TASK** → Module check, 5 questions" in md)
         check("... in the course language, whatever the operator's", "instructor notes" in md and "slaids" not in md)
@@ -408,8 +450,8 @@ def main():
         check("a module with no module check is caught", any("no module check" in x for x in cs.validate(bad)), cs.validate(bad))
         bad = copy.deepcopy(SCRIPT)
         bad["screens"].append({"id": "s09", "kind": "slide", "title": "After the check", "text": "x", "notes": "", "minutes": 0})
-        bad["screens"][8]["graded"] = True
-        bad["screens"][3]["correct"] = "D"
+        screen(bad, "m01")["graded"] = True
+        screen(bad, "q01")["correct"] = "D"
         bad["minutes_allocated"] = 40
         cb2 = new_course(tmp, "bad", bad)
         code, out = cs_run("render", cb2, "--module", "1")

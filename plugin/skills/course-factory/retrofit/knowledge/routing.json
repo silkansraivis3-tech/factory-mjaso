@@ -199,7 +199,7 @@
       "uzlabo",
       "обнови"
     ],
-    "behaviour": "Do the change as asked. Grep for what depends on anything removed (L7) and say in one line what else it touched. If it hits one of the five hard limits (L26), say why in one or two plain sentences, offer the closest option that works, and do that. Log the correction in FEEDBACK_LOG.md (L32). Do not turn it into an interview and do not rebuild the rest of the module."
+    "behaviour": "Do the change as asked. Grep for what depends on anything removed (L7) and say in one line what else it touched. If it hits one of the four material limits (L26: programme and Main ILOs, hours, sources, offline), say why in one or two plain sentences, offer the closest option that works, and do that. If it goes against a DESIGN rule (knowledge/design-rules.json), say the rule and the risk once and ask - their way or the factory's; on their way do it and record it (design_choices.py add), and never change it back. Log the correction in FEEDBACK_LOG.md (L32). Do not turn it into an interview and do not rebuild the rest of the module."
   },
   "fix_triggers": {
     "_law": "L50 - a fix is not a build (owner, 2026-10-15). Added 2.29.0. Before it, 'the last slide is bad in all modules, fix them all' matched edit, and was done as nineteen separate edits, each with the build's full checks and a QA agent after it - about 30 minutes for a small fix (GAS ADVANCED FEEDBACK_LOG #61-#93).",

@@ -99,6 +99,7 @@ sys.path.insert(0, HERE)
 import check_slide_text as slide_text  # noqa: E402  - the same four rules the built slides get (L22)
 import workspace  # noqa: E402  - the factory works in course\ beside the operator's material (L40)
 import bloom_map  # noqa: E402  - what level each question reaches, against its Sub-ILO (L48)
+import design_choices  # noqa: E402  - the operator's design choices are theirs, not must-fixes (L26, 2.30.0)
 
 MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json"), encoding="utf-8"))
 KINDS = ("slide", "task-slide", "activity", "self-check", "module-check", "final")
@@ -697,7 +698,9 @@ def theory_findings(script):
         if not s.get("active"):              # L49: the density is of PLAIN theory; an active slide's minutes are what the trainees do
             th_words += w_slide + w_notes
             th_min += minutes(s)
-        if w_slide < R["slide"]["min_words"]:
+        if s.get("recap"):
+            pass                              # L51: a recap is short on purpose - recap_findings checks its points
+        elif w_slide < R["slide"]["min_words"]:
             add(s["id"], "text", FAIL, "t_thin_slide", w=w_slide, min=R["slide"]["min_words"])
         elif w_slide > R["slide"]["max_words"]:
             add(s["id"], "text", NOTE, "t_long_slide", w=w_slide, max=R["slide"]["max_words"])
@@ -804,7 +807,7 @@ def media_findings(script):
         k = parse_kind(s.get("visual_kind", ""))
         if k == "none" or not (k or "").strip():
             # no quota (owner, 2.18.1): a slide with no picture is a suggestion - the summary slide not even that
-            if s is not slides[-1]:
+            if s is not slides[-1] and not s.get("recap"):
                 add(s["id"], "visual_kind", NOTE, "v_none")
             continue
         if k not in VISUAL_KINDS:
@@ -827,8 +830,9 @@ def media_findings(script):
         TD = MEDIA["three_d"]
         is3d = lambda s: MEDIA["visual_kinds"].get(parse_kind(s.get("visual_kind", "")), {}).get("family") in TD["families"]
         three = [s for s in slides if is3d(s)]
-        if len(three) >= TD["count_from"] and len(three) > TD["max_share"] * len(slides):     # half of the presentation's teaching slides
-            add(None, "visual_kind", FAIL, "v_3d_share", n=len(three), tot=len(slides), pct="%.0f" % (100.0 * len(three) / len(slides)),
+        teach = [s for s in slides if not s.get("recap")]       # the recap closes the module; it teaches nothing new (L51)
+        if len(three) >= TD["count_from"] and len(three) > TD["max_share"] * len(teach):      # half of the presentation's teaching slides
+            add(None, "visual_kind", FAIL, "v_3d_share", n=len(three), tot=len(teach), pct="%.0f" % (100.0 * len(three) / len(teach)),
                 max="%.0f" % (100 * TD["max_share"]))
         run = 0
         for s in slides:
@@ -861,7 +865,51 @@ def media_findings(script):
             run = run + 1 if mech(a) == mech(b) else 1
             if run == F["max_same_in_a_row"] + 1:
                 add(b["id"], "", NOTE, "m_same_in_a_row", n=run, how=mech_label(mech(b), lang))
+    return found + recap_findings(script)
+
+
+def recap_findings(script):
+    """L51 (owner, 2026-10-15) - every teaching module closes with ONE recap slide ("what to take away"),
+    straight before the task slide that opens the module check: 3-6 points, one line each, read at a
+    glance. The design is the same in every module (gb_compose.css section 11); this checks the words.
+    A FAIL here blocks approval like any other - the operator who wants it otherwise approves
+    --despite-findings, and that choice is recorded (L26)."""
+    if str(script.get("module")).lower() == "final":
+        return []
+    R = RULES["recap"]
+    screens = script.get("screens", [])
+    _, sets, _ = plan_of(script)
+    found = []
+
+    def add(sid, field, level, key, **kw):
+        found.append({"where": place(script, sid) if sid else T(script, "s_the_module"), "screen": sid or "", "field": field,
+                      "level": level, "rule": key, "detail": T(script, key, **kw), "fix": ""})
+
+    mc = next((st["opened_by"] for st in sets if st["kind"] == "module-check" and st["opened_by"]), None)
+    recaps = [s for s in screens if s.get("kind") == "slide" and s.get("recap")]
+    if not recaps:
+        if mc:
+            add(None, "", FAIL, "r_no_recap")
+        return found
+    if len(recaps) > 1:
+        add(recaps[1]["id"], "", FAIL, "r_recap_twice", n=len(recaps))
+    rc = recaps[-1]
+    if mc:
+        i = next(n for n, s in enumerate(screens) if s.get("id") == mc)
+        if i == 0 or screens[i - 1] is not rc:
+            add(rc["id"], "", FAIL, "r_recap_place")
+    points = lines_of(rc.get("text", ""))
+    if not R["min_points"] <= len(points) <= R["max_points"]:
+        add(rc["id"], "text", FAIL, "r_recap_points", n=len(points), lo=R["min_points"], hi=R["max_points"])
+    for n, line in enumerate(points, 1):
+        w = len(words(line))
+        if w > R["max_words_per_point"]:
+            add(rc["id"], "text", NOTE, "r_recap_long", i=n, w=w, max=R["max_words_per_point"])
     return found
+
+
+# the design rules (knowledge/design-rules.json) a finding enforces - an operator's choice against one waives it (L26)
+DESIGN_FINDINGS = {"recap": "r_", "three-d-share": "v_3d_share"}
 
 
 def all_findings(script):
@@ -1683,6 +1731,11 @@ def cmd_approve(course, module, by, despite=False):
         print("Not approved - the script still has problems:\n" + "\n".join("  - " + x for x in probs))
         return 1
     must = blocking(all_findings(script))
+    chosen = design_choices.load(course)                     # L26: a design rule the operator chose against stops nothing
+    waived = [f for f in must if any(f["rule"].startswith(pre) and rule in chosen for rule, pre in DESIGN_FINDINGS.items())]
+    must = [f for f in must if f not in waived]
+    for f in waived:
+        print("  %s: %s - %s" % (f["where"], f["detail"], design_choices.label(chosen[next(r for r, pre in DESIGN_FINDINGS.items() if f["rule"].startswith(pre))])))
     if must and not despite:
         print("Not approved - the checks found %d thing(s) that must be fixed first:\n%s\n\n"
               "  Fix them in the script (propose, confirm, apply) - or, if the operator has read them and wants the\n"

@@ -38,6 +38,13 @@
     "_why": "Every teaching module ends with one. It covers the whole module, so a short module (under before_self_check.min_minutes of theory) still has one."
   },
 
+  "recap": {
+    "min_points": 3,
+    "max_points": 6,
+    "max_words_per_point": 24,
+    "_what": "L51 (owner, 2026-10-15): every teaching module closes with ONE recap slide - \"what to take away\" - straight before the task slide that opens the module check, in the same animated design in every module (course-module-ui gb_compose.css section 11, markup in course-module-ux build/GUIDE.md). In the script it is a slide with \"recap\": true; its text is the points, one line each, \"Short title - one sentence\". Its visual_kind is none - the design is the picture.",
+    "_why": "The owner: each module should end in the module check, but before it a beautiful summary in the same design - boxes, the main points to take away from this module - and all modules the same closing slide design. A recap is short on purpose, so the slide word floor (slide.min_words) does not apply to it; its notes still do."
+  },
   "split": {
     "_authority": "Owner, 2026-10-15 (L49, 2.26.0): 'now most courses are 80/20 - 80 theory, 20 practical. On paper, in the programmes and IMO model courses it stays as it is. But we want to at least come close to 20/80 - 20 plain raw theory, 80 practical: simulators, active learning theory, self-checks, tablet interactive tasks ... first it needs to be reviewed by the person who uses the plugin.' The programme's hours never change (L1); what changes is how the class spends them. Measured on the Stage 2 page and every Stage 3 review page. A suggestion, not a rule, in 2.26.0.",
     "_keep_theory": "Owner, 2026-10-15: 'still you need enough theory ... that does not mean you don't need raw theory at all, you can still add it, and don't remove existing good theory, because each instructor can skip each slide faster; on paper we have that theory, if someone needs he can read it - but the main teaching activities, how the trainee will gain this knowledge, are in active learning.' So 20/80 is reached with TIME, never by cutting theory: every good theory slide stays (more may be added), its minutes shrink - the instructor moves through it faster and the words stay to be read - and the minutes it frees go to active learning. No suggestion ever says to remove a slide or shorten its text. The slide and density floors still apply.",

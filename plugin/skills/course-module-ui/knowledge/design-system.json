@@ -16,6 +16,8 @@
     {"name": "task_complete.css",   "from": "course-task-ux/assets/task_complete.css",    "for": "the completion panel"},
     {"name": "task_complete.js",    "from": "course-task-ux/assets/task_complete.js",     "for": "the one shared task ending"},
     {"name": "gb_deck.js",          "from": "course-module-ux/assets/gb_deck.js",         "for": "the deck engine"},
+    {"name": "gb_zoom.js",          "from": "course-module-ux/assets/gb_zoom.js",         "for": "every picture opens full screen and closes again - every page (L51)"},
+    {"name": "gb_zoom.css",         "from": "course-module-ux/assets/gb_zoom.css",        "for": "the full-screen picture viewer's look (L51)"},
     {"name": "gb_run.js",           "from": "course-module-ux/assets/gb_run.js",          "for": "the START_HERE step runner"},
     {"name": "gb_run.css",          "from": "course-module-ux/assets/gb_run.css",         "for": "the step runner's look"},
     {"name": "novikontas_logo.svg", "from": "../resources/brand/novikontas_logo.svg",     "for": "the landing screen"}

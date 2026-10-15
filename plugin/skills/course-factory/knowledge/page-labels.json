@@ -372,7 +372,12 @@
     "mm_plan_out": "Cards that do not belong:",
     "mm_timeline": "The events in the order they happened (the tablet shuffles them):",
     "mm_stop": "should have been stopped here",
-    "mm_compare": "The options side by side:"
+    "mm_compare": "The options side by side:",
+    "r_no_recap": "The module has no recap slide (\"what to take away\") - every teaching module closes with one, straight before the module check (L51).",
+    "r_recap_place": "The recap slide must come straight before the task slide that opens the module check (L51).",
+    "r_recap_twice": "The module has {n} recap slides - it closes with one (L51).",
+    "r_recap_points": "The recap has {n} point(s) - it needs {lo} to {hi}, one line each (L51).",
+    "r_recap_long": "Recap point {i} has {w} words - keep each point to {max} or fewer, it is read at a glance (L51)."
   },
   "lv": {
     "page_title": "Kursa uzbūve — jūsu pārskatīšanai",
@@ -733,7 +738,12 @@
     "mm_plan_out": "Kartītes, kas neder:",
     "mm_timeline": "Notikumi tādā secībā, kā tie notika (planšete tos sajauc):",
     "mm_stop": "šeit to vajadzēja apturēt",
-    "mm_compare": "Varianti blakus:"
+    "mm_compare": "Varianti blakus:",
+    "r_no_recap": "Modulim nav kopsavilkuma slaida (\"ko paturēt prātā\") - katrs mācību modulis beidzas ar to, tieši pirms moduļa pārbaudes (L51).",
+    "r_recap_place": "Kopsavilkuma slaidam jābūt tieši pirms uzdevuma slaida, kas atver moduļa pārbaudi (L51).",
+    "r_recap_twice": "Modulim ir {n} kopsavilkuma slaidi - tas beidzas ar vienu (L51).",
+    "r_recap_points": "Kopsavilkumā ir {n} punkts(i) - vajag no {lo} līdz {hi}, katrs savā rindā (L51).",
+    "r_recap_long": "Kopsavilkuma {i}. punktā ir {w} vārdi - katrā punktā ne vairāk kā {max}, to izlasa vienā mirklī (L51)."
   },
   "ru": {
     "page_title": "Структура курса — на ваше рассмотрение",
@@ -1094,6 +1104,11 @@
     "mm_plan_out": "Карточки, которые не подходят:",
     "mm_timeline": "События в том порядке, как они произошли (планшет их перемешивает):",
     "mm_stop": "здесь это надо было остановить",
-    "mm_compare": "Варианты рядом:"
+    "mm_compare": "Варианты рядом:",
+    "r_no_recap": "В модуле нет итогового слайда («что запомнить») - каждый учебный модуль заканчивается им, прямо перед проверкой модуля (L51).",
+    "r_recap_place": "Итоговый слайд должен стоять прямо перед слайдом задания, который открывает проверку модуля (L51).",
+    "r_recap_twice": "В модуле {n} итоговых слайда - он заканчивается одним (L51).",
+    "r_recap_points": "В итоге {n} пункт(ов) - нужно от {lo} до {hi}, по одной строке (L51).",
+    "r_recap_long": "В пункте {i} итога {w} слов - не больше {max} в пункте, его читают одним взглядом (L51)."
   }
 }

@@ -33,6 +33,15 @@ This is a **delivery-UX skill**. It never decides what a module teaches.
 
 ---
 
+## The person decides the design — L26 (course-factory, 2.30.0)
+
+Every rule in this skill about how a course **looks or behaves** is a rule for the factory's own choices. When the
+person asks for something else: if nothing conflicts, just do it; if it goes against a rule here, say which rule and
+the risk in one or two plain sentences and ask **once** - *your way* / *the factory's way*; on *your way*, do it fully,
+record it (`course-factory/scripts/design_choices.py add <course> --rule <id> ...`), and **never change it back** - not
+in a later build, fix or session, and not because a check flagged it. The course material (programme, Main ILOs,
+hours, sources, the approved words) keeps its own rules: `course-factory` SKILL.md, L26.
+
 ## Where a module lives, and how it starts (L43, owner 2026-10-01)
 
 *(2.21.0, L45: the folder is `course\modules\module01\` and the deck `presentation\index.html` - every screen a `.slide`

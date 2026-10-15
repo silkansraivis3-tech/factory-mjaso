@@ -63,6 +63,15 @@ PREVIEW by default and stays there until a human says, in their own words, that 
 
 ---
 
+## The person decides the design — L26 (course-factory, 2.30.0)
+
+Every rule in this skill about how a course **looks or behaves** is a rule for the factory's own choices. When the
+person asks for something else: if nothing conflicts, just do it; if it goes against a rule here, say which rule and
+the risk in one or two plain sentences and ask **once** - *your way* / *the factory's way*; on *your way*, do it fully,
+record it (`course-factory/scripts/design_choices.py add <course> --rule <id> ...`), and **never change it back** - not
+in a later build, fix or session, and not because a check flagged it. The course material (programme, Main ILOs,
+hours, sources, the approved words) keeps its own rules: `course-factory` SKILL.md, L26.
+
 ## 0 · Read this first, then do only what the mode needs
 
 `knowledge/platform.json` **is the authority** on every path, root, pattern and rule. Read

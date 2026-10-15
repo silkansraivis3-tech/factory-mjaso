@@ -71,7 +71,7 @@ def main():
     a = copy.deepcopy(s)
     screen(a, "s03")["active"] = "explore"
     sp2 = cs.split_of(a)
-    check("an active slide's minutes count as active", sp2["plain"] == 10 and sp2["active_slides"] == 5, sp2)
+    check("an active slide's minutes count as active", sp2["plain"] == 12 and sp2["active_slides"] == 3, sp2)     # s01 5 + s02 5 + the recap 2 plain; s03's 3 active
     check("an active slide is still theory taught before the next task", not [f for f in cs.theory_findings(a)[0] if f["rule"] == "t_before_sc"])
     slow = copy.deepcopy(s)
     screen(slow, "s03")["minutes"] = 25
@@ -100,7 +100,7 @@ def main():
         check("... and the active slide says what kind", LV["s_active"] in page and LV["tech_explore"] in page)
         p = subprocess.run([sys.executable, os.path.join(HERE, "content_script.py"), "render", c, "--module", "1"],
                            capture_output=True, text=True, encoding="utf-8")
-        check("render prints the split", "Plain theory 10 min, active 13 min" in p.stdout, p.stdout)
+        check("render prints the split", "Plain theory 12 min, active 11 min" in p.stdout, p.stdout)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

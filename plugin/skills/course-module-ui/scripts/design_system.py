@@ -197,7 +197,19 @@ def check(module, as_json=False):
                 state = "CHANGED"
         rows.append({"file": item["name"], "state": state, "path": target})
 
-    bad = [r for r in rows if r["state"] != "OK"]
+    # L26 (2.30.0): where the operator chose a different look for this course after hearing the risk, an edited
+    # shared file is their choice - reported as such, and never put back
+    sys.path.insert(0, os.path.join(SKILLS, "course-factory", "scripts"))
+    import design_choices
+    chosen = design_choices.load(module).get("shared-design")
+    if chosen:
+        for r in rows:
+            if r["state"] == "CHANGED":
+                r["state"], r["choice"] = "CHOSEN", design_choices.label(chosen)
+    bad = [r for r in rows if r["state"] not in ("OK", "CHOSEN")]
+    for r in rows:
+        if r["state"] == "CHOSEN" and not as_json:
+            print("  %s was changed in this module - %s. Left as it is.\n" % (r["file"], r["choice"]))
     if as_json:
         print(json.dumps({"module": module, "ok": not bad, "files": rows}, indent=2))
         return 1 if bad else 0
@@ -217,7 +229,11 @@ def check(module, as_json=False):
         print("    - %-20s %s" % (r["file"], what[r["state"]]))
     print("\n  How to see it: open the module's module.html by double-clicking it; a missing or\n"
           "  changed style file shows as screens that look different from Module 1.\n"
-          "  What to do: tell me to fix it and I will - that is\n"
+          "  If the operator asked for that different look: tell them the risk (this module will\n"
+          "  not match the others, and later updates will not reach it), and if they keep it,\n"
+          "  record it - design_choices.py add <course> --rule shared-design ... (L26). Never\n"
+          "  put the factory's files back over a look the operator asked for.\n"
+          "  Otherwise, what to do: tell me to fix it and I will - that is\n"
           "      design_system.py install <module folder> --update\n"
           "  which puts the factory's files back. Anything the module genuinely needs that the\n"
           "  factory's files do not have belongs in the module's own stylesheet instead.\n"

@@ -8,6 +8,7 @@
      REQUIRES  assets/gb_tokens.css   (the token set)
                assets/gb_shell.css    (this shell)
                assets/gb_deck.js      (the engine)
+               assets/gb_zoom.js/.css (every picture opens full screen - L51)
 
      THE CHROME BLOCK IS NOT OPTIONAL. A module with more than one screen and
      no #btnNext / #btnPrev cannot be advanced on a tablet.
@@ -22,6 +23,7 @@
 <link rel="stylesheet" href="assets/gb_tokens.css">
 <link rel="stylesheet" href="assets/gb_shell.css">
 <link rel="stylesheet" href="assets/gb_compose.css">
+<link rel="stylesheet" href="assets/gb_zoom.css">
 <!-- module-local styles and figure component stylesheets go here -->
 </head>
 <body>
@@ -183,6 +185,7 @@
 </main>
 
 <script src="assets/gb_deck.js"></script>
+<script src="assets/gb_zoom.js"></script>
 <!-- figure component scripts go here, before the init call -->
 <script>
   GBDeck.init({

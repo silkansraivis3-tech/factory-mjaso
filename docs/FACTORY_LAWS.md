@@ -244,14 +244,19 @@ that builds each one out has landed. The full text of each is in
 `plugin/skills/course-factory/references/laws-in-full.md` — inside the plugin, because this `docs/`
 folder is not installed with it.
 
-**L26 · The operator's request wins, and "the style" means the brand system only.** Fixed: brand
-colours, typography, logo use, and the shell, tokens, components, navigation and tablet system.
-Everything else a colleague asks for — content, structure, emphasis, number of slides, examples,
-visuals, tasks, wording — is done, never refused as "not in the style". Five hard limits only: the
-brand · the programme and its Main ILOs · the official hours · no source, no maritime claim (a fact
-the operator states is a source) · the offline tablet. Hitting one: one or two plain sentences why,
-the closest option that works, then do it. → `course-factory` (`SKILL.md`, `retrofit/knowledge/routing.json`
-edit mode, `content-lock.json`, `expert-edits.json`)
+**L26 · The operator's request wins. The material keeps four hard limits; the design is the person's, after one
+warning** *(design part revised 2026-10-15, 2.30.0)*. Everything a colleague asks for about the material — content,
+structure, emphasis, number of slides, examples, tasks, wording — is done. Four hard limits, all on the material side:
+the programme and its Main ILOs · the official hours · no source, no maritime claim (a fact the operator states is a
+source) · the offline tablet; hitting one: one or two plain sentences why, the closest option that works, then do it.
+The design — brand colours, typeface and logo use, shell and components, layouts, animation, the recap and the
+picture viewer, text size, space, the 3D share (`knowledge/design-rules.json`) — is the person's: nothing conflicts,
+do it; it goes against a rule, say the rule and the risk once and ask, their way or the factory's; their way is done,
+recorded in `STANDARDS.md` (`scripts/design_choices.py`), reported by every check as their choice and never changed
+back. Owner: *"claude should tell person about this risk, but still after person reviews and tells that he wants his
+way, plugin listens to that."* → `course-factory` (`SKILL.md`, `references/laws-in-full.md`,
+`knowledge/design-rules.json`, `scripts/design_choices.py`, `retrofit/knowledge/routing.json` edit mode,
+`content-lock.json`, `expert-edits.json`; the same block near the top of every skill)
 
 **L27 · Three test levels, and only the final assessment is graded.** Self-check in the presentation
 and the module check at the end of every module are **ungraded**; the final assessment is the only
@@ -401,8 +406,19 @@ untouched slide re-measured, no whole-course QA, at most 2 agents at once. A cou
 numbered standard and is never repaired again. The full sign-off stays for builds, retrofits and handover.
 → `course-factory` (`fix/GUIDE.md`, `knowledge/fix-rules.json`, `scripts/fix.py`, `scripts/measure_slides.py`, 2.29.0)
 
-**All fifty laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L50 are enforced first through `course-factory/SKILL.md`'s
+**L51 · Every picture opens full screen, and every module closes with the same recap.** Owner, 2026-10-15: every
+picture, illustration and explanatory image can be tapped to full screen and closed again; each module ends in its
+module check, and before it a beautiful summary - animated boxes, the main points to take away - with the same closing
+design in every module. One shared viewer, `gb_zoom.js` / `gb_zoom.css`, on every page that shows a picture (tap opens;
+X, tap outside, Esc, swipe down, Back or the next slide closes; pinch, double-tap or + / − zoom; a ⤢ corner button
+where the trainee answers on the picture). One recap slide, `"recap": true` in the script, 3-6 points, straight before
+the module check's task slide, built in `.slide.dark.recap` (`gb_compose.css` 15). Both are design: the person may
+choose otherwise after hearing the risk (L26).
+→ `course-factory` (`content_script.py`, `check_course_package.py`, `knowledge/theory-rules.json` recap),
+`course-module-ux` (`assets/gb_zoom.js`, build/GUIDE.md 6a), `course-module-ui` (`gb_compose.css` 15, `design-system.json`, 2.30.0)
+
+**All fifty-one laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L51 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

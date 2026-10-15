@@ -63,20 +63,37 @@ routes. It does not itself write screens, tasks, or content.
 
 ---
 
-## The operator's request wins — L26
+## The operator's request wins — L26 (design part revised 2.30.0)
 
-**"The style" means the Novikontas brand system only** — brand colours, typography, logo use, and
-the shell, tokens, components, navigation and tablet system it is built into. Anything a colleague
-asks for about content, structure, emphasis, number of slides, examples, visuals, tasks or wording
-is **done**: never refused, never watered down, never quietly ignored as "not in the style". Their
-request in chat is the explicit authorisation L18 asks for, and it reaches expert-edited regions
-too (L24 protects an expert's change from the factory, not from the operator).
+**The course material** — content, structure, emphasis, number of slides, examples, tasks, wording —
+is **done** as asked: never refused, never watered down, never quietly ignored. Their request in chat
+is the explicit authorisation L18 asks for, and it reaches expert-edited regions too (L24 protects an
+expert's change from the factory, not from the operator). The material keeps four hard limits, unchanged:
+**the programme and its Main ILOs (L1, L2) · the official hours (L1, L3) · no source, no maritime claim
+(L4) · the offline tablet (L6)**. A fact the operator states is a source — use it, record it as theirs,
+and list it in that module's content-script review (L29). When a request truly hits one of the four: one
+or two plain sentences why, the closest option that works, and then do that.
 
-Only five limits are hard: **the brand · the programme and its Main ILOs (L1, L2) · the official
-hours (L1, L3) · no source, no maritime claim (L4) · the offline tablet (L6)**. A fact the operator
-states is a source — use it, record it as theirs, and list it in that module's content-script review (L29). When a request truly hits a hard limit: one
-or two plain sentences why, the closest option that works, and then do that. Every other "never"
-in this factory governs the factory's own choices, not the operator's requests.
+**The design** — how it looks and behaves on the screen: colours, typeface, logo use, the shell and its
+components, layouts, animation, the recap slide, the picture viewer, text size, free space, the 3D share
+(`knowledge/design-rules.json`) — **is the person's to decide** (owner, 2026-10-15: *"if some of persons
+ideas conflicts with plugin rules, claude should tell person about this risk, but still after person
+reviews and tells that he wants his way, plugin listens to that"*):
+
+1. **Nothing conflicts** → just do it. No question.
+2. **It goes against a factory design rule** (even the brand) → say which rule and the risk in one or two
+   plain sentences (`design_choices.py rules` has the risk for each), and ask **once** — one pop-up, two
+   answers: *your way* / *the factory's way* (L31).
+3. **Their way** → do it fully, and record it:
+   `scripts/design_choices.py add <course> --rule <id> --choice "..." --said "<their words>" --risk "..."`
+   (it is a standard in `STANDARDS.md`, L50). From then on every check reports that place as **their
+   choice**, and **no build, fix or later session changes it back**. Never ask about it again; only the
+   person removes it.
+4. **The factory's way** → keep the rule; their words go in `FEEDBACK_LOG.md` (L32).
+
+**A check is never a reason to undo a person's wish.** When a check flags something they asked for, the
+answer is step 2 — never a quiet repair. Every other "never" in this factory governs the factory's own
+choices, not the operator's requests.
 
 ## Owner decisions in force — Phase 5
 
@@ -108,6 +125,7 @@ row wins** — even before its step has been built out. Full text: `references/l
 | **L48** | **The Bloom level is measured, and the tablet lifts it** (owner, 2026-10-15: *"bloom taxonomy needs to be on higher level - that's why we have tablets"*). Every ILO's level read from its verb, every task's from how it is answered (`knowledge/bloom.json`); the Stage 2 page and every Stage 3 review page show where the course is, every task below its Sub-ILO, and the tablet task types that would lift it - **suggestions only**; Main ILOs stay verbatim (L2), a weak Sub-ILO verb is re-expressed with the operator's approval. Read `bloom/GUIDE.md` when judging or lifting a level; `scripts/bloom_map.py` | now (2.25.0) |
 | **L49** | **20 / 80 in class - the programme unchanged, every theory slide kept** (owner, 2026-10-15). On paper the programme stays (L1); in class plain theory - the instructor explaining - aims at a fifth of the minutes, the rest the trainees do something: tasks, practice, simulator, and slides marked `"active"` (explain-then-reveal, predict-then-reveal, worked-example, scenario, explore). **Theory is never removed to get there** - a plain slide keeps its words (it can be read, the instructor moves faster) and gives up minutes; good theory may be added. Theory in ~5-minute cycles before a task. Measured on the Stage 2 page (theory-as-activity with minutes) and every Stage 3 review page - a suggestion, never a stop. `knowledge/theory-rules.json` → `split`. **The factory proposes, the operator decides** (2.27.0): per sub-topic, how its theory is learned by doing - written for a maritime expert, not an IT person - each kept or struck on the Stage 2 page; only kept ones are built. Read `active/GUIDE.md` at Stage 2; `scripts/active_plan.py`. **Five new tablet tasks** for the higher Bloom levels (2.28.0): find the fault, spot the errors, build the plan, rebuild the incident, compare | now (2.26.0-2.28.0) |
 | **L50** | **A fix is not a build - find, one list, one yes, change, one check** (owner, 2026-10-15: *"i want for fixes to be faster and still quality ... it will not go to 3-4 qa reviews"*). A correction to built modules - one, some or all - reads only `fix/GUIDE.md`, COURSE_STATE and the course's `STANDARDS.md`; "find it in the others" is one sweep of every module (`scripts/fix.py sweep`, measured in a hidden browser by `scripts/measure_slides.py`); the operator says yes once for the whole list; words go through every content script in one batch and into the built slides; a part every module uses is changed once and copied (`sync-shared`); a wish for every module becomes a standard; then **one** check for the kind of change, by whoever made it - no QA agent after the fixer, no whole-course QA, at most 2 agents. `knowledge/fix-rules.json` | now (2.29.0) |
+| **L51** | **Every picture opens full screen, and every module closes with the same recap** (owner, 2026-10-15: *"all images, every picture, illustration, explanitory image ... can be clicked and be full screened, and later you can close it"*; *"before [the module check] it should be beautiful summary in same design ... boxes, main points what to take away from this module, and all modules should be same closing slide design"*). **The picture viewer** `gb_zoom.js` + `gb_zoom.css` (course-module-ux assets, copied by `design_system.py`) on every page that shows a picture - deck, tasks, module check, handout: tap opens, X / tap outside / Esc / swipe down / Back / the next slide close, pinch or + / − zoom; a picture the trainee answers on gets a corner ⤢ button so a tap stays the answer. **The recap**: one slide `"recap": true` straight before the module check's task slide, 3-6 points "Short title - one sentence", built in the one shared design `.slide.dark.recap` (`gb_compose.css` 15 - animated boxes, then "Next: the module check"). `content_script.py` (r_ findings), `check_course_package.py`. Both are **design**: a person who wants them otherwise is told the risk and gets their way (L26) | now (2.30.0) |
 | **L41** | **The old course is the foundation.** Read it whole at intake (`scripts/old_course.py inventory`, and `images` for its pictures); at the Stage 2 STOP every module says what it **keeps**, what it **modernises and makes digital**, and what it **adds** | now (2.19.0) |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
@@ -121,6 +139,9 @@ predict-then-reveal, worked example then own attempt. More practice than theory;
 
 - **Every session starts by reading `COURSE_STATE.md`** if the course folder has one, and never
   re-asks or re-decides what it lists under *Decided*. A new course: `course_memory.py start`.
+  **Then `STANDARDS.md` and the last rows of `FEEDBACK_LOG.md`** (2.30.0): what the person wants in every
+  module, and every design choice they made against a factory rule (`design_choices.py list <course>`) -
+  built to, never re-asked, never "repaired" (L26).
 - **At every STOP**, update it: stage, what was approved, open questions, next step, file map. Then
   `course_memory.py check` — it says whether a new session could resume from it.
 - **Every correction the operator makes** goes into `FEEDBACK_LOG.md` straight away, in their words,
