@@ -94,7 +94,7 @@ there before the first screen. Write screens inside it; do not rebuild it.
 | `.ov-grid`, `.ov-head`, `.ov-item` | the overview of all screens |
 | `.chip`, `.cbtn`, `.btn-label`, `.fbtn`, `.tag`, `.t`, `.k`, `.n` | the chrome's own buttons, labels and counters |
 | `.gbt-topback` | the hidden Back link the Android hardware Back button clicks — every page needs one |
-| `.active`, `.cur`, `.on`, `.idle`, `.gone`, `.dark-active` | states **the engine sets** — never write them by hand |
+| `.active`, `.cur`, `.on`, `.idle`, `.gone`, `.dark-active`, `.banded` | states **the engine sets** — never write them by hand (`.banded`: the corner tag, hidden on a screen whose header band names it) |
 
 ## 6 · Document pages — START_HERE, handout, practical cards, plans (`gb_page.css`)
 

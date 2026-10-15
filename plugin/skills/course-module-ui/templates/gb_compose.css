@@ -471,7 +471,8 @@ figure{margin:0}
 .dots i{width:9px;height:9px;border-radius:50%;background:var(--cmp-white-16);display:block;
   transition:background .3s ease}
 .slide:not(.dark) .dots i{background:var(--line-l)}
-.dots i.on{background:var(--blue)}
+/* the light-slide rule above outranks a bare ".dots i.on" - so a light slide showed no current step */
+.dots i.on,.slide:not(.dark) .dots i.on{background:var(--blue)}
 .caption{text-align:center;font-size:clamp(12.5px,1.85vmin,26.8px);line-height:1.45;
   color:var(--dim-d);max-width:44em;margin:0 auto}
 .slide:not(.dark) .caption{color:var(--dim-l)}

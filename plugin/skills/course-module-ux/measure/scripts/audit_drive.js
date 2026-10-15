@@ -55,6 +55,9 @@
                                       the deck's own forward control. This
                                       probe is worthless without it. */
     slideTitleAttr: "data-title",  /* CHANGE: attribute goto() reports back */
+    stepBtnSel: ".mediabar [data-act=\"next\"]",  /* a figure's own "Next step"; enabled
+                                      while the figure has steps left. The deck's
+                                      Next must walk them before it leaves the slide */
 
     /* --- timing --- */
     settleMs: 620,                 /* > your slide transition duration */
@@ -193,7 +196,7 @@
           "CONFIG.slideSel (" + CONFIG.slideSel + ").");
       }
       var hi = Math.min(to === undefined ? slides.length : to, slides.length);
-      var rows = [], coll = [], stalled = [];
+      var rows = [], coll = [], stalled = [], skipped = [];
       var totals = { low: 0, small: 0, spill: 0, tap: 0,
                      svgSmall: 0, collide: 0, xcollide: 0, scroll: 0 };
 
@@ -226,25 +229,55 @@
 
       seekTo(from);
 
+      /* a figure's steps left on this slide: its own "Next step" is still enabled */
+      function stepsLeft(slide) {
+        var b = slide.querySelector(CONFIG.stepBtnSel);
+        return !!(b && !b.disabled);
+      }
+      function measure(i, k) {
+        var r = D.deck.auditSlide(slides[i], i + 1);
+        if (k) { r.slide = (i + 1) + " step " + k; }
+        KINDS.forEach(function (kd) { totals[kd] += r[kd].length; });
+        rows.push(r);
+
+        var x = D.coll.collideSlide(slides[i], i + 1);
+        totals.xcollide += x.n;
+        if (x.n) {
+          coll.push({ slide: r.slide, n: x.n,
+                      text: x.text.slice(0, CONFIG.maxCollisionExamples),
+                      box: x.box.slice(0, CONFIG.maxCollisionExamples),
+                      chrome: x.chrome.slice(0, CONFIG.maxCollisionExamples) });
+        }
+      }
+      /* The deck's own Next walks a figure's steps before it leaves the slide (gb_deck.js hook
+         "step"), and every step is measured: a line a step lights can lose its contrast - white
+         callout text on the light wash (M03, 2026-10-15). A Next that leaves the slide while the
+         figure still has steps is a failure: in front of a class those steps are never shown. */
+      function walk(i, k) {
+        if (!stepsLeft(slides[i]) || k >= CONFIG.maxFragClicks) { return Promise.resolve(); }
+        var before = slides[i].innerHTML;
+        nextBtn.click();
+        /* left the slide, or (on the deck's last slide) Next did nothing at all */
+        if (activeIdx() !== i || slides[i].innerHTML === before) {
+          skipped.push({ slide: i + 1, atStep: k });
+          return Promise.resolve();
+        }
+        fireResize();
+        return sleep(settleMs()).then(function () {
+          measure(i, k + 1);
+          return walk(i, k + 1);
+        });
+      }
       function step(i) {
         if (i >= hi) { return Promise.resolve(); }
         if (activeIdx() !== i) { seekTo(i); }
         revealFrags(slides[i]);
         fireResize();
         return sleep(settleMs()).then(function () {
-          var r = D.deck.auditSlide(slides[i], i + 1);
-          KINDS.forEach(function (k) { totals[k] += r[k].length; });
-          rows.push(r);
-
-          var x = D.coll.collideSlide(slides[i], i + 1);
-          totals.xcollide += x.n;
-          if (x.n) {
-            coll.push({ slide: i + 1, n: x.n,
-                        text: x.text.slice(0, CONFIG.maxCollisionExamples),
-                        box: x.box.slice(0, CONFIG.maxCollisionExamples),
-                        chrome: x.chrome.slice(0, CONFIG.maxCollisionExamples) });
-          }
-          if (i < hi - 1) { nextBtn.click(); }   /* on to the next slide */
+          measure(i, 0);
+          return walk(i, 0);
+        }).then(function () {
+          if (i < hi - 1 && activeIdx() === i) { nextBtn.click(); }   /* on to the next slide */
           return step(i + 1);
         });
       }
@@ -258,6 +291,7 @@
         });
         var n = totals.xcollide;
         KINDS.forEach(function (k) { n += totals[k]; });
+        n += skipped.length;
         var res = {
           page: CONFIG.deckLabel || window.location.href,
           viewport: [window.innerWidth, window.innerHeight],
@@ -268,6 +302,8 @@
           /* a stalled seek means the numbers below are for the WRONG slides —
              read this before reading anything else */
           stalledNavigation: stalled,
+          /* the deck's Next left these slides while their figure still had steps */
+          skippedSteps: skipped,
           medians: rows.map(function (r) { return r.medianPx; }),
           fills: rows.map(function (r) { return r.fillPct; }),
           linksInsideSlides: qa(document, CONFIG.slideSel + " a[href]").length,
@@ -294,6 +330,11 @@
             console.error("!!! NAVIGATION STALLED on " + stalled.length +
               " slide(s) — the deck would not advance, so some rows below " +
               "measure the wrong slide: " + JSON.stringify(stalled));
+          }
+          if (skipped.length) {
+            console.error("!!! STEPS SKIPPED on " + skipped.length + " slide(s) — the deck's " +
+              "Next left a figure with steps still to show (give its slide a gb_deck.js " +
+              "\"step\" hook): " + JSON.stringify(skipped));
           }
         }
         return verdict(res);

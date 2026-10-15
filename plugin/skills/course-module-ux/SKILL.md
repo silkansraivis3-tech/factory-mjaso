@@ -199,7 +199,7 @@ real use reaches it.
 
 Do not write a deck engine. `assets/gb_deck.js` is it: `GBDeck.init({text, hooks})` owns
 start/exit, next/prev, progress, counter, block tag, overview, instructor cue, fullscreen,
-keyboard (with a keyCode fallback), guarded swipe, idle chrome and per-screen enter/leave hooks.
+keyboard (with a keyCode fallback), guarded swipe, idle chrome and per-screen enter/leave/step hooks.
 It pairs with `course-module-ui/templates/gb_shell.css` and `gb_shell.html`. All three reach the
 module through `course-module-ui/scripts/design_system.py install` — copied, never retyped, and the
 engine is not read to use it: its API is the line above.
@@ -207,6 +207,14 @@ engine is not read to use it: its API is the line above.
 If a deck has more than one slide and no `#btnNext`/`#btnPrev`, the engine paints a red banner
 across the page saying so. That is deliberate: the pilot shipped a module a finger could not
 advance, and a silent failure is how it got that far.
+
+**A figure that builds in steps is walked by the deck's own Next.** Its slide's hook carries
+`step(dir)` (true while it has a step that way, false when the deck should move on), so Next,
+Back, the arrow keys and a swipe show every step before the slide changes. Never a per-module
+copy of this: M01 and M02 each carried one and M03 was built without it, so its figures were
+skipped in front of a class. A line a step lights must stay readable in its lit state — white
+text on a light wash is the trap. `audit_drive.js` walks and measures every step, and fails a
+slide the deck's Next leaves with steps still to show.
 
 ## Verify before reporting done
 
