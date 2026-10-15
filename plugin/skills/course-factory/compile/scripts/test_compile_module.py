@@ -403,6 +403,14 @@ def main():
               "room.jpg" not in p10 and "Gas safe machinery space · s04" in out, out)
         check("L54: a thumbnail elsewhere is not a problem for a photo placed by hand here - that thumbnail gives way",
               "M00 s08" not in out, out)
+        sh8 = cs.load(os.path.join(c8, "working_claude", "script", "M01.build.json"))
+        sh8["screens"]["s04"]["no_photo"] = ["gas safe machinery space"]
+        cs.save(os.path.join(c8, "working_claude", "script", "M01.build.json"), sh8)
+        cs.save(os.path.join(md8, "assets", "img", "_photo_meta.json"),
+                dict(PHOTO_META, **{"room.jpg": dict(PHOTO_META["ship.jpg"], shows=["gas safe machinery space"])}))
+        code, out = run(COMPILE, c8, "--module", "1", "--force")
+        check("L53: 'no_photo' in the build sheet keeps a photo that does not fit how the thing is drawn off that slide - and lists it",
+              "room.jpg" not in section(deck(md8), "s04") and "Gas safe machinery space · s04" in out, out)
         kitfig = ('<div class="fill fig kit-fig"><script type="application/json" id="k">' + json.dumps(
             {"parts": [{"type": "space", "label": "ENGINE\nROOM"}, {"type": "space", "label": "TCS"}, {"type": "text", "text": "up the vent mast"},
                        {"type": "text", "text": "LNG LIQUID LINE"}, {"type": "text", "text": "Tank"}, {"type": "text", "text": "0 % LEL"}],

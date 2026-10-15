@@ -598,7 +598,7 @@ def bring_in(mdir, name, meta, src):
         cs.save(p, own)
 
 
-def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None):
+def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None, refuse=()):
     """L53: each real thing a drawing names gets its real photograph beside the drawing - a small tappable photo
     that opens in the L52 panel. Matched by the photo's "shows"; a thing with no photo is noted for the list.
     L54: a photograph the course already shows anywhere (`taken`) is never shown again - a different one, or none"""
@@ -606,6 +606,10 @@ def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None):
     for num, name in drawn_parts(lines, fig):
         if any("assets/img/" + n in on_slide and any(shows_it(x, name) for x in m.get("shows") or []) for n, m, _, _ in pool):
             continue                                      # its photograph is already on the slide
+        if any(same_thing(name, x) for x in refuse):
+            if is_thing(name):                            # the build sheet says no photo we have fits how it is drawn here
+                notes.append((where, num, name))
+            continue
         hit = next(((n, m, d, pid) for n, m, d, pid in pool if pid not in taken
                     and any(shows_it(x, name) for x in m.get("shows") or [])), None)
         if not hit:
@@ -794,7 +798,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     # L53: a drawing of real things carries their real photographs, under the drawing - unasked
     strip = ""
     if fig and not is_photo and comp != "photo" and notes is not None:
-        strip = part_photos(lines, fig, on_slide, mdir, pool or [], notes, sid, taken)
+        strip = part_photos(lines, fig, on_slide, mdir, pool or [], notes, sid, taken, b.get("no_photo") or [])
         if strip and room_under:
             fig, strip = under_figure(fig, strip), ""
     extra = [x for x in (inset, aside, strip) if x]

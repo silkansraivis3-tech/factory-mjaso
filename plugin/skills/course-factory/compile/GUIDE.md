@@ -85,6 +85,9 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   `"shows": ["bunkering station", "LNG bunker hose"]`. A photo of another module is copied in with `copied_from`; one
   awaiting a rights review is never used. Every real thing still without a photo is printed and written to
   `working_claude\PHOTOS_TO_TAKE.md` (the module's section is rewritten each build; `## Notes` is yours).
+  Matching is by name only: when a matched photo contradicts how the thing is drawn (deck tanks under a drawing of a tank
+  in its hold), say so in the build sheet - `"no_photo": ["fuel tank"]` with a `"_no_photo"` reason - and the thing goes
+  on the list instead. Look at every thumbnail the build placed before showing the deck.
 - **Every photograph once in the whole course (L54).** No photo is shown on two screens - in this module or any other;
   a copy under another name is the same photo (same `url_or_origin`, or the same bytes). A thumbnail takes a different
   photo or none; a photo you placed (picture, inset, photo in a drawing) that is already shown is reported - choose a
