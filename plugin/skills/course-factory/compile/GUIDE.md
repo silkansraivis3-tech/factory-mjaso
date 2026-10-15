@@ -43,6 +43,19 @@ The words: one line is a statement; several lines are a statement and its suppor
 own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registers its slide hooks as
 `window.GB_HOOKS = window.GB_HOOKS || {}; GB_HOOKS.s05 = {enter: fn, leave: fn};`.
 
+## 2b · Real photographs, and no empty space (L48, L49 - owner, 2026-10-15)
+
+- **As many real photographs as possible.** A photograph as the slide's picture fills the screen (`visual_full`)
+  or the right of it (`split`) - never a small photo in a column. Beside a drawing, add a real photo under the
+  words: `"inset": {"photo": "assets/img/x.jpg", "caption": "On board: ..."}` (its credit is added for you).
+- **Emphasis**, chosen per slide: `"boxes": [2, 3]` (two options, side by side in meaning), `"conclusion": 5`
+  (the line the room must leave with), `"legend": true` (a stage drawing's lines as a numbered row). The term
+  before " - " or ": " is set in bold automatically.
+- **No empty space.** A drawing, animation or 3D model gets the wider column (`fig-wide`) and the column's
+  height; words are at reading size (`.copy`). Before showing a deck: `audit_compose.js` (every screen composed,
+  none weak), `audit_deck.js` (no spill, no overfill, no tiny labels), `audit_collide.js` - at 1280 × 800 and
+  1024 × 768. A label inside a drawing below 12.5 px on screen is fixed in the drawing.
+
 ## 3 · When the look is not enough
 
 If a slide needs something the shared style files cannot do, the answer is **never** a module style

@@ -744,6 +744,12 @@ def media_findings(script):
             add(None, "", NOTE, "v_no_motion", min="%g" % th_min)
         if len(slides) >= F["min_visual_kinds_from_slides"] and len(set(kinds)) < F["min_visual_kinds"]:
             add(None, "", NOTE, "v_few_kinds", n=len(set(kinds)), lo=F["min_visual_kinds"])
+        # L48 (owner, 2026-10-15): as many real photographs as possible - the summary slide aside, a suggestion
+        teach = slides[:-1] if len(slides) > 1 else slides
+        real = [s for s in teach if parse_kind(s.get("visual_kind", "")) in F["real_photo_kinds"]
+                or any(w in (s.get("visual") or "").lower() for w in F["real_photo_words"])]
+        if teach and len(real) < F["real_photo_min_share"] * len(teach):
+            add(None, "visual_kind", NOTE, "v_few_photos", n=len(real), tot=len(teach))
         # L46 (owner, 2026-10-07): 3D where it makes sense, at most half of the pictures - quality, not quantity
         TD = MEDIA["three_d"]
         is3d = lambda s: MEDIA["visual_kinds"].get(parse_kind(s.get("visual_kind", "")), {}).get("family") in TD["families"]

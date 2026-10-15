@@ -38,6 +38,21 @@ Also a composition in its own right:
 | `.trio` of `figure` (`img`/`svg` + `figcaption`, `b` for the caption title) | three photographs or three framed figures filling the stage |
 | `data-compose="sparse"` on the slide | declares a deliberately sparse flow screen, so the composition check does not flag it |
 
+Compiled slides (2.25.1, §13b — written by `course-factory/compile/`, usable by hand too):
+
+| Class | Use it for |
+|---|---|
+| `.copy` | the words beside or under a picture at reading size; holds `.statement`, `.lead`, `.support` |
+| `.box` (+ `alt`) · `.call` | inside `.copy`: two options side by side in meaning (blue, amber) · the conclusion line (navy) |
+| `.inset` (`img` + `figcaption`) | inside `.copy`: a small real photograph under the words, its caption and credit |
+| `.fill.fig` | the picture's box: the drawing and its controls stacked, taking the room the words leave |
+| `.two-col.fig-wide` | two-col with the wider column for the picture |
+| `.legend` (`li[data-i]`) | a numbered row under a stage drawing; the numbers come from `data-i` |
+| `.slide.photo.split` | a photograph filling the right of the screen, the words on the dark left |
+| `.act-ico` · `.act-lines` | the task slide's tablet sign · its lines grouped at reading size |
+| `.fig` · `.fig-wide` · `.split` | the modifiers above, named on their own for the vocabulary check |
+| `.cur` · `.lit` on a `[data-i]` line | **set by a figure that steps** — the line it is on (amber) and the lines already shown (blue) |
+
 ## 2 · Photographs (`gb_compose.css`)
 
 | Class | Use it for |

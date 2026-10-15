@@ -153,12 +153,38 @@ def main():
         check("every line is numbered in script order, so a stepping figure can light it up",
               re.findall(r'data-i="(\d+)"', s02) == ["1", "2", "3"] and re.findall(r'data-i="(\d+)"', s01) == ["1", "2", "3", "4", "5"])
         check("a fragment that is already a .fill is not wrapped again (its contents would get no width)",
-              cm.fill('<div class="fill m01-3d">x</div>') == '<div class="fill m01-3d">x</div>' and cm.fill("<svg/>") == '<div class="fill"><svg/></div>')
+              cm.fill('<div class="fill m01-3d">x</div>') == '<div class="fill m01-3d">x</div>' and cm.fill("<svg/>") == '<div class="fill fig"><svg/></div>')
+        tb = "\n".join(cm.words_html(["Two ways:", "Gas safe machinery space - a single failure cannot release gas.",
+                                      "ESD-protected machinery space - gas may be released.", "So: two barriers.",
+                                      "Anyone with safety duties needs this certificate."], emph={"boxes": [2, 3], "conclusion": 5}))
+        check("the term before \" - \" or \": \" is bold (four words or fewer); the words are unchanged",
+              "<b>Gas safe machinery space</b> - a single failure" in tb and "<b>So</b>: two barriers." in tb
+              and "<b>" not in cm.marked("Ways named in the IGF Code: reliquefy") and "<b>" not in cm.marked("a fuel tank - with"))
+        check("the build sheet's boxes and conclusion: .box, .box.alt, .call - in script order",
+              re.findall(r'class="(box(?: alt)?|call|lead)"', tb) == ["lead", "box", "box alt", "lead", "call"], tb)
+        lg = "\n".join(cm.words_html(["Fuel tank - in a hold.", "Vent mast - high above deck."], legend=True))
+        check("a legend: a numbered row, the numbers are the lines' data-i",
+              lg.startswith('<ol class="legend">') and '<li data-script-field="text" data-i="2"><b>Vent mast</b> - high above deck.</li>' in lg, lg)
+        meta = {"author": "Tholme (Wikimedia Commons user), own work", "source": "Wikimedia Commons", "licence": "CC BY-SA 4.0",
+                "url_or_origin": "https://commons.wikimedia.org/wiki/File:MF_Bergensfjord_filling_LNG_in_Arsv%C3%A5gen.jpg",
+                "orig_size": "4032x3024 px", "stored_size": "1600x1200 px JPEG q82 (resized, not cropped)", "attribution_required": True}
+        check("a credit names the work, the author, the source, the licence and the change (CC BY-SA)",
+              cm.credit_line(meta) == "Photo: MF Bergensfjord filling LNG in Arsvågen · Tholme · Wikimedia Commons · CC BY-SA 4.0 · resized",
+              cm.credit_line(meta))
+        few = [f for f in cs.media_findings(script()) if f["rule"] == "v_few_photos"]
+        more = json.loads(json.dumps(SCREENS))
+        more[1]["visual"] = "Thermometer scale; a real photo of a bunker station beside it."
+        check("L48: fewer than half the teaching slides with a real photograph -> a suggestion; a real photo beside a drawing counts",
+              len(few) == 1 and few[0]["level"] != "fail" and "1 of 3" in few[0]["detail"]
+              and not [f for f in cs.media_findings(script(screens=more)) if f["rule"] == "v_few_photos"], few)
+        check("a task slide carries the tablet sign and its lines grouped",
+              'class="act-ico"' in section(page, "t01") and '<div class="act-lines">' in section(page, "t01"))
         check("the footer's title is cut at a whole word", 'data-foot="M01 · IGF SHIPS · NOVIKONTAS"' in s02
               and cm.compile_deck(dict(script(), title="IGF ship design and operational characteristics"), {}, md, None, "x", True)[0]
               .count('data-foot="M01 · IGF SHIP DESIGN AND OPERATIONAL · NOVIKONTAS"') == 6)
-        check("split -> two-col: the statement, its support list, the picture in .fill",
-              'slide-body two-col"' in s02 and 'class="statement"' in s02 and 'class="support"' in s02 and '<div class="fill"><svg viewBox' in s02)
+        check("split + a drawing -> two-col fig-wide: the reading column (.copy), its statement and list, the picture in .fill.fig",
+              'slide-body two-col fig-wide"' in s02 and '<div class="copy">' in s02 and 'class="statement"' in s02
+              and 'class="support"' in s02 and '<div class="fill fig"><svg viewBox' in s02, s02)
         check("an .svg figure goes in as it is, without its XML prolog", "<?xml" not in page and "60 °C</text>" in s02)
         check("visual_wide with few words -> stage; an .html fragment placed as it is",
               'slide-body stage"' in s03 and FRAGMENT in s03)
@@ -234,6 +260,30 @@ def main():
         code, out = run(COMPILE, c5, "--module", "1")
         check("an .html drawing in the module folder is refused - it would go to the tablets as a page",
               code == 1 and "classroom would take it for a page" in out and FRAGMENT not in deck(md5), out)
+
+        # ---- a photograph beside the words, a legend, an inset photograph
+        os.makedirs(os.path.join(tmp, "f"))
+        c6, md6 = new_course(os.path.join(tmp, "f"), script())
+        bp = os.path.join(c6, "working_claude", "script", "M01.build.json")
+        sheet = cs.load(bp)
+        sheet["screens"]["s02"] = {"figure": "assets/img/ship.jpg"}
+        sheet["screens"]["s03"]["legend"] = True
+        sheet["screens"]["s04"].update(inset={"photo": "assets/img/ship.jpg", "caption": "On board: the tanks."}, boxes=[2, 3])
+        cs.save(bp, sheet)
+        code, out = run(COMPILE, c6, "--module", "1")
+        p6 = deck(md6)
+        a2, a3, a4 = section(p6, "s02"), section(p6, "s03"), section(p6, "s04")
+        check("split + a photograph -> the photo fills the right of the screen (.slide.photo.split), never a small photo in a column",
+              'class="slide photo split"' in a2 and "photo-wrap" in a2 and "two-col" not in a2, a2)
+        check("legend: true -> the lines as a numbered row under the drawing", '<ol class="legend">' in a3, a3)
+        check("inset: a real photograph under the words, its caption and credit marked data-script-ignore",
+              '<figure class="inset"><img src="../assets/img/ship.jpg"' in a4 and "<figcaption data-script-ignore>On board: the tanks. Photo:" in a4, a4)
+        code, out = run(MATCH, c6, "--module", "1", "--part", "instructor")
+        check("... and the words still match the approved script", code == 0, out)
+        io.open(os.path.join(md6, "assets", "gb_compose.css"), "a", encoding="utf-8").write("/* old */")
+        code, out = run(COMPILE, c6, "--module", "1")
+        check("a module whose shared style files are not the factory's current ones is told to update them",
+              code == 1 and "design_system.py install --update" in out, out)
 
         # ---- a changed word is still caught on a compiled deck
         p = os.path.join(md, "presentation", "index.html")

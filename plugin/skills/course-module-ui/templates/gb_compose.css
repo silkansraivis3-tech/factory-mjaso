@@ -477,6 +477,90 @@ figure{margin:0}
 .frag.on{opacity:1;transform:none}
 
 /* ==========================================================================
+   13b · COMPILED SLIDES (2.25.1) — the reading column, emphasis, legend, inset
+   photograph, a photograph beside the words, and the task-slide lines.
+   Taken from the IGF pilot's own module file (m01.css), where they were written
+   for one module; a deck built from the script (compile_module.py) gets them
+   in every module. Measured on the pilot: the shared .support list is 14 px and
+   grey - a SUPPORTING size - and every slide that used it for its main words
+   read as plainer than the hand-built one at 18 px.
+   ========================================================================== */
+/* the words beside or under a picture, at reading size */
+.copy{--fs:clamp(15px,2.3vmin,30px);display:flex;flex-direction:column;gap:min(2vmin,18px);
+  min-width:0;align-self:center;align-self:safe center}
+.copy p{margin:0}
+.copy .statement{font-size:calc(var(--fs) * 1.22);max-width:none}
+.copy .lead{font-size:var(--fs);line-height:1.45;color:var(--ink)}
+.slide.dark .copy .lead{color:var(--txt-d)}
+.copy .support{max-width:none;gap:min(1.3vmin,12px)}
+.copy .support li{font-size:var(--fs);line-height:1.45;color:var(--ink)}
+.slide.dark .copy .support li{color:var(--txt-d)}
+.copy b{color:var(--navy);font-weight:700}
+.slide.dark .copy b{color:var(--white)}
+/* a line a stepping figure is on (the figure sets .cur / .lit on [data-i]) */
+.copy [data-i]{border-radius:var(--r-s);transition:background-color .2s ease}
+.copy [data-i].lit{background:var(--blue-wash-l)}
+.slide.dark .copy [data-i].lit{background:var(--blue-wash-d)}
+.copy [data-i].cur{background:var(--amber-wash-l);box-shadow:-6px 0 0 var(--amber);font-weight:600}
+.slide.dark .copy [data-i].cur{background:var(--amber-wash-d)}
+/* emphasis chosen in the build sheet: two options side by side in meaning, and the conclusion */
+.copy .box{padding:.6em .95em;border-left:4px solid var(--blue);background:var(--blue-wash-l);
+  border-radius:0 var(--r-s) var(--r-s) 0;font-size:var(--fs);line-height:1.45;color:var(--ink)}
+.copy .box.alt{border-left-color:var(--amber);background:var(--amber-wash-l)}
+.slide.dark .copy .box{background:var(--blue-wash-d);color:var(--txt-d)}
+.slide.dark .copy .box.alt{background:var(--amber-wash-d)}
+.copy .call{padding:.75em 1em;border-radius:var(--r-m);background:var(--navy);color:var(--white);
+  font-size:var(--fs);line-height:1.45;font-weight:600}
+.slide.dark .copy .call{background:var(--blue);color:var(--on-blue)}
+.copy .call b{color:inherit}
+/* a real photograph under the words, beside the drawing */
+.copy .inset{display:flex;gap:min(2vmin,18px);align-items:center;margin:min(1vmin,8px) 0 0}
+.copy .inset img{width:44%;flex:0 0 44%;max-height:min(26vh,230px);object-fit:cover;border-radius:var(--r-m);
+  box-shadow:var(--sh)}
+.slide.dark .copy .inset img{box-shadow:var(--sh-d)}
+.copy .inset figcaption{font-size:clamp(12.5px,1.5vmin,19px);line-height:1.4;color:var(--dim-l)}
+.slide.dark .copy .inset figcaption{color:var(--dim-d)}
+/* the picture's box: a drawing with its own controls stacks them under it, and
+   takes the room the words leave - never a small drawing in a large column */
+.fill.fig{flex-direction:column;gap:min(1.6vmin,14px)}
+.fill.fig > svg,.fill.fig > img,.fill.fig > canvas{flex:0 1 auto;min-height:0;width:100%;
+  max-height:max(300px,calc(100vh - 330px))}
+.fill.fig > .mediabar{flex:0 0 auto}
+/* `.fill svg{width:100%}` above is for the drawing; a control's icon inside the box keeps its own size -
+   measured: without this the step buttons' chevrons grew to 40 px and their labels broke onto two lines */
+.fill .mediabar svg,.fill button svg{width:1.05em;height:1.05em;max-height:none;flex:0 0 auto}
+.slide-body.two-col.fig-wide{grid-template-columns:.8fr 1.2fr;grid-template-rows:minmax(0,1fr)}
+.slide-body.two-col.fig-wide > .fill{max-height:100%}
+/* a 3D model or a live component in the wide column takes the column's height, not a guess */
+.slide-body.two-col.fig-wide [data-stage]{height:max(320px,calc(100vh - 300px));width:100%}
+/* a numbered legend row under a stage drawing - its numbers match the drawing's */
+.legend{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:min(1.2vmin,12px)}
+.legend li{position:relative;min-height:44px;padding:.55em .75em .55em 2.5em;border:1.5px solid var(--line-l);
+  border-radius:var(--r-s);background:var(--white);color:var(--ink);cursor:pointer;
+  font-size:clamp(13px,1.75vmin,22px);line-height:1.35}
+.legend li::before{content:attr(data-i);position:absolute;left:.65em;top:.55em;width:1.45em;height:1.45em;
+  border-radius:50%;background:var(--navy);color:var(--white);font-size:.82em;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.legend li.cur{border-color:var(--amber);background:var(--amber-wash-l);font-weight:600}
+.slide.dark .legend li{background:var(--deep-2);border-color:var(--line-d);color:var(--txt-d)}
+.slide.dark .legend li.cur{background:var(--amber-wash-d)}
+/* a photograph beside the words: the photo fills the right of the screen, the words sit on the dark left */
+.slide.photo.split .photo-wrap{left:44%}
+.slide.photo.split .photo-scrim{
+  background:linear-gradient(90deg,var(--deep) 0%,var(--deep) 44%,transparent 58%),
+             linear-gradient(0deg,var(--cmp-night-72),transparent 30%)}
+.slide.photo.split .photo-copy{max-width:min(39vw,560px)}
+.slide.photo .photo-copy .lead{font-size:clamp(14px,2.1vmin,27px);line-height:1.45;color:var(--txt-d)}
+.slide.photo.split .photo-copy .lead{margin-top:min(1.4vmin,12px);padding-left:.85em;
+  border-left:3px solid var(--amber)}
+/* the task slide: its lines grouped at reading size, and the tablet sign */
+.act-ico{width:clamp(64px,11vmin,120px);height:auto;margin-top:2.6vmin;color:var(--blue)}
+.act-lines{margin-top:2.4vmin;display:flex;flex-direction:column;gap:.45em;align-items:center}
+.act-lines .act-inst{margin:0;font-size:clamp(15px,2.5vmin,34px);line-height:1.4;color:var(--txt-d);max-width:32em}
+.slide:not(.dark):not(.photo) .act-lines .act-inst{color:var(--ink)}
+
+/* ==========================================================================
    14 · NARROW FALLBACK — a portrait tablet is 800 px wide.
    Multi-column compositions collapse; nothing is allowed to squeeze.
    ========================================================================== */
@@ -503,6 +587,10 @@ figure{margin:0}
   .trio{grid-template-columns:1fr;max-height:none}
   .ans-grid{grid-template-columns:1fr}
   .photo-copy{max-width:min(78vw,620px)}
+  .slide-body.two-col.fig-wide{grid-template-columns:1fr;grid-template-rows:none}
+  .slide.photo.split .photo-wrap{left:0}
+  .slide.photo.split .photo-copy{max-width:min(78vw,620px)}
+  .copy .inset img{width:36%;flex-basis:36%}
 }
 @media (max-width:620px){
   .cards.c2,.cards.c3,.cards.c4{grid-template-columns:1fr}

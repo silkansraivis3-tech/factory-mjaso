@@ -65,6 +65,9 @@ afterwards**, which is the order in which a picture becomes decoration.
 > base for a scheme, drawing or photograph. If there is none, search the internet for a **real
 > photograph** of the actual thing. Author it if it is structural. Generate only when all of that
 > genuinely comes back empty — not when nobody felt like looking.
+>
+> **As many real photographs as possible (L48, owner 2026-10-15)** — in the presentation and the trainee tasks.
+> Where a drawing teaches the inside or the flow, a small real photograph of the actual thing still goes beside it.
 
 And **lead** means the reading order, not merely presence: a screen that explains a cargo pump in
 three paragraphs and then shows one has a picture, but the trainee stopped reading before it.

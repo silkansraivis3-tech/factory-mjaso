@@ -563,6 +563,21 @@ copy of the IGF pilot's Module 1 (its drawings moved into figure files): 20/20 s
 clean, `check_course_package` with the classroom importer "Ready", `audit_deck` / `audit_collide` PASS,
 `audit_compose` 11/11 composed. Not yet: task pages, module check, start pages. Test: `compile/scripts/test_compile_module.py`.
 
+## 4v · Compiled as good as hand-built; real photographs; no empty space (2.25.1, 2026-10-15)
+
+A side-by-side of the pilot's Module 1 (hand-built vs compiled, 1280 × 800) found 8 of 11 compiled slides plainer:
+the shared `.support` list is 14 px grey (a supporting size), and the hand-built deck had its own reading style, boxes,
+a conclusion line, a legend row, inset photos and a photo beside the words - all in one module's file. Those became
+shared: `course-module-ui/templates/gb_compose.css` §13b (`.copy`, `.box`, `.call`, `.inset`, `.legend`, `.fill.fig`,
+`.two-col.fig-wide`, `.slide.photo.split`, `.act-ico`, `.act-lines`, line states `.cur` / `.lit`; and a fix: a control's
+icon inside `.fill` no longer grows to full width). The compiler uses them, bolds the term before " - " / ": ", takes
+`boxes` / `conclusion` / `legend` / `inset` / `class` from the build sheet, writes the CC credit with title and
+"resized", and warns when a module's style copies are older than the factory's. Round 2: 11/11 slides as good or
+better, body text 18.4 px, pictures about 30 % larger; all audits pass at 1280 × 800; at 1024 × 768 drawing labels
+(in the drawings) are still under 12.5 px, as in the hand-built deck. Laws **L48** (as many real photographs as
+possible - `knowledge/media-and-tasks.json` floors `real_photo_*`, `content_script.py` suggestion `v_few_photos`, labels
+in en/lv/ru) and **L49** (no empty space, good padding - `compile/GUIDE.md` §2b, the three audits before showing).
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

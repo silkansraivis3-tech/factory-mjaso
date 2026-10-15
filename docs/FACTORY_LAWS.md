@@ -371,8 +371,24 @@ only their yes generates it - once; the nano-banana tools refuse without their w
 time. → `course-factory` (`scripts/picture_briefs.py`, `knowledge/media-and-tasks.json` generation_brief) and
 `nano-banana` 1.2.0 (`approved_by_user`, the usage log)
 
-**All forty-seven laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L47 are enforced first through `course-factory/SKILL.md`'s
+**L48 · As many real photographs as possible.** Owner, 2026-10-15: *"add as many real photos as possible"* - in
+the presentation and in the trainee tasks. Wherever a camera can show it, the slide's picture is a real photograph,
+or a small real photograph goes beside the drawing (the build sheet's `inset`); drawings and animations stay for what a
+camera cannot show - insides, flows, principles. Looked for in the knowledge base, the old course and the source
+files first, then free-licensed photographs on the internet, credited (title, author, source, licence, "resized");
+photos still missing go on the "photos to take at Novikontas" list. Never an AI picture of equipment a trainee must
+recognise (L33). → `course-factory` (`knowledge/media-and-tasks.json` floors `real_photo_*`, `scripts/content_script.py`
+suggestion `v_few_photos`, `compile/` inset and credit line, 2.25.1) and `course-visuals`
+
+**L49 · No empty space, good padding.** Owner, 2026-10-15. A picture takes the room the words leave - never a small
+drawing in a large column; words are at reading size (the shared `.copy`), never a small cluster in an empty box; the
+screen keeps its padding and the chrome's safe area, and nothing spills. A deck is built from the shared layouts only
+(`compile/`), and passes the browser audits before it is shown: `audit_compose.js` (every screen composed, none
+weak), `audit_deck.js` (no spill, no overfill), `audit_collide.js`. → `course-factory` (`compile/`) and
+`course-module-ui` (`gb_compose.css` §13b, 2.25.1)
+
+**All forty-nine laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L49 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

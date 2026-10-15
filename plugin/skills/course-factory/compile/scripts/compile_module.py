@@ -90,6 +90,9 @@ COMPOSITIONS = ("opener", "flow", "two-col", "wide-left", "wide-right", "stage")
 STAGE_MAX_WORDS = 45
 CHECK_PAGES = {"MC": "../assessment/check.html", "FA": "../assessment/final.html"}
 RECORD = "compiled.json"
+TABLET_ICON = ('<svg class="act-ico" viewBox="0 0 64 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" '
+               'stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="52" height="40" rx="5"/>'
+               '<path d="M16 33l9-10 7 7 6-5 10 8"/><circle cx="52" cy="24" r="1.6" fill="currentColor"/></svg>')
 e = lambda s: html.escape(s or "", quote=False)
 a = lambda s: html.escape(s or "", quote=True)
 
@@ -125,36 +128,59 @@ def start_icon():
 
 
 # ------------------------------------------------------------------ the words
-def words_html(lines, first_statement=True, dark_photo=False):
+TERM = re.compile(r"^([^:]{2,60}?)(\s-\s|:\s)(?=\S)")
+
+
+def marked(x, bold=True):
+    """a line's words, the term before " - " or ": " in bold when it is a name of four words or fewer
+    ("Gas mode: ...", "Tank connection space - ..."). The words are unchanged, so the match check still reads them."""
+    m = TERM.match(x) if bold else None
+    if m and 1 <= len(m.group(1).split()) <= 4 and not m.group(1)[:1].islower():
+        return "<b>%s</b>%s%s" % (e(m.group(1)), e(m.group(2)), e(x[m.end():]))
+    return e(x)
+
+
+def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=False):
     """the slide's lines, each one marked as approved text (check_script_match reads data-script-field) and
     numbered data-i="1", "2" ... in script order, so a figure that steps can light up its line
-    (document.querySelector('#s04 [data-i="3"]'))"""
-    out = []
-    line = lambda tag, cls, i, x: '<%s%s data-script-field="text" data-i="%d">%s</%s>' % (
-        tag, ' class="%s"' % cls if cls else "", i, e(x), tag)
-    bullets = [x for x in lines if x.startswith("•")]
-    if len(lines) == 1:
-        return [line("p", "lead" if dark_photo else "statement", 1, lines[0])]
+    (document.querySelector('#s04 [data-i="3"]')). emph (from the build sheet): {"boxes": [2, 3], "conclusion": 5}"""
+    emph = emph or {}
+    boxes, concl = list(emph.get("boxes") or []), emph.get("conclusion")
+    line = lambda tag, cls, i, x, bold=True: '<%s%s data-script-field="text" data-i="%d">%s</%s>' % (
+        tag, ' class="%s"' % cls if cls else "", i, marked(x, bold), tag)
+    if legend:
+        return ['<ol class="legend">'] + ["  " + line("li", "", i, x) for i, x in enumerate(lines, 1)] + ["</ol>"]
     if dark_photo:            # the shared look styles .lead over a photograph, not a list - a bullet stays a lead line
-        return [line("p", "lead", i, x) for i, x in enumerate(lines, 1)]
-    if not bullets and first_statement and not dark_photo:
-        out.append(line("p", "statement", 1, lines[0]))
-        out.append('<ul class="support">')
-        out += ["  " + line("li", "", i, x) for i, x in enumerate(lines[1:], 2)]
-        out.append("</ul>")
-        return out
-    run = []
-    for i, x in enumerate(lines + [None], 1):
-        if x is not None and x.startswith("•"):
-            run.append((i, x.lstrip("•").strip()))
+        return [line("p", "lead", i, x, bold=False) for i, x in enumerate(lines, 1)]
+    if len(lines) == 1:
+        return [line("p", "statement", 1, lines[0], bold=False)]
+    bullets = any(x.startswith("•") for x in lines)
+    roles = []
+    for i, x in enumerate(lines, 1):
+        if i == concl:
+            roles.append(("call", x))
+        elif i in boxes:
+            roles.append(("box alt" if boxes.index(i) % 2 else "box", x))
+        elif x.startswith("•"):
+            roles.append(("li", x.lstrip("•").strip()))
+        elif first_statement and not bullets and i == 1 and not boxes:
+            roles.append(("statement", x))
+        elif first_statement and not bullets and not boxes:
+            roles.append(("li", x))
+        else:
+            roles.append(("lead", x))
+    out, run = [], []
+    for i, (role, x) in enumerate(roles + [(None, None)], 1):
+        if role == "li":
+            run.append((i, x))
             continue
         if run:
             out.append('<ul class="support">')
             out += ["  " + line("li", "", k, r) for k, r in run]
             out.append("</ul>")
             run = []
-        if x is not None:
-            out.append(line("p", "lead", i, x))
+        if role:
+            out.append(line("p", role, i, x, bold=role != "statement"))
     return out
 
 
@@ -193,11 +219,24 @@ def photo_meta(mdir, rel):
         return {}
 
 
-def credit_line(meta):
+def credit_line(meta, with_title=True):
+    """Title · Author · Source · Licence · resized - who made it, where it is from, the licence, and that it was
+    changed (CC BY / BY-SA 4.0 require these; the title is good practice, left out beside a caption that already
+    says what the photo shows). The title is the meta's own, else the Wikimedia file name; "resized" when the
+    stored size is not the original's."""
     if not meta or not (meta.get("attribution_required") or meta.get("licence")):
         return ""
     author = re.split(r"\s*[(,]", meta.get("author") or "")[0].strip()
-    parts = [x for x in (author, meta.get("source"), meta.get("licence")) if x]
+    title = meta.get("title") or ""
+    m = re.search(r"/File:([^/?#]+?)\.(?:jpe?g|png|webp|gif|tiff?)$", meta.get("url_or_origin") or "", re.I)
+    if not with_title:
+        title, m = "", None
+    if not title and m:
+        from urllib.parse import unquote
+        title = unquote(m.group(1)).replace("_", " ").strip()
+    o, st = str(meta.get("orig_size") or ""), str(meta.get("stored_size") or "")
+    changed = meta.get("modification") or ("resized" if "resized" in st or (o and st and o.split()[0] != st.split()[0]) else "")
+    parts = [x for x in (title, author, meta.get("source"), meta.get("licence"), changed) if x]
     return "Photo: " + " · ".join(parts) if parts else ""
 
 
@@ -222,7 +261,7 @@ def figure_html(mdir, figdir, s, b, probs, where):
         return body, "", False
     meta = photo_meta(mdir, rel)
     alt = b.get("alt") or first_sentence(s.get("visual")) or first_sentence(meta.get("description"))
-    credit = credit_line(meta)
+    credit = b.get("credit") or credit_line(meta)
     if meta.get("attribution_required") and not credit:
         probs.append("%s: the photograph %s needs a credit line, and assets\\img\\_photo_meta.json does not give one" % (where, rel))
     return '<img src="../%s" alt="%s">' % (a(rel), a(alt)), credit, True
@@ -250,7 +289,21 @@ def fill(fig):
     already a .fill is its own box - wrapping it again would leave its contents no width (a 3D canvas at 0 px)"""
     if re.match(r'\s*<\w+\b[^>]*\bclass="[^"]*\bfill\b', fig or ""):
         return fig
-    return '<div class="fill">%s</div>' % (fig or "")
+    return '<div class="fill fig">%s</div>' % (fig or "")
+
+
+def inset_html(mdir, ins, probs, where):
+    """a real photograph under the words (L48): {"photo": "assets/img/x.jpg", "caption": "..."} - the caption is
+    instructor-chosen context with the credit, marked data-script-ignore so QA sees it counted"""
+    rel = (ins.get("photo") or "").replace("\\", "/")
+    if not os.path.isfile(os.path.join(mdir, rel)):
+        probs.append("%s: its inset photograph %s is not in the module folder" % (where, rel or "(none named)"))
+        return ""
+    meta = photo_meta(mdir, rel)
+    cap = " ".join(x for x in (ins.get("caption") or "", ins.get("credit") or credit_line(meta, with_title=not ins.get("caption"))) if x)
+    alt = ins.get("alt") or first_sentence(ins.get("caption")) or first_sentence(meta.get("description"))
+    return ('<figure class="inset"><img src="../%s" alt="%s"><figcaption data-script-ignore>%s</figcaption></figure>'
+            % (a(rel), a(alt), e(cap)))
 
 
 def attrs(d):
@@ -285,7 +338,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs):
         d["data-track"] = "practice" if kind == "activity" else "theory"
         body = ['<p class="act-code" data-script-ignore>%s</p>' % e(code),
                 '<h2 class="act-title" data-script-field="title">%s</h2>' % e(title)]
-        body += ['<p class="act-inst" data-script-field="text">%s</p>' % e(x) for x in lines]
+        if kind == "task-slide":
+            body.append(TABLET_ICON)
+        body.append('<div class="act-lines">')
+        body += ['  <p class="act-inst" data-script-field="text">%s</p>' % e(x) for x in lines]
+        body.append("</div>")
         return ('<section %s>\n  <div class="slide-kind"><b>%s</b> · %s · %s</div>\n  <div class="slide-body activity">\n    %s\n  </div>\n</section>'
                 % (attrs(d), d["data-kind"], m, code, "\n    ".join(body)))
 
@@ -296,7 +353,15 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs):
         comp = "flow"
     if comp == "photo" and not is_photo:
         comp = "stage"
-    d = {"class": "slide" + (" photo" if comp == "photo" else " dark" if b.get("dark") else ""),
+    # a photograph beside the words fills the right of the screen - never a small photo in a column
+    split_photo = is_photo and comp in ("two-col", "wide-left", "wide-right")
+    if split_photo:
+        comp = "photo"
+    emph = {k: b[k] for k in ("boxes", "conclusion") if k in b}
+    inset = inset_html(mdir, b["inset"], probs, where) if b.get("inset") else ""
+    own = re.sub(r"[^\w -]", "", b.get("class") or "")          # a hook for the module's drawing styles, never a look
+    d = {"class": "slide" + (" photo split" if split_photo else " photo" if comp == "photo" else " dark" if b.get("dark") else "")
+                  + (" " + own if own else ""),
          "data-title": s.get("title"), "data-kind": "Theory", "data-block": "%s · %d" % (m, n),
          "data-visual": s.get("visual_kind") or "none"}
     d.update(base)
@@ -304,24 +369,29 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs):
     h2 = '<h2 data-script-field="title">%s</h2>' % e(s.get("title"))
     credit_html = '\n  <div class="credit">%s</div>' % e(credit) if credit else ""
     ind = lambda xs, k: ("\n" + " " * k).join(xs)
+    copy = lambda xs, k: ('<div class="copy">\n' + " " * (k + 2) + ind(xs + ([inset] if inset else []), k + 2)
+                          + "\n" + " " * k + "</div>")
 
     if comp == "photo":
         return ('<section %s>\n  <div class="photo-wrap">%s</div>\n  <div class="photo-scrim"></div>\n%s\n'
                 '  <div class="photo-copy">\n    %s\n    %s\n  </div>%s\n</section>'
                 % (attrs(d), fig, head, h2, ind(words_html(lines, dark_photo=True), 4), credit_html))
     if comp == "stage":
+        words = words_html(lines, first_statement=False, emph=emph, legend=bool(b.get("legend")))
+        below = ind(words, 4) if b.get("legend") else copy(words, 4)
         return ('<section %s>\n%s\n  %s\n  <div class="slide-body stage">\n    %s\n    %s\n  </div>%s\n</section>'
-                % (attrs(d), head, h2, fill(fig), ind(words_html(lines, first_statement=False), 4), credit_html))
+                % (attrs(d), head, h2, fill(fig), below, credit_html))
     if comp in ("two-col", "wide-left", "wide-right"):
-        cls = "two-col" + ("" if comp == "two-col" else " " + comp)
-        return ('<section %s>\n%s\n  %s\n  <div class="slide-body %s">\n    <div>\n      %s\n    </div>\n    %s\n  </div>%s\n</section>'
-                % (attrs(d), head, h2, cls, ind(words_html(lines), 6), fill(fig), credit_html))
+        # a drawing, an animation or a 3D model gets the wider column (owner, 2026-10-15: bigger pictures)
+        cls = "two-col " + (comp if comp != "two-col" else "fig-wide")
+        return ('<section %s>\n%s\n  %s\n  <div class="slide-body %s">\n    %s\n    %s\n  </div>%s\n</section>'
+                % (attrs(d), head, h2, cls, copy(words_html(lines, emph=emph), 4), fill(fig), credit_html))
     if comp == "opener":
         return ('<section %s>\n%s\n  <div class="slide-body opener mid">\n    %s\n    %s\n  </div>%s\n</section>'
                 % (attrs(d), head, h2, ind(words_html(lines, first_statement=False), 4), credit_html))
     figure = ("\n    " + fill(fig)) if fig else ""
     return ('<section %s>\n%s\n  %s\n  <div class="slide-body">\n    %s%s\n  </div>%s\n</section>'
-            % (attrs(d), head, h2, ind(words_html(lines), 4), figure, credit_html))
+            % (attrs(d), head, h2, copy(words_html(lines, emph=emph), 4), figure, credit_html))
 
 
 # ------------------------------------------------------------------ the page
@@ -352,6 +422,11 @@ def compile_deck(script, build, mdir, figdir, version, approved):
         b = (build.get("screens") or {}).get(s["id"]) or {}
         teach += s["kind"] == "slide"
         slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs))
+    for x in STYLES:                    # the compiled layouts need the factory's current style files in the module
+        mine, canon = os.path.join(mdir, "assets", x), os.path.join(SKILLS, "course-module-ui", "templates", x)
+        if os.path.isfile(canon) and (not os.path.isfile(mine) or io.open(mine, "rb").read() != io.open(canon, "rb").read()):
+            probs.append("the module's copy of %s is not the factory's current one - run course-module-ui\\scripts\\"
+                         "design_system.py install --update on the module folder" % x)
     for rel in build.get("styles", []) + build.get("scripts", []):
         if not os.path.isfile(os.path.join(mdir, rel)):
             probs.append("the build sheet names %s, which is not in the module folder" % rel)
