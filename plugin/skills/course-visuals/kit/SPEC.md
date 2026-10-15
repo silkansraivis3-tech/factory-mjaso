@@ -4,7 +4,7 @@ A figure is a JSON spec: **parts** placed on a canvas, and **steps** that move t
 `kit.js` draws the parts and runs the steps, and `kit.css` gives the look. Nothing is drawn by hand.
 `GALLERY.html` shows every part moving, plus slide M02 s14 rebuilt from a spec.
 
-**In a course (L51)** the spec is a figure file: `working_claude/figures/M02/s14.kit.json`, named in the build
+**In a course (L55)** the spec is a figure file: `working_claude/figures/M02/s14.kit.json`, named in the build
 sheet like any drawing (`"s14": {"figure": "s14.kit.json", "dark": true}`). The compiler does the rest: the
 spec as data, the deck's step buttons, `kit.js`/`kit.css` (installed by `design_system.py`). Check specs with
 `scripts/check_kit.py module <module> --figures <figures/MNN>`. A part that doesn't exist yet: `PARTS.md`.
@@ -106,7 +106,7 @@ exist yet, the part is added to its family here, never drawn once on a slide.
 Planned for every family: **task mode** - the same spec with labels hidden and parts tappable, so a
 slide and the task built from it ("the GA from slide 4, no labels") can never drift apart.
 
-## Fill the frame, and the words do the explaining (L49, operator 2026-10-15)
+## Fill the frame, and the words do the explaining (L53, operator 2026-10-15)
 - **Draw to the panel.** `size` has the shape of the panel the figure is shown in (the wide column of a `two-col`
   slide: about 640 × 390, a dark slide 680 × 415), and the drawing covers it: `audit_drawing.js` EMPTY allows at most
   half of the panel blank and no blank piece over a fifth, judged at the last step too. A whole ship for five spaces,

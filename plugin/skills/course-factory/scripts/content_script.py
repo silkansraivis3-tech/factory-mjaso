@@ -744,7 +744,7 @@ def media_findings(script):
             add(None, "", NOTE, "v_no_motion", min="%g" % th_min)
         if len(slides) >= F["min_visual_kinds_from_slides"] and len(set(kinds)) < F["min_visual_kinds"]:
             add(None, "", NOTE, "v_few_kinds", n=len(set(kinds)), lo=F["min_visual_kinds"])
-        # L48 (owner, 2026-10-15): as many real photographs as possible - the summary slide aside, a suggestion
+        # L52 (owner, 2026-10-15): as many real photographs as possible - the summary slide aside, a suggestion
         teach = slides[:-1] if len(slides) > 1 else slides
         real = [s for s in teach if parse_kind(s.get("visual_kind", "")) in F["real_photo_kinds"]
                 or any(w in (s.get("visual") or "").lower() for w in F["real_photo_words"])]

@@ -574,16 +574,16 @@ icon inside `.fill` no longer grows to full width). The compiler uses them, bold
 `boxes` / `conclusion` / `legend` / `inset` / `class` from the build sheet, writes the CC credit with title and
 "resized", and warns when a module's style copies are older than the factory's. Round 2: 11/11 slides as good or
 better, body text 18.4 px, pictures about 30 % larger; all audits pass at 1280 × 800; at 1024 × 768 drawing labels
-(in the drawings) are still under 12.5 px, as in the hand-built deck. Laws **L48** (as many real photographs as
+(in the drawings) are still under 12.5 px, as in the hand-built deck. Laws **L52** (as many real photographs as
 possible - `knowledge/media-and-tasks.json` floors `real_photo_*`, `content_script.py` suggestion `v_few_photos`, labels
-in en/lv/ru) and **L49** (no empty space, good padding - `compile/GUIDE.md` §2b, the three audits before showing).
+in en/lv/ru) and **L53** (no empty space, good padding - `compile/GUIDE.md` §2b, the three audits before showing).
 
 ## 4w · Every drawing whole and clean (2.25.2, 2026-10-15)
 
 The owner's screenshots of the pilot: an engine room poking out through the sloping stern (M01 summary, M02 zones), a
 cargo area through a curved bow, a fuel tank and a vent-mast top cut off at the drawing's edge, labels over a deckhouse
 and through a box's border. Every existing check was green - all of it is inside one `<svg>`, where none looked.
-**L50**. New browser probe `course-module-ux/measure/scripts/audit_drawing.js`: (1) a part whose centre is inside an
+**L54**. New browser probe `course-module-ux/measure/scripts/audit_drawing.js`: (1) a part whose centre is inside an
 outlined closed shape stays inside its real geometry (isPointInFill / isPointInStroke along the part's own outline;
 `<use>` of a shared hull expanded; clip-path counts as inside); (2) nothing cut off at the frame or a clipping
 ancestor, the line's thickness included, also a part faded out for a later step; (3) every label keeps 4 px to any
@@ -599,7 +599,7 @@ M02 (hand-built in the pilot, not changed): 64 findings, 5 of them cut-offs that
 ## 4x · The second module compiled (2.25.3, 2026-10-15)
 
 The pilot's Module 2 (20 instructor screens, its deck hand-built) compiled in a scratch copy: its drawings moved into
-figure files, the emphasis read from its markup into a build sheet, then every drawing fixed to L50. Result at 1280x800:
+figure files, the emphasis read from its markup into a build sheet, then every drawing fixed to L54. Result at 1280x800:
 words 38/38, classroom importer Ready, navigation clean, `audit_drawing` 64 -> 0, `audit_deck` / `audit_collide` clean,
 `audit_compose` 20/20. New build-sheet keys (`compile/GUIDE.md` §2c): `legend` as a line range, `box_alt`, `groups`,
 `hooks`, `inset.under`, `aside`, `figure_first`; a room activity with a drawing; a task slide links to the existing page
@@ -612,7 +612,7 @@ drawings' labels, drawn for 1280, fall under 12.5 px - before and after alike; n
 
 The pilot's M02 tank-monitoring slide shipped as four hand-drawn snapshots swapped with `display:none` - no motion,
 and a look of its own. The owner: *use the kit; if there is no element in the kit, the AI creates the element, puts it
-in the kit, and asks for a merge after the module is complete.* **L51**. New `course-visuals/kit/`: `kit.js` (parts that
+in the kit, and asks for a merge after the module is complete.* **L55**. New `course-visuals/kit/`: `kit.js` (parts that
 draw themselves from a spec, a step engine that tweens values, marks that fire an alarm as their value crosses them -
 in the order the value meets them - hold a value at a shut-off and start other moves; a fallback timer so a step ends
 when a WebView stops sending frames), `kit.css` (ISA-101: grey at rest, amber alarm, red trip; tokens only),
@@ -630,7 +630,7 @@ a dark slide, which an `overflow:hidden` slide can still be scrolled by (`overfl
 ## 4z · Every photograph opens, unasked (2.27.0, 2026-10-15)
 
 Aigars's review of the IGF pilot: real photos for the illustrations, and *"images expandable - a lightbox with more
-explanation about the photo"*; the operator: *"the factory needs to make it on its own"*. **L52**. New
+explanation about the photo"*; the operator: *"the factory needs to make it on its own"*. **L56**. New
 `course-module-ux/assets/gb_photo.js` + `gb_photo.css` (ported from the definition panel and full-screen figure of the
 oil/chemical course, Modules 6 and 10, `course_deck_ext.js`): a tap on any photograph on a slide opens a panel - the
 photo whole, the slide's title, what it shows, its credit - and a tap there fills the screen; a `.slide.photo` gets a
@@ -640,21 +640,21 @@ inside drawing fragments and asides - gets `data-about` (the photo's `_photo_met
 `data-credit`; a photo with no description is reported; the module's copies are checked like the kit's.
 `test_compile_module.py` +7 checks (66). `_photo_meta.schema.json`: the description is now trainee-facing. IGF Basic
 M01–M03 recompiled: 12 photographs open, `check_script_match` and `check_course_package` pass. Not done: tap-to-open
-*cards* from the same course - automatic cards would hide the lines L49 lights from the figure's steps; they wait for
+*cards* from the same course - automatic cards would hide the lines L53 lights from the figure's steps; they wait for
 the script rewrite (claim titles, one lead line) that Aigars asked for.
 
-**L53**, the same day - the operator, at M01 s04 ("five new spaces"): a drawing of real things should also show the real
+**L57**, the same day - the operator, at M01 s04 ("five new spaces"): a drawing of real things should also show the real
 thing, small and close, to tap. The compiler's `drawn_parts` takes a drawn slide's real things - the term before " - "
 in each line (numbered from the kit figure's step whose `line` it is) and the labels the drawing writes on itself (kit
 `label`/`text`, SVG `<text>`; an abbreviation alone skipped) - matches photos by the new `shows` field
 (`_photo_meta.schema.json`; plural-insensitive, a one-word name only exactly), and puts up to four in a `.photo-strip`
-under the drawing, each opening in the L52 panel headed by its part (`data-name`). The pool is the module's photos, then
+under the drawing, each opening in the L56 panel headed by its part (`data-name`). The pool is the module's photos, then
 the course's other modules' (copied in with `copied_from`); `RIGHTS_REVIEW` / `REJECTED` never. A real thing - its last
 word in `knowledge/media-and-tasks.json` `photo_things` - with no photo is printed and written to
 `working_claude\PHOTOS_TO_TAKE.md` (per-module sections, `## Notes` kept); a photo without `shows` is pointed out; the
 build is never blocked. `test_compile_module.py` +11 checks (77).
 
-**L54**, the same day - the operator, seeing the one Viking Grace tank photo under five M03 drawings: *"no duplicate
+**L58**, the same day - the operator, seeing the one Viking Grace tank photo under five M03 drawings: *"no duplicate
 images - a different one or none, on all modules"*. `photo_id` (the photo's `url_or_origin`, else its bytes) makes a copy
 in another module the same photograph; `compile_deck` builds in two passes - first the photos placed by hand (one shown
 twice in the module, or shown by an earlier module's deck by hand, is a problem), then the thumbnails, which take only

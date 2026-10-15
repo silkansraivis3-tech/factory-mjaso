@@ -22,7 +22,7 @@
     "requires_reduced_motion_guard_when_infinite": true,
     "max_ambient_effects_per_screen": 1,
     "drawing_geometry": {
-      "_authority": "Owner, 2026-10-15 (L50), after the IGF pilot: an engine room poking out through a sloping stern, a cargo area through a curved bow, a fuel tank and a vent-mast top cut off at the drawing's edge, labels printed over a deckhouse and through a box's border.",
+      "_authority": "Owner, 2026-10-15 (L54), after the IGF pilot: an engine room poking out through a sloping stern, a cargo area through a curved bow, a fuel tank and a vent-mast top cut off at the drawing's edge, labels printed over a deckhouse and through a box's border.",
       "parts_inside_their_container": "a part drawn inside a hull, tank, room or box stays inside its REAL shape - where the hull slopes or curves, the room follows it (a path, not a rectangle) or is clipped to it (clip-path). Judged on geometry, not boxes.",
       "nothing_cut_off": "no part, and no part of its outline, reaches past the drawing's frame (viewBox) - also a part that only shows in a later step of an animation. Leave room for the line's thickness.",
       "label_safe_zone_px": 4,

@@ -1,6 +1,6 @@
 # Making a part the kit does not have yet
 
-**L51, owner decision 2026-10-15:** *use the kit. If the kit has no part for what the module needs, the AI
+**L55, owner decision 2026-10-15:** *use the kit. If the kit has no part for what the module needs, the AI
 makes the part, puts it in the kit, and asks for a merge once the module is complete.*
 
 A new part is never a one-off drawing on a slide. It is a kit part from the first line: it draws itself
@@ -79,7 +79,7 @@ KIT.define('drip_tray', function (fig, part, g, p) {
 - **`example` is required.** `check_kit.py` checks it as a spec, and the gallery draws it as the card Raivis
   reviews under "Parts added from courses".
 - **Nothing is cut off and nothing overlaps.** Run the example through `course-module-ux/measure/scripts/
-  audit_drawing.js` (L50).
+  audit_drawing.js` (L54).
 
 ## After the merge
 Promotion copies the block into the factory's `kit.js` with `status: 'kit'`. When colleagues update the

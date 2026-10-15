@@ -24,7 +24,7 @@
 }
 .slide img.gbphoto-can{cursor:zoom-in}
 
-/* L53: the real photographs of what a drawing shows, in a row under it - small, numbered like the drawing,
+/* L57: the real photographs of what a drawing shows, in a row under it - small, numbered like the drawing,
    each one opening in the panel. Labels stay at the 12.5 px floor (course-module-ux audit_deck.js). */
 .photo-strip{flex:0 0 auto;display:flex;justify-content:center;gap:min(1.4vmin,14px);width:100%;margin:0}
 .photo-strip .pthumb{margin:0;flex:0 1 min(19vmin,180px);min-width:0;display:flex;flex-direction:column;gap:.35em}

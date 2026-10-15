@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""check_kit.py - is a figure-kit spec drawable, and is a new part built to the kit's contract? (L51)
+"""check_kit.py - is a figure-kit spec drawable, and is a new part built to the kit's contract? (L55)
 
   check_kit.py spec  <file.kit.json> ... [--parts <module>/assets/kit_parts.js]
   check_kit.py parts <module>/assets/kit_parts.js

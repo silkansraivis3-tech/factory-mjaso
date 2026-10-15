@@ -43,7 +43,7 @@ The words: one line is a statement; several lines are a statement and its suppor
 own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registers its slide hooks as
 `window.GB_HOOKS = window.GB_HOOKS || {}; GB_HOOKS.s05 = {enter: fn, leave: fn};`.
 
-## 2b · Real photographs, and no empty space (L48, L49 - owner, 2026-10-15)
+## 2b · Real photographs, and no empty space (L52, L53 - owner, 2026-10-15)
 
 - **As many real photographs as possible.** A photograph as the slide's picture fills the screen (`visual_full`)
   or the right of it (`split`) - never a small photo in a column. Beside a drawing, add a real photo under the
@@ -55,18 +55,18 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   height; words are at reading size (`.copy`). Before showing a deck: `audit_compose.js` (every screen composed,
   none weak), `audit_deck.js` (no spill, no overfill, no tiny labels), `audit_collide.js` - at 1280 × 800 and
   1024 × 768. A label inside a drawing below 12.5 px on screen is fixed in the drawing.
-- **Every drawing whole and clean (L50).** Also `audit_drawing.js`: no part pokes out of the hull, tank, room or box
+- **Every drawing whole and clean (L54).** Also `audit_drawing.js`: no part pokes out of the hull, tank, room or box
   it sits in (draw the room along a sloping stern, or clip it), nothing is cut off at the drawing's frame, every label
   keeps 4 px clear of other shapes, lines and labels. A crossing that is meant is marked in the drawing:
   `data-may-cross`, `data-no-contain`, `data-may-overlap`. Every compiled deck also loads `gb_fit.js`, which widens a
   frame a drawing still reaches past and names it in the console - fix the drawing, then compile again.
-- **Figures from the figure kit (L51).** `"s14": {"figure": "s14.kit.json", "dark": true}` - the spec lives in
+- **Figures from the figure kit (L55).** `"s14": {"figure": "s14.kit.json", "dark": true}` - the spec lives in
   `working_claude\figures\M02\` like any drawing source. The compiler puts it into the page as data with the deck's own
   step buttons (`.mediabar`: previous, next, replay), and loads `kit.css` and `kit.js` (installed by `design_system.py`
   like `gb_deck.js`) and, when the course made parts of its own, `assets\kit_parts.js` after them. Each spec step lights
   its slide line (`"line": 2` -> `[data-i="2"]` `.cur`, earlier steps `.lit`); entering the slide starts the figure at
   step 0. Check the specs first: `course-visuals\kit\scripts\check_kit.py module <module> --figures <figures\M02>`.
-- **A kit figure is laid out beside its words, and drawn to its panel (L49, operator 2026-10-15).** A figure whose
+- **A kit figure is laid out beside its words, and drawn to its panel (L53, operator 2026-10-15).** A figure whose
   steps light the slide's lines takes `"composition": "two-col"` (the words at reading size in the left column, each
   lit line a tap target for its step; `"boxes"` when the lines are separate items) - not `stage` with a `legend`, where a
   large drawing left the explanation in a row of small cards. Draw the spec to the panel's own shape (about 640 × 390 in
@@ -74,11 +74,11 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   `audit_drawing.js` (its EMPTY check) at 1280 × 800, 1024 × 768 and 1920 × 1080, at step 0 and at the last step.
   `stage` stays for a figure that is the whole screen and has no lines to light.
 
-- **Every photograph opens (L52) - nothing to ask for.** Every compiled deck loads `gb_photo.js`: a tap on any photo
+- **Every photograph opens (L56) - nothing to ask for.** Every compiled deck loads `gb_photo.js`: a tap on any photo
   (the slide's picture, a split photo, an inset) opens it large with the slide's title, what it shows and its credit, and
   from there full screen; a full-screen photo slide gets a Photo button. The words come from the photo's `description` in
   `_photo_meta.json` - write it for the trainee when the photo comes in; a photo without one is reported at build.
-- **A drawing carries the real photos of what it shows (L53) - nothing to ask for.** The compiler takes the real things a
+- **A drawing carries the real photos of what it shows (L57) - nothing to ask for.** The compiler takes the real things a
   drawn slide names - the term before " - " in its lines (with the kit figure's step number) and the drawing's own labels -
   and puts the matching photos in a row under the drawing (`.photo-strip`, at most four), each opening in the panel.
   Matched by `"shows"` in `_photo_meta.json`: give every photo the plain names of what it really shows, e.g.
@@ -88,7 +88,7 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   Matching is by name only: when a matched photo contradicts how the thing is drawn (deck tanks under a drawing of a tank
   in its hold), say so in the build sheet - `"no_photo": ["fuel tank"]` with a `"_no_photo"` reason - and the thing goes
   on the list instead. Look at every thumbnail the build placed before showing the deck.
-- **Every photograph once in the whole course (L54).** No photo is shown on two screens - in this module or any other;
+- **Every photograph once in the whole course (L58).** No photo is shown on two screens - in this module or any other;
   a copy under another name is the same photo (same `url_or_origin`, or the same bytes). A thumbnail takes a different
   photo or none; a photo you placed (picture, inset, photo in a drawing) that is already shown is reported - choose a
   different one or none (the earlier module keeps it). After photos change, build every module again.

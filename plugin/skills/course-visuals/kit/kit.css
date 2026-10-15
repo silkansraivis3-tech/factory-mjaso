@@ -14,7 +14,7 @@
    with the slide's own .mediabar under it */
 .kit-fig{display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:14px;min-height:0;width:100%}
 /* the panel hugs the drawing's own shape and centres in the column: a panel stretched to a narrower, taller column
-   (1024 x 768) left blank bands above and below the drawing (L49, audit_drawing EMPTY) */
+   (1024 x 768) left blank bands above and below the drawing (L53, audit_drawing EMPTY) */
 .kit-screen{flex:0 1 auto;min-height:0;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
   background:var(--deep-2);border-radius:var(--r-l,20px);padding:12px}
 .slide.dark .kit-screen{background:transparent;padding:0}

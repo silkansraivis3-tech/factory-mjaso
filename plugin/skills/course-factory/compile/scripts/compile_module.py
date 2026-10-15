@@ -92,7 +92,7 @@ IMAGES = (".jpg", ".jpeg", ".png", ".webp", ".gif")
 KIT_SPEC = ".kit.json"                       # a figure made from the figure kit (course-visuals/kit)
 KIT_FILES = ("kit.css", "kit.js")             # shipped with the module by design_system.py, like gb_deck.js
 KIT_PARTS = "assets/kit_parts.js"             # parts this course added to the kit, until they are merged
-PHOTO_FILES = ("gb_photo.css", "gb_photo.js")  # every photograph opens (L52) - in every deck, shipped like gb_deck.js
+PHOTO_FILES = ("gb_photo.css", "gb_photo.js")  # every photograph opens (L56) - in every deck, shipped like gb_deck.js
 COMPOSITIONS = ("opener", "flow", "two-col", "wide-left", "wide-right", "stage")
 STAGE_MAX_WORDS = 45
 STATEMENT_MAX_WORDS = 22
@@ -382,12 +382,12 @@ def figure_html(mdir, figdir, s, b, probs, where):
 
 
 def photo_panel(meta, credit, rel, probs, where):
-    """L52: every photograph opens (gb_photo.js) - large, with what it shows and its credit. What it shows is the
+    """L56: every photograph opens (gb_photo.js) - large, with what it shows and its credit. What it shows is the
     photo's own record, written when the photo was brought in: its "description" says what is in the picture and
     never more than the picture evidences, like a caption."""
     about = (meta.get("description") or "").strip()
     if not about:
-        probs.append("%s: the photograph %s has no \"description\" in its _photo_meta.json - its panel (L52) would say "
+        probs.append("%s: the photograph %s has no \"description\" in its _photo_meta.json - its panel (L56) would say "
                      "nothing about what it shows" % (where, rel))
     return "".join(' %s="%s"' % (k, a(v)) for k, v in (("data-about", about), ("data-credit", credit)) if v)
 
@@ -396,7 +396,7 @@ IMG_TAG = re.compile(r'<img\b(?![^>]*\bdata-(?:about|no-zoom)\b)[^>]*\bsrc="\.\.
 
 
 def photos_in(body, mdir, probs, where):
-    """a photograph inside a drawing fragment (four photo cards, a photo in an aside) opens like any other (L52):
+    """a photograph inside a drawing fragment (four photo cards, a photo in an aside) opens like any other (L56):
     its <img> gets the photo's description and credit from the module's own _photo_meta.json"""
     def one(m):
         rel = m.group(1)
@@ -411,7 +411,7 @@ def photos_in(body, mdir, probs, where):
     return IMG_TAG.sub(one, body)
 
 
-# ------------------------------------------------------------------ L53: a drawing of real things carries their photos
+# ------------------------------------------------------------------ L57: a drawing of real things carries their photos
 THINGS = None
 JSON_DATA = re.compile(r'<script type="application/json"[^>]*>(.*?)</script>', re.S)
 SVG_TEXT = re.compile(r"<text\b[^>]*>(.*?)</text>", re.S | re.I)
@@ -540,7 +540,7 @@ def other_modules(mdir):
                   if os.path.join(root, x) != os.path.abspath(mdir) and os.path.isdir(os.path.join(root, x, "assets")))
 
 
-# ------------------------------------------------------------------ L54: every photograph once in the whole course
+# ------------------------------------------------------------------ L58: every photograph once in the whole course
 def photo_id(d, rel, meta=None):
     """what makes two files the same photograph: where it came from (url_or_origin), else the same bytes - so a
     copy under another name in another module is still the same picture"""
@@ -563,7 +563,7 @@ STRIP = re.compile(r'<div class="photo-strip".*?</div>', re.S)
 
 
 def shown_in(d, page):
-    """{photo: ("M01 s04", placed by hand?)} for every photograph a built deck shows. A thumbnail (L53) is not placed
+    """{photo: ("M01 s04", placed by hand?)} for every photograph a built deck shows. A thumbnail (L57) is not placed
     by hand: it gives way on its module's next build"""
     out = {}
     for sec in re.finditer(r'<section [^>]*\bid="([^"]+)".*?</section>', page, re.S):
@@ -599,9 +599,9 @@ def bring_in(mdir, name, meta, src):
 
 
 def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None, refuse=()):
-    """L53: each real thing a drawing names gets its real photograph beside the drawing - a small tappable photo
-    that opens in the L52 panel. Matched by the photo's "shows"; a thing with no photo is noted for the list.
-    L54: a photograph the course already shows anywhere (`taken`) is never shown again - a different one, or none"""
+    """L57: each real thing a drawing names gets its real photograph beside the drawing - a small tappable photo
+    that opens in the L56 panel. Matched by the photo's "shows"; a thing with no photo is noted for the list.
+    L58: a photograph the course already shows anywhere (`taken`) is never shown again - a different one, or none"""
     strip, taken = [], taken if taken is not None else {}
     for num, name in drawn_parts(lines, fig):
         if any("assets/img/" + n in on_slide and any(shows_it(x, name) for x in m.get("shows") or []) for n, m, _, _ in pool):
@@ -661,7 +661,7 @@ def write_to_take(course, script, notes):
     p = os.path.join(course, workspace.CLAUDE, TO_TAKE)
     m = cs.mid(script.get("module"))
     head = ("# Photos to take at Novikontas\n\n"
-            "Every real thing a drawing names that has no real photograph yet (L53). The `## Mnn` sections are written by\n"
+            "Every real thing a drawing names that has no real photograph yet (L57). The `## Mnn` sections are written by\n"
             "compile_module.py on every build - add a photo with its `shows` in `_photo_meta.json` and build again.\n"
             "Notes of your own go under `## Notes`, which is never touched.\n")
     text = io.open(p, encoding="utf-8").read() if os.path.isfile(p) else head + "\n## Notes\n"
@@ -704,7 +704,7 @@ def fill(fig):
 
 
 def inset_html(mdir, ins, probs, where):
-    """a real photograph under the words (L48): {"photo": "assets/img/x.jpg", "caption": "..."} - the caption is
+    """a real photograph under the words (L52): {"photo": "assets/img/x.jpg", "caption": "..."} - the caption is
     instructor-chosen context with the credit, marked data-script-ignore so QA sees it counted"""
     rel = (ins.get("photo") or "").replace("\\", "/")
     if not os.path.isfile(os.path.join(mdir, rel)):
@@ -795,7 +795,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     if inset and (b.get("inset") or {}).get("under") == "figure" and room_under:
         fig = under_figure(fig, inset)
         inset = ""
-    # L53: a drawing of real things carries their real photographs, under the drawing - unasked
+    # L57: a drawing of real things carries their real photographs, under the drawing - unasked
     strip = ""
     if fig and not is_photo and comp != "photo" and notes is not None:
         strip = part_photos(lines, fig, on_slide, mdir, pool or [], notes, sid, taken, b.get("no_photo") or [])
@@ -887,8 +887,8 @@ def compile_deck(script, build, mdir, figdir, version, approved):
     slides = []
     teach = 0
     notes, pool = [], photo_pool(mdir)
-    # L54 - every photograph once in the whole course. First the photographs placed by hand (slide pictures, insets,
-    # photos in drawings): one shown twice, or already shown by an EARLIER module, is a problem to fix. Then the L53
+    # L58 - every photograph once in the whole course. First the photographs placed by hand (slide pictures, insets,
+    # photos in drawings): one shown twice, or already shown by an EARLIER module, is a problem to fix. Then the L57
     # thumbnails take only what no deck of the course shows yet.
     here, me = {}, module_label(mdir)
     for s in screens:
@@ -899,13 +899,13 @@ def compile_deck(script, build, mdir, figdir, version, approved):
                 pid, at = photo_id(mdir, rel), "%s %s" % (me, s["id"])
                 if pid in here and here[pid] != at:
                     probs.append("%s (%s): the photograph %s is already shown on %s - a photograph is shown once in the "
-                                 "course (L54): choose a different one, or none" % (cs.place(script, s["id"]), s["id"], rel, here[pid]))
+                                 "course (L58): choose a different one, or none" % (cs.place(script, s["id"]), s["id"], rel, here[pid]))
                 here.setdefault(pid, at)
     elsewhere = shown_elsewhere(mdir)
     for pid, at in sorted(here.items(), key=lambda x: x[1]):
         other, by_hand = elsewhere.get(pid, ("", False))
         if by_hand and other.split()[0] < me:      # the earlier module keeps it; a thumbnail there gives way instead
-            probs.append("%s: its photograph is already shown on %s - a photograph is shown once in the course (L54): "
+            probs.append("%s: its photograph is already shown on %s - a photograph is shown once in the course (L58): "
                          "choose a different one, or none" % (at, other))
     taken = dict({k: v[0] for k, v in elsewhere.items()}, **here)
     for n, s in enumerate(screens, 1):
@@ -914,7 +914,7 @@ def compile_deck(script, build, mdir, figdir, version, approved):
         slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken))
     blind = sorted(n for n, m, d, _ in pool if os.path.abspath(d) == os.path.abspath(mdir) and not m.get("shows"))
     if blind:
-        notes.append((None, None, "%d photograph(s) without \"shows\" in _photo_meta.json, so no drawing can use them (L53): %s"
+        notes.append((None, None, "%d photograph(s) without \"shows\" in _photo_meta.json, so no drawing can use them (L57): %s"
                       % (len(blind), ", ".join(blind))))
     for x in STYLES:                    # the compiled layouts need the factory's current style files in the module
         mine, canon = os.path.join(mdir, "assets", x), os.path.join(SKILLS, "course-module-ui", "templates", x)
@@ -1043,7 +1043,7 @@ def main(argv=None):
     parts = [x for x in notes if x[0]]
     listed = write_to_take(o.course, script, parts)
     if notes:
-        print("\nReal photographs still missing for what the drawings show (L53) - listed in\n    %s" % listed)
+        print("\nReal photographs still missing for what the drawings show (L57) - listed in\n    %s" % listed)
         for r in by_thing(parts) + [x[2] for x in notes if not x[0]]:
             print("  - " + r)
     if probs:

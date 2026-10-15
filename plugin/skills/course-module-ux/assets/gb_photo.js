@@ -36,7 +36,7 @@
      (course-task-ux rulings §7).
 
    data-name on the <img>     the panel's heading - the part of a drawing a
-                              small photo shows (L53, .photo-strip), else the
+                              small photo shows (L57, .photo-strip), else the
                               slide's title
    data-no-zoom on an <img> leaves it alone (a logo, an icon, a card face).
    Loaded by every compiled deck (course-factory compile/), after gb_deck.js.
@@ -93,7 +93,7 @@
   function open(img) {
     close();
     var s = slideOf(img), words = wordsOf(img);
-    /* a photo of one part of a drawing (L53) is named after that part, else after its slide */
+    /* a photo of one part of a drawing (L57) is named after that part, else after its slide */
     var title = img.getAttribute("data-name") || (s ? (s.getAttribute("data-title") || "") : "");
     var dark = s && (s.classList.contains("dark") || s.classList.contains("photo"));
     box = d.createElement("div");

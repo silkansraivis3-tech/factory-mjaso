@@ -218,7 +218,7 @@ Three distinct layers, and passing one says nothing about the others:
 | layer | tool | what only it can see |
 |---|---|---|
 | STATIC | `measure/scripts/check_static.py all <module.html>`, `measure/scripts/check_navigation.py <course>` | minutes, links inside slides, missing nav, missing back hook, declared tap sizes |
-| RUNTIME | `measure/scripts/audit_drive.js` (+ `audit_deck.js`, `audit_collide.js` loaded first), `measure/scripts/audit_drawing.js` (inside a drawing: parts in their containers, nothing cut off, labels' safe zone - L50), `course-visuals/scripts/verify_figures.js` | contrast as painted, real laid-out size, spill, overlap, anything under the chrome, whether a figure rendered at all, whether a control can actually be tapped |
+| RUNTIME | `measure/scripts/audit_drive.js` (+ `audit_deck.js`, `audit_collide.js` loaded first), `measure/scripts/audit_drawing.js` (inside a drawing: parts in their containers, nothing cut off, labels' safe zone - L54), `course-visuals/scripts/verify_figures.js` | contrast as painted, real laid-out size, spill, overlap, anything under the chrome, whether a figure rendered at all, whether a control can actually be tapped |
 | COMPOSITION | `measure/scripts/audit_compose.js` | whether the screen is COMPOSED or merely fits — see below |
 | HUMAN | `review/GUIDE.md`, the side-by-side against the reference deck | whether it teaches |
 

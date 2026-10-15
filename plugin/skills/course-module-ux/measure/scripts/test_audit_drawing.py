@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""test_audit_drawing - every drawing whole and clean (L50), proven in a real browser.
+"""test_audit_drawing - every drawing whole and clean (L54), proven in a real browser.
 
     python test_audit_drawing.py
 

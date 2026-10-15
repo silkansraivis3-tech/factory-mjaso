@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_kit.py - check_kit.py and kit_parts.py do what PARTS.md says (L51). Run: python test_kit.py"""
+"""test_kit.py - check_kit.py and kit_parts.py do what PARTS.md says (L55). Run: python test_kit.py"""
 from __future__ import annotations
 
 import io

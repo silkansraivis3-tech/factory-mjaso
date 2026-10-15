@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""kit_parts.py - the parts a course added to the figure kit, and their way into the factory (L51)
+"""kit_parts.py - the parts a course added to the figure kit, and their way into the factory (L55)
 
   kit_parts.py list    <module folder> ...
   kit_parts.py promote <module folder> ... --factory <factory-mjaso clone> [--dry-run]
@@ -64,7 +64,7 @@ def cmd_promote(dirs, factory, dry):
         return 2
     text = ck.read(kit_js)
     if END not in text:
-        print("Stopped - the factory's kit.js has no %s marker; it predates L51" % END)
+        print("Stopped - the factory's kit.js has no %s marker; it predates L55" % END)
         return 2
     have = ck.kit_types(kit_js)
     todo, seen, failed, skipped = [], {}, [], []
