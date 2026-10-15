@@ -1,0 +1,87 @@
+{
+  "_authority": "Owner, 2026-10-15 (L48, 2.25.0): 'my main task is to level up pedagogy - bloom taxonomy needs to be on higher level. thats why we have tablets ... before that we used google docs/google classroom tasks, now we have tablets, so we can use all of their functionality to lift bloom taxonomy/pedagogy level up'. The Bloom map: what level each ILO asks for, what level each task reaches, where a task sits below its ILO, and which tablet task type would lift it. Read by scripts/bloom_map.py (and through it make_architecture_page.py and content_script.py); the judgement a list cannot make is in bloom/GUIDE.md. The revised taxonomy (Anderson & Krathwohl, 2001). Every floor here is a SUGGESTION in 2.25.0 - shown, never blocking.",
+
+  "levels": {
+    "1": {"key": "remember",   "en": "Remember",   "lv": "Atcerēties",  "ru": "Запомнить",
+          "means": {"en": "recall a fact, a name, a number", "lv": "atsaukt atmiņā faktu, nosaukumu, skaitli", "ru": "вспомнить факт, название, число"},
+          "examples": {"en": "name, list, identify", "lv": "nosaukt, uzskaitīt, atpazīt", "ru": "назвать, перечислить, распознать"}},
+    "2": {"key": "understand", "en": "Understand", "lv": "Saprast",     "ru": "Понять",
+          "means": {"en": "explain it in own words, sort it, compare it", "lv": "izskaidrot saviem vārdiem, sašķirot, salīdzināt", "ru": "объяснить своими словами, классифицировать, сравнить"},
+          "examples": {"en": "describe, explain, compare", "lv": "aprakstīt, izskaidrot, salīdzināt", "ru": "описать, объяснить, сравнить"}},
+    "3": {"key": "apply",      "en": "Apply",      "lv": "Lietot",      "ru": "Применить",
+          "means": {"en": "do it - operate, set, measure, carry out the procedure", "lv": "izdarīt - darbināt, iestatīt, izmērīt, veikt procedūru", "ru": "сделать - управлять, установить, измерить, выполнить процедуру"},
+          "examples": {"en": "operate, carry out, measure", "lv": "darbināt, veikt, izmērīt", "ru": "управлять, выполнить, измерить"}},
+    "4": {"key": "analyse",    "en": "Analyse",    "lv": "Analizēt",    "ru": "Анализировать",
+          "means": {"en": "find the cause, the fault, the hazard in a real situation", "lv": "atrast cēloni, kļūmi, bīstamību reālā situācijā", "ru": "найти причину, неисправность, опасность в реальной ситуации"},
+          "examples": {"en": "find the cause of, diagnose, distinguish", "lv": "atrast cēloni, diagnosticēt, atšķirt", "ru": "найти причину, диагностировать, отличить"}},
+    "5": {"key": "evaluate",   "en": "Evaluate",   "lv": "Izvērtēt",    "ru": "Оценить",
+          "means": {"en": "decide what to do and say why; judge someone's decision", "lv": "izlemt, ko darīt, un pamatot; izvērtēt kāda lēmumu", "ru": "решить, что делать, и обосновать; оценить чужое решение"},
+          "examples": {"en": "decide and justify, assess", "lv": "izlemt un pamatot, izvērtēt", "ru": "принять решение и обосновать, оценить"}},
+    "6": {"key": "create",     "en": "Create",     "lv": "Radīt",       "ru": "Создать",
+          "means": {"en": "make a plan, a procedure, a checklist of their own", "lv": "izveidot savu plānu, procedūru, kontrolsarakstu", "ru": "составить свой план, процедуру, чек-лист"},
+          "examples": {"en": "plan, develop, draft", "lv": "plānot, izstrādāt, sastādīt", "ru": "спланировать, разработать, составить"}}
+  },
+  "apply_level": 3,
+
+  "verbs": {
+    "_how": "How the level of an ILO is read. en: whole words, the script adds -s, -es, -ed, -ing (identify -> identifies, identified). lv and ru: word STEMS - anything that starts with the stem matches (aprakst -> apraksta, aprakstīt). Multi-word entries are phrases. An entry ending in $ is a whole word only (lv 'veic$' - so that 'veicināt', to promote, is not read as 'veikt', to carry out). The ILO's level is the HIGHEST of the verbs that lead a clause - the first verb, and any verb straight after a comma, a semicolon or a lead word (and, or, to; un, spēj; и, уметь) - so a noun deep in the object is not read as a verb. 'weak' verbs cannot be observed or measured: they get a level, and a note. A verb in more than one level in real use (select, determine, check, определить) is left OUT on purpose - the report says 'not in the list' and Claude judges it (bloom/GUIDE.md 2). A starting list: add the verbs your programmes use.",
+    "en": {
+      "1": ["define", "list", "name", "state", "recall", "recognise", "recognize", "identify", "label", "locate", "memorise", "memorize", "repeat"],
+      "2": ["describe", "explain", "outline", "summarise", "summarize", "classify", "compare", "interpret", "discuss", "illustrate", "exemplify", "paraphrase", "translate"],
+      "3": ["apply", "use", "operate", "carry out", "perform", "demonstrate", "calculate", "measure", "execute", "implement", "conduct", "handle", "prepare", "adjust", "follow", "complete", "solve", "estimate", "plot", "respond", "maintain", "start up", "shut down"],
+      "4": ["analyse", "analyze", "diagnose", "troubleshoot", "differentiate", "distinguish", "examine", "investigate", "deduce", "infer", "attribute", "break down", "trace"],
+      "5": ["evaluate", "assess", "judge", "justify", "critique", "prioritise", "prioritize", "recommend", "defend", "argue", "appraise", "decide"],
+      "6": ["design", "plan", "develop", "create", "compose", "construct", "devise", "formulate", "produce", "propose", "draft"]
+    },
+    "lv": {
+      "1": ["definē", "uzskait", "nosauc", "nosauk", "atpazī", "identificē", "atcer", "norād", "iegaumē"],
+      "2": ["aprakst", "izskaidro", "paskaidro", "skaidro", "klasificē", "salīdzin", "interpretē", "apspried", "raksturo", "ilustrē"],
+      "3": ["pielieto", "lietot", "lieto$", "izmanto", "darbin", "veic$", "veikt", "veicot", "izpild", "demonstrē", "aprēķin", "izmērī", "mērīt", "regulē", "iestat", "sagatavo", "rīkoj", "rīkot"],
+      "4": ["analizē", "diagnosticē", "atšķir", "izšķir", "izpēt", "secin"],
+      "5": ["novērtē", "izvērtē", "pamato", "izlem", "lemt", "lemj", "pieņemt lēmum", "pieņem lēmum", "prioritizē", "ieteik", "iesak"],
+      "6": ["izstrādā", "plāno", "izveido", "projektē", "sastāda", "formulē"]
+    },
+    "ru": {
+      "1": ["перечисл", "назвать", "называть", "распозна", "идентифицир", "вспомн", "воспроизв", "указать", "указывать"],
+      "2": ["описыва", "описа", "опиш", "объясн", "поясн", "классифицир", "сравн", "интерпретир", "характеризова", "охарактериз", "обсужд", "обсуд"],
+      "3": ["примен", "использ", "выполн", "провест", "демонстрир", "продемонстр", "рассчит", "вычисл", "измер", "эксплуатир", "управл", "действова"],
+      "4": ["анализир", "проанализ", "диагностир", "дифференцир", "выяв", "исслед"],
+      "5": ["оцени", "оценк", "оценива", "обоснов", "принять решени", "принимать решени", "аргументир", "рекомендова"],
+      "6": ["разраб", "спланир", "планир", "проектир", "спроектир", "созда", "составля", "составить", "сформулир", "формулир"]
+    }
+  },
+  "weak": {
+    "_why": "These say what happens inside a head - nobody can watch a trainee 'know'. A programme's Main ILO keeps them (verbatim, L2); a Sub-ILO is re-expressed with a verb that can be watched, the operator approving (status re-expressed). STCW's own column 'knowledge, understanding and proficiency' is written this way - the level is still read from it.",
+    "en": {"1": ["know", "be aware", "be familiar", "knowledge", "awareness", "familiarity"], "2": ["understand", "comprehend", "appreciate", "understanding"], "3": ["proficiency"]},
+    "lv": {"1": ["zināt", "zina", "zināšan", "apzinā", "iepazī", "būt informēt"], "2": ["saprast", "saprot", "izpratn"], "3": ["prasm"]},
+    "ru": {"1": ["знать", "знани", "ознаком", "иметь представлени"], "2": ["понима", "понять", "осознава"], "3": ["умени", "уметь", "навык"]}
+  },
+  "lead_words": {"_why": "A verb straight after one of these leads a clause: 'and describe', 'to operate', 'spēj aprakstīt', 'уметь применять'.",
+                 "en": ["and", "or", "then", "to"], "lv": ["un", "vai", "tad", "spēj", "spēt", "prot", "prast"],
+                 "ru": ["и", "или", "затем", "уметь", "умеет", "способен", "должен", "может"]},
+
+  "mechanics": {
+    "_how": "The level a tablet task type USUALLY reaches (typical), and the highest it CAN reach when it is written for it (ceiling) - with how. A question may state its own level ('bloom': 4, 'bloom_why': '...') when it is written above the usual; it is then shown as stated, and a stated level above the ceiling is pointed out. Create (6) is reached by no task type yet - new task types for it are part 3 of the Bloom plan.",
+    "single_choice":      {"typical": 1, "ceiling": 4, "higher": "give a short real situation, and make the right option one that has to be worked out from it - not a fact recalled"},
+    "multi_select":       {"typical": 1, "ceiling": 4, "higher": "a situation with several clues; the trainee picks every clue that points to the fault"},
+    "cloze":              {"typical": 1, "ceiling": 2, "higher": "gaps that carry the reasoning (because ... so ...) rather than the facts"},
+    "match":              {"typical": 2, "ceiling": 3, "higher": "match each situation to the action it needs, not a term to its definition"},
+    "categorise":         {"typical": 2, "ceiling": 4, "higher": "sort observed symptoms into the causes behind them"},
+    "order":              {"typical": 2, "ceiling": 3, "higher": "order the steps of a procedure the trainee will actually carry out, with the situation given"},
+    "hotspot":            {"typical": 1, "ceiling": 3, "higher": "tap where you would act - the valve to close, the point to measure - not just where a part is"},
+    "label_diagram":      {"typical": 1, "ceiling": 2, "higher": "label what each part does, not only its name"},
+    "spot_the_hazard":    {"typical": 4, "ceiling": 4, "higher": ""},
+    "read_instrument":    {"typical": 3, "ceiling": 4, "higher": "read it, then say what the reading means for the operation"},
+    "set_value":          {"typical": 3, "ceiling": 3, "higher": ""},
+    "panel_operate":      {"typical": 3, "ceiling": 3, "higher": ""},
+    "choose_and_justify": {"typical": 5, "ceiling": 5, "higher": ""},
+    "scenario":           {"typical": 4, "ceiling": 5, "higher": "at each step the trainee chooses the action AND the reason, and sees the consequence of a wrong one"}
+  },
+
+  "floors": {
+    "apply_plus_min_share": 0.5,
+    "_apply_plus": "A suggestion, not a rule (2.25.0): at least half of a module's self-check and module-check questions at Apply or higher. On paper and in Google Classroom almost everything was Remember; the tablet can let the trainee operate, find and decide.",
+    "module_check_reaches_ilo": true,
+    "_reaches": "A suggestion, not a rule (2.25.0): for every Sub-ILO the module check has at least one question at the Sub-ILO's level or higher - otherwise the module never checks what it promised."
+  }
+}

@@ -1,6 +1,7 @@
 # NOVIKONTAS Course Factory — read me first
 
-**`course-factory` 2.10.1 + `nano-banana` 1.1.2 · Phase 5 in progress (2026-09-30).**
+**`course-factory` 2.25.0 + `nano-banana` 1.2.0 · Phase 5 in progress (2026-10-15).**
+The current state, step by step: [`_claude/CONTEXT.md`](_claude/CONTEXT.md).
 The current plan and the owner's decisions: [`docs/PHASE5_GAP_REPORT.md`](docs/PHASE5_GAP_REPORT.md).
 
 This repository is the Course Factory — a Claude Code plugin that turns an approved training

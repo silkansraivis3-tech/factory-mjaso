@@ -98,6 +98,7 @@ Q = lambda t: "{%s}%s" % (W, t)
 sys.path.insert(0, HERE)
 import check_slide_text as slide_text  # noqa: E402  - the same four rules the built slides get (L22)
 import workspace  # noqa: E402  - the factory works in course\ beside the operator's material (L40)
+import bloom_map  # noqa: E402  - what level each question reaches, against its Sub-ILO (L48)
 
 MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json"), encoding="utf-8"))
 KINDS = ("slide", "task-slide", "activity", "self-check", "module-check", "final")
@@ -819,6 +820,14 @@ def summary(script):
             "total_min": sum(minutes(s) for s in screens if s.get("kind") in INSTRUCTOR)}
 
 
+def bloom_of(course, script):
+    """The Bloom map of this module (L48) - its Sub-ILOs from working_claude/architecture.json when there is one."""
+    rd = lambda n: load(workspace.claude_path(course, n)) if course and os.path.isfile(workspace.claude_path(course, n)) else None
+    arch, prog = rd("architecture.json"), rd("programme.json")
+    am = next((m for m in (arch or {}).get("modules", []) if str(m.get("module")) == str(script.get("module"))), None)
+    return bloom_map.module_map(script, am, prog, arch, mech=mech, where=lambda sid: place(script, sid))
+
+
 # ------------------------------------------------------------------ the review page
 FAMILY_MARK = {"still": "▣", "moving": "▶", "interactive": "☝", "3d": "⬢", "video": "●"}
 
@@ -940,6 +949,7 @@ def render_html(course, script):
     css = "".join(io.open(os.path.join(SKILLS, "course-module-ui", "templates", n), encoding="utf-8").read() + "\n"
                   for n in ("gb_tokens.css", "gb_page.css"))
     css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)   # the style files' comments are for maintainers (L25)
+    css += bloom_map.CSS
     css += """
 .verb{font-family:var(--font)} .screen{page-break-inside:avoid;break-inside:avoid}
 .sid{font-family:var(--mono);color:var(--faint-l);font-size:13px}
@@ -1032,6 +1042,9 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
     else:
         o.append('<p class="note">%s</p>' % e(T(script, "s_textcheck_clean")))
     o.append(media_summary_html(e, V, script))
+    bm = bloom_of(course, script)                          # L48 - suggestions only
+    o.append(bloom_map.module_html(bm, V))
+    blevel = {r["id"]: r for r in bm["rows"]}
 
     # ---- part 1: the instructor tablet
     o.append('<div class="part"><h2>%s</h2><p class="note">%s</p></div>' % (e(T(script, "s_part1")), e(T(script, "s_part1_intro"))))
@@ -1086,7 +1099,9 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
             o.append('<dl>%s<dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd>%s</dl></div>' % (
                 ("<dt>%s</dt><dd>%s</dd>" % (e(T(script, "s_correct")), e(s.get("correct", "")))) if uses(s, "options") else "",
                 e(T(script, "s_feedback")), V(s.get("feedback")),
-                e(T(script, "s_mechanic")), e(mech_label(mech(s), script.get("operator_language", "en"))),
+                e(T(script, "s_mechanic")), e(mech_label(mech(s), script.get("operator_language", "en"))) + (
+                    "<br><span class=\"note\">%s: %s</span>" % (e(T(script, "b_q_level")), e(bloom_map.question_line(
+                        blevel[s["id"]], script.get("operator_language", "en")))) if s["id"] in blevel else ""),
                 "" if st["kind"] == "final" else "<dt>%s</dt><dd>%s</dd>" % (
                     e(T(script, "s_taught_on")),
                     e(", ".join(T(script, "s_slide_n", n=n) for n in tn)) if tn else "<b>%s</b>" % e(T(script, "s_taught_nowhere")))))
@@ -1608,6 +1623,11 @@ def render(course, module, quiet=False):
                     print("  - [%s] %s%s: %s%s" % ("must fix" if f["level"] == FAIL else "note", f["where"],
                                                   (", " + f["field"]) if f["field"] else "", f["detail"],
                                                   (" - use instead: " + f["fix"]) if f["fix"] else ""))
+        bm = bloom_of(course, script)
+        if bm["findings"]:
+            print("\nThe Bloom map has %d suggestion(s) - on the review page, they never stop the module:" % len(bm["findings"]))
+            for k, kw in bm["findings"]:
+                print("  - " + bloom_map.T(bm["lang"], k, **kw))
     return 1 if probs else 0
 
 

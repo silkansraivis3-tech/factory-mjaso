@@ -38,6 +38,10 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 ```
 
 - `text` is the **exact visible words** of the slide, not a description of them. One line per line.
+- **Bloom (L48, 2.25.0).** A question may say which Sub-ILO it checks (`"sub_ilo": "1.2"`), and - only when
+  it is written above its task type's usual level - its level and why (`"bloom": 4, "bloom_why": "..."`).
+  The review page then shows every question below its Sub-ILO and how the tablet would lift it.
+  Aim the tasks at the Sub-ILO's level, and above *Remember* wherever the content allows (`bloom/GUIDE.md`).
 - **Enough theory (L36, `knowledge/theory-rules.json`).** A slide carries the teaching itself - the facts,
   numbers, names and reasons its Sub-ILO needs - not a headline (50-150 words, title included); the notes
   carry what the instructor explains, adds or asks beyond it (30 words or more); the module's slides and

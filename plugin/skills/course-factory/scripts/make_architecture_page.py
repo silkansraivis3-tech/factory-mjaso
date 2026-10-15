@@ -67,6 +67,8 @@ SKILLS = os.path.dirname(SKILL)
 LABELS = json.load(io.open(os.path.join(SKILL, "knowledge", "page-labels.json"), encoding="utf-8"))
 RULES = json.load(io.open(os.path.join(SKILL, "knowledge", "theory-rules.json"), encoding="utf-8"))
 MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json"), encoding="utf-8"))
+sys.path.insert(0, HERE)
+import bloom_map  # noqa: E402  - what level the ILOs ask for and the tasks reach (L48)
 FAMILY_MARK = {"still": "▣", "moving": "▶", "interactive": "☝", "3d": "⬢", "video": "●"}
 MOVING = ("moving", "interactive", "3d", "video")
 TECHNIQUES = ["self-check", "explain-then-reveal", "predict-then-reveal", "worked-example", "scenario"]
@@ -260,7 +262,7 @@ def analyse(prog, arch, plan=None):
         problems.append(("p_total_row", {"th": fmt_h(tot_th), "pr": fmt_h(tot_pr),
                                          "pth": fmt_h(num(tr.get("theory"))), "ppr": fmt_h(num(tr.get("practical")))}))
     return {"ahm": ahm, "ahm_assumed": ahm_assumed, "modules": modules, "problems": problems, "suggestions": suggestions,
-            "tot_th": tot_th, "tot_pr": tot_pr, "outcomes": outcomes}
+            "tot_th": tot_th, "tot_pr": tot_pr, "outcomes": outcomes, "bloom": bloom_map.course_map(prog, arch)}
 
 
 CSS_EXTRA = """
@@ -298,7 +300,7 @@ def style():
               os.path.join(SKILLS, "course-module-ui", "templates", "gb_page.css")):
         css += io.open(p, encoding="utf-8").read() + "\n"
     # the style files' own comments are for the factory's maintainers, not the operator (L25)
-    return re.sub(r"/\*.*?\*/", "", css, flags=re.S) + CSS_EXTRA
+    return re.sub(r"/\*.*?\*/", "", css, flags=re.S) + CSS_EXTRA + bloom_map.CSS
 
 
 def build(prog, arch, a):
@@ -440,6 +442,9 @@ def build(prog, arch, a):
         out.append("<tr><td>%s</td><td>%s</td><td>%s</td></tr>" % (e(i.get("id")), VP(i.get("text")), e(i.get("ref", ""))))
     out.append("</table>")
 
+    # ---- Bloom: what level the ILOs ask for, what the planned tasks reach (L48) - suggestions only
+    out.append(bloom_map.course_html(a["bloom"], VP))
+
     # ---- per module
     rb = RULES["before_self_check"]
     for m in mods:
@@ -568,6 +573,8 @@ def main(argv=None):
     if x.check:
         for k, kw in a["suggestions"]:
             print("  (suggestion) " + P.t(k, **kw))
+        for k, kw in a["bloom"]["findings"]:
+            print("  (Bloom, suggestion) " + P.t(k, **kw))
         for k, kw in a["problems"]:
             print("  - " + P.t(k, **kw))
         print("%d problem(s)." % len(a["problems"]))

@@ -371,8 +371,14 @@ only their yes generates it - once; the nano-banana tools refuse without their w
 time. → `course-factory` (`scripts/picture_briefs.py`, `knowledge/media-and-tasks.json` generation_brief) and
 `nano-banana` 1.2.0 (`approved_by_user`, the usage log)
 
-**All forty-seven laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L47 are enforced first through `course-factory/SKILL.md`'s
+**L48 · The Bloom level is measured, and the tablet lifts it.** Owner, 2026-10-15: on paper and in Google Classroom
+almost every task was Remember; the tablet lets a trainee operate, find and decide. Every ILO's level is read from its
+verb, every task's from how it is answered; the Stage 2 and Stage 3 pages show where the course is, every task below
+its Sub-ILO, and the tablet task types that would lift it - suggestions in 2.25.0, never a stop. → `course-factory`
+(`knowledge/bloom.json`, `bloom/GUIDE.md`, `scripts/bloom_map.py`, 2.25.0)
+
+**All forty-eight laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L48 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

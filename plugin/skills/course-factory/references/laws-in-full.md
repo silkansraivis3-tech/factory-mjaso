@@ -219,7 +219,7 @@ and the words to replace are in `SKILL.md` (*Every reply to the operator*) and `
 
 ---
 
-## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0; L45, 2.21.0; L46, 2.22.0; L47, 2.24.0)
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0; L45, 2.21.0; L46, 2.22.0; L47, 2.24.0; L48, 2.25.0)
 
 Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
 these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
@@ -760,3 +760,22 @@ explaining in detail what you want to see.' This will reduce failed attempts and
 - **What it cost is said every time.** Each picture is logged on the computer (`~/.config/nano-banana/usage.jsonl`) and
   per module (`working_claude/picture_briefs/M01.json`); each result says the count and the estimate (about €0.10 a
   picture, `NANO_BANANA_EUR_PER_IMAGE`); a video clip costs much more and says so.
+
+**L48 · The Bloom level is measured, and the tablet lifts it.**
+*"My main task is to level up pedagogy - bloom taxonomy needs to be on higher level. That's why we have tablets, because now we can create more difficult and more interesting and more interactive tasks for trainees; before that we used Google Docs / Google Classroom tasks."* - the owner, 2026-10-15.
+
+- **Measured.** Every ILO's level is read from its verb (`knowledge/bloom.json`: English words, Latvian and Russian
+  stems; the highest verb that leads a clause), every task's from how the trainee answers it - its task type's usual
+  level, or the level its author stated with a reason. A verb whose level depends on the sentence is not guessed:
+  it is judged (`bloom/GUIDE.md` §2) and written on the Sub-ILO.
+- **Shown where the operator decides.** The Stage 2 page: what each module's ILOs ask for against what its planned
+  task types reach. Each Stage 3 review page: every question's level, the share at *Apply* or higher (suggested at
+  least half), every question below its Sub-ILO, every Sub-ILO the module check does not reach.
+- **With the way up.** Each gap names the tablet task types that would lift it - operate the panel, set the value,
+  read the instrument for *Apply*; find the hazards, a scenario for *Analyse*; choose-and-justify for *Evaluate*.
+  *Create* is reached by no task type yet - said plainly; new task types for it are a later step.
+- **Within the other laws.** Main ILOs stay verbatim (L2) - a weak verb there is only noted. A Sub-ILO with a weak
+  verb (know, understand) is re-expressed with a verb that can be watched, and the operator approves it. Difficulty
+  is not level: an obscure fact is still *Remember*.
+- **Suggestions first.** In 2.25.0 no Bloom finding stops a page, a check or an approval; the owner decides when a
+  floor becomes a rule.

@@ -103,6 +103,7 @@ row wins** — even before its step has been built out. Full text: `references/l
 | **L45** | **The course folder is built to the classroom system's own rules** (`knowledge/classroom-system.json`, from the owner's `COURSE_FACTORY_PROMPT.md`): `course\modules\` = COURSE.html + `_course_shell\course_map.js` + `module01\` ... each with `presentation\index.html` (every `.slide` with `data-title`, the instructor notes in `data-cue`, a task slide with `data-activity` + `data-task-href`), `tasks\sc1_<slug>.html`, `assessment\check.html`; task pages report `gb-task-done`; module checks PASSED / NOT PASSED (for understanding, not an official grade); no spaces, ≤ 15 MB a file, offline; 1280 × 800 landscape. `scripts/check_course_package.py` runs the list and the classroom's own importer. **Rulebook of 2026-10-12 (2.23.0):** team tasks (`data-mode="team"` + `task-mode` / `task-scope` metas, `gb-team`), answers marked by `data-key`, never readable; no link into a `_` folder. | built in steps 6-10 |
 | **L46** | **3D where it makes sense - at most half of the presentation's teaching slides - at full quality, and smooth on the tablet** (owner, 2026-10-07: *"don't make it in all slides ... but also don't cut quality, and put it only on slides where it makes sense, not only because you can"*). 3D for equipment and structures whose shape, inside or layout in space is taught - not charts, symbols, documents or ideas. The cap is on how many, never how good. Speed from how scenes run, never a lesser look: one shared renderer, scenes built when their slide comes and freed after, no frame while nothing moves, soft shadows worked out once while still, pixel ratio min(device, 2); 30 frames a second with the CPU slowed 4x. `knowledge/media-and-tasks.json` → `three_d`; `content_script.py`, `check_course_package.py` (each `.slide` carries `data-visual`) | now (2.22.0); built in step 9 |
 | **L47** | **A generated picture only after the person described it and said yes** (owner, 2026-10-14: about €0.10 a picture, four developers redoing them use the budget up). Places first (`scripts/picture_briefs.py list`); one place at a time, eight plain questions with a suggestion each (`knowledge/media-and-tasks.json` → `generation_brief`); the prompt shown; generated once on a yes - the nano-banana tools refuse without the person's words; a redo needs a new yes; the count and cost said every time | now (2.24.0) |
+| **L48** | **The Bloom level is measured, and the tablet lifts it** (owner, 2026-10-15: *"bloom taxonomy needs to be on higher level - that's why we have tablets"*). Every ILO's level read from its verb, every task's from how it is answered (`knowledge/bloom.json`); the Stage 2 page and every Stage 3 review page show where the course is, every task below its Sub-ILO, and the tablet task types that would lift it - **suggestions only**; Main ILOs stay verbatim (L2), a weak Sub-ILO verb is re-expressed with the operator's approval. Read `bloom/GUIDE.md` when judging or lifting a level; `scripts/bloom_map.py` | now (2.25.0) |
 | **L41** | **The old course is the foundation.** Read it whole at intake (`scripts/old_course.py inventory`, and `images` for its pictures); at the Stage 2 STOP every module says what it **keeps**, what it **modernises and makes digital**, and what it **adds** | now (2.19.0) |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
@@ -338,6 +339,7 @@ It reads `programme.json` and `architecture.json` (and `plan.json`, optional) fr
 | **Sub-ILOs** | every one beside the programme's own wording, marked **kept / re-expressed / added**, with the reason — the operator's "next" ratifies them |
 | **Per module** | where theory is taught as activity (L5) · practical tasks and their equipment (L28) · self-checks — only where the theory time allows one (L36) — and the module check: the trainee's own score, not counted (L27) |
 | **Final assessment** | graded, with the programme's pass mark |
+| **Bloom levels** | what level every Main ILO and Sub-ILO asks for, what the planned task types reach, and how to lift a gap (L48, `bloom/GUIDE.md`) - suggestions, never a stop |
 
 Programme text appears verbatim in the programme's own language, module titles in COURSE_LANGUAGE; the headings and explanations are in the
 operator's language (`architecture.json` → `operator_language`: `en` / `lv` / `ru`,
@@ -363,6 +365,10 @@ after too little theory, an answer not yet taught, a task written onto a slide) 
 check (L22) run on the script first, and their findings head the review page; every question shows
 the slide that teaches its answer;
 approval is refused while a must-fix one stands, unless the operator approves `--despite-findings`.
+The **Bloom card** (L48) shows each question's level, the module's share at *Apply* or higher (suggested
+50 %), and every question below its Sub-ILO with the tablet task type that lifts it - suggestions only.
+Give a question `"sub_ilo"` to check it per Sub-ILO, and `"bloom"` + `"bloom_why"` when it is written above
+its task type's usual level (`bloom/GUIDE.md` §2).
 Approval is `approve --by <name>`; any later change makes it a draft again. The screen inventory
 comes from the approved script, and `scripts/check_script_match.py` proves the built module says
 exactly those words.

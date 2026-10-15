@@ -59,6 +59,9 @@ course-factory/
 ├── scripts/check_module_folder.py       kept as a short way in: runs check_course_package.py (2.21.0)
 ├── knowledge/classroom-system.json      the classroom system's own course-folder rules (L45, 2.21.0)
 ├── scripts/picture_briefs.py, test_picture_briefs.py   generated pictures: places, the person's description, cost (L47, 2.24.0)
+├── bloom/GUIDE.md                       READ IN: judging or lifting a Bloom level - Stage 2, Stage 3, retrofit (L48, 2.25.0)
+├── knowledge/bloom.json                 the six levels, verbs (en / lv / ru stems), each task type's usual and highest level, floors
+├── scripts/bloom_map.py, test_bloom_map.py   the Bloom map: ILO levels, task levels, gaps, how to lift - drawn on both review pages
 │                                          knowledge/media-and-tasks.json three_d: 3D on at most half the slides, where it makes sense, full quality, smooth (L46, 2.22.0)
 ├── scripts/old_course.py, test_workspace.py   the old course read whole, its pictures copied out (L41, 2.19.0)
 ├── knowledge/media-and-tasks.json        the kinds of picture and the ways of answering, who makes each, the variety floors (L37, L38, 2.18.0)
@@ -545,6 +548,21 @@ loop and the 1K draft are gone; the `image-director` agent makes approved pictur
 instead of retrying. The hand-offs in `course-visuals` (rules, SKILL, GUIDE, the brief schema, the hand-off script),
 `orchestration/GUIDE.md` and the `visual-sourcer` agent say the same. Tests: `nano-banana/server/test_nano_banana.py`,
 `scripts/test_picture_briefs.py`.
+
+## 4u · The Bloom map (2.25.0, 2026-10-15)
+
+The owner: "My main task is to level up pedagogy - bloom taxonomy needs to be on higher level. That's why we have tablets, because now we can create more difficult and more interesting and more interactive tasks for trainees; before that we used Google Docs / Google Classroom tasks." Nothing in the factory measured the level. Now `knowledge/bloom.json` holds the six
+levels (names, plain meaning, example verbs in en/lv/ru), the verbs that signal each (English whole words with their
+inflections; Latvian and Russian stems, `$` for a whole word - 'veic$' so that 'veicināt' is not 'veikt'), the weak
+verbs, and each of the 14 task types' usual and highest level with how to write it higher. `scripts/bloom_map.py` reads
+an ILO's level as its highest clause-leading verb (so a noun in the object is not a verb), a task's from its type or
+its stated `bloom`; `course_map` (Stage 2) and `module_map` (Stage 3) return the levels and the findings, drawn by
+`make_architecture_page.py` (its own section; never in `problems`, so `--check` exits as before) and
+`content_script.py render` (a card, and a level line under each question; never in `all_findings`, so approval is
+unchanged). Verbs used both ways (select, determine, check, определить) are left out on purpose: the report says
+'not known' and `bloom/GUIDE.md` §2 says how to judge it. Every floor is a suggestion until the owner says otherwise.
+Planned next (owner's three-part plan): part 2 the floors as rules; part 3 new task types for *Analyse* to *Create*
+(find the fault, spot the mistake in a filled-in permit, build the plan or checklist). Tests: `scripts/test_bloom_map.py`.
 
 ## 5 · Known gaps / before this goes live
 
