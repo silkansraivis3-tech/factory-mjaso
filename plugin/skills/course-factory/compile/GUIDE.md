@@ -78,6 +78,8 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   (the slide's picture, a split photo, an inset) opens it large with the slide's title, what it shows and its credit, and
   from there full screen; a full-screen photo slide gets a Photo button. The words come from the photo's `description` in
   `_photo_meta.json` - write it for the trainee when the photo comes in; a photo without one is reported at build.
+  A generated picture (`"generated": true`, `"generator": "Nano Banana (...)"` in its record) is labelled "AI-generated
+  illustration" in the panel, its credit and an inset's caption - never "Photo" - and is never an L57 thumbnail.
 - **A drawing carries the real photos of what it shows (L57) - nothing to ask for.** The compiler takes the real things a
   drawn slide names - the term before " - " in its lines (with the kit figure's step number) and the drawing's own labels -
   and puts the matching photos in a row under the drawing (`.photo-strip`, at most four), each opening in the panel.

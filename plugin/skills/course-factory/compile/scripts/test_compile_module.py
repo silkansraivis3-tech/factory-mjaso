@@ -411,6 +411,30 @@ def main():
         code, out = run(COMPILE, c8, "--module", "1", "--force")
         check("L57: 'no_photo' in the build sheet keeps a photo that does not fit how the thing is drawn off that slide - and lists it",
               "room.jpg" not in section(deck(md8), "s04") and "Gas safe machinery space · s04" in out, out)
+        # ---- a generated picture is never called a photograph (L33)
+        os.makedirs(os.path.join(tmp, "k"))
+        c11, md11 = new_course(os.path.join(tmp, "k"), script())
+        io.open(os.path.join(md11, "assets", "img", "ai_tank.webp"), "wb").write(b"RIFF\x00\x00\x00\x00WEBPgen")
+        cs.save(os.path.join(md11, "assets", "img", "_photo_meta.json"), dict(PHOTO_META, **{"ai_tank.webp": {
+            "source": "GENERATED", "generated": True, "generator": "Nano Banana", "licence": "AI-generated",
+            "url_or_origin": "generated:ai_tank", "description": "An illustration, not a photograph: a tank in its hold.",
+            "shows": ["gas safe machinery space"]}}))
+        bp11 = os.path.join(c11, "working_claude", "script", "M01.build.json")
+        sh11 = cs.load(bp11)
+        sh11["screens"]["s04"]["inset"] = {"photo": "assets/img/ai_tank.webp", "caption": "Illustration: an LNG tank in its hold."}
+        cs.save(bp11, sh11)
+        code, out = run(COMPILE, c11, "--module", "1")
+        k4 = section(deck(md11), "s04")
+        check("a generated inset: its caption leads with 'AI-generated illustration' and names the model, never 'Photo:'",
+              "<figcaption data-script-ignore>AI-generated illustration: an LNG tank in its hold. Made with Nano Banana.</figcaption>" in k4
+              and "Photo:" not in k4.split('<figure class="inset">')[1], k4[-700:])
+        check("a generated inset tells the panel so (data-generated), with the credit 'AI-generated illustration · Nano Banana'",
+              'data-credit="AI-generated illustration · Nano Banana" data-generated="1"' in k4, k4[-700:])
+        sh11["screens"]["s04"].pop("inset")
+        cs.save(bp11, sh11)
+        code, out = run(COMPILE, c11, "--module", "1", "--force")
+        check("L57 never places a generated picture as a real-photo thumbnail, even when its record says what it shows",
+              "ai_tank.webp" not in deck(md11) and "Gas safe machinery space · s04" in out, out)
         kitfig = ('<div class="fill fig kit-fig"><script type="application/json" id="k">' + json.dumps(
             {"parts": [{"type": "space", "label": "ENGINE\nROOM"}, {"type": "space", "label": "TCS"}, {"type": "text", "text": "up the vent mast"},
                        {"type": "text", "text": "LNG LIQUID LINE"}, {"type": "text", "text": "Tank"}, {"type": "text", "text": "0 % LEL"}],

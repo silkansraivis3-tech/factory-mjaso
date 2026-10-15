@@ -300,11 +300,22 @@ def photo_meta(mdir, rel):
         return {}
 
 
+GENERATED_LABEL = "AI-generated illustration"
+
+
+def is_generated(meta):
+    """a picture made by an image model (nano banana and the like) - its record says so"""
+    return bool(meta) and (meta.get("generated") is True or str(meta.get("source") or "").upper() == "GENERATED")
+
+
 def credit_line(meta, with_title=True):
     """Title · Author · Source · Licence · resized - who made it, where it is from, the licence, and that it was
     changed (CC BY / BY-SA 4.0 require these; the title is good practice, left out beside a caption that already
     says what the photo shows). The title is the meta's own, else the Wikimedia file name; "resized" when the
-    stored size is not the original's."""
+    stored size is not the original's. A generated picture is never called a photo: "AI-generated illustration ·
+    <generator>" (L33)."""
+    if is_generated(meta):
+        return " · ".join(x for x in (GENERATED_LABEL, meta.get("generator")) if x)
     if not meta or not (meta.get("attribution_required") or meta.get("licence")):
         return ""
     author = re.split(r"\s*[(,]", meta.get("author") or "")[0].strip()
@@ -389,7 +400,8 @@ def photo_panel(meta, credit, rel, probs, where):
     if not about:
         probs.append("%s: the photograph %s has no \"description\" in its _photo_meta.json - its panel (L56) would say "
                      "nothing about what it shows" % (where, rel))
-    return "".join(' %s="%s"' % (k, a(v)) for k, v in (("data-about", about), ("data-credit", credit)) if v)
+    out = "".join(' %s="%s"' % (k, a(v)) for k, v in (("data-about", about), ("data-credit", credit)) if v)
+    return out + (' data-generated="1"' if is_generated(meta) else "")     # the panel says so, never "Photograph"
 
 
 IMG_TAG = re.compile(r'<img\b(?![^>]*\bdata-(?:about|no-zoom)\b)[^>]*\bsrc="\.\./([^"]+)"[^>]*?(/?)>', re.I)
@@ -530,6 +542,7 @@ def photo_pool(mdir):
             return []
         return [(name, m, d, photo_id(d, "assets/img/" + name, m)) for name, m in sorted(meta.items()) if isinstance(m, dict)
                 and not any(x in str(m.get("rights_state") or "").upper() for x in NOT_CLEARED)
+                and not is_generated(m)                    # L57 places real photographs only
                 and os.path.isfile(os.path.join(d, "assets", "img", name))]
     return of(mdir) + [x for d in other_modules(mdir) for x in of(d)]
 
@@ -712,7 +725,17 @@ def inset_html(mdir, ins, probs, where):
         return ""
     meta = photo_meta(mdir, rel)
     credit = ins.get("credit") or credit_line(meta, with_title=not ins.get("caption"))
-    cap = " ".join(x for x in (ins.get("caption") or "", credit) if x)
+    caption = ins.get("caption") or ""
+    if is_generated(meta):              # the label leads, whatever the build sheet's caption says (L33)
+        caption = re.sub(r"(?i)^\s*(?:an?\s+)?(?:ai[- ]generated\s+)?illustration\s*[:\-–·]\s*", "", caption)
+        credit = credit_line(meta)
+        caption = caption.strip()
+        if caption and not caption.endswith((".", "!", "?")):
+            caption += "."
+        cap = "%s%s%s" % (GENERATED_LABEL, ": " + caption if caption else ".",
+                          " Made with %s." % meta["generator"].rstrip(".") if meta.get("generator") else "")
+    else:
+        cap = " ".join(x for x in (caption, credit) if x)
     alt = ins.get("alt") or first_sentence(ins.get("caption")) or first_sentence(meta.get("description"))
     return ('<figure class="inset"><img src="../%s" alt="%s"%s><figcaption data-script-ignore>%s</figcaption></figure>'
             % (a(rel), a(alt), photo_panel(meta, credit_line(meta) or credit, rel, probs, where), e(cap)))

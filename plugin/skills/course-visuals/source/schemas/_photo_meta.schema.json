@@ -57,6 +57,14 @@
         "items": {"type": "string"},
         "description": "L57: the plain names of the on-board things the photograph really shows, as slides and drawings name them, lower case, no abbreviations - e.g. [\"fuel tank\", \"type C tank\"], [\"bunkering station\"]. The compiler puts the photo beside every drawing that names one of them. Only what the picture evidences: a cargo tank of an LNG carrier is a \"membrane tank\", never a \"fuel tank\""
       },
+      "generated": {
+        "type": "boolean",
+        "description": "true for a picture made by an image model (nano banana and the like): it is labelled 'AI-generated illustration' everywhere, never a photograph, and never placed as an L57 thumbnail. Record 'generator', 'prompt' and 'approved_by_user' (L47) with it"
+      },
+      "generator": {
+        "type": "string",
+        "description": "the image model that made a generated picture, as it should read on screen, e.g. 'Nano Banana (Google Gemini image model)'"
+      },
       "copied_from": {
         "type": "string",
         "description": "set by the compiler when it copied the photo in from another module of the course (L57)"

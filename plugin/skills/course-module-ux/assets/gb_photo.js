@@ -38,6 +38,10 @@
    data-name on the <img>     the panel's heading - the part of a drawing a
                               small photo shows (L57, .photo-strip), else the
                               slide's title
+   data-generated on the <img> a picture made by an image model: the panel
+                              says "AI-generated illustration", never
+                              "Photograph" (L33), and a photo slide's
+                              button says "Illustration"
    data-no-zoom on an <img> leaves it alone (a logo, an icon, a card face).
    Loaded by every compiled deck (course-factory compile/), after gb_deck.js.
    ES5, no dependencies, safe on an old Android WebView.
@@ -96,20 +100,23 @@
     /* a photo of one part of a drawing (L57) is named after that part, else after its slide */
     var title = img.getAttribute("data-name") || (s ? (s.getAttribute("data-title") || "") : "");
     var dark = s && (s.classList.contains("dark") || s.classList.contains("photo"));
+    /* a picture made by an image model is never called a photograph (L33) */
+    var gen = img.hasAttribute("data-generated");
+    var kind = gen ? "AI-generated illustration" : "Photograph";
     box = d.createElement("div");
-    box.className = "gbphoto" + (dark ? " on-dark" : "");
+    box.className = "gbphoto" + (dark ? " on-dark" : "") + (gen ? " is-generated" : "");
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-modal", "true");
-    box.setAttribute("aria-label", "Photograph" + (title ? ": " + title : ""));
+    box.setAttribute("aria-label", kind + (title ? ": " + title : ""));
     box.innerHTML =
       '<div class="gbphoto-panel" tabindex="-1">' +
         '<button type="button" class="gbphoto-x" aria-label="Close">&times;</button>' +
         '<figure class="gbphoto-shot">' +
           '<img src="' + esc(img.getAttribute("src")) + '" alt="' + esc(img.getAttribute("alt")) + '">' +
-          '<figcaption class="gbphoto-cue">Tap the photo to see it full screen</figcaption>' +
+          '<figcaption class="gbphoto-cue">Tap the ' + (gen ? "picture" : "photo") + " to see it full screen</figcaption>" +
         "</figure>" +
         '<div class="gbphoto-say">' +
-          '<p class="gbphoto-kicker">Photograph</p>' +
+          '<p class="gbphoto-kicker">' + kind + "</p>" +
           (title ? '<h3 class="gbphoto-name">' + esc(title) + "</h3>" : "") +
           (words.about ? '<p class="gbphoto-about">' + esc(words.about) + "</p>" : "") +
           (words.credit ? '<p class="gbphoto-credit">' + esc(words.credit) + "</p>" : "") +
@@ -174,7 +181,7 @@
       b.setAttribute("data-script-ignore", "");
       b.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" ' +
                     'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>' +
-                    "<span>Photo</span>";
+                    "<span>" + (s.querySelector(".photo-wrap img").hasAttribute("data-generated") ? "Illustration" : "Photo") + "</span>";
       s.appendChild(b);
     });
   }

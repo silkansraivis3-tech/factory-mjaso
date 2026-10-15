@@ -475,7 +475,11 @@ with the words over it gets a Photo button. Close button, the dimmed screen, Esc
 is open. (2) Nobody asks for it per slide and no build-sheet key turns it on: every compiled deck loads it.
 (3) What the panel says is the photo's own `description` in `assets\img\_photo_meta.json`, written when the photo is
 brought in: what is in the picture and what to look at, for a trainee, and never more than the picture evidences (a
-caption, like its credit line). A photo with no description is reported at build. Ported from the definition panel and
+caption, like its credit line). A photo with no description is reported at build. (4) A picture made by an image model
+(its record: `"generated": true`, `"generator"`, the prompt, the operator's yes - L47) is never called a photograph: the
+panel's kicker, its credit and an inset's caption say "AI-generated illustration" and name the model, and L57 never
+places it as a thumbnail (operator, 2026-10-15, M01 s04's tank in its hold; L33 still asks for a real photo to replace
+it, so the thing stays on `PHOTOS_TO_TAKE.md`). Ported from the definition panel and
 full-screen figure of the oil/chemical course (Modules 6 and 10). → `course-module-ux` (`assets/gb_photo.js`,
 `gb_photo.css`), `course-module-ui` (`design-system.json` installs them), `course-factory` (`compile/` writes
 `data-about` / `data-credit` on every photograph), 2.27.0
