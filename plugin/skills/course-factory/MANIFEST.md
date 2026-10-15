@@ -65,6 +65,8 @@ course-factory/
 ├── knowledge/page-labels.json            the review pages' own words in the operator's language (en / lv / ru)
 ├── script/GUIDE.md                       READ IN: Stage 3 - the content script (2.16.0)
 ├── scripts/content_script.py, check_script_match.py, test_content_script.py   the script, the Word copy, corrections on confirmation, the word-for-word match
+├── compile/GUIDE.md                      READ IN: building the deck from the approved script (2.25.0)
+├── compile/scripts/compile_module.py, test_compile_module.py   the deck built, never typed; build sheet; hand edits never overwritten
 ├── hours/                                READ IN: plan mode, and audit
 │   ├── GUIDE.md
 │   ├── knowledge/hours-rules.json        every number and rule (authority)
@@ -545,6 +547,21 @@ loop and the 1K draft are gone; the `image-director` agent makes approved pictur
 instead of retrying. The hand-offs in `course-visuals` (rules, SKILL, GUIDE, the brief schema, the hand-off script),
 `orchestration/GUIDE.md` and the `visual-sourcer` agent say the same. Tests: `nano-banana/server/test_nano_banana.py`,
 `scripts/test_picture_briefs.py`.
+
+## 4u · The deck built from the approved script (2.25.0, 2026-10-15)
+
+`docs/PROPOSAL_SCRIPT_COMPILER.md`, agreed by the owner: the words were typed twice (script, then HTML) and each
+module grew its own style file for text and task screens. New lane `compile/`: `compile_module.py` builds
+`presentation/index.html` from the approved script and a **build sheet** (`working_claude/script/M01.build.json`:
+picture files, layout choices, the module's drawing styles and scripts - kept out of the script so a delivery change
+never undoes the approval). The frame is copied from `course-module-ui/templates/gb_shell.html`, the compositions are
+the shared vocabulary only, drawings are source in `working_claude/figures/M01/`, every text line is numbered
+(`data-i`) for figures that step, hooks come from `window.GB_HOOKS`. It refuses an unapproved script (`--draft`
+previews), never overwrites a hand-changed or hand-built deck (`--force`), and lists missing pictures.
+`check_script_match.py` gained `--part instructor|trainee` and reads a leading `•` as list markup. Proved on a scratch
+copy of the IGF pilot's Module 1 (its drawings moved into figure files): 20/20 screens match, `check_navigation`
+clean, `check_course_package` with the classroom importer "Ready", `audit_deck` / `audit_collide` PASS,
+`audit_compose` 11/11 composed. Not yet: task pages, module check, start pages. Test: `compile/scripts/test_compile_module.py`.
 
 ## 5 · Known gaps / before this goes live
 

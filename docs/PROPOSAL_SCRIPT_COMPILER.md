@@ -142,14 +142,17 @@ factory's shared look, and which goes.
 
 ## 4 · What changes in the script
 
-As little as possible. Today's script already holds the words, kinds, sets, mechanics, answers, picture
-kind, layout (`split`, `visual_wide`, `visual_full`) and minutes. Likely additions, all optional:
+**Nothing** — decided while building step 2 (2.25.0). Today's script already holds the words, kinds,
+sets, mechanics, answers, picture kind, layout (`split`, `visual_wide`, `visual_full`) and minutes.
+Delivery details go into a **build sheet** beside it (`working_claude\script\M01.build.json`), because
+any change to the script itself undoes the operator's approval:
 
-- `"figure"` — the hand-made figure file for a slide or a hands-on task. Today the drawings are typed
-  into the deck and task pages; they move into `assets/fig/` (Module 1 already has `m01_ga.svg` there).
-  For a hotspot, label or panel task the figure names its areas, and the compiler links each line of
-  `answer` to the area with the same name — the script itself holds no coordinates.
-- `"composition"` — only where `layout` is not enough to pick the composition class.
+- `"figure"` — the picture file of each slide. Drawings are source, in `working_claude\figures\M01\`
+  (an `.html` drawing in the module folder would ship to the tablets as a page); photographs ship in
+  `assets\img\`. For a hotspot, label or panel task the figure names its areas, and the compiler links
+  each line of `answer` to the area with the same name — the script itself holds no coordinates.
+- `"composition"` — only where `layout` is not enough to pick the composition class; `"dark"`.
+- the module's drawing styles and figure scripts, the landing line, the footer title.
 - screens a future deck might need that the script does not have (a section divider, the hand-off
   screen after the module check) — either generated from the module's data or added as script
   screens; see question 3 below. The pilot deck has none: every slide is a script screen.

@@ -61,6 +61,7 @@ EXEMPT_CLASSES = {"slide-kind", "src", "srcline", "credit", "mediabar", "fbtn", 
 EXEMPT_TAGS = {"svg", "script", "style", "button", "noscript", "template"}
 VOID = {"br", "img", "hr", "input", "meta", "link", "source", "area", "base", "col", "embed", "param", "track", "wbr"}
 norm = lambda s: re.sub(r"\s+", " ", s or "").strip()
+unbullet = lambda s: re.sub(r"^•\s*", "", norm(s))
 
 
 class Collect(HTMLParser):
@@ -133,6 +134,8 @@ def main(argv=None):
     ap.add_argument("course")
     ap.add_argument("--module", required=True)
     ap.add_argument("--module-dir", help="the built module's folder (default: <course>/modules/M01_<title>, or the older <course>/modules/m<N>)")
+    ap.add_argument("--part", choices=("all", "instructor", "trainee"), default="all",
+                    help="check only the instructor tablet's slides, or only the trainee tablet's tasks (while the other is not built yet)")
     a = ap.parse_args(argv)
     import workspace
     a.course = workspace.work_folder(a.course, create=False)   # course\ beside the material (L40)
@@ -164,7 +167,9 @@ def main(argv=None):
     ids = {s["id"] for s in script["screens"]}
     for sid in sorted(set(found) - ids):
         probs.append("%s (%s) claims script id %s, which the approved script does not have" % (found[sid]["file"], sid, sid))
-    for s in script["screens"]:
+    part = {"all": cs.KINDS, "instructor": cs.INSTRUCTOR, "trainee": cs.TASKS}[a.part]
+    screens = [s for s in script["screens"] if s["kind"] in part]
+    for s in screens:
         sid = s["id"]
         where = "%s (%s)" % (cs.place(script, sid), sid)
         if sid not in found:
@@ -201,8 +206,9 @@ def main(argv=None):
             if norm(s.get("title", "")) != " ".join(fields.get("title", [])):
                 probs.append("%s in %s: the title says \"%s\" - approved: \"%s\"" % (
                     where, got["file"], " ".join(fields.get("title", [])) or "(missing)", norm(s.get("title", ""))))
-            want_lines = [norm(x) for x in (s.get("text") or "").split("\n") if norm(x)]
-            got_lines = [x for x in fields.get("text", []) if x]
+            # a line starting with "•" is a list item; the bullet is drawn by the list, so the built line may omit it (2.25.0)
+            want_lines = [unbullet(x) for x in (s.get("text") or "").split("\n") if unbullet(x)]
+            got_lines = [unbullet(x) for x in fields.get("text", []) if unbullet(x)]
             if want_lines != got_lines:
                 probs.append("%s in %s: the slide text does not match the approved words - approved: \"%s\" / built: \"%s\"" % (
                     where, got["file"], " / ".join(want_lines), " / ".join(got_lines) or "(missing)"))
@@ -219,7 +225,8 @@ def main(argv=None):
               "  better, it goes to the operator as a change to the script (content_script.py propose), and is\n"
               "  built only once they have approved it.")
     else:
-        print("Every screen of module %s says exactly what the operator approved (%d screens)." % (a.module, len(script["screens"])))
+        print("Every screen of module %s%s says exactly what the operator approved (%d screens)." % (
+            a.module, "" if a.part == "all" else " on the %s tablet" % a.part, len(screens)))
     for x in notes:
         print("  note: " + x)
     return 1 if probs else 0

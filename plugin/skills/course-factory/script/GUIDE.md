@@ -193,6 +193,9 @@ apply), or, if the operator has read it and wants the words as they are (L26), a
 
 ## 5 · Building from it, and proving it
 
+**The deck is compiled, not typed** (2.25.0): `compile/GUIDE.md`. The marks below are what the compiler
+writes; they are listed here for a module still built by hand.
+
 The screen inventory is **derived from the approved script** — not a separate approval. Every screen
 built from it carries its id, and every approved text its field:
 

@@ -365,7 +365,8 @@ the slide that teaches its answer;
 approval is refused while a must-fix one stands, unless the operator approves `--despite-findings`.
 Approval is `approve --by <name>`; any later change makes it a draft again. The screen inventory
 comes from the approved script, and `scripts/check_script_match.py` proves the built module says
-exactly those words.
+exactly those words. **The deck is built from the approved script, never typed** (2.25.0):
+`compile/GUIDE.md`, `compile/scripts/compile_module.py`.
 
 ## Build order
 
