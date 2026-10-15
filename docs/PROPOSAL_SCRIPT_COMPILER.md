@@ -48,18 +48,24 @@ by what each call touched. "Context" is the text the model re-reads on every cal
 | Intake and architecture (Stages 1–2, same session) | 11 % | 13 % | 5 % | 9 % |
 | Script, notes, replies to the operator, other | 24 % | 23 % | 26 % | 58 % |
 
+**Part of the first row is drawing, not HTML.** A third of what was written into the module's pages,
+style files and task code was figure drawing typed straight into the page — 23 drawings make up 57 %
+of the deck file, and about 45 % of each task page. A compiler does not draw them; they move into figure files and are
+still made by hand.
+
 What this means for the saving:
 
-- The **first row disappears** with a compiler — the model no longer writes the deck by hand. That
-  alone is about a fifth of the cost and two-fifths of the writing.
-- The **browser row shrinks but does not vanish**: the layout checks still run once per compiled
-  module, but the fix–reload–measure loops (most of those 155 calls) happen once, in the compiler.
-- So the module build should cost **between a fifth and a half less**, most likely about a third.
-  Modules 2–16 have no intake or architecture work, so their share of HTML work, and the saving, is
-  higher than in Module 1.
-- In clock time the gain is smaller: the session ran 2 h 40 min, and HTML work was 23 % of the
-  model's time, so about **15–25 % faster** — 20 to 40 minutes a module, 5 to 10 hours over 16.
-  Replies, pictures and the operator's own time do not change.
+- **Gone with a compiler:** the rest of the first row — about 12 % of the cost (text re-read) and a
+  quarter of the writing.
+- **Smaller:** the browser row. The layout checks still run once per compiled module, but the
+  fix–reload–measure loops (most of those 155 calls) happen once, in the compiler.
+- So the module build should cost **between an eighth and two-fifths less, most likely about a
+  quarter**. Modules 2–16 have no intake or architecture work, so their share is higher than in
+  Module 1.
+- In clock time the gain is smaller: the session ran 2 h 40 min, so about **10–20 % faster** —
+  15 to 30 minutes a module, 4 to 8 hours over the other 15. Replies, pictures and the operator's
+  own time do not change.
+- The bigger gain may be the **same look in every module** (§3a) and fixing a layout bug once.
 - Not measured here: the rules loaded per module (row above), which the compiler also reduces.
 
 Method: a script sorted each model call by the files and tools it used; module CSS and task code
@@ -88,7 +94,8 @@ version. Running it again on the same script gives the same files.
 **It is not:**
 
 - **a new look.** It emits the existing shell, tokens and composition classes (L17, `course-module-ui`).
-  The look stays where it is; the compiler only stops it being retyped.
+  The look stays where it is; the compiler only stops it being retyped — and makes it the same in
+  every module (§3a).
 - **a figure maker.** A schematic, a 3D model, an animation or an interactive diagram is still made by
   hand or by `course-visuals` / `image-director`, as today. The script names the file
   (`"figure": "assets/m01_tank_cutaway.html"`) and the compiler places it as it is. It does not try to
@@ -98,7 +105,10 @@ version. Running it again on the same script gives the same files.
 
 ### The one shared task file
 
-Today each task page carries its own grading code. The compiler would ship **one** file that knows the
+Today each module writes its own task code. In the pilot, `m01_tasks.js` (21 KB) and `m01_tasks.css`
+(13 KB) were written by hand for Module 1's two task pages; the factory's own shared task ending
+(`task_complete.js`) and keyboard helper (`kbd_escape.js`) were copied into the module but no page
+loads them. Module 2 would write its own again. The compiler would ship **one** file that knows the
 14 ways of answering (`single_choice` … `scenario`), the task-page states (`course-task-ux` §0, L42),
 `gb-task-done` / `gb-timer` / `gb-team` (`classroom-system.json`) and answer keys as `data-key`
 (`gb_key()`, never readable). Each task page is then only its questions as data.
@@ -107,13 +117,38 @@ Where it lives: copied into each module (`moduleNN/assets/gb_task.js`) and prove
 same way `design_system.py` does for the style files — so every module stays a complete folder (L43).
 `_course_shell/` would also be allowed by the classroom rules, but would tie a module to its course.
 
+## 3a · The same look in every module
+
+**Today the look is only partly shared.** Every page loads the factory's style files (`gb_tokens`,
+`gb_shell`, `gb_compose`, `gb_page`, `gb_task`). But the pilot module adds two style files of its own:
+
+- `m01.css` (12.5 KB) — the colours of its drawings, and also its own slide-text layout
+  (`.m01-copy`) and a change to the shared two-column layout (`.slide-body.two-col`) for this module only;
+- `m01_tasks.css` (13 KB) — a complete task-page design of its own (screens, options, the answer dock,
+  feedback), on top of the factory's `gb_task.css`.
+
+Each new module written by hand does the same, so sixteen modules can end up with sixteen slightly
+different slide-text layouts and task screens.
+
+**With the compiler:** the deck and the task pages are built only from the factory's shared classes,
+so every module, in every course, has the same slide layouts and the same task screens. A module's
+own style file is kept **for its drawings only** (colours and labels inside a figure). When a module
+needs something the shared files lack — as Module 1 needed `.m01-copy` — it is added once to the
+shared files, and every module gets it on the next build. The compiler can warn when a module's own
+style file touches a shared class.
+
+This needs one decision (question 6): which of `m01.css` and `m01_tasks.css` becomes part of the
+factory's shared look, and which goes.
+
 ## 4 · What changes in the script
 
 As little as possible. Today's script already holds the words, kinds, sets, mechanics, answers, picture
 kind, layout (`split`, `visual_wide`, `visual_full`) and minutes. Likely additions, all optional:
 
-- `"figure"` — the hand-made figure file for a slide or a hands-on task (hotspot areas, label points,
-  panel controls are already in `answer`; their coordinates would go beside the figure).
+- `"figure"` — the hand-made figure file for a slide or a hands-on task. Today the drawings are typed
+  into the deck and task pages; they move into `assets/fig/` (Module 1 already has `m01_ga.svg` there).
+  For a hotspot, label or panel task the figure names its areas, and the compiler links each line of
+  `answer` to the area with the same name — the script itself holds no coordinates.
 - `"composition"` — only where `layout` is not enough to pick the composition class.
 - screens a future deck might need that the script does not have (a section divider, the hand-off
   screen after the module check) — either generated from the module's data or added as script
@@ -138,7 +173,7 @@ the compiler is tested by the same checks that test a hand-built module today:
 |---|---|---|
 | 0 | This proposal | Raivis agrees the direction |
 | 1 | `check_course_package.py` finds `gb-task-done` / `gb-timer` also in a task page's shared script file, not only in the page text (today `:313`, `:321` read the page only) | its tests, plus a fixture page that uses a shared file |
-| 2 | Compiler, instructor-tablet screens only: `slide`, `task-slide`, `activity` → `presentation/index.html` | compile IGF Module 1 into a scratch folder; compare with the hand-built deck screen by screen; `check_script_match.py` passes on all 11 slides; `audit_*.js` in the browser |
+| 2 | Compiler, instructor-tablet screens only: `slide`, `task-slide`, `activity` → `presentation/index.html`; Module 1's deck drawings moved into figure files; what `m01.css` styles beyond its drawings added to the shared files, as agreed in question 6 | compile IGF Module 1 into a scratch folder; compare with the hand-built deck screen by screen; `check_script_match.py` passes on all 11 slides; `audit_*.js` in the browser |
 | 3 | The shared task file, ways of answering added a few at a time — choose / read first, then order / match / sort / gap-fill, then the picture tasks, then set-value / panel / scenario | per batch: `check_task_pages.py`, `check_course_package.py` with the importer, the "never used a tablet" walkthrough (L42) |
 | 4 | Course files: `COURSE.html`, `_course_shell/course_map.js`, `course.json`, start pages — `classroom-system.json:8` says the factory writes them; no script does yet | the classroom importer |
 | 5 | Wire it into the build order and the module agents: they load the script lane and the picture lanes, not the HTML rules | token count before and after on one module |
@@ -156,6 +191,10 @@ One minor version per step that reaches colleagues; the owner reviews each PR.
 - **The tablet.** A shared task file is new for the importer (`course-tablet-publisher/vendor/package-core.mjs`)
   and the app's WebView. Step 1 and the importer run in step 3 prove it on this computer; the real-tablet
   test stays the owner's (L39).
+- **Moving the drawings out of the pages is real work.** Module 1 has 23 drawings in its deck and
+  more in its task pages; each becomes a file. Step 2 does this for Module 1 and shows how long it took.
+- **The shared look must grow.** What Module 1 styled for itself has to be added to the shared
+  files, or the compiled deck looks plainer (§3a, question 6).
 - **The migrated skills' rules came from real failures.** The compiler implements them; it does not
   rewrite or drop any. Where a rule cannot be expressed in code it stays in its lane.
 
@@ -170,6 +209,9 @@ One minor version per step that reaches colleagues; the owner reviews each PR.
 4. Does the classroom importer need anything for a shared task script file inside a module?
 5. Once the compiler is proven, may the checks in §5 that pass by construction move from "run every
    build" to "run in the compiler's own tests"?
+6. May a module's own style file be limited to its drawings, with slide text and task screens styled
+   only by the shared files? If yes: which parts of Module 1's `m01.css` and `m01_tasks.css` become
+   shared, and which go?
 
 ## 9 · Not part of this — separate small fixes found in the pilot
 
