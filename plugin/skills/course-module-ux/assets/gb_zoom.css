@@ -1,0 +1,54 @@
+/* ==========================================================================
+   gb_zoom.css — the full-screen picture viewer (pairs with gb_zoom.js, L51)
+   Loaded after gb_tokens.css on every page; works without it (fallbacks).
+   ========================================================================== */
+:root{
+  /* every colour the viewer paints with, named; the canonical token first */
+  --gbz-night: rgba(6,14,28,.94);
+  --gbz-ink: var(--txt-d, #F3F8FD);
+  --gbz-btn: rgba(12,30,58,.88);
+  --gbz-btn-line: rgba(255,255,255,.28);
+  --gbz-btn-ink: var(--white, #FFFFFF);
+  --gbz-hot: var(--blue, #2EB6F8);
+  --gbz-on-hot: var(--on-blue, #04263A);
+  --gbz-paper: var(--white, #FFFFFF);
+  --gbz-shadow: rgba(0,0,0,.5);
+  --gbz-btn-shadow: rgba(0,0,0,.35);
+}
+.gbz-can{cursor:zoom-in}
+html.gbz-open,html.gbz-open body{overflow:hidden}
+
+.gbz{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;padding:72px 24px 24px;
+  background:var(--gbz-night);
+  touch-action:none;-webkit-user-select:none;user-select:none}
+.gbz[hidden]{display:none}
+.gbz-stage{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;
+  overflow:hidden}
+.gbz-media{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;
+  border-radius:var(--r-m,13px);box-shadow:0 20px 54px var(--gbz-shadow);
+  transform-origin:center center;transition:transform .18s ease;cursor:zoom-in;
+  animation:gbz-in .26s cubic-bezier(.2,.8,.2,1) backwards}
+svg.gbz-media{max-width:none;max-height:none}   /* sized to fit by gb_zoom.js */
+.gbz.gbz-zoomed .gbz-media{cursor:grab;transition:none}
+.gbz-cap{margin:0;max-width:min(1100px,92vw);color:var(--gbz-ink);text-align:center;
+  font:500 clamp(16px,1.9vmin,22px)/1.45 var(--font,"Segoe UI",Roboto,Arial,sans-serif)}
+.gbz-cap[hidden]{display:none}
+
+.gbz-btn{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;
+  padding:0;border:1px solid var(--gbz-btn-line);border-radius:50%;cursor:pointer;
+  background:var(--gbz-btn);color:var(--gbz-btn-ink);box-shadow:0 6px 18px var(--gbz-btn-shadow);
+  -webkit-tap-highlight-color:transparent}
+.gbz-btn svg{width:28px;height:28px;fill:currentColor}
+.gbz-btn:hover,.gbz-btn:focus-visible{background:var(--gbz-hot);color:var(--gbz-on-hot);outline:none}
+.gbz-close{position:absolute;top:12px;right:12px}
+.gbz-tools{position:absolute;top:12px;left:12px;display:flex;gap:10px}
+
+/* the ⤢ button on a picture the trainee answers on - a tap there stays the answer */
+.gbz-corner{position:absolute;top:8px;right:8px;z-index:5;width:48px;height:48px;opacity:.92}
+.gbz-corner svg{width:24px;height:24px}
+
+@keyframes gbz-in{from{transform:scale(.94)}to{transform:scale(1)}}   /* movement only - never animate into visibility */
+@media (prefers-reduced-motion:reduce){
+  .gbz-media{transition:none;animation:none}
+}

@@ -27,6 +27,15 @@ quoted from a previous course; **none of them are about your course's content.**
 means the factory never relaxes them on its own; it never means refusing an operator's request (L26).
 If a request collides with one, say which in a sentence, offer the closest option that works, do it.
 
+## The person decides the design — L26 (course-factory, 2.30.0)
+
+Every rule in this skill about how a course **looks or behaves** is a rule for the factory's own choices. When the
+person asks for something else: if nothing conflicts, just do it; if it goes against a rule here, say which rule and
+the risk in one or two plain sentences and ask **once** - *your way* / *the factory's way*; on *your way*, do it fully,
+record it (`course-factory/scripts/design_choices.py add <course> --rule <id> ...`), and **never change it back** - not
+in a later build, fix or session, and not because a check flagged it. The course material (programme, Main ILOs,
+hours, sources, the approved words) keeps its own rules: `course-factory` SKILL.md, L26.
+
 ## The delivery target is a parameter, not a fact
 
 Everything measurable below was ruled for:
@@ -163,7 +172,8 @@ reason from a set — both must be right).
 > **Widened by the owner, 2026-09-30 (L38, 2.18.0):** as many ways of answering as possible, realistic and
 > technical - fourteen, none of them typing: choose one · choose all that are right · choose-and-justify · order ·
 > match · sort into groups · complete the sentence · tap the place · drag labels onto a drawing · find the hazards ·
-> read the instrument · set the value (slider or dial) · operate the panel / line up the valves · scenario. The list,
+> read the instrument · set the value (slider or dial) · operate the panel / line up the valves · scenario - and since
+> 2.28.0 five more (§2a): find the fault · spot the errors · build the plan · rebuild the incident · compare. The list,
 > how each answer is written and the variety floors are `course-factory/knowledge/media-and-tasks.json`; the
 > operator approves every task's words in the content script first.
 
@@ -173,6 +183,24 @@ allowed, §5 becomes mandatory.
 **One Submit per part.** Correct items lock and grey out with an explanation of *why*; wrong items
 get a hint and another attempt. The reasoning lives in the task, which is why the deck needs no
 answers slide.
+
+### 2a · Five more, for the higher Bloom levels (owner, 2026-10-15 - L49 step 4, 2.28.0)
+
+*"Tablet interactive tasks - not only drag n drop, choose e.c., something completely different, interesting and
+creative."* Still no typing, still tap and drag (drag always also tap-then-tap), still §0 first. The answer formats are
+`course-factory/knowledge/media-and-tasks.json`; every item the page shows carries `data-script-field="answer"`, exactly
+the items `content_script.answer_items` lists, and the right ones carry their `data-key` (§9a).
+
+| Task | On the trainee tablet | Done when |
+|---|---|---|
+| **Find the fault** | The symptoms on top (`!` lines), over the drawing or panel. Each part is a big card: **tap it to check it** - it turns over and shows what you see (the reading, the sound, the temperature). Checking is free and never wrong. Then **This is the fault** on one card. | the faulty part is named; a wrong one shows why it is fine and the trainee goes on checking |
+| **Spot the errors** | The filled-in document as it looks on board - a permit, a log page, a checklist, a loading plan - one line per row, large type. **Tap a line to flag it**, tap again to unflag; **Check** at the bottom. | every wrong line flagged and nothing else; each wrong line then shows its *why* |
+| **Build the plan** | A bank of shuffled cards below, an empty plan with numbered slots above. Drag (or tap a card, then a slot) to build the plan; cards that do not belong stay in the bank. | the right cards in the right order; a card that does not belong, when placed, says why |
+| **Rebuild the incident** | Shuffled event cards; first put them in order (as *order*); once the order is right, the cards stay and the question changes: **tap where it should have been stopped**. | the order, then the stop point - two parts, each with its own Check |
+| **Compare** | The options side by side as columns - their names on top, one row per figure, the figures large and aligned; under each column a big **Choose** button. | the right option chosen; the feedback names the figures that decide it |
+
+None of them hides information the trainee needs to answer: the readings in *find the fault* are one tap away and
+stay turned over; nothing is timed; a wrong answer is never an error message - it is a hint and another try (§1, L42).
 
 ---
 
@@ -260,14 +288,14 @@ in the **feedback**, not beside the data the trainee is meant to read.
 
 Prefer a real photograph; draw only what no photograph can show and **say on the page that it is a
 drawing**. Licence and credit on the page · **open the file and look at it** first · a caption claims
-only what the photograph evidences · photographs a trainee identifies from are tappable to full size.
+only what the photograph evidences · **every picture opens full screen and closes again** - load `../assets/gb_zoom.js` + `gb_zoom.css` on every task page with a picture (L51; a picture the trainee answers on gets a ⤢ corner button by itself, so a tap stays the answer).
 
 ---
 
 ## 8 · Two-stage tap, and close buttons
 
 1. **First tap opens the card and nothing else** — including a tap on the picture.
-2. **Only an open card lets its picture go full screen.**
+2. **Only an open card lets its picture go full screen** (the shared viewer, `gb_zoom.js`, does this by itself).
 3. **Always a close button**, at least 48 × 48, on the opened card and the full-screen view.
 4. **The tap hint never sits on top of content** — "tap to open" in normal flow beneath a closed
    card's picture; a badge over the picture only on an opened card.

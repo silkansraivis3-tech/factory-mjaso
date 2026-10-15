@@ -10,7 +10,7 @@
     {
       "name": "course-factory",
       "source": "./plugin",
-      "description": "Turn an approved training programme into a finished course on the NOVIKONTAS Android tablets: the accredited-hours law, ILO immutability, the one-page instructor module, the locked visual system, what representation actually teaches a concept, the asset pipeline with provenance and rights, trainee task screens, and a publisher that separates trainee from instructor material."
+      "description": "Turn an approved training programme into a finished course on the NOVIKONTAS Android tablets: the accredited-hours law, ILO immutability, the one-page instructor module, the locked visual system, what representation actually teaches a concept, the asset pipeline with provenance and rights, trainee task screens, a Bloom map of what every ILO asks for and every task reaches (and how the tablet lifts it), and a publisher that separates trainee from instructor material."
     },
     {
       "name": "nano-banana",

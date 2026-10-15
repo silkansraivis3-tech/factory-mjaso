@@ -43,8 +43,8 @@ def w(path, text):
     io.open(path, "w", encoding="utf-8", newline="\n").write(text)
 
 
-TASK = ("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>%s</title><link rel=\"stylesheet\" href=\"../assets/css/task.css\"></head>"
-        "<body><img src=\"../assets/img/hull.jpg\"><script src=\"../assets/js/task.js\"></script><script>"
+TASK = ("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>%s</title><link rel=\"stylesheet\" href=\"../assets/css/task.css\"><link rel=\"stylesheet\" href=\"../assets/gb_zoom.css\"></head>"
+        "<body><img src=\"../assets/img/hull.jpg\"><script src=\"../assets/js/task.js\"></script><script src=\"../assets/gb_zoom.js\"></script><script>"
         "var late = false; addEventListener('message', e => { if (e.data && e.data.type === 'gb-timer' && e.data.remaining <= 0) { late = true; } });"
         "function done(ok, total, items, head) { window.parent.postMessage({type: 'gb-task-done', code: '%s', title: 'x', ok: ok, total: total,"
         " head: head, items: items, answered: total, of: total, timeout: late}, '*'); }%s</script></body></html>")
@@ -52,6 +52,12 @@ TEAM_HEAD = ('<meta name="task-mode" content="team"><meta name="task-roles" cont
 TEAM_JS = ("var team = null; addEventListener('message', e => { if (e.data && e.data.type === 'gb-team') { team = e.data.team; } });"
            "setTimeout(() => { if (!team) { document.body.dataset.solo = '1'; } }, 2000);"
            "window.parent.postMessage({type: 'gb-task-done', scope: 'team', code: 'TT1', title: 'x', ok: 7, total: 9, head: '', items: [{t: '1.', ok: true}]}, '*');")
+
+
+RECAP = ("<section class=\"slide dark recap\" id=\"s09\" data-kind=\"Summary\" data-title=\"What to take away\" data-visual=\"none\""
+         " data-cue=\"- Read each point; ask for one example.\"><h2>What to take away</h2><div class=\"slide-body recap\"><ol class=\"rc-grid\" data-n=\"3\">"
+         + "".join("<li class=\"rc-item\"><b class=\"rc-t\">Point %d</b><span class=\"rc-sep\"> - </span><span class=\"rc-d\">why it matters</span></li>" % i
+                   for i in (1, 2, 3)) + "</ol><p class=\"rc-next\">Next: the module check</p></div></section>")
 
 
 def good_course(c):
@@ -63,7 +69,7 @@ def good_course(c):
     m = os.path.join(c, "module01")
     w(os.path.join(m, "presentation", "index.html"),
       "<!DOCTYPE html><html><head><title>GAS Basic · Module 1 " + D + " Gas tankers · Instructor presentation</title>"
-      "<link rel=\"stylesheet\" href=\"../assets/css/deck.css\"></head><body>"
+      "<link rel=\"stylesheet\" href=\"../assets/css/deck.css\"><link rel=\"stylesheet\" href=\"../assets/gb_zoom.css\"></head><body>"
       "<section class=\"slide active\" id=\"s01\" data-title=\"Why gas tankers are different\" data-kind=\"Theory\" data-cue=\"- Ask who has sailed on one.\">"
       "<h2>Why gas tankers are different</h2><img src=\"../assets/img/hull.jpg\"></section>"
       "<section class=\"slide\" id=\"t01\" data-kind=\"Task\" data-activity=\"SC1\" data-task-href=\"../tasks/sc1_keeping_the_cargo_liquid.html\""
@@ -71,8 +77,9 @@ def good_course(c):
       "<section class=\"slide\" id=\"p01\" data-kind=\"Task\" data-activity=\"P1\" data-link-hint=\"At the gas-measurement bench\" data-title=\"P1 " + D + " Take a reading\"></section>"
       "<section class=\"slide\" id=\"tt1\" data-kind=\"Task\" data-activity=\"TT1\" data-task-href=\"../tasks/tt1_plan_the_loading.html\" data-mode=\"team\""
       " data-team-size=\"3\" data-roles=\"Leader|Recorder|Checker\" data-title=\"TT1 " + D + " Plan the loading as a team\"></section>"
+      + RECAP +
       "<section class=\"slide\" id=\"t02\" data-kind=\"Check\" data-activity=\"MC\" data-task-href=\"../assessment/check.html\" data-title=\"MC " + D + " Module check\"></section>"
-      "<script src=\"../assets/js/deck.js\"></script></body></html>")
+      "<script src=\"../assets/js/deck.js\"></script><script src=\"../assets/gb_zoom.js\"></script></body></html>")
     w(os.path.join(m, "START_HERE.html"), "<meta http-equiv=\"refresh\" content=\"0; url=presentation/index.html\"><a href=\"presentation/index.html\">Open</a>")
     w(os.path.join(m, "START_HERE_EXTENDED.html"), "<a href=\"presentation/index.html\">Presentation</a><a href=\"tasks/sc1_keeping_the_cargo_liquid.html\">SC1</a>"
       "<a href=\"assessment/check.html\">Module check</a><a href=\"instructor/module_plan.html\">Plan</a>")
@@ -81,7 +88,7 @@ def good_course(c):
     w(os.path.join(m, "assessment", "check.html"), TASK % ("MC " + D + " Module check", "MC", "var pass = 4; done(5, 6, [{t: '1.', ok: true}], 5 >= pass ? 'PASSED' : 'NOT PASSED');"))
     w(os.path.join(m, "assessment", "check_answer_key.html"), "<p>1 A, 2 C</p>")
     w(os.path.join(m, "instructor", "module_plan.html"), "<p>plan</p>")
-    for f in ("css/task.css", "css/deck.css", "js/task.js", "js/deck.js", "img/hull.jpg"):
+    for f in ("css/task.css", "css/deck.css", "js/task.js", "js/deck.js", "img/hull.jpg", "gb_zoom.js", "gb_zoom.css"):
         w(os.path.join(m, "assets", f), "x")
     f2 = os.path.join(c, "module02")
     w(os.path.join(f2, "presentation", "index.html"),
@@ -90,7 +97,8 @@ def good_course(c):
     w(os.path.join(f2, "START_HERE.html"), "<a href=\"presentation/index.html\">Open</a>")
     w(os.path.join(f2, "START_HERE_EXTENDED.html"), "<a href=\"presentation/index.html\">P</a><a href=\"assessment/final.html\">Final</a>")
     w(os.path.join(f2, "assessment", "final.html"), TASK.replace("../assets/css/task.css", "../assets/final.css").replace("<img src=\"../assets/img/hull.jpg\">", "")
-      .replace("<script src=\"../assets/js/task.js\"></script>", "") % ("FA " + D + " Final assessment", "FA", "done(30, 36, [{t: '1.', ok: true}], 30 >= 26 ? 'PASSED' : 'NOT PASSED');"))
+      .replace("<script src=\"../assets/js/task.js\"></script>", "").replace("<link rel=\"stylesheet\" href=\"../assets/gb_zoom.css\">", "")
+      .replace("<script src=\"../assets/gb_zoom.js\"></script>", "") % ("FA " + D + " Final assessment", "FA", "done(30, 36, [{t: '1.', ok: true}], 30 >= 26 ? 'PASSED' : 'NOT PASSED');"))
     w(os.path.join(f2, "assets", "final.css"), "x")
 
 
@@ -228,6 +236,34 @@ def main():
         w(os.path.join(nov, "module01", "assets", "lib", "three.min.js"), "/* three */")
         code, out = run(nov, "--no-importer")
         check("3D in a module whose slides do not say their kind of picture is noted", code == 0 and "the 3D share cannot be counted" in out, out)
+
+        print("\n-- 2.30.0: the recap before the module check, every picture full screen (L51) - and the person's choice wins (L26)")
+        deck = lambda b: os.path.join(b, "module01", "presentation", "index.html")
+        src = io.open(deck(c), encoding="utf-8").read()
+        broken("a module with no recap slide", lambda b: w(deck(b), src.replace(RECAP, "")), "module01 has no recap slide straight before its module check")
+        broken("a recap that is not straight before the module check", lambda b: w(deck(b), src.replace(RECAP, "").replace("<section class=\"slide\" id=\"t01\"", RECAP + "<section class=\"slide\" id=\"t01\"")),
+               "module01 has no recap slide straight before its module check")
+        broken("a recap with two points", lambda b: w(deck(b), src.replace("<li class=\"rc-item\"><b class=\"rc-t\">Point 3</b>", "<li><b class=\"rc-t\">Point 3</b>")),
+               "the recap slide has 2 point(s)")
+        broken("a task page with a picture and no picture viewer", lambda b: w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
+               io.open(os.path.join(c, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"), encoding="utf-8").read()
+               .replace("<script src=\"../assets/gb_zoom.js\"></script>", "")), "sc1_keeping_the_cargo_liquid.html shows pictures but does not load gb_zoom.js")
+        own = os.path.join(tmp, "own_way")
+        shutil.copytree(master, own)
+        w(deck(os.path.join(own, "course", "modules")), src.replace(RECAP, ""))
+        sys.path.insert(0, HERE)
+        import design_choices as dc
+        dc.add(os.path.join(own, "course"), "recap", "No recap slide - the module check follows the last teaching slide",
+               "I don't want a summary, the instructor sums up himself", "the modules end differently")
+        code, out = run(own, "--no-importer")
+        check("the operator's choice against the recap, recorded after the risk was told, is a note - never a problem",
+              code == 0 and "the operator's choice S1" in out and "has no recap slide" in out, out)
+        code, out = run(os.path.join(own, "course", "modules"), "--no-importer")
+        check("... found the same from the modules folder", code == 0 and "the operator's choice S1" in out, out)
+        w(os.path.join(own, "course", "modules", "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
+          io.open(os.path.join(c, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"), encoding="utf-8").read().replace("<script src=\"../assets/gb_zoom.js\"></script>", ""))
+        code, out = run(own, "--no-importer")
+        check("... and a choice covers only its own rule: the missing picture viewer is still a problem", code == 1 and "does not load gb_zoom.js" in out, out)
         if node:
             print("\n-- the classroom's importer itself")
             broken("a missing style the importer refuses", lambda b: os.remove(os.path.join(b, "module01", "assets", "css", "task.css")),

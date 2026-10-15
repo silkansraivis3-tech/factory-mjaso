@@ -51,6 +51,7 @@ and each becomes screens now:
 | A practical write-up document | **practical-run** screens — as many as the run needs |
 | A marking sheet's criteria section | a **marking** screen — the criteria in the trainee's hearing, the craft in `data-cue` |
 | A debrief the instructor was trusted to remember | a **debrief** screen with the questions and the stop condition |
+| A last slide each module designed its own way | the **recap** — "what to take away" — straight before the module-check slide, the same design in every module (§6a, L51) |
 | The module check as a separate assessment page | the **second-to-last screen**, always — the hand-off screen is last |
 
 A launch screen that is already at 100 % fill cannot also tell the instructor *"the next five
@@ -146,6 +147,46 @@ assessed; recording is the instructor's job on the instructor's own device.
 ```bash
 python measure/scripts/check_static.py check-screen path/to/module.html
 ```
+
+---
+
+## 6a · The recap closes every module, and every picture opens full screen (L51, 2.30.0)
+
+**The recap.** The slide straight before the module-check slide, in every teaching module, built from the approved
+script's `"recap": true` slide - one `li` per line of its text - and nothing else on it:
+
+```html
+<section class="slide dark recap" id="s24" data-script="s24" data-kind="Summary" data-title="What to take away"
+         data-visual="none" data-cue="...the slide's notes...">
+  <div class="slide-kind"><b>Summary</b> · M01</div>
+  <h2 data-script-field="title">What to take away</h2>
+  <div class="slide-body recap">
+    <ol class="rc-grid" data-n="4">
+      <li class="rc-item" data-script-field="text"><b class="rc-t">Kept liquid</b><span class="rc-sep"> - </span><span
+          class="rc-d">cold, under pressure, or both</span></li>
+      ...
+    </ol>
+    <p class="rc-next" data-script-ignore>Next: the module check</p>
+  </div>
+</section>
+```
+
+`data-n` is the number of points (3-6: three in a row, four as two by two, five or six in two rows). A line with no
+" - " is a title only. The numbers, the animation and the colours come from `gb_compose.css` section 15 - never
+restyled in a module, never a module's own variant. The "next" line is in COURSE_LANGUAGE.
+
+**The picture viewer.** Every page of the module that shows a picture loads it - the deck, every task page, the
+module check, the handout:
+
+```html
+<link rel="stylesheet" href="../assets/gb_zoom.css">      <!-- after gb_tokens.css -->
+<script src="../assets/gb_zoom.js"></script>              <!-- anywhere; it starts by itself -->
+```
+
+Nothing is wired per picture. Mark `data-no-zoom` on a figure only where a tap must do something else and the
+figure is not an answer surface (hotspots laid over a picture are found by themselves and get the ⤢ button). Do
+not build a module's own lightbox. `check_course_package.py` fails a page with pictures and no viewer, and a module
+whose module check has no recap before it - unless the person chose otherwise (L26, `design_choices.py`).
 
 ---
 

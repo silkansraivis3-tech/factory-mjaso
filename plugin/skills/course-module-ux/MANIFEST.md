@@ -65,7 +65,9 @@ course-module-ux/
 │   └── DELIVERY_NOTES.md                 companion file; every honesty marker lands here
 ├── assets/
 │   ├── gb_run.js                         the step runner + return bar engine (course-agnostic)
-│   └── gb_run.css                        its stylesheet (Novikontas brand literals — gap #1)
+│   ├── gb_run.css                        its stylesheet (Novikontas brand literals — gap #1)
+│   ├── gb_zoom.js                        every picture opens full screen and closes again — every page (L51, 2.30.0)
+│   └── gb_zoom.css                       the viewer's look, colours named in its :root
 ├── build/
 │   ├── GUIDE.md                          building a module page; budgets; record engines
 │   └── knowledge/

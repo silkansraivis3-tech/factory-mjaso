@@ -28,7 +28,8 @@
        <div class="slide-body stage">         one dominant teaching visual
        <div class="slide-body activity">      an activity announcement
        <div class="slide-body checkbody">     a knowledge check
-       <div class="slide-body sum">           the closing summary
+       <div class="slide-body sum">           a summary grid (a day, a block)
+       <div class="slide-body recap">         THE module's closing slide - section 15 (L51)
        <div class="slide-body">               ordinary flow: lead, cards, takeaway
 
    Pick the composition the CONTENT needs. Do not reach for the same one twice
@@ -54,6 +55,11 @@
   --cmp-white-035: rgba(255,255,255,.035);
   --cmp-white-04: rgba(255,255,255,.04);
   --cmp-white-16: rgba(255,255,255,.16);
+  /* 15 · RECAP (L51, 2.30.0) */
+  --cmp-blue-18: rgba(46,182,248,.18);
+  --cmp-amber-12: rgba(233,165,30,.12);
+  --cmp-white-07: rgba(255,255,255,.07);
+  --cmp-white-02: rgba(255,255,255,.02);
 }
 
 
@@ -465,7 +471,8 @@ figure{margin:0}
 .dots i{width:9px;height:9px;border-radius:50%;background:var(--cmp-white-16);display:block;
   transition:background .3s ease}
 .slide:not(.dark) .dots i{background:var(--line-l)}
-.dots i.on{background:var(--blue)}
+/* the light-slide rule above outranks a bare ".dots i.on" - so a light slide showed no current step */
+.dots i.on,.slide:not(.dark) .dots i.on{background:var(--blue)}
 .caption{text-align:center;font-size:clamp(12.5px,1.85vmin,26.8px);line-height:1.45;
   color:var(--dim-d);max-width:44em;margin:0 auto}
 .slide:not(.dark) .caption{color:var(--dim-l)}
@@ -641,4 +648,94 @@ figure{margin:0}
 
 @media (prefers-reduced-motion: reduce){
   .frag{transition:none}
+}
+
+
+/* ==========================================================================
+   15 · RECAP — "what to take away", the closing slide of EVERY module (L51).
+   Owner, 2026-10-15: "each module should of course end in module check, but
+   before it it should be beautiful summary in same design, like beautiful
+   animation, boxes, main points what to take away from this module, and all
+   modules should be same closing slide design."
+
+   One design, every module - never restyled per module (a course that wants
+   it otherwise records that as its own choice, L26). It is the slide straight
+   before the module check's task slide. The markup is fixed:
+
+     <section class="slide dark recap" data-script="s24" data-kind="Summary"
+              data-title="What to take away" data-visual="none" data-cue="...">
+       <div class="slide-kind"><b>Summary</b> · M01</div>
+       <h2 data-script-field="title">What to take away</h2>
+       <div class="slide-body recap">
+         <ol class="rc-grid" data-n="4">
+           <li class="rc-item" data-script-field="text"><b class="rc-t">Kept liquid</b><span
+               class="rc-sep"> - </span><span class="rc-d">cold, under pressure, or both</span></li>
+           ... one <li> per line of the approved recap: "Short title - one sentence"
+         </ol>
+         <p class="rc-next" data-script-ignore>Next: the module check</p>
+       </div>
+     </section>
+
+   The numbers are drawn by CSS, so the slide says exactly the approved words.
+   Boxes rise in one after another, a blue-to-amber rule draws across each, then
+   the "next" strip arrives and nudges twice toward the module check. All of it
+   finishes in about two seconds and stays still after - the instructor talks
+   over a quiet screen. Only movement is animated, never visibility: where an
+   animation stalls (a preview pane), every word is still on the screen.
+   prefers-reduced-motion shows it all at once.
+   ========================================================================== */
+.slide.recap{background:
+  radial-gradient(120% 90% at 88% -12%,var(--cmp-blue-18),transparent 62%),
+  radial-gradient(90% 80% at -8% 112%,var(--cmp-amber-12),transparent 60%),
+  var(--deep)}
+.slide-body.recap{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;
+  gap:min(3vmin,30px);overflow:visible}   /* the rise-in must not flash a scrollbar; the measure still sees a real overflow */
+.rc-grid{--h:min(17vmin,170px);list-style:none;margin:0;padding:0;display:grid;gap:min(2.4vmin,24px);
+  grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:minmax(var(--h),auto);counter-reset:rc}
+.rc-grid[data-n="3"]{--h:min(34vmin,330px)}
+.rc-grid[data-n="4"]{--h:min(21vmin,210px);grid-template-columns:repeat(2,minmax(0,1fr))}
+.rc-item{--d:.15s;position:relative;counter-increment:rc;display:flex;flex-direction:column;
+  gap:.6em;margin:0;overflow:hidden;
+  padding:min(3.4vmin,34px) min(3.2vmin,32px) min(3vmin,30px);
+  background:linear-gradient(180deg,var(--cmp-white-07),var(--cmp-white-02));
+  border:1px solid var(--line-d);border-radius:var(--r-m);box-shadow:var(--sh-d)}
+.rc-item:nth-child(2){--d:.3s}
+.rc-item:nth-child(3){--d:.45s}
+.rc-item:nth-child(4){--d:.6s}
+.rc-item:nth-child(5){--d:.75s}
+.rc-item:nth-child(6){--d:.9s}
+.rc-item::before{content:counter(rc,decimal-leading-zero);align-self:flex-start;display:inline-flex;
+  align-items:center;justify-content:center;min-width:2.4em;height:2.4em;padding:0 .5em;
+  border-radius:999px;border:1px solid var(--cmp-amber-45);background:var(--amber-wash-d);
+  font-family:var(--mono);font-weight:700;color:var(--amber);font-size:clamp(16px,2vmin,26px);
+  letter-spacing:.06em;line-height:1}
+.rc-item::after{content:"";position:absolute;left:0;top:0;width:100%;height:4px;
+  background:linear-gradient(90deg,var(--blue),var(--amber));transform-origin:left center}
+.rc-t{display:block;color:var(--txt-d);font-weight:700;line-height:1.22;
+  font-size:clamp(20px,3.1vmin,42px)}
+.rc-sep{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.rc-d{display:block;color:var(--dim-d);line-height:1.45;font-size:clamp(17px,2.35vmin,30px)}
+.rc-next{align-self:center;display:inline-flex;align-items:center;gap:.7em;margin:0;
+  padding:.65em 1.5em;border-radius:999px;background:var(--amber-wash-d);
+  border:1px solid var(--cmp-amber-45);color:var(--txt-d);font-weight:600;
+  font-size:clamp(16px,2vmin,26px)}
+.rc-next::after{content:"\2192";display:inline-block;color:var(--amber);font-weight:700}
+
+.slide.recap.active .rc-item{animation:rc-rise .62s cubic-bezier(.2,.8,.2,1) var(--d) backwards}
+.slide.recap.active .rc-item::after{animation:rc-draw .7s ease-out calc(var(--d) + .25s) backwards}
+.slide.recap.active .rc-next{animation:rc-rise .6s cubic-bezier(.2,.8,.2,1) 1.15s backwards}
+.slide.recap.active .rc-next::after{animation:rc-nudge .9s ease-in-out 1.8s 2}
+@keyframes rc-rise{from{transform:translateY(28px) scale(.95)}to{transform:none}}   /* movement only: a stalled animation still shows every word (course-module-ux build/GUIDE.md 9) */
+@keyframes rc-draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes rc-nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(7px)}}
+
+@media (max-width:900px){
+  .rc-grid,.rc-grid[data-n="4"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:620px){
+  .rc-grid,.rc-grid[data-n="4"]{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion: reduce){
+  .slide.recap *,.slide.recap *::before,.slide.recap *::after{animation:none !important}
 }

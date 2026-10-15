@@ -67,9 +67,12 @@ SKILLS = os.path.dirname(SKILL)
 LABELS = json.load(io.open(os.path.join(SKILL, "knowledge", "page-labels.json"), encoding="utf-8"))
 RULES = json.load(io.open(os.path.join(SKILL, "knowledge", "theory-rules.json"), encoding="utf-8"))
 MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json"), encoding="utf-8"))
+ACTIVE = json.load(io.open(os.path.join(SKILL, "knowledge", "active-learning.json"), encoding="utf-8"))   # L49 step 3
+sys.path.insert(0, HERE)
+import bloom_map  # noqa: E402  - what level the ILOs ask for and the tasks reach (L48)
 FAMILY_MARK = {"still": "▣", "moving": "▶", "interactive": "☝", "3d": "⬢", "video": "●"}
 MOVING = ("moving", "interactive", "3d", "video")
-TECHNIQUES = ["self-check", "explain-then-reveal", "predict-then-reveal", "worked-example", "scenario"]
+TECHNIQUES = ["self-check", "explain-then-reveal", "predict-then-reveal", "worked-example", "scenario", "explore", "plain"]
 NOVIKONTAS_ACADEMIC_HOUR = 40
 
 
@@ -124,6 +127,12 @@ def module_check_of(am):
             "graded": bool(mc.get("graded")), "mechanics": list(mc.get("mechanics") or [])}
 
 
+def status_of(x):
+    """A theory-as-activity line: proposed (waiting for the operator), approved (kept) or struck. No status = kept (before 2.27.0)."""
+    st = x.get("status") or "approved"
+    return st if st in ("proposed", "approved", "struck") else "proposed"
+
+
 def media_of(am):
     """architecture.json "media": [{"kind", "what"}] - the pictures, animation and 3D a module plans (L37)."""
     return [x for x in (am.get("media") or []) if isinstance(x, dict)]
@@ -143,6 +152,8 @@ def analyse(prog, arch, plan=None):
     assess_topic = str(fa.get("topic")) if fa.get("topic") else next(
         (t for t in order if topics[t].get("assessment")), None)
     problems, modules, suggestions = [], [], []   # suggestions never stop the course (owner, 2.18.1)
+    split_found = []                              # L49 - suggestions too, shown in their own section
+    waiting = []                                  # L49 step 3 - proposals the operator has not kept or struck yet
 
     for pm in plan.get("modules", []) + arch.get("modules", []):
         ts = pm.get("topics")
@@ -206,6 +217,29 @@ def analyse(prog, arch, plan=None):
         if len(three) >= TD["count_from"] and len(three) > TD["max_share"] * len(md):
             problems.append(("p_3d_many", {"m": n, "n": len(three), "tot": len(md), "pct": "%.0f" % (100.0 * len(three) / len(md)),
                                            "max": "%.0f" % (100 * TD["max_share"])}))
+        # L49 - how the class spends the minutes: plain theory against everything the trainees do (programme unchanged)
+        al = [x for x in (am.get("active_learning") or []) if isinstance(x, dict)]
+        tasks_min = sum(s["minutes"] for s in m["sc"]) + m["mc"].get("minutes", 0)
+        counted = lambda sts: sum(num(x.get("minutes")) for x in al if status_of(x) in sts and x.get("technique") != "plain")
+        m["plain"] = max(0.0, m["th_min"] - tasks_min - counted(("approved",)))
+        m["active"] = m["alloc"] - m["plain"]
+        m["plain_all"] = max(0.0, m["th_min"] - tasks_min - counted(("approved", "proposed")))   # if every proposal is kept
+        m["active_all"] = m["alloc"] - m["plain_all"]
+        waiting.extend((n, x) for x in al if status_of(x) == "proposed")
+        if m["th_min"]:                                   # step 3: every sub-topic with theory gets a proposal
+            covered = {str(x.get("subtopic")) for x in al if x.get("subtopic")}
+            if m["subtopics"]:
+                for st in m["subtopics"]:
+                    if str(st.get("ref")) not in covered and not (al and not covered):
+                        split_found.append(("a_no_proposal", {"m": n, "s": st.get("ref", "?")}))
+            elif not al:
+                split_found.append(("a_no_proposal_mod", {"m": n}))
+        SP = RULES["split"]
+        if m["alloc"] and m["active"] < SP["target_active_share"] * m["alloc"] - 0.5:
+            split_found.append(("a_arch_low", {"m": n, "pp": "%.0f" % (100 * m["plain"] / m["alloc"]),
+                                               "tp": "%.0f" % (100 * (1 - SP["target_active_share"]))}))
+        if al and not all(num(x.get("minutes")) for x in al):
+            split_found.append(("a_no_minutes", {"m": n}))
         planned = [x for s in m["sc"] for x in s["mechanics"]] + (m["mc"].get("mechanics") or [])
         for x in planned:
             if x not in MEDIA["mechanics"] or x.startswith("_"):
@@ -260,7 +294,7 @@ def analyse(prog, arch, plan=None):
         problems.append(("p_total_row", {"th": fmt_h(tot_th), "pr": fmt_h(tot_pr),
                                          "pth": fmt_h(num(tr.get("theory"))), "ppr": fmt_h(num(tr.get("practical")))}))
     return {"ahm": ahm, "ahm_assumed": ahm_assumed, "modules": modules, "problems": problems, "suggestions": suggestions,
-            "tot_th": tot_th, "tot_pr": tot_pr, "outcomes": outcomes}
+            "tot_th": tot_th, "tot_pr": tot_pr, "outcomes": outcomes, "bloom": bloom_map.course_map(prog, arch), "split": split_found, "waiting": waiting}
 
 
 CSS_EXTRA = """
@@ -287,9 +321,51 @@ h1{color:var(--navy);margin:8px 0 6px} h2{color:var(--navy);margin:28px 0 8px} h
 .subs{margin:4px 0 10px;padding-left:1.2em} .subs li{margin:2px 0}
 .own{margin-top:4px;font-size:13.5px} .own .verb{background:none;border-left-color:var(--line-l)}
 @media (max-width:700px){.tablets{grid-template-columns:1fr}}
+.decide{display:flex;gap:8px;flex-wrap:wrap} .decide button,button.act{font:inherit;font-weight:700;min-height:44px;padding:6px 16px;
+  border-radius:var(--r-m);border:2px solid var(--line-l);background:var(--white);color:var(--ink);cursor:pointer}
+.decide button[data-choice=keep][aria-pressed=true]{background:var(--good-wash-l);border-color:var(--good);color:var(--good)}
+.decide button[data-choice=strike][aria-pressed=true]{background:var(--warn-wash-l);border-color:var(--warn);color:var(--warn)}
+button.act{background:var(--navy);border-color:var(--navy);color:var(--white)}
+.choices{font-size:16px} tr.st-struck td{opacity:.6} tr.st-struck td:nth-child(2){text-decoration:line-through}
+@media print{ .decide button::before{content:"\\2610  "} #copy-choices{display:none} }
 @media print{ body{background:#fff} .wrap{max-width:none;padding:0} .card{box-shadow:none}
   h2{page-break-after:avoid} tr{page-break-inside:avoid} }
 """
+
+
+DECIDE_JS = """<script>
+(function(){
+  var KEY = %(key)s, KEEP = %(keep)s, STRIKE = %(strike)s, NONE = %(none)s, picks = {};
+  try { picks = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { picks = {}; }
+  function line(){
+    var k = [], s = [];
+    Object.keys(picks).sort().forEach(function(id){ (picks[id] === "keep" ? k : s).push(id); });
+    if (!k.length && !s.length) return NONE;
+    return (k.length ? KEEP + ": " + k.join(", ") + "." : "") + (k.length && s.length ? " " : "") + (s.length ? STRIKE + ": " + s.join(", ") + "." : "");
+  }
+  function paint(){
+    document.querySelectorAll(".decide").forEach(function(box){
+      box.querySelectorAll("button").forEach(function(b){ b.setAttribute("aria-pressed", picks[box.dataset.id] === b.dataset.choice ? "true" : "false"); });
+    });
+    document.getElementById("choices-line").textContent = line();
+    try { localStorage.setItem(KEY, JSON.stringify(picks)); } catch (e) {}
+  }
+  document.querySelectorAll(".decide button").forEach(function(b){
+    b.addEventListener("click", function(){
+      var id = b.parentNode.dataset.id;
+      if (picks[id] === b.dataset.choice) delete picks[id]; else picks[id] = b.dataset.choice;
+      paint();
+    });
+  });
+  document.getElementById("copy-choices").addEventListener("click", function(){
+    var t = line(), done = function(){ document.getElementById("copied").hidden = false; };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t).then(done, fallback); } else { fallback(); }
+    function fallback(){ var a = document.createElement("textarea"); a.value = t; document.body.appendChild(a); a.select();
+      try { document.execCommand("copy"); done(); } catch (e) {} document.body.removeChild(a); }
+  });
+  paint();
+})();
+</script>"""
 
 
 def style():
@@ -298,7 +374,7 @@ def style():
               os.path.join(SKILLS, "course-module-ui", "templates", "gb_page.css")):
         css += io.open(p, encoding="utf-8").read() + "\n"
     # the style files' own comments are for the factory's maintainers, not the operator (L25)
-    return re.sub(r"/\*.*?\*/", "", css, flags=re.S) + CSS_EXTRA
+    return re.sub(r"/\*.*?\*/", "", css, flags=re.S) + CSS_EXTRA + bloom_map.CSS
 
 
 def build(prog, arch, a):
@@ -309,7 +385,8 @@ def build(prog, arch, a):
      "modules": [{"module": 1 (= the programme topic number), "title" (in the course language),
                   "main_ilos": ["1"],
                   "sub_ilos": [{"id", "status": "original|re-expressed|added", "programme_text", "text", "why"}],
-                  "active_learning": [{"where", "instead_of", "technique", "note"}],
+                  "active_learning": [{"id": "A1.1", "subtopic": "1.1", "does", "technique", "minutes", "instead_of",
+                                       "needs", "status": "proposed|approved|struck", "why", "note"}],   # L49, active/GUIDE.md
                   "practicals": [{"task", "equipment", "place", "minutes"}],
                   "self_checks": [{"questions": 4, "after": "sub-topic 1.1"}],
                   "module_check": {"questions": 6}}],
@@ -344,6 +421,16 @@ def build(prog, arch, a):
 
     mods = a["modules"]
     teaching = [m for m in mods if not m["assessment"]]
+    if a["waiting"]:                                     # L49 step 3 - the operator keeps or strikes each proposal
+        tm = [m for m in teaching if m["arch"] and m["alloc"]]
+        pct_of = lambda k: "%.0f" % (100.0 * sum(m[k] for m in tm) / (sum(m["alloc"] for m in tm) or 1))
+        out.append('<div class="card hot" id="decide"><h3>%s</h3><p>%s</p><p>%s<br><b>%s</b></p>'
+                   '<p class="choices"><span id="choices-line">%s</span></p>'
+                   '<p><button type="button" class="act" id="copy-choices">%s</button> <span id="copied" class="note" hidden>%s</span></p></div>' % (
+                       e(P.t("w_title", n=len(a["waiting"]))), e(P.t("w_intro")),
+                       e(P.t("w_now", pp=pct_of("plain"), ap=pct_of("active"))),
+                       e(P.t("w_all", pp=pct_of("plain_all"), ap=pct_of("active_all"))),
+                       e(P.t("w_none_yet")), e(P.t("w_copy")), e(P.t("w_copied"))))
     assess = next((m for m in mods if m["assessment"]), None)
     subs = [s for m in mods for s in m["arch"].get("sub_ilos", [])]
     cnt = {k: sum(1 for s in subs if s.get("status", "original") == k) for k in ("original", "re-expressed", "added")}
@@ -434,11 +521,33 @@ def build(prog, arch, a):
     pct = round(100 * a["tot_pr"] / (a["tot_th"] + a["tot_pr"])) if (a["tot_th"] + a["tot_pr"]) else 0
     out.append("<h2>%s</h2><p>%s</p>" % (e(P.t("ratio_title")), e(P.t("ratio_text", th=fmt_h(a["tot_th"]), pr=fmt_h(a["tot_pr"]), pct=pct))))
 
+    # ---- L49: in class, plain theory against active learning - the programme's hours unchanged
+    taught = [m for m in teaching if m["arch"] and m["alloc"]]
+    if taught:
+        SP = RULES["split"]
+        tp, ta = sum(m["plain"] for m in taught), sum(m["active"] for m in taught)
+        tot = tp + ta
+        out.append("<h3>%s</h3><p class=\"note\">%s</p><p><b>%s</b></p>" % (
+            e(P.t("a_title")), e(P.t("a_intro")), e(P.t("a_course", pp="%.0f" % (100 * tp / tot), ap="%.0f" % (100 * ta / tot),
+                                                            th="%.0f" % (100 - pct), pr=pct))))
+        out.append("<table><tr><th>%s</th><th>%s</th><th>%s</th><th>%s</th></tr>%s</table>" % (
+            e(P.t("module")), e(P.t("a_col_plain")), e(P.t("a_col_active")), e(P.t("a_col_share")), "".join(
+                '<tr><td>%d</td><td>%g %s</td><td>%g %s</td><td><span class="badge %s">%.0f %%</span></td></tr>' % (
+                    m["n"], m["plain"], e(P.t("minutes")), m["active"], e(P.t("minutes")),
+                    "b-ok" if m["active"] >= SP["target_active_share"] * m["alloc"] - 0.5 else "b-bad", 100 * m["active"] / m["alloc"])
+                for m in taught)))
+        if a["split"]:
+            out.append('<div class="card"><p class="note">%s</p><ul>%s</ul></div>' % (
+                e(P.t("suggestions_intro")), "".join("<li>%s</li>" % e(P.t(k, **kw)) for k, kw in a["split"])))
+
     # ---- Main ILOs, verbatim
     out.append("<h2>%s</h2><table>" % e(P.t("main_ilos_title")))
     for i in arch.get("main_ilos", []):
         out.append("<tr><td>%s</td><td>%s</td><td>%s</td></tr>" % (e(i.get("id")), VP(i.get("text")), e(i.get("ref", ""))))
     out.append("</table>")
+
+    # ---- Bloom: what level the ILOs ask for, what the planned tasks reach (L48) - suggestions only
+    out.append(bloom_map.course_html(a["bloom"], VP))
 
     # ---- per module
     rb = RULES["before_self_check"]
@@ -498,13 +607,32 @@ def build(prog, arch, a):
                     e(s.get("id")), e(st), e(P.t("status_" + st)), prog_txt, new_txt, e(s.get("why", "")) or "—"))
             out.append("</table>")
         if am.get("active_learning"):
-            out.append("<h3>%s</h3><table><tr><th>%s</th><th>%s</th><th>%s</th></tr>" % (
-                e(P.t("active_title")), e(P.t("col_where")), e(P.t("col_instead")), e(P.t("col_technique"))))
+            out.append('<h3>%s</h3><p class="note">%s</p><table class="al"><tr><th>%s</th><th>%s</th><th>%s</th><th>%s</th><th>%s</th></tr>' % (
+                e(P.t("active_title")), e(P.t("p_intro")), e(P.t("col_subtopic")), e(P.t("col_does")), e(P.t("col_how")),
+                e(P.t("col_needs")), e(P.t("col_decision"))))
             for x in am["active_learning"]:
-                tech = x.get("technique", "other")
-                out.append("<tr><td>%s</td><td>%s</td><td>%s%s</td></tr>" % (
-                    e(x.get("where", "")), e(x.get("instead_of", "")),
-                    e(P.t("tech_" + (tech if tech in TECHNIQUES else "other"))), (" — " + e(x["note"])) if x.get("note") else ""))
+                if not isinstance(x, dict):
+                    continue
+                tech, st = x.get("technique", "other"), status_of(x)
+                how = (e(P.t("stays_plain", why=x.get("why", "—"))) if tech == "plain" else
+                       e(P.t("tech_" + (tech if tech in TECHNIQUES else "other"))) +
+                       ((" · %g %s" % (num(x["minutes"]), e(P.t("minutes")))) if x.get("minutes") else ""))
+                does = e(x.get("does") or x.get("where") or "")
+                if x.get("instead_of"):
+                    does += '<div class="note">%s</div>' % e(P.t("slides_stay", x=x["instead_of"]))
+                if x.get("note"):
+                    does += '<div class="note">%s</div>' % e(x["note"])
+                xid = x.get("id", "")
+                if st == "proposed" and xid:
+                    dec = ('<span class="decide" data-id="%s"><button type="button" data-choice="keep" aria-pressed="false">%s</button>'
+                           '<button type="button" data-choice="strike" aria-pressed="false">%s</button></span>' % (
+                               e(xid), e(P.t("btn_keep")), e(P.t("btn_strike"))))
+                else:
+                    stl = ACTIVE["statuses"].get(st, {})
+                    dec = '<span class="badge %s">%s</span>' % ({"approved": "b-ok", "struck": "b-bad"}.get(st, "b-assess"),
+                                                                 e(stl.get(P.lang) or stl.get("en") or st))
+                out.append('<tr class="st-%s"><td><b>%s</b><br>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (
+                    e(st), e(xid), e(x.get("subtopic") or ""), does, how, e(x.get("needs", "")) or "—", dec))
             out.append("</table>")
         oc = am.get("from_old_course") or {}
         if oc:
@@ -540,7 +668,11 @@ def build(prog, arch, a):
 
     if arch.get("notes"):
         out.append("<h2>%s</h2><ul>%s</ul>" % (e(P.t("notes_title")), "".join("<li>%s</li>" % e(n) for n in arch["notes"])))
-    out.append('<p class="foot">%s %s %s</p></div></body></html>' % (e(P.t("prepared")), date.today().isoformat(), e(P.t("by_factory"))))
+    out.append('<p class="foot">%s %s %s</p></div>' % (e(P.t("prepared")), date.today().isoformat(), e(P.t("by_factory"))))
+    if a["waiting"]:
+        out.append(DECIDE_JS % {"key": json.dumps("cf-choices:" + str(c.get("title", ""))), "keep": json.dumps(P.t("btn_keep")),
+                                "strike": json.dumps(P.t("btn_strike")), "none": json.dumps(P.t("w_none_yet"))})
+    out.append("</body></html>")
     return "\n".join(out)
 
 
@@ -568,6 +700,10 @@ def main(argv=None):
     if x.check:
         for k, kw in a["suggestions"]:
             print("  (suggestion) " + P.t(k, **kw))
+        for k, kw in a["split"]:
+            print("  (20/80, suggestion) " + P.t(k, **kw))
+        for k, kw in a["bloom"]["findings"]:
+            print("  (Bloom, suggestion) " + P.t(k, **kw))
         for k, kw in a["problems"]:
             print("  - " + P.t(k, **kw))
         print("%d problem(s)." % len(a["problems"]))

@@ -59,6 +59,20 @@ course-factory/
 ├── scripts/check_module_folder.py       kept as a short way in: runs check_course_package.py (2.21.0)
 ├── knowledge/classroom-system.json      the classroom system's own course-folder rules (L45, 2.21.0)
 ├── scripts/picture_briefs.py, test_picture_briefs.py   generated pictures: places, the person's description, cost (L47, 2.24.0)
+├── bloom/GUIDE.md                       READ IN: judging or lifting a Bloom level - Stage 2, Stage 3, retrofit (L48, 2.25.0)
+├── knowledge/bloom.json                 the six levels, verbs (en / lv / ru stems), each task type's usual and highest level, floors
+├── scripts/bloom_map.py, test_bloom_map.py   the Bloom map: ILO levels, task levels, gaps, how to lift - drawn on both review pages
+├── scripts/test_active_split.py         20 / 80 in class: plain theory against active minutes on both pages (L49, 2.26.0; theory-rules.json split)
+├── active/GUIDE.md                      READ IN: Stage 2 - proposing theory as activity per sub-topic, recording the operator's decisions (L49, 2.27.0)
+├── knowledge/active-learning.json       the patterns proposals are written from (fits, what the trainees do, minutes), the rules, the statuses
+├── scripts/active_plan.py, test_active_plan.py   list what waits; decide - kept / struck, logged with the operator's words, page re-rendered
+├── scripts/test_new_task_types.py      the five tasks for the higher Bloom levels, end to end (L49 step 4, 2.28.0)
+├── fix/GUIDE.md                         READ IN: fix mode - a correction to built modules: find, one list, one yes, change, one check (L50, 2.29.0)
+├── knowledge/fix-rules.json             the sweeps and their thresholds, the check for each kind of change, what never runs in a fix, standards, shared parts
+├── scripts/fix.py, test_fix.py          sweep / propose / apply / approve / check / standard / sync-shared - every module at once, one yes for all of it
+├── scripts/measure_slides.py            every slide of many modules at 1280 x 800 in a hidden Chrome or Edge, animations finished, ~4 s a module
+├── knowledge/design-rules.json          the DESIGN rules a person may choose against after one warning, each with the risk to say (L26, 2.30.0)
+├── scripts/design_choices.py, test_design_choices.py   rules / list / add - a choice recorded in STANDARDS.md, obeyed by every check
 │                                          knowledge/media-and-tasks.json three_d: 3D on at most half the slides, where it makes sense, full quality, smooth (L46, 2.22.0)
 ├── scripts/old_course.py, test_workspace.py   the old course read whole, its pictures copied out (L41, 2.19.0)
 ├── knowledge/media-and-tasks.json        the kinds of picture and the ways of answering, who makes each, the variety floors (L37, L38, 2.18.0)
@@ -201,7 +215,8 @@ ignoring colleague requests as "not in the style":
   `course-task-ux`'s "not negotiable", `course-visuals`' "never add a visual to fill space".
 
 The five hard limits are the only exceptions: brand, programme + Main ILOs, hours, no source no
-claim (an operator's stated fact is a source), offline tablet.
+claim (an operator's stated fact is a source), offline tablet. *(2.30.0: the brand moved to the design side - the
+person's after one warning, see 4z; the material keeps the other four.)*
 
 ## 4e · Intake and the knowledge base (2.13.0, 2026-09-30, Phase 5 step 2)
 
@@ -548,7 +563,132 @@ instead of retrying. The hand-offs in `course-visuals` (rules, SKILL, GUIDE, the
 `orchestration/GUIDE.md` and the `visual-sourcer` agent say the same. Tests: `nano-banana/server/test_nano_banana.py`,
 `scripts/test_picture_briefs.py`.
 
-## 4u · The deck built from the approved script (2.25.0, 2026-10-15)
+## 4u · The Bloom map (2.25.0, 2026-10-15)
+
+The owner: "My main task is to level up pedagogy - bloom taxonomy needs to be on higher level. That's why we have tablets, because now we can create more difficult and more interesting and more interactive tasks for trainees; before that we used Google Docs / Google Classroom tasks." Nothing in the factory measured the level. Now `knowledge/bloom.json` holds the six
+levels (names, plain meaning, example verbs in en/lv/ru), the verbs that signal each (English whole words with their
+inflections; Latvian and Russian stems, `$` for a whole word - 'veic$' so that 'veicināt' is not 'veikt'), the weak
+verbs, and each of the 14 task types' usual and highest level with how to write it higher. `scripts/bloom_map.py` reads
+an ILO's level as its highest clause-leading verb (so a noun in the object is not a verb), a task's from its type or
+its stated `bloom`; `course_map` (Stage 2) and `module_map` (Stage 3) return the levels and the findings, drawn by
+`make_architecture_page.py` (its own section; never in `problems`, so `--check` exits as before) and
+`content_script.py render` (a card, and a level line under each question; never in `all_findings`, so approval is
+unchanged). Verbs used both ways (select, determine, check, определить) are left out on purpose: the report says
+'not known' and `bloom/GUIDE.md` §2 says how to judge it. Every floor is a suggestion until the owner says otherwise.
+Planned next (owner's three-part plan): part 2 the floors as rules; part 3 new task types for *Analyse* to *Create*
+(find the fault, spot the mistake in a filled-in permit, build the plan or checklist). Tests: `scripts/test_bloom_map.py`.
+
+## 4v · 20 / 80 in class (2.26.0, 2026-10-15)
+
+The owner: "Now most courses are 80/20 - 80 theory, 20 practical. On paper, in the programmes and IMO model courses it stays as it is, but we want to at least come close to 20/80 - 20 plain raw theory, 80 practical: simulators, active learning theory, self-checks, tablet interactive tasks." Then: "Still you need enough theory ... don't remove existing good theory, because each instructor can skip each slide faster; on paper we have that theory, if someone needs he can read it - but the main teaching activities, how the trainee will gain this knowledge, are in active learning." L5 always aimed at 80 % learner-active, but nothing measured it, and L36's
+floors (10 min and 250 words before a self-check; words per minute over every slide) pushed toward long plain
+theory. Now `theory-rules.json` `split` holds the aim (0.8), the five slide techniques and the keep-theory rule;
+`before_self_check` is 5 min / 125 words; the density counts slides without `"active"` only. `content_script.py`:
+`split_of` / `split_html` (a card on the review page, a line per active slide, a print-out in render; an unknown
+technique is a `validate` problem; never in `all_findings`). `make_architecture_page.py`: plain = theory minutes less
+self-checks, module check and `active_learning[].minutes`; its own section and `a["split"]`, never in `problems`, so
+`--check` exits as before; `explore` added to the techniques. The suggestion text names the plain slides with the
+most minutes and says to keep every slide - pinned in `test_active_split.py` (no 'remove' / 'delete' in any
+language). Three pinned numbers in `test_architecture_page.py` and one case in `test_content_script.py` moved
+from 10 to 5 minutes; their behaviour is unchanged.
+
+## 4w · Theory as activity - proposed, then kept or struck (2.27.0, 2026-10-15)
+
+The owner chose step 3 of the 20/80 plan: the factory proposes, per sub-topic, how theory can be taught as activity,
+and the operator ticks or strikes each on the Stage 2 page. `architecture.json` `active_learning[]` lines gained
+`id`, `subtopic`, `does`, `needs`, `status` (proposed / approved / struck; none = approved, so older courses read as
+before), and `technique: plain` with `why`. `make_architecture_page.py`: only kept lines count toward the split;
+`plain_all` / `active_all` if every proposal is kept; a waiting card at the top with both numbers and *Copy my
+choices*; per proposal Keep / Strike buttons (`aria-pressed`, 44 px), a small inline script that keeps the ticks in
+the browser's localStorage (wrapped in try/catch; the page still works without it) and builds the line "Keep: A1.1.
+Strike: A2.1." in the operator's language; the script is written only when something waits; nothing is fetched. A
+sub-topic with theory and no proposal is a suggestion (`a_no_proposal`). `active_plan.py decide` refuses an unknown
+id, an id both kept and struck, or no `--said`, before changing anything; it writes `decided_on` / `decided_said`,
+logs Stage 2 rows in FEEDBACK_LOG.md and re-renders the page. Checked by hand in the browser: the buttons, the line,
+and the ticks surviving a reload. Not built: step 4 - new creative task types.
+
+## 4x · Five new tablet tasks for the higher Bloom levels (2.28.0, 2026-10-15)
+
+The owner: "Tablet interactive tasks - not only drag n drop, choose e.c., something completely different, interesting and creative." Added as data and checks, like the fourteen before them: `media-and-tasks.json` mechanics
+`find_the_fault` (family investigate, hands-on), `spot_the_error` (investigate, hands-on), `build_the_plan` (build),
+`timeline` (arrange), `compare` (decide, hands-on), each with its one-box answer form; `bloom.json` levels (4, 5, 5->6,
+4->5, 5) - so `lift_text(6)` now names build the plan and says real creation stays with the practical exercise;
+`content_script.py` `USES`, `read_answer` (each mis-writing caught in plain words), `answer_items` (what the built
+page shows and which are right) and `task_body` (the review mock). Given data - the readings in find the fault,
+the events of an incident, the figures in compare - is not counted toward 'was the answer taught' (L36): only the
+fault, the stop point and the chosen option are. `course-task-ux` §2a says how each behaves on the tablet. No
+tablet engine is written yet - building the task pages is Phase 5 step 6. `test_new_task_types.py` runs each
+through validate, the review page, the Bloom map and `check_script_match.py` on a built module.
+
+## 4y · Fast fixes, quality kept (2.29.0, 2026-10-15)
+
+The owner: "i want for fixes to be faster and still quality. like if i find that in module 1-3 is very much free space, i can tell claude to find all free spaces in other modules, and it will not go to 3-4 qa reviews before that, because it takes time and usage." On GAS ADVANCED (FEEDBACK_LOG #61-#93) a
+module took 1-1.5 h to build and a minor fix about 30 min: every fix ran the build's whole process - a fixer agent per
+module re-measuring every slide at two sizes, the orchestrator re-checking, a whole-course QA, a visual sweep; up to
+six agents at once until the PC was unusable (#71, #85) and the usage limit hit (#76); the same wish (S5, S9, S10)
+repaired in 19 copies; fixes in generated output lost on rebuild (#88). Now a **fix** mode (`routing.json`
+`fix_triggers`) reads `fix/GUIDE.md`, `COURSE_STATE.md` and `STANDARDS.md` only. `scripts/fix.py`: `sweep --find
+space | text | overflow | layout | last-slide | kind | words` lists every place in every module, numbered; `propose`
+→ `apply --confirmed` → `approve --by` takes words across many modules through each content script exactly as
+`content_script.py apply` does (L29) and writes them into the built slides (`data-script-field`, `data-title`, notes
+into `data-cue`), listing what would need guessing as hand work, and names a module with its own generator so the
+words go there too; `sync-shared` copies `working_claude\shared\` into every module (dry run first, `shared.json` for
+another place; L43 kept); `check --kind words | layout | package` runs once on the touched modules; `standard --add
+--said` numbers a course-wide wish in `STANDARDS.md`. `knowledge/fix-rules.json` is the authority - thresholds, the
+check per kind of change, `never_in_a_fix`, at most 2 agents. `scripts/measure_slides.py` serves the course (never
+file://), opens each deck in a hidden Chrome or Edge calibrated to exactly 1280 x 800, presses Start and Next to the
+end on a fast virtual clock, and measures each slide with `course-module-ux`'s `audit_compose.js` (ink, empty below,
+smallest text, overflow) - the whole 19-module GAS ADVANCED in about 80 s, the same numbers every run, agreeing with
+the course's own QA. Three lessons from building it on GAS ADVANCED: several hidden browsers at once left three of four
+modules reading 0 % on every slide, while alone they measured the same to the last per cent - so one module at a time is
+the default (`--workers` is there, said to be less reliable) and a module that comes back broken or mostly empty is
+measured again, alone; measured mid-animation, slides read small text and empty space that the room never sees - so
+every entrance animation and transition is run to its end first; and the thresholds are the course's own QUALITY_BAR
+numbers (ink 45 %, text 16 px) and S9's "space up and down", not the factory's sign-off minimum (12.5 px). The full
+sign-off - the 14 checks in `SKILL.md` *Verify before reporting done* - stays for builds, retrofits and handover.
+Tests: `scripts/test_fix.py`.
+
+## 4z · Every picture full screen, one recap for every module, and the person decides the design (2.30.0, 2026-10-15)
+
+The owner: "all images, every picture, illustration, explanitory image e.c., can be clicked and be full screened, and
+later you can close it as well"; "each module should of course end in module check, but before it it should be
+beautiful summary in same design, like beautiful animation, boxes, main points what to take away from this module,
+and all modules should be same closing slide design"; and "if person who uses plugin somehow tells you that he does
+not like it, you need to listen to this ... claude should tell person about this risk, but still after person reviews
+and tells that he wants his way, plugin listens to that" - "only design ... no course material side".
+
+What was there before: a two-stage tap on card grids (course-module-ui anatomy) and "photographs a trainee identifies
+from should be tappable" (course-task-ux) - no viewer for any other picture, nothing in the deck engine, no check. A
+`sum` summary grid with no requirement, no place, no animation. L26 already said the operator's request wins - but
+fixed the brand and the components as "the style", had no step where the person hears the risk and confirms, and the
+checks did not know what the person chose, so the next build or fix flagged the wish and quietly put it back.
+
+- **L51 the viewer** - `course-module-ux/assets/gb_zoom.js` + `.css`, in `course-module-ui/knowledge/design-system.json`
+  (copied into every module) and `gb_shell.html`. ES5, starts by itself, delegated: every `img` and outermost inline
+  `svg` of 64 px or more. Closes on X, tap outside, Esc, swipe down, Back (history entry), or the active slide changing;
+  arrows close it and still turn the slide; touches never reach the deck's swipe. Pinch, double-tap, + / −, wheel, drag.
+  Answer surfaces (`[data-key]` / `[data-zone]` / `[data-hotspot]` inside the picture or laid over it, absolutely
+  placed) get a ⤢ corner button; a closed `.cmp-card` opens first. Only movement is animated (build/GUIDE.md 9).
+  Tried in a browser on a deck: photo, drawing, hotspot frame, each way of closing.
+- **L51 the recap** - `theory-rules.json` `recap`; `content_script.recap_findings` (no recap / not straight before the
+  module check / twice / 3-6 points: must-fix; a long point: a note); the recap is exempt from the slide word floor,
+  the picture note and the 3D-share denominator; `gb_compose.css` section 15 `.slide.dark.recap` (numbered boxes rising
+  in, a blue-to-amber rule drawn across, "Next: the module check"; movement only; reduced motion); markup in
+  `course-module-ux/build/GUIDE.md` 6a and `screen-kinds.json` `recap`; `check_course_package.py` checks the slide
+  before the module check and that every page with a picture loads the viewer.
+- **L26 revised** - `knowledge/design-rules.json` (recap, picture-viewer, brand, shared-design, text-size, free-space,
+  three-d-share, motion, layout - each with the risk to say; no material rule is in it); `scripts/design_choices.py`
+  writes a choice as a standard tagged `[departs from: <id>; risk told: ...]` in `STANDARDS.md` (`fix.py standard
+  --departs` too), finds it from any folder, and `check_course_package.py`, `content_script.py approve` and
+  `course-module-ui design_system.py check` (state CHOSEN) report it as the operator's choice instead of a problem.
+  The same short block sits near the top of all six SKILL.md files (`test_design_choices.py` checks it), and every
+  session reads `STANDARDS.md` and the feedback log after `COURSE_STATE.md`.
+
+Not verified: the viewer and the recap on the real classroom tablet and the projector (L39 - the owner's test). Whether
+the projector shows an opened picture depends on how the classroom mirrors the instructor's deck.
+*§4za-§4zf: the script-compiler branch, its own release numbers (merged into main's line as 2.32.0; its laws renumbered L52-L58).*
+
+## 4za · The deck built from the approved script (2.25.0, 2026-10-15)
 
 `docs/PROPOSAL_SCRIPT_COMPILER.md`, agreed by the owner: the words were typed twice (script, then HTML) and each
 module grew its own style file for text and task screens. New lane `compile/`: `compile_module.py` builds
@@ -563,7 +703,7 @@ copy of the IGF pilot's Module 1 (its drawings moved into figure files): 20/20 s
 clean, `check_course_package` with the classroom importer "Ready", `audit_deck` / `audit_collide` PASS,
 `audit_compose` 11/11 composed. Not yet: task pages, module check, start pages. Test: `compile/scripts/test_compile_module.py`.
 
-## 4v · Compiled as good as hand-built; real photographs; no empty space (2.25.1, 2026-10-15)
+## 4zb · Compiled as good as hand-built; real photographs; no empty space (2.25.1, 2026-10-15)
 
 A side-by-side of the pilot's Module 1 (hand-built vs compiled, 1280 × 800) found 8 of 11 compiled slides plainer:
 the shared `.support` list is 14 px grey (a supporting size), and the hand-built deck had its own reading style, boxes,
@@ -578,7 +718,7 @@ better, body text 18.4 px, pictures about 30 % larger; all audits pass at 1280 �
 possible - `knowledge/media-and-tasks.json` floors `real_photo_*`, `content_script.py` suggestion `v_few_photos`, labels
 in en/lv/ru) and **L53** (no empty space, good padding - `compile/GUIDE.md` §2b, the three audits before showing).
 
-## 4w · Every drawing whole and clean (2.25.2, 2026-10-15)
+## 4zc · Every drawing whole and clean (2.25.2, 2026-10-15)
 
 The owner's screenshots of the pilot: an engine room poking out through the sloping stern (M01 summary, M02 zones), a
 cargo area through a curved bow, a fuel tank and a vent-mast top cut off at the drawing's edge, labels over a deckhouse
@@ -596,7 +736,7 @@ Pilot M01 (compiled): 35 findings -> 0 at 1280x800, 1024x768 and 800x1280 after 
 stern, the vent-mast frame, the liquid clipped to the tank, labels moved; valve stems and the thermometer's dots marked).
 M02 (hand-built in the pilot, not changed): 64 findings, 5 of them cut-offs that `gb_fit` removes.
 
-## 4x · The second module compiled (2.25.3, 2026-10-15)
+## 4zd · The second module compiled (2.25.3, 2026-10-15)
 
 The pilot's Module 2 (20 instructor screens, its deck hand-built) compiled in a scratch copy: its drawings moved into
 figure files, the emphasis read from its markup into a build sheet, then every drawing fixed to L54. Result at 1280x800:
@@ -608,7 +748,7 @@ for its code. Shared look (`gb_compose.css` §13b): a packed stage, `.aside`, a 
 or scrolls), a box's heading in bold. `gb_fit.js` adds room only on the side that overflows. Known: at 1024x768 the
 drawings' labels, drawn for 1280, fall under 12.5 px - before and after alike; needs labels sized for small screens.
 
-## 4y · Figures from the figure kit; a missing part made into the kit (2.26.0, 2026-10-15)
+## 4ze · Figures from the figure kit; a missing part made into the kit (2.26.0, 2026-10-15)
 
 The pilot's M02 tank-monitoring slide shipped as four hand-drawn snapshots swapped with `display:none` - no motion,
 and a look of its own. The owner: *use the kit; if there is no element in the kit, the AI creates the element, puts it
@@ -627,7 +767,7 @@ Tested on IGF Basic M02 compiled from a copy of the course (s03, s04, s14): step
 steady under the finger. Found on the way, not changed: the shared `.slide.dark::before` watermark reaches 112 px below
 a dark slide, which an `overflow:hidden` slide can still be scrolled by (`overflow:clip` would close it).
 
-## 4z · Every photograph opens, unasked (2.27.0, 2026-10-15)
+## 4zf · Every photograph opens, unasked (2.27.0, 2026-10-15)
 
 Aigars's review of the IGF pilot: real photos for the illustrations, and *"images expandable - a lightbox with more
 explanation about the photo"*; the operator: *"the factory needs to make it on its own"*. **L56**. New

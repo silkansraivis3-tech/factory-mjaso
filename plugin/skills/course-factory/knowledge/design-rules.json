@@ -1,0 +1,36 @@
+{
+  "_authority": "L26 as revised in 2.30.0 (owner, 2026-10-15): the factory's DESIGN rules - how a course looks and behaves on the screen - give way to the person after one warning. scripts/design_choices.py reads this list; a choice names one of these ids.",
+  "_owner": "\"if person who uses plugin somehow tells you that he does not like it, you need to listen to this, if some of persons ideas conflicts with plugin rules, claude should tell person about this risk, but still after person reviews and tells that he wants his way, plugin listens to that.\" And: \"this fix does not affect any material side, only design ... its style+design, no course material side.\"",
+  "_material_is_not_here": "The course MATERIAL keeps its own rules, unchanged by this: the approved programme and its Main ILOs word for word (L1, L2), the official hours (L1, L3), no source no maritime claim (L4), the approved words of the content script (L29), the classroom system's own import rules (L45) and the offline tablet (L6). Those are not design and none of them is in this list.",
+  "_how": "1 the person asks for a look or a behaviour; 2 if it goes against a rule below, say which rule and the risk in one or two plain sentences, and ask - one pop-up, two answers: their way / the factory's way (L31); 3 on 'their way', do it fully, and record it: design_choices.py add <course> --rule <id> --choice ... --said ... --risk ...; 4 from then on every check that enforces that rule reports the place as the person's choice, never as a problem, and no build or fix changes it back. No question at all when nothing conflicts - just do it.",
+
+  "rules": {
+    "recap":          {"says": "every teaching module closes with the recap slide, \"what to take away\", in the one shared design, straight before the module check", "law": "L51",
+                       "risk": "the modules end differently; the room loses the moment that ties the module together before it is checked",
+                       "checked_by": ["content_script.py (r_ findings)", "check_course_package.py"]},
+    "picture-viewer": {"says": "every picture opens full screen with a tap and closes again (gb_zoom.js on every page)", "law": "L51",
+                       "risk": "a detail on a photograph or drawing cannot be shown big to the room or looked at closely on the trainee tablet",
+                       "checked_by": ["check_course_package.py"]},
+    "brand":          {"says": "the Novikontas brand - colours, the Raleway typeface, the logo and its use", "law": "L26, novikontas-brandbook",
+                       "risk": "the course no longer looks like a Novikontas course; marketing or the accrediting body may question material that does not carry the brand",
+                       "checked_by": ["course-module-ui audit_ui.py (raw colours)", "the model's own judgment"]},
+    "shared-design":  {"says": "one design in every module: the shared shell, tokens and components, copied byte for byte (design_system.py)", "law": "L26, course-module-ui",
+                       "risk": "this module looks and behaves unlike the others; a later update of the shared design will not reach the changed part",
+                       "checked_by": ["course-module-ui design_system.py check"]},
+    "text-size":      {"says": "text at least 16 px at 1280 x 800, read from the back of the room", "law": "L50, fix-rules.json sweeps.text",
+                       "risk": "the back rows cannot read it on the classroom screen",
+                       "checked_by": ["fix.py sweep/check (--floor)", "measure_slides.py"]},
+    "free-space":     {"says": "a teaching slide uses the screen - content at least 45 %, no empty band below", "law": "L50, fix-rules.json sweeps.space",
+                       "risk": "the slide looks unfinished on a big screen",
+                       "checked_by": ["fix.py sweep --find space"]},
+    "three-d-share":  {"says": "3D on at most half of the teaching slides, only where a shape, an inside or a layout in space is taught", "law": "L46",
+                       "risk": "the deck may lag on the classroom tablet, and 3D where it teaches nothing distracts from what does",
+                       "checked_by": ["content_script.py (v_3d_share)", "check_course_package.py"]},
+    "motion":         {"says": "animation that teaches - it shows a change, a sequence or a cause - never decoration, and still once it has made its point", "law": "course-visuals motion-rules.json",
+                       "risk": "movement that does not teach pulls the eye away from what does",
+                       "checked_by": ["the model's own judgment", "course-visuals review"]},
+    "layout":         {"says": "the screen compositions and the two slide modes (light, dark/photo) as the factory picks them", "law": "course-module-ui, course-module-ux",
+                       "risk": "the screen may read less clearly in the room",
+                       "checked_by": ["the model's own judgment", "measure audit"]}
+  }
+}

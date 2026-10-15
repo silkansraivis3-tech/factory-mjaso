@@ -101,6 +101,16 @@ def main():
         os.remove(os.path.join(m, "assets", "gb_deck.js"))
         code, st = states(m)
         check("a deleted engine is reported as MISSING", st.get("gb_deck.js") == "MISSING", st)
+        sys.path.insert(0, os.path.join(SKILLS, "course-factory", "scripts"))
+        import design_choices
+        shutil.copyfile(os.path.join(SKILLS, "course-module-ux", "assets", "gb_deck.js"), os.path.join(m, "assets", "gb_deck.js"))
+        stp = os.path.join(tmp, "course", "working_claude", "STANDARDS.md")
+        design_choices.add(os.path.join(tmp, "course"), "shared-design", "Module 1 keeps its own red accent", "I want red here", "it will not match the others")
+        code, st = states(m)
+        check("L26: a shared file the operator chose to change, after hearing the risk, is CHOSEN - and the check passes",
+              code == 0 and st["gb_compose.css"] == "CHOSEN", st)
+        os.remove(stp)
+        os.remove(os.path.join(m, "assets", "gb_deck.js"))
 
         print("\n-- an existing module is never overwritten without being asked")
         code, out = tool("install", m)

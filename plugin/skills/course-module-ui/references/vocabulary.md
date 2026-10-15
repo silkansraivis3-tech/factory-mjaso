@@ -29,6 +29,7 @@ Pick the composition the **content** needs. Never the same one three screens run
 | `activity` (slide is `.slide.dark.activity`) | announcing a task, drill or practical — **nothing clickable** | `.act-code` (the code, huge), `.act-title`, `.act-inst`, `.act-steps` of `.act-step` (with `.s` label), `.act-note`, `.act-now` (the "open task N on your tablet" line, `code` for the code) |
 | `checkbody` | a knowledge check or debrief question | `h2.bigcall`, `.bigq`, or a `.quiz` (§4), or an `.ans-grid` of `.ans` (`.ans.key` for the key answer) |
 | `sum` | the closing grid, one column per block | `.item` each with `.k` (block code/number), `h3`, `p` |
+| `recap` (slide is `.slide.dark.recap`, `data-kind="Summary"`) | **the module's closing slide, every module, the same (L51)** - "what to take away", straight before the module-check slide. Animated: the boxes rise in one by one, a blue-to-amber rule draws across each, then the "next" strip | `ol.rc-grid` with `data-n` = the number of points (3-6), each `li.rc-item` (`data-script-field="text"`) holding `b.rc-t` (short title), `span.rc-sep` (" - ", hidden, keeps the approved words whole) and `span.rc-d` (the sentence); then `p.rc-next` (`data-script-ignore`). Numbers come from CSS. Full markup: `gb_compose.css` section 15 |
 
 Also a composition in its own right:
 
@@ -110,7 +111,7 @@ there before the first screen. Write screens inside it; do not rebuild it.
 | `.ov-grid`, `.ov-head`, `.ov-item` | the overview of all screens |
 | `.chip`, `.cbtn`, `.btn-label`, `.fbtn`, `.tag`, `.t`, `.k`, `.n` | the chrome's own buttons, labels and counters |
 | `.gbt-topback` | the hidden Back link the Android hardware Back button clicks — every page needs one |
-| `.active`, `.cur`, `.on`, `.idle`, `.gone`, `.dark-active` | states **the engine sets** — never write them by hand |
+| `.active`, `.cur`, `.on`, `.idle`, `.gone`, `.dark-active`, `.banded` | states **the engine sets** — never write them by hand (`.banded`: the corner tag, hidden on a screen whose header band names it) |
 
 ## 6 · Document pages — START_HERE, handout, practical cards, plans (`gb_page.css`)
 
@@ -181,6 +182,7 @@ colours in the set; adding one is an owner decision (`knowledge/tokens.json` § 
 | `kit.css` | the figure kit's look - ISA-101, grey at rest, amber alarm, red trip, tokens only; it also holds a kit figure on a slide above its `.mediabar` (`course-visuals/kit`, L55) |
 | `gb_photo.js` + `gb_photo.css` | every photograph on a slide opens (L56): a panel with the photo whole, the slide's title, what it shows (`data-about`) and its credit (`data-credit`), then full screen; a `.slide.photo` gets a Photo button. `data-no-zoom` on an `<img>` leaves it alone. Also `.photo-strip` > `.pthumb` (L57): the real photos of what a drawing shows, in a row under it, the panel headed by the photo's `data-name`. Classes, all written by the script or the compiler, never by hand: `.gbphoto` (+ `on-dark`, `is-full`), `.gbphoto-panel`, `.gbphoto-shot`, `.gbphoto-cue`, `.gbphoto-say`, `.gbphoto-kicker`, `.gbphoto-name`, `.gbphoto-about`, `.gbphoto-credit`, `.gbphoto-hint`, `.gbphoto-x`, `.gbphoto-can`, `.photo-open`. Loaded by every compiled deck, after `gb_deck.js` |
 | `gb_run.js` + `gb_run.css` | the step runner on START_HERE (`course-module-ux`) |
+| `gb_zoom.js` + `gb_zoom.css` | **every picture opens full screen and closes again (L51)** - on every page that shows a picture: the deck, every task, the module check, the handout. Starts by itself, nothing wired per picture. Tap opens; X, a tap on the dark, Esc, swipe down, Back and the next slide close; pinch, double-tap or + / − zoom. A picture the trainee answers ON (hotspots over it) gets a corner ⤢ button instead, so a tap stays the answer. `data-no-zoom` on a figure leaves it out (a picture inside a button, a driven `[data-motion]` figure, video and 3D are left out by themselves) (`course-module-ux`) |
 | `kbd_escape.js` + `kbd_escape.css` | the three ways out of the soft keyboard (`course-task-ux` §5) |
 | `task_complete.js` + `task_complete.css` | the one shared ending for every task (`course-task-ux` §9) |
 | `novikontas_logo.svg` | the logo for the landing screen |

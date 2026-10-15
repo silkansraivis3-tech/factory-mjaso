@@ -244,14 +244,19 @@ that builds each one out has landed. The full text of each is in
 `plugin/skills/course-factory/references/laws-in-full.md` — inside the plugin, because this `docs/`
 folder is not installed with it.
 
-**L26 · The operator's request wins, and "the style" means the brand system only.** Fixed: brand
-colours, typography, logo use, and the shell, tokens, components, navigation and tablet system.
-Everything else a colleague asks for — content, structure, emphasis, number of slides, examples,
-visuals, tasks, wording — is done, never refused as "not in the style". Five hard limits only: the
-brand · the programme and its Main ILOs · the official hours · no source, no maritime claim (a fact
-the operator states is a source) · the offline tablet. Hitting one: one or two plain sentences why,
-the closest option that works, then do it. → `course-factory` (`SKILL.md`, `retrofit/knowledge/routing.json`
-edit mode, `content-lock.json`, `expert-edits.json`)
+**L26 · The operator's request wins. The material keeps four hard limits; the design is the person's, after one
+warning** *(design part revised 2026-10-15, 2.30.0)*. Everything a colleague asks for about the material — content,
+structure, emphasis, number of slides, examples, tasks, wording — is done. Four hard limits, all on the material side:
+the programme and its Main ILOs · the official hours · no source, no maritime claim (a fact the operator states is a
+source) · the offline tablet; hitting one: one or two plain sentences why, the closest option that works, then do it.
+The design — brand colours, typeface and logo use, shell and components, layouts, animation, the recap and the
+picture viewer, text size, space, the 3D share (`knowledge/design-rules.json`) — is the person's: nothing conflicts,
+do it; it goes against a rule, say the rule and the risk once and ask, their way or the factory's; their way is done,
+recorded in `STANDARDS.md` (`scripts/design_choices.py`), reported by every check as their choice and never changed
+back. Owner: *"claude should tell person about this risk, but still after person reviews and tells that he wants his
+way, plugin listens to that."* → `course-factory` (`SKILL.md`, `references/laws-in-full.md`,
+`knowledge/design-rules.json`, `scripts/design_choices.py`, `retrofit/knowledge/routing.json` edit mode,
+`content-lock.json`, `expert-edits.json`; the same block near the top of every skill)
 
 **L27 · Three test levels, and only the final assessment is graded.** Self-check in the presentation
 and the module check at the end of every module are **ungraded**; the final assessment is the only
@@ -312,6 +317,7 @@ trainee task list. → `course-factory` (`scripts/content_script.py`, 2.17.0); t
 **L36 · Enough theory before any task.** A slide carries the teaching; the notes carry the explanation;
 the words fill the minutes; a self-check only after a block of new theory; every answer taught before
 its task opens. Floors in `course-factory/knowledge/theory-rules.json`, checked on the content script.
+Amended by L49 (2.26.0): ~5-minute cycles; the density counts plain theory only.
 → `course-factory` (`scripts/content_script.py`, 2.17.0)
 
 **L37 · Every slide leaves room for its picture.** Each slide names the kind of visual, what it shows, its layout,
@@ -319,7 +325,7 @@ and who makes it - the factory, the image/video generator (context only), the so
 3D scan) or outside help. 40+ min of theory: something that moves, turns or can be explored.
 → `course-factory` (`knowledge/media-and-tasks.json`, `scripts/content_script.py`, 2.18.0); built by `course-visuals` (steps 8-9)
 
-**L38 · Tasks are varied and hands-on.** Fourteen ways of answering, none typing; 2+ per self-check, 3+ per module
+**L38 · Tasks are varied and hands-on.** Nineteen ways of answering since 2.28.0 (fourteen until then), none typing; 2+ per self-check, 3+ per module
 check, "choose one" at most 40 %, a hands-on question in every module. Widens `course-task-ux` §2.
 → `course-factory` (`knowledge/media-and-tasks.json`, `scripts/content_script.py`, 2.18.0); built by `course-task-ux` (step 6)
 *(2.18.1: L37 has no quota - pictures, animation and realistic 3D wherever they show the theory; the picture floors are
@@ -370,6 +376,46 @@ never from a lesser look; 30 frames a second with the CPU slowed 4x. → `course
 only their yes generates it - once; the nano-banana tools refuse without their words; the count and cost are said every
 time. → `course-factory` (`scripts/picture_briefs.py`, `knowledge/media-and-tasks.json` generation_brief) and
 `nano-banana` 1.2.0 (`approved_by_user`, the usage log)
+
+**L48 · The Bloom level is measured, and the tablet lifts it.** Owner, 2026-10-15: on paper and in Google Classroom
+almost every task was Remember; the tablet lets a trainee operate, find and decide. Every ILO's level is read from its
+verb, every task's from how it is answered; the Stage 2 and Stage 3 pages show where the course is, every task below
+its Sub-ILO, and the tablet task types that would lift it - suggestions in 2.25.0, never a stop. → `course-factory`
+(`knowledge/bloom.json`, `bloom/GUIDE.md`, `scripts/bloom_map.py`, 2.25.0)
+
+**L49 · 20 / 80 in class - the programme unchanged, every theory slide kept.** Owner, 2026-10-15: on paper the
+programme stays 80/20; in class plain theory aims at a fifth of the minutes and the trainees do something for the
+rest. Theory is never removed to get there - a plain slide keeps its words and gives up minutes; theory comes in
+~5-minute cycles (L36 amended: 5 min and 125 words before a self-check; the words-per-minute floor counts plain
+theory only). Measured on both review pages - a suggestion. Makes L5's 80 % visible. Since 2.27.0 the factory
+proposes, per sub-topic, how theory is learned by doing, and the operator keeps or strikes each on the Stage 2 page;
+only kept ones are built (`knowledge/active-learning.json`, `active/GUIDE.md`, `scripts/active_plan.py`). Since
+2.28.0 five new tablet tasks reach the higher Bloom levels - find the fault, spot the errors, build the plan, rebuild the incident, compare (`course-task-ux` §2a). → `course-factory`
+(`knowledge/theory-rules.json` split, `scripts/content_script.py`, `scripts/make_architecture_page.py`, 2.26.0)
+
+**L50 · A fix is not a build - find, one list, one yes, change, one check.** Owner, 2026-10-15: fixes faster and
+still quality; "find all free spaces in other modules" must not go through 3-4 QA reviews first. On GAS ADVANCED a
+module took 1-1.5 h to build and a minor fix about 30 min, because every fix ran the build's whole process. A
+correction to modules already built (one, some or all) is the **fix** mode: it reads only `fix/GUIDE.md`, the course's
+`COURSE_STATE.md` and `STANDARDS.md`; finds every place in every module at once (measured at 1280 x 800 in a hidden
+browser, one module at a time) as one numbered list; the operator says yes once for all of it; words change in the
+content script and the built slides together (L29 kept), a part every module uses is changed once in
+`working_claude\shared\` and copied into each module (L43 kept), a module with its own generator is changed in the
+generator; then one check for the kind of change, run once by whoever made the fix - no QA agent after the fixer, no
+untouched slide re-measured, no whole-course QA, at most 2 agents at once. A course-wide wish said once becomes a
+numbered standard and is never repaired again. The full sign-off stays for builds, retrofits and handover.
+→ `course-factory` (`fix/GUIDE.md`, `knowledge/fix-rules.json`, `scripts/fix.py`, `scripts/measure_slides.py`, 2.29.0)
+
+**L51 · Every picture opens full screen, and every module closes with the same recap.** Owner, 2026-10-15: every
+picture, illustration and explanatory image can be tapped to full screen and closed again; each module ends in its
+module check, and before it a beautiful summary - animated boxes, the main points to take away - with the same closing
+design in every module. One shared viewer, `gb_zoom.js` / `gb_zoom.css`, on every page that shows a picture (tap opens;
+X, tap outside, Esc, swipe down, Back or the next slide closes; pinch, double-tap or + / − zoom; a ⤢ corner button
+where the trainee answers on the picture). One recap slide, `"recap": true` in the script, 3-6 points, straight before
+the module check's task slide, built in `.slide.dark.recap` (`gb_compose.css` 15). Both are design: the person may
+choose otherwise after hearing the risk (L26).
+→ `course-factory` (`content_script.py`, `check_course_package.py`, `knowledge/theory-rules.json` recap),
+`course-module-ux` (`assets/gb_zoom.js`, build/GUIDE.md 6a), `course-module-ui` (`gb_compose.css` 15, `design-system.json`, 2.30.0)
 
 **L52 · As many real photographs as possible.** Owner, 2026-10-15: *"add as many real photos as possible"* - in
 the presentation and in the trainee tasks. Wherever a camera can show it, the slide's picture is a real photograph,
@@ -459,7 +505,7 @@ or on a slide of a later module than one that already shows it - is a problem th
 photo or none; the earlier module keeps it. A thumbnail elsewhere gives way on its module's next build, so build every
 module again after photos change. → `course-factory` (`compile/`), 2.27.0
 
-**All fifty-four laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+**All fifty-eight laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
 `course-visuals` was built; L26–L58 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 

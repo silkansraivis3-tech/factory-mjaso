@@ -83,10 +83,17 @@ def route(prompt, has_existing_material=True):
     has = lambda words: any((" " + w) in p for w in words)
     edit_shaped = has(et["change_words"]) and has(et["course_objects"]) and not has(et["whole_module_words"])
 
+    # FIX (L50, 2.29.0): several or all built modules, and something to change or
+    # find in them - one sweep, one list, one yes, one check; not N edits.
+    ft = ROUTING["fix_triggers"]
+    fix_shaped = has(ft["scope_words"]) and (has(ft["problem_words"]) or has(et["change_words"]))         and not has(et["whole_module_words"])
+
     # RESTYLE needs BOTH a narrow target AND a limiter. Either alone is not
     # enough - "change the colours and make it like GAS BASIC" is a retrofit.
     if narrow and limited:
         return "restyle", hits
+    if fix_shaped and has_existing_material:
+        return "fix", hits
     if edit_shaped:
         return "edit", hits
     if retrofit_shaped:
@@ -249,6 +256,23 @@ def main():
               "добавь ещё один слайд про насосы"]:
         m, _ = route(p)
         check("L26 edit   · %-44s -> edit" % p[:44], m, "edit")
+    # L50 (2.29.0): a correction across built modules is ONE fix, not N edits - the owner's own requests
+    for p in ["the last slide is bad in all modules, make it like module 2",
+              "in module 1-3 is very much free space, find all free spaces in other modules",
+              "yes, text bigger for all modules",
+              "all other slides have same similar mistakes, fix them",
+              "fix module 2 and then fix all module last slide",
+              "visos moduļos pēdējais slaids ir slikts, izlabo",
+              "во всех модулях слишком мелкий текст, исправь"]:
+        m, _ = route(p)
+        check("L50 fix    · %-44s -> fix" % p[:44], m, "fix")
+    m, _ = route("redesign all modules using the course factory")
+    check("L50 fix    · a whole-module rebuild of all modules is still a retrofit", m, "retrofit")
+    m, _ = route("only change the colours in all modules, nothing else")
+    check("L50 fix    · a narrow cosmetic change with a limiter is still a restyle", m, "restyle")
+    m, _ = route("delete slide 5")
+    check("L50 fix    · one named change in one module is still an edit", m, "edit")
+    check("L50 fix    · the mode exists and points at fix/GUIDE.md", "fix/GUIDE.md" in ROUTING["modes"]["fix"], True)
     # ...and the neighbours keep their own modes
     m, _ = route("make it better", has_existing_material=True)
     check("L26 edit   · no change named, no object -> still ambiguous", m, "ambiguous")

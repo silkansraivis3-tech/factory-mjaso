@@ -30,6 +30,11 @@ WHAT IT CHECKS - the course folder is course\\modules\\ (L44, L45)
     neither; the page listens for gb-team; scope team hands in with scope: 'team'; a sensible data-team-size
   every trainee page: no answer readable in its source (data-correct, data-answer); no link into a _ folder;
     notes when a page that hears the timer never reports timeout: true, or offers "try again" inside the classroom
+  the recap (L51): every teaching module's deck has the recap slide straight before its module-check slide -
+    class "recap", data-kind "Summary", 3 to 6 points (.rc-item) - the same design in every module
+  the picture viewer (L51): every page of a module that shows a picture loads gb_zoom.js and gb_zoom.css
+  the person's design choices (L26, design_choices.py): a rule the operator chose against, after hearing the risk,
+    is reported as their choice - a note, never a problem
   then the importer itself (needs Node): its errors are problems, its warnings notes
 Exit 0 when the classroom will take it as it is, 1 when anything must be fixed, 2 on bad input. Read only.
 """
@@ -52,6 +57,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SKILLS = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 import workspace  # noqa: E402
+import design_choices  # noqa: E402  - the operator's design choices are theirs, not problems (L26, 2.30.0)
 
 CONTRACT = json.load(io.open(os.path.join(os.path.dirname(HERE), "knowledge", "classroom-system.json"), encoding="utf-8"))
 LIM = CONTRACT["limits"]
@@ -90,6 +96,7 @@ class Page(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.refs, self.links, self.slides, self.title, self._t, self.css, self.metas = [], [], [], "", False, [], {}
         self._style = False
+        self.pictures = 0
 
     def handle_starttag(self, tag, attrs):
         a = {k: (v or "") for k, v in attrs}
@@ -98,8 +105,14 @@ class Page(HTMLParser):
                 self.refs.append((tag, k, v))
                 if tag == "a" and k == "href":
                     self.links.append(v)
-        if "slide" in a.get("class", "").split():
+        cls = a.get("class", "").split()
+        if "slide" in cls:
+            a["_points"] = 0
             self.slides.append(a)
+        if "rc-item" in cls and self.slides:
+            self.slides[-1]["_points"] += 1
+        if tag in ("img", "svg"):
+            self.pictures += 1
         if a.get("style"):
             self.css.append(a["style"])
         if tag == "meta" and a.get("name"):
@@ -222,6 +235,7 @@ def check(folder):
     if distinct > LIM["course_bytes_distinct"]:
         probs.append("%.0f MB of distinct files - the classroom takes at most 300 MB" % (distinct / 1048576.0))
 
+    recap_probs, viewer_probs = [], []
     # ---- every module
     for mod in mods:
         md = os.path.join(folder, mod)
@@ -268,6 +282,21 @@ def check(folder):
                 probs.append("%s: %d of the %d teaching slides are 3D (%.0f %%) - at most %.0f %%; keep 3D where a shape, an inside or a "
                              "layout in space is taught, the rest a photograph, a drawing or an animation - at full quality (L46)"
                              % (mod, len(three), len(teach), 100.0 * len(three) / len(teach), 100 * TD["max_share"]))
+            # L51 - the module closes with the recap, straight before its module check, in the one shared design
+            checks = [i for i, s in enumerate(pg.slides) if s.get("data-kind", "") == "Check"
+                      and os.path.basename(s.get("data-task-href", "")).lower() == "check.html"]
+            if checks:
+                i = checks[-1]
+                prev = pg.slides[i - 1] if i else {}
+                if "recap" not in prev.get("class", "").split():
+                    recap_probs.append("%s has no recap slide straight before its module check - every teaching module closes with "
+                                       "\"what to take away\" in the shared design (class \"slide dark recap\", gb_compose.css 15; L51)" % mod)
+                else:
+                    n = prev.get("_points", 0)
+                    if not 3 <= n <= 6:
+                        recap_probs.append("%s: the recap slide has %d point(s) (.rc-item) - it needs 3 to 6 (L51)" % (mod, n))
+                    if prev.get("data-kind", "") != "Summary":
+                        notes.append("%s: the recap slide says data-kind=\"%s\" - it is \"Summary\"" % (mod, prev.get("data-kind", "")))
             uses3d = any(THREE_LIB.match(f) for _, _, fn in os.walk(md) for f in fn)
             if uses3d and not vis:
                 notes.append("%s uses 3D, but its slides do not say their kind of picture (data-visual) - the 3D share cannot be counted" % mod)
@@ -362,6 +391,12 @@ def check(folder):
                     probs.append("%s loads a script from the internet - the classroom is offline" % rel(p))
                 if re.search(r"fonts\.(?:googleapis|gstatic)\.com", text):
                     notes.append("%s asks for Google Fonts - they are not loaded; it falls back to a system font" % rel(p))
+                if pg is not None and f.lower().endswith((".html", ".htm")) and pg.pictures and \
+                        re.search(r"(^|/)(presentation|tasks|assessment|handout)/", rel(p)):
+                    loaded = {os.path.basename(local(v)[0] or "") for _, _, v in pg.refs}
+                    if not {"gb_zoom.js", "gb_zoom.css"} <= loaded:
+                        viewer_probs.append("%s shows pictures but does not load gb_zoom.js and gb_zoom.css - every picture opens full "
+                                            "screen and closes again (L51; design_system.py install copies them)" % rel(p))
                 trainee = TRAINEE_FOLDERS.search(rel(p)) and not INSTRUCTOR_ONLY.search(rel(p))
                 if trainee and f.lower().endswith((".html", ".htm")) and ANSWER_ATTR.search(text):
                     probs.append("%s (a trainee page) carries its answers in the page (data-correct / data-answer) - they can be read without doing "
@@ -384,6 +419,12 @@ def check(folder):
                         probs.append("%s uses %s, which is not there" % (rel(p), ref))
                     elif trainee and INSTRUCTOR_ONLY.search(rel(target)):
                         probs.append("%s (a trainee page) links to %s, which is instructor-only - it would not open on the tablet" % (rel(p), rel(target)))
+    # L26 (2.30.0) - where the operator chose against a design rule after hearing the risk, it is their choice
+    choices = design_choices.load(folder)
+    for rule, found in (("recap", recap_probs), ("picture-viewer", viewer_probs)):
+        keep, waived = design_choices.split(found, choices, rule, lambda x: True)
+        probs += keep
+        notes += waived
     return probs, notes, mods
 
 

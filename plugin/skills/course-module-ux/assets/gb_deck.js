@@ -11,6 +11,7 @@
      start / exit · next / prev · progress · counter · block tag · footer
      overview grid · instructor cue · fullscreen · keyboard · swipe · idle chrome
      per-screen enter/leave hooks for figures
+     per-screen steps: a figure that builds takes Next / Back first (hook "step")
 
    THE RULE THAT COST A PILOT
      A tablet has no keyboard. Every navigation path must exist as a TAP.
@@ -60,10 +61,15 @@ var GBDeck = (function (w, d) {
       d.body.appendChild(warn);
     }
 
-    /* slide id OR zero-based index -> {enter, leave}. Both are accepted because both
+    /* slide id OR zero-based index -> {enter, leave, step}. Both are accepted because both
        are what people reach for; a key matching neither is announced rather than
        ignored, because a hook that never fires looks exactly like a figure that has
-       no animation. */
+       no animation.
+       step(dir), dir 1 or -1: the screen's own steps. Return true when the screen took
+       the press (a step forward or back); false when it has none left that way, and the
+       deck moves on. Next, Back, the arrow keys and a swipe all ask it first - a figure
+       whose steps only its own small buttons can reach is skipped in front of a class
+       (M03, 2026-10-15: each module carried its own copy of this, one did not). */
     var HOOKS = opts.hooks || {};
 
     function hookFor(i) {
@@ -103,7 +109,12 @@ var GBDeck = (function (w, d) {
       var s = slides[idx];
       if (counter) { counter.innerHTML = "<b>" + (idx + 1) + "</b> / " + slides.length; }
       if (progress) { progress.style.width = (100 * (idx + 1) / slides.length) + "%"; }
-      if (blockTag) { blockTag.textContent = s.getAttribute("data-block") || ""; }
+      if (blockTag) {
+        blockTag.textContent = s.getAttribute("data-block") || "";
+        /* a screen with a header band already names itself there - the corner tag sat on top of it */
+        if (s.querySelector(".slide-kind")) { blockTag.classList.add("banded"); }
+        else { blockTag.classList.remove("banded"); }
+      }
       if (s.classList.contains("dark") || s.classList.contains("photo")) {
         d.body.classList.add("dark-active");
       } else {
@@ -113,16 +124,20 @@ var GBDeck = (function (w, d) {
         cue.innerHTML = '<span class="tag">' + T.cue + "</span>" +
           (s.getAttribute("data-cue") || T.noCue);
       }
-      if (btnPrev) { btnPrev.disabled = (idx === 0); }
-      if (btnNext) { btnNext.disabled = (idx === slides.length - 1); }
       var h = hookFor(idx);
+      if (btnPrev) { btnPrev.disabled = (idx === 0) && !(h && h.step); }
+      if (btnNext) { btnNext.disabled = (idx === slides.length - 1) && !(h && h.step); }
       if (h && h.enter) { h.enter(); }
       markOverview();
       s.scrollTop = 0;
     }
 
-    function next() { if (cur < slides.length - 1) { show(cur + 1); } }
-    function prev() { if (cur > 0) { show(cur - 1); } }
+    function stepHere(dir) {
+      var h = hookFor(cur);
+      return !!(h && h.step && h.step(dir));
+    }
+    function next() { if (stepHere(1)) { return; } if (cur < slides.length - 1) { show(cur + 1); } }
+    function prev() { if (stepHere(-1)) { return; } if (cur > 0) { show(cur - 1); } }
 
     /* ---- start / exit --------------------------------------------------- */
     function start() {

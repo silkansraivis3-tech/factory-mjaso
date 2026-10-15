@@ -98,6 +98,8 @@ Q = lambda t: "{%s}%s" % (W, t)
 sys.path.insert(0, HERE)
 import check_slide_text as slide_text  # noqa: E402  - the same four rules the built slides get (L22)
 import workspace  # noqa: E402  - the factory works in course\ beside the operator's material (L40)
+import bloom_map  # noqa: E402  - what level each question reaches, against its Sub-ILO (L48)
+import design_choices  # noqa: E402  - the operator's design choices are theirs, not must-fixes (L26, 2.30.0)
 
 MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json"), encoding="utf-8"))
 KINDS = ("slide", "task-slide", "activity", "self-check", "module-check", "final")
@@ -113,9 +115,13 @@ USES = {"single_choice": {"options"}, "multi_select": {"options"}, "choose_and_j
         "order": {"answer"}, "match": {"answer"}, "categorise": {"answer"}, "cloze": {"answer"},
         "hotspot": {"answer", "visual"}, "label_diagram": {"answer", "visual"}, "spot_the_hazard": {"answer", "visual"},
         "read_instrument": {"options", "visual"}, "set_value": {"answer", "visual"}, "panel_operate": {"answer", "visual"},
-        "scenario": {"answer"}}
+        "scenario": {"answer"},
+        # L49 step 4 (2.28.0) - the higher Bloom levels: investigate, judge a document, build, rebuild, compare
+        "find_the_fault": {"answer", "visual"}, "spot_the_error": {"answer"}, "build_the_plan": {"answer"},
+        "timeline": {"answer"}, "compare": {"options", "answer"}}
 OLD_MECHANIC = {"tap to choose": "single_choice", "": "single_choice", None: "single_choice"}
 VISUAL_KINDS = [k for k in MEDIA["visual_kinds"] if not k.startswith("_")]
+ACTIVE = RULES["split"]["active_techniques"]        # what makes a slide active learning (L49)
 
 
 def mech(s):
@@ -409,6 +415,53 @@ def read_answer(s):
                 probs.append("%s: every scenario step needs two or more actions, exactly one marked *" % sid)
             right += good
             wrong += [unstar(a) for a in acts if not starred(a)]
+    elif m == "find_the_fault":
+        symptoms = [x for x in ls if x.lstrip().startswith("!")]
+        parts = [x for x in ls if not x.lstrip().startswith("!")]
+        good = [x for x in parts if starred(x)]
+        if not symptoms:
+            probs.append("%s: 'find the fault' starts with what the trainee notices - at least one symptom, on a line starting !" % sid)
+        if len(parts) < 3 or any(":" not in unstar(x) for x in parts):
+            probs.append("%s: 'find the fault' needs at least three parts to check, each written as: part: what you see when you check it" % sid)
+        if len(good) != 1:
+            probs.append("%s: 'find the fault' needs exactly one faulty part, marked *" % sid)
+        right += [unstar(x).split(":", 1)[0] for x in good]          # the readings are given in the task, not taught
+        wrong += [unstar(x).split(":", 1)[0] for x in parts if not starred(x)]
+    elif m == "spot_the_error":
+        rows = [x.split("=>", 1) for x in ls]
+        errors = [r for r in rows if starred(r[0])]
+        if len(ls) < 4:
+            probs.append("%s: 'spot the errors' shows the filled-in document - at least four lines" % sid)
+        if not errors:
+            probs.append("%s: 'spot the errors' needs at least one wrong line, marked *" % sid)
+        if len(errors) == len(rows):
+            probs.append("%s: in 'spot the errors' not every line may be wrong" % sid)
+        for r in errors:
+            if len(r) < 2 or not r[1].strip():
+                probs.append("%s: every wrong line says why after =>: %s" % (sid, unstar(r[0])))
+        right += [r[1].strip() for r in errors if len(r) > 1]
+    elif m == "build_the_plan":
+        good = [x for x in ls if starred(x)]
+        if len(good) < 3 or len(ls) - len(good) < 2:
+            probs.append("%s: 'build the plan' needs at least three cards that belong (marked *, in order) and two that do not" % sid)
+        right += [unstar(x) for x in good]
+        wrong += [unstar(x) for x in ls if not starred(x)]
+    elif m == "timeline":
+        good = [x for x in ls if starred(x)]
+        if len(ls) < 4:
+            probs.append("%s: 'rebuild the incident' needs at least four events, one per line, in the order they happened" % sid)
+        if len(good) != 1:
+            probs.append("%s: 'rebuild the incident' needs exactly one moment marked * - where it should have been stopped" % sid)
+        right += [unstar(x) for x in good]                         # the events are the case, given; the stop point is what was taught
+    elif m == "compare":
+        n = len(opts)
+        rows = [x for x in ls if ":" in x]
+        if len(rows) < 2 or len(rows) != len(ls):
+            probs.append("%s: 'compare' needs at least two lines of figures, each written as: what is compared: value A | value B" % sid)
+        for x in rows:
+            if len(x.split(":", 1)[1].split("|")) != n:
+                probs.append("%s: '%s' has %d value(s) - one per option (%d)" % (sid, x.split(":", 1)[0].strip(), len(x.split(":", 1)[1].split("|")), n))
+        # the figures are given in the task; the right option (above) is what was taught
     return probs, right, wrong
 
 
@@ -435,6 +488,30 @@ def answer_items(s):
             parts = [p.strip() for p in g.split("|")]
             items += [unstar(p) for p in parts]
             right += [unstar(p) for p in parts if starred(p)]
+    elif m == "find_the_fault":
+        for x in ls:
+            if x.lstrip().startswith("!"):
+                items.append(x.strip().lstrip("!").strip())
+                continue
+            part, _, seen = unstar(x).partition(":")
+            items += [part.strip(), seen.strip()]
+            if starred(x):
+                right.append(part.strip())
+    elif m == "spot_the_error":
+        for x in ls:
+            line, _, why = x.partition("=>")
+            items.append(unstar(line))
+            if why.strip():
+                items.append(why.strip())
+            if starred(line):
+                right.append(unstar(line))
+    elif m in ("build_the_plan", "timeline"):
+        items = [unstar(x) for x in ls]
+        right = [unstar(x) for x in ls if starred(x)]
+    elif m == "compare":
+        for x in ls:
+            what, _, vals = x.partition(":")
+            items += [what.strip()] + [v.strip() for v in vals.split("|")]
     elif m == "scenario":
         for x in ls:
             sit, _, acts = x.partition("=>")
@@ -503,6 +580,8 @@ def validate(script):
         seen.add(sid)
         if s.get("kind") not in KINDS:
             probs.append("screen %s: unknown kind %r" % (sid, s.get("kind")))
+        if s.get("kind") == "slide" and s.get("active") and s["active"] not in ACTIVE:
+            probs.append("%s: unknown kind of active learning %r - use one of: %s" % (sid, s["active"], ", ".join(ACTIVE)))
         if s.get("kind") == "slide" and s.get("visual_kind") and parse_kind(s["visual_kind"]) not in VISUAL_KINDS + ["none"]:
             probs.append("%s: unknown kind of visual %r - use one of: %s" % (sid, s["visual_kind"], ", ".join(VISUAL_KINDS)))
         if s.get("kind") in TASKS:
@@ -616,9 +695,12 @@ def theory_findings(script):
             continue
         w_slide = wc(s.get("title", ""), s.get("text", ""))
         w_notes = wc(s.get("notes", ""))
-        th_words += w_slide + w_notes
-        th_min += minutes(s)
-        if w_slide < R["slide"]["min_words"]:
+        if not s.get("active"):              # L49: the density is of PLAIN theory; an active slide's minutes are what the trainees do
+            th_words += w_slide + w_notes
+            th_min += minutes(s)
+        if s.get("recap"):
+            pass                              # L51: a recap is short on purpose - recap_findings checks its points
+        elif w_slide < R["slide"]["min_words"]:
             add(s["id"], "text", FAIL, "t_thin_slide", w=w_slide, min=R["slide"]["min_words"])
         elif w_slide > R["slide"]["max_words"]:
             add(s["id"], "text", NOTE, "t_long_slide", w=w_slide, max=R["slide"]["max_words"])
@@ -725,7 +807,7 @@ def media_findings(script):
         k = parse_kind(s.get("visual_kind", ""))
         if k == "none" or not (k or "").strip():
             # no quota (owner, 2.18.1): a slide with no picture is a suggestion - the summary slide not even that
-            if s is not slides[-1]:
+            if s is not slides[-1] and not s.get("recap"):
                 add(s["id"], "visual_kind", NOTE, "v_none")
             continue
         if k not in VISUAL_KINDS:
@@ -744,8 +826,11 @@ def media_findings(script):
             add(None, "", NOTE, "v_no_motion", min="%g" % th_min)
         if len(slides) >= F["min_visual_kinds_from_slides"] and len(set(kinds)) < F["min_visual_kinds"]:
             add(None, "", NOTE, "v_few_kinds", n=len(set(kinds)), lo=F["min_visual_kinds"])
-        # L52 (owner, 2026-10-15): as many real photographs as possible - the summary slide aside, a suggestion
-        teach = slides[:-1] if len(slides) > 1 else slides
+        # L52 (owner, 2026-10-15): as many real photographs as possible - the recap aside (L51), a suggestion.
+        # A script from before the recap (no slide marked "recap") still sets its last slide aside.
+        teach = [s for s in slides if not s.get("recap")]
+        if len(teach) == len(slides) and len(slides) > 1:
+            teach = slides[:-1]
         real = [s for s in teach if parse_kind(s.get("visual_kind", "")) in F["real_photo_kinds"]
                 or any(w in (s.get("visual") or "").lower() for w in F["real_photo_words"])]
         if teach and len(real) < F["real_photo_min_share"] * len(teach):
@@ -754,8 +839,9 @@ def media_findings(script):
         TD = MEDIA["three_d"]
         is3d = lambda s: MEDIA["visual_kinds"].get(parse_kind(s.get("visual_kind", "")), {}).get("family") in TD["families"]
         three = [s for s in slides if is3d(s)]
-        if len(three) >= TD["count_from"] and len(three) > TD["max_share"] * len(slides):     # half of the presentation's teaching slides
-            add(None, "visual_kind", FAIL, "v_3d_share", n=len(three), tot=len(slides), pct="%.0f" % (100.0 * len(three) / len(slides)),
+        teach = [s for s in slides if not s.get("recap")]       # the recap closes the module; it teaches nothing new (L51)
+        if len(three) >= TD["count_from"] and len(three) > TD["max_share"] * len(teach):      # half of the presentation's teaching slides
+            add(None, "visual_kind", FAIL, "v_3d_share", n=len(three), tot=len(teach), pct="%.0f" % (100.0 * len(three) / len(teach)),
                 max="%.0f" % (100 * TD["max_share"]))
         run = 0
         for s in slides:
@@ -788,7 +874,51 @@ def media_findings(script):
             run = run + 1 if mech(a) == mech(b) else 1
             if run == F["max_same_in_a_row"] + 1:
                 add(b["id"], "", NOTE, "m_same_in_a_row", n=run, how=mech_label(mech(b), lang))
+    return found + recap_findings(script)
+
+
+def recap_findings(script):
+    """L51 (owner, 2026-10-15) - every teaching module closes with ONE recap slide ("what to take away"),
+    straight before the task slide that opens the module check: 3-6 points, one line each, read at a
+    glance. The design is the same in every module (gb_compose.css section 11); this checks the words.
+    A FAIL here blocks approval like any other - the operator who wants it otherwise approves
+    --despite-findings, and that choice is recorded (L26)."""
+    if str(script.get("module")).lower() == "final":
+        return []
+    R = RULES["recap"]
+    screens = script.get("screens", [])
+    _, sets, _ = plan_of(script)
+    found = []
+
+    def add(sid, field, level, key, **kw):
+        found.append({"where": place(script, sid) if sid else T(script, "s_the_module"), "screen": sid or "", "field": field,
+                      "level": level, "rule": key, "detail": T(script, key, **kw), "fix": ""})
+
+    mc = next((st["opened_by"] for st in sets if st["kind"] == "module-check" and st["opened_by"]), None)
+    recaps = [s for s in screens if s.get("kind") == "slide" and s.get("recap")]
+    if not recaps:
+        if mc:
+            add(None, "", FAIL, "r_no_recap")
+        return found
+    if len(recaps) > 1:
+        add(recaps[1]["id"], "", FAIL, "r_recap_twice", n=len(recaps))
+    rc = recaps[-1]
+    if mc:
+        i = next(n for n, s in enumerate(screens) if s.get("id") == mc)
+        if i == 0 or screens[i - 1] is not rc:
+            add(rc["id"], "", FAIL, "r_recap_place")
+    points = lines_of(rc.get("text", ""))
+    if not R["min_points"] <= len(points) <= R["max_points"]:
+        add(rc["id"], "text", FAIL, "r_recap_points", n=len(points), lo=R["min_points"], hi=R["max_points"])
+    for n, line in enumerate(points, 1):
+        w = len(words(line))
+        if w > R["max_words_per_point"]:
+            add(rc["id"], "text", NOTE, "r_recap_long", i=n, w=w, max=R["max_words_per_point"])
     return found
+
+
+# the design rules (knowledge/design-rules.json) a finding enforces - an operator's choice against one waives it (L26)
+DESIGN_FINDINGS = {"recap": "r_", "three-d-share": "v_3d_share"}
 
 
 def all_findings(script):
@@ -823,6 +953,51 @@ def summary(script):
             "slide_words": sum(wc(s.get("title", ""), s.get("text", "")) for s in sl),
             "note_words": sum(wc(s.get("notes", "")) for s in sl),
             "total_min": sum(minutes(s) for s in screens if s.get("kind") in INSTRUCTOR)}
+
+
+def split_of(script):
+    """L49 - how the class spends the module's minutes: plain theory against everything the trainees do.
+    The programme's hours never change; every theory slide stays - only its minutes shrink (owner, 2026-10-15)."""
+    sc = [s for s in script.get("screens", []) if s.get("kind") in INSTRUCTOR]
+    plain = sum(minutes(s) for s in sc if s.get("kind") == "slide" and not s.get("active"))
+    act = sum(minutes(s) for s in sc if s.get("kind") == "slide" and s.get("active"))
+    tasks = sum(minutes(s) for s in sc if s.get("kind") == "task-slide")
+    practice = sum(minutes(s) for s in sc if s.get("kind") == "activity")
+    total = plain + act + tasks + practice
+    target = RULES["split"]["target_active_share"]
+    share = (total - plain) / total if total else 0.0
+    found = []
+    if total and share < target and str(script.get("module")).lower() != "final":
+        big = sorted((s for s in sc if s.get("kind") == "slide" and not s.get("active")), key=lambda s: -minutes(s))[:3]
+        found.append(("a_low", {"pp": "%.0f" % (100 * (1 - share)), "tp": "%.0f" % (100 * (1 - target)),
+                                "ids": ", ".join("%s (%g min)" % (place(script, s["id"]), minutes(s)) for s in big),
+                                "how": ", ".join(T(script, "tech_" + k) for k in ACTIVE)}))
+    return {"plain": plain, "active_slides": act, "tasks": tasks, "practice": practice, "total": total,
+            "share": share, "target": target, "findings": found}
+
+
+def split_html(e, script):
+    if str(script.get("module")).lower() == "final":
+        return ""
+    sp = split_of(script)
+    if not sp["total"]:
+        return ""
+    rows = "".join('<tr><td>%s</td><td><b>%g</b> %s</td></tr>' % (e(T(script, k)), sp[f], e(T(script, "s_min")))
+                   for k, f in (("a_plain", "plain"), ("a_active_slides", "active_slides"), ("a_tasks", "tasks"), ("a_practice", "practice")))
+    line = T(script, "a_line", p="%g" % sp["plain"], pp="%.0f" % (100 * (1 - sp["share"])), a="%g" % (sp["total"] - sp["plain"]),
+             ap="%.0f" % (100 * sp["share"]), tp="%.0f" % (100 * (1 - sp["target"])), ta="%.0f" % (100 * sp["target"]))
+    tail = "".join("<li>%s</li>" % e(T(script, k, **kw)) for k, kw in sp["findings"])
+    return '<div class="card"><h3>%s</h3><p class="note">%s</p><p><b>%s</b></p><table class="nums">%s</table>%s</div>' % (
+        e(T(script, "a_title")), e(T(script, "a_intro")), e(line), rows,
+        ("<ul>%s</ul>" % tail) if tail else '<p class="note">%s</p>' % e(T(script, "a_on_target")))
+
+
+def bloom_of(course, script):
+    """The Bloom map of this module (L48) - its Sub-ILOs from working_claude/architecture.json when there is one."""
+    rd = lambda n: load(workspace.claude_path(course, n)) if course and os.path.isfile(workspace.claude_path(course, n)) else None
+    arch, prog = rd("architecture.json"), rd("programme.json")
+    am = next((m for m in (arch or {}).get("modules", []) if str(m.get("module")) == str(script.get("module"))), None)
+    return bloom_map.module_map(script, am, prog, arch, mech=mech, where=lambda sid: place(script, sid))
 
 
 # ------------------------------------------------------------------ the review page
@@ -929,6 +1104,35 @@ def task_body(e, V, script, s):
     elif m == "panel_operate":
         out.append('<p class="mh">%s</p><table class="pairs">%s</table>' % (e(T(script, "mm_panel")), "".join(
             "<tr><td>%s</td><td>→</td><td><b>%s</b></td></tr>" % (V(x.split("=", 1)[0].strip()), V(x.split("=", 1)[-1].strip())) for x in ls)))
+    elif m == "find_the_fault":
+        sym = [x.strip().lstrip("!").strip() for x in ls if x.lstrip().startswith("!")]
+        parts = [x for x in ls if not x.lstrip().startswith("!")]
+        out.append('<p class="mh">%s</p><ul>%s</ul><p class="mh">%s</p><table class="pairs">%s</table>' % (
+            e(T(script, "mm_symptoms")), "".join("<li>%s</li>" % V(x) for x in sym), e(T(script, "mm_fault")), "".join(
+                '<tr%s><td><b>%s</b></td><td>%s</td></tr>' % (' class="ok"' if starred(x) else "", V(unstar(x).partition(":")[0].strip()),
+                                                             V(unstar(x).partition(":")[2].strip())) for x in parts)))
+    elif m == "spot_the_error":
+        rows = []
+        for x in ls:
+            line, _, why = x.partition("=>")
+            rows.append('<tr><td>%s</td><td>%s</td></tr>' % (
+                ('<b class="ok">%s</b>' % V(unstar(line))) if starred(line) else V(unstar(line)), V(why.strip()) if why.strip() else ""))
+        out.append('<p class="mh">%s</p><table class="pairs doc">%s</table>' % (e(T(script, "mm_error")), "".join(rows)))
+    elif m == "build_the_plan":
+        good = [x for x in ls if starred(x)]
+        out.append('<p class="mh">%s</p><ol class="steps">%s</ol><p class="mh">%s</p>%s' % (
+            e(T(script, "mm_plan")), "".join("<li>%s</li>" % V(unstar(x)) for x in good), e(T(script, "mm_plan_out")),
+            "".join('<span class="chip">%s</span>' % V(unstar(x)) for x in ls if not starred(x)) or "—"))
+    elif m == "timeline":
+        out.append('<p class="mh">%s</p><ol class="steps">%s</ol>' % (e(T(script, "mm_timeline")), "".join(
+            '<li%s>%s%s</li>' % (' class="ok"' if starred(x) else "", V(unstar(x)), (" ← <b>%s</b>" % e(T(script, "mm_stop"))) if starred(x) else "")
+            for x in ls)))
+    elif m == "compare":
+        opts = s.get("options", [])
+        head = "".join("<th>%s</th>" % V(o) for o in opts)
+        rows = "".join("<tr><td>%s</td>%s</tr>" % (V(x.partition(":")[0].strip()), "".join(
+            "<td>%s</td>" % V(v.strip()) for v in x.partition(":")[2].split("|"))) for x in ls)
+        out.append('<p class="mh">%s</p><table class="pairs"><tr><th></th>%s</tr>%s</table>' % (e(T(script, "mm_compare")), head, rows))
     elif m == "scenario":
         steps = []
         for n, x in enumerate(ls, 1):
@@ -946,6 +1150,7 @@ def render_html(course, script):
     css = "".join(io.open(os.path.join(SKILLS, "course-module-ui", "templates", n), encoding="utf-8").read() + "\n"
                   for n in ("gb_tokens.css", "gb_page.css"))
     css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)   # the style files' comments are for maintainers (L25)
+    css += bloom_map.CSS
     css += """
 .verb{font-family:var(--font)} .screen{page-break-inside:avoid;break-inside:avoid}
 .sid{font-family:var(--mono);color:var(--faint-l);font-size:13px}
@@ -1038,6 +1243,10 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
     else:
         o.append('<p class="note">%s</p>' % e(T(script, "s_textcheck_clean")))
     o.append(media_summary_html(e, V, script))
+    o.append(split_html(e, script))                        # L49 - plain theory against active learning
+    bm = bloom_of(course, script)                         # L48 - suggestions only
+    o.append(bloom_map.module_html(bm, V))
+    blevel = {r["id"]: r for r in bm["rows"]}
 
     # ---- part 1: the instructor tablet
     o.append('<div class="part"><h2>%s</h2><p class="note">%s</p></div>' % (e(T(script, "s_part1")), e(T(script, "s_part1_intro"))))
@@ -1067,6 +1276,8 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
                 e(T(script, "s_layout")), e((MEDIA["layouts"].get(s.get("layout") or "split") or {}).get(script.get("operator_language", "en"), s.get("layout", ""))),
                 e(T(script, "s_minutes")), e(s.get("minutes", "—")),
                 e(T(script, "s_words")), e(T(script, "s_words_n", a=wc(s.get("title", ""), s.get("text", "")), b=wc(s.get("notes", ""))))))
+        if s.get("active"):          # L49 - the trainees do something on this slide
+            o.append('<p class="note"><b>%s:</b> %s</p>' % (e(T(script, "s_active")), e(T(script, "tech_" + s["active"]))))
         if s.get("from_old"):        # L41 - where in the old course this slide comes from, and what changed
             o.append('<p class="note"><b>%s:</b> %s</p>' % (e(T(script, "s_from_old")), e(s["from_old"])))
         if s.get("notes"):
@@ -1092,7 +1303,9 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
             o.append('<dl>%s<dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd>%s</dl></div>' % (
                 ("<dt>%s</dt><dd>%s</dd>" % (e(T(script, "s_correct")), e(s.get("correct", "")))) if uses(s, "options") else "",
                 e(T(script, "s_feedback")), V(s.get("feedback")),
-                e(T(script, "s_mechanic")), e(mech_label(mech(s), script.get("operator_language", "en"))),
+                e(T(script, "s_mechanic")), e(mech_label(mech(s), script.get("operator_language", "en"))) + (
+                    "<br><span class=\"note\">%s: %s</span>" % (e(T(script, "b_q_level")), e(bloom_map.question_line(
+                        blevel[s["id"]], script.get("operator_language", "en")))) if s["id"] in blevel else ""),
                 "" if st["kind"] == "final" else "<dt>%s</dt><dd>%s</dd>" % (
                     e(T(script, "s_taught_on")),
                     e(", ".join(T(script, "s_slide_n", n=n) for n in tn)) if tn else "<b>%s</b>" % e(T(script, "s_taught_nowhere")))))
@@ -1527,6 +1740,11 @@ def cmd_approve(course, module, by, despite=False):
         print("Not approved - the script still has problems:\n" + "\n".join("  - " + x for x in probs))
         return 1
     must = blocking(all_findings(script))
+    chosen = design_choices.load(course)                     # L26: a design rule the operator chose against stops nothing
+    waived = [f for f in must if any(f["rule"].startswith(pre) and rule in chosen for rule, pre in DESIGN_FINDINGS.items())]
+    must = [f for f in must if f not in waived]
+    for f in waived:
+        print("  %s: %s - %s" % (f["where"], f["detail"], design_choices.label(chosen[next(r for r, pre in DESIGN_FINDINGS.items() if f["rule"].startswith(pre))])))
     if must and not despite:
         print("Not approved - the checks found %d thing(s) that must be fixed first:\n%s\n\n"
               "  Fix them in the script (propose, confirm, apply) - or, if the operator has read them and wants the\n"
@@ -1614,6 +1832,17 @@ def render(course, module, quiet=False):
                     print("  - [%s] %s%s: %s%s" % ("must fix" if f["level"] == FAIL else "note", f["where"],
                                                   (", " + f["field"]) if f["field"] else "", f["detail"],
                                                   (" - use instead: " + f["fix"]) if f["fix"] else ""))
+        sp = split_of(script)
+        if sp["total"] and str(script.get("module")).lower() != "final":
+            print("\nPlain theory %g min, active %g min (%.0f %% active; the aim is %.0f %%)." % (
+                sp["plain"], sp["total"] - sp["plain"], 100 * sp["share"], 100 * sp["target"]))
+            for k, kw in sp["findings"]:
+                print("  - [suggestion] " + T(script, k, **kw))
+        bm = bloom_of(course, script)
+        if bm["findings"]:
+            print("\nThe Bloom map has %d suggestion(s) - on the review page, they never stop the module:" % len(bm["findings"]))
+            for k, kw in bm["findings"]:
+                print("  - " + bloom_map.T(bm["lang"], k, **kw))
     return 1 if probs else 0
 
 

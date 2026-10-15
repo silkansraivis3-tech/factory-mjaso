@@ -219,35 +219,57 @@ and the words to replace are in `SKILL.md` (*Every reply to the operator*) and `
 
 ---
 
-## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0; L45, 2.21.0; L46, 2.22.0; L47, 2.24.0)
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0; L45, 2.21.0; L46, 2.22.0; L47, 2.24.0; L48, 2.25.0; L49, 2.26.0; L50, 2.29.0; L51 and the L26 design part, 2.30.0)
 
 Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
 these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
 has landed. The one-line operative form of each is in `SKILL.md`; this is the full text.
 
-**L26 · The operator's request wins, and "the style" means the brand system only.**
-Fixed: the Novikontas brand — its colours, typography and logo use — and the product it is built
-into: the shell, the tokens, the components, the navigation, the tablet system. Nothing else is
-"the style". Everything a colleague asks for about content, structure, emphasis, the number of
-slides, examples, visuals, tasks or wording is **done** — never refused, never watered down, never
-quietly left out because it is "not in the style".
+**L26 · The operator's request wins. The material keeps four hard limits; the design is the person's, after one warning.**
+*(Design part revised by the owner on 2026-10-15, 2.30.0: "if person who uses plugin somehow tells you that he does
+not like it, you need to listen to this, if some of persons ideas conflicts with plugin rules, claude should tell person
+about this risk, but still after person reviews and tells that he wants his way, plugin listens to that" - and "this
+does not affect any material side, only design ... its style+design, no course material side". Until 2.29.0 the brand
+and "the shell, the tokens, the components, the navigation" were fixed as "the style" and could be refused.)*
+
+**The material.** Everything a colleague asks for about content, structure, emphasis, the number of slides,
+examples, tasks or wording is **done** — never refused, never watered down, never quietly left out.
 
 The operator's request in chat **is** the explicit authorisation L18 asks for. It reaches regions an
 expert edited, too: L24 protects an expert's change from the *factory*, not from the operator.
 
-Five limits are hard, and only five:
+Four limits are hard, all of them on the material side, and only four:
 
-1. the Novikontas brand;
-2. the approved programme and its Main ILOs, copied verbatim (L1, L2);
-3. the official hours (L1, L3);
-4. no source, no maritime claim (L4) — a fact the operator states **is** a source: use it, record
+1. the approved programme and its Main ILOs, copied verbatim (L1, L2);
+2. the official hours (L1, L3);
+3. no source, no maritime claim (L4) — a fact the operator states **is** a source: use it, record
    it in `factory-notes.md` as theirs with the date, and list it in the module's content-script
    review (L29);
-5. the offline tablet (L6) — everything bundled, nothing fetched at class time.
+4. the offline tablet (L6) — everything bundled, nothing fetched at class time.
 
 When a request truly hits one of them, say why in one or two plain sentences, offer the closest
 option that works, and do that. *"The Main ILO has to stay word for word, so I added your wording
 as a Sub-ILO under it"* — not a refusal, and not an essay.
+
+**The design** — how the course looks and behaves on the screen: the brand's colours, typeface and logo use, the
+shell and its components, layouts and slide modes, animation, the recap slide and the picture viewer (L51), text
+size and free space (L50), the 3D share (L46). The list, each with the risk to say, is `knowledge/design-rules.json`.
+Here the person decides:
+
+1. Nothing conflicts → do it. No question.
+2. It goes against one of those rules → name the rule and the risk in one or two plain sentences and ask once: one
+   pop-up, *your way* / *the factory's way* (L31). *"The recap closes every other module; without it this one ends
+   differently and the room loses the moment that ties it together. Keep it, or your way?"*
+3. *Your way* → do it fully, and record it: `scripts/design_choices.py add <course> --rule <id> --choice ... --said
+   "<their words>" --risk ...` — a standard in `STANDARDS.md` tagged `[departs from: <id>]` (also
+   `fix.py standard --departs`). Every check that enforces the rule (`check_course_package.py`, `content_script.py`
+   approve, `design_system.py check`) then reports the place as the operator's choice and passes; no build, fix or
+   later session changes it back, and nobody asks again. Only the person removes it — by deleting the line.
+4. *The factory's way* → the rule stays; their words go in `FEEDBACK_LOG.md`.
+
+Why this was needed: the factory did what was asked, and the next build or fix ran a check, the check called the
+wish a FAIL, and it was quietly "repaired" back - the person saw the factory "not listening". **A check is never a
+reason to undo a person's wish**; when one flags it, the answer is step 2.
 
 Every other rule in this factory written as "never", "must not" or "not negotiable" is a rule for
 the factory's **own** choices — what it does when nobody has asked for anything. None of them is a
@@ -760,3 +782,129 @@ explaining in detail what you want to see.' This will reduce failed attempts and
 - **What it cost is said every time.** Each picture is logged on the computer (`~/.config/nano-banana/usage.jsonl`) and
   per module (`working_claude/picture_briefs/M01.json`); each result says the count and the estimate (about €0.10 a
   picture, `NANO_BANANA_EUR_PER_IMAGE`); a video clip costs much more and says so.
+
+**L48 · The Bloom level is measured, and the tablet lifts it.**
+*"My main task is to level up pedagogy - bloom taxonomy needs to be on higher level. That's why we have tablets, because now we can create more difficult and more interesting and more interactive tasks for trainees; before that we used Google Docs / Google Classroom tasks."* - the owner, 2026-10-15.
+
+- **Measured.** Every ILO's level is read from its verb (`knowledge/bloom.json`: English words, Latvian and Russian
+  stems; the highest verb that leads a clause), every task's from how the trainee answers it - its task type's usual
+  level, or the level its author stated with a reason. A verb whose level depends on the sentence is not guessed:
+  it is judged (`bloom/GUIDE.md` §2) and written on the Sub-ILO.
+- **Shown where the operator decides.** The Stage 2 page: what each module's ILOs ask for against what its planned
+  task types reach. Each Stage 3 review page: every question's level, the share at *Apply* or higher (suggested at
+  least half), every question below its Sub-ILO, every Sub-ILO the module check does not reach.
+- **With the way up.** Each gap names the tablet task types that would lift it - operate the panel, set the value,
+  read the instrument for *Apply*; find the hazards, a scenario for *Analyse*; choose-and-justify for *Evaluate*.
+  *Create* is reached by no task type yet - said plainly; new task types for it are a later step.
+- **Within the other laws.** Main ILOs stay verbatim (L2) - a weak verb there is only noted. A Sub-ILO with a weak
+  verb (know, understand) is re-expressed with a verb that can be watched, and the operator approves it. Difficulty
+  is not level: an obscure fact is still *Remember*.
+- **Suggestions first.** In 2.25.0 no Bloom finding stops a page, a check or an approval; the owner decides when a
+  floor becomes a rule.
+
+**L49 · 20 / 80 in class - the programme unchanged, every theory slide kept.**
+*"Now most courses are 80/20 - 80 theory, 20 practical. On paper, in the programmes and IMO model courses it stays as it is, but we want to at least come close to 20/80 - 20 plain raw theory, 80 practical: simulators, active learning theory, self-checks, tablet interactive tasks."* And: *"Still you need enough theory ... don't remove existing good theory, because each instructor can skip each slide faster; on paper we have that theory, if someone needs he can read it - but the main teaching activities, how the trainee will gain this knowledge, are in active learning."* - the owner, 2026-10-15.
+
+- **The programme never changes** (L1, L2, L34): its theory and practical hours are what the course is accredited
+  for. What changes is how the class spends them.
+- **Plain against active.** Plain theory is a slide the instructor explains. Active is everything the trainees do:
+  tasks on the tablet, practice, simulator and equipment, and slides marked `"active"` - explain-then-reveal,
+  predict-then-reveal, worked-example, scenario, explore. Aim: plain about 20 %, active about 80 % (L5's Track B, now
+  measured). Stage 2 counts a module's theory minutes less its tasks and its theory-as-activity minutes; Stage 3
+  counts the script's own minutes.
+- **Theory is never removed to get there.** Every good theory slide stays and more may be added; a plain slide
+  keeps its words - they can be read, on the screen and later - and gives up minutes, because the instructor moves
+  through it faster. The minutes go to activity. No suggestion ever says to remove a slide or shorten its text; the
+  slide and notes floors of L36 still apply.
+- **Short cycles.** L36 amended: about 5 minutes and 125 words of new theory before a self-check (was 10 and 250); the
+  words-per-minute floor counts plain theory only, since an active slide's minutes are what the trainees do. Every
+  answer is still taught before its question.
+- **The person decides.** Theory turned into activity is proposed on the Stage 2 page and approved there by the
+  operator - a maritime expert, not an IT person; marking a slide active that is only shown is not allowed. A
+  suggestion in 2.26.0, never a stop.
+- **Proposed per sub-topic, kept or struck one by one (2.27.0).** *"The factory proposes, per sub-topic, how theory
+  can be taught as activity, and the operator ticks or strikes each on the Stage 2 page."* Claude writes the
+  proposals from `knowledge/active-learning.json` (predict-then-reveal, explain-then-reveal, worked example,
+  scenario, explore, self-check - or stays plain, with why), each saying in plain words what the trainees do, its
+  minutes, that the slides stay, and what it needs. The page gives every one **Keep** and **Strike**, the class split
+  now and if all are kept, and a *Copy my choices* line to paste in the chat; `scripts/active_plan.py decide` records
+  exactly what the operator said, logs it with their words, and never deletes a struck line. Nothing is built from a
+  proposal until it is kept; every proposal is decided before Stage 2's "next".
+- **Five new tablet tasks for the higher levels (2.28.0).** *"Tablet interactive tasks - not only drag n drop, choose e.c., something completely different, interesting and creative."* - **find the fault** (symptoms first; tap each
+  part to check it and see its reading; then name the fault - Analyse), **spot the errors** in a filled-in permit, log
+  or plan (tap every wrong line, each then says why - Evaluate), **build the plan** from cards, some of which do not
+  belong (Evaluate; Create when written for a situation), **rebuild the incident** (order the events, then tap where
+  it should have been stopped - Analyse to Evaluate), **compare** options side by side with real figures and choose
+  (Evaluate). No typing, tap and drag only, every one written in the content script's one-box form the operator
+  edits in Word, every one checked word for word on the built page. How each behaves on the tablet:
+  `course-task-ux` §2a.
+
+**L50 · A fix is not a build - find, one list, one yes, change, one check.**
+*"i want for fixes to be faster and still quality. like if i find that in module 1-3 is very much free space, i can tell claude to find all free spaces in other modules, and it will not go to 3-4 qa reviews before that, because it takes time and usage"* And earlier: *"it took me about 1-1.5h to create one module, and then it took about 30min to repair it, why so long to repair, especially when this fix is minor"* - the owner, 2026-10-15.
+
+- **Why.** GAS ADVANCED, 2026-10-09..12 (FEEDBACK_LOG #61-#93): every review fix ran the build's whole process - a
+  fixer agent per module re-measuring every slide at two screen sizes, the orchestrator re-checking, a whole-course
+  QA, a visual sweep. Up to six agents ran at once until the PC was unusable (#71, #85) and the usage limit was hit
+  (#76); *"bro it takes too long"* (#90). The same wish - the end slide (S5), bigger text (S9), 56 px buttons (S10) -
+  was repaired in 19 copies, and fixes made in generated output were lost on the next rebuild (#88). A fix touches a
+  few things, so it checks those things, once.
+- **Its own mode.** A correction to modules that are already built - one, some or all - is the **fix** mode
+  (`retrofit/knowledge/routing.json` `fix_triggers`); "find X in the other modules too" sweeps first. It reads only
+  `fix/GUIDE.md`, the course's `COURSE_STATE.md` and `STANDARDS.md` - never the whole factory.
+- **Find - every module at once.** `scripts/fix.py sweep` measures or reads every module and lists every place,
+  numbered: `--find space | text | overflow | layout` are measured by `scripts/measure_slides.py` - every slide in a
+  hidden Chrome or Edge at 1280 x 800, its animations run to their end, about 4 s a module, one module at a time (the
+  whole 19-module GAS ADVANCED in about 80 s, the same numbers every run, agreeing with the course's own QA);
+  `last-slide` (`--like N`: the same design as module N?), `kind` (`--kind Task` ...) and `words` (`--words "..."`) are
+  read without a browser.
+- **One yes.** The operator sees one list and says yes once for all of it - or "all except 4 and 9". Words changed
+  across many modules go `fix.py propose` (one combined list, nothing changed yet) → `apply --confirmed` (each
+  module's content script changed exactly as `content_script.py apply` does - L29 kept - and the same words written
+  into the built slides: `data-script-field` title / text, `data-title`, the notes into `data-cue`; a slide where that
+  would mean guessing is listed as hand work) → `approve --by` (one approval for every module in the batch).
+- **Change once.** A part every module uses - the end-slide recap, the full-screen viewer - is changed once in
+  `course\working_claude\shared\` and copied into each module by `fix.py sync-shared` (a dry run first; `shared.json`
+  maps a file to another place), so every module stays self-contained (L43). A module built by its own generator is
+  changed in the generator, never only in the output.
+- **One check.** `fix.py check --kind words` (`check_script_match.py` and `check_slide_text.py` on the touched
+  modules) | `layout` (the touched modules measured: nothing off the screen, no text under the floor, before → after
+  for the swept slides) | `package` (`check_course_package.py`). Run once, by whoever made the fix, and its numbers
+  reported.
+- **Never in a fix.** A QA agent after the fixer; re-measuring slides that were not touched; two screen sizes unless
+  the operator asked about the projector; a contact sheet of every slide; a whole-course QA; re-reading the whole
+  factory; more than 2 agents at once - agents only for hand work in more than 3 modules.
+- **Said once, kept for good.** A course-wide wish said once becomes a numbered standard in
+  `course\working_claude\STANDARDS.md` (`fix.py standard --add "..." --said "<operator's words>"`); builders build new
+  modules to it and fixes keep it - it is never repaired again.
+- **The course's own numbers.** `knowledge/fix-rules.json` is the authority: ink at least 45 % of a teaching slide,
+  empty below the content at most 25 %, text at least 16 px, overflow tolerated up to 8 px - from GAS ADVANCED's own
+  QUALITY_BAR and its standard S9.
+- **Quality kept where it belongs.** The full sign-off - the 14 checks in `SKILL.md` *Verify before reporting done* -
+  stays for builds, retrofits and handover.
+
+**L51 · Every picture opens full screen, and every module closes with the same recap.**
+*(Owner, 2026-10-15: "i want to add that all images, every picture, illustration, explanitory image e.c., can be
+clicked and be full screened, and later you can close it as well" - and "each module should of course end in module
+check, but before it it should be beautiful summary in same design, like beautiful animation, boxes, main points what
+to take away from this module, and all modules should be same closing slide design.")*
+
+- **The picture viewer.** One shared engine, `gb_zoom.js` + `gb_zoom.css` (`course-module-ux/assets`, copied into
+  every module's `assets/` by `design_system.py install`), loaded by every page that shows a picture: the deck, every
+  task, the module check, the handout. It starts by itself; nothing is wired per picture. Every `<img>` and inline
+  drawing of 64 px or more opens with a tap; it closes with the X (56 px), a tap on the dark around it, Esc, a swipe
+  down, Back on the tablet, or the deck moving on - the arrows close it *and* turn the slide, so the instructor's Next
+  is never blocked. Pinch, double-tap or + / − zoom (never a gesture as the only way, L42). A picture the trainee
+  answers **on** - hotspots or labels laid over it - gets a corner ⤢ button instead, so a tap stays the answer; a
+  closed card still opens first (course-task-ux §8). Left out by themselves: pictures in buttons and links, the logo,
+  driven `[data-motion]` figures, video and 3D (their own controls); `data-no-zoom` leaves out any other.
+  `check_course_package.py`: a page with a picture and no viewer must be fixed.
+- **The recap.** Every teaching module (not the final assessment) closes with **one** recap slide, straight before the
+  task slide that opens the module check. In the script: a `slide` with `"recap": true`; its text is 3-6 points, one
+  line each, *"Short title - one sentence"* (`knowledge/theory-rules.json` → `recap`); its visual_kind is none - the
+  design is the picture; the slide word floor does not apply, the notes floor does. Built in the one shared design,
+  `.slide.dark.recap` (`gb_compose.css` section 15): numbered boxes rise in one after another, a blue-to-amber rule
+  draws across each, then "Next: the module check" arrives - about two seconds, then still; reduced motion shows it
+  at once. The approved words stay whole (the " - " is kept, hidden). `content_script.py` (r_ findings, must-fix)
+  and `check_course_package.py` (the slide before the module check is the recap, with 3-6 points).
+- **Both are design (L26).** A person who wants either one otherwise hears the risk once, and if they keep their way
+  it is recorded as their choice (`design_choices.py`) and every check obeys it.

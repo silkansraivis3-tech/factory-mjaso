@@ -38,11 +38,30 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 ```
 
 - `text` is the **exact visible words** of the slide, not a description of them. One line per line.
+- **The recap closes the module (L51, 2.30.0).** The slide straight before the module check's task slide is the
+  recap: `{"id": "s24", "kind": "slide", "recap": true, "title": "What to take away", "text": "Kept liquid - cold,
+  under pressure, or both
+...", "visual_kind": "none", "notes": "...", "minutes": 2}` - 3 to 6 points, one line
+  each, *"Short title - one sentence"*, 24 words or fewer, the module's main points in the words its slides used.
+  The slide word floor does not apply to it; the notes floor does. It is built in the one shared design (every
+  module the same). Missing or misplaced, it is a must-fix - unless the person chose otherwise after hearing the
+  risk (L26, `design_choices.py`), and then approval passes and names their choice.
+- **20 / 80 in class (L49, 2.26.0).** A slide where the trainees do something gets `"active"`:
+  `explain-then-reveal`, `predict-then-reveal`, `worked-example`, `scenario` or `explore` (they work the
+  model or diagram themselves) - and its notes say what they do. Never mark a slide that is only shown.
+  The review page shows plain theory against active minutes (aim: 20 / 80). To get there, **keep every
+  theory slide** and give the plain ones fewer minutes - the words stay to be read - and the minutes to
+  activity; never shorten or remove good theory. Theory may be added.
+- **Bloom (L48, 2.25.0).** A question may say which Sub-ILO it checks (`"sub_ilo": "1.2"`), and - only when
+  it is written above its task type's usual level - its level and why (`"bloom": 4, "bloom_why": "..."`).
+  The review page then shows every question below its Sub-ILO and how the tablet would lift it.
+  Aim the tasks at the Sub-ILO's level, and above *Remember* wherever the content allows (`bloom/GUIDE.md`).
 - **Enough theory (L36, `knowledge/theory-rules.json`).** A slide carries the teaching itself - the facts,
   numbers, names and reasons its Sub-ILO needs - not a headline (50-150 words, title included); the notes
   carry what the instructor explains, adds or asks beyond it (30 words or more); the module's slides and
-  notes together fill its theory minutes (40 words a minute or more). A self-check comes only after a
-  block of new theory (10 min and 400 words since the last task), and every question's correct answer
+  notes together fill its PLAIN theory minutes (25 words a minute or more - an active slide's minutes are
+  what the trainees do). A self-check comes only after a block of new theory (5 min and 125 words since the
+  last task - short cycles, L49), and every question's correct answer
   must already be in the slides before it - write the slide that teaches it first, then the question.
   A module with less theory than that has no self-check; its module check covers it.
 - Course text (titles, text, questions, answers, feedback) is in COURSE_LANGUAGE; the notes on the

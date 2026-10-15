@@ -116,6 +116,14 @@ asked to check its own work confirms it.
 
 ---
 
+## Rule 5 · The build has this QA; a fix does not (L50)
+
+This pipeline — builder, a different agent as QA, then the cross-module pass — is for **building**. Once the
+modules exist, the operator's review points and every "in all modules too" are **fixes**: `fix/GUIDE.md`, one sweep,
+one list, one yes, one check by whoever made the change. Do not start this workflow, a fixer agent per module or a QA
+agent behind a fix (GAS ADVANCED, FEEDBACK_LOG #61–#93: that is how a small fix took 30 minutes). A course-wide wish
+the operator states during review goes into `working_claude\STANDARDS.md`, and builders still to run read it.
+
 ## What the agents are
 
 | | Model | Tools | Reads | Writes |

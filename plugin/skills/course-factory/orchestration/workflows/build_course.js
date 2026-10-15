@@ -114,6 +114,13 @@ Never the registry, never course.json, never the handout, never another module. 
 are assembled afterwards by one process, because two agents writing one file is a lost
 write that no test catches.
 
+The course's standards come first (L50): if ${A.course}/working_claude/STANDARDS.md exists,
+read it and build to every S-line in it — they are the operator's wishes for every module
+(the end slide, text size, button size ...), said once so no module needs repairing for
+them again. A part every module uses lives once in ${A.course}/working_claude/shared/:
+copy it into your module's assets/ (or use course-factory/scripts/fix.py sync-shared);
+never write your own version of it.
+
 Your minutes are fixed and are not negotiable — anything that will not fit becomes
 self-study, and you record it so the handout can pick it up (L1).
 
