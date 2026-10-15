@@ -513,6 +513,10 @@ figure{margin:0}
   font-size:var(--fs);line-height:1.45;font-weight:600}
 .slide.dark .copy .call{background:var(--blue);color:var(--on-blue)}
 .copy .call b{color:inherit}
+/* a stepping figure washes a lit callout light: its white text turns to ink (dark slide: light text) -
+   white on the light wash was unreadable (M03, 2026-10-15) */
+.copy .call[data-i].lit,.copy .call[data-i].cur{color:var(--ink)}
+.slide.dark .copy .call[data-i].lit,.slide.dark .copy .call[data-i].cur{color:var(--txt-d)}
 /* a box that holds a heading and its list: the heading line is bold */
 .copy div.box > p:first-child{font-weight:700;margin:0 0 .35em}
 /* a real photograph under the words, beside the drawing */

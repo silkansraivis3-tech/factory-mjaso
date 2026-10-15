@@ -615,13 +615,21 @@
 
   /* in a compiled deck: the figure starts fresh each time its slide is entered, stops when it is
      left, and lights the slide's own text line for each step - spec step "line": 2 (or [2, 3])
-     marks [data-i="2"] .cur, and the lines of the steps before it .lit (gb_compose.css) */
+     marks [data-i="2"] .cur, and the lines of the steps before it .lit (gb_compose.css).
+     The deck's own Next / Back (button, arrow keys, swipe) walk its steps before the slide changes -
+     gb_deck.js hook "step"; a module no longer carries its own copy of this (M03, 2026-10-15) */
   root.GB_HOOKS = root.GB_HOOKS || {};
   function deck(f, slide) {
     var id = slide.id, before = root.GB_HOOKS[id] || {};
     root.GB_HOOKS[id] = {
       enter: function () { if (before.enter) before.enter(); f.go(0, true); },
-      leave: function () { if (before.leave) before.leave(); f.stop(); }
+      leave: function () { if (before.leave) before.leave(); f.stop(); },
+      step: function (dir) {
+        if (before.step && before.step(dir)) return true;
+        if (dir > 0 && f.n < f.steps()) { f.next(); return true; }
+        if (dir < 0 && f.n > 0) { f.prev(); return true; }
+        return false;
+      }
     };
     function ids(s) { return s && s.line != null ? [].concat(s.line) : []; }
     f.on('step', function (n) {
