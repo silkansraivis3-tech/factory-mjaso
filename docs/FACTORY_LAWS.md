@@ -388,8 +388,21 @@ only kept ones are built (`knowledge/active-learning.json`, `active/GUIDE.md`, `
 2.28.0 five new tablet tasks reach the higher Bloom levels - find the fault, spot the errors, build the plan, rebuild the incident, compare (`course-task-ux` §2a). → `course-factory`
 (`knowledge/theory-rules.json` split, `scripts/content_script.py`, `scripts/make_architecture_page.py`, 2.26.0)
 
-**All forty-nine laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L49 are enforced first through `course-factory/SKILL.md`'s
+**L50 · A fix is not a build - find, one list, one yes, change, one check.** Owner, 2026-10-15: fixes faster and
+still quality; "find all free spaces in other modules" must not go through 3-4 QA reviews first. On GAS ADVANCED a
+module took 1-1.5 h to build and a minor fix about 30 min, because every fix ran the build's whole process. A
+correction to modules already built (one, some or all) is the **fix** mode: it reads only `fix/GUIDE.md`, the course's
+`COURSE_STATE.md` and `STANDARDS.md`; finds every place in every module at once (measured at 1280 x 800 in a hidden
+browser, one module at a time) as one numbered list; the operator says yes once for all of it; words change in the
+content script and the built slides together (L29 kept), a part every module uses is changed once in
+`working_claude\shared\` and copied into each module (L43 kept), a module with its own generator is changed in the
+generator; then one check for the kind of change, run once by whoever made the fix - no QA agent after the fixer, no
+untouched slide re-measured, no whole-course QA, at most 2 agents at once. A course-wide wish said once becomes a
+numbered standard and is never repaired again. The full sign-off stays for builds, retrofits and handover.
+→ `course-factory` (`fix/GUIDE.md`, `knowledge/fix-rules.json`, `scripts/fix.py`, `scripts/measure_slides.py`, 2.29.0)
+
+**All fifty laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L50 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

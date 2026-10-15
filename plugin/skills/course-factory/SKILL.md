@@ -9,7 +9,9 @@ description: >
   module like GAS BASIC", "make these modules presentable", "make this module production-ready",
   "improve the existing presentation / course UX", "modernise this existing course", "apply Course
   Factory to this module", "make this module more visual and interactive", or the same intent in
-  Latvian or Russian. In retrofit the course CONTENT is locked and the existing DELIVERY
+  Latvian or Russian; and on FIXES to modules already built - "fix this in all modules", "the last slide
+  is bad in every module", "find the same free space in the other modules", "text bigger everywhere". In
+  retrofit the course CONTENT is locked and the existing DELIVERY
   implementation is not - screens, layout, visuals, animation and interaction are rebuilt to the
   canonical product, and the operator never has to name a skill, a validator or a folder. Owns
   mode selection, the accredited-hours law, ILO immutability, the content-lock/delivery-freedom
@@ -105,6 +107,7 @@ row wins** — even before its step has been built out. Full text: `references/l
 | **L47** | **A generated picture only after the person described it and said yes** (owner, 2026-10-14: about €0.10 a picture, four developers redoing them use the budget up). Places first (`scripts/picture_briefs.py list`); one place at a time, eight plain questions with a suggestion each (`knowledge/media-and-tasks.json` → `generation_brief`); the prompt shown; generated once on a yes - the nano-banana tools refuse without the person's words; a redo needs a new yes; the count and cost said every time | now (2.24.0) |
 | **L48** | **The Bloom level is measured, and the tablet lifts it** (owner, 2026-10-15: *"bloom taxonomy needs to be on higher level - that's why we have tablets"*). Every ILO's level read from its verb, every task's from how it is answered (`knowledge/bloom.json`); the Stage 2 page and every Stage 3 review page show where the course is, every task below its Sub-ILO, and the tablet task types that would lift it - **suggestions only**; Main ILOs stay verbatim (L2), a weak Sub-ILO verb is re-expressed with the operator's approval. Read `bloom/GUIDE.md` when judging or lifting a level; `scripts/bloom_map.py` | now (2.25.0) |
 | **L49** | **20 / 80 in class - the programme unchanged, every theory slide kept** (owner, 2026-10-15). On paper the programme stays (L1); in class plain theory - the instructor explaining - aims at a fifth of the minutes, the rest the trainees do something: tasks, practice, simulator, and slides marked `"active"` (explain-then-reveal, predict-then-reveal, worked-example, scenario, explore). **Theory is never removed to get there** - a plain slide keeps its words (it can be read, the instructor moves faster) and gives up minutes; good theory may be added. Theory in ~5-minute cycles before a task. Measured on the Stage 2 page (theory-as-activity with minutes) and every Stage 3 review page - a suggestion, never a stop. `knowledge/theory-rules.json` → `split`. **The factory proposes, the operator decides** (2.27.0): per sub-topic, how its theory is learned by doing - written for a maritime expert, not an IT person - each kept or struck on the Stage 2 page; only kept ones are built. Read `active/GUIDE.md` at Stage 2; `scripts/active_plan.py`. **Five new tablet tasks** for the higher Bloom levels (2.28.0): find the fault, spot the errors, build the plan, rebuild the incident, compare | now (2.26.0-2.28.0) |
+| **L50** | **A fix is not a build - find, one list, one yes, change, one check** (owner, 2026-10-15: *"i want for fixes to be faster and still quality ... it will not go to 3-4 qa reviews"*). A correction to built modules - one, some or all - reads only `fix/GUIDE.md`, COURSE_STATE and the course's `STANDARDS.md`; "find it in the others" is one sweep of every module (`scripts/fix.py sweep`, measured in a hidden browser by `scripts/measure_slides.py`); the operator says yes once for the whole list; words go through every content script in one batch and into the built slides; a part every module uses is changed once and copied (`sync-shared`); a wish for every module becomes a standard; then **one** check for the kind of change, by whoever made it - no QA agent after the fixer, no whole-course QA, at most 2 agents. `knowledge/fix-rules.json` | now (2.29.0) |
 | **L41** | **The old course is the foundation.** Read it whole at intake (`scripts/old_course.py inventory`, and `images` for its pictures); at the Stage 2 STOP every module says what it **keeps**, what it **modernises and makes digital**, and what it **adds** | now (2.19.0) |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
@@ -140,7 +143,8 @@ predict-then-reveal, worked example then own attempt. More practice than theory;
 | **plan** | turn an accredited programme into a module set with hours that add up | `hours/GUIDE.md` |
 | **retrofit** | upgrade, redesign, modernise or "make presentable" material that **already exists** | `retrofit/GUIDE.md` |
 | **preview** | let a colleague SEE the course — "how does it look", "let me review it", "open it in the browser" | `course-tablet-publisher` → `references/preview-and-approval.md` |
-| **edit** | make the content or structure change the operator named — add, remove, split, merge, reword, keep, more examples. **Do it** (L26) | `retrofit/knowledge/routing.json` § edit_triggers |
+| **edit** | make the content or structure change the operator named — add, remove, split, merge, reword, keep, more examples. **Do it** (L26) | `retrofit/knowledge/routing.json` § edit_triggers; once the module is built, check it as a fix (`fix/GUIDE.md` §4) |
+| **fix** | correct modules that are **already built** — one, some or **all**: "the last slide in every module", "find the same free space in the others", "text bigger everywhere", the operator's review points. Find every place at once, one list, one yes, change, **one** check (L50) | `fix/GUIDE.md` — and nothing else |
 | **restyle** | make one **narrow** cosmetic change and nothing else | `retrofit/knowledge/routing.json` § restyle |
 | **ship** | put an **approved** course onto the trainee and instructor terminals | `tablet/GUIDE.md`, and `course-tablet-publisher` owns the act |
 | **audit** | check an existing course against the programme and the terminals | `coverage/GUIDE.md`, then both lanes' verify sections |
@@ -423,6 +427,9 @@ companion file — a marker used and never reported is the failure this rule exi
 ---
 
 ## Verify before reporting done
+
+**This list is the sign-off of a build, a retrofit and the handover — not of a fix.** A fix runs only the one check
+for its kind of change (`fix/GUIDE.md` §4, L50).
 
 Run these, read the output, then report. A green exit is not proof the work happened — inspect
 the line for the thing you changed. **Why each check exists, and what got through without it:

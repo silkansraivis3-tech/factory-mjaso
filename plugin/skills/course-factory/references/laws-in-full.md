@@ -219,7 +219,7 @@ and the words to replace are in `SKILL.md` (*Every reply to the operator*) and `
 
 ---
 
-## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0; L45, 2.21.0; L46, 2.22.0; L47, 2.24.0; L48, 2.25.0; L49, 2.26.0)
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0; L45, 2.21.0; L46, 2.22.0; L47, 2.24.0; L48, 2.25.0; L49, 2.26.0; L50, 2.29.0)
 
 Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
 these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
@@ -816,3 +816,46 @@ explaining in detail what you want to see.' This will reduce failed attempts and
   (Evaluate). No typing, tap and drag only, every one written in the content script's one-box form the operator
   edits in Word, every one checked word for word on the built page. How each behaves on the tablet:
   `course-task-ux` §2a.
+
+**L50 · A fix is not a build - find, one list, one yes, change, one check.**
+*"i want for fixes to be faster and still quality. like if i find that in module 1-3 is very much free space, i can tell claude to find all free spaces in other modules, and it will not go to 3-4 qa reviews before that, because it takes time and usage"* And earlier: *"it took me about 1-1.5h to create one module, and then it took about 30min to repair it, why so long to repair, especially when this fix is minor"* - the owner, 2026-10-15.
+
+- **Why.** GAS ADVANCED, 2026-10-09..12 (FEEDBACK_LOG #61-#93): every review fix ran the build's whole process - a
+  fixer agent per module re-measuring every slide at two screen sizes, the orchestrator re-checking, a whole-course
+  QA, a visual sweep. Up to six agents ran at once until the PC was unusable (#71, #85) and the usage limit was hit
+  (#76); *"bro it takes too long"* (#90). The same wish - the end slide (S5), bigger text (S9), 56 px buttons (S10) -
+  was repaired in 19 copies, and fixes made in generated output were lost on the next rebuild (#88). A fix touches a
+  few things, so it checks those things, once.
+- **Its own mode.** A correction to modules that are already built - one, some or all - is the **fix** mode
+  (`retrofit/knowledge/routing.json` `fix_triggers`); "find X in the other modules too" sweeps first. It reads only
+  `fix/GUIDE.md`, the course's `COURSE_STATE.md` and `STANDARDS.md` - never the whole factory.
+- **Find - every module at once.** `scripts/fix.py sweep` measures or reads every module and lists every place,
+  numbered: `--find space | text | overflow | layout` are measured by `scripts/measure_slides.py` - every slide in a
+  hidden Chrome or Edge at 1280 x 800, its animations run to their end, about 4 s a module, one module at a time (the
+  whole 19-module GAS ADVANCED in about 80 s, the same numbers every run, agreeing with the course's own QA);
+  `last-slide` (`--like N`: the same design as module N?), `kind` (`--kind Task` ...) and `words` (`--words "..."`) are
+  read without a browser.
+- **One yes.** The operator sees one list and says yes once for all of it - or "all except 4 and 9". Words changed
+  across many modules go `fix.py propose` (one combined list, nothing changed yet) → `apply --confirmed` (each
+  module's content script changed exactly as `content_script.py apply` does - L29 kept - and the same words written
+  into the built slides: `data-script-field` title / text, `data-title`, the notes into `data-cue`; a slide where that
+  would mean guessing is listed as hand work) → `approve --by` (one approval for every module in the batch).
+- **Change once.** A part every module uses - the end-slide recap, the full-screen viewer - is changed once in
+  `course\working_claude\shared\` and copied into each module by `fix.py sync-shared` (a dry run first; `shared.json`
+  maps a file to another place), so every module stays self-contained (L43). A module built by its own generator is
+  changed in the generator, never only in the output.
+- **One check.** `fix.py check --kind words` (`check_script_match.py` and `check_slide_text.py` on the touched
+  modules) | `layout` (the touched modules measured: nothing off the screen, no text under the floor, before → after
+  for the swept slides) | `package` (`check_course_package.py`). Run once, by whoever made the fix, and its numbers
+  reported.
+- **Never in a fix.** A QA agent after the fixer; re-measuring slides that were not touched; two screen sizes unless
+  the operator asked about the projector; a contact sheet of every slide; a whole-course QA; re-reading the whole
+  factory; more than 2 agents at once - agents only for hand work in more than 3 modules.
+- **Said once, kept for good.** A course-wide wish said once becomes a numbered standard in
+  `course\working_claude\STANDARDS.md` (`fix.py standard --add "..." --said "<operator's words>"`); builders build new
+  modules to it and fixes keep it - it is never repaired again.
+- **The course's own numbers.** `knowledge/fix-rules.json` is the authority: ink at least 45 % of a teaching slide,
+  empty below the content at most 25 %, text at least 16 px, overflow tolerated up to 8 px - from GAS ADVANCED's own
+  QUALITY_BAR and its standard S9.
+- **Quality kept where it belongs.** The full sign-off - the 14 checks in `SKILL.md` *Verify before reporting done* -
+  stays for builds, retrofits and handover.

@@ -67,6 +67,10 @@ course-factory/
 ├── knowledge/active-learning.json       the patterns proposals are written from (fits, what the trainees do, minutes), the rules, the statuses
 ├── scripts/active_plan.py, test_active_plan.py   list what waits; decide - kept / struck, logged with the operator's words, page re-rendered
 ├── scripts/test_new_task_types.py      the five tasks for the higher Bloom levels, end to end (L49 step 4, 2.28.0)
+├── fix/GUIDE.md                         READ IN: fix mode - a correction to built modules: find, one list, one yes, change, one check (L50, 2.29.0)
+├── knowledge/fix-rules.json             the sweeps and their thresholds, the check for each kind of change, what never runs in a fix, standards, shared parts
+├── scripts/fix.py, test_fix.py          sweep / propose / apply / approve / check / standard / sync-shared - every module at once, one yes for all of it
+├── scripts/measure_slides.py            every slide of many modules at 1280 x 800 in a hidden Chrome or Edge, animations finished, ~4 s a module
 │                                          knowledge/media-and-tasks.json three_d: 3D on at most half the slides, where it makes sense, full quality, smooth (L46, 2.22.0)
 ├── scripts/old_course.py, test_workspace.py   the old course read whole, its pictures copied out (L41, 2.19.0)
 ├── knowledge/media-and-tasks.json        the kinds of picture and the ways of answering, who makes each, the variety floors (L37, L38, 2.18.0)
@@ -610,6 +614,34 @@ the events of an incident, the figures in compare - is not counted toward 'was t
 fault, the stop point and the chosen option are. `course-task-ux` §2a says how each behaves on the tablet. No
 tablet engine is written yet - building the task pages is Phase 5 step 6. `test_new_task_types.py` runs each
 through validate, the review page, the Bloom map and `check_script_match.py` on a built module.
+
+## 4y · Fast fixes, quality kept (2.29.0, 2026-10-15)
+
+The owner: "i want for fixes to be faster and still quality. like if i find that in module 1-3 is very much free space, i can tell claude to find all free spaces in other modules, and it will not go to 3-4 qa reviews before that, because it takes time and usage." On GAS ADVANCED (FEEDBACK_LOG #61-#93) a
+module took 1-1.5 h to build and a minor fix about 30 min: every fix ran the build's whole process - a fixer agent per
+module re-measuring every slide at two sizes, the orchestrator re-checking, a whole-course QA, a visual sweep; up to
+six agents at once until the PC was unusable (#71, #85) and the usage limit hit (#76); the same wish (S5, S9, S10)
+repaired in 19 copies; fixes in generated output lost on rebuild (#88). Now a **fix** mode (`routing.json`
+`fix_triggers`) reads `fix/GUIDE.md`, `COURSE_STATE.md` and `STANDARDS.md` only. `scripts/fix.py`: `sweep --find
+space | text | overflow | layout | last-slide | kind | words` lists every place in every module, numbered; `propose`
+→ `apply --confirmed` → `approve --by` takes words across many modules through each content script exactly as
+`content_script.py apply` does (L29) and writes them into the built slides (`data-script-field`, `data-title`, notes
+into `data-cue`), listing what would need guessing as hand work, and names a module with its own generator so the
+words go there too; `sync-shared` copies `working_claude\shared\` into every module (dry run first, `shared.json` for
+another place; L43 kept); `check --kind words | layout | package` runs once on the touched modules; `standard --add
+--said` numbers a course-wide wish in `STANDARDS.md`. `knowledge/fix-rules.json` is the authority - thresholds, the
+check per kind of change, `never_in_a_fix`, at most 2 agents. `scripts/measure_slides.py` serves the course (never
+file://), opens each deck in a hidden Chrome or Edge calibrated to exactly 1280 x 800, presses Start and Next to the
+end on a fast virtual clock, and measures each slide with `course-module-ux`'s `audit_compose.js` (ink, empty below,
+smallest text, overflow) - the whole 19-module GAS ADVANCED in about 80 s, the same numbers every run, agreeing with
+the course's own QA. Three lessons from building it on GAS ADVANCED: several hidden browsers at once left three of four
+modules reading 0 % on every slide, while alone they measured the same to the last per cent - so one module at a time is
+the default (`--workers` is there, said to be less reliable) and a module that comes back broken or mostly empty is
+measured again, alone; measured mid-animation, slides read small text and empty space that the room never sees - so
+every entrance animation and transition is run to its end first; and the thresholds are the course's own QUALITY_BAR
+numbers (ink 45 %, text 16 px) and S9's "space up and down", not the factory's sign-off minimum (12.5 px). The full
+sign-off - the 14 checks in `SKILL.md` *Verify before reporting done* - stays for builds, retrofits and handover.
+Tests: `scripts/test_fix.py`.
 
 ## 5 · Known gaps / before this goes live
 

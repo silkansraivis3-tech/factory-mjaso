@@ -1,0 +1,52 @@
+{
+  "_authority": "L50 - fast fixes, quality kept (owner, 2026-10-15). fix/GUIDE.md and scripts/fix.py read this file; change a number here and both follow.",
+  "_why": "GAS ADVANCED, 2026-10-09..12 (FEEDBACK_LOG #61-#93): one module took 1-1.5 h to build and a small fix about 30 min, because every fix went through the build's whole process - a fixer agent per module, each re-measuring every slide at two sizes, then the orchestrator re-checking, then a whole-course QA, then a visual sweep; up to six agents at once until the PC was unusable and the usage limit hit (#71, #76, #85, #90: 'bro it takes too long'). A fix is not a build: it touches a few things, so it checks those things, once.",
+
+  "scope_words": {
+    "all": ["all modules", "every module", "each module", "in all", "everywhere", "whole course", "other modules", "the others", "rest of the modules", "visos moduļos", "visiem moduļiem", "citos moduļos", "во всех модулях", "все модули", "в остальных модулях"],
+    "find_first": ["find", "look for", "search", "check where", "same problem", "same mistakes", "similar mistakes", "like in module", "atrodi", "meklē", "найди", "такие же"]
+  },
+
+  "sweeps": {
+    "space":    {"what": "slides with too much free space", "measured": true,
+                 "ink_floor": 0.45, "empty_bottom_max": 0.25,
+                 "_from": "GAS ADVANCED QUALITY_BAR: teaching slides ink >= 45 % at 1280 x 800; S9 'space up and down from that is awfully much'",
+                 "sparse_kinds": ["Task", "Check", "Hand-off", "Opener", "Title"],
+                 "_sparse": "task-start, check, opener and end slides are listed separately - sparer by design, but QUALITY_BAR #4 says they are not empty either"},
+    "text":     {"what": "slides with text too small to read in the room", "measured": true, "floor_px": 16,
+                 "_from": "QUALITY_BAR #3: every text run >= 16 px at 1280 x 800 (floor.json's 12.5 px is the sign-off minimum, not the course's own)"},
+    "overflow": {"what": "slides whose content runs off the screen", "measured": true, "tolerance_px": 8},
+    "layout":   {"what": "space, text size and overflow together - one measurement gives all three", "measured": true},
+    "last-slide": {"what": "every module's last slide, and whether it has the same design as a reference module (--like N)",
+                   "measured": false, "same_design_at": 0.6,
+                   "end_kinds": ["Hand-off", "End", "End slide"], "end_title_words": ["complete", "end of module", "end of the course", "beigas", "конец"]},
+    "kind":     {"what": "every slide of one kind (--kind Task, Check, Hand-off ...)", "measured": false},
+    "words":    {"what": "every slide and script screen that says a phrase (--words \"...\")", "measured": false}
+  },
+
+  "checks": {
+    "_rule": "After a fix, run ONLY the check for the kind of change - once, by whoever made the fix. No second checker, no orchestrator re-check, no whole-course QA, no screenshot contact sheet, no second screen size unless the change was about that size.",
+    "words":   {"for": "slide or task words, titles, instructor notes changed", "runs": ["check_script_match.py per touched module", "check_slide_text.py per touched module"]},
+    "layout":  {"for": "space, size, position, spacing, fonts, a picture made bigger, CSS", "runs": ["measure_slides.py on the touched modules at 1280 x 800: no overflow, no text under the floor; before -> after for swept slides"]},
+    "package": {"for": "a file added, moved, renamed or linked; a shared file copied into modules", "runs": ["check_course_package.py on the course"]},
+    "look":    {"for": "a new or changed component, animation or interaction", "runs": ["layout", "one look at ONE changed slide in the browser pane - not every slide, not every module"]}
+  },
+
+  "never_in_a_fix": [
+    "a QA agent after the fixer - the fixer runs the check itself and reports its numbers",
+    "re-measuring slides that were not touched",
+    "two screen sizes, unless the operator asked about the projector",
+    "a contact sheet / screenshots of every slide",
+    "a whole-course QA pass - that is for the build's sign-off and the handover",
+    "re-reading the whole factory - fix/GUIDE.md, COURSE_STATE.md and STANDARDS.md are enough",
+    "more than 2 agents at once - one session does a scripted fix alone; agents only for hand work in many modules"
+  ],
+
+  "agents": {"max_at_once": 2, "when": "only for hand work (redrawing, re-composing) in more than 3 modules; a scripted change (words, a shared file, a setting) is done by the session itself"},
+
+  "standards": {"file": "STANDARDS.md", "where": "working_claude",
+                "_why": "a course-wide wish the operator said once - 'the last slide like this', 'text bigger', 'all buttons 56 px' - is written down once, numbered, and every new module is built to it, so it is never repaired again (GAS ADVANCED S1-S10 lived only in that course's review folder)"},
+
+  "shared": {"source": "shared", "where": "working_claude", "default_target": "assets",
+             "_why": "a component every module uses (the end-slide recap, the full-screen viewer) is changed once in one place and copied into every module by fix.py sync-shared - each module stays self-contained (L43), and nobody fixes 19 copies by hand"}
+}
