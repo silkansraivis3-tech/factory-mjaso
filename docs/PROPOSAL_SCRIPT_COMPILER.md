@@ -23,16 +23,48 @@ the plugin:
 
 | | |
 |---|---|
-| Work for one module | about 1,700 messages in the build session for one 40-minute module; the course has 16 |
-| Two copies drift | `M01.json` has 20 screens; the built deck has 31 `.slide` sections, 11 of them carry `data-script`; 11 of 20 script titles appear verbatim in the HTML |
-| Every fix made twice | `FEEDBACK_LOG.md` rows 4–17: each wording fix applied to the JSON, then again to the HTML |
-| Layout fixed per module | row 18, "the text is cut off" — fixed by hand in this module only; the next module can repeat it |
+| Work for one module | the build session for one 40-minute module: 547 model calls (main session and 6 helpers), 24 messages from the operator, about 3.4 hours of model work; the course has 16 modules |
+| The words are typed twice | `M01.json` has 20 screens: 11 for the instructor tablet and 9 questions. The deck has exactly those 11 slides, each marked with its script id and every title word for word — correct, but typed a second time by hand and then proved by `check_script_match.py` |
+| Late fixes go in two places | `FEEDBACK_LOG.md` rows 20–22 changed the script after the module was built (row 18 is already Stage 4), so the deck had to be changed to match |
+| Layout fixed per module | row 18: a drawing spilled over the top of slide 7; fixed in this module's own style file (`m01.css`, edited 25 times in the session) — the next module can repeat it |
 | Nothing builds the deck | `content_script.py` builds the review page (`render_html`, :936) and the Word file (`render_docx`, :1129); `gb_key()` (:450) only checks keys. `gb_shell.html:4` says "Paste this. Fill the CAPITALISED placeholders." |
 | Rules loaded per module | `PHASE5_GAP_REPORT.md` §3, point 5 — about 80,000 tokens of rules before the first slide; 8 modules ≈ 640,000 |
 
 The rules that cost the most to load are the ones about *how to write the HTML* — the shell, the
 composition classes, the task-page protocol, the classroom folder rules. A compiler holds them in
 code once, so a module session needs only the script lane and the picture work.
+
+### Measured: how much of the pilot session was HTML work
+
+The pilot's Module 1 session (`8451f44f`, 2026-10-14, with its 6 helper agents) sorted call by call
+by what each call touched. "Context" is the text the model re-reads on every call — the main cost.
+
+| Work | Calls | Model output | Context read | Time |
+|---|---|---|---|---|
+| Writing, reading and checking the module's HTML, CSS and task code | 17 % | 39 % | 18 % | 13 % |
+| Looking at the deck and task pages in the browser (layout, overflow, clicks) | 28 % | 6 % | 32 % | 11 % |
+| **HTML work together** | **45 %** | **45 %** | **50 %** | **23 %** |
+| Pictures, 3D model and its checks | 20 % | 18 % | 19 % | 10 % |
+| Intake and architecture (Stages 1–2, same session) | 11 % | 13 % | 5 % | 9 % |
+| Script, notes, replies to the operator, other | 24 % | 23 % | 26 % | 58 % |
+
+What this means for the saving:
+
+- The **first row disappears** with a compiler — the model no longer writes the deck by hand. That
+  alone is about a fifth of the cost and two-fifths of the writing.
+- The **browser row shrinks but does not vanish**: the layout checks still run once per compiled
+  module, but the fix–reload–measure loops (most of those 155 calls) happen once, in the compiler.
+- So the module build should cost **between a fifth and a half less**, most likely about a third.
+  Modules 2–16 have no intake or architecture work, so their share of HTML work, and the saving, is
+  higher than in Module 1.
+- In clock time the gain is smaller: the session ran 2 h 40 min, and HTML work was 23 % of the
+  model's time, so about **15–25 % faster** — 20 to 40 minutes a module, 5 to 10 hours over 16.
+  Replies, pictures and the operator's own time do not change.
+- Not measured here: the rules loaded per module (row above), which the compiler also reduces.
+
+Method: a script sorted each model call by the files and tools it used; module CSS and task code
+count as HTML work, figures and the 3D model as pictures. Time counts gaps of up to 5 minutes; longer
+gaps are the operator's time and are not counted.
 
 ## 3 · What it is — and what it is not
 
@@ -83,8 +115,9 @@ kind, layout (`split`, `visual_wide`, `visual_full`) and minutes. Likely additio
 - `"figure"` — the hand-made figure file for a slide or a hands-on task (hotspot areas, label points,
   panel controls are already in `answer`; their coordinates would go beside the figure).
 - `"composition"` — only where `layout` is not enough to pick the composition class.
-- screens the deck has but the script does not (opener, section dividers, the hand-off screen) —
-  either generated from the module's data or added as script screens; see question 3 below.
+- screens a future deck might need that the script does not have (a section divider, the hand-off
+  screen after the module check) — either generated from the module's data or added as script
+  screens; see question 3 below. The pilot deck has none: every slide is a script screen.
 
 `content_script.py` keeps its checks; a new field is checked the same way.
 
@@ -105,7 +138,7 @@ the compiler is tested by the same checks that test a hand-built module today:
 |---|---|---|
 | 0 | This proposal | Raivis agrees the direction |
 | 1 | `check_course_package.py` finds `gb-task-done` / `gb-timer` also in a task page's shared script file, not only in the page text (today `:313`, `:321` read the page only) | its tests, plus a fixture page that uses a shared file |
-| 2 | Compiler, instructor-tablet screens only: `slide`, `task-slide`, `activity` → `presentation/index.html` | compile IGF Module 1 into a scratch folder; compare with the hand-built deck screen by screen; `check_script_match.py` passes on 20 of 20; `audit_*.js` in the browser |
+| 2 | Compiler, instructor-tablet screens only: `slide`, `task-slide`, `activity` → `presentation/index.html` | compile IGF Module 1 into a scratch folder; compare with the hand-built deck screen by screen; `check_script_match.py` passes on all 11 slides; `audit_*.js` in the browser |
 | 3 | The shared task file, ways of answering added a few at a time — choose / read first, then order / match / sort / gap-fill, then the picture tasks, then set-value / panel / scenario | per batch: `check_task_pages.py`, `check_course_package.py` with the importer, the "never used a tablet" walkthrough (L42) |
 | 4 | Course files: `COURSE.html`, `_course_shell/course_map.js`, `course.json`, start pages — `classroom-system.json:8` says the factory writes them; no script does yet | the classroom importer |
 | 5 | Wire it into the build order and the module agents: they load the script lane and the picture lanes, not the HTML rules | token count before and after on one module |
@@ -118,8 +151,8 @@ One minor version per step that reaches colleagues; the owner reviews each PR.
 - **A generated deck may look plainer than a hand-tuned one.** Answer: the compiler uses the same
   composition classes, and a slide that needs something special uses a figure file. Step 2's
   side-by-side comparison shows it before anything else is built on it.
-- **Some hand-built slides have no script screen** (11 of 31 in the pilot). If they matter, they must
-  become script screens or generated screens — otherwise they disappear.
+- **A slide that is not in the script would not be built.** In the pilot every slide is a script
+  screen, so nothing is lost; a later module that wants an extra slide adds it to the script.
 - **The tablet.** A shared task file is new for the importer (`course-tablet-publisher/vendor/package-core.mjs`)
   and the app's WebView. Step 1 and the importer run in step 3 prove it on this computer; the real-tablet
   test stays the owner's (L39).
@@ -132,7 +165,7 @@ One minor version per step that reaches colleagues; the owner reviews each PR.
 2. Where should the compiler live — a new `course-factory/compile/` lane (my suggestion: it keeps
    `content_script.py` for writing and approving, and the new lane for building), or inside
    `content_script.py`?
-3. Must every delivered slide exist in the script? (Opener, dividers and the hand-off screen could be
+3. Must every delivered slide exist in the script? (A divider or the hand-off screen could be
    generated from the module's data instead.)
 4. Does the classroom importer need anything for a shared task script file inside a module?
 5. Once the compiler is proven, may the checks in §5 that pass by construction move from "run every
