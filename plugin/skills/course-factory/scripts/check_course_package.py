@@ -166,6 +166,19 @@ def local(ref):
     return unquote(u.path), None
 
 
+def with_scripts(p, pg):
+    """The page's text and the text of every script file of its own it loads - a shared task file
+    (gb_task.js) does the reporting for the page, so gb-task-done / gb-timer may live there."""
+    parts = [read(p)]
+    for tag, k, v in pg.refs:
+        path, _ = local(v)
+        if tag == "script" and k == "src" and path:
+            js = os.path.normpath(os.path.join(os.path.dirname(p), path))
+            if os.path.isfile(js):
+                parts.append(read(js))
+    return "\n".join(parts)
+
+
 def run_importer(folder):
     node = shutil.which("node")
     if not node:
@@ -334,8 +347,8 @@ def check(folder):
                     code, kind, sa = "", "Task" if sub == "tasks" else "Check", {}
                 else:
                     _, code, kind, sa = opened[rel(p)]
-                txt = read(p)
                 tp = parse(p)
+                txt = with_scripts(p, tp)
                 title = tp.title.strip()
                 if code and not title.startswith(code + " " + DASH + " "):
                     probs.append("%s: its <title> must be \"%s %s <title>\" - it is \"%s\"" % (rel(p), code, DASH, title))
