@@ -227,9 +227,12 @@ def main():
         check("a module whose words do not fill its minutes is found", "t_density" in rules_of(slow), rules_of(slow))
         early = copy.deepcopy(SCRIPT)
         order = ["s01", "t01", "q01", "q02", "q03", "s02", "s03", "t02", "m01", "m02", "m03", "m04", "m05"]
-        early["screens"] = [screen(SCRIPT, x) for x in order]
+        early["screens"] = [copy.deepcopy(screen(SCRIPT, x)) for x in order]
+        check("L49: one 5-minute slide of theory is enough before a self-check - short cycles", "t_before_sc" not in rules_of(early), rules_of(early))
+        screen(early, "s01")["minutes"] = 3
+        screen(early, "s02")["minutes"] = 7       # the module's minutes still add up
         rs = rules_of(early)
-        check("a self-check after too little theory is found", "t_before_sc" in rs, rs)
+        check("a self-check after too little theory (3 min) is found", "t_before_sc" in rs, rs)
         nt = [x["screen"] for x in cs.theory_findings(early)[0] if x["rule"] == "t_not_taught"]
         check("... and the question whose answer only comes later is found - the ones already taught are not", nt == ["q03"], nt)
         untaught = copy.deepcopy(SCRIPT)

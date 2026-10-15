@@ -61,7 +61,7 @@
                  "ru": ["и", "или", "затем", "уметь", "умеет", "способен", "должен", "может"]},
 
   "mechanics": {
-    "_how": "The level a tablet task type USUALLY reaches (typical), and the highest it CAN reach when it is written for it (ceiling) - with how. A question may state its own level ('bloom': 4, 'bloom_why': '...') when it is written above the usual; it is then shown as stated, and a stated level above the ceiling is pointed out. Create (6) is reached by no task type yet - new task types for it are part 3 of the Bloom plan.",
+    "_how": "The level a tablet task type USUALLY reaches (typical), and the highest it CAN reach when it is written for it (ceiling) - with how. A question may state its own level ('bloom': 4, 'bloom_why': '...') when it is written above the usual; it is then shown as stated, and a stated level above the ceiling is pointed out. Create (6) is reached only by 'build the plan', written for it (2.28.0) - and in a narrow sense: the trainee composes a plan from given cards. Real creation stays with the practical exercise.",
     "single_choice":      {"typical": 1, "ceiling": 4, "higher": "give a short real situation, and make the right option one that has to be worked out from it - not a fact recalled"},
     "multi_select":       {"typical": 1, "ceiling": 4, "higher": "a situation with several clues; the trainee picks every clue that points to the fault"},
     "cloze":              {"typical": 1, "ceiling": 2, "higher": "gaps that carry the reasoning (because ... so ...) rather than the facts"},
@@ -75,7 +75,12 @@
     "set_value":          {"typical": 3, "ceiling": 3, "higher": ""},
     "panel_operate":      {"typical": 3, "ceiling": 3, "higher": ""},
     "choose_and_justify": {"typical": 5, "ceiling": 5, "higher": ""},
-    "scenario":           {"typical": 4, "ceiling": 5, "higher": "at each step the trainee chooses the action AND the reason, and sees the consequence of a wrong one"}
+    "scenario":           {"typical": 4, "ceiling": 5, "higher": "at each step the trainee chooses the action AND the reason, and sees the consequence of a wrong one"},
+    "find_the_fault":     {"typical": 4, "ceiling": 4, "higher": ""},
+    "spot_the_error":     {"typical": 5, "ceiling": 5, "higher": ""},
+    "build_the_plan":     {"typical": 5, "ceiling": 6, "higher": "give the situation the plan must fit, and cards from more than one procedure, so the trainee composes the plan for it"},
+    "timeline":           {"typical": 4, "ceiling": 5, "higher": "ask where it should have been stopped, and why - the feedback names the barrier that failed"},
+    "compare":            {"typical": 5, "ceiling": 5, "higher": ""}
   },
 
   "floors": {

@@ -160,8 +160,9 @@ def lift_options(target, n=3):
 
 
 def lift_text(target, lang):
-    if target >= 6:
-        return T(lang, "b_lift_create")
+    if target >= 6:      # Create: only a task type written for it comes near (2.28.0); real creation is the practical exercise
+        can = [k for k, v in B["mechanics"].items() if not k.startswith("_") and v["ceiling"] >= 6]
+        return "; ".join(["%s (%s)" % (mech_label(k, lang), B["mechanics"][k]["higher"]) for k in can] + [T(lang, "b_lift_create")])
     usual, can = lift_options(target)
     parts = [mech_label(k, lang) for k in usual]
     parts += ["%s (%s)" % (mech_label(k, lang), B["mechanics"][k]["higher"]) for k in can]

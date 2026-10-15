@@ -312,6 +312,7 @@ trainee task list. → `course-factory` (`scripts/content_script.py`, 2.17.0); t
 **L36 · Enough theory before any task.** A slide carries the teaching; the notes carry the explanation;
 the words fill the minutes; a self-check only after a block of new theory; every answer taught before
 its task opens. Floors in `course-factory/knowledge/theory-rules.json`, checked on the content script.
+Amended by L49 (2.26.0): ~5-minute cycles; the density counts plain theory only.
 → `course-factory` (`scripts/content_script.py`, 2.17.0)
 
 **L37 · Every slide leaves room for its picture.** Each slide names the kind of visual, what it shows, its layout,
@@ -319,7 +320,7 @@ and who makes it - the factory, the image/video generator (context only), the so
 3D scan) or outside help. 40+ min of theory: something that moves, turns or can be explored.
 → `course-factory` (`knowledge/media-and-tasks.json`, `scripts/content_script.py`, 2.18.0); built by `course-visuals` (steps 8-9)
 
-**L38 · Tasks are varied and hands-on.** Fourteen ways of answering, none typing; 2+ per self-check, 3+ per module
+**L38 · Tasks are varied and hands-on.** Nineteen ways of answering since 2.28.0 (fourteen until then), none typing; 2+ per self-check, 3+ per module
 check, "choose one" at most 40 %, a hands-on question in every module. Widens `course-task-ux` §2.
 → `course-factory` (`knowledge/media-and-tasks.json`, `scripts/content_script.py`, 2.18.0); built by `course-task-ux` (step 6)
 *(2.18.1: L37 has no quota - pictures, animation and realistic 3D wherever they show the theory; the picture floors are
@@ -377,8 +378,18 @@ verb, every task's from how it is answered; the Stage 2 and Stage 3 pages show w
 its Sub-ILO, and the tablet task types that would lift it - suggestions in 2.25.0, never a stop. → `course-factory`
 (`knowledge/bloom.json`, `bloom/GUIDE.md`, `scripts/bloom_map.py`, 2.25.0)
 
-**All forty-eight laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L48 are enforced first through `course-factory/SKILL.md`'s
+**L49 · 20 / 80 in class - the programme unchanged, every theory slide kept.** Owner, 2026-10-15: on paper the
+programme stays 80/20; in class plain theory aims at a fifth of the minutes and the trainees do something for the
+rest. Theory is never removed to get there - a plain slide keeps its words and gives up minutes; theory comes in
+~5-minute cycles (L36 amended: 5 min and 125 words before a self-check; the words-per-minute floor counts plain
+theory only). Measured on both review pages - a suggestion. Makes L5's 80 % visible. Since 2.27.0 the factory
+proposes, per sub-topic, how theory is learned by doing, and the operator keeps or strikes each on the Stage 2 page;
+only kept ones are built (`knowledge/active-learning.json`, `active/GUIDE.md`, `scripts/active_plan.py`). Since
+2.28.0 five new tablet tasks reach the higher Bloom levels - find the fault, spot the errors, build the plan, rebuild the incident, compare (`course-task-ux` §2a). → `course-factory`
+(`knowledge/theory-rules.json` split, `scripts/content_script.py`, `scripts/make_architecture_page.py`, 2.26.0)
+
+**All forty-nine laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L49 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

@@ -93,7 +93,9 @@ def main():
           [k for k in cs.MECHANICS if k not in bm.B["mechanics"]])
     usual, _ = bm.lift_options(3)
     check("Apply is reached by hands-on task types", usual and all(bm.MEDIA["mechanics"][k]["hands_on"] for k in usual), usual)
-    check("Create: no task type reaches it yet - and the lift says so", bm.lift_text(6, "en") == bm.T("en", "b_lift_create"))
+    six = bm.lift_text(6, "en")
+    check("Create: only 'build the plan' comes near it (2.28.0) - and the lift says real creation is the practical exercise",
+          bm.mech_label("build_the_plan", "en") in six and bm.T("en", "b_lift_create") in six, six)
 
     print("\n-- the words, in three languages")
     fkeys = ("b_weak_main", "b_weak_sub", "b_unknown", "b_create", "b_plan_below", "b_share_low", "b_q_below", "b_sub_unchecked", "b_q_over")

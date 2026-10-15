@@ -1,0 +1,58 @@
+{
+  "_authority": "Owner, 2026-10-15 (L49 step 3, 2.27.0): 'the factory proposes, per sub-topic, how theory can be taught as activity, and the operator ticks or strikes each on the Stage 2 page.' And: 'if some theory easily can be taught as test, interactive, practical activity, active learning theory, be my guest - but first it needs to be reviewed by the person who uses the plugin, mostly a person who knows nothing in IT and almost everything in maritime.' The catalogue Claude proposes from; the proposals are written into architecture.json (modules[].active_learning) and decided on the Stage 2 page. How to write them: active/GUIDE.md. Read by scripts/make_architecture_page.py and scripts/active_plan.py.",
+
+  "rules": [
+    "At least one proposal per programme sub-topic that carries theory - or a line saying why it stays plain (\"technique\": \"plain\", with \"why\").",
+    "The theory is never removed. A proposal takes MINUTES from plain theory, not slides: the slides stay, the instructor moves through them faster, their words stay to be read.",
+    "Written for a maritime expert who knows nothing about IT: what the trainees DO, in one or two plain sentences, in the operator's language. No technique names, no file or tool names.",
+    "Each proposal names its minutes, and what it needs that the factory cannot make alone (a photo of the real panel, the simulator, a piece of equipment) - in \"needs\".",
+    "Nothing is built from a proposal until the operator keeps it. A struck proposal stays in the file, marked struck, and is never proposed again for that sub-topic unless the operator asks.",
+    "The programme's hours do not change (L1). Practical hours are already active; proposals are for theory hours."
+  ],
+
+  "patterns": {
+    "predict-then-reveal": {
+      "fits": "a process, a cause and its effect, a physical property - what happens when something changes",
+      "does": "The trainees predict what happens, on the tablet or aloud; then the slide or animation shows it, and they compare.",
+      "example": "Before the slide on boil-off: 'The tank is cooled to -162 °C and the ship sails into the tropics. What happens to the pressure, and why?' - then the process animation runs.",
+      "minutes": [3, 8]
+    },
+    "explain-then-reveal": {
+      "fits": "a principle or a reason - why a rule exists, why a design is as it is",
+      "does": "In pairs the trainees explain the reason to each other first; then the slide reveals it and they check what they missed.",
+      "example": "'Why does a type C tank need no secondary barrier?' - two minutes in pairs, then the slide.",
+      "minutes": [3, 6]
+    },
+    "worked-example": {
+      "fits": "a calculation, a reading, a procedure with numbers - cargo quantity, a gas reading, a trim and stability figure",
+      "does": "The instructor works one example on the screen step by step; the trainees do the next one themselves on the tablet, then the next with fewer hints.",
+      "example": "One cargo quantity calculation worked on the screen; the trainees do the second with the same table.",
+      "minutes": [8, 20]
+    },
+    "scenario": {
+      "fits": "a decision, an emergency, a procedure under changing conditions - what the officer does",
+      "does": "A real situation unfolds step by step; at each step the trainees decide what to do and why, and see what follows.",
+      "example": "Gas alarm in the compressor room during loading: what first, who is told, what is closed - three decisions, each with its consequence.",
+      "minutes": [8, 20]
+    },
+    "explore": {
+      "fits": "equipment, a structure, a system - what has a shape, an inside or a layout in space",
+      "does": "The trainees turn, open and search the 3D model or interactive drawing themselves, and find the parts the instructor names.",
+      "example": "The four tank types in a hull section: each trainee opens them and finds which one leans on the hull for its strength.",
+      "minutes": [5, 12]
+    },
+    "self-check": {
+      "fits": "a block of theory just taught - a quick check that it landed",
+      "does": "A few questions on the trainee tablet - operate, sort, tap, decide - with the trainee's own score at the end.",
+      "example": "After the tank types: sort six photographs into the four types; tap the secondary barrier on the drawing.",
+      "minutes": [3, 6]
+    }
+  },
+
+  "statuses": {
+    "proposed": {"en": "proposed - waiting for you", "lv": "ierosināts - gaida jūsu lēmumu", "ru": "предложено - ждёт вашего решения"},
+    "approved": {"en": "kept", "lv": "saglabāts", "ru": "оставлено"},
+    "struck":   {"en": "struck", "lv": "svītrots", "ru": "вычеркнуто"},
+    "_old": "An entry with no status was written before 2.27.0 and counts as kept."
+  }
+}

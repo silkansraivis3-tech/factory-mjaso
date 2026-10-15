@@ -62,6 +62,11 @@ course-factory/
 ├── bloom/GUIDE.md                       READ IN: judging or lifting a Bloom level - Stage 2, Stage 3, retrofit (L48, 2.25.0)
 ├── knowledge/bloom.json                 the six levels, verbs (en / lv / ru stems), each task type's usual and highest level, floors
 ├── scripts/bloom_map.py, test_bloom_map.py   the Bloom map: ILO levels, task levels, gaps, how to lift - drawn on both review pages
+├── scripts/test_active_split.py         20 / 80 in class: plain theory against active minutes on both pages (L49, 2.26.0; theory-rules.json split)
+├── active/GUIDE.md                      READ IN: Stage 2 - proposing theory as activity per sub-topic, recording the operator's decisions (L49, 2.27.0)
+├── knowledge/active-learning.json       the patterns proposals are written from (fits, what the trainees do, minutes), the rules, the statuses
+├── scripts/active_plan.py, test_active_plan.py   list what waits; decide - kept / struck, logged with the operator's words, page re-rendered
+├── scripts/test_new_task_types.py      the five tasks for the higher Bloom levels, end to end (L49 step 4, 2.28.0)
 │                                          knowledge/media-and-tasks.json three_d: 3D on at most half the slides, where it makes sense, full quality, smooth (L46, 2.22.0)
 ├── scripts/old_course.py, test_workspace.py   the old course read whole, its pictures copied out (L41, 2.19.0)
 ├── knowledge/media-and-tasks.json        the kinds of picture and the ways of answering, who makes each, the variety floors (L37, L38, 2.18.0)
@@ -563,6 +568,48 @@ unchanged). Verbs used both ways (select, determine, check, определить
 'not known' and `bloom/GUIDE.md` §2 says how to judge it. Every floor is a suggestion until the owner says otherwise.
 Planned next (owner's three-part plan): part 2 the floors as rules; part 3 new task types for *Analyse* to *Create*
 (find the fault, spot the mistake in a filled-in permit, build the plan or checklist). Tests: `scripts/test_bloom_map.py`.
+
+## 4v · 20 / 80 in class (2.26.0, 2026-10-15)
+
+The owner: "Now most courses are 80/20 - 80 theory, 20 practical. On paper, in the programmes and IMO model courses it stays as it is, but we want to at least come close to 20/80 - 20 plain raw theory, 80 practical: simulators, active learning theory, self-checks, tablet interactive tasks." Then: "Still you need enough theory ... don't remove existing good theory, because each instructor can skip each slide faster; on paper we have that theory, if someone needs he can read it - but the main teaching activities, how the trainee will gain this knowledge, are in active learning." L5 always aimed at 80 % learner-active, but nothing measured it, and L36's
+floors (10 min and 250 words before a self-check; words per minute over every slide) pushed toward long plain
+theory. Now `theory-rules.json` `split` holds the aim (0.8), the five slide techniques and the keep-theory rule;
+`before_self_check` is 5 min / 125 words; the density counts slides without `"active"` only. `content_script.py`:
+`split_of` / `split_html` (a card on the review page, a line per active slide, a print-out in render; an unknown
+technique is a `validate` problem; never in `all_findings`). `make_architecture_page.py`: plain = theory minutes less
+self-checks, module check and `active_learning[].minutes`; its own section and `a["split"]`, never in `problems`, so
+`--check` exits as before; `explore` added to the techniques. The suggestion text names the plain slides with the
+most minutes and says to keep every slide - pinned in `test_active_split.py` (no 'remove' / 'delete' in any
+language). Three pinned numbers in `test_architecture_page.py` and one case in `test_content_script.py` moved
+from 10 to 5 minutes; their behaviour is unchanged.
+
+## 4w · Theory as activity - proposed, then kept or struck (2.27.0, 2026-10-15)
+
+The owner chose step 3 of the 20/80 plan: the factory proposes, per sub-topic, how theory can be taught as activity,
+and the operator ticks or strikes each on the Stage 2 page. `architecture.json` `active_learning[]` lines gained
+`id`, `subtopic`, `does`, `needs`, `status` (proposed / approved / struck; none = approved, so older courses read as
+before), and `technique: plain` with `why`. `make_architecture_page.py`: only kept lines count toward the split;
+`plain_all` / `active_all` if every proposal is kept; a waiting card at the top with both numbers and *Copy my
+choices*; per proposal Keep / Strike buttons (`aria-pressed`, 44 px), a small inline script that keeps the ticks in
+the browser's localStorage (wrapped in try/catch; the page still works without it) and builds the line "Keep: A1.1.
+Strike: A2.1." in the operator's language; the script is written only when something waits; nothing is fetched. A
+sub-topic with theory and no proposal is a suggestion (`a_no_proposal`). `active_plan.py decide` refuses an unknown
+id, an id both kept and struck, or no `--said`, before changing anything; it writes `decided_on` / `decided_said`,
+logs Stage 2 rows in FEEDBACK_LOG.md and re-renders the page. Checked by hand in the browser: the buttons, the line,
+and the ticks surviving a reload. Not built: step 4 - new creative task types.
+
+## 4x · Five new tablet tasks for the higher Bloom levels (2.28.0, 2026-10-15)
+
+The owner: "Tablet interactive tasks - not only drag n drop, choose e.c., something completely different, interesting and creative." Added as data and checks, like the fourteen before them: `media-and-tasks.json` mechanics
+`find_the_fault` (family investigate, hands-on), `spot_the_error` (investigate, hands-on), `build_the_plan` (build),
+`timeline` (arrange), `compare` (decide, hands-on), each with its one-box answer form; `bloom.json` levels (4, 5, 5->6,
+4->5, 5) - so `lift_text(6)` now names build the plan and says real creation stays with the practical exercise;
+`content_script.py` `USES`, `read_answer` (each mis-writing caught in plain words), `answer_items` (what the built
+page shows and which are right) and `task_body` (the review mock). Given data - the readings in find the fault,
+the events of an incident, the figures in compare - is not counted toward 'was the answer taught' (L36): only the
+fault, the stop point and the chosen option are. `course-task-ux` §2a says how each behaves on the tablet. No
+tablet engine is written yet - building the task pages is Phase 5 step 6. `test_new_task_types.py` runs each
+through validate, the review page, the Bloom map and `check_script_match.py` on a built module.
 
 ## 5 · Known gaps / before this goes live
 

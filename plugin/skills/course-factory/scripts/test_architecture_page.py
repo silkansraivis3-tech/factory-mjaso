@@ -140,10 +140,10 @@ def main():
         m1 = page[page.find('<div class="module"><h2>'):]
         m1 = m1[:m1.find('<div class="module">', 10)]
         check("module 1: slides + two self-checks + the module check = 80 min",
-              LV["budget_slides"] in m1 and "66 min" in m1 and LV["budget_sc"].format(k=2, q=4, after=LV["after_theory"].format(min=10)) in m1
+              LV["budget_slides"] in m1 and "66 min" in m1 and LV["budget_sc"].format(k=2, q=4, after=LV["after_theory"].format(min=5)) in m1
               and LV["budget_mc"].format(q=6) in m1 and "80 min" in m1, m1[:1200])
         check("a module with practice shows the practice minutes", LV["budget_practice"] in page)
-        check("a 10-minute module has no self-check - its module check covers it", LV["test_no_sc"].format(min=10) in page)
+        check("a 10-minute module has no self-check - its module check covers it", LV["test_no_sc"].format(min=5) in page)
 
         print("\n-- 2.18.0: pictures, animation and 3D, and how the trainee answers (L37, L38)")
         check("the page says who makes the pictures, and lists what Novikontas has to capture",
@@ -234,7 +234,7 @@ def main():
                 ("two topics merged into one module", en("p_one_topic", m=1, ts="1, 2")),
                 ("teaching inside the final assessment", en("p_assessment_only", m=4)),
                 ("a teaching module with no module check", en("p_no_module_check", m=2)),
-                ("more self-checks than the theory time allows", en("p_selfcheck_room", m=3, k=1, need="18", have="10", min=10)),
+                ("more self-checks than the theory time allows", en("p_selfcheck_room", m=3, k=1, need="13", have="10", min=5)),
                 ("a module the programme does not have", en("p_module_not_topic", m=7)),
                 ("a total that does not match the programme's total row", en("p_total_row", th="4.25", pr="1", pth="4.25", ppr="2")),
                 ("hours that do not match the programme", en("p_hours", m=1, alloc="80", built="120")),

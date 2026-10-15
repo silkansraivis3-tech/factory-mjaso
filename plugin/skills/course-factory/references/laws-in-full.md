@@ -219,7 +219,7 @@ and the words to replace are in `SKILL.md` (*Every reply to the operator*) and `
 
 ---
 
-## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0; L45, 2.21.0; L46, 2.22.0; L47, 2.24.0; L48, 2.25.0)
+## Phase 5 — the owner's decision record (L26–L33, 2.12.0; L34–L36, 2.17.0; L37–L38, 2.18.0; L39, 2.18.1; L40–L41, 2.19.0; L42, 2.19.2; L43, 2.19.3; L44, 2.20.0; L45, 2.21.0; L46, 2.22.0; L47, 2.24.0; L48, 2.25.0; L49, 2.26.0)
 
 Decided by the owner on 2026-09-30. **Where any older rule in this factory disagrees with one of
 these, this one wins** — and that holds from 2.12.0, before the step that builds each of them out
@@ -779,3 +779,40 @@ explaining in detail what you want to see.' This will reduce failed attempts and
   is not level: an obscure fact is still *Remember*.
 - **Suggestions first.** In 2.25.0 no Bloom finding stops a page, a check or an approval; the owner decides when a
   floor becomes a rule.
+
+**L49 · 20 / 80 in class - the programme unchanged, every theory slide kept.**
+*"Now most courses are 80/20 - 80 theory, 20 practical. On paper, in the programmes and IMO model courses it stays as it is, but we want to at least come close to 20/80 - 20 plain raw theory, 80 practical: simulators, active learning theory, self-checks, tablet interactive tasks."* And: *"Still you need enough theory ... don't remove existing good theory, because each instructor can skip each slide faster; on paper we have that theory, if someone needs he can read it - but the main teaching activities, how the trainee will gain this knowledge, are in active learning."* - the owner, 2026-10-15.
+
+- **The programme never changes** (L1, L2, L34): its theory and practical hours are what the course is accredited
+  for. What changes is how the class spends them.
+- **Plain against active.** Plain theory is a slide the instructor explains. Active is everything the trainees do:
+  tasks on the tablet, practice, simulator and equipment, and slides marked `"active"` - explain-then-reveal,
+  predict-then-reveal, worked-example, scenario, explore. Aim: plain about 20 %, active about 80 % (L5's Track B, now
+  measured). Stage 2 counts a module's theory minutes less its tasks and its theory-as-activity minutes; Stage 3
+  counts the script's own minutes.
+- **Theory is never removed to get there.** Every good theory slide stays and more may be added; a plain slide
+  keeps its words - they can be read, on the screen and later - and gives up minutes, because the instructor moves
+  through it faster. The minutes go to activity. No suggestion ever says to remove a slide or shorten its text; the
+  slide and notes floors of L36 still apply.
+- **Short cycles.** L36 amended: about 5 minutes and 125 words of new theory before a self-check (was 10 and 250); the
+  words-per-minute floor counts plain theory only, since an active slide's minutes are what the trainees do. Every
+  answer is still taught before its question.
+- **The person decides.** Theory turned into activity is proposed on the Stage 2 page and approved there by the
+  operator - a maritime expert, not an IT person; marking a slide active that is only shown is not allowed. A
+  suggestion in 2.26.0, never a stop.
+- **Proposed per sub-topic, kept or struck one by one (2.27.0).** *"The factory proposes, per sub-topic, how theory
+  can be taught as activity, and the operator ticks or strikes each on the Stage 2 page."* Claude writes the
+  proposals from `knowledge/active-learning.json` (predict-then-reveal, explain-then-reveal, worked example,
+  scenario, explore, self-check - or stays plain, with why), each saying in plain words what the trainees do, its
+  minutes, that the slides stay, and what it needs. The page gives every one **Keep** and **Strike**, the class split
+  now and if all are kept, and a *Copy my choices* line to paste in the chat; `scripts/active_plan.py decide` records
+  exactly what the operator said, logs it with their words, and never deletes a struck line. Nothing is built from a
+  proposal until it is kept; every proposal is decided before Stage 2's "next".
+- **Five new tablet tasks for the higher levels (2.28.0).** *"Tablet interactive tasks - not only drag n drop, choose e.c., something completely different, interesting and creative."* - **find the fault** (symptoms first; tap each
+  part to check it and see its reading; then name the fault - Analyse), **spot the errors** in a filled-in permit, log
+  or plan (tap every wrong line, each then says why - Evaluate), **build the plan** from cards, some of which do not
+  belong (Evaluate; Create when written for a situation), **rebuild the incident** (order the events, then tap where
+  it should have been stopped - Analyse to Evaluate), **compare** options side by side with real figures and choose
+  (Evaluate). No typing, tap and drag only, every one written in the content script's one-box form the operator
+  edits in Word, every one checked word for word on the built page. How each behaves on the tablet:
+  `course-task-ux` §2a.

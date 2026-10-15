@@ -163,7 +163,8 @@ reason from a set — both must be right).
 > **Widened by the owner, 2026-09-30 (L38, 2.18.0):** as many ways of answering as possible, realistic and
 > technical - fourteen, none of them typing: choose one · choose all that are right · choose-and-justify · order ·
 > match · sort into groups · complete the sentence · tap the place · drag labels onto a drawing · find the hazards ·
-> read the instrument · set the value (slider or dial) · operate the panel / line up the valves · scenario. The list,
+> read the instrument · set the value (slider or dial) · operate the panel / line up the valves · scenario - and since
+> 2.28.0 five more (§2a): find the fault · spot the errors · build the plan · rebuild the incident · compare. The list,
 > how each answer is written and the variety floors are `course-factory/knowledge/media-and-tasks.json`; the
 > operator approves every task's words in the content script first.
 
@@ -173,6 +174,24 @@ allowed, §5 becomes mandatory.
 **One Submit per part.** Correct items lock and grey out with an explanation of *why*; wrong items
 get a hint and another attempt. The reasoning lives in the task, which is why the deck needs no
 answers slide.
+
+### 2a · Five more, for the higher Bloom levels (owner, 2026-10-15 - L49 step 4, 2.28.0)
+
+*"Tablet interactive tasks - not only drag n drop, choose e.c., something completely different, interesting and
+creative."* Still no typing, still tap and drag (drag always also tap-then-tap), still §0 first. The answer formats are
+`course-factory/knowledge/media-and-tasks.json`; every item the page shows carries `data-script-field="answer"`, exactly
+the items `content_script.answer_items` lists, and the right ones carry their `data-key` (§9a).
+
+| Task | On the trainee tablet | Done when |
+|---|---|---|
+| **Find the fault** | The symptoms on top (`!` lines), over the drawing or panel. Each part is a big card: **tap it to check it** - it turns over and shows what you see (the reading, the sound, the temperature). Checking is free and never wrong. Then **This is the fault** on one card. | the faulty part is named; a wrong one shows why it is fine and the trainee goes on checking |
+| **Spot the errors** | The filled-in document as it looks on board - a permit, a log page, a checklist, a loading plan - one line per row, large type. **Tap a line to flag it**, tap again to unflag; **Check** at the bottom. | every wrong line flagged and nothing else; each wrong line then shows its *why* |
+| **Build the plan** | A bank of shuffled cards below, an empty plan with numbered slots above. Drag (or tap a card, then a slot) to build the plan; cards that do not belong stay in the bank. | the right cards in the right order; a card that does not belong, when placed, says why |
+| **Rebuild the incident** | Shuffled event cards; first put them in order (as *order*); once the order is right, the cards stay and the question changes: **tap where it should have been stopped**. | the order, then the stop point - two parts, each with its own Check |
+| **Compare** | The options side by side as columns - their names on top, one row per figure, the figures large and aligned; under each column a big **Choose** button. | the right option chosen; the feedback names the figures that decide it |
+
+None of them hides information the trainee needs to answer: the readings in *find the fault* are one tap away and
+stay turned over; nothing is timed; a wrong answer is never an error message - it is a hint and another try (§1, L42).
 
 ---
 

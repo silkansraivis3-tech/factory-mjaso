@@ -16,9 +16,9 @@ level of the tasks up to what the ILOs ask, and above *Remember* wherever the co
 | 1 | Remember | recall a fact, a name, a number | choose one, label, tap the part |
 | 2 | Understand | explain, sort, compare | match, sort into groups, order |
 | 3 | Apply | operate, set, measure, carry out | operate the panel, set the value, read the instrument |
-| 4 | Analyse | find the cause, the fault, the hazard | find the hazards, a scenario, sort symptoms into causes |
-| 5 | Evaluate | decide and say why; judge a decision | choose-and-justify, a scenario with reasons |
-| 6 | Create | make a plan, a procedure, a checklist | **no task type yet** — part 3 of the Bloom plan |
+| 4 | Analyse | find the cause, the fault, the hazard | **find the fault**, find the hazards, **rebuild the incident**, a scenario |
+| 5 | Evaluate | decide and say why; judge a decision | choose-and-justify, **spot the errors** in a filled-in document, **compare** the options, **build the plan** |
+| 6 | Create | make a plan, a procedure, a checklist | only **build the plan**, written for the situation, comes near; real creation is the practical exercise |
 
 ## 2 · Judging what the list cannot
 
@@ -52,7 +52,10 @@ Lift one level at a time, to the Sub-ILO's level — and above *Remember* wherev
 | match term to definition | Understand → Analyse | match **each symptom to its cause**; sort symptoms into causes |
 | choose the fact | Analyse | **find the hazards** in the scene; a gauge reading that is wrong — what is the fault? |
 | choose the action | Evaluate | **choose-and-justify**: the action, then the reason; a **scenario** that shows the consequence |
-| — | Evaluate | **judge a decision**: a colleague's filled-in permit or plan with a mistake — find it and say why |
+| — | Evaluate | **spot the errors**: a colleague's filled-in permit or plan — tap every wrong line, see why |
+| choose the cause | Analyse | **find the fault**: symptoms first, then check the parts one by one, then name the fault |
+| order the steps | Evaluate | **build the plan** from cards, some of which do not belong; **rebuild the incident** and tap where it should have stopped |
+| choose the fact | Evaluate | **compare** two plans or readings side by side with real figures, and choose the safer |
 
 Every lifted task still obeys the rest: the answer is taught on the slides before it (L36), the
 tablet rules (L42), the variety floors (L38), a real picture for real equipment (L33).

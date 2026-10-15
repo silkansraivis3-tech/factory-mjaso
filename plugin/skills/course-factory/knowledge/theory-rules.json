@@ -13,11 +13,13 @@
   },
   "module": {
     "min_words_per_theory_minute": 25,
+    "_plain_only": "Owner, 2026-10-15 (L49, 2.26.0): counted over PLAIN theory only - the slides without \"active\". A slide where the trainees predict, explain, explore or work an example fills its minutes with what they do, not with words.",
     "_why": "Across a module, the slides' own words plus the instructor notes, divided by the slides' minutes. Under this the module's hours are claimed but not filled: the instructor runs out of material long before the time does (must fix). 25 words a minute, now that the notes are short points and the teaching sits on the slide (2.18.1; it was 40 while the notes were long)."
   },
   "before_self_check": {
-    "min_minutes": 10,
-    "min_words": 250,
+    "min_minutes": 5,
+    "min_words": 125,
+    "_cycles": "Owner, 2026-10-15 (L49, 2.26.0): short cycles - about 5 minutes of theory, then the trainees do something. It was 10 minutes and 250 words, which pushed the class toward long plain theory. Active slides count as theory taught here: they teach. That every answer is taught before its question (answers_taught_first) is unchanged.",
     "_why": "A self-check comes only after a block of new theory: at least this many minutes of slides and this many words (slides + notes) since the module began or since the last task. A module whose theory is shorter than this has no self-check - its module check covers it."
   },
   "answers_taught_first": {
@@ -34,6 +36,15 @@
     "min_questions": 5,
     "minutes_per_question": 1,
     "_why": "Every teaching module ends with one. It covers the whole module, so a short module (under before_self_check.min_minutes of theory) still has one."
+  },
+
+  "split": {
+    "_authority": "Owner, 2026-10-15 (L49, 2.26.0): 'now most courses are 80/20 - 80 theory, 20 practical. On paper, in the programmes and IMO model courses it stays as it is. But we want to at least come close to 20/80 - 20 plain raw theory, 80 practical: simulators, active learning theory, self-checks, tablet interactive tasks ... first it needs to be reviewed by the person who uses the plugin.' The programme's hours never change (L1); what changes is how the class spends them. Measured on the Stage 2 page and every Stage 3 review page. A suggestion, not a rule, in 2.26.0.",
+    "_keep_theory": "Owner, 2026-10-15: 'still you need enough theory ... that does not mean you don't need raw theory at all, you can still add it, and don't remove existing good theory, because each instructor can skip each slide faster; on paper we have that theory, if someone needs he can read it - but the main teaching activities, how the trainee will gain this knowledge, are in active learning.' So 20/80 is reached with TIME, never by cutting theory: every good theory slide stays (more may be added), its minutes shrink - the instructor moves through it faster and the words stay to be read - and the minutes it frees go to active learning. No suggestion ever says to remove a slide or shorten its text. The slide and density floors still apply.",
+    "target_active_share": 0.8,
+    "_counts": "PLAIN = minutes of slides without \"active\" (the instructor explaining). ACTIVE = slides with \"active\" (one of the techniques below) + task slides (self-checks, module check, team tasks) + activities (practice, simulator, equipment). Stage 2: plain = the module's theory minutes less its self-checks, module check and the planned theory-as-activity minutes; active = those + the programme's practical minutes.",
+    "active_techniques": ["explain-then-reveal", "predict-then-reveal", "worked-example", "scenario", "explore"],
+    "_techniques": "What makes a SLIDE active - the trainees do something on it, not only listen: explain-then-reveal (they explain first, then the slide shows it), predict-then-reveal (they predict what happens, then see), worked-example (one worked through, then their own attempt), scenario (what would you do), explore (they work the interactive diagram or 3D model themselves - turn it, open it, find the part). The instructor notes say what the trainees do. Marking a slide active that is only shown is not allowed: the operator reads it on the review page."
   },
 
   "tablets": {

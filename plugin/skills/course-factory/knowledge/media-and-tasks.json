@@ -61,6 +61,7 @@
   },
 
   "mechanics": {
+    "_new": "Owner, 2026-10-15 (L49 step 4, 2.28.0): 'tablet interactive tasks - not only drag n drop, choose e.c., something completely different, interesting and creative'. Five ways of answering added for the higher Bloom levels: find the fault (investigate), spot the errors in a filled-in document, build the plan from cards, rebuild an incident timeline, compare options side by side. How each is built on the tablet: course-task-ux section 2a.",
     "_law": "No free typing on a self-check or module check (owner C11, course-task-ux §2) - every mechanic below is answered by tapping, dragging or setting a control. The 'answer' format is the one line-per-item text the operator edits in the Word file; '*' marks what is right.",
     "single_choice":      {"family": "choose",  "hands_on": false, "en": "Choose one answer", "lv": "Izvēlies vienu atbildi", "ru": "Выбери один ответ",
                            "answer": "options A, B, C (D); 'correct' is one letter"},
@@ -89,7 +90,17 @@
     "panel_operate":      {"family": "operate", "hands_on": true,  "en": "Operate the panel or line up the valves", "lv": "Darbini paneli vai sagatavo vārstu līniju", "ru": "Управляй панелью или выставь клапаны",
                            "answer": "one control per line: control = the state it must end in; the panel or drawing is named in 'visual'"},
     "scenario":           {"family": "decide",  "hands_on": true,  "en": "Scenario - decide, see what happens, decide again", "lv": "Scenārijs - izlem, redzi sekas, izlem atkal", "ru": "Сценарий - реши, увидь последствия, реши снова",
-                           "answer": "one step per line: the situation => right action* | wrong | wrong"}
+                           "answer": "one step per line: the situation => right action* | wrong | wrong"},
+    "find_the_fault":     {"family": "investigate", "hands_on": true,  "en": "Find the fault - check the parts, then name it", "lv": "Atrodi kļūmi - pārbaudi daļas, tad nosauc to", "ru": "Найди неисправность - проверь узлы, затем назови её",
+                           "answer": "first the symptoms, one per line starting '!'; then one line per part the trainee can check: part: what you see when you check it - the faulty part marked *"},
+    "spot_the_error":     {"family": "investigate", "hands_on": true,  "en": "Spot the errors in the filled-in document", "lv": "Atrodi kļūdas aizpildītajā dokumentā", "ru": "Найди ошибки в заполненном документе",
+                           "answer": "the document line by line, as it is filled in; every wrong line marked * and followed by => why it is wrong"},
+    "build_the_plan":     {"family": "build",       "hands_on": false, "en": "Build the plan from the cards - not every card belongs", "lv": "Saliec plānu no kartītēm - ne visas kartītes der", "ru": "Собери план из карточек - не все карточки подходят",
+                           "answer": "one card per line: the cards that belong marked *, in the order the plan needs them; the cards that do not belong unmarked"},
+    "timeline":           {"family": "arrange",     "hands_on": false, "en": "Rebuild the incident - order the events, then tap where it should have stopped", "lv": "Atjauno incidentu - sakārto notikumus, tad pieskaries, kur tas bija jāaptur", "ru": "Восстанови инцидент - расставь события и коснись момента, где его надо было остановить",
+                           "answer": "one event per line, in the order they happened (the tablet shuffles them); the moment it should have been stopped marked *"},
+    "compare":            {"family": "decide",      "hands_on": true,  "en": "Compare the options side by side, then choose", "lv": "Salīdzini variantus blakus, tad izvēlies", "ru": "Сравни варианты рядом, затем выбери",
+                           "answer": "options A, B (C) are the choices, 'correct' one letter; the answer box is the table, one line per figure: what is compared: value A | value B"}
   },
 
   "trainee_tablet_experience": {
