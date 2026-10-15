@@ -465,7 +465,8 @@ def compile_deck(script, build, mdir, figdir, version, approved):
                 "  </div>", "</div>"]
     body = ["<body>", '<a class="gbt-topback" href="../START_HERE_EXTENDED.html" hidden>Back</a>']
     body += inline + landing + [chrome_block(), '<main id="stage">', "\n\n".join(slides), "</main>",
-                                '<script src="../assets/gb_deck.js"></script>']
+                                '<script src="../assets/gb_deck.js"></script>',
+                                '<script src="../assets/gb_fit.js"></script>']
     body += ['<script src="../%s"></script>' % a(x) for x in build.get("scripts", [])]
     body += ["<script>",
              'GBDeck.init({ text: { cue: "Instructor cue", start: "Start" }, hooks: window.GB_HOOKS || {} });',

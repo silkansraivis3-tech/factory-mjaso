@@ -55,6 +55,11 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   height; words are at reading size (`.copy`). Before showing a deck: `audit_compose.js` (every screen composed,
   none weak), `audit_deck.js` (no spill, no overfill, no tiny labels), `audit_collide.js` - at 1280 × 800 and
   1024 × 768. A label inside a drawing below 12.5 px on screen is fixed in the drawing.
+- **Every drawing whole and clean (L50).** Also `audit_drawing.js`: no part pokes out of the hull, tank, room or box
+  it sits in (draw the room along a sloping stern, or clip it), nothing is cut off at the drawing's frame, every label
+  keeps 4 px clear of other shapes, lines and labels. A crossing that is meant is marked in the drawing:
+  `data-may-cross`, `data-no-contain`, `data-may-overlap`. Every compiled deck also loads `gb_fit.js`, which widens a
+  frame a drawing still reaches past and names it in the console - fix the drawing, then compile again.
 
 ## 3 · When the look is not enough
 

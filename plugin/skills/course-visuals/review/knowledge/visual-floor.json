@@ -20,7 +20,16 @@
     "allowed_extensions": ["jpg", "jpeg", "png", "svg", "webp", "gif", "mp4", "webm"],
     "requires_alt_or_arialabel": true,
     "requires_reduced_motion_guard_when_infinite": true,
-    "max_ambient_effects_per_screen": 1
+    "max_ambient_effects_per_screen": 1,
+    "drawing_geometry": {
+      "_authority": "Owner, 2026-10-15 (L50), after the IGF pilot: an engine room poking out through a sloping stern, a cargo area through a curved bow, a fuel tank and a vent-mast top cut off at the drawing's edge, labels printed over a deckhouse and through a box's border.",
+      "parts_inside_their_container": "a part drawn inside a hull, tank, room or box stays inside its REAL shape - where the hull slopes or curves, the room follows it (a path, not a rectangle) or is clipped to it (clip-path). Judged on geometry, not boxes.",
+      "nothing_cut_off": "no part, and no part of its outline, reaches past the drawing's frame (viewBox) - also a part that only shows in a later step of an animation. Leave room for the line's thickness.",
+      "label_safe_zone_px": 4,
+      "label_rule": "every label has its own clear space: 4 px on screen to any other shape, line or label; a label inside a box keeps 4 px from the box's edge (in proportion inside a small badge). A leader line may end at its label.",
+      "intentional_exceptions": "marked in the drawing, so the reason is written down: data-may-cross (a pipe through a bulkhead, a stem through a cylinder head), data-no-contain (a sea band, a frame), data-may-overlap (a value on a gauge face)",
+      "measured_by": "course-module-ux/measure/scripts/audit_drawing.js (inside, cut off, text zone) - in the browser, at 1280 x 800 and 1024 x 768; the safety net course-module-ux/assets/gb_fit.js widens a frame a drawing still reaches past and logs it"
+    }
   },
 
   "human_review_questions": {

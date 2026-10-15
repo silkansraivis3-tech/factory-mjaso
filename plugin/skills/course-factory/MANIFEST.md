@@ -578,6 +578,24 @@ better, body text 18.4 px, pictures about 30 % larger; all audits pass at 1280 �
 possible - `knowledge/media-and-tasks.json` floors `real_photo_*`, `content_script.py` suggestion `v_few_photos`, labels
 in en/lv/ru) and **L49** (no empty space, good padding - `compile/GUIDE.md` §2b, the three audits before showing).
 
+## 4w · Every drawing whole and clean (2.25.2, 2026-10-15)
+
+The owner's screenshots of the pilot: an engine room poking out through the sloping stern (M01 summary, M02 zones), a
+cargo area through a curved bow, a fuel tank and a vent-mast top cut off at the drawing's edge, labels over a deckhouse
+and through a box's border. Every existing check was green - all of it is inside one `<svg>`, where none looked.
+**L50**. New browser probe `course-module-ux/measure/scripts/audit_drawing.js`: (1) a part whose centre is inside an
+outlined closed shape stays inside its real geometry (isPointInFill / isPointInStroke along the part's own outline;
+`<use>` of a shared hull expanded; clip-path counts as inside); (2) nothing cut off at the frame or a clipping
+ancestor, the line's thickness included, also a part faded out for a later step; (3) every label keeps 4 px to any
+shape, line or label and to its own box's edge (in proportion inside a small badge; a leader line may end at it).
+Exceptions marked in the drawing: `data-may-cross`, `data-no-contain`, `data-may-overlap`. Safety net
+`course-module-ux/assets/gb_fit.js` (in the design-system copy list, loaded by every compiled deck): when a slide comes
+up, a drawing whose paint reaches past its viewBox gets a frame just big enough, and a console warning. Test:
+`measure/scripts/test_audit_drawing.py` (headless Chrome/Edge on `measure/fixtures/`, skips without one), 13 checks.
+Pilot M01 (compiled): 35 findings -> 0 at 1280x800, 1024x768 and 800x1280 after its drawings were fixed (rooms along the
+stern, the vent-mast frame, the liquid clipped to the tank, labels moved; valve stems and the thermometer's dots marked).
+M02 (hand-built in the pilot, not changed): 64 findings, 5 of them cut-offs that `gb_fit` removes.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

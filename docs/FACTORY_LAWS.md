@@ -387,8 +387,19 @@ screen keeps its padding and the chrome's safe area, and nothing spills. A deck 
 weak), `audit_deck.js` (no spill, no overfill), `audit_collide.js`. → `course-factory` (`compile/`) and
 `course-module-ui` (`gb_compose.css` §13b, 2.25.1)
 
-**All forty-nine laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L49 are enforced first through `course-factory/SKILL.md`'s
+**L50 · Every drawing whole and clean.** Owner, 2026-10-15, after the IGF pilot: an engine room poking out through
+the ship's sloping stern, a cargo area through the curved bow, a fuel tank and a vent-mast top cut off at the edge, labels
+printed over a deckhouse and through a box's border. (1) A part drawn inside a hull, tank, room or box stays inside its
+real shape - where the hull slopes or curves, the room follows it or is clipped to it. (2) Nothing is cut off at the
+drawing's frame - not the line's thickness, not a part that shows in a later step. (3) Every label has its own clear
+space: 4 px on screen to any other shape, line or label, and 4 px from the edge of the box it sits in. An intentional
+crossing is marked in the drawing (`data-may-cross`, `data-no-contain`, `data-may-overlap`). → `course-module-ux`
+(`measure/scripts/audit_drawing.js`, run before a deck is shown; `assets/gb_fit.js`, the safety net in every compiled
+deck that widens a frame a drawing still reaches past) and `course-visuals` (`review/knowledge/visual-floor.json`
+`drawing_geometry`), 2.25.2
+
+**All fifty laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L50 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

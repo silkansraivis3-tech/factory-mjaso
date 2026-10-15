@@ -174,6 +174,7 @@ colours in the set; adding one is an owner decision (`knowledge/tokens.json` § 
 | File | What it does |
 |---|---|
 | `gb_deck.js` | the deck engine: `GBDeck.init({text, hooks})` — Start, Next/Prev, progress, overview, instructor cue, fullscreen, keyboard, swipe, per-screen enter/leave hooks (`course-module-ux`) |
+| `gb_fit.js` | no drawing cut off at its edges: when a slide comes up, an `<svg>` whose drawing reaches past its viewBox gets a frame just big enough, and a console warning to fix the drawing; `data-fit="off"` opts out (`course-module-ux`, L49) |
 | `gb_run.js` + `gb_run.css` | the step runner on START_HERE (`course-module-ux`) |
 | `kbd_escape.js` + `kbd_escape.css` | the three ways out of the soft keyboard (`course-task-ux` §5) |
 | `task_complete.js` + `task_complete.css` | the one shared ending for every task (`course-task-ux` §9) |

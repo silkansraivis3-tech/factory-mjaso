@@ -68,6 +68,11 @@ afterwards**, which is the order in which a picture becomes decoration.
 >
 > **As many real photographs as possible (L48, owner 2026-10-15)** — in the presentation and the trainee tasks.
 > Where a drawing teaches the inside or the flow, a small real photograph of the actual thing still goes beside it.
+>
+> **Every drawing whole and clean (L50, owner 2026-10-15).** A room inside a hull follows the hull's real shape (a
+> sloping stern, a curved bow) - a path or a clip, never a rectangle poking through; nothing reaches past the drawing's
+> frame, not even a line's thickness; every label keeps 4 px clear of every other shape, line and label, and of its own
+> box's edge. Proven with `course-module-ux/measure/scripts/audit_drawing.js`; numbers in `review/knowledge/visual-floor.json`.
 
 And **lead** means the reading order, not merely presence: a screen that explains a cargo pump in
 three paragraphs and then shows one has a picture, but the trainee stopped reading before it.
