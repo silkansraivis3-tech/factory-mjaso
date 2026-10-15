@@ -92,7 +92,7 @@ IMAGES = (".jpg", ".jpeg", ".png", ".webp", ".gif")
 KIT_SPEC = ".kit.json"                       # a figure made from the figure kit (course-visuals/kit)
 KIT_FILES = ("kit.css", "kit.js")             # shipped with the module by design_system.py, like gb_deck.js
 KIT_PARTS = "assets/kit_parts.js"             # parts this course added to the kit, until they are merged
-PHOTO_FILES = ("gb_photo.css", "gb_photo.js")  # every photograph opens (L56) - in every deck, shipped like gb_deck.js
+PHOTO_FILES = ("gb_zoom.css", "gb_zoom.js")    # every picture opens full screen with its record (L51, L56), like gb_deck.js
 COMPOSITIONS = ("opener", "flow", "two-col", "wide-left", "wide-right", "stage")
 STAGE_MAX_WORDS = 45
 STATEMENT_MAX_WORDS = 22
@@ -300,11 +300,9 @@ def photo_meta(mdir, rel):
         return {}
 
 
-GENERATED_LABEL = "AI-generated illustration"
-
-
 def is_generated(meta):
-    """a picture made by an image model (nano banana and the like) - its record says so"""
+    """a picture made by an image model (nano banana and the like) - its record says so. It carries no credit line
+    (no third-party rights; operator 2026-10-15: no on-screen label) and is never an L57 thumbnail"""
     return bool(meta) and (meta.get("generated") is True or str(meta.get("source") or "").upper() == "GENERATED")
 
 
@@ -312,10 +310,9 @@ def credit_line(meta, with_title=True):
     """Title · Author · Source · Licence · resized - who made it, where it is from, the licence, and that it was
     changed (CC BY / BY-SA 4.0 require these; the title is good practice, left out beside a caption that already
     says what the photo shows). The title is the meta's own, else the Wikimedia file name; "resized" when the
-    stored size is not the original's. A generated picture is never called a photo: "AI-generated illustration ·
-    <generator>" (L33)."""
+    stored size is not the original's. A generated picture has none."""
     if is_generated(meta):
-        return " · ".join(x for x in (GENERATED_LABEL, meta.get("generator")) if x)
+        return ""
     if not meta or not (meta.get("attribution_required") or meta.get("licence")):
         return ""
     author = re.split(r"\s*[(,]", meta.get("author") or "")[0].strip()
@@ -393,15 +390,14 @@ def figure_html(mdir, figdir, s, b, probs, where):
 
 
 def photo_panel(meta, credit, rel, probs, where):
-    """L56: every photograph opens (gb_photo.js) - large, with what it shows and its credit. What it shows is the
-    photo's own record, written when the photo was brought in: its "description" says what is in the picture and
-    never more than the picture evidences, like a caption."""
+    """L56: every photograph carries its record into the L51 viewer (gb_zoom.js), which shows it under the picture
+    full screen: what it shows and its credit. What it shows is the photo's own record, written when the photo was
+    brought in: its "description" says what is in the picture and never more than the picture evidences."""
     about = (meta.get("description") or "").strip()
     if not about:
-        probs.append("%s: the photograph %s has no \"description\" in its _photo_meta.json - its panel (L56) would say "
-                     "nothing about what it shows" % (where, rel))
-    out = "".join(' %s="%s"' % (k, a(v)) for k, v in (("data-about", about), ("data-credit", credit)) if v)
-    return out + (' data-generated="1"' if is_generated(meta) else "")     # the panel says so, never "Photograph"
+        probs.append("%s: the photograph %s has no \"description\" in its _photo_meta.json - full screen (L51, L56) it "
+                     "would say nothing about what it shows" % (where, rel))
+    return "".join(' %s="%s"' % (k, a(v)) for k, v in (("data-about", about), ("data-credit", credit)) if v)
 
 
 IMG_TAG = re.compile(r'<img\b(?![^>]*\bdata-(?:about|no-zoom)\b)[^>]*\bsrc="\.\./([^"]+)"[^>]*?(/?)>', re.I)
@@ -725,17 +721,10 @@ def inset_html(mdir, ins, probs, where):
         return ""
     meta = photo_meta(mdir, rel)
     credit = ins.get("credit") or credit_line(meta, with_title=not ins.get("caption"))
-    caption = ins.get("caption") or ""
-    if is_generated(meta):              # the label leads, whatever the build sheet's caption says (L33)
-        caption = re.sub(r"(?i)^\s*(?:an?\s+)?(?:ai[- ]generated\s+)?illustration\s*[:\-–·]\s*", "", caption)
-        credit = credit_line(meta)
-        caption = caption.strip()
-        if caption and not caption.endswith((".", "!", "?")):
-            caption += "."
-        cap = "%s%s%s" % (GENERATED_LABEL, ": " + caption if caption else ".",
-                          " Made with %s." % meta["generator"].rstrip(".") if meta.get("generator") else "")
-    else:
-        cap = " ".join(x for x in (caption, credit) if x)
+    caption = (ins.get("caption") or "").strip()
+    if is_generated(meta):              # no credit line for a generated picture
+        credit = ""
+    cap = " ".join(x for x in (caption[:1].upper() + caption[1:], credit) if x)
     alt = ins.get("alt") or first_sentence(ins.get("caption")) or first_sentence(meta.get("description"))
     return ('<figure class="inset"><img src="../%s" alt="%s"%s><figcaption data-script-ignore>%s</figcaption></figure>'
             % (a(rel), a(alt), photo_panel(meta, credit_line(meta) or credit, rel, probs, where), e(cap)))
@@ -975,7 +964,7 @@ def compile_deck(script, build, mdir, figdir, version, approved):
             "<!-- %s -->" % stamp, '<meta charset="utf-8">',
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
             "<title>%s — %s</title>" % (m, e(title))]
-    head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in STYLES + ("gb_photo.css",)]
+    head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in STYLES + ("gb_zoom.css",)]
     if uses_kit:
         head.append('<link rel="stylesheet" href="../assets/kit.css">')
     head += ['<link rel="stylesheet" href="../%s">' % a(x) for x in build.get("styles", [])]
@@ -995,7 +984,7 @@ def compile_deck(script, build, mdir, figdir, version, approved):
     body += inline + landing + [chrome_block(), '<main id="stage">', "\n\n".join(slides), "</main>",
                                 '<script src="../assets/gb_deck.js"></script>',
                                 '<script src="../assets/gb_fit.js"></script>',
-                                '<script src="../assets/gb_photo.js"></script>']
+                                '<script src="../assets/gb_zoom.js"></script>']
     if uses_kit:                        # before GBDeck.init: kit.js registers each figure's slide hooks
         body.append('<script src="../assets/kit.js"></script>')
     if kit_parts:

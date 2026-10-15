@@ -739,3 +739,19 @@ figure{margin:0}
 @media (prefers-reduced-motion: reduce){
   .slide.recap *,.slide.recap *::before,.slide.recap *::after{animation:none !important}
 }
+
+/* ---- 16 · L57: the real photographs of what a drawing shows, in a row under it - small, numbered like the
+   drawing, each one opening full screen with its record (gb_zoom.js, L51/L56). Labels stay at the 12.5 px floor. */
+.photo-strip{flex:0 0 auto;display:flex;justify-content:center;gap:min(1.4vmin,14px);width:100%;margin:0}
+.photo-strip .pthumb{margin:0;flex:0 1 min(19vmin,180px);min-width:0;display:flex;flex-direction:column;gap:.35em}
+.slide .photo-strip .pthumb img{display:block;width:100%;height:min(11vh,104px);max-height:none;object-fit:cover;border-radius:var(--r-s);
+  border:1px solid var(--line-l);box-shadow:var(--sh);background:var(--ink)}
+.copy .photo-strip{justify-content:flex-start}
+.slide.dark .photo-strip .pthumb img{border-color:var(--line-d);box-shadow:var(--sh-d)}
+.photo-strip figcaption{display:flex;align-items:baseline;gap:.4em;font-size:clamp(12.5px,1.3vmin,16px);line-height:1.25;
+  color:var(--dim-l);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slide.dark .photo-strip figcaption{color:var(--dim-d)}
+.photo-strip figcaption b{flex:0 0 auto;display:inline-grid;place-items:center;width:1.6em;height:1.6em;border-radius:50%;
+  background:var(--navy);color:var(--white);font-size:.9em}
+.slide.dark .photo-strip figcaption b{background:var(--blue);color:var(--ink)}
+.slide.photo .photo-scrim{cursor:zoom-in}

@@ -62,6 +62,13 @@ var GBZoom = (function (w, d) {
   /* the picture a tap landed on - the outermost <svg>, or the <img> */
   function pictureOf(t) {
     if (!t || t.nodeType !== 1) { return null; }
+    /* a slide that IS a photograph lays its words and a dark scrim over it: a tap on the bare picture area
+       is a tap on the photograph (L56) */
+    var wrap = closest(t, ".photo-scrim,.photo-wrap");
+    if (wrap) {
+      var sl = closest(wrap, ".slide");
+      return (sl && sl.querySelector(".photo-wrap img")) || null;
+    }
     var svg = closest(t, "svg"), outer = svg;
     while (svg) { outer = svg; svg = svg.parentNode && closest(svg.parentNode, "svg"); }
     if (outer) { return outer; }
@@ -151,6 +158,20 @@ var GBZoom = (function (w, d) {
     apply();
   }
 
+  function esc(s) { return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  /* L56: a picture with a record says what it shows and whose it is - the compiler writes data-name (the part of a
+     drawing a small photo shows), data-about (the record's description) and data-credit on the <img> */
+  function recordOf(pic) {
+    if (!pic.getAttribute) { return ""; }
+    var name = pic.getAttribute("data-name"), about = pic.getAttribute("data-about"),
+        credit = pic.getAttribute("data-credit");
+    if (!name && !about && !credit) { return ""; }
+    return (name ? '<b class="gbz-name">' + esc(name) + "</b>" : "") +
+           (about ? '<span class="gbz-about">' + esc(about) + "</span>" : "") +
+           (credit ? '<span class="gbz-credit">' + esc(credit) + "</span>" : "");
+  }
+
   function captionOf(pic) {
     var f = closest(pic, "figure");
     var fc = f && f.querySelector("figcaption");
@@ -181,9 +202,10 @@ var GBZoom = (function (w, d) {
     media.setAttribute("class", "gbz-media");          /* an <svg> has a read-only className */
     media.setAttribute("draggable", "false");
     stage.appendChild(media);
-    var c = captionOf(pic);
-    cap.textContent = c;
-    cap.hidden = !c;
+    var rec = recordOf(pic), c = rec ? "" : captionOf(pic);
+    if (rec) { cap.innerHTML = rec; } else { cap.textContent = c; }
+    cap.classList.toggle("gbz-record", !!rec);
+    cap.hidden = !rec && !c;
     scale = 1; px = 0; py = 0; apply();
     lastFocus = d.activeElement;
     box.hidden = false;
@@ -298,6 +320,17 @@ var GBZoom = (function (w, d) {
       if (p !== all[i] || closest(p, NEVER) || closest(p, "[data-key]")) { continue; }
       if (answeredOn(p)) { corner(p); p.classList.add("gbz-answer"); }
       else { p.classList.add("gbz-can"); }
+    }
+    /* a slide that is a photograph: the words lie over it, so it also gets the ⤢ button, on the slide itself */
+    var photos = d.querySelectorAll(".slide.photo"), s, im, b;
+    for (i = 0; i < photos.length; i++) {
+      s = photos[i];
+      im = s.querySelector(".photo-wrap img");
+      if (!im || s.querySelector(":scope > .gbz-corner") || closest(im, NEVER)) { continue; }
+      b = btn("gbz-corner gbz-photo", T.open, "M5 5h6v2H8.4l3.3 3.3-1.4 1.4L7 8.4V11H5zm14 14h-6v-2h2.6l-3.3-3.3 1.4-1.4 3.3 3.3V13h2z");
+      b.setAttribute("data-script-ignore", "");
+      b.addEventListener("click", (function (img) { return function (e) { e.preventDefault(); e.stopPropagation(); show(img); }; })(im));
+      s.appendChild(b);
     }
   }
 

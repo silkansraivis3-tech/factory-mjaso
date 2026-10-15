@@ -38,9 +38,7 @@ STYLE_FILES = [
     os.path.join(SKILL, "templates", "gb_compose.css"),
     os.path.join(SKILL, "templates", "gb_shell.css"),
     os.path.join(SKILL, "templates", "gb_page.css"),
-    os.path.join(SKILLS, "course-task-ux", "assets", "gb_task.css"),
-    os.path.join(SKILLS, "course-module-ux", "assets", "gb_photo.css"),
-]
+    os.path.join(SKILLS, "course-task-ux", "assets", "gb_task.css"),]
 TOKENS = os.path.join(SKILL, "templates", "gb_tokens.css")
 
 PASS: list[str] = []

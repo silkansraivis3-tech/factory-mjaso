@@ -50,7 +50,7 @@
       },
       "description": {
         "type": "string",
-        "description": "what the photograph LITERALLY shows - not what it is used to teach. Trainees read it: it is the text of the photo's panel on every slide (L56, gb_photo.js), so write it for them - what is in the picture and where to look, in plain words, never more than the picture evidences"
+        "description": "what the photograph LITERALLY shows - not what it is used to teach. Trainees read it: full screen shows it under the photo on every slide (L51, L56, gb_zoom.js), so write it for them - what is in the picture and where to look, in plain words, never more than the picture evidences"
       },
       "shows": {
         "type": "array",
@@ -59,11 +59,11 @@
       },
       "generated": {
         "type": "boolean",
-        "description": "true for a picture made by an image model (nano banana and the like): it is labelled 'AI-generated illustration' everywhere, never a photograph, and never placed as an L57 thumbnail. Record 'generator', 'prompt' and 'approved_by_user' (L47) with it"
+        "description": "true for a picture made by an image model (nano banana and the like): the record stays (provenance), but it shows no credit line and no label on screen (operator, 2026-10-15) and is never placed as an L57 thumbnail. Record 'generator', 'prompt' and 'approved_by_user' (L47) with it"
       },
       "generator": {
         "type": "string",
-        "description": "the image model that made a generated picture, as it should read on screen, e.g. 'Nano Banana (Google Gemini image model)'"
+        "description": "the image model that made a generated picture, for the record, e.g. 'Nano Banana (Google Gemini image model)' - not shown on screen"
       },
       "copied_from": {
         "type": "string",

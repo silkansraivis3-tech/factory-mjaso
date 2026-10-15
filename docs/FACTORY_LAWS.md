@@ -411,7 +411,10 @@ picture, illustration and explanatory image can be tapped to full screen and clo
 module check, and before it a beautiful summary - animated boxes, the main points to take away - with the same closing
 design in every module. One shared viewer, `gb_zoom.js` / `gb_zoom.css`, on every page that shows a picture (tap opens;
 X, tap outside, Esc, swipe down, Back or the next slide closes; pinch, double-tap or + / − zoom; a ⤢ corner button
-where the trainee answers on the picture). One recap slide, `"recap": true` in the script, 3-6 points, straight before
+where the trainee answers on the picture). Full screen shows a photograph's own record under it - the part of a
+drawing it shows, what is in it, whose it is (L56) - and a slide that is a photograph opens on a tap of its bare picture
+area and carries the ⤢ button (operator, 2026-10-15: one viewer, L51's, with L56's explanation in it; compiled decks
+load it too). One recap slide, `"recap": true` in the script, 3-6 points, straight before
 the module check's task slide, built in `.slide.dark.recap` (`gb_compose.css` 15). Both are design: the person may
 choose otherwise after hearing the risk (L26).
 → `course-factory` (`content_script.py`, `check_course_package.py`, `knowledge/theory-rules.json` recap),
@@ -466,37 +469,32 @@ photographs still come first for anything a trainee must recognise (L52). → `c
 `kit.css`, `SPEC.md`, `PARTS.md`, `scripts/check_kit.py`, `scripts/kit_parts.py`, `GALLERY.html`), `course-factory`
 (the compiler places a kit spec and ships the kit) and `course-module-ui` (`design-system.json` installs it), 2.26.0
 
-**L56 · Every photograph opens - large, with what it shows - and the factory does it unasked.** Operator,
-2026-10-15, from Aigars's review of the IGF pilot: *"we need images to be expandable, so a lightbox with maybe more
-explanation about the photo"*, and *"the factory needs to make it on its own"*. (1) Every photograph on a slide - the
-slide's picture, a photo beside the words, an inset - opens on a tap into a panel: the photograph whole and large, the
-slide's title, what the photograph shows, its credit; a tap on it there fills the screen. A slide that is a photograph
-with the words over it gets a Photo button. Close button, the dimmed screen, Escape; the deck does not move while it
-is open. (2) Nobody asks for it per slide and no build-sheet key turns it on: every compiled deck loads it.
-(3) What the panel says is the photo's own `description` in `assets\img\_photo_meta.json`, written when the photo is
-brought in: what is in the picture and what to look at, for a trainee, and never more than the picture evidences (a
-caption, like its credit line). A photo with no description is reported at build. (4) A picture made by an image model
-(its record: `"generated": true`, `"generator"`, the prompt, the operator's yes - L47) is never called a photograph: the
-panel's kicker, its credit and an inset's caption say "AI-generated illustration" and name the model, and L57 never
-places it as a thumbnail (operator, 2026-10-15, M01 s04's tank in its hold; L33 still asks for a real photo to replace
-it, so the thing stays on `PHOTOS_TO_TAKE.md`). Ported from the definition panel and
-full-screen figure of the oil/chemical course (Modules 6 and 10). → `course-module-ux` (`assets/gb_photo.js`,
-`gb_photo.css`), `course-module-ui` (`design-system.json` installs them), `course-factory` (`compile/` writes
-`data-about` / `data-credit` on every photograph), 2.27.0
+**L56 · Every photograph carries what it shows into the viewer - unasked.** Operator, 2026-10-15, from Aigars's review
+of the IGF pilot: *"we need images to be expandable, so a lightbox with maybe more explanation about the photo"*, and
+*"the factory needs to make it on its own"*. The viewer is L51's `gb_zoom.js` (one viewer; the panel `gb_photo.js` of
+2.27.0 is retired). (1) Every photograph's record - its `description` in `assets\img\_photo_meta.json`, written when the
+photo is brought in: what is in the picture and where to look, for a trainee, never more than the picture evidences -
+and its credit go onto the `<img>` (`data-about`, `data-credit`; `data-name` for an L57 thumbnail), and full screen
+shows them under the picture. (2) Nobody asks for it per slide: the compiler writes them on every photograph. A photo
+with no description is reported at build. (3) A picture made by an image model keeps its full record (`"generated":
+true`, `"generator"`, the prompt, the operator's yes - L47) but carries no credit line and no label on screen
+(operator, 2026-10-15), and L57 never places it as a thumbnail; the thing it stands in for stays on
+`PHOTOS_TO_TAKE.md` until a real photo replaces it (L33). → `course-factory` (`compile/` writes the record onto every
+photograph), `course-module-ux` (`gb_zoom.js` shows it), 2.27.0, 2.33.0
 
 **L57 · A drawing of real things carries their real photographs - unasked.** Operator, 2026-10-15, looking at the
 IGF pilot's "five new spaces" drawing: *"if there is an illustration like this, there would also be a real image of it,
 maybe smaller, somewhere close, which you can click and see the real one"*. (1) Every drawn slide's real things - the
 parts its lines name ("Tank connection space - ...") and the labels the drawing writes on itself ("vent mast") - get
-their real photographs in a row under the drawing: small, numbered like the drawing's own steps, each opening in the
-L56 panel. At most four. (2) Matched by the photo's `shows` in `_photo_meta.json` - the plain names of what the picture
+their real photographs in a row under the drawing: small, numbered like the drawing's own steps, each opening full
+screen with its record (L51, L56). At most four. (2) Matched by the photo's `shows` in `_photo_meta.json` - the plain names of what the picture
 really shows, written when the photo is brought in; a photo with no `shows` is pointed out. A cleared photo of another
 module of the course is copied in with its record (`copied_from`); one awaiting a rights review is never used. (3) A
 real thing with no photo is reported at build and listed in `working_claude\PHOTOS_TO_TAKE.md` (each module's section
 rewritten on every build, the operator's `## Notes` kept) - it is a photo to take at Novikontas, never a reason to
 stop the build. A thing counts as real when its name ends in one of `knowledge/media-and-tasks.json` `photo_things`.
-→ `course-factory` (`compile/`), `course-module-ux` (`gb_photo.css` `.photo-strip`, `gb_photo.js` `data-name`),
-`course-visuals` (`_photo_meta.schema.json` `shows`), 2.27.0
+A build-sheet `"no_photo"` keeps a matched photo off a drawing it contradicts. → `course-factory` (`compile/`),
+`course-module-ui` (`gb_compose.css` 16 `.photo-strip`), `course-visuals` (`_photo_meta.schema.json` `shows`), 2.27.0
 
 **L58 · Every photograph once in the whole course.** Operator, 2026-10-15, after the same Viking Grace deck-tank photo
 came up under five drawings of IGF Module 3: *"don't have duplicate images - either a different one or none, on all
