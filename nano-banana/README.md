@@ -11,6 +11,8 @@ places it.
 |---|---|
 | `server/nano_banana_mcp.py` | MCP server, **Python standard library only** — nothing to pip install |
 | `skills/realistic-visuals/` | when to generate and when to draw, the prompt shot-list, the check-every-image loop, embedding in HTML and PPTX, provenance |
+| `skills/gemini-browser/` | **free route (1.3.0):** drives gemini.google.com on the person's own Google AI Pro account - no key, no cost per picture - from a list decided beforehand, downloads each picture and moves it into the project |
+| `scripts/gemini_driver.js` · `scripts/gemini_take.py` | the page driver (`GB.send / wait / download`) and the mover that takes the picture from Downloads to the slide's file and writes its `_photo_meta.json` record |
 | `agents/image-director.md` | does a whole set of images or clips in isolated context and returns paths only |
 
 Tools: `generate_image` · `generate_video` · `get_video` · `setup_api_key` · `nano_banana_status`.

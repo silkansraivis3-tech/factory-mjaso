@@ -654,6 +654,23 @@
     });
   }
 
+  /* owner, 2026-10-16: "no scrollbar at all allowed" on a slide - a box that scrolls hides what does not fit behind a
+     scrollbar the room cannot use. Any element of the slide (the slide too) set to scroll that has more inside than
+     it shows; scrollHeight rounds up, so a 1 px difference is not counted */
+  function checkScroll(root, where, out) {
+    [root].concat(qa(root, "*")).forEach(function (el) {
+      var cs = getComputedStyle(el);
+      if (cs.display === "none" || cs.visibility === "hidden") { return; }
+      var down = /(auto|scroll)/.test(cs.overflowY) && el.scrollHeight - el.clientHeight > CONFIG.tolPx;
+      var side = /(auto|scroll)/.test(cs.overflowX) && el.scrollWidth - el.clientWidth > CONFIG.tolPx;
+      if (down || side) {
+        report(out, { check: "scrolls", where: where, part: tag(el), other: "the slide - no scrollbar on a slide",
+                      detail: (down ? (el.scrollHeight - el.clientHeight) + " px more than it shows" : "")
+                              + (down && side ? ", " : "") + (side ? (el.scrollWidth - el.clientWidth) + " px wider" : "") }, [el]);
+      }
+    });
+  }
+
   function guard() {
     var w = window.innerWidth || 0, h = window.innerHeight || 0;
     if (w >= CONFIG.minViewportWidth && h >= CONFIG.minViewportHeight) { return null; }
@@ -703,6 +720,7 @@
           qa(s, "svg").filter(function (v) { return !v.ownerSVGElement && shown(v, v) && !v.closest("button, .mediabar, .slide-kind"); })
             .forEach(function (v) { count++; checkSvg(v, where, out, s); });
           checkPictures(s, where, out, s);
+          checkScroll(s, where, out);
           return step(i + 1);
         });
       }
