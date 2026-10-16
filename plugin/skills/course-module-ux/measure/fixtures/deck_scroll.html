@@ -1,0 +1,24 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>audit_drawing - a slide that scrolls</title>
+<style>
+  body{margin:0;font:16px sans-serif}
+  .slide{display:none;width:1280px;height:800px}
+  .slide.active{display:block}
+  .body{height:300px;overflow:auto}
+  .tall{height:308px;background:#ddd}   /* 8 px more than its box shows: the M02 s07 case, 2026-10-16 */
+  .fits{height:300px;background:#ddd}
+  .edge{height:301px;background:#ddd}   /* 1 px: scrollHeight rounding, not a scrollbar the room sees */
+</style></head>
+<body>
+<section class="slide" id="scrolls"><div class="body"><div class="tall"></div></div></section>
+<section class="slide" id="fits"><div class="body"><div class="fits"></div></div></section>
+<section class="slide" id="rounding"><div class="body"><div class="edge"></div></div></section>
+<pre id="out"></pre>
+<script src="../scripts/audit_drawing.js"></script>
+<script>
+  AuditDrawing.spec().settleMs = 50;
+  AuditDrawing.all().then(function (res) {
+    document.getElementById("out").textContent = JSON.stringify(res);
+  });
+</script>
+</body></html>

@@ -69,6 +69,9 @@ var GBZoom = (function (w, d) {
       var sl = closest(wrap, ".slide");
       return (sl && sl.querySelector(".photo-wrap img")) || null;
     }
+    /* a photograph laid ON a drawing (an <img> in a <foreignObject>, shown at its step - IGF M02 s13, 2026-10-16)
+       is its own picture: it opens full screen with its record, not the whole drawing */
+    if (t.tagName === "IMG" && closest(t, "foreignObject")) { return t; }
     var svg = closest(t, "svg"), outer = svg;
     while (svg) { outer = svg; svg = svg.parentNode && closest(svg.parentNode, "svg"); }
     if (outer) { return outer; }

@@ -88,6 +88,64 @@ def main():
         check("all of it is kept in working_claude/picture_briefs/M01.json", kept["s02"]["made"][1]["approved_by_user"] == "yes, with the window on the left"
               and kept["s02"]["answers"]["space"] == "left third empty", kept)
 
+        print("\n-- the free Gemini-app route: every place, its prompt and its file decided before the browser opens")
+        code, out = run("queue", master, "--module", "1", "--all")
+        q = json.load(io.open(os.path.join(master, "course", "working_claude", "picture_briefs", "M01.gemini.json"), encoding="utf-8"))
+        by = {x["slide"]: x for x in q}
+        check("the queue lists the still pictures - not the video clip, not the photograph", code == 0 and set(by) == {"s01", "s02"}, out)
+        check("the person's saved prompt is used as it is", by["s02"]["prompt"].startswith("Photograph of the cargo control room")
+              and by["s02"]["prompt_from"] == "the person", by["s02"])
+        check("every line ends in a file in the module's own folder",
+              all(x["save_as"].endswith(".png") and os.sep + "modules" + os.sep + "module01" + os.sep in x["save_as"] for x in q), q)
+        bare = dict(SCRIPT, screens=SCRIPT["screens"] + [{"id": "s04", "kind": "slide", "title": "The bunkering station at night",
+                                                             "text": "x", "visual_kind": "ai_illustration",
+                                                             "visual": "The bunkering station of an LNG-fuelled ferry at night, drip tray under the manifold",
+                                                             "minutes": 5},
+                                                            {"id": "s05", "kind": "slide", "title": "Three kinds of fuel tank",
+                                                             "text": "x", "visual_kind": "comparison",
+                                                             "visual": "Type A, Type B and Type C tanks side by side, each in its hold",
+                                                             "minutes": 5},
+                                                            {"id": "s06", "kind": "slide", "title": "Hazardous zones", "text": "x",
+                                                             "visual_kind": "schematic", "visual": "The zones around the fuel preparation room",
+                                                             "minutes": 5},
+                                                            {"id": "s07", "kind": "slide", "title": "Fuel lines", "text": "x",
+                                                             "visual_kind": "flow_animation", "visual": "Gas flowing to the engine",
+                                                             "minutes": 5}])
+        io.open(os.path.join(master, "course", "working_claude", "script", "M01.build.json"), "w", encoding="utf-8").write(
+            json.dumps({"module": 1, "screens": {"s06": {"figure": "m01_s06.svg", "no_picture": True}}}))
+        io.open(os.path.join(master, "course", "working_claude", "script", "M01.json"), "w", encoding="utf-8").write(json.dumps(bare))
+        code, out = run("queue", master, "--module", "1")
+        q = json.load(io.open(os.path.join(master, "course", "working_claude", "picture_briefs", "M01.gemini.json"), encoding="utf-8"))
+        by = {x["slide"]: x for x in q}
+        p = by.get("s04", {}).get("prompt", "")
+        check("without --all a place already made is left out", "s02" not in by and "s04" in by, out)
+        check("a place nobody described gets a prompt drafted from the script's own words - style, subject, space, no text, aspect",
+              p.startswith("A realistic documentary photograph of the bunkering station of an LNG-fuelled ferry at night")
+              and "No text, no letters" in p and "lower-left third" in p and p.endswith("Aspect ratio 16:9, landscape, high detail.")
+              and by["s04"]["rel"] == "assets/img/m01_s04_bunkering_station_night.png", by.get("s04"))
+        check("the same script gives the same prompt", run("queue", master, "--module", "1")[1] == out)
+        d = by.get("s05", {})
+        check("a drawing slide keeps its drawing and gets the real thing under it - a 3D render of the slide's subject, 4:3",
+              d.get("place_as") == "under the drawing (inset)" and d.get("aspect") == "4:3"
+              and d.get("prompt", "").startswith("A photorealistic 3D render of three kinds of fuel tank. Show it as it really")
+              and "side by side" not in d.get("prompt", "")
+              and "as it really looks on a ship" in d.get("prompt", "") and "No text" in d.get("prompt", "")
+              and d.get("rel") == "assets/img/m01_s05_three_kinds_fuel_tank_3d.png", d)
+        check("a drawing slide marked no_picture, and an animation of flow, are left alone", "s06" not in by and "s07" not in by, sorted(by))
+        code, out = run("done", master, "--module", "1", "--slide", "s05", "--file", d.get("rel", "x.png"), "--approved", "go", "--free")
+        check("a picture from the Gemini app is counted but costs nothing", "(this one free, from the Gemini app)" in out
+              and "about EUR 0.20 so far" in out, out)
+        build = json.load(io.open(os.path.join(master, "course", "working_claude", "script", "M01.build.json"), encoding="utf-8"))
+        check("done puts a drawing slide's picture under the drawing - the drawing stays the slide's figure",
+              build["screens"].get("s05", {}).get("inset") == {"photo": d.get("rel"), "under": "figure"}
+              and "figure" not in build["screens"]["s05"], (out, build))
+        check("... and a slide that has its picture under the drawing is not queued again",
+              "(s05)" not in run("queue", master, "--module", "1")[1])
+        code, out = run("done", master, "--module", "1", "--slide", "s04", "--file", by["s04"]["rel"], "--approved", "ok, the whole list")
+        build = json.load(io.open(os.path.join(master, "course", "working_claude", "script", "M01.build.json"), encoding="utf-8"))
+        check("done puts the picture into the build sheet, so the next compile places it",
+              build["screens"]["s04"]["figure"] == "assets/img/m01_s04_bunkering_station_night.png" and "build sheet now places it" in out, (out, build))
+
         print("\n-- the questions are there for every operator language")
         qs = cs.MEDIA["generation_brief"]["questions"]
         check("eight questions, each in English, Latvian and Russian", len(qs) == 8 and all(q.get(k) for q in qs for k in ("en", "lv", "ru")), qs)
