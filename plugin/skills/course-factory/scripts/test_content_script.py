@@ -542,6 +542,20 @@ def main():
               code == 0 and not os.path.isfile(p["pending"]) and screen(cs.load(p["script"]), "s01")["visual"].endswith("alongside"), out)
         code, out = cs_run("approve", c, "--module", "1", "--by", "Anna")
         check("... and it can be approved again", code == 0, out)
+        # 2.44.1 (IGF M03, 2026-10-16): a change whose value is a list, a number or true crashed the log after the
+        # script was already written - the pending list stayed behind and nothing reached FEEDBACK_LOG.md
+        ct = new_course(tmp, "types")
+        cht = os.path.join(tmp, "types_changes.json")
+        io.open(cht, "w", encoding="utf-8").write(json.dumps([{"field": "s01.recap", "new": True}, {"field": "q01.bloom", "new": 3},
+                                                               {"field": "q01.options", "new": ["Fully refrigerated", "Pressurised"]}]))
+        code, out = cs_run("propose", ct, "--module", "1", "--changes", cht)
+        code2, out2 = cs_run("apply", ct, "--module", "1", "--confirmed")
+        fb = io.open(os.path.join(ct, "working_claude", "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        st = {x["id"]: x for x in cs.load(cs.paths(ct, 1)["script"])["screens"]}
+        check("a change to true, a number or a list is proposed, applied and logged, and kept as true / a number / a list",
+              code == 0 and code2 == 0 and not os.path.isfile(cs.paths(ct, 1)["pending"]) and "Fully refrigerated / Pressurised" in fb
+              and st["s01"]["recap"] is True and st["q01"]["bloom"] == 3 and st["q01"]["options"] == ["Fully refrigerated", "Pressurised"],
+              out + out2)
 
         print("\n-- 2.16.1: the slide-text check still runs on every screen")
         dirty = copy.deepcopy(SCRIPT)

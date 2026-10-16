@@ -1614,8 +1614,18 @@ def screen_of(script, sid):
     return None
 
 
+def as_text(v):
+    """a field may hold a list (options, an answer's lines) or a number / true - shown to the operator as words (2.44.1:
+    a value that was not text crashed the understood list and the log, after the script was already written)"""
+    if isinstance(v, (list, tuple)):
+        return " / ".join(as_text(x) for x in v)
+    if isinstance(v, bool):
+        return "yes" if v else "no"
+    return "" if v is None else str(v)
+
+
 def short(s, n=90):
-    s = (s or "").replace("\n", " / ")
+    s = as_text(s).replace("\n", " / ")
     return s if len(s) <= n else s[:n - 1] + "…"
 
 
@@ -1644,9 +1654,10 @@ def describe(script, ch):
     name = {"title": "the title", "text": "the slide text", "visual": "the planned picture", "notes": "the instructor notes",
             "minutes": "the minutes", "question": "the question", "feedback": "the feedback", "mechanic": "how the trainee answers",
             "visual_kind": "the kind of picture", "answer": "the answer"}.get(f, f)
-    if len(ch["old"] or "") > 60 or len(ch["new"] or "") > 60:
-        return "%s, %s: %s" % (where, name, changed_words(ch["old"], ch["new"]))
-    return "%s: %s becomes \"%s\" (was \"%s\")" % (where, name, ch["new"], ch["old"])
+    old, new = as_text(ch["old"]), as_text(ch["new"])
+    if len(old) > 60 or len(new) > 60:
+        return "%s, %s: %s" % (where, name, changed_words(old, new))
+    return "%s: %s becomes \"%s\" (was \"%s\")" % (where, name, new, old)
 
 
 def write_pending(p, script, changes, notes, source):
