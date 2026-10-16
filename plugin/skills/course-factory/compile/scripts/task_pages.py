@@ -620,10 +620,15 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         out += dial(sid, q, b, w, where, probs)
     elif m == "find_the_fault":                         # the symptoms; each part a card - tap to check, then name it
         ls = cs.lines_of(q.get("answer"))
-        out += picture(q, b, mdir, figdir, figs, probs, where)
+        pic = picture(q, b, mdir, figdir, figs, probs, where)
+        if pic:                                         # the picture beside the symptoms, so the cards fit the screen
+            out.append('    <div class="ffhead">')
+            out += ["  " + x for x in pic]
         out.append('    <div class="sym"><p class="phead">%s</p>' % e(w["symptoms"]))
         out += ['      <p data-script-field="answer">%s</p>' % e(x.strip().lstrip("!").strip()) for x in ls if x.lstrip().startswith("!")]
         out.append("    </div>")
+        if pic:
+            out.append("    </div>")
         out.append('    <p class="opts-say">%s</p>' % e(w["fault_say"]))
         out.append('    <div class="cg ffs">')
         parts = [(cs.unstar(x).partition(":")[0].strip(), cs.unstar(x).partition(":")[2].strip(), 1 if cs.starred(x) else 0)

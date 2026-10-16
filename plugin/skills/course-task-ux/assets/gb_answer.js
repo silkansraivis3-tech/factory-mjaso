@@ -129,10 +129,12 @@
   function $$(s, r) { return Array.prototype.slice.call((r || D).querySelectorAll(s)); }
   function norm(s) { return String(s).replace(/\s+/g, ' ').replace(/^ | $/g, ''); }
   function txt(el) { return norm(el.textContent); }
-  function has(el, c) { return (' ' + el.className + ' ').indexOf(' ' + c + ' ') >= 0; }
-  function add(el, c) { if (el && !has(el, c)) { el.className = (el.className ? el.className + ' ' : '') + c; } }
+  /* through the class attribute, never .className - a drawing's SVG elements have a read-only className */
+  function cls(el) { return (el && el.getAttribute && el.getAttribute('class')) || ''; }
+  function has(el, c) { return (' ' + cls(el) + ' ').indexOf(' ' + c + ' ') >= 0; }
+  function add(el, c) { if (el && !has(el, c)) { el.setAttribute('class', (cls(el) ? cls(el) + ' ' : '') + c); } }
   function del(el, c) {
-    if (el) { el.className = norm((' ' + el.className + ' ').replace(' ' + c + ' ', ' ')); }
+    if (el && has(el, c)) { el.setAttribute('class', norm((' ' + cls(el) + ' ').replace(' ' + c + ' ', ' '))); }
   }
   function each(list, fn) { for (var i = 0; i < list.length; i++) { fn(list[i], i); } }
 
@@ -398,7 +400,7 @@
   }
   /* compare: the figures of a column show what its name button shows - chosen, right, wrong */
   function syncFor(root) {
-    each($$('[data-for]', root), function (c) {
+    each($$('.cmp [data-for]', root), function (c) {      /* only the compare table - a drawing may use data-for too */
       var it = D.getElementById(c.getAttribute('data-for'));
       each(['sel', 'right', 'wrong', 'dim'], function (k) { if (it && has(it, k)) { add(c, k); } else { del(c, k); } });
     });
@@ -503,7 +505,7 @@
     if ($('.chip', el)) { p.groups.push(mkPlace(q, el)); }
     each($$('.dial', el), function (d) { p.groups.push(mkDial(q, d)); });
     /* compare: a figure in a column chooses that column */
-    each($$('[data-for]', el), function (c) {
+    each($$('.cmp [data-for]', el), function (c) {
       c.addEventListener('click', function () { var it = D.getElementById(c.getAttribute('data-for')); if (it) { it.click(); } }, false);
     });
     /* find the fault: tap a part to check it - it turns over and stays turned over; checking is never wrong */
@@ -627,7 +629,10 @@
       });
     });
     if (q.vd) { q.vd.textContent = q.ok ? say('correct') : say(kind); }
-    if (q.why) { add(q.why, 'on'); add(q.why, q.ok ? 'good' : 'bad'); }
+    if (q.why) {
+      add(q.why, 'on'); add(q.why, q.ok ? 'good' : 'bad');
+      try { q.why.scrollIntoView({ block: 'nearest' }); } catch (x) { /* an old WebView */ }   /* above the dock, not under it */
+    }
   }
   function allOk(q) {
     var ok = true;

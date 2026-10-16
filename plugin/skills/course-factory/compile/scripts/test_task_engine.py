@@ -68,6 +68,7 @@ DRIVER = r"""
   var queue = [];
   PLAN.forEach(function (p) {
     if (p[0] === 'post') { queue.push(function () { window.postMessage(p[1], '*'); }); return; }
+    if (p[0] === 'eval') { queue.push(function () { (new Function(p[1]))(); }); return; }
     queue.push(function () { answer(p[0], p[1]); });
     queue.push(function () { out.steps.push(p[0] + ':' + dock()); });     /* Check */
     queue.push(function () { out.steps.push(p[0] + ':' + dock()); });     /* Next, or See my score */
@@ -197,8 +198,13 @@ def main():
         page = os.path.join(md, "tasks", "sc1_every_way.html")
         check("the fixture page is built", code == 0 and os.path.isfile(page), out)
         print("\n-- every question answered right")
-        r = drive(exe, page, RIGHT, tmp)
-        check("no script error on the page", not r.get("errors"), r.get("errors"))
+        # found by the walkthrough on the IGF pilot: a drawing's own element with a class and data-for in the question
+        # made the engine write .className on an SVG node and stop - the drawing is never the engine's to touch
+        svg = ("var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'), g = document.createElementNS(s.namespaceURI, 'g');"
+               "g.setAttribute('data-for', 't-a'); g.setAttribute('class', 'sel'); s.appendChild(g);"
+               "document.querySelector('.scr[data-script=\"q09\"]').appendChild(s);")
+        r = drive(exe, page, [["eval", svg]] + RIGHT, tmp)
+        check("no script error on the page - also with a drawing's own data-for and classes in a question", not r.get("errors"), r.get("errors"))
         rep = r.get("report") or {}
         check("the classroom hears 10 of 10, every question answered, no time-out",
               rep.get("ok") == 10 and rep.get("total") == 10 and rep.get("answered") == 10 and rep.get("timeout") is False, rep)

@@ -337,7 +337,7 @@ def every_way_part(tmp):
     check("find the fault: the symptoms, a card per part to turn over, the faulty part keyed 1; its picture from the build sheet",
           '<p data-script-field="answer">Tank 2 pressure rises about 0.05 bar an hour</p>' in p and p.count('class="ffc"') == 3
           and ks.get("Condenser") == cs.gb_key("q05", "Condenser", 1) and ks.get("Compressor") == cs.gb_key("q05", "Compressor", 0)
-          and re.search(r'data-script="q05".*?<div class="instrument">', p, re.S) and 'src="../assets/gb_zoom.js"' in p)
+          and re.search(r'data-script="q05".*?<div class="ffhead">\s*<div class="instrument">', p, re.S) and 'src="../assets/gb_zoom.js"' in p)
     check("spot the errors: the document in its order, each line keyed, each why shown after the Check",
           ks.get("Oxygen: 18.5 %") == cs.gb_key("q06", "Oxygen: 18.5 %", 1) and ks.get("Space: cargo tank 2") == cs.gb_key("q06", "Space: cargo tank 2", 0)
           and p.index("Space: cargo tank 2") < p.index("Oxygen: 18.5 %") < p.index("Signed: Chief Officer")
