@@ -165,7 +165,7 @@ ru *пробел*.
 | fa | Final assessment | Noslēguma pārbaudījums | Итоговая аттестация |
 | task | Task {c} | Uzdevums {c} | Задание {c} |
 
-## 6 · Added in 2.45.0 — the engine's "missed" words and the instructor's answer key
+## 6 · Added in 2.46.0 — the engine's "missed" words and the instructor's answer key
 
 `course-task-ux/assets/gb_answer.js` LANG (choose all that are right, answered wrong: a right one not chosen):
 

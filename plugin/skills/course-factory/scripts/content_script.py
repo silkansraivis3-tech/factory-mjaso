@@ -1770,7 +1770,7 @@ class Stop(Exception):
 
 
 def check_script_field(name, v):
-    """the value a top-level script field may take (2.45.0) - returned as it will be stored"""
+    """the value a top-level script field may take (2.46.0) - returned as it will be stored"""
     if name not in SCRIPT_FIELDS:
         raise Stop("the script field %r cannot be changed this way - only %s can; status and approval are the operator's \"next\", "
                    "screens are added, removed or edited one at a time" % (name, ", ".join(SCRIPT_FIELDS)))
@@ -1798,7 +1798,7 @@ def index_of(script, sid):
 
 
 def build_changes(script, entries):
-    """The list of understood changes (2.45.0). Entries apply in order on a working copy, so a later one may target a
+    """The list of understood changes (2.46.0). Entries apply in order on a working copy, so a later one may target a
     screen an earlier one added, and every "old" value is the one that entry will really replace. Returns
     (changes, the script as it would stand); raises Stop for an entry that cannot be understood."""
     work, lang, changes = copy.deepcopy(script), script.get("operator_language", "en"), []

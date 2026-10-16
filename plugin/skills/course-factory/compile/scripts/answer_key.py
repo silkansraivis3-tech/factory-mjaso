@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The instructor's answer key of a module, built from its approved script (2.45.0) - the last hand-made page gone.
+"""The instructor's answer key of a module, built from its approved script (2.46.0) - the last hand-made page gone.
 
 Used by compile_module.py with the task pages: assessment\\check_answer_key.html - instructor-only by its name
 (classroom-system.json: "answers and marking - instructor-only by its name"), listed by compile_course.py on the
@@ -45,7 +45,7 @@ WORDS = {"en": {
     "accepts": "the dial accepts {vals}", "stop": "Then tap where it should have stopped: {x}",
     "out": "Stays out of the plan: {x}", "because": "Why: {x}", "step": "Step {n}: {x}", "fault": "The faulty part: {x}",
     "wrong_lines": "The wrong lines:", "places": "Each label on its place: {x}", "ends": "{c}: {s}"},
-    # PROVISIONAL (2.45.0) - written by Claude, to be checked by a native speaker: compile/TRANSLATIONS_REVIEW.md
+    # PROVISIONAL (2.46.0) - written by Claude, to be checked by a native speaker: compile/TRANSLATIONS_REVIEW.md
     "lv": {
     "title": "Atbilžu atslēga – {n}. modulis", "title_final": "Atbilžu atslēga – noslēguma pārbaudījums", "back": "Atpakaļ",
     "only_h": "Tikai instruktoram",

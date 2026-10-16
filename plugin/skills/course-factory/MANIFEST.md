@@ -996,7 +996,7 @@ Source: `M04_BUILD_METRICS.md` §9 (findings 1, 3, 5, 6, 7, 8, 13, 14). Each fix
   problem (`credit_path_problems()`), on the deck and on every task page.
 - Not touched, by instruction: `compile/scripts/task_pages.py`, `course-task-ux/assets/gb_answer.*` (another agent).
 
-## 4zo · The shared task engine after IGF M01-M03, the compiled answer key, whole-screen corrections (2.45.0, 2026-10-16)
+## 4zo · The shared task engine after IGF M01-M03, the compiled answer key, whole-screen corrections (2.46.0, 2026-10-16)
 
 Source: the visual reviews of IGF Modules 1-3 rebuilt as compiled pages ("shared, not the module's"). Each fix is a
 check in `compile/scripts/test_task_engine.py` (headless Chrome, 1280 x 800) that fails on 2.44.1 and passes now.

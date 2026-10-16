@@ -623,7 +623,7 @@
     if (g.type === 'choose') {
       each(g.items, function (it) {
         /* choose all that are right: a right one the trainee did not choose is shown as one ("Also right"), outlined -
-           never ticked as if it had been chosen (2.45.0; course-task-ux §0.5: a tick is what the trainee did right) */
+           never ticked as if it had been chosen (2.46.0; course-task-ux §0.5: a tick is what the trainee did right) */
         if (itemRight(g, it) && g.multi && !has(it, 'sel')) {
           add(it, 'missed');
           it.setAttribute('data-miss', say(g.q.mech === 'spot_the_error' ? 'alsoWrong' : 'alsoRight'));
@@ -682,7 +682,7 @@
       bring(q.why, q.parts.length > 1 ? q.parts[q.k].el : null);
     }
   }
-  /* bring an element into the band between the top bar and the dock (2.45.0). The top bar is sticky: scrollIntoView
+  /* bring an element into the band between the top bar and the dock (2.46.0). The top bar is sticky: scrollIntoView
      left a scenario's "Step 2 of 3" under it. Scrolled down only as far as keeps `from` (default: the element itself)
      below the top bar - when both do not fit, the top wins. */
   function bring(el, from) {
@@ -894,7 +894,7 @@
     screensOff();
     add(resScr, 'on');
     add(dock, 'off');
-    toTop();                     /* the last question was scrolled: the ring opened half under the top bar (2.45.0) */
+    toTop();                     /* the last question was scrolled: the ring opened half under the top bar (2.46.0) */
     setPart(say('result'));
     if (gotEl) { gotEl.textContent = ''; }
     setBar(qs.length);
@@ -960,7 +960,7 @@
   }
 
   /* ---------------------------------------------------------------- start */
-  /* every choice keeps the letter it was shown with (2.45.0): a CSS counter re-lettered a scenario's step once the
+  /* every choice keeps the letter it was shown with (2.46.0): a CSS counter re-lettered a scenario's step once the
      choices that were not right had folded away - "C" became "A" after Check */
   function letterAll() {
     each($$('.opt'), function (o) {

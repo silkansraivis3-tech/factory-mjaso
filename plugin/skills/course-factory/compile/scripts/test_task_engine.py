@@ -421,7 +421,7 @@ def figures_part(exe, tmp):
     check("1280 x 800: the label chips are above the Check bar", not low, low)
 
 
-# ---------------------------------------------------------------- 2.45.0: what rebuilding IGF M01-M03 found in the engine
+# ---------------------------------------------------------------- 2.46.0: what rebuilding IGF M01-M03 found in the engine
 PREP = ('<svg viewBox="0 0 640 400" role="img"><rect x="20" y="20" width="600" height="360" fill="#fff" stroke="#000"/>'
         '<g id="hs-top" data-name="Under the deckhead"><rect class="hit" x="40" y="30" width="560" height="50"/></g>'
         '<g id="hs-vent" data-name="Ventilation outlet"><rect class="hit" x="30" y="150" width="60" height="70"/></g>'
@@ -507,8 +507,8 @@ def lum(css):
 
 
 def fixes_part(exe, tmp):
-    """2.45.0 - what rebuilding IGF M01-M03 as compiled pages found in the shared engine, each driven in the browser"""
-    print("\n-- 2.45.0: the engine fixes found on IGF M01-M03")
+    """2.46.0 - what rebuilding IGF M01-M03 as compiled pages found in the shared engine, each driven in the browser"""
+    print("\n-- 2.46.0: the engine fixes found on IGF M01-M03")
     os.makedirs(os.path.join(tmp, "fx"))
     c, md = tcm.new_course(os.path.join(tmp, "fx"), tcm.script(screens=FIXES), build=False)
     io.open(os.path.join(md, "assets", "fig", "prep.svg"), "w", encoding="utf-8").write(PREP)

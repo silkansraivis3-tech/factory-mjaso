@@ -557,8 +557,8 @@ def main():
               and st["s01"]["recap"] is True and st["q01"]["bloom"] == 3 and st["q01"]["options"] == ["Fully refrigerated", "Pressurised"],
               out + out2)
 
-        # 2.45.0: a chat correction may also add a screen, remove one, or change a top-level field of the script
-        print("\n-- 2.45.0: a new screen, a removed screen, a screen edited after it was added")
+        # 2.46.0: a chat correction may also add a screen, remove one, or change a top-level field of the script
+        print("\n-- 2.46.0: a new screen, a removed screen, a screen edited after it was added")
         ca = new_course(tmp, "addrm")
         pa, cha = cs.paths(ca, 1), os.path.join(tmp, "addrm_changes.json")
         q_new = "Which tank type needs no secondary barrier at all?"
@@ -591,7 +591,7 @@ def main():
               fb.count("| 3 · M01 · q04 |") == 2 and fb.count("| 3 · M01 · s05 |") == 1 and fb.count("| 3 · M01 · m05 |") == 1
               and q_new in fb and "A closer look at Moss tanks" in fb and "Put these cargoes in order" in fb and "'id'" not in fb and "{" not in fb, fb[-900:])
 
-        print("\n-- 2.45.0: a top-level field of the script")
+        print("\n-- 2.46.0: a top-level field of the script")
         cf = new_course(tmp, "sfield")
         pf, chf = cs.paths(cf, 1), os.path.join(tmp, "sfield_changes.json")
         src_new = ["IGC Code 2016: 4.21-4.24", "IMO Model Course 1.04, section 2"]
@@ -609,7 +609,7 @@ def main():
               code == 0 and s1["sources"] == src_new and s1["pass_mark"] == 80 and s1["title"] == "Gas tanker basics"
               and s1["screens"] == s0["screens"] and fb.count("| 3 · M01 · script |") == 3 and "IMO Model Course 1.04, section 2" in fb, out + fb[-600:])
 
-        print("\n-- 2.45.0: what is refused stops with exit 2 and writes no list")
+        print("\n-- 2.46.0: what is refused stops with exit 2 and writes no list")
         base = {"id": "q07", "kind": "self-check", "question": "x?", "mechanic": "single_choice", "options": ["a", "b"], "correct": "A", "feedback": "f"}
         refused = {
             "a field the script keeps for itself (status)": [{"script_field": "status", "new": "approved"}],
@@ -631,7 +631,7 @@ def main():
             code, out = cs_run("propose", cr, "--module", "1", "--changes", chf)
             check("refused: %s" % what, code == 2 and out.startswith("Stopped - ") and not os.path.isfile(cs.paths(cr, 1)["pending"]), out)
 
-        print("\n-- 2.45.0: a script field changed after the list was made")
+        print("\n-- 2.46.0: a script field changed after the list was made")
         cm = new_course(tmp, "stale")
         pm = cs.paths(cm, 1)
         io.open(chf, "w", encoding="utf-8").write(json.dumps([{"script_field": "sources", "new": ["IGC Code"]}]))

@@ -99,7 +99,7 @@ STAGE_MAX_WORDS = 45
 STATEMENT_MAX_WORDS = 22
 CHECK_PAGES = {"MC": "../assessment/check.html", "FA": "../assessment/final.html"}
 RECORD = "compiled.json"
-# 2.45.0 - a task slide's icon says what the trainees will DO on the tablet: the way of answering most of its set's
+# 2.46.0 - a task slide's icon says what the trainees will DO on the tablet: the way of answering most of its set's
 # questions use (IGF M01-M03: every task slide showed the same generic tablet). The tablet's outline stays, the gesture
 # inside it changes.
 ICON_FAMILY = {"single_choice": "choose", "multi_select": "choose", "choose_and_justify": "choose", "compare": "choose",

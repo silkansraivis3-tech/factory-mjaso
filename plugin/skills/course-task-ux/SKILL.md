@@ -137,7 +137,7 @@ halves count - a task that is clear but dull fails, and so does one that is impr
    dragged item lands, a calm shake and a hint on a wrong try, a check mark and the reason on a right one. The last
    screen shows the trainee's own score as an animated ring - rewarding and professional, never childish.
    A tick means *you did this, and it is right*: when several answers are right and one was missed, the missed one is
-   outlined in green and says **"Also right"** - never ticked as if it had been chosen (2.45.0, `gb_answer.js`).
+   outlined in green and says **"Also right"** - never ticked as if it had been chosen (2.46.0, `gb_answer.js`).
 6. **Modern and real.** Real equipment on the screen - 3D models that turn, real photographs, panels and gauges that
    look and behave like the ones on board; smooth motion between steps; the module's own look (`course-module-ui`).
    Nothing may look or feel like an old web form.

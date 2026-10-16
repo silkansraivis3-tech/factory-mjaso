@@ -61,7 +61,7 @@ body>.wrap{flex:1 0 auto;width:100%}
 .opts.multi .opt.sel::before,.opts.multi .opt.right::before{content:"\2713"}
 .opts.multi .opt.wrong::before{content:"\2715"}
 /* ... answered wrong: a right one the trainee did NOT choose is outlined and says so ("Also right") - its box stays
-   empty, because a tick is what the trainee did right (course-task-ux §0.5, 2.45.0) */
+   empty, because a tick is what the trainee did right (course-task-ux §0.5, 2.46.0) */
 .opt.missed{border:2px dashed var(--good);background:var(--white)}
 .opts.multi .opt.missed::before{content:"";border:2px dashed var(--good);background:transparent}
 .opt.missed::after{content:attr(data-miss);margin-left:auto;padding:2px 12px;border-radius:99px;
@@ -80,7 +80,7 @@ body>.wrap{flex:1 0 auto;width:100%}
   .scr[data-pic="beside"] .instrument{grid-column:1;margin:0;max-width:none}
   .scr[data-pic="beside"] .instrument .ga{--gaw:min(100%,calc((100vh - 310px) * var(--ar,1.6)))}
   .scr[data-pic="beside"] .opts{grid-column:2;margin:0;max-width:none}
-  /* tap the place on a drawing that is not wide (2.45.0, IGF M03): the drawing takes the screen's whole height and the
+  /* tap the place on a drawing that is not wide (2.46.0, IGF M03): the drawing takes the screen's whole height and the
      explanation sits beside it - it left half the screen empty, the explanation's room kept under it */
   .scr[data-pic="side"].on{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,320px);column-gap:20px;align-items:start}
   .scr[data-pic="side"]>.q{grid-column:1/-1}
@@ -88,7 +88,7 @@ body>.wrap{flex:1 0 auto;width:100%}
   .scr[data-pic="side"] .ga{--gaw:min(100%,calc((100vh - 250px) * var(--ar,1.6)))}
   .scr[data-pic="side"]>.why{grid-column:2;margin:0;flex-direction:column;align-self:center}
   /* a long list to put in order, build or match (6 rows or more): the numbered places beside the cards, so the cards
-     are on the screen without scrolling at 1280 x 800 (2.45.0, IGF M03 - 8 rows) */
+     are on the screen without scrolling at 1280 x 800 (2.46.0, IGF M03 - 8 rows) */
   .scr[data-many="1"].on,.scr[data-many] .part.lay.on{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
     column-gap:20px;align-items:start}
   .scr[data-many="1"].on>*,.scr[data-many] .part.lay>*{grid-column:1/-1}
@@ -113,7 +113,7 @@ body>.wrap{flex:1 0 auto;width:100%}
 .ga.lab{--gaw:min(100%,calc((100vh - 400px) * var(--ar,2.575)))}
 .ga svg.taskfig,.ga img.taskfig{display:block;width:100%;height:auto;background:var(--white);border-radius:var(--r-m)}
 /* a figure-kit drawing is the deck's dark screen in a task too (kit.css: "a monitor in the room"): drawn for a dark
-   ground, it read inverted on white - a closed valve pale grey, an open one solid (2.45.0) */
+   ground, it read inverted on white - a closed valve pale grey, an open one solid (2.46.0) */
 .ga svg.taskfig.kit{background:var(--deep-2)}
 .ga.kitfig .leaders line{stroke:var(--dim-d)}
 .ga.kitfig .leaders circle{fill:var(--dim-d)}

@@ -76,7 +76,7 @@ ON_PICTURE = {"hotspot", "spot_the_hazard", "label_diagram"}
 # the ways of answering that are not answered ON a picture but may show one above their controls ("figure" in the build sheet)
 ABOVE = {"match", "categorise", "order", "cloze", "choose_and_justify", "scenario", "spot_the_error", "build_the_plan", "timeline"}
 DEFAULT_PASS = 70
-# 2.45.0 (IGF M01-M03): a drawing to tap that is narrower than this (width / height) takes the screen's height with the
+# 2.46.0 (IGF M01-M03): a drawing to tap that is narrower than this (width / height) takes the screen's height with the
 # explanation beside it (gb_answer.css data-pic="side"); a list of MANY rows or more to order, build or match has its
 # numbered places beside the cards (data-many) - eight rows needed a scroll to reach the cards at 1280 x 800
 SIDE_AR, MANY = 1.8, 6
@@ -731,7 +731,7 @@ def kit_symbol(sid, n, states, start):
             '<script type="application/json" id="%s">%s</script>' % (sid_, sid_, json.dumps(spec, separators=(",", ":"))))
 
 
-# 2.45.0 - a label box is as wide as its words need. The 17 % box cut off "Tank connection space" once the tick
+# 2.46.0 - a label box is as wide as its words need. The 17 % box cut off "Tank connection space" once the tick
 # appeared, and IGF M01 and M03 placed their boxes by hand. A card can be dropped in any box, so every box of a drawing
 # is as wide as its longest label needs, in at most two lines of 16 px (gb_answer.css .lbox .chip).
 NARROW, WIDE = set("ijlt.,:;'!|()[]f ·-"), set("mwMW@%")
@@ -1138,7 +1138,7 @@ def result_screen(w):
 
 
 def pass_mark_of(script, build, probs=None):
-    """the check's pass mark in %: the approved script's "pass_mark" (2.45.0 - the operator corrects it like any
+    """the check's pass mark in %: the approved script's "pass_mark" (2.46.0 - the operator corrects it like any
     other word of the script: content_script.py propose {"script_field": "pass_mark"}), else the build sheet's, else 70"""
     s, b = script.get("pass_mark"), build.get("pass_mark")
     if s and b and int(s) != int(b) and probs is not None and not any("pass mark" in x and "build sheet" in x for x in probs):
@@ -1239,7 +1239,7 @@ def compile_tasks(script, build, mdir, figdir, version, approved):
             continue
         pages[page_path(mdir, slide, code)] = page_html(script, slide, code, qs, build, mdir, figdir, version, approved,
                                                        first_set, probs)
-    import answer_key                                   # 2.45.0 - the instructor's key, from the same approved script
+    import answer_key                                   # 2.46.0 - the instructor's key, from the same approved script
     key = answer_key.key_page(script, build, mdir, version, approved, probs)
     if key:
         pages[key[0]] = key[1]
