@@ -862,6 +862,18 @@ pages show who handed in but names no message; the pages listen for `{type: 'gb-
 (`team_task.gb_team_done`). Tests: `test_compile_module.py` team part (both marks, `check_script_match`,
 `check_course_package`), `test_task_engine.py` (no team / team / handed in elsewhere / member).
 
+## 4zj · The factory's own words in Latvian and Russian (2.40.0, 2026-10-16)
+
+L19: a course page is in one language. The words the compiler and the engine add - buttons, prompts, the result, the
+start pages - existed in English only, so a Latvian or Russian course would have mixed two languages on one screen.
+Now `task_pages.py` WORDS, `gb_answer.js` `LANG` (picked by `<html lang>`, still overridable by `GB_ANSWER_TEXT`) and
+`compile_course.py` WORDS are in en / lv / ru, asserted complete per language. **PROVISIONAL**: written by Claude and
+listed word by word, with the choices made (address, gender-free wording, abbreviated plurals, terms), in
+`compile/TRANSLATIONS_REVIEW.md` for Aleksis or a native speaker. Any other language is reported, exit 1 - the page
+is built with English factory words, never silently. `compile_module.lang_code()` maps "Latvian" / "Latviešu" /
+"lv" to lv (the deck, task pages and start pages wrote `lang="la"`), and `slug()` turns a Latvian or Russian title
+into plain letters for the file name. The owner's ruling stands: every course is English unless explicitly not.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

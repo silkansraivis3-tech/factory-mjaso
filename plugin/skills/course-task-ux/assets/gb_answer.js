@@ -29,7 +29,8 @@
    head, items, answered, of, timeout: true|false}); the instructor's timer {type: 'gb-timer'} is heard, and at 0
    what was done is marked and reported with timeout: true. "Start again" exists only outside the classroom frame
    (window.parent === window): inside it, one opening gives one result.
-   The words on the controls come from window.GB_ANSWER_TEXT (the compiler writes them in the course language). */
+   The words on the controls are in the page's language (<html lang>: en, lv, ru - LANG below); a page may still
+   override any of them with window.GB_ANSWER_TEXT. */
 (function () {
   'use strict';
   var D = document, W = window;
@@ -45,9 +46,45 @@
     goOn: 'Go on', decimal: '.',
     teamRole: 'You are the {role}', teamOne: 'One answer for the whole team', handedIn: 'Handed in by {by} for {team}',
     got: 'You got {ok} of {total} right.', timeUp: ' The time was up.',
-    passNote: 'Pass mark {pass} % – {need} of {total} right. This shows what to review. It is not a grade.'
+    passNote: 'Pass mark {pass} % – {need} of {total} right. This shows what to review. It is not a grade.',
+    passed: 'PASSED', notPassed: 'NOT PASSED'
   };
-  (function () { var k, o = W.GB_ANSWER_TEXT || {}; for (k in o) { if (o.hasOwnProperty(k)) { T[k] = o[k]; } } }());
+  /* the course language (L19) - the page's <html lang>; PROVISIONAL (2.40.0), written by Claude, to be checked by a
+     native speaker: course-factory/compile/TRANSLATIONS_REVIEW.md. The message to the classroom keeps 'PASSED' /
+     'NOT PASSED' - a code, not a word on the screen. */
+  var LANG = {
+    lv: {
+      tryFirst: 'Vispirms izmēģini planšeti', startSelf: 'Sākt paškontroli', moduleCheck: 'Moduļa pārbaude',
+      startCheck: 'Sākt pārbaudi', question: '{n}. jautājums no {of}', soFar: 'Pagaidām pareizi: {n}',
+      check: 'Pārbaudīt', next: 'Tālāk', seeScore: 'Mans rezultāts', result: 'Tavs rezultāts',
+      correct: 'Pareizi.', notQuiteChoice: 'Ne gluži – pareizā atbilde ir atzīmēta.',
+      notQuitePlace: 'Ne gluži – dzeltenās kartītes ir pārliktas savās vietās.',
+      notQuiteValue: 'Ne gluži – zaļā josla rāda pareizās vērtības.',
+      goOn: 'Turpināt', decimal: ',',
+      teamRole: 'Tava loma: {role}', teamOne: 'Viena atbilde visai komandai', handedIn: '{team} atbildi iesniedza: {by}',
+      got: 'Pareizi: {ok} no {total}.', timeUp: ' Laiks beidzās.',
+      passNote: 'Ieskaites slieksnis {pass} % – {need} no {total} pareizi. Tas rāda, ko atkārtot. Tā nav atzīme.',
+      passed: 'IESKAITĪTS', notPassed: 'NAV IESKAITĪTS'
+    },
+    ru: {
+      tryFirst: 'Сначала попробуй планшет', startSelf: 'Начать самопроверку', moduleCheck: 'Проверка по модулю',
+      startCheck: 'Начать проверку', question: 'Вопрос {n} из {of}', soFar: 'Пока правильно: {n}',
+      check: 'Проверить', next: 'Далее', seeScore: 'Мой результат', result: 'Твой результат',
+      correct: 'Правильно.', notQuiteChoice: 'Не совсем – правильный ответ отмечен.',
+      notQuitePlace: 'Не совсем – жёлтые карточки перенесены на свои места.',
+      notQuiteValue: 'Не совсем – зелёная полоса показывает правильные значения.',
+      goOn: 'Дальше', decimal: ',',
+      teamRole: 'Твоя роль: {role}', teamOne: 'Один ответ на всю команду', handedIn: 'Ответ команды {team} сдал(а): {by}',
+      got: 'Правильно: {ok} из {total}.', timeUp: ' Время вышло.',
+      passNote: 'Проходной балл {pass} % – {need} из {total} правильно. Это показывает, что повторить. Это не оценка.',
+      passed: 'ЗАЧТЕНО', notPassed: 'НЕ ЗАЧТЕНО'
+    }
+  };
+  (function () {
+    var k, l = LANG[(D.documentElement.getAttribute('lang') || 'en').slice(0, 2).toLowerCase()] || {}, o = W.GB_ANSWER_TEXT || {};
+    for (k in l) { if (l.hasOwnProperty(k)) { T[k] = l[k]; } }
+    for (k in o) { if (o.hasOwnProperty(k)) { T[k] = o[k]; } }
+  }());
   function say(k, v) {
     return String(T[k]).replace(/\{(\w+)\}/g, function (m, n) { return (v && v[n] !== undefined) ? v[n] : m; });
   }
@@ -781,7 +818,11 @@
     num.textContent = t.ok + ' / ' + t.total;
     if (arc) { arc.setAttribute('data-off', String(Math.round(C * (1 - (t.total ? t.ok / t.total : 0)) * 10) / 10)); }
     if (badge) {
-      if (h) { badge.textContent = h; badge.style.display = 'inline-block'; if (h === 'NOT PASSED') { add(badge, 'no'); } }
+      if (h) {
+        badge.textContent = say(h === 'PASSED' ? 'passed' : 'notPassed');
+        badge.style.display = 'inline-block';
+        if (h === 'NOT PASSED') { add(badge, 'no'); }
+      }
       else { badge.style.display = 'none'; }
     }
     if (h === 'PASSED') { add(ring, 'pass'); }

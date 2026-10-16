@@ -434,6 +434,82 @@ def team_part(tmp):
           not re.search(r"tt[12]_|data-team-size|task-scope|gb-team", out), out)
 
 
+IN_LANGUAGE = {
+    "Latvian": [
+        {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Paškontrole 1 - vārsti", "text": "Paškontrole planšetē tagad.", "minutes": 4},
+        {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "cloze", "question": "Pabeidz teikumu.",
+         "answer": "SDG glabā [-162 °C* | 0 °C | 20 °C] temperatūrā.", "feedback": "Ļoti auksts."},
+        {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "set_value", "question": "Iestati trauksmes temperatūru.",
+         "visual": "skala", "answer": "-42,5 °C ± 0,5, range -60 to 20", "feedback": "-42,5 °C."},
+        {"id": "q03", "kind": "self-check", "set": "SC1", "mechanic": "panel_operate", "question": "Sagatavo vārstu līniju.",
+         "visual": "panelis", "answer": "Galvenais gāzes vārsts = aizvērts\nVentilators = darbojas", "feedback": "Gāze ciet, ventilators strādā."},
+        {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Moduļa pārbaude - 1. modulis", "text": "Moduļa pārbaude planšetē tagad.", "minutes": 4},
+        {"id": "m01", "kind": "module-check", "set": "MC", "mechanic": "single_choice", "question": "Kur sagatavo degvielu?",
+         "options": ["Degvielas sagatavošanas telpā", "Uz tiltiņa"], "correct": "A", "feedback": "Tur ir sūkņi un iztvaicētāji."}],
+    "Russian": [
+        {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Самопроверка 1 - клапаны", "text": "Самопроверка на планшете.", "minutes": 4},
+        {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "cloze", "question": "Дополни предложение.",
+         "answer": "СПГ хранится при [-162 °C* | 0 °C | 20 °C].", "feedback": "Очень холодно."},
+        {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "set_value", "question": "Установи температуру тревоги.",
+         "visual": "шкала", "answer": "-42,5 °C ± 0,5, range -60 to 20", "feedback": "-42,5 °C."},
+        {"id": "q03", "kind": "self-check", "set": "SC1", "mechanic": "panel_operate", "question": "Выставь клапаны.",
+         "visual": "панель", "answer": "Главный газовый клапан = закрыт\nВентилятор = работает", "feedback": "Газ закрыт, вентилятор работает."},
+        {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Проверка по модулю - модуль 1", "text": "Проверка на планшете.", "minutes": 4},
+        {"id": "m01", "kind": "module-check", "set": "MC", "mechanic": "single_choice", "question": "Где готовят топливо?",
+         "options": ["В помещении подготовки топлива", "На мостике"], "correct": "A", "feedback": "Там насосы и испарители."}],
+}
+
+
+def language_part(tmp):
+    """L19 COURSE_LANGUAGE: the task screen's own words in the course language - lv and ru, flagged PROVISIONAL"""
+    print("\n-- the task screens in Latvian and Russian")
+    sys.path.insert(0, HERE)
+    import task_pages
+    words = {"Latvian": ("lv", "Sākt paškontroli", "1. moduļa pārbaude", "Ieskaites slieksnis 70 % – 1 no 1 pareizi", "atvērts", "Pieskaries tukšajai vietai"),
+             "Russian": ("ru", "Начать самопроверку", "Проверка по модулю 1", "Проходной балл 70 % – 1 из 1 правильно", "открыт", "Коснись пропуска")}
+    for lang, (code_l, start, mc_title, pass_line, other, cloze_say) in words.items():
+        os.makedirs(os.path.join(tmp, code_l))
+        sc = script(screens=IN_LANGUAGE[lang])
+        sc["course_language"] = lang
+        sc.update(approved_hash=cs.content_hash(sc))
+        c, md = new_course(os.path.join(tmp, code_l), sc, build=False)
+        cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {"t01": {"try_tablet": False}}})
+        code, out = run(COMPILE, c, "--module", "1", "--only", "tasks")
+        sc1 = [f for f in os.listdir(os.path.join(md, "tasks")) if f.startswith("sc1_")]
+        p = io.open(os.path.join(md, "tasks", sc1[0]), encoding="utf-8").read() if sc1 else ""
+        m = io.open(os.path.join(md, "assessment", "check.html"), encoding="utf-8").read() if code == 0 else ""
+        check("%s: compiled with no language problem, the page marked lang=\"%s\"" % (lang, code_l),
+              code == 0 and '<html lang="%s">' % code_l in p and "not in the factory in that language" not in out, out)
+        check("%s: the page's own words are %s - start, the gap's prompt, the module check's title and pass mark" % (lang, lang),
+              start in p and cloze_say in p and "<title>MC — %s</title>" % mc_title in m and pass_line in m, (p[-600:], m[:900]))
+        check("%s: no English word of the factory's left on the page" % lang,
+              not re.search(r">(Start the self-check|Back|Your score|Start again|Tap a gap|Less|More)<", p + m))
+        check("%s: the dial's scale reads −60 °C to 20 °C; its keys stay the same in every language (-43.0 / -42.5 / -42.0)" % lang,
+              "<span>−60 °C</span><span>20 °C</span>" in p and re.search(r'data-key="([0-9a-f ]+)"', p.split('class="dial"')[1]).group(1).split()
+              == [cs.gb_key("q02", "°C", v) for v in ("-43.0", "-42.5", "-42.0")], p.split('class="dial"')[1][:300])
+        check("%s: the panel offers the other position in the course language, and draws the valve" % lang,
+              ">%s</button>" % other in p and '"type":"valve"' in p and '"type":"pump"' in p)
+        code, out = run(MATCH, c, "--module", "1", "--part", "trainee")
+        check("%s: check_script_match passes" % lang, code == 0, out)
+    eng = io.open(os.path.join(SKILLS, "course-task-ux", "assets", "gb_answer.js"), encoding="utf-8").read()
+    check("the engine has its words in lv and ru, chosen by <html lang>, marked PROVISIONAL",
+          "Pārbaudīt" in eng and "Проверить" in eng and "PROVISIONAL" in eng and "documentElement.getAttribute('lang')" in eng)
+    check("the compiler's words are PROVISIONAL too, and listed for review",
+          "PROVISIONAL" in io.open(os.path.join(HERE, "task_pages.py"), encoding="utf-8").read()
+          and os.path.isfile(os.path.join(SKILL, "compile", "TRANSLATIONS_REVIEW.md")) and set(task_pages.WORDS) == {"en", "lv", "ru"})
+    # a language the factory has no words for is reported - the page is built, its own words English, never silently
+    os.makedirs(os.path.join(tmp, "no"))
+    sc = script(screens=IN_LANGUAGE["Latvian"])
+    sc["course_language"] = "Norwegian"
+    sc.update(approved_hash=cs.content_hash(sc))
+    c, md = new_course(os.path.join(tmp, "no"), sc, build=False)
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks")
+    check("Norwegian: reported (the course is in Norwegian - the words are not in the factory in that language), page lang=\"no\"",
+          code == 1 and "the course is in Norwegian" in out and "not in the factory in that language" in out, out)
+    check("'Latvian' is lv everywhere, never 'la'", task_pages.cm.lang_code("Latvian") == "lv" and task_pages.cm.lang_code("Latviešu") == "lv"
+          and task_pages.cm.lang_code("ru") == "ru" and task_pages.cm.lang_code("Klingon") is None)
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="compile_")
     try:
@@ -822,6 +898,7 @@ def main():
         tasks_part(tmp)
         every_way_part(tmp)
         team_part(tmp)
+        language_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

@@ -68,7 +68,7 @@ DRIVER = r"""
   var queue = [];
   PLAN.forEach(function (p) {
     if (p[0] === 'post') { queue.push(function () { window.postMessage(p[1], '*'); }); return; }
-    if (p[0] === 'eval') { queue.push(function () { (new Function(p[1]))(); }); return; }
+    if (p[0] === 'eval') { queue.push(function () { (new Function('out', p[1]))(out); }); return; }
     queue.push(function () { answer(p[0], p[1]); });
     queue.push(function () { out.steps.push(p[0] + ':' + dock()); });     /* Check */
     queue.push(function () { out.steps.push(p[0] + ':' + dock()); });     /* Next, or See my score */
@@ -184,6 +184,28 @@ def team_part(exe, tmp):
           rep.get("ok") == 1 and "scope" not in rep and "Team A" in bar and "You are" not in bar, r)
 
 
+def language_part(exe, tmp):
+    """L19: the engine's own words in the page's language - lv here (ru is the same table)"""
+    print("\n-- a Latvian page")
+    os.makedirs(os.path.join(tmp, "lv"))
+    sc = tcm.script(screens=tcm.IN_LANGUAGE["Latvian"])
+    sc["course_language"] = "Latvian"
+    sc.update(approved_hash=tcm.cs.content_hash(sc))
+    c, md = tcm.new_course(os.path.join(tmp, "lv"), sc, build=False)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {"t01": {"try_tablet": False}}})
+    tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    page = os.path.join(md, "tasks", [f for f in os.listdir(os.path.join(md, "tasks")) if f.startswith("sc1_")][0])
+    peek = "out.dial = document.querySelector('.dial-val').textContent;"
+    r = drive(exe, page, [["q01", [["tap", ".cg .opt", "-162 °C"]]],
+                          ["q02", [["plus", 35]]], ["eval", peek],
+                          ["q03", [["tap", ".opt", "aizvērts"], ["tap", ".opt", "darbojas"]]]], tmp, look=False)
+    steps = r.get("steps", [])
+    check("the buttons speak Latvian: Pārbaudīt, Tālāk, Mans rezultāts", not r.get("errors") and "q01:Pārbaudīt" in steps
+          and "q01:Tālāk" in steps and "q03:Mans rezultāts" in steps, r)
+    check("the dial shows the decimal comma (−42,5), and the value is graded the same", r.get("dial") == "−42,5"
+          and (r.get("report") or {}).get("ok") == 3, r)
+
+
 def main():
     exe = drawing_check.find_browser()
     if not exe:
@@ -224,6 +246,7 @@ def main():
         check("a card that does not belong goes back to the bank; the one that belongs is put in its slot",
               "fixed" in look.get("cargo", "") and look.get("cargo", "").endswith("|tray") and look.get("permit", "").endswith("|3"), look)
         team_part(exe, tmp)
+        language_part(exe, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
