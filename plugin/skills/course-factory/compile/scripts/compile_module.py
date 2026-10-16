@@ -6,6 +6,8 @@
     compile_module.py <course folder> --module 1 --init-build    write a starter build sheet, make the module folder with the factory's style files, build nothing
     compile_module.py <course folder> --module 1 --draft         build from a script that is not approved yet (preview only)
     compile_module.py <course folder> --module 1 --force         overwrite a deck that was changed by hand
+    compile_module.py <course folder> --module 1 --only plan     build only instructor\\M01_PLAN.html (2.47.0: the module's plan,
+                                                                 from the same approved script - compile\\scripts\\module_plan.py)
 
 WHY THIS EXISTS
 Until 2.25 every module was written twice: the content script the operator approves, then the same words
@@ -99,9 +101,35 @@ STAGE_MAX_WORDS = 45
 STATEMENT_MAX_WORDS = 22
 CHECK_PAGES = {"MC": "../assessment/check.html", "FA": "../assessment/final.html"}
 RECORD = "compiled.json"
-TABLET_ICON = ('<svg class="act-ico" viewBox="0 0 64 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" '
-               'stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="52" height="40" rx="5"/>'
-               '<path d="M16 33l9-10 7 7 6-5 10 8"/><circle cx="52" cy="24" r="1.6" fill="currentColor"/></svg>')
+# 2.46.0 - a task slide's icon says what the trainees will DO on the tablet: the way of answering most of its set's
+# questions use (IGF M01-M03: every task slide showed the same generic tablet). The tablet's outline stays, the gesture
+# inside it changes.
+ICON_FAMILY = {"single_choice": "choose", "multi_select": "choose", "choose_and_justify": "choose", "compare": "choose",
+               "read_instrument": "choose", "scenario": "choose", "hotspot": "tap", "spot_the_hazard": "tap",
+               "label_diagram": "drag", "match": "drag", "categorise": "drag", "order": "order", "build_the_plan": "order",
+               "timeline": "order", "set_value": "dial", "panel_operate": "dial", "find_the_fault": "find",
+               "spot_the_error": "find", "cloze": "cloze"}
+ICON_GLYPH = {
+    "choose": '<circle cx="19" cy="17" r="4"/><circle cx="19" cy="31" r="4" fill="currentColor"/><path d="M28 17h17M28 31h17"/>',
+    "tap": '<circle cx="32" cy="22" r="9"/><circle cx="32" cy="22" r="2.4" fill="currentColor"/><path d="M32 8v4M32 32v4M18 22h4M42 22h4"/>',
+    "drag": '<rect x="13" y="12" width="15" height="10" rx="2"/><rect x="36" y="26" width="15" height="10" rx="2" stroke-dasharray="3 3"/>'
+            '<path d="M24 28h7m-3-3 3 3-3 3"/>',
+    "order": '<path d="M24 14h20M24 24h20M24 34h20"/><circle cx="17" cy="14" r="1.8" fill="currentColor"/>'
+             '<circle cx="17" cy="24" r="1.8" fill="currentColor"/><circle cx="17" cy="34" r="1.8" fill="currentColor"/>',
+    "dial": '<path d="M14 30h36"/><circle cx="38" cy="30" r="5" fill="currentColor"/><path d="M14 17h36" stroke-dasharray="2 6"/>',
+    "find": '<circle cx="29" cy="21" r="8"/><path d="M35 27l9 9"/>',
+    "cloze": '<path d="M13 18h11M40 18h11M13 31h38"/><rect x="26" y="13" width="12" height="10" rx="2" stroke-dasharray="3 2"/>'}
+
+
+def task_icon(script, code):
+    """the task slide's icon - the way of answering most of the set's questions use (the first one on a tie)"""
+    qs = [s for s in script.get("screens", []) if s.get("kind") in cs.TASKS and
+          ((s.get("set") or "").strip() or {"self-check": "SC1", "module-check": "MC", "final": "FA"}[s["kind"]]) == code]
+    fams = [ICON_FAMILY.get(cs.mech(s), "choose") for s in qs] or ["choose"]
+    fam = max(fams, key=lambda f: (fams.count(f), -fams.index(f)))
+    return ('<svg class="act-ico" data-icon="%s" viewBox="0 0 64 48" aria-hidden="true" fill="none" stroke="currentColor" '
+            'stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="52" height="40" rx="5"/>%s</svg>'
+            % (fam, ICON_GLYPH[fam]))
 e = lambda s: html.escape(s or "", quote=False)
 a = lambda s: html.escape(s or "", quote=True)
 
@@ -883,7 +911,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         body = ['<p class="act-code" data-script-ignore>%s</p>' % e(code),
                 '<h2 class="act-title" data-script-field="title">%s</h2>' % e(title)]
         if kind == "task-slide":
-            body.append(TABLET_ICON)
+            body.append(task_icon(script, code))
         body.append('<div class="act-lines">')
         body += ['  <p class="act-inst" data-script-field="text">%s</p>' % e(x) for x in lines]
         body.append("</div>")
@@ -1143,8 +1171,9 @@ def main(argv=None):
     ap.add_argument("--init-build", action="store_true", help="write a starter build sheet and stop")
     ap.add_argument("--draft", action="store_true", help="build from a script that is not approved yet - a preview")
     ap.add_argument("--force", action="store_true", help="overwrite a deck or task page that was changed by hand")
-    ap.add_argument("--only", choices=("all", "deck", "tasks"), default="all",
-                    help="build only the deck, or only the trainee task pages (default: both)")
+    ap.add_argument("--only", choices=("all", "deck", "tasks", "plan"), default="all",
+                    help="build only the deck, only the trainee task pages (and the answer key), or only the instructor's "
+                         "plan (default: all three)")
     ap.add_argument("--no-drawing-check", action="store_true",
                     help="skip the automatic drawing check (L54) - only while working on a drawing, never before showing")
     o = ap.parse_args(argv)
@@ -1191,7 +1220,7 @@ def main(argv=None):
     rec_path = workspace.module_record(mdir, RECORD)
     rec = cs.load(rec_path) if os.path.isfile(rec_path) else {}
     by_hand = lambda path, key: os.path.isfile(path) and not o.force and sha(io.open(path, encoding="utf-8").read()) != rec.get(key)
-    if o.only != "tasks" and by_hand(out, "index.html"):
+    if o.only in ("all", "deck") and by_hand(out, "index.html"):
         print("Stopped - nothing was overwritten.\n\n  The deck was changed by hand, or was built before the compiler:\n    %s\n"
               "  A change made in the deck would be lost. Put it into the script (content_script.py propose) or the\n"
               "  build sheet, then compile again with --force." % out)
@@ -1200,7 +1229,7 @@ def main(argv=None):
     probs, notes = [], []
     rec.update({"script_hash": cs.content_hash(script), "plugin_version": plugin_version()})
     written = []
-    if o.only != "tasks":
+    if o.only in ("all", "deck"):
         written.append(out)
         page, probs, notes = compile_deck(script, build, mdir, figdir, plugin_version(), approved)
         os.makedirs(os.path.dirname(out), exist_ok=True)
@@ -1210,7 +1239,7 @@ def main(argv=None):
         probs += credit_path_problems(page, "presentation/index.html")
         n = sum(1 for s in script["screens"] if s["kind"] in cs.INSTRUCTOR)
         print("Built %s - %d screens from the %s script.\n    %s" % (cs.mid(o.module), n, "approved" if approved else "DRAFT", out))
-    if o.only != "deck":
+    if o.only in ("all", "tasks"):
         import task_pages
         pages, tprobs, left = task_pages.compile_tasks(script, build, mdir, figdir, plugin_version(), approved)
         probs += tprobs
@@ -1229,6 +1258,20 @@ def main(argv=None):
             print("Built the task page %s" % key)
         for x in left:
             print("  left as it is: %s" % x)
+    if o.only in ("all", "plan"):                      # 2.47.0 - the instructor's plan, from the same approved script
+        import module_plan
+        ppath, ppage = module_plan.plan_page(script, build, mdir, o.course, plugin_version(), approved, probs)
+        key = os.path.relpath(ppath, mdir).replace("\\", "/")
+        if by_hand(ppath, key):
+            probs.append("%s was changed by hand, or was made before the compiler - it was not overwritten. Put the change "
+                         "into the script or the build sheet, then compile again with --force" % key)
+        else:
+            os.makedirs(os.path.dirname(ppath), exist_ok=True)
+            with io.open(ppath, "w", encoding="utf-8", newline="\n") as f:
+                f.write(ppage)
+            rec[key] = sha(ppage)
+            written.append(ppath)
+            print("Built the module plan %s" % key)
     cs.save(rec_path, rec)
     # L54 - every drawing whole and clean: checked by itself on every page just written, never left to memory
     if written and not o.no_drawing_check:
@@ -1242,7 +1285,7 @@ def main(argv=None):
     if not approved:
         probs.insert(0, "the script is not approved - what was built is a preview only, never handed over")
     parts = [x for x in notes if x[0]]
-    if o.only != "tasks":
+    if o.only in ("all", "deck"):
         listed = write_to_take(o.course, script, parts)
         if notes:
             print("\nReal photographs still missing for what the drawings show (L57) - listed in\n    %s" % listed)
@@ -1253,7 +1296,7 @@ def main(argv=None):
         for x in probs:
             print("  - " + x)
         return 1
-    print(NEXT_STEPS)
+    print(NEXT_STEPS if o.only != "plan" else "\nNext: read the plan beside the deck - its minutes, its tasks and its sources are the script's.")
     return 0
 
 

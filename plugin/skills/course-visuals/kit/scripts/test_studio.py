@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """test_studio.py - the figure studio draws one spec, audits every step at both sizes and photographs it, and the
-kit's own layout moves a label off a part by itself (2.45.0). Run: python test_studio.py  (SKIP without Chrome/Edge)"""
+kit's own layout moves a label off a part by itself (2.48.0). Run: python test_studio.py  (SKIP without Chrome/Edge)"""
 from __future__ import annotations
 
 import io
@@ -61,8 +61,14 @@ def main():
             check("a screenshot per size", all(os.path.isfile(v.get("shot") or "") for v in r["sizes"].values()),
                   [v.get("shot") for v in r["sizes"].values()])
         r2, _ = studio.run(good, panel="task", sizes=((1280, 800),), out=os.path.join(tmp, "shots2"))
-        check("on a task page's white card the figure takes the light colours", r2 and
-              (r2["sizes"]["1280x800"].get("report") or {}).get("theme") == "light")
+        check("on a task page the figure is the deck's dark screen too (2.46.0 gb_answer.css) - the kit sees it", r2 and
+              (r2["sizes"]["1280x800"].get("report") or {}).get("theme") == "dark")
+        light = os.path.join(tmp, "light.kit.json")
+        io.open(light, "w", encoding="utf-8").write(json.dumps(dict(GOOD, theme="light")))
+        r4, _ = studio.run(light, panel="task", sizes=((1280, 800),), out=os.path.join(tmp, "shots4"))
+        _, p4 = studio.summary(r4, light) if r4 else (None, ["no run"])
+        check("\"theme\": \"light\" takes the light colours, and it is clean on them (contrast by construction)", r4 and
+              (r4["sizes"]["1280x800"].get("report") or {}).get("theme") == "light" and not p4, p4)
         r3, _ = studio.run(bad, panel="two-col", sizes=((1280, 800),), out=os.path.join(tmp, "shots3"))
         _, p3 = studio.summary(r3, bad) if r3 else (None, [])
         check("words fixed on a line are found (text zone)", any(c == "text zone" for _, _, c, _, _ in p3), p3)

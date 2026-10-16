@@ -41,7 +41,8 @@
   ul.facts li{margin:4px 0}
   .card{min-width:0}
   @media (max-width:900px){.demo{grid-template-columns:minmax(0,1fr)}}
-  /* the light panel - how every figure looks on a task page's white card (kit.css .kit-light) */
+  /* the light panel - how every figure looks on a light page (kit.css .kit-light; a task page shows a kit drawing on
+     the dark screen, 2.46.0) */
   .themebar{position:sticky;top:0;z-index:5;display:flex;justify-content:flex-end;gap:8px;padding:8px 0}
   .themebar button{font:inherit;font-weight:700;font-size:14px;min-height:44px;padding:0 14px;border-radius:10px;cursor:pointer;
     color:var(--txt-d);background:var(--deep-3);border:1px solid var(--line-d)}
@@ -59,7 +60,7 @@
 <main>
   <div class="themebar" role="group" aria-label="Panel">
     <button type="button" data-theme="dark" aria-pressed="true">Dark panel (deck)</button>
-    <button type="button" data-theme="light" aria-pressed="false">Light panel (task page)</button>
+    <button type="button" data-theme="light" aria-pressed="false">Light panel (a light page)</button>
   </div>
   <p class="kicker">NOVIKONTAS course factory · figure kit</p>
   <p class="lede">Ready-made parts that draw themselves from a short spec and move between steps. The AI writes the spec,

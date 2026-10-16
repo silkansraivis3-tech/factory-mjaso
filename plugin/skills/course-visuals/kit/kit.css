@@ -6,12 +6,12 @@
    abnormal - amber for an alarm, red for a trip. A screen that is colourful at rest
    has nothing left to say when something goes wrong.
 
-   TWO PANELS (2.45.0). A part names its colours by the dark-panel tokens (--txt-d, --dim-d, --cold ...). A figure
-   drawn on a light ground - a task page's white card - gets .kit-light (kit.js chooses it from what is behind the
+   TWO PANELS (2.48.0). A part names its colours by the dark-panel tokens (--txt-d, --dim-d, --cold ...). A figure
+   drawn on a light ground - a light page or card (a task page draws it on the dark screen, 2.46.0) - gets .kit-light (kit.js chooses it from what is behind the
    figure, or the spec's "theme"), and inside it each of those tokens means its light counterpart. So every part,
    the kit's own and a course's (kit_parts.js css), keeps its contrast on either panel by construction.
 
-   THE 12.5 PX FLOOR (2.45.0). Every type size is multiplied by --kit-up, which kit.js sets to 1 / the figure's
+   THE 12.5 PX FLOOR (2.48.0). Every type size is multiplied by --kit-up, which kit.js sets to 1 / the figure's
    scale when it is shown smaller than 1:1: no word is ever drawn under 12.5 px on screen. */
 
 .kit{display:block;width:100%;height:auto;overflow:visible;

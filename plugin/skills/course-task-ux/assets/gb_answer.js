@@ -43,6 +43,7 @@
     correct: 'Correct.', notQuiteChoice: 'Not quite – the right answer is marked.',
     notQuitePlace: 'Not quite – the amber ones were moved to where they belong.',
     notQuiteValue: 'Not quite – the green band shows the values that are right.',
+    notQuiteMissed: 'Not quite – what you missed is outlined in green.', alsoRight: 'Also right', alsoWrong: 'Also wrong',
     goOn: 'Go on', decimal: '.',
     teamRole: 'You are the {role}', teamOne: 'One answer for the whole team', handedIn: 'Handed in by {by} for {team}',
     got: 'You got {ok} of {total} right.', timeUp: ' The time was up.',
@@ -60,6 +61,7 @@
       correct: 'Pareizi.', notQuiteChoice: 'Ne gluži – pareizā atbilde ir atzīmēta.',
       notQuitePlace: 'Ne gluži – dzeltenās kartītes ir pārliktas savās vietās.',
       notQuiteValue: 'Ne gluži – zaļā josla rāda pareizās vērtības.',
+      notQuiteMissed: 'Ne gluži – tas, ko palaidi garām, ir apvilkts zaļā krāsā.', alsoRight: 'Arī pareizi', alsoWrong: 'Arī kļūdaini',
       goOn: 'Turpināt', decimal: ',',
       teamRole: 'Tava loma: {role}', teamOne: 'Viena atbilde visai komandai', handedIn: '{team} atbildi iesniedza: {by}',
       got: 'Pareizi: {ok} no {total}.', timeUp: ' Laiks beidzās.',
@@ -73,6 +75,7 @@
       correct: 'Правильно.', notQuiteChoice: 'Не совсем – правильный ответ отмечен.',
       notQuitePlace: 'Не совсем – жёлтые карточки перенесены на свои места.',
       notQuiteValue: 'Не совсем – зелёная полоса показывает правильные значения.',
+      notQuiteMissed: 'Не совсем – пропущенное обведено зелёным.', alsoRight: 'Тоже верно', alsoWrong: 'Тоже ошибка',
       goOn: 'Дальше', decimal: ',',
       teamRole: 'Твоя роль: {role}', teamOne: 'Один ответ на всю команду', handedIn: 'Ответ команды {team} сдал(а): {by}',
       got: 'Правильно: {ok} из {total}.', timeUp: ' Время вышло.',
@@ -619,7 +622,13 @@
     var bad = [], lo = -1, hi = -1, k, band;
     if (g.type === 'choose') {
       each(g.items, function (it) {
-        if (itemRight(g, it)) { add(it, g.rightCls || 'right'); }
+        /* choose all that are right: a right one the trainee did not choose is shown as one ("Also right"), outlined -
+           never ticked as if it had been chosen (2.46.0; course-task-ux §0.5: a tick is what the trainee did right) */
+        if (itemRight(g, it) && g.multi && !has(it, 'sel')) {
+          add(it, 'missed');
+          it.setAttribute('data-miss', say(g.q.mech === 'spot_the_error' ? 'alsoWrong' : 'alsoRight'));
+        }
+        else if (itemRight(g, it)) { add(it, g.rightCls || 'right'); }
         else if (has(it, 'sel')) { add(it, 'wrong'); }
         else if (has(it, 'opt')) { add(it, 'dim'); }
       });
@@ -665,12 +674,28 @@
         if (g.type === 'dial') { kind = 'notQuiteValue'; }
       });
     });
+    if (kind === 'notQuiteChoice' && $('.missed', q.sec)) { kind = 'notQuiteMissed'; }
     if (q.vd) { q.vd.textContent = q.ok ? say('correct') : say(kind); }
     if (q.why) {
       add(q.why, 'on'); add(q.why, q.ok ? 'good' : 'bad');
-      try { q.why.scrollIntoView({ block: 'nearest' }); } catch (x) { /* an old WebView */ }   /* above the dock, not under it */
+      /* above the dock, not under it - and a question of several parts keeps its last part's own label in view */
+      bring(q.why, q.parts.length > 1 ? q.parts[q.k].el : null);
     }
   }
+  /* bring an element into the band between the top bar and the dock (2.46.0). The top bar is sticky: scrollIntoView
+     left a scenario's "Step 2 of 3" under it. Scrolled down only as far as keeps `from` (default: the element itself)
+     below the top bar - when both do not fit, the top wins. */
+  function bring(el, from) {
+    if (!el || !el.getBoundingClientRect) { return; }
+    var r = el.getBoundingClientRect(), t = (from || el).getBoundingClientRect().top, d = 0;
+    var top = 8, bot = (W.innerHeight || D.documentElement.clientHeight) - 8, bar = $('.state'), team = $('#teamBar');
+    if (bar) { top = Math.max(top, bar.getBoundingClientRect().bottom + 8); }
+    if (team && !team.hasAttribute('hidden')) { top = Math.max(top, team.getBoundingClientRect().bottom + 8); }
+    if (dock && !has(dock, 'off')) { bot = Math.min(bot, dock.getBoundingClientRect().top - 8); }
+    if (r.bottom > bot) { d = Math.min(r.bottom - bot, t - top); } else if (t < top) { d = t - top; }
+    if (d) { try { W.scrollBy(0, d); } catch (x) { D.documentElement.scrollTop += d; } }
+  }
+  function toTop() { try { W.scrollTo(0, 0); } catch (x) { /* an old WebView */ } D.documentElement.scrollTop = 0; body.scrollTop = 0; }
   function allOk(q) {
     var ok = true;
     each(q.parts, function (p) { if (!(p.done && p.ok)) { ok = false; } });
@@ -769,8 +794,7 @@
     setGot();
     setBar(i);
     setBtn(say('check'), 'off');
-    D.documentElement.scrollTop = 0;
-    body.scrollTop = 0;
+    toTop();
     hint(q);
   }
   /* one Check per part; the question is right when every part is */
@@ -807,7 +831,7 @@
     if (p.kind === 'stop') { p.groups = [mkStop(q, before)]; add(before.el, 'stopping'); } else { add(before.el, 'past'); }
     add(p.el, 'on');
     setBtn(say('check'), 'off');
-    try { p.el.scrollIntoView({ block: 'nearest' }); } catch (x) { /* an old WebView */ }
+    bring(p.el);                                       /* the part's own label ("Step 2 of 3") stays under the top bar */
   }
   function next() {
     if (cur < qs.length - 1) { showQ(cur + 1); } else { showResult(); }
@@ -870,6 +894,7 @@
     screensOff();
     add(resScr, 'on');
     add(dock, 'off');
+    toTop();                     /* the last question was scrolled: the ring opened half under the top bar (2.46.0) */
     setPart(say('result'));
     if (gotEl) { gotEl.textContent = ''; }
     setBar(qs.length);
@@ -935,7 +960,19 @@
   }
 
   /* ---------------------------------------------------------------- start */
+  /* every choice keeps the letter it was shown with (2.46.0): a CSS counter re-lettered a scenario's step once the
+     choices that were not right had folded away - "C" became "A" after Check */
+  function letterAll() {
+    each($$('.opt'), function (o) {
+      var c = o.parentNode;
+      while (c && c !== body && !has(c, 'opts') && c.tagName !== 'TR') { c = c.parentNode; }
+      if (!c || c === body) { return; }
+      c.__gbn = (c.__gbn || 0) + 1;
+      o.setAttribute('data-l', String.fromCharCode(64 + c.__gbn));
+    });
+  }
   function init() {
+    letterAll();
     each($$('.scr[data-script]'), function (s) { qs.push(mkQ(s)); });
     TEAM.onDone = handedElsewhere;
     if (TEAM.done) { handedElsewhere(TEAM.done); }

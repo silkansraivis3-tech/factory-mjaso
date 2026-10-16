@@ -165,7 +165,31 @@ ru *пробел*.
 | fa | Final assessment | Noslēguma pārbaudījums | Итоговая аттестация |
 | task | Task {c} | Uzdevums {c} | Задание {c} |
 
-## 6 · Not covered here
+## 6 · Added in 2.46.0 — the engine's "missed" words and the instructor's answer key
+
+`course-task-ux/assets/gb_answer.js` LANG (choose all that are right, answered wrong: a right one not chosen):
+
+| key | English | Latvian (lv) | Russian (ru) |
+|---|---|---|---|
+| notQuiteMissed | Not quite – what you missed is outlined in green. | Ne gluži – tas, ko palaidi garām, ir apvilkts zaļā krāsā. | Не совсем – пропущенное обведено зелёным. |
+| alsoRight | Also right | Arī pareizi | Тоже верно |
+| alsoWrong | Also wrong (spot the errors: a wrong line not flagged) | Arī kļūdaini | Тоже ошибка |
+
+`compile/scripts/answer_key.py` WORDS - the instructor's page, the polite form: every string of its `lv` and `ru`
+tables (title, "Instructor only", how the pages mark, the column heads, Step / Why / The faulty part ...) is written by
+Claude and is PROVISIONAL like the rest of this file.
+
+## 7 · Added in 2.47.0 — the instructor's module plan
+
+`compile/scripts/module_plan.py` WORDS - the instructor's page, the polite form: every string of its `lv` and `ru`
+tables (the face - Allocated / Built and the three verdicts, What this module owes, Running order and its column heads,
+the kinds Theory / Active / Task / Room activity and the five techniques, Tasks on the tablets, pass mark lines, Room
+activities, Materials and equipment, Sources) is written by Claude and is PROVISIONAL like the rest of this file. Terms
+to check first: Sub-ILO = lv *apakšrezultāts*, ru *подрезультат*; Main ILO = lv *galvenais mācīšanās rezultāts*, ru
+*главный результат обучения*; room activity = lv *nodarbība telpā*, ru *занятие в аудитории*. The Main ILO and the
+programme topic are shown verbatim in the programme's own language, never translated.
+
+## 8 · Not covered here
 
 - The picture viewer (`gb_zoom.js`) has its own lv and ru (Aizvērt / Закрыть ...), written before this file.
 - The "ru" module check head word on the result screen is ЗАЧТЕНО / НЕ ЗАЧТЕНО; if the college uses

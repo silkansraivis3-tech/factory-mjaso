@@ -83,7 +83,17 @@ If they want to change the key, call `setup_api_key`. If a tool reports the wind
 could not open, pass its message on. **Never ask for the key in the chat, never write it into a
 file yourself, never echo it.**
 
+### The free route first: Gemini in the browser (1.3.0)
+
+When a browser with a signed-in Gemini is there (Claude in Chrome, or the built-in browser pane), make the
+pictures with the **`gemini-browser`** skill instead of these tools: the person's Google AI Pro account costs
+nothing per picture, the places and prompts come from one list (`picture_briefs.py queue`), the person says go
+once, and Claude drives the page, downloads each picture and moves it into the project. The tools below stay for
+video, for reference-image edits the app cannot take, and when no browser is signed in.
+
 ### When Google says *free tier* or *billing*: the manual route
+
+If a browser can be driven, use `gemini-browser` (above). Only without one:
 
 The API has no free quota for image or video models, so a key without billing on its project comes
 back `HTTP 429 … free_tier … limit: 0`. **After that error, stop calling the tools for the rest of

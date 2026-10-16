@@ -95,7 +95,7 @@ s3["theme"] = "light"
 s3["parts"].append({"type": "text", "x": 10, "y": 10, "text": "vapour space", "to": [40, 60]})
 check("a light theme and a callout pass", ck.check_spec(s3, types, "s") == [], ck.check_spec(s3, types, "s"))
 
-# ---------------------------------------------------------------- the 2.45.0 layout contract in kit.js itself
+# ---------------------------------------------------------------- the 2.48.0 layout contract in kit.js itself
 kit = ck.read(ck.KIT_JS)
 check("kit.js lays figures out (labels, the floor, the frame) and exports the helpers parts use",
       all(x in kit for x in ("function lay(f)", "function place(", "label: label", "widest: widest", "layoutAll")))

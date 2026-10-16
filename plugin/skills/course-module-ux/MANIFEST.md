@@ -89,7 +89,7 @@ course-module-ux/
         ├── serve_fresh.py                RUN IT. fresh unused port, prints its own PID
         ├── audit_deck.js                 browser probe: text size, contrast, controls, fill
         ├── audit_collide.js              browser probe: collisions and overlaps
-        ├── audit_drawing.js              browser probe: inside a drawing - parts in their containers, nothing cut off, labels' safe zone (L54, 2.25.2); 2.45.0: a kit figure laid out first, judged at every step in a deck, SMALL TEXT (12.5 px), a line hidden under an opaque shape is not "under" the words, figure(svg) for one drawing
+        ├── audit_drawing.js              browser probe: inside a drawing - parts in their containers, nothing cut off, labels' safe zone (L54, 2.25.2); 2.48.0: a kit figure laid out first, judged at every step in a deck, SMALL TEXT (12.5 px), a line hidden under an opaque shape is not "under" the words, figure(svg) for one drawing
         ├── test_audit_drawing.py         runs it in headless Chrome on fixtures/drawing_defects.html (skips without Chrome)
         ├── audit_drive.js                browser probe: drives the deck screen by screen
         ├── audit_opacity.js              browser probe: proves what you measure is visible

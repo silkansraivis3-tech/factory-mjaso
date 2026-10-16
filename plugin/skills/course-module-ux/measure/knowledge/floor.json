@@ -25,7 +25,8 @@
   "layout": {
     "spill": "none — no element may escape its slide body",
     "document_h_scroll": "none — documentElement.scrollWidth must not exceed innerWidth",
-    "wide_content": "a wide table, diagram or code block scrolls inside its own overflow-x container; the page body never scrolls sideways",
+    "wide_content": "on a task page, a wide table, diagram or code block scrolls inside its own overflow-x container; the page body never scrolls sideways",
+    "slide_scroll": "none - owner, 2026-10-16: 'no scrollbar at all allowed'. Nothing on a projected slide scrolls, down or sideways, at any step: what does not fit is laid out again (a smaller picture, a picture beside its drawing, words moved to the notes), never put behind a scrollbar. audit_drawing.js reports it as 'scrolls' at every compile",
     "collision": "no element may overlap the header band or another element; run the collision probe as well as the fill probe — see traps.json#flex-centred-overflow"
   },
   "fill": {

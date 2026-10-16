@@ -37,9 +37,9 @@
      5  CONTRAST     (a figure-kit drawing only, 2.44.0) every part can be seen against the figure's dark panel:
                      a label 4.5:1 (3:1 large), a shape or line 3:1. A part coloured for a light slide (navy,
                      steel) vanishes there. The kit's own parts (colour set in kit.css) are exempt; data-low-contrast
-                     marks a part meant to be quiet. See checkContrast(). Since 2.45.0 the kit colours every part
+                     marks a part meant to be quiet. See checkContrast(). Since 2.48.0 the kit colours every part
                      for the panel it is on (kit.css .kit-light): this check is the safety net.
-     6  SMALL TEXT   (a figure-kit drawing, 2.45.0) no word under CONFIG.minTextPx as rendered. The kit grows its
+     6  SMALL TEXT   (a figure-kit drawing, 2.48.0) no word under CONFIG.minTextPx as rendered. The kit grows its
                      own type classes when a figure is shown smaller than 1:1; a size a course part sets is judged.
 
      A figure-kit drawing is laid out by kit.js first (its labels, the 12.5 px floor, its frame) and, in a deck,
@@ -376,7 +376,7 @@
           }
         }
         /* an opaque shape drawn over everything behind it that holds this label's whole zone (a step badge's disc on a
-           room's line, a readout tile on a pipe) hides what is under it: a line there is not seen through it (2.45.0) */
+           room's line, a readout tile on a pipe) hides what is under it: a line there is not seen through it (2.48.0) */
         var zone = { x: T.b.x - pad, y: T.b.y - pad, x2: T.b.x + T.b.w + pad, y2: T.b.y + T.b.h + pad };
         var covers = items.filter(function (C) {
           if (C === T || !closed(C.el) || !fills(C.el) || C.b.w * C.b.h <= T.b.w * T.b.h) { return false; }
@@ -444,7 +444,7 @@
       }
       /* ---- 5 CONTRAST ---- every part of a kit figure can be seen against what is behind it */
       checkContrast(svg, where, items, out);
-      /* ---- 6 SMALL TEXT ---- no word of a kit figure under CONFIG.minTextPx as it is shown (2.45.0) */
+      /* ---- 6 SMALL TEXT ---- no word of a kit figure under CONFIG.minTextPx as it is shown (2.48.0) */
       if (svg.classList && svg.classList.contains("kit")) {
         items.forEach(function (T) {
           if (T.t !== "text" || !(T.el.textContent || "").trim()) { return; }
@@ -687,6 +687,23 @@
     });
   }
 
+  /* owner, 2026-10-16: "no scrollbar at all allowed" on a slide - a box that scrolls hides what does not fit behind a
+     scrollbar the room cannot use. Any element of the slide (the slide too) set to scroll that has more inside than
+     it shows; scrollHeight rounds up, so a 1 px difference is not counted */
+  function checkScroll(root, where, out) {
+    [root].concat(qa(root, "*")).forEach(function (el) {
+      var cs = getComputedStyle(el);
+      if (cs.display === "none" || cs.visibility === "hidden") { return; }
+      var down = /(auto|scroll)/.test(cs.overflowY) && el.scrollHeight - el.clientHeight > CONFIG.tolPx;
+      var side = /(auto|scroll)/.test(cs.overflowX) && el.scrollWidth - el.clientWidth > CONFIG.tolPx;
+      if (down || side) {
+        report(out, { check: "scrolls", where: where, part: tag(el), other: "the slide - no scrollbar on a slide",
+                      detail: (down ? (el.scrollHeight - el.clientHeight) + " px more than it shows" : "")
+                              + (down && side ? ", " : "") + (side ? (el.scrollWidth - el.clientWidth) + " px wider" : "") }, [el]);
+      }
+    });
+  }
+
   function guard() {
     var w = window.innerWidth || 0, h = window.innerHeight || 0;
     if (w >= CONFIG.minViewportWidth && h >= CONFIG.minViewportHeight) { return null; }
@@ -737,7 +754,7 @@
             .forEach(function (v) {
               count++;
               checkSvg(v, where, out, s);
-              /* a figure that steps is judged at the end of every step too (2.45.0): an alarm row, a lit label or a moved
+              /* a figure that steps is judged at the end of every step too (2.48.0): an alarm row, a lit label or a moved
                  part that only appears in step 3 was never on screen when the deck was checked at step 0 */
               var f = v.__kit;
               if (!CONFIG.kitSteps || !f || !f.steps || !f.steps()) { return; }
@@ -755,6 +772,7 @@
               f.go(0, true);
             });
           checkPictures(s, where, out, s);
+          checkScroll(s, where, out);
           return step(i + 1);
         });
       }

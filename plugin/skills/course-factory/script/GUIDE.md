@@ -196,6 +196,23 @@ python scripts/content_script.py read <course> --module 1 [--pdf <file>]      Wo
 python scripts/content_script.py propose <course> --module 1 --changes c.json  chat corrections
 ```
 
+A chat `changes.json` is a list, applied in order (a later entry may edit a screen an earlier one added).
+Besides editing one field of a screen it can add a screen, remove one, or change a top-level field:
+
+```json
+[ {"field": "q04.feedback", "new": "Membrane tanks are supported by the hull."},
+  {"add_screen": {"id": "q06", "kind": "self-check", "set": "SC1", "mechanic": "single_choice", "question": "...",
+                  "options": ["...", "..."], "correct": "A", "feedback": "..."}, "after": "q03"},
+  {"remove_screen": "q05"},
+  {"script_field": "sources", "new": ["IGC Code 2016: 1.2, 4.21-4.24"]} ]
+```
+
+`add_screen` takes `"after"` or `"before"` (a screen id; neither = at the end) and needs a new `id` and a
+`kind`. `script_field` may be `title`, `minutes_allocated`, `sources`, `pass_mark` (a whole number 1-100)
+or `operator_facts`; anything else (`status`, approval, `module`, `screens`) is refused — "Stopped -", exit 2,
+nothing written. Problems the changed script would have that it does not have now (a self-check left
+without its task slide, minutes that no longer add up) are listed under the changes, not blocking.
+
 Both write a **pending list** and print what was understood — *"screen 7: the slide text: 'rely on'
 becomes 'are supported by'; question 3: the correct answer becomes B"*. **Show that list to the
 operator, in their language, and wait.** Then:
@@ -205,7 +222,8 @@ python scripts/content_script.py apply <course> --module 1 --confirmed     only 
 python scripts/content_script.py discard <course> --module 1               they said no
 ```
 
-`apply` changes the script, logs every change in `FEEDBACK_LOG.md`, keeps the old Word file in
+`apply` changes the script (and stops, exit 1, if the screens or a script field changed since the list was
+made), logs every change in `FEEDBACK_LOG.md` (`3 · M01 · q06`, or `3 · M01 · script`), keeps the old Word file in
 `working_claude/script/old/`, and writes a fresh page and Word file. Comments are **instructions, not
 edits**: `apply` does not act on them — propose what you would change for each, show it, and apply
 that when the operator confirms.

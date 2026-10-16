@@ -139,7 +139,35 @@
       {"id": "space", "en": "Where does the slide's text go - which part of the picture stays empty?", "lv": "Kur atradīsies slaida teksts - kura attēla daļa paliek tukša?", "ru": "Где будет текст слайда - какая часть картинки остаётся пустой?"},
       {"id": "reference", "en": "Do you have a photo that shows what you mean? It helps the model more than anything.", "lv": "Vai jums ir foto, kas parāda, ko domājat? Tas modelim palīdz visvairāk.", "ru": "Есть ли фото, которое показывает, что вы имеете в виду? Это помогает модели больше всего."}
     ],
-    "kept_in": "working_claude/picture_briefs/M01.json - the answers, the agreed prompt, every picture made and the person's words; scripts/picture_briefs.py"
+    "kept_in": "working_claude/picture_briefs/M01.json - the answers, the agreed prompt, every picture made and the person's words; scripts/picture_briefs.py",
+    "gemini_browser": {
+      "_authority": "Owner, 2026-10-16 (via Aleksis): the AI spent its time thinking which picture to make and where - make the Gemini app in the browser (Google AI Pro, no API cost) do it, with the places and prompts already decided",
+      "why": "the Gemini app on the person's own Google AI Pro account costs nothing per picture, so the eight questions per picture are not needed to save money: picture_briefs.py queue drafts every prompt from the approved script, the person reads the whole list once and corrects any line, then nano-banana gemini-browser makes them one after the other",
+      "styles": {
+        "photo": "A realistic documentary photograph of",
+        "render3d": "A photorealistic 3D render of",
+        "cutaway3d": "A clean photorealistic 3D cutaway render, the outer shell cut open to show the inside, of",
+        "illustration": "A clean flat technical illustration in navy blue (#0B2265) and white with soft pale-blue fills, even line weight, of"
+      },
+      "default_style": "photo",
+      "space_by_composition": {
+        "photo": "Keep the lower-left third of the frame calm and uncluttered - the slide's title and words sit there.",
+        "beside_drawing": "The whole subject in frame with a margin all round, plain light background.",
+        "default": "Keep the subject whole and centred with a margin all round - nothing cut off at the edges."
+      },
+      "aspect_by_composition": {"photo": "16:9", "stage": "16:9", "beside_drawing": "4:3", "default": "4:3"},
+      "beside_drawing": {
+        "_authority": "Owner via Aleksis, 2026-10-16, on the tank-type, hazardous-zone and A-60 drawings: 'i need images there aswell'",
+        "why": "a drawing slide keeps its drawing - its labels, layout and boundaries are what the trainee learns and is checked on, and a generator invents plausible pipes and garbles words - and gets the real thing as a generated picture under it (the build sheet's inset, under: figure), the drawing and the picture side by side",
+        "kinds": ["schematic", "cutaway", "comparison", "interactive_diagram", "step_animation"],
+        "style": "render3d",
+        "style_by_kind": {"cutaway": "cutaway3d"},
+        "lead": "Show it as it really looks on a ship, the companion to a simplified drawing of the same thing.",
+        "opt_out": "a slide whose picture would add nothing gets \"no_picture\": true in the build sheet"
+      },
+      "always": "No text, no letters, no numbers, no labels, no arrows, no logos, no flags, no watermark.",
+      "end": "Aspect ratio {aspect}, landscape, high detail."
+    }
   },
   "three_d": {
     "_authority": "Owner, 2026-10-07 (L46, 2.22.0): 'now he does 3D models almost every slide - cut it down to 50%, better not quantity but quality, use it only where it makes sense; and it lags a little in these 3D models, maybe optimisation can be considered - but mainly I love these 3D models.' Second message, same day: 'I also don't need you to cut the quality of 3D models - don't make it in all slides, about 50% of the presentation is the max that can be 3D models, but also don't cut quality, and put it only on slides where it makes sense, not only because you can.'",

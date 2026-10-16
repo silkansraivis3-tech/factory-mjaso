@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """test_gallery.py - every figure in GALLERY.html draws, and is clean at every step on the dark AND the light panel
-(2.45.0). Run: python test_gallery.py   (needs Chrome or Edge; says SKIP without one)
+(2.48.0). Run: python test_gallery.py   (needs Chrome or Edge; says SKIP without one)
 
 Each card and demo is judged with course-module-ux/measure/scripts/audit_drawing.js at the end of every step, as the
 kit lays it out at 1280 x 800: inside, cut off, text zone, contrast and small text. EMPTY is not judged here - a card

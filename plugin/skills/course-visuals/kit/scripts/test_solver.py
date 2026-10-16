@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_solver.py - KIT.solveLabels, the label solver alone, in plain numbers with no SVG (2.45.0): the one a 3D figure's
+"""test_solver.py - KIT.solveLabels, the label solver alone, in plain numbers with no SVG (2.48.0): the one a 3D figure's
 label overlays will use. Run: python test_solver.py   (needs Node.js; says SKIP without it)"""
 from __future__ import annotations
 

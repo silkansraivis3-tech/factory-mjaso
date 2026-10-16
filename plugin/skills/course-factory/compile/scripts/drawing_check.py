@@ -12,7 +12,7 @@ compile_module.py now runs it on every page it writes - the deck slide by slide,
 each drawing as the trainee sees it (moved into its question, its labels hidden) - in a hidden Chrome or Edge at
 1280 x 800, and every finding is a problem to fix before the module is shown.
 
-2.45.0: the page really is 1280 x 800 (a hidden browser's page is smaller than its window: it was 1264 x 705); a kit
+2.48.0: the page really is 1280 x 800 (a hidden browser's page is smaller than its window: it was 1264 x 705); a kit
 figure in a deck is judged at the end of every step, not only at step 0; and a kit figure's words under 12.5 px are a
 finding (SMALL TEXT). A kit figure is tried alone, in seconds, with course-visuals/kit/scripts/studio.py.
 
@@ -76,7 +76,7 @@ _WIN = {}
 
 
 def window_for(exe, size=SIZE):
-    """the window that gives a page of exactly `size` (2.45.0): a hidden Chrome's page is smaller than its window -
+    """the window that gives a page of exactly `size` (2.48.0): a hidden Chrome's page is smaller than its window -
     --window-size=1280,800 gave a 1264 x 705 page, so every drawing used to be checked smaller than the tablet shows it.
     Measured once per run, then the same difference for every size."""
     if "d" not in _WIN:
@@ -137,7 +137,7 @@ def check(pages, root=None):
                     probs.append("%s, %s: contrast - %s %s (L54: colour the part for the figure's dark panel, or mark one "
                                  "meant to be quiet data-low-contrast)" % (name, f.get("where"), f.get("part"), f.get("detail")))
                     continue
-                if f.get("check") == "small text":   # a kit figure's word under 12.5 px at 1280 x 800 (2.45.0)
+                if f.get("check") == "small text":   # a kit figure's word under 12.5 px at 1280 x 800 (2.48.0)
                     probs.append("%s, %s: small text - %s %s (try the figure in the studio: course-visuals\\kit\\scripts\\"
                                  "studio.py <figure>.kit.json)" % (name, f.get("where"), f.get("part"), f.get("detail")))
                     continue

@@ -996,8 +996,76 @@ Source: `M04_BUILD_METRICS.md` §9 (findings 1, 3, 5, 6, 7, 8, 13, 14). Each fix
   problem (`credit_path_problems()`), on the deck and on every task page.
 - Not touched, by instruction: `compile/scripts/task_pages.py`, `course-task-ux/assets/gb_answer.*` (another agent).
 
-## 4zo · The figure kit does the drawing work; the figure studio (2.45.0, 2026-10-16)
+## 4zo · The shared task engine after IGF M01-M03, the compiled answer key, whole-screen corrections (2.46.0, 2026-10-16)
 
+Source: the visual reviews of IGF Modules 1-3 rebuilt as compiled pages ("shared, not the module's"). Each fix is a
+check in `compile/scripts/test_task_engine.py` (headless Chrome, 1280 x 800) that fails on 2.44.1 and passes now.
+
+- **Engine (`course-task-ux/assets/gb_answer.js` + `.css`)**: the result screen opens at the top (`toTop()` - the ring
+  sat half under the top bar); a part's next step and the feedback are brought between the top bar and the dock by
+  `bring()`, never under the sticky bar ("Step 2 of 3" was lost); every choice keeps the letter it was shown with
+  (`letterAll()` writes `data-l`; a CSS counter re-lettered a folded step's "C" as "A"); **choose all that are right,
+  answered wrong: a right one NOT chosen is outlined dashed green with "Also right"** ("Also wrong" for spot the
+  errors), never ticked as if chosen - decided by course-task-ux §0.5 (a tick is what the trainee did right); verdict
+  "Not quite – what you missed is outlined in green.". A figure-kit drawing on a task page - a panel's control and a
+  drawing to tap or label - is the deck's dark screen (`--deep-2`): on white a closed valve read pale grey, an open one
+  solid, the reverse of the deck.
+- **Compiler (`compile/scripts/task_pages.py`)**: a picture answered on carries `data-zoom="button"`, so the ⤢ sits on
+  the drawing's own corner (it floated at the screen's edge beside a narrow drawing); a drawing to tap narrower than
+  `SIDE_AR` 1.8 gets `data-pic="side"` - the screen's height, the explanation beside it (half the screen was empty); a
+  list of `MANY` 6+ to order, build, match or rebuild gets `data-many` - the places beside the cards in two columns (8
+  rows needed a scroll at 1280 x 800). **Label boxes are sized to their words** (`label_px`, two lines, the tick's room;
+  `label_boxes` packs both rows, passes boxes between them, reports what cannot fit; a hand box more than 5 % too
+  narrow is reported; the top row keeps clear of the ⤢ button, `CORNER_PX`) - proved on the pilot: M01 m01 and M03 q06
+  with their hand boxes removed fit, nothing cut off, none under the ⤢.
+- **`course-module-ui/templates/gb_page.css`**: `.scroll th{top:0}` - inside its scroll box a table's sticky head row
+  (top 48 px) was pushed down over the first row: the instructor plan and the answer key (found by the visual review).
+  The script's top-level `"pass_mark"` wins over the build sheet's (`pass_mark_of`; both and different is reported).
+- **The instructor's answer key (`compile/scripts/answer_key.py`)**: `assessment/check_answer_key.html` compiled with
+  the task pages from the same approved script - every question in the tablet's order, how it is answered, the right
+  answer in the script's words, the feedback, how the pages mark and the pass mark; gb_page look, course language (lv /
+  ru PROVISIONAL, `compile/TRANSLATIONS_REVIEW.md` §6); no `data-script` / `data-key`. Listed by `compile_course.py`.
+- **The deck (`compile_module.py`)**: a task slide's icon is the gesture its set mostly asks for (`task_icon`,
+  `data-icon` choose / tap / drag / order / dial / find / cloze) - all showed one tablet.
+- **Corrections (`scripts/content_script.py`)**: a changes file for `propose` may also hold `{"add_screen": {...},
+  "after": "s05"}` (or `"before"`), `{"remove_screen": "q05"}` and `{"script_field": "sources" | "pass_mark" | "title" |
+  "minutes_allocated" | "operator_facts", "new": ...}` - applied in order on a working copy, shown as understood, applied
+  only with `--confirmed`, one FEEDBACK_LOG row each (`3 · M01 · script` for a field); a script field changed after the
+  list was made stops apply (content_hash covers the screens only). `test_content_script.py` 161 → 182.
+- **Proof** on a scratch copy of the IGF pilot: M01-M04 recompiled, `check_script_match` exit 0 on all four,
+  `check_course_package` "Ready", the keys listed on every START_HERE_EXTENDED. M04's two deck contrast findings (slide 3
+  kit chart) are the same with 2.44.1 - not from this release.
+- After merging, every module needs `design_system.py install --update` (the engine changed).
+
+## 4zp · The module plan compiled from the approved script (2.47.0, 2026-10-16)
+
+Source: the IGF pilot's hand-made `M01_PLAN.html` / `M02_PLAN.html` predated the day's script corrections, and M03-M04
+had none (build-order step 14: "one plan per module, stating its allocated and built minutes on its own face").
+
+- **`compile/scripts/module_plan.py`** (new; called by `compile_module.py`, like `task_pages.py` and `answer_key.py`):
+  `moduleNN/instructor/MNN_PLAN.html` - instructor-only by its folder, the shared document look (`gb_tokens.css`,
+  `gb_page.css`), course language (en, lv, ru; lv / ru PROVISIONAL, `compile/TRANSLATIONS_REVIEW.md` §7). Every block is
+  from an approved file, nothing is typed: **the face** - allocated minutes (`minutes_allocated`, with the academic hours
+  of `programme.json`) against built minutes (the sum of every screen's minutes), the split plain theory / active
+  slides / tasks / room activities (`content_script.split_of`); a mismatch (short, over, or not stated) is a red card in
+  words **and** a build problem (exit 1); **what it owes** - the Main ILO and the Sub-ILOs of the module's rows of
+  `ilo_map.json`, each with the slides that teach it and the questions that check it; **the running order** - every
+  screen: start minute, minutes, theory / active (and the technique) / task / room activity, picture kind, the script's
+  notes as what the instructor does, its Sub-ILO; **the tasks** - every set with its code, the slide and minute that open
+  it, the pass mark (checks) or "no pass mark", every question with its way of answering, Sub-ILO and wording (the
+  answers stay in the answer key); **room activities** with their link hints; **materials** - the architecture's
+  `practicals` equipment, the tablets the tasks use, the pictures the script says must be captured at the school;
+  **sources** - the script's.
+- **`compile_module.py`**: a normal build writes the plan; `--only plan` builds it alone (`--only deck` / `tasks` no
+  longer touch it). It is recorded in `compiled.json` like the task pages: a plan changed by hand, or made before the
+  compiler, is not overwritten (exit 1) until `--force`. The pilot's two hand-made plans are therefore protected - move
+  them to `working_claude/modules/moduleNN/handmade_<date>/` first, or use `--force`.
+- Tests: `compile/scripts/test_module_plan.py` (47); `test_compile_course.py` now lists the compiled plan, not a stub.
+- After merging, every module whose `assets/gb_page.css` predates 2.46.0 needs `design_system.py install --update`
+  (the plan's tables need its `.scroll th{top:0}`).
+## 4zq · The figure kit does the drawing work; the figure studio (2.48.0, 2026-10-16)
+
+Built as 2.45.0 on its own branch (`aleksis/figure-kit-auto`), renumbered at the merge with 2.45.0-2.47.0.
 Measured on IGF M01-M04: 3, ~10, ~12 and 17 compile runs, nearly all for drawings - label boxes placed by hand in build
 sheets (M01 m01, M02 m01, M03 q06), labels overflowing, parts invisible on the dark panel, empty space, 12 px labels,
 each found only after a full build. Now the kit and its checks take that work:
@@ -1005,9 +1073,10 @@ each found only after a full build. Now the kit and its checks take that work:
   (`KIT.h.label`) placed clear of every shape, line and other label and of its own box's edge (L54), at the end of every
   step - beside the part, or further out with a leader line. `"text"` with `"to": [x, y]` is a callout. The solver is a
   pure function (`KIT.solveLabels`, `scripts/test_solver.py`) so the 3D kit's label overlays can use it.
-- **Task-page label boxes** (`compile/scripts/label_layout.py`, called from `task_pages.label_boxes()`): one width - what
-  the longest label needs on two lines with its tick - each box as near its place as the others allow (PAV), order kept,
-  both bands used. The pilot's hand-placed boxes were removed from the build sheets (scratch copy) and are not needed.
+- **Task-page label boxes**: one sizing - 2.46.0's `task_pages.label_px` - and `compile/scripts/label_layout.py` places
+  them: each box as near its place as the others allow (PAV), order kept, never off the edge or under the ⤢, a full row
+  hands its middle box to the other, what still does not fit is reported (the boxes squeezed, never cut off). It fixed
+  2.46.0's packing, which could push the last of five boxes 9 % past the right edge (IGF M02 m01).
 - **Both panels by construction** (`kit.css` `.kit-light`): a part names the dark-panel tokens; on a light ground they
   mean the light ones. The contrast check stays as the safety net; the gallery passes it on both panels.
 - **The 12.5 px floor** (`--kit-up`): shown smaller than 1:1 every kit type size grows by 1/scale (max 2x); boxes, rings
@@ -1026,13 +1095,11 @@ each found only after a full build. Now the kit and its checks take that work:
   gas_cylinder, push_button, person, sensor, static_charge, fire, flammability, range_bar, hose, manifold, spool_piece,
   tank_wall, spill, wind, tree). `GALLERY.html` has a dark/light switch; `test_gallery.py`: 34 merged parts, 48 figures,
   clean at every step on both panels.
-- Tests: `test_kit.py`, new `test_studio.py`, `test_gallery.py`, `test_solver.py`, `test_label_layout.py`;
-  `test_compile_module.py` 200, `test_task_engine.py` 49, `test_design_system.py` 49.
-- **Proof (IGF scratch copy, hand-placed boxes removed):** the studio swept all 32 M01-M04 kit figures in 583 s - 29
-  clean first time; M02 s15 needed a spec line (`"rows": 2`), M03 s06 and M04 s10 two kit fixes (now in the kit). Then
-  every module compiled clean on its first compile with the final kit (4 compiles against 3 + ~10 + ~12 + 17). Deck audits:
-  the same or fewer failures than the original course, none in a kit figure (a hand-made HTML figure, the recap's
-  rise-in, an M03 slide line's lit colour - not this work). The real course still needs M02 s15 `"rows": 2`.
+- Tests: `test_kit.py`, new `test_studio.py`, `test_gallery.py`, `test_solver.py`, `test_label_layout.py`.
+- **Proof (IGF scratch copy, hand-placed boxes removed):** the studio swept all 32 M01-M04 kit figures - 29 clean first
+  time; M02 s15 needed a spec line (`"rows": 2`), M03 s06 and M04 s10 two kit fixes (now in the kit). Then every module
+  compiled clean on its first compile with the final kit (4 compiles against 3 + ~10 + ~12 + 17). Deck audits: the same or
+  fewer failures than the original course, none in a kit figure. The real course still needs M02 s15 `"rows": 2`.
 - 1024x768, stated: the two-col panel shows a figure at 0.54-0.72 of its size; the floor grows its words 1.4-1.9x and
   25 of 32 IGF figures then crowd (labels without a clear place, overlaps). Not judged; the tablet is 1280x800.
 

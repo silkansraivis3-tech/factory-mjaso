@@ -61,7 +61,7 @@ KIT.define('oil_tray', function (fig, part, g, p) {
 /* end kit-part */
 ```
 
-## Words, boxes and colours - the kit does the drawing work (2.45.0)
+## Words, boxes and colours - the kit does the drawing work (2.48.0)
 
 - **A part's words are labels: `h.label(fig, g, attrs, text, opt)`**, never a bare `h.lines`/`h.el('text')` for a name,
   caption or state. The layout gives every label a place clear of every shape, line and other label, and its own box's
@@ -80,7 +80,7 @@ KIT.define('oil_tray', function (fig, part, g, p) {
   part uses those classes and sizes its boxes and rings with `fig.fit` and `k`. A `font-size` in a part's `css` does not
   grow: the drawing audit's SMALL TEXT reports it.
 - **Colour by the dark-panel tokens, and both panels are right.** `var(--txt-d)`, `--dim-d`, `--faint-d`, `--cold`,
-  `--deep`, `--deep-3`, `--amber`, `--warn-d` ... On a light ground (a task page's white card) kit.css `.kit-light` makes
+  `--deep`, `--deep-3`, `--amber`, `--warn-d` ... On a light ground (a light page; a task page shows kit drawings on the dark screen since 2.46.0) kit.css `.kit-light` makes
   each of them mean its light counterpart, so a part keeps its contrast on either by construction. Never a light token
   (`--navy`, `--steel`, `--line-l`, `--dim-l`) in a part: it is right on one panel only. A part that is quiet on purpose
   (a backdrop, a pale cloud, the core inside a flame) carries `data-low-contrast`, with the reason in a comment.

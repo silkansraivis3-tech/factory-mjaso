@@ -17,7 +17,7 @@ By hand (the gallery does this):
 Buttons `[data-act=prev|next|replay]`, a `.dots` span and a `[data-kit-title]` element found in the
 same parent (or in the nearest `[data-kit-scope]`) are wired automatically.
 
-**Try it first in the figure studio (2.45.0)** - one spec, its real slide, every step, both screen sizes, every drawing
+**Try it first in the figure studio (2.48.0)** - one spec, its real slide, every step, both screen sizes, every drawing
 audit and a screenshot, in seconds, without compiling the module:
 ```
 python scripts/studio.py <course>/working_claude/figures/M03/s07.kit.json        (on its real slide, from the build sheet)
@@ -26,7 +26,7 @@ python scripts/studio.py <spec>.kit.json --parts <kit_parts.js> --panel two-col|
 It judges 1280 x 800 (the tablet) and states 1024 x 768: the scale the figure is shown at, how much the kit grew the
 words for the 12.5 px floor, how many labels it moved, any it could not place, and every audit finding per step.
 
-## What the kit does by itself (2.45.0) - nothing of this goes in a build sheet
+## What the kit does by itself (2.48.0) - nothing of this goes in a build sheet
 - **Labels.** Every name, caption and state a part draws gets a place clear of every shape, line and other label, and
   of its own box's edge (4 px, L54), judged at the end of every step - beside its part, or further out with a leader
   line. A spec places a part; it never places its words. A label that finds no clear place stays where the part put it
@@ -39,7 +39,7 @@ words for the 12.5 px floor, how many labels it moved, any it could not place, a
 - **The frame.** A drawing that reaches past its frame makes the frame larger (taller only, when its column has the
   height); one lost in its frame is zoomed in to fill it (L53, at most 1.5x; never with `view`, an inset photo over it,
   or `"fit": false`).
-- **Both panels.** On a light ground (a task page) the figure takes the light mapping of the course tokens (kit.css
+- **Both panels.** On a light ground (a light page - a task page draws a kit figure on the dark screen, 2.46.0) the figure takes the light mapping of the course tokens (kit.css
   `.kit-light`) - chosen by what is behind it, or by `"theme": "light"|"dark"`.
 
 ## Top level
@@ -89,10 +89,10 @@ Parts added from courses (merged by `kit_parts.py promote`; each block's `exampl
 | `boil_off` | `w h insulation level liquidLabel vapourLabel heatLabel` - an insulated LNG tank cutaway | 0..1 heat in, boiling |
 | `gas_cloud` | `w h from:[x,y]` - a pale cloud growing in a space | 0..1 how much gas |
 | `integral_tank` | `w h cofferdam label cofferdamLabel hullLabel` - a hull tank in its cofferdam | liquid level 0..1 |
-| `pipe_section` · `relief_valve` · `step_track` · `coupling` · `drip_tray` · `water_curtain` · `detector` · `flame` | from IGF M03 (2.45.0): a cut along a double-walled pipe; a spring relief valve; numbered steps or a checklist (`boxes`); dry-disconnect / breakaway coupling; drip tray; water curtain; fixed gas detector head (marks); a flame at a point | see each part's `value` in `kit.js` |
+| `pipe_section` · `relief_valve` · `step_track` · `coupling` · `drip_tray` · `water_curtain` · `detector` · `flame` | from IGF M03 (2.48.0): a cut along a double-walled pipe; a spring relief valve; numbered steps or a checklist (`boxes`); dry-disconnect / breakaway coupling; drip tray; water curtain; fixed gas detector head (marks); a flame at a point | see each part's `value` in `kit.js` |
 | `curve_chart` | from IGF M04: `xaxis yaxis curves:[{label,pts}] hline point` - curves that draw themselves, a point that slides along one | 0..n curves, n..n+1 the point |
 
-Pre-built for IGF Basic modules 5-15 (2.45.0, from the architecture's media plans; each in `GALLERY.html`, tested on both panels):
+Pre-built for IGF Basic modules 5-15 (2.48.0, from the architecture's media plans; each in `GALLERY.html`, tested on both panels):
 
 | type | options | value |
 |---|---|---|
@@ -180,7 +180,7 @@ Grey and blue at rest. Colour appears only for something abnormal: amber for an 
 Colours come only from the `course-module-ui` tokens, named by their dark-panel names (the light panel remaps them).
 No word is drawn under 12.5 px on screen - the kit sees to it (above).
 
-## A task page's "label the drawing" boxes (2.45.0)
+## A task page's "label the drawing" boxes (2.48.0)
 `compile/scripts/label_layout.py` sizes and places them: one width for all the boxes of a question - what the longest
 label needs on two lines with its tick - in the band above the drawing for the places in its upper half and below for
 the rest, each as close to its place as the others allow, in the same order, 1 % apart and from the edges. A build

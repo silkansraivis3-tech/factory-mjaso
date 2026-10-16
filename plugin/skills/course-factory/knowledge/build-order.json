@@ -139,6 +139,7 @@
       "step": "module plans",
       "owner": "course-factory/hours",
       "does": "one plan per module, stating its allocated and built minutes on its own face",
+      "built_by": "compile/scripts/module_plan.py, called by compile_module.py (2.47.0) - never typed by hand",
       "goes_to": "the instructor terminal"
     },
     {

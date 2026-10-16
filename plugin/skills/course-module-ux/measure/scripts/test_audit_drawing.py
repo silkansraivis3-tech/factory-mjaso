@@ -124,6 +124,12 @@ def main():
         check("the kit's own gallery (every part, %s figures) passes the contrast check" % (gal or {}).get("n"),
               gal is not None and gal["n"] >= 15 and not gal["f"], gal)
 
+        sc = (page_out(exe, FIX / "deck_scroll.html", prof) or {}).get("findings", [])
+        scrolls = lambda sid: [x for x in sc if x["check"] == "scrolls" and "(%s)" % sid in x["where"]]
+        check("a slide whose box scrolls 8 px is reported - no scrollbar on a slide (owner, 2026-10-16)",
+              scrolls("scrolls") and "8 px more than it shows" in scrolls("scrolls")[0]["detail"], sc)
+        check("a slide that fits, and 1 px of scrollHeight rounding, are silent", not scrolls("fits") and not scrolls("rounding"), sc)
+
         fit = page_out(exe, FIX / "drawing_fit.html", prof) or {}
         sp = [float(v) for v in (fit.get("spills") or "0 0 0 0").split()]
         check("gb_fit widens a frame a drawing reaches past (up and right)", sp[1] < -16 and sp[0] + sp[2] > 108, fit)

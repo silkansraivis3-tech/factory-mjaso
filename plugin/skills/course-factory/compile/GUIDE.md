@@ -74,7 +74,7 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   like `gb_deck.js`) and, when the course made parts of its own, `assets\kit_parts.js` after them. Each spec step lights
   its slide line (`"line": 2` -> `[data-i="2"]` `.cur`, earlier steps `.lit`); entering the slide starts the figure at
   step 0. Check the specs first: `course-visuals\kit\scripts\check_kit.py module <module> --figures <figures\M02>`.
-- **Draw a kit figure in the studio, not in the compile (2.45.0).** `course-visuals\kit\scripts\studio.py
+- **Draw a kit figure in the studio, not in the compile (2.48.0).** `course-visuals\kit\scripts\studio.py
   working_claude\figures\M03\s07.kit.json` draws the spec on its real slide (the script's words, the build sheet's
   layout, the module's styles) at 1280 × 800 and 1024 × 768, runs every drawing audit at the end of every step, and saves
   a screenshot - in seconds. Change the spec until it is clean, then compile once. The kit does the drawing work by
@@ -175,12 +175,30 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
   Team A" when the classroom says so (`gb-team-done`). Scope `member`: everyone answers. Any team size; a role
   never locks anyone out of the task.
 - **Label the drawing:** the compiler adds a band above and below the drawing for the empty label boxes, so no box
-  covers what is drawn, with a leader line to each place. The boxes are sized and placed by themselves
-  (`label_layout.py`, 2.45.0): one width for all - what the longest label needs on two lines with its tick - each as
-  close to its place as the others allow, in the same order, never off the edge or onto another. Don't place them in
-  the build sheet; `"labels": {"Fuel tank": {"at": "sp-tank"}}` only names the place (a `"box"` given there still wins).
+  covers what is drawn, with a leader line to each place. Every box is as wide as the longest label needs, in two lines,
+  with room for the tick (2.46.0), and placed by itself (`label_layout.py`, 2.48.0): each as close to its place as the
+  others allow, in the same order, never off the edge, onto another or under the ⤢ button. Leave `"box"` out - IGF M01,
+  M02 and M03 no longer need theirs; `"labels": {"Fuel tank": {"at": "sp-tank"}}` only names the place. A `"box"` given
+  there still wins, and one too narrow for its words is reported.
 - **The page:** the course's first self-check opens with "try your tablet first" (`"try_tablet": false` on the task
-  slide's entry to leave it out); a check opens with its pass mark (`"pass_mark": 70` at the top of the build sheet).
+  slide's entry to leave it out); a check opens with its pass mark - the approved script's `"pass_mark"` (2.46.0,
+  corrected like any other word: `content_script.py propose` with `{"script_field": "pass_mark", "new": 80}`), else
+  `"pass_mark": 70` at the top of the build sheet; both, and different, is reported.
+- **The instructor's answer key** (2.46.0): `assessment\check_answer_key.html` is compiled with the task pages from the
+  same approved script - every question of every set in order, how it is answered, the right answer in the script's
+  words (the letters the tablet shows, the order, the gap's words, the dial's accepted values), the feedback, and how
+  the pages mark with the pass mark. Instructor-only by its name; `compile_course.py` lists it on START_HERE_EXTENDED.
+  No key is typed by hand any more - IGF M01-M03's were retired because they held answers corrected since.
+- **The instructor's plan** (2.47.0): `instructor\M01_PLAN.html` is compiled with the deck and the task pages
+  (`--only plan` builds it alone) - allocated against built minutes on its face (a mismatch is shown and reported), the
+  Main ILO and Sub-ILOs with where each is taught and checked, every screen with its minute and the script's notes, every
+  task set with its pass mark and questions, the room activities with their link hints, the equipment and the sources.
+  Never typed: correct the script and compile again. A plan changed by hand (or made before the compiler) is kept until
+  `--force`.
+- **Layouts the engine picks by itself** (2.46.0): a drawing to tap that is not wide (width / height < 1.8) takes the
+  screen's height with the explanation beside it; a list of 6 or more to order, build, match or rebuild has its
+  numbered places beside the cards; a task slide in the deck shows the gesture its set mostly asks for (choose, tap,
+  drag, order, dial, find, gap) instead of one tablet icon.
 - **Before showing it:** `check_script_match.py --part trainee` and `check_course_package.py`. The drawings are
   checked by the build itself (§2e), question by question - a drawing shared with the deck is checked again here,
   without its labels and at task size.

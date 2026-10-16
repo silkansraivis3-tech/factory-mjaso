@@ -80,7 +80,7 @@ scripts/check_visuals.py        deterministic visual checks
 scripts/check_assets.py         provenance, licences, rights
 templates/                      VISUAL_STORYBOARD.md · visual-notes.md
 kit/                            the figure kit (L55): a figure is a spec of parts and steps, never a drawing
-  kit.js · kit.css                  parts, step engine, and (2.45.0) the layout: labels clear with leaders, the
+  kit.js · kit.css                  parts, step engine, and (2.48.0) the layout: labels clear with leaders, the
                                     12.5 px floor (--kit-up), boxes sized to their words, the frame grown or zoomed to
                                     fit, light/dark panel by construction (.kit-light remaps the course tokens)
   SPEC.md · PARTS.md                the spec format; making a part the kit does not have yet

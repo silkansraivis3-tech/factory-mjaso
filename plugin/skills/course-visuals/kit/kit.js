@@ -349,9 +349,9 @@
   };
 
   /* ==========================================================================
-     LAYOUT (2.45.0) - the drawing work the kit does by itself, so no build sheet places a label by hand
+     LAYOUT (2.48.0) - the drawing work the kit does by itself, so no build sheet places a label by hand
        THEME   the parts' colours come from the course tokens through a dark or a light mapping (kit.css), chosen by
-               what the figure is drawn on: a deck's dark panel, a task page's white card - so every word and line
+               what the figure is drawn on: a deck's dark panel (a task page's too, 2.46.0), a light page - so every word and line
                keeps its contrast on either, by construction (audit_drawing.js CONTRAST stays as the safety net)
        FLOOR   no word is drawn under 12.5 px: shown smaller than 1:1, every kit type class grows by 1/scale
                (--kit-up, at most UP_MAX), and the layout makes room for it
