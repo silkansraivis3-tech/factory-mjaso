@@ -507,8 +507,18 @@ or on a slide of a later module than one that already shows it - is a problem th
 photo or none; the earlier module keeps it. A thumbnail elsewhere gives way on its module's next build, so build every
 module again after photos change. → `course-factory` (`compile/`), 2.27.0
 
-**All fifty-eight laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L58 are enforced first through `course-factory/SKILL.md`'s
+**L59 · No module before its map.** Owner, 2026-10-16, after a session building IGF Module 4 got the ILO map and the
+knowledge base only by a follow-up message: *"before creating any module the AI should have already made the ILO
+mapping and suggested for KNOWLEDGE_BASE to be created"*. Before any module's content is written, the course has its
+ILO map (`working_claude/ilo_map.json`), approved on the Stage 2 page, and a recorded knowledge-base decision. When
+there is no knowledge base, the factory suggests making one, unasked - what it is, from which files, how (the Course
+Source Processor; the factory has no builder) and what the course loses - and records yes / built / declined with the
+operator's reason, once. Every Sub-ILO is taught on a slide and checked by a question, and every fact traces to a
+listed source. A script approved before the law keeps its approval; its gaps are reported. → `course-factory`
+(`scripts/ilo_map.py`, `scripts/course_gate.py`, `kb/scripts/kb_tool.py`, `script/GUIDE.md` §0), 2.38.0
+
+**All fifty-nine laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L59 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

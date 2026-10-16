@@ -824,7 +824,7 @@ agents table) and `orchestration/workflows/build_course.js` send a module agent 
 sheet → compile, writing no HTML and loading no HTML rules: ≈ 80,800 → 38,500 tokens of rules per module agent
 (measured, size ÷ 4). `test_compile_course.py` 21 checks.
 
-## 4zh · The ILO map and the knowledge base before any module (2.38.0, 2026-10-16)
+## 4zh · L59 - the ILO map and the knowledge base before any module (2.38.0, 2026-10-16)
 
 Owner: *"before creating any module the AI should have already made the ILO mapping and suggested for
 KNOWLEDGE_BASE to be created"*. A session building IGF Module 4 got neither until a follow-up message: the ILO map
