@@ -84,8 +84,11 @@ def run(*args):
 
 
 def script(approved=True, screens=SCREENS):
+    # 2.47.0 - the module plan states allocated against built minutes and a mismatch is a build problem (exit 1): a fixture
+    # allocates what its screens add up to (SCREENS: 25), as an approved script does
+    built = sum(x.get("minutes") or 0 for x in screens if x["kind"] in cs.INSTRUCTOR)
     s = {"module": 1, "title": "IGF ships", "course_language": "English", "operator_language": "en",
-         "minutes_allocated": 25, "status": "draft", "screens": json.loads(json.dumps(screens))}
+         "minutes_allocated": built or 25, "status": "draft", "screens": json.loads(json.dumps(screens))}
     if approved:
         s.update(status="approved", approved_hash=cs.content_hash(s), approved_by="Test")
     return s

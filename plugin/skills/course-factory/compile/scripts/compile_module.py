@@ -6,6 +6,8 @@
     compile_module.py <course folder> --module 1 --init-build    write a starter build sheet, make the module folder with the factory's style files, build nothing
     compile_module.py <course folder> --module 1 --draft         build from a script that is not approved yet (preview only)
     compile_module.py <course folder> --module 1 --force         overwrite a deck that was changed by hand
+    compile_module.py <course folder> --module 1 --only plan     build only instructor\\M01_PLAN.html (2.47.0: the module's plan,
+                                                                 from the same approved script - compile\\scripts\\module_plan.py)
 
 WHY THIS EXISTS
 Until 2.25 every module was written twice: the content script the operator approves, then the same words
@@ -1169,8 +1171,9 @@ def main(argv=None):
     ap.add_argument("--init-build", action="store_true", help="write a starter build sheet and stop")
     ap.add_argument("--draft", action="store_true", help="build from a script that is not approved yet - a preview")
     ap.add_argument("--force", action="store_true", help="overwrite a deck or task page that was changed by hand")
-    ap.add_argument("--only", choices=("all", "deck", "tasks"), default="all",
-                    help="build only the deck, or only the trainee task pages (default: both)")
+    ap.add_argument("--only", choices=("all", "deck", "tasks", "plan"), default="all",
+                    help="build only the deck, only the trainee task pages (and the answer key), or only the instructor's "
+                         "plan (default: all three)")
     ap.add_argument("--no-drawing-check", action="store_true",
                     help="skip the automatic drawing check (L54) - only while working on a drawing, never before showing")
     o = ap.parse_args(argv)
@@ -1217,7 +1220,7 @@ def main(argv=None):
     rec_path = workspace.module_record(mdir, RECORD)
     rec = cs.load(rec_path) if os.path.isfile(rec_path) else {}
     by_hand = lambda path, key: os.path.isfile(path) and not o.force and sha(io.open(path, encoding="utf-8").read()) != rec.get(key)
-    if o.only != "tasks" and by_hand(out, "index.html"):
+    if o.only in ("all", "deck") and by_hand(out, "index.html"):
         print("Stopped - nothing was overwritten.\n\n  The deck was changed by hand, or was built before the compiler:\n    %s\n"
               "  A change made in the deck would be lost. Put it into the script (content_script.py propose) or the\n"
               "  build sheet, then compile again with --force." % out)
@@ -1226,7 +1229,7 @@ def main(argv=None):
     probs, notes = [], []
     rec.update({"script_hash": cs.content_hash(script), "plugin_version": plugin_version()})
     written = []
-    if o.only != "tasks":
+    if o.only in ("all", "deck"):
         written.append(out)
         page, probs, notes = compile_deck(script, build, mdir, figdir, plugin_version(), approved)
         os.makedirs(os.path.dirname(out), exist_ok=True)
@@ -1236,7 +1239,7 @@ def main(argv=None):
         probs += credit_path_problems(page, "presentation/index.html")
         n = sum(1 for s in script["screens"] if s["kind"] in cs.INSTRUCTOR)
         print("Built %s - %d screens from the %s script.\n    %s" % (cs.mid(o.module), n, "approved" if approved else "DRAFT", out))
-    if o.only != "deck":
+    if o.only in ("all", "tasks"):
         import task_pages
         pages, tprobs, left = task_pages.compile_tasks(script, build, mdir, figdir, plugin_version(), approved)
         probs += tprobs
@@ -1255,6 +1258,20 @@ def main(argv=None):
             print("Built the task page %s" % key)
         for x in left:
             print("  left as it is: %s" % x)
+    if o.only in ("all", "plan"):                      # 2.47.0 - the instructor's plan, from the same approved script
+        import module_plan
+        ppath, ppage = module_plan.plan_page(script, build, mdir, o.course, plugin_version(), approved, probs)
+        key = os.path.relpath(ppath, mdir).replace("\\", "/")
+        if by_hand(ppath, key):
+            probs.append("%s was changed by hand, or was made before the compiler - it was not overwritten. Put the change "
+                         "into the script or the build sheet, then compile again with --force" % key)
+        else:
+            os.makedirs(os.path.dirname(ppath), exist_ok=True)
+            with io.open(ppath, "w", encoding="utf-8", newline="\n") as f:
+                f.write(ppage)
+            rec[key] = sha(ppage)
+            written.append(ppath)
+            print("Built the module plan %s" % key)
     cs.save(rec_path, rec)
     # L54 - every drawing whole and clean: checked by itself on every page just written, never left to memory
     if written and not o.no_drawing_check:
@@ -1268,7 +1285,7 @@ def main(argv=None):
     if not approved:
         probs.insert(0, "the script is not approved - what was built is a preview only, never handed over")
     parts = [x for x in notes if x[0]]
-    if o.only != "tasks":
+    if o.only in ("all", "deck"):
         listed = write_to_take(o.course, script, parts)
         if notes:
             print("\nReal photographs still missing for what the drawings show (L57) - listed in\n    %s" % listed)
@@ -1279,7 +1296,7 @@ def main(argv=None):
         for x in probs:
             print("  - " + x)
         return 1
-    print(NEXT_STEPS)
+    print(NEXT_STEPS if o.only != "plan" else "\nNext: read the plan beside the deck - its minutes, its tasks and its sources are the script's.")
     return 0
 
 

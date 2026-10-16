@@ -180,6 +180,12 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
   words (the letters the tablet shows, the order, the gap's words, the dial's accepted values), the feedback, and how
   the pages mark with the pass mark. Instructor-only by its name; `compile_course.py` lists it on START_HERE_EXTENDED.
   No key is typed by hand any more - IGF M01-M03's were retired because they held answers corrected since.
+- **The instructor's plan** (2.47.0): `instructor\M01_PLAN.html` is compiled with the deck and the task pages
+  (`--only plan` builds it alone) - allocated against built minutes on its face (a mismatch is shown and reported), the
+  Main ILO and Sub-ILOs with where each is taught and checked, every screen with its minute and the script's notes, every
+  task set with its pass mark and questions, the room activities with their link hints, the equipment and the sources.
+  Never typed: correct the script and compile again. A plan changed by hand (or made before the compiler) is kept until
+  `--force`.
 - **Layouts the engine picks by itself** (2.46.0): a drawing to tap that is not wide (width / height < 1.8) takes the
   screen's height with the explanation beside it; a list of 6 or more to order, build, match or rebuild has its
   numbered places beside the cards; a task slide in the deck shows the gesture its set mostly asks for (choose, tap,

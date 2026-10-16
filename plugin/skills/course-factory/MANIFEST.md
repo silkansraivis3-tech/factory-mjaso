@@ -1037,6 +1037,33 @@ check in `compile/scripts/test_task_engine.py` (headless Chrome, 1280 x 800) tha
   kit chart) are the same with 2.44.1 - not from this release.
 - After merging, every module needs `design_system.py install --update` (the engine changed).
 
+## 4zp · The module plan compiled from the approved script (2.47.0, 2026-10-16)
+
+Source: the IGF pilot's hand-made `M01_PLAN.html` / `M02_PLAN.html` predated the day's script corrections, and M03-M04
+had none (build-order step 14: "one plan per module, stating its allocated and built minutes on its own face").
+
+- **`compile/scripts/module_plan.py`** (new; called by `compile_module.py`, like `task_pages.py` and `answer_key.py`):
+  `moduleNN/instructor/MNN_PLAN.html` - instructor-only by its folder, the shared document look (`gb_tokens.css`,
+  `gb_page.css`), course language (en, lv, ru; lv / ru PROVISIONAL, `compile/TRANSLATIONS_REVIEW.md` §7). Every block is
+  from an approved file, nothing is typed: **the face** - allocated minutes (`minutes_allocated`, with the academic hours
+  of `programme.json`) against built minutes (the sum of every screen's minutes), the split plain theory / active
+  slides / tasks / room activities (`content_script.split_of`); a mismatch (short, over, or not stated) is a red card in
+  words **and** a build problem (exit 1); **what it owes** - the Main ILO and the Sub-ILOs of the module's rows of
+  `ilo_map.json`, each with the slides that teach it and the questions that check it; **the running order** - every
+  screen: start minute, minutes, theory / active (and the technique) / task / room activity, picture kind, the script's
+  notes as what the instructor does, its Sub-ILO; **the tasks** - every set with its code, the slide and minute that open
+  it, the pass mark (checks) or "no pass mark", every question with its way of answering, Sub-ILO and wording (the
+  answers stay in the answer key); **room activities** with their link hints; **materials** - the architecture's
+  `practicals` equipment, the tablets the tasks use, the pictures the script says must be captured at the school;
+  **sources** - the script's.
+- **`compile_module.py`**: a normal build writes the plan; `--only plan` builds it alone (`--only deck` / `tasks` no
+  longer touch it). It is recorded in `compiled.json` like the task pages: a plan changed by hand, or made before the
+  compiler, is not overwritten (exit 1) until `--force`. The pilot's two hand-made plans are therefore protected - move
+  them to `working_claude/modules/moduleNN/handmade_<date>/` first, or use `--force`.
+- Tests: `compile/scripts/test_module_plan.py` (47); `test_compile_course.py` now lists the compiled plan, not a stub.
+- After merging, every module whose `assets/gb_page.css` predates 2.46.0 needs `design_system.py install --update`
+  (the plan's tables need its `.scroll th{top:0}`).
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never
