@@ -284,13 +284,13 @@
     if (p.title) el('text', { x: 20, y: 29, 'class': 'kit-ptitle' }, g, p.title);
     el('line', { x1: 1, x2: w - 1, y1: 44, y2: 44, 'class': 'kit-rule' }, g);
     var chip = el('g', { transform: 'translate(' + (w - 16) + ' 12)' }, g);
-    var box = el('rect', { y: 0, height: 22, rx: 11 }, chip);
+    var box = el('rect', { y: -2, height: 26, rx: 13 }, chip);      // 26 high, 16 a side: the words keep 4 px clear at 2/3 size (L54)
     var txt = el('text', { y: 15.5, 'text-anchor': 'middle' }, chip);
     part.alarms = function (list) {
       var n = list.length;
       var worst = list.some(function (a) { return a.kind === 'trip'; }) ? 'trip' : 'alarm';
       txt.textContent = n ? n + (n > 1 ? ' ALARMS' : ' ALARM') : 'ALL NORMAL';
-      var tw = textWidth(txt, 8) + 26;
+      var tw = textWidth(txt, 8) + 32;
       box.setAttribute('x', -tw); box.setAttribute('width', tw); txt.setAttribute('x', -tw / 2);
       chip.setAttribute('class', 'kit-chip' + (n ? ' kit-on-' + worst : ''));
     };
@@ -422,8 +422,8 @@
     });
     var tx = x1 - 10;
     el('line', { x1: tx, y1: top - 8, x2: tx, y2: bot - 6, 'class': 'kit-probe' }, g);
-    el('circle', { cx: tx, cy: top - 20, r: 17, 'class': 'kit-bubble' }, g);   // 17: "TT" keeps its 4 px clear of the ring (audit_drawing)
-    el('text', { x: tx, y: top - 15.5, 'text-anchor': 'middle', 'class': 'kit-bubble-t' }, g, p.tag || 'TT');
+    el('circle', { cx: tx, cy: top - 22, r: 20, 'class': 'kit-bubble' }, g);   // 20: "TT" keeps its 4 px clear of the ring down to 2/3 size (L54)
+    el('text', { x: tx, y: top - 17.5, 'text-anchor': 'middle', 'class': 'kit-bubble-t' }, g, p.tag || 'TT');
     part.render = function (v) {
       var ly = bot - clamp(v, 0, 1) * (bot - top) * 0.75;
       pool.setAttribute('y', ly); pool.setAttribute('height', bot - ly);
@@ -516,7 +516,9 @@
     el('rect', { width: w, height: h, rx: 8, 'class': 'kit-space kit-' + (p.style || 'room') }, g);
     if (p.label) {
       var below = p.labelAt === 'below';
-      lines(g, { x: below ? w / 2 : 10, y: below ? h + 20 : 20, 'text-anchor': below ? 'middle' : 'start',
+      // 14 / 24: the name keeps its 4 px clear of the room's edge also when the figure is shown at 2/3 size (L54);
+      // in a low room (a TCS 30 high) it sits in the middle, clear of the top and the bottom alike
+      lines(g, { x: below ? w / 2 : 14, y: below ? h + 20 : Math.min(24, h / 2 + 4.5), 'text-anchor': below ? 'middle' : 'start',
                  'class': below ? 'kit-cap' : 'kit-sl' }, p.label);
     }
     part.render = function (v) { wash.style.opacity = clamp(v, 0, 1).toFixed(3); g.classList.toggle('kit-lit', v > 0.5); };
@@ -571,8 +573,8 @@
 
   /* badge - a numbered step marker. value 0..1 = lit */
   TYPES.badge = function (fig, part, g, p) {
-    el('circle', { r: 15, 'class': 'kit-badge-o' }, g);       // 15: every digit keeps its 4 px clear of the ring at any scale
-    var disc = el('circle', { r: 15, 'class': 'kit-badge' }, g);
+    el('circle', { r: 17, 'class': 'kit-badge-o' }, g);       // 17: every digit keeps its 4 px clear of the ring down to 2/3 size
+    var disc = el('circle', { r: 17, 'class': 'kit-badge' }, g);
     el('text', { y: 5, 'text-anchor': 'middle', 'class': 'kit-badge-t' }, g, String(p.n != null ? p.n : ''));
     part.render = function (v) { disc.style.opacity = clamp(v, 0, 1).toFixed(2); g.classList.toggle('kit-lit', v > 0.5); };
   };
