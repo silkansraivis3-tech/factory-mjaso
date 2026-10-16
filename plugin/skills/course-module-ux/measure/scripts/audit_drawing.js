@@ -34,6 +34,11 @@
                      that steps is judged at its last step as well (operator,
                      2026-10-15: "the visual is too big, much empty space").
 
+     5  CONTRAST     (a figure-kit drawing only, 2.44.0) every part can be seen against the figure's dark panel:
+                     a label 4.5:1 (3:1 large), a shape or line 3:1. A part coloured for a light slide (navy,
+                     steel) vanishes there. The kit's own parts (colour set in kit.css) are exempt; data-low-contrast
+                     marks a part meant to be quiet. See checkContrast().
+
      Shapes inside <defs> drawn with <use> (a shared hull, a symbol) are copied
      in, invisibly, for the measurement and removed after.
 
@@ -79,6 +84,9 @@
                                 (calibrated on the IGF pilot, 2026-10-15: well-filled figures 24-33 %, the ones the
                                 operator called empty 53-74 %) */
     emptyBigPart: 0.06,      /* EMPTY: a shape larger than this share of the frame fills only along its outline */
+    figTextContrast: 4.5,    /* CONTRAST: a kit figure's label against its panel (WCAG AA), */
+    figLargeContrast: 3,     /*           a large one (24 px, or bold 18.66 px, as rendered) */
+    figGraphicContrast: 3,   /*           a shape or line (WCAG 1.4.11) */
     maxExamples: 40
   };
   if (global.__auditDrawingConfig) {
@@ -413,6 +421,8 @@
                       detail: "too much empty space (limits: " + Math.round(CONFIG.emptyMaxBlank * 100) + " % blank, " +
                       Math.round(CONFIG.emptyMaxShare * 100) + " % in one piece) - draw to the frame, crop the drawing, or give the room to the words" }, [svg]);
       }
+      /* ---- 5 CONTRAST ---- every part of a kit figure can be seen against what is behind it */
+      checkContrast(svg, where, items, out);
     } finally {
       copies.forEach(function (c) { c.parentNode.removeChild(c); });
     }
@@ -513,6 +523,133 @@
       if (px > CONFIG.tolPx) {
         report(out, { check: "cut off", where: where, part: tag(el) + (el.id ? "#" + el.id : ""), other: "its box or the slide",
                       detail: Math.round(px) + " px cut off" }, [el]);
+      }
+    });
+  }
+
+  /* ---- 5 CONTRAST (finding 13, IGF M04, 2026-10-16) ----
+     A kit figure is drawn on its own dark panel - on a light slide too - so a part coloured for a light slide (navy,
+     steel, ink) is painted dark on dark and disappears, and every other probe stayed green. Each painted part of a
+     figure-kit drawing is judged against what lies under it: the figure's panel, or the opaque shape it sits on.
+       a label      CONFIG.figTextContrast (3:1, a large label CONFIG.figLargeContrast) - set in the rendered size
+       a shape/line CONFIG.figGraphicContrast (3:1, WCAG 1.4.11) by its fill or its stroke, whichever shows
+     A part the kit itself colours (a fill/stroke rule in kit.css - its frame, bores, masks, rules) is exempt: the
+     gallery calibrates those. What a course adds (kit_parts.js css, an inline style) is judged. Anything marked
+     data-low-contrast is exempt too (write why next to it). Judged on a kit drawing only: any other drawing
+     sits on the slide, whose own colours the deck audit measures. */
+  function parseRgba(s) {
+    var m = /rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:[ ,/]+([\d.]+%?))?\s*\)/.exec(s || "");
+    if (!m) { return null; }
+    var a = m[4] === undefined ? 1 : (/%$/.test(m[4]) ? parseFloat(m[4]) / 100 : parseFloat(m[4]));
+    return [parseFloat(m[1]), parseFloat(m[2]), parseFloat(m[3]), a];
+  }
+  function over(top, under, alpha) {
+    var a = (top[3] === undefined ? 1 : top[3]) * (alpha === undefined ? 1 : alpha);
+    return [top[0] * a + under[0] * (1 - a), top[1] * a + under[1] * (1 - a), top[2] * a + under[2] * (1 - a), 1];
+  }
+  function relLum(c) {
+    function lin(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+    return 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+  }
+  function ratioOf(a, b) {
+    var l1 = relLum(a), l2 = relLum(b);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+  /* what lies behind the drawing: the first non-transparent backgrounds up the page, composited, then the kit's own
+     panel rectangle when it is drawn */
+  function panelColour(svg) {
+    var chain = [], n, c, base = [255, 255, 255, 1], i;
+    for (n = svg; n && n.nodeType === 1; n = n.parentElement) {
+      c = parseRgba(getComputedStyle(n).backgroundColor);
+      if (c && c[3] > 0) { chain.push(c); if (c[3] >= 0.99) { break; } }
+    }
+    for (i = chain.length - 1; i >= 0; i--) { base = over(chain[i], base); }
+    var pr = qa(svg, "rect.kit-panel")[0];
+    if (pr) {
+      var f = parseRgba(getComputedStyle(pr).fill), op = parseFloat(getComputedStyle(pr).fillOpacity);
+      if (f && f[3] > 0) { base = over(f, base, isNaN(op) ? 1 : op); }
+    }
+    return base;
+  }
+  function groupOpacity(el, svg) {
+    var o = 1, n;
+    for (n = el; n && n.nodeType === 1; n = n.parentElement) {
+      var v = parseFloat(getComputedStyle(n).opacity);
+      if (!isNaN(v)) { o *= v; }
+      if (n === svg) { break; }
+    }
+    return o;
+  }
+  function paintOf(el, svg, what) {      /* [r,g,b,a] of a part's fill or stroke, opacities folded into a */
+    var cs = getComputedStyle(el), c = parseRgba(what === "stroke" ? cs.stroke : cs.fill);
+    if (!c) { return null; }
+    var op = parseFloat(what === "stroke" ? cs.strokeOpacity : cs.fillOpacity);
+    c[3] = c[3] * (isNaN(op) ? 1 : op) * groupOpacity(el, svg);
+    return c;
+  }
+  /* the colour rules of kit.css - the kit's own parts are drawn and calibrated for the panel in the gallery (a pipe's
+     bore, a valve's mask, a track, a quiet rule are meant to be near the panel's colour). A part whose fill or stroke
+     is set by one of those rules is the kit's own; what a course adds (kit_parts.js css, an inline style, an
+     attribute) is judged. Where kit.css cannot be read, nothing is exempt. */
+  var kitRules = null;
+  function kitColourRules() {
+    if (kitRules) { return kitRules; }
+    kitRules = [];
+    function walk(rules) {
+      Array.prototype.forEach.call(rules || [], function (r) {
+        if (r.cssRules && !r.selectorText) { walk(r.cssRules); return; }
+        if (r.selectorText && r.style && (r.style.fill || r.style.stroke)) { kitRules.push(r.selectorText); }
+      });
+    }
+    Array.prototype.forEach.call(document.styleSheets, function (sh) {
+      if (!/(^|\/)kit\.css(\?|#|$)/.test(sh.href || "")) { return; }
+      try { walk(sh.cssRules); } catch (e) { /* cross-origin: unreadable */ }
+    });
+    return kitRules;
+  }
+  function kitOwn(el) {
+    return kitColourRules().some(function (sel) { try { return el.matches(sel); } catch (e) { return false; } });
+  }
+  function checkContrast(svg, where, items, out) {
+    if (!(svg.classList && svg.classList.contains("kit")) || svg.hasAttribute("data-low-contrast")) { return; }
+    var panel = panelColour(svg), sb = svg.getBoundingClientRect(), seen = 0;
+    var shapes = items.filter(function (it) {
+      var c = it.t === "text" || it.t === "image" || it.t === "line" || it.t === "polyline" ? null : paintOf(it.el, svg, "fill");
+      return c && c[3] >= 0.5 && it.b.w * it.b.h < 0.8 * sb.width * sb.height;
+    });
+    items.forEach(function (P) {
+      if (P.copy || upFlag(P.el, "data-low-contrast", svg) || kitOwn(P.el)) { return; }
+      if (P.el.matches(".kit-panel") || (P.t !== "text" && P.b.w * P.b.h >= 0.8 * sb.width * sb.height)) { return; }   /* the panel is what it is judged against */
+      var behind = panel, k;
+      for (k = shapes.length - 1; k >= 0; k--) {          /* the latest opaque shape drawn under it that holds its centre */
+        var S = shapes[k];
+        if (S === P || !(S.el.compareDocumentPosition(P.el) & 4) || S.b.w * S.b.h <= P.b.w * P.b.h) { continue; }
+        if (inFill(S.el, { x: P.b.cx, y: P.b.cy })) { behind = over(paintOf(S.el, svg, "fill"), panel); break; }
+      }
+      var cs = getComputedStyle(P.el), why = "", worst = 99, need = 0, what = "";
+      if (P.t === "text") {
+        var c = paintOf(P.el, svg, "fill");
+        if (!c || !(P.el.textContent || "").trim()) { return; }
+        var m = P.el.getScreenCTM(), px = parseFloat(cs.fontSize) * (m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : 1);
+        var large = px >= 24 || (px >= 18.66 && parseFloat(cs.fontWeight) >= 700);
+        need = large ? CONFIG.figLargeContrast : CONFIG.figTextContrast;
+        worst = ratioOf(over(c, behind), behind);
+        what = "label \"" + (P.el.textContent || "").trim().slice(0, 24) + "\" (" + cs.fill + ")";
+      } else if (P.t !== "image") {
+        var f = fills(P.el) ? paintOf(P.el, svg, "fill") : null, s = strokes(P.el) ? paintOf(P.el, svg, "stroke") : null;
+        var rf = f && f[3] > 0.05 ? ratioOf(over(f, behind), behind) : 0, rs = s && s[3] > 0.05 ? ratioOf(over(s, behind), behind) : 0;
+        if (!rf && !rs) { return; }
+        need = CONFIG.figGraphicContrast;
+        worst = Math.max(rf, rs);                               /* it shows if either its fill or its outline does */
+        what = (rf >= rs ? "fill " + cs.fill : "line " + cs.stroke);
+      } else { return; }
+      seen++;
+      if (worst < need) {
+        report(out, { check: "contrast", where: where, part: label(P.el), other: "the figure's panel",
+                      detail: what + " reads " + (Math.round(worst * 10) / 10) + ":1 against what is behind it (" +
+                              "rgb(" + Math.round(behind[0]) + "," + Math.round(behind[1]) + "," + Math.round(behind[2]) + ")), needs " + need +
+                              ":1 - a kit figure is drawn on a dark panel; colour the part for it (var(--txt-d), --dim-d, --cold ...), " +
+                              "or mark a part that is meant to be quiet data-low-contrast" }, [P.el]);
       }
     });
   }

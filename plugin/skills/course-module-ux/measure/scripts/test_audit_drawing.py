@@ -58,6 +58,26 @@ def page_out(exe, html, prof):
     return json.loads(unescape(m.group(1))) if m and m.group(1).strip() else None
 
 
+def gallery_contrast(exe, prof):
+    """the kit's own gallery (course-visuals/kit/GALLERY.html), every figure, run through the probe as it is: [contrast
+    findings] - the kit's own parts must pass their own check"""
+    gal = HERE.parent.parent.parent / "course-visuals" / "kit" / "GALLERY.html"
+    text = gal.read_text(encoding="utf-8")
+    text = re.sub(r"<head>", '<head><base href="%s/">' % gal.parent.as_uri(), text, count=1)
+    tail = ('<script src="%s"></script><script>setTimeout(function(){var r=AuditDrawing.page();var p=document.createElement("pre");'
+            'p.id="out";p.textContent=JSON.stringify({n:r.drawings,f:r.findings.filter(function(f){return f.check==="contrast"})'
+            '.map(function(f){return f.part+" "+f.detail})});document.body.appendChild(p);},1500);</script>'
+            % (HERE / "audit_drawing.js").as_uri())
+    i = text.lower().rfind("</body>")
+    page = Path(prof) / "gallery_probe.html"
+    page.write_text(text[:i] + tail + text[i:], encoding="utf-8")
+    p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
+                        "--window-size=1280,2600", "--virtual-time-budget=9000", "--dump-dom", page.as_uri()],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=200)
+    m = re.search(r'<pre id="out">(.*?)</pre>', p.stdout, re.S)
+    return json.loads(unescape(m.group(1))) if m and m.group(1).strip() else None
+
+
 def main():
     exe = browser()
     if not exe:
@@ -84,6 +104,25 @@ def main():
         check("a drawing that fills its frame is silent", not [x for x in f if x["svg"] == "good-full"],
               [x for x in f if x["svg"] == "good-full"])
         check("the verdict fails the page", (out or {}).get("verdict", "").startswith("VERDICT: FAIL"), out)
+
+        # finding 13 - contrast of each part of a kit figure against its (dark) panel
+        cc = page_out(exe, FIX / "drawing_contrast.html", prof) or {}
+        cf = [x for x in cc.get("findings", []) if x["check"] == "contrast"]
+        bad = {x["part"] for x in cf}
+        check("a label coloured for a light slide (navy, steel) on a kit figure's dark panel is found",
+              {"bad-text-navy", "bad-text-steel"} <= bad, cf)
+        check("a line (steel) and a filled shape (navy) that vanish on the panel are found",
+              {"bad-line-steel", "bad-rect-navy"} <= bad, cf)
+        check("what is seen is silent: light label, light line, navy text on a light card inside the figure",
+              not ({"good-text", "good-line", "text-on-card", "card"} & bad), cf)
+        check("a part marked data-low-contrast is left alone, and a drawing that is not a kit figure is not judged",
+              not ({"ok-quiet", "plain-navy"} & bad) and len(cf) == 4, cf)
+        check("the finding says the ratio and what to do",
+              all(":1" in x["detail"] and "dark panel" in x["detail"] for x in cf), cf)
+
+        gal = gallery_contrast(exe, prof)
+        check("the kit's own gallery (every part, %s figures) passes the contrast check" % (gal or {}).get("n"),
+              gal is not None and gal["n"] >= 15 and not gal["f"], gal)
 
         fit = page_out(exe, FIX / "drawing_fit.html", prof) or {}
         sp = [float(v) for v in (fit.get("spills") or "0 0 0 0").split()]

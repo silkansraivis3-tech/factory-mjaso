@@ -289,6 +289,21 @@ def tasks_part(tmp):
     code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force", "--drawing-check")
     check("a crossing marked as meant (data-may-cross) is not a finding", "every drawing whole and clean" in out, out)
 
+    # ---- finding 13: a kit figure's part coloured for a light slide cannot be seen on its dark panel - the same check
+    kit_page = os.path.join(md, "kit_contrast.html")
+    io.open(kit_page, "w", encoding="utf-8").write(
+        '<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff}'
+        '.kit-screen{background:#0C1E3A;padding:12px;width:640px}svg{display:block;width:100%;height:auto}'
+        '.kit-panel{fill:#0C1E3A}text{font:600 14px sans-serif}#a{fill:#F3F8FD}#b{fill:#0A2463}</style></head><body>'
+        '<div class="scr on" data-script="q01"><div class="kit-screen"><svg class="kit" viewBox="0 0 300 100">'
+        '<rect class="kit-panel" x="1" y="1" width="298" height="98" rx="12"/>'
+        '<text id="a" x="20" y="30">Boiling point</text><text id="b" x="20" y="60">Pressure rises</text></svg></div></div></body></html>')
+    kprobs, knote = drawing_check.check([kit_page], root=md)
+    kprobs = [x for x in kprobs if ": contrast - " in x]
+    check("the build's drawing check reports a kit figure's label that vanishes on its dark panel, naming the part and the ratio",
+          knote is None and len(kprobs) == 1 and "contrast" in kprobs[0] and "Pressure rises" in kprobs[0] and ":1" in kprobs[0], (kprobs, knote))
+    os.remove(kit_page)
+
 
 EVERY_WAY = [
     {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - every way", "text": "Self-check on your tablet now.", "minutes": 4},
@@ -546,6 +561,9 @@ def main():
         c, md = new_course(os.path.join(tmp, "a"), script())
         code, out = run(COMPILE, c, "--module", "1")
         check("an approved script with every picture builds clean (exit 0)", code == 0, out)
+        check("finding 14: the build prints the visual review under Next, as a required step with its checklist",
+              "THE VISUAL REVIEW - REQUIRED" in out and "EVERY slide and EVERY" in out and "1280 x 800" in out
+              and "no file path" in out and "answered once RIGHT and once WRONG" in out and "tap area" in out, out)
         page = deck(md)
         code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
         check("check_script_match --part instructor passes on the built deck", code == 0, out)
@@ -685,6 +703,18 @@ def main():
               and sheet["screens"]["s04"] == {"figure": "", "visual_kind": "model_3d"})
         code, out = run(COMPILE, c4, "--module", "1", "--init-build")
         check("--init-build never replaces an existing build sheet", code == 2, out)
+        # finding 8: a new module has no folder - --init-build makes it, with the factory's style files, ready to compile
+        os.makedirs(os.path.join(tmp, "d2"))
+        c4b, md4b = new_course(os.path.join(tmp, "d2"), script(), build=False)
+        gate_fixture.open_gate(c4b)
+        shutil.rmtree(md4b)
+        code, out = run(COMPILE, c4b, "--module", "1", "--init-build")
+        check("finding 8: --init-build makes the module folder and puts the factory's style files in it",
+              code == 0 and os.path.isfile(os.path.join(md4b, "assets", "gb_tokens.css"))
+              and os.path.isfile(os.path.join(md4b, "assets", "gb_deck.js")), out)
+        code, out = run(COMPILE, c4b, "--module", "1")
+        check("... and the first compile then runs (exit 1: the pictures are not chosen yet, not 2: no folder)",
+              code == 1 and os.path.isfile(os.path.join(md4b, "presentation", "index.html")), out[-500:])
 
         # ---- an .html drawing in the module folder would ship as a page - refused
         os.makedirs(os.path.join(tmp, "e"))
@@ -726,12 +756,34 @@ def main():
               'data-about="A ship taking gas."' in a4.split('<figure class="inset">')[1], a4)
         code, out = run(MATCH, c6, "--module", "1", "--part", "instructor")
         check("... and the words still match the approved script", code == 0, out)
+        # finding 3: an inset on a photo slide (.photo.split) sat in .photo-copy, which no inset rule reached - 74 px off the slide
+        sheet["screens"]["s02"]["inset"] = {"photo": "assets/img/ship.jpg", "caption": "A second look."}
+        cs.save(bp, sheet)
+        run(COMPILE, c6, "--module", "1", "--force")
+        a2 = section(deck(md6), "s02")
+        css6 = io.open(os.path.join(md6, "assets", "gb_compose.css"), encoding="utf-8").read()
+        m_inset = re.search(r"\.photo-copy \.inset img\{([^}]*)\}", css6)
+        check("finding 3: an inset on a photo slide is inside the words' column and that column styles it at inset size",
+              'class="slide photo split"' in a2 and 0 <= a2.find("photo-copy") < a2.find('<figure class="inset">')
+              and m_inset and "max-height:min(16vh" in m_inset.group(1) and ".photo-copy .inset{display:flex" in css6, a2[:600])
+        sheet["screens"]["s02"].pop("inset")
+        cs.save(bp, sheet)
+        run(COMPILE, c6, "--module", "1", "--force")
         cs.save(os.path.join(md6, "assets", "img", "_photo_meta.json"),
                 {"ship.jpg": dict(PHOTO_META["ship.jpg"], description="")})
         code, out = run(COMPILE, c6, "--module", "1")
         check("L56: a photograph with no description is reported - its panel would say nothing",
               code == 1 and 'has no "description"' in out, out)
+        # finding 14: a credit that shows where the file lives on somebody's computer is a build problem
+        for field, val in (("source", "C:\\Users\\aleksisv\\Desktop\\photos\\ship.jpg"), ("author", "D:/Kursi/photos/jane"),
+                           ("source", "working_claude\\figures\\M01"), ("source", "assets/img/ship_raw.jpg")):
+            cs.save(os.path.join(md6, "assets", "img", "_photo_meta.json"), {"ship.jpg": dict(PHOTO_META["ship.jpg"], **{field: val})})
+            code, out = run(COMPILE, c6, "--module", "1", "--force")
+            check("finding 14: a credit with a path in its %s (%s) is a build problem" % (field, val[:14]),
+                  code == 1 and "credit or caption shows a file-system path" in out, out)
         cs.save(os.path.join(md6, "assets", "img", "_photo_meta.json"), PHOTO_META)
+        code, out = run(COMPILE, c6, "--module", "1", "--force")
+        check("... and a clean credit (a name, a source, a licence, a web address) is not", "file-system path" not in out, out)
         io.open(os.path.join(md6, "assets", "gb_zoom.js"), "a", encoding="utf-8").write("/* old */")
         code, out = run(COMPILE, c6, "--module", "1")
         check("a module whose gb_zoom.js is not the factory's current one is told to update it",

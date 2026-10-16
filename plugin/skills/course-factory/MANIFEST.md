@@ -926,6 +926,41 @@ question was optional. Now, by rule and by check:
   Tests: `test_kb.py` 61, `test_architecture_page.py` 89, `test_content_script.py` 160, `test_compile_module.py`
   (init-build stop), `test_workspace.py`; `scripts/gate_fixture.py` opens the gate on a test course.
 
+## 4zn · What building IGF Module 4 with the compiler found (2.44.0, 2026-10-16)
+
+Source: `M04_BUILD_METRICS.md` §9 (findings 1, 3, 5, 6, 7, 8, 13, 14). Each fix has a test.
+
+- **1 · `check_kit.py parts`**: a part's `css` written as concatenated strings (`'...' + '...'`) is read as css, not as
+  drawing code - no more false "fill/stroke set in the drawing". (`STRCAT`; `test_kit.py`)
+- **3 · inset on a photo slide**: `gb_compose.css` styles `.photo-copy .inset` (a compact row under the words, image
+  <= 16 vh); before, only `.copy` / `.fill` insets were styled and the photo ran at natural size, 74 px off the slide.
+  (`test_compile_module.py`)
+- **5 · `audit_deck.js`** finishes each slide's finite animations and transitions before measuring
+  (`CONFIG.finishAnimations`, default on): the recap's rise-in no longer reads as 23 px "scroll" in a pane where
+  animations do not advance. Test in a real browser: `measure/scripts/test_audit_deck.py` + `fixtures/deck_rise_in.html`.
+- **6 · `check_navigation.py`** reads the local scripts a page loads (a compiled task page's Back link is wired by the
+  shared `gb_answer.js`); a known shared engine (`gb_answer.js`, `gb_deck.js`, `gb_task.js`) counts even where its file
+  cannot be read. `test_check_navigation.py`.
+- **7 · `bloom_map.py`**: `parent_ids()` - a plain-numbered programme-result row with Sub-ILOs under it (`4` beside `4.1`,
+  `4.2`; or `"parent": true`) is the heading of those Sub-ILOs, not a Sub-ILO: no level read, no Apply question asked for
+  it, and a question linked to `"4"` serves `4.1` and `4.2`. A dotted row with children (`1.1` beside `1.1.c`) keeps its own level.
+- **8 · `design_system.py install`** makes a module folder that does not exist (a new module has none); inside the
+  Android project it still refuses and makes nothing; a path that is a file is refused. `compile_module.py --init-build`
+  makes the module folder and installs the factory's style files and engines in it.
+- **13 · contrast inside a figure**: `audit_drawing.js` check 5 judges each part of a figure-kit drawing (`svg.kit`)
+  against what is behind it - the panel, or the opaque shape it sits on: a label 4.5:1 (3:1 large, as rendered), a
+  shape or line 3:1 by its fill or its stroke. A part whose colour a rule in `kit.css` sets is the kit's own and exempt
+  (the gallery calibrates those); what a course adds (`kit_parts.js` css, inline style) is judged; `data-low-contrast`
+  marks a part meant to be quiet. Reported like the other drawing findings by `drawing_check.py` (a build problem). The
+  kit's own gallery passes it (a test): `cylinder`'s steel rod became `--faint-d`, the general-arrangement sea backdrop
+  is marked `data-low-contrast`.
+- **14 · the visual review is required**: `knowledge/build-order.json` step 16 (`visual_review`: a subagent, a
+  screenshot of every slide and every task screen at 1280x800, a five-point checklist) and `compile/GUIDE.md` §2f;
+  `compile_module.py` prints it under **Next** after every clean build. A credit, caption or full-screen record
+  (`.credit`, `figcaption`, `data-credit`, `data-about`) that shows a file-system path or a drive letter is a build
+  problem (`credit_path_problems()`), on the deck and on every task page.
+- Not touched, by instruction: `compile/scripts/task_pages.py`, `course-task-ux/assets/gb_answer.*` (another agent).
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never
