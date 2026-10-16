@@ -67,7 +67,7 @@ answer becomes B". Only apply --confirmed changes the script, logs each change i
 and re-renders both files. Any change after approval puts the module back to draft; approve records
 who approved which version.
 
-THE ILO MAP AND THE KNOWLEDGE BASE COME FIRST (owner, 2026-10-16 - 2.38.0)
+THE ILO MAP AND THE KNOWLEDGE BASE COME FIRST (owner, 2026-10-16 - 2.42.0)
 render (of a script not yet approved) and approve stop, exit 2, until the course has its ILO map
 (working_claude/ilo_map.json), the Stage 2 page is approved with it, and the knowledge-base decision is
 recorded - scripts/course_gate.py says what is missing. The review page then checks the module against
@@ -109,8 +109,8 @@ import check_slide_text as slide_text  # noqa: E402  - the same four rules the b
 import workspace  # noqa: E402  - the factory works in course\ beside the operator's material (L40)
 import bloom_map  # noqa: E402  - what level each question reaches, against its Sub-ILO (L48)
 import design_choices  # noqa: E402  - the operator's design choices are theirs, not must-fixes (L26, 2.30.0)
-import ilo_map  # noqa: E402  - what this module owes: its rows of the ILO map (2.38.0)
-import course_gate  # noqa: E402  - no module starts before the ILO map is approved and the KB decided (2.38.0)
+import ilo_map  # noqa: E402  - what this module owes: its rows of the ILO map (2.42.0)
+import course_gate  # noqa: E402  - no module starts before the ILO map is approved and the KB decided (2.42.0)
 
 MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json"), encoding="utf-8"))
 KINDS = ("slide", "task-slide", "activity", "self-check", "module-check", "final")
@@ -939,7 +939,7 @@ def sub_ilos_of(s):
 
 
 def ilo_findings(course, script):
-    """2.38.0 (owner, 2026-10-16) - the module against its rows of the ILO map, and its sources. Every Sub-ILO it
+    """2.42.0 (owner, 2026-10-16) - the module against its rows of the ILO map, and its sources. Every Sub-ILO it
     owes taught on a slide and checked by a question; every question naming its Sub-ILO; the sources listed.
     Only for a course that has an ILO map - every course past the Stage 2 gate has one."""
     m = ilo_map.read(course) if course else None
@@ -1304,7 +1304,7 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
             e(T(script, "s_textcheck_title")), e(T(script, "s_textcheck_intro")), "".join(row(f) for f in tf)))
     else:
         o.append('<p class="note">%s</p>' % e(T(script, "s_textcheck_clean")))
-    jf = ilo_findings(course, script)                     # 2.38.0 - the ILO map and the sources
+    jf = ilo_findings(course, script)                     # 2.42.0 - the ILO map and the sources
     if jf:
         o.append('<div class="card warn"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
             e(T(script, "s_ilo_title")), e(T(script, "s_ilo_intro")), "".join(row(f) for f in jf)))
@@ -1935,10 +1935,10 @@ def main(argv=None):
     a.course = workspace.work_folder(a.course)
     if not os.path.isfile(paths(a.course, a.module)["script"]):
         print("Stopped - there is no content script for module %s yet:\n    %s" % (a.module, paths(a.course, a.module)["script"]))
-        if course_gate.problems(a.course, a.module):        # say what comes first, before anyone writes one (2.38.0)
+        if course_gate.problems(a.course, a.module):        # say what comes first, before anyone writes one (2.42.0)
             print("\n" + course_gate.stop_message(a.module, course_gate.problems(a.course, a.module)))
         return 2
-    if a.cmd in ("render", "approve"):                      # 2.38.0 - the approved ILO map and the KB decision come first
+    if a.cmd in ("render", "approve"):                      # 2.42.0 - the approved ILO map and the KB decision come first
         script = load(paths(a.course, a.module)["script"])
         approved = script.get("status") == "approved" and script.get("approved_hash") == content_hash(script)
         probs = course_gate.problems(a.course, a.module) if (a.cmd == "approve" or not approved) else []

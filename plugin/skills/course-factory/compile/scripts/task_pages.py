@@ -16,15 +16,29 @@ THE BUILD SHEET, PER QUESTION (working_claude\\script\\M01.build.json "screens",
   gets its box in the build sheet: [left, top, width, height] in % of the drawing. A label box ("box": [left, top,
   width]) is placed by the compiler when not given: above the drawing's middle line in the top row, else the bottom.
   The drawing's own labels (#labels, or anything marked data-task-hide) are hidden on the task - they give the answer.
+  An element of the drawing can also be named by its id: "areas": {"Accommodation": "hs-acc"}; its shape may be a rect,
+  a circle or a path of straight lines, and a group's translate() is followed.
+  Beside a picture (set_value, find_the_fault, panel_operate) the "figure" is optional and shown above the task.
+    "q04": {"step": 0.5}                                          the dial's step (default: worked out from the tolerance)
+    "q10": {"states": {"Purge mode": ["Off", "Sweep", "Hold"]}, "start": {"Vent fan": "stopped"}}   a panel's positions
   The page sets: "pass_mark": 70 at the top of the build sheet (checks; default 70), "try_tablet": true|false on the
   task slide's entry (default: the course's first self-check opens with "try your tablet first").
 
 THE KEYS (classroom-system.json task_page.answer_keys) - data-key = gb_key(question id, the item's words, value):
-  choose / tap the picture 1 right, 0 wrong; put in order the place 1, 2, 3; match the left side's words; sort into
-  groups the group's name; label the drawing the place's id.
+  choose / tap the picture / a gap's words / a reason / a step's action / a line of the document / the faulty part /
+  a card that belongs in the plan / the moment to stop 1 right, 0 wrong; put in order the place 1, 2, 3; match the left
+  side's words; sort into groups the group's name; label the drawing the place's id; operate the panel the control's
+  name for the position it must end in ("-" for the others); set the value one key per accepted step, over the unit
+  and the value. A card that is right or wrong AND has a place (build the plan, rebuild the incident) carries its place
+  in data-place (0 = it stays out of the plan).
 
-Not compiled yet (the set's page is left as it is, and said so): cloze, set_value, panel_operate, scenario,
-choose_and_justify, find_the_fault, spot_the_error, build_the_plan, timeline, compare.
+A TEAM TASK (2.39.0) - a task slide with "team" in the script - gets the task-mode / task-roles / task-scope metas
+(classroom-system.json team_task) and a bar at the top the engine fills from the classroom's gb-team: the team's name
+and the trainee's role. No team arrives: it runs as an individual task.
+
+EVERY WAY OF ANSWERING IS COMPILED (2.38.0) - the nineteen of media-and-tasks.json, exactly what content_script.py
+accepts; a question is one or more parts (a scenario's steps, the incident's order and then its stop point), each
+with its own Check.
 """
 from __future__ import annotations
 
@@ -39,7 +53,10 @@ import content_script as cs
 ENGINE = ("gb_answer.css", "gb_answer.js")
 PAGE_CSS = ("gb_tokens.css", "gb_page.css", "gb_task.css", "gb_answer.css")
 BUILT = {"single_choice", "read_instrument", "multi_select", "hotspot", "spot_the_hazard",
-         "match", "categorise", "label_diagram", "order"}
+         "match", "categorise", "label_diagram", "order",
+         "cloze", "choose_and_justify", "scenario", "set_value", "find_the_fault", "spot_the_error",     # 2.38.0
+         "build_the_plan", "timeline", "compare", "panel_operate"}
+assert BUILT == set(cs.USES), "every way of answering an approved script can hold is compiled"
 ON_PICTURE = {"hotspot", "spot_the_hazard", "label_diagram"}
 DEFAULT_PASS = 70
 # the task screen's own words - the engine's are in gb_answer.js, overridden per language by GB_ANSWER_TEXT
@@ -51,7 +68,60 @@ WORDS = {"en": {
     "pass": "Pass mark {pass} % – {need} of {total} right",
     "score": "Your score", "score_note": "Your score is for you only. Look at the questions below and ask your instructor about any you missed.",
     "again": "Start again", "start_self": "Start the self-check", "start_check": "Start the check",
-    "choose_all": "Choose all that are right.", "module_n_check": "Module {n} check"}}
+    "choose_all": "Choose all that are right.", "module_n_check": "Module {n} check",
+    "gap_n": "Gap {n}", "cloze_say": "Tap a gap, then choose the words that fit it.",
+    "your_action": "What you do", "your_reason": "Why",
+    "step_n": "Step {n} of {of}",
+    "less": "Less", "more": "More", "decimal": ".",
+    "symptoms": "What you notice", "fault_say": "Tap a part to check it. Then tap “This is the fault” on the part that is faulty.",
+    "tap_to_check": "Tap to check", "is_fault": "This is the fault",
+    "errors_say": "Tap every line that is wrong. Tap it again to take the mark off.",
+    "plan_say": "Put the cards that belong into the plan, in order. Not every card belongs – leave those where they are.",
+    "timeline_order": "1. Put the events in the order they happened.",
+    "timeline_stop": "2. Now tap the event where it should have been stopped.",
+    "panel_say": "Put every control in the position it must end in."},
+    # PROVISIONAL (2.40.0) - written by Claude, to be checked by a native speaker: compile/TRANSLATIONS_REVIEW.md
+    "lv": {
+    "back": "Atpakaļ", "try_title": "Vispirms izmēģini planšeti", "try_tap": "Pieskaries šeit",
+    "try_1": "Pieskaries lielajam zilajam aplim.", "try_drag": "Velc mani",
+    "try_2": "Ievelc kartīti rāmī. Vai pieskaries kartītei, tad rāmim.",
+    "try_hello": "Labi! Vari sākt paškontroli.",
+    "pass": "Ieskaites slieksnis {pass} % – {need} no {total} pareizi",
+    "score": "Tavs rezultāts", "score_note": "Rezultāts ir tikai tev. Apskati jautājumus zemāk un pajautā instruktoram par tiem, kas neizdevās.",
+    "again": "Sākt no jauna", "start_self": "Sākt paškontroli", "start_check": "Sākt pārbaudi",
+    "choose_all": "Izvēlies visas pareizās atbildes.", "module_n_check": "{n}. moduļa pārbaude",
+    "gap_n": "{n}. tukšā vieta", "cloze_say": "Pieskaries tukšajai vietai, tad izvēlies vārdus, kas tur der.",
+    "your_action": "Ko tu dari", "your_reason": "Kāpēc",
+    "step_n": "{n}. solis no {of}",
+    "less": "Mazāk", "more": "Vairāk", "decimal": ",",
+    "symptoms": "Ko tu pamani", "fault_say": "Pieskaries daļai, lai to pārbaudītu. Tad bojātajai daļai pieskaries “Šī ir kļūme”.",
+    "tap_to_check": "Pieskaries, lai pārbaudītu", "is_fault": "Šī ir kļūme",
+    "errors_say": "Pieskaries katrai kļūdainajai rindai. Pieskaries vēlreiz, lai atzīmi noņemtu.",
+    "plan_say": "Saliec plānā vajadzīgās kartītes pareizā secībā. Ne visas kartītes der – tās atstāj, kur ir.",
+    "timeline_order": "1. Sakārto notikumus secībā, kādā tie notika.",
+    "timeline_stop": "2. Tagad pieskaries notikumam, kurā tas bija jāaptur.",
+    "panel_say": "Iestati katru vadības elementu stāvoklī, kurā tam jābūt beigās."},
+    "ru": {
+    "back": "Назад", "try_title": "Сначала попробуй планшет", "try_tap": "Коснись здесь",
+    "try_1": "Коснись большого синего круга.", "try_drag": "Перетащи меня",
+    "try_2": "Перетащи карточку в рамку. Или коснись карточки, затем рамки.",
+    "try_hello": "Отлично! Можно начинать самопроверку.",
+    "pass": "Проходной балл {pass} % – {need} из {total} правильно",
+    "score": "Твой результат", "score_note": "Результат — только для тебя. Посмотри вопросы ниже и спроси инструктора о тех, где была ошибка.",
+    "again": "Начать заново", "start_self": "Начать самопроверку", "start_check": "Начать проверку",
+    "choose_all": "Выбери все правильные ответы.", "module_n_check": "Проверка по модулю {n}",
+    "gap_n": "Пропуск {n}", "cloze_say": "Коснись пропуска, затем выбери подходящие слова.",
+    "your_action": "Что ты делаешь", "your_reason": "Почему",
+    "step_n": "Шаг {n} из {of}",
+    "less": "Меньше", "more": "Больше", "decimal": ",",
+    "symptoms": "Что ты замечаешь", "fault_say": "Коснись узла, чтобы проверить его. Затем на неисправном узле нажми «Это неисправность».",
+    "tap_to_check": "Коснись, чтобы проверить", "is_fault": "Это неисправность",
+    "errors_say": "Коснись каждой строки с ошибкой. Коснись ещё раз, чтобы снять отметку.",
+    "plan_say": "Разложи нужные карточки в план по порядку. Не все карточки подходят – их оставь на месте.",
+    "timeline_order": "1. Расставь события в том порядке, в котором они произошли.",
+    "timeline_stop": "2. Теперь коснись события, на котором его надо было остановить.",
+    "panel_say": "Установи каждый орган управления в положение, в котором он должен остаться."}}
+assert all(set(WORDS[k]) == set(WORDS["en"]) for k in WORDS), "every language has every word"
 e, a = cm.e, cm.a
 
 
@@ -135,22 +205,59 @@ def named(svg, name):
     return None
 
 
+def path_box(d):
+    """(x, y, w, h) of a path written in absolute M / L / H / V / Z (a room's outline, a pipe) - None for curves or
+    relative moves, which are left to a rect or circle of class "hit" """
+    if not d or re.search(r"[^MLHVZ\d\s,.\-eE]", d):
+        return None
+    xs, ys, x, y = [], [], 0.0, 0.0
+    for cmd, args in re.findall(r"([MLHVZ])([^MLHVZ]*)", d):
+        n = [float(v) for v in re.findall(NUM, args)]
+        if cmd in "ML":
+            for i in range(0, len(n) - 1, 2):
+                x, y = n[i], n[i + 1]
+                xs.append(x), ys.append(y)
+        elif cmd == "H":
+            for v in n:
+                x = v
+                xs.append(x), ys.append(y)
+        elif cmd == "V":
+            for v in n:
+                y = v
+                xs.append(x), ys.append(y)
+    return (min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)) if xs else None
+
+
+def shift(tag):
+    """the translate(x y) a tag moves what is in it by"""
+    m = re.search(r"translate\(\s*(%s)(?:[\s,]+(%s))?\s*\)" % (NUM, NUM), attr(tag, "transform") or "")
+    return (float(m.group(1)), float(m.group(2) or 0)) if m else (0.0, 0.0)
+
+
 def shape_box(el):
-    """(x, y, w, h) of the element's tappable shape: class "hit" first, else the element itself (rect / circle)"""
-    tags = re.findall(r"<(?:rect|circle|ellipse)\b[^>]*>", el)
+    """(x, y, w, h) of the element's tappable shape: class "hit" first, else the element itself (rect / circle /
+    path) - moved by the element's own translate() and the shape's"""
+    tags = re.findall(r"<(?:rect|circle|ellipse|path)\b[^>]*>", el)
     hit = [t for t in tags if "hit" in (attr(t, "class") or "").split()] or tags[:1]
     if not hit:
         return None
     t = hit[0]
     try:
         if t.startswith("<rect"):
-            return tuple(float(attr(t, k) or 0) for k in ("x", "y", "width", "height"))
-        r = float(attr(t, "r") or 0)
-        rx, ry = float(attr(t, "rx") or r), float(attr(t, "ry") or r)
-        cx, cy = float(attr(t, "cx") or 0), float(attr(t, "cy") or 0)
-        return cx - rx, cy - ry, 2 * rx, 2 * ry
+            box = tuple(float(attr(t, k) or 0) for k in ("x", "y", "width", "height"))
+        elif t.startswith("<path"):
+            box = path_box(attr(t, "d"))
+            if box is None:
+                return None
+        else:
+            r = float(attr(t, "r") or 0)
+            rx, ry = float(attr(t, "rx") or r), float(attr(t, "ry") or r)
+            cx, cy = float(attr(t, "cx") or 0), float(attr(t, "cy") or 0)
+            box = cx - rx, cy - ry, 2 * rx, 2 * ry
     except ValueError:
         return None
+    (ax, ay), (bx, by) = shift(re.match(r"<[^>]*>", el).group(0)) if el != t else (0.0, 0.0), shift(t)
+    return box[0] + ax + bx, box[1] + ay + by, box[2], box[3]
 
 
 def pct_box(box, vb, pad=8.0, min_px=56.0, width_px=1240.0):
@@ -237,9 +344,9 @@ def q_why(q):
     return ('    <div class="why"><b class="vd"></b><p data-script-field="feedback">%s</p></div>' % e(q.get("feedback")))
 
 
-def opt_buttons(sid, q, multi=False):
+def opt_buttons(sid, q, multi=False, cls="opts"):
     opts, right = q.get("options", []), cs.correct_letters(q)
-    out = ['    <div class="opts%s">' % (" multi" if multi else "")]
+    out = ['    <div class="%s%s">' % (cls, " multi" if multi else "")]
     for L, o in zip(cs.letters(len(opts)), opts):
         out.append('      <button type="button" class="opt" data-script-field="opt.%s" data-key="%s">%s</button>'
                    % (L, cs.gb_key(sid, o, 1 if L in right else 0), e(o)))
@@ -247,10 +354,144 @@ def opt_buttons(sid, q, multi=False):
     return out
 
 
-def chips(sid, items):
-    """items: [(words, value)] - shuffled"""
-    return ['      <button type="button" class="chip" data-script-field="answer" data-key="%s">%s</button>'
-            % (cs.gb_key(sid, t, v), e(t)) for t, v in shuffle(sid, items, key=lambda x: x[0])]
+def chips(sid, items, places=None):
+    """items: [(words, value)] - shuffled; places: {words: place} - a card that is right or wrong AND has a place
+    (build the plan, the incident) carries the place in data-place (0 = it stays out)"""
+    out = []
+    for t, v in shuffle(sid, items, key=lambda x: x[0]):
+        place = ' data-place="%s"' % cs.gb_key(sid, t, places.get(t, 0)) if places is not None else ""
+        out.append('      <button type="button" class="chip" data-script-field="answer" data-key="%s"%s>%s</button>'
+                   % (cs.gb_key(sid, t, v), place, e(t)))
+    return out
+
+
+def answer_buttons(sid, items, seed=None, cls="opt", order=True):
+    """items: [(words, 1 right / 0 wrong)] as answer buttons - shuffled (a script writes the right one first)"""
+    items = shuffle(seed or sid, items, key=lambda x: x[0]) if order else items
+    return ['<button type="button" class="%s" data-script-field="answer" data-key="%s">%s</button>'
+            % (cls, cs.gb_key(sid, t, v), e(t)) for t, v in items]
+
+
+def picks(text):
+    """'right* | wrong | wrong' -> [(words, 1 / 0)]"""
+    return [(cs.unstar(p), 1 if cs.starred(p) else 0) for p in text.split("|") if p.strip()]
+
+
+def slots(n):
+    out = ['    <div class="rows order">']
+    out += ['      <div class="row"><div class="name">%d</div><div class="zone slot" data-cap="1" data-val="%d"></div></div>' % (i, i)
+            for i in range(1, n + 1)]
+    return out + ["    </div>"]
+
+
+def picture(q, b, mdir, figdir, figs, probs, where):
+    """a picture beside a task that is not answered on it (set the value, find the fault, the panel): optional"""
+    if not (b.get("figure") or "").strip():
+        return []
+    if b["figure"].lower().endswith(cm.KIT_SPEC):
+        probs.append("%s: a figure-kit spec (%s) is not shown on a task page yet - name a drawing (.svg) or a photograph"
+                     % (where, b["figure"]))
+        return []
+    body, vb, _ = figure_for(q, b, mdir, figdir, probs, where)
+    if not body:
+        return []
+    figs["_pic"] = True
+    ar = ' style="--ar:%.3f"' % (vb[2] / vb[3]) if vb else ""
+    return ['    <div class="instrument"><div class="ga"%s>%s</div></div>' % (ar, re.sub(r"<svg\b", '<svg class="taskfig"', body, count=1) if vb else body)]
+
+
+# ------------------------------------------------------------------ set the value: the dial
+def decimals(x):
+    s = ("%.10f" % x).rstrip("0").rstrip(".")
+    return len(s.split(".")[1]) if "." in s else 0
+
+
+def dial_step(v, tol, lo, hi, given=None):
+    """(step, decimals) of the dial: the tolerance when the value and the range fall on it, else the largest round
+    step under it that they do - 4 to 400 steps along the track; the build sheet's "step" when it gives one"""
+    if given:
+        cands = [float(given)]
+    else:
+        cands = ([tol] if tol > 0 else []) + [m * 10 ** p for p in range(3, -4, -1) for m in (5, 2, 1)]
+        cands = [c for c in cands if tol <= 0 or c <= tol + 1e-12]
+    for st in cands:
+        n, k = (hi - lo) / st, (v - lo) / st
+        if 4 <= round(n) <= 400 and abs(n - round(n)) < 1e-6 and abs(k - round(k)) < 1e-6:
+            return st, max(decimals(st), decimals(lo))
+    return None, 0
+
+
+def dial(sid, q, b, w, where, probs):
+    mm = cs.SET_VALUE.match(q.get("answer") or "")
+    if not mm:
+        probs.append("%s: 'set the value' is not written as: value unit ± tolerance, range low to high" % where)
+        return []
+    num = lambda s: float(s.replace(",", "."))
+    v, unit, tol, lo, hi = num(mm.group(1)), mm.group(2), num(mm.group(3)), num(mm.group(4)), num(mm.group(5))
+    step, dec = dial_step(v, tol, lo, hi, b.get("step"))
+    if step is None:
+        probs.append("%s: the dial's steps cannot be worked out from %s - give them in the build sheet: \"step\": 0.5"
+                     % (where, q.get("answer")))
+        return []
+    S = 10 ** dec
+    LO, ST, n = round(lo * S), round(step * S), round((hi - lo) / step)
+    keys = [cs.gb_key(sid, unit, "%.*f" % (dec, (LO + k * ST) / S)) for k in range(n + 1)
+            if abs((LO + k * ST) / S - v) <= tol + step * 1e-6]          # one key per accepted step
+    shown = lambda x: ("%.*f" % (decimals(x), x)).replace("-", "−").replace(".", w["decimal"])
+    return ['    <div class="dial" data-lo="%g" data-hi="%g" data-step="%g" data-dec="%d" data-unit="%s" data-key="%s">'
+            % (lo, hi, step, dec, a(unit), " ".join(keys)),
+            '      <div class="dial-read"><b class="dial-val">&#8211;</b> <span class="dial-unit">%s</span></div>' % e(unit),
+            '      <div class="dial-row"><button type="button" class="dial-minus" aria-label="%s">&#8722;</button>'
+            '<div class="dial-track"><i class="dial-band"></i><i class="dial-fill"></i><span class="dial-thumb"></span></div>'
+            '<button type="button" class="dial-plus" aria-label="%s">+</button></div>' % (a(w["less"]), a(w["more"])),
+            '      <div class="dial-scale"><span>%s %s</span><span>%s %s</span></div>' % (shown(lo), e(unit), shown(hi), e(unit)),
+            "    </div>"]
+
+
+# ------------------------------------------------------------------ operate the panel
+# a control's other positions, when the build sheet does not list them ("states": {"control": ["open", "closed"]})
+PAIRS = [("open", "closed"), ("open", "shut"), ("on", "off"), ("running", "stopped"), ("start", "stop"),
+         ("started", "stopped"), ("auto", "manual"), ("automatic", "manual"), ("local", "remote"), ("locked", "unlocked"),
+         ("in service", "out of service"), ("enabled", "disabled"), ("energised", "de-energised"),
+         ("energized", "de-energized"), ("connected", "disconnected"), ("engaged", "disengaged"), ("reset", "tripped"),
+         ("atvērts", "aizvērts"), ("ieslēgts", "izslēgts"), ("darbojas", "apturēts"), ("automātisks", "manuāls"),
+         ("открыт", "закрыт"), ("открыто", "закрыто"), ("включен", "выключен"), ("включён", "выключен"),
+         ("работает", "остановлен"), ("автомат", "ручной")]
+# a control the figure kit draws: its part and the value of each position (course-visuals/kit/SPEC.md)
+KIT_STATE = {"open": ("valve", 1), "closed": ("valve", 0), "shut": ("valve", 0), "atvērts": ("valve", 1),
+             "aizvērts": ("valve", 0), "открыт": ("valve", 1), "закрыт": ("valve", 0), "открыто": ("valve", 1),
+             "закрыто": ("valve", 0), "running": ("pump", 1), "stopped": ("pump", 0), "darbojas": ("pump", 1),
+             "apturēts": ("pump", 0), "работает": ("pump", 1), "остановлен": ("pump", 0)}
+
+
+def cased(word, like):
+    return word.upper() if like.isupper() and len(like) > 1 else word[:1].upper() + word[1:] if like[:1].isupper() else word
+
+
+def positions(control, target, b):
+    """the positions a control can be put in, the one it must end in among them - or None"""
+    given = (b.get("states") or {}).get(control)
+    if given:
+        return [str(x).strip() for x in given] if target.lower() in [str(x).strip().lower() for x in given] else None
+    for p in PAIRS:
+        if target.lower() in p:
+            return [target if x == target.lower() else cased(x, target) for x in p]
+    return None
+
+
+def kit_symbol(sid, n, states, start):
+    """a little figure-kit drawing of the control (a valve, a pump) when every position is one the kit draws"""
+    kinds = {KIT_STATE.get(s.lower(), (None,))[0] for s in states}
+    if len(kinds) != 1 or None in kinds:
+        return ""
+    kind = kinds.pop()
+    v = KIT_STATE[start.lower()][1] if start and start.lower() in KIT_STATE else (0.5 if kind == "valve" else 0)
+    part = ({"id": "c", "type": "valve", "x": 100, "y": 58, "size": 22, "state": False, "trip": False, "value": v}
+            if kind == "valve" else {"id": "c", "type": "pump", "x": 92, "y": 50, "r": 26, "value": v})
+    spec = {"size": [200, 100], "parts": [part]}
+    sid_ = "kit-%s-%d" % (sid, n)
+    return ('<svg class="csym" data-kit="#%s" data-no-zoom aria-hidden="true"></svg>'
+            '<script type="application/json" id="%s">%s</script>' % (sid_, sid_, json.dumps(spec, separators=(",", ":"))))
 
 
 def label_boxes(places, vb):
@@ -272,14 +513,16 @@ def label_boxes(places, vb):
     return places
 
 
-def question_html(n, q, b, mdir, figdir, figs, probs):
+def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
+    w = w or WORDS["en"]
     sid, m = q["id"], cs.mech(q)
     where = "%s (%s)" % (q.get("set") or "", sid)
     out = ['  <section class="scr" data-script="%s" data-mech="%s"%s>' % (sid, m, "%s"), q_head(n, q)]
     extra = ""
     if m in ("single_choice", "multi_select"):
         if m == "multi_select":
-            out.append('    <p class="opts-say">%s</p>' % e(WORDS["en"]["choose_all"]))
+            out.append('    <p class="opts-say">%s</p>' % e(w["choose_all"]))
+            extra = ' data-multi="1"'          # gb_answer.js keeps every tapped option only on data-multi="1"
         out += opt_buttons(sid, q, multi=m == "multi_select")
     elif m == "read_instrument":
         body, vb, name = figure_for(q, b, mdir, figdir, probs, where, (b.get("figure") or "").strip() in figs["_bands"])
@@ -374,6 +617,136 @@ def question_html(n, q, b, mdir, figdir, figs, probs):
         out.append('    <div class="tray">')
         out += chips(sid, [(t, i) for i, t in enumerate(items, 1)])
         out.append("    </div>")
+    elif m == "cloze":                                  # the sentence with its gaps; each gap's choices under it
+        sent, groups = [], []
+        for bit in re.split(r"(\[[^\]]+\])", q.get("answer", "")):
+            if bit.startswith("[") and bit.endswith("]"):
+                groups.append(picks(bit[1:-1]))
+                sent.append('<button type="button" class="gap" data-g="%d" aria-label="%s"></button>'
+                            % (len(groups), a(w["gap_n"].format(n=len(groups)))))
+            elif bit.strip():
+                sent.append('%s<span data-script-field="answer">%s</span>%s'
+                            % (" " if bit[0].isspace() else "", e(bit.strip()), " " if bit[-1].isspace() else ""))
+            elif bit:
+                sent.append(" ")
+        out.append('    <p class="cloze">%s</p>' % "".join(sent))
+        out.append('    <p class="opts-say">%s</p>' % e(w["cloze_say"]))
+        out.append('    <div class="cgs">')
+        for n_, g in enumerate(groups, 1):
+            out.append('      <div class="cg opts" data-g="%d">' % n_)
+            out += ["        " + x for x in answer_buttons(sid, g, "%s.g%d" % (sid, n_))]
+            out.append("      </div>")
+        out.append("    </div>")
+    elif m == "choose_and_justify":                     # the actions and the reasons side by side, one Check
+        out.append('    <div class="cj">')
+        out.append('      <div><p class="phead">%s</p>' % e(w["your_action"]))
+        out += ["  " + x for x in opt_buttons(sid, q, cls="cg opts")]
+        out.append("      </div>")
+        out.append('      <div><p class="phead">%s</p>' % e(w["your_reason"]))
+        out.append('      <div class="cg opts">')
+        out += ["        " + x for x in answer_buttons(sid, [(cs.unstar(x), 1 if cs.starred(x) else 0) for x in cs.lines_of(q.get("answer"))])]
+        out.append("      </div></div>")
+        out.append("    </div>")
+    elif m == "scenario":                               # one part per step: decide, see, decide again
+        steps = cs.lines_of(q.get("answer"))
+        for n_, ln in enumerate(steps, 1):
+            sit, _, acts = ln.partition("=>")
+            out.append('    <div class="part step">')
+            out.append('      <p class="phead">%s</p>' % e(w["step_n"].format(n=n_, of=len(steps))))
+            out.append('      <p class="sit" data-script-field="answer">%s</p>' % e(sit.strip()))
+            out.append('      <div class="cg opts">')
+            out += ["        " + x for x in answer_buttons(sid, picks(acts), "%s.s%d" % (sid, n_))]
+            out.append("      </div>")
+            out.append("    </div>")
+    elif m == "set_value":
+        out += picture(q, b, mdir, figdir, figs, probs, where)
+        out += dial(sid, q, b, w, where, probs)
+    elif m == "find_the_fault":                         # the symptoms; each part a card - tap to check, then name it
+        ls = cs.lines_of(q.get("answer"))
+        pic = picture(q, b, mdir, figdir, figs, probs, where)
+        if pic:                                         # the picture beside the symptoms, so the cards fit the screen
+            out.append('    <div class="ffhead">')
+            out += ["  " + x for x in pic]
+        out.append('    <div class="sym"><p class="phead">%s</p>' % e(w["symptoms"]))
+        out += ['      <p data-script-field="answer">%s</p>' % e(x.strip().lstrip("!").strip()) for x in ls if x.lstrip().startswith("!")]
+        out.append("    </div>")
+        if pic:
+            out.append("    </div>")
+        out.append('    <p class="opts-say">%s</p>' % e(w["fault_say"]))
+        out.append('    <div class="cg ffs">')
+        parts = [(cs.unstar(x).partition(":")[0].strip(), cs.unstar(x).partition(":")[2].strip(), 1 if cs.starred(x) else 0)
+                 for x in ls if not x.lstrip().startswith("!")]
+        for part, seen, bad in shuffle(sid, parts, key=lambda x: x[0]):
+            out.append('      <div class="ffc"><button type="button" class="ff-look"><span class="ff-part" data-script-field="answer" '
+                       'data-key="%s">%s</span><span class="ff-tap">%s</span><span class="ff-seen" data-script-field="answer">%s</span>'
+                       '</button><button type="button" class="opt ff-pick">%s</button></div>'
+                       % (cs.gb_key(sid, part, bad), e(part), e(w["tap_to_check"]), e(seen), e(w["is_fault"])))
+        out.append("    </div>")
+    elif m == "spot_the_error":                         # the document as written; tap a line to flag it
+        out.append('    <p class="opts-say">%s</p>' % e(w["errors_say"]))
+        out.append('    <div class="cg opts multi doc" data-multi="1">')
+        for ln in cs.lines_of(q.get("answer")):
+            line, _, why = ln.partition("=>")
+            out.append('      <div class="dl">%s%s</div>' % (
+                answer_buttons(sid, [(cs.unstar(line), 1 if cs.starred(line) else 0)], order=False)[0],
+                '<p class="ewhy" data-script-field="answer">%s</p>' % e(why.strip()) if why.strip() else ""))
+        out.append("    </div>")
+    elif m == "build_the_plan":                         # numbered slots for the cards that belong; the rest stay out
+        ls = cs.lines_of(q.get("answer"))
+        good = [cs.unstar(x) for x in ls if cs.starred(x)]
+        extra = ' data-need="slots"'
+        out.append('    <p class="opts-say">%s</p>' % e(w["plan_say"]))
+        out += slots(len(good))
+        out.append('    <div class="tray">')
+        out += chips(sid, [(cs.unstar(x), 1 if cs.starred(x) else 0) for x in ls], {t: i for i, t in enumerate(good, 1)})
+        out.append("    </div>")
+    elif m == "timeline":                               # part 1 the order, part 2 the moment it should have stopped
+        ls = cs.lines_of(q.get("answer"))
+        out.append('    <div class="part">')
+        out.append('      <p class="phead">%s</p>' % e(w["timeline_order"]))
+        out += ["  " + x for x in slots(len(ls))]
+        out.append('      <div class="tray">')
+        out += ["  " + x for x in chips(sid, [(cs.unstar(x), 1 if cs.starred(x) else 0) for x in ls],
+                                        {cs.unstar(x): i for i, x in enumerate(ls, 1)})]
+        out.append("      </div>")
+        out.append("    </div>")
+        out.append('    <div class="part" data-kind="stop"><p class="phead">%s</p></div>' % e(w["timeline_stop"]))
+    elif m == "compare":                                # the options as columns, one row per figure
+        opts, right = q.get("options", []), cs.correct_letters(q)
+        out.append('    <table class="cmp cg">')
+        out.append('      <thead><tr><th class="what"></th>%s</tr></thead>' % "".join(
+            '<th><button type="button" class="opt" id="%s-%s" data-script-field="opt.%s" data-key="%s">%s</button></th>'
+            % (a(sid), L, L, cs.gb_key(sid, o, 1 if L in right else 0), e(o)) for L, o in zip(cs.letters(len(opts)), opts)))
+        out.append("      <tbody>")
+        for ln in cs.lines_of(q.get("answer")):
+            what, _, vals = ln.partition(":")
+            out.append('        <tr><th class="what" data-script-field="answer">%s</th>%s</tr>' % (e(what.strip()), "".join(
+                '<td data-for="%s-%s" data-script-field="answer">%s</td>' % (a(sid), L, e(v.strip()))
+                for L, v in zip(cs.letters(len(opts)), vals.split("|")))))
+        out.append("      </tbody>")
+        out.append("    </table>")
+    elif m == "panel_operate":                          # each control and its positions; the kit draws what it can
+        out += picture(q, b, mdir, figdir, figs, probs, where)
+        out.append('    <p class="opts-say">%s</p>' % e(w["panel_say"]))
+        out.append('    <div class="panel">')
+        for n_, ln in enumerate(cs.lines_of(q.get("answer")), 1):
+            control, _, target = (x.strip() for x in ln.partition("="))
+            states = positions(control, target, b)
+            if not states:
+                probs.append("%s: the positions of \"%s\" are not known - give them in the build sheet: \"states\": {\"%s\": [\"%s\", ...]}"
+                             % (where, control, control, target))
+                continue
+            start = ((b.get("start") or {}).get(control) or "").strip()
+            sym = kit_symbol(sid, n_, states, start)
+            figs["_kit"] = figs.get("_kit") or bool(sym)
+            out.append('      <div class="ctl cg%s" data-val="%s"><p class="cname" data-script-field="answer">%s</p>%s'
+                       % ("" if start else " unset", a(control), e(control), sym))
+            out.append('        <div class="opts">%s</div></div>' % "".join(
+                '<button type="button" class="opt seg%s" data-state%s data-script-field="answer" data-key="%s">%s</button>'
+                % (" sel" if start and s.lower() == start.lower() else "",
+                   ' data-kv="%g"' % KIT_STATE[s.lower()][1] if sym else "",
+                   cs.gb_key(sid, s, control if s.lower() == target.lower() else "-"), e(s)) for s in states))
+        out.append("    </div>")
     out.append(q_why(q))
     out.append("  </section>")
     out[0] = out[0] % extra
@@ -445,7 +818,8 @@ def result_screen(w):
 def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, first_set, probs):
     m = cs.mid(script.get("module"))
     lang = (script.get("course_language") or "English")
-    w = WORDS["en"]
+    code_l = cm.lang_code(lang)                         # L19: the whole page in the course language
+    w = WORDS.get(code_l) or WORDS["en"]
     short = short_title(slide.get("title"))
     if code == "MC":                                    # "Module check - Module 1" -> "Module 1 check"
         short = w["module_n_check"].format(n=script.get("module"))
@@ -459,26 +833,35 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
     figs, sections = {"_bands": {((sheet.get(q["id"]) or {}).get("figure") or "").strip() for q in qs
                                  if cs.mech(q) == "label_diagram"}}, []
     for n, q in enumerate(qs, 1):
-        if cs.mech(q) not in BUILT:
-            return None
-        sections.append(("  <!-- %s : %s -->\n" % (q["id"], cs.mech(q))) + question_html(n, q, sheet.get(q["id"]) or {}, mdir, figdir, figs, probs))
-    pictures = len(figs) > 1 or any(cs.mech(q) == "read_instrument" for q in qs)
+        sections.append(("  <!-- %s : %s -->\n" % (q["id"], cs.mech(q))) + question_html(n, q, sheet.get(q["id"]) or {}, mdir, figdir, figs, probs, w))
+    pictures = any(not k.startswith("_") for k in figs) or figs.get("_pic") or any(cs.mech(q) == "read_instrument" for q in qs)
+    kit = figs.get("_kit")
+    if kit:                                             # the panel's controls are drawn by the figure kit, shipped like the engine
+        for x in cm.KIT_FILES:
+            canon, mine = os.path.join(cm.SKILLS, "course-visuals", "kit", x), os.path.join(mdir, "assets", x)
+            if not os.path.isfile(mine) or io.open(mine, "rb").read() != io.open(canon, "rb").read():
+                probs.append("the module's copy of %s is not the factory's current one - run course-module-ui\\scripts\\"
+                             "design_system.py install --update on the module folder" % x)
     stamp = ("GENERATED by course-factory %s compile_module.py from working_claude/script/%s.json (%s) and %s.build.json.\n"
              "     Do not edit this file: change the script (content_script.py propose) or the build sheet, and compile again."
              % (version, m, ("approved " + script.get("approved_hash", "")) if approved else "DRAFT - NOT APPROVED", m))
-    head = ["<!DOCTYPE html>", '<html lang="%s">' % a(lang[:2].lower()), "<head>", "<!-- %s -->" % stamp,
+    head = ["<!DOCTYPE html>", '<html lang="%s">' % a(code_l or lang[:2].lower()), "<head>", "<!-- %s -->" % stamp,
             '<meta charset="utf-8">', '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">',
             "<title>%s — %s</title>" % (e(code), e(short))]
     team = slide.get("team") or {}
-    if team:
-        probs.append("%s: a team task page (gb-team) is not compiled yet - the set's page is left as it is" % code)
-        return None
-    head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in PAGE_CSS + (("gb_zoom.css",) if pictures else ())]
+    if team:                                            # classroom-system.json team_task: marked on the slide AND the page
+        head += ['<meta name="task-mode" content="team">',
+                 '<meta name="task-roles" content="%s">' % a("|".join(cs.team_roles(team))),
+                 '<meta name="task-scope" content="%s">' % a(team.get("scope") if team.get("scope") in cs.TEAM_SCOPES else "team")]
+    head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in PAGE_CSS + (("gb_zoom.css",) if pictures else ()) + (("kit.css",) if kit else ())]
     head.append("</head>")
     first = try_screen(w) if try_tablet else intro_screen(slide, short, len(qs), pass_mark, w) if is_check else ""
     body = ['<body data-code="%s" data-title="%s" data-pass="%d">' % (a(code), a(short), pass_mark),
-            '<a class="gbt-topback" href="#"><span class="gbt-ico">&#9664;</span> %s</a>' % e(w["back"]), "",
-            '<header class="state">',
+            '<a class="gbt-topback" href="#"><span class="gbt-ico">&#9664;</span> %s</a>' % e(w["back"]), ""]
+    if team:                                            # filled by the engine from the classroom's gb-team
+        body += ['<div class="teambar" id="teamBar" hidden><span class="tname" id="teamName"></span><span class="trole" id="teamRole">'
+                 '</span><span class="tnote" id="teamNote"></span><span class="tdone" id="teamDone"></span></div>', ""]
+    body += ['<header class="state">',
             '  <span class="part" id="partLbl"></span>', '  <span class="got" id="gotLbl"></span>',
             '  <div class="bar"><i id="barFill"></i></div>', "</header>", "", '<main class="wrap">', ""]
     if first:
@@ -486,13 +869,15 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
     body += ["\n\n".join(sections), "", result_screen(w), "", "</main>", "",
              '<div class="dock" id="dock"><button type="button" class="sub" id="go" disabled>%s</button></div>'
              % e(w["start_check"] if is_check else w["start_self"]), ""]
+    if kit:
+        body.append('<script src="../assets/kit.js"></script>')
     body += ['<script src="../assets/gb_answer.js"></script>']
     if pictures:
         body.append('<script src="../assets/gb_zoom.js"></script>')
     body += ["</body>", "</html>", ""]
-    if lang.lower() not in ("english", "en"):
-        probs.append("%s: the task screen's own words (Check, Next, Your score ...) are English - the %s words are not in the factory yet"
-                     % (code, lang))
+    if code_l not in WORDS:                             # reported, never a silent fall-back
+        probs.append("%s: the course is in %s - the task screen's own words (Check, Next, Your score ...) are not in the factory in "
+                     "that language, so they were written in English (task_pages.py WORDS, gb_answer.js)" % (code, lang))
     return "\n".join(head + body)
 
 
@@ -516,12 +901,10 @@ def compile_tasks(script, build, mdir, figdir, version, approved):
         not_yet = sorted({cs.mech(q) for q in qs} - BUILT)
         first_set = first_module and not seen_sc and code.startswith("SC")
         seen_sc = seen_sc or code.startswith("SC")
-        if not_yet:
-            left.append("%s - its way(s) of answering %s are not compiled yet" % (code, ", ".join(not_yet)))
+        if not_yet:                                     # only a script the factory would not accept has one
+            probs.append("%s: unknown way(s) of answering %s - a script uses those of knowledge/media-and-tasks.json"
+                         % (code, ", ".join(str(x) for x in not_yet)))
             continue
-        page = page_html(script, slide, code, qs, build, mdir, figdir, version, approved, first_set, probs)
-        if page is None:
-            left.append("%s - a team task" % code)
-            continue
-        pages[page_path(mdir, slide, code)] = page
+        pages[page_path(mdir, slide, code)] = page_html(script, slide, code, qs, build, mdir, figdir, version, approved,
+                                                       first_set, probs)
     return pages, probs, left

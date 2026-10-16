@@ -59,7 +59,7 @@ has to be settled by the reader and frozen at the gate:
 ## Rule 2 · The reader's output is a FILE, and it is not slides
 
 The first agent works alone with the programme, the model course and the knowledge base, and
-produces the Stage 2 files in the course folder (since 2.38.0 the factory's own, not free-form notes):
+produces the Stage 2 files in the course folder (since 2.42.0 the factory's own, not free-form notes):
 
 **`working_claude/architecture.json`** (shown as `to_review/ARCHITECTURE_REVIEW.html`) — module →
 official topic → allocated minutes (theory / practical) → what the module teaches → what it checks →

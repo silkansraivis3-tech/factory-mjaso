@@ -515,7 +515,7 @@ there is no knowledge base, the factory suggests making one, unasked - what it i
 Source Processor; the factory has no builder) and what the course loses - and records yes / built / declined with the
 operator's reason, once. Every Sub-ILO is taught on a slide and checked by a question, and every fact traces to a
 listed source. A script approved before the law keeps its approval; its gaps are reported. → `course-factory`
-(`scripts/ilo_map.py`, `scripts/course_gate.py`, `kb/scripts/kb_tool.py`, `script/GUIDE.md` §0), 2.38.0
+(`scripts/ilo_map.py`, `scripts/course_gate.py`, `kb/scripts/kb_tool.py`, `script/GUIDE.md` §0), 2.42.0
 
 **All fifty-nine laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
 `course-visuals` was built; L26–L59 are enforced first through `course-factory/SKILL.md`'s

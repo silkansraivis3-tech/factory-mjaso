@@ -133,7 +133,7 @@ row wins** — even before its step has been built out. Full text: `references/l
 | **L56** | **Every photograph carries what it shows into the viewer - unasked** (operator, 2026-10-15, from Aigars's review: *"images expandable, a lightbox with more explanation about the photo"*; *"the factory needs to make it on its own"*). One viewer, L51's `gb_zoom.js`, in every compiled deck too: full screen shows a photo's record under it - what it shows (its `description` in `_photo_meta.json`: write it when the photo comes in, for a trainee, claiming only what the picture shows) and its credit. No build-sheet key; a photo without a description is reported at build. A generated picture keeps its full record but shows no credit and no label, and is never an L57 thumbnail | now (2.27.0, 2.33.0) |
 | **L57** | **A drawing of real things carries their real photographs - unasked** (operator, 2026-10-15: *"an illustration like this would also have a real image of it, smaller, close, which you can click"*). The compiler finds the real things a drawn slide names (its line terms, the drawing's own labels) and puts their photos in a row under the drawing - numbered like the drawing, each opening in the L56 panel, at most four - matched by the photo's `shows` in `_photo_meta.json` (write it whenever a photo comes in). A cleared photo of another module is copied in; one awaiting rights review never. A real thing with no photo is reported and listed in `working_claude\PHOTOS_TO_TAKE.md` - never blocks the build | now (2.27.0) |
 | **L58** | **Every photograph once in the whole course** (operator, 2026-10-15: *"don't have duplicate images - either a different one or none, on all modules"*). One photograph, one screen - slide picture, inset, photo in a drawing or L57 thumbnail; a copy under another name in another module is the same photograph (`url_or_origin`, else the bytes). A thumbnail takes a different photo or none (the thing goes on `PHOTOS_TO_TAKE.md`); one placed by hand twice, or later than a module that already shows it, is reported at build - choose a different one or none. Build every module again after photos change | now (2.27.0) |
-| **L59** | **No module before its map** (owner, 2026-10-16: *"before creating any module the AI should have already made the ILO mapping and suggested for KNOWLEDGE_BASE to be created"*). Before any module's content is written, the course has its ILO map (`working_claude/ilo_map.json`), approved on the Stage 2 page, and a recorded knowledge-base decision; when there is no knowledge base, the factory suggests making one, unasked. Every Sub-ILO is taught on a slide and checked by a question, and every fact traces to a listed source. `scripts/course_gate.py` stops `content_script.py` and `compile_module.py --init-build` without them; `script/GUIDE.md` §0 | now (2.38.0) |
+| **L59** | **No module before its map** (owner, 2026-10-16: *"before creating any module the AI should have already made the ILO mapping and suggested for KNOWLEDGE_BASE to be created"*). Before any module's content is written, the course has its ILO map (`working_claude/ilo_map.json`), approved on the Stage 2 page, and a recorded knowledge-base decision; when there is no knowledge base, the factory suggests making one, unasked. Every Sub-ILO is taught on a slide and checked by a question, and every fact traces to a listed source. `scripts/course_gate.py` stops `content_script.py` and `compile_module.py --init-build` without them; `script/GUIDE.md` §0 | now (2.42.0) |
 | **L41** | **The old course is the foundation.** Read it whole at intake (`scripts/old_course.py inventory`, and `images` for its pictures); at the Stage 2 STOP every module says what it **keeps**, what it **modernises and makes digital**, and what it **adds** | now (2.19.0) |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
@@ -260,7 +260,7 @@ questions, and what to record. In order:
    course; propose the course type from the programme. The course language is always English.
    **Read the old course whole** (L41): `python scripts/old_course.py inventory <old course> --course <folder>`
    and `... images ...` - it is the foundation the architecture is planned from.
-   **No knowledge base? Suggest one, unasked** (owner, 2026-10-16; 2.38.0): `kb_tool.py find <folder>` prints
+   **No knowledge base? Suggest one, unasked** (owner, 2026-10-16; 2.42.0): `kb_tool.py find <folder>` prints
    what it is, which of their files it would be built from, how (the Course Source Processor - the factory has
    no tool for it, never pretend it does) and what the course loses without it. Say that to the operator in
    plain words, and put its ready question into the pop-up.
@@ -386,7 +386,7 @@ It reads `programme.json` and `architecture.json` (and `plan.json`, optional) fr
 | **Final assessment** | graded, with the programme's pass mark |
 | **Theory as activity** | per sub-topic, what the factory proposes the trainees *do* instead of only listening - minutes, what it needs, the slides staying - each with **Keep** / **Strike**; the class split now and if all are kept (L49, `active/GUIDE.md`). Record with `scripts/active_plan.py decide`; **every proposal is decided before the operator's "next" is recorded** - a proposal left waiting is not built |
 | **Bloom levels** | what level every Main ILO and Sub-ILO asks for, what the planned task types reach, and how to lift a gap (L48, `bloom/GUIDE.md`) - suggestions, never a stop |
-| **ILO map** | one row per Sub-ILO per module - what every module's script is written against - with the model-course items under each topic. Written with the page as `working_claude\ilo_map.json` (`scripts/ilo_map.py`); approving the page approves it (2.38.0) |
+| **ILO map** | one row per Sub-ILO per module - what every module's script is written against - with the model-course items under each topic. Written with the page as `working_claude\ilo_map.json` (`scripts/ilo_map.py`); approving the page approves it (2.42.0) |
 | **Knowledge base** | the intake decision: used, made for this course, or declined with the operator's reason - a declined one stays on the page |
 
 Programme text appears verbatim in the programme's own language, module titles in COURSE_LANGUAGE; the headings and explanations are in the
@@ -395,7 +395,7 @@ operator's language (`architecture.json` → `operator_language`: `en` / `lv` / 
 that disagree, a Sub-ILO change without the programme wording, a graded module check — is fixed or
 shown at the top. Markers stay in `factory-notes.md` (L31). Nothing is built until the operator
 says "next"; then record it - `python scripts/make_architecture_page.py --course <course> --approve --by "<name>"`
-(2.38.0: it fingerprints the ILO map, and is refused while the knowledge-base decision is missing, a teaching
+(2.42.0: it fingerprints the ILO map, and is refused while the knowledge-base decision is missing, a teaching
 module has nothing in the map, or a theory-as-activity proposal waits) - and in `COURSE_STATE.md` (L32). A later
 change to any Sub-ILO stops new modules until the page is approved again.
 
@@ -420,7 +420,7 @@ The **Bloom card** (L48) shows each question's level, the module's share at *App
 50 %), and every question below its Sub-ILO with the tablet task type that lifts it - suggestions only.
 Give a question `"sub_ilo"` to check it per Sub-ILO, and `"bloom"` + `"bloom_why"` when it is written above
 its task type's usual level (`bloom/GUIDE.md` §2).
-**Written against the ILO map** (2.38.0): the script is begun from the module's rows (`ilo_map.py show <course>
+**Written against the ILO map** (2.42.0): the script is begun from the module's rows (`ilo_map.py show <course>
 --module N`), the old course's keep / modernise / add (L41) and the knowledge base (`kb_tool.py search` only). The
 review page's **ILO map and sources check** - must-fix, like the theory check - wants every Sub-ILO taught on a
 slide and checked by a question (`"sub_ilo"` on both; on every question), and `"sources"` listed.

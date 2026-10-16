@@ -26,9 +26,9 @@ WHAT IT DOES
             files, never by its name. Writes nothing. One found: used. Several: a ready question. (2.13.1)
             None: the factory SUGGESTS making one, unasked - what it is, which of the folder's files it would
             be built from, how (the Course Source Processor - not part of the factory), and what the course
-            loses without it - with a ready pop-up question in --json. (2.38.0)
+            loses without it - with a ready pop-up question in --json. (2.42.0)
   decision  records the operator's answer in intake.json - yes / built / declined with their reason - so
-            it is asked once. Every module waits for it (scripts/course_gate.py). (2.38.0)
+            it is asked once. Every module waits for it (scripts/course_gate.py). (2.42.0)
   sources   lists every source; groups EXACT duplicates (same file content - cited once, no
             question needed) and LIKELY EDITIONS of one publication (MARPOL 2022 beside an older
             MARPOL; "SIGGTO LGHP (4th)" beside "SIGTTO liquified gas handling principles"). For
@@ -542,7 +542,7 @@ def cmd_find(folder, as_json):
     return 0
 
 
-# ------------------------------------------------------------------ no knowledge base: suggest one, unasked (2.38.0)
+# ------------------------------------------------------------------ no knowledge base: suggest one, unasked (2.42.0)
 CSP_FORMATS = (".pdf", ".doc", ".docx", ".ppt", ".pptx", ".jpg", ".jpeg", ".png", ".webp")
 GROUPS = [
     ("programme", "the approved programme", re.compile(r"program|programm|програм|mācību|macibu", re.I)),

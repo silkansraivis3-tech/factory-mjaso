@@ -256,13 +256,13 @@ def main():
         empty = os.path.join(tmp, "nothing", "here")
         os.makedirs(empty)
         code, out = run("find", empty)
-        check("none found -> the factory suggests making one, unasked: what, how, and what is lost without it (2.38.0)",
+        check("none found -> the factory suggests making one, unasked: what, how, and what is lost without it (2.42.0)",
               code == 1 and "SUGGESTS MAKING A KNOWLEDGE BASE" in out and "Course Source Processor" in out
               and "the factory has no tool that builds one" in out and "Without it:" in out and "kb_tool.py decision" in out, out)
         os.rmdir(empty); os.rmdir(os.path.dirname(empty))
         check("find wrote nothing anywhere", snapshot(tmp) == before_all)
 
-        print("\n-- no knowledge base: suggested unasked, and the operator's answer recorded once (2.38.0)")
+        print("\n-- no knowledge base: suggested unasked, and the operator's answer recorded once (2.42.0)")
         master = os.path.join(tmp, "m", "IGF basic")
         for rel in ("source_files/regulations/IGF CODE 2016.pdf", "source_files/model_course/IMO_Model_Course_7.13.pdf",
                     "source_files/Study programme 13-51-306.pdf", "source_files/equipment/gas detector.pdf",
@@ -311,7 +311,7 @@ def main():
         legacy = os.path.join(tmp, "legacy")
         w(os.path.join(legacy, "working_claude", "intake.json"), json.dumps(
             {"knowledge_base": [{"path": "C:\\a\\KNOWLEDGE_BASE", "format": "course_source_processor"}]}))
-        check("an intake from before 2.38.0 that names a knowledge base counts as the decision",
+        check("an intake from before 2.42.0 that names a knowledge base counts as the decision",
               (course_gate.kb_decision(legacy) or {}).get("answer") == "yes")
         w(os.path.join(legacy, "working_claude", "intake.json"), json.dumps({"knowledge_base": {"path": "none", "format": "none"}}))
         check("... and one that answered 'no knowledge base' counts as declined",

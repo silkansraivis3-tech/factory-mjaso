@@ -5,7 +5,7 @@ until the operator has approved the script.** One script per module, plus one fo
 assessment (`--module final`). Everything is done with `scripts/content_script.py`; the check that the
 built module obeys it is `scripts/check_script_match.py`.
 
-## 0 · Before writing — the ILO map, the model course, the old course, the knowledge base (2.38.0)
+## 0 · Before writing — the ILO map, the model course, the old course, the knowledge base (2.42.0)
 
 Owner, 2026-10-16: *"before creating any module the AI should have already made the ILO mapping and
 suggested for KNOWLEDGE_BASE to be created"*. **A module is written against what it owes, never from
@@ -43,7 +43,7 @@ While writing:
 The review page's **ILO map and sources check** — must-fix findings, like the theory check — lists a Sub-ILO
 taught nowhere or checked nowhere, a question with no `"sub_ilo"`, a `"sub_ilo"` the module does not own, and
 an empty `"sources"`. Approval waits for them unless the operator approves `--despite-findings` (L26). A
-script approved before 2.38.0 keeps its approval; its findings are reported, never forced.
+script approved before 2.42.0 keeps its approval; its findings are reported, never forced.
 
 ## 1 · Write the script
 
@@ -94,7 +94,7 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   theory slide** and give the plain ones fewer minutes - the words stay to be read - and the minutes to
   activity; never shorten or remove good theory. Theory may be added.
 - **Bloom (L48, 2.25.0).** A question says which Sub-ILO it checks (`"sub_ilo": "1.2"` - expected on every
-  question since 2.38.0, §0), and - only when
+  question since 2.42.0, §0), and - only when
   it is written above its task type's usual level - its level and why (`"bloom": 4, "bloom_why": "..."`).
   The review page then shows every question below its Sub-ILO and how the tablet would lift it.
   Aim the tasks at the Sub-ILO's level, and above *Remember* wherever the content allows (`bloom/GUIDE.md`).

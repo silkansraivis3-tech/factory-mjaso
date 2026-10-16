@@ -130,6 +130,35 @@ def main():
         io.open(os.path.join(c2, "modules", "COURSE.html"), "w", encoding="utf-8").write("<title>The hand-made name</title>")
         code, out = run(COURSE, c2, "--force")
         check("... a hand-made COURSE.html's title counts too, even with --force", code == 2 and "The hand-made name" in out, out)
+
+        # L19 - the start pages in the course language: lv and ru (PROVISIONAL, compile/TRANSLATIONS_REVIEW.md)
+        want = {"Latvian": ("lv", "Viss šim modulim", "Kursantu uzdevumi", "26 akad. st. (45 min)", "Moduļa pārbaude"),
+                "Russian": ("ru", "Всё для этого модуля", "Задания слушателей", "26 ак. ч. (45 мин)", "Проверка по модулю"),
+                "Norwegian": ("no", None, None, None, None)}
+        for lang, (code_l, everything, tasks, hours, mc) in want.items():
+            base = os.path.join(tmp, "lang_" + code_l)
+            os.makedirs(base)
+            sc = t.script(screens=t.IN_LANGUAGE["Russian" if lang == "Russian" else "Latvian"])
+            sc["course_language"] = lang
+            sc.update(approved_hash=cs.content_hash(sc))
+            cl, mdl = t.new_course(base, sc, build=False)
+            run(t.COMPILE, cl, "--module", "1")
+            wl = os.path.join(cl, "working_claude")
+            cs.save(os.path.join(wl, "architecture.json"), dict(ARCH, course={"title": TITLE, "course_language": lang}))
+            cs.save(os.path.join(wl, "programme.json"), {"academic_hour_min": 45, "total_row": {"total": 26}})
+            code, out = run(COURSE, cl)
+            if not everything:
+                check("Norwegian: the start pages' words are not in the factory - reported, never silent",
+                      code == 1 and "in English" in out, out)
+                continue
+            ext, page = read(mdl, "START_HERE_EXTENDED.html"), read(os.path.dirname(mdl), "COURSE.html")
+            check("%s: START_HERE_EXTENDED and COURSE.html in %s, marked lang=\"%s\"" % (lang, lang, code_l),
+                  code == 0 and '<html lang="%s">' % code_l in ext and everything in ext and tasks in ext and "MC · %s" % mc in ext
+                  and hours in page and '<html lang="%s">' % code_l in page, (out, ext[:1200]))
+            check("%s: a task page's file name is the title in plain letters (sc1_varsti / sc1_samoproverka...)" % lang,
+                  re.search(r'href="tasks/sc1_(varsti|klapany)\.html"', ext), ext)
+            check("%s: no English word of the factory's left on them" % lang,
+                  not re.search(r">(Everything for this module|Trainee tasks|Instructor only|All files|Back|Start the presentation)<", ext + page))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

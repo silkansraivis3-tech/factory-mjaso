@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""The ILO map - what every module owes, built from the Stage 2 files, never typed twice (2.38.0).
+"""The ILO map - what every module owes, built from the Stage 2 files, never typed twice (2.42.0).
 
     ilo_map.py build <course>                 write working_claude/ilo_map.json from programme.json + architecture.json
     ilo_map.py show  <course> --module 4      a module's rows - what its content script is written against
@@ -8,7 +8,7 @@
 
 WHY THIS EXISTS
 Owner, 2026-10-16: "before creating any module the AI should have already made the ILO mapping".
-Until 2.38.0 the ILO map was a build step with no file: a module's script could be written and
+Until 2.42.0 the ILO map was a build step with no file: a module's script could be written and
 approved without anyone having laid out, per module, which Main ILO and which Sub-ILOs it owes.
 
 WHAT IT IS

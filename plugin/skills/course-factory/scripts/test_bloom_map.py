@@ -149,7 +149,7 @@ def main():
 
     print("\n-- the module map (Stage 3)")
     script = copy.deepcopy(tcs.SCRIPT)
-    for x in script["screens"]:                  # the example carries "sub_ilo" since 2.38.0; these checks start unlinked
+    for x in script["screens"]:                  # the example carries "sub_ilo" since 2.42.0; these checks start unlinked
         x.pop("sub_ilo", None)
     mm = bm.module_map(script, mech=cs.mech)
     n = len(mm["rows"])

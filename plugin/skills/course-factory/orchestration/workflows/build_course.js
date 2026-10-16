@@ -19,7 +19,7 @@
  *                              looks for the knowledge base and, if there is none, brings back the
  *                              factory's suggestion to make one. Then it STOPS.
  *   pass 2  with `modules`  -> a gate agent runs scripts/course_gate.py first: no approved ILO map or
- *                              no knowledge-base decision, and NO module agent starts (2.38.0).
+ *                              no knowledge-base decision, and NO module agent starts (2.42.0).
  *                              Then the fan-out, with QA pipelined behind each module.
  *
  * `kb` may be left out: the reader finds it (kb_tool.py find) or suggests one.

@@ -94,7 +94,7 @@ KB_YES = {"knowledge_base_decision": {"answer": "yes", "path": "C:\\courses\\gas
 
 
 def write_course(d, prog, arch, plan=None, intake=KB_YES):
-    """intake: the Stage 1 record - by default the knowledge-base decision is made (2.38.0); None writes none."""
+    """intake: the Stage 1 record - by default the knowledge-base decision is made (2.42.0); None writes none."""
     os.makedirs(d, exist_ok=True)
     for n, v in (("programme.json", prog), ("architecture.json", arch), ("plan.json", plan), ("intake.json", intake)):
         if v is not None:
@@ -264,7 +264,7 @@ def main():
         check("the problems are at the top of the page, before what 'next' approves",
               0 <= p3.find(EN["problems_title"]) < p3.find(EN["approves_title"].replace('"', "&quot;")))
 
-        print("\n-- 2.38.0: the ILO map is made with the page and approved with it; the KB decision comes first")
+        print("\n-- 2.42.0: the ILO map is made with the page and approved with it; the KB decision comes first")
         sys.path.insert(0, HERE)
         import ilo_map
         import course_gate

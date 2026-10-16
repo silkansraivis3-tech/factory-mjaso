@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""The gate before any module: an approved ILO map and a recorded knowledge-base decision (2.38.0).
+"""The gate before any module: an approved ILO map and a recorded knowledge-base decision (2.42.0).
 
     course_gate.py <course> [--module 4]      exit 0: a module may start; exit 2: what has to happen first
 
@@ -18,7 +18,7 @@ build sheet is started (compile_module.py --init-build), or a module agent runs 
      or declined with the operator's reason (kb_tool.py decision). A declined one is allowed; the
      Stage 2 page keeps showing it.
 
-An intake written before 2.38.0 that names a knowledge base (or "none") counts as the decision. A
+An intake written before 2.42.0 that names a knowledge base (or "none") counts as the decision. A
 module whose script was approved before this gate existed keeps its approval: nothing here touches
 a script.
 
@@ -61,7 +61,7 @@ def kb_decision(course):
         if d["answer"] == "declined" and not (d.get("reason") or "").strip():
             return None
         return dict(d, legacy=False)
-    kb = i.get("knowledge_base")                     # an intake from before 2.38.0
+    kb = i.get("knowledge_base")                     # an intake from before 2.42.0
     kbs = kb if isinstance(kb, list) else [kb] if kb else []
     paths = [k.get("path") if isinstance(k, dict) else k for k in kbs]
     paths = [p for p in paths if isinstance(p, str) and p.strip() and p.strip().lower() not in ("none", "no", "-")]

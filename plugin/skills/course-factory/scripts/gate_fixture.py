@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""gate_fixture - for the tests only: open the Stage 2 gate on a test course (2.38.0).
+"""gate_fixture - for the tests only: open the Stage 2 gate on a test course (2.42.0).
 
     import gate_fixture; gate_fixture.open_gate(course, sub_ilos={1: [...]})
 

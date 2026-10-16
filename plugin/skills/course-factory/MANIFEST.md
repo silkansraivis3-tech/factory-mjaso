@@ -82,8 +82,9 @@ course-factory/
 ├── compile/GUIDE.md                      READ IN: building the deck from the approved script (2.25.0)
 ├── compile/scripts/compile_module.py, test_compile_module.py   the deck built, never typed; build sheet; hand edits never overwritten
 ├── compile/scripts/compile_course.py, test_compile_course.py   COURSE.html, course_map.js, every module's start pages (2.37.0)
-├── scripts/ilo_map.py                    the ILO map file, built from programme.json + architecture.json (2.38.0)
-├── scripts/course_gate.py, gate_fixture.py   no module before the approved ILO map and the KB decision; the tests' opener (2.38.0)
+├── compile/scripts/task_pages.py, test_task_engine.py   every trainee task page, all 19 ways of answering; the engine driven in Chrome (2.38.0)
+├── scripts/ilo_map.py                    the ILO map file, built from programme.json + architecture.json (2.42.0)
+├── scripts/course_gate.py, gate_fixture.py   no module before the approved ILO map and the KB decision; the tests' opener (2.42.0)
 ├── hours/                                READ IN: plan mode, and audit
 │   ├── GUIDE.md
 │   ├── knowledge/hours-rules.json        every number and rule (authority)
@@ -824,8 +825,71 @@ agents table) and `orchestration/workflows/build_course.js` send a module agent 
 sheet → compile, writing no HTML and loading no HTML rules: ≈ 80,800 → 38,500 tokens of rules per module agent
 (measured, size ÷ 4). `test_compile_course.py` 21 checks.
 
-## 4zh · L59 - the ILO map and the knowledge base before any module (2.38.0, 2026-10-16)
+## 4zh · Every way of answering compiled (2.38.0, 2026-10-16)
 
+Any answer type the compiler could not build forced a hand-made page, which broke the one-look / one-engine rule.
+`compile/scripts/task_pages.py` now builds all nineteen of `media-and-tasks.json` - exactly what `content_script.py`
+accepts (`BUILT == set(USES)`, asserted). The ten new ones: **complete the sentence** (tap a gap, its choices below; a
+wrong gap turns amber with the right words), **choose the action, then the reason** (two columns, one Check),
+**scenario** (one part per step, each with its own Check and a Go on), **set the value** (a dial: drag, tap, - / +;
+the step from the tolerance or `"step"`; one key per accepted step), **find the fault** (symptoms, a card per part to
+turn over, "This is the fault"), **spot the errors** (the document as written, tap a line to flag it, the why after
+the Check), **build the plan** (numbered slots, cards that do not belong stay in the bank - `data-key` 1/0 and
+`data-place`), **rebuild the incident** (the order, then tap where it should have stopped), **compare** (columns, a
+column chosen by its name or any figure) and **operate the panel** (every position of each control, the opposites
+known in en / lv / ru or `"states"` in the build sheet; a valve or pump drawn by the figure kit follows the choice).
+The engine `gb_answer.js` gained parts and groups (choose, place, dial, stop) and keeps the old markup working. A
+place on a drawing may now be a straight-line `path.hit` in a `translate()`d group, or an element id in `"areas"`.
+
+Checkers fixed, each with a test: `check_script_match.py` lets a panel show a control's other positions
+(`data-state`) and still catches any other extra word; `check_task_pages.py` reads `data-kit="#id"` as a reference and
+leaves the ids inside a compiled-in drawing (`svg.taskfig`) to the drawing; `check_course_package.py` no longer counts
+an svg marked `data-no-zoom` (the result ring) as a picture needing the viewer.
+
+Proof: `test_compile_module.py` (a fixture with all ten, keys and markup), `test_task_engine.py` (the page answered in
+headless Chrome: 10 of 10 right; 5 of 10 with five wrong and each reveal), and a copy of the IGF pilot: every set of
+M01-M03 compiled, nothing left as it is, `check_script_match` clean per module - after its build sheets were given the
+task drawings the pilot's hand pages had inlined (the pilot's own build sheets still need that step).
+
+## 4zi · Team task pages compiled (2.39.0, 2026-10-16)
+
+A team task's page was the last set the compiler left as it was. Per `classroom-system.json` `team_task` the page
+now carries `task-mode`, `task-roles`, `task-scope` (the slide already carried `data-mode`, `data-team-size`,
+`data-roles`) and a bar at the top that `gb_answer.js` fills from the classroom's `gb-team`: the team's name, the
+trainee's role, "One answer for the whole team" under scope `team`. No `gb-team` within about 2 seconds: the task
+runs alone (it never waits). Scope `team`: the first tablet to finish hands in with `scope: 'team'`, `team`, `by` -
+any member, so a team of any size with any roles finishes, and every member reads and answers the whole task.
+Scope `member`: everyone's own result. **Proposal to confirm with the classroom app:** the rulebook says the others'
+pages show who handed in but names no message; the pages listen for `{type: 'gb-team-done', by, team}`
+(`team_task.gb_team_done`). Tests: `test_compile_module.py` team part (both marks, `check_script_match`,
+`check_course_package`), `test_task_engine.py` (no team / team / handed in elsewhere / member).
+
+## 4zj · The factory's own words in Latvian and Russian (2.40.0, 2026-10-16)
+
+L19: a course page is in one language. The words the compiler and the engine add - buttons, prompts, the result, the
+start pages - existed in English only, so a Latvian or Russian course would have mixed two languages on one screen.
+Now `task_pages.py` WORDS, `gb_answer.js` `LANG` (picked by `<html lang>`, still overridable by `GB_ANSWER_TEXT`) and
+`compile_course.py` WORDS are in en / lv / ru, asserted complete per language. **PROVISIONAL**: written by Claude and
+listed word by word, with the choices made (address, gender-free wording, abbreviated plurals, terms), in
+`compile/TRANSLATIONS_REVIEW.md` for Aleksis or a native speaker. Any other language is reported, exit 1 - the page
+is built with English factory words, never silently. `compile_module.lang_code()` maps "Latvian" / "Latviešu" /
+"lv" to lv (the deck, task pages and start pages wrote `lang="la"`), and `slug()` turns a Latvian or Russian title
+into plain letters for the file name. The owner's ruling stands: every course is English unless explicitly not.
+
+## 4zk · The deck's own words in Latvian and Russian (2.41.0, 2026-10-16)
+
+L19, the deck's turn: a Latvian or Russian deck still had Next, Back, All screens, the instructor cue and the landing
+card's chips in English beside its Latvian or Russian content. `gb_deck.js` now has a `LANG` table (en / lv / ru,
+picked by `<html lang>` as `gb_answer.js` does; `GBDeck.init({text})` still overrides) and puts the words on the
+chrome's labels and tooltips, the Start button, the overview and the landing hint - the chrome itself stays copied from
+`gb_shell.html` word for word. The compiler no longer passes English words to `GBDeck.init`, and the landing card's
+chips are in the course language (`compile_module.py` LANDING); a language with no words is reported, exit 1. The
+polite form, as on the start pages. **PROVISIONAL**, listed in `compile/TRANSLATIONS_REVIEW.md` §4-5. Test: a
+Latvian deck driven in Chrome (`test_task_engine.py`).
+
+## 4zl · L59 - the ILO map and the knowledge base before any module (2.42.0, 2026-10-16)
+
+Built as 2.38.0 on its own branch beside the task compiler; renumbered 2.42.0 when the two were merged.
 Owner: *"before creating any module the AI should have already made the ILO mapping and suggested for
 KNOWLEDGE_BASE to be created"*. A session building IGF Module 4 got neither until a follow-up message: the ILO map
 was a build step with no file, `script/GUIDE.md` never mentioned the map or the knowledge base, and `"sub_ilo"` on a
@@ -835,7 +899,7 @@ question was optional. Now, by rule and by check:
   the master folder's files it would be built from (`source_files` and the old course, sorted: programme / model course /
   codes / old course / other), how - the Course Source Processor, which is *not* part of the factory and is said so - and
   what the course loses; `--json` adds the ready pop-up question. `kb_tool.py decision` records yes / built / declined
-  (with the operator's reason) in `intake.json` → `knowledge_base_decision`, once. An intake from before 2.38.0 naming a
+  (with the operator's reason) in `intake.json` → `knowledge_base_decision`, once. An intake from before 2.42.0 naming a
   knowledge base (or `none`) counts as the decision.
 - **The ILO map is a file, made before the split is approved.** `scripts/ilo_map.py` builds
   `working_claude/ilo_map.json` from `programme.json` + `architecture.json` - one row per Sub-ILO per module (a module with

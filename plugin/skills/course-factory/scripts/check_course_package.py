@@ -111,7 +111,7 @@ class Page(HTMLParser):
             self.slides.append(a)
         if "rc-item" in cls and self.slides:
             self.slides[-1]["_points"] += 1
-        if tag in ("img", "svg"):
+        if tag in ("img", "svg") and "data-no-zoom" not in a:     # the result ring, a control's symbol: not a picture
             self.pictures += 1
         if a.get("style"):
             self.css.append(a["style"])

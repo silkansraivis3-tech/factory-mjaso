@@ -5,21 +5,32 @@
    A compiled page (course-factory/compile/scripts/compile_module.py) is only its questions as markup:
      <body data-code="SC1" data-title="..." data-pass="0">      data-pass: the pass mark in %, 0 = a self-check
      <section class="scr" data-script="q01" data-mech="hotspot" [data-multi="1"]> ... </section>
-   One question per screen; choose, tap the picture, drag-and-drop with a tap-then-tap alternative.
+   One question per screen; choose, tap the picture, drag-and-drop with a tap-then-tap alternative, a dial.
+   A question is one or more parts (.part - none: the whole screen is one part), each answered and checked once:
+   a scenario's steps, the incident's order and then where it should have stopped. A part holds groups:
+     choose  a .cg (or the screen's .opt / .hot): one, or all that are right (data-multi="1")
+     place   .chip into .zone, back into .tray; data-need="slots": every slot filled, a card may stay in the tray
+     dial    .dial: a value from data-lo to data-hi in data-step, set by dragging or with - and +
+     stop    a part with data-kind="stop": tap one card of the part before it
 
    The answers are NOT in the page: every answer element carries data-key = gbKey(screen id, its text, value)
    and the page grades by working out the key of what the trainee did (classroom-system.json task_page.answer_keys).
-   Value of a key:  choose / tap the picture: 1 right, 0 wrong
-                    put in order: the place, 1, 2, 3 ...
+   Value of a key:  choose / tap the picture / a gap / a reason / a step's action / a line of the document /
+                    the faulty part / a card that belongs in the plan / the moment to stop: 1 right, 0 wrong
+                    (a .cg's data-val instead of 1: operate the panel - the control's name)
+                    put in order: the place, 1, 2, 3 ...  (a card that also says right or wrong - build the plan,
+                    rebuild the incident - carries its place in data-place, the same key: 0 = stays out)
                     match: the partner's text (the left side the right side belongs to)
                     sort into groups: the group's name
                     label the drawing: the id of the place on the drawing
+                    set the value: the unit, value - data-key lists one key per accepted step
 
    The classroom: the result is reported once - parent.postMessage({type: 'gb-task-done', code, title, ok, total,
    head, items, answered, of, timeout: true|false}); the instructor's timer {type: 'gb-timer'} is heard, and at 0
    what was done is marked and reported with timeout: true. "Start again" exists only outside the classroom frame
    (window.parent === window): inside it, one opening gives one result.
-   The words on the controls come from window.GB_ANSWER_TEXT (the compiler writes them in the course language). */
+   The words on the controls are in the page's language (<html lang>: en, lv, ru - LANG below); a page may still
+   override any of them with window.GB_ANSWER_TEXT. */
 (function () {
   'use strict';
   var D = document, W = window;
@@ -31,10 +42,49 @@
     check: 'Check', next: 'Next', seeScore: 'See my score', result: 'Your result',
     correct: 'Correct.', notQuiteChoice: 'Not quite – the right answer is marked.',
     notQuitePlace: 'Not quite – the amber ones were moved to where they belong.',
+    notQuiteValue: 'Not quite – the green band shows the values that are right.',
+    goOn: 'Go on', decimal: '.',
+    teamRole: 'You are the {role}', teamOne: 'One answer for the whole team', handedIn: 'Handed in by {by} for {team}',
     got: 'You got {ok} of {total} right.', timeUp: ' The time was up.',
-    passNote: 'Pass mark {pass} % – {need} of {total} right. This shows what to review. It is not a grade.'
+    passNote: 'Pass mark {pass} % – {need} of {total} right. This shows what to review. It is not a grade.',
+    passed: 'PASSED', notPassed: 'NOT PASSED'
   };
-  (function () { var k, o = W.GB_ANSWER_TEXT || {}; for (k in o) { if (o.hasOwnProperty(k)) { T[k] = o[k]; } } }());
+  /* the course language (L19) - the page's <html lang>; PROVISIONAL (2.40.0), written by Claude, to be checked by a
+     native speaker: course-factory/compile/TRANSLATIONS_REVIEW.md. The message to the classroom keeps 'PASSED' /
+     'NOT PASSED' - a code, not a word on the screen. */
+  var LANG = {
+    lv: {
+      tryFirst: 'Vispirms izmēģini planšeti', startSelf: 'Sākt paškontroli', moduleCheck: 'Moduļa pārbaude',
+      startCheck: 'Sākt pārbaudi', question: '{n}. jautājums no {of}', soFar: 'Pagaidām pareizi: {n}',
+      check: 'Pārbaudīt', next: 'Tālāk', seeScore: 'Mans rezultāts', result: 'Tavs rezultāts',
+      correct: 'Pareizi.', notQuiteChoice: 'Ne gluži – pareizā atbilde ir atzīmēta.',
+      notQuitePlace: 'Ne gluži – dzeltenās kartītes ir pārliktas savās vietās.',
+      notQuiteValue: 'Ne gluži – zaļā josla rāda pareizās vērtības.',
+      goOn: 'Turpināt', decimal: ',',
+      teamRole: 'Tava loma: {role}', teamOne: 'Viena atbilde visai komandai', handedIn: '{team} atbildi iesniedza: {by}',
+      got: 'Pareizi: {ok} no {total}.', timeUp: ' Laiks beidzās.',
+      passNote: 'Ieskaites slieksnis {pass} % – {need} no {total} pareizi. Tas rāda, ko atkārtot. Tā nav atzīme.',
+      passed: 'IESKAITĪTS', notPassed: 'NAV IESKAITĪTS'
+    },
+    ru: {
+      tryFirst: 'Сначала попробуй планшет', startSelf: 'Начать самопроверку', moduleCheck: 'Проверка по модулю',
+      startCheck: 'Начать проверку', question: 'Вопрос {n} из {of}', soFar: 'Пока правильно: {n}',
+      check: 'Проверить', next: 'Далее', seeScore: 'Мой результат', result: 'Твой результат',
+      correct: 'Правильно.', notQuiteChoice: 'Не совсем – правильный ответ отмечен.',
+      notQuitePlace: 'Не совсем – жёлтые карточки перенесены на свои места.',
+      notQuiteValue: 'Не совсем – зелёная полоса показывает правильные значения.',
+      goOn: 'Дальше', decimal: ',',
+      teamRole: 'Твоя роль: {role}', teamOne: 'Один ответ на всю команду', handedIn: 'Ответ команды {team} сдал(а): {by}',
+      got: 'Правильно: {ok} из {total}.', timeUp: ' Время вышло.',
+      passNote: 'Проходной балл {pass} % – {need} из {total} правильно. Это показывает, что повторить. Это не оценка.',
+      passed: 'ЗАЧТЕНО', notPassed: 'НЕ ЗАЧТЕНО'
+    }
+  };
+  (function () {
+    var k, l = LANG[(D.documentElement.getAttribute('lang') || 'en').slice(0, 2).toLowerCase()] || {}, o = W.GB_ANSWER_TEXT || {};
+    for (k in l) { if (l.hasOwnProperty(k)) { T[k] = l[k]; } }
+    for (k in o) { if (o.hasOwnProperty(k)) { T[k] = o[k]; } }
+  }());
   function say(k, v) {
     return String(T[k]).replace(/\{(\w+)\}/g, function (m, n) { return (v && v[n] !== undefined) ? v[n] : m; });
   }
@@ -44,13 +94,17 @@
     var sent = false;
     return {
       inFrame: !(window.parent === window),
+      stop: function () { sent = true; },            /* the team's answer was handed in from another tablet */
       send: function (r) {
         if (sent) { return; }
         sent = true;
-        try {
-          W.parent.postMessage({ type: 'gb-task-done', code: r.code, title: r.title, ok: r.ok, total: r.total,
-            head: r.head, items: r.items, answered: r.answered, of: r.of, timeout: r.timeout === true }, '*');
-        } catch (e) { /* opened on its own - no classroom to tell */ }
+        var msg = { type: 'gb-task-done', code: r.code, title: r.title, ok: r.ok, total: r.total,
+          head: r.head, items: r.items, answered: r.answered, of: r.of, timeout: r.timeout === true };
+        if (TEAM.handsIn()) {                        /* one answer for the team: the classroom records it for every member */
+          var t = { scope: 'team', team: TEAM.team.name, by: TEAM.team.me }, k;
+          for (k in t) { if (t.hasOwnProperty(k)) { msg[k] = t[k]; } }
+        }
+        try { W.parent.postMessage(msg, '*'); } catch (e) { /* opened on its own - no classroom to tell */ }
       },
       onTimer: function (fn) {
         W.addEventListener('message', function (e) {
@@ -63,6 +117,40 @@
       }
     };
   }());
+  /* ---------------------------------------------------------------- a team task (classroom-system.json team_task) */
+  /* <meta name="task-mode" content="team">: the classroom sends the team shortly after the page opens -
+     {type: 'gb-team', team: {name, colour, members, me, role}} - and it is shown at the top, as large as the question.
+     No team within about 2 seconds: the class has no teams and the task runs as an individual one (it never waits).
+     task-scope team: the first tablet of the team to finish hands in the one answer, with scope: 'team' (and team, by);
+     when another member's tablet has handed in, the classroom says so - {type: 'gb-team-done', by, team} - and this
+     page shows "Handed in by ... for Team A" and sends nothing. task-scope member: everyone answers and reports as
+     usual. Any team size; a role never locks anyone out - every member reads and answers the whole task. */
+  var TEAM = (function () {
+    function meta(n) { var m = D.querySelector('meta[name="' + n + '"]'); return m ? m.getAttribute('content') || '' : ''; }
+    var o = { on: meta('task-mode') === 'team', scope: meta('task-scope') === 'member' ? 'member' : 'team',
+      team: null, alone: false, done: null, onDone: null };
+    o.handsIn = function () { return !!(o.on && o.team && o.scope === 'team'); };
+    function show() {
+      var bar = D.getElementById('teamBar'), t = o.team;
+      if (!bar) { return; }
+      D.getElementById('teamName').textContent = String(t.name || '');
+      D.getElementById('teamRole').textContent = t.role ? say('teamRole', { role: String(t.role) }) : '';
+      D.getElementById('teamNote').textContent = o.scope === 'team' ? say('teamOne') : '';
+      if (/^#[0-9a-f]{3,8}$/i.test(t.colour || '')) { bar.style.borderLeftColor = t.colour; }
+      bar.removeAttribute('hidden');
+    }
+    if (o.on) {
+      W.addEventListener('message', function (e) {
+        var d = e && e.data;
+        if (!d || typeof d !== 'object') { return; }
+        if (d.type === 'gb-team' && d.team && typeof d.team === 'object') { o.team = d.team; show(); }
+        if (d.type === 'gb-team-done' && o.scope === 'team' && !o.done) { o.done = d; if (o.onDone) { o.onDone(d); } }
+      }, false);
+      setTimeout(function () { if (!o.team) { o.alone = true; } }, 2000);     /* no teams in this class */
+    }
+    return o;
+  }());
+
   /* the hidden Back link - the Android Back button clicks it; it only steps back, never to an instructor page */
   (function () {
     var back = D.querySelector('.gbt-topback');
@@ -78,10 +166,12 @@
   function $$(s, r) { return Array.prototype.slice.call((r || D).querySelectorAll(s)); }
   function norm(s) { return String(s).replace(/\s+/g, ' ').replace(/^ | $/g, ''); }
   function txt(el) { return norm(el.textContent); }
-  function has(el, c) { return (' ' + el.className + ' ').indexOf(' ' + c + ' ') >= 0; }
-  function add(el, c) { if (el && !has(el, c)) { el.className = (el.className ? el.className + ' ' : '') + c; } }
+  /* through the class attribute, never .className - a drawing's SVG elements have a read-only className */
+  function cls(el) { return (el && el.getAttribute && el.getAttribute('class')) || ''; }
+  function has(el, c) { return (' ' + cls(el) + ' ').indexOf(' ' + c + ' ') >= 0; }
+  function add(el, c) { if (el && !has(el, c)) { el.setAttribute('class', (cls(el) ? cls(el) + ' ' : '') + c); } }
   function del(el, c) {
-    if (el) { el.className = norm((' ' + el.className + ' ').replace(' ' + c + ' ', ' ')); }
+    if (el && has(el, c)) { el.setAttribute('class', norm((' ' + cls(el) + ' ').replace(' ' + c + ' ', ' '))); }
   }
   function each(list, fn) { for (var i = 0; i < list.length; i++) { fn(list[i], i); } }
 
@@ -267,6 +357,7 @@
     chip.addEventListener('touchstart', function (e) {
       lastTouch = new Date().getTime();
       if (e.cancelable) { e.preventDefault(); }
+      if (q.locked && q.tapLocked) { q.tapLocked(chip); return; }     /* a placed card tapped as an answer (stop) */
       begin(e, true);
     }, false);
     chip.addEventListener('touchmove', onMove, false);
@@ -274,6 +365,7 @@
     chip.addEventListener('touchcancel', function () { clean(); }, false);
     chip.addEventListener('mousedown', function (e) {
       if (e.button !== 0 || new Date().getTime() - lastTouch < 700) { return; }
+      if (q.locked && q.tapLocked) { q.tapLocked(chip); return; }
       begin(e, false);
       e.preventDefault();
     }, false);
@@ -289,96 +381,300 @@
       }, false);
     });
   }
-  function placed(q) { var n = 0; each(q.chips, function (c) { if (c.parentNode !== q.tray) { n++; } }); return n; }
+  function placed(g) { var n = 0; each(g.chips, function (c) { if (c.parentNode !== g.tray) { n++; } }); return n; }
+  function slotsFull(g) { var n = 0; each(g.zones, function (z) { if ($('.chip', z)) { n++; } }); return n === g.zones.length; }
   function zoneValue(z) { return z ? norm(z.getAttribute('data-val') || '') : ''; }
-  function chipGood(q, c) {
+  /* a card's place: data-place when the card also says right or wrong in data-key (build the plan, the incident) */
+  function placeKey(c) { return (c.getAttribute('data-place') || c.getAttribute('data-key') || '').toLowerCase(); }
+  function belongs(g, c) { return keyOf(c) === gbKey(g.id, txt(c), 1); }
+  function chipGood(g, c) {
     var z = c.parentNode;
-    return z !== q.tray && has(z, 'zone') && gbKey(q.id, txt(c), zoneValue(z)) === keyOf(c);
+    if (z === g.tray) { return g.need === 'slots' && !belongs(g, c); }     /* a card that does not belong stays out */
+    return has(z, 'zone') && gbKey(g.id, txt(c), zoneValue(z)) === placeKey(c);
   }
-  function rightZone(q, c) {
+  function rightZone(g, c) {
     var i;
-    for (i = 0; i < q.zones.length; i++) {
-      if (gbKey(q.id, txt(c), zoneValue(q.zones[i])) === keyOf(c)) { return q.zones[i]; }
+    for (i = 0; i < g.zones.length; i++) {
+      if (gbKey(g.id, txt(c), zoneValue(g.zones[i])) === placeKey(c)) { return g.zones[i]; }
     }
     return null;
   }
 
   /* ---------------------------------------------------------------- questions */
-  var CHOOSE = { single_choice: 1, read_instrument: 1, multi_select: 1, hotspot: 1, spot_the_hazard: 1 };
-  function isRight(q, it) { return keyOf(it) === gbKey(q.id, txt(it), 1); }
+  /* the element whose words and key an item stands for: itself, or (the faulty part's "This is the fault"
+     button) the keyed element beside it */
+  function keyEl(it) { return it.hasAttribute('data-key') ? it : ($('[data-key]', it.parentNode) || it); }
+  function itemRight(g, it) { var k = keyEl(it); return keyOf(k) === gbKey(g.id, txt(k), g.val); }
+
+  function mkChoose(q, box, multi, val, items) {
+    var g = { type: 'choose', q: q, id: q.id, box: box, multi: multi, val: val, picked: [], locked: false,
+      items: items || $$('.opt, .hot', box) };
+    if (!items) { each(g.items, function (it) { it.addEventListener('click', function () { pick(g, it); }, false); }); }
+    g.picked = g.items.filter(function (o) { return has(o, 'sel'); });      /* a panel control already in a position */
+    return g;
+  }
+  /* operate the panel: the control's little figure-kit drawing follows the position chosen */
+  function kitSet(box, v) {
+    var s = $('svg.csym', box), f = s && s.__kit;
+    del(box, 'unset');
+    if (f && f.parts.c) { f.set(f.parts.c, parseFloat(v)); }
+  }
+  function pick(g, it) {
+    if (g.locked) { return; }
+    if (g.multi) {
+      if (has(it, 'sel')) { del(it, 'sel'); } else { add(it, 'sel'); }
+      g.picked = g.items.filter(function (o) { return has(o, 'sel'); });
+    } else {
+      each(g.items, function (o) { del(o, 'sel'); });
+      add(it, 'sel');
+      g.picked = [it];
+    }
+    g.q.touched = true;
+    if (g.onpick) { g.onpick(it); }
+    if (it.hasAttribute('data-kv')) { kitSet(g.box, it.getAttribute('data-kv')); }
+    syncFor(g.q.sec);
+    refresh();
+  }
+  /* compare: the figures of a column show what its name button shows - chosen, right, wrong */
+  function syncFor(root) {
+    each($$('.cmp [data-for]', root), function (c) {      /* only the compare table - a drawing may use data-for too */
+      var it = D.getElementById(c.getAttribute('data-for'));
+      each(['sel', 'right', 'wrong', 'dim'], function (k) { if (it && has(it, k)) { add(c, k); } else { del(c, k); } });
+    });
+  }
+  function mkPlace(q, part) {
+    var g = { type: 'place', q: q, id: q.id, sec: part, chips: $$('.chip', part), zones: $$('.zone', part),
+      tray: $('.tray', part), need: part.getAttribute('data-need') || 'all', locked: false, sel: null };
+    g.onchange = function () { q.touched = true; refresh(); };
+    bindPlacement(g);
+    return g;
+  }
+
+  /* set the value: drag along the track, tap it, or step with - and + ; the number is shown large */
+  function mkDial(q, el) {
+    var g = { type: 'dial', q: q, id: q.id, el: el, k: -1, locked: false };
+    var lo = parseFloat(el.getAttribute('data-lo')), hi = parseFloat(el.getAttribute('data-hi'));
+    var step = parseFloat(el.getAttribute('data-step')), dec = parseInt(el.getAttribute('data-dec') || '0', 10);
+    var S = Math.pow(10, dec), LO = Math.round(lo * S), ST = Math.round(step * S), n = Math.round((hi - lo) / step);
+    var track = $('.dial-track', el), thumb = $('.dial-thumb', el), fill = $('.dial-fill', el), out = $('.dial-val', el);
+    var drag = false;
+    g.unit = el.getAttribute('data-unit') || '';
+    g.keys = keyOf(el).split(/\s+/);
+    g.n = n;
+    g.thumb = thumb;
+    g.track = track;
+    g.at = function (k) { return ((LO + k * ST) / S).toFixed(dec); };
+    g.good = function (k) { return g.keys.indexOf(gbKey(g.id, g.unit, g.at(k))) >= 0; };
+    g.shown = function (k) { return g.at(k).replace('-', '−').replace('.', T.decimal); };
+    g.paint = function () {
+      var p = 100 * Math.max(g.k, 0) / n;
+      thumb.style.left = p + '%';
+      fill.style.width = p + '%';
+      out.textContent = g.k < 0 ? '–' : g.shown(g.k);
+    };
+    g.set = function (k) {
+      if (g.locked) { return; }
+      g.k = Math.max(0, Math.min(n, k));
+      q.touched = true;
+      g.paint();
+      refresh();
+    };
+    function at(e) {
+      var t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]) || e, r = track.getBoundingClientRect();
+      return Math.round((t.clientX - r.left) / r.width * n);
+    }
+    track.addEventListener('touchstart', function (e) {
+      if (g.locked) { return; }
+      lastTouch = new Date().getTime();
+      if (e.cancelable) { e.preventDefault(); }
+      drag = true;
+      g.set(at(e));
+    }, false);
+    track.addEventListener('touchmove', function (e) { if (drag) { if (e.cancelable) { e.preventDefault(); } g.set(at(e)); } }, false);
+    track.addEventListener('touchend', function () { drag = false; }, false);
+    track.addEventListener('mousedown', function (e) {
+      if (g.locked || e.button !== 0 || new Date().getTime() - lastTouch < 700) { return; }
+      drag = true;
+      g.set(at(e));
+      e.preventDefault();
+    }, false);
+    D.addEventListener('mousemove', function (e) { if (drag) { g.set(at(e)); } }, false);
+    D.addEventListener('mouseup', function () { drag = false; }, false);
+    $('.dial-minus', el).addEventListener('click', function () { g.set(Math.max(g.k, 0) - 1); }, false);
+    $('.dial-plus', el).addEventListener('click', function () { g.set(Math.max(g.k, 0) + 1); }, false);
+    g.paint();
+    return g;
+  }
+
+  /* complete the sentence: the gap tapped (or the first empty one) shows its choices; a choice fills the gap */
+  function wireGaps(p) {
+    var gaps = $$('.gap', p.el);
+    if (!gaps.length) { return; }
+    function act(i) {
+      each(gaps, function (x, j) { if (j === i) { add(x, 'act'); } else { del(x, 'act'); } });
+      each(p.groups, function (g, j) { if (j === i) { add(g.box, 'act'); } else { del(g.box, 'act'); } });
+    }
+    each(gaps, function (x, i) {
+      x.addEventListener('click', function () { if (p.groups[i] && !p.groups[i].locked) { act(i); } }, false);
+    });
+    each(p.groups, function (g, i) {
+      g.gap = gaps[i];
+      g.onpick = function (it) {
+        var j, nx = -1;
+        gaps[i].textContent = txt(it);
+        add(gaps[i], 'full');
+        for (j = 1; j <= gaps.length && nx < 0; j++) { if (!p.groups[(i + j) % gaps.length].picked.length) { nx = (i + j) % gaps.length; } }
+        if (nx >= 0) { act(nx); }
+      };
+    });
+    act(0);
+  }
+
+  function mkPart(q, el, i) {
+    var p = { q: q, el: el, i: i, kind: el.getAttribute('data-kind') || '', groups: [], done: false, ok: false };
+    if (p.kind === 'stop') { return p; }                   /* its cards are the part's before it - made when it opens */
+    var cgs = $$('.cg', el);
+    if (cgs.length) {
+      each(cgs, function (b) { p.groups.push(mkChoose(q, b, b.getAttribute('data-multi') === '1', b.getAttribute('data-val') || '1')); });
+    } else if ($('.opt, .hot', el)) {
+      p.groups.push(mkChoose(q, el, q.multi || el.getAttribute('data-multi') === '1', '1'));
+    }
+    if ($('.chip', el)) { p.groups.push(mkPlace(q, el)); }
+    each($$('.dial', el), function (d) { p.groups.push(mkDial(q, d)); });
+    /* compare: a figure in a column chooses that column */
+    each($$('.cmp [data-for]', el), function (c) {
+      c.addEventListener('click', function () { var it = D.getElementById(c.getAttribute('data-for')); if (it) { it.click(); } }, false);
+    });
+    /* find the fault: tap a part to check it - it turns over and stays turned over; checking is never wrong */
+    each($$('.ff-look', el), function (b) {
+      b.addEventListener('click', function () { add(b.parentNode, 'seen'); q.touched = true; }, false);
+    });
+    wireGaps(p);
+    return p;
+  }
+  /* rebuild the incident, part two: the cards in their places are tapped to say where it should have stopped */
+  function mkStop(q, before) {
+    var place = null, g;
+    each(before.groups, function (x) { if (x.type === 'place') { place = x; } });
+    g = mkChoose(q, before.el, false, '1', place ? place.chips : []);
+    g.rightCls = 'stopat';
+    if (place) { place.tapLocked = function (chip) { pick(g, chip); }; }
+    each(g.items, function (c) {
+      c.addEventListener('click', function () { if (!place || place.locked) { pick(g, c); } }, false);
+    });
+    return g;
+  }
+
   function mkQ(sec) {
     var q = { sec: sec, id: sec.getAttribute('data-script'), mech: sec.getAttribute('data-mech'),
-      multi: sec.getAttribute('data-multi') === '1', done: false, ok: false, locked: false, sel: null, picked: [], touched: false };
+      multi: sec.getAttribute('data-multi') === '1', done: false, ok: false, touched: false, k: 0, parts: [] };
+    var ps = $$('.part', sec);
     q.text = txt($('[data-script-field="question"]', sec));
     q.why = $('.why', sec);
     q.vd = $('.vd', sec);
-    if (CHOOSE[q.mech]) {
-      q.items = $$('.opt, .hot', sec);
-      each(q.items, function (it) {
-        it.addEventListener('click', function () {
-          if (q.locked) { return; }
-          if (q.multi) {
-            if (has(it, 'sel')) { del(it, 'sel'); } else { add(it, 'sel'); }
-            q.picked = q.items.filter(function (o) { return has(o, 'sel'); });
-          } else {
-            each(q.items, function (o) { del(o, 'sel'); });
-            add(it, 'sel');
-            q.picked = [it];
-          }
-          q.sel = q.picked[0] || null;
-          q.touched = true;
-          refresh();
-        }, false);
-      });
-    } else {
-      q.chips = $$('.chip', sec);
-      q.zones = $$('.zone', sec);
-      q.tray = $('.tray', sec);
-      q.onchange = function () { q.touched = true; refresh(); };
-      bindPlacement(q);
-    }
+    each(ps.length ? ps : [sec], function (el, i) { q.parts.push(mkPart(q, el, i)); });
+    if (ps.length) { add(ps[0], 'on'); }
     return q;
   }
-  function hasAnswer(q) {
-    if (q.items) { return q.picked.length > 0; }
-    return placed(q) === q.chips.length;
+  function groupAnswered(g) {
+    if (g.type === 'choose') { return g.picked.length > 0; }
+    if (g.type === 'dial') { return g.k >= 0; }
+    return g.need === 'slots' ? slotsFull(g) : placed(g) === g.chips.length;
   }
-  function anyAnswer(q) {
-    if (q.items) { return q.picked.length > 0; }
-    return placed(q) > 0;
+  function groupTouched(g) {
+    if (g.type === 'choose') { return g.picked.length > 0; }
+    if (g.type === 'dial') { return g.k >= 0; }
+    return placed(g) > 0;
   }
-  function grade(q) {
-    var ok = true;
-    if (q.items) {
-      each(q.items, function (it) { if (has(it, 'sel') !== isRight(q, it)) { ok = false; } });
-      return ok && q.picked.length > 0;
-    }
-    each(q.chips, function (c) { if (!chipGood(q, c)) { ok = false; } });
+  function hasAnswer(p) {
+    var ok = p.groups.length > 0;
+    each(p.groups, function (g) { if (!groupAnswered(g)) { ok = false; } });
     return ok;
   }
-  function lock(q) { q.locked = true; add(q.sec, 'locked'); if (q.chips) { select(q, null); } }
-  function reveal(q, ok) {
-    var bad = [];
-    if (q.items) {
-      each(q.items, function (it) {
-        if (isRight(q, it)) { add(it, 'right'); }
+  function anyAnswer(p) {
+    var any = false;
+    each(p.groups, function (g) { if (groupTouched(g)) { any = true; } });
+    return any;
+  }
+  function gradeGroup(g) {
+    var ok = true;
+    if (g.type === 'choose') {
+      each(g.items, function (it) { if (has(it, 'sel') !== itemRight(g, it)) { ok = false; } });
+      return ok && g.picked.length > 0;
+    }
+    if (g.type === 'dial') { return g.k >= 0 && g.good(g.k); }
+    each(g.chips, function (c) { if (!chipGood(g, c)) { ok = false; } });
+    return ok;
+  }
+  function grade(p) {
+    var ok = p.groups.length > 0;
+    each(p.groups, function (g) { if (!gradeGroup(g)) { ok = false; } });
+    return ok;
+  }
+  function lock(p) {
+    add(p.el, 'locked');
+    each(p.groups, function (g) { g.locked = true; if (g.type === 'place') { select(g, null); } });
+  }
+  function revealGroup(g, ok) {
+    var bad = [], lo = -1, hi = -1, k, band;
+    if (g.type === 'choose') {
+      each(g.items, function (it) {
+        if (itemRight(g, it)) { add(it, g.rightCls || 'right'); }
         else if (has(it, 'sel')) { add(it, 'wrong'); }
         else if (has(it, 'opt')) { add(it, 'dim'); }
       });
-      if (!ok) { each(q.picked, function (it) { if (!isRight(q, it)) { add(it, 'shake'); } }); }
+      if (!ok) { each(g.picked, function (it) { if (!itemRight(g, it)) { add(it, 'shake'); } }); }
+      if (g.gap) {                                       /* the gap shows the right words: green, or amber when moved */
+        each(g.items, function (it) { if (itemRight(g, it)) { g.gap.textContent = txt(it); } });
+        add(g.gap, ok ? 'right' : 'fixed');
+        del(g.gap, 'act');
+        del(g.box, 'act');
+      }
+    } else if (g.type === 'dial') {
+      for (k = 0; k <= g.n; k++) { if (g.good(k)) { if (lo < 0) { lo = k; } hi = k; } }
+      band = $('.dial-band', g.el);
+      if (band && lo >= 0) {
+        band.style.left = (100 * Math.max(lo - 0.5, 0) / g.n) + '%';
+        band.style.width = (100 * (Math.min(hi + 0.5, g.n) - Math.max(lo - 0.5, 0)) / g.n) + '%';
+      }
+      add(g.el, ok ? 'right' : 'wrong');
     } else {
-      each(q.chips, function (c) {
-        if (chipGood(q, c)) { add(c, 'right'); } else { bad.push(c); }
+      each(g.chips, function (c) {
+        if (chipGood(g, c)) { add(c, c.parentNode === g.tray ? 'out' : 'right'); } else { bad.push(c); }
       });
-      each(bad, function (c) { q.tray.appendChild(c); });      /* lift the wrong ones out first */
+      each(bad, function (c) { g.tray.appendChild(c); });      /* lift the wrong ones out first */
       each(bad, function (c) {
-        var z = rightZone(q, c);
+        var z = rightZone(g, c);
         add(c, 'fixed');
-        (z || q.tray).appendChild(c);
+        (z || g.tray).appendChild(c);
       });
     }
-    if (q.vd) { q.vd.textContent = ok ? say('correct') : say(q.items ? 'notQuiteChoice' : 'notQuitePlace'); }
-    if (q.why) { add(q.why, 'on'); add(q.why, ok ? 'good' : 'bad'); }
+  }
+  function reveal(p, ok) {
+    each(p.groups, function (g) { revealGroup(g, gradeGroup(g)); });
+    each($$('.ffc', p.el), function (c) { add(c, 'seen'); });       /* every part's reading, once it is answered */
+    add(p.el, 'checked');
+    syncFor(p.el);
+    if (p.q.parts.length > 1) { add(p.el, ok ? 'good' : 'bad'); }
+  }
+  function verdict(q) {
+    var kind = 'notQuiteChoice';
+    each(q.parts, function (p) {
+      each(p.groups, function (g) {
+        if (g.type === 'place' && kind === 'notQuiteChoice') { kind = 'notQuitePlace'; }
+        if (g.type === 'dial') { kind = 'notQuiteValue'; }
+      });
+    });
+    if (q.vd) { q.vd.textContent = q.ok ? say('correct') : say(kind); }
+    if (q.why) {
+      add(q.why, 'on'); add(q.why, q.ok ? 'good' : 'bad');
+      try { q.why.scrollIntoView({ block: 'nearest' }); } catch (x) { /* an old WebView */ }   /* above the dock, not under it */
+    }
+  }
+  function allOk(q) {
+    var ok = true;
+    each(q.parts, function (p) { if (!(p.done && p.ok)) { ok = false; } });
+    return ok;
   }
 
   /* ---------------------------------------------------------------- a drawing shared by several questions */
@@ -411,18 +707,26 @@
   }
   function refresh() {
     if (cur < 0 || ended) { return; }
-    var q = qs[cur];
-    if (q.done) { return; }
-    go.disabled = !hasAnswer(q);
+    var q = qs[cur], p = q.parts[q.k];
+    if (q.done || p.done) { return; }
+    go.disabled = !hasAnswer(p);
   }
   function screensOff() { each($$('.scr'), function (s) { del(s, 'on'); }); }
+  /* the hand shows a gesture once per way of answering: tap the picture, drag a card, slide the dial -
+     a button that says what it does needs no hand */
   function hint(q) {
-    if (shown[q.mech] || q.items && !$('.hot', q.sec)) { return; }
+    var g = q.parts[q.k].groups[0];
+    if (!g || shown[q.mech] || g.type === 'choose' && !$('.hot', q.sec)) { return; }
     shown[q.mech] = true;
     later(500, function () {
       if (qs[cur] !== q || q.touched || q.done || ended) { return; }
-      if (q.items) { demoTap(neutralSpot(q.sec)); return; }
-      var a = q.chips[0], b = q.zones[0];
+      if (g.type === 'choose') { demoTap(neutralSpot(q.sec)); return; }
+      if (g.type === 'dial') {
+        var r = g.track.getBoundingClientRect();
+        demoDrag(centre(g.thumb), { x: r.left + r.width * 0.6, y: r.top + r.height / 2 });
+        return;
+      }
+      var a = g.chips[0], b = g.zones[0];
       if (a && b) { demoDrag(centre(a), centre(b)); }
     });
   }
@@ -441,16 +745,24 @@
     body.scrollTop = 0;
     hint(q);
   }
+  /* one Check per part; the question is right when every part is */
   function check() {
-    var q = qs[cur], ok;
-    if (!hasAnswer(q) || q.done) { return; }
+    var q = qs[cur], p = q.parts[q.k];
+    if (q.done || p.done || !hasAnswer(p)) { return; }
     killHand();
-    ok = grade(q);
+    p.ok = grade(p);
+    p.done = true;
+    lock(p);
+    reveal(p, p.ok);
+    if (q.k < q.parts.length - 1) { setBtn(say('goOn'), 'next'); return; }
+    finish(q);
+  }
+  function finish(q) {
     q.done = true;
-    q.ok = ok;
-    if (ok) { okCount++; }
-    lock(q);
-    reveal(q, ok);
+    q.ok = allOk(q);
+    if (q.ok) { okCount++; }
+    each(q.parts, function (p) { del(p.el, 'stopping'); });
+    verdict(q);
     setGot();
     setBar(cur + 1);
     if (cur === qs.length - 1) {
@@ -460,13 +772,23 @@
       setBtn(say('next'), 'next');
     }
   }
+  /* the next part: a scenario's next step (the step before folds up), or the incident's stop point (the cards stay) */
+  function openPart(q, k) {
+    var before = q.parts[k - 1], p = q.parts[k];
+    q.k = k;
+    if (p.kind === 'stop') { p.groups = [mkStop(q, before)]; add(before.el, 'stopping'); } else { add(before.el, 'past'); }
+    add(p.el, 'on');
+    setBtn(say('check'), 'off');
+    try { p.el.scrollIntoView({ block: 'nearest' }); } catch (x) { /* an old WebView */ }
+  }
   function next() {
     if (cur < qs.length - 1) { showQ(cur + 1); } else { showResult(); }
   }
   function onGo() {
     if (ended) { return; }
     if (!started) { started = true; showQ(0); return; }
-    if (!qs[cur].done) { check(); } else { next(); }
+    var q = qs[cur];
+    if (q.done) { next(); } else if (!q.parts[q.k].done) { check(); } else { openPart(q, q.k + 1); }
   }
 
   /* ---------------------------------------------------------------- result and report */
@@ -496,7 +818,11 @@
     num.textContent = t.ok + ' / ' + t.total;
     if (arc) { arc.setAttribute('data-off', String(Math.round(C * (1 - (t.total ? t.ok / t.total : 0)) * 10) / 10)); }
     if (badge) {
-      if (h) { badge.textContent = h; badge.style.display = 'inline-block'; if (h === 'NOT PASSED') { add(badge, 'no'); } }
+      if (h) {
+        badge.textContent = say(h === 'PASSED' ? 'passed' : 'notPassed');
+        badge.style.display = 'inline-block';
+        if (h === 'NOT PASSED') { add(badge, 'no'); }
+      }
       else { badge.style.display = 'none'; }
     }
     if (h === 'PASSED') { add(ring, 'pass'); }
@@ -530,16 +856,33 @@
   }
   function timeUp() {
     if (ended && reported) { return; }
-    if (cur >= 0 && qs[cur] && !qs[cur].done && anyAnswer(qs[cur])) {
-      var q = qs[cur], ok = grade(q);
-      q.done = true; q.ok = ok;
-      if (ok) { okCount++; }
-      lock(q);
+    var q = cur >= 0 ? qs[cur] : null, p = q ? q.parts[q.k] : null;
+    if (q && !q.done) {                       /* what was done is marked; a question half done counts as answered, not right */
+      if (!p.done && anyAnswer(p)) { p.ok = grade(p); p.done = true; lock(p); }
+      if (q.k > 0 || p.done) {
+        q.done = true; q.ok = allOk(q);
+        if (q.ok) { okCount++; }
+      }
     }
     report(true);
     showResult();
   }
   CR.onTimer(function (rem) { if (rem <= 0 && !reported) { timeUp(); } });
+  /* a team's answer handed in from another member's tablet: this one says so, locks, and sends nothing */
+  function handedElsewhere(d) {
+    if (reported) { return; }                                 /* this tablet handed in first */
+    reported = true;
+    CR.stop();
+    killHand();
+    ended = true;
+    var msg = D.getElementById('teamDone');
+    if (msg) {
+      msg.textContent = say('handedIn', { by: String(d.by || ''), team: String(d.team || (TEAM.team && TEAM.team.name) || '') });
+    }
+    add(body, 'handed');
+    add(dock, 'off');
+    each(qs, function (q) { each(q.parts, function (p) { lock(p); }); });
+  }
 
   /* ---------------------------------------------------------------- first screen of the course: try the tablet */
   function initTry() {
@@ -566,6 +909,8 @@
   /* ---------------------------------------------------------------- start */
   function init() {
     each($$('.scr[data-script]'), function (s) { qs.push(mkQ(s)); });
+    TEAM.onDone = handedElsewhere;
+    if (TEAM.done) { handedElsewhere(TEAM.done); }
     go.addEventListener('click', onGo, false);
     var again = $('#again');
     if (again) {

@@ -72,7 +72,36 @@ WORDS = {"en": {
     "foot": "These buttons open the same pages on this device - to look at a task before the class, or after it.",
     "all_files": "All files", "hours": "{h} academic hours ({m} min)", "modules": "{n} modules",
     "later": "Modules {a} to {b} are added as each one is approved.", "later_one": "Module {a} is added when it is approved.",
-    "final": "Final assessment", "mc": "Module check"}}
+    "final": "Final assessment", "mc": "Module check"},
+    # PROVISIONAL (2.40.0) - written by Claude, to be checked by a native speaker: compile/TRANSLATIONS_REVIEW.md.
+    # The instructor's pages: the polite form; minutes and hours abbreviated, so no plural depends on the number.
+    "lv": {
+    "start": "Sākt", "everything": "Viss šim modulim", "back": "Atpakaļ", "module": "Modulis",
+    "opening": "Prezentācija tiek atvērta. Ja nekas nenotiek, nospiediet pogu.",
+    "start_deck": "Sākt prezentāciju", "presentation": "Prezentācija",
+    "minutes": "{n} min", "min": "{n} min",
+    "how": "Atveriet prezentāciju un spiediet “Tālāk” līdz beigām – katrs uzdevums atveras kursantu planšetēs no sava uzdevuma slaida.",
+    "tasks": "Kursantu uzdevumi", "room": "Telpā", "reading": "Kursantam lasīšanai", "handout": "Izdales materiāls",
+    "instructor": "Tikai instruktoram",
+    "foot": "Šīs pogas atver tās pašas lapas šajā ierīcē – lai apskatītu uzdevumu pirms nodarbības vai pēc tās.",
+    "all_files": "Visi faili", "hours": "{h} akad. st. ({m} min)", "modules": "Moduļi: {n}",
+    "later": "Moduļi no {a} līdz {b} tiks pievienoti, kad katrs būs apstiprināts.",
+    "later_one": "{a}. modulis tiks pievienots, kad būs apstiprināts.",
+    "final": "Noslēguma pārbaudījums", "mc": "Moduļa pārbaude"},
+    "ru": {
+    "start": "Начать", "everything": "Всё для этого модуля", "back": "Назад", "module": "Модуль",
+    "opening": "Презентация открывается. Если ничего не происходит, нажмите кнопку.",
+    "start_deck": "Начать презентацию", "presentation": "Презентация",
+    "minutes": "{n} мин", "min": "{n} мин",
+    "how": "Откройте презентацию и нажимайте «Далее» до конца – каждое задание открывается на планшетах слушателей со своего слайда задания.",
+    "tasks": "Задания слушателей", "room": "В аудитории", "reading": "Для чтения слушателю", "handout": "Раздаточный материал",
+    "instructor": "Только для инструктора",
+    "foot": "Эти кнопки открывают те же страницы на этом устройстве – чтобы посмотреть задание до занятия или после него.",
+    "all_files": "Все файлы", "hours": "{h} ак. ч. ({m} мин)", "modules": "Модулей: {n}",
+    "later": "Модули с {a} по {b} добавляются по мере утверждения.",
+    "later_one": "Модуль {a} будет добавлен после утверждения.",
+    "final": "Итоговая аттестация", "mc": "Проверка по модулю"}}
+assert all(set(WORDS[k]) == set(WORDS["en"]) for k in WORDS), "every language has every word"
 
 
 def h(text):
@@ -95,8 +124,10 @@ def load_or(path, default):
 
 
 def lang_of(arch):
+    """the course language's code (L19) - "Latvian" is lv, never "la"; a language the factory does not know keeps its
+    first two letters, and main() reports it"""
     lang = ((arch.get("course") or {}).get("course_language") or "English").strip()
-    return lang[:2].lower()
+    return cm.lang_code(lang) or lang[:2].lower()
 
 
 # ------------------------------------------------------------------ what a module is
@@ -110,7 +141,7 @@ def module_info(course, arch, mod, probs):
     script = load_or(sp, {})
     title = (script.get("title") or (planned.get(n) or {}).get("title") or "").strip()
     if not title and n == len(planned) + 1 and arch.get("final_assessment"):
-        title = WORDS["en"]["final"]
+        title = WORDS.get(lang_of(arch), WORDS["en"])["final"]
     if not title:
         probs.append("%s has no title - neither an approved script (%s) nor a row in architecture.json" % (mod, os.path.basename(sp)))
         title = "Module %d" % n

@@ -50,7 +50,7 @@ INPUTS - in the course folder unless given
 It writes one self-contained HTML file (the style is inlined, nothing is fetched) that prints to
 PDF from the browser. --check writes nothing and exits 1 when the page would show problems.
 
-THE ILO MAP AND THE KNOWLEDGE BASE ARE APPROVED HERE (owner, 2026-10-16 - 2.38.0)
+THE ILO MAP AND THE KNOWLEDGE BASE ARE APPROVED HERE (owner, 2026-10-16 - 2.42.0)
 Making the page also writes working_claude/ilo_map.json (scripts/ilo_map.py) - one row per Sub-ILO per
 module - and the page shows it, with the knowledge-base decision from intake (a declined one stays on
 the page). --approve --by records the operator's "next" in architecture.json "approved", with a
@@ -79,8 +79,8 @@ MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json
 ACTIVE = json.load(io.open(os.path.join(SKILL, "knowledge", "active-learning.json"), encoding="utf-8"))   # L49 step 3
 sys.path.insert(0, HERE)
 import bloom_map  # noqa: E402  - what level the ILOs ask for and the tasks reach (L48)
-import ilo_map  # noqa: E402  - the ILO map, built from this page's own files (2.38.0)
-import course_gate  # noqa: E402  - no module starts before this page is approved (2.38.0)
+import ilo_map  # noqa: E402  - the ILO map, built from this page's own files (2.42.0)
+import course_gate  # noqa: E402  - no module starts before this page is approved (2.42.0)
 FAMILY_MARK = {"still": "▣", "moving": "▶", "interactive": "☝", "3d": "⬢", "video": "●"}
 MOVING = ("moving", "interactive", "3d", "video")
 TECHNIQUES = ["self-check", "explain-then-reveal", "predict-then-reveal", "worked-example", "scenario", "explore", "plain"]
@@ -309,7 +309,7 @@ def analyse(prog, arch, plan=None):
 
 
 def gate_of(course, prog, arch):
-    """2.38.0 - the ILO map built from this page's files, the knowledge-base decision and the operator's approval.
+    """2.42.0 - the ILO map built from this page's files, the knowledge-base decision and the operator's approval.
     The map is what every module's content script is written against; nothing starts before it is approved."""
     rows, owed = ilo_map.derive(prog, arch, ilo_map.find_syllabus(course) if course else None)
     kb = course_gate.kb_decision(course) if course else None
@@ -502,7 +502,7 @@ def build(prog, arch, a, g=None):
         e(P.t("approves_subilo", re=cnt["re-expressed"], add=cnt["added"], orig=cnt["original"])),
         e(P.t("approves_tests")), e(P.t("approves_media")), e(P.t("approves_tablets")), e(P.t("approves_practice"))))
     out.append('<p class="note">%s %s</p>' % (VP("Aa"), e(P.t("verbatim_note"))))
-    if g:                                                # 2.38.0 - approved with the page: the ILO map and the knowledge base
+    if g:                                                # 2.42.0 - approved with the page: the ILO map and the knowledge base
         out.append(gate_html(e, V, VP, P, g))
 
     ctype = c.get("course_type", "")

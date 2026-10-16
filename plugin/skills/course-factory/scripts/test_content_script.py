@@ -24,7 +24,7 @@ round trip is run separately when Word is installed - see MANIFEST 4h). Pinned:
   * the slide-text check (2.16.1) still runs on every screen;
   * check_script_match passes a module that says exactly the approved words, and fails a changed
     word, an extra sentence, a missing screen, a wrong correct answer and an unapproved script;
-  * THE GATE (2.38.0): render and approve stop without the architecture, the ILO map, the operator's
+  * THE GATE (2.42.0): render and approve stop without the architecture, the ILO map, the operator's
     recorded approval of it (or after a Sub-ILO changed since), or the knowledge-base decision - each
     named; the ILO map and sources check finds a Sub-ILO taught or checked nowhere, a question without
     "sub_ilo", a "sub_ilo" the module does not own and empty "sources", blocking approval unless
@@ -154,7 +154,7 @@ def new_course(tmp, name, script=SCRIPT, gate=True):
     io.open(os.path.join(c, "working_claude", "FEEDBACK_LOG.md"), "w", encoding="utf-8").write(
         "# log\n\n| # | Date | Stage · module · where | What the operator said | What changed | Operator-stated fact? |\n|---|---|---|---|---|---|\n"
         "| 1 | 2026-10-01 | 3 · M01 · s02 | type C tanks here are tested to 7 bar | used it | yes |\n")
-    if gate:                                                         # 2.38.0: approved ILO map + KB decision first
+    if gate:                                                         # 2.42.0: approved ILO map + KB decision first
         gate_fixture.open_gate(c)
     return c
 
@@ -631,7 +631,7 @@ def main():
         code, out = build()
         check("a script changed after approval fails the match", code == 1 and "not approved" in out, out)
 
-        print("\n-- 2.38.0: no module starts before the approved ILO map and the knowledge-base decision")
+        print("\n-- 2.42.0: no module starts before the approved ILO map and the knowledge-base decision")
         import course_gate
         import ilo_map
         ng = new_course(tmp, "nogate", gate=False)
@@ -679,7 +679,7 @@ def main():
         check("no script yet, gate shut: it says what comes first, before anyone writes one",
               code == 2 and "no content script" in out and "cannot be started yet" in out, out)
 
-        print("\n-- 2.38.0: the ILO map and sources check")
+        print("\n-- 2.42.0: the ILO map and sources check")
         cl = new_course(tmp, "iloclean")
         check("the example module teaches and checks both Sub-ILOs and lists its sources: nothing found",
               cs.ilo_findings(cl, SCRIPT) == [], cs.ilo_findings(cl, SCRIPT))
@@ -720,7 +720,7 @@ def main():
         check("the final assessment: every question names a Sub-ILO the course owns; no per-module coverage",
               [f["rule"] for f in cs.ilo_findings(cl, fin)] == ["i_unknown_sub"], cs.ilo_findings(cl, fin))
 
-        print("\n-- 2.38.0: a script approved before the gate is reported, never invalidated")
+        print("\n-- 2.42.0: a script approved before the gate is reported, never invalidated")
         old = copy.deepcopy(SCRIPT)
         old.pop("sources")
         for x in old["screens"]:

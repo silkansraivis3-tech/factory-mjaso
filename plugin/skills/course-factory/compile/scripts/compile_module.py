@@ -76,6 +76,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -105,6 +106,31 @@ e = lambda s: html.escape(s or "", quote=False)
 a = lambda s: html.escape(s or "", quote=True)
 
 
+NATIVE = {"latviešu": "lv", "latviesu": "lv", "русский": "ru", "english": "en"}
+# the deck's landing card: the compiler's own words beside the engine's (gb_deck.js LANG). PROVISIONAL (2.41.0) - written
+# by Claude, to be checked by a native speaker: compile/TRANSLATIONS_REVIEW.md. Counts as "label: n" - no plural forms.
+LANDING = {"en": {"module": "Module {n}", "min": "{n} min", "screens": "{n} teaching screens", "sc": "Self-check {c}",
+                  "mc": "Module check MC", "fa": "Final assessment", "task": "Task {c}"},
+           "lv": {"module": "{n}. modulis", "min": "{n} min", "screens": "Mācību ekrāni: {n}", "sc": "Paškontrole {c}",
+                  "mc": "Moduļa pārbaude MC", "fa": "Noslēguma pārbaudījums", "task": "Uzdevums {c}"},
+           "ru": {"module": "Модуль {n}", "min": "{n} мин", "screens": "Учебных экранов: {n}", "sc": "Самопроверка {c}",
+                  "mc": "Проверка по модулю MC", "fa": "Итоговая аттестация", "task": "Задание {c}"}}
+assert all(set(LANDING[k]) == set(LANDING["en"]) for k in LANDING), "every language has every word"
+
+
+def lang_code(name):
+    """the course language (L19 COURSE_LANGUAGE) as its two-letter code - "Latvian", "lv", "Latviešu" -> "lv";
+    None when it is not a language the factory knows (never "la" from "Latvian"[:2])"""
+    n = (name or "English").strip()
+    codes = cs.LABELS["course_language_codes"]
+    if n in codes:
+        return codes[n]
+    low = n.lower()
+    if low in codes.values():
+        return low
+    return NATIVE.get(low) or next((c for k, c in codes.items() if k.lower() == low), None)
+
+
 def plugin_version():
     try:
         with io.open(os.path.join(PLUGIN, ".claude-plugin", "plugin.json"), encoding="utf-8") as f:
@@ -117,8 +143,17 @@ def sha(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+CYRILLIC = dict(zip("абвгдеёжзийклмнопрстуфхцчшщъыьэюя",
+                    ["a", "b", "v", "g", "d", "e", "e", "zh", "z", "i", "i", "k", "l", "m", "n", "o", "p", "r", "s", "t", "u", "f",
+                     "kh", "ts", "ch", "sh", "shch", "", "y", "", "e", "iu", "ia"]))
+
+
 def slug(s):
-    return re.sub(r"[^a-z0-9]+", "_", (s or "").lower()).strip("_")[:50] or "task"
+    """a file name from a title, in plain letters: "Vārsti" -> varsti, "клапаны" -> klapany (2.40.0 - before, every
+    letter outside a-z was dropped: sc1_v_rsti.html)"""
+    t = "".join(CYRILLIC.get(ch, ch) for ch in (s or "").lower())
+    t = unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]+", "_", t).strip("_")[:50] or "task"
 
 
 def chrome_block():
@@ -769,6 +804,25 @@ def attrs(d):
     return " ".join('%s="%s"' % (k, a(str(v))) for k, v in d.items() if v not in (None, ""))
 
 
+def recap_html(s, base, m, n, total, lines):
+    """L51 - the module's closing slide, "what to take away", in the one shared design (gb_compose.css 15): one box
+    per approved line, "Short title - one sentence"; the numbers are drawn by CSS, so the slide says exactly the
+    approved words. No picture, no layout choice - every module the same"""
+    d = {"class": "slide dark recap", "data-title": s.get("title"), "data-kind": "Summary",
+         "data-block": "%s · %d" % (m, n), "data-visual": "none"}
+    d.update(base)
+    items = []
+    for x in lines:
+        t, sep, rest = x.partition(" - ")
+        items.append('<li class="rc-item" data-script-field="text">'
+                     + ('<b class="rc-t">%s</b><span class="rc-sep"> - </span><span class="rc-d">%s</span>' % (e(t), e(rest))
+                        if sep else '<span class="rc-d">%s</span>' % e(x)) + "</li>")
+    return ('<section %s>\n  <div class="slide-kind"><b>Summary</b> · %s · %d / %d</div>\n'
+            '  <h2 data-script-field="title">%s</h2>\n  <div class="slide-body recap">\n    <ol class="rc-grid" data-n="%d">\n'
+            '      %s\n    </ol>\n    <p class="rc-next" data-script-ignore>Next: the module check</p>\n  </div>\n</section>'
+            % (attrs(d), m, n, total, e(s.get("title")), len(items), "\n      ".join(items)))
+
+
 def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, pool=None, taken=None):
     m = cs.mid(script.get("module"))
     sid, kind = s["id"], s["kind"]
@@ -807,6 +861,9 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         body.append("</div>")
         return ('<section %s>\n  <div class="slide-kind"><b>%s</b> · %s · %s</div>\n  <div class="slide-body activity">\n    %s\n  </div>\n</section>'
                 % (attrs(d), d["data-kind"], m, code, "\n    ".join(body)))
+
+    if kind == "slide" and s.get("recap"):
+        return recap_html(s, base, m, n, total, lines)
 
     fig, credit, is_photo = figure_html(mdir, figdir, s, b, probs, where)
     comp = composition(s, b, is_photo, bool(fig))
@@ -986,14 +1043,20 @@ def compile_deck(script, build, mdir, figdir, version, approved):
         elif body:
             inline.append(body)
     codes = [(s.get("opens") or "").strip() for s in screens if s["kind"] == "task-slide"]
-    chips = ["%s min" % script.get("minutes_allocated")] if script.get("minutes_allocated") else []
-    chips.append("%d teaching screens" % teach)
-    chips += ["Self-check %s" % c if c.startswith("SC") else "Module check MC" if c == "MC" else
-              "Final assessment" if c == "FA" else "Task %s" % c for c in codes if c]
+    lang = script.get("course_language") or "English"
+    lc = lang_code(lang)                                # L19: the landing card and the engine's controls in the course language
+    w = LANDING.get(lc) or LANDING["en"]
+    if lc not in LANDING:                               # reported, never a silent fall-back
+        probs.append("the deck: the course is in %s - the deck's own words (Start, Next, Back ...) are not in the factory in "
+                     "that language, so they were written in English (compile_module.py LANDING, gb_deck.js)" % lang)
+    chips = [w["min"].format(n=script.get("minutes_allocated"))] if script.get("minutes_allocated") else []
+    chips.append(w["screens"].format(n=teach))
+    chips += [w["sc"].format(c=c) if c.startswith("SC") else w["mc"] if c == "MC" else
+              w["fa"] if c == "FA" else w["task"].format(c=c) for c in codes if c]
     stamp = ("GENERATED by course-factory %s compile_module.py from working_claude/script/%s.json (%s) and %s.build.json.\n"
              "     Do not edit this file: change the script (content_script.py propose) or the build sheet, and compile again."
              % (version, m, ("approved " + script.get("approved_hash", "")) if approved else "DRAFT - NOT APPROVED", m))
-    head = ['<!DOCTYPE html>', '<html lang="%s">' % a((script.get("course_language") or "English")[:2].lower()), "<head>",
+    head = ['<!DOCTYPE html>', '<html lang="%s">' % a(lc or lang[:2].lower()), "<head>",
             "<!-- %s -->" % stamp, '<meta charset="utf-8">',
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
             "<title>%s — %s</title>" % (m, e(title))]
@@ -1007,7 +1070,7 @@ def compile_deck(script, build, mdir, figdir, version, approved):
                '    <div class="brand-chip"><img src="../assets/novikontas_logo.svg" alt="Novikontas Academy"></div>']
     if rule:
         landing.append('    <div class="landing-rule">%s</div>' % e(rule))
-    landing += ['    <div class="landing-mod">%s · Module %s</div>' % (m, e(str(script.get("module")))),
+    landing += ['    <div class="landing-mod">%s · %s</div>' % (m, e(w["module"].format(n=script.get("module")))),
                 '    <h1 class="landing-title">%s</h1>' % e(title),
                 '    <div class="landing-meta">%s</div>' % "".join('<span class="chip">%s</span>' % e(c) for c in chips),
                 '    <button id="startBtn" type="button">%s<span class="btn-label">Start</span></button>' % start_icon(),
@@ -1024,7 +1087,7 @@ def compile_deck(script, build, mdir, figdir, version, approved):
         body.append('<script src="../%s"></script>' % KIT_PARTS)
     body += ['<script src="../%s"></script>' % a(x) for x in build.get("scripts", [])]
     body += ["<script>",
-             'GBDeck.init({ text: { cue: "Instructor cue", start: "Start" }, hooks: window.GB_HOOKS || {} });',
+             'GBDeck.init({ hooks: window.GB_HOOKS || {} });',      # its words: the engine's, by <html lang>
              "</script>", "</body>", "</html>", ""]
     return "\n".join(head + body), probs, notes
 
@@ -1053,7 +1116,7 @@ def main(argv=None):
         if os.path.isfile(bp):
             print("Stopped - the build sheet is already there; it is changed with the Edit tool, never replaced:\n    %s" % bp)
             return 2
-        gate = cs.course_gate.problems(o.course, o.module)      # belt and braces (2.38.0): content_script.py stops first
+        gate = cs.course_gate.problems(o.course, o.module)      # belt and braces (2.42.0): content_script.py stops first
         if gate:
             print(cs.course_gate.stop_message(o.module, gate, "built"))
             return 2

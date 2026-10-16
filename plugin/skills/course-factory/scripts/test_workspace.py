@@ -168,7 +168,7 @@ def main():
                 {"id": "s01", "kind": "slide", "title": "Gas tankers", "text": "x", "notes": "- y", "minutes": 1,
                  "from_old": "1. Liquefied Gas tankers.pptx, slides 1-2 - the photographs become a 3D model"}]}))
         code, out = run("content_script.py", "render", master, "--module", "1")
-        check("2.38.0: the script is not started before the page is approved and the knowledge base decided",
+        check("2.42.0: the script is not started before the page is approved and the knowledge base decided",
               code == 2 and "cannot be started yet" in out and not os.path.isdir(os.path.join(w, "to_review", "M01_SCRIPT_REVIEW.html")), out)
         gate_fixture.open_gate(w)
         code, out = run("content_script.py", "render", master, "--module", "1")
