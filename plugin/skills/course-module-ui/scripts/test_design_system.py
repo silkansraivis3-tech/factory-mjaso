@@ -143,6 +143,22 @@ def main():
         check("install refuses a folder inside the Android project",
               code == 2 and not os.path.exists(os.path.join(a, "assets")), out)
 
+        a2 = os.path.join(tmp, "AndroidStudioProjects", "NOVIKONTASTraining", "new_module")
+        code, out = tool("install", a2)
+        check("... and a folder that does not exist yet inside it is not made either",
+              code == 2 and not os.path.exists(a2), out)
+
+        print("\n-- a new module has no folder yet: install makes it (finding 8)")
+        newm = os.path.join(tmp, "course", "modules", "m9")
+        code, out = tool("install", newm)
+        code2, st = states(newm)
+        check("install makes a module folder that does not exist yet, and sets it up",
+              code == 0 and "Made the module folder" in out and code2 == 0 and set(st.values()) == {"OK"}, out)
+        afile = os.path.join(tmp, "course", "modules", "afile")
+        io.open(afile, "w").write("x")
+        code, out = tool("install", afile)
+        check("a path that is a file is refused, not replaced", code == 2 and os.path.isfile(afile), out)
+
         print("\n-- the factory's own files pass its own strict look check (2.11.2)")
         fresh = os.path.join(tmp, "course", "modules", "m2")
         os.makedirs(fresh)

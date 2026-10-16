@@ -127,6 +127,29 @@ def main():
     hit = [kw for k, kw in cm2["findings"] if k == "b_plan_below" and kw["m"] == 1]
     check("an Apply Sub-ILO with only Understand tasks planned is found, with the task types that lift it",
           hit and bm.mech_label("panel_operate", "lv") in hit[0]["how"], cm2["findings"])
+    # finding 7: the programme-result row ("4") is the heading of its Sub-ILOs, not a Sub-ILO
+    pa = {"course": {"course_language": "English", "operator_language": "en"},
+          "modules": [{"module": 4, "title": "LNG", "sub_ilos": [
+              {"id": "4", "status": "original"},
+              {"id": "4.1", "status": "re-expressed", "text": "State the main properties of LNG", "why": "x"},
+              {"id": "4.2", "status": "re-expressed", "text": "List the causes of boil-off", "why": "x"}]}]}
+    pp = {"language": "English", "outcomes": {"4": "Apply the properties of the fuel in the work on board"}}
+    cm4 = bm.course_map(pp, pa)
+    check("a programme-result row with Sub-ILOs under it is not itself a Sub-ILO (course map)",
+          [s["id"] for s in cm4["modules"][0]["subs"]] == ["4.1", "4.2"] and cm4["modules"][0]["top"] == 1
+          and not [k for k, _ in cm4["findings"] if k == "b_plan_below"], cm4["modules"][0]["subs"])
+    sc4 = {"module": 4, "operator_language": "en", "screens": [
+        {"id": "m01", "kind": "module-check", "mechanic": "single_choice", "sub_ilo": "4"},
+        {"id": "m02", "kind": "module-check", "mechanic": "single_choice", "sub_ilo": "4"}]}
+    mm4 = bm.module_map(sc4, pa["modules"][0], pp, pa, mech=lambda q: q["mechanic"])
+    check("... nor in the module map: no row for it, and no Apply question asked for it",
+          [s["id"] for s in mm4["subs"]] == ["4.1", "4.2"] and not any(kw.get("s") == "4" for _, kw in mm4["findings"]), mm4["findings"])
+    check("... and a question linked to the heading serves the Sub-ILOs under it",
+          all(s["ok"] for s in mm4["subs"]) and "b_sub_unchecked" not in keys(mm4["findings"]), mm4["subs"])
+    pa2 = copy.deepcopy(pa)
+    pa2["modules"][0]["sub_ilos"] = [{"id": "4", "status": "original", "text": "Describe the fuel", "why": "x"}]
+    check("a lone row with nothing under it stays a Sub-ILO",
+          [s["id"] for s in bm.course_map(pp, pa2)["modules"][0]["subs"]] == ["4"])
     a3 = copy.deepcopy(arch)
     a3["modules"][0]["sub_ilos"].append({"id": "1.1.d", "status": "added", "text": "Understand the boil-off", "why": "x"})
     cm3 = bm.course_map(prog, a3)

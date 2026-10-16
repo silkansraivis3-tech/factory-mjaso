@@ -587,6 +587,13 @@ figure{margin:0}
 .slide.photo .photo-copy .lead{font-size:clamp(14px,2.1vmin,27px);line-height:1.45;color:var(--txt-d)}
 .slide.photo.split .photo-copy .lead{margin-top:min(1.4vmin,12px);padding-left:.85em;
   border-left:3px solid var(--amber)}
+/* an inset photograph on a photograph slide (IGF M04 s02, 2026-10-16): the .copy/.fill rules above do not reach
+   .photo-copy, so the inset ran at its natural size and spilled 74 px off the slide. Here it is a compact row under the
+   words, small enough that the centred column keeps inside the slide */
+.photo-copy .inset{display:flex;gap:min(1.6vmin,14px);align-items:center;margin:min(1.2vmin,10px) 0 0;width:100%}
+.photo-copy .inset img{width:34%;flex:0 0 34%;height:auto;max-height:min(16vh,150px);object-fit:cover;
+  border-radius:var(--r-m);box-shadow:var(--sh-d)}
+.photo-copy .inset figcaption{font-size:clamp(12.5px,1.4vmin,17px);line-height:1.35;color:var(--dim-d)}
 /* small drawings that belong with the words (two mini figures beside a photo): compact, side by side.
    Measured on the IGF pilot M02: at the module's own 140 px they pushed the photo's words 102 px off the screen */
 .aside{margin-top:min(1.6vmin,14px)}

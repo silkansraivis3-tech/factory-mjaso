@@ -99,6 +99,7 @@
     minSettleMs: 520,              /* hard floor; do not lower */
     startSettleMs: 400,            /* after pressing the start button */
     dispatchResize: true,          /* re-run resize-bound per-slide layout */
+    finishAnimations: true,        /* measure the end state: finish each slide's entrance animations first */
 
     /* --- refuse-to-run guards --- */
     /* A DEGENERACY guard, not a size preference. A hidden or collapsed pane lays out
@@ -518,6 +519,19 @@
       else { x.classList.remove(CONFIG.activeClass); }
     });
   }
+  /* Measure the FINAL state, not a frame of the entrance. A slide's rise-in / fade-in animation moves its content
+     (a recap rising 23 px reads as "23 px scroll"); in a pane where animations do not advance (hidden, preview) the
+     frame stays at the start, so the audit would report a defect that is gone a second later in the room. Finish
+     every finite animation and transition under the slide (CSS and Web Animations) before measuring; an endless one
+     (a spinner, a pulse) cannot finish and is left running. (IGF M04, 2026-10-16.) */
+  function finishAnimations(slide) {
+    if (!CONFIG.finishAnimations || !slide || typeof slide.getAnimations !== "function") { return 0; }
+    var n = 0;
+    slide.getAnimations({ subtree: true }).forEach(function (a) {
+      try { a.finish(); n++; } catch (e) { /* an infinite animation has no end */ }
+    });
+    return n;
+  }
   function revealFrags(slide) {
     qa(slide, CONFIG.fragSel).forEach(function (f) {
       f.classList.add(CONFIG.fragOnClass);
@@ -625,6 +639,7 @@
         revealFrags(slides[i]);
         fireResize();   /* re-run resize-bound per-slide layout hooks */
         return sleep(settleMs()).then(function () {
+          finishAnimations(slides[i]);
           rows.push(auditSlide(slides[i], i + 1));
           return step(i + 1);
         });
@@ -647,7 +662,7 @@
   var api = { all: all, slice: slice, spec: spec, auditSlide: auditSlide,
               CONFIG: CONFIG, settleMs: settleMs, sleep: sleep,
               guardViewport: guardViewport, pressStart: pressStart,
-              activate: activate, revealFrags: revealFrags,
+              activate: activate, revealFrags: revealFrags, finishAnimations: finishAnimations,
               fireResize: fireResize, label: label, boxIn: boxIn,
               KINDS: KINDS, verdict: verdict };
 

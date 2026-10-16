@@ -174,6 +174,17 @@ def dist(counts, lang):
 
 
 # ------------------------------------------------------------------ the ILOs of the course
+def parent_ids(am):
+    """The module's programme-result rows: a plain-numbered row ("4") whose Sub-ILOs follow it ("4.1", "4.a") - it is the
+    heading of those Sub-ILOs, not a Sub-ILO (IGF M04, 2026-10-16: it was counted as one and asked for an Apply question).
+    A row can also say "parent": true. A dotted id with children ("1.1" beside "1.1.c") keeps its own level."""
+    rows = [s for s in (am.get("sub_ilos") or []) if isinstance(s, dict)]
+    ids = [str(s.get("id", "")) for s in rows]
+    return {i for s, i in zip(rows, ids)
+            if i and ((s.get("parent") is True and any(o.startswith(i + ".") for o in ids))
+                      or ("." not in i and any(o.startswith(i + ".") for o in ids)))}
+
+
 def _sub_ilos(prog, arch, am):
     """[(id, text, lang, level-info)] - the Sub-ILO as it will be taught (re-expressed / added in the course language)."""
     codes = LABELS["course_language_codes"]
@@ -181,7 +192,10 @@ def _sub_ilos(prog, arch, am):
     pl = codes.get((prog or {}).get("language", ""), cl)
     outcomes = {str(k): v for k, v in ((prog or {}).get("outcomes") or {}).items()}
     out = []
+    parents = parent_ids(am)
     for s in am.get("sub_ilos", []) or []:
+        if str(s.get("id", "?")) in parents:
+            continue
         st = s.get("status", "original")
         own = st in ("re-expressed", "added") and s.get("text")
         text = s["text"] if own else (s.get("programme_text") or outcomes.get(str(s.get("id"))) or s.get("text") or "")
@@ -276,6 +290,7 @@ def module_map(script, arch_module=None, prog=None, arch=None, mech=None, where=
                                       "how": lift_text(APPLY, lang)}))
     subs = _sub_ilos(prog, arch or {}, arch_module or {}) if arch_module else []
     by_id = {s["id"]: s for s in subs}
+    parents = parent_ids(arch_module or {})
     for r in rows:
         s = by_id.get(r["sub_ilo"])
         if s and s["level"] and r["level"] < min(s["level"], 5):
@@ -286,7 +301,8 @@ def module_map(script, arch_module=None, prog=None, arch=None, mech=None, where=
     checks = [r for r in rows if r["kind"] == "module-check"]
     sub_rows = []
     for s in subs:
-        mine = [r for r in checks if r["sub_ilo"] == s["id"]] if linked else checks
+        # a question linked to a programme-result row ("4") serves every Sub-ILO under it ("4.1", "4.2")
+        mine = [r for r in checks if r["sub_ilo"] == s["id"] or r["sub_ilo"] in parents and s["id"].startswith(r["sub_ilo"] + ".")] if linked else checks
         best = max((r["level"] for r in mine), default=None)
         ok = bool(s["level"]) and best is not None and best >= min(s["level"], 5)
         sub_rows.append({"id": s["id"], "level": s["level"], "best": best, "ok": ok, "text": s["text"]})

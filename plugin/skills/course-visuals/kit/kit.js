@@ -768,7 +768,7 @@ KIT.define('ga', function (fig, part, g, p) {
     hull = 'M0 0 H' + w + ' Q' + (w * 0.97) + ' ' + (d * 0.62) + ' ' + (w * 0.87) + ' ' + d +
       ' H' + (w * 0.1) + ' L' + (w * 0.03) + ' ' + (d * 0.5) + ' Z';
     if (p.water !== false) {
-      h.el('rect', { x: -12, y: d * wl, width: w + 24, height: d * (1 - wl) + 10, 'class': 'kit-ga-sea', 'data-no-contain': '', 'data-may-overlap': '' }, g);   // a backdrop: the hull covers it
+      h.el('rect', { x: -12, y: d * wl, width: w + 24, height: d * (1 - wl) + 10, 'class': 'kit-ga-sea', 'data-no-contain': '', 'data-may-overlap': '', 'data-low-contrast': '' }, g);   // a backdrop: the hull covers it
     }
   }
   h.el('path', { d: hull, 'class': 'kit-ga-hull' }, g);
@@ -937,7 +937,7 @@ KIT.define('cylinder', function (fig, part, g, p) {
   course: 'IGF Basic', module: 'M01', made: '2026-10-15',
   why: 'M01 s06: a dual-fuel engine cylinder in gas mode (gas jet lit by a pilot oil spray), on a gas trip, and in fuel-oil mode; M06 and M13 need it too',
   value: '0 stopped · 1 gas mode (gas jet + pilot spray) · 1.5 gas supply stopped (pilot only) · 2 fuel-oil mode (oil spray)',
-  css: '.kit-cylinder-wall{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2}.kit-cylinder-piston{fill:var(--steel);stroke:var(--dim-d);stroke-width:1.5}.kit-cylinder-ring{stroke:var(--deep);stroke-width:2}.kit-cylinder-rod{stroke:var(--steel);stroke-width:10}.kit-cylinder-inj{fill:var(--deep);stroke:var(--dim-d);stroke-width:1.5}.kit-cylinder-gas line{stroke:var(--txt-d);stroke-width:3;stroke-linecap:round;stroke-dasharray:2 6}.kit-cylinder-pilot line,.kit-cylinder-oil line{stroke:var(--cold);stroke-width:2.5;stroke-dasharray:5 4}.kit-cylinder-fire{fill:var(--txt-d);stroke:var(--txt-d);stroke-width:2;opacity:0}.kit-cylinder-run .kit-cylinder-moving{animation:kit-cylinder-stroke .9s ease-in-out infinite alternate}.kit-cylinder-run .kit-cylinder-gas line,.kit-cylinder-run .kit-cylinder-pilot line,.kit-cylinder-run .kit-cylinder-oil line{animation:kit-flow .8s linear infinite}.kit-cylinder-run .kit-state{fill:var(--txt-d)}.kit-cylinder-trip .kit-state{fill:var(--warn-d)}@keyframes kit-cylinder-stroke{to{transform:translateY(34px)}}',
+  css: '.kit-cylinder-wall{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2}.kit-cylinder-piston{fill:var(--steel);stroke:var(--dim-d);stroke-width:1.5}.kit-cylinder-ring{stroke:var(--deep);stroke-width:2}.kit-cylinder-rod{stroke:var(--faint-d);stroke-width:10}.kit-cylinder-inj{fill:var(--deep);stroke:var(--dim-d);stroke-width:1.5}.kit-cylinder-gas line{stroke:var(--txt-d);stroke-width:3;stroke-linecap:round;stroke-dasharray:2 6}.kit-cylinder-pilot line,.kit-cylinder-oil line{stroke:var(--cold);stroke-width:2.5;stroke-dasharray:5 4}.kit-cylinder-fire{fill:var(--txt-d);stroke:var(--txt-d);stroke-width:2;opacity:0}.kit-cylinder-run .kit-cylinder-moving{animation:kit-cylinder-stroke .9s ease-in-out infinite alternate}.kit-cylinder-run .kit-cylinder-gas line,.kit-cylinder-run .kit-cylinder-pilot line,.kit-cylinder-run .kit-cylinder-oil line{animation:kit-flow .8s linear infinite}.kit-cylinder-run .kit-state{fill:var(--txt-d)}.kit-cylinder-trip .kit-state{fill:var(--warn-d)}@keyframes kit-cylinder-stroke{to{transform:translateY(34px)}}',
   example: { size: [420, 330], parts: [
     { id: 'C', type: 'cylinder', x: 140, y: 50, w: 140, h: 230 } ],
     steps: [ { title: 'Gas mode', play: [['C', 1, 900]] }, { title: 'Gas trip', play: [['C', 1.5, 900]] },

@@ -5,7 +5,8 @@
 
 WHY THIS EXISTS
 audit_drawing.js finds a part poking out of the hull, tank, room or box it sits in, a part cut off at the drawing's
-edge, a label crowding a line, and a drawing lost in empty space. Until 2.35.0 someone had to remember to run it in a
+edge, a label crowding a line, a drawing lost in empty space, and (2.44.0) a part of a figure-kit drawing that cannot
+be seen against the figure's dark panel (navy or steel text and lines, coloured for a light slide). Until 2.35.0 someone had to remember to run it in a
 browser - and a task page never was: the IGF pilot's Module 1 check shipped an engine room sticking out of the stern.
 compile_module.py now runs it on every page it writes - the deck slide by slide, a task page question by question,
 each drawing as the trainee sees it (moved into its question, its labels hidden) - in a hidden Chrome or Edge at
@@ -103,6 +104,10 @@ def check(pages, root=None):
                 probs.append("%s: the drawing check could not finish - %s" % (name, res.get("error") or res.get("aborted")))
                 continue
             for f in res.get("findings", []):
+                if f.get("check") == "contrast":     # a kit figure's part that cannot be seen on its dark panel (finding 13)
+                    probs.append("%s, %s: contrast - %s %s (L54: colour the part for the figure's dark panel, or mark one "
+                                 "meant to be quiet data-low-contrast)" % (name, f.get("where"), f.get("part"), f.get("detail")))
+                    continue
                 probs.append("%s, %s: %s - %s %s%s (L54: fix the drawing, or mark a crossing that is meant with "
                              "data-may-cross / data-no-contain / data-may-overlap)"
                              % (name, f.get("where"), f.get("check"), f.get("part"), f.get("detail"),

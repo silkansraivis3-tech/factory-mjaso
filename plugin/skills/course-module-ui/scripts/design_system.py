@@ -18,6 +18,8 @@ Every file listed in knowledge/design-system.json, into <module>/assets/. With
 --start-deck it also writes module.html from templates/gb_shell.html - but only when the
 module has no module.html yet; the deck is the module's own work and is never overwritten.
 
+A module folder that does not exist yet is made (a new module has none).
+
 WHAT IT REFUSES
   * to overwrite a file in assets/ that differs from the canonical one, unless --update is
     given - a module that already exists may be a delivered one, and repainting a delivered
@@ -107,10 +109,17 @@ def install(module, start_deck=False, update=False):
               "  course is built. Point this at the course's own folder instead - for example\n"
               "  C:\\courses\\<course>\\modules\\m1 - and it will set the module up there." % module)
         return 2
-    if not os.path.isdir(module):
-        print("Stopped - that folder does not exist:\n    %s\n"
-              "  Check the spelling of the path, or make the module folder first." % module)
+    if os.path.exists(module) and not os.path.isdir(module):
+        print("Stopped - that is a file, not a folder:\n    %s" % module)
         return 2
+    if not os.path.isdir(module):
+        # a new module has no folder yet - make it (never inside the Android project: refused above)
+        try:
+            os.makedirs(module)
+        except OSError as err:
+            print("Stopped - the module folder could not be made:\n    %s\n  %s" % (module, err))
+            return 2
+        print("Made the module folder:\n    %s\n" % module)
 
     dest = os.path.join(module, spec["destination"])
     os.makedirs(dest, exist_ok=True)

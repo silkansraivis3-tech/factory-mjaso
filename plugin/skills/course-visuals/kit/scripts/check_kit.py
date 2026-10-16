@@ -52,9 +52,18 @@ def blocks(text):
     return [(m.group(1), m.group(2)) for m in BLOCK.finditer(text)]
 
 
+_STR = r"(?:'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"|`(?:\\.|[^`\\])*`)"
+STRCAT = _STR + r"(?:\s*\+\s*" + _STR + r")*"        # 'a' + 'b' + "c" - a string written in pieces
+
+
+def _unquote_cat(expr):
+    """the text of a 'a' + 'b' expression, the pieces joined"""
+    return "".join(m.group(0)[1:-1] for m in re.finditer(_STR, expr))
+
+
 def meta_field(block, key):
-    m = re.search(r"\b%s\s*:\s*(['\"])((?:\\.|(?!\1).)*)\1" % key, block, re.S)
-    return m.group(2) if m else None
+    m = re.search(r"\b%s\s*:\s*(%s)" % (key, STRCAT), block, re.S)
+    return _unquote_cat(m.group(1)) if m else None
 
 
 def strip_comments(js):
@@ -74,7 +83,7 @@ def check_part(name, block):
         probs.append("%s: name it in lower case with _ for what it is (drip_tray), not where it is used" % name)
     css = meta_field(block, "css") or ""
     body = strip_comments(block)
-    body_no_css = re.sub(r"\bcss\s*:\s*(['\"])(?:\\.|(?!\1).)*\1", "css:''", body, flags=re.S)
+    body_no_css = re.sub(r"\bcss\s*:\s*" + STRCAT, "css:''", body, flags=re.S)
     rules = [
         (r"#[0-9a-fA-F]{3,8}\b", "a colour written as #hex - use the kit's classes or var(--token)"),
         (r"\b(?:rgba?|hsla?)\(", "a colour written as rgb()/hsl() - use the kit's classes or var(--token)"),

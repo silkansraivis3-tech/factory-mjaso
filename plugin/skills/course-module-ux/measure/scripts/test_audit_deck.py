@@ -1,0 +1,66 @@
+# -*- coding: utf-8 -*-
+"""test_audit_deck - audit_deck.js measures a slide's END state, not a frame of its entrance animation (finding 5).
+
+    python test_audit_deck.py
+
+Opens measure/fixtures/deck_rise_in.html in headless Chrome or Edge: a recap whose content rises in from 23 px low, its
+animation paused (what a hidden / preview pane does). Pinned:
+  * with finishAnimations off the audit reports the 23 px "scroll" (the false finding this exists to remove);
+  * with it on (the default) the audit finishes the animation first and reports none;
+  * an endless animation on the slide does not stop the audit.
+Skips, and says so, when no Chrome or Edge is installed.
+"""
+from __future__ import annotations
+
+import json
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from html import unescape
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from test_audit_drawing import browser  # noqa: E402
+
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+FIX = Path(__file__).resolve().parent.parent / "fixtures" / "deck_rise_in.html"
+PASS, FAIL = [], []
+
+
+def check(name, ok, detail=""):
+    (PASS if ok else FAIL).append(name)
+    print(("  ok    " if ok else "  FAIL  ") + name + (("  -> " + str(detail)[:600]) if detail and not ok else ""))
+
+
+def run(exe, prof, query=""):
+    p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
+                        "--window-size=1280,800", "--virtual-time-budget=4000", "--dump-dom", FIX.as_uri() + query],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+    m = re.search(r'<pre id="out">(.*?)</pre>', p.stdout, re.S)
+    return json.loads(unescape(m.group(1))) if m and m.group(1).strip() else None
+
+
+def main():
+    exe = browser()
+    if not exe:
+        print("  skip  no Chrome or Edge found - audit_deck.js was not run")
+        return 0
+    prof = tempfile.mkdtemp(prefix="audit_deck_")
+    try:
+        kept = run(exe, prof, "?keep")
+        check("without finishing, the paused rise-in is measured as a 23 px scroll (the false finding)",
+              bool(kept) and kept.get("scroll") == 1, kept)
+        done = run(exe, prof)
+        check("the audit ran with an endless animation on the slide", done is not None, done)
+        check("finishing the entrance first: the recap is measured at rest, no scroll",
+              bool(done) and done.get("scroll") == 0 and done.get("verdict") == "VERDICT: PASS", done)
+    finally:
+        shutil.rmtree(prof, ignore_errors=True)
+    print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
+    return 1 if FAIL else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

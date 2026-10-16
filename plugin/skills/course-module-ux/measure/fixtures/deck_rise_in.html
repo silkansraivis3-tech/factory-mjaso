@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Fixture - a recap that rises in (audit_deck.js measures the end state)</title>
+<style>
+  html,body,p{margin:0;height:100%}
+  p{height:auto}
+  .slide{display:none;position:absolute;inset:0}
+  .slide.active{display:block}
+  .slide-body{position:absolute;inset:0;overflow:auto}
+  /* the recap's entrance: starts 23 px low and rises. Paused = a pane where animations do not advance. */
+  .rise{height:100%;animation:rise 30s linear both paused}
+  @keyframes rise{from{transform:translateY(23px);opacity:0}to{transform:none;opacity:1}}
+  /* an endless animation must not stop the audit */
+  .pulse{width:10px;height:10px;animation:pulse 1s infinite alternate paused}
+  @keyframes pulse{from{opacity:.4}to{opacity:1}}
+</style></head>
+<body>
+<main id="stage">
+  <section class="slide" id="s1"><div class="slide-body"><div class="rise"><p>What to take away</p><i class="pulse"></i></div></div></section>
+</main>
+<pre id="out"></pre>
+<script src="../scripts/audit_deck.js"></script>
+<script>
+  var off = location.search.indexOf("keep") >= 0;
+  if (off) { AuditDeck.CONFIG.finishAnimations = false; }
+  AuditDeck.all().then(function (res) {
+    document.getElementById("out").textContent = JSON.stringify({scroll: (res.totals || {}).scroll, verdict: res.verdict || "",
+      failing: res.failingSlides || []});
+  });
+</script>
+</body></html>

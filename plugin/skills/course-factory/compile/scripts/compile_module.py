@@ -3,7 +3,7 @@
 """Build a module's presentation from its approved content script - the words are typed once (L29).
 
     compile_module.py <course folder> --module 1                 build modules\\module01\\presentation\\index.html
-    compile_module.py <course folder> --module 1 --init-build    write a starter build sheet, build nothing
+    compile_module.py <course folder> --module 1 --init-build    write a starter build sheet, make the module folder with the factory's style files, build nothing
     compile_module.py <course folder> --module 1 --draft         build from a script that is not approved yet (preview only)
     compile_module.py <course folder> --module 1 --force         overwrite a deck that was changed by hand
 
@@ -433,6 +433,34 @@ def photo_panel(meta, credit, rel, probs, where):
         probs.append("%s: the photograph %s has no \"description\" in its _photo_meta.json - full screen (L51, L56) it "
                      "would say nothing about what it shows" % (where, rel))
     return "".join(' %s="%s"' % (k, a(v)) for k, v in (("data-about", about), ("data-credit", credit)) if v)
+
+
+# a file-system path where a trainee reads a credit or a caption (IGF M04, 2026-10-16: a photograph's record carried the
+# folder it was copied from, and the credit showed it on the slide - every automatic probe was green)
+PATH_IN_TEXT = re.compile(
+    r"(?<![A-Za-z])[A-Za-z]:[\\/]"                              # a drive letter: C:\ or D:/
+    r"|\\\\[\w.$-]+\\"                                          # a network path
+    r"|[\w.)-]\\[\w.(-]"                                        # a backslash path: Photos\x.jpg
+    r"|/(?:Users|home|mnt|tmp|var)/\w"                          # a user or system folder
+    r"|\bfile://|\bworking_claude\b|\bAppData\b"                 # the factory's own working folders
+    r"|(?:^|[\s\"'(])(?:\.\./|\./|assets/|img/)\S*\.(?:jpe?g|png|webp|gif|svg)\b", re.I)    # a relative picture path
+CREDIT_TEXT = re.compile(r'<div class="credit">(.*?)</div>|<figcaption\b[^>]*>(.*?)</figcaption>|\bdata-(?:credit|about)="([^"]*)"', re.S)
+
+
+def credit_path_problems(page, name):
+    """every credit, caption and full-screen record on a built page that shows a file-system path or a drive letter - a
+    build problem: the trainee must never read where a file lives on somebody's computer"""
+    probs, seen = [], set()
+    for m in CREDIT_TEXT.finditer(page):
+        raw = next(g for g in m.groups() if g is not None)
+        text = html.unescape(re.sub(r"<[^>]+>", "", raw)).strip()
+        hit = PATH_IN_TEXT.search(text)
+        if hit and text not in seen:
+            seen.add(text)
+            probs.append("%s: a credit or caption shows a file-system path (%r in \"%s\") - the trainee would read where the file "
+                         "lives on a computer. Fix the photograph's record in assets\\img\\_photo_meta.json (source, author, "
+                         "title, description) or the caption in the build sheet" % (name, hit.group(0).strip(), text[:90]))
+    return probs
 
 
 IMG_TAG = re.compile(r'<img\b(?![^>]*\bdata-(?:about|no-zoom)\b)[^>]*\bsrc="\.\./([^"]+)"[^>]*?(/?)>', re.I)
@@ -1092,6 +1120,21 @@ def compile_deck(script, build, mdir, figdir, version, approved):
     return "\n".join(head + body), probs, notes
 
 
+NEXT_STEPS = """
+Next:
+  1. check_script_match.py (the words), then the audit_*.js checks in the browser.
+  2. THE VISUAL REVIEW - REQUIRED (build-order step 16, compile\\GUIDE.md section 2f). Every probe can be green while
+     the picture is wrong. Give a subagent the built module and have it look at a screenshot of EVERY slide and EVERY
+     task screen at 1280 x 800 (never one screen of many), against this list, and return a short verdict with paths:
+       - every curve, line and label is visible (nothing navy-on-dark, nothing hidden behind a shape)
+       - every credit and caption is clean - no file path, no drive letter, no internal folder name
+       - every tap area sits on the thing it names; every drawn label is beside what it labels
+       - every answer type is answered once RIGHT and once WRONG, and the screen says which it was
+       - 'choose all' keeps every tapped option and scores a fully right answer as right
+       - nothing is cut off, covered, or sits under the Check bar until scrolled
+     A module is not handed over until the review is done and what it found is fixed."""
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("course")
@@ -1122,6 +1165,15 @@ def main(argv=None):
             return 2
         cs.save(bp, starter_build(script))
         print("Done - a starter build sheet:\n    %s\n  Next: put each slide's picture file in \"figure\", then compile." % bp)
+        # the module's folder does not exist for a new module: make it and put the factory's style files and engines
+        # in it, so the first compile does not stop (never inside the Android project - design_system.py refuses that)
+        mdir = o.module_dir or os.path.join(o.course, workspace.MODULES, "module%02d" % int(o.module))
+        if not os.path.isdir(os.path.join(mdir, "assets")):
+            sys.path.insert(0, os.path.join(SKILLS, "course-module-ui", "scripts"))
+            import design_system
+            print()
+            if design_system.install(mdir) != 0:
+                return 2
         return 0
     approved = script.get("status") == "approved" and script.get("approved_hash") == cs.content_hash(script)
     if not approved and not o.draft:
@@ -1155,6 +1207,7 @@ def main(argv=None):
         with io.open(out, "w", encoding="utf-8", newline="\n") as f:
             f.write(page)
         rec["index.html"] = sha(page)
+        probs += credit_path_problems(page, "presentation/index.html")
         n = sum(1 for s in script["screens"] if s["kind"] in cs.INSTRUCTOR)
         print("Built %s - %d screens from the %s script.\n    %s" % (cs.mid(o.module), n, "approved" if approved else "DRAFT", out))
     if o.only != "deck":
@@ -1163,6 +1216,7 @@ def main(argv=None):
         probs += tprobs
         for path, page in sorted(pages.items()):
             key = os.path.relpath(path, mdir).replace("\\", "/")
+            probs += credit_path_problems(page, key)
             if by_hand(path, key):
                 probs.append("%s was changed by hand, or was built before the compiler - it was not overwritten. Put the change "
                              "into the script or the build sheet, then compile again with --force" % key)
@@ -1199,7 +1253,7 @@ def main(argv=None):
         for x in probs:
             print("  - " + x)
         return 1
-    print("\nNext: check_script_match.py, then look at it in the browser (the audit_*.js checks).")
+    print(NEXT_STEPS)
     return 0
 
 

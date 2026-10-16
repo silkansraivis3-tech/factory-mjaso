@@ -56,6 +56,14 @@ for bad, why in [
 ]:
     probs = ck.check_part("drip_tray", ck.blocks(GOOD.replace(bad, why))[0][1])
     check("a part with %s is refused" % why, bool(probs), probs)
+CAT = GOOD.replace("css: '.kit-drip-tray-rim{stroke:var(--dim-d)}',",
+                   "css: '.kit-drip-tray-rim{stroke:var(--dim-d);' +\n"
+                   "       \"fill:var(--steel)}\" + '.kit-drip-tray-pool{fill:var(--water)}',")
+check("a css written as 'a' + 'b' is not read as drawing code (finding 1)",
+      ck.check_part("drip_tray", ck.blocks(CAT)[0][1]) == [], ck.check_part("drip_tray", ck.blocks(CAT)[0][1]))
+check("a concatenated css is still checked as css (a colour in a piece is refused)",
+      any("css writes a colour" in p for p in ck.check_part(
+          "drip_tray", ck.blocks(CAT.replace("var(--water)", "#fff"))[0][1])))
 check("a part named for its module is refused",
       bool(ck.check_part("M03_tray", ck.blocks(GOOD.replace("drip_tray", "M03_tray"))[0][1])))
 

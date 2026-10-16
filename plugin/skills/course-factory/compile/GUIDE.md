@@ -187,6 +187,30 @@ written down. No Chrome or Edge: the build says it did not check. `--no-drawing-
 `drawing_check.py <page.html> ...` checks any page by hand - a hand-built one too.
 - The screen's own words (Check, Next, Your score ...) are English for now; another course language is reported.
 
+## 2f · The visual review - required (2.44.0, build-order step 16)
+
+Every automatic probe was green on IGF Module 4 while a look at the screens still found invisible curves, a credit
+showing an internal file path, a broken "choose all" and tap areas off the things they name. The probes measure what
+someone thought to measure; only looking finds the rest. So **looking is a required step**, not a courtesy:
+
+- **Who:** a subagent (the main session never views the pictures; it gets a short verdict and file paths).
+- **What:** a screenshot of **every slide** of the deck and **every screen** of every task page and the module check, at
+  **1280 × 800**. Not a sample.
+- **Against this list:**
+  1. every curve, line and label is visible against what is behind it (a kit figure sits on a dark panel - nothing navy
+     or steel on it, nothing hidden under a shape);
+  2. every credit and caption is clean - no file path, no drive letter, no internal folder name;
+  3. every tap area sits on the thing it names; every drawn label is beside what it labels;
+  4. every answer type is answered **once right and once wrong**, and the screen says which it was ("choose all" keeps
+     every tapped option and scores a fully right answer as right);
+  5. nothing is cut off, covered, or sits under the Check bar until the page is scrolled.
+- **After:** fix what it found, build again, review the screens that changed. `compile_module.py` prints this under
+  **Next** after every clean build. A module is not handed over until it is done.
+- **Two backstops that are cheap and automatic** (they do not replace the review): the drawing check (§2e) now also
+  reports a part of a kit figure that cannot be seen on the figure's dark panel (`contrast`: a label under 4.5:1, a
+  shape or line under 3:1; the kit's own parts are exempt; `data-low-contrast` marks a part meant to be quiet), and a
+  credit, caption or full-screen record that shows a file-system path or a drive letter is a **build problem**.
+
 ## 3 · When the look is not enough
 
 If a slide needs something the shared style files cannot do, the answer is **never** a module style
