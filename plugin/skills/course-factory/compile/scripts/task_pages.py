@@ -76,6 +76,19 @@ ON_PICTURE = {"hotspot", "spot_the_hazard", "label_diagram"}
 # the ways of answering that are not answered ON a picture but may show one above their controls ("figure" in the build sheet)
 ABOVE = {"match", "categorise", "order", "cloze", "choose_and_justify", "scenario", "spot_the_error", "build_the_plan", "timeline"}
 DEFAULT_PASS = 70
+# 2.45.0 (IGF M01-M03): a drawing to tap that is narrower than this (width / height) takes the screen's height with the
+# explanation beside it (gb_answer.css data-pic="side"); a list of MANY rows or more to order, build or match has its
+# numbered places beside the cards (data-many) - eight rows needed a scroll to reach the cards at 1280 x 800
+SIDE_AR, MANY = 1.8, 6
+
+
+def many(n, how="1"):
+    return ' data-many="%s"' % how if n >= MANY else ""
+
+
+def ga_class(fig):
+    """the picture's frame; a figure-kit drawing is a dark screen there too (gb_answer.css .kitfig)"""
+    return "ga kitfig" if fig and fig.kind == "kit" else "ga"
 # the task screen's own words - the engine's are in gb_answer.js, overridden per language by GB_ANSWER_TEXT
 WORDS = {"en": {
     "back": "Back", "try_title": "Try your tablet first", "try_tap": "Tap here",
@@ -718,23 +731,75 @@ def kit_symbol(sid, n, states, start):
             '<script type="application/json" id="%s">%s</script>' % (sid_, sid_, json.dumps(spec, separators=(",", ":"))))
 
 
-def label_boxes(places, vb):
+# 2.45.0 - a label box is as wide as its words need. The 17 % box cut off "Tank connection space" once the tick
+# appeared, and IGF M01 and M03 placed their boxes by hand. A card can be dropped in any box, so every box of a drawing
+# is as wide as its longest label needs, in at most two lines of 16 px (gb_answer.css .lbox .chip).
+NARROW, WIDE = set("ijlt.,:;'!|()[]f ·-"), set("mwMW@%")
+CORNER_PX = 60.0                                     # the ⤢ button: 48 px, 8 px from the drawing's top right (gb_zoom.css)
+
+
+def text_px(s, size=16.0):
+    """the width of words at 16 px semibold - measured for Raleway, the widest of the course fonts (Segoe UI, Roboto are
+    narrower), so a box sized by it is never too small"""
+    w = 0.0
+    for ch in s:
+        w += (0.30 if ch in NARROW else 0.86 if ch in WIDE else 0.70 if ch.isupper() else 0.62 if ch.isdigit() else 0.57) * size
+    return w
+
+
+def label_px(t):
+    """px a label's box needs: the words in one or two lines, the box's and the card's borders and padding, and the
+    tick (or the arrow of a card moved to its place) the engine adds after Check"""
+    words = t.split()
+    lines = [text_px(t)] + [max(text_px(" ".join(words[:k])), text_px(" ".join(words[k:]))) for k in range(1, len(words))]
+    return min(lines) * 1.06 + 46.0
+
+
+def label_boxes(places, vb, probs=None, where=""):
     """where the empty label boxes go when the build sheet does not say: in the band above the drawing for what is in
-    its upper half, in the band below for the rest, in order across - the same order as what they point at"""
-    top = sorted([p for p in places if p["box"][1] + p["box"][3] / 2 < 50], key=lambda p: p["box"][0] + p["box"][2] / 2)
-    bot = sorted([p for p in places if p not in top], key=lambda p: p["box"][0] + p["box"][2] / 2)
-    hp = vb[3] * ppu(vb)                                  # the drawing's height in px at 1280 x 800
+    its upper half, in the band below for the rest, in order across - the same order as what they point at. Every box
+    is as wide as the longest label needs (label_px); a row that cannot hold its boxes passes the one nearest the
+    middle to the other row, and what still does not fit is reported, never cut off"""
+    top = [p for p in places if p["box"][1] + p["box"][3] / 2 < 50]
+    bot = [p for p in places if p not in top]
+    hp, wp = vb[3] * ppu(vb), vb[2] * ppu(vb)              # the drawing's height and width in px at 1280 x 800
+    w = min(max(max(label_px(p["t"]) for p in places), BOX_PX * 2) * 100.0 / wp, 96.0)
+    corner = CORNER_PX * 100.0 / wp                        # the top row keeps clear of the ⤢ button (gb_zoom, top right)
+    fit = {id(top): int((98.0 - corner + 1.0) // (w + 1.0)), id(bot): int((98.0 + 1.0) // (w + 1.0))}   # boxes a row holds
+    mid = lambda p: abs(p["box"][1] + p["box"][3] / 2 - 50)
+    for a_, b_ in ((top, bot), (bot, top)):
+        while len(a_) > fit[id(a_)] and len(b_) < fit[id(b_)]:
+            x = min(a_, key=mid)
+            a_.remove(x)
+            b_.append(x)
+    if (len(top) > fit[id(top)] or len(bot) > fit[id(bot)]) and probs is not None:
+        probs.append("%s: %d label boxes as wide as their words need (%.0f %% of the drawing) do not fit in its two label rows - "
+                     "shorten the longest labels in the script, or place the boxes in the build sheet (\"labels\": {\"...\": "
+                     "{\"box\": [left, top, width]}})" % (where, len(places), w))
     gap = (BAND_PX - BOX_PX) / 2
     for row, y in ((top, round(100 * gap / hp, 2)), (bot, round(100 * (hp - gap - BOX_PX) / hp, 2))):
-        n = len(row)
-        w = min(17.0, 96.0 / max(n, 1) - 1.5)
+        row.sort(key=lambda p: p["box"][0] + p["box"][2] / 2)
+        lefts = [p["box"][0] + p["box"][2] / 2 - w / 2 for p in row]
+        for i in range(len(row)):                          # never over the one before ...
+            lefts[i] = max(lefts[i], 1.0, lefts[i - 1] + w + 1.0 if i else 1.0)
+        limit = 99.0 - w - (corner if row is top else 0.0)
+        for i in reversed(range(len(row))):                # ... nor past the right edge (nor under the ⤢)
+            lefts[i] = min(lefts[i], limit)
+            limit = lefts[i] - 1.0 - w
         for i, p in enumerate(row):
-            cx = p["box"][0] + p["box"][2] / 2
-            left = min(max(cx - w / 2, 1.0), 99.0 - w)
-            if i and left < row[i - 1]["at"][0] + row[i - 1]["at"][2] + 1.0:
-                left = row[i - 1]["at"][0] + row[i - 1]["at"][2] + 1.0
-            p["at"] = [round(left, 2), y, round(w, 2)]
+            p["at"] = [round(max(lefts[i], 0.0), 2), y, round(w, 2)]
     return places
+
+
+def label_width_problems(places, vb, where):
+    """a box placed by hand in the build sheet that is narrower than the longest label needs - a card would be cut off.
+    label_px is measured for the widest font, so a hand box within 5 % of it still fits (IGF M01-M03, measured)"""
+    if not vb:
+        return []
+    need = max(label_px(p["t"]) for p in places) * 100.0 / (vb[2] * ppu(vb))
+    return ["%s: the label box of \"%s\" in the build sheet is %.1f %% wide - the longest label needs %.1f %%; leave \"box\" out "
+            "and the compiler places and sizes it" % (where, p["t"], p["at"][2], need)
+            for p in places if p.get("hand") and p["at"][2] < 0.95 * need]
 
 
 def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
@@ -773,6 +838,8 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
             holder.append(fig.html(True))
         if fig:
             figs["_kit"] = figs.get("_kit") or fig.kind == "kit"
+            if fig.vb and fig.vb[2] / fig.vb[3] < SIDE_AR:      # not a wide drawing: the screen's height, the explanation beside it
+                extra += ' data-pic="side"'
         for t in items:
             box, pid = area(fig, t, b, where, probs) if fig else (None, None)
             if box is None:
@@ -781,7 +848,8 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
                           'data-script-field="answer" data-key="%s"><span class="vh">%s</span></button>'
                           % (box[0], box[1], box[2], box[3], ' data-part="%s"' % a(pid) if fig.kind == "kit" else "",
                              cs.gb_key(sid, t, 1 if t in right else 0), e(t)))
-        out.append('    <div class="stage"><div class="ga" data-fig="%s"%s>' % (a(fig.name if fig else ""), fig.ar() if fig else ""))
+        out.append('    <div class="stage"><div class="%s" data-fig="%s" data-zoom="button"%s>'
+                   % (ga_class(fig), a(fig.name if fig else ""), fig.ar() if fig else ""))
         out += holder
         out.append("    </div></div>")
     elif m == "label_diagram":
@@ -795,11 +863,13 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
                             where, probs) if fig else (None, None)
             if box is None:
                 continue
-            places.append({"t": t, "id": eid, "box": box, "at": given.get("box")})
+            places.append({"t": t, "id": eid, "box": box, "at": given.get("box"), "hand": bool(given.get("box"))})
         auto = [p for p in places if not p["at"]]
-        if auto:
-            label_boxes(auto, vb)
-        out.append('    <div class="stage"><div class="ga lab" data-fig="%s"%s>' % (a(fig.name if fig else ""), fig.ar() if fig else ""))
+        if auto and vb:
+            label_boxes(auto, vb, probs, where)
+        probs += label_width_problems(places, vb, where)
+        out.append('    <div class="stage"><div class="%s lab" data-fig="%s" data-zoom="button"%s>'
+                   % (ga_class(fig), a(fig.name if fig else ""), fig.ar() if fig else ""))
         if fig and fig.name not in figs:
             figs[fig.name] = True
             out.append(fig.html(True))
@@ -824,6 +894,7 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         out.append("    </div>")
     elif m == "match":
         pairs = [[x.strip() for x in ln.split("=", 1)] for ln in cs.lines_of(q.get("answer")) if "=" in ln]
+        extra = many(len(pairs))
         out.append('    <div class="rows">')
         for left, _ in pairs:
             out.append('      <div class="row"><div class="name" data-script-field="answer">%s</div>'
@@ -847,6 +918,7 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         out.append("    </div>")
     elif m == "order":
         items, _ = cs.answer_items(q)
+        extra = many(len(items))
         out.append('    <div class="rows order">')
         for i in range(1, len(items) + 1):
             out.append('      <div class="row"><div class="name">%d</div><div class="zone slot" data-cap="1" data-val="%d"></div></div>' % (i, i))
@@ -931,7 +1003,7 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
     elif m == "build_the_plan":                         # numbered slots for the cards that belong; the rest stay out
         ls = cs.lines_of(q.get("answer"))
         good = [cs.unstar(x) for x in ls if cs.starred(x)]
-        extra = ' data-need="slots"'
+        extra = ' data-need="slots"' + many(max(len(good), MANY if len(ls) >= 9 else 0))
         out.append('    <p class="opts-say">%s</p>' % e(w["plan_say"]))
         out += slots(len(good))
         out.append('    <div class="tray">')
@@ -939,7 +1011,8 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         out.append("    </div>")
     elif m == "timeline":                               # part 1 the order, part 2 the moment it should have stopped
         ls = cs.lines_of(q.get("answer"))
-        out.append('    <div class="part">')
+        extra = many(len(ls), "part")
+        out.append('    <div class="part%s">' % (" lay" if extra else ""))
         out.append('      <p class="phead">%s</p>' % e(w["timeline_order"]))
         out += ["  " + x for x in slots(len(ls))]
         out.append('      <div class="tray">')
@@ -1064,6 +1137,16 @@ def result_screen(w):
         "  </section>"])
 
 
+def pass_mark_of(script, build, probs=None):
+    """the check's pass mark in %: the approved script's "pass_mark" (2.45.0 - the operator corrects it like any
+    other word of the script: content_script.py propose {"script_field": "pass_mark"}), else the build sheet's, else 70"""
+    s, b = script.get("pass_mark"), build.get("pass_mark")
+    if s and b and int(s) != int(b) and probs is not None and not any("pass mark" in x and "build sheet" in x for x in probs):
+        probs.append("the script's pass mark is %s %%, the build sheet still says %s %% - the script's is used; take "
+                     "\"pass_mark\" out of the build sheet" % (s, b))
+    return int(s or b or DEFAULT_PASS)
+
+
 def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, first_set, probs):
     m = cs.mid(script.get("module"))
     lang = (script.get("course_language") or "English")
@@ -1073,7 +1156,7 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
     if code == "MC":                                    # "Module check - Module 1" -> "Module 1 check"
         short = w["module_n_check"].format(n=script.get("module"))
     is_check = code in cm.CHECK_PAGES
-    pass_mark = int(build.get("pass_mark") or DEFAULT_PASS) if is_check else 0
+    pass_mark = pass_mark_of(script, build, probs) if is_check else 0
     sheet = build.get("screens") or {}
     try_tablet = (sheet.get(slide["id"]) or {}).get("try_tablet")
     if try_tablet is None:
@@ -1156,4 +1239,8 @@ def compile_tasks(script, build, mdir, figdir, version, approved):
             continue
         pages[page_path(mdir, slide, code)] = page_html(script, slide, code, qs, build, mdir, figdir, version, approved,
                                                        first_set, probs)
+    import answer_key                                   # 2.45.0 - the instructor's key, from the same approved script
+    key = answer_key.key_page(script, build, mdir, version, approved, probs)
+    if key:
+        pages[key[0]] = key[1]
     return pages, probs, left

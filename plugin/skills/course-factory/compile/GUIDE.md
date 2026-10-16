@@ -168,10 +168,22 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
   Team A" when the classroom says so (`gb-team-done`). Scope `member`: everyone answers. Any team size; a role
   never locks anyone out of the task.
 - **Label the drawing:** the compiler adds a band above and below the drawing for the empty label boxes, so no box
-  covers what is drawn, with a leader line to each place. Or place them yourself: `"labels": {"Fuel tank": {"at":
-  "sp-tank", "box": [left, top, width]}}`.
+  covers what is drawn, with a leader line to each place. Every box is as wide as the longest label needs, in two lines,
+  with room for the tick (2.45.0 - leave `"box"` out; IGF M01 and M03 no longer need theirs). Or place them yourself:
+  `"labels": {"Fuel tank": {"at": "sp-tank", "box": [left, top, width]}}` - a box too narrow for its words is reported.
 - **The page:** the course's first self-check opens with "try your tablet first" (`"try_tablet": false` on the task
-  slide's entry to leave it out); a check opens with its pass mark (`"pass_mark": 70` at the top of the build sheet).
+  slide's entry to leave it out); a check opens with its pass mark - the approved script's `"pass_mark"` (2.45.0,
+  corrected like any other word: `content_script.py propose` with `{"script_field": "pass_mark", "new": 80}`), else
+  `"pass_mark": 70` at the top of the build sheet; both, and different, is reported.
+- **The instructor's answer key** (2.45.0): `assessment\check_answer_key.html` is compiled with the task pages from the
+  same approved script - every question of every set in order, how it is answered, the right answer in the script's
+  words (the letters the tablet shows, the order, the gap's words, the dial's accepted values), the feedback, and how
+  the pages mark with the pass mark. Instructor-only by its name; `compile_course.py` lists it on START_HERE_EXTENDED.
+  No key is typed by hand any more - IGF M01-M03's were retired because they held answers corrected since.
+- **Layouts the engine picks by itself** (2.45.0): a drawing to tap that is not wide (width / height < 1.8) takes the
+  screen's height with the explanation beside it; a list of 6 or more to order, build, match or rebuild has its
+  numbered places beside the cards; a task slide in the deck shows the gesture its set mostly asks for (choose, tap,
+  drag, order, dial, find, gap) instead of one tablet icon.
 - **Before showing it:** `check_script_match.py --part trainee` and `check_course_package.py`. The drawings are
   checked by the build itself (§2e), question by question - a drawing shared with the deck is checked again here,
   without its labels and at task size.

@@ -4,7 +4,7 @@
 
     content_script.py render   <course> --module 1           review page + Word file for the operator
     content_script.py read     <course> --module 1 [--docx F] [--pdf F]   what the operator changed -> PENDING
-    content_script.py propose  <course> --module 1 --changes changes.json  a chat correction -> PENDING
+    content_script.py propose  <course> --module 1 --changes changes.json  a chat correction / a new or removed screen / a script field -> PENDING
     content_script.py apply    <course> --module 1 --confirmed           apply PENDING - only after the operator said yes
     content_script.py approve  <course> --module 1 --by "<name>"         the operator's "next"
     content_script.py status   <course> --module 1
@@ -67,6 +67,20 @@ answer becomes B". Only apply --confirmed changes the script, logs each change i
 and re-renders both files. Any change after approval puts the module back to draft; approve records
 who approved which version.
 
+WHAT A CHANGES FILE MAY HOLD (propose)  - a JSON list, applied in order on a working copy, so a later entry may
+target a screen an earlier one added:
+    {"field": "q04.feedback", "new": "..."}                 one field of an existing screen (as always)
+    {"add_screen": {"id": "q05", "kind": "self-check", ...}, "after": "s05"}   a whole new screen, placed
+                                                             "after" or "before" a screen id; neither = at the end
+    {"remove_screen": "q05"}                                 the screen goes
+    {"script_field": "sources", "new": [...]}                a top-level field: title, minutes_allocated, sources,
+                                                             pass_mark (whole number 1-100), operator_facts. Anything
+                                                             else (status, approved_*, module, docx_hash, screens)
+                                                             is refused, exit 2. Nothing is written when an entry is refused.
+Problems the result would have that the script does not have now (validate) are listed as notes, not blocking. apply replays every change
+the same way, refuses (exit 1) when the screens or a script field changed since the list was made, and logs one
+FEEDBACK_LOG.md row per change ("3 · M01 · q05", or "3 · M01 · script" for a script field).
+
 THE ILO MAP AND THE KNOWLEDGE BASE COME FIRST (owner, 2026-10-16 - 2.42.0)
 render (of a script not yet approved) and approve stop, exit 2, until the course has its ILO map
 (working_claude/ilo_map.json), the Stage 2 page is approved with it, and the knowledge-base decision is
@@ -82,6 +96,7 @@ without it, read says so and asks for the comments in Word or in the chat instea
 from __future__ import annotations
 
 import argparse
+import copy
 import difflib
 import hashlib
 import html
@@ -305,6 +320,8 @@ def set_field(screen, f, value):
         opts[i] = value
     elif f == "visual_kind":
         screen[f] = parse_kind(value)
+    elif f == "minutes" and isinstance(value, (int, float)) and not isinstance(value, bool):
+        screen[f] = value
     elif f == "minutes":
         try:
             screen[f] = float(value) if "." in value else int(value)
@@ -1643,9 +1660,33 @@ def changed_words(old, new):
     return "; ".join(parts) or "only line breaks or spacing change"
 
 
+SCREEN_WORDS = {"slide": "slide", "task-slide": "task slide", "activity": "activity slide", "self-check": "self-check question",
+                "module-check": "module check question", "final": "final assessment question"}
+SCRIPT_FIELD_WORDS = {"minutes_allocated": "minutes allocated", "pass_mark": "pass mark", "operator_facts": "operator facts"}
+SCRIPT_FIELDS = ("title", "minutes_allocated", "sources", "pass_mark", "operator_facts")   # the top-level fields a change may touch
+NEW_PROBLEMS = "after these changes the script would have: "
+
+
+def screen_label(s):
+    """what a screen is called in a list: its question, else its title"""
+    return s.get("question") or s.get("title") or s.get("id") or ""
+
+
 def describe(script, ch):
+    op = ch.get("op")
+    if op == "add":
+        s = ch["new"]
+        return "a new screen %s (%s, \"%s\") is added %s" % (ch["screen"], SCREEN_WORDS.get(s.get("kind"), s.get("kind")),
+                                                              short(screen_label(s)), ch.get("where") or "at the end")
+    if op == "remove":
+        return "%s (%s) is removed: \"%s\"" % (ch.get("where") or ch["screen"], ch["screen"], short(screen_label(ch["old"])))
+    if op == "script":
+        name, old, new = SCRIPT_FIELD_WORDS.get(ch["field"], ch["field"]), as_text(ch["old"]), as_text(ch["new"])
+        if len(old) > 60 or len(new) > 60:
+            return "the script's %s: %s" % (name, changed_words(old, new))
+        return "the script's %s becomes \"%s\" (was \"%s\")" % (name, new, old)
     s = screen_of(script, ch["screen"])
-    where = "%s (%s)" % (place(script, ch["screen"]), ch["screen"]) if s else ch["screen"]
+    where = "%s (%s)" % (place(script, ch["screen"]), ch["screen"]) if s else (ch.get("where") or ch["screen"])
     f = ch["field"]
     if f == "correct":
         return "%s: the correct answer becomes %s (was %s)" % (where, ch["new"], ch["old"])
@@ -1724,18 +1765,138 @@ def cmd_read(course, module, docx, pdf):
     return write_pending(p, script, changes, notes, "word" if os.path.isfile(p["docx"]) else "pdf")
 
 
+class Stop(Exception):
+    """an entry of a changes file that cannot be understood - the message is shown after "Stopped - " and nothing is written"""
+
+
+def check_script_field(name, v):
+    """the value a top-level script field may take (2.45.0) - returned as it will be stored"""
+    if name not in SCRIPT_FIELDS:
+        raise Stop("the script field %r cannot be changed this way - only %s can; status and approval are the operator's \"next\", "
+                   "screens are added, removed or edited one at a time" % (name, ", ".join(SCRIPT_FIELDS)))
+    num = isinstance(v, (int, float)) and not isinstance(v, bool)
+    if name == "pass_mark":
+        if not num or float(v) != int(v) or not 1 <= int(v) <= 100:
+            raise Stop("pass_mark must be a whole number from 1 to 100, not %r" % (v,))
+        return int(v)
+    if name == "minutes_allocated":
+        if not num or v < 0:
+            raise Stop("minutes_allocated must be a number, not %r" % (v,))
+        return v
+    if name in ("sources", "operator_facts") and not isinstance(v, list):
+        raise Stop("%s must be a list, not %r" % (name, v))
+    if name == "title" and not (isinstance(v, str) and v.strip()):
+        raise Stop("title must be text, not %r" % (v,))
+    return v
+
+
+def index_of(script, sid):
+    for i, s in enumerate(script.get("screens", [])):
+        if s.get("id") == sid:
+            return i
+    return None
+
+
+def build_changes(script, entries):
+    """The list of understood changes (2.45.0). Entries apply in order on a working copy, so a later one may target a
+    screen an earlier one added, and every "old" value is the one that entry will really replace. Returns
+    (changes, the script as it would stand); raises Stop for an entry that cannot be understood."""
+    work, lang, changes = copy.deepcopy(script), script.get("operator_language", "en"), []
+    if not isinstance(entries, list):
+        raise Stop("the changes file must be a list of changes")
+    for n, c in enumerate(entries, 1):
+        if not isinstance(c, dict):
+            raise Stop("entry %d is not a change" % n)
+        if "add_screen" in c:
+            s = c["add_screen"]
+            if not isinstance(s, dict) or not isinstance(s.get("id"), str) or not s["id"].strip():
+                raise Stop("entry %d: a new screen needs an id" % n)
+            if s.get("kind") not in KINDS:
+                raise Stop("entry %d: the new screen %s has an unknown kind %r - use one of: %s" % (n, s["id"], s.get("kind"), ", ".join(KINDS)))
+            if index_of(work, s["id"]) is not None:
+                raise Stop("entry %d: there is already a screen %s - a new screen needs an id of its own" % (n, s["id"]))
+            if c.get("after") and c.get("before"):
+                raise Stop("entry %d: a new screen goes after or before another screen, not both" % n)
+            anchor = c.get("after") or c.get("before")
+            if anchor is not None and index_of(work, anchor) is None:
+                raise Stop("entry %d: there is no screen %r to put the new screen %s" % (n, anchor, "after" if c.get("after") else "before"))
+            ch = {"op": "add", "screen": s["id"], "new": copy.deepcopy(s),
+                  "where": ("%s %s (%s)" % ("after" if c.get("after") else "before", place(work, anchor), anchor)) if anchor else "at the end"}
+            if c.get("after"):
+                ch["after"] = anchor
+            elif c.get("before"):
+                ch["before"] = anchor
+        elif "remove_screen" in c:
+            sid = c["remove_screen"]
+            i = index_of(work, sid)
+            if i is None:
+                raise Stop("entry %d: there is no screen %r to remove" % (n, sid))
+            ch = {"op": "remove", "screen": sid, "old": copy.deepcopy(work["screens"][i]), "where": place(work, sid)}
+        elif "script_field" in c:
+            name = c["script_field"]
+            if "new" not in c:
+                raise Stop("entry %d: the script field %s has no \"new\" value" % (n, name))
+            ch = {"op": "script", "screen": "", "field": name, "old": copy.deepcopy(work.get(name)), "new": check_script_field(name, c["new"])}
+        else:
+            if "field" not in c or "new" not in c:
+                raise Stop("entry %d is not a change I know - it needs \"field\" and \"new\" (or add_screen, remove_screen, script_field)" % n)
+            sid, f = c["field"].split(".", 1) if "." in c["field"] and not c["field"].startswith("opt.") else (c.get("screen"), c["field"])
+            s = screen_of(work, sid)
+            if s is None:
+                raise Stop("there is no screen %r in this module's script." % sid)
+            ch = {"screen": sid, "field": f, "old": get_field(s, f, lang) or "", "new": c["new"]}
+            if screen_of(script, sid) is None:
+                ch["where"] = "the new screen %s" % sid
+        apply_change(work, ch)
+        changes.append(ch)
+    return changes, work
+
+
+def apply_change(script, ch):
+    """one understood change, onto a script - the same for propose's working copy and for apply. A script field whose
+    value is no longer the one the list saw raises Stop: content_hash covers the screens only."""
+    op = ch.get("op")
+    if op == "add":
+        screens = script.setdefault("screens", [])
+        at = len(screens)
+        if ch.get("after") or ch.get("before"):
+            i = index_of(script, ch.get("after") or ch.get("before"))
+            if i is None:
+                raise Stop("the screen %s, where the new screen goes, is gone" % (ch.get("after") or ch.get("before")))
+            at = i + 1 if ch.get("after") else i
+        screens.insert(at, copy.deepcopy(ch["new"]))
+    elif op == "remove":
+        i = index_of(script, ch["screen"])
+        if i is None:
+            raise Stop("the screen %s to remove is gone" % ch["screen"])
+        del script["screens"][i]
+    elif op == "script":
+        if script.get(ch["field"]) != ch["old"]:
+            raise Stop("the script's %s is not what it was when the list was made" % ch["field"])
+        script[ch["field"]] = copy.deepcopy(ch["new"])
+    else:
+        set_field(screen_of(script, ch["screen"]), ch["field"], ch["new"])
+
+
+def new_problems(before, after):
+    def probs(sc):
+        try:
+            return validate(sc)
+        except Exception as e:                       # a screen too broken for validate to read - say so instead of crashing
+            return ["could not be checked (%s: %s)" % (type(e).__name__, e)]
+    old = probs(before)
+    return [NEW_PROBLEMS + x for x in probs(after) if x not in old]
+
+
 def cmd_propose(course, module, changes_file):
     p = paths(course, module)
     script = load(p["script"])
-    changes = []
-    for c in load(changes_file):
-        sid, f = c["field"].split(".", 1) if "." in c["field"] and not c["field"].startswith("opt.") else (c.get("screen"), c["field"])
-        s = screen_of(script, sid)
-        if s is None:
-            print("Stopped - there is no screen %r in this module's script." % sid)
-            return 2
-        changes.append({"screen": sid, "field": f, "old": get_field(s, f, script.get("operator_language", "en")) or "", "new": c["new"]})
-    return write_pending(p, script, changes, [], "chat")
+    try:
+        changes, work = build_changes(script, load(changes_file))
+    except Stop as e:
+        print("Stopped - %s" % e)
+        return 2
+    return write_pending(p, script, changes, new_problems(script, work) if changes else [], "chat")
 
 
 def append_feedback(course, script, changes, source):
@@ -1748,8 +1909,10 @@ def append_feedback(course, script, changes, source):
     rows = []
     for ch in changes:
         n += 1
+        op = ch.get("op")
+        said = short(screen_label(ch["new"] if op == "add" else ch["old"]) if op in ("add", "remove") else ch["new"], 120)
         rows.append("| %d | %s | 3 · %s · %s | %s (%s) | %s | no |" % (
-            n, date.today().isoformat(), mid(script["module"]), ch["screen"], short(ch["new"], 120).replace("|", "/"), source,
+            n, date.today().isoformat(), mid(script["module"]), "script" if op == "script" else ch["screen"], said.replace("|", "/"), source,
             describe(script, ch).replace("|", "/")))
     with io.open(fb, "a", encoding="utf-8", newline="\n") as f:
         f.write(("\n" if not text.endswith("\n") else "") + "\n".join(rows) + "\n")
@@ -1775,11 +1938,16 @@ def cmd_apply(course, module, confirmed):
         print("Nothing to apply - there is no list of understood changes waiting.")
         return 2
     script, pend = load(p["script"]), load(p["pending"])
+    asked = [n for n in pend["notes"] if not n.startswith(NEW_PROBLEMS)]      # problems the result would have are notes too, not instructions
     if pend["base_hash"] != content_hash(script):
         print("Stopped - the script changed after the list was made. Read the corrections again, and show the new list.")
         return 1
-    for ch in pend["changes"]:
-        set_field(screen_of(script, ch["screen"]), ch["field"], ch["new"])
+    try:
+        for ch in pend["changes"]:
+            apply_change(script, ch)
+    except Stop as e:
+        print("Stopped - the script changed after the list was made (%s). Read the corrections again, and show the new list." % e)
+        return 1
     was_approved = script.get("status") == "approved"
     if pend["changes"]:
         script["status"] = "draft"
@@ -1793,7 +1961,7 @@ def cmd_apply(course, module, confirmed):
     print("Applied %d change(s), logged in FEEDBACK_LOG.md, and made a fresh review page and Word file.%s%s"
           % (len(pend["changes"]), " The module is back to draft: it needs the operator's \"next\" again." if was_approved and pend["changes"] else "",
              ("\n  %d comment(s) and note(s) were NOT applied - they are instructions, not edits. Propose the change for "
-              "each (content_script.py propose), show it, and apply it when the operator confirms." % len(pend["notes"])) if pend["notes"] else ""))
+              "each (content_script.py propose), show it, and apply it when the operator confirms." % len(asked)) if asked else ""))
     return 0
 
 

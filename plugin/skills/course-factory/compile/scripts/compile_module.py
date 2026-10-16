@@ -99,9 +99,35 @@ STAGE_MAX_WORDS = 45
 STATEMENT_MAX_WORDS = 22
 CHECK_PAGES = {"MC": "../assessment/check.html", "FA": "../assessment/final.html"}
 RECORD = "compiled.json"
-TABLET_ICON = ('<svg class="act-ico" viewBox="0 0 64 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" '
-               'stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="52" height="40" rx="5"/>'
-               '<path d="M16 33l9-10 7 7 6-5 10 8"/><circle cx="52" cy="24" r="1.6" fill="currentColor"/></svg>')
+# 2.45.0 - a task slide's icon says what the trainees will DO on the tablet: the way of answering most of its set's
+# questions use (IGF M01-M03: every task slide showed the same generic tablet). The tablet's outline stays, the gesture
+# inside it changes.
+ICON_FAMILY = {"single_choice": "choose", "multi_select": "choose", "choose_and_justify": "choose", "compare": "choose",
+               "read_instrument": "choose", "scenario": "choose", "hotspot": "tap", "spot_the_hazard": "tap",
+               "label_diagram": "drag", "match": "drag", "categorise": "drag", "order": "order", "build_the_plan": "order",
+               "timeline": "order", "set_value": "dial", "panel_operate": "dial", "find_the_fault": "find",
+               "spot_the_error": "find", "cloze": "cloze"}
+ICON_GLYPH = {
+    "choose": '<circle cx="19" cy="17" r="4"/><circle cx="19" cy="31" r="4" fill="currentColor"/><path d="M28 17h17M28 31h17"/>',
+    "tap": '<circle cx="32" cy="22" r="9"/><circle cx="32" cy="22" r="2.4" fill="currentColor"/><path d="M32 8v4M32 32v4M18 22h4M42 22h4"/>',
+    "drag": '<rect x="13" y="12" width="15" height="10" rx="2"/><rect x="36" y="26" width="15" height="10" rx="2" stroke-dasharray="3 3"/>'
+            '<path d="M24 28h7m-3-3 3 3-3 3"/>',
+    "order": '<path d="M24 14h20M24 24h20M24 34h20"/><circle cx="17" cy="14" r="1.8" fill="currentColor"/>'
+             '<circle cx="17" cy="24" r="1.8" fill="currentColor"/><circle cx="17" cy="34" r="1.8" fill="currentColor"/>',
+    "dial": '<path d="M14 30h36"/><circle cx="38" cy="30" r="5" fill="currentColor"/><path d="M14 17h36" stroke-dasharray="2 6"/>',
+    "find": '<circle cx="29" cy="21" r="8"/><path d="M35 27l9 9"/>',
+    "cloze": '<path d="M13 18h11M40 18h11M13 31h38"/><rect x="26" y="13" width="12" height="10" rx="2" stroke-dasharray="3 2"/>'}
+
+
+def task_icon(script, code):
+    """the task slide's icon - the way of answering most of the set's questions use (the first one on a tie)"""
+    qs = [s for s in script.get("screens", []) if s.get("kind") in cs.TASKS and
+          ((s.get("set") or "").strip() or {"self-check": "SC1", "module-check": "MC", "final": "FA"}[s["kind"]]) == code]
+    fams = [ICON_FAMILY.get(cs.mech(s), "choose") for s in qs] or ["choose"]
+    fam = max(fams, key=lambda f: (fams.count(f), -fams.index(f)))
+    return ('<svg class="act-ico" data-icon="%s" viewBox="0 0 64 48" aria-hidden="true" fill="none" stroke="currentColor" '
+            'stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="52" height="40" rx="5"/>%s</svg>'
+            % (fam, ICON_GLYPH[fam]))
 e = lambda s: html.escape(s or "", quote=False)
 a = lambda s: html.escape(s or "", quote=True)
 
@@ -883,7 +909,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         body = ['<p class="act-code" data-script-ignore>%s</p>' % e(code),
                 '<h2 class="act-title" data-script-field="title">%s</h2>' % e(title)]
         if kind == "task-slide":
-            body.append(TABLET_ICON)
+            body.append(task_icon(script, code))
         body.append('<div class="act-lines">')
         body += ['  <p class="act-inst" data-script-field="text">%s</p>' % e(x) for x in lines]
         body.append("</div>")

@@ -62,6 +62,7 @@ DRIVER = r"""
       else if (x[0] === 'look') { byText(s, '.ff-part', x[1]).parentNode.click(); }
       else if (x[0] === 'fault') { byText(s, '.ff-part', x[1]).parentNode.parentNode.querySelector('.ff-pick').click(); }
       else if (x[0] === 'dock') { out.steps.push(q + ':' + dock()); }
+      else if (x[0] === 'eval') { (new Function('out', 's', x[1]))(out, s); }
     });
   }
   /* one step at a time, so a message to the page (gb-team, gb-team-done) arrives between the taps, as in class */
@@ -136,15 +137,17 @@ def check(name, ok, detail=""):
     print(("  ok    " if ok else "  FAIL  ") + name + (("  -> " + str(detail)[:600]) if detail and not ok else ""))
 
 
-def drive(exe, page, plan, tmp, look=True):
+def drive(exe, page, plan, tmp, look=True, size=None):
+    """size=(w, h): the page's viewport exactly that tablet's size, as probe() opens it"""
     text = io.open(page, encoding="utf-8").read()
     text = re.sub(r"<head>", '<head><base href="%s/">' % Path(os.path.dirname(page)).as_uri(), text, count=1)
     i = text.rfind("</body>")
     text = text[:i] + "<script>%s</script>" % (DRIVER % (json.dumps(plan, ensure_ascii=False), "true" if look else "false")) + text[i:]
     w = os.path.join(tmp, "drive.html")
     io.open(w, "w", encoding="utf-8").write(text)
+    win = ["--hide-scrollbars", "--window-size=%d,%d" % (size[0], size[1] + 95)] if size else ["--window-size=1280,800"]
     p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--user-data-dir=" + os.path.join(tmp, "prof"),
-                        "--allow-file-access-from-files", "--window-size=1280,800", "--virtual-time-budget=15000", "--dump-dom", Path(w).as_uri()],
+                        "--allow-file-access-from-files"] + win + ["--virtual-time-budget=15000", "--dump-dom", Path(w).as_uri()],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
     m = re.search(r'<pre id="gbtest">(.*?)</pre>', p.stdout, re.S)
     return json.loads(html.unescape(m.group(1))) if m else {"errors": ["no result: " + p.stdout[-300:] + p.stderr[-300:]]}
@@ -328,15 +331,15 @@ PROBE = r"""
       hot.click(); q.afterTap = {viewer: visible(), selected: /\bsel\b/.test(hot.className)};
       if (corner) { corner.click(); q.afterCorner = {viewer: visible(), text: (document.querySelector('.gbz-cap') || {}).textContent || ''};
         var x = document.querySelector('.gbz-close'); if (x) { x.click(); } q.afterClose = visible(); }
-    } else if (s.querySelector('.lbox')) {
-      var ch = s.querySelectorAll('.chip'), zs = s.querySelectorAll('.lbox');
-      for (var i = 0; i < ch.length; i++) { press(ch[i]); zs[i].click(); }
-    } else { var o = s.querySelector('.opt'); if (o) { o.click(); } }
+    } else if (s.querySelector('.chip')) {               /* label boxes, slots, groups: every card somewhere */
+      var ch = s.querySelectorAll('.chip'), zs = s.querySelectorAll('.zone');
+      for (var i = 0; i < ch.length && zs.length; i++) { press(ch[i]); zs[Math.min(i, zs.length - 1)].click(); }
+    } else { [].forEach.call(s.querySelectorAll('.part.on .opt, .cg .opt, .opts .opt'), function (o, i, l) { if (!o.closest('.cg') || !o.closest('.cg').querySelector('.sel')) { o.click(); } }); }
   }
   var left = document.querySelectorAll('.scr[data-script]').length;
   function step() {
-    var intro = document.getElementById('introScr');
-    if (intro && /\bon\b/.test(intro.className)) { go.click(); return setTimeout(step, 200); }
+    var intro = document.getElementById('introScr') || document.getElementById('tryScr');
+    if (intro && /\bon\b/.test(intro.className)) { go.disabled = false; go.click(); return setTimeout(step, 200); }
     var s = document.querySelector('.scr[data-script].on');
     if (!s || !left) { return finish(); }
     left--;
@@ -418,6 +421,163 @@ def figures_part(exe, tmp):
     check("1280 x 800: the label chips are above the Check bar", not low, low)
 
 
+# ---------------------------------------------------------------- 2.45.0: what rebuilding IGF M01-M03 found in the engine
+PREP = ('<svg viewBox="0 0 640 400" role="img"><rect x="20" y="20" width="600" height="360" fill="#fff" stroke="#000"/>'
+        '<g id="hs-top" data-name="Under the deckhead"><rect class="hit" x="40" y="30" width="560" height="50"/></g>'
+        '<g id="hs-vent" data-name="Ventilation outlet"><rect class="hit" x="30" y="150" width="60" height="70"/></g>'
+        '<g id="hs-door" data-name="Near the floor by the door"><rect class="hit" x="500" y="300" width="100" height="60"/></g></svg>')
+PIPE = [("Ventilate the space", 1), ("Isolate the line", 2), ("Drain the liquid", 3), ("Purge with nitrogen", 4),
+        ("Measure the atmosphere", 5), ("Issue the permit", 6), ("Open the flange", 7), ("Make the repair", 8)]
+FIXES = [
+    {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the room", "text": "Self-check on your tablet now.", "minutes": 4},
+    {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap every place where a fixed gas detector belongs.",
+     "visual": "the room", "answer": "Under the deckhead*\nVentilation outlet*\nNear the floor by the door", "feedback": "Methane rises."},
+    {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "multi_select", "question": "Which are fuels under the IGF Code?",
+     "options": ["LNG", "Coal", "CNG"], "correct": "A, C", "feedback": "Natural gas."},
+    {"id": "q03", "kind": "self-check", "set": "SC1", "mechanic": "scenario", "question": "A leak in the fuel preparation room.",
+     "answer": "The detector alarms at 20 % LEL => Find the leak* | Silence it | Carry on\n"
+               "It reaches 40 % LEL => Leave the room* | Stay and look | Open the door wide\n"
+               "The gas is shut off => Report to the bridge* | Restart the pump | Go home", "feedback": "Find, leave, report."},
+    {"id": "q04", "kind": "self-check", "set": "SC1", "mechanic": "order", "question": "Put the eight steps of opening a gas line in order.",
+     "answer": "\n".join(t for t, _ in PIPE), "feedback": "Make it safe first."},
+    {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Module check - Module 1",
+     "text": "Module check on your tablet now.\nThree questions.\nYou see PASSED or NOT PASSED.", "minutes": 5},
+    {"id": "m01", "kind": "module-check", "set": "MC", "mechanic": "label_diagram", "question": "Drag each label to its place.",
+     "visual": "the GA", "answer": "Fuel tank\nTank connection space\nVent mast", "feedback": "These are the new spaces."},
+    {"id": "m02", "kind": "module-check", "set": "MC", "mechanic": "panel_operate", "question": "Shut the bunkering down.",
+     "visual": "the panel", "answer": "Bunker valve = closed", "feedback": "The valve closes."},
+    {"id": "m03", "kind": "module-check", "set": "MC", "mechanic": "timeline", "question": "Rebuild the incident.",
+     "answer": "\n".join(["The compressor tripped", "Pressure rose*", "The alarm was silenced", "Nobody reported it",
+                          "The relief valve lifted", "Gas reached the deck", "The crew mustered"]), "feedback": "Stop at the pressure."},
+]
+RECT = "function R(e){var b=e.getBoundingClientRect();return {l:b.left,t:b.top,r:b.right,b:b.bottom,w:b.width,h:b.height};}"
+BAR = "var bar = document.querySelector('.state').getBoundingClientRect().bottom;"
+SC_PLAN = [
+    ["q01", [["tap", ".hot", "Under the deckhead"], ["dock"], ["eval", RECT + BAR +
+        "var m = [].filter.call(s.querySelectorAll('.hot'), function (h) { return /missed/.test(h.className); });"
+        "var ga = s.querySelector('.ga'), why = s.querySelector('.why'), z = ga.querySelector('.gbz-corner');"
+        "out.q01 = {side: s.getAttribute('data-pic'), missed: m.map(function (h) { return h.textContent + '|' + h.className; }),"
+        " ga: R(ga), why: R(why), corner: z ? R(z) : null, vh: innerHeight};"]]],
+    ["q02", [["tap", ".opt", "LNG"], ["dock"], ["eval",
+        "var c = [].filter.call(s.querySelectorAll('.opt'), function (o) { return o.textContent.trim() === 'CNG'; })[0];"
+        "out.q02 = {cls: c.className, before: getComputedStyle(c, '::before').content, tag: c.getAttribute('data-miss'),"
+        " vd: s.querySelector('.vd').textContent};"]]],
+    # a step taller than the screen, and a long result list - as on a 1024 x 768 tablet with long words
+    ["eval", "var st = document.createElement('style'); st.textContent = '.sit{min-height:560px} .res li{min-height:160px}';"
+             "document.head.appendChild(st);"],
+    ["q03", [["eval", "var o = [].filter.call(s.querySelectorAll('.part')[0].querySelectorAll('.opt'), function (x) {"
+                      " return x.textContent.trim() === 'Find the leak'; })[0]; out.l1 = getComputedStyle(o, '::before').content;"],
+             ["tap", ".opt", "Find the leak"], ["dock"], ["dock"], ["eval", RECT + BAR +
+        "var p = s.querySelectorAll('.part'), o = [].filter.call(p[0].querySelectorAll('.opt'), function (x) { return x.textContent.trim() === 'Find the leak'; })[0];"
+        "out.q03 = {bar: bar, head: R(p[1].querySelector('.phead')), vh: innerHeight, l1: getComputedStyle(o, '::before').content, shown: o.getAttribute('data-l')};"],
+             ["tap", ".opt", "Leave the room"], ["dock"], ["dock"], ["tap", ".opt", "Report to the bridge"]]],
+    ["q04", [["eval", RECT + "var d = document.getElementById('dock').getBoundingClientRect().top;"
+        "out.q04 = {low: Math.max.apply(null, [].map.call(s.querySelectorAll('.chip,.slot'), function (c) { return R(c).b; })), dock: d,"
+        " doc: document.documentElement.scrollHeight, vh: innerHeight, many: s.getAttribute('data-many')};"]]
+     + [["card", t, n] for t, n in PIPE]],
+    ["eval", RECT + BAR + "out.res = {y: scrollY, ring: R(document.getElementById('resRing')), bar: bar};"],
+]
+MC_PLAN = [
+    ["eval", "document.getElementById('go').click();"],
+    ["m01", [["eval",                    # two labels swapped: after Check they are moved, with the arrow, into their own boxes
+        "function card(t) { return [].filter.call(s.querySelectorAll('.chip'), function (c) { return c.textContent.trim() === t; })[0]; }"
+        "function put(t, v) { var c = card(t), r = c.getBoundingClientRect(), o = {bubbles: true, button: 0, clientX: r.left + 5, clientY: r.top + 5};"
+        " c.dispatchEvent(new MouseEvent('mousedown', o)); document.dispatchEvent(new MouseEvent('mouseup', o));"
+        " s.querySelector('.lbox[data-val=\"' + v + '\"]').click(); }"
+        "put('Fuel tank', 'sp-tcs'); put('Tank connection space', 'sp-tank'); put('Vent mast', 'sp-vent');"],
+             ["dock"], ["eval", RECT +
+        "var z = s.querySelector('.gbz-corner'); out.corner = z ? R(z) : null;"
+        "out.m01 = [].map.call(s.querySelectorAll('.lbox'), function (b) { var c = b.querySelector('.chip');"
+        " return {box: R(b), cls: c.className, sw: c.scrollWidth, cw: c.clientWidth, sh: c.scrollHeight, ch: c.clientHeight, t: c.textContent.trim()}; });"]]],
+    ["m02", [["eval",
+        "function look(s) { var v = s.querySelector('svg.csym'), f = v.querySelector('.kit-vfill');"
+        " return {bg: getComputedStyle(v).backgroundColor, fill: getComputedStyle(f).fill, op: getComputedStyle(f).opacity}; }"
+        "[].filter.call(s.querySelectorAll('.opt'), function (o) { return o.textContent.trim() === 'open'; })[0].click(); out.open = look(s);"],
+             ["tap", ".opt", "closed"], ["eval", "var v = s.querySelector('svg.csym'), f = v.querySelector('.kit-vfill');"
+        "out.closed = {bg: getComputedStyle(v).backgroundColor, fill: getComputedStyle(f).fill, op: getComputedStyle(f).opacity};"]]],
+    ["m03", [["eval", RECT + "out.m03 = {low: Math.max.apply(null, [].map.call(s.querySelectorAll('.chip'), function (c) { return R(c).b; })),"
+        " dock: document.getElementById('dock').getBoundingClientRect().top, many: s.getAttribute('data-many')};"]]],
+]
+
+
+def lum(css):
+    """the luminance of an rgb() colour, 0 .. 255"""
+    v = [float(x) for x in re.findall(r"[\d.]+", css or "")[:3]] or [0, 0, 0]
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+
+
+def fixes_part(exe, tmp):
+    """2.45.0 - what rebuilding IGF M01-M03 as compiled pages found in the shared engine, each driven in the browser"""
+    print("\n-- 2.45.0: the engine fixes found on IGF M01-M03")
+    os.makedirs(os.path.join(tmp, "fx"))
+    c, md = tcm.new_course(os.path.join(tmp, "fx"), tcm.script(screens=FIXES), build=False)
+    io.open(os.path.join(md, "assets", "fig", "prep.svg"), "w", encoding="utf-8").write(PREP)
+    io.open(os.path.join(md, "assets", "fig", "ga.svg"), "w", encoding="utf-8").write(tcm.GA)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "t01": {"try_tablet": False}, "q01": {"figure": "assets/fig/prep.svg"}, "m01": {"figure": "assets/fig/ga.svg"}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    check("the fixture pages are built", code in (0, 1) and os.path.isfile(os.path.join(md, "tasks", "sc1_the_room.html")), out)
+    r = drive(exe, os.path.join(md, "tasks", "sc1_the_room.html"), SC_PLAN, tmp, look=False, size=(1280, 800))
+    check("no script error on the self-check", not r.get("errors"), r.get("errors"))
+    q = r.get("q01") or {}
+    ga, why, z = q.get("ga") or {}, q.get("why") or {}, q.get("corner") or {}
+    check("tap the place on a drawing that is not wide: it takes the screen's height, the explanation beside it - not half the screen empty",
+          q.get("side") == "side" and ga.get("h", 0) >= 0.62 * q.get("vh", 800) and why.get("l", 0) >= ga.get("r", 9e9) - 1, q)
+    check("... and its ⤢ button sits ON the drawing's corner, not out at the edge of the screen",
+          z and ga["l"] <= z["l"] and z["r"] <= ga["r"] + 1 and ga["t"] <= z["t"] and z["b"] <= ga["b"] + 1, q)
+    check("tap every place, one missed: the missed place is outlined green as missed, never ticked as chosen",
+          len(q.get("missed", [])) == 1 and "Ventilation outlet" in q["missed"][0] and " right" not in q["missed"][0], q.get("missed"))
+    q = r.get("q02") or {}
+    check("choose all that are right, one missed: it says \"Also right\", its box is not ticked, the verdict says what was missed",
+          "missed" in q.get("cls", "") and "right" not in q.get("cls", "").split() and q.get("tag") == "Also right"
+          and "✓" not in q.get("before", "") and q.get("vd") == "Not quite – what you missed is outlined in green.", q)
+    q = r.get("q03") or {}
+    check("a scenario's next step: its \"Step 2 of 3\" is below the top bar, not scrolled under it",
+          q.get("head") and q["head"]["t"] >= q["bar"] - 1 and q["head"]["b"] <= q["vh"], q)
+    check("after Check a folded step keeps the letter its choice was shown with - not re-lettered \"A\"",
+          r.get("l1") and q.get("l1") == r.get("l1") == '"%s"' % q.get("shown"),
+          {"before": r.get("l1"), "after": q})
+    q = r.get("q04") or {}
+    check("8 rows to put in order at 1280 x 800: the places beside the cards, every card on the screen without a scroll",
+          q.get("many") == "1" and q.get("low", 9e9) <= q.get("dock", 0) + 0.5 and q.get("doc", 9e9) <= q.get("vh", 0) + 1, q)
+    q = r.get("res") or {}
+    check("the result screen opens at the top: the score ring whole, under the top bar", q.get("y") == 0 and q.get("ring", {}).get("t", -1) >= q.get("bar", 0) - 1, q)
+    rep = r.get("report") or {}
+    check("graded as before: 2 of 4 (the two with a miss are wrong)", rep.get("ok") == 2 and rep.get("total") == 4, rep)
+
+    r = drive(exe, os.path.join(md, "assessment", "check.html"), MC_PLAN, tmp, look=False, size=(1280, 800))
+    check("no script error on the module check", not r.get("errors"), r.get("errors"))
+    boxes = r.get("m01") or []
+    cut = ["%s %s>%s / %s>%s" % (b["t"], b["sw"], b["cw"], b["sh"], b["ch"]) for b in boxes if b["sw"] > b["cw"] + 1 or b["sh"] > b["ch"] + 1]
+    check("label the drawing: \"Tank connection space\" and every label fits its box with the tick or the arrow - nothing cut off",
+          len(boxes) == 3 and not cut and sum("fixed" in b["cls"] for b in boxes) == 2, cut or boxes)
+    over = [(x["t"], y["t"]) for i, x in enumerate(boxes) for y in boxes[i + 1:]
+            if x["box"]["l"] < y["box"]["r"] and y["box"]["l"] < x["box"]["r"] and x["box"]["t"] < y["box"]["b"] and y["box"]["t"] < x["box"]["b"]]
+    check("... and no two label boxes overlap", not over, over)
+    z = r.get("corner") or {}
+    under = [b["t"] for b in boxes if z and b["box"]["l"] < z["r"] and z["l"] < b["box"]["r"] and b["box"]["t"] < z["b"] and z["t"] < b["box"]["b"]]
+    check("... and none lies under the drawing's ⤢ button (M03 q06: the arrow of a card was hidden under it)", z and not under, under or z)
+    key = drive(exe, os.path.join(md, "assessment", "check_answer_key.html"), [["eval", RECT +
+        "out.key = [].map.call(document.querySelectorAll('table'), function (t) { var r = t.rows;"
+        " return {th: R(r[0].cells[0]), td: R(r[1].cells[0])}; });"]], tmp, look=False, size=(1280, 800))
+    rows = key.get("key") or []
+    check("the answer key's tables: the head row sits on its first question, not pushed down over it (gb_page.css .scroll th)",
+          len(rows) == 2 and all(x["th"]["b"] <= x["td"]["t"] + 1 for x in rows), rows or key)
+    o, s = r.get("open") or {}, r.get("closed") or {}
+    check("operate the panel: the valve is drawn on the deck's dark screen, closed = filled and bright, open = hollow, as in the deck",
+          s.get("bg") == o.get("bg") == "rgb(12, 30, 58)" and float(s.get("op", 0)) > 0.9 and float(o.get("op", 1)) < 0.1
+          and lum(s.get("fill")) > lum(s.get("bg")) + 80, {"open": o, "closed": s})
+    q = r.get("m03") or {}
+    check("rebuild the incident with 7 events: the cards beside the places, all above the Check bar",
+          q.get("many") == "part" and q.get("low", 9e9) <= q.get("dock", 0) + 0.5, q)
+
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
+    dk = tcm.deck(md)
+    icons = re.findall(r'<svg class="act-ico" data-icon="(\w+)"', dk)
+    check("the deck's task slides show what the trainees will do: choose for SC1, drag for the module check - not one generic tablet",
+          icons == ["choose", "drag"], icons or out)
+
+
 def main():
     exe = drawing_check.find_browser()
     if not exe:
@@ -458,6 +618,7 @@ def main():
         check("a card that does not belong goes back to the bank; the one that belongs is put in its slot",
               "fixed" in look.get("cargo", "") and look.get("cargo", "").endswith("|tray") and look.get("permit", "").endswith("|3"), look)
         figures_part(exe, tmp)
+        fixes_part(exe, tmp)
         team_part(exe, tmp)
         language_part(exe, tmp)
         deck_language_part(exe, tmp)

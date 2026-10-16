@@ -557,6 +557,93 @@ def main():
               and st["s01"]["recap"] is True and st["q01"]["bloom"] == 3 and st["q01"]["options"] == ["Fully refrigerated", "Pressurised"],
               out + out2)
 
+        # 2.45.0: a chat correction may also add a screen, remove one, or change a top-level field of the script
+        print("\n-- 2.45.0: a new screen, a removed screen, a screen edited after it was added")
+        ca = new_course(tmp, "addrm")
+        pa, cha = cs.paths(ca, 1), os.path.join(tmp, "addrm_changes.json")
+        q_new = "Which tank type needs no secondary barrier at all?"
+        io.open(cha, "w", encoding="utf-8").write(json.dumps([
+            {"add_screen": {"id": "q04", "kind": "self-check", "set": "SC1", "mechanic": "single_choice", "question": q_new,
+                            "options": ["Type A", "Type B", "Type C"], "correct": "C", "feedback": "Type C."}, "after": "q03"},
+            {"field": "q04.feedback", "new": "Type C tanks are pressure vessels and need no secondary barrier."},
+            {"remove_screen": "m05"},
+            {"add_screen": {"id": "s05", "kind": "slide", "title": "A closer look at Moss tanks", "text": "Moss tanks are spheres.", "minutes": 2},
+             "before": "s04"}], ensure_ascii=False))
+        code, out = cs_run("propose", ca, "--module", "1", "--changes", cha)
+        ids0 = [x["id"] for x in cs.load(pa["script"])["screens"]]
+        check("an added and a removed screen are proposed - listed in words, nothing changed yet, the pending list written",
+              code == 0 and "nothing has been changed yet" in out and 'a new screen q04 (self-check question, "%s")' % q_new in out
+              and "is added after" in out and "(q03)" in out and "is removed" in out and "(m05)" in out and "A closer look at Moss tanks" in out
+              and os.path.isfile(pa["pending"]) and "q04" not in ids0 and "m05" in ids0, out)
+        check("... the edit of the screen added in the same list reads its old value from the working copy",
+              "the new screen q04, the feedback: \"C.\" becomes \"C tanks are pressure vessels" in out, out)
+        check("... and the problems the result would have are listed as notes (the minutes no longer add up)",
+              "after these changes the script would have: " in out and "minutes add up" in out, out)
+        code, out = cs_run("apply", ca, "--module", "1", "--confirmed")
+        sa = cs.load(pa["script"])
+        ids1 = [x["id"] for x in sa["screens"]]
+        fb = io.open(os.path.join(ca, "working_claude", "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        check("applied after the yes: the new screen sits after q03, the other before s04, m05 is gone, the later edit landed, the script is a draft",
+              code == 0 and ids1.index("q04") == ids1.index("q03") + 1 and ids1.index("s05") == ids1.index("s04") - 1 and "m05" not in ids1
+              and screen(sa, "q04")["feedback"].startswith("Type C tanks are pressure vessels") and sa["status"] == "draft"
+              and not os.path.isfile(pa["pending"]), out)
+        check("... and each is logged with its question or title in words - never a raw screen",
+              fb.count("| 3 · M01 · q04 |") == 2 and fb.count("| 3 · M01 · s05 |") == 1 and fb.count("| 3 · M01 · m05 |") == 1
+              and q_new in fb and "A closer look at Moss tanks" in fb and "Put these cargoes in order" in fb and "'id'" not in fb and "{" not in fb, fb[-900:])
+
+        print("\n-- 2.45.0: a top-level field of the script")
+        cf = new_course(tmp, "sfield")
+        pf, chf = cs.paths(cf, 1), os.path.join(tmp, "sfield_changes.json")
+        src_new = ["IGC Code 2016: 4.21-4.24", "IMO Model Course 1.04, section 2"]
+        io.open(chf, "w", encoding="utf-8").write(json.dumps([{"script_field": "sources", "new": src_new}, {"script_field": "pass_mark", "new": 80},
+                                                              {"script_field": "title", "new": "Gas tanker basics"}], ensure_ascii=False))
+        code, out = cs_run("propose", cf, "--module", "1", "--changes", chf)
+        s0 = cs.load(pf["script"])
+        check("script fields are proposed in words, nothing changed yet",
+              code == 0 and "nothing has been changed yet" in out and "the script's sources" in out and "the script's pass mark becomes \"80\"" in out
+              and "Gas tanker basics" in out and os.path.isfile(pf["pending"]) and "pass_mark" not in s0 and s0["title"] == "Gas tankers", out)
+        code, out = cs_run("apply", cf, "--module", "1", "--confirmed")
+        s1 = cs.load(pf["script"])
+        fb = io.open(os.path.join(cf, "working_claude", "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        check("sources, pass_mark and title are applied (a whole number, a list), logged as '3 · M01 · script', the screens untouched",
+              code == 0 and s1["sources"] == src_new and s1["pass_mark"] == 80 and s1["title"] == "Gas tanker basics"
+              and s1["screens"] == s0["screens"] and fb.count("| 3 · M01 · script |") == 3 and "IMO Model Course 1.04, section 2" in fb, out + fb[-600:])
+
+        print("\n-- 2.45.0: what is refused stops with exit 2 and writes no list")
+        base = {"id": "q07", "kind": "self-check", "question": "x?", "mechanic": "single_choice", "options": ["a", "b"], "correct": "A", "feedback": "f"}
+        refused = {
+            "a field the script keeps for itself (status)": [{"script_field": "status", "new": "approved"}],
+            "the screens as a field": [{"script_field": "screens", "new": []}],
+            "a screen id that is already used": [{"add_screen": dict(base, id="s01")}],
+            "a new screen with no id": [{"add_screen": {k: v for k, v in base.items() if k != "id"}}],
+            "a new screen of an unknown kind": [{"add_screen": dict(base, kind="video")}],
+            "an 'after' that names no screen": [{"add_screen": base, "after": "zz9"}],
+            "a 'before' that names no screen": [{"add_screen": base, "before": "zz9"}],
+            "a remove that names no screen": [{"remove_screen": "zz9"}],
+            "a remove of a screen added nowhere (it is removed twice)": [{"remove_screen": "m05"}, {"remove_screen": "m05"}],
+            "a pass mark that is not a whole number": [{"script_field": "pass_mark", "new": 82.5}],
+            "a pass mark over 100": [{"script_field": "pass_mark", "new": 101}],
+            "sources that are not a list": [{"script_field": "sources", "new": "IGC Code"}],
+            "minutes that are not a number": [{"script_field": "minutes_allocated", "new": "lots"}]}
+        for k, (what, entries) in enumerate(refused.items()):
+            cr = new_course(tmp, "refuse%d" % k)
+            io.open(chf, "w", encoding="utf-8").write(json.dumps(entries))
+            code, out = cs_run("propose", cr, "--module", "1", "--changes", chf)
+            check("refused: %s" % what, code == 2 and out.startswith("Stopped - ") and not os.path.isfile(cs.paths(cr, 1)["pending"]), out)
+
+        print("\n-- 2.45.0: a script field changed after the list was made")
+        cm = new_course(tmp, "stale")
+        pm = cs.paths(cm, 1)
+        io.open(chf, "w", encoding="utf-8").write(json.dumps([{"script_field": "sources", "new": ["IGC Code"]}]))
+        cs_run("propose", cm, "--module", "1", "--changes", chf)
+        sm = cs.load(pm["script"])
+        sm["sources"] = ["somebody else's edit"]
+        cs.save(pm["script"], sm)
+        code, out = cs_run("apply", cm, "--module", "1", "--confirmed")
+        check("apply stops when a script field is no longer what the list saw, and changes nothing",
+              code == 1 and "Stopped - the script changed after the list was made" in out
+              and cs.load(pm["script"])["sources"] == ["somebody else's edit"] and os.path.isfile(pm["pending"]), out)
+
         print("\n-- 2.16.1: the slide-text check still runs on every screen")
         dirty = copy.deepcopy(SCRIPT)
         screen(dirty, "s01")["title"] = "Why gas tankers are different - Revision 3"
