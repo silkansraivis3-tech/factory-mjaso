@@ -804,6 +804,25 @@ def attrs(d):
     return " ".join('%s="%s"' % (k, a(str(v))) for k, v in d.items() if v not in (None, ""))
 
 
+def recap_html(s, base, m, n, total, lines):
+    """L51 - the module's closing slide, "what to take away", in the one shared design (gb_compose.css 15): one box
+    per approved line, "Short title - one sentence"; the numbers are drawn by CSS, so the slide says exactly the
+    approved words. No picture, no layout choice - every module the same"""
+    d = {"class": "slide dark recap", "data-title": s.get("title"), "data-kind": "Summary",
+         "data-block": "%s · %d" % (m, n), "data-visual": "none"}
+    d.update(base)
+    items = []
+    for x in lines:
+        t, sep, rest = x.partition(" - ")
+        items.append('<li class="rc-item" data-script-field="text">'
+                     + ('<b class="rc-t">%s</b><span class="rc-sep"> - </span><span class="rc-d">%s</span>' % (e(t), e(rest))
+                        if sep else '<span class="rc-d">%s</span>' % e(x)) + "</li>")
+    return ('<section %s>\n  <div class="slide-kind"><b>Summary</b> · %s · %d / %d</div>\n'
+            '  <h2 data-script-field="title">%s</h2>\n  <div class="slide-body recap">\n    <ol class="rc-grid" data-n="%d">\n'
+            '      %s\n    </ol>\n    <p class="rc-next" data-script-ignore>Next: the module check</p>\n  </div>\n</section>'
+            % (attrs(d), m, n, total, e(s.get("title")), len(items), "\n      ".join(items)))
+
+
 def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, pool=None, taken=None):
     m = cs.mid(script.get("module"))
     sid, kind = s["id"], s["kind"]
@@ -842,6 +861,9 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         body.append("</div>")
         return ('<section %s>\n  <div class="slide-kind"><b>%s</b> · %s · %s</div>\n  <div class="slide-body activity">\n    %s\n  </div>\n</section>'
                 % (attrs(d), d["data-kind"], m, code, "\n    ".join(body)))
+
+    if kind == "slide" and s.get("recap"):
+        return recap_html(s, base, m, n, total, lines)
 
     fig, credit, is_photo = figure_html(mdir, figdir, s, b, probs, where)
     comp = composition(s, b, is_photo, bool(fig))

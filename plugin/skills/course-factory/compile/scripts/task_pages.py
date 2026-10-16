@@ -522,6 +522,7 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
     if m in ("single_choice", "multi_select"):
         if m == "multi_select":
             out.append('    <p class="opts-say">%s</p>' % e(w["choose_all"]))
+            extra = ' data-multi="1"'          # gb_answer.js keeps every tapped option only on data-multi="1"
         out += opt_buttons(sid, q, multi=m == "multi_select")
     elif m == "read_instrument":
         body, vb, name = figure_for(q, b, mdir, figdir, probs, where, (b.get("figure") or "").strip() in figs["_bands"])

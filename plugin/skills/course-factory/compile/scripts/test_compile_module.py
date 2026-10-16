@@ -169,6 +169,29 @@ def html_unescape(s):
     return html.unescape(s).strip()
 
 
+def recap_part(tmp):
+    """L51: a slide marked "recap" is built in the one shared closing design, and still says the approved words"""
+    print("\n-- the recap slide")
+    os.makedirs(os.path.join(tmp, "r"))
+    recap = {"id": "s05", "kind": "slide", "recap": True, "title": "What to take away", "visual_kind": "none",
+             "text": "Kept liquid - cold, under pressure, or both.\nTwo barriers - between the gas and people.\nThe spaces are new.",
+             "notes": "- Ask three trainees.", "minutes": 2}
+    screens = json.loads(json.dumps(SCREENS))
+    screens.insert([x["id"] for x in screens].index("t02"), recap)
+    c, md = new_course(os.path.join(tmp, "r"), script(screens=screens))
+    code, out = run(COMPILE, c, "--module", "1")
+    r = section(deck(md), "s05")
+    check("a recap slide is built in the shared closing design (slide dark recap, data-kind Summary)",
+          code == 0 and 'class="slide dark recap"' in r and 'data-kind="Summary"' in r, out + r[:400])
+    check("... one box per line, its title bold before ' - '",
+          r.count('class="rc-item"') == 3 and '<b class="rc-t">Kept liquid</b><span class="rc-sep"> - </span>'
+          '<span class="rc-d">cold, under pressure, or both.</span>' in r and '<span class="rc-d">The spaces are new.</span>' in r, r)
+    check("... with the 'next: the module check' strip outside the script's words",
+          '<p class="rc-next" data-script-ignore>' in r, r)
+    code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
+    check("... and check_script_match finds exactly the approved words on it", code == 0, out)
+
+
 def tasks_part(tmp):
     """the trainee task pages built from the same script, with the one shared engine (gb_answer.js)"""
     print("\n-- the task pages")
@@ -207,6 +230,10 @@ def tasks_part(tmp):
     check("choose all that are right: one key per option, 1 for each right one",
           ks.get("LNG") == cs.gb_key("q03", "LNG", 1) and ks.get("CNG") == cs.gb_key("q03", "CNG", 1)
           and ks.get("Coal") == cs.gb_key("q03", "Coal", 0) and 'class="opts multi"' in p)
+    check("... and its screen says data-multi=\"1\", so the engine keeps every option tapped, not only the last",
+          '<section class="scr" data-script="q03" data-mech="multi_select" data-multi="1">' in p,
+          re.search(r'<section[^>]*data-script="q03"[^>]*>', p).group(0) if re.search(r'<section[^>]*data-script="q03"[^>]*>', p) else p[:300])
+    check("a single-choice screen is not multi", re.search(r'data-script="m03" data-mech="single_choice">', io.open(mc, encoding="utf-8").read()) is not None)
     check("put in order: the key is the place, and the cards are not shown in order",
           ks.get("Transfer") == cs.gb_key("q04", "Transfer", 3)
           and [t for t, _ in keys_of(p) if t in ("Safety meeting", "Connect the hose", "Transfer", "Disconnect")]
@@ -895,6 +922,7 @@ def main():
         code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
         check("check_script_match still fails a changed word", code == 1 and "2016" in out, out)
 
+        recap_part(tmp)
         tasks_part(tmp)
         every_way_part(tmp)
         team_part(tmp)
