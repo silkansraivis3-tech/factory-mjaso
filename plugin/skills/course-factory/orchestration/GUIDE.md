@@ -15,18 +15,21 @@ guide exists is that the failures are all in that seam, not in the parallelism.
 ```
   0  READER          one agent, alone with the knowledge base
      |               programme · model course · what each module teaches
-     |               writes:  MODULE_MAP.md   ILO_MAP.md   (files, never slides)
+     |               writes:  architecture.json   ilo_map.json   ARCHITECTURE_REVIEW.html
+     |                        (files, never slides) - and the knowledge-base suggestion if there is none
      v
-  =  GATE            the owner approves the table. Nothing is built until they do.
+  =  GATE            the owner approves the page and the ILO map on it; the KB decision is recorded.
+     |               course_gate.py checks both - no module agent starts until it says open.
      |
      v
   1..N MODULE        one agent per module, all at once
      |               each owns exactly one folder and nothing else
+     |               script -> operator approves -> compiled (never typed)
      v
   Q  QA              per module as it lands, then one cross-module pass
      |
      v
-  +  ASSEMBLY        the orchestrator alone: registry, handout, hours total, publish
+  +  ASSEMBLY        the orchestrator alone: compile_course.py, handout, hours total, publish
 ```
 
 Four rules hold that shape together. Each is here because dropping it produces a specific,
@@ -56,14 +59,20 @@ has to be settled by the reader and frozen at the gate:
 ## Rule 2 · The reader's output is a FILE, and it is not slides
 
 The first agent works alone with the programme, the model course and the knowledge base, and
-produces two documents in the course folder:
+produces the Stage 2 files in the course folder (since 2.42.0 the factory's own, not free-form notes):
 
-**`MODULE_MAP.md`** — module → official topic numbers → allocated minutes (theory / practical) →
-what the module teaches → what it checks → whether it needs a facility. The minutes column sums to
-the programme total or the reader has not finished.
+**`working_claude/architecture.json`** (shown as `to_review/ARCHITECTURE_REVIEW.html`) — module →
+official topic → allocated minutes (theory / practical) → what the module teaches → what it checks →
+the practicals and their equipment. The minutes sum to the programme total or the reader has not
+finished.
 
-**`ILO_MAP.md`** — for every module: which Main ILO and which Sub-ILOs are taught there, **and how**
-— taught, practised, or assessed, against which screen, task or practical. One row per outcome.
+**`working_claude/ilo_map.json`** — the ILO map, written by `make_architecture_page.py` with the page
+(`scripts/ilo_map.py`): for every module, its Main ILO verbatim and every Sub-ILO it owes, one row each,
+with the model-course items under its topic. `ilo_map.py show <course> --module N` prints one module's rows.
+
+And when `kb_tool.py find` finds no knowledge base, the factory's **suggestion to make one**, word for
+word - the operator decides, and `kb_tool.py decision` records it. `scripts/course_gate.py` stops every
+module agent until the page is approved with its ILO map and the knowledge-base decision is recorded.
 
 > **The ILO map never appears in a slide.** It is the build's own instrument: it tells each module
 > agent what it owes, and it tells the QA agent what to check. A trainee does not need to read a
@@ -79,14 +88,24 @@ disagreeing is still free.
 
 ## Rule 3 · One agent, one folder — and the orchestrator owns everything shared
 
-Every module agent may write **only** inside `modules/mN/`. Everything that more than one module
-touches is written by the orchestrator after the fan-out, alone:
+Every module agent may write **only** inside `modules/moduleNN/` and its own `working_claude\script\MNN.*`
+and `working_claude\figures\MNN\`. Everything that more than one module touches is written by the
+orchestrator after the fan-out, alone:
 
-- `courses/<id>/course.json` and the generated `courses/registry.js`
+- the course's own pages: `compile/scripts/compile_course.py` writes `COURSE.html`, `_course_shell/course_map.js`
+  and every module's `START_HERE.html` / `START_HERE_EXTENDED.html` from the approved architecture, the scripts
+  and the built decks; `scripts/check_course_package.py` then runs the classroom's importer on them (2.37.0)
+- `courses/<id>/course.json` and the generated `courses/registry.js`, when the course goes to the Android
+  terminals (`course-tablet-publisher`)
 - the handout — it is one document with one running structure, and it is also the overflow valve
   for L1, so it cannot be assembled until every module knows what it could not fit
 - the instructor run content, the task manifest, the cross-module checks
 - anything under the terminals
+- **the figure kit (L55).** A module agent that needs a part the kit lacks makes it in its own
+  `modules/mN/assets/kit_parts.js` and uses it - it never edits the factory's `kit.js`. At assembly the
+  orchestrator runs `course-visuals/kit/scripts/kit_parts.py promote` on **all** modules at once: a part two
+  modules both made is promoted once and the difference merged by hand, then one merge request for the owner
+  (the operator is asked before the push)
 
 This is not tidiness. Two agents writing the same file is a lost write that no test catches,
 because the file is still valid HTML afterwards — it is just missing one agent's work.
@@ -99,8 +118,8 @@ because the file is still valid HTML afterwards — it is just missing one agent
 worth making: a QA agent has nothing to check while a module is still being written. So run it as a
 **pipeline**, not as a ninth parallel worker —
 
-- **as each module lands**, a QA agent reads that module against its rows in `ILO_MAP.md` and its
-  minutes in `MODULE_MAP.md`, and runs the deterministic checks. Module 3 is being verified while
+- **as each module lands**, a QA agent reads that module against its rows in `ilo_map.json` and its
+  minutes in `architecture.json`, and runs the deterministic checks. Module 3 is being verified while
   Module 7 is still being written; no wall-clock is wasted.
 - **once at the end**, a single cross-module pass that only it can do: task codes unique across the
   course, terminology consistent, the hours total, the visual dialect, every cross-reference
@@ -123,8 +142,8 @@ the operator states during review goes into `working_claude\STANDARDS.md`, and b
 
 | | Model | Tools | Reads | Writes |
 |---|---|---|---|---|
-| **Reader** | the strongest available | read + search only | programme, model course, KB | `MODULE_MAP.md`, `ILO_MAP.md` |
-| **Module** | the strongest available | full | its own rows of the two maps, the visual system, its source extracts | `modules/mN/` only |
+| **Reader** | the strongest available | read + search only | programme, model course, KB | `architecture.json`, `ilo_map.json` (via the Stage 2 page), the KB suggestion |
+| **Module** | the strongest available | full | its own rows of the ILO map (`ilo_map.py show`) and its module in `architecture.json`, its source extracts, `script/GUIDE.md`, then - once its script is approved - `compile/GUIDE.md` and the picture lanes (`course-visuals`). **Not** the HTML rules (`course-module-ux`, `course-module-ui`, `course-task-ux`): the compiler builds their standard | its script and build sheet, its figures, `modules/moduleNN/` - and never HTML by hand |
 | **Visual** | the `nano-banana:image-director` agent (generates) or `course-factory:visual-sourcer` (finds) | read, write, web, the nano-banana tools | a `GENERATED_ASSET_REQUIRED` brief | the asset files named in the brief |
 | **QA** | strong; never the builder | read + run checks | the module, the two maps | a findings list — **never a fix** |
 
@@ -168,3 +187,10 @@ particular course.
 **The gate is not automated, and must not be.** The script stops after the reader and prints the
 table. The module split and the minutes are the expensive things to get wrong, and changing a table
 row is free while changing eight built modules is not.
+
+**Neither is the script approval (L29).** In pass 2 a module agent whose content script is not approved
+writes it and stops at its review page; the operator approves each one, and pass 2 runs again - an approved
+module is then compiled, never typed. So a module agent loads the script lane and the picture lanes, not the
+HTML rules: about **38,500 tokens of rules instead of 80,800** before its first slide (measured on 2.37.0,
+size ÷ 4, `docs/PROPOSAL_SCRIPT_COMPILER.md` §6), and it no longer writes the 80-160 KB of deck and task
+HTML a module of the IGF pilot has - it writes a 3-5 KB build sheet and its figures.

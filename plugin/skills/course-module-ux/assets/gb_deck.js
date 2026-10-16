@@ -11,6 +11,8 @@
      start / exit · next / prev · progress · counter · block tag · footer
      overview grid · instructor cue · fullscreen · keyboard · swipe · idle chrome
      per-screen enter/leave hooks for figures
+     per-screen steps: a figure that builds takes Next / Back first (hook "step")
+     the controls' words in the page's language (<html lang>: en, lv, ru - LANG)
 
    THE RULE THAT COST A PILOT
      A tablet has no keyboard. Every navigation path must exist as a TAP.
@@ -27,19 +29,44 @@ var GBDeck = (function (w, d) {
   function el(id) { return d.getElementById(id); }
   function each(list, fn) { Array.prototype.forEach.call(list, fn); }
 
+  /* the engine's own words. The deck is the instructor's, so lv / ru use the polite form, as the start pages do.
+     The course language (L19) - the page's <html lang>; PROVISIONAL (2.41.0), written by Claude, to be checked by a
+     native speaker: course-factory/compile/TRANSLATIONS_REVIEW.md. opts.text still overrides any word. */
+  var EN = {
+    cue: "Instructor cue", noCue: "No cue for this screen.", start: "Start", screen: "Screen {n}", of: "of",
+    next: "Next", back: "Back", grid: "All screens", full: "Fullscreen", leave: "Leave", close: "Close",
+    ovHint: "Tap a screen to jump there · G closes this view",
+    hint: "→ / Space next · ← back · F fullscreen · G all screens · N instructor cue",
+    missing: "Navigation controls are missing from this page. Add the chrome block from " +
+      "gb_shell.html before delivering this module."
+  };
+  var LANG = {
+    lv: {
+      cue: "Norāde instruktoram", noCue: "Šim ekrānam norādes nav.", start: "Sākt", screen: "{n}. ekrāns", of: "no",
+      next: "Tālāk", back: "Atpakaļ", grid: "Visi ekrāni", full: "Pilnekrāns", leave: "Iziet", close: "Aizvērt",
+      ovHint: "Pieskarieties ekrānam, lai uz to pārietu · G aizver šo skatu",
+      hint: "→ / atstarpe – tālāk · ← atpakaļ · F pilnekrāns · G visi ekrāni · N norāde instruktoram",
+      missing: "Šajā lapā trūkst navigācijas pogu. Pirms šī moduļa vadīšanas pievienojiet pogu bloku no gb_shell.html."
+    },
+    ru: {
+      cue: "Подсказка для инструктора", noCue: "Для этого экрана подсказки нет.", start: "Начать", screen: "Экран {n}",
+      of: "из", next: "Далее", back: "Назад", grid: "Все экраны", full: "Полный экран", leave: "Выйти", close: "Закрыть",
+      ovHint: "Коснитесь экрана, чтобы перейти к нему · G закрывает этот вид",
+      hint: "→ / пробел – далее · ← назад · F полный экран · G все экраны · N подсказка для инструктора",
+      missing: "На этой странице нет кнопок навигации. Перед проведением модуля добавьте блок кнопок из gb_shell.html."
+    }
+  };
+  /* id -> [word, key]: the chrome is copied from gb_shell.html word for word, in English; a page in a language the
+     engine has words for gets them on its controls here */
+  var LABELS = { btnGrid: ["grid", "G"], btnCue: ["cue", "N"], btnPrev: ["back", "←"], btnNext: ["next", "→"],
+                 btnFull: ["full", "F"], btnExit: ["leave", ""] };
+
   function init(opts) {
     opts = opts || {};
-    var TXT = opts.text || {};
-    var T = {
-      cue: TXT.cue || "Instructor cue",
-      noCue: TXT.noCue || "No cue for this screen.",
-      start: TXT.start || "Start",
-      screen: TXT.screen || "Screen",
-      of: TXT.of || "of",
-      missing: TXT.missing ||
-        "Navigation controls are missing from this page. Add the chrome block from " +
-        "gb_shell.html before delivering this module."
-    };
+    var TXT = opts.text || {}, T = {}, k;
+    var L = LANG[(d.documentElement.getAttribute("lang") || "en").slice(0, 2).toLowerCase()];
+    for (k in EN) { if (EN.hasOwnProperty(k)) { T[k] = TXT[k] || (L && L[k]) || EN[k]; } }
+    function said(word) { return !!(L || TXT[word]); }
 
     var slides = Array.prototype.slice.call(d.querySelectorAll(".slide"));
     if (!slides.length) { return null; }
@@ -60,10 +87,37 @@ var GBDeck = (function (w, d) {
       d.body.appendChild(warn);
     }
 
-    /* slide id OR zero-based index -> {enter, leave}. Both are accepted because both
+    /* ---- the controls' words, in the page's language ---------------------- */
+    each(Object.keys(LABELS), function (id) {
+      var b = el(id), w = LABELS[id][0], key = LABELS[id][1];
+      if (!b || !said(w)) { return; }
+      b.setAttribute("aria-label", T[w]);
+      b.setAttribute("title", T[w] + (key ? " (" + key + ")" : ""));
+    });
+    function relabel(node, word) {         /* the word only - an icon beside it stays */
+      if (!node || !said(word)) { return; }
+      var t = null;
+      each(node.childNodes, function (c) { if (c.nodeType === 3 && /\S/.test(c.nodeValue)) { t = c; } });
+      if (t) { t.nodeValue = t.nodeValue.replace(/\S(?:[\s\S]*\S)?/, T[word]); }
+      else if (!node.children.length) { node.textContent = T[word]; }
+    }
+    var sb = el("startBtn");
+    relabel(sb && sb.querySelector(".btn-label"), "start");
+    relabel(el("ovClose"), "close");
+    relabel(d.querySelector("#overview .ov-head b"), "grid");
+    relabel(d.querySelector("#overview .ov-head span"), "ovHint");
+    relabel(d.querySelector("#landing .landing-hint"), "hint");
+    relabel(d.querySelector(".gbt-topback"), "back");
+
+    /* slide id OR zero-based index -> {enter, leave, step}. Both are accepted because both
        are what people reach for; a key matching neither is announced rather than
        ignored, because a hook that never fires looks exactly like a figure that has
-       no animation. */
+       no animation.
+       step(dir), dir 1 or -1: the screen's own steps. Return true when the screen took
+       the press (a step forward or back); false when it has none left that way, and the
+       deck moves on. Next, Back, the arrow keys and a swipe all ask it first - a figure
+       whose steps only its own small buttons can reach is skipped in front of a class
+       (M03, 2026-10-15: each module carried its own copy of this, one did not). */
     var HOOKS = opts.hooks || {};
 
     function hookFor(i) {
@@ -103,7 +157,12 @@ var GBDeck = (function (w, d) {
       var s = slides[idx];
       if (counter) { counter.innerHTML = "<b>" + (idx + 1) + "</b> / " + slides.length; }
       if (progress) { progress.style.width = (100 * (idx + 1) / slides.length) + "%"; }
-      if (blockTag) { blockTag.textContent = s.getAttribute("data-block") || ""; }
+      if (blockTag) {
+        blockTag.textContent = s.getAttribute("data-block") || "";
+        /* a screen with a header band already names itself there - the corner tag sat on top of it */
+        if (s.querySelector(".slide-kind")) { blockTag.classList.add("banded"); }
+        else { blockTag.classList.remove("banded"); }
+      }
       if (s.classList.contains("dark") || s.classList.contains("photo")) {
         d.body.classList.add("dark-active");
       } else {
@@ -113,16 +172,20 @@ var GBDeck = (function (w, d) {
         cue.innerHTML = '<span class="tag">' + T.cue + "</span>" +
           (s.getAttribute("data-cue") || T.noCue);
       }
-      if (btnPrev) { btnPrev.disabled = (idx === 0); }
-      if (btnNext) { btnNext.disabled = (idx === slides.length - 1); }
       var h = hookFor(idx);
+      if (btnPrev) { btnPrev.disabled = (idx === 0) && !(h && h.step); }
+      if (btnNext) { btnNext.disabled = (idx === slides.length - 1) && !(h && h.step); }
       if (h && h.enter) { h.enter(); }
       markOverview();
       s.scrollTop = 0;
     }
 
-    function next() { if (cur < slides.length - 1) { show(cur + 1); } }
-    function prev() { if (cur > 0) { show(cur - 1); } }
+    function stepHere(dir) {
+      var h = hookFor(cur);
+      return !!(h && h.step && h.step(dir));
+    }
+    function next() { if (stepHere(1)) { return; } if (cur < slides.length - 1) { show(cur + 1); } }
+    function prev() { if (stepHere(-1)) { return; } if (cur > 0) { show(cur - 1); } }
 
     /* ---- start / exit --------------------------------------------------- */
     function start() {
@@ -169,7 +232,8 @@ var GBDeck = (function (w, d) {
         b.className = "ov-item";
         b.innerHTML =
           '<span class="n">' + (i + 1) + "</span>" +
-          '<span class="t">' + (s.getAttribute("data-title") || (T.screen + " " + (i + 1))) + "</span>" +
+          '<span class="t">' + (s.getAttribute("data-title") ||
+            (T.screen.indexOf("{n}") < 0 ? T.screen + " " + (i + 1) : T.screen.replace("{n}", i + 1))) + "</span>" +
           '<span class="k">' + (s.getAttribute("data-kind") || "") + "</span>";
         b.addEventListener("click", function () {
           if (overview) { overview.classList.remove("on"); }

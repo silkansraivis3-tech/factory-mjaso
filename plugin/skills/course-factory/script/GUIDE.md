@@ -5,6 +5,46 @@ until the operator has approved the script.** One script per module, plus one fo
 assessment (`--module final`). Everything is done with `scripts/content_script.py`; the check that the
 built module obeys it is `scripts/check_script_match.py`.
 
+## 0 · Before writing — the ILO map, the model course, the old course, the knowledge base (2.42.0)
+
+Owner, 2026-10-16: *"before creating any module the AI should have already made the ILO mapping and
+suggested for KNOWLEDGE_BASE to be created"*. **A module is written against what it owes, never from
+memory.** `content_script.py` will not render or approve a script (exit 2) until the course has its ILO
+map, the Stage 2 page is approved with it, and the knowledge-base decision is recorded:
+
+```
+python scripts/course_gate.py <course> --module 4        open, or exactly what has to happen first
+```
+
+Then, before the first screen is written, read — in this order, and only these:
+
+1. **The module's rows of the ILO map** — `python scripts/ilo_map.py show <course> --module 4`: the
+   programme topic and the **Main ILO verbatim (L2)**, every **Sub-ILO** the module owes (kept /
+   re-expressed / added), and the model-course items under the topic. The same module in
+   `working_claude/architecture.json` says how they were planned (active learning, media, tasks).
+2. **The model-course items it owes** — the course's transcribed syllabus (`working_claude/*syllabus*.json`,
+   `coverage/GUIDE.md` §1), the items listed by `ilo_map.py show`. They are the outcomes *inside* the topic;
+   `coverage/` checks them later against everything built.
+3. **The old course's keep / modernise / add for this module (L41)** — `architecture.json` →
+   `from_old_course`, and `OLD_COURSE_INVENTORY.md` for the slides and pictures it names.
+4. **The knowledge base — only through `kb/scripts/kb_tool.py search`** (several phrasings: the other
+   names, the abbreviation, the older term). Never open a whole `document.md`. A declined knowledge base
+   (the Stage 2 page says so) means the source files themselves, searched the same narrow way.
+
+While writing:
+
+- **Every Sub-ILO is taught on at least one slide and checked by at least one question.** Mark the slide(s)
+  that teach it `"sub_ilo": "4.a"` (a list when a slide teaches two), and **every question** with the
+  Sub-ILO it checks. A Sub-ILO with children (4 → 4.a, 4.b) is met through them.
+- **Every fact on a slide traces to a source in `"sources"`**: the document, its edition, the section or page
+  (`"IGF Code 2016 (MSC.391(95)): 6.7.1, 15.8.2"`). Only the current edition is cited (intake). An
+  operator-stated fact goes in `operator_facts`, not in `sources`.
+
+The review page's **ILO map and sources check** — must-fix findings, like the theory check — lists a Sub-ILO
+taught nowhere or checked nowhere, a question with no `"sub_ilo"`, a `"sub_ilo"` the module does not own, and
+an empty `"sources"`. Approval waits for them unless the operator approves `--despite-findings` (L26). A
+script approved before 2.42.0 keeps its approval; its findings are reported, never forced.
+
 ## 1 · Write the script
 
 `<course>/working_claude/script/M01.json` — the whole lesson **in the order it is taught**. It runs on two
@@ -25,15 +65,16 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 {"module": 1, "title": "<module title, course language>", "course_language": "English",
  "operator_language": "lv", "status": "draft",
  "operator_facts": [{"fact": "<what the operator said>", "where": "s03", "said": "2026-10-01"}],
+ "sources": ["<document, edition: sections or pages>", "…"],
  "screens": [
-  {"id": "s01", "kind": "slide", "title": "…", "text": "line one\nline two",
+  {"id": "s01", "kind": "slide", "title": "…", "text": "line one\nline two", "sub_ilo": "1.a",
    "visual": "<the picture planned, and where it comes from>", "notes": "<instructor only>", "minutes": 5},
   {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - …",
    "text": "<only: a task starts now, and what it is about>", "notes": "…", "minutes": 4},
-  {"id": "q01", "kind": "self-check", "set": "SC1", "question": "…", "options": ["…", "…", "…"], "correct": "A",
+  {"id": "q01", "kind": "self-check", "set": "SC1", "sub_ilo": "1.a", "question": "…", "options": ["…", "…", "…"], "correct": "A",
    "feedback": "<what the trainee sees after answering>", "mechanic": "tap to choose"},
   {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Module check - …", "text": "…", "notes": "…", "minutes": 6},
-  {"id": "m01", "kind": "module-check", "set": "MC", "question": "…", "options": ["…", "…"], "correct": "B",
+  {"id": "m01", "kind": "module-check", "set": "MC", "sub_ilo": "1.b", "question": "…", "options": ["…", "…"], "correct": "B",
    "feedback": "…", "mechanic": "tap to choose", "graded": false}]}
 ```
 
@@ -52,7 +93,21 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   The review page shows plain theory against active minutes (aim: 20 / 80). To get there, **keep every
   theory slide** and give the plain ones fewer minutes - the words stay to be read - and the minutes to
   activity; never shorten or remove good theory. Theory may be added.
-- **Bloom (L48, 2.25.0).** A question may say which Sub-ILO it checks (`"sub_ilo": "1.2"`), and - only when
+- **3D and AI pictures - planned unasked (2.49.0, operator 2026-10-16: "make it so they add 3D + AI generated photos
+  when needed").** Before the review page is shown, plan them yourself - the operator never has to ask:
+  - **3D:** where a slide's lesson is a shape, an inside or a layout in space (a tank and its barriers, a space and
+    what is around it, a pipe between its valves), set its `visual_kind` to `model_3d` and describe the scene in
+    `visual`. Aim for one good 3D scene in a module whose subject is spatial; none in one that is not (procedures,
+    charts, ideas). L46 still holds: at most half the teaching slides, never a real photo replaced, full quality.
+  - **AI picture:** where a slide sets a scene or a situation that no real photograph shows (people at work, an
+    operation, an incident) - `ai_illustration`, context only, never equipment to recognise (L33). Planning it is
+    free; the picture itself is described, priced and said yes to before it is made (nano-banana, L47).
+  - The review page names what you left out as proposals (`v_3d_propose`, `v_ai_propose`): the slide and the words
+    that made it. Each one the operator keeps goes into the script (propose / apply); each one they strike goes into
+    the script's `"declined"`, outside the approved words, so it is never proposed again:
+    `"declined": {"3d": {"s06": "operator: the comparison drawing is enough"}, "ai": {}}`.
+- **Bloom (L48, 2.25.0).** A question says which Sub-ILO it checks (`"sub_ilo": "1.2"` - expected on every
+  question since 2.42.0, §0), and - only when
   it is written above its task type's usual level - its level and why (`"bloom": 4, "bloom_why": "..."`).
   The review page then shows every question below its Sub-ILO and how the tablet would lift it.
   Aim the tasks at the Sub-ILO's level, and above *Remember* wherever the content allows (`bloom/GUIDE.md`).
@@ -154,6 +209,23 @@ python scripts/content_script.py read <course> --module 1 [--pdf <file>]      Wo
 python scripts/content_script.py propose <course> --module 1 --changes c.json  chat corrections
 ```
 
+A chat `changes.json` is a list, applied in order (a later entry may edit a screen an earlier one added).
+Besides editing one field of a screen it can add a screen, remove one, or change a top-level field:
+
+```json
+[ {"field": "q04.feedback", "new": "Membrane tanks are supported by the hull."},
+  {"add_screen": {"id": "q06", "kind": "self-check", "set": "SC1", "mechanic": "single_choice", "question": "...",
+                  "options": ["...", "..."], "correct": "A", "feedback": "..."}, "after": "q03"},
+  {"remove_screen": "q05"},
+  {"script_field": "sources", "new": ["IGC Code 2016: 1.2, 4.21-4.24"]} ]
+```
+
+`add_screen` takes `"after"` or `"before"` (a screen id; neither = at the end) and needs a new `id` and a
+`kind`. `script_field` may be `title`, `minutes_allocated`, `sources`, `pass_mark` (a whole number 1-100)
+or `operator_facts`; anything else (`status`, approval, `module`, `screens`) is refused — "Stopped -", exit 2,
+nothing written. Problems the changed script would have that it does not have now (a self-check left
+without its task slide, minutes that no longer add up) are listed under the changes, not blocking.
+
 Both write a **pending list** and print what was understood — *"screen 7: the slide text: 'rely on'
 becomes 'are supported by'; question 3: the correct answer becomes B"*. **Show that list to the
 operator, in their language, and wait.** Then:
@@ -163,7 +235,8 @@ python scripts/content_script.py apply <course> --module 1 --confirmed     only 
 python scripts/content_script.py discard <course> --module 1               they said no
 ```
 
-`apply` changes the script, logs every change in `FEEDBACK_LOG.md`, keeps the old Word file in
+`apply` changes the script (and stops, exit 1, if the screens or a script field changed since the list was
+made), logs every change in `FEEDBACK_LOG.md` (`3 · M01 · q06`, or `3 · M01 · script`), keeps the old Word file in
 `working_claude/script/old/`, and writes a fresh page and Word file. Comments are **instructions, not
 edits**: `apply` does not act on them — propose what you would change for each, show it, and apply
 that when the operator confirms.
@@ -211,6 +284,9 @@ apply), or, if the operator has read it and wants the words as they are (L26), a
 `--despite-findings` — the findings are recorded with the approval.
 
 ## 5 · Building from it, and proving it
+
+**The deck is compiled, not typed** (2.25.0): `compile/GUIDE.md`. The marks below are what the compiler
+writes; they are listed here for a module still built by hand.
 
 The screen inventory is **derived from the approved script** — not a separate approval. Every screen
 built from it carries its id, and every approved text its field:

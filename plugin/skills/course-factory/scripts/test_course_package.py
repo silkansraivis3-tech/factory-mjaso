@@ -123,6 +123,20 @@ def main():
             check("without Node the factory says plainly that the importer did not run", "Node is not installed" in out, out)
         check("... from the course folder and the modules folder too", run(os.path.join(master, "course"))[0] == 0 and run(c)[0] == 0)
 
+        print("\n-- a task page whose reporting lives in the shared task file (gb_task.js)")
+        sh = os.path.join(tmp, "shared", "modules")
+        shutil.copytree(c, sh)
+        page = TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "")
+        head, js = page.split("<script>")[0], page.split("<script>")[1].split("</script>")[0]
+        w(os.path.join(sh, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"), head + "</body></html>")
+        w(os.path.join(sh, "module01", "assets", "js", "task.js"), js + " done(3, 4, [{t: '1.', ok: true}], '');")
+        code, out = run(sh, "--no-importer")
+        check("it passes - gb-task-done, ok, total, items and gb-timer are read from the page's own script file",
+              code == 0 and "gb-task-done" not in out and "gb-timer" not in out, out)
+        w(os.path.join(sh, "module01", "assets", "js", "task.js"), "var x = 1;")
+        code, out = run(sh, "--no-importer")
+        check("caught: a shared script file that does not report either", code == 1 and "never reports its result (gb-task-done)" in out, out)
+
         def broken(name, fn, needle, importer=False):
             b = os.path.join(tmp, "b_" + str(len(PASS) + len(FAIL)), "modules")
             shutil.copytree(c, b)
@@ -248,6 +262,15 @@ def main():
         broken("a task page with a picture and no picture viewer", lambda b: w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
                io.open(os.path.join(c, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"), encoding="utf-8").read()
                .replace("<script src=\"../assets/gb_zoom.js\"></script>", "")), "sc1_keeping_the_cargo_liquid.html shows pictures but does not load gb_zoom.js")
+        ring = os.path.join(tmp, "ring_only", "modules")              # 2.38.0: the result ring is not a picture
+        shutil.copytree(c, ring)
+        w(os.path.join(ring, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
+          io.open(os.path.join(c, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"), encoding="utf-8").read()
+          .replace("<img src=\"../assets/img/hull.jpg\">", "<svg viewBox=\"0 0 190 190\" aria-hidden=\"true\" data-no-zoom></svg>")
+          .replace("<script src=\"../assets/gb_zoom.js\"></script>", "").replace("<link rel=\"stylesheet\" href=\"../assets/gb_zoom.css\">", ""))
+        code, out = run(ring, "--no-importer")
+        check("a page whose only svg is marked data-no-zoom (the result ring, a control's symbol) needs no picture viewer",
+              "sc1_keeping_the_cargo_liquid.html shows pictures" not in out, out)
         own = os.path.join(tmp, "own_way")
         shutil.copytree(master, own)
         w(deck(os.path.join(own, "course", "modules")), src.replace(RECAP, ""))

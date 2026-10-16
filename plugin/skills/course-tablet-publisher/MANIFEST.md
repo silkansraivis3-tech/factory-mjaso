@@ -86,7 +86,7 @@ Against the live repository, read-only except for a throwaway pack that was dele
 | unknown course id | refuses with an explanation |
 | `gitpub.py plan` | detects `master`, names the 266 dirty files, correct PR URL |
 | commit with no / failing gate report | both refuse |
-| merge without `--merge` | refuses |
+| `merge` / `--merge` (any form) | refuses - a reviewer merges the PR in GitHub |
 | NEW course pack (created, tested, deleted) | PASS; registry lists it beside gas-basic; leak, missing asset, service-role key and laptop address each refuse; no Android file touched |
 | repository after all tests | unchanged — 266 dirty paths before and after, still on `master` |
 

@@ -38,8 +38,7 @@ STYLE_FILES = [
     os.path.join(SKILL, "templates", "gb_compose.css"),
     os.path.join(SKILL, "templates", "gb_shell.css"),
     os.path.join(SKILL, "templates", "gb_page.css"),
-    os.path.join(SKILLS, "course-task-ux", "assets", "gb_task.css"),
-]
+    os.path.join(SKILLS, "course-task-ux", "assets", "gb_task.css"),]
 TOKENS = os.path.join(SKILL, "templates", "gb_tokens.css")
 
 PASS: list[str] = []
@@ -144,6 +143,22 @@ def main():
         check("install refuses a folder inside the Android project",
               code == 2 and not os.path.exists(os.path.join(a, "assets")), out)
 
+        a2 = os.path.join(tmp, "AndroidStudioProjects", "NOVIKONTASTraining", "new_module")
+        code, out = tool("install", a2)
+        check("... and a folder that does not exist yet inside it is not made either",
+              code == 2 and not os.path.exists(a2), out)
+
+        print("\n-- a new module has no folder yet: install makes it (finding 8)")
+        newm = os.path.join(tmp, "course", "modules", "m9")
+        code, out = tool("install", newm)
+        code2, st = states(newm)
+        check("install makes a module folder that does not exist yet, and sets it up",
+              code == 0 and "Made the module folder" in out and code2 == 0 and set(st.values()) == {"OK"}, out)
+        afile = os.path.join(tmp, "course", "modules", "afile")
+        io.open(afile, "w").write("x")
+        code, out = tool("install", afile)
+        check("a path that is a file is refused, not replaced", code == 2 and os.path.isfile(afile), out)
+
         print("\n-- the factory's own files pass its own strict look check (2.11.2)")
         fresh = os.path.join(tmp, "course", "modules", "m2")
         os.makedirs(fresh)
@@ -152,6 +167,35 @@ def main():
                            capture_output=True, text=True, encoding="utf-8", errors="replace")
         check("audit_ui.py --strict finds no defect in a freshly set-up module",
               p.returncode == 0 and "0 defects" in p.stdout, p.stdout[-600:])
+
+        print("\n-- a class the page's own scripts query is a hook, not an unstyled class (C15: .dial-val)")
+        hk = os.path.join(tmp, "hooks")
+        os.makedirs(hk)
+        io.open(os.path.join(hk, "s.css"), "w", encoding="utf-8").write(".dial-read{margin:0}")
+        io.open(os.path.join(hk, "engine.js"), "w", encoding="utf-8").write(
+            "var out = $('.dial-val', el); var t = el.querySelector('.dial-track .x'); fetch('data.json');\n"
+            "// el.querySelector('.in-a-comment')\nif (el.classList.contains('was-seen')) {}")
+
+        def page_for(script, name, extra=""):
+            body = ('<div class="dial-read"><b class="dial-val">-</b><i class="dial-track"></i><u class="x"></u>'
+                    '<s class="was-seen"></s>%s</div>' % extra)
+            io.open(os.path.join(hk, name), "w", encoding="utf-8").write(
+                '<!DOCTYPE html><html><head><link rel="stylesheet" href="s.css">%s</head><body>%s</body></html>' % (script, body))
+            return subprocess.run([sys.executable, os.path.join(HERE, "audit_ui.py"), os.path.join(hk, name)],
+                                  capture_output=True, text=True, encoding="utf-8", errors="replace")
+        p = page_for('<script src="engine.js"></script>', "with_engine.html")
+        check("classes a linked engine queries are hooks: no DEFECT on .dial-val .dial-track .x .was-seen",
+              p.returncode == 0 and "DEFECT" not in p.stdout and ".dial-val" in p.stdout and "script" in p.stdout, p.stdout[-500:])
+        p = page_for("", "no_engine.html")
+        check("the same page without the engine is still a DEFECT naming those classes",
+              p.returncode == 1 and "DEFECT" in p.stdout and ".dial-val" in p.stdout, p.stdout[-500:])
+        p = page_for('<script src="engine.js"></script>', "with_engine2.html", '<s class="in-a-comment"></s>')
+        check("a selector in a comment is not a query, and a file name ('data.json') is not a class: only .in-a-comment is a DEFECT",
+              p.returncode == 1 and "DEFECT" in p.stdout and ".in-a-comment" in p.stdout.split("DEFECT")[1].split("note")[0]
+              and ".dial-val" not in p.stdout.split("DEFECT")[1].split("note")[0] and "json" not in p.stdout, p.stdout[-500:])
+        p = page_for("<script>document.querySelector('.in-a-comment'); $('.dial-val'); $('.dial-track'); $('.x'); el.classList.contains('was-seen')</script>",
+                     "inline.html", '<s class="in-a-comment"></s>')
+        check("an inline script counts too", p.returncode == 0 and "DEFECT" not in p.stdout, p.stdout[-500:])
 
         print("\n-- the install record never ships to a tablet")
         sys.path.insert(0, os.path.join(SKILLS, "course-tablet-publisher", "scripts"))

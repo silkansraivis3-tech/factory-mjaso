@@ -78,10 +78,21 @@ never a pass.
 await AuditOpacity.all();     // or .slice(0, 9)
 await AuditCollide.all();
 await AuditDeck.all();
+await AuditCompose.all();     // is each screen composed, or a corner cluster? (.run() is the same call)
 await AuditDrive.run();       // .run(0, 12)
 ```
 
-They also register on `window.__audit` (`.opacity`, `.collide`, `.deck`, `.drive`).
+They also register on `window.__audit` (`.opacity`, `.collide`, `.deck`, `.compose`, `.drive`).
+`AuditCompose.all()` sets `__auditExit` like the others: `1` on a WEAK screen or an abort, `0` otherwise
+(a REVIEW screen is for a person to look at, not a failure).
+
+**No browser pane needed:** `python measure/scripts/run_audits.py <deck index.html or its folder>
+[--viewport 1920x1080 ...] [--json out.json] [--quiet]` loads `audit_deck.js`, `audit_collide.js` and
+`audit_compose.js` into the deck in headless Chrome or Edge, runs each `.all()` at 1280×800 (and every
+`--viewport`, laid out at exactly that size), and prints one line per probe and viewport with the failing
+slides underneath. Exit `0` every probe passed, `1` one failed, `2` something could not be measured (no
+browser, the page did not answer, a probe aborted — never a pass). The page it injects is written beside the
+deck as `_audit_<pid>.html` and always removed again; `--json` goes outside the course.
 `audit_drive.js` **depends on the other two being loaded first** and aborts naming the missing
 file rather than throwing.
 
@@ -89,6 +100,7 @@ file rather than throwing.
 |---|---|---|
 | `audit_deck.js` | the sweep: text size (including **effective** SVG size), contrast, control size, fill per screen, links inside slides, document h-scroll | **Portable.** CONFIG edit only |
 | `audit_collide.js` | collisions and overlaps — **run this even when the fill probe is silent** | **Portable with one gap**: check 3 (text under page furniture) needs the chrome selectors set, or it silently reports an unearned pass. See `traps.json#chrome-selectors-not-discoverable` |
+| `audit_drawing.js` | inside every **drawing** (`<svg>`), where the others do not look: a part poking out of the hull, tank, room or box it sits in (judged on the real shape), anything **cut off** at the drawing's frame (also a part that only shows in a later step), and every label's **4 px safe zone** to other shapes, lines and labels (L54, 2.25.2). `AuditDrawing.all()` for a deck, `.page()` for a task page or a figure, `.show(findings)` outlines them | **Portable.** No course selectors beyond `.slide` and the start button |
 | `audit_opacity.js` | that what you are measuring is actually **visible** — inherited `opacity` composited into the text alpha, which the contrast sweep cannot see | **Portable.** Least coupled of the four |
 | `audit_drive.js` | drives the deck through its real Next control so the others see every screen | **Portable in form, coupled in substance.** It encodes a navigation model — one forward control advancing frags and slides linearly from a start button — that CONFIG cannot abstract. Separate frag/slide controls or keyboard-only nav need code changes |
 

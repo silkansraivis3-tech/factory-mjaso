@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>audit_drawing contrast fixture</title>
+<!-- test_audit_drawing.py opens this in headless Chrome (finding 13, IGF M04). A figure-kit drawing (svg.kit) sits on
+     the kit's dark panel even on this LIGHT page. bad-* parts are coloured for a light slide and vanish; good-* parts
+     are seen; the rest must stay silent. No kit.css is linked here, so nothing is exempt as "the kit's own". -->
+<style>
+  body{margin:0;padding:20px;font-family:sans-serif;background:#fff}
+  .kit-screen{background:#0C1E3A;border-radius:16px;padding:12px;width:640px;margin:0 0 24px}
+  svg{display:block;width:100%;height:auto}
+  .kit-panel{fill:#0C1E3A;stroke:#1d3a63;stroke-width:1.5}
+  text{font:600 14px sans-serif}
+  #good-text{fill:#F3F8FD}
+  #bad-text-navy{fill:#0A2463}
+  #bad-text-steel{fill:#415C8F}
+  #bad-line-steel{stroke:#415C8F;stroke-width:3;fill:none}
+  #good-line{stroke:#8FC2FF;stroke-width:3;fill:none}
+  #bad-rect-navy{fill:#0A2463}
+  #card{fill:#F3F8FD}
+  #text-on-card{fill:#0A2463}
+  #ok-quiet{stroke:#0A2463;stroke-width:3;fill:none}
+</style>
+</head>
+<body>
+<div class="kit-screen">
+  <svg id="fig-kit" class="kit" viewBox="0 0 300 170">
+    <rect class="kit-panel" x="1" y="1" width="298" height="168" rx="14"/>
+    <text id="good-text" x="20" y="30">Boiling point</text>
+    <text id="bad-text-navy" x="20" y="52">Pressure rises</text>
+    <text id="bad-text-steel" x="20" y="74">Temperature</text>
+    <path id="bad-line-steel" d="M150 20 H280"/>
+    <path id="good-line" d="M150 40 H280"/>
+    <rect id="bad-rect-navy" x="150" y="55" width="60" height="22"/>
+    <rect id="card" x="20" y="90" width="120" height="30" rx="4"/>
+    <text id="text-on-card" x="30" y="110">Navy on a light card</text>
+    <path id="ok-quiet" data-low-contrast d="M150 100 H280"/>
+  </svg>
+</div>
+<!-- a drawing that is not a kit figure sits on the slide, not on the kit's panel: left to the deck audit -->
+<svg id="plain" viewBox="0 0 300 60" style="width:480px;border:1px dashed #ccc">
+  <text id="plain-navy" x="10" y="30" fill="#0A2463">Navy on white</text>
+</svg>
+
+<pre id="out"></pre>
+<script src="../scripts/audit_drawing.js"></script>
+<script>
+  console.log = function () {};
+  var res = AuditDrawing.page();
+  document.getElementById("out").textContent = JSON.stringify({
+    verdict: res.verdict,
+    findings: res.findings.map(function (f) {
+      var el = f.els && f.els[0], svg = el && (el.ownerSVGElement || el);
+      return { check: f.check, svg: svg && svg.id, part: el && el.id, detail: f.detail };
+    })
+  });
+</script>
+</body>
+</html>

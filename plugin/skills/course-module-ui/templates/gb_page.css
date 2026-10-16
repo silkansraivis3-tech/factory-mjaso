@@ -122,6 +122,9 @@ table{border-collapse:collapse;width:100%;background:var(--white);
   font-size:clamp(13px,1.7vmin,16px)}
 th,td{border:1px solid var(--line-l);padding:8px 10px;text-align:left;vertical-align:top}
 th{background:var(--navy);color:var(--white);font-weight:700;position:sticky;top:48px}
+/* inside .scroll the box is the scroll container: top:48px pushed the head row down over the first row (the plan, the
+   answer key - 2.46.0 visual review) */
+.scroll th{top:0}
 td.n,td.m{font-family:var(--mono);white-space:nowrap;font-weight:700;color:var(--navy)}
 tr.p td{background:var(--blue-wash-l)}
 

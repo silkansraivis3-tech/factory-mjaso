@@ -29,6 +29,10 @@ its field:
     the page) the right answer is not data-correct but data-key="<gbKey(screen id, its text, 1)>" - wrong ones
     carry the key with 0 (content_script.gb_key; classroom-system.json task_page.answer_keys). Both are read.
 
+    Operate the panel (2.38.0) shows each control with every position it can take, not only the one the script says
+    it must end in: a position is marked data-state, and those extra words are the panel's own, not compared. Any
+    other word the script does not have is still a finding.
+
 WHAT IT CHECKS
   1  the script is approved, and has not changed since it was approved
   2  every screen in the script is built somewhere in the module folder, and nothing else claims a
@@ -50,6 +54,7 @@ import json
 import os
 import re
 import sys
+from collections import Counter
 from html.parser import HTMLParser
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -61,6 +66,7 @@ EXEMPT_CLASSES = {"slide-kind", "src", "srcline", "credit", "mediabar", "fbtn", 
 EXEMPT_TAGS = {"svg", "script", "style", "button", "noscript", "template"}
 VOID = {"br", "img", "hr", "input", "meta", "link", "source", "area", "base", "col", "embed", "param", "track", "wbr"}
 norm = lambda s: re.sub(r"\s+", " ", s or "").strip()
+unbullet = lambda s: re.sub(r"^•\s*", "", norm(s))
 
 
 class Collect(HTMLParser):
@@ -99,7 +105,8 @@ class Collect(HTMLParser):
                 sid = self._ctx()[0]
                 if sid in self.screens:
                     self.screens[sid]["fields"].setdefault(a["data-script-field"], []).append("")
-                    self.screens[sid]["flags"].setdefault(a["data-script-field"], []).append((a.get("data-correct"), a.get("data-key")))
+                    self.screens[sid]["flags"].setdefault(a["data-script-field"], []).append(
+                        (a.get("data-correct"), a.get("data-key"), "data-state" in a))
 
     def handle_endtag(self, tag):
         for i in range(len(self.stack) - 1, -1, -1):
@@ -123,7 +130,7 @@ class Collect(HTMLParser):
 def marked_right(sid, got, field):
     """which pieces of one field are marked right: data-key = gbKey(id, text, 1), or (the factory's own QA copy) data-correct"""
     out = []
-    for text, (dc, dk) in zip(got["fields"].get(field, []), got["flags"].get(field, [])):
+    for text, (dc, dk, _) in zip(got["fields"].get(field, []), got["flags"].get(field, [])):
         out.append(dk.strip().lower() == cs.gb_key(sid, norm(text), 1) if dk else dc == "true")
     return out
 
@@ -133,6 +140,8 @@ def main(argv=None):
     ap.add_argument("course")
     ap.add_argument("--module", required=True)
     ap.add_argument("--module-dir", help="the built module's folder (default: <course>/modules/M01_<title>, or the older <course>/modules/m<N>)")
+    ap.add_argument("--part", choices=("all", "instructor", "trainee"), default="all",
+                    help="check only the instructor tablet's slides, or only the trainee tablet's tasks (while the other is not built yet)")
     a = ap.parse_args(argv)
     import workspace
     a.course = workspace.work_folder(a.course, create=False)   # course\ beside the material (L40)
@@ -164,7 +173,9 @@ def main(argv=None):
     ids = {s["id"] for s in script["screens"]}
     for sid in sorted(set(found) - ids):
         probs.append("%s (%s) claims script id %s, which the approved script does not have" % (found[sid]["file"], sid, sid))
-    for s in script["screens"]:
+    part = {"all": cs.KINDS, "instructor": cs.INSTRUCTOR, "trainee": cs.TASKS}[a.part]
+    screens = [s for s in script["screens"] if s["kind"] in part]
+    for s in screens:
         sid = s["id"]
         where = "%s (%s)" % (cs.place(script, sid), sid)
         if sid not in found:
@@ -189,6 +200,13 @@ def main(argv=None):
             if cs.uses(s, "answer") and cs.mech(s) != "set_value":
                 items, right = cs.answer_items(s)
                 built = fields.get("answer", [])
+                if cs.mech(s) == "panel_operate":
+                    # a control is shown with every position it can be put in (data-state), not only the one it must
+                    # end in - those other positions are the panel's own words, so they are not compared
+                    states = Counter(t for t, f in zip(built, got["flags"].get("answer", [])) if f[2])
+                    extra = Counter(built) - Counter(norm(x) for x in items)
+                    if not extra - states:
+                        built = list((Counter(built) - extra).elements())
                 if sorted(norm(x) for x in items) != sorted(built):
                     probs.append("%s in %s: the answer's items are not the approved ones - approved: \"%s\" / built: \"%s\"" % (
                         where, got["file"], " / ".join(norm(x) for x in items), " / ".join(built) or "(missing)"))
@@ -201,8 +219,9 @@ def main(argv=None):
             if norm(s.get("title", "")) != " ".join(fields.get("title", [])):
                 probs.append("%s in %s: the title says \"%s\" - approved: \"%s\"" % (
                     where, got["file"], " ".join(fields.get("title", [])) or "(missing)", norm(s.get("title", ""))))
-            want_lines = [norm(x) for x in (s.get("text") or "").split("\n") if norm(x)]
-            got_lines = [x for x in fields.get("text", []) if x]
+            # a line starting with "•" is a list item; the bullet is drawn by the list, so the built line may omit it (2.25.0)
+            want_lines = [unbullet(x) for x in (s.get("text") or "").split("\n") if unbullet(x)]
+            got_lines = [unbullet(x) for x in fields.get("text", []) if unbullet(x)]
             if want_lines != got_lines:
                 probs.append("%s in %s: the slide text does not match the approved words - approved: \"%s\" / built: \"%s\"" % (
                     where, got["file"], " / ".join(want_lines), " / ".join(got_lines) or "(missing)"))
@@ -219,7 +238,8 @@ def main(argv=None):
               "  better, it goes to the operator as a change to the script (content_script.py propose), and is\n"
               "  built only once they have approved it.")
     else:
-        print("Every screen of module %s says exactly what the operator approved (%d screens)." % (a.module, len(script["screens"])))
+        print("Every screen of module %s%s says exactly what the operator approved (%d screens)." % (
+            a.module, "" if a.part == "all" else " on the %s tablet" % a.part, len(screens)))
     for x in notes:
         print("  note: " + x)
     return 1 if probs else 0

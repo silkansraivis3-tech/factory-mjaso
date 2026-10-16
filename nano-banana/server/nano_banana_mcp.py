@@ -31,19 +31,34 @@ Google account, a video clip much more. So generate_image and generate_video ref
 approved_by_user: the person's own words saying yes to this exact picture, after they described it
 and saw the prompt. Every generation is written to ~/.config/nano-banana/usage.jsonl, and each
 result reports how many pictures were made today and this month, and roughly what they cost.
+
+THE WORDS ARE NOT ENOUGH ON THEIR OWN (1.3.1). approved_by_user is text Claude passes, so:
+  * a hard spending cap: no generation once today's or this month's estimated EUR on this computer
+    would pass NANO_BANANA_DAILY_LIMIT_EUR (default 5) or NANO_BANANA_MONTHLY_LIMIT_EUR (default 50);
+  * when the MCP client declares the `elicitation` capability, the person also confirms each
+    generation in the client's own dialog - a yes Claude cannot type. A client without it gets
+    approved_by_user alone;
+  * a paid video is never lost: its operation is written to usage.jsonl the moment it starts, and a
+    failed status poll returns status "running" with the operation instead of an error.
+The key file is plain text in the user's profile; chmod 600 is a no-op on Windows, so it is
+protected only by the Windows account.
 """
 from __future__ import annotations
 
 import base64
+import collections
+import itertools
 import json
 import mimetypes
 import os
+import queue
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
 
-VERSION = "1.2.0"
+VERSION = "1.3.1"
 API = "https://generativelanguage.googleapis.com/v1beta"
 
 DEFAULT_IMAGE_MODEL = "gemini-3.1-flash-image"   # Nano Banana 2 - the generalist
@@ -238,11 +253,20 @@ NEED_YES = ("Not generated - every picture costs money (about EUR %.2f; a video 
             "never reuse an earlier yes for a different picture or a redo.")
 
 
-def eur_per_image():
+def _eur(name, default):
     try:
-        return float(cfg("NANO_BANANA_EUR_PER_IMAGE", "0.10"))
+        return float(cfg(name, str(default)))
     except ValueError:
-        return 0.10
+        return default
+
+
+def eur_per_image():
+    return _eur("NANO_BANANA_EUR_PER_IMAGE", 0.10)
+
+
+def eur_per_video():
+    # Veo 3.1 Fast is about USD 0.15 a second; an 8 s clip ~ EUR 1.10. Rounded up: an estimate.
+    return _eur("NANO_BANANA_EUR_PER_VIDEO", 1.50)
 
 
 def usage_file():
@@ -256,13 +280,16 @@ def approval(a):
     return words[:300]
 
 
-def record_use(kind, model, out_path, words):
+def record_use(kind, model, out_path, words, operation=""):
     p = usage_file()
+    row = {"when": time.strftime("%Y-%m-%dT%H:%M:%S"), "kind": kind, "model": model,
+           "out_path": out_path, "approved_by_user": words}
+    if operation:
+        row["operation"] = operation        # a paid video can always be collected again from this
     try:
         os.makedirs(os.path.dirname(p) or ".", exist_ok=True)
         with open(p, "a", encoding="utf-8") as f:
-            f.write(json.dumps({"when": time.strftime("%Y-%m-%dT%H:%M:%S"), "kind": kind, "model": model,
-                                "out_path": out_path, "approved_by_user": words}, ensure_ascii=False) + "\n")
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
     except OSError as e:
         log("could not write the usage log:", e)
 
@@ -270,6 +297,7 @@ def record_use(kind, model, out_path, words):
 def usage_summary():
     today, month = time.strftime("%Y-%m-%d"), time.strftime("%Y-%m")
     n = {"images_today": 0, "images_this_month": 0, "videos_today": 0, "videos_this_month": 0}
+    ops = []
     try:
         with open(usage_file(), encoding="utf-8") as f:
             for line in f:
@@ -283,18 +311,121 @@ def usage_summary():
                     n[k + "_this_month"] += 1
                     if when.startswith(today):
                         n[k + "_today"] += 1
+                if r.get("operation"):
+                    ops.append({"when": when, "operation": r["operation"], "out_path": r.get("out_path", "")})
     except OSError:
         pass
-    e = eur_per_image()
+    e, v = eur_per_image(), eur_per_video()
+    day = n["images_today"] * e + n["videos_today"] * v
+    mon = n["images_this_month"] * e + n["videos_this_month"] * v
+    dl, ml = daily_limit(), monthly_limit()
     n.update({"eur_per_image": e, "images_today_eur": round(n["images_today"] * e, 2),
               "images_this_month_eur": round(n["images_this_month"] * e, 2),
+              "eur_per_video": v, "eur_today": round(day, 2), "eur_this_month": round(mon, 2),
+              "daily_limit_eur": dl, "monthly_limit_eur": ml,
+              "recent_video_operations": ops[-5:],
               "note": "on this computer; an estimate - Google's billing page has the real amount; videos cost much more than pictures",
-              "tell_the_person": "Picture %d today on this computer, about EUR %.2f; this month %d, about EUR %.2f." % (
-                  n["images_today"], n["images_today"] * e, n["images_this_month"], n["images_this_month"] * e)})
+              "tell_the_person": ("Picture %d today on this computer, about EUR %.2f; this month %d, about EUR %.2f. "
+                                  "All generations: about EUR %.2f of EUR %.2f today, EUR %.2f of EUR %.2f this month.") % (
+                  n["images_today"], n["images_today"] * e, n["images_this_month"], n["images_this_month"] * e,
+                  day, dl, mon, ml)})
     return n
 
 
+# ---------------------------------------------------------------- the hard spending cap
+
+def daily_limit():
+    return _eur("NANO_BANANA_DAILY_LIMIT_EUR", 5.0)
+
+
+def monthly_limit():
+    return _eur("NANO_BANANA_MONTHLY_LIMIT_EUR", 50.0)
+
+
+CAP_REACHED = ("Not generated - the spending cap on this computer is reached: about EUR %.2f spent %s, this %s would "
+               "cost about EUR %.2f, and the limit is EUR %.2f. Tell the person; do not retry and do not draw it in SVG. "
+               "Only the person may raise the cap: set the environment variable %s (e.g. to %d) - in "
+               "~/.claude/settings.json under \"env\", or as a Windows user environment variable - and restart "
+               "Claude Code. The free route (Gemini in the browser, skill gemini-browser) has no cap.")
+
+
+def spend_cap(kind):
+    """Refuse BEFORE the key or Google is touched when this generation would pass a cap."""
+    u = usage_summary()
+    this = eur_per_image() if kind == "image" else eur_per_video()
+    for span, spent, limit, var in (("today", u["eur_today"], u["daily_limit_eur"], "NANO_BANANA_DAILY_LIMIT_EUR"),
+                                    ("this month", u["eur_this_month"], u["monthly_limit_eur"],
+                                     "NANO_BANANA_MONTHLY_LIMIT_EUR")):
+        if spent + this > limit + 1e-9:
+            raise ValueError(CAP_REACHED % (spent, span, "picture" if kind == "image" else "video clip",
+                                            this, limit, var, int(limit * 2) or 10))
+
+
+# ---------------------------------------------------------------- a yes Claude cannot type (MCP elicitation)
+
+CLIENT = {"elicitation": False}         # set from the client's capabilities at initialize
+CONFIRM_TIMEOUT = 600
+
+
+def confirm_with_person(kind, prompt, out_path):
+    """When the client supports elicitation, the person confirms in the client's own dialog.
+    Returns True when confirmed, False when the client has no such dialog (approved_by_user
+    then stands alone). Raises when the person declines, cancels or does not answer."""
+    if not CLIENT["elicitation"]:
+        return False
+    cost = eur_per_image() if kind == "image" else eur_per_video()
+    msg = ("Generate this %s? It costs money (about EUR %.2f).\n\nPrompt: %s\n\nSaved to: %s" % (
+        "picture" if kind == "image" else "video clip", cost, prompt[:600], out_path))
+    resp = _request_client("elicitation/create", {
+        "message": msg,
+        "requestedSchema": {"type": "object", "properties": {
+            "generate": {"type": "boolean", "title": "Yes, generate it", "default": False}},
+            "required": ["generate"]}}, CONFIRM_TIMEOUT)
+    res = (resp or {}).get("result") or {}
+    if res.get("action") == "accept" and (res.get("content") or {}).get("generate") is True:
+        return True
+    raise ValueError("Not generated - the person did not confirm it in the confirmation dialog (%s). "
+                     "Do not retry unless they ask again." % (
+                         res.get("action") or ("no answer" if resp is None else "error")))
+
+
+# ---------------------------------------------------------------- stdio transport
+
+INBOX = queue.Queue()                   # lines from the client, filled by the reader thread
+BACKLOG = collections.deque()           # lines that arrived while waiting for a client answer
+_IDS = itertools.count(1)
+
+
+def _request_client(method, params, timeout):
+    """Send a request TO the client and wait for its answer. Anything else that arrives
+    meanwhile is kept for the main loop. None on timeout or end of input."""
+    rid = "nb-%d" % next(_IDS)
+    send({"jsonrpc": "2.0", "id": rid, "method": method, "params": params})
+    deadline = time.time() + timeout
+    while True:
+        left = deadline - time.time()
+        if left <= 0:
+            return None
+        try:
+            line = INBOX.get(timeout=left)
+        except queue.Empty:
+            return None
+        if line is None:
+            INBOX.put(None)
+            return None
+        try:
+            msg = json.loads(line)
+        except ValueError:
+            msg = None
+        if isinstance(msg, dict) and msg.get("id") == rid and ("result" in msg or "error" in msg):
+            return msg
+        BACKLOG.append(line)
+
+
 # ---------------------------------------------------------------- HTTP
+
+FINAL = -1                              # ApiError status: Google answered, and the answer is final
+
 
 class ApiError(Exception):
     def __init__(self, status, message):
@@ -478,6 +609,8 @@ def generate_image(a):
     if not out_path:
         raise ValueError("out_path is required - the file the image is saved to")
     words = approval(a)                 # before the key and before anything is sent: it costs money
+    spend_cap("image")
+    confirmed = confirm_with_person("image", prompt, out_path)
     ensure_key()
     model = a.get("model") or cfg("NANO_BANANA_IMAGE_MODEL", DEFAULT_IMAGE_MODEL)
     if model in ("pro", "nano-banana-pro"):
@@ -535,6 +668,7 @@ def generate_image(a):
 
     return {
         "saved": written,
+        "confirmed_in_dialog": confirmed,
         "model": model,
         "route": route,
         "aspect_ratio": aspect,
@@ -556,7 +690,7 @@ def _video_download(op, out_path):
                or resp.get("generatedVideos") or resp.get("videos") or [])
     if not samples:
         filt = (resp.get("generateVideoResponse") or {}).get("raiMediaFilteredReasons")
-        raise ApiError(0, "Video finished but no file came back.%s" % (
+        raise ApiError(FINAL, "Video finished but no file came back.%s" % (
             (" Filtered: %s" % filt) if filt else ""))
     written = []
     base, ext = os.path.splitext(_abs(out_path))
@@ -570,7 +704,7 @@ def _video_download(op, out_path):
         elif v.get("bytesBase64Encoded") or v.get("data"):
             b = base64.b64decode(v.get("bytesBase64Encoded") or v.get("data"))
         else:
-            raise ApiError(0, "Video sample had neither a uri nor bytes")
+            raise ApiError(FINAL, "Video sample had neither a uri nor bytes")
         with open(p, "wb") as f:
             f.write(b)
         written.append({"path": p, "bytes": len(b)})
@@ -585,6 +719,8 @@ def generate_video(a):
     if not out_path:
         raise ValueError("out_path is required - the .mp4 the video is saved to")
     words = approval(a)
+    spend_cap("video")
+    confirmed = confirm_with_person("video", prompt, out_path)
     ensure_key()
     model = a.get("model") or cfg("NANO_BANANA_VIDEO_MODEL", DEFAULT_VIDEO_MODEL)
     params = {
@@ -607,28 +743,45 @@ def generate_video(a):
     op = http("POST", "%s/models/%s:predictLongRunning" % (API, model),
               {"instances": [inst], "parameters": params})
     name = op.get("name", "")
-    record_use("video", model, out_path, words)          # billed once it starts
+    # billed once it starts - and the operation is the only handle on the paid clip, so it is
+    # on disk before anything else can fail
+    record_use("video", model, out_path, words, operation=name)
     wait = int(a.get("wait_seconds") if a.get("wait_seconds") is not None else 360)
     result = _poll_video(name, out_path, wait)
-    result.update({"model": model, "parameters": params, "cost": usage_summary()})
+    result.update({"model": model, "parameters": params, "confirmed_in_dialog": confirmed,
+                   "cost": usage_summary()})
     return result
+
+
+def _transient(e):
+    """A network error, a timeout, a rate limit or a server error - worth polling again.
+    FINAL (the operation itself failed or came back empty) is not."""
+    return e.status in (0, 408, 429) or e.status >= 500
+
+
+COLLECT_LATER = ("Call get_video with this operation and the same out_path to collect it. The operation is also "
+                 "in usage.jsonl (nano_banana_status lists recent ones). Google keeps the clip for 2 days.")
 
 
 def _poll_video(name, out_path, wait):
     deadline = time.time() + max(0, wait)
-    op = {"name": name}
     while True:
-        op = http("GET", "%s/%s" % (API, name))
-        if op.get("done"):
-            if op.get("error"):
-                raise ApiError(0, "Video failed: %s" % op["error"].get("message", op["error"]))
-            return {"status": "done", "operation": name, "saved": _video_download(op, out_path),
-                    "watermark": "SynthID (invisible) - this is an AI-generated video",
-                    "note": "Google keeps the server copy for 2 days only; the local file is the copy.",
-                    "next": "Extract a poster frame or use the start image as poster; check the motion teaches."}
+        try:
+            op = http("GET", "%s/%s" % (API, name))
+            if op.get("done"):
+                if op.get("error"):
+                    raise ApiError(FINAL, "Video failed: %s" % op["error"].get("message", op["error"]))
+                return {"status": "done", "operation": name, "saved": _video_download(op, out_path),
+                        "watermark": "SynthID (invisible) - this is an AI-generated video",
+                        "note": "Google keeps the server copy for 2 days only; the local file is the copy.",
+                        "next": "Extract a poster frame or use the start image as poster; check the motion teaches."}
+        except ApiError as e:
+            # A paid clip must not be lost to a network blip: hand back the operation, not an error.
+            if not _transient(e):
+                raise ApiError(e.status, "%s | operation: %s - %s" % (e, name, COLLECT_LATER))
+            return {"status": "running", "operation": name, "poll_error": str(e)[:300], "next": COLLECT_LATER}
         if time.time() >= deadline:
-            return {"status": "running", "operation": name,
-                    "next": "Call get_video with this operation and the same out_path to collect it."}
+            return {"status": "running", "operation": name, "next": COLLECT_LATER}
         time.sleep(10)
 
 
@@ -780,6 +933,10 @@ def handle(req):
     rid = req.get("id")
     if method == "initialize":
         pv = (req.get("params") or {}).get("protocolVersion") or "2025-06-18"
+        # {} means form mode (the original spec); newer clients list modes, e.g. {"form": {}, "url": {}}.
+        el = ((req.get("params") or {}).get("capabilities") or {}).get("elicitation")
+        CLIENT["elicitation"] = isinstance(el, dict) and (not el or "form" in el)
+        log("client confirmation dialog (elicitation): %s" % ("yes" if CLIENT["elicitation"] else "no"))
         return {"protocolVersion": pv, "capabilities": {"tools": {}},
                 "serverInfo": {"name": "nano-banana", "version": VERSION}}
     if method == "ping":
@@ -802,9 +959,21 @@ def handle(req):
     raise KeyError(method)
 
 
+def _reader():
+    for line in sys.stdin:
+        INBOX.put(line)
+    INBOX.put(None)
+
+
 def serve():
     log("server %s ready" % VERSION)
-    for line in sys.stdin:
+    # stdin is read on its own thread so a tool call can wait for the client's answer
+    # (the confirmation dialog) without blocking the channel it arrives on.
+    threading.Thread(target=_reader, daemon=True).start()
+    while True:
+        line = BACKLOG.popleft() if BACKLOG else INBOX.get()
+        if line is None:
+            break
         line = line.strip()
         if not line:
             continue

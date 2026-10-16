@@ -139,7 +139,35 @@
       {"id": "space", "en": "Where does the slide's text go - which part of the picture stays empty?", "lv": "Kur atradīsies slaida teksts - kura attēla daļa paliek tukša?", "ru": "Где будет текст слайда - какая часть картинки остаётся пустой?"},
       {"id": "reference", "en": "Do you have a photo that shows what you mean? It helps the model more than anything.", "lv": "Vai jums ir foto, kas parāda, ko domājat? Tas modelim palīdz visvairāk.", "ru": "Есть ли фото, которое показывает, что вы имеете в виду? Это помогает модели больше всего."}
     ],
-    "kept_in": "working_claude/picture_briefs/M01.json - the answers, the agreed prompt, every picture made and the person's words; scripts/picture_briefs.py"
+    "kept_in": "working_claude/picture_briefs/M01.json - the answers, the agreed prompt, every picture made and the person's words; scripts/picture_briefs.py",
+    "gemini_browser": {
+      "_authority": "Owner, 2026-10-16 (via Aleksis): the AI spent its time thinking which picture to make and where - make the Gemini app in the browser (Google AI Pro, no API cost) do it, with the places and prompts already decided",
+      "why": "the Gemini app on the person's own Google AI Pro account costs nothing per picture, so the eight questions per picture are not needed to save money: picture_briefs.py queue drafts every prompt from the approved script, the person reads the whole list once and corrects any line, then nano-banana gemini-browser makes them one after the other",
+      "styles": {
+        "photo": "A realistic documentary photograph of",
+        "render3d": "A photorealistic 3D render of",
+        "cutaway3d": "A clean photorealistic 3D cutaway render, the outer shell cut open to show the inside, of",
+        "illustration": "A clean flat technical illustration in navy blue (#0B2265) and white with soft pale-blue fills, even line weight, of"
+      },
+      "default_style": "photo",
+      "space_by_composition": {
+        "photo": "Keep the lower-left third of the frame calm and uncluttered - the slide's title and words sit there.",
+        "beside_drawing": "The whole subject in frame with a margin all round, plain light background.",
+        "default": "Keep the subject whole and centred with a margin all round - nothing cut off at the edges."
+      },
+      "aspect_by_composition": {"photo": "16:9", "stage": "16:9", "beside_drawing": "4:3", "default": "4:3"},
+      "beside_drawing": {
+        "_authority": "Owner via Aleksis, 2026-10-16, on the tank-type, hazardous-zone and A-60 drawings: 'i need images there aswell'",
+        "why": "a drawing slide keeps its drawing - its labels, layout and boundaries are what the trainee learns and is checked on, and a generator invents plausible pipes and garbles words - and gets the real thing as a generated picture under it (the build sheet's inset, under: figure), the drawing and the picture side by side",
+        "kinds": ["schematic", "cutaway", "comparison", "interactive_diagram", "step_animation"],
+        "style": "render3d",
+        "style_by_kind": {"cutaway": "cutaway3d"},
+        "lead": "Show it as it really looks on a ship, the companion to a simplified drawing of the same thing.",
+        "opt_out": "a slide whose picture would add nothing gets \"no_picture\": true in the build sheet"
+      },
+      "always": "No text, no letters, no numbers, no labels, no arrows, no logos, no flags, no watermark.",
+      "end": "Aspect ratio {aspect}, landscape, high detail."
+    }
   },
   "three_d": {
     "_authority": "Owner, 2026-10-07 (L46, 2.22.0): 'now he does 3D models almost every slide - cut it down to 50%, better not quantity but quality, use it only where it makes sense; and it lags a little in these 3D models, maybe optimisation can be considered - but mainly I love these 3D models.' Second message, same day: 'I also don't need you to cut the quality of 3D models - don't make it in all slides, about 50% of the presentation is the max that can be 3D models, but also don't cut quality, and put it only on slides where it makes sense, not only because you can.'",
@@ -163,6 +191,15 @@
     ],
     "flat_words": ["chart", "graph", "curve", "table", "matrix", "list", "symbol", "pictogram", "document", "binder", "checklist", "permit", "timeline", "flowchart", "cheese", "steps of"],
     "_flat_words": "A 3D slide whose picture description uses one of these words gets a suggestion: a 3D model of something flat adds weight, not understanding.",
+    "fit_words": ["tank", "tanks", "hull", "hold", "space", "spaces", "room", "cofferdam", "airlock", "containment", "membrane",
+                  "insulation", "pump", "compressor", "valve", "valves", "manifold", "pipe", "piping", "pipework", "double-walled",
+                  "duct", "vent mast", "engine", "vaporizer", "vaporiser", "heater", "exchanger", "station", "coupling", "hose",
+                  "inside", "cutaway", "cut-open", "layout", "arrangement", "where on board", "location", "placement"],
+    "_fit_words": "2.49.0 (operator, 2026-10-16: 'make it so they add 3D when needed'). The factory proposes a 3D model unasked: in a module with no 3D yet, the teaching slides whose title, words or planned picture name a shape, an inside or a layout in space (these words, whole-word, English) - best first, at most propose_max - are proposed as model_3d. Never a slide whose picture is a real photograph (L52 keeps it) or whose picture is flat (flat_words). The person keeps or strikes each before approving; a struck one is written in the script's \"declined\" and never proposed again.",
+    "propose_max": 2,
+    "propose_first_kinds": ["cutaway", "technical_drawing", "schematic", "interactive_diagram", "comparison", "none"],
+    "_propose_first": "A slide planned as a drawing of a thing (a cutaway, a section, a layout) is proposed before one planned as a step or flow animation - an animation's lesson is the sequence, and turning it into 3D can lose that. Words inside these phrases are not counted: not_fit_phrases.",
+    "not_fit_phrases": ["room temperature", "in the room", "space for", "make space", "free space", "inside the module", "location of the"],
     "quality": "Each 3D model that stays gets the care of a main picture: true proportions, real materials (steel, insulation, paint), clear labels, a cut-open view where the inside is taught, and a starting view that already shows the point. Fewer, better.",
     "performance": {
       "_principle": "Never a lesser look to make it faster (owner, 2026-10-07: 'don't cut quality'). The speed comes from how the scenes run - one renderer, built and freed with their slide, nothing drawn or recomputed while nothing changes - not from fewer details, blurrier pictures or plainer light.",
@@ -192,6 +229,22 @@
     "_every_slide": "Owner, 2026-09-30 (2.18.1): no quota. As many pictures as the theory and the experience call for - wherever a picture, an animation or a realistic 3D illustration reflects what is being taught at that point, put it in; animation and 3D especially. A slide with none gets a suggestion, never a block. A picture that is named must say what it shows (must fix), and an unknown kind is a mistake to correct. 3D is the exception (owner, 2026-10-07, L46): at most half of a module's pictures, and only where it makes sense - see three_d.",
     "moving_or_3d_per_module_from_min": 40,
     "_moving": "A suggestion, not a rule (2.18.1): a module with this many minutes of theory and nothing that moves, turns or can be explored is pointed out, because where something moves, changes state or has an inside, a still picture teaches it worse (course-visuals, learning-needs.json).",
+    "ai_scene_words": ["crew", "people", "person", "team", "operator", "seafarer", "ship at", "at sea", "in port", "port", "harbour",
+                       "quay", "terminal", "deck", "bridge", "bunkering", "operation", "scene", "situation", "incident", "accident",
+                       "emergency", "fire", "explosion", "leak", "release", "cloud", "spill", "drill", "evacuation", "weather", "night"],
+    "ai_propose_max": 2,
+    "_ai_scene": "2.49.0 (operator, 2026-10-16: 'add AI generated photos when needed'). Where no real photograph exists, a realistic AI picture can set the scene - never equipment a trainee must recognise (L33), never instead of a photo that can be taken (L52). The factory proposes it unasked: in a module with no AI picture yet, a teaching slide with no picture, or whose planned picture is a schematic or none and whose words name a scene or a situation (these words) - at most ai_propose_max - is proposed as ai_illustration. Planning it costs nothing; each picture is still described, priced and said yes to before it is made (nano-banana, L47). A struck one goes in the script's \"declined\".",
+    "real_photo_kinds": ["photo", "annotated_photo", "photo_to_take", "video_real", "model_3d_scan"],
+    "real_photo_words": ["real photo", "real photograph", "photograph", "photo of"],
+    "real_photo_min_share": 0.5,
+    "_real_photos": "L52 (owner, 2026-10-15: 'add as many real photos as possible'). A teaching slide counts when its picture is a real photograph, a real film or a 3D scan - or its planned picture says a real photograph goes beside the drawing (the build sheet's inset). Fewer than half is pointed out as a suggestion: wherever a camera can show it, a real photograph goes in - as the slide's picture or beside the drawing. Never an AI picture of equipment a trainee must recognise (L33).",
+    "photo_things": ["tank", "space", "room", "hold", "mast", "station", "valve", "pipe", "pipework", "line", "hose", "coupling",
+                     "manifold", "pump", "compressor", "vaporizer", "vaporiser", "heater", "exchanger", "engine", "boiler", "detector",
+                     "sensor", "gauge", "panel", "button", "duct", "vent", "outlet", "trunk", "vessel", "truck", "tanker", "container",
+                     "cylinder", "bulkhead", "door", "airlock", "fan", "suit", "glove", "monitor", "nozzle", "arm", "cofferdam", "tray",
+                     "curtain", "flange", "bonnet", "unit", "ladder", "hatch", "deckhouse", "funnel", "membrane", "insulation"],
+    "_photo_things": "L57 (operator, 2026-10-15). A part a drawing names counts as a real thing - one a camera can show - when its last word is one of these (plural or not), or when a photo's 'shows' names it. Each such part on a drawn slide gets its real photograph beside the drawing, matched by the photo's 'shows' in _photo_meta.json; a part with no photo is reported at build and goes on working_claude\\PHOTOS_TO_TAKE.md.",
+    "photo_strip_max": 4,
     "min_visual_kinds_from_slides": 6,
     "min_visual_kinds": 3,
     "_kinds": "A suggestion, not a rule (2.18.1): a module of 6 slides or more with fewer than 3 kinds of picture is pointed out - but a picture is never added only for variety (L13).",

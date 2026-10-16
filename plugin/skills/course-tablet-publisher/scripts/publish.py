@@ -2,23 +2,23 @@
 # -*- coding: utf-8 -*-
 """One command for the whole publication: validate, register, then git.
 
-    DRY RUN (the default)              --publish                --publish --merge
-    ------------------------           ---------------------    -----------------
-    gates                              gates                    gates
-    registry check                     registry write           registry write
-    platform link check                platform link check      platform link check
-    print the plan                     branch, commit, push     ... then merge to
-                                       print the PR URL         the default branch
+    DRY RUN (the default)              --publish
+    ------------------------           ---------------------
+    gates                              gates
+    registry check                     registry write
+    platform link check                platform link check
+    print the plan                     branch, commit, push
+                                       print the PR URL
 
 Nothing reaches git unless --publish is given, and nothing reaches the default
-branch unless --merge is given on top of it. A FAIL from the gate stops the run
-before git is touched at all.
+branch from here at all: a reviewer approves and merges the pull request in
+GitHub (--merge is refused). A FAIL from the gate stops the run before git is
+touched at all.
 
 Usage
 -----
     publish.py --repo <android project> --course-id gas-basic
     publish.py --repo <android project> --course-id gas-basic --publish
-    publish.py --repo <android project> --course-id gas-basic --publish --merge
 
     --version X.Y.Z   override the version from course.json (branch name)
     --strict          treat every warning as a failure
@@ -144,7 +144,8 @@ def main(argv=None) -> int:
                          "--publish: the Android project is a publish target, not a "
                          "development workspace, and nothing reaches it without a "
                          "human having said so in as many words.")
-    ap.add_argument("--merge", action="store_true", help="also merge into the default branch")
+    ap.add_argument("--merge", action="store_true",
+                    help="refused: a reviewer merges the pull request in GitHub")
     ap.add_argument("--strict", action="store_true")
     ap.add_argument("--skip-links", action="store_true")
     ap.add_argument("--report", help="where to write the gate report (default: beside the repo)")
@@ -156,6 +157,13 @@ def main(argv=None) -> int:
     # mistyped publish cannot read, write or touch the Android project at all.
     if a.publish and not (a.approved_by or "").strip():
         print(APPROVAL_REFUSAL)
+        return 2
+    # Merging is a reviewer's act in GitHub, never this script's: --approved-by is free
+    # text nobody can verify here. Refused before anything is opened, like approval.
+    if a.merge:
+        print("REFUSED: --merge is not supported. Publish with --publish; a reviewer "
+              "approves and merges the pull request in GitHub. Branch protection on the "
+              "default branch is the real guard.")
         return 2
 
     with open(a.platform, "r", encoding="utf-8") as fh:
@@ -247,16 +255,8 @@ def main(argv=None) -> int:
             print("\nSTOPPED at `git " + sub + "`. Read the refusal above.")
             return 1
 
-    if a.merge:
-        rc, _ = run(common[:2] + ["merge"] + common[2:] + ["--merge"],
-                    "git merge into the default branch")
-        if rc != 0:
-            print("\nThe branch is pushed but NOT merged. Read the refusal above; "
-                  "the pull request URL from the push step is still valid.")
-            return 1
-        print("\nPublished and merged.")
-    else:
-        print("\nPublished on a branch. Open the pull request with the URL above.")
+    print("\nPublished on a branch. Open the pull request with the URL above; "
+          "a reviewer approves and merges it in GitHub.")
     print(live_prerequisite(a.course_id, plat), end="")
     return 0
 

@@ -134,6 +134,8 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
 }
 body:not(.dark-active) #blockTag{color:var(--faint-l)}
 #blockTag.idle{opacity:0}
+/* gb_deck.js sets .banded on a screen with a header band: the band names the screen, and the tag sat on top of it */
+#blockTag.banded{display:none}
 
 /* The touch navigation strip. It fades when idle but NEVER disappears and never
    stops accepting taps below the fade - a tablet user has no mouse to "wake" it

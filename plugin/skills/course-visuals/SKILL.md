@@ -74,6 +74,14 @@ afterwards**, which is the order in which a picture becomes decoration.
 > base for a scheme, drawing or photograph. If there is none, search the internet for a **real
 > photograph** of the actual thing. Author it if it is structural. Generate only when all of that
 > genuinely comes back empty — not when nobody felt like looking.
+>
+> **As many real photographs as possible (L52, owner 2026-10-15)** — in the presentation and the trainee tasks.
+> Where a drawing teaches the inside or the flow, a small real photograph of the actual thing still goes beside it.
+>
+> **Every drawing whole and clean (L54, owner 2026-10-15).** A room inside a hull follows the hull's real shape (a
+> sloping stern, a curved bow) - a path or a clip, never a rectangle poking through; nothing reaches past the drawing's
+> frame, not even a line's thickness; every label keeps 4 px clear of every other shape, line and label, and of its own
+> box's edge. Proven with `course-module-ux/measure/scripts/audit_drawing.js`; numbers in `review/knowledge/visual-floor.json`.
 
 And **lead** means the reading order, not merely presence: a screen that explains a cargo pump in
 three paragraphs and then shows one has a picture, but the trainee stopped reading before it.
@@ -167,6 +175,8 @@ inactive state · changing conditions · the labels the learner is asked about �
 **Every asset carries provenance, a licence and a visual verification**, in a metadata file beside
 the file. Open and look at every image before using it, and record that you looked. A plausible
 photograph of the wrong equipment teaches false recognition and is worse than no photograph.
+A photograph's record also says, for the trainee, what it shows (`description` - the text of its panel, L56) and
+names the things in it (`shows` - the compiler puts the photo beside every drawing that names one of them, L57).
 
 Never present a generated illustration as a photograph, an interpolated value as a measured one, or
 one manufacturer's equipment as another's.
@@ -208,9 +218,24 @@ original manual → recognised technical body → other credible source. **Not**
 scraped image sites or blogs. Record source, origin, rights, relevance, intended use, whether
 modification is permitted, whether attribution is required. **Legally usable assets are downloaded
 and packaged locally** — the tablet has no network and the app 403s every external host.
-**4 CREATE** — SVG for anything with topology, labels or state; HTML/CSS/JS for state-driven
-process; Canvas only where SVG genuinely fails; a generated illustration only when a realistic
-scene is the right medium. **Never generated imagery in place of a structured technical schematic.**
+**4 CREATE** — **from the figure kit first (L55).** Anything with topology, labels, state, flow or
+sequence is a kit spec, `NAME.kit.json` in `working_claude/figures/MNN/` (`kit/SPEC.md`), never a
+one-off SVG; a part the kit lacks is made into the kit (below). Hand-written SVG/HTML only for what
+the kit's families cannot be (a 3D model, a photo annotation); Canvas only where SVG genuinely fails;
+a generated illustration only when a realistic scene is the right medium. **Never generated imagery
+in place of a structured technical schematic.**
+
+> **The figure kit (L55, owner 2026-10-15):** *use the kit; if there is no element in the kit, the AI creates the
+> element, puts it in the kit, and asks for a merge after the module is complete.*
+> 1. **Write the spec.** `kit/SPEC.md` lists the seven families and every part. A step names the slide line it
+>    lights (`"line": 2`); an alarm is a mark on a value, so it fires when the value crosses it - never a second picture.
+> 2. **A part is missing?** Make it to `kit/PARTS.md` in the module's `assets/kit_parts.js` (status `new`, kit helpers,
+>    tokens only, an `example` spec), run `kit/scripts/check_kit.py module <module> --figures <figures/MNN>`, use it.
+> 3. **The module is complete** (QA passed, deck compiled) → `kit/scripts/kit_parts.py promote <module> --factory
+>    <factory-mjaso clone>`; it prints the branch, commit, push and merge-request steps - **ask the operator before the
+>    push**; the owner merges. In an orchestrated build module agents never touch the factory's `kit.js` - the
+>    orchestrator promotes every module's parts together at assembly and merges duplicates.
+> 4. **Review surface:** `kit/GALLERY.html` shows every part moving; a promoted part shows there with its example.
 
 Two escalations, and neither is silent:
 

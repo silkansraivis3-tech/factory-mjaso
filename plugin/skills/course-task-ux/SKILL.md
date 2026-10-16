@@ -136,6 +136,8 @@ halves count - a task that is clear but dull fails, and so does one that is impr
 5. **Alive, instant feedback.** Every touch answers within a tenth of a second: a press state, a soft snap when a
    dragged item lands, a calm shake and a hint on a wrong try, a check mark and the reason on a right one. The last
    screen shows the trainee's own score as an animated ring - rewarding and professional, never childish.
+   A tick means *you did this, and it is right*: when several answers are right and one was missed, the missed one is
+   outlined in green and says **"Also right"** - never ticked as if it had been chosen (2.46.0, `gb_answer.js`).
 6. **Modern and real.** Real equipment on the screen - 3D models that turn, real photographs, panels and gauges that
    look and behave like the ones on board; smooth motion between steps; the module's own look (`course-module-ui`).
    Nothing may look or feel like an old web form.
@@ -197,7 +199,11 @@ the items `content_script.answer_items` lists, and the right ones carry their `d
 | **Spot the errors** | The filled-in document as it looks on board - a permit, a log page, a checklist, a loading plan - one line per row, large type. **Tap a line to flag it**, tap again to unflag; **Check** at the bottom. | every wrong line flagged and nothing else; each wrong line then shows its *why* |
 | **Build the plan** | A bank of shuffled cards below, an empty plan with numbered slots above. Drag (or tap a card, then a slot) to build the plan; cards that do not belong stay in the bank. | the right cards in the right order; a card that does not belong, when placed, says why |
 | **Rebuild the incident** | Shuffled event cards; first put them in order (as *order*); once the order is right, the cards stay and the question changes: **tap where it should have been stopped**. | the order, then the stop point - two parts, each with its own Check |
-| **Compare** | The options side by side as columns - their names on top, one row per figure, the figures large and aligned; under each column a big **Choose** button. | the right option chosen; the feedback names the figures that decide it |
+| **Compare** | The options side by side as columns - one row per figure, the figures large and aligned; each column's name on top is its big **Choose** button, and a tap on any figure of the column chooses it too. | the right option chosen; the feedback names the figures that decide it |
+
+**All nineteen are compiled** (course-factory 2.38.0): `compile/scripts/task_pages.py` builds each from the approved
+script and the one shared engine, `assets/gb_answer.js` + `gb_answer.css`, grades it - a question is one or more parts,
+each with its own Check (a scenario's steps; the incident's order, then its stop point). No task page is made by hand.
 
 None of them hides information the trainee needs to answer: the readings in *find the fault* are one tap away and
 stay turned over; nothing is timed; a wrong answer is never an error message - it is a hint and another try (§1, L42).
@@ -329,6 +335,8 @@ task's own finish handler.
   role never locks anyone out of reading the whole scenario, and with no `gb-team` within about 2 seconds it runs as
   an ordinary task. `task-scope` `team`: one member (normally the Recorder) hands in with `scope: 'team'` and the
   others' pages say who handed in for the team; `member`: everyone answers and the team's average is shown.
+  Compiled since course-factory 2.39.0 (`gb_answer.js`, the `TEAM` part): the first tablet to finish hands in for
+  the team; the others hear `gb-team-done` (a factory proposal, `team_task.gb_team_done`) and say who did.
   L42 applies in full: a role's part is as plain and as big as everything else.
 
 ---

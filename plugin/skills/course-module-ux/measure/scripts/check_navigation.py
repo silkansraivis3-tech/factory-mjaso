@@ -71,6 +71,28 @@ def scripts_of(t: str) -> str:
     return "\n".join(re.findall(r"<script\b[^>]*>(.*?)</script>", t, re.S | re.I))
 
 
+# shared engines that carry the page's way out (their Back handler calls history.back / location) - a compiled task
+# page has no inline script at all; its a.gbt-topback is wired by gb_answer.js (IGF M04 finding 6)
+SHARED_NAV_ENGINES = {"gb_answer.js", "gb_deck.js", "gb_task.js"}
+
+
+def shared_scripts_of(path: str, text: str) -> str:
+    """the text of the local scripts a page loads (<script src="../assets/gb_answer.js">), so a way out the shared
+    engine provides is seen. A known engine that cannot be read from here (a page checked on its own) still counts."""
+    out = []
+    for src in re.findall(r"<script\b[^>]*\bsrc=[\"']([^\"']+)[\"']", text, re.I):
+        if re.match(r"[a-z][a-z0-9+.-]*:", src, re.I) or src.startswith("//"):
+            continue
+        name = os.path.basename(src.split("?")[0].split("#")[0])
+        p = os.path.normpath(os.path.join(os.path.dirname(path), src.split("?")[0].split("#")[0]))
+        try:
+            out.append(open(p, encoding="utf-8", errors="replace").read())
+        except OSError:
+            if name in SHARED_NAV_ENGINES:
+                out.append("/* shared engine %s: history.back */ history.back" % name)
+    return "\n".join(out)
+
+
 def is_fragment(raw: str) -> bool:
     """A figure fragment is markup meant to be pasted INTO a page, not a page.
 
@@ -133,7 +155,8 @@ def check_file(path: str, raw: str) -> None:
     # ---- 3 · trapped: no way onward and no way out -------------------------
     links = re.findall(r'<a\b[^>]*href="([^"]+)"', body, re.I)
     real_links = [h for h in links if h and not h.startswith("#")]
-    if n <= 1 and not real_links and "location.href" not in js and "history.back" not in js:
+    nav_js = js + "\n" + shared_scripts_of(path, text)
+    if n <= 1 and not real_links and "location.href" not in nav_js and "history.back" not in nav_js:
         fail(path, "single screen with no link out and no scripted navigation",
              "the learner is trapped on this page")
 

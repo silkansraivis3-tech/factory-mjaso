@@ -126,6 +126,14 @@ row wins** — even before its step has been built out. Full text: `references/l
 | **L49** | **20 / 80 in class - the programme unchanged, every theory slide kept** (owner, 2026-10-15). On paper the programme stays (L1); in class plain theory - the instructor explaining - aims at a fifth of the minutes, the rest the trainees do something: tasks, practice, simulator, and slides marked `"active"` (explain-then-reveal, predict-then-reveal, worked-example, scenario, explore). **Theory is never removed to get there** - a plain slide keeps its words (it can be read, the instructor moves faster) and gives up minutes; good theory may be added. Theory in ~5-minute cycles before a task. Measured on the Stage 2 page (theory-as-activity with minutes) and every Stage 3 review page - a suggestion, never a stop. `knowledge/theory-rules.json` → `split`. **The factory proposes, the operator decides** (2.27.0): per sub-topic, how its theory is learned by doing - written for a maritime expert, not an IT person - each kept or struck on the Stage 2 page; only kept ones are built. Read `active/GUIDE.md` at Stage 2; `scripts/active_plan.py`. **Five new tablet tasks** for the higher Bloom levels (2.28.0): find the fault, spot the errors, build the plan, rebuild the incident, compare | now (2.26.0-2.28.0) |
 | **L50** | **A fix is not a build - find, one list, one yes, change, one check** (owner, 2026-10-15: *"i want for fixes to be faster and still quality ... it will not go to 3-4 qa reviews"*). A correction to built modules - one, some or all - reads only `fix/GUIDE.md`, COURSE_STATE and the course's `STANDARDS.md`; "find it in the others" is one sweep of every module (`scripts/fix.py sweep`, measured in a hidden browser by `scripts/measure_slides.py`); the operator says yes once for the whole list; words go through every content script in one batch and into the built slides; a part every module uses is changed once and copied (`sync-shared`); a wish for every module becomes a standard; then **one** check for the kind of change, by whoever made it - no QA agent after the fixer, no whole-course QA, at most 2 agents. `knowledge/fix-rules.json` | now (2.29.0) |
 | **L51** | **Every picture opens full screen, and every module closes with the same recap** (owner, 2026-10-15: *"all images, every picture, illustration, explanitory image ... can be clicked and be full screened, and later you can close it"*; *"before [the module check] it should be beautiful summary in same design ... boxes, main points what to take away from this module, and all modules should be same closing slide design"*). **The picture viewer** `gb_zoom.js` + `gb_zoom.css` (course-module-ux assets, copied by `design_system.py`) on every page that shows a picture - deck, tasks, module check, handout: tap opens, X / tap outside / Esc / swipe down / Back / the next slide close, pinch or + / − zoom; a picture the trainee answers on gets a corner ⤢ button so a tap stays the answer. **The recap**: one slide `"recap": true` straight before the module check's task slide, 3-6 points "Short title - one sentence", built in the one shared design `.slide.dark.recap` (`gb_compose.css` 15 - animated boxes, then "Next: the module check"). `content_script.py` (r_ findings), `check_course_package.py`. Both are **design**: a person who wants them otherwise is told the risk and gets their way (L26) | now (2.30.0) |
+| **L52** | **As many real photographs as possible** (owner, 2026-10-15) - in the presentation and the trainee tasks. Wherever a camera can show it: the slide's picture, or a small real photo beside the drawing (build sheet `inset`); KB, old course, source files first, then free-licensed and credited; missing ones on the "photos to take at Novikontas" list; never AI for equipment a trainee must recognise (L33). Checked on the script: `v_few_photos` | now (2.25.1) |
+| **L53** | **No empty space, good padding** (owner, 2026-10-15). Pictures take the room the words leave, words at reading size, padding and the chrome's safe area kept, nothing spills. The deck is compiled from the shared layouts (`compile/GUIDE.md`) and passes `audit_compose.js`, `audit_deck.js`, `audit_collide.js` before it is shown. **Inside the figure too** (operator, 2.26.3): a figure fills its panel (`audit_drawing.js` EMPTY), sits beside its words at reading size (`two-col`, not a stage over small cards), and every line a step lights is a tap target for that step | now (2.25.1, 2.26.3) |
+| **L54** | **Every drawing whole and clean** (owner, 2026-10-15). A part inside a hull, tank, room or box stays inside its real shape (slope, curve - follow it or clip to it); nothing cut off at the drawing's frame, also in a later step; every label 4 px clear of other shapes, lines and labels and of its own box's edge; an intentional crossing marked `data-may-cross` / `data-no-contain` / `data-may-overlap`. `audit_drawing.js` before a deck is shown; `gb_fit.js` in every compiled deck | now (2.25.2) |
+| **L55** | **Figures come from the figure kit** (owner, 2026-10-15). A system, state, flow or sequence is a `NAME.kit.json` spec in `working_claude\figures\MNN\` (`course-visuals/kit/SPEC.md`), never a one-off SVG. A part the kit lacks is made to `kit/PARTS.md` in the module's `assets\kit_parts.js` and used at once; **after the module is complete** `kit/scripts/kit_parts.py promote` puts it in the factory's kit and the merge request goes to the owner (ask the operator before the push). Parallel build: module agents write only their own `kit_parts.js`; the orchestrator promotes at assembly | now (2.26.0) |
+| **L56** | **Every photograph carries what it shows into the viewer - unasked** (operator, 2026-10-15, from Aigars's review: *"images expandable, a lightbox with more explanation about the photo"*; *"the factory needs to make it on its own"*). One viewer, L51's `gb_zoom.js`, in every compiled deck too: full screen shows a photo's record under it - what it shows (its `description` in `_photo_meta.json`: write it when the photo comes in, for a trainee, claiming only what the picture shows) and its credit. No build-sheet key; a photo without a description is reported at build. A generated picture keeps its full record but shows no credit and no label, and is never an L57 thumbnail | now (2.27.0, 2.33.0) |
+| **L57** | **A drawing of real things carries their real photographs - unasked** (operator, 2026-10-15: *"an illustration like this would also have a real image of it, smaller, close, which you can click"*). The compiler finds the real things a drawn slide names (its line terms, the drawing's own labels) and puts their photos in a row under the drawing - numbered like the drawing, each opening in the L56 panel, at most four - matched by the photo's `shows` in `_photo_meta.json` (write it whenever a photo comes in). A cleared photo of another module is copied in; one awaiting rights review never. A real thing with no photo is reported and listed in `working_claude\PHOTOS_TO_TAKE.md` - never blocks the build | now (2.27.0) |
+| **L58** | **Every photograph once in the whole course** (operator, 2026-10-15: *"don't have duplicate images - either a different one or none, on all modules"*). One photograph, one screen - slide picture, inset, photo in a drawing or L57 thumbnail; a copy under another name in another module is the same photograph (`url_or_origin`, else the bytes). A thumbnail takes a different photo or none (the thing goes on `PHOTOS_TO_TAKE.md`); one placed by hand twice, or later than a module that already shows it, is reported at build - choose a different one or none. Build every module again after photos change | now (2.27.0) |
+| **L59** | **No module before its map** (owner, 2026-10-16: *"before creating any module the AI should have already made the ILO mapping and suggested for KNOWLEDGE_BASE to be created"*). Before any module's content is written, the course has its ILO map (`working_claude/ilo_map.json`), approved on the Stage 2 page, and a recorded knowledge-base decision; when there is no knowledge base, the factory suggests making one, unasked. Every Sub-ILO is taught on a slide and checked by a question, and every fact traces to a listed source. `scripts/course_gate.py` stops `content_script.py` and `compile_module.py --init-build` without them; `script/GUIDE.md` §0 | now (2.42.0) |
 | **L41** | **The old course is the foundation.** Read it whole at intake (`scripts/old_course.py inventory`, and `images` for its pictures); at the Stage 2 STOP every module says what it **keeps**, what it **modernises and makes digital**, and what it **adds** | now (2.19.0) |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
@@ -252,6 +260,10 @@ questions, and what to record. In order:
    course; propose the course type from the programme. The course language is always English.
    **Read the old course whole** (L41): `python scripts/old_course.py inventory <old course> --course <folder>`
    and `... images ...` - it is the foundation the architecture is planned from.
+   **No knowledge base? Suggest one, unasked** (owner, 2026-10-16; 2.42.0): `kb_tool.py find <folder>` prints
+   what it is, which of their files it would be built from, how (the Course Source Processor - the factory has
+   no tool for it, never pretend it does) and what the course loses without it. Say that to the operator in
+   plain words, and put its ready question into the pop-up.
 2. **Sort the sources** — `kb/scripts/kb_tool.py sources <kb> --course <course>` (read `kb/GUIDE.md`):
    exact copies and .doc/.docx pairs are settled without asking; each publication found in more than
    one edition becomes a "which edition is current?" question.
@@ -261,7 +273,13 @@ questions, and what to record. In order:
    course type (`NEW_ENTRANT` / `EXPERIENCED`, the programme's pointer first as *Recommended*), the
    model course only if not found, the edition questions, and — in retrofit, only
    when `detect_expert_edits.py` says `nothing-to-go-on` — whether anyone edited it by hand (L24).
-4. **Record** it in `working_claude\intake.json`, editions via `kb_tool.py decide`. Nothing is asked twice.
+4. **Record** it in `working_claude\intake.json`, editions via `kb_tool.py decide`, the knowledge base via
+   `kb_tool.py decision` (yes / built / declined with their reason). Nothing is asked twice.
+
+**No module starts before the ILO map is approved and the knowledge base is decided** (owner, 2026-10-16:
+*"before creating any module the AI should have already made the ILO mapping and suggested for
+KNOWLEDGE_BASE to be created"*). `content_script.py` and `compile_module.py --init-build` stop, exit 2,
+and `scripts/course_gate.py <course>` says what is missing.
 
 Every instrument and simulator in the IMO model course is **assumed available** (L28) — never asked.
 Never ask the module split, screen count, task codes, pass marks, file layout or which lane to
@@ -368,13 +386,18 @@ It reads `programme.json` and `architecture.json` (and `plan.json`, optional) fr
 | **Final assessment** | graded, with the programme's pass mark |
 | **Theory as activity** | per sub-topic, what the factory proposes the trainees *do* instead of only listening - minutes, what it needs, the slides staying - each with **Keep** / **Strike**; the class split now and if all are kept (L49, `active/GUIDE.md`). Record with `scripts/active_plan.py decide`; **every proposal is decided before the operator's "next" is recorded** - a proposal left waiting is not built |
 | **Bloom levels** | what level every Main ILO and Sub-ILO asks for, what the planned task types reach, and how to lift a gap (L48, `bloom/GUIDE.md`) - suggestions, never a stop |
+| **ILO map** | one row per Sub-ILO per module - what every module's script is written against - with the model-course items under each topic. Written with the page as `working_claude\ilo_map.json` (`scripts/ilo_map.py`); approving the page approves it (2.42.0) |
+| **Knowledge base** | the intake decision: used, made for this course, or declined with the operator's reason - a declined one stays on the page |
 
 Programme text appears verbatim in the programme's own language, module titles in COURSE_LANGUAGE; the headings and explanations are in the
 operator's language (`architecture.json` → `operator_language`: `en` / `lv` / `ru`,
 `knowledge/page-labels.json`). Run it with `--check` first: anything the page would flag — hours
 that disagree, a Sub-ILO change without the programme wording, a graded module check — is fixed or
 shown at the top. Markers stay in `factory-notes.md` (L31). Nothing is built until the operator
-says "next"; then record it in `COURSE_STATE.md` (L32).
+says "next"; then record it - `python scripts/make_architecture_page.py --course <course> --approve --by "<name>"`
+(2.42.0: it fingerprints the ILO map, and is refused while the knowledge-base decision is missing, a teaching
+module has nothing in the map, or a theory-as-activity proposal waits) - and in `COURSE_STATE.md` (L32). A later
+change to any Sub-ILO stops new modules until the page is approved again.
 
 ## Stage 3 — the content script, approved before any HTML (L29)
 
@@ -397,9 +420,17 @@ The **Bloom card** (L48) shows each question's level, the module's share at *App
 50 %), and every question below its Sub-ILO with the tablet task type that lifts it - suggestions only.
 Give a question `"sub_ilo"` to check it per Sub-ILO, and `"bloom"` + `"bloom_why"` when it is written above
 its task type's usual level (`bloom/GUIDE.md` §2).
+**Written against the ILO map** (2.42.0): the script is begun from the module's rows (`ilo_map.py show <course>
+--module N`), the old course's keep / modernise / add (L41) and the knowledge base (`kb_tool.py search` only). The
+review page's **ILO map and sources check** - must-fix, like the theory check - wants every Sub-ILO taught on a
+slide and checked by a question (`"sub_ilo"` on both; on every question), and `"sources"` listed.
 Approval is `approve --by <name>`; any later change makes it a draft again. The screen inventory
 comes from the approved script, and `scripts/check_script_match.py` proves the built module says
-exactly those words.
+exactly those words. **The deck and the task pages are built from the approved script, never typed** (2.25.0,
+2.34.0): `compile/GUIDE.md`, `compile/scripts/compile_module.py`; **the course's own pages** - `COURSE.html`,
+`course_map.js`, every module's two start pages - by `compile/scripts/compile_course.py`, once for the course
+(2.37.0). A module agent therefore reads the script lane, `compile/GUIDE.md` and the picture lanes - not the HTML
+rules of `course-module-ux`, `course-module-ui` and `course-task-ux`, which the compiler builds to.
 
 ## Build order
 

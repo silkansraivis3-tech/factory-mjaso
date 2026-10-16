@@ -50,7 +50,24 @@
       },
       "description": {
         "type": "string",
-        "description": "what the photograph LITERALLY shows - not what it is used to teach"
+        "description": "what the photograph LITERALLY shows - not what it is used to teach. Trainees read it: full screen shows it under the photo on every slide (L51, L56, gb_zoom.js), so write it for them - what is in the picture and where to look, in plain words, never more than the picture evidences"
+      },
+      "shows": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "L57: the plain names of the on-board things the photograph really shows, as slides and drawings name them, lower case, no abbreviations - e.g. [\"fuel tank\", \"type C tank\"], [\"bunkering station\"]. The compiler puts the photo beside every drawing that names one of them. Only what the picture evidences: a cargo tank of an LNG carrier is a \"membrane tank\", never a \"fuel tank\""
+      },
+      "generated": {
+        "type": "boolean",
+        "description": "true for a picture made by an image model (nano banana and the like): the record stays (provenance), but it shows no credit line and no label on screen (operator, 2026-10-15) and is never placed as an L57 thumbnail. Record 'generator', 'prompt' and 'approved_by_user' (L47) with it"
+      },
+      "generator": {
+        "type": "string",
+        "description": "the image model that made a generated picture, for the record, e.g. 'Nano Banana (Google Gemini image model)' - not shown on screen"
+      },
+      "copied_from": {
+        "type": "string",
+        "description": "set by the compiler when it copied the photo in from another module of the course (L57)"
       },
       "teaching_purpose": {
         "type": "string",

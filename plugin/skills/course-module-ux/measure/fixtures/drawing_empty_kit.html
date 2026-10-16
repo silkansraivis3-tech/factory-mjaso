@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>audit_drawing EMPTY fixture (figure kit)</title>
+<!-- test_audit_drawing.py opens this in headless Chrome (K12, IGF M06). Three kit figures, each in a 640 px panel:
+       bad-sparse    one small tank in a corner, no steps: EMPTY - and the finding says WHERE the blank piece is
+       good-pipes    two pipe routes that go round the panel with valves on them: a pipe counts by its bounding box, so
+                     the space its bends enclose is not "blank" (counted by its outline alone, thin pipes read as empty)
+       good-busiest  a pool fire that burns at step 1 and is out at the last step: the rest state and the last state are
+                     sparse by design, the figure is judged at its BUSIEST step and passes -->
+<link rel="stylesheet" href="../../../course-visuals/kit/kit.css">
+<style>
+  body{margin:0;padding:20px;font-family:sans-serif;background:#fff}
+  .kit-screen{background:#0C1E3A;border-radius:16px;padding:12px;width:640px;margin:0 0 24px;box-sizing:content-box}
+</style>
+</head>
+<body>
+<div class="kit-screen"><svg id="bad-sparse" data-kit="#spec-sparse"></svg></div>
+<div class="kit-screen"><svg id="good-pipes" data-kit="#spec-pipes"></svg></div>
+<div class="kit-screen"><svg id="good-busiest" data-kit="#spec-busiest"></svg></div>
+
+<script type="application/json" id="spec-sparse">{"size":[640,390],"label":"a small tank in a corner","fit":false,"parts":[
+ {"id":"T","type":"tank","x":30,"y":30,"w":150,"h":80,"label":"tank","value":0.5}]}</script>
+<script type="application/json" id="spec-pipes">{"size":[640,390],"label":"two pipe routes round the panel","fit":false,"parts":[
+ {"id":"P1","type":"pipe","d":"M40 40 H600 V350 H40","value":0},
+ {"id":"P2","type":"pipe","d":"M150 130 H490 V260 H150","value":0},
+ {"id":"V1","type":"valve","x":40,"y":195,"label":"V1","value":1},
+ {"id":"V2","type":"valve","x":320,"y":130,"label":"V2","value":1}]}</script>
+<script type="application/json" id="spec-busiest">{"size":[640,390],"label":"a pool fire that goes out","fit":false,"parts":[
+ {"id":"F","type":"fire","kind":"pool","x":40,"y":340,"w":560,"height":300,"value":0}],
+ "steps":[{"title":"The pool burns","play":[["F",1,500]]},{"title":"The fire is put out","play":[["F",0,500]]}]}</script>
+
+<pre id="out"></pre>
+<script src="../scripts/audit_drawing.js"></script>
+<script src="../../../course-visuals/kit/kit.js"></script>
+<script>
+  console.log = function () {};
+  setTimeout(function () {
+    KIT.layoutAll(true);
+    var res = AuditDrawing.page();
+    document.getElementById("out").textContent = JSON.stringify({
+      verdict: res.verdict,
+      findings: res.findings.map(function (f) {
+        var el = f.els && f.els[0], svg = el && (el.ownerSVGElement || el);
+        return { check: f.check, svg: svg && svg.id, part: el && el.id, detail: f.detail };
+      })
+    });
+  }, 600);
+</script>
+</body>
+</html>
