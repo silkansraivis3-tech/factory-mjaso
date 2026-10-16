@@ -818,6 +818,51 @@ def text_findings(script):
     return found
 
 
+def said_words(s, vocab, but=()):
+    """the words of vocab a slide's title, text or planned picture names - whole words, any case, each once; words
+    inside one of the phrases in but ("room temperature") are not counted"""
+    said = " ".join(str(s.get(f) or "") for f in ("title", "text", "visual"))
+    for p in but:
+        said = re.sub(r"(?i)%s" % re.escape(p), " ", said)
+    return [w for w in vocab if re.search(r"(?i)(?<![\w-])%s(?![\w-])" % re.escape(w), said)]
+
+
+def propose_3d(teach, three, declined):
+    """2.49.0 - in a module with no 3D yet, the teaching slides where a shape, an inside or a layout in space is the
+    lesson (knowledge/media-and-tasks.json three_d.fit_words), best first: (screen, the words, rule). Never a slide whose
+    picture is a real photograph (L52), a flat one (flat_words), or one the person struck (the script's "declined")."""
+    TD, F = MEDIA["three_d"], MEDIA["floors"]
+    if three:
+        return []
+    out = []
+    for s in teach:
+        k = parse_kind(s.get("visual_kind", ""))
+        fam = MEDIA["visual_kinds"].get(k, {}).get("family")
+        if s["id"] in declined or k in F["real_photo_kinds"] or fam in ("3d", "video") or said_words(s, TD["flat_words"]):
+            continue
+        words = said_words(s, TD["fit_words"], TD["not_fit_phrases"])
+        if words:                                       # a drawn thing before an animated sequence, then the most words
+            out.append((k not in TD["propose_first_kinds"], -len(words), len(out), s["id"], words))
+    return [(sid, words, "v_3d_propose") for _f, _n, _i, sid, words in sorted(out)[:TD["propose_max"]]]
+
+
+def propose_ai(teach, kinds, declined):
+    """2.49.0 - in a module with no AI picture yet, a teaching slide with no picture whose words name a scene or a
+    situation (floors.ai_scene_words): (screen, the words, rule). Context only - never equipment to recognise (L33);
+    each picture is still described, priced and said yes to before it is made (L47)."""
+    F = MEDIA["floors"]
+    if any(MEDIA["visual_kinds"][k]["made_by"] == "nano_banana" for k in kinds):
+        return []
+    out = []
+    for s in teach:
+        if s["id"] in declined or parse_kind(s.get("visual_kind", "")) not in ("none", ""):
+            continue
+        words = said_words(s, F["ai_scene_words"])
+        if words:
+            out.append((-len(words), len(out), s["id"], words))
+    return [(sid, words, "v_ai_propose") for _n, _i, sid, words in sorted(out)[:F["ai_propose_max"]]]
+
+
 def media_findings(script):
     """L37, L38 - every slide leaves room for a named visual, a module moves where it can, and the tasks are
     varied and hands-on. Floors: knowledge/media-and-tasks.json."""
@@ -881,6 +926,12 @@ def media_findings(script):
             word = next((x for x in TD["flat_words"] if re.search(r"(?i)\b%s\b" % re.escape(x), said)), None)
             if word:
                 add(s["id"], "visual", NOTE, "v_3d_flat", word=word)
+        # 2.49.0 (operator, 2026-10-16): 3D and AI pictures proposed unasked, slide by slide - kept or struck
+        declined = script.get("declined") or {}
+        for sid, words, rule in propose_3d(teach, three, declined.get("3d") or {}):
+            add(sid, "visual_kind", NOTE, rule, words=", ".join(words))
+        for sid, words, rule in propose_ai(teach, kinds, declined.get("ai") or {}):
+            add(sid, "visual_kind", NOTE, rule, words=", ".join(words))
 
     slide_no, sets, set_of = plan_of(script)
     qs = [q for st in sets if st["kind"] != "final" for q in st["questions"]]

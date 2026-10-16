@@ -433,8 +433,9 @@ def figure_html(mdir, figdir, s, b, probs, where):
     rel = (b.get("figure") or "").replace("\\", "/")
     if not rel:
         if (s.get("visual_kind") or "none") != "none":
-            probs.append("%s has no picture file in the build sheet - it is planned as %s: %s"
-                         % (where, s.get("visual_kind"), first_sentence(s.get("visual")) or "(no description)"))
+            probs.append("%s has no picture file in the build sheet - it is planned as %s: %s%s"
+                         % (where, s.get("visual_kind"), first_sentence(s.get("visual")) or "(no description)",
+                            NO_PHOTO_YET if s.get("visual_kind") in ("photo", "annotated_photo", "photo_to_take") else ""))
         return "", "", False
     body, err = read_figure(mdir, rel, figdir)
     if err:
@@ -520,6 +521,10 @@ GENERIC = {"tank", "space", "room", "engine", "pipe", "line", "valve", "pump", "
            "hold", "vessel", "ship", "gas", "fuel", "button", "hose", "arm", "fan", "door"}
 ACRONYMS = {"LNG", "CNG", "LPG", "ESD", "GVU", "TCS", "FPR", "IGF", "LEL", "BOG", "GCU", "PRV", "ERS", "QCDC", "IMO"}
 TO_TAKE = "PHOTOS_TO_TAKE.md"
+# 2.49.0 (operator, 2026-10-16: AI pictures when needed) - what a missing photograph can become, said at the build
+NO_PHOTO_YET = (" - find the real photograph (the project, the factory library, a free-licence one: course-visuals); "
+                "if none exists and the slide only sets the scene, propose an AI picture unasked (nano-banana: described, "
+                "priced, said yes to, then made; never equipment to recognise, L33); equipment stays a photo to take")
 
 
 def norm(s):

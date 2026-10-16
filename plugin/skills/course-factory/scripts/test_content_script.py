@@ -351,6 +351,39 @@ def main():
         half["screens"][1:1] = [dict(screen(SCRIPT, "s02"), id="s0%d" % i, visual_kind="photo") for i in (4, 5)]
         check("... two of five is fine", not [x for x in cs.media_findings(half) if x["rule"] == "v_3d_share"])
 
+        print("\n-- 2.49.0: 3D and AI pictures proposed unasked, slide by slide - kept or struck")
+        prop = lambda sc, r: [x for x in cs.media_findings(sc) if x["rule"] == r]
+        MEDIA_TD = cs.MEDIA["three_d"]
+        check("a module that has a 3D model gets no 3D proposal", not prop(SCRIPT, "v_3d_propose"), prop(SCRIPT, "v_3d_propose"))
+        no3 = copy.deepcopy(SCRIPT)
+        for x in no3["screens"]:
+            if x.get("kind") == "slide":
+                x["visual_kind"], x["visual"] = "schematic", "A drawing of the idea"
+        screen(no3, "s01").update(visual_kind="step_animation", visual="Kit figure: the tank and its relief valve, step by step")
+        screen(no3, "s02").update(visual_kind="cutaway", visual="A cut-open tank: the membrane, the insulation and the hull behind it")
+        screen(no3, "s03").update(visual_kind="photo", visual="A real photograph of the tank connection space")
+        p3 = prop(no3, "v_3d_propose")
+        check("no 3D: the drawn tank comes first, the animated one second", [x["screen"] for x in p3] == ["s02", "s01"], p3)
+        check("... never the slide with a real photograph (L52)", "s03" not in [x["screen"] for x in p3], p3)
+        check("... a proposal, not a must-fix (owner 2.18.1: a picture is never a block)",
+              p3 and all(x["level"] == cs.NOTE for x in p3) and not [f for f in cs.blocking(cs.media_findings(no3)) if f["rule"] == "v_3d_propose"], p3)
+        check("... it names the words that made it", "membrane" in p3[0]["detail"] and "insulation" in p3[0]["detail"], p3[0]["detail"] if p3 else "")
+        rt = copy.deepcopy(no3)
+        screen(rt, "s01").update(visual="Kit figure: a liquid warming at room temperature")
+        check("'room temperature' is not a room", cs.said_words(screen(rt, "s01"), ["room"], MEDIA_TD["not_fit_phrases"]) == []
+              and cs.said_words(screen(rt, "s01"), ["room"]) == ["room"])
+        st = copy.deepcopy(no3)
+        st["declined"] = {"3d": {"s02": "operator: the cutaway is enough"}}
+        check("a struck proposal is not made again", [x["screen"] for x in prop(st, "v_3d_propose")] == ["s01"], prop(st, "v_3d_propose"))
+        check("... and striking it does not touch the approved words", cs.content_hash(st) == cs.content_hash(no3))
+        ai = copy.deepcopy(no3)
+        screen(ai, "s03").update(visual_kind="none", visual="", title="The crew at a bunkering operation in port")
+        pa = prop(ai, "v_ai_propose")
+        check("a scene with no picture gets an AI picture proposed", [x["screen"] for x in pa] == ["s03"] and pa[0]["level"] == cs.NOTE, pa)
+        check("... context only, priced, asked first", "L33" in pa[0]["detail"] and "EUR" in pa[0]["detail"], pa[0]["detail"] if pa else "")
+        screen(ai, "s01")["visual_kind"] = "ai_illustration"
+        check("... not when the module already has an AI picture", not prop(ai, "v_ai_propose"), prop(ai, "v_ai_propose"))
+
         print("\n-- L51 (2.30.0): every module closes with one recap slide, straight before the module check")
         rules = lambda sc: {x["rule"]: x for x in cs.recap_findings(sc)}
         check("the example module's recap passes", not rules(SCRIPT), cs.recap_findings(SCRIPT))

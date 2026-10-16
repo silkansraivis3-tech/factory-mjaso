@@ -93,6 +93,19 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   The review page shows plain theory against active minutes (aim: 20 / 80). To get there, **keep every
   theory slide** and give the plain ones fewer minutes - the words stay to be read - and the minutes to
   activity; never shorten or remove good theory. Theory may be added.
+- **3D and AI pictures - planned unasked (2.49.0, operator 2026-10-16: "make it so they add 3D + AI generated photos
+  when needed").** Before the review page is shown, plan them yourself - the operator never has to ask:
+  - **3D:** where a slide's lesson is a shape, an inside or a layout in space (a tank and its barriers, a space and
+    what is around it, a pipe between its valves), set its `visual_kind` to `model_3d` and describe the scene in
+    `visual`. Aim for one good 3D scene in a module whose subject is spatial; none in one that is not (procedures,
+    charts, ideas). L46 still holds: at most half the teaching slides, never a real photo replaced, full quality.
+  - **AI picture:** where a slide sets a scene or a situation that no real photograph shows (people at work, an
+    operation, an incident) - `ai_illustration`, context only, never equipment to recognise (L33). Planning it is
+    free; the picture itself is described, priced and said yes to before it is made (nano-banana, L47).
+  - The review page names what you left out as proposals (`v_3d_propose`, `v_ai_propose`): the slide and the words
+    that made it. Each one the operator keeps goes into the script (propose / apply); each one they strike goes into
+    the script's `"declined"`, outside the approved words, so it is never proposed again:
+    `"declined": {"3d": {"s06": "operator: the comparison drawing is enough"}, "ai": {}}`.
 - **Bloom (L48, 2.25.0).** A question says which Sub-ILO it checks (`"sub_ilo": "1.2"` - expected on every
   question since 2.42.0, §0), and - only when
   it is written above its task type's usual level - its level and why (`"bloom": 4, "bloom_why": "..."`).

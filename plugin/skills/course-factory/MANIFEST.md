@@ -1104,6 +1104,21 @@ each found only after a full build. Now the kit and its checks take that work:
 - 1024x768, stated: the two-col panel shows a figure at 0.54-0.72 of its size; the floor grows its words 1.4-1.9x and
   25 of 32 IGF figures then crowd (labels without a clear place, overlaps). Not judged; the tablet is 1280x800.
 
+## 4zr · 3D and AI pictures planned unasked (2.49.0, 2026-10-16)
+
+- **Why:** IGF M04, M05 and M06 were scripted with no 3D and M03-M06 with no AI picture; the module-level suggestion
+  "nothing moves, turns or can be explored" was printed and ignored. Operator: "make it so they add 3D + AI generated
+  photos when needed".
+- **Script writer** (`script/GUIDE.md`): plans them before the review page - `model_3d` where the lesson is a shape, an
+  inside or a layout in space (about one good scene in a spatial module, L46's cap kept), `ai_illustration` where a
+  slide sets a scene no real photograph shows (context only, L33; described, priced and said yes to before it is made, L47).
+- **Check** (`content_script.py` `propose_3d` / `propose_ai`, words in `media-and-tasks.json` `three_d.fit_words`,
+  `not_fit_phrases`, `propose_first_kinds`, `floors.ai_scene_words`): what was left out is named slide by slide, as a
+  proposal with the words that made it - never a must-fix (owner 2.18.1). Kept → the script (propose / apply). Struck →
+  `"declined": {"3d": {...}, "ai": {...}}` in the script, outside the approved words (the hash does not change).
+- **Build** (`compile_module.py`, `compile/GUIDE.md` §2b): a photo slide with no picture file says what it can become.
+- **On the pilot:** no proposal in M01-M03 (each has its 3D scene); M04 s10, s06; M05 s06, s05; M06 s14, s06.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never
