@@ -996,6 +996,46 @@ Source: `M04_BUILD_METRICS.md` §9 (findings 1, 3, 5, 6, 7, 8, 13, 14). Each fix
   problem (`credit_path_problems()`), on the deck and on every task page.
 - Not touched, by instruction: `compile/scripts/task_pages.py`, `course-task-ux/assets/gb_answer.*` (another agent).
 
+## 4zo · The figure kit does the drawing work; the figure studio (2.45.0, 2026-10-16)
+
+Measured on IGF M01-M04: 3, ~10, ~12 and 17 compile runs, nearly all for drawings - label boxes placed by hand in build
+sheets (M01 m01, M02 m01, M03 q06), labels overflowing, parts invisible on the dark panel, empty space, 12 px labels,
+each found only after a full build. Now the kit and its checks take that work:
+- **Labels laid out by themselves** (`kit.js` `layout()` / `solveLabels()`): every part's words are a label
+  (`KIT.h.label`) placed clear of every shape, line and other label and of its own box's edge (L54), at the end of every
+  step - beside the part, or further out with a leader line. `"text"` with `"to": [x, y]` is a callout. The solver is a
+  pure function (`KIT.solveLabels`, `scripts/test_solver.py`) so the 3D kit's label overlays can use it.
+- **Task-page label boxes** (`compile/scripts/label_layout.py`, called from `task_pages.label_boxes()`): one width - what
+  the longest label needs on two lines with its tick - each box as near its place as the others allow (PAV), order kept,
+  both bands used. The pilot's hand-placed boxes were removed from the build sheets (scratch copy) and are not needed.
+- **Both panels by construction** (`kit.css` `.kit-light`): a part names the dark-panel tokens; on a light ground they
+  mean the light ones. The contrast check stays as the safety net; the gallery passes it on both panels.
+- **The 12.5 px floor** (`--kit-up`): shown smaller than 1:1 every kit type size grows by 1/scale (max 2x); boxes, rings
+  and rows grow with their words (`fig.fit`); past 1.3x frame growth the words stop growing and SMALL TEXT reports it.
+- **Fit**: a drawing that reaches past its frame grows the frame (taller only when the column has room), one lost in its
+  frame is zoomed to fill it (max 1.5x; never on a task page, with `view`, an inset photo or `"fit": false`); an alarm too
+  long for its log goes on two lines; a panel holds the parts on it.
+- **The figure studio** `course-visuals/kit/scripts/studio.py <spec>`: the spec on its real slide (built by
+  `compile_module.slide_html` from the script and build sheet), 1280x800 judged and 1024x768 stated, every audit at every
+  step, a screenshot - 2-10 s.
+- **Checks**: `drawing_check.py` sees a true 1280x800 page (it was 1264x705); `audit_drawing.js` lays a kit figure out
+  first, judges a deck's kit figure at every step (`kitSteps`), adds SMALL TEXT, knows an opaque shape hides the line under
+  it, and `figure(svg)` audits one drawing.
+- **Parts**: promoted from IGF M03/M04 (pipe_section, relief_valve, step_track, coupling, drip_tray, water_curtain,
+  detector, flame, curve_chart) and 17 pre-built for M05-M15 from `architecture.json`'s media plans (fan, spray,
+  gas_cylinder, push_button, person, sensor, static_charge, fire, flammability, range_bar, hose, manifold, spool_piece,
+  tank_wall, spill, wind, tree). `GALLERY.html` has a dark/light switch; `test_gallery.py`: 34 merged parts, 48 figures,
+  clean at every step on both panels.
+- Tests: `test_kit.py`, new `test_studio.py`, `test_gallery.py`, `test_solver.py`, `test_label_layout.py`;
+  `test_compile_module.py` 200, `test_task_engine.py` 49, `test_design_system.py` 49.
+- **Proof (IGF scratch copy, hand-placed boxes removed):** the studio swept all 32 M01-M04 kit figures in 583 s - 29
+  clean first time; M02 s15 needed a spec line (`"rows": 2`), M03 s06 and M04 s10 two kit fixes (now in the kit). Then
+  every module compiled clean on its first compile with the final kit (4 compiles against 3 + ~10 + ~12 + 17). Deck audits:
+  the same or fewer failures than the original course, none in a kit figure (a hand-made HTML figure, the recap's
+  rise-in, an M03 slide line's lit colour - not this work). The real course still needs M02 s15 `"rows": 2`.
+- 1024x768, stated: the two-col panel shows a figure at 0.54-0.72 of its size; the floor grows its words 1.4-1.9x and
+  25 of 32 IGF figures then crowd (labels without a clear place, overlaps). Not judged; the tablet is 1280x800.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

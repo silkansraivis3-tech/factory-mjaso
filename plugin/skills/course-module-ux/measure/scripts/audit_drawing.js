@@ -37,7 +37,13 @@
      5  CONTRAST     (a figure-kit drawing only, 2.44.0) every part can be seen against the figure's dark panel:
                      a label 4.5:1 (3:1 large), a shape or line 3:1. A part coloured for a light slide (navy,
                      steel) vanishes there. The kit's own parts (colour set in kit.css) are exempt; data-low-contrast
-                     marks a part meant to be quiet. See checkContrast().
+                     marks a part meant to be quiet. See checkContrast(). Since 2.45.0 the kit colours every part
+                     for the panel it is on (kit.css .kit-light): this check is the safety net.
+     6  SMALL TEXT   (a figure-kit drawing, 2.45.0) no word under CONFIG.minTextPx as rendered. The kit grows its
+                     own type classes when a figure is shown smaller than 1:1; a size a course part sets is judged.
+
+     A figure-kit drawing is laid out by kit.js first (its labels, the 12.5 px floor, its frame) and, in a deck,
+     judged at the end of every step as well as at step 0 (CONFIG.kitSteps).
 
      Shapes inside <defs> drawn with <use> (a shared hull, a symbol) are copied
      in, invisibly, for the measurement and removed after.
@@ -87,6 +93,8 @@
     figTextContrast: 4.5,    /* CONTRAST: a kit figure's label against its panel (WCAG AA), */
     figLargeContrast: 3,     /*           a large one (24 px, or bold 18.66 px, as rendered) */
     figGraphicContrast: 3,   /*           a shape or line (WCAG 1.4.11) */
+    minTextPx: 12.5,         /* SMALL TEXT: a kit figure's words, as rendered */
+    kitSteps: true,          /* all(): a kit figure is judged at the end of each of its steps as well as at step 0 */
     maxExamples: 40
   };
   if (global.__auditDrawingConfig) {
@@ -300,6 +308,9 @@
     if (svg.hasAttribute("data-audit-ignore") || svg.ownerSVGElement) { return; }
     var r = svg.getBoundingClientRect();
     if (r.width < 4 || r.height < 4) { return; }
+    /* a figure-kit drawing lays itself out for the size it is shown at (its labels, the 12.5 px floor, its frame) the
+       first time it is on screen - which may be this very moment, when a check moved it into a question */
+    if (svg.__kit && typeof svg.__kit.layout === "function") { try { svg.__kit.layout(); } catch (e) { /* judged as it is */ } }
     var copies = expandUses(svg);
     try {
       /* every painted part that is laid out - also one faded out now that a later step of the figure shows
@@ -364,8 +375,18 @@
             g.push({ x: T.b.x - pad + (T.b.w + 2 * pad) * i / (cols - 1), y: T.b.y - pad + (T.b.h + 2 * pad) * j / (rows - 1) });
           }
         }
+        /* an opaque shape drawn over everything behind it that holds this label's whole zone (a step badge's disc on a
+           room's line, a readout tile on a pipe) hides what is under it: a line there is not seen through it (2.45.0) */
+        var zone = { x: T.b.x - pad, y: T.b.y - pad, x2: T.b.x + T.b.w + pad, y2: T.b.y + T.b.h + pad };
+        var covers = items.filter(function (C) {
+          if (C === T || !closed(C.el) || !fills(C.el) || C.b.w * C.b.h <= T.b.w * T.b.h) { return false; }
+          var cs = getComputedStyle(C.el), c = parseRgba(cs.fill), op = parseFloat(cs.fillOpacity);
+          if (!c || c[3] * (isNaN(op) ? 1 : op) * groupOpacity(C.el, svg) < 0.95) { return false; }
+          return [[zone.x, zone.y], [zone.x2, zone.y], [zone.x, zone.y2], [zone.x2, zone.y2]].every(function (q) { return inFill(C.el, { x: q[0], y: q[1] }); });
+        });
         items.forEach(function (E) {
           if (E === T || E.el.contains(T.el) || upFlag(E.el, "data-may-overlap", svg)) { return; }
+          if (E.t !== "text" && covers.some(function (C) { return C !== E && (E.el.compareDocumentPosition(C.el) & 4); })) { return; }
           if (E.t === "text") {
             /* two labels: their letters may not overlap. Lines of one label stacked one under the other are
                a paragraph - only side by side do they need the safe zone between them */
@@ -423,6 +444,18 @@
       }
       /* ---- 5 CONTRAST ---- every part of a kit figure can be seen against what is behind it */
       checkContrast(svg, where, items, out);
+      /* ---- 6 SMALL TEXT ---- no word of a kit figure under CONFIG.minTextPx as it is shown (2.45.0) */
+      if (svg.classList && svg.classList.contains("kit")) {
+        items.forEach(function (T) {
+          if (T.t !== "text" || !(T.el.textContent || "").trim()) { return; }
+          var m = T.el.getScreenCTM(), px = parseFloat(getComputedStyle(T.el).fontSize) * (m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : 1);
+          if (px < CONFIG.minTextPx - 0.05) {
+            report(out, { check: "small text", where: where, part: label(T.el), other: "",
+                          detail: "drawn at " + (Math.round(px * 10) / 10) + " px - the floor is " + CONFIG.minTextPx + " px (the kit sets " +
+                                  "its own type classes larger by itself; a size set in a course part's css does not grow)" }, [T.el]);
+          }
+        });
+      }
     } finally {
       copies.forEach(function (c) { c.parentNode.removeChild(c); });
     }
@@ -701,7 +734,26 @@
         return sleep(CONFIG.settleMs).then(function () {
           var s = slides[i], where = "slide " + (i + 1) + (s.id ? " (" + s.id + ")" : "");
           qa(s, "svg").filter(function (v) { return !v.ownerSVGElement && shown(v, v) && !v.closest("button, .mediabar, .slide-kind"); })
-            .forEach(function (v) { count++; checkSvg(v, where, out, s); });
+            .forEach(function (v) {
+              count++;
+              checkSvg(v, where, out, s);
+              /* a figure that steps is judged at the end of every step too (2.45.0): an alarm row, a lit label or a moved
+                 part that only appears in step 3 was never on screen when the deck was checked at step 0 */
+              var f = v.__kit;
+              if (!CONFIG.kitSteps || !f || !f.steps || !f.steps()) { return; }
+              var seen = {};
+              out.forEach(function (x) { if (x.where === where) { seen[x.check + "|" + x.part + "|" + (x.other || "")] = 1; } });
+              for (var k = 1; k <= f.steps(); k++) {
+                f.go(k, true);
+                var more = [];
+                checkSvg(v, where + " step " + k, more, s);
+                more.forEach(function (x) {
+                  var key = x.check + "|" + x.part + "|" + (x.other || "");
+                  if (!seen[key]) { seen[key] = 1; out.push(x); }
+                });
+              }
+              f.go(0, true);
+            });
           checkPictures(s, where, out, s);
           return step(i + 1);
         });
@@ -726,7 +778,16 @@
     return (findings || []).length;
   }
 
-  global.AuditDrawing = { all: all, page: page, show: show, spec: function () { return CONFIG; } };
+  /* figure(svg) - one drawing alone (the figure studio, course-visuals/kit/scripts/studio.py) */
+  function figure(svg, where) {
+    var ab = guard();
+    if (ab) { return verdict(ab); }
+    var out = [];
+    checkSvg(svg, where || "figure", out, (svg.closest && svg.closest(CONFIG.slideSel)) || document.body);
+    return verdict({ drawings: 1, findings: out });
+  }
+
+  global.AuditDrawing = { all: all, page: page, figure: figure, show: show, spec: function () { return CONFIG; } };
   global.__audit = global.__audit || {};
   global.__audit.drawing = global.AuditDrawing;
 })(window);

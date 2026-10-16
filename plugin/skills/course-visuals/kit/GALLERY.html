@@ -33,7 +33,7 @@
   .steptitle{text-align:center;color:var(--amber)!important;font-weight:700;font-size:17px!important;min-height:1.5em;margin:10px 0 0!important}
   pre{font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--dim-d);background:var(--deep);
     border:1px solid var(--line-d);border-radius:var(--r-m);padding:12px;margin:0;overflow:auto;max-height:640px}
-  .parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+  .parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:20px}   /* a card shows its part at 1:1 or larger */
   details{margin-top:12px}
   summary{cursor:pointer;color:var(--blue);font-size:14px;font-weight:700}
   details pre{margin-top:8px;max-height:320px}
@@ -41,14 +41,32 @@
   ul.facts li{margin:4px 0}
   .card{min-width:0}
   @media (max-width:900px){.demo{grid-template-columns:minmax(0,1fr)}}
+  /* the light panel - how every figure looks on a task page's white card (kit.css .kit-light) */
+  .themebar{position:sticky;top:0;z-index:5;display:flex;justify-content:flex-end;gap:8px;padding:8px 0}
+  .themebar button{font:inherit;font-weight:700;font-size:14px;min-height:44px;padding:0 14px;border-radius:10px;cursor:pointer;
+    color:var(--txt-d);background:var(--deep-3);border:1px solid var(--line-d)}
+  .themebar button[aria-pressed="true"]{background:var(--navy);border-color:var(--blue2)}
+  body.light{background:var(--grey);color:var(--ink)}
+  body.light .card{background:var(--white);border-color:var(--line-l)}
+  body.light .card p,body.light .lede,body.light .note,body.light pre{color:var(--dim-l)}
+  body.light pre{background:var(--grey);border-color:var(--line-l)}
+  body.light .steptitle{color:var(--amber-ink)!important}
+  body.light .bar button{color:var(--ink);background:var(--grey);border-color:var(--line-l)}
+  body.light .bar button.primary{color:var(--white);background:var(--navy)}
 </style>
 </head>
 <body>
 <main>
+  <div class="themebar" role="group" aria-label="Panel">
+    <button type="button" data-theme="dark" aria-pressed="true">Dark panel (deck)</button>
+    <button type="button" data-theme="light" aria-pressed="false">Light panel (task page)</button>
+  </div>
   <p class="kicker">NOVIKONTAS course factory · figure kit</p>
   <p class="lede">Ready-made parts that draw themselves from a short spec and move between steps. The AI writes the spec,
     and the kit does the drawing, the motion and the alarms. Every alarm fires at the moment its value crosses the mark,
-    so the order of events is always right. Seven families are planned; two are built.</p>
+    so the order of events is always right. The kit also lays every figure out by itself: each label gets a clear place
+    (a leader line when it had to move away), no word is drawn under 12.5 px, boxes are as wide as their words, and the
+    colours follow the panel - switch it above.</p>
 
   <h1 class="family">1 · Instruments</h1>
   <h2>Slide s14 rebuilt from a spec</h2>
@@ -206,7 +224,7 @@
     label: 'LNG fuel system from tank to engine: fuel tank, tank connection space, vaporizer and heater, gas valve unit, double-walled pipe, dual-fuel engine.',
     idle: 'Press Next step to follow the fuel from tank to engine',
     parts: [
-      { id: 'S2', type: 'space', x: 150, y: 70, w: 140, h: 95, label: 'TANK\nCONNECTION\nSPACE' },
+      { id: 'S2', type: 'space', x: 150, y: 56, w: 140, h: 109, label: 'TANK\nCONNECTION\nSPACE' },
       { id: 'S3', type: 'space', x: 310, y: 70, w: 190, h: 125, label: 'FUEL PREPARATION\nROOM' },
       { id: 'S4', type: 'space', x: 530, y: 70, w: 215, h: 300, label: 'ENGINE ROOM' },
       { id: 'S5', type: 'space', x: 552, y: 105, w: 88, h: 60, style: 'enclosure', label: 'gas valve unit', labelAt: 'below' },
@@ -223,7 +241,7 @@
       { id: 'E1', type: 'engine', x: 640, y: 250, w: 100, h: 72, label: 'dual-fuel engine' },
       { type: 'text', x: 676, y: 218, anchor: 'end', text: 'double-walled\npipe' },
       { id: 'B1', type: 'badge', x: 40, y: 168, n: 1 },
-      { id: 'B2', type: 'badge', x: 290, y: 70, n: 2 },
+      { id: 'B2', type: 'badge', x: 290, y: 56, n: 2 },
       { id: 'B3', type: 'badge', x: 500, y: 70, n: 3 },
       { id: 'B4', type: 'badge', x: 640, y: 105, n: 4 },
       { id: 'B5', type: 'badge', x: 722, y: 190, n: 5 }
@@ -345,6 +363,19 @@
     grid.appendChild(card);
     KIT.controls(KIT.mount(card.querySelector('.fig'), c.spec), card);
   }
+
+  /* the panel switch: every figure takes the light or the dark mapping of the course tokens (kit.css .kit-light) and
+     lays itself out again; ?theme=light opens the gallery on the light panel */
+  function panel(t) {
+    document.body.classList.toggle('light', t === 'light');
+    document.body.setAttribute('data-kit-theme', t);
+    [].forEach.call(document.querySelectorAll('.themebar button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-theme') === t)); });
+    KIT.layoutAll(true);
+  }
+  [].forEach.call(document.querySelectorAll('.themebar button'), function (b) {
+    b.addEventListener('click', function () { panel(b.getAttribute('data-theme')); });
+  });
+  if (/[?&]theme=light\b/.test(location.search)) panel('light');
 })();
 </script>
 </body>

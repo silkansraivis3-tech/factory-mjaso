@@ -74,6 +74,13 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   like `gb_deck.js`) and, when the course made parts of its own, `assets\kit_parts.js` after them. Each spec step lights
   its slide line (`"line": 2` -> `[data-i="2"]` `.cur`, earlier steps `.lit`); entering the slide starts the figure at
   step 0. Check the specs first: `course-visuals\kit\scripts\check_kit.py module <module> --figures <figures\M02>`.
+- **Draw a kit figure in the studio, not in the compile (2.45.0).** `course-visuals\kit\scripts\studio.py
+  working_claude\figures\M03\s07.kit.json` draws the spec on its real slide (the script's words, the build sheet's
+  layout, the module's styles) at 1280 × 800 and 1024 × 768, runs every drawing audit at the end of every step, and saves
+  a screenshot - in seconds. Change the spec until it is clean, then compile once. The kit does the drawing work by
+  itself: every label gets a clear place (a leader line if it had to move), no word is drawn under 12.5 px, boxes are as
+  wide as their words, the frame grows or zooms to hold and fill, and the colours follow the panel (dark deck, light task
+  page). A spec never places a label; a `"text"` with `"to": [x, y]` is a callout joined to that place.
 - **A kit figure is laid out beside its words, and drawn to its panel (L53, operator 2026-10-15).** A figure whose
   steps light the slide's lines takes `"composition": "two-col"` (the words at reading size in the left column, each
   lit line a tap target for its step; `"boxes"` when the lines are separate items) - not `stage` with a `legend`, where a
@@ -168,8 +175,10 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
   Team A" when the classroom says so (`gb-team-done`). Scope `member`: everyone answers. Any team size; a role
   never locks anyone out of the task.
 - **Label the drawing:** the compiler adds a band above and below the drawing for the empty label boxes, so no box
-  covers what is drawn, with a leader line to each place. Or place them yourself: `"labels": {"Fuel tank": {"at":
-  "sp-tank", "box": [left, top, width]}}`.
+  covers what is drawn, with a leader line to each place. The boxes are sized and placed by themselves
+  (`label_layout.py`, 2.45.0): one width for all - what the longest label needs on two lines with its tick - each as
+  close to its place as the others allow, in the same order, never off the edge or onto another. Don't place them in
+  the build sheet; `"labels": {"Fuel tank": {"at": "sp-tank"}}` only names the place (a `"box"` given there still wins).
 - **The page:** the course's first self-check opens with "try your tablet first" (`"try_tablet": false` on the task
   slide's entry to leave it out); a check opens with its pass mark (`"pass_mark": 70` at the top of the build sheet).
 - **Before showing it:** `check_script_match.py --part trainee` and `check_course_package.py`. The drawings are

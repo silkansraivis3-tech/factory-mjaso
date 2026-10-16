@@ -12,6 +12,10 @@ compile_module.py now runs it on every page it writes - the deck slide by slide,
 each drawing as the trainee sees it (moved into its question, its labels hidden) - in a hidden Chrome or Edge at
 1280 x 800, and every finding is a problem to fix before the module is shown.
 
+2.45.0: the page really is 1280 x 800 (a hidden browser's page is smaller than its window: it was 1264 x 705); a kit
+figure in a deck is judged at the end of every step, not only at step 0; and a kit figure's words under 12.5 px are a
+finding (SMALL TEXT). A kit figure is tried alone, in seconds, with course-visuals/kit/scripts/studio.py.
+
 A crossing that is meant is marked in the drawing, so the reason is written down: data-may-cross, data-no-contain,
 data-may-overlap (course-module-ux/measure/scripts/audit_drawing.js).
 
@@ -68,13 +72,38 @@ def wrapper(page, deck):
     return text[:i] + tail + text[i:] if i >= 0 else text + tail
 
 
+_WIN = {}
+
+
+def window_for(exe, size=SIZE):
+    """the window that gives a page of exactly `size` (2.45.0): a hidden Chrome's page is smaller than its window -
+    --window-size=1280,800 gave a 1264 x 705 page, so every drawing used to be checked smaller than the tablet shows it.
+    Measured once per run, then the same difference for every size."""
+    if "d" not in _WIN:
+        tmp = tempfile.mkdtemp(prefix="cf_cal_")
+        try:
+            f = os.path.join(tmp, "cal.html")
+            io.open(f, "w", encoding="utf-8").write("<html><body><script>var p=document.createElement('pre');p.id='cal';"
+                                                    "p.textContent=innerWidth+'x'+innerHeight;document.body.appendChild(p)</script></body></html>")
+            p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--user-data-dir=" +
+                                os.path.join(tmp, "p"), "--window-size=1280,800", "--dump-dom", Path(f).as_uri()],
+                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
+            m = re.search(r'<pre id="cal">(\d+)x(\d+)</pre>', p.stdout or "")
+            _WIN["d"] = (1280 - int(m.group(1)), 800 - int(m.group(2))) if m else (0, 0)
+        except (OSError, subprocess.TimeoutExpired):
+            _WIN["d"] = (0, 0)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+    return size[0] + _WIN["d"][0], size[1] + _WIN["d"][1]
+
+
 def run_page(exe, page, prof, tmp):
     deck = os.path.basename(page).lower() == "index.html" and os.path.basename(os.path.dirname(page)).lower() == "presentation"
     w = os.path.join(tmp, "check_%d.html" % abs(hash(page)))
     io.open(w, "w", encoding="utf-8").write(wrapper(page, deck))
     try:
         p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--mute-audio",
-                            "--user-data-dir=" + prof, "--allow-file-access-from-files", "--window-size=%d,%d" % SIZE,
+                            "--user-data-dir=" + prof, "--allow-file-access-from-files", "--window-size=%d,%d" % window_for(exe),
                             "--virtual-time-budget=%d" % (120000 if deck else 8000), "--dump-dom", Path(w).as_uri()],
                            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
     except (OSError, subprocess.TimeoutExpired) as err:
@@ -108,8 +137,13 @@ def check(pages, root=None):
                     probs.append("%s, %s: contrast - %s %s (L54: colour the part for the figure's dark panel, or mark one "
                                  "meant to be quiet data-low-contrast)" % (name, f.get("where"), f.get("part"), f.get("detail")))
                     continue
+                if f.get("check") == "small text":   # a kit figure's word under 12.5 px at 1280 x 800 (2.45.0)
+                    probs.append("%s, %s: small text - %s %s (try the figure in the studio: course-visuals\\kit\\scripts\\"
+                                 "studio.py <figure>.kit.json)" % (name, f.get("where"), f.get("part"), f.get("detail")))
+                    continue
                 probs.append("%s, %s: %s - %s %s%s (L54: fix the drawing, or mark a crossing that is meant with "
-                             "data-may-cross / data-no-contain / data-may-overlap)"
+                             "data-may-cross / data-no-contain / data-may-overlap; a kit figure: course-visuals\\kit\\"
+                             "scripts\\studio.py shows it at every step in seconds)"
                              % (name, f.get("where"), f.get("check"), f.get("part"), f.get("detail"),
                                 (" - " + f["other"]) if f.get("other") else ""))
     finally:

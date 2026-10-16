@@ -4,11 +4,27 @@
    ISA-101 "high-performance HMI", the convention modern ship alarm and monitoring
    screens follow: calm greys and blues at rest; colour appears only when something is
    abnormal - amber for an alarm, red for a trip. A screen that is colourful at rest
-   has nothing left to say when something goes wrong. */
+   has nothing left to say when something goes wrong.
+
+   TWO PANELS (2.45.0). A part names its colours by the dark-panel tokens (--txt-d, --dim-d, --cold ...). A figure
+   drawn on a light ground - a task page's white card - gets .kit-light (kit.js chooses it from what is behind the
+   figure, or the spec's "theme"), and inside it each of those tokens means its light counterpart. So every part,
+   the kit's own and a course's (kit_parts.js css), keeps its contrast on either panel by construction.
+
+   THE 12.5 PX FLOOR (2.45.0). Every type size is multiplied by --kit-up, which kit.js sets to 1 / the figure's
+   scale when it is shown smaller than 1:1: no word is ever drawn under 12.5 px on screen. */
 
 .kit{display:block;width:100%;height:auto;overflow:visible;
   font-family:var(--font,"Raleway","Segoe UI",Arial,sans-serif)}
 .kit text{font-family:inherit}
+
+/* a figure on a light ground: the dark-panel tokens mean their light counterparts here */
+.kit.kit-light{                      /* tokens only, no fallbacks: without gb_tokens.css each use keeps its own (dark) one */
+  --deep:var(--white);--deep-2:var(--white);--deep-3:var(--grey);
+  --txt-d:var(--navy);--dim-d:var(--dim-l);--faint-d:var(--faint-l);
+  --line-d:var(--line-l);--cold:var(--steel);--blue:var(--navy);
+  --blue-wash-d:var(--blue-wash-l);--amber:var(--amber-ink);--amber-wash-d:var(--amber-wash-l);
+  --warn-d:var(--warn);--good-d:var(--good);--on-blue:var(--white)}
 
 /* in a deck: the figure is a dark screen on a dark or a light slide alike (a monitor in the room),
    with the slide's own .mediabar under it */
@@ -42,23 +58,27 @@
 /* frame */
 .kit-panel{fill:var(--deep-2,#0C1E3A);stroke:var(--line-d,rgba(46,182,248,.18));stroke-width:1.5}
 .kit-rule{stroke:var(--line-d,rgba(46,182,248,.18));stroke-width:1}
-.kit-ptitle{font-size:14px;font-weight:700;letter-spacing:.08em;fill:var(--dim-d,#A2B7CF)}
+.kit-ptitle{font-size:calc(14px * var(--kit-up,1));font-weight:700;letter-spacing:.08em;fill:var(--dim-d,#A2B7CF)}
 .kit-chip rect{fill:var(--deep,#0A182E);stroke:var(--line-d,rgba(46,182,248,.18))}
-.kit-chip text{font-size:12.5px;font-weight:700;letter-spacing:.06em;fill:var(--dim-d,#A2B7CF)}
+.kit-chip text{font-size:calc(12.5px * var(--kit-up,1));font-weight:700;letter-spacing:.06em;fill:var(--dim-d,#A2B7CF)}
 .kit-chip.kit-on-alarm rect{fill:var(--amber-wash-d,rgba(233,165,30,.14));stroke:var(--amber,#E9A51E)}
 .kit-chip.kit-on-alarm text{fill:var(--amber,#E9A51E)}
-.kit-chip.kit-on-trip rect{fill:rgba(255,140,130,.14);stroke:var(--warn-d,#FF8C82)}
+.kit-chip.kit-on-trip rect{fill:var(--deep,#0A182E);stroke:var(--warn-d,#FF8C82)}
 .kit-chip.kit-on-trip text{fill:var(--warn-d,#FF8C82)}
 
-/* type */
-.kit-h{font-size:15px;font-weight:700;fill:var(--txt-d,#F3F8FD)}
-.kit-cap{font-size:12.5px;fill:var(--dim-d,#A2B7CF)}
-.kit-tick{font-size:12.5px;fill:var(--faint-d,#71879F)}
+/* type - every size times --kit-up (the 12.5 px floor) */
+.kit-h{font-size:calc(15px * var(--kit-up,1));font-weight:700;fill:var(--txt-d,#F3F8FD)}
+.kit-cap{font-size:calc(12.5px * var(--kit-up,1));fill:var(--dim-d,#A2B7CF)}
+.kit-tick{font-size:calc(12.5px * var(--kit-up,1));fill:var(--faint-d,#71879F)}
 .kit-tickl{stroke:var(--faint-d,#71879F);stroke-width:1.5}
-.kit-num{font-family:var(--mono,Consolas,monospace);font-size:16px;font-weight:700;fill:var(--txt-d,#F3F8FD)}
+.kit-num{font-family:var(--mono,Consolas,monospace);font-size:calc(16px * var(--kit-up,1));font-weight:700;fill:var(--txt-d,#F3F8FD)}
 .kit-dig{fill:var(--deep,#0A182E);stroke:var(--line-d,rgba(46,182,248,.18))}
-.kit-tl{font-size:12.5px;font-weight:700;letter-spacing:.06em;fill:var(--dim-d,#A2B7CF)}
-.kit-big{font-family:var(--mono,Consolas,monospace);font-size:22px;font-weight:700;fill:var(--txt-d,#F3F8FD)}
+.kit-tl{font-size:calc(12.5px * var(--kit-up,1));font-weight:700;letter-spacing:.06em;fill:var(--dim-d,#A2B7CF)}
+.kit-big{font-family:var(--mono,Consolas,monospace);font-size:calc(22px * var(--kit-up,1));font-weight:700;fill:var(--txt-d,#F3F8FD)}
+
+/* a leader line from a label the layout moved back to its part (kit.js layout) */
+.kit-leader{stroke:var(--dim-d,#A2B7CF);stroke-width:1.5;stroke-linecap:round}
+.kit-leader-dot{fill:var(--dim-d,#A2B7CF)}                     /* the place a callout ("text" with "to") names */
 
 /* process fluid */
 .kit-vessel{fill:var(--deep,#0A182E);stroke:var(--faint-d,#71879F);stroke-width:2}
@@ -67,7 +87,7 @@
 
 /* marks: present but quiet at rest; lit, solid and briefly flashing once crossed */
 .kit-mark line{stroke-width:2;stroke-dasharray:5 4;opacity:.6}
-.kit-mark text{font-size:12.5px;fill:var(--dim-d,#A2B7CF)}
+.kit-mark text{font-size:calc(12.5px * var(--kit-up,1));fill:var(--dim-d,#A2B7CF)}
 .kit-mark.kit-alarm line{stroke:var(--amber,#E9A51E)}
 .kit-mark.kit-trip line{stroke:var(--warn-d,#FF8C82)}
 .kit-mark.kit-limit line{stroke:var(--dim-d,#A2B7CF)}
@@ -102,7 +122,7 @@
 .kit-flange{stroke:var(--dim-d,#A2B7CF);stroke-width:4;stroke-linecap:round}
 .kit-probe{stroke:var(--dim-d,#A2B7CF);stroke-width:3;stroke-linecap:round}
 .kit-bubble{fill:var(--deep,#0A182E);stroke:var(--dim-d,#A2B7CF);stroke-width:1.5}
-.kit-bubble-t{font-size:12.5px;font-weight:700;fill:var(--dim-d,#A2B7CF)}
+.kit-bubble-t{font-size:calc(12.5px * var(--kit-up,1));font-weight:700;fill:var(--dim-d,#A2B7CF)}
 .kit-wire{fill:none;stroke:var(--faint-d,#71879F);stroke-width:1.5;stroke-dasharray:6 4}
 .kit-drop{fill:var(--cold,#8FC2FF);opacity:0}
 .kit-dripping .kit-drop{animation:kit-fall .9s ease-in infinite}
@@ -117,13 +137,14 @@
 .kit-valve-bg{fill:var(--deep-2,#0C1E3A)}
 .kit-stem{stroke:var(--dim-d,#A2B7CF);stroke-width:2}
 .kit-act{fill:var(--deep,#0A182E);stroke:var(--dim-d,#A2B7CF);stroke-width:1.5}
-.kit-state{font-size:12.5px;font-weight:700;letter-spacing:.06em;fill:var(--dim-d,#A2B7CF)}
+.kit-state{font-size:calc(12.5px * var(--kit-up,1));font-weight:700;letter-spacing:.06em;fill:var(--dim-d,#A2B7CF)}
 .kit-shut .kit-state{fill:var(--warn-d,#FF8C82)}
 .kit-shut .kit-valve{stroke:var(--warn-d,#FF8C82)}
 .kit-shut .kit-vfill{fill:var(--warn-d,#FF8C82)}
 
 /* contents of a pipe: liquid is the cold blue, gas is pale (methane vapour has no colour;
-   amber stays reserved for alarms). The fill mask only shows what has reached that far. */
+   amber stays reserved for alarms), air (a ventilation duct) is paler still. The fill mask only shows what has
+   reached that far. */
 .kit-jacket{fill:none;stroke:var(--faint-d,#71879F);stroke-width:20}
 .kit-annulus{fill:none;stroke:var(--deep-2,#0C1E3A);stroke-width:16}
 .kit-reach{fill:none;stroke:#fff;stroke-width:24;stroke-linecap:butt}
@@ -131,6 +152,10 @@
 .kit-fl-liquid .kit-content{stroke:var(--cold,#8FC2FF);opacity:.55}
 .kit-fl-gas .kit-content{stroke:var(--txt-d,#F3F8FD);opacity:.22}
 .kit-fl-gas .kit-flow{stroke:var(--txt-d,#F3F8FD);stroke-dasharray:2 6;stroke-linecap:round;stroke-width:3}
+.kit-fl-air .kit-pipe{stroke-width:18}
+.kit-fl-air .kit-bore{stroke-width:14}
+.kit-fl-air .kit-content{stroke:none}
+.kit-fl-air .kit-flow{stroke:var(--dim-d,#A2B7CF);stroke-dasharray:10 12;stroke-width:2;stroke-linecap:round}
 .kit-vessel-o{fill:none;stroke:var(--faint-d,#71879F);stroke-width:2}
 .kit-quiet.kit-shut .kit-state{fill:var(--dim-d,#A2B7CF)}
 .kit-quiet.kit-shut .kit-valve{stroke:var(--dim-d,#A2B7CF)}
@@ -142,7 +167,7 @@
 .kit-room{stroke-dasharray:7 5}
 .kit-enclosure{stroke:var(--dim-d,#A2B7CF)}
 .kit-lit .kit-space{stroke:var(--blue,#2EB6F8);stroke-width:2}
-.kit-sl{font-size:12.5px;font-weight:700;letter-spacing:.06em;fill:var(--faint-d,#71879F);transition:fill .3s}
+.kit-sl{font-size:calc(12.5px * var(--kit-up,1));font-weight:700;letter-spacing:.06em;fill:var(--faint-d,#71879F);transition:fill .3s}
 .kit-lit .kit-sl{fill:var(--txt-d,#F3F8FD)}
 
 /* machinery */
@@ -164,17 +189,17 @@
 /* step badges */
 .kit-badge-o{fill:var(--deep,#0A182E);stroke:var(--faint-d,#71879F);stroke-width:1.5}
 .kit-badge{fill:var(--blue,#2EB6F8);opacity:0}
-.kit-badge-t{font-size:13px;font-weight:700;fill:var(--dim-d,#A2B7CF)}
+.kit-badge-t{font-size:calc(13px * var(--kit-up,1));font-weight:700;fill:var(--dim-d,#A2B7CF)}
 .kit-lit .kit-badge-t{fill:var(--on-blue,#04263A)}
 
 /* alarm log */
 .kit-logbox{fill:var(--deep,#0A182E);stroke:var(--line-d,rgba(46,182,248,.18))}
-.kit-empty{font-size:13px;fill:var(--faint-d,#71879F)}
+.kit-empty{font-size:calc(13px * var(--kit-up,1));fill:var(--faint-d,#71879F)}
 .kit-row rect{fill:var(--deep-3,#122A52)}
 .kit-row.kit-alarm .kit-sev{fill:var(--amber,#E9A51E)}
 .kit-row.kit-trip .kit-sev{fill:var(--warn-d,#FF8C82)}
-.kit-time{font-family:var(--mono,Consolas,monospace);font-size:13px;fill:var(--dim-d,#A2B7CF)}
-.kit-msg{font-size:13.5px;font-weight:700;fill:var(--txt-d,#F3F8FD)}
+.kit-time{font-family:var(--mono,Consolas,monospace);font-size:calc(13px * var(--kit-up,1));fill:var(--dim-d,#A2B7CF)}
+.kit-msg{font-size:calc(13.5px * var(--kit-up,1));font-weight:700;fill:var(--txt-d,#F3F8FD)}
 .kit-row.kit-alarm .kit-msg{fill:var(--amber,#E9A51E)}
 .kit-row.kit-trip .kit-msg{fill:var(--warn-d,#FF8C82)}
 .kit-row.kit-new{animation:kit-in .35s ease-out,kit-blink .5s steps(1) .35s 5}

@@ -38,12 +38,12 @@ If two modules made the same thing, it merges them into one part.
 ## The template
 
 ```js
-/* kit-part: drip_tray */
-KIT.define('drip_tray', function (fig, part, g, p) {
+/* kit-part: oil_tray */
+KIT.define('oil_tray', function (fig, part, g, p) {
   var h = KIT.h, w = p.w || 120;                       // settings, each with a sensible default
   h.el('rect', { width: w, height: 18, rx: 4, 'class': 'kit-steel' }, g);   // kit classes first
   var pool = h.el('rect', { x: 4, y: 14, width: w - 8, height: 0, 'class': 'kit-pool' }, g);
-  if (p.label) h.lines(g, { x: w / 2, y: 40, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  if (p.label) h.label(fig, g, { x: w / 2, y: 40, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);  // the layout places it
   part.render = function (v) {                         // value -> picture; called on every frame
     var d = h.clamp(v, 0, 1) * 12;
     pool.setAttribute('y', 16 - d); pool.setAttribute('height', d);
@@ -61,11 +61,38 @@ KIT.define('drip_tray', function (fig, part, g, p) {
 /* end kit-part */
 ```
 
+## Words, boxes and colours - the kit does the drawing work (2.45.0)
+
+- **A part's words are labels: `h.label(fig, g, attrs, text, opt)`**, never a bare `h.lines`/`h.el('text')` for a name,
+  caption or state. The layout gives every label a place clear of every shape, line and other label, and its own box's
+  edge (L54, 4 px), at the end of every step - beside its part if it can, further out with a leader line if it must. Put
+  it where it reads best; the layout moves it only when it is not clear. `opt.inside: true` keeps it inside the part
+  (a room's name; `opt.within: <element>` inside that shape), `opt.near: 16, lead: false` lets it shift a little but
+  never leave its mark (a scale mark's words), `opt.fixed: true` never moves it. More text can go into the group it
+  returns (a valve's name and its OPEN/CLOSED move together). Tick numbers and the words inside a box stay plain text.
+- **A box that holds words is sized to them: `fig.fit(function (k) { ... })`.** It runs at layout time, when the words
+  have their real width, with `k` the factor the kit grows every type size by (see below). Measure with
+  `h.widest(textElement, [all the words it can show])` - a readout's widest reading is `h.readings(p, min, max, marks, v0)`
+  - and set the box's width, and its height times `k`. `fig.fit(fn, true)` runs after every other fit (a frame that
+  holds other parts, like `panel`).
+- **No word is ever drawn under 12.5 px.** When a figure is shown smaller than 1:1 the kit sets `--kit-up` and every kit
+  type class grows by it (`kit-cap`, `kit-h`, `kit-tick`, `kit-num`, `kit-tl`, `kit-state`, `kit-sl`, `kit-big` ...). So a
+  part uses those classes and sizes its boxes and rings with `fig.fit` and `k`. A `font-size` in a part's `css` does not
+  grow: the drawing audit's SMALL TEXT reports it.
+- **Colour by the dark-panel tokens, and both panels are right.** `var(--txt-d)`, `--dim-d`, `--faint-d`, `--cold`,
+  `--deep`, `--deep-3`, `--amber`, `--warn-d` ... On a light ground (a task page's white card) kit.css `.kit-light` makes
+  each of them mean its light counterpart, so a part keeps its contrast on either by construction. Never a light token
+  (`--navy`, `--steel`, `--line-l`, `--dim-l`) in a part: it is right on one panel only. A part that is quiet on purpose
+  (a backdrop, a pale cloud, the core inside a flame) carries `data-low-contrast`, with the reason in a comment.
+- **Try it in the studio before anything else:** `scripts/studio.py <example>.kit.json --parts <kit_parts.js>` draws
+  it on a dark slide (`--panel two-col`) and on a task page (`--panel task`, the light ground) at 1280 x 800 and
+  1024 x 768, audits every step and saves a screenshot - in seconds.
+
 ## The rules - `check_kit.py parts` enforces them
 - **The markers** `/* kit-part: name */` … `/* end kit-part */` are required, one part per block. They are how
   promotion finds the part.
-- **Use the helpers** `KIT.h.el / lines / clamp / fmt / polar / arc`. Don't use `innerHTML`, and don't make
-  your own `createElementNS`.
+- **Use the helpers** `KIT.h.el / label / lines / widest / readings / clamp / fmt / polar / arc`. Don't use
+  `innerHTML`, and don't make your own `createElementNS`.
 - **Colours come only from the kit's classes or `var(--token)` in `css`.** Don't use `#hex`, `rgb()` or named
   colours, and don't set `fill`/`stroke` in JavaScript.
 - **Text uses only the kit's type classes** (`kit-h`, `kit-cap`, `kit-tick`, `kit-num`, `kit-tl`, `kit-state`).
@@ -78,8 +105,8 @@ KIT.define('drip_tray', function (fig, part, g, p) {
 - **`css` class names start with `kit-<part>-`,** so two parts never collide.
 - **`example` is required.** `check_kit.py` checks it as a spec, and the gallery draws it as the card Raivis
   reviews under "Parts added from courses".
-- **Nothing is cut off and nothing overlaps.** Run the example through `course-module-ux/measure/scripts/
-  audit_drawing.js` (L54).
+- **Nothing is cut off and nothing overlaps, on either panel.** Run the example through `scripts/studio.py`
+  (`--panel two-col` and `--panel task`): it runs `course-module-ux/measure/scripts/audit_drawing.js` (L54) at every step.
 
 ## After the merge
 Promotion copies the block into the factory's `kit.js` with `status: 'kit'`. When colleagues update the

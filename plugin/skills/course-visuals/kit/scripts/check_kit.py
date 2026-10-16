@@ -31,7 +31,7 @@ KIT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KIT_JS = os.path.join(KIT, "kit.js")
 FAMILIES = ("instruments", "piping", "spaces", "cutaways", "gas-fire-machinery", "charts", "procedures")
 KINDS = ("alarm", "trip", "limit")
-SUBS = {"pipe": ("fill",)}                     # a second value on one part: "<id>.fill"
+SUBS = {"pipe": ("fill",), "hose": ("fill",)}  # a second value on one part: "<id>.fill"
 BLOCK = re.compile(r"/\*\s*kit-part:\s*([\w]+)\s*\*/(.*?)/\*\s*end kit-part\s*\*/", re.S)
 DEFINE = re.compile(r"KIT\.define\(\s*['\"](\w+)['\"]")
 MIN_PX = 12.5
@@ -155,6 +155,10 @@ def check_spec(spec, types, where):
         bad('no "size": [width, height]')
     if not spec.get("label"):
         bad('no "label" - one sentence a screen reader says (the compiler falls back to the visual\'s first sentence)')
+    if spec.get("theme") not in (None, "light", "dark"):
+        bad('"theme" is %r - "light" or "dark" (or leave it out: the kit sees what the figure is drawn on)' % spec.get("theme"))
+    if spec.get("fit") not in (None, True, False):
+        bad('"fit" is %r - false keeps the drawing from being zoomed to fill its panel' % spec.get("fit"))
     parts = spec.get("parts") or []
     if not parts:
         bad("no parts")
@@ -174,6 +178,11 @@ def check_spec(spec, types, where):
             kinds[pid] = t
         if p.get("source") and p["source"] not in ids:
             bad("part %s repeats %s, which is not listed before it" % (pid, p["source"]))
+        if t == "text" and "to" in p and not (isinstance(p["to"], list) and len(p["to"]) == 2
+                                              and all(isinstance(v, (int, float)) for v in p["to"])):
+            bad("the callout %r has \"to\": %r - the place it names, [x, y]" % (str(p.get("text"))[:30], p["to"]))
+        if t == "text" and not str(p.get("text") or "").strip():
+            bad("a text part with no words")
         for m in p.get("marks") or []:
             if not isinstance(m.get("at"), (int, float)):
                 bad("a mark on %s has no number at \"at\"" % pid)

@@ -720,21 +720,10 @@ def kit_symbol(sid, n, states, start):
 
 def label_boxes(places, vb):
     """where the empty label boxes go when the build sheet does not say: in the band above the drawing for what is in
-    its upper half, in the band below for the rest, in order across - the same order as what they point at"""
-    top = sorted([p for p in places if p["box"][1] + p["box"][3] / 2 < 50], key=lambda p: p["box"][0] + p["box"][2] / 2)
-    bot = sorted([p for p in places if p not in top], key=lambda p: p["box"][0] + p["box"][2] / 2)
-    hp = vb[3] * ppu(vb)                                  # the drawing's height in px at 1280 x 800
-    gap = (BAND_PX - BOX_PX) / 2
-    for row, y in ((top, round(100 * gap / hp, 2)), (bot, round(100 * (hp - gap - BOX_PX) / hp, 2))):
-        n = len(row)
-        w = min(17.0, 96.0 / max(n, 1) - 1.5)
-        for i, p in enumerate(row):
-            cx = p["box"][0] + p["box"][2] / 2
-            left = min(max(cx - w / 2, 1.0), 99.0 - w)
-            if i and left < row[i - 1]["at"][0] + row[i - 1]["at"][2] + 1.0:
-                left = row[i - 1]["at"][0] + row[i - 1]["at"][2] + 1.0
-            p["at"] = [round(left, 2), y, round(w, 2)]
-    return places
+    its upper half, in the band below for the rest, in order across - the same order as what they point at. Each box is
+    as wide as the longest label needs, and none runs off the edge or onto another (2.45.0, label_layout.py)"""
+    import label_layout
+    return label_layout.label_boxes(places, vb, ppu(vb), BAND_PX, BOX_PX)
 
 
 def question_html(n, q, b, mdir, figdir, figs, probs, w=None):

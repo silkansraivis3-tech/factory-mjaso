@@ -35,10 +35,38 @@
     if (parent) parent.appendChild(n);
     return n;
   }
+  /* the line spacing is in em, so a label the kit sets larger (--kit-up, the 12.5 px floor) keeps its spacing:
+     16 at the 12.5 px caption size, as before */
   function lines(parent, attrs, text, lh) {
     var t = el('text', attrs, parent), rows = String(text).split('\n');
-    rows.forEach(function (s, i) { el('tspan', { x: attrs.x || 0, dy: i ? (lh || 16) : 0 }, t, s); });
+    rows.forEach(function (s, i) { el('tspan', { x: attrs.x || 0, dy: i ? ((lh || 16) / 12.5).toFixed(3) + 'em' : 0 }, t, s); });
     return rows.length;
+  }
+  /* a LABEL: words that belong to a part and may be moved by the layout (layout() below) to a place clear of every
+     shape, line and other label - with a leader line back to the part when it had to go further than beside it.
+       opt.inside  true: it stays inside the part (a room's name), clear of its edge
+       opt.near    how far it may go without a leader (default: beside the part); opt.lead false: never a leader
+       opt.fixed   true: it is never moved (it is still checked)
+     Returns the label's group; more text may be added to it (a valve's state under its name). */
+  function label(fig, g, attrs, text, opt) {
+    var w = el('g', { 'class': 'kit-lbl' }, g), L = { g: w, part: g, opt: opt || {} };
+    if (text != null && text !== '') lines(w, attrs, text, opt && opt.lh);
+    w.__kitL = L;
+    if (L.opt.within) (L.opt.within.__kitWithin = L.opt.within.__kitWithin || []).push(L);
+    fig.labels.push(L);
+    return w;
+  }
+  /* the width of the widest of these words in a text element as it is styled (restores what it said) */
+  function widest(t, words) {
+    var keep = t.textContent, w = 0;
+    words.forEach(function (s) { t.textContent = s; w = Math.max(w, textWidth(t, 8.5)); });
+    t.textContent = keep;
+    return w;
+  }
+  /* what a scale's readout can show: its ends, its middle, its marks and its start */
+  function readings(p, lo, hi, marks, v0) {
+    var vs = [lo, hi, (lo + hi) / 2, v0].concat((marks || []).map(function (m) { return m.at; }));
+    return vs.map(function (v) { return fmt(v, p); });
   }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function num(v, d) {
@@ -85,15 +113,20 @@
     this.svg = host.namespaceURI === NS ? host : el('svg', {}, host);
     /* "view": [x, y, w, h] shows a different window on the same canvas - a task page adds a band above and below
        the drawing for its empty label boxes (compile/task_pages.py); a deck never sets it */
-    this.svg.setAttribute('viewBox', (spec.view && spec.view.length === 4 ? spec.view : [0, 0, size[0], size[1]]).join(' '));
+    this.base = (spec.view && spec.view.length === 4 ? spec.view : [0, 0, size[0], size[1]]).map(Number);
+    this.svg.setAttribute('viewBox', this.base.join(' '));
     this.svg.setAttribute('role', 'img');
     this.svg.setAttribute('data-motion', 'teaching');
+    this.svg.setAttribute('data-fit', 'off');          // the kit fits its own frame (layout), gb_fit.js leaves it alone
     if (spec.label) this.svg.setAttribute('aria-label', spec.label);
     this.svg.classList.add('kit');
-    this.parts = {}; this.list = []; this.handlers = {};
+    this.parts = {}; this.list = []; this.handlers = {}; this.labels = []; this.fits = [];
     this.tweens = []; this.alarms = []; this.now = 0; this.n = 0; this.raf = 0; this.silent = false;
+    this.report = null; this.laid = 0;
+    this.theme();
     (spec.parts || []).forEach(function (p) { self.add(p); });
     this.clearState();
+    watch(this);
   }
 
   Figure.prototype = {
@@ -107,7 +140,8 @@
         for (var k in p) q[k] = p[k];
         p = q;
       }
-      var g = el('g', { 'class': 'kit-part kit-part-' + p.type, transform: 'translate(' + (p.x || 0) + ' ' + (p.y || 0) + ')' }, this.svg);
+      var g = el('g', { 'class': 'kit-part kit-part-' + p.type, transform: 'translate(' + (p.x || 0) + ' ' + (p.y || 0) + ')',
+                        'data-kit-id': p.id || null }, this.svg);
       var part = { id: p.id, p: p, g: g, marks: (p.marks || []).map(mark), mirrors: [], moving: 0,
                    v0: p.value != null ? +p.value : (src ? src.v0 : 0) };
       part.v = part.v0;
@@ -199,6 +233,7 @@
         var held = self.set(t.part, t.from + (t.to - t.from) * t.ease(k));
         if (held || k >= 1) t.dead = true;
       });
+      if (!this.tweens.length && this.later && !this.silent) { this.later = false; var me = this; setTimeout(function () { me.layout(true); }, 0); }
       this.tweens = this.tweens.filter(function (t) { return !t.dead; });
       this.tweens.forEach(function (t) { if (t.from !== null && t.part.id) mv[t.part.id] = t.to > t.from ? 1 : -1; });
       this.list.forEach(function (part) {
@@ -270,24 +305,572 @@
         this.applyStep(n);
         if (instant || reducedMotion()) this.flush(); else this.run();
       }
-      this.emit('step', n);
+      if (!this.laying) {
+        this.emit('step', n);
+        if (!this.laid) this.layout();               // the first time it is on screen
+      }
     },
     next: function () { if (this.n < this.steps()) this.go(this.n + 1); },
     prev: function () { if (this.n > 0) this.go(this.n - 1, true); },
-    replay: function () { this.go(this.n); }
+    replay: function () { this.go(this.n); },
+    /* a part's box that holds words is sized to them at layout time, when the words have their real width */
+    fit: function (fn, late) { if (late) fn.late = true; this.fits.push(fn); },
+
+    /* the figure's colours follow what it is drawn on (theme() below) */
+    theme: function () { return theme(this); },
+    /* lay the figure out for the size it is shown at now: the 12.5 px floor, boxes sized to their words, every label
+       clear, the frame filled. Runs by itself the first time the figure is on screen and whenever its size changes;
+       returns what it did (fig.report) - the figure studio and audit_drawing.js read it. */
+    layout: function (force) {
+      var svg = this.svg, r = svg.getBoundingClientRect ? svg.getBoundingClientRect() : null;
+      if (!r || r.width < 2 || r.height < 2 || this.laying) return this.report;
+      if (!force && this.laid && Math.abs(r.width - this.laid) < 1) return this.report;
+      if (this.raf) { this.later = true; return this.report; }     // after the step that is playing
+      var n0 = this.n, rep;
+      this.laying = true;
+      try { rep = lay(this); }
+      catch (err) { rep = { error: String((err && err.message) || err) }; if (root.console) console.error(err); }
+      finally {
+        try { this.go(n0, true); } catch (e2) { /* the figure stays where the layout left it */ }
+        this.laying = false;
+      }
+      this.laid = svg.getBoundingClientRect().width || r.width;
+      this.report = rep;
+      /* a task page lays its tap areas on the drawn parts (gb_answer.js placeParts, on "resize"): tell it they may have moved */
+      if (svg.hasAttribute('data-kit-still') && root.dispatchEvent) {
+        setTimeout(function () { try { root.dispatchEvent(new Event('resize')); } catch (e) { /* an old WebView */ } }, 0);
+      }
+      if (rep && rep.unplaced && rep.unplaced.length && root.console) {
+        console.warn('kit: ' + rep.unplaced.length + ' label(s) found no clear place in ' + (this.svg.id || this.spec.label || 'a figure') +
+                     ': ' + rep.unplaced.map(function (u) { return '"' + u.text + '"'; }).join(', '));
+      }
+      return rep;
+    }
   };
+
+  /* ==========================================================================
+     LAYOUT (2.45.0) - the drawing work the kit does by itself, so no build sheet places a label by hand
+       THEME   the parts' colours come from the course tokens through a dark or a light mapping (kit.css), chosen by
+               what the figure is drawn on: a deck's dark panel, a task page's white card - so every word and line
+               keeps its contrast on either, by construction (audit_drawing.js CONTRAST stays as the safety net)
+       FLOOR   no word is drawn under 12.5 px: shown smaller than 1:1, every kit type class grows by 1/scale
+               (--kit-up, at most UP_MAX), and the layout makes room for it
+       FIT     a box that holds words (a readout, an alarm row) is as wide as its widest words
+       LABELS  every label (KIT.h.label) gets a place clear of every shape, line and other label and its own box's
+               edge (4 px, L54) - beside its part if it can, further out with a leader line if it must
+       FRAME   a drawing that reaches past its frame makes the frame larger; one lost in its frame is zoomed in to
+               fill it (L53, at most ZOOM_MAX; never with "view", an inset photo over it, or "fit": false)
+     Measured on the drawing as it is on screen, at the end of every step, so a part that only shows later is
+     never covered either.
+     ========================================================================== */
+  var FIGS = [], UP_MAX = 2, ZOOM_MAX = 1.5, GROW_MAX = 1.3, FLOOR_PX = 12.5, PAD_PX = 4.5, CELL = 2;
+  var GEOM = 'rect, circle, ellipse, line, polyline, polygon, path, text, image';
+  var NOT_DRAWN = 'defs, symbol, clipPath, mask, marker, pattern';
+
+  function rgba(s) {
+    var m = /rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:[ ,/]+([\d.]+%?))?\s*\)/.exec(s || '');
+    if (!m) return null;
+    var a = m[4] === undefined ? 1 : (/%$/.test(m[4]) ? parseFloat(m[4]) / 100 : parseFloat(m[4]));
+    return [+m[1], +m[2], +m[3], a];
+  }
+  function luminance(c) {
+    function lin(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+    return 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+  }
+  /* "light" or "dark": the spec's "theme", a data-kit-theme above the figure, a deck's figure panel or dark slide -
+     else the colour actually behind the figure */
+  function theme(f) {
+    var t = f.spec.theme, n, svg = f.svg;
+    for (n = svg; !t && n && n.nodeType === 1; n = n.parentElement) t = n.getAttribute('data-kit-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = null;
+      for (n = svg; !t && n && n.nodeType === 1; n = n.parentElement) {
+        if (n.classList && (n.classList.contains('kit-screen') || (n.classList.contains('slide') && n.classList.contains('dark')))) t = 'dark';
+      }
+      if (!t) {
+        var chain = [], base = [255, 255, 255, 1], c, i;
+        for (n = svg; n && n.nodeType === 1; n = n.parentElement) {
+          try { c = rgba(getComputedStyle(n).backgroundColor); } catch (e) { c = null; }
+          if (c && c[3] > 0.02) { chain.push(c); if (c[3] >= 0.99) break; }
+        }
+        for (i = chain.length - 1; i >= 0; i--) {
+          var a = chain[i][3];
+          base = [chain[i][0] * a + base[0] * (1 - a), chain[i][1] * a + base[1] * (1 - a), chain[i][2] * a + base[2] * (1 - a), 1];
+        }
+        t = luminance(base) > 0.35 ? 'light' : 'dark';
+      }
+    }
+    svg.classList.toggle('kit-light', t === 'light');
+    svg.classList.toggle('kit-dark', t !== 'light');
+    f.tone = t;
+    return t;
+  }
+
+  function watch(f) {
+    FIGS.push(f);
+    if (root.ResizeObserver) {
+      /* after the notification, never inside it: the layout may change the drawing's height, and a change made inside
+         a ResizeObserver callback is reported as a script error ("loop completed with undelivered notifications") */
+      try { new root.ResizeObserver(function () { setTimeout(function () { f.layout(); }, 0); }).observe(f.svg); }
+      catch (e) { /* laid out on its first step */ }
+    }
+  }
+  if (document.fonts && document.fonts.addEventListener) {          // the course font arrives: the words have their real width
+    document.fonts.addEventListener('loadingdone', function () { FIGS.forEach(function (f) { if (f.laid) f.layout(true); }); });
+  }
+
+  function q(rootEl, sel) { return Array.prototype.slice.call(rootEl.querySelectorAll(sel)); }
+  function tagOf(n) { return (n.tagName || '').toLowerCase(); }
+  function notDrawn(n, svg) {
+    for (var p = n.parentNode; p && p !== svg; p = p.parentNode) if (p.matches && p.matches(NOT_DRAWN)) return true;
+    return false;
+  }
+  function flagged(n, attr, svg) {
+    for (var p = n; p && p !== svg; p = p.parentNode) if (p.hasAttribute && p.hasAttribute(attr)) return true;
+    return false;
+  }
+  function seen(n, svg) {                       // painted now: laid out, and not faded out by its step
+    var o = 1;
+    for (var p = n; p && p.nodeType === 1; p = p.parentElement) {
+      var cs = getComputedStyle(p);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+      if (p === svg) break;
+      o *= parseFloat(cs.opacity);
+      if (!(o > 0.05)) return false;
+    }
+    return true;
+  }
+  function painted(n) {
+    var cs = getComputedStyle(n), t = tagOf(n);
+    function on(v, op) { return v && v !== 'none' && v !== 'transparent' && !/rgba\([^)]*,\s*0\)$/.test(v) && !(parseFloat(op) <= 0.05); }
+    return t === 'text' || t === 'image' || on(cs.fill, cs.fillOpacity) || (on(cs.stroke, cs.strokeOpacity) && parseFloat(cs.strokeWidth) > 0);
+  }
+  function labelOf(n, svg) {
+    for (var p = n; p && p !== svg; p = p.parentNode) if (p.__kitL) return p.__kitL;
+    return null;
+  }
+  function partOf(n, svg) {
+    for (var p = n; p && p !== svg; p = p.parentNode) if (p.classList && p.classList.contains('kit-part')) return p;
+    return null;
+  }
+  function det(M) { return Math.sqrt(Math.abs(M.a * M.d - M.b * M.c)) || 1; }
+  function onto(M, x, y) { return { x: M.a * x + M.c * y + M.e, y: M.b * x + M.d * y + M.f }; }
+  function boxOf(pts) {
+    var b = { x: 1e9, y: 1e9, x2: -1e9, y2: -1e9 };
+    pts.forEach(function (p) { b.x = Math.min(b.x, p.x); b.y = Math.min(b.y, p.y); b.x2 = Math.max(b.x2, p.x); b.y2 = Math.max(b.y2, p.y); });
+    return b;
+  }
+  function join(a, b) {
+    if (!a) return b ? { x: b.x, y: b.y, x2: b.x2, y2: b.y2 } : null;
+    if (!b) return a;
+    return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), x2: Math.max(a.x2, b.x2), y2: Math.max(a.y2, b.y2) };
+  }
+  function grown(b, d) { return { x: b.x - d, y: b.y - d, x2: b.x2 + d, y2: b.y2 + d }; }
+  function meets(a, b) { return a.x < b.x2 && b.x < a.x2 && a.y < b.y2 && b.y < a.y2; }
+  function gapOf(a, b) {
+    var dx = Math.max(0, b.x - a.x2, a.x - b.x2), dy = Math.max(0, b.y - a.y2, a.y - b.y2);
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  /* a label's words as the drawing audit judges them: the letters, the middle three-quarters of the line box */
+  function textBox(t, M) {
+    var b;
+    try { b = t.getBBox(); } catch (e) { return null; }
+    if (!b || (!b.width && !b.height)) return null;
+    var y = b.y + 0.18 * b.height, h = 0.74 * b.height;
+    return boxOf([onto(M, b.x, y), onto(M, b.x + b.width, y), onto(M, b.x, y + h), onto(M, b.x + b.width, y + h)]);
+  }
+  function outline(n, M) {
+    var pts = [], L = 0, i;
+    try { L = n.getTotalLength(); } catch (e) { L = 0; }
+    if (L > 0) {
+      var N = Math.max(8, Math.min(1500, Math.ceil(L * det(M) / CELL)));
+      for (i = 0; i <= N; i++) { var a = n.getPointAtLength(L * i / N); pts.push(onto(M, a.x, a.y)); }
+      return pts;
+    }
+    try {
+      var b = n.getBBox();
+      if (b.width || b.height) {
+        [[0, 0], [1, 0], [1, 1], [0, 1], [0.5, 0], [1, 0.5], [0.5, 1], [0, 0.5]].forEach(function (k) {
+          pts.push(onto(M, b.x + k[0] * b.width, b.y + k[1] * b.height));
+        });
+      }
+    } catch (e2) { /* nothing to measure */ }
+    return pts;
+  }
+  function geomKey(n, M) {
+    var s = [M.a, M.b, M.c, M.d, M.e, M.f].map(function (v) { return v.toFixed(2); }).join(',');
+    ['d', 'x', 'y', 'width', 'height', 'cx', 'cy', 'r', 'rx', 'ry', 'x1', 'y1', 'x2', 'y2', 'points'].forEach(function (k) {
+      var v = n.getAttribute(k);
+      if (v != null) s += '|' + v;
+    });
+    return s;
+  }
+
+  /* everything drawn, at the end of every step: the obstacles (outlines, and the words that are not labels), each
+     label's box, each part's outline (where a leader goes), the whole drawing's box, the smallest word on screen */
+  function gather(f, states) {
+    var svg = f.svg, G = { obs: [], body: null, parts: [], minPx: 1e9, seenKeys: {}, scale: 1 };
+    /* measured where their parts put them: a move from an earlier round is taken off first (else a second round - after a
+       zoom - read the moved place as the label's own and left it on the line it had been moved off) */
+    f.labels.forEach(function (L) { L.box = null; L.seen = false; L.within = null; L.g.removeAttribute('transform'); });
+    var oldLeaders = svg.querySelector('g.kit-leaders');
+    if (oldLeaders) oldLeaders.parentNode.removeChild(oldLeaders);
+    q(svg, '.kit-part').forEach(function (p) { p.__kitBox = null; p.__kitPts = null; });
+    states.forEach(function (k) {
+      if (states.length > 1 || k !== f.n) f.go(k, true);
+      var ctm = svg.getScreenCTM();
+      if (!ctm) return;
+      var inv = ctm.inverse(), s = det(ctm);
+      G.scale = s;
+      q(svg, GEOM).forEach(function (n, idx) {
+        if (notDrawn(n, svg) || !seen(n, svg) || !painted(n)) return;
+        var sc = n.getScreenCTM();
+        if (!sc) return;
+        var M = inv.multiply(sc), t = tagOf(n), L = labelOf(n, svg), part = partOf(n, svg), b, key;
+        if (t === 'text') {
+          b = textBox(n, M);
+          if (!b) return;
+          G.minPx = Math.min(G.minPx, parseFloat(getComputedStyle(n).fontSize) * det(M) * s);
+          if (L) { L.box = join(L.box, b); L.seen = true; return; }
+          G.body = join(G.body, b);
+          key = idx + 't' + b.x.toFixed(1) + ',' + b.y.toFixed(1) + ',' + b.x2.toFixed(1);
+          if (G.seenKeys[key]) return;
+          G.seenKeys[key] = 1;
+          if (!flagged(n, 'data-may-overlap', svg)) G.obs.push({ rect: b });
+          if (part) { part.__kitBox = join(part.__kitBox, b); }
+          return;
+        }
+        if (n.__kitWithin) {                       // the box a label keeps inside (opt.within)
+          try { var wb = n.getBBox(); n.__kitWithin.forEach(function (L2) { L2.within = boxOf([onto(M, wb.x, wb.y), onto(M, wb.x + wb.width, wb.y + wb.height)]); }); }
+          catch (e3) { /* not drawn */ }
+        }
+        if (L || t === 'image') {
+          if (t === 'image') { try { var ib = n.getBBox(); G.body = join(G.body, boxOf([onto(M, ib.x, ib.y), onto(M, ib.x + ib.width, ib.y + ib.height)])); } catch (e) { /* none */ } }
+          return;
+        }
+        key = idx + '|' + geomKey(n, M);
+        var cs = getComputedStyle(n), sw = parseFloat(cs.strokeWidth) || 0;
+        var r = (cs.stroke && cs.stroke !== 'none' && sw > 0 ? sw / 2 * det(M) : 0) + 0.5;
+        var known = G.seenKeys[key];
+        var pts = known ? known.pts : outline(n, M);
+        if (!pts.length) return;
+        var pb = grown(boxOf(pts), r);
+        G.body = join(G.body, pb);
+        if (known) return;
+        G.seenKeys[key] = { pts: pts };
+        if (!flagged(n, 'data-may-overlap', svg)) G.obs.push({ pts: pts, r: r });
+        if (part) {
+          part.__kitBox = join(part.__kitBox, pb);
+          part.__kitPts = (part.__kitPts || []).concat(pts.filter(function (p, i) { return i % 3 === 0; }));
+          if (G.parts.indexOf(part) < 0) G.parts.push(part);
+        }
+      });
+    });
+    return G;
+  }
+
+  /* the occupied cells of the drawing, CELL units square, with a summed table for "is this box clear?" in one look */
+  function Grid(V) {
+    var cols = Math.ceil(V[2] / CELL) + 2, rows = Math.ceil(V[3] / CELL) + 2, occ = new Uint8Array(cols * rows), sat = null;
+    function ci(x) { return Math.max(0, Math.min(cols - 1, Math.floor((x - V[0]) / CELL))); }
+    function ri(y) { return Math.max(0, Math.min(rows - 1, Math.floor((y - V[1]) / CELL))); }
+    return {
+      mark: function (x0, y0, x1, y1) {
+        var c0 = ci(x0), c1 = ci(x1), r0 = ri(y0), r1 = ri(y1), r, c;
+        for (r = r0; r <= r1; r++) for (c = c0; c <= c1; c++) occ[r * cols + c] = 1;
+      },
+      done: function () {
+        sat = new Int32Array((cols + 1) * (rows + 1));
+        for (var r = 0; r < rows; r++) {
+          var run = 0;
+          for (var c = 0; c < cols; c++) { run += occ[r * cols + c]; sat[(r + 1) * (cols + 1) + c + 1] = sat[r * (cols + 1) + c + 1] + run; }
+        }
+      },
+      sum: function (b) {
+        var c0 = ci(b.x), c1 = ci(b.x2), r0 = ri(b.y), r1 = ri(b.y2), W = cols + 1;
+        return sat[(r1 + 1) * W + c1 + 1] - sat[r0 * W + c1 + 1] - sat[(r1 + 1) * W + c0] + sat[r0 * W + c0];
+      },
+      at: function (x, y) { return occ[ri(y) * cols + ci(x)]; }
+    };
+  }
+
+  function nearestOn(pts, x, y) {
+    var best = null, d = 1e18;
+    (pts || []).forEach(function (p) { var e = (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y); if (e < d) { d = e; best = p; } });
+    return best;
+  }
+  function edgePoint(b, x, y) { return { x: Math.max(b.x, Math.min(b.x2, x)), y: Math.max(b.y, Math.min(b.y2, y)) }; }
+
+  /* SOLVE - every label a clear place, in plain numbers, with no SVG in it: a 3D figure's projected outlines take the
+     same solver for their label overlays (KIT.solveLabels).
+       obs     [{rect: {x, y, x2, y2}} | {pts: [{x, y}], r}]   what is drawn: words' boxes, outlines (points, half width)
+       labels  [{box, anchor, pts, within, opt}]                a label's box where its part put it, the part's box and
+                                                               outline points (where a leader ends), opt as h.label's
+       V       [x, y, w, h] the frame; P the clearance (L54's 4 px, in these units)
+     -> { at: [box], leader: [{x1, y1, x2, y2} | null], unplaced: [index], moved, leaders }
+     Those already clear stay; the others, largest first, take the nearest clear place - beside the part, else further
+     out with a leader line that crosses no other label. */
+  function solveLabels(obs, labs, V, P) {
+    var grid = Grid(V), bounds = { x: V[0] + P, y: V[1] + P, x2: V[0] + V[2] - P, y2: V[1] + V[3] - P };
+    var q2 = CELL / 2;                         // half a cell more all round: the grid never lets a label in closer than P
+    obs.forEach(function (o) {
+      if (o.rect) { grid.mark(o.rect.x - q2, o.rect.y - q2, o.rect.x2 + q2, o.rect.y2 + q2); return; }
+      var r = o.r + q2;
+      o.pts.forEach(function (p) { grid.mark(p.x - r, p.y - r, p.x + r, p.y + r); });
+    });
+    grid.done();
+    var taken = [], out = { at: [], leader: [], unplaced: [], moved: 0, leaders: 0 };
+    labs.forEach(function (L) { L.opt = L.opt || {}; L.anchor = L.anchor || L.box; L.at = null; L.leader = null; });
+    function inBounds(b) { return b.x >= bounds.x && b.y >= bounds.y && b.x2 <= bounds.x2 && b.y2 <= bounds.y2; }
+    /* the grid is coarse (a cell, plus half a cell round every obstacle): words inside a low room (a bilge 28 high) are
+       allowed one cell closer to its walls - still clear of them, and audit_drawing.js judges the true 4 px */
+    function clear(b, inside) {
+      var pad = inside ? Math.max(1, P - CELL) : P;
+      if (!inBounds(b) || grid.sum(grown(b, pad)) > 0) return false;
+      for (var i = 0; i < taken.length; i++) if (meets(grown(taken[i], P), b)) return false;
+      return true;
+    }
+    var todo = [];
+    labs.forEach(function (L) {
+      if (L.opt.fixed || clear(L.box, L.opt.inside)) { L.at = L.box; taken.push(L.box); } else todo.push(L);
+    });
+    /* a callout where it was put still gets its leader to the place it names */
+    labs.forEach(function (L) {
+      if (!L.opt.callout || L.at !== L.box || gapOf(L.box, L.anchor) <= (L.opt.near || 0) + P) return;
+      taken.splice(taken.indexOf(L.box), 1);
+      var ln = leaderFor(L, L.box);
+      taken.push(L.box);
+      if (ln) { L.leader = ln; out.leaders++; }
+    });
+    todo.sort(function (a, b) { return (b.box.x2 - b.box.x) * (b.box.y2 - b.box.y) - (a.box.x2 - a.box.x) * (a.box.y2 - a.box.y); });
+    todo.forEach(function (L) {
+      var best = search(L);
+      if (best) { L.at = best.box; L.leader = best.leader; out.moved++; if (best.leader) out.leaders++; }
+      else { L.at = L.box; out.unplaced.push(labs.indexOf(L)); }
+      taken.push(L.at);
+    });
+    function search(L) {
+      var b = L.box, w = b.x2 - b.x, h = b.y2 - b.y, cx0 = (b.x + b.x2) / 2, cy0 = (b.y + b.y2) / 2, A = L.anchor;
+      var inside = !!L.opt.inside, lead = !inside && L.opt.lead !== false, near = L.opt.near != null ? L.opt.near : 8;
+      var C = inside ? (L.within || A) : null, R = inside ? 0 : (lead ? 160 : near + P), st = inside ? 2 : 4, best = null;
+      var x0 = inside ? C.x : A.x - R - w, x1 = inside ? C.x2 - w : A.x2 + R, y0 = inside ? C.y : A.y - R - h, y1 = inside ? C.y2 - h : A.y2 + R;
+      var selfA = L.opt.self || meets(b, A);
+      for (var y = y0; y <= y1; y += st) {
+        for (var x = x0; x <= x1; x += st) {
+          var c = { x: x, y: y, x2: x + w, y2: y + h };
+          if (!selfA && meets(c, A)) continue;
+          var d = Math.sqrt((x + w / 2 - cx0) * (x + w / 2 - cx0) + (y + h / 2 - cy0) * (y + h / 2 - cy0));
+          if (best && d >= best.cost) continue;
+          if (!clear(c, inside)) continue;
+          var cost = d, ln = null;
+          if (!inside && !L.opt.self && gapOf(c, A) > near + P) {
+            if (!lead) continue;
+            ln = leaderFor(L, c);
+            if (!ln) continue;
+            cost += 24 + ln.cost;
+          }
+          if (!best || cost < best.cost) best = { box: c, leader: ln, cost: cost };
+        }
+      }
+      return best;
+    }
+    /* from the part's own outline to the label's nearest edge; never through another label, a crossed line costs */
+    function leaderFor(L, c) {
+      var cx = (c.x + c.x2) / 2, cy = (c.y + c.y2) / 2;
+      var a = nearestOn(L.pts, cx, cy) || edgePoint(L.anchor, cx, cy);
+      var e = edgePoint(grown(c, P * 0.5), a.x, a.y), dx = e.x - a.x, dy = e.y - a.y, len = Math.sqrt(dx * dx + dy * dy);
+      if (len < 4) return null;
+      var hits = 0, n = Math.ceil(len / CELL);
+      for (var i = 0; i <= n; i++) {
+        var px = a.x + dx * i / n, py = a.y + dy * i / n, from = len * i / n;
+        for (var j = 0; j < taken.length; j++) {
+          var t = grown(taken[j], P * 0.5);
+          if (px > t.x && px < t.x2 && py > t.y && py < t.y2) return null;
+        }
+        if (from > 5 && len - from > 3 && grid.at(px, py)) hits++;
+      }
+      return { x1: a.x, y1: a.y, x2: e.x, y2: e.y, cost: hits * 3 + len * 0.15 };
+    }
+    labs.forEach(function (L) { out.at.push(L.at); out.leader.push(L.leader); });
+    return out;
+  }
+
+  /* PLACE - the solver's answer laid on the figure: each label's group moved, its leader drawn */
+  function place(f, G, V, P) {
+    var svg = f.svg;
+    f.labels.forEach(function (L) { L.g.removeAttribute('transform'); L.at = null; L.leader = null; });
+    var old = svg.querySelector('g.kit-leaders');
+    if (old) old.parentNode.removeChild(old);
+    var labs = f.labels.filter(function (L) { return L.seen && L.box; });
+    var input = labs.map(function (L) {
+      return { box: L.box, anchor: (L.part && L.part.__kitBox) || L.box, pts: L.part && L.part.__kitPts, within: L.within, opt: L.opt };
+    });
+    var res = solveLabels(G.obs, input, V, P), out = { moved: res.moved, leaders: res.leaders, unplaced: [] };
+    labs.forEach(function (L, i) { L.at = res.at[i]; L.leader = res.leader[i]; });
+    res.unplaced.forEach(function (i) {
+      var L = labs[i], owner = partOf(L.g, svg);
+      out.unplaced.push({ text: (L.g.textContent || '').replace(/\s+/g, ' ').trim(), part: (owner && owner.getAttribute('data-kit-id')) || '' });
+    });
+    var lg = null;
+    labs.forEach(function (L) {
+      if (!L.at) return;
+      if (L.at !== L.box) {
+        var dx = L.at.x - L.box.x, dy = L.at.y - L.box.y, pm = L.g.parentNode.getScreenCTM(), sm = svg.getScreenCTM();
+        if (pm && sm) {                         // the move in the label's own units (its part may be scaled)
+          var k = det(sm) / det(pm);
+          dx *= k; dy *= k;
+        }
+        L.g.setAttribute('transform', 'translate(' + dx.toFixed(2) + ' ' + dy.toFixed(2) + ')');
+      }
+      if (L.leader) {
+        if (!lg) lg = el('g', { 'class': 'kit-leaders', 'aria-hidden': 'true' }, svg);
+        el('line', { x1: L.leader.x1.toFixed(1), y1: L.leader.y1.toFixed(1), x2: L.leader.x2.toFixed(1), y2: L.leader.y2.toFixed(1),
+                     'class': 'kit-leader', 'data-may-cross': '' }, lg);
+      }
+    });
+    out.labels = labs.length;
+    return out;
+  }
+
+  function setView(svg, V) { svg.setAttribute('viewBox', V.map(function (v) { return +v.toFixed(2); }).join(' ')); }
+  function scaleNow(svg) { var m = svg.getScreenCTM(); return m ? det(m) : 1; }
+  function upFor(s) { return Math.min(UP_MAX, Math.max(1, 1 / s)); }
+  /* the height a deck figure may take: its column, less the step buttons (0 when it is not in a deck's figure column) */
+  function roomPx(svg) {
+    var col = svg.closest && svg.closest('.kit-fig');
+    if (!col) return 0;
+    var bar = col.querySelector('.mediabar'), scr = svg.closest('.kit-screen'), cs = scr ? getComputedStyle(scr) : null;
+    var pad = cs ? (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) : 0;
+    return col.clientHeight - (bar ? bar.getBoundingClientRect().height + 14 : 0) - pad;
+  }
+  /* the frame made larger to hold B with a margin. Only taller, when the drawing needs height alone and its column has
+     the room (so it is not shown smaller); else keeping its shape */
+  function holding(V, B, m, svg) {
+    var x0 = Math.min(V[0], B.x - m), y0 = Math.min(V[1], B.y - m), x1 = Math.max(V[0] + V[2], B.x2 + m), y1 = Math.max(V[1] + V[3], B.y2 + m);
+    var w = x1 - x0, h = y1 - y0, a = V[2] / V[3];
+    if (svg && w <= V[2] + 0.5) {
+      var r = svg.getBoundingClientRect(), room = roomPx(svg);
+      if (room > 0 && r.width * h / V[2] <= room) return [V[0], y0, V[2], h];
+    }
+    if (w / h > a) { var h2 = w / a; y0 -= (h2 - h) / 2; h = h2; } else { var w2 = h * a; x0 -= (w2 - w) / 2; w = w2; }
+    return [x0, y0, w, h];
+  }
+
+  function lay(f) {
+    var svg = f.svg, steps = f.steps(), states = [], k, i;
+    for (k = 0; k <= steps; k++) states.push(k);
+    /* a still figure on a task page keeps its frame: the page lays its tap areas, label boxes and leader lines on it in
+       % of that frame (task_pages.py, gb_answer.js) */
+    var still = svg.hasAttribute('data-kit-step') || svg.hasAttribute('data-kit-still');
+    var zoomOK = !(still || f.spec.view || f.spec.fit === false ||
+                   (svg.parentNode && svg.parentNode.querySelector && svg.parentNode.querySelector('.inset.over')));
+    f.theme();
+    var V = f.base.slice();
+    setView(svg, V);
+    function upTo(u) {                    // the words' size, then every box sized to them, then the frames that hold boxes
+      f.upNow = u;
+      svg.style.setProperty('--kit-up', u.toFixed(3));
+      f.fits.forEach(function (fit) { if (!fit.late) fit(u); });
+      f.fits.forEach(function (fit) { if (fit.late) fit(u); });
+    }
+    var s = scaleNow(svg), up = upFor(s);
+    upTo(up);
+    f.labels.forEach(function (L) { L.g.removeAttribute('transform'); });
+    var G = gather(f, states);
+    /* a drawing that reaches past its frame: the frame grows to hold it (keeping its shape) */
+    function holds(B) { return B.x >= V[0] - 0.5 && B.y >= V[1] - 0.5 && B.x2 <= V[0] + V[2] + 0.5 && B.y2 <= V[1] + V[3] + 0.5; }
+    /* words grown for the floor grow their boxes, which may need a larger frame, which shows everything smaller:
+       a few rounds settle it */
+    var crowded = false;
+    function contain(extra) {
+      for (var r = 0; r < 6 && !still; r++) {
+        var B = join(G.body, extra);
+        if (!B || holds(B)) return;
+        V = holding(V, B, 3, f.spec.view ? null : svg);
+        setView(svg, V);
+        s = scaleNow(svg);
+        /* words that need more room than the panel gives would grow the frame, which shows them smaller, which grows
+           them again: past GROW_MAX the words stop growing (the drawing audit's SMALL TEXT then says so) */
+        if (V[2] > f.base[2] * GROW_MAX) crowded = true;
+        var up2 = upFor(s);
+        if (!crowded && Math.abs(up2 - up) >= 0.01) { up = up2; upTo(up); }
+        G = gather(f, states);
+        extra = null;
+      }
+    }
+    contain(null);
+    var P = PAD_PX / s, res = place(f, G, V, P), zoom = 1;
+    /* a label with no clear place inside the frame: the frame grows to give it one (gb_fit.js did this for every drawing) */
+    var lost = null;
+    f.labels.forEach(function (L) { if (L.at && L.at === L.box && L.seen && !holds(grown(L.box, P))) lost = join(lost, grown(L.box, P)); });
+    if (lost) {
+      contain(lost);
+      P = PAD_PX / s;
+      res = place(f, G, V, P);
+    }
+    /* a drawing lost in its frame is zoomed in to fill it (L53) */
+    if (zoomOK && G.body) {
+      var C = G.body;
+      f.labels.forEach(function (L) { if (L.at) C = join(C, L.at); });
+      if (C) {
+        var m = P + 6, z = Math.min(V[2] / (C.x2 - C.x + 2 * m), V[3] / (C.y2 - C.y + 2 * m), ZOOM_MAX);
+        if (z > 1.04) {
+          var w2 = V[2] / z, h2 = V[3] / z;
+          V = [(C.x + C.x2) / 2 - w2 / 2, (C.y + C.y2) / 2 - h2 / 2, w2, h2];
+          setView(svg, V);
+          zoom = z;
+          s = scaleNow(svg);
+          var up3 = upFor(s);
+          if (Math.abs(up3 - up) > 0.01) {
+            up = up3; upTo(up);
+            G = gather(f, states);
+            P = PAD_PX / s;
+            res = place(f, G, V, P);
+          }
+        }
+      }
+    }
+    return { theme: f.tone, scale: +s.toFixed(3), up: +up.toFixed(3), zoom: +zoom.toFixed(3), view: V.map(function (v) { return +v.toFixed(1); }),
+             minTextPx: G.minPx < 1e8 ? +(G.minPx * scaleNow(svg) / G.scale).toFixed(2) : null, labels: res.labels, moved: res.moved,
+             leaders: res.leaders, unplaced: res.unplaced, crowded: crowded, floorMet: !crowded && (up < UP_MAX || s * UP_MAX >= 1) };
+  }
 
   /* ------------------------------------------------------------------ parts */
 
   /* panel - the monitoring screen frame, its title and the alarm-state chip */
   TYPES.panel = function (fig, part, g, p) {
-    var w = p.w || 600, h = p.h || 440;
-    el('rect', { x: 1, y: 1, width: w - 2, height: h - 2, rx: 14, 'class': 'kit-panel' }, g);
-    if (p.title) el('text', { x: 20, y: 29, 'class': 'kit-ptitle' }, g, p.title);
-    el('line', { x1: 1, x2: w - 1, y1: 44, y2: 44, 'class': 'kit-rule' }, g);
+    var w = p.w || 600, h = p.h || 440, w0 = w, h0 = h, px = p.x || 0, py = p.y || 0;
+    var frame = el('rect', { x: 1, y: 1, width: w - 2, height: h - 2, rx: 14, 'class': 'kit-panel' }, g);
+    /* the screen holds every part placed on it: a readout or an alarm list that grew with its words (the 12.5 px
+       floor, a long alarm) makes the screen larger, never pokes out of it */
+    fig.fit(function () {
+      var W = w0, H = h0;
+      q(fig.svg, '.kit-part').forEach(function (o) {
+        if (o === g || !o.getBBox) return;
+        var m = /translate\(\s*([-\d.]+)[ ,]+([-\d.]+)/.exec(o.getAttribute('transform') || ''), ox = m ? +m[1] - px : 0, oy = m ? +m[2] - py : 0;
+        if (ox < 0 || oy < 0 || ox > w0 || oy > h0) return;              // placed outside the screen: not on it
+        var b;
+        try { b = o.getBBox(); } catch (e) { return; }
+        if (!b.width && !b.height) return;
+        W = Math.max(W, ox + b.x + b.width + 16);
+        H = Math.max(H, oy + b.y + b.height + 16);
+      });
+      w = W; h = H;
+      frame.setAttribute('width', w - 2); frame.setAttribute('height', h - 2);
+      rule.setAttribute('x2', w - 1);
+      chip.setAttribute('transform', 'translate(' + (w - 16) + ' 12)');
+    }, true);
+    var ttl = p.title ? el('text', { x: 20, y: 29, 'class': 'kit-ptitle' }, g, p.title) : null;
+    var rule = el('line', { x1: 1, x2: w - 1, y1: 44, y2: 44, 'class': 'kit-rule' }, g);
     var chip = el('g', { transform: 'translate(' + (w - 16) + ' 12)' }, g);
     var box = el('rect', { y: -2, height: 26, rx: 13 }, chip);      // 26 high, 16 a side: the words keep 4 px clear at 2/3 size (L54)
     var txt = el('text', { y: 15.5, 'text-anchor': 'middle' }, chip);
+    fig.fit(function (k) {                          // the header grows with its words (the 12.5 px floor)
+      if (ttl) ttl.setAttribute('y', 29 + 12 * (k - 1));
+      rule.setAttribute('y1', 44 + 14 * (k - 1)); rule.setAttribute('y2', 44 + 14 * (k - 1));
+      box.setAttribute('height', 26 * k); box.setAttribute('rx', 13 * k); txt.setAttribute('y', 15.5 * k);
+      part.alarms(fig.alarms);
+    });
     part.alarms = function (list) {
       var n = list.length;
       var worst = list.some(function (a) { return a.kind === 'trip'; }) ? 'trip' : 'alarm';
@@ -304,7 +887,7 @@
     function y(v) { return h - clamp((v - lo) / (hi - lo), 0, 1) * h; }
     var cid = fig.uid + '-' + p.id + '-clip';
     el('rect', { x: 3, y: 3, width: w - 6, height: h - 6, rx: 5 }, el('clipPath', { id: cid }, el('defs', {}, g)));
-    if (p.label) el('text', { x: w / 2, y: -14, 'text-anchor': 'middle', 'class': 'kit-h' }, g, p.label);
+    if (p.label) label(fig, g, { x: w / 2, y: -14, 'text-anchor': 'middle', 'class': 'kit-h' }, p.label);
     el('rect', { width: w, height: h, rx: 8, 'class': 'kit-vessel' }, g);
     var inside = el('g', { 'clip-path': 'url(#' + cid + ')' }, g);
     var body = el('rect', { x: 0, width: w, 'class': 'kit-liquid' }, inside);
@@ -319,14 +902,18 @@
     part.marks.forEach(function (m) {
       var my = y(m.at), mg = el('g', { 'class': 'kit-mark kit-' + m.kind }, g);
       el('line', { x1: -4, x2: w + 10, y1: my, y2: my }, mg);
-      if (m.label) el('text', { x: w + 14, y: my + 4.5 }, mg, m.label);
+      if (m.label) label(fig, mg, { x: w + 14, y: my + 4.5 }, m.label, { near: 16, lead: false });   // it may shift, never far from its mark
       m.node = mg;
     });
     var out = null;
     if (p.readout !== false) {
-      var bw = Math.max(w + 16, 78);
-      el('rect', { x: w / 2 - bw / 2, y: h + 14, width: bw, height: 30, rx: 6, 'class': 'kit-dig' }, g);
+      var dig = el('rect', { y: h + 14, height: 30, rx: 6, 'class': 'kit-dig' }, g);
       out = el('text', { x: w / 2, y: h + 35, 'text-anchor': 'middle', 'class': 'kit-num' }, g);
+      fig.fit(function (k) {                      // as wide as its widest reading, 12 a side; as tall as its words
+        var bw = Math.max(w + 16, 78, widest(out, readings(p, lo, hi, p.marks, part.v0)) + 24);
+        dig.setAttribute('x', w / 2 - bw / 2); dig.setAttribute('width', bw);
+        dig.setAttribute('height', 30 * k); out.setAttribute('y', h + 14 + 21 * k);
+      });
     }
     part.render = function (v) {
       var yy = y(v);
@@ -347,7 +934,7 @@
     function zone(m, a, b) {
       m.zone = el('path', { d: arc(tr, ang(a), ang(b)), 'class': 'kit-zone kit-' + m.kind, 'stroke-width': tw }, g);
     }
-    if (p.label) el('text', { x: 0, y: -r - 14, 'text-anchor': 'middle', 'class': 'kit-h' }, g, p.label);
+    if (p.label) label(fig, g, { x: 0, y: -r - 14, 'text-anchor': 'middle', 'class': 'kit-h' }, p.label);
     el('circle', { r: r, 'class': 'kit-dial' }, g);
     el('path', { d: arc(tr, a0, a0 + sw), 'class': 'kit-track', 'stroke-width': tw }, g);
     if (p.normal) el('path', { d: arc(tr, ang(p.normal[0]), ang(p.normal[1])), 'class': 'kit-band', 'stroke-width': tw }, g);
@@ -375,7 +962,7 @@
         var c = Math.cos(a * Math.PI / 180), s = Math.sin(a * Math.PI / 180), pt = polar(r + 14, a);
         var nl = String(m.label).split('\n').length;
         var y0 = pt[1] + 4.5 + (s > 0.3 ? 6 : s < -0.3 ? -6 - (nl - 1) * 16 : -(nl - 1) * 8);
-        lines(mg, { x: pt[0], y: y0, 'text-anchor': c > 0.3 ? 'start' : c < -0.3 ? 'end' : 'middle' }, m.label);
+        label(fig, mg, { x: pt[0], y: y0, 'text-anchor': c > 0.3 ? 'start' : c < -0.3 ? 'end' : 'middle' }, m.label, { near: 16, lead: false });
       }
       m.node = mg;
     });
@@ -384,13 +971,18 @@
     el('circle', { r: mini ? 3.5 : 7, 'class': 'kit-hub' }, g);
     var val = null, below = r + 22;
     if (!mini && p.readout !== false) {         // under the dial, clear of the scale numbers
-      el('rect', { x: -44, y: r + 10, width: 88, height: 30, rx: 6, 'class': 'kit-dig' }, g);
+      var dig = el('rect', { y: r + 10, height: 30, rx: 6, 'class': 'kit-dig' }, g);
       val = el('text', { x: 0, y: r + 31, 'text-anchor': 'middle', 'class': 'kit-num' }, g);
       below = r + 58;
+      fig.fit(function (k) {
+        var bw = Math.max(88, widest(val, readings(p, lo, hi, p.marks, part.v0)) + 24);
+        dig.setAttribute('x', -bw / 2); dig.setAttribute('width', bw);
+        dig.setAttribute('height', 30 * k); val.setAttribute('y', r + 10 + 21 * k);
+      });
     }
     if (p.caption) {
       var right = p.captionAt === 'right';
-      lines(g, { x: right ? r + 12 : 0, y: right ? 0 : below, 'text-anchor': right ? 'start' : 'middle', 'class': 'kit-cap' }, p.caption);
+      label(fig, g, { x: right ? r + 12 : 0, y: right ? 0 : below, 'text-anchor': right ? 'start' : 'middle', 'class': 'kit-cap' }, p.caption);
     }
     part.render = function (v) {
       nd.setAttribute('transform', 'rotate(' + ang(v).toFixed(2) + ')');
@@ -402,9 +994,16 @@
   /* readout - a digital tile (temperature, gas %LEL ...) that changes state on its marks */
   TYPES.readout = function (fig, part, g, p) {
     var w = p.w || 120, h = p.h || 56;
-    el('rect', { width: w, height: h, rx: 8, 'class': 'kit-tile' }, g);
-    if (p.label) el('text', { x: 12, y: 20, 'class': 'kit-tl' }, g, p.label);
+    var tile = el('rect', { width: w, height: h, rx: 8, 'class': 'kit-tile' }, g);
+    var name = p.label ? el('text', { x: 12, y: 20, 'class': 'kit-tl' }, g, p.label) : null;
     var val = el('text', { x: w - 12, y: h - 11, 'text-anchor': 'end', 'class': 'kit-big' }, g);
+    fig.fit(function (k) {                        // its name and its widest reading, 12 a side; as tall as its words
+      var tw = Math.max(w, (name ? widest(name, [p.label]) : 0) + 24, widest(val, readings(p, p.min || 0, p.max != null ? p.max : 100, p.marks, part.v0)) + 24);
+      var th = Math.max(h, 56 * k);
+      tile.setAttribute('width', tw); tile.setAttribute('height', th);
+      val.setAttribute('x', tw - 12); val.setAttribute('y', th - 11 * k);
+      if (name) name.setAttribute('y', 20 * k);
+    });
     part.render = function (v) { val.textContent = fmt(v, p); };
     part.flag = function (m, on) { g.classList.toggle('kit-on-' + m.kind, on); };
   };
@@ -424,8 +1023,11 @@
     });
     var tx = x1 - 10;
     el('line', { x1: tx, y1: top - 8, x2: tx, y2: bot - 6, 'class': 'kit-probe' }, g);
-    el('circle', { cx: tx, cy: top - 22, r: 20, 'class': 'kit-bubble' }, g);   // 20: "TT" keeps its 4 px clear of the ring down to 2/3 size (L54)
-    el('text', { x: tx, y: top - 17.5, 'text-anchor': 'middle', 'class': 'kit-bubble-t' }, g, p.tag || 'TT');
+    var ring = el('circle', { cx: tx, cy: top - 22, r: 20, 'class': 'kit-bubble' }, g);   // 20: "TT" keeps its 4 px clear of the ring down to 2/3 size (L54)
+    var tag = el('text', { x: tx, y: top - 17.5, 'text-anchor': 'middle', 'class': 'kit-bubble-t' }, g, p.tag || 'TT');
+    fig.fit(function (k) {                          // the ring grows with its letters, standing on the probe
+      ring.setAttribute('r', 20 * k); ring.setAttribute('cy', top - 2 - 20 * k); tag.setAttribute('y', top - 2 - 20 * k + 4.5 * k);
+    });
     part.render = function (v) {
       var ly = bot - clamp(v, 0, 1) * (bot - top) * 0.75;
       pool.setAttribute('y', ly); pool.setAttribute('height', bot - ly);
@@ -446,8 +1048,9 @@
     var fill = el('path', { d: bow, 'class': 'kit-vfill' }, sym);
     el('path', { d: bow, 'class': 'kit-valve' }, sym);
     var right = p.labelAt === 'right', lx = right ? s + 26 : 0, ly = right ? -4 : s + 22, anchor = right ? 'start' : 'middle';
-    var nl = p.label ? lines(g, { x: lx, y: ly, 'text-anchor': anchor, 'class': 'kit-cap' }, p.label) : 0;
-    var st = p.state === false ? null : el('text', { x: lx, y: ly + nl * 16, 'text-anchor': anchor, 'class': 'kit-state' }, g);
+    var lg = p.label || p.state !== false ? label(fig, g, {}, '') : null;          // its name and its state move together
+    var nl = p.label ? lines(lg, { x: lx, y: ly, 'text-anchor': anchor, 'class': 'kit-cap' }, p.label) : 0;
+    var st = p.state === false ? null : el('text', { x: lx, y: ly, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': anchor, 'class': 'kit-state' }, lg);
     if (p.trip === false) g.classList.add('kit-quiet');   // closing is normal here: no red
     part.render = function (v) {
       var shut = v < 0.5;
@@ -463,7 +1066,7 @@
                   1..2 the pipe emptying towards p.drain (0 = start, 0.5 = middle, 1 = end, default)
      fluid: "liquid" (cold blue, long dashes) or "gas" (pale, fine dots). double: a double-walled pipe. */
   TYPES.pipe = function (fig, part, g, p) {
-    var fluid = p.fluid === 'gas' ? 'gas' : 'liquid', mid = fig.uid + '-' + (p.id || 'p' + (++UID)) + '-m';
+    var fluid = p.fluid === 'gas' || p.fluid === 'air' ? p.fluid : 'liquid', mid = fig.uid + '-' + (p.id || 'p' + (++UID)) + '-m';
     g.classList.add('kit-fl-' + fluid);
     if (p.double) {
       el('path', { d: p.d, 'class': 'kit-jacket' }, g);
@@ -502,7 +1105,7 @@
     var liq = el('rect', { x: 0, width: w, 'class': 'kit-liquid', 'clip-path': 'url(#' + cid + ')' }, g);
     var surf = el('line', { x1: 0, x2: w, 'class': 'kit-surface', 'clip-path': 'url(#' + cid + ')' }, g);
     el('path', { d: shape, 'class': 'kit-vessel-o' }, g);
-    if (p.label) lines(g, { x: w / 2, y: h + 22, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+    if (p.label) label(fig, g, { x: w / 2, y: h + 22, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
     part.render = function (v) {
       var y = h - clamp(v, 0, 1) * h;
       liq.setAttribute('y', y); liq.setAttribute('height', h - y);
@@ -520,8 +1123,8 @@
       var below = p.labelAt === 'below';
       // 14 / 24: the name keeps its 4 px clear of the room's edge also when the figure is shown at 2/3 size (L54);
       // in a low room (a TCS 30 high) it sits in the middle, clear of the top and the bottom alike
-      lines(g, { x: below ? w / 2 : 14, y: below ? h + 20 : Math.min(24, h / 2 + 4.5), 'text-anchor': below ? 'middle' : 'start',
-                 'class': below ? 'kit-cap' : 'kit-sl' }, p.label);
+      label(fig, g, { x: below ? w / 2 : 14, y: below ? h + 20 : Math.min(24, h / 2 + 4.5), 'text-anchor': below ? 'middle' : 'start',
+                      'class': below ? 'kit-cap' : 'kit-sl' }, p.label, below ? null : { inside: true });
     }
     part.render = function (v) { wash.style.opacity = clamp(v, 0, 1).toFixed(3); g.classList.toggle('kit-lit', v > 0.5); };
   };
@@ -533,7 +1136,7 @@
     var coil = el('path', { d: 'M' + (-r) + ' 0 L' + (-z) + ' 0 L' + (-z / 2) + ' ' + (-z) + ' L0 ' + z + ' L' + (z / 2) + ' ' + (-z) + ' L' + z + ' 0 L' + r + ' 0', 'class': 'kit-coil' }, g);
     el('line', { x1: -z, y1: r + 2, x2: -z, y2: r + 12, 'class': 'kit-hm' }, g);
     el('line', { x1: z, y1: r + 2, x2: z, y2: r + 12, 'class': 'kit-hm' }, g);
-    if (p.label) lines(g, { x: 0, y: r + 30, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+    if (p.label) label(fig, g, { x: 0, y: r + 30, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
     part.render = function (v) { g.classList.toggle('kit-active', v > 0.5); coil.style.opacity = (0.55 + 0.45 * clamp(v, 0, 1)).toFixed(2); };
   };
 
@@ -544,21 +1147,25 @@
     el('circle', { r: r, 'class': 'kit-shell' }, g);
     var imp = el('g', { 'class': 'kit-imp' }, g);
     [0, 120, 240].forEach(function (a) { el('path', { d: 'M0 0 L' + (r * 0.7) + ' -3', transform: 'rotate(' + a + ')' }, imp); });
-    if (p.label) lines(g, { x: 0, y: r + 22, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+    if (p.label) label(fig, g, { x: 0, y: r + 22, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
     part.render = function (v) { g.classList.toggle('kit-running', v > 0.5); };
   };
 
   /* engine - a dual-fuel engine block. value 0 stopped, 1 running */
   TYPES.engine = function (fig, part, g, p) {
     var w = p.w || 100, h = p.h || 70, n = p.cylinders || 4, cw = (w - 16) / n;
-    el('rect', { width: w, height: h, rx: 8, 'class': 'kit-block' }, g);
+    var block = el('rect', { width: w, height: h, rx: 8, 'class': 'kit-block' }, g);
     for (var i = 0; i < n; i++) {
       var cx = 8 + cw * i + cw / 2;
       el('rect', { x: cx - cw * 0.32, y: -10, width: cw * 0.64, height: 14, rx: 2, 'class': 'kit-head' }, g);
       el('rect', { x: cx - cw * 0.22, y: 8, width: cw * 0.44, height: 12, rx: 2, 'class': 'kit-piston', style: 'animation-delay:' + (-0.15 * i) + 's' }, g);
     }
     var st = el('text', { x: w / 2, y: h - 12, 'text-anchor': 'middle', 'class': 'kit-state' }, g);
-    if (p.label) lines(g, { x: w / 2, y: h + 20, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+    fig.fit(function (k) {          // RUNNING under the pistons' lowest point (25) with 4 clear, the block as tall as that needs
+      var base = Math.max(h - 12, 29 + 10 * k), bh = Math.max(h, base + 8 * k);
+      st.setAttribute('y', base); block.setAttribute('height', bh);
+    });
+    if (p.label) label(fig, g, { x: w / 2, y: h + 20, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
     part.render = function (v) { var on = v > 0.5; g.classList.toggle('kit-running', on); st.textContent = on ? 'RUNNING' : 'STOPPED'; };
   };
 
@@ -569,15 +1176,16 @@
     [0, 0.45, 0.9].forEach(function (d, i) {
       el('circle', { cx: (i - 1) * 5, cy: -12, r: 7, style: 'animation-delay:' + d + 's' }, puffs);
     });
-    if (p.label) lines(g, { x: p.labelAt === 'left' ? -18 : 18, y: -2, 'text-anchor': p.labelAt === 'left' ? 'end' : 'start', 'class': 'kit-cap' }, p.label);
+    if (p.label) label(fig, g, { x: p.labelAt === 'left' ? -18 : 18, y: -2, 'text-anchor': p.labelAt === 'left' ? 'end' : 'start', 'class': 'kit-cap' }, p.label);
     part.render = function (v) { puffs.style.opacity = clamp(v, 0, 1).toFixed(2); g.classList.toggle('kit-venting', v > 0.05); };
   };
 
   /* badge - a numbered step marker. value 0..1 = lit */
   TYPES.badge = function (fig, part, g, p) {
-    el('circle', { r: 17, 'class': 'kit-badge-o' }, g);       // 17: every digit keeps its 4 px clear of the ring down to 2/3 size
+    var ring = el('circle', { r: 17, 'class': 'kit-badge-o' }, g);       // 17: every digit keeps its 4 px clear of the ring down to 2/3 size
     var disc = el('circle', { r: 17, 'class': 'kit-badge' }, g);
-    el('text', { y: 5, 'text-anchor': 'middle', 'class': 'kit-badge-t' }, g, String(p.n != null ? p.n : ''));
+    var num_ = el('text', { y: 5, 'text-anchor': 'middle', 'class': 'kit-badge-t' }, g, String(p.n != null ? p.n : ''));
+    fig.fit(function (k) { ring.setAttribute('r', 17 * k); disc.setAttribute('r', 17 * k); num_.setAttribute('y', 5 * k); });
     part.render = function (v) { disc.style.opacity = clamp(v, 0, 1).toFixed(2); g.classList.toggle('kit-lit', v > 0.5); };
   };
 
@@ -585,26 +1193,61 @@
   TYPES.wire = function (fig, part, g, p) { el('path', { d: p.d, 'class': 'kit-wire' }, g); };
 
   /* text - a heading or caption; "\n" breaks lines */
-  TYPES.text = function (fig, part, g, p) {
-    lines(g, { x: 0, y: 0, 'text-anchor': p.anchor || 'middle', 'class': 'kit-' + (p.style || 'cap') }, p.text);
+  TYPES.text = function (fig, part, g, p) {        // it may shift a little to stay clear, never far and never with a leader
+    if (p.to && p.to.length === 2) {               // a CALLOUT: words for a place ("to": [x, y]) - a leader line joins them
+      el('circle', { cx: p.to[0] - (p.x || 0), cy: p.to[1] - (p.y || 0), r: 2.5, 'class': 'kit-leader-dot', 'data-may-cross': '' }, g);
+      label(fig, g, { x: 0, y: 0, 'text-anchor': p.anchor || 'middle', 'class': 'kit-' + (p.style || 'cap') }, p.text,
+            { callout: true, near: 6, fixed: !!p.fixed });
+      return;
+    }
+    label(fig, g, { x: 0, y: 0, 'text-anchor': p.anchor || 'middle', 'class': 'kit-' + (p.style || 'cap') }, p.text,
+          { self: true, near: p.near != null ? p.near : 28, lead: false, fixed: !!p.fixed });
   };
 
   /* log - the alarm list: newest on top, time-stamped, flashing until it settles */
   TYPES.log = function (fig, part, g, p) {
-    var w = p.w || 560, rows = p.rows || 2, rh = 24;
-    el('rect', { width: w, height: 32 + rows * rh, rx: 10, 'class': 'kit-logbox' }, g);
-    el('text', { x: 14, y: 20, 'class': 'kit-tl' }, g, p.label || 'ALARM LOG');
+    var w = p.w || 560, rows = p.rows || 2, rh = 24, k = 1, tx = 94, two = {}, lines2 = false;
+    var box = el('rect', { width: w, height: 32 + rows * rh, rx: 10, 'class': 'kit-logbox' }, g);
+    var head = el('text', { x: 14, y: 20, 'class': 'kit-tl' }, g, p.label || 'ALARM LOG');
     var body = el('g', { transform: 'translate(0 29)' }, g);
+    /* no message runs out of its row: an alarm (every mark's text in the spec) too long for the log's width goes on two
+       lines, broken at its best space, and every row is then two lines high - the log never gets wider than it was
+       drawn, so a long alarm cannot push the figure smaller. As tall as its words at the 12.5 px floor (k). */
+    fig.fit(function (up) {
+      k = up || 1;
+      var said = [];
+      (fig.spec.parts || []).forEach(function (q2) { (q2.marks || []).forEach(function (m) { if (m.alarm) said.push(m.alarm); }); });
+      var probe = el('text', { x: 0, y: -999, 'class': 'kit-time', 'aria-hidden': 'true' }, g);
+      tx = 16 + widest(probe, ['00:00:00']) + 14;
+      probe.setAttribute('class', 'kit-msg');
+      var room = w - 16 - tx - 12;
+      two = {}; lines2 = false;
+      said.forEach(function (s) {
+        if (widest(probe, [s]) <= room) return;
+        var best = null, bw = 1e9, re = / /g, m;
+        while ((m = re.exec(s))) {
+          var a = s.slice(0, m.index), b = s.slice(m.index + 1), ww = Math.max(widest(probe, [a]), widest(probe, [b]));
+          if (ww < bw) { bw = ww; best = [a, b]; }
+        }
+        if (best) { two[s] = best; lines2 = true; }
+      });
+      g.removeChild(probe);
+      rh = (lines2 ? 40 : 24) * k;
+      box.setAttribute('height', 32 * k + rows * rh);
+      head.setAttribute('y', 20 * k);
+      body.setAttribute('transform', 'translate(0 ' + (29 * k) + ')');
+      part.alarms(fig.alarms, null);
+    });
     part.alarms = function (list, newest) {
       while (body.firstChild) body.removeChild(body.firstChild);
-      if (!list.length) { el('text', { x: 14, y: 16, 'class': 'kit-empty' }, body, p.empty || 'No active alarms'); return; }
+      if (!list.length) { el('text', { x: 14, y: 16 * k, 'class': 'kit-empty' }, body, p.empty || 'No active alarms'); return; }
       list.slice(0, rows).forEach(function (a, i) {
         var at = el('g', { transform: 'translate(8 ' + (i * rh) + ')' }, body);
         var row = el('g', { 'class': 'kit-row kit-' + a.kind + (a === newest ? ' kit-new' : '') }, at);
         el('rect', { width: w - 16, height: rh - 3, rx: 5 }, row);
         el('rect', { width: 5, height: rh - 3, rx: 2, 'class': 'kit-sev' }, row);
-        el('text', { x: 16, y: 15.5, 'class': 'kit-time' }, row, clock(fig, a.t));
-        el('text', { x: 94, y: 15.5, 'class': 'kit-msg' }, row, a.text);
+        el('text', { x: 16, y: 15.5 * k, 'class': 'kit-time' }, row, clock(fig, a.t));
+        lines(row, { x: tx, y: 15.5 * k, 'class': 'kit-msg' }, two[a.text] ? two[a.text].join('\n') : a.text);
       });
     };
   };
@@ -746,8 +1389,14 @@
     mount: mount, controls: controls, Figure: Figure, types: TYPES, define: define, local: LOCAL, added: ADDED,
     reducedMotion: reducedMotion,
     /* the drawing helpers every part uses - a new part uses these too, never its own */
-    h: { el: el, lines: lines, clamp: clamp, num: num, fmt: fmt, polar: polar, arc: arc,
-         flagMark: flagMark, textWidth: textWidth, NS: NS }
+    h: { el: el, lines: lines, label: label, widest: widest, readings: readings, clamp: clamp, num: num, fmt: fmt, polar: polar, arc: arc,
+         flagMark: flagMark, textWidth: textWidth, NS: NS },
+    figures: FIGS,
+    /* the label solver alone, in plain numbers - for any drawing that can say where its outlines are (a 3D figure's
+       projected parts); see solveLabels() */
+    solveLabels: solveLabels,
+    /* every figure on the page laid out again for the size it is shown at (the drawing audit calls it first) */
+    layoutAll: function (force) { return FIGS.map(function (f) { return f.layout(force); }); }
   };
 })(window);
 
@@ -784,7 +1433,7 @@ KIT.define('ga', function (fig, part, g, p) {
       h.el('rect', { x: f.x, y: -hs.h - fh, width: f.w || 18, height: fh, rx: 2, 'class': 'kit-ga-house' }, g);
     }
   }
-  if (p.label) h.lines(g, { x: w / 2, y: d + (plan ? 22 : 30), 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  if (p.label) h.label(fig, g, { x: w / 2, y: d + (plan ? 22 : 30), 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
   part.render = function (v) {
     wash.style.opacity = h.clamp(v, 0, 1).toFixed(3);
     g.classList.toggle('kit-lit', v > 0.5);
@@ -915,10 +1564,10 @@ KIT.define('cylinder', function (fig, part, g, p) {
     h.el('line', { x1: fx + q0[0], y1: fy + q0[1], x2: fx + q1[0], y2: fy + q1[1] }, fire);
   });
   if (p.labels !== false) {
-    h.el('text', { x: -24, y: 16, 'text-anchor': 'end', 'class': 'kit-cap' }, g, 'oil injector');
-    h.el('text', { x: w + 24, y: 16, 'text-anchor': 'start', 'class': 'kit-cap' }, g, 'gas injector');
-    h.el('text', { x: w / 2, y: -36, 'text-anchor': 'middle', 'class': 'kit-cap' }, g, 'exhaust valve');
-    h.el('text', { x: -24, y: pTop + ph / 2 + 4, 'text-anchor': 'end', 'class': 'kit-cap' }, g, 'piston');
+    h.label(fig, g, { x: -24, y: 16, 'text-anchor': 'end', 'class': 'kit-cap' }, 'oil injector');
+    h.label(fig, g, { x: w + 24, y: 16, 'text-anchor': 'start', 'class': 'kit-cap' }, 'gas injector');
+    h.label(fig, g, { x: w / 2, y: -36, 'text-anchor': 'middle', 'class': 'kit-cap' }, 'exhaust valve');
+    h.label(fig, g, { x: -24, y: pTop + ph / 2 + 4, 'text-anchor': 'end', 'class': 'kit-cap' }, 'piston');
   }
   var st = h.el('text', { x: w / 2, y: H + 24, 'text-anchor': 'middle', 'class': 'kit-state' }, g);
   part.render = function (v) {
@@ -950,13 +1599,13 @@ KIT.define('boil_off', function (fig, part, g, p) {
   var iw = w - 2 * ins, ih = ht - 2 * ins, r = ih / 2, sy = ins + ih * (1 - lv), cid = fig.uid + '-' + p.id + '-bo';
   h.el('rect', { width: w, height: ht, rx: ht / 2, 'class': 'kit-boil-off-ins' }, g);
   h.el('rect', { x: ins, y: ins, width: iw, height: ih, rx: r }, h.el('clipPath', { id: cid }, h.el('defs', {}, g)));
-  h.el('rect', { x: ins, y: ins, width: iw, height: ih, rx: r, 'class': 'kit-vessel' }, g);
+  var ves = h.el('rect', { x: ins, y: ins, width: iw, height: ih, rx: r, 'class': 'kit-vessel' }, g);
   var inside = h.el('g', { 'clip-path': 'url(#' + cid + ')' }, g);
   h.el('rect', { x: ins, y: sy, width: iw, height: ins + ih - sy, 'class': 'kit-liquid' }, inside);
   h.el('line', { x1: ins, x2: ins + iw, y1: sy, y2: sy, 'class': 'kit-surface' }, inside);
   var bub = h.el('g', { 'class': 'kit-boil-off-bubbles' }, inside);
-  [0.3, 0.42, 0.55, 0.66, 0.78].forEach(function (fx, i) {
-    h.el('circle', { cx: ins + iw * fx, cy: ins + ih - 6, r: 3 + (i % 2), style: 'animation-delay:' + (-0.37 * i) + 's;--rise:' + (sy - (ins + ih - 6)).toFixed(0) + 'px' }, bub);
+  [0.46, 0.55, 0.64, 0.73, 0.82].forEach(function (fx, i) {     // right of the liquid's name (IGF M04 finding 4: they rose through it)
+    h.el('circle', { cx: ins + iw * fx, cy: ins + ih - 6, r: 3 + (i % 2), style: 'animation-delay:' + (-0.37 * i) + 's;--rise:' + Math.min(0, sy + 9 - (ins + ih - 6)).toFixed(0) + 'px' }, bub);
   });
   var heat = h.el('g', { 'class': 'kit-boil-off-heat' }, g);
   [[-30, ht / 2, 0], [w + 30, ht / 2, 180], [w * 0.38, ht + 30, -90], [w * 0.62, ht + 30, -90]].forEach(function (a) {
@@ -964,12 +1613,13 @@ KIT.define('boil_off', function (fig, part, g, p) {
     h.el('path', { d: 'M-14 0 q4 -5 8 0 t8 0 t8 0 M10 -6 L18 0 L10 6' }, hg);
   });
   var lx = ins + r * 0.75;                                 // clear of the rounded ends
-  if (p.liquidLabel !== false) h.el('text', { x: lx, y: ins + ih - 18, 'class': 'kit-h' }, g, p.liquidLabel || 'LNG');
-  if (p.vapourLabel !== false) h.el('text', { x: lx, y: ins + 26, 'class': 'kit-h' }, g, p.vapourLabel || 'vapour');
-  if (p.heatLabel) h.el('text', { x: w * 0.5, y: ht + 58, 'text-anchor': 'middle', 'class': 'kit-cap' }, g, p.heatLabel);
+  if (p.liquidLabel !== false) h.label(fig, g, { x: lx, y: ins + ih - 18, 'class': 'kit-h' }, p.liquidLabel || 'LNG', { inside: true, within: ves });
+  if (p.vapourLabel !== false) h.label(fig, g, { x: lx, y: ins + 26, 'class': 'kit-h' }, p.vapourLabel || 'vapour', { inside: true, within: ves });
+  if (p.heatLabel) h.label(fig, g, { x: w * 0.5, y: ht + 58, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.heatLabel);
   part.render = function (v) {
     var k = h.clamp(v, 0, 1);
-    heat.style.opacity = k.toFixed(2); bub.style.opacity = k.toFixed(2);
+    heat.style.opacity = k > 0.02 ? (0.6 + 0.4 * k).toFixed(2) : '0';      // a little heat is still drawn so it can be seen
+    bub.style.opacity = k > 0.02 ? '1' : '0';                               // a bubble is there or not: never a faint one
     g.classList.toggle('kit-boil-off-on', k > 0.05);
   };
 }, {
@@ -978,7 +1628,7 @@ KIT.define('boil_off', function (fig, part, g, p) {
   course: 'IGF Basic', module: 'M01', made: '2026-10-15',
   why: 'M01 s07: heat leaks through the insulation into a cold LNG tank and some of the liquid boils off as vapour',
   value: 'how much heat leaks in and boils the liquid, 0..1 (arrows and rising bubbles)',
-  css: '.kit-boil-off-ins{fill:var(--deep-3);stroke:var(--faint-d);stroke-width:1.5;stroke-dasharray:4 3}.kit-boil-off-bubbles circle{fill:none;stroke:var(--txt-d);stroke-width:1.5}.kit-boil-off-heat path{fill:none;stroke:var(--txt-d);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}.kit-boil-off-on .kit-boil-off-bubbles circle{animation:kit-boil-off-rise 1.6s ease-in infinite}.kit-boil-off-on .kit-boil-off-heat g path{animation:kit-boil-off-in 1.2s ease-in-out infinite alternate}@keyframes kit-boil-off-rise{to{transform:translateY(var(--rise,-60px))}}@keyframes kit-boil-off-in{to{transform:translateX(6px)}}',
+  css: '.kit-boil-off-ins{fill:var(--deep-3);stroke:var(--faint-d);stroke-width:1.5;stroke-dasharray:4 3}.kit-boil-off-bubbles circle{fill:none;stroke:var(--deep);stroke-width:2}.kit-light .kit-boil-off-bubbles circle{stroke:var(--txt-d)}.kit-boil-off-heat path{fill:none;stroke:var(--txt-d);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}.kit-boil-off-on .kit-boil-off-bubbles circle{animation:kit-boil-off-rise 1.6s ease-in infinite}.kit-boil-off-on .kit-boil-off-heat g path{animation:kit-boil-off-in 1.2s ease-in-out infinite alternate}@keyframes kit-boil-off-rise{to{transform:translateY(var(--rise,-60px))}}@keyframes kit-boil-off-in{to{transform:translateX(6px)}}',
   example: { size: [360, 260], parts: [
     { id: 'B', type: 'boil_off', x: 50, y: 40, w: 260, h: 140, heatLabel: 'heat leaks in' } ],
     steps: [ { title: 'Heat leaks in and some LNG boils off', play: [['B', 1, 1500]] } ] }
@@ -1080,7 +1730,8 @@ KIT.define('gas_cloud', function (fig, part, g, p) {
   [[0.5, 0.56, 0.34, 0.3], [0.29, 0.62, 0.21, 0.25], [0.71, 0.6, 0.23, 0.26], [0.42, 0.4, 0.22, 0.2], [0.61, 0.42, 0.2, 0.2]]
     .forEach(function (b, i) {
       h.el('ellipse', { cx: b[0] * w, cy: b[1] * ht, rx: b[2] * w, ry: b[3] * ht, 'class': 'kit-gas-cloud-puff',
-                        'data-no-contain': '', 'data-may-overlap': '', style: 'animation-delay:' + (-0.7 * i) + 's' }, grow);
+                        'data-no-contain': '', 'data-may-overlap': '', 'data-low-contrast': '',     // pale by design: methane vapour has no colour
+                        style: 'animation-delay:' + (-0.7 * i) + 's' }, grow);
     });
   part.render = function (v) {
     var k = h.clamp(v, 0, 1), s = 0.2 + 0.8 * k;
@@ -1107,13 +1758,13 @@ KIT.define('integral_tank', function (fig, part, g, p) {
   var tx = c, ty = c, tw = w - 2 * c, th = ht - c, cid = fig.uid + '-' + p.id + '-it';
   h.el('rect', { width: w, height: ht, rx: 3, 'class': 'kit-integral-tank-cd' }, g);
   h.el('rect', { x: tx, y: ty, width: tw, height: th }, h.el('clipPath', { id: cid }, h.el('defs', {}, g)));
-  h.el('rect', { x: tx, y: ty, width: tw, height: th, 'class': 'kit-vessel' }, g);
+  var ves = h.el('rect', { x: tx, y: ty, width: tw, height: th, 'class': 'kit-vessel' }, g);
   var liq = h.el('rect', { x: tx, width: tw, 'class': 'kit-liquid', 'clip-path': 'url(#' + cid + ')' }, g);
   var surf = h.el('line', { x1: tx, x2: tx + tw, 'class': 'kit-surface', 'clip-path': 'url(#' + cid + ')' }, g);
   h.el('rect', { x: -10, y: ht, width: w + 20, height: 8, 'class': 'kit-steel' }, g);
-  if (p.label) h.el('text', { x: tx + 10, y: ty + 20, 'class': 'kit-sl' }, g, p.label);
-  if (p.cofferdamLabel !== false) h.el('text', { x: w / 2, y: -8, 'text-anchor': 'middle', 'class': 'kit-cap' }, g, p.cofferdamLabel || 'cofferdam');
-  if (p.hullLabel !== false) h.el('text', { x: w / 2, y: ht + 26, 'text-anchor': 'middle', 'class': 'kit-cap' }, g, p.hullLabel || 'hull');
+  if (p.label) h.label(fig, g, { x: tx + 10, y: ty + 20, 'class': 'kit-sl' }, p.label, { inside: true, within: ves });
+  if (p.cofferdamLabel !== false) h.label(fig, g, { x: w / 2, y: -8, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.cofferdamLabel || 'cofferdam');
+  if (p.hullLabel !== false) h.label(fig, g, { x: w / 2, y: ht + 26, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.hullLabel || 'hull');
   part.render = function (v) {
     var y = ty + th - h.clamp(v, 0, 1) * th;
     liq.setAttribute('y', y); liq.setAttribute('height', ty + th - y);
@@ -1129,6 +1780,1583 @@ KIT.define('integral_tank', function (fig, part, g, p) {
   example: { size: [300, 220], parts: [
     { id: 'T', type: 'integral_tank', x: 70, y: 40, w: 160, h: 120, label: 'methanol', value: 0.7 } ],
     steps: [ { title: 'Fuel is drawn off', play: [['T', 0.45, 3000]] } ] }
+});
+/* end kit-part */
+/* kit-part: pipe_section */
+KIT.define('pipe_section', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 520, D = p.h || 100, t = 6, an = p.annulus || 18;
+  var yi = t + an, b0 = yi + t, b1 = D - yi - t, bx = p.branchAt != null ? p.branchAt : w - 80, bw = 28, bh = p.branch || 56;
+  var lk = (p.leakAt != null ? p.leakAt : 0.3) * bx, cid = fig.uid + '-' + p.id + '-ps', run = bx + bw - lk;
+  var clip = h.el('clipPath', { id: cid }, h.el('defs', {}, g));
+  h.el('rect', { x: 0, y: t, width: w - t, height: an }, clip);
+  h.el('rect', { x: 0, y: D - yi, width: w - t, height: an }, clip);
+  h.el('rect', { x: bx, y: -bh, width: bw, height: bh + t }, clip);
+  h.el('rect', { x: 0, y: b0, width: w, height: b1 - b0, 'class': 'kit-pipe-section-bore', 'data-low-contrast': '' }, g);
+  var inner = h.el('g', { 'class': 'kit-fl-gas' }, g);
+  var flow = h.el('path', { d: 'M0 ' + (D / 2) + ' H' + w, 'class': 'kit-flow' }, inner);
+  var ann = h.el('g', { 'clip-path': 'url(#' + cid + ')' }, g);
+  var gas = h.el('rect', { x: lk, y: t, height: an, width: 0, 'class': 'kit-pipe-section-gas' }, ann);
+  var gasUp = h.el('rect', { x: bx, width: bw, y: t, height: 0, 'class': 'kit-pipe-section-gas' }, ann);
+  var air = h.el('g', { 'class': 'kit-pipe-section-air' }, ann), ax = h.el('g', { 'class': 'kit-pipe-section-ax' }, air);
+  [t + an / 2, D - yi + an / 2].forEach(function (cy) {
+    for (var x = -40; x < w; x += 40) h.el('path', { d: 'M' + (x - 4) + ' ' + (cy - 5) + ' L' + (x + 3) + ' ' + cy + ' L' + (x - 4) + ' ' + (cy + 5) }, ax);
+  });
+  var ay = h.el('g', { 'class': 'kit-pipe-section-ay' }, air), cx = bx + bw / 2;
+  for (var y = t + 28; y > -bh - 28; y -= 28) h.el('path', { d: 'M' + (cx - 5) + ' ' + (y + 4) + ' L' + cx + ' ' + (y - 3) + ' L' + (cx + 5) + ' ' + (y + 4) }, ay);
+  [[0, 0, bx - t, t], [bx + bw + t, 0, w - bx - bw - t, t], [0, D - t, w, t], [0, yi, w, t], [0, D - yi - t, w, t],
+   [bx - t, -bh, t, bh + t], [bx + bw, -bh, t, bh + t], [w - t, t, t, an], [w - t, D - yi, t, an]].forEach(function (r) {
+    h.el('rect', { x: r[0], y: r[1], width: r[2], height: r[3], 'class': 'kit-pipe-section-wall' }, g);
+  });
+  var crack = h.el('path', { d: 'M' + (lk - 4) + ' ' + yi + ' L' + (lk + 2) + ' ' + (yi + t / 2) + ' L' + (lk - 2) + ' ' + (yi + t), 'class': 'kit-pipe-section-crack' }, g);
+  part.render = function (v) {
+    var a = h.clamp(v, 0, 1), k = h.clamp(v - 1, 0, 1), along = h.clamp(k / 0.75, 0, 1), up = h.clamp((k - 0.75) / 0.25, 0, 1);
+    flow.style.opacity = a > 0.02 ? '1' : '0';
+    air.style.opacity = (0.65 + 0.35 * a).toFixed(2);
+    g.classList.toggle('kit-pipe-section-on', a > 0.05);
+    gas.setAttribute('width', (along * run).toFixed(1));
+    gasUp.setAttribute('y', (t - up * (bh + t)).toFixed(1)); gasUp.setAttribute('height', (up * (bh + t)).toFixed(1));
+    crack.style.opacity = k > 0.01 ? '1' : '0';
+  };
+}, {
+  family: 'cutaways',
+  status: 'kit', merged_from: "IGF Basic M03",
+  course: 'IGF Basic', module: 'M03', made: '2026-10-15',
+  why: 'M03 s02: a cut along a double-walled gas pipe - gas in the inner pipe, air drawn through the annular space to an outlet; a leak stays in the annular space and is carried out',
+  value: '0 still · 1 gas flowing and the annular space ventilated · 1..2 a leak from the inner pipe spreads along the annular space and up the outlet',
+  css: '.kit-pipe-section-wall{fill:var(--faint-d)}.kit-pipe-section-bore{fill:var(--txt-d);opacity:.08}.kit-pipe-section-gas{fill:var(--txt-d);fill-opacity:.4;stroke:var(--txt-d);stroke-width:1.5}.kit-pipe-section-air path{fill:none;stroke:var(--cold);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.kit-pipe-section-crack{fill:none;stroke:var(--deep-2);stroke-width:3}.kit-pipe-section-on .kit-pipe-section-ax{animation:kit-pipe-section-x 1.1s linear infinite}.kit-pipe-section-on .kit-pipe-section-ay{animation:kit-pipe-section-y .9s linear infinite}@keyframes kit-pipe-section-x{to{transform:translateX(40px)}}@keyframes kit-pipe-section-y{to{transform:translateY(-28px)}}',
+  example: { size: [460, 220], parts: [
+    { id: 'P', type: 'pipe_section', x: 20, y: 90, w: 420, h: 96 } ],
+    steps: [ { title: 'Gas flows; air is drawn through the annular space', play: [['P', 1, 800]] },
+             { title: 'A leak stays in the annular space and is carried out', play: [['P', 2, 4000, 0, 'linear']] } ] }
+});
+/* end kit-part */
+/* kit-part: relief_valve */
+KIT.define('relief_valve', function (fig, part, g, p) {
+  var h = KIT.h, s = p.size || 14, k = s * 0.7, top = -s - 22, left = p.outlet === 'left';
+  var sym = h.el('g', { transform: left ? 'scale(-1 1)' : null }, g);
+  [['M0 0 L' + (-k) + ' ' + s + ' H' + k + ' Z'], ['M0 0 L' + s + ' ' + (-k) + ' V' + k + ' Z']].forEach(function (d) {
+    h.el('path', { d: d[0], 'class': 'kit-valve-bg' }, sym);
+    h.el('path', { d: d[0], 'class': 'kit-valve' }, sym);
+  });
+  h.el('line', { x1: -8, x2: 8, y1: top, y2: top, 'class': 'kit-flange' }, sym);
+  var spring = h.el('path', { 'class': 'kit-relief-valve-spring' }, sym);
+  var disc = h.el('rect', { x: -k, width: 2 * k, height: 4, rx: 1.5, 'class': 'kit-relief-valve-disc' }, sym);
+  var right = p.labelAt === 'right', lx = right ? s + 14 : 0, ly = right ? top + 10 : s + 22, anchor = right ? 'start' : 'middle';
+  var lg = p.label || p.state !== false ? h.label(fig, g, {}, '') : null;           // its name and its state move together
+  var nl = p.label ? h.lines(lg, { x: lx, y: ly, 'text-anchor': anchor, 'class': 'kit-cap' }, p.label) : 0;
+  var st = p.state === false ? null : h.el('text', { x: lx, y: ly, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': anchor, 'class': 'kit-state' }, lg);
+  part.render = function (v) {
+    var lift = h.clamp(v, 0, 1), dy = -4 - lift * 8, d = 'M0 ' + (dy - 1), n = 6, seg = (top - (dy - 1)) / n;
+    for (var i = 1; i <= n; i++) d += ' L' + (i === n ? 0 : (i % 2 ? 6 : -6)) + ' ' + (dy - 1 + seg * i).toFixed(1);
+    spring.setAttribute('d', d);
+    disc.setAttribute('y', (dy).toFixed(1));
+    if (st) st.textContent = lift > 0.1 ? 'RELIEVING' : 'CLOSED';
+    g.classList.toggle('kit-relief-valve-lift', lift > 0.1);
+  };
+}, {
+  family: 'piping',
+  status: 'kit', merged_from: "IGF Basic M03",
+  course: 'IGF Basic', module: 'M03', made: '2026-10-15',
+  why: 'M03 s03 and s09: a spring-loaded relief valve - the spring holds the disc on its seat until the pressure beats it, then the disc lifts and the vapour goes to the vent',
+  value: 'how far the disc has lifted, 0 closed .. 1 fully open; inlet at (0, size) below, outlet at (size, 0) to the side',
+  css: '.kit-relief-valve-spring{fill:none;stroke:var(--dim-d);stroke-width:2;stroke-linejoin:round}.kit-relief-valve-disc{fill:var(--dim-d)}.kit-relief-valve-lift .kit-relief-valve-spring{stroke:var(--amber)}.kit-relief-valve-lift .kit-relief-valve-disc{fill:var(--amber)}.kit-relief-valve-lift .kit-state{fill:var(--amber)}',
+  example: { size: [320, 200], parts: [
+    { id: 'P', type: 'pipe', fluid: 'gas', d: 'M120 170 V114', value: 0 },
+    { id: 'O', type: 'pipe', fluid: 'gas', d: 'M134 100 H240 V40', value: 0 },
+    { id: 'R', type: 'relief_valve', x: 120, y: 100, labelAt: 'right', outlet: 'left', label: 'relief valve' },
+    { id: 'V', type: 'vent', x: 240, y: 40 } ],
+    steps: [ { title: 'The pressure beats the spring: the valve lifts', play: [['R', 1, 600], ['P', 1, 300], ['O', 1, 300, 300], ['V', 1, 400, 500]] },
+             { title: 'The pressure falls: the spring closes it', play: [['R', 0, 600], ['P', 0, 300], ['O', 0, 300], ['V', 0, 400]] } ] }
+});
+/* end kit-part */
+/* kit-part: step_track */
+KIT.define('step_track', function (fig, part, g, p) {
+  var h = KIT.h, steps = p.steps || [], n = steps.length, vert = !!p.vertical, box = !!p.boxes;
+  var gap = vert ? (p.gap || 34) : (n > 1 ? (p.w || 600) / (n - 1) : 0);
+  for (var k = 0; !box && k < n - 1; k++) {           // the rail runs between the circles, never under a number
+    var a0 = gap * k + 20, a1 = gap * (k + 1) - 20;
+    h.el('line', vert ? { x1: 0, x2: 0, y1: a0, y2: a1, 'class': 'kit-step-track-rail' }
+                      : { x1: a0, x2: a1, y1: 0, y2: 0, 'class': 'kit-step-track-rail' }, g);
+  }
+  var made = steps.map(function (label, i) {
+    var sg = h.el('g', { transform: 'translate(' + (vert ? 0 : gap * i) + ' ' + (vert ? gap * i : 0) + ')', 'class': 'kit-step-track-step' }, g);
+    if (box) h.el('rect', { x: -10, y: -10, width: 20, height: 20, rx: 4, 'class': 'kit-badge-o' }, sg);
+    else {
+      h.el('circle', { r: 17, 'class': 'kit-badge-o' }, sg);              /* room for a digit at 0.8x (audit_drawing) */
+      h.el('circle', { r: 17, 'class': 'kit-badge' }, sg);
+      h.el('text', { y: 5, 'text-anchor': 'middle', 'class': 'kit-badge-t' }, sg, String(i + 1));
+    }
+    h.el('path', { d: 'M-6 0 L-2 5 L7 -6', 'class': 'kit-step-track-tick' }, sg);
+    h.label(fig, sg, vert ? { x: 24, y: 5, 'class': 'kit-cap' } : { x: 0, y: 34, 'text-anchor': 'middle', 'class': 'kit-cap' }, label,
+            { near: 22, lead: false });      // two long neighbours step apart, never far from their number
+    return sg;
+  });
+  part.render = function (v) {
+    made.forEach(function (sg, i) {
+      var k = i + 1, cur = !box && Math.abs(v - k) < 0.5, done = box ? v >= k - 0.001 : v >= k + 0.5;
+      sg.classList.toggle('kit-lit', cur);
+      sg.classList.toggle('kit-step-track-done', done);
+    });
+  };
+}, {
+  family: 'procedures',
+  status: 'kit', merged_from: "IGF Basic M03",
+  course: 'IGF Basic', module: 'M03', made: '2026-10-15',
+  why: 'M03 s18 the eight steps of a bunkering operation, s14 the bunker safety checklist ticked off; the first part of the Procedures family M05, M11, M14 and M15 need',
+  value: 'circles: step k is the current one while the value is about k, and ticked once it passes k + 0.5 · boxes (a checklist): item k is ticked once the value reaches k',
+  css: '.kit-step-track-rail{stroke:var(--faint-d);stroke-width:2}.kit-step-track-step.kit-lit .kit-badge{opacity:1}.kit-step-track-tick{fill:none;stroke:var(--txt-d);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;opacity:0}.kit-step-track-done .kit-step-track-tick{opacity:1}.kit-step-track-done .kit-badge-t{display:none}.kit-step-track-step.kit-lit .kit-cap,.kit-step-track-done .kit-cap{fill:var(--txt-d)}',
+  example: { size: [460, 150], parts: [
+    { id: 'S', type: 'step_track', x: 40, y: 40, w: 380, steps: ['Prepare', 'Connect', 'Inert', 'Cool down', 'Transfer'] } ],
+    steps: [ { title: 'Step 1', play: [['S', 1, 400]] }, { title: 'Step 2', play: [['S', 2, 400]] }, { title: 'Step 3', play: [['S', 3, 400]] } ] }
+});
+/* end kit-part */
+/* kit-part: coupling */
+KIT.define('coupling', function (fig, part, g, p) {
+  var h = KIT.h, brk = p.kind === 'breakaway';
+  var sym = h.el('g', { transform: p.rotate ? 'rotate(' + p.rotate + ')' : null }, g);
+  var L = h.el('g', {}, sym), R = h.el('g', {}, sym);
+  h.el('rect', { x: -20, y: -11, width: 18, height: 22, rx: 3, 'class': 'kit-coupling-body' }, L);
+  h.el('rect', { x: 2, y: -11, width: 18, height: 22, rx: 3, 'class': 'kit-coupling-body' }, R);
+  var seals = [h.el('rect', { x: -6, y: -8, width: 3, height: 16, 'class': 'kit-coupling-seal' }, L),
+               h.el('rect', { x: 3, y: -8, width: 3, height: 16, 'class': 'kit-coupling-seal' }, R)];
+  var mark = brk ? h.el('line', { x1: 0, x2: 0, y1: -16, y2: 16, 'class': 'kit-coupling-break' }, sym) : null;
+  var above = p.labelAt === 'above', nl = p.label ? String(p.label).split('\n').length : 0;
+  var ly = above ? -24 - (nl - 1) * 16 : 32;
+  var lg = p.label || p.state !== false ? h.label(fig, g, {}, '') : null;           // its name and its state move together
+  if (p.label) h.lines(lg, { x: 0, y: ly, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  var st = p.state === false ? null : h.el('text', { x: 0, y: ly, dy: (above ? -1.28 : nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'middle', 'class': 'kit-state' }, lg);
+  part.render = function (v) {
+    var c = h.clamp(v, 0, 1), gap = (1 - c) * 12;
+    L.setAttribute('transform', 'translate(' + (-gap).toFixed(1) + ' 0)');
+    R.setAttribute('transform', 'translate(' + gap.toFixed(1) + ' 0)');
+    seals.forEach(function (s) { s.style.opacity = c < 0.5 ? '1' : '0'; });
+    if (mark) mark.style.opacity = c > 0.5 ? '1' : '0';
+    if (st) st.textContent = c > 0.5 ? 'CONNECTED' : (brk ? 'PARTED - SEALED' : 'DISCONNECTED');
+    g.classList.toggle('kit-coupling-parted', c < 0.5);
+  };
+}, {
+  family: 'piping',
+  status: 'kit', merged_from: "IGF Basic M03",
+  course: 'IGF Basic', module: 'M03', made: '2026-10-15',
+  why: 'M03 s13 and s15: the dry-disconnect coupling and the breakaway coupling at the bunkering station - when they part, both halves are sealed',
+  value: '1 connected, 0 parted (each half shows its closed face); kind "dry" or "breakaway"',
+  css: '.kit-coupling-body{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2}.kit-coupling-seal{fill:var(--txt-d)}.kit-coupling-break{stroke:var(--dim-d);stroke-width:2;stroke-dasharray:3 3}',
+  example: { size: [320, 140], parts: [
+    { id: 'A', type: 'pipe', d: 'M20 50 H148', value: 0 },
+    { id: 'B', type: 'pipe', d: 'M172 50 H300', value: 0 },
+    { id: 'C', type: 'coupling', x: 160, y: 50, kind: 'breakaway', label: 'breakaway coupling' } ],
+    steps: [ { title: 'Connected', play: [['C', 1, 600]] }, { title: 'Pulled apart - both halves seal', play: [['C', 0, 600]] } ] }
+});
+/* end kit-part */
+/* kit-part: drip_tray */
+KIT.define('drip_tray', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 160, d = p.h || 24, cid = fig.uid + '-' + p.id + '-dt';
+  h.el('rect', { x: 6, y: d + 3, width: w - 12, height: 8, rx: 2, 'class': 'kit-drip-tray-ins' }, g);
+  h.el('rect', { x: 3, y: 0, width: w - 6, height: d - 3 }, h.el('clipPath', { id: cid }, h.el('defs', {}, g)));
+  var pool = h.el('rect', { x: 3, width: w - 6, 'class': 'kit-pool', 'clip-path': 'url(#' + cid + ')' }, g);
+  h.el('path', { d: 'M0 0 V' + d + ' H' + w + ' V0', 'class': 'kit-drip-tray-pan' }, g);
+  if (p.drip) {
+    var dx = p.dripAt != null ? p.dripAt : w / 2;
+    [0, 0.3, 0.6].forEach(function (s) {
+      h.el('circle', { cx: dx, cy: -p.drip, r: 3.2, 'class': 'kit-drop', style: 'animation-delay:' + s + 's;--fall:' + (p.drip + d - 8) + 'px' }, g);
+    });
+  }
+  if (p.label) h.label(fig, g, { x: w / 2, y: d + 32, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) {
+    var lv = h.clamp(v, 0, 1) * (d - 6);
+    pool.setAttribute('y', (d - 3 - lv).toFixed(1)); pool.setAttribute('height', lv.toFixed(1));
+  };
+  part.motion = function (dv) { g.classList.toggle('kit-dripping', dv > 0); };
+}, {
+  family: 'piping',
+  status: 'kit', merged_from: "IGF Basic M03",
+  course: 'IGF Basic', module: 'M03', made: '2026-10-15',
+  why: 'M03 s16: a stainless steel drip tray, insulated from the deck, catches LNG leaking from a flange at the bunker manifold',
+  value: 'how full the tray is, 0..1 (drops fall while it fills)',
+  css: '.kit-drip-tray-pan{fill:none;stroke:var(--dim-d);stroke-width:3;stroke-linejoin:round}.kit-drip-tray-ins{fill:var(--deep-3);stroke:var(--faint-d);stroke-width:1.5;stroke-dasharray:4 3}',
+  example: { size: [300, 160], parts: [
+    { id: 'D', type: 'drip_tray', x: 70, y: 70, w: 160, drip: 50, label: 'drip tray' } ],
+    steps: [ { title: 'A spill is caught', play: [['D', 1, 2500]] } ] }
+});
+/* end kit-part */
+/* kit-part: water_curtain */
+KIT.define('water_curtain', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 36, ht = p.h || 120, n = Math.max(3, Math.round(w / 9));
+  var sheet = h.el('g', { 'class': 'kit-water-curtain-sheet' }, g);
+  for (var i = 0; i < n; i++) {
+    var x = ((i + 0.5) * w / n).toFixed(1);
+    h.el('line', { x1: x, x2: x, y1: 0, y2: ht, style: 'animation-delay:' + (-0.17 * i).toFixed(2) + 's' }, sheet);
+  }
+  if (p.label) h.label(fig, g, { x: p.labelAt === 'left' ? -10 : w + 10, y: ht / 2, 'text-anchor': p.labelAt === 'left' ? 'end' : 'start', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) {
+    var k = h.clamp(v, 0, 1);
+    sheet.style.opacity = k.toFixed(2);
+    g.classList.toggle('kit-water-curtain-on', k > 0.05);
+  };
+}, {
+  family: 'piping',
+  status: 'kit', merged_from: "IGF Basic M03",
+  course: 'IGF Basic', module: 'M03', made: '2026-10-15',
+  why: 'M03 s11: water spray cooling a burning vent mast head (a water curtain down the hull is only an "other solutions" bullet on s16, not drawn)',
+  value: 'how much water is running, 0..1',
+  css: '.kit-water-curtain-sheet line{stroke:var(--cold);stroke-width:2;stroke-dasharray:6 8;stroke-linecap:round}.kit-water-curtain-on .kit-water-curtain-sheet line{animation:kit-water-curtain-fall .7s linear infinite}@keyframes kit-water-curtain-fall{to{stroke-dashoffset:-28}}',
+  example: { size: [300, 180], parts: [
+    { type: 'text', x: 110, y: 22, text: 'hull' },
+    { id: 'W', type: 'water_curtain', x: 120, y: 30, w: 40, h: 120, label: 'water curtain' } ],
+    steps: [ { title: 'The water curtain runs', play: [['W', 1, 800]] } ] }
+});
+/* end kit-part */
+/* kit-part: detector */
+KIT.define('detector', function (fig, part, g, p) {
+  var h = KIT.h, r = p.r || 19, at = p.readAt || 'right';
+  var head = h.el('circle', { r: r, 'class': 'kit-detector-head' }, g);
+  var tag = h.el('text', { y: 4.5, 'text-anchor': 'middle', 'class': 'kit-bubble-t' }, g, p.tag || 'GD');
+  var pos = { right: { x: r + 8, y: 4.5, a: 'start' }, left: { x: -r - 8, y: 4.5, a: 'end' }, below: { x: 0, y: r + 20, a: 'middle' } }[at] || { x: r + 8, y: 4.5, a: 'start' };
+  var val = p.readout === false ? null : h.el('text', { x: pos.x, y: pos.y, 'text-anchor': pos.a, 'class': 'kit-state' }, g);
+  fig.fit(function (k) {                          // the head grows with its letters (the 12.5 px floor), the reading beside it
+    head.setAttribute('r', r * k); tag.setAttribute('y', 4.5 * k);
+    if (val) {
+      val.setAttribute('x', at === 'below' ? 0 : (at === 'left' ? -1 : 1) * (r * k + 8));
+      val.setAttribute('y', at === 'below' ? r * k + 20 * k : 4.5 * k);
+    }
+  });
+  if (p.label) h.label(fig, g, { x: 0, y: at === 'below' ? r + 38 : r + 20, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) { if (val) val.textContent = h.fmt(v, p); };
+  part.flag = function (m, on) { g.classList.toggle('kit-on-' + m.kind, on); };
+}, {
+  family: 'instruments',
+  status: 'kit', merged_from: "IGF Basic M03",
+  course: 'IGF Basic', module: 'M03', made: '2026-10-15',
+  why: 'M03 s17: a fixed gas detector head placed in a space - where it sits is the lesson; it reads % LEL and alarms on its marks',
+  value: 'the reading (for gas: % LEL); its marks turn it amber (alarm) or red (trip)',
+  css: '.kit-detector-head{fill:var(--deep);stroke:var(--dim-d);stroke-width:2}.kit-on-alarm .kit-detector-head{stroke:var(--amber);stroke-width:3.5}.kit-on-alarm .kit-state{fill:var(--amber)}.kit-on-trip .kit-detector-head{stroke:var(--warn-d)}.kit-on-trip .kit-state{fill:var(--warn-d)}',
+  example: { size: [300, 160], parts: [
+    { id: 'R', type: 'space', x: 20, y: 30, w: 260, h: 110, label: 'FUEL PREPARATION ROOM' },
+    { id: 'D', type: 'detector', x: 150, y: 70, unit: '% LEL', label: 'near the deckhead',
+      marks: [{ at: 20, kind: 'alarm', alarm: 'GAS 20 % LEL · alarm' }] } ],
+    steps: [ { title: 'Gas reaches the detector', play: [['D', 24, 2500, 0, 'linear']] } ] }
+});
+/* end kit-part */
+/* kit-part: flame */
+KIT.define('flame', function (fig, part, g, p) {
+  var h = KIT.h, s = p.size || 44;
+  function tongue(k) {
+    return 'M0 0 C' + (-s * 0.45 * k) + ' ' + (-s * 0.22 * k) + ' ' + (-s * 0.32 * k) + ' ' + (-s * 0.7 * k) + ' 0 ' + (-s * k) +
+           ' C' + (s * 0.32 * k) + ' ' + (-s * 0.7 * k) + ' ' + (s * 0.45 * k) + ' ' + (-s * 0.22 * k) + ' 0 0 Z';
+  }
+  var grow = h.el('g', {}, g), body = h.el('g', { 'class': 'kit-flame-body' }, grow);
+  h.el('path', { d: tongue(1), 'class': 'kit-flame-outer' }, body);
+  h.el('path', { d: tongue(0.55), 'class': 'kit-flame-core', 'data-low-contrast': '' }, body);   // the hot core inside the flame: its outer tongue carries the contrast
+  if (p.label) h.label(fig, g, { x: s * 0.6, y: -s * 0.6, 'class': 'kit-cap' }, p.label);
+  part.render = function (v) {
+    var k = h.clamp(v, 0, 1);
+    grow.setAttribute('transform', 'scale(' + Math.max(k, 0.001).toFixed(3) + ')');
+    grow.style.opacity = k > 0.02 ? '1' : '0';
+    g.classList.toggle('kit-flame-on', k > 0.05);
+  };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Basic M03",
+  course: 'IGF Basic', module: 'M03', made: '2026-10-15',
+  why: 'M03 s11: venting gas has caught fire at the vent mast outlet - the flame stands while gas is released and goes out when the release stops and nitrogen smothers it; M13 needs it too',
+  value: 'the size of the flame, 0 out .. 1 full; it stands on its point (x, y) and burns upwards',
+  css: '.kit-flame-outer{fill:var(--warn-d);opacity:.7}.kit-flame-core{fill:var(--amber)}.kit-flame-on .kit-flame-body{transform-box:fill-box;transform-origin:50% 100%;animation:kit-flame-flicker .35s ease-in-out infinite alternate}@keyframes kit-flame-flicker{to{transform:scale(1.07,.9)}}',
+  example: { size: [240, 160], parts: [
+    { id: 'P', type: 'pipe', fluid: 'gas', d: 'M120 150 V90', value: 1 },
+    { id: 'V', type: 'vent', x: 120, y: 90, value: 1 },
+    { id: 'F', type: 'flame', x: 120, y: 80, label: 'gas burning\nat the outlet' } ],
+    steps: [ { title: 'The venting gas ignites', play: [['F', 1, 900]] }, { title: 'Venting stops - the flame goes out', play: [['F', 0, 1200], ['V', 0, 600], ['P', 0, 600]] } ] }
+});
+/* end kit-part */
+/* kit-part: curve_chart */
+KIT.define('curve_chart', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 560, ht = p.h || 320;
+  var X = p.xaxis || { min: 0, max: 100, every: 20, unit: '' }, Y = p.yaxis || { min: 0, max: 10, every: 2, unit: '' };
+  var curves = p.curves || [], pt = p.point || null;
+  function sx(v) { return (v - X.min) / (X.max - X.min) * w; }
+  function sy(v) { return ht - (v - Y.min) / (Y.max - Y.min) * ht; }
+  var axes = h.el('g', { 'class': 'kit-curve-chart-axes' }, g);
+  for (var xv = X.min; xv <= X.max + 1e-9; xv += X.every) {
+    h.el('line', { x1: sx(xv), y1: 0, x2: sx(xv), y2: ht, 'class': 'kit-curve-chart-grid', 'data-may-cross': '', 'data-may-overlap': '', 'data-low-contrast': '' }, axes);
+    h.el('text', { x: sx(xv), y: ht + 18, 'text-anchor': 'middle', 'class': 'kit-tick' }, axes, String(xv).replace('-', '−'));
+  }
+  for (var yv = Y.min; yv <= Y.max + 1e-9; yv += Y.every) {
+    h.el('line', { x1: 0, y1: sy(yv), x2: w, y2: sy(yv), 'class': 'kit-curve-chart-grid', 'data-may-cross': '', 'data-may-overlap': '', 'data-low-contrast': '' }, axes);
+    h.el('text', { x: -12, y: sy(yv) + 4, 'text-anchor': 'end', 'class': 'kit-tick' }, axes, String(yv));
+  }
+  h.el('path', { d: 'M0 0 V' + ht + ' H' + w, 'class': 'kit-curve-chart-frame', 'data-may-cross': '' }, axes);
+  if (X.label) h.el('text', { x: w, y: ht + 38, 'text-anchor': 'end', 'class': 'kit-cap' }, axes, X.label);
+  if (Y.label) h.el('text', { x: 0, y: -12, 'text-anchor': 'start', 'class': 'kit-cap' }, axes, Y.label);
+  if (p.hline) {
+    h.el('line', { x1: 0, y1: sy(p.hline.at), x2: w, y2: sy(p.hline.at), 'class': 'kit-curve-chart-hline', 'data-may-cross': '' }, g);
+    if (p.hline.label) h.label(fig, g, { x: p.hline.labelX != null ? sx(p.hline.labelX) : 6,
+                                         y: sy(p.hline.at) + (p.hline.below ? 18 : -11), 'class': 'kit-cap' }, p.hline.label, { near: 20, lead: false });
+  }
+  var drawn = curves.map(function (c, i) {
+    var d = c.pts.map(function (q, k) { return (k ? 'L' : 'M') + sx(q[0]).toFixed(1) + ' ' + sy(q[1]).toFixed(1); }).join(' ');
+    var cg = h.el('g', { 'class': 'kit-curve-chart-c' + (i % 3) }, g);
+    var path = h.el('path', { d: d, 'class': 'kit-curve-chart-line', 'data-may-cross': '' }, cg);
+    var first = c.pts[0], dot = h.el('circle', { cx: sx(first[0]), cy: sy(first[1]), r: 5, 'class': 'kit-curve-chart-dot' }, cg);
+    var lab = null;
+    if (c.label) {
+      var at = c.labelAt || c.pts[c.pts.length - 1];
+      lab = h.el('text', { x: sx(at[0]), y: sy(at[1]), 'text-anchor': c.anchor || 'start', 'class': 'kit-cap' }, cg, c.label);
+    }
+    if (c.bp) {
+      var bl = h.el('text', { x: sx(first[0]) + (c.bpDx || 0), y: sy(first[1]) + (c.bpDy != null ? c.bpDy : 22), 'text-anchor': 'middle', 'class': 'kit-num' }, cg, c.bp);
+      lab = lab || bl; c._bp = bl;
+    }
+    var len = 0; try { len = path.getTotalLength(); } catch (e) { len = 0; }
+    return { path: path, dot: dot, lab: lab, bpl: c._bp, len: len || 1000, g: cg };
+  });
+  var mark = null;
+  if (pt) {
+    mark = h.el('g', { 'class': 'kit-curve-chart-point' }, g);
+    var gv = h.el('line', { 'class': 'kit-curve-chart-guide', 'data-may-cross': '' }, mark);
+    var gh = h.el('line', { 'class': 'kit-curve-chart-guide', 'data-may-cross': '' }, mark);
+    var pd = h.el('circle', { r: 7, 'class': 'kit-curve-chart-pdot' }, mark);
+    var pl = h.el('text', { 'class': 'kit-num', 'text-anchor': 'start' }, h.label(fig, mark, {}, '', { near: 30, lead: false }));   // the layout keeps the reading off the curves
+  }
+  function along(c, xv) {                              // the curve's value at xv, straight between its points
+    var q = curves[c].pts;
+    for (var k = 1; k < q.length; k++) if (xv <= q[k][0]) {
+      var f = (xv - q[k - 1][0]) / (q[k][0] - q[k - 1][0]); return q[k - 1][1] + f * (q[k][1] - q[k - 1][1]);
+    }
+    return q[q.length - 1][1];
+  }
+  part.render = function (v) {
+    var n = curves.length;
+    drawn.forEach(function (c, i) {
+      var k = h.clamp(v - i, 0, 1);
+      c.path.setAttribute('stroke-dasharray', c.len);
+      c.path.setAttribute('stroke-dashoffset', (c.len * (1 - k)).toFixed(1));
+      c.g.style.opacity = k > 0.001 ? '1' : '0';
+      c.dot.style.opacity = k > 0.001 ? '1' : '0';
+      if (c.lab) c.lab.style.opacity = k > 0.95 ? '1' : '0';
+      if (c.bpl) c.bpl.style.opacity = k > 0.95 ? '1' : '0';
+    });
+    if (mark) {
+      var m = h.clamp(v - n, 0, 1);
+      mark.style.opacity = m > 0.001 ? '1' : '0';
+      var xv = pt.from + (pt.to - pt.from) * m, yv = along(pt.curve, xv), x = sx(xv), y = sy(yv);
+      gv.setAttribute('x1', x); gv.setAttribute('x2', x); gv.setAttribute('y1', y); gv.setAttribute('y2', ht);
+      gh.setAttribute('x1', 0); gh.setAttribute('x2', x); gh.setAttribute('y1', y); gh.setAttribute('y2', y);
+      pd.setAttribute('cx', x); pd.setAttribute('cy', y);
+      var left = pt.labelSide === 'left';
+      pl.setAttribute('text-anchor', left ? 'end' : 'start');
+      pl.setAttribute('x', left ? x - 14 : x + 12); pl.setAttribute('y', left ? y - 12 : y + 5);
+      // the reading is shown where the point stops - a moving number would sit on the labels it passes
+      pl.textContent = m > 0.97 ? (pt.label || h.fmt(xv, { decimals: 0, unit: X.unit }) + ' · ' + h.fmt(yv, { decimals: 1, unit: Y.unit })) : '';
+    }
+  };
+}, {
+  family: 'charts',
+  status: 'kit', merged_from: "IGF Basic M04",
+  course: 'IGF Basic', module: 'M04', made: '2026-10-16',
+  why: 'M04 s03: vapour pressure against temperature for methane, propane and methanol - each curve meets the 1 bar line at its boiling point, then a point slides up the propane curve to 20 °C and reads about 8 bar (SPEC.md family 6: "curve with a moving point")',
+  value: '0..n: curve k draws itself from k to k+1; then n..n+1 the point slides along point.curve from point.from to point.to',
+  css: '.kit-curve-chart-grid{stroke:var(--line-d);stroke-width:1}.kit-curve-chart-frame{fill:none;stroke:var(--faint-d);stroke-width:1.5}.kit-curve-chart-hline{stroke:var(--dim-d);stroke-width:2;stroke-dasharray:8 6}.kit-curve-chart-line{fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.kit-curve-chart-c0 .kit-curve-chart-line{stroke:var(--blue)}.kit-curve-chart-c0 .kit-curve-chart-dot{fill:var(--blue)}.kit-curve-chart-c1 .kit-curve-chart-line{stroke:var(--txt-d);stroke-dasharray:14 7}.kit-curve-chart-c1 .kit-curve-chart-dot{fill:var(--txt-d)}.kit-curve-chart-c2 .kit-curve-chart-line{stroke:var(--cold);stroke-width:5;stroke-dasharray:1 8}.kit-curve-chart-c2 .kit-curve-chart-dot{fill:var(--cold)}.kit-curve-chart-guide{stroke:var(--blue);stroke-width:1.5;stroke-dasharray:4 4}.kit-curve-chart-pdot{fill:var(--txt-d);stroke:var(--blue);stroke-width:3}',
+  example: { size: [420, 260], parts: [
+    { id: 'VP', type: 'curve_chart', x: 50, y: 30, w: 340, h: 180,
+      xaxis: { min: -60, max: 60, every: 20, unit: '°C', label: 'temperature °C' }, yaxis: { min: 0, max: 16, every: 4, unit: 'bar', label: 'bar' },
+      hline: { at: 1, label: '1 bar', labelX: -58 },
+      curves: [{ label: 'propane', pts: [[-42, 1], [0, 4.7], [20, 8.4], [40, 13.7]], labelAt: [42, 14.5] }],
+      point: { curve: 0, from: -42, to: 20, label: '20 °C · about 8 bar' } } ],
+    steps: [ { title: 'The curve', play: [['VP', 1, 1500]] }, { title: 'Read it at 20 °C', play: [['VP', 2, 1500]] } ] }
+});
+/* end kit-part */
+/* kit-part: fan */
+KIT.define('fan', function (fig, part, g, p) {
+  var h = KIT.h, r = p.r || 26, half = (p.len || 170) / 2, wh = r + 9;
+  var deg = { right: 0, down: 90, left: 180, up: 270 }[p.dir || 'right'] || 0, vert = deg === 90 || deg === 270;
+  var sym = h.el('g', { transform: deg ? 'rotate(' + deg + ')' : null }, g);
+  [-1, 1].forEach(function (s) {
+    h.el('rect', { x: -half, y: s < 0 ? -wh - 6 : wh, width: 2 * half, height: 6, rx: 2, 'class': 'kit-steel' }, sym);
+  });
+  h.el('circle', { r: r + 3, 'class': 'kit-shell' }, sym);
+  var rotor = h.el('g', { 'class': 'kit-fan-rotor' }, sym);
+  [0, 90, 180, 270].forEach(function (a) {
+    h.el('path', { d: 'M0 0 Q ' + (r * 0.5) + ' ' + (-r * 0.62) + ' ' + (r * 0.88) + ' ' + (-r * 0.12) + ' Q ' + (r * 0.42) + ' ' + (r * 0.12) + ' 0 0 Z',
+      transform: 'rotate(' + a + ')', 'class': 'kit-fan-blade' }, rotor);
+  });
+  h.el('circle', { r: 5, 'class': 'kit-fan-hub' }, sym);
+  var air = h.el('g', {}, sym);
+  [-15, 0, 15].forEach(function (y) {
+    [[-half + 10, -r - 10], [r + 10, half - 10]].forEach(function (s) {
+      h.el('line', { x1: s[0], y1: y, x2: s[1] - 7, y2: y, 'class': 'kit-fan-air' }, air);
+      h.el('path', { d: 'M' + (s[1] - 8) + ' ' + (y - 5) + ' L' + s[1] + ' ' + y + ' L' + (s[1] - 8) + ' ' + (y + 5), 'class': 'kit-fan-head' }, air);
+    });
+  });
+  var ex = vert ? wh + 6 : half, ey = vert ? half : wh + 6;
+  var lg = p.label || p.state !== false ? h.label(fig, g, {}, '') : null;           // its name and its state move together
+  var lx = vert ? ex + 14 : 0, ly = vert ? -4 : ey + 22, anc = vert ? 'start' : 'middle';
+  var nl = p.label ? h.lines(lg, { x: lx, y: ly, 'text-anchor': anc, 'class': 'kit-cap' }, p.label) : 0;
+  var st = p.state === false ? null : h.el('text', { x: lx, y: ly, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': anc, 'class': 'kit-state' }, lg);
+  part.render = function (v) {
+    var k = h.clamp(v, 0, 1), on = k > 0.02;
+    air.style.opacity = on ? (0.35 + 0.65 * k).toFixed(2) : '0';
+    if (on) rotor.style.animationDuration = (1.1 - 0.8 * k).toFixed(2) + 's';
+    g.classList.toggle('kit-fan-on', on);
+    if (st) st.textContent = on ? 'RUNNING' : 'STOPPED';
+  };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M05 (machinery space ventilation) and M11 (enclosed-space entry): a mechanical ventilation fan in a duct or wall opening - the arrows show which way it moves the air, and no arrows means no air',
+  value: '0 stopped .. 1 running: blades turn faster, the air arrows flow in the direction dir (right, left, up, down); RUNNING or STOPPED under the name',
+  css: '.kit-fan-blade{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:1.5;stroke-linejoin:round}' +
+    '.kit-fan-hub{fill:var(--dim-d)}' +
+    '.kit-fan-air{stroke:var(--cold);stroke-width:3;stroke-dasharray:10 8;stroke-linecap:round}' +
+    '.kit-fan-head{fill:none;stroke:var(--cold);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}' +
+    '.kit-fan-on .kit-fan-rotor{animation:kit-fan-spin .6s linear infinite}' +
+    '.kit-fan-on .kit-fan-air{animation:kit-fan-air .7s linear infinite}' +
+    '.kit-fan-on .kit-state{fill:var(--txt-d)}' +
+    '@keyframes kit-fan-spin{to{transform:rotate(360deg)}}@keyframes kit-fan-air{to{stroke-dashoffset:-18}}',
+  example: { size: [320, 150], parts: [
+    { id: 'F', type: 'fan', x: 160, y: 56, dir: 'right', r: 34, len: 300, label: 'extract fan' } ],
+    steps: [ { title: 'The fan runs - the air moves along the arrows', play: [['F', 1, 1500]] },
+             { title: 'The fan stops - no air moves', play: [['F', 0, 1000]] } ] }
+});
+/* end kit-part */
+/* kit-part: spray */
+KIT.define('spray', function (fig, part, g, p) {
+  var h = KIT.h, kind = p.nozzle || 'monitor', agent = p.agent || 'water', reach = p.reach || (kind === 'sprinkler' ? 90 : 130);
+  var ang = p.angle != null ? p.angle : (kind === 'sprinkler' ? -90 : kind === 'hand' ? 12 : 22);
+  var spread = ({ water: 6, foam: 14, powder: 20 }[agent] || 10) * (kind === 'hand' ? 1.4 : 1);
+  if (kind === 'sprinkler') spread = 38;
+  var a = ang * Math.PI / 180, seed = 11, i;
+  function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+  if (kind === 'monitor') {                                     // the pedestal stays upright while the barrel turns
+    var px = -30 * Math.cos(a), py = 30 * Math.sin(a);
+    h.el('path', { d: 'M' + px.toFixed(1) + ' ' + py.toFixed(1) + ' V' + (py + 36).toFixed(1), 'class': 'kit-pipe-s' }, g);
+    h.el('path', { d: 'M' + (px - 18).toFixed(1) + ' ' + (py + 36).toFixed(1) + ' H' + (px + 18).toFixed(1), 'class': 'kit-flange' }, g);
+  }
+  var sym = h.el('g', { transform: ang ? 'rotate(' + (-ang) + ')' : null }, g);
+  var cone = h.el('g', { 'class': 'kit-spray-cone' }, sym);
+  [-spread, spread].forEach(function (d) {
+    var e = h.polar(reach, d);
+    h.el('line', { x1: 0, y1: 0, x2: e[0].toFixed(1), y2: e[1].toFixed(1) }, cone);
+  });
+  var a0 = h.polar(reach, -spread), a1 = h.polar(reach, spread);
+  h.el('path', { d: 'M' + a0[0].toFixed(1) + ' ' + a0[1].toFixed(1) + ' A' + reach + ' ' + reach + ' 0 0 1 ' + a1[0].toFixed(1) + ' ' + a1[1].toFixed(1) }, cone);
+  var streaks = [], dots = [];
+  if (agent === 'water') {
+    var ns = kind === 'sprinkler' ? 9 : 5;
+    for (i = 0; i < ns; i++) {
+      var dd = -spread + 2 * spread * i / (ns - 1);
+      streaks.push({ n: h.el('line', { 'class': 'kit-spray-streak', style: 'animation-delay:' + (-0.1 * i).toFixed(2) + 's' }, sym),
+                     d: dd, len: reach * (0.8 + 0.2 * rnd()) });
+    }
+  } else {
+    var nd = agent === 'powder' ? 70 : 24, tries = 0;
+    while (dots.length < nd && tries++ < 3000) {                  // no two grains on one another
+      var t = Math.pow(rnd(), 0.85), pt = h.polar(10 + t * (reach - 10), (rnd() * 2 - 1) * spread * Math.min(1, 0.25 + t * 1.1));
+      var rr = agent === 'powder' ? 1.8 + 2.2 * t : 3 + 6 * t;
+      if (dots.some(function (o) { return Math.sqrt(Math.pow(o.x - pt[0], 2) + Math.pow(o.y - pt[1], 2)) < o.r + rr + 4; })) continue;
+      dots.push({ t: t, x: pt[0], y: pt[1], r: rr, n: h.el('circle', { cx: pt[0].toFixed(1), cy: pt[1].toFixed(1), r: rr.toFixed(1),
+        'class': agent === 'powder' ? 'kit-spray-dot' : 'kit-spray-foam', style: 'animation-delay:' + (-rnd()).toFixed(2) + 's' }, sym) });
+    }
+  }
+  if (kind === 'monitor') {
+    h.el('path', { d: 'M-48 -6 H-10 L0 -10 V10 L-10 6 H-48 Z', 'class': 'kit-steel' }, sym);
+    h.el('circle', { cx: -30, cy: 0, r: 5, 'class': 'kit-spray-pivot' }, sym);
+  } else if (kind === 'hand') {
+    h.el('path', { d: 'M-34 0 C-52 0 -52 26 -78 26', 'class': 'kit-pipe-s' }, sym);
+    h.el('path', { d: 'M-34 -5 H-8 L0 -9 V9 L-8 5 H-34 Z', 'class': 'kit-steel' }, sym);
+    h.el('path', { d: 'M-24 5 L-28 20 H-19 L-16 5', 'class': 'kit-steel' }, sym);
+  } else {
+    h.el('line', { x1: -42, y1: 0, x2: -10, y2: 0, 'class': 'kit-pipe-s' }, sym);
+    h.el('path', { d: 'M-12 -9 L-2 -13 M-12 9 L-2 13', 'class': 'kit-flange' }, sym);
+    h.el('line', { x1: 0, y1: -13, x2: 0, y2: 13, 'class': 'kit-flange' }, sym);
+    h.el('circle', { cx: -7, cy: 0, r: 3.5, 'class': 'kit-spray-pivot' }, sym);
+  }
+  var rear = { monitor: 48, hand: 60, sprinkler: 42 }[kind] || 48;
+  var lg = p.label || p.state !== false ? h.label(fig, g, {}, '') : null;
+  var lx = -rear * Math.cos(a) - 8, ly = rear * Math.sin(a) - 14;
+  var nl = p.label ? h.lines(lg, { x: lx.toFixed(1), y: ly.toFixed(1), 'text-anchor': 'end', 'class': 'kit-cap' }, p.label) : 0;
+  var st = p.state === false ? null : h.el('text', { x: lx.toFixed(1), y: ly.toFixed(1), dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'end', 'class': 'kit-state' }, lg);
+  var word = { powder: 'DRY POWDER', water: 'WATER', foam: 'FOAM' }[agent] || 'AGENT';
+  var rl = null;
+  if (p.reachLabel) {
+    var re = h.polar(reach, 0);
+    rl = h.label(fig, g, { x: 0, y: 0, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.reachLabel);
+    rl.setAttribute('transform', 'translate(' + (re[0] * Math.cos(a) + 0).toFixed(1) + ' ' + (-re[0] * Math.sin(a) - 14).toFixed(1) + ')');
+  }
+  part.render = function (v) {
+    var k = h.clamp(v, 0, 1), on = k > 0.02;
+    streaks.forEach(function (s) {
+      var e0 = h.polar(8, s.d), e1 = h.polar(Math.max(9, s.len * k), s.d);
+      s.n.setAttribute('x1', e0[0].toFixed(1)); s.n.setAttribute('y1', e0[1].toFixed(1));
+      s.n.setAttribute('x2', e1[0].toFixed(1)); s.n.setAttribute('y2', e1[1].toFixed(1));
+      s.n.style.opacity = on ? '1' : '0';
+    });
+    dots.forEach(function (d) { d.n.style.opacity = h.clamp((k - d.t * 0.85) / 0.15, 0, 1).toFixed(2); });
+    cone.style.opacity = (0.75 + 0.25 * k).toFixed(2);          // the reach is drawn faintly even at rest
+    if (rl) rl.style.opacity = k > 0.9 ? '1' : '0';
+    g.classList.toggle('kit-spray-on', on);
+    if (st) st.textContent = word + (on ? ' ON' : ' OFF');
+  };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M13 fixed dry-powder installation, powder monitors and hand hoses: what comes out of the nozzle, which way and how far - a cone of powder, water or foam of a given reach and angle',
+  value: '0..1 how much is discharged: the spray grows out of the nozzle to its reach (nozzle monitor, hand or sprinkler; agent powder, water or foam; angle in degrees above horizontal, -90 = down)',
+  css: '.kit-spray-cone line,.kit-spray-cone path{fill:none;stroke:var(--dim-d);stroke-width:1.5;stroke-dasharray:4 5}' +
+    '.kit-spray-pivot{fill:var(--deep);stroke:var(--dim-d);stroke-width:2}' +
+    '.kit-spray-streak{stroke:var(--cold);stroke-width:3;stroke-linecap:round;stroke-dasharray:9 7;opacity:0}' +
+    '.kit-spray-dot{fill:var(--txt-d)}' +
+    '.kit-spray-foam{fill:var(--cold);fill-opacity:.25;stroke:var(--txt-d);stroke-width:1.5}' +
+    '.kit-spray-on .kit-spray-streak{animation:kit-spray-run .5s linear infinite}' +
+    '.kit-spray-on .kit-spray-dot,.kit-spray-on .kit-spray-foam{animation:kit-spray-drift .9s linear infinite}' +
+    '.kit-spray-on .kit-state{fill:var(--txt-d)}' +
+    '@keyframes kit-spray-run{to{stroke-dashoffset:-16}}@keyframes kit-spray-drift{to{transform:translateX(12px)}}',
+  example: { size: [640, 330], parts: [
+    { id: 'M', type: 'spray', x: 100, y: 235, nozzle: 'monitor', agent: 'powder', angle: 12, reach: 270, label: 'powder monitor' },
+    { id: 'H', type: 'spray', x: 410, y: 70, nozzle: 'hand', agent: 'foam', angle: -12, reach: 200, label: 'foam hose' },
+    { id: 'S', type: 'spray', x: 560, y: 250, nozzle: 'sprinkler', agent: 'water', label: 'sprinkler' } ],
+    steps: [ { title: 'The monitor discharges powder over its reach', play: [['M', 1, 2200]] },
+             { title: 'A hand hose lays foam', play: [['H', 1, 1800]] },
+             { title: 'The sprinkler wets the area below it', play: [['S', 1, 1800]] } ] }
+});
+/* end kit-part */
+/* kit-part: gas_cylinder */
+KIT.define('gas_cylinder', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 56, ht = p.h || 150, cid = fig.uid + '-' + (p.id || 'gc') + '-cyl';
+  function shell(wd) {
+    var hw = wd / 2;
+    return 'M' + (-hw) + ' 0 V' + (-(ht - hw)) + ' A' + hw + ' ' + hw + ' 0 0 1 ' + hw + ' ' + (-(ht - hw)) + ' V0 Z';
+  }
+  var clip = h.el('path', { d: shell(w) }, h.el('clipPath', { id: cid }, h.el('defs', {}, g)));
+  var body = h.el('path', { d: shell(w), 'class': 'kit-vessel' }, g);
+  var fill = h.el('g', { 'clip-path': 'url(#' + cid + ')' }, g);
+  var gas = h.el('rect', { x: -w / 2, width: w, 'class': 'kit-gas-cylinder-fill', 'data-low-contrast': '' }, fill);   // the fill is quiet on purpose: the surface line above it carries the contrast
+  var top = h.el('line', { x1: -w / 2, x2: w / 2, 'class': 'kit-surface' }, fill);
+  var bodyLine = h.el('path', { d: shell(w), 'class': 'kit-shell-o' }, g);
+  h.el('line', { x1: -w / 2 - 4, y1: 0, x2: w / 2 + 4, y2: 0, 'class': 'kit-flange' }, g);
+  h.el('rect', { x: -7, y: -ht - 8, width: 14, height: 10, 'class': 'kit-steel' }, g);                 // neck
+  h.el('rect', { x: -11, y: -ht - 25, width: 22, height: 17, rx: 3, 'class': 'kit-steel' }, g);       // valve body
+  h.el('rect', { x: 11, y: -ht - 21, width: 11, height: 7, rx: 2, 'class': 'kit-steel' }, g);         // outlet
+  h.el('line', { x1: 0, y1: -ht - 25, x2: 0, y2: -ht - 31, 'class': 'kit-stem' }, g);
+  h.el('line', { x1: -13, y1: -ht - 31, x2: 13, y2: -ht - 31, 'class': 'kit-flange' }, g);           // hand wheel
+  var plate = p.gas ? h.el('rect', { x: -20, y: -ht * 0.62 - 11, width: 40, height: 22, rx: 3, 'class': 'kit-gas-cylinder-plate' }, g) : null;
+  var cap = p.gas ? h.el('text', { x: 0, y: -ht * 0.62 + 4.5, 'text-anchor': 'middle', 'class': 'kit-tl' }, g, p.gas) : null;
+  if (p.label) h.label(fig, g, { x: 0, y: 24, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  fig.fit(function (k) {                                // the bottle is as wide as its gas word needs, 8 a side
+    var tw = cap ? h.widest(cap, [p.gas]) : 0, pw = tw + 16, ph = 22 * k, wd = Math.max(w, pw + 12);
+    [clip, body, bodyLine].forEach(function (n) { n.setAttribute('d', shell(wd)); });
+    gas.setAttribute('x', -wd / 2); gas.setAttribute('width', wd);
+    top.setAttribute('x1', -wd / 2); top.setAttribute('x2', wd / 2);
+    if (cap) {
+      plate.setAttribute('x', -pw / 2); plate.setAttribute('width', pw); plate.setAttribute('height', ph);
+      plate.setAttribute('y', -ht * 0.62 - ph / 2); cap.setAttribute('y', -ht * 0.62 + 4.5 * k);
+    }
+  });
+  part.render = function (v) {
+    var lv = h.clamp(v, 0, 1) * (ht - 8);
+    gas.setAttribute('y', (-lv).toFixed(1)); gas.setAttribute('height', (lv + 2).toFixed(1));
+    top.setAttribute('y1', (-lv).toFixed(1)); top.setAttribute('y2', (-lv).toFixed(1));
+    top.style.opacity = lv > 2 ? '1' : '0';
+  };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M13 nitrogen cylinders that drive a dry-powder installation, and M10 breathing-air cylinders (SCBA): a compressed-gas bottle with its valve, shown with how much pressure is left in it',
+  value: 'how full the cylinder is (its pressure), 0..1; it stands on its base point (x, y); w and h size it, gas is the short word on the bottle (N2, CO2, AIR)',
+  css: '.kit-gas-cylinder-fill{fill:var(--cold);opacity:.5}.kit-gas-cylinder-plate{fill:var(--deep);stroke:var(--dim-d);stroke-width:1.5}',
+  example: { size: [640, 300], parts: [
+    { id: 'A', type: 'gas_cylinder', x: 100, y: 240, w: 84, h: 180, gas: 'N2', label: 'nitrogen', value: 1 },
+    { id: 'B', type: 'gas_cylinder', x: 240, y: 240, w: 84, h: 180, gas: 'N2', label: 'nitrogen', value: 1 },
+    { id: 'C', type: 'gas_cylinder', x: 380, y: 240, w: 84, h: 180, gas: 'CO2', label: 'carbon dioxide', value: 1 },
+    { id: 'D', type: 'gas_cylinder', x: 520, y: 240, w: 84, h: 180, gas: 'AIR', label: 'breathing air', value: 0.6 } ],
+    steps: [ { title: 'The nitrogen cylinders are used - their pressure falls', play: [['A', 0.45, 2800], ['B', 0.45, 2800]] },
+             { title: 'The breathing-air cylinder is refilled', play: [['D', 1, 1800]] } ] }
+});
+/* end kit-part */
+/* kit-part: push_button */
+KIT.define('push_button', function (fig, part, g, p) {
+  var h = KIT.h;
+  h.el('rect', { x: -60, y: -102, width: 120, height: 182, rx: 8, 'class': 'kit-push-button-plate' }, g);   // the wall plate it is mounted on
+  h.el('line', { x1: -38, y1: 10, x2: -38, y2: -36, 'class': 'kit-probe' }, g);
+  h.el('line', { x1: 38, y1: 10, x2: 38, y2: -36, 'class': 'kit-probe' }, g);
+  h.el('rect', { x: -44, y: 10, width: 88, height: 30, rx: 5, 'class': 'kit-vessel' }, g);
+  h.el('rect', { x: -7, y: -2, width: 14, height: 13, 'class': 'kit-steel' }, g);
+  var cap = h.el('g', {}, g);
+  h.el('path', { d: 'M-30 2 C-30 -28 30 -28 30 2 Z', 'class': 'kit-push-button-cap' }, cap);
+  h.el('line', { x1: -33, y1: 2, x2: 33, y2: 2, 'class': 'kit-flange' }, cap);
+  var lid = h.el('g', {}, g);
+  h.el('rect', { x: -38, y: -41, width: 76, height: 6, rx: 3, 'class': 'kit-push-button-lid' }, lid);
+  var tagBox = h.el('rect', { x: -22, y: 46, width: 44, height: 22, rx: 4, 'class': 'kit-push-button-tag' }, g);
+  var tagTxt = h.el('text', { x: 0, y: 61, 'text-anchor': 'middle', 'class': 'kit-tl' }, g, p.tag || 'ESD');
+  var lg = p.label || p.state !== false ? h.label(fig, g, {}, '') : null;
+  var nl = p.label ? h.lines(lg, { x: 0, y: 104, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label) : 0;
+  var st = p.state === false ? null : h.el('text', { x: 0, y: 104, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'middle', 'class': 'kit-state' }, lg);
+  fig.fit(function (k) {                                // the tag plate is as wide as its words need, 8 a side, and as tall
+    var wd = Math.max(44, h.widest(tagTxt, [p.tag || 'ESD']) + 16), th = 22 * k;
+    tagBox.setAttribute('x', -wd / 2); tagBox.setAttribute('width', wd); tagBox.setAttribute('height', th);
+    tagTxt.setAttribute('y', 46 + th / 2 + 4.5 * k);
+  });
+  part.render = function (v) {
+    var c = h.clamp(v, 0, 1), up = h.clamp(c / 0.4, 0, 1), dn = h.clamp((c - 0.4) / 0.6, 0, 1);
+    lid.setAttribute('transform', 'rotate(' + (-55 * up).toFixed(1) + ' -38 -38)');
+    cap.setAttribute('transform', 'translate(0 ' + (9 * dn).toFixed(1) + ')');
+    g.classList.toggle('kit-push-button-on', c > 0.5);
+    if (st) st.textContent = c > 0.5 ? 'PRESSED' : 'READY';
+  };
+}, {
+  family: 'instruments',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M14 the ESD panel: an emergency-stop mushroom push button under a hinged guard, with its tag - the guard lifts, the button goes down and turns red, the word PRESSED shows (the shutdown it starts is drawn by the other parts)',
+  value: '0 ready, 1 pressed: the guard lifts over 0..0.4, the button goes down over 0.4..1 and turns red (trip); READY or PRESSED under the name',
+  css: '.kit-push-button-plate{fill:var(--deep-3);stroke:var(--faint-d);stroke-width:2}' +
+    '.kit-push-button-cap{fill:var(--cold);fill-opacity:.45;stroke:var(--dim-d);stroke-width:2}' +
+    '.kit-push-button-lid{fill:var(--cold);fill-opacity:.2;stroke:var(--dim-d);stroke-width:2}' +
+    '.kit-push-button-tag{fill:var(--deep);stroke:var(--dim-d);stroke-width:1.5}' +
+    '.kit-push-button-on .kit-push-button-cap{fill:var(--warn-d);fill-opacity:.9;stroke:var(--warn-d)}' +
+    '.kit-push-button-on .kit-state{fill:var(--warn-d)}',
+  example: { size: [640, 250], parts: [
+    { id: 'A', type: 'push_button', x: 110, y: 114, tag: 'ESD 1', label: 'navigation bridge' },
+    { id: 'B', type: 'push_button', x: 320, y: 114, tag: 'ESD 2', label: 'engine control room' },
+    { id: 'C', type: 'push_button', x: 530, y: 114, tag: 'ESD 3', label: 'bunker station' } ],
+    steps: [ { title: 'The guard is lifted and the button pressed - shutdown starts', play: [['C', 1, 1800]] },
+             { title: 'Reset - ready again', play: [['C', 0, 900]] } ] }
+});
+/* end kit-part */
+/* kit-part: person */
+KIT.define('person', function (fig, part, g, p) {
+  var h = KIT.h, S = p.scale || 1, wear = p.wear || [], names = p.names || {};
+  var NAMES = { helmet: 'HELMET', visor: 'VISOR', gloves: 'GLOVES', suit: 'SUIT', boots: 'BOOTS', scba: 'SCBA' };
+  var POS = { helmet: [26, -166, 'start'], visor: [-24, -156, 'end'], suit: [40, -104, 'start'],
+              gloves: [-42, -72, 'end'], boots: [26, -8, 'start'], scba: [40, -136, 'start'] };
+  var b = h.el('g', { transform: S === 1 ? null : 'scale(' + S + ')' }, g), nodes = {};
+  function put(item, node) { (nodes[item] = nodes[item] || []).push(node); return node; }
+  function use(item) { return wear.indexOf(item) >= 0; }
+  if (use('scba')) {                                                   // the bottle behind the shoulder
+    var bk = h.el('g', {}, b);
+    h.el('rect', { x: 14, y: -150, width: 15, height: 62, rx: 6, 'class': 'kit-person-ppe' }, bk);
+    h.el('rect', { x: 18, y: -157, width: 7, height: 8, rx: 1, 'class': 'kit-person-ppe' }, bk);
+    put('scba', bk);
+  }
+  h.el('line', { x1: -9, y1: -80, x2: -11, y2: -12, 'class': 'kit-person-leg' }, b);
+  h.el('line', { x1: 9, y1: -80, x2: 11, y2: -12, 'class': 'kit-person-leg' }, b);
+  h.el('line', { x1: -22, y1: -128, x2: -31, y2: -86, 'class': 'kit-person-arm' }, b);
+  h.el('line', { x1: 22, y1: -128, x2: 31, y2: -86, 'class': 'kit-person-arm' }, b);
+  h.el('rect', { x: -21, y: -135, width: 42, height: 56, rx: 10, 'class': 'kit-person-body' }, b);
+  h.el('circle', { cx: 0, cy: -150, r: 13, 'class': 'kit-person-body' }, b);
+  [-1, 1].forEach(function (s) {
+    h.el('circle', { cx: 31 * s, cy: -82, r: 5.5, 'class': 'kit-person-body' }, b);
+    h.el('ellipse', { cx: 13 * s, cy: -5, rx: 9, ry: 4.5, 'class': 'kit-person-body' }, b);
+  });
+  if (use('suit')) {
+    var su = h.el('g', {}, b);
+    h.el('line', { x1: -9, y1: -80, x2: -11, y2: -12, 'class': 'kit-person-suit-l' }, su);
+    h.el('line', { x1: 9, y1: -80, x2: 11, y2: -12, 'class': 'kit-person-suit-l' }, su);
+    h.el('line', { x1: -22, y1: -128, x2: -31, y2: -86, 'class': 'kit-person-suit-a' }, su);
+    h.el('line', { x1: 22, y1: -128, x2: 31, y2: -86, 'class': 'kit-person-suit-a' }, su);
+    h.el('rect', { x: -21, y: -135, width: 42, height: 56, rx: 10, 'class': 'kit-person-suit-t' }, su);
+    h.el('line', { x1: 0, y1: -134, x2: 0, y2: -82, 'class': 'kit-person-zip' }, su);
+    put('suit', su);
+  }
+  if (use('boots')) {
+    var bo = h.el('g', {}, b);
+    [-1, 1].forEach(function (s) { h.el('rect', { x: s < 0 ? -22 : 7, y: -17, width: 15, height: 15, rx: 4, 'class': 'kit-person-ppe' }, bo); });
+    put('boots', bo);
+  }
+  if (use('gloves')) {
+    var gl = h.el('g', {}, b);
+    [-1, 1].forEach(function (s) { h.el('circle', { cx: 31 * s, cy: -82, r: 8, 'class': 'kit-person-ppe' }, gl); });
+    put('gloves', gl);
+  }
+  if (use('scba')) {
+    var sf = h.el('g', {}, b);
+    h.el('line', { x1: -15, y1: -132, x2: 15, y2: -88, 'class': 'kit-person-strap' }, sf);
+    h.el('line', { x1: 15, y1: -132, x2: -15, y2: -88, 'class': 'kit-person-strap' }, sf);
+    h.el('path', { d: 'M10 -141 C22 -128 36 -140 24 -150', 'class': 'kit-person-hose' }, sf);
+    h.el('path', { d: 'M-10 -148 H10 V-142 Q0 -134 -10 -142 Z', 'class': 'kit-person-ppe' }, sf);
+    put('scba', sf);
+  }
+  if (use('helmet')) {
+    var he = h.el('g', {}, b);
+    h.el('path', { d: 'M-16 -151 C-16 -178 16 -178 16 -151 Z', 'class': 'kit-person-ppe' }, he);
+    h.el('line', { x1: -21, y1: -151, x2: 21, y2: -151, 'class': 'kit-person-brim' }, he);
+    put('helmet', he);
+  }
+  if (use('visor')) {
+    var vi = h.el('g', {}, b);
+    h.el('path', { d: 'M-15 -160 H15 V-139 Q0 -134 -15 -139 Z', 'class': 'kit-person-visor' }, vi);
+    put('visor', vi);
+  }
+  var tags = {};
+  if (p.names !== false) wear.forEach(function (item) {
+    var q = POS[item], txt = names[item] || NAMES[item];
+    if (!q || !txt) return;
+    tags[item] = h.label(fig, g, { x: q[0] * S, y: q[1] * S, 'text-anchor': q[2], 'class': 'kit-cap' }, txt);
+  });
+  if (p.label) h.label(fig, g, { x: 0, y: 24 * S, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) {
+    wear.forEach(function (item, i) {
+      var k = h.clamp(v - i, 0, 1);
+      (nodes[item] || []).forEach(function (n) { n.style.opacity = k.toFixed(2); });
+      if (tags[item]) tags[item].style.opacity = k > 0.95 ? '1' : '0';
+    });
+  };
+}, {
+  family: 'procedures',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M10 PPE for gas work, M11 the attendant and the entrant, M15 spill response: a plain standing worker pictogram (not a drawing of real equipment) that puts on its protective equipment one item at a time',
+  value: '0..n: item k of wear appears (and its name) from k to k+1; wear is any of helmet, visor, gloves, suit, boots, scba, in the order they are put on',
+  css: '.kit-person-body{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2}' +
+    '.kit-person-leg{stroke:var(--dim-d);stroke-width:11;stroke-linecap:round}' +
+    '.kit-person-arm{stroke:var(--dim-d);stroke-width:9;stroke-linecap:round}' +
+    '.kit-person-ppe{fill:var(--cold);fill-opacity:.55;stroke:var(--txt-d);stroke-width:2;stroke-linejoin:round}' +
+    '.kit-person-suit-l{stroke:var(--cold);stroke-opacity:.6;stroke-width:15;stroke-linecap:round}' +
+    '.kit-person-suit-a{stroke:var(--cold);stroke-opacity:.6;stroke-width:13;stroke-linecap:round}' +
+    '.kit-person-suit-t{fill:var(--cold);fill-opacity:.5;stroke:var(--txt-d);stroke-width:1.5}' +
+    '.kit-person-zip{stroke:var(--txt-d);stroke-width:2;stroke-dasharray:3 3}' +
+    '.kit-person-strap{stroke:var(--txt-d);stroke-width:4;stroke-linecap:round}' +
+    '.kit-person-hose{fill:none;stroke:var(--txt-d);stroke-width:3;stroke-linecap:round}' +
+    '.kit-person-brim{stroke:var(--txt-d);stroke-width:4;stroke-linecap:round}' +
+    '.kit-person-visor{fill:var(--cold);fill-opacity:.2;stroke:var(--txt-d);stroke-width:2}',
+  example: { size: [640, 330], parts: [
+    { id: 'A', type: 'person', x: 110, y: 290, scale: 1.3, wear: ['helmet', 'visor', 'gloves', 'boots'], label: 'bunkering operator' },
+    { id: 'B', type: 'person', x: 320, y: 290, scale: 1.3, wear: ['helmet', 'gloves', 'suit', 'boots', 'scba'], label: 'entrant' },
+    { id: 'C', type: 'person', x: 530, y: 290, scale: 1.3, wear: ['helmet', 'visor', 'gloves', 'suit', 'boots', 'scba'], label: 'spill responder' } ],
+    steps: [ { title: 'Head and hands: helmet, visor, gloves', play: [['A', 2, 1600, 0, 'linear'], ['B', 2, 1600, 0, 'linear'], ['C', 2, 1600, 0, 'linear']] },
+             { title: 'Body: gloves, suit, boots', play: [['A', 4, 1600, 0, 'linear'], ['B', 4, 1600, 0, 'linear'], ['C', 4, 1600, 0, 'linear']] },
+             { title: 'Breathing: the apparatus goes on last', play: [['B', 5, 1000, 0, 'linear'], ['C', 6, 1600, 0, 'linear']] } ] }
+});
+/* end kit-part */
+/* kit-part: sensor */
+KIT.define('sensor', function (fig, part, g, p) {
+  var h = KIT.h, ir = p.kind === 'infrared', ox = p.oxygen != null ? p.oxygen : 1, key, i;
+  var LB = { cap: 'sintered cap', bead: 'heated bead', gas: 'gas', oxygen: 'oxygen', lamp: 'IR lamp', cell: 'gas in the beam', det: 'detector' };
+  var WD = ir ? { none: 'NO GAS - BEAM FULL', on: 'GAS DIMS THE BEAM' }
+              : { none: 'NO GAS', on: 'GAS BURNS - SIGNAL', off: 'NO OXYGEN - NO SIGNAL' };
+  for (key in (p.labels || {})) LB[key] = p.labels[key];
+  for (key in (p.words || {})) WD[key] = p.words[key];
+  var seed = 5, labs = {};
+  function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+  function lab(name, x, y, anchor) {
+    if (!LB[name]) return null;
+    labs[name] = h.label(fig, g, { x: x, y: y, 'text-anchor': anchor || 'middle', 'class': 'kit-cap' }, LB[name]);
+    return labs[name];
+  }
+  var gasDots = [], oxDots = [], rays = [], beam = null, bar = null, barH = 40, sx = 0, sy = 0;
+  if (!ir) {
+    h.el('path', { d: 'M-34 -4 V-84 Q-34 -114 0 -114 Q34 -114 34 -84 V-4 Z', 'class': 'kit-vessel' }, g);
+    h.el('path', { d: 'M-34 -84 Q-34 -114 0 -114 Q34 -114 34 -84', 'class': 'kit-sensor-sinter' }, g);
+    h.el('rect', { x: -40, y: -6, width: 80, height: 14, rx: 3, 'class': 'kit-steel' }, g);
+    [-8, 8].forEach(function (x) {
+      h.el('line', { x1: x, y1: -6, x2: x, y2: -40, 'class': 'kit-probe' }, g);
+      h.el('line', { x1: x, y1: 8, x2: x, y2: 22, 'class': 'kit-probe' }, g);
+    });
+    for (i = 0; i < 8; i++) {
+      var a0 = h.polar(15, i * 45), a1 = h.polar(23, i * 45);
+      rays.push(h.el('line', { x1: a0[0].toFixed(1), y1: (a0[1] - 50).toFixed(1), x2: a1[0].toFixed(1), y2: (a1[1] - 50).toFixed(1), 'class': 'kit-sensor-ray' }, g));
+    }
+    h.el('circle', { cx: 0, cy: -50, r: 11, 'class': 'kit-sensor-bead' }, g);
+    var gx = [-20, -6, 8, 22, 0], ox_ = [-26, -12, 2, 16, 28];
+    for (i = 0; i < 5; i++) {
+      gasDots.push(h.el('circle', { cx: gx[i], cy: -148 + (i % 2) * 14, r: 3.2, 'class': 'kit-sensor-gas kit-sensor-in', style: 'animation-delay:' + (-0.36 * i).toFixed(2) + 's' }, g));
+      oxDots.push(h.el('circle', { cx: ox_[i], cy: -134 + (i % 2) * 14, r: 3.4, 'class': 'kit-sensor-ox kit-sensor-in', style: 'animation-delay:' + (-0.36 * i - 0.18).toFixed(2) + 's' }, g));
+    }
+    lab('cap', 44, -92, 'start'); lab('bead', 44, -50, 'start');
+    lab('gas', -36, -150, 'end'); lab('oxygen', -36, -128, 'end');
+    sx = 0; sy = 38;
+  } else {
+    h.el('circle', { r: 16, 'class': 'kit-shell' }, g);
+    for (i = 0; i < 6; i++) {
+      var r0 = h.polar(21, -50 + i * 20), r1 = h.polar(29, -50 + i * 20);
+      h.el('line', { x1: r0[0].toFixed(1), y1: r0[1].toFixed(1), x2: r1[0].toFixed(1), y2: r1[1].toFixed(1), 'class': 'kit-sensor-lamp' }, g);
+    }
+    h.el('rect', { x: 40, y: -34, width: 140, height: 68, rx: 4, 'class': 'kit-sensor-cell' }, g);
+    h.el('rect', { x: 196, y: -28, width: 34, height: 56, rx: 4, 'class': 'kit-shell' }, g);
+    h.el('rect', { x: 205, y: -20, width: 16, height: 40, 'class': 'kit-sensor-slot' }, g);
+    bar = h.el('rect', { x: 205, width: 16, 'class': 'kit-sensor-sig' }, g);
+    beam = h.el('g', { 'data-low-contrast': '' }, g);              // gas dims the beam: that is the lesson, so a dim beam is not a fault
+    [-10, 0, 10].forEach(function (y) { h.el('line', { x1: 20, y1: y, x2: 194, y2: y, 'class': 'kit-sensor-beam' }, beam); });
+    for (i = 0; i < 12; i++) {
+      gasDots.push(h.el('circle', { cx: (50 + rnd() * 120).toFixed(1), cy: (-26 + rnd() * 52).toFixed(1), r: 3.2, 'class': 'kit-sensor-gas kit-sensor-wob', style: 'animation-delay:' + (-rnd() * 2).toFixed(2) + 's' }, g));
+    }
+    lab('lamp', 0, -42); lab('cell', 110, -46); lab('det', 213, -42);
+    sx = 113; sy = 60;
+  }
+  var lg = p.label || p.state !== false ? h.label(fig, g, {}, '') : null;           // its name and its reading word move together
+  var nl = p.label ? h.lines(lg, { x: sx, y: sy + 8, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label) : 0;
+  var st = p.state === false ? null : h.el('text', { x: sx, y: sy + 8, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'middle', 'class': 'kit-state' }, lg);
+  part.render = function (v) {
+    var k = h.clamp(v, 0, 1), on = k > 0.02, burn = k * h.clamp(ox, 0, 1), word;
+    if (ir) {
+      var n = on ? Math.ceil(k * gasDots.length) : 0, sig = 1 - 0.8 * k;
+      gasDots.forEach(function (d, j) { d.setAttribute('visibility', j < n ? 'visible' : 'hidden'); });
+      beam.style.opacity = (0.15 + 0.85 * sig).toFixed(2);
+      bar.setAttribute('height', (40 * sig).toFixed(1)); bar.setAttribute('y', (20 - 40 * sig).toFixed(1));
+      word = on ? WD.on : WD.none;
+    } else {
+      var ng = on ? Math.ceil(k * 5) : 0, no = Math.ceil(h.clamp(ox, 0, 1) * 5);
+      gasDots.forEach(function (d, j) { d.setAttribute('visibility', j < ng ? 'visible' : 'hidden'); });
+      oxDots.forEach(function (d, j) { d.setAttribute('visibility', j < no ? 'visible' : 'hidden'); });
+      rays.forEach(function (r) { r.style.opacity = burn.toFixed(2); });
+      if (labs.gas) labs.gas.style.opacity = on ? '1' : '0';
+      if (labs.oxygen) labs.oxygen.style.opacity = no ? '1' : '0';
+      word = !on ? WD.none : (ox > 0.05 ? WD.on : WD.off);
+    }
+    g.classList.toggle('kit-sensor-on', on);
+    g.classList.toggle('kit-sensor-hot', !ir && burn > 0.2);
+    if (st) st.textContent = word;
+  };
+}, {
+  family: 'cutaways',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M09 gas detection: how a gas sensor sees gas, as a principle cutaway - a catalytic bead that burns the gas (and needs oxygen to do it) and an infrared cell where gas dims a beam',
+  value: '0..1 how much gas is in the sensor; kind catalytic (heated bead in a sintered cap; option oxygen 0..1 - with none, nothing burns) or infrared (lamp, cell, detector); a reading word sits under it, words and labels can be replaced',
+  css: '.kit-sensor-sinter{fill:none;stroke:var(--dim-d);stroke-width:4;stroke-dasharray:2 4}' +
+    '.kit-sensor-bead{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2.5}' +
+    '.kit-sensor-hot .kit-sensor-bead{fill:var(--txt-d);stroke:var(--txt-d)}' +
+    '.kit-sensor-ray{stroke:var(--txt-d);stroke-width:2.5;stroke-linecap:round;opacity:0}' +
+    '.kit-sensor-gas{fill:var(--txt-d)}' +
+    '.kit-sensor-ox{fill:none;stroke:var(--cold);stroke-width:2}' +
+    '.kit-sensor-lamp{stroke:var(--cold);stroke-width:2.5;stroke-linecap:round}' +
+    '.kit-sensor-cell{fill:none;stroke:var(--faint-d);stroke-width:2;stroke-dasharray:6 4}' +
+    '.kit-sensor-slot{fill:var(--deep);stroke:var(--faint-d);stroke-width:1}' +
+    '.kit-sensor-sig{fill:var(--cold)}' +
+    '.kit-sensor-beam{stroke:var(--cold);stroke-width:3;stroke-linecap:round}' +
+    '.kit-sensor-on .kit-sensor-in{animation:kit-sensor-in 1.8s linear infinite}' +
+    '.kit-sensor-on .kit-sensor-wob{animation:kit-sensor-wob 1.2s ease-in-out infinite alternate}' +
+    '.kit-sensor-on .kit-state{fill:var(--txt-d)}' +
+    '@keyframes kit-sensor-in{0%{transform:translateY(0);opacity:0}15%{opacity:1}85%{opacity:1}100%{transform:translateY(80px);opacity:0}}' +
+    '@keyframes kit-sensor-wob{to{transform:translate(6px,-4px)}}',
+  example: { size: [600, 250], parts: [
+    { id: 'C', type: 'sensor', kind: 'catalytic', x: 70, y: 170, label: 'catalytic' },
+    { id: 'N', type: 'sensor', kind: 'catalytic', oxygen: 0, x: 290, y: 170, label: 'catalytic, no oxygen', labels: { cap: false, bead: false } },
+    { id: 'I', type: 'sensor', kind: 'infrared', x: 400, y: 100, label: 'infrared' } ],
+    steps: [ { title: 'Gas reaches the sensors', play: [['C', 1, 2000], ['N', 1, 2000], ['I', 1, 2000]] },
+             { title: 'The gas goes away', play: [['C', 0, 1200], ['N', 0, 1200], ['I', 0, 1200]] } ] }
+});
+/* end kit-part */
+/* kit-part: static_charge */
+KIT.define('static_charge', function (fig, part, g, p) {
+  var h = KIT.h, bonded = !!p.bonded, key, i;
+  var LB = { part: 'isolated metal part', earth: 'earthed steel', bond: 'bonding cable' };
+  for (key in (p.labels || {})) LB[key] = p.labels[key];
+  function lab(name, x, y, anchor) { if (LB[name]) h.label(fig, g, { x: x, y: y, 'text-anchor': anchor, 'class': 'kit-cap' }, LB[name]); }
+  function plus(x, y) { return h.el('path', { d: 'M' + (x - 4.5) + ' ' + y + ' H' + (x + 4.5) + ' M' + x + ' ' + (y - 4.5) + ' V' + (y + 4.5), 'class': 'kit-static-charge-sign' }, g); }
+  h.el('path', { d: 'M-130 -46 H-26 Q0 -46 0 -20 V-3', 'class': 'kit-pipe' }, g);                      // hose
+  h.el('line', { x1: -10, y1: -2, x2: 10, y2: -2, 'class': 'kit-flange' }, g);
+  var stream = h.el('line', { x1: 0, y1: 4, x2: 0, y2: 66, 'class': 'kit-static-charge-stream' }, g);
+  var tsign = [20, 36, 52].map(function (y) { return plus(0, y); });
+  h.el('line', { x1: -74, y1: 140, x2: 74, y2: 140, 'class': 'kit-tickl' }, g);                       // the floor
+  [-38, 38].forEach(function (x) { h.el('rect', { x: x - 10, y: 130, width: 20, height: 10, 'class': 'kit-static-charge-ins' }, g); });
+  h.el('rect', { x: -52, y: 70, width: 104, height: 60, rx: 12, 'class': 'kit-steel' }, g);           // the isolated part
+  var order = [2, 7, 0, 9, 4, 5, 1, 8, 3, 6], signs = [];
+  for (i = 0; i < 10; i++) signs[order.indexOf(i)] = plus(-36 + 18 * (i % 5), i < 5 ? 88 : 112);
+  h.el('line', { x1: 118, y1: 90, x2: 118, y2: 140, 'class': 'kit-pipe-s' }, g);                       // an earthed post
+  h.el('path', { d: 'M105 144 H131 M110 150 H126 M115 156 H121', 'class': 'kit-flange' }, g);
+  var spark = h.el('path', { d: 'M52 100 L66 91 L76 107 L88 93 L98 107 L116 100', 'class': 'kit-static-charge-spark' }, g);
+  var cable = null, drain = null;
+  if (bonded) {
+    var cd = 'M-52 100 C-92 100 -92 126 -92 146';
+    cable = h.el('path', { d: cd, 'class': 'kit-static-charge-cable' }, g);
+    drain = h.el('path', { d: cd, 'class': 'kit-static-charge-drain' }, g);
+    h.el('path', { d: 'M-105 150 H-79 M-100 156 H-84 M-95 162 H-89', 'class': 'kit-flange' }, g);
+  }
+  lab('part', 0, 164, 'middle'); lab('earth', 118, 76, 'middle');
+  if (bonded) lab('bond', -100, 100, 'end');
+  var lg = p.label || p.state !== false ? h.label(fig, g, {}, '') : null;
+  var nl = p.label ? h.lines(lg, { x: -130, y: -66, 'text-anchor': 'start', 'class': 'kit-cap' }, p.label) : 0;
+  var st = p.state === false ? null : h.el('text', { x: -130, y: -66, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'start', 'class': 'kit-state' }, lg);
+  part.render = function (v) {
+    var c = Math.max(0, v), build = h.clamp(c, 0, 1), s = h.clamp((c - 1) / 0.2, 0, 1), on = c > 0.02;
+    var shown = bonded ? 0 : build * signs.length * (1 - s), word;
+    signs.forEach(function (n, j) { n.style.opacity = h.clamp(shown - j, 0, 1).toFixed(2); });
+    tsign.forEach(function (n) { n.style.opacity = h.clamp(build * 3, 0, 1).toFixed(2); });
+    var fire = !bonded && c > 1 && c <= 1.2;
+    spark.style.opacity = fire ? '1' : '0';
+    g.classList.toggle('kit-static-charge-on', on);
+    g.classList.toggle('kit-static-charge-hot', fire);
+    if (st) {
+      if (!on) word = 'AT REST';
+      else if (bonded) word = 'BONDED - NO CHARGE BUILDS';
+      else if (fire) word = 'SPARK - IGNITION SOURCE';
+      else if (c > 1.2) word = 'DISCHARGED';
+      else word = 'CHARGE BUILDS UP';
+      st.textContent = word;
+    }
+  };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M06 and M07 ignition sources: a liquid or gas flowing out of a hose charges an isolated metal part until a spark jumps to earthed steel - and a bonding cable to earth stops the charge from ever building',
+  value: '0..1 the charge on the isolated part builds; 1..1.2 a spark jumps and the charge is gone; option bonded: true draws the bonding cable to earth and the charge never builds',
+  css: '.kit-static-charge-stream{stroke:var(--cold);stroke-width:4;stroke-dasharray:8 7;stroke-linecap:round;opacity:0}' +
+    '.kit-static-charge-on .kit-static-charge-stream{opacity:1;animation:kit-static-charge-run .5s linear infinite}' +
+    '.kit-static-charge-sign{fill:none;stroke:var(--txt-d);stroke-width:2.5;stroke-linecap:round}' +
+    '.kit-static-charge-ins{fill:var(--deep-3);stroke:var(--faint-d);stroke-width:1.5;stroke-dasharray:4 3}' +
+    '.kit-static-charge-spark{fill:none;stroke:var(--txt-d);stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round;opacity:0}' +
+    '.kit-static-charge-cable{fill:none;stroke:var(--dim-d);stroke-width:5;stroke-linecap:round}' +
+    '.kit-static-charge-drain{fill:none;stroke:var(--txt-d);stroke-width:3;stroke-dasharray:3 9;stroke-linecap:round;opacity:0}' +
+    '.kit-static-charge-on .kit-static-charge-drain{opacity:1;animation:kit-static-charge-run 1s linear infinite}' +
+    '.kit-static-charge-on .kit-state{fill:var(--txt-d)}' +
+    '.kit-static-charge-hot .kit-state{fill:var(--amber)}' +
+    '@keyframes kit-static-charge-run{to{stroke-dashoffset:-15}}',
+  example: { size: [640, 250], parts: [
+    { id: 'A', type: 'static_charge', x: 150, y: 80, label: 'not bonded' },
+    { id: 'B', type: 'static_charge', x: 460, y: 80, bonded: true, label: 'bonded to earth', labels: { part: false, earth: false } } ],
+    steps: [ { title: 'Liquid flows from the hose - charge builds on the isolated part', play: [['A', 1, 2600, 0, 'linear'], ['B', 1, 2600, 0, 'linear']] },
+             { title: 'The charge jumps to earthed steel as a spark - the bonded part never charged', play: [['A', 1.1, 600]] } ] }
+});
+/* end kit-part */
+/* kit-part: fire */
+KIT.define('fire', function (fig, part, g, p) {
+  var h = KIT.h, jet = p.kind === 'jet', w = p.w || 140, len = p.length || 170, ang = p.angle || 0, seed = 3, i;
+  function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+  var body = h.el('g', {}, g), grow, lx, ly, la = 'middle';
+  if (jet) {
+    var sym = h.el('g', { transform: ang ? 'rotate(' + (-ang) + ')' : null }, body), R = Math.min(len * 0.12, 70);
+    h.el('line', { x1: -90, y1: 0, x2: -4, y2: 0, 'class': 'kit-pipe' }, sym);                 // the pipe the gas leaks from
+    h.el('line', { x1: -4, y1: -9, x2: -4, y2: 9, 'class': 'kit-flange' }, sym);
+    grow = h.el('g', {}, sym);
+    var jt = h.el('g', { 'class': 'kit-fire-jet' }, grow);
+    h.el('path', { d: 'M0 -5 C' + (len * 0.25) + ' ' + (-R) + ' ' + (len * 0.6) + ' ' + (-R * 0.8) + ' ' + len + ' 0 C' + (len * 0.6) + ' ' + (R * 0.8) + ' ' + (len * 0.25) + ' ' + R + ' 0 5 Z', 'class': 'kit-fire-out' }, jt);
+    h.el('path', { d: 'M0 -3 C' + (len * 0.2) + ' ' + (-R * 0.5) + ' ' + (len * 0.4) + ' ' + (-R * 0.4) + ' ' + (len * 0.58) + ' 0 C' + (len * 0.4) + ' ' + (R * 0.4) + ' ' + (len * 0.2) + ' ' + (R * 0.5) + ' 0 3 Z', 'class': 'kit-fire-core', 'data-low-contrast': '' }, jt);   // the hot core inside the jet: its outer tongue carries the contrast
+    lx = -8; ly = 30; la = 'end';
+  } else {
+    h.el('rect', { x: 1, y: 0, width: w - 2, height: 12, 'class': 'kit-pool' }, g);
+    h.el('path', { d: 'M-2 -2 V16 H' + (w + 2) + ' V-2', 'class': 'kit-fire-pan' }, g);
+    grow = h.el('g', {}, body);
+    var n = Math.max(3, Math.round(w / 22)), sp = w / n, top = p.height || Math.min(w * 0.55, 140);
+    for (i = 0; i < n; i++) {
+      var cx = (i + 0.5) * sp, s = top * (0.62 + 0.38 * rnd()), wd = sp * 0.78, c2 = h.el('g', { 'class': 'kit-fire-tongue', style: 'animation-delay:' + (-rnd() * 0.4).toFixed(2) + 's' }, grow);
+      h.el('path', { d: 'M' + (cx - wd).toFixed(1) + ' 0 C' + (cx - wd * 1.2).toFixed(1) + ' ' + (-s * 0.3).toFixed(1) + ' ' + (cx - wd * 0.55).toFixed(1) + ' ' + (-s * 0.65).toFixed(1) + ' ' + cx.toFixed(1) + ' ' + (-s).toFixed(1) +
+        ' C' + (cx + wd * 0.55).toFixed(1) + ' ' + (-s * 0.65).toFixed(1) + ' ' + (cx + wd * 1.2).toFixed(1) + ' ' + (-s * 0.3).toFixed(1) + ' ' + (cx + wd).toFixed(1) + ' 0 Z', 'class': 'kit-fire-out' }, c2);
+      h.el('path', { d: 'M' + (cx - wd * 0.5).toFixed(1) + ' 0 C' + (cx - wd * 0.6).toFixed(1) + ' ' + (-s * 0.15).toFixed(1) + ' ' + (cx - wd * 0.25).toFixed(1) + ' ' + (-s * 0.35).toFixed(1) + ' ' + cx.toFixed(1) + ' ' + (-s * 0.55).toFixed(1) +
+        ' C' + (cx + wd * 0.25).toFixed(1) + ' ' + (-s * 0.35).toFixed(1) + ' ' + (cx + wd * 0.6).toFixed(1) + ' ' + (-s * 0.15).toFixed(1) + ' ' + (cx + wd * 0.5).toFixed(1) + ' 0 Z', 'class': 'kit-fire-core', 'data-low-contrast': '' }, c2);   // the hot core inside each tongue
+    }
+    lx = w / 2; ly = 36;
+  }
+  var lg = p.label || p.state ? h.label(fig, g, {}, '') : null;
+  var nl = p.label ? h.lines(lg, { x: lx, y: ly, 'text-anchor': la, 'class': 'kit-cap' }, p.label) : 0;
+  var st = p.state ? h.el('text', { x: lx, y: ly, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': la, 'class': 'kit-state' }, lg) : null;
+  part.render = function (v) {
+    var k = h.clamp(v, 0, 1);
+    grow.setAttribute('transform', jet ? 'scale(' + Math.max(k, 0.001).toFixed(3) + ' ' + (0.5 + 0.5 * k).toFixed(3) + ')' : 'scale(1 ' + Math.max(k, 0.001).toFixed(3) + ')');
+    grow.style.opacity = k > 0.02 ? '1' : '0';
+    g.classList.toggle('kit-fire-on', k > 0.05);
+    if (st) st.textContent = k > 0.05 ? 'BURNING' : 'OUT';
+  };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M13 fire types: a pool fire (a spilled liquid burning over its surface - wide, low flames) and a jet fire (gas leaking under pressure and burning as a long tongue from the leak point)',
+  value: '0 out .. 1 full; kind pool (width w, optional height) or jet (length, angle in degrees above horizontal), the flame stands on the surface (pool) or grows out of the leak point (jet)',
+  css: '.kit-fire-out{fill:var(--warn-d);opacity:.7}' +
+    '.kit-fire-core{fill:var(--amber)}' +
+    '.kit-fire-pan{fill:none;stroke:var(--dim-d);stroke-width:3;stroke-linejoin:round}' +
+    '.kit-fire-on .kit-fire-tongue{transform-box:fill-box;transform-origin:50% 100%;animation:kit-fire-flick .4s ease-in-out infinite alternate}' +
+    '.kit-fire-on .kit-fire-jet{transform-box:fill-box;transform-origin:0% 50%;animation:kit-fire-jet .3s ease-in-out infinite alternate}' +
+    '.kit-fire-on .kit-state{fill:var(--warn-d)}' +
+    '@keyframes kit-fire-flick{to{transform:scale(1.08,.88)}}@keyframes kit-fire-jet{to{transform:scale(1.06,.88)}}',
+  example: { size: [640, 330], parts: [
+    { id: 'J', type: 'fire', kind: 'jet', x: 190, y: 90, length: 430, angle: 0, value: 1, label: 'jet fire\ngas leaks under pressure' },
+    { id: 'P', type: 'fire', kind: 'pool', x: 90, y: 250, w: 460, value: 1, label: 'pool fire: a spilled liquid burns' } ],
+    steps: [ { title: 'The leak is reduced - the jet fire gets smaller', play: [['J', 0.75, 1800]] },
+             { title: 'Foam goes on the pool - its flames get lower', play: [['P', 0.75, 1800]] } ] }
+});
+/* end kit-part */
+/* kit-part: flammability */
+KIT.define('flammability', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 380, ht = p.h || 250, X = p.xmax || 100, Y = p.ymax || 25, air = p.air || 21;
+  var zone = p.zone || [], path = p.path || [[0, air], [100, 0]], words = p.words || ['NOT FLAMMABLE', 'FLAMMABLE'];
+  function sx(v) { return v / X * w; }
+  function sy(v) { return ht - v / Y * ht; }
+  function list(a) { return a.map(function (q) { return sx(q[0]).toFixed(1) + ' ' + sy(q[1]).toFixed(1); }); }
+  var v, i;
+  h.el('path', { d: 'M0 0 V' + ht + ' H' + w, 'class': 'kit-flammability-axis' }, g);
+  for (v = 0; v <= X + 1e-9; v += p.xevery || 20) {
+    h.el('line', { x1: sx(v), x2: sx(v), y1: ht, y2: ht + 6, 'class': 'kit-tickl' }, g);
+    if (v > 0) h.el('line', { x1: sx(v), x2: sx(v), y1: 0, y2: ht, 'class': 'kit-flammability-grid', 'data-may-cross': '', 'data-may-overlap': '', 'data-low-contrast': '' }, g);   // a quiet grid
+    h.el('text', { x: sx(v), y: ht + 22, 'text-anchor': 'middle', 'class': 'kit-tick' }, g, String(v));
+  }
+  for (v = 0; v <= Y + 1e-9; v += p.yevery || 5) {
+    h.el('line', { x1: -6, x2: 0, y1: sy(v), y2: sy(v), 'class': 'kit-tickl' }, g);
+    if (v > 0) h.el('line', { x1: 0, x2: w, y1: sy(v), y2: sy(v), 'class': 'kit-flammability-grid', 'data-may-cross': '', 'data-may-overlap': '', 'data-low-contrast': '' }, g);
+    h.el('text', { x: -15, y: sy(v) + 4.5, 'text-anchor': 'end', 'class': 'kit-tick' }, g, String(v));
+  }
+  h.label(fig, g, { x: w / 2, y: ht + 48, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.xlabel || '% fuel in the mixture');
+  h.label(fig, g, { x: 0, y: -14, 'text-anchor': 'start', 'class': 'kit-cap' }, p.ylabel || '% oxygen');
+  /* the flammable zone is a polygon of [fuel %, oxygen %] points: a course gives its own numbers from its sources */
+  if (zone.length > 2) {
+    h.el('polygon', { points: list(zone).join(' '), 'class': 'kit-flammability-zone', 'data-no-contain': '', 'data-low-contrast': '' }, g);
+  }
+  h.el('line', { x1: sx(0), y1: sy(air), x2: sx(100), y2: sy(0), 'class': 'kit-flammability-air', 'data-may-cross': '' }, g);
+  (p.lines || []).forEach(function (m) {
+    h.el('polyline', { points: list(m.pts).join(' '), 'class': 'kit-flammability-line', 'data-may-cross': '' }, g);
+    var e = m.pts[m.pts.length - 1];
+    if (m.label) h.label(fig, g, { x: sx(e[0]) - 6, y: sy(e[1]) - 9, 'text-anchor': 'end', 'class': 'kit-cap' }, m.label);
+  });
+  if (p.airLabel) h.label(fig, g, { x: sx(60) + 8, y: sy(air * 0.4) - 12, 'text-anchor': 'start', 'class': 'kit-cap' }, p.airLabel);
+  if (p.zoneLabel && zone.length > 2) {
+    var nose = zone.reduce(function (a, b) { return b[1] < a[1] ? b : a; });
+    h.label(fig, g, { x: sx(nose[0]) + 4, y: sy(nose[1] - 2.4) + 4.5, 'text-anchor': 'start', 'class': 'kit-cap' }, p.zoneLabel);
+  }
+  var st = h.label(fig, g, {}, '');
+  var stText = h.el('text', { x: w - 6, y: 16, 'text-anchor': 'end', 'class': 'kit-state kit-flammability-st' }, st);
+  var P = path.map(function (q) { return [sx(q[0]), sy(q[1])]; }), cum = [0], total = 0;
+  for (i = 1; i < P.length; i++) { total += Math.sqrt(Math.pow(P[i][0] - P[i - 1][0], 2) + Math.pow(P[i][1] - P[i - 1][1], 2)); cum.push(total); }
+  total = total || 1;
+  var trail = h.el('polyline', { points: P.map(function (q) { return q[0].toFixed(1) + ' ' + q[1].toFixed(1); }).join(' '), 'class': 'kit-flammability-trail', 'data-may-cross': '' }, g);
+  var dot = h.el('circle', { r: 7, 'class': 'kit-flammability-dot', 'data-may-cross': '' }, g);
+  function near(px, py, a, b) {                       // px from the segment a-b
+    var dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1;
+    var t = h.clamp(((px - a[0]) * dx + (py - a[1]) * dy) / l2, 0, 1);
+    return Math.sqrt(Math.pow(px - a[0] - t * dx, 2) + Math.pow(py - a[1] - t * dy, 2));
+  }
+  function inZone(px, py) {                           // inside the polygon, or on its edge
+    var z = zone.map(function (q) { return [sx(q[0]), sy(q[1])]; }), c = false, j, k;
+    if (z.length < 3) return false;
+    for (k = 0, j = z.length - 1; k < z.length; j = k++) {
+      if ((z[k][1] > py) !== (z[j][1] > py) && px < (z[j][0] - z[k][0]) * (py - z[k][1]) / (z[j][1] - z[k][1]) + z[k][0]) c = !c;
+    }
+    for (k = 0, j = z.length - 1; k < z.length; j = k++) if (near(px, py, z[k], z[j]) < 2.5) c = true;
+    return c;
+  }
+  part.render = function (val) {
+    var s = h.clamp(val, 0, 1) * total, k = 1, f, x, y;
+    while (k < P.length - 1 && cum[k] < s) k++;
+    f = cum[k] > cum[k - 1] ? h.clamp((s - cum[k - 1]) / (cum[k] - cum[k - 1]), 0, 1) : 0;
+    x = P[k - 1][0] + f * (P[k][0] - P[k - 1][0]);
+    y = P[k - 1][1] + f * (P[k][1] - P[k - 1][1]);
+    dot.setAttribute('cx', x.toFixed(1)); dot.setAttribute('cy', y.toFixed(1));
+    trail.setAttribute('stroke-dasharray', s.toFixed(1) + ' ' + (total * 2).toFixed(1));
+    var hot = inZone(x, y);
+    g.classList.toggle('kit-flammability-hot', hot);
+    stText.textContent = hot ? words[1] : words[0];
+  };
+}, {
+  family: 'charts',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M06 the flammability diagram for methane (fuel % against oxygen %, the air line, the flammable zone, a mixture moving along the air line) and M07 the inerting path that stays out of the zone (plan: the media plans of modules 6 and 7)',
+  value: '0..1 how far the point has travelled along path (a list of [fuel %, oxygen %]); the zone lights amber while the point is inside it',
+  css: '.kit-flammability-axis{fill:none;stroke:var(--faint-d);stroke-width:2}' +
+    '.kit-flammability-grid{stroke:var(--faint-d);stroke-width:1;stroke-dasharray:2 6;opacity:.7}' +
+    '.kit-flammability-air{stroke:var(--dim-d);stroke-width:2.5}' +
+    '.kit-flammability-zone{fill:var(--faint-d);fill-opacity:.25;stroke:var(--dim-d);stroke-width:2;stroke-dasharray:6 4;stroke-linejoin:round}' +
+    '.kit-flammability-hot .kit-flammability-zone{fill:var(--amber);fill-opacity:.4;stroke:var(--amber);stroke-dasharray:none}' +
+    '.kit-flammability-line{fill:none;stroke:var(--cold);stroke-width:2;stroke-dasharray:8 5}' +
+    '.kit-flammability-trail{fill:none;stroke:var(--blue);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}' +
+    '.kit-flammability-dot{fill:var(--txt-d);stroke:var(--blue);stroke-width:3}' +
+    '.kit-flammability-hot .kit-flammability-dot{stroke:var(--amber)}' +
+    '.kit-flammability-hot .kit-flammability-st{fill:var(--amber)}',
+  /* example data is methane, drawn from nothing but the corners the air line gives (5 and 15 % in air); a course gives
+     its own zone, lines and path from its sources */
+  example: { size: [520, 340], parts: [
+    { id: 'F', type: 'flammability', x: 70, y: 40, w: 400, h: 250,
+      zone: [[5, 19.95], [15, 17.85], [6, 12]], zoneLabel: 'flammable zone', airLabel: 'air line',
+      lines: [{ label: 'oxygen limit', pts: [[0, 12], [100, 12]] }],
+      path: [[0, 21], [100, 0]] } ],
+    steps: [ { title: 'Methane is added to air: too lean', play: [['F', 0.04, 1500, 0, 'linear']] },
+             { title: 'Between 5 and 15 % the mixture can burn', play: [['F', 0.1, 1500, 0, 'linear']] },
+             { title: 'Above 15 % it is too rich', play: [['F', 0.4, 1800, 0, 'linear']] } ] }
+});
+/* end kit-part */
+/* kit-part: range_bar */
+KIT.define('range_bar', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 520, bh = p.h || 34, max = p.max || 100, lel = +p.lel, uel = +p.uel;
+  var words = p.words || { lean: 'LEAN', flammable: 'FLAMMABLE', rich: 'RICH' };
+  function sx(v) { return h.clamp(v / max, 0, 1) * w; }
+  var a = sx(lel), b = sx(uel);
+  h.el('rect', { x: 0, y: 0, width: a, height: bh, 'class': 'kit-range-bar-out' }, g);
+  var mid = h.el('rect', { x: a, y: 0, width: Math.max(1, b - a), height: bh, 'class': 'kit-range-bar-mid' }, g);
+  h.el('rect', { x: b, y: 0, width: Math.max(1, w - b), height: bh, 'class': 'kit-range-bar-out' }, g);
+  h.el('rect', { x: 0, y: 0, width: w, height: bh, rx: 4, 'class': 'kit-range-bar-frame', 'data-no-contain': '' }, g);
+  var every = p.every || 10, v, nums = [0, lel, uel, max];
+  for (v = 0; v <= max + 1e-9; v += every) h.el('line', { x1: sx(v), x2: sx(v), y1: bh, y2: bh + 5, 'class': 'kit-tickl' }, g);
+  nums.forEach(function (n) {
+    h.el('line', { x1: sx(n), x2: sx(n), y1: bh, y2: bh + 9, 'class': 'kit-tickl' }, g);
+    h.el('text', { x: sx(n), y: bh + 26, 'text-anchor': 'middle', 'class': 'kit-tick' }, g, String(n));
+  });
+  h.label(fig, g, { x: (a + b) / 2, y: -26, 'text-anchor': 'middle', 'class': 'kit-cap' }, words.flammable);
+  h.label(fig, g, { x: a / 2, y: bh + 52, 'text-anchor': 'middle', 'class': 'kit-cap' }, words.lean);
+  h.label(fig, g, { x: (b + w) / 2, y: bh + 52, 'text-anchor': 'middle', 'class': 'kit-cap' }, words.rich);
+  if (p.label) h.label(fig, g, { x: 0, y: -56, 'text-anchor': 'start', 'class': 'kit-h' }, p.label);
+  var rd = h.label(fig, g, {}, '');
+  var rdText = h.el('text', { x: w, y: -56, 'text-anchor': 'end', 'class': 'kit-state kit-range-bar-st' }, rd);
+  var ptr = h.el('g', {}, g);
+  h.el('line', { x1: 0, x2: 0, y1: -14, y2: bh + 9, 'class': 'kit-range-bar-needle', 'data-may-cross': '' }, ptr);
+  h.el('path', { d: 'M-8 -15 H8 L0 -1 Z', 'class': 'kit-range-bar-ptr', 'data-may-cross': '' }, ptr);
+  part.render = function (val) {
+    var c = h.clamp(val, 0, max), on = c >= lel && c <= uel;
+    ptr.setAttribute('transform', 'translate(' + sx(c).toFixed(1) + ' 0)');
+    g.classList.toggle('kit-range-bar-hot', on);
+    rdText.textContent = h.fmt(c, { decimals: p.decimals || 0, unit: '%' }) + ' · ' + (on ? words.flammable : (c < lel ? words.lean : words.rich));
+  };
+}, {
+  family: 'charts',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M06 the flammable range of each fuel in air (methane 5-15, methanol 6-36, ammonia 15-28, hydrogen 4-75 %): lean below the lower limit, flammable between the limits, rich above (plan: media plan of module 6)',
+  value: 'the concentration in %, 0..max (default 100); the pointer slides there and the flammable band lights amber while it is between lel and uel',
+  css: '.kit-range-bar-out{fill:var(--deep-3);stroke:var(--faint-d);stroke-width:1.5}' +
+    '.kit-range-bar-mid{fill:var(--faint-d);fill-opacity:.55;stroke:var(--dim-d);stroke-width:1.5}' +
+    '.kit-range-bar-hot .kit-range-bar-mid{fill:var(--amber);fill-opacity:.7;stroke:var(--amber)}' +
+    '.kit-range-bar-frame{fill:none;stroke:var(--dim-d);stroke-width:2}' +
+    '.kit-range-bar-needle{stroke:var(--txt-d);stroke-width:3}' +
+    '.kit-range-bar-ptr{fill:var(--txt-d)}' +
+    '.kit-range-bar-hot .kit-range-bar-st{fill:var(--amber)}',
+  example: { size: [560, 330], parts: [
+    { id: 'M', type: 'range_bar', x: 20, y: 76, w: 520, lel: 5, uel: 15, label: 'methane in air', value: 0 },
+    { id: 'H', type: 'range_bar', x: 20, y: 246, w: 520, lel: 4, uel: 75, label: 'hydrogen in air', value: 0 } ],
+    steps: [ { title: 'Methane: 2 % is too lean', play: [['M', 2, 900]] },
+             { title: 'Methane: 10 % is flammable', play: [['M', 10, 1000]] },
+             { title: 'Methane: 30 % is too rich - hydrogen burns across most of the scale', play: [['M', 30, 1000], ['H', 50, 1400, 200]] } ] }
+});
+/* end kit-part */
+/* kit-part: hose */
+KIT.define('hose', function (fig, part, g, p) {
+  var h = KIT.h, fluid = p.fluid === 'gas' ? 'gas' : 'liquid', mid = fig.uid + '-' + (p.id || 'hs') + '-m';
+  g.classList.add('kit-hose-' + fluid);
+  h.el('path', { d: p.d, 'class': 'kit-hose-body' }, g);
+  /* the corrugation rings and the bore are dark on the hose's own body: quiet on purpose, the body and the fluid carry it */
+  h.el('path', { d: p.d, 'class': 'kit-hose-rib', 'data-low-contrast': '' }, g);
+  h.el('path', { d: p.d, 'class': 'kit-hose-bore', 'data-low-contrast': '' }, g);
+  var mask = h.el('mask', { id: mid, maskUnits: 'userSpaceOnUse', x: -4000, y: -4000, width: 8000, height: 8000 }, h.el('defs', {}, g));
+  var reach = h.el('path', { d: p.d, 'class': 'kit-reach' }, mask);
+  var inside = h.el('g', { mask: 'url(#' + mid + ')' }, g);
+  h.el('path', { d: p.d, 'class': 'kit-hose-fluid', 'data-low-contrast': '' }, inside);      // translucent liquid, as the kit's own pipe content
+  var flow = h.el('path', { d: p.d, 'class': 'kit-flow' }, inside);
+  var L = 0, m0 = null;
+  try { L = reach.getTotalLength(); } catch (e) { L = 0; }
+  if (L) {
+    var a0 = reach.getPointAtLength(0), a1 = reach.getPointAtLength(Math.min(6, L)), b0 = reach.getPointAtLength(L), b1 = reach.getPointAtLength(Math.max(0, L - 6));
+    [[a0, a1], [b0, b1]].forEach(function (c) {          // a coupling collar at each end, square to the hose
+      var ang = Math.atan2(c[1].y - c[0].y, c[1].x - c[0].x) * 180 / Math.PI;
+      h.el('rect', { x: -5, y: -17, width: 10, height: 34, rx: 2, 'class': 'kit-hose-collar', 'data-may-cross': '',
+                     transform: 'translate(' + c[0].x.toFixed(1) + ' ' + c[0].y.toFixed(1) + ') rotate(' + ang.toFixed(1) + ')' }, g);
+    });
+    m0 = reach.getPointAtLength(L / 2);
+  }
+  L = L || 1000;
+  if (p.label) {
+    var lx = p.labelAt ? p.labelAt[0] : (m0 ? m0.x : 0), ly = p.labelAt ? p.labelAt[1] : (m0 ? m0.y - 30 : 0);
+    h.label(fig, g, { x: lx, y: ly, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  }
+  part.render = function (v) {                         // the flow, as a pipe's
+    flow.style.opacity = v > 0.02 ? Math.min(1, 0.35 + v).toFixed(2) : 0;
+    flow.style.animationDuration = (0.8 / Math.max(v, 0.2)).toFixed(2) + 's';
+  };
+  var drain = p.drain != null ? +p.drain : 1;
+  fig.sub(part, 'fill', p.fill != null ? +p.fill : (p.empty ? 0 : 1), function (f) {     // "<id>.fill": the front advancing, 1..2 emptying
+    var s, e;
+    if (f <= 1) { s = 0; e = h.clamp(f, 0, 1) * L; }
+    else { var k = h.clamp(f - 1, 0, 1); s = k * drain * L; e = L - k * (1 - drain) * L; }
+    reach.setAttribute('stroke-dasharray', '0 ' + s.toFixed(1) + ' ' + Math.max(0, e - s).toFixed(1) + ' ' + (2 * L).toFixed(1));
+  });
+}, {
+  family: 'piping',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M13 the hand hoses used for bunkering and sampling, M14 the bunkering hose in the ESD chain between shore and ship (plan: media plans of modules 13 and 14)',
+  value: 'flow 0 still .. 1 fast, as a pipe; the second value "<id>.fill" is 0..1 the fluid front advancing along d, 1..2 the hose emptying (set "empty": true to start dry). The spec checker only knows pipe.fill - hose.fill is new',
+  css: '.kit-hose-body{fill:none;stroke:var(--faint-d);stroke-width:24}' +
+    '.kit-hose-rib{fill:none;stroke:var(--deep-3);stroke-width:24;stroke-dasharray:3 7}' +
+    '.kit-hose-bore{fill:none;stroke:var(--deep);stroke-width:14}' +
+    '.kit-hose-fluid{fill:none;stroke:var(--cold);stroke-width:10;opacity:.55}' +
+    '.kit-hose-gas .kit-hose-fluid{stroke:var(--txt-d);opacity:.22}' +
+    '.kit-hose-gas .kit-flow{stroke:var(--txt-d);stroke-dasharray:2 6;stroke-linecap:round;stroke-width:3}' +
+    '.kit-hose-collar{fill:var(--dim-d);stroke:var(--txt-d);stroke-width:1.5}',
+  example: { size: [640, 300], parts: [
+    { id: 'H', type: 'hose', empty: true, label: 'bunker hose', value: 0,
+      d: 'M40 28 H560 C610 28 610 88 560 88 H80 C30 88 30 148 80 148 H560 C610 148 610 208 560 208 H80 C30 208 30 268 80 268 H600' } ],
+    steps: [ { title: 'The hose is connected and dry', play: [['H', 0, 200]] },
+             { title: 'LNG from the shore fills the hose', play: [['H', 0.8, 400], ['H.fill', 1, 3600, 0, 'linear']] },
+             { title: 'LNG flows through to the ship', play: [['H', 1, 800]] } ] }
+});
+/* end kit-part */
+/* kit-part: manifold */
+KIT.define('manifold', function (fig, part, g, p) {
+  var h = KIT.h, outs = p.outlets || [], n = outs.length || 1, w = p.w || 560, sp = w / n, hh = p.h || 24;
+  var drop = p.drop || 44, hl = p.hose || 56, y0 = hh + drop + 7, words = p.words || ['BLANKED', 'CONNECTED'];
+  h.el('rect', { x: 0, y: 0, width: w, height: hh, rx: 6, 'class': 'kit-steel' }, g);
+  h.el('rect', { x: -8, y: -6, width: 10, height: hh + 12, rx: 2, 'class': 'kit-manifold-cap' }, g);
+  h.el('rect', { x: w - 2, y: -6, width: 10, height: hh + 12, rx: 2, 'class': 'kit-manifold-cap' }, g);
+  if (p.label) h.label(fig, g, { x: w / 2, y: -20, 'text-anchor': 'middle', 'class': 'kit-h' }, p.label);
+  var made = outs.map(function (o, i) {
+    var cx = sp * (i + 0.5), og = h.el('g', { 'class': 'kit-manifold-out' }, g);
+    h.el('rect', { x: cx - 8, y: hh, width: 16, height: drop, 'class': 'kit-steel' }, og);
+    h.el('rect', { x: cx - 18, y: hh + drop, width: 36, height: 7, rx: 2, 'class': 'kit-manifold-flange' }, og);
+    var hose = h.el('rect', { x: cx - 10, y: y0, width: 20, height: 0, 'class': 'kit-manifold-hose', 'data-may-cross': '' }, og);
+    var coll = h.el('rect', { x: cx - 14, y: y0, width: 28, height: 9, rx: 2, 'class': 'kit-manifold-collar', 'data-may-cross': '' }, og);
+    var blind = h.el('rect', { x: cx - 18, y: y0, width: 36, height: 9, rx: 2, 'class': 'kit-manifold-blind', 'data-may-cross': '' }, og);
+    var lg = h.label(fig, og, {}, '');
+    var nl = h.lines(lg, { x: cx, y: y0 + hl + 26, 'text-anchor': 'middle', 'class': 'kit-cap' }, o.label || '');
+    var st = h.el('text', { x: cx, y: y0 + hl + 26, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'middle', 'class': 'kit-state' }, lg);
+    return { g: og, hose: hose, coll: coll, blind: blind, st: st };
+  });
+  part.render = function (v) {
+    made.forEach(function (o, i) {
+      var c = h.clamp(v - i, 0, 1);
+      o.hose.setAttribute('height', (hl * c).toFixed(1));
+      o.coll.style.opacity = c > 0.02 ? '1' : '0';
+      o.blind.style.opacity = (1 - c).toFixed(2);
+      o.st.textContent = c > 0.5 ? words[1] : words[0];
+      o.g.classList.toggle('kit-manifold-on', c > 0.5);
+    });
+  };
+}, {
+  family: 'piping',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M14 and M15 the bunker station: the manifold header with its liquid and vapour-return connections, each blanked with a blind flange until a hose is connected (plan: media plans of modules 14 and 15)',
+  value: '0..n how many outlets are connected, counted from the left: outlet k grows its hose while the value goes from k to k+1; the others keep their blind flange',
+  css: '.kit-manifold-cap{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2}' +
+    '.kit-manifold-flange{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2}' +
+    '.kit-manifold-blind{fill:var(--dim-d);stroke:var(--txt-d);stroke-width:1.5}' +
+    '.kit-manifold-hose{fill:var(--deep-3);stroke:var(--cold);stroke-width:2}' +
+    '.kit-manifold-collar{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2;opacity:0}' +
+    '.kit-manifold-on .kit-state{fill:var(--txt-d)}',
+  example: { size: [640, 248], parts: [
+    { id: 'M', type: 'manifold', x: 40, y: 46, w: 560, label: 'bunker manifold',
+      outlets: [{ label: 'liquid 1' }, { label: 'liquid 2' }, { label: 'vapour return' }, { label: 'spare' }], value: 0 } ],
+    steps: [ { title: 'Liquid 1 is connected, the others stay blanked', play: [['M', 1, 1200]] },
+             { title: 'The vapour return is connected too', play: [['M', 3, 1800]] } ] }
+});
+/* end kit-part */
+/* kit-part: spool_piece */
+KIT.define('spool_piece', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 560, t = p.t || 26, sl = p.spool || 120, lift = p.lift || 64, fl = 10;
+  var gx = (w - sl) / 2, words = p.words || ['SEGREGATED', 'CONNECTED'], fh = t + 10;
+  function pipe(x0, x1) {
+    h.el('rect', { x: x0, y: -t / 2, width: x1 - x0, height: t, 'class': 'kit-steel' }, g);
+    return h.el('rect', { x: x0 + 3, y: -t / 2 + 5, width: Math.max(1, x1 - x0 - 6), height: t - 10, 'class': 'kit-liquid' }, g);
+  }
+  function support(x) {                                 // a pipe saddle under the pipe
+    h.el('path', { d: 'M' + (x - 6) + ' ' + t / 2 + ' L' + (x + 6) + ' ' + t / 2 + ' L' + (x + 16) + ' ' + (t / 2 + 16) + ' L' + (x - 16) + ' ' + (t / 2 + 16) + ' Z', 'class': 'kit-spool-piece-support' }, g);
+  }
+  pipe(0, gx - fl);
+  var rightFill = pipe(gx + sl + fl, w);
+  [18, gx - fl - 18, gx + sl + fl + 18, w - 18].forEach(support);
+  h.el('rect', { x: gx - fl, y: -fh / 2, width: fl, height: fh, rx: 2, 'class': 'kit-spool-piece-flange' }, g);
+  h.el('rect', { x: gx + sl, y: -fh / 2, width: fl, height: fh, rx: 2, 'class': 'kit-spool-piece-flange' }, g);
+  var sg = h.el('g', { 'class': 'kit-spool-piece-spool' }, g);
+  h.el('rect', { x: gx + fl, y: -t / 2, width: sl - 2 * fl, height: t, 'class': 'kit-steel' }, sg);
+  var sFill = h.el('rect', { x: gx + fl, y: -t / 2 + 5, width: sl - 2 * fl, height: t - 10, 'class': 'kit-liquid' }, sg);
+  h.el('rect', { x: gx, y: -fh / 2, width: fl, height: fh, rx: 2, 'class': 'kit-spool-piece-flange' }, sg);
+  h.el('rect', { x: gx + sl - fl, y: -fh / 2, width: fl, height: fh, rx: 2, 'class': 'kit-spool-piece-flange' }, sg);
+  var bl = h.el('rect', { x: gx, y: -fh / 2, width: 12, height: fh, rx: 2, 'class': 'kit-spool-piece-blind', 'data-may-cross': '' }, g);
+  var br = h.el('rect', { x: gx + sl - 12, y: -fh / 2, width: 12, height: fh, rx: 2, 'class': 'kit-spool-piece-blind', 'data-may-cross': '' }, g);
+  /* the spool's name stays where the spool is parked (a label that moves with the spool would be placed over both places) */
+  if (p.spoolLabel) h.label(fig, g, { x: gx + sl / 2, y: -fh / 2 - lift - 10, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.spoolLabel);
+  if (p.left) h.label(fig, g, { x: (gx - fl) / 2, y: fh / 2 + 24, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.left);
+  if (p.right) h.label(fig, g, { x: w - (gx - fl) / 2, y: fh / 2 + 24, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.right);
+  var lg = h.label(fig, g, {}, ''), ny = fh / 2 + 24, nl = 0;
+  if (p.label) nl = h.lines(lg, { x: w / 2, y: ny, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  var st = h.el('text', { x: w / 2, y: ny, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'middle', 'class': 'kit-state kit-spool-piece-st' }, lg);
+  part.render = function (v) {
+    var c = h.clamp(v, 0, 1);
+    sg.setAttribute('transform', 'translate(0 ' + (-(1 - c) * lift).toFixed(1) + ')');
+    sg.style.opacity = (0.75 + 0.25 * c).toFixed(2);
+    sFill.style.opacity = c > 0.5 ? '1' : '0';
+    rightFill.style.opacity = c > 0.5 ? '1' : '0';
+    bl.style.opacity = (1 - c).toFixed(2); br.style.opacity = (1 - c).toFixed(2);
+    st.textContent = c > 0.5 ? words[1] : words[0];
+    g.classList.toggle('kit-spool-piece-seg', c <= 0.5);
+  };
+}, {
+  family: 'piping',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M07 segregation of a gas line: two flanged pipe ends with a removable spool between them - fitted, the line is connected; removed, a blank flange on each end keeps the gas from passing (plan: media plan of module 7)',
+  value: '1 the spool is fitted and the line connected, 0 the spool is removed (it lifts away) and a blank flange is fitted on each end - SEGREGATED; between, it moves',
+  css: '.kit-spool-piece-flange{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2}' +
+    '.kit-spool-piece-support{fill:var(--deep-3);stroke:var(--faint-d);stroke-width:2;stroke-linejoin:round}' +
+    '.kit-spool-piece-blind{fill:var(--dim-d);stroke:var(--txt-d);stroke-width:1.5}' +
+    '.kit-spool-piece-seg .kit-spool-piece-st{fill:var(--blue)}',
+  example: { size: [640, 190], parts: [
+    { id: 'K', type: 'tank', x: 8, y: 54, w: 132, h: 100, label: 'LNG tank', value: 0.7 },
+    { id: 'S', type: 'spool_piece', x: 140, y: 104, w: 370, t: 30, spool: 130, lift: 46, label: 'gas supply line', left: 'tank side', right: 'engine side', spoolLabel: 'spool piece', value: 1 },
+    { id: 'E', type: 'engine', x: 510, y: 69, w: 122, h: 70, cylinders: 3, label: 'dual-fuel engine', value: 1 } ],
+    steps: [ { title: 'The spool is removed and each end blanked - no gas reaches the engine', play: [['S', 0, 1800], ['E', 0, 300, 1800]] },
+             { title: 'The spool is fitted again - the line is connected', play: [['S', 1, 1800], ['E', 1, 300, 1800]] } ] }
+});
+/* end kit-part */
+/* kit-part: tank_wall */
+KIT.define('tank_wall', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 300, def = [{ label: 'inner tank', kind: 'steel', h: 28 }, { label: 'insulation', kind: 'foam', h: 90 },
+    { label: 'secondary barrier', kind: 'barrier', h: 24 }, { label: 'hull', kind: 'steel', h: 44 }];
+  var layers = p.layers || def, y = 0, lx = w + 16;
+  function kind(l) {
+    if (l.kind) return l.kind;
+    return /insul|foam|perlite/i.test(l.label || '') ? 'foam' : (/barrier|membrane/i.test(l.label || '') ? 'barrier' : 'steel');
+  }
+  if (p.insideLabel) {                                  // the cargo side
+    h.el('rect', { x: 0, y: 0, width: w, height: 52, 'class': 'kit-liquid', 'data-no-contain': '' }, g);
+    h.el('line', { x1: 0, x2: w, y1: 0, y2: 0, 'class': 'kit-surface', 'data-may-cross': '' }, g);
+    h.label(fig, g, { x: lx, y: 31, 'text-anchor': 'start', 'class': 'kit-h' }, p.insideLabel);
+    y = 52;
+  }
+  var made = layers.map(function (l, i) {
+    var lh = l.h || def[Math.min(i, def.length - 1)].h, k = kind(l), lg = h.el('g', { 'class': 'kit-tank-wall-layer' }, g), y1 = y;
+    h.el('rect', { x: 0, y: y1, width: w, height: lh, 'class': 'kit-tank-wall-' + k }, lg);
+    if (k === 'foam') {
+      for (var r = 1; r <= 3; r++) {
+        h.el('line', { x1: 14, x2: w - 14, y1: y1 + lh * r / 4, y2: y1 + lh * r / 4, 'class': 'kit-tank-wall-cells' }, lg);
+      }
+    }
+    var wash = h.el('rect', { x: 0, y: y1, width: w, height: lh, 'class': 'kit-tank-wall-wash', 'data-may-overlap': '' }, lg);
+    h.label(fig, lg, { x: lx, y: y1 + lh / 2 + 4.5, 'text-anchor': 'start', 'class': 'kit-cap kit-tank-wall-nm' }, l.label || '');
+    y += lh;
+    return { g: lg, wash: wash };
+  });
+  if (p.outsideLabel) {
+    h.el('rect', { x: 0, y: y, width: w, height: 48, 'class': 'kit-tank-wall-out', 'data-no-contain': '' }, g);
+    h.label(fig, g, { x: lx, y: y + 29, 'text-anchor': 'start', 'class': 'kit-h' }, p.outsideLabel);
+  }
+  part.render = function (v) {
+    made.forEach(function (m, i) {
+      var pick = h.clamp(1 - Math.abs(v - (i + 1)), 0, 1);
+      m.wash.style.opacity = (pick * 0.55).toFixed(2);
+      m.g.classList.toggle('kit-tank-wall-lit', pick > 0.5);
+    });
+  };
+}, {
+  family: 'cutaways',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M07 the wall of a cryogenic LNG tank, cut away: inner tank, insulation, secondary barrier and hull, named from the cargo outward (plan: media plan of module 7)',
+  value: '0..n: layer k (counted from the cargo side, 1..n) is picked out while the value is about k, and 0 picks none; layers:[{label, kind steel|foam|barrier, h}] renames or drops layers',
+  css: '.kit-tank-wall-steel{fill:var(--deep-3);stroke:var(--faint-d);stroke-width:2}' +
+    '.kit-tank-wall-foam{fill:var(--deep);stroke:var(--faint-d);stroke-width:2}' +
+    '.kit-tank-wall-barrier{fill:var(--deep-2);stroke:var(--cold);stroke-width:2.5}' +
+    '.kit-tank-wall-cells{stroke:var(--dim-d);stroke-width:3;stroke-dasharray:2 9;stroke-linecap:round}' +
+    '.kit-tank-wall-wash{fill:var(--blue);opacity:0}' +
+    '.kit-tank-wall-out{fill:var(--deep);stroke:var(--faint-d);stroke-width:1.5;stroke-dasharray:6 5}' +
+    '.kit-tank-wall-lit .kit-tank-wall-nm{fill:var(--txt-d);font-weight:700}',
+  example: { size: [470, 318], parts: [
+    { id: 'W', type: 'tank_wall', x: 20, y: 16, w: 300, insideLabel: 'LNG, -163 °C', outsideLabel: 'sea', value: 0 } ],
+    steps: [ { title: 'The inner tank holds the LNG', play: [['W', 1, 700]] },
+             { title: 'The insulation keeps the cold in', play: [['W', 2, 700]] },
+             { title: 'The secondary barrier catches a leak', play: [['W', 3, 700]] },
+             { title: 'The hull is the ship\'s own steel', play: [['W', 4, 700]] } ] }
+});
+/* end kit-part */
+/* kit-part: spill */
+KIT.define('spill', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 300, water = p.surface === 'water', S = p.surfaceY || 150, T = water ? 50 : 16;
+  var fx = p.from != null ? p.from : w / 2, reach = p.reach || Math.min(fx, w - fx) - 8, words = p.words || ['SPREADING', 'BOILING OFF'];
+  var ht = water ? 4 : 7, wisps = [], bubs = [], i;
+  if (water) {
+    h.el('rect', { x: 0, y: S, width: w, height: T, 'class': 'kit-spill-water', 'data-low-contrast': '', 'data-no-contain': '' }, g);
+    var d = 'M0 ' + S;
+    for (i = 0; i < w / 30; i++) d += ' q 7.5 -6 15 0 t 15 0';
+    h.el('path', { d: d, 'class': 'kit-spill-wave', 'data-may-cross': '' }, g);
+  } else {
+    h.el('rect', { x: 0, y: S, width: w, height: T, 'class': 'kit-steel' }, g);
+    for (i = 30; i < w; i += 60) h.el('path', { d: 'M' + i + ' ' + (S + T) + ' V' + (S + 34), 'class': 'kit-spill-beam' }, g);   // the stiffeners under the deck plate
+  }
+  h.el('rect', { x: fx - 7, y: S - 124, width: 14, height: 46, 'class': 'kit-steel' }, g);
+  h.el('rect', { x: fx - 15, y: S - 78, width: 30, height: 7, rx: 2, 'class': 'kit-spill-flange' }, g);
+  var stream = h.el('line', { x1: fx, x2: fx, y1: S - 71, y2: S - 1, 'class': 'kit-spill-stream', 'data-may-cross': '' }, g);
+  var pool = h.el('path', { d: 'M' + fx + ' ' + S, 'class': 'kit-spill-pool', 'data-may-cross': '' }, g);
+  var fr = [-0.82, -0.52, -0.22, 0.12, 0.42, 0.72, 0.95];
+  fr.forEach(function (f, j) {
+    bubs.push(h.el('circle', { r: 3 + (j % 3), 'class': 'kit-spill-bub', 'data-low-contrast': '', 'data-may-cross': '' }, g));
+    var wg = h.el('g', {}, g);
+    h.el('path', { d: 'M0 0 q 7 -10 0 -20 t 0 -20 t 0 -20', 'class': 'kit-spill-wisp', 'data-low-contrast': '', 'data-may-cross': '' }, wg);
+    wisps.push(wg);
+  });
+  var lg = h.label(fig, g, {}, ''), ly = S + 50 + 24, nl = 0;       // deck and water name themselves on one line
+  if (p.label) nl = h.lines(lg, { x: w / 2, y: ly, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  var st = h.el('text', { x: w / 2, y: ly, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'middle', 'class': 'kit-state kit-spill-st' }, lg);
+  part.render = function (v) {
+    var c = h.clamp(v, 0, 1), r = reach * (water ? 1 - Math.pow(1 - c, 2.2) : Math.pow(c, 0.8)), boil = h.clamp((c - 0.45) / 0.4, 0, 1);
+    stream.style.opacity = c > 0.01 ? '1' : '0';
+    pool.setAttribute('d', r < 1 ? 'M' + fx + ' ' + S : 'M' + (fx - r).toFixed(1) + ' ' + S + ' Q' + fx + ' ' + (S - 2 * ht) + ' ' + (fx + r).toFixed(1) + ' ' + S + ' Z');
+    wisps.forEach(function (wg, j) {
+      var x = fx + fr[j] * r, sc = boil * (water ? 1.35 : 1) * (0.7 + 0.1 * (j % 4));
+      wg.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + (S - ht - 6) + ') scale(1 ' + sc.toFixed(2) + ')');
+      wg.style.opacity = boil.toFixed(2);
+      bubs[j].setAttribute('cx', x.toFixed(1)); bubs[j].setAttribute('cy', (S - ht - 3 - 3 * (j % 3)).toFixed(1));
+      bubs[j].style.opacity = boil.toFixed(2);
+    });
+    st.textContent = c < 0.02 ? '' : (boil > 0.5 ? words[1] : words[0]);
+    g.classList.toggle('kit-spill-boil', boil > 0.5);
+  };
+  part.motion = function (d) { g.classList.toggle('kit-spill-live', d > 0); };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M15 LNG spilt on the deck and on the water: a pool spreads from the leak (far wider and thinner on water) and boils off in vapour - why the deck is steel and why water is not a safe place for a spill (plan: media plan of module 15)',
+  value: '0..1 how far the pool has spread from the leak; from about 0.5 it boils (bubbles and rising vapour wisps); surface "deck" or "water" (drawn as water, the pool spreads wider and boils harder)',
+  css: '.kit-spill-water{fill:var(--cold);fill-opacity:.14;stroke:none}' +
+    '.kit-spill-wave{fill:none;stroke:var(--cold);stroke-width:2.5}' +
+    '.kit-spill-beam{fill:none;stroke:var(--faint-d);stroke-width:3}' +
+    '.kit-spill-flange{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2}' +
+    '.kit-spill-stream{stroke:var(--cold);stroke-width:3;opacity:0}' +
+    '.kit-spill-pool{fill:var(--cold);fill-opacity:.7;stroke:var(--cold);stroke-width:1.5;stroke-linejoin:round}' +
+    '.kit-spill-bub{fill:none;stroke:var(--txt-d);stroke-width:1.5;opacity:0}' +
+    '.kit-spill-wisp{fill:none;stroke:var(--txt-d);stroke-width:2.5;stroke-linecap:round;opacity:.45}' +
+    '.kit-spill-live .kit-spill-wisp{animation:kit-spill-rise 1.1s ease-out infinite}' +
+    '@keyframes kit-spill-rise{0%{opacity:.15}100%{opacity:.6}}',
+  example: { size: [640, 240], parts: [
+    { id: 'D', type: 'spill', x: 10, y: 10, w: 300, surface: 'deck', label: 'LNG on deck', value: 0 },
+    { id: 'W', type: 'spill', x: 330, y: 10, w: 300, surface: 'water', label: 'LNG on water', value: 0 } ],
+    steps: [ { title: 'The LNG spreads - much further and thinner on water', play: [['D', 0.4, 1800, 0, 'linear'], ['W', 0.55, 1800, 0, 'linear']] },
+             { title: 'Both pools boil off in vapour', play: [['D', 1, 2200, 0, 'linear'], ['W', 1, 2200, 0, 'linear']] } ] }
+});
+/* end kit-part */
+/* kit-part: wind */
+KIT.define('wind', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 260, rows = p.rows || 5, gap = p.gap || 34, ht = gap * (rows - 1), words = p.words || ['CALM', 'LIGHT', 'MODERATE', 'STRONG'];
+  var cx = w / 2, cy = ht / 2, ang = (p.dir || 0) * Math.PI / 180, off = [0.04, 0.2, 0, 0.14, 0.09], mul = [1, 0.8, 1.1, 0.7, 0.95];
+  var R = Math.abs(cx * Math.sin(ang)) + Math.abs(cy * Math.cos(ang));          // half the height of the turned drawing
+  var rg = h.el('g', { transform: 'rotate(' + (p.dir || 0) + ' ' + cx + ' ' + cy + ')' }, g), streaks = [];
+  for (var i = 0; i < rows; i++) {
+    var sg = h.el('g', { 'class': 'kit-wind-streak' }, rg);
+    streaks.push({
+      line: h.el('line', { y1: i * gap, y2: i * gap, 'class': 'kit-wind-line', 'data-may-cross': '' }, sg),
+      head: h.el('path', { d: 'M0 -7 L13 0 L0 7 Z', 'class': 'kit-wind-head', 'data-may-cross': '' }, sg), g: sg, y: i * gap, o: off[i % off.length], m: mul[i % mul.length]
+    });
+  }
+  var lg = h.label(fig, g, {}, ''), ly = cy + R + 24, nl = 0;
+  if (p.label) nl = h.lines(lg, { x: cx, y: ly, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  var st = h.el('text', { x: cx, y: ly, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'middle', 'class': 'kit-state' }, lg);
+  part.render = function (v) {
+    var c = h.clamp(v, 0, 1);
+    streaks.forEach(function (s, i) {
+      var len = w * (0.22 + 0.5 * c) * s.m, x0 = s.o * w * (0.4 + c), vis = h.clamp((c - i * 0.12) * 8, 0, 1);
+      s.line.setAttribute('x1', x0.toFixed(1)); s.line.setAttribute('x2', (x0 + len - 6).toFixed(1));
+      s.head.setAttribute('transform', 'translate(' + (x0 + len - 6).toFixed(1) + ' ' + s.y + ')');
+      s.g.style.opacity = (0.8 + 0.2 * vis).toFixed(2);
+    });
+    st.textContent = p.max ? Math.round(c * p.max) + (p.unit ? ' ' + p.unit : '') : (c < 0.05 ? words[0] : (c < 0.4 ? words[1] : (c < 0.75 ? words[2] : words[3])));
+  };
+  part.motion = function (d) { g.classList.toggle('kit-wind-live', d !== 0); };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M06 a vapour cloud drifts with the wind: the direction and strength of the wind that carries a leak away from, or over, the deck (plan: media plan of module 6)',
+  value: '0..1 how strong the wind is: more and longer streaks, faster while it changes; dir is the way it blows, in degrees (0 = to the right, 90 = down); with max and unit the words are a reading (12 m/s), else CALM / LIGHT / MODERATE / STRONG',
+  css: '.kit-wind-line{stroke:var(--cold);stroke-width:3.5;stroke-linecap:round}' +
+    '.kit-wind-head{fill:var(--cold)}' +
+    '.kit-wind-live .kit-wind-line{stroke-dasharray:26 14;animation:kit-wind-run .6s linear infinite}' +
+    '@keyframes kit-wind-run{to{stroke-dashoffset:-40}}',
+  example: { size: [640, 330], parts: [
+    { id: 'R', type: 'space', x: 10, y: 40, w: 270, h: 210, label: 'open deck', value: 0 },
+    { id: 'C', type: 'gas_cloud', x: 15, y: 50, w: 260, h: 190, from: [70, 130], value: 0 },
+    { id: 'W', type: 'wind', x: 320, y: 56, w: 300, rows: 6, gap: 40, dir: 0, label: 'wind', value: 0 } ],
+    steps: [ { title: 'A light wind - the gas gathers slowly', play: [['W', 0.3, 1400], ['C', 0.5, 2000, 0, 'linear']] },
+             { title: 'A strong wind carries the cloud away', play: [['W', 1, 1600], ['C', 1, 2000, 0, 'linear']] } ] }
+});
+/* end kit-part */
+/* kit-part: tree */
+KIT.define('tree', function (fig, part, g, p) {
+  var h = KIT.h, nodes = [], kids = [];
+  function norm(n) { return typeof n === 'string' ? { label: n } : n; }
+  var link = h.el('path', { d: 'M0 0', 'class': 'kit-tree-link' }, g);
+  var probeH = h.el('text', { x: 0, y: 0, 'class': 'kit-h kit-tree-probe' }, g, ''), probeC = h.el('text', { x: 0, y: 0, 'class': 'kit-cap kit-tree-probe' }, g, '');
+  function make(n, big, level) {
+    var ng = h.el('g', { 'class': 'kit-tree-node' }, g), rect = h.el('rect', { rx: 8, 'class': 'kit-tree-box' }, ng);
+    var text = h.el('text', { x: 0, y: 0, 'text-anchor': 'middle', 'class': big ? 'kit-h' : 'kit-cap' }, ng);
+    var rows = String(n.label || '').split('\n');
+    rows.forEach(function (s, i) { h.el('tspan', { x: 0, dy: i ? (16 / 12.5).toFixed(3) + 'em' : 0 }, text, s); });
+    var o = { g: ng, rect: rect, text: text, rows: rows, big: big, level: level, w: 0, h: 0, x: 0, y: 0, kids: [] };
+    nodes.push(o);
+    return o;
+  }
+  var root = make(norm(p.root || { label: '' }), true, 0);
+  (p.children || []).forEach(function (c) {
+    var n = norm(c), o = make(n, false, 1);
+    root.kids.push(o); kids.push(o);
+  });
+  (p.children || []).forEach(function (c, i) {            // the second level comes after the first, in reading order
+    (norm(c).children || []).forEach(function (s) { kids[i].kids.push(make(norm(s), false, 2)); });
+  });
+  function size(o, k) {
+    o.w = Math.max(p.minW || 104, h.widest(o.big ? probeH : probeC, o.rows) + 36);
+    o.h = o.rows.length * 16 * k + 28 * k;
+  }
+  function put(o, x, y, k) {
+    o.x = x; o.y = y;
+    o.rect.setAttribute('x', x.toFixed(1)); o.rect.setAttribute('y', y.toFixed(1));
+    o.rect.setAttribute('width', o.w.toFixed(1)); o.rect.setAttribute('height', o.h.toFixed(1));
+    var lh = 16 * k, top = y + (o.h - o.rows.length * lh) / 2, base = top + lh / 2 + 0.36 * (o.big ? 15 : 12.5) * k, cx = x + o.w / 2;
+    o.text.setAttribute('x', cx.toFixed(1)); o.text.setAttribute('y', base.toFixed(1));
+    [].forEach.call(o.text.childNodes, function (t) { t.setAttribute('x', cx.toFixed(1)); });
+  }
+  function place(k) {
+    var gapX = 26, gapY = 56 * Math.max(1, k * 0.9), ind = 28, rowH = 0;
+    nodes.forEach(function (o) { size(o, k); });
+    kids.forEach(function (o) { rowH = Math.max(rowH, o.h); });
+    kids.forEach(function (o) { o.h = rowH; });
+    var cols = kids.map(function (o) {
+      var gw = 0; o.kids.forEach(function (s) { gw = Math.max(gw, s.w); });
+      return Math.max(o.w, o.kids.length ? ind + gw : 0);
+    });
+    var rowW = cols.reduce(function (a, b) { return a + b; }, 0) + gapX * Math.max(0, kids.length - 1);
+    var total = Math.max(rowW, root.w), x = (total - rowW) / 2, d = '';
+    put(root, (total - root.w) / 2, 0, k);
+    var rcx = root.x + root.w / 2, busY = root.h + gapY / 2, y1 = root.h + gapY;
+    var firstCx = 0, lastCx = 0;
+    kids.forEach(function (o, i) {
+      put(o, x, y1, k);
+      var ccx = o.x + o.w / 2;
+      if (i === 0) firstCx = ccx;
+      lastCx = ccx;
+      d += 'M' + ccx.toFixed(1) + ' ' + busY.toFixed(1) + ' V' + y1.toFixed(1);
+      if (o.kids.length) {
+        var sx = o.x + 12, yy = y1 + o.h + 12, yEnd = yy;
+        o.kids.forEach(function (s) {
+          put(s, o.x + ind, yy, k);
+          yEnd = yy + s.h / 2;
+          d += 'M' + sx.toFixed(1) + ' ' + yEnd.toFixed(1) + ' H' + s.x.toFixed(1);
+          yy += s.h + 10;
+        });
+        d += 'M' + sx.toFixed(1) + ' ' + (y1 + o.h).toFixed(1) + ' V' + yEnd.toFixed(1);
+      }
+      x += cols[i] + gapX;
+    });
+    if (kids.length) d += 'M' + rcx.toFixed(1) + ' ' + root.h.toFixed(1) + ' V' + busY.toFixed(1) + ' M' + firstCx.toFixed(1) + ' ' + busY.toFixed(1) + ' H' + lastCx.toFixed(1);
+    link.setAttribute('d', d || 'M0 0');
+  }
+  place(1);
+  fig.fit(place);
+  part.render = function (v) {
+    var idx = Math.round(v);
+    nodes.forEach(function (o, i) {
+      o.g.classList.toggle('kit-tree-lit', idx === i + 1);
+      o.g.classList.toggle('kit-tree-seen', idx > i + 1);
+    });
+  };
+}, {
+  family: 'procedures',
+  status: 'kit', merged_from: "IGF Basic M05-M15",
+  course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
+  why: 'M14 the emergency organisation and M15 the reporting chain: who leads and who reports to whom, as boxes joined by lines (plan: media plans of modules 14 and 15)',
+  value: '0..n lights box k, in reading order (the root is 1, then its children left to right, then the second level under them in the same order); 0 lights none, and the boxes passed keep a blue edge',
+  css: '.kit-tree-probe{opacity:0}' +
+    '.kit-tree-link{fill:none;stroke:var(--faint-d);stroke-width:2;stroke-linejoin:round}' +
+    '.kit-tree-box{fill:var(--deep-3);stroke:var(--faint-d);stroke-width:2}' +
+    '.kit-tree-seen .kit-tree-box{stroke:var(--blue)}' +
+    '.kit-tree-lit .kit-tree-box{fill:var(--deep);stroke:var(--blue);stroke-width:3.5}' +
+    '.kit-tree-lit text{fill:var(--txt-d)}',
+  example: { size: [520, 300], parts: [
+    { id: 'T', type: 'tree', x: 10, y: 10, root: 'Master', value: 0,
+      children: [{ label: 'Chief officer\n(on-scene leader)', children: ['Deck team', 'Fire team'] },
+                 { label: 'Chief engineer\n(engine control)', children: ['Engine team'] },
+                 { label: 'Second officer\n(communications)' }] } ],
+    steps: [ { title: 'The master commands the emergency', play: [['T', 1, 500]] },
+             { title: 'The chief officer leads on the scene', play: [['T', 2, 500]] },
+             { title: 'The deck team reports to the chief officer', play: [['T', 5, 600]] } ] }
 });
 /* end kit-part */
 /* kit-parts: end */
