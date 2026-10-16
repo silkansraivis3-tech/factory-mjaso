@@ -1,6 +1,6 @@
-# The task screens' and start pages' own words in Latvian and Russian — PROVISIONAL, for review
+# The task screens', start pages' and deck's own words in Latvian and Russian — PROVISIONAL, for review
 
-Status: **PROVISIONAL** (2.40.0, 2026-10-16). Written by Claude, not yet checked by a native speaker. Every line below
+Status: **PROVISIONAL** (2.40.0, 2026-10-16; the deck's words 2.41.0, same day). Written by Claude, not yet checked by a native speaker. Every line below
 is used by the compiler as it stands; a correction is made in the code named in each table and this file is updated
 with it. When a speaker has checked a language, change its status line here to "checked by <name>, <date>".
 
@@ -126,9 +126,47 @@ ru открыт / закрыт, открыто / закрыто, включен 
 | final | Final assessment | Noslēguma pārbaudījums | Итоговая аттестация |
 | mc | Module check | Moduļa pārbaude | Проверка по модулю |
 
-## 4 · Not covered here
+## 4 · The deck's own words — `course-module-ux/assets/gb_deck.js` (LANG, by the page's `<html lang>`) — 2.41.0
 
-- The deck's own controls (`gb_deck.js`: Next, Back ...) are not part of this change — check them before an lv / ru
-  deck goes in front of a class. The picture viewer (`gb_zoom.js`) already has lv and ru.
+The deck is the instructor's, so it uses the polite form (lv *jūs*, ru *вы*), as the start pages do. The chrome is
+copied from `gb_shell.html` in English, word for word; the engine puts these words on the controls (label and tooltip,
+the tooltip with its key: "Tālāk (→)") when the page's language is lv or ru. `GBDeck.init({text})` still overrides any.
+
+| key | English | Latvian (lv) | Russian (ru) |
+|---|---|---|---|
+| next | Next | Tālāk | Далее |
+| back | Back | Atpakaļ | Назад |
+| start | Start | Sākt | Начать |
+| grid | All screens | Visi ekrāni | Все экраны |
+| cue | Instructor cue | Norāde instruktoram | Подсказка для инструктора |
+| noCue | No cue for this screen. | Šim ekrānam norādes nav. | Для этого экрана подсказки нет. |
+| full | Fullscreen | Pilnekrāns | Полный экран |
+| leave | Leave | Iziet | Выйти |
+| close | Close | Aizvērt | Закрыть |
+| screen | Screen {n} | {n}. ekrāns | Экран {n} |
+| of | of | no | из |
+| ovHint | Tap a screen to jump there · G closes this view | Pieskarieties ekrānam, lai uz to pārietu · G aizver šo skatu | Коснитесь экрана, чтобы перейти к нему · G закрывает этот вид |
+| hint | → / Space next · ← back · F fullscreen · G all screens · N instructor cue | → / atstarpe – tālāk · ← atpakaļ · F pilnekrāns · G visi ekrāni · N norāde instruktoram | → / пробел – далее · ← назад · F полный экран · G все экраны · N подсказка для инструктора |
+| missing | Navigation controls are missing from this page. Add the chrome block from gb_shell.html before delivering this module. | Šajā lapā trūkst navigācijas pogu. Pirms šī moduļa vadīšanas pievienojiet pogu bloku no gb_shell.html. | На этой странице нет кнопок навигации. Перед проведением модуля добавьте блок кнопок из gb_shell.html. |
+
+Terms to check first: *instructor cue* = lv *norāde instruktoram*, ru *подсказка для инструктора* (a cue is what
+to say or do on that screen); *leave* (the presentation) = lv *iziet*, ru *выйти*; the Space key = lv *atstarpe*,
+ru *пробел*.
+
+## 5 · The deck's landing card — `compile/scripts/compile_module.py` LANDING — 2.41.0
+
+| key | English | Latvian (lv) | Russian (ru) |
+|---|---|---|---|
+| module | Module {n} | {n}. modulis | Модуль {n} |
+| min | {n} min | {n} min | {n} мин |
+| screens | {n} teaching screens | Mācību ekrāni: {n} | Учебных экранов: {n} |
+| sc | Self-check {c} | Paškontrole {c} | Самопроверка {c} |
+| mc | Module check MC | Moduļa pārbaude MC | Проверка по модулю MC |
+| fa | Final assessment | Noslēguma pārbaudījums | Итоговая аттестация |
+| task | Task {c} | Uzdevums {c} | Задание {c} |
+
+## 6 · Not covered here
+
+- The picture viewer (`gb_zoom.js`) has its own lv and ru (Aizvērt / Закрыть ...), written before this file.
 - The "ru" module check head word on the result screen is ЗАЧТЕНО / НЕ ЗАЧТЕНО; if the college uses
   "СДАНО / НЕ СДАНО" for a module check, change both lines together.

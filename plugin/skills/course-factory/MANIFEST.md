@@ -874,6 +874,17 @@ is built with English factory words, never silently. `compile_module.lang_code()
 "lv" to lv (the deck, task pages and start pages wrote `lang="la"`), and `slug()` turns a Latvian or Russian title
 into plain letters for the file name. The owner's ruling stands: every course is English unless explicitly not.
 
+## 4zk · The deck's own words in Latvian and Russian (2.41.0, 2026-10-16)
+
+L19, the deck's turn: a Latvian or Russian deck still had Next, Back, All screens, the instructor cue and the landing
+card's chips in English beside its Latvian or Russian content. `gb_deck.js` now has a `LANG` table (en / lv / ru,
+picked by `<html lang>` as `gb_answer.js` does; `GBDeck.init({text})` still overrides) and puts the words on the
+chrome's labels and tooltips, the Start button, the overview and the landing hint - the chrome itself stays copied from
+`gb_shell.html` word for word. The compiler no longer passes English words to `GBDeck.init`, and the landing card's
+chips are in the course language (`compile_module.py` LANDING); a language with no words is reported, exit 1. The
+polite form, as on the start pages. **PROVISIONAL**, listed in `compile/TRANSLATIONS_REVIEW.md` §4-5. Test: a
+Latvian deck driven in Chrome (`test_task_engine.py`).
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

@@ -206,6 +206,90 @@ def language_part(exe, tmp):
           and (r.get("report") or {}).get("ok") == 3, r)
 
 
+DECK_DRIVER = r"""
+(function () {
+  var out = {errors: []};
+  window.addEventListener('error', function (e) { out.errors.push(String(e.message)); });
+  function q(s) { return document.querySelector(s); }
+  function txt(s) { var n = q(s); return n ? n.textContent.replace(/\s+/g, ' ').trim() : null; }
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      try {
+        out.labels = {};
+        ['btnGrid', 'btnCue', 'btnPrev', 'btnNext', 'btnFull', 'btnExit'].forEach(function (id) {
+          var b = document.getElementById(id);
+          out.labels[id] = b.getAttribute('aria-label') + '|' + b.getAttribute('title');
+        });
+        out.start = txt('#startBtn'); out.hint = txt('.landing-hint'); out.mod = txt('.landing-mod');
+        out.chips = txt('.landing-meta'); out.close = txt('#ovClose'); out.ovHead = txt('#overview .ov-head');
+        out.back = txt('.gbt-topback');
+        document.getElementById('startBtn').click();
+        document.getElementById('btnCue').click();
+        out.cue = txt('#cue .tag');
+      } catch (err) { out.errors.push(String(err && err.stack || err)); }
+      var pre = document.createElement('pre'); pre.id = 'gbtest'; pre.textContent = JSON.stringify(out);
+      document.body.appendChild(pre);
+    }, 50);
+  });
+}());
+"""
+
+
+def drive_deck(exe, page, tmp, lang=None):
+    """the deck opened as the instructor does; lang= puts the same page in another <html lang>"""
+    text = io.open(page, encoding="utf-8").read()
+    if lang:
+        text = re.sub(r'<html lang="[^"]*">', '<html lang="%s">' % lang, text, count=1)
+    text = re.sub(r"<head>", '<head><base href="%s/">' % Path(os.path.dirname(page)).as_uri(), text, count=1)
+    i = text.rfind("</body>")
+    text = text[:i] + "<script>%s</script>" % DECK_DRIVER + text[i:]
+    w = os.path.join(tmp, "deck.html")
+    io.open(w, "w", encoding="utf-8").write(text)
+    p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--user-data-dir=" + os.path.join(tmp, "prof"),
+                        "--allow-file-access-from-files", "--window-size=1280,800", "--virtual-time-budget=10000", "--dump-dom", Path(w).as_uri()],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+    m = re.search(r'<pre id="gbtest">(.*?)</pre>', p.stdout, re.S)
+    return json.loads(html.unescape(m.group(1))) if m else {"errors": ["no result: " + p.stdout[-300:] + p.stderr[-300:]]}
+
+
+def deck_language_part(exe, tmp):
+    """L19: the deck engine's own words (gb_deck.js LANG) and the landing card in the page's language - lv here"""
+    print("\n-- a Latvian deck")
+    os.makedirs(os.path.join(tmp, "dlv"))
+    sc = tcm.script(screens=tcm.IN_LANGUAGE["Latvian"])
+    sc["course_language"] = "Latvian"
+    sc.update(approved_hash=tcm.cs.content_hash(sc))
+    c, md = tcm.new_course(os.path.join(tmp, "dlv"), sc, build=False)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {"t01": {"try_tablet": False}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
+    page = tcm.deck(md)
+    check("the Latvian deck is built with no language problem, marked lang=\"lv\", no English words passed to the engine",
+          code == 0 and '<html lang="lv">' in page and "GBDeck.init({ hooks:" in page and "not in the factory" not in out, out)
+    r = drive_deck(exe, os.path.join(md, "presentation", "index.html"), tmp)
+    lab = r.get("labels") or {}
+    check("no script error on the Latvian deck", not r.get("errors"), r.get("errors"))
+    check("the controls speak Latvian: Tālāk (→), Atpakaļ (←), Visi ekrāni (G), Norāde instruktoram (N), Iziet",
+          lab.get("btnNext") == "Tālāk|Tālāk (→)" and lab.get("btnPrev") == "Atpakaļ|Atpakaļ (←)" and lab.get("btnGrid") == "Visi ekrāni|Visi ekrāni (G)"
+          and lab.get("btnCue") == "Norāde instruktoram|Norāde instruktoram (N)" and lab.get("btnFull") == "Pilnekrāns|Pilnekrāns (F)"
+          and lab.get("btnExit") == "Iziet|Iziet", lab)
+    check("Start, the overview, the landing hint, the Back link and the cue's tag in Latvian",
+          r.get("start") == "Sākt" and r.get("close") == "Aizvērt" and (r.get("ovHead") or "").startswith("Visi ekrāniPieskarieties ekrānam")
+          and (r.get("hint") or "").startswith("→ / atstarpe – tālāk") and r.get("back") == "Atpakaļ" and r.get("cue") == "Norāde instruktoram", r)
+    check("the landing card's chips in Latvian: 1. modulis, 25 min, Mācību ekrāni: 0, Paškontrole SC1, Moduļa pārbaude MC",
+          (r.get("mod") or "").endswith("1. modulis") and "Mācību ekrāni: 0" in (r.get("chips") or "") and "Paškontrole SC1" in (r.get("chips") or "")
+          and "Moduļa pārbaude MC" in (r.get("chips") or ""), r)
+    check("no English word of the deck's own left on the Latvian landing or controls",
+          not re.search(r"\b(Next|Back|Start|All screens|Instructor cue|Fullscreen|Leave|Close|teaching screens|Self-check|Module)\b",
+                        json.dumps(r, ensure_ascii=False)), r)
+    r = drive_deck(exe, os.path.join(md, "presentation", "index.html"), tmp, lang="en")
+    check("the same deck as an English page keeps the frame's own English words",
+          not r.get("errors") and (r.get("labels") or {}).get("btnNext") == "Next|Next (→)" and r.get("cue") == "Instructor cue"
+          and r.get("back") == "Back", r)
+    eng = io.open(os.path.join(tcm.SKILLS, "course-module-ux", "assets", "gb_deck.js"), encoding="utf-8").read()
+    check("the deck engine has its words in lv and ru, chosen by <html lang>, marked PROVISIONAL",
+          "Tālāk" in eng and "Далее" in eng and "PROVISIONAL" in eng and 'documentElement.getAttribute("lang")' in eng)
+
+
 def main():
     exe = drawing_check.find_browser()
     if not exe:
@@ -247,6 +331,7 @@ def main():
               "fixed" in look.get("cargo", "") and look.get("cargo", "").endswith("|tray") and look.get("permit", "").endswith("|3"), look)
         team_part(exe, tmp)
         language_part(exe, tmp)
+        deck_language_part(exe, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

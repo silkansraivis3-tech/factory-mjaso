@@ -214,8 +214,9 @@ from what is already approved and built, nothing new:
 - A module agent never runs it: two agents writing `COURSE.html` is a lost write no test catches
   (`orchestration/GUIDE.md` Rule 3).
 
-**Languages (2.40.0, L19).** The words the factory itself puts on a task page (`task_pages.py` WORDS, the engine's in
-`gb_answer.js`) and on the start pages (`compile_course.py` WORDS) exist in English, Latvian and Russian, chosen by
+**Languages (2.40.0, L19; the deck 2.41.0).** The words the factory itself puts on a task page (`task_pages.py` WORDS,
+the engine's in `gb_answer.js`), on the deck (the deck engine's in `gb_deck.js` LANG, the landing card's in
+`compile_module.py` LANDING) and on the start pages (`compile_course.py` WORDS) exist in English, Latvian and Russian, chosen by
 the script's / architecture's `course_language` - the whole page in one language, `<html lang>` set to its code
 ("Latvian" is lv, never "la"). The lv and ru words are **PROVISIONAL** until a native speaker has checked them:
 `compile/TRANSLATIONS_REVIEW.md` lists every one. Any other language is reported (exit 1) and the factory's words
