@@ -22,11 +22,12 @@ guide exists is that the failures are all in that seam, not in the parallelism.
      v
   1..N MODULE        one agent per module, all at once
      |               each owns exactly one folder and nothing else
+     |               script -> operator approves -> compiled (never typed)
      v
   Q  QA              per module as it lands, then one cross-module pass
      |
      v
-  +  ASSEMBLY        the orchestrator alone: registry, handout, hours total, publish
+  +  ASSEMBLY        the orchestrator alone: compile_course.py, handout, hours total, publish
 ```
 
 Four rules hold that shape together. Each is here because dropping it produces a specific,
@@ -79,10 +80,15 @@ disagreeing is still free.
 
 ## Rule 3 · One agent, one folder — and the orchestrator owns everything shared
 
-Every module agent may write **only** inside `modules/mN/`. Everything that more than one module
-touches is written by the orchestrator after the fan-out, alone:
+Every module agent may write **only** inside `modules/moduleNN/` and its own `working_claude\script\MNN.*`
+and `working_claude\figures\MNN\`. Everything that more than one module touches is written by the
+orchestrator after the fan-out, alone:
 
-- `courses/<id>/course.json` and the generated `courses/registry.js`
+- the course's own pages: `compile/scripts/compile_course.py` writes `COURSE.html`, `_course_shell/course_map.js`
+  and every module's `START_HERE.html` / `START_HERE_EXTENDED.html` from the approved architecture, the scripts
+  and the built decks; `scripts/check_course_package.py` then runs the classroom's importer on them (2.37.0)
+- `courses/<id>/course.json` and the generated `courses/registry.js`, when the course goes to the Android
+  terminals (`course-tablet-publisher`)
 - the handout — it is one document with one running structure, and it is also the overflow valve
   for L1, so it cannot be assembled until every module knows what it could not fit
 - the instructor run content, the task manifest, the cross-module checks
@@ -129,7 +135,7 @@ the operator states during review goes into `working_claude\STANDARDS.md`, and b
 | | Model | Tools | Reads | Writes |
 |---|---|---|---|---|
 | **Reader** | the strongest available | read + search only | programme, model course, KB | `MODULE_MAP.md`, `ILO_MAP.md` |
-| **Module** | the strongest available | full | its own rows of the two maps, the visual system, its source extracts | `modules/mN/` only |
+| **Module** | the strongest available | full | its own rows of the two maps, its source extracts, `script/GUIDE.md`, then - once its script is approved - `compile/GUIDE.md` and the picture lanes (`course-visuals`). **Not** the HTML rules (`course-module-ux`, `course-module-ui`, `course-task-ux`): the compiler builds their standard | its script and build sheet, its figures, `modules/moduleNN/` - and never HTML by hand |
 | **Visual** | the `nano-banana:image-director` agent (generates) or `course-factory:visual-sourcer` (finds) | read, write, web, the nano-banana tools | a `GENERATED_ASSET_REQUIRED` brief | the asset files named in the brief |
 | **QA** | strong; never the builder | read + run checks | the module, the two maps | a findings list — **never a fix** |
 
@@ -173,3 +179,10 @@ particular course.
 **The gate is not automated, and must not be.** The script stops after the reader and prints the
 table. The module split and the minutes are the expensive things to get wrong, and changing a table
 row is free while changing eight built modules is not.
+
+**Neither is the script approval (L29).** In pass 2 a module agent whose content script is not approved
+writes it and stops at its review page; the operator approves each one, and pass 2 runs again - an approved
+module is then compiled, never typed. So a module agent loads the script lane and the picture lanes, not the
+HTML rules: about **38,500 tokens of rules instead of 80,800** before its first slide (measured on 2.37.0,
+size ÷ 4, `docs/PROPOSAL_SCRIPT_COMPILER.md` §6), and it no longer writes the 80-160 KB of deck and task
+HTML a module of the IGF pilot has - it writes a 3-5 KB build sheet and its figures.

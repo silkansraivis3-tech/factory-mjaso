@@ -81,6 +81,7 @@ course-factory/
 ├── scripts/content_script.py, check_script_match.py, test_content_script.py   the script, the Word copy, corrections on confirmation, the word-for-word match
 ├── compile/GUIDE.md                      READ IN: building the deck from the approved script (2.25.0)
 ├── compile/scripts/compile_module.py, test_compile_module.py   the deck built, never typed; build sheet; hand edits never overwritten
+├── compile/scripts/compile_course.py, test_compile_course.py   COURSE.html, course_map.js, every module's start pages (2.37.0)
 ├── hours/                                READ IN: plan mode, and audit
 │   ├── GUIDE.md
 │   ├── knowledge/hours-rules.json        every number and rule (authority)
@@ -804,6 +805,22 @@ inside a fragment that is its own row-flex `.fill` (3D model + controls) squeeze
 the words unless the drawing's box is the compiler's own (`OWN_BOX`); the stage-with-legend layout no longer drops what
 goes with the words; `gb_compose.css` `.fill.fig figure.inset img` keeps an inset under a kit figure at inset size (it
 grew to ~590 × 440 and squashed `.kit-screen`). `test_compile_module.py` 85.
+
+## 4zg · The course's own pages built; module agents compile (2.37.0, 2026-10-16)
+
+Steps 4 and 5 of `docs/PROPOSAL_SCRIPT_COMPILER.md`. `classroom-system.json:8` said the factory writes
+`COURSE.html` and `course_map.js`; no script did, so every course typed them and both start pages of every module.
+`compile/scripts/compile_course.py` builds them from what is approved and built: the title from `architecture.json`,
+each module's title and minutes from its approved script, the hours from `programme.json`, how the course is named
+from `working_claude\course.build.json`, a module's tasks from its built deck's task slides, its instructor files from
+the folder. The course title is recorded at the first build and never changes without `--retitle` - it is the
+classroom's course ID - also against a hand-made `COURSE.html`. A planned module not built yet is named, never listed;
+a task slide whose page is missing is reported; hand-changed pages are kept without `--force`. `course.json` is left
+to the importer. On a copy of the IGF pilot: `check_course_package.py` and the importer find nothing wrong with the
+built pages, same course ID. Step 5: `build-order.json` steps 8, 10, 11, 15, `orchestration/GUIDE.md` (Rule 3, the
+agents table) and `orchestration/workflows/build_course.js` send a module agent through script → approval → build
+sheet → compile, writing no HTML and loading no HTML rules: ≈ 80,800 → 38,500 tokens of rules per module agent
+(measured, size ÷ 4). `test_compile_course.py` 21 checks.
 
 ## 5 · Known gaps / before this goes live
 

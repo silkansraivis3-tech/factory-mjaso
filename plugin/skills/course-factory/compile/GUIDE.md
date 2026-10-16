@@ -12,6 +12,14 @@ python compile/scripts/compile_module.py <course> --module 1                buil
 python scripts/check_script_match.py <course> --module 1 --part instructor  the words are the approved ones
 ```
 
+When the modules are built - and again whenever one is added or its tasks change - the course's own pages, once
+for the whole course, by one process (never a module agent: §5):
+
+```
+python compile/scripts/compile_course.py <course>                 COURSE.html, _course_shell\course_map.js, every module's start pages
+python scripts/check_course_package.py <course>\modules           the classroom's own importer
+```
+
 Then the usual checks: `check_navigation.py`, `check_course_package.py`, and in the browser the
 `audit_deck.js`, `audit_collide.js` and `audit_compose.js` probes — the compiler does not prove a layout
 fits, the audits do. The drawing check (`audit_drawing.js`) is the one the build runs itself (§2e).
@@ -162,5 +170,29 @@ drawings' colours only.
 - A missing picture is listed, never invented.
 - The same script and build sheet always give the same file.
 
-Not built yet: the start pages and course files, the other ways of answering, team task pages, the task screen's
-words in other languages (next steps of the proposal).
+## 5 · The course's own pages (2.37.0)
+
+`compile_course.py` writes what classroom-system.json says the factory writes and no script did before - all of it
+from what is already approved and built, nothing new:
+
+| Page | From |
+|---|---|
+| `modules\COURSE.html` — `<title>` = the course ID in the classroom; a `description` its importer quotes | `architecture.json` `course.title`; `programme.json` hours; `working_claude\course.build.json` `"regulation"`, `"programme"` (how the course is named — delivery, like a build sheet) |
+| `modules\_course_shell\course_map.js` — the module order and titles, as data | the module folders; each title from its approved script |
+| `moduleNN\START_HERE.html` — opens the deck at once | the script's title |
+| `moduleNN\START_HERE_EXTENDED.html` — the deck, every task page, the instructor's files | the built deck's task slides (`data-activity`, `data-task-href`); `instructor\*.html`, `*answer_key*.html`, `handout\` as they are in the folder |
+
+- **The course title never changes by itself.** It is recorded at the first build; a new title in the architecture,
+  or a hand-made `COURSE.html` with another one, stops the build — a new title is a new course in the classroom.
+  `--retitle` only when the course was never added there.
+- A planned module not built yet is named on the course page ("Modules 4 to 16 are added as each one is approved"),
+  never listed.
+- A task slide whose page is not in the module folder is reported — build the task pages first.
+- Generated, like the deck: a page changed by hand is not overwritten without `--force`; the same input gives the
+  same bytes. `course.json` is **not** written: the classroom's importer makes it from these two files.
+- `COURSE.html` wears the shared look: `gb_tokens.css` and `gb_page.css` are copied into `_course_shell\`.
+- A module agent never runs it: two agents writing `COURSE.html` is a lost write no test catches
+  (`orchestration/GUIDE.md` Rule 3).
+
+Not built yet: the other ways of answering, team task pages, the task screen's and the start pages' words in other
+languages (next steps of the proposal).

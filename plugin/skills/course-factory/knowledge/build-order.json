@@ -1,7 +1,7 @@
 {
   "_authority": "The ordered pipeline and who owns each step. SKILL.md points here and must not restate the order in prose.",
   "_written": "2026-09-07",
-  "_revised": "2026-09-10 - the visual layer became an explicit required step (8) owned by course-module-ui, and its audit joined verify. Before this the pipeline named no owner for how a module LOOKS, so a module could pass every UX check and still ship as default white HTML. Steps renumbered from 8 onwards. | 2026-09-10 (Phase 3) - a VISUAL PLAN step (9) owned by course-visuals was inserted after the visual system and before task pages, and course-visuals joined verify. Before this the pipeline named an owner for how a module LOOKS but none for WHAT THE PICTURE SHOULD BE, so a module could pass every check and still ship card grids and boxes joined by arrows. Steps renumbered from 9 on. | 2026-09-11 - a RETROFIT pipeline was added beside the build pipeline. The steps are not the same: a retrofit starts from existing material, so it classifies the delivery first and its content steps are reads rather than writes.",
+  "_revised": "2026-09-10 - the visual layer became an explicit required step (8) owned by course-module-ui, and its audit joined verify. Before this the pipeline named no owner for how a module LOOKS, so a module could pass every UX check and still ship as default white HTML. Steps renumbered from 8 onwards. | 2026-09-10 (Phase 3) - a VISUAL PLAN step (9) owned by course-visuals was inserted after the visual system and before task pages, and course-visuals joined verify. Before this the pipeline named an owner for how a module LOOKS but none for WHAT THE PICTURE SHOULD BE, so a module could pass every check and still ship card grids and boxes joined by arrows. Steps renumbered from 9 on. | 2026-09-11 - a RETROFIT pipeline was added beside the build pipeline. The steps are not the same: a retrofit starts from existing material, so it classifies the delivery first and its content steps are reads rather than writes. | 2026-10-16 (2.37.0) - steps 10-11 are compiled from the approved script (compile/), and step 15 starts with compile_course.py for the course's own pages: a module agent writes the build sheet and the figures, never the HTML, and no longer loads the HTML rules (about 42,000 tokens less per module agent, measured in docs/PROPOSAL_SCRIPT_COMPILER.md §6).",
   "steps": [
     {
       "n": 0,
@@ -84,7 +84,7 @@
       "n": 8,
       "step": "visual system",
       "owner": "course-module-ui",
-      "does": "establish the module's visual layer BEFORE any HTML: run course-module-ui/scripts/design_system.py install <module> --start-deck, which copies every canonical style file and engine into the module's assets/ byte for byte - the files are copied, never read - then read course-module-ui/references/vocabulary.md, the full list of compositions, components and tokens by name and when to use each. Every colour, radius, shadow and font in new work comes from a token.",
+      "does": "establish the module's visual layer BEFORE any HTML: run course-module-ui/scripts/design_system.py install <module>, which copies every canonical style file and engine into the module's assets/ byte for byte - the files are copied, never read. Since 2.37.0 the compiler (steps 10-11) writes every screen from those files, so a module agent reads compile/GUIDE.md for its few layout choices, not vocabulary.md; --start-deck and vocabulary.md are for a module still built by hand (a retrofit the compiler cannot take). Every colour, radius, shadow and font in new work comes from a token.",
       "blocked_without": "the screen inventory approved at step 7",
       "rule": "REQUIRED for every new module - the visual layer is not optional and is not course-module-ux's to invent. A new deck that hardcodes its own colours has started a second visual dialect.",
       "why": "course-module-ux is a floor (contrast, tap size, fill, overflow), not an identity. Two modules can pass every check in floor.json and look nothing alike - that already happened across the eight GAS BASIC modules. Routing the look to its owner is what stops it happening again.",
@@ -104,16 +104,16 @@
     {
       "n": 10,
       "step": "task pages",
-      "owner": "course-task-ux",
-      "does": "the trainee task pages the screens will announce",
-      "rule": "BEFORE the deck announces them - a screen announcing a task the tablet lacks is the worst failure in the room"
+      "owner": "course-factory/compile (compile_module.py, task_pages.py) - building course-task-ux's standard",
+      "does": "the trainee task pages the screens will announce, compiled from the approved script's questions with the one shared task engine (gb_answer.js). A way of answering the compiler does not build yet is left as it is and said so - that page alone is made by hand to course-task-ux",
+      "rule": "BEFORE the deck announces them - a screen announcing a task the tablet lacks is the worst failure in the room. compile_module.py builds the pages and the deck in one run, and compile_course.py reports any task slide whose page is missing"
     },
     {
       "n": 11,
       "step": "screens",
-      "owner": "course-module-ux",
-      "does": "the one-page module: open, Start, Next to the end",
-      "rule": "the deck announces a task and never launches it"
+      "owner": "course-factory/compile (compile_module.py) - building course-module-ux's one-page module",
+      "does": "the one-page module: open, Start, Next to the end - compiled from the approved script and the module's build sheet (working_claude/script/MNN.build.json: the picture of each slide, a layout choice). The module agent writes the build sheet and the figures (course-visuals), never the deck's HTML; then compile_course.py writes the module's START_HERE.html and START_HERE_EXTENDED.html",
+      "rule": "the deck announces a task and never launches it. The output is generated: a change goes into the script or the build sheet and is built again, never edited in the HTML (compile/GUIDE.md)"
     },
     {
       "n": 12,
@@ -140,8 +140,8 @@
       "n": 15,
       "step": "terminals",
       "owner": "course-factory/tablet",
-      "does": "course pack into the trainee terminal; plans, prepare and record into the instructor terminal; regenerate the run script",
-      "rule": "no app code, no forked terminal, no copied shared engine"
+      "does": "course pack into the trainee terminal; plans, prepare and record into the instructor terminal; regenerate the run script. First the course's own pages, once for the whole course and by one process (never a module agent): compile/scripts/compile_course.py writes COURSE.html, _course_shell/course_map.js and every module's two start pages from the approved architecture, the scripts and the built decks; then scripts/check_course_package.py runs the classroom's own importer on course/modules",
+      "rule": "no app code, no forked terminal, no copied shared engine. The course title is the classroom's course ID - compile_course.py never changes it without --retitle"
     },
     {
       "n": 16,

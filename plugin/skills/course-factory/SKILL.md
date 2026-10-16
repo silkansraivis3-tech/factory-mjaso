@@ -406,8 +406,11 @@ Give a question `"sub_ilo"` to check it per Sub-ILO, and `"bloom"` + `"bloom_why
 its task type's usual level (`bloom/GUIDE.md` §2).
 Approval is `approve --by <name>`; any later change makes it a draft again. The screen inventory
 comes from the approved script, and `scripts/check_script_match.py` proves the built module says
-exactly those words. **The deck is built from the approved script, never typed** (2.25.0):
-`compile/GUIDE.md`, `compile/scripts/compile_module.py`.
+exactly those words. **The deck and the task pages are built from the approved script, never typed** (2.25.0,
+2.34.0): `compile/GUIDE.md`, `compile/scripts/compile_module.py`; **the course's own pages** - `COURSE.html`,
+`course_map.js`, every module's two start pages - by `compile/scripts/compile_course.py`, once for the course
+(2.37.0). A module agent therefore reads the script lane, `compile/GUIDE.md` and the picture lanes - not the HTML
+rules of `course-module-ux`, `course-module-ui` and `course-task-ux`, which the compiler builds to.
 
 ## Build order
 

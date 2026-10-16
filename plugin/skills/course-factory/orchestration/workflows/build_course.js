@@ -5,7 +5,9 @@
  *   { course: "<absolute path to the course folder>",
  *     programme: "<path to the approved programme>",
  *     kb: "<path to the knowledge base - Course Source Processor or docling>",
- *     modules: [ { id: "m1", title: "...", minutes: 240, theory: 200, practical: 40 }, ... ] }
+ *     modules: [ { id: 1, title: "...", minutes: 240, theory: 200, practical: 40 }, ... ] }
+ *
+ * id is the module's number: its folder is modules/module01, its script working_claude/script/M01.json.
  *
  * `modules` is deliberately an INPUT, not something the script discovers. The reader
  * produces the split, the owner approves it at the gate, and only then is this run with
@@ -99,6 +101,9 @@ if (!A.modules || !A.modules.length) {
 
 /* ------------------------------------------------- 1..N · BUILD, WITH QA BEHIND */
 
+/* m.id is the module's number: 1, 2 ... - its folder is modules/module01 (L45), its script M01 */
+const two = (m) => String(m.id).replace(/\D/g, '').padStart(2, '0')
+
 const build = (m) => `Invoke ${SKILL} and follow it. Build ONE module.
 
   Course folder:   ${A.course}
@@ -109,10 +114,30 @@ Read ONLY your own rows of ${A.course}/MODULE_MAP.md and ${A.course}/ILO_MAP.md,
 the source extracts they name. Do not read the whole knowledge base: search it with
 course-factory/kb/scripts/kb_tool.py search, which writes into the course folder only.
 
-YOU MAY WRITE ONLY INSIDE  ${A.course}/modules/${m.id}/
-Never the registry, never course.json, never the handout, never another module. Those
-are assembled afterwards by one process, because two agents writing one file is a lost
-write that no test catches.
+THE WORDS ARE TYPED ONCE (L29). Your module's content script is
+working_claude/script/M${two(m)}.json (course-factory script/GUIDE.md).
+  * Not approved yet: write it, make its review page and Word file, and STOP there -
+    report "awaiting approval". The operator approves each script; nothing is built
+    from words nobody approved.
+  * Approved: you BUILD, and you never type the deck's or a task page's HTML.
+    Read course-factory compile/GUIDE.md and the picture lanes (course-visuals: what
+    each slide's picture should be, the figure kit) - NOT course-module-ux,
+    course-module-ui or course-task-ux: the compiler builds their standard.
+      design_system.py install modules/module${two(m)}       (course-module-ui/scripts)
+      compile_module.py <course> --module ${m.id} --init-build   then fill the build sheet:
+          each slide's figure (a real photo, a kit drawing, a figure file), a layout
+          choice only where the script's own is not enough
+      compile_module.py <course> --module ${m.id}               fix what it reports, build again
+    A change goes into the script or the build sheet and is built again - never into
+    the HTML. A way of answering the compiler leaves "as it is" is the one page you
+    make by hand, to course-task-ux.
+
+YOU MAY WRITE ONLY INSIDE  ${A.course}/modules/module${two(m)}/  and your own
+working_claude/script/M${two(m)}.* and working_claude/figures/M${two(m)}/.
+Never COURSE.html, never _course_shell/, never the start pages of another module, never
+the handout, never another module. Those are assembled afterwards by one process
+(compile_course.py), because two agents writing one file is a lost write that no test
+catches.
 
 The course's standards come first (L50): if ${A.course}/working_claude/STANDARDS.md exists,
 read it and build to every S-line in it — they are the operator's wishes for every module
@@ -124,26 +149,27 @@ never write your own version of it.
 Your minutes are fixed and are not negotiable — anything that will not fit becomes
 self-study, and you record it so the handout can pick it up (L1).
 
-The visual layer is routed, never improvised: course-module-ui owns the look,
-course-visuals owns what the picture should be. Every TOPIC screen leads with a figure
-(L23) — search the source files and knowledge base first, then the internet for a real
-photograph, then author or generate. A screen that honestly needs no figure declares it
-with data-novisual="<reason>". Where an image needs generating and you cannot produce
-it, write the brief to _visual_briefs/ and keep going: the module is finished as far as
-it can go, and the handoff is written at the end.
+The look is the compiler's; what the picture should be is course-visuals'. Every TOPIC
+screen leads with a figure (L23) — search the source files and knowledge base first, then
+the internet for a real photograph, then the figure kit, then author or generate. The
+script's visual_kind "none" is how a screen honestly needs no figure. Where an image needs
+generating and you cannot produce it, write the brief to _visual_briefs/ and keep going:
+the module is finished as far as it can go, and the handoff is written at the end.
 
-Report what you built, every honesty marker with its source, the achieved Track A
-buckets and Track B ratio, and what you moved to the handout.`
+Report what you built (or "awaiting approval"), every honesty marker with its source, the
+achieved Track A buckets and Track B ratio, what you moved to the handout, and every line
+the compiler printed under "To fix" or "left as it is".`
 
 const qa = (m) => `You did NOT build this module. Check it.
 
-  Module:  ${A.course}/modules/${m.id}
+  Module:  ${A.course}/modules/module${two(m)}
   Against: ${A.course}/MODULE_MAP.md and ${A.course}/ILO_MAP.md (its rows only)
 
-Run the deterministic checks and READ their output — check_hours, check_balance,
-check_syllabus_coverage, verify_links, audit_navigation, crosscheck_tasks,
-check_slide_text, check_visual_first, check_visuals, check_assets, audit_ui --strict,
-and classify_module.py.
+A module whose script is not approved yet has nothing built to check: report that, with
+blocking false. Otherwise run the deterministic checks and READ their output —
+check_script_match, check_hours, check_balance, check_syllabus_coverage, verify_links,
+audit_navigation, crosscheck_tasks, check_slide_text, check_visual_first, check_visuals,
+check_assets, the drawing check compile_module.py ran (L54), and classify_module.py.
 
 Then answer the questions no script can: is every outcome in the ILO map actually
 taught here, or only mentioned? Does each figure teach something the text does not?
@@ -208,6 +234,9 @@ return {
   blocking: blocking.map((q) => q.module),
   next: blocking.length
     ? 'Blocking findings. Fix them in the named modules before assembly.'
-    : 'Assemble: registry, course.json, the handout, the run content — one process, not an agent each. '
-      + 'Then course-tablet-publisher.',
+    : 'Approve every script still awaiting approval and run pass 2 again (approved modules are rebuilt '
+      + 'from their scripts, unchanged ones stay the same bytes). Then assemble, one process, not an '
+      + 'agent each: compile/scripts/compile_course.py <course> (COURSE.html, course_map.js, every '
+      + 'module\'s start pages), scripts/check_course_package.py <course>/modules, the handout, the run '
+      + 'content. Then course-tablet-publisher.',
 }

@@ -184,6 +184,25 @@ the compiler is tested by the same checks that test a hand-built module today:
 
 One minor version per step that reaches colleagues; the owner reviews each PR.
 
+**Where it stands (2026-10-16, 2.37.0).** Steps 1-3 are built (2.25.0-2.36.0; step 3 has 9 of the 19 ways of
+answering). Step 4: `compile/scripts/compile_course.py` writes `COURSE.html`, `course_map.js` and every module's two
+start pages; on a copy of the IGF pilot (Modules 1-3) `check_course_package.py` and the classroom's importer find
+nothing wrong with them, and the course keeps its ID ("basic-training-for-service-on-ships-subject-to-the-igf-code").
+`course.json` is not written - in the classroom's folder layout its importer makes it. Step 5: `build-order.json`
+steps 8, 10, 11, 15, the orchestration guide and `build_course.js` send a module agent through the script, then the
+compiler. Measured as §3 of `PHASE5_GAP_REPORT.md` did (size ÷ 4):
+
+| A module agent loads | Before (hand-built) | After (compiled) |
+|---|---|---|
+| course-factory SKILL + build order + script lane + picture lanes (course-visuals, figure kit) | ≈ 35,000 | ≈ 35,000 |
+| HTML rules: course-module-ux (router, build guide, screen kinds, audience split, floor, classroom system), course-module-ui (router, vocabulary, anatomy, tokens, frame), course-task-ux (router, media-and-tasks) | ≈ 45,800 | - |
+| the compile lane (`compile/GUIDE.md`) | - | ≈ 3,600 |
+| **rules before the first slide** | **≈ 80,800** | **≈ 38,500 (−52 %)** |
+
+And what it writes: the IGF pilot's Modules 1-3 have 80, 163 and 129 KB of deck and task-page HTML; compiled, the
+module agent writes a build sheet of 3-5 KB instead (plus its figures, 41-95 KB, which it drew either way). Eight
+modules: about 340,000 tokens of rules saved before any content.
+
 ## 7 · Risks
 
 - **A generated deck may look plainer than a hand-tuned one.** Answer: the compiler uses the same
