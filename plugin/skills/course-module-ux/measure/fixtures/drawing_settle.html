@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>audit_drawing settle fixture</title>
+<!-- test_audit_drawing.py opens this in headless Chrome (C11, IGF M06). A part of a figure-kit drawing that is fading in
+     (the kit sets style.opacity from the part's value, a deck's own animation or a colour transition is under way) was
+     judged half-faded: a 16:1 sign read 1.5:1. The drawing audit now runs finished-able animations and transitions to
+     their end first, and judges a part a figure's value fades at its full opacity.
+       fade-inline  light text, style="opacity:.1"         - a kit part's value-driven fade: silent
+       fade-anim    light text, a 30 s opacity animation   - mid-fade when measured: silent once settled
+       fade-trans   a rect whose fill is moving from navy to light over 30 s: silent once settled
+       bad-navy     navy on the dark panel                - still found: the check is not relaxed
+       good-text    light text                            - silent -->
+<style>
+  body{margin:0;padding:20px;font-family:sans-serif;background:#fff}
+  .kit-screen{background:#0C1E3A;border-radius:16px;padding:12px;width:640px;margin:0 0 24px}
+  svg{display:block;width:100%;height:auto}
+  .kit-panel{fill:#0C1E3A;stroke:#1d3a63;stroke-width:1.5}
+  text{font:600 14px sans-serif;fill:#F3F8FD}
+  #bad-navy{fill:#0A2463}
+  #fade-anim{animation:fade 30s linear both}
+  @keyframes fade{from{opacity:.06}to{opacity:1}}
+  #fade-trans{fill:#0A2463;transition:fill 30s linear}
+</style>
+</head>
+<body>
+<div class="kit-screen">
+  <svg id="fig-kit" class="kit" viewBox="0 0 300 170">
+    <rect class="kit-panel" x="1" y="1" width="298" height="168" rx="14"/>
+    <text id="good-text" x="20" y="30">Boiling point</text>
+    <text id="fade-inline" x="20" y="54" style="opacity:.1">Charge builds up</text>
+    <text id="fade-anim" x="20" y="78">Spark</text>
+    <rect id="fade-trans" x="170" y="20" width="100" height="30"/>
+    <rect id="bad-navy" x="170" y="70" width="100" height="30"/>
+  </svg>
+</div>
+
+<pre id="out"></pre>
+<script src="../scripts/audit_drawing.js"></script>
+<script>
+  console.log = function () {};
+  var t = document.getElementById("fade-trans");
+  getComputedStyle(t).fill;                       // the starting colour is settled, then it starts to move
+  t.style.fill = "#F3F8FD";
+  var res = AuditDrawing.page();
+  document.getElementById("out").textContent = JSON.stringify({
+    verdict: res.verdict,
+    findings: res.findings.map(function (f) {
+      var el = f.els && f.els[0], svg = el && (el.ownerSVGElement || el);
+      return { check: f.check, svg: svg && svg.id, part: el && el.id, detail: f.detail };
+    })
+  });
+</script>
+</body>
+</html>

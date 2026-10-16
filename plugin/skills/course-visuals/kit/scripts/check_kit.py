@@ -31,7 +31,9 @@ KIT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KIT_JS = os.path.join(KIT, "kit.js")
 FAMILIES = ("instruments", "piping", "spaces", "cutaways", "gas-fire-machinery", "charts", "procedures")
 KINDS = ("alarm", "trip", "limit")
-SUBS = {"pipe": ("fill",), "hose": ("fill",)}  # a second value on one part: "<id>.fill"
+# a second value on one part: "<id>.fill" (a pipe or hose filling), "<id>.burst" (a tank that ruptures, tank "burst"),
+# "<id>.drift" (a gas cloud carried off, gas_cloud "drift")
+SUBS = {"pipe": ("fill",), "hose": ("fill",), "tank": ("burst",), "gas_cloud": ("drift",)}
 BLOCK = re.compile(r"/\*\s*kit-part:\s*([\w]+)\s*\*/(.*?)/\*\s*end kit-part\s*\*/", re.S)
 DEFINE = re.compile(r"KIT\.define\(\s*['\"](\w+)['\"]")
 MIN_PX = 12.5
@@ -162,7 +164,7 @@ def check_spec(spec, types, where):
     parts = spec.get("parts") or []
     if not parts:
         bad("no parts")
-    ids, kinds = set(), {}
+    ids, kinds, given = set(), {}, {}
     for i, p in enumerate(parts):
         if not isinstance(p, dict):
             bad("part %d is not an object" % (i + 1))
@@ -176,6 +178,7 @@ def check_spec(spec, types, where):
                 bad("the id %s is used twice" % pid)
             ids.add(pid)
             kinds[pid] = t
+            given[pid] = p
         if p.get("source") and p["source"] not in ids:
             bad("part %s repeats %s, which is not listed before it" % (pid, p["source"]))
         if t == "text" and "to" in p and not (isinstance(p["to"], list) and len(p["to"]) == 2
@@ -200,6 +203,8 @@ def check_spec(spec, types, where):
             bad("%s moves %s, which is not a part" % (what, ref))
         elif sub and sub not in SUBS.get(kinds.get(base), ()):
             bad("%s moves %s - a %s has no %r value" % (what, ref, kinds.get(base), sub))
+        elif sub in ("burst", "drift") and not given[base].get(sub):       # "T.burst" needs "burst" on the tank, "C.drift" needs "drift" on the cloud
+            bad("%s moves %s, but %s has no %r option - the part draws that value only when its spec asks for it" % (what, ref, base, sub))
 
     def acts(lst, what):
         for a in lst or []:

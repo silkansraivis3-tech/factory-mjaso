@@ -578,6 +578,50 @@ def fixes_part(exe, tmp):
           icons == ["choose", "drag"], icons or out)
 
 
+def picture_part(exe, tmp):
+    """2.49.1 - IGF M06: a photo over a sort left its drop zones under the Check bar; the right state on a dark drawing
+    was near-black with a tiny tick"""
+    print("\n-- 2.49.1: a picture over a sort, the right state on a dark drawing")
+    screens = [
+        {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the picture", "text": "Self-check on your tablet now.", "minutes": 4},
+        {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "categorise", "question": "Sort each precaution under the hazard it protects against.",
+         "answer": "Pressure surge: close manual valves slowly; open the next tank's valve before closing the last\n"
+                   "Trapped liquid: a small relief valve on each section between valves; drain lines after use\n"
+                   "Cold burns: a face shield over goggles; trousers worn over the boots", "feedback": "x"},
+        {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the master valve.", "visual": "the plant",
+         "answer": "Master valve*\nFuel tank\nPump", "feedback": "Between the tank and the pump."}]
+    os.makedirs(os.path.join(tmp, "pic"))
+    c, md = tcm.new_course(os.path.join(tmp, "pic"), tcm.script(screens=screens), build=False)
+    io.open(os.path.join(md, "assets", "img", "gloves.png"), "wb").write(tcm.png(1000, 740))
+    tcm.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), {"gloves.png": {"source": "Own photograph, Novikontas", "licence": "own work",
+        "attribution_required": False, "description": "Thick blue gloves."}})
+    io.open(os.path.join(c, "working_claude", "figures", "M01", "plant.kit.json"), "w", encoding="utf-8").write(json.dumps(tcm.PLANT_KIT))
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "t01": {"try_tablet": False}, "q01": {"figure": "assets/img/gloves.png"},
+        "q02": {"figure": "plant.kit.json", "unlabel": "answers", "areas": {"Master valve": "mv", "Fuel tank": "tk", "Pump": "pp"}}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    page = os.path.join(md, "tasks", "sc1_the_picture.html")
+    check("the fixture page is built", code == 0 and os.path.isfile(page), out)
+    r = drive(exe, page, [["eval", RECT + "document.getElementById('go').click(); var s = document.querySelector('.scr.on');"
+        " out.cat = {pic: s.getAttribute('data-pic'), vh: innerHeight, dock: R(document.getElementById('go').parentNode),"
+        " zones: [].map.call(s.querySelectorAll('.zone'), R), img: R(s.querySelector('.instrument'))};"]], tmp, look=False, size=(1280, 800))
+    cat = r.get("cat") or {}
+    check("no script error", not r.get("errors"), r.get("errors"))
+    check("a photo over a sort: it sits beside the cards, and every drop zone is above the Check bar at 1280 x 800",
+          cat.get("pic") == "beside" and len(cat.get("zones", [])) == 3 and max(z["b"] for z in cat["zones"]) <= cat["dock"]["t"] + 0.5
+          and cat["img"]["b"] <= cat["dock"]["t"], cat)
+    r = drive(exe, page, [["eval",
+        "var s = document.querySelector('.scr[data-script=\"q02\"]'); s.className += ' on';"
+        " var h = [].filter.call(s.querySelectorAll('.hot'), function (x) { return x.textContent.trim() === 'Master valve'; })[0];"
+        " h.className += ' sel right'; var cs = getComputedStyle(h), af = getComputedStyle(h, '::after');"
+        " out.hot = {blend: cs.mixBlendMode, border: cs.borderTopColor, bg: cs.backgroundColor, tick: af.width, tickbg: af.backgroundColor,"
+        " dark: !!h.closest('.ga.kitfig')};"]], tmp, look=False, size=(1280, 800))
+    hot = r.get("hot") or {}
+    check("the right area on a dark drawing: a plain light-green wash (not multiply: near-black), a clear light-green border, a 34 px tick",
+          hot.get("dark") and hot.get("blend") == "normal" and hot.get("border") == "rgb(79, 214, 160)" and hot.get("tick") == "34px"
+          and hot.get("tickbg") == "rgb(79, 214, 160)" and lum(hot.get("bg")) > 40, hot)
+
+
 def main():
     exe = drawing_check.find_browser()
     if not exe:
@@ -619,6 +663,7 @@ def main():
               "fixed" in look.get("cargo", "") and look.get("cargo", "").endswith("|tray") and look.get("permit", "").endswith("|3"), look)
         figures_part(exe, tmp)
         fixes_part(exe, tmp)
+        picture_part(exe, tmp)
         team_part(exe, tmp)
         language_part(exe, tmp)
         deck_language_part(exe, tmp)

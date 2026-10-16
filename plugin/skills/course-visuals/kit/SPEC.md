@@ -23,6 +23,8 @@ audit and a screenshot, in seconds, without compiling the module:
 python scripts/studio.py <course>/working_claude/figures/M03/s07.kit.json        (on its real slide, from the build sheet)
 python scripts/studio.py <spec>.kit.json --parts <kit_parts.js> --panel two-col|dark|wide-left|task|WxH
 ```
+`--step N` photographs one step; **`--step all`** draws the rest state and the end of every step as one contact sheet
+(panels as wide as the real slide's) in a single browser run, instead of one run per step (2.49.1).
 It judges 1280 x 800 (the tablet) and states 1024 x 768: the scale the figure is shown at, how much the kit grew the
 words for the 12.5 px floor, how many labels it moved, any it could not place, and every audit finding per step.
 
@@ -66,15 +68,15 @@ words for the 12.5 px floor, how many labels it moved, any it could not place, a
 | `well` | `w h tag` - bilge well, dripping leak, TT sensor | pool 0..1 |
 | `valve` | `size label labelAt(right) rotate state(false) actuator(false) trip(false)` - ISA bow-tie, filled when closed; red when shut unless `trip: false` | 1 open, 0 closed |
 | `pipe` | `d` (SVG path) `fluid`(liquid/gas/air - air: a ventilation duct) `double` `drain` - its contents and their movement | flow 0 still … 1; **`<id>.fill`** 0..1 the front advancing, 1..2 emptying towards `drain` |
-| `tank` | `w h label` - horizontal type C tank | liquid level 0..1 |
-| `space` | `w h label labelAt(below) style(room/enclosure)` - a room (dashed) or an enclosure (solid) | 0..1 picked out |
+| `tank` | `w h label burst` - horizontal type C tank. `burst: true` (or `{r, label}`: the fireball's radius and name) adds the value **`<id>.burst`** 0..1: the shell cracks (0..0.25) and the contents ignite in a fireball (leave `r` of room round the tank) | liquid level 0..1 |
+| `space` | `w h label labelAt(below) style(room/enclosure) crosses` - a room (dashed) or an enclosure (solid). `crosses: true` for a box laid over a tank's end or a hull line on purpose (not judged as poking out of it). A name that does not fit inside the grown type goes under the room by itself | 0..1 picked out |
 | `exchanger` | `r label` - P&ID heat exchanger (vaporizer, heater) | 0..1 heating |
 | `pump` | `r label` - P&ID centrifugal pump | 0 stopped, 1 running |
 | `engine` | `w h cylinders label` - dual-fuel engine block | 0 stopped, 1 running |
 | `vent` | `label labelAt(left)` - vent outlet to the open air | 0..1 venting |
 | `badge` | `n` - a numbered step marker | 0..1 lit |
 | `wire` | `d` - ISA dashed signal line | - |
-| `text` | `text style(h, cap, tick, sl) anchor near fixed`; `\n` breaks lines; it may shift up to `near` (28) to stay clear. With **`to: [x, y]`** it is a CALLOUT: words for that place, joined to it by a leader line, placed clear by the layout | - |
+| `text` | `text style(h, cap, tick, sl) anchor near fixed reveal`; `\n` breaks lines; it may shift up to `near` (28) to stay clear. With **`to: [x, y]`** it is a CALLOUT: words for that place, joined to it by a leader line, placed clear by the layout. **`reveal: true`** (or a `value`) makes the words - and a callout's dot and leader - a thing a step brings in: not drawn at rest, `["T", 1, 400]` fades them in, so a predict-then-reveal slide does not print its answer | 0..1 opacity (with `reveal`/`value`) |
 | `log` | `w rows label empty` - alarm list, newest first | - |
 
 Parts added from courses (merged by `kit_parts.py promote`; each block's `example` is its card in `GALLERY.html`):
@@ -83,11 +85,11 @@ Parts added from courses (merged by `kit_parts.py promote`; each block's `exampl
 |---|---|---|
 | `ga` | `w h view(side/plan) draft water house:{x,w,h} funnel:{x,w,h} frames label` - a ship's hull; named spaces are `space` parts on it | 0..1 picked out |
 | `zone` | `zone(0/1/2)` and `w h rx` or `r`, `from:[x,y]` - a hazardous-zone overlay | 0..1 grown from `from` |
-| `scale` | `h w min max every unit reach limits:[{at,label,side}] markers:[{label,note,at}]` - a vertical scale; `orient:"h"` with `len` runs it across, each marker on a stem at its `rise`, words to its `side` (left/right) | 0..n: marker k slides (vertical) or drops (across) into place from k to k+1 |
+| `scale` | `h w min max every unit reach limits:[{at,label,side}] markers:[{label,note,at}]` - a vertical scale; `orient:"h"` with `len` runs it across, each marker on a stem at its `rise`, words to its `side` (left/right). A marker's word and note, and a limit's name, are labels the layout places and the audit judges; the tick numbers keep clear of the bar as the type grows (2.49.1) | 0..n: marker k slides (vertical) or drops (across) into place from k to k+1 |
 | `bands` | `w rowH chip axis rows:[{label,tone(z0/z1/z2),caption,gas:[[from,to]]}]` - time bands with a clock | 0..n: row k sweeps from k to k+1 |
 | `cylinder` | `w h labels` - a dual-fuel engine cylinder, injectors at 0.22 w and 0.78 w | 0 stopped · 1 gas mode · 1.5 gas supply stopped · 2 fuel-oil mode |
 | `boil_off` | `w h insulation level liquidLabel vapourLabel heatLabel` - an insulated LNG tank cutaway | 0..1 heat in, boiling |
-| `gas_cloud` | `w h from:[x,y]` - a pale cloud growing in a space | 0..1 how much gas |
+| `gas_cloud` | `w h from:[x,y] drift:[dx,dy]` - a pale cloud growing in a space. `drift` (or `true`: 0.4 w to the right) adds the value **`<id>.drift`** 0..1: the whole cloud moves that far and spreads a little - wind carrying a leak away; it crosses walls by design | 0..1 how much gas |
 | `integral_tank` | `w h cofferdam label cofferdamLabel hullLabel` - a hull tank in its cofferdam | liquid level 0..1 |
 | `pipe_section` · `relief_valve` · `step_track` · `coupling` · `drip_tray` · `water_curtain` · `detector` · `flame` | from IGF M03 (2.48.0): a cut along a double-walled pipe; a spring relief valve; numbered steps or a checklist (`boxes`); dry-disconnect / breakaway coupling; drip tray; water curtain; fixed gas detector head (marks); a flame at a point | see each part's `value` in `kit.js` |
 | `curve_chart` | from IGF M04: `xaxis yaxis curves:[{label,pts}] hline point` - curves that draw themselves, a point that slides along one | 0..n curves, n..n+1 the point |
@@ -103,9 +105,12 @@ Pre-built for IGF Basic modules 5-15 (2.48.0, from the architecture's media plan
 | `person` | `wear:[helmet,visor,gloves,suit,boots,scba] scale label` - a worker pictogram | 0..n PPE item k appears |
 | `sensor` | `kind(catalytic/infrared) oxygen` - how a gas sensor sees gas | 0..1 gas in the sensor |
 | `static_charge` | `bonded labels` - charge on an isolated part, the spark | 0..1 charge, 1..1.2 spark |
-| `fire` | `kind(pool/jet) w height length angle label` | 0 out … 1 full |
+| `fire` | `kind(pool/jet) w height length angle label stub` - a jet is drawn on a 90 px pipe end; `stub: false` leaves it out when the figure has the real pipe | 0 out … 1 full |
 | `flammability` | `zone:[[fuel %, O2 %]] path:[[..]]` and axes - the flammability diagram | 0..1 along the path; the zone lights while inside |
-| `range_bar` | `w lel uel max label` - lean / flammable / rich | the concentration % |
+| `range_bar` | `w lel uel max label nums` - lean / flammable / rich. Numbers under the bar: both limits and the ends - an end is left out when a limit is within 8 % of the axis from it (a lower limit of 4-6 % would sit on the "0"); `nums: [..]` names them outright | the concentration % |
+| `lamp` | `label ex` - a light fitting on its cable: electrical equipment, an ignition source in a gas-dangerous space; `ex: true` draws the heavy explosion-protected enclosure | 0 off, 1 lit |
+| `spark` | `kind(electric/friction) to:[dx,dy] label` - an arc jumping from this point to `to` (the two contacts stay drawn), or hot particles thrown from this point (a tool or a chain on steel) | 0..1 the spark |
+| `composition_bar` | `w h segments:[{label,pct}] total unit label` - one bar split into the shares of its components (methane, ethane, nitrogen ...) | 0..n: segment k fills from its left edge from k to k+1, its name and share appear once it is half drawn |
 | `hose` | `d empty label` - a flexible bunkering hose | flow 0..1; **`<id>.fill`** like a pipe's |
 | `manifold` | `outlets:[{label}]` - a bunker manifold header | 0..n outlets connected |
 | `spool_piece` | `w t spool lift left right spoolLabel label` - segregation | 1 fitted, 0 removed + blanks |
@@ -151,8 +156,8 @@ exist yet, the part is added to its family here, never drawn once on a slide.
 | 2 | Piping and flow | pipe (liquid/gas/air, double-walled, fill and drain), valve, tank, space, exchanger, pump, engine, vent, badge, wire, relief_valve, coupling, drip_tray, water_curtain, integral_tank, hose, manifold, spool_piece | **built** | M02 · M03 · M07 · M13 · M14 · M15 |
 | 3 | Ship and spaces | ga (side view, deck plan), zone overlay; named spaces are `space` | **built** | M01 s04, s09 · M02 s12 · M07 · M11 |
 | 4 | Cutaways | boil_off, pipe_section, sensor, tank_wall; tank types A/B/C still planned | **built** | M01 s07 · M03 · M07 · M09 |
-| 5 | Gas, fire and machinery | gas_cloud, cylinder, flame, fire (pool, jet), spray, fan, gas_cylinder, static_charge, spill, wind | **built** | M01 · M02 · M03 · M05 · M06 · M10 · M11 · M13 · M15 |
-| 6 | Charts | scale, bands, curve_chart, flammability, range_bar; composition bar still planned | **built** | M01 s02 · M02 s11 · M04 · M06 · M07 |
+| 5 | Gas, fire and machinery | gas_cloud (grows, drifts), cylinder, flame, fire (pool, jet), spray, fan, gas_cylinder, static_charge, spill, wind, lamp, spark; a tank that ruptures (tank `burst`) | **built** | M01 · M02 · M03 · M05 · M06 · M10 · M11 · M13 · M15 |
+| 6 | Charts | scale, bands, curve_chart, flammability, range_bar, composition_bar | **built** | M01 s02 · M02 s11 · M04 · M06 · M07 |
 | 7 | Procedures | step_track (steps, checklist), tree, person; flowchart, cause-and-effect matrix still planned | **started** | M03 · M05 · M10 · M11 · M14 · M15 |
 
 **Task mode (2.43.0, built).** The same spec drawn on a trainee task page, so a slide and the task built from it
@@ -167,7 +172,9 @@ for its empty label boxes); a deck never sets it.
 ## Fill the frame, and the words do the explaining (L53, operator 2026-10-15)
 - **Draw to the panel.** `size` has the shape of the panel the figure is shown in (the wide column of a `two-col`
   slide: about 640 × 390, a dark slide 680 × 415), and the drawing covers it: `audit_drawing.js` EMPTY allows at most
-  half of the panel blank and no blank piece over a fifth, judged at the last step too. A whole ship for five spaces,
+  half of the panel blank and no blank piece over a fifth. A figure that steps is judged at its busiest step (a rest state is
+sparse by design); a pipe counts by its bounding box, so the space inside its bends is not blank; and the finding says where the
+largest blank piece is (side and pixels). A whole ship for five spaces,
   one pipe with three valves, a small scale in a big panel - crop to what the steps show, spread the parts, add the
   context the slide's lines name (the master valve before the gas valve unit, the engine-room boundary).
 - **The words stay beside the figure at reading size.** A figure whose steps light the slide's lines goes in a `two-col`

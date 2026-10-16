@@ -95,6 +95,29 @@ s3["theme"] = "light"
 s3["parts"].append({"type": "text", "x": 10, "y": 10, "text": "vapour space", "to": [40, 60]})
 check("a light theme and a callout pass", ck.check_spec(s3, types, "s") == [], ck.check_spec(s3, types, "s"))
 
+# ---------------------------------------------------------------- 2.49.1: the parts and values IGF M06 asked for (K4, K5)
+check("lamp, spark and composition_bar are in the kit", {"lamp", "spark", "composition_bar"} <= types, types)
+merged_now = dict(ck.blocks(ck.read(ck.KIT_JS)))
+check("the new parts are merged blocks that pass the parts contract (colours, helpers, example)",
+      all(n in merged_now and ck.check_part(n, merged_now[n]) == [] for n in ("lamp", "spark", "composition_bar", "gas_cloud", "drip_tray", "flame", "fire")),
+      [(n, ck.check_part(n, merged_now[n])) for n in ("lamp", "spark", "composition_bar", "gas_cloud") if n in merged_now])
+new_spec = {"size": [400, 300], "label": "x", "parts": [
+    {"id": "T", "type": "tank", "burst": True}, {"id": "C", "type": "gas_cloud", "drift": [60, 0]},
+    {"id": "N", "type": "text", "x": 5, "y": 5, "text": "the answer", "reveal": True},
+    {"id": "B", "type": "composition_bar", "segments": [{"label": "methane", "pct": 90}]},
+    {"id": "L", "type": "lamp", "ex": True}, {"id": "S", "type": "spark", "kind": "friction"}],
+    "steps": [{"title": "go", "play": [["T.burst", 1, 800], ["C.drift", 1, 800], ["N", 1, 300], ["B", 1, 500]]}]}
+check("a tank's burst, a cloud's drift, a revealed text and the new parts make a good spec",
+      ck.check_spec(new_spec, types, "s") == [], ck.check_spec(new_spec, types, "s"))
+for change, what in [
+    (lambda s: s["parts"][0].pop("burst"), "T.burst on a tank that has no \"burst\""),
+    (lambda s: s["parts"][1].pop("drift"), "C.drift on a cloud that has no \"drift\""),
+    (lambda s: s["steps"][0]["play"].append(["L.burst", 1, 100]), "a burst on a lamp"),
+]:
+    s4 = json.loads(json.dumps(new_spec))
+    change(s4)
+    check("a spec with %s is refused" % what, bool(ck.check_spec(s4, types, "s")))
+
 # ---------------------------------------------------------------- the 2.48.0 layout contract in kit.js itself
 kit = ck.read(ck.KIT_JS)
 check("kit.js lays figures out (labels, the floor, the frame) and exports the helpers parts use",

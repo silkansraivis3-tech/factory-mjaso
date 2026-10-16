@@ -766,6 +766,195 @@ def language_part(tmp):
           and task_pages.cm.lang_code("ru") == "ru" and task_pages.cm.lang_code("Klingon") is None)
 
 
+def build_of(c, mutate):
+    """change the course's build sheet with `mutate(sheet)` and save it"""
+    bp = os.path.join(c, "working_claude", "script", "M01.build.json")
+    sheet = cs.load(bp)
+    mutate(sheet)
+    cs.save(bp, sheet)
+    return sheet
+
+
+def fixes_part(tmp):
+    """2.49.1 - the problems found building IGF Module 6 with the compiler (C1-C16)"""
+    print("\n-- 2.49.1: what building IGF Module 6 found")
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    import task_pages as tp
+
+    # C1 - `python -I` leaves the script's own folder off sys.path: task_pages, module_plan, answer_key were not found
+    os.makedirs(os.path.join(tmp, "c1"))
+    c, md = new_course(os.path.join(tmp, "c1"), script())
+    p = subprocess.run([sys.executable, "-I", COMPILE, c, "--module", "1", "--no-drawing-check"], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
+    check("C1: compile_module.py runs under python -I (isolated) - the script's own folder is on sys.path",
+          p.returncode == 0 and "ModuleNotFoundError" not in p.stdout + p.stderr and os.path.isfile(os.path.join(md, "tasks", "sc1_the_new_spaces.html")),
+          (p.stdout + p.stderr)[-600:])
+
+    # C2 - a crash after the deck is written must not leave the compiler's own file "changed by hand"
+    os.makedirs(os.path.join(tmp, "c2"))
+    c, md = new_course(os.path.join(tmp, "c2"), script())
+    crash = ("import sys; sys.path.insert(0, %r)\nimport compile_module as cm, task_pages as tp\n"
+             "def boom(*a, **k): raise RuntimeError('boom')\ntp.compile_tasks = boom\n"
+             "cm.main([%r, '--module', '1', '--no-drawing-check'])\n" % (HERE, c))
+    p = subprocess.run([sys.executable, "-c", crash], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    recs = [os.path.join(r, f) for r, _, fs in os.walk(c) for f in fs if f == "compiled.json"]
+    rec = cs.load(recs[0]) if recs else {}
+    check("C2: a crash after the deck was written leaves the deck in the build record (written with the file)",
+          p.returncode != 0 and "boom" in p.stderr and os.path.isfile(os.path.join(md, "presentation", "index.html"))
+          and "index.html" in rec, (p.stderr[-300:], rec))
+    code, out = run(COMPILE, c, "--module", "1")
+    check("C2: the next run then works - the compiler's own deck is not refused as 'changed by hand' (no --force)",
+          code in (0, 1) and "changed by hand" not in out and "tasks/sc1_the_new_spaces.html" in out, out)
+
+    # C3 - the starter build sheet takes the landing rule and the pass mark from the course's other sheets
+    sc = json.loads(json.dumps(script()))
+    sc["screens"] += [
+        {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the valve.", "answer": "Valve*\nPump", "feedback": "x"},
+        {"id": "q03", "kind": "self-check", "set": "SC1", "mechanic": "single_choice", "question": "Which?", "options": ["a", "b"], "correct": "A", "feedback": "x"}]
+    sc["title"] = "Hazards of operations on IGF ships and the people who run them"
+    st = cm.starter_build(sc, [{"landing_rule": "Old rule", "pass_mark": 60}, {"landing_rule": "Basic training · IGF Code", "pass_mark": 70, "foot": "OTHER"}])
+    check("C3: the starter build sheet has the course's landing rule and pass mark (the latest sheet that has them)",
+          st["landing_rule"] == "Basic training · IGF Code" and st["pass_mark"] == 70, st)
+    check("C3: ... a foot from the module's own title (whole words), and an entry for each question answered on a picture",
+          st["foot"] == "HAZARDS OF OPERATIONS ON IGF SHIPS AND" and st["screens"]["q02"] == {"figure": "", "areas": {}} and "q03" not in st["screens"], st)
+    check("C3: ... nothing invented when no other sheet exists", "pass_mark" not in cm.starter_build(sc) and cm.starter_build(sc)["landing_rule"] == "")
+    os.makedirs(os.path.join(tmp, "c3"))
+    c, md = new_course(os.path.join(tmp, "c3"), script(), build=False)
+    gate_fixture.open_gate(c)
+    sdir = os.path.join(c, "working_claude", "script")
+    cs.save(os.path.join(sdir, "M02.build.json"), {"module": 2, "landing_rule": "Basic training · IGF Code", "pass_mark": 75, "screens": {}})
+    code, out = run(COMPILE, c, "--module", "1", "--init-build")
+    sheet = cs.load(os.path.join(sdir, "M01.build.json"))
+    check("C3: --init-build reads the sibling build sheets of the course", code == 0 and sheet["landing_rule"] == "Basic training · IGF Code"
+          and sheet["pass_mark"] == 75 and sheet["foot"] == "IGF SHIPS", (out, sheet))
+
+    # C5 / C6 - a chart's axis is no thing to photograph; "not_things" takes a name off the list altogether
+    chart = ('<div class="fill fig kit-fig"><script type="application/json" id="k">' + json.dumps(
+        {"size": [640, 390], "parts": [{"type": "flammability", "id": "F"}, {"type": "text", "text": "Air line"}]}) + "</script></div>")
+    check("C5: a figure made only of the kit's chart parts names no real thing - 'Air line' is not listed",
+          cm.chart_only(chart) and cm.drawn_parts(["Air line - the line the mixture follows.", "Flammable zone - burns."], chart) == [], cm.drawn_parts(["Air line - x"], chart))
+    mixed = chart.replace('"type": "flammability"', '"type": "tank"')
+    check("C5: a drawing with a tank among its parts still names its things",
+          not cm.chart_only(mixed) and [n for _, n in cm.drawn_parts(["Air line - the line."], mixed)] == ["Air line"])
+    notes = []
+    cm.part_photos(["Air line - x.", "Relief valve - y."], mixed, set(), md, [], notes, "s03", {}, (), [])
+    check("C6: with no help both names are listed", sorted(n[2] for n in notes) == ["Air line", "Relief valve"], notes)
+    notes = []
+    cm.part_photos(["Air line - x.", "Relief valve - y."], mixed, set(), md, [], notes, "s03", {}, (), ["air line"])
+    check("C6: \"not_things\" removes the name from the list altogether (\"no_photo\" keeps it listed)",
+          [n[2] for n in notes] == ["Relief valve"], notes)
+    notes = []
+    cm.part_photos(["Air line - x.", "Relief valve - y."], mixed, set(), md, [], notes, "s03", {}, ["air line"], [])
+    check("C6: ... and 'no_photo' still lists it", sorted(n[2] for n in notes) == ["Air line", "Relief valve"], notes)
+
+    # C7 - an inset under a drawing that leaves it a small part of its panel is warned about
+    sh = cm.under_share('<script type="application/json" id="k">{"size": [640, 390], "parts": []}</script>')
+    sh2 = cm.under_share('<svg viewBox="0 0 640 640"></svg>')
+    check("C7: a 640 x 390 drawing keeps ~47 % of its panel under an inset (the M06 measure: 197 of 417 px); a square one keeps more",
+          sh and round(sh[0], 2) == 0.47 and round(sh[1]) == 416 and sh2 and sh2[0] > cm.UNDER_MIN_SHARE and cm.under_share("<p>none</p>") is None, (sh, sh2))
+    os.makedirs(os.path.join(tmp, "c7"))
+    c, md = new_course(os.path.join(tmp, "c7"), script())
+    io.open(os.path.join(c, "working_claude", "figures", "M01", "ind.kit.json"), "w", encoding="utf-8").write(json.dumps(
+        {"size": [640, 390], "parts": [{"id": "t", "type": "tank", "x": 20, "y": 50, "w": 150, "h": 110, "value": 0.3}]}))
+    build_of(c, lambda s: s["screens"].update(s04={"figure": "ind.kit.json", "dark": True, "inset": {"photo": "assets/img/ship.jpg", "under": "figure"}}))
+    code, out = run(COMPILE, c, "--module", "1")
+    check("C7: \"under\": \"figure\" that leaves the figure under ~60 % of its panel is reported at build",
+          code == 1 and "leaves the drawing only about 47 %" in out and "(s04)" in out, out)
+    build_of(c, lambda s: s["screens"].update(s04={"figure": "ind.kit.json", "dark": True, "inset": {"photo": "assets/img/ship.jpg"}}))
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    check("C7: the same inset under the words is not reported", "leaves the drawing only" not in out, out)
+
+    # C8 / C9 - a photo in a real column; a photo in a figure fragment keeps its visible credit
+    os.makedirs(os.path.join(tmp, "c8"))
+    c, md = new_course(os.path.join(tmp, "c8"), script())
+    io.open(os.path.join(c, "working_claude", "figures", "M01", "cards.html"), "w", encoding="utf-8").write(
+        '<div class="fig-cards"><img src="../assets/img/ship.jpg" alt="Truck to ship"></div>')
+    build_of(c, lambda s: s["screens"].update(s01={}, s02={"figure": "assets/img/ship.jpg", "composition": "wide-left"}, s03={"figure": "cards.html"}))
+    code, out = run(COMPILE, c, "--module", "1")
+    d2, d3 = section(deck(md), "s02"), section(deck(md), "s03")
+    check("C8: a photograph slide with \"composition\": \"wide-left\" is a real column layout (the words as wide as asked), not 'photo split'",
+          'class="slide-body two-col wide-left photo-col"' in d2 and "photo split" not in d2 and 'class="slide photo' not in d2, d2[:700])
+    check("C8: ... the photo fills its own column and keeps its visible credit line",
+          '<div class="fill fig photo-col"><img src="../assets/img/ship.jpg"' in d2 and '<div class="credit">Photo: Jane Doe' in d2, d2)
+    check("C9: a photograph inside a figure fragment keeps the slide credit line", '<div class="credit">Photo: Jane Doe' in d3 and "data-credit=" in d3, d3)
+    css = io.open(os.path.join(md, "assets", "gb_compose.css"), encoding="utf-8").read()
+    check("C8: the column layout is styled - the photo is cropped to its column, which has the slide's height",
+          ".slide-body.two-col.photo-col{grid-template-rows:minmax(0,1fr)" in css and "object-fit:cover" in css.split(".photo-col > .fill.photo-col > img")[1][:200], css[:100])
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    build_of(c, lambda s: s["screens"].update(s02={"figure": "assets/img/ship.jpg", "composition": "two-col"}, s03={}))
+    run(COMPILE, c, "--module", "1", "--force")
+    check("C8: \"two-col\" with a photograph is still the photo-on-the-right slide (words on the scrim)", 'class="slide photo split"' in section(deck(md), "s02"))
+
+    # C4 / C12 / C13 - the task pages
+    spec = {"size": [400, 200], "parts": [
+        {"id": "tk", "type": "tank", "x": 20, "y": 50, "w": 150, "h": 110, "label": "Fuel tank", "value": 0.2},
+        {"id": "mv", "type": "valve", "x": 210, "y": 100, "size": 16, "label": "Master valve", "value": 1},
+        {"id": "pp", "type": "pump", "x": 300, "y": 100, "r": 26, "label": "Pump", "value": 0},
+        {"id": "sv", "type": "valve", "x": 350, "y": 40, "size": 16, "label": "Spare valve", "value": 0},
+        {"id": "T_mv", "type": "text", "x": 190, "y": 150, "text": "the master valve"},
+        {"type": "text", "to": [214, 104], "x": 190, "y": 180, "text": "points at the valve"},
+        {"type": "text", "to": [300, 100], "x": 280, "y": 180, "text": "points at the pump"},
+        {"type": "text", "x": 200, "y": 20, "text": "Fuel plant", "style": "h"}], "steps": [{"title": "1 · Fill", "set": {"tk": 0.8}}]}
+    screens = [
+        {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the plant", "text": "Self-check on your tablet now.", "minutes": 4},
+        {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the master valve.", "visual": "the plant",
+         "answer": "Master valve*\nFuel tank\nPump", "feedback": "Between tank and pump."},
+        {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "categorise", "question": "Sort each precaution under its hazard.",
+         "answer": "Surge: close valves slowly\nCold burns: wear a face shield", "feedback": "x"},
+        {"id": "q03", "kind": "self-check", "set": "SC1", "mechanic": "single_choice", "question": "What is this?",
+         "options": ["A pump", "A boiler"], "correct": "A", "feedback": "A pump."},
+        {"id": "q04", "kind": "self-check", "set": "SC1", "mechanic": "order", "question": "Put the steps in order.",
+         "answer": "Open the valve\nStart the pump", "feedback": "x"}]
+    os.makedirs(os.path.join(tmp, "c4"))
+    c, md = new_course(os.path.join(tmp, "c4"), script(screens=screens), build=False)
+    img = os.path.join(md, "assets", "img")
+    io.open(os.path.join(img, "pump.png"), "wb").write(png(600, 400))
+    cs.save(os.path.join(img, "_photo_meta.json"), {"pump.png": {"source": "Own photograph, Novikontas", "licence": "own work",
+            "attribution_required": False, "description": "A grey pump on a blue base. It has a red relief valve.", "shows": "pump"}})
+    io.open(os.path.join(c, "working_claude", "figures", "M01", "plant.kit.json"), "w", encoding="utf-8").write(json.dumps(spec))
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "t01": {"try_tablet": False},
+        "q01": {"figure": "plant.kit.json", "unlabel": "answers", "areas": {"Master valve": "mv", "Fuel tank": "tk", "Pump": "pp"}},
+        "q02": {"figure": "assets/img/pump.png"},
+        "q03": {"figure": "assets/img/pump.png"},
+        "q04": {"figure": "assets/img/pump.png"}}})
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks")
+    page = io.open(os.path.join(md, "tasks", "sc1_the_plant.html"), encoding="utf-8").read()
+    q = {k: page.split('data-script="%s"' % k)[1].split("</section>")[0] for k in ("q01", "q02", "q03", "q04")}
+    ks = re.search(r'id="kit-task-[^"]+">(.*?)</script>', q["q01"], re.S)
+    got = json.loads(ks.group(1))["parts"] if ks else []
+    words = json.dumps(got)
+    check("C4: \"unlabel\": \"answers\" takes the words off only the parts the answers name",
+          code == 0 and "Fuel tank" not in words and "Master valve" not in words and "\"Pump\"" not in words and "Spare valve" in words, (out, words))
+    check("C4: ... and the callouts of those parts (pointing at them, or T_<id>), but not a free caption or another part's callout",
+          "the master valve" not in words and "points at the valve" not in words and "points at the pump" not in words
+          and "Fuel plant" in words and len(got) == 5, words)
+    broken_sheet = {"module": 1, "screens": {"t01": {"try_tablet": False}, "q01": {"figure": "plant.kit.json", "unlabel": "everything",
+                    "areas": {"Master valve": "mv"}}}}
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), broken_sheet)
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force")
+    check("C4: an unknown \"unlabel\" is reported and names the three choices", code == 1 and '"answers", "all" or a list' in out, out)
+    check("C12: a photo over a categorise / an order lays itself beside the cards on landscape (data-pic=beside), like a choice",
+          all('data-pic="beside"' in q[k] and "instrument" in q[k] for k in ("q02", "q04", "q03")) and 'data-mech="categorise" data-pic="beside"' in q["q02"], q["q02"][:300])
+    gcss = io.open(os.path.join(SKILLS, "course-task-ux", "assets", "gb_answer.css"), encoding="utf-8").read()
+    check("C12: the engine's stylesheet places the picture and the cards of a sort / put-in-order beside each other",
+          '.scr[data-pic="beside"][data-mech="categorise"]>.grps{grid-column:1/-1}' in gcss and '[data-mech="order"],[data-mech="match"]' in gcss, "")
+    check("C13: a task photograph's alt comes from the question's visual, else the photo's own record",
+          '<img class="taskfig" src="../assets/img/pump.png" alt="A grey pump on a blue base."' in q["q02"] and tp.photo_alt({"name": "A pump"}) == "A pump"
+          and tp.photo_alt({"shows": ["a pump", "a base"]}) == "a pump, a base" and tp.photo_alt({}) == "", q["q02"][:500])
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {"t01": {"try_tablet": False},
+            "q02": {"figure": "assets/img/pump.png", "alt": "The pump room, seen from the door"}, "q03": {"figure": "assets/img/pump.png"}, "q04": {}}})
+    run(COMPILE, c, "--module", "1", "--only", "tasks", "--force")
+    page = io.open(os.path.join(md, "tasks", "sc1_the_plant.html"), encoding="utf-8").read()
+    check("C13: the build sheet's own alt wins", 'alt="The pump room, seen from the door"' in page, "")
+    # C15 / C16 - the stylesheet
+    check("C15: .dial-val (the set-value readout the engine writes) has a rule", re.search(r"\.dial-read \.dial-val\{", gcss) is not None)
+    check("C16: on a dark drawing (and a photo) a right / wrong area is a plain wash, not multiply (near-black) - with a larger tick",
+          ".ga.kitfig .hot.right,.ga:has(>img.taskfig) .hot.right{border-color:var(--good-d)" in gcss
+          and "mix-blend-mode:normal}" in gcss and "width:34px;height:34px" in gcss)
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="compile_")
     try:
@@ -1199,6 +1388,7 @@ def main():
         every_way_part(tmp)
         team_part(tmp)
         language_part(tmp)
+        fixes_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

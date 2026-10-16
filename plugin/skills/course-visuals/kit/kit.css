@@ -157,6 +157,13 @@
 .kit-fl-air .kit-content{stroke:none}
 .kit-fl-air .kit-flow{stroke:var(--dim-d,#A2B7CF);stroke-dasharray:10 12;stroke-width:2;stroke-linecap:round}
 .kit-vessel-o{fill:none;stroke:var(--faint-d,#71879F);stroke-width:2}
+/* a tank that ruptures (tank "burst", 2.49.1): the shell cracks and turns red, the contents ignite in a fireball */
+.kit-tank-crack{fill:none;stroke:var(--warn-d,#FF8C82);stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}
+.kit-tank-burst .kit-vessel-o{stroke:var(--warn-d,#FF8C82);stroke-width:3}
+.kit-tank-fire-out{fill:var(--warn-d,#FF8C82);opacity:.7}
+.kit-tank-fire-core{fill:var(--amber,#E9A51E)}
+.kit-tank-burning .kit-tank-fire-out{transform-box:fill-box;transform-origin:center;animation:kit-tank-boil .6s ease-in-out infinite alternate}
+@keyframes kit-tank-boil{to{transform:scale(1.07)}}
 .kit-quiet.kit-shut .kit-state{fill:var(--dim-d,#A2B7CF)}
 .kit-quiet.kit-shut .kit-valve{stroke:var(--dim-d,#A2B7CF)}
 .kit-quiet.kit-shut .kit-vfill{fill:var(--dim-d,#A2B7CF)}

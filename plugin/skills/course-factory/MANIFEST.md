@@ -1119,6 +1119,23 @@ each found only after a full build. Now the kit and its checks take that work:
 - **Build** (`compile_module.py`, `compile/GUIDE.md` §2b): a photo slide with no picture file says what it can become.
 - **On the pilot:** no proposal in M01-M03 (each has its 3D scene); M04 s10, s06; M05 s06, s05; M06 s14, s06.
 
+## 4zs · What building IGF Module 6 from nothing found, fixed (2.49.1, 2026-10-16)
+
+- **The build:** 84 min, 0 hand edits to HTML, 9 compile runs of which 5 a correct factory would not have needed; 33
+  problems logged with file:line in the course's `working_claude/M06_BUILD_METRICS.md` §6. 31 fixed here.
+- **Compiler / task pages** (C1-C9, C12, C13, C15, C16): `python -I`; crash-safe build record; `--init-build` from the
+  course; `"unlabel": "answers"`; `"not_things"`; inset warning; photo slides in real columns (`.photo-col`) with the
+  credit kept; landscape picture beside categorise/order/match; alt text; `.dial-val`; right state on dark drawings.
+- **Figure kit / drawing check** (K1-K13, C11): scale and range-bar words through the layout and the audit; parts
+  `lamp`, `spark`, `composition_bar`; states `tank.burst`, `gas_cloud.drift`; `text` revealed by a step; EMPTY at the
+  busiest step; `studio.py --step all`; contrast after animations settle.
+- **Script lane / checkers** (P1-P3, C10, C14, C15, C17): Apply-level numbers; render and `kb_tool` write only on change;
+  `audit_compose.all()`; hooks are not unstyled; `measure/scripts/run_audits.py` runs the three deck probes headless.
+- **Not changed, on purpose:** per-question Retry (C16) is against course-task-ux §9a (one opening, one result) - the
+  owner's call; `two-col` on a photo stays `photo split`, which M01-M06 use deliberately.
+- **Proof:** 36 test files; M01-M06 compiled with `python -I` on a scratch copy, the importer ready, `run_audits.py`
+  PASS on all six decks at 1280x800. The real course still needs M02 s15 `"rows": 2`.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

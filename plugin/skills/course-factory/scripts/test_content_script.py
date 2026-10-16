@@ -198,6 +198,19 @@ def main():
         check("render writes the review page and the Word file, with no problems", code == 0 and os.path.isfile(p["docx"]) and "problems" not in out, out)
         check("the page is in the operator's language, the course text marked English",
               '<html lang="lv">' in page and '<span class="verb" lang="en">Four containment systems</span>' in page)
+        # P2: render keeps the file's own indent and rewrites it only when something changed
+        ci = new_course(tmp, "indent4")
+        pi = cs.paths(ci, 1)["script"]
+        io.open(pi, "w", encoding="utf-8", newline="\n").write(json.dumps(SCRIPT, ensure_ascii=False, indent=4) + "\n")
+        cs_run("render", ci, "--module", "1")
+        raw1 = io.open(pi, encoding="utf-8", newline="").read()
+        check("P2: render keeps a 4-space file at 4 spaces, and adds only the docx_hash",
+              raw1.startswith('{\n    "module"') and json.loads(raw1).get("docx_hash") and
+              {k: v for k, v in json.loads(raw1).items() if k != "docx_hash"} == SCRIPT, raw1[:60])
+        os.utime(pi, (1, 1))
+        cs_run("render", ci, "--module", "1")
+        check("P2: a second render with nothing changed does not write the script file at all",
+              io.open(pi, encoding="utf-8", newline="").read() == raw1 and os.path.getmtime(pi) == 1)
         part2 = page.find(lv("s_part2"))
         part1 = page.find(lv("s_part1"))
         check("part 1 is the instructor tablet, part 2 the trainee tablet", 0 < part1 < part2, (part1, part2))
@@ -259,6 +272,17 @@ def main():
         f = [x for x in cs.theory_findings(untaught)[0] if x["rule"] == "t_not_taught"]
         check("a question whose answer was never taught is found, on that question", f and f[0]["screen"] == "q01"
               and f[0]["where"] == LV["s_question_in"].format(set=LV["s_sc_name"].format(k=1), q=1), f)
+        # P1 (M06 q01): an Apply-level question brings its own numbers - they are not taught on any slide
+        applied = copy.deepcopy(SCRIPT)
+        screen(applied, "q02")["answer"] = "Fully refrigerated: 3 %; 10 %; 25 %; 40 %; 55 %; 60 %"
+        nt0 = [x["screen"] for x in cs.theory_findings(applied)[0] if x["rule"] == "t_not_taught"]
+        screen(applied, "q02")["bloom"] = 3
+        screen(applied, "q02")["bloom_why"] = "the trainee applies the carriage rule to cargoes it is not given on a slide"
+        nt3 = [x["screen"] for x in cs.theory_findings(applied)[0] if x["rule"] == "t_not_taught"]
+        check("P1: new numbers in a Bloom-3 question are not 'untaught' - without bloom they are", nt0 == ["q02"] and nt3 == [], (nt0, nt3))
+        screen(applied, "q02")["answer"] = "Gas-free: ballast 3 %; 10 %\nPurged: ullage 25 %; 40 %"
+        nt3 = [x["screen"] for x in cs.theory_findings(applied)[0] if x["rule"] == "t_not_taught"]
+        check("P1: ... but words that were never taught are still found at Bloom 3", nt3 == ["q02"], nt3)
         onslide = copy.deepcopy(SCRIPT)
         screen(onslide, "t01")["text"] = "At what temperature is LNG carried near atmospheric pressure? A, B or C."
         check("a task written onto its slide is found", "t_task_on_slide" in rules_of(onslide), rules_of(onslide))

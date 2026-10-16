@@ -233,6 +233,51 @@ def main():
             check("a course folder inside the knowledge base is refused", code == 2 and not os.path.exists(inner), out)
             check("nothing inside the knowledge base changed", snapshot(kb) == before)
 
+            # P3: a read tool never writes into the course
+            ksp = os.path.join(course, "working_claude", "kb_sources.json")
+            os.utime(ksp, (1, 1))
+            raw_before = io.open(ksp, "rb").read()
+            code, out = run("search", kb, "sulphur content fuel oil", "--course", course, "--top", "3")
+            check("search does not touch kb_sources.json", code == 0 and os.path.getmtime(ksp) == 1 and io.open(ksp, "rb").read() == raw_before, out)
+            snap_c = snapshot(course)
+            code, out = run("search", kb, "inerting dew point", "--course", course, "--top", "2", "--stdout")
+            check("search --stdout prints the pack and writes nothing at all",
+                  code == 0 and "# Retrieval pack" in out and "## 1 ·" in out and snapshot(course) == snap_c, out[:200])
+            code, out = run("sources", kb, "--course", course)
+            check("sources on an unchanged knowledge base does not rewrite kb_sources.json",
+                  code == 0 and os.path.getmtime(ksp) == 1 and io.open(ksp, "rb").read() == raw_before and "not rewritten" in out, out[-200:])
+
+        print("\n-- sources with two knowledge bases: one entry each, never the last one only")
+        kb_a, kb_b = build_csp(os.path.join(tmp, "multi_a")), build_docling(os.path.join(tmp, "multi_b"))
+        mc = os.path.join(tmp, "multi_course", "course")
+        os.makedirs(mc)
+        run("sources", kb_a, "--course", mc)
+        ksp = os.path.join(mc, "working_claude", "kb_sources.json")
+        run("sources", kb_b, "--course", mc)
+        rep = json.load(io.open(ksp, encoding="utf-8"))
+        held = [os.path.normcase(e["knowledge_base"]) for e in rep.get("knowledge_bases", [])]
+        check("a second knowledge base is added, the first is kept",
+              held == [os.path.normcase(os.path.abspath(kb_a)), os.path.normcase(os.path.abspath(kb_b))], held)
+        check("the flat top level holds both: the sources add up and the edition questions are not lost",
+              rep["source_count"] == sum(e["source_count"] for e in rep["knowledge_bases"]) and
+              len(rep["edition_groups"]) >= len(rep["knowledge_bases"][0]["edition_groups"]) > 0, rep["source_count"])
+        os.utime(ksp, (1, 1))
+        run("sources", kb_a, "--course", mc)
+        check("re-running either one changes nothing", os.path.getmtime(ksp) == 1 and
+              [e["knowledge_base"] for e in json.load(io.open(ksp, encoding="utf-8"))["knowledge_bases"]] == [os.path.abspath(kb_a), os.path.abspath(kb_b)])
+        legacy = os.path.join(tmp, "legacy_course", "course", "working_claude")
+        os.makedirs(legacy)
+        flat = {k: v for k, v in rep["knowledge_bases"][0].items()}
+        flat["_what"] = "old"
+        io.open(os.path.join(legacy, "kb_sources.json"), "w", encoding="utf-8").write(json.dumps(flat, indent=2))
+        os.utime(os.path.join(legacy, "kb_sources.json"), (1, 1))
+        run("sources", kb_a, "--course", os.path.dirname(legacy))
+        check("an older flat file, same knowledge base, same content: left as it is",
+              os.path.getmtime(os.path.join(legacy, "kb_sources.json")) == 1)
+        run("sources", kb_b, "--course", os.path.dirname(legacy))
+        l2 = json.load(io.open(os.path.join(legacy, "kb_sources.json"), encoding="utf-8"))
+        check("... and a second knowledge base keeps the older one's entry", len(l2.get("knowledge_bases", [])) == 2, list(l2))
+
         print("\n-- find (2.13.1): every knowledge base, by its files, writing nothing")
         course = os.path.join(tmp, "a_course")
         os.makedirs(os.path.join(course, "materials", "deep"))

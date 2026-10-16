@@ -7,7 +7,7 @@
     kb_tool.py sources <kb folder> --course <course folder> [--json]
     kb_tool.py decide  <course folder> --keep "<source path>" [--keep ...] [--different "<group id>" ...]
     kb_tool.py decision <course folder> --yes <kb> | --built <kb> | --declined "<reason>"
-    kb_tool.py search  <kb folder> "<what you are looking for>" --course <course folder> [--top 12] [--all]
+    kb_tool.py search  <kb folder> "<what you are looking for>" --course <course folder> [--top 12] [--all] [--stdout]
 
 WHY THIS EXISTS
 Until 2.13.0 the factory assumed every knowledge base was a docling extraction, and the owner's
@@ -33,12 +33,16 @@ WHAT IT DOES
             question needed) and LIKELY EDITIONS of one publication (MARPOL 2022 beside an older
             MARPOL; "SIGGTO LGHP (4th)" beside "SIGTTO liquified gas handling principles"). For
             each edition group it writes a ready pop-up question - "which edition is current?" -
-            into <course>/_factory/kb_sources.json. The operator answers; `decide` records it.
+            into <course>/working_claude/kb_sources.json. The operator answers; `decide` records it.
+            The file is rewritten only when what it holds changes (a re-run never touches it), and it
+            keeps one entry per knowledge base - a run on one never drops another's.
   decide    records the operator's answer in <course>/_factory/intake.json: which one is current,
             or that the group is really different publications.
   search    ranks pieces with the knowledge base's own index (BM25) and writes a retrieval pack -
             the matching extracts with file and page - into course/working_claude/retrieval/. Sources the
             operator marked as not current, and exact duplicates, are left out (--all keeps them).
+            It writes nothing else - never kb_sources.json or intake.json - and nothing at all with --stdout,
+            so an agent that only reads can search without touching the course.
 
 WHAT IT NEVER DOES
 Write inside the knowledge base (L14). Every write goes to the course folder, and a course folder
@@ -248,6 +252,70 @@ def question_for(g):
             "multiSelect": False, "options": opts, "members": [r["path"] for r in g]}
 
 
+SOURCES_WHAT = "Written by course-factory/kb/scripts/kb_tool.py sources. Internal - never shipped."
+
+
+def _same_kb(a, b):
+    return os.path.normcase(os.path.abspath(a or "")) == os.path.normcase(os.path.abspath(b or ""))
+
+
+def _sans_dates(report):
+    """a report without its 'written' dates - a re-run on the same day, or on another, that finds the same
+    thing is not a change"""
+    r = {k: v for k, v in report.items() if k not in ("written", "_what")}
+    if "knowledge_bases" in r:
+        r["knowledge_bases"] = [{k: v for k, v in e.items() if k != "written"} for e in r["knowledge_bases"]]
+    return r
+
+
+def merge_sources(path, entry):
+    """The report to keep in kb_sources.json: this knowledge base's entry added to - or, when it is already
+    there, replaced in - the ones the file already holds. A course can have several knowledge bases; a run on one
+    never drops another's entry. The top level of the file keeps the flat shape older tools read (`decide`
+    reads edition_groups), holding the union of every knowledge base. Returns (report, changed): `changed`
+    is False when nothing but the date would differ, so a read tool never touches the file for nothing."""
+    old = None
+    if os.path.isfile(path):
+        try:
+            old = load_json(path)
+        except (OSError, ValueError):
+            old = None
+    held = []
+    if isinstance(old, dict):
+        held = [dict(e) for e in old.get("knowledge_bases") or []
+                if isinstance(e, dict) and e.get("knowledge_base")]
+        if not held and old.get("knowledge_base"):        # an older file: one flat entry
+            held = [{k: old[k] for k in ("knowledge_base", "format", "written", "source_count", "exact_duplicates",
+                                         "format_copies", "edition_groups") if k in old}]
+    prior = next((e for e in held if _same_kb(e["knowledge_base"], entry["knowledge_base"])), None)
+    if prior is not None and _sans_dates(prior) == _sans_dates(entry):
+        entry = dict(entry, written=prior.get("written", entry["written"]))
+    held = [entry if e is prior else e for e in held] if prior is not None else held + [entry]
+    seen, groups = set(), []
+    for e in held:
+        for g in e.get("edition_groups") or []:
+            if g["id"] not in seen:
+                seen.add(g["id"])
+                groups.append(g)
+    report = {
+        "_what": SOURCES_WHAT,
+        "knowledge_base": held[0]["knowledge_base"], "format": held[0].get("format"),     # the first one; all are in knowledge_bases
+        "written": max(e.get("written", "") for e in held),
+        "source_count": sum(e.get("source_count", 0) for e in held),
+        "exact_duplicates": [g for e in held for g in e.get("exact_duplicates") or []],
+        "format_copies": [g for e in held for g in e.get("format_copies") or []],
+        "edition_groups": groups,
+        "knowledge_bases": held,
+    }
+    if isinstance(old, dict):
+        new = _sans_dates(report)
+        if "knowledge_bases" not in old:                   # a flat file stays flat until there is a second knowledge base
+            new.pop("knowledge_bases", None)
+        if _sans_dates(old) == new:
+            return old, False
+    return report, True
+
+
 def cmd_sources(kb, course, as_json):
     fmt = detect(kb)
     if not fmt:
@@ -256,8 +324,7 @@ def cmd_sources(kb, course, as_json):
         return refuse_inside(course, kb)
     rows = inventory(kb, fmt)
     exact, editions, fmt_copies = group_sources(rows)
-    report = {
-        "_what": "Written by course-factory/kb/scripts/kb_tool.py sources. Internal - never shipped.",
+    entry = {
         "knowledge_base": os.path.abspath(kb), "format": fmt, "written": date.today().isoformat(),
         "source_count": len(rows),
         "exact_duplicates": [[r["path"] for r in g] for g in exact],
@@ -265,10 +332,12 @@ def cmd_sources(kb, course, as_json):
         "edition_groups": [question_for(g) for g in editions],
     }
     out = _claude(course, "kb_sources.json")
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    with io.open(out, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
-        f.write("\n")
+    report, changed = merge_sources(out, entry)
+    if changed:
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        with io.open(out, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+            f.write("\n")
     if as_json:
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0
@@ -295,7 +364,7 @@ def cmd_sources(kb, course, as_json):
             print("    - " + "  |  ".join("%s (%s)" % (r["file"], edition_hint(r)) for r in g))
     else:
         print("\n  No publication appears in more than one edition.")
-    print("\n  Written to %s" % out)
+    print("\n  %s %s" % ("Written to" if changed else "Already up to date, not rewritten:", out))
     return 0
 
 
@@ -416,7 +485,9 @@ def slug(s):
     return re.sub(r"[^a-z0-9]+", "_", s.lower()).strip("_")[:60] or "search"
 
 
-def cmd_search(kb, q, course, top, keep_all):
+def cmd_search(kb, q, course, top, keep_all, to_stdout=False):
+    """Reads the knowledge base and the course's decisions; the only thing it writes is its own retrieval pack
+    (retrieval/<date>_<query>.md) - never kb_sources.json, never intake.json. With to_stdout it writes nothing."""
     fmt = detect(kb)
     if not fmt:
         return no_kb(kb)
@@ -427,7 +498,6 @@ def cmd_search(kb, q, course, top, keep_all):
     skip = set() if keep_all else (superseded(course) | {r["path"] for g in exact + fmt_copies for r in g[1:]})
     hits = (search_csp if fmt == "course_source_processor" else search_docling)(kb, q, top, skip)
     outdir = _claude(course, "retrieval")
-    os.makedirs(outdir, exist_ok=True)
     out = os.path.join(outdir, "%s_%s.md" % (date.today().isoformat(), slug(q)))
     L = ["# Retrieval pack — %s" % q, "",
          "*Written %s by course-factory/kb/scripts/kb_tool.py from `%s` (%s). Extracts are the source's own "
@@ -449,9 +519,16 @@ def cmd_search(kb, q, course, top, keep_all):
         if h["asset"]:
             L += ["Picture: `%s`" % h["asset"], ""]
         L += [h["text"].strip(), ""]
-    with io.open(out, "w", encoding="utf-8", newline="\n") as f:
-        f.write("\n".join(L) + "\n")
-    print("%d extract(s) for \"%s\" written to\n  %s" % (len(hits), q, out))
+    text = "\n".join(L) + "\n"
+    if to_stdout:
+        sys.stdout.buffer.write(text.encode("utf-8"))
+        return 0
+    os.makedirs(outdir, exist_ok=True)
+    same = os.path.isfile(out) and io.open(out, encoding="utf-8", newline="").read() == text
+    if not same:
+        with io.open(out, "w", encoding="utf-8", newline="\n") as f:
+            f.write(text)
+    print("%d extract(s) for \"%s\" %s\n  %s" % (len(hits), q, "already in" if same else "written to", out))
     return 0
 
 
@@ -772,6 +849,7 @@ def main(argv=None):
     k.add_argument("--yes", metavar="KB"); k.add_argument("--built", metavar="KB"); k.add_argument("--declined", metavar="REASON")
     q = sub.add_parser("search"); q.add_argument("kb"); q.add_argument("query"); q.add_argument("--course", required=True)
     q.add_argument("--top", type=int, default=12); q.add_argument("--all", action="store_true")
+    q.add_argument("--stdout", action="store_true", help="print the pack, write nothing at all")
     a = ap.parse_args(argv)
     if getattr(a, "course", None):                 # what the factory writes goes to course\ (L40)
         given = a.course
@@ -790,7 +868,7 @@ def main(argv=None):
         return cmd_decide(a.course, set(a.keep), set(a.different))
     if a.cmd == "decision":
         return cmd_decision(a.course, a.yes, a.built, a.declined)
-    return cmd_search(a.kb, a.query, a.course, a.top, a.all)
+    return cmd_search(a.kb, a.query, a.course, a.top, a.all, a.stdout)
 
 
 if __name__ == "__main__":

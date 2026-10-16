@@ -2,7 +2,7 @@
 """studio.py - the figure studio: one *.kit.json drawn, audited and photographed in seconds, without a module compile.
 
   studio.py <figure.kit.json> [--parts kit_parts.js] [--panel two-col|dark|wide-left|task|WxH]
-            [--sizes 1280x800,1024x768] [--step final|N] [--out <folder>] [--json]
+            [--sizes 1280x800,1024x768] [--step final|N|all] [--out <folder>] [--json]
 
 WHY (IGF M01-M04, 2026-10-16): the modules took 3, ~10, ~12 and 17 compile runs, nearly all for drawings - a label
 overflowing, a part invisible on the dark panel, empty space, a 12 px label - each found only after a full build and its
@@ -13,7 +13,9 @@ drawing check. The studio gives the same answers for one figure at a time:
      compiler's own slide_html. A spec anywhere else is drawn in a slide frame of the --panel kind.
   2  at 1280 x 800 and 1024 x 768, every step: audit_drawing.js (inside, cut off, text zone, empty, contrast, small
      text) and the kit's own layout report (scale, the 12.5 px floor, labels moved, labels with no clear place)
-  3  a screenshot per size, of the --step (default: the last), into --out (default: next to the spec, _studio/)
+  3  a screenshot per size, of the --step (default: the last), into --out (default: next to the spec, _studio/).
+     --step all draws the whole sequence - the rest state and the end of every step - as ONE contact sheet in a single
+     browser run (the panels as wide as the real slide's), instead of one run per step
 
 Exit 0 clean, 1 findings, 2 could not run (no Chrome or Edge: set CF_BROWSER).
 """
@@ -174,6 +176,59 @@ PROBE = r"""
 </script>"""
 
 
+def generic_head(panel):
+    """the stylesheets of a generic frame (no course): the tokens, the shell, the kit - and the frame's own few rules"""
+    css = [os.path.join(TOKENS, x) for x in ("gb_tokens.css", "gb_shell.css", "gb_compose.css")] + [os.path.join(KIT, "kit.css")]
+    if panel == "task":
+        css.insert(2, os.path.join(SKILLS, "course-task-ux", "assets", "gb_answer.css"))
+    head = "".join('<link rel="stylesheet" href="%s">' % uri(x) for x in css if os.path.isfile(x))
+    head += ("<style>body{margin:0;background:var(--grey)} .studio-box{margin:20px auto;display:flex}"
+             " .studio-box .kit-fig{height:100%} .studio-task{max-width:1240px;margin:20px auto;padding:20px;background:var(--white)}"
+             " .studio-task .ga{width:640px;max-width:100%;position:relative} .studio-task .ga svg{display:block;width:100%;height:auto}"
+             " .slide{position:absolute;inset:0;display:flex}"
+             " .sheet{display:grid;gap:16px;padding:16px;box-sizing:border-box} .sheet-cell{min-width:0}"
+             " .sheet-cap{font:700 15px/1.2 sans-serif;color:var(--navy);height:28px;overflow:hidden;white-space:nowrap}"
+             " .sheet .kit-screen{width:100%}</style>")
+    return head
+
+
+# the figure's panel, as the deck shows it, at each window width - the contact sheet draws every step at this width, so the
+# words are grown (the 12.5 px floor) exactly as on the real slide
+PANEL_W = {1280: 682, 1024: 443}
+
+
+def sheet_size(spec, size):
+    """(cell width, columns, page width, page height) of the contact sheet for a window `size`"""
+    cw = PANEL_W.get(size[0], int(size[0] * 0.53))
+    n = len(spec.get("steps") or []) + 1
+    cols = 1 if n == 1 else 2
+    ch = int(round(cw * spec["size"][1] / float(spec["size"][0]))) + 24 + 28            # the panel's padding, the caption
+    rows = (n + cols - 1) // cols
+    return cw, cols, cols * cw + (cols + 1) * 16, rows * ch + (rows + 1) * 16
+
+
+def sheet_html(spec, parts_js, size):
+    """ONE page that draws the figure at the end of every step side by side (step 0 = the rest state), each in a dark panel the
+    width of the real slide's - so one browser run gives the whole sequence, where a --step N run gave one picture"""
+    cw, cols, pw, ph = sheet_size(spec, size)
+    steps = spec.get("steps") or []
+    cells = ""
+    for k in range(len(steps) + 1):
+        title = "Start" if k == 0 else (steps[k - 1].get("title") or "")
+        cells += ('<div class="sheet-cell"><div class="sheet-cap">%s</div><div class="kit-screen"><svg data-kit="#kit-sheet" '
+                  'data-sheet-step="%d"></svg></div></div>' % (html.escape("%s" % title if k == 0 else "Step %d - %s" % (k, title)), k))
+    data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    scripts = [os.path.join(KIT, "kit.js")] + ([parts_js] if parts_js else [])
+    # each cell is a normal figure (the frame grows as in a deck), moved to its step once it is drawn
+    run = ("<script>setTimeout(function(){KIT.figures.forEach(function(f,i){var svg=f.svg,k=+svg.getAttribute('data-sheet-step');"
+           "f.go(k,true);f.layout(true);});"
+           "if(document.getAnimations)document.getAnimations().forEach(function(a){try{var t=a.effect.getTiming();"
+           "if(t.iterations===Infinity)a.pause();else a.finish();}catch(e){}});},400);</script>")
+    return ('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">%s</head><body><div class="sheet" '
+            'style="grid-template-columns:repeat(%d,%dpx);width:%dpx">%s</div><script type="application/json" id="kit-sheet">%s</script>%s%s</body></html>'
+            % (generic_head("two-col"), cols, cw, pw, cells, data, "".join('<script src="%s"></script>' % uri(s) for s in scripts), run)), (pw, ph)
+
+
 def page_html(spec, ctx, panel, parts_js, shot):
     """(html, base folder): the studio page, read from the module's presentation folder (course) or the kit"""
     shot_js = "null" if shot is None else json.dumps(shot)
@@ -199,14 +254,7 @@ def page_html(spec, ctx, panel, parts_js, shot):
                '<meta name="viewport" content="width=device-width, initial-scale=1">%s</head><body>%s%s</body></html>'
                % (Path(os.path.join(real["mdir"], "presentation")).as_uri(), head, body, probe))
         return doc, real.get("probs") or []
-    css = [os.path.join(TOKENS, x) for x in ("gb_tokens.css", "gb_shell.css", "gb_compose.css")] + [os.path.join(KIT, "kit.css")]
-    if panel == "task":
-        css.insert(2, os.path.join(SKILLS, "course-task-ux", "assets", "gb_answer.css"))
-    head = "".join('<link rel="stylesheet" href="%s">' % uri(x) for x in css if os.path.isfile(x))
-    head += ("<style>body{margin:0;background:var(--grey)} .studio-box{margin:20px auto;display:flex}"
-             " .studio-box .kit-fig{height:100%} .studio-task{max-width:1240px;margin:20px auto;padding:20px;background:var(--white)}"
-             " .studio-task .ga{width:640px;max-width:100%;position:relative} .studio-task .ga svg{display:block;width:100%;height:auto}"
-             " .slide{position:absolute;inset:0;display:flex}</style>")
+    head = generic_head(panel)
     scripts = [os.path.join(KIT, "kit.js")] + ([parts_js] if parts_js else [])
     body = generic_slide(spec, panel) + "".join('<script src="%s"></script>' % uri(s) for s in scripts)
     doc = ('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, '
@@ -274,14 +322,20 @@ def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), ste
     try:
         for size in sizes:
             for mode in ("probe", "shot"):
-                doc, nts = page_html(spec, ctx, panel or "two-col", parts, None if mode == "probe" else step)
+                sheet = mode == "shot" and step == "all"
+                if sheet:                       # ONE page with every step side by side: one browser run for the whole sequence
+                    doc, win = sheet_html(spec, parts, size)
+                    nts = []
+                else:
+                    doc, nts = page_html(spec, ctx, panel or "two-col", parts, None if mode == "probe" else step)
                 notes += nts
                 f = os.path.join(tmp, "%s_%dx%d.html" % (mode, size[0], size[1]))
                 io.open(f, "w", encoding="utf-8").write(doc)
                 prof = tempfile.mkdtemp(prefix="p_", dir=tmp)
-                png = os.path.join(out, "%s_%dx%d.png" % (stem, size[0], size[1])) if mode == "shot" else None
+                png = os.path.join(out, "%s_%dx%d%s.png" % (stem, size[0], size[1], "_all" if sheet else "")) if mode == "shot" else None
                 # a screenshot's page is its whole window; a page read back (--dump-dom) is smaller than its window
-                win = size if png else window_for(size, exe)
+                if not sheet:
+                    win = size if png else window_for(size, exe)
                 procs.append((size, mode, png, chrome(exe, uri(f), win, prof, png), (uri(f), win, png)))
         for size, mode, png, p, again in procs:
             ok, so = p.wait(30)
@@ -369,13 +423,13 @@ def main(argv=None):
     ap.add_argument("--parts", help="a module's kit_parts.js (found by itself for a spec inside a course)")
     ap.add_argument("--panel", help="two-col | dark | wide-left | task | WxH (default: the real slide, or two-col)")
     ap.add_argument("--sizes", default="1280x800,1024x768")
-    ap.add_argument("--step", default="final", help="the step in the screenshot: final or a number")
+    ap.add_argument("--step", default="final", help="the step in the screenshot: final, a number, or all (a contact sheet of every step)")
     ap.add_argument("--out", help="where the screenshots go (default: _studio next to the spec)")
     ap.add_argument("--json", action="store_true")
     o = ap.parse_args(argv)
     sizes = tuple(tuple(int(v) for v in s.split("x")) for s in o.sizes.split(","))
     t0 = time.time()
-    result, why = run(o.spec, o.parts, o.panel, sizes, o.step if o.step == "final" else int(o.step), o.out)
+    result, why = run(o.spec, o.parts, o.panel, sizes, o.step if o.step in ("final", "all") else int(o.step), o.out)
     if not result:
         print("Not run: " + why)
         return 2

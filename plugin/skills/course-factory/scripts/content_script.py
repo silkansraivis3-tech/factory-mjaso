@@ -179,11 +179,35 @@ def load(p):
         return json.load(f)
 
 
+def file_indent(raw, default=2):
+    """The indent a JSON file already uses (a number of spaces, or a tab; None when it is one line), so a
+    rewrite does not change how the file looks to an editor."""
+    for line in raw.splitlines()[1:]:
+        m = re.match(r"^([ \t]+)\S", line)
+        if m:
+            return "\t" if m.group(1).startswith("\t") else len(m.group(1))
+    return None if raw.strip() and "\n" not in raw.strip() else default
+
+
 def save(p, obj):
+    """Write obj as JSON in the file's own formatting - and only when something actually changed."""
     os.makedirs(os.path.dirname(p), exist_ok=True)
-    with io.open(p, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=2)
-        f.write("\n")
+    indent, raw = 2, None
+    if os.path.isfile(p):
+        try:
+            with io.open(p, encoding="utf-8", newline="") as f:
+                raw = f.read()
+            if json.loads(raw) == obj:
+                return False
+            indent = file_indent(raw)
+        except ValueError:
+            raw = None
+    text = json.dumps(obj, ensure_ascii=False, indent=indent) + "\n"
+    if raw is not None and "\r\n" in raw:
+        text = text.replace("\n", "\r\n")
+    with io.open(p, "w", encoding="utf-8", newline="") as f:
+        f.write(text)
+    return True
 
 
 def content_hash(script):
@@ -679,12 +703,18 @@ def terms(text):
     return nums, ws
 
 
-def taught_share(answer, taught, others=()):
+def taught_share(answer, taught, others=(), words_only=False):
     """How much of an answer's key words are in the taught text: numbers exactly, words by their first
     five letters (so 'membrane' finds 'membranes', and Latvian and Russian endings still match). Words
     the wrong answers share are left out when anything is left - 'semi-refrigerated' is taught by
-    'semi', not by 'refrigerated', which every option about cold cargo has."""
+    'semi', not by 'refrigerated', which every option about cold cargo has.
+    words_only: a question that APPLIES a taught rule to new cases (Bloom 3 and up) brings its own numbers -
+    the mixtures it is given are not taught on any slide - so only its words and groups are judged: a
+    number the slides do teach still counts as taught, a new one is neither taught nor untaught."""
     an, aw = terms(answer)
+    if words_only:
+        tn_ = {x.lstrip("-") for x in taught[0]}
+        an = {n for n in an if n in taught[0] or n.lstrip("-") in tn_}
     on, ow = set(), set()
     for o in others:
         n, w = terms(o)
@@ -778,10 +808,14 @@ def theory_findings(script):
                         answer = "\n".join(right)
                         if not any(terms(answer)):
                             answer, others = q.get("feedback", ""), []
-                        each = [(taught_share(answer, slide_terms(x), others) or 0, x) for x in seen_slides]
+                        try:
+                            applying = int(q.get("bloom") or 0) >= 3      # applies a taught rule to new cases: judge words, not new numbers
+                        except (TypeError, ValueError):
+                            applying = False
+                        each = [(taught_share(answer, slide_terms(x), others, applying) or 0, x) for x in seen_slides]
                         union = (set().union(*[slide_terms(x)[0] for x in seen_slides]) if seen_slides else set(),
                                  set().union(*[slide_terms(x)[1] for x in seen_slides]) if seen_slides else set())
-                        share = taught_share(answer, union, others)
+                        share = taught_share(answer, union, others, applying)
                         best = sorted([e for e in each if e[0] >= 0.3], key=lambda e: -e[0])[:2]
                         taught_on[q["id"]] = sorted(slide_no[x["id"]] for _, x in best)
                         if share is not None and share < R["answers_taught_first"]["min_share"]:

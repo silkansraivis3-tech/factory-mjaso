@@ -30,9 +30,12 @@
                      panel, or the <svg> box): at most CONFIG.emptyMaxBlank of the
                      frame more than one grid cell from any content, and no blank
                      piece over CONFIG.emptyMaxShare. Letterbox bands count; a large
-                     shape (a hull, a room) fills only along its outline; a figure
-                     that steps is judged at its last step as well (operator,
-                     2026-10-15: "the visual is too big, much empty space").
+                     shape (a hull, a room) fills only along its outline; a pipe (an open
+                     stroked path) counts by its bounding box; a figure that steps is
+                     judged at its BUSIEST step - the state with the least blank, not
+                     step 0 - and the finding says where the largest blank piece is
+                     (operator, 2026-10-15: "the visual is too big, much empty space";
+                     IGF M06 2026-10-16: thin pipes read as blank, rest states failed).
 
      5  CONTRAST     (a figure-kit drawing only, 2.44.0) every part can be seen against the figure's dark panel:
                      a label 4.5:1 (3:1 large), a shape or line 3:1. A part coloured for a light slide (navy,
@@ -90,6 +93,8 @@
                                 (calibrated on the IGF pilot, 2026-10-15: well-filled figures 24-33 %, the ones the
                                 operator called empty 53-74 %) */
     emptyBigPart: 0.06,      /* EMPTY: a shape larger than this share of the frame fills only along its outline */
+    emptyPipeBox: 0.25,      /* EMPTY: a pipe (an open stroked path, no fill) counts by its bounding box up to this share of
+                                the frame; a longer route only a cell either side of its line */
     figTextContrast: 4.5,    /* CONTRAST: a kit figure's label against its panel (WCAG AA), */
     figLargeContrast: 3,     /*           a large one (24 px, or bold 18.66 px, as rendered) */
     figGraphicContrast: 3,   /*           a shape or line (WCAG 1.4.11) */
@@ -130,6 +135,33 @@
       if (getComputedStyle(n).display === "none") { return false; }
     }
     return true;
+  }
+  /* Animations and transitions that END are run to their end before a drawing is judged, as audit_deck.js does for a slide
+     (C11, IGF M06: a sign of kit-static-charge, 16:1 on its panel, read 1.5:1 once - caught mid-fade; a deck's own fade-in
+     or a colour transition moves a computed colour for a moment too). Only what is in the drawing, or holds it. An endless
+     animation (a flow, a flicker) has no end and is left running. */
+  function settle(svg) {
+    var n = 0;
+    if (!document.getAnimations) { return 0; }
+    document.getAnimations().forEach(function (a) {
+      var t = a.effect && a.effect.target;
+      if (!t || !(svg.contains(t) || t.contains(svg))) { return; }
+      try {
+        var timing = a.effect.getComputedTiming ? a.effect.getComputedTiming() : {};
+        if (timing.endTime !== Infinity && timing.iterations !== Infinity) { a.finish(); n++; }
+      } catch (e) { /* an endless animation cannot finish */ }
+    });
+    return n;
+  }
+  /* does an animation run on this element's opacity? (a kit part fading in or out by its value, or a blink) */
+  function animatesOpacity(n) {
+    if (!n.getAnimations) { return false; }
+    try {
+      return n.getAnimations().some(function (a) {
+        var kf = a.effect && a.effect.getKeyframes ? a.effect.getKeyframes() : [];
+        return kf.some(function (k) { return k.opacity !== undefined; });
+      });
+    } catch (e) { return false; }
   }
   function shown(el, svg) {
     var n;
@@ -311,6 +343,7 @@
     /* a figure-kit drawing lays itself out for the size it is shown at (its labels, the 12.5 px floor, its frame) the
        first time it is on screen - which may be this very moment, when a check moved it into a question */
     if (svg.__kit && typeof svg.__kit.layout === "function") { try { svg.__kit.layout(); } catch (e) { /* judged as it is */ } }
+    settle(svg);
     var copies = expandUses(svg);
     try {
       /* every painted part that is laid out - also one faded out now that a later step of the figure shows
@@ -439,8 +472,10 @@
       if (E4) {
         report(out, { check: "empty", where: where, part: "blank " + Math.round(E4.blank * 100) + " % of the frame, largest piece " +
                       Math.round(E4.w) + " x " + Math.round(E4.h) + " px = " + Math.round(E4.share * 100) + " %", other: E4.frame,
-                      detail: "too much empty space (limits: " + Math.round(CONFIG.emptyMaxBlank * 100) + " % blank, " +
-                      Math.round(CONFIG.emptyMaxShare * 100) + " % in one piece) - draw to the frame, crop the drawing, or give the room to the words" }, [svg]);
+                      detail: "too much empty space" + (E4.steps ? ", even at its fullest (step " + E4.step + " of " + E4.steps + ")" : "") +
+                      " (limits: " + Math.round(CONFIG.emptyMaxBlank * 100) + " % blank, " +
+                      Math.round(CONFIG.emptyMaxShare * 100) + " % in one piece) - the largest blank piece is " + E4.region +
+                      " - draw to the frame there, crop the drawing, or give the room to the words", region: E4.at }, [svg]);
       }
       /* ---- 5 CONTRAST ---- every part of a kit figure can be seen against what is behind it */
       checkContrast(svg, where, items, out);
@@ -479,72 +514,107 @@
     }
     if (fr.w < CONFIG.emptyMinFramePx || fr.h < CONFIG.emptyMinFramePx) { return null; }
     var cell = Math.max(fr.w, fr.h) / CONFIG.emptyGrid, cols = Math.ceil(fr.w / cell), rows = Math.ceil(fr.h / cell), r, c;
-    var full = [];
-    for (r = 0; r < rows; r++) { full.push([]); for (c = 0; c < cols; c++) { full[r].push(0); } }
-    function mark(x0, y0, x1, y1) {
-      var c0 = Math.max(0, Math.floor((x0 - fr.x) / cell)), c1 = Math.min(cols - 1, Math.floor((x1 - fr.x) / cell));
-      var r0 = Math.max(0, Math.floor((y0 - fr.y) / cell)), r1 = Math.min(rows - 1, Math.floor((y1 - fr.y) / cell));
-      for (r = r0; r <= r1; r++) { for (c = c0; c <= c1; c++) { full[r][c] = 1; } }
-    }
-    /* a figure that steps is judged complete - its last step - as well as now: parts that arrive later are content */
-    var parts = geom, f = svg.__kit;
-    if (f && f.steps && f.steps() && f.n !== f.steps()) {
-      var n0 = f.n;
-      try { f.go(f.steps(), true); parts = geom.concat(painted(svg)); } finally { f.go(n0, true); }
-    }
     /* on a task, what is laid ON the drawing to answer (a tap area, an empty label box - absolutely placed, with
        data-key or data-zone, as gb_zoom.js counts them) is content of the picture too: a band left for the label
        boxes is not empty space */
-    var holder = svg.parentNode;
+    var laid = [], holder = svg.parentNode;
     if (holder && holder.querySelectorAll) {
       Array.prototype.forEach.call(holder.querySelectorAll("[data-key],[data-zone],[data-hotspot]"), function (el) {
         if (el.parentNode !== holder || getComputedStyle(el).position !== "absolute") { return; }
         var bb = el.getBoundingClientRect();
-        if (bb.width && bb.height) { mark(bb.left, bb.top, bb.right, bb.bottom); }
+        if (bb.width && bb.height) { laid.push(bb); }
       });
     }
-    parts.forEach(function (it) {
-      var b = it.b, a = b.w * b.h;
-      if (a >= 0.8 * fr.w * fr.h) { return; }                    /* a panel or background is not content */
-      if (a < CONFIG.emptyBigPart * fr.w * fr.h || it.t === "text") { mark(b.x, b.y, b.x + b.w, b.y + b.h); return; }
-      /* a large shape (a hull, a room, a tank) carries information along its outline, not across its blank inside */
-      it.pts.forEach(function (p) { mark(p.x, p.y, p.x, p.y); });
-    });
-    /* largest all-blank rectangle: one histogram of blank cells per row, the largest rectangle under each */
-    var hgt = [], best = { a: 0 };
-    for (c = 0; c < cols; c++) { hgt.push(0); }
-    for (r = 0; r < rows; r++) {
-      for (c = 0; c < cols; c++) { hgt[c] = full[r][c] ? 0 : hgt[c] + 1; }
-      var st = [];
-      for (c = 0; c <= cols; c++) {
-        var hh = c < cols ? hgt[c] : 0;
-        while (st.length && hgt[st[st.length - 1]] >= hh) {
-          var top = st.pop(), height = hgt[top], left = st.length ? st[st.length - 1] + 1 : 0, width = c - left;
-          if (height * width > best.a) { best = { a: height * width, w: width, h: height }; }
-        }
-        st.push(c);
+    /* one state of the drawing judged: the blank share, the largest blank rectangle and where it is */
+    function judge(parts) {
+      var full = [], r, c;
+      for (r = 0; r < rows; r++) { full.push([]); for (c = 0; c < cols; c++) { full[r].push(0); } }
+      function mark(x0, y0, x1, y1) {
+        var c0 = Math.max(0, Math.floor((x0 - fr.x) / cell)), c1 = Math.min(cols - 1, Math.floor((x1 - fr.x) / cell));
+        var r0 = Math.max(0, Math.floor((y0 - fr.y) / cell)), r1 = Math.min(rows - 1, Math.floor((y1 - fr.y) / cell));
+        for (var rr = r0; rr <= r1; rr++) { for (var cc = c0; cc <= c1; cc++) { full[rr][cc] = 1; } }
       }
-    }
-    /* and the blank share overall: cells more than one cell away from any content */
-    var blank = 0;
-    for (r = 0; r < rows; r++) {
-      for (c = 0; c < cols; c++) {
-        var near = false;
-        for (var dr = -1; dr <= 1 && !near; dr++) {
-          for (var dc = -1; dc <= 1 && !near; dc++) {
-            var rr = r + dr, cc = c + dc;
-            if (rr >= 0 && rr < rows && cc >= 0 && cc < cols && full[rr][cc]) { near = true; }
+      laid.forEach(function (bb) { mark(bb.left, bb.top, bb.right, bb.bottom); });
+      parts.forEach(function (it) {
+        var b = it.b, a = b.w * b.h;
+        if (a >= 0.8 * fr.w * fr.h) { return; }                    /* a panel or background is not content */
+        if (a < CONFIG.emptyBigPart * fr.w * fr.h || it.t === "text") { mark(b.x, b.y, b.x + b.w, b.y + b.h); return; }
+        /* a pipe, a wire, a line (an open stroked path with no fill) is counted by its bounding box - the space its bends
+           enclose is where its valves, gauges and words sit; counted by its outline alone, a thin pipe read as blank
+           (K12, IGF M06). A route longer than CONFIG.emptyPipeBox of the frame is only counted a cell either side. */
+        if (!CLOSED[it.t] && !closed(it.el) && strokes(it.el) && !fills(it.el)) {
+          if (a <= CONFIG.emptyPipeBox * fr.w * fr.h) { mark(b.x, b.y, b.x + b.w, b.y + b.h); return; }
+          it.pts.forEach(function (p) { mark(p.x - cell, p.y - cell, p.x + cell, p.y + cell); });
+          return;
+        }
+        /* a large shape (a hull, a room, a tank) carries information along its outline, not across its blank inside */
+        it.pts.forEach(function (p) { mark(p.x, p.y, p.x, p.y); });
+      });
+      /* largest all-blank rectangle: one histogram of blank cells per row, the largest rectangle under each */
+      var hgt = [], best = { a: 0 };
+      for (c = 0; c < cols; c++) { hgt.push(0); }
+      for (r = 0; r < rows; r++) {
+        for (c = 0; c < cols; c++) { hgt[c] = full[r][c] ? 0 : hgt[c] + 1; }
+        var st = [];
+        for (c = 0; c <= cols; c++) {
+          var hh = c < cols ? hgt[c] : 0;
+          while (st.length && hgt[st[st.length - 1]] >= hh) {
+            var top = st.pop(), height = hgt[top], left = st.length ? st[st.length - 1] + 1 : 0, width = c - left;
+            if (height * width > best.a) { best = { a: height * width, w: width, h: height, c0: left, r0: r - height + 1 }; }
           }
+          st.push(c);
         }
-        if (!near) { blank++; }
       }
+      /* and the blank share overall: cells more than one cell away from any content */
+      var blank = 0;
+      for (r = 0; r < rows; r++) {
+        for (c = 0; c < cols; c++) {
+          var near = false;
+          for (var dr = -1; dr <= 1 && !near; dr++) {
+            for (var dc = -1; dc <= 1 && !near; dc++) {
+              var rr = r + dr, cc = c + dc;
+              if (rr >= 0 && rr < rows && cc >= 0 && cc < cols && full[rr][cc]) { near = true; }
+            }
+          }
+          if (!near) { blank++; }
+        }
+      }
+      blank /= rows * cols;
+      var w = best.w * cell, h = best.h * cell, share = best.a ? (w * h) / (fr.w * fr.h) : 0;
+      /* a margin strip along an edge is not a hole: it must be large both ways to count */
+      var hole = share > CONFIG.emptyMaxShare && w >= CONFIG.emptyMinSide * fr.w && h >= CONFIG.emptyMinSide * fr.h;
+      return { w: w, h: h, share: share, blank: blank, hole: hole, x: (best.c0 || 0) * cell, y: (best.r0 || 0) * cell };
     }
-    blank /= rows * cols;
-    var w = best.w * cell, h = best.h * cell, share = best.a ? (w * h) / (fr.w * fr.h) : 0;
-    /* a margin strip along an edge is not a hole: it must be large both ways to count */
-    var hole = share > CONFIG.emptyMaxShare && w >= CONFIG.emptyMinSide * fr.w && h >= CONFIG.emptyMinSide * fr.h;
-    if (!hole && blank <= CONFIG.emptyMaxBlank) { return null; }
-    return { w: w, h: h, share: share, blank: blank, hole: hole, frame: name };
+    /* a figure that steps is judged at its BUSIEST step - the state with the least blank, a hole counting against it - not
+       at step 0 (a rest state is sparse by design: the steps bring the parts in) and not only at the last. A figure whose
+       fullest state is still too empty is empty. Remembered per drawing and frame, so a run that visits every step judges
+       once (K12, IGF M06) */
+    var f = svg.__kit, key = [Math.round(fr.x), Math.round(fr.y), Math.round(fr.w), Math.round(fr.h), svg.getAttribute("viewBox"),
+                              f && f.steps ? f.steps() : 0].join("|");
+    if (svg.__emptyKey === key) { return null; }
+    svg.__emptyKey = key;
+    var res = null, step = 0;
+    if (f && f.steps && f.steps() && f.go) {
+      var n0 = f.n, k, here;
+      try {
+        for (k = 0; k <= f.steps(); k++) {
+          f.go(k, true);
+          here = judge(k === n0 ? geom : painted(svg));
+          if (!res || (here.hole ? 1 : 0) + here.blank < (res.hole ? 1 : 0) + res.blank) { res = here; step = k; }
+        }
+      } finally { f.go(n0, true); }
+    } else {
+      res = judge(geom);
+    }
+    if (!res.hole && res.blank <= CONFIG.emptyMaxBlank) { return null; }
+    /* where the blank piece is, so the drawing can be filled there */
+    var tl = res.x <= cell, tr = res.x + res.w >= fr.w - cell, tt = res.y <= cell, tb = res.y + res.h >= fr.h - cell;
+    var across = tl && tr ? "across the full width" : tr ? "on the right" : tl ? "on the left" : "in the middle";
+    var down = tt && tb ? "the full height" : tb ? "at the bottom" : tt ? "at the top" : "";
+    var region = [across, down].filter(Boolean).join(", ") + " - from x " + Math.round(res.x) + ", y " + Math.round(res.y) + " to x " +
+                 Math.round(res.x + res.w) + ", y " + Math.round(res.y + res.h) + " px of the frame (" + Math.round(fr.w) + " x " + Math.round(fr.h) + ")";
+    return { w: res.w, h: res.h, share: res.share, blank: res.blank, hole: res.hole, frame: name, step: step, steps: f && f.steps ? f.steps() : 0,
+             region: region, at: { x: res.x, y: res.y, w: res.w, h: res.h } };
   }
 
   function checkPictures(root, where, out, stop) {
@@ -613,11 +683,25 @@
     }
     return o;
   }
+  /* The opacity a part is JUDGED at: its stylesheet's opacity (a pale cloud, a quiet grid) counts, but a fade a figure's
+     value drives - inline style.opacity set by a kit part's render, or an animation on opacity - does not: a sign that is
+     fading in by the charge is as legible as it will be at the end of the fade, and measuring it half-faded read 1.5:1 for
+     a 16:1 part (C11, IGF M06). A part that is not there at all (opacity under 0.05) is not judged: see shown(). */
+  function judgedOpacity(el, svg) {
+    var o = 1, n;
+    for (n = el; n && n.nodeType === 1; n = n.parentElement) {
+      var v = parseFloat(getComputedStyle(n).opacity);
+      var driven = n !== svg && ((n.style && n.style.opacity !== "") || animatesOpacity(n));
+      if (!isNaN(v) && !driven) { o *= v; }
+      if (n === svg) { break; }
+    }
+    return o;
+  }
   function paintOf(el, svg, what) {      /* [r,g,b,a] of a part's fill or stroke, opacities folded into a */
     var cs = getComputedStyle(el), c = parseRgba(what === "stroke" ? cs.stroke : cs.fill);
     if (!c) { return null; }
     var op = parseFloat(what === "stroke" ? cs.strokeOpacity : cs.fillOpacity);
-    c[3] = c[3] * (isNaN(op) ? 1 : op) * groupOpacity(el, svg);
+    c[3] = c[3] * (isNaN(op) ? 1 : op) * judgedOpacity(el, svg);
     return c;
   }
   /* the colour rules of kit.css - the kit's own parts are drawn and calibrated for the panel in the gallery (a pipe's
@@ -726,9 +810,13 @@
     return res;
   }
 
+  /* EMPTY is judged once per drawing and frame in a run (it looks at every step itself): a new run judges again */
+  function resetEmpty(root) { qa(root || document, "svg").forEach(function (s) { s.__emptyKey = null; }); }
+
   function page() {
     var ab = guard();
     if (ab) { return verdict(ab); }
+    resetEmpty();
     var out = [], svgs = qa(document, "svg").filter(function (s) { return !s.ownerSVGElement && shown(s, s); });
     svgs.forEach(function (s, i) { checkSvg(s, "drawing " + (i + 1) + (s.id ? " #" + s.id : ""), out, document.body); });
     checkPictures(document.body, "page", out, document.body);
@@ -739,6 +827,7 @@
     var ab = guard();
     if (ab) { return Promise.resolve(verdict(ab)); }
     var sb = document.querySelector(CONFIG.startBtnSel);
+    resetEmpty();
     var go = (sb && getComputedStyle(sb).display !== "none") ? (sb.click(), sleep(400)) : Promise.resolve();
     return go.then(function () {
       var slides = qa(document, CONFIG.slideSel), out = [], count = 0;
@@ -801,6 +890,7 @@
     var ab = guard();
     if (ab) { return verdict(ab); }
     var out = [];
+    svg.__emptyKey = null;
     checkSvg(svg, where || "figure", out, (svg.closest && svg.closest(CONFIG.slideSel)) || document.body);
     return verdict({ drawings: 1, findings: out });
   }

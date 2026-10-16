@@ -80,6 +80,16 @@ body>.wrap{flex:1 0 auto;width:100%}
   .scr[data-pic="beside"] .instrument{grid-column:1;margin:0;max-width:none}
   .scr[data-pic="beside"] .instrument .ga{--gaw:min(100%,calc((100vh - 310px) * var(--ar,1.6)))}
   .scr[data-pic="beside"] .opts{grid-column:2;margin:0;max-width:none}
+  /* sort / put in order / match with a picture (2.49.1, IGF M06 q09): the drop zones went under the Check bar when the
+     photo sat above them. Sort: the picture (only as tall as the cards' row, 240 px at 1280 x 800) and the cards share
+     one row, the groups run full width under them. Order and match: the picture takes the first column over both rows,
+     the places and the cards sit beside it */
+  .scr[data-pic="beside"][data-mech="categorise"] .instrument{grid-column:1;grid-row:2}
+  .scr[data-pic="beside"][data-mech="categorise"] .instrument .ga{--gaw:min(100%,calc((100vh - 560px) * var(--ar,1.6)))}
+  .scr[data-pic="beside"][data-mech="categorise"]>.tray{grid-column:2;grid-row:2;margin:0;max-width:none}
+  .scr[data-pic="beside"][data-mech="categorise"]>.grps{grid-column:1/-1}
+  .scr[data-pic="beside"]:is([data-mech="order"],[data-mech="match"]) .instrument{grid-row:2 / span 2}
+  .scr[data-pic="beside"]:is([data-mech="order"],[data-mech="match"])>:is(.tray,.rows){grid-column:2;margin:0;max-width:none}
   /* tap the place on a drawing that is not wide (2.46.0, IGF M03): the drawing takes the screen's whole height and the
      explanation sits beside it - it left half the screen empty, the explanation's room kept under it */
   .scr[data-pic="side"].on{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,320px);column-gap:20px;align-items:start}
@@ -135,6 +145,20 @@ body>.wrap{flex:1 0 auto;width:100%}
 .hot.right::after{content:"\2713";background:var(--good)}
 .hot.wrong::after{content:"\2715";background:var(--warn)}
 .hot.missed{border:4px dashed var(--good);background:transparent}     /* a place to tap that was missed - no tick */
+/* on a dark panel (a figure-kit drawing, or a photograph) `multiply` turned a right or wrong area near-black with a tiny
+   tick (IGF M06 m01, 2026-10-16): there the wash is a plain translucent light-green / light-red over the dark, the border
+   the dark ground's own green / red, and the tick is larger and dark-on-light so it reads from the back of the room */
+.ga.kitfig .hot:active,.ga.kitfig .hot.sel,.ga.kitfig .hot.right,.ga.kitfig .hot.wrong,
+.ga:has(>img.taskfig) .hot:active,.ga:has(>img.taskfig) .hot.sel,.ga:has(>img.taskfig) .hot.right,.ga:has(>img.taskfig) .hot.wrong{
+  mix-blend-mode:normal}
+.ga.kitfig .hot.sel,.ga:has(>img.taskfig) .hot.sel{border-color:var(--blue);background:var(--blue-wash-d)}
+.ga.kitfig .hot.right,.ga:has(>img.taskfig) .hot.right{border-color:var(--good-d);background:rgba(79,214,160,.30)}
+.ga.kitfig .hot.wrong,.ga:has(>img.taskfig) .hot.wrong{border-color:var(--warn-d);background:rgba(255,140,130,.30)}
+.ga.kitfig .hot.right::after,.ga.kitfig .hot.wrong::after,
+.ga:has(>img.taskfig) .hot.right::after,.ga:has(>img.taskfig) .hot.wrong::after{
+  width:34px;height:34px;right:6px;top:6px;font-size:22px;color:var(--deep)}
+.ga.kitfig .hot.right::after,.ga:has(>img.taskfig) .hot.right::after{background:var(--good-d)}
+.ga.kitfig .hot.wrong::after,.ga:has(>img.taskfig) .hot.wrong::after{background:var(--warn-d)}
 .vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
   clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
@@ -283,6 +307,7 @@ body>.wrap{flex:1 0 auto;width:100%}
   background:var(--white)}
 .dial-read{text-align:center;font:700 40px/1.2 var(--font);color:var(--navy)}
 .dial-read .dial-unit{font-size:26px;color:var(--dim-l)}
+.dial-read .dial-val{font-weight:700;font-variant-numeric:tabular-nums;color:var(--navy)}   /* the number the engine writes (gb_answer.js) */
 .dial-row{display:flex;align-items:center;gap:16px;margin:10px 0 4px}
 .dial-row .dial-minus,.dial-row .dial-plus{flex:0 0 auto;width:64px;height:64px;border-radius:50%;
   border:2px solid var(--steel);background:var(--white);color:var(--navy);font:700 30px/1 var(--font);cursor:pointer}

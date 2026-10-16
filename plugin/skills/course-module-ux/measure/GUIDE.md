@@ -78,10 +78,21 @@ never a pass.
 await AuditOpacity.all();     // or .slice(0, 9)
 await AuditCollide.all();
 await AuditDeck.all();
+await AuditCompose.all();     // is each screen composed, or a corner cluster? (.run() is the same call)
 await AuditDrive.run();       // .run(0, 12)
 ```
 
-They also register on `window.__audit` (`.opacity`, `.collide`, `.deck`, `.drive`).
+They also register on `window.__audit` (`.opacity`, `.collide`, `.deck`, `.compose`, `.drive`).
+`AuditCompose.all()` sets `__auditExit` like the others: `1` on a WEAK screen or an abort, `0` otherwise
+(a REVIEW screen is for a person to look at, not a failure).
+
+**No browser pane needed:** `python measure/scripts/run_audits.py <deck index.html or its folder>
+[--viewport 1920x1080 ...] [--json out.json] [--quiet]` loads `audit_deck.js`, `audit_collide.js` and
+`audit_compose.js` into the deck in headless Chrome or Edge, runs each `.all()` at 1280×800 (and every
+`--viewport`, laid out at exactly that size), and prints one line per probe and viewport with the failing
+slides underneath. Exit `0` every probe passed, `1` one failed, `2` something could not be measured (no
+browser, the page did not answer, a probe aborted — never a pass). The page it injects is written beside the
+deck as `_audit_<pid>.html` and always removed again; `--json` goes outside the course.
 `audit_drive.js` **depends on the other two being loaded first** and aborts naming the missing
 file rather than throwing.
 

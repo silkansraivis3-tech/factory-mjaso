@@ -31,8 +31,9 @@ THE BUILD SHEET, PER QUESTION (working_claude\\script\\M01.build.json "screens",
         It opens full screen only by its corner button (a tap stays the answer); the viewer shows its credit.
     a figure-kit drawing  "m04_chart.kit.json"  the very spec the deck plays, drawn still at its last step
         ("kit_step": 2 or a word of a step's title for another), places = the spec's part ids or the words a part is
-        drawn with ("areas": {"Funnel": "ga1"}), "unlabel": "all" | ["P1", "V2"] takes the words off the drawing
-        so it does not give the answer away. The engine lays each area on the drawn part itself.
+        drawn with ("areas": {"Funnel": "ga1"}), "unlabel": "answers" | "all" | ["P1", "V2"] takes the words off the
+        drawing so it does not give the answer away - "answers" (2.49.1) only the parts the answers name and their callouts,
+        "all" every part's words and every free `text` part. The engine lays each area on the drawn part itself.
     "q04": {"step": 0.5}                                          the dial's step (default: worked out from the tolerance)
     "q10": {"states": {"Purge mode": ["Off", "Sweep", "Hold"]}, "start": {"Vent fan": "stopped"}}   a panel's positions
   The page sets: "pass_mark": 70 at the top of the build sheet (checks; default 70), "try_tablet": true|false on the
@@ -75,6 +76,7 @@ assert BUILT == set(cs.USES), "every way of answering an approved script can hol
 ON_PICTURE = {"hotspot", "spot_the_hazard", "label_diagram"}
 # the ways of answering that are not answered ON a picture but may show one above their controls ("figure" in the build sheet)
 ABOVE = {"match", "categorise", "order", "cloze", "choose_and_justify", "scenario", "spot_the_error", "build_the_plan", "timeline"}
+BESIDE_ABOVE = ("categorise", "order", "match")      # of those, the ways of answering that lay their picture beside on landscape
 DEFAULT_PASS = 70
 # 2.46.0 (IGF M01-M03): a drawing to tap that is narrower than this (width / height) takes the screen's height with the
 # explanation beside it (gb_answer.css data-pic="side"); a list of MANY rows or more to order, build or match has its
@@ -396,6 +398,21 @@ def image_size(path):
     return None
 
 
+def photo_alt(meta):
+    """2.49.1 - a task photograph's alt text when the build sheet gives none: what the photo's own record says it shows
+    (its description's first sentence, else its name / about / shows)"""
+    meta = meta or {}
+    alt = cm.first_sentence(meta.get("description"))
+    if not alt:
+        for k in ("name", "about", "shows"):
+            v = meta.get(k)
+            v = ", ".join(str(x) for x in v) if isinstance(v, (list, tuple)) else v
+            if isinstance(v, str) and v.strip():
+                alt = v.strip()
+                break
+    return alt
+
+
 def photo_fig(q, b, rel, mdir, probs, where, bands=False, wrap=False):
     """a REAL photograph of real equipment as the picture of a task: the file is in the module (read_figure reported it
     when it is not), its record is assets\\img\\_photo_meta.json - a missing record is reported, never invented. Its
@@ -416,8 +433,11 @@ def photo_fig(q, b, rel, mdir, probs, where, bands=False, wrap=False):
         probs.append("%s: the size of the photograph %s cannot be read (is it a .jpg, .png or .webp?) - the places on it cannot be worked out" % (where, rel))
         size = (4, 3)
     name = cm.slug(rel)
-    alt = b.get("alt") or q.get("visual") or ""
-    cred = ' data-credit="%s"' % a(credit) if credit else ""
+    alt = b.get("alt") or q.get("visual") or photo_alt(meta)
+    if not alt:
+        probs.append("%s: the photograph %s has no alt text - put \"alt\" in the build sheet's entry (or a \"description\" in its "
+                     "record in _photo_meta.json): a screen reader reads nothing there otherwise" % (where, rel))
+    cred =' data-credit="%s"' % a(credit) if credit else ""
     if wrap:                                           # labels need a band round the picture: the photo inside a drawing
         w, h = 1000.0, round(1000.0 * size[1] / size[0], 2)
         body = ('<svg viewBox="0 0 %g %g" role="img" aria-label="%s" data-audit-ignore%s><image href="../%s" x="0" y="0" width="%g" height="%g" '
@@ -454,6 +474,61 @@ def kit_box(p):
         return None
 
 
+def part_extent(p, grow=0.0):
+    """a kit part's box (x0, y0, x1, y1): its own w x h or radius, else the corners of its path "d" (M, L, H, V, absolute)"""
+    box = kit_box(p)
+    if box:
+        x, y, w, h = box
+        return (x - grow, y - grow, x + w + grow, y + h + grow)
+    d = p.get("d")
+    if not isinstance(d, str):
+        return None
+    xs, ys, x, y = [], [], 0.0, 0.0
+    for cmd, args in re.findall(r"([MLHVmlhv])([^MLHVmlhv]*)", d):
+        nums = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", args)]
+        if cmd in "ML" and len(nums) >= 2:
+            x, y = nums[0], nums[1]
+        elif cmd == "H" and nums:
+            x = nums[0]
+        elif cmd == "V" and nums:
+            y = nums[0]
+        elif cmd.islower() and nums:                    # a relative move: the corner is unknown, so no box
+            return None
+        xs.append(x)
+        ys.append(y)
+    return (min(xs) - grow, min(ys) - grow, max(xs) + grow, max(ys) + grow) if xs else None
+
+
+def answer_part_ids(b, names, ids):
+    """the kit parts the answers name: the build sheet's "areas" (a part id, or the words a part is drawn with) and "labels"
+    ("at": a part id) - what "unlabel": "answers" takes the words off"""
+    out = set()
+    for name, given in list((b.get("areas") or {}).items()) + [(k, (v or {}).get("at") if isinstance(v, dict) else v)
+                                                              for k, v in (b.get("labels") or {}).items()]:
+        pid = given if isinstance(given, str) else None
+        pid = pid or names.get(re.sub(r"\s+", " ", str(name)).strip().lower())
+        if pid in ids:
+            out.add(pid)
+    return out
+
+
+def callouts_of(parts, answer_ids, reach=24.0):
+    """the bare words (a `text` part, as id() of the part) that are an answer's callout: it points ("to": [x, y]) at the
+    answer's part, it says so ("for": the part's id), or its id is T_<the part's id>"""
+    boxes = [part_extent(p, reach) for p in parts if p.get("id") in answer_ids]
+    gone = set()
+    for p in parts:
+        if p.get("type") != "text":
+            continue
+        to = p.get("to")
+        hit = any(bx and isinstance(to, (list, tuple)) and len(to) == 2 and bx[0] <= to[0] <= bx[2] and bx[1] <= to[1] <= bx[3]
+                  for bx in boxes)
+        tid = p.get("id") or ""
+        if hit or (p.get("for") and p["for"] in answer_ids) or (tid.startswith("T_") and tid[2:] in answer_ids):
+            gone.add(id(p))
+    return gone
+
+
 def kit_fig(q, b, text, rel, probs, where, bands):
     """a figure-kit drawing in a task: the same *.kit.json the deck plays (course-visuals/kit/SPEC.md), drawn STILL at
     the end of its last step - or of the step the build sheet names ("kit_step": 2, or a word of a step's title). The
@@ -475,17 +550,28 @@ def kit_fig(q, b, text, rel, probs, where, bands):
             if p.get("id") and isinstance(p.get(k), str):
                 names.setdefault(re.sub(r"\s+", " ", p[k]).strip().lower(), p["id"])
     hide = b.get("unlabel")
-    if hide not in (None, False, "all") and not isinstance(hide, list):
-        probs.append("%s: \"unlabel\" is \"all\" or a list of part ids" % where)
+    if hide not in (None, False, "all", "answers") and not isinstance(hide, list):
+        probs.append("%s: \"unlabel\" is \"answers\", \"all\" or a list of part ids" % where)
         hide = None
     if isinstance(hide, list):
         for x in hide:
             if x not in ids:
                 probs.append("%s: \"unlabel\" names %s, which is not a part of %s (parts: %s)" % (where, x, rel, ", ".join(ids)))
+    if hide == "answers":                               # 2.49.1 - only what the answers name, and their callouts
+        mine_ids = answer_part_ids(b, names, ids)
+        gone = callouts_of(parts, mine_ids)
+        if not mine_ids:
+            probs.append("%s: \"unlabel\": \"answers\" - the build sheet's \"areas\" / \"labels\" name no part of %s, so nothing is "
+                         "taken off" % (where, rel))
     if hide:
         keep = []
         for p in parts:
-            mine = hide == "all" or p.get("id") in hide
+            if hide == "answers":
+                if id(p) in gone:                       # a callout of an answer: words only, it goes
+                    continue
+                mine = p.get("id") in mine_ids
+            else:
+                mine = hide == "all" or p.get("id") in hide
             if mine and p.get("type") == "text":        # a bare caption is nothing but words: it goes
                 continue
             keep.append(dict((k, v) for k, v in p.items() if k not in KIT_WORDS) if mine else p)
@@ -1056,6 +1142,10 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         out.append("    </div>")
     out.append(q_why(q))
     out.append("  </section>")
+    # 2.49.1 (IGF M06 q09): a picture over a categorise / order / match pushed the drop zones under the Check bar at
+    # 1280 x 800 - on a landscape tablet the picture sits beside the cards and places, as it does by single choice
+    if m in BESIDE_ABOVE and any('class="instrument"' in x for x in out) and "data-many" not in extra and "data-pic" not in extra:
+        extra += ' data-pic="beside"'
     out[0] = out[0] % extra
     return "\n".join(out)
 

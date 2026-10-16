@@ -7,7 +7,9 @@ from it with the factory's own frame, style files and deck engine. Nobody edits 
 Why: `docs/PROPOSAL_SCRIPT_COMPILER.md`.
 
 ```
-python compile/scripts/compile_module.py <course> --module 1 --init-build   once: a starter build sheet
+python compile/scripts/compile_module.py <course> --module 1 --init-build   once: a starter build sheet (2.49.1: landing
+                                                                            rule, pass mark from the course's other sheets; a foot;
+                                                                            an entry per tap / label question)
 python compile/scripts/compile_module.py <course> --module 1                build (again after every change)
 python scripts/check_script_match.py <course> --module 1 --part instructor  the words are the approved ones
 ```
@@ -44,6 +46,9 @@ to the tablets. Write a fragment as the deck sees it: its links start `../assets
 | `layout` `split` | `two-col` — the words left, the picture right |
 | `layout` `visual_wide` | `stage` when the words are short (45 or fewer), else `two-col wide-right` |
 | `"composition"` in the build sheet | overrides: `opener`, `flow`, `two-col`, `wide-left`, `wide-right`, `stage` |
+| a photograph + `two-col` | the photo fills the right of the screen, the words on a dark scrim (`photo split`, fixed width) |
+| a photograph + `wide-left` / `wide-right` (2.49.1) | a real column layout: the words as wide as the layout says, the photo cropped to fill its own column, its credit line on the slide. Use it when the words do not fit beside a `photo split` (IGF M06 s10 spilled 14 px) |
+| a photograph inside a figure fragment (2.49.1) | keeps the slide's visible credit line (the photo's, unless the build sheet's `"credit"` says otherwise, or the fragment's own caption already has it) |
 | a task slide | `activity` with its code, `data-task-href` to `tasks\sc1_<title>.html` / `assessment\check.html` |
 
 The words: one line is a statement; several lines are a statement and its support list; a line starting
@@ -105,6 +110,10 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   Matching is by name only: when a matched photo contradicts how the thing is drawn (deck tanks under a drawing of a tank
   in its hold), say so in the build sheet - `"no_photo": ["fuel tank"]` with a `"_no_photo"` reason - and the thing goes
   on the list instead. Look at every thumbnail the build placed before showing the deck.
+  **Not a thing (2.49.1).** The words a chart draws - an axis, a line, a zone ("Air line") - are no real thing: a figure
+  made only of the kit's chart parts (`scale`, `bands`, `curve_chart`, `flammability`, `range_bar`, bare `text`) is
+  skipped. For any other name that is no thing, `"not_things": ["air line"]` (with a `"_not_things"` reason) takes it
+  off the list altogether - `"no_photo"` keeps it listed.
 - **A planned photo that does not exist (2.49.0).** The build names every photo slide with no picture file. Find the
   real one first (project, factory library, a free licence - `course-visuals`). If none exists and the slide only sets
   the scene, propose an AI picture unasked - `nano-banana:realistic-visuals`: describe it, show the prompt and the
@@ -126,7 +135,7 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
 | `"box_alt": [4]` | which boxes are amber (otherwise every second one) |
 | `"groups": [{"lines": [2, 7], "class": "box z1"}]` | lines 2-7 in one box, the first as its bold heading (a zone with its list) |
 | `"hooks": {"3": {"class": "m02-steptext", "data-step": "2"}}` | a figure script's handle on a line - a class word and `data-*`, never a look |
-| `"inset": {..., "under": "figure"}` | the real photo goes under the drawing when the words fill their column |
+| `"inset": {..., "under": "figure"}` | the real photo goes under the drawing when the words fill their column. It takes ~220 px of the drawing's panel: when that leaves the drawing under ~60 % (a 640 x 390 spec keeps 47 %), the build says so (2.49.1) - put the inset under the words, use `"over"`, or draw the figure wider and less tall |
 | `"inset": {..., "over": {"x": 140, "y": 8, "w": 176}}` | the photo lies on a blank part of a kit drawing, in the drawing's units - the drawing keeps the whole column and its full size (a photo under a drawing squeezed it to half size, its labels to 7 px). It still opens full screen; look at it at every step, the drawing check does not see what a photo covers |
 | `"aside": "m02_s08_minis.html"` | small drawings that belong with the words |
 | `"figure_first": true` | the drawing on the left, the words on the right |
@@ -162,10 +171,16 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
   `"areas": {"Relief valve": [62.5, 31, 12, 18]}`; a missing file, record, credit or box is reported, an image-model
   picture is refused. A tap on it stays the answer - it opens full screen by its corner button. A kit drawing's places are
   its part ids or the words a part is drawn with (`"areas": {"Funnel": "ga1"}`); `"kit_step": 2` (or a word of a step's
-  title) shows another step; `"unlabel": "all"` or `["P1"]` takes the words off so the drawing does not give the answer
-  away. The same `"figure"` also puts a picture beside a single / multi choice, above match, categorise, order, cloze,
-  scenario ..., and `"figures": {"Plan A": "assets/img/a.jpg"}` over a `compare` column. With a picture beside four
-  choices the compiler lays them side by side on a landscape tablet, so no choice is ever under the Check bar.
+  title) shows another step; **`"unlabel": "answers"`** (2.49.1, the choice to make) takes the words off only the parts
+  the answers name (`areas` / `labels`) and their callouts - a `text` part pointing at them (`"to": [x, y]` inside the
+  part), one with `"for": "<part id>"`, or one whose id is `T_<part id>` - so the rest of the drawing keeps its words and
+  does not read blank. `"unlabel": "all"` also takes every free `text` part and the deck's context words (IGF M06 q08
+  came out 51 % blank), and `["P1"]` takes exactly those ids. The same `"figure"` also puts a picture beside a single /
+  multi choice, above match, categorise, order, cloze, scenario ..., and `"figures": {"Plan A": "assets/img/a.jpg"}` over
+  a `compare` column. With a picture beside four choices - or beside the cards of a sort, an order or a match (2.49.1) -
+  the compiler lays them side by side on a landscape tablet, so no choice and no drop zone is ever under the Check bar.
+  A task photograph's `alt` is the build sheet's `"alt"`, else the question's `visual`, else the photo record's description
+  (name / about / shows): write `"alt"` when the description would give the answer away.
 - **Beside a picture** (set_value, find_the_fault, panel_operate) a drawing is optional: `"figure"` shows it above
   the task. **Set the value** is a dial from the range's low to its high end; its step is the tolerance when the value
   falls on it, else the largest round step under it that does (or `"step": 0.5`); one key per accepted step. **Operate

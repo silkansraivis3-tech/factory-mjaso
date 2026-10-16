@@ -50,7 +50,9 @@
 
    HOW TO RUN
      serve over http, then in the page:
-       await AuditCompose.run()        every screen
+       await AuditCompose.all()        every screen (.run() is the same call)
+                                       sets window.__auditExit: 1 on a WEAK screen
+                                       or an abort, 0 otherwise (REVIEW is not a fail)
        AuditCompose.one()              the screen you are looking at
 
    Requires the deck's own Next button (#btnNext) and start button, same as
@@ -280,7 +282,11 @@ var AuditCompose = (function (w, d) {
     var slides = d.querySelectorAll(CONFIG.slideSel);
     var start = d.querySelector(CONFIG.startBtnSel);
     var next = d.querySelector(CONFIG.nextBtnSel);
-    if (!next) { return Promise.resolve({ ABORTED: "no next button (" + CONFIG.nextBtnSel + ")" }); }
+    if (!next) {
+      w.__auditExit = 1;
+      if (w.console) { console.error("audit_compose aborted: no next button (" + CONFIG.nextBtnSel + ")"); console.log("VERDICT: FAIL n=1"); }
+      return Promise.resolve({ ABORTED: "no next button (" + CONFIG.nextBtnSel + ")" });
+    }
 
     var results = [];
     var chain = Promise.resolve();
@@ -309,6 +315,13 @@ var AuditCompose = (function (w, d) {
     return chain.then(function () {
       var weak = results.filter(function (r) { return r.verdict === "WEAK"; });
       var review = results.filter(function (r) { return r.verdict === "REVIEW"; });
+      /* the same contract as the other probes: window.__auditExit is 0 or 1. WEAK fails; REVIEW is a
+         screen for a person to look at, not a failure, and an abort (no Next button) is always a failure */
+      w.__auditExit = weak.length ? 1 : 0;
+      if (w.console) {
+        console.log(weak.length ? "VERDICT: FAIL n=" + weak.length :
+                    (review.length ? "VERDICT: PASS (REVIEW n=" + review.length + ")" : "VERDICT: PASS"));
+      }
       return {
         viewport: [w.innerWidth, w.innerHeight],
         screens: results.length,
@@ -326,5 +339,11 @@ var AuditCompose = (function (w, d) {
     });
   }
 
-  return { run: run, one: one, measure: measure, CONFIG: CONFIG };
+  /* .all() is the name audit_deck.js and audit_collide.js use; .run() is kept for what already calls it */
+  function all() { return run(); }
+
+  var api = { all: all, run: run, one: one, measure: measure, CONFIG: CONFIG };
+  w.__audit = w.__audit || {};
+  w.__audit.compose = api;
+  return api;
 })(window, document);

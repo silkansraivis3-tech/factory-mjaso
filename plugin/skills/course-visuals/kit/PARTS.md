@@ -108,6 +108,19 @@ KIT.define('oil_tray', function (fig, part, g, p) {
 - **Nothing is cut off and nothing overlaps, on either panel.** Run the example through `scripts/studio.py`
   (`--panel two-col` and `--panel task`): it runs `course-module-ux/measure/scripts/audit_drawing.js` (L54) at every step.
 
+## What the kit gained from IGF M06 (2.49.1) - do not make these again
+`lamp` (electrical equipment, `ex: true` for the explosion-protected fitting), `spark` (electric arc or frictional burst),
+`composition_bar` (one bar, the shares of its components), a **tank that ruptures** (`tank` with `burst`: the second value
+`<id>.burst` cracks the shell, then a fireball), a **cloud that drifts** (`gas_cloud` with `drift`: `<id>.drift`), and words a
+step brings in (`text` with `reveal: true`). Lightning and a collapsed person are not built yet - make them if a module needs them.
+Each has its card in `GALLERY.html` (from its `example`), drawn and audited on both panels.
+
+Two patterns worth copying when a part needs a second value or a part that is only sometimes there:
+- **A second value** (`<id>.burst`) is made with `fig.sub(part, 'burst', 0, render)`, and its pieces are built only when the spec
+  asks for them (`burst: true`) - a hidden fireball that every tank carried would be reported "cut off (in a later step)".
+- **A part that crosses another by its nature** (a flame over a tank, a spark between two contacts, a cloud through a wall) is
+  marked `data-may-cross` (and `data-no-contain` when it holds nothing), with the reason in a comment - not left to be flagged.
+
 ## After the merge
 Promotion copies the block into the factory's `kit.js` with `status: 'kit'`. When colleagues update the
 plugin, their modules get the part from `kit.js`. A module that still carries its own copy in

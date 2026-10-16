@@ -60,6 +60,11 @@ It lists every source and sorts out what would otherwise be cited twice or cited
   written ready to ask in `<course>/working_claude/kb_sources.json`. Every question has a *"Different
   publications — keep all"* option, because two files can look alike and be two books.
 
+`kb_sources.json` is rewritten only when what it holds changes — running `sources` again on an unchanged
+knowledge base leaves the file (and its date) alone. A course with several knowledge bases keeps one entry
+per knowledge base (`knowledge_bases`); a run on one never drops the others. The top level stays flat (the
+union of all) for `decide`.
+
 Put the edition questions into the intake pop-up with the others (`knowledge/intake.json`). Record
 each answer:
 
@@ -81,6 +86,10 @@ matching extracts in the source's own words, each with its file and page — int
 `<course>/working_claude/retrieval/`. Cite the file and page shown, never the pack. Search by more than one
 phrasing: the equipment's other names, the abbreviation, the older term. A search that finds nothing
 is a stated gap, and a stated gap is a good answer (L4).
+
+Searching is a read: it writes only its own retrieval pack — never `kb_sources.json` or `intake.json` — and
+an agent that must not touch the course at all adds `--stdout`, which prints the pack and writes nothing.
+Do not run `sources` before every search; run it once per knowledge base.
 
 ## What never happens
 

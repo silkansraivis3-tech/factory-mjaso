@@ -120,6 +120,30 @@ def main():
         check("the finding says the ratio and what to do",
               all(":1" in x["detail"] and "dark panel" in x["detail"] for x in cf), cf)
 
+        # C11 (IGF M06) - judged after animations and transitions settle; a fade the figure's value drives is judged at full
+        st = page_out(exe, FIX / "drawing_settle.html", prof) or {}
+        sf = [x for x in st.get("findings", []) if x["check"] == "contrast"]
+        sbad = {x["part"] for x in sf}
+        check("a part still fading in by an animation (a deck's fade, a colour transition) is judged once it has settled",
+              not ({"fade-anim", "fade-trans"} & sbad), sf)
+        check("a part a kit figure's value fades (style.opacity) is judged at full opacity - a 16:1 sign is not 1.5:1",
+              "fade-inline" not in sbad, sf)
+        check("... and the check is not relaxed: navy on the dark panel is still found, light text is silent",
+              sbad == {"bad-navy"}, sf)
+
+        # K12 (IGF M06) - EMPTY counts a pipe by its box, judges a stepping figure at its busiest step, says where
+        ek = page_out(exe, FIX / "drawing_empty_kit.html", prof) or {}
+        ef = [x for x in ek.get("findings", []) if x["check"] == "empty"]
+        eby = {x["svg"]: x for x in ef}
+        check("a figure that is mostly one small tank is empty", "bad-sparse" in eby, ef)
+        check("the finding says where the blank piece is (side and pixels)",
+              "bad-sparse" in eby and "the largest blank piece is" in eby["bad-sparse"]["detail"]
+              and re.search(r"on the right.*from x \d+, y \d+ to x \d+, y \d+ px", eby["bad-sparse"]["detail"]), ef)
+        check("two pipe routes round the panel are counted by their box: the space inside their bends is not blank",
+              "good-pipes" not in eby, ef)
+        check("a figure whose rest state and last state are sparse is judged at its busiest step (a pool fire that burns, then goes out)",
+              "good-busiest" not in eby, ef)
+
         gal = gallery_contrast(exe, prof)
         check("the kit's own gallery (every part, %s figures) passes the contrast check" % (gal or {}).get("n"),
               gal is not None and gal["n"] >= 15 and not gal["f"], gal)

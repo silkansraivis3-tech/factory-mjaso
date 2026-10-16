@@ -50,7 +50,59 @@ def sweep(extra):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+STATE_PAGE = """<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>SC1</title>
+<style>.wrap{margin:0}.ok{color:green}</style>%s</head><body><main class="wrap"><button class="opt">A</button>%s</main></body></html>
+"""
+
+
+def states(script, extra_js=None, js_name="app.js", inline=""):
+    """the `states` check on a page whose engine is `script` (a linked file named js_name), plus an inline script"""
+    tmp = tempfile.mkdtemp(prefix="ctp_")
+    try:
+        link = ""
+        if script is not None:
+            with open(os.path.join(tmp, js_name), "w", encoding="utf-8") as f:
+                f.write(script)
+            link = '<script src="%s"></script>' % js_name
+        p = os.path.join(tmp, "page.html")
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(STATE_PAGE % ("", link + ("<script>%s</script>" % inline if inline else "")))
+        r = subprocess.run([sys.executable, CHECK, p, "--only", "states"], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace")
+        return r.returncode, r.stdout + r.stderr
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def states_tests():
+    code, out = states("document.querySelector('.opt').classList.add('right');")
+    check("ETPA4: an engine sets `right`, the sheet styles `.ok` - the unstyled feedback class is a finding",
+          code == 1 and 'class "right"' in out, out)
+    code, out = states("var n=document.querySelectorAll('.right').length; el.classList.add('right'); if(el.classList.contains('right')){}")
+    check("... and reading `.right` back to count the score does not hide it", code == 1 and 'class "right"' in out, out)
+    code, out = states("el.classList.toggle('seen-mark', true);")
+    check("a mark nothing reads and nothing styles is a finding", code == 1 and 'class "seen-mark"' in out, out)
+    code, out = states("el.classList.toggle('seen-mark', true); if (el.classList.contains('seen-mark')) { go(); }")
+    check("a hook the script reads back with classList.contains is not unstyled", code == 0, out)
+    code, out = states("el.classList.add('dial-mark'); var d = root.querySelector('.dial-mark .x');")
+    check("... nor one it finds with querySelector('.x')", code == 0, out)
+    code, out = states("el.classList.add('dial-mark'); if (el.matches('.opt.dial-mark')) {}")
+    check("... nor one it tests with matches('.x')", code == 0, out)
+    code, out = states("el.classList.add('dial-mark');", inline="document.body.closest('.dial-mark');")
+    check("... the read-back may be in another script of the same page", code == 0, out)
+    code, out = states("/* state-hook: mark-a mark-b */ el.classList.add('mark-a'); el.classList.add('mark-b');")
+    check("a script's own `state-hook:` comment declares its marks", code == 0, out)
+    code, out = states("el.classList.toggle('kit-dark', true); g.classList.toggle('kit-coupling-parted', c); g.classList.toggle('kit-spill-boil', b);",
+                       js_name="kit.js")
+    check("the factory's own marks in kit.js (kit-dark, kit-coupling-parted, kit-spill-boil) are not unstyled", code == 0, out)
+    code, out = states("p.classList.add('gbz-answer');", js_name="gb_zoom.js")
+    check("... nor gbz-answer in gb_zoom.js", code == 0, out)
+    code, out = states("p.classList.add('gbz-answer');", js_name="app.js")
+    check("... but the same name set by a page's own script is still judged", code == 1 and "gbz-answer" in out, out)
+
+
 def main():
+    states_tests()
     code, out = sweep("")
     check("a figure-kit spec named by data-kit=\"#id\" is read", "kit-q10-1" not in out, out)
     check("the ids of a drawing placed by the compiler (svg.taskfig) are not judged on the task page",

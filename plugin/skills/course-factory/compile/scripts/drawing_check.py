@@ -141,6 +141,10 @@ def check(pages, root=None):
                     probs.append("%s, %s: small text - %s %s (try the figure in the studio: course-visuals\\kit\\scripts\\"
                                  "studio.py <figure>.kit.json)" % (name, f.get("where"), f.get("part"), f.get("detail")))
                     continue
+                if f.get("check") == "empty":        # judged at the figure's busiest step; the finding names the blank piece (2.49.1)
+                    probs.append("%s, %s: empty - %s: %s (see every step at once: course-visuals\\kit\\scripts\\studio.py "
+                                 "<figure>.kit.json --step all)" % (name, f.get("where"), f.get("part"), f.get("detail")))
+                    continue
                 probs.append("%s, %s: %s - %s %s%s (L54: fix the drawing, or mark a crossing that is meant with "
                              "data-may-cross / data-no-contain / data-may-overlap; a kit figure: course-visuals\\kit\\"
                              "scripts\\studio.py shows it at every step in seconds)"

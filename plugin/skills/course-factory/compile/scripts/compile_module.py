@@ -62,7 +62,8 @@ HOW A SLIDE IS LAID OUT (the same for every module)
 
 THE OUTPUT IS GENERATED - NEVER EDIT IT BY HAND
 Its first comment says so. A record of what was written is kept in working_claude\\modules\\module01\\
-compiled.json; if the deck was changed by hand since, the build stops instead of overwriting the change
+compiled.json, saved with each file as it is written (so a crash part-way never leaves the compiler's own file looking
+hand-changed); if the deck was changed by hand since, the build stops instead of overwriting the change
 (--force overwrites; a hand-built deck from before the compiler is also protected this way).
 
 Exit 0 built; 1 built, but with problems to fix before it is shown (a missing picture, a draft script);
@@ -86,6 +87,8 @@ SKILL = os.path.dirname(os.path.dirname(HERE))                 # course-factory
 SKILLS = os.path.dirname(SKILL)
 PLUGIN = os.path.dirname(SKILLS)
 sys.path.insert(0, os.path.join(SKILL, "scripts"))
+if HERE not in sys.path:                                       # 2.49.1 - `python -I` leaves the script's own folder off
+    sys.path.insert(0, HERE)                                   # sys.path: task_pages, module_plan, answer_key, label_layout
 import content_script as cs  # noqa: E402
 import workspace  # noqa: E402
 
@@ -444,7 +447,9 @@ def figure_html(mdir, figdir, s, b, probs, where):
     if rel.lower().endswith(KIT_SPEC):
         return kit_figure(body, s, probs, where), "", False
     if body is not None:
-        return photos_in(body, mdir, probs, where), "", False
+        credits = []
+        page = photos_in(body, mdir, probs, where, credits)
+        return page, b.get("credit") or fragment_credit(page, credits), False
     meta = photo_meta(mdir, rel)
     alt = b.get("alt") or first_sentence(s.get("visual")) or first_sentence(meta.get("description"))
     credit = b.get("credit") or credit_line(meta)
@@ -495,9 +500,10 @@ def credit_path_problems(page, name):
 IMG_TAG = re.compile(r'<img\b(?![^>]*\bdata-(?:about|no-zoom)\b)[^>]*\bsrc="\.\./([^"]+)"[^>]*?(/?)>', re.I)
 
 
-def photos_in(body, mdir, probs, where):
+def photos_in(body, mdir, probs, where, credits=None):
     """a photograph inside a drawing fragment (four photo cards, a photo in an aside) opens like any other (L56):
-    its <img> gets the photo's description and credit from the module's own _photo_meta.json"""
+    its <img> gets the photo's description and credit from the module's own _photo_meta.json. `credits`, when given,
+    collects each photo's credit line (2.49.1)"""
     def one(m):
         rel = m.group(1)
         if not rel.lower().endswith(IMAGES) or not os.path.isfile(os.path.join(mdir, rel)):
@@ -507,8 +513,18 @@ def photos_in(body, mdir, probs, where):
             return m.group(0)
         tag, close = m.group(0), m.group(2)
         cut = len(tag) - (2 if close else 1)
+        if credits is not None and credit_line(meta) not in credits:
+            credits.append(credit_line(meta))
         return tag[:cut].rstrip() + photo_panel(meta, credit_line(meta), rel, probs, where) + tag[cut:]
     return IMG_TAG.sub(one, body)
+
+
+def fragment_credit(page, credits):
+    """2.49.1 - a photograph inside a figure fragment keeps the slide's visible credit line, like a photograph slide's:
+    the credit of its one or two photographs, unless the fragment already says it in its own words (a card's caption)"""
+    seen = html.unescape(re.sub(r"<[^>]+>", " ", page))
+    credits = [x for x in credits if x and x not in seen]
+    return " / ".join(credits) if 0 < len(credits) <= 2 else ""
 
 
 # ------------------------------------------------------------------ L57: a drawing of real things carries their photos
@@ -521,6 +537,7 @@ GENERIC = {"tank", "space", "room", "engine", "pipe", "line", "valve", "pump", "
            "hold", "vessel", "ship", "gas", "fuel", "button", "hose", "arm", "fan", "door"}
 ACRONYMS = {"LNG", "CNG", "LPG", "ESD", "GVU", "TCS", "FPR", "IGF", "LEL", "BOG", "GCU", "PRV", "ERS", "QCDC", "IMO"}
 TO_TAKE = "PHOTOS_TO_TAKE.md"
+CHART_PARTS = ("scale", "bands", "curve_chart", "flammability", "range_bar")   # the kit's chart family (SPEC.md family 6)
 # 2.49.0 (operator, 2026-10-16: AI pictures when needed) - what a missing photograph can become, said at the build
 NO_PHOTO_YET = (" - find the real photograph (the project, the factory library, a free-licence one: course-visuals); "
                 "if none exists and the slide only sets the scene, propose an AI picture unasked (nano-banana: described, "
@@ -592,10 +609,26 @@ def step_numbers(fig):
     return nums
 
 
+def chart_only(fig):
+    """2.49.1 - a drawing that is only a chart (its parts are of the kit's chart family, bare words aside): what it names
+    is an axis, a line, a zone or a scale - never a real thing to photograph"""
+    types = []
+    for m in JSON_DATA.finditer(fig or ""):
+        try:
+            spec = json.loads(m.group(1).replace("<\\/", "</"))
+        except ValueError:
+            continue
+        types += [p.get("type") for p in spec.get("parts") or [] if isinstance(p, dict)] if isinstance(spec, dict) else []
+    types = [t for t in types if t != "text"]
+    return bool(types) and all(t in CHART_PARTS for t in types)
+
+
 def drawn_parts(lines, fig):
     """the real things a drawn slide names, in order: the slide's own terms ("Tank connection space - ...") with the
     drawing's step number, then the labels the drawing writes on itself. An abbreviation alone (TCS) is skipped -
-    the slide or the key names it in full."""
+    the slide or the key names it in full. A chart names no things (2.49.1)."""
+    if chart_only(fig):
+        return []
     nums, parts = step_numbers(fig), []
 
     def add(num, name):
@@ -703,12 +736,16 @@ def bring_in(mdir, name, meta, src):
         cs.save(p, own)
 
 
-def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None, refuse=()):
+def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None, refuse=(), not_things=()):
     """L57: each real thing a drawing names gets its real photograph beside the drawing - a small tappable photo
     that opens in the L56 panel. Matched by the photo's "shows"; a thing with no photo is noted for the list.
-    L58: a photograph the course already shows anywhere (`taken`) is never shown again - a different one, or none"""
+    L58: a photograph the course already shows anywhere (`taken`) is never shown again - a different one, or none.
+    `not_things` (build sheet "not_things", 2.49.1): words the drawing writes that are no real thing - an axis, a line
+    of a chart - are left off the list altogether (`refuse` = "no photo fits", which stays on it)"""
     strip, taken = [], taken if taken is not None else {}
     for num, name in drawn_parts(lines, fig):
+        if any(same_thing(name, x) for x in not_things):
+            continue
         if any("assets/img/" + n in on_slide and any(shows_it(x, name) for x in m.get("shows") or []) for n, m, _, _ in pool):
             continue                                      # its photograph is already on the slide
         if any(same_thing(name, x) for x in refuse):
@@ -762,6 +799,31 @@ def over_figure(fig, inset, over, probs, where):
     style = "left:%.2f%%;top:%.2f%%;width:%.2f%%" % (100 * x / sw, 100 * y / sh, 100 * w / sw)
     photo = inset.replace('<figure class="inset">', '<figure class="inset over" style="%s">' % style, 1)
     return fig.replace(m.group(0), '<div class="kit-screen"><div class="kit-holder">%s%s</div></div>' % (m.group(1), photo), 1), ""
+
+
+# 2.49.1 - an inset laid under a drawing takes its own height out of the drawing's panel. Measured on IGF M06 s05 at
+# 1280 x 800: the wide column is 682 px wide, its panel 417 px high, the inset (photo, 26 vh up to 230 px, + caption) ~220 px
+PANEL_W, INSET_H, UNDER_MIN_SHARE = 682.0, 220.0, 0.6
+
+
+def under_share(fig):
+    """(share, panel height) - the part of the drawing's panel the drawing keeps once an inset sits under it, from the
+    drawing's own shape (a kit spec's "size", an SVG's viewBox); None when the shape is not known"""
+    size = None
+    for m in JSON_DATA.finditer(fig or ""):
+        try:
+            sz = json.loads(m.group(1).replace("<\\/", "</")).get("size")
+            size = [float(x) for x in sz][:2]
+            break
+        except (ValueError, TypeError, AttributeError):
+            continue
+    if not size:
+        m = re.search(r'viewBox="\s*[-\d.]+[ ,]+[-\d.]+[ ,]+([\d.]+)[ ,]+([\d.]+)"', fig or "")
+        size = [float(m.group(1)), float(m.group(2))] if m else None
+    if not size or size[0] <= 0 or size[1] <= 0:
+        return None
+    panel = PANEL_W * size[1] / size[0]
+    return max(0.0, (panel - INSET_H) / panel), panel
 
 
 def under_figure(fig, extra):
@@ -933,8 +995,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         comp = "flow"
     if comp == "photo" and not is_photo:
         comp = "stage"
-    # a photograph beside the words fills the right of the screen - never a small photo in a column
-    split_photo = is_photo and comp in ("two-col", "wide-left", "wide-right")
+    # a photograph beside the words fills the right of the screen (two-col: the words on a scrim, fixed width) - never a
+    # small photo in a column. 2.49.1: "wide-left" / "wide-right" are honoured for a photograph - a real column layout, the
+    # words as wide as asked and the photo filling its own column (cropped to it), its credit line still on the slide
+    split_photo = is_photo and comp == "two-col"
+    photo_col = is_photo and comp in ("wide-left", "wide-right")
     if split_photo:
         comp = "photo"
     emph = {k: b[k] for k in ("boxes", "box_alt", "conclusion", "groups", "hooks") if k in b}
@@ -956,12 +1021,18 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     if inset and (b.get("inset") or {}).get("over"):
         fig, inset = over_figure(fig, inset, b["inset"]["over"], probs, where)
     if inset and (b.get("inset") or {}).get("under") == "figure" and room_under:
+        sh = under_share(fig)
+        if sh and sh[0] < UNDER_MIN_SHARE:
+            probs.append("%s: the inset under the drawing leaves the drawing only about %d %% of its panel (about %d of %d px high at "
+                         "1280 x 800), so the drawing is drawn at about half its size - put the inset under the words, lay it "
+                         "over a blank part of the drawing (\"over\"), or draw the figure wider and less tall"
+                         % (where, round(100 * sh[0]), round(sh[1] - INSET_H), round(sh[1])))
         fig = under_figure(fig, inset)
         inset = ""
     # L57: a drawing of real things carries their real photographs, under the drawing - unasked
     strip = ""
     if fig and not is_photo and comp != "photo" and notes is not None:
-        strip = part_photos(lines, fig, on_slide, mdir, pool or [], notes, sid, taken, b.get("no_photo") or [])
+        strip = part_photos(lines, fig, on_slide, mdir, pool or [], notes, sid, taken, b.get("no_photo") or [], b.get("not_things") or [])
         if strip and room_under:
             fig, strip = under_figure(fig, strip), ""
     extra = [x for x in (inset, aside, strip) if x]
@@ -1011,7 +1082,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     if comp in ("two-col", "wide-left", "wide-right"):
         # a drawing, an animation or a 3D model gets the wider column (owner, 2026-10-15: bigger pictures)
         cls = "two-col " + (comp if comp != "two-col" else "fig-wide")
-        cols = [copy(words_html(lines, emph=emph), 4), fill(fig)]
+        box = fill(fig)
+        if photo_col:                      # the photograph is cropped to its column, which has the slide's height
+            box = box.replace('class="fill fig"', 'class="fill fig photo-col"', 1)
+            cls += " photo-col"
+        cols = [copy(words_html(lines, emph=emph), 4), box]
         if b.get("figure_first"):          # the drawing on the left, the words on the right
             cols.reverse()
             cls = cls.replace("fig-wide", "fig-wide fig-first")
@@ -1030,11 +1105,56 @@ def build_path(course, module):
     return os.path.join(cs.paths(course, module)["dir"], cs.mid(module) + ".build.json")
 
 
-def starter_build(script):
-    return {"module": script.get("module"), "landing_rule": "", "styles": [], "scripts": [], "inline": [],
-            "screens": {s["id"]: ({"figure": "", "visual_kind": s.get("visual_kind") or "none"} if s["kind"] == "slide" else
-                                  {"link_hint": ""} if s["kind"] == "activity" else {})
-                        for s in script["screens"] if s["kind"] in cs.INSTRUCTOR}}
+def short_title(title):
+    """the module's title as the deck's foot has it: upper case, whole words only, never "CHARACTE" """
+    short = (title or "").upper()
+    if len(short) > 40:
+        short = short[:41].rsplit(" ", 1)[0].rstrip(" -·,")
+    return short
+
+
+# the ways of answering ON a picture: their starter entry names the picture and the places (2.49.1)
+STARTER_ON_PICTURE = {"hotspot": {"figure": "", "areas": {}}, "spot_the_hazard": {"figure": "", "areas": {}},
+                      "label_diagram": {"figure": "", "labels": {}}}
+
+
+def sibling_sheets(bp):
+    """the course's other module build sheets (M01.build.json ...), the nearest first - what every module shares"""
+    here = os.path.dirname(bp)
+    out = []
+    for name in sorted(os.listdir(here)) if os.path.isdir(here) else []:
+        p = os.path.join(here, name)
+        if name.endswith(".build.json") and os.path.abspath(p) != os.path.abspath(bp):
+            try:
+                out.append(cs.load(p))
+            except (OSError, ValueError):
+                pass
+    return out
+
+
+def starter_build(script, shared=()):
+    """A starter build sheet. 2.49.1: the landing rule and the pass mark are the same in every module of a course, so they
+    come from the course's other build sheets (the latest module that has them); the foot is this module's title; each
+    question answered on a picture gets its entry (figure + places) to fill in."""
+    def first(key):
+        for sheet in reversed(list(shared)):
+            if sheet.get(key) not in (None, ""):
+                return sheet[key]
+        return None
+    sheet = {"module": script.get("module"), "landing_rule": first("landing_rule") or "",
+             "foot": short_title(script.get("title"))}
+    if first("pass_mark") is not None:
+        sheet["pass_mark"] = first("pass_mark")
+    sheet.update({"styles": [], "scripts": [], "inline": []})
+    screens = {}
+    for s in script["screens"]:
+        if s["kind"] in cs.INSTRUCTOR:
+            screens[s["id"]] = ({"figure": "", "visual_kind": s.get("visual_kind") or "none"} if s["kind"] == "slide" else
+                                {"link_hint": ""} if s["kind"] == "activity" else {})
+        elif s["kind"] in cs.TASKS and cs.mech(s) in STARTER_ON_PICTURE:
+            screens[s["id"]] = json.loads(json.dumps(STARTER_ON_PICTURE[cs.mech(s)]))
+    sheet["screens"] = screens
+    return sheet
 
 
 def compile_deck(script, build, mdir, figdir, version, approved):
@@ -1042,9 +1162,7 @@ def compile_deck(script, build, mdir, figdir, version, approved):
     m = cs.mid(script.get("module"))
     title = script.get("title") or ""
     screens = [s for s in script["screens"] if s["kind"] in cs.INSTRUCTOR]
-    short = title.upper()
-    if len(short) > 40:                                  # whole words only - never "CHARACTE"
-        short = short[:41].rsplit(" ", 1)[0].rstrip(" -·,")
+    short = short_title(title)                           # whole words only - never "CHARACTE"
     foot = "%s · %s · NOVIKONTAS" % (m, build.get("foot") or short)
     total = len(screens)
     slides = []
@@ -1197,7 +1315,13 @@ def main(argv=None):
         if gate:
             print(cs.course_gate.stop_message(o.module, gate, "built"))
             return 2
-        cs.save(bp, starter_build(script))
+        shared = sibling_sheets(bp)
+        try:                                            # the course's own sheet, when it names a landing rule or pass mark
+            cp = workspace.claude_path(o.course, "course.build.json")
+            shared.insert(0, cs.load(cp) if os.path.isfile(cp) else {})
+        except (OSError, ValueError):
+            pass
+        cs.save(bp, starter_build(script, shared))
         print("Done - a starter build sheet:\n    %s\n  Next: put each slide's picture file in \"figure\", then compile." % bp)
         # the module's folder does not exist for a new module: make it and put the factory's style files and engines
         # in it, so the first compile does not stop (never inside the Android project - design_system.py refuses that)
@@ -1234,6 +1358,8 @@ def main(argv=None):
     probs, notes = [], []
     rec.update({"script_hash": cs.content_hash(script), "plugin_version": plugin_version()})
     written = []
+    # 2.49.1 - the build record is saved with each file as it is written, so a crash later in the run never leaves a
+    # file of the compiler's own that the next run refuses as "changed by hand"
     if o.only in ("all", "deck"):
         written.append(out)
         page, probs, notes = compile_deck(script, build, mdir, figdir, plugin_version(), approved)
@@ -1241,6 +1367,7 @@ def main(argv=None):
         with io.open(out, "w", encoding="utf-8", newline="\n") as f:
             f.write(page)
         rec["index.html"] = sha(page)
+        cs.save(rec_path, rec)
         probs += credit_path_problems(page, "presentation/index.html")
         n = sum(1 for s in script["screens"] if s["kind"] in cs.INSTRUCTOR)
         print("Built %s - %d screens from the %s script.\n    %s" % (cs.mid(o.module), n, "approved" if approved else "DRAFT", out))
@@ -1259,6 +1386,7 @@ def main(argv=None):
             with io.open(path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(page)
             rec[key] = sha(page)
+            cs.save(rec_path, rec)
             written.append(path)
             print("Built the task page %s" % key)
         for x in left:
@@ -1275,6 +1403,7 @@ def main(argv=None):
             with io.open(ppath, "w", encoding="utf-8", newline="\n") as f:
                 f.write(ppage)
             rec[key] = sha(ppage)
+            cs.save(rec_path, rec)
             written.append(ppath)
             print("Built the module plan %s" % key)
     cs.save(rec_path, rec)
