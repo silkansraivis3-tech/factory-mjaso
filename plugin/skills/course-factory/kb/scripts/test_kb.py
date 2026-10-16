@@ -46,8 +46,9 @@ def check(name, ok, detail=""):
     print(("  ok    " if ok else "  FAIL  ") + name + (("  -> " + str(detail)) if detail and not ok else ""))
 
 
-def run(*a):
-    p = subprocess.run([sys.executable, TOOL] + list(a), capture_output=True, text=True, encoding="utf-8", errors="replace")
+def run(*a, cwd=None):
+    p = subprocess.run([sys.executable, TOOL] + list(a), capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       cwd=cwd)
     return p.returncode, p.stdout + p.stderr
 
 
@@ -174,7 +175,7 @@ def main():
             print("\n-- %s" % kind)
             kb = build(os.path.join(tmp, kind))
             before = snapshot(kb)
-            course = os.path.join(tmp, kind + "_course")
+            course = os.path.join(tmp, kind + "_course", "course")
             os.makedirs(course)
             code, out = run("detect", kb)
             check("recognised as %s" % kind, code == 0 and out.strip() == kind, out)
@@ -318,6 +319,38 @@ def main():
               (course_gate.kb_decision(legacy) or {}).get("answer") == "declined")
         w(os.path.join(legacy, "working_claude", "intake.json"), json.dumps({"programme": "x.pdf"}))
         check("... an intake that never asked is no decision", course_gate.kb_decision(legacy) is None)
+
+        print("\n-- a wrong --course is refused, never made up (2.48.1)")
+        master = os.path.join(tmp, "Kursi", "Drošības pamatkurss")
+        w(os.path.join(master, "source_files", "IGF CODE.pdf"), "x")
+        build_csp(master)                                                    # master\KNOWLEDGE_BASE
+        kb = build_docling(os.path.join(master, "knowledge_base_existing", "gas-basic"))
+        before = snapshot(master)
+        kbs_before = [snapshot(os.path.join(master, d)) for d in ("KNOWLEDGE_BASE", "knowledge_base_existing", "source_files")]
+        stray =os.path.join(master, "knowledge_base_existing", "GAS")
+        code, out = run("search", kb, "sulphur", "--course", stray)
+        check("a --course that does not exist is refused and not made (it was made beside the knowledge base)",
+              code == 2 and not os.path.exists(stray) and snapshot(master) == before, out)
+        check("... and the refusal names the course folder it should have been",
+              os.path.join(master, "course") in out, out)
+        code, out = run("search", kb, "sulphur", "--course", "gas_advanced_x", cwd=os.path.dirname(HERE))
+        check("a relative --course run from the factory's kb\\ folder is refused, nothing made in the factory",
+              code == 2 and not os.path.exists(os.path.join(os.path.dirname(HERE), "gas_advanced_x")), out)
+        check("a folder inside the factory is never a course folder, even one that looks like one",
+              "inside the factory" in (kb_tool.not_here(os.path.join(os.path.dirname(HERE), "gas-advanced")) or ""))
+        os.makedirs(os.path.join(stray, "working_claude"))                   # what the earlier run left
+        code, out = run("search", kb, "sulphur", "--course", stray)
+        check("a course-looking folder inside a knowledge_base* folder is refused",
+              code == 2 and "inside a knowledge base" in out and os.listdir(os.path.join(stray, "working_claude")) == [], out)
+        shutil.rmtree(stray)
+        code, out = run("search", kb, "sulphur", "--course", os.path.join(master, "source_files"))
+        check("source_files is not a course folder", code == 2 and snapshot(master) == before, out)
+        code, out = run("search", kb, "sulphur", "--course", master)
+        packs = os.path.join(master, "course", "working_claude", "retrieval")
+        check("the master folder -> the pack goes to its course\\working_claude\\retrieval",
+              code == 0 and os.path.isdir(packs) and len(os.listdir(packs)) == 1, out)
+        check("... and neither knowledge base nor source_files changed", kbs_before == [
+            snapshot(os.path.join(master, d)) for d in ("KNOWLEDGE_BASE", "knowledge_base_existing", "source_files")])
 
         print("\n-- not a knowledge base")
         code, out = run("detect", tmp)

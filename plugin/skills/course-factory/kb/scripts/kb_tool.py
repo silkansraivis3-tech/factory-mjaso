@@ -37,13 +37,15 @@ WHAT IT DOES
   decide    records the operator's answer in <course>/_factory/intake.json: which one is current,
             or that the group is really different publications.
   search    ranks pieces with the knowledge base's own index (BM25) and writes a retrieval pack -
-            the matching extracts with file and page - into <course>/_factory/retrieval/. Sources the
+            the matching extracts with file and page - into course/working_claude/retrieval/. Sources the
             operator marked as not current, and exact duplicates, are left out (--all keeps them).
 
 WHAT IT NEVER DOES
 Write inside the knowledge base (L14). Every write goes to the course folder, and a course folder
 inside the knowledge base is refused. The SEARCH program writes its packs into the knowledge
 base's own retrieval/ folder; this one does not.
+Make up a course folder (2.48.1). --course must be an existing master folder or its course/ folder,
+outside the factory and every knowledge base; anything else stops with the folder it should have been.
 """
 from __future__ import annotations
 
@@ -469,11 +471,15 @@ def kb_summary(path, fmt):
     return {"path": os.path.abspath(path), "format": fmt, "sources": n}
 
 
-def _claude(course, *parts):
-    """working_claude/<parts> in the work folder - an older course's _factory/ copy is found too (L44)."""
+def _ws():
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "scripts"))
     import workspace
-    return workspace.claude_path(course, *parts)
+    return workspace
+
+
+def _claude(course, *parts):
+    """working_claude/<parts> in the work folder - an older course's _factory/ copy is found too (L44)."""
+    return _ws().claude_path(course, *parts)
 
 
 def find_kbs(folder, max_depth=5, up=1):
@@ -686,6 +692,74 @@ def refuse_inside(course, kb):
     return 2
 
 
+# ------------------------------------------------------------------ the course folder, never a made-up one (2.48.1)
+def ancestors(p):
+    p = os.path.abspath(p)
+    while True:
+        yield p
+        up = os.path.dirname(p)
+        if up == p:
+            return
+        p = up
+
+
+def factory_root():
+    """The factory's own folder - the checkout it runs from, or the installed plugin. Course work never goes here."""
+    plugin = os.path.abspath(__file__)
+    for _ in range(5):                             # scripts, kb, course-factory, skills, plugin
+        plugin = os.path.dirname(plugin)
+    up = os.path.dirname(plugin)
+    return up if any(os.path.exists(os.path.join(up, m)) for m in (".git", ".claude-plugin")) else plugin
+
+
+def not_here(work):
+    """Why course work may not be written into this folder, or None: it is inside the factory, or inside a
+    knowledge base or the knowledge_base* folder that holds them (L14)."""
+    if inside(work, factory_root()):
+        return "it is inside the factory itself (%s) - the factory never keeps course work in its own folder" % factory_root()
+    for a in ancestors(work):
+        if os.path.basename(a).lower().startswith("knowledge_base") or detect(a):
+            return "it is inside a knowledge base (%s) - that is read-only, and so is every folder in it" % a
+    return None
+
+
+def course_folder(given):
+    """(work folder, None) for --course, or (None, why not). Before 2.48.1 any folder was taken as it was, and made
+    if it did not exist - so a wrong --course put retrieval packs into the factory repo and beside a knowledge base.
+    Now it must exist and be the course's own folder or its master folder, outside the factory and every knowledge base."""
+    ws = _ws()
+    p = os.path.abspath(given)
+    if not os.path.isdir(p):
+        return None, "that folder does not exist"
+    if not (ws.is_work(p) or ws.is_master(p)):
+        return None, ("it is not a course folder - it has no working_claude\\ or to_review\\, and no source_files\\ "
+                      "or knowledge base in it")
+    w = ws.work_folder(p, create=False)
+    why = not_here(w)
+    if why:
+        return None, why
+    return ws.work_folder(p), None
+
+
+def likely_course(kb):
+    """The course folder a knowledge base belongs to: course\\ in the first master folder above it."""
+    ws = _ws()
+    for a in ancestors(os.path.dirname(os.path.abspath(kb))):
+        if ws.is_master(a) and not not_here(a):
+            return os.path.join(a, ws.WORK)
+    return None
+
+
+def refuse_course(given, why, kb=None):
+    guess = likely_course(kb) if kb and detect(kb) else None
+    print("Stopped - nothing was written.\n\n  --course does not name this course's folder:\n    %s\n  %s.\n\n"
+          "  Everything the factory writes goes into the course's own folder (course\\working_claude\\, course\\to_review\\)\n"
+          "  - never into a knowledge base, the source files or the factory. Give the master folder that holds\n"
+          "  source_files\\ and the knowledge base, or its course\\ folder.%s"
+          % (os.path.abspath(given), why, ("\n\n  For this knowledge base that is:\n    --course \"%s\"" % guess) if guess else ""))
+    return 2
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -700,9 +774,10 @@ def main(argv=None):
     q.add_argument("--top", type=int, default=12); q.add_argument("--all", action="store_true")
     a = ap.parse_args(argv)
     if getattr(a, "course", None):                 # what the factory writes goes to course\ (L40)
-        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "scripts"))
-        import workspace
-        a.course = workspace.work_folder(a.course)
+        given = a.course
+        a.course, why = course_folder(given)
+        if why:
+            return refuse_course(given, why, getattr(a, "kb", None))
     if a.cmd == "find":
         return cmd_find(a.folder, a.json)
     if a.cmd == "detect":

@@ -238,8 +238,9 @@ Processor, was unknown to the factory.
   acronym (LGHP, ISGOTT), by typo (SIGGTO/SIGTTO) — each written as a ready "which edition is
   current?" question. Different numbers mean different documents (exercise 14.2.4 is not 14.2.5, model
   course 1.04 is not 1.35); a short differing word is not a typo (LNG/LPG). `decide` records the answer;
-  `search` then leaves the old edition out. Packs go to `<course>/_factory/retrieval/`, **never into the
-  knowledge base**.
+  `search` then leaves the old edition out. Packs go to `course/working_claude/retrieval/`, **never into the
+  knowledge base**; a `--course` that is not an existing course or master folder, or sits in the factory or a
+  knowledge base, is refused (2.48.1).
 - Run read-only on the two real knowledge bases on this machine: GAS BASIC (docling, 48 sources) —
   3 exact copies (the SIGTTO book three times), 1 .doc/.docx pair, and 2 edition questions (MARPOL
   2022 against an older MARPOL; ICS Tanker Safety Guide 3rd ed. against an undated one). The electrical

@@ -87,6 +87,10 @@ is a stated gap, and a stated gap is a good answer (L4).
 - **Nothing is written inside the knowledge base** (L14). The owner's SEARCH program writes its packs
   into the knowledge base's own `retrieval/` folder; the factory writes into the course folder only,
   and refuses a course folder that sits inside the knowledge base.
+- **No course folder is made up** (2.48.1). `--course` must be an existing master folder or its
+  `course\` folder, outside the factory and outside every knowledge base or `knowledge_base*` folder.
+  A wrong one stops with nothing written and names the folder it should have been. (Before, a wrong
+  `--course` was taken as it was and created - packs landed in the factory repo and beside a knowledge base.)
 - An IMO model course is a training requirement, never a source of fact (L22).
 - A figure from the knowledge base - a textbook or publisher figure too - **is usable as it is** (owner, 2026-10-01;
   L33 revised): credit it where the source is known and list it in `factory-notes.md`. Its images are in each
