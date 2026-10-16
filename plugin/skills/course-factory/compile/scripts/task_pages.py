@@ -575,7 +575,9 @@ def q_why(q):
 def opt_buttons(sid, q, multi=False, cls="opts"):
     opts, right = q.get("options", []), cs.correct_letters(q)
     out = ['    <div class="%s%s">' % (cls, " multi" if multi else "")]
-    for L, o in zip(cs.letters(len(opts)), opts):
+    # out of the script's order, like every other answer: a script writes the right one first (IGF M05: A was right in
+    # every choose-one question, so always tapping the first option passed) - the same order on every build
+    for L, o in shuffle(sid, list(zip(cs.letters(len(opts)), opts)), key=lambda x: x[1]):
         out.append('      <button type="button" class="opt" data-script-field="opt.%s" data-key="%s">%s</button>'
                    % (L, cs.gb_key(sid, o, 1 if L in right else 0), e(o)))
     out.append("    </div>")
@@ -1120,6 +1122,8 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
              % e(w["start_check"] if is_check else w["start_self"]), ""]
     if kit:
         body.append('<script src="../assets/kit.js"></script>')
+        if os.path.isfile(os.path.join(mdir, cm.KIT_PARTS)):   # the course's own parts, as the deck loads them
+            body.append('<script src="../%s"></script>' % cm.KIT_PARTS)
     body += ['<script src="../assets/gb_answer.js"></script>']
     if pictures:
         body.append('<script src="../assets/gb_zoom.js"></script>')
