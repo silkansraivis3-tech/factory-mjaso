@@ -82,6 +82,8 @@ course-factory/
 ├── compile/GUIDE.md                      READ IN: building the deck from the approved script (2.25.0)
 ├── compile/scripts/compile_module.py, test_compile_module.py   the deck built, never typed; build sheet; hand edits never overwritten
 ├── compile/scripts/compile_course.py, test_compile_course.py   COURSE.html, course_map.js, every module's start pages (2.37.0)
+├── scripts/ilo_map.py                    the ILO map file, built from programme.json + architecture.json (2.38.0)
+├── scripts/course_gate.py, gate_fixture.py   no module before the approved ILO map and the KB decision; the tests' opener (2.38.0)
 ├── hours/                                READ IN: plan mode, and audit
 │   ├── GUIDE.md
 │   ├── knowledge/hours-rules.json        every number and rule (authority)
@@ -821,6 +823,44 @@ built pages, same course ID. Step 5: `build-order.json` steps 8, 10, 11, 15, `or
 agents table) and `orchestration/workflows/build_course.js` send a module agent through script → approval → build
 sheet → compile, writing no HTML and loading no HTML rules: ≈ 80,800 → 38,500 tokens of rules per module agent
 (measured, size ÷ 4). `test_compile_course.py` 21 checks.
+
+## 4zh · The ILO map and the knowledge base before any module (2.38.0, 2026-10-16)
+
+Owner: *"before creating any module the AI should have already made the ILO mapping and suggested for
+KNOWLEDGE_BASE to be created"*. A session building IGF Module 4 got neither until a follow-up message: the ILO map
+was a build step with no file, `script/GUIDE.md` never mentioned the map or the knowledge base, and `"sub_ilo"` on a
+question was optional. Now, by rule and by check:
+
+- **Intake suggests a missing knowledge base, unasked.** `kb_tool.py find` with none found prints what one is, which of
+  the master folder's files it would be built from (`source_files` and the old course, sorted: programme / model course /
+  codes / old course / other), how - the Course Source Processor, which is *not* part of the factory and is said so - and
+  what the course loses; `--json` adds the ready pop-up question. `kb_tool.py decision` records yes / built / declined
+  (with the operator's reason) in `intake.json` → `knowledge_base_decision`, once. An intake from before 2.38.0 naming a
+  knowledge base (or `none`) counts as the decision.
+- **The ILO map is a file, made before the split is approved.** `scripts/ilo_map.py` builds
+  `working_claude/ilo_map.json` from `programme.json` + `architecture.json` - one row per Sub-ILO per module (a module with
+  none: its Main ILO), the Main ILO and topic verbatim, the model-course items under the topic from any
+  `*syllabus*.json`. Core fields are rebuilt every time; other fields and keys (the IGF pilot's own tool adds how / where /
+  assessed, STCW tables) are kept. `make_architecture_page.py` writes it with the page and shows it, with the KB decision
+  (a declined one stays on the page). `--approve --by` records the operator's "next" in `architecture.json` → `approved`
+  with the map's fingerprint; refused without a KB decision, with a teaching module missing from the map, a Main ILO not
+  verbatim, or a theory-as-activity proposal waiting.
+- **The hard stop.** `scripts/course_gate.py` (CLI and module): no architecture, no or stale ILO map, page not approved
+  or Sub-ILOs changed since, no KB decision, or the module has no rows → a plain list of what to do. `content_script.py`
+  render (of an unapproved script) and approve exit 2 on it; `compile_module.py --init-build` too; `build_course.js`
+  pass 2 runs it in a gate agent before any module agent, and the reader now produces the Stage 2 files and the KB
+  suggestion instead of free-form `MODULE_MAP.md` / `ILO_MAP.md`.
+- **The script uses them.** `script/GUIDE.md` §0 *Before writing*: the module's rows (`ilo_map.py show`), the model-course
+  items, the old course's keep / modernise / add, the knowledge base only through `kb_tool.py search`, every fact traced
+  in `"sources"`. The review page's **ILO map and sources check** (must-fix, `--despite-findings` possible): a Sub-ILO
+  taught on no slide or checked by no question, a question without `"sub_ilo"`, a `"sub_ilo"` the module does not own,
+  empty `"sources"`.
+- **The IGF pilot is not broken retroactively** (checked on a copy): its `ilo_map.json` reads as the map (67 rows match
+  `architecture.json`; the final-assessment row is kept), its intake counts as the KB decision, and M01-M03 stay approved
+  with their gaps reported. M04 waits for one command: `make_architecture_page.py --course <course> --approve --by "<name>"`.
+- The publisher now sorts `ilo_map.json` and `intake.json` as internal (`course-tablet-publisher/knowledge/platform.json`).
+  Tests: `test_kb.py` 61, `test_architecture_page.py` 89, `test_content_script.py` 160, `test_compile_module.py`
+  (init-build stop), `test_workspace.py`; `scripts/gate_fixture.py` opens the gate on a test course.
 
 ## 5 · Known gaps / before this goes live
 

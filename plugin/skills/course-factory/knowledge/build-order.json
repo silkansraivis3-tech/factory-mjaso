@@ -1,15 +1,15 @@
 {
   "_authority": "The ordered pipeline and who owns each step. SKILL.md points here and must not restate the order in prose.",
   "_written": "2026-09-07",
-  "_revised": "2026-09-10 - the visual layer became an explicit required step (8) owned by course-module-ui, and its audit joined verify. Before this the pipeline named no owner for how a module LOOKS, so a module could pass every UX check and still ship as default white HTML. Steps renumbered from 8 onwards. | 2026-09-10 (Phase 3) - a VISUAL PLAN step (9) owned by course-visuals was inserted after the visual system and before task pages, and course-visuals joined verify. Before this the pipeline named an owner for how a module LOOKS but none for WHAT THE PICTURE SHOULD BE, so a module could pass every check and still ship card grids and boxes joined by arrows. Steps renumbered from 9 on. | 2026-09-11 - a RETROFIT pipeline was added beside the build pipeline. The steps are not the same: a retrofit starts from existing material, so it classifies the delivery first and its content steps are reads rather than writes. | 2026-10-16 (2.37.0) - steps 10-11 are compiled from the approved script (compile/), and step 15 starts with compile_course.py for the course's own pages: a module agent writes the build sheet and the figures, never the HTML, and no longer loads the HTML rules (about 42,000 tokens less per module agent, measured in docs/PROPOSAL_SCRIPT_COMPILER.md §6).",
+  "_revised": "2026-09-10 - the visual layer became an explicit required step (8) owned by course-module-ui, and its audit joined verify. Before this the pipeline named no owner for how a module LOOKS, so a module could pass every UX check and still ship as default white HTML. Steps renumbered from 8 onwards. | 2026-09-10 (Phase 3) - a VISUAL PLAN step (9) owned by course-visuals was inserted after the visual system and before task pages, and course-visuals joined verify. Before this the pipeline named an owner for how a module LOOKS but none for WHAT THE PICTURE SHOULD BE, so a module could pass every check and still ship card grids and boxes joined by arrows. Steps renumbered from 9 on. | 2026-09-11 - a RETROFIT pipeline was added beside the build pipeline. The steps are not the same: a retrofit starts from existing material, so it classifies the delivery first and its content steps are reads rather than writes. | 2026-10-16 (2.37.0) - steps 10-11 are compiled from the approved script (compile/), and step 15 starts with compile_course.py for the course's own pages: a module agent writes the build sheet and the figures, never the HTML, and no longer loads the HTML rules (about 42,000 tokens less per module agent, measured in docs/PROPOSAL_SCRIPT_COMPILER.md §6). | 2026-10-16 (2.38.0) - owner: 'before creating any module the AI should have already made the ILO mapping and suggested for KNOWLEDGE_BASE to be created'. Step 4 now outputs working_claude/ilo_map.json, the GATE (6) shows and approves it and records the approval, step 0 suggests a missing knowledge base unasked and records the decision, and step 6b is blocked without both (scripts/course_gate.py).",
   "steps": [
     {
       "n": 0,
       "step": "intake",
       "owner": "course-factory (knowledge/intake.json) + course-factory/kb",
-      "does": "Stage 1. Look in the folder first; sort the knowledge base's sources (kb_tool.py sources - exact copies, format copies, editions); ask what is still missing in one batch of pop-up questions - programme, knowledge base, old course, course type, model course and language only if not found, which edition is current; record everything in _factory/intake.json",
+      "does": "Stage 1. Look in the folder first; find the knowledge base (kb_tool.py find <master folder>) - and when there is none, SUGGEST making one, unasked, in plain words (L25): kb_tool.py find prints what it is, which of the folder's files it would be built from, how (the Course Source Processor - not part of the factory) and what the course loses without it, with the ready pop-up question; sort its sources (kb_tool.py sources - exact copies, format copies, editions); ask what is still missing in one batch of pop-up questions - programme, knowledge base, old course, course type, model course and language only if not found, which edition is current; record everything in working_claude/intake.json, the knowledge-base answer with kb_tool.py decision (yes / built / declined with the operator's reason - asked once)",
       "blocked_without": "nothing - the programme is the one blocking ANSWER, and it is asked here",
-      "output": "working_claude/intake.json, working_claude/kb_sources.json, and working_claude/COURSE_STATE.md + FEEDBACK_LOG.md started (scripts/course_memory.py start) with the course table and every intake decision filled in",
+      "output": "working_claude/intake.json (with knowledge_base_decision), working_claude/kb_sources.json, and working_claude/COURSE_STATE.md + FEEDBACK_LOG.md started (scripts/course_memory.py start) with the course table and every intake decision filled in",
       "added": "2.13.0 (Phase 5 step 2). Numbered 0 so no later step moves."
     },
     {
@@ -33,14 +33,18 @@
       "step": "knowledge base",
       "owner": "course-factory/kb (kb/GUIDE.md, kb/scripts/kb_tool.py)",
       "does": "sources for the subject, extracted and searchable - a Course Source Processor knowledge base or an older docling one, told apart by their files. Searched with kb_tool.py search; retrieval packs are written into the course folder's _factory/retrieval/, never into the knowledge base. Only the current edition of a publication is cited (intake).",
-      "note": "search the extracted text before declaring a source unreadable; never read a document.md or content.md whole"
+      "note": "search the extracted text before declaring a source unreadable; never read a document.md or content.md whole",
+      "when_none": "the factory suggests making one at intake (0), unasked - the factory itself has no tool that builds one; the Course Source Processor does. The operator's answer (yes / built / declined with a reason) is recorded with kb_tool.py decision; a declined one is allowed and stays on the Stage 2 page (2.38.0)"
     },
     {
       "n": 4,
       "step": "ILO map",
       "owner": "novikontas-pedagogy-toolkit (wording) + course-factory/hours (immutability)",
-      "does": "Main ILOs verbatim; Sub-ILOs re-expressed for digital/practical delivery, each marked PROVISIONAL",
-      "rule": "never renumber a Sub-ILO anywhere a trainee can see"
+      "does": "Main ILOs verbatim; Sub-ILOs re-expressed for digital/practical delivery, each marked PROVISIONAL - written per module into architecture.json (one module per programme topic, L34, so the module of every Sub-ILO is known before the split is approved); then the ILO map FILE is built from them - scripts/ilo_map.py build, or make_architecture_page.py, which writes it with the Stage 2 page: one row per Sub-ILO per module, the Main ILO verbatim, the model-course items under the topic. It is shown on the Stage 2 page and approved with it (6). A module with no Sub-ILO of its own is mapped to its Main ILO.",
+      "blocked_without": "the programme (1) - its Main ILOs and outcomes are copied verbatim",
+      "output": "working_claude/ilo_map.json (2.38.0)",
+      "rule": "never renumber a Sub-ILO anywhere a trainee can see. The core of a row is rebuilt from architecture.json every time - a Sub-ILO is changed there, never in ilo_map.json",
+      "why": "owner, 2026-10-16: 'before creating any module the AI should have already made the ILO mapping'. A module written before the map has nothing to be checked against."
     },
     {
       "n": "4b",
@@ -60,8 +64,9 @@
       "n": 6,
       "step": "GATE",
       "owner": "course-factory (SKILL.md)",
-      "does": "Stage 2 STOP: write architecture.json beside programme.json and plan.json, run scripts/make_architecture_page.py --check, then write ARCHITECTURE_REVIEW.html and STOP. The page shows every module - one per programme topic (L34), the final assessment last - with its hours and where its minutes go, how the course runs on the two tablets (L35), the Main ILOs verbatim, every Sub-ILO beside the programme wording (kept / re-expressed / added), active learning, practical tasks with equipment and the test plan. The operator's 'next' approves it and ratifies the Sub-ILO changes.",
-      "output": "architecture.json, ARCHITECTURE_REVIEW.html (2.15.0)",
+      "does": "Stage 2 STOP: write architecture.json beside programme.json and plan.json, run scripts/make_architecture_page.py --check, then write ARCHITECTURE_REVIEW.html (it writes ilo_map.json with it) and STOP. The page shows every module - one per programme topic (L34), the final assessment last - with its hours and where its minutes go, how the course runs on the two tablets (L35), the Main ILOs verbatim, every Sub-ILO beside the programme wording (kept / re-expressed / added), the ILO map, the knowledge-base decision (a declined one stays on the page), active learning, practical tasks with equipment and the test plan. The operator's 'next' approves it and ratifies the Sub-ILO changes - recorded with make_architecture_page.py --approve --by \"<name>\" (refused while the knowledge-base decision is missing, a teaching module has nothing in the ILO map, or a theory-as-activity proposal waits).",
+      "blocked_without": "the ILO map (4) and the knowledge-base decision recorded at intake (0) - make_architecture_page.py shows a missing one at the top and will not record the approval",
+      "output": "architecture.json with \"approved\" {by, on, ilo_map_hash}, ilo_map.json, ARCHITECTURE_REVIEW.html (2.15.0; approval recorded 2.38.0)",
       "why": "changing a table row is free; changing eight built modules is not"
     },
     {
@@ -69,7 +74,7 @@
       "step": "content script",
       "owner": "course-factory (script/GUIDE.md, scripts/content_script.py)",
       "does": "Stage 3 STOP, per module: the exact words of every screen in trainee order - one task per screen - with the planned picture, instructor notes, every question with answers, correct answer and feedback, and the operator-stated facts listed once. A review page and a Word file for the operator. Every correction is shown as an understood list before it is applied (apply --confirmed only after the operator says yes). The final-assessment bank the same way (--module final).",
-      "blocked_without": "the GATE (6) approved",
+      "blocked_without": "the GATE (6) approved WITH its ILO map, and the knowledge-base decision recorded - content_script.py render/approve and compile_module.py --init-build stop (exit 2) without them; scripts/course_gate.py says what is missing (2.38.0). Written against the module's rows of the ILO map (ilo_map.py show), the old course's keep/modernise/add (L41) and the knowledge base (kb_tool.py search); every Sub-ILO taught on a slide and checked by a question, and \"sources\" listed - checked on the review page",
       "output": "working_claude/script/M<nn>.json approved; to_review/M<nn>_SCRIPT_REVIEW.html, to_review/M<nn>_SCRIPT.docx, to_review/M<nn>_INSTRUCTOR_NOTES.md",
       "added": "2.16.0 (Phase 5 step 5). Numbered 6b so no later step moves."
     },

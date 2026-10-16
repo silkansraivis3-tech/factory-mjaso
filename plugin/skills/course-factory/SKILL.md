@@ -259,6 +259,10 @@ questions, and what to record. In order:
    course; propose the course type from the programme. The course language is always English.
    **Read the old course whole** (L41): `python scripts/old_course.py inventory <old course> --course <folder>`
    and `... images ...` - it is the foundation the architecture is planned from.
+   **No knowledge base? Suggest one, unasked** (owner, 2026-10-16; 2.38.0): `kb_tool.py find <folder>` prints
+   what it is, which of their files it would be built from, how (the Course Source Processor - the factory has
+   no tool for it, never pretend it does) and what the course loses without it. Say that to the operator in
+   plain words, and put its ready question into the pop-up.
 2. **Sort the sources** — `kb/scripts/kb_tool.py sources <kb> --course <course>` (read `kb/GUIDE.md`):
    exact copies and .doc/.docx pairs are settled without asking; each publication found in more than
    one edition becomes a "which edition is current?" question.
@@ -268,7 +272,13 @@ questions, and what to record. In order:
    course type (`NEW_ENTRANT` / `EXPERIENCED`, the programme's pointer first as *Recommended*), the
    model course only if not found, the edition questions, and — in retrofit, only
    when `detect_expert_edits.py` says `nothing-to-go-on` — whether anyone edited it by hand (L24).
-4. **Record** it in `working_claude\intake.json`, editions via `kb_tool.py decide`. Nothing is asked twice.
+4. **Record** it in `working_claude\intake.json`, editions via `kb_tool.py decide`, the knowledge base via
+   `kb_tool.py decision` (yes / built / declined with their reason). Nothing is asked twice.
+
+**No module starts before the ILO map is approved and the knowledge base is decided** (owner, 2026-10-16:
+*"before creating any module the AI should have already made the ILO mapping and suggested for
+KNOWLEDGE_BASE to be created"*). `content_script.py` and `compile_module.py --init-build` stop, exit 2,
+and `scripts/course_gate.py <course>` says what is missing.
 
 Every instrument and simulator in the IMO model course is **assumed available** (L28) — never asked.
 Never ask the module split, screen count, task codes, pass marks, file layout or which lane to
@@ -375,13 +385,18 @@ It reads `programme.json` and `architecture.json` (and `plan.json`, optional) fr
 | **Final assessment** | graded, with the programme's pass mark |
 | **Theory as activity** | per sub-topic, what the factory proposes the trainees *do* instead of only listening - minutes, what it needs, the slides staying - each with **Keep** / **Strike**; the class split now and if all are kept (L49, `active/GUIDE.md`). Record with `scripts/active_plan.py decide`; **every proposal is decided before the operator's "next" is recorded** - a proposal left waiting is not built |
 | **Bloom levels** | what level every Main ILO and Sub-ILO asks for, what the planned task types reach, and how to lift a gap (L48, `bloom/GUIDE.md`) - suggestions, never a stop |
+| **ILO map** | one row per Sub-ILO per module - what every module's script is written against - with the model-course items under each topic. Written with the page as `working_claude\ilo_map.json` (`scripts/ilo_map.py`); approving the page approves it (2.38.0) |
+| **Knowledge base** | the intake decision: used, made for this course, or declined with the operator's reason - a declined one stays on the page |
 
 Programme text appears verbatim in the programme's own language, module titles in COURSE_LANGUAGE; the headings and explanations are in the
 operator's language (`architecture.json` → `operator_language`: `en` / `lv` / `ru`,
 `knowledge/page-labels.json`). Run it with `--check` first: anything the page would flag — hours
 that disagree, a Sub-ILO change without the programme wording, a graded module check — is fixed or
 shown at the top. Markers stay in `factory-notes.md` (L31). Nothing is built until the operator
-says "next"; then record it in `COURSE_STATE.md` (L32).
+says "next"; then record it - `python scripts/make_architecture_page.py --course <course> --approve --by "<name>"`
+(2.38.0: it fingerprints the ILO map, and is refused while the knowledge-base decision is missing, a teaching
+module has nothing in the map, or a theory-as-activity proposal waits) - and in `COURSE_STATE.md` (L32). A later
+change to any Sub-ILO stops new modules until the page is approved again.
 
 ## Stage 3 — the content script, approved before any HTML (L29)
 
@@ -404,6 +419,10 @@ The **Bloom card** (L48) shows each question's level, the module's share at *App
 50 %), and every question below its Sub-ILO with the tablet task type that lifts it - suggestions only.
 Give a question `"sub_ilo"` to check it per Sub-ILO, and `"bloom"` + `"bloom_why"` when it is written above
 its task type's usual level (`bloom/GUIDE.md` §2).
+**Written against the ILO map** (2.38.0): the script is begun from the module's rows (`ilo_map.py show <course>
+--module N`), the old course's keep / modernise / add (L41) and the knowledge base (`kb_tool.py search` only). The
+review page's **ILO map and sources check** - must-fix, like the theory check - wants every Sub-ILO taught on a
+slide and checked by a question (`"sub_ilo"` on both; on every question), and `"sources"` listed.
 Approval is `approve --by <name>`; any later change makes it a draft again. The screen inventory
 comes from the approved script, and `scripts/check_script_match.py` proves the built module says
 exactly those words. **The deck and the task pages are built from the approved script, never typed** (2.25.0,

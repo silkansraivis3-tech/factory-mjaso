@@ -256,9 +256,68 @@ def main():
         empty = os.path.join(tmp, "nothing", "here")
         os.makedirs(empty)
         code, out = run("find", empty)
-        check("none found -> it says the question goes into the intake pop-up", code == 1 and "intake pop-up" in out, out)
+        check("none found -> the factory suggests making one, unasked: what, how, and what is lost without it (2.38.0)",
+              code == 1 and "SUGGESTS MAKING A KNOWLEDGE BASE" in out and "Course Source Processor" in out
+              and "the factory has no tool that builds one" in out and "Without it:" in out and "kb_tool.py decision" in out, out)
         os.rmdir(empty); os.rmdir(os.path.dirname(empty))
         check("find wrote nothing anywhere", snapshot(tmp) == before_all)
+
+        print("\n-- no knowledge base: suggested unasked, and the operator's answer recorded once (2.38.0)")
+        master = os.path.join(tmp, "m", "IGF basic")
+        for rel in ("source_files/regulations/IGF CODE 2016.pdf", "source_files/model_course/IMO_Model_Course_7.13.pdf",
+                    "source_files/Study programme 13-51-306.pdf", "source_files/equipment/gas detector.pdf",
+                    "old course/ch1.pptx", "source_files/notes.txt", "course/to_review/M01_SCRIPT.docx"):
+            w(os.path.join(master, rel), "x")
+        before = snapshot(os.path.join(tmp, "m"))
+        code, out = run("find", master, "--json")
+        sg = json.loads(out).get("suggestion") or {}
+        g = sg.get("groups") or {}
+        check("the suggestion names the files it would be built from, sorted as the operator knows them",
+              code == 1 and sg.get("files") == 5 and len(g.get("programme", [])) == 1 and len(g.get("model_course", [])) == 1
+              and len(g.get("codes", [])) == 1 and len(g.get("old_course", [])) == 1 and len(g.get("other", [])) == 1, sg)
+        check("... from source_files and the old course - never the factory's own course\\ folder or a .txt",
+              not any("course" + os.sep + "to_review" in f or f.endswith(".txt") for v in g.values() for f in v)
+              and os.path.normcase(sg.get("source_root", "")) == os.path.normcase(os.path.join(master, "source_files")), sg)
+        q = sg.get("question") or {}
+        check("--json carries the ready pop-up question, making one first and marked Recommended",
+              q.get("header") == "Sources" and len(q.get("options", [])) == 3 and "(Recommended)" in q["options"][0]["label"], q)
+        check("the suggestion says what the operator must run - and never that the factory builds it",
+              "Course Source Processor" in sg.get("text", "") and "has no tool that builds one" in sg.get("text", "")
+              and os.path.join(master, "source_files") in sg.get("text", ""), sg.get("text"))
+        check("finding and suggesting wrote nothing", snapshot(os.path.join(tmp, "m")) == before)
+
+        wc = os.path.join(master, "course")
+        code, out = run("decision", master)
+        check("no decision yet: decision with no answer says so (exit 1)", code == 1 and "none recorded" in out, out)
+        code, out = run("decision", master, "--declined", "  ")
+        check("declined needs the operator's reason", code == 2 and "reason" in out, out)
+        code, out = run("decision", master, "--yes", os.path.join(master, "source_files"))
+        check("--yes refuses a folder that is not a knowledge base", code == 2 and "not a knowledge base" in out, out)
+        code, out = run("decision", master, "--declined", "the programme is two pages; we read it directly")
+        intake = json.load(io.open(os.path.join(wc, "working_claude", "intake.json"), encoding="utf-8"))
+        d = intake.get("knowledge_base_decision") or {}
+        check("declined with the reason is recorded in course\\working_claude\\intake.json, and in 'asked'",
+              code == 0 and d.get("answer") == "declined" and d.get("reason", "").startswith("the programme is two pages")
+              and any(x.get("question") == "knowledge base" for x in intake.get("asked", [])), (out, intake))
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "scripts"))
+        import course_gate
+        check("course_gate reads the decision", (course_gate.kb_decision(wc) or {}).get("answer") == "declined")
+        code, out = run("decision", master, "--built", os.path.join(course, "materials", "KNOWLEDGE_BASE"))
+        d = json.load(io.open(os.path.join(wc, "working_claude", "intake.json"), encoding="utf-8")).get("knowledge_base_decision")
+        check("--built records the new knowledge base with its kind", code == 0 and d["answer"] == "built"
+              and d["format"] == "course_source_processor" and "reason" not in d, d)
+        check("... and the knowledge base itself was never written to",
+              not os.path.exists(os.path.join(course, "materials", "KNOWLEDGE_BASE", "intake.json")))
+        legacy = os.path.join(tmp, "legacy")
+        w(os.path.join(legacy, "working_claude", "intake.json"), json.dumps(
+            {"knowledge_base": [{"path": "C:\\a\\KNOWLEDGE_BASE", "format": "course_source_processor"}]}))
+        check("an intake from before 2.38.0 that names a knowledge base counts as the decision",
+              (course_gate.kb_decision(legacy) or {}).get("answer") == "yes")
+        w(os.path.join(legacy, "working_claude", "intake.json"), json.dumps({"knowledge_base": {"path": "none", "format": "none"}}))
+        check("... and one that answered 'no knowledge base' counts as declined",
+              (course_gate.kb_decision(legacy) or {}).get("answer") == "declined")
+        w(os.path.join(legacy, "working_claude", "intake.json"), json.dumps({"programme": "x.pdf"}))
+        check("... an intake that never asked is no decision", course_gate.kb_decision(legacy) is None)
 
         print("\n-- not a knowledge base")
         code, out = run("detect", tmp)

@@ -67,6 +67,15 @@ answer becomes B". Only apply --confirmed changes the script, logs each change i
 and re-renders both files. Any change after approval puts the module back to draft; approve records
 who approved which version.
 
+THE ILO MAP AND THE KNOWLEDGE BASE COME FIRST (owner, 2026-10-16 - 2.38.0)
+render (of a script not yet approved) and approve stop, exit 2, until the course has its ILO map
+(working_claude/ilo_map.json), the Stage 2 page is approved with it, and the knowledge-base decision is
+recorded - scripts/course_gate.py says what is missing. The review page then checks the module against
+its rows of the map: every Sub-ILO it owes taught on a slide ("sub_ilo" on the slide) and checked by a
+question ("sub_ilo" on every question), and "sources" not empty - must-fix findings like the theory
+check's, approvable --despite-findings. A script approved before this gate keeps its approval; its
+findings are only reported.
+
 Standard library only - it runs on any colleague's computer. PDF comments need the pypdf package;
 without it, read says so and asks for the comments in Word or in the chat instead.
 """
@@ -100,6 +109,8 @@ import check_slide_text as slide_text  # noqa: E402  - the same four rules the b
 import workspace  # noqa: E402  - the factory works in course\ beside the operator's material (L40)
 import bloom_map  # noqa: E402  - what level each question reaches, against its Sub-ILO (L48)
 import design_choices  # noqa: E402  - the operator's design choices are theirs, not must-fixes (L26, 2.30.0)
+import ilo_map  # noqa: E402  - what this module owes: its rows of the ILO map (2.38.0)
+import course_gate  # noqa: E402  - no module starts before the ILO map is approved and the KB decided (2.38.0)
 
 MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json"), encoding="utf-8"))
 KINDS = ("slide", "task-slide", "activity", "self-check", "module-check", "final")
@@ -921,9 +932,60 @@ def recap_findings(script):
 DESIGN_FINDINGS = {"recap": "r_", "three-d-share": "v_3d_share"}
 
 
-def all_findings(script):
+def sub_ilos_of(s):
+    """The Sub-ILO(s) a screen names: "sub_ilo": "1.a" or ["1.a", "1.b"]."""
+    v = s.get("sub_ilo")
+    return [str(x).strip() for x in (v if isinstance(v, list) else [v]) if x not in (None, "") and str(x).strip()]
+
+
+def ilo_findings(course, script):
+    """2.38.0 (owner, 2026-10-16) - the module against its rows of the ILO map, and its sources. Every Sub-ILO it
+    owes taught on a slide and checked by a question; every question naming its Sub-ILO; the sources listed.
+    Only for a course that has an ILO map - every course past the Stage 2 gate has one."""
+    m = ilo_map.read(course) if course else None
+    if m is None:
+        return []
+    found = []
+
+    def add(sid, field, key, **kw):
+        found.append({"where": place(script, sid) if sid else T(script, "s_the_module"), "screen": sid or "", "field": field,
+                      "level": FAIL, "rule": key, "detail": T(script, key, **kw), "fix": ""})
+
+    if not [x for x in (script.get("sources") or []) if str(x).strip()]:
+        add("", "sources", "i_no_sources")
+    final = str(script.get("module")).lower() == "final"
+    rows = [r for r in m.get("rows", []) if isinstance(r, dict)] if final else ilo_map.module_rows(m, script.get("module"))
+    screens = script.get("screens", [])
+    qs = [s for s in screens if s.get("kind") in TASKS]
+    missing = [s.get("id") for s in qs if not sub_ilos_of(s)]
+    if missing:
+        add("", "sub_ilo", "i_q_no_sub", n=len(missing),
+            ids="; ".join(place(script, x) for x in missing[:8]) + ((" (+%d more)" % (len(missing) - 8)) if len(missing) > 8 else ""))
+    if not rows:                                  # the gate says so; nothing to check against
+        return found
+    known = {str(r.get("sub_ilo_id")) for r in rows}
+    for s in screens:
+        for t in sub_ilos_of(s):
+            if t not in known:
+                add(s.get("id"), "sub_ilo", "i_unknown_sub", s=t, known=", ".join(sorted(known)))
+    if final:
+        return found
+    taught = {t for s in screens if s.get("kind") in ("slide", "activity") for t in sub_ilos_of(s)}
+    checked = {t for s in qs for t in sub_ilos_of(s)}
+    for r in rows:
+        sid = str(r.get("sub_ilo_id"))
+        if sid not in ilo_map.leaves(rows):
+            continue
+        if sid not in taught:
+            add("", "sub_ilo", "i_not_taught", s=sid, text=short(r.get("sub_ilo", ""), 90))
+        if sid not in checked:
+            add("", "sub_ilo", "i_not_checked", s=sid)
+    return found
+
+
+def all_findings(script, course=None):
     th, _ = theory_findings(script)
-    return th + media_findings(script) + text_findings(script)
+    return th + media_findings(script) + text_findings(script) + ilo_findings(course, script)
 
 
 def blocking(findings):
@@ -1242,6 +1304,12 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
             e(T(script, "s_textcheck_title")), e(T(script, "s_textcheck_intro")), "".join(row(f) for f in tf)))
     else:
         o.append('<p class="note">%s</p>' % e(T(script, "s_textcheck_clean")))
+    jf = ilo_findings(course, script)                     # 2.38.0 - the ILO map and the sources
+    if jf:
+        o.append('<div class="card warn"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
+            e(T(script, "s_ilo_title")), e(T(script, "s_ilo_intro")), "".join(row(f) for f in jf)))
+    else:
+        o.append('<p class="note">%s</p>' % e(T(script, "s_ilo_clean" if ilo_map.read(course) is not None else "s_ilo_none")))
     o.append(media_summary_html(e, V, script))
     o.append(split_html(e, script))                        # L49 - plain theory against active learning
     bm = bloom_of(course, script)                         # L48 - suggestions only
@@ -1371,7 +1439,7 @@ def build_docx(course, script):
             body.append(_para("• " + f.get("fact", ""), lang=cl))
     th_found, taught_on = theory_findings(script)
     for head, found in (("s_theory_title", th_found), ("s_media_title", media_findings(script)),
-                        ("s_textcheck_title", text_findings(script))):
+                        ("s_textcheck_title", text_findings(script)), ("s_ilo_title", ilo_findings(course, script))):
         if found:
             label(T(script, head), style="Heading1")
             for f in found:
@@ -1739,7 +1807,7 @@ def cmd_approve(course, module, by, despite=False):
     if probs:
         print("Not approved - the script still has problems:\n" + "\n".join("  - " + x for x in probs))
         return 1
-    must = blocking(all_findings(script))
+    must = blocking(all_findings(script, course))
     chosen = design_choices.load(course)                     # L26: a design rule the operator chose against stops nothing
     waived = [f for f in must if any(f["rule"].startswith(pre) and rule in chosen for rule, pre in DESIGN_FINDINGS.items())]
     must = [f for f in must if f not in waived]
@@ -1825,7 +1893,7 @@ def render(course, module, quiet=False):
             print("\nThe script still has problems - fix them before showing it:\n" + "\n".join("  - " + x for x in probs))
         th, _ = theory_findings(script)
         for head, found in (("The theory check", th), ("The pictures-and-tasks check", media_findings(script)),
-                            ("The text check", text_findings(script))):
+                            ("The text check", text_findings(script)), ("The ILO map and sources check", ilo_findings(course, script))):
             if found:
                 print("\n%s found %d thing(s) - they are at the top of the review page and the Word file:" % (head, len(found)))
                 for f in found:
@@ -1867,7 +1935,16 @@ def main(argv=None):
     a.course = workspace.work_folder(a.course)
     if not os.path.isfile(paths(a.course, a.module)["script"]):
         print("Stopped - there is no content script for module %s yet:\n    %s" % (a.module, paths(a.course, a.module)["script"]))
+        if course_gate.problems(a.course, a.module):        # say what comes first, before anyone writes one (2.38.0)
+            print("\n" + course_gate.stop_message(a.module, course_gate.problems(a.course, a.module)))
         return 2
+    if a.cmd in ("render", "approve"):                      # 2.38.0 - the approved ILO map and the KB decision come first
+        script = load(paths(a.course, a.module)["script"])
+        approved = script.get("status") == "approved" and script.get("approved_hash") == content_hash(script)
+        probs = course_gate.problems(a.course, a.module) if (a.cmd == "approve" or not approved) else []
+        if probs:
+            print(course_gate.stop_message(a.module, probs, "started" if a.cmd == "render" else "approved"))
+            return 2
     return {"render": lambda: render(a.course, a.module), "read": lambda: cmd_read(a.course, a.module, a.docx, a.pdf),
             "propose": lambda: cmd_propose(a.course, a.module, a.changes), "apply": lambda: cmd_apply(a.course, a.module, a.confirmed),
             "discard": lambda: cmd_discard(a.course, a.module),

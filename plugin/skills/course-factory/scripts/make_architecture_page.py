@@ -5,6 +5,7 @@
     make_architecture_page.py --course <course folder>
         [--programme programme.json] [--architecture architecture.json] [--plan plan.json]
         [--out ARCHITECTURE_REVIEW.html] [--check]
+    make_architecture_page.py --course <course folder> --approve --by "<operator>"     the operator's "next", recorded
 
     The inputs are read from <course>/working_claude/ (an older course's copies in the course folder are found too);
     the page is written to <course>/to_review/ (L44).
@@ -48,6 +49,14 @@ INPUTS - in the course folder unless given
 
 It writes one self-contained HTML file (the style is inlined, nothing is fetched) that prints to
 PDF from the browser. --check writes nothing and exits 1 when the page would show problems.
+
+THE ILO MAP AND THE KNOWLEDGE BASE ARE APPROVED HERE (owner, 2026-10-16 - 2.38.0)
+Making the page also writes working_claude/ilo_map.json (scripts/ilo_map.py) - one row per Sub-ILO per
+module - and the page shows it, with the knowledge-base decision from intake (a declined one stays on
+the page). --approve --by records the operator's "next" in architecture.json "approved", with a
+fingerprint of the ILO map. It is refused while no knowledge-base decision is recorded, a teaching
+module has nothing in the map, a Main ILO is not verbatim, or a theory-as-activity proposal waits.
+No module's content script starts before it (scripts/course_gate.py).
 """
 from __future__ import annotations
 
@@ -70,6 +79,8 @@ MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json
 ACTIVE = json.load(io.open(os.path.join(SKILL, "knowledge", "active-learning.json"), encoding="utf-8"))   # L49 step 3
 sys.path.insert(0, HERE)
 import bloom_map  # noqa: E402  - what level the ILOs ask for and the tasks reach (L48)
+import ilo_map  # noqa: E402  - the ILO map, built from this page's own files (2.38.0)
+import course_gate  # noqa: E402  - no module starts before this page is approved (2.38.0)
 FAMILY_MARK = {"still": "▣", "moving": "▶", "interactive": "☝", "3d": "⬢", "video": "●"}
 MOVING = ("moving", "interactive", "3d", "video")
 TECHNIQUES = ["self-check", "explain-then-reveal", "predict-then-reveal", "worked-example", "scenario", "explore", "plain"]
@@ -297,6 +308,57 @@ def analyse(prog, arch, plan=None):
             "tot_th": tot_th, "tot_pr": tot_pr, "outcomes": outcomes, "bloom": bloom_map.course_map(prog, arch), "split": split_found, "waiting": waiting}
 
 
+def gate_of(course, prog, arch):
+    """2.38.0 - the ILO map built from this page's files, the knowledge-base decision and the operator's approval.
+    The map is what every module's content script is written against; nothing starts before it is approved."""
+    rows, owed = ilo_map.derive(prog, arch, ilo_map.find_syllabus(course) if course else None)
+    kb = course_gate.kb_decision(course) if course else None
+    ok = course_gate.approval(arch)
+    h = ilo_map.fingerprint(rows)
+    problems = [] if kb else [("p_no_kb_decision", {})]
+    have, fa = {r["module"] for r in rows}, ilo_map.final_topic(arch)
+    for am in arch.get("modules", []) or []:
+        n = ilo_map.mkey(am.get("module"))
+        if isinstance(n, int) and str(n) != fa and ilo_map.mname(n) not in have:
+            problems.append(("p_no_ilo_row", {"m": n}))
+    return {"rows": rows, "owed": owed, "kb": kb, "approved": ok, "hash": h,
+            "fresh": bool(ok) and ok["ilo_map_hash"] == h, "problems": problems}
+
+
+def gate_html(e, V, VP, P, g):
+    """The approval line, the knowledge base and the ILO map - on the page the operator approves."""
+    ok = g["approved"]
+    out = ['<div class="card %s"><h3>%s</h3><p>%s</p></div>' % (
+        "key" if g["fresh"] else "hot", e(P.t("ap_title")),
+        e(P.t("ap_done", by=ok["by"], on=ok.get("on", "")) if g["fresh"] else
+          P.t("ap_stale", by=ok["by"], on=ok.get("on", "")) if ok else P.t("ap_wait")))]
+    kb = g["kb"]
+    if not kb:
+        line, cls = P.t("kb_none"), "warn"
+    elif kb["answer"] == "declined":
+        line, cls = P.t("kb_declined", reason=kb.get("reason", "")), "warn"
+    else:
+        p = kb.get("path")
+        line, cls = P.t("kb_" + kb["answer"], path="; ".join(p) if isinstance(p, list) else (p or "")), ""
+    out.append('<div class="card %s"><h3>%s</h3><p>%s</p></div>' % (cls, e(P.t("kb_title")), e(line)))
+    body, seen = [], set()
+    for r in g["rows"]:
+        st = r["sub_ilo_status"]
+        first = r["module"] not in seen
+        seen.add(r["module"])
+        owed = g["owed"].get(r["module"]) or []
+        mc = ", ".join(r.get("model_course") or [])
+        if first and owed:
+            mc = (mc + " · " if mc else "") + P.t("im_owed", n=len(owed))
+        body.append("<tr><td class=\"n\">%s</td><td><b>%s</b></td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
+            e(r["module"] if first else ""), e(r["sub_ilo_id"]), e(P.t("status_" + st)),
+            (V(r["sub_ilo"]) if st in ("re-expressed", "added") else VP(r["sub_ilo"])), e(mc) or "—"))
+    out.append('<h2 id="ilo-map">%s</h2><p class="note">%s</p><table><tr><th>%s</th><th>%s</th><th>%s</th><th></th><th>%s</th></tr>%s</table>' % (
+        e(P.t("im_title")), e(P.t("im_intro")), e(P.t("im_h_module")), e(P.t("im_h_sub")), e(P.t("im_h_status")),
+        e(P.t("im_h_mc")), "".join(body)))
+    return "".join(out)
+
+
 CSS_EXTRA = """
 .verb{font-family:var(--font);background:var(--amber-wash-l);border-left:3px solid var(--amber);
   padding:.1em .45em;border-radius:0 var(--r-s) var(--r-s) 0}
@@ -377,7 +439,7 @@ def style():
     return re.sub(r"/\*.*?\*/", "", css, flags=re.S) + CSS_EXTRA + bloom_map.CSS
 
 
-def build(prog, arch, a):
+def build(prog, arch, a, g=None):
     """architecture.json:
     {"course": {"title", "course_language", "operator_language", "course_type", "programme_file",
                 "model_course"},
@@ -440,6 +502,8 @@ def build(prog, arch, a):
         e(P.t("approves_subilo", re=cnt["re-expressed"], add=cnt["added"], orig=cnt["original"])),
         e(P.t("approves_tests")), e(P.t("approves_media")), e(P.t("approves_tablets")), e(P.t("approves_practice"))))
     out.append('<p class="note">%s %s</p>' % (VP("Aa"), e(P.t("verbatim_note"))))
+    if g:                                                # 2.38.0 - approved with the page: the ILO map and the knowledge base
+        out.append(gate_html(e, V, VP, P, g))
 
     ctype = c.get("course_type", "")
     out.append("<table>")
@@ -682,6 +746,8 @@ def main(argv=None):
     ap.add_argument("--programme"); ap.add_argument("--architecture"); ap.add_argument("--plan")
     ap.add_argument("--out", default="ARCHITECTURE_REVIEW.html")
     ap.add_argument("--check", action="store_true", help="write nothing; exit 1 if the page would show problems")
+    ap.add_argument("--approve", action="store_true", help="record the operator's \"next\" on this page (with --by)")
+    ap.add_argument("--by", help="who approved the page - the operator's name")
     x = ap.parse_args(argv)
     sys.path.insert(0, HERE)
     import workspace
@@ -696,8 +762,18 @@ def main(argv=None):
               "  They are programme.json and architecture.json in the course folder (plan.json is optional)." % err)
         return 2
     a = analyse(prog, arch, plan)
+    g = gate_of(x.course, prog, arch)
+    a["problems"] += g["problems"]
     P = Page((arch.get("course") or {}).get("operator_language", "en"))
+    if x.approve:
+        return approve(x, prog, arch, a, g, P, path(x.architecture, "architecture.json"))
     if x.check:
+        if g["kb"] and g["kb"]["answer"] == "declined":
+            print("  (knowledge base) " + P.t("kb_declined", reason=g["kb"].get("reason", "")))
+        print("  (ILO map) %d Sub-ILO row(s) in %d module(s); %s" % (
+            len(g["rows"]), len({r["module"] for r in g["rows"]}),
+            "approved by %s on %s" % (g["approved"]["by"], g["approved"].get("on", "")) if g["fresh"] else
+            "approved earlier, but the Sub-ILOs changed since" if g["approved"] else "not approved yet"))
         for k, kw in a["suggestions"]:
             print("  (suggestion) " + P.t(k, **kw))
         for k, kw in a["split"]:
@@ -711,12 +787,55 @@ def main(argv=None):
     out = x.out if os.path.isabs(x.out) else os.path.join(workspace.review_dir(x.course), x.out)   # to_review\ (L44)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with io.open(out, "w", encoding="utf-8", newline="\n") as f:
-        f.write(build(prog, arch, a))
+        f.write(build(prog, arch, a, g))
+    m, _ = ilo_map.build(x.course, quiet=True)          # the ILO map is written with the page it is approved on
     print("The architecture page is ready:\n    %s\n  %d modules - one per programme topic, the last is the final assessment only.\n"
-          "  Open it with a double-click; it opens in the web browser and prints to PDF from there.%s"
+          "  Open it with a double-click; it opens in the web browser and prints to PDF from there.%s%s"
           % (out, len(a["modules"]), ("\n  It shows %d problem(s) at the top - they are for the operator to see before approving." % len(a["problems"]))
-                                     if a["problems"] else ""))
+                                     if a["problems"] else "",
+             ("\n  The ILO map is written beside it (%d Sub-ILO rows) - approved with the page:\n    %s" % (len(m["rows"]), ilo_map.path(x.course))) if m else ""))
+    if not g["fresh"]:
+        print("  When the operator says \"next\", record it - no module starts before:\n"
+              "    make_architecture_page.py --course \"%s\" --approve --by \"<their name>\"" % x.course)
     return 0
+
+
+def approve(x, prog, arch, a, g, P, arch_path):
+    """The operator's "next" on the Stage 2 page, recorded - the ILO map it approves is fingerprinted, so a later
+    change to any Sub-ILO stops new modules until the page is approved again (course_gate.py)."""
+    if not (x.by or "").strip():
+        print("Stopped - nothing was recorded. Say who approved the page: --approve --by \"<their name>\".")
+        return 2
+    must = list(g["problems"]) + [(k, kw) for k, kw in a["problems"] if k in ("p_main_not_verbatim", "p_main_unknown")]
+    lines = [P.t(k, **kw) for k, kw in must]
+    if a["waiting"]:
+        lines.append("%d theory-as-activity proposal(s) are still waiting for Keep or Strike - record them first "
+                     "(scripts/active_plan.py decide)." % len(a["waiting"]))
+    if lines:
+        print("Stopped - the approval was NOT recorded. The page cannot be approved while:\n%s"
+              % "\n".join("  - " + s for s in lines))
+        return 2
+    arch["approved"] = {"by": x.by.strip(), "on": date.today().isoformat(), "ilo_map_hash": g["hash"]}
+    with io.open(arch_path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(arch, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    ilo_map.build(x.course, quiet=True)
+    g = gate_of(x.course, prog, arch)
+    out = x.out if os.path.isabs(x.out) else os.path.join(workspace_review(x.course), x.out)
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    with io.open(out, "w", encoding="utf-8", newline="\n") as f:
+        f.write(build(prog, arch, a, g))
+    print("Recorded: the Stage 2 page is approved by %s on %s - the module split, the hours and the ILO map (%d Sub-ILO rows).\n"
+          "  The modules can start now; each content script is written against its rows (ilo_map.py show <course> --module N).\n"
+          "  Any later change to a Sub-ILO stops new modules until the page is approved again.%s"
+          % (x.by.strip(), date.today().isoformat(), len(g["rows"]),
+             ("\n  Still open, shown on the page: " + "; ".join(P.t(k, **kw) for k, kw in a["problems"])) if a["problems"] else ""))
+    return 0
+
+
+def workspace_review(course):
+    import workspace
+    return workspace.review_dir(course)
 
 
 if __name__ == "__main__":

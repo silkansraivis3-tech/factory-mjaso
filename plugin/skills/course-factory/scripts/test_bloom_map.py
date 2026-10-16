@@ -149,6 +149,8 @@ def main():
 
     print("\n-- the module map (Stage 3)")
     script = copy.deepcopy(tcs.SCRIPT)
+    for x in script["screens"]:                  # the example carries "sub_ilo" since 2.38.0; these checks start unlinked
+        x.pop("sub_ilo", None)
     mm = bm.module_map(script, mech=cs.mech)
     n = len(mm["rows"])
     want = sum(1 for q in script["screens"] if q.get("kind") in bm.TASK_KINDS and bm.B["mechanics"][cs.mech(q)]["typical"] >= 3) / float(n)

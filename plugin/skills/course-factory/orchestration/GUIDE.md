@@ -15,9 +15,11 @@ guide exists is that the failures are all in that seam, not in the parallelism.
 ```
   0  READER          one agent, alone with the knowledge base
      |               programme · model course · what each module teaches
-     |               writes:  MODULE_MAP.md   ILO_MAP.md   (files, never slides)
+     |               writes:  architecture.json   ilo_map.json   ARCHITECTURE_REVIEW.html
+     |                        (files, never slides) - and the knowledge-base suggestion if there is none
      v
-  =  GATE            the owner approves the table. Nothing is built until they do.
+  =  GATE            the owner approves the page and the ILO map on it; the KB decision is recorded.
+     |               course_gate.py checks both - no module agent starts until it says open.
      |
      v
   1..N MODULE        one agent per module, all at once
@@ -57,14 +59,20 @@ has to be settled by the reader and frozen at the gate:
 ## Rule 2 · The reader's output is a FILE, and it is not slides
 
 The first agent works alone with the programme, the model course and the knowledge base, and
-produces two documents in the course folder:
+produces the Stage 2 files in the course folder (since 2.38.0 the factory's own, not free-form notes):
 
-**`MODULE_MAP.md`** — module → official topic numbers → allocated minutes (theory / practical) →
-what the module teaches → what it checks → whether it needs a facility. The minutes column sums to
-the programme total or the reader has not finished.
+**`working_claude/architecture.json`** (shown as `to_review/ARCHITECTURE_REVIEW.html`) — module →
+official topic → allocated minutes (theory / practical) → what the module teaches → what it checks →
+the practicals and their equipment. The minutes sum to the programme total or the reader has not
+finished.
 
-**`ILO_MAP.md`** — for every module: which Main ILO and which Sub-ILOs are taught there, **and how**
-— taught, practised, or assessed, against which screen, task or practical. One row per outcome.
+**`working_claude/ilo_map.json`** — the ILO map, written by `make_architecture_page.py` with the page
+(`scripts/ilo_map.py`): for every module, its Main ILO verbatim and every Sub-ILO it owes, one row each,
+with the model-course items under its topic. `ilo_map.py show <course> --module N` prints one module's rows.
+
+And when `kb_tool.py find` finds no knowledge base, the factory's **suggestion to make one**, word for
+word - the operator decides, and `kb_tool.py decision` records it. `scripts/course_gate.py` stops every
+module agent until the page is approved with its ILO map and the knowledge-base decision is recorded.
 
 > **The ILO map never appears in a slide.** It is the build's own instrument: it tells each module
 > agent what it owes, and it tells the QA agent what to check. A trainee does not need to read a
@@ -110,8 +118,8 @@ because the file is still valid HTML afterwards — it is just missing one agent
 worth making: a QA agent has nothing to check while a module is still being written. So run it as a
 **pipeline**, not as a ninth parallel worker —
 
-- **as each module lands**, a QA agent reads that module against its rows in `ILO_MAP.md` and its
-  minutes in `MODULE_MAP.md`, and runs the deterministic checks. Module 3 is being verified while
+- **as each module lands**, a QA agent reads that module against its rows in `ilo_map.json` and its
+  minutes in `architecture.json`, and runs the deterministic checks. Module 3 is being verified while
   Module 7 is still being written; no wall-clock is wasted.
 - **once at the end**, a single cross-module pass that only it can do: task codes unique across the
   course, terminology consistent, the hours total, the visual dialect, every cross-reference
@@ -134,8 +142,8 @@ the operator states during review goes into `working_claude\STANDARDS.md`, and b
 
 | | Model | Tools | Reads | Writes |
 |---|---|---|---|---|
-| **Reader** | the strongest available | read + search only | programme, model course, KB | `MODULE_MAP.md`, `ILO_MAP.md` |
-| **Module** | the strongest available | full | its own rows of the two maps, its source extracts, `script/GUIDE.md`, then - once its script is approved - `compile/GUIDE.md` and the picture lanes (`course-visuals`). **Not** the HTML rules (`course-module-ux`, `course-module-ui`, `course-task-ux`): the compiler builds their standard | its script and build sheet, its figures, `modules/moduleNN/` - and never HTML by hand |
+| **Reader** | the strongest available | read + search only | programme, model course, KB | `architecture.json`, `ilo_map.json` (via the Stage 2 page), the KB suggestion |
+| **Module** | the strongest available | full | its own rows of the ILO map (`ilo_map.py show`) and its module in `architecture.json`, its source extracts, `script/GUIDE.md`, then - once its script is approved - `compile/GUIDE.md` and the picture lanes (`course-visuals`). **Not** the HTML rules (`course-module-ux`, `course-module-ui`, `course-task-ux`): the compiler builds their standard | its script and build sheet, its figures, `modules/moduleNN/` - and never HTML by hand |
 | **Visual** | the `nano-banana:image-director` agent (generates) or `course-factory:visual-sourcer` (finds) | read, write, web, the nano-banana tools | a `GENERATED_ASSET_REQUIRED` brief | the asset files named in the brief |
 | **QA** | strong; never the builder | read + run checks | the module, the two maps | a findings list — **never a fix** |
 

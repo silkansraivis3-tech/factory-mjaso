@@ -23,7 +23,27 @@ python kb/scripts/kb_tool.py find <course folder>
 
 It looks in the course folder, every sub-folder and one level up, recognises each knowledge base by
 its files, never walks inside one, and **writes nothing**. One found: use it. Several: `--json` gives
-a ready pop-up question, "which one is this course's?". None: ask where it is in the intake pop-up.
+a ready pop-up question, "which one is this course's?".
+
+**None found: the factory suggests making one — unasked** (owner, 2026-10-16: *"before creating any
+module the AI should have already ... suggested for KNOWLEDGE_BASE to be created"*). `find` prints the
+suggestion ready to pass on in plain words (L25): what a knowledge base is, which of the folder's files
+it would be built from (programme, model course, codes, old course, `source_files`), how, and what the
+course loses without it; `--json` carries it as `suggestion` with the ready pop-up question.
+**How it is made:** the factory has no tool that builds one — never say or imply it does. The **Course
+Source Processor** (Raivis Silkans's tool, outside the factory) is run on the `source_files` folder and
+writes a `KNOWLEDGE_BASE` folder there. If the operator does not have it, they ask Raivis for it.
+
+Record the answer once — no module starts without it (`scripts/course_gate.py`):
+
+```
+python kb/scripts/kb_tool.py decision <course folder> --built "<the new KNOWLEDGE_BASE>"
+python kb/scripts/kb_tool.py decision <course folder> --yes "<a knowledge base they point to>"
+python kb/scripts/kb_tool.py decision <course folder> --declined "<their reason, in their words>"
+```
+
+A found one is recorded with `--yes` too. A declined knowledge base is allowed; the Stage 2 page keeps
+showing it, and the facts are then searched in the source files themselves.
 
 Then sort its sources:
 

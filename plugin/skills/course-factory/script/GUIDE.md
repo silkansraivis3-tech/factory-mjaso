@@ -5,6 +5,46 @@ until the operator has approved the script.** One script per module, plus one fo
 assessment (`--module final`). Everything is done with `scripts/content_script.py`; the check that the
 built module obeys it is `scripts/check_script_match.py`.
 
+## 0 · Before writing — the ILO map, the model course, the old course, the knowledge base (2.38.0)
+
+Owner, 2026-10-16: *"before creating any module the AI should have already made the ILO mapping and
+suggested for KNOWLEDGE_BASE to be created"*. **A module is written against what it owes, never from
+memory.** `content_script.py` will not render or approve a script (exit 2) until the course has its ILO
+map, the Stage 2 page is approved with it, and the knowledge-base decision is recorded:
+
+```
+python scripts/course_gate.py <course> --module 4        open, or exactly what has to happen first
+```
+
+Then, before the first screen is written, read — in this order, and only these:
+
+1. **The module's rows of the ILO map** — `python scripts/ilo_map.py show <course> --module 4`: the
+   programme topic and the **Main ILO verbatim (L2)**, every **Sub-ILO** the module owes (kept /
+   re-expressed / added), and the model-course items under the topic. The same module in
+   `working_claude/architecture.json` says how they were planned (active learning, media, tasks).
+2. **The model-course items it owes** — the course's transcribed syllabus (`working_claude/*syllabus*.json`,
+   `coverage/GUIDE.md` §1), the items listed by `ilo_map.py show`. They are the outcomes *inside* the topic;
+   `coverage/` checks them later against everything built.
+3. **The old course's keep / modernise / add for this module (L41)** — `architecture.json` →
+   `from_old_course`, and `OLD_COURSE_INVENTORY.md` for the slides and pictures it names.
+4. **The knowledge base — only through `kb/scripts/kb_tool.py search`** (several phrasings: the other
+   names, the abbreviation, the older term). Never open a whole `document.md`. A declined knowledge base
+   (the Stage 2 page says so) means the source files themselves, searched the same narrow way.
+
+While writing:
+
+- **Every Sub-ILO is taught on at least one slide and checked by at least one question.** Mark the slide(s)
+  that teach it `"sub_ilo": "4.a"` (a list when a slide teaches two), and **every question** with the
+  Sub-ILO it checks. A Sub-ILO with children (4 → 4.a, 4.b) is met through them.
+- **Every fact on a slide traces to a source in `"sources"`**: the document, its edition, the section or page
+  (`"IGF Code 2016 (MSC.391(95)): 6.7.1, 15.8.2"`). Only the current edition is cited (intake). An
+  operator-stated fact goes in `operator_facts`, not in `sources`.
+
+The review page's **ILO map and sources check** — must-fix findings, like the theory check — lists a Sub-ILO
+taught nowhere or checked nowhere, a question with no `"sub_ilo"`, a `"sub_ilo"` the module does not own, and
+an empty `"sources"`. Approval waits for them unless the operator approves `--despite-findings` (L26). A
+script approved before 2.38.0 keeps its approval; its findings are reported, never forced.
+
 ## 1 · Write the script
 
 `<course>/working_claude/script/M01.json` — the whole lesson **in the order it is taught**. It runs on two
@@ -25,15 +65,16 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 {"module": 1, "title": "<module title, course language>", "course_language": "English",
  "operator_language": "lv", "status": "draft",
  "operator_facts": [{"fact": "<what the operator said>", "where": "s03", "said": "2026-10-01"}],
+ "sources": ["<document, edition: sections or pages>", "…"],
  "screens": [
-  {"id": "s01", "kind": "slide", "title": "…", "text": "line one\nline two",
+  {"id": "s01", "kind": "slide", "title": "…", "text": "line one\nline two", "sub_ilo": "1.a",
    "visual": "<the picture planned, and where it comes from>", "notes": "<instructor only>", "minutes": 5},
   {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - …",
    "text": "<only: a task starts now, and what it is about>", "notes": "…", "minutes": 4},
-  {"id": "q01", "kind": "self-check", "set": "SC1", "question": "…", "options": ["…", "…", "…"], "correct": "A",
+  {"id": "q01", "kind": "self-check", "set": "SC1", "sub_ilo": "1.a", "question": "…", "options": ["…", "…", "…"], "correct": "A",
    "feedback": "<what the trainee sees after answering>", "mechanic": "tap to choose"},
   {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Module check - …", "text": "…", "notes": "…", "minutes": 6},
-  {"id": "m01", "kind": "module-check", "set": "MC", "question": "…", "options": ["…", "…"], "correct": "B",
+  {"id": "m01", "kind": "module-check", "set": "MC", "sub_ilo": "1.b", "question": "…", "options": ["…", "…"], "correct": "B",
    "feedback": "…", "mechanic": "tap to choose", "graded": false}]}
 ```
 
@@ -52,7 +93,8 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   The review page shows plain theory against active minutes (aim: 20 / 80). To get there, **keep every
   theory slide** and give the plain ones fewer minutes - the words stay to be read - and the minutes to
   activity; never shorten or remove good theory. Theory may be added.
-- **Bloom (L48, 2.25.0).** A question may say which Sub-ILO it checks (`"sub_ilo": "1.2"`), and - only when
+- **Bloom (L48, 2.25.0).** A question says which Sub-ILO it checks (`"sub_ilo": "1.2"` - expected on every
+  question since 2.38.0, §0), and - only when
   it is written above its task type's usual level - its level and why (`"bloom": 4, "bloom_why": "..."`).
   The review page then shows every question below its Sub-ILO and how the tablet would lift it.
   Aim the tasks at the Sub-ILO's level, and above *Remember* wherever the content allows (`bloom/GUIDE.md`).

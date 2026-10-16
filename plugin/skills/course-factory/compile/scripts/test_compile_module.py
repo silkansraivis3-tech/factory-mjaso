@@ -32,6 +32,7 @@ SKILL = os.path.dirname(os.path.dirname(HERE))
 SKILLS = os.path.dirname(SKILL)
 sys.path.insert(0, os.path.join(SKILL, "scripts"))
 import content_script as cs  # noqa: E402
+import gate_fixture  # noqa: E402
 
 COMPILE = os.path.join(HERE, "compile_module.py")
 MATCH = os.path.join(SKILL, "scripts", "check_script_match.py")
@@ -397,6 +398,11 @@ def main():
               code == 1 and out.count("has no picture file in the build sheet") == 4, out)
         code, out = run(MATCH, c4, "--module", "1", "--part", "instructor")
         check("... and its words still match the script", code == 0, out)
+        code, out = run(COMPILE, c4, "--module", "1", "--init-build")
+        check("2.38.0: --init-build waits for the approved ILO map and the knowledge-base decision (belt and braces)",
+              code == 2 and "cannot be built yet" in out and "ILO map" in out
+              and not os.path.isfile(os.path.join(c4, "working_claude", "script", "M01.build.json")), out)
+        gate_fixture.open_gate(c4)
         code, out = run(COMPILE, c4, "--module", "1", "--init-build")
         check("--init-build writes a starter build sheet",
               code == 0 and os.path.isfile(os.path.join(c4, "working_claude", "script", "M01.build.json")), out)

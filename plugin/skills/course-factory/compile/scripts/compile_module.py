@@ -1053,6 +1053,10 @@ def main(argv=None):
         if os.path.isfile(bp):
             print("Stopped - the build sheet is already there; it is changed with the Edit tool, never replaced:\n    %s" % bp)
             return 2
+        gate = cs.course_gate.problems(o.course, o.module)      # belt and braces (2.38.0): content_script.py stops first
+        if gate:
+            print(cs.course_gate.stop_message(o.module, gate, "built"))
+            return 2
         cs.save(bp, starter_build(script))
         print("Done - a starter build sheet:\n    %s\n  Next: put each slide's picture file in \"figure\", then compile." % bp)
         return 0

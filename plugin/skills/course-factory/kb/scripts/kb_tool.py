@@ -6,6 +6,7 @@
     kb_tool.py detect  <kb folder>
     kb_tool.py sources <kb folder> --course <course folder> [--json]
     kb_tool.py decide  <course folder> --keep "<source path>" [--keep ...] [--different "<group id>" ...]
+    kb_tool.py decision <course folder> --yes <kb> | --built <kb> | --declined "<reason>"
     kb_tool.py search  <kb folder> "<what you are looking for>" --course <course folder> [--top 12] [--all]
 
 WHY THIS EXISTS
@@ -23,6 +24,11 @@ own tool - the Course Source Processor - was unknown to it. Both are read here, 
 WHAT IT DOES
   find      every knowledge base in the course folder, its sub-folders and one level up - by its
             files, never by its name. Writes nothing. One found: used. Several: a ready question. (2.13.1)
+            None: the factory SUGGESTS making one, unasked - what it is, which of the folder's files it would
+            be built from, how (the Course Source Processor - not part of the factory), and what the course
+            loses without it - with a ready pop-up question in --json. (2.38.0)
+  decision  records the operator's answer in intake.json - yes / built / declined with their reason - so
+            it is asked once. Every module waits for it (scripts/course_gate.py). (2.38.0)
   sources   lists every source; groups EXACT duplicates (same file content - cited once, no
             question needed) and LIKELY EDITIONS of one publication (MARPOL 2022 beside an older
             MARPOL; "SIGGTO LGHP (4th)" beside "SIGTTO liquified gas handling principles"). For
@@ -517,12 +523,14 @@ def cmd_find(folder, as_json):
                          "description": "%s - %s sources - %s" % (
                              {"course_source_processor": "Course Source Processor", "docling": "docling"}[k["format"]],
                              k["sources"] if k["sources"] is not None else "?", k["path"])} for k in kbs[:4]]}
+    if not kbs:
+        result["suggestion"] = suggestion(folder)
     if as_json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0 if kbs else 1
     if not kbs:
-        print("No knowledge base was found in\n    %s\n  or its sub-folders, or one level up. It goes into the intake pop-up as\n"
-              "  \"Where is the knowledge base for this course?\"" % os.path.abspath(folder))
+        print("No knowledge base was found in\n    %s\n  or its sub-folders, or one level up. Nothing was written.\n\n%s"
+              % (os.path.abspath(folder), result["suggestion"]["text"]))
         return 1
     print("Found %d knowledge base(s) - nothing was written anywhere:\n" % len(kbs))
     for k in kbs:
@@ -531,6 +539,134 @@ def cmd_find(folder, as_json):
                                                k["sources"] if k["sources"] is not None else "?"))
     print("\n  %s" % ("One found - it is used, no question needed." if len(kbs) == 1 else
                       "More than one - the intake pop-up asks which is this course's (the question is ready with --json)."))
+    return 0
+
+
+# ------------------------------------------------------------------ no knowledge base: suggest one, unasked (2.38.0)
+CSP_FORMATS = (".pdf", ".doc", ".docx", ".ppt", ".pptx", ".jpg", ".jpeg", ".png", ".webp")
+GROUPS = [
+    ("programme", "the approved programme", re.compile(r"program|programm|програм|mācību|macibu", re.I)),
+    ("model_course", "the IMO model course", re.compile(r"model[ _-]?course|\bimo\b.*\d+\.\d+|\bmc[ _-]?\d+\.\d+", re.I)),
+    ("codes", "codes, conventions and IMO circulars", re.compile(
+        r"\bcode\b|kodeks|solas|marpol|stcw|\bigf\b|\bigc\b|\bibc\b|\bisgott\b|\bmsc[ ._]|resolution|circ", re.I)),
+    ("old_course", "the old course", re.compile(r"\bold\b|old[ _-]course|previous|vecais|iepriek|стар|existing", re.I)),
+]
+WORK_DIRS = {"course", "to_review", "working_claude", "_factory", "modules", "_course_shell"}
+BUILT_DIR = re.compile(r"^(module\d+|assets|presentation|tasks|assessment)$", re.I)   # a built course is not a source
+
+
+def source_files_of(folder, limit=4000):
+    """What a knowledge base would be built from: every file the Course Source Processor reads, sorted into
+    the groups an operator recognises. Read-only; never walks into a knowledge base or the factory's own folders."""
+    groups = {g[0]: [] for g in GROUPS}
+    groups["other"] = []
+    total, src_dir, tops = 0, None, []
+    for name in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+        if not os.path.isdir(os.path.join(folder, name)):
+            continue
+        if name.lower() in ("source_files", "source files", "sources"):
+            src_dir = os.path.join(folder, name)
+        elif GROUPS[3][2].search(name):
+            tops.append(os.path.join(folder, name))
+    roots = [src_dir] + tops if src_dir else [folder]          # a master folder: its source_files and the old course (L40)
+    for root in roots:
+        for dirpath, dirnames, files in os.walk(root):
+            if detect(dirpath):
+                dirnames[:] = []
+                continue
+            dirnames[:] = [d for d in dirnames if d.lower() not in SKIP_DIRS | WORK_DIRS and not d.startswith(".")
+                           and not BUILT_DIR.match(d)]
+            rel = os.path.relpath(dirpath, folder)
+            for f in files:
+                if not f.lower().endswith(CSP_FORMATS) or total >= limit:
+                    continue
+                total += 1
+                where = os.path.join(rel, f) if rel != "." else f
+                g = next((k for k, _, rx in GROUPS if rx.search(where)), "other")
+                groups[g].append(where)
+    return total, groups, src_dir
+
+
+def suggestion(folder):
+    """The factory's own suggestion when no knowledge base exists - said unasked, in plain words (L25)."""
+    folder = os.path.abspath(folder)
+    total, groups, src_dir = source_files_of(folder)
+    root = src_dir or folder
+    lines = ["THE FACTORY SUGGESTS MAKING A KNOWLEDGE BASE FIRST - before the modules are planned.", "",
+             "What it is: a searchable copy of this course's source files - the programme, the IMO model course, the",
+             "codes, the old course - cut into pieces that keep their page numbers. Nothing is summarised or changed,",
+             "and the original files stay where they are. With it, every fact on a slide is found by a search and",
+             "quoted with its document and page.", ""]
+    if total:
+        lines.append("It would be built from %d file(s) in %s:" % (total, root))
+        for k, label, _ in GROUPS + [("other", "other source files", None)]:
+            if groups[k]:
+                lines.append("  - %s (%d): %s%s" % (label, len(groups[k]), "; ".join(groups[k][:3]), " ..." if len(groups[k]) > 3 else ""))
+    else:
+        lines.append("No source files were found in %s - put the programme, the model course, the codes and the old" % folder)
+        lines.append("course into a source_files folder there first.")
+    lines += ["",
+              "How: the factory has no tool that builds one. The Course Source Processor does (Raivis Silkans's tool - it",
+              "is not part of the factory; ask him for it if you do not have it). Run it on this folder:",
+              "    %s" % root,
+              "It writes a KNOWLEDGE_BASE folder there; scanned pages are read by OCR. Then tell me, and I will find it.",
+              "",
+              "Without it: facts are checked by opening whole PDFs instead of searching them, so a slide's facts are",
+              "harder to trace to their page; two editions of one book (an old and a new MARPOL) cannot be sorted out",
+              "for you; scanned pages with no text cannot be read; and the content scripts rest on fewer sources.",
+              "",
+              "Record the operator's answer once (it is never asked again):",
+              "    kb_tool.py decision <course> --built <the new KNOWLEDGE_BASE folder>",
+              "    kb_tool.py decision <course> --yes <an existing knowledge base they point to>",
+              "    kb_tool.py decision <course> --declined \"<their reason>\"   (allowed; the Stage 2 page keeps showing it)"]
+    question = {"header": "Sources", "multiSelect": False,
+                "question": "There is no knowledge base for this course yet. Shall we make one before the modules are planned?",
+                "options": [
+                    {"label": "Yes - I will make it (Recommended)",
+                     "description": "Run the Course Source Processor on %s; tell me when it is done." % root},
+                    {"label": "There is one - I will point to it", "description": "A knowledge base made earlier, in another folder."},
+                    {"label": "No - use the source files", "description": "Allowed. Facts are harder to trace to their page; "
+                                                                          "the Stage 2 page will show this decision."}]}
+    return {"source_root": root, "files": total, "groups": groups, "text": "\n".join(lines), "question": question}
+
+
+def cmd_decision(course, yes, built, declined):
+    """Record the operator's answer about the knowledge base in intake.json - asked once (L31)."""
+    ip = _claude(course, "intake.json")
+    intake = load_json(ip) if os.path.isfile(ip) else {}
+    chosen = [x for x in (("yes", yes), ("built", built), ("declined", declined)) if x[1] is not None]
+    if not chosen:
+        d = intake.get("knowledge_base_decision")
+        print("Knowledge base decision: %s" % (json.dumps(d, ensure_ascii=False) if d else "none recorded yet"))
+        return 0 if d else 1
+    if len(chosen) > 1:
+        print("Stopped - give one answer: --yes, --built or --declined.")
+        return 2
+    answer, value = chosen[0]
+    rec = {"answer": answer, "decided": date.today().isoformat()}
+    if answer == "declined":
+        if not value.strip():
+            print("Stopped - a declined knowledge base needs the operator's reason, in their words: --declined \"<reason>\".")
+            return 2
+        rec["reason"] = value.strip()
+    else:
+        fmt = detect(value)
+        if not fmt:
+            return no_kb(value)
+        rec.update(path=os.path.abspath(value), format=fmt)
+        intake.setdefault("knowledge_base", {"path": os.path.abspath(value), "format": fmt})
+    intake["knowledge_base_decision"] = rec
+    asked = intake.setdefault("asked", [])
+    if isinstance(asked, list):
+        asked.append({"question": "knowledge base", "answer": answer + ((": " + rec["reason"]) if rec.get("reason") else ""),
+                      "date": rec["decided"]})
+    os.makedirs(os.path.dirname(ip), exist_ok=True)
+    with io.open(ip, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(intake, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    print("Recorded in %s: knowledge base %s.%s" % (ip, {"yes": "used - " + rec.get("path", ""), "built": "made for this course - "
+                                                         + rec.get("path", ""), "declined": "declined - " + rec.get("reason", "")}[answer],
+                                                   "\n  The Stage 2 page will show it as a finding." if answer == "declined" else ""))
     return 0
 
 
@@ -558,6 +694,8 @@ def main(argv=None):
     s = sub.add_parser("sources"); s.add_argument("kb"); s.add_argument("--course", required=True); s.add_argument("--json", action="store_true")
     c = sub.add_parser("decide"); c.add_argument("course"); c.add_argument("--keep", action="append", default=[])
     c.add_argument("--different", action="append", default=[])
+    k = sub.add_parser("decision"); k.add_argument("course")
+    k.add_argument("--yes", metavar="KB"); k.add_argument("--built", metavar="KB"); k.add_argument("--declined", metavar="REASON")
     q = sub.add_parser("search"); q.add_argument("kb"); q.add_argument("query"); q.add_argument("--course", required=True)
     q.add_argument("--top", type=int, default=12); q.add_argument("--all", action="store_true")
     a = ap.parse_args(argv)
@@ -575,6 +713,8 @@ def main(argv=None):
         return cmd_sources(a.kb, a.course, a.json)
     if a.cmd == "decide":
         return cmd_decide(a.course, set(a.keep), set(a.different))
+    if a.cmd == "decision":
+        return cmd_decision(a.course, a.yes, a.built, a.declined)
     return cmd_search(a.kb, a.query, a.course, a.top, a.all)
 
 

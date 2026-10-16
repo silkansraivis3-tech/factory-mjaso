@@ -23,7 +23,12 @@ round trip is run separately when Word is installed - see MANIFEST 4h). Pinned:
     --confirmed, logs each change, keeps the old file; approval is undone by any later change;
   * the slide-text check (2.16.1) still runs on every screen;
   * check_script_match passes a module that says exactly the approved words, and fails a changed
-    word, an extra sentence, a missing screen, a wrong correct answer and an unapproved script.
+    word, an extra sentence, a missing screen, a wrong correct answer and an unapproved script;
+  * THE GATE (2.38.0): render and approve stop without the architecture, the ILO map, the operator's
+    recorded approval of it (or after a Sub-ILO changed since), or the knowledge-base decision - each
+    named; the ILO map and sources check finds a Sub-ILO taught or checked nowhere, a question without
+    "sub_ilo", a "sub_ilo" the module does not own and empty "sources", blocking approval unless
+    --despite-findings; a script approved before the gate stays approved, its gaps only reported.
 """
 from __future__ import annotations
 
@@ -45,6 +50,7 @@ TOOL = os.path.join(HERE, "content_script.py")
 MATCH = os.path.join(HERE, "check_script_match.py")
 sys.path.insert(0, HERE)
 import content_script as cs  # noqa: E402
+import gate_fixture  # noqa: E402
 LV, EN = cs.LABELS["lv"], cs.LABELS["en"]
 PASS, FAIL = [], []
 
@@ -84,42 +90,43 @@ SCRIPT = {
     "module": 1, "title": "Gas tankers", "course_language": "English", "operator_language": "lv", "status": "draft",
     "minutes_allocated": 23,
     "operator_facts": [{"fact": "On our simulator the ESD button is on the left console.", "where": "s03"}],
+    "sources": ["IGC Code 2016: 1.2, 4.21-4.24 (containment systems)", "SIGTTO Liquefied Gas Handling Principles, 4th ed.: ch. 1-2"],
     "screens": [
-        {"id": "s01", "kind": "slide", "title": "Why gas tankers are different", "text": S01_TEXT, "visual_kind": "photo",
+        {"id": "s01", "sub_ilo": "1.1", "kind": "slide", "title": "Why gas tankers are different", "text": S01_TEXT, "visual_kind": "photo",
          "visual": "Photograph of a membrane LNG carrier alongside", "notes": S01_NOTES, "minutes": 5},
-        {"id": "s02", "kind": "slide", "title": "Three ways to keep the cargo liquid", "text": S02_TEXT, "visual_kind": "chart",
+        {"id": "s02", "sub_ilo": "1.1", "kind": "slide", "title": "Three ways to keep the cargo liquid", "text": S02_TEXT, "visual_kind": "chart",
          "visual": "Pressure-temperature line for propane with the three ship types marked", "notes": S02_NOTES, "minutes": 5},
         {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - keeping the cargo liquid",
          "text": "A short self-check opens on your tablet now: three questions on why gas is carried cold or under pressure.",
          "notes": "Press OPEN TASK. Give three minutes and watch who hesitates.", "minutes": 3},
-        {"id": "q01", "kind": "self-check", "set": "SC1", "question": "At what temperature is LNG carried near atmospheric pressure?",
+        {"id": "q01", "sub_ilo": "1.1", "kind": "self-check", "set": "SC1", "question": "At what temperature is LNG carried near atmospheric pressure?",
          "options": ["About -162 °C", "At room temperature, under pressure", "About -42 °C"], "correct": "A",
          "feedback": "LNG is fully refrigerated: about -162 °C, just above atmospheric pressure.", "mechanic": "tap to choose"},
-        {"id": "q02", "kind": "self-check", "set": "SC1", "question": "Sort the cargoes by the ship that usually carries them.",
+        {"id": "q02", "sub_ilo": "1.1", "kind": "self-check", "set": "SC1", "question": "Sort the cargoes by the ship that usually carries them.",
          "mechanic": "categorise", "answer": "Fully pressurised: LPG in small ships; ammonia\nFully refrigerated: LNG; large LPG cargoes",
          "feedback": "Small LPG ships and ammonia carriers hold the cargo under pressure; LNG and large LPG cargoes are carried cold."},
-        {"id": "q03", "kind": "self-check", "set": "SC1", "question": "Set the temperature at which ethylene is carried.",
+        {"id": "q03", "sub_ilo": "1.1", "kind": "self-check", "set": "SC1", "question": "Set the temperature at which ethylene is carried.",
          "mechanic": "set_value", "visual_kind": "schematic", "visual": "A thermometer scale from -170 °C to +20 °C with a slider",
          "answer": "-104 °C ± 4, range -170 to 20", "feedback": "Ethylene is carried on semi-refrigerated ships, at about -104 °C."},
-        {"id": "s03", "kind": "slide", "title": "Four containment systems", "text": S03_TEXT, "visual_kind": "model_3d", "layout": "visual_wide",
+        {"id": "s03", "sub_ilo": "1.2", "kind": "slide", "title": "Four containment systems", "text": S03_TEXT, "visual_kind": "model_3d", "layout": "visual_wide",
          "visual": "3D model of the four tank types in a hull section - turn it, and cut each one open; a real photo of a membrane tank's insulation beside it (L57)", "notes": S03_NOTES, "minutes": 3},
         {"id": "s04", "kind": "slide", "recap": True, "title": "What to take away", "text": RECAP_TEXT, "visual_kind": "none",
          "visual": "", "notes": RECAP_NOTES, "minutes": 2},
         {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Module check - gas tankers",
          "text": "The module check opens on your tablet now: five questions on the whole module. Your score is for you.",
          "notes": "Press OPEN TASK when the room is ready.", "minutes": 5},
-        {"id": "m01", "kind": "module-check", "set": "MC", "question": "Tap the tank that relies on the hull for its strength.",
+        {"id": "m01", "sub_ilo": "1.2", "kind": "module-check", "set": "MC", "question": "Tap the tank that relies on the hull for its strength.",
          "mechanic": "hotspot", "visual_kind": "model_3d", "visual": "The same 3D hull section with the four tank types",
          "answer": "Type A prismatic tank\nType B Moss sphere\nMembrane tank *\nType C cylinder",
          "feedback": "Membrane tanks are supported by the hull."},
-        {"id": "m02", "kind": "module-check", "set": "MC", "question": "What is LNG mostly?", "mechanic": "single_choice",
+        {"id": "m02", "sub_ilo": "1.1", "kind": "module-check", "set": "MC", "question": "What is LNG mostly?", "mechanic": "single_choice",
          "options": ["Propane", "Methane", "Ammonia"], "correct": "B", "feedback": "LNG is mostly methane."},
-        {"id": "m03", "kind": "module-check", "set": "MC", "question": "Match each tank type with the secondary barrier it needs.",
+        {"id": "m03", "sub_ilo": "1.2", "kind": "module-check", "set": "MC", "question": "Match each tank type with the secondary barrier it needs.",
          "mechanic": "match", "answer": "Type A = full secondary barrier\nType B = partial secondary barrier\nType C = no secondary barrier",
          "feedback": "The more is known about how a tank would fail, the less secondary barrier it needs."},
-        {"id": "m04", "kind": "module-check", "set": "MC", "question": "Roughly what pressure are fully pressurised LPG tanks designed for?",
+        {"id": "m04", "sub_ilo": "1.1", "kind": "module-check", "set": "MC", "question": "Roughly what pressure are fully pressurised LPG tanks designed for?",
          "mechanic": "single_choice", "options": ["About 18 bar", "About 0.25 bar", "About 1 bar"], "correct": "A", "feedback": "About 18 bar."},
-        {"id": "m05", "kind": "module-check", "set": "MC", "question": "Put these cargoes in order, coldest first, as they are carried.",
+        {"id": "m05", "sub_ilo": "1.1", "kind": "module-check", "set": "MC", "question": "Put these cargoes in order, coldest first, as they are carried.",
          "mechanic": "order", "answer": "LNG at about -162 °C\nEthylene at about -104 °C\nPropane at about -42 °C",
          "feedback": "LNG is the coldest; propane on a fully refrigerated ship is carried at about -42 °C."}]}
 
@@ -140,13 +147,15 @@ def cs_run(*a):
     return run(TOOL, *a)
 
 
-def new_course(tmp, name, script=SCRIPT):
+def new_course(tmp, name, script=SCRIPT, gate=True):
     c = os.path.join(tmp, name)
     os.makedirs(os.path.join(c, "working_claude", "script"))       # L44: the factory's own files
     io.open(os.path.join(c, "working_claude", "script", "M01.json"), "w", encoding="utf-8").write(json.dumps(script, ensure_ascii=False))
     io.open(os.path.join(c, "working_claude", "FEEDBACK_LOG.md"), "w", encoding="utf-8").write(
         "# log\n\n| # | Date | Stage · module · where | What the operator said | What changed | Operator-stated fact? |\n|---|---|---|---|---|---|\n"
         "| 1 | 2026-10-01 | 3 · M01 · s02 | type C tanks here are tested to 7 bar | used it | yes |\n")
+    if gate:                                                         # 2.38.0: approved ILO map + KB decision first
+        gate_fixture.open_gate(c)
     return c
 
 
@@ -621,6 +630,114 @@ def main():
         cs_run("apply", c, "--module", "1", "--confirmed")
         code, out = build()
         check("a script changed after approval fails the match", code == 1 and "not approved" in out, out)
+
+        print("\n-- 2.38.0: no module starts before the approved ILO map and the knowledge-base decision")
+        import course_gate
+        import ilo_map
+        ng = new_course(tmp, "nogate", gate=False)
+        code, out = cs_run("render", ng, "--module", "1")
+        check("no architecture, no ILO map, no KB decision: render stops (exit 2), writes nothing, and says each",
+              code == 2 and "cannot be started yet" in out and "architecture is not written" in out
+              and "knowledge base" in out and not os.path.isdir(os.path.join(ng, "to_review")), out)
+        code, out = cs_run("approve", ng, "--module", "1", "--by", "Anna")
+        check("approve stops the same way", code == 2 and "cannot be approved yet" in out
+              and cs.load(cs.paths(ng, 1)["script"]).get("status") == "draft", out)
+        gate_fixture.open_gate(ng, approve=False, kb=False)
+        code, out = cs_run("render", ng, "--module", "1")
+        check("an ILO map nobody approved, and no KB decision: still stopped - both named",
+              code == 2 and "has not approved the Stage 2 page" in out and "--approve --by" in out
+              and "Nobody has decided yet whether this course gets a knowledge base" in out and "ILO map yet" not in out, out)
+        gate_fixture.open_gate(ng, kb=False)
+        code, out = cs_run("render", ng, "--module", "1")
+        check("approved, but no KB decision: still stopped", code == 2 and "knowledge base" in out and "Stage 2 page yet" not in out, out)
+        gate_fixture.open_gate(ng)
+        code, out = cs_run("render", ng, "--module", "1")
+        check("approved ILO map + KB decided (declined is allowed): the script is started", code == 0, out)
+        os.remove(ilo_map.path(ng))
+        code, out = cs_run("render", ng, "--module", "1")
+        check("the ILO map file missing: stopped, and told how it is written", code == 2 and "no ILO map yet" in out
+              and "make_architecture_page.py" in out, out)
+        ilo_map.build(ng, quiet=True)
+        ap = os.path.join(ng, "working_claude", "architecture.json")
+        arch = cs.load(ap)
+        arch["modules"][0]["sub_ilos"].append({"id": "1.3", "status": "added", "text": "Name the ESD triggers.", "why": "x"})
+        cs.save(ap, arch)
+        code, out = cs_run("render", ng, "--module", "1")
+        check("a Sub-ILO added after approval: stopped - the map is stale and the approval old", code == 2
+              and "out of date" in out and "changed after the operator approved" in out, out)
+        code, out = run(os.path.join(HERE, "course_gate.py"), ng, "--module", "1")
+        check("course_gate.py says the same, exit 2", code == 2 and "changed after the operator approved" in out, out)
+        arch["modules"][0]["sub_ilos"].pop()
+        cs.save(ap, arch)
+        code, out = run(os.path.join(HERE, "course_gate.py"), ng, "--module", "1")
+        check("... put back, the gate is open again and names who approved", code == 0 and "approved by Test" in out, out)
+        code, out = run(os.path.join(HERE, "course_gate.py"), ng, "--module", "7")
+        check("a module with no rows in the ILO map is stopped on its own", code == 2 and "Module 7 has no Sub-ILO" in out, out)
+        nos = os.path.join(tmp, "noscript")
+        os.makedirs(os.path.join(nos, "working_claude"))
+        code, out = cs_run("render", nos, "--module", "1")
+        check("no script yet, gate shut: it says what comes first, before anyone writes one",
+              code == 2 and "no content script" in out and "cannot be started yet" in out, out)
+
+        print("\n-- 2.38.0: the ILO map and sources check")
+        cl = new_course(tmp, "iloclean")
+        check("the example module teaches and checks both Sub-ILOs and lists its sources: nothing found",
+              cs.ilo_findings(cl, SCRIPT) == [], cs.ilo_findings(cl, SCRIPT))
+        bad = copy.deepcopy(SCRIPT)
+        bad["sources"] = []
+        screen(bad, "s03")["sub_ilo"] = "1.1"                    # 1.2 now taught nowhere
+        del screen(bad, "q02")["sub_ilo"]
+        screen(bad, "m01")["sub_ilo"] = "9.9"
+        screen(bad, "m03")["sub_ilo"] = "1.1"                    # 1.2 now checked nowhere
+        fr = cs.ilo_findings(cl, bad)
+        rules = sorted(f["rule"] for f in fr)
+        check("empty sources, a question without sub_ilo, a Sub-ILO the module does not own, one taught nowhere and checked nowhere",
+              rules == ["i_no_sources", "i_not_checked", "i_not_taught", "i_q_no_sub", "i_unknown_sub"], rules)
+        check("... every one a must-fix, in the operator's language",
+              all(f["level"] == cs.FAIL for f in fr) and any(LV["i_not_taught"].split("{s}")[0] in f["detail"] for f in fr), fr)
+        check("... the unknown one names where it is, and what the module has",
+              any(f["rule"] == "i_unknown_sub" and f["screen"] == "m01" and "1.1, 1.2" in f["detail"] for f in fr), fr)
+        tags = copy.deepcopy(SCRIPT)
+        screen(tags, "s01")["sub_ilo"] = ["1.1", "1.2"]
+        screen(tags, "s03")["sub_ilo"] = "1.1"
+        check("a slide may teach two Sub-ILOs (a list)", cs.ilo_findings(cl, tags) == [], cs.ilo_findings(cl, tags))
+        nomap = new_course(tmp, "nomapfind", gate=False)
+        check("without an ILO map the check adds nothing (the gate stops the module instead)", cs.ilo_findings(nomap, bad) == [])
+        cb2 = new_course(tmp, "ilobad", script=bad)
+        code, out = cs_run("render", cb2, "--module", "1")
+        page = io.open(cs.paths(cb2, 1)["review"], encoding="utf-8").read()
+        check("the findings are on the review page under their own heading, and in the chat output",
+              html.escape(LV["s_ilo_title"]) in page and "The ILO map and sources check found 5" in out, out)
+        code, out = cs_run("approve", cb2, "--module", "1", "--by", "Anna")
+        check("they block approval like the theory check", code == 1 and LV["i_not_checked"].format(s="1.2") in out, out)
+        code, out = cs_run("approve", cb2, "--module", "1", "--by", "Anna", "--despite-findings")
+        rec = cs.load(cs.paths(cb2, 1)["script"])
+        check("... unless the operator approves despite them - recorded", code == 0
+              and {"i_no_sources", "i_not_taught"} <= {f["rule"] for f in rec.get("approved_despite_findings", [])}, out)
+        fin = copy.deepcopy(SCRIPT)
+        fin["module"] = "final"
+        screen(fin, "m02")["sub_ilo"] = "4.a"
+        check("the final assessment: every question names a Sub-ILO the course owns; no per-module coverage",
+              [f["rule"] for f in cs.ilo_findings(cl, fin)] == ["i_unknown_sub"], cs.ilo_findings(cl, fin))
+
+        print("\n-- 2.38.0: a script approved before the gate is reported, never invalidated")
+        old = copy.deepcopy(SCRIPT)
+        old.pop("sources")
+        for x in old["screens"]:
+            x.pop("sub_ilo", None)
+        old.update(status="approved", approved_by="Aleksis", approved_on="2026-10-14")
+        old["approved_hash"] = cs.content_hash(old)
+        po = new_course(tmp, "pilot", script=old, gate=False)
+        code, out = cs_run("render", po, "--module", "1")
+        check("an approved script re-renders with no gate at all (nothing to start)", code == 0, out)
+        gate_fixture.open_gate(po)
+        code, out = cs_run("render", po, "--module", "1")
+        after = cs.load(cs.paths(po, 1)["script"])
+        check("with the ILO map, its gaps are reported on the page and in the chat ...",
+              "The ILO map and sources check found" in out and "i_no_sources" in {f["rule"] for f in cs.ilo_findings(po, after)}, out)
+        code, out = cs_run("status", po, "--module", "1")
+        check("... and it stays approved - same hash, same approver", code == 0 and "approved by Aleksis on 2026-10-14" in out
+              and after["approved_hash"] == cs.content_hash(after), out)
 
         print("\n-- the review files never ship to a tablet")
         sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-tablet-publisher", "scripts"))

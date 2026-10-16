@@ -14,8 +14,15 @@
  * the approved table. That is the whole point of the gate — see orchestration/GUIDE.md.
  *
  * Run it in two passes:
- *   pass 1  omit `modules`  -> the reader runs, writes the two maps, and STOPS.
- *   pass 2  with `modules`  -> the fan-out, with QA pipelined behind each module.
+ *   pass 1  omit `modules`  -> the reader runs, writes the Stage 2 files - architecture.json, the
+ *                              ILO map (working_claude/ilo_map.json) and ARCHITECTURE_REVIEW.html -
+ *                              looks for the knowledge base and, if there is none, brings back the
+ *                              factory's suggestion to make one. Then it STOPS.
+ *   pass 2  with `modules`  -> a gate agent runs scripts/course_gate.py first: no approved ILO map or
+ *                              no knowledge-base decision, and NO module agent starts (2.38.0).
+ *                              Then the fan-out, with QA pipelined behind each module.
+ *
+ * `kb` may be left out: the reader finds it (kb_tool.py find) or suggests one.
  *
  * The prompts below are short on purpose. Each agent loads the skill that owns its
  * question; restating a skill's rules here is how two authorities start to disagree.
@@ -41,9 +48,19 @@ phase('Read')
 
 const MAP_SCHEMA = {
   type: 'object',
-  required: ['modules', 'total_minutes', 'language'],
+  required: ['modules', 'total_minutes', 'language', 'ilo_map', 'kb'],
   properties: {
     language: { type: 'string' },
+    ilo_map: { type: 'string', description: 'absolute path of working_claude/ilo_map.json, written with the Stage 2 page' },
+    kb: {
+      type: 'object',
+      required: ['status'],
+      properties: {
+        status: { type: 'string', enum: ['found', 'none', 'decided'] },
+        path: { type: 'string' },
+        suggestion: { type: 'string', description: 'when none: kb_tool.py find\'s suggestion, word for word' },
+      },
+    },
     total_minutes: { type: 'number' },
     modules: {
       type: 'array',
@@ -66,21 +83,24 @@ const MAP_SCHEMA = {
 const READ = `Invoke ${SKILL} in PLAN mode and follow it.
 
 The approved programme:  ${A.programme}
-The knowledge base:      ${A.kb}
+The knowledge base:      ${A.kb || '(not given - find it)'}
 The course folder:       ${A.course}
 
-Work alone with those three. Produce TWO FILES in the course folder — nothing else,
-and no slides:
+Work alone with those. Stage 1 and Stage 2 only — no content script, no slides:
 
-  MODULE_MAP.md   module -> official topic numbers -> allocated minutes (theory /
-                  practical) -> what the module teaches -> what it checks -> whether
-                  it needs a facility. The minutes column MUST sum to the programme
-                  total; run hours/scripts/check_hours.py and read its output.
+  KNOWLEDGE BASE  course-factory/kb/scripts/kb_tool.py find <the course material folder>.
+                  None found: it prints the factory's suggestion to make one (what it is,
+                  which files, how, what the course loses). Return that text word for word
+                  in kb.suggestion - the operator decides; record nothing yourself.
 
-  ILO_MAP.md      every Main ILO and Sub-ILO, per module, with HOW each one is met:
-                  taught / practised / assessed, against a named screen, task or
-                  practical. One row per outcome. Main ILOs are copied VERBATIM (L2).
-                  Any Sub-ILO you re-express is marked PROVISIONAL.
+  STAGE 2 FILES   working_claude/programme.json and architecture.json - one module per
+                  programme topic (L34) with its minutes (they MUST sum to the programme
+                  total: hours/scripts/check_hours.py), the Main ILOs VERBATIM (L2), every
+                  Sub-ILO (kept / re-expressed - PROVISIONAL until approved - / added).
+                  Then scripts/make_architecture_page.py --course <course>: it writes
+                  ARCHITECTURE_REVIEW.html AND the ILO map, working_claude/ilo_map.json -
+                  one row per Sub-ILO per module, what every module's script is written
+                  against. Return its path in ilo_map.
 
 Detect and state COURSE_LANGUAGE (L19). Raise every UNKNOWN rather than inventing an
 hour, a pass mark or a citation, and never web-search during intake.
@@ -93,9 +113,40 @@ if (!A.modules || !A.modules.length) {
   /* The gate. The owner approves the table before anything expensive happens. */
   return {
     stopped_at: 'GATE',
-    why: 'The module split and the minutes are the expensive things to get wrong. '
-       + 'Review MODULE_MAP.md and ILO_MAP.md, then re-run with args.modules set to the approved table.',
+    why: 'The module split, the minutes and the ILO map are the expensive things to get wrong. '
+       + 'Show the operator to_review/ARCHITECTURE_REVIEW.html (it carries the ILO map)'
+       + (plan && plan.kb && plan.kb.status === 'none' ? ' and the suggestion to make a knowledge base (kb.suggestion), and record '
+          + 'their answer with kb_tool.py decision' : '')
+       + '; record their "next" with make_architecture_page.py --approve --by "<name>", then re-run with '
+       + 'args.modules set to the approved table.',
     proposed: plan,
+  }
+}
+
+/* ------------------------------------------------ the gate, checked - not trusted */
+
+const GATE_SCHEMA = {
+  type: 'object',
+  required: ['open', 'output'],
+  properties: { open: { type: 'boolean' }, output: { type: 'string' } },
+}
+
+const gate = await agent(
+  `Run exactly this and nothing else, then report:
+
+    python <the course-factory skill folder>/scripts/course_gate.py "${A.course}"
+
+open = true only if it exited 0. output = everything it printed, word for word.
+Do not fix anything, do not write any file.`,
+  { label: 'gate:ilo-map+kb', phase: 'Read', schema: GATE_SCHEMA }
+)
+
+if (!gate || !gate.open) {
+  /* No module agent starts without the approved ILO map and the knowledge-base decision (owner, 2026-10-16). */
+  return {
+    stopped_at: 'GATE',
+    why: 'No module starts before the ILO map is approved and the knowledge-base decision is recorded.',
+    gate: gate ? gate.output : 'the gate check did not run',
   }
 }
 
@@ -110,9 +161,14 @@ const build = (m) => `Invoke ${SKILL} and follow it. Build ONE module.
   Your module:     ${m.id} — ${m.title}
   Your minutes:    ${m.minutes} total (${m.theory} theory / ${m.practical} practical)
 
-Read ONLY your own rows of ${A.course}/MODULE_MAP.md and ${A.course}/ILO_MAP.md, plus
-the source extracts they name. Do not read the whole knowledge base: search it with
-course-factory/kb/scripts/kb_tool.py search, which writes into the course folder only.
+Your module is written against YOUR ROWS OF THE ILO MAP - read them first:
+  ilo_map.py show ${A.course} --module ${m.id}       (course-factory/scripts)
+- the Main ILO verbatim, every Sub-ILO you owe, the model-course items under your topic -
+then your module in working_claude/architecture.json (incl. what it keeps, modernises and
+adds from the old course, L41). Do not read the whole knowledge base: search it with
+course-factory/kb/scripts/kb_tool.py search, which writes into the course folder only, and
+list every source you use in the script's "sources". Every Sub-ILO is taught on a slide and
+checked by a question ("sub_ilo" on both) - script/GUIDE.md "Before writing".
 
 THE WORDS ARE TYPED ONCE (L29). Your module's content script is
 working_claude/script/M${two(m)}.json (course-factory script/GUIDE.md).
@@ -163,7 +219,8 @@ the compiler printed under "To fix" or "left as it is".`
 const qa = (m) => `You did NOT build this module. Check it.
 
   Module:  ${A.course}/modules/module${two(m)}
-  Against: ${A.course}/MODULE_MAP.md and ${A.course}/ILO_MAP.md (its rows only)
+  Against: its rows of the ILO map (ilo_map.py show ${A.course} --module ${m.id}) and
+           its module in working_claude/architecture.json
 
 A module whose script is not approved yet has nothing built to check: report that, with
 blocking false. Otherwise run the deterministic checks and READ their output —
@@ -217,7 +274,7 @@ could not answer:
   * the hours total against the approved programme, both Track A buckets
   * one visual dialect, not several (audit_ui.py over every module's stylesheets)
   * every cross-reference between modules resolves
-  * every outcome in ILO_MAP.md is taught somewhere, and no outcome is claimed twice
+  * every row of working_claude/ilo_map.json is taught somewhere, and no outcome is claimed twice
   * every page reachable and every page has a way back (audit_navigation.py)
   * nothing at RIGHTS_REVIEW_REQUIRED, no honesty marker on a course-facing page
 
