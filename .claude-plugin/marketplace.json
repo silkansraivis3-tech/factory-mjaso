@@ -15,7 +15,7 @@
     {
       "name": "nano-banana",
       "source": "./nano-banana",
-      "description": "Realistic, 3D and photo-like images (Google Nano Banana) and short realistic/3D animation clips (Google Veo) for presentations, decks and course screens. Every picture costs money, so Claude asks the person to describe each one and generates only after their yes, then checks it and places the file locally - instead of faking realism in SVG. Needs a Gemini API key, asked for once and kept in the system credential store."
+      "description": "Realistic, 3D and photo-like images (Google Nano Banana) and short realistic/3D animation clips (Google Veo) for presentations, decks and course screens. Every picture costs money, so Claude asks the person to describe each one and generates only after their yes, then checks it and places the file locally - instead of faking realism in SVG. A hard daily and monthly spending cap. Needs a Gemini API key, asked for once and kept in a file in the user's profile."
     }
   ]
 }

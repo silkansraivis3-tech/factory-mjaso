@@ -56,6 +56,14 @@ generated automatically:
 4. It shows you the result. A change is a new paid picture, so it asks again.
 5. It tells you how many pictures this computer made today and this month, and roughly what they cost
    (the log is `~/.config/nano-banana/usage.jsonl`). Ask *"nano banana status"* at any time.
+6. A hard cap stops generation at about EUR 5 a day or EUR 50 a month on this computer. To raise it, set
+   `NANO_BANANA_DAILY_LIMIT_EUR` / `NANO_BANANA_MONTHLY_LIMIT_EUR` (in `~/.claude/settings.json` under `"env"`
+   or as a Windows user environment variable) and restart Claude Code. Prices: `NANO_BANANA_EUR_PER_IMAGE`
+   (0.10), `NANO_BANANA_EUR_PER_VIDEO` (1.50) - estimates; Google's billing page has the real amount.
+7. If Claude Code shows MCP confirmation dialogs (elicitation), each generation also asks you there.
+
+The key is saved as plain text in `~/.config/nano-banana/gemini_api_key`. On Windows the file is protected
+only by your Windows account (chmod is a no-op there).
 
 ## Use
 

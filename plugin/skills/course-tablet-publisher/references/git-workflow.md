@@ -14,7 +14,7 @@ and a script can refuse where prose cannot.
 fetch → branch course/<slug>/<version> off the base
       → stage ONLY this course's paths → show the diff shape → commit
       → push → pull-request URL
-      → (only with --merge, and only on a passing gate) merge into the default branch
+      → a reviewer approves and merges the pull request in GitHub (never this script)
 ```
 
 ---
@@ -94,18 +94,18 @@ nothing else about the flow changes.
 
 ---
 
-## Reaching the default branch automatically
+## Reaching the default branch
 
-`--merge` merges the published branch into the default branch and pushes it. It requires:
+Only a person, in GitHub. The scripts push a branch and leave a reviewable pull request; you
+**say so plainly** rather than implying the course is live. `gitpub.py merge` and
+`publish.py --merge` refuse. They used to merge straight into the default branch with
+`--approved-by` as the only check — free text nobody could verify, and a check any colleague
+running `git` directly would bypass anyway.
 
-- an explicit `--merge` in the task (this is the authorisation),
-- a gate verdict of PASS or WARN,
-- no conflict against the fetched base.
-
-Without `--merge`, a clean reviewable pull request is left and you **say so plainly** rather
-than implying the course is live. There is no branch protection on this repository today and
-no CI, which means **the local gate is the only gate** — a good reason to prefer the pull
-request unless the task explicitly asks for the merge.
+The real guard is **branch protection on the default branch** (`master` on the tablet
+repository): required review before merge. That is the repository owner's setting, not
+something a script can enforce. Until it is on, the local gate plus a human reading the PR
+are the only gates.
 
 ---
 

@@ -64,7 +64,11 @@ come from a vague first description. So **nothing is generated automatically.** 
    is saved to. Ask: *"Generate this one picture (about €0.10)?"*
 4. **Generate only after a clear yes, and only once.** Pass their own words in `approved_by_user`; the tool
    refuses to run without them. Never write that field yourself, and never reuse an earlier yes for another
-   picture or a redo.
+   picture or a redo. (1.3.1) Where the client offers a confirmation dialog (MCP elicitation) the person
+   confirms there too; a decline is final - do not retry. A **spending cap** (EUR 5 a day, EUR 50 a month on
+   this computer by default) refuses with how to raise it: tell the person, never raise it yourself. A video
+   whose status check fails comes back `running` with its `operation` - collect it with `get_video`; the
+   operation is also in `usage.jsonl` and in `nano_banana_status`.
 5. **Show the result and ask:** use it, or what should change? A change is a new paid picture. Say what you
    would change and ask again. Prefer an edit of the good picture (`reference_images` and *"change only X"*) to
    a new one from scratch.

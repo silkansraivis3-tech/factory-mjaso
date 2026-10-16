@@ -38,6 +38,7 @@ gate itself can be tested without breaking a real course.
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import re
@@ -254,10 +255,25 @@ def check_roles(repo: str, plat: dict, sets: dict, out: list, simulate: bool) ->
 
 
 # --------------------------------------------------------------------- 3 secrets
+def jwt_role(token: str):
+    """The 'role' claim of a JWT's payload, or None when it does not decode."""
+    parts = token.split(".")
+    if len(parts) < 2:
+        return None
+    seg = parts[1]
+    try:
+        data = json.loads(base64.urlsafe_b64decode(seg + "=" * (-len(seg) % 4)))
+    except (ValueError, UnicodeDecodeError):
+        return None
+    return data.get("role") if isinstance(data, dict) else None
+
+
 def check_secrets(repo: str, plat: dict, sets: dict, out: list) -> None:
+    # Only the matched VALUE can be allowed, never its surroundings: a name such as
+    # SUPABASE_ANON_KEY next to a service-role key says nothing about the key.
     rules = plat["safety_rules"]["secrets"]
     pats = [(re.compile(p, re.I), lvl, why) for p, lvl, why in rules["patterns"]]
-    allow = [re.compile(p) for p in rules.get("allow_patterns", [])]
+    allow_roles = set(rules.get("allow_jwt_roles", []))
 
     for root in sets["trainee"] + sets["instructor"]:
         for f in walk(root):
@@ -267,11 +283,14 @@ def check_secrets(repo: str, plat: dict, sets: dict, out: list) -> None:
             for rx, lvl, why in pats:
                 for m in rx.finditer(txt):
                     hit = m.group(0)
-                    if any(a.search(hit) for a in allow):
-                        continue
-                    seg = txt[max(0, m.start() - 200): m.end() + 200]
-                    if any(a.search(seg) for a in allow):
-                        continue
+                    if hit.startswith("eyJ") and "." in hit:
+                        role = jwt_role(hit)
+                        if role in allow_roles:
+                            continue
+                        if role is not None:
+                            lvl = FAIL
+                            why = ("a JWT whose role is '%s' - only a role of %s may "
+                                   "ship" % (role, " / ".join(sorted(allow_roles)) or "none"))
                     out.append(Finding("secrets", lvl, rel(repo, f),
                                        txt.count("\n", 0, m.start()) + 1,
                                        why + " (matched: " + hit[:40] + "...)"))

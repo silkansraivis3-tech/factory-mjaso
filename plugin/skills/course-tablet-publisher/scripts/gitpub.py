@@ -19,9 +19,9 @@ What it guarantees
   `master`; a skill that hard-coded `main` would create a branch off nothing.
 * `--force`, `--force-with-lease`, history rewriting and branch deletion are
   not implemented. There is no flag that reaches them.
-* Merging into the default branch happens only with an explicit `--merge`,
-  only when the branch is a fast-forward or a clean no-ff merge, and never
-  when any gate reported a failure.
+* It never merges into the default branch. The course is pushed on a branch
+  and a person approves and merges the pull request in GitHub. `merge` and
+  `--merge` remain only to refuse with that reason.
 
 Subcommands
 -----------
@@ -29,7 +29,7 @@ Subcommands
     branch   fetch, create/checkout course/<slug>/<version> off the base
     commit   stage the pathspecs, show the diff shape, commit
     push     push the branch, print the PR URL (no gh CLI on this machine)
-    merge    merge the published branch into the default branch and push it
+    merge    refuses: merging is a reviewer's act in GitHub
     status   where is this course's branch relative to the base
 
 Exit codes: 0 ok, 1 refused (a rail tripped), 2 bad usage.
@@ -223,7 +223,9 @@ def cmd_plan(a, repo: str) -> int:
         print(f"      {s}")
     if slug:
         print(f"  PR URL after push:\n      https://github.com/{slug}/compare/{base}...{br}?expand=1")
-    print("  merge into " + base + ": " + ("AUTHORISED (--merge given)" if a.merge else "no (PR left for review)"))
+    print("  merge into " + base + ": never by this script - a reviewer merges the PR in GitHub")
+    if a.merge:
+        raise Refused(MERGE_REFUSAL)
     return OK
 
 
@@ -323,39 +325,18 @@ def cmd_push(a, repo: str) -> int:
     return OK
 
 
+MERGE_REFUSAL = (
+    "this script does not merge into the default branch. A course reaches it when a "
+    "reviewer approves and merges the pull request in GitHub. --approved-by is free text "
+    "the script cannot verify, and an approval checked here could be bypassed by anyone "
+    "running git directly - branch protection on the default branch, set by the "
+    "repository owner, is the real guard."
+)
+
+
 def cmd_merge(a, repo: str) -> int:
-    """Only reached when the caller explicitly authorised publication to the
-    default branch AND every gate passed."""
-    require_gates_passed(a.gate_report)
-    if not a.merge:
-        raise Refused("merging into the default branch needs an explicit --merge")
-    base = a.base or default_branch(repo)
-    br = a.branch or git(repo, "rev-parse", "--abbrev-ref", "HEAD")
-    if br == base:
-        raise Refused("nothing to merge: already on " + base)
-
-    git(repo, "fetch", a.remote, "--prune")
-    base_ref = f"{a.remote}/{base}"
-
-    conflicts = git(repo, "merge-tree", "--write-tree", "--name-only", base_ref, br, check=False)
-    if "CONFLICT" in conflicts.upper():
-        raise Refused(
-            "the base branch and this course branch conflict. A human resolves this - "
-            "guessing at a content conflict is how a colleague's course gets deleted.\n"
-            + conflicts[:800]
-        )
-    if a.dry_run:
-        print(f"DRY RUN - would merge {br} into {base} and push")
-        return OK
-
-    git(repo, "checkout", base)
-    git(repo, "merge", "--ff-only", base_ref) if git_ok(repo, "rev-parse", "--verify", base_ref) else None
-    git(repo, "merge", "--no-ff", "-m", f"Merge {br} into {base}", br)
-    git(repo, "push", a.remote, base)
-    print(f"merged {br} into {base} and pushed. {base} is now at "
-          + git(repo, "rev-parse", "--short", "HEAD"))
-    git(repo, "checkout", br)
-    return OK
+    """Kept only so an old instruction gets a reason instead of a usage error."""
+    raise Refused(MERGE_REFUSAL)
 
 
 def cmd_status(a, repo: str) -> int:
@@ -383,17 +364,17 @@ def main(argv=None) -> int:
     ap.add_argument("--path", action="append", default=[],
                     help="repo-relative path this course owns. Repeatable. "
                          "NOTHING outside these is ever staged.")
-    ap.add_argument("--gate-report", help="publish.py's JSON report; required to commit/push/merge")
+    ap.add_argument("--gate-report", help="publish.py's JSON report; required to commit/push")
     ap.add_argument("--base", help="base branch; detected from the remote when omitted")
     ap.add_argument("--remote", default="origin")
-    ap.add_argument("--branch", help="branch to act on (status/merge); default HEAD")
+    ap.add_argument("--branch", help="branch to act on (status); default HEAD")
     ap.add_argument("--message", help="commit message")
     ap.add_argument("--approved-by", default="",
                     help="who approved this course for the tablets. Recorded as an "
                          "Approved-by trailer, so the repository says who approved a "
                          "course and not only who ran a script.")
     ap.add_argument("--merge", action="store_true",
-                    help="authorise merging into the default branch")
+                    help="refused: a reviewer merges the pull request in GitHub")
     ap.add_argument("--allow-base-commit", action="store_true",
                     help=argparse.SUPPRESS)
     ap.add_argument("--dry-run", action="store_true")
