@@ -623,6 +623,21 @@ def main():
         code, out = run(COMPILE, c7, "--module", "1", "--force")
         check("a course's own new parts (assets/kit_parts.js) load after kit.js",
               deck(md7).index("../assets/kit.js") < deck(md7).index("../assets/kit_parts.js"), out)
+        sheet["screens"]["s04"] = {"figure": "valve.kit.json", "dark": True,
+                                   "inset": {"photo": "assets/img/ship.jpg", "caption": "a ship.", "over": {"x": 30, "y": 10, "w": 90}}}
+        cs.save(bp, sheet)
+        code, out = run(COMPILE, c7, "--module", "1", "--force")
+        k4 = section(deck(md7), "s04")
+        check("an inset photo 'over' a kit drawing lies on it in the drawing's units, inside the drawing's own box",
+              '<div class="kit-holder"><svg data-kit="#kit-s04"></svg><figure class="inset over" '
+              'style="left:10.00%;top:5.00%;width:30.00%"><img src="../assets/img/ship.jpg"' in k4, k4[:700])
+        sheet["screens"]["s04"]["inset"]["over"] = {"x": 250, "y": 10, "w": 90}
+        cs.save(bp, sheet)
+        code, out = run(COMPILE, c7, "--module", "1", "--force")
+        check("... one that would reach past the drawing is reported, and the photo goes under the words instead",
+              code == 1 and '"over" puts the photo outside the drawing' in out and "kit-holder" not in deck(md7), out)
+        sheet["screens"]["s04"] = {"figure": "valve.kit.json", "dark": True}
+        cs.save(bp, sheet)
         cs.save(os.path.join(c7, "working_claude", "figures", "M01", "valve.kit.json"), {"size": [1, 1]})
         code, out = run(COMPILE, c7, "--module", "1", "--force")
         check("a kit spec with no parts is reported, not shipped blank", code == 1 and "has no parts" in out, out)

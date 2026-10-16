@@ -104,6 +104,7 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
 | `"groups": [{"lines": [2, 7], "class": "box z1"}]` | lines 2-7 in one box, the first as its bold heading (a zone with its list) |
 | `"hooks": {"3": {"class": "m02-steptext", "data-step": "2"}}` | a figure script's handle on a line - a class word and `data-*`, never a look |
 | `"inset": {..., "under": "figure"}` | the real photo goes under the drawing when the words fill their column |
+| `"inset": {..., "over": {"x": 140, "y": 8, "w": 176}}` | the photo lies on a blank part of a kit drawing, in the drawing's units - the drawing keeps the whole column and its full size (a photo under a drawing squeezed it to half size, its labels to 7 px). It still opens full screen; look at it at every step, the drawing check does not see what a photo covers |
 | `"aside": "m02_s08_minis.html"` | small drawings that belong with the words |
 | `"figure_first": true` | the drawing on the left, the words on the right |
 | `"class": "m02-s3d"` | a hook for the module's drawing styles on the slide |

@@ -19,6 +19,14 @@
   background:var(--deep-2);border-radius:var(--r-l,20px);padding:12px}
 .slide.dark .kit-screen{background:transparent;padding:0}
 .kit-screen > .kit{width:100%;height:auto;max-height:100%}     /* the viewBox keeps its shape inside */
+/* a real photo laid over a blank part of the drawing ("inset": {"over": {...}} in the build sheet): placed in the
+   drawing's own units, so it stays where it was put at every screen size; it still opens full screen on a tap */
+.kit-holder{position:relative;width:100%;line-height:0}
+.kit-holder > .kit{display:block;width:100%;height:auto}
+.fill .kit-holder > figure.inset.over{position:absolute;display:block;margin:0;width:auto;line-height:1.3}
+.fill .kit-holder > figure.inset.over img{display:block;width:100%;max-height:none;aspect-ratio:16/9;object-fit:cover;
+  border-radius:var(--r-m,12px);box-shadow:0 0 0 1px var(--line-d,rgba(46,182,248,.3))}
+.fill .kit-holder > figure.inset.over figcaption{margin:5px 0 0;font-size:12.5px;line-height:1.3;color:var(--dim-d,#A2B7CF)}
 .kit-fig > .mediabar{flex:0 0 auto}
 /* the figure's row is the slide body's full height, never the text's: the current line turns bold
    and can wrap, and a row that followed the text moved the step buttons from under the presenter's finger */

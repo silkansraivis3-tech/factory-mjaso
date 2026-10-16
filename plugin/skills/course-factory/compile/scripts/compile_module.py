@@ -644,6 +644,30 @@ FILL_BOX = re.compile(r'\s*<\w+\b[^>]*\bclass="[^"]*\bfill\b')
 OWN_BOX = re.compile(r'\s*<div class="fill fig\b')            # the compiler's own column (fill(), a kit figure)
 
 
+KIT_SCREEN = re.compile(r'<div class="kit-screen">(<svg data-kit="#([\w-]+)"></svg>)</div>')
+
+
+def over_figure(fig, inset, over, probs, where):
+    """an inset photograph laid over a blank part of a kit drawing (owner, 2026-10-16: keep the photo, but never at the
+    cost of the drawing's size): "over": {"x": 140, "y": 10, "w": 180} in the drawing's own units. The photo stays an
+    <img> - it opens full screen with its record - and the drawing keeps the whole column. Returns (figure, "") or,
+    when it cannot be placed, (figure, inset) so the photo goes where it would have gone."""
+    m = KIT_SCREEN.search(fig or "")
+    spec = re.search(r'<script type="application/json" id="%s">(.*?)</script>' % re.escape(m.group(2)), fig, re.S) if m else None
+    try:
+        sw, sh = json.loads(spec.group(1)).get("size") or (0, 0)
+        x, y, w = float(over["x"]), float(over["y"]), float(over["w"])
+    except (AttributeError, ValueError, TypeError, KeyError):
+        probs.append("%s: \"over\" places a photo on a figure-kit drawing, in its units: {\"x\": 140, \"y\": 10, \"w\": 180}" % where)
+        return fig, inset
+    if not (sw and sh and 0 <= x and 0 <= y and x + w <= sw and y < sh):
+        probs.append("%s: \"over\" puts the photo outside the drawing (%g x %g)" % (where, sw, sh))
+        return fig, inset
+    style = "left:%.2f%%;top:%.2f%%;width:%.2f%%" % (100 * x / sw, 100 * y / sh, 100 * w / sw)
+    photo = inset.replace('<figure class="inset">', '<figure class="inset over" style="%s">' % style, 1)
+    return fig.replace(m.group(0), '<div class="kit-screen"><div class="kit-holder">%s%s</div></div>' % (m.group(1), photo), 1), ""
+
+
 def under_figure(fig, extra):
     """put something under the drawing, inside its box when the drawing is its own .fill"""
     if not FILL_BOX.match(fig):
@@ -811,6 +835,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     # lays itself out (a 3D model beside its controls, a row) would put it beside the canvas and squeeze it to 0 px -
     # there it goes with the words
     room_under = fig and not is_photo and (OWN_BOX.match(fig) or not FILL_BOX.match(fig))
+    if inset and (b.get("inset") or {}).get("over"):
+        fig, inset = over_figure(fig, inset, b["inset"]["over"], probs, where)
     if inset and (b.get("inset") or {}).get("under") == "figure" and room_under:
         fig = under_figure(fig, inset)
         inset = ""
