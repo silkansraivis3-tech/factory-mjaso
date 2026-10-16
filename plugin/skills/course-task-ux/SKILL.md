@@ -333,6 +333,8 @@ task's own finish handler.
   role never locks anyone out of reading the whole scenario, and with no `gb-team` within about 2 seconds it runs as
   an ordinary task. `task-scope` `team`: one member (normally the Recorder) hands in with `scope: 'team'` and the
   others' pages say who handed in for the team; `member`: everyone answers and the team's average is shown.
+  Compiled since course-factory 2.39.0 (`gb_answer.js`, the `TEAM` part): the first tablet to finish hands in for
+  the team; the others hear `gb-team-done` (a factory proposal, `team_task.gb_team_done`) and say who did.
   L42 applies in full: a role's part is as plain and as big as everything else.
 
 ---

@@ -43,6 +43,7 @@
     notQuitePlace: 'Not quite – the amber ones were moved to where they belong.',
     notQuiteValue: 'Not quite – the green band shows the values that are right.',
     goOn: 'Go on', decimal: '.',
+    teamRole: 'You are the {role}', teamOne: 'One answer for the whole team', handedIn: 'Handed in by {by} for {team}',
     got: 'You got {ok} of {total} right.', timeUp: ' The time was up.',
     passNote: 'Pass mark {pass} % – {need} of {total} right. This shows what to review. It is not a grade.'
   };
@@ -56,13 +57,17 @@
     var sent = false;
     return {
       inFrame: !(window.parent === window),
+      stop: function () { sent = true; },            /* the team's answer was handed in from another tablet */
       send: function (r) {
         if (sent) { return; }
         sent = true;
-        try {
-          W.parent.postMessage({ type: 'gb-task-done', code: r.code, title: r.title, ok: r.ok, total: r.total,
-            head: r.head, items: r.items, answered: r.answered, of: r.of, timeout: r.timeout === true }, '*');
-        } catch (e) { /* opened on its own - no classroom to tell */ }
+        var msg = { type: 'gb-task-done', code: r.code, title: r.title, ok: r.ok, total: r.total,
+          head: r.head, items: r.items, answered: r.answered, of: r.of, timeout: r.timeout === true };
+        if (TEAM.handsIn()) {                        /* one answer for the team: the classroom records it for every member */
+          var t = { scope: 'team', team: TEAM.team.name, by: TEAM.team.me }, k;
+          for (k in t) { if (t.hasOwnProperty(k)) { msg[k] = t[k]; } }
+        }
+        try { W.parent.postMessage(msg, '*'); } catch (e) { /* opened on its own - no classroom to tell */ }
       },
       onTimer: function (fn) {
         W.addEventListener('message', function (e) {
@@ -75,6 +80,40 @@
       }
     };
   }());
+  /* ---------------------------------------------------------------- a team task (classroom-system.json team_task) */
+  /* <meta name="task-mode" content="team">: the classroom sends the team shortly after the page opens -
+     {type: 'gb-team', team: {name, colour, members, me, role}} - and it is shown at the top, as large as the question.
+     No team within about 2 seconds: the class has no teams and the task runs as an individual one (it never waits).
+     task-scope team: the first tablet of the team to finish hands in the one answer, with scope: 'team' (and team, by);
+     when another member's tablet has handed in, the classroom says so - {type: 'gb-team-done', by, team} - and this
+     page shows "Handed in by ... for Team A" and sends nothing. task-scope member: everyone answers and reports as
+     usual. Any team size; a role never locks anyone out - every member reads and answers the whole task. */
+  var TEAM = (function () {
+    function meta(n) { var m = D.querySelector('meta[name="' + n + '"]'); return m ? m.getAttribute('content') || '' : ''; }
+    var o = { on: meta('task-mode') === 'team', scope: meta('task-scope') === 'member' ? 'member' : 'team',
+      team: null, alone: false, done: null, onDone: null };
+    o.handsIn = function () { return !!(o.on && o.team && o.scope === 'team'); };
+    function show() {
+      var bar = D.getElementById('teamBar'), t = o.team;
+      if (!bar) { return; }
+      D.getElementById('teamName').textContent = String(t.name || '');
+      D.getElementById('teamRole').textContent = t.role ? say('teamRole', { role: String(t.role) }) : '';
+      D.getElementById('teamNote').textContent = o.scope === 'team' ? say('teamOne') : '';
+      if (/^#[0-9a-f]{3,8}$/i.test(t.colour || '')) { bar.style.borderLeftColor = t.colour; }
+      bar.removeAttribute('hidden');
+    }
+    if (o.on) {
+      W.addEventListener('message', function (e) {
+        var d = e && e.data;
+        if (!d || typeof d !== 'object') { return; }
+        if (d.type === 'gb-team' && d.team && typeof d.team === 'object') { o.team = d.team; show(); }
+        if (d.type === 'gb-team-done' && o.scope === 'team' && !o.done) { o.done = d; if (o.onDone) { o.onDone(d); } }
+      }, false);
+      setTimeout(function () { if (!o.team) { o.alone = true; } }, 2000);     /* no teams in this class */
+    }
+    return o;
+  }());
+
   /* the hidden Back link - the Android Back button clicks it; it only steps back, never to an instructor page */
   (function () {
     var back = D.querySelector('.gbt-topback');
@@ -783,6 +822,21 @@
     showResult();
   }
   CR.onTimer(function (rem) { if (rem <= 0 && !reported) { timeUp(); } });
+  /* a team's answer handed in from another member's tablet: this one says so, locks, and sends nothing */
+  function handedElsewhere(d) {
+    if (reported) { return; }                                 /* this tablet handed in first */
+    reported = true;
+    CR.stop();
+    killHand();
+    ended = true;
+    var msg = D.getElementById('teamDone');
+    if (msg) {
+      msg.textContent = say('handedIn', { by: String(d.by || ''), team: String(d.team || (TEAM.team && TEAM.team.name) || '') });
+    }
+    add(body, 'handed');
+    add(dock, 'off');
+    each(qs, function (q) { each(q.parts, function (p) { lock(p); }); });
+  }
 
   /* ---------------------------------------------------------------- first screen of the course: try the tablet */
   function initTry() {
@@ -809,6 +863,8 @@
   /* ---------------------------------------------------------------- start */
   function init() {
     each($$('.scr[data-script]'), function (s) { qs.push(mkQ(s)); });
+    TEAM.onDone = handedElsewhere;
+    if (TEAM.done) { handedElsewhere(TEAM.done); }
     go.addEventListener('click', onGo, false);
     var again = $('#again');
     if (again) {

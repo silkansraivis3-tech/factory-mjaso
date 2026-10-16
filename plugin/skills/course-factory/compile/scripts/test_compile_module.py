@@ -390,6 +390,50 @@ def every_way_part(tmp):
     check("a curved path is left to a rect or circle of class hit", task_pages.shape_box('<path class="hit" d="M0 0 C 1 2 3 4 5 6"/>') is None)
 
 
+TEAMWORK = SCREENS[:6] + [
+    {"id": "t03", "kind": "task-slide", "opens": "TT1", "title": "Team task 1 - plan the bunkering",
+     "text": "Team task on your tablets now.\nOne answer for the team.", "minutes": 5,
+     "team": {"size": "3-4", "roles": ["Leader", "Recorder", "Checker"], "scope": "team"}},
+    {"id": "p01", "kind": "self-check", "set": "TT1", "mechanic": "order", "question": "Put the bunkering steps in order.",
+     "answer": "Safety meeting\nConnect the hose\nTransfer\nDisconnect", "feedback": "Meeting first."},
+    {"id": "p02", "kind": "self-check", "set": "TT1", "question": "Who stops the transfer when contact is lost?",
+     "options": ["Either side, at once", "Only the bunker vessel"], "correct": "A", "feedback": "Either side.", "mechanic": "single_choice"},
+    {"id": "t04", "kind": "task-slide", "opens": "TT2", "title": "Team task 2 - check each other",
+     "text": "Each of you answers on your own tablet.", "minutes": 3, "team": {"size": "2", "scope": "member"}},
+    {"id": "p03", "kind": "self-check", "set": "TT2", "question": "Where is the fuel prepared?", "options": ["Fuel preparation room", "Bridge"],
+     "correct": "A", "feedback": "Pumps and vaporizers are there.", "mechanic": "single_choice"},
+] + SCREENS[6:]
+
+
+def team_part(tmp):
+    """a team task (classroom-system.json team_task): marked on the slide and the page, the team shown by the engine"""
+    print("\n-- a team task")
+    os.makedirs(os.path.join(tmp, "team"))
+    c, md = new_course(os.path.join(tmp, "team"), script(screens=TEAMWORK))
+    code, out = run(COMPILE, c, "--module", "1")
+    tt1, tt2 = os.path.join(md, "tasks", "tt1_plan_the_bunkering.html"), os.path.join(md, "tasks", "tt2_check_each_other.html")
+    check("a team task's page is compiled, not left as it is", code == 0 and os.path.isfile(tt1) and os.path.isfile(tt2)
+          and "left as it is" not in out, out)
+    if not os.path.isfile(tt1):
+        return
+    p1, p2, d = io.open(tt1, encoding="utf-8").read(), io.open(tt2, encoding="utf-8").read(), deck(md)
+    check("the page says it is a team task, its roles and how it hands in (task-mode, task-roles, task-scope)",
+          '<meta name="task-mode" content="team">' in p1 and '<meta name="task-roles" content="Leader|Recorder|Checker">' in p1
+          and '<meta name="task-scope" content="team">' in p1 and '<meta name="task-scope" content="member">' in p2)
+    check("the slide says it too: data-mode, data-team-size, data-roles",
+          re.search(r'<section [^>]*data-activity="TT1"[^>]*data-mode="team" data-team-size="3-4" data-roles="Leader\|Recorder\|Checker"', d)
+          and re.search(r'<section [^>]*data-activity="TT2"[^>]*data-mode="team" data-team-size="2"', d), d[:300])
+    check("the team's name and the trainee's role have their place at the top, hidden until the classroom sends them",
+          '<div class="teambar" id="teamBar" hidden>' in p1 and p1.index('id="teamBar"') < p1.index('<header class="state">'))
+    check("an individual task carries none of it", "task-mode" not in io.open(os.path.join(md, "tasks", "sc1_the_new_spaces.html"),
+                                                                          encoding="utf-8").read())
+    code, out = run(MATCH, c, "--module", "1", "--part", "trainee")
+    check("check_script_match --part trainee passes on the team pages", code == 0, out)
+    code, out = run(os.path.join(SKILL, "scripts", "check_course_package.py"), os.path.join(c, "modules"), "--no-importer")
+    check("check_course_package finds nothing wrong with the team tasks (both marks, gb-team, the 2 s fallback, scope: 'team')",
+          not re.search(r"tt[12]_|data-team-size|task-scope|gb-team", out), out)
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="compile_")
     try:
@@ -777,6 +821,7 @@ def main():
 
         tasks_part(tmp)
         every_way_part(tmp)
+        team_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

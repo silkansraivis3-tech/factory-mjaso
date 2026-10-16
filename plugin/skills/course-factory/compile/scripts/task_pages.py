@@ -32,6 +32,10 @@ THE KEYS (classroom-system.json task_page.answer_keys) - data-key = gb_key(quest
   and the value. A card that is right or wrong AND has a place (build the plan, rebuild the incident) carries its place
   in data-place (0 = it stays out of the plan).
 
+A TEAM TASK (2.39.0) - a task slide with "team" in the script - gets the task-mode / task-roles / task-scope metas
+(classroom-system.json team_task) and a bar at the top the engine fills from the classroom's gb-team: the team's name
+and the trainee's role. No team arrives: it runs as an individual task.
+
 EVERY WAY OF ANSWERING IS COMPILED (2.38.0) - the nineteen of media-and-tasks.json, exactly what content_script.py
 accepts; a question is one or more parts (a scenario's steps, the incident's order and then its stop point), each
 with its own Check.
@@ -780,8 +784,6 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
     figs, sections = {"_bands": {((sheet.get(q["id"]) or {}).get("figure") or "").strip() for q in qs
                                  if cs.mech(q) == "label_diagram"}}, []
     for n, q in enumerate(qs, 1):
-        if cs.mech(q) not in BUILT:
-            return None
         sections.append(("  <!-- %s : %s -->\n" % (q["id"], cs.mech(q))) + question_html(n, q, sheet.get(q["id"]) or {}, mdir, figdir, figs, probs, w))
     pictures = any(not k.startswith("_") for k in figs) or figs.get("_pic") or any(cs.mech(q) == "read_instrument" for q in qs)
     kit = figs.get("_kit")
@@ -798,15 +800,19 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
             '<meta charset="utf-8">', '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">',
             "<title>%s — %s</title>" % (e(code), e(short))]
     team = slide.get("team") or {}
-    if team:
-        probs.append("%s: a team task page (gb-team) is not compiled yet - the set's page is left as it is" % code)
-        return None
+    if team:                                            # classroom-system.json team_task: marked on the slide AND the page
+        head += ['<meta name="task-mode" content="team">',
+                 '<meta name="task-roles" content="%s">' % a("|".join(cs.team_roles(team))),
+                 '<meta name="task-scope" content="%s">' % a(team.get("scope") if team.get("scope") in cs.TEAM_SCOPES else "team")]
     head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in PAGE_CSS + (("gb_zoom.css",) if pictures else ()) + (("kit.css",) if kit else ())]
     head.append("</head>")
     first = try_screen(w) if try_tablet else intro_screen(slide, short, len(qs), pass_mark, w) if is_check else ""
     body = ['<body data-code="%s" data-title="%s" data-pass="%d">' % (a(code), a(short), pass_mark),
-            '<a class="gbt-topback" href="#"><span class="gbt-ico">&#9664;</span> %s</a>' % e(w["back"]), "",
-            '<header class="state">',
+            '<a class="gbt-topback" href="#"><span class="gbt-ico">&#9664;</span> %s</a>' % e(w["back"]), ""]
+    if team:                                            # filled by the engine from the classroom's gb-team
+        body += ['<div class="teambar" id="teamBar" hidden><span class="tname" id="teamName"></span><span class="trole" id="teamRole">'
+                 '</span><span class="tnote" id="teamNote"></span><span class="tdone" id="teamDone"></span></div>', ""]
+    body += ['<header class="state">',
             '  <span class="part" id="partLbl"></span>', '  <span class="got" id="gotLbl"></span>',
             '  <div class="bar"><i id="barFill"></i></div>', "</header>", "", '<main class="wrap">', ""]
     if first:
@@ -846,12 +852,10 @@ def compile_tasks(script, build, mdir, figdir, version, approved):
         not_yet = sorted({cs.mech(q) for q in qs} - BUILT)
         first_set = first_module and not seen_sc and code.startswith("SC")
         seen_sc = seen_sc or code.startswith("SC")
-        if not_yet:
-            left.append("%s - its way(s) of answering %s are not compiled yet" % (code, ", ".join(not_yet)))
+        if not_yet:                                     # only a script the factory would not accept has one
+            probs.append("%s: unknown way(s) of answering %s - a script uses those of knowledge/media-and-tasks.json"
+                         % (code, ", ".join(str(x) for x in not_yet)))
             continue
-        page = page_html(script, slide, code, qs, build, mdir, figdir, version, approved, first_set, probs)
-        if page is None:
-            left.append("%s - a team task" % code)
-            continue
-        pages[page_path(mdir, slide, code)] = page
+        pages[page_path(mdir, slide, code)] = page_html(script, slide, code, qs, build, mdir, figdir, version, approved,
+                                                       first_set, probs)
     return pages, probs, left

@@ -257,6 +257,16 @@ body>.wrap{flex:1 0 auto;width:100%}
 .ctl .opt.seg::before{display:none}
 .ctl.unset .csym{opacity:.35}
 
+/* ---- a team task: the team and the trainee's role at the top, as large as the question ---- */
+.teambar{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding:10px 24px;border-left:12px solid var(--blue);
+  background:var(--navy);color:var(--white);font:700 20px/1.3 var(--font)}
+.teambar[hidden]{display:none}
+.teambar .trole{font-weight:600}
+.teambar .tnote{font-weight:400;font-size:18px;color:var(--on-navy)}
+.teambar .tdone{flex-basis:100%;font-size:22px}
+.teambar .tdone:empty{display:none}
+body.handed .wrap{opacity:.55}
+
 /* ---- the gesture hint: a hand that shows it once ------------------------ */
 .hand{position:fixed;left:0;top:0;z-index:70;width:56px;height:56px;pointer-events:none;
   opacity:0;transition:transform .9s ease-in-out,opacity .25s}

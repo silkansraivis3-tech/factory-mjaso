@@ -148,6 +148,13 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
   figure kit and follows the position chosen. A control whose positions are not known is reported, never guessed.
 - **Two-part questions** - a scenario's steps, the incident's order and then its stop point - have a Check for each
   part; the question is right when every part is.
+- **A team task** (2.39.0) - a task slide with `"team": {"size", "roles", "scope"}` in the script - is marked on the
+  slide (`data-mode="team"`, `data-team-size`, `data-roles`) and on its page (`task-mode`, `task-roles`, `task-scope`
+  metas), per `classroom-system.json` `team_task`. The engine shows the team's name and the trainee's role at the
+  top when the classroom sends `gb-team`, and runs as an individual task when none comes. Scope `team`: the first
+  tablet of the team to finish hands in the one answer with `scope: 'team'`; the others show "Handed in by ... for
+  Team A" when the classroom says so (`gb-team-done`). Scope `member`: everyone answers. Any team size; a role
+  never locks anyone out of the task.
 - **Label the drawing:** the compiler adds a band above and below the drawing for the empty label boxes, so no box
   covers what is drawn, with a leader line to each place. Or place them yourself: `"labels": {"Fuel tank": {"at":
   "sp-tank", "box": [left, top, width]}}`.
@@ -207,5 +214,4 @@ from what is already approved and built, nothing new:
 - A module agent never runs it: two agents writing `COURSE.html` is a lost write no test catches
   (`orchestration/GUIDE.md` Rule 3).
 
-Not built yet: team task pages, the task screen's and the start pages' words in other languages (next steps of the
-proposal).
+Not built yet: the task screen's and the start pages' words in other languages (next step of the proposal).

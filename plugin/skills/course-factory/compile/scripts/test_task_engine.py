@@ -36,8 +36,8 @@ PASS, FAIL = [], []
 
 DRIVER = r"""
 (function () {
-  var PLAN = %s, out = {steps: [], report: null, errors: []};
-  window.addEventListener('message', function (e) { if (e.data && e.data.type === 'gb-task-done') { out.report = e.data; } });
+  var PLAN = %s, LOOK = %s, out = {steps: [], report: null, reports: 0, errors: []};
+  window.addEventListener('message', function (e) { if (e.data && e.data.type === 'gb-task-done') { out.report = e.data; out.reports++; } });
   window.addEventListener('error', function (e) { out.errors.push(String(e.message)); });
   function sec(id) { return document.querySelector('.scr[data-script="' + id + '"]'); }
   function byText(root, sel, t) {
@@ -64,13 +64,28 @@ DRIVER = r"""
       else if (x[0] === 'dock') { out.steps.push(q + ':' + dock()); }
     });
   }
-  window.addEventListener('load', function () { setTimeout(function () {
+  /* one step at a time, so a message to the page (gb-team, gb-team-done) arrives between the taps, as in class */
+  var queue = [];
+  PLAN.forEach(function (p) {
+    if (p[0] === 'post') { queue.push(function () { window.postMessage(p[1], '*'); }); return; }
+    queue.push(function () { answer(p[0], p[1]); });
+    queue.push(function () { out.steps.push(p[0] + ':' + dock()); });     /* Check */
+    queue.push(function () { out.steps.push(p[0] + ':' + dock()); });     /* Next, or See my score */
+  });
+  function run() {
+    var f = queue.shift();
+    if (f) {
+      try { f(); } catch (err) { out.errors.push(String(err && err.stack || err)); }
+      setTimeout(run, 30);
+      return;
+    }
+    if (LOOK) { look(); }
+    var bar = document.getElementById('teamBar');
+    if (bar) { out.team = {hidden: bar.hasAttribute('hidden'), text: bar.textContent.replace(/\s+/g, ' ').trim(), go: document.getElementById('dock').className}; }
+    finish();
+  }
+  function look() {
     try {
-      PLAN.forEach(function (p) {                           /* answer, Check, then Next (or See my score) */
-        answer(p[0], p[1]);
-        out.steps.push(p[0] + ':' + dock());
-        out.steps.push(p[0] + ':' + dock());
-      });
       var look = {};
       look.gap2 = sec('q01').querySelectorAll('.gap')[1].className + '|' + sec('q01').querySelectorAll('.gap')[1].textContent;
       look.dial = sec('q04').querySelector('.dial').className + '|' + sec('q04').querySelector('.dial-band').style.width;
@@ -81,11 +96,14 @@ DRIVER = r"""
       look.stopat = sec('q08').querySelectorAll('.chip.stopat').length;
       out.look = look;
     } catch (err) { out.errors.push(String(err && err.stack || err)); }
+  }
+  function finish() {
     setTimeout(function () {                               /* postMessage arrives as a task of its own */
       var pre = document.createElement('pre'); pre.id = 'gbtest'; pre.textContent = JSON.stringify(out);
       document.body.appendChild(pre);
     }, 300);
-  }, 50); });
+  }
+  window.addEventListener('load', function () { setTimeout(run, 50); });
 }());
 """
 
@@ -117,11 +135,11 @@ def check(name, ok, detail=""):
     print(("  ok    " if ok else "  FAIL  ") + name + (("  -> " + str(detail)[:600]) if detail and not ok else ""))
 
 
-def drive(exe, page, plan, tmp):
+def drive(exe, page, plan, tmp, look=True):
     text = io.open(page, encoding="utf-8").read()
     text = re.sub(r"<head>", '<head><base href="%s/">' % Path(os.path.dirname(page)).as_uri(), text, count=1)
     i = text.rfind("</body>")
-    text = text[:i] + "<script>%s</script>" % (DRIVER % json.dumps(plan, ensure_ascii=False)) + text[i:]
+    text = text[:i] + "<script>%s</script>" % (DRIVER % (json.dumps(plan, ensure_ascii=False), "true" if look else "false")) + text[i:]
     w = os.path.join(tmp, "drive.html")
     io.open(w, "w", encoding="utf-8").write(text)
     p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--user-data-dir=" + os.path.join(tmp, "prof"),
@@ -129,6 +147,40 @@ def drive(exe, page, plan, tmp):
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
     m = re.search(r'<pre id="gbtest">(.*?)</pre>', p.stdout, re.S)
     return json.loads(html.unescape(m.group(1))) if m else {"errors": ["no result: " + p.stdout[-300:] + p.stderr[-300:]]}
+
+
+TEAM_A = {"type": "gb-team", "team": {"name": "Team A", "colour": "#4fd1c5", "members": ["Olena", "Juris", "Anna"],
+                                      "me": "Juris", "role": "Recorder"}}
+TT = [["p01", [["card", "Safety meeting", 1], ["card", "Connect the hose", 2], ["card", "Transfer", 3], ["card", "Disconnect", 4]]],
+      ["p02", [["tap", ".opt", "Either side, at once"]]]]
+
+
+def team_part(exe, tmp):
+    """classroom-system.json team_task, in the browser: the team shown, one answer per team, no team = alone"""
+    print("\n-- a team task")
+    os.makedirs(os.path.join(tmp, "t"))
+    c, md = tcm.new_course(os.path.join(tmp, "t"), tcm.script(screens=tcm.TEAMWORK))
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    tt1, tt2 = os.path.join(md, "tasks", "tt1_plan_the_bunkering.html"), os.path.join(md, "tasks", "tt2_check_each_other.html")
+    r = drive(exe, tt1, TT, tmp, look=False)
+    rep = r.get("report") or {}
+    check("no team from the classroom: it runs as an individual task - nothing hidden, no scope",
+          not r.get("errors") and rep.get("ok") == 2 and "scope" not in rep and (r.get("team") or {}).get("hidden") is True, r)
+    r = drive(exe, tt1, [["post", TEAM_A]] + TT, tmp, look=False)
+    rep, bar = r.get("report") or {}, (r.get("team") or {}).get("text", "")
+    check("the team arrives: its name and the trainee's role at the top", "Team A" in bar and "You are the Recorder" in bar
+          and "One answer for the whole team" in bar, r.get("team"))
+    check("scope team: the one answer is handed in with scope 'team', the team and who handed in",
+          rep.get("scope") == "team" and rep.get("team") == "Team A" and rep.get("by") == "Juris" and rep.get("ok") == 2, rep)
+    r = drive(exe, tt1, [["post", TEAM_A], ["post", {"type": "gb-team-done", "by": "Olena", "team": "Team A"}]] + TT, tmp, look=False)
+    check("handed in from another tablet: this one says who did, locks, and sends nothing",
+          r.get("reports") == 0 and "Handed in by Olena for Team A" in (r.get("team") or {}).get("text", "")
+          and "off" in (r.get("team") or {}).get("go", ""), r)
+    r = drive(exe, tt2, [["post", dict(TEAM_A, team=dict(TEAM_A["team"], role=None))], ["p03", [["tap", ".opt", "Fuel preparation room"]]]],
+              tmp, look=False)
+    rep, bar = r.get("report") or {}, (r.get("team") or {}).get("text", "")
+    check("scope member, no roles: everyone reports as usual; the team is still shown, no role is invented",
+          rep.get("ok") == 1 and "scope" not in rep and "Team A" in bar and "You are" not in bar, r)
 
 
 def main():
@@ -165,6 +217,7 @@ def main():
         check("a wrong value shows the band of right values", "wrong" in look.get("dial", "") and not look.get("dial", "").endswith("|"), look)
         check("a card that does not belong goes back to the bank; the one that belongs is put in its slot",
               "fixed" in look.get("cargo", "") and look.get("cargo", "").endswith("|tray") and look.get("permit", "").endswith("|3"), look)
+        team_part(exe, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

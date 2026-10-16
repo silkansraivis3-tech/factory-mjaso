@@ -849,6 +849,19 @@ headless Chrome: 10 of 10 right; 5 of 10 with five wrong and each reveal), and a
 M01-M03 compiled, nothing left as it is, `check_script_match` clean per module - after its build sheets were given the
 task drawings the pilot's hand pages had inlined (the pilot's own build sheets still need that step).
 
+## 4zi · Team task pages compiled (2.39.0, 2026-10-16)
+
+A team task's page was the last set the compiler left as it was. Per `classroom-system.json` `team_task` the page
+now carries `task-mode`, `task-roles`, `task-scope` (the slide already carried `data-mode`, `data-team-size`,
+`data-roles`) and a bar at the top that `gb_answer.js` fills from the classroom's `gb-team`: the team's name, the
+trainee's role, "One answer for the whole team" under scope `team`. No `gb-team` within about 2 seconds: the task
+runs alone (it never waits). Scope `team`: the first tablet to finish hands in with `scope: 'team'`, `team`, `by` -
+any member, so a team of any size with any roles finishes, and every member reads and answers the whole task.
+Scope `member`: everyone's own result. **Proposal to confirm with the classroom app:** the rulebook says the others'
+pages show who handed in but names no message; the pages listen for `{type: 'gb-team-done', by, team}`
+(`team_task.gb_team_done`). Tests: `test_compile_module.py` team part (both marks, `check_script_match`,
+`check_course_package`), `test_task_engine.py` (no team / team / handed in elsewhere / member).
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never
