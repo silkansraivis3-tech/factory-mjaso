@@ -586,12 +586,17 @@ def check_states(html_files, ctx):
         html = read(page)
         for m in re.finditer(r"<style\b[^>]*>(.*?)</style\s*>", html, re.I | re.S):
             sheets.append(m.group(1))
-    css = strip_comments_css(" ".join(sheets))
-
     units = [(p, strip_comments_js(read(p))) for p in ctx["js"]]
     for page in html_files:
         for _off, code in inline_scripts(read(page)):
             units.append((page, strip_comments_js(code)))
+    # a script may write its own rules into a <style> it makes (the figure kit does):
+    # string literals holding a rule body count as a stylesheet
+    for _path, code in units:
+        for m in re.finditer(r"""'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*\"""", code):
+            if "{" in m.group(0):
+                sheets.append(m.group(0)[1:-1])
+    css = strip_comments_css(" ".join(sheets))
 
     seen = {}
     for path, code in units:
@@ -603,7 +608,8 @@ def check_states(html_files, ctx):
                 seen.setdefault(one, (path, m.start()))
 
     for name in sorted(seen):
-        if re.search(r"\." + re.escape(name) + r"(?![\w-])", css):
+        tail = r"[\w-]" if name.endswith("-") else r"(?![\w-])"   # 'kit-on-' + state: a prefix
+        if re.search(r"\." + re.escape(name) + tail, css):
             continue
         path, pos = seen[name]
         body = strip_comments_js(read(path))

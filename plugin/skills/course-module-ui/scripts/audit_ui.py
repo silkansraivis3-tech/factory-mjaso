@@ -193,7 +193,9 @@ def page_classes(html_path):
     return unstyled, structural, len(used)
 
 
-VAR_USE = re.compile(r"var\(\s*(--[a-z][\w-]*)")
+# only a var() with no fallback: var(--kit-up,1) still resolves when nothing defines --kit-up
+# (the figure kit sets it from script); var(--okbg) does not
+VAR_USE = re.compile(r"var\(\s*(--[a-z][\w-]*)\s*\)")
 VAR_DEF = re.compile(r"(--[a-z][\w-]*)\s*:")
 
 

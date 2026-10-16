@@ -508,7 +508,7 @@ figure{margin:0}
 .copy [data-i]{border-radius:var(--r-s);transition:background-color .2s ease}
 .copy [data-i].lit{background:var(--blue-wash-l)}
 .slide.dark .copy [data-i].lit{background:var(--blue-wash-d)}
-.copy [data-i].cur{background:var(--amber-wash-l);box-shadow:-6px 0 0 var(--amber);font-weight:600}
+.copy [data-i].cur{background:var(--amber-wash-l);font-weight:600}
 .slide.dark .copy [data-i].cur{background:var(--amber-wash-d)}
 /* emphasis chosen in the build sheet: two options side by side in meaning, and the conclusion */
 .copy .box{padding:.6em .95em;border-left:4px solid var(--blue);background:var(--blue-wash-l);
