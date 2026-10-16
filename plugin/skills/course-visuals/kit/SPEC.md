@@ -21,6 +21,7 @@ same parent (or in the nearest `[data-kit-scope]`) are wired automatically.
 | key | meaning |
 |---|---|
 | `size` | `[w, h]` viewBox |
+| `view` | `[x, y, w, h]` - another window on the canvas (task pages only, see Task mode) |
 | `label` | aria-label: what the figure shows, in one sentence |
 | `idle` | text under the figure at step 0 |
 | `clock` | start time of the alarm log, default `"10:42:00"` |
@@ -103,8 +104,14 @@ exist yet, the part is added to its family here, never drawn once on a slide.
 | 6 | Charts | scale, bands (from IGF M01/M02); curve with a moving point, range bar, composition bar still planned | **started** | M01 s02 · M02 s11 · M04 · M06 · M07 |
 | 7 | Procedures | step track, flowchart, cause-and-effect matrix, checklist | planned | M05 · M11 · M14 · M15 |
 
-Planned for every family: **task mode** - the same spec with labels hidden and parts tappable, so a
-slide and the task built from it ("the GA from slide 4, no labels") can never drift apart.
+**Task mode (2.43.0, built).** The same spec drawn on a trainee task page, so a slide and the task built from it
+("the GA from slide 4, no labels") can never drift apart: `<svg data-kit="#spec" data-kit-step="3">` is drawn still at
+the end of step 3 (`"final"` or empty = the last), without step buttons, and - being still - opens full screen like a
+picture. The compiler (`compile/task_pages.py`) writes it from a build-sheet figure `*.kit.json`; the sheet's
+`"kit_step"` picks the step, `"unlabel"` takes the words off the parts (`label`, `caption`, `title`, `tag` ...; a `text`
+part goes), and the tappable areas are the parts' own ids - `gb_answer.js` lays each one on the drawn part's box. A
+spec's optional `"view": [x, y, w, h]` shows another window on the canvas (the task page adds a band above and below
+for its empty label boxes); a deck never sets it.
 
 ## Fill the frame, and the words do the explaining (L53, operator 2026-10-15)
 - **Draw to the panel.** `size` has the shape of the panel the figure is shown in (the wide column of a `two-col`

@@ -290,6 +290,150 @@ def tasks_part(tmp):
     check("a crossing marked as meant (data-may-cross) is not a finding", "every drawing whole and clean" in out, out)
 
 
+# ---- 2.43.0: real photographs and figure-kit drawings on a task page
+PLANT_KIT = {"size": [400, 200], "label": "The fuel plant", "parts": [
+    {"id": "tk", "type": "tank", "x": 20, "y": 50, "w": 150, "h": 110, "label": "Fuel tank", "value": 0.2},
+    {"id": "mv", "type": "valve", "x": 210, "y": 100, "size": 16, "label": "Master valve", "value": 1},
+    {"id": "pp", "type": "pump", "x": 300, "y": 100, "r": 26, "label": "Pump", "value": 0},
+    {"id": "cap", "type": "text", "x": 200, "y": 20, "text": "Fuel plant", "style": "h"}],
+    "steps": [{"title": "1 · Fill the tank", "play": [["tk", 0.8, 400]]}, {"title": "2 · Pump runs", "set": {"pp": 1}}]}
+FIGURE_TASKS = [
+    {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - look at the plant", "text": "Self-check on your tablet now.", "minutes": 4},
+    {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "read_instrument", "question": "What does the gauge read?", "visual": "a gauge",
+     "options": ["2.0 bar", "4.0 bar", "6.0 bar", "8.0 bar"], "correct": "B", "feedback": "The needle is on 4."},
+    {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the relief valve.", "visual": "the pump room",
+     "answer": "Relief valve*\nPump\nStrainer", "feedback": "It is the small red valve."},
+    {"id": "q03", "kind": "self-check", "set": "SC1", "mechanic": "single_choice", "question": "What is this?", "visual": "the pump room",
+     "options": ["A pump", "A boiler", "A tank", "A cooler"], "correct": "A", "feedback": "A pump."},
+    {"id": "q04", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the master valve.", "visual": "the plant",
+     "answer": "Master valve*\nFuel tank\nPump", "feedback": "It is between the tank and the pump."},
+    {"id": "q05", "kind": "self-check", "set": "SC1", "mechanic": "compare", "question": "Which pump room do you accept?", "options": ["Room A", "Room B"],
+     "correct": "B", "answer": "Valves labelled: no | yes\nFloor clear: yes | yes", "feedback": "Room B is labelled."},
+    {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Module check - Module 1", "text": "Module check on your tablet now.", "minutes": 5},
+    {"id": "m01", "kind": "module-check", "set": "MC", "mechanic": "label_diagram", "question": "Drag each label to its place.", "visual": "the pump room",
+     "answer": "Relief valve\nPump", "feedback": "These are the valve and the pump."},
+    {"id": "m02", "kind": "module-check", "set": "MC", "mechanic": "label_diagram", "question": "Drag each label to its place.", "visual": "the plant",
+     "answer": "Fuel tank\nMaster valve\nPump", "feedback": "Tank, valve, pump."},
+]
+FIGURE_BUILD = {"module": 1, "screens": {
+    "t01": {"try_tablet": False},
+    "q01": {"figure": "assets/img/gauge.png"},
+    "q02": {"figure": "assets/img/pump.png", "areas": {"Relief valve": [62.5, 31, 12, 18], "Pump": [20, 40, 30, 35], "Strainer": [5, 5, 15, 20]}},
+    "q03": {"figure": "assets/img/pump.png"},
+    "q04": {"figure": "plant.kit.json", "unlabel": "all"},
+    "q05": {"figures": {"Room A": "assets/img/pump.png", "Room B": "assets/img/gauge.png"}},
+    "m01": {"figure": "assets/img/pump.png", "areas": {"Relief valve": [62.5, 31, 12, 18], "Pump": [20, 40, 30, 35]}},
+    "m02": {"figure": "plant.kit.json", "unlabel": "all", "kit_step": "Pump runs"}}}
+
+
+def png(w, h, rgb=(205, 214, 228)):
+    """a real .png of w x h pixels, one colour - a photograph stand-in the compiler can read the size of"""
+    import struct
+    import zlib
+    raw = b"".join(b"\x00" + bytes(rgb) * w for _ in range(h))
+
+    def chunk(t, d):
+        return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b"")
+
+
+def figures_course(tmp, build=None, screens=FIGURE_TASKS):
+    """a course whose tasks stand on real photographs (with their records) and a figure-kit drawing"""
+    c, md = new_course(tmp, script(screens=screens), build=False)
+    img = os.path.join(md, "assets", "img")
+    for name, size in (("pump.png", (600, 400)), ("gauge.png", (1200, 1200)), ("gen.png", (600, 400))):
+        io.open(os.path.join(img, name), "wb").write(png(*size))
+    io.open(os.path.join(img, "nometa.png"), "wb").write(png(600, 400))
+    cs.save(os.path.join(img, "_photo_meta.json"), dict(PHOTO_META, **{
+        "pump.png": {"source": "Own photograph, Novikontas", "licence": "own work", "attribution_required": False,
+                     "description": "The pump room: the relief valve is the small red one.", "shows": "pump room"},
+        "gauge.png": {"source": "Wikimedia Commons", "author": "Jane Doe (Wikimedia Commons user), own work", "licence": "CC BY-SA 4.0",
+                      "attribution_required": True, "description": "A pressure gauge reading 4 bar.", "title": "Pressure gauge"},
+        "gen.png": {"source": "GENERATED", "generated": True, "description": "A made-up pump room."}}))
+    figs = os.path.join(c, "working_claude", "figures", "M01")
+    io.open(os.path.join(figs, "plant.kit.json"), "w", encoding="utf-8").write(json.dumps(PLANT_KIT))
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), build or FIGURE_BUILD)
+    return c, md
+
+
+def figures_part(tmp):
+    """a task stands on a REAL PHOTOGRAPH or a FIGURE-KIT drawing - the same *.kit.json the deck plays"""
+    print("\n-- real photographs and figure-kit drawings on the task pages")
+    os.makedirs(os.path.join(tmp, "figtasks"))
+    c, md = figures_course(os.path.join(tmp, "figtasks"))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks")
+    check("a module whose tasks stand on photographs and a kit drawing builds clean", code == 0 and "tasks/sc1_look_at_the_plant.html" in out, out)
+    p = io.open(os.path.join(md, "tasks", "sc1_look_at_the_plant.html"), encoding="utf-8").read()
+    m = io.open(os.path.join(md, "assessment", "check.html"), encoding="utf-8").read()
+    code, out = run(MATCH, c, "--module", "1", "--part", "trainee")
+    check("check_script_match --part trainee passes on the photo and kit pages", code == 0, out)
+    q01, q02, q04 = (p.split('data-script="%s"' % x)[1].split("</section>")[0] for x in ("q01", "q02", "q04"))
+    check("a photograph is a real <img> of the module's assets/img, in the shape of the photograph (--ar 1.5), tappable areas over it",
+          '<img class="taskfig" src="../assets/img/pump.png"' in q02 and "--ar:1.500" in q02 and q02.count('class="hot"') == 3, q02[:400])
+    check("the areas are the build sheet's boxes in % of the photograph - nothing is guessed",
+          'style="left:62.5%;top:31%;width:12%;height:18%"' in q02, q02)
+    check("a tap on the photograph stays the answer: the picture opens only by its corner button, so the viewer gets the credit "
+          "and not what it shows (that could be the answer)",
+          'data-about' not in q02 + q01 and 'data-credit="Photo: Pressure gauge · Jane Doe · Wikimedia Commons · CC BY-SA 4.0"' in q01,
+          q01[:500])
+    check("a photograph read from a task is a big picture beside its four choices (data-pic) - the screen's own height decides its size",
+          'data-pic="beside"' in q01 and 'data-mech="read_instrument"' in q01 and "--ar:1.000" in q01, q01[:300])
+    check("a task that shows a photograph loads the picture viewer", 'src="../assets/gb_zoom.js"' in p and 'href="../assets/gb_zoom.css"' in p)
+    q03 = p.split('data-script="q03"')[1].split("</section>")[0]
+    check("a picture beside a plain single-choice question: the photograph, then its choices",
+          'data-pic="beside"' in q03 and q03.find("<img") < q03.find('class="opts"'), q03[:400])
+    q05 = p.split('data-script="q05"')[1].split("</section>")[0]
+    check("compare: a picture over each column's choice", q05.count('class="cmpfig"') == 2 and q05.find("cmpfig") < q05.find('class="opt"'), q05[:500])
+    # the kit drawing
+    check("a kit drawing is the deck's own spec, drawn still at its last step (kit.js: data-kit-step), with no step buttons",
+          'data-kit="#kit-task-' in q04 and 'data-kit-step="2"' in q04 and "mediabar" not in p and 'data-act=' not in p, q04[:500])
+    check("one spec: the page ships kit.js and kit.css, like the panel's valves",
+          '<script src="../assets/kit.js"></script>' in p and 'href="../assets/kit.css"' in p)
+    spec = json.loads(re.search(r'<script type="application/json" id="kit-task-[^"]+">(.*?)</script>', q04, re.S).group(1))
+    check("\"unlabel\": \"all\" takes every word off the drawing (the answers' words) - the parts stay, the caption goes",
+          not any(k in pt for pt in spec["parts"] for k in ("label", "caption", "title", "tag")) and len(spec["parts"]) == 3
+          and "Fuel tank" not in json.dumps(spec), spec)
+    ks = dict(keys_of(p))
+    check("a kit part is found by the words it is drawn with, and carries its part id: the engine lays the area on the drawn part",
+          'data-part="mv"' in q04 and 'data-part="tk"' in q04 and 'data-part="pp"' in q04 and ks.get("Master valve") == cs.gb_key("q04", "Master valve", 1), q04)
+    check("the answers are still only data-key: no word of the spec's labels is in the page's markup outside the keyed buttons",
+          "data-correct" not in p)
+    m02 = m.split('data-script="m02"')[1].split("</section>")[0]
+    check("a named step ('Pump runs') is the step the task page shows: 2", 'data-kit-step="2"' in m02, m02[:300])
+    ms = re.search(r'id="kit-task-[^"]+">(.*?)</script>', m02, re.S)
+    check("label the kit drawing: the spec gets a band above and below it (\"view\") for the empty label boxes; 3 boxes, 3 leader lines "
+          "that follow their parts",
+          ms and json.loads(ms.group(1)).get("view", [0, 0, 0, 0])[1] < 0 and m02.count('class="lbox zone"') == 3
+          and m02.count("<line") == 3 and m02.count('data-part="') == 3, m02[:600])
+    m01 = m.split('data-script="m01"')[1].split("</section>")[0]
+    check("label a photograph: the photo sits in a drawing with a band above and below it; its record's credit goes with it",
+          "<image " in m01 and 'href="../assets/img/pump.png"' in m01 and re.search(r'viewBox="0 -[\d.]+ 1000', m01) and m01.count('class="lbox zone"') == 2, m01[:500])
+    # what must be reported, never invented
+    def build_with(**kw):
+        return {"module": 1, "screens": dict(FIGURE_BUILD["screens"], **kw)}
+
+    def broken(name, build, text, shown=True):
+        cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), build)
+        code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force")
+        check(name, code == 1 and text in out, out)
+
+    broken("a photograph that is not in the module is reported, not invented",
+           build_with(q02={"figure": "assets/img/missing.png", "areas": {"Relief valve": [1, 1, 10, 10]}}), "its photograph assets/img/missing.png is not there")
+    broken("a photograph with no record in _photo_meta.json is reported, never shown without one",
+           build_with(q02={"figure": "assets/img/nometa.png", "areas": {"Relief valve": [1, 1, 10, 10]}}), "assets/img/nometa.png has no record")
+    broken("a picture made by an image model is refused for what a trainee must recognise",
+           build_with(q02={"figure": "assets/img/gen.png", "areas": {"Relief valve": [1, 1, 10, 10]}}), "assets/img/gen.png was made by an image model")
+    broken("an answer with no box on a photograph is reported, never guessed",
+           build_with(q02={"figure": "assets/img/pump.png", "areas": {"Pump": [1, 1, 10, 10]}}), '"Relief valve" has no place on the photograph')
+    broken("an answer that is no part of the kit drawing is reported, with the parts there are",
+           build_with(q04={"figure": "plant.kit.json", "areas": {"Master valve": "nope"}}), '"Master valve" is not a part of the kit figure')
+    broken("a kit step that does not exist is reported", build_with(m02={"figure": "plant.kit.json", "kit_step": "Cooling"}), '"kit_step" \'Cooling\' is no step')
+    broken("'unlabel' naming a part the spec does not have is reported", build_with(q04={"figure": "plant.kit.json", "unlabel": ["zz"]}),
+           '"unlabel" names zz')
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), FIGURE_BUILD)
+    run(COMPILE, c, "--module", "1", "--only", "tasks", "--force")
+
+
 EVERY_WAY = [
     {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - every way", "text": "Self-check on your tablet now.", "minutes": 4},
     {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "cloze", "question": "Complete the sentence.",
@@ -930,6 +1074,7 @@ def main():
 
         recap_part(tmp)
         tasks_part(tmp)
+        figures_part(tmp)
         every_way_part(tmp)
         team_part(tmp)
         language_part(tmp)

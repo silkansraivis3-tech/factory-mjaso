@@ -926,6 +926,41 @@ question was optional. Now, by rule and by check:
   Tests: `test_kb.py` 61, `test_architecture_page.py` 89, `test_content_script.py` 160, `test_compile_module.py`
   (init-build stop), `test_workspace.py`; `scripts/gate_fixture.py` opens the gate on a test course.
 
+## 4zm · Real photographs and figure-kit drawings on the task pages; a big picture never under the Check bar (2.43.0, 2026-10-16)
+
+Owner's rule: *as many REAL photographs as possible in presentations AND in practical/trainee tasks.* Until now a task's
+"figure" had to be an SVG, so a kit chart was drawn twice (IGF M04: a static SVG copy for q03/m06, free to drift) and
+a "tap the place" task could not stand on a photo. And IGF M04 finding 12: a read_instrument with a big figure at
+1280x800 stacked four options in one column, the page grew to 934 px and the last option sat under the fixed Check bar.
+
+- **A photograph** (`task_pages.py` `photo_fig`): `"figure": "assets/img/x.jpg"` for hotspot, spot_the_hazard,
+  read_instrument, label_diagram (the photo is wrapped in a drawing so it gets its label bands), a picture beside
+  single/multi choice, above match / categorise / order / cloze / scenario / spot_the_error / build_the_plan / timeline /
+  choose_and_justify, and over a `compare` column (`"figures": {"Plan A": "assets/img/a.jpg"}`). Places are the build
+  sheet's `"areas": {"words": [left, top, width, height]}` in % of the photograph (there is no drawing to find them on;
+  a missing one is reported). The photo's size is read from its header (`image_size`, no library). A file that is not
+  there, a photo with no `_photo_meta.json` record, a missing credit, or a picture made by an image model (never for
+  what a trainee must recognise) is **reported, never invented**. A tap stays the answer: the picture opens full
+  screen only by its ⤢ corner (gb_zoom `answeredOn`); the viewer shows the credit but not the record's description (it
+  could give the answer away).
+- **A figure-kit drawing** (`kit_fig`): `"figure": "m04_chart.kit.json"` - the deck's own spec, so a chart is drawn
+  once. `kit.js` draws it still at the end of its last step (`data-kit-step`; `"kit_step": 2` or a word of a step's
+  title for another) with no step buttons, and as a static figure it opens full screen like any picture. Areas are the
+  spec's part ids (or the words a part is drawn with); `gb_answer.js` `placeParts` lays each tappable area (56 px
+  minimum) and each label-leader end on the drawn part itself once kit.js has drawn it - no box to estimate.
+  `"unlabel": "all" | ["P1", "V2"]` takes the words off so the drawing does not give the answer away. Label bands
+  use the new `spec.view`. Same spec + different step / unlabel = a separate figure in the page.
+- **Layout** (`gb_answer.css`): `data-pic="beside"` (read_instrument, and single/multi choice with a picture) puts the
+  picture beside its choices on a landscape tablet (>= 900 px), its height capped to what the screen leaves after the
+  header, the question, the room for the explanation and the Check bar (`100vh - 310px`). Nothing is under the bar at
+  1280x800 or 1024x768, and the page no longer scrolls.
+- Tests: `test_compile_module.py` 166 -> 190 (photo, kit, compare, label, every report); `test_task_engine.py` 49:
+  headless Chrome measures both tablet sizes (also proves the old layout fails: 934 px, 766 > 720), the tap-vs-corner
+  behaviour, the kit's still step and that every area / leader lies on its drawn part.
+- Not proved: the drawn bounds of every kit part type (placement uses the part's own rendered box, tested on tank,
+  valve, pump); a real photo at a real tablet (headless Chrome stands in); `compare` pictures are only checked in the
+  markup; the Latvian / Russian pages were not re-driven with photos.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

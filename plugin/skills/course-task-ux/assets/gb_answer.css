@@ -63,6 +63,20 @@ body>.wrap{flex:1 0 auto;width:100%}
 /* read the instrument: the picture above its choices */
 .instrument{max-width:1040px;margin:0 auto 10px}
 .instrument .ga{--gaw:min(100%,calc((100vh - 470px) * var(--ar,1.6)))}
+/* ... and on a landscape tablet (2.43.0, IGF M04 finding 12) the picture sits BESIDE its choices, never above four
+   stacked options: the picture's height is what is left of the screen after the header, the question, the room kept
+   for the explanation and the Check bar (300 px), so the last choice is never under the bar at 1280 x 800 or 1024 x 768 */
+@media (min-width:900px){
+  .scr[data-pic="beside"].on{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);
+    column-gap:20px;align-items:center}
+  .scr[data-pic="beside"]>.q,.scr[data-pic="beside"]>.why,.scr[data-pic="beside"]>.opts-say{grid-column:1/-1}
+  .scr[data-pic="beside"] .instrument{grid-column:1;margin:0;max-width:none}
+  .scr[data-pic="beside"] .instrument .ga{--gaw:min(100%,calc((100vh - 310px) * var(--ar,1.6)))}
+  .scr[data-pic="beside"] .opts{grid-column:2;margin:0;max-width:none}
+}
+/* compare: a picture over each column's choice */
+.cmpfig{margin:0 0 8px}
+.cmpfig .ga{--gaw:100%}
 
 /* ---- the drawing and its tappable areas --------------------------------- */
 .stage{position:relative}

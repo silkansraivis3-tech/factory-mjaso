@@ -19,6 +19,20 @@ THE BUILD SHEET, PER QUESTION (working_claude\\script\\M01.build.json "screens",
   An element of the drawing can also be named by its id: "areas": {"Accommodation": "hs-acc"}; its shape may be a rect,
   a circle or a path of straight lines, and a group's translate() is followed.
   Beside a picture (set_value, find_the_fault, panel_operate) the "figure" is optional and shown above the task.
+
+  WHAT A "figure" CAN BE (2.43.0)
+    a drawing  "assets/fig/m01_ga.svg"           places found by data-name + class "hit", as above
+    a REAL PHOTOGRAPH  "assets/img/pump_room.jpg"   a .jpg / .png / .webp in the module's assets/img with its record in
+        assets/img/_photo_meta.json - for tap the place, spot the hazard, read the instrument, label the drawing, a
+        picture beside any other question and over a compare column ("figures": {"Plan A": "assets/img/a.jpg"}).
+        Its places are boxes in % of the photograph - there is no drawing to find them on:
+        "q01": {"figure": "assets/img/pump_room.jpg", "areas": {"Relief valve": [62.5, 31, 12, 18]}}
+        A photograph that is not there, has no record, or was made by an image model is reported, never invented.
+        It opens full screen only by its corner button (a tap stays the answer); the viewer shows its credit.
+    a figure-kit drawing  "m04_chart.kit.json"  the very spec the deck plays, drawn still at its last step
+        ("kit_step": 2 or a word of a step's title for another), places = the spec's part ids or the words a part is
+        drawn with ("areas": {"Funnel": "ga1"}), "unlabel": "all" | ["P1", "V2"] takes the words off the drawing
+        so it does not give the answer away. The engine lays each area on the drawn part itself.
     "q04": {"step": 0.5}                                          the dial's step (default: worked out from the tolerance)
     "q10": {"states": {"Purge mode": ["Off", "Sweep", "Hold"]}, "start": {"Vent fan": "stopped"}}   a panel's positions
   The page sets: "pass_mark": 70 at the top of the build sheet (checks; default 70), "try_tablet": true|false on the
@@ -46,6 +60,7 @@ import io
 import json
 import os
 import re
+import struct
 
 import compile_module as cm
 import content_script as cs
@@ -58,6 +73,8 @@ BUILT = {"single_choice", "read_instrument", "multi_select", "hotspot", "spot_th
          "build_the_plan", "timeline", "compare", "panel_operate"}
 assert BUILT == set(cs.USES), "every way of answering an approved script can hold is compiled"
 ON_PICTURE = {"hotspot", "spot_the_hazard", "label_diagram"}
+# the ways of answering that are not answered ON a picture but may show one above their controls ("figure" in the build sheet)
+ABOVE = {"match", "categorise", "order", "cloze", "choose_and_justify", "scenario", "spot_the_error", "build_the_plan", "timeline"}
 DEFAULT_PASS = 70
 # the task screen's own words - the engine's are in gb_answer.js, overridden per language by GB_ANSWER_TEXT
 WORDS = {"en": {
@@ -273,11 +290,6 @@ def pct_box(box, vb, pad=8.0, min_px=56.0, width_px=1240.0):
     return [round(100.0 * (x - vx) / vw, 2), round(100.0 * (y - vy) / vh, 2), round(100.0 * w / vw, 2), round(100.0 * h / vh, 2)]
 
 
-def taskfig(body, name):
-    """the drawing as the page carries it: once, marked so the engine moves it into the question on screen"""
-    return re.sub(r"<svg\b", '<svg class="taskfig" data-fig="%s"' % a(name), body, count=1)
-
-
 BAND_PX, BOX_PX, WIDTH_PX = 64.0, 56.0, 1240.0     # a label row above and below the drawing; the box; the drawing's widest
 LAB_PX = 400.0                                       # the labelled drawing's height at 1280 x 800: 100vh - 400px (gb_answer.css .ga.lab)
 
@@ -287,51 +299,267 @@ def ppu(vb):
     return min(WIDTH_PX / vb[2], LAB_PX / vb[3])
 
 
-def with_bands(body, vb):
-    """label the drawing: a band above and below it for the empty label boxes, so no box covers what is drawn"""
+def band_vb(vb):
+    """the drawing's view box with a band above and below it for the empty label boxes, so none covers what is drawn"""
     x, y, w, h = vb
     band = BAND_PX * h / (LAB_PX - 2 * BAND_PX)          # when the height decides the size
     if LAB_PX / (h + 2 * band) > WIDTH_PX / w:            # the width decides it
         band = BAND_PX * w / WIDTH_PX
-    nvb = (x, y - band, w, h + 2 * band)
+    return (x, y - band, w, h + 2 * band)
+
+
+def with_bands(body, vb):
+    """label the drawing: a band above and below it for the empty label boxes, so no box covers what is drawn"""
+    nvb = band_vb(vb)
     body = re.sub(r'(<svg\b[^>]*\bviewBox=")[^"]*(")', lambda m: m.group(1) + "%g %g %g %g" % nvb + m.group(2), body, count=1)
     return body, nvb
 
 
-def figure_for(q, b, mdir, figdir, probs, where, bands=False):
-    """(svg markup, view box, figure name) - or an <img> for a photograph"""
-    rel = (b.get("figure") or "").strip()
-    if not rel:
-        probs.append("%s: '%s' is answered on a picture - put its drawing in the build sheet (\"figure\")" % (where, q.get("mechanic")))
-        return None, None, None
-    body, err = cm.read_figure(mdir, rel, figdir)
-    if err:
-        probs.append("%s: its drawing %s %s" % (where, rel, err))
-        return None, None, None
-    if body is None:                                   # a photograph: shipped in the module folder
-        return '<img class="taskfig" src="../%s" alt="%s" data-fig="%s">' % (a(rel), a(q.get("visual") or ""), a(cm.slug(rel))), None, cm.slug(rel)
-    vb = viewbox(body)
+# ------------------------------------------------------------------ the picture of a task (2.43.0)
+class Fig(object):
+    """what a question's "figure" is, however it is made: a drawing (.svg), a REAL PHOTOGRAPH (.jpg .png .webp), or a
+    figure-kit drawing (*.kit.json - the very spec the deck plays, drawn still)
+      kind   "svg" | "img" | "kit"          name  what makes two questions share it     vb  (x, y, w, h) - the units the
+      areas are worked out in (a photograph: its pixels)      svg  the drawing's markup, for finding places on it
+      parts  {answer words: part id}, a kit drawing's parts   make(shared, uid) -> the markup as the page carries it"""
+
+    def __init__(self, kind, name, vb, make, svg=None, parts=None, ids=()):
+        self.kind, self.name, self.vb, self.make, self.svg, self.parts, self.ids = kind, name, vb, make, svg, parts or {}, set(ids)
+        self.spec_parts = []
+
+    def html(self, shared=False, uid=""):
+        return self.make(shared, uid or self.name)
+
+    def ar(self):
+        """' style="--ar:1.6"' - the shape of the picture, so the frame is as large as the screen allows"""
+        return ' style="--ar:%.3f"' % (self.vb[2] / self.vb[3]) if self.vb else ""
+
+
+def image_size(path):
+    """(width, height) of a .png .jpg .webp .gif from its header, no imaging library - None when it cannot be read"""
+    try:
+        f = io.open(path, "rb")
+    except OSError:
+        return None
+    with f:
+        head = f.read(32)
+        if head[:8] == b"\x89PNG\r\n\x1a\n":
+            return struct.unpack(">II", head[16:24])
+        if head[:6] in (b"GIF87a", b"GIF89a"):
+            return struct.unpack("<HH", head[6:10])
+        if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+            kind = head[12:16]
+            if kind == b"VP8X":
+                return 1 + int.from_bytes(head[24:27], "little"), 1 + int.from_bytes(head[27:30], "little")
+            if kind == b"VP8L":
+                bits = int.from_bytes(head[21:25], "little")
+                return (bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1
+            if kind == b"VP8 ":
+                w, h = struct.unpack("<HH", head[26:30])
+                return w & 0x3FFF, h & 0x3FFF
+            return None
+        if head[:2] == b"\xff\xd8":                       # walk the segments to the frame header
+            f.seek(2)
+            while True:
+                b = f.read(1)
+                if not b:
+                    return None
+                if b != b"\xff":
+                    continue
+                m = f.read(1)
+                while m == b"\xff":
+                    m = f.read(1)
+                if not m:
+                    return None
+                if m in (b"\xd8", b"\x01") or b"\xd0" <= m <= b"\xd7":
+                    continue
+                n = f.read(2)
+                if len(n) < 2:
+                    return None
+                if b"\xc0" <= m <= b"\xcf" and m not in (b"\xc4", b"\xc8", b"\xcc"):
+                    d = f.read(5)
+                    return (struct.unpack(">HH", d[1:5])[1], struct.unpack(">HH", d[1:5])[0]) if len(d) == 5 else None
+                f.seek(struct.unpack(">H", n)[0] - 2, 1)
+    return None
+
+
+def photo_fig(q, b, rel, mdir, probs, where, bands=False, wrap=False):
+    """a REAL photograph of real equipment as the picture of a task: the file is in the module (read_figure reported it
+    when it is not), its record is assets\\img\\_photo_meta.json - a missing record is reported, never invented. Its
+    credit goes into the full-screen viewer (gb_zoom); what it shows (the record's "description") does not - on a task
+    it could give the answer away. A picture made by an image model is refused for what a trainee must recognise."""
+    meta = cm.photo_meta(mdir, rel)
+    if not meta:
+        probs.append("%s: the photograph %s has no record in %s - add its source, licence and what it shows; a photograph is "
+                     "never shown on a task without its record" % (where, rel, os.path.join(os.path.dirname(rel), "_photo_meta.json").replace("/", "\\")))
+    elif cm.is_generated(meta):
+        probs.append("%s: %s was made by an image model - a task that asks the trainee to recognise, find or read real equipment "
+                     "shows a real photograph of it (take one at Novikontas, or find a free-licensed one)" % (where, rel))
+    credit = b.get("credit") or cm.credit_line(meta)
+    if meta and meta.get("attribution_required") and not credit:
+        probs.append("%s: the photograph %s needs a credit line, and _photo_meta.json does not give one" % (where, rel))
+    size = image_size(os.path.join(mdir, rel))
+    if not size:
+        probs.append("%s: the size of the photograph %s cannot be read (is it a .jpg, .png or .webp?) - the places on it cannot be worked out" % (where, rel))
+        size = (4, 3)
+    name = cm.slug(rel)
+    alt = b.get("alt") or q.get("visual") or ""
+    cred = ' data-credit="%s"' % a(credit) if credit else ""
+    if wrap:                                           # labels need a band round the picture: the photo inside a drawing
+        w, h = 1000.0, round(1000.0 * size[1] / size[0], 2)
+        body = ('<svg viewBox="0 0 %g %g" role="img" aria-label="%s" data-audit-ignore%s><image href="../%s" x="0" y="0" width="%g" height="%g" '
+                'preserveAspectRatio="none"/></svg>' % (w, h, a(alt), cred, a(rel), w, h))
+        return svg_fig(body, name, (0.0, 0.0, w, h), where, rel, probs, bands)
+    return Fig("img", name, (0.0, 0.0, float(size[0]), float(size[1])),
+               lambda shared, uid: '<img class="taskfig" src="../%s" alt="%s"%s%s>' % (
+                   a(rel), a(alt), ' data-fig="%s"' % a(name) if shared else "", cred))
+
+
+def svg_fig(body, name, vb, where, rel, probs, bands):
     if not vb:
         probs.append("%s: the drawing %s has no viewBox - the places on it cannot be worked out" % (where, rel))
     elif bands:
         body, vb = with_bands(body, vb)
-    return body, vb, cm.slug(rel)
+    return Fig("svg", name, vb, lambda shared, uid: re.sub(r"<svg\b", '<svg class="taskfig"' + (' data-fig="%s"' % a(name) if shared else ""),
+                                                          body, count=1), svg=body)
 
 
-def area(svg, vb, name, b, where, probs):
-    """[left, top, width, height] in % for one answer on the drawing"""
+# a kit part's words on the drawing - what "unlabel" takes off, so the drawing does not give the answer away
+KIT_WORDS = ("label", "caption", "title", "tag", "labels", "cofferdamLabel", "hullLabel", "liquidLabel", "vapourLabel", "heatLabel")
+
+
+def kit_box(p):
+    """a kit part's rough box in the drawing's units - only where the engine places the tappable area before the drawn
+    part is measured (gb_answer.js placeParts replaces it with the part's own box)"""
+    x, y = p.get("x") or 0, p.get("y") or 0
+    try:
+        if p.get("w") and p.get("h"):
+            return (x, y, float(p["w"]), float(p["h"]))
+        r = p.get("r") or p.get("size")
+        return (x - float(r), y - float(r), 2.0 * float(r), 2.0 * float(r)) if r else None
+    except (TypeError, ValueError):
+        return None
+
+
+def kit_fig(q, b, text, rel, probs, where, bands):
+    """a figure-kit drawing in a task: the same *.kit.json the deck plays (course-visuals/kit/SPEC.md), drawn STILL at
+    the end of its last step - or of the step the build sheet names ("kit_step": 2, or a word of a step's title). The
+    parts the answers are about are found by their ids; "unlabel": "all" or ["P1", "V2"] takes the words off the parts,
+    so the drawing does not give the answer away. One spec, so a chart is drawn once and can never drift."""
+    try:
+        spec = json.loads(text)
+    except ValueError as err:
+        probs.append("%s: its kit figure %s is not valid JSON - %s" % (where, rel, err))
+        return None
+    parts = spec.get("parts") if isinstance(spec, dict) else None
+    if not parts:
+        probs.append("%s: its kit figure %s has no parts" % (where, rel))
+        return None
+    ids = [p.get("id") for p in parts if p.get("id")]
+    names = {}                                          # the words of a part (before "unlabel") -> its id
+    for p in parts:
+        for k in ("id", "label", "tag", "title"):
+            if p.get("id") and isinstance(p.get(k), str):
+                names.setdefault(re.sub(r"\s+", " ", p[k]).strip().lower(), p["id"])
+    hide = b.get("unlabel")
+    if hide not in (None, False, "all") and not isinstance(hide, list):
+        probs.append("%s: \"unlabel\" is \"all\" or a list of part ids" % where)
+        hide = None
+    if isinstance(hide, list):
+        for x in hide:
+            if x not in ids:
+                probs.append("%s: \"unlabel\" names %s, which is not a part of %s (parts: %s)" % (where, x, rel, ", ".join(ids)))
+    if hide:
+        keep = []
+        for p in parts:
+            mine = hide == "all" or p.get("id") in hide
+            if mine and p.get("type") == "text":        # a bare caption is nothing but words: it goes
+                continue
+            keep.append(dict((k, v) for k, v in p.items() if k not in KIT_WORDS) if mine else p)
+        spec = dict(spec, parts=keep)
+    steps = spec.get("steps") or []
+    want = b.get("kit_step", "final")
+    n = len(steps)
+    if isinstance(want, int) and not isinstance(want, bool):
+        n = want
+    elif isinstance(want, str) and want.strip() and want != "final":
+        hit = [i for i, s in enumerate(steps, 1) if want.strip().lower() in str(s.get("title") or "").lower()]
+        if not hit:
+            probs.append("%s: \"kit_step\" %r is no step of %s - its steps: %s" % (where, want, rel, "; ".join(str(s.get("title")) for s in steps) or "none"))
+        else:
+            n = hit[0]
+    if not 0 <= n <= len(steps):
+        probs.append("%s: \"kit_step\" %s is outside the %d step(s) of %s" % (where, n, len(steps), rel))
+        n = len(steps)
+    try:
+        size = [float(x) for x in spec.get("size") or (600, 440)]
+        vb = (0.0, 0.0, size[0], size[1])
+    except (TypeError, ValueError):
+        probs.append("%s: the kit figure %s has no usable \"size\"" % (where, rel))
+        return None
+    if bands:
+        vb = band_vb(vb)
+        spec = dict(spec, view=[round(v, 3) for v in vb])
+    if not spec.get("label"):
+        spec["label"] = cm.first_sentence(q.get("visual")) or ""
+    key = json.dumps([n, hide, bool(bands)], sort_keys=True)
+    name = cm.slug(rel) + ("" if key == json.dumps([len(steps), None, False]) else "-" + cm.sha(key)[:6])
+    data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+
+    def make(shared, uid):
+        sid = "kit-task-" + uid
+        return ('<svg class="taskfig" data-kit="#%s" data-kit-step="%d"%s></svg><script type="application/json" id="%s">%s</script>'
+                % (sid, n, ' data-fig="%s"' % a(name) if shared else "", sid, data))
+    fig = Fig("kit", name, vb, make, parts=names, ids=ids)
+    fig.spec_parts = parts
+    return fig
+
+
+def figure_for(q, b, mdir, figdir, probs, where, bands=False, wrap=False):
+    """a Fig: a drawing, a real photograph or a figure-kit drawing - or None, with the reason in probs"""
+    rel = (b.get("figure") or "").strip().replace("\\", "/")
+    if not rel:
+        probs.append("%s: '%s' is answered on a picture - put its drawing or photograph in the build sheet (\"figure\")" % (where, q.get("mechanic")))
+        return None
+    body, err = cm.read_figure(mdir, rel, figdir)
+    if err:
+        probs.append("%s: its %s %s %s" % (where, "photograph" if rel.lower().endswith(cm.IMAGES) else "drawing", rel, err))
+        return None
+    if rel.lower().endswith(cm.KIT_SPEC):
+        return kit_fig(q, b, body, rel, probs, where, bands)
+    if body is None:                                   # a photograph: shipped in the module folder
+        return photo_fig(q, b, rel, mdir, probs, where, bands, wrap)
+    return svg_fig(body, cm.slug(rel), viewbox(body), where, rel, probs, bands)
+
+
+def area(fig, name, b, where, probs):
+    """([left, top, width, height] in %, the answer's id) for one answer on the picture"""
     given = (b.get("areas") or {}).get(name)
     if isinstance(given, list) and len(given) == 4:
         return given, (b.get("ids") or {}).get(name) or cm.slug(name)
-    eid = given if isinstance(given, str) else named(svg or "", name)
-    el = element(svg or "", eid) if eid else None
+    if fig.kind == "kit":                              # a part of the spec: by id, or by the words it is drawn with
+        pid = given if isinstance(given, str) else fig.parts.get(re.sub(r"\s+", " ", name).strip().lower())
+        if pid not in fig.ids:
+            probs.append("%s: \"%s\" is not a part of the kit figure - name its part id in the build sheet: \"areas\": {\"%s\": \"<part id>\"} "
+                         "(parts: %s)" % (where, name, name, ", ".join(sorted(fig.ids))))
+            return None, pid or cm.slug(name)
+        part = next((p for p in (fig.spec_parts or []) if p.get("id") == pid), None)
+        box = kit_box(part) if part else None
+        return (pct_box(box, fig.vb) if box else [40.0, 40.0, 20.0, 20.0]), pid
+    if fig.kind == "img":
+        probs.append("%s: \"%s\" has no place on the photograph - give its box in %% of the photograph in the build sheet: "
+                     "\"areas\": {\"%s\": [left, top, width, height]}" % (where, name, name))
+        return None, cm.slug(name)
+    svg = fig.svg or ""
+    eid = given if isinstance(given, str) else named(svg, name)
+    el = element(svg, eid) if eid else None
     box = shape_box(el) if el else None
-    if not (box and vb):
+    if not (box and fig.vb):
         probs.append("%s: \"%s\" is not on the drawing - give the drawing an element with data-name=\"%s\" and a "
                      "shape of class \"hit\" in it, or its box in the build sheet: \"areas\": {\"%s\": [left, top, width, height]}"
                      % (where, name, name, name))
         return None, eid or cm.slug(name)
-    return pct_box(box, vb), eid
+    return pct_box(box, fig.vb), eid
 
 
 # ------------------------------------------------------------------ one question
@@ -388,16 +616,12 @@ def picture(q, b, mdir, figdir, figs, probs, where):
     """a picture beside a task that is not answered on it (set the value, find the fault, the panel): optional"""
     if not (b.get("figure") or "").strip():
         return []
-    if b["figure"].lower().endswith(cm.KIT_SPEC):
-        probs.append("%s: a figure-kit spec (%s) is not shown on a task page yet - name a drawing (.svg) or a photograph"
-                     % (where, b["figure"]))
-        return []
-    body, vb, _ = figure_for(q, b, mdir, figdir, probs, where)
-    if not body:
+    fig = figure_for(q, b, mdir, figdir, probs, where)
+    if not fig:
         return []
     figs["_pic"] = True
-    ar = ' style="--ar:%.3f"' % (vb[2] / vb[3]) if vb else ""
-    return ['    <div class="instrument"><div class="ga"%s>%s</div></div>' % (ar, re.sub(r"<svg\b", '<svg class="taskfig"', body, count=1) if vb else body)]
+    figs["_kit"] = figs.get("_kit") or fig.kind == "kit"
+    return ['    <div class="instrument"><div class="ga"%s>%s</div></div>' % (fig.ar(), fig.html(False, q["id"]))]
 
 
 # ------------------------------------------------------------------ set the value: the dial
@@ -519,56 +743,68 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
     where = "%s (%s)" % (q.get("set") or "", sid)
     out = ['  <section class="scr" data-script="%s" data-mech="%s"%s>' % (sid, m, "%s"), q_head(n, q)]
     extra = ""
+    if m in ABOVE:                                      # a picture above the question's own controls, when the build sheet names one
+        out += picture(q, b, mdir, figdir, figs, probs, where)
     if m in ("single_choice", "multi_select"):
         if m == "multi_select":
             out.append('    <p class="opts-say">%s</p>' % e(w["choose_all"]))
             extra = ' data-multi="1"'          # gb_answer.js keeps every tapped option only on data-multi="1"
+        pic = picture(q, b, mdir, figdir, figs, probs, where)    # "what is this?" - a real photograph beside the choices
+        if pic:
+            out += pic
+            extra += ' data-pic="beside"'
         out += opt_buttons(sid, q, multi=m == "multi_select")
     elif m == "read_instrument":
-        body, vb, name = figure_for(q, b, mdir, figdir, probs, where, (b.get("figure") or "").strip() in figs["_bands"])
-        if body:
-            ar = ' style="--ar:%.3f"' % (vb[2] / vb[3]) if vb else ""
-            out.append('    <div class="instrument"><div class="ga"%s>%s</div></div>' % (ar, body if not vb else re.sub(r"<svg\b", '<svg class="taskfig"', body, count=1)))
+        fig = figure_for(q, b, mdir, figdir, probs, where, (b.get("figure") or "").strip() in figs["_bands"])
+        if fig:
+            figs["_pic"] = True
+            figs["_kit"] = figs.get("_kit") or fig.kind == "kit"
+            out.append('    <div class="instrument"><div class="ga"%s>%s</div></div>' % (fig.ar(), fig.html(False, sid)))
+            extra = ' data-pic="beside"'       # the picture beside the choices, never over four stacked ones (gb_answer.css)
         out += opt_buttons(sid, q)
     elif m in ("hotspot", "spot_the_hazard"):
         items, right = cs.answer_items(q)
-        body, vb, name = figure_for(q, b, mdir, figdir, probs, where, (b.get("figure") or "").strip() in figs["_bands"])
+        fig = figure_for(q, b, mdir, figdir, probs, where, (b.get("figure") or "").strip() in figs["_bands"])
         if len(right) > 1:
             extra = ' data-multi="1"'
         holder = []
-        if body and name not in figs:
-            figs[name] = True
-            holder.append(taskfig(body, name) if vb else body)
+        if fig and (fig.kind == "img" or fig.name not in figs):         # a drawing is in the page once; a photo is cached
+            figs[fig.name] = True
+            holder.append(fig.html(True))
+        if fig:
+            figs["_kit"] = figs.get("_kit") or fig.kind == "kit"
         for t in items:
-            box, _ = area(body if vb else None, vb, t, b, where, probs) if body else (None, None)
+            box, pid = area(fig, t, b, where, probs) if fig else (None, None)
             if box is None:
                 continue
-            holder.append('      <button type="button" class="hot" style="left:%s%%;top:%s%%;width:%s%%;height:%s%%" '
+            holder.append('      <button type="button" class="hot" style="left:%s%%;top:%s%%;width:%s%%;height:%s%%"%s '
                           'data-script-field="answer" data-key="%s"><span class="vh">%s</span></button>'
-                          % (box[0], box[1], box[2], box[3], cs.gb_key(sid, t, 1 if t in right else 0), e(t)))
-        ar = ' style="--ar:%.3f"' % (vb[2] / vb[3]) if vb else ""
-        out.append('    <div class="stage"><div class="ga" data-fig="%s"%s>' % (a(name or ""), ar))
+                          % (box[0], box[1], box[2], box[3], ' data-part="%s"' % a(pid) if fig.kind == "kit" else "",
+                             cs.gb_key(sid, t, 1 if t in right else 0), e(t)))
+        out.append('    <div class="stage"><div class="ga" data-fig="%s"%s>' % (a(fig.name if fig else ""), fig.ar() if fig else ""))
         out += holder
         out.append("    </div></div>")
     elif m == "label_diagram":
         items, _ = cs.answer_items(q)
-        body, vb, name = figure_for(q, b, mdir, figdir, probs, where, (b.get("figure") or "").strip() in figs["_bands"])
+        fig = figure_for(q, b, mdir, figdir, probs, where, (b.get("figure") or "").strip() in figs["_bands"], wrap=True)
+        vb = fig.vb if fig else None
         places = []
         for t in items:
             given = (b.get("labels") or {}).get(t) or {}
-            box, eid = area(body if vb else None, vb, t, dict(b, areas={t: given["at"]} if given.get("at") else b.get("areas") or {}),
-                            where, probs) if body else (None, None)
+            box, eid = area(fig, t, dict(b, areas={t: given["at"]} if given.get("at") else b.get("areas") or {}),
+                            where, probs) if fig else (None, None)
             if box is None:
                 continue
             places.append({"t": t, "id": eid, "box": box, "at": given.get("box")})
         auto = [p for p in places if not p["at"]]
         if auto:
             label_boxes(auto, vb)
-        ar = ' style="--ar:%.3f"' % (vb[2] / vb[3]) if vb else ""
-        out.append('    <div class="stage"><div class="ga lab" data-fig="%s"%s>' % (a(name or ""), ar))
-        if body and name not in figs:
-            figs[name] = True
-            out.append(taskfig(body, name) if vb else body)
+        out.append('    <div class="stage"><div class="ga lab" data-fig="%s"%s>' % (a(fig.name if fig else ""), fig.ar() if fig else ""))
+        if fig and fig.name not in figs:
+            figs[fig.name] = True
+            out.append(fig.html(True))
+        if fig:
+            figs["_kit"] = figs.get("_kit") or fig.kind == "kit"
         if places:
             out.append('      <svg class="leaders" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" data-audit-ignore data-no-zoom>')
             for p in places:
@@ -576,7 +812,8 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
                 bh = 100.0 * BOX_PX / (vb[3] * ppu(vb)) if vb else 0.0
                 x1, y1 = bx + bw / 2, by + (bh if by < 50 else 0)
                 x2, y2 = p["box"][0] + p["box"][2] / 2, p["box"][1] + p["box"][3] / 2
-                out.append('        <line x1="%.2f" y1="%.2f" x2="%.2f" y2="%.2f" vector-effect="non-scaling-stroke"/>' % (x1, y1, x2, y2))
+                out.append('        <line x1="%.2f" y1="%.2f" x2="%.2f" y2="%.2f" vector-effect="non-scaling-stroke"%s/>'
+                           % (x1, y1, x2, y2, ' data-part="%s"' % a(p["id"]) if fig.kind == "kit" else ""))
             out.append("      </svg>")
         for p in places:
             out.append('      <div class="lbox zone" data-cap="1" data-zone data-val="%s" style="left:%s%%;top:%s%%;width:%s%%;height:%.2f%%"></div>'
@@ -713,10 +950,22 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         out.append('    <div class="part" data-kind="stop"><p class="phead">%s</p></div>' % e(w["timeline_stop"]))
     elif m == "compare":                                # the options as columns, one row per figure
         opts, right = q.get("options", []), cs.correct_letters(q)
+        shown = b.get("figures") or {}                  # "figures": {"Plan A": "assets/img/plan_a.jpg"} - a picture over its column
+
+        def head_fig(L, o):
+            rel = shown.get(L) or shown.get(o)
+            if not rel:
+                return ""
+            fig = figure_for(q, dict(b, figure=rel), mdir, figdir, probs, where)
+            if not fig:
+                return ""
+            figs["_pic"] = True
+            figs["_kit"] = figs.get("_kit") or fig.kind == "kit"
+            return '<div class="cmpfig"><div class="ga"%s>%s</div></div>' % (fig.ar(), fig.html(False, "%s-%s" % (sid, L)))
         out.append('    <table class="cmp cg">')
         out.append('      <thead><tr><th class="what"></th>%s</tr></thead>' % "".join(
-            '<th><button type="button" class="opt" id="%s-%s" data-script-field="opt.%s" data-key="%s">%s</button></th>'
-            % (a(sid), L, L, cs.gb_key(sid, o, 1 if L in right else 0), e(o)) for L, o in zip(cs.letters(len(opts)), opts)))
+            '<th>%s<button type="button" class="opt" id="%s-%s" data-script-field="opt.%s" data-key="%s">%s</button></th>'
+            % (head_fig(L, o), a(sid), L, L, cs.gb_key(sid, o, 1 if L in right else 0), e(o)) for L, o in zip(cs.letters(len(opts)), opts)))
         out.append("      <tbody>")
         for ln in cs.lines_of(q.get("answer")):
             what, _, vals = ln.partition(":")

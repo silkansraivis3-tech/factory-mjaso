@@ -290,6 +290,134 @@ def deck_language_part(exe, tmp):
           "Tālāk" in eng and "Далее" in eng and "PROVISIONAL" in eng and 'documentElement.getAttribute("lang")' in eng)
 
 
+PROBE = r"""
+(function () {
+  var out = {qs: [], errors: []};
+  window.addEventListener('error', function (e) { out.errors.push(String(e.message)); });
+  var go = document.getElementById('go');
+  function R(e) { var b = e.getBoundingClientRect(); return {l: b.left, t: b.top, r: b.right, b: b.bottom, w: b.width, h: b.height}; }
+  function press(el) {
+    var r = el.getBoundingClientRect(), o = {bubbles: true, button: 0, clientX: r.left + 5, clientY: r.top + 5};
+    el.dispatchEvent(new MouseEvent('mousedown', o)); document.dispatchEvent(new MouseEvent('mouseup', o));
+  }
+  function measure(s) {
+    var q = {id: s.getAttribute('data-script'), vh: innerHeight, doc: document.documentElement.scrollHeight,
+             dockTop: R(document.getElementById('dock')).t, opts: [].map.call(s.querySelectorAll('.opt'), R),
+             hots: [].map.call(s.querySelectorAll('.hot'), R), chips: [].map.call(s.querySelectorAll('.chip'), R)};
+    var ga = s.querySelector('.ga'); if (ga) { q.ga = R(ga); }
+    var k = s.querySelector('svg.taskfig[data-kit]');
+    if (k) {
+      q.kit = {mounted: !!k.__kit, n: k.__kit && k.__kit.n, steps: k.__kit && k.__kit.steps(), still: k.hasAttribute('data-kit-still'),
+               motion: k.hasAttribute('data-motion'), want: k.getAttribute('data-kit-step'), inside: [], leaders: []};
+      [].forEach.call(s.querySelectorAll('.hot[data-part]'), function (h) {
+        var pr = R(k.__kit.parts[h.getAttribute('data-part')].g), hr = R(h);
+        q.kit.inside.push({part: h.getAttribute('data-part'), ok: hr.l <= pr.l + 1 && hr.r >= pr.r - 1 && hr.t <= pr.t + 1 && hr.b >= pr.b - 1 && hr.w >= 55 && hr.h >= 55});
+      });
+      [].forEach.call(s.querySelectorAll('line[data-part]'), function (ln) {
+        var pr = R(k.__kit.parts[ln.getAttribute('data-part')].g), g = R(ga), x = g.l + g.w * parseFloat(ln.getAttribute('x2')) / 100, y = g.t + g.h * parseFloat(ln.getAttribute('y2')) / 100;
+        q.kit.leaders.push({part: ln.getAttribute('data-part'), ok: x >= pr.l - 2 && x <= pr.r + 2 && y >= pr.t - 2 && y <= pr.b + 2});
+      });
+    }
+    var corner = s.querySelector('.gbz-corner'); q.corner = !!corner;
+    return q;
+  }
+  function visible() { var z = document.querySelector('.gbz'); return !!z && !z.hidden && getComputedStyle(z).display !== 'none'; }
+  function answer(s, q) {
+    var hot = s.querySelector('.hot'), corner = s.querySelector('.gbz-corner');
+    if (hot) {
+      hot.click(); q.afterTap = {viewer: visible(), selected: /\bsel\b/.test(hot.className)};
+      if (corner) { corner.click(); q.afterCorner = {viewer: visible(), text: (document.querySelector('.gbz-cap') || {}).textContent || ''};
+        var x = document.querySelector('.gbz-close'); if (x) { x.click(); } q.afterClose = visible(); }
+    } else if (s.querySelector('.lbox')) {
+      var ch = s.querySelectorAll('.chip'), zs = s.querySelectorAll('.lbox');
+      for (var i = 0; i < ch.length; i++) { press(ch[i]); zs[i].click(); }
+    } else { var o = s.querySelector('.opt'); if (o) { o.click(); } }
+  }
+  var left = document.querySelectorAll('.scr[data-script]').length;
+  function step() {
+    var intro = document.getElementById('introScr');
+    if (intro && /\bon\b/.test(intro.className)) { go.click(); return setTimeout(step, 200); }
+    var s = document.querySelector('.scr[data-script].on');
+    if (!s || !left) { return finish(); }
+    left--;
+    setTimeout(function () {
+      try { var q = measure(s); answer(s, q); out.qs.push(q); go.click(); go.click(); }
+      catch (err) { out.errors.push(String(err && err.stack || err)); }
+      setTimeout(step, 250);
+    }, 450);
+  }
+  function finish() { var pre = document.createElement('pre'); pre.id = 'gbtest'; pre.textContent = JSON.stringify(out); document.body.appendChild(pre); }
+  window.addEventListener('load', function () { setTimeout(step, 100); });
+}());
+"""
+
+
+def probe(exe, page, tmp, size=(1280, 800)):
+    """the page opened at a tablet's size, every question measured as the trainee sees it, then answered (see PROBE).
+    The window is taller by the browser's own chrome so the page's viewport is exactly size (and no scrollbar)."""
+    text = io.open(page, encoding="utf-8").read()
+    text = re.sub(r"<head>", '<head><base href="%s/">' % Path(os.path.dirname(page)).as_uri(), text, count=1)
+    i = text.rfind("</body>")
+    text = text[:i] + "<script>%s</script>" % PROBE + text[i:]
+    w = os.path.join(tmp, "probe.html")
+    io.open(w, "w", encoding="utf-8").write(text)
+    p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--hide-scrollbars",
+                        "--user-data-dir=" + os.path.join(tmp, "prof"), "--allow-file-access-from-files",
+                        "--window-size=%d,%d" % (size[0], size[1] + 95), "--virtual-time-budget=20000", "--dump-dom", Path(w).as_uri()],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+    m = re.search(r'<pre id="gbtest">(.*?)</pre>', p.stdout, re.S)
+    return json.loads(html.unescape(m.group(1))) if m else {"errors": ["no result: " + p.stdout[-300:] + p.stderr[-300:]], "qs": []}
+
+
+def figures_part(exe, tmp):
+    """2.43.0 in a browser: nothing ever sits under the Check bar at 1280 x 800 and 1024 x 768; a photograph's tap is the
+    answer and its corner button opens it; a figure-kit drawing is drawn still at its last step and its tappable areas
+    lie on the drawn parts"""
+    print("\n-- photographs and kit drawings in a browser")
+    os.makedirs(os.path.join(tmp, "fg"))
+    c, md = tcm.figures_course(os.path.join(tmp, "fg"))
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    check("the fixture pages are built", code == 0, out)
+    sc, mc = os.path.join(md, "tasks", "sc1_look_at_the_plant.html"), os.path.join(md, "assessment", "check.html")
+    for size in ((1280, 800), (1024, 768)):
+        tag = "%dx%d" % size
+        r = probe(exe, sc, tmp, size)
+        qs = {q["id"]: q for q in r.get("qs", [])}
+        check("%s: no script error, every question of the self-check shown" % tag, not r.get("errors") and len(qs) == 5, r.get("errors") or sorted(qs))
+        under = ["%s: %s > %s" % (q["id"], round(max([o["b"] for o in q["opts"] + q["hots"]] or [0])), round(q["dockTop"]))
+                 for q in qs.values() if max([o["b"] for o in q["opts"] + q["hots"]] or [0]) > q["dockTop"] + 0.5]
+        check("%s: no choice and no tappable area is ever under the Check bar - not for a big photograph beside four choices either" % tag,
+              not under, under)
+        check("%s: a big square photo read beside its four choices: the page does not grow past the screen" % tag,
+              qs.get("q01", {}).get("doc", 0) <= size[1] + 1 and qs.get("q03", {}).get("doc", 0) <= size[1] + 1,
+              {k: qs.get(k, {}).get("doc") for k in ("q01", "q03")})
+        if "q01" in qs and qs["q01"]["opts"]:
+            q = qs["q01"]
+            check("%s: the picture is beside the four choices, not over them, and does not shrink to nothing" % tag,
+                  q["ga"]["r"] <= q["opts"][0]["l"] + 1 and q["ga"]["h"] >= 300 and all(o["l"] == q["opts"][0]["l"] for o in q["opts"]), q)
+        check("%s: the second question's photograph answers on a tap and does NOT open; its corner button opens it with the credit, and it closes"
+              % tag, (qs.get("q02", {}).get("afterTap") or {}).get("viewer") is False and (qs["q02"]["afterTap"]).get("selected")
+              and (qs["q02"].get("afterCorner") or {}).get("viewer") is True and qs["q02"].get("afterClose") is False, qs.get("q02"))
+        check("%s: the viewer shows the photograph's credit" % tag, "Own photograph" in (qs.get("q02", {}).get("afterCorner") or {}).get("text", ""),
+              qs.get("q02", {}).get("afterCorner"))
+        k = (qs.get("q04") or {}).get("kit") or {}
+        check("%s: the kit drawing is drawn, still, at its last step (2 of 2), no longer a driven figure" % tag,
+              k.get("mounted") and k.get("n") == 2 and k.get("steps") == 2 and k.get("still") and not k.get("motion"), k)
+        check("%s: each tappable area covers its drawn part, at least 56 px (L42)" % tag,
+              len(k.get("inside", [])) == 3 and all(x["ok"] for x in k["inside"]), k.get("inside"))
+        check("%s: the kit drawing opens full screen only by its corner button" % tag, (qs.get("q04") or {}).get("corner") is True, qs.get("q04"))
+    r = probe(exe, mc, tmp)
+    qs = {q["id"]: q for q in r.get("qs", [])}
+    check("the module check: both labelled drawings (a photograph, a kit drawing) are answered without a script error",
+          not r.get("errors") and set(qs) == {"m01", "m02"}, r.get("errors") or sorted(qs))
+    k = (qs.get("m02") or {}).get("kit") or {}
+    check("label the kit drawing: still at step 2 (the named step), every leader line ends on its drawn part",
+          k.get("n") == 2 and len(k.get("leaders", [])) == 3 and all(x["ok"] for x in k["leaders"]), k)
+    check("label the photograph: opens by its corner button too", (qs.get("m01") or {}).get("corner") is True, qs.get("m01"))
+    low = [q["id"] for q in qs.values() if max([o["b"] for o in q["chips"]] or [0]) > q["dockTop"] + 0.5]
+    check("1280 x 800: the label chips are above the Check bar", not low, low)
+
+
 def main():
     exe = drawing_check.find_browser()
     if not exe:
@@ -329,6 +457,7 @@ def main():
         check("a wrong value shows the band of right values", "wrong" in look.get("dial", "") and not look.get("dial", "").endswith("|"), look)
         check("a card that does not belong goes back to the bank; the one that belongs is put in its slot",
               "fixed" in look.get("cargo", "") and look.get("cargo", "").endswith("|tray") and look.get("permit", "").endswith("|3"), look)
+        figures_part(exe, tmp)
         team_part(exe, tmp)
         language_part(exe, tmp)
         deck_language_part(exe, tmp)

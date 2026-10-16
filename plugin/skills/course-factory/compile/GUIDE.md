@@ -139,6 +139,18 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
   does not name gets a box: `"areas": {"Funnel": [left, top, width, height]}` in % of the drawing, or the id of its
   element: `"areas": {"Accommodation": "hs-acc"}` - never guessed. The drawing's own labels (`#labels`,
   `[data-task-hide]`) are hidden.
+- **A real photograph, or a figure-kit drawing, instead of an .svg (2.43.0).** The same `"figure"` may be
+  `"assets/img/pump_room.jpg"` (a photo in the module's `assets/img` with its record in `_photo_meta.json` - use as many
+  real photographs as possible: tap the place, spot the hazard, read the instrument, label the drawing) or
+  `"m04_chart.kit.json"` (the deck's own kit spec, drawn still at its last step - never copy a kit chart into an SVG).
+  A photograph has no drawing to find places on, so each answer's place is its box in % of the photograph:
+  `"areas": {"Relief valve": [62.5, 31, 12, 18]}`; a missing file, record, credit or box is reported, an image-model
+  picture is refused. A tap on it stays the answer - it opens full screen by its corner button. A kit drawing's places are
+  its part ids or the words a part is drawn with (`"areas": {"Funnel": "ga1"}`); `"kit_step": 2` (or a word of a step's
+  title) shows another step; `"unlabel": "all"` or `["P1"]` takes the words off so the drawing does not give the answer
+  away. The same `"figure"` also puts a picture beside a single / multi choice, above match, categorise, order, cloze,
+  scenario ..., and `"figures": {"Plan A": "assets/img/a.jpg"}` over a `compare` column. With a picture beside four
+  choices the compiler lays them side by side on a landscape tablet, so no choice is ever under the Check bar.
 - **Beside a picture** (set_value, find_the_fault, panel_operate) a drawing is optional: `"figure"` shows it above
   the task. **Set the value** is a dial from the range's low to its high end; its step is the tolerance when the value
   falls on it, else the largest round step under it that does (or `"step": 0.5`); one key per accepted step. **Operate

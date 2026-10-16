@@ -685,6 +685,33 @@
       if (svg && svg.parentNode !== holder) { holder.insertBefore(svg, holder.firstChild); }
     });
   }
+  /* a figure-kit drawing in a task (2.43.0): its tappable areas and the ends of its leader lines are the drawn parts
+     themselves - [data-part="<part id>"] is laid on the part's own box once kit.js has drawn it (it draws after this
+     file starts, so wait for it), grown to a 56 px tap target (L42) */
+  function placeParts(sec, tries) {
+    var held = $$('[data-part]', sec), ga = $('.ga', sec), svg = ga && $('svg.taskfig[data-kit]', ga);
+    if (!held.length || !svg) { return; }
+    if (!svg.__kit) {
+      if ((tries || 0) < 80) { setTimeout(function () { if (qs[cur] && qs[cur].sec === sec) { placeParts(sec, (tries || 0) + 1); } }, 50); }
+      return;
+    }
+    var g = ga.getBoundingClientRect();
+    if (!g.width || !g.height) { return; }
+    each(held, function (h) {
+      var part = svg.__kit.parts[h.getAttribute('data-part')], r = part && part.g.getBoundingClientRect();
+      if (!r || !r.width) { return; }
+      var cx = r.left + r.width / 2 - g.left, cy = r.top + r.height / 2 - g.top;
+      if (h.tagName.toLowerCase() === 'line') {                    /* a leader line ends on the middle of its part */
+        h.setAttribute('x2', (100 * cx / g.width).toFixed(2)); h.setAttribute('y2', (100 * cy / g.height).toFixed(2));
+        return;
+      }
+      var w = Math.max(r.width + 16, 56), ht = Math.max(r.height + 16, 56);
+      var x = Math.min(Math.max(cx - w / 2, 0), g.width - Math.min(w, g.width)), y = Math.min(Math.max(cy - ht / 2, 0), g.height - Math.min(ht, g.height));
+      h.style.left = (100 * x / g.width).toFixed(2) + '%'; h.style.top = (100 * y / g.height).toFixed(2) + '%';
+      h.style.width = (100 * Math.min(w, g.width) / g.width).toFixed(2) + '%'; h.style.height = (100 * Math.min(ht, g.height) / g.height).toFixed(2) + '%';
+    });
+  }
+  W.addEventListener('resize', function () { if (cur >= 0 && qs[cur]) { placeParts(qs[cur].sec); } });
   function neutralSpot(sec) {
     var ga = $('.ga', sec), r = ga.getBoundingClientRect();
     return { x: r.left + r.width * 0.83, y: r.top + r.height * 0.88 };
@@ -737,6 +764,7 @@
     screensOff();
     moveFig(q.sec);
     add(q.sec, 'on');
+    placeParts(q.sec);
     setPart(say('question', { n: i + 1, of: qs.length }));
     setGot();
     setBar(i);

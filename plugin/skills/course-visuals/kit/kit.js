@@ -83,7 +83,9 @@
     this.spec = spec;
     this.uid = 'kit' + (++UID);
     this.svg = host.namespaceURI === NS ? host : el('svg', {}, host);
-    this.svg.setAttribute('viewBox', '0 0 ' + size[0] + ' ' + size[1]);
+    /* "view": [x, y, w, h] shows a different window on the same canvas - a task page adds a band above and below
+       the drawing for its empty label boxes (compile/task_pages.py); a deck never sets it */
+    this.svg.setAttribute('viewBox', (spec.view && spec.view.length === 4 ? spec.view : [0, 0, size[0], size[1]]).join(' '));
     this.svg.setAttribute('role', 'img');
     this.svg.setAttribute('data-motion', 'teaching');
     if (spec.label) this.svg.setAttribute('aria-label', spec.label);
@@ -723,7 +725,19 @@
         return;
       }
       controls(fig, host.closest('[data-kit-scope]') || host.parentNode);
+      still(host, fig);
     });
+  }
+
+  /* TASK MODE (2.43.0): <svg data-kit="#spec" data-kit-step="3"> is drawn STILL, at the end of step 3 ("final" or empty
+     = the last step), with no step buttons - the same spec a deck plays, as a picture a trainee answers on. A static
+     figure is not a driven one, so it opens full screen like any picture (gb_zoom) */
+  function still(host, fig) {
+    if (!host.hasAttribute || !host.hasAttribute('data-kit-step')) return;
+    var want = host.getAttribute('data-kit-step'), n = /^\d+$/.test(want) ? +want : fig.steps();
+    fig.go(Math.min(n, fig.steps()), true);
+    host.removeAttribute('data-motion');
+    host.setAttribute('data-kit-still', '');
   }
   /* after kit_parts.js has had its turn to define parts, which loads after this file */
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', auto); else setTimeout(auto, 0);
