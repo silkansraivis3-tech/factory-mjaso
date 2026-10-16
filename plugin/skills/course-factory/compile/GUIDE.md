@@ -14,7 +14,7 @@ python scripts/check_script_match.py <course> --module 1 --part instructor  the 
 
 Then the usual checks: `check_navigation.py`, `check_course_package.py`, and in the browser the
 `audit_deck.js`, `audit_collide.js` and `audit_compose.js` probes — the compiler does not prove a layout
-fits, the audits do.
+fits, the audits do. The drawing check (`audit_drawing.js`) is the one the build runs itself (§2e).
 
 ## 1 · What goes where
 
@@ -131,9 +131,19 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
   "sp-tank", "box": [left, top, width]}}`.
 - **The page:** the course's first self-check opens with "try your tablet first" (`"try_tablet": false` on the task
   slide's entry to leave it out); a check opens with its pass mark (`"pass_mark": 70` at the top of the build sheet).
-- **Before showing it:** `check_script_match.py --part trainee`, `check_course_package.py`, and in the browser
-  `AuditDrawing.page()` on every question with a drawing - a drawing shared with the deck is checked again here,
+- **Before showing it:** `check_script_match.py --part trainee` and `check_course_package.py`. The drawings are
+  checked by the build itself (§2e), question by question - a drawing shared with the deck is checked again here,
   without its labels and at task size.
+
+## 2e · Every drawing checked at every build (L54, 2.35.0)
+
+Nothing poking out, nothing cut off, no crowded label, no drawing lost in empty space - **anywhere**, and not left to
+memory: after writing its pages `compile_module.py` opens each in a hidden Chrome or Edge at 1280 × 800 and runs
+`audit_drawing.js` on it (`drawing_check.py`) - the deck slide by slide, a task page question by question. Every
+finding is a problem to fix before the module is shown (exit 1), named by page, slide or question and part. A crossing
+that is meant is marked in the drawing (`data-may-cross`, `data-no-contain`, `data-may-overlap`), so the reason is
+written down. No Chrome or Edge: the build says it did not check. `--no-drawing-check` only while working on a drawing.
+`drawing_check.py <page.html> ...` checks any page by hand - a hand-built one too.
 - The screen's own words (Check, Next, Your score ...) are English for now; another course language is reported.
 
 ## 3 · When the look is not enough

@@ -1013,6 +1013,8 @@ def main(argv=None):
     ap.add_argument("--force", action="store_true", help="overwrite a deck or task page that was changed by hand")
     ap.add_argument("--only", choices=("all", "deck", "tasks"), default="all",
                     help="build only the deck, or only the trainee task pages (default: both)")
+    ap.add_argument("--no-drawing-check", action="store_true",
+                    help="skip the automatic drawing check (L54) - only while working on a drawing, never before showing")
     o = ap.parse_args(argv)
     o.course = workspace.work_folder(o.course, create=False)
     p = cs.paths(o.course, o.module)
@@ -1052,7 +1054,9 @@ def main(argv=None):
     figdir = os.path.join(o.course, workspace.CLAUDE, "figures", cs.mid(o.module))
     probs, notes = [], []
     rec.update({"script_hash": cs.content_hash(script), "plugin_version": plugin_version()})
+    written = []
     if o.only != "tasks":
+        written.append(out)
         page, probs, notes = compile_deck(script, build, mdir, figdir, plugin_version(), approved)
         os.makedirs(os.path.dirname(out), exist_ok=True)
         with io.open(out, "w", encoding="utf-8", newline="\n") as f:
@@ -1074,10 +1078,20 @@ def main(argv=None):
             with io.open(path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(page)
             rec[key] = sha(page)
+            written.append(path)
             print("Built the task page %s" % key)
         for x in left:
             print("  left as it is: %s" % x)
     cs.save(rec_path, rec)
+    # L54 - every drawing whole and clean: checked by itself on every page just written, never left to memory
+    if written and not o.no_drawing_check:
+        import drawing_check
+        dprobs, dnote = drawing_check.check(written, root=mdir)
+        if dnote:
+            print("\nNot checked: " + dnote)
+        else:
+            print("Drawing check (L54): %s" % ("%d problem(s)" % len(dprobs) if dprobs else "every drawing whole and clean"))
+        probs += dprobs
     if not approved:
         probs.insert(0, "the script is not approved - what was built is a preview only, never handed over")
     parts = [x for x in notes if x[0]]

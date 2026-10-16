@@ -73,7 +73,12 @@ def check(name, ok, detail=""):
 
 
 def run(*args):
-    p = subprocess.run([sys.executable] + list(args), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    """the fixtures' drawings are bare shapes, not L54-clean drawings: the drawing check runs only where a test asks
+    for it (--drawing-check), so every other test sees the build alone"""
+    args = list(args)
+    if args and args[0] == COMPILE:
+        args = [x for x in args if x != "--drawing-check"] if "--drawing-check" in args else args + ["--no-drawing-check"]
+    p = subprocess.run([sys.executable] + args, capture_output=True, text=True, encoding="utf-8", errors="replace")
     return p.returncode, p.stdout + p.stderr
 
 
@@ -120,7 +125,11 @@ def section(page, sid):
     return m.group(0) if m else ""
 
 
-GA = ('<svg viewBox="0 0 400 200" role="img"><path id="hull" d="M10 60 H390 V190 H10 Z"/>'
+GA = ('<svg viewBox="0 0 400 200" role="img"><path id="hull" d="M10 60 H390 V190 H10 Z" fill="#fff" stroke="#000"/>'
+      '<g fill="#eee" stroke="#000"><rect x="20" y="70" width="110" height="110"/><rect x="40" y="90" width="60" height="50"/>'
+      '<rect x="290" y="70" width="40" height="110"/><rect x="340" y="70" width="40" height="110"/>'
+      '<rect x="295" y="20" width="80" height="38"/><rect x="40" y="10" width="70" height="48"/>'
+      '<rect x="150" y="150" width="130" height="30"/><rect x="200" y="70" width="80" height="22"/></g>'
       '<g id="sp-tank" data-name="Fuel tank"><rect class="hit" x="200" y="100" width="80" height="50"/></g>'
       '<g id="sp-tcs" data-name="Tank connection space"><rect class="hit" x="150" y="100" width="40" height="40"/></g>'
       '<g id="sp-vent" data-name="Vent mast"><rect class="hit" x="230" y="5" width="10" height="55"/></g>'
@@ -230,6 +239,28 @@ def tasks_part(tmp):
     code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force")
     check("an answer the drawing does not name, with no box in the build sheet, is reported - never guessed",
           code == 1 and '"Funnel" is not on the drawing' in out, out)
+
+    # ---- L54 at every build: a part poking out is found by the build itself, on a task page as on a deck
+    sys.path.insert(0, HERE)
+    import drawing_check
+    if not drawing_check.find_browser():
+        print("  skip  no Chrome or Edge found - the automatic drawing check was not tried")
+        return
+    cs.save(sb, {"module": 1, "screens": {"q01": {"figure": "assets/fig/ga.svg", "areas": {"Funnel": [5, 5, 10, 20]}},
+                                          "m01": {"figure": "assets/fig/ga.svg"}}})
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force", "--drawing-check")
+    check("a clean drawing passes the automatic drawing check on every question that shows it",
+          "Drawing check (L54): every drawing whole and clean" in out, out)
+    bad = GA.replace('<rect class="hit" x="150"', '<rect x="2" y="150" width="60" height="40" stroke="#000" fill="#fff"/><rect class="hit" x="150"')
+    io.open(os.path.join(md, "assets", "fig", "ga.svg"), "w", encoding="utf-8").write(bad)
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force", "--drawing-check")
+    check("a room poking out of the hull is reported by the build itself, naming the page and the question",
+          code == 1 and re.search(r"tasks/sc1_the_spaces\.html, q01, .*inside - rect .*pokes out", out)
+          and re.search(r"assessment/check\.html, m01, .*inside", out), out)
+    io.open(os.path.join(md, "assets", "fig", "ga.svg"), "w", encoding="utf-8").write(
+        bad.replace('<rect x="2" y="150"', '<rect data-may-cross x="2" y="150"'))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force", "--drawing-check")
+    check("a crossing marked as meant (data-may-cross) is not a finding", "every drawing whole and clean" in out, out)
 
 
 def main():

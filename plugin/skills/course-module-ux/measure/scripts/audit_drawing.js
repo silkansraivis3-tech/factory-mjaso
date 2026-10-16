@@ -449,6 +449,17 @@
       var n0 = f.n;
       try { f.go(f.steps(), true); parts = geom.concat(painted(svg)); } finally { f.go(n0, true); }
     }
+    /* on a task, what is laid ON the drawing to answer (a tap area, an empty label box - absolutely placed, with
+       data-key or data-zone, as gb_zoom.js counts them) is content of the picture too: a band left for the label
+       boxes is not empty space */
+    var holder = svg.parentNode;
+    if (holder && holder.querySelectorAll) {
+      Array.prototype.forEach.call(holder.querySelectorAll("[data-key],[data-zone],[data-hotspot]"), function (el) {
+        if (el.parentNode !== holder || getComputedStyle(el).position !== "absolute") { return; }
+        var bb = el.getBoundingClientRect();
+        if (bb.width && bb.height) { mark(bb.left, bb.top, bb.right, bb.bottom); }
+      });
+    }
     parts.forEach(function (it) {
       var b = it.b, a = b.w * b.h;
       if (a >= 0.8 * fr.w * fr.h) { return; }                    /* a panel or background is not content */
