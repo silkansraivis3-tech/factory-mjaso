@@ -231,6 +231,10 @@ def tasks_part(tmp):
     check("choose all that are right: one key per option, 1 for each right one",
           ks.get("LNG") == cs.gb_key("q03", "LNG", 1) and ks.get("CNG") == cs.gb_key("q03", "CNG", 1)
           and ks.get("Coal") == cs.gb_key("q03", "Coal", 0) and 'class="opts multi"' in p)
+    check("... and its screen says data-multi=\"1\", so the engine keeps every option tapped, not only the last",
+          '<section class="scr" data-script="q03" data-mech="multi_select" data-multi="1">' in p,
+          re.search(r'<section[^>]*data-script="q03"[^>]*>', p).group(0) if re.search(r'<section[^>]*data-script="q03"[^>]*>', p) else p[:300])
+    check("a single-choice screen is not multi", re.search(r'data-script="m03" data-mech="single_choice">', io.open(mc, encoding="utf-8").read()) is not None)
     check("put in order: the key is the place, and the cards are not shown in order",
           ks.get("Transfer") == cs.gb_key("q04", "Transfer", 3)
           and [t for t, _ in keys_of(p) if t in ("Safety meeting", "Connect the hose", "Transfer", "Disconnect")]
