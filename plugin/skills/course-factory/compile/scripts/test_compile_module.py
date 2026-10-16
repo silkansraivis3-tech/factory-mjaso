@@ -258,10 +258,17 @@ def tasks_part(tmp):
           all(k.find(">%s<" % x) > 0 for x in ("q01", "q02", "q03", "q04", "q05", "m01", "m02", "m03"))
           and k.find(">q04<") < k.find(">q05<") < k.find(">m01<") and "It holds the tank valves." in k
           and 'href="../assets/gb_page.css"' in k and "Self-check SC1 – The spaces" in k and "<h2>Module check</h2>" in k, k[:600])
-    check("... each right answer in the script's words: the area, the lettered options, the order, the gap, the label places",
-          "<td>Tank connection space</td>" in k and "<b>A</b> – LNG<br><b>C</b> – CNG" in k
+    def shown(page, sid):                               # the options in the order the tablet shows them, lettered A, B ...
+        sec = re.search(r'data-script="%s".*?</section>' % sid, page, re.S).group(0)
+        return {t: chr(65 + i) for i, t in enumerate(html_unescape(x) for x in re.findall(r'class="opt"[^>]*>([^<]+)<', sec))}
+    l3, lm = shown(p, "q03"), shown(m, "m03")
+    want = sorted([(l3["LNG"], "LNG"), (l3["CNG"], "CNG")])
+    check("... each right answer in the script's words: the area, the options by the letter the tablet SHOWS (shuffled since "
+          "2.44.2), the order, the gap, the label places",
+          "<td>Tank connection space</td>" in k and "<br>".join("<b>%s</b> – %s" % x for x in want) in k
           and "1. Safety meeting<br>2. Connect the hose" in k and "LNG is stored at <b>[-162]</b> °C." in k
-          and "<b>B</b> – No, only in an emergency" in k and "Fuel preparation room: pumps and vaporizers" in k, k)
+          and "<b>%s</b> – No, only in an emergency" % lm["No, only in an emergency"] in k
+          and "Fuel preparation room: pumps and vaporizers" in k, (l3, lm, k[k.find("q03"):k.find("q03") + 400]))
     check("... how the pages mark: no pass mark on a self-check; the check's pass mark and what it needs",
           "no pass mark" in k and "Pass mark 70 %: 3 of 3 right = PASSED" in k, k)
     check("... and nothing in it a checker could take for a task page: no data-script, no data-key",
@@ -445,6 +452,9 @@ def figures_part(tmp):
     q03 = p.split('data-script="q03"')[1].split("</section>")[0]
     check("a picture beside a plain single-choice question: the photograph, then its choices",
           'data-pic="beside"' in q03 and q03.find("<img") < q03.find('class="opts"'), q03[:400])
+    fields = re.findall(r'data-script-field="(opt\.[A-Z])"', q03)
+    check("choose-one options are out of the script's order (a script writes the right one first) - the same order every build",
+          len(fields) > 1 and fields != sorted(fields), fields)
     q05 = p.split('data-script="q05"')[1].split("</section>")[0]
     check("compare: a picture over each column's choice", q05.count('class="cmpfig"') == 2 and q05.find("cmpfig") < q05.find('class="opt"'), q05[:500])
     # the kit drawing
@@ -452,6 +462,14 @@ def figures_part(tmp):
           'data-kit="#kit-task-' in q04 and 'data-kit-step="2"' in q04 and "mediabar" not in p and 'data-act=' not in p, q04[:500])
     check("one spec: the page ships kit.js and kit.css, like the panel's valves",
           '<script src="../assets/kit.js"></script>' in p and 'href="../assets/kit.css"' in p)
+    check("a module with no parts of its own loads no kit_parts.js on its task page", "kit_parts.js" not in p)
+    io.open(os.path.join(md, "assets", "kit_parts.js"), "w", encoding="utf-8").write("/* a course's new parts */")
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force")
+    pk = io.open(os.path.join(md, "tasks", "sc1_look_at_the_plant.html"), encoding="utf-8").read()
+    check("a course's own kit parts (assets/kit_parts.js) load on the task page after kit.js, as in the deck - else a "
+          "drawing using them says 'unknown part type' and its tap areas collapse (IGF M05 q02)",
+          'src="../assets/kit_parts.js"' in pk and pk.index("../assets/kit.js") < pk.index("../assets/kit_parts.js"), out)
+    os.remove(os.path.join(md, "assets", "kit_parts.js"))
     spec = json.loads(re.search(r'<script type="application/json" id="kit-task-[^"]+">(.*?)</script>', q04, re.S).group(1))
     check("\"unlabel\": \"all\" takes every word off the drawing (the answers' words) - the parts stay, the caption goes",
           not any(k in pt for pt in spec["parts"] for k in ("label", "caption", "title", "tag")) and len(spec["parts"]) == 3

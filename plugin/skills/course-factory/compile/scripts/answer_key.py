@@ -86,10 +86,15 @@ WORDS = {"en": {
 assert all(set(WORDS[k]) == set(WORDS["en"]) for k in WORDS), "every language has every word"
 
 
-def lettered(q, which=None):
-    """'B – the words' for the options marked right - the letters the trainee sees (options are never shuffled)"""
-    opts, right = q.get("options", []), which or cs.correct_letters(q)
-    return ["<b>%s</b> – %s" % (L, e(o)) for L, o in zip(cs.letters(len(opts)), opts) if L in right]
+def lettered(q, shown=True):
+    """'B – the words' for the options marked right, by the letter the TRAINEE SEES: the tablet shows the options
+    shuffled (task_pages.opt_buttons, 2.44.2) and the engine letters them in that order (gb_answer.js letterAll) - the
+    same deterministic order is worked out here. shown=False: the script's order (a compare table's columns)"""
+    opts, right = q.get("options", []), cs.correct_letters(q)
+    pairs = list(zip(cs.letters(len(opts)), opts))
+    if shown:
+        pairs = tp.shuffle(q["id"], pairs, key=lambda x: x[1])
+    return ["<b>%s</b> – %s" % (S, e(o)) for S, (L, o) in zip(cs.letters(len(pairs)), pairs) if L in right]
 
 
 def accepted(q, b, w):
@@ -113,8 +118,10 @@ def accepted(q, b, w):
 def right_answer(q, b, w):
     """the right answer of one question as lines of HTML, in the words of the approved script"""
     m, ls = cs.mech(q), cs.lines_of(q.get("answer"))
-    if m in ("single_choice", "multi_select", "read_instrument", "compare"):
+    if m in ("single_choice", "multi_select", "read_instrument"):
         return lettered(q)
+    if m == "compare":                                  # its columns stay in the script's order
+        return lettered(q, shown=False)
     if m == "choose_and_justify":
         return lettered(q) + [w["because"].format(x=e(cs.unstar(x))) for x in ls if cs.starred(x)]
     if m in ("hotspot", "spot_the_hazard"):
