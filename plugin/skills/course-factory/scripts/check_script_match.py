@@ -29,6 +29,10 @@ its field:
     the page) the right answer is not data-correct but data-key="<gbKey(screen id, its text, 1)>" - wrong ones
     carry the key with 0 (content_script.gb_key; classroom-system.json task_page.answer_keys). Both are read.
 
+    Operate the panel (2.38.0) shows each control with every position it can take, not only the one the script says
+    it must end in: a position is marked data-state, and those extra words are the panel's own, not compared. Any
+    other word the script does not have is still a finding.
+
 WHAT IT CHECKS
   1  the script is approved, and has not changed since it was approved
   2  every screen in the script is built somewhere in the module folder, and nothing else claims a
@@ -50,6 +54,7 @@ import json
 import os
 import re
 import sys
+from collections import Counter
 from html.parser import HTMLParser
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -100,7 +105,8 @@ class Collect(HTMLParser):
                 sid = self._ctx()[0]
                 if sid in self.screens:
                     self.screens[sid]["fields"].setdefault(a["data-script-field"], []).append("")
-                    self.screens[sid]["flags"].setdefault(a["data-script-field"], []).append((a.get("data-correct"), a.get("data-key")))
+                    self.screens[sid]["flags"].setdefault(a["data-script-field"], []).append(
+                        (a.get("data-correct"), a.get("data-key"), "data-state" in a))
 
     def handle_endtag(self, tag):
         for i in range(len(self.stack) - 1, -1, -1):
@@ -124,7 +130,7 @@ class Collect(HTMLParser):
 def marked_right(sid, got, field):
     """which pieces of one field are marked right: data-key = gbKey(id, text, 1), or (the factory's own QA copy) data-correct"""
     out = []
-    for text, (dc, dk) in zip(got["fields"].get(field, []), got["flags"].get(field, [])):
+    for text, (dc, dk, _) in zip(got["fields"].get(field, []), got["flags"].get(field, [])):
         out.append(dk.strip().lower() == cs.gb_key(sid, norm(text), 1) if dk else dc == "true")
     return out
 
@@ -194,6 +200,13 @@ def main(argv=None):
             if cs.uses(s, "answer") and cs.mech(s) != "set_value":
                 items, right = cs.answer_items(s)
                 built = fields.get("answer", [])
+                if cs.mech(s) == "panel_operate":
+                    # a control is shown with every position it can be put in (data-state), not only the one it must
+                    # end in - those other positions are the panel's own words, so they are not compared
+                    states = Counter(t for t, f in zip(built, got["flags"].get("answer", [])) if f[2])
+                    extra = Counter(built) - Counter(norm(x) for x in items)
+                    if not extra - states:
+                        built = list((Counter(built) - extra).elements())
                 if sorted(norm(x) for x in items) != sorted(built):
                     probs.append("%s in %s: the answer's items are not the approved ones - approved: \"%s\" / built: \"%s\"" % (
                         where, got["file"], " / ".join(norm(x) for x in items), " / ".join(built) or "(missing)"))

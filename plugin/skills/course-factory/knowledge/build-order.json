@@ -105,7 +105,7 @@
       "n": 10,
       "step": "task pages",
       "owner": "course-factory/compile (compile_module.py, task_pages.py) - building course-task-ux's standard",
-      "does": "the trainee task pages the screens will announce, compiled from the approved script's questions with the one shared task engine (gb_answer.js). A way of answering the compiler does not build yet is left as it is and said so - that page alone is made by hand to course-task-ux",
+      "does": "the trainee task pages the screens will announce, compiled from the approved script's questions with the one shared task engine (gb_answer.js) - every way of answering a script can hold (2.38.0), so no task page is made by hand",
       "rule": "BEFORE the deck announces them - a screen announcing a task the tablet lacks is the worst failure in the room. compile_module.py builds the pages and the deck in one run, and compile_course.py reports any task slide whose page is missing"
     },
     {

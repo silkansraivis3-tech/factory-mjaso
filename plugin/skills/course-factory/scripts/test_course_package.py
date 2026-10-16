@@ -262,6 +262,15 @@ def main():
         broken("a task page with a picture and no picture viewer", lambda b: w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
                io.open(os.path.join(c, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"), encoding="utf-8").read()
                .replace("<script src=\"../assets/gb_zoom.js\"></script>", "")), "sc1_keeping_the_cargo_liquid.html shows pictures but does not load gb_zoom.js")
+        ring = os.path.join(tmp, "ring_only", "modules")              # 2.38.0: the result ring is not a picture
+        shutil.copytree(c, ring)
+        w(os.path.join(ring, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
+          io.open(os.path.join(c, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"), encoding="utf-8").read()
+          .replace("<img src=\"../assets/img/hull.jpg\">", "<svg viewBox=\"0 0 190 190\" aria-hidden=\"true\" data-no-zoom></svg>")
+          .replace("<script src=\"../assets/gb_zoom.js\"></script>", "").replace("<link rel=\"stylesheet\" href=\"../assets/gb_zoom.css\">", ""))
+        code, out = run(ring, "--no-importer")
+        check("a page whose only svg is marked data-no-zoom (the result ring, a control's symbol) needs no picture viewer",
+              "sc1_keeping_the_cargo_liquid.html shows pictures" not in out, out)
         own = os.path.join(tmp, "own_way")
         shutil.copytree(master, own)
         w(deck(os.path.join(own, "course", "modules")), src.replace(RECAP, ""))

@@ -82,6 +82,7 @@ course-factory/
 ├── compile/GUIDE.md                      READ IN: building the deck from the approved script (2.25.0)
 ├── compile/scripts/compile_module.py, test_compile_module.py   the deck built, never typed; build sheet; hand edits never overwritten
 ├── compile/scripts/compile_course.py, test_compile_course.py   COURSE.html, course_map.js, every module's start pages (2.37.0)
+├── compile/scripts/task_pages.py, test_task_engine.py   every trainee task page, all 19 ways of answering; the engine driven in Chrome (2.38.0)
 ├── hours/                                READ IN: plan mode, and audit
 │   ├── GUIDE.md
 │   ├── knowledge/hours-rules.json        every number and rule (authority)
@@ -821,6 +822,32 @@ built pages, same course ID. Step 5: `build-order.json` steps 8, 10, 11, 15, `or
 agents table) and `orchestration/workflows/build_course.js` send a module agent through script → approval → build
 sheet → compile, writing no HTML and loading no HTML rules: ≈ 80,800 → 38,500 tokens of rules per module agent
 (measured, size ÷ 4). `test_compile_course.py` 21 checks.
+
+## 4zh · Every way of answering compiled (2.38.0, 2026-10-16)
+
+Any answer type the compiler could not build forced a hand-made page, which broke the one-look / one-engine rule.
+`compile/scripts/task_pages.py` now builds all nineteen of `media-and-tasks.json` - exactly what `content_script.py`
+accepts (`BUILT == set(USES)`, asserted). The ten new ones: **complete the sentence** (tap a gap, its choices below; a
+wrong gap turns amber with the right words), **choose the action, then the reason** (two columns, one Check),
+**scenario** (one part per step, each with its own Check and a Go on), **set the value** (a dial: drag, tap, - / +;
+the step from the tolerance or `"step"`; one key per accepted step), **find the fault** (symptoms, a card per part to
+turn over, "This is the fault"), **spot the errors** (the document as written, tap a line to flag it, the why after
+the Check), **build the plan** (numbered slots, cards that do not belong stay in the bank - `data-key` 1/0 and
+`data-place`), **rebuild the incident** (the order, then tap where it should have stopped), **compare** (columns, a
+column chosen by its name or any figure) and **operate the panel** (every position of each control, the opposites
+known in en / lv / ru or `"states"` in the build sheet; a valve or pump drawn by the figure kit follows the choice).
+The engine `gb_answer.js` gained parts and groups (choose, place, dial, stop) and keeps the old markup working. A
+place on a drawing may now be a straight-line `path.hit` in a `translate()`d group, or an element id in `"areas"`.
+
+Checkers fixed, each with a test: `check_script_match.py` lets a panel show a control's other positions
+(`data-state`) and still catches any other extra word; `check_task_pages.py` reads `data-kit="#id"` as a reference and
+leaves the ids inside a compiled-in drawing (`svg.taskfig`) to the drawing; `check_course_package.py` no longer counts
+an svg marked `data-no-zoom` (the result ring) as a picture needing the viewer.
+
+Proof: `test_compile_module.py` (a fixture with all ten, keys and markup), `test_task_engine.py` (the page answered in
+headless Chrome: 10 of 10 right; 5 of 10 with five wrong and each reveal), and a copy of the IGF pilot: every set of
+M01-M03 compiled, nothing left as it is, `check_script_match` clean per module - after its build sheets were given the
+task drawings the pilot's hand pages had inlined (the pilot's own build sheets still need that step).
 
 ## 5 · Known gaps / before this goes live
 

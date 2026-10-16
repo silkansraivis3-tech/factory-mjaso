@@ -197,7 +197,11 @@ the items `content_script.answer_items` lists, and the right ones carry their `d
 | **Spot the errors** | The filled-in document as it looks on board - a permit, a log page, a checklist, a loading plan - one line per row, large type. **Tap a line to flag it**, tap again to unflag; **Check** at the bottom. | every wrong line flagged and nothing else; each wrong line then shows its *why* |
 | **Build the plan** | A bank of shuffled cards below, an empty plan with numbered slots above. Drag (or tap a card, then a slot) to build the plan; cards that do not belong stay in the bank. | the right cards in the right order; a card that does not belong, when placed, says why |
 | **Rebuild the incident** | Shuffled event cards; first put them in order (as *order*); once the order is right, the cards stay and the question changes: **tap where it should have been stopped**. | the order, then the stop point - two parts, each with its own Check |
-| **Compare** | The options side by side as columns - their names on top, one row per figure, the figures large and aligned; under each column a big **Choose** button. | the right option chosen; the feedback names the figures that decide it |
+| **Compare** | The options side by side as columns - one row per figure, the figures large and aligned; each column's name on top is its big **Choose** button, and a tap on any figure of the column chooses it too. | the right option chosen; the feedback names the figures that decide it |
+
+**All nineteen are compiled** (course-factory 2.38.0): `compile/scripts/task_pages.py` builds each from the approved
+script and the one shared engine, `assets/gb_answer.js` + `gb_answer.css`, grades it - a question is one or more parts,
+each with its own Check (a scenario's steps; the incident's order, then its stop point). No task page is made by hand.
 
 None of them hides information the trainee needs to answer: the readings in *find the fault* are one tap away and
 stay turned over; nothing is timed; a wrong answer is never an error message - it is a hint and another try (§1, L42).

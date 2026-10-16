@@ -78,9 +78,15 @@ course-task-ux/
 │   ├── kbd_escape.css           the Done pill (§5). Genericised from gb_kbd.css
 │   ├── kbd_escape.js            three routes out of the soft keyboard (§5)
 │   ├── task_complete.css        the completion panel (§9). From gb_done.css
-│   └── task_complete.js         one shared ending for every task (§9)
+│   ├── task_complete.js         one shared ending for every task (§9)
+│   ├── gb_answer.js / .css      the ONE engine of every compiled task page: all 19
+│   │                            ways of answering, parts with their own Check, the
+│   │                            dial, the panel (course-factory 2.34.0, 2.38.0)
+│   └── gb_task.css              the answer states every task page shares
 └── scripts/
     ├── check_task_pages.py      five static sweeps; exit 0 / 1 / 2 / 3
+    ├── test_check_task_pages.py what the dead-markup sweep may not judge: a data-kit
+    │                            reference, a compiled-in drawing's ids (2.38.0)
     └── measure_in_page.js       pasted into the browser console; the geometry,
                                  type-size and contrast half of §11
 ```

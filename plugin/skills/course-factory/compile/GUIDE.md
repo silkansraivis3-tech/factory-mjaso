@@ -128,13 +128,26 @@ grading by `data-key`, the result ring, PASSED / NOT PASSED and the classroom me
 are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-task-ux/assets, installed by
 `design_system.py` like `gb_deck.js`) - promoted from the IGF pilot's Module 1. `--only tasks` builds only these.
 
-- **Built:** single_choice, multi_select, read_instrument, hotspot, spot_the_hazard, match, categorise, label_diagram,
-  order. A set using any other way of answering, or a team task, is **left as it is** and named in the output.
+- **Built: all nineteen ways of answering** an approved script can hold (2.38.0) - single_choice, multi_select,
+  read_instrument, hotspot, spot_the_hazard, match, categorise, label_diagram, order, and cloze, choose_and_justify,
+  scenario, set_value, find_the_fault, spot_the_error, build_the_plan, timeline, compare, panel_operate. No trainee
+  task page is made by hand any more; the one engine grades them all, tap and drag only (L38, L42).
 - **On a picture** (hotspot, spot_the_hazard, label_diagram, read_instrument) the build sheet names the drawing, keyed
   by the question's id: `"q01": {"figure": "assets/fig/m01_ga.svg"}`. Each answer's place is found by itself - the
-  drawing's element with `data-name` equal to the answer's words, and in it the shape of class `hit` (rect or circle),
-  grown to a 56 px tap target. What the drawing does not name gets a box: `"areas": {"Funnel": [left, top, width,
-  height]}` in % of the drawing - never guessed. The drawing's own labels (`#labels`, `[data-task-hide]`) are hidden.
+  drawing's element with `data-name` equal to the answer's words, and in it the shape of class `hit` (rect, circle,
+  or a path of straight lines; a group's `translate()` is followed), grown to a 56 px tap target. What the drawing
+  does not name gets a box: `"areas": {"Funnel": [left, top, width, height]}` in % of the drawing, or the id of its
+  element: `"areas": {"Accommodation": "hs-acc"}` - never guessed. The drawing's own labels (`#labels`,
+  `[data-task-hide]`) are hidden.
+- **Beside a picture** (set_value, find_the_fault, panel_operate) a drawing is optional: `"figure"` shows it above
+  the task. **Set the value** is a dial from the range's low to its high end; its step is the tolerance when the value
+  falls on it, else the largest round step under it that does (or `"step": 0.5`); one key per accepted step. **Operate
+  the panel** shows every position a control can take: the opposite of the one it must end in (open / closed,
+  running / stopped, on / off, auto / manual ... in en, lv and ru), or `"states": {"Purge mode": ["Off", "Sweep",
+  "Hold"]}`; a control may start in a position: `"start": {"Vent fan": "stopped"}`. A valve or a pump is drawn by the
+  figure kit and follows the position chosen. A control whose positions are not known is reported, never guessed.
+- **Two-part questions** - a scenario's steps, the incident's order and then its stop point - have a Check for each
+  part; the question is right when every part is.
 - **Label the drawing:** the compiler adds a band above and below the drawing for the empty label boxes, so no box
   covers what is drawn, with a leader line to each place. Or place them yourself: `"labels": {"Fuel tank": {"at":
   "sp-tank", "box": [left, top, width]}}`.
@@ -194,5 +207,5 @@ from what is already approved and built, nothing new:
 - A module agent never runs it: two agents writing `COURSE.html` is a lost write no test catches
   (`orchestration/GUIDE.md` Rule 3).
 
-Not built yet: the other ways of answering, team task pages, the task screen's and the start pages' words in other
-languages (next steps of the proposal).
+Not built yet: team task pages, the task screen's and the start pages' words in other languages (next steps of the
+proposal).

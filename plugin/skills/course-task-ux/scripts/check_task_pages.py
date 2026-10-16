@@ -236,6 +236,10 @@ def check_deadmarkup(html_files, ctx):
 
     # --- ids that nothing reads -------------------------------------------
     for page, html in html_bodies.items():
+        # a drawing the compiler placed in the page (svg.taskfig) is the course's shared figure file, the same one the
+        # deck shows: its ids are the drawing's own names (the places a label goes, what the drawing check reports),
+        # not the page's markup - they are judged where the drawing is made, not here
+        html = re.sub(r"""<svg\b[^>]*\bclass\s*=\s*["'][^"']*\btaskfig\b.*?</svg\s*>""", _mask, html, flags=re.S | re.I)
         for m in re.finditer(r"""\bid\s*=\s*["']([^"'\s]+)["']""", html):
             ident = m.group(1)
             if re.search(r"[#.\[\]{}]", ident):
@@ -245,6 +249,9 @@ def check_deadmarkup(html_files, ctx):
                 re.search(r"#" + re.escape(ident) + r"\b", all_js) or
                 re.search(r"""["']#?""" + re.escape(ident) + r"""["']""", all_js) or
                 re.search(r"""\bhref\s*=\s*["'][^"']*#""" + re.escape(ident)
+                          + r"""["']""", all_html) or
+                # a selector handed to a script in markup: <svg data-kit="#spec-id"> (course-visuals/kit)
+                re.search(r"""\bdata-[\w-]+\s*=\s*["']#""" + re.escape(ident)
                           + r"""["']""", all_html) or
                 re.search(r"""\b(?:for|aria-\w+|form|list|headers)\s*=\s*["'][^"']*\b"""
                           + re.escape(ident) + r"""\b""", all_html))
