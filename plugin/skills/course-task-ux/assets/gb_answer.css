@@ -1,0 +1,214 @@
+/* ==========================================================================
+   gb_answer.css - the screens of every compiled trainee task page (gb_answer.js).
+   Promoted from the IGF pilot's m01_tasks.css (2.34.0), so every module's tasks look alike.
+   Loads AFTER gb_tokens.css, gb_page.css, gb_task.css and only adds what they do not
+   have: the 1280 x 800 landscape layout, the 56 px controls (course-task-ux section 0),
+   tap-the-picture areas, drag-and-drop chips with their tap-then-tap state, the
+   "show the gesture" hand and the result ring. Every colour is a token.
+   ========================================================================== */
+
+body{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+  overflow-x:hidden;min-height:100vh;display:flex;flex-direction:column}
+body>.wrap{flex:1 0 auto;width:100%}
+/* the Android Back button clicks this link; it is not shown in the classroom frame */
+.gbt-topback{display:none}
+
+/* ---- frame ------------------------------------------------------------- */
+.state{top:0;min-height:58px;padding:8px 24px}
+.state .part{font-size:18px}
+.state .got{font-size:18px;color:var(--dim-l)}
+.wrap{max-width:1280px;padding:8px 20px 14px}
+.scr{display:none}
+.scr.on{display:block;animation:gban-in .22s ease-out}
+@keyframes gban-in{from{transform:translateY(10px)}to{transform:none}}
+
+.q{display:flex;align-items:center;gap:12px;margin:6px 0 10px;font-size:20px;line-height:1.35}
+.q .num{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:50%;background:var(--navy);color:var(--white);
+  font-size:17px;font-weight:700}
+.q .stem{font-weight:700;color:var(--navy);font-size:20px}
+
+/* the dock: one big button, always in the same place */
+.dock{position:sticky;bottom:0;z-index:30;padding:10px 24px;background:var(--white);
+  border-top:2px solid var(--line-l)}
+.dock .sub{max-width:1180px;margin:0 auto;min-height:58px;font-size:20px}
+.dock.off{display:none}
+.sub.next{background:var(--blue);border-color:var(--blue);color:var(--on-blue)}
+.sub[disabled]{opacity:.45}
+
+/* what the trainee did is told at once, then explained */
+.why{display:flex;gap:12px;align-items:baseline;visibility:hidden;min-height:74px;
+  margin:10px 0 0;padding:12px 16px;font-size:17px}
+.why.on{display:flex;visibility:visible}
+.why .vd{flex:0 0 auto;font-size:18px;color:var(--navy)}
+.why.good .vd{color:var(--good)}
+.why.bad .vd{color:var(--warn)}
+.why p{margin:0;line-height:1.45}
+
+/* ---- choose one, choose all that are right, read the instrument ---------- */
+.opts{counter-reset:o;max-width:1040px;margin:4px auto 0;gap:10px}
+.opt{position:relative;min-height:64px;padding:12px 18px;font-size:19px;line-height:1.35}
+.opt::before{counter-increment:o;content:counter(o,upper-alpha);flex:0 0 auto;width:38px;
+  height:38px;border-radius:50%;border:2px solid var(--steel);color:var(--navy);
+  display:inline-flex;align-items:center;justify-content:center;font-size:17px;font-weight:700}
+.opt.sel::before{background:var(--blue);border-color:var(--blue);color:var(--on-blue)}
+.opt.right::before{background:var(--good);border-color:var(--good);color:var(--white)}
+.opt.wrong::before{background:var(--warn);border-color:var(--warn);color:var(--white)}
+/* choose all that are right: a square box that takes a tick */
+.opts.multi .opt::before{content:"";border-radius:8px}
+.opts.multi .opt.sel::before,.opts.multi .opt.right::before{content:"\2713"}
+.opts.multi .opt.wrong::before{content:"\2715"}
+.opts-say{margin:0 auto 6px;max-width:1040px;font-size:17px;color:var(--dim-l)}
+/* read the instrument: the picture above its choices */
+.instrument{max-width:1040px;margin:0 auto 10px}
+.instrument .ga{--gaw:min(100%,calc((100vh - 470px) * var(--ar,1.6)))}
+
+/* ---- the drawing and its tappable areas --------------------------------- */
+.stage{position:relative}
+.ga{--gaw:min(100%,calc((100vh - 300px) * var(--ar,2.575)));position:relative;width:var(--gaw);
+  margin:0 auto;border-radius:var(--r-m);box-shadow:0 0 0 1px var(--line-l)}
+.ga.lab{--gaw:min(100%,calc((100vh - 400px) * var(--ar,2.575)))}
+.ga svg.taskfig,.ga img.taskfig{display:block;width:100%;height:auto;background:var(--white);border-radius:var(--r-m)}
+/* a drawing shared with the deck keeps its labels there; in a task they would give the answer away */
+.ga svg.taskfig #labels,.ga svg.taskfig [data-task-hide]{display:none}
+.ga .leaders{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+.ga .leaders line{stroke:var(--navy);stroke-width:2;stroke-dasharray:6 4}
+.ga .leaders circle{fill:var(--navy)}
+.hot{position:absolute;display:block;padding:0;margin:0;border:2px dashed var(--blue2);
+  border-radius:12px;background:transparent;cursor:pointer;font:16px var(--font);
+  transition:background .1s,border-color .1s}
+.hot:active{background:var(--blue-wash-l);mix-blend-mode:multiply}
+.hot.sel{border:4px solid var(--blue);background:var(--blue-wash-l);mix-blend-mode:multiply}
+.hot.right{border:4px solid var(--good);background:var(--good-wash-l);mix-blend-mode:multiply}
+.hot.wrong{border:4px solid var(--warn);background:var(--warn-wash-l);mix-blend-mode:multiply}
+.hot.right::after,.hot.wrong::after{position:absolute;right:4px;top:2px;width:26px;height:26px;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;
+  font-weight:700;color:var(--white);mix-blend-mode:normal}
+.hot.right::after{content:"\2713";background:var(--good)}
+.hot.wrong::after{content:"\2715";background:var(--warn)}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ---- drag and drop (and tap, then tap) ----------------------------------- */
+.tray{display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;min-height:80px;
+  margin:10px 0;padding:10px;border:2px dashed var(--line-l);border-radius:var(--r-m);
+  background:var(--white)}
+.chip{display:inline-flex;align-items:center;gap:10px;min-height:58px;max-width:100%;
+  padding:8px 16px 8px 12px;border:2px solid var(--steel);border-radius:var(--r-m);
+  background:var(--white);color:var(--ink);font:600 17px/1.25 var(--font);text-align:left;
+  cursor:grab;touch-action:none;box-shadow:0 3px 0 var(--line-l);position:relative}
+.chip::before{content:"";flex:0 0 auto;width:14px;height:24px;opacity:.7;
+  background:radial-gradient(circle,var(--steel) 2px,transparent 2.6px) 0 0/7px 8px}
+.chip:active{transform:translateY(1px)}
+.chip.sel{transform:translateY(-4px);border-color:var(--blue);background:var(--blue-wash-l);
+  box-shadow:var(--sh)}
+.chip.lifted{opacity:.35}
+.chip.snap{animation:gban-snap .28s ease-out}
+@keyframes gban-snap{0%{transform:scale(.9)}60%{transform:scale(1.04)}100%{transform:none}}
+.chip.right{border-color:var(--good);background:var(--good-wash-l);box-shadow:none}
+.chip.right::after{content:"\2713";margin-left:auto;padding-left:8px;font-weight:700;color:var(--good)}
+.chip.fixed{border-color:var(--amber);background:var(--amber-wash-l);box-shadow:none}
+.chip.fixed::after{content:"\21BB";margin-left:auto;padding-left:8px;font-weight:700;color:var(--amber-ink)}
+.ghost{position:fixed;z-index:60;margin:0;pointer-events:none;box-shadow:var(--sh);
+  transform:scale(1.04) rotate(-1.5deg);background:var(--blue-wash-l);border-color:var(--blue)}
+.zone.over,.tray.over{border-color:var(--blue);background:var(--blue-wash-l)}
+.armed .zone,.armed .tray{border-color:var(--blue)}
+.locked .chip,.locked .opt,.locked .hot,.locked .zone,.locked .tray{pointer-events:none}
+.locked .chip{cursor:default}
+/* data-motion="affordance" - the one short shake tells the trainee an answer was not right; it never loops */
+.shake{animation:gban-shake .4s ease-in-out}
+@keyframes gban-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+/* match: names stay, descriptions are dragged next to them; put in order: numbered places */
+.rows{display:grid;gap:10px;margin:4px 0 0}
+.row{display:grid;grid-template-columns:300px 1fr;gap:12px;align-items:stretch}
+.row .name{display:flex;align-items:center;min-height:64px;padding:10px 16px;
+  border-radius:var(--r-m);background:var(--navy);color:var(--white);font:700 18px/1.25 var(--font)}
+.rows.order .row{grid-template-columns:64px 1fr}
+.rows.order .name{justify-content:center;padding:0;font-size:22px}
+.slot{display:flex;align-items:center;min-height:64px;padding:4px;
+  border:2px dashed var(--blue2);border-radius:var(--r-m);background:var(--white)}
+.slot .chip{width:100%}
+
+/* categorise: the groups side by side */
+.grps{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:6px 0 0}
+.grp{border:2px solid var(--navy);border-radius:var(--r-m);background:var(--white);overflow:hidden}
+.grp .gname{padding:10px 14px;background:var(--navy);color:var(--white);font:700 18px/1.25 var(--font)}
+.grp .zone{display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;min-height:130px;
+  padding:10px;border:0;border-radius:0}
+
+/* label the drawing: empty boxes on the drawing */
+.lbox{position:absolute;height:56px;padding:0;border:2px dashed var(--navy);
+  border-radius:12px;background:var(--white);display:flex}
+.lbox .chip{width:100%;height:100%;min-height:0;padding:2px 8px;gap:6px;font-size:16px;
+  line-height:1.15;box-shadow:none}
+.lbox .chip::before{display:none}
+.lbox.zone.over{border-color:var(--blue);background:var(--blue-wash-l)}
+
+/* ---- the gesture hint: a hand that shows it once ------------------------ */
+.hand{position:fixed;left:0;top:0;z-index:70;width:56px;height:56px;pointer-events:none;
+  opacity:0;transition:transform .9s ease-in-out,opacity .25s}
+.hand svg{display:block;width:56px;height:56px;transition:transform .15s}
+.hand.press svg{transform:scale(.86)}
+.dghost{position:fixed;left:0;top:0;z-index:65;pointer-events:none;opacity:0;
+  border:2px solid var(--blue);border-radius:var(--r-m);background:var(--blue-wash-l);
+  transition:transform .9s ease-in-out,opacity .25s}
+.rip{position:fixed;z-index:66;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;
+  border:3px solid var(--blue);pointer-events:none;animation:gban-rip .6s ease-out forwards}
+@keyframes gban-rip{from{transform:scale(.6);opacity:1}to{transform:scale(3.2);opacity:0}}
+
+/* ---- first screen of the course: try the tablet -------------------------- */
+.try{display:grid;gap:14px;max-width:1040px;margin:10px auto 0}
+.try-step{position:relative;display:flex;align-items:center;gap:22px;min-height:130px;
+  padding:16px 24px;border:2px solid var(--line-l);border-radius:var(--r-l);background:var(--white)}
+.try-step .txt{font-size:20px;line-height:1.4;color:var(--ink)}
+.try-step .txt b{color:var(--navy)}
+.try-step .tick{margin-left:auto;display:flex;align-items:center;justify-content:center;
+  width:56px;height:56px;border-radius:50%;background:var(--good);color:var(--white);
+  font-size:30px;font-weight:700;visibility:hidden}
+.try-step.done{border-color:var(--good);background:var(--good-wash-l)}
+.try-step.done .tick{visibility:visible}
+.try-tap{flex:0 0 auto;width:96px;height:96px;border-radius:50%;border:0;background:var(--blue);
+  box-shadow:var(--sh);cursor:pointer}
+.try-tap:active{transform:scale(.94)}
+.try-drop{display:flex;align-items:center;gap:18px;flex:0 0 auto}
+.try-drop .tray{margin:0;min-width:200px;min-height:80px}
+.try-drop .slot{min-width:200px;min-height:80px;justify-content:center}
+.try-arrow{font-size:30px;color:var(--steel)}
+.try-hello{margin:6px 0 0;text-align:center;font-size:19px;color:var(--good-d);font-weight:700;
+  visibility:hidden}
+.try-hello.on{visibility:visible;color:var(--good)}
+
+/* ---- start of a check ---------------------------------------------------- */
+.intro{max-width:900px;margin:18px auto 0;padding:22px 28px;border:2px solid var(--line-l);
+  border-radius:var(--r-l);background:var(--white);font-size:20px;line-height:1.55}
+.intro p{margin:0 0 10px}
+.intro .pass{display:inline-block;padding:4px 14px;border-radius:99px;background:var(--blue-wash-l);
+  border:1px solid var(--blue);color:var(--navy);font-weight:700}
+
+/* ---- result -------------------------------------------------------------- */
+.res{max-width:1000px;margin:14px auto 0}
+.res-top{display:flex;align-items:center;gap:36px;padding:20px 28px;border-radius:var(--r-l);
+  background:var(--white);border:2px solid var(--line-l)}
+.ring{flex:0 0 auto;width:190px;height:190px;position:relative}
+.ring svg{width:190px;height:190px;transform:rotate(-90deg)}
+.ring .trk{fill:none;stroke:var(--grey);stroke-width:16}
+.ring .arc{fill:none;stroke:var(--blue);stroke-width:16;stroke-linecap:round;
+  transition:stroke-dashoffset 1.1s ease-out}
+.ring.pass .arc{stroke:var(--good)}
+.ring .num{position:absolute;left:0;top:0;width:100%;height:100%;display:flex;
+  align-items:center;justify-content:center;font:700 44px/1 var(--font);color:var(--navy)}
+.res-top h1{margin:0 0 6px;font-size:30px}
+.res-top .badge{display:inline-block;margin:0 0 8px;padding:6px 20px;border-radius:99px;
+  font-size:26px;font-weight:700;letter-spacing:.04em;color:var(--white);background:var(--good)}
+.res-top .badge.no{background:var(--warn)}
+.res-top p{margin:0 0 6px;font-size:19px;line-height:1.45}
+.res ol{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+.res li{display:flex;align-items:center;gap:14px;min-height:56px;padding:8px 16px;
+  border-radius:var(--r-m);background:var(--white);border:1px solid var(--line-l);font-size:17px}
+.res li i{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:32px;
+  height:32px;border-radius:50%;font-style:normal;font-weight:700;color:var(--white);
+  background:var(--good)}
+.res li.no i{background:var(--warn)}
+.res li.skip i{background:var(--faint-l)}
+#again{max-width:420px;margin:16px auto 0}

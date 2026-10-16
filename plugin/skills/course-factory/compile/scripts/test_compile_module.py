@@ -120,6 +120,118 @@ def section(page, sid):
     return m.group(0) if m else ""
 
 
+GA = ('<svg viewBox="0 0 400 200" role="img"><path id="hull" d="M10 60 H390 V190 H10 Z"/>'
+      '<g id="sp-tank" data-name="Fuel tank"><rect class="hit" x="200" y="100" width="80" height="50"/></g>'
+      '<g id="sp-tcs" data-name="Tank connection space"><rect class="hit" x="150" y="100" width="40" height="40"/></g>'
+      '<g id="sp-vent" data-name="Vent mast"><rect class="hit" x="230" y="5" width="10" height="55"/></g>'
+      '<g id="labels"><text x="200" y="195">Fuel tank</text></g></svg>')
+TASKS = [
+    {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the spaces", "text": "Self-check on your tablet now.", "minutes": 4},
+    {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the tank connection space.",
+     "visual": "the GA", "answer": "Tank connection space*\nFuel tank\nFunnel", "feedback": "It holds the tank valves."},
+    {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "match", "question": "Match each space to what it holds.",
+     "answer": "Fuel preparation room = pumps and vaporizers\nTank connection space = the tank valves\nVent mast = the vapour outlet",
+     "feedback": "Each space has one job."},
+    {"id": "q03", "kind": "self-check", "set": "SC1", "mechanic": "multi_select", "question": "Which are fuels under the IGF Code?",
+     "options": ["LNG", "Coal", "CNG"], "correct": "A, C", "feedback": "Natural gas."},
+    {"id": "q04", "kind": "self-check", "set": "SC1", "mechanic": "order", "question": "Put the bunkering steps in order.",
+     "answer": "Safety meeting\nConnect the hose\nTransfer\nDisconnect", "feedback": "Meeting first."},
+    {"id": "t02", "kind": "task-slide", "opens": "SC2", "title": "Self-check 2 - gaps", "text": "Self-check on your tablet now.", "minutes": 3},
+    {"id": "q05", "kind": "self-check", "set": "SC2", "mechanic": "cloze", "question": "Complete the sentence.",
+     "answer": "LNG is stored at [-162* | 0 | 20] °C.", "feedback": "Very cold."},
+    {"id": "t03", "kind": "task-slide", "opens": "MC", "title": "Module check - Module 1",
+     "text": "Module check on your tablet now.\nThree questions on the whole module.\nYou see PASSED or NOT PASSED.", "minutes": 5},
+    {"id": "m01", "kind": "module-check", "set": "MC", "mechanic": "label_diagram", "question": "Drag each label to its place.",
+     "visual": "the GA", "answer": "Fuel tank\nTank connection space\nVent mast", "feedback": "These are the new spaces."},
+    {"id": "m02", "kind": "module-check", "set": "MC", "mechanic": "categorise", "question": "Sort the fuels.",
+     "answer": "Detailed rules: LNG; CNG\nAlternative design: methanol; ammonia", "feedback": "Natural gas has detailed rules."},
+    {"id": "m03", "kind": "module-check", "set": "MC", "mechanic": "single_choice", "question": "Is venting acceptable?",
+     "options": ["Yes", "No, only in an emergency"], "correct": "B", "feedback": "Only in an emergency."},
+]
+
+
+def keys_of(page):
+    """[(words, data-key)] of every answer element"""
+    return [(html_unescape(t), k) for k, t in re.findall(r'data-key="([0-9a-f]{8})">(?:<span class="vh">)?([^<]+)<', page)]
+
+
+def html_unescape(s):
+    import html
+    return html.unescape(s).strip()
+
+
+def tasks_part(tmp):
+    """the trainee task pages built from the same script, with the one shared engine (gb_answer.js)"""
+    print("\n-- the task pages")
+    os.makedirs(os.path.join(tmp, "t"))
+    c, md = new_course(os.path.join(tmp, "t"), script(screens=TASKS), build=False)
+    io.open(os.path.join(md, "assets", "fig", "ga.svg"), "w", encoding="utf-8").write(GA)
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "q01": {"figure": "assets/fig/ga.svg", "areas": {"Funnel": [5, 5, 10, 20]}},
+        "m01": {"figure": "assets/fig/ga.svg"}}})
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks")
+    sc1 = os.path.join(md, "tasks", "sc1_the_spaces.html")
+    mc = os.path.join(md, "assessment", "check.html")
+    check("every set the engine can build gets its page, named as the deck links it", os.path.isfile(sc1) and os.path.isfile(mc), out)
+    check("a set with a way of answering not compiled yet is left as it is, and said so",
+          not os.path.exists(os.path.join(md, "tasks", "sc2_gaps.html")) and "SC2 - its way(s) of answering cloze are not compiled yet" in out, out)
+    code, out = run(MATCH, c, "--module", "1", "--part", "trainee")
+    check("check_script_match --part trainee passes on the built pages (SC2 not built is the only gap)",
+          "q05" in out and not re.search(r"\((q0[1-4]|m0[1-3])\)", out), out)
+    p, m = io.open(sc1, encoding="utf-8").read(), io.open(mc, encoding="utf-8").read()
+    check("<title> is 'CODE — Title' and the page is marked generated",
+          "<title>SC1 — The spaces</title>" in p and "<title>MC — Module 1 check</title>" in m and "GENERATED by course-factory" in p)
+    check("the page loads the factory's shared engine and styles, nothing of its own",
+          '<script src="../assets/gb_answer.js"></script>' in p and 'href="../assets/gb_answer.css"' in p
+          and "<script>" not in p and "postMessage" not in p)
+    check("the answers are never in the page - only data-key", "data-correct" not in p + m and "data-answer" not in p + m)
+    ks = dict(keys_of(p))
+    check("tap the picture: the right area's key is gb_key(id, words, 1), the others 0",
+          ks.get("Tank connection space") == cs.gb_key("q01", "Tank connection space", 1)
+          and ks.get("Funnel") == cs.gb_key("q01", "Funnel", 0), ks)
+    check("an area is found on the drawing by its data-name and its .hit shape, grown to a 56 px tap target",
+          re.search(r'class="hot" style="left:3[0-9.]+%;top:4[0-9.]+%;width:1[0-9.]+%;height:2[0-9.]+%"', p), p[:200])
+    check("an area the drawing does not name takes its box from the build sheet", 'style="left:5%;top:5%;width:10%;height:20%"' in p)
+    check("the drawing is in the page once, marked for the engine, its own labels hidden by the shared styles",
+          p.count('class="taskfig" data-fig="assets_fig_ga_svg"') == 1)
+    check("match: each right side's key is its left side's words",
+          ks.get("the tank valves") == cs.gb_key("q02", "the tank valves", "Tank connection space"))
+    check("choose all that are right: one key per option, 1 for each right one",
+          ks.get("LNG") == cs.gb_key("q03", "LNG", 1) and ks.get("CNG") == cs.gb_key("q03", "CNG", 1)
+          and ks.get("Coal") == cs.gb_key("q03", "Coal", 0) and 'class="opts multi"' in p)
+    check("put in order: the key is the place, and the cards are not shown in order",
+          ks.get("Transfer") == cs.gb_key("q04", "Transfer", 3)
+          and [t for t, _ in keys_of(p) if t in ("Safety meeting", "Connect the hose", "Transfer", "Disconnect")]
+          != ["Safety meeting", "Connect the hose", "Transfer", "Disconnect"])
+    check("the course's first self-check opens with 'try your tablet first'; the module check with its pass mark",
+          'id="tryScr"' in p and 'id="introScr"' in m and "Pass mark 70 % – 3 of 3 right" in m and 'data-pass="70"' in m)
+    km = dict(keys_of(m))
+    check("label the drawing: the key is the place's id, the boxes sit in bands added to the drawing",
+          km.get("Fuel tank") == cs.gb_key("m01", "Fuel tank", "sp-tank") and 'viewBox="0 ' not in m.split('data-fig')[1][:80]
+          and m.count('class="lbox zone"') == 3, m[:300])
+    check("sort into groups: the key is the group's name", km.get("methanol") == cs.gb_key("m02", "methanol", "Alternative design"))
+    check("a page with a picture loads the picture viewer (L51)", 'src="../assets/gb_zoom.js"' in m)
+    # the classroom's own rules for a task page, read from the page and its shared engine
+    eng = io.open(os.path.join(SKILLS, "course-task-ux", "assets", "gb_answer.js"), encoding="utf-8").read()
+    check("the engine reports gb-task-done with ok, total, items, PASSED / NOT PASSED, timeout, and hears gb-timer",
+          all(x in eng for x in ("gb-task-done", "ok:", "total:", "items:", "'PASSED'", "'NOT PASSED'", "timeout:", "gb-timer")))
+    check("'Start again' only outside the classroom frame (window.parent === window)", "window.parent === window" in eng)
+    first = io.open(sc1, encoding="utf-8").read()
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks")
+    check("the same script and build sheet give the same page", io.open(sc1, encoding="utf-8").read() == first, out)
+    io.open(sc1, "w", encoding="utf-8").write(first.replace("Tap the tank", "Tap the TANK"))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks")
+    check("a task page changed by hand is never overwritten without --force",
+          code == 1 and "tasks/sc1_the_spaces.html was changed by hand" in out and "TANK" in io.open(sc1, encoding="utf-8").read(), out)
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force")
+    check("--force builds it again from the script", "TANK" not in io.open(sc1, encoding="utf-8").read(), out)
+    sb = os.path.join(c, "working_claude", "script", "M01.build.json")
+    cs.save(sb, {"module": 1, "screens": {"q01": {"figure": "assets/fig/ga.svg"}, "m01": {"figure": "assets/fig/ga.svg"}}})
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force")
+    check("an answer the drawing does not name, with no box in the build sheet, is reported - never guessed",
+          code == 1 and '"Funnel" is not on the drawing' in out, out)
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="compile_")
     try:
@@ -489,6 +601,8 @@ def main():
         io.open(p, "w", encoding="utf-8").write(page.replace("Mandatory since 2017.", "Mandatory since 2016."))
         code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
         check("check_script_match still fails a changed word", code == 1 and "2016" in out, out)
+
+        tasks_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

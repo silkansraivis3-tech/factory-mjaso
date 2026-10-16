@@ -11,6 +11,8 @@
     {"name": "gb_compose.css",      "from": "course-module-ui/templates/gb_compose.css",  "for": "what sits on a deck screen - compositions and blocks"},
     {"name": "gb_page.css",         "from": "course-module-ui/templates/gb_page.css",     "for": "document pages and the frame of task pages"},
     {"name": "gb_task.css",         "from": "course-task-ux/assets/gb_task.css",          "for": "task controls, on top of gb_page.css"},
+    {"name": "gb_answer.css",       "from": "course-task-ux/assets/gb_answer.css",        "for": "the screens of every compiled task page - choose, tap the picture, drag and drop, the result ring"},
+    {"name": "gb_answer.js",        "from": "course-task-ux/assets/gb_answer.js",         "for": "the one shared engine of every compiled task page - grading by data-key, gb-task-done, gb-timer (L38, L42)"},
     {"name": "kbd_escape.css",      "from": "course-task-ux/assets/kbd_escape.css",       "for": "the Done pill"},
     {"name": "kbd_escape.js",       "from": "course-task-ux/assets/kbd_escape.js",        "for": "the three ways out of the soft keyboard"},
     {"name": "task_complete.css",   "from": "course-task-ux/assets/task_complete.css",    "for": "the completion panel"},

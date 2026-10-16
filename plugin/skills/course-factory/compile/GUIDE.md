@@ -109,7 +109,32 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
 | `"class": "m02-s3d"` | a hook for the module's drawing styles on the slide |
 
 A room activity with a drawing of its own (trace a path) is laid out like a teaching slide and keeps the classroom's
-Task marks. A task slide links to the existing page for its code (`tasks\sc2_*.html`) while task pages are not compiled.
+Task marks. A task slide links to its set's page (`tasks\sc2_*.html`, `assessment\check.html`) - built by §2d.
+
+## 2d · The task pages (2.34.0)
+
+Every task slide that opens questions gets its page from the same script: `tasks\sc1_<title>.html`,
+`assessment\check.html`, `assessment\final.html`. The page is only its questions as markup; how a trainee answers,
+grading by `data-key`, the result ring, PASSED / NOT PASSED and the classroom messages (`gb-task-done`, `gb-timer`)
+are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-task-ux/assets, installed by
+`design_system.py` like `gb_deck.js`) - promoted from the IGF pilot's Module 1. `--only tasks` builds only these.
+
+- **Built:** single_choice, multi_select, read_instrument, hotspot, spot_the_hazard, match, categorise, label_diagram,
+  order. A set using any other way of answering, or a team task, is **left as it is** and named in the output.
+- **On a picture** (hotspot, spot_the_hazard, label_diagram, read_instrument) the build sheet names the drawing, keyed
+  by the question's id: `"q01": {"figure": "assets/fig/m01_ga.svg"}`. Each answer's place is found by itself - the
+  drawing's element with `data-name` equal to the answer's words, and in it the shape of class `hit` (rect or circle),
+  grown to a 56 px tap target. What the drawing does not name gets a box: `"areas": {"Funnel": [left, top, width,
+  height]}` in % of the drawing - never guessed. The drawing's own labels (`#labels`, `[data-task-hide]`) are hidden.
+- **Label the drawing:** the compiler adds a band above and below the drawing for the empty label boxes, so no box
+  covers what is drawn, with a leader line to each place. Or place them yourself: `"labels": {"Fuel tank": {"at":
+  "sp-tank", "box": [left, top, width]}}`.
+- **The page:** the course's first self-check opens with "try your tablet first" (`"try_tablet": false` on the task
+  slide's entry to leave it out); a check opens with its pass mark (`"pass_mark": 70` at the top of the build sheet).
+- **Before showing it:** `check_script_match.py --part trainee`, `check_course_package.py`, and in the browser
+  `AuditDrawing.page()` on every question with a drawing - a drawing shared with the deck is checked again here,
+  without its labels and at task size.
+- The screen's own words (Check, Next, Your score ...) are English for now; another course language is reported.
 
 ## 3 · When the look is not enough
 
@@ -126,4 +151,5 @@ drawings' colours only.
 - A missing picture is listed, never invented.
 - The same script and build sheet always give the same file.
 
-Not built yet: the task pages, the module check page and the start pages (next steps of the proposal).
+Not built yet: the start pages and course files, the other ways of answering, team task pages, the task screen's
+words in other languages (next steps of the proposal).

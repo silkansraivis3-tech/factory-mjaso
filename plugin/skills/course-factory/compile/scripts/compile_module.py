@@ -730,6 +730,17 @@ def inset_html(mdir, ins, probs, where):
             % (a(rel), a(alt), photo_panel(meta, credit_line(meta) or credit, rel, probs, where), e(cap)))
 
 
+def task_href(code, short, mdir):
+    """the set's one page, as the deck links it: assessment\\check.html / final.html, or tasks\\<code>_<title>.html -
+    a page already there for this code keeps its name, so the deck and task_pages.py always agree"""
+    if code in CHECK_PAGES:
+        return CHECK_PAGES[code]
+    tdir = os.path.join(mdir, "tasks")
+    have = sorted(f for f in (os.listdir(tdir) if os.path.isdir(tdir) else [])
+                  if f.lower().startswith(code.lower() + "_") and f.lower().endswith(".html"))
+    return "../tasks/" + have[0] if len(have) == 1 else "../tasks/%s_%s.html" % (code.lower(), slug(short))
+
+
 def attrs(d):
     return " ".join('%s="%s"' % (k, a(str(v))) for k, v in d.items() if v not in (None, ""))
 
@@ -754,11 +765,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
              "data-kind": "Check" if is_check else "Task", "data-block": "%s · %s" % (m, code), "data-visual": "none",
              "data-activity": code}
         if kind == "task-slide":
-            # the set's one page; until task pages are compiled too, an existing page for this code is the one
-            have = sorted(f for f in (os.listdir(os.path.join(mdir, "tasks")) if os.path.isdir(os.path.join(mdir, "tasks")) else [])
-                          if f.lower().startswith(code.lower() + "_") and f.lower().endswith(".html"))
-            d["data-task-href"] = CHECK_PAGES.get(code) or ("../tasks/" + have[0] if len(have) == 1 else
-                                                            "../tasks/%s_%s.html" % (code.lower(), slug(short)))
+            d["data-task-href"] = task_href(code, short, mdir)
             team = s.get("team") or {}
             if team:
                 d.update({"data-mode": "team", "data-team-size": team.get("size", ""),
@@ -1003,7 +1010,9 @@ def main(argv=None):
     ap.add_argument("--module-dir", help="the module folder (default: <course>\\modules\\module01)")
     ap.add_argument("--init-build", action="store_true", help="write a starter build sheet and stop")
     ap.add_argument("--draft", action="store_true", help="build from a script that is not approved yet - a preview")
-    ap.add_argument("--force", action="store_true", help="overwrite a deck that was changed by hand")
+    ap.add_argument("--force", action="store_true", help="overwrite a deck or task page that was changed by hand")
+    ap.add_argument("--only", choices=("all", "deck", "tasks"), default="all",
+                    help="build only the deck, or only the trainee task pages (default: both)")
     o = ap.parse_args(argv)
     o.course = workspace.work_folder(o.course, create=False)
     p = cs.paths(o.course, o.module)
@@ -1034,30 +1043,50 @@ def main(argv=None):
     out = os.path.join(mdir, "presentation", "index.html")
     rec_path = workspace.module_record(mdir, RECORD)
     rec = cs.load(rec_path) if os.path.isfile(rec_path) else {}
-    if os.path.isfile(out) and not o.force:
-        now = sha(io.open(out, encoding="utf-8").read())
-        if now != rec.get("index.html"):
-            print("Stopped - nothing was overwritten.\n\n  The deck was changed by hand, or was built before the compiler:\n    %s\n"
-                  "  A change made in the deck would be lost. Put it into the script (content_script.py propose) or the\n"
-                  "  build sheet, then compile again with --force." % out)
-            return 2
+    by_hand = lambda path, key: os.path.isfile(path) and not o.force and sha(io.open(path, encoding="utf-8").read()) != rec.get(key)
+    if o.only != "tasks" and by_hand(out, "index.html"):
+        print("Stopped - nothing was overwritten.\n\n  The deck was changed by hand, or was built before the compiler:\n    %s\n"
+              "  A change made in the deck would be lost. Put it into the script (content_script.py propose) or the\n"
+              "  build sheet, then compile again with --force." % out)
+        return 2
     figdir = os.path.join(o.course, workspace.CLAUDE, "figures", cs.mid(o.module))
-    page, probs, notes = compile_deck(script, build, mdir, figdir, plugin_version(), approved)
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    with io.open(out, "w", encoding="utf-8", newline="\n") as f:
-        f.write(page)
-    rec.update({"index.html": sha(page), "script_hash": cs.content_hash(script), "plugin_version": plugin_version()})
+    probs, notes = [], []
+    rec.update({"script_hash": cs.content_hash(script), "plugin_version": plugin_version()})
+    if o.only != "tasks":
+        page, probs, notes = compile_deck(script, build, mdir, figdir, plugin_version(), approved)
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        with io.open(out, "w", encoding="utf-8", newline="\n") as f:
+            f.write(page)
+        rec["index.html"] = sha(page)
+        n = sum(1 for s in script["screens"] if s["kind"] in cs.INSTRUCTOR)
+        print("Built %s - %d screens from the %s script.\n    %s" % (cs.mid(o.module), n, "approved" if approved else "DRAFT", out))
+    if o.only != "deck":
+        import task_pages
+        pages, tprobs, left = task_pages.compile_tasks(script, build, mdir, figdir, plugin_version(), approved)
+        probs += tprobs
+        for path, page in sorted(pages.items()):
+            key = os.path.relpath(path, mdir).replace("\\", "/")
+            if by_hand(path, key):
+                probs.append("%s was changed by hand, or was built before the compiler - it was not overwritten. Put the change "
+                             "into the script or the build sheet, then compile again with --force" % key)
+                continue
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with io.open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(page)
+            rec[key] = sha(page)
+            print("Built the task page %s" % key)
+        for x in left:
+            print("  left as it is: %s" % x)
     cs.save(rec_path, rec)
-    n = sum(1 for s in script["screens"] if s["kind"] in cs.INSTRUCTOR)
     if not approved:
-        probs.insert(0, "the script is not approved - this deck is a preview only, never handed over")
-    print("Built %s - %d screens from the %s script.\n    %s" % (cs.mid(o.module), n, "approved" if approved else "DRAFT", out))
+        probs.insert(0, "the script is not approved - what was built is a preview only, never handed over")
     parts = [x for x in notes if x[0]]
-    listed = write_to_take(o.course, script, parts)
-    if notes:
-        print("\nReal photographs still missing for what the drawings show (L57) - listed in\n    %s" % listed)
-        for r in by_thing(parts) + [x[2] for x in notes if not x[0]]:
-            print("  - " + r)
+    if o.only != "tasks":
+        listed = write_to_take(o.course, script, parts)
+        if notes:
+            print("\nReal photographs still missing for what the drawings show (L57) - listed in\n    %s" % listed)
+            for r in by_thing(parts) + [x[2] for x in notes if not x[0]]:
+                print("  - " + r)
     if probs:
         print("\nTo fix before it is shown:")
         for x in probs:
