@@ -4,9 +4,9 @@
 
     content_script.py render   <course> --module 1           review page + Word file for the operator
     content_script.py read     <course> --module 1 [--docx F] [--pdf F]   what the operator changed -> PENDING
-    content_script.py propose  <course> --module 1 --changes changes.json  a chat correction -> PENDING
-    content_script.py apply    <course> --module 1 --confirmed           apply PENDING - only after the operator said yes
-    content_script.py approve  <course> --module 1 --by "<name>"         the operator's "next"
+    content_script.py propose  <course> --module 1 --changes changes.json [--proposed-by "<who>"]   a chat correction / a new or removed screen / a script field -> PENDING
+    content_script.py apply    <course> --module 1 --confirmed [--confirmed-by "<name>"]   apply PENDING - only after the operator said yes
+    content_script.py approve  <course> --module 1 --by "<name>"         the operator's "next" - the operator's own act (--by is the person)
     content_script.py status   <course> --module 1
 
 WHY THIS EXISTS
@@ -67,12 +67,44 @@ answer becomes B". Only apply --confirmed changes the script, logs each change i
 and re-renders both files. Any change after approval puts the module back to draft; approve records
 who approved which version.
 
+WHAT A CHANGES FILE MAY HOLD (propose)  - a JSON list, applied in order on a working copy, so a later entry may
+target a screen an earlier one added:
+    {"field": "q04.feedback", "new": "..."}                 one field of an existing screen (as always)
+    {"add_screen": {"id": "q05", "kind": "self-check", ...}, "after": "s05"}   a whole new screen, placed
+                                                             "after" or "before" a screen id; neither = at the end
+    {"remove_screen": "q05"}                                 the screen goes
+    {"script_field": "sources", "new": [...]}                a top-level field: title, minutes_allocated, sources,
+                                                             pass_mark (whole number 1-100), operator_facts. Anything
+                                                             else (status, approved_*, module, docx_hash, screens)
+                                                             is refused, exit 2. Nothing is written when an entry is refused.
+Problems the result would have that the script does not have now (validate) are listed as notes, not blocking. apply replays every change
+the same way, refuses (exit 1) when the screens or a script field changed since the list was made, and logs one
+FEEDBACK_LOG.md row per change ("3 · M01 · q05", or "3 · M01 · script" for a script field).
+
+THE ILO MAP AND THE KNOWLEDGE BASE COME FIRST (owner, 2026-10-16 - 2.42.0)
+render (of a script not yet approved) and approve stop, exit 2, until the course has its ILO map
+(working_claude/ilo_map.json), the Stage 2 page is approved with it, and the knowledge-base decision is
+recorded - scripts/course_gate.py says what is missing. The review page then checks the module against
+its rows of the map: every Sub-ILO it owes taught on a slide ("sub_ilo" on the slide) and checked by a
+question ("sub_ilo" on every question), and "sources" not empty - must-fix findings like the theory
+check's, approvable --despite-findings. A script approved before this gate keeps its approval; its
+findings are only reported. Re-approving it after a change that does not touch Sub-ILO tags, the
+sources or the screens (a picture, a word - apply remembers what changed in "since_approval") does not
+hold it to those rules either (2.49.2); propose says which applies. A new approval is checked in full,
+and records it ("approved_checks").
+
+WHO PROPOSED, WHO SAID YES (2.49.2)
+propose --proposed-by and apply --confirmed-by name them; FEEDBACK_LOG.md keeps both ("[proposed by X;
+confirmed by Y]"). A Word or PDF read is "the operator (their Word file)". Left out, a name is "not stated" -
+never assumed to be the operator's. Approval is the operator's own act: see script/GUIDE.md.
+
 Standard library only - it runs on any colleague's computer. PDF comments need the pypdf package;
 without it, read says so and asks for the comments in Word or in the chat instead.
 """
 from __future__ import annotations
 
 import argparse
+import copy
 import difflib
 import hashlib
 import html
@@ -100,6 +132,8 @@ import check_slide_text as slide_text  # noqa: E402  - the same four rules the b
 import workspace  # noqa: E402  - the factory works in course\ beside the operator's material (L40)
 import bloom_map  # noqa: E402  - what level each question reaches, against its Sub-ILO (L48)
 import design_choices  # noqa: E402  - the operator's design choices are theirs, not must-fixes (L26, 2.30.0)
+import ilo_map  # noqa: E402  - what this module owes: its rows of the ILO map (2.42.0)
+import course_gate  # noqa: E402  - no module starts before the ILO map is approved and the KB decided (2.42.0)
 
 MEDIA = json.load(io.open(os.path.join(SKILL, "knowledge", "media-and-tasks.json"), encoding="utf-8"))
 KINDS = ("slide", "task-slide", "activity", "self-check", "module-check", "final")
@@ -153,11 +187,35 @@ def load(p):
         return json.load(f)
 
 
+def file_indent(raw, default=2):
+    """The indent a JSON file already uses (a number of spaces, or a tab; None when it is one line), so a
+    rewrite does not change how the file looks to an editor."""
+    for line in raw.splitlines()[1:]:
+        m = re.match(r"^([ \t]+)\S", line)
+        if m:
+            return "\t" if m.group(1).startswith("\t") else len(m.group(1))
+    return None if raw.strip() and "\n" not in raw.strip() else default
+
+
 def save(p, obj):
+    """Write obj as JSON in the file's own formatting - and only when something actually changed."""
     os.makedirs(os.path.dirname(p), exist_ok=True)
-    with io.open(p, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=2)
-        f.write("\n")
+    indent, raw = 2, None
+    if os.path.isfile(p):
+        try:
+            with io.open(p, encoding="utf-8", newline="") as f:
+                raw = f.read()
+            if json.loads(raw) == obj:
+                return False
+            indent = file_indent(raw)
+        except ValueError:
+            raw = None
+    text = json.dumps(obj, ensure_ascii=False, indent=indent) + "\n"
+    if raw is not None and "\r\n" in raw:
+        text = text.replace("\n", "\r\n")
+    with io.open(p, "w", encoding="utf-8", newline="") as f:
+        f.write(text)
+    return True
 
 
 def content_hash(script):
@@ -294,6 +352,8 @@ def set_field(screen, f, value):
         opts[i] = value
     elif f == "visual_kind":
         screen[f] = parse_kind(value)
+    elif f == "minutes" and isinstance(value, (int, float)) and not isinstance(value, bool):
+        screen[f] = value
     elif f == "minutes":
         try:
             screen[f] = float(value) if "." in value else int(value)
@@ -651,12 +711,18 @@ def terms(text):
     return nums, ws
 
 
-def taught_share(answer, taught, others=()):
+def taught_share(answer, taught, others=(), words_only=False):
     """How much of an answer's key words are in the taught text: numbers exactly, words by their first
     five letters (so 'membrane' finds 'membranes', and Latvian and Russian endings still match). Words
     the wrong answers share are left out when anything is left - 'semi-refrigerated' is taught by
-    'semi', not by 'refrigerated', which every option about cold cargo has."""
+    'semi', not by 'refrigerated', which every option about cold cargo has.
+    words_only: a question that APPLIES a taught rule to new cases (Bloom 3 and up) brings its own numbers -
+    the mixtures it is given are not taught on any slide - so only its words and groups are judged: a
+    number the slides do teach still counts as taught, a new one is neither taught nor untaught."""
     an, aw = terms(answer)
+    if words_only:
+        tn_ = {x.lstrip("-") for x in taught[0]}
+        an = {n for n in an if n in taught[0] or n.lstrip("-") in tn_}
     on, ow = set(), set()
     for o in others:
         n, w = terms(o)
@@ -750,10 +816,14 @@ def theory_findings(script):
                         answer = "\n".join(right)
                         if not any(terms(answer)):
                             answer, others = q.get("feedback", ""), []
-                        each = [(taught_share(answer, slide_terms(x), others) or 0, x) for x in seen_slides]
+                        try:
+                            applying = int(q.get("bloom") or 0) >= 3      # applies a taught rule to new cases: judge words, not new numbers
+                        except (TypeError, ValueError):
+                            applying = False
+                        each = [(taught_share(answer, slide_terms(x), others, applying) or 0, x) for x in seen_slides]
                         union = (set().union(*[slide_terms(x)[0] for x in seen_slides]) if seen_slides else set(),
                                  set().union(*[slide_terms(x)[1] for x in seen_slides]) if seen_slides else set())
-                        share = taught_share(answer, union, others)
+                        share = taught_share(answer, union, others, applying)
                         best = sorted([e for e in each if e[0] >= 0.3], key=lambda e: -e[0])[:2]
                         taught_on[q["id"]] = sorted(slide_no[x["id"]] for _, x in best)
                         if share is not None and share < R["answers_taught_first"]["min_share"]:
@@ -787,6 +857,145 @@ def text_findings(script):
                     seen.add(key)
                     found.append({"where": place(script, s["id"]), "screen": s["id"], "field": f, "level": x.level,
                                   "rule": x.rule, "detail": x.detail, "fix": x.fix})
+    return found
+
+
+def said_words(s, vocab, but=(), fields=("title", "text", "visual")):
+    """the words of vocab a slide's title, text or planned picture names - whole words, any case, each once; words
+    inside one of the phrases in but ("room temperature") are not counted. fields narrows where to look."""
+    said = " ".join(str(s.get(f) or "") for f in fields)
+    for p in but:
+        said = re.sub(r"(?i)%s" % re.escape(p), " ", said)
+    return [w for w in vocab if re.search(r"(?i)(?<![\w-])%s(?![\w-])" % re.escape(w), said)]
+
+
+def is_step_list(text):
+    """a text that is a list - three or more lines that begin with a number or a bullet"""
+    return sum(1 for ln in str(text or "").splitlines() if re.match(r"\s*(\d+[.)]?\s|[-*•]\s)", ln)) >= 3
+
+
+def propose_3d(teach, three, declined):
+    """2.49.0 - in a module with no 3D yet, the teaching slides where a shape, an inside or a layout in space is the
+    lesson (knowledge/media-and-tasks.json three_d.fit_words), best first: (screen, the words, rule). Never a slide whose
+    picture is a real photograph (L52), a flat one (flat_words), or one the person struck (the script's "declined").
+    2.49.2 - and not a procedure, a document or an idea: the fit words must be in the title or the planned picture (not
+    only in the text), no sequence/document/idea word there (procedure_words), no flow or process animation, no worked
+    example whose text is a list. The words returned are the ones in the title and the picture."""
+    TD, F = MEDIA["three_d"], MEDIA["floors"]
+    if three:
+        return []
+    out = []
+    for s in teach:
+        k = parse_kind(s.get("visual_kind", ""))
+        fam = MEDIA["visual_kinds"].get(k, {}).get("family")
+        if s["id"] in declined or k in F["real_photo_kinds"] or fam in ("3d", "video") or k in TD["not_fit_kinds"] \
+                or MEDIA["visual_kinds"].get(k, {}).get("made_by") == "nano_banana" or said_words(s, TD["flat_words"]):
+            continue
+        if s.get("active") in TD["skip_active_lists"] and is_step_list(s.get("text")):
+            continue
+        pic = {"title": s.get("title"), "visual": re.sub(r"(?i)\b3D model\b", " ", str(s.get("visual") or ""))}
+        if said_words(pic, TD["procedure_words"]):
+            continue
+        words = said_words(pic, TD["fit_words"], TD["not_fit_phrases"])
+        if len(words) >= TD["pic_min_words"]:           # a drawn thing before an animated sequence, then the most words
+            out.append((k not in TD["propose_first_kinds"], -len(said_words(s, TD["fit_words"], TD["not_fit_phrases"])),
+                        len(out), s["id"], words))
+    return [(sid, words, "v_3d_propose") for _f, _n, _i, sid, words in sorted(out)[:TD["propose_max"]]]
+
+
+def propose_ai(teach, kinds, declined):
+    """2.49.0 - in a module with no AI picture yet, a teaching slide with no picture whose words name a scene or a
+    situation (floors.ai_scene_words): (screen, the words, rule). Context only - never equipment to recognise (L33);
+    each picture is still described, priced and said yes to before it is made (L47)."""
+    F = MEDIA["floors"]
+    if any(MEDIA["visual_kinds"][k]["made_by"] == "nano_banana" for k in kinds):
+        return []
+    out = []
+    for s in teach:
+        if s["id"] in declined or parse_kind(s.get("visual_kind", "")) not in ("none", ""):
+            continue
+        words = said_words(s, F["ai_scene_words"])
+        if words:
+            out.append((-len(words), len(out), s["id"], words))
+    return [(sid, words, "v_ai_propose") for _n, _i, sid, words in sorted(out)[:F["ai_propose_max"]]]
+
+
+# 2.49.7 (IGF M01 s05) - a slide planned as 3D whose build sheet gives it a 2D figure was built without a word: the compiler
+# never looked at the kind. A 3D scene is an .html figure that holds one ([data-stage], data-3d, data-scene or a canvas -
+# what perf3d.mjs measures); anything else is 2D. The operator may keep the 2D figure with their reason: "declined_3d".
+SCENE_MARK = re.compile(r"\bdata-(?:stage|3d|scene)\b|<canvas\b", re.I)
+
+
+def is_3d(s):
+    return MEDIA["visual_kinds"].get(parse_kind(s.get("visual_kind", "")), {}).get("family") in MEDIA["three_d"]["families"]
+
+
+def flat_3d(s, b, body):
+    """the build sheet's 2D figure of a slide the script plans as 3D, else "". b is the slide's build-sheet entry, body the
+    figure file's text (None for a picture). No figure, a 3D scene, or a 2D figure kept with a reason -> ""."""
+    rel = (b or {}).get("figure") or ""
+    if not rel or not is_3d(s) or str((b or {}).get("declined_3d") or "").strip():
+        return ""
+    if rel.lower().endswith((".html", ".htm")) and body and SCENE_MARK.search(body):
+        return ""
+    return rel
+
+
+def best_3d(script, skip=()):
+    """L60 (2.49.7) - the module's best slide for a 3D scene, as (screen id, why) or None: a slide the script already plans
+    as 3D first, else the one propose_3d ranks first - its lesson a shape, an inside or a layout in space, never a slide
+    whose picture is a real photograph (L52) or a flat thing (L46). Slides in `skip` and in the script's "declined" 3d are
+    passed over. `why` is the words that make it fit ("" for a slide the script plans as 3D)."""
+    slides = [s for s in script.get("screens", []) if s.get("kind") == "slide"]
+    teach = [s for s in slides if not s.get("recap")]
+    if len(teach) == len(slides) and len(slides) > 1:     # a script from before the recap: its last slide sums up
+        teach = slides[:-1]
+    skip = set(skip) | set((script.get("declined") or {}).get("3d") or {})
+    planned = [s for s in teach if is_3d(s) and s["id"] not in skip]
+    if planned:
+        return planned[0]["id"], ""
+    got = propose_3d(teach, [], skip)
+    return (got[0][0], ", ".join(got[0][1])) if got else None
+
+
+def scene_in(body):
+    """does a figure's markup hold a 3D scene?"""
+    return bool(body and SCENE_MARK.search(body))
+
+
+def build_findings(course, script):
+    """what the module's build sheet does to the planned pictures, shown with the script's own findings on the review page:
+    a 3D slide built as a 2D figure, and (L60) a module built with no 3D scene at all - its best candidate named, until the
+    operator declines it ("declined_3d" at the top of the build sheet). Notes - the build sheet is no part of the approved
+    words, and L60 is a strong recommendation, never a block."""
+    if not course:
+        return []
+    m = mid(script.get("module"))
+    try:
+        bp = os.path.join(paths(course, script.get("module"))["dir"], m + ".build.json")
+        build = load(bp) if os.path.isfile(bp) else None
+    except (OSError, ValueError):
+        build = None
+    if not build:
+        return []
+    figdir, found, scene = workspace.claude_path(course, "figures", m), [], False
+    for s in script.get("screens", []):
+        b = (build.get("screens") or {}).get(s.get("id")) or {}
+        rel, body = (b.get("figure") or "").replace("\\", "/"), None
+        if rel.lower().endswith((".html", ".htm")) and os.path.isfile(os.path.join(figdir, rel)):
+            body = io.open(os.path.join(figdir, rel), encoding="utf-8").read()
+        scene = scene or (rel.lower().endswith((".html", ".htm")) and scene_in(body))
+        flat = flat_3d(s, b, body)
+        if flat:
+            found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "visual_kind", "level": NOTE,
+                          "rule": "v_3d_flat_figure", "detail": T(script, "v_3d_flat_figure", fig=flat), "fix": ""})
+    if not scene and not found and not str(build.get("declined_3d") or "").strip():
+        best = best_3d(script, [sid for sid, b in (build.get("screens") or {}).items() if str((b or {}).get("declined_3d") or "").strip()])
+        if best:
+            found.append({"where": T(script, "s_the_module"), "screen": "", "field": "", "level": NOTE, "rule": "v_3d_none_built",
+                          "detail": T(script, "v_3d_none_built", sid=best[0], title=next(
+                              (s.get("title") or "" for s in script["screens"] if s.get("id") == best[0]), ""),
+                              why=best[1] or T(script, "v_3d_why_planned")), "fix": ""})
     return found
 
 
@@ -826,6 +1035,15 @@ def media_findings(script):
             add(None, "", NOTE, "v_no_motion", min="%g" % th_min)
         if len(slides) >= F["min_visual_kinds_from_slides"] and len(set(kinds)) < F["min_visual_kinds"]:
             add(None, "", NOTE, "v_few_kinds", n=len(set(kinds)), lo=F["min_visual_kinds"])
+        # L52 (owner, 2026-10-15): as many real photographs as possible - the recap aside (L51), a suggestion.
+        # A script from before the recap (no slide marked "recap") still sets its last slide aside.
+        teach = [s for s in slides if not s.get("recap")]
+        if len(teach) == len(slides) and len(slides) > 1:
+            teach = slides[:-1]
+        real = [s for s in teach if parse_kind(s.get("visual_kind", "")) in F["real_photo_kinds"]
+                or any(w in (s.get("visual") or "").lower() for w in F["real_photo_words"])]
+        if teach and len(real) < F["real_photo_min_share"] * len(teach):
+            add(None, "visual_kind", NOTE, "v_few_photos", n=len(real), tot=len(teach))
         # L46 (owner, 2026-10-07): 3D where it makes sense, at most half of the pictures - quality, not quantity
         TD = MEDIA["three_d"]
         is3d = lambda s: MEDIA["visual_kinds"].get(parse_kind(s.get("visual_kind", "")), {}).get("family") in TD["families"]
@@ -844,6 +1062,12 @@ def media_findings(script):
             word = next((x for x in TD["flat_words"] if re.search(r"(?i)\b%s\b" % re.escape(x), said)), None)
             if word:
                 add(s["id"], "visual", NOTE, "v_3d_flat", word=word)
+        # 2.49.0 (operator, 2026-10-16): 3D and AI pictures proposed unasked, slide by slide - kept or struck
+        declined = script.get("declined") or {}
+        for sid, words, rule in propose_3d(teach, three, declined.get("3d") or {}):
+            add(sid, "visual_kind", NOTE, rule, words=", ".join(words))
+        for sid, words, rule in propose_ai(teach, kinds, declined.get("ai") or {}):
+            add(sid, "visual_kind", NOTE, rule, words=", ".join(words))
 
     slide_no, sets, set_of = plan_of(script)
     qs = [q for st in sets if st["kind"] != "final" for q in st["questions"]]
@@ -912,9 +1136,60 @@ def recap_findings(script):
 DESIGN_FINDINGS = {"recap": "r_", "three-d-share": "v_3d_share"}
 
 
-def all_findings(script):
+def sub_ilos_of(s):
+    """The Sub-ILO(s) a screen names: "sub_ilo": "1.a" or ["1.a", "1.b"]."""
+    v = s.get("sub_ilo")
+    return [str(x).strip() for x in (v if isinstance(v, list) else [v]) if x not in (None, "") and str(x).strip()]
+
+
+def ilo_findings(course, script):
+    """2.42.0 (owner, 2026-10-16) - the module against its rows of the ILO map, and its sources. Every Sub-ILO it
+    owes taught on a slide and checked by a question; every question naming its Sub-ILO; the sources listed.
+    Only for a course that has an ILO map - every course past the Stage 2 gate has one."""
+    m = ilo_map.read(course) if course else None
+    if m is None:
+        return []
+    found = []
+
+    def add(sid, field, key, **kw):
+        found.append({"where": place(script, sid) if sid else T(script, "s_the_module"), "screen": sid or "", "field": field,
+                      "level": FAIL, "rule": key, "detail": T(script, key, **kw), "fix": ""})
+
+    if not [x for x in (script.get("sources") or []) if str(x).strip()]:
+        add("", "sources", "i_no_sources")
+    final = str(script.get("module")).lower() == "final"
+    rows = [r for r in m.get("rows", []) if isinstance(r, dict)] if final else ilo_map.module_rows(m, script.get("module"))
+    screens = script.get("screens", [])
+    qs = [s for s in screens if s.get("kind") in TASKS]
+    missing = [s.get("id") for s in qs if not sub_ilos_of(s)]
+    if missing:
+        add("", "sub_ilo", "i_q_no_sub", n=len(missing),
+            ids="; ".join(place(script, x) for x in missing[:8]) + ((" (+%d more)" % (len(missing) - 8)) if len(missing) > 8 else ""))
+    if not rows:                                  # the gate says so; nothing to check against
+        return found
+    known = {str(r.get("sub_ilo_id")) for r in rows}
+    for s in screens:
+        for t in sub_ilos_of(s):
+            if t not in known:
+                add(s.get("id"), "sub_ilo", "i_unknown_sub", s=t, known=", ".join(sorted(known)))
+    if final:
+        return found
+    taught = {t for s in screens if s.get("kind") in ("slide", "activity") for t in sub_ilos_of(s)}
+    checked = {t for s in qs for t in sub_ilos_of(s)}
+    for r in rows:
+        sid = str(r.get("sub_ilo_id"))
+        if sid not in ilo_map.leaves(rows):
+            continue
+        if sid not in taught:
+            add("", "sub_ilo", "i_not_taught", s=sid, text=short(r.get("sub_ilo", ""), 90))
+        if sid not in checked:
+            add("", "sub_ilo", "i_not_checked", s=sid)
+    return found
+
+
+def all_findings(script, course=None):
     th, _ = theory_findings(script)
-    return th + media_findings(script) + text_findings(script)
+    return th + media_findings(script) + text_findings(script) + ilo_findings(course, script)
 
 
 def blocking(findings):
@@ -1221,7 +1496,11 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
             e(T(script, "s_theory_title")), e(T(script, "s_theory_intro")), "".join(row(f) for f in th_found)))
     else:
         o.append('<p class="note">%s</p>' % e(T(script, "s_theory_clean")))
-    mf = media_findings(script)
+    bf = build_findings(course, script)
+    no3d = [f for f in bf if f["rule"] == "v_3d_none_built"]       # L60 - said where it is seen first, never a block
+    if no3d:
+        o.append('<div class="card hot"><h3>%s</h3><p>%s</p></div>' % (e(T(script, "s_3d_title")), e(no3d[0]["detail"])))
+    mf = media_findings(script) + [f for f in bf if f not in no3d]
     if mf:
         o.append('<div class="card warn"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
             e(T(script, "s_media_title")), e(T(script, "s_media_intro")), "".join(row(f) for f in mf)))
@@ -1233,6 +1512,12 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
             e(T(script, "s_textcheck_title")), e(T(script, "s_textcheck_intro")), "".join(row(f) for f in tf)))
     else:
         o.append('<p class="note">%s</p>' % e(T(script, "s_textcheck_clean")))
+    jf = ilo_findings(course, script)                     # 2.42.0 - the ILO map and the sources
+    if jf:
+        o.append('<div class="card warn"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
+            e(T(script, "s_ilo_title")), e(T(script, "s_ilo_intro")), "".join(row(f) for f in jf)))
+    else:
+        o.append('<p class="note">%s</p>' % e(T(script, "s_ilo_clean" if ilo_map.read(course) is not None else "s_ilo_none")))
     o.append(media_summary_html(e, V, script))
     o.append(split_html(e, script))                        # L49 - plain theory against active learning
     bm = bloom_of(course, script)                         # L48 - suggestions only
@@ -1361,8 +1646,8 @@ def build_docx(course, script):
         for f in facts:
             body.append(_para("• " + f.get("fact", ""), lang=cl))
     th_found, taught_on = theory_findings(script)
-    for head, found in (("s_theory_title", th_found), ("s_media_title", media_findings(script)),
-                        ("s_textcheck_title", text_findings(script))):
+    for head, found in (("s_theory_title", th_found), ("s_media_title", media_findings(script) + build_findings(course, script)),
+                        ("s_textcheck_title", text_findings(script)), ("s_ilo_title", ilo_findings(course, script))):
         if found:
             label(T(script, head), style="Heading1")
             for f in found:
@@ -1537,8 +1822,18 @@ def screen_of(script, sid):
     return None
 
 
+def as_text(v):
+    """a field may hold a list (options, an answer's lines) or a number / true - shown to the operator as words (2.44.1:
+    a value that was not text crashed the understood list and the log, after the script was already written)"""
+    if isinstance(v, (list, tuple)):
+        return " / ".join(as_text(x) for x in v)
+    if isinstance(v, bool):
+        return "yes" if v else "no"
+    return "" if v is None else str(v)
+
+
 def short(s, n=90):
-    s = (s or "").replace("\n", " / ")
+    s = as_text(s).replace("\n", " / ")
     return s if len(s) <= n else s[:n - 1] + "…"
 
 
@@ -1556,9 +1851,33 @@ def changed_words(old, new):
     return "; ".join(parts) or "only line breaks or spacing change"
 
 
+SCREEN_WORDS = {"slide": "slide", "task-slide": "task slide", "activity": "activity slide", "self-check": "self-check question",
+                "module-check": "module check question", "final": "final assessment question"}
+SCRIPT_FIELD_WORDS = {"minutes_allocated": "minutes allocated", "pass_mark": "pass mark", "operator_facts": "operator facts"}
+SCRIPT_FIELDS = ("title", "minutes_allocated", "sources", "pass_mark", "operator_facts")   # the top-level fields a change may touch
+NEW_PROBLEMS = "after these changes the script would have: "
+
+
+def screen_label(s):
+    """what a screen is called in a list: its question, else its title"""
+    return s.get("question") or s.get("title") or s.get("id") or ""
+
+
 def describe(script, ch):
+    op = ch.get("op")
+    if op == "add":
+        s = ch["new"]
+        return "a new screen %s (%s, \"%s\") is added %s" % (ch["screen"], SCREEN_WORDS.get(s.get("kind"), s.get("kind")),
+                                                              short(screen_label(s)), ch.get("where") or "at the end")
+    if op == "remove":
+        return "%s (%s) is removed: \"%s\"" % (ch.get("where") or ch["screen"], ch["screen"], short(screen_label(ch["old"])))
+    if op == "script":
+        name, old, new = SCRIPT_FIELD_WORDS.get(ch["field"], ch["field"]), as_text(ch["old"]), as_text(ch["new"])
+        if len(old) > 60 or len(new) > 60:
+            return "the script's %s: %s" % (name, changed_words(old, new))
+        return "the script's %s becomes \"%s\" (was \"%s\")" % (name, new, old)
     s = screen_of(script, ch["screen"])
-    where = "%s (%s)" % (place(script, ch["screen"]), ch["screen"]) if s else ch["screen"]
+    where = "%s (%s)" % (place(script, ch["screen"]), ch["screen"]) if s else (ch.get("where") or ch["screen"])
     f = ch["field"]
     if f == "correct":
         return "%s: the correct answer becomes %s (was %s)" % (where, ch["new"], ch["old"])
@@ -1567,26 +1886,61 @@ def describe(script, ch):
     name = {"title": "the title", "text": "the slide text", "visual": "the planned picture", "notes": "the instructor notes",
             "minutes": "the minutes", "question": "the question", "feedback": "the feedback", "mechanic": "how the trainee answers",
             "visual_kind": "the kind of picture", "answer": "the answer"}.get(f, f)
-    if len(ch["old"] or "") > 60 or len(ch["new"] or "") > 60:
-        return "%s, %s: %s" % (where, name, changed_words(ch["old"], ch["new"]))
-    return "%s: %s becomes \"%s\" (was \"%s\")" % (where, name, ch["new"], ch["old"])
+    old, new = as_text(ch["old"]), as_text(ch["new"])
+    if len(old) > 60 or len(new) > 60:
+        return "%s, %s: %s" % (where, name, changed_words(old, new))
+    return "%s: %s becomes \"%s\" (was \"%s\")" % (where, name, new, old)
 
 
-def write_pending(p, script, changes, notes, source):
+NOT_STATED = "not stated"
+ILO_CHECK = "ilo_map"          # approved_checks: the approval was made with the ILO map and sources rules (2.42.0) checked in full
+
+
+def change_entry(ch):
+    """one applied change as it is remembered until the next approval: what kind, which screen, which field"""
+    return {"op": ch.get("op") or "edit", "screen": ch.get("screen", ""), "field": ch.get("field", "")}
+
+
+def touches_ilo_rules(entries):
+    """2.49.2 - does a change touch what the ILO map and sources rules read: a Sub-ILO tag, the sources, a screen added or removed"""
+    return any(e.get("op") in ("add", "remove") or e.get("field") == "sub_ilo" or (e.get("op") == "script" and e.get("field") == "sources")
+               for e in entries or [])
+
+
+def approved_before_ilo_rules(script):
+    """2.49.2 - a script approved earlier, without the ILO map and sources rules checked in full (approved before 2.42.0)"""
+    return bool(script.get("approved_hash")) and ILO_CHECK not in (script.get("approved_checks") or [])
+
+
+def approval_note(script, changes):
+    """what the next approval will check of the ILO map and sources rules, said when the list is shown (F9)"""
+    if not approved_before_ilo_rules(script):
+        return ""
+    if touches_ilo_rules(list(script.get("since_approval") or []) + [change_entry(c) for c in changes]):
+        return ("This script was approved before the ILO map and sources rules (2.42.0). These changes touch Sub-ILO tags, the sources or "
+                "add or remove a screen, so approve will check those rules in full: every Sub-ILO taught on a slide and checked by a question, "
+                "every question tagged, sources listed.")
+    return ("This script was approved before the ILO map and sources rules (2.42.0). These changes do not touch Sub-ILO tags, the sources "
+            "or the screens, so approve will not hold the script to those rules - they stay suggestions, as they are on the review page.")
+
+
+def write_pending(p, script, changes, notes, source, proposed_by=NOT_STATED):
     if not changes and not notes:
         if os.path.isfile(p["pending"]):
             os.remove(p["pending"])
         print("What I understood: nothing - the file says exactly what the script says. Nothing is waiting.")
         return 0
     pend = {"_what": "Understood, NOT applied. Show the list to the operator; apply only after they confirm.",
-            "source": source, "made": datetime.now().isoformat(timespec="seconds"), "base_hash": content_hash(script),
-            "changes": changes, "notes": notes}
+            "source": source, "proposed_by": proposed_by or NOT_STATED, "made": datetime.now().isoformat(timespec="seconds"),
+            "base_hash": content_hash(script), "changes": changes, "notes": notes}
     save(p["pending"], pend)
     print("What I understood - nothing has been changed yet:\n")
     for ch in changes:
         print("  - " + describe(script, ch))
     for nt in notes:
         print("  - " + nt)
+    if changes and approval_note(script, changes):
+        print("\n  " + approval_note(script, changes))
     print("\nShow this list to the operator. Only when they confirm:  content_script.py apply <course> --module %s --confirmed"
           % script.get("module"))
     return 0
@@ -1633,24 +1987,146 @@ def cmd_read(course, module, docx, pdf):
             for a in found:
                 notes.append("PDF comment on page %d (screens on that page: %s) from %s: \"%s\"" % (
                     a["page"], ", ".join(a["screens_on_page"]) or "not found", a["author"] or "the operator", short(a["text"], 200)))
-    return write_pending(p, script, changes, notes, "word" if os.path.isfile(p["docx"]) else "pdf")
+    word = os.path.isfile(p["docx"])
+    return write_pending(p, script, changes, notes, "word" if word else "pdf",
+                         "the operator (their %s)" % ("Word file" if word else "PDF"))      # the operator's own file
 
 
-def cmd_propose(course, module, changes_file):
+class Stop(Exception):
+    """an entry of a changes file that cannot be understood - the message is shown after "Stopped - " and nothing is written"""
+
+
+def check_script_field(name, v):
+    """the value a top-level script field may take (2.46.0) - returned as it will be stored"""
+    if name not in SCRIPT_FIELDS:
+        raise Stop("the script field %r cannot be changed this way - only %s can; status and approval are the operator's \"next\", "
+                   "screens are added, removed or edited one at a time" % (name, ", ".join(SCRIPT_FIELDS)))
+    num = isinstance(v, (int, float)) and not isinstance(v, bool)
+    if name == "pass_mark":
+        if not num or float(v) != int(v) or not 1 <= int(v) <= 100:
+            raise Stop("pass_mark must be a whole number from 1 to 100, not %r" % (v,))
+        return int(v)
+    if name == "minutes_allocated":
+        if not num or v < 0:
+            raise Stop("minutes_allocated must be a number, not %r" % (v,))
+        return v
+    if name in ("sources", "operator_facts") and not isinstance(v, list):
+        raise Stop("%s must be a list, not %r" % (name, v))
+    if name == "title" and not (isinstance(v, str) and v.strip()):
+        raise Stop("title must be text, not %r" % (v,))
+    return v
+
+
+def index_of(script, sid):
+    for i, s in enumerate(script.get("screens", [])):
+        if s.get("id") == sid:
+            return i
+    return None
+
+
+def build_changes(script, entries):
+    """The list of understood changes (2.46.0). Entries apply in order on a working copy, so a later one may target a
+    screen an earlier one added, and every "old" value is the one that entry will really replace. Returns
+    (changes, the script as it would stand); raises Stop for an entry that cannot be understood."""
+    work, lang, changes = copy.deepcopy(script), script.get("operator_language", "en"), []
+    if not isinstance(entries, list):
+        raise Stop("the changes file must be a list of changes")
+    for n, c in enumerate(entries, 1):
+        if not isinstance(c, dict):
+            raise Stop("entry %d is not a change" % n)
+        if "add_screen" in c:
+            s = c["add_screen"]
+            if not isinstance(s, dict) or not isinstance(s.get("id"), str) or not s["id"].strip():
+                raise Stop("entry %d: a new screen needs an id" % n)
+            if s.get("kind") not in KINDS:
+                raise Stop("entry %d: the new screen %s has an unknown kind %r - use one of: %s" % (n, s["id"], s.get("kind"), ", ".join(KINDS)))
+            if index_of(work, s["id"]) is not None:
+                raise Stop("entry %d: there is already a screen %s - a new screen needs an id of its own" % (n, s["id"]))
+            if c.get("after") and c.get("before"):
+                raise Stop("entry %d: a new screen goes after or before another screen, not both" % n)
+            anchor = c.get("after") or c.get("before")
+            if anchor is not None and index_of(work, anchor) is None:
+                raise Stop("entry %d: there is no screen %r to put the new screen %s" % (n, anchor, "after" if c.get("after") else "before"))
+            ch = {"op": "add", "screen": s["id"], "new": copy.deepcopy(s),
+                  "where": ("%s %s (%s)" % ("after" if c.get("after") else "before", place(work, anchor), anchor)) if anchor else "at the end"}
+            if c.get("after"):
+                ch["after"] = anchor
+            elif c.get("before"):
+                ch["before"] = anchor
+        elif "remove_screen" in c:
+            sid = c["remove_screen"]
+            i = index_of(work, sid)
+            if i is None:
+                raise Stop("entry %d: there is no screen %r to remove" % (n, sid))
+            ch = {"op": "remove", "screen": sid, "old": copy.deepcopy(work["screens"][i]), "where": place(work, sid)}
+        elif "script_field" in c:
+            name = c["script_field"]
+            if "new" not in c:
+                raise Stop("entry %d: the script field %s has no \"new\" value" % (n, name))
+            ch = {"op": "script", "screen": "", "field": name, "old": copy.deepcopy(work.get(name)), "new": check_script_field(name, c["new"])}
+        else:
+            if "field" not in c or "new" not in c:
+                raise Stop("entry %d is not a change I know - it needs \"field\" and \"new\" (or add_screen, remove_screen, script_field)" % n)
+            sid, f = c["field"].split(".", 1) if "." in c["field"] and not c["field"].startswith("opt.") else (c.get("screen"), c["field"])
+            s = screen_of(work, sid)
+            if s is None:
+                raise Stop("there is no screen %r in this module's script." % sid)
+            ch = {"screen": sid, "field": f, "old": get_field(s, f, lang) or "", "new": c["new"]}
+            if screen_of(script, sid) is None:
+                ch["where"] = "the new screen %s" % sid
+        apply_change(work, ch)
+        changes.append(ch)
+    return changes, work
+
+
+def apply_change(script, ch):
+    """one understood change, onto a script - the same for propose's working copy and for apply. A script field whose
+    value is no longer the one the list saw raises Stop: content_hash covers the screens only."""
+    op = ch.get("op")
+    if op == "add":
+        screens = script.setdefault("screens", [])
+        at = len(screens)
+        if ch.get("after") or ch.get("before"):
+            i = index_of(script, ch.get("after") or ch.get("before"))
+            if i is None:
+                raise Stop("the screen %s, where the new screen goes, is gone" % (ch.get("after") or ch.get("before")))
+            at = i + 1 if ch.get("after") else i
+        screens.insert(at, copy.deepcopy(ch["new"]))
+    elif op == "remove":
+        i = index_of(script, ch["screen"])
+        if i is None:
+            raise Stop("the screen %s to remove is gone" % ch["screen"])
+        del script["screens"][i]
+    elif op == "script":
+        if script.get(ch["field"]) != ch["old"]:
+            raise Stop("the script's %s is not what it was when the list was made" % ch["field"])
+        script[ch["field"]] = copy.deepcopy(ch["new"])
+    else:
+        set_field(screen_of(script, ch["screen"]), ch["field"], ch["new"])
+
+
+def new_problems(before, after):
+    def probs(sc):
+        try:
+            return validate(sc)
+        except Exception as e:                       # a screen too broken for validate to read - say so instead of crashing
+            return ["could not be checked (%s: %s)" % (type(e).__name__, e)]
+    old = probs(before)
+    return [NEW_PROBLEMS + x for x in probs(after) if x not in old]
+
+
+def cmd_propose(course, module, changes_file, proposed_by=None):
     p = paths(course, module)
     script = load(p["script"])
-    changes = []
-    for c in load(changes_file):
-        sid, f = c["field"].split(".", 1) if "." in c["field"] and not c["field"].startswith("opt.") else (c.get("screen"), c["field"])
-        s = screen_of(script, sid)
-        if s is None:
-            print("Stopped - there is no screen %r in this module's script." % sid)
-            return 2
-        changes.append({"screen": sid, "field": f, "old": get_field(s, f, script.get("operator_language", "en")) or "", "new": c["new"]})
-    return write_pending(p, script, changes, [], "chat")
+    try:
+        changes, work = build_changes(script, load(changes_file))
+    except Stop as e:
+        print("Stopped - %s" % e)
+        return 2
+    return write_pending(p, script, changes, new_problems(script, work) if changes else [], "chat", (proposed_by or "").strip() or NOT_STATED)
 
 
-def append_feedback(course, script, changes, source):
+def append_feedback(course, script, changes, source, proposed_by=NOT_STATED, confirmed_by=NOT_STATED):
     fb = workspace.claude_path(course, "FEEDBACK_LOG.md")
     if not os.path.isfile(fb):
         return
@@ -1660,9 +2136,12 @@ def append_feedback(course, script, changes, source):
     rows = []
     for ch in changes:
         n += 1
-        rows.append("| %d | %s | 3 · %s · %s | %s (%s) | %s | no |" % (
-            n, date.today().isoformat(), mid(script["module"]), ch["screen"], short(ch["new"], 120).replace("|", "/"), source,
-            describe(script, ch).replace("|", "/")))
+        op = ch.get("op")
+        said = short(screen_label(ch["new"] if op == "add" else ch["old"]) if op in ("add", "remove") else ch["new"], 120)
+        # 2.49.2 (F10): who proposed it and who said yes are named - never the operator's words by default
+        rows.append("| %d | %s | 3 · %s · %s | %s (%s) [proposed by %s; confirmed by %s] | %s | no |" % (
+            n, date.today().isoformat(), mid(script["module"]), "script" if op == "script" else ch["screen"], said.replace("|", "/"), source,
+            str(proposed_by).replace("|", "/"), str(confirmed_by).replace("|", "/"), describe(script, ch).replace("|", "/")))
     with io.open(fb, "a", encoding="utf-8", newline="\n") as f:
         f.write(("\n" if not text.endswith("\n") else "") + "\n".join(rows) + "\n")
 
@@ -1678,7 +2157,7 @@ def archive_name(folder, stem, ext):
     return path
 
 
-def cmd_apply(course, module, confirmed):
+def cmd_apply(course, module, confirmed, confirmed_by=None):
     p = paths(course, module)
     if not confirmed:
         print("Stopped - apply needs --confirmed, and that is only given after the operator has read the list and said yes.")
@@ -1687,25 +2166,38 @@ def cmd_apply(course, module, confirmed):
         print("Nothing to apply - there is no list of understood changes waiting.")
         return 2
     script, pend = load(p["script"]), load(p["pending"])
+    asked = [n for n in pend["notes"] if not n.startswith(NEW_PROBLEMS)]      # problems the result would have are notes too, not instructions
     if pend["base_hash"] != content_hash(script):
         print("Stopped - the script changed after the list was made. Read the corrections again, and show the new list.")
         return 1
-    for ch in pend["changes"]:
-        set_field(screen_of(script, ch["screen"]), ch["field"], ch["new"])
+    try:
+        for ch in pend["changes"]:
+            apply_change(script, ch)
+    except Stop as e:
+        print("Stopped - the script changed after the list was made (%s). Read the corrections again, and show the new list." % e)
+        return 1
     was_approved = script.get("status") == "approved"
     if pend["changes"]:
         script["status"] = "draft"
+        if script.get("approved_hash"):             # 2.49.2 (F9): what changed since the approval - approve checks only that
+            log = script.setdefault("since_approval", [])
+            log += [e for e in map(change_entry, pend["changes"]) if e not in log]
     save(p["script"], script)
-    append_feedback(course, script, pend["changes"], {"word": "Word file", "pdf": "PDF", "chat": "chat"}.get(pend["source"], pend["source"]))
+    proposed_by = pend.get("proposed_by") or NOT_STATED
+    confirmed_by = (confirmed_by or "").strip() or NOT_STATED
+    append_feedback(course, script, pend["changes"], {"word": "Word file", "pdf": "PDF", "chat": "chat"}.get(pend["source"], pend["source"]),
+                    proposed_by, confirmed_by)
     os.makedirs(p["old"], exist_ok=True)
     if os.path.isfile(p["docx"]):
         shutil.move(p["docx"], archive_name(p["old"], "%s_SCRIPT" % mid(module), ".docx"))
+    pend["confirmed_by"], pend["applied_on"] = confirmed_by, date.today().isoformat()
+    save(p["pending"], pend)
     os.replace(p["pending"], archive_name(p["old"], "%s.applied" % mid(module), ".json"))
     render(course, module, quiet=True)
     print("Applied %d change(s), logged in FEEDBACK_LOG.md, and made a fresh review page and Word file.%s%s"
           % (len(pend["changes"]), " The module is back to draft: it needs the operator's \"next\" again." if was_approved and pend["changes"] else "",
              ("\n  %d comment(s) and note(s) were NOT applied - they are instructions, not edits. Propose the change for "
-              "each (content_script.py propose), show it, and apply it when the operator confirms." % len(pend["notes"])) if pend["notes"] else ""))
+              "each (content_script.py propose), show it, and apply it when the operator confirms." % len(asked)) if asked else ""))
     return 0
 
 
@@ -1730,7 +2222,15 @@ def cmd_approve(course, module, by, despite=False):
     if probs:
         print("Not approved - the script still has problems:\n" + "\n".join("  - " + x for x in probs))
         return 1
-    must = blocking(all_findings(script))
+    must = blocking(all_findings(script, course))
+    # 2.49.2 (F9): a script approved before the ILO map and sources rules (2.42.0), changed in a way that does not touch what those
+    # rules read (a picture, a word), is not held to them again - they stay suggestions. A new approval is checked in full.
+    ilo = ilo_findings(course, script)
+    lenient = approved_before_ilo_rules(script) and not touches_ilo_rules(script.get("since_approval"))
+    if lenient and ilo:
+        must = [f for f in must if f not in ilo]
+        print("  %d finding(s) of the ILO map and sources check stay suggestions: this script was approved before those rules (2.42.0) "
+              "and nothing changed since touches Sub-ILO tags, the sources or the screens. They are on the review page." % len(ilo))
     chosen = design_choices.load(course)                     # L26: a design rule the operator chose against stops nothing
     waived = [f for f in must if any(f["rule"].startswith(pre) and rule in chosen for rule, pre in DESIGN_FINDINGS.items())]
     must = [f for f in must if f not in waived]
@@ -1744,6 +2244,9 @@ def cmd_approve(course, module, by, despite=False):
         return 1
     script["approved_despite_findings"] = [dict(f, date=date.today().isoformat()) for f in must] if must else []
     script.update({"status": "approved", "approved_by": by, "approved_on": date.today().isoformat(), "approved_hash": content_hash(script)})
+    script.pop("since_approval", None)
+    if not lenient or not ilo:                       # the ILO map and sources rules were checked in full (or the script meets them)
+        script["approved_checks"] = sorted(set(script.get("approved_checks") or []) | {ILO_CHECK})
     save(p["script"], script)
     render(course, module, quiet=True)
     print("Module %s's script is approved by %s. The slides built from it must say exactly this (check_script_match.py)." % (script["module"], by))
@@ -1816,7 +2319,7 @@ def render(course, module, quiet=False):
             print("\nThe script still has problems - fix them before showing it:\n" + "\n".join("  - " + x for x in probs))
         th, _ = theory_findings(script)
         for head, found in (("The theory check", th), ("The pictures-and-tasks check", media_findings(script)),
-                            ("The text check", text_findings(script))):
+                            ("The text check", text_findings(script)), ("The ILO map and sources check", ilo_findings(course, script))):
             if found:
                 print("\n%s found %d thing(s) - they are at the top of the review page and the Word file:" % (head, len(found)))
                 for f in found:
@@ -1848,8 +2351,10 @@ def main(argv=None):
             s.add_argument("--docx"); s.add_argument("--pdf")
         if name == "propose":
             s.add_argument("--changes", required=True)
+            s.add_argument("--proposed-by", help="who proposed these changes - the operator's own words, or the agent (default: not stated)")
         if name == "apply":
             s.add_argument("--confirmed", action="store_true")
+            s.add_argument("--confirmed-by", help="who read the list and said yes - the operator's name (default: not stated)")
         if name == "approve":
             s.add_argument("--by", required=True)
             s.add_argument("--despite-findings", action="store_true",
@@ -1858,9 +2363,19 @@ def main(argv=None):
     a.course = workspace.work_folder(a.course)
     if not os.path.isfile(paths(a.course, a.module)["script"]):
         print("Stopped - there is no content script for module %s yet:\n    %s" % (a.module, paths(a.course, a.module)["script"]))
+        if course_gate.problems(a.course, a.module):        # say what comes first, before anyone writes one (2.42.0)
+            print("\n" + course_gate.stop_message(a.module, course_gate.problems(a.course, a.module)))
         return 2
+    if a.cmd in ("render", "approve"):                      # 2.42.0 - the approved ILO map and the KB decision come first
+        script = load(paths(a.course, a.module)["script"])
+        approved = script.get("status") == "approved" and script.get("approved_hash") == content_hash(script)
+        probs = course_gate.problems(a.course, a.module) if (a.cmd == "approve" or not approved) else []
+        if probs:
+            print(course_gate.stop_message(a.module, probs, "started" if a.cmd == "render" else "approved"))
+            return 2
     return {"render": lambda: render(a.course, a.module), "read": lambda: cmd_read(a.course, a.module, a.docx, a.pdf),
-            "propose": lambda: cmd_propose(a.course, a.module, a.changes), "apply": lambda: cmd_apply(a.course, a.module, a.confirmed),
+            "propose": lambda: cmd_propose(a.course, a.module, a.changes, a.proposed_by),
+            "apply": lambda: cmd_apply(a.course, a.module, a.confirmed, a.confirmed_by),
             "discard": lambda: cmd_discard(a.course, a.module),
             "approve": lambda: cmd_approve(a.course, a.module, a.by, a.despite_findings), "status": lambda: cmd_status(a.course, a.module)}[a.cmd]()
 

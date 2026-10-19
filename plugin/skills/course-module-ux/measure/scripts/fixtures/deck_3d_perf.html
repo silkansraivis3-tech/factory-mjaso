@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture - two 3D slides for perf3d.mjs</title>
+<style>
+  body { margin: 0; font: 16px sans-serif; }
+  .slide { display: none; padding: 24px; }
+  .slide.active { display: block; }
+  canvas { width: 480px; height: 300px; background: #123; }
+</style>
+</head>
+<body>
+<!-- Test fixture for perf3d.mjs. No libraries: a 2D canvas stands in for a three.js scene.
+     s1: plain title slide (no canvas), the slide BEFORE the first 3D one.
+     s-fast: draws its first frame on the first animation frame after enter.
+     s-slow: deliberately waits ~2 s before its first frame (a scene building on enter). Do not "fix" it:
+             test_perf3d.py expects it to be over the 1000 ms budget.
+     The scene reports itself as window.__scene3d = { enterT, firstFrameT, frames, spin(ms, cb) } like a real 3D slide. -->
+<div id="landing"><button id="startBtn" type="button">Start</button></div>
+<button id="btnNext" type="button">Next</button>
+<main id="stage">
+  <section class="slide" id="s1"><h2>Title</h2></section>
+  <section class="slide" id="s-fast" data-delay="0"><h2>Fast scene</h2><canvas width="480" height="300"></canvas></section>
+  <section class="slide" id="s-slow" data-delay="2000"><h2>Slow scene</h2><canvas width="480" height="300"></canvas></section>
+</main>
+<script>
+(function () {
+  var slides = [].slice.call(document.querySelectorAll('.slide')), at = -1, raf = 0;
+  function show(i) {
+    if (at >= 0) slides[at].classList.remove('active');
+    at = i; slides[i].classList.add('active');
+    cancelAnimationFrame(raf);
+    var cv = slides[i].querySelector('canvas');
+    if (cv) startScene(cv, Number(slides[i].getAttribute('data-delay')) || 0);
+  }
+  function startScene(cv, delay) {
+    var ctx = cv.getContext('2d');
+    var scene = window.__scene3d = { enterT: performance.now(), firstFrameT: 0, frames: 0, prepared: false };
+    var running = false, angle = 0;
+    function draw() {                     // a fake "model": a turning square
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.save(); ctx.translate(240, 150); ctx.rotate(angle += 0.05);
+      ctx.fillStyle = '#4af'; ctx.fillRect(-50, -50, 100, 100); ctx.restore();
+      scene.frames++;
+      if (!scene.firstFrameT) scene.firstFrameT = performance.now();
+    }
+    function loop() { draw(); raf = requestAnimationFrame(loop); }
+    scene.spin = function (ms, cb) {
+      var f0 = scene.frames, t0 = performance.now();
+      setTimeout(function () { cb({ frames: scene.frames - f0, ms: performance.now() - t0 }); }, ms);
+    };
+    setTimeout(function () { running = true; raf = requestAnimationFrame(loop); }, delay);
+  }
+  document.getElementById('startBtn').addEventListener('click', function () {
+    document.getElementById('landing').style.display = 'none'; show(0);
+  });
+  document.getElementById('btnNext').addEventListener('click', function () {
+    if (at < slides.length - 1) show(at + 1);
+  });
+})();
+</script>
+</body></html>

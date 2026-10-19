@@ -89,9 +89,14 @@ def check(name, ok, detail=""):
     print(("  ok    " if ok else "  FAIL  ") + name + (("  -> " + str(detail)[:300]) if detail and not ok else ""))
 
 
-def write_course(d, prog, arch, plan=None):
+KB_YES = {"knowledge_base_decision": {"answer": "yes", "path": "C:\\courses\\gas\\KNOWLEDGE_BASE", "format": "course_source_processor",
+                                      "decided": "2026-10-16"}}
+
+
+def write_course(d, prog, arch, plan=None, intake=KB_YES):
+    """intake: the Stage 1 record - by default the knowledge-base decision is made (2.42.0); None writes none."""
     os.makedirs(d, exist_ok=True)
-    for n, v in (("programme.json", prog), ("architecture.json", arch), ("plan.json", plan)):
+    for n, v in (("programme.json", prog), ("architecture.json", arch), ("plan.json", plan), ("intake.json", intake)):
         if v is not None:
             io.open(os.path.join(d, n), "w", encoding="utf-8").write(json.dumps(v, ensure_ascii=False))
     return d
@@ -259,6 +264,75 @@ def main():
         check("the problems are at the top of the page, before what 'next' approves",
               0 <= p3.find(EN["problems_title"]) < p3.find(EN["approves_title"].replace('"', "&quot;")))
 
+        print("\n-- 2.42.0: the ILO map is made with the page and approved with it; the KB decision comes first")
+        sys.path.insert(0, HERE)
+        import ilo_map
+        import course_gate
+        g = write_course(os.path.join(tmp, "gate"), PROGRAMME, copy.deepcopy(ARCH))
+        code, out = run("--course", g)
+        m = ilo_map.read(g)
+        ids = [(r["module"], r["sub_ilo_id"], r["sub_ilo_status"]) for r in (m or {}).get("rows", [])]
+        check("making the page writes working_claude\\ilo_map.json - one row per Sub-ILO per module",
+              code == 0 and ids == [("M01", "1.1", "original"), ("M01", "1.1.a", "re-expressed"), ("M01", "1.1.b", "added"),
+                                    ("M02", "1.3", "original"), ("M03", "1", "main")], ids)
+        r0 = m["rows"][0]
+        check("each row carries the Main ILO and the programme topic verbatim (L2), the re-expressed one its own words",
+              r0["main_ilo"] == MAIN1 and r0["topic"] == PROGRAMME["topics"]["1"]["title"] and r0["sub_ilo"] == OUT11
+              and m["rows"][1]["sub_ilo"] == SUB_NEW and m["rows"][1]["programme_wording"] == OUT11, r0)
+        check("a module with no Sub-ILO of its own is mapped to its Main ILO", m["rows"][4]["sub_ilo"] == MAIN1)
+        check("ilo_map.py: a Sub-ILO with children is met through them",
+              ilo_map.leaves(ilo_map.module_rows(m, 1)) == ["1.1.a", "1.1.b"])
+        pg = page_of(g)
+        lvk = lambda key, **kw: html.escape(LV[key].format(**kw) if kw else LV[key])     # ARCH's operator language is lv
+        check("the page shows the ILO map, the knowledge base and that it waits for approval - in the operator's language",
+              lvk("im_title") in pg and SUB_NEW in pg and lvk("kb_yes", path="C:\\courses\\gas\\KNOWLEDGE_BASE") in pg
+              and lvk("ap_wait") in pg, [x for x in ("im_title", "ap_wait") if lvk(x) not in pg])
+        code, out = run("--course", g, "--approve")
+        check("--approve without --by records nothing", code == 2 and "--by" in out and course_gate.approval(json.load(
+            io.open(os.path.join(g, "architecture.json"), encoding="utf-8"))) is None, out)
+        probs = course_gate.problems(g, 1)
+        check("before approval the gate is shut, and says how to record the approval",
+              len(probs) == 1 and "--approve --by" in probs[0], probs)
+        code, out = run("--course", g, "--approve", "--by", "Anna Bērziņa")
+        arch_now = json.load(io.open(os.path.join(g, "architecture.json"), encoding="utf-8"))
+        ok = course_gate.approval(arch_now)
+        check("--approve records who and when, with the ILO map's fingerprint", code == 0 and ok and ok["by"] == "Anna Bērziņa"
+              and ok["ilo_map_hash"] == m["ilo_map_hash"], (out, ok))
+        check("... the gate is open for every module", course_gate.problems(g, 1) == [] and course_gate.problems(g, 3) == [])
+        check("... and the page now says approved", "Anna Bērziņa" in page_of(g) and run("--course", g, "--check")[0] == 0)
+        arch_now["modules"][0]["sub_ilos"][1]["text"] = "Point out the containment system on a general arrangement plan"
+        io.open(os.path.join(g, "architecture.json"), "w", encoding="utf-8").write(json.dumps(arch_now, ensure_ascii=False))
+        probs = course_gate.problems(g, 1)
+        check("a Sub-ILO changed after approval shuts the gate again - the map is stale and the approval old",
+              any("out of date" in p for p in probs) and any("changed after the operator approved" in p for p in probs), probs)
+        run("--course", g)
+        check("... making the page again refreshes the map; only the new approval is missing",
+              [p for p in course_gate.problems(g, 1) if "changed after" in p] and not [p for p in course_gate.problems(g, 1) if "out of date" in p])
+        check("... and the page says the Sub-ILOs changed since", "Anna Bērziņa" in page_of(g) and "--approve" not in page_of(g))
+
+        nk = write_course(os.path.join(tmp, "nokb"), PROGRAMME, copy.deepcopy(ARCH), intake=None)
+        code, out = run("--course", nk, "--check")
+        check("no knowledge-base decision is a problem at the top of the page", code == 1 and LV["p_no_kb_decision"] in out, out)
+        code, out = run("--course", nk, "--approve", "--by", "Anna")
+        check("... and the page cannot be approved while it is missing", code == 2 and "NOT recorded" in out
+              and course_gate.approval(json.load(io.open(os.path.join(nk, "architecture.json"), encoding="utf-8"))) is None, out)
+        dk = write_course(os.path.join(tmp, "declined"), PROGRAMME, copy.deepcopy(ARCH),
+                          intake={"knowledge_base_decision": {"answer": "declined", "reason": "two pages of sources only"}})
+        code, out = run("--course", dk, "--check")
+        check("a declined knowledge base is allowed - --check passes and names it", code == 0 and "two pages of sources only" in out, out)
+        run("--course", dk)
+        check("... and it stays visible on the page", "two pages of sources only" in page_of(dk))
+        wa = copy.deepcopy(ARCH)
+        wa["modules"][0]["active_learning"][0].update(id="A1.1", status="proposed", minutes=10, does="x")
+        wt = write_course(os.path.join(tmp, "waiting"), PROGRAMME, wa)
+        code, out = run("--course", wt, "--approve", "--by", "Anna")
+        check("the page cannot be approved while a theory-as-activity proposal waits", code == 2 and "Keep or Strike" in out, out)
+        na = copy.deepcopy(ARCH)
+        na["modules"][2]["main_ilos"] = []
+        nn = write_course(os.path.join(tmp, "noilo"), PROGRAMME, na)
+        code, out = run("--course", nn, "--approve", "--by", "Anna")
+        check("... nor while a teaching module has nothing in the ILO map", code == 2 and LV["p_no_ilo_row"].format(m=3) in out, out)
+
         print("\n-- one file that opens anywhere")
         check("the page fetches nothing from the internet", not re.search(r"""(src|href)\s*=\s*["']?https?:""", page) and "@import" not in page)
         check("the page has a print layout", "@media print" in page)
@@ -271,7 +345,7 @@ def main():
         plat = gates.load_platform()
         repo = os.path.join(tmp, "repo")
         base = os.path.join(repo, plat["asset_roots"]["trainee"], "courses", "x", "")
-        for n in ("ARCHITECTURE_REVIEW.html", "programme.json", "plan.json", "architecture.json"):
+        for n in ("ARCHITECTURE_REVIEW.html", "programme.json", "plan.json", "architecture.json", "ilo_map.json", "intake.json"):
             check("the publisher sorts %s as INTERNAL" % n, gates.classify(repo, plat, base + n) == "INTERNAL",
                   gates.classify(repo, plat, base + n))
         check("... while a trainee page still ships", gates.classify(repo, plat, base + "index.html") != "INTERNAL")

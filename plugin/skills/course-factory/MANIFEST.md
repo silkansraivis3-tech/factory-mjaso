@@ -79,6 +79,12 @@ course-factory/
 ├── knowledge/page-labels.json            the review pages' own words in the operator's language (en / lv / ru)
 ├── script/GUIDE.md                       READ IN: Stage 3 - the content script (2.16.0)
 ├── scripts/content_script.py, check_script_match.py, test_content_script.py   the script, the Word copy, corrections on confirmation, the word-for-word match
+├── compile/GUIDE.md                      READ IN: building the deck from the approved script (2.25.0)
+├── compile/scripts/compile_module.py, test_compile_module.py   the deck built, never typed; build sheet; hand edits never overwritten
+├── compile/scripts/compile_course.py, test_compile_course.py   COURSE.html, course_map.js, every module's start pages (2.37.0)
+├── compile/scripts/task_pages.py, test_task_engine.py   every trainee task page, all 19 ways of answering; the engine driven in Chrome (2.38.0)
+├── scripts/ilo_map.py                    the ILO map file, built from programme.json + architecture.json (2.42.0)
+├── scripts/course_gate.py, gate_fixture.py   no module before the approved ILO map and the KB decision; the tests' opener (2.42.0)
 ├── hours/                                READ IN: plan mode, and audit
 │   ├── GUIDE.md
 │   ├── knowledge/hours-rules.json        every number and rule (authority)
@@ -232,8 +238,9 @@ Processor, was unknown to the factory.
   acronym (LGHP, ISGOTT), by typo (SIGGTO/SIGTTO) — each written as a ready "which edition is
   current?" question. Different numbers mean different documents (exercise 14.2.4 is not 14.2.5, model
   course 1.04 is not 1.35); a short differing word is not a typo (LNG/LPG). `decide` records the answer;
-  `search` then leaves the old edition out. Packs go to `<course>/_factory/retrieval/`, **never into the
-  knowledge base**.
+  `search` then leaves the old edition out. Packs go to `course/working_claude/retrieval/`, **never into the
+  knowledge base**; a `--course` that is not an existing course or master folder, or sits in the factory or a
+  knowledge base, is refused (2.48.1).
 - Run read-only on the two real knowledge bases on this machine: GAS BASIC (docling, 48 sources) —
   3 exact copies (the SIGTTO book three times), 1 .doc/.docx pair, and 2 edition questions (MARPOL
   2022 against an older MARPOL; ICS Tanker Safety Guide 3rd ed. against an undated one). The electrical
@@ -684,8 +691,562 @@ checks did not know what the person chose, so the next build or fix flagged the 
 
 Not verified: the viewer and the recap on the real classroom tablet and the projector (L39 - the owner's test). Whether
 the projector shows an opened picture depends on how the classroom mirrors the instructor's deck.
+*§4za-§4zf: the script-compiler branch, its own release numbers (merged into main's line as 2.32.0; its laws renumbered L52-L58).*
 
-## 4u · The rulebook of 2026-10-19: the result is the last screen (2.31.0)
+## 4za · The deck built from the approved script (2.25.0, 2026-10-15)
+
+`docs/PROPOSAL_SCRIPT_COMPILER.md`, agreed by the owner: the words were typed twice (script, then HTML) and each
+module grew its own style file for text and task screens. New lane `compile/`: `compile_module.py` builds
+`presentation/index.html` from the approved script and a **build sheet** (`working_claude/script/M01.build.json`:
+picture files, layout choices, the module's drawing styles and scripts - kept out of the script so a delivery change
+never undoes the approval). The frame is copied from `course-module-ui/templates/gb_shell.html`, the compositions are
+the shared vocabulary only, drawings are source in `working_claude/figures/M01/`, every text line is numbered
+(`data-i`) for figures that step, hooks come from `window.GB_HOOKS`. It refuses an unapproved script (`--draft`
+previews), never overwrites a hand-changed or hand-built deck (`--force`), and lists missing pictures.
+`check_script_match.py` gained `--part instructor|trainee` and reads a leading `•` as list markup. Proved on a scratch
+copy of the IGF pilot's Module 1 (its drawings moved into figure files): 20/20 screens match, `check_navigation`
+clean, `check_course_package` with the classroom importer "Ready", `audit_deck` / `audit_collide` PASS,
+`audit_compose` 11/11 composed. Not yet: task pages, module check, start pages. Test: `compile/scripts/test_compile_module.py`.
+
+## 4zb · Compiled as good as hand-built; real photographs; no empty space (2.25.1, 2026-10-15)
+
+A side-by-side of the pilot's Module 1 (hand-built vs compiled, 1280 × 800) found 8 of 11 compiled slides plainer:
+the shared `.support` list is 14 px grey (a supporting size), and the hand-built deck had its own reading style, boxes,
+a conclusion line, a legend row, inset photos and a photo beside the words - all in one module's file. Those became
+shared: `course-module-ui/templates/gb_compose.css` §13b (`.copy`, `.box`, `.call`, `.inset`, `.legend`, `.fill.fig`,
+`.two-col.fig-wide`, `.slide.photo.split`, `.act-ico`, `.act-lines`, line states `.cur` / `.lit`; and a fix: a control's
+icon inside `.fill` no longer grows to full width). The compiler uses them, bolds the term before " - " / ": ", takes
+`boxes` / `conclusion` / `legend` / `inset` / `class` from the build sheet, writes the CC credit with title and
+"resized", and warns when a module's style copies are older than the factory's. Round 2: 11/11 slides as good or
+better, body text 18.4 px, pictures about 30 % larger; all audits pass at 1280 × 800; at 1024 × 768 drawing labels
+(in the drawings) are still under 12.5 px, as in the hand-built deck. Laws **L52** (as many real photographs as
+possible - `knowledge/media-and-tasks.json` floors `real_photo_*`, `content_script.py` suggestion `v_few_photos`, labels
+in en/lv/ru) and **L53** (no empty space, good padding - `compile/GUIDE.md` §2b, the three audits before showing).
+
+## 4zc · Every drawing whole and clean (2.25.2, 2026-10-15)
+
+The owner's screenshots of the pilot: an engine room poking out through the sloping stern (M01 summary, M02 zones), a
+cargo area through a curved bow, a fuel tank and a vent-mast top cut off at the drawing's edge, labels over a deckhouse
+and through a box's border. Every existing check was green - all of it is inside one `<svg>`, where none looked.
+**L54**. New browser probe `course-module-ux/measure/scripts/audit_drawing.js`: (1) a part whose centre is inside an
+outlined closed shape stays inside its real geometry (isPointInFill / isPointInStroke along the part's own outline;
+`<use>` of a shared hull expanded; clip-path counts as inside); (2) nothing cut off at the frame or a clipping
+ancestor, the line's thickness included, also a part faded out for a later step; (3) every label keeps 4 px to any
+shape, line or label and to its own box's edge (in proportion inside a small badge; a leader line may end at it).
+Exceptions marked in the drawing: `data-may-cross`, `data-no-contain`, `data-may-overlap`. Safety net
+`course-module-ux/assets/gb_fit.js` (in the design-system copy list, loaded by every compiled deck): when a slide comes
+up, a drawing whose paint reaches past its viewBox gets a frame just big enough, and a console warning. Test:
+`measure/scripts/test_audit_drawing.py` (headless Chrome/Edge on `measure/fixtures/`, skips without one), 13 checks.
+Pilot M01 (compiled): 35 findings -> 0 at 1280x800, 1024x768 and 800x1280 after its drawings were fixed (rooms along the
+stern, the vent-mast frame, the liquid clipped to the tank, labels moved; valve stems and the thermometer's dots marked).
+M02 (hand-built in the pilot, not changed): 64 findings, 5 of them cut-offs that `gb_fit` removes.
+
+## 4zd · The second module compiled (2.25.3, 2026-10-15)
+
+The pilot's Module 2 (20 instructor screens, its deck hand-built) compiled in a scratch copy: its drawings moved into
+figure files, the emphasis read from its markup into a build sheet, then every drawing fixed to L54. Result at 1280x800:
+words 38/38, classroom importer Ready, navigation clean, `audit_drawing` 64 -> 0, `audit_deck` / `audit_collide` clean,
+`audit_compose` 20/20. New build-sheet keys (`compile/GUIDE.md` §2c): `legend` as a line range, `box_alt`, `groups`,
+`hooks`, `inset.under`, `aside`, `figure_first`; a room activity with a drawing; a task slide links to the existing page
+for its code. Shared look (`gb_compose.css` §13b): a packed stage, `.aside`, a group of small figures as the picture,
+`.legend.own-numbers` / `data-n`, a small-projector rule (1024 px: words half the width, a step smaller - nothing spills
+or scrolls), a box's heading in bold. `gb_fit.js` adds room only on the side that overflows. Known: at 1024x768 the
+drawings' labels, drawn for 1280, fall under 12.5 px - before and after alike; needs labels sized for small screens.
+
+## 4ze · Figures from the figure kit; a missing part made into the kit (2.26.0, 2026-10-15)
+
+The pilot's M02 tank-monitoring slide shipped as four hand-drawn snapshots swapped with `display:none` - no motion,
+and a look of its own. The owner: *use the kit; if there is no element in the kit, the AI creates the element, puts it
+in the kit, and asks for a merge after the module is complete.* **L55**. New `course-visuals/kit/`: `kit.js` (parts that
+draw themselves from a spec, a step engine that tweens values, marks that fire an alarm as their value crosses them -
+in the order the value meets them - hold a value at a shut-off and start other moves; a fallback timer so a step ends
+when a WebView stops sending frames), `kit.css` (ISA-101: grey at rest, amber alarm, red trip; tokens only),
+`SPEC.md` (the format; seven families, two built: instruments, piping and flow), `PARTS.md` (the contract for a new
+part), `GALLERY.html` (every part moving; s03, s04, s14 rebuilt from specs), `scripts/check_kit.py` (spec and part
+checks), `scripts/kit_parts.py` (list; promote into the factory's kit after the module is complete - prints the git and
+merge-request steps, never pushes), `scripts/test_kit.py` (30 checks). Compiler: a `*.kit.json` figure goes into the
+page as data with the deck's `.mediabar`, `kit.css`/`kit.js` (+ `assets/kit_parts.js`) load before `GBDeck.init`, each
+step lights its slide line; `test_compile_module.py` +8 checks (59 on top of 2.25.3). `design-system.json` installs `kit.js`/`kit.css`.
+Orchestration Rule 3: module agents write only their own `kit_parts.js`; the orchestrator promotes at assembly.
+Tested on IGF Basic M02 compiled from a copy of the course (s03, s04, s14): steps, lines, slide enter/leave, buttons
+steady under the finger. Found on the way, not changed: the shared `.slide.dark::before` watermark reaches 112 px below
+a dark slide, which an `overflow:hidden` slide can still be scrolled by (`overflow:clip` would close it).
+
+## 4zf · Every photograph opens, unasked (2.27.0, 2026-10-15)
+
+Aigars's review of the IGF pilot: real photos for the illustrations, and *"images expandable - a lightbox with more
+explanation about the photo"*; the operator: *"the factory needs to make it on its own"*. **L56**. New
+`course-module-ux/assets/gb_photo.js` + `gb_photo.css` (ported from the definition panel and full-screen figure of the
+oil/chemical course, Modules 6 and 10, `course_deck_ext.js`): a tap on any photograph on a slide opens a panel - the
+photo whole, the slide's title, what it shows, its credit - and a tap there fills the screen; a `.slide.photo` gets a
+48 px Photo button; close button 56 px, the dimmed screen, Escape (one layer at a time); keys and swipes stay with the
+panel. `design-system.json` installs both. Compiler: every photograph `<img>` - slide picture, split, inset, and photos
+inside drawing fragments and asides - gets `data-about` (the photo's `_photo_meta.json` `description`) and
+`data-credit`; a photo with no description is reported; the module's copies are checked like the kit's.
+`test_compile_module.py` +7 checks (66). `_photo_meta.schema.json`: the description is now trainee-facing. IGF Basic
+M01–M03 recompiled: 12 photographs open, `check_script_match` and `check_course_package` pass. Not done: tap-to-open
+*cards* from the same course - automatic cards would hide the lines L53 lights from the figure's steps; they wait for
+the script rewrite (claim titles, one lead line) that Aigars asked for.
+
+**L57**, the same day - the operator, at M01 s04 ("five new spaces"): a drawing of real things should also show the real
+thing, small and close, to tap. The compiler's `drawn_parts` takes a drawn slide's real things - the term before " - "
+in each line (numbered from the kit figure's step whose `line` it is) and the labels the drawing writes on itself (kit
+`label`/`text`, SVG `<text>`; an abbreviation alone skipped) - matches photos by the new `shows` field
+(`_photo_meta.schema.json`; plural-insensitive, a one-word name only exactly), and puts up to four in a `.photo-strip`
+under the drawing, each opening in the L56 panel headed by its part (`data-name`). The pool is the module's photos, then
+the course's other modules' (copied in with `copied_from`); `RIGHTS_REVIEW` / `REJECTED` never. A real thing - its last
+word in `knowledge/media-and-tasks.json` `photo_things` - with no photo is printed and written to
+`working_claude\PHOTOS_TO_TAKE.md` (per-module sections, `## Notes` kept); a photo without `shows` is pointed out; the
+build is never blocked. `test_compile_module.py` +11 checks (77).
+
+**L58**, the same day - the operator, seeing the one Viking Grace tank photo under five M03 drawings: *"no duplicate
+images - a different one or none, on all modules"*. `photo_id` (the photo's `url_or_origin`, else its bytes) makes a copy
+in another module the same photograph; `compile_deck` builds in two passes - first the photos placed by hand (one shown
+twice in the module, or shown by an earlier module's deck by hand, is a problem), then the thumbnails, which take only
+what no built deck of the course shows (`shown_elsewhere`; another deck's thumbnails give way on that deck's next build).
+Fixed in the same pass, from the photo session's measurements at 1280 × 800: the strip and an `"under": "figure"` inset
+inside a fragment that is its own row-flex `.fill` (3D model + controls) squeezed the canvas to 0 px - they now go with
+the words unless the drawing's box is the compiler's own (`OWN_BOX`); the stage-with-legend layout no longer drops what
+goes with the words; `gb_compose.css` `.fill.fig figure.inset img` keeps an inset under a kit figure at inset size (it
+grew to ~590 × 440 and squashed `.kit-screen`). `test_compile_module.py` 85.
+
+## 4zg · The course's own pages built; module agents compile (2.37.0, 2026-10-16)
+
+Steps 4 and 5 of `docs/PROPOSAL_SCRIPT_COMPILER.md`. `classroom-system.json:8` said the factory writes
+`COURSE.html` and `course_map.js`; no script did, so every course typed them and both start pages of every module.
+`compile/scripts/compile_course.py` builds them from what is approved and built: the title from `architecture.json`,
+each module's title and minutes from its approved script, the hours from `programme.json`, how the course is named
+from `working_claude\course.build.json`, a module's tasks from its built deck's task slides, its instructor files from
+the folder. The course title is recorded at the first build and never changes without `--retitle` - it is the
+classroom's course ID - also against a hand-made `COURSE.html`. A planned module not built yet is named, never listed;
+a task slide whose page is missing is reported; hand-changed pages are kept without `--force`. `course.json` is left
+to the importer. On a copy of the IGF pilot: `check_course_package.py` and the importer find nothing wrong with the
+built pages, same course ID. Step 5: `build-order.json` steps 8, 10, 11, 15, `orchestration/GUIDE.md` (Rule 3, the
+agents table) and `orchestration/workflows/build_course.js` send a module agent through script → approval → build
+sheet → compile, writing no HTML and loading no HTML rules: ≈ 80,800 → 38,500 tokens of rules per module agent
+(measured, size ÷ 4). `test_compile_course.py` 21 checks.
+
+## 4zh · Every way of answering compiled (2.38.0, 2026-10-16)
+
+Any answer type the compiler could not build forced a hand-made page, which broke the one-look / one-engine rule.
+`compile/scripts/task_pages.py` now builds all nineteen of `media-and-tasks.json` - exactly what `content_script.py`
+accepts (`BUILT == set(USES)`, asserted). The ten new ones: **complete the sentence** (tap a gap, its choices below; a
+wrong gap turns amber with the right words), **choose the action, then the reason** (two columns, one Check),
+**scenario** (one part per step, each with its own Check and a Go on), **set the value** (a dial: drag, tap, - / +;
+the step from the tolerance or `"step"`; one key per accepted step), **find the fault** (symptoms, a card per part to
+turn over, "This is the fault"), **spot the errors** (the document as written, tap a line to flag it, the why after
+the Check), **build the plan** (numbered slots, cards that do not belong stay in the bank - `data-key` 1/0 and
+`data-place`), **rebuild the incident** (the order, then tap where it should have stopped), **compare** (columns, a
+column chosen by its name or any figure) and **operate the panel** (every position of each control, the opposites
+known in en / lv / ru or `"states"` in the build sheet; a valve or pump drawn by the figure kit follows the choice).
+The engine `gb_answer.js` gained parts and groups (choose, place, dial, stop) and keeps the old markup working. A
+place on a drawing may now be a straight-line `path.hit` in a `translate()`d group, or an element id in `"areas"`.
+
+Checkers fixed, each with a test: `check_script_match.py` lets a panel show a control's other positions
+(`data-state`) and still catches any other extra word; `check_task_pages.py` reads `data-kit="#id"` as a reference and
+leaves the ids inside a compiled-in drawing (`svg.taskfig`) to the drawing; `check_course_package.py` no longer counts
+an svg marked `data-no-zoom` (the result ring) as a picture needing the viewer.
+
+Proof: `test_compile_module.py` (a fixture with all ten, keys and markup), `test_task_engine.py` (the page answered in
+headless Chrome: 10 of 10 right; 5 of 10 with five wrong and each reveal), and a copy of the IGF pilot: every set of
+M01-M03 compiled, nothing left as it is, `check_script_match` clean per module - after its build sheets were given the
+task drawings the pilot's hand pages had inlined (the pilot's own build sheets still need that step).
+
+## 4zi · Team task pages compiled (2.39.0, 2026-10-16)
+
+A team task's page was the last set the compiler left as it was. Per `classroom-system.json` `team_task` the page
+now carries `task-mode`, `task-roles`, `task-scope` (the slide already carried `data-mode`, `data-team-size`,
+`data-roles`) and a bar at the top that `gb_answer.js` fills from the classroom's `gb-team`: the team's name, the
+trainee's role, "One answer for the whole team" under scope `team`. No `gb-team` within about 2 seconds: the task
+runs alone (it never waits). Scope `team`: the first tablet to finish hands in with `scope: 'team'`, `team`, `by` -
+any member, so a team of any size with any roles finishes, and every member reads and answers the whole task.
+Scope `member`: everyone's own result. **Proposal to confirm with the classroom app:** the rulebook says the others'
+pages show who handed in but names no message; the pages listen for `{type: 'gb-team-done', by, team}`
+(`team_task.gb_team_done`). Tests: `test_compile_module.py` team part (both marks, `check_script_match`,
+`check_course_package`), `test_task_engine.py` (no team / team / handed in elsewhere / member).
+
+## 4zj · The factory's own words in Latvian and Russian (2.40.0, 2026-10-16)
+
+L19: a course page is in one language. The words the compiler and the engine add - buttons, prompts, the result, the
+start pages - existed in English only, so a Latvian or Russian course would have mixed two languages on one screen.
+Now `task_pages.py` WORDS, `gb_answer.js` `LANG` (picked by `<html lang>`, still overridable by `GB_ANSWER_TEXT`) and
+`compile_course.py` WORDS are in en / lv / ru, asserted complete per language. **PROVISIONAL**: written by Claude and
+listed word by word, with the choices made (address, gender-free wording, abbreviated plurals, terms), in
+`compile/TRANSLATIONS_REVIEW.md` for Aleksis or a native speaker. Any other language is reported, exit 1 - the page
+is built with English factory words, never silently. `compile_module.lang_code()` maps "Latvian" / "Latviešu" /
+"lv" to lv (the deck, task pages and start pages wrote `lang="la"`), and `slug()` turns a Latvian or Russian title
+into plain letters for the file name. The owner's ruling stands: every course is English unless explicitly not.
+
+## 4zk · The deck's own words in Latvian and Russian (2.41.0, 2026-10-16)
+
+L19, the deck's turn: a Latvian or Russian deck still had Next, Back, All screens, the instructor cue and the landing
+card's chips in English beside its Latvian or Russian content. `gb_deck.js` now has a `LANG` table (en / lv / ru,
+picked by `<html lang>` as `gb_answer.js` does; `GBDeck.init({text})` still overrides) and puts the words on the
+chrome's labels and tooltips, the Start button, the overview and the landing hint - the chrome itself stays copied from
+`gb_shell.html` word for word. The compiler no longer passes English words to `GBDeck.init`, and the landing card's
+chips are in the course language (`compile_module.py` LANDING); a language with no words is reported, exit 1. The
+polite form, as on the start pages. **PROVISIONAL**, listed in `compile/TRANSLATIONS_REVIEW.md` §4-5. Test: a
+Latvian deck driven in Chrome (`test_task_engine.py`).
+
+## 4zl · L59 - the ILO map and the knowledge base before any module (2.42.0, 2026-10-16)
+
+Built as 2.38.0 on its own branch beside the task compiler; renumbered 2.42.0 when the two were merged.
+Owner: *"before creating any module the AI should have already made the ILO mapping and suggested for
+KNOWLEDGE_BASE to be created"*. A session building IGF Module 4 got neither until a follow-up message: the ILO map
+was a build step with no file, `script/GUIDE.md` never mentioned the map or the knowledge base, and `"sub_ilo"` on a
+question was optional. Now, by rule and by check:
+
+- **Intake suggests a missing knowledge base, unasked.** `kb_tool.py find` with none found prints what one is, which of
+  the master folder's files it would be built from (`source_files` and the old course, sorted: programme / model course /
+  codes / old course / other), how - the Course Source Processor, which is *not* part of the factory and is said so - and
+  what the course loses; `--json` adds the ready pop-up question. `kb_tool.py decision` records yes / built / declined
+  (with the operator's reason) in `intake.json` → `knowledge_base_decision`, once. An intake from before 2.42.0 naming a
+  knowledge base (or `none`) counts as the decision.
+- **The ILO map is a file, made before the split is approved.** `scripts/ilo_map.py` builds
+  `working_claude/ilo_map.json` from `programme.json` + `architecture.json` - one row per Sub-ILO per module (a module with
+  none: its Main ILO), the Main ILO and topic verbatim, the model-course items under the topic from any
+  `*syllabus*.json`. Core fields are rebuilt every time; other fields and keys (the IGF pilot's own tool adds how / where /
+  assessed, STCW tables) are kept. `make_architecture_page.py` writes it with the page and shows it, with the KB decision
+  (a declined one stays on the page). `--approve --by` records the operator's "next" in `architecture.json` → `approved`
+  with the map's fingerprint; refused without a KB decision, with a teaching module missing from the map, a Main ILO not
+  verbatim, or a theory-as-activity proposal waiting.
+- **The hard stop.** `scripts/course_gate.py` (CLI and module): no architecture, no or stale ILO map, page not approved
+  or Sub-ILOs changed since, no KB decision, or the module has no rows → a plain list of what to do. `content_script.py`
+  render (of an unapproved script) and approve exit 2 on it; `compile_module.py --init-build` too; `build_course.js`
+  pass 2 runs it in a gate agent before any module agent, and the reader now produces the Stage 2 files and the KB
+  suggestion instead of free-form `MODULE_MAP.md` / `ILO_MAP.md`.
+- **The script uses them.** `script/GUIDE.md` §0 *Before writing*: the module's rows (`ilo_map.py show`), the model-course
+  items, the old course's keep / modernise / add, the knowledge base only through `kb_tool.py search`, every fact traced
+  in `"sources"`. The review page's **ILO map and sources check** (must-fix, `--despite-findings` possible): a Sub-ILO
+  taught on no slide or checked by no question, a question without `"sub_ilo"`, a `"sub_ilo"` the module does not own,
+  empty `"sources"`.
+- **The IGF pilot is not broken retroactively** (checked on a copy): its `ilo_map.json` reads as the map (67 rows match
+  `architecture.json`; the final-assessment row is kept), its intake counts as the KB decision, and M01-M03 stay approved
+  with their gaps reported. M04 waits for one command: `make_architecture_page.py --course <course> --approve --by "<name>"`.
+- The publisher now sorts `ilo_map.json` and `intake.json` as internal (`course-tablet-publisher/knowledge/platform.json`).
+  Tests: `test_kb.py` 61, `test_architecture_page.py` 89, `test_content_script.py` 160, `test_compile_module.py`
+  (init-build stop), `test_workspace.py`; `scripts/gate_fixture.py` opens the gate on a test course.
+
+## 4zm · Real photographs and figure-kit drawings on the task pages; a big picture never under the Check bar (2.43.0, 2026-10-16)
+
+Owner's rule: *as many REAL photographs as possible in presentations AND in practical/trainee tasks.* Until now a task's
+"figure" had to be an SVG, so a kit chart was drawn twice (IGF M04: a static SVG copy for q03/m06, free to drift) and
+a "tap the place" task could not stand on a photo. And IGF M04 finding 12: a read_instrument with a big figure at
+1280x800 stacked four options in one column, the page grew to 934 px and the last option sat under the fixed Check bar.
+
+- **A photograph** (`task_pages.py` `photo_fig`): `"figure": "assets/img/x.jpg"` for hotspot, spot_the_hazard,
+  read_instrument, label_diagram (the photo is wrapped in a drawing so it gets its label bands), a picture beside
+  single/multi choice, above match / categorise / order / cloze / scenario / spot_the_error / build_the_plan / timeline /
+  choose_and_justify, and over a `compare` column (`"figures": {"Plan A": "assets/img/a.jpg"}`). Places are the build
+  sheet's `"areas": {"words": [left, top, width, height]}` in % of the photograph (there is no drawing to find them on;
+  a missing one is reported). The photo's size is read from its header (`image_size`, no library). A file that is not
+  there, a photo with no `_photo_meta.json` record, a missing credit, or a picture made by an image model (never for
+  what a trainee must recognise) is **reported, never invented**. A tap stays the answer: the picture opens full
+  screen only by its ⤢ corner (gb_zoom `answeredOn`); the viewer shows the credit but not the record's description (it
+  could give the answer away).
+- **A figure-kit drawing** (`kit_fig`): `"figure": "m04_chart.kit.json"` - the deck's own spec, so a chart is drawn
+  once. `kit.js` draws it still at the end of its last step (`data-kit-step`; `"kit_step": 2` or a word of a step's
+  title for another) with no step buttons, and as a static figure it opens full screen like any picture. Areas are the
+  spec's part ids (or the words a part is drawn with); `gb_answer.js` `placeParts` lays each tappable area (56 px
+  minimum) and each label-leader end on the drawn part itself once kit.js has drawn it - no box to estimate.
+  `"unlabel": "all" | ["P1", "V2"]` takes the words off so the drawing does not give the answer away. Label bands
+  use the new `spec.view`. Same spec + different step / unlabel = a separate figure in the page.
+- **Layout** (`gb_answer.css`): `data-pic="beside"` (read_instrument, and single/multi choice with a picture) puts the
+  picture beside its choices on a landscape tablet (>= 900 px), its height capped to what the screen leaves after the
+  header, the question, the room for the explanation and the Check bar (`100vh - 310px`). Nothing is under the bar at
+  1280x800 or 1024x768, and the page no longer scrolls.
+- Tests: `test_compile_module.py` 166 -> 190 (photo, kit, compare, label, every report); `test_task_engine.py` 49:
+  headless Chrome measures both tablet sizes (also proves the old layout fails: 934 px, 766 > 720), the tap-vs-corner
+  behaviour, the kit's still step and that every area / leader lies on its drawn part.
+- Not proved: the drawn bounds of every kit part type (placement uses the part's own rendered box, tested on tank,
+  valve, pump); a real photo at a real tablet (headless Chrome stands in); `compare` pictures are only checked in the
+  markup; the Latvian / Russian pages were not re-driven with photos.
+
+## 4zn · What building IGF Module 4 with the compiler found (2.44.0, 2026-10-16)
+
+Source: `M04_BUILD_METRICS.md` §9 (findings 1, 3, 5, 6, 7, 8, 13, 14). Each fix has a test.
+
+- **1 · `check_kit.py parts`**: a part's `css` written as concatenated strings (`'...' + '...'`) is read as css, not as
+  drawing code - no more false "fill/stroke set in the drawing". (`STRCAT`; `test_kit.py`)
+- **3 · inset on a photo slide**: `gb_compose.css` styles `.photo-copy .inset` (a compact row under the words, image
+  <= 16 vh); before, only `.copy` / `.fill` insets were styled and the photo ran at natural size, 74 px off the slide.
+  (`test_compile_module.py`)
+- **5 · `audit_deck.js`** finishes each slide's finite animations and transitions before measuring
+  (`CONFIG.finishAnimations`, default on): the recap's rise-in no longer reads as 23 px "scroll" in a pane where
+  animations do not advance. Test in a real browser: `measure/scripts/test_audit_deck.py` + `fixtures/deck_rise_in.html`.
+- **6 · `check_navigation.py`** reads the local scripts a page loads (a compiled task page's Back link is wired by the
+  shared `gb_answer.js`); a known shared engine (`gb_answer.js`, `gb_deck.js`, `gb_task.js`) counts even where its file
+  cannot be read. `test_check_navigation.py`.
+- **7 · `bloom_map.py`**: `parent_ids()` - a plain-numbered programme-result row with Sub-ILOs under it (`4` beside `4.1`,
+  `4.2`; or `"parent": true`) is the heading of those Sub-ILOs, not a Sub-ILO: no level read, no Apply question asked for
+  it, and a question linked to `"4"` serves `4.1` and `4.2`. A dotted row with children (`1.1` beside `1.1.c`) keeps its own level.
+- **8 · `design_system.py install`** makes a module folder that does not exist (a new module has none); inside the
+  Android project it still refuses and makes nothing; a path that is a file is refused. `compile_module.py --init-build`
+  makes the module folder and installs the factory's style files and engines in it.
+- **13 · contrast inside a figure**: `audit_drawing.js` check 5 judges each part of a figure-kit drawing (`svg.kit`)
+  against what is behind it - the panel, or the opaque shape it sits on: a label 4.5:1 (3:1 large, as rendered), a
+  shape or line 3:1 by its fill or its stroke. A part whose colour a rule in `kit.css` sets is the kit's own and exempt
+  (the gallery calibrates those); what a course adds (`kit_parts.js` css, inline style) is judged; `data-low-contrast`
+  marks a part meant to be quiet. Reported like the other drawing findings by `drawing_check.py` (a build problem). The
+  kit's own gallery passes it (a test): `cylinder`'s steel rod became `--faint-d`, the general-arrangement sea backdrop
+  is marked `data-low-contrast`.
+- **14 · the visual review is required**: `knowledge/build-order.json` step 16 (`visual_review`: a subagent, a
+  screenshot of every slide and every task screen at 1280x800, a five-point checklist) and `compile/GUIDE.md` §2f;
+  `compile_module.py` prints it under **Next** after every clean build. A credit, caption or full-screen record
+  (`.credit`, `figcaption`, `data-credit`, `data-about`) that shows a file-system path or a drive letter is a build
+  problem (`credit_path_problems()`), on the deck and on every task page.
+- Not touched, by instruction: `compile/scripts/task_pages.py`, `course-task-ux/assets/gb_answer.*` (another agent).
+
+## 4zo · The shared task engine after IGF M01-M03, the compiled answer key, whole-screen corrections (2.46.0, 2026-10-16)
+
+Source: the visual reviews of IGF Modules 1-3 rebuilt as compiled pages ("shared, not the module's"). Each fix is a
+check in `compile/scripts/test_task_engine.py` (headless Chrome, 1280 x 800) that fails on 2.44.1 and passes now.
+
+- **Engine (`course-task-ux/assets/gb_answer.js` + `.css`)**: the result screen opens at the top (`toTop()` - the ring
+  sat half under the top bar); a part's next step and the feedback are brought between the top bar and the dock by
+  `bring()`, never under the sticky bar ("Step 2 of 3" was lost); every choice keeps the letter it was shown with
+  (`letterAll()` writes `data-l`; a CSS counter re-lettered a folded step's "C" as "A"); **choose all that are right,
+  answered wrong: a right one NOT chosen is outlined dashed green with "Also right"** ("Also wrong" for spot the
+  errors), never ticked as if chosen - decided by course-task-ux §0.5 (a tick is what the trainee did right); verdict
+  "Not quite – what you missed is outlined in green.". A figure-kit drawing on a task page - a panel's control and a
+  drawing to tap or label - is the deck's dark screen (`--deep-2`): on white a closed valve read pale grey, an open one
+  solid, the reverse of the deck.
+- **Compiler (`compile/scripts/task_pages.py`)**: a picture answered on carries `data-zoom="button"`, so the ⤢ sits on
+  the drawing's own corner (it floated at the screen's edge beside a narrow drawing); a drawing to tap narrower than
+  `SIDE_AR` 1.8 gets `data-pic="side"` - the screen's height, the explanation beside it (half the screen was empty); a
+  list of `MANY` 6+ to order, build, match or rebuild gets `data-many` - the places beside the cards in two columns (8
+  rows needed a scroll at 1280 x 800). **Label boxes are sized to their words** (`label_px`, two lines, the tick's room;
+  `label_boxes` packs both rows, passes boxes between them, reports what cannot fit; a hand box more than 5 % too
+  narrow is reported; the top row keeps clear of the ⤢ button, `CORNER_PX`) - proved on the pilot: M01 m01 and M03 q06
+  with their hand boxes removed fit, nothing cut off, none under the ⤢.
+- **`course-module-ui/templates/gb_page.css`**: `.scroll th{top:0}` - inside its scroll box a table's sticky head row
+  (top 48 px) was pushed down over the first row: the instructor plan and the answer key (found by the visual review).
+  The script's top-level `"pass_mark"` wins over the build sheet's (`pass_mark_of`; both and different is reported).
+- **The instructor's answer key (`compile/scripts/answer_key.py`)**: `assessment/check_answer_key.html` compiled with
+  the task pages from the same approved script - every question in the tablet's order, how it is answered, the right
+  answer in the script's words, the feedback, how the pages mark and the pass mark; gb_page look, course language (lv /
+  ru PROVISIONAL, `compile/TRANSLATIONS_REVIEW.md` §6); no `data-script` / `data-key`. Listed by `compile_course.py`.
+- **The deck (`compile_module.py`)**: a task slide's icon is the gesture its set mostly asks for (`task_icon`,
+  `data-icon` choose / tap / drag / order / dial / find / cloze) - all showed one tablet.
+- **Corrections (`scripts/content_script.py`)**: a changes file for `propose` may also hold `{"add_screen": {...},
+  "after": "s05"}` (or `"before"`), `{"remove_screen": "q05"}` and `{"script_field": "sources" | "pass_mark" | "title" |
+  "minutes_allocated" | "operator_facts", "new": ...}` - applied in order on a working copy, shown as understood, applied
+  only with `--confirmed`, one FEEDBACK_LOG row each (`3 · M01 · script` for a field); a script field changed after the
+  list was made stops apply (content_hash covers the screens only). `test_content_script.py` 161 → 182.
+- **Proof** on a scratch copy of the IGF pilot: M01-M04 recompiled, `check_script_match` exit 0 on all four,
+  `check_course_package` "Ready", the keys listed on every START_HERE_EXTENDED. M04's two deck contrast findings (slide 3
+  kit chart) are the same with 2.44.1 - not from this release.
+- After merging, every module needs `design_system.py install --update` (the engine changed).
+
+## 4zp · The module plan compiled from the approved script (2.47.0, 2026-10-16)
+
+Source: the IGF pilot's hand-made `M01_PLAN.html` / `M02_PLAN.html` predated the day's script corrections, and M03-M04
+had none (build-order step 14: "one plan per module, stating its allocated and built minutes on its own face").
+
+- **`compile/scripts/module_plan.py`** (new; called by `compile_module.py`, like `task_pages.py` and `answer_key.py`):
+  `moduleNN/instructor/MNN_PLAN.html` - instructor-only by its folder, the shared document look (`gb_tokens.css`,
+  `gb_page.css`), course language (en, lv, ru; lv / ru PROVISIONAL, `compile/TRANSLATIONS_REVIEW.md` §7). Every block is
+  from an approved file, nothing is typed: **the face** - allocated minutes (`minutes_allocated`, with the academic hours
+  of `programme.json`) against built minutes (the sum of every screen's minutes), the split plain theory / active
+  slides / tasks / room activities (`content_script.split_of`); a mismatch (short, over, or not stated) is a red card in
+  words **and** a build problem (exit 1); **what it owes** - the Main ILO and the Sub-ILOs of the module's rows of
+  `ilo_map.json`, each with the slides that teach it and the questions that check it; **the running order** - every
+  screen: start minute, minutes, theory / active (and the technique) / task / room activity, picture kind, the script's
+  notes as what the instructor does, its Sub-ILO; **the tasks** - every set with its code, the slide and minute that open
+  it, the pass mark (checks) or "no pass mark", every question with its way of answering, Sub-ILO and wording (the
+  answers stay in the answer key); **room activities** with their link hints; **materials** - the architecture's
+  `practicals` equipment, the tablets the tasks use, the pictures the script says must be captured at the school;
+  **sources** - the script's.
+- **`compile_module.py`**: a normal build writes the plan; `--only plan` builds it alone (`--only deck` / `tasks` no
+  longer touch it). It is recorded in `compiled.json` like the task pages: a plan changed by hand, or made before the
+  compiler, is not overwritten (exit 1) until `--force`. The pilot's two hand-made plans are therefore protected - move
+  them to `working_claude/modules/moduleNN/handmade_<date>/` first, or use `--force`.
+- Tests: `compile/scripts/test_module_plan.py` (47); `test_compile_course.py` now lists the compiled plan, not a stub.
+- After merging, every module whose `assets/gb_page.css` predates 2.46.0 needs `design_system.py install --update`
+  (the plan's tables need its `.scroll th{top:0}`).
+## 4zq · The figure kit does the drawing work; the figure studio (2.48.0, 2026-10-16)
+
+Built as 2.45.0 on its own branch (`aleksis/figure-kit-auto`), renumbered at the merge with 2.45.0-2.47.0.
+Measured on IGF M01-M04: 3, ~10, ~12 and 17 compile runs, nearly all for drawings - label boxes placed by hand in build
+sheets (M01 m01, M02 m01, M03 q06), labels overflowing, parts invisible on the dark panel, empty space, 12 px labels,
+each found only after a full build. Now the kit and its checks take that work:
+- **Labels laid out by themselves** (`kit.js` `layout()` / `solveLabels()`): every part's words are a label
+  (`KIT.h.label`) placed clear of every shape, line and other label and of its own box's edge (L54), at the end of every
+  step - beside the part, or further out with a leader line. `"text"` with `"to": [x, y]` is a callout. The solver is a
+  pure function (`KIT.solveLabels`, `scripts/test_solver.py`) so the 3D kit's label overlays can use it.
+- **Task-page label boxes**: one sizing - 2.46.0's `task_pages.label_px` - and `compile/scripts/label_layout.py` places
+  them: each box as near its place as the others allow (PAV), order kept, never off the edge or under the ⤢, a full row
+  hands its middle box to the other, what still does not fit is reported (the boxes squeezed, never cut off). It fixed
+  2.46.0's packing, which could push the last of five boxes 9 % past the right edge (IGF M02 m01).
+- **Both panels by construction** (`kit.css` `.kit-light`): a part names the dark-panel tokens; on a light ground they
+  mean the light ones. The contrast check stays as the safety net; the gallery passes it on both panels.
+- **The 12.5 px floor** (`--kit-up`): shown smaller than 1:1 every kit type size grows by 1/scale (max 2x); boxes, rings
+  and rows grow with their words (`fig.fit`); past 1.3x frame growth the words stop growing and SMALL TEXT reports it.
+- **Fit**: a drawing that reaches past its frame grows the frame (taller only when the column has room), one lost in its
+  frame is zoomed to fill it (max 1.5x; never on a task page, with `view`, an inset photo or `"fit": false`); an alarm too
+  long for its log goes on two lines; a panel holds the parts on it.
+- **The figure studio** `course-visuals/kit/scripts/studio.py <spec>`: the spec on its real slide (built by
+  `compile_module.slide_html` from the script and build sheet), 1280x800 judged and 1024x768 stated, every audit at every
+  step, a screenshot - 2-10 s.
+- **Checks**: `drawing_check.py` sees a true 1280x800 page (it was 1264x705); `audit_drawing.js` lays a kit figure out
+  first, judges a deck's kit figure at every step (`kitSteps`), adds SMALL TEXT, knows an opaque shape hides the line under
+  it, and `figure(svg)` audits one drawing.
+- **Parts**: promoted from IGF M03/M04 (pipe_section, relief_valve, step_track, coupling, drip_tray, water_curtain,
+  detector, flame, curve_chart) and 17 pre-built for M05-M15 from `architecture.json`'s media plans (fan, spray,
+  gas_cylinder, push_button, person, sensor, static_charge, fire, flammability, range_bar, hose, manifold, spool_piece,
+  tank_wall, spill, wind, tree). `GALLERY.html` has a dark/light switch; `test_gallery.py`: 34 merged parts, 48 figures,
+  clean at every step on both panels.
+- Tests: `test_kit.py`, new `test_studio.py`, `test_gallery.py`, `test_solver.py`, `test_label_layout.py`.
+- **Proof (IGF scratch copy, hand-placed boxes removed):** the studio swept all 32 M01-M04 kit figures - 29 clean first
+  time; M02 s15 needed a spec line (`"rows": 2`), M03 s06 and M04 s10 two kit fixes (now in the kit). Then every module
+  compiled clean on its first compile with the final kit (4 compiles against 3 + ~10 + ~12 + 17). Deck audits: the same or
+  fewer failures than the original course, none in a kit figure. The real course still needs M02 s15 `"rows": 2`.
+- 1024x768, stated: the two-col panel shows a figure at 0.54-0.72 of its size; the floor grows its words 1.4-1.9x and
+  25 of 32 IGF figures then crowd (labels without a clear place, overlaps). Not judged; the tablet is 1280x800.
+
+## 4zr · 3D and AI pictures planned unasked (2.49.0, 2026-10-16)
+
+- **Why:** IGF M04, M05 and M06 were scripted with no 3D and M03-M06 with no AI picture; the module-level suggestion
+  "nothing moves, turns or can be explored" was printed and ignored. Operator: "make it so they add 3D + AI generated
+  photos when needed".
+- **Script writer** (`script/GUIDE.md`): plans them before the review page - `model_3d` where the lesson is a shape, an
+  inside or a layout in space (about one good scene in a spatial module, L46's cap kept), `ai_illustration` where a
+  slide sets a scene no real photograph shows (context only, L33; described, priced and said yes to before it is made, L47).
+- **Check** (`content_script.py` `propose_3d` / `propose_ai`, words in `media-and-tasks.json` `three_d.fit_words`,
+  `not_fit_phrases`, `propose_first_kinds`, `floors.ai_scene_words`): what was left out is named slide by slide, as a
+  proposal with the words that made it - never a must-fix (owner 2.18.1). Kept → the script (propose / apply). Struck →
+  `"declined": {"3d": {...}, "ai": {...}}` in the script, outside the approved words (the hash does not change).
+- **Build** (`compile_module.py`, `compile/GUIDE.md` §2b): a photo slide with no picture file says what it can become.
+- **On the pilot:** no proposal in M01-M03 (each has its 3D scene); M04 s10, s06; M05 s06, s05; M06 s14, s06.
+
+## 4zs · What building IGF Module 6 from nothing found, fixed (2.49.1, 2026-10-16)
+
+- **The build:** 84 min, 0 hand edits to HTML, 9 compile runs of which 5 a correct factory would not have needed; 33
+  problems logged with file:line in the course's `working_claude/M06_BUILD_METRICS.md` §6. 31 fixed here.
+- **Compiler / task pages** (C1-C9, C12, C13, C15, C16): `python -I`; crash-safe build record; `--init-build` from the
+  course; `"unlabel": "answers"`; `"not_things"`; inset warning; photo slides in real columns (`.photo-col`) with the
+  credit kept; landscape picture beside categorise/order/match; alt text; `.dial-val`; right state on dark drawings.
+- **Figure kit / drawing check** (K1-K13, C11): scale and range-bar words through the layout and the audit; parts
+  `lamp`, `spark`, `composition_bar`; states `tank.burst`, `gas_cloud.drift`; `text` revealed by a step; EMPTY at the
+  busiest step; `studio.py --step all`; contrast after animations settle.
+- **Script lane / checkers** (P1-P3, C10, C14, C15, C17): Apply-level numbers; render and `kb_tool` write only on change;
+  `audit_compose.all()`; hooks are not unstyled; `measure/scripts/run_audits.py` runs the three deck probes headless.
+- **Not changed, on purpose:** per-question Retry (C16) is against course-task-ux §9a (one opening, one result) - the
+  owner's call; `two-col` on a photo stays `photo split`, which M01-M06 use deliberately.
+- **Proof:** 36 test files; M01-M06 compiled with `python -I` on a scratch copy, the importer ready, `run_audits.py`
+  PASS on all six decks at 1280x800. The real course still needs M02 s15 `"rows": 2`.
+
+## 4zt · What the overnight build of IGF M07-M15 found, fixed; every 3D scene answers a tap (2.49.2, 2026-10-19)
+
+- **The build:** M07-M15 and the final assessment built in one unattended run (16:51-19:13), 3D scenes for M04-M07,
+  21 factory problems logged in the course's `working_claude/OVERNIGHT_2026-10-16.md` §7. All fixed here.
+- **Compiler** (F1, F2, F4, F5, F6, F7, F12, F13, F20, F21, F25): design files checked and updated at every compile;
+  `--module final`; final variants `final_a.html` / `final_b.html`; drafts marked and left out of the package; inset spill
+  warning (86 words); 3D stage fits its column; `measure/scripts/perf3d.mjs` + `test_perf3d.py`; task photo credit and
+  ⤢; long order verdict full width; push button on operate-the-panel.
+- **Kit** (F3, F4, F8, F22, `log`): `gas_cloud` figure coordinates; words grow under a photo inset; `push_button` `h`,
+  `tree`, `level`, `spill` (approved drawings unchanged: `surfaceY` and its 150 default kept); `person` `labels`; `log` wraps.
+- **Script lane** (F9, F10, F15, F23, F24): picture-only re-approval; who proposed / confirmed in FEEDBACK_LOG; stricter 3D
+  proposal (`procedure_words`); `ilo_map.py refresh <course> [--module N] [--dry-run]` + `test_ilo_map.py`; approval is
+  the operator's own act.
+- **3D taps** (operator, 2026-10-19): `media-and-tasks.json` `three_d.interaction` - a tap highlights a part (blue glow,
+  framed, named), a second tap or a tap beside resets; course-visuals SKILL, compile/GUIDE.
+- **Proof:** 38 test files; IGF M01-M16 compiled on a scratch copy - M01-M06 exit 0, the drafts report only "not
+  approved", every drawing clean, importer ready, `run_audits.py` PASS on the changed decks.
+
+## 4zu · One bullet look in every deck (2.49.3, 2026-10-19)
+
+- **Found** (operator, IGF M06 s08): over a photograph every line - heading and point alike - carried the same amber
+  left rule, and the points kept a typed `•`; text slides draw points as the `.support` list's blue square.
+- **Now:** a `•` line over a photo is `.lead.sub` (the blue square, no rule); the lines it hangs under are `.lead.head`
+  (bold, white, a step larger, no rule). A `•` typed in a `.box` is dropped. Photo slides with no `•` lines unchanged.
+- **Proof:** `test_compile_module.py` 261; IGF M01-M15 decks rebuilt, 22 photo slides with points measured inside the
+  slide at 1920x1080 and 1024x768, no typed `•` left in any deck.
+
+## 4zv · What the pre-merge review of the branch found, fixed (2.49.4 + nano-banana 1.3.2, 2026-10-19)
+
+- **Compiler** (`compile_module.py`): an inset caption, credit or description with a backslash is put under the
+  drawing as written (was `re.error: bad escape`); a slide with no words gives no word lines (was IndexError); after
+  approval, `--only tasks` / `--only plan` keep `DRAFT_NOT_PACKAGED.txt` - only a deck rebuild takes it away; the
+  figures folder and `PHOTOS_TO_TAKE.md` go through `workspace.claude_path` (an older course's `_factory\` is found,
+  a missing `working_claude\` is made).
+- **`ilo_map.py derive`**: a `"final"` module row sorts last (was TypeError, which also stopped `course_gate.py` and
+  `make_architecture_page.py`).
+- **`studio.py`**: without 1280x800 in `--sizes` the result is "not measured", not clean; an aborted audit is a finding.
+- **`build_course.js`**: the reader runs in pass 1 only - pass 2 never rewrites the approved Stage 2 files; a module
+  whose build or QA returned nothing is blocking.
+- **Publisher** (`gitpub.py`): git prints paths unquoted (`core.quotepath=false`) and the script writes UTF-8, so a
+  course file named `Drošība.png` commits; `push` refuses any branch but `course/<slug>/...`.
+  `references/git-workflow.md` no longer describes the removed merge step.
+- **nano-banana 1.3.2**: a picture is counted in `usage.jsonl` before its file is written; a usage log that cannot be
+  read, or a write that failed, refuses the next generation instead of counting EUR 0. A Pro picture that fails
+  (busy, not on the key, no image) is tried once with Flash - one picture, the approved one - and the result says
+  so (`fell_back_from`); a key problem is not retried (operator, 2026-10-19).
+- **Proof:** new tests in `test_compile_module.py`, `test_ilo_map.py`, `test_studio.py`, `test_publisher.py`,
+  `test_nano_banana.py`, and the new `orchestration/workflows/test_build_course.py` (fails on 2.49.3); 39 test files pass.
+- **Not changed (stated):** the spending cap still prices every picture and clip flat (EUR 0.10 / 1.50, settable);
+  `gemini_take.py take` still moves the newest download without a name filter; the gate report is not tied to the
+  staged content; secrets are scanned in text extensions only.
+
+## 4zw · Numbered steps are one list (2.49.5, 2026-10-19)
+
+- **Found** (operator, IGF M11 s04): six numbered steps drawn three ways - step 1 as the headline, steps 2-6 as
+  blue squares that also carried their typed numbers, some step names bold.
+- **Now:** lines numbered 1, 2, 3 ... in order compile to `ol.support.seq` (over a photo `.lead.sub.step`): every
+  step the same size, the step's own number in a navy disc as its marker (`.n`, kept in the words for the match check).
+  The compiler half shipped inside 2.49.4's commit; 2.49.5 adds the styles and the vocabulary row.
+- **Proof:** `test_compile_module.py` 270; IGF M01-M15 rebuilt, the 12 step slides measured inside the slide at
+  1920x1080 and 1024x768.
+
+## 4zx · A selected line always looks selected; a photo never lies on a drawing (2.49.6, 2026-10-19)
+
+- **Found** (operator, IGF M05 s02 and M02 s13): boxes alternated blue and amber by default, and the line a stepping
+  figure is on (`.cur`) was amber too - out-ranked by `.box.alt`, so an amber box did not change when selected and a
+  blue one turning amber read as the only selection. M02's fire control plan laid its photos on the cargo area,
+  covering the bow of the ship, excused by `data-may-overlap`.
+- **Now:** every box is blue; `box_alt` (only where the build sheet names it) is grey. `.cur` is amber wash + amber
+  ring + amber bar, after every card rule and out-ranking it. `audit_deck.js` "mark": on a stepping slide each
+  `[data-i]` line with `.cur` must differ from itself and every other line at rest. `audit_drawing.js` check 7
+  "photo over drawing": a real photo painted over drawn parts is a finding (markers drawn after a photo are fine;
+  `data-may-overlap` does not excuse it); a shown photo counts as content for EMPTY. M02 s13's photos moved to a
+  column beside the hull.
+- **Proof:** `test_audit_deck.py` 5 (the old look fails, the shipped one passes), `test_audit_drawing.py` 32 (a photo
+  on the drawing found; beside it, or a marker on a photo, silent), `test_compile_module.py` 271;
+  the new check flagged M02 s13 before the move and is clean at all 6 steps after it.
+
+## 4zy · The M01 benchmark's compiler gaps: 3D said (L60), EMPTY at the busiest step, the vent mast's tap area (2.49.7, 2026-10-19)
+
+- **Found** (IGF M01 built twice from one script, by hand at 2.24.0 and by the compiler at 2.49.6 - benchmark
+  `compiler\METRICS.md`): (1) s05 is `model_3d`, the build sheet gave it a kit figure and the compile passed without a
+  word - the compiler never read the kind. (2) EMPTY named s02's rest state, "at its fullest (step 0 of 3)": a part a
+  later step brings in waits at opacity 0 and was counted at every step, so every state looked alike and step 0 won
+  the tie. (3) A hotspot on a kit `vent` covered only its outlet, so q03 "Vent mast" took a hand-made % box. Behind
+  that box, (4): with `"unlabel": "answers"`, two questions on one kit figure shared one drawing (the share key held
+  the word "answers", not the answers), so q03 was shown q01's drawing, with "vent mast" still written on it.
+- **Now:** (1) a 3D slide whose figure is not an `.html` scene (`[data-stage]`, `data-3d`, `data-scene`, `<canvas>`) is
+  a must-fix in the build and a note on the script's review page, "asks for a 3D scene; it has a 2D figure", until the
+  slide's entry holds the operator's reason, `"declined_3d"` (content_script `flat_3d`, `build_findings`).
+  `--init-build` plans a `model_3d` slide's scene by default: its figure, its scene file and `three.min.js` in
+  `"scripts"`, and a `"_figure"` note from M03's `m03_station3d.js` (GUIDE 2b; L46 limits unchanged). (2) each step is
+  judged by what it shows (settled), a tie goes to the later step, and the finding says "at its busiest step (step N of
+  M)". (3) a `vent` on top of a pipe's upright run lays an unpainted box down the run, so its tap area (and a label's
+  leader end) is the whole mast; `"mast": false` / `"mast": <length>`. (4) the share key holds the answers' part ids.
+- **L60 (Aleksis, 2026-10-19: "very recommended to build a 3d model at least once where you can in a module"):** a
+  script with no 3D slide gets one anyway - `--init-build` gives the best slide (`content_script.best_3d`: one the script
+  plans as 3D, else `propose_3d`'s first - a shape, an inside or a layout in space, never a real photo's slide) a starter
+  scene entry with a `"_3d"` note on why. A module built with no scene: a RECOMMENDED block in the build and its own card
+  on the review page, naming the candidate and why - never a block, never exit 1. Declined with the operator's reason at
+  the top of the build sheet (`"declined_3d"`), it is not proposed again; a slide's own `"declined_3d"` takes it out of
+  the running. L46 unchanged. Law text: `docs/FACTORY_LAWS.md` L60, `SKILL.md`.
+- **Not fixed by this - the benchmark misread it:** M01 s02 without its captions is 60 % blank at its busiest step too
+  (all three markers in): the captions fill a real hole, they are no workaround for a wrong check.
+- **Proof:** `test_audit_drawing.py` 33 (the M01 s02 scale: EMPTY at step 3 of 3), `test_task_engine.py` 75 (a vent
+  mast's tap area covers its pipe run, in a browser), `test_compile_module.py` 284 (L60: the best slide's starter scene, the RECOMMENDED block and review card, declined not again; 2D figure on a 3D slide said in the build
+  and on the review page; a kit figure too; a scene silent; `declined_3d` silent, an empty one not; the starter scene
+  entry; two questions, other answers, two drawings). IGF M01 recompiled as a copy (benchmark `compiler_fix\course`):
+  the s05 finding shows; q03 has its own drawing, no % box, its tap area 56 x 251 px over the whole mast.
+
+## 4zz · The rulebook of 2026-10-19: the result is the last screen (main's 2.31.0, merged as 2.50.3)
 
 The tablet system's project manager sent the next `COURSE_FACTORY_PROMPT.md` (the importer was unchanged). New: after
 the result a task page has nothing to press - no "Answers", "Review", "Show solution", "Next task", "Menu" or "Home",
@@ -695,21 +1256,80 @@ moves only between its own steps, never navigating the frame or opening a window
 `target=_blank`, `window.open`, `location` navigation, and those button labels in markup or set from script are
 problems; in-page `#steps`, Next and Previous pass), `course-task-ux` §9a. Tests: seven breaks caught, own steps pass.
 
+## 4zz2 · What the M01 benchmark run 4 worked around, fixed in the factory (2.50.4, 2026-10-19)
+
+Run 4 (factory 2.50.2, `M01_benchmark\compiler_v4\METRICS.md`) passed in 14.4 min with no hand edit to HTML, by working
+round six factory problems in its inputs. Each is fixed here, with a test that fails on the old code:
+
+1. **A conclusion on a dark slide.** `gb_compose.css`: `.slide.dark .copy .call b{color:inherit}` - `.slide.dark .copy b`
+   (white) out-ranked the callout's own colour, 2.29:1 on blue (s02). `audit_deck.js` "mark" re-reads every line it tried
+   before giving transitions back - the last line's background faded back over .2 s while its colour snapped, and the
+   contrast check measured the conclusion's dark words on the dark wash, 1.11:1 (s07; a fault of the check, not the
+   deck). Fixture `measure/fixtures/deck_call_dark.html`, `test_audit_deck.py`.
+2. **The audit summary names what to fix.** `run_audits.py` prints one line per finding - `slide 2 (s02): low contrast b
+   "Low-flashpoint fuel" 2.29:1 (need 4.5)`, spills, small text, tap targets, collisions with both elements' words - and
+   the probes return the slide's id; `build_module.py` keeps 40 audit lines. `test_run_audits.py`.
+3. **`vent` `"mast": true`.** True asks for a mast: the pipe's run under the outlet, else a 60-unit mast the kit draws; a
+   length with no pipe under it is drawn too - never an outlet floating in the air. Any other value stops the figure
+   (`kit.js`) and is refused by `check_kit.py` before the build. SPEC row updated. `test_kit.py`, `test_studio.py`.
+4. **A label that names a feature of its part.** `h.label(..., {at: [x, y]})`: judged against that point, not the whole
+   part - a nudge (8 units) is free, any further move off the point gets a leader from it. The `cylinder`'s oil injector,
+   gas injector, exhaust valve and piston use it: a neighbour no longer pushes them up the cylinder's side with no line
+   (s06). `test_studio.py` (a tank on the left, a room on the right).
+5. **`"unlabel": "answers"` on a shared drawing.** `task_pages.py` keeps the answers' words in the spec and lists their
+   parts in `"ghost"`; `kit.js` lays them out with every other label and hides them after every layout (a `text` part
+   whole, a part's labels and leaders) - the words left stand exactly where the deck has them. Taking them out re-laid
+   the rest: on M01 s04, q01's "Fuel tank" moved under the tank connection space. `"all"` still takes the words out
+   (nothing is left to misplace); a part's `title` / `tag` (plain text, not labels) still go. `test_studio.py` (M01 s04's
+   GA: laid out with the ghosts = laid out in full; taken out = moved), `test_compile_module.py` C4.
+6. **No unusable candidate.** `figure_fit.spoiled()` - a part moved outside the frame, or onto a part it was clear of
+   (clouds, flames, sprays and text are drawn over parts by nature). A re-fit that is spoiled is never the answer in a
+   round, never saved as a fit and never as a `.candidate.kit.json`; the report says why (`usable()`). The kit grows its
+   frame to hold a stray part, so the audits had passed s05's lamp at x 635 in a 600-wide spec. `test_figure_fit.py`.
+
 ## 5 · Known gaps / before this goes live
 
-1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never
-   driven a course from a brief. `templates/factory-notes.md` §9 is the channel for what that
-   teaches; there is no companion file yet, so nothing has come back.
-2. **The count-claim check is advisory, not solved.** Deck-size phrasing varies per course and a
-   range sentence ("over two screens") reads like a size claim. It printed 13 wrong claims before
-   narrowing and still prints 3 on a correct course. A per-course declared pattern would fix it.
-3. **`build-order.json` names owners but enforces nothing.** Nothing stops a step running before
-   its predecessor. The gate at step 5 is the only hard stop.
-4. **GAS BASIC itself is not yet compliant.** It is 535 min over, so `check_hours.py` exits 1 on
-   it by design. Rebalancing it — moving the excess to the handout, per the owner's ruling — is
-   outstanding work, not a skill defect.
-5. **No cost pass.** `novikontas-token-economics` has not been run against this bundle. The
-   router is ~1.4k words and each lane is read alone, which is the intended shape, but the
-   description length and worst-case single-mode load are unmeasured.
-6. **Modules 1 and 8 of GAS BASIC have no module plan**, so the "one plan per module" rule this
-   skill mandates is not yet true of the course it was derived from.
+Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.
+The IGF course (MC 7.13) was built from its approved scripts - M01-M15 and the final assessment, 2026-10-15 to
+10-19 - and what each build found came back through the course's `working_claude/factory-notes.md` and build notes
+and was fixed (§4zs-§4zx). What is still open:
+
+**Waiting on the owner's decision** (also in PR #1)
+
+1. **The hand-off screen.** The ruling of 2026-09-03 (`floor.json`) puts a hand-off screen after the module check,
+   but the script allows no screen after the check, so every compiled deck ends on it and `check_static.py`
+   reports 2 findings per module. Open question: should the compiler add the hand-off screen itself (it is not
+   content)?
+2. **Theory / practice balance on compiled decks.** `check_balance.py` needs `data-active` on each block; the
+   compiler does not write it. Copying the script's active-slide mark across makes each active slide a "100 %
+   active theory block", which `check_balance` flags as a rename. Which rule wins is the owner's call.
+3. **Per-question Retry** (C16) stays out: it contradicts course-task-ux §9a (one opening, one result).
+
+**Not built yet, on purpose**
+
+4. **The script editor** - an instructor changing a script without an AI session. Its own proposal, later.
+5. **Tap-to-open cards** built from the course's own material: automatic cards would hide the lines a stepping
+   figure lights (L53); they wait for the script rewrite Aigars asked for (claim titles, one lead line).
+6. **Latvian and Russian wording** has not had a native speaker's check.
+7. **Real tablets.** Every measurement is in headless Chrome (1280x800, 1920x1080, 1024x768); the decks and task
+   pages have not been run on the Training / Trainer terminals (L39 - the owner's).
+
+**Checks weaker than they look**
+
+8. **The count-claim check is advisory** (`verify_course.py`): a range sentence ("over two screens") reads like a size
+   claim, and it still prints 3 on a correct course. A per-course declared pattern would fix it.
+9. **`knowledge/build-order.json` names owners but enforces nothing.** The gate at step 5 is the only hard stop.
+10. **Stated in 2.49.4 and not changed:** the nano-banana spending cap prices every picture and clip flat (EUR 0.10 /
+    1.50, settable); `gemini_take.py take` moves the newest download without a name filter; the gate report is not
+    tied to the staged content; secrets are scanned in text extensions only.
+
+**Not measured**
+
+11. **No cost pass on course-factory.** `novikontas-token-economics` was run on course-module-ux and course-task-ux
+    (2026-09-03), not on this skill: its description length and worst-case single-lane load are unmeasured.
+
+**The reference course** (GAS BASIC is not on the machine this list was rewritten on - as last recorded, 2026-09-10)
+
+12. **GAS BASIC is 535 min over**, so `check_hours.py` exits 1 on it by design; moving the excess to the handout, per the
+    owner's ruling, is course work, not a factory defect. **Its modules 1 and 8 had no module plan** - since 2.47.0
+    `module_plan.py` builds the plan from the script, so compiling them would close it.

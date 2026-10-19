@@ -236,6 +236,10 @@ def check_deadmarkup(html_files, ctx):
 
     # --- ids that nothing reads -------------------------------------------
     for page, html in html_bodies.items():
+        # a drawing the compiler placed in the page (svg.taskfig) is the course's shared figure file, the same one the
+        # deck shows: its ids are the drawing's own names (the places a label goes, what the drawing check reports),
+        # not the page's markup - they are judged where the drawing is made, not here
+        html = re.sub(r"""<svg\b[^>]*\bclass\s*=\s*["'][^"']*\btaskfig\b.*?</svg\s*>""", _mask, html, flags=re.S | re.I)
         for m in re.finditer(r"""\bid\s*=\s*["']([^"'\s]+)["']""", html):
             ident = m.group(1)
             if re.search(r"[#.\[\]{}]", ident):
@@ -245,6 +249,9 @@ def check_deadmarkup(html_files, ctx):
                 re.search(r"#" + re.escape(ident) + r"\b", all_js) or
                 re.search(r"""["']#?""" + re.escape(ident) + r"""["']""", all_js) or
                 re.search(r"""\bhref\s*=\s*["'][^"']*#""" + re.escape(ident)
+                          + r"""["']""", all_html) or
+                # a selector handed to a script in markup: <svg data-kit="#spec-id"> (course-visuals/kit)
+                re.search(r"""\bdata-[\w-]+\s*=\s*["']#""" + re.escape(ident)
                           + r"""["']""", all_html) or
                 re.search(r"""\b(?:for|aria-\w+|form|list|headers)\s*=\s*["'][^"']*\b"""
                           + re.escape(ident) + r"""\b""", all_html))
@@ -558,6 +565,50 @@ def check_kbd(html_files, _ctx):
     return findings, None
 
 
+# Classes a factory script sets only to MARK a state - an engine or a figure kit reads it, or a style that
+# lives elsewhere (the figure's own CSS variables) does the painting. They are not feedback the trainee must
+# see, so the `states` check does not ask for a rule. Keyed by the script's file name: a page's OWN script that
+# sets the same name is still judged. A script can declare its own with a comment anywhere in it:
+#     /* state-hook: kit-dark kit-spill-boil */
+STATE_HOOKS = {
+    "kit.js": ("kit-dark",              # kit.js: the light/dark theme mark on the figure's <svg>
+               "kit-coupling-parted",   # the coupling figure: parted / joined, read by its own step text
+               "kit-spill-boil"),       # the spill figure: boiling / not, read by its own step text
+    "gb_zoom.js": ("gbz-answer",),      # the zoom engine: marks the answered panel for its own bookkeeping
+}
+STATE_HOOK_COMMENT = re.compile(r"state-hook\s*:\s*([^*\n]+)", re.I)
+
+# A class that carries the answer itself must be styled even when a script reads it back: reading `.right`
+# to count the score does not make it visible (the ETPA4 pilot).
+FEEDBACK_NAMES = frozenset((
+    "right", "wrong", "correct", "incorrect", "ok", "bad", "good", "chosen", "picked", "selected", "revealed",
+    "shown", "miss", "hit", "pass", "fail", "error", "err", "done", "solved", "open", "on", "active"))
+
+_READ_CALL = re.compile(
+    r"""(?:querySelector(?:All)?|closest|matches)\s*\(\s*(["'`])((?:(?!\1)[^\\]|\\.)*)\1""", re.S)
+
+
+def classes_read_back(code):
+    """The class names a script asks the DOM about: classList.contains('x'), querySelector('.x ...'),
+    querySelectorAll, closest, matches, getElementsByClassName('x')."""
+    out = set()
+    for m in re.finditer(r"""classList\s*\.\s*contains\s*\(\s*["']([^"'\s]+)["']""", code):
+        out.add(m.group(1))
+    for m in re.finditer(r"""getElementsByClassName\s*\(\s*["']([^"']+)["']""", code):
+        out.update(m.group(1).split())
+    for m in _READ_CALL.finditer(code):
+        out.update(re.findall(r"\.(-?[_a-zA-Z][\w-]*)", m.group(2)))
+    return out
+
+
+def declared_hooks(path):
+    """The classes the file at `path` is declared to set as marks only: the factory's own list for its scripts,
+    plus any `state-hook:` comment in the file itself."""
+    out = set(STATE_HOOKS.get(os.path.basename(path), ()) if path.lower().endswith(".js") else ())
+    for m in STATE_HOOK_COMMENT.finditer(read(path)):
+        out.update(m.group(1).split())
+    return out
+
 
 def check_states(html_files, ctx):
     """A class the ENGINE adds at run time that no stylesheet styles.
@@ -572,6 +623,14 @@ def check_states(html_files, ctx):
     Structural names a script also sets (`opt`, `q`, `wrap`) are checked the same way -
     if nothing styles them either, the page is not on a stylesheet at all, which is
     worth knowing.
+
+    Not every class a script sets is something to see. A class that only MARKS a state is a hook, and is
+    not reported when a script reads it back (classList.contains, querySelector('.x'), matches, closest,
+    getElementsByClassName), when the factory's own list names it for that script (STATE_HOOKS - the
+    figure kit's `kit-dark`, `kit-coupling-parted`, `kit-spill-boil`, the zoom engine's `gbz-answer`), or
+    when the script declares it in a `state-hook: name` comment. The names that carry the answer itself
+    (FEEDBACK_NAMES: right, wrong, correct, chosen, ...) are the exception to the read-back rule - counting
+    `.right` for the score does not make it visible - so the ETPA4 case still fails.
     """
     findings = []
     sheets = [read(p) for p in ctx["css"]]
@@ -579,12 +638,17 @@ def check_states(html_files, ctx):
         html = read(page)
         for m in re.finditer(r"<style\b[^>]*>(.*?)</style\s*>", html, re.I | re.S):
             sheets.append(m.group(1))
-    css = strip_comments_css(" ".join(sheets))
-
     units = [(p, strip_comments_js(read(p))) for p in ctx["js"]]
     for page in html_files:
         for _off, code in inline_scripts(read(page)):
             units.append((page, strip_comments_js(code)))
+    # a script may write its own rules into a <style> it makes (the figure kit does):
+    # string literals holding a rule body count as a stylesheet
+    for _path, code in units:
+        for m in re.finditer(r"""'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*\"""", code):
+            if "{" in m.group(0):
+                sheets.append(m.group(0)[1:-1])
+    css = strip_comments_css(" ".join(sheets))
 
     seen = {}
     for path, code in units:
@@ -595,10 +659,22 @@ def check_states(html_files, ctx):
             for one in m.group(1).split():
                 seen.setdefault(one, (path, m.start()))
 
+    # A class that only MARKS a state - the script sets it and a script reads it back, or the factory's own
+    # asset says so - is a hook, not a look: nothing needs to style it.
+    read_back = set()
+    for _path, code in units:
+        read_back |= classes_read_back(code)
+
     for name in sorted(seen):
-        if re.search(r"\." + re.escape(name) + r"(?![\w-])", css):
+        tail = r"[\w-]" if name.endswith("-") else r"(?![\w-])"   # 'kit-on-' + state: a prefix
+        if re.search(r"\." + re.escape(name) + tail, css):
             continue
         path, pos = seen[name]
+        # a hook is judged where it was SET: kit.js's own marks pass, the same name set by a page's own script does not
+        if name in declared_hooks(path):
+            continue
+        if name in read_back and name not in FEEDBACK_NAMES:
+            continue
         body = strip_comments_js(read(path))
         findings.append((path, line_of(body, pos),
                          'the engine sets class "%s" at run time and no stylesheet '

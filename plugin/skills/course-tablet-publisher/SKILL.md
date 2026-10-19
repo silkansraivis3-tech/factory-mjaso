@@ -98,7 +98,6 @@ One command does all of it. It is a **dry run by default** and touches git only 
 ```bash
 python scripts/publish.py --repo <android project> --course-id <slug>
 python scripts/publish.py --repo <android project> --course-id <slug> --publish
-python scripts/publish.py --repo <android project> --course-id <slug> --publish --merge
 ```
 
 1. **Identify the course.** The slug is the `courses/<slug>/` folder name and the `id` in its
@@ -197,8 +196,9 @@ and the honest list of what still needs wiring for a truly generic platform.
 - **A content conflict is never resolved by guessing.** Stop and say who else published.
 - **Never** force-push, never rewrite the default branch, never delete a branch, never commit
   a secret, never commit the report file or scratch files. There is no flag that does these.
-- **`--merge` is the only route into the default branch**, and it needs a passing gate and a
-  clean merge. Without it a reviewable pull request is left and you say so plainly.
+- **Nothing here merges into the default branch.** A reviewable pull request is left and you
+  say so plainly; a reviewer approves and merges it in GitHub (`--merge` is refused). Branch
+  protection on the default branch is the repository owner's setting and the real guard.
 
 ## 5 · Reporting back
 

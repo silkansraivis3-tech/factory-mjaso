@@ -14,7 +14,7 @@ and a script can refuse where prose cannot.
 fetch → branch course/<slug>/<version> off the base
       → stage ONLY this course's paths → show the diff shape → commit
       → push → pull-request URL
-      → (only with --merge, and only on a passing gate) merge into the default branch
+      → a reviewer approves and merges the pull request in GitHub (never this script)
 ```
 
 ---
@@ -35,18 +35,20 @@ refused, naming the files, and the fix is `git restore --staged <those paths>` (
 the working-tree changes) or publishing from a clean clone.
 
 **3 · The gate report is required, and a FAIL is final.**
-`commit`, `push` and `merge` all demand `--gate-report`. `FAIL` refuses. `WARN` proceeds and
+`commit` and `push` both demand `--gate-report`. `FAIL` refuses. `WARN` proceeds and
 prints the warning count — see §"Why WARN publishes" below.
 
 **4 · There is no destructive flag.**
 Force push, `--force-with-lease`, history rewriting, branch deletion and pushing the default
 branch directly are **not implemented**. There is no argument that reaches them. If a
-situation seems to need one, it needs a human instead.
+situation seems to need one, it needs a human instead. `push` pushes only a course branch,
+`course/<slug>/<version>` - never `master`, `staging` or any other shared branch the
+platform has, and never another course's branch.
 
 **5 · A conflict is never guessed at.**
-Before merging, a conflict is detected with `git merge-tree`. On a conflict the publish stops
-and reports it. Resolving a content conflict by picking a side is how a colleague's course
-gets silently deleted.
+The script does not merge, so it never resolves a conflict. A conflict between the course
+branch and the base shows on the pull request, and a person resolves it. Resolving a content
+conflict by picking a side is how a colleague's course gets silently deleted.
 
 ---
 
@@ -94,18 +96,18 @@ nothing else about the flow changes.
 
 ---
 
-## Reaching the default branch automatically
+## Reaching the default branch
 
-`--merge` merges the published branch into the default branch and pushes it. It requires:
+Only a person, in GitHub. The scripts push a branch and leave a reviewable pull request; you
+**say so plainly** rather than implying the course is live. `gitpub.py merge` and
+`publish.py --merge` refuse. They used to merge straight into the default branch with
+`--approved-by` as the only check — free text nobody could verify, and a check any colleague
+running `git` directly would bypass anyway.
 
-- an explicit `--merge` in the task (this is the authorisation),
-- a gate verdict of PASS or WARN,
-- no conflict against the fetched base.
-
-Without `--merge`, a clean reviewable pull request is left and you **say so plainly** rather
-than implying the course is live. There is no branch protection on this repository today and
-no CI, which means **the local gate is the only gate** — a good reason to prefer the pull
-request unless the task explicitly asks for the merge.
+The real guard is **branch protection on the default branch** (`master` on the tablet
+repository): required review before merge. That is the repository owner's setting, not
+something a script can enforce. Until it is on, the local gate plus a human reading the PR
+are the only gates.
 
 ---
 

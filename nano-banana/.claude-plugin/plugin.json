@@ -1,8 +1,8 @@
 {
   "name": "nano-banana",
   "displayName": "NOVIKONTAS Nano Banana",
-  "version": "1.2.0",
-  "description": "Realistic, 3D and photo-like images (Google Nano Banana) and short realistic or 3D animation clips (Google Veo) for presentations, decks, handouts and course screens. Every picture costs money, so Claude first finds the places a generated picture fits, asks the person to describe each one, shows the prompt and generates only after their yes - one picture at a time, counted and priced - then checks it and places it locally instead of drawing a fake 'realistic' picture in SVG. Needs one Gemini API key: the first time a picture is asked for, a small window opens and the user pastes it there - never into the chat.",
+  "version": "1.3.2",
+  "description": "Realistic, 3D and photo-like images (Google Nano Banana) and short realistic or 3D animation clips (Google Veo) for presentations, decks, handouts and course screens. Free route: Claude drives the Gemini app in the browser on the person's own Google AI Pro account from a list of places and prompts decided beforehand, downloads each picture and puts it in the project - no key, no cost per picture. Every picture costs money, so Claude first finds the places a generated picture fits, asks the person to describe each one, shows the prompt and generates only after their yes - one picture at a time, counted and priced - then checks it and places it locally instead of drawing a fake 'realistic' picture in SVG. Needs one Gemini API key: the first time a picture is asked for, a small window opens and the user pastes it there - never into the chat.",
   "author": {
     "name": "Raivis Silkans",
     "email": "raivis.silkans@novikontas.org"

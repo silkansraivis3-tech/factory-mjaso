@@ -93,12 +93,17 @@
                                       Empty array disables that check. */
     controlSel: "button, a, input, select, textarea, [role=button]",
                                    /* CHANGE: what counts as a touch target */
+    markSel: "[data-i]",           /* a line a stepping figure marks .cur (the step it is on) */
+    markCurClass: "cur",
+    markStepSel: ".kit-tap, .mediabar, [data-act=next]",
+                                   /* a slide with one of these steps; only there is .cur ever set */
 
     /* --- timing --- */
     settleMs: 560,                 /* > your slide transition duration */
     minSettleMs: 520,              /* hard floor; do not lower */
     startSettleMs: 400,            /* after pressing the start button */
     dispatchResize: true,          /* re-run resize-bound per-slide layout */
+    finishAnimations: true,        /* measure the end state: finish each slide's entrance animations first */
 
     /* --- refuse-to-run guards --- */
     /* A DEGENERACY guard, not a size preference. A hidden or collapsed pane lays out
@@ -317,10 +322,55 @@
   }
 
   /* ------------------------------ one slide ------------------------------ */
+  /* A SELECTED LINE THAT DOES NOT LOOK SELECTED. A stepping figure sets .cur on the line it is on. Found in the room:
+     the blue and amber boxes alternated, .cur was amber, and an amber box out-ranked it - the presenter pressed Next
+     and the amber line did not change at all, while a blue one turning amber read as "now it is selected"
+     (IGF M05, 2026-10-19). For every line on a stepping slide: its look with .cur must differ from its own look at
+     rest AND from every other line's look at rest. Transitions are switched off while reading, so the computed
+     value is the end state, not a frame of the fade. */
+  function markLook(st) {
+    return [st.backgroundColor, st.borderLeftColor, st.boxShadow, st.outlineStyle + " " + st.outlineColor].join(" | ");
+  }
+  function markCheck(s) {
+    var bad = [];
+    if (!qa(s, CONFIG.markStepSel).length) { return bad; }
+    var lines = qa(s, CONFIG.markSel).filter(function (el) {
+      return !isSvg(el) && getComputedStyle(el).display !== "none";
+    });
+    if (!lines.length) { return bad; }
+    var cls = CONFIG.markCurClass, kept = lines.map(function (el) {
+      var had = el.classList.contains(cls), tr = el.style.transition;
+      el.style.transition = "none";
+      el.classList.remove(cls);
+      return { el: el, had: had, tr: tr };
+    });
+    var rest = kept.map(function (k) { return markLook(getComputedStyle(k.el)); });
+    kept.forEach(function (k, i) {
+      k.el.classList.add(cls);
+      var on = markLook(getComputedStyle(k.el));
+      k.el.classList.remove(cls);
+      var same = on === rest[i] ? "itself" : null;
+      for (var j = 0; !same && j < rest.length; j++) {
+        if (j !== i && on === rest[j]) { same = label(kept[j].el) + " at rest"; }
+      }
+      if (same) { bad.push({ sel: label(k.el), looksLike: same, txt: (k.el.textContent || "").trim().slice(0, CONFIG.txtSample) }); }
+    });
+    kept.forEach(function (k) {
+      if (k.had) { k.el.classList.add(cls); }
+    });
+    /* read the restored look while transitions are still off, so giving them back starts no fade: the last line's
+       .cur look was never re-read, and its background faded back over .2 s while its colour snapped - the contrast
+       check below then measured a conclusion's dark text on the dark wash, 1.11:1 (M01 benchmark run 4, s07) */
+    kept.forEach(function (k) { getComputedStyle(k.el).backgroundColor; });
+    kept.forEach(function (k) { k.el.style.transition = k.tr; });
+    return bad;
+  }
+
   function auditSlide(s, n) {
     var ext = rootExtent(s);
-    var out = { slide: n, low: [], small: [], spill: [], tap: [],
-                svgSmall: [], collide: [], scroll: [] };
+    var out = { slide: n, id: s.id || "", low: [], small: [], spill: [], tap: [],
+                svgSmall: [], collide: [], scroll: [], mark: [] };
+    out.mark = markCheck(s);
     var sizes = [], chars = 0;
 
     qa(s, "*").forEach(function (el) {
@@ -468,7 +518,7 @@
   }
 
   /* ------------------------------- the sweep ------------------------------ */
-  var KINDS = ["low", "small", "spill", "tap", "svgSmall", "collide", "scroll"];
+  var KINDS = ["low", "small", "spill", "tap", "svgSmall", "collide", "scroll", "mark"];
 
   function spec() {
     return {
@@ -518,6 +568,19 @@
       else { x.classList.remove(CONFIG.activeClass); }
     });
   }
+  /* Measure the FINAL state, not a frame of the entrance. A slide's rise-in / fade-in animation moves its content
+     (a recap rising 23 px reads as "23 px scroll"); in a pane where animations do not advance (hidden, preview) the
+     frame stays at the start, so the audit would report a defect that is gone a second later in the room. Finish
+     every finite animation and transition under the slide (CSS and Web Animations) before measuring; an endless one
+     (a spinner, a pulse) cannot finish and is left running. (IGF M04, 2026-10-16.) */
+  function finishAnimations(slide) {
+    if (!CONFIG.finishAnimations || !slide || typeof slide.getAnimations !== "function") { return 0; }
+    var n = 0;
+    slide.getAnimations({ subtree: true }).forEach(function (a) {
+      try { a.finish(); n++; } catch (e) { /* an infinite animation has no end */ }
+    });
+    return n;
+  }
   function revealFrags(slide) {
     qa(slide, CONFIG.fragSel).forEach(function (f) {
       f.classList.add(CONFIG.fragOnClass);
@@ -526,7 +589,7 @@
 
   function report(rows, slides, from, to) {
     var totals = { low: 0, small: 0, spill: 0, tap: 0, svgSmall: 0, collide: 0,
-                   scroll: 0 };
+                   scroll: 0, mark: 0 };
     rows.forEach(function (r) {
       KINDS.forEach(function (k) { totals[k] += r[k].length; });
     });
@@ -579,14 +642,15 @@
       docHScroll: document.documentElement.scrollWidth >
                   document.documentElement.clientWidth,
       failingSlides: failing.map(function (r) {
-        return { slide: r.slide,
+        return { slide: r.slide, id: r.id,
                  low: r.low.slice(0, CONFIG.maxExamples),
                  small: r.small.slice(0, CONFIG.maxExamples),
                  spill: r.spill.slice(0, CONFIG.maxExamples),
                  tap: r.tap.slice(0, CONFIG.maxTapExamples),
                  svgSmall: r.svgSmall.slice(0, CONFIG.maxExamples),
                  scroll: r.scroll.slice(0, CONFIG.maxExamples),
-                 collide: r.collide.slice(0, CONFIG.maxExamples) };
+                 collide: r.collide.slice(0, CONFIG.maxExamples),
+                 mark: r.mark.slice(0, CONFIG.maxExamples) };
       })
     };
     return out;
@@ -625,6 +689,7 @@
         revealFrags(slides[i]);
         fireResize();   /* re-run resize-bound per-slide layout hooks */
         return sleep(settleMs()).then(function () {
+          finishAnimations(slides[i]);
           rows.push(auditSlide(slides[i], i + 1));
           return step(i + 1);
         });
@@ -647,7 +712,7 @@
   var api = { all: all, slice: slice, spec: spec, auditSlide: auditSlide,
               CONFIG: CONFIG, settleMs: settleMs, sleep: sleep,
               guardViewport: guardViewport, pressStart: pressStart,
-              activate: activate, revealFrags: revealFrags,
+              activate: activate, revealFrags: revealFrags, finishAnimations: finishAnimations,
               fireResize: fireResize, label: label, boxIn: boxIn,
               KINDS: KINDS, verdict: verdict };
 

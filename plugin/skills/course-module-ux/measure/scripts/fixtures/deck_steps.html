@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture - figure steps and the deck's Next</title>
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_shell.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_compose.css">
+</head>
+<body>
+<!-- Regression fixture for gb_deck.js hook "step" and audit_drive.js's step walk.
+     s2: a stepping figure WITH a step hook - the deck's Next shows steps 1, 2, 3, then moves on.
+     s3: the same figure WITHOUT a hook - deliberately: audit_drive.js must report it under
+         skippedSteps (the M03 defect, 2026-10-15). Do not "fix" s3.
+     s1 and s2 carry a header band, so the corner tag (#blockTag) must be hidden there; s3 has none. -->
+<div id="landing"><button id="startBtn" type="button">Start</button></div>
+<div id="progress"></div>
+<div id="blockTag"></div>
+<div id="overview"><button class="fbtn" id="ovClose" type="button">Close</button><div class="ov-grid" id="ovGrid"></div></div>
+<div id="cue"></div>
+<div id="chrome">
+  <button class="cbtn" id="btnPrev" type="button" aria-label="Back">&lt;</button>
+  <span id="counter"><b>1</b> / 1</span>
+  <button class="cbtn" id="btnNext" type="button" aria-label="Next">&gt;</button>
+</div>
+<main id="stage">
+  <section class="slide" id="s1" data-block="FX · 1" data-title="Opening">
+    <div class="slide-kind"><b>Theory</b> · FX · 1</div>
+    <h2>Opening</h2>
+  </section>
+  <section class="slide" id="s2" data-block="FX · 2" data-title="Figure with a step hook">
+    <div class="slide-kind"><b>Theory</b> · FX · 2</div>
+    <h2>Figure with a step hook</h2>
+    <p class="fx-state">step 0</p>
+    <div class="mediabar"><button class="fbtn" type="button" data-act="prev">Previous step</button><span class="dots"></span><button class="fbtn primary" type="button" data-act="next">Next step</button></div>
+  </section>
+  <section class="slide" id="s3" data-block="FX · 3" data-title="Figure without a step hook">
+    <h2>Figure without a step hook</h2>
+    <p class="fx-state">step 0</p>
+    <div class="mediabar"><button class="fbtn" type="button" data-act="prev">Previous step</button><span class="dots"></span><button class="fbtn primary" type="button" data-act="next">Next step</button></div>
+  </section>
+</main>
+<script src="../../../assets/gb_deck.js"></script>
+<script>
+/* a three-step figure: its own buttons, dots and a state line - the shape kit.js gives a figure */
+function fxFigure(slide, steps) {
+  var f = { n: 0 }, bar = slide.querySelector(".mediabar"), dots = bar.querySelector(".dots");
+  var i;
+  for (i = 0; i <= steps; i++) { dots.appendChild(document.createElement("i")); }
+  f.go = function (n) {
+    f.n = Math.max(0, Math.min(steps, n));
+    slide.querySelector(".fx-state").textContent = "step " + f.n;
+    Array.prototype.forEach.call(dots.children, function (d, k) { d.classList.toggle("on", k === f.n); });
+    bar.querySelector('[data-act="prev"]').disabled = f.n === 0;
+    bar.querySelector('[data-act="next"]').disabled = f.n >= steps;
+  };
+  bar.querySelector('[data-act="prev"]').addEventListener("click", function () { f.go(f.n - 1); });
+  bar.querySelector('[data-act="next"]').addEventListener("click", function () { f.go(f.n + 1); });
+  f.go(0);
+  return f;
+}
+var a = fxFigure(document.getElementById("s2"), 3), b = fxFigure(document.getElementById("s3"), 3);
+GBDeck.init({ hooks: {
+  s2: { enter: function () { a.go(0); },
+        step: function (dir) {
+          if (dir > 0 && a.n < 3) { a.go(a.n + 1); return true; }
+          if (dir < 0 && a.n > 0) { a.go(a.n - 1); return true; }
+          return false;
+        } },
+  s3: { enter: function () { b.go(0); } }
+} });
+</script>
+</body></html>

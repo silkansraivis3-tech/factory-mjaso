@@ -14,6 +14,7 @@ real Android project - which is itself the first thing tested.
 """
 from __future__ import annotations
 
+import base64
 import io
 import json
 import os
@@ -23,6 +24,7 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 PY = sys.executable
 
 PASS: list[str] = []
@@ -101,6 +103,24 @@ def main() -> int:
         check("with approval it proceeds past the gate",
               "not been approved" not in out2)
 
+        # ---- 1b · nothing here merges into the default branch -------------
+        # --approved-by is free text; a merge it "authorised" was authorised by nobody.
+        rcm, outm = run([os.path.join(HERE, "publish.py"),
+                         "--repo", os.path.join(tmp, "no-such-repo"),
+                         "--course-id", "t-course", "--publish",
+                         "--approved-by", "Test Person", "--merge"])
+        check("publish --merge is refused", rcm != 0 and "--merge is not supported" in outm,
+              outm[-300:])
+        check("and refused before the platform repository is opened",
+              "platform repository" not in outm)
+
+        gr = os.path.join(tmp, "gitrepo")
+        os.makedirs(gr)
+        subprocess.run(["git", "init", "-q", gr], capture_output=True)
+        rcg, outg = run([os.path.join(HERE, "gitpub.py"), "merge", "--repo", gr, "--merge"])
+        check("gitpub merge refuses, even with --merge",
+              rcg == 1 and "does not merge into the default branch" in outg, outg[-300:])
+
         # ---- 2 · the runtime gate ----------------------------------------
         good = make_repo(os.path.join(tmp, "good"))
         rc3, out3 = run([os.path.join(HERE, "gates.py"), "--repo", good,
@@ -129,6 +149,43 @@ def main() -> int:
                          "--course-id", "t-course"])
         check("the live-class shell is exempt from the runtime gate",
               "live/live.js" not in out5 and "live\\live.js" not in out5)
+
+        # ---- 2b · the secrets gate allows a value, never a neighbourhood ----
+        # The anon key's NAME next to a service-role key used to excuse the key: the
+        # allowlist looked 200 characters either side of the hit. Only the decoded
+        # role of the JWT itself may let it through now.
+        def jwt(payload):
+            enc = lambda d: base64.urlsafe_b64encode(
+                json.dumps(d).encode()).decode().rstrip("=")
+            return enc({"alg": "HS256", "typ": "JWT"}) + "." + enc(payload) + ".sig0000000000"
+
+        def secrets_run(name, body):
+            r = make_repo(os.path.join(tmp, name))
+            io.open(os.path.join(r, "app", "src", "main", "assets", "training_terminal",
+                                 "courses", "t-course", "gb_config.js"), "w",
+                    encoding="utf-8").write(body)
+            return run([os.path.join(HERE, "gates.py"), "--repo", r,
+                        "--course-id", "t-course"])
+
+        _, outs = secrets_run("svc", '// anon public key -> SUPABASE_ANON_KEY\n'
+                              'SUPABASE_ANON_KEY="%s";\n'
+                              % jwt({"iss": "supabase", "role": "service_role"}))
+        check("a service-role JWT right after SUPABASE_ANON_KEY= FAILS",
+              "[FAIL] secrets" in outs and "service_role" in outs, outs[-400:])
+
+        _, outa = secrets_run("anon", 'SUPABASE_ANON_KEY="%s";\n'
+                              % jwt({"iss": "supabase", "role": "anon"}))
+        check("a real anon JWT passes the secrets gate",
+              "] secrets:" not in outa, outa[-400:])
+
+        _, outn = secrets_run("noname", 'var k = "%s";\n'
+                              % jwt({"iss": "supabase", "role": "authenticated"}))
+        check("a JWT of any other role FAILS even with no name near it",
+              "[FAIL] secrets" in outn, outn[-400:])
+
+        _, outw = secrets_run("svcname", "// see SUPABASE_ANON_KEY\nvar r = 'service_role';\n")
+        check("the text service_role next to the anon key's name is no longer excused",
+              "[FAIL] secrets" in outw, outw[-400:])
 
         # ---- 3 · the preview surface -------------------------------------
         course = os.path.join(tmp, "course")
@@ -207,6 +264,37 @@ def main() -> int:
         globs = plat["role_rules"]["internal_globs"]
         check("REVIEW.html is internal by pattern",
               any("REVIEW" in g for g in globs))
+
+        # ---- 5 · gitpub commit / push on a real repository (2.49.4) ----------
+        pr = os.path.join(tmp, "pubrepo")
+        os.makedirs(pr)
+        g = lambda *a: subprocess.run(["git", "-c", "core.quotepath=false", "-C", pr, *a], capture_output=True,
+                                      text=True, encoding="utf-8", errors="replace")
+        g("init", "-q", "-b", "main")
+        g("config", "user.name", "Test"); g("config", "user.email", "t@example.org")
+        io.open(os.path.join(pr, "README.md"), "w", encoding="utf-8").write("base\n")
+        g("add", "README.md"); g("commit", "-q", "-m", "base")
+        g("checkout", "-q", "-b", "course/t-course/1.0.0")
+        cdir = os.path.join(pr, "courses", "t-course")
+        os.makedirs(cdir)
+        io.open(os.path.join(cdir, "Drošība.png"), "wb").write(b"\x89PNG\r\n\x1a\n")
+        io.open(os.path.join(cdir, "index.html"), "w", encoding="utf-8").write(PAGE_OK % "T")
+        okrep = os.path.join(tmp, "gate_ok.json")
+        io.open(okrep, "w", encoding="utf-8").write(json.dumps({"verdict": "PASS"}))
+        gp = os.path.join(HERE, "gitpub.py")
+        base = ["--repo", pr, "--slug", "t-course", "--version", "1.0.0", "--gate-report", okrep, "--base", "main"]
+        rcc, outc = run([gp, "commit"] + base + ["--path", "courses/t-course", "--message", "t-course 1.0.0"])
+        check("gitpub commit: a course file with a Latvian name (Drošība.png) is the course's own, not 'outside its paths'",
+              rcc == 0 and "outside this course's paths" not in outc
+              and "Drošība.png" in g("show", "--name-only", "--format=", "HEAD").stdout, outc[-400:])
+        rcp, outp = run([gp, "push"] + base + ["--dry-run"])
+        check("gitpub push: the course's own branch may be pushed", rcp == 0 and "would push course/t-course/1.0.0" in outp, outp[-300:])
+        g("checkout", "-q", "-b", "staging")
+        rcs, outs = run([gp, "push"] + base + ["--dry-run"])
+        check("gitpub push: a shared branch that is not the base (staging) is refused", rcs == 1 and "only a course branch" in outs, outs[-300:])
+        g("checkout", "-q", "-b", "course/other-course/2.0.0")
+        rco, outo = run([gp, "push"] + base + ["--dry-run"])
+        check("gitpub push: another course's branch is refused under this course's slug", rco == 1 and "course/t-course/" in outo, outo[-300:])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

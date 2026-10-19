@@ -78,10 +78,21 @@ never a pass.
 await AuditOpacity.all();     // or .slice(0, 9)
 await AuditCollide.all();
 await AuditDeck.all();
+await AuditCompose.all();     // is each screen composed, or a corner cluster? (.run() is the same call)
 await AuditDrive.run();       // .run(0, 12)
 ```
 
-They also register on `window.__audit` (`.opacity`, `.collide`, `.deck`, `.drive`).
+They also register on `window.__audit` (`.opacity`, `.collide`, `.deck`, `.compose`, `.drive`).
+`AuditCompose.all()` sets `__auditExit` like the others: `1` on a WEAK screen or an abort, `0` otherwise
+(a REVIEW screen is for a person to look at, not a failure).
+
+**No browser pane needed:** `python measure/scripts/run_audits.py <deck index.html or its folder>
+[--viewport 1920x1080 ...] [--json out.json] [--quiet]` loads `audit_deck.js`, `audit_collide.js` and
+`audit_compose.js` into the deck in headless Chrome or Edge, runs each `.all()` at 1280×800 (and every
+`--viewport`, laid out at exactly that size), and prints one line per probe and viewport with the failing
+slides underneath. Exit `0` every probe passed, `1` one failed, `2` something could not be measured (no
+browser, the page did not answer, a probe aborted — never a pass). The page it injects is written beside the
+deck as `_audit_<pid>.html` and always removed again; `--json` goes outside the course.
 `audit_drive.js` **depends on the other two being loaded first** and aborts naming the missing
 file rather than throwing.
 
@@ -89,6 +100,7 @@ file rather than throwing.
 |---|---|---|
 | `audit_deck.js` | the sweep: text size (including **effective** SVG size), contrast, control size, fill per screen, links inside slides, document h-scroll | **Portable.** CONFIG edit only |
 | `audit_collide.js` | collisions and overlaps — **run this even when the fill probe is silent** | **Portable with one gap**: check 3 (text under page furniture) needs the chrome selectors set, or it silently reports an unearned pass. See `traps.json#chrome-selectors-not-discoverable` |
+| `audit_drawing.js` | inside every **drawing** (`<svg>`), where the others do not look: a part poking out of the hull, tank, room or box it sits in (judged on the real shape), anything **cut off** at the drawing's frame (also a part that only shows in a later step), and every label's **4 px safe zone** to other shapes, lines and labels (L54, 2.25.2). `AuditDrawing.all()` for a deck, `.page()` for a task page or a figure, `.show(findings)` outlines them | **Portable.** No course selectors beyond `.slide` and the start button |
 | `audit_opacity.js` | that what you are measuring is actually **visible** — inherited `opacity` composited into the text alpha, which the contrast sweep cannot see | **Portable.** Least coupled of the four |
 | `audit_drive.js` | drives the deck through its real Next control so the others see every screen | **Portable in form, coupled in substance.** It encodes a navigation model — one forward control advancing frags and slides linearly from a start button — that CONFIG cannot abstract. Separate frag/slide controls or keyboard-only nav need code changes |
 
@@ -122,6 +134,49 @@ result alone is evidence.
 **Measure the whole document at least once, not only the slides.** Every probe walks `.slide`,
 so a footer, a corner tag or the landing screen is never visited — a footer and a corner tag sat
 capped at 11.5 px for the life of one deck for exactly this reason.
+
+### 2b · The 3D speed test — `perf3d.mjs`
+
+A 3D slide can pass every probe above and still show an empty box for three seconds on the
+classroom tablet. `scripts/perf3d.mjs` measures that: Node plus headless Chrome over the DevTools
+protocol, no npm packages, CPU slowed 4x as a stand-in for the tablet.
+
+```
+node scripts/perf3d.mjs <deck.html | url> [--slides=id1,id2|all] [--budget-ms=1000] [--throttle=4]
+                        [--gate=warm|cold|both] [--no-cold] [--no-fps] [--min-fps=0] [--dwell=2000]
+                        [--ms=2000] [--wait-ms=10000] [--w=1280 --h=800] [--gl=swiftshader|gpu|none]
+                        [--chrome=PATH] [--json] [--help]
+```
+
+Chrome is found through `--chrome`, env `CHROME_PATH`, or the usual Windows/macOS/Linux places.
+Default `--slides=all` is every slide that holds a `<canvas>`, `[data-3d]` or `[data-scene]`; a scene
+that creates its canvas only on enter must be named with `--slides`. The deck is the factory shell:
+`.slide` sections that get class `active`, `#btnNext`, optional `#startBtn` (else Enter); the 3D slide
+reports itself in `window.__scene3d = { enterT, firstFrameT, frames, [spin(ms, cb)], [prepared], [marks] }`
+(`performance.now()` stamps set by the slide's enter hook and its first drawn frame). No `__scene3d`
+means exit 2: the tool cannot measure it, and says so rather than passing it.
+
+What the numbers mean:
+
+- **warm ms** — enter hook to first drawn frame after dwelling on the slide before it, as a person
+  does. This is the number judged against the budget: **first frame < 1 s on the 4x CPU throttle**.
+- **cold ms** — the same on a jump straight to the slide with `window.__noPrepare = true`. A cold
+  number far above the warm one shows the scene relies on build-ahead; it is judged only with
+  `--gate=cold|both`.
+- **fps** — frames the scene drew per second over `--ms` while it turns (its `spin`, else passively).
+  Reported, not judged, unless `--min-fps` is set (30 is the usual tablet floor). The throttle slows
+  scripts, not the GL back end, so a poor fps on `--gl=swiftshader` can be the software stand-in.
+
+Exit 0 = every measured slide within budget, 1 = over budget (or no first frame), 2 = bad input, no
+Chrome, no 3D slide, no `__scene3d`. `--json` prints one JSON document instead of the table.
+
+**To reach < 1 s a 3D slide must build its scene on the slide BEFORE it ("build-ahead").** Create the
+renderer, geometry, materials and textures while the slide before is on screen (its idle time), keep
+them hidden, and make the enter hook only reveal the canvas and draw. Building on enter costs the
+whole scene setup in the first frame, which at 4x CPU is seconds. Honour `window.__noPrepare` (skip the
+build-ahead) so this tool can show the cold number, and set `__scene3d.prepared = true` when the
+scene was built ahead. The test is `scripts/test_perf3d.py` (fixture `scripts/fixtures/deck_3d_perf.html`;
+skips when Node or Chrome is missing).
 
 ### 3 · The console
 

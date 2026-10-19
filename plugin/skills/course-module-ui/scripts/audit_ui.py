@@ -16,7 +16,9 @@ Reports, per stylesheet:
   * stylesheets with no :root at all
 
 Reports, per page:
-  * classes used in the markup that no loaded stylesheet defines
+  * classes used in the markup that no loaded stylesheet defines - except a class the page's own scripts
+    query (classList.contains, querySelector('.x'), $('.x', el), matches, closest ...): that is a hook the
+    script finds the element by, not a look, and is listed as a note
 
 Exit code 1 only under --strict. By default this is a report, not a gate: the shipped GAS
 BASIC decks carry raw chrome colours (the reference module itself has 82), so a gate on by
@@ -157,8 +159,53 @@ SVG_CONTAINERS = {"g", "defs", "symbol", "marker", "clippath",
                   "lineargradient", "radialgradient", "pattern", "mask"}
 
 
+SCRIPT_BLOCK = re.compile(r"<script\b([^>]*)>(.*?)</script\s*>", re.S | re.I)
+SCRIPT_SRC = re.compile(r"""\bsrc\s*=\s*["']([^"']+)["']""", re.I)
+JS_COMMENT = re.compile(r"/\*.*?\*/|(?<![:\\/])//[^\n]*", re.S)
+# a string handed to any call that reads like a selector: '.dial-val', '.dial-track .x', 'div.card', '[data-x].on'
+SELECTOR_ARG = re.compile(r"""\(\s*(["'`])\s*((?:[.#\[]|[A-Za-z][\w-]*[.\[#:])[^"'`\n]*)\1""")
+CLASS_IN_SELECTOR = re.compile(r"\.(-?[_A-Za-z][\w-]*)")
+NOT_CLASSES = {"js", "css", "html", "htm", "json", "png", "jpg", "jpeg", "svg", "gif", "webp", "mp4", "md", "txt", "csv", "woff", "woff2"}
+
+
+def classes_queried(js):
+    """The class names a page's own scripts ask the DOM about - classList.contains('x'), getElementsByClassName,
+    and any call whose string argument reads as a selector (querySelector('.x'), closest, matches, a local
+    $('.x', el)). Such a class is a HOOK: the script finds the element by it, and nothing has to paint it."""
+    js = JS_COMMENT.sub(" ", js)
+    out = set()
+    for m in re.finditer(r"""classList\s*\.\s*contains\s*\(\s*["']([^"'\s]+)["']""", js):
+        out.add(m.group(1))
+    for m in re.finditer(r"""getElementsByClassName\s*\(\s*["']([^"']+)["']""", js):
+        out.update(m.group(1).split())
+    for m in SELECTOR_ARG.finditer(js):
+        out.update(c for c in CLASS_IN_SELECTOR.findall(m.group(2)) if c not in NOT_CLASSES)
+    return out
+
+
+def page_hooks(html_path, raw):
+    """The classes the page's own scripts - inline, and the local files it loads - query."""
+    js = ""
+    for attrs, code in SCRIPT_BLOCK.findall(raw):
+        s = SCRIPT_SRC.search(attrs)
+        if not s:
+            t = re.search(r"""\btype\s*=\s*["']?([^"'\s>]+)""", attrs, re.I)
+            if not t or "javascript" in t.group(1).lower() or t.group(1).lower() == "module":
+                js += "\n" + code
+            continue
+        src = s.group(1).split("?")[0].split("#")[0]
+        if "://" in src or src.startswith("//"):
+            continue
+        f = (html_path.parent / src).resolve()
+        if f.is_file():
+            js += "\n" + f.read_text(encoding="utf-8", errors="replace")
+    return classes_queried(js)
+
+
 def page_classes(html_path):
-    """(unstyled, structural, n_used) for one page, or None if it is a fragment."""
+    """(unstyled, structural, n_used, hooks) for one page, or None if it is a fragment. `hooks` are the
+    classes with no rule that the page's own scripts query - found by the script, not painted; they are not
+    unstyled."""
     raw = html_path.read_text(encoding="utf-8", errors="replace")
     head = raw[:2000].lower()
     if "<!doctype" not in head and "<html" not in head and "<body" not in head:
@@ -188,12 +235,16 @@ def page_classes(html_path):
             bucket.add(n)
 
     missing = sorted(u for u in used if u not in defined)
-    structural = [u for u in missing if u in on_svg and u not in on_normal]
-    unstyled = [u for u in missing if u not in structural]
-    return unstyled, structural, len(used)
+    queried = page_hooks(html_path, raw)
+    hooks = [u for u in missing if u in queried]
+    structural = [u for u in missing if u in on_svg and u not in on_normal and u not in hooks]
+    unstyled = [u for u in missing if u not in structural and u not in hooks]
+    return unstyled, structural, len(used), hooks
 
 
-VAR_USE = re.compile(r"var\(\s*(--[a-z][\w-]*)")
+# only a var() with no fallback: var(--kit-up,1) still resolves when nothing defines --kit-up
+# (the figure kit sets it from script); var(--okbg) does not
+VAR_USE = re.compile(r"var\(\s*(--[a-z][\w-]*)\s*\)")
 VAR_DEF = re.compile(r"(--[a-z][\w-]*)\s*:")
 
 
@@ -334,7 +385,7 @@ def main():
             n_frag += 1
             continue
         n_page += 1
-        unstyled, structural, n_used = r
+        unstyled, structural, n_used, hooks = r
         shrunk = page_shrunk_type(pg)
         if shrunk:
             n_def += len(shrunk)
@@ -364,6 +415,10 @@ def main():
             print("\n%s" % pg)
             print("   note    %d drawing-structure class(es) unstyled, which is normal: %s"
                   % (len(structural), " ".join("." + u for u in structural)))
+        if hooks:
+            print("\n%s" % pg)
+            print("   note    %d class(es) no stylesheet styles, which the page's own scripts query - a hook the "
+                  "script finds, not a look: %s" % (len(hooks), " ".join("." + u for u in hooks)))
 
     print("\n%d stylesheet(s) and %d page(s) read - %d defects, %d drift/review findings."
           % (len(files), n_page, n_def, n_drift))

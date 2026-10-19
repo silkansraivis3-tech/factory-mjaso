@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Fixture - a photo laid on a drawing (audit_drawing.js check 7)</title>
+<style>body{margin:0;font-family:sans-serif} svg{display:block;width:480px;height:240px;margin:8px}
+  foreignObject img{display:block;width:100%;height:100%;background:#888}</style>
+</head><body>
+<!-- IGF M02 s13: the photo on the "free" cargo area covered the bow; data-may-overlap must not excuse it -->
+<svg id="bad-photo" viewBox="0 0 480 240">
+  <path id="hull" d="M10 40 H380 Q470 50 470 120 Q470 190 380 200 H10 Z" fill="#F3F8FD" stroke="#0A2463" stroke-width="3"/>
+  <rect id="room" x="40" y="70" width="120" height="100" fill="#FFFFFF" stroke="#0A2463" stroke-width="2"/>
+  <foreignObject id="pic-on" x="300" y="70" width="150" height="100" data-may-overlap><img src="ship.jpg" alt=""></foreignObject>
+</svg>
+<!-- the same photo in its own column beside the hull: silent -->
+<svg id="good-beside" viewBox="0 0 480 240">
+  <path id="hull2" d="M10 40 H230 Q300 50 300 120 Q300 190 230 200 H10 Z" fill="#F3F8FD" stroke="#0A2463" stroke-width="3"/>
+  <rect id="room2" x="40" y="70" width="120" height="100" fill="#FFFFFF" stroke="#0A2463" stroke-width="2"/>
+  <foreignObject id="pic-beside" x="320" y="70" width="150" height="100"><img src="ship.jpg" alt=""></foreignObject>
+</svg>
+<!-- "tap the place": a photo with a marker drawn AFTER it, on it - silent -->
+<svg id="good-marker" viewBox="0 0 480 240">
+  <foreignObject id="pic-base" x="10" y="10" width="300" height="220"><img src="ship.jpg" alt=""></foreignObject>
+  <circle id="marker" cx="150" cy="120" r="18" fill="none" stroke="#B4453A" stroke-width="4"/>
+  <text id="mlabel" x="340" y="125" font-size="16" fill="#0A2463">the valve</text>
+</svg>
+<pre id="out"></pre>
+<script src="../scripts/audit_drawing.js"></script>
+<script>
+  console.log = function () {};
+  var res = AuditDrawing.page();
+  document.getElementById("out").textContent = JSON.stringify({
+    verdict: res.verdict,
+    findings: res.findings.map(function (f) {
+      var el = f.els && f.els[0], svg = el && (el.ownerSVGElement || el);
+      return { check: f.check, svg: svg && svg.id, part: el && el.id, detail: f.detail };
+    })
+  });
+</script>
+</body>
+</html>

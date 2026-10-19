@@ -23,7 +23,12 @@ round trip is run separately when Word is installed - see MANIFEST 4h). Pinned:
     --confirmed, logs each change, keeps the old file; approval is undone by any later change;
   * the slide-text check (2.16.1) still runs on every screen;
   * check_script_match passes a module that says exactly the approved words, and fails a changed
-    word, an extra sentence, a missing screen, a wrong correct answer and an unapproved script.
+    word, an extra sentence, a missing screen, a wrong correct answer and an unapproved script;
+  * THE GATE (2.42.0): render and approve stop without the architecture, the ILO map, the operator's
+    recorded approval of it (or after a Sub-ILO changed since), or the knowledge-base decision - each
+    named; the ILO map and sources check finds a Sub-ILO taught or checked nowhere, a question without
+    "sub_ilo", a "sub_ilo" the module does not own and empty "sources", blocking approval unless
+    --despite-findings; a script approved before the gate stays approved, its gaps only reported.
 """
 from __future__ import annotations
 
@@ -45,6 +50,7 @@ TOOL = os.path.join(HERE, "content_script.py")
 MATCH = os.path.join(HERE, "check_script_match.py")
 sys.path.insert(0, HERE)
 import content_script as cs  # noqa: E402
+import gate_fixture  # noqa: E402
 LV, EN = cs.LABELS["lv"], cs.LABELS["en"]
 PASS, FAIL = [], []
 
@@ -84,42 +90,43 @@ SCRIPT = {
     "module": 1, "title": "Gas tankers", "course_language": "English", "operator_language": "lv", "status": "draft",
     "minutes_allocated": 23,
     "operator_facts": [{"fact": "On our simulator the ESD button is on the left console.", "where": "s03"}],
+    "sources": ["IGC Code 2016: 1.2, 4.21-4.24 (containment systems)", "SIGTTO Liquefied Gas Handling Principles, 4th ed.: ch. 1-2"],
     "screens": [
-        {"id": "s01", "kind": "slide", "title": "Why gas tankers are different", "text": S01_TEXT, "visual_kind": "photo",
+        {"id": "s01", "sub_ilo": "1.1", "kind": "slide", "title": "Why gas tankers are different", "text": S01_TEXT, "visual_kind": "photo",
          "visual": "Photograph of a membrane LNG carrier alongside", "notes": S01_NOTES, "minutes": 5},
-        {"id": "s02", "kind": "slide", "title": "Three ways to keep the cargo liquid", "text": S02_TEXT, "visual_kind": "chart",
+        {"id": "s02", "sub_ilo": "1.1", "kind": "slide", "title": "Three ways to keep the cargo liquid", "text": S02_TEXT, "visual_kind": "chart",
          "visual": "Pressure-temperature line for propane with the three ship types marked", "notes": S02_NOTES, "minutes": 5},
         {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - keeping the cargo liquid",
          "text": "A short self-check opens on your tablet now: three questions on why gas is carried cold or under pressure.",
          "notes": "Press OPEN TASK. Give three minutes and watch who hesitates.", "minutes": 3},
-        {"id": "q01", "kind": "self-check", "set": "SC1", "question": "At what temperature is LNG carried near atmospheric pressure?",
+        {"id": "q01", "sub_ilo": "1.1", "kind": "self-check", "set": "SC1", "question": "At what temperature is LNG carried near atmospheric pressure?",
          "options": ["About -162 °C", "At room temperature, under pressure", "About -42 °C"], "correct": "A",
          "feedback": "LNG is fully refrigerated: about -162 °C, just above atmospheric pressure.", "mechanic": "tap to choose"},
-        {"id": "q02", "kind": "self-check", "set": "SC1", "question": "Sort the cargoes by the ship that usually carries them.",
+        {"id": "q02", "sub_ilo": "1.1", "kind": "self-check", "set": "SC1", "question": "Sort the cargoes by the ship that usually carries them.",
          "mechanic": "categorise", "answer": "Fully pressurised: LPG in small ships; ammonia\nFully refrigerated: LNG; large LPG cargoes",
          "feedback": "Small LPG ships and ammonia carriers hold the cargo under pressure; LNG and large LPG cargoes are carried cold."},
-        {"id": "q03", "kind": "self-check", "set": "SC1", "question": "Set the temperature at which ethylene is carried.",
+        {"id": "q03", "sub_ilo": "1.1", "kind": "self-check", "set": "SC1", "question": "Set the temperature at which ethylene is carried.",
          "mechanic": "set_value", "visual_kind": "schematic", "visual": "A thermometer scale from -170 °C to +20 °C with a slider",
          "answer": "-104 °C ± 4, range -170 to 20", "feedback": "Ethylene is carried on semi-refrigerated ships, at about -104 °C."},
-        {"id": "s03", "kind": "slide", "title": "Four containment systems", "text": S03_TEXT, "visual_kind": "model_3d", "layout": "visual_wide",
-         "visual": "3D model of the four tank types in a hull section - turn it, and cut each one open", "notes": S03_NOTES, "minutes": 3},
+        {"id": "s03", "sub_ilo": "1.2", "kind": "slide", "title": "Four containment systems", "text": S03_TEXT, "visual_kind": "model_3d", "layout": "visual_wide",
+         "visual": "3D model of the four tank types in a hull section - turn it, and cut each one open; a real photo of a membrane tank's insulation beside it (L57)", "notes": S03_NOTES, "minutes": 3},
         {"id": "s04", "kind": "slide", "recap": True, "title": "What to take away", "text": RECAP_TEXT, "visual_kind": "none",
          "visual": "", "notes": RECAP_NOTES, "minutes": 2},
         {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Module check - gas tankers",
          "text": "The module check opens on your tablet now: five questions on the whole module. Your score is for you.",
          "notes": "Press OPEN TASK when the room is ready.", "minutes": 5},
-        {"id": "m01", "kind": "module-check", "set": "MC", "question": "Tap the tank that relies on the hull for its strength.",
+        {"id": "m01", "sub_ilo": "1.2", "kind": "module-check", "set": "MC", "question": "Tap the tank that relies on the hull for its strength.",
          "mechanic": "hotspot", "visual_kind": "model_3d", "visual": "The same 3D hull section with the four tank types",
          "answer": "Type A prismatic tank\nType B Moss sphere\nMembrane tank *\nType C cylinder",
          "feedback": "Membrane tanks are supported by the hull."},
-        {"id": "m02", "kind": "module-check", "set": "MC", "question": "What is LNG mostly?", "mechanic": "single_choice",
+        {"id": "m02", "sub_ilo": "1.1", "kind": "module-check", "set": "MC", "question": "What is LNG mostly?", "mechanic": "single_choice",
          "options": ["Propane", "Methane", "Ammonia"], "correct": "B", "feedback": "LNG is mostly methane."},
-        {"id": "m03", "kind": "module-check", "set": "MC", "question": "Match each tank type with the secondary barrier it needs.",
+        {"id": "m03", "sub_ilo": "1.2", "kind": "module-check", "set": "MC", "question": "Match each tank type with the secondary barrier it needs.",
          "mechanic": "match", "answer": "Type A = full secondary barrier\nType B = partial secondary barrier\nType C = no secondary barrier",
          "feedback": "The more is known about how a tank would fail, the less secondary barrier it needs."},
-        {"id": "m04", "kind": "module-check", "set": "MC", "question": "Roughly what pressure are fully pressurised LPG tanks designed for?",
+        {"id": "m04", "sub_ilo": "1.1", "kind": "module-check", "set": "MC", "question": "Roughly what pressure are fully pressurised LPG tanks designed for?",
          "mechanic": "single_choice", "options": ["About 18 bar", "About 0.25 bar", "About 1 bar"], "correct": "A", "feedback": "About 18 bar."},
-        {"id": "m05", "kind": "module-check", "set": "MC", "question": "Put these cargoes in order, coldest first, as they are carried.",
+        {"id": "m05", "sub_ilo": "1.1", "kind": "module-check", "set": "MC", "question": "Put these cargoes in order, coldest first, as they are carried.",
          "mechanic": "order", "answer": "LNG at about -162 °C\nEthylene at about -104 °C\nPropane at about -42 °C",
          "feedback": "LNG is the coldest; propane on a fully refrigerated ship is carried at about -42 °C."}]}
 
@@ -140,13 +147,15 @@ def cs_run(*a):
     return run(TOOL, *a)
 
 
-def new_course(tmp, name, script=SCRIPT):
+def new_course(tmp, name, script=SCRIPT, gate=True):
     c = os.path.join(tmp, name)
     os.makedirs(os.path.join(c, "working_claude", "script"))       # L44: the factory's own files
     io.open(os.path.join(c, "working_claude", "script", "M01.json"), "w", encoding="utf-8").write(json.dumps(script, ensure_ascii=False))
     io.open(os.path.join(c, "working_claude", "FEEDBACK_LOG.md"), "w", encoding="utf-8").write(
         "# log\n\n| # | Date | Stage · module · where | What the operator said | What changed | Operator-stated fact? |\n|---|---|---|---|---|---|\n"
         "| 1 | 2026-10-01 | 3 · M01 · s02 | type C tanks here are tested to 7 bar | used it | yes |\n")
+    if gate:                                                         # 2.42.0: approved ILO map + KB decision first
+        gate_fixture.open_gate(c)
     return c
 
 
@@ -189,6 +198,19 @@ def main():
         check("render writes the review page and the Word file, with no problems", code == 0 and os.path.isfile(p["docx"]) and "problems" not in out, out)
         check("the page is in the operator's language, the course text marked English",
               '<html lang="lv">' in page and '<span class="verb" lang="en">Four containment systems</span>' in page)
+        # P2: render keeps the file's own indent and rewrites it only when something changed
+        ci = new_course(tmp, "indent4")
+        pi = cs.paths(ci, 1)["script"]
+        io.open(pi, "w", encoding="utf-8", newline="\n").write(json.dumps(SCRIPT, ensure_ascii=False, indent=4) + "\n")
+        cs_run("render", ci, "--module", "1")
+        raw1 = io.open(pi, encoding="utf-8", newline="").read()
+        check("P2: render keeps a 4-space file at 4 spaces, and adds only the docx_hash",
+              raw1.startswith('{\n    "module"') and json.loads(raw1).get("docx_hash") and
+              {k: v for k, v in json.loads(raw1).items() if k != "docx_hash"} == SCRIPT, raw1[:60])
+        os.utime(pi, (1, 1))
+        cs_run("render", ci, "--module", "1")
+        check("P2: a second render with nothing changed does not write the script file at all",
+              io.open(pi, encoding="utf-8", newline="").read() == raw1 and os.path.getmtime(pi) == 1)
         part2 = page.find(lv("s_part2"))
         part1 = page.find(lv("s_part1"))
         check("part 1 is the instructor tablet, part 2 the trainee tablet", 0 < part1 < part2, (part1, part2))
@@ -250,6 +272,17 @@ def main():
         f = [x for x in cs.theory_findings(untaught)[0] if x["rule"] == "t_not_taught"]
         check("a question whose answer was never taught is found, on that question", f and f[0]["screen"] == "q01"
               and f[0]["where"] == LV["s_question_in"].format(set=LV["s_sc_name"].format(k=1), q=1), f)
+        # P1 (M06 q01): an Apply-level question brings its own numbers - they are not taught on any slide
+        applied = copy.deepcopy(SCRIPT)
+        screen(applied, "q02")["answer"] = "Fully refrigerated: 3 %; 10 %; 25 %; 40 %; 55 %; 60 %"
+        nt0 = [x["screen"] for x in cs.theory_findings(applied)[0] if x["rule"] == "t_not_taught"]
+        screen(applied, "q02")["bloom"] = 3
+        screen(applied, "q02")["bloom_why"] = "the trainee applies the carriage rule to cargoes it is not given on a slide"
+        nt3 = [x["screen"] for x in cs.theory_findings(applied)[0] if x["rule"] == "t_not_taught"]
+        check("P1: new numbers in a Bloom-3 question are not 'untaught' - without bloom they are", nt0 == ["q02"] and nt3 == [], (nt0, nt3))
+        screen(applied, "q02")["answer"] = "Gas-free: ballast 3 %; 10 %\nPurged: ullage 25 %; 40 %"
+        nt3 = [x["screen"] for x in cs.theory_findings(applied)[0] if x["rule"] == "t_not_taught"]
+        check("P1: ... but words that were never taught are still found at Bloom 3", nt3 == ["q02"], nt3)
         onslide = copy.deepcopy(SCRIPT)
         screen(onslide, "t01")["text"] = "At what temperature is LNG carried near atmospheric pressure? A, B or C."
         check("a task written onto its slide is found", "t_task_on_slide" in rules_of(onslide), rules_of(onslide))
@@ -341,6 +374,71 @@ def main():
         half = copy.deepcopy(two)
         half["screens"][1:1] = [dict(screen(SCRIPT, "s02"), id="s0%d" % i, visual_kind="photo") for i in (4, 5)]
         check("... two of five is fine", not [x for x in cs.media_findings(half) if x["rule"] == "v_3d_share"])
+
+        print("\n-- 2.49.0: 3D and AI pictures proposed unasked, slide by slide - kept or struck")
+        prop = lambda sc, r: [x for x in cs.media_findings(sc) if x["rule"] == r]
+        MEDIA_TD = cs.MEDIA["three_d"]
+        check("a module that has a 3D model gets no 3D proposal", not prop(SCRIPT, "v_3d_propose"), prop(SCRIPT, "v_3d_propose"))
+        no3 = copy.deepcopy(SCRIPT)
+        for x in no3["screens"]:
+            if x.get("kind") == "slide":
+                x["visual_kind"], x["visual"] = "schematic", "A drawing of the idea"
+        screen(no3, "s01").update(visual_kind="step_animation", visual="Kit figure: the tank and its relief valve, the pipe leaving it")
+        screen(no3, "s02").update(visual_kind="cutaway", visual="A cut-open tank: the membrane, the insulation and the hull behind it")
+        screen(no3, "s03").update(visual_kind="photo", visual="A real photograph of the tank connection space")
+        p3 = prop(no3, "v_3d_propose")
+        check("no 3D: the drawn tank comes first, the animated one second", [x["screen"] for x in p3] == ["s02", "s01"], p3)
+        check("... never the slide with a real photograph (L52)", "s03" not in [x["screen"] for x in p3], p3)
+        check("... a proposal, not a must-fix (owner 2.18.1: a picture is never a block)",
+              p3 and all(x["level"] == cs.NOTE for x in p3) and not [f for f in cs.blocking(cs.media_findings(no3)) if f["rule"] == "v_3d_propose"], p3)
+        check("... it names the words that made it", "membrane" in p3[0]["detail"] and "insulation" in p3[0]["detail"], p3[0]["detail"] if p3 else "")
+        rt = copy.deepcopy(no3)
+        screen(rt, "s01").update(visual="Kit figure: a liquid warming at room temperature")
+        check("'room temperature' is not a room", cs.said_words(screen(rt, "s01"), ["room"], MEDIA_TD["not_fit_phrases"]) == []
+              and cs.said_words(screen(rt, "s01"), ["room"]) == ["room"])
+        st = copy.deepcopy(no3)
+        st["declined"] = {"3d": {"s02": "operator: the cutaway is enough"}}
+        check("a struck proposal is not made again", [x["screen"] for x in prop(st, "v_3d_propose")] == ["s01"], prop(st, "v_3d_propose"))
+        check("... and striking it does not touch the approved words", cs.content_hash(st) == cs.content_hash(no3))
+        print("   2.49.2: a procedure, a document or an idea is not proposed as 3D")
+        ids3 = lambda sc: [x["screen"] for x in prop(sc, "v_3d_propose")]
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="step_animation", visual="Kit figure: the six steps as a track; the tank, the valve and the pipe light in turn")
+        check("the planned picture says steps / in turn: a sequence, not a shape - not proposed", "s01" not in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="schematic", visual="A drawing of the idea", title="Before anyone enters",
+                                 text="Check the tank, the valve and the pipe space before entry.")
+        check("fit words only in the slide's text (not the title or picture): not proposed", "s01" not in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="schematic", visual="A drawing of a tank")
+        check("one fit word in the picture is not enough (pic_min_words)", "s01" not in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="process_animation", visual="Kit figure: the tank and its relief valve, the pipe leaving it")
+        check("a process or flow animation is the author saying the lesson is a flow - not proposed", "s01" not in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(title="The barrier model - layers of protection", visual="Kit figure: the tank, the valve and the pipe, four walls")
+        check("an idea (barrier model, layers of protection) is not proposed even if its picture names a tank and a valve",
+              "s01" not in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="cutaway", active="worked-example", title="A cut-open tank and its valve",
+                                 text="1 Close the valve\n2 Vent the tank\n3 Open the manifold")
+        check("a worked example whose text is a list is not proposed", "s01" not in ids3(pr), ids3(pr))
+        screen(pr, "s01")["text"] = "A cut-open tank with its valve; the vapour above the liquid."
+        check("... but one whose text is prose still is", "s01" in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="cutaway", visual="3D model of a cut-open tank and its valve")
+        check("'3D model' in a picture note is the kind's name, not an idea word", "s01" in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="ai_illustration", visual="A picture of the tank and the valve in the room")
+        check("a generated (AI) picture is a scene, not a shape - not proposed", "s01" not in ids3(pr), ids3(pr))
+
+        ai = copy.deepcopy(no3)
+        screen(ai, "s03").update(visual_kind="none", visual="", title="The crew at a bunkering operation in port")
+        pa = prop(ai, "v_ai_propose")
+        check("a scene with no picture gets an AI picture proposed", [x["screen"] for x in pa] == ["s03"] and pa[0]["level"] == cs.NOTE, pa)
+        check("... context only, priced, asked first", "L33" in pa[0]["detail"] and "EUR" in pa[0]["detail"], pa[0]["detail"] if pa else "")
+        screen(ai, "s01")["visual_kind"] = "ai_illustration"
+        check("... not when the module already has an AI picture", not prop(ai, "v_ai_propose"), prop(ai, "v_ai_propose"))
 
         print("\n-- L51 (2.30.0): every module closes with one recap slide, straight before the module check")
         rules = lambda sc: {x["rule"]: x for x in cs.recap_findings(sc)}
@@ -533,6 +631,107 @@ def main():
               code == 0 and not os.path.isfile(p["pending"]) and screen(cs.load(p["script"]), "s01")["visual"].endswith("alongside"), out)
         code, out = cs_run("approve", c, "--module", "1", "--by", "Anna")
         check("... and it can be approved again", code == 0, out)
+        # 2.44.1 (IGF M03, 2026-10-16): a change whose value is a list, a number or true crashed the log after the
+        # script was already written - the pending list stayed behind and nothing reached FEEDBACK_LOG.md
+        ct = new_course(tmp, "types")
+        cht = os.path.join(tmp, "types_changes.json")
+        io.open(cht, "w", encoding="utf-8").write(json.dumps([{"field": "s01.recap", "new": True}, {"field": "q01.bloom", "new": 3},
+                                                               {"field": "q01.options", "new": ["Fully refrigerated", "Pressurised"]}]))
+        code, out = cs_run("propose", ct, "--module", "1", "--changes", cht)
+        code2, out2 = cs_run("apply", ct, "--module", "1", "--confirmed")
+        fb = io.open(os.path.join(ct, "working_claude", "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        st = {x["id"]: x for x in cs.load(cs.paths(ct, 1)["script"])["screens"]}
+        check("a change to true, a number or a list is proposed, applied and logged, and kept as true / a number / a list",
+              code == 0 and code2 == 0 and not os.path.isfile(cs.paths(ct, 1)["pending"]) and "Fully refrigerated / Pressurised" in fb
+              and st["s01"]["recap"] is True and st["q01"]["bloom"] == 3 and st["q01"]["options"] == ["Fully refrigerated", "Pressurised"],
+              out + out2)
+
+        # 2.46.0: a chat correction may also add a screen, remove one, or change a top-level field of the script
+        print("\n-- 2.46.0: a new screen, a removed screen, a screen edited after it was added")
+        ca = new_course(tmp, "addrm")
+        pa, cha = cs.paths(ca, 1), os.path.join(tmp, "addrm_changes.json")
+        q_new = "Which tank type needs no secondary barrier at all?"
+        io.open(cha, "w", encoding="utf-8").write(json.dumps([
+            {"add_screen": {"id": "q04", "kind": "self-check", "set": "SC1", "mechanic": "single_choice", "question": q_new,
+                            "options": ["Type A", "Type B", "Type C"], "correct": "C", "feedback": "Type C."}, "after": "q03"},
+            {"field": "q04.feedback", "new": "Type C tanks are pressure vessels and need no secondary barrier."},
+            {"remove_screen": "m05"},
+            {"add_screen": {"id": "s05", "kind": "slide", "title": "A closer look at Moss tanks", "text": "Moss tanks are spheres.", "minutes": 2},
+             "before": "s04"}], ensure_ascii=False))
+        code, out = cs_run("propose", ca, "--module", "1", "--changes", cha)
+        ids0 = [x["id"] for x in cs.load(pa["script"])["screens"]]
+        check("an added and a removed screen are proposed - listed in words, nothing changed yet, the pending list written",
+              code == 0 and "nothing has been changed yet" in out and 'a new screen q04 (self-check question, "%s")' % q_new in out
+              and "is added after" in out and "(q03)" in out and "is removed" in out and "(m05)" in out and "A closer look at Moss tanks" in out
+              and os.path.isfile(pa["pending"]) and "q04" not in ids0 and "m05" in ids0, out)
+        check("... the edit of the screen added in the same list reads its old value from the working copy",
+              "the new screen q04, the feedback: \"C.\" becomes \"C tanks are pressure vessels" in out, out)
+        check("... and the problems the result would have are listed as notes (the minutes no longer add up)",
+              "after these changes the script would have: " in out and "minutes add up" in out, out)
+        code, out = cs_run("apply", ca, "--module", "1", "--confirmed")
+        sa = cs.load(pa["script"])
+        ids1 = [x["id"] for x in sa["screens"]]
+        fb = io.open(os.path.join(ca, "working_claude", "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        check("applied after the yes: the new screen sits after q03, the other before s04, m05 is gone, the later edit landed, the script is a draft",
+              code == 0 and ids1.index("q04") == ids1.index("q03") + 1 and ids1.index("s05") == ids1.index("s04") - 1 and "m05" not in ids1
+              and screen(sa, "q04")["feedback"].startswith("Type C tanks are pressure vessels") and sa["status"] == "draft"
+              and not os.path.isfile(pa["pending"]), out)
+        check("... and each is logged with its question or title in words - never a raw screen",
+              fb.count("| 3 · M01 · q04 |") == 2 and fb.count("| 3 · M01 · s05 |") == 1 and fb.count("| 3 · M01 · m05 |") == 1
+              and q_new in fb and "A closer look at Moss tanks" in fb and "Put these cargoes in order" in fb and "'id'" not in fb and "{" not in fb, fb[-900:])
+
+        print("\n-- 2.46.0: a top-level field of the script")
+        cf = new_course(tmp, "sfield")
+        pf, chf = cs.paths(cf, 1), os.path.join(tmp, "sfield_changes.json")
+        src_new = ["IGC Code 2016: 4.21-4.24", "IMO Model Course 1.04, section 2"]
+        io.open(chf, "w", encoding="utf-8").write(json.dumps([{"script_field": "sources", "new": src_new}, {"script_field": "pass_mark", "new": 80},
+                                                              {"script_field": "title", "new": "Gas tanker basics"}], ensure_ascii=False))
+        code, out = cs_run("propose", cf, "--module", "1", "--changes", chf)
+        s0 = cs.load(pf["script"])
+        check("script fields are proposed in words, nothing changed yet",
+              code == 0 and "nothing has been changed yet" in out and "the script's sources" in out and "the script's pass mark becomes \"80\"" in out
+              and "Gas tanker basics" in out and os.path.isfile(pf["pending"]) and "pass_mark" not in s0 and s0["title"] == "Gas tankers", out)
+        code, out = cs_run("apply", cf, "--module", "1", "--confirmed")
+        s1 = cs.load(pf["script"])
+        fb = io.open(os.path.join(cf, "working_claude", "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        check("sources, pass_mark and title are applied (a whole number, a list), logged as '3 · M01 · script', the screens untouched",
+              code == 0 and s1["sources"] == src_new and s1["pass_mark"] == 80 and s1["title"] == "Gas tanker basics"
+              and s1["screens"] == s0["screens"] and fb.count("| 3 · M01 · script |") == 3 and "IMO Model Course 1.04, section 2" in fb, out + fb[-600:])
+
+        print("\n-- 2.46.0: what is refused stops with exit 2 and writes no list")
+        base = {"id": "q07", "kind": "self-check", "question": "x?", "mechanic": "single_choice", "options": ["a", "b"], "correct": "A", "feedback": "f"}
+        refused = {
+            "a field the script keeps for itself (status)": [{"script_field": "status", "new": "approved"}],
+            "the screens as a field": [{"script_field": "screens", "new": []}],
+            "a screen id that is already used": [{"add_screen": dict(base, id="s01")}],
+            "a new screen with no id": [{"add_screen": {k: v for k, v in base.items() if k != "id"}}],
+            "a new screen of an unknown kind": [{"add_screen": dict(base, kind="video")}],
+            "an 'after' that names no screen": [{"add_screen": base, "after": "zz9"}],
+            "a 'before' that names no screen": [{"add_screen": base, "before": "zz9"}],
+            "a remove that names no screen": [{"remove_screen": "zz9"}],
+            "a remove of a screen added nowhere (it is removed twice)": [{"remove_screen": "m05"}, {"remove_screen": "m05"}],
+            "a pass mark that is not a whole number": [{"script_field": "pass_mark", "new": 82.5}],
+            "a pass mark over 100": [{"script_field": "pass_mark", "new": 101}],
+            "sources that are not a list": [{"script_field": "sources", "new": "IGC Code"}],
+            "minutes that are not a number": [{"script_field": "minutes_allocated", "new": "lots"}]}
+        for k, (what, entries) in enumerate(refused.items()):
+            cr = new_course(tmp, "refuse%d" % k)
+            io.open(chf, "w", encoding="utf-8").write(json.dumps(entries))
+            code, out = cs_run("propose", cr, "--module", "1", "--changes", chf)
+            check("refused: %s" % what, code == 2 and out.startswith("Stopped - ") and not os.path.isfile(cs.paths(cr, 1)["pending"]), out)
+
+        print("\n-- 2.46.0: a script field changed after the list was made")
+        cm = new_course(tmp, "stale")
+        pm = cs.paths(cm, 1)
+        io.open(chf, "w", encoding="utf-8").write(json.dumps([{"script_field": "sources", "new": ["IGC Code"]}]))
+        cs_run("propose", cm, "--module", "1", "--changes", chf)
+        sm = cs.load(pm["script"])
+        sm["sources"] = ["somebody else's edit"]
+        cs.save(pm["script"], sm)
+        code, out = cs_run("apply", cm, "--module", "1", "--confirmed")
+        check("apply stops when a script field is no longer what the list saw, and changes nothing",
+              code == 1 and "Stopped - the script changed after the list was made" in out
+              and cs.load(pm["script"])["sources"] == ["somebody else's edit"] and os.path.isfile(pm["pending"]), out)
 
         print("\n-- 2.16.1: the slide-text check still runs on every screen")
         dirty = copy.deepcopy(SCRIPT)
@@ -621,6 +820,171 @@ def main():
         cs_run("apply", c, "--module", "1", "--confirmed")
         code, out = build()
         check("a script changed after approval fails the match", code == 1 and "not approved" in out, out)
+
+        print("\n-- 2.42.0: no module starts before the approved ILO map and the knowledge-base decision")
+        import course_gate
+        import ilo_map
+        ng = new_course(tmp, "nogate", gate=False)
+        code, out = cs_run("render", ng, "--module", "1")
+        check("no architecture, no ILO map, no KB decision: render stops (exit 2), writes nothing, and says each",
+              code == 2 and "cannot be started yet" in out and "architecture is not written" in out
+              and "knowledge base" in out and not os.path.isdir(os.path.join(ng, "to_review")), out)
+        code, out = cs_run("approve", ng, "--module", "1", "--by", "Anna")
+        check("approve stops the same way", code == 2 and "cannot be approved yet" in out
+              and cs.load(cs.paths(ng, 1)["script"]).get("status") == "draft", out)
+        gate_fixture.open_gate(ng, approve=False, kb=False)
+        code, out = cs_run("render", ng, "--module", "1")
+        check("an ILO map nobody approved, and no KB decision: still stopped - both named",
+              code == 2 and "has not approved the Stage 2 page" in out and "--approve --by" in out
+              and "Nobody has decided yet whether this course gets a knowledge base" in out and "ILO map yet" not in out, out)
+        gate_fixture.open_gate(ng, kb=False)
+        code, out = cs_run("render", ng, "--module", "1")
+        check("approved, but no KB decision: still stopped", code == 2 and "knowledge base" in out and "Stage 2 page yet" not in out, out)
+        gate_fixture.open_gate(ng)
+        code, out = cs_run("render", ng, "--module", "1")
+        check("approved ILO map + KB decided (declined is allowed): the script is started", code == 0, out)
+        os.remove(ilo_map.path(ng))
+        code, out = cs_run("render", ng, "--module", "1")
+        check("the ILO map file missing: stopped, and told how it is written", code == 2 and "no ILO map yet" in out
+              and "make_architecture_page.py" in out, out)
+        ilo_map.build(ng, quiet=True)
+        ap = os.path.join(ng, "working_claude", "architecture.json")
+        arch = cs.load(ap)
+        arch["modules"][0]["sub_ilos"].append({"id": "1.3", "status": "added", "text": "Name the ESD triggers.", "why": "x"})
+        cs.save(ap, arch)
+        code, out = cs_run("render", ng, "--module", "1")
+        check("a Sub-ILO added after approval: stopped - the map is stale and the approval old", code == 2
+              and "out of date" in out and "changed after the operator approved" in out, out)
+        code, out = run(os.path.join(HERE, "course_gate.py"), ng, "--module", "1")
+        check("course_gate.py says the same, exit 2", code == 2 and "changed after the operator approved" in out, out)
+        arch["modules"][0]["sub_ilos"].pop()
+        cs.save(ap, arch)
+        code, out = run(os.path.join(HERE, "course_gate.py"), ng, "--module", "1")
+        check("... put back, the gate is open again and names who approved", code == 0 and "approved by Test" in out, out)
+        code, out = run(os.path.join(HERE, "course_gate.py"), ng, "--module", "7")
+        check("a module with no rows in the ILO map is stopped on its own", code == 2 and "Module 7 has no Sub-ILO" in out, out)
+        nos = os.path.join(tmp, "noscript")
+        os.makedirs(os.path.join(nos, "working_claude"))
+        code, out = cs_run("render", nos, "--module", "1")
+        check("no script yet, gate shut: it says what comes first, before anyone writes one",
+              code == 2 and "no content script" in out and "cannot be started yet" in out, out)
+
+        print("\n-- 2.42.0: the ILO map and sources check")
+        cl = new_course(tmp, "iloclean")
+        check("the example module teaches and checks both Sub-ILOs and lists its sources: nothing found",
+              cs.ilo_findings(cl, SCRIPT) == [], cs.ilo_findings(cl, SCRIPT))
+        bad = copy.deepcopy(SCRIPT)
+        bad["sources"] = []
+        screen(bad, "s03")["sub_ilo"] = "1.1"                    # 1.2 now taught nowhere
+        del screen(bad, "q02")["sub_ilo"]
+        screen(bad, "m01")["sub_ilo"] = "9.9"
+        screen(bad, "m03")["sub_ilo"] = "1.1"                    # 1.2 now checked nowhere
+        fr = cs.ilo_findings(cl, bad)
+        rules = sorted(f["rule"] for f in fr)
+        check("empty sources, a question without sub_ilo, a Sub-ILO the module does not own, one taught nowhere and checked nowhere",
+              rules == ["i_no_sources", "i_not_checked", "i_not_taught", "i_q_no_sub", "i_unknown_sub"], rules)
+        check("... every one a must-fix, in the operator's language",
+              all(f["level"] == cs.FAIL for f in fr) and any(LV["i_not_taught"].split("{s}")[0] in f["detail"] for f in fr), fr)
+        check("... the unknown one names where it is, and what the module has",
+              any(f["rule"] == "i_unknown_sub" and f["screen"] == "m01" and "1.1, 1.2" in f["detail"] for f in fr), fr)
+        tags = copy.deepcopy(SCRIPT)
+        screen(tags, "s01")["sub_ilo"] = ["1.1", "1.2"]
+        screen(tags, "s03")["sub_ilo"] = "1.1"
+        check("a slide may teach two Sub-ILOs (a list)", cs.ilo_findings(cl, tags) == [], cs.ilo_findings(cl, tags))
+        nomap = new_course(tmp, "nomapfind", gate=False)
+        check("without an ILO map the check adds nothing (the gate stops the module instead)", cs.ilo_findings(nomap, bad) == [])
+        cb2 = new_course(tmp, "ilobad", script=bad)
+        code, out = cs_run("render", cb2, "--module", "1")
+        page = io.open(cs.paths(cb2, 1)["review"], encoding="utf-8").read()
+        check("the findings are on the review page under their own heading, and in the chat output",
+              html.escape(LV["s_ilo_title"]) in page and "The ILO map and sources check found 5" in out, out)
+        code, out = cs_run("approve", cb2, "--module", "1", "--by", "Anna")
+        check("they block approval like the theory check", code == 1 and LV["i_not_checked"].format(s="1.2") in out, out)
+        code, out = cs_run("approve", cb2, "--module", "1", "--by", "Anna", "--despite-findings")
+        rec = cs.load(cs.paths(cb2, 1)["script"])
+        check("... unless the operator approves despite them - recorded", code == 0
+              and {"i_no_sources", "i_not_taught"} <= {f["rule"] for f in rec.get("approved_despite_findings", [])}, out)
+        fin = copy.deepcopy(SCRIPT)
+        fin["module"] = "final"
+        screen(fin, "m02")["sub_ilo"] = "4.a"
+        check("the final assessment: every question names a Sub-ILO the course owns; no per-module coverage",
+              [f["rule"] for f in cs.ilo_findings(cl, fin)] == ["i_unknown_sub"], cs.ilo_findings(cl, fin))
+
+        print("\n-- 2.42.0: a script approved before the gate is reported, never invalidated")
+        old = copy.deepcopy(SCRIPT)
+        old.pop("sources")
+        for x in old["screens"]:
+            x.pop("sub_ilo", None)
+        old.update(status="approved", approved_by="Aleksis", approved_on="2026-10-14")
+        old["approved_hash"] = cs.content_hash(old)
+        po = new_course(tmp, "pilot", script=old, gate=False)
+        code, out = cs_run("render", po, "--module", "1")
+        check("an approved script re-renders with no gate at all (nothing to start)", code == 0, out)
+        gate_fixture.open_gate(po)
+        code, out = cs_run("render", po, "--module", "1")
+        after = cs.load(cs.paths(po, 1)["script"])
+        check("with the ILO map, its gaps are reported on the page and in the chat ...",
+              "The ILO map and sources check found" in out and "i_no_sources" in {f["rule"] for f in cs.ilo_findings(po, after)}, out)
+        code, out = cs_run("status", po, "--module", "1")
+        check("... and it stays approved - same hash, same approver", code == 0 and "approved by Aleksis on 2026-10-14" in out
+              and after["approved_hash"] == cs.content_hash(after), out)
+
+        print("\n-- 2.49.2 (F9): a picture-only change re-approves an old script cleanly; (F10) who proposed and who confirmed is kept")
+        pc = os.path.join(tmp, "pic.json")
+        io.open(pc, "w", encoding="utf-8").write(json.dumps([{"field": "s01.visual", "new": "Another photograph of a tank"}]))
+        code, out = cs_run("propose", po, "--module", "1", "--changes", pc, "--proposed-by", "Claude (agent)")
+        pend = cs.load(cs.paths(po, 1)["pending"])
+        check("propose says which new rules apply: none of the ILO map rules, for a picture", code == 0
+              and "approved before the ILO map and sources rules" in out and "will not hold the script to those rules" in out, out)
+        check("... and keeps who proposed it", pend.get("proposed_by") == "Claude (agent)", pend)
+        code, out = cs_run("apply", po, "--module", "1", "--confirmed", "--confirmed-by", "Aleksis")
+        rec = cs.load(cs.paths(po, 1)["script"])
+        fbt = io.open(os.path.join(po, "working_claude", "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        check("apply logs the proposer and the confirmer, not the operator's words by default",
+              "[proposed by Claude (agent); confirmed by Aleksis]" in fbt and "(chat)" in fbt, fbt[-300:])
+        arch_applied = [f for f in os.listdir(cs.paths(po, 1)["old"]) if ".applied" in f]
+        check("... the archived list names who confirmed it", arch_applied and cs.load(os.path.join(cs.paths(po, 1)["old"], arch_applied[-1])).get("confirmed_by") == "Aleksis", arch_applied)
+        check("... and the script remembers what changed since its approval",
+              rec.get("since_approval") == [{"op": "edit", "screen": "s01", "field": "visual"}] and rec["status"] == "draft", rec.get("since_approval"))
+        code, out = cs_run("approve", po, "--module", "1", "--by", "Aleksis")
+        rec = cs.load(cs.paths(po, 1)["script"])
+        check("approve: the picture-only change re-approves cleanly - the new rules stay suggestions, said so",
+              code == 0 and "stay suggestions" in out and rec["status"] == "approved" and "since_approval" not in rec
+              and "ilo_map" not in (rec.get("approved_checks") or []), out)
+        io.open(pc, "w", encoding="utf-8").write(json.dumps([{"field": "s02.visual", "new": "A different chart of the three cargoes"}]))
+        cs_run("propose", po, "--module", "1", "--changes", pc)
+        code, out = cs_run("apply", po, "--module", "1", "--confirmed")
+        fbt = io.open(os.path.join(po, "working_claude", "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        check("without names, they are 'not stated' - never assumed to be the operator's", "[proposed by not stated; confirmed by not stated]" in fbt, fbt[-300:])
+        io.open(pc, "w", encoding="utf-8").write(json.dumps([{"field": "s03.sub_ilo", "new": "1.1"}]))
+        code, out = cs_run("propose", po, "--module", "1", "--changes", pc)
+        check("a change to a Sub-ILO tag: the rules apply in full, and propose says so", "check those rules in full" in out, out)
+        cs_run("apply", po, "--module", "1", "--confirmed", "--confirmed-by", "Aleksis")
+        code, out = cs_run("approve", po, "--module", "1", "--by", "Aleksis")
+        check("... and approve holds the script to them: sources, untagged questions, a Sub-ILO taught nowhere", code == 1
+              and "must be fixed" in out and LV["i_no_sources"] in out, out)
+        fixed = cs.load(cs.paths(po, 1)["script"])
+        for x in fixed["screens"]:                               # the tags the example module has
+            x["sub_ilo"] = screen(SCRIPT, x["id"])["sub_ilo"] if "sub_ilo" in screen(SCRIPT, x["id"]) else x.get("sub_ilo")
+        fixed["sources"] = list(SCRIPT["sources"])
+        cs.save(cs.paths(po, 1)["script"], fixed)
+        code, out = cs_run("approve", po, "--module", "1", "--by", "Aleksis")
+        rec = cs.load(cs.paths(po, 1)["script"])
+        check("once the script meets them, it is approved and remembers the rules were checked in full",
+              code == 0 and "ilo_map" in (rec.get("approved_checks") or []), out)
+        io.open(pc, "w", encoding="utf-8").write(json.dumps([{"field": "s01.visual", "new": "A third photograph"}]))
+        cs_run("propose", po, "--module", "1", "--changes", pc)
+        code, out = cs_run("propose", po, "--module", "1", "--changes", pc)
+        check("... after that no old-script note is shown (a new approval is checked in full)", "approved before the ILO map" not in out, out)
+        cs_run("apply", po, "--module", "1", "--confirmed")
+        tagless = cs.load(cs.paths(po, 1)["script"])
+        screen(tagless, "q01").pop("sub_ilo", None)
+        cs.save(cs.paths(po, 1)["script"], tagless)
+        code, out = cs_run("approve", po, "--module", "1", "--by", "Aleksis")
+        check("... and a fully-checked script is held to the rules on every re-approval", code == 1 and LV["i_q_no_sub"].split("{")[0] in out, out)
+        fresh = new_course(tmp, "ilofresh", script=bad)
+        code, out = cs_run("approve", fresh, "--module", "1", "--by", "Anna")
+        check("a new approval (never approved) is checked in full", code == 1 and "stay suggestions" not in out and LV["i_not_checked"].format(s="1.2") in out, out)
 
         print("\n-- the review files never ship to a tablet")
         sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-tablet-publisher", "scripts"))

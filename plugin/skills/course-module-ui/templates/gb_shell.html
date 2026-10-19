@@ -189,7 +189,7 @@
 <!-- figure component scripts go here, before the init call -->
 <script>
   GBDeck.init({
-    text: { cue: "Instructor cue", start: "Start" },
+    /* text: { cue: "..." } overrides a word; the words follow <html lang> (en, lv, ru) without it */
     hooks: {}   /* slideId: { enter: fn, leave: fn } for figures that animate */
   });
 </script>

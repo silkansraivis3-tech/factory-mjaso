@@ -146,7 +146,7 @@
    "(^|/)COURSE_PATTERN_[^/]*\\.md$",
    "(^|/)factory-notes\\.md$",
    "(^|/)ARCHITECTURE_REVIEW\\.html$",
-   "(^|/)(programme|plan|architecture)\\.json$",
+   "(^|/)(programme|plan|architecture|ilo_map|intake)\\.json$",
    "(^|/)review/[^/]*_SCRIPT(_REVIEW)?\\.(html|docx)$"
   ],
   "instructor_only_filename_patterns": [
@@ -319,14 +319,13 @@
     [
      "eyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}",
      "WARN",
-     "a JWT. A Supabase ANON key here is publishable by design; anything else is not - decode it and check the 'role' claim"
+     "a JWT that does not decode - a Supabase ANON key is publishable by design; anything else is not, and this one's 'role' claim cannot be read"
     ]
    ],
-   "allow_patterns": [
-    "SUPABASE_ANON_KEY",
-    "anon public key",
-    "role\\\\?\":\\\\?\"anon"
+   "allow_jwt_roles": [
+    "anon"
    ],
+   "_allow_note": "Only the matched value itself can be allowed: a JWT passes when its own decoded payload says role 'anon'. A JWT with any other role FAILS. Nothing near a hit (a variable name, a comment) can excuse it - the old 200-character window let a service-role key sitting next to the text SUPABASE_ANON_KEY through.",
    "_anon_key_note": "gb_config.js carries the Supabase ANON key. That key is designed to be shipped in a client and is not a leak. Its safety rests entirely on row-level security being correct in backend/ - the tablets make unauthenticated writes to course_runs and unlocks, so anyone who unzips the APK can reach those endpoints. An RLS audit is worth doing; it is not this gate's job."
   },
   "offline": {

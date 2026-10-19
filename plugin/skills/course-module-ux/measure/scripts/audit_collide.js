@@ -326,7 +326,7 @@
                    ox: Math.round(o2.x), oy: Math.round(o2.y) });
       }
     }
-    return { slide: n, n: text.length + box.length + underChrome.length,
+    return { slide: n, id: s.id || "", n: text.length + box.length + underChrome.length,
              text: text, box: box, chrome: underChrome };
   }
 
@@ -428,7 +428,7 @@
           slidesTotal: slides.length,
           totalCollisions: total,
           slides: rows.map(function (r) {
-            return { slide: r.slide, n: r.n,
+            return { slide: r.slide, id: r.id, n: r.n,
                      text: r.text.slice(0, CONFIG.maxExamples),
                      box: r.box.slice(0, CONFIG.maxExamples),
                      chrome: r.chrome.slice(0, CONFIG.maxExamples) };

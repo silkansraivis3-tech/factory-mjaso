@@ -6,6 +6,7 @@
   /* every colour the viewer paints with, named; the canonical token first */
   --gbz-night: rgba(6,14,28,.94);
   --gbz-ink: var(--txt-d, #F3F8FD);
+  --gbz-dim: var(--dim-d, #A9BCD0);
   --gbz-btn: rgba(12,30,58,.88);
   --gbz-btn-line: rgba(255,255,255,.28);
   --gbz-btn-ink: var(--white, #FFFFFF);
@@ -34,6 +35,12 @@ svg.gbz-media{max-width:none;max-height:none}   /* sized to fit by gb_zoom.js */
 .gbz-cap{margin:0;max-width:min(1100px,92vw);color:var(--gbz-ink);text-align:center;
   font:500 clamp(16px,1.9vmin,22px)/1.45 var(--font,"Segoe UI",Roboto,Arial,sans-serif)}
 .gbz-cap[hidden]{display:none}
+/* L56: a picture's own record - the part it shows, what is in it, whose it is - under the picture, never over it */
+.gbz-cap.gbz-record{text-align:left;max-height:26vh;overflow-y:auto;overscroll-behavior:contain;
+  font-size:clamp(15px,1.75vmin,21px);touch-action:pan-y}
+.gbz-cap .gbz-name{display:block;font-weight:700;font-size:1.12em;margin-bottom:.2em}
+.gbz-cap .gbz-about{display:block}
+.gbz-cap .gbz-credit{display:block;margin-top:.45em;color:var(--gbz-dim);font-size:max(12.5px,.75em)}
 
 .gbz-btn{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;
   padding:0;border:1px solid var(--gbz-btn-line);border-radius:50%;cursor:pointer;
@@ -47,6 +54,8 @@ svg.gbz-media{max-width:none;max-height:none}   /* sized to fit by gb_zoom.js */
 /* the ⤢ button on a picture the trainee answers on - a tap there stays the answer */
 .gbz-corner{position:absolute;top:8px;right:8px;z-index:5;width:48px;height:48px;opacity:.92}
 .gbz-corner svg{width:24px;height:24px}
+/* on a slide that is a photograph: below the header band, clear of the words */
+.slide.photo > .gbz-corner.gbz-photo{top:calc(min(7.4vmin,62px) + 14px);right:14px}
 
 @keyframes gbz-in{from{transform:scale(.94)}to{transform:scale(1)}}   /* movement only - never animate into visibility */
 @media (prefers-reduced-motion:reduce){

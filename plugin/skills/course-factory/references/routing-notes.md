@@ -12,7 +12,8 @@ to read.*
 `orchestration/` answers "eight modules, eight agents at once — how?". It is the only lane that is
 about the *run* rather than the course: what has to be decided before a fan-out (the minutes, the
 module split, the language, the visual system, the task-code ranges), what the reader agent writes
-to a **file and never to a slide** (`MODULE_MAP.md`, `ILO_MAP.md`), and the one rule that keeps a
+to a **file and never to a slide** (`architecture.json`, `ilo_map.json` - approved before any module
+agent starts, `scripts/course_gate.py`), and the one rule that keeps a
 parallel build from losing work — **one agent, one folder**, with everything shared assembled
 afterwards by one process.
 

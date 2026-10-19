@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Fixture - the conclusion on a dark stepping slide must read (audit_deck.js "low")</title>
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_compose.css">
+<style>
+  html,body{margin:0;height:100%}
+  .slide{display:none;position:absolute;inset:0}
+  .slide.active{display:block}
+  .slide.dark{background:var(--deep)}
+  .slide-body{position:absolute;inset:0;overflow:auto}
+</style></head>
+<body>
+<main id="stage">
+  <!-- M01 benchmark run 4: s02's bold term in the conclusion was white on the blue callout (2.29:1); s07's conclusion,
+       the last line a stepping figure marks, was measured mid-fade after the mark check (1.11:1) -->
+  <section class="slide dark" id="s07"><div class="slide-body"><div class="copy">
+    <p class="statement" data-i="1">Heat always leaks into a cold LNG tank, so some LNG boils off as gas.</p>
+    <ul class="support"><li data-i="2">The tank pressure must stay within its design range.</li></ul>
+    <p class="call" data-i="3"><b>Venting to atmosphere</b>: not acceptable, except in an emergency.</p>
+  </div><div class="mediabar"><button data-act="next" style="width:60px;height:60px">Next</button></div></div></section>
+</main>
+<pre id="out"></pre>
+<script src="../scripts/audit_deck.js"></script>
+<script>
+  AuditDeck.all().then(function (res) {
+    var f = (res.failingSlides || [])[0] || {};
+    document.getElementById("out").textContent = JSON.stringify({low: (f.low || []).length, lows: f.low || [],
+      mark: (res.totals || {}).mark, verdict: res.verdict || ""});
+  });
+</script>
+</body></html>

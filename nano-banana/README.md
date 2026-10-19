@@ -11,6 +11,8 @@ places it.
 |---|---|
 | `server/nano_banana_mcp.py` | MCP server, **Python standard library only** — nothing to pip install |
 | `skills/realistic-visuals/` | when to generate and when to draw, the prompt shot-list, the check-every-image loop, embedding in HTML and PPTX, provenance |
+| `skills/gemini-browser/` | **free route (1.3.0):** drives gemini.google.com on the person's own Google AI Pro account - no key, no cost per picture - from a list decided beforehand, downloads each picture and moves it into the project |
+| `scripts/gemini_driver.js` · `scripts/gemini_take.py` | the page driver (`GB.send / wait / download`) and the mover that takes the picture from Downloads to the slide's file and writes its `_photo_meta.json` record |
 | `agents/image-director.md` | does a whole set of images or clips in isolated context and returns paths only |
 
 Tools: `generate_image` · `generate_video` · `get_video` · `setup_api_key` · `nano_banana_status`.
@@ -54,6 +56,14 @@ generated automatically:
 4. It shows you the result. A change is a new paid picture, so it asks again.
 5. It tells you how many pictures this computer made today and this month, and roughly what they cost
    (the log is `~/.config/nano-banana/usage.jsonl`). Ask *"nano banana status"* at any time.
+6. A hard cap stops generation at about EUR 5 a day or EUR 50 a month on this computer. To raise it, set
+   `NANO_BANANA_DAILY_LIMIT_EUR` / `NANO_BANANA_MONTHLY_LIMIT_EUR` (in `~/.claude/settings.json` under `"env"`
+   or as a Windows user environment variable) and restart Claude Code. Prices: `NANO_BANANA_EUR_PER_IMAGE`
+   (0.10), `NANO_BANANA_EUR_PER_VIDEO` (1.50) - estimates; Google's billing page has the real amount.
+7. If Claude Code shows MCP confirmation dialogs (elicitation), each generation also asks you there.
+
+The key is saved as plain text in `~/.config/nano-banana/gemini_api_key`. On Windows the file is protected
+only by your Windows account (chmod is a no-op there).
 
 ## Use
 
@@ -72,7 +82,7 @@ level-4 *generated illustration* step.
 
 | | |
 |---|---|
-| image model | `gemini-3.1-flash-image` (Nano Banana 2); `gemini-3-pro-image` (Pro) on request or after failures |
+| image model | `gemini-3.1-flash-image` (Nano Banana 2); `gemini-3-pro-image` (Pro) on request or after failures; a failed Pro request is tried once with Flash (1.3.2) |
 | video model | `veo-3.1-fast-generate-preview`, 8 s, 720p, 16:9 |
 | images | 16:9, 2K, PNG, saved into the deck's own `assets/` |
 

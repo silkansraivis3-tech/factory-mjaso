@@ -39,6 +39,23 @@ Also a composition in its own right:
 | `.trio` of `figure` (`img`/`svg` + `figcaption`, `b` for the caption title) | three photographs or three framed figures filling the stage |
 | `data-compose="sparse"` on the slide | declares a deliberately sparse flow screen, so the composition check does not flag it |
 
+Compiled slides (2.25.1, §13b — written by `course-factory/compile/`, usable by hand too):
+
+| Class | Use it for |
+|---|---|
+| `.copy` | the words beside or under a picture at reading size; holds `.statement`, `.lead`, `.support` |
+| `.box` (+ `alt`) · `.call` | inside `.copy`: a line set apart (blue - every box the same) · `alt` only where the build sheet names `box_alt`, the other of two options (grey, never amber) · the conclusion line (navy) |
+| `.inset` (`img` + `figcaption`) | inside `.copy`: a small real photograph under the words, its caption and credit |
+| `.fill.fig` | the picture's box: the drawing and its controls stacked, taking the room the words leave |
+| `.two-col.fig-wide` | two-col with the wider column for the picture |
+| `.legend` (`li[data-i][data-n]`) | a numbered row under a stage drawing; the badge shows `data-n` (1, 2, 3 in the row); `.own-numbers` when the words already start with their number - no badge |
+| `.two-col.fig-wide.fig-first` | the drawing on the left, the words on the right |
+| `.slide.photo.split` | a photograph filling the right of the screen, the words on the dark left |
+| `.act-ico` · `.act-lines` | the task slide's tablet sign · its lines grouped at reading size |
+| `.aside` | small drawings that belong with the words (mini figures on a photo slide) - compact, never pushing the words off the screen |
+| `.fig` · `.fig-wide` · `.fig-first` · `.own-numbers` · `.split` | the modifiers above, named on their own for the vocabulary check |
+| `.cur` · `.lit` on a `[data-i]` line | **set by a figure that steps** — the line it is on (amber wash, amber ring and bar; it out-ranks every card look) and the lines already shown (blue). Amber on a line means "here now" only: no card at rest is amber. `audit_deck.js` fails a selected line that looks like itself or another line at rest |
+
 ## 2 · Photographs (`gb_compose.css`)
 
 | Class | Use it for |
@@ -47,6 +64,8 @@ Also a composition in its own right:
 | `.photo-wrap` (holding the `img`) | the full-bleed photograph: the photo IS the screen |
 | `.photo-scrim` (+ `right`) | the dark gradient the copy sits on; `right` when the copy is on the right |
 | `.photo-copy` (+ `right`) | the text over the photo: `h2`, `.lead` |
+| `.support.seq` (an `ol`) · `.n` · `.lead.step` in `.photo-copy` | steps the script numbers itself (`1 …`, `2 …`, from 1 in order): one list, every step the same size, the step's own number in a navy disc (blue on dark) as its marker - never step 1 as a headline and the rest as squares. The number stays in the words (`.n`) for the match check. Set by the compiler |
+| `.lead.head` · `.lead.sub` in `.photo-copy` | words with points over a photo: `.head` is a line that heads its points (bold, white, a step larger — as a text slide marks its opening line), `.sub` is a point under it (the `.support` list's blue square). **One bullet look in every deck**: no amber rule on a heading line — amber rule means a takeaway or a law. The compiler sets both from the script's `•` lines |
 | `.photo-badge` | the small amber label above the copy |
 | `.credit` | the licence / credit line — required on the page for any photo that needs attribution |
 
@@ -94,7 +113,7 @@ there before the first screen. Write screens inside it; do not rebuild it.
 | `.ov-grid`, `.ov-head`, `.ov-item` | the overview of all screens |
 | `.chip`, `.cbtn`, `.btn-label`, `.fbtn`, `.tag`, `.t`, `.k`, `.n` | the chrome's own buttons, labels and counters |
 | `.gbt-topback` | the hidden Back link the Android hardware Back button clicks — every page needs one |
-| `.active`, `.cur`, `.on`, `.idle`, `.gone`, `.dark-active` | states **the engine sets** — never write them by hand |
+| `.active`, `.cur`, `.on`, `.idle`, `.gone`, `.dark-active`, `.banded` | states **the engine sets** — never write them by hand (`.banded`: the corner tag, hidden on a screen whose header band names it) |
 
 ## 6 · Document pages — START_HERE, handout, practical cards, plans (`gb_page.css`)
 
@@ -160,8 +179,14 @@ colours in the set; adding one is an owner decision (`knowledge/tokens.json` § 
 | File | What it does |
 |---|---|
 | `gb_deck.js` | the deck engine: `GBDeck.init({text, hooks})` — Start, Next/Prev, progress, overview, instructor cue, fullscreen, keyboard, swipe, per-screen enter/leave hooks (`course-module-ux`) |
+| `gb_fit.js` | no drawing cut off at its edges: when a slide comes up, an `<svg>` whose drawing reaches past its viewBox gets a frame just big enough, and a console warning to fix the drawing; `data-fit="off"` opts out (`course-module-ux`, L53) |
+| `kit.js` | the figure kit: draws and steps every figure file named NAME.kit.json (a spec, never a drawing), lights the slide's `[data-i]` lines per step, registers the slide's hooks; a course's own new parts load after it from `assets/kit_parts.js` (`course-visuals/kit`, L55) |
+| `kit.css` | the figure kit's look - ISA-101, grey at rest, amber alarm, red trip, tokens only; it also holds a kit figure on a slide above its `.mediabar` (`course-visuals/kit`, L55) |
 | `gb_run.js` + `gb_run.css` | the step runner on START_HERE (`course-module-ux`) |
-| `gb_zoom.js` + `gb_zoom.css` | **every picture opens full screen and closes again (L51)** - on every page that shows a picture: the deck, every task, the module check, the handout. Starts by itself, nothing wired per picture. Tap opens; X, a tap on the dark, Esc, swipe down, Back and the next slide close; pinch, double-tap or + / − zoom. A picture the trainee answers ON (hotspots over it) gets a corner ⤢ button instead, so a tap stays the answer. `data-no-zoom` on a figure leaves it out (a picture inside a button, a driven `[data-motion]` figure, video and 3D are left out by themselves) (`course-module-ux`) |
+| `gb_zoom.js` + `gb_zoom.css` | **every picture opens full screen and closes again (L51)** - on every page that shows a picture: the deck, every task, the module check, the handout. Starts by itself, nothing wired per picture. Tap opens; X, a tap on the dark, Esc, swipe down, Back and the next slide close; pinch, double-tap or + / − zoom. A picture the trainee answers ON (hotspots over it) gets a corner ⤢ button instead, so a tap stays the answer. `data-no-zoom` on a figure leaves it out (a picture inside a button, a driven `[data-motion]` figure, video and 3D are left out by themselves) (`course-module-ux`). **A photo's record (L56):** when the `<img>` carries `data-name` / `data-about` / `data-credit` (the compiler writes them from `_photo_meta.json`), full screen shows them under the picture - the part it shows, what is in it, whose it is (the viewer's own classes in `gb_zoom.css`: `gbz-cap gbz-record`, `gbz-name`, `gbz-about`, `gbz-credit`). A slide that is a photograph opens on a tap of its bare picture area and gets the ⤢ button on the slide (`gbz-corner gbz-photo`). Loaded by every compiled deck too |
+| `.two-col.photo-col` > `.fill.photo-col` | (`gb_compose.css`, 2.49.1) a photo slide laid out `wide-left` / `wide-right` in the build sheet: a real column layout, the photo cropped to fill its column, its credit line kept - so long words get the room `photo split` cannot give them. Written by the compiler, never by hand |
+| `.photo-strip` > `.pthumb` | (`gb_compose.css` 16, L57) the real photos of what a drawing shows, in a row under it, each numbered like the drawing and opening full screen with its record - written by the compiler, never by hand |
+| `gb_answer.js` + `gb_answer.css` | the one shared engine and screens of every compiled task page - choose, tap the picture, drag and drop, label the drawing, the result ring; grading by `data-key`, `gb-task-done`, `gb-timer` (`course-factory/compile/scripts/task_pages.py`) |
 | `kbd_escape.js` + `kbd_escape.css` | the three ways out of the soft keyboard (`course-task-ux` §5) |
 | `task_complete.js` + `task_complete.css` | the one shared ending for every task (`course-task-ux` §9) |
 | `novikontas_logo.svg` | the logo for the landing screen |

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Fixture - a selected line must look selected (audit_deck.js "mark")</title>
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../course-module-ui/templates/gb_compose.css">
+<style>
+  html,body{margin:0;height:100%}
+  .slide{display:none;position:absolute;inset:0}
+  .slide.active{display:block}
+  .slide-body{position:absolute;inset:0;overflow:auto}
+  /* ?old: the look before 2.49.6 - blue and amber boxes in turn, .cur amber and out-ranked by the amber box */
+  .old .copy .box.alt{border-left-color:var(--amber)!important;background:var(--amber-wash-l)!important}
+  .old .copy [data-i].cur{box-shadow:none!important}
+  .old .copy .box[data-i].cur{border-left-color:var(--blue)!important}
+  .old .copy .box.alt[data-i].cur{border-left-color:var(--amber)!important;background:var(--amber-wash-l)!important}
+</style></head>
+<body>
+<main id="stage">
+  <section class="slide" id="s1"><div class="slide-body"><div class="copy">
+    <p class="lead" data-i="1">The IGF Code sets goals first, then rules.</p>
+    <p class="box" data-i="2"><b>Goal</b> - what each chapter must achieve.</p>
+    <p class="box alt" data-i="3"><b>Functional requirements</b> - how safe it must be.</p>
+  </div><div class="mediabar"><button data-act="next" style="width:60px;height:60px">Next</button></div></div></section>
+</main>
+<pre id="out"></pre>
+<script src="../scripts/audit_deck.js"></script>
+<script>
+  if (location.search.indexOf("old") >= 0) { document.body.className = "old"; }
+  AuditDeck.all().then(function (res) {
+    var f = (res.failingSlides || [])[0] || {};
+    document.getElementById("out").textContent = JSON.stringify({mark: (res.totals || {}).mark, verdict: res.verdict || "",
+      marks: f.mark || []});
+  });
+</script>
+</body></html>

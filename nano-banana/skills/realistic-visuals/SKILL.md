@@ -64,7 +64,11 @@ come from a vague first description. So **nothing is generated automatically.** 
    is saved to. Ask: *"Generate this one picture (about €0.10)?"*
 4. **Generate only after a clear yes, and only once.** Pass their own words in `approved_by_user`; the tool
    refuses to run without them. Never write that field yourself, and never reuse an earlier yes for another
-   picture or a redo.
+   picture or a redo. (1.3.1) Where the client offers a confirmation dialog (MCP elicitation) the person
+   confirms there too; a decline is final - do not retry. A **spending cap** (EUR 5 a day, EUR 50 a month on
+   this computer by default) refuses with how to raise it: tell the person, never raise it yourself. A video
+   whose status check fails comes back `running` with its `operation` - collect it with `get_video`; the
+   operation is also in `usage.jsonl` and in `nano_banana_status`.
 5. **Show the result and ask:** use it, or what should change? A change is a new paid picture. Say what you
    would change and ask again. Prefer an edit of the good picture (`reference_images` and *"change only X"*) to
    a new one from scratch.
@@ -83,7 +87,17 @@ If they want to change the key, call `setup_api_key`. If a tool reports the wind
 could not open, pass its message on. **Never ask for the key in the chat, never write it into a
 file yourself, never echo it.**
 
+### The free route first: Gemini in the browser (1.3.0)
+
+When a browser with a signed-in Gemini is there (Claude in Chrome, or the built-in browser pane), make the
+pictures with the **`gemini-browser`** skill instead of these tools: the person's Google AI Pro account costs
+nothing per picture, the places and prompts come from one list (`picture_briefs.py queue`), the person says go
+once, and Claude drives the page, downloads each picture and moves it into the project. The tools below stay for
+video, for reference-image edits the app cannot take, and when no browser is signed in.
+
 ### When Google says *free tier* or *billing*: the manual route
+
+If a browser can be driven, use `gemini-browser` (above). Only without one:
 
 The API has no free quota for image or video models, so a key without billing on its project comes
 back `HTTP 429 … free_tier … limit: 0`. **After that error, stop calling the tools for the rest of
@@ -186,6 +200,8 @@ Generate **once, at the final size**. A 1K draft and then a 2K final is two paid
 
 Model: default Nano Banana 2 (`gemini-3.1-flash-image`). Switch to `model: "pro"`
 (`gemini-3-pro-image`) for crowded scenes, fine mechanical detail, or after Flash failed twice.
+If Pro fails (busy, not on the key, no image), the tool tries the same picture once with Flash - still one
+picture, the one approved - and the result carries `fell_back_from`: tell the person it is the Flash model's.
 
 Save **straight into the deck's or module's own assets folder**, lower snake_case, subject first:
 `assets/lng_carrier_starboard_quarter.png`. Never leave the picture only in a temp folder.

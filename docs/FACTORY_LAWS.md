@@ -411,14 +411,126 @@ picture, illustration and explanatory image can be tapped to full screen and clo
 module check, and before it a beautiful summary - animated boxes, the main points to take away - with the same closing
 design in every module. One shared viewer, `gb_zoom.js` / `gb_zoom.css`, on every page that shows a picture (tap opens;
 X, tap outside, Esc, swipe down, Back or the next slide closes; pinch, double-tap or + / − zoom; a ⤢ corner button
-where the trainee answers on the picture). One recap slide, `"recap": true` in the script, 3-6 points, straight before
+where the trainee answers on the picture). Full screen shows a photograph's own record under it - the part of a
+drawing it shows, what is in it, whose it is (L56) - and a slide that is a photograph opens on a tap of its bare picture
+area and carries the ⤢ button (operator, 2026-10-15: one viewer, L51's, with L56's explanation in it; compiled decks
+load it too). One recap slide, `"recap": true` in the script, 3-6 points, straight before
 the module check's task slide, built in `.slide.dark.recap` (`gb_compose.css` 15). Both are design: the person may
 choose otherwise after hearing the risk (L26).
 → `course-factory` (`content_script.py`, `check_course_package.py`, `knowledge/theory-rules.json` recap),
 `course-module-ux` (`assets/gb_zoom.js`, build/GUIDE.md 6a), `course-module-ui` (`gb_compose.css` 15, `design-system.json`, 2.30.0)
 
-**All fifty-one laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L51 are enforced first through `course-factory/SKILL.md`'s
+**L52 · As many real photographs as possible.** Owner, 2026-10-15: *"add as many real photos as possible"* - in
+the presentation and in the trainee tasks. Wherever a camera can show it, the slide's picture is a real photograph,
+or a small real photograph goes beside the drawing (the build sheet's `inset`); drawings and animations stay for what a
+camera cannot show - insides, flows, principles. Looked for in the knowledge base, the old course and the source
+files first, then free-licensed photographs on the internet, credited (title, author, source, licence, "resized");
+photos still missing go on the "photos to take at Novikontas" list. Never an AI picture of equipment a trainee must
+recognise (L33). → `course-factory` (`knowledge/media-and-tasks.json` floors `real_photo_*`, `scripts/content_script.py`
+suggestion `v_few_photos`, `compile/` inset and credit line, 2.25.1) and `course-visuals`
+
+**L53 · No empty space, good padding.** Owner, 2026-10-15. A picture takes the room the words leave - never a small
+drawing in a large column; words are at reading size (the shared `.copy`), never a small cluster in an empty box; the
+screen keeps its padding and the chrome's safe area, and nothing spills. A deck is built from the shared layouts only
+(`compile/`), and passes the browser audits before it is shown: `audit_compose.js` (every screen composed, none
+weak), `audit_deck.js` (no spill, no overfill), `audit_collide.js`. → `course-factory` (`compile/`) and
+`course-module-ui` (`gb_compose.css` §13b, 2.25.1)
+*Inside the figure too* (operator, 2026-10-15, after M01 s04: "the visual is too big, much empty space, the
+information about it too small and too little, the buttons aren't clickable"). (1) A figure is drawn to the frame it is
+shown in and fills it: at most half of the frame blank, no blank piece over a fifth (`audit_drawing.js` EMPTY, judged
+at the figure's last step too) - crop a sparse drawing to what its steps show, or give the room to the words.
+(2) The words that explain a figure are at reading size: a figure whose steps are the slide's lines sits beside them
+(`two-col`), never as a large stage drawing over a row of small cards. (3) A line a step lights is the way to that
+step - tap it (or Enter) and the step plays; anything that looks like a button works like one. Checked at
+1280 × 800, 1024 × 768 and 1920 × 1080. → `course-visuals/kit` (`kit.js`, `kit.css`, `SPEC.md`), `course-module-ux`
+(`audit_drawing.js`), `course-module-ui` (`gb_compose.css`), 2.26.3
+
+**L54 · Every drawing whole and clean.** Owner, 2026-10-15, after the IGF pilot: an engine room poking out through
+the ship's sloping stern, a cargo area through the curved bow, a fuel tank and a vent-mast top cut off at the edge, labels
+printed over a deckhouse and through a box's border. (1) A part drawn inside a hull, tank, room or box stays inside its
+real shape - where the hull slopes or curves, the room follows it or is clipped to it. (2) Nothing is cut off at the
+drawing's frame - not the line's thickness, not a part that shows in a later step. (3) Every label has its own clear
+space: 4 px on screen to any other shape, line or label, and 4 px from the edge of the box it sits in. An intentional
+crossing is marked in the drawing (`data-may-cross`, `data-no-contain`, `data-may-overlap`). → `course-module-ux`
+(`measure/scripts/audit_drawing.js`, run before a deck is shown; `assets/gb_fit.js`, the safety net in every compiled
+deck that widens a frame a drawing still reaches past) and `course-visuals` (`review/knowledge/visual-floor.json`
+`drawing_geometry`), 2.25.2
+
+**L55 · Figures come from the figure kit; a missing part is made into the kit.** Owner, 2026-10-15, after the IGF
+pilot's tank-monitoring slide shipped as four hand-drawn snapshots that swapped instead of moving: *use the kit; if
+the kit has no element for what the module needs, the AI creates the element, puts it in the kit, and asks for a merge
+once the module is complete.* (1) A drawn figure that shows a system, a state, a flow or a sequence is a figure-kit
+spec (`NAME.kit.json`: parts and steps), never a one-off SVG; the kit draws it, moves its values between steps, fires
+each alarm as its value crosses its mark, and lights the slide's lines. (2) A part the kit lacks is made to the kit's
+contract in the module's own `assets/kit_parts.js` - kit helpers, course tokens, ISA-101 colour, an example spec - and
+used at once. (3) Once the module is complete it is promoted into the factory's kit and a merge request goes to the
+owner; in a parallel build only the orchestrator promotes, at assembly, so no two modules write the kit. Real
+photographs still come first for anything a trainee must recognise (L52). → `course-visuals` (`kit/`: `kit.js`,
+`kit.css`, `SPEC.md`, `PARTS.md`, `scripts/check_kit.py`, `scripts/kit_parts.py`, `GALLERY.html`), `course-factory`
+(the compiler places a kit spec and ships the kit) and `course-module-ui` (`design-system.json` installs it), 2.26.0
+
+**L56 · Every photograph carries what it shows into the viewer - unasked.** Operator, 2026-10-15, from Aigars's review
+of the IGF pilot: *"we need images to be expandable, so a lightbox with maybe more explanation about the photo"*, and
+*"the factory needs to make it on its own"*. The viewer is L51's `gb_zoom.js` (one viewer; the panel `gb_photo.js` of
+2.27.0 is retired). (1) Every photograph's record - its `description` in `assets\img\_photo_meta.json`, written when the
+photo is brought in: what is in the picture and where to look, for a trainee, never more than the picture evidences -
+and its credit go onto the `<img>` (`data-about`, `data-credit`; `data-name` for an L57 thumbnail), and full screen
+shows them under the picture. (2) Nobody asks for it per slide: the compiler writes them on every photograph. A photo
+with no description is reported at build. (3) A picture made by an image model keeps its full record (`"generated":
+true`, `"generator"`, the prompt, the operator's yes - L47) but carries no credit line and no label on screen
+(operator, 2026-10-15), and L57 never places it as a thumbnail; the thing it stands in for stays on
+`PHOTOS_TO_TAKE.md` until a real photo replaces it (L33). → `course-factory` (`compile/` writes the record onto every
+photograph), `course-module-ux` (`gb_zoom.js` shows it), 2.27.0, 2.33.0
+
+**L57 · A drawing of real things carries their real photographs - unasked.** Operator, 2026-10-15, looking at the
+IGF pilot's "five new spaces" drawing: *"if there is an illustration like this, there would also be a real image of it,
+maybe smaller, somewhere close, which you can click and see the real one"*. (1) Every drawn slide's real things - the
+parts its lines name ("Tank connection space - ...") and the labels the drawing writes on itself ("vent mast") - get
+their real photographs in a row under the drawing: small, numbered like the drawing's own steps, each opening full
+screen with its record (L51, L56). At most four. (2) Matched by the photo's `shows` in `_photo_meta.json` - the plain names of what the picture
+really shows, written when the photo is brought in; a photo with no `shows` is pointed out. A cleared photo of another
+module of the course is copied in with its record (`copied_from`); one awaiting a rights review is never used. (3) A
+real thing with no photo is reported at build and listed in `working_claude\PHOTOS_TO_TAKE.md` (each module's section
+rewritten on every build, the operator's `## Notes` kept) - it is a photo to take at Novikontas, never a reason to
+stop the build. A thing counts as real when its name ends in one of `knowledge/media-and-tasks.json` `photo_things`.
+A build-sheet `"no_photo"` keeps a matched photo off a drawing it contradicts. → `course-factory` (`compile/`),
+`course-module-ui` (`gb_compose.css` 16 `.photo-strip`), `course-visuals` (`_photo_meta.schema.json` `shows`), 2.27.0
+
+**L58 · Every photograph once in the whole course.** Operator, 2026-10-15, after the same Viking Grace deck-tank photo
+came up under five drawings of IGF Module 3: *"don't have duplicate images - either a different one or none, on all
+modules"*. (1) A photograph is shown on one screen of the course only - as a slide's picture, an inset, a photo in a
+drawing or an L57 thumbnail. The same picture copied under another name in another module is the same photograph
+(the compiler compares where it came from, `url_or_origin`, else the file's bytes). (2) A thumbnail never repeats a
+photograph the course already shows: it takes a different photo of that thing, or none, and the thing goes on
+`PHOTOS_TO_TAKE.md` - another real photo of it lets it be shown. (3) A photograph placed by hand twice - on two slides,
+or on a slide of a later module than one that already shows it - is a problem the build reports, to fix with a different
+photo or none; the earlier module keeps it. A thumbnail elsewhere gives way on its module's next build, so build every
+module again after photos change. → `course-factory` (`compile/`), 2.27.0
+
+**L59 · No module before its map.** Owner, 2026-10-16, after a session building IGF Module 4 got the ILO map and the
+knowledge base only by a follow-up message: *"before creating any module the AI should have already made the ILO
+mapping and suggested for KNOWLEDGE_BASE to be created"*. Before any module's content is written, the course has its
+ILO map (`working_claude/ilo_map.json`), approved on the Stage 2 page, and a recorded knowledge-base decision. When
+there is no knowledge base, the factory suggests making one, unasked - what it is, from which files, how (the Course
+Source Processor; the factory has no builder) and what the course loses - and records yes / built / declined with the
+operator's reason, once. Every Sub-ILO is taught on a slide and checked by a question, and every fact traces to a
+listed source. A script approved before the law keeps its approval; its gaps are reported. → `course-factory`
+(`scripts/ilo_map.py`, `scripts/course_gate.py`, `kb/scripts/kb_tool.py`, `script/GUIDE.md` §0), 2.42.0
+
+**L60 · At least one 3D scene in every module where the subject allows it - strongly recommended.** Aleksis,
+2026-10-19, after the M01 benchmark built a planned 3D slide as a flat figure without a word: *"it should be like it is
+very recommended to build a 3d model at least once where you can in a module"*. A module whose script plans no 3D still
+gets one where a slide's lesson is a shape, an inside or a layout in space: `--init-build` picks the best slide unasked
+(one the script plans as 3D first, else the best fit) and writes its starter scene entry, built like IGF M03's
+`m03_station3d.js`. A module built with no 3D scene is said loud in the build and in its own card on the review page -
+the best candidate and why. A recommendation, never a block (2.18.1): the operator may decline it with their reason
+(`"declined_3d"` at the top of the build sheet), and a declined scene is not proposed again. A slide the script plans as
+3D that is given a 2D figure stays a must-fix until its own `"declined_3d"` holds a reason. L46 is unchanged - at most
+half the teaching slides, never instead of a real photograph, the speed and tap rules of the compile GUIDE 2b.
+→ `course-factory` (`scripts/content_script.py` `best_3d`, `build_findings`; `compile/scripts/compile_module.py`), 2.49.7
+
+**All sixty laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L60 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:
