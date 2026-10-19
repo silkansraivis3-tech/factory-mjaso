@@ -56,6 +56,8 @@ HOW A SLIDE IS LAID OUT (the same for every module)
   "composition" in the build sheet overrides: opener, flow, two-col, wide-left, wide-right, stage
   The words: one line -> a statement; several lines -> the first is the statement and the rest its
   support list; a line starting with "• " is a list item, and the other lines are lead paragraphs.
+  Over a photograph there is no list: a "• " line is a .lead.sub (the list's square marker) and the
+  lines it hangs under are .lead.head (bold) - the same heading-and-points look as a text slide.
   A task slide -> "activity": the set's code, the title, its lines; data-task-href to the set's page
   (tasks\\sc1_<title>.html, assessment\\check.html, assessment\\final.html). A room activity -> no page,
   data-link-hint from the build sheet or its first line.
@@ -302,8 +304,12 @@ def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=
         rows = [line("li", "", i, x).replace(' data-i="%d"' % i, ' data-i="%d" data-n="%d"' % (i, n), 1)
                 for n, (i, x) in enumerate(pairs, 1)]
         return ['<ol class="legend%s">' % (" own-numbers" if own else "")] + ["  " + r for r in rows] + ["</ol>"]
-    if dark_photo:            # the shared look styles .lead over a photograph, not a list - a bullet stays a lead line
-        return [line("p", "lead", i, x, bold=False) for i, x in pairs]
+    if dark_photo:            # the shared look styles .lead over a photograph, not a list - a bullet stays a lead line,
+        # marked .sub (the list's square marker); the lines between them are their headings, .head - bold, as a
+        # text slide marks its opening line
+        head = "lead head" if any(x.startswith("•") for _, x in pairs) else "lead"
+        return [line("p", "lead sub", i, x.lstrip("•").strip(), bold=False) if x.startswith("•")
+                else line("p", head, i, x, bold=False) for i, x in pairs]
     if len(pairs) == 1 and not boxes and not concl and not emph.get("groups"):
         # one line is a statement - except around a stage drawing, where it is reading text and the drawing is the point
         return [line("p", "statement" if first_statement else "lead", pairs[0][0], pairs[0][1], bold=not first_statement)]
@@ -323,7 +329,8 @@ def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=
             roles.append(("call", i, x))
         elif i in boxes:
             alt = (i in alts) if alts is not None else boxes.index(i) % 2 == 1
-            roles.append(("box alt" if alt else "box", i, x))
+            # a box sets its line apart already - a typed "•" in it is a second bullet look (IGF M03, 2026-10-19)
+            roles.append(("box alt" if alt else "box", i, x.lstrip("•").strip()))
         elif x.startswith("•"):
             roles.append(("li", i, x.lstrip("•").strip()))
         elif plain and n == 0:

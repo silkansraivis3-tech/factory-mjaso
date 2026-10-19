@@ -1154,6 +1154,15 @@ each found only after a full build. Now the kit and its checks take that work:
 - **Proof:** 38 test files; IGF M01-M16 compiled on a scratch copy - M01-M06 exit 0, the drafts report only "not
   approved", every drawing clean, importer ready, `run_audits.py` PASS on the changed decks.
 
+## 4zu · One bullet look in every deck (2.49.3, 2026-10-19)
+
+- **Found** (operator, IGF M06 s08): over a photograph every line - heading and point alike - carried the same amber
+  left rule, and the points kept a typed `•`; text slides draw points as the `.support` list's blue square.
+- **Now:** a `•` line over a photo is `.lead.sub` (the blue square, no rule); the lines it hangs under are `.lead.head`
+  (bold, white, a step larger, no rule). A `•` typed in a `.box` is dropped. Photo slides with no `•` lines unchanged.
+- **Proof:** `test_compile_module.py` 261; IGF M01-M15 decks rebuilt, 22 photo slides with points measured inside the
+  slide at 1920x1080 and 1024x768, no typed `•` left in any deck.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

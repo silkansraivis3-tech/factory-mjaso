@@ -1136,8 +1136,9 @@ def main():
         bl = "\n".join(cm.words_html(["Ways named in the Code:", "• reliquefy", "• burn it", "Venting: not acceptable."]))
         check("a line starting with • becomes a list item (bullet drawn by the list)",
               '<li data-script-field="text" data-i="2">reliquefy</li>' in bl and "•" not in bl and bl.count('class="lead"') == 2, bl)
-        check("over a photograph a • line stays a lead line, bullet kept - the shared look has no list style on photos",
-              '<p class="lead" data-script-field="text" data-i="3">• the fuels</p>' in s01 and "<ul" not in s01, s01)
+        check("over a photograph a • line stays a lead line marked .sub, its heading lines .head - no list on photos",
+              '<p class="lead sub" data-script-field="text" data-i="3">the fuels</p>' in s01 and "<ul" not in s01
+              and 'class="lead head"' in s01 and 'class="lead"' not in s01, s01)
         check("every line is numbered in script order, so a stepping figure can light it up",
               re.findall(r'data-i="(\d+)"', s02) == ["1", "2", "3"] and re.findall(r'data-i="(\d+)"', s01) == ["1", "2", "3", "4", "5"])
         check("a fragment that is already a .fill is not wrapped again (its contents would get no width)",
@@ -1150,6 +1151,10 @@ def main():
               and "<b>" not in cm.marked("Ways named in the IGF Code: reliquefy") and "<b>" not in cm.marked("a fuel tank - with"))
         check("the build sheet's boxes and conclusion: .box, .box.alt, .call - in script order",
               re.findall(r'class="(box(?: alt)?|call|lead)"', tb) == ["lead", "box", "box alt", "lead", "call"], tb)
+        bb = "\n".join(cm.words_html(["Two ways:", "• ventilated - fans draw air out", "• inerted - filled with gas"],
+                                     emph={"boxes": [2, 3]}))
+        check("a • line in a box loses its typed bullet - the box sets it apart, one bullet look per deck",
+              "•" not in bb and bb.count('class="box') == 2, bb)
         lg = "\n".join(cm.words_html(["Fuel tank - in a hold.", "Vent mast - high above deck."], legend=True))
         check("a legend: a numbered row counting 1, 2 ... (data-n), the script number kept as data-i",
               lg.startswith('<ol class="legend">') and '<li data-script-field="text" data-i="2" data-n="2"><b>Vent mast</b> - high above deck.</li>' in lg, lg)
