@@ -35,6 +35,7 @@ course-factory/
 ├── MANIFEST.md                           this file
 ├── references/                           READ WHEN NAMED — the full text moved out of SKILL.md in 2.11.0
 │   ├── laws-in-full.md                   every law with its reasons and cases, word for word
+│   ├── owner-decisions.md                every Phase 5 row (L27-L60) in full, one heading per law (2.50.5)
 │   ├── verify-in-full.md                 why each verify check exists
 │   └── routing-notes.md                  what orchestration/ and coverage/ are for; the visual-layer routing
 ├── knowledge/
@@ -1286,6 +1287,20 @@ round six factory problems in its inputs. Each is fixed here, with a test that f
    (clouds, flames, sprays and text are drawn over parts by nature). A re-fit that is spoiled is never the answer in a
    round, never saved as a fit and never as a `.candidate.kit.json`; the report says why (`usable()`). The kit grows its
    frame to hold a stray part, so the audits had passed s05's lamp at x 635 in a 600-wide spec. `test_figure_fit.py`.
+
+## 4zz3 · Lighter loading again: the Phase 5 rows in full move out (2.50.5, 2026-10-19)
+
+The same move as §4c, for the same reason - moved, never deleted. Since 2.11.0 the *Owner decisions in force* table
+had grown to 20 KB of the 55 KB every session reads whenever the skill fires. Each row now keeps its operative rule
+(every *never*, *only*, *at most* and limit, the owning file or check) in `SKILL.md`; the row as it stood up to
+2.50.4 is in `references/owner-decisions.md`, word for word, one heading per law so a session greps `## L45` and
+reads one section, not the 72 KB `laws-in-full.md`. The table's preamble says to read a row in full before working
+on its step. `SKILL.md` 55,062 → 43,269 bytes (≈ 13,800 → 10,800 tokens).
+
+The description was 1,610 characters and the skill listing cut it off inside the *NOT* list, the part that keeps
+deck and handout requests away from this skill; it is now 962, with the same modes and boundaries and one new
+boundary - pptx and Word material belongs to the `novikontas-*` skills (the *Deliberately outside* table already
+said so).
 
 ## 5 · Known gaps / before this goes live
 
