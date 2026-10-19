@@ -282,6 +282,11 @@ approved; a better choice found while building goes back to the operator as a ch
 A 3D model is three.js from geometry the factory can state exactly; the exact look of a named piece of
 equipment is a phone 3D scan at Novikontas, a manufacturer's or licensed model - never an AI model.
 
+**Every 3D scene answers a tap (operator, 2026-10-19).** Drag turns, pinch zooms, and a tap on a part highlights it -
+blue glow, the camera frames it, its name shows; a second tap or a tap beside puts the view back. The tappable parts are
+the ones the labels name. A scene that only turns is not finished (`media-and-tasks.json` → `three_d.interaction`;
+reference: IGF M03 `m03_station3d.js`).
+
 **3D: on fewer slides, never at a lower quality, and smooth (L46, owner 2026-10-07).** At most half of a
 presentation's teaching slides are 3D, and only where a shape, an inside or a layout in space is the lesson - never a
 chart, a symbol, a document, an idea, or 3D only because it can be. The cap is on how many, never how good: each 3D

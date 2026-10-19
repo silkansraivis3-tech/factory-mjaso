@@ -5,6 +5,7 @@
     ilo_map.py build <course>                 write working_claude/ilo_map.json from programme.json + architecture.json
     ilo_map.py show  <course> --module 4      a module's rows - what its content script is written against
     ilo_map.py check <course>                 is ilo_map.json there, and does it say what architecture.json says?
+    ilo_map.py refresh <course> [--module 4] [--dry-run]   the slide and question columns, from the scripts' "sub_ilo" tags
 
 WHY THIS EXISTS
 Owner, 2026-10-16: "before creating any module the AI should have already made the ILO mapping".
@@ -27,6 +28,16 @@ The core fields are rebuilt from architecture.json every time. Anything else on 
 taught, where, how it is assessed - the IGF pilot's own tool adds those) and any other top-level key
 is kept as it is. make_architecture_page.py builds it whenever it makes the Stage 2 page, and the
 operator's "next" on that page approves it (course_gate.py).
+
+SLIDES AND QUESTIONS COME FROM THE SCRIPTS (2.49.2, F23)
+The per-module tables of slides and questions are no longer typed by hand. refresh reads each module's
+content script (working_claude/script/M04.json) and, for every row, writes where_taught ("slide 3 Title;
+slide 5 Title"), checked_by ("SC1 q01, q02 · MC m03"), and the same as ids - taught_on, checked_on - from the
+"sub_ilo" tag of each slide, activity and question (a row meets the tags of the Sub-ILOs below it). It writes
+nothing else: the Main ILO, the Sub-ILO, their status and wording, and every other field of a row stay as
+they are, so the operator's approval of the map stays valid. A module with no script yet is left alone; a tag
+no row owns, and a Sub-ILO taught or checked nowhere, are reported. Run it after a script is approved or its
+slides move (a course's own table tool reads these fields instead of keeping its own lists).
 
 Standard library only.
 """
@@ -231,14 +242,92 @@ def stale(course, m=None):
     return diff
 
 
+SCRIPT_KEYS = ("where_taught", "checked_by", "taught_on", "checked_on")      # the only row fields refresh writes (2.49.2)
+
+
+def script_tags(v):
+    """the Sub-ILO(s) a screen names: "sub_ilo": "1.a" or ["1.a", "1.b"]"""
+    return [str(x).strip() for x in (v if isinstance(v, list) else [v]) if x not in (None, "") and str(x).strip()]
+
+
+def under(tag, sid):
+    """a tag meets a row when it is the row's own id or one of the Sub-ILOs below it ("1.a" meets "1")"""
+    return tag == sid or tag.startswith(sid + ".")
+
+
+def refresh_rows(rows, script):
+    """The slide and question columns of one module's rows, from its content script's "sub_ilo" tags (F23, 2.49.2).
+    Returns (new field values per sub_ilo_id, unknown tags [(screen id, tag)]). Pure - writes nothing."""
+    import content_script as cs                       # late: content_script imports this module
+    slide_no, sets, _ = cs.plan_of(script)
+    screens = script.get("screens", [])
+    ids = [str(r.get("sub_ilo_id")) for r in rows]
+    unknown = [(s.get("id"), t) for s in screens for t in script_tags(s.get("sub_ilo")) if t not in ids]
+    made = {}
+    for sid in ids:
+        slides = [s for s in screens if s.get("kind") in ("slide", "activity") and any(under(t, sid) for t in script_tags(s.get("sub_ilo")))]
+        by_set = []
+        for st in sets:
+            q = [x["id"] for x in st["questions"] if any(under(t, sid) for t in script_tags(x.get("sub_ilo")))]
+            if q:
+                by_set.append((st["id"], q))
+        made[sid] = {"where_taught": "; ".join("slide %d %s" % (slide_no[s["id"]], s.get("title", "")) for s in slides),
+                     "checked_by": " · ".join("%s %s" % (k, ", ".join(q)) for k, q in by_set),
+                     "taught_on": [s["id"] for s in slides], "checked_on": [i for _, q in by_set for i in q]}
+    return made, unknown
+
+
+def refresh(course, module=None, write=True):
+    """Refresh the slide/question rows of the ILO map from the modules' content scripts (working_claude/script/MNN.json).
+    Only where_taught, checked_by, taught_on, checked_on of a row change - never the Main ILO, the Sub-ILO or any other
+    wording (the approval stays valid). A module with no script is left as it is. Returns (report lines, error)."""
+    m = read(course)
+    if m is None:
+        return [], "there is no ILO map yet"
+    only = mkey(module) if module is not None else None
+    report, changed = [], False
+    for k in sorted({mkey(r.get("module")) for r in m["rows"] if isinstance(r, dict) and isinstance(mkey(r.get("module")), int)}):
+        if only is not None and k != only:
+            continue
+        if all(str(r.get("sub_ilo_id")) in ("-", "") for r in module_rows(m, k)):      # the final assessment's own row
+            continue
+        sp = workspace.claude_path(course, "script", "%s.json" % mname(k))
+        if not os.path.isfile(sp):
+            report.append("%s: no content script yet - rows left as they are" % mname(k))
+            continue
+        rows = module_rows(m, k)
+        made, unknown = refresh_rows(rows, load(sp))
+        n = 0
+        for r in rows:
+            new = made[str(r.get("sub_ilo_id"))]
+            if any(r.get(f) != new[f] for f in SCRIPT_KEYS):
+                r.update(new)
+                n += 1
+        changed = changed or n > 0
+        need = [str(r.get("sub_ilo_id")) for r in rows if str(r.get("sub_ilo_id")) in leaves(rows)]
+        gaps = ["%s not taught on any slide" % i for i in need if not made[i]["taught_on"]] + \
+               ["%s not checked by any question" % i for i in need if not made[i]["checked_on"]]
+        report.append("%s: %d of %d row(s) refreshed from %s%s%s" % (
+            mname(k), n, len(rows), os.path.basename(sp),
+            ("; unknown tag(s): " + ", ".join("%s on %s" % (t, s) for s, t in unknown)) if unknown else "",
+            ("; " + "; ".join(gaps)) if gaps else ""))
+    if write and changed:
+        m["script_synced"] = date.today().isoformat()
+        save(path(course), m)
+    return report, None
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("build", "show", "check"):
+    for name in ("build", "show", "check", "refresh"):
         s = sub.add_parser(name)
         s.add_argument("course")
         if name == "show":
             s.add_argument("--module", required=True)
+        if name == "refresh":
+            s.add_argument("--module", help="one module (default: every module that has a script)")
+            s.add_argument("--dry-run", action="store_true", help="say what would change; write nothing")
     a = ap.parse_args(argv)
     a.course = workspace.work_folder(a.course, create=False)
     if a.cmd == "build":
@@ -252,6 +341,12 @@ def main(argv=None):
         print("There is no ILO map yet:\n    %s\n  It is written with the Stage 2 page (make_architecture_page.py), or with: ilo_map.py build <course>."
               % path(a.course))
         return 2
+    if a.cmd == "refresh":
+        lines, err = refresh(a.course, a.module, write=not a.dry_run)
+        for x in lines:
+            print("  " + x)
+        print("%s - the Main ILO and Sub-ILO wording is untouched." % ("Nothing written (--dry-run)" if a.dry_run else "The ILO map's slide and question rows are refreshed"))
+        return 0
     if a.cmd == "check":
         d = stale(a.course, m)
         if d:

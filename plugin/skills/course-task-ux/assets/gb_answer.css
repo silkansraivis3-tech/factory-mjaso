@@ -69,6 +69,11 @@ body>.wrap{flex:1 0 auto;width:100%}
 .opts-say{margin:0 auto 6px;max-width:1040px;font-size:17px;color:var(--dim-l)}
 /* read the instrument: the picture above its choices */
 .instrument{max-width:1040px;margin:0 auto 10px}
+/* a real photograph's credit, as a line along the foot of the picture, as on a slide (2.49.2) - the same words the
+   full-screen viewer shows. It lies ON the picture, so the picture's size, and the page's height, do not change */
+:root{--ga-credit-ink:#fff;--ga-credit-bg:rgba(8,18,38,.74)}
+.ga > .figcredit{position:absolute;left:0;right:0;bottom:0;margin:0;padding:5px 12px;font:500 14px/1.35 var(--font);
+  color:var(--ga-credit-ink);background:var(--ga-credit-bg);border-radius:0 0 var(--r-m) var(--r-m);pointer-events:none}
 .instrument .ga{--gaw:min(100%,calc((100vh - 470px) * var(--ar,1.6)))}
 /* ... and on a landscape tablet (2.43.0, IGF M04 finding 12) the picture sits BESIDE its choices, never above four
    stacked options: the picture's height is what is left of the screen after the header, the question, the room kept
@@ -105,7 +110,10 @@ body>.wrap{flex:1 0 auto;width:100%}
   .scr[data-many="1"].on>.rows,.scr[data-many] .part.lay>.rows{grid-column:1;grid-row:span 2;margin:0}
   .scr[data-many="1"].on>.tray,.scr[data-many] .part.lay>.tray{grid-column:2;margin:0;
     display:grid;grid-template-columns:1fr 1fr;align-items:stretch}
-  .scr[data-many="1"].on>.why{grid-column:2}
+  /* the verdict and its explanation run the full width under the places and the cards - in the narrow right column a long
+     feedback was cut off after a wrong answer (2.49.2, IGF M07-M15: a 6-item order) */
+  .scr[data-many="1"].on>.why{grid-column:1/-1;grid-row:auto;max-width:none;margin-top:12px}
+  .scr[data-many="1"].on>.why:not(.on){display:none}      /* no room kept for it before Check - the page stays one screen high */
   .scr[data-many] .rows{gap:8px}
   .scr[data-many] .row .name,.scr[data-many] .slot{min-height:58px}
   .scr[data-many] .rows:not(.order) .row{grid-template-columns:minmax(120px,40%) 1fr}
@@ -329,6 +337,7 @@ body>.wrap{flex:1 0 auto;width:100%}
   background:var(--white)}
 .ctl .cname{font:700 19px/1.3 var(--font);color:var(--navy)}
 .ctl .csym{display:block;width:100%;height:96px;background:var(--deep-2);border-radius:var(--r-m)}   /* as the deck draws it */
+.ctl .csym.tall{height:150px}                    /* a push button is drawn tall: plate, guard, cap and tag (2.49.2) */
 .ctl .opts{grid-auto-flow:column;grid-auto-columns:1fr;max-width:none;margin:0}
 .ctl .opt.seg{min-height:58px;justify-content:center;font-weight:700}
 .ctl .opt.seg::before{display:none}

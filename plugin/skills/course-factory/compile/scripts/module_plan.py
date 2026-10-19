@@ -358,7 +358,7 @@ def plan_page(script, build, mdir, course, version, approved, probs):
         body.append("  <p>%s</p>" % e(w["no_tasks"]))
     for slide, code, qs in found:
         pm = tp.pass_mark_of(script, build)
-        is_check = code in cm.CHECK_PAGES
+        is_check = cm.is_check(code)
         head = "%s – %s" % (code, tp.short_title(slide.get("title")) if code.startswith("SC") else slide.get("title"))
         info = [w["opened"].format(n=slide_no[slide["id"]], t=num(start[slide["id"]])), w["qs"].format(n=len(qs)),
                 w["pass"].format(**{"pass": pm, "need": -(-len(qs) * pm // 100), "total": len(qs)}) if is_check else w["no_pass"]]

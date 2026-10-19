@@ -189,6 +189,22 @@ def main():
                'window.COURSE_MAP = [{"code":"module01","title":"Gas tankers","entry":"presentation/index.html"}];'), "_course_shell/course_map.js lists module01, the folder has module01, module02")
         broken("no START_HERE_EXTENDED.html (L43)", lambda b: os.remove(os.path.join(b, "module02", "START_HERE_EXTENDED.html")), "module02/START_HERE_EXTENDED.html is missing")
 
+        print("\n-- 2.49.2: drafts and final variants (IGF M07-M15)")
+        dr = os.path.join(tmp, "draftcourse", "modules")
+        shutil.copytree(c, dr)
+        shutil.rmtree(os.path.join(dr, "module02", "assessment"))              # a half-built preview
+        w(os.path.join(dr, "module02", "DRAFT_NOT_PACKAGED.txt"), "draft")
+        w(os.path.join(dr, "_course_shell", "course_map.js"), 'window.COURSE_MAP = [{"code":"module01","title":"Gas tankers","entry":"presentation/index.html"}];')
+        code, out = run(dr)
+        check("a module marked DRAFT_NOT_PACKAGED.txt is left out of every check, and said so as a note - the package passes",
+              code == 0 and "module02: draft - not packaged" in out and "1 module(s)" in out, out)
+        code, out = run(c)
+        check("... and the same course without the mark still fails on nothing (the mark is the only difference)", code == 0, out)
+        fin = io.open(os.path.join(c, "module02", "presentation", "index.html"), encoding="utf-8").read()
+        broken("a final variant that opens a task page instead of a graded assessment page", lambda b: w(os.path.join(b, "module02", "presentation", "index.html"),
+               fin.replace('data-activity="FA" data-task-href="../assessment/final.html"', 'data-activity="FB" data-task-href="../tasks/fb_variant_b.html"')),
+               "a final assessment variant (FB) must be a Check slide that opens a graded page in assessment/")
+
         print("\n-- 2.23.0: the classroom rulebook of 2026-10-12")
         team = os.path.join("module01", "tasks", "tt1_plan_the_loading.html")
         teamsrc = io.open(os.path.join(c, team), encoding="utf-8").read()

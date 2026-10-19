@@ -190,19 +190,19 @@ def key_page(script, build, mdir, version, approved, probs):
     sheet = build.get("screens") or {}
     final = str(script.get("module")).lower() == "final"
     title = w["title_final"] if final else w["title"].format(n=script.get("module"))
-    pages = ", ".join(os.path.relpath(tp.page_path(mdir, s, c), mdir).replace("\\", "/") for s, c, _ in found)
+    pages = ", ".join(os.path.relpath(tp.page_path(mdir, s, c, script), mdir).replace("\\", "/") for s, c, _ in found)
     names = []
+    codes = [c for _, c, _ in found]
     for slide, code, qs in found:
-        names.append(w["mc"] if code == "MC" else w["fa"] if code == "FA" else
+        names.append(w["mc"] if code == "MC" else cm.final_name(w["fa"], code, codes) if cm.FINAL_SET.match(code) else
                      w["sc"].format(code=code, title=tp.short_title(slide.get("title"))))
     how = []
     if any(c.startswith("SC") for _, c, _ in found):
         how.append(w["self"])
-    for slide, code, qs in found:
-        if code in cm.CHECK_PAGES:
+    for (slide, code, qs), name in zip(found, names):
+        if cm.is_check(code):
             pm = tp.pass_mark_of(script, build)
-            how.append(w["check"].format(name=w["mc"] if code == "MC" else w["fa"], **{"pass": pm, "need": -(-len(qs) * pm // 100),
-                                                                                    "total": len(qs)}))
+            how.append(w["check"].format(name=name, **{"pass": pm, "need": -(-len(qs) * pm // 100), "total": len(qs)}))
     how += [w["timer"], w["shown"]]
     m = cs.mid(script.get("module"))
     made = w["made"].format(m=m, by=script.get("approved_by") or "", on=script.get("approved_on") or "", v=version) if approved else w["draft"]

@@ -383,7 +383,7 @@ def main():
         for x in no3["screens"]:
             if x.get("kind") == "slide":
                 x["visual_kind"], x["visual"] = "schematic", "A drawing of the idea"
-        screen(no3, "s01").update(visual_kind="step_animation", visual="Kit figure: the tank and its relief valve, step by step")
+        screen(no3, "s01").update(visual_kind="step_animation", visual="Kit figure: the tank and its relief valve, the pipe leaving it")
         screen(no3, "s02").update(visual_kind="cutaway", visual="A cut-open tank: the membrane, the insulation and the hull behind it")
         screen(no3, "s03").update(visual_kind="photo", visual="A real photograph of the tank connection space")
         p3 = prop(no3, "v_3d_propose")
@@ -400,6 +400,38 @@ def main():
         st["declined"] = {"3d": {"s02": "operator: the cutaway is enough"}}
         check("a struck proposal is not made again", [x["screen"] for x in prop(st, "v_3d_propose")] == ["s01"], prop(st, "v_3d_propose"))
         check("... and striking it does not touch the approved words", cs.content_hash(st) == cs.content_hash(no3))
+        print("   2.49.2: a procedure, a document or an idea is not proposed as 3D")
+        ids3 = lambda sc: [x["screen"] for x in prop(sc, "v_3d_propose")]
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="step_animation", visual="Kit figure: the six steps as a track; the tank, the valve and the pipe light in turn")
+        check("the planned picture says steps / in turn: a sequence, not a shape - not proposed", "s01" not in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="schematic", visual="A drawing of the idea", title="Before anyone enters",
+                                 text="Check the tank, the valve and the pipe space before entry.")
+        check("fit words only in the slide's text (not the title or picture): not proposed", "s01" not in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="schematic", visual="A drawing of a tank")
+        check("one fit word in the picture is not enough (pic_min_words)", "s01" not in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="process_animation", visual="Kit figure: the tank and its relief valve, the pipe leaving it")
+        check("a process or flow animation is the author saying the lesson is a flow - not proposed", "s01" not in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(title="The barrier model - layers of protection", visual="Kit figure: the tank, the valve and the pipe, four walls")
+        check("an idea (barrier model, layers of protection) is not proposed even if its picture names a tank and a valve",
+              "s01" not in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="cutaway", active="worked-example", title="A cut-open tank and its valve",
+                                 text="1 Close the valve\n2 Vent the tank\n3 Open the manifold")
+        check("a worked example whose text is a list is not proposed", "s01" not in ids3(pr), ids3(pr))
+        screen(pr, "s01")["text"] = "A cut-open tank with its valve; the vapour above the liquid."
+        check("... but one whose text is prose still is", "s01" in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="cutaway", visual="3D model of a cut-open tank and its valve")
+        check("'3D model' in a picture note is the kind's name, not an idea word", "s01" in ids3(pr), ids3(pr))
+        pr = copy.deepcopy(no3)
+        screen(pr, "s01").update(visual_kind="ai_illustration", visual="A picture of the tank and the valve in the room")
+        check("a generated (AI) picture is a scene, not a shape - not proposed", "s01" not in ids3(pr), ids3(pr))
+
         ai = copy.deepcopy(no3)
         screen(ai, "s03").update(visual_kind="none", visual="", title="The crew at a bunkering operation in port")
         pa = prop(ai, "v_ai_propose")
@@ -896,6 +928,63 @@ def main():
         code, out = cs_run("status", po, "--module", "1")
         check("... and it stays approved - same hash, same approver", code == 0 and "approved by Aleksis on 2026-10-14" in out
               and after["approved_hash"] == cs.content_hash(after), out)
+
+        print("\n-- 2.49.2 (F9): a picture-only change re-approves an old script cleanly; (F10) who proposed and who confirmed is kept")
+        pc = os.path.join(tmp, "pic.json")
+        io.open(pc, "w", encoding="utf-8").write(json.dumps([{"field": "s01.visual", "new": "Another photograph of a tank"}]))
+        code, out = cs_run("propose", po, "--module", "1", "--changes", pc, "--proposed-by", "Claude (agent)")
+        pend = cs.load(cs.paths(po, 1)["pending"])
+        check("propose says which new rules apply: none of the ILO map rules, for a picture", code == 0
+              and "approved before the ILO map and sources rules" in out and "will not hold the script to those rules" in out, out)
+        check("... and keeps who proposed it", pend.get("proposed_by") == "Claude (agent)", pend)
+        code, out = cs_run("apply", po, "--module", "1", "--confirmed", "--confirmed-by", "Aleksis")
+        rec = cs.load(cs.paths(po, 1)["script"])
+        fbt = io.open(os.path.join(po, "working_claude", "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        check("apply logs the proposer and the confirmer, not the operator's words by default",
+              "[proposed by Claude (agent); confirmed by Aleksis]" in fbt and "(chat)" in fbt, fbt[-300:])
+        arch_applied = [f for f in os.listdir(cs.paths(po, 1)["old"]) if ".applied" in f]
+        check("... the archived list names who confirmed it", arch_applied and cs.load(os.path.join(cs.paths(po, 1)["old"], arch_applied[-1])).get("confirmed_by") == "Aleksis", arch_applied)
+        check("... and the script remembers what changed since its approval",
+              rec.get("since_approval") == [{"op": "edit", "screen": "s01", "field": "visual"}] and rec["status"] == "draft", rec.get("since_approval"))
+        code, out = cs_run("approve", po, "--module", "1", "--by", "Aleksis")
+        rec = cs.load(cs.paths(po, 1)["script"])
+        check("approve: the picture-only change re-approves cleanly - the new rules stay suggestions, said so",
+              code == 0 and "stay suggestions" in out and rec["status"] == "approved" and "since_approval" not in rec
+              and "ilo_map" not in (rec.get("approved_checks") or []), out)
+        io.open(pc, "w", encoding="utf-8").write(json.dumps([{"field": "s02.visual", "new": "A different chart of the three cargoes"}]))
+        cs_run("propose", po, "--module", "1", "--changes", pc)
+        code, out = cs_run("apply", po, "--module", "1", "--confirmed")
+        fbt = io.open(os.path.join(po, "working_claude", "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        check("without names, they are 'not stated' - never assumed to be the operator's", "[proposed by not stated; confirmed by not stated]" in fbt, fbt[-300:])
+        io.open(pc, "w", encoding="utf-8").write(json.dumps([{"field": "s03.sub_ilo", "new": "1.1"}]))
+        code, out = cs_run("propose", po, "--module", "1", "--changes", pc)
+        check("a change to a Sub-ILO tag: the rules apply in full, and propose says so", "check those rules in full" in out, out)
+        cs_run("apply", po, "--module", "1", "--confirmed", "--confirmed-by", "Aleksis")
+        code, out = cs_run("approve", po, "--module", "1", "--by", "Aleksis")
+        check("... and approve holds the script to them: sources, untagged questions, a Sub-ILO taught nowhere", code == 1
+              and "must be fixed" in out and LV["i_no_sources"] in out, out)
+        fixed = cs.load(cs.paths(po, 1)["script"])
+        for x in fixed["screens"]:                               # the tags the example module has
+            x["sub_ilo"] = screen(SCRIPT, x["id"])["sub_ilo"] if "sub_ilo" in screen(SCRIPT, x["id"]) else x.get("sub_ilo")
+        fixed["sources"] = list(SCRIPT["sources"])
+        cs.save(cs.paths(po, 1)["script"], fixed)
+        code, out = cs_run("approve", po, "--module", "1", "--by", "Aleksis")
+        rec = cs.load(cs.paths(po, 1)["script"])
+        check("once the script meets them, it is approved and remembers the rules were checked in full",
+              code == 0 and "ilo_map" in (rec.get("approved_checks") or []), out)
+        io.open(pc, "w", encoding="utf-8").write(json.dumps([{"field": "s01.visual", "new": "A third photograph"}]))
+        cs_run("propose", po, "--module", "1", "--changes", pc)
+        code, out = cs_run("propose", po, "--module", "1", "--changes", pc)
+        check("... after that no old-script note is shown (a new approval is checked in full)", "approved before the ILO map" not in out, out)
+        cs_run("apply", po, "--module", "1", "--confirmed")
+        tagless = cs.load(cs.paths(po, 1)["script"])
+        screen(tagless, "q01").pop("sub_ilo", None)
+        cs.save(cs.paths(po, 1)["script"], tagless)
+        code, out = cs_run("approve", po, "--module", "1", "--by", "Aleksis")
+        check("... and a fully-checked script is held to the rules on every re-approval", code == 1 and LV["i_q_no_sub"].split("{")[0] in out, out)
+        fresh = new_course(tmp, "ilofresh", script=bad)
+        code, out = cs_run("approve", fresh, "--module", "1", "--by", "Anna")
+        check("a new approval (never approved) is checked in full", code == 1 and "stay suggestions" not in out and LV["i_not_checked"].format(s="1.2") in out, out)
 
         print("\n-- the review files never ship to a tablet")
         sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-tablet-publisher", "scripts"))

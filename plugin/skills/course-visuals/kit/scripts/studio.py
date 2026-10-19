@@ -45,6 +45,7 @@ COMPILE = os.path.join(SKILLS, "course-factory", "compile", "scripts")
 FACTORY_SCRIPTS = os.path.join(SKILLS, "course-factory", "scripts")
 sys.path.insert(0, FACTORY_SCRIPTS)
 OUT_ID = "__studio_out"
+INSET_OVER = None       # (x, y, w) in the drawing's units: draw a stand-in photo over the figure (--inset-over), as the compiler's "over" does
 PANELS = ("two-col", "dark", "wide-left", "task")
 
 
@@ -107,9 +108,18 @@ def real_slide(ctx):
 def generic_slide(spec, panel):
     """a slide frame of the panel kind with the spec in it - the compiler's markup for a kit figure"""
     data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-    fig = ('<div class="fill fig kit-fig" data-kit-scope><div class="kit-screen"><svg data-kit="#kit-studio"></svg></div>'
+    svg = '<svg data-kit="#kit-studio"></svg>'
+    if INSET_OVER and panel != "task":      # a photo laid over a blank part of the drawing, as the compiler's "over" does (F4)
+        x, y, w = INSET_OVER
+        sw, sh = spec["size"]
+        photo = ('<figure class="inset over" style="left:%.2f%%;top:%.2f%%;width:%.2f%%"><img alt="photo" src="data:image/svg+xml,'
+                 '%%3Csvg xmlns=%%27http://www.w3.org/2000/svg%%27 viewBox=%%270 0 16 9%%27%%3E%%3Crect width=%%2716%%27 height=%%279%%27 '
+                 'fill=%%27%%23556%%27/%%3E%%3C/svg%%3E"><figcaption>a photograph</figcaption></figure>'
+                 % (100 * x / sw, 100 * y / sh, 100 * w / sw))
+        svg = '<div class="kit-holder">%s%s</div>' % (svg, photo)
+    fig = ('<div class="fill fig kit-fig" data-kit-scope><div class="kit-screen">%s</div>'
            '<script type="application/json" id="kit-studio">%s</script>%s</div>'
-           % (data, '<div class="mediabar"><button class="fbtn" type="button" data-act="prev">Previous step</button>'
+           % (svg, data,'<div class="mediabar"><button class="fbtn" type="button" data-act="prev">Previous step</button>'
                     '<span class="dots"></span><button class="fbtn primary" type="button" data-act="next">Next step</button>'
                     '<button class="fbtn" type="button" data-act="replay">Replay</button></div>' if spec.get("steps") else ""))
     if panel == "task":
@@ -426,7 +436,11 @@ def main(argv=None):
     ap.add_argument("--step", default="final", help="the step in the screenshot: final, a number, or all (a contact sheet of every step)")
     ap.add_argument("--out", help="where the screenshots go (default: _studio next to the spec)")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--inset-over", help="x,y,w: a stand-in photo laid over the drawing in its own units (the deck's \"inset over\"); not with --step all")
     o = ap.parse_args(argv)
+    if o.inset_over:
+        global INSET_OVER
+        INSET_OVER = tuple(float(v) for v in o.inset_over.split(","))
     sizes = tuple(tuple(int(v) for v in s.split("x")) for s in o.sizes.split(","))
     t0 = time.time()
     result, why = run(o.spec, o.parts, o.panel, sizes, o.step if o.step in ("final", "all") else int(o.step), o.out)

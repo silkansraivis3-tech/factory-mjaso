@@ -474,7 +474,10 @@ SC_PLAN = [
     ["q04", [["eval", RECT + "var d = document.getElementById('dock').getBoundingClientRect().top;"
         "out.q04 = {low: Math.max.apply(null, [].map.call(s.querySelectorAll('.chip,.slot'), function (c) { return R(c).b; })), dock: d,"
         " doc: document.documentElement.scrollHeight, vh: innerHeight, many: s.getAttribute('data-many')};"]]
-     + [["card", t, n] for t, n in PIPE]],
+     + [["card", t, n] for t, n in PIPE]
+     + [["eval", RECT +            # the verdict as it is after Check: it is laid out when it shows, so show it
+         "var w = s.querySelector('.why'); w.className += ' on';"
+         "out.q04w = {why: R(w), rows: R(s.querySelector('.rows')), tray: R(s.querySelector('.tray'))};"]]],
     ["eval", RECT + BAR + "out.res = {y: scrollY, ring: R(document.getElementById('resRing')), bar: bar};"],
 ]
 MC_PLAN = [
@@ -540,6 +543,10 @@ def fixes_part(exe, tmp):
     q = r.get("q04") or {}
     check("8 rows to put in order at 1280 x 800: the places beside the cards, every card on the screen without a scroll",
           q.get("many") == "1" and q.get("low", 9e9) <= q.get("dock", 0) + 0.5 and q.get("doc", 9e9) <= q.get("vh", 0) + 1, q)
+    qw = r.get("q04w") or {}
+    w_, ro, tr = qw.get("why") or {}, qw.get("rows") or {}, qw.get("tray") or {}
+    check("F21 (2.49.2): the verdict box of a long order runs the full width under the places and the cards - never in the narrow column",
+          w_ and ro and tr and w_["l"] <= ro["l"] + 1 and w_["r"] >= tr["r"] - 1 and w_["t"] >= max(ro["b"], tr["b"]) - 1, qw)
     q = r.get("res") or {}
     check("the result screen opens at the top: the score ring whole, under the top bar", q.get("y") == 0 and q.get("ring", {}).get("t", -1) >= q.get("bar", 0) - 1, q)
     rep = r.get("report") or {}

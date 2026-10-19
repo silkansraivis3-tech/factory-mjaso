@@ -43,7 +43,11 @@ While writing:
 The review page's **ILO map and sources check** — must-fix findings, like the theory check — lists a Sub-ILO
 taught nowhere or checked nowhere, a question with no `"sub_ilo"`, a `"sub_ilo"` the module does not own, and
 an empty `"sources"`. Approval waits for them unless the operator approves `--despite-findings` (L26). A
-script approved before 2.42.0 keeps its approval; its findings are reported, never forced.
+script approved before 2.42.0 keeps its approval; its findings are reported, never forced (§4).
+
+The ILO map's slide and question rows are **built from the scripts**, not typed per module: after a script is
+approved or its slides move, `python scripts/ilo_map.py refresh <course> [--module N]` writes each row's
+`where_taught` / `checked_by` from the `"sub_ilo"` tags (the approved Main ILO and Sub-ILO wording is never touched).
 
 ## 1 · Write the script
 
@@ -106,6 +110,10 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
     that made it. Each one the operator keeps goes into the script (propose / apply); each one they strike goes into
     the script's `"declined"`, outside the approved words, so it is never proposed again:
     `"declined": {"3d": {"s06": "operator: the comparison drawing is enough"}, "ai": {}}`.
+  - A 3D proposal needs the shape in the slide's **title or planned picture** (two fit words at least), not only
+    in its text, and none of: a sequence, a document or an idea there (steps, procedure, report, permit,
+    checklist, model, layers of protection, "in turn"), a flow or process animation, a generated picture, or a
+    worked example whose text is a list (2.49.2, `knowledge/media-and-tasks.json` `three_d`).
 - **Bloom (L48, 2.25.0).** A question says which Sub-ILO it checks (`"sub_ilo": "1.2"` - expected on every
   question since 2.42.0, §0), and - only when
   it is written above its task type's usual level - its level and why (`"bloom": 4, "bloom_why": "..."`).
@@ -231,9 +239,14 @@ becomes 'are supported by'; question 3: the correct answer becomes B"*. **Show t
 operator, in their language, and wait.** Then:
 
 ```
-python scripts/content_script.py apply <course> --module 1 --confirmed     only after they said yes
+python scripts/content_script.py apply <course> --module 1 --confirmed --confirmed-by "<name>"    only after they said yes
 python scripts/content_script.py discard <course> --module 1               they said no
 ```
+
+Say who proposed and who said yes (2.49.2, F10): `propose --proposed-by "<who>"` (the operator in chat, or the agent
+that worked the change out) and `apply --confirmed-by "<the operator's name>"`. The log row keeps both
+(`[proposed by Claude (agent); confirmed by Aleksis]`); a Word or PDF read is "the operator (their Word file)". Left
+out, a name is "not stated" — the log never claims the words were the operator's when nobody said so.
 
 `apply` changes the script (and stops, exit 1, if the screens or a script field changed since the list was
 made), logs every change in `FEEDBACK_LOG.md` (`3 · M01 · q06`, or `3 · M01 · script`), keeps the old Word file in
@@ -260,6 +273,26 @@ python scripts/content_script.py approve <course> --module 1 --by "<name>"
 
 Refused while a pending list waits or the script has problems. **Any change after approval makes it a
 draft again.** Record the approval in `COURSE_STATE.md` (L32). `status` says where a module stands.
+
+**Approval is the operator's own act — never an agent's, never relayed** (2.49.2, F24). `--by` is the
+person who read the words and said "next", in their own session. An agent does not run `approve` on an
+instruction passed on from another session, a note, a handoff file or an earlier message: the permission
+system of Claude Code blocks it — correctly, since a relayed "approve" is not the operator's word — and the
+factory has no switch around it, by design. So:
+
+- **Unattended runs** (overnight, a module agent, a batch): build with `compile_module.py --draft` and stop
+  at the draft. Say in the report which scripts wait for approval; never try to approve them.
+- **The operator approves in their own session**, after reading the review page or the Word file:
+  `content_script.py approve <course> --module N --by "<their name>"` (they may ask an agent in that
+  same session to run it, having just said yes there). The compiler then builds the real module.
+- A script whose approval an unattended run needs stays a draft; nothing downstream pretends otherwise
+  (`check_script_match.py` fails a build from a draft).
+
+**An old script re-approved** (2.49.2, F9). A script approved before 2.42.0 keeps its approval and its
+ILO-map findings are only reported. After a change that does not touch Sub-ILO tags, the sources or the
+screens — a picture, a word — `approve` does not hold it to those rules again (it says so; `propose` also
+says which applies). A change to a `sub_ilo` tag or the sources, or a screen added or removed, checks them
+in full; a new approval always does, and records it (`approved_checks`).
 
 **The theory check runs on the script, before any HTML** (2.17.0, L36): a slide too thin to teach from,
 notes too thin to explain from, a module whose words do not fill its minutes, a self-check after too

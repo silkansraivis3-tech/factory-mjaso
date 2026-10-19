@@ -115,6 +115,18 @@ KIT.define('oil_tray', function (fig, part, g, p) {
 step brings in (`text` with `reveal: true`). Lightning and a collapsed person are not built yet - make them if a module needs them.
 Each has its card in `GALLERY.html` (from its `example`), drawn and audited on both panels.
 
+## What the kit gained from IGF M07-M15 (2.49.2) - do not work round these again
+- `gas_cloud` `from` is in **figure coordinates** like every other part (`fromIn: "box"` keeps the old reading); `check_kit.py`
+  warns when the origin is off the figure. A part with a point of its own (a cloud's origin, a spill's `from`) names it in the
+  figure's coordinates, or says which.
+- `push_button` takes `h` (default 120); `spill` draws inside `x..x+w, y..y+h` and says its `h`; `tree` fits `w`, wraps its words
+  and keeps the 12.5 px floor; `level` puts its tick numbers on the right when a pipe runs in on the left; `log` sets a long
+  alarm on as many lines as it needs. **A part is sized to its box, and its words are labels.** It never draws outside the
+  box its spec gives it, and a box that holds words fits them (`fig.fit`).
+- `person` names each item by what the slide says (`labels`) and wears goggles, respirator and apron too.
+- A photo "over" a drawing no longer leaves the words small: the kit lays out on a window `resize` and grows words 0.1 % past 12.5.
+- The studio can try it: `studio.py <spec> --inset-over x,y,w` draws a stand-in photo over the figure as the deck does.
+
 Two patterns worth copying when a part needs a second value or a part that is only sometimes there:
 - **A second value** (`<id>.burst`) is made with `fig.sub(part, 'burst', 0, render)`, and its pieces are built only when the spec
   asks for them (`burst: true`) - a hidden fireball that every tank carried would be reported "cut off (in a later step)".

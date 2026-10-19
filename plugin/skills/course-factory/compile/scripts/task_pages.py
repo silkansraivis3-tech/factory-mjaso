@@ -341,6 +341,7 @@ class Fig(object):
     def __init__(self, kind, name, vb, make, svg=None, parts=None, ids=()):
         self.kind, self.name, self.vb, self.make, self.svg, self.parts, self.ids = kind, name, vb, make, svg, parts or {}, set(ids)
         self.spec_parts = []
+        self.credit = ""                                # a photograph's credit line, shown under it (2.49.2)
 
     def html(self, shared=False, uid=""):
         return self.make(shared, uid or self.name)
@@ -443,9 +444,11 @@ def photo_fig(q, b, rel, mdir, probs, where, bands=False, wrap=False):
         body = ('<svg viewBox="0 0 %g %g" role="img" aria-label="%s" data-audit-ignore%s><image href="../%s" x="0" y="0" width="%g" height="%g" '
                 'preserveAspectRatio="none"/></svg>' % (w, h, a(alt), cred, a(rel), w, h))
         return svg_fig(body, name, (0.0, 0.0, w, h), where, rel, probs, bands)
-    return Fig("img", name, (0.0, 0.0, float(size[0]), float(size[1])),
-               lambda shared, uid: '<img class="taskfig" src="../%s" alt="%s"%s%s>' % (
-                   a(rel), a(alt), ' data-fig="%s"' % a(name) if shared else "", cred))
+    fig = Fig("img", name, (0.0, 0.0, float(size[0]), float(size[1])),
+              lambda shared, uid: '<img class="taskfig" src="../%s" alt="%s"%s%s>' % (
+                  a(rel), a(alt), ' data-fig="%s"' % a(name) if shared else "", cred))
+    fig.credit = credit if not (meta and cm.is_generated(meta)) else ""
+    return fig
 
 
 def svg_fig(body, name, vb, where, rel, probs, bands):
@@ -722,7 +725,16 @@ def picture(q, b, mdir, figdir, figs, probs, where):
         return []
     figs["_pic"] = True
     figs["_kit"] = figs.get("_kit") or fig.kind == "kit"
-    return ['    <div class="instrument"><div class="ga"%s>%s</div></div>' % (fig.ar(), fig.html(False, q["id"]))]
+    return [instrument_box(fig, q["id"])]
+
+
+def instrument_box(fig, uid):
+    """the picture shown with a question that is not answered on it. 2.49.2 (IGF M07-M15, F20): a real photograph there
+    carries its credit as a line under it and the round corner button (gb_zoom's data-zoom="button") that opens it full
+    screen - as on a slide; before, the credit was only inside the viewer and the picture showed no sign it could open"""
+    zoom = ' data-zoom="button"' if fig.kind == "img" else ""
+    cred = '<p class="figcredit">%s</p>' % e(fig.credit) if fig.credit else ""
+    return '    <div class="instrument"><div class="ga"%s%s>%s%s</div></div>' % (zoom, fig.ar(), fig.html(False, uid), cred)
 
 
 # ------------------------------------------------------------------ set the value: the dial
@@ -786,7 +798,12 @@ PAIRS = [("open", "closed"), ("open", "shut"), ("on", "off"), ("running", "stopp
 KIT_STATE = {"open": ("valve", 1), "closed": ("valve", 0), "shut": ("valve", 0), "atvērts": ("valve", 1),
              "aizvērts": ("valve", 0), "открыт": ("valve", 1), "закрыт": ("valve", 0), "открыто": ("valve", 1),
              "закрыто": ("valve", 0), "running": ("pump", 1), "stopped": ("pump", 0), "darbojas": ("pump", 1),
-             "apturēts": ("pump", 0), "работает": ("pump", 1), "остановлен": ("pump", 0)}
+             "apturēts": ("pump", 0), "работает": ("pump", 1), "остановлен": ("pump", 0),
+             # 2.49.2 (F25) - a push button (the kit's push_button: 0 ready, 1 pressed): the ESD button of IGF M14
+             "ready": ("button", 0), "pressed": ("button", 1), "released": ("button", 0), "not pressed": ("button", 0),
+             "pushed": ("button", 1), "gatavs": ("button", 0), "nospiests": ("button", 1), "nospiesta": ("button", 1),
+             "atlaists": ("button", 0), "готов": ("button", 0), "нажата": ("button", 1), "нажат": ("button", 1),
+             "отпущена": ("button", 0)}
 
 
 def cased(word, like):
@@ -804,19 +821,36 @@ def positions(control, target, b):
     return None
 
 
-def kit_symbol(sid, n, states, start):
-    """a little figure-kit drawing of the control (a valve, a pump) when every position is one the kit draws"""
+def button_tag(control):
+    """the short code a push button's tag plate carries: 'ESD push button' -> 'ESD', 'ESD 2 bridge' -> 'ESD 2', else ''
+    (the kit then writes its own 'ESD')"""
+    m = re.match(r"^\s*([A-Za-z]{2,5}(?:\s*\d{1,2})?)\b", control or "")
+    return m.group(1).upper() if m and (m.group(1).isupper() or re.search(r"\d", m.group(1))) else ""
+
+
+def kit_symbol(sid, n, states, start, control=""):
+    """a little figure-kit drawing of the control (a valve, a pump, a push button) when every position is one the kit draws"""
     kinds = {KIT_STATE.get(s.lower(), (None,))[0] for s in states}
     if len(kinds) != 1 or None in kinds:
         return ""
     kind = kinds.pop()
     v = KIT_STATE[start.lower()][1] if start and start.lower() in KIT_STATE else (0.5 if kind == "valve" else 0)
-    part = ({"id": "c", "type": "valve", "x": 100, "y": 58, "size": 22, "state": False, "trip": False, "value": v}
-            if kind == "valve" else {"id": "c", "type": "pump", "x": 92, "y": 50, "r": 26, "value": v})
-    spec = {"size": [200, 100], "parts": [part]}
+    if kind == "valve":
+        part = {"id": "c", "type": "valve", "x": 100, "y": 58, "size": 22, "state": False, "trip": False, "value": v}
+        size = [200, 100]
+    elif kind == "button":                              # the kit's push_button: plate 120 x 182 round (0, 0); no words under it - the card says them
+        part = {"id": "c", "type": "push_button", "x": 70, "y": 110, "state": False, "value": v}
+        if button_tag(control):
+            part["tag"] = button_tag(control)
+        size = [140, 200]
+    else:
+        part = {"id": "c", "type": "pump", "x": 92, "y": 50, "r": 26, "value": v}
+        size = [200, 100]
+    spec = {"size": size, "parts": [part]}
     sid_ = "kit-%s-%d" % (sid, n)
-    return ('<svg class="csym" data-kit="#%s" data-no-zoom aria-hidden="true"></svg>'
-            '<script type="application/json" id="%s">%s</script>' % (sid_, sid_, json.dumps(spec, separators=(",", ":"))))
+    return ('<svg class="csym%s" data-kit="#%s" data-no-zoom aria-hidden="true"></svg>'
+            '<script type="application/json" id="%s">%s</script>'
+            % (" tall" if kind == "button" else "", sid_, sid_, json.dumps(spec, separators=(",", ":"))))
 
 
 # 2.46.0 - a label box is as wide as its words need. The 17 % box cut off "Tank connection space" once the tick
@@ -895,7 +929,7 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         if fig:
             figs["_pic"] = True
             figs["_kit"] = figs.get("_kit") or fig.kind == "kit"
-            out.append('    <div class="instrument"><div class="ga"%s>%s</div></div>' % (fig.ar(), fig.html(False, sid)))
+            out.append(instrument_box(fig, sid))
             extra = ' data-pic="beside"'       # the picture beside the choices, never over four stacked ones (gb_answer.css)
         out += opt_buttons(sid, q)
     elif m in ("hotspot", "spot_the_hazard"):
@@ -922,6 +956,8 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         out.append('    <div class="stage"><div class="%s" data-fig="%s" data-zoom="button"%s>'
                    % (ga_class(fig), a(fig.name if fig else ""), fig.ar() if fig else ""))
         out += holder
+        if fig and fig.credit and fig.kind == "img":
+            out.append('      <p class="figcredit">%s</p>' % e(fig.credit))
         out.append("    </div></div>")
     elif m == "label_diagram":
         items, _ = cs.answer_items(q)
@@ -1130,7 +1166,7 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
                              % (where, control, control, target))
                 continue
             start = ((b.get("start") or {}).get(control) or "").strip()
-            sym = kit_symbol(sid, n_, states, start)
+            sym = kit_symbol(sid, n_, states, start, control)
             figs["_kit"] = figs.get("_kit") or bool(sym)
             out.append('      <div class="ctl cg%s" data-val="%s"><p class="cname" data-script-field="answer">%s</p>%s'
                        % ("" if start else " unset", a(control), e(control), sym))
@@ -1230,7 +1266,7 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
     short = short_title(slide.get("title"))
     if code == "MC":                                    # "Module check - Module 1" -> "Module 1 check"
         short = w["module_n_check"].format(n=script.get("module"))
-    is_check = code in cm.CHECK_PAGES
+    is_check = cm.is_check(code)                        # the module check, a final assessment variant (FA, FB): graded
     pass_mark = pass_mark_of(script, build, probs) if is_check else 0
     sheet = build.get("screens") or {}
     try_tablet = (sheet.get(slide["id"]) or {}).get("try_tablet")
@@ -1290,9 +1326,9 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
     return "\n".join(head + body)
 
 
-def page_path(mdir, slide, code):
+def page_path(mdir, slide, code, script=None):
     """the page the deck's task slide opens - the same name compile_module.py gives data-task-href"""
-    href = cm.task_href(code, short_title(slide.get("title")), mdir)
+    href = cm.task_href(code, short_title(slide.get("title")), mdir, script)
     return os.path.normpath(os.path.join(mdir, "presentation", href))
 
 
@@ -1314,7 +1350,7 @@ def compile_tasks(script, build, mdir, figdir, version, approved):
             probs.append("%s: unknown way(s) of answering %s - a script uses those of knowledge/media-and-tasks.json"
                          % (code, ", ".join(str(x) for x in not_yet)))
             continue
-        pages[page_path(mdir, slide, code)] = page_html(script, slide, code, qs, build, mdir, figdir, version, approved,
+        pages[page_path(mdir, slide, code, script)] = page_html(script, slide, code, qs, build, mdir, figdir, version, approved,
                                                        first_set, probs)
     import answer_key                                   # 2.46.0 - the instructor's key, from the same approved script
     key = answer_key.key_page(script, build, mdir, version, approved, probs)

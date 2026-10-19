@@ -118,6 +118,34 @@ for change, what in [
     change(s4)
     check("a spec with %s is refused" % what, bool(ck.check_spec(s4, types, "s")))
 
+# ---------------------------------------------------------------- 2.49.2: what IGF M07-M15 found (F3, F22)
+def cloud(**kw):
+    p = {"id": "C", "type": "gas_cloud", "x": 350, "y": 110, "w": 250, "h": 120}
+    p.update(kw)
+    return {"size": [640, 390], "label": "x", "parts": [p],
+            "steps": [{"title": "gas", "play": [["C", 1, 500]]}]}
+
+
+check("F3 gas_cloud: an origin in the cloud's own box (an old spec) is clean", ck.check_spec(cloud(**{"from": [100, 80]}), types, "s") == [])
+check("F3 gas_cloud: an origin in figure coordinates (only inside the box that way) is clean",
+      ck.check_spec(cloud(**{"from": [450, 190]}), types, "s") == [])
+check("F3 gas_cloud: the same point read in the box with \"fromIn\": \"box\" lands off the figure and is warned",
+      any("off the picture" in x for x in ck.check_spec(cloud(**{"from": [450, 190], "fromIn": "box"}), types, "s")))
+check("F3 gas_cloud: an origin off the figure either way is warned, with where it landed",
+      any("off the picture" in x and "[" in x for x in ck.check_spec(cloud(**{"from": [900, 700]}), types, "s")))
+check("F3 gas_cloud: \"fromIn\": \"figure\" reads a point that is inside the box both ways as figure coordinates",
+      ck.cloud_origin({"x": 20, "y": 20, "w": 280, "h": 150, "from": [110, 130], "fromIn": "figure"}) == ((110, 130), "figure")
+      and ck.cloud_origin({"x": 20, "y": 20, "w": 280, "h": 150, "from": [110, 130]}) == ((130, 150), "box"))
+check("F3 gas_cloud: a \"from\" that is not [x, y] is refused", bool(ck.check_spec(cloud(**{"from": "left"}), types, "s")))
+person = {"size": [400, 330], "label": "x", "parts": [
+    {"id": "A", "type": "person", "x": 100, "y": 290, "wear": ["goggles", "respirator", "apron", "gloves", "boots"],
+     "labels": {"respirator": "HALF MASK"}}], "steps": [{"title": "on", "play": [["A", 5, 500]]}]}
+check("F22 person: goggles, respirator, apron and a labels option are a good spec", ck.check_spec(person, types, "s") == [], ck.check_spec(person, types, "s"))
+p2 = json.loads(json.dumps(person)); p2["parts"][0]["wear"].append("cape")
+check("F22 person: a wear item the kit cannot draw is refused", bool(ck.check_spec(p2, types, "s")))
+p3 = json.loads(json.dumps(person)); p3["parts"][0]["labels"]["suit"] = "OVERALL"
+check("F22 person: a label for an item that is not worn is refused (its words would never show)", bool(ck.check_spec(p3, types, "s")))
+
 # ---------------------------------------------------------------- the 2.48.0 layout contract in kit.js itself
 kit = ck.read(ck.KIT_JS)
 check("kit.js lays figures out (labels, the floor, the frame) and exports the helpers parts use",

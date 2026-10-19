@@ -125,6 +125,36 @@ def main():
         code, out = run(COURSE, c, "--retitle")
         check("... --retitle accepts it", "<title>A new name</title>" in read(root, "COURSE.html"), out)
 
+        # F7 (2.49.2) - a module built with --draft is a preview: marked, left out of the package, and said so
+        base = os.path.join(tmp, "draft")
+        os.makedirs(base)
+        cd, mdd = t.new_course(base, t.script())
+        run(t.COMPILE, cd, "--module", "1")
+        sc2 = t.script(approved=False)
+        sc2.update(module=2, title="Fuel systems")
+        cs.save(os.path.join(cd, "working_claude", "script", "M02.json"), sc2)
+        code, out = run(t.COMPILE, cd, "--module", "2", "--draft")
+        wd = os.path.join(cd, "working_claude")
+        cs.save(os.path.join(wd, "architecture.json"), ARCH)
+        cs.save(os.path.join(wd, "programme.json"), {"academic_hour_min": 45, "total_row": {"total": 26}})
+        rd = os.path.dirname(mdd)
+        code, out = run(COURSE, cd)
+        check("F7: a draft module is reported as 'draft - not packaged' and left out of COURSE.html and the module list",
+              "module02: draft - not packaged" in out and "module02" not in read(rd, "COURSE.html")
+              and "module02" not in read(rd, "_course_shell", "course_map.js")
+              and not os.path.isfile(os.path.join(rd, "module02", "START_HERE.html")), out)
+        code, out = run(PACKAGE, rd)
+        check("F7: check_course_package.py leaves the draft out of its checks and the importer's run, and says so as a note (not a problem)",
+              "module02: draft - not packaged" in out and "module02" not in out.split("Worth a look")[0], out[-1500:])
+        # F6 - the start page names a final's variants
+        sc_fin = t.final_script()
+        cf = t.final_course(os.path.join(tmp, "fin"), "f", sc_fin)
+        run(t.COMPILE, cf, "--module", "final")
+        code, out = run(COURSE, cf)
+        extf = read(cf, "modules", "module03", "START_HERE_EXTENDED.html")
+        check("F6: START_HERE_EXTENDED links both final variants, each named",
+              'href="assessment/final_a.html">FA · Final assessment A<' in extf and 'href="assessment/final_b.html">FB · Final assessment B<' in extf, extf)
+
         c2 = os.path.join(tmp, "two")                      # a course whose COURSE.html was made by hand, never compiled
         shutil.copytree(c, c2)
         os.remove(os.path.join(c2, "working_claude", "compiled_course.json"))

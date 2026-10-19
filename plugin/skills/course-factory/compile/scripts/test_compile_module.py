@@ -938,6 +938,8 @@ def fixes_part(tmp):
     check("C12: a photo over a categorise / an order lays itself beside the cards on landscape (data-pic=beside), like a choice",
           all('data-pic="beside"' in q[k] and "instrument" in q[k] for k in ("q02", "q04", "q03")) and 'data-mech="categorise" data-pic="beside"' in q["q02"], q["q02"][:300])
     gcss = io.open(os.path.join(SKILLS, "course-task-ux", "assets", "gb_answer.css"), encoding="utf-8").read()
+    check("F20 (2.49.2): a photograph beside a question carries its credit as a line on the picture and the round open-full-screen button",
+          all('data-zoom="button"' in q[k] and '<p class="figcredit">Photo: ' in q[k] for k in ("q03", "q04")), q["q03"][:700])
     check("C12: the engine's stylesheet places the picture and the cards of a sort / put-in-order beside each other",
           '.scr[data-pic="beside"][data-mech="categorise"]>.grps{grid-column:1/-1}' in gcss and '[data-mech="order"],[data-mech="match"]' in gcss, "")
     check("C13: a task photograph's alt comes from the question's visual, else the photo's own record",
@@ -953,6 +955,147 @@ def fixes_part(tmp):
     check("C16: on a dark drawing (and a photo) a right / wrong area is a plain wash, not multiply (near-black) - with a larger tick",
           ".ga.kitfig .hot.right,.ga:has(>img.taskfig) .hot.right{border-color:var(--good-d)" in gcss
           and "mix-blend-mode:normal}" in gcss and "width:34px;height:34px" in gcss)
+
+
+def final_script(variants=("FA", "FB")):
+    """a final assessment's script: a slide, one task slide per variant, two graded questions per variant"""
+    screens = [{"id": "s01", "kind": "slide", "title": "The final assessment", "layout": "split", "visual_kind": "comparison",
+                "text": "Two variants, 60 minutes.\nYou need 70 %.", "visual": "A table.", "notes": "- Hand out one variant.", "minutes": 5}]
+    for i, v in enumerate(variants, 1):
+        screens.append({"id": "t%02d" % i, "kind": "task-slide", "opens": v, "title": "Final assessment %s - the whole course" % v[1],
+                        "text": "Final assessment on your tablet.", "notes": "- Press OPEN TASK.", "minutes": 10})
+    for v in variants:
+        for k in (1, 2):
+            screens.append({"id": "%s%02d" % (v.lower(), k), "kind": "final", "set": v, "question": "Which space surrounds the tank valves? (%s%d)" % (v, k),
+                            "options": ["Tank connection space", "Galley"], "correct": "A", "feedback": "It holds every tank connection.",
+                            "mechanic": "single_choice"})
+    s = script(approved=False, screens=screens)
+    s.update(module="final", title="Final assessment")
+    s.update(status="approved", approved_hash=cs.content_hash(s), approved_by="Test")
+    return s
+
+
+def final_course(tmp, name, sc, architecture=True):
+    c = os.path.join(tmp, name, "course")
+    os.makedirs(os.path.join(c, "working_claude", "script"))
+    cs.save(os.path.join(c, "working_claude", "script", "FINAL.json"), sc)
+    if architecture:
+        cs.save(os.path.join(c, "working_claude", "architecture.json"), {
+            "course": {"title": "IGF", "course_language": "English"},
+            "modules": [{"module": 1, "title": "One"}, {"module": 2, "title": "Two"}], "final_assessment": {"topic": "3"}})
+    return c
+
+
+def v2492_part(tmp):
+    """2.49.2 - what building IGF Modules 7-15 and the final found in the compiler (F1 F2 F4 F5 F6 F7 F12 F25)"""
+    print("\n-- 2.49.2: the compiler fixes found on IGF M07-M15 and the final")
+    sys.path.insert(0, os.path.join(SKILLS, "course-module-ui", "scripts"))
+    sys.path.insert(0, HERE)
+    import design_system
+    import task_pages as tp
+    # F1 - a design file that only fell behind is put right, and the build says so
+    os.makedirs(os.path.join(tmp, "v1"))
+    c, md = new_course(os.path.join(tmp, "v1"), script())
+    kit = os.path.join(md, "assets", "kit.js")
+    io.open(kit, "w", encoding="utf-8").write("/* an older kit */")
+    spec = design_system.load_list()
+    rp = design_system.record_path(md, spec)
+    rec = json.load(io.open(rp, encoding="utf-8"))
+    rec["files"]["kit.js"] = design_system.sha(kit)                     # what was installed once - the factory has moved on since
+    json.dump(rec, io.open(rp, "w", encoding="utf-8"))
+    code, out = run(COMPILE, c, "--module", "1")
+    canon = os.path.join(SKILLS, "course-visuals", "kit", "kit.js")
+    check("F1: a kit.js that only fell behind is updated before the build - and the build says which file, and that it did",
+          code == 0 and "updated from the factory" in out and "kit.js (older version)" in out
+          and io.open(kit, "rb").read() == io.open(canon, "rb").read(), out)
+    code, out = run(COMPILE, c, "--module", "1")
+    check("F1: a second build says the design files are the factory's own, and changes nothing",
+          code == 0 and "all" in out.split("\n")[0] and "are the factory's own" in out.split("\n")[0], out)
+    # F2 - the module folder exists (assets\img made first) but holds no design files
+    os.makedirs(os.path.join(tmp, "v2"))
+    c2, md2 = new_course(os.path.join(tmp, "v2"), script(), build=False)
+    gate_fixture.open_gate(c2)
+    for f in os.listdir(os.path.join(md2, "assets")):
+        if os.path.isfile(os.path.join(md2, "assets", f)):
+            os.remove(os.path.join(md2, "assets", f))
+    code, out = run(COMPILE, c2, "--module", "1", "--init-build")
+    check("F2: --init-build in a module folder that exists but has no design files says so plainly and installs them",
+          code == 0 and "Design files were missing" in out and os.path.isfile(os.path.join(md2, "assets", "kit.js"))
+          and os.path.isfile(os.path.join(md2, "assets", "gb_answer.js")), out)
+    for f in ("gb_deck.js", "kit.js"):
+        os.remove(os.path.join(md2, "assets", f))
+    code, out = run(COMPILE, c2, "--module", "1")
+    check("F2: a compile with design files missing installs them (and says: missing) instead of building without them",
+          "kit.js (missing)" in out and "gb_deck.js (missing)" in out and os.path.isfile(os.path.join(md2, "assets", "gb_deck.js")), out)
+    # F5 / F6 - the final: the folder after the last planned module, and each variant a graded assessment page
+    os.makedirs(os.path.join(tmp, "v5"))
+    cf = final_course(os.path.join(tmp, "v5"), "f", final_script())
+    code, out = run(COMPILE, cf, "--module", "final")
+    mf = os.path.join(cf, "modules", "module03")
+    check("F5: --module final builds into the folder after the last planned module (module03), no --module-dir needed",
+          os.path.isfile(os.path.join(mf, "presentation", "index.html")), out)
+    check("F6: a final with variants - FA and FB each a graded assessment page with its own answer key row; no task page for a variant",
+          os.path.isfile(os.path.join(mf, "assessment", "final_a.html")) and os.path.isfile(os.path.join(mf, "assessment", "final_b.html"))
+          and not os.path.isfile(os.path.join(mf, "assessment", "final.html")) and not os.path.isdir(os.path.join(mf, "tasks")), out)
+    dk = deck(mf)
+    check("F6: the deck's slides open them as Check slides (data-kind Check), and the landing card names the variants",
+          'data-task-href="../assessment/final_a.html"' in dk and 'data-task-href="../assessment/final_b.html"' in dk
+          and dk.count('data-kind="Check"') == 2 and "Final assessment A" in dk and "Final assessment B" in dk, dk[:300])
+    fb = io.open(os.path.join(mf, "assessment", "final_b.html"), encoding="utf-8").read()
+    check("F6: variant B is graded like the check - a pass mark, its own title FB",
+          'data-pass="70"' in fb and "<title>FB — " in fb and "(FB2)" in fb and "(FA1)" not in fb, fb[:600])
+    key = io.open(os.path.join(mf, "assessment", "check_answer_key.html"), encoding="utf-8").read()
+    check("F6: the instructor's key lists both variants and names their pages",
+          "final_a.html" in key and "final_b.html" in key and "Final assessment A" in key and "Final assessment B" in key, key[:600])
+    os.makedirs(os.path.join(tmp, "v6"))
+    c1 = final_course(os.path.join(tmp, "v6"), "f", final_script(("FA",)))
+    code, out = run(COMPILE, c1, "--module", "final")
+    check("F6: a final with ONE variant keeps assessment/final.html, as before",
+          os.path.isfile(os.path.join(c1, "modules", "module03", "assessment", "final.html"))
+          and not os.path.isfile(os.path.join(c1, "modules", "module03", "assessment", "final_a.html")), out)
+    os.makedirs(os.path.join(tmp, "v7"))
+    cn = final_course(os.path.join(tmp, "v7"), "f", final_script(), architecture=False)
+    code, out = run(COMPILE, cn, "--module", "final")
+    check("F5: with no architecture to count the modules, --module final stops and says to give --module-dir (no crash)",
+          code == 2 and "--module-dir" in out and "Traceback" not in out, out)
+    # F7 - a draft is marked; the mark goes when the approved script is built
+    os.makedirs(os.path.join(tmp, "v8"))
+    c3, md3 = new_course(os.path.join(tmp, "v8"), script(approved=False))
+    code, out = run(COMPILE, c3, "--module", "1", "--draft")
+    mark = os.path.join(md3, "DRAFT_NOT_PACKAGED.txt")
+    check("F7: --draft marks the module folder as a draft (DRAFT_NOT_PACKAGED.txt) and says it is left out of the package",
+          os.path.isfile(mark) and "marked as a draft" in out, out)
+    cs.save(os.path.join(c3, "working_claude", "script", "M01.json"), script())
+    code, out = run(COMPILE, c3, "--module", "1", "--force")
+    check("F7: building the approved script takes the mark away", code == 0 and not os.path.isfile(mark) and "draft mark" in out, out)
+    # F4 - words too long for an inset photograph under them are said at build
+    os.makedirs(os.path.join(tmp, "v9"))
+    longer = json.loads(json.dumps(SCREENS))
+    longer[1]["text"] = "\n".join("The Code sets rule %d for gas fuelled ships and every one of them needs a long careful line of words." % i
+                                  for i in range(1, 7))
+    c4, md4 = new_course(os.path.join(tmp, "v9"), script(screens=longer))
+    bp4 = os.path.join(c4, "working_claude", "script", "M01.build.json")
+    sh4 = cs.load(bp4)
+    sh4["screens"]["s02"]["inset"] = {"photo": "assets/img/ship.jpg", "caption": "On board."}
+    cs.save(bp4, sh4)
+    code, out = run(COMPILE, c4, "--module", "1")
+    check("F4: %d words with an inset photograph under them in a column are reported at build, with the px it will spill"
+          % len(" ".join(longer[1]["text"].split("\n")).split()),
+          code == 1 and "photograph will spill about" in out and "s02" in out, out)
+    sh4["screens"]["s02"].pop("inset")
+    cs.save(bp4, sh4)
+    code, out = run(COMPILE, c4, "--module", "1", "--force")
+    check("F4: the same words with no inset are not reported", "will spill" not in out, out)
+    # F25 - a push button on the operate-the-panel card
+    sym = tp.kit_symbol("m01", 1, ["ready", "pressed"], "ready", "ESD push button")
+    spec_ = json.loads(re.search(r'application/json" id="[^"]+">(.*?)</script>', sym).group(1))
+    check("F25: a control with ready / pressed is drawn with the kit's push_button, tagged ESD, in a taller card symbol",
+          'class="csym tall"' in sym and spec_["parts"][0]["type"] == "push_button" and spec_["parts"][0]["tag"] == "ESD"
+          and spec_["parts"][0]["value"] == 0 and tp.kit_symbol("m01", 1, ["ready", "open"], "", "x") == ""
+          and "pump" in tp.kit_symbol("m01", 2, ["running", "stopped"], "", "Pump"), sym[:300])
+    gc = io.open(os.path.join(SKILLS, "course-module-ui", "templates", "gb_compose.css"), encoding="utf-8").read()
+    check("F12: a 3D stage takes its column's height (no fixed 100vh - 300px that overran the column by 28 px)",
+          "[data-stage]{height:max(320px,calc(100vh - 300px))" not in gc and "fig-wide > .fill:has([data-stage])" in gc and "[data-stage]{width:100%;flex:1 1 0" in gc, "")
 
 
 def main():
@@ -1188,12 +1331,13 @@ def main():
         check("... and a clean credit (a name, a source, a licence, a web address) is not", "file-system path" not in out, out)
         io.open(os.path.join(md6, "assets", "gb_zoom.js"), "a", encoding="utf-8").write("/* old */")
         code, out = run(COMPILE, c6, "--module", "1")
-        check("a module whose gb_zoom.js is not the factory's current one is told to update it",
-              code == 1 and "gb_zoom.js is not the factory's current one" in out, out)
+        check("F1 (2.49.2): a module whose gb_zoom.js was edited inside it stops the build, naming the file and the exact command",
+              code == 2 and "gb_zoom.js" in out and "design_system.py" in out and "install" in out and "--update" in out
+              and "Stopped - nothing was built" in out, out)
         io.open(os.path.join(md6, "assets", "gb_compose.css"), "a", encoding="utf-8").write("/* old */")
         code, out = run(COMPILE, c6, "--module", "1")
-        check("a module whose shared style files are not the factory's current ones is told to update them",
-              code == 1 and "design_system.py install --update" in out, out)
+        check("... and so does every shared style file edited there (both listed)",
+              code == 2 and "gb_compose.css" in out and "gb_zoom.js" in out and "install" in out, out)
 
         # ---- L57: a drawing of real things carries their real photographs, unasked
         os.makedirs(os.path.join(tmp, "h"))
@@ -1389,6 +1533,7 @@ def main():
         team_part(tmp)
         language_part(tmp)
         fixes_part(tmp)
+        v2492_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

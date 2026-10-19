@@ -1136,6 +1136,24 @@ each found only after a full build. Now the kit and its checks take that work:
 - **Proof:** 36 test files; M01-M06 compiled with `python -I` on a scratch copy, the importer ready, `run_audits.py`
   PASS on all six decks at 1280x800. The real course still needs M02 s15 `"rows": 2`.
 
+## 4zt · What the overnight build of IGF M07-M15 found, fixed; every 3D scene answers a tap (2.49.2, 2026-10-19)
+
+- **The build:** M07-M15 and the final assessment built in one unattended run (16:51-19:13), 3D scenes for M04-M07,
+  21 factory problems logged in the course's `working_claude/OVERNIGHT_2026-10-16.md` §7. All fixed here.
+- **Compiler** (F1, F2, F4, F5, F6, F7, F12, F13, F20, F21, F25): design files checked and updated at every compile;
+  `--module final`; final variants `final_a.html` / `final_b.html`; drafts marked and left out of the package; inset spill
+  warning (86 words); 3D stage fits its column; `measure/scripts/perf3d.mjs` + `test_perf3d.py`; task photo credit and
+  ⤢; long order verdict full width; push button on operate-the-panel.
+- **Kit** (F3, F4, F8, F22, `log`): `gas_cloud` figure coordinates; words grow under a photo inset; `push_button` `h`,
+  `tree`, `level`, `spill` (approved drawings unchanged: `surfaceY` and its 150 default kept); `person` `labels`; `log` wraps.
+- **Script lane** (F9, F10, F15, F23, F24): picture-only re-approval; who proposed / confirmed in FEEDBACK_LOG; stricter 3D
+  proposal (`procedure_words`); `ilo_map.py refresh <course> [--module N] [--dry-run]` + `test_ilo_map.py`; approval is
+  the operator's own act.
+- **3D taps** (operator, 2026-10-19): `media-and-tasks.json` `three_d.interaction` - a tap highlights a part (blue glow,
+  framed, named), a second tap or a tap beside resets; course-visuals SKILL, compile/GUIDE.
+- **Proof:** 38 test files; IGF M01-M16 compiled on a scratch copy - M01-M06 exit 0, the drafts report only "not
+  approved", every drawing clean, importer ready, `run_audits.py` PASS on the changed decks.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

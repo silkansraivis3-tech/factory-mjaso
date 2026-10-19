@@ -37,10 +37,12 @@ words for the 12.5 px floor, how many labels it moved, any it could not place, a
   for it: boxes, rings and rows grow with their words. A figure whose words then need more room than its panel gives
   stops growing at 1.3x its width and the drawing audit's SMALL TEXT reports it - give it more room or fewer words.
 - **Boxes sized to their words.** A readout, a gauge or level readout, the alarm chip, an alarm row: as wide as the widest
-  thing it can show. An alarm too long for its log goes on two lines.
+  thing it can show. An alarm too long for its log goes on as many lines as it needs.
 - **The frame.** A drawing that reaches past its frame makes the frame larger (taller only, when its column has the
   height); one lost in its frame is zoomed in to fill it (L53, at most 1.5x; never with `view`, an inset photo over it,
-  or `"fit": false`).
+  or `"fit": false`). A photo laid over a drawing (the build sheet's inset `over`) is not zoomed, so the drawing is shown
+  below 1:1 and its words grow with it (2.49.2: the kit also lays out on a window `resize`, which a probe that measures a
+  slide the moment it is shown relies on, and grows words 0.1 % past the floor so a rounded 12.4999 never reads as small).
 - **Both panels.** On a light ground (a light page - a task page draws a kit figure on the dark screen, 2.46.0) the figure takes the light mapping of the course tokens (kit.css
   `.kit-light`) - chosen by what is behind it, or by `"theme": "light"|"dark"`.
 
@@ -61,7 +63,7 @@ words for the 12.5 px floor, how many labels it moved, any it could not place, a
 | type | options | value |
 |---|---|---|
 | `panel` | `w h title` - frame, title, alarm-state chip | - |
-| `level` | `w h label unit min max ticks readout decimals marks` | the level |
+| `level` | `w h label unit min max ticks readout decimals marks` - the tick numbers stand left of the column; a `pipe` that runs into that strip (a feed line) puts them on the right instead (2.49.2); `ticks`: `"right"`, `"left"` or `false` says it | the level |
 | `gauge` | `r label unit min max start sweep normal:[lo,hi] ticks every numbers readout decimals caption captionAt marks` | the reading |
 | gauge repeater | `source:"P1" mini:true` - copies the scale of P1 and follows it | - |
 | `readout` | `w h label unit sign decimals marks` - digital tile | the reading |
@@ -77,7 +79,7 @@ words for the 12.5 px floor, how many labels it moved, any it could not place, a
 | `badge` | `n` - a numbered step marker | 0..1 lit |
 | `wire` | `d` - ISA dashed signal line | - |
 | `text` | `text style(h, cap, tick, sl) anchor near fixed reveal`; `\n` breaks lines; it may shift up to `near` (28) to stay clear. With **`to: [x, y]`** it is a CALLOUT: words for that place, joined to it by a leader line, placed clear by the layout. **`reveal: true`** (or a `value`) makes the words - and a callout's dot and leader - a thing a step brings in: not drawn at rest, `["T", 1, 400]` fades them in, so a predict-then-reveal slide does not print its answer | 0..1 opacity (with `reveal`/`value`) |
-| `log` | `w rows label empty` - alarm list, newest first | - |
+| `log` | `w rows label empty` - alarm list, newest first. A long alarm (every mark's `alarm` text in the spec) is set on as many lines as it needs to fit the log's width (2.49.2; it was two at most), every row as tall as the most lines; the log never grows wider than `w` | - |
 
 Parts added from courses (merged by `kit_parts.py promote`; each block's `example` is its card in `GALLERY.html`):
 
@@ -89,7 +91,7 @@ Parts added from courses (merged by `kit_parts.py promote`; each block's `exampl
 | `bands` | `w rowH chip axis rows:[{label,tone(z0/z1/z2),caption,gas:[[from,to]]}]` - time bands with a clock | 0..n: row k sweeps from k to k+1 |
 | `cylinder` | `w h labels` - a dual-fuel engine cylinder, injectors at 0.22 w and 0.78 w | 0 stopped · 1 gas mode · 1.5 gas supply stopped · 2 fuel-oil mode |
 | `boil_off` | `w h insulation level liquidLabel vapourLabel heatLabel` - an insulated LNG tank cutaway | 0..1 heat in, boiling |
-| `gas_cloud` | `w h from:[x,y] drift:[dx,dy]` - a pale cloud growing in a space. `drift` (or `true`: 0.4 w to the right) adds the value **`<id>.drift`** 0..1: the whole cloud moves that far and spreads a little - wind carrying a leak away; it crosses walls by design | 0..1 how much gas |
+| `gas_cloud` | `w h from:[x,y] fromIn drift:[dx,dy]` - a pale cloud growing in a space. `from` is where it grows from: **figure coordinates, like every other part** (2.49.2) - or, as specs before 2.49.2 wrote it, in the cloud's own box. `fromIn: "figure"` / `"box"` says which; left out, a point inside the box is read in the box (an old spec draws as it did) and a point only inside it as figure coordinates (x - the cloud's x, y - its y) is read as figure coordinates. A point that lies inside the box both ways is read in the box - add `"fromIn": "figure"` to mean the other. `check_kit.py` warns when the origin lands off the figure. `drift` (or `true`: 0.4 w to the right) adds the value **`<id>.drift`** 0..1: the whole cloud moves that far and spreads a little - wind carrying a leak away; it crosses walls by design | 0..1 how much gas |
 | `integral_tank` | `w h cofferdam label cofferdamLabel hullLabel` - a hull tank in its cofferdam | liquid level 0..1 |
 | `pipe_section` · `relief_valve` · `step_track` · `coupling` · `drip_tray` · `water_curtain` · `detector` · `flame` | from IGF M03 (2.48.0): a cut along a double-walled pipe; a spring relief valve; numbered steps or a checklist (`boxes`); dry-disconnect / breakaway coupling; drip tray; water curtain; fixed gas detector head (marks); a flame at a point | see each part's `value` in `kit.js` |
 | `curve_chart` | from IGF M04: `xaxis yaxis curves:[{label,pts}] hline point` - curves that draw themselves, a point that slides along one | 0..n curves, n..n+1 the point |
@@ -101,8 +103,8 @@ Pre-built for IGF Basic modules 5-15 (2.48.0, from the architecture's media plan
 | `fan` | `label dir(right/left/up/down)` - ventilation fan in a duct or opening | 0 stopped … 1 running |
 | `spray` | `nozzle(monitor/hand/sprinkler) agent(powder/water/foam) angle reach reachLabel` | 0..1 how much is discharged |
 | `gas_cylinder` | `w h gas label` - N2 / CO2 / breathing-air bottle | 0..1 how full |
-| `push_button` | `label tag` - ESD mushroom button with a guard | 0 ready, 1 pressed (trip red) |
-| `person` | `wear:[helmet,visor,gloves,suit,boots,scba] scale label` - a worker pictogram | 0..n PPE item k appears |
+| `push_button` | `label tag h` - ESD mushroom button with a guard. `h`: the wall plate's height, 120 units (2.49.2; it was a fixed 182 - two did not stack in a 390-high figure); the words under it keep their size | 0 ready, 1 pressed (trip red) |
+| `person` | `wear:[helmet,visor,goggles,respirator,gloves,suit,apron,boots,scba] scale label labels` - a worker pictogram. `labels` (or `names`): `{item: words}` or a list in the order of `wear` names an item in the slide's own words, `{"visor": "GOGGLES", "scba": "BREATHING APPARATUS"}`; `false` names none (2.49.2) | 0..n PPE item k appears |
 | `sensor` | `kind(catalytic/infrared) oxygen` - how a gas sensor sees gas | 0..1 gas in the sensor |
 | `static_charge` | `bonded labels` - charge on an isolated part, the spark | 0..1 charge, 1..1.2 spark |
 | `fire` | `kind(pool/jet) w height length angle label stub` - a jet is drawn on a 90 px pipe end; `stub: false` leaves it out when the figure has the real pipe | 0 out … 1 full |
@@ -115,9 +117,9 @@ Pre-built for IGF Basic modules 5-15 (2.48.0, from the architecture's media plan
 | `manifold` | `outlets:[{label}]` - a bunker manifold header | 0..n outlets connected |
 | `spool_piece` | `w t spool lift left right spoolLabel label` - segregation | 1 fitted, 0 removed + blanks |
 | `tank_wall` | `w layers:[{label,kind,h}] insideLabel outsideLabel` - a cryogenic tank's wall layers | 0..n layer k picked out |
-| `spill` | `w surface(deck/water) label` | 0..1 spread; boils from 0.5 |
+| `spill` | `w h surface(deck/water) label from reach` - drawn inside its box x..x+w, y..y+h (2.49.2): the nozzle's top at `y`; `h` is 206 (deck) / 240 (water) with a one-line `label`, a shorter `h` shortens the nozzle; the wave is cut at `w` and `reach` is held to the room either side of `from` (it was drawn from y+26 to y+254, and 10 past `w`) | 0..1 spread; boils from 0.5 |
 | `wind` | `w rows gap dir max unit label` | 0..1 strength |
-| `tree` | `root children:[{label, children}]` - an organisation or reporting chart | 0..n box k lit |
+| `tree` | `root children:[{label, children}] w minW` - an organisation or reporting chart. It is laid out to fit `w` (default: the figure's width less its x and 10) and never wider: tighter padding and gaps, then words broken at a space, so its words keep the 12.5 px floor (2.49.2) | 0..n box k lit |
 
 ## Marks - the heart of it
 ```json

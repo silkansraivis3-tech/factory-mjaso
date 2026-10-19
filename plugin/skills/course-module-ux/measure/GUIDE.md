@@ -135,6 +135,49 @@ result alone is evidence.
 so a footer, a corner tag or the landing screen is never visited — a footer and a corner tag sat
 capped at 11.5 px for the life of one deck for exactly this reason.
 
+### 2b · The 3D speed test — `perf3d.mjs`
+
+A 3D slide can pass every probe above and still show an empty box for three seconds on the
+classroom tablet. `scripts/perf3d.mjs` measures that: Node plus headless Chrome over the DevTools
+protocol, no npm packages, CPU slowed 4x as a stand-in for the tablet.
+
+```
+node scripts/perf3d.mjs <deck.html | url> [--slides=id1,id2|all] [--budget-ms=1000] [--throttle=4]
+                        [--gate=warm|cold|both] [--no-cold] [--no-fps] [--min-fps=0] [--dwell=2000]
+                        [--ms=2000] [--wait-ms=10000] [--w=1280 --h=800] [--gl=swiftshader|gpu|none]
+                        [--chrome=PATH] [--json] [--help]
+```
+
+Chrome is found through `--chrome`, env `CHROME_PATH`, or the usual Windows/macOS/Linux places.
+Default `--slides=all` is every slide that holds a `<canvas>`, `[data-3d]` or `[data-scene]`; a scene
+that creates its canvas only on enter must be named with `--slides`. The deck is the factory shell:
+`.slide` sections that get class `active`, `#btnNext`, optional `#startBtn` (else Enter); the 3D slide
+reports itself in `window.__scene3d = { enterT, firstFrameT, frames, [spin(ms, cb)], [prepared], [marks] }`
+(`performance.now()` stamps set by the slide's enter hook and its first drawn frame). No `__scene3d`
+means exit 2: the tool cannot measure it, and says so rather than passing it.
+
+What the numbers mean:
+
+- **warm ms** — enter hook to first drawn frame after dwelling on the slide before it, as a person
+  does. This is the number judged against the budget: **first frame < 1 s on the 4x CPU throttle**.
+- **cold ms** — the same on a jump straight to the slide with `window.__noPrepare = true`. A cold
+  number far above the warm one shows the scene relies on build-ahead; it is judged only with
+  `--gate=cold|both`.
+- **fps** — frames the scene drew per second over `--ms` while it turns (its `spin`, else passively).
+  Reported, not judged, unless `--min-fps` is set (30 is the usual tablet floor). The throttle slows
+  scripts, not the GL back end, so a poor fps on `--gl=swiftshader` can be the software stand-in.
+
+Exit 0 = every measured slide within budget, 1 = over budget (or no first frame), 2 = bad input, no
+Chrome, no 3D slide, no `__scene3d`. `--json` prints one JSON document instead of the table.
+
+**To reach < 1 s a 3D slide must build its scene on the slide BEFORE it ("build-ahead").** Create the
+renderer, geometry, materials and textures while the slide before is on screen (its idle time), keep
+them hidden, and make the enter hook only reveal the canvas and draw. Building on enter costs the
+whole scene setup in the first frame, which at 4x CPU is seconds. Honour `window.__noPrepare` (skip the
+build-ahead) so this tool can show the cold number, and set `__scene3d.prepared = true` when the
+scene was built ahead. The test is `scripts/test_perf3d.py` (fixture `scripts/fixtures/deck_3d_perf.html`;
+skips when Node or Chrome is missing).
+
 ### 3 · The console
 
 After any scripted edit to inline JavaScript, **load the page and read the console.** Not the

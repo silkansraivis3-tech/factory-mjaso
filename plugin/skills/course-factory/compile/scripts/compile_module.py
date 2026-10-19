@@ -102,8 +102,51 @@ PHOTO_FILES = ("gb_zoom.css", "gb_zoom.js")    # every picture opens full screen
 COMPOSITIONS = ("opener", "flow", "two-col", "wide-left", "wide-right", "stage")
 STAGE_MAX_WORDS = 45
 STATEMENT_MAX_WORDS = 22
-CHECK_PAGES = {"MC": "../assessment/check.html", "FA": "../assessment/final.html"}
+# 2.49.2 (F4) - how many words a column keeps room for when a photograph sits under them (inset), at 1280 x 800. Measured on IGF:
+# M01 s03 (58 words) and M04 s02 (82, audit_deck clean) fitted; M07 s08 (95), s12 (101) and M09 s06 (91) spilled
+# 105 / 92 / 79 px off the slide - so the line is drawn between 82 and 91
+INSET_MAX_WORDS = {"two-col": 86, "wide-left": 86, "wide-right": 86, "photo-split": 96}
+CHECK_PAGES = {"MC": "../assessment/check.html", "FA": "../assessment/final.html"}   # the module check and the (single) final
 RECORD = "compiled.json"
+FINAL_SET = re.compile(r"^F[A-Z]$")           # 2.49.2 - a final assessment's set: FA, and FB when it has a second variant
+DRAFT_MARK = "DRAFT_NOT_PACKAGED.txt"         # 2.49.2 - in a module folder built from a script that is not approved (--draft)
+DRAFT_TEXT = ("DRAFT - NOT PACKAGED\n\nThis module was built with --draft from a content script that is not approved yet: it is a\n"
+              "preview. check_course_package.py and compile_course.py leave it out of the classroom package (they report it as\n"
+              "\"draft - not packaged\"). Approve the script and compile the module again: this file is then removed.\n")
+
+
+def is_check(code):
+    """a graded set: the module check (MC) or a final assessment variant (FA, FB ...)"""
+    return code == "MC" or bool(FINAL_SET.match(code or ""))
+
+
+def final_codes(script):
+    """the final assessment's variants in the script, in order: ["FA"], or ["FA", "FB"] (2.49.2 - variants are first-class)"""
+    out = []
+    for s in (script or {}).get("screens", []):
+        code = ((s.get("set") if s.get("kind") == "final" else s.get("opens") if s.get("kind") == "task-slide" else "") or "").strip()
+        if s.get("kind") == "final" and not code:
+            code = "FA"
+        if FINAL_SET.match(code) and code not in out:
+            out.append(code)
+    return sorted(out)
+
+
+def check_page(code, script=None):
+    """where a graded set's page is, as the deck links it. One final: assessment/final.html (as it always was); two or more
+    variants: each its own graded page, assessment/final_a.html, final_b.html - never a task page (IGF final, 2.49.2)"""
+    if code == "MC":
+        return CHECK_PAGES["MC"]
+    if code == "FA" and len(final_codes(script)) < 2:
+        return CHECK_PAGES["FA"]
+    return "../assessment/final_%s.html" % code[1].lower()
+
+
+def final_name(word, code, script_or_codes=None):
+    """the final assessment's name for the landing card, the key and the start page: 'Final assessment', and the variant's
+    letter after it when there is more than one variant"""
+    codes = script_or_codes if isinstance(script_or_codes, (list, tuple, set)) else final_codes(script_or_codes)
+    return "%s %s" % (word, code[1]) if len({c for c in codes if FINAL_SET.match(c or "")}) > 1 else word
 # 2.46.0 - a task slide's icon says what the trainees will DO on the tablet: the way of answering most of its set's
 # questions use (IGF M01-M03: every task slide showed the same generic tablet). The tablet's outline stays, the gesture
 # inside it changes.
@@ -912,11 +955,12 @@ def inset_html(mdir, ins, probs, where):
             % (a(rel), a(alt), photo_panel(meta, credit_line(meta) or credit, rel, probs, where), e(cap)))
 
 
-def task_href(code, short, mdir):
-    """the set's one page, as the deck links it: assessment\\check.html / final.html, or tasks\\<code>_<title>.html -
-    a page already there for this code keeps its name, so the deck and task_pages.py always agree"""
-    if code in CHECK_PAGES:
-        return CHECK_PAGES[code]
+def task_href(code, short, mdir, script=None):
+    """the set's one page, as the deck links it: assessment\\check.html / final.html (final_a.html, final_b.html when the
+    final has variants), or tasks\\<code>_<title>.html - a page already there for this code keeps its name, so the deck
+    and task_pages.py always agree"""
+    if is_check(code):
+        return check_page(code, script)
     tdir = os.path.join(mdir, "tasks")
     have = sorted(f for f in (os.listdir(tdir) if os.path.isdir(tdir) else [])
                   if f.lower().startswith(code.lower() + "_") and f.lower().endswith(".html"))
@@ -961,12 +1005,12 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         code = (s.get("opens") or "").strip() or sid.upper()
         title = s.get("title") or ""
         short = title.split(" - ", 1)[1] if " - " in title else title
-        is_check = code in CHECK_PAGES
+        graded = is_check(code)
         d = {"class": "slide dark activity", "data-title": "%s — %s" % (code, short[:1].upper() + short[1:]),
-             "data-kind": "Check" if is_check else "Task", "data-block": "%s · %s" % (m, code), "data-visual": "none",
+             "data-kind": "Check" if graded else "Task", "data-block": "%s · %s" % (m, code), "data-visual": "none",
              "data-activity": code}
         if kind == "task-slide":
-            d["data-task-href"] = task_href(code, short, mdir)
+            d["data-task-href"] = task_href(code, short, mdir, script)
             team = s.get("team") or {}
             if team:
                 d.update({"data-mode": "team", "data-team-size": team.get("size", ""),
@@ -1029,6 +1073,13 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                          % (where, round(100 * sh[0]), round(sh[1] - INSET_H), round(sh[1])))
         fig = under_figure(fig, inset)
         inset = ""
+    cap = INSET_MAX_WORDS.get("photo-split" if split_photo else comp)
+    nwords = cs.wc(" ".join(lines))
+    if inset and cap and nwords > cap:                 # F4 (2.49.2): said at build, before the drawing check finds the spill
+        probs.append("%s: %d words in the reading column and an inset photograph under them - the column holds about %d words "
+                     "with a photograph, so the photograph will spill about %d px off the slide at 1280 x 800 (IGF M07 s08 / s12, "
+                     "M09 s06: 79-105 px at 91-101 words). Cut the words, show the photograph on a task question or another slide, "
+                     "or lay it over a blank part of a kit drawing (\"over\")" % (where, nwords, cap, round((nwords - cap) * 4.5)))
     # L57: a drawing of real things carries their real photographs, under the drawing - unasked
     strip = ""
     if fig and not is_photo and comp != "photo" and notes is not None:
@@ -1231,7 +1282,7 @@ def compile_deck(script, build, mdir, figdir, version, approved):
     chips = [w["min"].format(n=script.get("minutes_allocated"))] if script.get("minutes_allocated") else []
     chips.append(w["screens"].format(n=teach))
     chips += [w["sc"].format(c=c) if c.startswith("SC") else w["mc"] if c == "MC" else
-              w["fa"] if c == "FA" else w["task"].format(c=c) for c in codes if c]
+              final_name(w["fa"], c, codes) if FINAL_SET.match(c) else w["task"].format(c=c) for c in codes if c]
     stamp = ("GENERATED by course-factory %s compile_module.py from working_claude/script/%s.json (%s) and %s.build.json.\n"
              "     Do not edit this file: change the script (content_script.py propose) or the build sheet, and compile again."
              % (version, m, ("approved " + script.get("approved_hash", "")) if approved else "DRAFT - NOT APPROVED", m))
@@ -1286,6 +1337,69 @@ Next:
      A module is not handed over until the review is done and what it found is fixed."""
 
 
+def module_folder(course, module, module_dir=None):
+    """(folder, why not) - the module's folder: --module-dir as given; moduleNN for a number; for "final" (2.49.2) the
+    folder after the course's last planned module - architecture.json's modules + 1, the same rule compile_course.py
+    uses for the final assessment's title (IGF: 15 planned modules, so module16)"""
+    if module_dir:
+        return module_dir, None
+    m = str(module).strip().lower()
+    if m.isdigit():
+        return os.path.join(course, workspace.MODULES, "module%02d" % int(m)), None
+    if m == "final":
+        ap_ = workspace.claude_path(course, "architecture.json")
+        try:
+            n = len(cs.load(ap_).get("modules") or []) + 1 if os.path.isfile(ap_) else 0
+        except (OSError, ValueError):
+            n = 0
+        if n > 1:
+            return os.path.join(course, workspace.MODULES, "module%02d" % n), None
+        return None, ("the final assessment's folder is the one after the last planned module, and there is no approved "
+                      "architecture.json (%s) to count them in - give the folder with --module-dir" % ap_)
+    return None, "--module is a number (1, 2 ...) or \"final\", not \"%s\"" % module
+
+
+def ensure_design(mdir):
+    """2.49.2 (IGF M01-M15 builds, F1 / F2) - before anything is built the module's design files (the style files, the engines,
+    kit.js ...) are checked against the factory's with design_system.py's own check, and put right when they only fell behind:
+    a module built with another kit.js than the factory's gave false findings (27 small-text 'problems' that the factory's
+    kit did not have), and a module folder made before --init-build had no design files at all.
+    Returns (exit code, the sentence that says what happened). 0 = the files are the factory's now (said which: they were
+    already, or MISSING / OUTDATED ones were installed); 2 = stopped, with the exact command, because a file was edited
+    inside the module (a second dialect - replacing it is the owner's decision, design_choices.py records a chosen one)."""
+    sys.path.insert(0, os.path.join(SKILLS, "course-module-ui", "scripts"))
+    import design_system
+    rows = design_system.states(mdir)
+    bad = {}
+    for r in rows:
+        if r["state"] not in ("OK", "CHOSEN"):
+            bad.setdefault(r["state"], []).append(r["file"])
+    ver = design_system.plugin_version()
+    if not bad:
+        return 0, "Design files: all %d are the factory's own (version %s) - checked, nothing changed." % (len(rows), ver)
+    cmd = 'python "%s" install "%s" --update' % (os.path.join(SKILLS, "course-module-ui", "scripts", "design_system.py"), mdir)
+    if "CHANGED" in bad:
+        return 2, ("Stopped - nothing was built.\n\n  These design files in\n    %s\n  were edited inside the module, so they are not "
+                   "the factory's own (a second look for one course):\n%s\n  If that was not meant, put the factory's files back "
+                   "(it also brings %s up to date):\n      %s\n  If the operator chose the different look, record it first "
+                   "(design_choices.py add <course> --rule shared-design ...) and build again."
+                   % (os.path.join(mdir, "assets"), "".join("    - %s\n" % x for x in bad["CHANGED"]),
+                      "every other file" if len(bad) > 1 else "nothing else", cmd))
+    import contextlib
+    quiet = io.StringIO()
+    with contextlib.redirect_stdout(quiet):
+        code = design_system.install(mdir, update=True)
+    if code != 0:
+        return 2, "Stopped - the design files could not be put in the module:\n%s\n  By hand: %s" % (quiet.getvalue().rstrip(), cmd)
+    if len(bad.get("MISSING", [])) == len(rows):
+        say = "Design files were missing in %s - installed the factory's %d (version %s)." % (os.path.join(mdir, "assets"), len(rows), ver)
+    else:
+        say = ("Design files: %d were not the factory's current ones - updated from the factory (version %s): %s." % (
+            sum(len(v) for v in bad.values()), ver,
+            ", ".join("%s (%s)" % (f, "missing" if k == "MISSING" else "older version") for k, fs in sorted(bad.items()) for f in fs)))
+    return 0, say
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("course")
@@ -1324,26 +1438,28 @@ def main(argv=None):
         cs.save(bp, starter_build(script, shared))
         print("Done - a starter build sheet:\n    %s\n  Next: put each slide's picture file in \"figure\", then compile." % bp)
         # the module's folder does not exist for a new module: make it and put the factory's style files and engines
-        # in it, so the first compile does not stop (never inside the Android project - design_system.py refuses that)
-        mdir = o.module_dir or os.path.join(o.course, workspace.MODULES, "module%02d" % int(o.module))
-        if not os.path.isdir(os.path.join(mdir, "assets")):
-            sys.path.insert(0, os.path.join(SKILLS, "course-module-ui", "scripts"))
-            import design_system
-            print()
-            if design_system.install(mdir) != 0:
-                return 2
-        return 0
+        # in it, so the first compile does not stop (never inside the Android project - design_system.py refuses that).
+        # 2.49.2: also when the folder is already there (assets\img made first) - the files are checked, not the folder
+        mdir, why = module_folder(o.course, o.module, o.module_dir)
+        if not mdir:
+            print("\nStopped before the module's folder - %s" % why)
+            return 2
+        code, say = ensure_design(mdir)
+        print("\n" + say)
+        return 0 if code == 0 else 2
     approved = script.get("status") == "approved" and script.get("approved_hash") == cs.content_hash(script)
     if not approved and not o.draft:
         print("Stopped - the content script of module %s is not approved (or changed after approval).\n"
               "  The deck is built only from approved words (L29). For a preview, add --draft." % o.module)
         return 2
     build = cs.load(bp) if os.path.isfile(bp) else {}
-    mdir = o.module_dir or os.path.join(o.course, workspace.MODULES, "module%02d" % int(o.module))
-    if not os.path.isdir(os.path.join(mdir, "assets")):
-        print("Stopped - the module folder has no assets\\ yet:\n    %s\n"
-              "  Run course-module-ui\\scripts\\design_system.py install on it first - it copies the factory's\n"
-              "  style files and engines the deck uses." % mdir)
+    mdir, why = module_folder(o.course, o.module, o.module_dir)
+    if not mdir:
+        print("Stopped - %s" % why)
+        return 2
+    code, say = ensure_design(mdir)         # 2.49.2: the module's design files are the factory's, or this says what it did
+    print(say + "\n" if code == 0 else say)
+    if code != 0:
         return 2
     out = os.path.join(mdir, "presentation", "index.html")
     rec_path = workspace.module_record(mdir, RECORD)
@@ -1354,6 +1470,17 @@ def main(argv=None):
               "  A change made in the deck would be lost. Put it into the script (content_script.py propose) or the\n"
               "  build sheet, then compile again with --force." % out)
         return 2
+    # 2.49.2 (F7) - a preview built from a script that is not approved stays where its assets are, in the module's folder, but is
+    # marked: check_course_package.py and compile_course.py leave a marked module out of the classroom package and say so
+    mark = os.path.join(mdir, DRAFT_MARK)
+    if not approved:
+        with io.open(mark, "w", encoding="utf-8", newline="\n") as f:
+            f.write(DRAFT_TEXT)
+        print("Preview - this module is marked as a draft (%s): the classroom package leaves it out until the script is approved\n"
+              "  and the module is built again." % DRAFT_MARK)
+    elif os.path.isfile(mark):
+        os.remove(mark)
+        print("The draft mark (%s) is gone - the script is approved, so the module is part of the classroom package." % DRAFT_MARK)
     figdir = os.path.join(o.course, workspace.CLAUDE, "figures", cs.mid(o.module))
     probs, notes = [], []
     rec.update({"script_hash": cs.content_hash(script), "plugin_version": plugin_version()})

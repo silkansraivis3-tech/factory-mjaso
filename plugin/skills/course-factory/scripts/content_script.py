@@ -4,9 +4,9 @@
 
     content_script.py render   <course> --module 1           review page + Word file for the operator
     content_script.py read     <course> --module 1 [--docx F] [--pdf F]   what the operator changed -> PENDING
-    content_script.py propose  <course> --module 1 --changes changes.json  a chat correction / a new or removed screen / a script field -> PENDING
-    content_script.py apply    <course> --module 1 --confirmed           apply PENDING - only after the operator said yes
-    content_script.py approve  <course> --module 1 --by "<name>"         the operator's "next"
+    content_script.py propose  <course> --module 1 --changes changes.json [--proposed-by "<who>"]   a chat correction / a new or removed screen / a script field -> PENDING
+    content_script.py apply    <course> --module 1 --confirmed [--confirmed-by "<name>"]   apply PENDING - only after the operator said yes
+    content_script.py approve  <course> --module 1 --by "<name>"         the operator's "next" - the operator's own act (--by is the person)
     content_script.py status   <course> --module 1
 
 WHY THIS EXISTS
@@ -88,7 +88,15 @@ recorded - scripts/course_gate.py says what is missing. The review page then che
 its rows of the map: every Sub-ILO it owes taught on a slide ("sub_ilo" on the slide) and checked by a
 question ("sub_ilo" on every question), and "sources" not empty - must-fix findings like the theory
 check's, approvable --despite-findings. A script approved before this gate keeps its approval; its
-findings are only reported.
+findings are only reported. Re-approving it after a change that does not touch Sub-ILO tags, the
+sources or the screens (a picture, a word - apply remembers what changed in "since_approval") does not
+hold it to those rules either (2.49.2); propose says which applies. A new approval is checked in full,
+and records it ("approved_checks").
+
+WHO PROPOSED, WHO SAID YES (2.49.2)
+propose --proposed-by and apply --confirmed-by name them; FEEDBACK_LOG.md keeps both ("[proposed by X;
+confirmed by Y]"). A Word or PDF read is "the operator (their Word file)". Left out, a name is "not stated" -
+never assumed to be the operator's. Approval is the operator's own act: see script/GUIDE.md.
 
 Standard library only - it runs on any colleague's computer. PDF comments need the pypdf package;
 without it, read says so and asks for the comments in Word or in the chat instead.
@@ -852,19 +860,27 @@ def text_findings(script):
     return found
 
 
-def said_words(s, vocab, but=()):
+def said_words(s, vocab, but=(), fields=("title", "text", "visual")):
     """the words of vocab a slide's title, text or planned picture names - whole words, any case, each once; words
-    inside one of the phrases in but ("room temperature") are not counted"""
-    said = " ".join(str(s.get(f) or "") for f in ("title", "text", "visual"))
+    inside one of the phrases in but ("room temperature") are not counted. fields narrows where to look."""
+    said = " ".join(str(s.get(f) or "") for f in fields)
     for p in but:
         said = re.sub(r"(?i)%s" % re.escape(p), " ", said)
     return [w for w in vocab if re.search(r"(?i)(?<![\w-])%s(?![\w-])" % re.escape(w), said)]
 
 
+def is_step_list(text):
+    """a text that is a list - three or more lines that begin with a number or a bullet"""
+    return sum(1 for ln in str(text or "").splitlines() if re.match(r"\s*(\d+[.)]?\s|[-*•]\s)", ln)) >= 3
+
+
 def propose_3d(teach, three, declined):
     """2.49.0 - in a module with no 3D yet, the teaching slides where a shape, an inside or a layout in space is the
     lesson (knowledge/media-and-tasks.json three_d.fit_words), best first: (screen, the words, rule). Never a slide whose
-    picture is a real photograph (L52), a flat one (flat_words), or one the person struck (the script's "declined")."""
+    picture is a real photograph (L52), a flat one (flat_words), or one the person struck (the script's "declined").
+    2.49.2 - and not a procedure, a document or an idea: the fit words must be in the title or the planned picture (not
+    only in the text), no sequence/document/idea word there (procedure_words), no flow or process animation, no worked
+    example whose text is a list. The words returned are the ones in the title and the picture."""
     TD, F = MEDIA["three_d"], MEDIA["floors"]
     if three:
         return []
@@ -872,11 +888,18 @@ def propose_3d(teach, three, declined):
     for s in teach:
         k = parse_kind(s.get("visual_kind", ""))
         fam = MEDIA["visual_kinds"].get(k, {}).get("family")
-        if s["id"] in declined or k in F["real_photo_kinds"] or fam in ("3d", "video") or said_words(s, TD["flat_words"]):
+        if s["id"] in declined or k in F["real_photo_kinds"] or fam in ("3d", "video") or k in TD["not_fit_kinds"] \
+                or MEDIA["visual_kinds"].get(k, {}).get("made_by") == "nano_banana" or said_words(s, TD["flat_words"]):
             continue
-        words = said_words(s, TD["fit_words"], TD["not_fit_phrases"])
-        if words:                                       # a drawn thing before an animated sequence, then the most words
-            out.append((k not in TD["propose_first_kinds"], -len(words), len(out), s["id"], words))
+        if s.get("active") in TD["skip_active_lists"] and is_step_list(s.get("text")):
+            continue
+        pic = {"title": s.get("title"), "visual": re.sub(r"(?i)\b3D model\b", " ", str(s.get("visual") or ""))}
+        if said_words(pic, TD["procedure_words"]):
+            continue
+        words = said_words(pic, TD["fit_words"], TD["not_fit_phrases"])
+        if len(words) >= TD["pic_min_words"]:           # a drawn thing before an animated sequence, then the most words
+            out.append((k not in TD["propose_first_kinds"], -len(said_words(s, TD["fit_words"], TD["not_fit_phrases"])),
+                        len(out), s["id"], words))
     return [(sid, words, "v_3d_propose") for _f, _n, _i, sid, words in sorted(out)[:TD["propose_max"]]]
 
 
@@ -1786,21 +1809,55 @@ def describe(script, ch):
     return "%s: %s becomes \"%s\" (was \"%s\")" % (where, name, new, old)
 
 
-def write_pending(p, script, changes, notes, source):
+NOT_STATED = "not stated"
+ILO_CHECK = "ilo_map"          # approved_checks: the approval was made with the ILO map and sources rules (2.42.0) checked in full
+
+
+def change_entry(ch):
+    """one applied change as it is remembered until the next approval: what kind, which screen, which field"""
+    return {"op": ch.get("op") or "edit", "screen": ch.get("screen", ""), "field": ch.get("field", "")}
+
+
+def touches_ilo_rules(entries):
+    """2.49.2 - does a change touch what the ILO map and sources rules read: a Sub-ILO tag, the sources, a screen added or removed"""
+    return any(e.get("op") in ("add", "remove") or e.get("field") == "sub_ilo" or (e.get("op") == "script" and e.get("field") == "sources")
+               for e in entries or [])
+
+
+def approved_before_ilo_rules(script):
+    """2.49.2 - a script approved earlier, without the ILO map and sources rules checked in full (approved before 2.42.0)"""
+    return bool(script.get("approved_hash")) and ILO_CHECK not in (script.get("approved_checks") or [])
+
+
+def approval_note(script, changes):
+    """what the next approval will check of the ILO map and sources rules, said when the list is shown (F9)"""
+    if not approved_before_ilo_rules(script):
+        return ""
+    if touches_ilo_rules(list(script.get("since_approval") or []) + [change_entry(c) for c in changes]):
+        return ("This script was approved before the ILO map and sources rules (2.42.0). These changes touch Sub-ILO tags, the sources or "
+                "add or remove a screen, so approve will check those rules in full: every Sub-ILO taught on a slide and checked by a question, "
+                "every question tagged, sources listed.")
+    return ("This script was approved before the ILO map and sources rules (2.42.0). These changes do not touch Sub-ILO tags, the sources "
+            "or the screens, so approve will not hold the script to those rules - they stay suggestions, as they are on the review page.")
+
+
+def write_pending(p, script, changes, notes, source, proposed_by=NOT_STATED):
     if not changes and not notes:
         if os.path.isfile(p["pending"]):
             os.remove(p["pending"])
         print("What I understood: nothing - the file says exactly what the script says. Nothing is waiting.")
         return 0
     pend = {"_what": "Understood, NOT applied. Show the list to the operator; apply only after they confirm.",
-            "source": source, "made": datetime.now().isoformat(timespec="seconds"), "base_hash": content_hash(script),
-            "changes": changes, "notes": notes}
+            "source": source, "proposed_by": proposed_by or NOT_STATED, "made": datetime.now().isoformat(timespec="seconds"),
+            "base_hash": content_hash(script), "changes": changes, "notes": notes}
     save(p["pending"], pend)
     print("What I understood - nothing has been changed yet:\n")
     for ch in changes:
         print("  - " + describe(script, ch))
     for nt in notes:
         print("  - " + nt)
+    if changes and approval_note(script, changes):
+        print("\n  " + approval_note(script, changes))
     print("\nShow this list to the operator. Only when they confirm:  content_script.py apply <course> --module %s --confirmed"
           % script.get("module"))
     return 0
@@ -1847,7 +1904,9 @@ def cmd_read(course, module, docx, pdf):
             for a in found:
                 notes.append("PDF comment on page %d (screens on that page: %s) from %s: \"%s\"" % (
                     a["page"], ", ".join(a["screens_on_page"]) or "not found", a["author"] or "the operator", short(a["text"], 200)))
-    return write_pending(p, script, changes, notes, "word" if os.path.isfile(p["docx"]) else "pdf")
+    word = os.path.isfile(p["docx"])
+    return write_pending(p, script, changes, notes, "word" if word else "pdf",
+                         "the operator (their %s)" % ("Word file" if word else "PDF"))      # the operator's own file
 
 
 class Stop(Exception):
@@ -1973,7 +2032,7 @@ def new_problems(before, after):
     return [NEW_PROBLEMS + x for x in probs(after) if x not in old]
 
 
-def cmd_propose(course, module, changes_file):
+def cmd_propose(course, module, changes_file, proposed_by=None):
     p = paths(course, module)
     script = load(p["script"])
     try:
@@ -1981,10 +2040,10 @@ def cmd_propose(course, module, changes_file):
     except Stop as e:
         print("Stopped - %s" % e)
         return 2
-    return write_pending(p, script, changes, new_problems(script, work) if changes else [], "chat")
+    return write_pending(p, script, changes, new_problems(script, work) if changes else [], "chat", (proposed_by or "").strip() or NOT_STATED)
 
 
-def append_feedback(course, script, changes, source):
+def append_feedback(course, script, changes, source, proposed_by=NOT_STATED, confirmed_by=NOT_STATED):
     fb = workspace.claude_path(course, "FEEDBACK_LOG.md")
     if not os.path.isfile(fb):
         return
@@ -1996,9 +2055,10 @@ def append_feedback(course, script, changes, source):
         n += 1
         op = ch.get("op")
         said = short(screen_label(ch["new"] if op == "add" else ch["old"]) if op in ("add", "remove") else ch["new"], 120)
-        rows.append("| %d | %s | 3 · %s · %s | %s (%s) | %s | no |" % (
+        # 2.49.2 (F10): who proposed it and who said yes are named - never the operator's words by default
+        rows.append("| %d | %s | 3 · %s · %s | %s (%s) [proposed by %s; confirmed by %s] | %s | no |" % (
             n, date.today().isoformat(), mid(script["module"]), "script" if op == "script" else ch["screen"], said.replace("|", "/"), source,
-            describe(script, ch).replace("|", "/")))
+            str(proposed_by).replace("|", "/"), str(confirmed_by).replace("|", "/"), describe(script, ch).replace("|", "/")))
     with io.open(fb, "a", encoding="utf-8", newline="\n") as f:
         f.write(("\n" if not text.endswith("\n") else "") + "\n".join(rows) + "\n")
 
@@ -2014,7 +2074,7 @@ def archive_name(folder, stem, ext):
     return path
 
 
-def cmd_apply(course, module, confirmed):
+def cmd_apply(course, module, confirmed, confirmed_by=None):
     p = paths(course, module)
     if not confirmed:
         print("Stopped - apply needs --confirmed, and that is only given after the operator has read the list and said yes.")
@@ -2036,11 +2096,19 @@ def cmd_apply(course, module, confirmed):
     was_approved = script.get("status") == "approved"
     if pend["changes"]:
         script["status"] = "draft"
+        if script.get("approved_hash"):             # 2.49.2 (F9): what changed since the approval - approve checks only that
+            log = script.setdefault("since_approval", [])
+            log += [e for e in map(change_entry, pend["changes"]) if e not in log]
     save(p["script"], script)
-    append_feedback(course, script, pend["changes"], {"word": "Word file", "pdf": "PDF", "chat": "chat"}.get(pend["source"], pend["source"]))
+    proposed_by = pend.get("proposed_by") or NOT_STATED
+    confirmed_by = (confirmed_by or "").strip() or NOT_STATED
+    append_feedback(course, script, pend["changes"], {"word": "Word file", "pdf": "PDF", "chat": "chat"}.get(pend["source"], pend["source"]),
+                    proposed_by, confirmed_by)
     os.makedirs(p["old"], exist_ok=True)
     if os.path.isfile(p["docx"]):
         shutil.move(p["docx"], archive_name(p["old"], "%s_SCRIPT" % mid(module), ".docx"))
+    pend["confirmed_by"], pend["applied_on"] = confirmed_by, date.today().isoformat()
+    save(p["pending"], pend)
     os.replace(p["pending"], archive_name(p["old"], "%s.applied" % mid(module), ".json"))
     render(course, module, quiet=True)
     print("Applied %d change(s), logged in FEEDBACK_LOG.md, and made a fresh review page and Word file.%s%s"
@@ -2072,6 +2140,14 @@ def cmd_approve(course, module, by, despite=False):
         print("Not approved - the script still has problems:\n" + "\n".join("  - " + x for x in probs))
         return 1
     must = blocking(all_findings(script, course))
+    # 2.49.2 (F9): a script approved before the ILO map and sources rules (2.42.0), changed in a way that does not touch what those
+    # rules read (a picture, a word), is not held to them again - they stay suggestions. A new approval is checked in full.
+    ilo = ilo_findings(course, script)
+    lenient = approved_before_ilo_rules(script) and not touches_ilo_rules(script.get("since_approval"))
+    if lenient and ilo:
+        must = [f for f in must if f not in ilo]
+        print("  %d finding(s) of the ILO map and sources check stay suggestions: this script was approved before those rules (2.42.0) "
+              "and nothing changed since touches Sub-ILO tags, the sources or the screens. They are on the review page." % len(ilo))
     chosen = design_choices.load(course)                     # L26: a design rule the operator chose against stops nothing
     waived = [f for f in must if any(f["rule"].startswith(pre) and rule in chosen for rule, pre in DESIGN_FINDINGS.items())]
     must = [f for f in must if f not in waived]
@@ -2085,6 +2161,9 @@ def cmd_approve(course, module, by, despite=False):
         return 1
     script["approved_despite_findings"] = [dict(f, date=date.today().isoformat()) for f in must] if must else []
     script.update({"status": "approved", "approved_by": by, "approved_on": date.today().isoformat(), "approved_hash": content_hash(script)})
+    script.pop("since_approval", None)
+    if not lenient or not ilo:                       # the ILO map and sources rules were checked in full (or the script meets them)
+        script["approved_checks"] = sorted(set(script.get("approved_checks") or []) | {ILO_CHECK})
     save(p["script"], script)
     render(course, module, quiet=True)
     print("Module %s's script is approved by %s. The slides built from it must say exactly this (check_script_match.py)." % (script["module"], by))
@@ -2189,8 +2268,10 @@ def main(argv=None):
             s.add_argument("--docx"); s.add_argument("--pdf")
         if name == "propose":
             s.add_argument("--changes", required=True)
+            s.add_argument("--proposed-by", help="who proposed these changes - the operator's own words, or the agent (default: not stated)")
         if name == "apply":
             s.add_argument("--confirmed", action="store_true")
+            s.add_argument("--confirmed-by", help="who read the list and said yes - the operator's name (default: not stated)")
         if name == "approve":
             s.add_argument("--by", required=True)
             s.add_argument("--despite-findings", action="store_true",
@@ -2210,7 +2291,8 @@ def main(argv=None):
             print(course_gate.stop_message(a.module, probs, "started" if a.cmd == "render" else "approved"))
             return 2
     return {"render": lambda: render(a.course, a.module), "read": lambda: cmd_read(a.course, a.module, a.docx, a.pdf),
-            "propose": lambda: cmd_propose(a.course, a.module, a.changes), "apply": lambda: cmd_apply(a.course, a.module, a.confirmed),
+            "propose": lambda: cmd_propose(a.course, a.module, a.changes, a.proposed_by),
+            "apply": lambda: cmd_apply(a.course, a.module, a.confirmed, a.confirmed_by),
             "discard": lambda: cmd_discard(a.course, a.module),
             "approve": lambda: cmd_approve(a.course, a.module, a.by, a.despite_findings), "status": lambda: cmd_status(a.course, a.module)}[a.cmd]()
 

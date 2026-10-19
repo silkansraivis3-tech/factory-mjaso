@@ -78,6 +78,38 @@ SPECS = {
         {"id": "M", "type": "range_bar", "x": 40, "y": 110, "w": 240, "lel": 4, "uel": 75, "label": "hydrogen in air", "value": 0},
         {"id": "H", "type": "range_bar", "x": 340, "y": 110, "w": 260, "lel": 5, "uel": 15, "nums": [5, 15, 100], "label": "methane in air", "value": 0}],
         "steps": [{"title": "lean", "play": [["M", 2, 800], ["H", 2, 800]]}, {"title": "burns", "play": [["M", 10, 800], ["H", 10, 800]]}]},
+    # 2.49.2 (IGF M07-M15, F8): two push buttons stack in a 390-high figure; a tree of four columns in a 640-wide figure keeps its
+    # words at 12.5 px; a level fed by a pipe from the left keeps its tick numbers off it; a spill stays in its box; a long alarm
+    # fits a narrow log
+    "stack": {"size": [640, 390], "label": "two ESD buttons one above the other", "parts": [
+        {"id": "A", "type": "push_button", "x": 100, "y": 90, "tag": "ESD 1", "label": "bunkering ESD"},
+        {"id": "B", "type": "push_button", "x": 100, "y": 270, "tag": "ESD 2", "label": "fuel supply stop"},
+        {"id": "C", "type": "push_button", "x": 400, "y": 120, "h": 182, "tag": "ESD 3", "label": "full size"},
+        {"id": "L", "type": "log", "x": 330, "y": 280, "w": 290, "rows": 1}],
+        "steps": [{"title": "both pressed", "play": [["A", 1, 800], ["B", 1, 800], ["C", 1, 800]]}]},
+    "tree": {"size": [640, 390], "label": "emergency organisation", "parts": [
+        {"id": "T", "type": "tree", "x": 10, "y": 10, "root": "Master", "value": 0,
+         "children": [{"label": "Chief officer\n(on-scene leader)", "children": ["Deck team", "Fire team", "Medical"]},
+                      {"label": "Chief engineer\n(engine control)", "children": ["Engine team", "Fuel shutdown"]},
+                      {"label": "Second officer\n(communications)", "children": ["Radio"]},
+                      {"label": "Bosun", "children": ["Boundary cooling"]}]}],
+        "steps": [{"title": "The master commands", "play": [["T", 1, 500]]}, {"title": "The deck team", "play": [["T", 5, 500]]}]},
+    "level_feed": {"size": [520, 330], "label": "a tank level column fed from the left", "parts": [
+        {"id": "L", "type": "level", "x": 330, "y": 50, "w": 60, "h": 200, "label": "TANK LEVEL", "min": 0, "max": 100, "unit": "%", "value": 20,
+         "marks": [{"at": 90, "kind": "alarm", "label": "HIGH"}]},
+        {"id": "P", "type": "pipe", "d": "M60 200 H330", "value": 0},
+        {"id": "V", "type": "valve", "x": 170, "y": 200, "label": "fill valve", "value": 1}],
+        "steps": [{"title": "The tank fills", "play": [["L", 85, 800], ["P.fill", 1, 300]]}]},
+    "spill_box": {"size": [640, 270], "label": "spills on deck and on water", "parts": [
+        {"id": "SD", "type": "spill", "x": 40, "y": 10, "w": 200, "surface": "deck", "label": "on the deck", "value": 0},
+        {"id": "SW", "type": "spill", "x": 400, "y": 10, "w": 200, "surface": "water", "label": "on the water", "reach": 999, "value": 0}],
+        "steps": [{"title": "spreading", "play": [["SD", 1, 800], ["SW", 1, 800]]}]},
+    "long_log": {"size": [640, 330], "label": "a narrow alarm log with long alarm text", "parts": [
+        {"id": "L", "type": "level", "x": 60, "y": 40, "h": 200, "unit": "%", "min": 0, "max": 100, "value": 0, "label": "TANK",
+         "marks": [{"at": 40, "kind": "alarm", "alarm": "Very high level - ESD of ship and shore, fuel supply stopped"},
+                   {"at": 70, "kind": "trip", "alarm": "Gas 40 % LEL - ESD"}]},
+        {"id": "G", "type": "log", "x": 330, "y": 60, "w": 250, "rows": 2}],
+        "steps": [{"title": "alarm", "play": [["L", 50, 600]]}, {"title": "trip", "play": [["L", 80, 600]]}]},
 }
 # for kit_eval: what a part does in the page, read back as numbers and words
 EVALS = {
@@ -123,6 +155,55 @@ EVALS = {
     "drip": ({"size": [420, 240], "label": "drip", "parts": [
         {"id": "D", "type": "drip_tray", "x": 110, "y": 80, "w": 200, "label": "drip tray", "labelAt": "right"}]},
         "f.layout(true);var t=svg.querySelector('[data-kit-id=\"D\"] .kit-lbl text');return +t.getAttribute('x');"),
+    # F3: gas_cloud "from" in figure coordinates (and in the cloud's own box, as older specs wrote it): the cloud grows from the same place
+    "cloud_from": ({"size": [640, 390], "label": "clouds", "parts": [
+        {"id": "A", "type": "gas_cloud", "x": 350, "y": 110, "w": 250, "h": 120, "from": [450, 190]},
+        {"id": "B", "type": "gas_cloud", "x": 20, "y": 110, "w": 250, "h": 120, "from": [100, 80]},
+        {"id": "C", "type": "gas_cloud", "x": 20, "y": 250, "w": 280, "h": 120, "from": [110, 270], "fromIn": "figure"},
+        {"id": "D", "type": "gas_cloud", "x": 350, "y": 250, "w": 250, "h": 120}],
+        "steps": [{"title": "gas", "play": [["A", 1, 300], ["B", 1, 300], ["C", 1, 300], ["D", 1, 300]]}]},
+        "f.layout(true);f.go(1,true);var o={};['A','B','C','D'].forEach(function(i){var g=svg.querySelector('[data-kit-id=\"'+i+'\"] g[filter]');"
+        "var m=/translate\\(([-\\d.]+) ([-\\d.]+)\\) scale/.exec(g.getAttribute('transform'));o[i]=m?[+m[1],+m[2]]:g.getAttribute('transform');});return o;"),
+    # F8: push_button 120 units by default (182 before), "h" sizes it; level ticks on the right when a pipe comes in on the left
+    "push_h": ({"size": [640, 390], "label": "buttons", "parts": [
+        {"id": "A", "type": "push_button", "x": 100, "y": 110, "tag": "ESD 1"},
+        {"id": "B", "type": "push_button", "x": 300, "y": 110, "tag": "ESD 2", "h": 182},
+        {"id": "L", "type": "level", "x": 500, "y": 40, "h": 150},
+        {"id": "M", "type": "level", "x": 400, "y": 240, "h": 100, "ticks": "right"},
+        {"id": "N", "type": "level", "x": 200, "y": 240, "h": 100},
+        {"id": "P", "type": "pipe", "d": "M440 90 H500", "value": 0}],
+        "steps": [{"title": "go", "play": [["A", 1, 300]]}]},
+        "f.layout(true);var pl=function(i){return svg.querySelector('[data-kit-id=\"'+i+'\"] .kit-push-button-plate').getBBox().height;};"
+        "var an=function(i){return [].map.call(svg.querySelectorAll('[data-kit-id=\"'+i+'\"] text.kit-tick'),function(t){return t.getAttribute('text-anchor');});};"
+        "return {a:pl('A'),b:pl('B'),lev:an('L'),lev2:an('M'),lev3:an('N')};"),
+    # F8: a spill stays in its box (x..x+w, y..y+h), with a reach that asks for more than the room and a water wave that is not a whole number of 30s
+    "spill_in": ({"size": [640, 330], "label": "spill", "parts": [
+        {"id": "S", "type": "spill", "x": 40, "y": 20, "w": 200, "surface": "water", "label": "on the water", "reach": 999, "value": 0},
+        {"id": "T", "type": "spill", "x": 340, "y": 20, "w": 230, "h": 170, "surface": "deck", "value": 0}],
+        "steps": [{"title": "boil", "play": [["S", 1, 300], ["T", 1, 300]]}]},
+        "f.layout(true);f.go(1,true);var b=function(i){var r=svg.querySelector('[data-kit-id=\"'+i+'\"]'),p=r.querySelectorAll('rect,path,circle,line');"
+        "var x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;[].forEach.call(p,function(e){var q=e.getBBox();if(e.classList.contains('kit-spill-wisp')||e.classList.contains('kit-spill-bub'))return;"
+        "x0=Math.min(x0,q.x);y0=Math.min(y0,q.y);x1=Math.max(x1,q.x+q.width);y1=Math.max(y1,q.y+q.height);});return [Math.round(x0),Math.round(y0),Math.round(x1),Math.round(y1)];};"
+        "var w=function(i){var q=svg.querySelector('[data-kit-id=\"'+i+'\"] .kit-spill-pool').getBBox();return [Math.round(q.x),Math.round(q.x+q.width)];};"
+        "return {s:b('S'),t:b('T'),pool:w('S')};"),
+    # F22: the names of a person's items - the defaults, and the slide's own words per item (object or list); goggles, respirator, apron are drawn
+    "person_words": ({"size": [640, 330], "label": "ppe", "parts": [
+        {"id": "A", "type": "person", "x": 110, "y": 290, "scale": 1.3, "wear": ["goggles", "respirator", "apron", "gloves"], "labels": {"respirator": "HALF MASK"}},
+        {"id": "B", "type": "person", "x": 320, "y": 290, "scale": 1.3, "wear": ["helmet", "visor", "scba"], "labels": ["HARD HAT", "GOGGLES"]},
+        {"id": "C", "type": "person", "x": 530, "y": 290, "scale": 1.3, "wear": ["visor", "suit"], "labels": False}],
+        "steps": [{"title": "on", "play": [["A", 4, 300], ["B", 3, 300], ["C", 2, 300]]}]},
+        "f.layout(true);f.go(1,true);var t=function(i){return [].map.call(svg.querySelectorAll('[data-kit-id=\"'+i+'\"] .kit-lbl text'),function(x){return x.textContent;});};"
+        "return {a:t('A'),b:t('B'),c:t('C')};"),
+    # F4: a drawing shown below 1:1 (a photo over it keeps it from being zoomed to fill its panel) has every word at 12.5 px or more
+    # by the deck audit's own sum (declared x rendered width / viewBox width), not 12.4999; and a window resize lays it out
+    "floor": ({"size": [640, 390], "label": "floor", "parts": [
+        {"id": "G", "type": "level", "x": 40, "y": 60, "h": 200, "unit": "%", "min": 0, "max": 100, "label": "TANK", "value": 40,
+         "marks": [{"at": 80, "kind": "alarm", "label": "HIGH"}]},
+        {"id": "T", "type": "tank", "x": 200, "y": 120, "w": 280, "h": 120, "label": "fuel tank", "value": 0.5}]},
+        "var small=function(){var vb=svg.getAttribute('viewBox').split(/[ ,]+/).map(Number),sc=svg.getBoundingClientRect().width/vb[2],m=1e9;"
+        "[].forEach.call(svg.querySelectorAll('text'),function(t){var f=parseFloat(getComputedStyle(t).fontSize);if(f)m=Math.min(m,f*sc);});return m;};"
+        "f.layout(true);var a=small();f.laid=0;svg.style.removeProperty('--kit-up');svg.setAttribute('viewBox','0 0 640 390');"
+        "window.dispatchEvent(new Event('resize'));return {min:a,laid:f.laid>0,up:svg.style.getPropertyValue('--kit-up'),after:small()};", 380),
 }
 
 
@@ -241,6 +322,42 @@ def main():
         check("a value set from outside the steps survives a layout (the task page's panel valve stayed closed only by luck)", v == [0, 1], v)
         v = kit_eval(*EVALS["drip"])
         check("K9 drip_tray: \"labelAt\" puts the name beside the pan", v is not None and v > 200, v)
+
+        # ------------------------------------------------------------ 2.49.2 - IGF M07-M15's kit problems
+        if all(runs.values()):
+            check("F8 push_button: two stacked in a 390-high figure, a full-size one beside them, and a log: clean at both sizes",
+                  not findings(runs["stack"]), findings(runs["stack"]))
+            check("F8 tree: four columns in a 640-wide figure keep every word at 12.5 px, at both sizes (it drew 11.5)",
+                  not findings(runs["tree"]) and all((runs["tree"]["sizes"][s].get("report") or {}).get("minTextPx", 0) >= 12.49
+                                                      for s in runs["tree"]["sizes"]),
+                  (findings(runs["tree"]), [(runs["tree"]["sizes"][s].get("report") or {}).get("minTextPx") for s in runs["tree"]["sizes"]]))
+            check("F8 level: a pipe running in on the left keeps clear of the tick numbers (text zone), at both sizes",
+                  not findings(runs["level_feed"]), findings(runs["level_feed"]))
+            check("F8 spill: both surfaces are clean in a figure the size of their boxes, at both sizes",
+                  not findings(runs["spill_box"]), findings(runs["spill_box"]))
+            check("F8 log: a long alarm in a narrow log stays inside it (3 lines where it needs them), at both sizes",
+                  not findings(runs["long_log"]), findings(runs["long_log"]))
+
+        v = kit_eval(*EVALS["cloud_from"])
+        check("F3 gas_cloud: \"from\" in figure coordinates, in the cloud's own box (old specs), and \"fromIn\": \"figure\" all grow from the right place",
+              v and v["A"] == [100, 80] and v["B"] == [100, 80] and v["C"] == [90, 20] and v["D"] == [125, 72], v)
+        v = kit_eval(*EVALS["push_h"])
+        check("F8 push_button: the wall plate is 120 units by default (182 before) and \"h\" sizes it",
+              v and 110 <= v["a"] <= 135 and 175 <= v["b"] <= 200, v)
+        check("F8 level: tick numbers stand left of the column (end-anchored), on the right when a pipe runs in on the left or \"ticks\": \"right\"",
+              v and set(v["lev"]) == {"start"} and set(v["lev2"]) == {"start"} and set(v["lev3"]) == {"end"}, v)
+        v = kit_eval(*EVALS["spill_in"])
+        check("F8 spill: drawn inside x..x+w (a wave cut at w, a reach held to the room), y..y+h (the box of its own words)",
+              v and v["s"][0] >= -1 and v["s"][2] <= 201 and v["s"][1] >= -1 and v["s"][3] <= 245 and v["pool"][0] >= 0 and v["pool"][1] <= 200
+              and v["t"][0] >= -1 and v["t"][2] <= 231 and v["t"][1] >= -1 and v["t"][3] <= 172, v)
+        v = kit_eval(*EVALS["person_words"])
+        check("F22 person: goggles, respirator, apron are named, and \"labels\" gives the slide's own words (an object, a list, or false for none)",
+              v and v["a"] == ["GOGGLES", "HALF MASK", "APRON", "GLOVES"] and v["b"] == ["HARD HAT", "GOGGLES", "SCBA"] and v["c"] == [], v)
+        v = kit_eval(*EVALS["floor"])
+        check("F4 a drawing shown below 1:1 has every word at 12.5 px or more by the deck audit's own sum, not 12.4999",
+              v and v["min"] >= 12.5, v)
+        check("F4 a window resize lays a figure out (a probe that measures a slide at once gets no observer call)",
+              v and v["laid"] and v["up"] != "" and v["after"] >= 12.5, v)
 
         # K13: one browser run draws every step - a contact sheet, as wide as the real slide's panels
         sheet_spec = os.path.join(tmp, "sheet.kit.json")

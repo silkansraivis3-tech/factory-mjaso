@@ -428,6 +428,16 @@
       catch (e) { /* laid out on its first step */ }
     }
   }
+  /* A WINDOW RESIZE lays the figures out too (2.49.2, F4). The ResizeObserver does it in a browser with frames; a probe that
+     measures a slide the moment it is shown (audit_deck.js fires "resize" for exactly that and waits) gets no observer call in
+     a hidden browser, so a figure with a photo "over" it - which is not zoomed to fill its panel, so it is shown below 1:1 -
+     kept its words at 12.5 px declared and the audit reported them smaller (svgSmall). A figure whose width has not changed
+     since its last layout is left as it is. */
+  if (root.addEventListener) {
+    root.addEventListener('resize', function () {
+      FIGS.forEach(function (f) { try { f.layout(); } catch (e) { /* the observer or the next resize tries again */ } });
+    });
+  }
   if (document.fonts && document.fonts.addEventListener) {          // the course font arrives: the words have their real width
     document.fonts.addEventListener('loadingdone', function () { FIGS.forEach(function (f) { if (f.laid) f.layout(true); }); });
   }
@@ -748,7 +758,9 @@
 
   function setView(svg, V) { svg.setAttribute('viewBox', V.map(function (v) { return +v.toFixed(2); }).join(' ')); }
   function scaleNow(svg) { var m = svg.getScreenCTM(); return m ? det(m) : 1; }
-  function upFor(s) { return Math.min(UP_MAX, Math.max(1, 1 / s)); }
+  /* 0.1 % over 1/s: a word grown to exactly 12.5 px once drawn read 12.4999 to the deck audit's svgSmall, which compares
+     declared x rendered width / viewBox width against 12.5 (2.49.2) */
+  function upFor(s) { return Math.min(UP_MAX, Math.max(1, 1.001 / s)); }
   /* the height a deck figure may take: its column, less the step buttons (0 when it is not in a deck's figure column) */
   function roomPx(svg) {
     var col = svg.closest && svg.closest('.kit-fig');
@@ -895,9 +907,43 @@
     };
   };
 
-  /* level - a tank level column with its marks and a digital readout */
+  /* does a pipe of the spec run through this box (x, y, x2, y2 in figure coordinates)? A pipe's path is read as straight runs
+     between its vertices (a curve by its end points); a pipe part is placed by its "d" and its own x, y. */
+  function pipeThrough(fig, B) {
+    var hit = false;
+    (fig.spec.parts || []).forEach(function (q) {
+      if (hit || q.type !== 'pipe' || !q.d) return;
+      var t = String(q.d).match(/[a-zA-Z]|-?\d*\.?\d+(?:e-?\d+)?/g) || [], N = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7 };
+      var ox = q.x || 0, oy = q.y || 0, cx = 0, cy = 0, sx = 0, sy = 0, cmd = '', i = 0;
+      while (i < t.length && !hit) {
+        if (/[a-zA-Z]/.test(t[i])) { cmd = t[i++]; if (/z/i.test(cmd)) { cx = sx; cy = sy; continue; } }
+        var up = cmd.toUpperCase(), rel = cmd !== up, n = N[up];
+        if (!n) break;
+        var a = t.slice(i, i + n).map(Number), x = cx, y = cy; i += n;
+        if (up === 'H') x = a[0] + (rel ? cx : 0); else if (up === 'V') y = a[0] + (rel ? cy : 0);
+        else { x = a[n - 2] + (rel ? cx : 0); y = a[n - 1] + (rel ? cy : 0); }
+        if (up === 'M') { sx = x; sy = y; cmd = rel ? 'l' : 'L'; }
+        else {
+          var len = Math.max(Math.abs(x - cx), Math.abs(y - cy)), steps = Math.max(1, Math.ceil(len / 3));
+          for (var s = 0; s <= steps && !hit; s++) {
+            var px = ox + cx + (x - cx) * s / steps, py = oy + cy + (y - cy) * s / steps;
+            if (px >= B.x && px <= B.x2 && py >= B.y && py <= B.y2) hit = true;
+          }
+        }
+        cx = x; cy = y;
+      }
+    });
+    return hit;
+  }
+
+  /* level - a tank level column with its marks and a digital readout. The tick numbers stand left of the column; a pipe
+     that runs into that strip (a feed line to the tank) puts them on the right instead (2.49.2), or say "ticks": "right" /
+     "left" / false. */
   TYPES.level = function (fig, part, g, p) {
     var w = p.w || 60, h = p.h || 200, lo = p.min || 0, hi = p.max != null ? p.max : 100;
+    var lx = p.x || 0, ly = p.y || 0, onRight = p.ticks === 'right' ||
+      (p.ticks !== 'left' && p.ticks !== false && pipeThrough(fig, { x: lx - 62, y: ly - 8, x2: lx + 1, y2: ly + h + 8 }) &&
+       !pipeThrough(fig, { x: lx + w - 1, y: ly - 8, x2: lx + w + 62, y2: ly + h + 8 }));
     function y(v) { return h - clamp((v - lo) / (hi - lo), 0, 1) * h; }
     var cid = fig.uid + '-' + p.id + '-clip';
     el('rect', { x: 3, y: 3, width: w - 6, height: h - 6, rx: 5 }, el('clipPath', { id: cid }, el('defs', {}, g)));
@@ -909,8 +955,8 @@
     if (p.ticks !== false) {
       for (var i = 0; i <= 4; i++) {
         var tv = lo + (hi - lo) * i / 4, ty = y(tv);
-        el('line', { x1: -7, x2: 0, y1: ty, y2: ty, 'class': 'kit-tickl' }, g);
-        el('text', { x: -11, y: ty + 4.5, 'text-anchor': 'end', 'class': 'kit-tick' }, g, num(tv, 0));
+        el('line', { x1: onRight ? w : -7, x2: onRight ? w + 7 : 0, y1: ty, y2: ty, 'class': 'kit-tickl' }, g);
+        el('text', { x: onRight ? w + 11 : -11, y: ty + 4.5, 'text-anchor': onRight ? 'start' : 'end', 'class': 'kit-tick' }, g, num(tv, 0));
       }
     }
     part.marks.forEach(function (m) {
@@ -1293,18 +1339,31 @@
       tx = 16 + widest(probe, ['00:00:00']) + 14;
       probe.setAttribute('class', 'kit-msg');
       var room = w - 16 - tx - 12;
-      two = {}; lines2 = false;
+      two = {}; lines2 = 1;
+      /* 2.49.2: a long alarm (M14, M15) went on two lines only, and a narrow log still ran out of its box. The words are now
+         set greedily, line by line, as many lines as they need to fit the room; every row is as tall as the most lines. */
       said.forEach(function (s) {
         if (widest(probe, [s]) <= room) return;
-        var best = null, bw = 1e9, re = / /g, m;
-        while ((m = re.exec(s))) {
-          var a = s.slice(0, m.index), b = s.slice(m.index + 1), ww = Math.max(widest(probe, [a]), widest(probe, [b]));
-          if (ww < bw) { bw = ww; best = [a, b]; }
+        var ws = s.split(' '), out = [], cur = '';
+        ws.forEach(function (wd) {
+          var t = cur ? cur + ' ' + wd : wd;
+          if (cur && widest(probe, [t]) > room) { out.push(cur); cur = wd; } else cur = t;
+        });
+        if (cur) out.push(cur);
+        if (out.length > 1) {
+          /* balance: move words back from the shorter-line end so the lines are near equal (the same line count) */
+          var L = out.length, flat = ws, best = out, bw = Math.max.apply(null, out.map(function (x) { return widest(probe, [x]); }));
+          if (L === 2) {
+            for (var c = 1; c < flat.length; c++) {
+              var a = flat.slice(0, c).join(' '), b = flat.slice(c).join(' '), ww = Math.max(widest(probe, [a]), widest(probe, [b]));
+              if (ww < bw) { bw = ww; best = [a, b]; }
+            }
+          }
+          two[s] = best; lines2 = Math.max(lines2, best.length);
         }
-        if (best) { two[s] = best; lines2 = true; }
       });
       g.removeChild(probe);
-      rh = (lines2 ? 40 : 24) * k;
+      rh = (8 + 16 * lines2) * k;
       box.setAttribute('height', 32 * k + rows * rh);
       head.setAttribute('y', 20 * k);
       body.setAttribute('transform', 'translate(0 ' + (29 * k) + ')');
@@ -1822,7 +1881,18 @@ KIT.define('bands', function (fig, part, g, p) {
 /* kit-part: gas_cloud */
 KIT.define('gas_cloud', function (fig, part, g, p) {
   var h = KIT.h, w = p.w || 200, ht = p.h || 120;
-  var ox = p.from ? p.from[0] : w / 2, oy = p.from ? p.from[1] : ht * 0.6, fid = fig.uid + '-' + p.id + '-soft';
+  /* WHERE IT GROWS FROM (2.49.2): "from": [x, y] is read in the cloud's own box (as every spec before 2.49.2 wrote it) OR in
+     figure coordinates, the way every other part is placed. "fromIn": "box" | "figure" says which; left out, the kit reads it
+     in the box when it lies inside the box (an old spec draws as it did) and otherwise, when it lies inside the box only as
+     figure coordinates (x - the cloud's x, y - its y), as figure coordinates. A point inside the box both ways is read in the
+     box - say "fromIn": "figure" to mean the other. check_kit.py warns when the origin lands off the figure. */
+  var cx0 = p.x || 0, cy0 = p.y || 0, ox = w / 2, oy = ht * 0.6;
+  if (p.from && p.from.length === 2) {
+    var fx0 = +p.from[0], fy0 = +p.from[1], inBox = function (x, y) { return x >= 0 && x <= w && y >= 0 && y <= ht; };
+    var asFig = p.fromIn === 'figure' || (p.fromIn !== 'box' && !inBox(fx0, fy0) && inBox(fx0 - cx0, fy0 - cy0));
+    ox = asFig ? fx0 - cx0 : fx0; oy = asFig ? fy0 - cy0 : fy0;
+  }
+  var fid = fig.uid + '-' + p.id + '-soft';
   h.el('feGaussianBlur', { stdDeviation: Math.max(4, Math.min(w, ht) * 0.05) },
        h.el('filter', { id: fid, x: '-20%', y: '-20%', width: '140%', height: '140%' }, h.el('defs', {}, g)));
   /* DRIFT (2.49.1): "drift": [dx, dy] (or true: 0.4 w to the right) gives the cloud a second value, "<id>.drift" 0..1 - the
@@ -1857,11 +1927,11 @@ KIT.define('gas_cloud', function (fig, part, g, p) {
   status: 'kit', merged_from: "IGF Basic M02",
   course: 'IGF Basic', module: 'M02', made: '2026-10-15',
   why: 'M02 s15: leaked gas gathering in the tank connection space until the detectors alarm and the gas is shut off; M06 and M13 need it too',
-  value: 'how much gas has gathered, 0..1 (the cloud grows from its leak point, pale - methane vapour has no colour); option drift: [dx, dy] adds the value "<id>.drift" 0..1 - the cloud moves that far and spreads a little (wind carrying a leak away)',
+  value: 'how much gas has gathered, 0..1 (the cloud grows from its leak point, pale - methane vapour has no colour); option drift: [dx, dy] adds the value "<id>.drift" 0..1 - the cloud moves that far and spreads a little (wind carrying a leak away); option from: [x, y] is where it grows from - in figure coordinates like every other part (2.49.2), or in the own box of the cloud as older specs wrote it ("fromIn": "box" | "figure"; left out, the kit reads it in the box when it lies there, else in figure coordinates)',
   css: '.kit-gas-cloud-puff{fill:var(--txt-d);opacity:.2;transform-box:fill-box;transform-origin:center}.kit-gas-cloud-spreading .kit-gas-cloud-puff{animation:kit-gas-cloud-drift 2.4s ease-in-out infinite alternate}@keyframes kit-gas-cloud-drift{to{transform:scale(1.06)}}',
   example: { size: [400, 190], parts: [
     { id: 'R', type: 'space', x: 20, y: 20, w: 280, h: 150, label: 'TANK CONNECTION SPACE' },
-    { id: 'C', type: 'gas_cloud', x: 20, y: 20, w: 280, h: 150, from: [90, 110], drift: [70, 0] } ],
+    { id: 'C', type: 'gas_cloud', x: 20, y: 20, w: 280, h: 150, from: [110, 130], fromIn: 'figure', drift: [70, 0] } ],
     steps: [ { title: 'A leak: gas gathers', play: [['C', 1, 4000, 0, 'linear']] },
              { title: 'The wind carries the cloud away', play: [['C.drift', 1, 3000, 0, 'linear']] } ] }
 });
@@ -2503,26 +2573,34 @@ KIT.define('gas_cylinder', function (fig, part, g, p) {
 /* end kit-part */
 /* kit-part: push_button */
 KIT.define('push_button', function (fig, part, g, p) {
-  var h = KIT.h;
-  h.el('rect', { x: -60, y: -102, width: 120, height: 182, rx: 8, 'class': 'kit-push-button-plate' }, g);   // the wall plate it is mounted on
-  h.el('line', { x1: -38, y1: 10, x2: -38, y2: -36, 'class': 'kit-probe' }, g);
-  h.el('line', { x1: 38, y1: 10, x2: 38, y2: -36, 'class': 'kit-probe' }, g);
-  h.el('rect', { x: -44, y: 10, width: 88, height: 30, rx: 5, 'class': 'kit-vessel' }, g);
-  h.el('rect', { x: -7, y: -2, width: 14, height: 13, 'class': 'kit-steel' }, g);
-  var cap = h.el('g', {}, g);
+  /* SIZE (2.49.2): "h" is the height of the wall plate, 120 units unless the spec says (it was a fixed 182, so two did not
+     stack in a 390-high figure). The picture is drawn at h/182 of its first size; its words (the tag, the name, READY /
+     PRESSED) keep their own size and sit under it, and the plate grows to hold the tag when the words are grown. */
+  var h = KIT.h, S = h.clamp((p.h || 120) / 182, 0.3, 1.5);
+  var plate = h.el('rect', { rx: 8, 'class': 'kit-push-button-plate' }, g);   // the wall plate it is mounted on
+  var art = h.el('g', { transform: 'scale(' + S.toFixed(4) + ')' }, g);
+  h.el('line', { x1: -38, y1: 10, x2: -38, y2: -36, 'class': 'kit-probe' }, art);
+  h.el('line', { x1: 38, y1: 10, x2: 38, y2: -36, 'class': 'kit-probe' }, art);
+  h.el('rect', { x: -44, y: 10, width: 88, height: 30, rx: 5, 'class': 'kit-vessel' }, art);
+  h.el('rect', { x: -7, y: -2, width: 14, height: 13, 'class': 'kit-steel' }, art);
+  var cap = h.el('g', {}, art);
   h.el('path', { d: 'M-30 2 C-30 -28 30 -28 30 2 Z', 'class': 'kit-push-button-cap' }, cap);
   h.el('line', { x1: -33, y1: 2, x2: 33, y2: 2, 'class': 'kit-flange' }, cap);
-  var lid = h.el('g', {}, g);
+  var lid = h.el('g', {}, art);
   h.el('rect', { x: -38, y: -41, width: 76, height: 6, rx: 3, 'class': 'kit-push-button-lid' }, lid);
-  var tagBox = h.el('rect', { x: -22, y: 46, width: 44, height: 22, rx: 4, 'class': 'kit-push-button-tag' }, g);
-  var tagTxt = h.el('text', { x: 0, y: 61, 'text-anchor': 'middle', 'class': 'kit-tl' }, g, p.tag || 'ESD');
+  var tagBox = h.el('rect', { x: -22, y: 46 * S, width: 44, height: 22, rx: 4, 'class': 'kit-push-button-tag' }, g);
+  var tagTxt = h.el('text', { x: 0, y: 46 * S + 15, 'text-anchor': 'middle', 'class': 'kit-tl' }, g, p.tag || 'ESD');
   var lg = p.label || p.state !== false ? h.label(fig, g, {}, '') : null;
-  var nl = p.label ? h.lines(lg, { x: 0, y: 104, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label) : 0;
-  var st = p.state === false ? null : h.el('text', { x: 0, y: 104, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'middle', 'class': 'kit-state' }, lg);
+  var ly0 = 46 * S + 22 + 8 + 12.5 + 8;
+  var nl = p.label ? h.lines(lg, { x: 0, y: ly0, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label) : 0;
+  var st = p.state === false ? null : h.el('text', { x: 0, y: ly0, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'middle', 'class': 'kit-state' }, lg);
   fig.fit(function (k) {                                // the tag plate is as wide as its words need, 8 a side, and as tall
-    var wd = Math.max(44, h.widest(tagTxt, [p.tag || 'ESD']) + 16), th = 22 * k;
+    var wd = Math.max(44, h.widest(tagTxt, [p.tag || 'ESD']) + 16), th = 22 * k, ty = 46 * S;
+    var bottom = Math.max(80 * S, ty + th + 8), pw = Math.max(120 * S, wd + 16);
+    plate.setAttribute('x', -pw / 2); plate.setAttribute('y', -102 * S); plate.setAttribute('width', pw); plate.setAttribute('height', bottom + 102 * S);
     tagBox.setAttribute('x', -wd / 2); tagBox.setAttribute('width', wd); tagBox.setAttribute('height', th);
-    tagTxt.setAttribute('y', 46 + th / 2 + 4.5 * k);
+    tagTxt.setAttribute('y', ty + th / 2 + 4.5 * k);
+    if (lg) [].forEach.call(lg.querySelectorAll('text'), function (t) { t.setAttribute('y', bottom + 8 + 12.5 * k); });
   });
   part.render = function (v) {
     var c = h.clamp(v, 0, 1), up = h.clamp(c / 0.4, 0, 1), dn = h.clamp((c - 0.4) / 0.6, 0, 1);
@@ -2536,7 +2614,7 @@ KIT.define('push_button', function (fig, part, g, p) {
   status: 'kit', merged_from: "IGF Basic M05-M15",
   course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
   why: 'M14 the ESD panel: an emergency-stop mushroom push button under a hinged guard, with its tag - the guard lifts, the button goes down and turns red, the word PRESSED shows (the shutdown it starts is drawn by the other parts)',
-  value: '0 ready, 1 pressed: the guard lifts over 0..0.4, the button goes down over 0.4..1 and turns red (trip); READY or PRESSED under the name',
+  value: '0 ready, 1 pressed: the guard lifts over 0..0.4, the button goes down over 0.4..1 and turns red (trip); READY or PRESSED under the name; option h: the height of the wall plate, 120 units (2.49.2; it was a fixed 182, so two did not stack in a 390-high figure) - the words under it keep their size',
   css: '.kit-push-button-plate{fill:var(--deep-3);stroke:var(--faint-d);stroke-width:2}' +
     '.kit-push-button-cap{fill:var(--cold);fill-opacity:.45;stroke:var(--dim-d);stroke-width:2}' +
     '.kit-push-button-lid{fill:var(--cold);fill-opacity:.2;stroke:var(--dim-d);stroke-width:2}' +
@@ -2553,10 +2631,19 @@ KIT.define('push_button', function (fig, part, g, p) {
 /* end kit-part */
 /* kit-part: person */
 KIT.define('person', function (fig, part, g, p) {
-  var h = KIT.h, S = p.scale || 1, wear = p.wear || [], names = p.names || {};
-  var NAMES = { helmet: 'HELMET', visor: 'VISOR', gloves: 'GLOVES', suit: 'SUIT', boots: 'BOOTS', scba: 'SCBA' };
-  var POS = { helmet: [26, -166, 'start'], visor: [-24, -156, 'end'], suit: [40, -104, 'start'],
-              gloves: [-42, -72, 'end'], boots: [26, -8, 'start'], scba: [40, -136, 'start'] };
+  /* WORDS (2.49.2): each item is named by default (NAMES), and "labels" says the words a slide uses instead, per item -
+     {"visor": "GOGGLES", "scba": "BREATHING APPARATUS"} (or a list in the order of "wear"; "names" is the same, kept for the
+     specs that have it; "labels": false names none). More to wear: goggles, apron, respirator. */
+  var h = KIT.h, S = p.scale || 1, wear = p.wear || [], names = {};
+  var NAMES = { helmet: 'HELMET', visor: 'VISOR', goggles: 'GOGGLES', respirator: 'RESPIRATOR', gloves: 'GLOVES', suit: 'SUIT',
+                apron: 'APRON', boots: 'BOOTS', scba: 'SCBA' };
+  var POS = { helmet: [26, -166, 'start'], visor: [-24, -156, 'end'], goggles: [-22, -151, 'end'], respirator: [-22, -138, 'end'],
+              suit: [40, -104, 'start'], apron: [-34, -108, 'end'], gloves: [-42, -72, 'end'], boots: [26, -8, 'start'],
+              scba: [40, -136, 'start'] };
+  [p.names, p.labels].forEach(function (src) {
+    if (src && typeof src === 'object' && !Array.isArray(src)) for (var key in src) names[key] = src[key];
+    else if (Array.isArray(src)) src.forEach(function (txt, i) { if (wear[i]) names[wear[i]] = txt; });
+  });
   var b = h.el('g', { transform: S === 1 ? null : 'scale(' + S + ')' }, g), nodes = {};
   function put(item, node) { (nodes[item] = nodes[item] || []).push(node); return node; }
   function use(item) { return wear.indexOf(item) >= 0; }
@@ -2596,6 +2683,12 @@ KIT.define('person', function (fig, part, g, p) {
     [-1, 1].forEach(function (s) { h.el('circle', { cx: 31 * s, cy: -82, r: 8, 'class': 'kit-person-ppe' }, gl); });
     put('gloves', gl);
   }
+  if (use('apron')) {                                                  // over the front of the body, held by a neck loop
+    var ap = h.el('g', {}, b);
+    h.el('path', { d: 'M-8 -131 Q0 -142 8 -131', 'class': 'kit-person-hose' }, ap);
+    h.el('rect', { x: -15, y: -132, width: 30, height: 50, rx: 4, 'class': 'kit-person-apron' }, ap);
+    put('apron', ap);
+  }
   if (use('scba')) {
     var sf = h.el('g', {}, b);
     h.el('line', { x1: -15, y1: -132, x2: 15, y2: -88, 'class': 'kit-person-strap' }, sf);
@@ -2615,8 +2708,20 @@ KIT.define('person', function (fig, part, g, p) {
     h.el('path', { d: 'M-15 -160 H15 V-139 Q0 -134 -15 -139 Z', 'class': 'kit-person-visor' }, vi);
     put('visor', vi);
   }
+  if (use('goggles')) {                                                // two lenses on a band across the eyes
+    var go = h.el('g', {}, b);
+    h.el('line', { x1: -14, y1: -152, x2: 14, y2: -152, 'class': 'kit-person-strap' }, go);
+    [-6, 6].forEach(function (x) { h.el('circle', { cx: x, cy: -152, r: 5, 'class': 'kit-person-visor' }, go); });
+    put('goggles', go);
+  }
+  if (use('respirator')) {                                             // a half mask over nose and mouth, with two filters
+    var re = h.el('g', {}, b);
+    h.el('path', { d: 'M-9 -147 H9 Q11 -140 0 -136 Q-11 -140 -9 -147 Z', 'class': 'kit-person-ppe' }, re);
+    [-1, 1].forEach(function (s) { h.el('circle', { cx: 10 * s, cy: -141, r: 3.5, 'class': 'kit-person-ppe' }, re); });
+    put('respirator', re);
+  }
   var tags = {};
-  if (p.names !== false) wear.forEach(function (item) {
+  if (p.names !== false && p.labels !== false) wear.forEach(function (item) {
     var q = POS[item], txt = names[item] || NAMES[item];
     if (!q || !txt) return;
     tags[item] = h.label(fig, g, { x: q[0] * S, y: q[1] * S, 'text-anchor': q[2], 'class': 'kit-cap' }, txt);
@@ -2634,7 +2739,7 @@ KIT.define('person', function (fig, part, g, p) {
   status: 'kit', merged_from: "IGF Basic M05-M15",
   course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
   why: 'M10 PPE for gas work, M11 the attendant and the entrant, M15 spill response: a plain standing worker pictogram (not a drawing of real equipment) that puts on its protective equipment one item at a time',
-  value: '0..n: item k of wear appears (and its name) from k to k+1; wear is any of helmet, visor, gloves, suit, boots, scba, in the order they are put on',
+  value: '0..n: item k of wear appears (and its name) from k to k+1; wear is any of helmet, visor, goggles, respirator, gloves, suit, apron, boots, scba, in the order they are put on; option labels (or names): {item: words} names an item in the slide\'s own words - {"visor": "GOGGLES"} - or a list in the order of wear, false for no names (2.49.2)',
   css: '.kit-person-body{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2}' +
     '.kit-person-leg{stroke:var(--dim-d);stroke-width:11;stroke-linecap:round}' +
     '.kit-person-arm{stroke:var(--dim-d);stroke-width:9;stroke-linecap:round}' +
@@ -2646,9 +2751,10 @@ KIT.define('person', function (fig, part, g, p) {
     '.kit-person-strap{stroke:var(--txt-d);stroke-width:4;stroke-linecap:round}' +
     '.kit-person-hose{fill:none;stroke:var(--txt-d);stroke-width:3;stroke-linecap:round}' +
     '.kit-person-brim{stroke:var(--txt-d);stroke-width:4;stroke-linecap:round}' +
-    '.kit-person-visor{fill:var(--cold);fill-opacity:.2;stroke:var(--txt-d);stroke-width:2}',
+    '.kit-person-visor{fill:var(--cold);fill-opacity:.2;stroke:var(--txt-d);stroke-width:2}' +
+    '.kit-person-apron{fill:var(--cold);fill-opacity:.4;stroke:var(--txt-d);stroke-width:2;stroke-linejoin:round}',
   example: { size: [640, 330], parts: [
-    { id: 'A', type: 'person', x: 110, y: 290, scale: 1.3, wear: ['helmet', 'visor', 'gloves', 'boots'], label: 'bunkering operator' },
+    { id: 'A', type: 'person', x: 110, y: 290, scale: 1.3, wear: ['goggles', 'respirator', 'apron', 'gloves'], labels: { respirator: 'HALF MASK' }, label: 'sample handler' },
     { id: 'B', type: 'person', x: 320, y: 290, scale: 1.3, wear: ['helmet', 'gloves', 'suit', 'boots', 'scba'], label: 'entrant' },
     { id: 'C', type: 'person', x: 530, y: 290, scale: 1.3, wear: ['helmet', 'visor', 'gloves', 'suit', 'boots', 'scba'], label: 'spill responder' } ],
     steps: [ { title: 'Head and hands: helmet, visor, gloves', play: [['A', 2, 1600, 0, 'linear'], ['B', 2, 1600, 0, 'linear'], ['C', 2, 1600, 0, 'linear']] },
@@ -3303,19 +3409,30 @@ KIT.define('tank_wall', function (fig, part, g, p) {
 /* end kit-part */
 /* kit-part: spill */
 KIT.define('spill', function (fig, part, g, p) {
-  var h = KIT.h, w = p.w || 300, water = p.surface === 'water', S = p.surfaceY || 150, T = water ? 50 : 16;
-  var fx = p.from != null ? p.from : w / 2, reach = p.reach || Math.min(fx, w - fx) - 8, words = p.words || ['SPREADING', 'BOILING OFF'];
+  /* THE BOX (2.49.2): the part is drawn inside [0, w] x [0, h] at its x, y - the nozzle's top at y, the surface 124 under it, then
+     the plate or the water, then the name and READY-like word. "h" (default: as tall as that takes) shortens the nozzle to fit
+     a shorter box; the pool and its vapour never reach past the sides (the wave is cut at w, a "reach" larger than the room is
+     held to it). It was drawn from y + 26 down to y + 254 whatever the spec said, so a figure that placed it by its box grew. */
+  var h = KIT.h, w = p.w || 300, water = p.surface === 'water', T = water ? 50 : 16;
+  var rows = p.label ? String(p.label).split('\n').length : 0, below = T + 30 + 16 * rows + 20;
+  // the surface, from the top of the part: a spec's surfaceY as before, else from "h", else 150 as before 2.49.2 - an
+  // approved drawing (IGF M06 s11, M15 s02) never moves because the kit changed
+  var S = p.surfaceY != null ? p.surfaceY : p.h ? h.clamp(p.h - below, 90, 600) : 150;
+  var fx = p.from != null ? p.from : w / 2, room = Math.max(0, Math.min(fx, w - fx) - 8);
+  var reach = Math.min(p.reach || room, room), words = p.words || ['SPREADING', 'BOILING OFF'];
   var ht = water ? 4 : 7, wisps = [], bubs = [], i;
   if (water) {
     h.el('rect', { x: 0, y: S, width: w, height: T, 'class': 'kit-spill-water', 'data-low-contrast': '', 'data-no-contain': '' }, g);
-    var d = 'M0 ' + S;
-    for (i = 0; i < w / 30; i++) d += ' q 7.5 -6 15 0 t 15 0';
+    var d = 'M0 ' + S, nw = Math.floor(w / 30);
+    for (i = 0; i < nw; i++) d += ' q 7.5 -6 15 0 t 15 0';
+    if (w - nw * 30 > 0.5) d += ' H' + w;                                 // the last part-wave is a straight run to the edge
     h.el('path', { d: d, 'class': 'kit-spill-wave', 'data-may-cross': '' }, g);
   } else {
     h.el('rect', { x: 0, y: S, width: w, height: T, 'class': 'kit-steel' }, g);
     for (i = 30; i < w; i += 60) h.el('path', { d: 'M' + i + ' ' + (S + T) + ' V' + (S + 34), 'class': 'kit-spill-beam' }, g);   // the stiffeners under the deck plate
   }
-  h.el('rect', { x: fx - 7, y: S - 124, width: 14, height: 46, 'class': 'kit-steel' }, g);
+  var nz = Math.max(10, Math.min(46, S - 78));                           // the nozzle, shortened when the box is
+  h.el('rect', { x: fx - 7, y: S - 78 - nz, width: 14, height: nz, 'class': 'kit-steel' }, g);
   h.el('rect', { x: fx - 15, y: S - 78, width: 30, height: 7, rx: 2, 'class': 'kit-spill-flange' }, g);
   var stream = h.el('line', { x1: fx, x2: fx, y1: S - 71, y2: S - 1, 'class': 'kit-spill-stream', 'data-may-cross': '' }, g);
   var pool = h.el('path', { d: 'M' + fx + ' ' + S, 'class': 'kit-spill-pool', 'data-may-cross': '' }, g);
@@ -3326,7 +3443,7 @@ KIT.define('spill', function (fig, part, g, p) {
     h.el('path', { d: 'M0 0 q 7 -10 0 -20 t 0 -20 t 0 -20', 'class': 'kit-spill-wisp', 'data-low-contrast': '', 'data-may-cross': '' }, wg);
     wisps.push(wg);
   });
-  var lg = h.label(fig, g, {}, ''), ly = S + 50 + 24, nl = 0;       // deck and water name themselves on one line
+  var lg = h.label(fig, g, {}, ''), ly = S + T + 30, nl = 0;       // under the plate or the water: its name, then the word for what the pool does
   if (p.label) nl = h.lines(lg, { x: w / 2, y: ly, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
   var st = h.el('text', { x: w / 2, y: ly, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'middle', 'class': 'kit-state kit-spill-st' }, lg);
   part.render = function (v) {
@@ -3349,7 +3466,7 @@ KIT.define('spill', function (fig, part, g, p) {
   status: 'kit', merged_from: "IGF Basic M05-M15",
   course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
   why: 'M15 LNG spilt on the deck and on the water: a pool spreads from the leak (far wider and thinner on water) and boils off in vapour - why the deck is steel and why water is not a safe place for a spill (plan: media plan of module 15)',
-  value: '0..1 how far the pool has spread from the leak; from about 0.5 it boils (bubbles and rising vapour wisps); surface "deck" or "water" (drawn as water, the pool spreads wider and boils harder)',
+  value: '0..1 how far the pool has spread from the leak; from about 0.5 it boils (bubbles and rising vapour wisps); surface "deck" or "water" (drawn as water, the pool spreads wider and boils harder); drawn inside its box x..x+w, y..y+h (2.49.2): the nozzle top at y, h 206 (deck) or 240 (water) unless the spec gives a shorter one, which shortens the nozzle',
   css: '.kit-spill-water{fill:var(--cold);fill-opacity:.14;stroke:none}' +
     '.kit-spill-wave{fill:none;stroke:var(--cold);stroke-width:2.5}' +
     '.kit-spill-beam{fill:none;stroke:var(--faint-d);stroke-width:3}' +
@@ -3360,7 +3477,7 @@ KIT.define('spill', function (fig, part, g, p) {
     '.kit-spill-wisp{fill:none;stroke:var(--txt-d);stroke-width:2.5;stroke-linecap:round;opacity:.45}' +
     '.kit-spill-live .kit-spill-wisp{animation:kit-spill-rise 1.1s ease-out infinite}' +
     '@keyframes kit-spill-rise{0%{opacity:.15}100%{opacity:.6}}',
-  example: { size: [640, 240], parts: [
+  example: { size: [640, 260], parts: [
     { id: 'D', type: 'spill', x: 10, y: 10, w: 300, surface: 'deck', label: 'LNG on deck', value: 0 },
     { id: 'W', type: 'spill', x: 330, y: 10, w: 300, surface: 'water', label: 'LNG on water', value: 0 } ],
     steps: [ { title: 'The LNG spreads - much further and thinner on water', play: [['D', 0.4, 1800, 0, 'linear'], ['W', 0.55, 1800, 0, 'linear']] },
@@ -3423,7 +3540,7 @@ KIT.define('tree', function (fig, part, g, p) {
     var text = h.el('text', { x: 0, y: 0, 'text-anchor': 'middle', 'class': big ? 'kit-h' : 'kit-cap' }, ng);
     var rows = String(n.label || '').split('\n');
     rows.forEach(function (s, i) { h.el('tspan', { x: 0, dy: i ? (16 / 12.5).toFixed(3) + 'em' : 0 }, text, s); });
-    var o = { g: ng, rect: rect, text: text, rows: rows, big: big, level: level, w: 0, h: 0, x: 0, y: 0, kids: [] };
+    var o = { g: ng, rect: rect, text: text, rows: rows, rows0: rows.slice(), big: big, level: level, w: 0, h: 0, x: 0, y: 0, kids: [] };
     nodes.push(o);
     return o;
   }
@@ -3435,8 +3552,36 @@ KIT.define('tree', function (fig, part, g, p) {
   (p.children || []).forEach(function (c, i) {            // the second level comes after the first, in reading order
     (norm(c).children || []).forEach(function (s) { kids[i].kids.push(make(norm(s), false, 2)); });
   });
-  function size(o, k) {
-    o.w = Math.max(p.minW || 104, h.widest(o.big ? probeH : probeC, o.rows) + 36);
+  /* THE WIDTH (2.49.2): the tree is laid out to fit "w" (default: the figure's width less the tree's x and 10) and never
+     wider - it drew a 640-wide figure's four columns 700+ wide, so the frame grew past what the type growth can follow and
+     the words were left at 11.5 px. Three tries, each tighter (the box padding, the gap between columns, then the words
+     broken at a space), the first that fits is used. */
+  var W = p.w || ((fig.spec.size && fig.spec.size[0] || 640) - (p.x || 0) - 10);
+  var CFG = [{ pad: 36, gapX: 26, minW: p.minW || 104, wrap: false }, { pad: 24, gapX: 14, minW: 80, wrap: false },
+             { pad: 20, gapX: 10, minW: 64, wrap: true }];
+  function rowsFor(o, c, room) {            // the words of a box, each row broken at its best space while it is wider than the room
+    var probe = o.big ? probeH : probeC, out = [];
+    function brk(s, left) {
+      if (!c.wrap || left < 1 || h.widest(probe, [s]) <= room - c.pad || s.indexOf(' ') < 0) { out.push(s); return; }
+      var best = null, bw = 1e9, re = / /g, m;
+      while ((m = re.exec(s))) {
+        var a = s.slice(0, m.index), b = s.slice(m.index + 1), ww = Math.max(h.widest(probe, [a]), h.widest(probe, [b]));
+        if (ww < bw) { bw = ww; best = [a, b]; }
+      }
+      brk(best[0], left - 1); brk(best[1], left - 1);
+    }
+    o.rows0.forEach(function (s) { brk(s, 2); });
+    return out;
+  }
+  function setRows(o, rows) {
+    if (o.rows.join('\n') === rows.join('\n')) return;
+    o.rows = rows;
+    while (o.text.firstChild) o.text.removeChild(o.text.firstChild);
+    rows.forEach(function (s, i) { h.el('tspan', { x: 0, dy: i ? (16 / 12.5).toFixed(3) + 'em' : 0 }, o.text, s); });
+  }
+  function size(o, k, c, room) {
+    setRows(o, rowsFor(o, c, room));
+    o.w = Math.max(c.minW, h.widest(o.big ? probeH : probeC, o.rows) + c.pad);
     o.h = o.rows.length * 16 * k + 28 * k;
   }
   function put(o, x, y, k) {
@@ -3448,15 +3593,21 @@ KIT.define('tree', function (fig, part, g, p) {
     [].forEach.call(o.text.childNodes, function (t) { t.setAttribute('x', cx.toFixed(1)); });
   }
   function place(k) {
-    var gapX = 26, gapY = 56 * Math.max(1, k * 0.9), ind = 28, rowH = 0;
-    nodes.forEach(function (o) { size(o, k); });
-    kids.forEach(function (o) { rowH = Math.max(rowH, o.h); });
-    kids.forEach(function (o) { o.h = rowH; });
-    var cols = kids.map(function (o) {
-      var gw = 0; o.kids.forEach(function (s) { gw = Math.max(gw, s.w); });
-      return Math.max(o.w, o.kids.length ? ind + gw : 0);
-    });
-    var rowW = cols.reduce(function (a, b) { return a + b; }, 0) + gapX * Math.max(0, kids.length - 1);
+    var gapY = 56 * Math.max(1, k * 0.9), ind = 28, rowH = 0, gapX, cols, rowW, c, ci;
+    for (ci = 0; ci < CFG.length; ci++) {            // the first of the three tries whose columns fit the width
+      c = CFG[ci]; gapX = c.gapX; rowH = 0;
+      var colRoom = (W - gapX * Math.max(0, kids.length - 1)) / Math.max(1, kids.length);
+      size(root, k, c, W);
+      kids.forEach(function (o) { size(o, k, c, colRoom - (o.kids.length ? ind : 0)); o.kids.forEach(function (s) { size(s, k, c, colRoom - ind); }); });
+      kids.forEach(function (o) { o.h = 0; rowH = Math.max(rowH, o.rows.length * 16 * k + 28 * k); });
+      kids.forEach(function (o) { o.h = rowH; });
+      cols = kids.map(function (o) {
+        var gw = 0; o.kids.forEach(function (s) { gw = Math.max(gw, s.w); });
+        return Math.max(o.w, o.kids.length ? ind + gw : 0);
+      });
+      rowW = cols.reduce(function (a, b) { return a + b; }, 0) + gapX * Math.max(0, kids.length - 1);
+      if (Math.max(rowW, root.w) <= W + 0.5) break;
+    }
     var total = Math.max(rowW, root.w), x = (total - rowW) / 2, d = '';
     put(root, (total - root.w) / 2, 0, k);
     var rcx = root.x + root.w / 2, busY = root.h + gapY / 2, y1 = root.h + gapY;

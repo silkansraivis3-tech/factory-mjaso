@@ -34,6 +34,8 @@ KINDS = ("alarm", "trip", "limit")
 # a second value on one part: "<id>.fill" (a pipe or hose filling), "<id>.burst" (a tank that ruptures, tank "burst"),
 # "<id>.drift" (a gas cloud carried off, gas_cloud "drift")
 SUBS = {"pipe": ("fill",), "hose": ("fill",), "tank": ("burst",), "gas_cloud": ("drift",)}
+# what a `person` can put on (the order they are put on is the order of "wear")
+PERSON_WEAR = ("helmet", "visor", "goggles", "respirator", "gloves", "suit", "apron", "boots", "scba")
 BLOCK = re.compile(r"/\*\s*kit-part:\s*([\w]+)\s*\*/(.*?)/\*\s*end kit-part\s*\*/", re.S)
 DEFINE = re.compile(r"KIT\.define\(\s*['\"](\w+)['\"]")
 MIN_PX = 12.5
@@ -144,6 +146,33 @@ def check_parts_file(path):
 
 
 # ------------------------------------------------------------------ a spec
+def cloud_origin(p):
+    """where a gas_cloud grows from, in figure coordinates, and how the kit read "from" ("box" or "figure") - the same
+    reading as kit.js (2.49.2): in the cloud's own box when it lies there, else in figure coordinates when it lies in the
+    box that way, unless "fromIn" says which"""
+    w, h = p.get("w") or 200, p.get("h") or 120
+    x0, y0 = p.get("x") or 0, p.get("y") or 0
+    fx, fy = p["from"]
+    inbox = lambda a, b: 0 <= a <= w and 0 <= b <= h
+    fig = p.get("fromIn") == "figure" or (p.get("fromIn") != "box" and not inbox(fx, fy) and inbox(fx - x0, fy - y0))
+    return ((fx, fy), "figure") if fig else ((x0 + fx, y0 + fy), "box")
+
+
+def cloud_origin_problem(p, size):
+    """a gas_cloud whose "from" puts its origin off the figure (it used to be silently drawn off the picture), else None"""
+    f = p.get("from")
+    if not (isinstance(f, list) and len(f) == 2 and all(isinstance(v, (int, float)) for v in f)):
+        return "the cloud %s has \"from\": %r - the point it grows from, [x, y]" % (p.get("id") or "", f)
+    if not (isinstance(size, list) and len(size) == 2 and all(isinstance(v, (int, float)) for v in size)):
+        return None
+    (ax, ay), how = cloud_origin(p)
+    if 0 <= ax <= size[0] and 0 <= ay <= size[1]:
+        return None
+    return ("the cloud %s grows from [%g, %g] read in %s coordinates - that is [%g, %g] on the figure, off its %gx%g size, so the "
+            "cloud is drawn off the picture; \"from\" is a point on the figure (or add \"fromIn\": \"figure\" / \"box\" to say which)"
+            % (p.get("id") or "", f[0], f[1], "the cloud's own box" if how == "box" else "figure", ax, ay, size[0], size[1]))
+
+
 def check_spec(spec, types, where):
     probs = []
 
@@ -186,6 +215,21 @@ def check_spec(spec, types, where):
             bad("the callout %r has \"to\": %r - the place it names, [x, y]" % (str(p.get("text"))[:30], p["to"]))
         if t == "text" and not str(p.get("text") or "").strip():
             bad("a text part with no words")
+        if t == "person":
+            wear = p.get("wear") or []
+            for item in wear:
+                if item not in PERSON_WEAR:
+                    bad("the person %s wears %r - the kit draws %s" % (p.get("id") or "", item, ", ".join(PERSON_WEAR)))
+            for key in ("labels", "names"):
+                if isinstance(p.get(key), dict):
+                    for item in p[key]:
+                        if item not in wear:
+                            bad("the person %s has a %s for %r, which is not in its \"wear\" - the words would never show"
+                                % (p.get("id") or "", key, item))
+        if t == "gas_cloud" and p.get("from") is not None:
+            bad_origin = cloud_origin_problem(p, size)
+            if bad_origin:
+                bad(bad_origin)
         for m in p.get("marks") or []:
             if not isinstance(m.get("at"), (int, float)):
                 bad("a mark on %s has no number at \"at\"" % pid)

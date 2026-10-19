@@ -14,6 +14,23 @@ python compile/scripts/compile_module.py <course> --module 1                buil
 python scripts/check_script_match.py <course> --module 1 --part instructor  the words are the approved ones
 ```
 
+**The module's design files (2.49.2).** Both `--init-build` and every compile first check the module's design files
+(style files, engines, `kit.js` ...) against the factory's with `design_system.py`'s own check, and **say what they did**,
+on the first line: *all N are the factory's own - nothing changed*; or *Design files were missing in ... - installed the
+factory's N*; or *N were not the factory's current ones - updated from the factory: kit.js (older version) ...* (files
+that only fell behind are put right, so a build never runs on an old `kit.js`). A file **edited inside the module** is
+different: the build stops (exit 2, nothing built), names the file and gives the exact `design_system.py install <module>
+--update` command (or, if the operator chose the different look, `design_choices.py add ... --rule shared-design`).
+**`--module final`** builds into the folder after the last planned module (architecture.json's modules + 1 - IGF: 15
+planned, so `module16`); with no architecture to count in, give `--module-dir`.
+**A final with two variants** (FA, FB) is two graded pages: `assessment\final_a.html`, `assessment\final_b.html`
+(PASSED / NOT PASSED, the pass mark, one answer-key section each; the deck's slides are Check slides, the landing card
+and the start page say "Final assessment A / B"). A single variant stays `assessment\final.html`.
+**A draft** (`--draft`, script not approved) writes `DRAFT_NOT_PACKAGED.txt` into the module folder: its preview stays
+viewable where its assets are, but `compile_course.py` and `check_course_package.py` leave it out - COURSE.html, the
+module list, every check and the importer's run - and say `moduleNN: draft - not packaged`. Building the approved script
+removes the mark.
+
 When the modules are built - and again whenever one is added or its tasks change - the course's own pages, once
 for the whole course, by one process (never a module agent: §5):
 
@@ -122,6 +139,18 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
 - **A `model_3d` slide (2.49.0, L46).** The scene is the module's own three.js file, listed in the build sheet's
   scripts like M03's `m03_station3d.js`, built to `knowledge/media-and-tasks.json` → `three_d.performance` (one shared
   renderer, built with its slide, first frame within 1 s and 30 fps with the CPU slowed 4x).
+  **Build the scene on the slide BEFORE it (2.49.2).** The first frame under 1 s is only reachable when the scene is
+  already built - geometry, materials, first render - while the trainees are still looking at the slide before: hook
+  the slide before's entry in `window.GB_HOOKS` to build it (hidden), and the 3D slide's own hook only reveals the
+  canvas and draws; honour `window.__noPrepare` and report `window.__scene3d` as `measure/GUIDE.md` §2b says - the
+  measuring tool reads it. A scene built when its slide opens took seconds on the throttled CPU in IGF M07-M15. **Measure it**: `node course-module-ux/measure/scripts/perf3d.mjs <deck.html>
+  --slides=all` (Node + headless Chrome, CPU slowed 4x, warm and cold first frame, fps; exit 1 over budget; see
+  `measure/GUIDE.md` §2b). **Every 3D scene answers a tap** (`three_d.interaction`): a tap - not a drag - on a part
+  highlights it (blue glow, the camera frames it, its name shows); a second tap on it, or a tap beside the parts,
+  puts the view back. The parts that can be tapped are the ones the labels name; raycast only on the tap, never per
+  frame; buttons and taps share one mode. Reference: IGF M03 `m03_station3d.js` (the highlight, the tap logic on
+  `pointerup`). A scene that only turns is not finished. A `[data-stage]` in a wide column takes the column's own
+  height (2.49.2) - no module override needed.
 - **Every photograph once in the whole course (L58).** No photo is shown on two screens - in this module or any other;
   a copy under another name is the same photo (same `url_or_origin`, or the same bytes). A thumbnail takes a different
   photo or none; a photo you placed (picture, inset, photo in a drawing) that is already shown is reported - choose a
@@ -147,7 +176,10 @@ Task marks. A task slide links to its set's page (`tasks\sc2_*.html`, `assessmen
 ## 2d · The task pages (2.34.0)
 
 Every task slide that opens questions gets its page from the same script: `tasks\sc1_<title>.html`,
-`assessment\check.html`, `assessment\final.html`. The page is only its questions as markup; how a trainee answers,
+`assessment\check.html`, `assessment\final.html` (`final_a.html`, `final_b.html` for a final with variants, 2.49.2). A
+real photograph beside a question carries its credit as a line on the picture and the round ⤢ button that opens it full
+screen, as on a slide; a control with ready / pressed positions on an operate-the-panel card is drawn with the kit's
+`push_button`. The page is only its questions as markup; how a trainee answers,
 grading by `data-key`, the result ring, PASSED / NOT PASSED and the classroom messages (`gb-task-done`, `gb-timer`)
 are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-task-ux/assets, installed by
 `design_system.py` like `gb_deck.js`) - promoted from the IGF pilot's Module 1. `--only tasks` builds only these.
@@ -274,6 +306,9 @@ drawings' colours only.
 - A deck changed by hand — or built by hand before the compiler — is **not overwritten**; the change
   goes into the script or the build sheet, then `--force`.
 - A missing picture is listed, never invented.
+- An inset photograph under more than about 75 words (90 on a photo split) is reported at build with the px it will
+  spill (IGF M07 s08 / s12, M09 s06: 79-105 px at 91-101 words) - before the drawing check finds it. Cut the words,
+  put the photograph on a task question, or lay it "over" a blank part of a kit drawing.
 - The same script and build sheet always give the same file.
 
 ## 5 · The course's own pages (2.37.0)

@@ -227,7 +227,9 @@ def start_extended(info, course_title, tasks, mdir, lang, w, probs):
             '  <div class="meta"><span>%s</span>%s</div>' % (e(course_title), "<span>%s</span>" % e(w["min"].format(n=mins)) if mins else ""),
             "",
             '  <a class="bigstart" href="presentation/index.html">%s</a>' % e(w["presentation"])]
-    named = {"MC": w["mc"], "FA": w["final"]}         # the deck's "MC — Module 3" says which module, not what it is
+    named = {"MC": w["mc"]}                           # the deck's "MC — Module 3" says which module, not what it is
+    codes = [c for c, _, _, _ in tasks]
+    named.update({c: cm.final_name(w["final"], c, codes) for c in codes if cm.FINAL_SET.match(c)})   # FA, FB: "Final assessment B"
     links = [(href, "%s · %s" % (code, named.get(code, title))) for code, title, href, _ in tasks if href]
     for href, _ in links:
         if not os.path.isfile(os.path.join(mdir, href)):
@@ -305,7 +307,16 @@ def main(argv=None):
         print("Stopped - architecture.json has no course.title; the classroom makes the course ID from it.")
         return 2
     mods = sorted(d for d in (os.listdir(root) if os.path.isdir(root) else []) if MODULE.match(d) and os.path.isdir(os.path.join(root, d)))
+    # 2.49.2 (F7) - a module built with --draft carries cm.DRAFT_MARK: a preview, not part of the classroom package. It gets no
+    # start pages and is not in COURSE.html or the module list - and it is said so, never silently left out
+    drafts = [d for d in mods if os.path.isfile(os.path.join(root, d, cm.DRAFT_MARK))]
+    for d in drafts:
+        print("%s: draft - not packaged (built from a script that is not approved; approve it and compile the module again)" % d)
+    mods = [d for d in mods if d not in drafts]
     if not mods:
+        if drafts:
+            print("Stopped - every module in\n    %s\n  is a draft (not packaged yet)." % root)
+            return 2
         print("Stopped - no module folders (module01 ...) in\n    %s" % root)
         return 2
     rec_p = workspace.claude_path(course, RECORD)
@@ -333,7 +344,8 @@ def main(argv=None):
     if o.module:
         only = "module%02d" % int(o.module)
         if only not in mods:
-            print("Stopped - there is no %s in\n    %s" % (only, root))
+            print("Stopped - %s is a draft (not packaged yet)." % only if only in drafts else
+                  "Stopped - there is no %s in\n    %s" % (only, root))
             return 2
 
     built = []

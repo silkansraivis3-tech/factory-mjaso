@@ -186,7 +186,10 @@ def install(module, start_deck=False, update=False):
     return 1 if blocked else 0
 
 
-def check(module, as_json=False):
+def states(module):
+    """[{file, state, path}] - OK / MISSING / OUTDATED / CHANGED (/ CHOSEN) of every canonical file in the module's assets/.
+    The compiler (compile_module.py, 2.49.2) asks this before it builds: a build with another version of kit.js or a
+    gb_* file than the factory's gave false findings (IGF M01-M06 had a 68 KB kit.js against the factory's 244 KB)"""
     spec = load_list()
     rec = read_record(module, spec).get("files", {})
     dest = os.path.join(module, spec["destination"])
@@ -215,6 +218,13 @@ def check(module, as_json=False):
         for r in rows:
             if r["state"] == "CHANGED":
                 r["state"], r["choice"] = "CHOSEN", design_choices.label(chosen)
+    return rows
+
+
+def check(module, as_json=False):
+    spec = load_list()
+    dest = os.path.join(module, spec["destination"])
+    rows = states(module)
     bad = [r for r in rows if r["state"] not in ("OK", "CHOSEN")]
     for r in rows:
         if r["state"] == "CHOSEN" and not as_json:

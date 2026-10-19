@@ -33,6 +33,9 @@ WHAT IT CHECKS - the course folder is course\\modules\\ (L44, L45)
   the recap (L51): every teaching module's deck has the recap slide straight before its module-check slide -
     class "recap", data-kind "Summary", 3 to 6 points (.rc-item) - the same design in every module
   the picture viewer (L51): every page of a module that shows a picture loads gb_zoom.js and gb_zoom.css
+  a draft (2.49.2): a module marked DRAFT_NOT_PACKAGED.txt by compile_module.py --draft (its script is not approved) is
+    left out of every check and of the importer's run, and reported as a note - "draft - not packaged"; a final
+    assessment variant (FA, FB) must be a Check slide that opens a graded page in assessment/
   the person's design choices (L26, design_choices.py): a rule the operator chose against, after hearing the risk,
     is reported as their choice - a note, never a problem
   then the importer itself (needs Node): its errors are problems, its warnings notes
@@ -79,6 +82,8 @@ TIMEOUT_TRUE = re.compile(r"timeout\s*:\s*(?!false\b)[\w!(]")
 TEAM_SIZE = re.compile(r"^\d+(?:-\d+)?$")
 IMPORTER = os.path.join(SKILLS, "course-tablet-publisher", "vendor", "import_check.mjs")
 MODULE = re.compile(r"^module\d{2}$")
+DRAFT_MARK = "DRAFT_NOT_PACKAGED.txt"       # written by compile/scripts/compile_module.py --draft
+FINAL_SET = re.compile(r"^F[A-Z]$")           # a final assessment's set: FA, FB ... (2.49.2)
 # the importer's own two rules, word for word from package-core.mjs
 INSTRUCTOR_ONLY = re.compile(
     r"(^|/)(?:instructor[^/]*|presentation|plan|plans|prepare|record|answers|instructor_screens)(/|$)"
@@ -190,6 +195,28 @@ def run_importer(folder):
         return None, "the admin panel's own import check could not run: %s" % err
 
 
+def run_importer_without_drafts(folder):
+    """the importer on the package as the classroom would get it: a module marked as a draft (DRAFT_NOT_PACKAGED.txt) is left out -
+    on a copy made of hard links (a copy of the files where the disk will not link), removed again afterwards"""
+    drafts = {d for d in os.listdir(folder) if MODULE.match(d) and os.path.isfile(os.path.join(folder, d, DRAFT_MARK))}
+    if not drafts:
+        return run_importer(folder)
+    import tempfile
+
+    def link(src, dst):
+        try:
+            os.link(src, dst)
+        except OSError:
+            shutil.copy2(src, dst)
+    tmp = tempfile.mkdtemp(prefix="package_")
+    try:
+        dst = os.path.join(tmp, os.path.basename(os.path.abspath(folder)))
+        shutil.copytree(folder, dst, ignore=lambda d, names: [n for n in names if d == folder and n in drafts], copy_function=link)
+        return run_importer(dst)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def check(folder):
     probs, notes = [], []
     rel = lambda p: os.path.relpath(p, folder).replace("\\", "/")
@@ -200,6 +227,13 @@ def check(folder):
     elif not parse(cp).title.strip():
         probs.append("COURSE.html has no <title> - the classroom takes the course title (and its ID) from it")
     mods = sorted(d for d in os.listdir(folder) if os.path.isdir(os.path.join(folder, d)) and MODULE.match(d))
+    # 2.49.2 (F7) - a module built with compile_module.py --draft carries DRAFT_NOT_PACKAGED.txt: a preview from a script that is
+    # not approved. It is not part of the classroom package - left out of every check below, and said so, never silently
+    drafts = [d for d in mods if os.path.isfile(os.path.join(folder, d, DRAFT_MARK))]
+    for d in drafts:
+        notes.append("%s: draft - not packaged (its script is not approved; it is left out of this check and of the classroom "
+                     "package until it is approved and compiled again)" % d)
+    mods = [d for d in mods if d not in drafts]
     if not mods:
         probs.append("no module folders named module01, module02 ...")
     for d in sorted(os.listdir(folder)):
@@ -230,6 +264,8 @@ def check(folder):
     # ---- every file
     count, distinct, seen = 0, 0, set()
     for dp, dn, fn in os.walk(folder):
+        if dp == folder:
+            dn[:] = [x for x in dn if x not in drafts]          # a draft module is not part of the package
         for x in dn + fn:
             if " " in x:
                 probs.append("a space in the name: %s - the classroom needs names without spaces" % rel(os.path.join(dp, x)))
@@ -273,6 +309,10 @@ def check(folder):
                     code, href = s.get("data-activity", ""), s.get("data-task-href", "")
                     if not code:
                         probs.append("%s is a %s slide with no data-activity code" % (where, kind))
+                    if FINAL_SET.match(code) and (kind != "Check" or "/assessment/" not in "/" + unquote(href).replace("\\", "/").lstrip("./")):
+                        probs.append("%s: a final assessment variant (%s) must be a Check slide that opens a graded page in assessment/ "
+                                     "(final.html, or final_a.html, final_b.html for variants) - not a task page; it opens %s as a %s slide"
+                                     % (where, code, href or "nothing", kind))
                     if href:
                         target = os.path.normpath(os.path.join(md, "presentation", unquote(href)))
                         if not os.path.isfile(target):
@@ -451,7 +491,7 @@ def main(argv=None):
         return 2
     folder = course_folder(a.folder)
     probs, notes, mods = check(folder)
-    imp, why = (None, None) if a.no_importer else run_importer(folder)
+    imp, why = (None, None) if a.no_importer else run_importer_without_drafts(folder)
     if imp:
         probs += ["the classroom's importer: " + e for e in imp.get("errors", [])]
         notes += ["the classroom's importer: " + w for w in imp.get("warnings", [])
