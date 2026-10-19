@@ -4,3 +4,7 @@
 # differ from the repo for no reason.
 __pycache__/
 *.py[cod]
+
+# Claude Code's per-machine state: session worktrees and the local preview
+# launch.json. Every colleague's copy differs; none of it belongs in the plugin.
+.claude/
