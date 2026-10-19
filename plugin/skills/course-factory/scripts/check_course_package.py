@@ -28,6 +28,8 @@ WHAT IT CHECKS - the course folder is course\\modules\\ (L44, L45)
     notes from the module's own scripts where a 3D scene would lag on the tablet (knowledge/media-and-tasks.json three_d)
   team tasks (rulebook 4b): a slide with data-mode="team" and its page with task-mode / task-scope metas, both or
     neither; the page listens for gb-team; scope team hands in with scope: 'team'; a sensible data-team-size
+  every task page (rulebook of 2026-10-19): never leaves itself - no link to a file, no new window, no navigation of
+    the frame; no 'Answers' / 'Review' / 'Show solution' / 'Next task' / 'Menu' / 'Home' button - the result is last
   every trainee page: no answer readable in its source (data-correct, data-answer); no link into a _ folder;
     notes when a page that hears the timer never reports timeout: true, or offers "try again" inside the classroom
   the recap (L51): every teaching module's deck has the recap slide straight before its module-check slide -
@@ -78,6 +80,15 @@ RENDERER = re.compile(r"new\s+[\w.]*WebGLRenderer\s*\(")
 ANSWER_ATTR = re.compile(r"<[^>]*\sdata-(?:correct|answer|right|solution)\s*=", re.I)
 RETRY = re.compile(r"(?i)\b(?:try|start|play)\s+again\b|m\u0113\u0123in\u0101t v\u0113lreiz|s\u0101kt no jauna")
 IN_FRAME = re.compile(r"(?:window\.)?parent\s*[!=]==?\s*(?:window|self)|(?:window\.)?self\s*[!=]==?\s*(?:window\.)?top|(?:window\.)?top\s*[!=]==?\s*(?:window|self)")
+LEAVES = (   # a task page never leaves itself - the tablet has no back button (rulebook of 2026-10-19)
+    (re.compile(r"<a\b[^>]*\bhref\s*=\s*[\"'](?!#|javascript:void)[^\"']+", re.I), "has a link to another page"),
+    (re.compile(r"\btarget\s*=\s*[\"']_blank", re.I), "opens a new window (target=_blank)"),
+    (re.compile(r"\bwindow\.open\s*\("), "opens a new window (window.open)"),
+    (re.compile(r"\blocation\.(?:href\s*=(?!=)|assign\s*\(|replace\s*\()|\b(?:window\.|document\.)?location\s*=(?!=)"), "sends the frame to another page (location)"),
+)
+NO_PRESS = r"(?:answers?|show answers?|correct answers?|review|review answers?|show (?:the )?solutions?|solutions?|next task|menu|main menu|home|back|back to (?:menu|tasks|the guide)|all tasks)"
+AFTER_BUTTON = re.compile(r"<(?:button|a)\b[^>]*>\s*(?:<[^>]+>\s*)*(" + NO_PRESS + r")\s*(?:<[^>]+>\s*)*</(?:button|a)>"
+                          r"|(?:textContent|innerText|innerHTML|value)\s*=\s*[\"'](" + NO_PRESS + r")[\"']", re.I)
 TIMEOUT_TRUE = re.compile(r"timeout\s*:\s*(?!false\b)[\w!(]")
 TEAM_SIZE = re.compile(r"^\d+(?:-\d+)?$")
 IMPORTER = os.path.join(SKILLS, "course-tablet-publisher", "vendor", "import_check.mjs")
@@ -406,6 +417,13 @@ def check(folder):
                     notes.append("%s hears the timer but never reports timeout: true - when the time is up it marks what was done and reports it" % rel(p))
                 if RETRY.search(txt) and not IN_FRAME.search(txt):
                     notes.append("%s offers to try again - inside the classroom one opening gives one result; allow it only outside the frame (window.parent === window)" % rel(p))
+                # rulebook of 2026-10-19 - the result is the last screen, and the page never leaves itself
+                for rx, why in LEAVES:
+                    if rx.search(txt):
+                        probs.append("%s %s - the trainee tablet has no back button, so it would be a dead end; a task moves only between its own steps" % (rel(p), why))
+                m = AFTER_BUTTON.search(txt)
+                if m:
+                    probs.append("%s has a \"%s\" button - after the result there is nothing to press; the classroom shows the answers in the debrief" % (rel(p), (m.group(1) or m.group(2)).strip()))
                 # rulebook 4b - a team task is marked in both places, and works without teams too
                 slide_team, page_team = sa.get("data-mode", "") == "team", tp.metas.get("task-mode", "") == "team"
                 if slide_team and not page_team:

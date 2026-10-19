@@ -1246,6 +1246,16 @@ each found only after a full build. Now the kit and its checks take that work:
   entry; two questions, other answers, two drawings). IGF M01 recompiled as a copy (benchmark `compiler_fix\course`):
   the s05 finding shows; q03 has its own drawing, no % box, its tap area 56 x 251 px over the whole mast.
 
+## 4zz · The rulebook of 2026-10-19: the result is the last screen (main's 2.31.0, merged as 2.50.3)
+
+The tablet system's project manager sent the next `COURSE_FACTORY_PROMPT.md` (the importer was unchanged). New: after
+the result a task page has nothing to press - no "Answers", "Review", "Show solution", "Next task", "Menu" or "Home",
+no link - because the trainee tablet has no back button and the classroom shows the answers in the debrief; and a task
+moves only between its own steps, never navigating the frame or opening a window. `classroom-system.json`
+(`task_page.result_is_last`, `stays_on_its_page`, the handover list), `check_course_package.py` (a link to a file,
+`target=_blank`, `window.open`, `location` navigation, and those button labels in markup or set from script are
+problems; in-page `#steps`, Next and Previous pass), `course-task-ux` §9a. Tests: seven breaks caught, own steps pass.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.
