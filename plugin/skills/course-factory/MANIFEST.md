@@ -1216,19 +1216,47 @@ each found only after a full build. Now the kit and its checks take that work:
 
 ## 5 · Known gaps / before this goes live
 
-1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never
-   driven a course from a brief. `templates/factory-notes.md` §9 is the channel for what that
-   teaches; there is no companion file yet, so nothing has come back.
-2. **The count-claim check is advisory, not solved.** Deck-size phrasing varies per course and a
-   range sentence ("over two screens") reads like a size claim. It printed 13 wrong claims before
-   narrowing and still prints 3 on a correct course. A per-course declared pattern would fix it.
-3. **`build-order.json` names owners but enforces nothing.** Nothing stops a step running before
-   its predecessor. The gate at step 5 is the only hard stop.
-4. **GAS BASIC itself is not yet compliant.** It is 535 min over, so `check_hours.py` exits 1 on
-   it by design. Rebalancing it — moving the excess to the handout, per the owner's ruling — is
-   outstanding work, not a skill defect.
-5. **No cost pass.** `novikontas-token-economics` has not been run against this bundle. The
-   router is ~1.4k words and each lane is read alone, which is the intended shape, but the
-   description length and worst-case single-mode load are unmeasured.
-6. **Modules 1 and 8 of GAS BASIC have no module plan**, so the "one plan per module" rule this
-   skill mandates is not yet true of the course it was derived from.
+Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.
+The IGF course (MC 7.13) was built from its approved scripts - M01-M15 and the final assessment, 2026-10-15 to
+10-19 - and what each build found came back through the course's `working_claude/factory-notes.md` and build notes
+and was fixed (§4zs-§4zx). What is still open:
+
+**Waiting on the owner's decision** (also in PR #1)
+
+1. **The hand-off screen.** The ruling of 2026-09-03 (`floor.json`) puts a hand-off screen after the module check,
+   but the script allows no screen after the check, so every compiled deck ends on it and `check_static.py`
+   reports 2 findings per module. Open question: should the compiler add the hand-off screen itself (it is not
+   content)?
+2. **Theory / practice balance on compiled decks.** `check_balance.py` needs `data-active` on each block; the
+   compiler does not write it. Copying the script's active-slide mark across makes each active slide a "100 %
+   active theory block", which `check_balance` flags as a rename. Which rule wins is the owner's call.
+3. **Per-question Retry** (C16) stays out: it contradicts course-task-ux §9a (one opening, one result).
+
+**Not built yet, on purpose**
+
+4. **The script editor** - an instructor changing a script without an AI session. Its own proposal, later.
+5. **Tap-to-open cards** built from the course's own material: automatic cards would hide the lines a stepping
+   figure lights (L53); they wait for the script rewrite Aigars asked for (claim titles, one lead line).
+6. **Latvian and Russian wording** has not had a native speaker's check.
+7. **Real tablets.** Every measurement is in headless Chrome (1280x800, 1920x1080, 1024x768); the decks and task
+   pages have not been run on the Training / Trainer terminals (L39 - the owner's).
+
+**Checks weaker than they look**
+
+8. **The count-claim check is advisory** (`verify_course.py`): a range sentence ("over two screens") reads like a size
+   claim, and it still prints 3 on a correct course. A per-course declared pattern would fix it.
+9. **`knowledge/build-order.json` names owners but enforces nothing.** The gate at step 5 is the only hard stop.
+10. **Stated in 2.49.4 and not changed:** the nano-banana spending cap prices every picture and clip flat (EUR 0.10 /
+    1.50, settable); `gemini_take.py take` moves the newest download without a name filter; the gate report is not
+    tied to the staged content; secrets are scanned in text extensions only.
+
+**Not measured**
+
+11. **No cost pass on course-factory.** `novikontas-token-economics` was run on course-module-ux and course-task-ux
+    (2026-09-03), not on this skill: its description length and worst-case single-lane load are unmeasured.
+
+**The reference course** (GAS BASIC is not on the machine this list was rewritten on - as last recorded, 2026-09-10)
+
+12. **GAS BASIC is 535 min over**, so `check_hours.py` exits 1 on it by design; moving the excess to the handout, per the
+    owner's ruling, is course work, not a factory defect. **Its modules 1 and 8 had no module plan** - since 2.47.0
+    `module_plan.py` builds the plan from the script, so compiling them would close it.
