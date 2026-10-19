@@ -1214,6 +1214,31 @@ each found only after a full build. Now the kit and its checks take that work:
   on the drawing found; beside it, or a marker on a photo, silent), `test_compile_module.py` 271;
   the new check flagged M02 s13 before the move and is clean at all 6 steps after it.
 
+## 4zy · The M01 benchmark's compiler gaps: 3D said, EMPTY at the busiest step, the vent mast's tap area (2.49.7, 2026-10-19)
+
+- **Found** (IGF M01 built twice from one script, by hand at 2.24.0 and by the compiler at 2.49.6 - benchmark
+  `compiler\METRICS.md`): (1) s05 is `model_3d`, the build sheet gave it a kit figure and the compile passed without a
+  word - the compiler never read the kind. (2) EMPTY named s02's rest state, "at its fullest (step 0 of 3)": a part a
+  later step brings in waits at opacity 0 and was counted at every step, so every state looked alike and step 0 won
+  the tie. (3) A hotspot on a kit `vent` covered only its outlet, so q03 "Vent mast" took a hand-made % box. Behind
+  that box, (4): with `"unlabel": "answers"`, two questions on one kit figure shared one drawing (the share key held
+  the word "answers", not the answers), so q03 was shown q01's drawing, with "vent mast" still written on it.
+- **Now:** (1) a 3D slide whose figure is not an `.html` scene (`[data-stage]`, `data-3d`, `data-scene`, `<canvas>`) is
+  a must-fix in the build and a note on the script's review page, "asks for a 3D scene; it has a 2D figure", until the
+  slide's entry holds the operator's reason, `"declined_3d"` (content_script `flat_3d`, `build_findings`).
+  `--init-build` plans a `model_3d` slide's scene by default: its figure, its scene file and `three.min.js` in
+  `"scripts"`, and a `"_figure"` note from M03's `m03_station3d.js` (GUIDE 2b; L46 limits unchanged). (2) each step is
+  judged by what it shows (settled), a tie goes to the later step, and the finding says "at its busiest step (step N of
+  M)". (3) a `vent` on top of a pipe's upright run lays an unpainted box down the run, so its tap area (and a label's
+  leader end) is the whole mast; `"mast": false` / `"mast": <length>`. (4) the share key holds the answers' part ids.
+- **Not fixed by this - the benchmark misread it:** M01 s02 without its captions is 60 % blank at its busiest step too
+  (all three markers in): the captions fill a real hole, they are no workaround for a wrong check.
+- **Proof:** `test_audit_drawing.py` 33 (the M01 s02 scale: EMPTY at step 3 of 3), `test_task_engine.py` 75 (a vent
+  mast's tap area covers its pipe run, in a browser), `test_compile_module.py` 279 (2D figure on a 3D slide said in the build
+  and on the review page; a kit figure too; a scene silent; `declined_3d` silent, an empty one not; the starter scene
+  entry; two questions, other answers, two drawings). IGF M01 recompiled as a copy (benchmark `compiler_fix\course`):
+  the s05 finding shows; q03 has its own drawing, no % box, its tap area 56 x 251 px over the whole mast.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

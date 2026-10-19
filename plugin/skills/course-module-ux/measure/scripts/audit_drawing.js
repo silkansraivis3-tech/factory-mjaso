@@ -475,7 +475,7 @@
       if (E4) {
         report(out, { check: "empty", where: where, part: "blank " + Math.round(E4.blank * 100) + " % of the frame, largest piece " +
                       Math.round(E4.w) + " x " + Math.round(E4.h) + " px = " + Math.round(E4.share * 100) + " %", other: E4.frame,
-                      detail: "too much empty space" + (E4.steps ? ", even at its fullest (step " + E4.step + " of " + E4.steps + ")" : "") +
+                      detail: "too much empty space" + (E4.steps ? ", even at its busiest step (step " + E4.step + " of " + E4.steps + ")" : "") +
                       " (limits: " + Math.round(CONFIG.emptyMaxBlank * 100) + " % blank, " +
                       Math.round(CONFIG.emptyMaxShare * 100) + " % in one piece) - the largest blank piece is " + E4.region +
                       " - draw to the frame there, crop the drawing, or give the room to the words", region: E4.at }, [svg]);
@@ -641,23 +641,28 @@
     /* a figure that steps is judged at its BUSIEST step - the state with the least blank, a hole counting against it - not
        at step 0 (a rest state is sparse by design: the steps bring the parts in) and not only at the last. A figure whose
        fullest state is still too empty is empty. Remembered per drawing and frame, so a run that visits every step judges
-       once (K12, IGF M06) */
+       once (K12, IGF M06).
+       Each state is judged by what it SHOWS (2.49.7, IGF M01 s02): a part a later step brings in waits at opacity 0, and
+       counted at every step it made every state look alike - the rest state won the tie and the finding named "step 0",
+       the state with the scale's markers hidden. A tie now goes to the later step, where a figure's parts have come in. */
     var f = svg.__kit, key = [Math.round(fr.x), Math.round(fr.y), Math.round(fr.w), Math.round(fr.h), svg.getAttribute("viewBox"),
                               f && f.steps ? f.steps() : 0].join("|");
     if (svg.__emptyKey === key) { return null; }
     svg.__emptyKey = key;
     var res = null, step = 0;
+    var showing = function (parts) { return parts.filter(function (it) { return shown(it.el, svg); }); };
     if (f && f.steps && f.steps() && f.go) {
       var n0 = f.n, k, here;
       try {
         for (k = 0; k <= f.steps(); k++) {
           f.go(k, true);
-          here = judge(k === n0 ? geom : painted(svg));
-          if (!res || (here.hole ? 1 : 0) + here.blank < (res.hole ? 1 : 0) + res.blank) { res = here; step = k; }
+          settle(svg);                                /* a fade the step started is judged at its end */
+          here = judge(showing(painted(svg)));
+          if (!res || (here.hole ? 1 : 0) + here.blank <= (res.hole ? 1 : 0) + res.blank) { res = here; step = k; }
         }
-      } finally { f.go(n0, true); }
+      } finally { f.go(n0, true); settle(svg); }
     } else {
-      res = judge(geom);
+      res = judge(showing(geom));
     }
     if (!res.hole && res.blank <= CONFIG.emptyMaxBlank) { return null; }
     /* where the blank piece is, so the drawing can be filled there */

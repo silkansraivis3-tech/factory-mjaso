@@ -8,7 +8,11 @@
        good-pipes    two pipe routes that go round the panel with valves on them: a pipe counts by its bounding box, so
                      the space its bends enclose is not "blank" (counted by its outline alone, thin pipes read as empty)
        good-busiest  a pool fire that burns at step 1 and is out at the last step: the rest state and the last state are
-                     sparse by design, the figure is judged at its BUSIEST step and passes -->
+                     sparse by design, the figure is judged at its BUSIEST step and passes
+       bad-scale     IGF M01 s02 (2.49.7): a temperature scale whose three markers come in one step at a time and wait at
+                     opacity 0 until then. Judged by what each step SHOWS, its busiest step is the last (all three markers),
+                     and that state is still more than half blank: EMPTY, and the finding names step 3 of 3 - not the rest
+                     state "step 0", which won a tie while the hidden markers were counted at every step -->
 <link rel="stylesheet" href="../../../course-visuals/kit/kit.css">
 <style>
   body{margin:0;padding:20px;font-family:sans-serif;background:#fff}
@@ -19,6 +23,7 @@
 <div class="kit-screen"><svg id="bad-sparse" data-kit="#spec-sparse"></svg></div>
 <div class="kit-screen"><svg id="good-pipes" data-kit="#spec-pipes"></svg></div>
 <div class="kit-screen"><svg id="good-busiest" data-kit="#spec-busiest"></svg></div>
+<div class="kit-screen"><svg id="bad-scale" data-kit="#spec-scale"></svg></div>
 
 <script type="application/json" id="spec-sparse">{"size":[640,390],"label":"a small tank in a corner","fit":false,"parts":[
  {"id":"T","type":"tank","x":30,"y":30,"w":150,"h":80,"label":"tank","value":0.5}]}</script>
@@ -30,6 +35,13 @@
 <script type="application/json" id="spec-busiest">{"size":[640,390],"label":"a pool fire that goes out","fit":false,"parts":[
  {"id":"F","type":"fire","kind":"pool","x":40,"y":340,"w":560,"height":300,"value":0}],
  "steps":[{"title":"The pool burns","play":[["F",1,500]]},{"title":"The fire is put out","play":[["F",0,500]]}]}</script>
+<script type="application/json" id="spec-scale">{"size":[640,370],"label":"oil fuel, methanol and LNG on a temperature scale","parts":[
+ {"id":"S","type":"scale","orient":"h","x":40,"y":300,"len":560,"w":22,"min":-200,"max":120,"every":40,"unit":"°C","reach":220,
+  "limits":[{"at":60,"label":"60 °C","side":"left"}],
+  "markers":[{"label":"oil fuel","note":"60 °C or more","at":85,"rise":200},
+             {"label":"methanol","note":"flashpoint about 12 °C","at":12,"rise":110,"side":"left"},
+             {"label":"LNG","note":"flashpoint about -188 °C","at":-188,"rise":262}]}],
+ "steps":[{"title":"Oil fuel","play":[["S",1,500]]},{"title":"Methanol","play":[["S",2,500]]},{"title":"LNG","play":[["S",3,500]]}]}</script>
 
 <pre id="out"></pre>
 <script src="../scripts/audit_drawing.js"></script>

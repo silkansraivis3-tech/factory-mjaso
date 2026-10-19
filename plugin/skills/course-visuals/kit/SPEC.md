@@ -75,7 +75,7 @@ words for the 12.5 px floor, how many labels it moved, any it could not place, a
 | `exchanger` | `r label` - P&ID heat exchanger (vaporizer, heater) | 0..1 heating |
 | `pump` | `r label` - P&ID centrifugal pump | 0 stopped, 1 running |
 | `engine` | `w h cylinders label` - dual-fuel engine block | 0 stopped, 1 running |
-| `vent` | `label labelAt(left)` - vent outlet to the open air | 0..1 venting |
+| `vent` | `label labelAt(left)` `mast` - vent outlet to the open air. On top of a pipe's upright run it is a vent mast: its tap area on a task is the whole run, not the outlet (2.49.7); `mast: false` keeps the outlet alone, `mast: <length>` gives the run when no pipe draws it | 0..1 venting |
 | `badge` | `n` - a numbered step marker | 0..1 lit |
 | `wire` | `d` - ISA dashed signal line | - |
 | `text` | `text style(h, cap, tick, sl) anchor near fixed reveal`; `\n` breaks lines; it may shift up to `near` (28) to stay clear. With **`to: [x, y]`** it is a CALLOUT: words for that place, joined to it by a leader line, placed clear by the layout. **`reveal: true`** (or a `value`) makes the words - and a callout's dot and leader - a thing a step brings in: not drawn at rest, `["T", 1, 400]` fades them in, so a predict-then-reveal slide does not print its answer | 0..1 opacity (with `reveal`/`value`) |
@@ -175,7 +175,8 @@ for its empty label boxes); a deck never sets it.
 - **Draw to the panel.** `size` has the shape of the panel the figure is shown in (the wide column of a `two-col`
   slide: about 640 × 390, a dark slide 680 × 415), and the drawing covers it: `audit_drawing.js` EMPTY allows at most
   half of the panel blank and no blank piece over a fifth. A figure that steps is judged at its busiest step (a rest state is
-sparse by design); a pipe counts by its bounding box, so the space inside its bends is not blank; and the finding says where the
+sparse by design), each step by what it shows - a part still to come is not counted (2.49.7) - and the finding names
+that step; a pipe counts by its bounding box, so the space inside its bends is not blank; and the finding says where the
 largest blank piece is (side and pixels). A whole ship for five spaces,
   one pipe with three valves, a small scale in a big panel - crop to what the steps show, spread the parts, add the
   context the slide's lines name (the master valve before the gas valve unit, the engine-room boundary).

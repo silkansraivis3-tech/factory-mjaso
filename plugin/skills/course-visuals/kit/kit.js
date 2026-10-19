@@ -1275,8 +1275,44 @@
     part.render = function (v) { var on = v > 0.5; g.classList.toggle('kit-running', on); st.textContent = on ? 'RUNNING' : 'STOPPED'; };
   };
 
-  /* vent - a vent outlet to the open air. value 0..1 = how much is venting (puffs) */
+  /* the mast a vent stands on: the straight upright run of a spec pipe that ends at the vent's outlet, as [x, top, bottom]
+     in the vent's own units (2.49.7, IGF M01 q03) - read like pipeThrough reads a pipe, absolute or relative M L H V */
+  function mastUnder(fig, x, y) {
+    var best = null;
+    (fig.spec.parts || []).forEach(function (q) {
+      if (q.type !== 'pipe' || !q.d) return;
+      var t = String(q.d).match(/[a-zA-Z]|-?\d*\.?\d+(?:e-?\d+)?/g) || [], N = { M: 2, L: 2, H: 1, V: 1 };
+      var ox = q.x || 0, oy = q.y || 0, cx = 0, cy = 0, cmd = '', i = 0, pts = [];
+      while (i < t.length) {
+        if (/[a-zA-Z]/.test(t[i])) cmd = t[i++];
+        var up = cmd.toUpperCase(), rel = cmd !== up, n = N[up];
+        if (!n) { pts = []; break; }                       // a curve: no straight mast to read
+        var a = t.slice(i, i + n).map(Number), nx = cx, ny = cy; i += n;
+        if (up === 'H') nx = a[0] + (rel ? cx : 0); else if (up === 'V') ny = a[0] + (rel ? cy : 0);
+        else { nx = a[0] + (rel ? cx : 0); ny = a[1] + (rel ? cy : 0); }
+        if (up === 'M') { pts = []; cmd = rel ? 'l' : 'L'; }
+        cx = nx; cy = ny;
+        pts.push([ox + cx, oy + cy]);
+      }
+      [[0, 1], [pts.length - 1, pts.length - 2]].forEach(function (e) {
+        var A = pts[e[0]], B = pts[e[1]];
+        if (!A || !B || Math.abs(A[0] - x) > 3 || Math.abs(A[1] - y) > 3 || Math.abs(B[0] - A[0]) > 3 || B[1] - A[1] < 12) return;
+        if (!best || B[1] - A[1] > best[2] - best[1]) best = [A[0] - x, A[1] - y, B[1] - y];
+      });
+    });
+    return best;
+  }
+
+  /* vent - a vent outlet to the open air. value 0..1 = how much is venting (puffs).
+     A vent on top of a pipe's upright run is a VENT MAST: its tap area on a task (gb_answer.js lays it on the part's box) is the
+     whole mast, not the outlet alone - an unpainted box down the run (2.49.7, IGF M01 q03 needed a hand-made % box).
+     "mast": false keeps the outlet alone; "mast": <length> gives the run when no pipe of the spec draws it. */
   TYPES.vent = function (fig, part, g, p) {
+    var mast = p.mast === false ? null : typeof p.mast === 'number' && p.mast > 0 ? [0, 0, p.mast] : mastUnder(fig, p.x || 0, p.y || 0);
+    if (mast) {
+      el('rect', { x: mast[0] - 9, y: mast[1], width: 18, height: mast[2] - mast[1], 'class': 'kit-hit',
+                   style: 'fill:none;stroke:none' }, g);
+    }
     el('path', { d: 'M-9 0 H9 M-6 -6 H6', 'class': 'kit-flange' }, g);
     var puffs = el('g', { 'class': 'kit-puffs' }, g);
     [0, 0.45, 0.9].forEach(function (d, i) {

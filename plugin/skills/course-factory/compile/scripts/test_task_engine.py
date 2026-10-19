@@ -311,9 +311,11 @@ PROBE = r"""
     var k = s.querySelector('svg.taskfig[data-kit]');
     if (k) {
       q.kit = {mounted: !!k.__kit, n: k.__kit && k.__kit.n, steps: k.__kit && k.__kit.steps(), still: k.hasAttribute('data-kit-still'),
-               motion: k.hasAttribute('data-motion'), want: k.getAttribute('data-kit-step'), inside: [], leaders: []};
+               motion: k.hasAttribute('data-motion'), want: k.getAttribute('data-kit-step'), inside: [], leaders: [], boxes: {}, hots: {}};
+      Object.keys(k.__kit.parts).forEach(function (id) { q.kit.boxes[id] = R(k.__kit.parts[id].g); });
       [].forEach.call(s.querySelectorAll('.hot[data-part]'), function (h) {
         var pr = R(k.__kit.parts[h.getAttribute('data-part')].g), hr = R(h);
+        q.kit.hots[h.getAttribute('data-part')] = hr;
         q.kit.inside.push({part: h.getAttribute('data-part'), ok: hr.l <= pr.l + 1 && hr.r >= pr.r - 1 && hr.t <= pr.t + 1 && hr.b >= pr.b - 1 && hr.w >= 55 && hr.h >= 55});
       });
       [].forEach.call(s.querySelectorAll('line[data-part]'), function (ln) {
@@ -372,6 +374,19 @@ def probe(exe, page, tmp, size=(1280, 800)):
     return json.loads(html.unescape(m.group(1))) if m else {"errors": ["no result: " + p.stdout[-300:] + p.stderr[-300:]], "qs": []}
 
 
+VENT_KIT = {"size": [400, 240], "label": "A fuel tank, a pump and the vent mast", "parts": [
+    {"id": "tk", "type": "tank", "x": 30, "y": 150, "w": 160, "h": 70, "label": "Fuel tank", "value": 0.5},
+    {"id": "pp", "type": "pump", "x": 250, "y": 185, "r": 24, "label": "Pump", "value": 0},
+    {"id": "vp", "type": "pipe", "fluid": "gas", "d": "M330 210 V40", "value": 0},
+    {"id": "vm", "type": "vent", "x": 330, "y": 40, "label": "Vent mast"}]}
+FIGURE_TASKS_VENT = [
+    {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the vent mast", "text": "Self-check on your tablet now.", "minutes": 2},
+    {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the vent mast.", "visual": "the vent mast",
+     "answer": "Vent mast*\nFuel tank\nPump", "feedback": "The tall pipe with the outlet on top."}]
+VENT_BUILD = {"module": 1, "screens": {"t01": {"try_tablet": False},
+              "q01": {"figure": "vent.kit.json", "unlabel": "answers", "areas": {"Vent mast": "vm", "Fuel tank": "tk", "Pump": "pp"}}}}
+
+
 def figures_part(exe, tmp):
     """2.43.0 in a browser: nothing ever sits under the Check bar at 1280 x 800 and 1024 x 768; a photograph's tap is the
     answer and its corner button opens it; a figure-kit drawing is drawn still at its last step and its tappable areas
@@ -419,6 +434,20 @@ def figures_part(exe, tmp):
     check("label the photograph: opens by its corner button too", (qs.get("m01") or {}).get("corner") is True, qs.get("m01"))
     low = [q["id"] for q in qs.values() if max([o["b"] for o in q["chips"]] or [0]) > q["dockTop"] + 0.5]
     check("1280 x 800: the label chips are above the Check bar", not low, low)
+
+    # 2.49.7 (IGF M01 q03) - a vent on top of a pipe's upright run is a vent mast: its tap area is the whole mast, not the cap
+    os.makedirs(os.path.join(tmp, "vent"))
+    c, md = tcm.figures_course(os.path.join(tmp, "vent"), build=VENT_BUILD, screens=FIGURE_TASKS_VENT)
+    io.open(os.path.join(c, "working_claude", "figures", "M01", "vent.kit.json"), "w", encoding="utf-8").write(json.dumps(VENT_KIT))
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    check("a hotspot on a kit vent mast, named by its part id, builds clean - no box in %", code == 0, out)
+    pages = [os.path.join(md, "tasks", x) for x in os.listdir(os.path.join(md, "tasks")) if x.startswith("sc1_")]
+    r = probe(exe, pages[0], tmp) if pages else {}
+    k = ({q["id"]: q for q in r.get("qs", [])}.get("q01") or {}).get("kit") or {}
+    hot, mast = (k.get("hots") or {}).get("vm"), (k.get("boxes") or {}).get("vp")
+    check("the vent mast's tap area covers its whole mast - the pipe run under the outlet, not the cap alone",
+          bool(hot and mast) and hot["t"] <= mast["t"] + 1 and hot["b"] >= mast["b"] - 1 and hot["l"] <= mast["l"] + 1 and hot["r"] >= mast["r"] - 1,
+          {"hot": hot, "mast": mast, "errors": r.get("errors")})
 
 
 # ---------------------------------------------------------------- 2.46.0: what rebuilding IGF M01-M03 found in the engine

@@ -17,6 +17,7 @@ Pinned:
 """
 from __future__ import annotations
 
+import html
 import io
 import json
 import os
@@ -116,7 +117,8 @@ def new_course(tmp, sc, build=True):
         cs.save(os.path.join(sdir, "M01.build.json"), {
             "module": 1, "landing_rule": "Basic training · IGF Code",
             "screens": {"s01": {"figure": "assets/img/ship.jpg"}, "s02": {"figure": "assets/fig/scale.svg"},
-                        "s03": {"figure": "ga.html"}, "s04": {"figure": "hull.svg", "dark": True}}})
+                        "s03": {"figure": "ga.html"},
+                        "s04": {"figure": "hull.svg", "dark": True, "declined_3d": "the fixture's hull section stays a flat drawing"}}})
     return c, md
 
 
@@ -1142,6 +1144,55 @@ def v2494_part(tmp):
     check("PHOTOS_TO_TAKE.md is written where the course keeps its factory files, the folder made when missing", ok, p)
 
 
+def v2497_part(tmp):
+    """2.49.7 (IGF M01 benchmark) - a slide the script plans as 3D, built with a 2D figure, is said - in the build and on the
+    review page - until the operator keeps the 2D figure with a reason"""
+    print("\n-- 2.49.7: a 3D slide is never quietly built in 2D")
+    sp = lambda c: os.path.join(c, "working_claude", "script", "M01.build.json")
+
+    def built(name, s04, files=()):
+        os.makedirs(os.path.join(tmp, name))
+        c, md = new_course(os.path.join(tmp, name), script())
+        sheet = cs.load(sp(c))
+        sheet["screens"]["s04"] = s04
+        cs.save(sp(c), sheet)
+        for fn, text in files:
+            io.open(os.path.join(c, "working_claude", "figures", "M01", fn), "w", encoding="utf-8").write(text)
+        code, out = run(COMPILE, c, "--module", "1", "--only", "deck", "--no-drawing-check")
+        return c, code, out
+
+    c, code, out = built("f1", {"figure": "hull.svg", "dark": True})
+    check("s04 (model_3d) given a 2D drawing: the build says it - \"asks for a 3D scene; it has a 2D figure\" - exit 1",
+          code == 1 and "(s04) asks for a 3D scene (model_3d); it has a 2D figure (hull.svg)" in out and "declined_3d" in out, out)
+    found = cs.build_findings(c, script())
+    check("... and the script's review page shows it beside the picture findings, as a note",
+          [f["screen"] for f in found] == ["s04"] and found[0]["level"] != "fail" and "hull.svg" in found[0]["detail"]
+          and found[0]["detail"] in html.unescape(cs.render_html(c, script())), found)
+    _c, code, out = built("f2", {"figure": "hull.kit.json", "dark": True},
+                          [("hull.kit.json", json.dumps({"size": [400, 200], "parts": [{"id": "T", "type": "tank", "x": 40, "y": 40, "w": 200, "h": 100}]}))])
+    check("a kit figure is a 2D figure too (IGF M01 s05)", code == 1 and "it has a 2D figure (hull.kit.json)" in out, out)
+    _c, code, out = built("f3", {"figure": "ga.html", "dark": True})
+    check("an .html figure holding a scene ([data-stage]) is the 3D scene - nothing said", "asks for a 3D scene" not in out, out)
+    c4, code, out = built("f4", {"figure": "hull.svg", "dark": True, "declined_3d": "the operator: a flat section reads better here"})
+    check("the 2D figure kept with the operator's reason (\"declined_3d\") is not flagged again - build and review page",
+          code == 0 and "asks for a 3D scene" not in out and not cs.build_findings(c4, script()), out)
+    _c, code, out = built("f5", {"figure": "hull.svg", "dark": True, "declined_3d": " "})
+    check("... a \"declined_3d\" with no reason keeps it said", code == 1 and "asks for a 3D scene" in out, out)
+
+    # IGF M01 q01/q03: two questions on one kit figure, "unlabel": "answers", other answers - two drawings, not one shared
+    sys.path.insert(0, HERE)
+    import task_pages
+    text = json.dumps(PLANT_KIT)
+    f1 = task_pages.kit_fig({}, {"unlabel": "answers", "areas": {"Fuel tank": "tk"}}, text, "plant.kit.json", [], "q01", False)
+    f2 = task_pages.kit_fig({}, {"unlabel": "answers", "areas": {"Pump": "pp"}}, text, "plant.kit.json", [], "q03", False)
+    f3 = task_pages.kit_fig({}, {"unlabel": "answers", "areas": {"Pump": "pp"}}, text, "plant.kit.json", [], "q04", False)
+    check("\"unlabel\": \"answers\" on one kit figure with other answers gives each question its own drawing - q03 never shows "
+          "q01's, with its own answer still written on it; the same answers still share one",
+          f1.name != f2.name and f2.name == f3.name and '"label":"Pump"' in f1.html(True) and '"label":"Pump"' not in f2.html(True),
+          (f1.name, f2.name, f3.name))
+
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="compile_")
     try:
@@ -1309,7 +1360,14 @@ def main():
               code == 0 and os.path.isfile(os.path.join(c4, "working_claude", "script", "M01.build.json")), out)
         sheet = cs.load(os.path.join(c4, "working_claude", "script", "M01.build.json"))
         check("the starter build sheet lists every slide with an empty figure", sorted(sheet["screens"]) == ["s01", "s02", "s03", "s04", "t01", "t02"]
-              and sheet["screens"]["s04"] == {"figure": "", "visual_kind": "model_3d"})
+              and sheet["screens"]["s02"] == {"figure": "", "visual_kind": "comparison"})
+        s4 = sheet["screens"]["s04"]
+        check("2.49.7: a model_3d slide's starter entry plans its scene by default - its figure, its scene file and three.js in "
+              "\"scripts\", how to build it (M03's m03_station3d.js, GUIDE 2b) and how to keep a 2D figure instead (\"declined_3d\")",
+              s4.get("figure") == "m01_s04_3d.html" and s4.get("visual_kind") == "model_3d"
+              and sheet["scripts"] == ["assets/vendor/three.min.js", "assets/js/m01_s04_3d.js"]
+              and "m03_station3d.js" in s4.get("_figure", "") and "declined_3d" in s4.get("_figure", "")
+              and "__scene3d" in s4.get("_figure", ""), sheet)
         code, out = run(COMPILE, c4, "--module", "1", "--init-build")
         check("--init-build never replaces an existing build sheet", code == 2, out)
         # finding 8: a new module has no folder - --init-build makes it, with the factory's style files, ready to compile
@@ -1545,7 +1603,7 @@ def main():
         cs.save(os.path.join(c7, "working_claude", "figures", "M01", "valve.kit.json"), kit_spec)
         bp = os.path.join(c7, "working_claude", "script", "M01.build.json")
         sheet = cs.load(bp)
-        sheet["screens"]["s04"] = {"figure": "valve.kit.json", "dark": True}
+        sheet["screens"]["s04"] = {"figure": "valve.kit.json", "dark": True, "declined_3d": "the fixture's kit figure stands in for the scene"}
         cs.save(bp, sheet)
         code, out = run(COMPILE, c7, "--module", "1")
         p7 = deck(md7)
@@ -1599,6 +1657,7 @@ def main():
         fixes_part(tmp)
         v2492_part(tmp)
         v2494_part(tmp)
+        v2497_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

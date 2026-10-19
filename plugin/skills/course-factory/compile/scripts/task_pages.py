@@ -604,7 +604,9 @@ def kit_fig(q, b, text, rel, probs, where, bands):
         spec = dict(spec, view=[round(v, 3) for v in vb])
     if not spec.get("label"):
         spec["label"] = cm.first_sentence(q.get("visual")) or ""
-    key = json.dumps([n, hide, bool(bands)], sort_keys=True)
+    # 2.49.7 (IGF M01 q01/q03) - "answers" takes off each question's own answers: two questions with other answers are two
+    # drawings, never one shared - q03 was given q01's, which still named the vent mast it asked for
+    key = json.dumps([n, sorted(mine_ids) if hide == "answers" else hide, bool(bands)], sort_keys=True)
     name = cm.slug(rel) + ("" if key == json.dumps([len(steps), None, False]) else "-" + cm.sha(key)[:6])
     data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 

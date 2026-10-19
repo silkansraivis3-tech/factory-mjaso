@@ -516,6 +516,8 @@ def figure_html(mdir, figdir, s, b, probs, where):
     if err:
         probs.append("%s: its picture file %s %s" % (where, rel, err))
         return "", "", False
+    if cs.flat_3d(s, b, body):                         # 2.49.7 (IGF M01 s05): a 3D slide is never quietly built in 2D
+        probs.append(FLAT_3D % (where, s.get("visual_kind"), rel))
     if rel.lower().endswith(KIT_SPEC):
         return kit_figure(body, s, probs, where), "", False
     if body is not None:
@@ -614,6 +616,10 @@ CHART_PARTS = ("scale", "bands", "curve_chart", "flammability", "range_bar")   #
 NO_PHOTO_YET = (" - find the real photograph (the project, the factory library, a free-licence one: course-visuals); "
                 "if none exists and the slide only sets the scene, propose an AI picture unasked (nano-banana: described, "
                 "priced, said yes to, then made; never equipment to recognise, L33); equipment stays a photo to take")
+# 2.49.7 (IGF M01 s05) - the script plans a 3D scene and the build sheet gives a 2D figure: said, until the operator keeps it
+FLAT_3D = ("%s asks for a 3D scene (%s); it has a 2D figure (%s) - build the scene (compile GUIDE 2b: an .html figure with a "
+           "[data-stage], its three.js file in \"scripts\", like M03's m03_station3d.js), or keep the 2D figure with the "
+           "operator's reason in the build sheet: \"declined_3d\": \"<their reason>\"")
 
 
 def norm(s):
@@ -1214,6 +1220,28 @@ def sibling_sheets(bp):
     return out
 
 
+THREE_JS = "assets/vendor/three.min.js"
+
+
+def starter_scene(script, sid, scripts):
+    """2.49.7 (IGF M01 s05) - a model_3d slide's starter entry plans its 3D scene by default: the figure and the scene file are
+    named, and the scene's two files go into the sheet's "scripts" - the build reports them missing until they are written,
+    so the 3D is built, or kept 2D with the operator's reason ("declined_3d"), never dropped without a word"""
+    m = cs.mid(script.get("module")).lower()
+    js = "assets/js/%s_%s_3d.js" % (m, sid)
+    for x in (THREE_JS, js):
+        if x not in scripts:
+            scripts.append(x)
+    return {"figure": "%s_%s_3d.html" % (m, sid),
+            "_figure": ("A 3D scene, planned by default (L46). Write the figure working_claude\\figures\\%s\\%s_%s_3d.html - a "
+                        "[data-stage] holder and a flat fallback drawing - and the scene %s, built like IGF M03's "
+                        "m03_station3d.js (compile GUIDE 2b): one shared renderer, the scene built while the slide before is "
+                        "on screen (its GB_HOOKS), window.__noPrepare and window.__scene3d for perf3d.mjs, a tap highlights a "
+                        "part; first frame under 1 s at 4x CPU (measure GUIDE 2b). Copy three.min.js into assets\\vendor\\. "
+                        "Or keep a 2D figure: put it in \"figure\", take the two scene files off \"scripts\", and write the "
+                        "operator's reason in \"declined_3d\"." % (m.upper(), m, sid, js))}
+
+
 def starter_build(script, shared=()):
     """A starter build sheet. 2.49.1: the landing rule and the pass mark are the same in every module of a course, so they
     come from the course's other build sheets (the latest module that has them); the foot is this module's title; each
@@ -1233,6 +1261,8 @@ def starter_build(script, shared=()):
         if s["kind"] in cs.INSTRUCTOR:
             screens[s["id"]] = ({"figure": "", "visual_kind": s.get("visual_kind") or "none"} if s["kind"] == "slide" else
                                 {"link_hint": ""} if s["kind"] == "activity" else {})
+            if s["kind"] == "slide" and cs.parse_kind(s.get("visual_kind", "")) == "model_3d":
+                screens[s["id"]].update(starter_scene(script, s["id"], sheet["scripts"]))
         elif s["kind"] in cs.TASKS and cs.mech(s) in STARTER_ON_PICTURE:
             screens[s["id"]] = json.loads(json.dumps(STARTER_ON_PICTURE[cs.mech(s)]))
     sheet["screens"] = screens

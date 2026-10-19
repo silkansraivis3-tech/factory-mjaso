@@ -151,6 +151,13 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   frame; buttons and taps share one mode. Reference: IGF M03 `m03_station3d.js` (the highlight, the tap logic on
   `pointerup`). A scene that only turns is not finished. A `[data-stage]` in a wide column takes the column's own
   height (2.49.2) - no module override needed.
+  **Planned by default, never dropped without a word (2.49.7, IGF M01 s05).** `--init-build` gives a `model_3d` slide
+  a starter scene entry: its figure (`m01_s05_3d.html`), its scene file and `three.min.js` in `"scripts"`, and a
+  `"_figure"` note on how to build it - the build reports the files missing until they are written. A 3D slide whose
+  figure is not a scene (a kit figure, an `.svg`, a photo - anything but an `.html` figure holding a `[data-stage]`,
+  `data-3d`, `data-scene` or a `<canvas>`) is a must-fix in the build and a note on the script's review page:
+  "asks for a 3D scene; it has a 2D figure". To keep the 2D figure, write the operator's reason in the slide's entry,
+  `"declined_3d": "<their reason>"`; it is not flagged again.
 - **Every photograph once in the whole course (L58).** No photo is shown on two screens - in this module or any other;
   a copy under another name is the same photo (same `url_or_origin`, or the same bytes). A thumbnail takes a different
   photo or none; a photo you placed (picture, inset, photo in a drawing) that is already shown is reported - choose a

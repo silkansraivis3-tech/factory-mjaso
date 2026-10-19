@@ -143,6 +143,10 @@ def main():
               "good-pipes" not in eby, ef)
         check("a figure whose rest state and last state are sparse is judged at its busiest step (a pool fire that burns, then goes out)",
               "good-busiest" not in eby, ef)
+        # 2.49.7 (IGF M01 s02) - each step is judged by what it shows: parts still to come (opacity 0) are not counted
+        check("a stepping figure is judged by what each step shows, and the finding names its busiest step - the scale with "
+              "all three markers in (step 3 of 3), not the rest state (step 0) with them hidden",
+              "bad-scale" in eby and "at its busiest step (step 3 of 3)" in eby["bad-scale"]["detail"], ef)
 
         gal = gallery_contrast(exe, prof)
         check("the kit's own gallery (every part, %s figures) passes the contrast check" % (gal or {}).get("n"),

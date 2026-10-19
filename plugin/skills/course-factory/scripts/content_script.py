@@ -920,6 +920,51 @@ def propose_ai(teach, kinds, declined):
     return [(sid, words, "v_ai_propose") for _n, _i, sid, words in sorted(out)[:F["ai_propose_max"]]]
 
 
+# 2.49.7 (IGF M01 s05) - a slide planned as 3D whose build sheet gives it a 2D figure was built without a word: the compiler
+# never looked at the kind. A 3D scene is an .html figure that holds one ([data-stage], data-3d, data-scene or a canvas -
+# what perf3d.mjs measures); anything else is 2D. The operator may keep the 2D figure with their reason: "declined_3d".
+SCENE_MARK = re.compile(r"\bdata-(?:stage|3d|scene)\b|<canvas\b", re.I)
+
+
+def is_3d(s):
+    return MEDIA["visual_kinds"].get(parse_kind(s.get("visual_kind", "")), {}).get("family") in MEDIA["three_d"]["families"]
+
+
+def flat_3d(s, b, body):
+    """the build sheet's 2D figure of a slide the script plans as 3D, else "". b is the slide's build-sheet entry, body the
+    figure file's text (None for a picture). No figure, a 3D scene, or a 2D figure kept with a reason -> ""."""
+    rel = (b or {}).get("figure") or ""
+    if not rel or not is_3d(s) or str((b or {}).get("declined_3d") or "").strip():
+        return ""
+    if rel.lower().endswith((".html", ".htm")) and body and SCENE_MARK.search(body):
+        return ""
+    return rel
+
+
+def build_findings(course, script):
+    """what the module's build sheet does to the planned pictures, shown with the script's own findings on the review page:
+    a 3D slide built as a 2D figure (2.49.7). A note - the build sheet is no part of the approved words."""
+    if not course:
+        return []
+    m = mid(script.get("module"))
+    try:
+        bp = os.path.join(paths(course, script.get("module"))["dir"], m + ".build.json")
+        build = load(bp) if os.path.isfile(bp) else {}
+    except (OSError, ValueError):
+        return []
+    figdir, found = workspace.claude_path(course, "figures", m), []
+    for s in script.get("screens", []):
+        b = (build.get("screens") or {}).get(s.get("id")) or {}
+        rel, body = (b.get("figure") or "").replace("\\", "/"), None
+        if rel.lower().endswith((".html", ".htm")) and os.path.isfile(os.path.join(figdir, rel)):
+            body = io.open(os.path.join(figdir, rel), encoding="utf-8").read()
+        flat = flat_3d(s, b, body)
+        if flat:
+            found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "visual_kind", "level": NOTE,
+                          "rule": "v_3d_flat_figure", "detail": T(script, "v_3d_flat_figure", fig=flat), "fix": ""})
+    return found
+
+
 def media_findings(script):
     """L37, L38 - every slide leaves room for a named visual, a module moves where it can, and the tasks are
     varied and hands-on. Floors: knowledge/media-and-tasks.json."""
@@ -1417,7 +1462,7 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
             e(T(script, "s_theory_title")), e(T(script, "s_theory_intro")), "".join(row(f) for f in th_found)))
     else:
         o.append('<p class="note">%s</p>' % e(T(script, "s_theory_clean")))
-    mf = media_findings(script)
+    mf = media_findings(script) + build_findings(course, script)
     if mf:
         o.append('<div class="card warn"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
             e(T(script, "s_media_title")), e(T(script, "s_media_intro")), "".join(row(f) for f in mf)))
@@ -1563,7 +1608,7 @@ def build_docx(course, script):
         for f in facts:
             body.append(_para("• " + f.get("fact", ""), lang=cl))
     th_found, taught_on = theory_findings(script)
-    for head, found in (("s_theory_title", th_found), ("s_media_title", media_findings(script)),
+    for head, found in (("s_theory_title", th_found), ("s_media_title", media_findings(script) + build_findings(course, script)),
                         ("s_textcheck_title", text_findings(script)), ("s_ilo_title", ilo_findings(course, script))):
         if found:
             label(T(script, head), style="Heading1")
