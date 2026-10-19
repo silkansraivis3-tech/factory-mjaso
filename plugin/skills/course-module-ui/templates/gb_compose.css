@@ -105,6 +105,14 @@
   border-radius:2px;background:var(--blue)}
 .support li b{color:var(--ink)}
 .slide.dark .support li b{color:var(--white)}
+/* numbered steps: the step's own number is its marker - a navy disc in place of the square, every step
+   the same size. The number stays in the words (.n), so the match check reads "1 Risk ..." whole (IGF M11 s04) */
+.support.seq li{padding-left:1.95em}
+.support.seq li::before{content:none}
+.support.seq .n,.photo-copy .lead.step .n{position:absolute;left:0;top:.24em;min-width:1.45em;height:1.45em;
+  padding:0 .25em;box-sizing:border-box;border-radius:.725em;background:var(--navy);color:var(--white);
+  font-size:.78em;font-weight:700;line-height:1.45em;text-align:center}
+.slide.dark .support.seq .n,.slide.photo .photo-copy .lead.step .n{background:var(--blue);color:var(--on-blue)}
 
 /* ==========================================================================
    3 · TWO-COL — explanation beside a visual. The single most useful
@@ -627,6 +635,8 @@ figure{margin:0}
 .slide.photo .photo-copy .lead.head{border-left:0;padding-left:0;margin-top:min(2.2vmin,20px);font-weight:700;
   color:var(--white);font-size:clamp(15.5px,2.35vmin,30px)}
 .slide.photo.split .photo-copy .lead.head{font-size:clamp(15.5px,2.2vmin,28px)}
+.slide.photo .photo-copy .lead.sub.step{padding-left:1.95em}
+.slide.photo .photo-copy .lead.sub.step::before{content:none}
 /* a smaller projector (1024 x 768): the words take half the width and step down a little in size - measured on
    the IGF pilot M02, nine word-heavy slides overflowed their column by 10 to 100 px at the full size */
 @media (max-width:1100px) and (min-width:901px){

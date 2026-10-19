@@ -1188,6 +1188,16 @@ each found only after a full build. Now the kit and its checks take that work:
   `gemini_take.py take` still moves the newest download without a name filter; the gate report is not tied to the
   staged content; secrets are scanned in text extensions only.
 
+## 4zw · Numbered steps are one list (2.49.5, 2026-10-19)
+
+- **Found** (operator, IGF M11 s04): six numbered steps drawn three ways - step 1 as the headline, steps 2-6 as
+  blue squares that also carried their typed numbers, some step names bold.
+- **Now:** lines numbered 1, 2, 3 ... in order compile to `ol.support.seq` (over a photo `.lead.sub.step`): every
+  step the same size, the step's own number in a navy disc as its marker (`.n`, kept in the words for the match check).
+  The compiler half shipped inside 2.49.4's commit; 2.49.5 adds the styles and the vocabulary row.
+- **Proof:** `test_compile_module.py` 270; IGF M01-M15 rebuilt, the 12 step slides measured inside the slide at
+  1920x1080 and 1024x768.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

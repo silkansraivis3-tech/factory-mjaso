@@ -64,6 +64,7 @@ Compiled slides (2.25.1, §13b — written by `course-factory/compile/`, usable 
 | `.photo-wrap` (holding the `img`) | the full-bleed photograph: the photo IS the screen |
 | `.photo-scrim` (+ `right`) | the dark gradient the copy sits on; `right` when the copy is on the right |
 | `.photo-copy` (+ `right`) | the text over the photo: `h2`, `.lead` |
+| `.support.seq` (an `ol`) · `.n` · `.lead.step` in `.photo-copy` | steps the script numbers itself (`1 …`, `2 …`, from 1 in order): one list, every step the same size, the step's own number in a navy disc (blue on dark) as its marker - never step 1 as a headline and the rest as squares. The number stays in the words (`.n`) for the match check. Set by the compiler |
 | `.lead.head` · `.lead.sub` in `.photo-copy` | words with points over a photo: `.head` is a line that heads its points (bold, white, a step larger — as a text slide marks its opening line), `.sub` is a point under it (the `.support` list's blue square). **One bullet look in every deck**: no amber rule on a heading line — amber rule means a takeaway or a law. The compiler sets both from the script's `•` lines |
 | `.photo-badge` | the small amber label above the copy |
 | `.credit` | the licence / credit line — required on the page for any photo that needs attribution |
