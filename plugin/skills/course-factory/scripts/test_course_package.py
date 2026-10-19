@@ -197,6 +197,24 @@ def main():
         broken("a link into a _ folder", lambda b: (w(os.path.join(b, "module01", "_photos_raw", "a.jpg"), "x"), w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
                (TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "done(1,1,[],'');")).replace("../assets/img/hull.jpg", "../_photos_raw/a.jpg"))),
                "a folder starting with _ is skipped by the classroom")
+        sc1 = os.path.join("module01", "tasks", "sc1_keeping_the_cargo_liquid.html")
+        page = lambda extra_body="", extra_js="": (TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "done(1,1,[],'');" + extra_js)).replace("<body>", "<body>" + extra_body)
+        print("\n-- the classroom rulebook of 2026-10-19: the result is the last screen, the page never leaves itself")
+        for what, body, js, needle in (
+                ("a link to another page", '<a href="../handout/index.html">Read more</a>', "", "has a link to another page"),
+                ("a link that opens a new window", '<a href="#q2" target="_blank">2</a>', "", "opens a new window (target=_blank)"),
+                ("window.open", "", "window.open('x.html');", "opens a new window (window.open)"),
+                ("the frame sent to another file", "", "location.href = 'sc2.html';", "sends the frame to another page (location)"),
+                ("an Answers button after the result", "<button class=\"big\">Answers</button>", "", 'has a "Answers" button'),
+                ("a Review button made in script", "", "b.textContent = 'Review';", 'has a "Review" button'),
+                ("a Menu link", '<a href="#"><span>Menu</span></a>', "", 'has a "Menu" button')):
+            broken(what, lambda b, body=body, js=js: w(os.path.join(b, sc1), page(body, js)), needle)
+        ok_steps = os.path.join(tmp, "steps", "modules")
+        shutil.copytree(c, ok_steps)
+        w(os.path.join(ok_steps, sc1), page('<nav><a href="#q1">1</a><a href="#q2">2</a></nav><button>Next</button><button>Previous</button><button>Check</button>',
+                                            "if (location.hash === '#q2') {} var here = location.href;"))
+        code, out = run(ok_steps, "--no-importer")
+        check("... moving between the task's own steps (Next, Previous, #q2) is fine", code == 0, out)
         nt = os.path.join(tmp, "notes23", "modules")
         shutil.copytree(c, nt)
         w(os.path.join(nt, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),

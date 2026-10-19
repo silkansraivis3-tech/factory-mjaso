@@ -731,6 +731,10 @@ slide, and every result reaches the instructor and the admin panel."*
   The factory plans a team task in the content script (a task slide's `"team"`) and checks both places; answers are
   marked in trainee pages by `data-key`, never readable (`task_page.answer_keys`); the timer's `timeout: true` and
   no retry inside the classroom are checked as notes.
+- **The rulebook of 2026-10-19** (from the tablet system's project manager, 2.31.0): the result screen is the last
+  screen - nothing to press after the score, no "Answers" / "Review" / "Menu" / "Home", no link, because the tablet has
+  no back button and the classroom shows the answers in the debrief; a task moves only between its own steps and
+  never sends the frame to another file or opens a window. `check_course_package.py` refuses both.
 
 **L46 · 3D where it makes sense - at most half of a module's pictures - and smooth on the tablet.**
 *"Now he does 3D models almost every slide - cut it down to 50%, better not quantity but quality, use it only where it

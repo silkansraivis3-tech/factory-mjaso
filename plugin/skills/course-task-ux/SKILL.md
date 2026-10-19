@@ -324,6 +324,14 @@ task's own finish handler.
 - **When the time is up** (`gb-timer` with `remaining` 0), mark what was done and report it with `timeout: true`.
 - **One opening, one result.** No "Try again" while the page is inside the classroom's frame; outside it
   (`window.parent === window`, revision at home) a retry is fine.
+- **The result screen is the last screen** (rulebook of 2026-10-19). After reporting, the page shows the score and
+  nothing else to press: no "Answers", "Review", "Show solution", "Next task", "Menu" or "Home", and no link. The
+  tablet has no back button and no address bar - any page a trainee reaches is a dead end. The classroom shows the
+  right answers to everyone in the debrief, built from `items`; the per-answer feedback of L42 happens while
+  answering, not on a screen after the result.
+- **A task never leaves its own page.** The trainee moves only between the task's own steps - tabs, Next / Previous,
+  `#q2` - on the same page. No link to another file, no `location.href` / `assign` / `replace`, no new window
+  (`target="_blank"`, `window.open`).
 - **A team task** (`data-mode="team"` on its slide; `task-mode`, `task-roles`, `task-scope` metas on the page) shows
   the team's name and the trainee's role at the top, as large as the question. It never needs a fixed team size, a
   role never locks anyone out of reading the whole scenario, and with no `gb-team` within about 2 seconds it runs as
