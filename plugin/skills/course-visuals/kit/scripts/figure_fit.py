@@ -759,6 +759,19 @@ def run_all(course, module, fix=True, jobs=4):
                 if HINT.get(check) and check not in seen:
                     seen.add(check)
                     block.append("    fix (%s): %s" % (check, HINT[check]))
+            bb = [v[:4] for v in (r.get("parts") or {}).values() if v[5] not in CONTAINERS]
+            if any(c == "empty" for c, _, _ in group(probs)) and bb:
+                w_ = max(b[2] for b in bb) - min(b[0] for b in bb)
+                h_ = max(b[3] for b in bb) - min(b[1] for b in bb)
+                pa = (st.get("panel") or [1, 1])[0] / float((st.get("panel") or [1, 1])[1] or 1)
+                if h_ and (w_ / h_) < 0.6 * pa:       # IGF M01 s02: a thin upright scale in a wide panel took 5 builds
+                    block.append("    why EMPTY: what it draws is %d x %d units - %s - in a %s frame: draw it across the panel (a "
+                                 "scale with \"orient\": \"h\", the parts side by side), or give the slide \"composition\": "
+                                 "\"wide-left\" so its column has the drawing's shape; moving parts a few units will not fill it"
+                                 % (w_, h_, "tall and narrow", "wide"))
+                elif h_ and (w_ / h_) > 1.6 * pa:
+                    block.append("    why EMPTY: what it draws is %d x %d units - wide and flat - in a taller frame: stack the "
+                                 "parts, or give the spec a flatter \"size\" so the frame has the drawing's shape" % (w_, h_))
             if how:
                 block.append("    tried by itself: %s" % how)
             left.append("\n".join(block))

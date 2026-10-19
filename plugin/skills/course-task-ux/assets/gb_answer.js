@@ -739,6 +739,10 @@
       if (!r || !r.width) { return; }
       var cx = r.left + r.width / 2 - g.left, cy = r.top + r.height / 2 - g.top;
       if (h.tagName.toLowerCase() === 'line') {                    /* a leader line ends on the middle of its part */
+        /* 2.50.1 - of what is DRAWN of it: a vent's tap area is the whole mast run (2.49.7) but unpainted, and the middle of
+           the part's box was empty deck (IGF M01 m01, found by three reviews and now by review_sheets.mjs) */
+        var pb = paintedBox(part.g);
+        if (pb) { cx = (pb.left + pb.right) / 2 - g.left; cy = (pb.top + pb.bottom) / 2 - g.top; }
         h.setAttribute('x2', (100 * cx / g.width).toFixed(2)); h.setAttribute('y2', (100 * cy / g.height).toFixed(2));
         return;
       }
@@ -747,6 +751,22 @@
       h.style.left = (100 * x / g.width).toFixed(2) + '%'; h.style.top = (100 * y / g.height).toFixed(2) + '%';
       h.style.width = (100 * Math.min(w, g.width) / g.width).toFixed(2) + '%'; h.style.height = (100 * Math.min(ht, g.height) / g.height).toFixed(2) + '%';
     });
+  }
+  /* the screen box of what is painted of a kit part: its shapes and lines - not its words, not an unpainted tap area */
+  function paintedBox(g) {
+    var box = null;
+    each($$('*', g), function (e) {
+      var tag = (e.tagName || '').toLowerCase();
+      if (!e.getBoundingClientRect || tag === 'g' || tag === 'text' || tag === 'tspan' || has(e, 'hit') ||
+          (e.closest && e.closest('.kit-lbl'))) { return; }
+      var cs = W.getComputedStyle(e);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0 || (cs.fill === 'none' && cs.stroke === 'none')) { return; }
+      var r = e.getBoundingClientRect();
+      if (!r.width && !r.height) { return; }
+      box = box ? { left: Math.min(box.left, r.left), top: Math.min(box.top, r.top), right: Math.max(box.right, r.right),
+                    bottom: Math.max(box.bottom, r.bottom) } : { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+    });
+    return box;
   }
   W.addEventListener('resize', function () { if (cur >= 0 && qs[cur]) { placeParts(qs[cur].sec); } });
   function neutralSpot(sec) {

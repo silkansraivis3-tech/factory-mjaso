@@ -211,7 +211,51 @@ window.__rv = (function(){
       var w = sec.querySelector('.why');
       return { ok: !!(w && w.classList.contains('good')), bad: !!(w && w.classList.contains('bad')), vd: txt(sec.querySelector('.vd')||document.body).slice(0,90) };
     },
-    next: function(){ return go(); }
+    next: function(){ return go(); },
+    /* 2.50.1 (M01 benchmark: three re-reviews were spent on these) - every leader line of the question on screen, as the
+       engine placed it: it must end ON something drawn of the part it names, and cross no words but its own box's */
+    leaders: function(){
+      var sec = document.querySelector('.scr.on[data-script]'); if (!sec) return [];
+      var svg = sec.querySelector('svg.taskfig'), f = svg && svg.__kit, out = [];
+      function pt(line, which){ var p = line.ownerSVGElement.createSVGPoint(); p.x = +line.getAttribute(which==1?'x1':'x2'); p.y = +line.getAttribute(which==1?'y1':'y2');
+        return p.matrixTransform(line.getScreenCTM()); }
+      function shown(el){ for (var e = el; e && e.nodeType === 1; e = e.parentNode) { var cs = getComputedStyle(e);
+        if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) return false; } return true; }
+      function crosses(a, b, r){            /* segment a-b through rectangle r (1 px inside its edges) */
+        var x0 = r.left + 1, x1 = r.right - 1, y0 = r.top + 1, y1 = r.bottom - 1, t0 = 0, t1 = 1, dx = b.x - a.x, dy = b.y - a.y;
+        var ps = [-dx, dx, -dy, dy], qs = [a.x - x0, x1 - a.x, a.y - y0, y1 - a.y];
+        if (x1 <= x0 || y1 <= y0) return false;
+        for (var i = 0; i < 4; i++) { if (ps[i] === 0) { if (qs[i] < 0) return false; } else { var t = qs[i] / ps[i];
+          if (ps[i] < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } } }
+        return t1 - t0 > 0.02;
+      }
+      function name(id){ var b = sec.querySelector('.lbox[data-val="' + id + '"]'); return b ? (b.getAttribute('data-name') || id) : id; }
+      $$('line[data-part]', sec).forEach(function(ln){
+        if (!shown(ln)) return;
+        var id = ln.getAttribute('data-part'), a = pt(ln, 1), b = pt(ln, 2), own = f && f.parts && f.parts[id] && f.parts[id].g;
+        $$('svg.taskfig text, .lbox', sec).forEach(function(t){
+          if (!shown(t) || (t.classList.contains('lbox') && t.getAttribute('data-val') === id)) return;
+          if (own && own.contains(t)) return;              /* its own part's words: the leader is meant to reach them */
+          if (t.closest && t.closest('.lbox[data-val="' + id + '"]')) return;
+          var words = (t.textContent || '').replace(/\\s+/g, ' ').trim();
+          if (!words && !t.classList.contains('lbox')) return;
+          if (crosses(a, b, t.getBoundingClientRect())) out.push('the leader to "' + name(id) + '" crosses ' + (t.classList.contains('lbox') ? 'the label box of "' + (t.getAttribute('data-name') || t.getAttribute('data-val')) + '"' : 'the words "' + words.slice(0, 30) + '"'));
+        });
+        var part = f && f.parts && f.parts[id];
+        if (part && part.g) {                /* its end on something painted of its part, within 8 px */
+          var best = 1e9;
+          $$('*', part.g).forEach(function(e){
+            if (!e.getBBox || e.tagName === 'g' || !shown(e)) return;
+            var cs = getComputedStyle(e); if (e.classList.contains('hit') || (cs.fill === 'none' && cs.stroke === 'none')) return;
+            var r = e.getBoundingClientRect(); if (!r.width && !r.height) return;
+            var ddx = Math.max(r.left - b.x, 0, b.x - r.right), ddy = Math.max(r.top - b.y, 0, b.y - r.bottom);
+            best = Math.min(best, Math.sqrt(ddx * ddx + ddy * ddy));
+          });
+          if (best > 8 && best < 1e9) out.push('the leader to "' + name(id) + '" ends ' + Math.round(best) + ' px from anything drawn of its part');
+        }
+      });
+      return out;
+    }
   };
 })();`;
 
@@ -236,6 +280,7 @@ async function tasks(tiles, failures) {
         const q = await evaluate('__rv.current()');
         if (!q) break;
         await evaluate(SETTLE); await sleep(150); await evaluate(SETTLE);
+        if (!good) for (const x of await evaluate('__rv.leaders()')) failures.push(`${name} ${q}: ${x}`);
         const r = await evaluate(`__rv.answer(${good})`);
         await sleep(220); await evaluate(SETTLE); await sleep(80);
         if (!good) await evaluate('__rv.overlay(true)');      // the tap areas and drop zones, outlined on the wrong-answer screen
@@ -324,7 +369,7 @@ try {
   console.log(`Review sheets: ${r.shown} of ${r.total} screens ${opt.all ? '' : '(changed since the last review) '}on ${r.out.length} sheet(s) in ${OUT}`);
   if (opt.list) console.log(list);
   failures.forEach(f => console.log('  FAIL ' + f));
-  console.log(failures.length ? `${failures.length} answer(s) graded wrongly` : 'Every question graded as expected: wrong answers not right, right answers right.');
+  console.log(failures.length ? `${failures.length} task-page problem(s)` : 'Every question graded as expected: wrong answers not right, right answers right; every leader line ends on its part and crosses no words.');
   code = failures.length ? 1 : 0;
 } catch (e) {
   console.error('review_sheets: ' + (e && e.message || e));

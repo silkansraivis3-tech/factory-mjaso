@@ -206,16 +206,17 @@ def main(argv=None):
     review = ""
     if want_review and passed:
         rcode, rout = results["review sheets"]
-        if rcode in (0, 1):                     # the sheets are the review now: the last review's folder is replaced
+        if rcode == 0:                          # the sheets are the review now: the last review's folder is replaced
             import shutil
             shutil.rmtree(out_dir, ignore_errors=True)
             os.replace(pending, out_dir)
             rout = rout.replace(pending, out_dir)
         logged("review_sheets.mjs", rout)
-        if rcode == 1:
+        if rcode == 1:                          # not promoted: the next review still compares with the last one shown
             passed = False
-            fails.append("answers graded wrongly")
-            say.append("ANSWERS - FAIL (review_sheets.mjs answered every question by its own keys):")
+            fails.append("task pages")
+            say.append("TASK PAGES - FAIL (review_sheets.mjs answered every question by its own keys and checked every leader "
+                       "line as the engine placed it - fix the drawing or the build sheet's \"labels\"):")
             say += ["  " + x for x in rout.splitlines() if "FAIL" in x]
         elif rcode == 0:
             first = rout.strip().splitlines()[0] if rout.strip() else ""
