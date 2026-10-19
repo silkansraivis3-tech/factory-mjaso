@@ -523,7 +523,9 @@ figure{margin:0}
 .copy .call{padding:.75em 1em;border-radius:var(--r-m);background:var(--navy);color:var(--white);
   font-size:var(--fs);line-height:1.45;font-weight:600}
 .slide.dark .copy .call{background:var(--blue);color:var(--on-blue)}
-.copy .call b{color:inherit}
+/* a bold term in the conclusion takes the conclusion's colour - on a dark slide too, where `.slide.dark .copy b`
+   (white) out-ranked it: white on the blue callout was 2.29:1 (M01 benchmark run 4, s02) */
+.copy .call b,.slide.dark .copy .call b{color:inherit}
 /* a line a stepping figure is on (the figure sets .cur / .lit on [data-i]). Amber means "where we are now" and
    nothing else: no card at rest is amber, and these rules come AFTER every card look and out-rank it, so the
    selected line always changes - fill, an amber ring and an amber bar. audit_deck.js "mark" fails a deck where

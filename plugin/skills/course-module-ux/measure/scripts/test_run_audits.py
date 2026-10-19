@@ -64,6 +64,19 @@ def main():
     check("an aborted probe is ABORT, never PASS", st == "ABORT", (st, line))
     st, _, _ = ra.summarise("deck", {"res": {"failures": 0}, "exit": None})
     check("a probe that never set __auditExit is ABORT", st == "ABORT")
+    # a failing slide names the element and its words, not "slide 2: low 1" (M01 benchmark run 4: a --json run was needed)
+    bad = {"res": {"slidesTotal": 8, "failures": 2, "verdict": "VERDICT: FAIL n=2", "failingSlides": [
+        {"slide": 2, "id": "s02", "low": [{"sel": "b", "ratio": 2.29, "need": 4.5, "px": 22, "txt": "flashpoint"}],
+         "spill": [{"sel": "p.call", "byPx": 18}]}]}, "exit": 1}
+    st, line, det = ra.summarise("deck", bad)
+    check("a low-contrast finding names the slide id, the element, its words and the ratio",
+          st == "FAIL" and any("s02" in d and "low contrast b" in d and '"flashpoint"' in d and "2.29:1" in d for d in det)
+          and any("spills p.call by 18 px" in d for d in det), det)
+    st, line, det = ra.summarise("collide", {"res": {"totalCollisions": 1, "slides": [
+        {"slide": 4, "id": "s04", "n": 1, "text": [{"a": "p.lead", "aTxt": "Gas valve unit", "b": "text", "bTxt": "GVU"}],
+         "box": [], "chrome": []}]}, "exit": 1})
+    check("a collision names both elements and their words",
+          st == "FAIL" and det and "s04" in det[0] and '"Gas valve unit"' in det[0] and '"GVU"' in det[0], det)
     real_measure, real_browser, real_offset = ra.measure, ra.browser, ra.frame_offset
     try:
         clean = {"deck": ok, "collide": {"res": {"totalCollisions": 0, "slides": []}, "exit": 0},

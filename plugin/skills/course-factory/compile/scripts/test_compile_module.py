@@ -925,13 +925,17 @@ def fixes_part(tmp):
     page = io.open(os.path.join(md, "tasks", "sc1_the_plant.html"), encoding="utf-8").read()
     q = {k: page.split('data-script="%s"' % k)[1].split("</section>")[0] for k in ("q01", "q02", "q03", "q04")}
     ks = re.search(r'id="kit-task-[^"]+">(.*?)</script>', q["q01"], re.S)
-    got = json.loads(ks.group(1))["parts"] if ks else []
-    words = json.dumps(got)
-    check("C4: \"unlabel\": \"answers\" takes the words off only the parts the answers name",
-          code == 0 and "Fuel tank" not in words and "Master valve" not in words and "\"Pump\"" not in words and "Spare valve" in words, (out, words))
+    kspec = json.loads(ks.group(1)) if ks else {}
+    got, ghost = kspec.get("parts") or [], kspec.get("ghost") or []
+    shown = json.dumps([p for p in got if p.get("id") not in ghost])
+    # 2.50.4: the answers' words stay in the spec and the kit hides them after laying them out ("ghost") - so the words
+    # left stand where the deck has them (taking them out re-laid the rest: M01 benchmark run 4, q01 / q03)
+    check("C4: \"unlabel\": \"answers\" takes the words off only the parts the answers name (laid out, then hidden: \"ghost\")",
+          code == 0 and {"tk", "mv", "pp"} <= set(ghost) and "sv" not in ghost and "Fuel tank" not in shown
+          and "Master valve" not in shown and "\"Pump\"" not in shown and "Spare valve" in shown and len(got) == 8, (out, kspec))
     check("C4: ... and the callouts of those parts (pointing at them, or T_<id>), but not a free caption or another part's callout",
-          "the master valve" not in words and "points at the valve" not in words and "points at the pump" not in words
-          and "Fuel plant" in words and len(got) == 5, words)
+          "the master valve" not in shown and "points at the valve" not in shown and "points at the pump" not in shown
+          and "Fuel plant" in shown and len(ghost) == 6, kspec)
     broken_sheet = {"module": 1, "screens": {"t01": {"try_tablet": False}, "q01": {"figure": "plant.kit.json", "unlabel": "everything",
                     "areas": {"Master valve": "mv"}}}}
     cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), broken_sheet)
@@ -1220,7 +1224,7 @@ def v2497_part(tmp):
     f3 = task_pages.kit_fig({}, {"unlabel": "answers", "areas": {"Pump": "pp"}}, text, "plant.kit.json", [], "q04", False)
     check("\"unlabel\": \"answers\" on one kit figure with other answers gives each question its own drawing - q03 never shows "
           "q01's, with its own answer still written on it; the same answers still share one",
-          f1.name != f2.name and f2.name == f3.name and '"label":"Pump"' in f1.html(True) and '"label":"Pump"' not in f2.html(True),
+          f1.name != f2.name and f2.name == f3.name and '"ghost":["tk"]' in f1.html(True) and '"ghost":["pp"]' in f2.html(True),
           (f1.name, f2.name, f3.name))
 
 

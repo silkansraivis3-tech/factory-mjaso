@@ -1256,6 +1256,37 @@ moves only between its own steps, never navigating the frame or opening a window
 `target=_blank`, `window.open`, `location` navigation, and those button labels in markup or set from script are
 problems; in-page `#steps`, Next and Previous pass), `course-task-ux` §9a. Tests: seven breaks caught, own steps pass.
 
+## 4zz2 · What the M01 benchmark run 4 worked around, fixed in the factory (2.50.4, 2026-10-19)
+
+Run 4 (factory 2.50.2, `M01_benchmark\compiler_v4\METRICS.md`) passed in 14.4 min with no hand edit to HTML, by working
+round six factory problems in its inputs. Each is fixed here, with a test that fails on the old code:
+
+1. **A conclusion on a dark slide.** `gb_compose.css`: `.slide.dark .copy .call b{color:inherit}` - `.slide.dark .copy b`
+   (white) out-ranked the callout's own colour, 2.29:1 on blue (s02). `audit_deck.js` "mark" re-reads every line it tried
+   before giving transitions back - the last line's background faded back over .2 s while its colour snapped, and the
+   contrast check measured the conclusion's dark words on the dark wash, 1.11:1 (s07; a fault of the check, not the
+   deck). Fixture `measure/fixtures/deck_call_dark.html`, `test_audit_deck.py`.
+2. **The audit summary names what to fix.** `run_audits.py` prints one line per finding - `slide 2 (s02): low contrast b
+   "Low-flashpoint fuel" 2.29:1 (need 4.5)`, spills, small text, tap targets, collisions with both elements' words - and
+   the probes return the slide's id; `build_module.py` keeps 40 audit lines. `test_run_audits.py`.
+3. **`vent` `"mast": true`.** True asks for a mast: the pipe's run under the outlet, else a 60-unit mast the kit draws; a
+   length with no pipe under it is drawn too - never an outlet floating in the air. Any other value stops the figure
+   (`kit.js`) and is refused by `check_kit.py` before the build. SPEC row updated. `test_kit.py`, `test_studio.py`.
+4. **A label that names a feature of its part.** `h.label(..., {at: [x, y]})`: judged against that point, not the whole
+   part - a nudge (8 units) is free, any further move off the point gets a leader from it. The `cylinder`'s oil injector,
+   gas injector, exhaust valve and piston use it: a neighbour no longer pushes them up the cylinder's side with no line
+   (s06). `test_studio.py` (a tank on the left, a room on the right).
+5. **`"unlabel": "answers"` on a shared drawing.** `task_pages.py` keeps the answers' words in the spec and lists their
+   parts in `"ghost"`; `kit.js` lays them out with every other label and hides them after every layout (a `text` part
+   whole, a part's labels and leaders) - the words left stand exactly where the deck has them. Taking them out re-laid
+   the rest: on M01 s04, q01's "Fuel tank" moved under the tank connection space. `"all"` still takes the words out
+   (nothing is left to misplace); a part's `title` / `tag` (plain text, not labels) still go. `test_studio.py` (M01 s04's
+   GA: laid out with the ghosts = laid out in full; taken out = moved), `test_compile_module.py` C4.
+6. **No unusable candidate.** `figure_fit.spoiled()` - a part moved outside the frame, or onto a part it was clear of
+   (clouds, flames, sprays and text are drawn over parts by nature). A re-fit that is spoiled is never the answer in a
+   round, never saved as a fit and never as a `.candidate.kit.json`; the report says why (`usable()`). The kit grows its
+   frame to hold a stray part, so the audits had passed s05's lamp at x 635 in a 600-wide spec. `test_figure_fit.py`.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

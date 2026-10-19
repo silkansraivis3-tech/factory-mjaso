@@ -111,6 +111,22 @@ SPECS = {
         {"id": "G", "type": "log", "x": 330, "y": 60, "w": 250, "rows": 2}],
         "steps": [{"title": "alarm", "play": [["L", 50, 600]]}, {"title": "trip", "play": [["L", 80, 600]]}]},
 }
+# 2.50.4 (M01 benchmark run 4, issue 5): IGF M01 s04's GA, shared by q01 / q03 / m01. q01's answers are the four spaces; with
+# their words taken out of the spec the kit re-laid the rest and put "Fuel tank" under the tank connection space
+GA_M01 = {"size": [640, 230], "label": "IGF M01 s04", "parts": [
+    {"id": "GA", "type": "ga", "view": "side", "x": 10, "y": 100, "w": 620, "h": 110, "house": {"x": 30, "w": 110, "h": 50}, "funnel": {"x": 60, "w": 30, "h": 24}},
+    {"id": "ER", "type": "space", "x": 150, "y": 110, "w": 120, "h": 80, "label": "Engine room", "style": "room"},
+    {"id": "FPR", "type": "space", "x": 276, "y": 110, "w": 70, "h": 60, "label": "Fuel preparation room", "style": "room"},
+    {"id": "TCS", "type": "space", "x": 352, "y": 110, "w": 56, "h": 70, "label": "Tank connection space", "style": "enclosure"},
+    {"id": "TK", "type": "tank", "x": 414, "y": 115, "w": 160, "h": 70, "label": "Fuel tank", "value": 0.6},
+    {"id": "BS", "type": "space", "x": 440, "y": 70, "w": 80, "h": 26, "label": "Bunkering station", "style": "room"},
+    {"id": "VP", "type": "pipe", "fluid": "gas", "d": "M596 100 V36", "value": 0},
+    {"id": "VM", "type": "vent", "x": 596, "y": 36, "labelAt": "left", "label": "Vent mast"}]}
+GA_ANSWERS = ["TCS", "FPR", "BS", "ER"]
+# a task figure is still (it keeps its frame); each label where the layout left it, and whether it is shown
+GA_JS = ("svg.setAttribute('data-kit-still','');f.layout(true);var o={};[].forEach.call(svg.querySelectorAll('.kit-lbl'),function(l){"
+         "var L=l.__kitL;if(L.at)o[l.textContent]={at:[L.at.x,L.at.y].map(Math.round),shown:getComputedStyle(l).display!=='none'};});return o;")
+
 # for kit_eval: what a part does in the page, read back as numbers and words
 EVALS = {
     # K5: words a step brings in; K11: a wrapped alarm keeps its space; K4: the new tank/cloud values; K10: no pipe stub
@@ -204,6 +220,31 @@ EVALS = {
         "[].forEach.call(svg.querySelectorAll('text'),function(t){var f=parseFloat(getComputedStyle(t).fontSize);if(f)m=Math.min(m,f*sc);});return m;};"
         "f.layout(true);var a=small();f.laid=0;svg.style.removeProperty('--kit-up');svg.setAttribute('viewBox','0 0 640 390');"
         "window.dispatchEvent(new Event('resize'));return {min:a,laid:f.laid>0,up:svg.style.getPropertyValue('--kit-up'),after:small()};", 380),
+    # 2.50.4 (M01 benchmark run 4, issue 3): "mast": true with no pipe under the vent drew a bare outlet in the air. Now a true
+    # or a length with no pipe under it is drawn; a pipe's own upright run is never drawn twice; false is the outlet alone
+    "vent_mast": ({"size": [640, 300], "label": "vent masts", "parts": [
+        {"id": "A", "type": "vent", "x": 80, "y": 40, "mast": True},
+        {"id": "B", "type": "vent", "x": 220, "y": 40, "mast": 120},
+        {"id": "P", "type": "pipe", "d": "M360 240 V40", "value": 0},
+        {"id": "C", "type": "vent", "x": 360, "y": 40, "mast": True},
+        {"id": "D", "type": "vent", "x": 500, "y": 40, "mast": False}]},
+        "var q=function(i,s){return svg.querySelector('[data-kit-id=\"'+i+'\"] '+s);};"
+        "var h=function(i){var m=q(i,'.kit-vent-mast');return m?Math.round(m.getBBox().height):0;};"
+        "var hit=function(i){var r=q(i,'.kit-hit');return r?Math.round(+r.getAttribute('height')):0;};"
+        "return {drawn:[h('A'),h('B'),h('C'),h('D')],hit:[hit('A'),hit('B'),hit('C'),hit('D')]};"),
+    # 2.50.4 (M01 benchmark run 4, issue 4): a cylinder's own labels name its features (oil injector, gas injector, exhaust
+    # valve, piston). A tank on its left and a room on its right push two of them away - each must keep a leader to its
+    # feature, or stay beside it; before, the oil injector's words went 37 units up the cylinder's side with no line
+    "cyl_leaders": ({"size": [640, 330], "label": "a cylinder between a tank and a room", "parts": [
+        {"id": "CY", "type": "cylinder", "x": 230, "y": 50, "w": 140, "h": 230},
+        {"id": "T", "type": "tank", "x": 20, "y": 40, "w": 180, "h": 90, "label": "fuel tank", "value": 0.5},
+        {"id": "R", "type": "space", "x": 400, "y": 20, "w": 220, "h": 120, "label": "ENGINE ROOM"}]},
+        "f.layout(true);var inv=svg.getScreenCTM().inverse(),out=[];"
+        "[].forEach.call(svg.querySelectorAll('[data-kit-id=\"CY\"] .kit-lbl'),function(l){var L=l.__kitL,a=L.opt.at;if(!a||!L.at)return;"
+        "var M=inv.multiply(l.parentNode.getScreenCTM()),px=M.a*a[0]+M.c*a[1]+M.e,py=M.b*a[0]+M.d*a[1]+M.f;"
+        "var dx=Math.max(0,L.at.x-px,px-L.at.x2),dy=Math.max(0,L.at.y-py,py-L.at.y2);"
+        "out.push({t:l.textContent,moved:Math.round(Math.hypot(L.at.x-L.box.x,L.at.y-L.box.y)),gap:Math.round(Math.hypot(dx,dy)),"
+        "leader:!!l.__kitLeader});});return out;"),
 }
 
 
@@ -371,6 +412,24 @@ def main():
               v and v["min"] >= 12.5, v)
         check("F4 a window resize lays a figure out (a probe that measures a slide at once gets no observer call)",
               v and v["laid"] and v["up"] != "" and v["after"] >= 12.5, v)
+        v = kit_eval(*EVALS["vent_mast"])
+        check("2.50.4 vent: \"mast\": true / a length with no pipe under it is drawn (60, 120), a pipe's run is not drawn twice, "
+              "false is the outlet alone; the tap area is the whole mast",
+              v and v["drawn"] == [60, 120, 0, 0] and v["hit"] == [60, 120, 200, 0], v)
+        v = kit_eval(*EVALS["cyl_leaders"])
+        check("2.50.4 cylinder: a label a neighbour pushes off its feature keeps a leader to it, or stays beside it (all four named; "
+              "at least one pushed away with a leader)",
+              v and len(v) == 4 and all(x["leader"] or x["moved"] <= 12 or x["gap"] <= 14 for x in v)
+              and any(x["leader"] for x in v), v)
+        full = kit_eval(GA_M01, GA_JS, 1100)
+        gone = kit_eval(dict(GA_M01, ghost=GA_ANSWERS), GA_JS, 1100)
+        bare = kit_eval(dict(GA_M01, parts=[dict((k, w) for k, w in p.items() if not (p["id"] in GA_ANSWERS and k == "label"))
+                                            for p in GA_M01["parts"]]), GA_JS, 1100)
+        check("2.50.4 ghost: the answers' words are laid out, then hidden - the words left stand exactly where the deck has them",
+              full and gone and set(full) == set(gone) and all(gone[t]["at"] == full[t]["at"] for t in full)
+              and [t for t in gone if gone[t]["shown"]] == ["Fuel tank", "Vent mast"], (full, gone))
+        check("... the case it fixes: with the words taken out of the spec, \"Fuel tank\" moved (under the tank connection space)",
+              bare and full and bare["Fuel tank"]["at"] != full["Fuel tank"]["at"], (bare, full))
 
         # K13: one browser run draws every step - a contact sheet, as wide as the real slide's panels
         sheet_spec = os.path.join(tmp, "sheet.kit.json")

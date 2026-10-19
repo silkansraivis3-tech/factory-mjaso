@@ -255,7 +255,9 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
   the answers name (`areas` / `labels`) and their callouts - a `text` part pointing at them (`"to": [x, y]` inside the
   part), one with `"for": "<part id>"`, or one whose id is `T_<part id>` - so the rest of the drawing keeps its words and
   does not read blank. `"unlabel": "all"` also takes every free `text` part and the deck's context words (IGF M06 q08
-  came out 51 % blank), and `["P1"]` takes exactly those ids. The same `"figure"` also puts a picture beside a single /
+  came out 51 % blank), and `["P1"]` takes exactly those ids. With `"answers"` or a list the words are laid out with the
+  rest and then hidden (the spec's `"ghost"`, 2.50.4), so the words left stand where the deck has them - taking them out
+  re-laid the rest and put a label beside the wrong space (M01 benchmark run 4). The same `"figure"` also puts a picture beside a single /
   multi choice, above match, categorise, order, cloze, scenario ..., and `"figures": {"Plan A": "assets/img/a.jpg"}` over
   a `compare` column. With a picture beside four choices - or beside the cards of a sort, an order or a match (2.49.1) -
   the compiler lays them side by side on a landscape tablet, so no choice and no drop zone is ever under the Check bar.

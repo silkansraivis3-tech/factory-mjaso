@@ -77,7 +77,7 @@ words for the 12.5 px floor, how many labels it moved, any it could not place, a
 | `exchanger` | `r label` - P&ID heat exchanger (vaporizer, heater) | 0..1 heating |
 | `pump` | `r label` - P&ID centrifugal pump | 0 stopped, 1 running |
 | `engine` | `w h cylinders label` - dual-fuel engine block | 0 stopped, 1 running |
-| `vent` | `label labelAt(left)` `mast` - vent outlet to the open air. On top of a pipe's upright run it is a vent mast: its tap area on a task is the whole run, not the outlet (2.49.7); `mast: false` keeps the outlet alone, `mast: <length>` gives the run when no pipe draws it | 0..1 venting |
+| `vent` | `label labelAt(left)` `mast` - vent outlet to the open air. On top of a pipe's upright run it is a vent mast: its tap area on a task is the whole run, not the outlet (2.49.7); `mast: false` keeps the outlet alone, `mast: <length>` gives the run when no pipe draws it, `mast: true` asks for a mast (60 long when no pipe draws it). With no pipe under the outlet, `true` or a length is drawn as an upright pipe - never an outlet floating in the air (2.50.4); any other value is refused | 0..1 venting |
 | `badge` | `n` - a numbered step marker | 0..1 lit |
 | `wire` | `d` - ISA dashed signal line | - |
 | `text` | `text style(h, cap, tick, sl) anchor near fixed reveal`; `\n` breaks lines; it may shift up to `near` (28) to stay clear. With **`to: [x, y]`** it is a CALLOUT: words for that place, joined to it by a leader line, placed clear by the layout. **`reveal: true`** (or a `value`) makes the words - and a callout's dot and leader - a thing a step brings in: not drawn at rest, `["T", 1, 400]` fades them in, so a predict-then-reveal slide does not print its answer | 0..1 opacity (with `reveal`/`value`) |
@@ -169,7 +169,8 @@ exist yet, the part is added to its family here, never drawn once on a slide.
 the end of step 3 (`"final"` or empty = the last), without step buttons, and - being still - opens full screen like a
 picture. The compiler (`compile/task_pages.py`) writes it from a build-sheet figure `*.kit.json`; the sheet's
 `"kit_step"` picks the step, `"unlabel"` takes the words off the parts (`label`, `caption`, `title`, `tag` ...; a `text`
-part goes), and the tappable areas are the parts' own ids - `gb_answer.js` lays each one on the drawn part's box. A
+part goes) - for `"answers"` or a list by the spec's `"ghost": [part ids]` (2.50.4): those parts' labels (a `text` part
+whole) are laid out like any other and hidden after every layout, so the words left stand where the deck has them - and the tappable areas are the parts' own ids - `gb_answer.js` lays each one on the drawn part's box. A
 spec's optional `"view": [x, y, w, h]` shows another window on the canvas (the task page adds a band above and below
 for its empty label boxes); a deck never sets it.
 

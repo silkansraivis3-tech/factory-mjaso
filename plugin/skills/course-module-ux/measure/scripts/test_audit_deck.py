@@ -9,7 +9,9 @@ animation paused (what a hidden / preview pane does). Pinned:
   * with it on (the default) the audit finishes the animation first and reports none;
   * an endless animation on the slide does not stop the audit;
   * (deck_mark.html) a line a stepping figure marks .cur must look selected: the old blue/amber boxes fail, the
-    shipped gb_compose.css passes (IGF M05, 2026-10-19).
+    shipped gb_compose.css passes (IGF M05, 2026-10-19);
+  * (deck_call_dark.html) a conclusion on a dark stepping slide passes contrast: its bold term takes the callout's
+    colour, and the mark check restores the last line with no fade left running (M01 benchmark run 4).
 Skips, and says so, when no Chrome or Edge is installed.
 """
 from __future__ import annotations
@@ -29,6 +31,7 @@ from test_audit_drawing import browser  # noqa: E402
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 FIX = Path(__file__).resolve().parent.parent / "fixtures" / "deck_rise_in.html"
 MARK = FIX.parent / "deck_mark.html"
+CALL = FIX.parent / "deck_call_dark.html"
 PASS, FAIL = [], []
 
 
@@ -66,6 +69,10 @@ def main():
         new = run(exe, prof, "", MARK)
         check("gb_compose.css as shipped: every line marked .cur changes and looks like no line at rest",
               bool(new) and new.get("mark") == 0 and new.get("verdict") == "VERDICT: PASS", new)
+        # the conclusion on a dark stepping slide: its bold term reads, and the mark check leaves no fade behind it
+        call = run(exe, prof, "", CALL)
+        check("a conclusion on a dark stepping slide passes contrast - its bold term and its words (M01 run 4, s02 / s07)",
+              bool(call) and call.get("low") == 0 and call.get("verdict") == "VERDICT: PASS", call)
     finally:
         shutil.rmtree(prof, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

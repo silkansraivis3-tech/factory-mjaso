@@ -517,6 +517,80 @@ def crop(spec, boxes, panel):
 
 
 # ------------------------------------------------------------------ fixing one figure
+COVERS = ("gas_cloud", "flame", "fire", "spray", "spill", "wind", "text")   # drawn over other parts by their nature
+
+
+def extent(p):
+    """a part's box (x0, y0, x1, y1) from the spec alone: x y w h, a radius, the corners of an absolute path, else its point"""
+    num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool)  # noqa: E731
+    x, y = p.get("x") or 0, p.get("y") or 0
+    if num(p.get("w")) and num(p.get("h")):
+        return (x, y, x + p["w"], y + p["h"])
+    r = p.get("r") if num(p.get("r")) else p.get("size") if num(p.get("size")) else None
+    if r:
+        return (x - r, y - r, x + r, y + r)
+    if isinstance(p.get("d"), str):
+        xs, ys, cx, cy = [], [], 0.0, 0.0
+        for cmd, args in re.findall(r"([MLHVmlhv])([^MLHVmlhv]*)", p["d"]):
+            v = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", args)]
+            if cmd.islower() or not v:                   # a relative step: its corner is not known here
+                continue
+            if cmd in "ML" and len(v) >= 2:
+                cx, cy = v[-2], v[-1]
+            elif cmd == "H":
+                cx = v[-1]
+            elif cmd == "V":
+                cy = v[-1]
+            xs.append(cx)
+            ys.append(cy)
+        return (min(xs), min(ys), max(xs), max(ys)) if xs else None
+    return (x, y, x, y) if num(p.get("x")) or num(p.get("y")) else None
+
+
+def spoiled(spec, cand, tol=1.0):
+    """why a re-fit is no drawing at all - [] when it is one. A part moved outside the frame, or onto a part it was clear of
+    in the spec as written (M01 benchmark run 4, s05: a "candidate" with the lamp at x 635 in a 600-wide spec and the engine
+    over the valve - the kit grows its frame to hold a stray part, so the audits passed it). Never kept, never saved."""
+    def frame(s):
+        v = s.get("view")
+        return (v[0], v[1], v[0] + v[2], v[1] + v[3]) if isinstance(v, list) and len(v) == 4 else (0, 0, s["size"][0], s["size"][1])
+
+    def out_of(b, f):
+        return b and (b[0] < f[0] - tol or b[1] < f[1] - tol or b[2] > f[2] + tol or b[3] > f[3] + tol)
+
+    def on(b, a):                                        # b's middle inside a, and a box, not a point
+        return a and b and a[2] > a[0] and a[3] > a[1] and a[0] < (b[0] + b[2]) / 2 < a[2] and a[1] < (b[1] + b[3]) / 2 < a[3]
+
+    why, f0, f1 = [], frame(spec), frame(cand)
+    old, new = spec.get("parts") or [], cand.get("parts") or []
+    if len(old) != len(new):
+        return ["the re-fit has %d parts, the spec %d" % (len(new), len(old))]
+    e0, e1 = [extent(p) for p in old], [extent(p) for p in new]
+    name = lambda i: "%s (%s)" % (new[i].get("id") or i + 1, new[i].get("type"))  # noqa: E731
+    for i in range(len(new)):
+        if e1[i] != e0[i] and out_of(e1[i], f1) and not out_of(e0[i], f0):     # moved (a crop moves nothing)
+            why.append("%s moved outside the %s x %s frame (to x %s, y %s)" % (name(i), fmt(f1[2] - f1[0]), fmt(f1[3] - f1[1]),
+                                                                               fmt(e1[i][0]), fmt(e1[i][1])))
+    solid = [i for i, p in enumerate(new) if p.get("type") not in CONTAINERS + PATHS + COVERS]
+    for a in solid:
+        for b in solid:
+            if a != b and on(e1[b], e1[a]) and not on(e0[b], e0[a]):
+                why.append("%s moved onto %s" % (name(b), name(a)))
+    return why
+
+
+def usable(spec, new, how, best):
+    """(fix, how, closest attempt) with anything spoiled() taken out: never a fit, never a saved "candidate", with a part
+    out of its frame or on another part - and the words say why nothing was saved"""
+    bad = spoiled(spec, new) if new else []
+    if bad:
+        new, how = None, "no fix: the re-fit %s" % "; ".join(bad)
+    bad = spoiled(spec, best[0]) if best else []
+    if bad:
+        how, best = "%s - no candidate saved: it %s" % (how, "; ".join(bad)), None
+    return new, how, best
+
+
 def classify(probs):
     checks = {p[2] for p in probs}
     return checks
@@ -564,6 +638,8 @@ def try_fixes(spec_path, sid, spec, r0, probs0, log):
                         return out
                     n += 1
                     boxes = r.get("parts") or {}
+                    if spoiled(spec, cand):              # a part sent out of the frame or onto another: never the answer
+                        continue
                     if out is None or len(p) < len(out[1]):
                         out = (cand, p, n, strip, (r.get("states") or [{}])[-1].get("panel") or panel)
                     if not p:
@@ -717,6 +793,7 @@ def run_all(course, module, fix=True, jobs=4):
         new, how, best = try_fixes(sp, sid, spec, r, probs, None)
         if os.path.isfile(cand_path):
             os.remove(cand_path)
+        new, how, best = usable(spec, new, how, best)
         if new:
             os.makedirs(os.path.dirname(fp), exist_ok=True)
             rec = {"source": cm.sha(text), "column": column, "how": how, "made_by": "figure_fit.py"}

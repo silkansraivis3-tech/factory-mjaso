@@ -53,6 +53,10 @@
        opt.inside  true: it stays inside the part (a room's name), clear of its edge
        opt.near    how far it may go without a leader (default: beside the part); opt.lead false: never a leader
        opt.fixed   true: it is never moved (it is still checked)
+       opt.at      [x, y] in the part's own units: the place on the part the words name (a cylinder's "oil injector"). The
+                   label is judged against that point, not the whole part: moved off it, it gets a leader from it - a
+                   label pushed down a part's side by a neighbour no longer sits, with no line, beside the wrong feature
+                   (M01 benchmark run 4, s06)
      Returns the label's group; more text may be added to it (a valve's state under its name). */
   function label(fig, g, attrs, text, opt) {
     var w = el('g', { 'class': 'kit-lbl' }, g), L = { g: w, part: g, opt: opt || {} };
@@ -131,6 +135,7 @@
     this.report = null; this.laid = 0;
     this.theme();
     (spec.parts || []).forEach(function (p) { self.add(p); });
+    ghosts(this, true);
     this.clearState();
     watch(this);
   }
@@ -334,9 +339,10 @@
       if (this.raf) { this.later = true; return this.report; }     // after the step that is playing
       var n0 = this.n, rep, kept = this.list.map(function (part) { return part.v; });
       this.laying = true;
-      try { rep = lay(this); }
+      try { ghosts(this, false); rep = lay(this); }
       catch (err) { rep = { error: String((err && err.message) || err) }; if (root.console) console.error(err); }
       finally {
+        ghosts(this, true);
         try { this.go(n0, true); } catch (e2) { /* the figure stays where the layout left it */ }
         /* going back to step n0 rebuilds the values from the steps: a value set from outside the steps (a task page's panel
            valve turned to "closed", gb_answer.js kitSet) was lost when a layout ran after it - at random, as a font arrived or
@@ -686,7 +692,8 @@
           if (best && d >= best.cost) continue;
           if (!clear(c, inside)) continue;
           var cost = d, ln = null;
-          if (!inside && !L.opt.self && gapOf(c, A) > near + P) {
+          /* a label naming a point (opt.at) may be nudged (near) from its own place, or sit beside the point, with no line */
+          if (!inside && !L.opt.self && gapOf(c, A) > near + P && !(L.opt.at && Math.sqrt((x - b.x) * (x - b.x) + (y - b.y) * (y - b.y)) <= near)) {
             if (!lead) continue;
             ln = leaderFor(L, c);
             if (!ln) continue;
@@ -725,8 +732,16 @@
     var old = svg.querySelector('g.kit-leaders');
     if (old) old.parentNode.removeChild(old);
     var labs = f.labels.filter(function (L) { return L.seen && L.box; });
+    var sm0 = svg.getScreenCTM(), inv0 = sm0 && sm0.inverse();
     var input = labs.map(function (L) {
-      return { box: L.box, anchor: (L.part && L.part.__kitBox) || L.box, pts: L.part && L.part.__kitPts, within: L.within, opt: L.opt };
+      var A = (L.part && L.part.__kitBox) || L.box, pts = L.part && L.part.__kitPts;
+      var pm = L.opt.at && inv0 && L.g.parentNode.getScreenCTM();
+      if (pm) {                              // opt.at: judged against the point it names, a leader starts there
+        var pt = onto(inv0.multiply(pm), +L.opt.at[0], +L.opt.at[1]);
+        A = { x: pt.x - 1, y: pt.y - 1, x2: pt.x + 1, y2: pt.y + 1 };
+        pts = [pt];
+      }
+      return { box: L.box, anchor: A, pts: pts, within: L.within, opt: L.opt };
     });
     var res = solveLabels(G.obs, input, V, P), out = { moved: res.moved, leaders: res.leaders, unplaced: [] };
     labs.forEach(function (L, i) { L.at = res.at[i]; L.leader = res.leader[i]; });
@@ -754,6 +769,22 @@
     });
     out.labels = labs.length;
     return out;
+  }
+
+  /* GHOST (2.50.4) - spec.ghost: [part ids] whose words a task takes off ("unlabel": "answers" or a list, task_pages.py).
+     They are laid out like every other label, so the words left stand exactly where the deck has them, and are hidden
+     after every layout: a `text` part whole, any other part's labels and their leader lines. Taking the words out of the
+     spec instead re-laid the rest, and a label could land beside the wrong space (M01 benchmark run 4, q01 / q03). */
+  function ghosts(f, hide) {
+    var ids = f.spec.ghost;
+    if (!ids || !ids.length) return;
+    q(f.svg, '.kit-part').forEach(function (p) {
+      if (ids.indexOf(p.getAttribute('data-kit-id')) < 0) return;
+      var lbls = q(p, '.kit-lbl'), d = hide ? 'none' : '';
+      if (p.classList.contains('kit-part-text')) p.style.display = d;
+      else lbls.forEach(function (n) { n.style.display = d; });
+      lbls.forEach(function (n) { if (n.__kitLeader) n.__kitLeader.style.display = d; });
+    });
   }
 
   function setView(svg, V) { svg.setAttribute('viewBox', V.map(function (v) { return +v.toFixed(2); }).join(' ')); }
@@ -1306,9 +1337,20 @@
   /* vent - a vent outlet to the open air. value 0..1 = how much is venting (puffs).
      A vent on top of a pipe's upright run is a VENT MAST: its tap area on a task (gb_answer.js lays it on the part's box) is the
      whole mast, not the outlet alone - an unpainted box down the run (2.49.7, IGF M01 q03 needed a hand-made % box).
-     "mast": false keeps the outlet alone; "mast": <length> gives the run when no pipe of the spec draws it. */
+     "mast": false keeps the outlet alone; "mast": <length> gives the run when no pipe of the spec draws it; "mast": true asks
+     for a mast. With no pipe of the spec under the outlet, a `true` or a length is DRAWN - an upright pipe down from the outlet
+     (true: VENT_MAST long) - never a bare outlet floating in the air (M01 benchmark run 4: `true` was silently ignored).
+     Any other value stops the figure with what it takes. */
+  var VENT_MAST = 60;
   TYPES.vent = function (fig, part, g, p) {
-    var mast = p.mast === false ? null : typeof p.mast === 'number' && p.mast > 0 ? [0, 0, p.mast] : mastUnder(fig, p.x || 0, p.y || 0);
+    var m = p.mast;
+    if (m !== undefined && m !== null && m !== true && m !== false && !(typeof m === 'number' && m > 0)) {
+      throw new Error('kit: vent ' + (p.id || '') + ' has "mast": ' + JSON.stringify(m) +
+                      ' - true (a mast), false (the outlet alone) or a length in figure units (the mast under the outlet)');
+    }
+    var under = m === false ? null : mastUnder(fig, p.x || 0, p.y || 0);
+    var mast = m === false ? null : typeof m === 'number' ? [0, 0, m] : under || (m === true ? [0, 0, VENT_MAST] : null);
+    if (mast && !under) el('path', { d: 'M0 0 V' + mast[2], 'class': 'kit-pipe kit-vent-mast' }, g);
     if (mast) {
       el('rect', { x: mast[0] - 9, y: mast[1], width: 18, height: mast[2] - mast[1], 'class': 'kit-hit',
                    style: 'fill:none;stroke:none' }, g);
@@ -1757,11 +1799,11 @@ KIT.define('cylinder', function (fig, part, g, p) {
     var q0 = h.polar(13, a), q1 = h.polar(20, a);
     h.el('line', { x1: fx + q0[0], y1: fy + q0[1], x2: fx + q1[0], y2: fy + q1[1] }, fire);
   });
-  if (p.labels !== false) {
-    h.label(fig, g, { x: -24, y: 16, 'text-anchor': 'end', 'class': 'kit-cap' }, 'oil injector');
-    h.label(fig, g, { x: w + 24, y: 16, 'text-anchor': 'start', 'class': 'kit-cap' }, 'gas injector');
-    h.label(fig, g, { x: w / 2, y: -36, 'text-anchor': 'middle', 'class': 'kit-cap' }, 'exhaust valve');
-    h.label(fig, g, { x: -24, y: pTop + ph / 2 + 4, 'text-anchor': 'end', 'class': 'kit-cap' }, 'piston');
+  if (p.labels !== false) {          // each names its own feature (at): moved by a neighbour, it keeps a leader to it
+    h.label(fig, g, { x: -24, y: 16, 'text-anchor': 'end', 'class': 'kit-cap' }, 'oil injector', { at: [ox - 5, 10] });
+    h.label(fig, g, { x: w + 24, y: 16, 'text-anchor': 'start', 'class': 'kit-cap' }, 'gas injector', { at: [gx + 5, 10] });
+    h.label(fig, g, { x: w / 2, y: -36, 'text-anchor': 'middle', 'class': 'kit-cap' }, 'exhaust valve', { at: [w / 2, -26] });
+    h.label(fig, g, { x: -24, y: pTop + ph / 2 + 4, 'text-anchor': 'end', 'class': 'kit-cap' }, 'piston', { at: [4, pTop + ph / 2] });
   }
   var st = h.el('text', { x: w / 2, y: H + 24, 'text-anchor': 'middle', 'class': 'kit-state' }, g);
   part.render = function (v) {

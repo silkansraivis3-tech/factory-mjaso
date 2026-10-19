@@ -33,7 +33,8 @@ THE BUILD SHEET, PER QUESTION (working_claude\\script\\M01.build.json "screens",
         ("kit_step": 2 or a word of a step's title for another), places = the spec's part ids or the words a part is
         drawn with ("areas": {"Funnel": "ga1"}), "unlabel": "answers" | "all" | ["P1", "V2"] takes the words off the
         drawing so it does not give the answer away - "answers" (2.49.1) only the parts the answers name and their callouts,
-        "all" every part's words and every free `text` part. The engine lays each area on the drawn part itself.
+        "all" every part's words and every free `text` part; "answers" and a list are laid out and then hidden by the kit
+        (spec "ghost", 2.50.4), so the words left stay where the deck has them. The engine lays each area on the drawn part.
     "q04": {"step": 0.5}                                          the dial's step (default: worked out from the tolerance)
     "q10": {"states": {"Purge mode": ["Off", "Sweep", "Hold"]}, "start": {"Vent fan": "stopped"}}   a panel's positions
   The page sets: "pass_mark": 70 at the top of the build sheet (checks; default 70), "try_tablet": true|false on the
@@ -462,6 +463,8 @@ def svg_fig(body, name, vb, where, rel, probs, bands):
 
 # a kit part's words on the drawing - what "unlabel" takes off, so the drawing does not give the answer away
 KIT_WORDS = ("label", "caption", "title", "tag", "labels", "cofferdamLabel", "hullLabel", "liquidLabel", "vapourLabel", "heatLabel")
+# the words the kit draws as plain text in a part's body, not as a label it lays out - the only ones a ghost still loses
+PLAIN_WORDS = ("title", "tag")
 
 
 def kit_box(p):
@@ -566,19 +569,28 @@ def kit_fig(q, b, text, rel, probs, where, bands):
         if not mine_ids:
             probs.append("%s: \"unlabel\": \"answers\" - the build sheet's \"areas\" / \"labels\" name no part of %s, so nothing is "
                          "taken off" % (where, rel))
-    if hide:
+    if hide == "all":
         keep = []
         for p in parts:
-            if hide == "answers":
-                if id(p) in gone:                       # a callout of an answer: words only, it goes
-                    continue
-                mine = p.get("id") in mine_ids
-            else:
-                mine = hide == "all" or p.get("id") in hide
-            if mine and p.get("type") == "text":        # a bare caption is nothing but words: it goes
+            if p.get("type") == "text":                 # a bare caption is nothing but words: it goes
                 continue
-            keep.append(dict((k, v) for k, v in p.items() if k not in KIT_WORDS) if mine else p)
+            keep.append(dict((k, v) for k, v in p.items() if k not in KIT_WORDS))
         spec = dict(spec, parts=keep)
+    elif hide:
+        # "answers" or a list (2.50.4): the parts keep their words and the kit lays them out with every other label, then
+        # hides them (spec "ghost") - so the words left stand where the deck has them. Taking them out of the spec re-laid
+        # the rest, and a label could land beside the wrong space (M01 benchmark run 4, q01 / q03). A part's title and tag
+        # are plain text, not labels: they still go from the spec
+        keep, ghost = [], []
+        for n, p in enumerate(parts):
+            mine = (id(p) in gone or p.get("id") in mine_ids) if hide == "answers" else p.get("id") in hide
+            if not mine:
+                keep.append(p)
+                continue
+            gid = p.get("id") or "_ghost%d" % n             # a callout with no id of its own
+            ghost.append(gid)
+            keep.append(dict([(k, v) for k, v in p.items() if k not in PLAIN_WORDS], id=gid))
+        spec = dict(spec, parts=keep, ghost=ghost)
     steps = spec.get("steps") or []
     want = b.get("kit_step", "final")
     n = len(steps)

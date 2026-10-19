@@ -116,8 +116,40 @@ def short(items, n=4):
     return ", ".join(items[:n]) + (" +%d" % (len(items) - n) if len(items) > n else "")
 
 
+def quote(t, n=40):
+    t = " ".join(str(t or "").split())
+    return ' "%s"' % (t[:n] + ("..." if len(t) > n else "")) if t else ""
+
+
+def finding(kind, f):
+    """one finding of the deck probe as the person needs it to fix it: the element and its words, not a count
+    (M01 benchmark run 4: "slide 2: low 1" took a separate run_audits.py --json to find a bold term in the conclusion)"""
+    if not isinstance(f, dict):
+        return "%s %s" % (kind, f)
+    sel = f.get("sel") or f.get("el") or "?"
+    if kind == "low":
+        return "low contrast %s%s %s:1 (need %s)" % (sel, quote(f.get("txt")), f.get("ratio"), f.get("need"))
+    if kind == "small":
+        return "small text %s%s %s px" % (sel, quote(f.get("txt")), f.get("px"))
+    if kind == "spill":
+        return "spills %s by %s px" % (sel, f.get("byPx"))
+    if kind == "tap":
+        return "small tap target %s %sx%s px" % (sel, f.get("w"), f.get("h"))
+    if kind == "svgSmall":
+        return "drawing text too small%s %s px on screen" % (quote(f.get("txt")), f.get("effPx", f.get("declaredPx")))
+    if kind == "scroll":
+        return "scrolls %s by %s px" % (sel, f.get("overflowPx"))
+    if kind == "collide":
+        return "labels collide %s / %s" % (f.get("a"), f.get("b"))
+    return "%s %s" % (kind, sel)
+
+
+def where(s):
+    return "slide %s%s" % (s.get("slide"), " (%s)" % s["id"] if s.get("id") else "")
+
+
 def summarise(name, rec):
-    """-> (status 'PASS'|'FAIL'|'ABORT', one line, [detail lines])"""
+    """-> (status 'PASS'|'FAIL'|'ABORT', one line, [detail lines]) - every detail line names the element and its words"""
     if "ABORTED" in rec:
         return "ABORT", str(rec["ABORTED"]).strip().splitlines()[0][:160], []
     r, ex = rec.get("res") or {}, rec.get("exit")
@@ -128,11 +160,11 @@ def summarise(name, rec):
     lines = []
     if name == "deck":
         for s in r.get("failingSlides") or []:
-            bits = ["%s %d" % (k, len(s[k])) for k in ("low", "small", "spill", "tap", "svgSmall", "scroll", "collide") if s.get(k)]
+            bits = [finding(k, f) for k in ("low", "small", "spill", "tap", "svgSmall", "scroll", "collide") for f in s.get(k) or []]
             # a line a stepping figure selects that does not look selected (IGF M05, 2026-10-19)
             bits += ["selected line looks unselected: %s (= %s)" % (m.get("txt") or m.get("sel"), m.get("looksLike"))
                      for m in s.get("mark") or []]
-            lines.append("slide %s: %s" % (s.get("slide"), ", ".join(bits) or "failed"))
+            lines += ["%s: %s" % (where(s), b) for b in bits] or ["%s: failed" % where(s)]
         if r.get("overfilledSlides"):
             lines.append("over-filled: " + short("%s (%s %%)" % (o["slide"], o["fillPct"]) for o in r["overfilledSlides"]))
         if r.get("linksInsideSlides"):
@@ -143,7 +175,11 @@ def summarise(name, rec):
     elif name == "collide":
         for s in r.get("slides") or r.get("failingSlides") or []:
             if s.get("collisions") or s.get("total") or s.get("n"):
-                lines.append("slide %s: %s" % (s.get("slide"), short(sorted((s.get("kinds") or s.get("byKind") or {}).items()) or ["collision"])))
+                bits = (["text on text %s%s / %s%s" % (c.get("a"), quote(c.get("aTxt"), 30), c.get("b"), quote(c.get("bTxt"), 30))
+                         for c in s.get("text") or []]
+                        + ["box on box %s / %s" % (c.get("a"), c.get("b")) for c in s.get("box") or []]
+                        + ["text under %s: %s%s" % (c.get("under"), c.get("sel"), quote(c.get("txt"), 30)) for c in s.get("chrome") or []])
+                lines += ["%s: %s" % (where(s), b) for b in bits] or ["%s: collision" % where(s)]
         tail = "%s collision(s)" % r.get("totalCollisions", "?")
     else:
         for p in r.get("problems") or []:

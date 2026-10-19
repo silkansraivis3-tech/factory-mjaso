@@ -146,6 +146,17 @@ check("F22 person: a wear item the kit cannot draw is refused", bool(ck.check_sp
 p3 = json.loads(json.dumps(person)); p3["parts"][0]["labels"]["suit"] = "OVERALL"
 check("F22 person: a label for an item that is not worn is refused (its words would never show)", bool(ck.check_spec(p3, types, "s")))
 
+# ---------------------------------------------------------------- 2.50.4: a vent's "mast" (M01 benchmark run 4, issue 3)
+def vent(mast):
+    return {"size": [400, 300], "label": "x", "parts": [{"id": "V", "type": "vent", "x": 200, "y": 60, "mast": mast}]}
+
+
+for good in (True, False, 80, 42.5):
+    check("vent \"mast\": %r is a good spec" % (good,), ck.check_spec(vent(good), types, "s") == [], ck.check_spec(vent(good), types, "s"))
+for wrong in ("tall", 0, -20, None, [0, 80]):
+    probs = ck.check_spec(vent(wrong), types, "s")
+    check("vent \"mast\": %r is refused, saying what it takes" % (wrong,), any("true (a mast)" in x for x in probs), probs)
+
 # ---------------------------------------------------------------- the 2.48.0 layout contract in kit.js itself
 kit = ck.read(ck.KIT_JS)
 check("kit.js lays figures out (labels, the floor, the frame) and exports the helpers parts use",

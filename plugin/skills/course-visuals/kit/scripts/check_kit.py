@@ -226,6 +226,10 @@ def check_spec(spec, types, where):
                         if item not in wear:
                             bad("the person %s has a %s for %r, which is not in its \"wear\" - the words would never show"
                                 % (p.get("id") or "", key, item))
+        if t == "vent" and "mast" in p and not (p["mast"] is True or p["mast"] is False or (
+                isinstance(p["mast"], (int, float)) and not isinstance(p["mast"], bool) and p["mast"] > 0)):
+            bad("the vent %s has \"mast\": %r - true (a mast), false (the outlet alone) or a length in figure units"
+                % (pid or "", p["mast"]))
         if t == "gas_cloud" and p.get("from") is not None:
             bad_origin = cloud_origin_problem(p, size)
             if bad_origin:

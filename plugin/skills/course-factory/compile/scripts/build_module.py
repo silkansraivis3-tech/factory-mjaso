@@ -201,7 +201,9 @@ def main(argv=None):
         if code != 0:
             fails.append(k)
             say.append("%s - FAIL:" % k.upper())
-            say += ["  " + x for x in lines_of("\n".join(y for y in out.splitlines() if not y.startswith("Built ")))]
+            # the audits name every element and its words (run_audits.summarise), so they keep more lines - no --json run to find them
+            say += ["  " + x for x in lines_of("\n".join(y for y in out.splitlines() if not y.startswith("Built ")),
+                                               40 if k.startswith("audits") else 12)]
     passed = not fails
     review = ""
     if want_review and passed:

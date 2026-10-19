@@ -123,6 +123,38 @@ def main():
     check("the parts are where they were", c["parts"] == sparse["parts"])
     check("a drawing that fills its frame is not cropped", ff.crop(sparse, {"0": [0, 0, 640, 390, "T", "tank"]}, [682, 415]) is None)
 
+    print("-- 2.50.4: never a fit or a saved candidate with a part out of its frame or on another part (M01 run 4, s05)")
+    ga = {"size": [600, 330], "parts": [
+        {"id": "RL", "type": "space", "x": 6, "y": 30, "w": 284, "h": 290},
+        {"id": "G1", "type": "pipe", "d": "M6 240 H160"},
+        {"id": "V1", "type": "valve", "x": 44, "y": 240},
+        {"id": "E1", "type": "engine", "x": 160, "y": 208, "w": 110, "h": 72},
+        {"id": "C2", "type": "gas_cloud", "x": 300, "y": 80, "w": 250, "h": 110},
+        {"id": "L2", "type": "lamp", "x": 560, "y": 70},
+        {"id": "TK", "type": "tank", "x": 320, "y": 220, "w": 200, "h": 80},
+        {"id": "TV", "type": "valve", "x": 420, "y": 230}]}
+    lamp_out = json.loads(json.dumps(ga))
+    lamp_out["parts"][5]["x"] = 635.4                       # the run-4 candidate's lamp
+    why = ff.spoiled(ga, lamp_out)
+    check("a part moved past the frame (the lamp at x 635 in a 600-wide spec) spoils the re-fit",
+          len(why) == 1 and "L2 (lamp) moved outside the 600 x 330 frame" in why[0], why)
+    eng_on = json.loads(json.dumps(ga))
+    eng_on["parts"][3]["x"] = 20                            # the engine drawn over the valve
+    why = ff.spoiled(ga, eng_on)
+    check("a part moved onto one it was clear of (the engine over the valve) spoils the re-fit",
+          why == ["V1 (valve) moved onto E1 (engine)"], why)
+    calm = json.loads(json.dumps(ga))
+    calm["parts"][4]["x"] = 40                              # a cloud over the engine room is a cloud
+    calm["parts"][6]["x"], calm["parts"][7]["x"] = 300, 400  # a valve drawn on its tank moves with it
+    check("a cloud over parts, a valve kept on its tank and a crop (a view, nothing moved) are not spoiled",
+          ff.spoiled(ga, calm) == [] and ff.spoiled(ga, dict(ga, view=[300, 60, 280, 160])) == [],
+          (ff.spoiled(ga, calm), ff.spoiled(ga, dict(ga, view=[300, 60, 280, 160]))))
+    new, how, best = ff.usable(ga, lamp_out, "COLUMN: re-fitted", (eng_on, [("1280x800", 1, "empty", "", "")], 3, True, [600, 330]))
+    check("figure_fit keeps no such fit and saves no such candidate - and says why",
+          new is None and best is None and "lamp" in how and "no candidate saved" in how and "onto E1" in how, how)
+    new, how, best = ff.usable(ga, calm, "COLUMN: re-fitted", None)
+    check("... a usable fit is kept as it is", new is calm and how == "COLUMN: re-fitted", how)
+
     print("-- the compiler draws a fit only while it belongs to its spec and its column")
     tmp = tempfile.mkdtemp(prefix="fit_test_")
     try:

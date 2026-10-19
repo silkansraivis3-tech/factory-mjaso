@@ -357,14 +357,18 @@
     });
     kept.forEach(function (k) {
       if (k.had) { k.el.classList.add(cls); }
-      k.el.style.transition = k.tr;
     });
+    /* read the restored look while transitions are still off, so giving them back starts no fade: the last line's
+       .cur look was never re-read, and its background faded back over .2 s while its colour snapped - the contrast
+       check below then measured a conclusion's dark text on the dark wash, 1.11:1 (M01 benchmark run 4, s07) */
+    kept.forEach(function (k) { getComputedStyle(k.el).backgroundColor; });
+    kept.forEach(function (k) { k.el.style.transition = k.tr; });
     return bad;
   }
 
   function auditSlide(s, n) {
     var ext = rootExtent(s);
-    var out = { slide: n, low: [], small: [], spill: [], tap: [],
+    var out = { slide: n, id: s.id || "", low: [], small: [], spill: [], tap: [],
                 svgSmall: [], collide: [], scroll: [], mark: [] };
     out.mark = markCheck(s);
     var sizes = [], chars = 0;
@@ -638,7 +642,7 @@
       docHScroll: document.documentElement.scrollWidth >
                   document.documentElement.clientWidth,
       failingSlides: failing.map(function (r) {
-        return { slide: r.slide,
+        return { slide: r.slide, id: r.id,
                  low: r.low.slice(0, CONFIG.maxExamples),
                  small: r.small.slice(0, CONFIG.maxExamples),
                  spill: r.spill.slice(0, CONFIG.maxExamples),
