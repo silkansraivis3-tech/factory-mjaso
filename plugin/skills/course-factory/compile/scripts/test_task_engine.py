@@ -658,6 +658,56 @@ def picture_part(exe, tmp):
           and hot.get("tickbg") == "rgb(79, 214, 160)" and lum(hot.get("bg")) > 40, hot)
 
 
+STEPS = [
+    {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the steps", "text": "Self-check on your tablet now.", "minutes": 4},
+    {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "scenario", "question": "Three situations. In each one, choose what happens or what is done.",
+     "answer": "At sea the engine runs in gas mode and the gas supply trips => The engine keeps burning the gas left in the pipe | "
+               "The engine changes over to fuel-oil mode and keeps running* | The engine stops and the ship loses power\n"
+               "Before any fuel flows from the bunker truck => The ship's and the supplier's persons in charge agree the procedure in writing and sign the safety checklist* | "
+               "The supplier decides alone how the transfer runs | The crew starts the transfer and signs the checklist afterwards\n"
+               "A ship with a gas-only engine loses its gas supply => The engine changes over to fuel-oil mode | The engine stops - it cannot switch to oil* | "
+               "The engine keeps running on the gas in the tank",
+     "feedback": "A dual-fuel engine changes over to oil and keeps running; a gas-only engine cannot, so it stops. Before any fuel flows, the persons in charge "
+                 "agree the procedure in writing and sign the checklist."}]
+STEP_OPT = [("The engine keeps burning the gas left in the pipe", "The engine changes over to fuel-oil mode and keeps running"),
+            ("The supplier decides alone how the transfer runs", "The ship's and the supplier's persons in charge agree the procedure in writing and sign the safety checklist"),
+            ("The engine changes over to fuel-oil mode", "The engine stops - it cannot switch to oil")]
+STEP_MEASURE = (RECT + BAR + "var p = [].slice.call(s.querySelectorAll('.part')), w = s.querySelector('.why'), d = document.getElementById('dock').getBoundingClientRect().top;"
+                "out.steps3 = {vh: innerHeight, bar: bar, dock: d, why: R(w), whyOn: /\\bon\\b/.test(w.className), vd: s.querySelector('.vd').textContent,"
+                " heads: p.map(function (x) { return R(x.querySelector('.phead')); }), parts: p.map(function (x) { return R(x); }),"
+                " past: p.map(function (x) { return /\\bpast\\b/.test(x.className); }),"
+                " last: R([].filter.call(p[2].querySelectorAll('.opt.right'), function (x) { return true; })[0])};")
+
+
+def steps_part(exe, tmp):
+    """2.50.1 - IGF M01 m02: after the last Check of a 3-step scenario the verdict and the part in hand were below the frame and
+    \"Step 2 of 3\" under the top bar. The earlier steps fold to a summary; the verdict, the last step's right answer and
+    every step's label are on the screen together, at 1280 x 800 and 1024 x 768, whichever way the steps were answered."""
+    print("\n-- 2.50.1: a 3-step scenario after its last Check")
+    os.makedirs(os.path.join(tmp, "st"))
+    c, md = tcm.new_course(os.path.join(tmp, "st"), tcm.script(screens=STEPS), build=False)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {"t01": {"try_tablet": False}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    page = os.path.join(md, "tasks", "sc1_the_steps.html")
+    check("the 3-step fixture page is built", code == 0 and os.path.isfile(page), out)
+    for size in ((1280, 800), (1024, 768)):
+        for how, pick in (("right", 1), ("wrong", 0)):
+            plan = [["eval", "document.getElementById('go').click();"],
+                    ["q01", [["tap", ".opt", STEP_OPT[0][pick]], ["dock"], ["dock"], ["tap", ".opt", STEP_OPT[1][1]], ["dock"], ["dock"],
+                             ["tap", ".opt", STEP_OPT[2][1]], ["dock"], ["eval", STEP_MEASURE]]]]
+            r = drive(exe, page, plan, tmp, look=False, size=size)
+            q = r.get("steps3") or {}
+            tag = "%dx%d, step 1 answered %s" % (size[0], size[1], how)
+            check("no script error (%s)" % tag, not r.get("errors"), r.get("errors"))
+            ok = bool(q.get("whyOn")) and q.get("why", {}).get("t", -1) >= q.get("bar", 9e9) and q["why"]["b"] <= q["dock"] + 0.5 and q["last"]["b"] <= q["why"]["t"] + 0.5
+            check("%s: the verdict (%s) and the last step's right answer are on the screen above the Check bar" % (tag, q.get("vd")), ok, q)
+            heads = q.get("heads") or []
+            check("%s: every step's label is below the top bar and none is above the frame" % tag,
+                  len(heads) == 3 and all(h["t"] >= q["bar"] - 1 and h["b"] <= q["dock"] for h in heads), q)
+            check("%s: the two finished steps are folded, and a folded step is shorter than the step in hand" % tag,
+                  q.get("past") == [True, True, False] and all((p["b"] - p["t"]) < 0.5 * (q["parts"][2]["b"] - q["parts"][2]["t"]) for p in q["parts"][:2]), q)
+
+
 def main():
     exe = drawing_check.find_browser()
     if not exe:
@@ -700,6 +750,7 @@ def main():
         figures_part(exe, tmp)
         fixes_part(exe, tmp)
         picture_part(exe, tmp)
+        steps_part(exe, tmp)
         team_part(exe, tmp)
         language_part(exe, tmp)
         deck_language_part(exe, tmp)

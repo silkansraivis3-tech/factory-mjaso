@@ -15,8 +15,10 @@
       and one PASS line. Do not run those checks one by one: each separate run is a turn of the model.
 5  on PASS it has photographed every slide, every figure step and every question (asked, wrong, right) onto a few
       sheets and checked that every question grades right and wrong answers as such. Give the sheets to ONE review
-      subagent (model haiku) with compile/REVIEW_PROMPT.md. Fix what it finds, build again: the next review gets only
-      the screens that changed. (Proved on the IGF M01 round-1 build: haiku found both problems the old browser-driving
+      subagent (model haiku) with compile/REVIEW_PROMPT.md. Fix ALL it finds in one go, build again, and send the same
+      reviewer a re-review (the changed screens only, with its finding list: FIXED / NOT FIXED - no new polish). Every
+      finding is fixed before hand-over; what the re-review adds is only what is clearly broken, so the loop ends (M01
+      benchmark: 6 open-ended review passes took 18 of 29 minutes). (Proved on the IGF M01 round-1 build: haiku found both problems the old browser-driving
       review found - the q03 tap area on the mast's cap only, a leader line through a caption - in 3 calls, $0.02,
       where the old review took 100 calls and $2.42.)
 ```

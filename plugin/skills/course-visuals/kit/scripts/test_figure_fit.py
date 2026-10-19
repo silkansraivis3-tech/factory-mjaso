@@ -6,6 +6,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -70,6 +71,48 @@ def main():
     check("a free text wider than the frame breaks at the space nearest its middle - the same words",
           n4 == 1 and out4["parts"][0]["text"].replace("\n", " ") == wide["parts"][0]["text"] and "\n" in out4["parts"][0]["text"],
           out4["parts"][0]["text"])
+
+    print("-- pack: a figure laid into a narrower width, row by row, room by room (2.50.1)")
+    fig = {"size": [640, 300], "parts": [
+        {"id": "PS", "type": "pipe_section", "x": 20, "y": 40, "w": 400, "h": 80, "branchAt": 320},
+        {"id": "VT", "type": "vent", "x": 340, "y": 20},
+        {"id": "RA", "type": "readout", "x": 460, "y": 50, "w": 150, "h": 60},
+        {"id": "MS", "type": "space", "x": 20, "y": 150, "w": 600, "h": 140},
+        {"id": "GP", "type": "pipe", "d": "M30 260 H470"},
+        {"id": "GD", "type": "readout", "x": 30, "y": 160, "w": 150, "h": 56},
+        {"id": "E", "type": "engine", "x": 476, "y": 220, "w": 130, "h": 60}]}
+    bx = {"0": [20, 40, 420, 120, "PS", "pipe_section"], "1": [340, 20, 360, 40, "VT", "vent"],
+          "2": [460, 50, 610, 110, "RA", "readout"], "3": [20, 150, 620, 290, "MS", "space"],
+          "4": [30, 258, 470, 262, "GP", "pipe"], "5": [30, 160, 180, 216, "GD", "readout"],
+          "6": [476, 220, 606, 280, "E", "engine"]}
+    b0 = {int(k): v[:4] for k, v in bx.items()}
+    own = ff.owners(fig["parts"], b0)
+    hst = ff.hosts(fig["parts"], b0, own)
+    check("rooms decided on the spec as written: the readout, the engine and the pipe are in the machinery space",
+          own.get(5) == 3 and own.get(6) == 3 and own.get(4) == 3 and own.get(2) is None, own)
+    check("the vent sits ON the pipe section: it keeps its place there", hst == {1: 0}, hst)
+    out, ok = ff.pack(fig, bx, 480, owner=own, host=hst)
+    q = {p.get("id"): p for p in out["parts"]}
+    check("the rows fit: the frame is 480 wide", ok and out["size"][0] == 480, out["size"])
+    check("a readout keeps its width, the pipe section gives way", q["RA"]["w"] == 150 and q["PS"]["w"] < 400, (q["RA"], q["PS"]))
+    check("the readout is still right of the pipe section, inside the frame",
+          q["RA"]["x"] > q["PS"]["x"] + q["PS"]["w"] and q["RA"]["x"] + 150 <= 480, (q["PS"], q["RA"]))
+    vent_at = (q["VT"]["x"] - q["PS"]["x"]) / float(q["PS"]["w"])
+    check("the vent stays at the same share of its pipe section (on its branch)", abs(vent_at - 0.8) < 0.06, vent_at)
+    check("the room shrinks with the frame and the engine stays inside it",
+          q["MS"]["w"] <= 470 and q["E"]["x"] + 130 <= q["MS"]["x"] + q["MS"]["w"], (q["MS"], q["E"]))
+    end = float(re.findall(r"H(-?[\d.]+)", q["GP"]["d"])[0])
+    check("the gas pipe still runs into the engine (it ends at the engine's new left side)",
+          abs(end - (q["E"]["x"] - 6)) < 8, (q["GP"]["d"], q["E"]["x"]))
+    nothing_moved_vertically = all(p.get("y") == o.get("y") for p, o in zip(out["parts"], fig["parts"]))
+    check("nothing moves up or down", nothing_moved_vertically)
+
+    print("-- keep_in: a part past its room's floor grows the room; a part past a side moves in")
+    k_spec = {"size": [300, 200], "parts": [{"id": "R", "type": "space", "x": 10, "y": 10, "w": 280, "h": 150},
+                                            {"id": "C", "type": "gas_cloud", "x": 250, "y": 120, "w": 60, "h": 60}]}
+    k_out, kn = ff.keep_in(k_spec, {"0": [10, 10, 290, 160, "R", "space"], "1": [250, 120, 310, 180, "C", "gas_cloud"]}, {1: 0})
+    check("the room grew by what poked out below, the cloud moved in from the right",
+          kn == 2 and k_out["parts"][0]["h"] > 150 and k_out["parts"][1]["x"] < 250, k_out["parts"])
 
     print("-- crop: EMPTY - a window around what is drawn, in the panel's shape; the parts are not moved")
     sparse = {"size": [640, 390], "parts": [{"id": "T", "type": "tank", "x": 40, "y": 40, "w": 120, "h": 60}]}

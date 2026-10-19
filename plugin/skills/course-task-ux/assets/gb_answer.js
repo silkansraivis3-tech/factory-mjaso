@@ -679,21 +679,33 @@
     if (q.why) {
       add(q.why, 'on'); add(q.why, q.ok ? 'good' : 'bad');
       /* above the dock, not under it - and a question of several parts keeps its last part's own label in view */
-      bring(q.why, q.parts.length > 1 ? q.parts[q.k].el : null);
+      if (q.parts.length > 1) { settle(q.why, q.parts[q.k].el); } else { bring(q.why, null); }
     }
   }
   /* bring an element into the band between the top bar and the dock (2.46.0). The top bar is sticky: scrollIntoView
      left a scenario's "Step 2 of 3" under it. Scrolled down only as far as keeps `from` (default: the element itself)
      below the top bar - when both do not fit, the top wins. */
-  function bring(el, from) {
-    if (!el || !el.getBoundingClientRect) { return; }
-    var r = el.getBoundingClientRect(), t = (from || el).getBoundingClientRect().top, d = 0;
+  function band() {
     var top = 8, bot = (W.innerHeight || D.documentElement.clientHeight) - 8, bar = $('.state'), team = $('#teamBar');
     if (bar) { top = Math.max(top, bar.getBoundingClientRect().bottom + 8); }
     if (team && !team.hasAttribute('hidden')) { top = Math.max(top, team.getBoundingClientRect().bottom + 8); }
     if (dock && !has(dock, 'off')) { bot = Math.min(bot, dock.getBoundingClientRect().top - 8); }
-    if (r.bottom > bot) { d = Math.min(r.bottom - bot, t - top); } else if (t < top) { d = t - top; }
+    return { top: top, bot: bot };
+  }
+  function bring(el, from) {
+    if (!el || !el.getBoundingClientRect) { return; }
+    var r = el.getBoundingClientRect(), t = (from || el).getBoundingClientRect().top, d = 0, b = band();
+    if (r.bottom > b.bot) { d = Math.min(r.bottom - b.bot, t - b.top); } else if (t < b.top) { d = t - b.top; }
     if (d) { try { W.scrollBy(0, d); } catch (x) { D.documentElement.scrollTop += d; } }
+  }
+  /* a question of several parts (2.50.1): once the earlier parts have folded, the question, the folded parts, the part
+     in hand and its verdict usually fit the screen together - then the page goes back to the top, so nothing of it
+     is left above the frame; when they do not, bring() keeps the part's own label under the top bar */
+  function settle(el, from) {
+    if (!el || !el.getBoundingClientRect) { return; }
+    var y = W.pageYOffset || D.documentElement.scrollTop || 0;
+    if (y > 0 && el.getBoundingClientRect().bottom + y <= band().bot) { toTop(); return; }
+    bring(el, from);
   }
   function toTop() { try { W.scrollTo(0, 0); } catch (x) { /* an old WebView */ } D.documentElement.scrollTop = 0; body.scrollTop = 0; }
   function allOk(q) {
@@ -831,7 +843,7 @@
     if (p.kind === 'stop') { p.groups = [mkStop(q, before)]; add(before.el, 'stopping'); } else { add(before.el, 'past'); }
     add(p.el, 'on');
     setBtn(say('check'), 'off');
-    bring(p.el);                                       /* the part's own label ("Step 2 of 3") stays under the top bar */
+    settle(p.el);                                      /* the part's own label ("Step 2 of 3") stays under the top bar */
   }
   function next() {
     if (cur < qs.length - 1) { showQ(cur + 1); } else { showResult(); }

@@ -173,14 +173,29 @@ def main(argv=None):
 
     if not o.no_course_pages:
         jobs["course pages (compile_course.py)"] = [PY, os.path.join(HERE, "compile_course.py"), course]
+    # 4 - the review sheets are made at the same time (2.50.1: they were a third of a passing build), into a folder of
+    # their own: they become the review only when everything passes, so a failed build never hides a changed screen
+    out_dir = workspace.claude_path(course, "review", m)
+    pending = out_dir + ".pending"
+    want_review = not o.no_review and not fails
+    if want_review:
+        import shutil
+        shutil.rmtree(pending, ignore_errors=True)
+        jobs["review sheets"] = ["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, pending, "--base=" + out_dir]
     results = {}
-    with cf.ThreadPoolExecutor(max_workers=6) as ex:
+    with cf.ThreadPoolExecutor(max_workers=7) as ex:
         futs = {ex.submit(run, c): k for k, c in jobs.items()}
+        pkg = None
         for f in cf.as_completed(futs):
             results[futs[f]] = f.result()
-    # the importer reads every file of the folder: it runs after the audits, whose probe pages come and go in presentation\
-    results["course package"] = run([PY, os.path.join(FACTORY, "check_course_package.py"), os.path.join(course, workspace.MODULES)])
-    for k in list(jobs) + ["course package"]:
+            # the importer reads every file of the module folder: it waits for the audits, whose probe pages come and go
+            # in presentation\, and for the course pages; it then runs beside the review sheets
+            if pkg is None and all(k in results for k in jobs if k != "review sheets"):
+                pkg = ex.submit(run, [PY, os.path.join(FACTORY, "check_course_package.py"), os.path.join(course, workspace.MODULES)])
+        if pkg is None:
+            pkg = ex.submit(run, [PY, os.path.join(FACTORY, "check_course_package.py"), os.path.join(course, workspace.MODULES)])
+        results["course package"] = pkg.result()
+    for k in [x for x in jobs if x != "review sheets"] + ["course package"]:
         code, out = results[k]
         logged(k, out)
         if code != 0:
@@ -188,11 +203,14 @@ def main(argv=None):
             say.append("%s - FAIL:" % k.upper())
             say += ["  " + x for x in lines_of("\n".join(y for y in out.splitlines() if not y.startswith("Built ")))]
     passed = not fails
-    # 4 - the review sheets, on a pass
     review = ""
-    if passed and not o.no_review:
-        out_dir = workspace.claude_path(course, "review", m)
-        rcode, rout = run(["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, out_dir], timeout=900)
+    if want_review and passed:
+        rcode, rout = results["review sheets"]
+        if rcode in (0, 1):                     # the sheets are the review now: the last review's folder is replaced
+            import shutil
+            shutil.rmtree(out_dir, ignore_errors=True)
+            os.replace(pending, out_dir)
+            rout = rout.replace(pending, out_dir)
         logged("review_sheets.mjs", rout)
         if rcode == 1:
             passed = False

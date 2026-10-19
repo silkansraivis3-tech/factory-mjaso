@@ -106,7 +106,13 @@ def real_slide(ctx):
         if ctx.get("spec_override") is not None:     # draw the spec given (a candidate fix), else the file - never a stale fit
             cm.OVERRIDE[name] = ctx["spec_override"]
         try:
-            page = cm.slide_html(script, s, 1, len(screens), ctx["entry"], mdir, figdir, "STUDIO", probs)
+            # 2.50.1 - the slide cut out of the whole deck as the compiler builds it, so it carries what the build puts beside
+            # the figure: the L57 photo row under it, an inset (IGF M01 benchmark: the studio drew s05 in a 369 x 361 panel,
+            # the build in 369 x 239 under its photo row - a figure clean in the studio failed the build twice)
+            build = dict(ctx["build"], screens=dict(ctx["build"].get("screens") or {}, **{s["id"]: ctx["entry"]}))
+            deck, _, _ = cm.compile_deck(script, build, mdir, figdir, "STUDIO", True)
+            m = re.search(r'<section [^>]*\bid="%s"[^>]*>.*?</section>' % re.escape(s["id"]), deck, re.S)
+            page = m.group(0) if m else cm.slide_html(script, s, 1, len(screens), ctx["entry"], mdir, figdir, "STUDIO", probs)
         finally:
             cm.OVERRIDE.clear()
     styles = list(cm.STYLES) + ["gb_zoom.css", "kit.css"]

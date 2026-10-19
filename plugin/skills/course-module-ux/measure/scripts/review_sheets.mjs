@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* review_sheets.mjs - the visual review's pictures, made by a script (compile GUIDE 2f, 2.50.0). Node 18+, no npm packages.
  *
- *   node review_sheets.mjs <module folder> <out folder> [--all] [--w=1280 --h=800] [--chrome=PATH]
+ *   node review_sheets.mjs <module folder> <out folder> [--all] [--base=<last review folder>] [--w=1280 --h=800] [--chrome=PATH]
  *
  * WHY (IGF M01 benchmark, 2026-10-19): the required look at every screen was done by browser-driving subagents - 100 model
  * calls and $2.42 for one module, a third of the build's cost. The looking is still required; driving a browser to see is
@@ -97,20 +97,25 @@ async function deck(tiles) {
   await load(pathToFileURL(page).href);
   await evaluate(`(function(){ var b=document.getElementById('startBtn'); if(b) b.click(); return 1; })()`);
   await sleep(500);
+  /* one picture per slide, a stepping figure at its LAST step - its fullest state, as the round-1 review looked at it;
+     the drawing check (L54) already judges every step by measurement */
   const seen = new Set();
   for (let n = 0; n < 400; n++) {
-    await sleep(350);
-    await evaluate(SETTLE);
-    await sleep(120);
+    await sleep(160);
     const st = await evaluate(`(function(){ var s=document.querySelector('.slide.active'); if(!s) return null;
       var k=s.querySelector('svg[data-kit]'), f=k&&k.__kit; var all=[].slice.call(document.querySelectorAll('.slide'));
-      return { id: s.id, i: all.indexOf(s)+1, of: all.length, title: s.getAttribute('data-title')||'', step: f&&f.steps&&f.steps()?f.n:null, steps: f&&f.steps?f.steps():0,
+      if (f && f.steps && f.steps()) { try { f.go(f.steps(), true); } catch(e){} }
+      return { id: s.id, i: all.indexOf(s)+1, of: all.length, title: s.getAttribute('data-title')||'', steps: f&&f.steps?f.steps():0,
                last: !!(document.getElementById('btnNext')||{}).disabled }; })()`);
     if (!st) break;
-    const key = st.id + (st.step != null ? '#' + st.step : '');
-    if (seen.has(key)) break;
-    seen.add(key);
-    tiles.push({ id: 'deck/' + key, label: `Deck slide ${st.i}/${st.of} (${st.id}) ${st.title}` + (st.step != null ? ` - figure step ${st.step} of ${st.steps}` : ''), png: await shot() });
+    if (seen.has(st.id)) {                      // still on it (a step was taken): on to the next slide
+      if (st.last) break;
+      await evaluate(`(function(){ var b=document.getElementById('btnNext'); if(b && !b.disabled) b.click(); return 1; })()`);
+      continue;
+    }
+    seen.add(st.id);
+    await evaluate(SETTLE); await sleep(140); await evaluate(SETTLE);
+    tiles.push({ id: 'deck/' + st.id, label: `Deck slide ${st.i}/${st.of} (${st.id}) ${st.title}` + (st.steps ? ` - figure at its last step (${st.steps})` : ''), png: await shot() });
     if (st.last) break;
     await evaluate(`(function(){ var b=document.getElementById('btnNext'); if(b && !b.disabled) b.click(); return 1; })()`);
   }
@@ -226,27 +231,25 @@ async function tasks(tiles, failures) {
     for (const good of [false, true]) {
       if (good) { await load(url); await evaluate(DRIVER); }
       await evaluate('__rv.start()');
-      await sleep(300);
+      await sleep(200);
       for (let n = 0; n < ids.length; n++) {
         const q = await evaluate('__rv.current()');
         if (!q) break;
-        await evaluate(SETTLE); await sleep(250); await evaluate(SETTLE);
-        if (!good) {
-          await evaluate('__rv.overlay(true)');
-          tiles.push({ id: `${name}/${q}/asked`, label: `${name} ${q} - as asked (pink: every tap area / drop zone, review overlay only)`, png: await shot() });
-          await evaluate('__rv.overlay(false)');
-        }
+        await evaluate(SETTLE); await sleep(150); await evaluate(SETTLE);
         const r = await evaluate(`__rv.answer(${good})`);
-        await sleep(350); await evaluate(SETTLE); await sleep(150);
+        await sleep(220); await evaluate(SETTLE); await sleep(80);
+        if (!good) await evaluate('__rv.overlay(true)');      // the tap areas and drop zones, outlined on the wrong-answer screen
         if (r.error) {
           failures.push(`${name} ${q}: answered ${good ? 'right' : 'wrong'} by the script - ${r.error}`);
           tiles.push({ id: `${name}/${q}/${good ? 'right' : 'wrong'}`, label: `${name} ${q} - could not be answered ${good ? 'right' : 'wrong'}: ${r.error}`, png: await shot() });
           break;
         } else if (good && !r.ok) failures.push(`${name} ${q}: the RIGHT answer (by its own keys) was graded not right - "${r.vd}"`);
         else if (!good && !r.bad) failures.push(`${name} ${q}: a WRONG answer was graded right - "${r.vd}"`);
-        tiles.push({ id: `${name}/${q}/${good ? 'right' : 'wrong'}`, label: `${name} ${q} - answered ${good ? 'RIGHT' : 'WRONG'} and checked: "${r.vd || ''}"`, png: await shot() });
+        tiles.push({ id: `${name}/${q}/${good ? 'right' : 'wrong'}`, label: `${name} ${q} - answered ${good ? 'RIGHT' : 'WRONG'} and checked: "${r.vd || ''}"`
+                     + (good ? '' : ' (pink: every tap area / drop zone, review overlay only)'), png: await shot() });
+        if (!good) await evaluate('__rv.overlay(false)');
         await evaluate('__rv.next()');
-        await sleep(300);
+        await sleep(180);
       }
     }
   }
@@ -256,7 +259,8 @@ async function tasks(tiles, failures) {
 async function sheets(tiles) {
   mkdirSync(OUT, { recursive: true });
   const manPath = join(OUT, 'manifest.json');
-  const before = existsSync(manPath) ? JSON.parse(readFileSync(manPath, 'utf8')) : {};
+  const basePath = join(opt.base ? resolve(opt.base) : OUT, 'manifest.json');     // --base: compare with the last review's folder
+  const before = existsSync(basePath) ? JSON.parse(readFileSync(basePath, 'utf8')) : {};
   /* "changed" is judged on a fingerprint - the screen's mean grey in 16 x 16 px cells - not on the bytes: a pipe's flow or a
      gas cloud's drift is never caught at the same phase twice, and the fingerprint does not see it; a word, a moved part,
      a label or a colour changes the cells it is in */
@@ -292,7 +296,7 @@ async function sheets(tiles) {
     const png = await shot(hh);
     const f = join(OUT, `sheet_${String(out.length + 1).padStart(2, '0')}.png`);
     writeFileSync(f, png);
-    out.push({ file: f, screens: pair.map(t => t.label) });
+    out.push({ file: basename(f), screens: pair.map(t => t.label) });
   }
   await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false });
   writeFileSync(manPath, JSON.stringify(now, null, 1));

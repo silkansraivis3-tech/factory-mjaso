@@ -51,6 +51,7 @@ sys.path.insert(0, studio.COMPILE)
 sys.path.insert(0, studio.FACTORY_SCRIPTS)
 
 GATE = "1280x800"
+SMALL_AT = "1024x768"
 CONTAINERS = ("space", "panel", "ga")
 # widths that stretch with the drawing (a room, a pipe run, a bar); every other part keeps its size and only moves
 STRETCH = {"space": ("w",), "panel": ("w",), "pipe_section": ("w", "branchAt"), "ga": ("w",), "tank": ("w",),
@@ -112,16 +113,30 @@ def ctx_for(spec_path, sid):
     return ctx
 
 
-def measure(spec_path, sid, spec=None):
-    """(problems at the gate, the gate's result) of a spec drawn on its slide; problems None when it could not run"""
+def has_strip(spec_path, sid):
+    """does the slide carry an L57 photo row under its drawing? - read from the slide as the compiler builds it"""
     ctx = ctx_for(spec_path, sid)
-    res, why = studio.run(spec_path, sizes=((1280, 800),), shots=False, spec=spec, ctx=ctx)
+    if not ctx:
+        return False
+    real, _, _ = studio.real_slide(ctx)
+    return bool(real) and 'class="photo-strip"' in real.get("slide", "")
+
+
+def measure(spec_path, sid, spec=None, strip=True):
+    """(problems at the gate, the gate's result) of a spec drawn on its slide; problems None when it could not run.
+    strip=False: drawn without the slide's L57 photo row (a candidate that needs the row's height)"""
+    ctx = ctx_for(spec_path, sid)
+    if ctx and not strip:
+        ctx = dict(ctx, entry=dict(ctx["entry"], _no_strip=True))
+    res, why = studio.run(spec_path, sizes=((1280, 800), (1024, 768)), shots=False, spec=spec, ctx=ctx)
     if not res:
         return None, {"error": why}
     r = res["sizes"].get(GATE) or {}
     if r.get("error"):
         return None, r
-    return [x for x in studio.problems(res) if x[0] == GATE], r
+    # judged as the build judges: every drawing audit at 1280 x 800 (the drawing check, L54), and words under the floor at
+    # 1024 x 768 too (run_audits.py's svgSmall - the kit grows words at most 2x, so a narrow column there fails the build)
+    return [x for x in studio.problems(res) if x[0] == GATE or (x[0] == SMALL_AT and x[2] == "small text")], r
 
 
 # ------------------------------------------------------------------ geometry
@@ -201,11 +216,205 @@ def inside(b, c):
     return c[0] <= cx <= c[2] and c[1] <= cy <= c[3] and (b[2] - b[0]) * (b[3] - b[1]) < (c[2] - c[0]) * (c[3] - c[1])
 
 
+def rows_of(ids, bx):
+    """the parts as rows: a part joins a row when it shares at least a third of the smaller height with it"""
+    rows = []
+    for i in sorted(ids, key=lambda i: (bx[i][1], bx[i][0])):
+        b = bx[i]
+        for r in rows:
+            top, bot = min(bx[j][1] for j in r), max(bx[j][3] for j in r)
+            share = min(b[3], bot) - max(b[1], top)
+            if share > 0.33 * min(b[3] - b[1], bot - top):
+                r.append(i)
+                break
+        else:
+            rows.append([i])
+    return [sorted(r, key=lambda i: bx[i][0]) for r in rows]
+
+
+def owners(parts, bx):
+    """{part: the smallest room it sits in} - decided ONCE, on the spec as written, and kept through every round of a
+    re-fit: a part that drifted out of its room in one round must not become a part of the room's neighbour in the next
+    (IGF M01 s05: the engine and the lamp left the ESD-protected space and the audits could no longer see it)"""
+    conts = [i for i in bx if parts[i].get("type") in CONTAINERS]
+    owner = {}
+    for i in bx:
+        best = None
+        for c in conts:
+            if c != i and inside(bx[i], bx[c]) and (best is None or (bx[c][2] - bx[c][0]) < (bx[best][2] - bx[best][0])):
+                best = c
+        if best is not None:
+            owner[i] = best
+    return owner
+
+
+def hosts(parts, bx, owner):
+    """{small part: the part it is drawn ON} - a vent on its pipe section, a valve or a badge on a tank: it is not laid out
+    by itself but keeps its place on its host. Decided once, on the spec as written, like owners()"""
+    area = lambda b: max(1.0, (b[2] - b[0]) * (b[3] - b[1]))   # noqa: E731
+    out = {}
+    for i in bx:
+        if parts[i].get("type") in CONTAINERS + PATHS:
+            continue
+        on = [j for j in bx if j != i and parts[j].get("type") not in CONTAINERS + PATHS and owner.get(j) == owner.get(i)
+              and overlap(bx[i], bx[j], 2) and area(bx[i]) < 0.25 * area(bx[j])]      # on it, or touching it
+        if on:
+            out[i] = max(on, key=lambda j: area(bx[j]))
+    return out
+
+
+def pack(spec, boxes, width, margin=6, owner=None, host=None):
+    """2.50.1 - a figure laid into a narrower width, row by row, room by room (lever 7, IGF M01 s05): in each row the parts
+    keep their order; a part of fixed size (a readout, an engine, a lamp, a heading) keeps its width; the stretchable ones
+    (STRETCH: a pipe section, a cloud, a tank ...) and the gaps give way, a stretchable part never under SHRINK_MIN; a room
+    is as wide as the room it gets and lays out its own parts the same way. A pipe's x follows the parts of its row - its
+    points are mapped piecewise between the parts' edges, so a pipe that ran into the engine still runs into it. Nothing
+    moves up or down. Returns (spec, True) or (spec, False) when a row cannot fit even at the floor."""
+    s = copy.deepcopy(spec)
+    parts = s["parts"]
+    bx = {int(k): list(v[:4]) for k, v in boxes.items() if int(k) < len(parts)}
+    conts = [i for i in bx if parts[i].get("type") in CONTAINERS]
+    owner = dict(owner) if owner is not None else owners(parts, bx)
+    new = {}                                          # i -> new [x0, x1]
+    ok = [True]
+    host = {i: h for i, h in (hosts(parts, bx, owner) if host is None else host).items() if i in bx and h in bx}
+
+    def lay(cid, left, right):
+        kids = [i for i in bx if owner.get(i) == cid and parts[i].get("type") not in PATHS and i not in host]
+        for row in rows_of(kids, bx):
+            ws = [bx[i][2] - bx[i][0] for i in row]
+            gaps = [max(0.0, bx[row[k + 1]][0] - bx[row[k]][2]) for k in range(len(row) - 1)]
+            stretch = [parts[i].get("type") in STRETCH or parts[i].get("type") in CONTAINERS for i in row]
+            avail = right - left
+            if len(row) == 1 and parts[row[0]].get("type") in CONTAINERS and ws[0] > avail:
+                ws[0] = avail          # a room alone in its row takes the width it gets: its own parts are laid out in it
+            fixed = sum(w for w, st in zip(ws, stretch) if not st)
+            flex = sum(w for w, st in zip(ws, stretch) if st)
+            gap_min = [min(g, GAP) for g in gaps]
+            room = avail - fixed - sum(gaps)
+            if room >= flex:                           # it fits as it is: only shifted to start at the left edge
+                k_s, k_g = 1.0, 1.0
+            elif avail - fixed - sum(gap_min) >= flex * SHRINK_MIN:
+                k_g = 1.0 if room >= flex * SHRINK_MIN else 0.0
+                k_s = (avail - fixed - (sum(gaps) if k_g else sum(gap_min))) / flex if flex else 1.0
+                k_s = min(1.0, k_s)
+            else:
+                ok[0] = False
+                k_s, k_g = SHRINK_MIN, 0.0
+            x = left + (bx[row[0]][0] - left if room >= flex and bx[row[0]][0] >= left else 0)
+            x = max(left, min(x, right - (fixed + flex * k_s + sum(gaps if k_g else gap_min))))
+            for k, i in enumerate(row):
+                w = ws[k] * (k_s if stretch[k] else 1.0)
+                new[i] = [x, x + w]
+                x += w + (gaps[k] if k_g else gap_min[k]) if k < len(gaps) else w
+        for i in kids:
+            if parts[i].get("type") in CONTAINERS:
+                lay(i, new[i][0] + PAD, new[i][1] - PAD)
+
+    lay(None, margin, width - margin)
+    for i, h in host.items():                        # on its host, at the same share of the host's width
+        if h in new:
+            hw0, hw1 = bx[h][2] - bx[h][0], new[h][1] - new[h][0]
+            x0 = new[h][0] + (bx[i][0] - bx[h][0]) * (hw1 / hw0 if hw0 else 1.0)
+            new[i] = [x0, x0 + bx[i][2] - bx[i][0]]
+
+    def interp(pts, x):
+        if x <= pts[0][0]:
+            return pts[0][1] + (x - pts[0][0])
+        if x >= pts[-1][0]:
+            return pts[-1][1] + (x - pts[-1][0])
+        for (a0, b0), (a1, b1) in zip(pts, pts[1:]):
+            if a0 <= x <= a1:
+                return b0 if a1 == a0 else b0 + (x - a0) * (b1 - b0) / (a1 - a0)
+        return x
+
+    def pipe_map(i, cid):
+        """a pipe follows what it touches: the parts within 12 units of it, and its room's walls - never a part it only
+        passes in another row (the gas pipe that ran into the engine still runs into it, and ends inside its room)"""
+        if cid is not None and cid in new:
+            pts = [(bx[cid][0] + PAD, new[cid][0] + PAD), (bx[cid][2] - PAD, new[cid][1] - PAD)]
+        else:
+            pts = [(0.0, float(margin)), (float(spec["size"][0]), float(width - margin))]
+        pb = bx.get(i)
+        for j in new:
+            if pb and j != i and owner.get(j) == cid and overlap(pb, bx[j], 12):
+                pts += [(bx[j][0], new[j][0]), (bx[j][2], new[j][1])]
+        pts.sort()
+        mono = []
+        for a, b in pts:                              # increasing both ways, or the pipe would fold back on itself
+            if not mono or (a > mono[-1][0] + 0.5 and b > mono[-1][1]):
+                mono.append((a, b))
+        return lambda x: interp(mono, x)
+
+    for i, (x0, x1) in new.items():
+        p = parts[i]
+        dx = x0 - bx[i][0]
+        p["x"] = round((p.get("x") or 0) + dx, 1)
+        neww, oldw = x1 - x0, bx[i][2] - bx[i][0]
+        if abs(neww - oldw) > 0.5:
+            t = p.get("type")
+            if isinstance(p.get("w"), (int, float)):
+                p["w"] = round(max(p["w"] - (oldw - neww), 1), 1)
+                if t == "pipe_section" and isinstance(p.get("branchAt"), (int, float)):
+                    p["branchAt"] = round(p["branchAt"] * p["w"] / float(p["w"] + (oldw - neww)), 1)
+        if isinstance(p.get("to"), list):
+            p["to"] = [round(p["to"][0] + dx, 1), p["to"][1]]
+    for i, p in enumerate(parts):                     # pipes, and what is placed in figure units, follow their row
+        cid = owner.get(i)
+        if p.get("type") in PATHS and p.get("d"):
+            p["d"] = shift_path(p["d"], pipe_map(i, cid))
+        if p.get("type") == "gas_cloud" and isinstance(p.get("from"), list) and p.get("fromIn") == "figure" and i in new:
+            w0_, w1_ = bx[i][2] - bx[i][0], new[i][1] - new[i][0]   # the same point of the cloud
+            p["from"] = [round(new[i][0] + (p["from"][0] - bx[i][0]) * (w1_ / w0_ if w0_ else 1.0), 1), p["from"][1]]
+    s["size"] = [int(round(width)), spec["size"][1]]
+    return s, ok[0]
+
+
+def keep_in(spec, boxes, owner=None):
+    """every part inside the room it sits in, after a pack: a part past the room's floor grows the room downwards (and the
+    frame with it, when the room reaches the frame's edge); a part past a side or the ceiling is moved in. Returns (spec,
+    repairs)"""
+    s = copy.deepcopy(spec)
+    parts = s["parts"]
+    bx = {int(k): list(v[:4]) for k, v in boxes.items() if int(k) < len(parts)}
+    conts = [i for i in bx if parts[i].get("type") in CONTAINERS]
+    n = 0
+    for i in bx:
+        p = parts[i]
+        if p.get("type") in CONTAINERS + PATHS:
+            continue
+        if owner is not None:
+            c = owner.get(i)
+            if c is None or c not in bx:
+                continue
+        else:
+            cs_ = [c for c in conts if inside(bx[i], bx[c])]
+            if not cs_:
+                continue
+            c = min(cs_, key=lambda c: (bx[c][2] - bx[c][0]) * (bx[c][3] - bx[c][1]))
+        b, r = bx[i], bx[c]
+        down = b[3] - (r[3] - PAD / 2.0)
+        if down > 0.5 and isinstance(parts[c].get("h"), (int, float)):
+            parts[c]["h"] = round(parts[c]["h"] + down, 1)
+            r[3] += down
+            s["size"][1] = max(s["size"][1], int(round(r[3] + 4)))
+            n += 1
+        dx = (r[0] + PAD / 2.0 - b[0]) if b[0] < r[0] + PAD / 2.0 else -(b[2] - (r[2] - PAD / 2.0)) if b[2] > r[2] - PAD / 2.0 else 0
+        dy = (r[1] + PAD / 2.0 - b[1]) if b[1] < r[1] + PAD / 2.0 else 0
+        if abs(dx) > 0.5 or abs(dy) > 0.5:
+            p["x"] = round((p.get("x") or 0) + dx, 1)
+            p["y"] = round((p.get("y") or 0) + dy, 1)
+            if p.get("type") == "gas_cloud" and isinstance(p.get("from"), list) and p.get("fromIn") == "figure":
+                p["from"] = [round(p["from"][0] + dx, 1), round(p["from"][1] + dy, 1)]
+            n += 1
+    return s, n
+
+
 SHRINK = ("engine", "tank", "readout", "pump", "exchanger", "space", "integral_tank", "gas_cloud", "drip_tray")
 SHRINK_MIN = 0.7          # a part is drawn at least this share of the size the spec gave it
 
 
-def tidy(spec, boxes, width, w0=None):
+def tidy(spec, boxes, width, w0=None, owner=None, skip=()):
     """one round of local repairs, after a squeeze - nothing is wrapped, so the drawing keeps its shape:
     a part past its room's right edge (or the frame's) moves left into free room, else is drawn narrower (never under
     SHRINK_MIN of its size); a part on top of the one before it moves beside it, or down inside its room; a free text
@@ -216,12 +425,15 @@ def tidy(spec, boxes, width, w0=None):
     w0 = w0 or {}
     bx ={int(k): list(v[:4]) for k, v in boxes.items() if int(k) < len(parts)}
     conts = [i for i in bx if parts[i].get("type") in CONTAINERS]
-    owner = {}
-    for i in bx:
-        if parts[i].get("type") not in CONTAINERS:
-            for c in conts:
-                if inside(bx[i], bx[c]):
-                    owner[i] = c
+    if owner is None:
+        owner = {}
+        for i in bx:
+            if parts[i].get("type") not in CONTAINERS:
+                for c in conts:
+                    if inside(bx[i], bx[c]):
+                        owner[i] = c
+    else:
+        owner = {i: c for i, c in owner.items() if c in bx and parts[i].get("type") not in CONTAINERS}
     fixes = 0
     order = sorted((i for i in bx if parts[i].get("type") not in CONTAINERS + PATHS), key=lambda i: (bx[i][0], bx[i][1]))
 
@@ -236,6 +448,8 @@ def tidy(spec, boxes, width, w0=None):
         bx[i] = [bx[i][0] + dx, bx[i][1] + dy, bx[i][2] + dx, bx[i][3] + dy]
 
     for i in order:
+        if i in skip:                                   # drawn on its host: it goes where the host goes
+            continue
         p = parts[i]
         c = owner.get(i)
         left, right = (bx[c][0] + PAD, bx[c][2] - PAD) if c is not None else (4, width - 4)
@@ -321,41 +535,61 @@ def try_fixes(spec_path, sid, spec, r0, probs0, log):
             tried.append("cropped to what it shows")
             if p == []:
                 return c, "EMPTY: cropped to what it shows at its busiest step (%s), the parts not moved" % " ".join(fmt(v) for v in c["view"]), None
-    # COLUMN: the spec is drawn below 0.8:1 in its column, so its words were grown past what the drawing holds - squeezed
-    # to the column (positions and stretchable lengths), then tidied part by part; at a few widths, in parallel
+    # COLUMN: the spec is drawn below 0.8:1 in its column, so its words were grown past what the drawing holds - laid into
+    # the column row by row (pack), kept inside its rooms, tidied; at a few widths, in parallel. When it does not fit with
+    # the slide's L57 photo row under it, tried again without the row (its height goes to the drawing)
     scale = (r0.get("report") or {}).get("scale") or 1
     best = None
-    if scale < 0.8 and panel[0]:
-        left = max(0.0, min((p.get("x") or 0) for p in spec["parts"] if p.get("type") not in PATHS))
+    if (scale < 0.8 or any(x[0] == SMALL_AT for x in probs0)) and panel[0]:
+        bx0 = {int(k): list(v[:4]) for k, v in boxes.items() if int(k) < len(spec["parts"])}
+        own = owners(spec["parts"], bx0)
+        hst = hosts(spec["parts"], bx0, own)
 
-        def attempt(wt):
-            k = (wt - 2 * left) / float(spec["size"][0] - 2 * left)
-            if k >= 0.98:
+        def attempt(arg):
+            wt, strip, boxes0 = arg
+            if wt >= spec["size"][0] * 0.98:
                 return None
-            cand = squeeze(spec, k, x0=left)
-            w0 = {i: q["w"] for i, q in enumerate(cand["parts"]) if isinstance(q.get("w"), (int, float))}
-            out = None
-            for n in range(4):
-                p, r = measure(spec_path, sid, cand)
-                if p is None:
-                    break
-                if out is None or len(p) < len(out[1]):
-                    out = (cand, p, n)
-                if not p:
-                    break
-                cand, fixes = tidy(cand, r.get("parts") or {}, cand["size"][0], w0)
-                if not fixes:
-                    break
+            cand, boxes, out, n = spec, boxes0, None, 0
+            w0 = {i: q["w"] for i, q in enumerate(spec["parts"]) if isinstance(q.get("w"), (int, float))}
+            for _ in range(3):
+                cand, _ok = pack(cand, boxes, wt, owner=own, host=hst)   # laid into the width, by the boxes the words need
+                for step in ("pack", "keep_in", "tidy"):
+                    if step != "pack":
+                        nxt, k = (keep_in(cand, boxes, own) if step == "keep_in" else tidy(cand, boxes, cand["size"][0], w0, own, set(hst)))
+                        if not k:
+                            continue
+                        cand = nxt
+                    p, r = measure(spec_path, sid, cand, strip)
+                    if p is None:
+                        return out
+                    n += 1
+                    boxes = r.get("parts") or {}
+                    if out is None or len(p) < len(out[1]):
+                        out = (cand, p, n, strip, (r.get("states") or [{}])[-1].get("panel") or panel)
+                    if not p:
+                        return out
             return out
-        with cf.ThreadPoolExecutor(max_workers=4) as ex:
-            outs = [x for x in ex.map(attempt, [panel[0] * f for f in (1.1, 1.2, 1.32, 1.45)]) if x]
-        for cand, p, n in outs:
-            if best is None or len(p) < len(best[1]):
-                best = (cand, p, n)
+
+        args = [(panel[0] * f, True, boxes) for f in (0.88, 1.0, 1.14)]
+        if has_strip(spec_path, sid):                    # the same slide without its photo row, tried at the same time
+            p_ns, r_ns = measure(spec_path, sid, None, False)
+            pn = (r_ns.get("states") or [{}])[-1].get("panel") or panel
+            if p_ns is not None:
+                args += [(pn[0] * f, False, r_ns.get("parts") or boxes) for f in (0.88, 1.0, 1.14)]
+        with cf.ThreadPoolExecutor(max_workers=len(args)) as ex:
+            outs = [x for x in ex.map(attempt, args) if x]
+        for o in outs:
+            if best is None or len(o[1]) < len(best[1]) or (len(o[1]) == len(best[1]) and o[3] and not best[3]):
+                best = o
         if best and not best[1]:
-            cand, _, n = best
-            return cand, ("COLUMN: re-fitted to its %d px column - drawn %d units wide (was %d), %d local repair(s); the spec "
-                          "is unchanged; look at it in the review sheet" % (panel[0], cand["size"][0], spec["size"][0], n)), None
+            cand, _, n, strip, pn = best
+            if not strip:
+                cand = dict(cand, _strip=False)
+            return cand, ("COLUMN: re-fitted to its %d x %d px column%s - drawn %d units wide (was %d), %d round(s); the spec is "
+                          "unchanged; look at it in the review sheet" % (pn[0], pn[1], "" if strip else (
+                              ", with the L57 photo row under it LEFT OFF this slide (the drawing needs its height; a "
+                              "wider column brings the row back)"),
+                              cand["size"][0], spec["size"][0], n)), None
         if best:
             tried.append("re-fitted to its %d px column: %d finding(s) left (was %d)" % (panel[0], len(best[1]), len(probs0)))
     return None, "; ".join(tried) or "no deterministic fix for %s" % ", ".join(sorted(checks)), best
@@ -428,6 +662,28 @@ def run_all(course, module, fix=True, jobs=4):
                 broken.add(sp)
     figs, figdir = deck_figures(course, module)
     todo = [(sid, sp, e) for sid, sp, e in figs if sp not in broken and os.path.isfile(sp)]
+    # 2.50.1 - a figure clean at the last run, whose slide (as the compiler builds it: words, layout, fit, photo row),
+    # spec and kit files have not changed since, is not measured again: a review-driven build changes one or two
+    keys, cache_path = {}, os.path.join(figdir or "", cm.FIT_DIR, "_clean.json")
+    try:
+        cache = json.load(io.open(cache_path, encoding="utf-8"))
+    except (OSError, ValueError):
+        cache = {}
+    try:
+        p = cs.paths(course, module)
+        script, build = cs.load(p["script"]), cs.load(os.path.join(p["dir"], cs.mid(module) + ".build.json"))
+        deck, _, _ = cm.compile_deck(script, build, mdir, figdir, "CACHE", True)
+        files = "".join(io.open(f, "rb").read().decode("utf-8", "replace") for f in
+                        (os.path.join(studio.KIT, "kit.js"), os.path.join(studio.KIT, "kit.css"), studio.AUDIT)
+                        + tuple(os.path.join(studio.TOKENS, x) for x in cm.STYLES) if os.path.isfile(f))
+        base = sha(files)
+        for sid, sp, e in todo:
+            m = re.search(r'<section [^>]*\bid="%s"[^>]*>.*?</section>' % re.escape(sid), deck, re.S)
+            keys[sid] = sha(base + (m.group(0) if m else "") + io.open(sp, encoding="utf-8").read())
+    except Exception:                                    # noqa: BLE001 - no cache: every figure is measured
+        keys = {}
+    skipped = [x for x in todo if keys.get(x[0]) and cache.get(x[0]) == keys[x[0]]]
+    todo = [x for x in todo if x not in skipped]
     results, entry = {}, {}
     with cf.ThreadPoolExecutor(max_workers=jobs) as ex:
         futs = {ex.submit(measure, sp, sid): (sid, sp) for sid, sp, e in todo}
@@ -443,7 +699,7 @@ def run_all(course, module, fix=True, jobs=4):
         e = entry[key]
         item = (sid, sp, e)
         probs, r = results[key]
-        text = io.open(sp, encoding="utf-8").read()
+        text = io.open(sp, encoding="utf-8").read().strip()      # as the compiler reads it (read_figure)
         spec = json.loads(text)
         fp = cm.fit_path(figdir, os.path.basename(sp), sid)
         cand_path = re.sub(r"\.kit\.json$", ".candidate.kit.json", fp)
@@ -454,15 +710,20 @@ def run_all(course, module, fix=True, jobs=4):
         column = cm.composition_key(s, e)
         old = cm.fitted(figdir, os.path.basename(sp), text, column, sid)
         if old:                                       # a fit made before for this spec and this column: still clean?
-            p, _ = measure(sp, sid, json.loads(old))
+            rec_old = json.load(io.open(fp, encoding="utf-8"))
+            p, _ = measure(sp, sid, json.loads(old), rec_old.get("strip") is not False)
             if p == []:
-                return item, probs, r, json.loads(old), json.load(io.open(fp, encoding="utf-8")).get("how", "re-fitted")
+                return item, probs, r, json.loads(old), rec_old.get("how", "re-fitted")
         new, how, best = try_fixes(sp, sid, spec, r, probs, None)
         if os.path.isfile(cand_path):
             os.remove(cand_path)
         if new:
             os.makedirs(os.path.dirname(fp), exist_ok=True)
-            rec = {"source": cm.sha(text), "column": column, "how": how, "made_by": "figure_fit.py", "spec": new}
+            rec = {"source": cm.sha(text), "column": column, "how": how, "made_by": "figure_fit.py"}
+            if new.get("_strip") is False:
+                rec["strip"] = False
+                new = {k: v for k, v in new.items() if k != "_strip"}
+            rec["spec"] = new
             io.open(fp, "w", encoding="utf-8").write(json.dumps(rec, ensure_ascii=False, indent=1))
         elif best and len(best[1]) < len(probs):      # the closest attempt, to edit instead of redrawing
             os.makedirs(os.path.dirname(cand_path), exist_ok=True)
@@ -507,7 +768,26 @@ def run_all(course, module, fix=True, jobs=4):
         dd = data["figures"].get(sid) or {}
         if os.path.isfile(fp) and dd.get("problems") == 0:
             os.remove(fp)
-    n = len(todo)
+    # the cache: clean as written, or clean by a fit (its key taken again - the slide now carries the fit)
+    for sid, sp, e in figs:
+        dd = data["figures"].get(sid) or {}
+        if dd.get("problems") == 0 and keys.get(sid):
+            cache[sid] = keys[sid]
+        elif not dd.get("fixed"):
+            cache.pop(sid, None)
+    if any(d.get("fixed") for d in data["figures"].values()):
+        try:
+            deck, _, _ = cm.compile_deck(script, build, mdir, figdir, "CACHE", True)
+            for sid, sp, e in figs:
+                if (data["figures"].get(sid) or {}).get("fixed"):
+                    m = re.search(r'<section [^>]*\bid="%s"[^>]*>.*?</section>' % re.escape(sid), deck, re.S)
+                    cache[sid] = sha(base + (m.group(0) if m else "") + io.open(sp, encoding="utf-8").read())
+        except Exception:                                # noqa: BLE001
+            pass
+    if figdir and keys:
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        io.open(cache_path, "w", encoding="utf-8").write(json.dumps(cache, indent=1, sort_keys=True))
+    n = len(todo) + len(skipped)
     lines += ["Figures: %d on slides, %d spec(s) checked" % (n, len(all_specs(course, module)))]
     lines += ["  spec: " + x for x in spec_probs]
     lines += ["  " + x for x in fixed]

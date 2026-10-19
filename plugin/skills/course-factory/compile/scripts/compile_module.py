@@ -487,6 +487,26 @@ def fit_path(figdir, name, sid):
     return os.path.join(figdir or "", FIT_DIR, "%s.%s" % (sid, name))
 
 
+def strip_off(figdir, s, b):
+    """2.50.1 - the L57 photo row is left off this slide: a candidate the studio is trying without it ("_no_strip"), or an
+    active fit made that way by figure_fit.py - the drawing fits its column only with the row's height (IGF M01 s05 at
+    wide-left: 369 x 239 px with the row, 369 x 361 without; round 2 of the benchmark chose the same by hand)"""
+    if b.get("_no_strip"):
+        return True
+    rel = (b.get("figure") or "").replace("\\", "/")
+    if not figdir or not rel.lower().endswith(KIT_SPEC):
+        return False
+    p = fit_path(figdir, os.path.basename(rel), s["id"])
+    if not os.path.isfile(p):
+        return False
+    try:
+        rec = json.load(io.open(p, encoding="utf-8"))
+        text = io.open(os.path.join(figdir, rel), encoding="utf-8").read().strip()
+    except (OSError, ValueError):
+        return False
+    return rec.get("strip") is False and rec.get("source") == sha(text) and rec.get("column") == composition_key(s, b)
+
+
 def fitted(figdir, name, text, key, sid):
     """2.50.0 (lever 7, M01 round 2) - a kit figure re-fitted to the column it is shown in, by figure_fit.py, when its slide's
     layout changed and the spec no longer fits: kept beside the spec in figures\\MNN\\_fit\\, used only while the spec and the
@@ -1156,7 +1176,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                      "or lay it over a blank part of a kit drawing (\"over\")" % (where, nwords, cap, round((nwords - cap) * 4.5)))
     # L57: a drawing of real things carries their real photographs, under the drawing - unasked
     strip = ""
-    if fig and not is_photo and comp != "photo" and notes is not None:
+    if fig and not is_photo and comp != "photo" and notes is not None and not strip_off(figdir, s, b):
         strip = part_photos(lines, fig, on_slide, mdir, pool or [], notes, sid, taken, b.get("no_photo") or [], b.get("not_things") or [])
         if strip and room_under:
             fig, strip = under_figure(fig, strip), ""

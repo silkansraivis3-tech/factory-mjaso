@@ -12,8 +12,9 @@ task pages on a tablet, all at 1280 x 800. Read EVERY `sheet_NN.png` in the fold
 parallel, several Read calls in one message. Each sheet holds two screens, each under a grey label that names it
 (deck slide and figure step, or task page, question and state). `sheets.json` in the same folder lists them.
 
-The pink dashed boxes on an "as asked" task screen are NOT part of the page: they show you every tap area ("tap N")
-and drop zone ("zone N") the trainee can use. They are there so you can judge item 3.
+A deck slide whose drawing steps is shown at its last step. Every question is shown twice: answered WRONG and checked,
+then answered RIGHT and checked. The pink dashed boxes on a WRONG screen are NOT part of the page: they show you every
+tap area ("tap N") and drop zone ("zone N") the trainee can use. They are there so you can judge item 3.
 
 Look at every screen against this list:
 
@@ -27,6 +28,11 @@ Look at every screen against this list:
    shows the right answer.
 5. **Nothing cut off or covered.** No word cut at a screen edge, no part of a drawing under the button bar at the
    bottom, nothing overlapping the slide's title or footer.
+
+**A re-review** (the brief says "re-review" and lists the findings of the last review): look only at the sheets you are
+given - the screens that changed - and say, for each listed finding, FIXED or NOT FIXED; add a new problem only when a
+screen is clearly broken (a word or a part cut off or unreadable, a tap area on the wrong thing). Do not raise new points
+of polish on a re-review.
 
 Return, in under 200 words:
 - `PASS` or `FAIL` on the first line;
