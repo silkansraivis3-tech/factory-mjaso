@@ -32,8 +32,11 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
+
+_SLIDE_LOCK = threading.Lock()
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KIT = os.path.dirname(HERE)
@@ -97,7 +100,15 @@ def real_slide(ctx):
         return None, None, "the module folder %s has no assets" % mdir
     figdir = os.path.join(ctx["work"], "figures", "M%02d" % ctx["module"])
     probs = []
-    page = cm.slide_html(script, s, 1, len(screens), ctx["entry"], mdir, figdir, "STUDIO", probs)
+    name = os.path.basename(ctx["entry"].get("figure") or "")
+    with _SLIDE_LOCK:                          # figure_fit.py runs several studios at once, in threads
+        cm.OVERRIDE.clear()
+        if ctx.get("spec_override") is not None:     # draw the spec given (a candidate fix), else the file - never a stale fit
+            cm.OVERRIDE[name] = ctx["spec_override"]
+        try:
+            page = cm.slide_html(script, s, 1, len(screens), ctx["entry"], mdir, figdir, "STUDIO", probs)
+        finally:
+            cm.OVERRIDE.clear()
     styles = list(cm.STYLES) + ["gb_zoom.css", "kit.css"]
     extra = ["../" + x for x in ctx["build"].get("styles", [])]
     chrome = ('<div id="landing"><div class="landing-card"><button id="startBtn" type="button"><span class="btn-label">Start'
@@ -166,11 +177,28 @@ PROBE = r"""
         });
         return;
       }
-      var k = 0;
+      var k = 0, boxes = {};
+      /* 2.50.0 - every part's box in the drawing's own units (its labels inside it, as laid out), joined over the steps:
+         what figure_fit.py needs to crop a drawing to what it shows, or to re-flow it into another column */
+      function partBoxes() {
+        var specParts = f.spec.parts || [];
+        f.list.forEach(function (part) {
+          if (!part.g || part.id && part.id.indexOf('.') > 0 || getComputedStyle(part.g).display === 'none') return;
+          var i = specParts.indexOf(part.p);             // keyed by the part's place in the spec (a repeater: by its id)
+          if (i < 0 && part.id) specParts.forEach(function (q, j) { if (q.id === part.id) i = j; });
+          if (i < 0) return;
+          var b; try { b = part.g.getBBox(); } catch (e) { return; }
+          if (!b || (!b.width && !b.height)) return;
+          var p = part.p || {}, x0 = (p.x || 0) + b.x, y0 = (p.y || 0) + b.y, key = String(i), o = boxes[key];
+          boxes[key] = o ? [Math.min(o[0], x0), Math.min(o[1], y0), Math.max(o[2], x0 + b.width), Math.max(o[3], y0 + b.height), p.id || '', p.type]
+                         : [x0, y0, x0 + b.width, y0 + b.height, p.id || '', p.type];
+        });
+      }
       (function next() {
-        if (k > f.steps()) { res.report = f.layout(true); out(res); return; }
+        if (k > f.steps()) { res.report = f.layout(true); res.parts = boxes; out(res); return; }
         f.go(k, true);
         frames(2, function () {
+          partBoxes();
           var a = AuditDrawing.figure(svg, 'step ' + k);
           var sb2 = svg.getBoundingClientRect(), host = svg.closest('.kit-screen') || svg.parentNode, hb = host.getBoundingClientRect();
           res.states.push({ step: k, findings: (a.findings || []).map(function (x) { return { check: x.check, part: x.part, other: x.other || '', detail: x.detail || '' }; }),
@@ -309,16 +337,24 @@ def window_for(size, exe=None):
     return drawing_check.window_for(exe or find_browser(), size)
 
 
-def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), step="final", out=None, quiet=False):
-    """{size: {"states": [...], "report": {...}, "shot": png}} and a list of problems; None, why when it cannot run"""
+def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), step="final", out=None, quiet=False,
+        shots=True, spec=None, ctx=None):
+    """{size: {"states": [...], "report": {...}, "shot": png}} and a list of problems; None, why when it cannot run.
+    2.50.0: shots=False only measures (no screenshot run); spec= draws this spec instead of the file's (a candidate fix,
+    figure_fit.py), on the file's own slide; ctx= the slide context, when the caller already found it"""
     exe = find_browser()
     if not exe:
         return None, "no Chrome or Edge on this computer (set CF_BROWSER)"
-    try:
-        spec = json.load(io.open(spec_path, encoding="utf-8"))
-    except ValueError as err:
-        return None, "%s is not valid JSON - %s" % (spec_path, err)
-    ctx = course_context(spec_path) if not panel else None
+    if spec is None:
+        try:
+            spec = json.load(io.open(spec_path, encoding="utf-8"))
+        except ValueError as err:
+            return None, "%s is not valid JSON - %s" % (spec_path, err)
+    else:
+        spec = json.loads(json.dumps(spec))
+    ctx = ctx or (course_context(spec_path) if not panel else None)
+    if ctx and spec is not None:            # the slide is built from the build sheet's entry with THIS spec in it
+        ctx = dict(ctx, spec_override=spec)
     if ctx and not parts:
         cand = os.path.join(ctx["course"], "modules", "module%02d" % ctx["module"], "assets", "kit_parts.js")
         parts = cand if os.path.isfile(cand) else None
@@ -331,7 +367,7 @@ def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), ste
     res, procs, notes = {}, [], []
     try:
         for size in sizes:
-            for mode in ("probe", "shot"):
+            for mode in ("probe", "shot") if shots else ("probe",):
                 sheet = mode == "shot" and step == "all"
                 if sheet:                       # ONE page with every step side by side: one browser run for the whole sequence
                     doc, win = sheet_html(spec, parts, size)

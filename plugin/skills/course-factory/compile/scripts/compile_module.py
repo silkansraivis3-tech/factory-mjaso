@@ -472,6 +472,38 @@ def first_sentence(s):
     return s.strip()
 
 
+OVERRIDE = {}      # {spec file name: spec} - drawn instead of the file: the studio trying a candidate on its real slide
+FIT_DIR = "_fit"
+
+
+def composition_key(s, b):
+    """what decides the figure's column: the layout and the slide's dark / figure-first / inset choices"""
+    return "|".join(str(x) for x in (b.get("composition") or s.get("layout") or "", bool(b.get("dark")), bool(b.get("figure_first")),
+                                      json.dumps(b.get("inset") or {}, sort_keys=True), json.dumps(b.get("no_photo") or [], sort_keys=True)))
+
+
+def fit_path(figdir, name, sid):
+    """one fit per slide: a spec shown on two slides may sit in two columns"""
+    return os.path.join(figdir or "", FIT_DIR, "%s.%s" % (sid, name))
+
+
+def fitted(figdir, name, text, key, sid):
+    """2.50.0 (lever 7, M01 round 2) - a kit figure re-fitted to the column it is shown in, by figure_fit.py, when its slide's
+    layout changed and the spec no longer fits: kept beside the spec in figures\\MNN\\_fit\\, used only while the spec and the
+    slide's layout are the ones it was made from (else the spec is drawn as written, and the drawing check judges it).
+    The spec itself is never rewritten."""
+    p = fit_path(figdir, name, sid)
+    if not figdir or not os.path.isfile(p):
+        return None
+    try:
+        rec = json.load(io.open(p, encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if rec.get("source") != sha(text) or rec.get("column") != key:
+        return None
+    return json.dumps(rec.get("spec"), ensure_ascii=False)
+
+
 def kit_figure(text, s, probs, where):
     """a figure made from the figure kit (course-visuals/kit): its spec goes into the page as it is, and
     kit.js draws it there. The step buttons are the deck's own .mediabar. course-visuals/kit/scripts/
@@ -519,6 +551,11 @@ def figure_html(mdir, figdir, s, b, probs, where):
     if cs.flat_3d(s, b, body):                         # 2.49.7 (IGF M01 s05): a 3D slide is never quietly built in 2D
         probs.append(FLAT_3D % (where, s.get("visual_kind"), rel))
     if rel.lower().endswith(KIT_SPEC):
+        name = os.path.basename(rel)
+        if name in OVERRIDE:                           # the studio trying a candidate on the real slide
+            body = json.dumps(OVERRIDE[name], ensure_ascii=False)
+        else:
+            body = fitted(figdir, name, body, composition_key(s, b), s["id"]) or body
         return kit_figure(body, s, probs, where), "", False
     if body is not None:
         credits = []
@@ -1242,7 +1279,182 @@ def starter_scene(script, sid, scripts):
                         "operator's reason in \"declined_3d\"." % (m.upper(), m, sid, js))}
 
 
-def starter_build(script, shared=()):
+# ------------------------------------------------------------------ starter figure-kit specs (2.50.0)
+# The visual kinds a figure-kit spec can draw: a drawing, a chart, a comparison, an animation. Not a photograph, not a
+# drawing from the sources (technical_drawing), not a 3D scene (those get starter_scene).
+STARTER_FIGURE_KINDS = ("schematic", "cutaway", "chart", "comparison", "step_animation", "flow_animation",
+                        "process_animation", "interactive_diagram")
+# the script's own word -> the kit part that draws it; an unknown word becomes a text callout
+KIT_WORDS = {
+    "tank": "tank", "pipe": "pipe", "pipeline": "pipe", "hose": "pipe", "duct": "pipe", "valve": "valve",
+    "engine": "engine", "generator": "engine", "vent": "vent", "mast": "vent", "pump": "pump", "compressor": "pump",
+    "detector": "detector", "sensor": "detector", "gauge": "gauge", "pressure": "gauge", "manometer": "gauge",
+    "level": "level", "room": "space", "space": "space", "hold": "space", "compartment": "space", "enclosure": "space",
+    "scale": "scale", "flashpoint": "scale", "temperature": "scale", "thermometer": "scale",
+    "ship": "ga", "hull": "ga", "vessel": "ga", "vaporizer": "exchanger", "vaporiser": "exchanger",
+    "heater": "exchanger", "exchanger": "exchanger"}
+KIT_WORD = re.compile(r"\b(%s)(?:s|es)?\b" % "|".join(sorted(KIT_WORDS, key=len, reverse=True)), re.I)
+# per part type: anchor ("tl" = x, y is its top left, "c" = its centre), the room it takes (w, h), what it starts at and
+# where a step takes it
+STARTER_PART = {
+    "tank": ("tl", 170, 74, 0.2, 0.9), "pipe": ("pipe", 190, 0, 0, 1), "valve": ("c", 40, 40, 0, 1),
+    "engine": ("tl", 120, 70, 0, 1), "vent": ("c", 40, 40, 0, 1), "pump": ("c", 40, 50, 0, 1),
+    "detector": ("c", 50, 50, 0, 20), "gauge": ("c", 90, 90, 0, 7), "level": ("tl", 50, 110, 20, 80),
+    "space": ("tl", 160, 80, 0, 1), "scale": ("tl", 90, 120, 0, 1), "ga": ("tl", 190, 56, 0, 1),
+    "exchanger": ("c", 40, 56, 0, 1)}
+STARTER_MAX_PARTS = 9
+
+
+def kit_hit(text, last=False):
+    """(kit part type, the word as the script wrote it) for the first - or, for a name, the last (its head noun) - word in
+    `text` the kit has a part for, else None"""
+    hits = [(m.start(), KIT_WORDS[m.group(1).lower()], m.group(0)) for m in KIT_WORD.finditer(text or "")]
+    if not hits:
+        return None
+    _, kind, word = hits[-1] if last else hits[0]
+    return kind, word
+
+
+def wrap_words(text, width):
+    """the same words on lines of at most `width` characters, broken at spaces with \\n (a text part's own line break)"""
+    out, cur = [], ""
+    for w in text.split():
+        if cur and len(cur) + 1 + len(w) > width:
+            out.append(cur)
+            cur = w
+        else:
+            cur = (cur + " " + w).strip()
+    return "\n".join(out + [cur]) if cur else ""
+
+
+def starter_figure(script, s):
+    """2.50.0 - a starter figure-kit spec for a drawing slide, so the build starts from something to edit, not from nothing
+    (IGF M01 benchmark: 27 Edit/Write calls writing specs from scratch). One part per thing the script names - the term before
+    " - " or ": " in each line (the rule words_html bolds by), else the kit's word in the line, else its first words as a text
+    callout - each labelled in the script's own words, laid on a grid inside 640 x 390 so none overlap, plus the kit's words
+    in the first sentence of `visual` that the lines did not name. One step per line after the opening statement, lighting
+    that line and moving the part it names. Returns the spec, or None when the slide has no lines to draw."""
+    lines = cs.lines_of(s.get("text"))
+    if not lines:
+        return None
+    # an opening statement: a plain sentence before lines that name things ("Many IGF ships have dual-fuel engines."); a list of
+    # bare names ("Fuel tank." "Tank connection space.") has none
+    statement = len(lines) > 1 and not TERM.match(lines[0]) and any(TERM.match(x) for x in lines[1:])
+    items, index = [], {}                              # items: {"kind", "label", "start", "to"}; index: (kind, label) -> n
+    steps = []                                         # (line number, part n, flipped)
+    for i in range(2 if statement else 1, len(lines) + 1):
+        line = lines[i - 1]
+        m = TERM.match(line)
+        term = m.group(1).strip() if m and 1 <= len(m.group(1).split()) <= 4 and not m.group(1)[:1].islower() else ""
+        bare = re.sub(r"[.,;:!?]+$", "", line).strip()
+        if not term and not m and len(bare.split()) <= 4:        # a line that is only a name: "Tank connection space."
+            term = bare
+        hit = kit_hit(term, last=True) if term else kit_hit(line)
+        if hit and term:
+            kind, label = hit[0], term
+        elif hit:
+            kind, label = hit
+        else:
+            kind = "text"
+            label = term or " ".join(re.sub(r"[.,;:!?]+$", "", line).split()[:5])
+        key = (kind, label.lower())
+        flipped = key in index
+        if not flipped:
+            if len(items) >= STARTER_MAX_PARTS:
+                continue
+            index[key] = len(items)
+            start, to = (0, 1) if kind == "text" else STARTER_PART[kind][3:5]
+            items.append({"kind": kind, "label": label, "start": start, "to": to})
+        steps.append((i, index[key], flipped))
+    if not steps:
+        return None
+    have = {it["kind"] for it in items}
+    visual = (s.get("visual") or "").strip()
+    first = re.split(r"(?<=[.!?])\s", visual, 1)[0] if visual else ""
+    for m in KIT_WORD.finditer(first):                 # the things the picture is described as holding
+        kind = KIT_WORDS[m.group(1).lower()]
+        if kind in have or len(items) >= STARTER_MAX_PARTS:
+            continue
+        have.add(kind)
+        items.append({"kind": kind, "label": m.group(0).lower(), "start": STARTER_PART[kind][3], "to": STARTER_PART[kind][4]})
+    n = len(items)
+    cols = 1 if n == 1 else 2 if n <= 4 else 3
+    rows = -(-n // cols)
+    cw, ch = 640 // cols, 390 // rows
+    parts, ids, now = [], [], []
+    for k, it in enumerate(items):
+        pid, kind = "P%d" % (k + 1), it["kind"]
+        ids.append(pid)
+        now.append(it["start"])
+        cx, cy = (k % cols) * cw + cw // 2, (k // cols) * ch + ch // 2
+        if kind == "text":
+            parts.append({"id": pid, "type": "text", "x": cx, "y": cy, "anchor": "middle", "reveal": True,
+                          "text": wrap_words(it["label"], max(10, cw // 9))})
+            continue
+        anchor, w, h = STARTER_PART[kind][:3]
+        w = min(w, cw - 30)
+        h = min(h, ch - 56) if h else 0
+        p = {"id": pid, "type": kind}
+        if anchor == "tl":
+            p.update(x=cx - w // 2, y=cy - h // 2 - 8, w=w, h=h)
+        elif anchor == "c":
+            p.update(x=cx - (24 if kind in ("valve", "detector") else 0), y=cy - (10 if kind in ("pump", "exchanger", "detector") else 0))
+        if kind == "pipe":
+            p.update(d="M%d %d H%d" % (cx - w // 2, cy, cx + w // 2), fluid="liquid")
+        if kind == "gauge":
+            p.update(r=max(25, min(36, h // 2 if h else 36)), min=0, max=10, numbers=False)   # a small dial: no numbers round it
+        if kind == "level":
+            p.update(min=0, max=100)
+        if kind == "valve":
+            p.update(labelAt="right", trip=False)
+        if kind == "vent":
+            p.update(labelAt="right", mast=False)
+        if kind == "scale":
+            p.update(h=h, min=0, max=100, every=50, markers=[{"label": it["label"], "at": 50}])
+        if kind not in ("pipe", "scale"):
+            p["label"] = it["label"]
+        if it["start"]:
+            p["value"] = it["start"]
+        parts.append(p)
+        if kind == "pipe":                              # a pipe has no words of its own: its name stands over it
+            parts.append({"type": "text", "x": cx, "y": cy - 16, "anchor": "middle", "text": wrap_words(it["label"], max(10, cw // 9))})
+    plan = []
+    for i, k, flipped in steps:
+        it = items[k]
+        to = it["to"] if not flipped else (it["start"] if now[k] == it["to"] else it["to"])
+        if flipped and it["kind"] == "text":
+            to = 1
+        now[k] = to
+        words = " ".join(lines[i - 1].split())
+        title = "%d · %s" % (len(plan) + 1, words[:60].rstrip())
+        plan.append({"title": title, "line": i, "play": [[ids[k], to, 600]]})
+    label = first or (s.get("title") or "")
+    return {"size": [640, 390], "label": label, "idle": "Press Next step", "parts": parts, "steps": plan}
+
+
+def starter_figures(script, build_screens, figdir, skip=(), out=None):
+    """the starter figure of every slide whose picture the kit can draw - written into `out` ({slide id: spec}) when its
+    file is not there yet (never overwritten) - and the slide's entry in `build_screens` set to name it"""
+    for s in script["screens"]:
+        if s["kind"] != "slide" or s["id"] in skip or s.get("recap") or s["id"] not in build_screens:
+            continue
+        if cs.parse_kind(s.get("visual_kind", "")) not in STARTER_FIGURE_KINDS:
+            continue
+        spec = starter_figure(script, s)
+        if not spec:
+            continue
+        name = "%s.kit.json" % s["id"]
+        entry = build_screens[s["id"]]
+        entry.update({"figure": name, "composition": "two-col", "dark": True})
+        if not os.path.isfile(os.path.join(figdir, name)):
+            entry["_figure"] = ("starter written by --init-build: replace the placeholder parts with the real drawing, one part per "
+                                "thing the script names (SPEC.md); the parts are placed on a grid and the steps light the slide's "
+                                "lines. Try it with studio.py before compiling.")
+            if out is not None:
+                out[s["id"]] = spec
+
+
+def starter_build(script, shared=(), figdir=None, specs=None):
     """A starter build sheet. 2.49.1: the landing rule and the pass mark are the same in every module of a course, so they
     come from the course's other build sheets (the latest module that has them); the foot is this module's title; each
     question answered on a picture gets its entry (figure + places) to fill in."""
@@ -1273,6 +1485,8 @@ def starter_build(script, shared=()):
                                    "shape, an inside or a layout in space (%s). Strongly recommended, never required: to decline it, "
                                    "give the slide its 2D figure, take the scene files off \"scripts\", and write the operator's reason "
                                    "in the sheet's top-level \"declined_3d\" - it is not proposed again." % best[1])
+    if figdir is not None:             # 2.50.0: a starter figure-kit spec for every drawing slide - not a 3D one, not a photo
+        starter_figures(script, screens, figdir, skip={best[0]} if best else (), out=specs)
     sheet["screens"] = screens
     return sheet
 
@@ -1392,18 +1606,9 @@ def compile_deck(script, build, mdir, figdir, version, approved):
 
 
 NEXT_STEPS = """
-Next:
-  1. check_script_match.py (the words), then the audit_*.js checks in the browser.
-  2. THE VISUAL REVIEW - REQUIRED (build-order step 16, compile\\GUIDE.md section 2f). Every probe can be green while
-     the picture is wrong. Give a subagent the built module and have it look at a screenshot of EVERY slide and EVERY
-     task screen at 1280 x 800 (never one screen of many), against this list, and return a short verdict with paths:
-       - every curve, line and label is visible (nothing navy-on-dark, nothing hidden behind a shape)
-       - every credit and caption is clean - no file path, no drive letter, no internal folder name
-       - every tap area sits on the thing it names; every drawn label is beside what it labels
-       - every answer type is answered once RIGHT and once WRONG, and the screen says which it was
-       - 'choose all' keeps every tapped option and scores a fully right answer as right
-       - nothing is cut off, covered, or sits under the Check bar until scrolled
-     A module is not handed over until the review is done and what it found is fixed."""
+Next: compile\\scripts\\build_module.py <course> --module N runs this compile AND every check in one command, prints only
+  what fails, and on a pass makes the visual review's sheets (GUIDE 2f - required: one review subagent reads them with
+  compile\\REVIEW_PROMPT.md). A module is not handed over until the review is done and what it found is fixed."""
 
 
 def module_folder(course, module, module_dir=None):
@@ -1504,8 +1709,15 @@ def main(argv=None):
             shared.insert(0, cs.load(cp) if os.path.isfile(cp) else {})
         except (OSError, ValueError):
             pass
-        cs.save(bp, starter_build(script, shared))
-        print("Done - a starter build sheet:\n    %s\n  Next: put each slide's picture file in \"figure\", then compile." % bp)
+        figdir, specs = workspace.claude_path(o.course, "figures", cs.mid(o.module)), {}
+        cs.save(bp, starter_build(script, shared, figdir=figdir, specs=specs))
+        print("Done - a starter build sheet:\n    %s\n  Next: fill in each slide's picture, edit the starter figures (parts and "
+              "options: course-visuals\\kit\\CATALOGUE.md), then build and check in one command:\n    compile\\scripts\\"
+              "build_module.py <course> --module %s" % (bp, o.module))
+        for sid, spec in specs.items():                 # 2.50.0: starter figure-kit specs - edited, never written from nothing
+            cs.save(os.path.join(figdir, "%s.kit.json" % sid), spec)
+            print("  starter figure: figures\\%s\\%s.kit.json - %d parts, %d steps (edit it: the parts are placed on a grid)"
+                  % (cs.mid(o.module), sid, len(spec["parts"]), len(spec["steps"])))
         # the module's folder does not exist for a new module: make it and put the factory's style files and engines
         # in it, so the first compile does not stop (never inside the Android project - design_system.py refuses that).
         # 2.49.2: also when the folder is already there (assets\img made first) - the files are checked, not the folder

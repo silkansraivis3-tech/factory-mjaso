@@ -1,5 +1,39 @@
 # Building the deck from the approved script (2.25.0)
 
+## Quickstart - one module, start to PASS (2.50.0). Read this; the rest of the file is reference.
+
+```
+1  python compile/scripts/compile_module.py <course> --module 1 --init-build
+      the build sheet (working_claude\script\M01.build.json), a STARTER figure-kit spec for every drawn slide
+      (working_claude\figures\M01\sNN.kit.json: the script's parts on a grid, a step per line) and the 3D starter entry
+2  read course-visuals\kit\CATALOGUE.md - one line per kit part, the spec format, marks and steps. Never kit.js.
+3  fill the build sheet (each slide's picture, layout, the photos) and EDIT the starter specs - never write one from nothing
+4  python compile/scripts/build_module.py <course> --module 1            again after every change, until PASS
+      ONE command runs everything: every figure on its real slide at once (auto-fixes what has one right answer), the
+      compile and its drawing check, the words (instructor + trainee), navigation, the audits at 1280x800 and 1024x768,
+      the course pages and the classroom's importer. It prints only what fails - file, slide or question, what to do -
+      and one PASS line. Do not run those checks one by one: each separate run is a turn of the model.
+5  on PASS it has photographed every slide, every figure step and every question (asked, wrong, right) onto a few
+      sheets and checked that every question grades right and wrong answers as such. Give the sheets to ONE review
+      subagent (model haiku) with compile/REVIEW_PROMPT.md. Fix what it finds, build again: the next review gets only
+      the screens that changed. (Proved on the IGF M01 round-1 build: haiku found both problems the old browser-driving
+      review found - the q03 tap area on the mast's cap only, a leader line through a caption - in 3 calls, $0.02,
+      where the old review took 100 calls and $2.42.)
+```
+
+- **A figure problem** is reported once per figure and part, with the step. `figure_fit.py` has already tried the fixes
+  with one right answer: a drawing lost in empty space is cropped to what it shows; a drawing whose column got narrower
+  (a layout changed) is re-fitted to it. Kept only when every audit is clean (figures\M01\_fit\ - the spec is never
+  rewritten). When it gets close but not clean, it saves the attempt as `_fit\sNN.sNN.candidate.kit.json`: copy it over
+  the spec and fix what it lists. To look at one figure at every step: `course-visuals\kit\scripts\studio.py <spec>
+  --step all`.
+- **Effort.** The mechanical loop - build, read the failure, change a number in a spec or a key in the build sheet, build
+  again - needs no deep thinking: it can run at medium effort. Keep high effort for the design decisions: which picture
+  teaches the slide, what a figure shows, 3D or not, what the operator must be asked.
+- **A parallel build** (one agent per module): add `--no-course-pages` - one process writes COURSE.html (§5).
+- **A revision** (operator corrections): words through `content_script.py propose` -> `apply`; layout and figure changes
+  in the build sheet and specs; then step 4 once.
+
 Read this lane when a module's script is approved and its presentation is made into its finished file
 (built). **The words are typed
 once — in the script.** `compile/scripts/compile_module.py` writes `modules\module01\presentation\index.html`
@@ -287,9 +321,16 @@ Every automatic probe was green on IGF Module 4 while a look at the screens stil
 showing an internal file path, a broken "choose all" and tap areas off the things they name. The probes measure what
 someone thought to measure; only looking finds the rest. So **looking is a required step**, not a courtesy:
 
-- **Who:** a subagent (the main session never views the pictures; it gets a short verdict and file paths).
-- **What:** a screenshot of **every slide** of the deck and **every screen** of every task page and the module check, at
-  **1280 × 800**. Not a sample.
+- **Who:** ONE review subagent, model `haiku` or `sonnet` (the main session never views the pictures; it gets a short
+  verdict). Its brief is `compile/REVIEW_PROMPT.md`. It reads sheets; it never drives a browser (2.50.0 - the M01
+  benchmark's browser-driving review took 100 model calls and a third of the module's cost).
+- **What:** a screenshot of **every slide** of the deck, **every step** of a figure that steps, and **every question**
+  of every task page and the module check - as asked (every tap area and drop zone outlined by a review overlay), answered
+  wrong and checked, answered right and checked - at **1280 × 800**. Not a sample. `build_module.py` makes them on a pass
+  (`course-module-ux/measure/scripts/review_sheets.mjs <module> <out>`, two screens to a sheet, in
+  `working_claude\review\M01\`); the next review gets only the screens whose picture changed (`--all` for every one).
+  Item 4 below is checked by the script: each question is answered by its own keys, and a right answer not graded right
+  (or a wrong one graded right) fails the build.
 - **Against this list:**
   1. every curve, line and label is visible against what is behind it (a kit figure sits on a dark panel - nothing navy
      or steel on it, nothing hidden under a shape);

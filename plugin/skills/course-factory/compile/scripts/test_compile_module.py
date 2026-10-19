@@ -1233,9 +1233,8 @@ def main():
         c, md = new_course(os.path.join(tmp, "a"), script())
         code, out = run(COMPILE, c, "--module", "1")
         check("an approved script with every picture builds clean (exit 0)", code == 0, out)
-        check("finding 14: the build prints the visual review under Next, as a required step with its checklist",
-              "THE VISUAL REVIEW - REQUIRED" in out and "EVERY slide and EVERY" in out and "1280 x 800" in out
-              and "no file path" in out and "answered once RIGHT and once WRONG" in out and "tap area" in out, out)
+        check("finding 14 (2.50.0): the build points at build_module.py and the required visual review with its brief",
+              "build_module.py" in out and "required" in out and "REVIEW_PROMPT.md" in out and "not handed over" in out, out)
         page = deck(md)
         code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
         check("check_script_match --part instructor passes on the built deck", code == 0, out)
@@ -1391,8 +1390,50 @@ def main():
         check("--init-build writes a starter build sheet",
               code == 0 and os.path.isfile(os.path.join(c4, "working_claude", "script", "M01.build.json")), out)
         sheet = cs.load(os.path.join(c4, "working_claude", "script", "M01.build.json"))
-        check("the starter build sheet lists every slide with an empty figure", sorted(sheet["screens"]) == ["s01", "s02", "s03", "s04", "t01", "t02"]
-              and sheet["screens"]["s02"] == {"figure": "", "visual_kind": "comparison"})
+        check("the starter build sheet lists every slide with an empty figure (a photo's stays empty; a drawing's names its starter spec, 2.50.0)",
+              sorted(sheet["screens"]) == ["s01", "s02", "s03", "s04", "t01", "t02"]
+              and sheet["screens"]["s01"] == {"figure": "", "visual_kind": "photo"}
+              and sheet["screens"]["s02"].get("figure") == "s02.kit.json", sheet["screens"])
+        # 2.50.0 - starter figure-kit specs: the agent edits them, it does not write them from nothing
+        figs = os.path.join(c4, "working_claude", "figures", "M01")
+        s2e, s3e = sheet["screens"]["s02"], sheet["screens"]["s03"]
+        check("2.50.0: --init-build writes a starter spec for each drawing slide and none for a photo slide or a 3D slide, and the "
+              "slide's entry names it (two-col, dark, a note that it is a starter)",
+              sorted(f for f in os.listdir(figs) if f.endswith(".kit.json")) == ["s02.kit.json", "s03.kit.json"]
+              and s2e["composition"] == "two-col" and s2e["dark"] is True and "starter" in s2e["_figure"]
+              and s3e["figure"] == "s03.kit.json" and "figure" in sheet["screens"]["s04"] and sheet["screens"]["s04"]["figure"] == "m01_s04_3d.html"
+              and "starter figure: figures\\M01\\s03.kit.json - 3 parts, 3 steps" in out, (sorted(os.listdir(figs)), out))
+        spec3 = cs.load(os.path.join(figs, "s03.kit.json"))
+        spec2 = cs.load(os.path.join(figs, "s02.kit.json"))
+        ids3 = [p["id"] for p in spec3["parts"] if p.get("id")]
+        check("... the parts are the script's own words (each line's name), typed by the kit's words (tank, space), one step per "
+              "line lighting it and moving its part",
+              [p["type"] for p in spec3["parts"]] == ["tank", "space", "space"]
+              and [p["label"] for p in spec3["parts"]] == ["Fuel tank", "Tank connection space", "Fuel preparation room"]
+              and [t["line"] for t in spec3["steps"]] == [1, 2, 3] and [t["play"][0][0] for t in spec3["steps"]] == ids3
+              and spec3["size"] == [640, 390] and spec3["idle"] == "Press Next step" and spec3["label"] == "General arrangement."
+              and spec3["steps"][0]["title"].startswith("1 · Fuel tank"), spec3)
+        check("... a line the kit has no word for becomes a text callout the step reveals, a scale word a scale; none overlap",
+              [p["type"] for p in spec2["parts"]] == ["ga", "text", "scale"]
+              and spec2["parts"][1]["text"] == "Mandatory since 2017" and spec2["parts"][1].get("reveal") is True
+              and spec2["steps"][1]["play"] == [["P2", 1, 600]], spec2)
+        boxes = [(p["x"], p["y"]) for p in spec2["parts"] + spec3["parts"]]
+        check("... every part has its own place on the grid", all("x" in p and "y" in p for p in spec2["parts"] + spec3["parts"])
+              and len({(p["x"], p["y"]) for p in spec3["parts"]}) == len(spec3["parts"]), boxes)
+        kit = os.path.join(SKILLS, "course-visuals", "kit", "scripts", "check_kit.py")
+        for name in ("s02", "s03"):
+            code, kout = run(kit, "spec", os.path.join(figs, name + ".kit.json"))
+            check("2.50.0: the starter %s spec passes check_kit.py" % name, code == 0 and "clean" in kout, kout)
+        # never overwritten: a spec the agent has edited stays as it is, however many times --init-build runs again
+        mine = os.path.join(figs, "s03.kit.json")
+        edited = dict(spec3, label="Edited by hand.")
+        cs.save(mine, edited)
+        os.remove(os.path.join(c4, "working_claude", "script", "M01.build.json"))
+        code, out = run(COMPILE, c4, "--module", "1", "--init-build")
+        again = cs.load(os.path.join(c4, "working_claude", "script", "M01.build.json"))
+        check("2.50.0: --init-build never overwrites a figure spec that is there (the entry still names it, with no starter note)",
+              code == 0 and cs.load(mine) == edited and "s03.kit.json" not in out and "s02.kit.json" not in out
+              and again["screens"]["s03"]["figure"] == "s03.kit.json" and "_figure" not in again["screens"]["s03"], out)
         s4 = sheet["screens"]["s04"]
         check("2.49.7: a model_3d slide's starter entry plans its scene by default - its figure, its scene file and three.js in "
               "\"scripts\", how to build it (M03's m03_station3d.js, GUIDE 2b) and how to keep a 2D figure instead (\"declined_3d\")",

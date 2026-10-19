@@ -1,5 +1,7 @@
 # Figure kit - the spec format
 
+Writing a spec? Read CATALOGUE.md first (one line per part) - this file is the full reference.
+
 A figure is a JSON spec: **parts** placed on a canvas, and **steps** that move their values.
 `kit.js` draws the parts and runs the steps, and `kit.css` gives the look. Nothing is drawn by hand.
 `GALLERY.html` shows every part moving, plus slide M02 s14 rebuilt from a spec.

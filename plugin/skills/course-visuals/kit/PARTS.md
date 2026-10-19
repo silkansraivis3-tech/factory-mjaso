@@ -1,5 +1,7 @@
 # Making a part the kit does not have yet
 
+Writing a spec? Read CATALOGUE.md first (one line per part) - this file is the full reference.
+
 **L55, owner decision 2026-10-15:** *use the kit. If the kit has no part for what the module needs, the AI
 makes the part, puts it in the kit, and asks for a merge once the module is complete.*
 

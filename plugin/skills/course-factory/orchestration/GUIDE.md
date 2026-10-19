@@ -194,3 +194,7 @@ module is then compiled, never typed. So a module agent loads the script lane an
 HTML rules: about **38,500 tokens of rules instead of 80,800** before its first slide (measured on 2.37.0,
 size ÷ 4, `docs/PROPOSAL_SCRIPT_COMPILER.md` §6), and it no longer writes the 80-160 KB of deck and task
 HTML a module of the IGF pilot has - it writes a 3-5 KB build sheet and its figures.
+A module agent builds and checks with ONE command, `compile/scripts/build_module.py <course> --module N
+--no-course-pages` (2.50.0; the orchestrator alone writes the course's pages), starting from the Quickstart of
+`compile/GUIDE.md` and `course-visuals/kit/CATALOGUE.md`; its visual review is one `haiku` subagent reading the sheets
+the build made (`compile/REVIEW_PROMPT.md`). The mechanical build-fix loop may run at medium effort.

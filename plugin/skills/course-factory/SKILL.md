@@ -434,6 +434,10 @@ exactly those words. **The deck and the task pages are built from the approved s
 `course_map.js`, every module's two start pages - by `compile/scripts/compile_course.py`, once for the course
 (2.37.0). A module agent therefore reads the script lane, `compile/GUIDE.md` and the picture lanes - not the HTML
 rules of `course-module-ux`, `course-module-ui` and `course-task-ux`, which the compiler builds to.
+**One command builds and checks a module (2.50.0):** `compile/scripts/build_module.py <course> --module N` - every
+figure at once, the compile, every check, and the visual review's sheets; it prints only what fails. Start at the
+**Quickstart** at the top of `compile/GUIDE.md`, and write figure specs from `course-visuals/kit/CATALOGUE.md`, never
+from `kit.js`.
 
 ## Build order
 

@@ -158,8 +158,8 @@
       "visual_review": {
         "_why": "IGF Module 4 (2026-10-16): every automatic probe was green while a visual review still found invisible curves, a credit showing an internal file path, a broken 'choose all' and tap areas off the things they name. Probes measure what someone thought to measure; only looking at the screen finds the rest.",
         "required": true,
-        "who": "a subagent (the main session never views the screenshots; it receives a short text verdict with file paths - CLAUDE.md 'Visual QA')",
-        "what": "a screenshot of EVERY slide of the deck and EVERY screen of every task page and the module check, at 1280x800 - not a sample",
+        "who": "ONE review subagent, model haiku or sonnet, briefed by compile/REVIEW_PROMPT.md - it reads sheets and never drives a browser (2.50.0: the browser-driving review of the M01 benchmark was 100 model calls, a third of the module's cost); the main session receives a short text verdict - CLAUDE.md 'Visual QA'",
+        "what": "a screenshot of EVERY slide of the deck, EVERY figure step and EVERY question of every task page and the module check (as asked with its tap areas outlined, answered wrong, answered right), at 1280x800 - not a sample. compile/scripts/build_module.py makes them on a pass (review_sheets.mjs, two screens to a sheet) and checks by script that every question grades right and wrong answers as such; a re-review gets only the screens that changed",
         "checklist": [
           "every curve, line and label is visible against what is behind it (nothing navy-on-dark, nothing under a shape)",
           "every credit and caption is clean - no file-system path, no drive letter, no internal folder name",
@@ -167,7 +167,7 @@
           "every answer type is answered once RIGHT and once WRONG, and the screen says which it was ('choose all' keeps every tapped option)",
           "nothing is cut off, covered, or sits under the Check bar until the page is scrolled"
         ],
-        "after": "fix what it found, build again, and review the screens that changed. compile_module.py prints this under Next; compile/GUIDE.md section 2f describes it. Automatic backstops (not a replacement): the drawing check's contrast finding, and a build problem for a credit that shows a path."
+        "after": "fix what it found, build again (build_module.py), and review the screens that changed. build_module.py prints the sheet folder; compile/GUIDE.md section 2f describes it. Automatic backstops (not a replacement): the drawing check's contrast finding, and a build problem for a credit that shows a path."
       },
       "scripts": [
         "hours/scripts/check_hours.py",
