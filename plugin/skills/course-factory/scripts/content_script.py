@@ -941,27 +941,61 @@ def flat_3d(s, b, body):
     return rel
 
 
+def best_3d(script, skip=()):
+    """L60 (2.49.7) - the module's best slide for a 3D scene, as (screen id, why) or None: a slide the script already plans
+    as 3D first, else the one propose_3d ranks first - its lesson a shape, an inside or a layout in space, never a slide
+    whose picture is a real photograph (L52) or a flat thing (L46). Slides in `skip` and in the script's "declined" 3d are
+    passed over. `why` is the words that make it fit ("" for a slide the script plans as 3D)."""
+    slides = [s for s in script.get("screens", []) if s.get("kind") == "slide"]
+    teach = [s for s in slides if not s.get("recap")]
+    if len(teach) == len(slides) and len(slides) > 1:     # a script from before the recap: its last slide sums up
+        teach = slides[:-1]
+    skip = set(skip) | set((script.get("declined") or {}).get("3d") or {})
+    planned = [s for s in teach if is_3d(s) and s["id"] not in skip]
+    if planned:
+        return planned[0]["id"], ""
+    got = propose_3d(teach, [], skip)
+    return (got[0][0], ", ".join(got[0][1])) if got else None
+
+
+def scene_in(body):
+    """does a figure's markup hold a 3D scene?"""
+    return bool(body and SCENE_MARK.search(body))
+
+
 def build_findings(course, script):
     """what the module's build sheet does to the planned pictures, shown with the script's own findings on the review page:
-    a 3D slide built as a 2D figure (2.49.7). A note - the build sheet is no part of the approved words."""
+    a 3D slide built as a 2D figure, and (L60) a module built with no 3D scene at all - its best candidate named, until the
+    operator declines it ("declined_3d" at the top of the build sheet). Notes - the build sheet is no part of the approved
+    words, and L60 is a strong recommendation, never a block."""
     if not course:
         return []
     m = mid(script.get("module"))
     try:
         bp = os.path.join(paths(course, script.get("module"))["dir"], m + ".build.json")
-        build = load(bp) if os.path.isfile(bp) else {}
+        build = load(bp) if os.path.isfile(bp) else None
     except (OSError, ValueError):
+        build = None
+    if not build:
         return []
-    figdir, found = workspace.claude_path(course, "figures", m), []
+    figdir, found, scene = workspace.claude_path(course, "figures", m), [], False
     for s in script.get("screens", []):
         b = (build.get("screens") or {}).get(s.get("id")) or {}
         rel, body = (b.get("figure") or "").replace("\\", "/"), None
         if rel.lower().endswith((".html", ".htm")) and os.path.isfile(os.path.join(figdir, rel)):
             body = io.open(os.path.join(figdir, rel), encoding="utf-8").read()
+        scene = scene or (rel.lower().endswith((".html", ".htm")) and scene_in(body))
         flat = flat_3d(s, b, body)
         if flat:
             found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "visual_kind", "level": NOTE,
                           "rule": "v_3d_flat_figure", "detail": T(script, "v_3d_flat_figure", fig=flat), "fix": ""})
+    if not scene and not found and not str(build.get("declined_3d") or "").strip():
+        best = best_3d(script, [sid for sid, b in (build.get("screens") or {}).items() if str((b or {}).get("declined_3d") or "").strip()])
+        if best:
+            found.append({"where": T(script, "s_the_module"), "screen": "", "field": "", "level": NOTE, "rule": "v_3d_none_built",
+                          "detail": T(script, "v_3d_none_built", sid=best[0], title=next(
+                              (s.get("title") or "" for s in script["screens"] if s.get("id") == best[0]), ""),
+                              why=best[1] or T(script, "v_3d_why_planned")), "fix": ""})
     return found
 
 
@@ -1462,7 +1496,11 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
             e(T(script, "s_theory_title")), e(T(script, "s_theory_intro")), "".join(row(f) for f in th_found)))
     else:
         o.append('<p class="note">%s</p>' % e(T(script, "s_theory_clean")))
-    mf = media_findings(script) + build_findings(course, script)
+    bf = build_findings(course, script)
+    no3d = [f for f in bf if f["rule"] == "v_3d_none_built"]       # L60 - said where it is seen first, never a block
+    if no3d:
+        o.append('<div class="card hot"><h3>%s</h3><p>%s</p></div>' % (e(T(script, "s_3d_title")), e(no3d[0]["detail"])))
+    mf = media_findings(script) + [f for f in bf if f not in no3d]
     if mf:
         o.append('<div class="card warn"><h3>%s</h3><p class="note">%s</p><ul>%s</ul></div>' % (
             e(T(script, "s_media_title")), e(T(script, "s_media_intro")), "".join(row(f) for f in mf)))

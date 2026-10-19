@@ -1214,7 +1214,7 @@ each found only after a full build. Now the kit and its checks take that work:
   on the drawing found; beside it, or a marker on a photo, silent), `test_compile_module.py` 271;
   the new check flagged M02 s13 before the move and is clean at all 6 steps after it.
 
-## 4zy · The M01 benchmark's compiler gaps: 3D said, EMPTY at the busiest step, the vent mast's tap area (2.49.7, 2026-10-19)
+## 4zy · The M01 benchmark's compiler gaps: 3D said (L60), EMPTY at the busiest step, the vent mast's tap area (2.49.7, 2026-10-19)
 
 - **Found** (IGF M01 built twice from one script, by hand at 2.24.0 and by the compiler at 2.49.6 - benchmark
   `compiler\METRICS.md`): (1) s05 is `model_3d`, the build sheet gave it a kit figure and the compile passed without a
@@ -1231,10 +1231,17 @@ each found only after a full build. Now the kit and its checks take that work:
   judged by what it shows (settled), a tie goes to the later step, and the finding says "at its busiest step (step N of
   M)". (3) a `vent` on top of a pipe's upright run lays an unpainted box down the run, so its tap area (and a label's
   leader end) is the whole mast; `"mast": false` / `"mast": <length>`. (4) the share key holds the answers' part ids.
+- **L60 (Aleksis, 2026-10-19: "very recommended to build a 3d model at least once where you can in a module"):** a
+  script with no 3D slide gets one anyway - `--init-build` gives the best slide (`content_script.best_3d`: one the script
+  plans as 3D, else `propose_3d`'s first - a shape, an inside or a layout in space, never a real photo's slide) a starter
+  scene entry with a `"_3d"` note on why. A module built with no scene: a RECOMMENDED block in the build and its own card
+  on the review page, naming the candidate and why - never a block, never exit 1. Declined with the operator's reason at
+  the top of the build sheet (`"declined_3d"`), it is not proposed again; a slide's own `"declined_3d"` takes it out of
+  the running. L46 unchanged. Law text: `docs/FACTORY_LAWS.md` L60, `SKILL.md`.
 - **Not fixed by this - the benchmark misread it:** M01 s02 without its captions is 60 % blank at its busiest step too
   (all three markers in): the captions fill a real hole, they are no workaround for a wrong check.
 - **Proof:** `test_audit_drawing.py` 33 (the M01 s02 scale: EMPTY at step 3 of 3), `test_task_engine.py` 75 (a vent
-  mast's tap area covers its pipe run, in a browser), `test_compile_module.py` 279 (2D figure on a 3D slide said in the build
+  mast's tap area covers its pipe run, in a browser), `test_compile_module.py` 284 (L60: the best slide's starter scene, the RECOMMENDED block and review card, declined not again; 2D figure on a 3D slide said in the build
   and on the review page; a kit figure too; a scene silent; `declined_3d` silent, an empty one not; the starter scene
   entry; two questions, other answers, two drawings). IGF M01 recompiled as a copy (benchmark `compiler_fix\course`):
   the s05 finding shows; q03 has its own drawing, no % box, its tap area 56 x 251 px over the whole mast.

@@ -151,9 +151,14 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   frame; buttons and taps share one mode. Reference: IGF M03 `m03_station3d.js` (the highlight, the tap logic on
   `pointerup`). A scene that only turns is not finished. A `[data-stage]` in a wide column takes the column's own
   height (2.49.2) - no module override needed.
-  **Planned by default, never dropped without a word (2.49.7, IGF M01 s05).** `--init-build` gives a `model_3d` slide
-  a starter scene entry: its figure (`m01_s05_3d.html`), its scene file and `three.min.js` in `"scripts"`, and a
-  `"_figure"` note on how to build it - the build reports the files missing until they are written. A 3D slide whose
+  **At least one scene per module where the subject allows it - strongly recommended (L60, 2.49.7).** `--init-build`
+  gives a `model_3d` slide a starter scene entry: its figure (`m01_s05_3d.html`), its scene file and `three.min.js` in
+  `"scripts"`, and a `"_figure"` note on how to build it - the build reports the files missing until they are written.
+  A script with no `model_3d` slide gets the same entry on its best slide, unasked (`content_script.best_3d`: a shape,
+  an inside or a layout in space; never a real photo's slide), with a `"_3d"` note saying why. A module built with no
+  scene gets a RECOMMENDED block in the build and its own card on the review page, naming the best candidate - never a
+  block: the operator declines with their reason, `"declined_3d"` at the TOP of the build sheet, and it is not
+  proposed again. A 3D slide whose
   figure is not a scene (a kit figure, an `.svg`, a photo - anything but an `.html` figure holding a `[data-stage]`,
   `data-3d`, `data-scene` or a `<canvas>`) is a must-fix in the build and a note on the script's review page:
   "asks for a 3D scene; it has a 2D figure". To keep the 2D figure, write the operator's reason in the slide's entry,

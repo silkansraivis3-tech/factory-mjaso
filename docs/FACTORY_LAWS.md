@@ -517,8 +517,20 @@ operator's reason, once. Every Sub-ILO is taught on a slide and checked by a que
 listed source. A script approved before the law keeps its approval; its gaps are reported. → `course-factory`
 (`scripts/ilo_map.py`, `scripts/course_gate.py`, `kb/scripts/kb_tool.py`, `script/GUIDE.md` §0), 2.42.0
 
-**All fifty-nine laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L59 are enforced first through `course-factory/SKILL.md`'s
+**L60 · At least one 3D scene in every module where the subject allows it - strongly recommended.** Aleksis,
+2026-10-19, after the M01 benchmark built a planned 3D slide as a flat figure without a word: *"it should be like it is
+very recommended to build a 3d model at least once where you can in a module"*. A module whose script plans no 3D still
+gets one where a slide's lesson is a shape, an inside or a layout in space: `--init-build` picks the best slide unasked
+(one the script plans as 3D first, else the best fit) and writes its starter scene entry, built like IGF M03's
+`m03_station3d.js`. A module built with no 3D scene is said loud in the build and in its own card on the review page -
+the best candidate and why. A recommendation, never a block (2.18.1): the operator may decline it with their reason
+(`"declined_3d"` at the top of the build sheet), and a declined scene is not proposed again. A slide the script plans as
+3D that is given a 2D figure stays a must-fix until its own `"declined_3d"` holds a reason. L46 is unchanged - at most
+half the teaching slides, never instead of a real photograph, the speed and tap rules of the compile GUIDE 2b.
+→ `course-factory` (`scripts/content_script.py` `best_3d`, `build_findings`; `compile/scripts/compile_module.py`), 2.49.7
+
+**All sixty laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L60 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

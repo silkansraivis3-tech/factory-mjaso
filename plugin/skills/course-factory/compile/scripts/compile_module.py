@@ -1265,6 +1265,14 @@ def starter_build(script, shared=()):
                 screens[s["id"]].update(starter_scene(script, s["id"], sheet["scripts"]))
         elif s["kind"] in cs.TASKS and cs.mech(s) in STARTER_ON_PICTURE:
             screens[s["id"]] = json.loads(json.dumps(STARTER_ON_PICTURE[cs.mech(s)]))
+    # L60 - at least one 3D scene in every module where the subject allows it: with none planned, the best slide gets one, unasked
+    best = None if any(cs.parse_kind(s.get("visual_kind", "")) == "model_3d" for s in script["screens"]) else cs.best_3d(script)
+    if best and best[0] in screens:
+        screens[best[0]].update(starter_scene(script, best[0], sheet["scripts"]))
+        screens[best[0]]["_3d"] = ("Proposed by the factory, unasked (L60): this module has no 3D scene and this slide's lesson has a "
+                                   "shape, an inside or a layout in space (%s). Strongly recommended, never required: to decline it, "
+                                   "give the slide its 2D figure, take the scene files off \"scripts\", and write the operator's reason "
+                                   "in the sheet's top-level \"declined_3d\" - it is not proposed again." % best[1])
     sheet["screens"] = screens
     return sheet
 
@@ -1609,6 +1617,10 @@ def main(argv=None):
         probs += dprobs
     if not approved:
         probs.insert(0, "the script is not approved - what was built is a preview only, never handed over")
+    if o.only in ("all", "deck"):                      # L60 - a strong recommendation, said loud, never a block (2.18.1)
+        for f in cs.build_findings(o.course, script):
+            if f["rule"] == "v_3d_none_built":
+                print("\n" + "=" * 78 + "\nRECOMMENDED (L60) - " + f["detail"] + "\n" + "=" * 78)
     parts = [x for x in notes if x[0]]
     if o.only in ("all", "deck"):
         listed = write_to_take(o.course, script, parts)

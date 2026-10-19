@@ -1179,6 +1179,38 @@ def v2497_part(tmp):
     _c, code, out = built("f5", {"figure": "hull.svg", "dark": True, "declined_3d": " "})
     check("... a \"declined_3d\" with no reason keeps it said", code == 1 and "asks for a 3D scene" in out, out)
 
+    # L60 (Aleksis, 2026-10-19: "very recommended to build a 3D model at least once where you can in a module")
+    flat = json.loads(json.dumps(SCREENS))
+    flat[3].update(visual_kind="interactive_diagram", visual="A hull section: the double-walled gas pipe and the engine room.")
+    os.makedirs(os.path.join(tmp, "l60"))
+    c6, md6 = new_course(os.path.join(tmp, "l60"), script(screens=flat), build=False)
+    gate_fixture.open_gate(c6)
+    code, out = run(COMPILE, c6, "--module", "1", "--init-build")
+    sheet = cs.load(sp(c6))
+    s3 = sheet["screens"].get("s03", {})
+    check("L60: a module with no 3D slide in its script - --init-build gives the best slide (the spaces and their arrangement) "
+          "a starter scene, unasked, and says why and how to decline",
+          code == 0 and s3.get("figure") == "m01_s03_3d.html" and "assets/js/m01_s03_3d.js" in sheet["scripts"]
+          and "L60" in s3.get("_3d", "") and "arrangement" in s3.get("_3d", "") and "declined_3d" in s3.get("_3d", ""), sheet)
+    check("... never on a slide whose picture is a real photograph (L52)", "_3d" not in sheet["screens"].get("s01", {}), sheet)
+    sheet["screens"]["s04"] = {"figure": "hull.svg", "dark": True}
+    sheet["scripts"] = []
+    for sid in ("s01", "s02", "s03"):
+        sheet["screens"][sid] = {"figure": {"s01": "assets/img/ship.jpg", "s02": "assets/fig/scale.svg", "s03": "hull.svg"}[sid]}
+    cs.save(sp(c6), sheet)
+    code, out = run(COMPILE, c6, "--module", "1", "--only", "deck", "--no-drawing-check")
+    check("L60: built with no 3D scene - the build says it loud, names the best candidate and why, and does not block on it",
+          "RECOMMENDED (L60) - no 3D scene in this module; the best candidate is s03 \"Five new spaces\", because spaces, arrangement" in out
+          and "To fix before it is shown" not in out and code == 0, out)
+    page = html.unescape(cs.render_html(c6, script(screens=flat)))
+    check("... and the review page shows it in its own card", "No 3D scene in this module yet" in page
+          and page.find("No 3D scene in this module yet") < page.find("the best candidate is s03"), page[:300])
+    sheet["declined_3d"] = "the operator: this module is about rules, a drawing is enough"
+    cs.save(sp(c6), sheet)
+    code, out = run(COMPILE, c6, "--module", "1", "--only", "deck", "--no-drawing-check")
+    check("L60: declined with the operator's reason - not proposed again, in the build or on the review page",
+          "RECOMMENDED (L60)" not in out and not cs.build_findings(c6, script(screens=flat)), out)
+
     # IGF M01 q01/q03: two questions on one kit figure, "unlabel": "answers", other answers - two drawings, not one shared
     sys.path.insert(0, HERE)
     import task_pages
