@@ -108,12 +108,17 @@ async function deck(tiles) {
       return { id: s.id, i: all.indexOf(s)+1, of: all.length, title: s.getAttribute('data-title')||'', steps: f&&f.steps?f.steps():0,
                last: !!(document.getElementById('btnNext')||{}).disabled }; })()`);
     if (!st) break;
-    if (seen.has(st.id)) {                      // still on it (a step was taken): on to the next slide
+    if (seen.has(st.id)) {                      // still on it (a step was taken): its picture is retaken at this later state
+      await evaluate(SETTLE); await sleep(140); await evaluate(SETTLE);
+      const t = tiles.find(x => x.id === 'deck/' + st.id);
+      if (t) t.png = await shot();
       if (st.last) break;
       await evaluate(`(function(){ var b=document.getElementById('btnNext'); if(b && !b.disabled) b.click(); return 1; })()`);
       continue;
     }
+    if (!seen.size) await sleep(900);           // the first slide fades in after Start
     seen.add(st.id);
+    await evaluate(`Promise.all([].slice.call(document.images).map(function(i){ return i.complete ? 1 : new Promise(function(r){ i.onload = i.onerror = r; setTimeout(r, 3000); }); })).then(function(){ return 1; })`);
     await evaluate(SETTLE); await sleep(140); await evaluate(SETTLE);
     tiles.push({ id: 'deck/' + st.id, label: `Deck slide ${st.i}/${st.of} (${st.id}) ${st.title}` + (st.steps ? ` - figure at its last step (${st.steps})` : ''), png: await shot() });
     if (st.last) break;
@@ -281,6 +286,7 @@ async function tasks(tiles, failures) {
         if (!q) break;
         await evaluate(SETTLE); await sleep(150); await evaluate(SETTLE);
         if (!good) for (const x of await evaluate('__rv.leaders()')) failures.push(`${name} ${q}: ${x}`);
+        if (opt.asked && good) tiles.push({ id: `${name}/${q}/asked`, label: `${name} ${q} - as asked`, png: await shot() });
         const r = await evaluate(`__rv.answer(${good})`);
         await sleep(220); await evaluate(SETTLE); await sleep(80);
         if (!good) await evaluate('__rv.overlay(true)');      // the tap areas and drop zones, outlined on the wrong-answer screen
@@ -290,7 +296,7 @@ async function tasks(tiles, failures) {
           break;
         } else if (good && !r.ok) failures.push(`${name} ${q}: the RIGHT answer (by its own keys) was graded not right - "${r.vd}"`);
         else if (!good && !r.bad) failures.push(`${name} ${q}: a WRONG answer was graded right - "${r.vd}"`);
-        tiles.push({ id: `${name}/${q}/${good ? 'right' : 'wrong'}`, label: `${name} ${q} - answered ${good ? 'RIGHT' : 'WRONG'} and checked: "${r.vd || ''}"`
+        if (!opt.asked) tiles.push({ id: `${name}/${q}/${good ? 'right' : 'wrong'}`, label: `${name} ${q} - answered ${good ? 'RIGHT' : 'WRONG'} and checked: "${r.vd || ''}"`
                      + (good ? '' : ' (pink: every tap area / drop zone, review overlay only)'), png: await shot() });
         if (!good) await evaluate('__rv.overlay(false)');
         await evaluate('__rv.next()');
@@ -330,14 +336,19 @@ async function sheets(tiles) {
   const show = opt.all ? tiles : tiles.filter(differs);
   for (const f of readdirSync(OUT)) if (/^sheet_\d+\.png$/.test(f)) rmSync(join(OUT, f));
   const LBL = 30, out = [];
+  /* the sheet is a page of files, never a data: URL - one with a photo slide passed Chrome's 2 MB limit and came out black */
+  const tmpDir = join(profile, 'sheet');
+  mkdirSync(tmpDir, { recursive: true });
   for (let i = 0; i < show.length; i += 2) {
     const pair = show.slice(i, i + 2);
-    const html = '<!DOCTYPE html><html><body style="margin:0;background:#111">' + pair.map(t =>
+    pair.forEach((t, k) => writeFileSync(join(tmpDir, `t${i + k}.png`), t.png));
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#111">' + pair.map((t, k) =>
       `<div style="height:${LBL}px;font:700 16px/30px sans-serif;color:#fff;background:#333;padding:0 10px;white-space:nowrap;overflow:hidden">${t.label.replace(/</g, '&lt;')}</div>` +
-      `<img style="display:block;width:${W}px;height:${H}px" src="data:image/png;base64,${t.png.toString('base64')}">`).join('') + '</body></html>';
+      `<img style="display:block;width:${W}px;height:${H}px" src="t${i + k}.png">`).join('') + '</body></html>';
     const hh = pair.length * (H + LBL);
+    writeFileSync(join(tmpDir, `s${i}.html`), html);
     await send('Emulation.setDeviceMetricsOverride', { width: W, height: hh, deviceScaleFactor: 1, mobile: false });
-    await load('data:text/html;base64,' + Buffer.from(html).toString('base64'));
+    await load(pathToFileURL(join(tmpDir, `s${i}.html`)).href);
     const png = await shot(hh);
     const f = join(OUT, `sheet_${String(out.length + 1).padStart(2, '0')}.png`);
     writeFileSync(f, png);
