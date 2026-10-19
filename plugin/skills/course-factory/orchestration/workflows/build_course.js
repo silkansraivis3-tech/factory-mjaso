@@ -107,9 +107,10 @@ hour, a pass mark or a citation, and never web-search during intake.
 
 Then return the module table as JSON. Do not build anything.`
 
-const plan = await agent(READ, { label: 'read:programme', phase: 'Read', schema: MAP_SCHEMA })
-
 if (!A.modules || !A.modules.length) {
+  /* Pass 1 only: the reader writes the Stage 2 files. Pass 2 never runs it again - it would rewrite the
+     architecture and the ILO map the owner has just approved (2.49.4). */
+  const plan = await agent(READ, { label: 'read:programme', phase: 'Read', schema: MAP_SCHEMA })
   /* The gate. The owner approves the table before anything expensive happens. */
   return {
     stopped_at: 'GATE',
@@ -282,7 +283,10 @@ Report. Do not fix.`,
   { label: 'crosscheck:course', phase: 'Cross-check', schema: QA_SCHEMA }
 )
 
-const blocking = results.filter((q) => q && q.blocking)
+/* a module whose build or QA brought back nothing is not verified - it blocks, it is never counted as clean */
+const blocking = results
+  .map((q, i) => q || { module: String(A.modules[i].id), blocking: true, classification: 'NOT VERIFIED - no QA result' })
+  .filter((q) => q.blocking)
 
 return {
   modules: A.modules.length,

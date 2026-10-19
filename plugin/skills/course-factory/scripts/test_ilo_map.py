@@ -119,6 +119,15 @@ def main():
         os.makedirs(os.path.join(nomap, "working_claude"))
         code, out = run("refresh", nomap)
         check("a course without an ILO map: stopped, told how it is made", code == 2 and "no ILO map yet" in out, out)
+
+        print("\n-- 2.49.4: an architecture that lists the final as a module")
+        arch = {"modules": [{"module": "final", "topics": []}, {"module": 2, "topics": []}, {"module": "M01", "topics": []}]}
+        try:
+            got = ilo_map.derive({}, arch)
+            err = None
+        except Exception as ex:                   # TypeError: '<' not supported between 'str' and 'int' - before 2.49.4
+            got, err = None, "%s: %s" % (type(ex).__name__, ex)
+        check("a module row \"final\" beside numbered modules derives the map, no TypeError", err is None, err)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n" + "=" * 72)

@@ -24,6 +24,7 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 PY = sys.executable
 
 PASS: list[str] = []
@@ -263,6 +264,37 @@ def main() -> int:
         globs = plat["role_rules"]["internal_globs"]
         check("REVIEW.html is internal by pattern",
               any("REVIEW" in g for g in globs))
+
+        # ---- 5 · gitpub commit / push on a real repository (2.49.4) ----------
+        pr = os.path.join(tmp, "pubrepo")
+        os.makedirs(pr)
+        g = lambda *a: subprocess.run(["git", "-c", "core.quotepath=false", "-C", pr, *a], capture_output=True,
+                                      text=True, encoding="utf-8", errors="replace")
+        g("init", "-q", "-b", "main")
+        g("config", "user.name", "Test"); g("config", "user.email", "t@example.org")
+        io.open(os.path.join(pr, "README.md"), "w", encoding="utf-8").write("base\n")
+        g("add", "README.md"); g("commit", "-q", "-m", "base")
+        g("checkout", "-q", "-b", "course/t-course/1.0.0")
+        cdir = os.path.join(pr, "courses", "t-course")
+        os.makedirs(cdir)
+        io.open(os.path.join(cdir, "Drošība.png"), "wb").write(b"\x89PNG\r\n\x1a\n")
+        io.open(os.path.join(cdir, "index.html"), "w", encoding="utf-8").write(PAGE_OK % "T")
+        okrep = os.path.join(tmp, "gate_ok.json")
+        io.open(okrep, "w", encoding="utf-8").write(json.dumps({"verdict": "PASS"}))
+        gp = os.path.join(HERE, "gitpub.py")
+        base = ["--repo", pr, "--slug", "t-course", "--version", "1.0.0", "--gate-report", okrep, "--base", "main"]
+        rcc, outc = run([gp, "commit"] + base + ["--path", "courses/t-course", "--message", "t-course 1.0.0"])
+        check("gitpub commit: a course file with a Latvian name (Drošība.png) is the course's own, not 'outside its paths'",
+              rcc == 0 and "outside this course's paths" not in outc
+              and "Drošība.png" in g("show", "--name-only", "--format=", "HEAD").stdout, outc[-400:])
+        rcp, outp = run([gp, "push"] + base + ["--dry-run"])
+        check("gitpub push: the course's own branch may be pushed", rcp == 0 and "would push course/t-course/1.0.0" in outp, outp[-300:])
+        g("checkout", "-q", "-b", "staging")
+        rcs, outs = run([gp, "push"] + base + ["--dry-run"])
+        check("gitpub push: a shared branch that is not the base (staging) is refused", rcs == 1 and "only a course branch" in outs, outs[-300:])
+        g("checkout", "-q", "-b", "course/other-course/2.0.0")
+        rco, outo = run([gp, "push"] + base + ["--dry-run"])
+        check("gitpub push: another course's branch is refused under this course's slug", rco == 1 and "course/t-course/" in outo, outo[-300:])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

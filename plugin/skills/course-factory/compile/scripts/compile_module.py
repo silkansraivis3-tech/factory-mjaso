@@ -58,6 +58,8 @@ HOW A SLIDE IS LAID OUT (the same for every module)
   support list; a line starting with "• " is a list item, and the other lines are lead paragraphs.
   Over a photograph there is no list: a "• " line is a .lead.sub (the list's square marker) and the
   lines it hangs under are .lead.head (bold) - the same heading-and-points look as a text slide.
+  Lines the script numbers itself, 1, 2, 3 ... in order, are one numbered list (ol.support.seq; over a photo
+  .lead.sub.step): every step the same size, its own number the marker.
   A task slide -> "activity": the set's code, the title, its lines; data-task-href to the set's page
   (tasks\\sc1_<title>.html, assessment\\check.html, assessment\\final.html). A room activity -> no page,
   data-link-hint from the build sheet or its first line.
@@ -248,6 +250,7 @@ def start_icon():
 
 # ------------------------------------------------------------------ the words
 TERM = re.compile(r"^([^:]{2,60}?)(\s-\s|:\s)(?=\S)")
+STEP_NUM = re.compile(r"^(\d{1,2}[.)]?)(\s+)(?=\S)")      # "1 Risk ...", "2. Isolate ...", "3) Ventilate ..."
 
 
 def marked(x, bold=True):
@@ -290,13 +293,19 @@ def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=
     alts = emph.get("box_alt")
     hooks = {str(k): v for k, v in (emph.get("hooks") or {}).items()}
 
-    def line(tag, cls, i, x, bold=True):
+    def line(tag, cls, i, x, bold=True, num=False):
         extra, hcls = hook_attrs(hooks.get(str(i)))
         cls = " ".join(c for c in (cls, hcls) if c)
+        m = STEP_NUM.match(x) if num else None
+        # a step's own number becomes its marker (.n); the words stay whole, so the match check still reads "1 Risk ..."
+        words = ('<span class="n">%s</span>%s%s' % (e(m.group(1)), m.group(2), marked(x[m.end():], bold)) if m
+                 else marked(x, bold))
         return '<%s%s data-script-field="text" data-i="%d"%s>%s</%s>' % (
-            tag, ' class="%s"' % cls if cls else "", i, extra, marked(x, bold), tag)
+            tag, ' class="%s"' % cls if cls else "", i, extra, words, tag)
 
     pairs = list(zip(idx, lines))
+    if not pairs:             # a title-and-figure slide: the script may have no words for it
+        return []
     if legend:
         # the badge counts 1, 2, 3 in the row (data-n); when the approved words already start with their own
         # number ("1 Fuel tank ...") the row shows those and draws no second number
@@ -307,8 +316,12 @@ def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=
     if dark_photo:            # the shared look styles .lead over a photograph, not a list - a bullet stays a lead line,
         # marked .sub (the list's square marker); the lines between them are their headings, .head - bold, as a
         # text slide marks its opening line
-        head = "lead head" if any(x.startswith("•") for _, x in pairs) else "lead"
+        # steps the script numbers itself are .lead.sub too, their own number the marker, as on a text slide
+        nums = [int(m.group(1).rstrip(".)")) for m in (STEP_NUM.match(x) for _, x in pairs) if m]
+        steps = len(nums) >= 2 and nums == list(range(1, len(nums) + 1))
+        head = "lead head" if any(x.startswith("•") for _, x in pairs) or steps else "lead"
         return [line("p", "lead sub", i, x.lstrip("•").strip(), bold=False) if x.startswith("•")
+                else line("p", "lead sub step", i, x, bold=False, num=True) if steps and STEP_NUM.match(x)
                 else line("p", head, i, x, bold=False) for i, x in pairs]
     if len(pairs) == 1 and not boxes and not concl and not emph.get("groups"):
         # one line is a statement - except around a stage drawing, where it is reading text and the drawing is the point
@@ -319,8 +332,13 @@ def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=
         for k in range(lo, hi + 1):
             group_of[k] = (lo, hi, re.sub(r"[^\w -]", "", g.get("class") or "box"))
     bullets = any(x.startswith("•") for x in lines)
+    # steps the script numbers itself ("1 Risk assessment ...", "2 Isolate ...") are one numbered list: every step
+    # the same size, its number the marker - not step 1 as the headline and the rest as squares (IGF M11 s04)
+    nums = [int(m.group(1).rstrip(".)")) for m in (STEP_NUM.match(x) for x in lines) if m]
+    seq = len(nums) >= 2 and nums == list(range(1, len(nums) + 1)) and not boxes and not group_of
     # a first line is the headline only when it is short - a long opening paragraph set as a headline fills the column
-    plain = first_statement and not bullets and not boxes and not group_of and cs.wc(lines[0]) <= STATEMENT_MAX_WORDS
+    plain = (first_statement and not bullets and not seq and not boxes and not group_of
+             and cs.wc(lines[0]) <= STATEMENT_MAX_WORDS)
     roles = []
     for n, (i, x) in enumerate(pairs):
         if i in group_of:
@@ -333,6 +351,8 @@ def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=
             roles.append(("box alt" if alt else "box", i, x.lstrip("•").strip()))
         elif x.startswith("•"):
             roles.append(("li", i, x.lstrip("•").strip()))
+        elif seq and STEP_NUM.match(x):
+            roles.append(("li", i, x))
         elif plain and n == 0:
             roles.append(("statement", i, x))
         elif plain:
@@ -343,9 +363,10 @@ def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=
 
     def flush_run(dest):
         if run:
-            dest.append('<ul class="support">')
-            dest.extend("  " + line("li", "", k, r) for k, r in run)
-            dest.append("</ul>")
+            steps = seq and all(STEP_NUM.match(r) for _, r in run)
+            dest.append('<ol class="support seq">' if steps else '<ul class="support">')
+            dest.extend("  " + line("li", "", k, r, num=steps) for k, r in run)
+            dest.append("</ol>" if steps else "</ul>")
             del run[:]
 
     def flush_group():
@@ -880,7 +901,8 @@ def under_figure(fig, extra):
     """put something under the drawing, inside its box when the drawing is its own .fill"""
     if not FILL_BOX.match(fig):
         return fig + "\n" + extra
-    return re.sub(r"</div>\s*$", extra + "\n</div>", fig.rstrip(), count=1)
+    # a function, not a replacement string: a caption or credit with a backslash (C:\Users\...) is text, not an escape
+    return re.sub(r"</div>\s*$", lambda _: extra + "\n</div>", fig.rstrip(), count=1)
 
 
 def by_thing(notes):
@@ -899,7 +921,8 @@ def by_thing(notes):
 
 def write_to_take(course, script, notes):
     """working_claude\\PHOTOS_TO_TAKE.md - this module's section rewritten on every build, the rest kept"""
-    p = os.path.join(course, workspace.CLAUDE, TO_TAKE)
+    p = workspace.claude_path(course, TO_TAKE)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
     m = cs.mid(script.get("module"))
     head = ("# Photos to take at Novikontas\n\n"
             "Every real thing a drawing names that has no real photograph yet (L57). The `## Mnn` sections are written by\n"
@@ -1485,10 +1508,13 @@ def main(argv=None):
             f.write(DRAFT_TEXT)
         print("Preview - this module is marked as a draft (%s): the classroom package leaves it out until the script is approved\n"
               "  and the module is built again." % DRAFT_MARK)
-    elif os.path.isfile(mark):
+    elif os.path.isfile(mark) and o.only in ("all", "deck"):
         os.remove(mark)
         print("The draft mark (%s) is gone - the script is approved, so the module is part of the classroom package." % DRAFT_MARK)
-    figdir = os.path.join(o.course, workspace.CLAUDE, "figures", cs.mid(o.module))
+    elif os.path.isfile(mark):     # the deck on disk is still the draft's - the mark goes only when the deck is built again
+        print("The draft mark (%s) stays - the deck was built from the draft and --only %s does not rebuild it.\n"
+              "  Compile with --only deck (or all) to bring the approved module into the classroom package." % (DRAFT_MARK, o.only))
+    figdir = workspace.claude_path(o.course, "figures", cs.mid(o.module))
     probs, notes = [], []
     rec.update({"script_hash": cs.content_hash(script), "plugin_version": plugin_version()})
     written = []

@@ -54,7 +54,9 @@ def git(repo: str, *args: str, check: bool = True) -> str:
     env["GIT_TERMINAL_PROMPT"] = "0"          # a credential prompt would hang forever
     env["GIT_OPTIONAL_LOCKS"] = "0"
     p = subprocess.run(
-        ["git", "-C", repo, *args],
+        # core.quotepath=false: a path with ä or š is printed as it is, not "\303\244" in quotes,
+        # so a Latvian or Russian file name is recognised as the course's own
+        ["git", "-c", "core.quotepath=false", "-C", repo, *args],
         capture_output=True, text=True, env=env, encoding="utf-8", errors="replace",
     )
     if check and p.returncode != 0:
@@ -313,6 +315,11 @@ def cmd_push(a, repo: str) -> int:
     base = a.base or default_branch(repo)
     if br == base:
         raise Refused(f"refusing to push {base} from this script. Course work is pushed on a branch.")
+    # only a course branch is pushed - never master, staging or any other shared branch the platform has
+    want = branch_name(a.slug, "x")[:-1] if a.slug else "course/"
+    if not br.startswith(want):
+        raise Refused(f"refusing to push {br}: this script pushes only a course branch ({want}<version>). "
+                      "Run `gitpub.py branch` first.")
     if a.dry_run:
         print(f"DRY RUN - would push {br} to {a.remote}")
         return OK
@@ -401,4 +408,7 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
+    # a Windows console is cp1252: printing a staged "Drošība.png" crashed the commit half way
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     sys.exit(main())

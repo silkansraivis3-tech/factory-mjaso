@@ -1098,6 +1098,50 @@ def v2492_part(tmp):
           "[data-stage]{height:max(320px,calc(100vh - 300px))" not in gc and "fig-wide > .fill:has([data-stage])" in gc and "[data-stage]{width:100%;flex:1 1 0" in gc, "")
 
 
+def v2494_part(tmp):
+    """2.49.4 - what the pre-merge review of the branch found in the compiler"""
+    print("\n-- 2.49.4: the pre-merge review's compiler fixes")
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    fig = '<div class="fill"><svg viewBox="0 0 10 10"></svg></div>'
+    extra = '<div class="inset-cap">Photo taken from C:\\Users\\crew\\deck.jpg</div>'
+    try:
+        got = cm.under_figure(fig, extra)
+    except Exception as ex:                       # re.error: bad escape \U - before 2.49.4
+        got = "%s: %s" % (type(ex).__name__, ex)
+    check("an inset caption with a backslash (C:\\Users\\...) is put under the drawing as it is written, no crash",
+          extra in got and got.endswith("</div>") and got.count("</div>") == 2, got)
+    check("a slide with no words gives no word lines (no IndexError)", cm.words_html([]) == [] and cm.words_html([], legend=True) == [])
+    os.makedirs(os.path.join(tmp, "w1"))
+    bare = json.loads(json.dumps(SCREENS))
+    bare[1]["text"] = ""                          # a split slide: title and figure only
+    bare[2]["text"] = ""                          # a wide slide: title and figure only
+    c, md = new_course(os.path.join(tmp, "w1"), script(screens=bare))
+    code, out = run(COMPILE, c, "--module", "1")
+    check("a title-and-figure slide with no words compiles", code in (0, 1) and "Traceback" not in out
+          and os.path.isfile(os.path.join(md, "presentation", "index.html")), out)
+    # the draft mark stays until the deck itself is rebuilt from the approved script
+    os.makedirs(os.path.join(tmp, "w2"))
+    c2, md2 = new_course(os.path.join(tmp, "w2"), script(approved=False))
+    run(COMPILE, c2, "--module", "1", "--draft")
+    mark = os.path.join(md2, "DRAFT_NOT_PACKAGED.txt")
+    cs.save(os.path.join(c2, "working_claude", "script", "M01.json"), script())
+    code, out = run(COMPILE, c2, "--module", "1", "--only", "tasks", "--force")
+    check("--only tasks after approval keeps the draft mark - the deck on disk is still the draft's - and says why",
+          os.path.isfile(mark) and "mark (DRAFT_NOT_PACKAGED.txt) stays" in out and "--only deck" in out, out)
+    code, out = run(COMPILE, c2, "--module", "1", "--only", "deck", "--force")
+    check("--only deck after approval takes the mark away", not os.path.isfile(mark) and "draft mark" in out, out)
+    # PHOTOS_TO_TAKE.md in a course that has no working_claude folder yet
+    bare_course = os.path.join(tmp, "w3")
+    os.makedirs(bare_course)
+    try:
+        p = cm.write_to_take(bare_course, {"module": 1, "title": "Gas as fuel"}, [])
+        ok = os.path.isfile(p) and "## M01" in io.open(p, encoding="utf-8").read()
+    except Exception as ex:
+        ok, p = False, "%s: %s" % (type(ex).__name__, ex)
+    check("PHOTOS_TO_TAKE.md is written where the course keeps its factory files, the folder made when missing", ok, p)
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="compile_")
     try:
@@ -1155,6 +1199,17 @@ def main():
                                      emph={"boxes": [2, 3]}))
         check("a • line in a box loses its typed bullet - the box sets it apart, one bullet look per deck",
               "•" not in bb and bb.count('class="box') == 2, bb)
+        sq = "\n".join(cm.words_html(["1 Risk assessment - by the master.", "2 Isolate - pipes blanked.",
+                                      "3 Ventilate the space."]))
+        check("steps numbered in the script are one numbered list: no headline, no square, the number its marker",
+              '<ol class="support seq">' in sq and sq.count("<li ") == 3 and 'class="statement"' not in sq
+              and '<span class="n">1</span> <b>Risk assessment</b> - by the master.' in sq, sq)
+        nq = "\n".join(cm.words_html(["2 tanks hold the fuel.", "3 pumps move it."]))
+        check("lines that start with a count but not 1, 2, 3 ... stay ordinary lines",
+              "seq" not in nq and 'class="n"' not in nq, nq)
+        pq = "\n".join(cm.words_html(["Before entry:", "1 Test the air.", "2 Enter."], dark_photo=True))
+        check("numbered steps over a photograph: .lead.sub.step with the number as marker, the line above .head",
+              pq.count('class="lead sub step"') == 2 and 'class="lead head"' in pq and '<span class="n">2</span>' in pq, pq)
         lg = "\n".join(cm.words_html(["Fuel tank - in a hold.", "Vent mast - high above deck."], legend=True))
         check("a legend: a numbered row counting 1, 2 ... (data-n), the script number kept as data-i",
               lg.startswith('<ol class="legend">') and '<li data-script-field="text" data-i="2" data-n="2"><b>Vent mast</b> - high above deck.</li>' in lg, lg)
@@ -1539,6 +1594,7 @@ def main():
         language_part(tmp)
         fixes_part(tmp)
         v2492_part(tmp)
+        v2494_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

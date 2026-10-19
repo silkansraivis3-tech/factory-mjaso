@@ -200,6 +200,8 @@ Generate **once, at the final size**. A 1K draft and then a 2K final is two paid
 
 Model: default Nano Banana 2 (`gemini-3.1-flash-image`). Switch to `model: "pro"`
 (`gemini-3-pro-image`) for crowded scenes, fine mechanical detail, or after Flash failed twice.
+If Pro fails (busy, not on the key, no image), the tool tries the same picture once with Flash - still one
+picture, the one approved - and the result carries `fell_back_from`: tell the person it is the Flash model's.
 
 Save **straight into the deck's or module's own assets folder**, lower snake_case, subject first:
 `assets/lng_carrier_starboard_quarter.png`. Never leave the picture only in a temp folder.

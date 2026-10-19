@@ -153,6 +153,74 @@ def main():
         check("a video that really failed is an error - and still names the operation",
               r.get("isError") and "safety filter" in text and OP in text, text)
 
+        print("\n-- 1.3.2: the cap fails closed", file=REAL_STDOUT)
+        keep = {k: os.environ.get(k) for k in ("NANO_BANANA_USAGE_FILE", "NANO_BANANA_DAILY_LIMIT_EUR", "NANO_BANANA_MONTHLY_LIMIT_EUR")}
+        os.environ.update({"NANO_BANANA_DAILY_LIMIT_EUR": "100", "NANO_BANANA_MONTHLY_LIMIT_EUR": "100"})
+        fresh = os.path.join(tmp, "usage2.jsonl")
+        os.environ["NANO_BANANA_USAGE_FILE"] = fresh
+        nb.ensure_key = lambda: None
+        nb.http = lambda *a, **k: {"candidates": [{"content": {"parts": [{"inlineData": {"mimeType": "image/png", "data": PNG}}]}}]}
+        blocker = os.path.join(tmp, "a_file")
+        open(blocker, "w").write("x")
+        r, text = call("generate_image", dict(img, out_path=os.path.join(blocker, "sub", "x.png")))
+        rows2 = open(fresh, encoding="utf-8").read().splitlines() if os.path.isfile(fresh) else []
+        check("a paid picture whose file cannot be saved is still counted (recorded before the write)",
+              r.get("isError") and len(rows2) == 1 and json.loads(rows2[0])["kind"] == "image", (text, rows2))
+        sent.clear()
+        nb.http = lambda *a, **k: sent.append(a) or {}
+        os.environ["NANO_BANANA_USAGE_FILE"] = tmp                  # a folder: it cannot be read as the log
+        r, text = call("generate_image", img)
+        check("a usage log that cannot be read refuses the next picture - unknown is not EUR 0",
+              r.get("isError") and "cannot be checked" in text and not sent, text)
+        os.environ["NANO_BANANA_USAGE_FILE"] = fresh
+        nb.UNCOUNTED.append("Permission denied")
+        r, text = call("generate_image", img)
+        check("a usage-log write that failed earlier refuses the next picture too",
+              r.get("isError") and "cannot be checked" in text and "Permission denied" in text and not sent, text)
+        nb.UNCOUNTED.clear()
+
+        print("\n-- 1.3.2: Pro fails, the same picture once with Flash", file=REAL_STDOUT)
+        asked_models = []
+
+        def pro_busy(method, url, body=None, *a, **k):
+            m = (body or {}).get("model") or url.split("/models/")[-1].split(":")[0]
+            asked_models.append(m)
+            if m == nb.PRO_IMAGE_MODEL:
+                raise nb.ApiError(503, "HTTP 503: the model is overloaded")
+            return {"candidates": [{"content": {"parts": [{"inlineData": {"mimeType": "image/png", "data": PNG}}]}}]}
+        nb.http = pro_busy
+        before = len(open(fresh, encoding="utf-8").read().splitlines())
+        r, text = call("generate_image", dict(img, model="pro", out_path=os.path.join(tmp, "fb.png")))
+        res = {} if r.get("isError") else json.loads(text)
+        after = len(open(fresh, encoding="utf-8").read().splitlines())
+        check("Pro overloaded: the picture is made with Flash, and the result says so",
+              res.get("model") == nb.DEFAULT_IMAGE_MODEL and res.get("fell_back_from", {}).get("from") == nb.PRO_IMAGE_MODEL
+              and "503" in res["fell_back_from"]["why"] and "Flash" in res["next"] and os.path.isfile(os.path.join(tmp, "fb.png")), text)
+        check("... Pro asked once, Flash once, and one picture counted", asked_models == [nb.PRO_IMAGE_MODEL, nb.DEFAULT_IMAGE_MODEL]
+              and after - before == 1, (asked_models, after - before))
+
+        def both_fail(method, url, body=None, *a, **k):
+            raise nb.ApiError(503, "HTTP 503: overloaded")
+        nb.http = both_fail
+        r, text = call("generate_image", dict(img, model="pro"))
+        check("both fail: an error that names both models, nothing counted",
+              r.get("isError") and nb.PRO_IMAGE_MODEL in text and nb.DEFAULT_IMAGE_MODEL in text
+              and len(open(fresh, encoding="utf-8").read().splitlines()) == after, text)
+        asked_models.clear()
+        nb.http = lambda method, url, body=None, *a, **k: asked_models.append(1) or (_ for _ in ()).throw(nb.ApiError(400, "API key not valid"))
+        r, text = call("generate_image", dict(img, model="pro"))
+        check("a key problem is not retried with Flash", r.get("isError") and len(asked_models) == 1, (asked_models, text))
+        asked_models.clear()
+        nb.http = pro_busy
+        r, text = call("generate_image", dict(img, model=nb.DEFAULT_IMAGE_MODEL, out_path=os.path.join(tmp, "fl.png")))
+        check("a Flash request is never 'fallen back' - one request", not r.get("isError") and asked_models == [nb.DEFAULT_IMAGE_MODEL]
+              and "fell_back_from" not in json.loads(text), text)
+        for k, v in keep.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
         print("\n-- a yes Claude cannot type: the client's confirmation dialog", file=REAL_STDOUT)
         init = lambda caps: nb.handle({"jsonrpc": "2.0", "id": 0, "method": "initialize",
                                        "params": {"protocolVersion": "2025-06-18", "capabilities": caps}})

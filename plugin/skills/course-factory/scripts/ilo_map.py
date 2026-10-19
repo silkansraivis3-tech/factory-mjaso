@@ -123,7 +123,9 @@ def derive(prog, arch, syllabus=None):
     mains.update({str(k): v for k, v in (prog.get("main_ilos") or {}).items()})      # the programme's words win (L2)
     fa = final_topic(arch)
     rows, owed = [], {}
-    for am in sorted(arch.get("modules", []) or [], key=lambda m: mkey(m.get("module")) or 0):
+    # a "final" row sorts last - comparing it with the numbers raised TypeError
+    order = lambda m: (lambda n: n if isinstance(n, int) else 10 ** 9)(mkey(m.get("module")))
+    for am in sorted(arch.get("modules", []) or [], key=order):
         n = mkey(am.get("module"))
         if not isinstance(n, int) or str(n) == fa:
             continue

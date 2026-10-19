@@ -1163,6 +1163,31 @@ each found only after a full build. Now the kit and its checks take that work:
 - **Proof:** `test_compile_module.py` 261; IGF M01-M15 decks rebuilt, 22 photo slides with points measured inside the
   slide at 1920x1080 and 1024x768, no typed `•` left in any deck.
 
+## 4zv · What the pre-merge review of the branch found, fixed (2.49.4 + nano-banana 1.3.2, 2026-10-19)
+
+- **Compiler** (`compile_module.py`): an inset caption, credit or description with a backslash is put under the
+  drawing as written (was `re.error: bad escape`); a slide with no words gives no word lines (was IndexError); after
+  approval, `--only tasks` / `--only plan` keep `DRAFT_NOT_PACKAGED.txt` - only a deck rebuild takes it away; the
+  figures folder and `PHOTOS_TO_TAKE.md` go through `workspace.claude_path` (an older course's `_factory\` is found,
+  a missing `working_claude\` is made).
+- **`ilo_map.py derive`**: a `"final"` module row sorts last (was TypeError, which also stopped `course_gate.py` and
+  `make_architecture_page.py`).
+- **`studio.py`**: without 1280x800 in `--sizes` the result is "not measured", not clean; an aborted audit is a finding.
+- **`build_course.js`**: the reader runs in pass 1 only - pass 2 never rewrites the approved Stage 2 files; a module
+  whose build or QA returned nothing is blocking.
+- **Publisher** (`gitpub.py`): git prints paths unquoted (`core.quotepath=false`) and the script writes UTF-8, so a
+  course file named `Drošība.png` commits; `push` refuses any branch but `course/<slug>/...`.
+  `references/git-workflow.md` no longer describes the removed merge step.
+- **nano-banana 1.3.2**: a picture is counted in `usage.jsonl` before its file is written; a usage log that cannot be
+  read, or a write that failed, refuses the next generation instead of counting EUR 0. A Pro picture that fails
+  (busy, not on the key, no image) is tried once with Flash - one picture, the approved one - and the result says
+  so (`fell_back_from`); a key problem is not retried (operator, 2026-10-19).
+- **Proof:** new tests in `test_compile_module.py`, `test_ilo_map.py`, `test_studio.py`, `test_publisher.py`,
+  `test_nano_banana.py`, and the new `orchestration/workflows/test_build_course.py` (fails on 2.49.3); 39 test files pass.
+- **Not changed (stated):** the spending cap still prices every picture and clip flat (EUR 0.10 / 1.50, settable);
+  `gemini_take.py take` still moves the newest download without a name filter; the gate report is not tied to the
+  staged content; secrets are scanned in text extensions only.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

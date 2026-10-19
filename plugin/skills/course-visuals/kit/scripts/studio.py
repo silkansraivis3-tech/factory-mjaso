@@ -379,6 +379,8 @@ def problems(result):
             out.append((size, "-", "error", r["error"], ""))
             continue
         for st in r.get("states", []):
+            if st.get("aborted"):         # the audit did not run on this step - never a clean step
+                out.append((size, st.get("step", "-"), "aborted", st["aborted"], "the drawing was not measured"))
             for f in st.get("findings", []):
                 key = (size, f["check"], f["part"], f.get("other"))
                 if key in seen:
@@ -416,6 +418,9 @@ def summary(result, spec_path, gate="1280x800"):
             lines.append("      screenshot: %s" % r["shot"])
     allp = problems(result)
     probs = [x for x in allp if x[0] == gate]
+    if gate not in result["sizes"]:       # only the tablet size is judged - without it nothing was, so it is not clean
+        probs.append((gate, "-", "not measured", "the tablet size",
+                      "was not in --sizes; add %s - only that size is judged" % gate))
     for size, step, check, part, detail in probs:
         lines.append("  - %s step %s: %s - %s %s" % (size, step, check, part, detail))
     other = [x for x in allp if x[0] != gate]

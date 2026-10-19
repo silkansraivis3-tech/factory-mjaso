@@ -82,7 +82,7 @@ level-4 *generated illustration* step.
 
 | | |
 |---|---|
-| image model | `gemini-3.1-flash-image` (Nano Banana 2); `gemini-3-pro-image` (Pro) on request or after failures |
+| image model | `gemini-3.1-flash-image` (Nano Banana 2); `gemini-3-pro-image` (Pro) on request or after failures; a failed Pro request is tried once with Flash (1.3.2) |
 | video model | `veo-3.1-fast-generate-preview`, 8 s, 720p, 16:9 |
 | images | 16:9, 2K, PNG, saved into the deck's own `assets/` |
 

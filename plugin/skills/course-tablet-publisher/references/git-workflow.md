@@ -35,18 +35,20 @@ refused, naming the files, and the fix is `git restore --staged <those paths>` (
 the working-tree changes) or publishing from a clean clone.
 
 **3 · The gate report is required, and a FAIL is final.**
-`commit`, `push` and `merge` all demand `--gate-report`. `FAIL` refuses. `WARN` proceeds and
+`commit` and `push` both demand `--gate-report`. `FAIL` refuses. `WARN` proceeds and
 prints the warning count — see §"Why WARN publishes" below.
 
 **4 · There is no destructive flag.**
 Force push, `--force-with-lease`, history rewriting, branch deletion and pushing the default
 branch directly are **not implemented**. There is no argument that reaches them. If a
-situation seems to need one, it needs a human instead.
+situation seems to need one, it needs a human instead. `push` pushes only a course branch,
+`course/<slug>/<version>` - never `master`, `staging` or any other shared branch the
+platform has, and never another course's branch.
 
 **5 · A conflict is never guessed at.**
-Before merging, a conflict is detected with `git merge-tree`. On a conflict the publish stops
-and reports it. Resolving a content conflict by picking a side is how a colleague's course
-gets silently deleted.
+The script does not merge, so it never resolves a conflict. A conflict between the course
+branch and the base shows on the pull request, and a person resolves it. Resolving a content
+conflict by picking a side is how a colleague's course gets silently deleted.
 
 ---
 

@@ -241,7 +241,20 @@ def findings(r, drop=("empty",)):
     return [p for p in studio.problems(r) if p[2] not in drop]
 
 
+def judged_part():
+    """2.49.4 - the studio never says clean about a size it did not measure (no browser needed)"""
+    clean = {"states": [{"step": 0, "findings": []}], "report": {}}
+    _, p = studio.summary({"sizes": {"1920x1080": clean}}, "x.kit.json")
+    check("--sizes without 1280x800: not clean - the tablet size was never measured", p and p[0][2] == "not measured", p)
+    _, p = studio.summary({"sizes": {"1280x800": clean}}, "x.kit.json")
+    check("... with it, a figure with no findings is clean", p == [], p)
+    aborted = {"states": [{"step": 0, "findings": [], "aborted": "viewport under 320 px"}], "report": {}}
+    _, p = studio.summary({"sizes": {"1280x800": aborted}}, "x.kit.json")
+    check("an audit that aborted is a finding, not a clean step", any(c == "aborted" for _, _, c, _, _ in p), p)
+
+
 def main():
+    judged_part()
     if not studio.find_browser():
         print("SKIP - no Chrome or Edge (set CF_BROWSER)")
         return 0

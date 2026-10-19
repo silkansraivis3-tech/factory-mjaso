@@ -280,6 +280,9 @@ def approval(a):
     return words[:300]
 
 
+UNCOUNTED = []          # usage-log writes that failed in this server's life - the cap then refuses (fails closed)
+
+
 def record_use(kind, model, out_path, words, operation=""):
     p = usage_file()
     row = {"when": time.strftime("%Y-%m-%dT%H:%M:%S"), "kind": kind, "model": model,
@@ -291,7 +294,9 @@ def record_use(kind, model, out_path, words, operation=""):
         with open(p, "a", encoding="utf-8") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
     except OSError as e:
+        # the cap counts this file - a generation it does not hold would let the next ones past the cap
         log("could not write the usage log:", e)
+        UNCOUNTED.append(str(e))
 
 
 def usage_summary():
@@ -313,8 +318,10 @@ def usage_summary():
                         n[k + "_today"] += 1
                 if r.get("operation"):
                     ops.append({"when": when, "operation": r["operation"], "out_path": r.get("out_path", "")})
-    except OSError:
-        pass
+    except FileNotFoundError:
+        pass                                # nothing generated on this computer yet
+    except OSError as e:
+        n["unreadable"] = str(e)            # spend_cap refuses: an unread log is not EUR 0 spent
     e, v = eur_per_image(), eur_per_video()
     day = n["images_today"] * e + n["videos_today"] * v
     mon = n["images_this_month"] * e + n["videos_this_month"] * v
@@ -349,9 +356,16 @@ CAP_REACHED = ("Not generated - the spending cap on this computer is reached: ab
                "Claude Code. The free route (Gemini in the browser, skill gemini-browser) has no cap.")
 
 
+USAGE_UNKNOWN = ("Not generated - the spending cap cannot be checked: the usage log %s could not be read or written (%s). "
+                 "What was spent is unknown, so nothing more is generated. Tell the person; they fix the file or its "
+                 "folder (or set NANO_BANANA_USAGE_FILE) and restart Claude Code.")
+
+
 def spend_cap(kind):
     """Refuse BEFORE the key or Google is touched when this generation would pass a cap."""
     u = usage_summary()
+    if u.get("unreadable") or UNCOUNTED:
+        raise ValueError(USAGE_UNKNOWN % (usage_file(), u.get("unreadable") or UNCOUNTED[-1]))
     this = eur_per_image() if kind == "image" else eur_per_video()
     for span, spent, limit, var in (("today", u["eur_today"], u["daily_limit_eur"], "NANO_BANANA_DAILY_LIMIT_EUR"),
                                     ("this month", u["eur_this_month"], u["monthly_limit_eur"],
@@ -601,29 +615,8 @@ def _generate_content_body(prompt, refs, aspect, size):
     return {"contents": [{"role": "user", "parts": parts}], "generationConfig": gen}
 
 
-def generate_image(a):
-    prompt = (a.get("prompt") or "").strip()
-    if not prompt:
-        raise ValueError("prompt is required")
-    out_path = a.get("out_path") or ""
-    if not out_path:
-        raise ValueError("out_path is required - the file the image is saved to")
-    words = approval(a)                 # before the key and before anything is sent: it costs money
-    spend_cap("image")
-    confirmed = confirm_with_person("image", prompt, out_path)
-    ensure_key()
-    model = a.get("model") or cfg("NANO_BANANA_IMAGE_MODEL", DEFAULT_IMAGE_MODEL)
-    if model in ("pro", "nano-banana-pro"):
-        model = PRO_IMAGE_MODEL
-    aspect = a.get("aspect_ratio") or "16:9"
-    size = a.get("image_size") or "2K"
-    if size == "512":
-        size = "512px"
-    mime_out = "image/png" if a.get("format", "png") == "png" else "image/jpeg"
-    refs = [_load_image(p) for p in (a.get("reference_images") or [])]
-    if len(refs) > 14:
-        raise ValueError("at most 14 reference images")
-
+def _one_image(model, prompt, refs, aspect, size, mime_out):
+    """One request to one model: (route, images, texts). ApiError when Google refuses or sends no image."""
     route = "interactions"
     try:
         resp = http("POST", API + "/interactions",
@@ -651,7 +644,51 @@ def generate_image(a):
             ("blocked: %s. " % block) if block else "",
             ("finish reason: %s. " % reason) if reason else "",
             ("Model said: " + " ".join(texts)[:600]) if texts else ""))
+    return route, images, texts
 
+
+def generate_image(a):
+    prompt = (a.get("prompt") or "").strip()
+    if not prompt:
+        raise ValueError("prompt is required")
+    out_path = a.get("out_path") or ""
+    if not out_path:
+        raise ValueError("out_path is required - the file the image is saved to")
+    words = approval(a)                 # before the key and before anything is sent: it costs money
+    spend_cap("image")
+    confirmed = confirm_with_person("image", prompt, out_path)
+    ensure_key()
+    model = a.get("model") or cfg("NANO_BANANA_IMAGE_MODEL", DEFAULT_IMAGE_MODEL)
+    if model in ("pro", "nano-banana-pro"):
+        model = PRO_IMAGE_MODEL
+    aspect = a.get("aspect_ratio") or "16:9"
+    size = a.get("image_size") or "2K"
+    if size == "512":
+        size = "512px"
+    mime_out = "image/png" if a.get("format", "png") == "png" else "image/jpeg"
+    refs = [_load_image(p) for p in (a.get("reference_images") or [])]
+    if len(refs) > 14:
+        raise ValueError("at most 14 reference images")
+
+    fell_back = None
+    try:
+        route, images, texts = _one_image(model, prompt, refs, aspect, size, mime_out)
+    except ApiError as e:
+        # Pro failed (busy, not on this key, no image): the same picture once with Flash - still one picture,
+        # the one the person said yes to. A key problem is not retried: Flash would fail the same way.
+        if model != PRO_IMAGE_MODEL or "api key" in str(e).lower() or e.status in (401,):
+            raise
+        log("%s failed (%s), trying %s" % (model, str(e)[:200], DEFAULT_IMAGE_MODEL))
+        fell_back = {"from": model, "why": _redact(str(e))[:400]}
+        model = DEFAULT_IMAGE_MODEL
+        try:
+            route, images, texts = _one_image(model, prompt, refs, aspect, size, mime_out)
+        except ApiError as e2:
+            raise ApiError(e2.status, "%s failed (%s), and %s failed too: %s" % (
+                fell_back["from"], fell_back["why"][:200], model, e2))
+
+    # billed already - counted before anything that can fail (a bad folder, a full disk) loses the count
+    record_use("image", model, out_path, words)
     written = []
     paths = _out_paths(out_path, len(images), images[0][0])
     for (mime, data), p in zip(images, paths):
@@ -664,9 +701,8 @@ def generate_image(a):
         dims = _dims(b)
         written.append({"path": p, "mime": mime, "bytes": len(b),
                         "size": ("%dx%d" % dims) if dims else "unknown"})
-    record_use("image", model, out_path, words)
 
-    return {
+    out = {
         "saved": written,
         "confirmed_in_dialog": confirmed,
         "model": model,
@@ -680,6 +716,11 @@ def generate_image(a):
                  "use it, or what should change? A change is a new paid generation and needs their yes again - "
                  "prefer an edit of this picture (reference_images + 'change only X') to a new one."),
     }
+    if fell_back:
+        out["fell_back_from"] = fell_back
+        out["next"] = ("Made with %s: %s failed (see fell_back_from.why) and the server tried Flash once. Tell the person "
+                       "this picture is the Flash model's, not Pro's. " % (model, fell_back["from"])) + out["next"]
+    return out
 
 
 # ---------------------------------------------------------------- video
@@ -853,7 +894,7 @@ TOOLS = [
                 "out_path": {"type": "string", "description": "Where to save, e.g. deck/assets/lng_carrier_render.png. Folders are created. Several results get _1, _2 suffixes."},
                 "aspect_ratio": {"type": "string", "enum": IMAGE_ASPECTS, "description": "Default 16:9 (a slide)."},
                 "image_size": {"type": "string", "enum": IMAGE_SIZES, "description": "Default 2K. 4K for full-bleed print; 1K for drafts."},
-                "model": {"type": "string", "description": "Default gemini-3.1-flash-image (Nano Banana 2). Use gemini-3-pro-image (or 'pro') for complex scenes, fine detail or when Flash failed twice."},
+                "model": {"type": "string", "description": "Default gemini-3.1-flash-image (Nano Banana 2). Use gemini-3-pro-image (or 'pro') for complex scenes, fine detail or when Flash failed twice. If Pro fails, the server tries the same picture once with Flash and says so (fell_back_from)."},
                 "reference_images": {"type": "array", "items": {"type": "string"}, "description": "Local image paths to edit, restyle, keep consistent with, or combine (max 14)."},
                 "format": {"type": "string", "enum": ["png", "jpeg"], "description": "Default png."},
                 "approved_by_user": {"type": "string", "description": "The person's own words approving THIS picture after seeing the prompt, e.g. 'yes, generate it'. Required - never write it yourself, never reuse an earlier yes for a redo."},
