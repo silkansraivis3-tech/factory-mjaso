@@ -547,6 +547,27 @@
     q(svg, '.kit-part').forEach(function (p) { p.__kitBox = null; p.__kitPts = null; });
     states.forEach(function (k) {
       if (states.length > 1 || k !== f.n) f.go(k, true);
+      /* 2.50.6 - a part that moves for ever (an engine's pistons, a cylinder's piston, a vent's puffs) is measured at
+         MOTION_PHASES of its cycle, held still: what it sweeps is in the way, not the one frame the layout happened on.
+         The cylinder's "piston" label was placed clear of one frame and sat on the moving piston on others (M01 benchmark
+         run 5, s06), as the drawing check now finds on every build */
+      var anims = motions(svg), held = anims.map(function (a) { return { a: a, t: a.currentTime, run: a.playState === 'running' }; });
+      try {
+        (anims.length ? MOTION_PHASES : [null]).forEach(function (ph) {
+          if (ph !== null) holdAt(anims, ph);
+          measure();
+        });
+      } finally {
+        var live = document.getAnimations();
+        held.forEach(function (x) {
+          if (live.indexOf(x.a) < 0) return;          // cancelled meanwhile: never revived
+          try { x.a.currentTime = x.t; if (x.run) x.a.play(); } catch (e) { /* gone */ }
+        });
+      }
+    });
+    return G;
+
+    function measure() {
       var ctm = svg.getScreenCTM();
       if (!ctm) return;
       var inv = ctm.inverse(), s = det(ctm);
@@ -594,8 +615,26 @@
           if (G.parts.indexOf(part) < 0) G.parts.push(part);
         }
       });
+    }
+  }
+  /* the endless animations in a drawing, all held still at one moment of ONE clock (0 to 1 across the longest cycle, two
+     cycles in) - real frames, so what the kit staggers stays staggered - as audit_drawing.js judges them */
+  var MOTION_PHASES = [0, 0.25, 0.5, 0.75, 1];
+  function motions(svg) {
+    if (!document.getAnimations) return [];
+    return document.getAnimations().filter(function (a) {
+      var t = a.effect && a.effect.target;
+      if (!t || !svg.contains(t)) return false;
+      try { var c = a.effect.getComputedTiming(); return c.iterations === Infinity && c.duration > 0; } catch (e) { return false; }
     });
-    return G;
+  }
+  function holdAt(anims, ph) {
+    var span = 0, lag = 0;
+    anims.forEach(function (a) {
+      try { span = Math.max(span, a.effect.getComputedTiming().duration); lag = Math.max(lag, a.effect.getTiming().delay || 0); }
+      catch (e) { /* not timed */ }
+    });
+    anims.forEach(function (a) { try { a.pause(); a.currentTime = lag + (2 + ph) * span; } catch (e) { /* measured as it is */ } });
   }
 
   /* the occupied cells of the drawing, CELL units square, with a summed table for "is this box clear?" in one look */
@@ -1289,6 +1328,7 @@
   };
 
   /* engine - a dual-fuel engine block. value 0 stopped, 1 running */
+  var ENGINE_STROKE_LOW = 25;
   TYPES.engine = function (fig, part, g, p) {
     var w = p.w || 100, h = p.h || 70, n = p.cylinders || 4, cw = (w - 16) / n;
     var block = el('rect', { width: w, height: h, rx: 8, 'class': 'kit-block' }, g);
@@ -1298,9 +1338,25 @@
       el('rect', { x: cx - cw * 0.22, y: 8, width: cw * 0.44, height: 12, rx: 2, 'class': 'kit-piston', style: 'animation-delay:' + (-0.15 * i) + 's' }, g);
     }
     var st = el('text', { x: w / 2, y: h - 12, 'text-anchor': 'middle', 'class': 'kit-state' }, g);
-    fig.fit(function (k) {          // RUNNING under the pistons' lowest point (25) with 4 clear, the block as tall as that needs
-      var base = Math.max(h - 12, 29 + 10 * k), bh = Math.max(h, base + 8 * k);
-      st.setAttribute('y', base); block.setAttribute('height', bh);
+    /* RUNNING / STOPPED under the LOWEST point of the pistons' stroke (y 8 + 12 tall + kit.css kit-piston's 5 = 25) with the
+       kit's clearance on screen (PAD_PX, grown with the words), its letters measured, not guessed; the block as tall and as
+       wide as that needs. Before 2.50.6 the word was placed for 29 + 10 x its growth: at a grown size its letters reached
+       up into the stroke, so the part's own RUNNING sat over its own piston on some frames (M01 benchmark run 5, s03) and
+       ran past a narrow block's sides. */
+    fig.fit(function (k) {
+      var keep = st.textContent, pad = PAD_PX * k, bb = null;
+      st.textContent = 'RUNNING';
+      st.setAttribute('y', 0);
+      try { bb = st.getBBox(); } catch (e) { bb = null; }
+      var up = bb && bb.height ? -bb.y : 10 * k, down = bb && bb.height ? bb.y + bb.height : 3 * k;
+      var tw = widest(st, ['RUNNING', 'STOPPED']);
+      st.textContent = keep;
+      var base = Math.max(h - 12, ENGINE_STROKE_LOW + pad + up), bh = Math.max(h, base + down + pad + 2);
+      var bw = Math.max(w, tw + 2 * pad + 4);
+      st.setAttribute('y', base);
+      block.setAttribute('height', bh);
+      block.setAttribute('x', (w - bw) / 2);
+      block.setAttribute('width', bw);
     });
     if (p.label) label(fig, g, { x: w / 2, y: h + 20, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
     part.render = function (v) { var on = v > 0.5; g.classList.toggle('kit-running', on); st.textContent = on ? 'RUNNING' : 'STOPPED'; };

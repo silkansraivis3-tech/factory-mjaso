@@ -51,6 +51,13 @@
      A figure-kit drawing is laid out by kit.js first (its labels, the 12.5 px floor, its frame) and, in a deck,
      judged at the end of every step as well as at step 0 (CONFIG.kitSteps).
 
+     MOTION (2.50.6, M01 benchmark run 5). A drawing with an endless animation (a running engine's pistons, a vent's
+     puffs, a flow) is judged on EVERY frame of it, not on the one the probe happened to see: checks 1-3 run at
+     CONFIG.motionPhases evenly spaced phases of every endless animation's cycle, held still, and a finding on any of
+     them is reported once ("on 3 of 9 frames of its motion"). The animations are put back as they were. An unchanged
+     spec flipped between PASS and FAIL from one build to the next before (s03: puffs out of the hull, RUNNING over
+     its own piston).
+
      Shapes inside <defs> drawn with <use> (a shared hull, a symbol) are copied
      in, invisibly, for the measurement and removed after.
 
@@ -103,6 +110,7 @@
     figGraphicContrast: 3,   /*           a shape or line (WCAG 1.4.11) */
     minTextPx: 12.5,         /* SMALL TEXT: a kit figure's words, as rendered */
     kitSteps: true,          /* all(): a kit figure is judged at the end of each of its steps as well as at step 0 */
+    motionPhases: 9,         /* MOTION: checks 1-3 at this many phases (0 to 1) of every endless animation's cycle */
     maxExamples: 40
   };
   if (global.__auditDrawingConfig) {
@@ -155,6 +163,32 @@
       } catch (e) { /* an endless animation cannot finish */ }
     });
     return n;
+  }
+  /* MOTION (2.50.6) - the endless animations in a drawing (a running engine's pistons, a vent's puffs, a flow), all held
+     still at one moment of ONE clock: `phase` 0 to 1 across the longest cycle, started two cycles in, so every delay has
+     passed. One clock keeps the frames real - parts the kit staggers on purpose (puffs, spray dots, pistons out of step)
+     stay staggered; held each at the same phase of its own cycle, a spray's dots piled onto each other */
+  function endless(svg) {
+    if (!document.getAnimations) { return []; }
+    return document.getAnimations().filter(function (a) {
+      var t = a.effect && a.effect.target;
+      if (!t || !svg.contains(t)) { return false; }
+      try {
+        var c = a.effect.getComputedTiming();
+        return c.iterations === Infinity && c.duration > 0;
+      } catch (e) { return false; }
+    });
+  }
+  function holdAt(anims, phase) {
+    var span = 0, lag = 0;
+    anims.forEach(function (a) {
+      try { span = Math.max(span, a.effect.getComputedTiming().duration); lag = Math.max(lag, a.effect.getTiming().delay || 0); }
+      catch (e) { /* not timed */ }
+    });
+    var T = lag + (2 + phase) * span;
+    anims.forEach(function (a) {
+      try { a.pause(); a.currentTime = T; } catch (e) { /* judged as it is */ }
+    });
   }
   /* does an animation run on this element's opacity? (a kit part fading in or out by its value, or a blink) */
   function animatesOpacity(n) {
@@ -348,12 +382,16 @@
     if (svg.__kit && typeof svg.__kit.layout === "function") { try { svg.__kit.layout(); } catch (e) { /* judged as it is */ } }
     settle(svg);
     var copies = expandUses(svg);
+    var moving = endless(svg), held = moving.map(function (a) { return { a: a, t: a.currentTime, run: a.playState === "running" }; });
     try {
       /* every painted part that is laid out - also one faded out now that a later step of the figure shows
          (a zone ring, a highlight): it must not be cut off when it appears. Checks 1 and 3 judge what shows now. */
-      var geom = painted(svg);
-      var items = geom.filter(function (it) { return shown(it.el, svg); });
-
+      var geom, items;
+      var measure = function () {
+        geom = painted(svg);
+        items = geom.filter(function (it) { return shown(it.el, svg); });
+      };
+      var shapes = function (out) {
       /* ---- 1 INSIDE ---- */
       var holders = items.filter(function (it) {
         return closed(it.el) && strokes(it.el) && !upFlag(it.el, "data-no-contain", svg);
@@ -470,8 +508,38 @@
           }
         });
       });
+      };
+      /* MOTION - checks 1-3 on every frame of an endless animation, each finding once; the rest at phase 0 */
+      var phases = moving.length ? Math.max(2, CONFIG.motionPhases) : 1, seen = [], k;
+      for (k = 0; k < phases; k++) {
+        if (moving.length) { holdAt(moving, k / (phases - 1)); }
+        measure();
+        var here = [];
+        shapes(here);
+        here.forEach(function (f) {
+          var s = null;
+          seen.forEach(function (o) {
+            if (!s && o.f.check === f.check && o.f.part === f.part && o.f.other === f.other && o.f.els.length === f.els.length &&
+                o.f.els.every(function (el, i) { return el === f.els[i]; })) { s = o; }
+          });
+          if (!s) { seen.push({ f: f, k: [k] }); } else if (s.k.indexOf(k) < 0) { s.k.push(k); }
+        });
+      }
+      seen.forEach(function (s) {
+        if (s.k.length < phases) { s.f.detail += " - on " + s.k.length + " of " + phases + " frames of its motion"; }
+        out.push(s.f);
+      });
+      if (moving.length) { holdAt(moving, 0); measure(); }
       /* ---- 4 EMPTY ---- the drawing fills the frame it is given: no large blank area inside it */
       var E4 = emptySpace(svg, geom);
+      /* EMPTY walks a stepping figure's steps, which restarts its animations: the rest is judged on the frame held again */
+      if (moving.length || endless(svg).length) {
+        endless(svg).forEach(function (a) {
+          if (moving.indexOf(a) < 0) { moving.push(a); held.push({ a: a, t: a.currentTime, run: a.playState === "running" }); }
+        });
+        holdAt(endless(svg), 0);
+        measure();
+      }
       if (E4) {
         report(out, { check: "empty", where: where, part: "blank " + Math.round(E4.blank * 100) + " % of the frame, largest piece " +
                       Math.round(E4.w) + " x " + Math.round(E4.h) + " px = " + Math.round(E4.share * 100) + " %", other: E4.frame,
@@ -497,6 +565,11 @@
       /* ---- 7 PHOTO OVER THE DRAWING ---- */
       checkPhotos(svg, where, items, out);
     } finally {
+      var live = document.getAnimations ? document.getAnimations() : [];
+      held.forEach(function (h) {                     /* the motion put back as it was - only what still runs: an */
+        if (live.indexOf(h.a) < 0) { return; }        /* animation a step change cancelled is never revived */
+        try { h.a.currentTime = h.t; if (h.run) { h.a.play(); } } catch (e) { /* gone with its element */ }
+      });
       copies.forEach(function (c) { c.parentNode.removeChild(c); });
     }
   }

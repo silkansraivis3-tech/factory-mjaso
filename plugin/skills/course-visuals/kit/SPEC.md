@@ -76,7 +76,7 @@ words for the 12.5 px floor, how many labels it moved, any it could not place, a
 | `space` | `w h label labelAt(below) style(room/enclosure) crosses` - a room (dashed) or an enclosure (solid). `crosses: true` for a box laid over a tank's end or a hull line on purpose (not judged as poking out of it). A name that does not fit inside the grown type goes under the room by itself | 0..1 picked out |
 | `exchanger` | `r label` - P&ID heat exchanger (vaporizer, heater) | 0..1 heating |
 | `pump` | `r label` - P&ID centrifugal pump | 0 stopped, 1 running |
-| `engine` | `w h cylinders label` - dual-fuel engine block | 0 stopped, 1 running |
+| `engine` | `w h cylinders label` - dual-fuel engine block. RUNNING / STOPPED stands under the pistons' whole stroke, and the block grows taller and wider to hold the word at its grown size (2.50.6) | 0 stopped, 1 running |
 | `vent` | `label labelAt(left)` `mast` - vent outlet to the open air. On top of a pipe's upright run it is a vent mast: its tap area on a task is the whole run, not the outlet (2.49.7); `mast: false` keeps the outlet alone, `mast: <length>` gives the run when no pipe draws it, `mast: true` asks for a mast (60 long when no pipe draws it). With no pipe under the outlet, `true` or a length is drawn as an upright pipe - never an outlet floating in the air (2.50.4); any other value is refused | 0..1 venting |
 | `badge` | `n` - a numbered step marker | 0..1 lit |
 | `wire` | `d` - ISA dashed signal line | - |

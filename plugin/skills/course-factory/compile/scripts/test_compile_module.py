@@ -1401,12 +1401,26 @@ def main():
         # 2.50.0 - starter figure-kit specs: the agent edits them, it does not write them from nothing
         figs = os.path.join(c4, "working_claude", "figures", "M01")
         s2e, s3e = sheet["screens"]["s02"], sheet["screens"]["s03"]
-        check("2.50.0: --init-build writes a starter spec for each drawing slide and none for a photo slide or a 3D slide, and the "
+        check("2.50.0: --init-build writes a starter spec for each drawing slide and none for a photo slide, and the "
               "slide's entry names it (two-col, dark, a note that it is a starter)",
-              sorted(f for f in os.listdir(figs) if f.endswith(".kit.json")) == ["s02.kit.json", "s03.kit.json"]
+              {"s02.kit.json", "s03.kit.json"} <= set(os.listdir(figs)) and "s01.kit.json" not in os.listdir(figs)
               and s2e["composition"] == "two-col" and s2e["dark"] is True and "starter" in s2e["_figure"]
               and s3e["figure"] == "s03.kit.json" and "figure" in sheet["screens"]["s04"] and sheet["screens"]["s04"]["figure"] == "m01_s04_3d.html"
               and "starter figure: figures\\M01\\s03.kit.json - 3 parts, 3 steps" in out, (sorted(os.listdir(figs)), out))
+        # 2.50.6 (M01 benchmark run 5, s05) - a model_3d slide gets its 2D starter too: declining the 3D ("declined_3d") edits
+        # it, never writes a spec from nothing. The scene stays the plan: the entry still names the 3D figure
+        s4e = sheet["screens"]["s04"]
+        s4k = os.path.join(figs, "s04.kit.json")
+        spec4 = cs.load(s4k) if os.path.isfile(s4k) else {}
+        check("2.50.6: --init-build writes a 2D starter spec for a model_3d slide - the script's own parts, a step per line - "
+              "and its entry keeps the 3D scene as the plan, with a note how to switch to the starter (\"_2d\")",
+              bool(spec4.get("parts")) and len(spec4.get("steps") or []) >= 2 and s4e.get("figure") == "m01_s04_3d.html"
+              and "s04.kit.json" in s4e.get("_2d", "") and "declined_3d" in s4e.get("_2d", "")
+              and "_2d" in s4e.get("_figure", "")
+              and "figures\\M01\\s04.kit.json" in out and "the 2D figure if the 3D scene is declined" in out, (s4e, spec4, out))
+        if spec4:
+            code, kout = run(os.path.join(SKILLS, "course-visuals", "kit", "scripts", "check_kit.py"), "spec", s4k)
+            check("2.50.6: ... and that starter passes check_kit.py", code == 0 and "clean" in kout, kout)
         spec3 = cs.load(os.path.join(figs, "s03.kit.json"))
         spec2 = cs.load(os.path.join(figs, "s02.kit.json"))
         ids3 = [p["id"] for p in spec3["parts"] if p.get("id")]

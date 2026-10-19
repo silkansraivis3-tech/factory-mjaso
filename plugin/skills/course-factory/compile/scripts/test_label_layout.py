@@ -3,8 +3,12 @@
 Run: python test_label_layout.py"""
 from __future__ import annotations
 
+import json
 import os
+import re
+import shutil
 import sys
+import tempfile
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -87,6 +91,60 @@ probs = []
 tp.label_boxes(many, VB1, probs, "many")
 check("more than two bands hold is reported, and still nothing runs off the drawing",
       probs and "do not fit" in probs[0] and all(1 - 1e-6 <= p["at"][0] and p["at"][0] + p["at"][2] <= 99 + 1e-6 for p in many), probs)
+
+# 2.50.6 (M01 benchmark run 5, m01) - five two-line labels on the 2:1 GA of s04: as wide as the drawing, the two rows held
+# four (the build sheet placed all five by hand). The drawing is shown 560 of the row's 1240 px wide, so the rows reach past
+# it - three boxes to a row - and the drawing keeps its size
+GA = {"size": [640, 310], "label": "the GA", "parts": [
+    {"id": "G", "type": "ga", "x": 20, "y": 160, "w": 600, "h": 130, "house": {"x": 34, "w": 110, "h": 80}, "funnel": {"x": 62, "w": 24, "h": 34}},
+    {"id": "ER", "type": "space", "x": 150, "y": 176, "w": 110, "h": 84, "label": "Engine room"},
+    {"id": "FPR", "type": "space", "x": 268, "y": 176, "w": 74, "h": 84, "label": "Fuel preparation room"},
+    {"id": "TCS", "type": "space", "x": 350, "y": 176, "w": 50, "h": 84, "style": "enclosure", "label": "Tank connection space"},
+    {"id": "TK", "type": "tank", "x": 406, "y": 186, "w": 140, "h": 64, "label": "Fuel tank", "value": 0.6},
+    {"id": "BS", "type": "space", "x": 272, "y": 126, "w": 66, "h": 34, "style": "enclosure", "label": "Bunkering station"},
+    {"id": "VP", "type": "pipe", "fluid": "gas", "d": "M375 176 V30", "value": 0},
+    {"id": "VM", "type": "vent", "x": 375, "y": 30, "labelAt": "right", "label": "Vent mast"}]}
+FIVE = ["Fuel tank", "Tank connection space", "Fuel preparation room", "Bunkering station", "Vent mast"]
+raw = (0.0, 0.0, 640.0, 310.0)
+narrow = tp.band_vb(raw)
+gp = [{"t": t, "box": [100.0 * (x - narrow[0]) / narrow[2], 100.0 * (y - narrow[1]) / narrow[3], 100.0 * w_ / narrow[2], 100.0 * h_ / narrow[3]]}
+      for t, (x, y, w_, h_) in zip(FIVE, [(406, 186, 140, 64), (350, 176, 50, 84), (268, 176, 74, 84), (272, 126, 66, 34), (369, 30, 12, 146)])]
+if not hasattr(tp, "label_side"):
+    check("task_pages.label_side - the label rows reach past a narrow drawing", False, "missing (before 2.50.6)")
+else:
+    check("M01 m01: as wide as the drawing, the two label rows do not hold the five boxes (the run 5 failure)",
+          tp.rows_fit([dict(p) for p in gp], narrow) is not True)
+    side = tp.label_side(gp, raw)
+    wide = tp.band_vb(raw, side)
+    check("... so the rows reach past the drawing on both sides (%.0f units each)" % side, side > 0, side)
+    check("... and the drawing keeps its size on the screen", abs(tp.ppu(wide) - tp.ppu(narrow)) < 1e-9, (tp.ppu(wide), tp.ppu(narrow)))
+    check("... and stays inside the screen's row (1240 px)", wide[2] * tp.ppu(wide) <= tp.WIDTH_PX + 1e-6, wide[2] * tp.ppu(wide))
+    check("a drawing whose boxes already fit two to a row is not widened", tp.label_side(gp[:3], raw) == 0.0, tp.label_side(gp[:3], raw))
+
+tmp = tempfile.mkdtemp(prefix="label_rows_")
+try:
+    with open(os.path.join(tmp, "ga.kit.json"), "w", encoding="utf-8") as f:
+        json.dump(GA, f)
+    q = {"id": "m01", "kind": "module-check", "set": "MC", "mechanic": "label_diagram", "question": "Drag each label to its place.",
+         "visual": "the GA", "answer": "\n".join(FIVE), "feedback": "These are the new spaces."}
+    sheet = {"figure": "ga.kit.json", "unlabel": "answers",
+             "labels": {"Bunkering station": {"at": "BS"}, "Vent mast": {"at": "VM"}, "Fuel preparation room": {"at": "FPR"},
+                        "Tank connection space": {"at": "TCS"}, "Fuel tank": {"at": "TK"}}}
+    probs = []
+    html = tp.question_html(1, q, sheet, tmp, tmp, {"_bands": {"ga.kit.json"}}, probs)
+    check("M01 m01 built: no box placed by hand and nothing reported", not probs, probs)
+    boxes = [[float(v) for v in m] for m in re.findall(r'class="lbox zone"[^>]*style="left:([\d.]+)%;top:([\d.]+)%;width:([\d.]+)%', html)]
+    rows_ = {}
+    for left, top, w_ in boxes:
+        rows_.setdefault(top, []).append((left, left + w_))
+    check("... five boxes, three to a row at most, none over another, none off the edge",
+          len(boxes) == 5 and max(len(r) for r in rows_.values()) <= 3 and all(lo >= 0.99 and hi <= 99.01 for r in rows_.values() for lo, hi in r)
+          and all(a_[1] <= b_[0] for r in rows_.values() for a_, b_ in zip(sorted(r), sorted(r)[1:])), boxes)
+    vbm = re.search(r'"view":\[([-\d.,]+)\]', html)
+    check("... and the drawing shown is the widened one (its view reaches past the GA on the left)",
+          bool(vbm) and float(vbm.group(1).split(",")[0]) < 0, vbm and vbm.group(0))
+finally:
+    shutil.rmtree(tmp, ignore_errors=True)
 
 # the build sheet still wins when it gives a box
 given = [{"t": "Fuel tank", "box": [10, 60, 6, 6], "at": [5, 85, 20]}]

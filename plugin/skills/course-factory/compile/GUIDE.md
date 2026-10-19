@@ -5,7 +5,8 @@
 ```
 1  python compile/scripts/compile_module.py <course> --module 1 --init-build
       the build sheet (working_claude\script\M01.build.json), a STARTER figure-kit spec for every drawn slide
-      (working_claude\figures\M01\sNN.kit.json: the script's parts on a grid, a step per line) and the 3D starter entry
+      (working_claude\figures\M01\sNN.kit.json: the script's parts on a grid, a step per line) and the 3D starter entry -
+      a 3D slide gets both (2.50.6): declining the 3D ("declined_3d") edits its 2D starter
 2  read course-visuals\kit\CATALOGUE.md - one line per kit part, the spec format, marks and steps. Never kit.js.
 3  fill the build sheet (each slide's picture, layout, the photos) and EDIT the starter specs - never write one from nothing
 4  python compile/scripts/build_module.py <course> --module 1            again after every change, until PASS
@@ -190,6 +191,9 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   **At least one scene per module where the subject allows it - strongly recommended (L60, 2.49.7).** `--init-build`
   gives a `model_3d` slide a starter scene entry: its figure (`m01_s05_3d.html`), its scene file and `three.min.js` in
   `"scripts"`, and a `"_figure"` note on how to build it - the build reports the files missing until they are written.
+  It also writes the slide's 2D starter spec (`sNN.kit.json`, 2.50.6), named in the entry's `"_2d"` note but not in
+  `"figure"`: to keep a 2D figure, point `"figure"` at it, take the scene files off `"scripts"` and write
+  `"declined_3d"` - then edit the starter, never write a spec from nothing (M01 benchmark run 5, s05).
   A script with no `model_3d` slide gets the same entry on its best slide, unasked (`content_script.best_3d`: a shape,
   an inside or a layout in space; never a real photo's slide), with a `"_3d"` note saying why. A module built with no
   scene gets a RECOMMENDED block in the build and its own card on the review page, naming the best candidate - never a
@@ -284,7 +288,11 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
   with room for the tick (2.46.0), and placed by itself (`label_layout.py`, 2.48.0): each as close to its place as the
   others allow, in the same order, never off the edge, onto another or under the ⤢ button. Leave `"box"` out - IGF M01,
   M02 and M03 no longer need theirs; `"labels": {"Fuel tank": {"at": "sp-tank"}}` only names the place. A `"box"` given
-  there still wins, and one too narrow for its words is reported.
+  there still wins, and one too narrow for its words is reported. **Boxes that do not fit two rows as wide as the
+  drawing** (2.50.6): a drawing shown narrower than the screen - a 2:1 drawing under its bands is as tall as it may be and
+  only ~560 of the row's 1240 px wide - gets rows that reach past it on both sides, as far as the drawing keeps its size
+  (`task_pages.label_side`); five two-line labels then fit three below and two above (M01 benchmark run 5's m01 placed
+  all five by hand). Only what not even the screen's width holds is reported.
 - **The page:** the course's first self-check opens with "try your tablet first" (`"try_tablet": false` on the task
   slide's entry to leave it out); a check opens with its pass mark - the approved script's `"pass_mark"` (2.46.0,
   corrected like any other word: `content_script.py propose` with `{"script_field": "pass_mark", "new": 80}`), else
@@ -317,6 +325,11 @@ finding is a problem to fix before the module is shown (exit 1), named by page, 
 that is meant is marked in the drawing (`data-may-cross`, `data-no-contain`, `data-may-overlap`), so the reason is
 written down. No Chrome or Edge: the build says it did not check. `--no-drawing-check` only while working on a drawing.
 `drawing_check.py <page.html> ...` checks any page by hand - a hand-built one too.
+- **A drawing that moves is judged on every frame (2.50.6).** A running engine's pistons, a cylinder's piston, a vent's
+  puffs, a flow: the check holds every endless animation still at 9 phases of its cycle and reports what goes wrong on any
+  of them ("on 1 of 9 frames of its motion"), so an unchanged spec gets the same verdict at every build (M01 benchmark run
+  5: s03 flipped between PASS and FAIL). The kit lays its labels out clear of what a moving part sweeps, and the `engine`
+  keeps RUNNING clear of its pistons' whole stroke - a finding on a moving part is the spec's to fix.
 - The screen's own words (Check, Next, Your score ...) are English for now; another course language is reported.
 
 ## 2f · The visual review - required (2.44.0, build-order step 16)

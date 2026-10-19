@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>audit_drawing MOTION fixture (figure kit)</title>
+<!-- test_audit_drawing.py opens this in headless Chrome (M01 benchmark run 5, 2.50.6). Every endless animation of the page
+     is first frozen at the phase in the address's #hash (0 to 1 of its cycle) - two runs are the same page caught at two
+     moments. A drawing check that judges "the frame it happens to see" gives two verdicts; one that judges every phase of
+     the motion gives the same verdict for both.
+       bad-puffs     a vent under a room: its puffs rise INTO the room's floor - inside on some frames, half out on others
+       engines       running kit engines (the deck's own part, nothing else in the figure) at four sizes and two panel
+                     widths: the part's own RUNNING label must keep clear of its own moving pistons on every frame
+       engine-cyl    M01 s06: a running kit cylinder by the left edge - its "piston" label, moved in off the edge, must be
+                     placed clear of the piston's whole stroke, not of the one frame the layout saw -->
+<link rel="stylesheet" href="../../../course-visuals/kit/kit.css">
+<style>
+  body{margin:0;padding:20px;font-family:sans-serif;background:#fff}
+  .kit-screen{background:#0C1E3A;border-radius:16px;padding:12px;width:640px;margin:0 0 24px;box-sizing:content-box}
+  .kit-screen.small{width:330px}
+</style>
+</head>
+<body>
+<div class="kit-screen"><svg id="bad-puffs" data-kit="#spec-puffs"></svg></div>
+<div class="kit-screen"><svg id="engine-a" data-kit="#spec-engines"></svg></div>
+<div class="kit-screen small"><svg id="engine-b" data-kit="#spec-engines"></svg></div>
+<div class="kit-screen"><svg id="engine-cyl" data-kit="#spec-cylinder"></svg></div>
+
+<script type="application/json" id="spec-puffs">{"size":[640,390],"label":"a vent under a room","fit":false,"parts":[
+ {"id":"R","type":"space","x":200,"y":60,"w":300,"h":118,"label":"machinery space"},
+ {"id":"VM","type":"vent","x":350,"y":200,"mast":120,"value":1},
+ {"id":"T","type":"tank","x":40,"y":250,"w":200,"h":90,"label":"tank","value":0.5},
+ {"id":"T2","type":"tank","x":420,"y":250,"w":200,"h":90,"label":"tank 2","value":0.5}]}</script>
+<script type="application/json" id="spec-engines">{"size":[640,390],"label":"three running engines","fit":false,"parts":[
+ {"id":"E1","type":"engine","x":30,"y":60,"w":116,"h":58,"cylinders":3,"label":"engine 1","value":1},
+ {"id":"E2","type":"engine","x":230,"y":60,"w":130,"h":64,"cylinders":4,"label":"engine 2","value":1},
+ {"id":"E3","type":"engine","x":440,"y":60,"w":160,"h":100,"cylinders":6,"label":"engine 3","value":1},
+ {"id":"E4","type":"engine","x":30,"y":230,"w":580,"h":120,"cylinders":8,"label":"engine 4","value":1}]}</script>
+<script type="application/json" id="spec-cylinder">{"size":[640,390],"label":"M01 s06: a running cylinder near the left edge","parts":[
+ {"id":"C","type":"cylinder","x":40,"y":24,"w":210,"h":342,"value":1},
+ {"id":"GP","type":"pipe","fluid":"gas","d":"M620 100 H270","value":1},
+ {"id":"TG","type":"text","x":620,"y":76,"anchor":"end","text":"gas supply"},
+ {"id":"PP","type":"pipe","fluid":"liquid","d":"M620 180 H270","value":1},
+ {"id":"TP","type":"text","x":620,"y":158,"anchor":"end","text":"pilot fuel oil"}]}</script>
+
+<pre id="out"></pre>
+<script src="../scripts/audit_drawing.js"></script>
+<script src="../../../course-visuals/kit/kit.js"></script>
+<script>
+  console.log = function () {};
+  /* every endless animation held at one phase of its cycle - the moment a drawing check happened to see */
+  function freeze(phase) {
+    document.getAnimations().forEach(function (a) {
+      var c = a.effect.getComputedTiming(), t = a.effect.getTiming();
+      if (c.iterations !== Infinity || !(c.duration > 0)) { return; }
+      a.pause();
+      a.currentTime = (t.delay || 0) + (2 + phase) * c.duration;
+    });
+  }
+  setTimeout(function () {
+    KIT.layoutAll(true);
+    freeze(parseFloat((location.hash || "#0").slice(1)) || 0);
+    var res = AuditDrawing.page();
+    document.getElementById("out").textContent = JSON.stringify({
+      verdict: res.verdict,
+      findings: res.findings.map(function (f) {
+        var el = f.els && f.els[0], svg = el && (el.ownerSVGElement || el);
+        return { check: f.check, svg: svg && svg.id, part: f.part, other: f.other, detail: f.detail };
+      })
+    });
+  }, 600);
+</script>
+</body>
+</html>

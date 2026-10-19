@@ -1302,6 +1302,41 @@ deck and handout requests away from this skill; it is now 962, with the same mod
 boundary - pptx and Word material belongs to the `novikontas-*` skills (the *Deliberately outside* table already
 said so).
 
+## 4zz4 · What the M01 benchmark run 5 worked around, fixed in the factory (2.50.6, 2026-10-19)
+
+Run 5 (factory 2.50.5, `M01_benchmark\compiler_v5\METRICS.md`) passed, but in 9 builds (7 failed) where run 4 took 3. Most
+of the failures came from three compiler / kit problems. Each is fixed here, with a test that fails on the old code:
+
+1. **The drawing check gave an unchanged spec a different verdict from one build to the next.** It finished animations
+   that end and left the endless ones running, so it judged whatever frame it caught: s03's vent puffs out of a space on
+   one build, the engine's own RUNNING over its own piston on another (builds 5-8 changed nothing that mattered).
+   `audit_drawing.js` now holds every endless animation in a drawing still at `CONFIG.motionPhases` (9) moments of ONE
+   clock across the longest cycle - real frames, so what the kit staggers on purpose (puffs, spray dots, pistons out of
+   step) stays staggered; held each at the same phase of its own cycle, a spray's dots piled up and failed contrast - and
+   runs checks 1-3 (inside, cut off, text zone) at each; a finding on any of them is reported once, "on 3 of 9 frames of
+   its motion". The rest of the checks judge the first moment, held again after EMPTY (its step walk restarts a figure's
+   animations), and only animations still live are put back. The kit's label layout (`kit.js` `gather`) measures moving
+   parts the same way (5 moments), so a label is placed clear of what a part sweeps: the `cylinder`'s "piston" label, moved
+   in off the edge, sat on the moving piston on 5 of 9 frames (s06 - passed by luck in run 5). The `engine` itself:
+   RUNNING / STOPPED stands under the lowest point of the pistons' stroke (25) with the kit's clearance on screen, its
+   letters measured, and the block grows wide enough for the word (a small engine on a narrow panel ran the word past
+   its block). Fixture `measure/fixtures/drawing_motion.html` (the page frozen at three moments by its #hash: one verdict;
+   four engines and a cylinder: no self-conflict), `test_audit_drawing.py`. What the deterministic check now reports on
+   every build is the spec's to fix - on run 5's s03, the lower ship's vent puffs rise into the upper drawing's space at
+   step 4.
+2. **Five two-line label boxes did not fit a 2:1 drawing's two rows.** A drawing under its label bands is as tall as the
+   screen allows; a 2:1 one is then ~560 of the row's 1240 px wide, and five boxes 185 px wide fitted two to a row - run 5
+   placed all five by hand. `task_pages.label_side` widens the drawing's view box on both sides, step by step and only as
+   far as the drawing keeps its size, until the boxes fit (`rows_fit`, label_layout's own placing); the label question
+   gets that wider drawing (its own name - a hotspot on the same figure keeps the plain one). Not with a box the build
+   sheet placed. Run 5's m01 without its hand boxes: three below, two above, clear of the ⤢, every leader on its part
+   (`review_sheets.mjs`). `test_label_layout.py` (the run 5 GA, unit and through `question_html`).
+3. **`--init-build` wrote no kit starter for a slide planned as 3D.** Declining the 3D meant writing s05's spec from
+   nothing, against the Quickstart. `starter_figures(..., fallback=)`: a `model_3d` slide - and the slide proposed for 3D
+   unasked (L60) - gets its 2D starter `sNN.kit.json` too; the entry keeps the scene as the plan and says in `"_2d"` how
+   to switch (point `"figure"` at it, take the scene files off `"scripts"`, write `"declined_3d"`). `test_compile_module.py`
+   (the starter is written, passes `check_kit.py`, and the scene stays named).
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

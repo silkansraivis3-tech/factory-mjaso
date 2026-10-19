@@ -12,6 +12,8 @@ Pinned:
   * a clean drawing - a room along the slope, a marked pipe through a bulkhead, a roof overhanging its deckhouse,
     liquid clipped to its tank, a label with its clearance - is silent;
   * gb_fit.js widens the frame of a drawing that reaches past it, leaves one that fits, and leaves data-fit="off".
+  * a drawing that moves (a running engine, a vent's puffs) gets one verdict whatever frame it is caught at, and the
+    kit's own engine never conflicts with itself (2.50.6).
 """
 from __future__ import annotations
 
@@ -50,9 +52,9 @@ def browser():
     return None
 
 
-def page_out(exe, html, prof):
+def page_out(exe, html, prof, hash_=""):
     p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
-                        "--window-size=1280,2600", "--virtual-time-budget=4000", "--dump-dom", html.as_uri()],
+                        "--window-size=1280,2600", "--virtual-time-budget=4000", "--dump-dom", html.as_uri() + hash_],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
     m = re.search(r'<pre id="out">(.*?)</pre>', p.stdout, re.S)
     return json.loads(unescape(m.group(1))) if m and m.group(1).strip() else None
@@ -147,6 +149,22 @@ def main():
         check("a stepping figure is judged by what each step shows, and the finding names its busiest step - the scale with "
               "all three markers in (step 3 of 3), not the rest state (step 0) with them hidden",
               "bad-scale" in eby and "at its busiest step (step 3 of 3)" in eby["bad-scale"]["detail"], ef)
+
+        # 2.50.6 (M01 benchmark run 5, s03) - a drawing that moves is judged on every frame of its motion, not the one seen
+        caught = {}
+        for ph in ("0", "0.25", "0.5"):
+            mo = page_out(exe, FIX / "drawing_motion.html", prof, "#" + ph) or {}
+            caught[ph] = sorted({(x["svg"], x["check"], x["part"], x["other"]) for x in mo.get("findings", [])
+                                 if x["check"] in ("inside", "cut off", "text zone")})     # the checks motion moves
+        check("the same page caught at three moments of its motion gets the same verdict - a running engine and a vent's "
+              "puffs no longer flip an unchanged spec between PASS and FAIL",
+              caught["0"] == caught["0.25"] == caught["0.5"], caught)
+        check("... and what goes wrong on only some frames is found on all three: the puffs that rise half out of the room",
+              all(any(c[0] == "bad-puffs" and c[1] == "inside" for c in v) for v in caught.values()), caught)
+        eng = [c for v in caught.values() for c in v if c[0].startswith("engine")]
+        check("the kit's own running engine never conflicts with itself, at four sizes and on a narrow panel: its RUNNING "
+              "clears its pistons' whole stroke and stays inside its block - and a running cylinder's \"piston\" label is "
+              "laid out clear of the piston's whole stroke, not of one frame (M01 s06)", not eng, eng)
 
         gal = gallery_contrast(exe, prof)
         check("the kit's own gallery (every part, %s figures) passes the contrast check" % (gal or {}).get("n"),

@@ -315,18 +315,20 @@ def ppu(vb):
     return min(WIDTH_PX / vb[2], LAB_PX / vb[3])
 
 
-def band_vb(vb):
-    """the drawing's view box with a band above and below it for the empty label boxes, so none covers what is drawn"""
+def band_vb(vb, side=0.0):
+    """the drawing's view box with a band above and below it for the empty label boxes, so none covers what is drawn -
+    and `side` drawing units either side when the label rows reach past the drawing (label_side, 2.50.6)"""
     x, y, w, h = vb
+    w += 2 * side
     band = BAND_PX * h / (LAB_PX - 2 * BAND_PX)          # when the height decides the size
     if LAB_PX / (h + 2 * band) > WIDTH_PX / w:            # the width decides it
         band = BAND_PX * w / WIDTH_PX
-    return (x, y - band, w, h + 2 * band)
+    return (x - side, y - band, w, h + 2 * band)
 
 
-def with_bands(body, vb):
+def with_bands(body, vb, side=0.0):
     """label the drawing: a band above and below it for the empty label boxes, so no box covers what is drawn"""
-    nvb = band_vb(vb)
+    nvb = band_vb(vb, side)
     body = re.sub(r'(<svg\b[^>]*\bviewBox=")[^"]*(")', lambda m: m.group(1) + "%g %g %g %g" % nvb + m.group(2), body, count=1)
     return body, nvb
 
@@ -343,6 +345,7 @@ class Fig(object):
         self.kind, self.name, self.vb, self.make, self.svg, self.parts, self.ids = kind, name, vb, make, svg, parts or {}, set(ids)
         self.spec_parts = []
         self.credit = ""                                # a photograph's credit line, shown under it (2.49.2)
+        self.raw_vb = None                              # the view box before its label bands (2.50.6, label_side)
 
     def html(self, shared=False, uid=""):
         return self.make(shared, uid or self.name)
@@ -415,7 +418,7 @@ def photo_alt(meta):
     return alt
 
 
-def photo_fig(q, b, rel, mdir, probs, where, bands=False, wrap=False):
+def photo_fig(q, b, rel, mdir, probs, where, bands=False, wrap=False, side=0.0):
     """a REAL photograph of real equipment as the picture of a task: the file is in the module (read_figure reported it
     when it is not), its record is assets\\img\\_photo_meta.json - a missing record is reported, never invented. Its
     credit goes into the full-screen viewer (gb_zoom); what it shows (the record's "description") does not - on a task
@@ -444,7 +447,7 @@ def photo_fig(q, b, rel, mdir, probs, where, bands=False, wrap=False):
         w, h = 1000.0, round(1000.0 * size[1] / size[0], 2)
         body = ('<svg viewBox="0 0 %g %g" role="img" aria-label="%s" data-audit-ignore%s><image href="../%s" x="0" y="0" width="%g" height="%g" '
                 'preserveAspectRatio="none"/></svg>' % (w, h, a(alt), cred, a(rel), w, h))
-        return svg_fig(body, name, (0.0, 0.0, w, h), where, rel, probs, bands)
+        return svg_fig(body, name, (0.0, 0.0, w, h), where, rel, probs, bands, side)
     fig = Fig("img", name, (0.0, 0.0, float(size[0]), float(size[1])),
               lambda shared, uid: '<img class="taskfig" src="../%s" alt="%s"%s%s>' % (
                   a(rel), a(alt), ' data-fig="%s"' % a(name) if shared else "", cred))
@@ -452,13 +455,19 @@ def photo_fig(q, b, rel, mdir, probs, where, bands=False, wrap=False):
     return fig
 
 
-def svg_fig(body, name, vb, where, rel, probs, bands):
+def svg_fig(body, name, vb, where, rel, probs, bands, side=0.0):
+    raw = None
     if not vb:
         probs.append("%s: the drawing %s has no viewBox - the places on it cannot be worked out" % (where, rel))
     elif bands:
-        body, vb = with_bands(body, vb)
-    return Fig("svg", name, vb, lambda shared, uid: re.sub(r"<svg\b", '<svg class="taskfig"' + (' data-fig="%s"' % a(name) if shared else ""),
-                                                          body, count=1), svg=body)
+        raw = vb
+        body, vb = with_bands(body, vb, side)
+        if side:                                       # rows past the drawing: another drawing than the one shared
+            name += "-w%d" % round(side)
+    fig = Fig("svg", name, vb, lambda shared, uid: re.sub(r"<svg\b", '<svg class="taskfig"' + (' data-fig="%s"' % a(name) if shared else ""),
+                                                         body, count=1), svg=body)
+    fig.raw_vb = raw
+    return fig
 
 
 # a kit part's words on the drawing - what "unlabel" takes off, so the drawing does not give the answer away
@@ -535,7 +544,7 @@ def callouts_of(parts, answer_ids, reach=24.0):
     return gone
 
 
-def kit_fig(q, b, text, rel, probs, where, bands):
+def kit_fig(q, b, text, rel, probs, where, bands, side=0.0):
     """a figure-kit drawing in a task: the same *.kit.json the deck plays (course-visuals/kit/SPEC.md), drawn STILL at
     the end of its last step - or of the step the build sheet names ("kit_step": 2, or a word of a step's title). The
     parts the answers are about are found by their ids; "unlabel": "all" or ["P1", "V2"] takes the words off the parts,
@@ -611,14 +620,15 @@ def kit_fig(q, b, text, rel, probs, where, bands):
     except (TypeError, ValueError):
         probs.append("%s: the kit figure %s has no usable \"size\"" % (where, rel))
         return None
+    raw = vb
     if bands:
-        vb = band_vb(vb)
+        vb = band_vb(vb, side)
         spec = dict(spec, view=[round(v, 3) for v in vb])
     if not spec.get("label"):
         spec["label"] = cm.first_sentence(q.get("visual")) or ""
     # 2.49.7 (IGF M01 q01/q03) - "answers" takes off each question's own answers: two questions with other answers are two
     # drawings, never one shared - q03 was given q01's, which still named the vent mast it asked for
-    key = json.dumps([n, sorted(mine_ids) if hide == "answers" else hide, bool(bands)], sort_keys=True)
+    key = json.dumps([n, sorted(mine_ids) if hide == "answers" else hide, bool(bands)] + ([round(side, 2)] if side else []), sort_keys=True)
     name = cm.slug(rel) + ("" if key == json.dumps([len(steps), None, False]) else "-" + cm.sha(key)[:6])
     data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 
@@ -628,11 +638,13 @@ def kit_fig(q, b, text, rel, probs, where, bands):
                 % (sid, n, ' data-fig="%s"' % a(name) if shared else "", sid, data))
     fig = Fig("kit", name, vb, make, parts=names, ids=ids)
     fig.spec_parts = parts
+    fig.raw_vb = raw if bands else None
     return fig
 
 
-def figure_for(q, b, mdir, figdir, probs, where, bands=False, wrap=False):
-    """a Fig: a drawing, a real photograph or a figure-kit drawing - or None, with the reason in probs"""
+def figure_for(q, b, mdir, figdir, probs, where, bands=False, wrap=False, side=0.0):
+    """a Fig: a drawing, a real photograph or a figure-kit drawing - or None, with the reason in probs. `side`: the label
+    rows reach that many drawing units past it on either side (label_side, 2.50.6)"""
     rel = (b.get("figure") or "").strip().replace("\\", "/")
     if not rel:
         probs.append("%s: '%s' is answered on a picture - put its drawing or photograph in the build sheet (\"figure\")" % (where, q.get("mechanic")))
@@ -642,10 +654,10 @@ def figure_for(q, b, mdir, figdir, probs, where, bands=False, wrap=False):
         probs.append("%s: its %s %s %s" % (where, "photograph" if rel.lower().endswith(cm.IMAGES) else "drawing", rel, err))
         return None
     if rel.lower().endswith(cm.KIT_SPEC):
-        return kit_fig(q, b, body, rel, probs, where, bands)
+        return kit_fig(q, b, body, rel, probs, where, bands, side)
     if body is None:                                   # a photograph: shipped in the module folder
-        return photo_fig(q, b, rel, mdir, probs, where, bands, wrap)
-    return svg_fig(body, cm.slug(rel), viewbox(body), where, rel, probs, bands)
+        return photo_fig(q, b, rel, mdir, probs, where, bands, wrap, side)
+    return svg_fig(body, cm.slug(rel), viewbox(body), where, rel, probs, bands, side)
 
 
 def area(fig, name, b, where, probs):
@@ -897,17 +909,51 @@ def label_boxes(places, vb, probs=None, where=""):
     is as wide as the longest label needs (label_px); label_layout.py places them (2.48.0): each as near its place as
     the others allow, the order kept, never off the edge, onto another or under the ⤢; a row that cannot hold its boxes
     passes the one nearest the middle to the other row, and what still does not fit is reported, never cut off"""
-    import label_layout
     if not places:
         return places
+    w = rows_fit(places, vb)
+    if w is not True and probs is not None:
+        probs.append("%s: %d label boxes as wide as their words need (%.0f %% of the drawing) do not fit in its two label rows, "
+                     "even reaching past the drawing to the screen's width - shorten the longest labels in the script, or place "
+                     "the boxes in the build sheet (\"labels\": {\"...\": {\"box\": [left, top, width]}})" % (where, len(places), w))
+    return places
+
+
+def rows_fit(places, vb):
+    """lay the boxes out (label_layout) in the drawing's two label rows: True when every one fits, else the boxes' width in %"""
+    import label_layout
     wp = vb[2] * ppu(vb)                                   # the drawing's width in px at 1280 x 800
     w = min(max(max(label_px(p["t"]) for p in places), BOX_PX * 2) * 100.0 / wp, 96.0)
     corner = CORNER_PX * 100.0 / wp                        # the top row keeps clear of the ⤢ button (gb_zoom, top right)
-    if not label_layout.label_boxes(places, vb, ppu(vb), w, BAND_PX, BOX_PX, corner) and probs is not None:
-        probs.append("%s: %d label boxes as wide as their words need (%.0f %% of the drawing) do not fit in its two label rows - "
-                     "shorten the longest labels in the script, or place the boxes in the build sheet (\"labels\": {\"...\": "
-                     "{\"box\": [left, top, width]}})" % (where, len(places), w))
-    return places
+    return True if label_layout.label_boxes(places, vb, ppu(vb), w, BAND_PX, BOX_PX, corner) else w
+
+
+def label_side(places, raw):
+    """2.50.6 (M01 benchmark run 5, m01) - how far, in drawing units either side, the two label rows reach past a drawing
+    that is shown narrower than the screen, so the boxes fit three to a row where two did. A 2:1 drawing under its bands is
+    as tall as the screen allows and 560 of the row's 1240 px wide: five two-line labels 185 px wide fitted two to a row,
+    four in all, and the build sheet placed all five by hand. The rows grow only as far as the drawing keeps its size; 0
+    when the two rows already hold the boxes, or when even the screen's width does not (reported by label_boxes)."""
+    vb = band_vb(raw)
+    if rows_fit([dict(p) for p in places], vb) is True:
+        return 0.0
+    p0, step = ppu(vb), raw[2] * 0.02
+    s = step
+    while True:
+        nvb = band_vb(raw, s)
+        if ppu(nvb) < p0 - 1e-9:                          # the drawing would get smaller: the screen is full
+            return 0.0
+        moved = [dict(p, box=rebox(p["box"], vb, nvb)) for p in places]
+        if rows_fit(moved, nvb) is True:
+            return round(s, 2)
+        s += step
+
+
+def rebox(box, vb, nvb):
+    """a [left, top, width, height] % of view box vb as % of view box nvb"""
+    x, y = vb[0] + box[0] * vb[2] / 100.0, vb[1] + box[1] * vb[3] / 100.0
+    return [round(100.0 * (x - nvb[0]) / nvb[2], 2), round(100.0 * (y - nvb[1]) / nvb[3], 2),
+            round(box[2] * vb[2] / nvb[2], 2), round(box[3] * vb[3] / nvb[3], 2)]
 
 
 def label_width_problems(places, vb, where):
@@ -975,16 +1021,27 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         out.append("    </div></div>")
     elif m == "label_diagram":
         items, _ = cs.answer_items(q)
-        fig = figure_for(q, b, mdir, figdir, probs, where, (b.get("figure") or "").strip() in figs["_bands"], wrap=True)
+        banded = (b.get("figure") or "").strip() in figs["_bands"]
+
+        def placed(fig, probs):
+            out_ = []
+            for t in items:
+                given = (b.get("labels") or {}).get(t) or {}
+                box, eid = area(fig, t, dict(b, areas={t: given["at"]} if given.get("at") else b.get("areas") or {}),
+                                where, probs) if fig else (None, None)
+                if box is not None:
+                    out_.append({"t": t, "id": eid, "box": box, "at": given.get("box"), "hand": bool(given.get("box"))})
+            return out_
+        fig = figure_for(q, b, mdir, figdir, probs, where, banded, wrap=True)
+        places = placed(fig, probs)
+        # 2.50.6 - boxes that do not fit two to a row beside a narrow drawing: the rows reach past it (label_side). Not
+        # with a box the build sheet placed - it was placed on the drawing as it was
+        side = label_side(places, fig.raw_vb) if fig and fig.raw_vb and places and not any(p["hand"] for p in places) else 0.0
+        if side:
+            wide = figure_for(q, b, mdir, figdir, [], where, banded, wrap=True, side=side)     # its problems are said above
+            if wide:
+                fig, places = wide, placed(wide, [])
         vb = fig.vb if fig else None
-        places = []
-        for t in items:
-            given = (b.get("labels") or {}).get(t) or {}
-            box, eid = area(fig, t, dict(b, areas={t: given["at"]} if given.get("at") else b.get("areas") or {}),
-                            where, probs) if fig else (None, None)
-            if box is None:
-                continue
-            places.append({"t": t, "id": eid, "box": box, "at": given.get("box"), "hand": bool(given.get("box"))})
         auto = [p for p in places if not p["at"]]
         if auto and vb:
             label_boxes(auto, vb, probs, where)

@@ -1295,8 +1295,8 @@ def starter_scene(script, sid, scripts):
                         "m03_station3d.js (compile GUIDE 2b): one shared renderer, the scene built while the slide before is "
                         "on screen (its GB_HOOKS), window.__noPrepare and window.__scene3d for perf3d.mjs, a tap highlights a "
                         "part; first frame under 1 s at 4x CPU (measure GUIDE 2b). Copy three.min.js into assets\\vendor\\. "
-                        "Or keep a 2D figure: put it in \"figure\", take the two scene files off \"scripts\", and write the "
-                        "operator's reason in \"declined_3d\"." % (m.upper(), m, sid, js))}
+                        "Or keep a 2D figure: put it in \"figure\" (--init-build writes its starter, see \"_2d\"), take the two "
+                        "scene files off \"scripts\", and write the operator's reason in \"declined_3d\"." % (m.upper(), m, sid, js))}
 
 
 # ------------------------------------------------------------------ starter figure-kit specs (2.50.0)
@@ -1452,19 +1452,32 @@ def starter_figure(script, s):
     return {"size": [640, 390], "label": label, "idle": "Press Next step", "parts": parts, "steps": plan}
 
 
-def starter_figures(script, build_screens, figdir, skip=(), out=None):
+def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=()):
     """the starter figure of every slide whose picture the kit can draw - written into `out` ({slide id: spec}) when its
-    file is not there yet (never overwritten) - and the slide's entry in `build_screens` set to name it"""
+    file is not there yet (never overwritten) - and the slide's entry in `build_screens` set to name it.
+    `fallback` (2.50.6): the slides a 3D scene is planned for - a model_3d slide, or the one proposed unasked (L60). Each
+    gets its 2D starter too, written but not named in "figure" (the scene stays the plan): declining the 3D
+    ("declined_3d") means editing that starter, never writing a spec from nothing (M01 benchmark run 5, s05)."""
     for s in script["screens"]:
-        if s["kind"] != "slide" or s["id"] in skip or s.get("recap") or s["id"] not in build_screens:
+        if s["kind"] != "slide" or s.get("recap") or s["id"] not in build_screens:
             continue
-        if cs.parse_kind(s.get("visual_kind", "")) not in STARTER_FIGURE_KINDS:
+        two_d = s["id"] in fallback
+        if not two_d and (s["id"] in skip or cs.parse_kind(s.get("visual_kind", "")) not in STARTER_FIGURE_KINDS):
             continue
         spec = starter_figure(script, s)
         if not spec:
             continue
         name = "%s.kit.json" % s["id"]
         entry = build_screens[s["id"]]
+        if two_d:
+            if not os.path.isfile(os.path.join(figdir, name)):
+                entry["_2d"] = ("Keeping a 2D figure instead of the 3D scene? Its starter is written: working_claude\\figures\\%s\\%s - "
+                                "set \"figure\": \"%s\", \"composition\": \"two-col\", \"dark\": true, take the scene files off "
+                                "\"scripts\", write the operator's reason in \"declined_3d\", and edit the starter (SPEC.md) - "
+                                "never write one from nothing." % (cs.mid(script.get("module")), name, name))
+                if out is not None:
+                    out[s["id"]] = spec
+            continue
         entry.update({"figure": name, "composition": "two-col", "dark": True})
         if not os.path.isfile(os.path.join(figdir, name)):
             entry["_figure"] = ("starter written by --init-build: replace the placeholder parts with the real drawing, one part per "
@@ -1505,8 +1518,10 @@ def starter_build(script, shared=(), figdir=None, specs=None):
                                    "shape, an inside or a layout in space (%s). Strongly recommended, never required: to decline it, "
                                    "give the slide its 2D figure, take the scene files off \"scripts\", and write the operator's reason "
                                    "in the sheet's top-level \"declined_3d\" - it is not proposed again." % best[1])
-    if figdir is not None:             # 2.50.0: a starter figure-kit spec for every drawing slide - not a 3D one, not a photo
-        starter_figures(script, screens, figdir, skip={best[0]} if best else (), out=specs)
+    if figdir is not None:             # 2.50.0: a starter figure-kit spec for every drawing slide - not a photo; a 3D one's
+        three_d = {s["id"] for s in script["screens"] if s["kind"] == "slide" and cs.parse_kind(s.get("visual_kind", "")) == "model_3d"}
+        starter_figures(script, screens, figdir, skip={best[0]} if best else (), out=specs,      # is its 2D fallback (2.50.6)
+                        fallback=three_d | ({best[0]} if best else set()))
     sheet["screens"] = screens
     return sheet
 
@@ -1734,10 +1749,12 @@ def main(argv=None):
         print("Done - a starter build sheet:\n    %s\n  Next: fill in each slide's picture, edit the starter figures (parts and "
               "options: course-visuals\\kit\\CATALOGUE.md), then build and check in one command:\n    compile\\scripts\\"
               "build_module.py <course> --module %s" % (bp, o.module))
+        sheet_screens = cs.load(bp).get("screens") or {}
         for sid, spec in specs.items():                 # 2.50.0: starter figure-kit specs - edited, never written from nothing
             cs.save(os.path.join(figdir, "%s.kit.json" % sid), spec)
-            print("  starter figure: figures\\%s\\%s.kit.json - %d parts, %d steps (edit it: the parts are placed on a grid)"
-                  % (cs.mid(o.module), sid, len(spec["parts"]), len(spec["steps"])))
+            print("  starter figure: figures\\%s\\%s.kit.json - %d parts, %d steps (edit it: the parts are placed on a grid)%s"
+                  % (cs.mid(o.module), sid, len(spec["parts"]), len(spec["steps"]),
+                     " - the 2D figure if the 3D scene is declined" if (sheet_screens.get(sid) or {}).get("_2d") else ""))
         # the module's folder does not exist for a new module: make it and put the factory's style files and engines
         # in it, so the first compile does not stop (never inside the Android project - design_system.py refuses that).
         # 2.49.2: also when the folder is already there (assets\img made first) - the files are checked, not the folder
