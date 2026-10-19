@@ -7,7 +7,9 @@ Opens measure/fixtures/deck_rise_in.html in headless Chrome or Edge: a recap who
 animation paused (what a hidden / preview pane does). Pinned:
   * with finishAnimations off the audit reports the 23 px "scroll" (the false finding this exists to remove);
   * with it on (the default) the audit finishes the animation first and reports none;
-  * an endless animation on the slide does not stop the audit.
+  * an endless animation on the slide does not stop the audit;
+  * (deck_mark.html) a line a stepping figure marks .cur must look selected: the old blue/amber boxes fail, the
+    shipped gb_compose.css passes (IGF M05, 2026-10-19).
 Skips, and says so, when no Chrome or Edge is installed.
 """
 from __future__ import annotations
@@ -26,6 +28,7 @@ from test_audit_drawing import browser  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 FIX = Path(__file__).resolve().parent.parent / "fixtures" / "deck_rise_in.html"
+MARK = FIX.parent / "deck_mark.html"
 PASS, FAIL = [], []
 
 
@@ -34,9 +37,9 @@ def check(name, ok, detail=""):
     print(("  ok    " if ok else "  FAIL  ") + name + (("  -> " + str(detail)[:600]) if detail and not ok else ""))
 
 
-def run(exe, prof, query=""):
+def run(exe, prof, query="", fix=FIX):
     p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
-                        "--window-size=1280,800", "--virtual-time-budget=4000", "--dump-dom", FIX.as_uri() + query],
+                        "--window-size=1280,800", "--virtual-time-budget=4000", "--dump-dom", fix.as_uri() + query],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
     m = re.search(r'<pre id="out">(.*?)</pre>', p.stdout, re.S)
     return json.loads(unescape(m.group(1))) if m and m.group(1).strip() else None
@@ -56,6 +59,13 @@ def main():
         check("the audit ran with an endless animation on the slide", done is not None, done)
         check("finishing the entrance first: the recap is measured at rest, no scroll",
               bool(done) and done.get("scroll") == 0 and done.get("verdict") == "VERDICT: PASS", done)
+        # a selected line must look selected: the old blue/amber boxes, where .cur on the amber box changed nothing
+        old = run(exe, prof, "?old", MARK)
+        check("the old look: the amber box marked .cur looks like itself at rest - mark fails",
+              bool(old) and old.get("mark", 0) >= 1 and any(m.get("looksLike") == "itself" for m in old.get("marks", [])), old)
+        new = run(exe, prof, "", MARK)
+        check("gb_compose.css as shipped: every line marked .cur changes and looks like no line at rest",
+              bool(new) and new.get("mark") == 0 and new.get("verdict") == "VERDICT: PASS", new)
     finally:
         shutil.rmtree(prof, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

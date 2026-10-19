@@ -161,7 +161,7 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
 | Key | What it does |
 |---|---|
 | `"legend": [2, 6]` | on a stage slide only lines 2-6 form the numbered row; the lines before go above the drawing, the rest below. Words that already start with their own number get no second badge |
-| `"box_alt": [4]` | which boxes are amber (otherwise every second one) |
+| `"box_alt": [4]` | which boxes are grey - the other of two options side by side. Without it every box is blue: amber is only ever the line a stepping figure is on (2.49.6) |
 | `"groups": [{"lines": [2, 7], "class": "box z1"}]` | lines 2-7 in one box, the first as its bold heading (a zone with its list) |
 | `"hooks": {"3": {"class": "m02-steptext", "data-step": "2"}}` | a figure script's handle on a line - a class word and `data-*`, never a look |
 | `"inset": {..., "under": "figure"}` | the real photo goes under the drawing when the words fill their column. It takes ~220 px of the drawing's panel: when that leaves the drawing under ~60 % (a 640 x 390 spec keeps 47 %), the build says so (2.49.1) - put the inset under the words, use `"over"`, or draw the figure wider and less tall |

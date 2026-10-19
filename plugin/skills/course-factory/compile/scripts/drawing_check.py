@@ -141,6 +141,11 @@ def check(pages, root=None):
                     probs.append("%s, %s: small text - %s %s (try the figure in the studio: course-visuals\\kit\\scripts\\"
                                  "studio.py <figure>.kit.json)" % (name, f.get("where"), f.get("part"), f.get("detail")))
                     continue
+                if f.get("check") == "photo over drawing":   # a real photo hiding the drawing it sits on (IGF M02, 2.49.6)
+                    probs.append("%s, %s: photo over drawing - %s covers %s (L54: a photo goes beside the drawing - its own "
+                                 "column in the figure or an .inset - never on it; data-may-overlap does not excuse a photo)"
+                                 % (name, f.get("where"), f.get("part"), f.get("other")))
+                    continue
                 if f.get("check") == "empty":        # judged at the figure's busiest step; the finding names the blank piece (2.49.1)
                     probs.append("%s, %s: empty - %s: %s (see every step at once: course-visuals\\kit\\scripts\\studio.py "
                                  "<figure>.kit.json --step all)" % (name, f.get("where"), f.get("part"), f.get("detail")))

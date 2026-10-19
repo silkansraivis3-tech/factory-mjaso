@@ -282,8 +282,8 @@ def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=
     (document.querySelector('#s04 [data-i="3"]')). `idx` gives the script numbers when only some lines are drawn here.
 
     emph (from the build sheet):
-      "boxes": [2, 3]            each line in a box (blue; without "box_alt" every second one is amber)
-      "box_alt": [4]             these boxes amber
+      "boxes": [2, 3]            each line in a box (blue - all of them; amber is kept for the line a figure is on)
+      "box_alt": [4]             these boxes grey: the other of two options side by side
       "conclusion": 5            the line the room leaves with (navy)
       "groups": [{"lines": [2, 7], "class": "box z1"}]   lines 2-7 in one box: the first as its heading
       "hooks": {"3": {"class": "m02-steptext", "data-step": "2"}}   a figure script's hook on a line"""
@@ -346,7 +346,8 @@ def words_html(lines, first_statement=True, dark_photo=False, emph=None, legend=
         elif i == concl:
             roles.append(("call", i, x))
         elif i in boxes:
-            alt = (i in alts) if alts is not None else boxes.index(i) % 2 == 1
+            # no automatic second colour: blue / amber in turn read as "selected" (IGF M05, 2026-10-19)
+            alt = i in (alts or ())
             # a box sets its line apart already - a typed "•" in it is a second bullet look (IGF M03, 2026-10-19)
             roles.append(("box alt" if alt else "box", i, x.lstrip("•").strip()))
         elif x.startswith("•"):

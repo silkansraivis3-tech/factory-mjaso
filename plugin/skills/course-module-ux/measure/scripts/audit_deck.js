@@ -93,6 +93,10 @@
                                       Empty array disables that check. */
     controlSel: "button, a, input, select, textarea, [role=button]",
                                    /* CHANGE: what counts as a touch target */
+    markSel: "[data-i]",           /* a line a stepping figure marks .cur (the step it is on) */
+    markCurClass: "cur",
+    markStepSel: ".kit-tap, .mediabar, [data-act=next]",
+                                   /* a slide with one of these steps; only there is .cur ever set */
 
     /* --- timing --- */
     settleMs: 560,                 /* > your slide transition duration */
@@ -318,10 +322,51 @@
   }
 
   /* ------------------------------ one slide ------------------------------ */
+  /* A SELECTED LINE THAT DOES NOT LOOK SELECTED. A stepping figure sets .cur on the line it is on. Found in the room:
+     the blue and amber boxes alternated, .cur was amber, and an amber box out-ranked it - the presenter pressed Next
+     and the amber line did not change at all, while a blue one turning amber read as "now it is selected"
+     (IGF M05, 2026-10-19). For every line on a stepping slide: its look with .cur must differ from its own look at
+     rest AND from every other line's look at rest. Transitions are switched off while reading, so the computed
+     value is the end state, not a frame of the fade. */
+  function markLook(st) {
+    return [st.backgroundColor, st.borderLeftColor, st.boxShadow, st.outlineStyle + " " + st.outlineColor].join(" | ");
+  }
+  function markCheck(s) {
+    var bad = [];
+    if (!qa(s, CONFIG.markStepSel).length) { return bad; }
+    var lines = qa(s, CONFIG.markSel).filter(function (el) {
+      return !isSvg(el) && getComputedStyle(el).display !== "none";
+    });
+    if (!lines.length) { return bad; }
+    var cls = CONFIG.markCurClass, kept = lines.map(function (el) {
+      var had = el.classList.contains(cls), tr = el.style.transition;
+      el.style.transition = "none";
+      el.classList.remove(cls);
+      return { el: el, had: had, tr: tr };
+    });
+    var rest = kept.map(function (k) { return markLook(getComputedStyle(k.el)); });
+    kept.forEach(function (k, i) {
+      k.el.classList.add(cls);
+      var on = markLook(getComputedStyle(k.el));
+      k.el.classList.remove(cls);
+      var same = on === rest[i] ? "itself" : null;
+      for (var j = 0; !same && j < rest.length; j++) {
+        if (j !== i && on === rest[j]) { same = label(kept[j].el) + " at rest"; }
+      }
+      if (same) { bad.push({ sel: label(k.el), looksLike: same, txt: (k.el.textContent || "").trim().slice(0, CONFIG.txtSample) }); }
+    });
+    kept.forEach(function (k) {
+      if (k.had) { k.el.classList.add(cls); }
+      k.el.style.transition = k.tr;
+    });
+    return bad;
+  }
+
   function auditSlide(s, n) {
     var ext = rootExtent(s);
     var out = { slide: n, low: [], small: [], spill: [], tap: [],
-                svgSmall: [], collide: [], scroll: [] };
+                svgSmall: [], collide: [], scroll: [], mark: [] };
+    out.mark = markCheck(s);
     var sizes = [], chars = 0;
 
     qa(s, "*").forEach(function (el) {
@@ -469,7 +514,7 @@
   }
 
   /* ------------------------------- the sweep ------------------------------ */
-  var KINDS = ["low", "small", "spill", "tap", "svgSmall", "collide", "scroll"];
+  var KINDS = ["low", "small", "spill", "tap", "svgSmall", "collide", "scroll", "mark"];
 
   function spec() {
     return {
@@ -540,7 +585,7 @@
 
   function report(rows, slides, from, to) {
     var totals = { low: 0, small: 0, spill: 0, tap: 0, svgSmall: 0, collide: 0,
-                   scroll: 0 };
+                   scroll: 0, mark: 0 };
     rows.forEach(function (r) {
       KINDS.forEach(function (k) { totals[k] += r[k].length; });
     });
@@ -600,7 +645,8 @@
                  tap: r.tap.slice(0, CONFIG.maxTapExamples),
                  svgSmall: r.svgSmall.slice(0, CONFIG.maxExamples),
                  scroll: r.scroll.slice(0, CONFIG.maxExamples),
-                 collide: r.collide.slice(0, CONFIG.maxExamples) };
+                 collide: r.collide.slice(0, CONFIG.maxExamples),
+                 mark: r.mark.slice(0, CONFIG.maxExamples) };
       })
     };
     return out;

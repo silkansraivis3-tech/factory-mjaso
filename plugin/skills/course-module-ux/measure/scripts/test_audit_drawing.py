@@ -148,6 +148,12 @@ def main():
         check("the kit's own gallery (every part, %s figures) passes the contrast check" % (gal or {}).get("n"),
               gal is not None and gal["n"] >= 15 and not gal["f"], gal)
 
+        ph = (page_out(exe, FIX / "drawing_photo.html", prof) or {}).get("findings", [])
+        photo = lambda svg: [x for x in ph if x["check"] == "photo over drawing" and x["svg"] == svg]
+        check("a photo laid on the drawing is found, data-may-overlap or not (IGF M02 s13, 2.49.6)",
+              bool(photo("bad-photo")) and photo("bad-photo")[0]["part"] == "pic-on", ph)
+        check("a photo in its own column beside the drawing, and a marker drawn on a photo, are silent",
+              not photo("good-beside") and not photo("good-marker"), ph)
         sc = (page_out(exe, FIX / "deck_scroll.html", prof) or {}).get("findings", [])
         scrolls = lambda sid: [x for x in sc if x["check"] == "scrolls" and "(%s)" % sid in x["where"]]
         check("a slide whose box scrolls 8 px is reported - no scrollbar on a slide (owner, 2026-10-16)",

@@ -44,6 +44,9 @@
                      for the panel it is on (kit.css .kit-light): this check is the safety net.
      6  SMALL TEXT   (a figure-kit drawing, 2.48.0) no word under CONFIG.minTextPx as rendered. The kit grows its
                      own type classes when a figure is shown smaller than 1:1; a size a course part sets is judged.
+     7  PHOTO OVER   (2.49.6) a real photograph (<image> of a .jpg/.png, or <foreignObject> holding an <img>) is
+                     painted over parts of the drawing. A photo goes beside the drawing; a marker drawn after the
+                     photo is fine. data-may-overlap does not excuse it. See checkPhotos().
 
      A figure-kit drawing is laid out by kit.js first (its labels, the 12.5 px floor, its frame) and, in a deck,
      judged at the end of every step as well as at step 0 (CONFIG.kitSteps).
@@ -491,9 +494,53 @@
           }
         });
       }
+      /* ---- 7 PHOTO OVER THE DRAWING ---- */
+      checkPhotos(svg, where, items, out);
     } finally {
       copies.forEach(function (c) { c.parentNode.removeChild(c); });
     }
+  }
+
+  /* A real photograph laid ON the drawing hides the drawing: the M02 fire control plan put its photos on the "free"
+     cargo area and they covered the bow of the ship it teaches (IGF M02, 2026-10-19). A photo goes beside the drawing -
+     its own column in the figure, or an .inset - never over it. Only parts painted BEFORE the photo count (a marker
+     drawn on a photo, "tap the place", is the point of that photo), and a panel behind the whole drawing is not a part.
+     data-may-overlap does not excuse a photo: it is for a label on a shape. */
+  var PHOTO_RX = /\.(jpe?g|png|webp|avif|gif)(\?|#|$)/i;
+  function isPhoto(ph) {
+    return tag(ph) === "image" ? PHOTO_RX.test(ph.getAttribute("href") || ph.getAttribute("xlink:href") || "")
+                               : !!ph.querySelector("img, picture, video");
+  }
+  function checkPhotos(svg, where, items, out) {
+    var sv = svg.getBoundingClientRect();
+    qa(svg, "foreignObject, image").forEach(function (ph) {
+      if (!isPhoto(ph) || inHiddenRoot(ph, svg) || !shown(ph, svg)) { return; }
+      var r = ph.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4) { return; }
+      var hits = [];
+      items.forEach(function (E) {
+        if (E.el === ph || ph.contains(E.el) || E.copy) { return; }
+        if (!(E.el.compareDocumentPosition(ph) & 4)) { return; }          /* drawn after the photo: on it, by design */
+        if (E.b.w >= 0.9 * sv.width && E.b.h >= 0.9 * sv.height) { return; }   /* a panel behind everything */
+        var x0 = Math.max(r.left, E.b.x), y0 = Math.max(r.top, E.b.y), x1 = Math.min(r.right, E.b.x + E.b.w), y1 = Math.min(r.bottom, E.b.y + E.b.h);
+        if (x1 - x0 < 2 || y1 - y0 < 2) { return; }
+        var n = 0, i, j;
+        if (E.t === "text" || E.t === "image") { n = 1; }
+        else {
+          for (i = 0; i <= 6 && !n; i++) {
+            for (j = 0; j <= 6 && !n; j++) {
+              if (within(E.el, { x: x0 + (x1 - x0) * i / 6, y: y0 + (y1 - y0) * j / 6 })) { n = 1; }
+            }
+          }
+        }
+        if (n) { hits.push(E.el); }
+      });
+      if (hits.length) {
+        report(out, { check: "photo over drawing", where: where, part: label(ph), other: label(hits[0]),
+                      detail: "a photograph is painted over " + hits.length + " part(s) of the drawing - put it beside the drawing " +
+                              "(its own column, or an .inset), never on it" }, [ph, hits[0]]);
+      }
+    });
   }
 
   /* the largest blank rectangle in the frame a drawing is shown in (its .kit-screen panel, or the <svg> box), on a
@@ -535,6 +582,12 @@
         for (var rr = r0; rr <= r1; rr++) { for (var cc = c0; cc <= c1; cc++) { full[rr][cc] = 1; } }
       }
       laid.forEach(function (bb) { mark(bb.left, bb.top, bb.right, bb.bottom); });
+      /* a real photo shown beside the drawing, in its own column, is content too (IGF M02, 2.49.6) */
+      qa(svg, "foreignObject, image").forEach(function (ph) {
+        if (!isPhoto(ph) || inHiddenRoot(ph, svg) || !shown(ph, svg)) { return; }
+        var bb = ph.getBoundingClientRect();
+        if (bb.width && bb.height) { mark(bb.left, bb.top, bb.right, bb.bottom); }
+      });
       parts.forEach(function (it) {
         var b = it.b, a = b.w * b.h;
         if (a >= 0.8 * fr.w * fr.h) { return; }                    /* a panel or background is not content */

@@ -512,22 +512,29 @@ figure{margin:0}
 .slide.dark .copy .support li{color:var(--txt-d)}
 .copy b{color:var(--navy);font-weight:700}
 .slide.dark .copy b{color:var(--white)}
-/* a line a stepping figure is on (the figure sets .cur / .lit on [data-i]) */
-.copy [data-i]{border-radius:var(--r-s);transition:background-color .2s ease}
-.copy [data-i].lit{background:var(--blue-wash-l)}
-.slide.dark .copy [data-i].lit{background:var(--blue-wash-d)}
-.copy [data-i].cur{background:var(--amber-wash-l);font-weight:600}
-.slide.dark .copy [data-i].cur{background:var(--amber-wash-d)}
-/* emphasis chosen in the build sheet: two options side by side in meaning, and the conclusion */
+/* emphasis chosen in the build sheet: a line in a box, and the conclusion. One box look - blue and amber boxes
+   side by side read as "this one is selected", and an amber box never changed when it was (IGF M05, 2026-10-19).
+   .alt only where the build sheet names "box_alt" (the other of two options): grey, NEVER amber. */
 .copy .box{padding:.6em .95em;border-left:4px solid var(--blue);background:var(--blue-wash-l);
   border-radius:0 var(--r-s) var(--r-s) 0;font-size:var(--fs);line-height:1.45;color:var(--ink)}
-.copy .box.alt{border-left-color:var(--amber);background:var(--amber-wash-l)}
+.copy .box.alt{border-left-color:var(--navy);background:var(--grey)}
 .slide.dark .copy .box{background:var(--blue-wash-d);color:var(--txt-d)}
-.slide.dark .copy .box.alt{background:var(--amber-wash-d)}
+.slide.dark .copy .box.alt{border-left-color:var(--dim-d);background:rgba(255,255,255,.06)}
 .copy .call{padding:.75em 1em;border-radius:var(--r-m);background:var(--navy);color:var(--white);
   font-size:var(--fs);line-height:1.45;font-weight:600}
 .slide.dark .copy .call{background:var(--blue);color:var(--on-blue)}
 .copy .call b{color:inherit}
+/* a line a stepping figure is on (the figure sets .cur / .lit on [data-i]). Amber means "where we are now" and
+   nothing else: no card at rest is amber, and these rules come AFTER every card look and out-rank it, so the
+   selected line always changes - fill, an amber ring and an amber bar. audit_deck.js "mark" fails a deck where
+   a selected line looks like itself or like another line at rest. */
+.copy [data-i]{border-radius:var(--r-s);transition:background-color .2s ease,box-shadow .2s ease}
+.copy [data-i].lit{background:var(--blue-wash-l)}
+.slide.dark .copy [data-i].lit{background:var(--blue-wash-d)}
+.copy [data-i].cur,.copy .box[data-i].cur{background:var(--amber-wash-l);font-weight:600;
+  box-shadow:inset 0 0 0 2px var(--amber)}
+.copy .box[data-i].cur{border-left-color:var(--amber)}
+.slide.dark .copy [data-i].cur,.slide.dark .copy .box[data-i].cur{background:var(--amber-wash-d)}
 /* a stepping figure washes a lit callout light: its white text turns to ink (dark slide: light text) -
    white on the light wash was unreadable (M03, 2026-10-15) */
 .copy .call[data-i].lit,.copy .call[data-i].cur{color:var(--ink)}

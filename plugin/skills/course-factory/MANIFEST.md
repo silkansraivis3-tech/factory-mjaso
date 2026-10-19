@@ -1198,6 +1198,22 @@ each found only after a full build. Now the kit and its checks take that work:
 - **Proof:** `test_compile_module.py` 270; IGF M01-M15 rebuilt, the 12 step slides measured inside the slide at
   1920x1080 and 1024x768.
 
+## 4zx · A selected line always looks selected; a photo never lies on a drawing (2.49.6, 2026-10-19)
+
+- **Found** (operator, IGF M05 s02 and M02 s13): boxes alternated blue and amber by default, and the line a stepping
+  figure is on (`.cur`) was amber too - out-ranked by `.box.alt`, so an amber box did not change when selected and a
+  blue one turning amber read as the only selection. M02's fire control plan laid its photos on the cargo area,
+  covering the bow of the ship, excused by `data-may-overlap`.
+- **Now:** every box is blue; `box_alt` (only where the build sheet names it) is grey. `.cur` is amber wash + amber
+  ring + amber bar, after every card rule and out-ranking it. `audit_deck.js` "mark": on a stepping slide each
+  `[data-i]` line with `.cur` must differ from itself and every other line at rest. `audit_drawing.js` check 7
+  "photo over drawing": a real photo painted over drawn parts is a finding (markers drawn after a photo are fine;
+  `data-may-overlap` does not excuse it); a shown photo counts as content for EMPTY. M02 s13's photos moved to a
+  column beside the hull.
+- **Proof:** `test_audit_deck.py` 5 (the old look fails, the shipped one passes), `test_audit_drawing.py` 32 (a photo
+  on the drawing found; beside it, or a marker on a photo, silent), `test_compile_module.py` 271;
+  the new check flagged M02 s13 before the move and is clean at all 6 steps after it.
+
 ## 5 · Known gaps / before this goes live
 
 1. **No real run yet.** Every script has been executed against GAS BASIC, but the skill has never

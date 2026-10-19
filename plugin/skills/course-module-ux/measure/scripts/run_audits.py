@@ -129,6 +129,9 @@ def summarise(name, rec):
     if name == "deck":
         for s in r.get("failingSlides") or []:
             bits = ["%s %d" % (k, len(s[k])) for k in ("low", "small", "spill", "tap", "svgSmall", "scroll", "collide") if s.get(k)]
+            # a line a stepping figure selects that does not look selected (IGF M05, 2026-10-19)
+            bits += ["selected line looks unselected: %s (= %s)" % (m.get("txt") or m.get("sel"), m.get("looksLike"))
+                     for m in s.get("mark") or []]
             lines.append("slide %s: %s" % (s.get("slide"), ", ".join(bits) or "failed"))
         if r.get("overfilledSlides"):
             lines.append("over-filled: " + short("%s (%s %%)" % (o["slide"], o["fillPct"]) for o in r["overfilledSlides"]))

@@ -1193,8 +1193,12 @@ def main():
         check("the term before \" - \" or \": \" is bold (four words or fewer); the words are unchanged",
               "<b>Gas safe machinery space</b> - a single failure" in tb and "<b>So</b>: two barriers." in tb
               and "<b>" not in cm.marked("Ways named in the IGF Code: reliquefy") and "<b>" not in cm.marked("a fuel tank - with"))
-        check("the build sheet's boxes and conclusion: .box, .box.alt, .call - in script order",
-              re.findall(r'class="(box(?: alt)?|call|lead)"', tb) == ["lead", "box", "box alt", "lead", "call"], tb)
+        check("the build sheet's boxes and conclusion: .box, .call - in script order, every box one colour",
+              re.findall(r'class="(box(?: alt)?|call|lead)"', tb) == ["lead", "box", "box", "lead", "call"], tb)
+        ta = "\n".join(cm.words_html(["Two ways:", "Gas safe - no release.", "ESD-protected - may release."],
+                                     emph={"boxes": [2, 3], "box_alt": [3]}))
+        check("a .box.alt only where the build sheet names box_alt",
+              re.findall(r'class="(box(?: alt)?|lead)"', ta) == ["lead", "box", "box alt"], ta)
         bb = "\n".join(cm.words_html(["Two ways:", "• ventilated - fans draw air out", "• inerted - filled with gas"],
                                      emph={"boxes": [2, 3]}))
         check("a • line in a box loses its typed bullet - the box sets it apart, one bullet look per deck",

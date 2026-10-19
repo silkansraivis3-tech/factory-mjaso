@@ -44,7 +44,7 @@ Compiled slides (2.25.1, §13b — written by `course-factory/compile/`, usable 
 | Class | Use it for |
 |---|---|
 | `.copy` | the words beside or under a picture at reading size; holds `.statement`, `.lead`, `.support` |
-| `.box` (+ `alt`) · `.call` | inside `.copy`: two options side by side in meaning (blue, amber) · the conclusion line (navy) |
+| `.box` (+ `alt`) · `.call` | inside `.copy`: a line set apart (blue - every box the same) · `alt` only where the build sheet names `box_alt`, the other of two options (grey, never amber) · the conclusion line (navy) |
 | `.inset` (`img` + `figcaption`) | inside `.copy`: a small real photograph under the words, its caption and credit |
 | `.fill.fig` | the picture's box: the drawing and its controls stacked, taking the room the words leave |
 | `.two-col.fig-wide` | two-col with the wider column for the picture |
@@ -54,7 +54,7 @@ Compiled slides (2.25.1, §13b — written by `course-factory/compile/`, usable 
 | `.act-ico` · `.act-lines` | the task slide's tablet sign · its lines grouped at reading size |
 | `.aside` | small drawings that belong with the words (mini figures on a photo slide) - compact, never pushing the words off the screen |
 | `.fig` · `.fig-wide` · `.fig-first` · `.own-numbers` · `.split` | the modifiers above, named on their own for the vocabulary check |
-| `.cur` · `.lit` on a `[data-i]` line | **set by a figure that steps** — the line it is on (amber) and the lines already shown (blue) |
+| `.cur` · `.lit` on a `[data-i]` line | **set by a figure that steps** — the line it is on (amber wash, amber ring and bar; it out-ranks every card look) and the lines already shown (blue). Amber on a line means "here now" only: no card at rest is amber. `audit_deck.js` fails a selected line that looks like itself or another line at rest |
 
 ## 2 · Photographs (`gb_compose.css`)
 
