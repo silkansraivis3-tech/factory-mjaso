@@ -53,7 +53,7 @@ for index,item in enumerate(items,1):
 <section class="slide-content {item['kind']}">{item['body']}</section>
 <footer class="bottomline"><span>Foundation / Visual learning</span><span class="progress">{''.join('<i'+(' class="on"' if n<=index else '')+'></i>' for n in range(1,total+1))}<span style="margin-left:15px">{index:02} / {total:02}</span></span></footer>
 </main><script src="../../assets/preview-runtime.js"></script></body></html>'''
-    (directory/'template.html').write_text(markup)
+    (directory/'template.html').write_text(markup,encoding='utf-8',newline='\n')
     contract=dict(id=item['id']+'.v1',status='design-preview-not-compiler-integrated',name=item['name'],entry='template.html',logicalViewport=dict(width=1280,height=800),scaling='uniform-contain',slots=[dict(name=s,required=True) for s in item['slots']],allowedExtras=[],overflowPolicy='report-do-not-shrink-text',contentChanges='require-source-approval',assets=['../../assets/template.css','../../assets/preview-runtime.js','../../assets/raleway-variable.ttf'],notes='Proposed contract. Current preview supplies sample content; production slot binding and compiler validation are not implemented.')
     if item['id']=='content-in-parts':
         contract['state']={'part':{'type':'integer','minimum':1,'maximum':3,'initial':1}}
@@ -62,10 +62,10 @@ for index,item in enumerate(items,1):
     if item in DENSE_TEMPLATES:
         contract['contentBalance']={'textShare':0.55,'visualShare':0.45,'textShareRange':[0.50,0.60],'visualShareRange':[0.40,0.50],'overflow':'use-more-parts-not-smaller-fonts'}
     if item['id'] in ('photo-explain','compare-two','opening'):contract['assets'].append('../../assets/maritime-preview.jpg')
-    (directory/'template.json').write_text(json.dumps(contract,ensure_ascii=False,indent=2)+'\n')
+    (directory/'template.json').write_text(json.dumps(contract,ensure_ascii=False,indent=2)+'\n',encoding='utf-8',newline='\n')
 
 catalog=[dict(id=x['id'],name=x['name'],en=x['en'],description=x['desc'],path='templates/'+x['id']+'/template.html',contract='templates/'+x['id']+'/template.json') for x in items]
-(ROOT/'catalog.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n')
-(ROOT/'assets/catalog.js').write_text('window.TEMPLATE_CATALOG='+json.dumps(catalog,ensure_ascii=False)+';\n')
-(ROOT/'course-layout-rules.json').write_text(json.dumps({'status':'proposed-not-compiler-enforced','maxConsecutiveTextOnlySlides':2,'denseContentRequiresAdjacentVisual':True,'splitBalance':{'textShareRange':[0.5,0.6],'visualShareRange':[0.4,0.5],'default':[0.55,0.45]},'allowedVisuals':['image','diagram','animation','interactive','model_3d'],'overflowPolicy':'paginate-approved-content-or-choose-another-template','textOnlyPolicy':'short-content-only','notes':'Course sequence must be validated by the compiler. This gallery is a template catalogue, not a course sequence. Dense preview layouts always include an adjacent visual.'},ensure_ascii=False,indent=2)+'\n')
+(ROOT/'catalog.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8',newline='\n')
+(ROOT/'assets/catalog.js').write_text('window.TEMPLATE_CATALOG='+json.dumps(catalog,ensure_ascii=False)+';\n',encoding='utf-8',newline='\n')
+(ROOT/'course-layout-rules.json').write_text(json.dumps({'status':'proposed-not-compiler-enforced','maxConsecutiveTextOnlySlides':2,'denseContentRequiresAdjacentVisual':True,'splitBalance':{'textShareRange':[0.5,0.6],'visualShareRange':[0.4,0.5],'default':[0.55,0.45]},'allowedVisuals':['image','diagram','animation','interactive','model_3d'],'overflowPolicy':'paginate-approved-content-or-choose-another-template','textOnlyPolicy':'short-content-only','notes':'Course sequence must be validated by the compiler. This gallery is a template catalogue, not a course sequence. Dense preview layouts always include an adjacent visual.'},ensure_ascii=False,indent=2)+'\n',encoding='utf-8',newline='\n')
 print('Built',len(items),'HTML templates and JSON contracts.')
