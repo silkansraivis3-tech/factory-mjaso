@@ -278,7 +278,9 @@ var AuditCompose = (function (w, d) {
 
   function wait(ms) { return new Promise(function (r) { w.setTimeout(r, ms); }); }
 
-  function run() {
+  /* only = [screen index from 0, ...]: the walk is the same, every screen in turn with Next, but just those screens are
+     measured (run_audits.py 2.57.0 - the slides changed since their last clean audit) */
+  function run(only) {
     var slides = d.querySelectorAll(CONFIG.slideSel);
     var start = d.querySelector(CONFIG.startBtnSel);
     var next = d.querySelector(CONFIG.nextBtnSel);
@@ -306,7 +308,7 @@ var AuditCompose = (function (w, d) {
     for (var i = 0; i < slides.length; i++) {
       /* jshint loopfunc:true */
       chain = chain.then(function () {
-        results.push(one());
+        results.push(only && only.indexOf(results.length) < 0 ? { verdict: "NOT MEASURED" } : one());
         next.click();
         return wait(CONFIG.settleMs);
       });
@@ -340,7 +342,7 @@ var AuditCompose = (function (w, d) {
   }
 
   /* .all() is the name audit_deck.js and audit_collide.js use; .run() is kept for what already calls it */
-  function all() { return run(); }
+  function all(only) { return run(only); }
 
   var api = { all: all, run: run, one: one, measure: measure, CONFIG: CONFIG };
   w.__audit = w.__audit || {};

@@ -667,7 +667,9 @@
     return res;
   }
 
-  function slice(from, to) {
+  /* only = [slide index from 0, ...]: measure just those slides, the whole deck loaded and its deck-wide checks as ever
+     (run_audits.py 2.57.0 - the slides changed since their last clean audit) */
+  function slice(from, to, only) {
     from = from || 0;
     var abort = guardViewport();
     if (abort) { return Promise.resolve(verdict(abort)); }
@@ -685,6 +687,7 @@
 
       function step(i) {
         if (i >= hi) { return Promise.resolve(); }
+        if (only && only.indexOf(i) < 0) { return step(i + 1); }
         activate(slides, i);
         revealFrags(slides[i]);
         fireResize();   /* re-run resize-bound per-slide layout hooks */
@@ -707,7 +710,7 @@
     });
   }
 
-  function all() { return slice(0, undefined); }
+  function all(only) { return slice(0, undefined, only); }
 
   var api = { all: all, slice: slice, spec: spec, auditSlide: auditSlide,
               CONFIG: CONFIG, settleMs: settleMs, sleep: sleep,

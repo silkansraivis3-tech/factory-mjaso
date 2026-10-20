@@ -2478,6 +2478,9 @@ def main(argv=None):
                          "plan (default: all three)")
     ap.add_argument("--no-drawing-check", action="store_true",
                     help="skip the automatic drawing check (L54) - only while working on a drawing, never before showing")
+    ap.add_argument("--full", action="store_true",
+                    help="the drawing check judges every slide and task page again, not only those changed since their last "
+                         "clean check (2.57.0)")
     o = ap.parse_args(argv)
     o.course = workspace.work_folder(o.course, create=False)
     p = cs.paths(o.course, o.module)
@@ -2626,11 +2629,17 @@ def main(argv=None):
     # L54 - every drawing whole and clean: checked by itself on every page just written, never left to memory
     if written and not o.no_drawing_check:
         import drawing_check
-        dprobs, dnote = drawing_check.check(written, root=mdir)
+        # 2.57.0 - a slide or task page judged clean before, and unchanged in everything it loads since, is not judged again
+        clean = workspace.claude_path(o.course, "_build", "%s_drawing_clean.json"
+                                      % (cs.mid(o.module) if str(o.module).isdigit() else str(o.module)))
+        dprobs, dnote = drawing_check.check(written, root=mdir, cache=clean, full=o.full)
         if dnote:
             print("\nNot checked: " + dnote)
         else:
-            print("Drawing check (L54): %s" % ("%d problem(s)" % len(dprobs) if dprobs else "every drawing whole and clean"))
+            sl, pg = drawing_check.LAST.get("slides", (0, 0)), drawing_check.LAST.get("pages", (0, 0))
+            print("Drawing check (L54): %s (judged %d of %d slides, %d of %d task pages - the rest unchanged since their last "
+                  "clean check)" % ("%d problem(s)" % len(dprobs) if dprobs else "every drawing whole and clean",
+                                    sl[0], sl[1], pg[0], pg[1]))
         probs += dprobs
     if not approved:
         probs.insert(0, "the script is not approved - what was built is a preview only, never handed over")

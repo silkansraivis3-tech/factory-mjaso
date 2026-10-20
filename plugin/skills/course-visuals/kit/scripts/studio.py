@@ -418,16 +418,24 @@ def page_html(spec, ctx, panel, parts_js, shot):
 
 class _Run(object):
     """a hidden browser writing what it read back into a file (a pipe left unread while another one finishes made
-    the browser stall)"""
+    the browser stall). 2.57.0: it holds one slot of the computer's pool (browser_slots.py) from its start until
+    wait() returns - start one and wait() for it before starting the next in the same thread"""
 
     def __init__(self, exe, url, size, prof, shot_png=None):
+        import browser_slots
         args = [exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--mute-audio",
                 "--no-default-browser-check", "--user-data-dir=" + prof, "--allow-file-access-from-files",
                 "--window-size=%d,%d" % size, "--virtual-time-budget=%d" % (6000 if shot_png else 20000)]
         args += ["--screenshot=" + shot_png] if shot_png else ["--dump-dom"]
         self.out = os.path.join(prof, "dom.html")
-        self.fh = io.open(self.out, "w", encoding="utf-8", errors="replace")
-        self.p = subprocess.Popen(args + [url], stdout=self.fh, stderr=subprocess.DEVNULL, cwd=prof)
+        self.slot = browser_slots.slot()
+        self.slot.__enter__()
+        try:
+            self.fh = io.open(self.out, "w", encoding="utf-8", errors="replace")
+            self.p = subprocess.Popen(args + [url], stdout=self.fh, stderr=subprocess.DEVNULL, cwd=prof)
+        except BaseException:
+            self.slot.__exit__(None, None, None)
+            raise
 
     def wait(self, timeout):
         try:
@@ -437,6 +445,8 @@ class _Run(object):
             self.p.kill()
             self.p.wait()
             ok = False
+        finally:
+            self.slot.__exit__(None, None, None)
         self.fh.close()
         return ok, io.open(self.out, encoding="utf-8", errors="replace").read() if ok else ""
 
@@ -502,13 +512,22 @@ def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), ste
                 # a screenshot's page is its whole window; a page read back (--dump-dom) is smaller than its window
                 if not sheet:
                     win = size if png else window_for(size, exe)
-                procs.append((size, mode, png, chrome(exe, uri(f), win, prof, png), (uri(f), win, png)))
-        for size, mode, png, p, again in procs:
-            ok, so = p.wait(30)
+                procs.append((size, mode, png, (uri(f), win, png, prof)))
+
+        def go(job):
+            # 2.57.0: each browser in a thread of its own, holding one slot of the computer's pool while it runs - a
+            # thread never holds one slot while it waits for the next (the runs used to start all at once, then be read)
+            size, mode, png, (u, win, shot, prof) = job
+            ok, so = chrome(exe, u, win, prof, shot).wait(30)
             if not ok:                                 # a hidden browser that stalls is tried once more, on its own
                 if os.environ.get("KIT_STUDIO_DEBUG"):
                     print("  (the %s run at %dx%d stalled - tried again)" % (mode, size[0], size[1]))
-                ok, so = chrome(exe, again[0], again[1], tempfile.mkdtemp(prefix="p_", dir=tmp), again[2]).wait(60)
+                ok, so = chrome(exe, u, win, tempfile.mkdtemp(prefix="p_", dir=tmp), shot).wait(60)
+            return ok, so
+        import concurrent.futures as cf
+        with cf.ThreadPoolExecutor(max_workers=max(1, len(procs))) as ex:
+            outs = list(ex.map(go, procs))
+        for (size, mode, png, _), (ok, so) in zip(procs, outs):
             key = "%dx%d" % size
             r = res.setdefault(key, {})
             if mode == "shot":

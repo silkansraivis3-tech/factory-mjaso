@@ -973,8 +973,9 @@ def main(argv=None):
     return code
 
 
-def run_all(course, module, fix=True, jobs=4):
-    """(exit code, report text, data) - the spec checks, then every slide figure measured at once, then the fixes"""
+def run_all(course, module, fix=True, jobs=4, full=False):
+    """(exit code, report text, data) - the spec checks, then every slide figure measured at once, then the fixes.
+    full = measure every figure, also those clean at the last run (build_module.py --full, 2.57.0)"""
     import compile_module as cm
     lines, data = [], {"figures": {}}
     # the spec checks (check_kit.py): a spec that would not draw is said first, and not measured
@@ -1022,7 +1023,7 @@ def run_all(course, module, fix=True, jobs=4):
             keys[sid] = sha(base + (m.group(0) if m else "") + io.open(sp, encoding="utf-8").read())
     except Exception:                                    # noqa: BLE001 - no cache: every figure is measured
         keys = {}
-    skipped = [x for x in todo if keys.get(x[0]) and cache.get(x[0]) == keys[x[0]]]
+    skipped = [] if full else [x for x in todo if keys.get(x[0]) and cache.get(x[0]) == keys[x[0]]]
     todo = [x for x in todo if x not in skipped]
     results, entry = {}, {}
     with cf.ThreadPoolExecutor(max_workers=jobs) as ex:

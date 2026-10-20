@@ -39,6 +39,8 @@ SKILLS = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 AUDIT = os.path.join(SKILLS, "course-module-ux", "measure", "scripts", "audit_drawing.js")
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "scripts"))
 from measure_slides import find_browser  # noqa: E402
+import browser_slots  # noqa: E402
+import check_cache  # noqa: E402
 
 SIZE = (1280, 800)
 OUT = "__audit_out"
@@ -47,15 +49,19 @@ WRITE = ("function __done(r){var p=document.createElement('pre');p.id='%s';p.tex
          "document.body.appendChild(p);}"
          "function __keep(f,pre){return {check:f.check,where:(pre||'')+f.where,part:f.part,other:f.other||'',detail:f.detail||''};}" % OUT)
 # a deck: every slide in turn, as the deck shows it (audit_drawing.js all() presses Start). 2.56.0: a long deck is checked
-# in slices side by side - each browser keeps only its slides [__LO, __HI) and the finding's slide number is put back
-# in <head>, before the page is read: a slide outside the slice is taken out as the parser adds it, so neither the deck
-# nor the figure kit ever lays it out (removing it after the load left every browser drawing the whole deck)
-SLICE = ("<script>(function(){var i=0,LO=%d,HI=%d;new MutationObserver(function(ms){ms.forEach(function(m){"
+# in slices side by side - each browser keeps only its slides and the finding's slide number is put back. Put
+# in <head>, before the page is read: a slide not kept is taken out as the parser adds it, so neither the deck
+# nor the figure kit ever lays it out (removing it after the load left every browser drawing the whole deck).
+# 2.57.0: the slides kept are a list (the ones changed since their last clean check), and the browser says how many
+# slides it counted, so a deck the fingerprints split differently is checked whole instead
+SLICE = ("<script>(function(){var i=0,K=%s;window.__cfSlides=0;new MutationObserver(function(ms){ms.forEach(function(m){"
          "[].forEach.call(m.addedNodes,function(n){if(n.nodeType===1&&n.classList&&n.classList.contains('slide')"
-         "&&!(n.parentNode&&n.parentNode.closest&&n.parentNode.closest('.slide'))){if(i<LO||i>=HI){n.parentNode.removeChild(n);}i++;}});"
+         "&&!(n.parentNode&&n.parentNode.closest&&n.parentNode.closest('.slide'))){if(!K[i]){n.parentNode.removeChild(n);}"
+         "i++;window.__cfSlides=i;}});"
          "});}).observe(document.documentElement,{childList:true,subtree:true});})();</script>")
 DECK = WRITE + ("setTimeout(function(){AuditDrawing.all().then(function(r){"
-                "__done({drawings:r.drawings||0,aborted:r.ABORTED||'',findings:(r.findings||[]).map(function(f){return __keep(f)})});"
+                "__done({drawings:r.drawings||0,aborted:r.ABORTED||'',seen:window.__cfSlides,"
+                "findings:(r.findings||[]).map(function(f){return __keep(f)})});"
                 "},function(e){__done({error:String(e)})});},300);")
 # a task page: every question that shows a picture, with the shared drawing moved into it - as gb_answer.js does
 TASK = WRITE + ("setTimeout(function(){try{var out=[],n=0,ab='';"
@@ -69,12 +75,13 @@ TASK = WRITE + ("setTimeout(function(){try{var out=[],n=0,ab='';"
                 "__done({drawings:n,aborted:ab,findings:out});}catch(e){__done({error:String(e)});}},300);")
 
 
-def wrapper(page, deck, rng=None):
+def wrapper(page, deck, keep=None):
     """the page as it is, read from its own folder (<base>), with the probe and its runner added at the end;
-    rng = (first, end) keeps only those slides of a deck"""
+    keep = [slide index, ...] (from 0) keeps only those slides of a deck"""
     text = io.open(page, encoding="utf-8").read()
     base = '<base href="%s/">' % Path(os.path.dirname(os.path.abspath(page))).as_uri()
-    text = re.sub(r"<head>", "<head>" + base + (SLICE % rng if deck and rng else ""), text, count=1, flags=re.I)
+    kept = SLICE % json.dumps({str(i): 1 for i in keep}) if deck and keep is not None else ""
+    text = re.sub(r"<head>", lambda m: "<head>" + base + kept, text, count=1, flags=re.I)
     tail = '<script src="%s"></script><script>%s</script>' % (Path(AUDIT).as_uri(), DECK if deck else TASK)
     i = text.lower().rfind("</body>")
     return text[:i] + tail + text[i:] if i >= 0 else text + tail
@@ -93,9 +100,9 @@ def window_for(exe, size=SIZE):
             f = os.path.join(tmp, "cal.html")
             io.open(f, "w", encoding="utf-8").write("<html><body><script>var p=document.createElement('pre');p.id='cal';"
                                                     "p.textContent=innerWidth+'x'+innerHeight;document.body.appendChild(p)</script></body></html>")
-            p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--user-data-dir=" +
-                                os.path.join(tmp, "p"), "--window-size=1280,800", "--dump-dom", Path(f).as_uri()],
-                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
+            p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--user-data-dir=" +
+                                   os.path.join(tmp, "p"), "--window-size=1280,800", "--dump-dom", Path(f).as_uri()],
+                                  capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
             m = re.search(r'<pre id="cal">(\d+)x(\d+)</pre>', p.stdout or "")
             _WIN["d"] = (1280 - int(m.group(1)), 800 - int(m.group(2))) if m else (0, 0)
         except (OSError, subprocess.TimeoutExpired):
@@ -109,36 +116,41 @@ def is_deck(page):
     return os.path.basename(page).lower() == "index.html" and os.path.basename(os.path.dirname(page)).lower() == "presentation"
 
 
-SLIDE_TAG = re.compile(r"<(?:section|div)\b[^>]*\bclass=\"(?:[^\"]*\s)?slide(?:\s[^\"]*)?\"", re.I)
+SLIDE_TAG = check_cache.SLIDE_TAG
 
 
-def slices(page, jobs):
-    """a deck's slides cut into ranges for `jobs` browsers (at least 3 slides each); [None] = the page whole"""
-    if jobs < 2 or not is_deck(page):
+def slices(page, jobs, todo=None):
+    """a deck's slides cut into lists for `jobs` browsers (at least 3 slides each); [None] = the page whole.
+    todo = the slides to check (2.57.0: the ones changed since their last clean check), else every slide"""
+    if not is_deck(page):
         return [None]
     n = len(SLIDE_TAG.findall(io.open(page, encoding="utf-8").read()))
-    per = max(3, -(-n // jobs))
-    return [None] if n <= per else [(lo, min(n, lo + per)) for lo in range(0, n, per)]
+    todo = list(range(n)) if todo is None else todo
+    if len(todo) == n and (jobs < 2 or n <= max(3, -(-n // jobs))):
+        return [None]
+    per = max(3, -(-len(todo) // max(1, jobs)))
+    return [todo[k:k + per] for k in range(0, len(todo), per)]
 
 
-def renumber(res, rng):
-    """a slice's findings with the deck's own slide numbers ("slide 2 (s05)" in the slice starting at 10 is slide 12)"""
-    if not rng:
+def renumber(res, keep):
+    """a slice's findings with the deck's own slide numbers ("slide 2 (s05)" of the slides [9, 11, 12] is slide 12)"""
+    if keep is None:
         return res
     for f in res.get("findings", []):
-        f["where"] = re.sub(r"^slide (\d+)", lambda m: "slide %d" % (int(m.group(1)) + rng[0]), f.get("where", ""))
+        f["where"] = re.sub(r"^slide (\d+)", lambda m: "slide %d" % (keep[int(m.group(1)) - 1] + 1)
+                            if 0 < int(m.group(1)) <= len(keep) else m.group(0), f.get("where", ""))
     return res
 
 
-def run_page(exe, page, prof, tmp, rng=None):
+def run_page(exe, page, prof, tmp, keep=None):
     deck = is_deck(page)
-    w = os.path.join(tmp, "check_%d_%s.html" % (abs(hash(page)), "%d-%d" % rng if rng else "all"))
-    io.open(w, "w", encoding="utf-8").write(wrapper(page, deck, rng))
+    w = os.path.join(tmp, "check_%d_%s.html" % (abs(hash(page)), "-".join(map(str, keep[:1] + keep[-1:])) if keep else "all"))
+    io.open(w, "w", encoding="utf-8").write(wrapper(page, deck, keep))
     try:
-        p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--mute-audio",
-                            "--user-data-dir=" + prof, "--allow-file-access-from-files", "--window-size=%d,%d" % window_for(exe),
-                            "--virtual-time-budget=%d" % (120000 if deck else 8000), "--dump-dom", Path(w).as_uri()],
-                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
+        p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--mute-audio",
+                               "--user-data-dir=" + prof, "--allow-file-access-from-files", "--window-size=%d,%d" % window_for(exe),
+                               "--virtual-time-budget=%d" % (120000 if deck else 8000), "--dump-dom", Path(w).as_uri()],
+                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
     except (OSError, subprocess.TimeoutExpired) as err:
         return {"error": str(err)}
     m = re.search(r'<pre id="%s">(.*?)</pre>' % OUT, p.stdout, re.S)
@@ -161,29 +173,80 @@ def jobs_for(n):
     return max(1, min(n, want or min(8, max(1, (os.cpu_count() or 2) // 2))))
 
 
-def check(pages, root=None):
-    """(problems, a note when the check could not run) for the built pages"""
+LAST = {}      # what the last check() judged: {"slides": (judged, of), "pages": (judged, of)} - for the build's note
+
+
+def check(pages, root=None, cache=None, full=False):
+    """(problems, a note when the check could not run) for the built pages.
+    cache = a JSON file of the slides and task pages last judged clean (check_cache.py, 2.57.0): one whose fingerprint
+    is unchanged is not judged again; full = judge every one (and record the clean ones)"""
+    LAST.clear()
     exe = find_browser()
     if not exe:
         return [], ("the drawing check (parts poking out, cut off, crowded labels) did not run - no Chrome or Edge on this "
                     "computer; set CF_BROWSER to one, or run AuditDrawing.page() / .all() by hand in a browser")
     probs = []
     prof, tmp = tempfile.mkdtemp(prefix="cf_drawing_"), tempfile.mkdtemp(prefix="cf_pages_")
+    store = check_cache.Cache(cache, use=not full)
     try:
         window_for(exe)                      # measured once, before the pages run side by side
+        salt = check_cache.salt(AUDIT, os.path.abspath(__file__), extra="%s|%dx%d" % (check_cache.browser_id(exe), *window_for(exe)))
+        prints, todo = {}, {}
+        for page in pages:                   # [(unit key, fingerprint)] per page, and the slides to judge (None = all)
+            fps = check_cache.fingerprints(page, is_deck(page), salt) if cache else None
+            name = os.path.relpath(page, root).replace("\\", "/") if root else page
+            prints[page] = [("%s#%d" % (name, k), fp) for k, (_, fp) in enumerate(fps)] if fps else None
+            todo[page] = None if not fps else [k for k, (key, fp) in enumerate(prints[page]) if not store.clean(key, fp)]
+        slides = [p for p in pages if is_deck(p)]
+        n_sl = sum(len(prints[p]) if prints[p] else len(SLIDE_TAG.findall(io.open(p, encoding="utf-8").read())) for p in slides)
+        LAST["slides"] = (sum(len(todo[p]) if todo[p] is not None else len(SLIDE_TAG.findall(io.open(p, encoding="utf-8").read()))
+                              for p in slides), n_sl)
+        LAST["pages"] = (sum(1 for p in pages if not is_deck(p) and todo[p] != []), len(pages) - len(slides))
         import concurrent.futures as cf
         n = jobs_for(8)
-        work = [(page, rng) for page in pages for rng in slices(page, n)]
-        with cf.ThreadPoolExecutor(max_workers=min(n, len(work))) as ex:
-            # a browser locks its profile folder: one per piece of work
-            got = list(ex.map(lambda iw: renumber(run_page(exe, iw[1][0], os.path.join(prof, "p%d" % iw[0]), tmp, iw[1][1]),
-                                                  iw[1][1]), enumerate(work)))
+
+        def judge(work):
+            if not work:
+                return []
+            with cf.ThreadPoolExecutor(max_workers=min(n, len(work))) as ex:
+                # a browser locks its profile folder: one per piece of work
+                return list(ex.map(lambda iw: renumber(run_page(exe, iw[1][0], os.path.join(prof, "p%d_%d" % (len(work), iw[0])),
+                                                                tmp, iw[1][1]), iw[1][1]), enumerate(work)))
+        # a deck whose results are recorded always runs with the counting script (every slide kept when it runs whole), so
+        # a finding's "slide N" is known to be the fingerprints' slide N
+        work = [(page, list(range(len(prints[page]))) if keep is None and prints[page] and is_deck(page) else keep)
+                for page in pages if todo[page] != [] for keep in slices(page, n, todo[page])]
+        got = judge(work)
+        # a deck the browser counted differently from its fingerprints (a slide in a slide, an odd tag): judged whole
+        odd = sorted({p for (p, keep), r in zip(work, got) if keep is not None and not r.get("error")
+                      and r.get("seen") != (len(prints[p]) if prints[p] else len(SLIDE_TAG.findall(io.open(p, encoding="utf-8").read())))})
+        if odd:
+            work, got = [w for w in work if w[0] not in odd], [r for w, r in zip(work, got) if w[0] not in odd]
+            again = [(p, None) for p in odd]
+            work, got = work + again, got + judge(again)
+            for p in odd:
+                prints[p] = None
         done = []                            # one answer per page, its slices joined in slide order
         for page in pages:
-            parts = [r for (p, _), r in zip(work, got) if p == page]
-            bad = [r for r in parts if r.get("error") or r.get("aborted")]
-            done.append(bad[0] if bad else {"drawings": sum(r.get("drawings", 0) for r in parts),
-                                            "findings": [f for r in parts for f in r.get("findings", [])]})
+            parts = [(keep, r) for (p, keep), r in zip(work, got) if p == page]
+            bad = [r for _, r in parts if r.get("error") or r.get("aborted")]
+            done.append(bad[0] if bad else {"drawings": sum(r.get("drawings", 0) for _, r in parts),
+                                            "findings": [f for _, r in parts for f in r.get("findings", [])]})
+            # 2.57.0 - what was judged clean is recorded; a slide or page with a finding, or that did not finish, is not
+            units = prints.get(page)
+            if not units:
+                continue
+            judged = [k for keep, _ in parts for k in (keep if keep is not None else range(len(units)))]
+            if bad:
+                hit = set(judged)
+            elif is_deck(page):
+                nums = [re.match(r"slide (\d+)", f.get("where", "")) for f in done[-1]["findings"]]
+                hit = set(judged) if not all(nums) else {int(m.group(1)) - 1 for m in nums}
+            else:
+                hit = set(judged) if done[-1]["findings"] else set()
+            for k in judged:
+                (store.bad(units[k][0]) if k in hit else store.ok(*units[k]))
+        store.save()
         for page, res in zip(pages, done):
             name = os.path.relpath(page, root).replace("\\", "/") if root else page
             if res.get("error") or res.get("aborted"):

@@ -27,6 +27,7 @@ SKILLS = os.path.dirname(os.path.dirname(KIT))
 AUDIT = os.path.join(SKILLS, "course-module-ux", "measure", "scripts", "audit_drawing.js")
 sys.path.insert(0, os.path.join(SKILLS, "course-factory", "compile", "scripts"))
 import drawing_check as dc  # noqa: E402
+import browser_slots  # noqa: E402  - on the path drawing_check put it on; one pool of hidden browsers (2.57.0)
 
 FAILS = []
 
@@ -70,7 +71,7 @@ def run(theme):
         page = os.path.join(tmp, "gallery.html")
         io.open(page, "w", encoding="utf-8").write(t)
         url = Path(page).as_uri() + ("?theme=light" if theme == "light" else "")
-        p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
+        p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
                             "--user-data-dir=" + os.path.join(tmp, "p"), "--allow-file-access-from-files",
                             "--window-size=%d,%d" % dc.window_for(exe), "--virtual-time-budget=60000", "--dump-dom", url],
                            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)

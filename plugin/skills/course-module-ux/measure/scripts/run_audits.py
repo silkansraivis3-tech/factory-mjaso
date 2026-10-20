@@ -36,6 +36,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from test_audit_drawing import browser  # noqa: E402  - the one place that finds Chrome or Edge
+sys.path.insert(0, str(HERE.parents[2] / "course-factory" / "scripts"))
+import browser_slots  # noqa: E402  - one pool of hidden browsers for the whole computer (2.57.0)
+import check_cache  # noqa: E402  - a slide audited clean is not measured again until it changes (2.57.0)
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 PROBES = (("deck", "audit_deck.js", "AuditDeck"), ("collide", "audit_collide.js", "AuditCollide"),
@@ -48,7 +51,7 @@ RUN = """<script>
   var n=names[i][0], g=window[names[i][1]];
   window.__auditExit=undefined;
   try{ if(!g){o[n]={ABORTED:"probe did not load"}; continue;}
-       var r=await g.all(); o[n]={res:r, exit:window.__auditExit}; }
+       var r=await g.all(%s); o[n]={res:r, exit:window.__auditExit}; }
   catch(e){ o[n]={ABORTED:String(e&&e.stack||e)}; }
  }
  o.viewport=[window.innerWidth,window.innerHeight];
@@ -74,9 +77,9 @@ def frame_offset(exe):
     try:
         page = Path(d) / "cal.html"
         page.write_text('<body><pre id="o"></pre><script>o.textContent=innerWidth+"x"+innerHeight</script>', encoding="utf-8")
-        p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + os.path.join(d, "p"),
-                            "--window-size=1280,800", "--virtual-time-budget=1000", "--dump-dom", page.as_uri()],
-                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
+        p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + os.path.join(d, "p"),
+                               "--window-size=1280,800", "--virtual-time-budget=1000", "--dump-dom", page.as_uri()],
+                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
         m = re.search(r'<pre id="o">(\d+)x(\d+)</pre>', p.stdout)
         return (max(0, 1280 - int(m.group(1))), max(0, 800 - int(m.group(2)))) if m else (0, 0)
     except (subprocess.TimeoutExpired, OSError):
@@ -85,20 +88,21 @@ def frame_offset(exe):
         shutil.rmtree(d, ignore_errors=True)
 
 
-def measure(exe, deck, size, budget, offset=(0, 0)):
-    """-> (results by probe, error text). The injected page is removed whatever happens."""
+def measure(exe, deck, size, budget, offset=(0, 0), only=None):
+    """-> (results by probe, error text). The injected page is removed whatever happens. only = [slide index from 0, ...]:
+    the whole deck is loaded, just those slides are measured (2.57.0)"""
     size = (size[0] + offset[0], size[1] + offset[1])
     scripts = "".join('<script src="%s"></script>' % (HERE / js).as_uri() for _, js, _ in PROBES)
-    inject = scripts + RUN % json.dumps([[n, g] for n, _, g in PROBES])
+    inject = scripts + RUN % (json.dumps([[n, g] for n, _, g in PROBES]), json.dumps(only))
     html = deck.read_text(encoding="utf-8")
     i = html.lower().rfind("</body>")
     page = deck.with_name("_audit_%d.html" % os.getpid())
     prof = tempfile.mkdtemp(prefix="run_audits_")
     try:
         page.write_text(html[:i] + inject + html[i:] if i >= 0 else html + inject, encoding="utf-8")
-        p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
-                            "--window-size=%d,%d" % size, "--virtual-time-budget=%d" % budget, "--dump-dom", page.as_uri()],
-                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
+        p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
+                               "--window-size=%d,%d" % size, "--virtual-time-budget=%d" % budget, "--dump-dom", page.as_uri()],
+                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
     except subprocess.TimeoutExpired:
         return None, "the browser did not finish in 15 minutes"
     finally:
@@ -196,6 +200,36 @@ def summarise(name, rec):
     return ("PASS" if ex == 0 else "FAIL"), "%s   %s" % (word, tail), lines
 
 
+def slides_hit(res):
+    """{slide index from 0} that any probe found something on - None when a finding cannot be put on one slide (an abort,
+    the page scrolling sideways, a failure with no slide named): then no slide of the run is recorded clean. A compose
+    REVIEW screen counts too, so it is listed on every run"""
+    hit = set()
+    for name, _, _ in PROBES:
+        rec = res.get(name) or {}
+        r, ex = rec.get("res") or {}, rec.get("exit")
+        if "ABORTED" in rec or r.get("ABORTED") or ex not in (0, 1):
+            return None
+        if name == "deck":
+            if r.get("linksInsideSlides") or r.get("docHScroll"):
+                return None
+            found = [s.get("slide") for s in (r.get("failingSlides") or []) + (r.get("overfilledSlides") or [])]
+        elif name == "collide":
+            found = [s.get("slide") for s in r.get("slides") or r.get("failingSlides") or []
+                     if s.get("collisions") or s.get("total") or s.get("n")]
+        else:
+            found = [p.get("n") for p in r.get("problems") or []]
+        if not all(isinstance(x, int) for x in found) or (ex == 1 and not found):
+            return None
+        hit |= {x - 1 for x in found}
+    return hit
+
+
+def counted(res):
+    """how many slides each probe saw (the deck's and collide's slidesTotal, compose's screens)"""
+    return {((res.get(n) or {}).get("res") or {}).get("slidesTotal" if n != "compose" else "screens") for n, _, _ in PROBES}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("deck")
@@ -203,6 +237,9 @@ def main(argv=None):
     ap.add_argument("--json", metavar="FILE", help="write every probe's full result here (outside the course)")
     ap.add_argument("--budget", type=int, default=240000, help="the browser's virtual-time budget in ms (default 240000)")
     ap.add_argument("--quiet", action="store_true", help="only the failing lines")
+    ap.add_argument("--cache", metavar="FILE", help="the slides last audited clean (2.57.0): a slide unchanged in everything "
+                                                    "it loads since is not measured again (outside the course)")
+    ap.add_argument("--full", action="store_true", help="with --cache: measure every slide again (and record the clean ones)")
     a = ap.parse_args(argv)
     exe = browser()
     if not exe:
@@ -218,14 +255,36 @@ def main(argv=None):
             sizes.append((int(m.group(1)), int(m.group(2))))
     worst, full = 0, {}
     offset = frame_offset(exe)
+    store, judged = check_cache.Cache(a.cache, use=not a.full), []
+    salt = check_cache.salt(*[str(HERE / js) for _, js, _ in PROBES], __file__,
+                            extra="%s|%d|%s" % (check_cache.browser_id(exe), a.budget, offset))
+    fps = check_cache.fingerprints(str(deck), True, salt) if a.cache else None
     for size in sizes:
-        res, err = measure(exe, deck, size, a.budget, offset)
         label = "%dx%d" % size
+        units = [("%s#%d" % (label, k), check_cache.sha(fp, label)) for k, (_, fp) in enumerate(fps)] if fps else None
+        todo = [k for k, (key, fp) in enumerate(units) if not store.clean(key, fp)] if units else None
+        if todo == []:
+            judged.append("0 of %d slides at %s" % (len(units), label))
+            if not a.quiet:
+                print("%s  unchanged  every slide clean at its last audit (%d slides) - not measured again" % (label, len(units)))
+            continue
+        only = todo if units and len(todo) < len(units) else None
+        res, err = measure(exe, deck, size, a.budget, offset) if only is None else measure(exe, deck, size, a.budget, offset, only)
+        if res is not None and units and counted(res) != {len(units)}:
+            # the browser counted the slides differently from the fingerprints: measured whole, nothing recorded
+            if only is not None:
+                res, err = measure(exe, deck, size, a.budget, offset)
+            units, only = None, None
         if res is None:
             print("%s  NOT MEASURED  %s" % (label, err))
             worst = 2
             continue
         full[label] = res
+        if units:
+            judged.append("%d of %d slides at %s" % (len(only or units), len(units), label))
+            hit = slides_hit(res)
+            for k in (only if only is not None else range(len(units))):
+                (store.bad(units[k][0]) if hit is None or k in hit else store.ok(*units[k]))
         for name, _, _ in PROBES:
             st, line, detail = summarise(name, res.get(name) or {"ABORTED": "no result"})
             worst = max(worst, {"PASS": 0, "FAIL": 1, "ABORT": 2}[st])
@@ -236,9 +295,11 @@ def main(argv=None):
                 print("            " + d)
             if len(detail) > 12:
                 print("            ... %d more (--json has them all)" % (len(detail) - 12))
+    store.save()
     if a.json:
         Path(a.json).write_text(json.dumps(full, ensure_ascii=False, indent=1), encoding="utf-8")
-    print("run_audits: %s" % ("every probe passed" if worst == 0 else "a probe failed" if worst == 1 else "something could not be measured"))
+    print("run_audits: %s%s" % ("every probe passed" if worst == 0 else "a probe failed" if worst == 1 else "something could not be measured",
+                                " (measured %s; the rest unchanged since their last clean audit)" % ", ".join(judged) if judged else ""))
     return worst
 
 

@@ -23,6 +23,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir, homedir } from 'node:os';
 import { join, resolve, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { takeSlot } from './browser_slots.mjs';
 
 const args = process.argv.slice(2);
 const opt = {}, pos = [];
@@ -49,6 +50,7 @@ function findChrome(explicit) {
 /* ------------------------------------------------------------------ the browser */
 const chromePath = findChrome(opt.chrome);
 if (!chromePath) { console.error('review_sheets: no Chrome or Edge (set CF_BROWSER)'); process.exit(2); }
+await takeSlot();             // 2.57.0: one slot of the computer's pool of hidden browsers, held until the process exits
 const profile = mkdtempSync(join(tmpdir(), 'cf-review-'));
 const chrome = spawn(chromePath, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, `--window-size=${W},${H}`,
   '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--mute-audio', '--allow-file-access-from-files',

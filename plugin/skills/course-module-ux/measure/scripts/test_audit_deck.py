@@ -26,7 +26,7 @@ from html import unescape
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from test_audit_drawing import browser  # noqa: E402
+from test_audit_drawing import browser, browser_slots  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 FIX = Path(__file__).resolve().parent.parent / "fixtures" / "deck_rise_in.html"
@@ -41,7 +41,7 @@ def check(name, ok, detail=""):
 
 
 def run(exe, prof, query="", fix=FIX):
-    p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
+    p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
                         "--window-size=1280,800", "--virtual-time-budget=4000", "--dump-dom", fix.as_uri() + query],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
     m = re.search(r'<pre id="out">(.*?)</pre>', p.stdout, re.S)

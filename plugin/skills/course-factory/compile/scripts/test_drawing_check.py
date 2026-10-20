@@ -40,8 +40,10 @@ def check(name, ok, detail=""):
 
 def main():
     check("a deck is cut into slices of at least 3 slides; a task page and a short deck stay whole",
-          dc.slices("x/tasks/a.html", 7) == [None] and dc.renumber({"findings": [{"where": "slide 2 (s05)"}]}, (9, 12))
+          dc.slices("x/tasks/a.html", 7) == [None] and dc.renumber({"findings": [{"where": "slide 2 (s05)"}]}, [9, 10, 11])
           ["findings"][0]["where"] == "slide 11 (s05)")
+    check("2.57.0 a slice is the list of slides it keeps: the 2nd of slides 3, 8, 12 is slide 9",
+          dc.renumber({"findings": [{"where": "slide 2 (s09) step 1"}]}, [2, 8, 11])["findings"][0]["where"] == "slide 9 (s09) step 1")
     if not dc.find_browser():
         print("SKIP the browser part - no Chrome or Edge")
         return 1 if FAILS else 0
@@ -52,8 +54,10 @@ def main():
         body = "".join('<section class="slide%s" id="s%02d">%s</section>' % (" active" if i == 0 else "", i + 1,
                                                                              BAD if i == 6 else GOOD) for i in range(8))
         io.open(deck, "w", encoding="utf-8").write(DECK % body)
-        check("... an 8-slide deck is cut into 3 slices for 3 browsers", dc.slices(deck, 3) == [(0, 3), (3, 6), (6, 8)],
+        check("... an 8-slide deck is cut into 3 slices for 3 browsers", dc.slices(deck, 3) == [[0, 1, 2], [3, 4, 5], [6, 7]],
               dc.slices(deck, 3))
+        check("... and only the slides asked for, when some are unchanged (2.57.0)", dc.slices(deck, 3, [1, 6]) == [[1, 6]],
+              dc.slices(deck, 3, [1, 6]))
         out = {}
         for jobs in ("1", "3"):
             os.environ["CF_DRAWING_JOBS"] = jobs

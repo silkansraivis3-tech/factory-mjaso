@@ -28,6 +28,9 @@ ends with each stage's seconds (2.52.0).
 A figures-only round (2.56.0): when the last full build failed on nothing but the figures, and the script and the build
 sheet are as they were then, a build whose figures still fail stops after them (~1 min, not ~3) - fix the figures in the
 studio, run again; once they are clean the whole build runs. --full runs everything every time. PASS is only ever a full run.
+2.57.0: the drawing check and the audits judge again only the slides and task pages changed in anything they load since
+their last clean check (check_cache.py; the figures already did) - a failing one every time; --full judges everything.
+Every hidden browser takes a slot of one pool for the whole computer (browser_slots.py, CF_BROWSER_SLOTS).
 Exit 0 PASS, 1 problems to fix, 2 stopped (the compiler refused: not approved, changed by hand, design files edited).
 """
 from __future__ import annotations
@@ -205,7 +208,8 @@ def main(argv=None):
     ap.add_argument("--no-review", action="store_true", help="no review sheets after a pass")
     ap.add_argument("--draft", action="store_true")
     ap.add_argument("--force", action="store_true")
-    ap.add_argument("--full", action="store_true", help="never stop after the figures - every stage, every run")
+    ap.add_argument("--full", action="store_true", help="never stop after the figures - every stage, every run; the drawing "
+                                                        "check and the audits judge every slide and page again (2.57.0)")
     o = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     t0 = time.time()
@@ -250,7 +254,7 @@ def main(argv=None):
     if str(o.module).isdigit():
         try:
             import figure_fit
-            fcode, fig_text, _ = figure_fit.run_all(course, o.module, fix=not o.no_fix)
+            fcode, fig_text, _ = figure_fit.run_all(course, o.module, fix=not o.no_fix, full=o.full)
         except Exception as err:                     # noqa: BLE001 - the compile's own drawing check still runs
             fcode, fig_text = 1, "Figures: the pre-check could not run (%s) - the compile's drawing check still judges them" % err
         logged("figures (figure_fit.py)", fig_text)
@@ -278,6 +282,7 @@ def main(argv=None):
     cmd = [PY, os.path.join(HERE, "compile_module.py"), course, "--module", str(o.module)]
     cmd += ["--draft"] if o.draft else []
     cmd += ["--force"] if o.force else []
+    cmd += ["--full"] if o.full else []          # 2.57.0: the drawing check judges every slide and page, not only the changed
     ccode, cout = run(cmd)
     logged("compile_module.py", cout)
     t = timed("compile (compile_module.py, its drawing check)", t)
@@ -330,7 +335,9 @@ def main(argv=None):
     }
     sizes = ["1024x768"] + [v for v in o.viewport if v not in ("1280x800", "1024x768")]
     if os.path.isfile(deck):
-        a = [PY, os.path.join(MEASURE, "run_audits.py"), deck, "--quiet"]
+        # 2.57.0 - a slide audited clean and unchanged in everything it loads is not measured again (--full: every slide)
+        a = [PY, os.path.join(MEASURE, "run_audits.py"), deck, "--quiet", "--cache", os.path.join(logdir, "%s_audits_clean.json" % m)]
+        a += ["--full"] if o.full else []
         for v in sizes:
             a += ["--viewport", v]
         jobs["audits 1280x800 %s" % " ".join(sizes)] = a

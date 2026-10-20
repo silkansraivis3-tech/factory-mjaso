@@ -31,6 +31,8 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = Path(__file__).resolve().parent
 FIX = HERE.parent / "fixtures"
 PASS, FAIL = [], []
+sys.path.insert(0, str(HERE.parents[2] / "course-factory" / "scripts"))
+import browser_slots  # noqa: E402  - one pool of hidden browsers for the whole computer (2.57.0)
 
 
 def check(name, ok, detail=""):
@@ -53,7 +55,7 @@ def browser():
 
 
 def page_out(exe, html, prof, hash_=""):
-    p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
+    p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
                         "--window-size=1280,2600", "--virtual-time-budget=4000", "--dump-dom", html.as_uri() + hash_],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
     m = re.search(r'<pre id="out">(.*?)</pre>', p.stdout, re.S)
@@ -73,7 +75,7 @@ def gallery_contrast(exe, prof):
     i = text.lower().rfind("</body>")
     page = Path(prof) / "gallery_probe.html"
     page.write_text(text[:i] + tail + text[i:], encoding="utf-8")
-    p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
+    p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
                         "--window-size=1280,2600", "--virtual-time-budget=9000", "--dump-dom", page.as_uri()],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=200)
     m = re.search(r'<pre id="out">(.*?)</pre>', p.stdout, re.S)
