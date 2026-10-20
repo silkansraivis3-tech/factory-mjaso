@@ -57,6 +57,15 @@ def main():
     check("a passing package and a stop (exit 2) are passed through untouched",
           b.own_package_findings(0, "Ready", "module01") == (0, "Ready", 0)
           and b.own_package_findings(2, "Stopped", "module01") == (2, "Stopped", 0))
+    last = {"inputs": "k1", "only_figures": True}
+    check("2.55.0 a figures-only round: only figures fail, the last full build failed on figures alone, same inputs -> stop",
+          b.figures_only_round(["figures"], False, last, "k1"))
+    check("... never when the script or build sheet changed, the last build failed on more, --full, or nothing failed yet",
+          not b.figures_only_round(["figures"], False, last, "k2")
+          and not b.figures_only_round(["figures"], False, {"inputs": "k1", "only_figures": False}, "k1")
+          and not b.figures_only_round(["figures"], True, last, "k1")
+          and not b.figures_only_round([], False, last, "k1")
+          and not b.figures_only_round(["figures"], False, {}, "k1"))
     blanks_part()
     stages_part()
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))

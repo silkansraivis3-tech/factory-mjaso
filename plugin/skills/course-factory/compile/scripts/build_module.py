@@ -25,13 +25,18 @@ Printed: each failure with its file, slide or question, and what to do; a figure
 step; then one line - PASS, or how many problems. Everything else is in the full log (its path is the last line), which
 ends with each stage's seconds (2.52.0).
 --no-course-pages: a module agent in a parallel build (orchestration Rule 3 - one process writes COURSE.html).
+A figures-only round (2.55.0): when the last full build failed on nothing but the figures, and the script and the build
+sheet are as they were then, a build whose figures still fail stops after them (~1 min, not ~3) - fix the figures in the
+studio, run again; once they are clean the whole build runs. --full runs everything every time. PASS is only ever a full run.
 Exit 0 PASS, 1 problems to fix, 2 stopped (the compiler refused: not approved, changed by hand, design files edited).
 """
 from __future__ import annotations
 
 import argparse
 import concurrent.futures as cf
+import hashlib
 import io
+import json
 import os
 import re
 import subprocess
@@ -159,6 +164,32 @@ def workspace_figdir(course, module):
     return workspace.claude_path(course, "figures", cs.mid(module))
 
 
+def inputs_key(course, module):
+    """the words and the build sheet as they are now - what everything after the figures is built from"""
+    import content_script as cs
+    import compile_module as cm
+    h = hashlib.sha256()
+    for p in (cs.paths(course, module)["script"], cm.build_path(course, module)):
+        try:
+            h.update(io.open(p, "rb").read())
+        except OSError:
+            h.update(b"-")
+    return h.hexdigest()[:16]
+
+
+def last_full(logdir, m):
+    try:
+        return json.load(io.open(os.path.join(logdir, "%s_last.json" % m), encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def figures_only_round(fails, full, last, key):
+    """stop after the figures? Only when they are all that fails so far, the last full build failed on nothing but
+    figures (or drawing findings of the compile), and it was built from these same words and build sheet"""
+    return fails == ["figures"] and not full and bool(last.get("only_figures")) and last.get("inputs") == key
+
+
 def figure_slides(text):
     """the slide ids the figure pre-check already reported (their compile drawing findings say the same thing again)"""
     return set(re.findall(r"^  (s\d+\w*) \(", text, re.M))
@@ -174,6 +205,7 @@ def main(argv=None):
     ap.add_argument("--no-review", action="store_true", help="no review sheets after a pass")
     ap.add_argument("--draft", action="store_true")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--full", action="store_true", help="never stop after the figures - every stage, every run")
     o = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     t0 = time.time()
@@ -229,6 +261,19 @@ def main(argv=None):
         if fcode:
             fails.append("figures")
     t = timed("figures (figure_fit.py)", t0)
+    key = inputs_key(course, o.module)
+    last = last_full(logdir, m)
+    if figures_only_round(fails, o.full, last, key):
+        # 2.55.0 - a figures-only round: everything else passed on the last full build, from these same words and build
+        # sheet; the compile and the checks are run again once the figures are clean (a fix in a spec moves only its figure)
+        write_stages(log, stages, t0)
+        log.close()
+        print("\n".join(say))
+        print("FAIL %s - figures (%.0f s; a figures-only round: the rest passed on the last full build and the script and build "
+              "sheet are unchanged - fix these in the studio, run again; the full build runs once they are clean, --full now)"
+              % (m, time.time() - t0))
+        print("Full log: %s" % log.name)
+        return 1
     # 2 - the compile (with its own drawing check)
     cmd = [PY, os.path.join(HERE, "compile_module.py"), course, "--module", str(o.module)]
     cmd += ["--draft"] if o.draft else []
@@ -247,6 +292,9 @@ def main(argv=None):
     probs = [x for x in probs if not any(re.search(r"\(%s\)[ :]" % re.escape(s), x) and re.search(r"\b(empty|text zone|inside|"
                                                                                                     r"cut off|small text|label|contrast)\b", x)
                                          for s in shown)]
+    # every compile problem a drawing finding (a task page's figure, judged here): still a figures-only build (2.55.0)
+    drawing_only = bool(probs) and all(re.search(r"\b(empty|text zone|inside|cut off|small text|label|contrast|photo over "
+                                                 r"drawing|scrolls)\b", x) for x in probs)
     if ccode != 0 or probs:
         fails.append("compile")
         say.append("COMPILE - %d problem(s) to fix%s:" % (len(probs), " (the figures above not repeated)" if shown else ""))
@@ -365,6 +413,12 @@ def main(argv=None):
             notes.append("Review sheets not made (%s) - do the visual review by hand (GUIDE 2f)" % (lines_of(rout, 1) or ["?"])[0])
     write_stages(log, stages, t0)
     log.close()
+    try:                                   # what the next run may skip (2.55.0 - a figures-only round)
+        io.open(os.path.join(logdir, "%s_last.json" % m), "w", encoding="utf-8").write(json.dumps(
+            {"inputs": key, "fails": fails,
+             "only_figures": bool(fails) and set(fails) <= {"figures", "compile"} and ("compile" not in fails or drawing_only)}))
+    except OSError:
+        pass
     for x in say:
         print(x)
     for x in notes:

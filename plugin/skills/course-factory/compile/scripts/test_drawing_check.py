@@ -25,7 +25,8 @@ FAILS = []
 GOOD = ('<svg viewBox="0 0 100 60"><path d="M5 10 H95 L90 50 H25 L8 40 Z" fill="#fff" stroke="#0A2463"/>'
         '<rect x="30" y="16" width="30" height="26" fill="#eef" stroke="#0A2463"/></svg>')
 BAD = ('<svg viewBox="0 0 100 60"><path d="M5 10 H95 L90 50 H25 L8 40 Z" fill="#fff" stroke="#0A2463"/>'
-       '<rect id="room" x="10" y="14" width="30" height="34" fill="#eef" stroke="#0A2463"/></svg>')
+       '<g class="kit-part" data-kit-id="ER"><rect id="room" x="10" y="14" width="30" height="34" fill="#eef" stroke="#0A2463"/>'
+       '</g></svg>')
 DECK = """<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>deck</title>
 <style>.slide{display:none;width:1280px;height:800px}.slide.active{display:block}svg{width:600px;height:auto}</style></head>
 <body>%s</body></html>"""
@@ -61,6 +62,8 @@ def main():
         check("whole: the room poking out of the hull is found on slide 7",
               any("slide 7 (s07)" in p and "room" in p for p in out["1"]), out["1"])
         check("in slices side by side: the same findings, the same slide number", out["1"] == out["3"], out)
+        check("2.55.0 a kit part's finding names its spec id ([part ER]), so the fix knows what to move",
+              any("[part ER]" in p for p in out["1"]), out["1"])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))

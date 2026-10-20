@@ -34,10 +34,19 @@ given - the screens that changed - and say, for each listed finding, FIXED or NO
 screen is clearly broken (a word or a part cut off or unreadable, a tap area on the wrong thing). Do not raise new points
 of polish on a re-review.
 
+**Label every problem BROKEN or POLISH** (2.55.0 - a fix to a drawing that already passes every check can break it again:
+IGF M02 s02 went PASS, then four failed builds, for polish):
+- `BROKEN` - a trainee or an instructor would misread it, miss it or be unable to do it: a word or a part cut off,
+  covered or unreadable; a tap area on the wrong thing or on empty space; a label or leader pointing at the wrong
+  thing; the wrong verdict or no right answer shown; a file path on screen. BROKEN is fixed before hand-over.
+- `POLISH` - right and readable, but could look better: spacing a little tight, a label close to a line but clear,
+  balance, alignment. POLISH is listed for the operator, never fixed in the build loop.
+When unsure, it is POLISH.
+
 Return, in under 200 words:
-- `PASS` or `FAIL` on the first line;
-- for each problem: the screen's label exactly as written on the sheet, the item number (1-5), and what is wrong, in
-  one line - specific enough to fix without looking ("q03: the tap area covers only the top of the vent mast, not the
-  pipe below it").
+- `PASS` or `FAIL` on the first line - FAIL only when there is at least one BROKEN;
+- for each problem: `BROKEN` or `POLISH`, the screen's label exactly as written on the sheet, the item number (1-5),
+  and what is wrong, in one line - specific enough to fix without looking ("BROKEN q03: the tap area covers only the
+  top of the vent mast, not the pipe below it").
 Report only what you can see. Do not report taste. Do not repeat a problem for each screen it is on - name the first
-screen and say "also on ...".
+screen and say "also on ...". A re-review checks only the BROKEN ones.

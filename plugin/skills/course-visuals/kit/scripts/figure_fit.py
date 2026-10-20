@@ -187,6 +187,33 @@ def fmt(v):
     return ("%.1f" % v).rstrip("0").rstrip(".")
 
 
+GEOM = ("x", "y", "w", "h", "r", "x1", "y1", "x2", "y2", "at", "size")
+
+
+def parts_together(spec_path, block):
+    """(2.55.0) the spec's own parts a figure's findings name ("[part TK1]", audit_drawing.js), each as the spec has it -
+    so every number a fix may touch is on one screen, and a fix for one finding is made knowing what it moves for the
+    others (one fix, two new problems: IGF M02 s02, 2026-10-20). Then the studio command that tries a fix in seconds"""
+    ids = list(dict.fromkeys(re.findall(r"\[part ([^\]\s]+)\]", block)))
+    out = []
+    try:
+        spec = json.load(io.open(spec_path, encoding="utf-8"))
+        by = {str(p.get("id")): p for p in spec.get("parts", []) if isinstance(p, dict)}
+        rows = []
+        for i in ids:
+            p = by.get(i)
+            if p:
+                rows.append("%s %s %s" % (i, p.get("type", "?"), " ".join("%s %s" % (k, p[k] if not isinstance(p[k], (int, float))
+                                                                                 else fmt(p[k])) for k in GEOM if k in p)))
+        if rows:
+            out.append("    the parts named, as the spec has them - change them together: " + " · ".join(rows))
+    except (OSError, ValueError):
+        pass
+    out.append("    try a fix in seconds, every step at once: course-visuals\\kit\\scripts\\studio.py %s --step all "
+               "(then one build_module.py run)" % os.path.basename(spec_path))
+    return out
+
+
 def squeeze(spec, k, x0=0.0):
     """every x position mapped x0 + (x - x0) * k, stretchable widths times k; sizes of everything else kept"""
     s = copy.deepcopy(spec)
@@ -1090,6 +1117,7 @@ def run_all(course, module, fix=True, jobs=4):
                                  "parts, or give the spec a flatter \"size\" so the frame has the drawing's shape" % (w_, h_))
             if how:
                 block.append("    tried by itself: %s" % how)
+            block += parts_together(sp, "\n".join(block))
             left.append("\n".join(block))
             d["left"] = [list(x) for x in probs]
     for sid, sp, e in figs:            # a figure clean as written needs no fit: an old one is removed

@@ -135,7 +135,28 @@ def inside_part():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def together_part():
+    print("-- 2.55.0 the parts a figure's findings name, with their spec numbers, and the studio command")
+    tmp = tempfile.mkdtemp(prefix="test_ff_tog_")
+    try:
+        sp = os.path.join(tmp, "s02.kit.json")
+        io.open(sp, "w", encoding="utf-8").write(json.dumps({"size": [640, 390], "parts": [
+            {"id": "SC", "type": "scale", "x": 40, "y": 24, "w": 90, "h": 330},
+            {"id": "G1", "type": "gauge", "x": 500, "y": 100, "r": 40}, {"id": "Z", "type": "tank", "x": 1, "y": 1}]}))
+        out = ff.parts_together(sp, "    inside - rect.kit-block in g.kit-part [part SC]: pokes out by 4 - path [part G1]\n"
+                                    "    empty - ... [part SC]")
+        line = out[0] if out else ""
+        check("each named part once, in the order named, with its spec numbers; an unnamed part left out",
+              "SC scale x 40 y 24 w 90 h 330 · G1 gauge x 500 y 100 r 40" in line and "Z tank" not in line, out)
+        check("... and the studio command for the spec", any("studio.py s02.kit.json --step all" in x for x in out), out)
+        check("a block that names no part still gets the studio command",
+              ff.parts_together(sp, "    empty - blank 57 %") == [out[-1]], ff.parts_together(sp, "x"))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
+    together_part()
     print("-- squeeze: positions and stretchable lengths follow the column, part sizes stay")
     s = ff.squeeze(SPEC, 0.5, x0=20)
     p = {q.get("id") or q["type"]: q for q in s["parts"]}

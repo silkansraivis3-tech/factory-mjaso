@@ -232,6 +232,10 @@
       if (g.id || gc) { s += " in g" + (g.id ? "#" + g.id : "") + (gc ? "." + gc.split(/\s+/)[0] : ""); break; }
       g = g.parentNode;
     }
+    /* a figure-kit part's own spec id (2.55.0): "path.kit-vessel in g.kit-part" did not say WHICH part of the spec to
+       move, so a fix was a guess - the builder now reads "[part TK1]" and finds it in the .kit.json */
+    var kp = el.closest ? el.closest("[data-kit-id]") : null;
+    if (kp && kp.getAttribute("data-kit-id")) { s += " [part " + kp.getAttribute("data-kit-id") + "]"; }
     return s;
   }
   /* a part drawn through a clip-path is cut to that shape - by construction it cannot poke out */

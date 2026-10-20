@@ -241,8 +241,11 @@ course-module-ui or course-task-ux: the compiler builds their standard.
         only what fails. Fix what it prints in the build sheet or the figure specs and run it
         again - never a check on its own, never the HTML. --no-course-pages: one process
         writes COURSE.html afterwards.
-    on PASS: the review the Quickstart names - ONE reviewer (model haiku, compile/REVIEW_PROMPT.md),
-        fix all it finds, build again, ONE re-review of the changed screens. No third pass.
+    on PASS: the review the Quickstart names - ONE reviewer (model haiku, compile/REVIEW_PROMPT.md; with no
+        subagent tool, review the sheets yourself against it), fix every BROKEN finding, build again, ONE
+        re-review of the changed screens. No third pass. POLISH is never fixed here: write it to
+        working_claude/review/M${two(m)}/POLISH.md and list it in your report.
+    a figure problem: fix it in the studio (studio.py <spec> --step all, seconds), then one build.
 
 A way of answering the compiler leaves "as it is" is the one page you make by hand, to
 course-task-ux.

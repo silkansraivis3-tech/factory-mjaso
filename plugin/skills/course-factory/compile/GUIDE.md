@@ -16,10 +16,17 @@
       and one PASS line. Do not run those checks one by one: each separate run is a turn of the model.
 5  on PASS it has photographed every slide, every figure step and every question (asked, wrong, right) onto a few
       sheets and checked that every question grades right and wrong answers as such. Give the sheets to ONE review
-      subagent (model haiku) with compile/REVIEW_PROMPT.md. Fix ALL it finds in one go, build again, and send the same
-      reviewer a re-review (the changed screens only, with its finding list: FIXED / NOT FIXED - no new polish). Every
-      finding is fixed before hand-over; what the re-review adds is only what is clearly broken, so the loop ends (M01
-      benchmark: 6 open-ended review passes took 18 of 29 minutes). (Proved on the IGF M01 round-1 build: haiku found both problems the old browser-driving
+      subagent (model haiku) with compile/REVIEW_PROMPT.md. It labels each finding BROKEN or POLISH (2.55.0). Fix every
+      BROKEN one in one go, build again, and send the same reviewer a re-review (the changed screens only, with its
+      BROKEN list: FIXED / NOT FIXED - no new polish). POLISH is never fixed in the loop: write it to
+      working_claude\review\MNN\POLISH.md for the operator - a fix to a drawing that already passes can break it again
+      (IGF M02 s02: PASS, then four failed builds). Every BROKEN finding is fixed before hand-over, so the loop ends (M01
+      benchmark: 6 open-ended review passes took 18 of 29 minutes).
+   A FIGURE problem (from the build or the review): fix it in the studio, not in build after build -
+      course-visuals\kit\scripts\studio.py <spec> --step all judges one figure at every step in seconds, on its real
+      slide or task page (2.52.1). The build lists each finding's spec part ("[part TK1]") and those parts' numbers
+      together: change them together, try in the studio until clean, then ONE build_module.py run. While only figures
+      fail, build_module.py stops after them (a figures-only round, ~1 min) and runs the rest once they are clean. (Proved on the IGF M01 round-1 build: haiku found both problems the old browser-driving
       review found - the q03 tap area on the mast's cap only, a leader line through a caption - in 3 calls, $0.02,
       where the old review took 100 calls and $2.42.)
 ```
