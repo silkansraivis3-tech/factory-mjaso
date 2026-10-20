@@ -131,6 +131,7 @@ seems to collide with it. The record behind the rows: `references/laws-in-full.m
 | **L58** | **Every photograph once in the whole course** - a duplicate is replaced or dropped. Build every module again after photos change | now |
 | **L59** | **No module before its map** - the ILO map approved on the Stage 2 page and a knowledge-base decision recorded (suggest one, unasked, if none). `scripts/course_gate.py` enforces it | now |
 | **L60** | **At least one 3D scene per module where the subject allows - strongly recommended**, never a block: `--init-build` picks the slide unasked; a module without one is said loud; declined only with the operator's reason (`"declined_3d"`) | now |
+| **L61** | **Physical equipment is drawn as it looks on board** - the kit draws tanks, pipes, valves, machines and the ship in their materials, light and shade and real features, in every deck unasked; screens stay flat ISA-101; a new kit part declares its `look` and an `equipment` part uses `KIT.h.body` / `equip` (`course-visuals/kit/PARTS.md`) | now |
 | **L41** | **The old course is the foundation.** Read it whole at intake (`scripts/old_course.py inventory`, `images`); at Stage 2 every module says what it **keeps**, **modernises** and **adds** | now |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),

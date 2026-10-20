@@ -28,12 +28,12 @@ def check(what, ok, detail=""):
 
 GOOD = """/* kit-part: oil_tray */
 KIT.define('oil_tray', function (fig, part, g, p) {
-  var h = KIT.h, w = p.w || 120;
-  h.el('rect', { width: w, height: 18, rx: 4, 'class': 'kit-steel' }, g);
+  var h = KIT.h, w = p.w || 120, eq = h.equip(g);
+  h.body('rect', { width: w, height: 18, rx: 4 }, eq, { mat: 'steel', shade: 'box' });
   var pool = h.el('rect', { x: 4, y: 14, width: w - 8, height: 0, 'class': 'kit-pool' }, g);
   part.render = function (v) { var d = h.clamp(v, 0, 1) * 12; pool.setAttribute('y', 16 - d); pool.setAttribute('height', d); };
 }, {
-  family: 'piping', status: 'new', course: 'IGF Basic', module: 'M03', made: '2026-10-15',
+  family: 'piping', status: 'new', look: 'equipment', course: 'IGF Basic', module: 'M03', made: '2026-10-15',
   why: 'M03 s07: liquid caught under the manifold', value: 'how full, 0..1',
   css: '.kit-oil-tray-rim{stroke:var(--dim-d)}',
   example: { size: [300, 120], parts: [{ id: 'D', type: 'oil_tray', x: 90, y: 40 }],
@@ -46,7 +46,7 @@ KIT.define('oil_tray', function (fig, part, g, p) {
 check("a part built to the template passes", ck.check_part("oil_tray", ck.blocks(GOOD)[0][1]) == [],
       ck.check_part("oil_tray", ck.blocks(GOOD)[0][1]))
 for bad, why in [
-    ("'class': 'kit-steel'", "fill: '#ff0000'"),
+    ("{ mat: 'steel', shade: 'box' }", "{ mat: 'steel', fill: '#ff0000' }"),
     ("h.clamp(v, 0, 1)", "h.clamp(v, 0, 1); g.innerHTML = ''"),
     ("var h = KIT.h,", "var h = KIT.h, s = 'font-size:9px',"),
     ("family: 'piping'", "family: 'misc'"),
@@ -59,7 +59,7 @@ for bad, why in [
     check("a part with %s is refused" % why, bool(probs), probs)
 CAT = GOOD.replace("css: '.kit-oil-tray-rim{stroke:var(--dim-d)}',",
                    "css: '.kit-oil-tray-rim{stroke:var(--dim-d);' +\n"
-                   "       \"fill:var(--steel)}\" + '.kit-oil-tray-pool{fill:var(--water)}',")
+                   "       \"fill:var(--kit-steel)}\" + '.kit-oil-tray-pool{fill:var(--water)}',")
 check("a css written as 'a' + 'b' is not read as drawing code (finding 1)",
       ck.check_part("oil_tray", ck.blocks(CAT)[0][1]) == [], ck.check_part("oil_tray", ck.blocks(CAT)[0][1]))
 check("a concatenated css is still checked as css (a colour in a piece is refused)",
@@ -67,6 +67,48 @@ check("a concatenated css is still checked as css (a colour in a piece is refuse
           "oil_tray", ck.blocks(CAT.replace("var(--water)", "#fff"))[0][1])))
 check("a part named for its module is refused",
       bool(ck.check_part("M03_tray", ck.blocks(GOOD.replace("oil_tray", "M03_tray"))[0][1])))
+
+# ---------------------------------------------------------------- 2.52.0, L61: physical equipment is drawn as it looks on board
+def part_with(old, new):
+    return ck.check_part("oil_tray", ck.blocks(GOOD.replace(old, new))[0][1])
+
+
+check("L61: a part that does not say what it is drawn as (look) is refused",
+      any("look:" in x for x in part_with("look: 'equipment', ", "")), part_with("look: 'equipment', ", ""))
+check("L61: a look that is not equipment, screen or diagram is refused",
+      any("look:" in x for x in part_with("look: 'equipment'", "look: 'pretty'")))
+FLAT = "h.el('rect', { width: w, height: 18, rx: 4, 'class': 'kit-shell' }, eq);"
+probs = part_with("h.body('rect', { width: w, height: 18, rx: 4 }, eq, { mat: 'steel', shade: 'box' });", FLAT)
+check("L61: equipment drawn with no material (no KIT.h.body / equip / kit-m-*) is refused",
+      any("draws no body in a material" in x for x in probs), probs)
+check("L61: equipment drawn with a flat ISA body class (kit-shell) is refused",
+      any("flat kit-shell" in x for x in probs), probs)
+probs = part_with("'.kit-oil-tray-rim{stroke:var(--dim-d)}'", "'.kit-oil-tray-rim{fill:var(--deep-3);stroke:var(--dim-d)}'")
+check("L61: equipment whose css fills a body flat (var(--deep-3)) is refused", any("fills a body flat" in x for x in probs), probs)
+check("L61: a body filled with a kit material in css (var(--kit-steel)) passes",
+      part_with("'.kit-oil-tray-rim{stroke:var(--dim-d)}'", "'.kit-oil-tray-rim{fill:var(--kit-steel);stroke:var(--dim-d)}'") == [])
+SCREEN = GOOD.replace("look: 'equipment'", "look: 'screen'").replace(
+    "h.body('rect', { width: w, height: 18, rx: 4 }, eq, { mat: 'steel', shade: 'box' });",
+    "h.el('rect', { width: w, height: 18, rx: 4, 'class': 'kit-tile' }, g);")
+check("L61: a screen stays a flat ISA-101 HMI - no material asked of it",
+      ck.check_part("oil_tray", ck.blocks(SCREEN)[0][1]) == [], ck.check_part("oil_tray", ck.blocks(SCREEN)[0][1]))
+merged = dict(ck.blocks(ck.read(ck.KIT_JS)))
+bad_look = sorted(n for n, b in merged.items() if ck.meta_field(b, "look") not in ck.LOOKS)
+check("L61: every part merged into kit.js says what it is drawn as", not bad_look, bad_look)
+equipment = sorted(n for n, b in merged.items() if ck.meta_field(b, "look") == "equipment")
+check("L61: the kit's physical parts are drawn as equipment (cylinder, coupling, manifold, person, ga ...)",
+      {"cylinder", "coupling", "manifold", "person", "ga", "hose", "relief_valve", "gas_cylinder"} <= set(equipment), equipment)
+kitjs, kitcss = ck.read(ck.KIT_JS), ck.read(os.path.join(os.path.dirname(ck.KIT_JS), "kit.css"))
+check("L61: kit.js draws the materials once per page and gives parts KIT.h.body, equip, flange",
+      all(x in kitjs for x in ("function materials()", "body: body", "equip: equip", "flange: flange", "'kit-materials'")))
+check("L61: the materials are tokens (--mat-*), with a set of their own for a light page (.kit-mat-light, .kit.kit-light)",
+      all(x in kitcss for x in ("--mat-steel:", "--mat-steel-l:", ".kit-mat-light{", "--kit-steel:url(#kit-m-steel-l)")))
+check("L61: the materials' textures are never display:none (Chrome then drops their paint servers)",
+      "display:none" not in kitjs.split("function materials()", 1)[1].split("function body(", 1)[0])
+for t in ("valve", "tank", "pipe", "exchanger", "pump", "engine", "vent", "well"):
+    src = kitjs.split("TYPES.%s = function" % t, 1)[1].split("\n  };", 1)[0]
+    check("L61: the kit's own %s is drawn in its material (body / equip / flange)" % t,
+          bool(re.search(r"\b(?:body|equip|flange)\(", src)))
 
 # ---------------------------------------------------------------- specs
 types = ck.kit_types()
@@ -211,7 +253,7 @@ try:
         rc2 = kp.cmd_promote(mods[:1], fac, dry=False)
     check("promoting again adds nothing", rc2 == 0 and ck.read(os.path.join(fac, kp.KIT_REL)).count("kit-part: oil_tray") == 1)
     io.open(os.path.join(mods[1], "assets", "kit_parts.js"), "w", encoding="utf-8").write(
-        GOOD.replace("oil_tray", "spill_tray").replace("'kit-steel'", "'kit-steel', fill: '#fff'"))
+        GOOD.replace("oil_tray", "spill_tray").replace("{ mat: 'steel', shade: 'box' }", "{ mat: 'steel', fill: '#fff' }"))
     with redirect_stdout(io.StringIO()):
         rc3 = kp.cmd_promote(mods[1:], fac, dry=False)
     check("a part that fails its check stops the promotion", rc3 == 1 and "spill_tray" not in ck.read(os.path.join(fac, kp.KIT_REL)))

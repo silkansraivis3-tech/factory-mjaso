@@ -35,7 +35,7 @@ course-factory/
 ├── MANIFEST.md                           this file
 ├── references/                           READ WHEN NAMED — the full text moved out of SKILL.md in 2.11.0
 │   ├── laws-in-full.md                   every law with its reasons and cases, word for word
-│   ├── owner-decisions.md                every Phase 5 row (L27-L60) in full, one heading per law (2.50.5)
+│   ├── owner-decisions.md                every Phase 5 row (L27-L61) in full, one heading per law (2.50.5)
 │   ├── verify-in-full.md                 why each verify check exists
 │   └── routing-notes.md                  what orchestration/ and coverage/ are for; the visual-layer routing
 ├── knowledge/
@@ -1424,6 +1424,53 @@ the first.
   rights gate, AI held back, weak match, a broken or older library. Proved on the real Gas Library: "portable gas
   detector" 4 shippable photos + 4 blocked, "type C tank" 1 photo + 2 figures, 4 blocked, the AI cutaway held back,
   "LNG bunkering" 6 photos; with the library switched off the resolver answers as before (exit 3).
+
+## 4zz8 · Physical equipment is drawn as it looks on board (L61, 2.55.0 - built as 2.52.0 on its own branch, 2026-10-20)
+
+Aleksis approved a plain-vs-realistic mock-up of the figure kit ("yes we like this new kit styling") and asked for it in
+the kit itself, on in every deck: no spec option, no per-slide ask. Then: "also do the Parts added from courses", "make
+the ship look realistic aswell, look at real images of it", "definitely ... the person", "make this relief valve look better".
+- **The materials layer** (`kit.js` `materials()`): one hidden `<svg id="kit-materials">` per page (never display:none),
+  holding the material patterns (cladding, brushed steel, machinery paint, cast, deck, rubber, foam, hull plating,
+  superstructure white, cloth, protective suit), the shade gradients (cyl, cylv, box, round), LNG, fire, sea, a section
+  hatch and two soft-blur filters. The grain is three small canvas bitmaps drawn once per page - an feTurbulence filter in a
+  pattern was rendered again on every frame. Colours are the kit's `--mat-*` tokens (`kit.css`); a paint server keeps the
+  colours of where it is defined, so a light page has its own set (ids `-l`) and `.kit-light` points at it.
+- **Helpers**: `KIT.h.equip(g)` (one piece of equipment: one soft shadow; the drawing check judges it as one object,
+  `data-kit-body` in `audit_drawing.js`), `h.body(tag, attrs, parent, {mat, shade, hatch})`, `h.reshape`, `h.flange`.
+- **Every physical part reworked** - base: valve (cast body, end flanges, bonnet; positioner and diaphragm actuator, or a
+  yoke head and handwheel with `actuator: false`; the ISA bow-tie a light plate, red only on a trip), pipe (stainless,
+  mating flanges at every end), tank (cladding, straps, saddles, dome over the pipe that leaves it, LNG in the cut-away),
+  exchanger (shell-and-tube, copper coil), pump, engine (bedplate, covers, crankcase doors the pistons work behind, a
+  turbocharger with its intake silencer on the end no part is drawn at and inside the engine's room, RUNNING on a name
+  plate), vent, well. From courses: all 18
+  equipment parts, the ship (from photos of LNG-fuelled ships: plating, sheer stripe, rail, boot-top, bottom paint, bulb,
+  rudder, propeller, anchor, white house with windows, mast, funnel band), the worker (navy workwear, real PPE), the fixed
+  gas detector (junction box, sensor head, gland, alarm lamp), the relief valve (round angle body, cut-away seat and disc,
+  open bonnet with a coil spring, lever), hose ends, manifold block valves and blinds, lamp guards and the Ex fitting.
+  Fire, flame, spark and spill drawn as they look (flame colours, a jet fire's lifted blue root, LNG's white vapour fog,
+  an arc's blue halo); a dual-fuel cylinder's combustion as plumes along the jets (faint blue gas, bright pilot).
+  The gas bottle as it is filled and read: opaque, one paint (its EN 1089-3 shoulder code - N2 black, CO2 grey, air black
+  and white quarters - only with `code: true`: the standard leaves out fixed extinguishing systems), a gauge on the valve for compressed gas (needle and bar fall together), CO2 read by weight in kg with its
+  pressure left alone and its liquid shown in a window tagged "liquid"; the reading stacked on the plate (number over
+  unit), shown only when the steps change that bottle, so a row of bottles stays as narrow as real ones.
+- **Layout**: a room's name with no clear place inside (the room filled with equipment) goes beside it; the valve is no
+  taller than the ISA symbol it replaces; a shade, a section hatch and a bolt are not measured again, and what does not
+  move is measured once per state (not again at every motion phase). Real specs (the M01 benchmark build, 96 figures)
+  were drawn new against old: a low tank's saddle feet scale with it (a 40-high tank in a tight hold), its straps are
+  surface detail words may cross, the turbocharger stays inside the engine's room, a zone lying on a tank takes deep inks
+  (one bigger than the tank keeps the inks it needs over the hull). A second pass over the same figures: the gas detector
+  compact and centred on its point (its sensor had poked through a deck), a gas bottle's valve scaled with a small
+  bottle, a fan's arrows left out of a duct too short for them, the hull's paint (bottom paint, boot-top) surface detail
+  words may cross, and a leader line keeps the full clearance from every word, the words drawn in parts too.
+- **Words on light equipment**: a room's name or a caption over a light surface (the tank's cladding, the white
+  superstructure, machinery paint) is printed in dark ink as on a nameplate (`kit.js` `inkOn`, once the labels are
+  placed), not in light letters with a dark halo.
+- **`audit_drawing.js` twice as fast, the same findings**: a bounding-box test before each point-in-shape test, one inverse
+  matrix per shape per pass, a body's shade / hatch / bolt judged as the body (`kitCopy`). IGF M03 s15 (8 steps, six
+  flowing pipes) audited in 27 s (56 s before, with half the shapes); `test_audit_drawing.py` 37 pass.
+- **The rule** (`SPEC.md` "Rules of the look", `PARTS.md`): a part declares `look` - `equipment`, `screen` or `diagram`;
+  equipment draws its bodies in a kit material; screens stay ISA-101. `check_kit.py parts` enforces it (`test_kit.py`).
 
 ## 5 · Known gaps / before this goes live
 

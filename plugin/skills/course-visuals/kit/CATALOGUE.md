@@ -27,19 +27,21 @@ value at the mark; `then` moves to start the moment it is crossed; marks fire in
 
 ## Parts
 `name` (family) - options (default) - value: what the number means - ex: one part as written in a spec.
-Colours, sizes and label places are the kit's: a spec sets none of them.
+Colours, sizes and label places are the kit's: a spec sets none of them. So is the look (L61, 2.52.0): physical
+equipment is drawn as it looks on board - its material, light and shade, its flanges, actuators and supports - and the
+screens stay calm ISA-101 screens. A valve is automatic (an actuator) unless `"actuator": false` (a handwheel).
 
 - `panel` (instruments) - w h title [frame, title, alarm-state chip] - value: -
 - `level` (instruments) - w h label unit min max ticks readout decimals marks [the tick numbers stand left of the column] - value: the level
 - `gauge` (instruments) - r label unit min max start sweep normal:[lo,hi] ticks every numbers readout decimals caption captionAt marks; repeater: source:"P1" mini:true - value: the reading
 - `readout` (instruments) - w h label unit sign decimals marks [digital tile] - value: the reading
 - `well` (instruments) - w h tag [bilge well, dripping leak, TT sensor] - value: pool 0..1
-- `valve` (piping) - size label labelAt(right) rotate state(false) actuator(false) trip(false) [ISA bow-tie, filled when closed] - value: 1 open, 0 closed
+- `valve` (piping) - size label labelAt(right) rotate state(false) actuator(false) trip(false) [a real valve (cast body, flanges, bonnet] - value: 1 open, 0 closed
 - `pipe` (piping) - d (SVG path) fluid(liquid/gas/air - air: a ventilation duct) double drain [its contents and their movement] - value: flow 0 still … 1; <id>.fill 0..1 the front advancing, 1..2 emptying towards drain
 - `tank` (piping) - w h label burst [horizontal type C tank] - value: liquid level 0..1
 - `space` (piping) - w h label labelAt(below) style(room/enclosure) crosses [a room (dashed) or an enclosure (solid)] - value: 0..1 picked out
-- `exchanger` (piping) - r label [P&ID heat exchanger (vaporizer, heater)] - value: 0..1 heating
-- `pump` (piping) - r label [P&ID centrifugal pump] - value: 0 stopped, 1 running
+- `exchanger` (piping) - r label [a shell-and-tube heat exchanger (vaporizer, heater), its co…] - value: 0..1 heating
+- `pump` (piping) - r label [a centrifugal pump: cast volute on its foot, the impeller t…] - value: 0 stopped, 1 running
 - `engine` (piping) - w h cylinders label [dual-fuel engine block] - value: 0 stopped, 1 running
 - `vent` (piping) - label labelAt(left) mast [vent outlet to the open air] - value: 0..1 venting
 - `badge` (piping) - n [a numbered step marker] - value: 0..1 lit
@@ -65,7 +67,7 @@ Colours, sizes and label places are the kit's: a spec sets none of them.
 - `curve_chart` (charts) - w=560 h=320 xaxis yaxis curves=[] point hline - value: 0..n curves, n..n+1 the point - ex: `{"type":"curve_chart","x":50,"y":30,"w":340,"h":180,"xaxis":{"min":-60,"max":60,"every":20,"unit":"°C","label":"temperature °C"},"yaxis":{"min":0,"max":16,"every":4,"unit":"bar","label":"bar"},"hline":{"at":1,"label":"1 bar","labelX":-58}}`
 - `fan` (gas-fire-machinery) - label dir(right/left/up/down) - value: 0 stopped … 1 running - ex: `{"type":"fan","x":160,"y":56,"dir":"right","r":34,"len":300,"label":"extract fan"}`
 - `spray` (gas-fire-machinery) - nozzle(monitor/hand/sprinkler) agent(powder/water/foam) angle reach reachLabel - value: 0..1 how much is discharged - ex: `{"type":"spray","x":100,"y":235,"nozzle":"monitor","agent":"powder","angle":12,"reach":270,"label":"powder monitor"}`
-- `gas_cylinder` (gas-fire-machinery) - w h gas label - value: 0..1 how full - ex: `{"type":"gas_cylinder","x":100,"y":240,"w":84,"h":180,"gas":"N2","label":"nitrogen","value":1}`
+- `gas_cylinder` (gas-fire-machinery) - w h gas label bar kg liquid reading code - value: 0..1 how full - ex: `{"type":"gas_cylinder","x":100,"y":240,"w":84,"h":180,"gas":"N2","label":"nitrogen","value":1}`
 - `push_button` (instruments) - label tag h - value: 0 ready, 1 pressed (trip red) - ex: `{"type":"push_button","x":110,"y":114,"tag":"ESD 1","label":"navigation bridge"}`
 - `person` (procedures) - wear:[helmet,visor,goggles,respirator,gloves,suit,apron,boots,scba] scale label labels - value: 0..n PPE item k appears - ex: `{"type":"person","x":110,"y":290,"scale":1.3,"wear":["goggles","respirator","apron","gloves"],"labels":{"respirator":"HALF MASK"},"label":"sample handler"}`
 - `sensor` (cutaways) - kind(catalytic/infrared) oxygen - value: 0..1 gas in the sensor - ex: `{"type":"sensor","kind":"catalytic","x":70,"y":170,"label":"catalytic"}`

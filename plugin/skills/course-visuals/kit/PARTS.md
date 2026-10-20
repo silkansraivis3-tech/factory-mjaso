@@ -43,7 +43,8 @@ If two modules made the same thing, it merges them into one part.
 /* kit-part: oil_tray */
 KIT.define('oil_tray', function (fig, part, g, p) {
   var h = KIT.h, w = p.w || 120;                       // settings, each with a sensible default
-  h.el('rect', { width: w, height: 18, rx: 4, 'class': 'kit-steel' }, g);   // kit classes first
+  var eq = h.equip(g);                                 // the piece of equipment: one object, one soft shadow
+  h.body('rect', { width: w, height: 18, rx: 4 }, eq, { mat: 'steel', shade: 'box' });   // its body in its material
   var pool = h.el('rect', { x: 4, y: 14, width: w - 8, height: 0, 'class': 'kit-pool' }, g);
   if (p.label) h.label(fig, g, { x: w / 2, y: 40, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);  // the layout places it
   part.render = function (v) {                         // value -> picture; called on every frame
@@ -53,6 +54,7 @@ KIT.define('oil_tray', function (fig, part, g, p) {
 }, {
   family: 'piping',                 // instruments | piping | spaces | cutaways | gas-fire-machinery | charts | procedures
   status: 'new',                    // "new" until merged; promote sets "kit"
+  look: 'equipment',                // equipment (a physical thing) | screen (an ISA-101 HMI) | diagram - L61, below
   course: 'IGF Basic', module: 'M03', made: '2026-10-15',
   why: 'M03 s07: liquid caught under the bunker manifold',
   value: 'how full the tray is, 0..1',
@@ -62,6 +64,38 @@ KIT.define('oil_tray', function (fig, part, g, p) {
 });
 /* end kit-part */
 ```
+
+## Physical equipment looks like the real equipment (L61, 2.52.0)
+
+Every part says what it is drawn as - `look: 'equipment'`, `'screen'` or `'diagram'` - and `check_kit.py parts`
+refuses one that does not.
+- **`equipment`** - anything a trainee could touch on board: a vessel, a pipe or hose, a valve, a pump, a fitting, a
+  bottle, a lamp, a ship, a worker. It is drawn the way the trainee sees it there:
+  - **its bodies in a kit material, with light and shade**: `h.body(tag, attrs, parent, { mat, shade })`. `mat` is one of
+    `clad` (aluminium cladding over insulation), `steel` (brushed stainless), `paint` / `paintl` (machinery paint, a
+    lighter coat), `cast`, `deck` (painted deck plate), `rubber`, `foam`, `hull` (a ship's painted plating), `white` (a
+    superstructure), `cloth` / `suit` (workwear, a protective suit), `skin`, `lng` (LNG in a cut-away); `shade` is `cyl`
+    (a cylinder lying down), `cylv` (standing up), `box` (lit from above) or `round`. A body that changes shape later
+    changes through `h.reshape(node, attrs)`, so its shade goes with it.
+  - **in one piece of equipment**: `var eq = h.equip(g)` - the group its bodies go in. It casts one soft shadow (`{ shadow:
+    false }` for none - a part whose insides move for ever) and the drawing check judges it as one object
+    (`data-kit-body`), so its pieces may overlap (a bonnet on a body) but the whole still may not poke out of its room.
+    Labels go on `g`, never inside `eq`.
+  - **with its real, recognisable features**: `h.flange(parent, x, y, angle, len, t)` bolts a flange across a line where
+    it joins the next pipe or a piece of equipment; and the supports, actuators, handwheels, nozzles, covers, windows a
+    real one has. An automatic valve has an actuator, a manual one a handwheel.
+  - not with the flat ISA bodies (`kit-shell`, `kit-block`, `kit-head`, `kit-act`) and not with a flat fill of its own
+    (`fill:var(--deep-3)`, `--steel`, `--dim-d`, `--faint-d` in its `css`): a body takes a kit material - a class
+    (`kit-m-steel`, a stroke `kit-ms-steel`) or `var(--kit-steel)` in its `css`.
+  - its teaching state still reads at a glance (a fill, open / shut, running, an alarm), and amber and red stay for alarm
+    and trip: materials are neutral greys and blues; copper only for a heating coil; a fire has a flame's own colours
+    (`kit-m-fire`).
+- **`screen`** - a monitoring screen, a gauge, a readout, an alarm list: it IS a screen, so it stays a flat, calm ISA-101
+  HMI in the kit's screen classes.
+- **`diagram`** - a zone, a chart, a scale, a cloud, a principle drawn as a principle.
+
+Try it on both panels in the studio: a light page has its own set of textures (the material tokens and `.kit-light`
+in `kit.css`), and the drawing audit's contrast judges what a part's own `css` paints.
 
 ## Words, boxes and colours - the kit does the drawing work (2.48.0)
 
@@ -93,6 +127,7 @@ KIT.define('oil_tray', function (fig, part, g, p) {
 ## The rules - `check_kit.py parts` enforces them
 - **The markers** `/* kit-part: name */` … `/* end kit-part */` are required, one part per block. They are how
   promotion finds the part.
+- **Say what it is drawn as** (`look`), and draw equipment in its material (`KIT.h.equip / body / reshape / flange`) - L61, above.
 - **Use the helpers** `KIT.h.el / label / lines / widest / readings / clamp / fmt / polar / arc`. Don't use
   `innerHTML`, and don't make your own `createElementNS`.
 - **Colours come only from the kit's classes or `var(--token)` in `css`.** Don't use `#hex`, `rgb()` or named
