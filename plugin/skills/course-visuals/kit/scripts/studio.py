@@ -10,7 +10,9 @@ drawing check. The studio gives the same answers for one figure at a time:
 
   1  the figure as the deck shows it. A spec inside a course (<course>/working_claude/figures/MNN/sNN.kit.json) is drawn
      on its REAL slide - the script's words, the build sheet's layout, the module's style files - built by the
-     compiler's own slide_html. A spec anywhere else is drawn in a slide frame of the --panel kind.
+     compiler's own slide_html. A spec anywhere else is drawn in a slide frame of the --panel kind. --panel task on a spec a
+     course's task question stands on (2.52.1) draws that question's REAL task page (task_pages.page_html) - the frame the
+     build's drawing check measures - and photographs it; outside a course it is a generic 640 px task frame.
   2  at 1280 x 800 and 1024 x 768, every step: audit_drawing.js (inside, cut off, text zone, empty, contrast, small
      text) and the kit's own layout report (scale, the 12.5 px floor, labels moved, labels with no clear place)
   3  a screenshot per size, of the --step (default: the last), into --out (default: next to the spec, _studio/).
@@ -80,6 +82,114 @@ def course_context(spec_path):
             return {"course": str(course), "work": str(work), "module": mod, "screen": sid, "build": b,
                     "script": str(script), "entry": entry}
     return None
+
+
+def task_context(spec_path):
+    """(course, module, question id, build entry) when the spec sits in a course's figures folder and a TASK question is
+    answered on it or shows it - the first such question in the build sheet - else None (2.52.1)"""
+    p = Path(os.path.abspath(spec_path))
+    if len(p.parts) < 4 or p.parent.parent.name.lower() != "figures" or not re.fullmatch(r"M\d\d", p.parent.name, re.I):
+        return None
+    work = p.parent.parent.parent
+    mod = int(p.parent.name[1:])
+    build, script = work / "script" / ("M%02d.build.json" % mod), work / "script" / ("M%02d.json" % mod)
+    if not (build.is_file() and script.is_file()):
+        return None
+    import content_script as cs
+    b, sc = json.load(io.open(build, encoding="utf-8")), json.load(io.open(script, encoding="utf-8"))
+    tasks = [s["id"] for s in sc.get("screens") or [] if s.get("kind") in cs.TASKS]
+    for sid in tasks:
+        entry = (b.get("screens") or {}).get(sid) or {}
+        if (entry.get("figure") or "").strip() == p.name:
+            return {"course": str(work.parent), "work": str(work), "module": mod, "screen": sid, "build": b,
+                    "script": str(script), "entry": entry, "page": True}
+    return None
+
+
+# a task page with ONE question shown, its shared drawing moved into it (as gb_answer.js does), then measured by the
+# drawing audit exactly as the build's drawing check measures the page (drawing_check.py TASK) - and its frame's size
+TASK_PROBE = r"""<script src="%(audit)s"></script><script>
+setTimeout(function(){var out={states:[]};try{
+ var s=document.querySelector('.scr[data-script="%(qid)s"]');
+ [].forEach.call(document.querySelectorAll('.scr'),function(x){x.classList.remove('on');});s.classList.add('on');
+ [].forEach.call(s.querySelectorAll('.ga[data-fig]'),function(h){var v=document.querySelector('svg.taskfig[data-fig="'+
+   h.getAttribute('data-fig')+'"]');if(v&&v.parentNode!==h){h.insertBefore(v,h.firstChild);}});
+ if(window.KIT&&KIT.layoutAll){KIT.layoutAll(true);}
+ var g=s.querySelector('.ga'),sv=g&&g.querySelector('svg'),gr=g?g.getBoundingClientRect():{width:0,height:0},
+     vr=sv?sv.getBoundingClientRect():{width:0,height:0};
+ var st={step:'page',svg:[Math.round(vr.width),Math.round(vr.height)],panel:[Math.round(gr.width),Math.round(gr.height)],findings:[]};
+ if(!%(shot)s){var r=AuditDrawing.page();if(r.ABORTED){st.aborted=r.ABORTED;}
+  (r.findings||[]).forEach(function(f){st.findings.push({check:f.check,where:f.where,part:f.part,other:f.other||'',detail:f.detail||''});});}
+ out.states.push(st);if(sv&&sv.__kit&&sv.__kit.report){out.report=sv.__kit.report;}}catch(e){out.error=String(e);}
+ var p=document.createElement('pre');p.id='%(out)s';p.textContent=JSON.stringify(out);if(!%(shot)s){document.body.appendChild(p);}
+},400);</script>"""
+
+
+def task_page_run(spec_path, spec, ctx, sizes, out, shots):
+    """2.52.1 - a spec a task question stands on, drawn on the REAL task page as the compiler builds it (task_pages.page_html:
+    its width and layout, its step, the words taken off, the label bands) - the frame the build's drawing check measures. The
+    M01 rebuild of 2026-10-20: the studio's 640 px task panel said clean, the build's 969 x 500 frame failed it twice (EMPTY)."""
+    sys.path.insert(0, COMPILE)
+    import compile_module as cm
+    import content_script as cs
+    import task_pages
+    import drawing_check
+    script = cs.load(ctx["script"])
+    hit = next(((sl, code, qs) for sl, code, qs in task_pages.sets(script) if any(q["id"] == ctx["screen"] for q in qs)), None)
+    mdir = os.path.join(ctx["course"], "modules", "module%02d" % ctx["module"])
+    if not hit or not os.path.isdir(os.path.join(mdir, "assets")):
+        return None, "the task page of %s cannot be built (no set or no module folder)" % ctx["screen"]
+    slide, code, qs = hit
+    figdir = os.path.join(ctx["work"], "figures", "M%02d" % ctx["module"])
+    with _SLIDE_LOCK:
+        task_pages.TRY.clear()
+        task_pages.TRY[os.path.basename(spec_path)] = spec      # the spec given (a candidate), never a stale fit
+        try:
+            page = task_pages.page_html(script, slide, code, qs, ctx["build"], mdir, figdir, "STUDIO", True, False, [])
+        finally:
+            task_pages.TRY.clear()
+    where = os.path.dirname(task_pages.page_path(mdir, slide, code, script))
+    os.makedirs(where, exist_ok=True)
+    exe = find_browser()
+    res, files = {}, []
+    stem = os.path.basename(spec_path).replace(".kit.json", "")
+    out = out or os.path.join(os.path.dirname(os.path.abspath(spec_path)), "_studio")
+    tmp = tempfile.mkdtemp(prefix="kit_studio_task_")
+    try:
+        base = '<base href="%s/">' % Path(where).as_uri()
+        for size in sizes:
+            key = "%dx%d" % size
+            r = res.setdefault(key, {"states": [], "report": {}})
+            for mode in ("probe", "shot") if shots else ("probe",):
+                f = os.path.join(where, "__studio_%s_%s_%s.html" % (ctx["screen"], key, mode))
+                files.append(f)
+                doc = re.sub(r"<head>", "<head>" + base, page, count=1, flags=re.I)
+                probe = TASK_PROBE % {"audit": uri(AUDIT), "qid": ctx["screen"], "out": OUT_ID, "shot": "true" if mode == "shot" else "false"}
+                i = doc.lower().rfind("</body>")
+                io.open(f, "w", encoding="utf-8").write(doc[:i] + probe + doc[i:] if i >= 0 else doc + probe)
+                prof = tempfile.mkdtemp(prefix="p_", dir=tmp)
+                if mode == "shot":
+                    os.makedirs(out, exist_ok=True)
+                    png = os.path.join(out, "%s_%s_task_%s.png" % (stem, ctx["screen"], key))
+                    ok, _ = chrome(exe, uri(f), size, prof, png).wait(60)
+                    r["shot"] = png if os.path.isfile(png) else None
+                    continue
+                ok, so = chrome(exe, uri(f), drawing_check.window_for(exe, size), prof).wait(90)
+                m = re.search(r'<pre id="%s">(.*?)</pre>' % OUT_ID, so or "", re.S)
+                if not m:
+                    r["error"] = "the task page did not finish in the hidden browser"
+                    continue
+                got = json.loads(html.unescape(m.group(1)))
+                if got.get("error"):
+                    r["error"] = got["error"]
+                r["states"] = got.get("states") or []
+                r["report"] = got.get("report") or {}
+    finally:
+        for f in files:
+            if os.path.isfile(f):
+                os.remove(f)
+        shutil.rmtree(tmp, ignore_errors=True)
+    return {"sizes": res, "context": {"module": ctx["module"], "screen": ctx["screen"], "page": True}, "notes": []}, None
 
 
 def real_slide(ctx):
@@ -358,6 +468,10 @@ def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), ste
             return None, "%s is not valid JSON - %s" % (spec_path, err)
     else:
         spec = json.loads(json.dumps(spec))
+    if panel == "task" and not ctx:             # 2.52.1: a spec a course's task question stands on - its real task page
+        tctx = task_context(spec_path)
+        if tctx:
+            return task_page_run(spec_path, spec, tctx, sizes, out, shots)
     ctx = ctx or (course_context(spec_path) if not panel else None)
     if ctx and spec is not None:            # the slide is built from the build sheet's entry with THIS spec in it
         ctx = dict(ctx, spec_override=spec)
@@ -441,7 +555,8 @@ def summary(result, spec_path, gate="1280x800"):
     lines = []
     ctx = result.get("context")
     lines.append("Figure studio - %s%s" % (os.path.basename(spec_path),
-                                            (" on M%02d %s, its real slide" % (ctx["module"], ctx["screen"])) if ctx else ""))
+                                            (" on M%02d %s, its real %s" % (ctx["module"], ctx["screen"], "task page" if ctx.get("page")
+                                                                            else "slide")) if ctx else ""))
     for size, r in sorted(result["sizes"].items(), reverse=True):
         rep = r.get("report") or {}
         st = r.get("states") or [{}]

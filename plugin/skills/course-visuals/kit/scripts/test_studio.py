@@ -294,6 +294,65 @@ def judged_part():
     check("an audit that aborted is a finding, not a clean step", any(c == "aborted" for _, _, c, _, _ in p), p)
 
 
+# 2.52.1 (M01 rebuild 2026-10-20, runs 1 and 3) - a ship drawing a task question stands on: clean in the studio's 640 px task
+# panel, EMPTY in the real task page's frame (~1000 px wide, the words smaller beside the drawing)
+SHIP = {"size": [640, 330], "label": "ship", "parts": [
+    {"id": "G", "type": "ga", "x": 20, "y": 170, "w": 600, "h": 130, "house": {"x": 40, "w": 90, "h": 50},
+     "funnel": {"x": 60, "w": 22, "h": 24}, "label": "LNG-fuelled ship"},
+    {"id": "TCS", "type": "space", "x": 200, "y": 178, "w": 120, "h": 110, "label": "Tank connection space"},
+    {"id": "ER", "type": "space", "x": 340, "y": 178, "w": 120, "h": 110, "label": "Engine room"},
+    {"id": "T", "type": "tank", "x": 60, "y": 190, "w": 120, "h": 80, "label": "Fuel tank", "value": 0.5},
+    {"id": "VP", "type": "pipe", "fluid": "gas", "d": "M520 170 V50", "value": 0},
+    {"id": "VO", "type": "vent", "x": 520, "y": 50, "label": "Vent mast", "labelAt": "right"},
+    {"id": "BS", "type": "space", "x": 200, "y": 120, "w": 120, "h": 40, "style": "enclosure", "label": "Bunkering station"}]}
+
+
+def task_page_part():
+    """2.52.1 - --panel task on a spec a course's task question stands on draws the REAL task page (task_pages.page_html), so
+    the studio judges what the build's drawing check judges; a spec outside a course keeps the generic 640 px panel"""
+    print("\n-- --panel task: the real task page (2.52.1)")
+    sys.path.insert(0, studio.COMPILE)
+    import test_compile_module as tcm
+    import figure_fit as ff
+    import content_script as cs
+    import task_pages
+    tmp = tempfile.mkdtemp(prefix="studio_task_")
+    try:
+        screens = [{"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the ship", "text": "Self-check now.", "minutes": 2},
+                   {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the tank connection space.",
+                    "visual": "the ship", "answer": "Tank connection space*\nEngine room", "feedback": "Around the valves."}]
+        build = {"module": 1, "screens": {"t01": {"try_tablet": False},
+                                          "q01": {"figure": "ship.kit.json", "areas": {"Tank connection space": "TCS", "Engine room": "ER"}}}}
+        c, md = tcm.figures_course(tmp, build=build, screens=screens)
+        figdir = os.path.join(c, "working_claude", "figures", "M01")
+        sp = os.path.join(figdir, "ship.kit.json")
+        io.open(sp, "w", encoding="utf-8").write(json.dumps(SHIP))
+        loose = os.path.join(tmp, "ship.kit.json")
+        io.open(loose, "w", encoding="utf-8").write(json.dumps(SHIP))
+        rg, _ = studio.run(loose, panel="task", sizes=((1280, 800),), out=os.path.join(tmp, "g"))
+        check("outside a course: the generic 640 px task panel, where this ship is clean (the case it fixes)",
+              rg and not (rg.get("context") or {}).get("page") and not [p for p in studio.problems(rg) if p[2] == "empty"],
+              rg and studio.problems(rg))
+        script = cs.load(cs.paths(c, 1)["script"])
+        slide, code, qs = next(iter(task_pages.sets(script)))
+        real = ff.task_page_findings(studio.find_browser(), script, slide, code, qs, build, md, figdir) or {}
+        r, _ = studio.run(sp, panel="task", out=os.path.join(tmp, "t"))
+        st = (((r or {}).get("sizes") or {}).get("1280x800") or {}).get("states") or [{}]
+        text, probs = studio.summary(r, sp) if r else ("", [])
+        check("in a course: drawn on q01's real task page (its frame ~1000 px wide, not 640), and the studio finds what the "
+              "build's drawing check finds there - EMPTY",
+              r and (r.get("context") or {}).get("page") and (st[-1].get("panel") or [0])[0] > 900
+              and any(x[0] == "empty" for x in real.get("q01", [])) and any(p[2] == "empty" for p in probs)
+              and "its real task page" in text, (st, real.get("q01"), text[-600:]))
+        shot = (((r or {}).get("sizes") or {}).get("1280x800") or {}).get("shot") or ""
+        check("... and photographs that page (the question shown)", shot.endswith("_task_1280x800.png") and os.path.isfile(shot), shot)
+        check("... the temporary pages are gone from the module folder",
+              not [f for f in os.listdir(os.path.join(md, "tasks")) if f.startswith("__studio_")]
+              if os.path.isdir(os.path.join(md, "tasks")) else True)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     judged_part()
     if not studio.find_browser():
@@ -440,6 +499,7 @@ def main():
               shot.endswith("_all.png") and os.path.isfile(shot) and png_size(shot)[0] >= 1300 and png_size(shot)[1] >= 700, shot)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+    task_page_part()
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
     return 1 if FAILS else 0
 
