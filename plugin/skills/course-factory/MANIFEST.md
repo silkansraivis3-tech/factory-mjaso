@@ -1375,11 +1375,22 @@ the ship look realistic aswell, look at real images of it", "definitely ... the 
   open bonnet with a coil spring, lever), hose ends, manifold block valves and blinds, lamp guards and the Ex fitting.
   Fire, flame, spark and spill drawn as they look (flame colours, a jet fire's lifted blue root, LNG's white vapour fog,
   an arc's blue halo); a dual-fuel cylinder's combustion as plumes along the jets (faint blue gas, bright pilot).
+  The gas bottle as it is filled and read: opaque, one paint (its EN 1089-3 shoulder code - N2 black, CO2 grey, air black
+  and white quarters - only with `code: true`: the standard leaves out fixed extinguishing systems), a gauge on the valve for compressed gas (needle and bar fall together), CO2 read by weight in kg with its
+  pressure left alone and its liquid shown in a window tagged "liquid"; the reading stacked on the plate (number over
+  unit), shown only when the steps change that bottle, so a row of bottles stays as narrow as real ones.
 - **Layout**: a room's name with no clear place inside (the room filled with equipment) goes beside it; the valve is no
   taller than the ISA symbol it replaces; a shade, a section hatch and a bolt are not measured again, and what does not
   move is measured once per state (not again at every motion phase). Real specs (the M01 benchmark build, 96 figures)
   were drawn new against old: a low tank's saddle feet scale with it (a 40-high tank in a tight hold), its straps are
-  surface detail words may cross, the turbocharger stays inside the engine's room, a zone over a tank takes deep inks.
+  surface detail words may cross, the turbocharger stays inside the engine's room, a zone lying on a tank takes deep inks
+  (one bigger than the tank keeps the inks it needs over the hull). A second pass over the same figures: the gas detector
+  compact and centred on its point (its sensor had poked through a deck), a gas bottle's valve scaled with a small
+  bottle, a fan's arrows left out of a duct too short for them, the hull's paint (bottom paint, boot-top) surface detail
+  words may cross, and a leader line keeps the full clearance from every word, the words drawn in parts too.
+- **Words on light equipment**: a room's name or a caption over a light surface (the tank's cladding, the white
+  superstructure, machinery paint) is printed in dark ink as on a nameplate (`kit.js` `inkOn`, once the labels are
+  placed), not in light letters with a dark halo.
 - **`audit_drawing.js` twice as fast, the same findings**: a bounding-box test before each point-in-shape test, one inverse
   matrix per shape per pass, a body's shade / hatch / bolt judged as the body (`kitCopy`). IGF M03 s15 (8 steps, six
   flowing pipes) audited in 27 s (56 s before, with half the shapes); `test_audit_drawing.py` 37 pass.

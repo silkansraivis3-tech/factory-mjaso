@@ -35,7 +35,7 @@
   --mat-skin:#C8977A;--mat-hair:#3B3330;--mat-cloth:#2F4B6E;--mat-suit:#A9BCCB;--mat-reflect:#E4EAEF;
   --mat-edge:#2C3844;--mat-edge-steel:#3A4550;--mat-edge-clad:#5B6672;--mat-bolt:#3A4550;
   --mat-yoke:#9AA6B1;--mat-stem:#C3CCD5;--mat-hole:#1A2633;
-  --mat-plate:#E4E9EE;--mat-ink:#2C3844;--mat-trip:var(--warn,#B4453A);
+  --mat-plate:#E4E9EE;--mat-ink:#2C3844;--mat-trip:var(--warn,#B4453A);--mat-trip-deep:#8A2B22;
   --mat-copper:#D9A877;--mat-copper-hot:#F2C79A;--mat-flame:#FFE3B3;--mat-flame-edge:#A86A2E;   /* a burning spray in an engine: pale, never the alarm amber; its edge on a light page */
   --mat-lng-top:#BFE0FF;--mat-lng-mid:#7FB6EE;--mat-lng-deep:#2E5F96;--mat-lng-surf:#D8ECFF;
   --mat-hi:#FFFFFF;--mat-lo:#000000;--mat-drop:rgba(0,0,0,.5);
@@ -252,6 +252,8 @@
 .kit-sl{font-size:calc(12.5px * var(--kit-up,1));font-weight:700;letter-spacing:.06em;fill:var(--faint-d,#71879F);transition:fill .3s;
   paint-order:stroke;stroke:var(--deep,#0A182E);stroke-width:3.5px;stroke-linejoin:round;stroke-opacity:.9}
 .kit-lit .kit-sl{fill:var(--txt-d,#F3F8FD)}
+/* over light equipment the name is printed in dark ink, as on a nameplate (kit.js inkOn) */
+.kit-sl.kit-sl-ink,.kit-lit .kit-sl.kit-sl-ink,.kit-cap.kit-sl-ink{fill:var(--mat-ink);stroke:none}
 
 /* machinery */
 .kit-shell{fill:var(--deep,#0A182E);stroke:var(--dim-d,#A2B7CF);stroke-width:2}
