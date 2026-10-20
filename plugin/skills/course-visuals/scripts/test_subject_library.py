@@ -156,6 +156,23 @@ def main() -> int:
         code, d = resolve(["portable gas detector", "--project", empty_project, "--library", modern, "--no-library"],
                           {SL.ENV_ALL: "off"})
         check("--no-library skips 2a", not any(x.startswith("2a") for x in d.get("levels_searched", [])), d)
+        # 2.55.0 - a library picture's record passes the asset check in every state the library may ship
+        # (check_assets.py had its own list without OWNER_CLEARED / GENERATED: IGF M02 with the Gas Library)
+        import check_assets as CA
+        with open(os.path.join(os.path.dirname(HERE), "source", "knowledge", "asset-pipeline.json"), encoding="utf-8") as fh:
+            states = set(json.load(fh)["rights_states"]) | set(SL.config()["ship_states"])
+        check("check_assets accepts every rights state of the pipeline and of a subject library",
+              states <= CA.VALID_RIGHTS and {"OWNER_CLEARED", "GENERATED"} <= CA.VALID_RIGHTS, sorted(states - CA.VALID_RIGHTS))
+        img = os.path.join(tmp, "assets_owner", "img")
+        os.makedirs(img)
+        open(os.path.join(img, "m02_lib_tray.jpg"), "wb").write(b"\xff\xd8\xff\xd9")
+        with open(os.path.join(img, "_photo_meta.json"), "w", encoding="utf-8") as fh:
+            json.dump({"m02_lib_tray.jpg": {"source": "Gas Library", "rights_state": "OWNER_CLEARED", "credit": "EMSA",
+                                            "description": "a drip tray under a bunker manifold", "teaching_purpose": "spill"}}, fh)
+        p = subprocess.run([sys.executable, "-I", os.path.join(HERE, "check_assets.py"), img, "--json"],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        check("... an OWNER_CLEARED library picture is not refused for its rights state",
+              "rights_state" not in p.stdout or "is not valid" not in p.stdout, p.stdout[-600:])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

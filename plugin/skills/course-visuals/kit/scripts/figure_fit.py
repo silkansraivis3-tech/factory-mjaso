@@ -1043,7 +1043,7 @@ def run_all(course, module, fix=True, jobs=4):
         spec = json.loads(text)
         fp = cm.fit_path(figdir, os.path.basename(sp), sid)
         cand_path = re.sub(r"\.kit\.json$", ".candidate.kit.json", fp)
-        if probs == [] or probs is None or not fix:
+        if probs == [] or probs is None:
             return item, probs, r, None, None
         sc = cs.load(cs.paths(course, module)["script"])
         s = next((x for x in sc["screens"] if x["id"] == sid), {})
@@ -1054,6 +1054,10 @@ def run_all(course, module, fix=True, jobs=4):
             p, _ = measure(sp, sid, json.loads(old), rec_old.get("strip") is not False)
             if p == []:
                 return item, probs, r, json.loads(old), rec_old.get("how", "re-fitted")
+        # --no-fix makes no NEW fit, but the compiler draws a saved one that is still clean - judging the spec as written
+        # instead failed a deck that was right (2.55.0: IGF M02 s09, the QA's re-run against the builder's PASS)
+        if not fix:
+            return item, probs, r, None, None
         new, how, best = try_fixes(sp, sid, spec, r, probs, None)
         if os.path.isfile(cand_path):
             os.remove(cand_path)

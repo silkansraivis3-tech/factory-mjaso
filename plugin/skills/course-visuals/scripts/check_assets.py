@@ -24,8 +24,23 @@ SCHEMA_DIR = os.path.join(SKILL, "source", "schemas")
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".svg", ".webp", ".gif"}
 META_FILES = {"_photo_meta.json": "photo", "_figure_meta.json": "figure"}
 
-VALID_RIGHTS = {"CLEARED", "PROJECT_OWNED", "PUBLIC_DOMAIN",
-                "ATTRIBUTION_REQUIRED", "RIGHTS_REVIEW_REQUIRED", "REJECTED"}
+def valid_rights():
+    """every rights state the asset pipeline defines, and the ones a subject library ships with (2.55.0). This list was
+    typed here and drifted: OWNER_CLEARED (asset-pipeline.json since 2.19.2) and a library's GENERATED failed every
+    record that carried them - found by the IGF M02 build with the Gas Library, 2026-10-20"""
+    out = {"CLEARED", "PROJECT_OWNED", "PUBLIC_DOMAIN", "ATTRIBUTION_REQUIRED", "RIGHTS_REVIEW_REQUIRED", "REJECTED"}
+    know = os.path.join(SKILL, "source", "knowledge")
+    for name, pick in (("asset-pipeline.json", lambda d: d.get("rights_states", {}).keys()),
+                       ("subject-libraries.json", lambda d: d.get("ship_states", []))):
+        try:
+            with open(os.path.join(know, name), encoding="utf-8") as fh:
+                out |= {k for k in pick(json.load(fh)) if not str(k).startswith("_")}
+        except (OSError, ValueError, AttributeError):
+            pass
+    return out
+
+
+VALID_RIGHTS = valid_rights()
 
 findings: list[dict] = []
 
