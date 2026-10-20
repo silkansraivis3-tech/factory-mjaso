@@ -46,7 +46,14 @@ KEEP = ("check", "where", "part", "other", "detail")
 WRITE = ("function __done(r){var p=document.createElement('pre');p.id='%s';p.textContent=JSON.stringify(r);"
          "document.body.appendChild(p);}"
          "function __keep(f,pre){return {check:f.check,where:(pre||'')+f.where,part:f.part,other:f.other||'',detail:f.detail||''};}" % OUT)
-# a deck: every slide in turn, as the deck shows it (audit_drawing.js all() presses Start)
+# a deck: every slide in turn, as the deck shows it (audit_drawing.js all() presses Start). 2.55.0: a long deck is checked
+# in slices side by side - each browser keeps only its slides [__LO, __HI) and the finding's slide number is put back
+# in <head>, before the page is read: a slide outside the slice is taken out as the parser adds it, so neither the deck
+# nor the figure kit ever lays it out (removing it after the load left every browser drawing the whole deck)
+SLICE = ("<script>(function(){var i=0,LO=%d,HI=%d;new MutationObserver(function(ms){ms.forEach(function(m){"
+         "[].forEach.call(m.addedNodes,function(n){if(n.nodeType===1&&n.classList&&n.classList.contains('slide')"
+         "&&!(n.parentNode&&n.parentNode.closest&&n.parentNode.closest('.slide'))){if(i<LO||i>=HI){n.parentNode.removeChild(n);}i++;}});"
+         "});}).observe(document.documentElement,{childList:true,subtree:true});})();</script>")
 DECK = WRITE + ("setTimeout(function(){AuditDrawing.all().then(function(r){"
                 "__done({drawings:r.drawings||0,aborted:r.ABORTED||'',findings:(r.findings||[]).map(function(f){return __keep(f)})});"
                 "},function(e){__done({error:String(e)})});},300);")
@@ -62,11 +69,12 @@ TASK = WRITE + ("setTimeout(function(){try{var out=[],n=0,ab='';"
                 "__done({drawings:n,aborted:ab,findings:out});}catch(e){__done({error:String(e)});}},300);")
 
 
-def wrapper(page, deck):
-    """the page as it is, read from its own folder (<base>), with the probe and its runner added at the end"""
+def wrapper(page, deck, rng=None):
+    """the page as it is, read from its own folder (<base>), with the probe and its runner added at the end;
+    rng = (first, end) keeps only those slides of a deck"""
     text = io.open(page, encoding="utf-8").read()
     base = '<base href="%s/">' % Path(os.path.dirname(os.path.abspath(page))).as_uri()
-    text = re.sub(r"<head>", "<head>" + base, text, count=1, flags=re.I)
+    text = re.sub(r"<head>", "<head>" + base + (SLICE % rng if deck and rng else ""), text, count=1, flags=re.I)
     tail = '<script src="%s"></script><script>%s</script>' % (Path(AUDIT).as_uri(), DECK if deck else TASK)
     i = text.lower().rfind("</body>")
     return text[:i] + tail + text[i:] if i >= 0 else text + tail
@@ -97,10 +105,35 @@ def window_for(exe, size=SIZE):
     return size[0] + _WIN["d"][0], size[1] + _WIN["d"][1]
 
 
-def run_page(exe, page, prof, tmp):
-    deck = os.path.basename(page).lower() == "index.html" and os.path.basename(os.path.dirname(page)).lower() == "presentation"
-    w = os.path.join(tmp, "check_%d.html" % abs(hash(page)))
-    io.open(w, "w", encoding="utf-8").write(wrapper(page, deck))
+def is_deck(page):
+    return os.path.basename(page).lower() == "index.html" and os.path.basename(os.path.dirname(page)).lower() == "presentation"
+
+
+SLIDE_TAG = re.compile(r"<(?:section|div)\b[^>]*\bclass=\"(?:[^\"]*\s)?slide(?:\s[^\"]*)?\"", re.I)
+
+
+def slices(page, jobs):
+    """a deck's slides cut into ranges for `jobs` browsers (at least 3 slides each); [None] = the page whole"""
+    if jobs < 2 or not is_deck(page):
+        return [None]
+    n = len(SLIDE_TAG.findall(io.open(page, encoding="utf-8").read()))
+    per = max(3, -(-n // jobs))
+    return [None] if n <= per else [(lo, min(n, lo + per)) for lo in range(0, n, per)]
+
+
+def renumber(res, rng):
+    """a slice's findings with the deck's own slide numbers ("slide 2 (s05)" in the slice starting at 10 is slide 12)"""
+    if not rng:
+        return res
+    for f in res.get("findings", []):
+        f["where"] = re.sub(r"^slide (\d+)", lambda m: "slide %d" % (int(m.group(1)) + rng[0]), f.get("where", ""))
+    return res
+
+
+def run_page(exe, page, prof, tmp, rng=None):
+    deck = is_deck(page)
+    w = os.path.join(tmp, "check_%d_%s.html" % (abs(hash(page)), "%d-%d" % rng if rng else "all"))
+    io.open(w, "w", encoding="utf-8").write(wrapper(page, deck, rng))
     try:
         p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--mute-audio",
                             "--user-data-dir=" + prof, "--allow-file-access-from-files", "--window-size=%d,%d" % window_for(exe),
@@ -117,6 +150,17 @@ def run_page(exe, page, prof, tmp):
         return {"error": "the probe's answer could not be read"}
 
 
+def jobs_for(n):
+    """how many hidden browsers check at once (2.55.0): the deck in slices and every task page side by side, each its own
+    browser with its own profile - half the computer's cores, at most 8, CF_DRAWING_JOBS to set it (1 = one page at a
+    time, the deck whole, as before). The findings are the same and come back in the pages' and slides' order."""
+    try:
+        want = int(os.environ.get("CF_DRAWING_JOBS") or 0)
+    except ValueError:
+        want = 0
+    return max(1, min(n, want or min(8, max(1, (os.cpu_count() or 2) // 2))))
+
+
 def check(pages, root=None):
     """(problems, a note when the check could not run) for the built pages"""
     exe = find_browser()
@@ -126,9 +170,22 @@ def check(pages, root=None):
     probs = []
     prof, tmp = tempfile.mkdtemp(prefix="cf_drawing_"), tempfile.mkdtemp(prefix="cf_pages_")
     try:
+        window_for(exe)                      # measured once, before the pages run side by side
+        import concurrent.futures as cf
+        n = jobs_for(8)
+        work = [(page, rng) for page in pages for rng in slices(page, n)]
+        with cf.ThreadPoolExecutor(max_workers=min(n, len(work))) as ex:
+            # a browser locks its profile folder: one per piece of work
+            got = list(ex.map(lambda iw: renumber(run_page(exe, iw[1][0], os.path.join(prof, "p%d" % iw[0]), tmp, iw[1][1]),
+                                                  iw[1][1]), enumerate(work)))
+        done = []                            # one answer per page, its slices joined in slide order
         for page in pages:
+            parts = [r for (p, _), r in zip(work, got) if p == page]
+            bad = [r for r in parts if r.get("error") or r.get("aborted")]
+            done.append(bad[0] if bad else {"drawings": sum(r.get("drawings", 0) for r in parts),
+                                            "findings": [f for r in parts for f in r.get("findings", [])]})
+        for page, res in zip(pages, done):
             name = os.path.relpath(page, root).replace("\\", "/") if root else page
-            res = run_page(exe, page, prof, tmp)
             if res.get("error") or res.get("aborted"):
                 probs.append("%s: the drawing check could not finish - %s" % (name, res.get("error") or res.get("aborted")))
                 continue
