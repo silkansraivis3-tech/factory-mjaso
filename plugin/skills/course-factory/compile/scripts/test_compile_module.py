@@ -917,7 +917,7 @@ def fixes_part(tmp):
     code, out = run(COMPILE, c, "--module", "1")
     d2, d3 = section(deck(md), "s02"), section(deck(md), "s03")
     check("C8: a photograph slide with \"composition\": \"wide-left\" is a real column layout (the words as wide as asked), not 'photo split'",
-          'class="slide-body two-col wide-left photo-col"' in d2 and "photo split" not in d2 and 'class="slide photo' not in d2, d2[:700])
+          'class="slide-body two-col wide-left photo-col dom-fig"' in d2 and "photo split" not in d2 and 'class="slide photo' not in d2, d2[:700])
     check("C8: ... the photo fills its own column and keeps its visible credit line",
           '<div class="fill fig photo-col"><img src="../assets/img/ship.jpg"' in d2 and '<div class="credit">Photo: Jane Doe' in d2, d2)
     check("C9: a photograph inside a figure fragment keeps the slide credit line", '<div class="credit">Photo: Jane Doe' in d3 and "data-credit=" in d3, d3)
@@ -1227,6 +1227,7 @@ def v2497_part(tmp):
     # L60 (Aleksis, 2026-10-19: "very recommended to build a 3D model at least once where you can in a module")
     flat = json.loads(json.dumps(SCREENS))
     flat[3].update(visual_kind="interactive_diagram", visual="A hull section: the double-walled gas pipe and the engine room.")
+    flat[2].update(notes="- Name each space.")     # 2.52.0: "Tap each space" on a flat drawing is a cue to fix - not this test's point
     os.makedirs(os.path.join(tmp, "l60"))
     c6, md6 = new_course(os.path.join(tmp, "l60"), script(screens=flat), build=False)
     gate_fixture.open_gate(c6)
@@ -1268,6 +1269,134 @@ def v2497_part(tmp):
           f1.name != f2.name and f2.name == f3.name and '"ghost":["tk"]' in f1.html(True) and '"ghost":["pp"]' in f2.html(True),
           (f1.name, f2.name, f3.name))
 
+
+
+STEP_KIT = {"size": [400, 200], "parts": [{"id": "T", "type": "tank", "x": 40, "y": 40, "w": 200, "h": 100, "label": "Fuel tank"}],
+            "steps": [{"title": "The tank", "show": ["T"], "line": 1}]}
+
+
+def v2520_part(tmp):
+    """2.52.0 (IGF M01 + M02 benchmark, 2026-10-20) - six things a trainee or an instructor saw"""
+    print("\n-- 2.52.0: what the deck says is what was built; only what is shown ships")
+    sys.path.insert(0, HERE)
+    sp = lambda c: os.path.join(c, "working_claude", "script", "M01.build.json")
+    os.makedirs(os.path.join(tmp, "v52"))
+    sc = json.loads(json.dumps(SCREENS))
+    sc[1]["active"] = "predict-then-reveal"                 # s02, 4 min, active
+    sc[2]["notes"] = "- Tap each space.\n- Before you tap, ask."
+    sc[3]["notes"] = "- ESD in module 14.\n- Rotate the model and cut the pipe open."
+    c, md = new_course(os.path.join(tmp, "v52"), script(screens=sc))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    page = deck(md)
+    s01, s02, s03, s04 = (section(page, x) for x in ("s01", "s02", "s03", "s04"))
+
+    # 1 - 3D wording after the 3D was declined
+    check("1: a 3D slide kept as a 2D drawing (\"declined_3d\") says the kind it was built with - data-visual is no model_3d",
+          'data-visual="schematic"' in s04 and "model_3d" not in s04, s04[:400])
+    check("1: ... a slide whose figure holds a scene keeps its planned kind", 'data-visual="interactive_diagram"' in s03, s03[:300])
+    check("1: a cue that asks the built picture for what it cannot do is in \"To fix\" - the approved words unchanged in the deck",
+          code == 1 and "To fix before it is shown" in out and "(s04): the instructor's cue says \"Rotate the model and cut the pipe open.\""
+          in out and "not a 3D scene" in out and 'data-cue="- ESD in module 14.\n- Rotate the model and cut the pipe open."' in s04, out)
+    check("1: ... a cue the picture can do (tap the parts of a 3D scene) is not reported", "(s03): the instructor" not in out, out)
+    fixes_p = os.path.join(c, "working_claude", "script", "M01.cue_fixes.json")
+    fixes = cs.load(fixes_p) if os.path.isfile(fixes_p) else None
+    check("1: ... with a drafted line in its place, written as a changes file beside the script, and the exact propose command",
+          "Drafted in its place: \"Point to each part on the drawing in turn.\"" in out and "propose" in out and "M01.cue_fixes.json" in out
+          and fixes == [{"field": "s04.notes", "new": "- ESD in module 14.\n- Point to each part on the drawing in turn."}], (out, fixes))
+    code_pr, out_pr = run(os.path.join(SKILL, "scripts", "content_script.py"), "propose", c, "--module", "1", "--changes", fixes_p)
+    check("1: ... content_script.py propose takes the file as it is (pending - the script itself is unchanged)",
+          code_pr == 0 and cs.load(os.path.join(c, "working_claude", "script", "M01.json"))["screens"][3]["notes"] == sc[3]["notes"], out_pr)
+    sheet = cs.load(sp(c))
+    sheet["screens"]["s04"]["cue_kept"] = "the operator: the instructor turns the printed model in the room"
+    cs.save(sp(c), sheet)
+    code_k, out_k = run(COMPILE, c, "--module", "1", "--only", "deck")
+    check("1: ... kept with the operator's reason (\"cue_kept\") it is not reported again - and no drafted file is left", code_k == 0
+          and "the instructor's cue says" not in out_k and not os.path.isfile(fixes_p), out_k)
+    import compile_module as cm
+    kit = '<div class="fill fig kit-fig"><script type="application/json" id="kit-s09">%s</script></div>' % json.dumps(STEP_KIT)
+    s9 = {"id": "s09", "notes": "- Tap each part in order, tank to engine.\n- Tap the next step when the room answers."}
+    found = cm.cue_problems(s9, kit, "interactive_diagram", False, {}, md, "s09")
+    check("1: on a kit drawing \"tap each part\" is reported (its parts do not answer a tap), \"tap\" alone is not (its step "
+          "buttons and lit lines do)", len(found) == 1 and "Tap each part in order" in found[0] and "tap on its parts" in found[0], found)
+    sheet = cs.load(sp(c))
+    sheet["screens"]["s04"]["figure"] = "s04.kit.json"
+    cs.save(sp(c), sheet)
+    io.open(os.path.join(c, "working_claude", "figures", "M01", "s04.kit.json"), "w", encoding="utf-8").write(json.dumps(STEP_KIT))
+    code_p, out_p = run(COMPILE, c, "--module", "1", "--only", "plan")
+    plan = io.open(os.path.join(md, "instructor", "M01_PLAN.html"), encoding="utf-8").read()
+    row = re.search(r"<tr><td class=\"n\">4</td>.*?</tr>", plan, re.S)
+    check("1: the instructor's plan labels the slide by the picture built (a step animation), not the script's 3D model",
+          row and "Step-by-step animation" in row.group(0) and "3D model" not in row.group(0), row.group(0) if row else plan[-600:])
+
+    # 4 - data-active
+    check("4: every block carries data-active - a plain theory slide 0, an active slide its minutes, a task slide its minutes",
+          'data-mins="3" data-active="0"' in s01 and 'data-mins="4" data-active="4"' in s02
+          and 'data-mins="4" data-active="4"' in section(page, "t01"), (s01[:300], s02[:300]))
+    bal = os.path.join(SKILL, "hours", "scripts", "check_balance.py")
+    code_b, out_b = run(bal, os.path.join(md, "presentation", "index.html"))
+    check("4: check_balance.py reads every compiled block (no 'data-active missing')", "data-active missing" not in out_b
+          and "learner-active" in out_b, out_b)
+
+    # 5 - the figure first in the markup, the projector layout kept by CSS
+    check("5: a two-col slide writes its figure before its words, marked dom-fig", re.search(
+        r'<div class="slide-body two-col wide-right dom-fig">\s*<div class="fill fig">.*?<div class="copy">', s04, re.S), s04)
+    css = io.open(os.path.join(SKILLS, "course-module-ui", "templates", "gb_compose.css"), encoding="utf-8").read()
+    check("5: ... and gb_compose.css puts the words back first on a landscape screen only",
+          "@media (min-width:901px){.slide-body.dom-fig > .copy{order:-1}}" in css)
+    flow = cm.slide_html(script(), {"id": "s07", "kind": "slide", "title": "T", "text": "One.\nTwo.", "minutes": 2},
+                         1, 1, {"figure": "assets/fig/scale.svg", "composition": "flow"}, md, None, "F", [])
+    check("5: a flow slide with a figure: figure first, dom-fig", re.search(r'<div class="slide-body dom-fig">\s*<div class="fill fig">'
+                                                                         r'.*?<div class="copy">', flow, re.S), flow)
+    ff = cm.slide_html(script(), {"id": "s07", "kind": "slide", "title": "T", "text": "One.\nTwo.", "minutes": 2, "layout": "split"},
+                       1, 1, {"figure": "assets/fig/scale.svg", "figure_first": True}, md, None, "F", [])
+    check("5: \"figure_first\" (the drawing on the left) is unchanged - no dom-fig", "fig-wide fig-first" in ff and "dom-fig" not in ff, ff)
+
+    # 2 - only what is shown ships, "used_in" from the real references
+    img = os.path.join(md, "assets", "img")
+    io.open(os.path.join(img, "spare_ai.webp"), "wb").write(b"RIFF")
+    meta = cs.load(os.path.join(img, "_photo_meta.json"))
+    meta["spare_ai.webp"] = {"generated": True, "description": "An AI tank.", "used_in": "M01 presentation, slide s02"}
+    meta["ship.jpg"]["used_in"] = "M07 presentation, slide s09"
+    cs.save(os.path.join(img, "_photo_meta.json"), meta)
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    meta = cs.load(os.path.join(img, "_photo_meta.json"))
+    left = cs.load(os.path.join(img, "_unused", "_photo_meta.json"))
+    check("2: a picture no page shows is left out of the package - moved, with its record, to assets/img/_unused/ - and said",
+          not os.path.isfile(os.path.join(img, "spare_ai.webp")) and os.path.isfile(os.path.join(img, "_unused", "spare_ai.webp"))
+          and "spare_ai.webp" not in meta and "spare_ai.webp" in left and "left out of the package" in out
+          and "- spare_ai.webp" in out, out)
+    check("2: ... \"used_in\" is rewritten from where the pages really show the picture", meta["ship.jpg"]["used_in"] == "M01 presentation, slide s01",
+          meta["ship.jpg"])
+    sheet = cs.load(sp(c))
+    sheet["screens"]["s02"]["inset"] = {"photo": "assets/img/spare_ai.webp", "caption": "An AI tank"}
+    cs.save(sp(c), sheet)
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    meta = cs.load(os.path.join(img, "_photo_meta.json"))
+    check("2: ... named again in the build sheet, it comes back with its record and is shown", os.path.isfile(os.path.join(img, "spare_ai.webp"))
+          and meta.get("spare_ai.webp", {}).get("used_in") == "M01 presentation, slide s02" and "Back in the package" in out
+          and "spare_ai.webp" in section(deck(md), "s02"), out)
+
+    # 3 - a real photograph proposed for a task question answered on a picture
+    tq = json.loads(json.dumps(SCREENS))
+    tq.insert(5, {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "visual": "the plan",
+                  "question": "On the fire control plan, tap the fuel preparation room.", "answer": "Fuel preparation room*\nGalley",
+                  "feedback": "It is a category A machinery space."})
+    os.makedirs(os.path.join(tmp, "v52t"))
+    c3, md3 = new_course(os.path.join(tmp, "v52t"), script(screens=tq))
+    sheet = cs.load(sp(c3))
+    sheet["screens"]["q02"] = {"figure": "assets/fig/scale.svg", "areas": {"Fuel preparation room": [10, 10, 20, 20], "Galley": [50, 10, 20, 20]}}
+    cs.save(sp(c3), sheet)
+    io.open(os.path.join(md3, "assets", "img", "plan.jpg"), "wb").write(b"\xff\xd8\xff\xd9")
+    pm = cs.load(os.path.join(md3, "assets", "img", "_photo_meta.json"))
+    pm["plan.jpg"] = {"source": "Wikimedia Commons", "author": "A", "licence": "CC BY 4.0", "description": "A fire control plan.",
+                      "shows": ["fire control plan"]}
+    cs.save(os.path.join(md3, "assets", "img", "_photo_meta.json"), pm)
+    code, out = run(COMPILE, c3, "--module", "1", "--only", "tasks")
+    fix_list = out.split("To fix before it is shown")[1] if "To fix before it is shown" in out else ""
+    check("3: a tap-the-place question about what a real photograph of the module shows: a note with the photo and the build-sheet "
+          "line - never in \"To fix\"", "Real photographs a task question could be answered on" in out
+          and '(q02, hotspot): the real photograph plan.jpg shows "fire control plan" - build-sheet line: "q02": {"figure": '
+          '"assets/img/plan.jpg", "areas": {"Fuel preparation room":' in out and "plan.jpg" not in fix_list, out)
 
 
 def main():
@@ -1369,7 +1498,7 @@ def main():
               and cm.compile_deck(dict(script(), title="IGF ship design and operational characteristics"), {}, md, None, "x", True)[0]
               .count('data-foot="M01 · IGF SHIP DESIGN AND OPERATIONAL · NOVIKONTAS"') == 6)
         check("split + a drawing -> two-col fig-wide: the reading column (.copy), its statement and list, the picture in .fill.fig",
-              'slide-body two-col fig-wide"' in s02 and '<div class="copy">' in s02 and 'class="statement"' in s02
+              'slide-body two-col fig-wide dom-fig"' in s02 and '<div class="copy">' in s02 and 'class="statement"' in s02
               and 'class="support"' in s02 and '<div class="fill fig"><svg viewBox' in s02, s02)
         check("an .svg figure goes in as it is, without its XML prolog", "<?xml" not in page and "60 °C</text>" in s02)
         check("visual_wide with few words -> stage; an .html fragment placed as it is",
@@ -1384,7 +1513,9 @@ def main():
               'data-kind="Check"' in t02 and 'data-task-href="../assessment/check.html"' in t02)
         check("every slide has data-title and the instructor notes as data-cue",
               all('data-title="' in section(page, x) and 'data-cue="- ' in section(page, x) for x in ("s01", "s02", "s03", "s04", "t01", "t02")))
-        check("every teaching slide says its picture kind (data-visual)", 'data-visual="model_3d"' in s04 and 'data-visual="photo"' in s01)
+        # 2.52.0: the kind BUILT - s04 is planned as a 3D model and kept a flat drawing ("declined_3d")
+        check("every teaching slide says its picture kind (data-visual), as built",
+              'data-visual="schematic"' in s04 and 'data-visual="photo"' in s01 and 'data-visual="interactive_diagram"' in s03)
         check("no question is ever on a slide", "q01" not in page and "m01" not in re.sub(r"(?i)M01", "", page))
         check("no link inside a slide", not re.search(r"<main.*<a\s[^>]*href", page, re.S))
         check("the landing card shows the course line, the module, the minutes and the tasks",
@@ -1790,6 +1921,7 @@ def main():
         v2492_part(tmp)
         v2494_part(tmp)
         v2497_part(tmp)
+        v2520_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

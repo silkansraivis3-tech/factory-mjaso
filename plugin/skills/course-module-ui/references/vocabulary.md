@@ -50,10 +50,11 @@ Compiled slides (2.25.1, §13b — written by `course-factory/compile/`, usable 
 | `.two-col.fig-wide` | two-col with the wider column for the picture |
 | `.legend` (`li[data-i][data-n]`) | a numbered row under a stage drawing; the badge shows `data-n` (1, 2, 3 in the row); `.own-numbers` when the words already start with their number - no badge |
 | `.two-col.fig-wide.fig-first` | the drawing on the left, the words on the right |
+| `.slide-body.dom-fig` | written by the compiler (2.52.0): the figure first in the markup - first on a portrait tablet - and the words put back first on a landscape screen by CSS `order`; never typed by hand |
 | `.slide.photo.split` | a photograph filling the right of the screen, the words on the dark left |
 | `.act-ico` · `.act-lines` | the task slide's tablet sign · its lines grouped at reading size |
 | `.aside` | small drawings that belong with the words (mini figures on a photo slide) - compact, never pushing the words off the screen |
-| `.fig` · `.fig-wide` · `.fig-first` · `.own-numbers` · `.split` | the modifiers above, named on their own for the vocabulary check |
+| `.fig` · `.fig-wide` · `.fig-first` · `.dom-fig` · `.own-numbers` · `.split` | the modifiers above, named on their own for the vocabulary check |
 | `.cur` · `.lit` on a `[data-i]` line | **set by a figure that steps** — the line it is on (amber wash, amber ring and bar; it out-ranks every card look) and the lines already shown (blue). Amber on a line means "here now" only: no card at rest is amber. `audit_deck.js` fails a selected line that looks like itself or another line at rest |
 
 ## 2 · Photographs (`gb_compose.css`)

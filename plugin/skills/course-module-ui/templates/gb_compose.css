@@ -124,6 +124,11 @@
 .slide-body.two-col.wide-left{grid-template-columns:1.35fr .65fr}
 .slide-body.two-col.wide-right{grid-template-columns:.65fr 1.35fr}
 .slide-body.two-col > *{min-width:0}
+/* 2.52.0 (L23) - a compiled slide writes its figure FIRST in the markup (.dom-fig), so a portrait tablet - one column, under
+   900 px - shows the figure in its first screen and a screen reader meets it first. On a landscape screen `order` puts
+   the words back where the layout has them (left of the figure in a two-col, above it in a flow): the projector
+   picture is the one it was. A hand-built deck has no .dom-fig and is not touched */
+@media (min-width:901px){.slide-body.dom-fig > .copy{order:-1}}
 
 /* the column that holds the visual. It takes the height it is given. */
 .fill{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;

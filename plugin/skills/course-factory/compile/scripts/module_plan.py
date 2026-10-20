@@ -209,6 +209,7 @@ def plan_page(script, build, mdir, course, version, approved, probs):
         probs.append("%s plan: the course is in %s - the plan's own words are not in the factory in that language, so they were "
                      "written in English (module_plan.py WORDS)" % (m, lang))
     sheet = build.get("screens") or {}
+    figdir = workspace.claude_path(course, "figures", m) if course else None
     slide_no, sets, set_of = cs.plan_of(script)
     screens = [s for s in script.get("screens", []) if s.get("kind") in cs.INSTRUCTOR]
     # ---- the minutes: allocated against built
@@ -334,7 +335,10 @@ def plan_page(script, build, mdir, course, version, approved, probs):
             kind = kind.rstrip(" ·")
         else:
             kind = w["theory"]
-        vk = cs.kind_label(s.get("visual_kind"), wl).split(" (")[0].split(" - ")[0] if s.get("visual_kind") else ""
+        # 2.52.0 - the kind of picture the slide was BUILT with (the deck's data-visual), never the script's plan when the
+        # build sheet gave another: a 3D slide kept 2D ("declined_3d") is not promised as a model here
+        built_k = cm.slide_visual(s, sheet.get(s["id"]) or {}, mdir, figdir) if s.get("visual_kind") else ""
+        vk = cs.kind_label(built_k, wl).split(" (")[0].split(" - ")[0] if built_k and built_k != "none" else ""
         kind_html = e(kind) + ("<br><small>%s</small>" % e(vk) if vk and vk != kind else "")
         do = bullets(s.get("notes"))
         if k == "task-slide":

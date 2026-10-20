@@ -1350,6 +1350,50 @@ the vent at y 230 instead of 196 and no hand label boxes, M01 **PASSes** in one 
 `vent-puffs` (a vent 22 under a room: was inside on some frames, now clean) and `bad-mover` (a plain moving disc, the
 determinism case the puffs were), `test_audit_drawing.py`.
 
+## 4zz6 · Six things a trainee or an instructor saw (2.52.0, 2026-10-20)
+
+Each found by both benchmark runs of IGF M01 + M02 (`M01_benchmark\workflow_before`, `workflow_after`); each fixed with a
+test that fails on 2.51.0.
+
+1. **3D promised after the 3D was declined.** The deck's `data-visual` and the plan's kind came from the script's
+   `visual_kind`, so M01 s05 / M02 s09 (kept 2D with `"declined_3d"`) still said `model_3d`. `compile_module.built_kind`
+   now says what was BUILT: a 3D kind only for a scene, a photo kind only for a photograph, else the script's kind when
+   the figure can be it, else from the figure (a kit with steps: `step_animation`; a flat drawing: `schematic`).
+   `module_plan.py` labels the timeline from the same (`slide_visual`). The instructor's cue is the approved words (L29)
+   and is never changed: `cue_problems` puts a cue line in "To fix" when it asks the built picture for what it cannot do
+   - rotate / turn / zoom / cut open (not a 3D scene), drag, "tap each part" (a kit drawing's parts do not answer a tap;
+   its step buttons and lit lines do), tap (nothing to tap). A module figure script that names the slide is trusted.
+   Each such line comes with a drafted replacement (`draft_cue`: what the built picture can do, keeping what follows a
+   colon), written for the whole module to `working_claude\script\MNN.cue_fixes.json` with the exact
+   `content_script.py propose ... --changes` command - propose only shows it, the operator's yes applies it. The
+   operator may keep a cue knowingly with `"cue_kept": "<their reason>"` on the slide's build-sheet entry.
+2. **Pictures no page shows shipped to the tablets, and `used_in` was wrong.** After every build `ship_only_shown`
+   moves each picture of `assets\img\` that no built page, style or script names - with its `_photo_meta.json` record - to
+   `assets\img\_unused\` (a folder starting with `_` is skipped by the classroom's importer, `package-core.mjs
+   internal()`), and rewrites each shown picture's `used_in` from where the pages show it ("M01 presentation, slide s01").
+   Nothing is deleted: named again in the build sheet or a drawing it names (`named_again`; `_` note keys and HTML
+   comments are not naming), or picked as an L57 thumbnail, it comes back on the next build. `check_course_package.py`
+   leaves `_` folders out of the package's file count, sizes and names like the importer; the publisher's gate
+   (`gates.py check_unshown_ai`) refuses an AI-generated picture that no published page shows. IGF: M01 leaves out
+   `m01_ai_lng_tank_in_hold.webp` and `m07_portable_multigas_detector.jpg`, M02 seven pictures.
+3. **No real photograph reached a task.** `task_photo_notes`: after a build, each tap / spot / label / read-the-instrument
+   question whose words name what a real photo of the module's pool `shows` (a thing of two words or more, said whole) is
+   listed with the photo and the build-sheet line that would use it - a note, never a block (`build_module.py` lists
+   them in one line). IGF M02: the fire-plan photo for q12 and m06 (ILO 2.6).
+4. **`data-active` was never written**, so `check_balance.py` failed on every compiled deck. Each block now carries it
+   as the L49 split counts: an active slide, a task slide, a room activity all their minutes; a plain slide 0 (owner
+   question 2 in §5 is narrowed to slides over 10 minutes).
+5. **The figure came after the words** (`check_visual_first` warned on every slide; on a portrait tablet the figure was
+   below the first screen). A two-col or flow slide writes its figure first (`.dom-fig`); `gb_compose.css` puts the
+   words back first on a landscape screen (`@media (min-width:901px){.slide-body.dom-fig > .copy{order:-1}}`).
+   `"figure_first"` slides are unchanged; a hand-built deck has no `.dom-fig`. Proof: every screen of M01 and M02
+   photographed by `review_sheets.mjs --all` before and after at 1920 x 1080 and 1280 x 800 - see the CONTEXT row.
+6. **A Sub-ILO's parts were not checked one by one.** `content_script.ilo_findings` adds a NOTE (`i_clause_not_checked`)
+   for each part of a leaf Sub-ILO that none of its tagged questions asks about. `clauses()` cuts only on ";" and before
+   a verb or who / what / where ("... and who on board is involved"), never inside brackets, " - ... - " or after a
+   colon; a map row's own `"clauses"` list, when given, is used as it is (additive - no approved map changes). Whether
+   it ever blocks is the owner's decision.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.
@@ -1363,9 +1407,11 @@ and was fixed (§4zs-§4zx). What is still open:
    but the script allows no screen after the check, so every compiled deck ends on it and `check_static.py`
    reports 2 findings per module. Open question: should the compiler add the hand-off screen itself (it is not
    content)?
-2. **Theory / practice balance on compiled decks.** `check_balance.py` needs `data-active` on each block; the
-   compiler does not write it. Copying the script's active-slide mark across makes each active slide a "100 %
-   active theory block", which `check_balance` flags as a rename. Which rule wins is the owner's call.
+2. **Theory / practice balance on compiled decks.** From 2.52.0 the compiler writes `data-active` on every block, as
+   the script's L49 split counts it: an active slide, a task slide and a room activity are all their minutes active, a
+   plain theory slide 0 - so `check_balance.py` now runs on every compiled deck. Still open: an active slide of more
+   than 10 minutes is a "100 % active theory block", which `check_balance` fails as a rename (no IGF M01/M02 slide is
+   that long). Whether L49's count or check_balance's rule wins is the owner's call.
 3. **Per-question Retry** (C16) stays out: it contradicts course-task-ux §9a (one opening, one result).
 
 **Not built yet, on purpose**

@@ -40,7 +40,10 @@ TWO FILES IN, ONE PAGE OUT
   links start ../assets/. An .html fragment is never put in the module folder: the classroom would take it
   for a page and send it to the tablets. A picture (.jpg .png .webp .gif) is SHIPPED: it is in the module
   folder and becomes an <img>; its credit line comes from assets\\img\\_photo_meta.json. Styles and scripts
-  are shipped too (module folder). A figure script that animates registers its per-slide hooks as
+  are shipped too (module folder). Only what a built page shows ships (2.52.0): after the build a picture no page,
+  style or script names goes with its record to assets\\img\\_unused\\ (the classroom skips a _ folder), and comes back
+  when the build sheet names it again; each shown picture's "used_in" is written from where the pages show it.
+  A figure script that animates registers its per-slide hooks as
       window.GB_HOOKS = window.GB_HOOKS || {};  GB_HOOKS.s05 = {enter: fn, leave: fn};
   and finds the slide's own lines by number: document.querySelector('#s04 [data-i="2"]').
   A figure named *.kit.json is a FIGURE KIT spec (course-visuals/kit/SPEC.md): parts and steps, no drawing.
@@ -658,6 +661,144 @@ def fragment_credit(page, credits):
     return " / ".join(credits) if 0 < len(credits) <= 2 else ""
 
 
+# ------------------------------------------------------------------ 2.52.0: what the built picture is, and can do
+def kit_spec_of(fig):
+    """the figure-kit spec inside a built figure, or None"""
+    for m in JSON_DATA.finditer(fig or ""):
+        try:
+            spec = json.loads(m.group(1).replace("<\\/", "</"))
+        except ValueError:
+            continue
+        if isinstance(spec, dict) and spec.get("parts"):
+            return spec
+    return None
+
+
+def built_kind(s, fig, is_photo, meta=None):
+    """the kind of picture the slide really has (media-and-tasks.json visual_kinds), from the figure built - the script's
+    planned kind when the figure is one: a 3D kind only for a 3D scene, a photograph kind only for a photograph. A 3D slide
+    the operator kept 2D ("declined_3d") is a 2D drawing here, so nothing downstream promises a model to turn"""
+    planned = cs.parse_kind(s.get("visual_kind") or "") or "none"
+    fam = lambda k: (cs.MEDIA["visual_kinds"].get(k) or {}).get("family")
+    if not fig:
+        return "none"
+    if is_photo:
+        return "ai_illustration" if is_generated(meta) else planned if planned in PHOTO_KINDS else "photo"
+    drawn = planned != "none" and fam(planned) not in ("3d", "video") and planned not in PHOTO_KINDS + ("ai_illustration",)
+    if cs.scene_in(fig):                               # a mounted figure ([data-stage]) may be 2D; a canvas or data-3d is a scene
+        return planned if fam(planned) == "3d" or drawn else (
+            "model_3d" if re.search(r"<canvas\b|\bdata-(?:3d|scene)\b", fig, re.I) else "interactive_diagram")
+    if re.search(r"<video\b", fig, re.I):
+        return planned if fam(planned) == "video" else "video_real"
+    if drawn:
+        return planned
+    spec = kit_spec_of(fig)
+    if spec is not None:
+        return "step_animation" if spec.get("steps") else FLAT_KIND
+    if IMG_SRC.search(fig) and not re.search(r"<svg\b", fig, re.I):
+        return "photo"
+    return FLAT_KIND
+
+
+def slide_visual(s, b, mdir, figdir):
+    """built_kind of one slide, from its build-sheet entry - for the instructor's plan (module_plan.py)"""
+    if s.get("kind") != "slide" and not (s.get("kind") == "activity" and b.get("figure")):
+        return ""
+    fig, _credit, is_photo = figure_html(mdir, figdir, s, b, [], "")
+    return built_kind(s, fig, is_photo, photo_meta(mdir, (b.get("figure") or "").replace("\\", "/")) if is_photo else None)
+
+
+def hooked(build, mdir, sid):
+    """a module figure script of the build sheet ("scripts") that works on this slide - what it lets the presenter do is
+    its own, so a cue on it is never second-guessed"""
+    for rel in build.get("scripts") or []:
+        try:
+            text = io.open(os.path.join(mdir, rel), encoding="utf-8").read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        if re.search(r"(?:GB_HOOKS\.|['\"#])%s\b" % re.escape(sid), text):
+            return True
+    return False
+
+
+def figure_can(fig, kind, is_photo, build, mdir, sid):
+    """what the presenter can do with the built picture: turn (a 3D scene), drag, tap, tap_part (its drawn parts)"""
+    if not fig:
+        return set()
+    if cs.scene_in(fig) or hooked(build, mdir, sid):
+        return {"turn", "drag", "tap", "tap_part"}
+    if is_photo:
+        return {"tap"}                                 # it opens full screen (L51)
+    spec = kit_spec_of(fig)
+    if spec is not None:                               # the step buttons and the lines its steps light are buttons (kit.js)
+        return {"tap"} if spec.get("steps") else set()
+    can = set()
+    if TAP_MARK.search(fig):
+        can |= {"tap", "tap_part"}
+    if DRAG_MARK.search(fig):
+        can.add("drag")
+    return can
+
+
+CUE_FIXES = {}      # {slide id: its notes with every drafted cue line} - written by main() as a changes file for propose
+CUE_FIX_HOW = "<cue-fix>"
+
+
+def draft_cue(ln, fig, is_photo):
+    """a cue line that asks the picture only for what it can do - a draft for the operator, never applied by the build.
+    What follows a colon in the old line (what the picture shows) is kept; "" = drop the line"""
+    tail = ln.split(":", 1)[1].strip() if ":" in ln else ""
+    spec = kit_spec_of(fig)
+    if spec is not None and spec.get("steps"):
+        do = "Step through the drawing with Next, or tap a lit line"
+    elif is_photo:
+        do = "Open the photo full screen and point out what it shows"
+    elif fig:
+        do = "Point to each part on the drawing in turn"
+    else:
+        return ""
+    return do + (": " + tail if tail else ".")
+
+
+def cue_problems(s, fig, kind, is_photo, build, mdir, where):
+    """2.52.0 (IGF M01 s04 / s05, M02 s09) - a line of the instructor's cue that asks the picture for what the built picture
+    cannot do ("Rotate the model and cut the pipe open" on a 2D drawing once the 3D was declined; "Tap each part" on a
+    drawing whose parts do not answer a tap). The approved words are never changed by the build (L29) - they are said,
+    with a drafted line in their place (CUE_FIXES: main() writes them as a changes file for content_script.py propose)"""
+    can, out = figure_can(fig, kind, is_photo, build, mdir, s["id"]), []
+    what = kind.replace("_", " ") if kind != "none" else "no picture"
+    notes = s.get("notes") or ""
+    for ln in [x.strip().lstrip("-•").strip() for x in notes.splitlines() if x.strip()]:
+        need = [k for k, rx in (("turn", CUE_TURN), ("drag", CUE_DRAG), ("tap_part", CUE_TAP_PART)) if rx.search(ln) and k not in can]
+        if "tap_part" not in need and CUE_TAP.search(ln) and "tap" not in can and not CUE_TAP_PART.search(ln):
+            need.append("tap")
+        if not need:
+            continue
+        new = draft_cue(ln, fig, is_photo)
+        notes = notes.replace(ln, new, 1) if new else "\n".join(x for x in notes.splitlines() if x.strip().lstrip("-•").strip() != ln)
+        out.append("%s: the instructor's cue says \"%s\" - the picture built here (%s) %s. The build never changes the approved "
+                   "words (L29). Drafted in its place: %s - %s; or give the slide a picture that does it, or keep the cue with "
+                   "the operator's reason in the build sheet: \"cue_kept\": \"<their reason>\""
+                   % (where, ln, what, "; it ".join(CANNOT[k] for k in need), "\"%s\"" % new if new else "drop the line", CUE_FIX_HOW))
+    if out:
+        CUE_FIXES[s["id"]] = notes
+    return out
+
+
+def write_cue_fixes(course, module, probs):
+    """the drafted cue lines as a changes file beside the script (never applied by the build: propose shows them to the
+    operator, apply --confirmed only after their yes), and the exact command in each cue line of "To fix" """
+    p = os.path.join(cs.paths(course, module)["dir"], "%s.cue_fixes.json" % cs.mid(module))
+    if not CUE_FIXES:
+        if os.path.isfile(p):
+            os.remove(p)
+        return probs
+    cs.save(p, [{"field": "%s.notes" % sid, "new": notes} for sid, notes in sorted(CUE_FIXES.items())])
+    how = "to propose the drafted lines (all of this module's, in %s): python \"%s\" propose \"%s\" --module %s --changes \"%s\"" % (
+        os.path.basename(p), os.path.join(SKILL, "scripts", "content_script.py"), course, module, p)
+    return [x.replace(CUE_FIX_HOW, how) for x in probs]
+
+
 # ------------------------------------------------------------------ L57: a drawing of real things carries their photos
 THINGS = None
 JSON_DATA = re.compile(r'<script type="application/json"[^>]*>(.*?)</script>', re.S)
@@ -677,6 +818,22 @@ NO_PHOTO_YET = (" - find the real photograph (the project, the factory library, 
 FLAT_3D = ("%s asks for a 3D scene (%s); it has a 2D figure (%s) - build the scene (compile GUIDE 2b: an .html figure with a "
            "[data-stage], its three.js file in \"scripts\", like M03's m03_station3d.js), or keep the 2D figure with the "
            "operator's reason in the build sheet: \"declined_3d\": \"<their reason>\"")
+# 2.52.0 (IGF M01/M02 benchmark, 2026-10-20) - what the slide's picture IS once built: the deck's data-visual and the plan's
+# kind say this, never the script's plan when the build sheet gave something else (a 3D slide kept 2D with "declined_3d")
+PHOTO_KINDS = ("photo", "photo_to_take")
+FLAT_KIND = "schematic"
+# the instructor's cue asks the picture to do something: turn it, drag in it, tap it, tap its parts
+CUE_TURN = re.compile(r"(?i)\b(?:rotat\w*|spin\w*|pinch\w*|zoom\w*|turn\s+(?:it|the\s+(?:model|scene|view|section|hull|tank)s?)\b"
+                      r"|cut\b[^.;\n]{0,30}\bopen\b)")
+CUE_DRAG = re.compile(r"(?i)\bdrag\w*")
+CUE_TAP_PART = re.compile(r"(?i)\b(?:tap|click)\w*\s+(?:on\s+)?(?:each|every|a|the)\s+(?:\w+\s+)?(?:part|space|component)s?\b")
+CUE_TAP = re.compile(r"(?i)\b(?:tap|click)(?:s|ped|ping)?\b")
+TAP_MARK = re.compile(r"<button\b|\bonclick=|role=\"button\"|\bdata-tap\b|addEventListener\(\s*['\"](?:click|pointerup|pointerdown)", re.I)
+DRAG_MARK = re.compile(r"\bdraggable\b|pointermove|mousemove|touchmove", re.I)
+CANNOT = {"turn": "cannot be turned, zoomed or cut open - it is not a 3D scene",
+          "drag": "has nothing to drag",
+          "tap_part": "does not answer a tap on its parts",
+          "tap": "has nothing to tap"}
 
 
 def norm(s):
@@ -795,16 +952,186 @@ def photo_pool(mdir):
     """every cleared photograph that says what it shows: the module's own first, then the other modules' of the
     course (a match there is copied in with its record)"""
     def of(d):
-        p = os.path.join(d, "assets", "img", "_photo_meta.json")
-        try:
-            meta = json.load(io.open(p, encoding="utf-8"))
-        except (OSError, ValueError):
-            return []
-        return [(name, m, d, photo_id(d, "assets/img/" + name, m)) for name, m in sorted(meta.items()) if isinstance(m, dict)
+        meta = {}
+        for sub in (UNUSED, ""):                           # 2.52.0: a photo left out of the package is still the course's
+            p = os.path.join(d, "assets", "img", sub, "_photo_meta.json")
+            try:
+                meta.update(json.load(io.open(p, encoding="utf-8")))
+            except (OSError, ValueError, TypeError):
+                continue
+        return [(name, m, d, photo_id(d, os.path.relpath(img_file(d, name), d).replace("\\", "/"), m))
+                for name, m in sorted(meta.items()) if isinstance(m, dict)
                 and not any(x in str(m.get("rights_state") or "").upper() for x in NOT_CLEARED)
                 and not is_generated(m)                    # L57 places real photographs only
-                and os.path.isfile(os.path.join(d, "assets", "img", name))]
+                and os.path.isfile(img_file(d, name))]
     return of(mdir) + [x for d in other_modules(mdir) for x in of(d)]
+
+
+# ------------------------------------------------------------------ 2.52.0: only what is shown ships
+UNUSED = "_unused"          # assets\img\_unused\ - a folder starting with _ is skipped by the classroom (package-core.mjs)
+SHOWN_EXT = (".html", ".htm", ".css", ".js", ".svg", ".json")
+
+
+def img_file(d, name):
+    """where a module's picture is: assets\\img\\, or assets\\img\\_unused\\ when it was left out of the package"""
+    p = os.path.join(d, "assets", "img", name)
+    q = os.path.join(d, "assets", "img", UNUSED, name)
+    return q if not os.path.isfile(p) and os.path.isfile(q) else p
+
+
+def move_record(src_dir, dst_dir, name):
+    """a picture's _photo_meta.json record goes with it"""
+    sp, dp = os.path.join(src_dir, "_photo_meta.json"), os.path.join(dst_dir, "_photo_meta.json")
+    try:
+        src = json.load(io.open(sp, encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    if name not in src:
+        return
+    dst = json.load(io.open(dp, encoding="utf-8")) if os.path.isfile(dp) else {}
+    dst[name] = src.pop(name)
+    cs.save(dp, dst)
+    cs.save(sp, src)
+
+
+def restore(mdir, names):
+    """pictures left out of the package before and now named again (the build sheet, a drawing, an L57 thumbnail): back in
+    assets\\img\\ with their records, so the build finds them"""
+    img = os.path.join(mdir, "assets", "img")
+    back = []
+    for name in names:
+        src = os.path.join(img, UNUSED, name)
+        if os.path.isfile(src) and not os.path.isfile(os.path.join(img, name)):
+            os.replace(src, os.path.join(img, name))
+            move_record(os.path.join(img, UNUSED), img, name)
+            back.append(name)
+    return back
+
+
+def named_again(mdir, build, figdir):
+    """the pictures in assets\\img\\_unused\\ that the build sheet, the module's drawings or its own styles and scripts name"""
+    left = os.path.join(mdir, "assets", "img", UNUSED)
+    names = [f for f in (os.listdir(left) if os.path.isdir(left) else []) if f.lower().endswith(IMAGES)]
+    if not names:
+        return []
+
+    def said(o):                    # a key starting with _ is a note in the build sheet ("_inset": "... was placed ..."), no use
+        if isinstance(o, dict):
+            return {k: said(v) for k, v in o.items() if not str(k).startswith("_")}
+        return [said(v) for v in o] if isinstance(o, list) else o
+    sheet = json.dumps(said(build), ensure_ascii=False)
+    texts = [sheet]
+    for rel in set(re.findall(r'"([^"]+\.(?:html?|svg|json))"', sheet)):      # the drawings the build sheet names
+        p = os.path.join(figdir or "", rel.replace("\\", "/"))
+        if figdir and os.path.isfile(p):
+            texts.append(re.sub(r"<!--.*?-->", "", io.open(p, encoding="utf-8", errors="replace").read(), flags=re.S))
+    for rel in build.get("styles", []) + build.get("scripts", []):
+        p = os.path.join(mdir, rel)
+        if os.path.isfile(p):
+            texts.append(io.open(p, encoding="utf-8", errors="replace").read())
+    blob = "\n".join(texts)
+    return [n for n in names if re.search(r"(?<![\w.-])%s(?![\w.-])" % re.escape(n), blob)]
+
+
+def where_shown(mdir, name, texts):
+    """["M01 presentation, slide s01", "M01 tasks, q03" ...] - every place a shipped page shows the picture"""
+    m, out = module_label(mdir), []
+    rx = re.compile(r"(?<![\w.-])%s(?![\w.-])" % re.escape(name))
+    for rel, text in texts:
+        hits = [h.start() for h in rx.finditer(text)]
+        if not hits:
+            continue
+        what = ("presentation" if rel.startswith("presentation/") else "plan" if rel.startswith("instructor/")
+                else "final assessment" if rel.startswith("assessment/final") else "module check" if rel.startswith("assessment/")
+                else "tasks" if rel.startswith("tasks/") else rel)
+        ids = []
+        for h in hits:
+            sec = None
+            for s in re.finditer(r'<section\b[^>]*?\b(?:id|data-script)="([^"]+)"', text[:h]):
+                sec = s.group(1)
+            if sec and sec not in ids:
+                ids.append(sec)
+        if what == "presentation" and ids:
+            out.append("%s presentation, slide %s" % (m, ", ".join(ids)))
+        elif ids and what in ("tasks", "module check", "final assessment"):
+            out.append("%s %s, %s" % (m, what, ", ".join(ids)))
+        else:
+            out.append("%s %s" % (m, what))
+    return out
+
+
+PHOTO_TASKS = ("hotspot", "spot_the_hazard", "label_diagram", "read_instrument")
+
+
+def task_photo_notes(script, build, mdir):
+    """2.52.0 (IGF M01/M02: no task page showed a real photograph; M02's licensed fire-plan photo went unused although its
+    Sub-ILO is reading a fire control plan) - each question answered on a picture (tap the place, spot the hazard, label,
+    read the instrument) whose subject is what a real photograph of the module's own pool shows: the photo and the
+    build-sheet line that would use it. A note, never a block - whether the photo fits the question is the author's call"""
+    pool = [(n, m) for n, m, d, _ in photo_pool(mdir) if os.path.abspath(d) == os.path.abspath(mdir)]
+    sheet, out = build.get("screens") or {}, []
+    for q in [s for s in script.get("screens", []) if s.get("kind") in cs.TASKS and cs.mech(s) in PHOTO_TASKS]:
+        b = sheet.get(q["id"]) or {}
+        if (b.get("figure") or "").lower().endswith(IMAGES):
+            continue                                       # already on a photograph
+        subject = norm(" ".join(str(x) for x in [q.get("question"), q.get("answer"), q.get("visual")] + list(q.get("options") or [])))
+        for n, meta in pool:
+            # a thing of two words or more, said whole ("fire control plan"); one word only when it names one thing
+            # ("airlock", never "tank")
+            hit = next((x for x in meta.get("shows") or [] if norm(x) and (len(norm(x)) >= 2 or (norm(x)[0] not in GENERIC
+                        and len(norm(x)[0]) > 4)) and any(subject[i:i + len(norm(x))] == norm(x)
+                                                           for i in range(len(subject) - len(norm(x)) + 1))), None)
+            if not hit:
+                continue
+            line = {"figure": "assets/img/" + n}
+            if cs.mech(q) in ("hotspot", "spot_the_hazard"):
+                line["areas"] = {x: "[left, top, width, height] in % of the photo" for x in cs.answer_items(q)[0]}
+            elif cs.mech(q) == "label_diagram":
+                line["labels"] = {x: {"at": "[left, top, width, height] in % of the photo"} for x in (cs.answer_items(q)[0] or [])}
+            out.append("%s (%s, %s): the real photograph %s shows \"%s\" - build-sheet line: \"%s\": %s"
+                       % (cs.place(script, q["id"]), q["id"], cs.mech(q), n, hit, q["id"], json.dumps(line, ensure_ascii=False)))
+            break
+    return out
+
+
+def ship_only_shown(mdir):
+    """2.52.0 (IGF M01/M02 benchmark: M01 shipped an AI picture and an M07 photo it never shows, M02 seven pictures) - after a
+    build, every picture in assets\\img\\ that no built page, style or script of the module names is moved, with its record,
+    to assets\\img\\_unused\\ - kept for the course (an L57 thumbnail or the build sheet brings it back), but left out of
+    the classroom package. Each shown picture's "used_in" is rewritten from where the pages really show it.
+    Returns (the pictures left out, the records whose "used_in" changed)."""
+    img = os.path.join(mdir, "assets", "img")
+    if not os.path.isdir(img):
+        return [], []
+    texts = []
+    for dp, dirs, fs in os.walk(mdir):
+        dirs[:] = [x for x in dirs if not x.startswith("_") and os.path.abspath(os.path.join(dp, x)) != os.path.abspath(img)]
+        for f in fs:
+            if f.lower().endswith(SHOWN_EXT) and not f.startswith("_"):     # a record (_photo_meta.json ...) shows nothing
+                p = os.path.join(dp, f)
+                texts.append((os.path.relpath(p, mdir).replace("\\", "/"), io.open(p, encoding="utf-8", errors="replace").read()))
+    mp = os.path.join(img, "_photo_meta.json")
+    try:
+        meta = json.load(io.open(mp, encoding="utf-8")) if os.path.isfile(mp) else {}
+    except ValueError:
+        meta = {}
+    left, changed = [], []
+    for name in sorted(f for f in os.listdir(img) if f.lower().endswith(IMAGES) and os.path.isfile(os.path.join(img, f))):
+        places = where_shown(mdir, name, texts)
+        if not places:
+            os.makedirs(os.path.join(img, UNUSED), exist_ok=True)
+            os.replace(os.path.join(img, name), os.path.join(img, UNUSED, name))
+            left.append(name)
+            continue
+        rec = meta.get(name)
+        if isinstance(rec, dict) and rec.get("used_in") != "; ".join(places):
+            rec["used_in"] = "; ".join(places)
+            changed.append(name)
+    if changed:
+        cs.save(mp, meta)
+    for name in left:
+        move_record(img, os.path.join(img, UNUSED), name)
+    return left, changed
 
 
 def other_modules(mdir):
@@ -862,8 +1189,11 @@ def bring_in(mdir, name, meta, src):
     """a photograph of another module of the course, copied into this one with its record, so the module ships whole"""
     import shutil
     dst = os.path.join(mdir, "assets", "img", name)
+    if os.path.abspath(src) == os.path.abspath(mdir):  # this module's own, left out of the package before: back in
+        restore(mdir, [name])
+        return
     if not os.path.isfile(dst):
-        shutil.copyfile(os.path.join(src, "assets", "img", name), dst)
+        shutil.copyfile(img_file(src, name), dst)
     p = os.path.join(mdir, "assets", "img", "_photo_meta.json")
     own = json.load(io.open(p, encoding="utf-8")) if os.path.isfile(p) else {}
     if name not in own:
@@ -896,7 +1226,7 @@ def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None, refu
         if len(strip) >= cs.MEDIA["floors"].get("photo_strip_max", 4):
             continue
         n, meta, d, pid = hit
-        if os.path.abspath(d) != os.path.abspath(mdir):
+        if os.path.abspath(d) != os.path.abspath(mdir) or not os.path.isfile(os.path.join(mdir, "assets", "img", n)):
             bring_in(mdir, n, meta, d)
         rel = "assets/img/" + n
         taken[pid] = where
@@ -1089,13 +1419,22 @@ def recap_html(s, base, m, n, total, lines):
             % (attrs(d), m, n, total, e(s.get("title")), len(items), "\n      ".join(items)))
 
 
-def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, pool=None, taken=None):
+def active_mins(s):
+    """2.52.0 - the block's learner-active minutes for check_balance.py (data-active, Track B), as the script's L49 split
+    counts them: a slide marked "active", a task slide and a room activity are the trainees doing; a plain theory slide 0"""
+    if not cs.minutes(s):
+        return ""
+    on = s.get("kind") in ("task-slide", "activity") or (s.get("kind") == "slide" and bool(s.get("active")))
+    return "%g" % cs.minutes(s) if on else "0"
+
+
+def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, pool=None, taken=None, build=None):
     m = cs.mid(script.get("module"))
     sid, kind = s["id"], s["kind"]
     where = "%s (%s)" % (cs.place(script, sid), sid)
     lines = cs.lines_of(s.get("text"))
     base = {"id": sid, "data-script": sid, "data-track": "theory", "data-mins": ("%g" % cs.minutes(s)) if cs.minutes(s) else "",
-            "data-foot": foot, "data-cue": (s.get("notes") or "").strip()}
+            "data-active": active_mins(s), "data-foot": foot, "data-cue": (s.get("notes") or "").strip()}
 
     # a room activity that has its own figure (trace a path on a drawing) is laid out like a teaching slide,
     # and keeps the classroom's Task marks: its code and how the room works
@@ -1132,6 +1471,9 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         return recap_html(s, base, m, n, total, lines)
 
     fig, credit, is_photo = figure_html(mdir, figdir, s, b, probs, where)
+    kind = built_kind(s, fig, is_photo, photo_meta(mdir, (b.get("figure") or "").replace("\\", "/")) if is_photo else None)
+    if not str(b.get("cue_kept") or "").strip():       # the operator kept the cue as it is, with their reason
+        probs += cue_problems(s, fig, kind, is_photo, build or {}, mdir, where)
     comp = composition(s, b, is_photo, bool(fig))
     if comp not in COMPOSITIONS + ("photo",):
         probs.append("%s: the build sheet asks for the layout \"%s\" - the layouts are %s" % (where, comp, ", ".join(COMPOSITIONS)))
@@ -1190,7 +1532,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     d = {"class": "slide" + (" photo split" if split_photo else " photo" if comp == "photo" else " dark" if b.get("dark") else "")
                   + (" " + own if own else ""),
          "data-title": s.get("title"), "data-kind": "Theory", "data-block": "%s · %d" % (m, n),
-         "data-visual": s.get("visual_kind") or "none"}
+         "data-visual": kind}
     d.update(base)
     label = "Theory"
     if act:
@@ -1236,18 +1578,21 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if photo_col:                      # the photograph is cropped to its column, which has the slide's height
             box = box.replace('class="fill fig"', 'class="fill fig photo-col"', 1)
             cls += " photo-col"
-        cols = [copy(words_html(lines, emph=emph), 4), box]
+        # 2.52.0 (L23) - the figure first in the markup: a portrait tablet (one column) shows it in its first screen. On a
+        # landscape screen gb_compose.css (.dom-fig) puts the words back on the left - the projector picture is unchanged
+        cols = [box, copy(words_html(lines, emph=emph), 4)]
         if b.get("figure_first"):          # the drawing on the left, the words on the right
-            cols.reverse()
             cls = cls.replace("fig-wide", "fig-wide fig-first")
+        else:
+            cls += " dom-fig"
         return ('<section %s>\n%s\n  %s\n  <div class="slide-body %s">\n    %s\n    %s\n  </div>%s\n</section>'
                 % (attrs(d), head, h2, cls, cols[0], cols[1], credit_html))
     if comp == "opener":
         return ('<section %s>\n%s\n  <div class="slide-body opener mid">\n    %s\n    %s\n  </div>%s\n</section>'
                 % (attrs(d), head, h2, ind(words_html(lines, first_statement=False), 4), credit_html))
-    figure = ("\n    " + fill(fig)) if fig else ""
-    return ('<section %s>\n%s\n  %s\n  <div class="slide-body">\n    %s%s\n  </div>%s\n</section>'
-            % (attrs(d), head, h2, copy(words_html(lines, emph=emph), 4), figure, credit_html))
+    figure = (fill(fig) + "\n    ") if fig else ""        # 2.52.0 (L23): first in the markup, placed under the words by CSS
+    return ('<section %s>\n%s\n  %s\n  <div class="slide-body%s">\n    %s%s\n  </div>%s\n</section>'
+            % (attrs(d), head, h2, " dom-fig" if fig else "", figure, copy(words_html(lines, emph=emph), 4), credit_html))
 
 
 # ------------------------------------------------------------------ the page
@@ -1666,6 +2011,7 @@ def starter_build(script, shared=(), figdir=None, specs=None, mdir=None):
 
 def compile_deck(script, build, mdir, figdir, version, approved):
     probs = []
+    CUE_FIXES.clear()
     m = cs.mid(script.get("module"))
     title = script.get("title") or ""
     screens = [s for s in script["screens"] if s["kind"] in cs.INSTRUCTOR]
@@ -1699,7 +2045,7 @@ def compile_deck(script, build, mdir, figdir, version, approved):
     for n, s in enumerate(screens, 1):
         b = (build.get("screens") or {}).get(s["id"]) or {}
         teach += s["kind"] == "slide"
-        slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken))
+        slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, build))
     blind = sorted(n for n, m, d, _ in pool if os.path.abspath(d) == os.path.abspath(mdir) and not m.get("shows"))
     if blind:
         notes.append((None, None, "%d photograph(s) without \"shows\" in _photo_meta.json, so no drawing can use them (L57): %s"
@@ -1941,6 +2287,9 @@ def main(argv=None):
         print("The draft mark (%s) stays - the deck was built from the draft and --only %s does not rebuild it.\n"
               "  Compile with --only deck (or all) to bring the approved module into the classroom package." % (DRAFT_MARK, o.only))
     figdir = workspace.claude_path(o.course, "figures", cs.mid(o.module))
+    back = restore(mdir, named_again(mdir, build, figdir))       # 2.52.0: named again - back in the package
+    if back:
+        print("Back in the package (named again; they were in assets\\img\\%s\\): %s\n" % (UNUSED, ", ".join(back)))
     probs, notes = [], []
     rec.update({"script_hash": cs.content_hash(script), "plugin_version": plugin_version()})
     written = []
@@ -1949,6 +2298,7 @@ def main(argv=None):
     if o.only in ("all", "deck"):
         written.append(out)
         page, probs, notes = compile_deck(script, build, mdir, figdir, plugin_version(), approved)
+        probs = write_cue_fixes(o.course, o.module, probs)            # 2.52.0: the drafted cue lines, ready for propose
         os.makedirs(os.path.dirname(out), exist_ok=True)
         with io.open(out, "w", encoding="utf-8", newline="\n") as f:
             f.write(page)
@@ -1993,6 +2343,14 @@ def main(argv=None):
             written.append(ppath)
             print("Built the module plan %s" % key)
     cs.save(rec_path, rec)
+    if written:                     # 2.52.0 - only what a page shows ships; "used_in" says where it is shown
+        left, changed = ship_only_shown(mdir)
+        if left:
+            print("\nPictures no page shows - left out of the package, kept in assets\\img\\%s\\ with their records (named in "
+                  "the build sheet or a drawing again, they come back on the next build):\n%s"
+                  % (UNUSED, "\n".join("  - %s" % x for x in left)))
+        if changed:
+            print("\"used_in\" rewritten from where the pages show them (assets\\img\\_photo_meta.json): %s" % ", ".join(changed))
     # L54 - every drawing whole and clean: checked by itself on every page just written, never left to memory
     if written and not o.no_drawing_check:
         import drawing_check
@@ -2015,6 +2373,13 @@ def main(argv=None):
             print("\nReal photographs still missing for what the drawings show (L57) - listed in\n    %s" % listed)
             for r in by_thing(parts) + [x[2] for x in notes if not x[0]]:
                 print("  - " + r)
+    if o.only in ("all", "tasks"):                     # 2.52.0 - a note, never a block
+        tnotes = task_photo_notes(script, build, mdir)
+        if tnotes:
+            print("\nReal photographs a task question could be answered on (a note - nothing is blocked; the places are "
+                  "boxes in % of the photo, measured on it):")
+            for x in tnotes:
+                print("  - " + x)
     if probs:
         print("\nTo fix before it is shown:")
         for x in probs:

@@ -139,6 +139,27 @@ def main() -> int:
             check("runtime gate catches " + what, needle in out4)
         check("a runtime failure stops publication", "VERDICT: FAIL" in out4)
 
+        # ---- 2b · an AI picture no page shows is refused (2.52.0, IGF M01/M02) ----
+        ai = make_repo(os.path.join(tmp, "ai"))
+        img = os.path.join(ai, "app", "src", "main", "assets", "training_terminal", "courses", "t-course", "assets", "img")
+        os.makedirs(os.path.join(img, "_unused"))
+        meta = {"tank_ai.webp": {"generated": True, "description": "An AI tank."},
+                "shown_ai.webp": {"source": "GENERATED", "description": "Shown."},
+                "real.jpg": {"source": "Wikimedia Commons", "licence": "CC BY 4.0"}}
+        io.open(os.path.join(img, "_photo_meta.json"), "w", encoding="utf-8").write(json.dumps(meta))
+        for n in ("tank_ai.webp", "shown_ai.webp", "real.jpg"):
+            io.open(os.path.join(img, n), "wb").write(b"x")
+        io.open(os.path.join(img, "_unused", "_photo_meta.json"), "w", encoding="utf-8").write(json.dumps({"old_ai.webp": {"generated": True}}))
+        io.open(os.path.join(img, "_unused", "old_ai.webp"), "wb").write(b"x")
+        tt = os.path.dirname(os.path.dirname(img))
+        io.open(os.path.join(tt, "tasks", "T2.html"), "w", encoding="utf-8").write(
+            (PAGE_OK % "T2").replace("<p>ok</p>", '<img src="../assets/img/shown_ai.webp" alt="x">'))
+        rc5, out5 = run([os.path.join(HERE, "gates.py"), "--repo", ai, "--course-id", "t-course"])
+        check("an AI-generated picture no page shows is refused (it would ship unseen)",
+              rc5 == 1 and "tank_ai.webp - an AI-generated picture that no page shows" in out5, out5[-600:])
+        check("... one a page shows, a real photo and one left in a _ folder (the classroom skips it) are not",
+              "shown_ai.webp - an AI" not in out5 and "real.jpg - an AI" not in out5 and "old_ai.webp" not in out5, out5[-600:])
+
         # the platform shell may reach the backend; a course may not
         shell = os.path.join(bad, "app", "src", "instructor", "assets",
                              "instructor_terminal", "live")

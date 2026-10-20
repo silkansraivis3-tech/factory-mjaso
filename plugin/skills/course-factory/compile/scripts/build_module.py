@@ -205,7 +205,15 @@ def main(argv=None):
         stages.append((title, time.time() - since))
         return time.time()
 
-    # 1 - every figure at once, before the compile
+    # 1 - every figure at once, before the compile. 2.53.0 (built as 2.52.0 on its own branch): the module's design files are made the factory's first (the
+    # compile does it too) - the figures are measured on their real slide with the module's own gb_compose.css, and a deck
+    # built by a newer compiler (the figure first in the markup, .dom-fig) measured with the older style file puts the
+    # figure in the wrong column. A file edited inside the module is left alone here; the compile stops on it
+    if os.path.isdir(mdir):
+        try:
+            cm.ensure_design(mdir)
+        except Exception:                            # noqa: BLE001 - the compile checks the design files again and says why
+            pass
     fig_text = ""
     if str(o.module).isdigit():
         try:
@@ -254,6 +262,16 @@ def main(argv=None):
     mm = re.search(r"Real photographs still missing.*?listed in\s*\n\s*(\S.*?)\n((?:  - .*\n?)*)", cout)
     if mm:
         notes.append("Real photographs still to take: %d thing(s), listed in %s" % (len(mm.group(2).strip().splitlines()), mm.group(1).strip()))
+    # 2.52.0 - the compile's notes on pictures: left out of the package, and real photos a task question could stand on
+    ml = re.search(r"Pictures no page shows - left out of the package.*?\n((?:  - .*\n?)*)", cout)
+    if ml:
+        notes.append("Left out of the package (no page shows them; kept in assets\\img\\_unused\\): " +
+                     ", ".join(x.strip()[2:] for x in ml.group(1).strip().splitlines()))
+    mt = re.search(r"Real photographs a task question could be answered on.*?\n((?:  - .*\n?)*)", cout)
+    if mt:
+        rows = [re.search(r"\((\w+), [\w_]+\): the real photograph (\S+)", x) for x in mt.group(1).strip().splitlines()]
+        notes.append("NOTE - a real photograph could carry: " + ", ".join("%s (%s)" % (r.group(1), r.group(2)) for r in rows if r)
+                     + " - the build-sheet lines are in the full log (compile_module.py)")
     # 3 - the checks, at the same time
     deck = os.path.join(mdir, "presentation", "index.html")
     jobs = {
