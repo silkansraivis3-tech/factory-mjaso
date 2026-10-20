@@ -187,7 +187,7 @@ def fmt(v):
     return ("%.1f" % v).rstrip("0").rstrip(".")
 
 
-GEOM = ("x", "y", "w", "h", "r", "x1", "y1", "x2", "y2", "at", "size")
+GEOM = ("x", "y", "w", "h", "r", "x1", "y1", "x2", "y2", "at", "size", "d", "points", "from", "to")   # a pipe is its "d"
 
 
 def parts_together(spec_path, block):

@@ -288,13 +288,14 @@ def main(argv=None):
         log.close()
         return 2
     probs, rec = compile_problems(cout)
+    # every compile problem a drawing finding - the figures above again, or a task page's figure judged here: still a
+    # figures-only build (2.55.0). Judged on the whole list, before the figures' repeats are taken out of it
+    drawing_only = ccode == 1 and bool(probs) and all(re.search(r"\b(empty|text zone|inside|cut off|small text|label|contrast|"
+                                                                r"photo over drawing|scrolls)\b", x) for x in probs)
     shown = figure_slides(fig_text)
     probs = [x for x in probs if not any(re.search(r"\(%s\)[ :]" % re.escape(s), x) and re.search(r"\b(empty|text zone|inside|"
                                                                                                     r"cut off|small text|label|contrast)\b", x)
                                          for s in shown)]
-    # every compile problem a drawing finding (a task page's figure, judged here): still a figures-only build (2.55.0)
-    drawing_only = bool(probs) and all(re.search(r"\b(empty|text zone|inside|cut off|small text|label|contrast|photo over "
-                                                 r"drawing|scrolls)\b", x) for x in probs)
     if ccode != 0 or probs:
         fails.append("compile")
         say.append("COMPILE - %d problem(s) to fix%s:" % (len(probs), " (the figures above not repeated)" if shown else ""))
