@@ -1,0 +1,32 @@
+{
+  "_authority": "The shared SUBJECT LIBRARIES the factory reads and saves back into: one knowledge base + asset library per subject, shared by every course on that subject (pictures with provenance, reference documents with their distribution, cited facts, glossary, the courses' knowledge bases searched at once). They live OUTSIDE this public repository - on the company's Google Drive - and this file holds only how to find them. scripts/subject_library.py and scripts/resolve_asset.py read it. A library that is not found is skipped without a word: the factory works the same without one.",
+  "_written": "2026-10-20",
+  "_locate": "In order: the env var NOVIKONTAS_SUBJECT_LIBRARIES (folders separated by ';' on Windows, ':' elsewhere - any folder with tools/find.py), then each library's own env var, then its default places. A folder counts when it holds the library's marker files.",
+  "_contract": "A subject library answers: python tools/find.py \"<subject>\" [--json] [--only pictures] - topics, cited facts (CONFLICT rows flagged), glossary, regulations, an inbox of unreviewed facts, pictures with rights state, reference PDFs with distribution, source passages; python tools/use_asset.py <id> <module folder> - copies a picture and its provenance into a module; python tools/contribute.py picture|document|fact|term|register-course - saves back what a course session found.",
+  "ship_states": ["PUBLIC_DOMAIN", "ATTRIBUTION_REQUIRED", "CLEARED", "OWNER_CLEARED", "PROJECT_OWNED", "GENERATED"],
+  "_ship_states": "Only these may go on the tablets. UNKNOWN, PUBLICATION_FIGURE, RIGHTS_REVIEW_REQUIRED, SEE_LICENCE: classroom reference only until cleared - the resolver lists them as blocked, never as found. GENERATED (an AI picture) ships, but is never the picture of equipment a trainee must recognise.",
+  "document_states": {
+    "SHARE": "may go to trainees",
+    "FREE_DOWNLOAD": "may go to trainees - prefer the publisher's link on the tablets",
+    "INSTRUCTOR_ONLY": "never to trainees or the tablets",
+    "CHECK": "ask the owner first"
+  },
+  "libraries": [
+    {
+      "id": "gas",
+      "name": "NOVIKONTAS Gas Library",
+      "env": "NOVIKONTAS_GAS_LIBRARY",
+      "default_locations": [
+        "G:/My Drive/Gas Library",
+        "~/Google Drive/My Drive/Gas Library",
+        "~/My Drive/Gas Library"
+      ],
+      "_default_locations": "Google Drive for desktop: Windows mounts 'My Drive' at G: by default; on a Mac it sits under the home folder. Elsewhere set NOVIKONTAS_GAS_LIBRARY.",
+      "marker": ["library_config.json", "tools/find.py"],
+      "courses": ["GAS BASIC (STCW A-V/1-2-1)", "GAS ADVANCED (STCW A-V/1-2-2)", "IGF Basic (STCW A-V/3-1)", "IGF Advanced (STCW A-V/3-2)"],
+      "subject_words": ["gas", "lng", "lpg", "cng", "liquefied", "igf", "igc", "methane", "methanol", "ammonia", "hydrogen", "boil-off", "bunkering", "cryogenic", "low-flashpoint", "gas carrier", "gas tanker", "dual-fuel"],
+      "_subject_words": "A course is ON this subject when its programme title, STCW reference or module titles hold one of these words (or the operator says so). Then the factory runs find.py before the knowledge base and the internet, saves back what it finds, and registers the course in the library. Pictures are searched for every course while the library is present - a breathing apparatus photo serves any course.",
+      "owners": "GAS BASIC / GAS ADVANCED - Raivis Silkans; IGF - Aleksis Vejs; review of the inbox by them"
+    }
+  ]
+}

@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Run levels 1 and 2 of the asset pipeline mechanically.
 
-  LEVEL 1  PROJECT  - source_files/, operator assets, the course's own assets
-  LEVEL 2  FACTORY  - the plugin's resources/ library
+  LEVEL 1   PROJECT  - source_files/, operator assets, the course's own assets
+  LEVEL 2   SHARED   - what is already reviewed and shared between courses:
+     2a LIBRARY      the subject libraries (the Gas Library first; subject_library.py finds
+                     them, source/knowledge/subject-libraries.json) - searched by DESCRIPTION
+                     through the library's own find.py, rights-gated
+     2b FACTORY      the plugin's resources/ library
 
 Level 3 (internet) is judgement and belongs to the visual-sourcer agent.
 Level 4 (create) is the outcome when 1-3 find nothing.
@@ -12,12 +16,20 @@ query into the terms a search should actually try - plurals, hyphenation,
 abbreviations, both spellings - because one failed grep for the requester's
 phrasing is the commonest way an existing asset gets missed.
 
+A library picture counts as found only in a state that may ship on the tablets
+(subject-libraries.json ship_states); the rest are listed as blocked - classroom
+reference until cleared. An AI picture from a library is held back unless
+--allow-ai says the need is a scene or a cutaway a camera cannot show: it is
+never the picture of equipment a trainee must recognise. No library on this
+computer = 2a is skipped without a word.
+
 Exit codes
   0  at least one candidate found
   3  nothing found at levels 1-2 -> GENERATED_ASSET_REQUIRED (or level 3)
   2  bad usage
 
   python resolve_asset.py "LNG membrane cargo tank" --project <dir> [--factory <dir>] [--json]
+      [--allow-ai] [--library <root>] [--no-library]
 """
 from __future__ import annotations
 
@@ -145,6 +157,21 @@ def search(root: str, level: int, label: str, terms: list[str],
     return found[:limit]
 
 
+def library_level(query: str, roots: list[str], limit: int, allow_ai: bool) -> dict:
+    """LEVEL 2a - the subject libraries, by description, rights-gated. Never fails."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        import subject_library as SL
+    except ImportError:
+        return {"usable": [], "ai_held_back": [], "blocked": [], "searched": []}
+    libs = SL.locate()
+    if roots:
+        want = {os.path.normcase(os.path.realpath(r)) for r in roots}
+        libs = [x for x in SL.locate(env={SL.ENV_ALL: os.pathsep.join(roots)})
+                if os.path.normcase(os.path.realpath(x["root"])) in want]
+    return SL.pictures(query, libs, limit=limit, allow_ai=allow_ai)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("query")
@@ -155,7 +182,15 @@ def main() -> int:
                          "plugin's resources/ relative to this script")
     ap.add_argument("--limit", type=int, default=5)
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--library", action="append", default=[],
+                    help="a subject library folder for LEVEL 2a (repeatable); default: every "
+                         "library subject_library.py finds on this computer")
+    ap.add_argument("--no-library", action="store_true", help="skip LEVEL 2a")
+    ap.add_argument("--allow-ai", action="store_true",
+                    help="the need is a scene or a cutaway a camera cannot show - a library's AI "
+                         "picture may be offered (never for equipment a trainee must recognise)")
     a = ap.parse_args()
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # library descriptions are not cp1252
 
     terms = expand(a.query)
     words = [w for w in re.split(r"[^a-z0-9]+", a.query.lower()) if w and w not in STOP]
@@ -170,21 +205,27 @@ def main() -> int:
     cands: list[dict] = []
     for root in a.project:
         cands += search(root, 1, "PROJECT", terms, words, a.limit)
+    levels = ["1 PROJECT"] if a.project else []
+    lib: dict = {"usable": [], "ai_held_back": [], "blocked": [], "searched": []}
     if not cands:
+        if not a.no_library:
+            lib = library_level(a.query, a.library, a.limit, a.allow_ai)
+            levels += ["2a LIBRARY " + s for s in lib["searched"]]
         cands += search(factory, 2, "FACTORY", terms, words, a.limit)
+        levels.append("2b FACTORY")
 
-    blocked = [c for c in cands if c["rights_state"] == "RIGHTS_REVIEW_REQUIRED"]
-    usable = [c for c in cands if c["rights_state"] != "RIGHTS_REVIEW_REQUIRED"]
+    blocked = [c for c in cands if c["rights_state"] == "RIGHTS_REVIEW_REQUIRED"] + lib["blocked"]
+    usable = lib["usable"] + [c for c in cands if c["rights_state"] != "RIGHTS_REVIEW_REQUIRED"]
     outcome = "FOUND" if usable else "GENERATED_ASSET_REQUIRED"
 
     result = {
         "query": a.query,
         "terms_tried": terms,
-        "levels_searched": (["1 PROJECT"] if a.project else [])
-                           + (["2 FACTORY"] if not [c for c in cands if c["level"] == 1] else []),
+        "levels_searched": levels,
         "outcome": outcome,
         "candidates": usable,
         "blocked_by_rights": blocked,
+        "ai_held_back": lib["ai_held_back"],
     }
 
     if a.json:
@@ -200,23 +241,39 @@ def main() -> int:
         if usable:
             for c in usable:
                 print("  LEVEL %d %-8s %s" % (c["level"], c["level_name"], c["path"]))
-                print("      score=%-4d rights=%s" % (c["score"], c["rights_state"]))
+                if c["level_name"] == "LIBRARY":
+                    print("      %s `%s` %s rights=%s%s" % (c["library"], c["library_id"], c["kind"], c["rights_state"],
+                                                          " AI" if c["ai_generated"] else ""))
+                    if c.get("credit"):
+                        print("      credit: %s" % c["credit"][:90])
+                    print("      copy with provenance: %s" % c["use"])
+                else:
+                    print("      score=%-4d rights=%s" % (c["score"], c["rights_state"]))
                 if c["note"]:
                     print("      %s" % c["note"][:90])
         if blocked:
             print()
             for c in blocked:
-                print("  BLOCKED  RIGHTS_REVIEW_REQUIRED  " + c["path"])
+                print("  BLOCKED  %s  %s" % (c["rights_state"], c["path"]) +
+                      ("  (%s)" % c["why"] if c.get("why") else ""))
+        if result["ai_held_back"]:
+            print()
+            for c in result["ai_held_back"]:
+                print("  HELD BACK  AI picture  %s  - only with --allow-ai, for a scene or cutaway" % c["path"])
         print()
         print("=" * 72)
         if usable:
             print("%d candidate(s). Levels 1-2 answered - do not search the internet." % len(usable))
+            print("Open and look at a candidate before using it; a library picture goes in with its")
+            print("library's use_asset.py so its provenance travels with it.")
         else:
             print("GENERATED_ASSET_REQUIRED")
             print("Nothing at levels 1-2. Try level 3 (visual-sourcer agent) before creating;")
             print("if level 3 also fails, write the brief in")
             print("source/schemas/GENERATED_ASSET_BRIEF.md - every field, especially")
             print("'forbidden inaccuracies'.")
+            print("What level 3 finds or level 4 makes on a library's subject is saved back:")
+            print("subject_library.py contribute picture <file> (source/GUIDE.md, 'Saving back').")
     return 0 if usable else 3
 
 

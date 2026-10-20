@@ -5,7 +5,8 @@ description: >
   need, and report back. Use when a course screen needs a specific asset and it is not already to
   hand — "find a technically credible image of X", "is there a photograph of Y anywhere",
   "does a drawing of this exist" — or when the asset pipeline reaches level 3. Searches the project
-  first, then the factory library, then the internet, evaluates candidates for technical
+  first, then the shared subject library and the factory library, then the internet, saves what it
+  downloads back into the subject library, evaluates candidates for technical
   credibility, records provenance and rights, and returns either a short ranked recommendation or
   GENERATED_ASSET_REQUIRED with a generation brief. Investigation only — it never designs
   curriculum, never edits course content, and never makes a pedagogical decision.
@@ -56,8 +57,14 @@ by its caption, not its filename. `scripts/resolve_asset.py` does the mechanical
 hand where the corpus needs judgement.
 A project asset **wins over everything**: already cleared, already the operator's own equipment.
 
-**3 · Level 2, FACTORY.** `${CLAUDE_PLUGIN_ROOT}/resources/`. Reuse only if it is both technically
-correct and pedagogically right for this need.
+**3 · Level 2, SHARED.** First the **subject library**, when this computer has one
+(`course-visuals/scripts/subject_library.py locate`; the NOVIKONTAS Gas Library for every gas course):
+`resolve_asset.py` searches it by description and lists what may ship, what is blocked by rights
+(classroom reference only) and the AI pictures it held back. For more than pictures — facts, terms,
+reference PDFs and their distribution — run `subject_library.py find "<subject>"`. Then
+`${CLAUDE_PLUGIN_ROOT}/resources/`. Reuse only if it is both technically correct and pedagogically
+right for this need; a library picture goes into the module with the library's `use_asset.py`.
+Never offer a library AI picture as the picture of equipment a trainee must recognise.
 
 **4 · Level 3, INTERNET** — only after 1 and 2 have actually been searched.
 Authority order: manufacturer → official organisation or regulator → original manual or standard →
@@ -109,7 +116,14 @@ beside them. Nothing is downloaded unseen.
 Anything recommended and legally usable must be **downloaded and packaged locally** into the asset
 folder you were given — the tablet has no network and the app returns 403 to every external host.
 Write the provenance entry into `_photo_meta.json` or `_figure_meta.json` beside it. Do not touch
-anything else.
+anything else — except the subject library:
+
+**Save it back.** On a subject library's subject (`subject_library.py covers "<course title>"`),
+every file you downloaded and packaged goes into the library too, with the record you just wrote:
+`python <course-visuals>/scripts/subject_library.py contribute picture <the file in the module> --by "visual-sourcer, <course> <module>" --found-for "<module> <slide>"`
+(several: `--no-rebuild` each, then `subject_library.py sync` once). A reference PDF you found:
+`... contribute document <pdf> --type ... --title ... --origin-url ... --distribution ...`. The library
+refuses anything without source and rights — fix the record, never invent a value.
 
 ## Your report — keep it short
 
@@ -119,7 +133,7 @@ The main conversation does not want your search log. Return:
 QUERY        <what was asked for>
 OUTCOME      FOUND | RIGHTS_REVIEW_REQUIRED | GENERATED_ASSET_REQUIRED
 TERMS TRIED  <the expansion, one line>
-LEVELS       1 searched: <what> · 2 searched: <what> · 3 searched: <what, or not reached>
+LEVELS       1 searched: <what> · 2 searched: <library + resources/, or "no library here"> · 3 searched: <what, or not reached>
 
 RECOMMENDED
   1. <path or URL>
@@ -131,6 +145,7 @@ RECOMMENDED
 
 REJECTED     <candidate — one-line reason>  (so the next search does not repeat it)
 WRITTEN      <files added, provenance entries written>
+CONTRIBUTED  <what went into the subject library (picture / document, as what), or "none - <why>">
 NOTE         <anything the requester must decide>
 ```
 

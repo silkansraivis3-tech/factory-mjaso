@@ -261,6 +261,13 @@ questions, and what to record. In order:
    what it is, which of their files it would be built from, how (the Course Source Processor - the factory has
    no tool for it, never pretend it does) and what the course loses without it. Say that to the operator in
    plain words, and put its ready question into the pop-up.
+   **A shared subject library?** (2.52.0) `course-visuals/scripts/subject_library.py covers "<programme
+   title, STCW ref>"` - the Gas Library for every gas course. Found: its `find` runs before the knowledge
+   base and the internet (CONFLICT rows are not settled - `OPEN_DECISIONS.md`), what the course finds
+   goes back with `subject_library.py contribute` (pictures, documents, facts and terms - to its inbox,
+   never straight into its facts), and **a new course is registered in it** once its modules folder
+   exists - `contribute register-course <id> --module-root ... --module-glob ... --map T05=M03` - so the
+   library harvests its pictures (`intake.json` → *the subject library*). None: nothing to do or say.
 2. **Sort the sources** — `kb/scripts/kb_tool.py sources <kb> --course <course>` (read `kb/GUIDE.md`):
    exact copies and .doc/.docx pairs are settled without asking; each publication found in more than
    one edition becomes a "which edition is current?" question.

@@ -1350,6 +1350,37 @@ the vent at y 230 instead of 196 and no hand label boxes, M01 **PASSes** in one 
 `vent-puffs` (a vent 22 under a room: was inside on some frames, now clean) and `bad-mover` (a plain moving disc, the
 determinism case the puffs were), `test_audit_drawing.py`.
 
+## 4zz6 · Shared subject libraries: read first, save back (2.52.0, 2026-10-20)
+
+Aigars Klūga asked for one shared knowledge base + asset library for the gas courses (GAS BASIC, GAS ADVANCED, IGF
+Basic, IGF Advanced); it was built on the company's Drive (`Gas Library`: pictures with provenance, reference PDFs with
+distribution, cited facts with the courses' conflicts, glossary, regulations, one search over three knowledge bases).
+Decided with Aleksis: the library's content stays on Drive and this public repository gets only the code that uses it;
+the factory both reads the library and saves its finds back. Built course-agnostic as **subject libraries** - gas is
+the first.
+
+- **Found, never required.** `course-visuals/source/knowledge/subject-libraries.json` (how one is found: the env var
+  `NOVIKONTAS_SUBJECT_LIBRARIES`, the library's own `NOVIKONTAS_GAS_LIBRARY`, then the Google Drive default place; which
+  rights states may ship) and `course-visuals/scripts/subject_library.py` (`locate`, `covers`, `find`, `contribute`,
+  `sync`). None on the computer = skipped without a word.
+- **Level 2 is SHARED: 2a the subject library, 2b `resources/`** - the four levels stay four. `resolve_asset.py` asks the
+  library's own `find.py --only pictures` (by description, what it shows, teaching purpose, synonyms - never the file
+  name); a picture counts as found only in a shippable state, the rest are listed as blocked; a one-word coincidence is
+  dropped (the library reports its match strength); an AI picture is held back unless `--allow-ai` (a scene or a
+  cutaway) - never the picture of equipment a trainee must recognise. The copy goes in with the library's
+  `use_asset.py`, provenance with it.
+- **Facts.** At intake the course is checked against the library's subject (`intake.json` *the subject library*), its
+  `find` runs before the knowledge base (`build-order.json` step 3, `script/GUIDE.md` §0, `kb/GUIDE.md`), and a CONFLICT
+  row is named with the library's `OPEN_DECISIONS.md`, never settled by picking a value.
+- **Saving back** (the library's own `tools/contribute.py`, called through `subject_library.py contribute`): a picture
+  from level 3 / 4 once packaged in the module, a reference PDF with its distribution, a cited fact or term (into the
+  library's inbox as NEW - the owners review), a new course registered so the library harvests its modules. No source
+  or no rights = refused; AI flagged. `visual-sourcer` reports CONTRIBUTED; `source/GUIDE.md` §Saving back.
+- Tests: `course-visuals/scripts/test_subject_library.py` 21 (fake libraries - no real library needed): absent library,
+  rights gate, AI held back, weak match, a broken or older library. Proved on the real Gas Library: "portable gas
+  detector" 4 shippable photos + 4 blocked, "type C tank" 1 photo + 2 figures, 4 blocked, the AI cutaway held back,
+  "LNG bunkering" 6 photos; with the library switched off the resolver answers as before (exit 3).
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

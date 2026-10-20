@@ -28,9 +28,14 @@
     {
       "level": 2,
       "name": "FACTORY",
-      "search": ["${CLAUDE_PLUGIN_ROOT}/resources/", "the approved reusable visual library"],
+      "search": [
+        "2a the SUBJECT LIBRARY, when this computer has one (source/knowledge/subject-libraries.json; scripts/subject_library.py locate) - the Gas Library first: searched by description through its own find.py, rights-gated (ship_states found, the rest blocked), an AI picture held back unless the need is a scene or cutaway; taken into the module with the library's use_asset.py so the provenance travels. Absent = skipped, never a failure.",
+        "2b ${CLAUDE_PLUGIN_ROOT}/resources/",
+        "the approved reusable visual library"
+      ],
       "reuse_test": "Reuse only if it is BOTH technically correct for this subject and pedagogically right for this learning need. A near-miss reused to save time teaches the near-miss.",
-      "wins_because": "already reviewed, already licence-clean, already tablet-tested"
+      "wins_because": "already reviewed, already licence-clean (or its rights state says otherwise), already used on the tablets by a course on the same subject",
+      "save_back": "On a subject library's subject, every picture found at level 3 or made at level 4, and every new reference document, is contributed back once it is packaged in the module (scripts/subject_library.py contribute picture|document) - source and rights required, AI pictures flagged. source/GUIDE.md 'Saving back'."
     },
     {
       "level": 3,

@@ -13,13 +13,13 @@ requester's exact phrasing.
 
 ```
 1 PROJECT   source_files/, operator assets, manuals, drawings, the course's own assets
-2 FACTORY   ${CLAUDE_PLUGIN_ROOT}/resources/
+2 SHARED    2a the subject library (the Gas Library first), 2b ${CLAUDE_PLUGIN_ROOT}/resources/
 3 INTERNET  only after 1 and 2 were actually searched
 4 CREATE    SVG · HTML/CSS/JS · Canvas · programmatic · generated illustration
 ```
 
-`scripts/resolve_asset.py` mechanises levels 1 and 2 and says `GENERATED_ASSET_REQUIRED` when both
-come back empty — provisional until level 3 has also been searched, which is what
+`scripts/resolve_asset.py` mechanises levels 1 and 2 (2a through the library's own search, by
+description) and says `GENERATED_ASSET_REQUIRED` when both come back empty — provisional until level 3 has also been searched, which is what
 `source/schemas/GENERATED_ASSET_BRIEF.md` requires before a brief is written. Level 3 is judgement — hand it to the **`visual-sourcer`** agent, which works
 in isolated context so a long search does not fill the main conversation.
 
@@ -45,9 +45,31 @@ equipment, and needs no rights decision.
 
 ---
 
-## Level 2 — the factory library
+## Level 2 — what is already shared
 
-`${CLAUDE_PLUGIN_ROOT}/resources/`. Already reviewed, already licence-clean, already tablet-tested.
+**2a · The subject library.** One knowledge base + asset library shared by every course on a subject,
+kept on the company's Drive, never in this repository — the **NOVIKONTAS Gas Library** (GAS BASIC,
+GAS ADVANCED, IGF Basic, IGF Advanced) is the first. `scripts/subject_library.py locate` says whether
+this computer has one (`knowledge/subject-libraries.json`: the env var `NOVIKONTAS_SUBJECT_LIBRARIES`,
+the library's own variable such as `NOVIKONTAS_GAS_LIBRARY`, then its default place, `G:\My Drive\Gas
+Library` for Google Drive on Windows). None found = skipped without a word; nothing depends on it.
+
+`resolve_asset.py` searches it through the library's own `find.py` — by **description, what it shows
+and its teaching purpose**, with synonyms, never by file name — and gates it by rights:
+
+- **found** only in a state that may ship on the tablets: `PUBLIC_DOMAIN` · `ATTRIBUTION_REQUIRED`
+  (credit on the slide) · `CLEARED` · `OWNER_CLEARED` · `PROJECT_OWNED` · `GENERATED`;
+- **blocked**, classroom reference until cleared: `UNKNOWN` · `PUBLICATION_FIGURE` ·
+  `RIGHTS_REVIEW_REQUIRED` · `SEE_LICENCE`;
+- **an AI picture is held back** unless `--allow-ai` says the need is a scene or a cutaway a camera
+  cannot show. It is never the picture of equipment a trainee must recognise.
+
+Take a library picture into the module with the library's `use_asset.py <id> <module folder>` (the
+resolver prints the command) — the file and its provenance record travel together. Pictures sorted
+from a knowledge base (`kbga_*`) were sorted from contact sheets: open one before it goes on a slide.
+
+**2b · The factory library.** `${CLAUDE_PLUGIN_ROOT}/resources/`. Already reviewed, already
+licence-clean, already tablet-tested.
 
 **Reuse only if it is both technically correct for this subject and pedagogically right for this
 need.** A near-miss reused to save time teaches the near-miss.
@@ -170,6 +192,25 @@ a generated image teaching something false, and it is the one most often left em
 
 ---
 
+## Saving back — what one course finds, every course on the subject gets
+
+When the module is on a subject library's subject (`scripts/subject_library.py covers "<programme
+title, STCW ref, module titles>"`), everything new this lane adds goes into the library as well as
+into the module — once it is packaged in the module with its provenance record:
+
+| Found or made | Command (`scripts/subject_library.py contribute ...`) |
+|---|---|
+| a picture from level 3, a Novikontas photo, a generated render | `picture <the file in the module>` — reads its `_photo_meta.json` / `_figure_meta.json` record |
+| a reference document (a PDF: SDS, manual, guidance) | `document <pdf> --type <type> --title ... --edition ... --origin-url <publisher page> --distribution SHARE\|FREE_DOWNLOAD\|INSTRUCTOR_ONLY\|CHECK` |
+
+The library refuses a picture without source, rights_state, credit, description, teaching_purpose and
+a real `visually_verified`, and flags an AI picture (it must be `GENERATED` and is listed for
+replacement by a real photo where it shows equipment). A picture already in a module of a course the
+library harvests is not copied — the rebuild takes it from the course. A duplicate (same sha256) is
+reported, not added. The contribution rebuilds the library (about 30 s); after several, pass
+`--no-rebuild` and run `subject_library.py sync` once. **Say in the report what was contributed.**
+Facts and terms go back the same way — `course-factory`'s `script/GUIDE.md` §0.
+
 ## What "done" looks like for this lane
 
 - Every level actually searched, in order, and the search recorded — including the terms tried
@@ -178,4 +219,5 @@ a generated image teaching something false, and it is the one most often left em
 - Anything at `RIGHTS_REVIEW_REQUIRED` is reported to the owner, not shipped
 - Every remote asset that is used has been **downloaded and packaged locally**
 - Every `GENERATED_ASSET_REQUIRED` carries a complete brief
+- On a subject library's subject: every new picture and document is contributed back, and the report says which
 - `scripts/check_assets.py` runs clean, and its output was read

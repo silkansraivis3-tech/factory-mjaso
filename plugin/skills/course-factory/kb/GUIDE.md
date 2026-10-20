@@ -15,6 +15,12 @@ are over a megabyte. Search, then read the pieces the search returns.
 
 ## At intake
 
+**On a shared subject library's subject** (the Gas Library for every gas course; `intake.json` → *the
+subject library*), `course-visuals/scripts/subject_library.py find "<subject>"` comes before this
+lane's search: it searches this course's knowledge base together with the other courses' and adds the
+cited facts, glossary and open conflicts. This lane is still how a course's own knowledge base is
+found, recorded and searched in depth.
+
 First find it — the operator gives a course folder, not a knowledge-base path:
 
 ```

@@ -34,7 +34,8 @@
       "owner": "course-factory/kb (kb/GUIDE.md, kb/scripts/kb_tool.py)",
       "does": "sources for the subject, extracted and searchable - a Course Source Processor knowledge base or an older docling one, told apart by their files. Searched with kb_tool.py search; retrieval packs are written into the course folder's _factory/retrieval/, never into the knowledge base. Only the current edition of a publication is cited (intake).",
       "note": "search the extracted text before declaring a source unreadable; never read a document.md or content.md whole",
-      "when_none": "the factory suggests making one at intake (0), unasked - the factory itself has no tool that builds one; the Course Source Processor does. The operator's answer (yes / built / declined with a reason) is recorded with kb_tool.py decision; a declined one is allowed and stays on the Stage 2 page (2.42.0)"
+      "when_none": "the factory suggests making one at intake (0), unasked - the factory itself has no tool that builds one; the Course Source Processor does. The operator's answer (yes / built / declined with a reason) is recorded with kb_tool.py decision; a declined one is allowed and stays on the Stage 2 page (2.42.0)",
+      "subject_library": "on a shared subject library's subject (intake.json look_first 'the subject library'; the Gas Library for every gas course) its find.py comes FIRST - it searches the course's own knowledge base and the other courses' at once and adds the cited facts, the glossary and the open conflicts - then kb_tool.py search for more. A CONFLICT row is named on the review page with OPEN_DECISIONS.md, never settled by picking a value. A new cited fact or term goes back with subject_library.py contribute fact|term (inbox, status NEW). Absent: skipped (2.52.0)"
     },
     {
       "n": 4,
@@ -104,7 +105,7 @@
       "blocked_without": "the screen inventory (7) and the visual system (8)",
       "rule": "REQUIRED for a substantial module, any complex concept, anything animated and anything needing a new asset. NOT required for a single labelled photograph or a plain-text screen.",
       "why": "course-module-ui fixes the palette and course-module-ux fixes the geometry; neither decides whether a concept should be a photograph, a schematic, an animation or a sentence. That decision is where generic AI course graphics come from.",
-      "also": "runs the asset pipeline levels 1-2 (scripts/resolve_asset.py) so a screen is never designed around a photograph that does not exist; emits RIGHTS_REVIEW_REQUIRED and GENERATED_ASSET_REQUIRED rather than shipping quietly."
+      "also": "runs the asset pipeline levels 1-2 (scripts/resolve_asset.py - level 2a is the subject library, when there is one) so a screen is never designed around a photograph that does not exist; emits RIGHTS_REVIEW_REQUIRED and GENERATED_ASSET_REQUIRED rather than shipping quietly. On a subject library's subject every picture found at level 3 or made at level 4 (a nano-banana / Gemini render, a Novikontas photo) is contributed back once packaged in the module (subject_library.py contribute picture <file>; course-visuals source/GUIDE.md 'Saving back')."
     },
     {
       "n": 10,
