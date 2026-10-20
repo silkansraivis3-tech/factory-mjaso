@@ -1350,6 +1350,35 @@ the vent at y 230 instead of 196 and no hand label boxes, M01 **PASSes** in one 
 `vent-puffs` (a vent 22 under a room: was inside on some frames, now clean) and `bad-mover` (a plain moving disc, the
 determinism case the puffs were), `test_audit_drawing.py`.
 
+## 4zz6 · Physical equipment is drawn as it looks on board (L61, 2.52.0, 2026-10-20)
+
+Aleksis approved a plain-vs-realistic mock-up of the figure kit ("yes we like this new kit styling") and asked for it in
+the kit itself, on in every deck: no spec option, no per-slide ask. Then: "also do the Parts added from courses", "make
+the ship look realistic aswell, look at real images of it", "definitely ... the person", "make this relief valve look better".
+- **The materials layer** (`kit.js` `materials()`): one hidden `<svg id="kit-materials">` per page (never display:none),
+  holding the material patterns (cladding, brushed steel, machinery paint, cast, deck, rubber, foam, hull plating,
+  superstructure white, cloth, protective suit), the shade gradients (cyl, cylv, box, round), LNG, fire, sea, a section
+  hatch and two soft-blur filters. The grain is three small canvas bitmaps drawn once per page - an feTurbulence filter in a
+  pattern was rendered again on every frame. Colours are the kit's `--mat-*` tokens (`kit.css`); a paint server keeps the
+  colours of where it is defined, so a light page has its own set (ids `-l`) and `.kit-light` points at it.
+- **Helpers**: `KIT.h.equip(g)` (one piece of equipment: one soft shadow; the drawing check judges it as one object,
+  `data-kit-body` in `audit_drawing.js`), `h.body(tag, attrs, parent, {mat, shade, hatch})`, `h.reshape`, `h.flange`.
+- **Every physical part reworked** - base: valve (cast body, end flanges, bonnet; positioner and diaphragm actuator, or a
+  yoke head and handwheel with `actuator: false`; the ISA bow-tie a light plate, red only on a trip), pipe (stainless,
+  mating flanges at every end), tank (cladding, straps, saddles, dome over the pipe that leaves it, LNG in the cut-away),
+  exchanger (shell-and-tube, copper coil), pump, engine (bedplate, covers, crankcase doors the pistons work behind, exhaust
+  manifold, a turbocharger on the end no part is drawn at, RUNNING on a name plate), vent, well. From courses: all 18
+  equipment parts, the ship (from photos of LNG-fuelled ships: plating, sheer stripe, rail, boot-top, bottom paint, bulb,
+  rudder, propeller, anchor, white house with windows, mast, funnel band), the worker (navy workwear, real PPE), the fixed
+  gas detector (junction box, sensor head, gland, alarm lamp), the relief valve (round angle body, cut-away seat and disc,
+  open bonnet with a coil spring, lever), hose ends, manifold block valves and blinds, lamp guards and the Ex fitting.
+  Fire, flame, spark and spill drawn as they look (flame colours, a jet fire's lifted blue root, LNG's white vapour fog,
+  an arc's blue halo); a dual-fuel cylinder's combustion as plumes along the jets (faint blue gas, bright pilot).
+- **Layout**: a room's name with no clear place inside (the room filled with equipment) goes beside it; the valve is no
+  taller than the ISA symbol it replaces; a shade, a section hatch and a bolt are not measured again.
+- **The rule** (`SPEC.md` "Rules of the look", `PARTS.md`): a part declares `look` - `equipment`, `screen` or `diagram`;
+  equipment draws its bodies in a kit material; screens stay ISA-101. `check_kit.py parts` enforces it (`test_kit.py`).
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

@@ -156,7 +156,11 @@
     if (!host) return;
     var svg = el('svg', { id: MAT_ID, 'class': 'kit-materials', 'aria-hidden': 'true', focusable: 'false', 'data-audit-ignore': '',
                           width: 0, height: 0, style: 'position:absolute;left:0;top:0;width:0;height:0;overflow:hidden;pointer-events:none' });
-    var NZ = noiseTiles();
+    var NZ = noiseTiles(), fx = el('defs', {}, svg);
+    /* soft edges - a vapour fog, smoke, a glow: drawn on a shape that only changes while a step plays */
+    [['soft', 2.5], ['fog', 5]].forEach(function (f) {
+      el('feGaussianBlur', { stdDeviation: f[1] }, el('filter', { id: 'kit-f-' + f[0], x: '-60%', y: '-60%', width: '220%', height: '220%' }, fx));
+    });
     [['', 1], ['-l', 0.8]].forEach(function (set) {
       var sfx = set[0], k = set[1], d = el('defs', { 'class': 'kit-mat-set' + (sfx ? ' kit-mat-light' : '') }, svg);
       function tile(name, w, h) {
@@ -187,6 +191,8 @@
       el('path', { d: 'M0 23.5 H96 M0 0 V12 M48 12 V24', 'stroke-width': 0.8, fill: 'none', 'class': 'kit-mt-strake' }, hull);
       var white = tile('white', 120, 120);                                     // a superstructure's white paint
       noise(white, 'mottle', 0.08); noise(white, 'grain', 0.06);
+      var hatch = el('pattern', { id: 'kit-m-hatch' + sfx, patternUnits: 'userSpaceOnUse', width: 6, height: 6 }, d);   // a cut face's section hatching
+      el('path', { d: 'M-1 7 L7 -1 M-1 1 L1 -1 M5 7 L7 5', 'stroke-width': 1, 'class': 'kit-mt-hatch' }, hatch);
       var cloth = tile('cloth', 40, 40);                                       // workwear cloth, woven
       noise(cloth, 'grain', 0.07); noise(cloth, 'brushed', 0.04);
       var suit = tile('suit', 60, 60);                                         // a protective suit's coated fabric
@@ -200,11 +206,10 @@
       });
       /* a fire's flame - white-hot at its base, orange, red at its tips - standing up (fire) or along a jet (firejet); the
          sea, lit at its surface and deep below (sea) */
-      [['fire', { x1: 0, y1: 1, x2: 0, y2: 0 }], ['firejet', { x1: 0, y1: 0, x2: 1, y2: 0 }]].forEach(function (f) {
+      [['fire', { x1: 0, y1: 1, x2: 0, y2: 0 }, [[0, 'hot', 0.95], [0.4, 'mid', 0.92], [1, 'tip', 0.8]]],
+       ['firejet', { x1: 0, y1: 0, x2: 1, y2: 0 }, [[0, 'root', 0.55], [0.14, 'hot', 0.95], [0.45, 'mid', 0.92], [1, 'tip', 0.8]]]].forEach(function (f) {
         var gr = el('linearGradient', { id: 'kit-m-' + f[0] + sfx, x1: f[1].x1, y1: f[1].y1, x2: f[1].x2, y2: f[1].y2 }, d);
-        [[0, 'hot', 0.95], [0.4, 'mid', 0.92], [1, 'tip', 0.8]].forEach(function (s) {
-          el('stop', { offset: s[0], 'stop-opacity': s[2], 'class': 'kit-mt-fire-' + s[1] }, gr);
-        });
+        f[2].forEach(function (s) { el('stop', { offset: s[0], 'stop-opacity': s[2], 'class': 'kit-mt-fire-' + s[1] }, gr); });
       });
       var sea = el('linearGradient', { id: 'kit-m-sea' + sfx, x1: 0, y1: 0, x2: 0, y2: 1 }, d);
       [[0, 'top'], [1, 'deep']].forEach(function (s) { el('stop', { offset: s[0], 'class': 'kit-mt-sea-' + s[1] }, sea); });
@@ -239,6 +244,11 @@
     if (o.shade) {
       for (k in attrs) if (k !== 'class' && k !== 'style' && k !== 'id') s[k] = attrs[k];
       n.__kitShade = el(tag, s, parent);
+    }
+    if (o.hatch) {                                      // a cut face in a cut-away: its section hatching over it
+      var c = { 'class': 'kit-sh kit-m-hatch', 'aria-hidden': 'true' };
+      for (k in attrs) if (k !== 'class' && k !== 'style' && k !== 'id') c[k] = attrs[k];
+      el(tag, c, parent);
     }
     return n;
   }
@@ -643,16 +653,20 @@
     for (var p = n; p && p !== svg; p = p.parentNode) if (p.hasAttribute && p.hasAttribute(attr)) return true;
     return false;
   }
-  function seen(n, svg) {                       // painted now: laid out, and not faded out by its step
-    var o = 1;
-    for (var p = n; p && p.nodeType === 1; p = p.parentElement) {
-      var cs = getComputedStyle(p);
-      if (cs.display === 'none' || cs.visibility === 'hidden') return false;
-      if (p === svg) break;
-      o *= parseFloat(cs.opacity);
-      if (!(o > 0.05)) return false;
+  function seen(n, svg, memo) {                 // painted now: laid out, and not faded out by its step
+    /* memo (2.52.0): one Map per measuring pass - a drawn piece of equipment nests its shapes deeper (an equipment group,
+       a flange group), and every shape walked all its ancestors' styles again */
+    memo = memo || new Map();
+    function vis(p) {                           // its opacity times its ancestors' up to the drawing; -1 when not shown
+      if (memo.has(p)) return memo.get(p);
+      var cs = getComputedStyle(p), v;
+      if (cs.display === 'none' || cs.visibility === 'hidden') v = -1;
+      else if (p === svg || !p.parentElement) v = 1;
+      else { var up = vis(p.parentElement); v = up < 0 ? -1 : up * parseFloat(cs.opacity); }
+      memo.set(p, v);
+      return v;
     }
-    return true;
+    return vis(n) > 0.05;
   }
   function painted(n) {
     var cs = getComputedStyle(n), t = tagOf(n);
@@ -755,11 +769,12 @@
     function measure() {
       var ctm = svg.getScreenCTM();
       if (!ctm) return;
-      var inv = ctm.inverse(), s = det(ctm);
+      var inv = ctm.inverse(), s = det(ctm), memo = new Map();
       G.scale = s;
       q(svg, GEOM).forEach(function (n, idx) {
-        /* a body's light and shade (body()) is the same shape again: measured once, as the body */
-        if (n.classList.contains('kit-sh') || notDrawn(n, svg) || !seen(n, svg) || !painted(n)) return;
+        /* a body's light and shade (body()) is the same shape again: measured once, as the body; a bolt always sits on a
+           body that is measured (2.52.0) */
+        if (n.classList.contains('kit-sh') || n.classList.contains('kit-m-bolt') || notDrawn(n, svg) || !seen(n, svg, memo) || !painted(n)) return;
         var sc = n.getScreenCTM();
         if (!sc) return;
         var M = inv.multiply(sc), t = tagOf(n), L = labelOf(n, svg), part = partOf(n, svg), b, key;
@@ -1369,19 +1384,25 @@
     body('ellipse', { rx: s + 4.5, ry: k + 3 }, cast, { mat: 'cast', shade: 'round' });
     var top = -k - 3;
     body('rect', { x: -5 * u, y: top - 4 * u, width: 10 * u, height: 4.5 * u, rx: 1.5 }, cast, { mat: 'cast', shade: 'box' });   // the bonnet
+    [-3.4 * u, 3.4 * u].forEach(function (bx) { el('circle', { cx: bx, cy: top - 3.2 * u, r: 0.9 * u, 'class': 'kit-m-bolt' }, cast); });   // its bolts
     top -= 4 * u;
     if (p.actuator !== false) {
       el('path', { d: 'M' + (-4.5 * u) + ' ' + top + ' V' + (top - 3 * u) + ' M' + (4.5 * u) + ' ' + top + ' V' + (top - 3 * u), 'class': 'kit-m-yoke' }, cast);
       el('line', { x1: 0, y1: top, x2: 0, y2: top - 3 * u, 'class': 'kit-m-stem' }, cast);
+      /* the positioner on the yoke - the box that tells an automatic valve from a manual one, its air line to the actuator */
+      body('rect', { x: 5.5 * u, y: top - 3.6 * u, width: 5 * u, height: 4 * u, rx: 0.6 }, cast, { mat: 'steel', shade: 'box' });
+      el('path', { d: 'M' + (8 * u) + ' ' + (top - 3.6 * u) + ' V' + (top - 5.5 * u) + ' H' + (6 * u), 'class': 'kit-m-spoke' }, cast);
       top -= 3 * u;
       body('rect', { x: -11 * u, y: top - 1.5 * u, width: 22 * u, height: 1.5 * u, rx: 0.6 }, cast, { mat: 'steel' });   // the diaphragm case's flange
       top -= 1.5 * u;
       body('path', { d: 'M' + (-10 * u) + ' ' + top + ' Q' + (-10 * u) + ' ' + (top - 6 * u) + ' 0 ' + (top - 6 * u) + ' Q' + (10 * u) + ' ' + (top - 6 * u) +
                         ' ' + (10 * u) + ' ' + top + ' Z' }, cast, { mat: 'paint', shade: 'round' });
-    } else {
+    } else {                                             // the gland nut, the yoke head and the stem nut under the handwheel
+      body('rect', { x: -2.5 * u, y: top - 1.5 * u, width: 5 * u, height: 1.5 * u }, cast, { mat: 'steel' });
       el('line', { x1: 0, y1: top, x2: 0, y2: top - 6 * u, 'class': 'kit-m-stem' }, cast);
+      body('rect', { x: -3 * u, y: top - 4.6 * u, width: 6 * u, height: 2.6 * u, rx: 0.6 }, cast, { mat: 'cast', shade: 'box' });
       el('ellipse', { cy: top - 6 * u, rx: 11 * u, ry: 3.2 * u, 'class': 'kit-m-wheel' }, cast);
-      el('line', { x1: -10 * u, y1: top - 6 * u, x2: 10 * u, y2: top - 6 * u, 'class': 'kit-m-spoke' }, cast);
+      el('path', { d: 'M' + (-10 * u) + ' ' + (top - 6 * u) + ' H' + (10 * u) + ' M0 ' + (top - 8.8 * u) + ' V' + (top - 3.2 * u), 'class': 'kit-m-spoke' }, cast);
     }
     el('path', { d: bow, 'class': 'kit-valve-bg' }, sym);
     var fill = el('path', { d: bow, 'class': 'kit-vfill' }, sym);
@@ -1600,9 +1621,12 @@
        a pipe or another part is in the way there, left out when both ends are taken (decided at layout, from what is
        drawn: a spool piece's pipe runs into the block as well as a pipe does) */
     var tg = el('g', {}, eq);
+    el('path', { d: 'M-13 12 V-13 H10', 'class': 'kit-engine-exh' }, tg);            // the exhaust from the manifold down to the turbine
     body('rect', { x: -6, y: 16, width: 8, height: 12 }, tg, { mat: 'steel' });
+    body('rect', { x: -31, y: 15, width: 9, height: 14, rx: 2 }, tg, { mat: 'steel', shade: 'cyl' });   // the intake silencer
     body('circle', { cx: -13, cy: 22, r: 11 }, tg, { mat: 'cast', shade: 'round' });
     el('circle', { cx: -13, cy: 22, r: 4.5, 'class': 'kit-m-hole' }, tg);
+    var mf = body('rect', { x: 8, y: -18, width: w - 16, height: 9, rx: 3 }, eq, { mat: 'clad', shade: 'cyl' });   // the insulated exhaust manifold
     function taken(B, own) {
       if (pipeThrough(fig, B)) return true;
       return q(fig.svg, '.kit-part').some(function (o) {
@@ -1620,6 +1644,13 @@
       var cx = 8 + cw * i + cw / 2, hw = cw * 0.64;
       body('rect', { x: cx - hw / 2, y: -10, width: hw, height: 14, rx: 2 }, eq, { mat: 'paintl', shade: 'box' });
       [cx - hw / 2 + 3, cx + hw / 2 - 3].forEach(function (bx) { el('circle', { cx: bx, cy: -6.5, r: 1.2, 'class': 'kit-m-bolt' }, eq); });
+      /* the crankcase door the piston is seen working behind (2.52.0): a bolted steel door round a dark opening */
+      var dw = cw * 0.76;
+      body('rect', { x: cx - dw / 2, y: 5, width: dw, height: 22, rx: 2 }, eq, { mat: 'steel', shade: 'box' });
+      el('rect', { x: cx - cw * 0.27, y: 7, width: cw * 0.54, height: 19, rx: 1.5, 'class': 'kit-engine-recess' }, eq);
+      [[cx - dw / 2 + 2.2, 7.2], [cx + dw / 2 - 2.2, 7.2], [cx - dw / 2 + 2.2, 24.8], [cx + dw / 2 - 2.2, 24.8]].forEach(function (b) {
+        el('circle', { cx: b[0], cy: b[1], r: 0.9, 'class': 'kit-m-bolt' }, eq);
+      });
       el('rect', { x: cx - cw * 0.22, y: 8, width: cw * 0.44, height: 12, rx: 2, 'class': 'kit-piston', style: 'animation-delay:' + (-0.15 * i) + 's' }, g);
     }
     var plate = el('rect', { rx: 3, 'class': 'kit-m-label' }, g);
@@ -1647,9 +1678,10 @@
       plate.setAttribute('y', base - up - py); plate.setAttribute('height', up + down + 2 * py);
       reshape(block, { x: x0, width: bw, height: bh });
       reshape(bed, { x: x0 - 4, width: bw + 8, y: bh - 3 });
+      reshape(mf, { x: x0 + 8, width: bw - 16 });
       var own = { x: X + x0, y: Y - 10, x2: X + x0 + bw, y2: Y + bh + 5 };
-      var side = !taken({ x: X + x0 - 25, y: Y + 10, x2: X + x0 - 1, y2: Y + 34 }, own) ? -1 :
-                 !taken({ x: X + x0 + bw + 1, y: Y + 10, x2: X + x0 + bw + 25, y2: Y + 34 }, own) ? 1 : 0;
+      var side = !taken({ x: X + x0 - 32, y: Y + 10, x2: X + x0 - 1, y2: Y + 34 }, own) ? -1 :
+                 !taken({ x: X + x0 + bw + 1, y: Y + 10, x2: X + x0 + bw + 32, y2: Y + 34 }, own) ? 1 : 0;
       tg.style.display = side ? '' : 'none';
       tg.setAttribute('transform', side < 0 ? 'translate(' + x0.toFixed(2) + ' 0)' : 'translate(' + (w - x0).toFixed(2) + ' 0) scale(-1 1)');
       if (lt) lt.setAttribute('y', bh + 5 + 4 + 14 * k);
@@ -2034,8 +2066,9 @@ KIT.define('ga', function (fig, part, g, p) {
   }
   h.el('path', { d: hull }, h.el('clipPath', { id: cid }, h.el('defs', {}, g)));
   var ship = h.equip(g, { shadow: false });
-  if (!plan) {                                          // the rudder, under the counter
+  if (!plan) {                                          // the rudder under the counter, the bulbous bow under the stem
     h.el('path', { d: 'M' + (w * 0.042) + ' ' + (d * 0.6) + ' H' + (w * 0.075) + ' V' + (d * 0.96) + ' H' + (w * 0.05) + ' Z', 'class': 'kit-m-bottom', 'data-may-cross': '' }, ship);
+    if (d >= 30) h.el('ellipse', { cx: w * 0.948, cy: d * 0.8, rx: w * 0.04, ry: d * 0.13, 'class': 'kit-m-bottom kit-ga-bulb', 'data-may-cross': '' }, ship);
   }
   h.body('path', { d: hull }, ship, { mat: plan ? 'deck' : 'hull' });
   var paint = h.el('g', { 'clip-path': 'url(#' + cid + ')' }, ship);
@@ -2045,6 +2078,7 @@ KIT.define('ga', function (fig, part, g, p) {
     h.el('rect', { x: 0, y: d * wl, width: w, height: d * (1 - wl) + 2, 'class': 'kit-m-bottom' }, paint);
     h.el('line', { x1: 0, x2: w, y1: d * wl, y2: d * wl, 'class': 'kit-ga-boot' }, paint);
     h.el('rect', { x: 0, y: 0, width: w, height: Math.max(2, Math.min(4, d * 0.07)), 'class': 'kit-m-white' }, paint);
+    if (d >= 30) h.body('ellipse', { cx: w * 0.088, cy: d * 0.8, rx: 2.6, ry: d * 0.15 }, paint, { mat: 'cast', shade: 'round' });   // the propeller
     if (d >= 30) {                                     // the hawse pipe and the anchor in it, under the bulwark at the bow
       var ax = w * 0.935, ay = d * 0.2;
       h.el('ellipse', { cx: ax, cy: ay, rx: 3.2, ry: 2.2, 'class': 'kit-m-window' }, paint);
@@ -2064,7 +2098,8 @@ KIT.define('ga', function (fig, part, g, p) {
     h.el('line', { x1: x, x2: x, y1: 3, y2: d - 3, 'class': 'kit-ga-frame' }, g);
   });
   if (!plan && p.house) {
-    var hs = p.house, hh = hs.h, hx = hs.x, hw = hs.w, i;
+    var hs = p.house, hh = hs.h, hx = hs.x, hw = hs.w, i, mx = hx + hw * (p.funnel && p.funnel.x > hx + hw / 2 ? 0.25 : 0.72);
+    h.el('path', { d: 'M' + mx + ' ' + (-hh) + ' V' + (-hh - 20) + ' M' + (mx - 7) + ' ' + (-hh - 16) + ' H' + (mx + 7), 'class': 'kit-ga-mast' }, ship);   // the mast and its radar
     h.body('rect', { x: hx, y: -hh, width: hw, height: hh, rx: 3 }, ship, { mat: 'white', shade: 'box' });
     var rows = [[-hh + 4, Math.max(2.5, Math.min(5, hh * 0.08)), 5.5]];          // the bridge windows along the top
     if (hh >= 30) rows.push([-hh * 0.34, Math.max(2, Math.min(3.5, hh * 0.05)), 3.5]);   // and a lower row
@@ -2093,6 +2128,7 @@ KIT.define('ga', function (fig, part, g, p) {
   css: '.kit-ga-hull{fill:none;stroke:var(--dim-d);stroke-width:2;stroke-linejoin:round;transition:stroke .3s}.kit-ga-sea{fill:var(--cold);opacity:.12}' +
     '.kit-ga-boot{stroke:var(--mat-stem);stroke-width:1.5}.kit-ga-anchor{fill:none;stroke:var(--mat-yoke);stroke-width:1.6;stroke-linecap:round}' +
     '.kit-ga-rail{fill:none;stroke:var(--dim-d);stroke-width:1}.kit-ga-band{fill:var(--mat-hull)}' +
+    '.kit-ga-mast{fill:none;stroke:var(--dim-d);stroke-width:2;stroke-linecap:round}.kit-ga-bulb{stroke:var(--mat-yoke);stroke-width:1.2}' +
     '.kit-ga-bulwark{fill:none;stroke:var(--mat-white);stroke-width:6}' +
     '.kit-ga-frame{stroke:var(--faint-d);stroke-width:1;stroke-dasharray:3 4}.kit-lit .kit-ga-hull{stroke:var(--blue)}',
   example: { size: [420, 200], parts: [
@@ -2215,15 +2251,22 @@ KIT.define('cylinder', function (fig, part, g, p) {
   var pTop = cov + (H - cov) * 0.34, ph = 46;
   /* 2.52.0: cut through as on board - the cast liner and cover, the steel piston on its rod, the exhaust valve and the
      injectors in their materials; the sprays and the flame stay the teaching colours */
-  var moving = h.el('g', { 'class': 'kit-cylinder-moving' }, g);
-  h.el('line', { x1: w / 2, x2: w / 2, y1: pTop + ph, y2: H - 36, 'class': 'kit-cylinder-rod' }, moving);   // stays in the liner at the bottom of the stroke
+  var moving = h.el('g', { 'class': 'kit-cylinder-moving' }, g), pin = pTop + ph * 0.62, be = H - 46;
+  /* the connecting rod, tapered from the gudgeon pin to its big end - it stays in the liner at the bottom of the stroke */
+  h.body('path', { d: 'M' + (w / 2 - 6) + ' ' + pin + ' L' + (w / 2 - 9) + ' ' + be + ' H' + (w / 2 + 9) + ' L' + (w / 2 + 6) + ' ' + pin + ' Z' }, moving, { mat: 'steel', shade: 'cylv' });
+  h.body('circle', { cx: w / 2, cy: be, r: 9 }, moving, { mat: 'cast', shade: 'round' });
   h.body('rect', { x: 4, y: pTop, width: w - 8, height: ph, rx: 4 }, moving, { mat: 'steel', shade: 'box' });
+  h.el('path', { d: 'M6 ' + (pTop + 3) + ' Q' + (w / 2) + ' ' + (pTop - 4) + ' ' + (w - 6) + ' ' + (pTop + 3), 'class': 'kit-cylinder-crown' }, moving);   // the crown
   [10, 18, 26].forEach(function (dy) { h.el('line', { x1: 6, x2: w - 6, y1: pTop + dy, y2: pTop + dy, 'class': 'kit-cylinder-ring' }, moving); });
+  h.body('circle', { cx: w / 2, cy: pin, r: 4.5 }, moving, { mat: 'steel', shade: 'round' });                      // the gudgeon pin
   var eq = h.equip(g);
-  h.body('rect', { x: -12, y: cov, width: 12, height: H - cov }, eq, { mat: 'cast', shade: 'box' });
-  h.body('rect', { x: w, y: cov, width: 12, height: H - cov }, eq, { mat: 'cast', shade: 'box' });
-  h.body('rect', { x: -16, y: 0, width: w + 32, height: cov, rx: 4 }, eq, { mat: 'cast', shade: 'box' });
+  h.body('rect', { x: -12, y: cov, width: 12, height: H - cov }, eq, { mat: 'cast', shade: 'box', hatch: true });
+  h.body('rect', { x: w, y: cov, width: 12, height: H - cov }, eq, { mat: 'cast', shade: 'box', hatch: true });
+  h.body('rect', { x: -16, y: 0, width: w + 32, height: cov, rx: 4 }, eq, { mat: 'cast', shade: 'box', hatch: true });
   h.el('line', { x1: w / 2, x2: w / 2, y1: -26, y2: cov + 2, 'class': 'kit-m-stem kit-cylinder-stem' }, eq);
+  h.body('rect', { x: w / 2 - 5, y: -6, width: 10, height: 6, rx: 1 }, eq, { mat: 'cast', shade: 'box' });          // the valve guide
+  h.el('path', { d: 'M' + (w / 2) + ' -7 l5 -2 l-10 -3 l10 -3 l-10 -3 l10 -3 l-5 -2', 'class': 'kit-cylinder-spring' }, eq);   // and its spring
+  [12, w - 12, -8, w + 8].forEach(function (sx) { h.el('circle', { cx: sx, cy: 5, r: 2, 'class': 'kit-m-bolt' }, eq); });   // the cover's studs
   h.body('path', { d: 'M' + (w / 2 - 18) + ' ' + (cov + 6) + ' Q' + (w / 2) + ' ' + (cov - 2) + ' ' + (w / 2 + 18) + ' ' + (cov + 6) + ' Z' }, eq, { mat: 'steel' });
   [ox, gx].forEach(function (x) {                       // an injector passes through the cover by design
     h.body('rect', { x: x - 5, y: -6, width: 10, height: cov + 12, rx: 2, 'data-may-cross': '' }, eq, { mat: 'steel', shade: 'cylv' });
@@ -2285,7 +2328,9 @@ KIT.define('cylinder', function (fig, part, g, p) {
   look: 'equipment',
   why: 'M01 s06: a dual-fuel engine cylinder in gas mode (gas jet lit by a pilot oil spray), on a gas trip, and in fuel-oil mode; M06 and M13 need it too',
   value: '0 stopped · 1 gas mode (gas jet + pilot spray) · 1.5 gas supply stopped (pilot only) · 2 fuel-oil mode (oil spray)',
-  css: '.kit-cylinder-ring{stroke:var(--mat-edge);stroke-width:2}.kit-cylinder-rod{stroke:var(--kit-steel);stroke-width:10}.kit-cylinder-stem{stroke-width:3}.kit-cylinder-gas line{stroke:var(--txt-d);stroke-width:3;stroke-linecap:round;stroke-dasharray:2 6}.kit-cylinder-pilot line,.kit-cylinder-oil line{stroke:var(--cold);stroke-width:2.5;stroke-dasharray:5 4}.kit-cylinder-fire{opacity:0}.kit-cylinder-flame{fill:var(--mat-flame);opacity:.92}.kit-cylinder-fire-gas .kit-cylinder-flame{fill:var(--cold);opacity:.6}.kit-cylinder-fire-gas .kit-cylinder-core{opacity:.75}.kit-light .kit-cylinder-flame{stroke:var(--mat-flame-edge);stroke-width:1.5}.kit-light .kit-cylinder-fire-gas .kit-cylinder-flame{opacity:.9}.kit-cylinder-core{fill:var(--txt-d)}.kit-cylinder-run .kit-cylinder-flick{transform-box:fill-box;transform-origin:50% 0;animation:kit-cylinder-flicker .3s ease-in-out infinite alternate}@keyframes kit-cylinder-flicker{to{transform:scale(1.05,.94)}}.kit-cylinder-run .kit-cylinder-moving{animation:kit-cylinder-stroke .9s ease-in-out infinite alternate}.kit-cylinder-run .kit-cylinder-gas line,.kit-cylinder-run .kit-cylinder-pilot line,.kit-cylinder-run .kit-cylinder-oil line{animation:kit-flow .8s linear infinite}.kit-cylinder-run .kit-state{fill:var(--txt-d)}.kit-cylinder-trip .kit-state{fill:var(--warn-d)}@keyframes kit-cylinder-stroke{to{transform:translateY(34px)}}',
+  css: '.kit-cylinder-ring{stroke:var(--mat-edge);stroke-width:2}.kit-cylinder-stem{stroke-width:3}' +
+    '.kit-cylinder-crown{fill:none;stroke:var(--mat-edge);stroke-width:1.5}.kit-cylinder-spring{fill:none;stroke:var(--mat-stem);stroke-width:1.6;stroke-linejoin:round}' +
+    '.kit-cylinder-gas line{stroke:var(--txt-d);stroke-width:3;stroke-linecap:round;stroke-dasharray:2 6}.kit-cylinder-pilot line,.kit-cylinder-oil line{stroke:var(--cold);stroke-width:2.5;stroke-dasharray:5 4}.kit-cylinder-fire{opacity:0}.kit-cylinder-flame{fill:var(--mat-flame);opacity:.92}.kit-cylinder-fire-gas .kit-cylinder-flame{fill:var(--cold);opacity:.6}.kit-cylinder-fire-gas .kit-cylinder-core{opacity:.75}.kit-light .kit-cylinder-flame{stroke:var(--mat-flame-edge);stroke-width:1.5}.kit-light .kit-cylinder-fire-gas .kit-cylinder-flame{opacity:.9}.kit-cylinder-core{fill:var(--txt-d)}.kit-cylinder-run .kit-cylinder-flick{transform-box:fill-box;transform-origin:50% 0;animation:kit-cylinder-flicker .3s ease-in-out infinite alternate}@keyframes kit-cylinder-flicker{to{transform:scale(1.05,.94)}}.kit-cylinder-run .kit-cylinder-moving{animation:kit-cylinder-stroke .9s ease-in-out infinite alternate}.kit-cylinder-run .kit-cylinder-gas line,.kit-cylinder-run .kit-cylinder-pilot line,.kit-cylinder-run .kit-cylinder-oil line{animation:kit-flow .8s linear infinite}.kit-cylinder-run .kit-state{fill:var(--txt-d)}.kit-cylinder-trip .kit-state{fill:var(--warn-d)}@keyframes kit-cylinder-stroke{to{transform:translateY(34px)}}',
   example: { size: [420, 330], parts: [
     { id: 'C', type: 'cylinder', x: 140, y: 50, w: 140, h: 230 } ],
     steps: [ { title: 'Gas mode', play: [['C', 1, 900]] }, { title: 'Gas trip', play: [['C', 1.5, 900]] },
@@ -2300,6 +2345,7 @@ KIT.define('boil_off', function (fig, part, g, p) {
      the bubbles move inside it for as long as it boils, and a shadow would be drawn again on every frame) */
   var eq = h.equip(g, { shadow: false });
   h.body('rect', { width: w, height: ht, rx: ht / 2, 'class': 'kit-boil-off-ins' }, eq, { mat: 'foam', shade: 'cyl' });
+  h.el('rect', { width: w, height: ht, rx: ht / 2, 'class': 'kit-boil-off-wall kit-boil-off-jacket kit-ms-steel' }, eq);   // the outer steel jacket over the insulation
   h.el('rect', { x: ins, y: ins, width: iw, height: ih, rx: r }, h.el('clipPath', { id: cid }, h.el('defs', {}, g)));
   var ves = h.el('rect', { x: ins, y: ins, width: iw, height: ih, rx: r, 'class': 'kit-vessel' }, eq);
   var inside = h.el('g', { 'clip-path': 'url(#' + cid + ')' }, eq);
@@ -2332,7 +2378,7 @@ KIT.define('boil_off', function (fig, part, g, p) {
   look: 'equipment',
   why: 'M01 s07: heat leaks through the insulation into a cold LNG tank and some of the liquid boils off as vapour',
   value: 'how much heat leaks in and boils the liquid, 0..1 (arrows and rising bubbles)',
-  css: '.kit-boil-off-wall{fill:none;stroke-width:5}.kit-boil-off-bubbles circle{fill:none;stroke:var(--deep);stroke-width:2}.kit-light .kit-boil-off-bubbles circle{stroke:var(--txt-d)}.kit-boil-off-heat path{fill:none;stroke:var(--txt-d);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}.kit-boil-off-on .kit-boil-off-bubbles circle{animation:kit-boil-off-rise 1.6s ease-in infinite}.kit-boil-off-on .kit-boil-off-heat g path{animation:kit-boil-off-in 1.2s ease-in-out infinite alternate}@keyframes kit-boil-off-rise{to{transform:translateY(var(--rise,-60px))}}@keyframes kit-boil-off-in{to{transform:translateX(6px)}}',
+  css: '.kit-boil-off-wall{fill:none;stroke-width:5}.kit-boil-off-jacket{stroke-width:3}.kit-boil-off-bubbles circle{fill:none;stroke:var(--deep);stroke-width:2}.kit-light .kit-boil-off-bubbles circle{stroke:var(--txt-d)}.kit-boil-off-heat path{fill:none;stroke:var(--txt-d);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}.kit-boil-off-on .kit-boil-off-bubbles circle{animation:kit-boil-off-rise 1.6s ease-in infinite}.kit-boil-off-on .kit-boil-off-heat g path{animation:kit-boil-off-in 1.2s ease-in-out infinite alternate}@keyframes kit-boil-off-rise{to{transform:translateY(var(--rise,-60px))}}@keyframes kit-boil-off-in{to{transform:translateX(6px)}}',
   example: { size: [360, 260], parts: [
     { id: 'B', type: 'boil_off', x: 50, y: 40, w: 260, h: 140, heatLabel: 'heat leaks in' } ],
     steps: [ { title: 'Heat leaks in and some LNG boils off', play: [['B', 1, 1500]] } ] }
@@ -2544,7 +2590,7 @@ KIT.define('pipe_section', function (fig, part, g, p) {
   var walls = h.equip(g, { shadow: false });
   [[0, 0, bx - t, t], [bx + bw + t, 0, w - bx - bw - t, t], [0, D - t, w, t], [0, yi, w, t], [0, D - yi - t, w, t],
    [bx - t, -bh, t, bh + t], [bx + bw, -bh, t, bh + t], [w - t, t, t, an], [w - t, D - yi, t, an]].forEach(function (r) {
-    h.body('rect', { x: r[0], y: r[1], width: r[2], height: r[3] }, walls, { mat: 'steel' });     // the pipes' steel, cut through (2.52.0)
+    h.body('rect', { x: r[0], y: r[1], width: r[2], height: r[3] }, walls, { mat: 'steel', hatch: true });     // the pipes' steel, cut through (2.52.0)
   });
   var crack = h.el('path', { d: 'M' + (lk - 4) + ' ' + yi + ' L' + (lk + 2) + ' ' + (yi + t / 2) + ' L' + (lk - 2) + ' ' + (yi + t), 'class': 'kit-pipe-section-crack' }, g);
   part.render = function (v) {
@@ -2574,29 +2620,41 @@ KIT.define('pipe_section', function (fig, part, g, p) {
 KIT.define('relief_valve', function (fig, part, g, p) {
   var h = KIT.h, s = p.size || 14, k = s * 0.7, top = -s - 22, left = p.outlet === 'left';
   var sym = h.el('g', { transform: left ? 'scale(-1 1)' : null }, g);
-  /* 2.52.0: the real valve - a cast angle body flanged to its inlet below and its outlet at the side, the open bonnet
-     (two yoke bars) the spring is seen in, its cover on top; the ISA triangles stay on the body as a light plate */
-  var eq = h.equip(sym);
+  /* 2.52.0 (operator: "make this relief valve look better"): a real spring-loaded safety valve - a rounded cast angle body
+     on its inlet neck and outlet neck, both flanged; a cut-away window in the body showing the disc on its seat; the open
+     bonnet (two cast yoke bars on the bonnet flange) where its steel coil spring is seen pressing the disc down; the
+     spindle up through the top plate, the adjusting cap, and the lifting lever */
+  var eq = h.equip(sym), wy = -k + 1;
   h.flange(eq, 0, s + 5, 90, 2 * k + 10, 5);
   h.flange(eq, s + 5, 0, 0, 2 * k + 10, 5);
-  h.body('rect', { x: -k - 3, y: -k - 3, width: s + k + 6, height: s + k + 6, rx: 6 }, eq, { mat: 'cast', shade: 'round' });
-  h.el('path', { d: 'M' + (-k - 1) + ' ' + (-k - 3) + ' V' + top + ' M' + (k + 1) + ' ' + (-k - 3) + ' V' + top, 'class': 'kit-m-yoke' }, eq);
-  h.body('rect', { x: -k - 4, y: top - 3, width: 2 * k + 8, height: 4, rx: 1 }, eq, { mat: 'steel', shade: 'box' });
-  [['M0 0 L' + (-k) + ' ' + s + ' H' + k + ' Z'], ['M0 0 L' + s + ' ' + (-k) + ' V' + k + ' Z']].forEach(function (d) {
-    h.el('path', { d: d[0], 'class': 'kit-valve-bg' }, sym);
-    h.el('path', { d: d[0], 'class': 'kit-valve' }, sym);
+  h.body('rect', { x: -k * 0.75, y: 0, width: 1.5 * k, height: s + 3 }, eq, { mat: 'cast', shade: 'cylv' });       // the inlet neck
+  h.body('rect', { x: 0, y: -k * 0.75, width: s + 3, height: 1.5 * k }, eq, { mat: 'cast', shade: 'cyl' });        // the outlet neck
+  h.body('ellipse', { rx: k + 4, ry: k + 3 }, eq, { mat: 'cast', shade: 'round' });                                // the body
+  h.el('rect', { x: -k + 1.5, y: wy, width: 2 * k - 3, height: 4 - wy, rx: 2, 'class': 'kit-relief-valve-win' }, eq);   // the cut-away window
+  h.body('rect', { x: -6, y: 0, width: 12, height: 3, rx: 0.8 }, eq, { mat: 'steel' });                            // the seat on the inlet nozzle
+  [-1, 1].forEach(function (sd) {                                                                                   // the yoke bars
+    h.body('rect', { x: sd < 0 ? -k - 1 : k - 2, y: top, width: 3, height: -k - 4 - top }, eq, { mat: 'cast', shade: 'cylv' });
   });
+  h.body('rect', { x: -k - 2.5, y: -k - 6, width: 2 * k + 5, height: 3.5, rx: 1 }, eq, { mat: 'steel', shade: 'box' });   // the bonnet flange
+  h.body('rect', { x: -k - 3, y: top - 3, width: 2 * k + 6, height: 4, rx: 1 }, eq, { mat: 'steel', shade: 'box' });     // the top plate
+  h.body('rect', { x: -3, y: top - 9, width: 6, height: 6, rx: 1 }, eq, { mat: 'cast', shade: 'box' });          // the adjusting screw's cap
+  h.body('rect', { x: -4.5, y: top - 11, width: 9, height: 3, rx: 1 }, eq, { mat: 'steel' });
+  h.el('path', { d: 'M-3 ' + (top - 6) + ' L' + (-k - 10) + ' ' + (top + 4), 'class': 'kit-m-stem kit-relief-valve-lever' }, eq);   // the lifting lever
+  h.body('circle', { cx: -k - 10, cy: top + 4, r: 2.4 }, eq, { mat: 'cast', shade: 'round' });
+  var spindle = h.el('line', { x1: 0, x2: 0, y2: top - 6, 'class': 'kit-m-stem kit-relief-valve-spindle' }, sym);
   var spring = h.el('path', { 'class': 'kit-relief-valve-spring' }, sym);
-  var disc = h.el('rect', { x: -k, width: 2 * k, height: 4, rx: 1.5, 'class': 'kit-relief-valve-disc' }, sym);
+  var disc = h.el('rect', { x: -7, width: 14, height: 4, rx: 1.5, 'class': 'kit-relief-valve-disc' }, sym);
   var right = p.labelAt === 'right', lx = right ? s + 14 : 0, ly = right ? top + 10 : s + 22, anchor = right ? 'start' : 'middle';
   var lg = p.label || p.state !== false ? h.label(fig, g, {}, '') : null;           // its name and its state move together
   var nl = p.label ? h.lines(lg, { x: lx, y: ly, 'text-anchor': anchor, 'class': 'kit-cap' }, p.label) : 0;
   var st = p.state === false ? null : h.el('text', { x: lx, y: ly, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': anchor, 'class': 'kit-state' }, lg);
   part.render = function (v) {
-    var lift = h.clamp(v, 0, 1), dy = -4 - lift * 8, d = 'M0 ' + (dy - 1), n = 6, seg = (top - (dy - 1)) / n;
-    for (var i = 1; i <= n; i++) d += ' L' + (i === n ? 0 : (i % 2 ? 6 : -6)) + ' ' + (dy - 1 + seg * i).toFixed(1);
+    /* the disc lifts off its seat into the window; the coil spring between the disc's washer and the top plate is squeezed */
+    var lift = h.clamp(v, 0, 1), dy = -4 - lift * 4.5, b0 = dy - 1, n = 9, seg = (top - b0) / n, d = 'M-6 ' + b0.toFixed(1) + ' H6';
+    for (var i = 1; i <= n; i++) d += ' L' + (i % 2 ? -6 : 6) + ' ' + (b0 + seg * i).toFixed(1);
     spring.setAttribute('d', d);
     disc.setAttribute('y', (dy).toFixed(1));
+    spindle.setAttribute('y1', dy.toFixed(1));
     if (st) st.textContent = lift > 0.1 ? 'RELIEVING' : 'CLOSED';
     g.classList.toggle('kit-relief-valve-lift', lift > 0.1);
   };
@@ -2607,7 +2665,9 @@ KIT.define('relief_valve', function (fig, part, g, p) {
   look: 'equipment',
   why: 'M03 s03 and s09: a spring-loaded relief valve - the spring holds the disc on its seat until the pressure beats it, then the disc lifts and the vapour goes to the vent',
   value: 'how far the disc has lifted, 0 closed .. 1 fully open; inlet at (0, size) below, outlet at (size, 0) to the side',
-  css: '.kit-relief-valve-spring{fill:none;stroke:var(--dim-d);stroke-width:2;stroke-linejoin:round}.kit-relief-valve-disc{fill:var(--mat-stem);stroke:var(--txt-d);stroke-width:1.5}.kit-relief-valve-lift .kit-relief-valve-spring{stroke:var(--amber)}.kit-relief-valve-lift .kit-relief-valve-disc{fill:var(--amber)}.kit-relief-valve-lift .kit-state{fill:var(--amber)}',
+  css: '.kit-relief-valve-win{fill:var(--mat-hole);stroke:var(--mat-edge);stroke-width:1}.kit-relief-valve-lever{stroke-width:2.4}.kit-relief-valve-spindle{stroke-width:2}' +
+    '.kit-relief-valve-spring{fill:none;stroke:var(--kit-steel);stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}' +
+    '.kit-relief-valve-disc{fill:var(--mat-stem);stroke:var(--txt-d);stroke-width:1.5}.kit-relief-valve-lift .kit-relief-valve-spring{stroke:var(--amber)}.kit-relief-valve-lift .kit-relief-valve-disc{fill:var(--amber)}.kit-relief-valve-lift .kit-state{fill:var(--amber)}',
   example: { size: [320, 200], parts: [
     { id: 'P', type: 'pipe', fluid: 'gas', d: 'M120 170 V114', value: 0 },
     { id: 'O', type: 'pipe', fluid: 'gas', d: 'M134 100 H240 V40', value: 0 },
@@ -2674,6 +2734,9 @@ KIT.define('coupling', function (fig, part, g, p) {
   var seals = [h.el('rect', { x: -6, y: -8, width: 3, height: 16, 'class': 'kit-coupling-seal' }, L),
                h.el('rect', { x: 3, y: -8, width: 3, height: 16, 'class': 'kit-coupling-seal' }, R)];
   var mark = brk ? h.el('line', { x1: 0, x2: 0, y1: -16, y2: 16, 'class': 'kit-coupling-break' }, sym) : null;
+  /* a breakaway coupling is held by shear bolts across its joint (2.52.0): pulled hard, they break and it parts */
+  var shear = brk ? h.el('g', {}, sym) : null;
+  if (shear) [-8, 0, 8].forEach(function (y) { h.body('rect', { x: -4, y: y - 1.3, width: 8, height: 2.6, rx: 1 }, shear, { mat: 'steel' }); });
   var above = p.labelAt === 'above', nl = p.label ? String(p.label).split('\n').length : 0;
   var ly = above ? -24 - (nl - 1) * 16 : 32;
   var lg = p.label || p.state !== false ? h.label(fig, g, {}, '') : null;           // its name and its state move together
@@ -2685,6 +2748,7 @@ KIT.define('coupling', function (fig, part, g, p) {
     R.setAttribute('transform', 'translate(' + gap.toFixed(1) + ' 0)');
     seals.forEach(function (s) { s.style.opacity = c < 0.5 ? '1' : '0'; });
     if (mark) mark.style.opacity = c > 0.5 ? '1' : '0';
+    if (shear) shear.style.opacity = c > 0.5 ? '1' : '0';
     if (st) st.textContent = c > 0.5 ? 'CONNECTED' : (brk ? 'PARTED - SEALED' : 'DISCONNECTED');
     g.classList.toggle('kit-coupling-parted', c < 0.5);
   };
@@ -2782,20 +2846,38 @@ KIT.define('water_curtain', function (fig, part, g, p) {
 /* kit-part: detector */
 KIT.define('detector', function (fig, part, g, p) {
   var h = KIT.h, r = p.r || 19, at = p.readAt || 'right';
-  /* 2.52.0: the head as fitted - its cast housing round the sensor face, on a steel bracket to the deckhead or wall */
-  var eq = h.equip(g);
-  var bracket = h.body('rect', { x: -4, y: -r - 9, width: 8, height: 10 }, eq, { mat: 'steel', shade: 'cylv' });
-  var foot = h.body('rect', { x: -10, y: -r - 12, width: 20, height: 4, rx: 1 }, eq, { mat: 'steel', shade: 'box' });
-  var head = h.el('circle', { r: r, 'class': 'kit-detector-head' }, eq);
+  /* 2.52.0: a fixed gas detector as fitted (Honeywell Sensepoint-like): a flameproof cast junction box on its bracket, its
+     cover screws, its tag on a nameplate, a cable gland at its side, the sensor head with its weather guard hanging
+     below, and the alarm lamp on top (amber in alarm, red at trip). Inside the old r footprint at r = 19 */
+  var eq = h.equip(g), top = -r;
+  var bracket = h.body('rect', { x: -4, y: top - 9, width: 8, height: 10 }, eq, { mat: 'steel', shade: 'cylv' });
+  var foot = h.body('rect', { x: -10, y: top - 12, width: 20, height: 4, rx: 1 }, eq, { mat: 'steel', shade: 'box' });
+  var gland = h.body('path', { d: '' }, eq, { mat: 'steel', shade: 'box' });
+  var head = h.body('rect', { x: -r + 2, y: top, width: 2 * r - 4, height: 22, rx: 3, 'class': 'kit-detector-head' }, eq, { mat: 'cast', shade: 'box' });
+  var screws = [0, 1, 2, 3].map(function () { return h.el('circle', { r: 1.3, 'class': 'kit-m-bolt' }, eq); });
+  var sensor = h.body('rect', { x: -6, width: 12, height: 13 }, eq, { mat: 'steel', shade: 'cylv' });
+  var guard = h.body('rect', { x: -7.5, width: 15, height: 4.5, rx: 1.5 }, eq, { mat: 'cast', shade: 'box' });
+  var slits = h.el('path', { 'class': 'kit-detector-slit' }, eq);
+  var lamp = h.el('circle', { r: 2.6, 'class': 'kit-detector-lamp' }, eq);
+  var plate = h.el('rect', { rx: 2, 'class': 'kit-detector-plate' }, g);
   var tag = h.el('text', { y: 4.5, 'text-anchor': 'middle', 'class': 'kit-bubble-t' }, g, p.tag || 'GD');
   var pos = { right: { x: r + 8, y: 4.5, a: 'start' }, left: { x: -r - 8, y: 4.5, a: 'end' }, below: { x: 0, y: r + 20, a: 'middle' } }[at] || { x: r + 8, y: 4.5, a: 'start' };
   var val = p.readout === false ? null : h.el('text', { x: pos.x, y: pos.y, 'text-anchor': pos.a, 'class': 'kit-state' }, g);
-  fig.fit(function (k) {                          // the head grows with its letters (the 12.5 px floor), the reading beside it
-    head.setAttribute('r', r * k); tag.setAttribute('y', 4.5 * k);
-    h.reshape(bracket, { y: -r * k - 9 }); h.reshape(foot, { y: -r * k - 12 });
+  fig.fit(function (k) {                          // the box grows with its tag (the 12.5 px floor), the reading beside it
+    var tw = h.widest(tag, [p.tag || 'GD']), pw = tw + 12, ph = 18 * k, bw = Math.max(2 * r - 4, pw + 12), bh = Math.max(24, ph + 6);
+    var x0 = -bw / 2, mid = top + bh / 2, bot = top + bh, sb = bot + 13;
+    h.reshape(head, { x: x0, width: bw, height: bh });
+    [[x0 + 3, top + 3], [-x0 - 3, top + 3], [x0 + 3, bot - 3], [-x0 - 3, bot - 3]].forEach(function (c, i) { screws[i].setAttribute('cx', c[0]); screws[i].setAttribute('cy', c[1]); });
+    plate.setAttribute('x', -pw / 2); plate.setAttribute('width', pw); plate.setAttribute('y', mid - ph / 2); plate.setAttribute('height', ph);
+    tag.setAttribute('y', mid + 4.5 * k);
+    h.reshape(gland, { d: 'M' + (x0 - 6) + ' ' + (mid - 3.5) + ' H' + x0 + ' V' + (mid + 3.5) + ' H' + (x0 - 6) + ' L' + (x0 - 7.5) + ' ' + mid + ' Z' });
+    h.reshape(sensor, { y: bot }); h.reshape(guard, { y: sb });
+    slits.setAttribute('d', 'M-4 ' + (sb + 1) + ' V' + (sb + 3.5) + ' M0 ' + (sb + 1) + ' V' + (sb + 3.5) + ' M4 ' + (sb + 1) + ' V' + (sb + 3.5));
+    lamp.setAttribute('cx', -x0 - 7); lamp.setAttribute('cy', top - 1);
+    h.reshape(bracket, { y: top - 9 }); h.reshape(foot, { y: top - 12 });
     if (val) {
-      val.setAttribute('x', at === 'below' ? 0 : (at === 'left' ? -1 : 1) * (r * k + 8));
-      val.setAttribute('y', at === 'below' ? r * k + 20 * k : 4.5 * k);
+      val.setAttribute('x', at === 'below' ? 0 : (at === 'left' ? -1 : 1) * (bw / 2 + (at === 'left' ? 16 : 8)));
+      val.setAttribute('y', at === 'below' ? sb + 4.5 + 16 * k : mid + 4.5 * k);
     }
   });
   if (p.label) h.label(fig, g, { x: 0, y: at === 'below' ? r + 38 : r + 20, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
@@ -2808,7 +2890,10 @@ KIT.define('detector', function (fig, part, g, p) {
   look: 'equipment',
   why: 'M03 s17: a fixed gas detector head placed in a space - where it sits is the lesson; it reads % LEL and alarms on its marks',
   value: 'the reading (for gas: % LEL); its marks turn it amber (alarm) or red (trip)',
-  css: '.kit-detector-head{fill:var(--deep);stroke:var(--kit-cast);stroke-width:5}.kit-on-alarm .kit-detector-head{stroke:var(--amber);stroke-width:5}.kit-on-alarm .kit-state{fill:var(--amber)}.kit-on-trip .kit-detector-head{stroke:var(--warn-d)}.kit-on-trip .kit-state{fill:var(--warn-d)}',
+  css: '.kit-detector-plate{fill:var(--deep);stroke:var(--mat-edge-steel);stroke-width:1}.kit-detector-slit{fill:none;stroke:var(--mat-window);stroke-width:1.2}' +
+    '.kit-detector-lamp{fill:var(--mat-stem);stroke:var(--mat-edge);stroke-width:.8}' +
+    '.kit-on-alarm .kit-detector-head{stroke:var(--amber);stroke-width:3}.kit-on-alarm .kit-detector-lamp{fill:var(--amber)}.kit-on-alarm .kit-state{fill:var(--amber)}' +
+    '.kit-on-trip .kit-detector-head{stroke:var(--warn-d);stroke-width:3}.kit-on-trip .kit-detector-lamp{fill:var(--warn-d)}.kit-on-trip .kit-state{fill:var(--warn-d)}',
   example: { size: [300, 160], parts: [
     { id: 'R', type: 'space', x: 20, y: 30, w: 260, h: 110, label: 'FUEL PREPARATION ROOM' },
     { id: 'D', type: 'detector', x: 150, y: 70, unit: '% LEL', label: 'near the deckhead',
@@ -2819,15 +2904,21 @@ KIT.define('detector', function (fig, part, g, p) {
 /* kit-part: flame */
 KIT.define('flame', function (fig, part, g, p) {
   var h = KIT.h, s = p.size || 44;
-  function tongue(k) {
-    return 'M0 0 C' + (-s * 0.45 * k) + ' ' + (-s * 0.22 * k) + ' ' + (-s * 0.32 * k) + ' ' + (-s * 0.7 * k) + ' 0 ' + (-s * k) +
-           ' C' + (s * 0.32 * k) + ' ' + (-s * 0.7 * k) + ' ' + (s * 0.45 * k) + ' ' + (-s * 0.22 * k) + ' 0 0 Z';
+  /* 2.52.0: a real flame is never a symmetric candle - its tip leans and curls (lean), smaller tongues burn behind it, and
+     the gas burns blue where it leaves the outlet */
+  function tongue(k, dx, lean) {
+    var t = (dx || 0) + (lean || 0) * s * k;
+    return 'M' + (dx || 0) + ' 0 C' + ((dx || 0) - s * 0.45 * k) + ' ' + (-s * 0.22 * k) + ' ' + (t - s * 0.42 * k) + ' ' + (-s * 0.62 * k) + ' ' + t + ' ' + (-s * k) +
+           ' C' + (t + s * 0.18 * k) + ' ' + (-s * 0.72 * k) + ' ' + ((dx || 0) + s * 0.48 * k) + ' ' + (-s * 0.24 * k) + ' ' + (dx || 0) + ' 0 Z';
   }
   var grow = h.el('g', {}, g), body = h.el('g', { 'class': 'kit-flame-body' }, grow);
   /* a flame stands on a tank, a room's roof or a vent and burns up past it by its nature: it is not judged as poking out of
      what it stands on, and it holds nothing (2.49.1) */
-  h.el('path', { d: tongue(1), 'class': 'kit-flame-outer kit-m-fire', 'data-may-cross': '', 'data-no-contain': '' }, body);
-  h.el('path', { d: tongue(0.55), 'class': 'kit-flame-core', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, body);   // the hot core inside the flame: its outer tongue carries the contrast
+  h.el('path', { d: tongue(0.62, -s * 0.24, -0.16), 'class': 'kit-flame-outer kit-m-fire', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, body);   // behind the main tongue: it carries the contrast
+  h.el('path', { d: tongue(0.5, s * 0.26, 0.2), 'class': 'kit-flame-outer kit-m-fire', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, body);
+  h.el('path', { d: tongue(1, 0, 0.12), 'class': 'kit-flame-outer kit-m-fire', 'data-may-cross': '', 'data-no-contain': '' }, body);
+  h.el('path', { d: tongue(0.55, 0, 0.06), 'class': 'kit-flame-core', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, body);   // the hot core inside the flame: its outer tongue carries the contrast
+  h.el('ellipse', { cx: 0, cy: -s * 0.04, rx: s * 0.2, ry: s * 0.08, 'class': 'kit-flame-root', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, body);
   if (p.label) h.label(fig, g, { x: s * 0.6, y: -s * 0.6, 'class': 'kit-cap' }, p.label);
   part.render = function (v) {
     var k = h.clamp(v, 0, 1);
@@ -2842,7 +2933,7 @@ KIT.define('flame', function (fig, part, g, p) {
   look: 'diagram',
   why: 'M03 s11: venting gas has caught fire at the vent mast outlet - the flame stands while gas is released and goes out when the release stops and nitrogen smothers it; M13 needs it too',
   value: 'the size of the flame, 0 out .. 1 full; it stands on its point (x, y) and burns upwards',
-  css: '.kit-flame-outer{opacity:.95}.kit-flame-core{fill:var(--mat-fire-hot);opacity:.85}.kit-flame-on .kit-flame-body{transform-box:fill-box;transform-origin:50% 100%;animation:kit-flame-flicker .35s ease-in-out infinite alternate}@keyframes kit-flame-flicker{to{transform:scale(1.07,.9)}}',
+  css: '.kit-flame-outer{opacity:.95}.kit-flame-core{fill:var(--mat-fire-hot);opacity:.85}.kit-flame-root{fill:var(--mat-fire-root);opacity:.65}.kit-flame-on .kit-flame-body{transform-box:fill-box;transform-origin:50% 100%;animation:kit-flame-flicker .35s ease-in-out infinite alternate}@keyframes kit-flame-flicker{to{transform:scale(1.07,.9)}}',
   example: { size: [240, 160], parts: [
     { id: 'P', type: 'pipe', fluid: 'gas', d: 'M120 150 V90', value: 1 },
     { id: 'V', type: 'vent', x: 120, y: 90, value: 1 },
@@ -2958,14 +3049,17 @@ KIT.define('fan', function (fig, part, g, p) {
   [-1, 1].forEach(function (s) {
     h.body('rect', { x: -half, y: s < 0 ? -wh - 6 : wh, width: 2 * half, height: 6, rx: 2 }, eq, { mat: 'steel', shade: 'box' });
   });
+  if (half > r + 28) [-1, 1].forEach(function (s) { h.flange(eq, s * (r + 22), 0, 0, 2 * wh + 12, 5); });   // the duct's bolted joints either side
   h.el('circle', { r: r + 3, 'class': 'kit-fan-case' }, eq);
   [45, 135, 225, 315].forEach(function (a) { var b = h.polar(r + 3, a); h.el('circle', { cx: b[0].toFixed(1), cy: b[1].toFixed(1), r: 1.4, 'class': 'kit-m-bolt' }, eq); });
   var rotor = h.el('g', { 'class': 'kit-fan-rotor' }, sym);
-  [0, 90, 180, 270].forEach(function (a) {
-    h.el('path', { d: 'M0 0 Q ' + (r * 0.5) + ' ' + (-r * 0.62) + ' ' + (r * 0.88) + ' ' + (-r * 0.12) + ' Q ' + (r * 0.42) + ' ' + (r * 0.12) + ' 0 0 Z',
-      transform: 'rotate(' + a + ')', 'class': 'kit-fan-blade' }, rotor);
-  });
-  h.el('circle', { r: 5, 'class': 'kit-fan-hub' }, sym);
+  for (var bl = 0; bl < 7; bl++) {                      // an axial fan's seven blades
+    h.el('path', { d: 'M0 0 Q ' + (r * 0.42) + ' ' + (-r * 0.5) + ' ' + (r * 0.9) + ' ' + (-r * 0.16) + ' Q ' + (r * 0.5) + ' ' + (r * 0.04) + ' 0 0 Z',
+      transform: 'rotate(' + (bl * 360 / 7).toFixed(1) + ')', 'class': 'kit-fan-blade' }, rotor);
+  }
+  h.el('circle', { r: 7, 'class': 'kit-fan-hub' }, sym);
+  h.el('path', { d: 'M' + (-r) + ' 0 H' + r + ' M0 ' + (-r) + ' V' + r, 'class': 'kit-fan-guard', 'data-low-contrast': '' }, sym);   // the guard over the rotor: thin, the blades carry it
+  h.el('circle', { r: r + 0.5, 'class': 'kit-fan-guard', 'data-low-contrast': '' }, sym);
   var air = h.el('g', {}, sym);
   [-15, 0, 15].forEach(function (y) {
     [[-half + 10, -r - 10], [r + 10, half - 10]].forEach(function (s) {
@@ -2995,6 +3089,7 @@ KIT.define('fan', function (fig, part, g, p) {
   css: '.kit-fan-case{fill:var(--deep);stroke:var(--kit-cast);stroke-width:6}' +
     '.kit-fan-blade{fill:var(--kit-steel);stroke:var(--mat-edge-steel);stroke-width:1;stroke-linejoin:round}' +
     '.kit-fan-hub{fill:var(--mat-stem);stroke:var(--mat-edge-steel);stroke-width:1}' +
+    '.kit-fan-guard{fill:none;stroke:var(--mat-yoke);stroke-width:1;opacity:.7}' +
     '.kit-fan-air{stroke:var(--cold);stroke-width:3;stroke-dasharray:10 8;stroke-linecap:round}' +
     '.kit-fan-head{fill:none;stroke:var(--cold);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}' +
     '.kit-fan-on .kit-fan-rotor{animation:kit-fan-spin .6s linear infinite}' +
@@ -3125,12 +3220,19 @@ KIT.define('gas_cylinder', function (fig, part, g, p) {
   var eq = h.equip(g);
   var clip = h.el('path', { d: shell(w) }, h.el('clipPath', { id: cid }, h.el('defs', {}, g)));
   var body = h.body('path', { d: shell(w) }, eq, { mat: 'paint', shade: 'cylv' });
+  /* its shoulder painted in the gas's colour code, as real bottles are (EN 1089-3): nitrogen black, carbon dioxide grey,
+     breathing air white and black - in the kit's neutral paints, never the alarm colours */
+  var code = { N2: ['dark'], CO2: ['grey'], AIR: ['white', 'dark'] }[String(p.gas || '').toUpperCase()] || [];
+  var shoulder = h.el('g', { 'clip-path': 'url(#' + cid + ')' }, eq), bands = code.map(function (c) {
+    return h.el('rect', { y: -ht, height: w * 0.55, 'class': 'kit-gas-cylinder-sh-' + c }, shoulder);
+  });
   var fill = h.el('g', { 'clip-path': 'url(#' + cid + ')' }, eq);
   var gas = h.el('rect', { x: -w / 2, width: w, 'class': 'kit-gas-cylinder-fill', 'data-low-contrast': '' }, fill);   // the fill is quiet on purpose: the surface line above it carries the contrast
   var top = h.el('line', { x1: -w / 2, x2: w / 2, 'class': 'kit-surface' }, fill);
   var bodyLine = h.el('path', { d: shell(w), 'class': 'kit-gas-cylinder-o', 'data-low-contrast': '' }, eq);   // the edge over the fill: the paint carries the shape
   var ring = h.body('rect', { x: -w / 2 - 4, y: -3, width: w + 8, height: 5, rx: 1.5 }, eq, { mat: 'paint', shade: 'box' });   // foot ring
   h.body('rect', { x: -7, y: -ht - 8, width: 14, height: 10 }, eq, { mat: 'steel', shade: 'cylv' });                 // neck
+  h.body('rect', { x: -9.5, y: -ht - 3, width: 19, height: 3.5, rx: 1 }, eq, { mat: 'steel', shade: 'box' });       // its collar
   h.body('rect', { x: -11, y: -ht - 25, width: 22, height: 17, rx: 3 }, eq, { mat: 'steel', shade: 'box' });         // valve body
   h.body('rect', { x: 11, y: -ht - 21, width: 11, height: 7, rx: 2 }, eq, { mat: 'steel', shade: 'cyl' });           // outlet
   h.el('line', { x1: 0, y1: -ht - 25, x2: 0, y2: -ht - 31, 'class': 'kit-m-stem' }, eq);
@@ -3142,6 +3244,7 @@ KIT.define('gas_cylinder', function (fig, part, g, p) {
     var tw = cap ? h.widest(cap, [p.gas]) : 0, pw = tw + 16, ph = 22 * k, wd = Math.max(w, pw + 12);
     [clip, bodyLine].forEach(function (n) { n.setAttribute('d', shell(wd)); });
     h.reshape(body, { d: shell(wd) }); h.reshape(ring, { x: -wd / 2 - 4, width: wd + 8 });
+    bands.forEach(function (b, i) { b.setAttribute('x', -wd / 2 + i * wd / bands.length); b.setAttribute('width', wd / bands.length); b.setAttribute('height', wd * 0.55); });
     gas.setAttribute('x', -wd / 2); gas.setAttribute('width', wd);
     top.setAttribute('x1', -wd / 2); top.setAttribute('x2', wd / 2);
     if (cap) {
@@ -3162,7 +3265,8 @@ KIT.define('gas_cylinder', function (fig, part, g, p) {
   look: 'equipment',
   why: 'M13 nitrogen cylinders that drive a dry-powder installation, and M10 breathing-air cylinders (SCBA): a compressed-gas bottle with its valve, shown with how much pressure is left in it',
   value: 'how full the cylinder is (its pressure), 0..1; it stands on its base point (x, y); w and h size it, gas is the short word on the bottle (N2, CO2, AIR)',
-  css: '.kit-gas-cylinder-fill{fill:var(--cold);opacity:.45}.kit-gas-cylinder-o{fill:none;stroke:var(--mat-edge);stroke-width:1.5}' +
+  css: '.kit-gas-cylinder-sh-dark{fill:var(--mat-window);stroke:var(--mat-yoke);stroke-width:2.5}.kit-gas-cylinder-sh-grey{fill:var(--mat-yoke)}.kit-gas-cylinder-sh-white{fill:var(--mat-white)}' +
+    '.kit-gas-cylinder-fill{fill:var(--cold);opacity:.45}.kit-gas-cylinder-o{fill:none;stroke:var(--mat-edge);stroke-width:1.5}' +
     '.kit-gas-cylinder-plate{fill:var(--deep);stroke:var(--mat-edge-steel);stroke-width:1.5}',
   example: { size: [640, 300], parts: [
     { id: 'A', type: 'gas_cylinder', x: 100, y: 240, w: 84, h: 180, gas: 'N2', label: 'nitrogen', value: 1 },
@@ -3187,6 +3291,8 @@ KIT.define('push_button', function (fig, part, g, p) {
   h.el('line', { x1: 38, y1: 10, x2: 38, y2: -36, 'class': 'kit-m-stem kit-push-button-post' }, art);
   h.body('rect', { x: -44, y: 10, width: 88, height: 30, rx: 5 }, art, { mat: 'cast', shade: 'box' });
   h.body('rect', { x: -7, y: -2, width: 14, height: 13 }, art, { mat: 'steel', shade: 'cylv' });
+  [-1, 1].forEach(function (s) { h.body('circle', { cx: 38 * s, cy: -38, r: 3 }, art, { mat: 'steel', shade: 'round' }); });   // the guard's hinge knuckles
+  var screws = [0, 1, 2, 3].map(function () { return h.el('circle', { r: 2, 'class': 'kit-m-bolt' }, eq); });
   var cap = h.el('g', {}, art);
   h.el('path', { d: 'M-30 2 C-30 -28 30 -28 30 2 Z', 'class': 'kit-push-button-cap' }, cap);
   h.el('line', { x1: -33, y1: 2, x2: 33, y2: 2, 'class': 'kit-flange' }, cap);
@@ -3202,6 +3308,9 @@ KIT.define('push_button', function (fig, part, g, p) {
     var wd = Math.max(44, h.widest(tagTxt, [p.tag || 'ESD']) + 16), th = 22 * k, ty = 46 * S;
     var bottom = Math.max(80 * S, ty + th + 8), pw = Math.max(120 * S, wd + 16);
     h.reshape(plate, { x: -pw / 2, y: -102 * S, width: pw, height: bottom + 102 * S });
+    [[-pw / 2 + 6, -102 * S + 6], [pw / 2 - 6, -102 * S + 6], [-pw / 2 + 6, bottom - 6], [pw / 2 - 6, bottom - 6]].forEach(function (c, i) {
+      screws[i].setAttribute('cx', c[0]); screws[i].setAttribute('cy', c[1]);
+    });
     tagBox.setAttribute('x', -wd / 2); tagBox.setAttribute('width', wd); tagBox.setAttribute('height', th);
     tagTxt.setAttribute('y', ty + th / 2 + 4.5 * k);
     if (lg) [].forEach.call(lg.querySelectorAll('text'), function (t) { t.setAttribute('y', bottom + 8 + 12.5 * k); });
@@ -3373,9 +3482,9 @@ KIT.define('person', function (fig, part, g, p) {
     '.kit-person-strap{fill:none;stroke:var(--mat-window);stroke-width:4;stroke-linecap:round}' +
     '.kit-person-loop{fill:none;stroke:var(--mat-window);stroke-width:2.5;stroke-linecap:round}' +
     '.kit-person-ridge{fill:none;stroke:var(--mat-edge);stroke-width:1.5}' +
-    '.kit-person-lens{fill:var(--cold);fill-opacity:.22;stroke:var(--mat-stem);stroke-width:1.5}' +
+    '.kit-person-lens{fill:var(--cold);fill-opacity:.22;stroke:var(--dim-d);stroke-width:1.5}' +
     '.kit-person-goggle{fill:var(--cold);fill-opacity:.35;stroke:var(--mat-window);stroke-width:2.5}' +
-    '.kit-person-mask{fill:var(--cold);fill-opacity:.2;stroke:var(--mat-stem);stroke-width:3.5}',
+    '.kit-person-mask{fill:var(--cold);fill-opacity:.2;stroke:var(--dim-d);stroke-width:3.5}',
   example: { size: [640, 330], parts: [
     { id: 'A', type: 'person', x: 110, y: 290, scale: 1.3, wear: ['goggles', 'respirator', 'apron', 'gloves'], labels: { respirator: 'HALF MASK' }, label: 'sample handler' },
     { id: 'B', type: 'person', x: 320, y: 290, scale: 1.3, wear: ['helmet', 'gloves', 'suit', 'boots', 'scba'], label: 'entrant' },
@@ -3510,11 +3619,11 @@ KIT.define('static_charge', function (fig, part, g, p) {
   var stream = h.el('line', { x1: 0, y1: 4, x2: 0, y2: 66, 'class': 'kit-static-charge-stream' }, g);
   var tsign = [20, 36, 52].map(function (y) { return plus(0, y); });
   h.el('line', { x1: -74, y1: 140, x2: 74, y2: 140, 'class': 'kit-tickl' }, g);                       // the floor
-  [-38, 38].forEach(function (x) { h.el('rect', { x: x - 10, y: 130, width: 20, height: 10, 'class': 'kit-static-charge-ins' }, g); });
+  [-38, 38].forEach(function (x) { h.body('rect', { x: x - 10, y: 130, width: 20, height: 10, rx: 2, 'class': 'kit-static-charge-ins' }, g, { mat: 'rubber', shade: 'box' }); });   // rubber feet: it stands insulated
   h.el('rect', { x: -52, y: 70, width: 104, height: 60, rx: 12, 'class': 'kit-steel' }, g);           // the isolated part
   var order = [2, 7, 0, 9, 4, 5, 1, 8, 3, 6], signs = [];
   for (i = 0; i < 10; i++) signs[order.indexOf(i)] = plus(-36 + 18 * (i % 5), i < 5 ? 88 : 112, true);
-  h.el('line', { x1: 118, y1: 90, x2: 118, y2: 140, 'class': 'kit-pipe-s' }, g);                       // an earthed post
+  h.body('rect', { x: 112, y: 90, width: 12, height: 50, rx: 2 }, g, { mat: 'steel', shade: 'cylv' });         // an earthed steel post
   h.el('path', { d: 'M105 144 H131 M110 150 H126 M115 156 H121', 'class': 'kit-flange' }, g);
   var spark = h.el('path', { d: 'M52 100 L66 91 L76 107 L88 93 L98 107 L116 100', 'class': 'kit-static-charge-spark' }, g);
   var cable = null, drain = null;
@@ -3567,7 +3676,7 @@ KIT.define('static_charge', function (fig, part, g, p) {
   css: '.kit-static-charge-stream{stroke:var(--cold);stroke-width:4;stroke-dasharray:8 7;stroke-linecap:round;opacity:0}' +
     '.kit-static-charge-on .kit-static-charge-stream{opacity:1;animation:kit-static-charge-run .5s linear infinite}' +
     '.kit-static-charge-sign{fill:none;stroke:var(--txt-d);stroke-width:2.5;stroke-linecap:round}.kit-static-charge-metal{stroke:var(--mat-window)}' +
-    '.kit-static-charge-ins{fill:var(--deep-3);stroke:var(--faint-d);stroke-width:1.5;stroke-dasharray:4 3}' +
+    '.kit-static-charge-ins{stroke:var(--mat-yoke)}' +
     '.kit-static-charge-spark{fill:none;stroke:var(--txt-d);stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round;opacity:0}' +
     '.kit-static-charge-cable{fill:none;stroke:var(--dim-d);stroke-width:5;stroke-linecap:round}' +
     '.kit-static-charge-drain{fill:none;stroke:var(--txt-d);stroke-width:3;stroke-dasharray:3 9;stroke-linecap:round;opacity:0}' +
@@ -3596,21 +3705,48 @@ KIT.define('fire', function (fig, part, g, p) {
     }
     grow = h.el('g', {}, sym);
     var jt = h.el('g', { 'class': 'kit-fire-jet' }, grow);
-    h.el('path', { d: 'M0 -5 C' + (len * 0.25) + ' ' + (-R) + ' ' + (len * 0.6) + ' ' + (-R * 0.8) + ' ' + len + ' 0 C' + (len * 0.6) + ' ' + (R * 0.8) + ' ' + (len * 0.25) + ' ' + R + ' 0 5 Z', 'class': 'kit-fire-out kit-m-firejet', 'data-may-cross': '', 'data-no-contain': '' }, jt);
-    h.el('path', { d: 'M0 -3 C' + (len * 0.2) + ' ' + (-R * 0.5) + ' ' + (len * 0.4) + ' ' + (-R * 0.4) + ' ' + (len * 0.58) + ' 0 C' + (len * 0.4) + ' ' + (R * 0.4) + ' ' + (len * 0.2) + ' ' + (R * 0.5) + ' 0 3 Z', 'class': 'kit-fire-core', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, jt);   // the hot core inside the jet: its outer tongue carries the contrast
+    /* 2.52.0, as a real jet fire burns: lifted off the nozzle on a blue root, ragged turbulent edges, the tail bent up by
+       buoyancy, the hot core starting after the lift-off gap */
+    function smooth(pts) {
+      var d = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+      for (var j = 1; j < pts.length - 1; j++) {
+        d += ' Q' + pts[j][0].toFixed(1) + ' ' + pts[j][1].toFixed(1) + ' ' + ((pts[j][0] + pts[j + 1][0]) / 2).toFixed(1) + ' ' + ((pts[j][1] + pts[j + 1][1]) / 2).toFixed(1);
+      }
+      return d + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + pts[pts.length - 1][1].toFixed(1);
+    }
+    function lift(x) { return -0.12 * len * Math.pow(x / len, 2); }   // the tail rises
+    var T = [[0.06, 0.1], [0.18, 0.62], [0.32, 0.9], [0.48, 1], [0.64, 0.88], [0.8, 0.62], [0.92, 0.32], [1, 0]];
+    var top = [], bot = [];
+    T.forEach(function (q, j) {
+      var x = q[0] * len, hw = q[1] * R * (1 + (j % 2 ? 0.07 : -0.05)), y = lift(x);
+      top.push([x, y - hw * (1 + (j % 3 === 1 ? 0.06 : 0))]); bot.push([x, y + hw * (j % 3 === 2 ? 1.07 : 1)]);
+    });
+    h.el('path', { d: smooth(top.concat(bot.reverse())) + ' Z', 'class': 'kit-fire-out kit-m-firejet', 'data-may-cross': '', 'data-no-contain': '' }, jt);
+    var C2 = [[0.1, 0.1], [0.22, 0.45], [0.38, 0.5], [0.52, 0.32], [0.62, 0]], ct = [], cb = [];
+    C2.forEach(function (q) { var x = q[0] * len, y = lift(x); ct.push([x, y - q[1] * R]); cb.push([x, y + q[1] * R]); });
+    h.el('path', { d: smooth(ct.concat(cb.reverse())) + ' Z', 'class': 'kit-fire-core', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, jt);   // the hot core inside the jet: its outer tongue carries the contrast
     lx = -8; ly = 30; la = 'end';
   } else {
     h.el('rect', { x: 1, y: 0, width: w - 2, height: 12, 'class': 'kit-pool' }, g);
     h.el('path', { d: 'M-2 -2 V16 H' + (w + 2) + ' V-2', 'class': 'kit-fire-pan' }, g);
     grow = h.el('g', {}, body);
-    var n = Math.max(3, Math.round(w / 22)), sp = w / n, top = p.height || Math.min(w * 0.55, 140);
+    /* 2.52.0, as a real pool fire burns: broad billows of uneven height leaning one way (it was a comb of equal teeth),
+       a white-hot glow along the pool, smoke above the flames where the core runs out of air */
+    var n = Math.max(3, Math.round(w / 34)), sp = w / n, top = p.height || Math.min(w * 0.55, 140);
+    [[0.3, -0.9, 0.17, 0.2], [0.56, -1, 0.21, 0.22], [0.8, -0.86, 0.15, 0.17]].forEach(function (q) {      // the smoke, over the tips
+      h.el('ellipse', { cx: (w * q[0]).toFixed(1), cy: (top * q[1]).toFixed(1), rx: (w * q[2]).toFixed(1), ry: (top * q[3]).toFixed(1),
+                        'class': 'kit-fire-smoke kit-m-smoke kit-m-fog', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, grow);
+    });
     for (i = 0; i < n; i++) {
-      var cx = (i + 0.5) * sp, s = top * (0.62 + 0.38 * rnd()), wd = sp * 0.78, c2 = h.el('g', { 'class': 'kit-fire-tongue', style: 'animation-delay:' + (-rnd() * 0.4).toFixed(2) + 's' }, grow);
-      h.el('path', { d: 'M' + (cx - wd).toFixed(1) + ' 0 C' + (cx - wd * 1.2).toFixed(1) + ' ' + (-s * 0.3).toFixed(1) + ' ' + (cx - wd * 0.55).toFixed(1) + ' ' + (-s * 0.65).toFixed(1) + ' ' + cx.toFixed(1) + ' ' + (-s).toFixed(1) +
-        ' C' + (cx + wd * 0.55).toFixed(1) + ' ' + (-s * 0.65).toFixed(1) + ' ' + (cx + wd * 1.2).toFixed(1) + ' ' + (-s * 0.3).toFixed(1) + ' ' + (cx + wd).toFixed(1) + ' 0 Z', 'class': 'kit-fire-out kit-m-fire', 'data-may-cross': '', 'data-no-contain': '' }, c2);
-      h.el('path', { d: 'M' + (cx - wd * 0.5).toFixed(1) + ' 0 C' + (cx - wd * 0.6).toFixed(1) + ' ' + (-s * 0.15).toFixed(1) + ' ' + (cx - wd * 0.25).toFixed(1) + ' ' + (-s * 0.35).toFixed(1) + ' ' + cx.toFixed(1) + ' ' + (-s * 0.55).toFixed(1) +
-        ' C' + (cx + wd * 0.25).toFixed(1) + ' ' + (-s * 0.35).toFixed(1) + ' ' + (cx + wd * 0.6).toFixed(1) + ' ' + (-s * 0.15).toFixed(1) + ' ' + (cx + wd * 0.5).toFixed(1) + ' 0 Z', 'class': 'kit-fire-core', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, c2);   // the hot core inside each tongue
+      var cx = (i + 0.5) * sp, s = top * (0.5 + 0.5 * rnd()), wd = sp * (0.85 + 0.6 * rnd()), lean = s * (0.1 + 0.08 * rnd());
+      wd = Math.min(wd, cx + 2, w + 2 - cx); lean = Math.min(lean, w - cx - 4);   // the fire stays over its pool
+      var c2 = h.el('g', { 'class': 'kit-fire-tongue', style: 'animation-delay:' + (-rnd() * 0.4).toFixed(2) + 's' }, grow);
+      h.el('path', { d: 'M' + (cx - wd).toFixed(1) + ' 0 C' + (cx - wd * 1.15).toFixed(1) + ' ' + (-s * 0.35).toFixed(1) + ' ' + (cx - wd * 0.2 + lean * 0.4).toFixed(1) + ' ' + (-s * 0.6).toFixed(1) + ' ' + (cx + lean).toFixed(1) + ' ' + (-s).toFixed(1) +
+        ' C' + (cx + wd * 0.45 + lean * 0.5).toFixed(1) + ' ' + (-s * 0.62).toFixed(1) + ' ' + (cx + wd * 1.1).toFixed(1) + ' ' + (-s * 0.28).toFixed(1) + ' ' + (cx + wd).toFixed(1) + ' 0 Z', 'class': 'kit-fire-out kit-m-fire', 'data-may-cross': '', 'data-no-contain': '' }, c2);
+      h.el('path', { d: 'M' + (cx - wd * 0.5).toFixed(1) + ' 0 C' + (cx - wd * 0.6).toFixed(1) + ' ' + (-s * 0.15).toFixed(1) + ' ' + (cx - wd * 0.2 + lean * 0.2).toFixed(1) + ' ' + (-s * 0.35).toFixed(1) + ' ' + (cx + lean * 0.5).toFixed(1) + ' ' + (-s * 0.5).toFixed(1) +
+        ' C' + (cx + wd * 0.3 + lean * 0.3).toFixed(1) + ' ' + (-s * 0.35).toFixed(1) + ' ' + (cx + wd * 0.6).toFixed(1) + ' ' + (-s * 0.15).toFixed(1) + ' ' + (cx + wd * 0.5).toFixed(1) + ' 0 Z', 'class': 'kit-fire-core', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, c2);   // the hot core inside each billow
     }
+    h.el('ellipse', { cx: w / 2, cy: -2, rx: w / 2, ry: 7, 'class': 'kit-fire-glow kit-m-soft', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, grow);
     lx = w / 2; ly = 36;
   }
   var lg = p.label || p.state ? h.label(fig, g, {}, '') : null;
@@ -3631,6 +3767,7 @@ KIT.define('fire', function (fig, part, g, p) {
   why: 'M13 fire types: a pool fire (a spilled liquid burning over its surface - wide, low flames) and a jet fire (gas leaking under pressure and burning as a long tongue from the leak point)',
   value: '0 out .. 1 full; kind pool (width w, optional height) or jet (length, angle in degrees above horizontal), the flame stands on the surface (pool) or grows out of the leak point (jet); a jet is drawn on a 90 px pipe end unless stub: false',
   css: '.kit-fire-out{opacity:.95}' +                         // its fill is the kit's fire (2.52.0): white-hot, orange, red tips
+    '.kit-fire-smoke{opacity:.55}.kit-fire-glow{fill:var(--mat-fire-hot);opacity:.7}' +
     '.kit-fire-core{fill:var(--mat-fire-hot);opacity:.85}' +
     '.kit-fire-pan{fill:none;stroke:var(--dim-d);stroke-width:3;stroke-linejoin:round}' +
     '.kit-fire-on .kit-fire-tongue{transform-box:fill-box;transform-origin:50% 100%;animation:kit-fire-flick .4s ease-in-out infinite alternate}' +
@@ -3827,12 +3964,21 @@ KIT.define('hose', function (fig, part, g, p) {
   try { L = reach.getTotalLength(); } catch (e) { L = 0; }
   if (L) {
     var a0 = reach.getPointAtLength(0), a1 = reach.getPointAtLength(Math.min(6, L)), b0 = reach.getPointAtLength(L), b1 = reach.getPointAtLength(Math.max(0, L - 6));
-    [[a0, a1], [b0, b1]].forEach(function (c) {          // a coupling collar at each end, square to the hose
+    /* 2.52.0: each end as a real hose end fitting, square to the hose - its bolted flange, the swaged steel ferrule, a
+       stepped bend restrictor onto the hose; and a pale marker band at a quarter and three quarters of its length */
+    [[a0, a1], [b0, b1]].forEach(function (c) {
       var ang = Math.atan2(c[1].y - c[0].y, c[1].x - c[0].x) * 180 / Math.PI;
-      var col = h.equip(g);
-      h.body('rect', { x: -5, y: -17, width: 10, height: 34, rx: 2, 'data-may-cross': '',
-                       transform: 'translate(' + c[0].x.toFixed(1) + ' ' + c[0].y.toFixed(1) + ') rotate(' + ang.toFixed(1) + ')' }, col, { mat: 'steel', shade: 'box' });
-      h.flange(col, c[0].x - Math.cos(ang * Math.PI / 180) * 7, c[0].y - Math.sin(ang * Math.PI / 180) * 7, ang, 38, 4);
+      var col = h.equip(g), fg = h.el('g', { 'data-may-cross': '', transform: 'translate(' + c[0].x.toFixed(1) + ' ' + c[0].y.toFixed(1) + ') rotate(' + ang.toFixed(1) + ')' }, col);
+      h.body('rect', { x: 14, y: -12.5, width: 6, height: 25, rx: 2 }, fg, { mat: 'steel', shade: 'cyl' });
+      h.body('rect', { x: 3, y: -14.5, width: 12, height: 29, rx: 2 }, fg, { mat: 'steel', shade: 'cyl' });
+      h.flange(fg, 0, 0, 0, 36, 6);
+      [-1, 1].forEach(function (s) { h.el('circle', { cx: 0, cy: s * 7, r: 1.3, 'class': 'kit-m-bolt' }, fg); });
+    });
+    [0.25, 0.75].forEach(function (f) {
+      var q0 = reach.getPointAtLength(L * f), q1 = reach.getPointAtLength(Math.min(L, L * f + 4));
+      var ang = Math.atan2(q1.y - q0.y, q1.x - q0.x) * 180 / Math.PI;
+      h.el('rect', { x: -2, y: -12, width: 4, height: 24, 'class': 'kit-m-reflect', 'data-may-cross': '',
+                     transform: 'translate(' + q0.x.toFixed(1) + ' ' + q0.y.toFixed(1) + ') rotate(' + ang.toFixed(1) + ')' }, g);
     });
     m0 = reach.getPointAtLength(L / 2);
   }
@@ -3860,9 +4006,9 @@ KIT.define('hose', function (fig, part, g, p) {
   why: 'M13 the hand hoses used for bunkering and sampling, M14 the bunkering hose in the ESD chain between shore and ship (plan: media plans of modules 13 and 14)',
   value: 'flow 0 still .. 1 fast, as a pipe; the second value "<id>.fill" is 0..1 the fluid front advancing along d, 1..2 the hose emptying (set "empty": true to start dry). The spec checker only knows pipe.fill - hose.fill is new',
   css: '.kit-hose-body{fill:none;stroke-width:24}' +
-    '.kit-hose-rib{fill:none;stroke:var(--mat-edge);stroke-width:24;stroke-dasharray:3 7}' +
-    '.kit-hose-bore{fill:none;stroke:var(--deep);stroke-width:14}' +
-    '.kit-hose-fluid{fill:none;stroke:var(--cold);stroke-width:10;opacity:.55}' +
+    '.kit-hose-rib{fill:none;stroke:var(--mat-edge);stroke-width:24;stroke-dasharray:2 9;opacity:.45}' +
+    '.kit-hose-bore{fill:none;stroke:var(--deep);stroke-width:11}' +
+    '.kit-hose-fluid{fill:none;stroke:var(--cold);stroke-width:8;opacity:.55}' +
     '.kit-hose-gas .kit-hose-fluid{stroke:var(--txt-d);opacity:.22}' +
     '.kit-hose-gas .kit-flow{stroke:var(--txt-d);stroke-dasharray:2 6;stroke-linecap:round;stroke-width:3}' +
     '',
@@ -3882,16 +4028,22 @@ KIT.define('manifold', function (fig, part, g, p) {
      on until a rubber hose is coupled */
   var eq = h.equip(g);
   h.body('rect', { x: 0, y: 0, width: w, height: hh, rx: 6 }, eq, { mat: 'steel', shade: 'cyl' });
+  (n > 1 ? [sp, w - sp] : []).forEach(function (x) { h.flange(eq, x - 2.5, hh / 2, 0, hh + 10, 5); h.flange(eq, x + 2.5, hh / 2, 0, hh + 10, 5); });   // the header's bolted joints, between outlets
   h.body('rect', { x: -8, y: -6, width: 10, height: hh + 12, rx: 2 }, eq, { mat: 'cast', shade: 'box' });
   h.body('rect', { x: w - 2, y: -6, width: 10, height: hh + 12, rx: 2 }, eq, { mat: 'cast', shade: 'box' });
   if (p.label) h.label(fig, g, { x: w / 2, y: -20, 'text-anchor': 'middle', 'class': 'kit-h' }, p.label);
   var made = outs.map(function (o, i) {
-    var cx = sp * (i + 0.5), og = h.el('g', { 'class': 'kit-manifold-out' }, g), oe = h.equip(og);
+    var cx = sp * (i + 0.5), og = h.el('g', { 'class': 'kit-manifold-out' }, g), oe = h.equip(og), vy = hh + drop * 0.45;
     h.body('rect', { x: cx - 8, y: hh, width: 16, height: drop }, oe, { mat: 'steel', shade: 'cylv' });
+    h.body('ellipse', { cx: cx, cy: vy, rx: 10, ry: 7 }, oe, { mat: 'cast', shade: 'round' });                // its block valve
+    h.body('rect', { x: cx + 9, y: vy - 1.5, width: 3, height: 3 }, oe, { mat: 'steel' });
+    h.body('rect', { x: cx + 11, y: vy - 1.5, width: 15, height: 3, rx: 1 }, oe, { mat: 'steel', shade: 'box' });   // and its lever
     h.flange(oe, cx, hh + drop + 3.5, 90, 36, 7);
     var hose = h.el('rect', { x: cx - 10, y: y0, width: 20, height: 0, 'class': 'kit-manifold-hose kit-m-rubber', 'data-may-cross': '' }, oe);
     var coll = h.el('rect', { x: cx - 14, y: y0, width: 28, height: 9, rx: 2, 'class': 'kit-manifold-collar kit-m-steel', 'data-may-cross': '' }, oe);
-    var blind = h.el('rect', { x: cx - 18, y: y0, width: 36, height: 9, rx: 2, 'class': 'kit-manifold-blind kit-m-paintl', 'data-may-cross': '' }, oe);
+    var blind = h.el('g', { 'data-may-cross': '' }, oe);                               // a blind flange, bolted on
+    h.el('rect', { x: cx - 18, y: y0, width: 36, height: 9, rx: 2, 'class': 'kit-manifold-blind kit-m-paintl' }, blind);
+    [-13, -5, 5, 13].forEach(function (bx) { h.el('circle', { cx: cx + bx, cy: y0 + 4.5, r: 1.3, 'class': 'kit-m-bolt' }, blind); });
     var lg = h.label(fig, og, {}, '');
     var nl = h.lines(lg, { x: cx, y: y0 + hl + 26, 'text-anchor': 'middle', 'class': 'kit-cap' }, o.label || '');
     var st = h.el('text', { x: cx, y: y0 + hl + 26, dy: (nl * 1.28).toFixed(2) + 'em', 'text-anchor': 'middle', 'class': 'kit-state' }, lg);
@@ -4002,14 +4154,17 @@ KIT.define('tank_wall', function (fig, part, g, p) {
     var lh = l.h || def[Math.min(i, def.length - 1)].h, k = kind(l), lg = h.el('g', { 'class': 'kit-tank-wall-layer' }, g), y1 = y;
     /* 2.52.0: each layer cut through in its material - the steel plates, the cellular foam; the barrier keeps its line */
     if (k === 'barrier') h.el('rect', { x: 0, y: y1, width: w, height: lh, 'class': 'kit-tank-wall-barrier' }, lg);
-    else h.body('rect', { x: 0, y: y1, width: w, height: lh }, lg, { mat: k === 'foam' ? 'foam' : 'steel', shade: 'box' });
+    else h.body('rect', { x: 0, y: y1, width: w, height: lh }, lg, { mat: k === 'foam' ? 'foam' : 'steel', shade: 'box', hatch: k !== 'foam' });
+    if (k === 'foam') for (var px = 50; px < w; px += 50) h.el('line', { x1: px, x2: px, y1: y1 + 2, y2: y1 + lh - 2, 'class': 'kit-tank-wall-joint', 'data-low-contrast': '' }, lg);   // its panels' joints
+    if (k === 'barrier') h.body('rect', { x: 0, y: y1 + lh / 2 - 2, width: w, height: 4 }, lg, { mat: 'steel' });   // the barrier's foil
     var wash = h.el('rect', { x: 0, y: y1, width: w, height: lh, 'class': 'kit-tank-wall-wash', 'data-may-overlap': '' }, lg);
     h.label(fig, lg, { x: lx, y: y1 + lh / 2 + 4.5, 'text-anchor': 'start', 'class': 'kit-cap kit-tank-wall-nm' }, l.label || '');
     y += lh;
     return { g: lg, wash: wash };
   });
   if (p.outsideLabel) {
-    h.el('rect', { x: 0, y: y, width: w, height: 48, 'class': 'kit-tank-wall-out', 'data-no-contain': '' }, g);
+    var sea = /sea|water|ocean/i.test(p.outsideLabel);                   // the sea outside the hull is drawn as the sea (2.52.0)
+    h.el('rect', { x: 0, y: y, width: w, height: 48, 'class': sea ? 'kit-tank-wall-sea kit-m-sea' : 'kit-tank-wall-out', 'data-no-contain': '' }, g);
     h.label(fig, g, { x: lx, y: y + 29, 'text-anchor': 'start', 'class': 'kit-h' }, p.outsideLabel);
   }
   part.render = function (v) {
@@ -4029,6 +4184,7 @@ KIT.define('tank_wall', function (fig, part, g, p) {
   css: '.kit-tank-wall-barrier{fill:var(--deep-2);stroke:var(--cold);stroke-width:2.5}' +
     '.kit-tank-wall-wash{fill:var(--blue);opacity:0}' +
     '.kit-tank-wall-out{fill:var(--deep);stroke:var(--faint-d);stroke-width:1.5;stroke-dasharray:6 5}' +
+    '.kit-tank-wall-sea{stroke:var(--mat-reflect);stroke-width:1.5}.kit-tank-wall-joint{stroke:var(--mat-edge-clad);stroke-width:1.5}' +
     '.kit-tank-wall-lit .kit-tank-wall-nm{fill:var(--txt-d);font-weight:700}',
   example: { size: [470, 318], parts: [
     { id: 'W', type: 'tank_wall', x: 20, y: 16, w: 300, insideLabel: 'LNG, -163 °C', outsideLabel: 'sea', value: 0 } ],
@@ -4069,10 +4225,13 @@ KIT.define('spill', function (fig, part, g, p) {
   var stream = h.el('line', { x1: fx, x2: fx, y1: S - 71, y2: S - 1, 'class': 'kit-spill-stream', 'data-may-cross': '' }, g);
   var pool = h.el('path', { d: 'M' + fx + ' ' + S, 'class': 'kit-spill-pool kit-m-lng', 'data-may-cross': '' }, g);
   var fr = [-0.82, -0.52, -0.22, 0.12, 0.42, 0.72, 0.95];
+  /* 2.52.0: LNG boiling off makes a dense, low white fog that hugs the surface and rolls outward (it was drawn as squiggles
+     that read as steam or wires); the liquid flashes where the stream lands; the pool seethes with fine bubbles */
+  var flash = h.el('ellipse', { cx: fx, cy: S - 5, rx: 11, ry: 6, 'class': 'kit-spill-flash kit-m-vapour kit-m-fog', 'data-low-contrast': '', 'data-may-cross': '' }, g);
   fr.forEach(function (f, j) {
-    bubs.push(h.el('circle', { r: 3 + (j % 3), 'class': 'kit-spill-bub', 'data-low-contrast': '', 'data-may-cross': '' }, g));
+    bubs.push(h.el('circle', { r: 1.4 + 0.5 * (j % 3), 'class': 'kit-spill-bub', 'data-low-contrast': '', 'data-may-cross': '' }, g));
     var wg = h.el('g', {}, g);
-    h.el('path', { d: 'M0 0 q 7 -10 0 -20 t 0 -20 t 0 -20', 'class': 'kit-spill-wisp', 'data-low-contrast': '', 'data-may-cross': '' }, wg);
+    h.el('ellipse', { cx: 0, cy: -9, rx: 20, ry: 10, 'class': 'kit-spill-wisp kit-m-vapour kit-m-fog', 'data-low-contrast': '', 'data-may-cross': '' }, wg);
     wisps.push(wg);
   });
   var lg = h.label(fig, g, {}, ''), ly = S + T + 30, nl = 0;       // under the plate or the water: its name, then the word for what the pool does
@@ -4081,6 +4240,7 @@ KIT.define('spill', function (fig, part, g, p) {
   part.render = function (v) {
     var c = h.clamp(v, 0, 1), r = reach * (water ? 1 - Math.pow(1 - c, 2.2) : Math.pow(c, 0.8)), boil = h.clamp((c - 0.45) / 0.4, 0, 1);
     stream.style.opacity = c > 0.01 ? '1' : '0';
+    flash.style.opacity = c > 0.01 ? '0.8' : '0';
     pool.setAttribute('d', r < 1 ? 'M' + fx + ' ' + S : 'M' + (fx - r).toFixed(1) + ' ' + S + ' Q' + fx + ' ' + (S - 2 * ht) + ' ' + (fx + r).toFixed(1) + ' ' + S + ' Z');
     wisps.forEach(function (wg, j) {
       var x = fx + fr[j] * r, sc = boil * (water ? 1.35 : 1) * (0.7 + 0.1 * (j % 4));
@@ -4099,16 +4259,16 @@ KIT.define('spill', function (fig, part, g, p) {
   course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
   look: 'diagram',
   why: 'M15 LNG spilt on the deck and on the water: a pool spreads from the leak (far wider and thinner on water) and boils off in vapour - why the deck is steel and why water is not a safe place for a spill (plan: media plan of module 15)',
-  value: '0..1 how far the pool has spread from the leak; from about 0.5 it boils (bubbles and rising vapour wisps); surface "deck" or "water" (drawn as water, the pool spreads wider and boils harder); drawn inside its box x..x+w, y..y+h (2.49.2): the nozzle top at y, h 206 (deck) or 240 (water) unless the spec gives a shorter one, which shortens the nozzle',
+  value: '0..1 how far the pool has spread from the leak; from about 0.5 it boils (it seethes, and a low white vapour fog rolls over it); surface "deck" or "water" (drawn as water, the pool spreads wider and boils harder); drawn inside its box x..x+w, y..y+h (2.49.2): the nozzle top at y, h 206 (deck) or 240 (water) unless the spec gives a shorter one, which shortens the nozzle',
   css: '.kit-spill-water{fill-opacity:.85;stroke:none}' +
-    '.kit-spill-wave{fill:none;stroke:var(--cold);stroke-width:2.5}' +
+    '.kit-spill-wave{fill:none;stroke:var(--mat-reflect);stroke-width:2.5}' +
     '.kit-spill-beam{fill:none;stroke:var(--faint-d);stroke-width:3}' +
     '.kit-spill-stream{stroke:var(--cold);stroke-width:3;opacity:0}' +
     '.kit-spill-pool{stroke:var(--mat-lng-surf);stroke-width:1.5;stroke-linejoin:round}' +
-    '.kit-spill-bub{fill:none;stroke:var(--txt-d);stroke-width:1.5;opacity:0}' +
-    '.kit-spill-wisp{fill:none;stroke:var(--txt-d);stroke-width:2.5;stroke-linecap:round;opacity:.45}' +
-    '.kit-spill-live .kit-spill-wisp{animation:kit-spill-rise 1.1s ease-out infinite}' +
-    '@keyframes kit-spill-rise{0%{opacity:.15}100%{opacity:.6}}',
+    '.kit-spill-bub{fill:var(--mat-vapour);opacity:0}' +
+    '.kit-spill-flash{opacity:0}.kit-spill-wisp{opacity:.6}' +
+    '.kit-spill-live .kit-spill-wisp{transform-box:fill-box;transform-origin:50% 100%;animation:kit-spill-roll 1.6s ease-in-out infinite alternate}' +
+    '@keyframes kit-spill-roll{0%{opacity:.45;transform:scale(1,1)}100%{opacity:.7;transform:scale(1.12,1.08)}}',
   example: { size: [640, 260], parts: [
     { id: 'D', type: 'spill', x: 10, y: 10, w: 300, surface: 'deck', label: 'LNG on deck', value: 0 },
     { id: 'W', type: 'spill', x: 330, y: 10, w: 300, surface: 'water', label: 'LNG on water', value: 0 } ],
@@ -4311,8 +4471,18 @@ KIT.define('lamp', function (fig, part, g, p) {
     h.el('line', { x1: q0[0].toFixed(1), y1: (cy + q0[1]).toFixed(1), x2: q1[0].toFixed(1), y2: (cy + q1[1]).toFixed(1) }, rays);
   }
   h.el('circle', { cx: 0, cy: cy, r: 16, 'class': 'kit-lamp-bulb' }, g);
-  /* an explosion-protected (Ex) fitting: the glass sits inside a heavy enclosure that holds any spark in */
-  if (ex) h.el('rect', { x: -27, y: -4, width: 54, height: 52, rx: 12, 'class': 'kit-lamp-ex kit-ms-cast', 'data-no-contain': '' }, g);
+  /* 2.52.0: an ordinary fitting has a light wire guard over its glass; an explosion-protected (Ex) one is a heavy bolted
+     cast housing with its cable glands, a flange ring, thick glass and a steel cage - the enclosure that holds any spark in */
+  if (!ex) h.el('path', { d: 'M-15 4 C-20 30 -8 40 0 40 C8 40 20 30 15 4 M0 4 V40', 'class': 'kit-lamp-guard', 'data-may-cross': '', 'data-no-contain': '' }, g);
+  else {
+    g.classList.add('kit-lamp-exg');
+    var hx = h.equip(g);
+    [-12, 12].forEach(function (x) { h.body('rect', { x: x - 3, y: -13, width: 6, height: 6, rx: 1 }, hx, { mat: 'steel', shade: 'box' }); });   // cable glands
+    h.body('rect', { x: -22, y: -8, width: 44, height: 18, rx: 3 }, hx, { mat: 'cast', shade: 'box' });
+    [-17, -6, 6, 17].forEach(function (x) { h.el('circle', { cx: x, cy: -4, r: 1.3, 'class': 'kit-m-bolt' }, hx); });
+    h.body('ellipse', { cx: 0, cy: 11, rx: 21, ry: 3.5 }, hx, { mat: 'steel', shade: 'box' });
+    h.el('path', { d: 'M-19 12 C-27 34 -12 47 0 47 C12 47 27 34 19 12 M-9 13 C-12 32 -6 46 0 47 M9 13 C12 32 6 46 0 47', 'class': 'kit-lamp-cage', 'data-may-cross': '', 'data-no-contain': '' }, g);
+  }
   if (p.label) h.label(fig, g, { x: 0, y: cy + r0 + 38, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
   part.render = function (v) {
     var k = h.clamp(v, 0, 1);
@@ -4330,7 +4500,8 @@ KIT.define('lamp', function (fig, part, g, p) {
     '.kit-lamp-bulb{fill:var(--deep);stroke:var(--dim-d);stroke-width:2.5}' +
     '.kit-lamp-on .kit-lamp-bulb{fill:var(--txt-d);stroke:var(--txt-d)}' +
     '.kit-lamp-rays line{stroke:var(--txt-d);stroke-width:3;stroke-linecap:round;stroke-dasharray:6 5}' +
-    '.kit-lamp-ex{fill:none;stroke-width:6;stroke-linejoin:round}',
+    '.kit-lamp-guard{fill:none;stroke:var(--mat-yoke);stroke-width:1.4}.kit-lamp-cage{fill:none;stroke:var(--kit-steel);stroke-width:3;stroke-linecap:round}' +
+    '.kit-lamp-exg .kit-lamp-bulb{stroke-width:4.5}',
   example: { size: [380, 190], parts: [
     { id: 'A', type: 'lamp', x: 100, y: 40, label: 'ordinary lamp' },
     { id: 'B', type: 'lamp', x: 280, y: 40, ex: true, label: 'Ex-protected lamp' } ],
@@ -4342,23 +4513,40 @@ KIT.define('spark', function (fig, part, g, p) {
   var h = KIT.h, fric = p.kind === 'friction', to = p.to && p.to.length === 2 ? p.to : [70, 0], i;
   var burst = h.el('g', {}, g), flick = h.el('g', { 'class': 'kit-spark-flick' }, burst), cx = 0, cy = 0;
   if (fric) {
-    /* friction: a tool or a chain scraping steel throws a burst of hot particles from the point of contact */
-    var lens = [30, 20, 34, 22, 28, 18, 33, 24, 29, 21];
-    for (i = 0; i < 10; i++) {
-      var a = -170 + i * 18.9, q0 = h.polar(8, a), q1 = h.polar(lens[i], a);
-      h.el('line', { x1: q0[0].toFixed(1), y1: q0[1].toFixed(1), x2: q1[0].toFixed(1), y2: q1[1].toFixed(1), 'class': 'kit-spark-ray' }, flick);
+    /* friction (2.52.0, as it looks): a tool scraping a steel edge throws hot particles one way - a spray of glowing streaks
+       that fall away under gravity, from a white-hot point of contact */
+    var eqf = h.equip(g, { shadow: false });
+    h.body('rect', { x: -44, y: 3, width: 54, height: 7, rx: 1 }, eqf, { mat: 'steel', shade: 'box' });   // the steel edge being scraped
+    var lens = [30, 22, 36, 26, 33, 20, 35, 27, 31, 24, 34];
+    for (i = 0; i < 11; i++) {
+      var a = -100 + i * 8.5, q0 = h.polar(5, a), q1 = h.polar(lens[i], a), drop = lens[i] * 0.22;
+      var mx = (q0[0] + q1[0]) / 2, my = (q0[1] + q1[1]) / 2 - 2;
+      h.el('path', { d: 'M' + q0[0].toFixed(1) + ' ' + q0[1].toFixed(1) + ' Q' + mx.toFixed(1) + ' ' + my.toFixed(1) + ' ' + q1[0].toFixed(1) + ' ' + (q1[1] + drop).toFixed(1),
+                     'class': 'kit-spark-ray' }, flick);
+      if (i % 3 === 1) h.el('circle', { cx: q1[0].toFixed(1), cy: (q1[1] + drop).toFixed(1), r: 1.8, 'class': 'kit-spark-hot' }, flick);
     }
-    h.el('circle', { cx: 0, cy: 0, r: 5, 'class': 'kit-spark-hot' }, flick);
+    h.el('circle', { cx: 0, cy: 0, r: 8, 'class': 'kit-spark-glow kit-m-soft', 'data-low-contrast': '' }, flick);   // the glow round the contact
+    h.el('circle', { cx: 0, cy: 0, r: 4, 'class': 'kit-spark-hot' }, flick);
   } else {
-    /* electric: an arc jumps across the gap between two contacts - a zig-zag from (0, 0) to the point "to" */
-    var len = Math.sqrt(to[0] * to[0] + to[1] * to[1]) || 1, ux = to[0] / len, uy = to[1] / len, amp = Math.min(14, len * 0.16), d = 'M0 0';
-    for (i = 1; i < 6; i++) {
-      var f = len * i / 6, s = i % 2 ? 1 : -1;
-      d += ' L' + (ux * f - uy * amp * s).toFixed(1) + ' ' + (uy * f + ux * amp * s).toFixed(1);
+    /* electric (2.52.0, as it looks): an arc jumps between two steel terminals - an irregular, branched path, a blue halo
+       round a bright core - from (0, 0) to the point "to" */
+    var len = Math.sqrt(to[0] * to[0] + to[1] * to[1]) || 1, ux = to[0] / len, uy = to[1] / len, amp = Math.min(14, len * 0.16), d = 'M0 0', pts = [];
+    var AMP = [0.7, -1, 0.45, -0.85, 0.95, -0.5, 0.6];
+    for (i = 1; i < 8; i++) {
+      var f = len * i / 8, s = AMP[i - 1];
+      pts.push([ux * f - uy * amp * s, uy * f + ux * amp * s]);
+      d += ' L' + pts[i - 1][0].toFixed(1) + ' ' + pts[i - 1][1].toFixed(1);
     }
-    h.el('path', { d: d + ' L' + to[0] + ' ' + to[1], 'class': 'kit-spark-bolt' }, flick);
-    h.el('circle', { cx: 0, cy: 0, r: 5, 'class': 'kit-spark-contact' }, g);                          // the two contacts stay drawn at rest
-    h.el('circle', { cx: to[0], cy: to[1], r: 5, 'class': 'kit-spark-contact' }, g);
+    d += ' L' + to[0] + ' ' + to[1];
+    [[2, 0.9, -1], [5, 0.7, 1]].forEach(function (b) {                       // two short branches off the arc
+      var q = pts[b[0]], e = [q[0] + (ux * 0.5 - uy * b[2]) * amp * b[1] * 1.6, q[1] + (uy * 0.5 + ux * b[2]) * amp * b[1] * 1.6];
+      d += ' M' + q[0].toFixed(1) + ' ' + q[1].toFixed(1) + ' L' + e[0].toFixed(1) + ' ' + e[1].toFixed(1);
+    });
+    h.el('path', { d: d, 'class': 'kit-spark-halo kit-m-soft', 'data-low-contrast': '' }, flick);   // the glow round the arc: its core carries it
+    h.el('path', { d: d, 'class': 'kit-spark-bolt' }, flick);
+    h.el('path', { d: d, 'class': 'kit-spark-core', 'data-low-contrast': '' }, flick);
+    var eqe = h.equip(g, { shadow: false });                                  // the two terminals stay drawn at rest
+    [[0, 0], to].forEach(function (c) { h.body('circle', { cx: c[0], cy: c[1], r: 5.5 }, eqe, { mat: 'steel', shade: 'round' }); });
     cx = to[0] / 2; cy = to[1] / 2;
   }
   if (p.label) h.label(fig, g, { x: cx, y: cy - (fric ? 44 : 26), 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
@@ -4374,11 +4562,13 @@ KIT.define('spark', function (fig, part, g, p) {
   course: 'IGF Basic', module: 'M06', made: '2026-10-16',
   look: 'diagram',
   why: 'M06 ignition sources: an electric spark (a switch or a loose contact) and a frictional spark (a tool, a chain or a rope scraping steel) - the small energy that lights a gas-air mixture',
-  value: '0 no spark, 1 the spark at full; kind "electric" (default: an arc jumps from this point to to: [dx, dy]) or "friction" (hot particles thrown from this point); the two contacts of an electric spark stay drawn at rest',
-  css: '.kit-spark-bolt{fill:none;stroke:var(--amber);stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}' +
-    '.kit-spark-ray{stroke:var(--amber);stroke-width:3;stroke-linecap:round}' +
-    '.kit-spark-hot{fill:var(--amber)}' +
-    '.kit-spark-contact{fill:var(--deep-3);stroke:var(--dim-d);stroke-width:2.5}' +
+  value: '0 no spark, 1 the spark at full; kind "electric" (default: an arc jumps from this point to to: [dx, dy]) or "friction" (hot particles thrown from this point, off a steel edge); the two terminals of an electric spark stay drawn at rest',
+  css: '.kit-spark-halo{fill:none;stroke:var(--cold);stroke-width:10;opacity:.35;stroke-linejoin:round;stroke-linecap:round}' +
+    '.kit-spark-bolt{fill:none;stroke:var(--cold);stroke-width:4;stroke-linejoin:round;stroke-linecap:round}' +
+    '.kit-spark-core{fill:none;stroke:var(--mat-vapour);stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}' +
+    '.kit-spark-ray{fill:none;stroke:var(--mat-fire-mid);stroke-width:2.2;stroke-linecap:round}.kit-light .kit-spark-ray{stroke:var(--mat-flame-edge)}' +
+    '.kit-spark-hot{fill:var(--mat-fire-hot)}.kit-light .kit-spark-hot{fill:var(--mat-flame-edge)}' +
+    '.kit-spark-glow{fill:var(--mat-fire-mid);opacity:.6}' +
     '.kit-spark-on .kit-spark-flick{transform-box:fill-box;transform-origin:center;animation:kit-spark-flick .18s steps(1) infinite alternate}' +
     '@keyframes kit-spark-flick{to{transform:scale(1.14) rotate(5deg)}}',
   example: { size: [460, 190], parts: [

@@ -29,8 +29,9 @@
   --mat-steel:#A3AEB9;--mat-paint:#5D7182;--mat-paintl:#7A8E9E;--mat-cast:#6E7C89;--mat-deck:#56636F;
   --mat-rubber:#434C55;--mat-foam:#B9C0C6;
   --mat-hull:#1D4673;--mat-hull-seam:#143458;--mat-bottom:#2A3036;--mat-white:#D3DAE1;--mat-window:#16222E;
-  --mat-fire-hot:#FFF4C8;--mat-fire-mid:#FFB548;--mat-fire-tip:#E0532E;   /* a fire's own colours: it IS the hazard */
+  --mat-fire-root:#78AEFF;--mat-fire-hot:#FFF4C8;--mat-fire-mid:#FFB548;--mat-fire-tip:#E0532E;   /* a fire's own colours: it IS the hazard */
   --mat-sea-top:#2D6B9F;--mat-sea-deep:#10304F;
+  --mat-vapour:#EEF4FA;--mat-smoke:#4A4743;--mat-arc:#BFDCFF;   /* LNG vapour's white fog, a fire's smoke, an electric arc's glow */
   --mat-skin:#C8977A;--mat-hair:#3B3330;--mat-cloth:#2F4B6E;--mat-suit:#A9BCCB;--mat-reflect:#E4EAEF;
   --mat-edge:#2C3844;--mat-edge-steel:#3A4550;--mat-edge-clad:#5B6672;--mat-bolt:#3A4550;
   --mat-yoke:#9AA6B1;--mat-stem:#C3CCD5;--mat-hole:#1A2633;
@@ -58,7 +59,7 @@
 .kit-mat-light{--mat-clad:var(--mat-clad-l);--mat-steel:var(--mat-steel-l);--mat-paint:var(--mat-paint-l);--mat-paintl:var(--mat-paintl-l);
   --mat-cast:var(--mat-cast-l);--mat-deck:var(--mat-deck-l);--mat-rubber:var(--mat-rubber-l);--mat-foam:var(--mat-foam-l);
   --mat-hull:var(--mat-hull-l);--mat-white:var(--mat-white-l)}
-.kit.kit-light{--mat-drop:var(--mat-drop-l);
+.kit.kit-light{--mat-drop:var(--mat-drop-l);--mat-vapour:#B8C6D3;--mat-smoke:#5E5A55;
   --kit-clad:url(#kit-m-clad-l) var(--mat-clad-l);--kit-steel:url(#kit-m-steel-l) var(--mat-steel-l);
   --kit-paint:url(#kit-m-paint-l) var(--mat-paint-l);--kit-paintl:url(#kit-m-paintl-l) var(--mat-paintl-l);
   --kit-cast:url(#kit-m-cast-l) var(--mat-cast-l);--kit-deck:url(#kit-m-deck-l) var(--mat-deck-l);
@@ -73,11 +74,12 @@
 .kit-mt-clad{fill:var(--mat-clad)}.kit-mt-steel{fill:var(--mat-steel)}.kit-mt-paint{fill:var(--mat-paint)}
 .kit-mt-paintl{fill:var(--mat-paintl)}.kit-mt-cast{fill:var(--mat-cast)}.kit-mt-deck{fill:var(--mat-deck)}
 .kit-mt-rubber{fill:var(--mat-rubber)}.kit-mt-foam{fill:var(--mat-foam)}
+.kit-mt-hatch{stroke:var(--mat-edge);opacity:.45}
 .kit-mt-hull{fill:var(--mat-hull)}.kit-mt-white{fill:var(--mat-white)}.kit-mt-cloth{fill:var(--mat-cloth)}.kit-mt-suit{fill:var(--mat-suit)}.kit-mt-strake{stroke:var(--mat-hull-seam)}
 .kit-mt-seam{stroke:var(--mat-seam)}.kit-mt-seam-lit{stroke:var(--mat-seam-lit)}.kit-mt-rivet{fill:var(--mat-rivet)}
 .kit-mt-weld{stroke:var(--mat-edge-steel)}
 .kit-mt-hi{stop-color:var(--mat-hi)}.kit-mt-lo{stop-color:var(--mat-lo)}
-.kit-mt-fire-hot{stop-color:var(--mat-fire-hot)}.kit-mt-fire-mid{stop-color:var(--mat-fire-mid)}.kit-mt-fire-tip{stop-color:var(--mat-fire-tip)}
+.kit-mt-fire-root{stop-color:var(--mat-fire-root)}.kit-mt-fire-hot{stop-color:var(--mat-fire-hot)}.kit-mt-fire-mid{stop-color:var(--mat-fire-mid)}.kit-mt-fire-tip{stop-color:var(--mat-fire-tip)}
 .kit-mt-sea-top{stop-color:var(--mat-sea-top)}.kit-mt-sea-deep{stop-color:var(--mat-sea-deep)}
 .kit-mt-lng1{stop-color:var(--mat-lng-top)}.kit-mt-lng2{stop-color:var(--mat-lng-mid)}.kit-mt-lng3{stop-color:var(--mat-lng-deep)}
 /* the material classes themselves are at the end of this file, so they win over the flat rules above them */
@@ -263,6 +265,8 @@
 .kit-block{fill:var(--deep-3,#122A52);stroke:var(--dim-d,#A2B7CF);stroke-width:2}
 .kit-head{fill:var(--deep,#0A182E);stroke:var(--dim-d,#A2B7CF);stroke-width:1.5}
 .kit-piston{fill:var(--kit-steel)}
+.kit-engine-recess{fill:var(--mat-hole)}                                            /* the dark crankcase behind its door */
+.kit-engine-exh{fill:none;stroke:var(--kit-clad);stroke-width:5;stroke-linejoin:round}
 .kit-running .kit-piston{animation:kit-piston .5s ease-in-out infinite alternate}
 .kit-running .kit-state{fill:var(--txt-d,#F3F8FD)}
 .kit-puffs circle{fill:var(--txt-d,#F3F8FD);opacity:0;transform-box:fill-box;transform-origin:center}
@@ -318,6 +322,11 @@
 .kit-m-fire{fill:var(--kit-fire)}.kit-m-firejet{fill:var(--kit-firejet)}
 .kit-light .kit-m-fire,.kit-light .kit-m-firejet{stroke:var(--mat-flame-edge);stroke-width:1.5}
 .kit-m-sea{fill:var(--kit-sea)}
+.kit-m-hatch{fill:url(#kit-m-hatch) transparent;stroke:none;pointer-events:none}   /* a cut face: laid over a body in a cut-away */
+.kit-light .kit-m-hatch{fill:url(#kit-m-hatch-l) transparent}
+.kit-m-soft{filter:url(#kit-f-soft)}.kit-m-fog{filter:url(#kit-f-fog)}            /* a soft edge: smoke, a glow, vapour */
+.kit-m-vapour{fill:var(--mat-vapour)}                                              /* cold vapour: a white fog */
+.kit-m-smoke{fill:var(--mat-smoke)}
 .kit-m-window{fill:var(--mat-window)}
 .kit-m-lng{fill:var(--kit-lng);opacity:1}
 .kit-m-lngs{stroke:var(--mat-lng-surf)}                                     /* the liquid's surface, seen through the cut-away */

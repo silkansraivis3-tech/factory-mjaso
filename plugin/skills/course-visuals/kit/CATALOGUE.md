@@ -27,19 +27,21 @@ value at the mark; `then` moves to start the moment it is crossed; marks fire in
 
 ## Parts
 `name` (family) - options (default) - value: what the number means - ex: one part as written in a spec.
-Colours, sizes and label places are the kit's: a spec sets none of them.
+Colours, sizes and label places are the kit's: a spec sets none of them. So is the look (L61, 2.52.0): physical
+equipment is drawn as it looks on board - its material, light and shade, its flanges, actuators and supports - and the
+screens stay calm ISA-101 screens. A valve is automatic (an actuator) unless `"actuator": false` (a handwheel).
 
 - `panel` (instruments) - w h title [frame, title, alarm-state chip] - value: -
 - `level` (instruments) - w h label unit min max ticks readout decimals marks [the tick numbers stand left of the column] - value: the level
 - `gauge` (instruments) - r label unit min max start sweep normal:[lo,hi] ticks every numbers readout decimals caption captionAt marks; repeater: source:"P1" mini:true - value: the reading
 - `readout` (instruments) - w h label unit sign decimals marks [digital tile] - value: the reading
 - `well` (instruments) - w h tag [bilge well, dripping leak, TT sensor] - value: pool 0..1
-- `valve` (piping) - size label labelAt(right) rotate state(false) actuator(false) trip(false) [ISA bow-tie, filled when closed] - value: 1 open, 0 closed
+- `valve` (piping) - size label labelAt(right) rotate state(false) actuator(false) trip(false) [a real valve (cast body, flanges, bonnet] - value: 1 open, 0 closed
 - `pipe` (piping) - d (SVG path) fluid(liquid/gas/air - air: a ventilation duct) double drain [its contents and their movement] - value: flow 0 still … 1; <id>.fill 0..1 the front advancing, 1..2 emptying towards drain
 - `tank` (piping) - w h label burst [horizontal type C tank] - value: liquid level 0..1
 - `space` (piping) - w h label labelAt(below) style(room/enclosure) crosses [a room (dashed) or an enclosure (solid)] - value: 0..1 picked out
-- `exchanger` (piping) - r label [P&ID heat exchanger (vaporizer, heater)] - value: 0..1 heating
-- `pump` (piping) - r label [P&ID centrifugal pump] - value: 0 stopped, 1 running
+- `exchanger` (piping) - r label [a shell-and-tube heat exchanger (vaporizer, heater), its co…] - value: 0..1 heating
+- `pump` (piping) - r label [a centrifugal pump: cast volute on its foot, the impeller t…] - value: 0 stopped, 1 running
 - `engine` (piping) - w h cylinders label [dual-fuel engine block] - value: 0 stopped, 1 running
 - `vent` (piping) - label labelAt(left) mast [vent outlet to the open air] - value: 0..1 venting
 - `badge` (piping) - n [a numbered step marker] - value: 0..1 lit
