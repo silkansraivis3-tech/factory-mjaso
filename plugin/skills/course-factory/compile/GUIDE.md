@@ -202,7 +202,14 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   figure is not a scene (a kit figure, an `.svg`, a photo - anything but an `.html` figure holding a `[data-stage]`,
   `data-3d`, `data-scene` or a `<canvas>`) is a must-fix in the build and a note on the script's review page:
   "asks for a 3D scene; it has a 2D figure". To keep the 2D figure, write the operator's reason in the slide's entry,
-  `"declined_3d": "<their reason>"`; it is not flagged again.
+  `"declined_3d": "<their reason>"`; it is not flagged again. The deck's `data-visual` and the plan then say the 2D
+  kind it was built with (2.52.0), and a cue line that still asks to rotate, zoom, cut open, drag or "tap each part"
+  of a picture that cannot is a must-fix, with a drafted line in `working_claude\script\MNN.cue_fixes.json` and the
+  `content_script.py propose` command that shows it to the operator; or keep it with `"cue_kept": "<their reason>"`.
+- **Only what a page shows ships (2.52.0).** After each build a picture of `assets\img\` that no built page names goes,
+  with its record, to `assets\img\_unused\` (skipped by the classroom); name it in the build sheet again and it comes
+  back. `used_in` in `_photo_meta.json` is written by the build. A tap / spot / label / read-the-instrument question whose
+  subject a real photo of the module shows is listed after the build with the build-sheet line - a note.
 - **Every photograph once in the whole course (L58).** No photo is shown on two screens - in this module or any other;
   a copy under another name is the same photo (same `url_or_origin`, or the same bytes). A thumbnail takes a different
   photo or none; a photo you placed (picture, inset, photo in a drawing) that is already shown is reported - choose a

@@ -277,6 +277,9 @@ def check(folder):
     for dp, dn, fn in os.walk(folder):
         if dp == folder:
             dn[:] = [x for x in dn if x not in drafts]          # a draft module is not part of the package
+        # 2.52.0 - a folder starting with _ (assets\img\_unused\, the pictures no page shows) is skipped by the classroom's
+        # importer (package-core.mjs internal()), so it is no part of the package's files, sizes or names either
+        dn[:] = [x for x in dn if not x.startswith("_") or x == "_course_shell"]
         for x in dn + fn:
             if " " in x:
                 probs.append("a space in the name: %s - the classroom needs names without spaces" % rel(os.path.join(dp, x)))

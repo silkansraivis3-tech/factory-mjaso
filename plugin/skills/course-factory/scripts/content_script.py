@@ -1184,7 +1184,70 @@ def ilo_findings(course, script):
             add("", "sub_ilo", "i_not_taught", s=sid, text=short(r.get("sub_ilo", ""), 90))
         if sid not in checked:
             add("", "sub_ilo", "i_not_checked", s=sid)
+            continue
+        # 2.52.0 (IGF M01: "explain the operating modes and who on board is involved" - 'who is involved' taught in one
+        # line, never asked) - each part of the Sub-ILO that no question tagged to it asks about. A NOTE: whether it ever
+        # blocks is the owner's decision. A row's own "clauses" list, when the map gives one, is used as it is
+        tagged = [q for q in qs if sid in sub_ilos_of(q)]
+        asked = set(stems(" ".join(str(x) for q in tagged for x in [q.get("question"), q.get("answer"), q.get("visual")]
+                                   + list(q.get("options") or []))))
+        parts = r.get("clauses") if isinstance(r.get("clauses"), list) else clauses(r.get("sub_ilo", ""))
+        for c in parts if len(parts) > 1 else []:
+            want = stems(c, drop_verb=True)
+            if want and sum(w in asked for w in want) * 2 < len(want):
+                found.append({"where": T(script, "s_the_module"), "screen": "", "field": "sub_ilo", "level": NOTE,
+                              "rule": "i_clause_not_checked", "detail": T(script, "i_clause_not_checked", s=sid, clause=c,
+                                                                           n=len(tagged)), "fix": ""})
     return found
+
+
+# 2.52.0 - the parts of a Sub-ILO, each something to be able to do. Conservative: split on ";", and on ", " / " and " only
+# where what follows opens a clause of its own - a verb of the ILO's ("... and state that ...") or who / what / where / how
+# ("the operating modes and who on board is involved" is two parts). Objects in a list ("fuel tank, tank connection space")
+# stay one part, and so does anything in brackets, between " - " dashes or after a colon (an example list)
+CLAUSE_STOP = {"the", "and", "of", "on", "in", "a", "an", "to", "for", "with", "its", "their", "his", "her", "is", "are", "be",
+               "by", "from", "at", "as", "or", "who", "what", "where", "when", "why", "how", "which", "that", "this", "these",
+               "those", "each", "every", "all", "any", "it", "they", "them", "can", "may", "must", "will", "shall", "into", "under"}
+CLAUSE_WH = ("who", "what", "where", "when", "why", "how", "which", "whom", "whose")
+ILO_VERBS = {"explain", "describe", "identify", "name", "list", "state", "define", "recognise", "recognize", "demonstrate",
+             "apply", "use", "outline", "understand", "know", "compare", "distinguish", "locate", "read", "interpret", "select",
+             "perform", "operate", "check", "show", "give", "recall", "summarise", "summarize", "discuss", "classify", "calculate",
+             "say", "point", "find", "follow", "carry", "take", "prepare", "complete", "report", "respond", "act"}
+CLAUSE_CUT = re.compile(r"(?:,\s*(?:and\s+)?|\s+and\s+)(?=(?:%s)\b)" % "|".join(sorted(ILO_VERBS | set(CLAUSE_WH))), re.I)
+
+
+def stems(text, drop_verb=False):
+    """the content words of a text, cut to a stem: "Operating modes" -> ["opera", "mode"]"""
+    words = re.findall(r"[a-z0-9]+", re.sub(r"\([^)]*\)", " ", str(text or "")).lower())
+    if drop_verb and words and words[0] in ILO_VERBS:
+        words = words[1:]
+    out = []
+    for w in words:
+        if len(w) < 3 or w in CLAUSE_STOP:
+            continue
+        w = w[:-1] if len(w) > 3 and w.endswith("s") and not w.endswith("ss") else w
+        out.append(w[:5])
+    return out
+
+
+def clauses(text):
+    """["explain the operating modes", "who on board is involved"] - a Sub-ILO cut into its parts, conservatively"""
+    t = re.sub(r"\([^)]*\)", " ", str(text or ""))
+    t = re.sub(r"\s[-–—]\s[^;]*?\s[-–—]\s", " ", t)          # " - gas mode, fuel-oil mode ... - " is an example list
+    out = []
+    for piece in t.split(";"):
+        parts, lead = [], False
+        for p in CLAUSE_CUT.split(piece):
+            p = " ".join(p.split(":")[0].split()).strip(" .,")
+            if not p:
+                continue
+            if len(parts) == 1 and not lead and parts[0].split()[0].lower() not in ILO_VERBS:
+                parts[0] += ", " + p                  # "On a fire control plan, identify ..." - one part
+                lead = True
+            else:
+                parts.append(p)
+        out += parts
+    return out
 
 
 def all_findings(script, course=None):

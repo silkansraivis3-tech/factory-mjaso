@@ -275,8 +275,9 @@ Run the deterministic checks in TWO shell calls and READ their output:
      and wrong), in one command. It rebuilds from the same approved inputs, so the bytes come out
      the same: anything it reports, or a stop (exit 2), is a finding.
   2  the checks it does not run, chained in ONE call, each by the usage line at the top of its
-     file, printing only what fails: check_hours, check_balance (compiled decks carry no
-     data-active - "cannot run" is a known gap, not a finding), check_syllabus_coverage,
+     file, printing only what fails: check_hours, check_balance on presentation/index.html (compiled
+     decks carry data-active from 2.52.0; "100% of a theory block active" on an active slide over 10
+     minutes is the owner's open decision, MANIFEST "Waiting on the owner" 2, not a finding), check_syllabus_coverage,
      verify_links, audit_navigation, crosscheck_tasks, check_slide_text, check_visual_first,
      check_visuals, check_assets and classify_module.py.
 The module's START_HERE pages, COURSE.html and course_map.js are written by compile_course.py once every

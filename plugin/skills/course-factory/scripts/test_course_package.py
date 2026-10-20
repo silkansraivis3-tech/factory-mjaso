@@ -164,6 +164,14 @@ def main():
                "loads a script from the internet")
         broken("a file over 15 MB", lambda b: open(os.path.join(b, "module01", "assets", "img", "big.jpg"), "wb").write(b"\0" * (15 * 1024 * 1024 + 1)),
                "the classroom takes at most 15 MB per file")
+        # 2.52.0 - assets\img\_unused\ (the pictures no page shows, left there by compile_module.py) is skipped by the importer
+        un = os.path.join(tmp, "unused", "modules")
+        shutil.copytree(c, un)
+        os.makedirs(os.path.join(un, "module01", "assets", "img", "_unused"))
+        open(os.path.join(un, "module01", "assets", "img", "_unused", "old big.jpg"), "wb").write(b"\0" * (15 * 1024 * 1024 + 1))
+        code, out = run(un)
+        check("a picture left out of the package (assets/img/_unused/) is no part of it - its size and name are not the classroom's",
+              code == 0 and "old big.jpg" not in out and "15 MB" not in out, out)
         broken("a working folder inside the course", lambda b: w(os.path.join(b, "notes", "draft.html"), "x"), "notes\\ is not a module")
         broken("a trainee page linking back to START_HERE.html", lambda b: w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
                (TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "done(1,1,[],'');")).replace("<body>", "<body><a href=\"../START_HERE.html\">Back</a>")),

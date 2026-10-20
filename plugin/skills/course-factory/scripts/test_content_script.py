@@ -891,6 +891,27 @@ def main():
         screen(tags, "s01")["sub_ilo"] = ["1.1", "1.2"]
         screen(tags, "s03")["sub_ilo"] = "1.1"
         check("a slide may teach two Sub-ILOs (a list)", cs.ilo_findings(cl, tags) == [], cs.ilo_findings(cl, tags))
+        # 2.52.0 (IGF M01 1.b: "explain the operating modes and who on board is involved" - 'who' taught, never asked)
+        check("a Sub-ILO is cut into its parts only before a verb or who/what/where - a list of objects stays one part",
+              cs.clauses("Explain the main operating modes of an IGF ship - gas mode, fuel-oil mode, bunkering - and who on board "
+                         "is involved.") == ["Explain the main operating modes of an IGF ship", "who on board is involved"]
+              and cs.clauses("Identify the hazards of LNG, CNG and methanol (and hydrogen).") == ["Identify the hazards of LNG, CNG and methanol"]
+              and cs.clauses("On a fire control plan, identify the A-60 boundaries and state why") ==
+              ["On a fire control plan, identify the A-60 boundaries", "state why"],
+              cs.clauses("Explain the main operating modes of an IGF ship - gas mode, fuel-oil mode, bunkering - and who on board is involved."))
+        cc = new_course(tmp, "iloclause")
+        mp = ilo_map.path(cc)
+        imap = cs.load(mp)
+        for r in imap["rows"]:
+            if str(r.get("sub_ilo_id")) == "1.2":
+                r["sub_ilo"] = "Identify the cargo containment systems and the secondary barrier each needs, and who on board inspects them."
+        cs.save(mp, imap)
+        fc = [f for f in cs.ilo_findings(cc, SCRIPT) if f["rule"] == "i_clause_not_checked"]
+        check("a part of a Sub-ILO no question tagged to it asks about is a finding on the review page - a NOTE, never a block",
+              len(fc) == 1 and "who on board inspects them" in fc[0]["detail"] and "1.2" in fc[0]["detail"]
+              and fc[0]["level"] == cs.NOTE and not cs.blocking(fc), cs.ilo_findings(cc, SCRIPT))
+        check("... the parts its questions do ask about are not ('the secondary barrier' - m03)",
+              not any("secondary barrier" in f["detail"] for f in fc), fc)
         nomap = new_course(tmp, "nomapfind", gate=False)
         check("without an ILO map the check adds nothing (the gate stops the module instead)", cs.ilo_findings(nomap, bad) == [])
         cb2 = new_course(tmp, "ilobad", script=bad)

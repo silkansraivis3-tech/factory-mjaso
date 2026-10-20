@@ -19,7 +19,8 @@ different building, a `.bak` file by nobody at all - it just ships.
     junk         no .bak / .orig / editor state inside an asset tree
     assets       every local file a published page points at exists
     rights       figures whose own metadata says "not cleared for
-                 publication" are named, so a human decides
+                 publication" are named, so a human decides; an
+                 AI-generated picture no page shows is refused (2.52.0)
 
 Verdict: PASS, WARN (publishable, with things a human should read) or FAIL
 (publication stops). Writes a JSON report that gitpub.py refuses to commit
@@ -488,6 +489,38 @@ def check_rights(repo: str, plat: dict, sets: dict, out: list) -> None:
                     out.append(Finding("rights", WARN, rel(repo, f), 0,
                                        f"'{key}' is marked not cleared for publication - a human decides "
                                        "whether it may go to the shared repository"))
+    check_unshown_ai(repo, sets, out)
+
+
+UNDER_FOLDER = re.compile(r"(^|/)(?!_course_shell/)_[^/]*/")
+SHOWN_EXT = (".html", ".htm", ".css", ".js", ".svg", ".json")
+
+
+def check_unshown_ai(repo: str, sets: dict, out: list) -> None:
+    """2.52.0 (IGF M01/M02 benchmark, 2026-10-20: an AI picture no page showed went to the tablets with the module) - a
+    picture an image model made (its _photo_meta.json record says "generated": true, or source GENERATED) that no
+    published page, style or script names is refused: it would ship unseen, and nobody decided it should. compile_module.py
+    leaves an unused picture out of the package (assets/img/_unused/, a folder the classroom skips); this is the gate
+    that holds when something put one back."""
+    roots = sets["trainee"] + sets["instructor"]
+    files = [f for r in roots for f in walk(r)]
+    shown = "\n".join(read_text(f) for f in files if f.lower().endswith(SHOWN_EXT)
+                      and os.path.basename(f) != "_photo_meta.json")
+    for f in files:
+        if os.path.basename(f) != "_photo_meta.json" or UNDER_FOLDER.search(rel(repo, f)):
+            continue
+        try:
+            meta = json.loads(read_text(f))
+        except ValueError:
+            continue
+        for name, m in (meta.items() if isinstance(meta, dict) else ()):
+            made = isinstance(m, dict) and (m.get("generated") is True or str(m.get("source") or "").upper() == "GENERATED")
+            if made and os.path.isfile(os.path.join(os.path.dirname(f), name)) \
+                    and not re.search(r"(?<![\w.-])%s(?![\w.-])" % re.escape(name), shown):
+                out.append(Finding("rights", FAIL, rel(repo, os.path.join(os.path.dirname(f), name)), 0,
+                                   "an AI-generated picture that no page shows - it would ship to the tablets unseen. "
+                                   "Build the module again (compile_module.py leaves an unused picture out, in "
+                                   "assets/img/_unused/) or delete it from the package"))
 
 
 # -------------------------------------------------------------------- the runner
