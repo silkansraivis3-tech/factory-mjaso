@@ -243,6 +243,17 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template^="recap."] .rc-item{border-color:var(--lt-line-d)}
 .slide[data-template^="recap."] .rc-item::after{background:var(--lt-blue)}
 .slide[data-template^="recap."] .rc-item::before{color:var(--lt-blue);background:rgba(83,167,219,.12)}
+/* a short screen (1024 x 768): the template's own top space and the boxes' minimum height give way, never the words'
+   size - with the template's margin and chrome room, six recap boxes put "Next: the module check" under the deck's
+   chrome again (2.56.0, the merge of the templates with gb_compose.css's 780 px rule) */
+@media (max-height:780px){
+  .slide[data-template^="recap."] .slide-body{margin-top:min(1.2vmin,10px)}
+  .slide[data-template^="recap."] .slide-body.recap{gap:min(1vmin,8px)}
+  .slide[data-template^="recap."] .rc-grid{--h:min(12vmin,92px);gap:min(1.2vmin,10px)}
+  .slide[data-template^="recap."] .rc-item{gap:.3em;padding:min(1.6vmin,13px) min(2.2vmin,18px) min(1.4vmin,11px)}
+  .slide[data-template^="recap."] .rc-grid[data-n="3"]{--h:min(24vmin,184px)}
+  .slide[data-template^="recap."] .rc-grid[data-n="4"]{--h:min(15vmin,116px)}
+}
 
 /* ---------------------------------------------------------------- one slide, several parts */
 .slide[data-template] .lt-parts{display:flex;flex-direction:column;gap:min(2.4vmin,20px)}

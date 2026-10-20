@@ -1677,9 +1677,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
 
     b = asked_composition(b)                      # L61: a template asked for by name decides the composition
     fig, credit, is_photo = figure_html(mdir, figdir, s, b, probs, where)
-    kind = built_kind(s, fig, is_photo, photo_meta(mdir, (b.get("figure") or "").replace("\\", "/")) if is_photo else None)
+    # what picture was BUILT (2.54.0) - its own name: `kind` stays the slide's kind, which L61's dense rule below reads
+    # (the merge of 2.52.0 and 2.54.0 had both under one name, so a dense slide with no picture went uncaught)
+    vkind = built_kind(s, fig, is_photo, photo_meta(mdir, (b.get("figure") or "").replace("\\", "/")) if is_photo else None)
     if not str(b.get("cue_kept") or "").strip():       # the operator kept the cue as it is, with their reason
-        probs += cue_problems(s, fig, kind, is_photo, build or {}, mdir, where)
+        probs += cue_problems(s, fig, vkind, is_photo, build or {}, mdir, where)
     comp = composition(s, b, is_photo, bool(fig))
     if comp not in COMPOSITIONS + ("photo",):
         probs.append("%s: the build sheet asks for the layout \"%s\" - the layouts are %s" % (where, comp, ", ".join(COMPOSITIONS)))
@@ -1765,7 +1767,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     d = {"class": "slide" + (" photo split" if split_photo else " photo" if comp == "photo" else " dark" if b.get("dark") else "")
                   + (" " + own if own else ""),
          "data-title": s.get("title"), "data-kind": "Theory", "data-block": "%s · %d" % (m, n),
-         "data-visual": kind}
+         "data-visual": vkind}
     d.update(base)
     template_attrs(d, tid, variant, split)
     label = "Theory"
