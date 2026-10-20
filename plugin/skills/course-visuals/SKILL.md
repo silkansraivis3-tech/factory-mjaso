@@ -251,6 +251,13 @@ Two escalations, and neither is silent:
 `scripts/resolve_asset.py` runs levels 1 and 2 mechanically. Level 3 is judgement and belongs to the
 **`visual-sourcer`** agent, which works in isolated context and returns a short report.
 
+**Subject libraries (2.52.0).** Level 2 starts with the shared **subject library** when this computer
+has one — the NOVIKONTAS Gas Library on Drive for GAS BASIC / ADVANCED and IGF Basic / Advanced
+(`scripts/subject_library.py locate`). The resolver searches it by description and rights-gates it;
+an AI picture from it is never the picture of equipment a trainee must recognise. What this skill
+finds or makes on the library's subject is **saved back** (`subject_library.py contribute`), and the
+report says so — `source/GUIDE.md` §Level 2 and §Saving back. No library = skipped, never a failure.
+
 ---
 
 ## Tablet-first, always

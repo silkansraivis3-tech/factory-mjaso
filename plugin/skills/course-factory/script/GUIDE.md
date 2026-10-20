@@ -27,7 +27,15 @@ Then, before the first screen is written, read — in this order, and only these
    `coverage/` checks them later against everything built.
 3. **The old course's keep / modernise / add for this module (L41)** — `architecture.json` →
    `from_old_course`, and `OLD_COURSE_INVENTORY.md` for the slides and pictures it names.
-4. **The knowledge base — only through `kb/scripts/kb_tool.py search`** (several phrasings: the other
+4. **The subject library first, when the course is on its subject** (2.52.0; `intake.json` →
+   `subject_library`; the Gas Library for every gas course): `python <course-visuals>/scripts/subject_library.py
+   find "<the slide's subject>"` — the shared topic and which module of each course teaches it, the
+   **cited facts**, glossary, regulations held, reference PDFs with their distribution, and passages from
+   every course's knowledge base at once (file + page). Quote a value only with its source. **A row marked
+   CONFLICT is not settled**: do not pick one of its values — name the conflict on the screen's notes and
+   in `"sources"`, and point to the library's `OPEN_DECISIONS.md`; the course owners decide. An inbox row
+   (NEW) is not reviewed: check its source before using it. No library on this computer: skip this.
+5. **The knowledge base — only through `kb/scripts/kb_tool.py search`** (several phrasings: the other
    names, the abbreviation, the older term). Never open a whole `document.md`. A declined knowledge base
    (the Stage 2 page says so) means the source files themselves, searched the same narrow way.
 
@@ -39,6 +47,12 @@ While writing:
 - **Every fact on a slide traces to a source in `"sources"`**: the document, its edition, the section or page
   (`"IGF Code 2016 (MSC.391(95)): 6.7.1, 15.8.2"`). Only the current edition is cited (intake). An
   operator-stated fact goes in `operator_facts`, not in `sources`.
+- **Save back what the library did not have** (on its subject): a fact you verified in a source, with
+  its document, edition and page, that `find` did not return — `subject_library.py contribute fact
+  "<subject>" "<value, unit, conditions>" --source "<doc, edition, page>" --found-for "<course> M04 s03"`;
+  a term with its regulation's definition — `... contribute term "<term>" "<meaning>" --source "<...>"`.
+  They go to the library's inbox as NEW for the course owners to review, never straight into its facts.
+  An operator-stated fact is not contributed. Say in the module's report what was contributed.
 
 The review page's **ILO map and sources check** — must-fix findings, like the theory check — lists a Sub-ILO
 taught nowhere or checked nowhere, a question with no `"sub_ilo"`, a `"sub_ilo"` the module does not own, and
