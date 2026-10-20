@@ -1337,6 +1337,19 @@ of the failures came from three compiler / kit problems. Each is fixed here, wit
    to switch (point `"figure"` at it, take the scene files off `"scripts"`, write `"declined_3d"`). `test_compile_module.py`
    (the starter is written, passes `check_kit.py`, and the scene stays named).
 
+## 4zz5 · A vent's puffs rise only into free air (2.50.7, 2026-10-20)
+
+What 2.50.6's deterministic check left on run 5: s03's vent puffs rose into the drawing above on 2 of 9 frames, on every
+build. Fixed in the kit, not in the spec. The `vent` measures, at every layout, how far its puffs can rise before they meet
+anything drawn above the outlet (`ventRise`: the shapes' real geometry scanned upward across the puffs' width, as the
+drawing check judges it - a line, a shape's inside, or the ceiling of a room the outlet stands in) and rises them that far,
+up to the 34 they always rose (`--rise` in kit.css `kit-puff`). Where there is almost no air - s03's outlet stood 8 units
+under the other ship's keel - the puffs cannot fit and the check still finds them: `figure_fit.py` then adds "fix (vent)"
+with the numbers (57 units for the full rise) and what to change (lower the outlet). Run 5's course (scratch copy): with
+the vent at y 230 instead of 196 and no hand label boxes, M01 **PASSes** in one build. Fixture `drawing_motion.html`:
+`vent-puffs` (a vent 22 under a room: was inside on some frames, now clean) and `bad-mover` (a plain moving disc, the
+determinism case the puffs were), `test_audit_drawing.py`.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

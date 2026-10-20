@@ -152,15 +152,18 @@ def main():
 
         # 2.50.6 (M01 benchmark run 5, s03) - a drawing that moves is judged on every frame of its motion, not the one seen
         caught = {}
-        for ph in ("0", "0.25", "0.5"):
+        for ph in ("0", "0.5", "0.9"):
             mo = page_out(exe, FIX / "drawing_motion.html", prof, "#" + ph) or {}
             caught[ph] = sorted({(x["svg"], x["check"], x["part"], x["other"]) for x in mo.get("findings", [])
                                  if x["check"] in ("inside", "cut off", "text zone")})     # the checks motion moves
-        check("the same page caught at three moments of its motion gets the same verdict - a running engine and a vent's "
-              "puffs no longer flip an unchanged spec between PASS and FAIL",
-              caught["0"] == caught["0.25"] == caught["0.5"], caught)
-        check("... and what goes wrong on only some frames is found on all three: the puffs that rise half out of the room",
-              all(any(c[0] == "bad-puffs" and c[1] == "inside" for c in v) for v in caught.values()), caught)
+        check("the same page caught at three moments of its motion gets the same verdict - a running engine or a moving "
+              "part no longer flips an unchanged spec between PASS and FAIL",
+              caught["0"] == caught["0.5"] == caught["0.9"], caught)
+        check("... and what goes wrong on only some frames is found on all three: the disc that moves half out of its room",
+              all(any(c[0] == "bad-mover" and c[1] == "inside" for c in v) for v in caught.values()), caught)
+        # 2.50.7 (run 5, s03) - the kit rises a vent's puffs only into free air
+        vent = [c for v in caught.values() for c in v if c[0] == "vent-puffs"]
+        check("a kit vent under a room: its puffs stop short of the room's floor on every frame (they rose into it)", not vent, vent)
         eng = [c for v in caught.values() for c in v if c[0].startswith("engine")]
         check("the kit's own running engine never conflicts with itself, at four sizes and on a narrow panel: its RUNNING "
               "clears its pistons' whole stroke and stays inside its block - and a running cylinder's \"piston\" label is "

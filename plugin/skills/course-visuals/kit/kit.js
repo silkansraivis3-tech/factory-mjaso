@@ -1398,6 +1398,43 @@
      (true: VENT_MAST long) - never a bare outlet floating in the air (M01 benchmark run 4: `true` was silently ignored).
      Any other value stops the figure with what it takes. */
   var VENT_MAST = 60;
+  /* how far a vent's puffs may rise: into free air only (2.50.7). A puff starts 12 above the outlet, rises PUFF_RISE and
+     grows to 10.5 across; it stops PAD_PX short of the lowest thing drawn above the outlet - another part, a room's ceiling
+     when the outlet is inside it - so it never enters another drawing. M01 benchmark run 5, s03: the lower ship's vent mast
+     stood under the upper ship's drawing and its puffs rose into a space there on some frames - the deterministic drawing
+     check (2.50.6) found it on every build. Measured in the drawing's own units, at every layout (after the boxes are sized). */
+  var PUFF_RISE = 34;
+  function ventRise(fig, g) {
+    var svg = fig.svg, sc = svg.getScreenCTM(), gc = g.getScreenCTM();
+    if (!sc || !gc) return PUFF_RISE;
+    var inv = sc.inverse(), o = onto(inv.multiply(gc), 0, 0), pad = PAD_PX / det(sc);
+    var xs = [-15, -10, -5, 0, 5, 10, 15].map(function (d) { return o.x + d; });
+    var start = o.y - 8.5, top = o.y - 22.5 - PUFF_RISE - pad, ceil = -1e9, pt = svg.createSVGPoint();
+    function has(n, L, x, y, how) {
+      var l = onto(L, x, y);
+      pt.x = l.x; pt.y = l.y;
+      try { return how === 'fill' ? n.isPointInFill(pt) : n.isPointInStroke(pt); } catch (e) { return false; }
+    }
+    q(svg, GEOM).forEach(function (n) {
+      if (g.contains(n) || (n.closest && n.closest('.kit-lbl, .kit-leaders, defs')) || n.classList.contains('kit-hit') || !painted(n)) return;
+      var b, nc = n.getScreenCTM();
+      try { b = n.getBBox(); } catch (e) { return; }
+      if (!nc || !(b.width || b.height)) return;
+      var M = inv.multiply(nc), bb = boxOf([onto(M, b.x, b.y), onto(M, b.x + b.width, b.y), onto(M, b.x, b.y + b.height), onto(M, b.x + b.width, b.y + b.height)]);
+      if (bb.x2 < xs[0] || bb.x > xs[6] || bb.y2 < top || bb.y > start) return;
+      if (tagOf(n) === 'text') { ceil = Math.max(ceil, Math.min(bb.y2, start)); return; }
+      /* scanned upward from the puffs' start, across their width: the first height where the shape is met - its line or
+         its inside, or, for a room the outlet stands in, the room's ceiling (geometry, as the drawing check judges it) */
+      var L = nc.inverse().multiply(sc), within = has(n, L, o.x, start, 'fill');
+      for (var y = start; y >= top; y -= 1) {
+        if (xs.some(function (x) { return has(n, L, x, y, 'stroke') || (within ? !has(n, L, x, y, 'fill') : has(n, L, x, y, 'fill')); })) {
+          ceil = Math.max(ceil, y);
+          break;
+        }
+      }
+    });
+    return Math.max(0, Math.min(PUFF_RISE, o.y - ceil - 22.5 - pad));
+  }
   TYPES.vent = function (fig, part, g, p) {
     var m = p.mast;
     if (m !== undefined && m !== null && m !== true && m !== false && !(typeof m === 'number' && m > 0)) {
@@ -1416,6 +1453,7 @@
     [0, 0.45, 0.9].forEach(function (d, i) {
       el('circle', { cx: (i - 1) * 5, cy: -12, r: 7, style: 'animation-delay:' + d + 's' }, puffs);
     });
+    fig.fit(function () { puffs.style.setProperty('--rise', -ventRise(fig, g) + 'px'); }, true);
     if (p.label) label(fig, g, { x: p.labelAt === 'left' ? -18 : 18, y: -2, 'text-anchor': p.labelAt === 'left' ? 'end' : 'start', 'class': 'kit-cap' }, p.label);
     part.render = function (v) { puffs.style.opacity = clamp(v, 0, 1).toFixed(2); g.classList.toggle('kit-venting', v > 0.05); };
   };

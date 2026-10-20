@@ -326,10 +326,12 @@ that is meant is marked in the drawing (`data-may-cross`, `data-no-contain`, `da
 written down. No Chrome or Edge: the build says it did not check. `--no-drawing-check` only while working on a drawing.
 `drawing_check.py <page.html> ...` checks any page by hand - a hand-built one too.
 - **A drawing that moves is judged on every frame (2.50.6).** A running engine's pistons, a cylinder's piston, a vent's
-  puffs, a flow: the check holds every endless animation still at 9 phases of its cycle and reports what goes wrong on any
-  of them ("on 1 of 9 frames of its motion"), so an unchanged spec gets the same verdict at every build (M01 benchmark run
-  5: s03 flipped between PASS and FAIL). The kit lays its labels out clear of what a moving part sweeps, and the `engine`
-  keeps RUNNING clear of its pistons' whole stroke - a finding on a moving part is the spec's to fix.
+  puffs, a flow: the check holds every endless animation still at 9 moments of one clock and reports what goes wrong on
+  any of them ("on 1 of 9 frames of its motion"), so an unchanged spec gets the same verdict at every build (M01 benchmark
+  run 5: s03 flipped between PASS and FAIL). The kit lays its labels out clear of what a moving part sweeps, the `engine`
+  keeps RUNNING clear of its pistons' whole stroke, and a `vent`'s puffs rise only into free air (2.50.7). A finding on
+  a moving part is the spec's to fix; for puffs the build says how ("fix (vent)": lower the outlet - run 5's s03 passed
+  with its vent at y 230 instead of 196, 8 units under the other ship's keel).
 - The screen's own words (Check, Next, Your score ...) are English for now; another course language is reported.
 
 ## 2f · The visual review - required (2.44.0, build-order step 16)

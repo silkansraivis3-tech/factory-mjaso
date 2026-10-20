@@ -7,8 +7,11 @@
      is first frozen at the phase in the address's #hash (0 to 1 of its cycle) - two runs are the same page caught at two
      moments. A drawing check that judges "the frame it happens to see" gives two verdicts; one that judges every phase of
      the motion gives the same verdict for both.
-       bad-puffs     a vent under a room: its puffs rise INTO the room's floor - inside on some frames, half out on others
-       engines       running kit engines (the deck's own part, nothing else in the figure) at four sizes and two panel
+       bad-mover     a plain drawing (no kit): a disc that moves in a room and out through its floor - inside on some
+                     frames, half out on others: found whatever moment the page is caught at
+       vent-puffs    a kit vent 22 under a room (2.50.7): its puffs rise only into the free air below the room's floor -
+                     before, they rose into it on some frames
+       engines      running kit engines (the deck's own part, nothing else in the figure) at four sizes and two panel
                      widths: the part's own RUNNING label must keep clear of its own moving pistons on every frame
        engine-cyl    M01 s06: a running kit cylinder by the left edge - its "piston" label, moved in off the edge, must be
                      placed clear of the piston's whole stroke, not of the one frame the layout saw -->
@@ -20,7 +23,12 @@
 </style>
 </head>
 <body>
-<div class="kit-screen"><svg id="bad-puffs" data-kit="#spec-puffs"></svg></div>
+<svg id="bad-mover" viewBox="0 0 300 200" width="300" height="200">
+  <rect x="40" y="20" width="220" height="120" fill="#fff" stroke="#123" stroke-width="2"/>
+  <circle class="mover" cx="150" cy="100" r="12" fill="#e33"/>
+</svg>
+<style>.mover{animation:fixture-sink 1s linear infinite alternate}@keyframes fixture-sink{to{transform:translateY(45px)}}</style>
+<div class="kit-screen"><svg id="vent-puffs" data-kit="#spec-puffs"></svg></div>
 <div class="kit-screen"><svg id="engine-a" data-kit="#spec-engines"></svg></div>
 <div class="kit-screen small"><svg id="engine-b" data-kit="#spec-engines"></svg></div>
 <div class="kit-screen"><svg id="engine-cyl" data-kit="#spec-cylinder"></svg></div>

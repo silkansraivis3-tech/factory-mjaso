@@ -216,7 +216,7 @@
 @keyframes kit-fall{0%{transform:translateY(0);opacity:0}15%{opacity:1}85%{opacity:1}100%{transform:translateY(var(--fall,60px));opacity:0}}
 @keyframes kit-spin{to{transform:rotate(360deg)}}
 @keyframes kit-piston{to{transform:translateY(5px)}}
-@keyframes kit-puff{0%{transform:translateY(0) scale(.5);opacity:0}20%{opacity:.6}100%{transform:translateY(-34px) scale(1.5);opacity:0}}
+@keyframes kit-puff{0%{transform:translateY(0) scale(.5);opacity:0}20%{opacity:.6}100%{transform:translateY(var(--rise,-34px)) scale(1.5);opacity:0}}
 @keyframes kit-in{from{opacity:0;transform:translateX(-14px)}}
 
 /* reduced motion: every figure jumps to its end state (kit.js), and nothing flashes or flows */

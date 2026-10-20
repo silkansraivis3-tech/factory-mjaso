@@ -681,6 +681,11 @@ HINT = {
     "label": "a label found no clear place: give the figure more room around that part, or shorter words",
     "contrast": "colour the part for the dark panel (kit tokens only) or mark one meant to be quiet data-low-contrast",
 }
+# 2.50.7 (M01 benchmark run 5, s03) - the kit rises a vent's puffs only into free air; a puff still in the way means the outlet
+# has almost none: it stood 8 units under the other ship's keel
+PUFF_HINT = ("a vent's puffs need about 57 units of free air above its outlet (they start 12 above it, rise up to 34 and "
+             "grow 10.5 across); the kit rises them only as far as the air is free, and here there is too little - lower the "
+             "outlet (a shorter mast: the vent's y and the end of the pipe under it) or move what is drawn above it")
 
 
 def short(part):
@@ -836,6 +841,8 @@ def run_all(course, module, fix=True, jobs=4):
                 if HINT.get(check) and check not in seen:
                     seen.add(check)
                     block.append("    fix (%s): %s" % (check, HINT[check]))
+            if any("kit-puffs" in (part or "") for _, _, _, part, _ in probs):
+                block.append("    fix (vent): %s" % PUFF_HINT)
             bb = [v[:4] for v in (r.get("parts") or {}).values() if v[5] not in CONTAINERS]
             if any(c == "empty" for c, _, _ in group(probs)) and bb:
                 w_ = max(b[2] for b in bb) - min(b[0] for b in bb)
