@@ -42,6 +42,7 @@
   /* on a light page: a shade darker, so the metal stands off the white, and a softer shadow */
   --mat-clad-l:#9CA7B2;--mat-steel-l:#97A3AE;--mat-paint-l:#5A6E7F;--mat-paintl-l:#73879A;--mat-cast-l:#68768A;
   --mat-deck-l:#56636F;--mat-rubber-l:#434C55;--mat-foam-l:#AEB6BD;--mat-drop-l:rgba(10,24,46,.3);
+  --mat-vapour-l:#B8C6D3;--mat-smoke-l:#5E5A55;
   --mat-hull-l:#1D4673;--mat-white-l:#C9D1D9;
   /* the textures and shades kit.js draws once per page (an id that is missing paints the plain colour after it) */
   --kit-clad:url(#kit-m-clad) var(--mat-clad);--kit-steel:url(#kit-m-steel) var(--mat-steel);
@@ -59,7 +60,7 @@
 .kit-mat-light{--mat-clad:var(--mat-clad-l);--mat-steel:var(--mat-steel-l);--mat-paint:var(--mat-paint-l);--mat-paintl:var(--mat-paintl-l);
   --mat-cast:var(--mat-cast-l);--mat-deck:var(--mat-deck-l);--mat-rubber:var(--mat-rubber-l);--mat-foam:var(--mat-foam-l);
   --mat-hull:var(--mat-hull-l);--mat-white:var(--mat-white-l)}
-.kit.kit-light{--mat-drop:var(--mat-drop-l);--mat-vapour:#B8C6D3;--mat-smoke:#5E5A55;
+.kit.kit-light{--mat-drop:var(--mat-drop-l);--mat-vapour:var(--mat-vapour-l);--mat-smoke:var(--mat-smoke-l);
   --kit-clad:url(#kit-m-clad-l) var(--mat-clad-l);--kit-steel:url(#kit-m-steel-l) var(--mat-steel-l);
   --kit-paint:url(#kit-m-paint-l) var(--mat-paint-l);--kit-paintl:url(#kit-m-paintl-l) var(--mat-paintl-l);
   --kit-cast:url(#kit-m-cast-l) var(--mat-cast-l);--kit-deck:url(#kit-m-deck-l) var(--mat-deck-l);
