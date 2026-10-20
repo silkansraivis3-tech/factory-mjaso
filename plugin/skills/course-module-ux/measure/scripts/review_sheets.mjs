@@ -177,8 +177,11 @@ window.__rv = (function(){
       var lo=parseFloat(d.getAttribute('data-lo')), hi=parseFloat(d.getAttribute('data-hi')), st=parseFloat(d.getAttribute('data-step')), dec=parseInt(d.getAttribute('data-dec')||'0',10);
       var S=Math.pow(10,dec), n=Math.round((hi-lo)/st), unit=d.getAttribute('data-unit')||'', keys=k(d).split(/\\s+/), target=-1, wrong=-1, i;
       for (i=0;i<=n;i++){ var at=((Math.round(lo*S)+i*Math.round(st*S))/S).toFixed(dec); if(keys.indexOf(key(id,unit,at))>=0){ if(target<0) target=i; } else if(wrong<0) wrong=i; }
-      var want = good ? target : wrong, plus = d.querySelector('.dial-plus');
-      for (i=0; i<=want && plus; i++) plus.click();
+      /* as gb_answer.js steps an untouched dial: its first + lands on step 1 and its first - on step 0 (2.51.0 - clicking +
+         want+1 times landed one past, so a right answer with no tolerance graded wrong: IGF M02 m07, 11.5 m +/- 0) */
+      var want = good ? target : wrong, plus = d.querySelector('.dial-plus'), minus = d.querySelector('.dial-minus');
+      if (want === 0 && minus) minus.click();
+      for (i=0; i<want && plus; i++) plus.click();
       did = true;
     });
     return did;

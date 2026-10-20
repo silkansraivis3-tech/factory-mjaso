@@ -23,6 +23,13 @@
  *                              Then the fan-out, with QA pipelined behind each module.
  *
  * `kb` may be left out: the reader finds it (kb_tool.py find) or suggests one.
+ * `factory` (optional): a folder holding the factory's skills (`<factory>/course-factory/SKILL.md` ...) to use
+ *   instead of the installed plugin - a benchmark pins its version this way.
+ * `notes` (optional): the operator's words for every module agent ("no paid pictures tonight", "decline 3D: ...").
+ *
+ * Models (2.51.0, the M01 benchmark: the mechanical loop was most of the bill): the reader and the script writer
+ * keep the session's model - that is where the words come from. Building an approved script (build_module.py
+ * until PASS, the review, the fixes) and QA run on Sonnet at medium effort; the gate, one command, at low.
  *
  * The prompts below are short on purpose. Each agent loads the skill that owns its
  * question; restating a skill's rules here is how two authorities start to disagree.
@@ -40,7 +47,14 @@ export const meta = {
 }
 
 const A = args || {}
-const SKILL = 'the course-factory skill (Skill tool, name "course-factory")'
+const SKILL = A.factory
+  ? `the course-factory skill at ${A.factory}/course-factory/SKILL.md (read it as the Skill tool would, and use the `
+    + `scripts and guides under ${A.factory} - not the installed plugin)`
+  : 'the course-factory skill (Skill tool, name "course-factory")'
+const SCRIPTS = A.factory ? `${A.factory}/course-factory` : '<the course-factory skill folder>'
+const NOTES = A.notes ? `\n\nTHE OPERATOR SAYS, FOR THIS RUN: ${A.notes}` : ''
+/* the mechanical work - building an approved script, checking it - on Sonnet; see the header */
+const MECHANICAL = { model: 'sonnet', effort: 'medium' }
 
 /* ---------------------------------------------------------------- 0 · READ */
 
@@ -128,19 +142,25 @@ if (!A.modules || !A.modules.length) {
 
 const GATE_SCHEMA = {
   type: 'object',
-  required: ['open', 'output'],
-  properties: { open: { type: 'boolean' }, output: { type: 'string' } },
+  required: ['open', 'output', 'approved'],
+  properties: {
+    open: { type: 'boolean' }, output: { type: 'string' },
+    approved: { type: 'array', items: { type: 'string' }, description: 'the module ids whose script status says "approved"' },
+  },
 }
 
 const gate = await agent(
-  `Run exactly this and nothing else, then report:
+  `Run exactly these and nothing else, in ONE shell call, then report:
 
-    python <the course-factory skill folder>/scripts/course_gate.py "${A.course}"
+    python ${SCRIPTS}/scripts/course_gate.py "${A.course}"
+${A.modules.map((m) => `    python ${SCRIPTS}/scripts/content_script.py status "${A.course}" --module ${m.id}`).join('\n')}
 
-open = true only if it exited 0. output = everything it printed, word for word.
-Do not fix anything, do not write any file.`,
-  { label: 'gate:ilo-map+kb', phase: 'Read', schema: GATE_SCHEMA }
+open = true only if course_gate.py exited 0. output = everything course_gate.py printed, word for word.
+approved = the module ids (as written after --module) whose status line says "approved by"; a draft, a
+missing script or an error is not approved. Do not fix anything, do not write any file.`,
+  { label: 'gate:ilo-map+kb', phase: 'Read', schema: GATE_SCHEMA, model: 'sonnet', effort: 'low' }
 )
+const APPROVED = new Set(((gate && gate.approved) || []).map(String))
 
 if (!gate || !gate.open) {
   /* No module agent starts without the approved ILO map and the knowledge-base decision (owner, 2026-10-16). */
@@ -156,9 +176,8 @@ if (!gate || !gate.open) {
 /* m.id is the module's number: 1, 2 ... - its folder is modules/module01 (L45), its script M01 */
 const two = (m) => String(m.id).replace(/\D/g, '').padStart(2, '0')
 
-const build = (m) => `Invoke ${SKILL} and follow it. Build ONE module.
-
-  Course folder:   ${A.course}
+/* what every module agent is told, the script writer and the builder alike */
+const brief = (m) => `  Course folder:   ${A.course}
   Your module:     ${m.id} — ${m.title}
   Your minutes:    ${m.minutes} total (${m.theory} theory / ${m.practical} practical)
 
@@ -166,28 +185,7 @@ Your module is written against YOUR ROWS OF THE ILO MAP - read them first:
   ilo_map.py show ${A.course} --module ${m.id}       (course-factory/scripts)
 - the Main ILO verbatim, every Sub-ILO you owe, the model-course items under your topic -
 then your module in working_claude/architecture.json (incl. what it keeps, modernises and
-adds from the old course, L41). Do not read the whole knowledge base: search it with
-course-factory/kb/scripts/kb_tool.py search, which writes into the course folder only, and
-list every source you use in the script's "sources". Every Sub-ILO is taught on a slide and
-checked by a question ("sub_ilo" on both) - script/GUIDE.md "Before writing".
-
-THE WORDS ARE TYPED ONCE (L29). Your module's content script is
-working_claude/script/M${two(m)}.json (course-factory script/GUIDE.md).
-  * Not approved yet: write it, make its review page and Word file, and STOP there -
-    report "awaiting approval". The operator approves each script; nothing is built
-    from words nobody approved.
-  * Approved: you BUILD, and you never type the deck's or a task page's HTML.
-    Read course-factory compile/GUIDE.md and the picture lanes (course-visuals: what
-    each slide's picture should be, the figure kit) - NOT course-module-ux,
-    course-module-ui or course-task-ux: the compiler builds their standard.
-      design_system.py install modules/module${two(m)}       (course-module-ui/scripts)
-      compile_module.py <course> --module ${m.id} --init-build   then fill the build sheet:
-          each slide's figure (a real photo, a kit drawing, a figure file), a layout
-          choice only where the script's own is not enough
-      compile_module.py <course> --module ${m.id}               fix what it reports, build again
-    A change goes into the script or the build sheet and is built again - never into
-    the HTML. A way of answering the compiler leaves "as it is" is the one page you
-    make by hand, to course-task-ux.
+adds from the old course, L41).
 
 YOU MAY WRITE ONLY INSIDE  ${A.course}/modules/module${two(m)}/  and your own
 working_claude/script/M${two(m)}.* and working_claude/figures/M${two(m)}/.
@@ -204,7 +202,50 @@ copy it into your module's assets/ (or use course-factory/scripts/fix.py sync-sh
 never write your own version of it.
 
 Your minutes are fixed and are not negotiable — anything that will not fit becomes
-self-study, and you record it so the handout can pick it up (L1).
+self-study, and you record it so the handout can pick it up (L1).${NOTES}`
+
+/* a module whose script is not approved: the words, on the session's model, then STOP */
+const writeScript = (m) => `Invoke ${SKILL} and follow it. Write ONE module's content script.
+
+${brief(m)}
+
+Do not read the whole knowledge base: search it with course-factory/kb/scripts/kb_tool.py
+search, which writes into the course folder only, and list every source you use in the
+script's "sources". Every Sub-ILO is taught on a slide and checked by a question ("sub_ilo"
+on both) - script/GUIDE.md "Before writing".
+
+THE WORDS ARE TYPED ONCE (L29). Your module's content script is
+working_claude/script/M${two(m)}.json (course-factory script/GUIDE.md). Write it, make its
+review page and Word file, and STOP there - report "awaiting approval". The operator
+approves each script; nothing is built from words nobody approved.
+
+Report "awaiting approval", every honesty marker with its source, the planned Track A
+buckets and Track B ratio, and what you moved to the handout.`
+
+/* an approved module: the mechanical build, on Sonnet (MECHANICAL), in ONE command per round */
+const build = (m) => `Invoke ${SKILL} and follow it. BUILD ONE module from its approved script.
+
+${brief(m)}
+
+Your script working_claude/script/M${two(m)}.json is approved: you never type the deck's or a
+task page's HTML, and you never change the approved words. Read the Quickstart at the top of
+course-factory compile/GUIDE.md and follow it step by step - it is the whole build - and the
+picture lanes it names (course-visuals/kit/CATALOGUE.md, never kit.js). NOT course-module-ux,
+course-module-ui or course-task-ux: the compiler builds their standard.
+
+    design_system.py install modules/module${two(m)}                     (course-module-ui/scripts)
+    compile_module.py <course> --module ${m.id} --init-build              (once, if the build sheet is missing)
+    fill the build sheet, edit the starter figure specs
+    build_module.py <course> --module ${m.id} --no-course-pages           (compile/scripts)
+        ONE command runs the figures, the compile, every check and the review sheets and prints
+        only what fails. Fix what it prints in the build sheet or the figure specs and run it
+        again - never a check on its own, never the HTML. --no-course-pages: one process
+        writes COURSE.html afterwards.
+    on PASS: the review the Quickstart names - ONE reviewer (model haiku, compile/REVIEW_PROMPT.md),
+        fix all it finds, build again, ONE re-review of the changed screens. No third pass.
+
+A way of answering the compiler leaves "as it is" is the one page you make by hand, to
+course-task-ux.
 
 The look is the compiler's; what the picture should be is course-visuals'. Every TOPIC
 screen leads with a figure (L23) — search the source files and knowledge base first, then
@@ -213,21 +254,33 @@ script's visual_kind "none" is how a screen honestly needs no figure. Where an i
 generating and you cannot produce it, write the brief to _visual_briefs/ and keep going:
 the module is finished as far as it can go, and the handoff is written at the end.
 
-Report what you built (or "awaiting approval"), every honesty marker with its source, the
-achieved Track A buckets and Track B ratio, what you moved to the handout, and every line
-the compiler printed under "To fix" or "left as it is".`
+Report: the last line build_module.py printed (PASS, or the problems left) and the path of
+its full log, how many build_module.py runs it took, every honesty marker with its source,
+the achieved Track A buckets and Track B ratio, what you moved to the handout, every line
+the compiler printed under "To fix" or "left as it is", and what the review found and
+whether each finding was fixed.`
 
 const qa = (m) => `You did NOT build this module. Check it.
 
   Module:  ${A.course}/modules/module${two(m)}
   Against: its rows of the ILO map (ilo_map.py show ${A.course} --module ${m.id}) and
            its module in working_claude/architecture.json
+  Factory: the skills folder ${A.factory || '(the installed plugin\'s skills/)'} - the checks below live in its
+           course-factory/, course-visuals/ and course-module-ux/ folders
 
-A module whose script is not approved yet has nothing built to check: report that, with
-blocking false. Otherwise run the deterministic checks and READ their output —
-check_script_match, check_hours, check_balance, check_syllabus_coverage, verify_links,
-audit_navigation, crosscheck_tasks, check_slide_text, check_visual_first, check_visuals,
-check_assets, the drawing check compile_module.py ran (L54), and classify_module.py.
+Run the deterministic checks in TWO shell calls and READ their output:
+  1  python course-factory/compile/scripts/build_module.py "${A.course}" --module ${m.id} --no-course-pages --no-fix
+     - the compile, the drawing check (L54), both script matches, navigation, the audits at
+     1280x800 and 1024x768, the importer and the review sheets' grading of every question (right
+     and wrong), in one command. It rebuilds from the same approved inputs, so the bytes come out
+     the same: anything it reports, or a stop (exit 2), is a finding.
+  2  the checks it does not run, chained in ONE call, each by the usage line at the top of its
+     file, printing only what fails: check_hours, check_balance (compiled decks carry no
+     data-active - "cannot run" is a known gap, not a finding), check_syllabus_coverage,
+     verify_links, audit_navigation, crosscheck_tasks, check_slide_text, check_visual_first,
+     check_visuals, check_assets and classify_module.py.
+The module's START_HERE pages, COURSE.html and course_map.js are written by compile_course.py once every
+module is in: their absence, and a link to them, is not a finding of this module.
 
 Then answer the questions no script can: is every outcome in the ILO map actually
 taught here, or only mentioned? Does each figure teach something the text does not?
@@ -255,11 +308,17 @@ const QA_SCHEMA = {
   },
 }
 
-/* Module 3 is verified while Module 7 is still being written. No wasted wall-clock. */
+/* Module 3 is verified while Module 7 is still being written. No wasted wall-clock.
+   An approved module is built and checked on Sonnet; a draft gets its script written on the session's model and
+   has nothing built to check, so no QA agent is spent on it. */
 const results = await pipeline(
   A.modules,
-  (m) => agent(build(m), { label: `build:${m.id}`, phase: 'Build' }).then((r) => ({ m, r })),
-  ({ m }) => agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA })
+  (m) => APPROVED.has(String(m.id))
+    ? agent(build(m), { label: `build:${m.id}`, phase: 'Build', ...MECHANICAL }).then((r) => ({ m, r, built: true }))
+    : agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' }).then((r) => ({ m, r, built: false })),
+  ({ m, built }) => built
+    ? agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
+    : { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] }
 )
 
 /* ------------------------------------------------------------ + · CROSS-CHECK */

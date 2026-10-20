@@ -76,6 +76,29 @@ def lines_of(out, n=12):
     return keep[-n:]
 
 
+COURSE_PAGES = re.compile(r"START_HERE|START_COURSE|COURSE\.html|course_map|_course_shell")
+
+
+def own_package_findings(code, out, folder):
+    """--no-course-pages (a module agent in a parallel build, 2.51.0): the course package is judged on this module alone.
+    The course's own pages (COURSE.html, course_map.js, every START_HERE*) are written by compile_course.py once every
+    module is in, and another module is another agent's - so a finding about either is left to the orchestrator's check
+    after assembly, and only this module's own findings fail it. Before, no module in a parallel build could PASS (the
+    start pages are missing until assembly), so none reached its review sheets. Returns (code, out, how many left out)."""
+    if code != 1 or "thing(s) to fix" not in out:
+        return code, out, 0
+    head, rest = out.split("thing(s) to fix", 1)
+    body, sep, tail = rest.partition("\nWorth a look")
+    items = [x for x in body.splitlines() if x.startswith("  - ")]
+    other = re.compile(r"module(?!%s\b)\d\d\b" % re.escape(folder[-2:]))
+    keep = [x for x in items if not COURSE_PAGES.search(x) and not (other.search(x) and folder not in x)]
+    left = len(items) - len(keep)
+    if keep:
+        return 1, out, left
+    return 0, head.rsplit("\n", 1)[0] + "\nThis module's own package findings: none (%d left to the check after assembly)\n" % left \
+        + (sep + tail if sep else ""), left
+
+
 def figure_slides(text):
     """the slide ids the figure pre-check already reported (their compile drawing findings say the same thing again)"""
     return set(re.findall(r"^  (s\d+\w*) \(", text, re.M))
@@ -195,6 +218,15 @@ def main(argv=None):
         if pkg is None:
             pkg = ex.submit(run, [PY, os.path.join(FACTORY, "check_course_package.py"), os.path.join(course, workspace.MODULES)])
         results["course package"] = pkg.result()
+    if o.no_course_pages:
+        pcode, pout, left = own_package_findings(*results["course package"], folder=os.path.basename(mdir))
+        if left and pcode != 0:
+            # the module's own findings fail it; the left-out ones are only listed in the log
+            pout += "\n(%d of the findings above concern the course's own pages or another module - the check after assembly's)\n" % left
+        results["course package"] = (pcode, pout)
+        if left:
+            notes.append("Course package: %d finding(s) about the course's own pages or other modules left to the check after "
+                         "assembly (compile_course.py, then check_course_package.py)" % left)
     for k in [x for x in jobs if x != "review sheets"] + ["course package"]:
         code, out = results[k]
         logged(k, out)

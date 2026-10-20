@@ -26,10 +26,12 @@ HARNESS = r"""
 const fs = require('fs')
 const src = fs.readFileSync(process.argv[2], 'utf8').replace(/^export const meta/m, 'const meta')
 const args = JSON.parse(process.argv[3])
-const labels = []
+const labels = [], opts = {}, prompts = {}
 const agent = async (prompt, o) => {
   labels.push(o.label)
-  if (o.label.startsWith('gate:')) return { open: true, output: 'open' }
+  opts[o.label] = { model: o.model || null, effort: o.effort || null }
+  prompts[o.label] = prompt
+  if (o.label.startsWith('gate:')) return { open: true, output: 'open', approved: args._approved || ['1', '2'] }
   if (o.label === 'qa:2') return null                       // the QA agent for module 2 brought back nothing
   if (o.label.startsWith('qa:')) return { module: o.label.slice(3), classification: 'OK', blocking: false, findings: [] }
   if (o.label.startsWith('read:')) return { modules: [] }
@@ -40,7 +42,7 @@ const parallel = (fs_) => Promise.all(fs_.map((f) => f()))
 const phase = () => {}
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 new AsyncFunction('args', 'agent', 'pipeline', 'parallel', 'phase', src)(args, agent, pipeline, parallel, phase)
-  .then((r) => console.log(JSON.stringify({ labels, r })))
+  .then((r) => console.log(JSON.stringify({ labels, opts, prompts, r })))
   .catch((e) => { console.log(JSON.stringify({ error: String(e && e.stack || e) })); process.exit(1) })
 """
 
@@ -79,6 +81,27 @@ def main():
               "error" not in two and "read:programme" not in labels and labels[:1] == ["gate:ilo-map+kb"], two)
         check("... a module whose QA brought back nothing blocks; a module with a clean QA does not",
               two.get("r", {}).get("blocking") == ["2"], two.get("r"))
+        o = two.get("opts", {})
+        check("... an approved module is built and checked on Sonnet at medium effort (2.51.0)",
+              o.get("build:1") == {"model": "sonnet", "effort": "medium"}
+              and o.get("qa:1") == {"model": "sonnet", "effort": "medium"}, o)
+        check("... the gate runs on Sonnet at low effort, and is asked every module's script status",
+              o.get("gate:ilo-map+kb") == {"model": "sonnet", "effort": "low"}
+              and two.get("prompts", {}).get("gate:ilo-map+kb", "").count("content_script.py status") == 2, o)
+        check("... the builder runs build_module.py, not the compile and the checks one by one",
+              "build_module.py" in two.get("prompts", {}).get("build:1", "")
+              and "--no-course-pages" in two.get("prompts", {}).get("build:1", ""), two.get("prompts", {}).get("build:1"))
+        three = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_approved": ["1"],
+                          "factory": "C:/f/skills", "notes": "no paid pictures"})
+        labels, o, pr = three.get("labels", []), three.get("opts", {}), three.get("prompts", {})
+        check("a draft module gets its script written on the session's model, and no QA agent is spent on it",
+              "script:2" in labels and "build:2" not in labels and "qa:2" not in labels
+              and o.get("script:2") == {"model": None, "effort": None}
+              and three.get("r", {}).get("blocking") == [], three)
+        check("args.factory pins the skills every agent reads, args.notes reaches every module agent",
+              "C:/f/skills/course-factory/SKILL.md" in pr.get("build:1", "")
+              and "C:/f/skills/course-factory/scripts/course_gate.py" in pr.get("gate:ilo-map+kb", "")
+              and "no paid pictures" in pr.get("build:1", "") and "no paid pictures" in pr.get("script:2", ""), pr)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
