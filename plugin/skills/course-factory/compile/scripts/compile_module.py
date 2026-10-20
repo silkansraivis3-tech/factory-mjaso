@@ -1013,7 +1013,12 @@ def composition(s, b, is_photo, has_fig):
         return c
     lay = s.get("layout")
     if lay == "visual_full":
-        return "photo" if is_photo else "stage"
+        # 2.52.0 - words over a full-screen photograph sit in a fixed column on a scrim: past STAGE_MAX_WORDS they spill off
+        # the slide (IGF M01 s01, 70 words: 18 px at 1280 x 800, 42 px at 1024 x 768, every benchmark build; M02 s01, 82
+        # words: 8 / 32 px), and M03-M15 each set "two-col" by hand. A long one is the photo beside the words (split).
+        if is_photo:
+            return "photo" if cs.wc(s.get("text", "")) <= STAGE_MAX_WORDS else "two-col"
+        return "stage"
     if lay == "split":
         return "two-col" if has_fig else "flow"
     if lay == "visual_wide":
@@ -1312,7 +1317,7 @@ KIT_WORDS = {
     "level": "level", "room": "space", "space": "space", "hold": "space", "compartment": "space", "enclosure": "space",
     "scale": "scale", "flashpoint": "scale", "temperature": "scale", "thermometer": "scale",
     "ship": "ga", "hull": "ga", "vessel": "ga", "vaporizer": "exchanger", "vaporiser": "exchanger",
-    "heater": "exchanger", "exchanger": "exchanger"}
+    "heater": "exchanger", "exchanger": "exchanger", "cylinder": "cylinder"}
 KIT_WORD = re.compile(r"\b(%s)(?:s|es)?\b" % "|".join(sorted(KIT_WORDS, key=len, reverse=True)), re.I)
 # per part type: anchor ("tl" = x, y is its top left, "c" = its centre), the room it takes (w, h), what it starts at and
 # where a step takes it
@@ -1321,7 +1326,7 @@ STARTER_PART = {
     "engine": ("tl", 120, 70, 0, 1), "vent": ("c", 40, 40, 0, 1), "pump": ("c", 40, 50, 0, 1),
     "detector": ("c", 50, 50, 0, 20), "gauge": ("c", 90, 90, 0, 7), "level": ("tl", 50, 110, 20, 80),
     "space": ("tl", 160, 80, 0, 1), "scale": ("tl", 90, 120, 0, 1), "ga": ("tl", 190, 56, 0, 1),
-    "exchanger": ("c", 40, 56, 0, 1)}
+    "exchanger": ("c", 40, 56, 0, 1), "cylinder": ("tl", 140, 230, 0, 1)}
 STARTER_MAX_PARTS = 9
 
 
@@ -1347,13 +1352,177 @@ def wrap_words(text, width):
     return "\n".join(out + [cur]) if cur else ""
 
 
-def starter_figure(script, s):
+# 2.52.0 - the starter is drawn to the shape of the column the deck shows it in, its parts spread over all of it. Laid
+# 640 x 390 on a grid of small fixed-size parts, ~20 of 25 failing M01 builds had a figure over half blank (EMPTY - s02 in
+# every one): each part kept its default size in a cell twice as large, a row of three left a blank cell, and a slide with
+# an L57 photo row under the drawing showed it in a 682 x 292 px panel, so the 390-high canvas was drawn at 0.75 with
+# bands of blank either side (M01 workflow benchmark, 2026-10-20).
+STARTER_W = 640
+STARTER_PANEL = (682.0, 416.0)       # the two-col figure column at 1280 x 800, the composition every starter is given
+STARTER_STRIP_H = 124.0              # the L57 photo row under a drawing at 1280 x 800 (M01 s04: the panel 682 x 292 px)
+STARTER_MARGIN, STARTER_LABEL = 14, 30   # round each part inside its cell; the room its label takes beside it
+STARTER_CELL_ASPECT = 1.5            # the cell shape the parts draw best in (a tank, an engine, a room: wider than tall)
+# the parts that are a fixed small symbol (and a text callout) take a narrower cell than the parts that grow to theirs
+STARTER_GLYPH = {"valve", "vent", "detector", "pump", "exchanger", "text"}
+
+
+def starter_size(lines, items, pool, taken=None):
+    """the canvas: 640 wide and as high as the deck's column is for that width - less the L57 photo row when a cleared
+    photograph shows one of the things the starter draws (the row goes under the drawing and takes its height)"""
+    W, H = STARTER_PANEL
+    if pool:                                            # what part_photos() will find for this drawing, nothing copied
+        spec = {"parts": [{"type": it["kind"], ("text" if it["kind"] == "text" else "label"): it["label"]} for it in items]}
+        fig = '<script type="application/json">%s</script>' % json.dumps(spec)
+        taken = taken or {}
+        if any(pid not in taken and any(shows_it(x, name) for x in (m.get("shows") or []))
+               for _, name in drawn_parts(lines, fig) for _, m, _, pid in pool):
+            H -= STARTER_STRIP_H
+    return STARTER_W, int(round(STARTER_W * H / W))
+
+
+def starter_rows(n):
+    """every way to share n parts out over rows in reading order (5: [5], [4, 1], [3, 2] ... [1, 1, 1, 1, 1])"""
+    if n <= 1:
+        return [[n]]
+    out = []
+    for first in range(n, 0, -1):
+        out += [[first] + rest for rest in starter_rows(n - first)] if first < n else [[n]]
+    return out
+
+
+def starter_cells(items, size):
+    """each part's cell (x, y, w, h), in reading order: of every way to share the parts out over rows, the one whose cells
+    come nearest each part's own shape (STARTER_SHAPE: a ship long and low, a level tall). The cells of a row are as wide
+    as their parts need - a symbol or a text callout about 0.6 of a growing part, a dial 0.7; a row of text callouts only
+    is as high as its words, and the rows with drawn parts share the rest. A scale stands the whole height at the left."""
+    import math
+    kinds = [it["kind"] for it in items]
+    if "scale" in kinds and len(kinds) > 1:
+        i = kinds.index("scale")
+        col = min(260, size[0] // 3)
+        rest = starter_cells(items[:i] + items[i + 1:], (size[0] - col, size[1]))
+        rest = [(x + col, y, w, h) for x, y, w, h in rest]
+        return rest[:i] + [(0, 0, col, size[1])] + rest[i:]
+    best = None
+    for rows in starter_rows(len(items)):
+        cells = starter_grid(items, size, rows)
+        cost = sum(abs(math.log((w / max(h, 1)) / STARTER_SHAPE.get(k, STARTER_CELL_ASPECT))) for k, (_, _, w, h) in zip(kinds, cells))
+        if best is None or cost < best[0] - 1e-9:
+            best = (cost, cells)
+    return best[1]
+
+
+# the cell shape (w / h) each part draws best in
+STARTER_SHAPE = {"ga": 3.2, "text": 3.0, "pipe": 3.0, "tank": 2.0, "engine": 1.6, "space": 1.7, "gauge": 1.0, "level": 0.6,
+                 "valve": 1.6, "vent": 0.8, "pump": 1.0, "exchanger": 1.0, "detector": 1.2, "cylinder": 0.7}
+
+
+def starter_grid(items, size, rows):
+    """the cells for one way of sharing the parts out over rows (starter_cells)"""
+    kinds = [it["kind"] for it in items]
+    weight = lambda k: 0.6 if k in STARTER_GLYPH else 0.7 if k == "gauge" else 1.0
+    cells, k = [], 0
+    fixed, grow = [], []
+    for c in rows:
+        row = items[k:k + c]
+        if all(it["kind"] == "text" for it in row) and len(rows) > 1:
+            per = size[0] / c
+            n = max(len(wrap_words(it["label"], max(10, int((per - 2 * STARTER_MARGIN) / 8.5))).split("\n")) for it in row)
+            fixed.append(n * 22 + 2 * STARTER_MARGIN + 12)
+            grow.append(0)
+        else:
+            fixed.append(0)
+            grow.append(max(weight(x) for x in kinds[k:k + c]))
+        k += c
+    left = size[1] - sum(fixed)
+    k, y = 0, 0.0
+    for c, fx, rw in zip(rows, fixed, grow):
+        h = fx or left * rw / (sum(grow) or 1)
+        ws = [weight(x) for x in kinds[k:k + c]]
+        x = 0.0
+        for wt in ws:
+            w = size[0] * wt / sum(ws)
+            cells.append((x, y, w, h))
+            x += w
+        k += c
+        y += h
+    return cells
+
+
+def starter_part(pid, it, cell):
+    """the part (and a pipe's words) drawn to fill its cell - a tank, a room, an engine, a ship as large as the cell
+    leaves room for its label; a symbol at its own size in the middle"""
+    kind, (x0, y0, cw, ch) = it["kind"], cell
+    m, lab = STARTER_MARGIN, STARTER_LABEL
+    cx, cy = int(round(x0 + cw / 2)), int(round(y0 + ch / 2))
+    iw, ih = int(cw - 2 * m), int(ch - 2 * m)            # the room inside the cell
+    if kind == "text":
+        return [{"id": pid, "type": "text", "x": cx, "y": cy, "anchor": "middle", "reveal": True,
+                 "text": wrap_words(it["label"], max(10, int(iw / 8.5)))}]
+    p = {"id": pid, "type": kind}
+    top = lambda w, h: p.update(x=int(round(cx - w / 2)), y=int(round(y0 + m + (ih - lab - h) / 2)), w=int(w), h=int(h))
+    if kind == "tank":
+        top(iw, max(56, min(ih - lab, iw * 0.5)))
+    elif kind == "space":
+        top(iw, max(60, ih - lab))
+    elif kind == "engine":
+        w = min(iw, 300)
+        top(w, max(60, min(ih - lab, w * 0.55)))
+    elif kind == "cylinder":                             # an engine cylinder: tall, its own words beside it
+        h = max(120, min(ih, 340))
+        p.update(x=int(round(cx - h * 0.3)), y=int(round(y0 + m + (ih - h) / 2)), w=int(h * 0.6), h=int(h))
+    elif kind == "ga":                                   # the house and the funnel stand above the hull: room for them
+        w = iw
+        h = max(40, min(ih - lab - 44, w * 0.24))
+        p.update(x=int(round(cx - w / 2)), y=int(round(y0 + m + 44 + (ih - lab - 44 - h) / 2)), w=int(w), h=int(h))
+    elif kind == "level":
+        top(50, max(80, min(ih - lab, 240)))
+    elif kind == "scale":                                # its marker's words stand to its right, and the marker moves
+        h = max(80, ih - 24)
+        p.update(x=int(round(x0 + m + 30)), y=int(round(y0 + m + 12)), w=90, h=int(h), reach=int(max(60, iw - 150)))
+    elif kind == "gauge":
+        p.update(x=cx, y=int(round(cy - lab / 2)), r=int(max(25, min(90, iw / 2 - 6, (ih - lab) / 2 - 6))))
+    elif kind in ("pump", "exchanger"):
+        p.update(x=cx, y=int(round(cy - lab / 2)), r=int(max(20, min(40, iw / 4, (ih - lab) / 3))))
+    elif kind == "detector":
+        p.update(x=cx - 24, y=cy - 10, r=int(max(19, min(30, ih / 5))))
+    elif kind == "valve":                                # a valve sits on its line: the line drawn across the cell with it
+        p.update(x=cx, y=cy, size=18)
+    elif kind == "vent":                                 # the outlet on top of its mast, the mast down the cell
+        p.update(x=cx - 24, y=int(round(y0 + m + 20)), mast=int(max(30, ih - 40)))
+    if kind == "pipe":
+        p.update(d="M%d %d H%d" % (int(x0 + m), cy, int(x0 + cw - m)), fluid="liquid")
+    if kind == "gauge":
+        p.update(min=0, max=10, numbers=False)                # a small dial: no numbers round it
+    if kind == "level":
+        p.update(min=0, max=100)
+    if kind == "valve":
+        p.update(labelAt="right", trip=False)
+    if kind == "vent":
+        p.update(labelAt="right")
+    if kind == "scale":
+        p.update(min=0, max=100, every=50, markers=[{"label": it["label"], "at": 50}])
+    if kind not in ("pipe", "scale"):
+        p["label"] = it["label"]
+    if it["start"]:
+        p["value"] = it["start"]
+    out = [p]
+    if kind == "valve":
+        out.insert(0, {"id": pid + "L", "type": "pipe", "d": "M%d %d H%d" % (int(x0 + m), cy, int(x0 + cw - m)), "fluid": "liquid"})
+    if kind == "pipe":                                    # a pipe has no words of its own: its name stands over it
+        out.append({"type": "text", "x": cx, "y": cy - 16, "anchor": "middle", "text": wrap_words(it["label"], max(10, int(iw / 8.5)))})
+    return out
+
+
+def starter_figure(script, s, pool=None, taken=None):
     """2.50.0 - a starter figure-kit spec for a drawing slide, so the build starts from something to edit, not from nothing
     (IGF M01 benchmark: 27 Edit/Write calls writing specs from scratch). One part per thing the script names - the term before
     " - " or ": " in each line (the rule words_html bolds by), else the kit's word in the line, else its first words as a text
-    callout - each labelled in the script's own words, laid on a grid inside 640 x 390 so none overlap, plus the kit's words
-    in the first sentence of `visual` that the lines did not name. One step per line after the opening statement, lighting
-    that line and moving the part it names. Returns the spec, or None when the slide has no lines to draw."""
+    callout - each labelled in the script's own words, plus the kit's words in the first sentence of `visual` that the lines
+    did not name. 2.52.0: drawn to the column's real shape (starter_size: `pool` = the course's cleared photographs, for the
+    L57 photo row) and spread over all of it, each part grown to its cell (starter_cells, starter_part) - none overlap.
+    One step per line after the opening statement, lighting that line and moving the part it names. Returns the spec, or
+    None when the slide has no lines to draw."""
     lines = cs.lines_of(s.get("text"))
     if not lines:
         return None
@@ -1397,47 +1566,13 @@ def starter_figure(script, s):
             continue
         have.add(kind)
         items.append({"kind": kind, "label": m.group(0).lower(), "start": STARTER_PART[kind][3], "to": STARTER_PART[kind][4]})
-    n = len(items)
-    cols = 1 if n == 1 else 2 if n <= 4 else 3
-    rows = -(-n // cols)
-    cw, ch = 640 // cols, 390 // rows
+    size = starter_size(lines, items, pool, taken)
     parts, ids, now = [], [], []
-    for k, it in enumerate(items):
-        pid, kind = "P%d" % (k + 1), it["kind"]
+    for k, (it, cell) in enumerate(zip(items, starter_cells(items, size))):
+        pid = "P%d" % (k + 1)
         ids.append(pid)
         now.append(it["start"])
-        cx, cy = (k % cols) * cw + cw // 2, (k // cols) * ch + ch // 2
-        if kind == "text":
-            parts.append({"id": pid, "type": "text", "x": cx, "y": cy, "anchor": "middle", "reveal": True,
-                          "text": wrap_words(it["label"], max(10, cw // 9))})
-            continue
-        anchor, w, h = STARTER_PART[kind][:3]
-        w = min(w, cw - 30)
-        h = min(h, ch - 56) if h else 0
-        p = {"id": pid, "type": kind}
-        if anchor == "tl":
-            p.update(x=cx - w // 2, y=cy - h // 2 - 8, w=w, h=h)
-        elif anchor == "c":
-            p.update(x=cx - (24 if kind in ("valve", "detector") else 0), y=cy - (10 if kind in ("pump", "exchanger", "detector") else 0))
-        if kind == "pipe":
-            p.update(d="M%d %d H%d" % (cx - w // 2, cy, cx + w // 2), fluid="liquid")
-        if kind == "gauge":
-            p.update(r=max(25, min(36, h // 2 if h else 36)), min=0, max=10, numbers=False)   # a small dial: no numbers round it
-        if kind == "level":
-            p.update(min=0, max=100)
-        if kind == "valve":
-            p.update(labelAt="right", trip=False)
-        if kind == "vent":
-            p.update(labelAt="right", mast=False)
-        if kind == "scale":
-            p.update(h=h, min=0, max=100, every=50, markers=[{"label": it["label"], "at": 50}])
-        if kind not in ("pipe", "scale"):
-            p["label"] = it["label"]
-        if it["start"]:
-            p["value"] = it["start"]
-        parts.append(p)
-        if kind == "pipe":                              # a pipe has no words of its own: its name stands over it
-            parts.append({"type": "text", "x": cx, "y": cy - 16, "anchor": "middle", "text": wrap_words(it["label"], max(10, cw // 9))})
+        parts += starter_part(pid, it, cell)
     plan = []
     for i, k, flipped in steps:
         it = items[k]
@@ -1449,10 +1584,10 @@ def starter_figure(script, s):
         title = "%d · %s" % (len(plan) + 1, words[:60].rstrip())
         plan.append({"title": title, "line": i, "play": [[ids[k], to, 600]]})
     label = first or (s.get("title") or "")
-    return {"size": [640, 390], "label": label, "idle": "Press Next step", "parts": parts, "steps": plan}
+    return {"size": list(size), "label": label, "idle": "Press Next step", "parts": parts, "steps": plan}
 
 
-def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=()):
+def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(), pool=None, taken=None):
     """the starter figure of every slide whose picture the kit can draw - written into `out` ({slide id: spec}) when its
     file is not there yet (never overwritten) - and the slide's entry in `build_screens` set to name it.
     `fallback` (2.50.6): the slides a 3D scene is planned for - a model_3d slide, or the one proposed unasked (L60). Each
@@ -1464,7 +1599,7 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
         two_d = s["id"] in fallback
         if not two_d and (s["id"] in skip or cs.parse_kind(s.get("visual_kind", "")) not in STARTER_FIGURE_KINDS):
             continue
-        spec = starter_figure(script, s)
+        spec = starter_figure(script, s, pool, taken)
         if not spec:
             continue
         name = "%s.kit.json" % s["id"]
@@ -1487,10 +1622,11 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
                 out[s["id"]] = spec
 
 
-def starter_build(script, shared=(), figdir=None, specs=None):
+def starter_build(script, shared=(), figdir=None, specs=None, mdir=None):
     """A starter build sheet. 2.49.1: the landing rule and the pass mark are the same in every module of a course, so they
     come from the course's other build sheets (the latest module that has them); the foot is this module's title; each
-    question answered on a picture gets its entry (figure + places) to fill in."""
+    question answered on a picture gets its entry (figure + places) to fill in. `mdir` (2.52.0): the module folder, whose
+    cleared photographs (and the course's) decide whether a starter figure gets the L57 photo row under it."""
     def first(key):
         for sheet in reversed(list(shared)):
             if sheet.get(key) not in (None, ""):
@@ -1520,8 +1656,10 @@ def starter_build(script, shared=(), figdir=None, specs=None):
                                    "in the sheet's top-level \"declined_3d\" - it is not proposed again." % best[1])
     if figdir is not None:             # 2.50.0: a starter figure-kit spec for every drawing slide - not a photo; a 3D one's
         three_d = {s["id"] for s in script["screens"] if s["kind"] == "slide" and cs.parse_kind(s.get("visual_kind", "")) == "model_3d"}
+        pool = photo_pool(mdir) if mdir and os.path.isdir(mdir) else []
+        taken = {k: v[0] for k, v in shown_elsewhere(mdir).items()} if pool else {}
         starter_figures(script, screens, figdir, skip={best[0]} if best else (), out=specs,      # is its 2D fallback (2.50.6)
-                        fallback=three_d | ({best[0]} if best else set()))
+                        fallback=three_d | ({best[0]} if best else set()), pool=pool, taken=taken)
     sheet["screens"] = screens
     return sheet
 
@@ -1745,7 +1883,7 @@ def main(argv=None):
         except (OSError, ValueError):
             pass
         figdir, specs = workspace.claude_path(o.course, "figures", cs.mid(o.module)), {}
-        cs.save(bp, starter_build(script, shared, figdir=figdir, specs=specs))
+        cs.save(bp, starter_build(script, shared, figdir=figdir, specs=specs, mdir=module_folder(o.course, o.module, o.module_dir)[0]))
         print("Done - a starter build sheet:\n    %s\n  Next: fill in each slide's picture, edit the starter figures (parts and "
               "options: course-visuals\\kit\\CATALOGUE.md), then build and check in one command:\n    compile\\scripts\\"
               "build_module.py <course> --module %s" % (bp, o.module))

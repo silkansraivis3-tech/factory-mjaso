@@ -96,7 +96,7 @@ to the tablets. Write a fragment as the deck sees it: its links start `../assets
 
 | In the script, or in the delivery file | On the screen |
 |---|---|
-| `layout` `visual_full` + a photograph | `.slide.photo` — the photo is the screen, the words over it |
+| `layout` `visual_full` + a photograph | `.slide.photo` — the photo is the screen, the words over it; past 45 words (2.52.0) the photo beside the words (`two-col`, the split photo) - set by itself, no build-sheet choice |
 | `layout` `split` | `two-col` — the words left, the picture right |
 | `layout` `visual_wide` | `stage` when the words are short (45 or fewer), else `two-col wide-right` |
 | `"composition"` in the build sheet | overrides: `opener`, `flow`, `two-col`, `wide-left`, `wide-right`, `stage` |
@@ -254,7 +254,8 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
   A photograph has no drawing to find places on, so each answer's place is its box in % of the photograph:
   `"areas": {"Relief valve": [62.5, 31, 12, 18]}`; a missing file, record, credit or box is reported, an image-model
   picture is refused. A tap on it stays the answer - it opens full screen by its corner button. A kit drawing's places are
-  its part ids or the words a part is drawn with (`"areas": {"Funnel": "ga1"}`); `"kit_step": 2` (or a word of a step's
+  its part ids or the words a part is drawn with (`"areas": {"Fuel tank": "ft"}`) - and a place drawn inside a part:
+  a side-view ga's funnel and house, `"areas": {"Funnel": "G.funnel"}` (2.52.0; never a % box); `"kit_step": 2` (or a word of a step's
   title) shows another step; **`"unlabel": "answers"`** (2.49.1, the choice to make) takes the words off only the parts
   the answers name (`areas` / `labels`) and their callouts - a `text` part pointing at them (`"to": [x, y]` inside the
   part), one with `"for": "<part id>"`, or one whose id is `T_<part id>` - so the rest of the drawing keeps its words and

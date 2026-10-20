@@ -22,6 +22,11 @@ turns did:
                       same words). Nothing is wrapped downwards: a column is height-bound as often as width-bound
                       (IGF M01 s05: wrapping made the drawing taller and every word smaller). Tried at four widths at
                       once; one that audits clean at every step is kept.
+             INSIDE   (2.52.0) a part past what it sits in - a room or a tank past a side-view ship's hull, a part past
+                      its room - moved in (a room takes its parts along), else drawn smaller (never under 70 %); worked
+                      out from the spec, so it serves the slide and every TASK PAGE drawing the same spec. The task
+                      pages' figures are measured as their pages draw them (the step, the words taken off, the label
+                      bands, the page's width) and get the same fix, as figures\\MNN\\_fit\\<question>.<spec>
              A fix is written to figures\\MNN\\_fit\\<slide>.<spec> with the spec's hash and the slide's layout: the
              compiler draws it only while both are unchanged. The spec itself is never rewritten. A figure no fix makes
              clean is reported as it is, with what to do - and the closest attempt is saved beside it
@@ -414,6 +419,219 @@ SHRINK = ("engine", "tank", "readout", "pump", "exchanger", "space", "integral_t
 SHRINK_MIN = 0.7          # a part is drawn at least this share of the size the spec gave it
 
 
+# ------------------------------------------------------------------ INSIDE (2.52.0)
+# M01 workflow benchmark, 2026-10-20: "inside" - a room or a tank past the ship's hull, a part past its room - failed the
+# deck slide and both task questions drawn from the same spec (s04, q01, q03) in builds 1-3, and figure_fit only repaired
+# it inside a COLUMN re-fit. It has one right answer: the part drawn inside what it sits in. Worked out from the spec, so
+# the same fix serves the slide and every task page that draws the spec.
+def hull_x(p, y):
+    """(left, right) of a side-view ga hull at height y (the spec's units) - the outline kit.js draws: the deck line at y,
+    the stern sloping to (0.03 w, d/2) and (0.1 w, d), the bow a curve from (w, 0) through (0.97 w, 0.62 d) to (0.87 w, d)"""
+    gx, gy, w, d = float(p.get("x") or 0), float(p.get("y") or 0), float(p.get("w") or 600), float(p.get("h") or 80)
+    t = min(1.0, max(0.0, (y - gy) / d))
+    left = gx + (0.06 * w * t if t <= 0.5 else 0.03 * w + (t - 0.5) / 0.5 * 0.07 * w)
+    s = (1.24 - (1.5376 - 0.96 * t) ** 0.5) / 0.48            # the curve's own parameter at this height
+    right = gx + w * ((1 - s) ** 2 + 2 * (1 - s) * s * 0.97 + s * s * 0.87)
+    return left, right
+
+
+def inside_fix(spec):
+    """(spec, repairs): every part drawn inside what it sits in - a room or a tank on a side-view ship inside the hull's
+    outline, a part in a room inside the room - by moving it in (a room takes its parts with it), else by drawing it
+    smaller (never under SHRINK_MIN of its size, only the parts SHRINK names). Decided on the spec as written."""
+    s = copy.deepcopy(spec)
+    parts = s.get("parts") or []
+    m = PAD / 2.0
+    ext = {i: extent(p) for i, p in enumerate(parts)}
+    ext = {i: list(b) for i, b in ext.items() if b and b[2] > b[0] and b[3] > b[1]}
+    for i, p in enumerate(parts):                         # an engine's cylinder heads stand 10 units above its block (kit.js)
+        if p.get("type") == "engine" and i in ext:
+            ext[i][1] -= 10
+    mid = lambda b: ((b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0)   # noqa: E731
+    within = lambda b, c: c[0] <= mid(b)[0] <= c[2] and c[1] <= mid(b)[1] <= c[3]   # noqa: E731
+    solid = lambda i: parts[i].get("type") not in PATHS + COVERS + ("ga", "panel")   # noqa: E731
+    rooms = [i for i in ext if parts[i].get("type") == "space"]
+    owner = {i: min((c for c in rooms if c != i and within(ext[i], ext[c]) and
+                     (ext[i][2] - ext[i][0]) * (ext[i][3] - ext[i][1]) < (ext[c][2] - ext[c][0]) * (ext[c][3] - ext[c][1])),
+                    key=lambda c: (ext[c][2] - ext[c][0]) * (ext[c][3] - ext[c][1]), default=None) for i in ext if solid(i)}
+    n = [0]
+
+    def move(i, dx, dy, kids=True):
+        p = parts[i]
+        p["x"] = round((p.get("x") or 0) + dx, 1)
+        p["y"] = round((p.get("y") or 0) + dy, 1)
+        ext[i] = [ext[i][0] + dx, ext[i][1] + dy, ext[i][2] + dx, ext[i][3] + dy]
+        if kids:
+            for j, c in owner.items():
+                if c == i:
+                    move(j, dx, dy)
+
+    def size(i, key, new):
+        p = parts[i]
+        old = float(p[key])
+        p[key] = round(new, 1)
+        ext[i][2 if key == "w" else 3] += new - old
+
+    def fit(i, top, bottom, side):
+        """part i into [top, bottom] and, at its depth, between side(y) = (left, right)"""
+        p, b = parts[i], ext[i]
+        can = p.get("type") in SHRINK and isinstance(p.get("w"), (int, float)) and isinstance(p.get("h"), (int, float))
+        if b[3] > bottom + 0.5:                           # past the floor: up if there is room, else shorter
+            up = min(b[3] - bottom, max(0.0, b[1] - top))
+            if up > 0.5:
+                move(i, 0, -up)
+                n[0] += 1
+            if ext[i][3] > bottom + 0.5 and can and ext[i][3] - bottom <= (1 - SHRINK_MIN) * p["h"]:
+                size(i, "h", p["h"] - (ext[i][3] - bottom))
+                n[0] += 1
+        if ext[i][1] < top - 0.5:                         # over the ceiling: down
+            dn = min(top - ext[i][1], max(0.0, bottom - ext[i][3]))
+            if dn > 0.5:
+                move(i, 0, dn)
+                n[0] += 1
+        lo, hi = side(ext[i][1]), side(ext[i][3])
+        left, right = max(lo[0], hi[0]) + m, min(lo[1], hi[1]) - m
+        if ext[i][2] - ext[i][0] > right - left + 0.5 and can and ext[i][2] - ext[i][0] - (right - left) <= (1 - SHRINK_MIN) * p["w"]:
+            size(i, "w", p["w"] - (ext[i][2] - ext[i][0] - (right - left)))
+            n[0] += 1
+        dx = (left - ext[i][0]) if ext[i][0] < left - 0.5 else (right - ext[i][2]) if ext[i][2] > right + 0.5 else 0
+        if dx and ext[i][0] + dx >= left - 0.5 and ext[i][2] + dx <= right + 0.5:
+            move(i, dx, 0)
+            n[0] += 1
+
+    # a room, a tank, an engine on a side-view ship: inside the hull's outline
+    for g in [i for i, p in enumerate(parts) if p.get("type") == "ga" and p.get("view") != "plan" and i in ext]:
+        gp = parts[g]
+        hb = (float(gp.get("x") or 0), float(gp.get("y") or 0), float(gp.get("x") or 0) + float(gp.get("w") or 600),
+              float(gp.get("y") or 0) + float(gp.get("h") or 80))
+        for i in [i for i in ext if solid(i) and owner.get(i) is None and within(ext[i], hb)]:
+            fit(i, hb[1] + m, hb[3] - m, lambda y, gp=gp: hull_x(gp, y))
+    # a part in a room: inside the room
+    for i, c in owner.items():
+        if c is not None:
+            r = ext[c]
+            fit(i, r[1] + m, r[3] - m, lambda y, r=r: (r[0], r[2]))
+    return s, n[0]
+
+
+def task_figures(course, module):
+    """[(question id, spec path, build entry, question, banded)] - every kit figure a task question is answered on or shows,
+    and whether its page draws it with label bands (a label_diagram on the same figure, task_pages.py "_bands")"""
+    import content_script as cs
+    p = cs.paths(course, module)
+    bp = os.path.join(p["dir"], cs.mid(module) + ".build.json")
+    if not (os.path.isfile(bp) and os.path.isfile(p["script"])):
+        return []
+    build, script = cs.load(bp), cs.load(p["script"])
+    qs = {s["id"]: s for s in script["screens"] if s["kind"] in cs.TASKS}
+    figdir = os.path.join(os.path.dirname(p["dir"]), "figures", cs.mid(module))
+    screens = build.get("screens") or {}
+    banded = {(e.get("figure") or "").strip() for sid, e in screens.items() if sid in qs and cs.mech(qs[sid]) == "label_diagram"}
+    out = []
+    for sid, e in screens.items():
+        f = (e.get("figure") or "").strip().replace("\\", "/")
+        if sid in qs and f.endswith(".kit.json"):
+            out.append((sid, os.path.join(figdir, f), e, qs[sid], f in banded))
+    return out
+
+
+def task_page_findings(exe, script, slide, code, qs, build, mdir, figdir, tries=None):
+    """{question id: [(check, part, detail)]} - the drawing check on the task page exactly as the compile builds it (task_pages.
+    page_html, drawing_check.run_page: the page's own width and layout, the step, the words taken off, the label bands), with
+    `tries` ({spec name: spec}) drawn instead of those specs and their fits; None when it could not run"""
+    import shutil
+    import tempfile
+    import task_pages
+    import drawing_check
+    task_pages.TRY.clear()
+    task_pages.TRY.update(tries or {})
+    try:
+        page = task_pages.page_html(script, slide, code, qs, build, mdir, figdir, "FIT", True, False, [])
+    finally:
+        task_pages.TRY.clear()
+    where = os.path.dirname(task_pages.page_path(mdir, slide, code, script))
+    os.makedirs(where, exist_ok=True)
+    f = os.path.join(where, "__fit_%s.html" % re.sub(r"\W", "", code.lower()))
+    tmp = tempfile.mkdtemp(prefix="ff_task_")
+    try:
+        io.open(f, "w", encoding="utf-8").write(page)
+        r = drawing_check.run_page(exe, f, os.path.join(tmp, "p"), tmp)
+    finally:
+        if os.path.isfile(f):
+            os.remove(f)
+        shutil.rmtree(tmp, ignore_errors=True)
+    if r.get("error") or r.get("aborted"):
+        return None
+    out = {q["id"]: [] for q in qs}
+    for x in r.get("findings") or []:
+        qid = (x.get("where") or "").split(",", 1)[0].strip()
+        out.setdefault(qid, []).append((x.get("check"), x.get("part") or "", x.get("detail") or ""))
+    return out
+
+
+def fix_tasks(course, module, figdir, fix=True):
+    """2.52.0 - the task pages' kit figures: each page with one measured by the drawing check as the compile builds it, and
+    INSIDE fixed by itself - the same fix as a slide's, worked out from the spec, kept only when the page's drawing check
+    finds no part out any more and nothing new. The fit is written to figures\\MNN\\_fit\\<question>.<spec>, which
+    task_pages.py draws while the spec is unchanged. Returns ([lines fixed], [lines left])."""
+    import compile_module as cm
+    import content_script as cs
+    import task_pages
+    figs = {qid: (sp, q) for qid, sp, e, q, banded in task_figures(course, module) if os.path.isfile(sp)}
+    exe = studio.find_browser()
+    mdir, _ = cm.module_folder(course, module)
+    if not figs or not exe or not mdir or not os.path.isdir(os.path.join(mdir, "assets")):
+        return [], []
+    p = cs.paths(course, module)
+    script, build = cs.load(p["script"]), cs.load(os.path.join(p["dir"], cs.mid(module) + ".build.json"))
+    fixed, left = [], []
+    for slide, code, qs in task_pages.sets(script):
+        mine = [q["id"] for q in qs if q["id"] in figs]
+        if not mine:
+            continue
+        base = task_page_findings(exe, script, slide, code, qs, build, mdir, figdir)
+        if base is None:
+            continue
+        out = {qid: [x for x in base.get(qid, [])] for qid in mine}
+        for name in sorted({os.path.basename(figs[q][0]) for q in mine}):
+            users = [q for q in mine if os.path.basename(figs[q][0]) == name]
+            bad = [q for q in users if any(x[0] == "inside" for x in out[q])]
+            if not (fix and bad):
+                continue
+            text = io.open(figs[users[0]][0], encoding="utf-8").read().strip()
+            try:
+                spec = json.loads(text)
+            except ValueError:
+                continue                                  # check_kit.py says so above
+            cand, k = inside_fix(spec)
+            if not k or spoiled(spec, cand):
+                continue
+            after = task_page_findings(exe, script, slide, code, qs, build, mdir, figdir, {name: cand})
+            if after is None:
+                continue
+            for q in bad:
+                now = after.get(q, [])
+                if any(x[0] == "inside" for x in now) or len(now) >= len(out[q]) or \
+                        not {x[0] for x in now} <= {x[0] for x in out[q]}:
+                    continue                              # never kept when it leaves a part out, or brings a new problem
+                how = "INSIDE: %d part(s) moved or drawn smaller to sit inside what they are on, measured on its task page" % k
+                fp = cm.fit_path(figdir, name, q)
+                os.makedirs(os.path.dirname(fp), exist_ok=True)
+                io.open(fp, "w", encoding="utf-8").write(json.dumps(
+                    {"source": cm.sha(text), "column": TASK_COLUMN, "how": how, "made_by": "figure_fit.py", "spec": cand},
+                    ensure_ascii=False, indent=1))
+                fixed.append("%s (%s, task page): fixed by itself - %s" % (q, name, how))
+                out[q] = now
+        for q in mine:
+            if out[q]:
+                left.append("%s (%s, task page): %s" % (q, os.path.basename(figs[q][0]),
+                                                        "; ".join(sorted({"%s - %s" % (c, short(pt)) for c, pt, _ in out[q]}))[:300]))
+    return fixed, left
+
+
+TASK_COLUMN = "task"          # the "column" a task page's fit is made for (compile_module.fitted)
+
+
 def tidy(spec, boxes, width, w0=None, owner=None, skip=()):
     """one round of local repairs, after a squeeze - nothing is wrapped, so the drawing keeps its shape:
     a part past its room's right edge (or the frame's) moves left into free room, else is drawn narrower (never under
@@ -602,6 +820,20 @@ def try_fixes(spec_path, sid, spec, r0, probs0, log):
     panel = (r0.get("states") or [{}])[-1].get("panel") or [0, 0]
     boxes = r0.get("parts") or {}
     tried = []
+    if "inside" in checks:                                # 2.52.0 INSIDE: every part drawn inside what it sits in
+        c, k = inside_fix(spec)
+        if k and not spoiled(spec, c):
+            p, r = measure(spec_path, sid, c)
+            tried.append("moved %d part(s) inside what they sit in" % k)
+            if p == []:
+                return c, "INSIDE: %d part(s) moved or drawn smaller to sit inside what they are on (the hull, their room)" % k, None
+            if p is not None and {x[2] for x in p} <= {"empty"} and (r.get("parts") or {}):
+                c2 = crop(c, r.get("parts") or {}, (r.get("states") or [{}])[-1].get("panel") or panel)
+                if c2:
+                    p2, _ = measure(spec_path, sid, c2)
+                    if p2 == []:
+                        return c2, ("INSIDE + EMPTY: %d part(s) moved inside what they sit in, then cropped to what it shows (%s)"
+                                    % (k, " ".join(fmt(v) for v in c2["view"]))), None
     if checks <= {"empty"} and boxes:                     # only EMPTY: crop to what the steps show
         c = crop(spec, boxes, panel)
         if c:
@@ -885,10 +1117,19 @@ def run_all(course, module, fix=True, jobs=4):
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
         io.open(cache_path, "w", encoding="utf-8").write(json.dumps(cache, indent=1, sort_keys=True))
     n = len(todo) + len(skipped)
+    # 2.52.0 - the task pages' figures, as their pages draw them: INSIDE fixed by itself. What is left is said here and
+    # judged by the compile's drawing check (which reads the same pages)
+    try:
+        t_fixed, t_left = fix_tasks(course, module, figdir, fix) if figdir else ([], [])
+    except Exception as err:                             # noqa: BLE001 - the compile's drawing check still judges the pages
+        t_fixed, t_left = [], ["the task pages' figures could not be measured here (%s) - the compile's drawing check judges them" % err]
+    fixed += t_fixed
+    data["tasks"] = {"fixed": t_fixed, "left": t_left}
     lines += ["Figures: %d on slides, %d spec(s) checked" % (n, len(all_specs(course, module)))]
     lines += ["  spec: " + x for x in spec_probs]
     lines += ["  " + x for x in fixed]
     lines += ["  " + x for x in left]
+    lines += ["  (the compile's drawing check judges) " + x for x in t_left]
     code = 1 if (left or spec_probs) else 0
     lines.append("Figures: %s" % ("every figure clean%s" % (" (%d fixed by itself)" % len(fixed) if fixed else "") if code == 0
                                   else "%d figure(s) to fix" % (len(left) + len(spec_probs))))

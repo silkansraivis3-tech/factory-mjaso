@@ -735,13 +735,16 @@
     var g = ga.getBoundingClientRect();
     if (!g.width || !g.height) { return; }
     each(held, function (h) {
-      var part = svg.__kit.parts[h.getAttribute('data-part')], r = part && part.g.getBoundingClientRect();
+      /* "G.funnel" (2.52.0): a named place drawn inside part G - its own shape (kit.js data-kit-place) */
+      var pid = h.getAttribute('data-part') || '', dot = pid.indexOf('.'), part = svg.__kit.parts[dot > 0 ? pid.slice(0, dot) : pid];
+      var node = part && (dot > 0 ? part.g.querySelector('[data-kit-place="' + pid.slice(dot + 1) + '"]') : part.g);
+      var r = node && node.getBoundingClientRect();
       if (!r || !r.width) { return; }
       var cx = r.left + r.width / 2 - g.left, cy = r.top + r.height / 2 - g.top;
       if (h.tagName.toLowerCase() === 'line') {                    /* a leader line ends on the middle of its part */
         /* 2.50.1 - of what is DRAWN of it: a vent's tap area is the whole mast run (2.49.7) but unpainted, and the middle of
            the part's box was empty deck (IGF M01 m01, found by three reviews and now by review_sheets.mjs) */
-        var pb = paintedBox(part.g);
+        var pb = dot > 0 ? r : paintedBox(part.g);
         if (pb) { cx = (pb.left + pb.right) / 2 - g.left; cy = (pb.top + pb.bottom) / 2 - g.top; }
         h.setAttribute('x2', (100 * cx / g.width).toFixed(2)); h.setAttribute('y2', (100 * cy / g.height).toFixed(2));
         return;

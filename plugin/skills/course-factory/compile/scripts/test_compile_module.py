@@ -196,6 +196,47 @@ def recap_part(tmp):
           '<p class="rc-next" data-script-ignore>' in r, r)
     code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
     check("... and check_script_match finds exactly the approved words on it", code == 0, out)
+    long_layouts_part(tmp)
+
+
+# IGF M01 s01 and M02 s16, as approved: the words that spilled in every 2026-10-20 benchmark build
+M01_S01 = ("Some ships burn gases or low-flashpoint liquids as fuel: LNG, methanol, ammonia, hydrogen.\nThese ships follow the IGF "
+           "Code.\nIn this module:\n• the rules and the ships they cover\n• what is new on board\n• how the ship runs and "
+           "takes on fuel\nAfter 40 minutes you can point out what is new on a general arrangement plan, and say how the ship runs "
+           "and takes on fuel.")
+M02_S16 = ("Fuels - LNG, CNG, LPG, methanol, ethanol, ammonia and hydrogen are kept cold, under pressure or as normal liquids.\n"
+           "The LNG path - tank, tank connection space, vaporizer, gas valve unit, double-walled pipe, engine.\n"
+           "Tanks - independent A, B and C, membrane and integral; the secondary barrier needed depends on the type.\n"
+           "Zones - 0, 1 and 2 show where gas may be, and decide which equipment and work are allowed.\n"
+           "Fire plan - the fuel preparation room is category A; A-60 boundaries shield spaces facing the fuel.\n"
+           "Watching - level, pressure, temperature and gas are read locally and remotely; at 40 % LEL on two detectors the "
+           "safety system acts.")
+
+
+def long_layouts_part(tmp):
+    """2.52.0 - a long opening over a full-screen photograph is laid out beside the photograph (it spilled 18 / 42 px), and a
+    six-box recap fits a 1024 x 768 screen (its last line went 9 px under the deck's chrome) - by the deck audit itself"""
+    print("\n-- long words on the opening photograph and the recap (2.52.0)")
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    s = {"layout": "visual_full", "text": M01_S01}
+    check("a full-screen photograph with more than %d words is laid out beside them (two-col: the split photo); a short one "
+          "stays full screen" % cm.STAGE_MAX_WORDS,
+          cm.composition(s, {}, True, True) == "two-col" and cm.composition(dict(s, text="Gas as fuel."), {}, True, True) == "photo"
+          and cm.composition(s, {"composition": "photo"}, True, True) == "photo", cm.composition(s, {}, True, True))
+    os.makedirs(os.path.join(tmp, "rl"))
+    screens = json.loads(json.dumps(SCREENS))
+    screens[0]["text"] = M01_S01
+    screens.insert([x["id"] for x in screens].index("t02"), {"id": "s05", "kind": "slide", "recap": True, "title": "What to take away",
+                                                             "visual_kind": "none", "text": M02_S16, "minutes": 2})
+    c, md = new_course(os.path.join(tmp, "rl"), script(screens=screens))
+    code, out = run(COMPILE, c, "--module", "1")
+    check("the long fixture builds", code == 0 and 'class="slide photo split"' in section(deck(md), "s01"), out)
+    audits = os.path.join(SKILLS, "course-module-ux", "measure", "scripts", "run_audits.py")
+    code, aout = run(audits, os.path.join(md, "presentation", "index.html"), "--viewport", "1024x768", "--quiet")
+    bad = [x for x in aout.splitlines() if re.search(r"\((s01|s05)\)", x) and re.search(r"spills|under #chrome|over-filled", x)]
+    check("audited at 1280 x 800 and 1024 x 768: the opening's words stay on the slide, the recap clears the deck's chrome",
+          "1024x768" in aout and not bad, bad or aout[-800:])
 
 
 def tasks_part(tmp):

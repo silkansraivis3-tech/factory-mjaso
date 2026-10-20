@@ -57,8 +57,58 @@ def main():
     check("a passing package and a stop (exit 2) are passed through untouched",
           b.own_package_findings(0, "Ready", "module01") == (0, "Ready", 0)
           and b.own_package_findings(2, "Stopped", "module01") == (2, "Stopped", 0))
+    blanks_part()
+    stages_part()
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
     return 1 if FAILS else 0
+
+
+def blanks_part():
+    """2.52.0 - a build sheet with --init-build's blanks still in it builds nothing; one line says what to fill (M01 workflow
+    benchmark run 1: a 68 s build whose eight compile problems were all blanks)"""
+    import io
+    import json
+    import shutil
+    import subprocess
+    import tempfile
+    import test_compile_module as tcm
+    import content_script as cs
+    tmp = tempfile.mkdtemp(prefix="bm_blanks_")
+    try:
+        sc = tcm.script(screens=tcm.SCREENS + [
+            {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the vent mast.",
+             "visual": "the ship", "answer": "Vent mast*\nFuel tank", "feedback": "High above the deck."}])
+        c, md = tcm.new_course(tmp, sc)
+        check("a filled build sheet has no blanks", b.starter_blanks(c, 1) == [], b.starter_blanks(c, 1))
+        tcm.build_of(c, lambda s: s["screens"].update(s01={"figure": "", "visual_kind": "photo"}, q02={"figure": "", "areas": {}},
+                                                       s04={"figure": "m01_s04_3d.html", "visual_kind": "model_3d"}))
+        got = b.starter_blanks(c, 1)
+        check("the starter's blanks are found: a slide with no picture, a question on no picture, a planned 3D scene not written",
+              [x[0] for x in got] == [["s01"], ["q02"], ["s04 (m01_s04_3d.html)"]], got)
+        p = subprocess.run([sys.executable, os.path.join(HERE, "build_module.py"), c, "--module", "1"], capture_output=True,
+                           text=True, encoding="utf-8", errors="replace", timeout=300)
+        out = (p.stdout or "") + (p.stderr or "")
+        check("build_module.py builds nothing on it (exit 1) and says in one line what to fill",
+              p.returncode == 1 and out.strip().count("\n") == 0 and out.startswith("FAIL M01 - nothing built")
+              and "s01" in out and "q02" in out and "declined_3d" in out
+              and not os.path.isfile(os.path.join(md, "presentation", "index.html")), (p.returncode, out))
+        tcm.build_of(c, lambda s: s["screens"]["s04"].update(declined_3d="the operator keeps the flat drawing"))
+        check("a 3D scene declined with the operator's reason is no blank", [x[0] for x in b.starter_blanks(c, 1)] == [["s01"], ["q02"]],
+              b.starter_blanks(c, 1))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def stages_part():
+    import io
+    import time
+    buf = io.StringIO()
+    b.write_stages(buf, [("figures (figure_fit.py)", 41.2), ("compile (compile_module.py, its drawing check)", 63.0),
+                         ("  audits 1280x800 1024x768", 120.4)], time.time() - 230)
+    text = buf.getvalue()
+    check("2.52.0: the build log ends with each stage's seconds and the total",
+          "===== stage seconds" in text and "figures (figure_fit.py)" in text and "41 s" in text and "120 s" in text
+          and "total" in text and "230 s" in text, text)
 
 
 if __name__ == "__main__":
