@@ -1376,7 +1376,13 @@ the ship look realistic aswell, look at real images of it", "definitely ... the 
   Fire, flame, spark and spill drawn as they look (flame colours, a jet fire's lifted blue root, LNG's white vapour fog,
   an arc's blue halo); a dual-fuel cylinder's combustion as plumes along the jets (faint blue gas, bright pilot).
 - **Layout**: a room's name with no clear place inside (the room filled with equipment) goes beside it; the valve is no
-  taller than the ISA symbol it replaces; a shade, a section hatch and a bolt are not measured again.
+  taller than the ISA symbol it replaces; a shade, a section hatch and a bolt are not measured again, and what does not
+  move is measured once per state (not again at every motion phase). Real specs (the M01 benchmark build, 96 figures)
+  were drawn new against old: a low tank's saddle feet scale with it (a 40-high tank in a tight hold), its straps are
+  surface detail words may cross, the turbocharger stays inside the engine's room, a zone over a tank takes deep inks.
+- **`audit_drawing.js` twice as fast, the same findings**: a bounding-box test before each point-in-shape test, one inverse
+  matrix per shape per pass, a body's shade / hatch / bolt judged as the body (`kitCopy`). IGF M03 s15 (8 steps, six
+  flowing pipes) audited in 27 s (56 s before, with half the shapes); `test_audit_drawing.py` 37 pass.
 - **The rule** (`SPEC.md` "Rules of the look", `PARTS.md`): a part declares `look` - `equipment`, `screen` or `diagram`;
   equipment draws its bodies in a kit material; screens stay ISA-101. `check_kit.py parts` enforces it (`test_kit.py`).
 

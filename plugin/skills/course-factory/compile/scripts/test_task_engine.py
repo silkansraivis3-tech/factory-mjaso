@@ -523,10 +523,12 @@ MC_PLAN = [
         " return {box: R(b), cls: c.className, sw: c.scrollWidth, cw: c.clientWidth, sh: c.scrollHeight, ch: c.clientHeight, t: c.textContent.trim()}; });"]]],
     ["m02", [["eval",
         "function look(s) { var v = s.querySelector('svg.csym'), f = v.querySelector('.kit-vfill');"
-        " return {bg: getComputedStyle(v).backgroundColor, fill: getComputedStyle(f).fill, op: getComputedStyle(f).opacity}; }"
+        " return {bg: getComputedStyle(v).backgroundColor, fill: getComputedStyle(f).fill, op: getComputedStyle(f).opacity,"
+        " plate: getComputedStyle(v.querySelector('.kit-valve-bg')).fill}; }"
         "[].filter.call(s.querySelectorAll('.opt'), function (o) { return o.textContent.trim() === 'open'; })[0].click(); out.open = look(s);"],
              ["tap", ".opt", "closed"], ["eval", "var v = s.querySelector('svg.csym'), f = v.querySelector('.kit-vfill');"
-        "out.closed = {bg: getComputedStyle(v).backgroundColor, fill: getComputedStyle(f).fill, op: getComputedStyle(f).opacity};"]]],
+        "out.closed = {bg: getComputedStyle(v).backgroundColor, fill: getComputedStyle(f).fill, op: getComputedStyle(f).opacity,"
+        " plate: getComputedStyle(v.querySelector('.kit-valve-bg')).fill};"]]],
     ["m03", [["eval", RECT + "out.m03 = {low: Math.max.apply(null, [].map.call(s.querySelectorAll('.chip'), function (c) { return R(c).b; })),"
         " dock: document.getElementById('dock').getBoundingClientRect().top, many: s.getAttribute('data-many')};"]]],
 ]
@@ -600,9 +602,11 @@ def fixes_part(exe, tmp):
     check("the answer key's tables: the head row sits on its first question, not pushed down over it (gb_page.css .scroll th)",
           len(rows) == 2 and all(x["th"]["b"] <= x["td"]["t"] + 1 for x in rows), rows or key)
     o, s = r.get("open") or {}, r.get("closed") or {}
-    check("operate the panel: the valve is drawn on the deck's dark screen, closed = filled and bright, open = hollow, as in the deck",
+    # 2.52.0 (L61): the valve is a real valve whose ISA bow-tie is a light plate on its cast body - closed, the bow-tie is
+    # filled in the plate's dark ink, so "closed" reads against the plate, not against the screen
+    check("operate the panel: the valve is drawn on the deck's dark screen, closed = filled (dark on its light plate), open = hollow, as in the deck",
           s.get("bg") == o.get("bg") == "rgb(12, 30, 58)" and float(s.get("op", 0)) > 0.9 and float(o.get("op", 1)) < 0.1
-          and lum(s.get("fill")) > lum(s.get("bg")) + 80, {"open": o, "closed": s})
+          and lum(s.get("plate")) > lum(s.get("fill")) + 80, {"open": o, "closed": s})
     q = r.get("m03") or {}
     check("rebuild the incident with 7 events: the cards beside the places, all above the Check bar",
           q.get("many") == "part" and q.get("low", 9e9) <= q.get("dock", 0) + 0.5, q)
