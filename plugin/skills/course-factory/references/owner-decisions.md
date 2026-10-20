@@ -172,6 +172,11 @@ Pictures: KB → old course → source files → internet → authored → gener
 
 **At least one 3D scene in every module where the subject allows it - strongly recommended** (Aleksis, 2026-10-19: *"it should be like it is very recommended to build a 3d model at least once where you can in a module"*). A script with no 3D slide is no reason to skip it: `compile_module.py --init-build` picks the best slide unasked (a shape, an inside or a layout in space; never a real photo's slide) and writes its starter scene entry from IGF M03's `m03_station3d.js`. A module built with no scene is said loud - the build's RECOMMENDED block and its own card on the review page, naming the best candidate and why. Never a block (2.18.1): the operator declines with their reason, `"declined_3d"` at the top of the build sheet, and it is not proposed again. A slide the script plans as 3D given a 2D figure stays a must-fix until its own `"declined_3d"` holds a reason. L46's limits and `compile/GUIDE.md` 2b's speed and tap rules unchanged
 
+## L61
+**Built out in:** now (2.52.0)
+
+**Physical equipment is drawn as it looks on board** (Aleksis, 2026-10-20, approving the realistic kit mock-up: *"yes we like this new kit styling"*; *"also do the Parts added from courses"*; *"make the ship look realistic aswell, look at real images of it"*). Every figure-kit part that is a physical thing is drawn in its material, with light and shade and its real features (flanges, saddles, a dome, an actuator or a handwheel, a bedplate, a ship's plating and superstructure); screens stay flat ISA-101 and diagrams stay diagrams; the teaching state stays readable and amber / red stay for alarm / trip. The kit does it in every deck - no option, no per-slide ask. A new part declares its `look` and an `equipment` part draws with `KIT.h.body` / `KIT.h.equip` and the kit's materials (`course-visuals/kit/PARTS.md`, `check_kit.py`).
+
 ## L41
 **Built out in:** now (2.19.0)
 

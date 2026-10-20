@@ -67,7 +67,8 @@
     and the kit does the drawing, the motion and the alarms. Every alarm fires at the moment its value crosses the mark,
     so the order of events is always right. The kit also lays every figure out by itself: each label gets a clear place
     (a leader line when it had to move away), no word is drawn under 12.5 px, boxes are as wide as their words, and the
-    colours follow the panel - switch it above.</p>
+    colours follow the panel - switch it above. Physical equipment looks like the real equipment (L61, 2.52.0): its
+    material, light and shade, its flanges, saddles, actuators and the rest; the screens stay calm ISA-101 screens.</p>
 
   <h1 class="family">1 · Instruments</h1>
   <h2>Slide s14 rebuilt from a spec</h2>
@@ -199,12 +200,12 @@
         { id: 'T', type: 'readout', x: 40, y: 34, w: 220, h: 70, label: 'TEMPERATURE', unit: '°C', sign: true, value: 12,
           marks: [{ at: -60, kind: 'trip', dir: 'down' }] } ],
         steps: [ { title: 'Cold liquid reaches the sensor', play: [['T', -158, 3600]] } ] } },
-    { title: 'Bilge well', note: 'A leak drips in, the pool rises and the TT sensor sits at the bottom. The drips run only while the pool is rising.',
+    { title: 'Bilge well', note: 'Let into the painted deck plate: a leak drips from a flanged pipe end, the pool rises and the TT sensor sits at the bottom. The drips run only while the pool is rising.',
       spec: { size: [300, 200], parts: [
         { id: 'W', type: 'well', x: 85, y: 50, w: 130, h: 120 },
         { type: 'text', x: 150, y: 192, text: 'tank connection space' } ],
         steps: [ { title: 'Liquid leaks into the well', play: [['W', 1, 5000, 0, 'linear']] } ] } },
-    { title: 'Valve and pipe flow', note: 'ISA bow-tie valve: hollow when open, filled when closed. The flow keeps moving until the valve shuts.',
+    { title: 'Valve and pipe flow', note: 'A real valve - cast body, end flanges, bonnet, diaphragm actuator - in a stainless pipe with bolted flanges. The ISA bow-tie is its plate: hollow when open, filled when closed. The flow keeps moving until the valve shuts.',
       spec: { size: [320, 170], parts: [
         { id: 'F', type: 'pipe', d: 'M20 70 H300', value: 0 },
         { id: 'V', type: 'valve', x: 160, y: 70, label: 'bunkering valve', value: 1 } ],
@@ -289,13 +290,21 @@
   };
 
   var CARDS2 = [
-    { title: 'Tank, pump and fluid front', note: 'Horizontal type C tank, P&ID centrifugal pump. The liquid front moves along the pipe while the tank level drops.',
+    { title: 'Valves: automatic and manual', note: 'Drawn as what they are: an automatic valve has its actuator (the default), a manual one its handwheel ("actuator": false). The plate turns red only when a valve shuts on a trip; closing a manual valve as normal work ("trip": false) stays grey.',
+      spec: { size: [460, 170], parts: [
+        { id: 'P', type: 'pipe', fluid: 'gas', d: 'M20 80 H440', value: 1 },
+        { id: 'VA', type: 'valve', x: 90, y: 80, label: 'automatic', value: 1 },
+        { id: 'VB', type: 'valve', x: 230, y: 80, label: 'shut-off', value: 1 },
+        { id: 'VC', type: 'valve', x: 370, y: 80, label: 'manual', actuator: false, trip: false, value: 1 } ],
+        steps: [ { title: 'The shut-off valve trips', play: [['VB', 0, 700], ['P', 0, 400, 300]] },
+                 { title: 'The manual valve is closed by hand', play: [['VC', 0, 900]] } ] } },
+    { title: 'Tank, pump and fluid front', note: 'A type C tank as it is on deck - cladding, straps, saddles, its dome where the pipe leaves - cut away to show the LNG; a centrifugal pump on its foot. The liquid front moves along the pipe while the tank level drops.',
       spec: { size: [320, 190], parts: [
         { id: 'P', type: 'pipe', fluid: 'liquid', d: 'M170 105 H305', fill: 0, value: 0 },
         { id: 'T', type: 'tank', x: 20, y: 60, w: 150, h: 90, value: 0.7, label: 'fuel tank' },
         { id: 'U', type: 'pump', x: 235, y: 105, label: 'pump' } ],
         steps: [ { title: 'The pump starts', play: [['U', 1, 200], ['P.fill', 1, 1500, 200, 'linear'], ['P', 1, 400, 200], ['T', 0.55, 3200, 0, 'linear']] } ] } },
-    { title: 'Vaporizer', note: 'P&ID heat-exchanger symbol. Liquid goes in, the heating medium works, and gas comes out.',
+    { title: 'Vaporizer', note: 'A shell-and-tube exchanger with flanged heads; its copper coil glows while it heats. Liquid goes in, the heating medium works, and gas comes out.',
       spec: { size: [320, 170], parts: [
         { id: 'L', type: 'pipe', fluid: 'liquid', d: 'M20 75 H142', fill: 0, value: 0 },
         { id: 'G', type: 'pipe', fluid: 'gas', d: 'M178 75 H300', fill: 0, value: 0 },
@@ -316,7 +325,7 @@
         { id: 'VT', type: 'vent', x: 120, y: 70, label: 'to the open air' } ],
         steps: [ { title: 'Venting', play: [['V.fill', 1, 900, 0, 'linear'], ['V', 1, 300], ['VT', 1, 400, 800]] },
                  { title: 'Vented - the pipe is empty', play: [['V', 0, 400, 400], ['V.fill', 2, 900, 0, 'linear'], ['VT', 0, 600, 700]] } ] } },
-    { title: 'Engine', note: 'A dual-fuel engine block: the pistons move while it runs.',
+    { title: 'Engine', note: 'A dual-fuel engine: the painted block on its bedplate, bolted cylinder covers, a turbocharger at its free end; the pistons move while it runs, and RUNNING / STOPPED reads on its name plate.',
       spec: { size: [320, 150], parts: [
         { id: 'E', type: 'engine', x: 110, y: 40, w: 100, h: 64, label: 'dual-fuel engine' } ],
         steps: [ { title: 'Running', play: [['E', 1, 200]] }, { title: 'Stopped', play: [['E', 0, 200]] } ] } }

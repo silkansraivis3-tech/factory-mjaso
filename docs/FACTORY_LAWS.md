@@ -529,8 +529,25 @@ the best candidate and why. A recommendation, never a block (2.18.1): the operat
 half the teaching slides, never instead of a real photograph, the speed and tap rules of the compile GUIDE 2b.
 → `course-factory` (`scripts/content_script.py` `best_3d`, `build_findings`; `compile/scripts/compile_module.py`), 2.49.7
 
-**All sixty laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L60 are enforced first through `course-factory/SKILL.md`'s
+**L61 · Physical equipment is drawn as it looks on board.** Aleksis, 2026-10-20, approving a plain-vs-realistic mock-up of
+the figure kit: *"yes we like this new kit styling"*, then *"also do the Parts added from courses"* and *"make the ship look
+realistic aswell, look at real images of it"*. (1) Every kit part that is a physical thing - a tank, a pipe, a valve, a
+pump, an exchanger, an engine, a vent, a hose, a coupling, a ship - is drawn in its material (cladding, brushed
+stainless, cast or painted metal, rubber, a ship's painted plating), with light and shade, and with the real features a
+trainee recognises on board: flanges at its joints, saddles, a dome, a bonnet and what works it (an actuator on an
+automatic valve, a handwheel on a manual one), a bedplate and a turbocharger, a superstructure's windows. (2) A screen
+(panel, gauge, readout, alarm log) stays a calm ISA-101 HMI, and a diagram (a zone, a chart, a cloud) stays a diagram.
+(3) The teaching state stays readable at a glance - the fluid's front, open or shut (the ISA bow-tie stays on the valve
+as a plate), running, alarms - and amber and red stay reserved for alarm and trip: materials are neutral greys and
+blues, copper only for a heating coil. (4) It is the kit's own look, on in every deck - no spec option, no per-slide ask.
+A new part declares its `look` (`equipment`, `screen` or `diagram`) and an equipment part draws its bodies with
+`KIT.h.body` / `KIT.h.equip` and the kit's materials; `check_kit.py` refuses one that does not. →
+`course-visuals` (`kit/kit.js` materials, `KIT.h.body`, `equip`, `flange`; `kit/kit.css` `--mat-*`; `SPEC.md` "Rules of
+the look"; `PARTS.md`; `scripts/check_kit.py`), `course-module-ux` (`audit_drawing.js` judges one piece of equipment as
+one object, `data-kit-body`), 2.52.0
+
+**All sixty-one laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L61 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

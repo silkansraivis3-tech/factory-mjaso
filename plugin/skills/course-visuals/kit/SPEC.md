@@ -70,12 +70,12 @@ words for the 12.5 px floor, how many labels it moved, any it could not place, a
 | gauge repeater | `source:"P1" mini:true` - copies the scale of P1 and follows it | - |
 | `readout` | `w h label unit sign decimals marks` - digital tile | the reading |
 | `well` | `w h tag` - bilge well, dripping leak, TT sensor | pool 0..1 |
-| `valve` | `size label labelAt(right) rotate state(false) actuator(false) trip(false)` - ISA bow-tie, filled when closed; red when shut unless `trip: false` | 1 open, 0 closed |
+| `valve` | `size label labelAt(right) rotate state(false) actuator(false) trip(false)` - a real valve (cast body, flanges, bonnet; a diaphragm actuator, or a handwheel with `actuator: false`) with the ISA bow-tie as its plate, filled when closed; red when shut unless `trip: false` | 1 open, 0 closed |
 | `pipe` | `d` (SVG path) `fluid`(liquid/gas/air - air: a ventilation duct) `double` `drain` - its contents and their movement | flow 0 still … 1; **`<id>.fill`** 0..1 the front advancing, 1..2 emptying towards `drain` |
 | `tank` | `w h label burst` - horizontal type C tank. `burst: true` (or `{r, label}`: the fireball's radius and name) adds the value **`<id>.burst`** 0..1: the shell cracks (0..0.25) and the contents ignite in a fireball (leave `r` of room round the tank) | liquid level 0..1 |
 | `space` | `w h label labelAt(below) style(room/enclosure) crosses` - a room (dashed) or an enclosure (solid). `crosses: true` for a box laid over a tank's end or a hull line on purpose (not judged as poking out of it). A name that does not fit inside the grown type goes under the room by itself | 0..1 picked out |
-| `exchanger` | `r label` - P&ID heat exchanger (vaporizer, heater) | 0..1 heating |
-| `pump` | `r label` - P&ID centrifugal pump | 0 stopped, 1 running |
+| `exchanger` | `r label` - a shell-and-tube heat exchanger (vaporizer, heater), its copper coil showing the heating | 0..1 heating |
+| `pump` | `r label` - a centrifugal pump: cast volute on its foot, the impeller turning in its eye | 0 stopped, 1 running |
 | `engine` | `w h cylinders label` - dual-fuel engine block. RUNNING / STOPPED stands under the pistons' whole stroke, and the block grows taller and wider to hold the word at its grown size (2.50.6) | 0 stopped, 1 running |
 | `vent` | `label labelAt(left)` `mast` - vent outlet to the open air. On top of a pipe's upright run it is a vent mast: its tap area on a task is the whole run, not the outlet (2.49.7); `mast: false` keeps the outlet alone, `mast: <length>` gives the run when no pipe draws it, `mast: true` asks for a mast (60 long when no pipe draws it). With no pipe under the outlet, `true` or a length is drawn as an upright pipe - never an outlet floating in the air (2.50.4); any other value is refused. Its puffs rise only into free air: up to 34, stopping short of anything drawn above the outlet (2.50.7) - give the outlet about 57 units of air above it for the full rise | 0..1 venting |
 | `badge` | `n` - a numbered step marker | 0..1 lit |
@@ -188,10 +188,34 @@ largest blank piece is (side and pixels). A whole ship for five spaces,
 - **A lit line is a button.** Every line a step lights (or the box a line heads) becomes a tap target: tap it or press
   Enter and that step plays (`.kit-tap`, 44 px). The first step that lights a line owns it.
 
-## Rules of the look (ISA-101)
-Grey and blue at rest. Colour appears only for something abnormal: amber for an alarm, red for a trip.
-Colours come only from the `course-module-ui` tokens, named by their dark-panel names (the light panel remaps them).
-No word is drawn under 12.5 px on screen - the kit sees to it (above).
+## Rules of the look (L61, 2.52.0)
+**Physical equipment looks like the real equipment; a screen looks like a screen.** The kit does it in every deck by
+itself - a spec has no option for it and a slide never asks for it.
+- **Equipment** - a tank, a pipe, a valve, a pump, an exchanger, an engine, a vent, a hose, a coupling, a manifold, a
+  bottle, a lamp, a ship, a worker - is drawn the way a trainee sees it on board: **in its material** (aluminium
+  cladding, brushed stainless, cast or painted metal, rubber, a ship's painted plating, workwear), **with light and
+  shade** (a second copy of each body's shape: a cylinder, a box lit from above, a round), a soft shadow, and **its real
+  features**: bolted flanges at every pipe joint and wherever a pipe meets equipment, a tank's saddles, straps and dome,
+  an exchanger's shell-and-tube body with flanged heads (its copper coil still shows the heating), an engine's bedplate,
+  bolted covers and turbocharger, a ship's plating, sheer stripe, rail, boot-top, white superstructure with its windows
+  and funnel band, a worker's real PPE.
+- **Valves are drawn as what they are**: a cast body bolted in by its end flanges, a bonnet, and on top a yoke and a
+  pneumatic diaphragm actuator on an automatic valve (the default) or a stem and handwheel on a manual one
+  (`"actuator": false`). The ISA bow-tie stays on the body as a light plate - outline when open, filled when closed, red
+  only when it shut on a trip (`"trip": false`: grey). No taller than the old symbol: a room's name keeps its place.
+- **Screens stay a calm ISA-101 HMI** - panel, level, gauge, readout, alarm log, badge: grey and blue at rest; colour
+  appears only for something abnormal, amber for an alarm, red for a trip. **Diagrams stay diagrams** (a zone, a chart, a
+  cloud, a scale).
+- **The teaching state reads at a glance** on either: a fluid's front, open or shut, running, an alarm. The materials
+  are neutral greys and blues (copper only for a heating coil); a fire and a burning spray have a flame's own colours.
+  Amber and red stay reserved for alarm and trip.
+- Colours come only from tokens: the `course-module-ui` tokens, named by their dark-panel names, and the kit's own
+  material tokens (`kit.css` `--mat-*`). The textures are drawn once per page (`kit.js` `materials()`); a light page has
+  its own set and `.kit-light` points at it. No word is drawn under 12.5 px on screen - the kit sees to it (above). A
+  room's name keeps a halo of the panel's colour, so it reads on a white superstructure or a painted hull, and one that
+  finds no clear place inside its room (filled with equipment) goes beside it.
+- The drawing check judges one piece of equipment as one object (`data-kit-body`): a valve's flange is not "poking out"
+  of its own body, but the valve is, out of the room it stands in.
 
 ## A task page's "label the drawing" boxes (2.48.0)
 `compile/scripts/label_layout.py` sizes and places them: one width for all the boxes of a question - what the longest

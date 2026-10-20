@@ -235,6 +235,16 @@
     return s;
   }
   /* a part drawn through a clip-path is cut to that shape - by construction it cannot poke out */
+  /* the piece of equipment a shape belongs to: a figure-kit part drawn as the real thing (2.52.0) is built of pieces that
+     overlap by design - a valve's flanges, cast body, bonnet and actuator; a tank's saddles under its shell. The kit draws
+     them in one group marked data-kit-body, and INSIDE judges that group as one object: a piece is never "poking out" of
+     another piece of the same equipment, but the equipment still is, out of the room it stands in */
+  function kitBody(el, svg) {
+    for (var n = el; n && n !== svg; n = n.parentNode) {
+      if (n.hasAttribute && n.hasAttribute("data-kit-body")) { return n; }
+    }
+    return null;
+  }
   function clippedPart(el, svg) {
     for (var n = el; n && n !== svg && n.nodeType === 1; n = n.parentElement) {
       if (n.getAttribute("clip-path") || getComputedStyle(n).clipPath !== "none") { return true; }
@@ -399,8 +409,10 @@
       items.forEach(function (P) {
         if (upFlag(P.el, "data-may-cross", svg) || clippedPart(P.el, svg)) { return; }
         if (!(closed(P.el) || P.t === "text" || P.t === "image")) { return; }
+        var pb = kitBody(P.el, svg);
         holders.forEach(function (S) {
           if (S === P || S.b.w * S.b.h < CONFIG.minAreaRatio * P.b.w * P.b.h) { return; }
+          if (pb && pb === kitBody(S.el, svg)) { return; }   /* two pieces of one piece of equipment (2.52.0) */
           /* held only when the part's centre is truly inside - a roof bar centred ON a deckhouse's line overhangs by design */
           if (!inFill(S.el, { x: P.b.cx, y: P.b.cy }) || onStroke(S.el, { x: P.b.cx, y: P.b.cy })) { return; }
           var tol = CONFIG.tolPx, worst = 0, n = 0;

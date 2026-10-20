@@ -35,7 +35,7 @@ course-factory/
 ├── MANIFEST.md                           this file
 ├── references/                           READ WHEN NAMED — the full text moved out of SKILL.md in 2.11.0
 │   ├── laws-in-full.md                   every law with its reasons and cases, word for word
-│   ├── owner-decisions.md                every Phase 5 row (L27-L60) in full, one heading per law (2.50.5)
+│   ├── owner-decisions.md                every Phase 5 row (L27-L61) in full, one heading per law (2.50.5)
 │   ├── verify-in-full.md                 why each verify check exists
 │   └── routing-notes.md                  what orchestration/ and coverage/ are for; the visual-layer routing
 ├── knowledge/

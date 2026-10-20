@@ -12,7 +12,75 @@
    the kit's own and a course's (kit_parts.js css), keeps its contrast on either panel by construction.
 
    THE 12.5 PX FLOOR (2.48.0). Every type size is multiplied by --kit-up, which kit.js sets to 1 / the figure's
-   scale when it is shown smaller than 1:1: no word is ever drawn under 12.5 px on screen. */
+   scale when it is shown smaller than 1:1: no word is ever drawn under 12.5 px on screen.
+
+   MATERIALS (2.52.0, L61). Physical equipment - a tank, a pipe, a valve, a pump, an engine - is drawn the way a trainee
+   sees it on board: in its material (aluminium cladding, brushed stainless, painted or cast metal), with light and shade
+   so it has a form, and its real features (flanges, saddles, actuators). A screen (panel, gauge, readout, log) stays a
+   calm ISA-101 HMI: it IS a screen. The material colours are tokens too, the kit's own (--mat-*, below); kit.js draws
+   their textures once per page (a hidden <svg id="kit-materials">) and a part names a material by class (kit-m-steel)
+   or with KIT.h.body(). Amber and red stay reserved for alarm and trip: the materials are neutral greys and blues
+   (copper only for a heating coil). */
+
+/* ---------------------------------------------------------------- materials (2.52.0) */
+:root{
+  /* on the dark panel (a deck's figure screen) */
+  --mat-clad:#AAB4BE;--mat-seam:#6F7A86;--mat-seam-lit:#DCE3EA;--mat-rivet:#727D88;
+  --mat-steel:#A3AEB9;--mat-paint:#5D7182;--mat-paintl:#7A8E9E;--mat-cast:#6E7C89;--mat-deck:#56636F;
+  --mat-rubber:#434C55;--mat-foam:#B9C0C6;
+  --mat-hull:#1D4673;--mat-hull-seam:#143458;--mat-bottom:#2A3036;--mat-white:#D3DAE1;--mat-window:#16222E;
+  --mat-fire-hot:#FFF4C8;--mat-fire-mid:#FFB548;--mat-fire-tip:#E0532E;   /* a fire's own colours: it IS the hazard */
+  --mat-sea-top:#2D6B9F;--mat-sea-deep:#10304F;
+  --mat-skin:#C8977A;--mat-hair:#3B3330;--mat-cloth:#2F4B6E;--mat-suit:#A9BCCB;--mat-reflect:#E4EAEF;
+  --mat-edge:#2C3844;--mat-edge-steel:#3A4550;--mat-edge-clad:#5B6672;--mat-bolt:#3A4550;
+  --mat-yoke:#9AA6B1;--mat-stem:#C3CCD5;--mat-hole:#1A2633;
+  --mat-plate:#E4E9EE;--mat-ink:#2C3844;--mat-trip:var(--warn,#B4453A);
+  --mat-copper:#D9A877;--mat-copper-hot:#F2C79A;--mat-flame:#FFE3B3;--mat-flame-edge:#A86A2E;   /* a burning spray in an engine: pale, never the alarm amber; its edge on a light page */
+  --mat-lng-top:#BFE0FF;--mat-lng-mid:#7FB6EE;--mat-lng-deep:#2E5F96;--mat-lng-surf:#D8ECFF;
+  --mat-hi:#FFFFFF;--mat-lo:#000000;--mat-drop:rgba(0,0,0,.5);
+  /* on a light page: a shade darker, so the metal stands off the white, and a softer shadow */
+  --mat-clad-l:#9CA7B2;--mat-steel-l:#97A3AE;--mat-paint-l:#5A6E7F;--mat-paintl-l:#73879A;--mat-cast-l:#68768A;
+  --mat-deck-l:#56636F;--mat-rubber-l:#434C55;--mat-foam-l:#AEB6BD;--mat-drop-l:rgba(10,24,46,.3);
+  --mat-hull-l:#1D4673;--mat-white-l:#C9D1D9;
+  /* the textures and shades kit.js draws once per page (an id that is missing paints the plain colour after it) */
+  --kit-clad:url(#kit-m-clad) var(--mat-clad);--kit-steel:url(#kit-m-steel) var(--mat-steel);
+  --kit-paint:url(#kit-m-paint) var(--mat-paint);--kit-paintl:url(#kit-m-paintl) var(--mat-paintl);
+  --kit-cast:url(#kit-m-cast) var(--mat-cast);--kit-deck:url(#kit-m-deck) var(--mat-deck);
+  --kit-rubber:url(#kit-m-rubber) var(--mat-rubber);--kit-foam:url(#kit-m-foam) var(--mat-foam);
+  --kit-lng:url(#kit-m-lng) var(--mat-lng-mid);
+  --kit-hull:url(#kit-m-hull) var(--mat-hull);--kit-white:url(#kit-m-white) var(--mat-white);
+  --kit-cloth:url(#kit-m-cloth) var(--mat-cloth);--kit-suit:url(#kit-m-suit) var(--mat-suit);
+  --kit-fire:url(#kit-m-fire) var(--mat-fire-mid);--kit-firejet:url(#kit-m-firejet) var(--mat-fire-mid);--kit-sea:url(#kit-m-sea) var(--mat-sea-top);
+  --kit-sh-cyl:url(#kit-sh-cyl) transparent;--kit-sh-cylv:url(#kit-sh-cylv) transparent;
+  --kit-sh-box:url(#kit-sh-box) transparent;--kit-sh-round:url(#kit-sh-round) transparent}
+/* a paint server keeps the colours of the place it is defined, not of the figure that uses it: the light page has its
+   own set (kit.js draws it in .kit-mat-light), and a figure on a light ground points at it */
+.kit-mat-light{--mat-clad:var(--mat-clad-l);--mat-steel:var(--mat-steel-l);--mat-paint:var(--mat-paint-l);--mat-paintl:var(--mat-paintl-l);
+  --mat-cast:var(--mat-cast-l);--mat-deck:var(--mat-deck-l);--mat-rubber:var(--mat-rubber-l);--mat-foam:var(--mat-foam-l);
+  --mat-hull:var(--mat-hull-l);--mat-white:var(--mat-white-l)}
+.kit.kit-light{--mat-drop:var(--mat-drop-l);
+  --kit-clad:url(#kit-m-clad-l) var(--mat-clad-l);--kit-steel:url(#kit-m-steel-l) var(--mat-steel-l);
+  --kit-paint:url(#kit-m-paint-l) var(--mat-paint-l);--kit-paintl:url(#kit-m-paintl-l) var(--mat-paintl-l);
+  --kit-cast:url(#kit-m-cast-l) var(--mat-cast-l);--kit-deck:url(#kit-m-deck-l) var(--mat-deck-l);
+  --kit-rubber:url(#kit-m-rubber-l) var(--mat-rubber-l);--kit-foam:url(#kit-m-foam-l) var(--mat-foam-l);
+  --kit-lng:url(#kit-m-lng-l) var(--mat-lng-mid);
+  --kit-hull:url(#kit-m-hull-l) var(--mat-hull-l);--kit-white:url(#kit-m-white-l) var(--mat-white-l);
+  --kit-cloth:url(#kit-m-cloth-l) var(--mat-cloth);--kit-suit:url(#kit-m-suit-l) var(--mat-suit);
+  --kit-fire:url(#kit-m-fire-l) var(--mat-fire-mid);--kit-firejet:url(#kit-m-firejet-l) var(--mat-fire-mid);--kit-sea:url(#kit-m-sea-l) var(--mat-sea-top);
+  --kit-sh-cyl:url(#kit-sh-cyl-l) transparent;--kit-sh-cylv:url(#kit-sh-cylv-l) transparent;
+  --kit-sh-box:url(#kit-sh-box-l) transparent;--kit-sh-round:url(#kit-sh-round-l) transparent}
+/* the tiles of the textures (kit.js materials()) */
+.kit-mt-clad{fill:var(--mat-clad)}.kit-mt-steel{fill:var(--mat-steel)}.kit-mt-paint{fill:var(--mat-paint)}
+.kit-mt-paintl{fill:var(--mat-paintl)}.kit-mt-cast{fill:var(--mat-cast)}.kit-mt-deck{fill:var(--mat-deck)}
+.kit-mt-rubber{fill:var(--mat-rubber)}.kit-mt-foam{fill:var(--mat-foam)}
+.kit-mt-hull{fill:var(--mat-hull)}.kit-mt-white{fill:var(--mat-white)}.kit-mt-cloth{fill:var(--mat-cloth)}.kit-mt-suit{fill:var(--mat-suit)}.kit-mt-strake{stroke:var(--mat-hull-seam)}
+.kit-mt-seam{stroke:var(--mat-seam)}.kit-mt-seam-lit{stroke:var(--mat-seam-lit)}.kit-mt-rivet{fill:var(--mat-rivet)}
+.kit-mt-weld{stroke:var(--mat-edge-steel)}
+.kit-mt-hi{stop-color:var(--mat-hi)}.kit-mt-lo{stop-color:var(--mat-lo)}
+.kit-mt-fire-hot{stop-color:var(--mat-fire-hot)}.kit-mt-fire-mid{stop-color:var(--mat-fire-mid)}.kit-mt-fire-tip{stop-color:var(--mat-fire-tip)}
+.kit-mt-sea-top{stop-color:var(--mat-sea-top)}.kit-mt-sea-deep{stop-color:var(--mat-sea-deep)}
+.kit-mt-lng1{stop-color:var(--mat-lng-top)}.kit-mt-lng2{stop-color:var(--mat-lng-mid)}.kit-mt-lng3{stop-color:var(--mat-lng-deep)}
+/* the material classes themselves are at the end of this file, so they win over the flat rules above them */
 
 .kit{display:block;width:100%;height:auto;overflow:visible;
   font-family:var(--font,"Raleway","Segoe UI",Arial,sans-serif)}
@@ -127,26 +195,28 @@
 .kit-drop{fill:var(--cold,#8FC2FF);opacity:0}
 .kit-dripping .kit-drop{animation:kit-fall .9s ease-in infinite}
 
-/* piping and valves */
-.kit-pipe{fill:none;stroke:var(--faint-d,#71879F);stroke-width:10}
-.kit-bore{fill:none;stroke:var(--deep,#0A182E);stroke-width:6}
+/* piping and valves - a pipe is brushed stainless, its bore the window onto what it carries (2.52.0) */
+.kit-pipe{fill:none;stroke:var(--kit-steel);stroke-width:13}
+.kit-bore{fill:none;stroke:var(--deep,#0A182E);stroke-width:7}
 .kit-flow{fill:none;stroke:var(--cold,#8FC2FF);stroke-width:2.5;stroke-dasharray:7 9;
   animation:kit-flow .8s linear infinite;transition:opacity .3s}
-.kit-valve{fill:none;stroke:var(--dim-d,#A2B7CF);stroke-width:2;stroke-linejoin:round}
-.kit-vfill{fill:var(--dim-d,#A2B7CF)}
-.kit-valve-bg{fill:var(--deep-2,#0C1E3A)}
+/* the ISA bow-tie stays on the valve as a light plate on its cast body (2.52.0): outline when open, filled when
+   closed, red only when it shut on a trip - the plate is light on both panels, so its inks are the light-panel ones */
+.kit-valve{fill:none;stroke:var(--mat-ink);stroke-width:1.6;stroke-linejoin:round}
+.kit-vfill{fill:var(--mat-ink)}
+.kit-valve-bg{fill:var(--mat-plate)}
 .kit-stem{stroke:var(--dim-d,#A2B7CF);stroke-width:2}
 .kit-act{fill:var(--deep,#0A182E);stroke:var(--dim-d,#A2B7CF);stroke-width:1.5}
 .kit-state{font-size:calc(12.5px * var(--kit-up,1));font-weight:700;letter-spacing:.06em;fill:var(--dim-d,#A2B7CF)}
 .kit-shut .kit-state{fill:var(--warn-d,#FF8C82)}
-.kit-shut .kit-valve{stroke:var(--warn-d,#FF8C82)}
-.kit-shut .kit-vfill{fill:var(--warn-d,#FF8C82)}
+.kit-shut .kit-valve{stroke:var(--mat-trip)}
+.kit-shut .kit-vfill{fill:var(--mat-trip)}
 
 /* contents of a pipe: liquid is the cold blue, gas is pale (methane vapour has no colour;
    amber stays reserved for alarms), air (a ventilation duct) is paler still. The fill mask only shows what has
    reached that far. */
-.kit-jacket{fill:none;stroke:var(--faint-d,#71879F);stroke-width:20}
-.kit-annulus{fill:none;stroke:var(--deep-2,#0C1E3A);stroke-width:16}
+.kit-jacket{fill:none;stroke:var(--kit-steel);stroke-width:25}
+.kit-annulus{fill:none;stroke:var(--deep-2,#0C1E3A);stroke-width:19}
 .kit-reach{fill:none;stroke:#fff;stroke-width:24;stroke-linecap:butt}
 .kit-content{fill:none;stroke-width:6}
 .kit-fl-liquid .kit-content{stroke:var(--cold,#8FC2FF);opacity:.55}
@@ -156,17 +226,18 @@
 .kit-fl-air .kit-bore{stroke-width:14}
 .kit-fl-air .kit-content{stroke:none}
 .kit-fl-air .kit-flow{stroke:var(--dim-d,#A2B7CF);stroke-dasharray:10 12;stroke-width:2;stroke-linecap:round}
-.kit-vessel-o{fill:none;stroke:var(--faint-d,#71879F);stroke-width:2}
+.kit-vessel-o{fill:none;stroke:var(--mat-edge-clad);stroke-width:2.5}
 /* a tank that ruptures (tank "burst", 2.49.1): the shell cracks and turns red, the contents ignite in a fireball */
 .kit-tank-crack{fill:none;stroke:var(--warn-d,#FF8C82);stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}
 .kit-tank-burst .kit-vessel-o{stroke:var(--warn-d,#FF8C82);stroke-width:3}
-.kit-tank-fire-out{fill:var(--warn-d,#FF8C82);opacity:.7}
-.kit-tank-fire-core{fill:var(--amber,#E9A51E)}
+.kit-tank-fire-out{fill:var(--kit-fire);opacity:.85}               /* the fireball in a fire's own colours (2.52.0) */
+.kit-tank-fire-core{fill:var(--mat-fire-hot)}
+.kit-light .kit-tank-fire-out{stroke:var(--mat-flame-edge);stroke-width:1.5}
 .kit-tank-burning .kit-tank-fire-out{transform-box:fill-box;transform-origin:center;animation:kit-tank-boil .6s ease-in-out infinite alternate}
 @keyframes kit-tank-boil{to{transform:scale(1.07)}}
 .kit-quiet.kit-shut .kit-state{fill:var(--dim-d,#A2B7CF)}
-.kit-quiet.kit-shut .kit-valve{stroke:var(--dim-d,#A2B7CF)}
-.kit-quiet.kit-shut .kit-vfill{fill:var(--dim-d,#A2B7CF)}
+.kit-quiet.kit-shut .kit-valve{stroke:var(--mat-ink)}
+.kit-quiet.kit-shut .kit-vfill{fill:var(--mat-ink)}
 
 /* spaces */
 .kit-wash{fill:var(--blue-wash-d,rgba(46,182,248,.13));opacity:0}
@@ -174,20 +245,24 @@
 .kit-room{stroke-dasharray:7 5}
 .kit-enclosure{stroke:var(--dim-d,#A2B7CF)}
 .kit-lit .kit-space{stroke:var(--blue,#2EB6F8);stroke-width:2}
-.kit-sl{font-size:calc(12.5px * var(--kit-up,1));font-weight:700;letter-spacing:.06em;fill:var(--faint-d,#71879F);transition:fill .3s}
+/* a room's name keeps a halo of the panel's colour round its letters (2.52.0): it reads on whatever the room is drawn
+   over - a ship's white superstructure, a painted hull, a pipe */
+.kit-sl{font-size:calc(12.5px * var(--kit-up,1));font-weight:700;letter-spacing:.06em;fill:var(--faint-d,#71879F);transition:fill .3s;
+  paint-order:stroke;stroke:var(--deep,#0A182E);stroke-width:3.5px;stroke-linejoin:round;stroke-opacity:.9}
 .kit-lit .kit-sl{fill:var(--txt-d,#F3F8FD)}
 
 /* machinery */
 .kit-shell{fill:var(--deep,#0A182E);stroke:var(--dim-d,#A2B7CF);stroke-width:2}
 .kit-shell-o{fill:none;stroke:var(--dim-d,#A2B7CF);stroke-width:2}
-.kit-coil{fill:none;stroke:var(--dim-d,#A2B7CF);stroke-width:2;stroke-linejoin:round}
-.kit-active .kit-coil{stroke:var(--txt-d,#F3F8FD);stroke-dasharray:6 3;animation:kit-flow 1.2s linear infinite}
-.kit-hm{stroke:var(--faint-d,#71879F);stroke-width:2}
-.kit-imp path{stroke:var(--dim-d,#A2B7CF);stroke-width:2.5;stroke-linecap:round}
+/* the heating coil is copper (the one warm material), seen through the exchanger's shell; heating, it glows and runs */
+.kit-coil{fill:none;stroke:var(--mat-copper);stroke-width:2;stroke-linejoin:round}
+.kit-active .kit-coil{stroke:var(--mat-copper-hot);stroke-width:2.4;stroke-dasharray:6 3;animation:kit-flow 1.2s linear infinite}
+.kit-hm{stroke:var(--kit-steel);stroke-width:4}
+.kit-imp path{stroke:var(--mat-stem);stroke-width:2.5;stroke-linecap:round}
 .kit-running .kit-imp{animation:kit-spin .7s linear infinite}
 .kit-block{fill:var(--deep-3,#122A52);stroke:var(--dim-d,#A2B7CF);stroke-width:2}
 .kit-head{fill:var(--deep,#0A182E);stroke:var(--dim-d,#A2B7CF);stroke-width:1.5}
-.kit-piston{fill:var(--faint-d,#71879F)}
+.kit-piston{fill:var(--kit-steel)}
 .kit-running .kit-piston{animation:kit-piston .5s ease-in-out infinite alternate}
 .kit-running .kit-state{fill:var(--txt-d,#F3F8FD)}
 .kit-puffs circle{fill:var(--txt-d,#F3F8FD);opacity:0;transform-box:fill-box;transform-origin:center}
@@ -218,6 +293,49 @@
 @keyframes kit-piston{to{transform:translateY(5px)}}
 @keyframes kit-puff{0%{transform:translateY(0) scale(.5);opacity:0}20%{opacity:.6}100%{transform:translateY(var(--rise,-34px)) scale(1.5);opacity:0}}
 @keyframes kit-in{from{opacity:0;transform:translateX(-14px)}}
+
+/* ---------------------------------------------------------------- equipment in its material (2.52.0, L61)
+   a body in its material - KIT.h.body(tag, attrs, parent, {mat, shade}) - after every flat rule, so it wins */
+.kit-m-clad{fill:var(--kit-clad);stroke:var(--mat-edge-clad);stroke-width:1.2}
+.kit-m-steel,.kit-steel{fill:var(--kit-steel);stroke:var(--mat-edge-steel);stroke-width:1}
+.kit-m-paint{fill:var(--kit-paint);stroke:var(--mat-edge);stroke-width:1.2}
+.kit-m-paintl{fill:var(--kit-paintl);stroke:var(--mat-edge);stroke-width:1.2}
+.kit-m-cast{fill:var(--kit-cast);stroke:var(--mat-edge);stroke-width:1.2}
+.kit-m-deck{fill:var(--kit-deck);stroke:var(--mat-edge);stroke-width:1.2}
+.kit-m-rubber{fill:var(--kit-rubber);stroke:var(--mat-edge);stroke-width:1.2}
+.kit-m-foam{fill:var(--kit-foam);stroke:var(--mat-edge-clad);stroke-width:1}
+.kit-m-hull{fill:var(--kit-hull);stroke:var(--mat-yoke);stroke-width:1.5;stroke-linejoin:round}   /* a ship's painted topsides */
+.kit-m-white{fill:var(--kit-white);stroke:var(--mat-yoke);stroke-width:1.2}       /* a superstructure's white paint */
+.kit-m-bottom{fill:var(--mat-bottom)}                                              /* the bottom paint under the waterline */
+/* a person (2.52.0): skin, hair, workwear cloth, a protective suit, reflective tape - outlined light, so the figure
+   stands off the dark panel */
+.kit-m-skin{fill:var(--mat-skin);stroke:var(--mat-edge);stroke-width:.8}
+.kit-m-hair{fill:var(--mat-hair)}
+.kit-m-cloth{fill:var(--kit-cloth);stroke:var(--mat-yoke);stroke-width:1.2;stroke-linejoin:round}
+.kit-m-suit{fill:var(--kit-suit);stroke:var(--mat-edge);stroke-width:1.2;stroke-linejoin:round}
+.kit-m-reflect{fill:var(--mat-reflect)}
+/* a fire and the sea (2.52.0): a flame in its own colours, edged on a light page so it stands off the white */
+.kit-m-fire{fill:var(--kit-fire)}.kit-m-firejet{fill:var(--kit-firejet)}
+.kit-light .kit-m-fire,.kit-light .kit-m-firejet{stroke:var(--mat-flame-edge);stroke-width:1.5}
+.kit-m-sea{fill:var(--kit-sea)}
+.kit-m-window{fill:var(--mat-window)}
+.kit-m-lng{fill:var(--kit-lng);opacity:1}
+.kit-m-lngs{stroke:var(--mat-lng-surf)}                                     /* the liquid's surface, seen through the cut-away */
+.kit-m-plate{fill:var(--mat-plate);stroke:var(--mat-ink);stroke-width:1}     /* a light plate on the metal: a valve's state */
+.kit-m-label{fill:var(--deep,#0A182E);stroke:var(--mat-edge-steel);stroke-width:1.2}   /* a dark name plate its words are read on */
+.kit-m-bolt{fill:var(--mat-bolt)}
+.kit-m-hole{fill:var(--mat-hole);stroke:var(--mat-yoke);stroke-width:1.2}   /* an opening: a turbocharger's intake, a nozzle's mouth */
+.kit-m-yoke{fill:none;stroke:var(--mat-yoke);stroke-width:1.6}
+.kit-m-stem{fill:none;stroke:var(--mat-stem);stroke-width:1.6;stroke-linecap:round}
+.kit-m-wheel{fill:none;stroke:var(--mat-stem);stroke-width:2.4}
+.kit-m-spoke{fill:none;stroke:var(--mat-yoke);stroke-width:1.2}
+.kit-m-copper{fill:none;stroke:var(--mat-copper);stroke-width:1.8;stroke-linejoin:round}
+.kit-ms-steel{stroke:var(--kit-steel)}.kit-ms-cast{stroke:var(--kit-cast)}.kit-ms-rubber{stroke:var(--kit-rubber)}
+/* light and shade: a second copy of the body's shape laid over it */
+.kit-sh{stroke:none;pointer-events:none}
+.kit-sh-cyl{fill:var(--kit-sh-cyl)}.kit-sh-cylv{fill:var(--kit-sh-cylv)}.kit-sh-box{fill:var(--kit-sh-box)}.kit-sh-round{fill:var(--kit-sh-round)}
+/* the soft shadow a piece of equipment casts on what is behind it */
+.kit-m-drop{filter:drop-shadow(0 3px 3px var(--mat-drop))}
 
 /* reduced motion: every figure jumps to its end state (kit.js), and nothing flashes or flows */
 @media (prefers-reduced-motion:reduce){.kit *{animation:none!important;transition:none!important}}
