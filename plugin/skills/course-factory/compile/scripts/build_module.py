@@ -25,7 +25,7 @@ Printed: each failure with its file, slide or question, and what to do; a figure
 step; then one line - PASS, or how many problems. Everything else is in the full log (its path is the last line), which
 ends with each stage's seconds (2.52.0).
 --no-course-pages: a module agent in a parallel build (orchestration Rule 3 - one process writes COURSE.html).
-A figures-only round (2.55.0): when the last full build failed on nothing but the figures, and the script and the build
+A figures-only round (2.56.0): when the last full build failed on nothing but the figures, and the script and the build
 sheet are as they were then, a build whose figures still fail stops after them (~1 min, not ~3) - fix the figures in the
 studio, run again; once they are clean the whole build runs. --full runs everything every time. PASS is only ever a full run.
 Exit 0 PASS, 1 problems to fix, 2 stopped (the compiler refused: not approved, changed by hand, design files edited).
@@ -237,7 +237,7 @@ def main(argv=None):
         stages.append((title, time.time() - since))
         return time.time()
 
-    # 1 - every figure at once, before the compile. 2.53.0 (built as 2.52.0 on its own branch): the module's design files are made the factory's first (the
+    # 1 - every figure at once, before the compile. 2.54.0 (built as 2.52.0 on its own branch): the module's design files are made the factory's first (the
     # compile does it too) - the figures are measured on their real slide with the module's own gb_compose.css, and a deck
     # built by a newer compiler (the figure first in the markup, .dom-fig) measured with the older style file puts the
     # figure in the wrong column. A file edited inside the module is left alone here; the compile stops on it
@@ -264,7 +264,7 @@ def main(argv=None):
     key = inputs_key(course, o.module)
     last = last_full(logdir, m)
     if figures_only_round(fails, o.full, last, key):
-        # 2.55.0 - a figures-only round: everything else passed on the last full build, from these same words and build
+        # 2.56.0 - a figures-only round: everything else passed on the last full build, from these same words and build
         # sheet; the compile and the checks are run again once the figures are clean (a fix in a spec moves only its figure)
         write_stages(log, stages, t0)
         log.close()
@@ -289,7 +289,7 @@ def main(argv=None):
         return 2
     probs, rec = compile_problems(cout)
     # every compile problem a drawing finding - the figures above again, or a task page's figure judged here: still a
-    # figures-only build (2.55.0). Judged on the whole list, before the figures' repeats are taken out of it
+    # figures-only build (2.56.0). Judged on the whole list, before the figures' repeats are taken out of it
     drawing_only = ccode == 1 and bool(probs) and all(re.search(r"\b(empty|text zone|inside|cut off|small text|label|contrast|"
                                                                 r"photo over drawing|scrolls)\b", x) for x in probs)
     shown = figure_slides(fig_text)
@@ -414,7 +414,7 @@ def main(argv=None):
             notes.append("Review sheets not made (%s) - do the visual review by hand (GUIDE 2f)" % (lines_of(rout, 1) or ["?"])[0])
     write_stages(log, stages, t0)
     log.close()
-    try:                                   # what the next run may skip (2.55.0 - a figures-only round)
+    try:                                   # what the next run may skip (2.56.0 - a figures-only round)
         io.open(os.path.join(logdir, "%s_last.json" % m), "w", encoding="utf-8").write(json.dumps(
             {"inputs": key, "fails": fails,
              "only_figures": bool(fails) and set(fails) <= {"figures", "compile"} and ("compile" not in fails or drawing_only)}))

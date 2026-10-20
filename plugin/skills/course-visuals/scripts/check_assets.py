@@ -25,7 +25,7 @@ IMAGE_EXT = {".jpg", ".jpeg", ".png", ".svg", ".webp", ".gif"}
 META_FILES = {"_photo_meta.json": "photo", "_figure_meta.json": "figure"}
 
 def valid_rights():
-    """every rights state the asset pipeline defines, and the ones a subject library ships with (2.55.0). This list was
+    """every rights state the asset pipeline defines, and the ones a subject library ships with (2.56.0). This list was
     typed here and drifted: OWNER_CLEARED (asset-pipeline.json since 2.19.2) and a library's GENERATED failed every
     record that carried them - found by the IGF M02 build with the Gas Library, 2026-10-20"""
     out = {"CLEARED", "PROJECT_OWNED", "PUBLIC_DOMAIN", "ATTRIBUTION_REQUIRED", "RIGHTS_REVIEW_REQUIRED", "REJECTED"}

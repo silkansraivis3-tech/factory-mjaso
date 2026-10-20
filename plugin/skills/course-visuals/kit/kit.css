@@ -14,7 +14,7 @@
    THE 12.5 PX FLOOR (2.48.0). Every type size is multiplied by --kit-up, which kit.js sets to 1 / the figure's
    scale when it is shown smaller than 1:1: no word is ever drawn under 12.5 px on screen.
 
-   MATERIALS (2.52.0, L61). Physical equipment - a tank, a pipe, a valve, a pump, an engine - is drawn the way a trainee
+   MATERIALS (2.52.0, L62). Physical equipment - a tank, a pipe, a valve, a pump, an engine - is drawn the way a trainee
    sees it on board: in its material (aluminium cladding, brushed stainless, painted or cast metal), with light and shade
    so it has a form, and its real features (flanges, saddles, actuators). A screen (panel, gauge, readout, log) stays a
    calm ISA-101 HMI: it IS a screen. The material colours are tokens too, the kit's own (--mat-*, below); kit.js draws
@@ -299,7 +299,7 @@
 @keyframes kit-puff{0%{transform:translateY(0) scale(.5);opacity:0}20%{opacity:.6}100%{transform:translateY(var(--rise,-34px)) scale(1.5);opacity:0}}
 @keyframes kit-in{from{opacity:0;transform:translateX(-14px)}}
 
-/* ---------------------------------------------------------------- equipment in its material (2.52.0, L61)
+/* ---------------------------------------------------------------- equipment in its material (2.52.0, L62)
    a body in its material - KIT.h.body(tag, attrs, parent, {mat, shade}) - after every flat rule, so it wins */
 .kit-m-clad{fill:var(--kit-clad);stroke:var(--mat-edge-clad);stroke-width:1.2}
 .kit-m-steel,.kit-steel{fill:var(--kit-steel);stroke:var(--mat-edge-steel);stroke-width:1}

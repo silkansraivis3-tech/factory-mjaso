@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""test_drawing_check - the drawing check in slices side by side finds what it finds whole (2.55.0).
+"""test_drawing_check - the drawing check in slices side by side finds what it finds whole (2.56.0).
 
     python test_drawing_check.py
 
 A deck of 8 slides with one room poking out of its hull on slide 7 is checked one page at a time with the deck whole
-(CF_DRAWING_JOBS=1, as before 2.55.0) and in slices side by side (the default): the same findings, the same slide
+(CF_DRAWING_JOBS=1, as before 2.56.0) and in slices side by side (the default): the same findings, the same slide
 number (a slice keeps only its slides, so its own count starts at 1 - drawing_check puts the deck's number back).
 """
 from __future__ import annotations
@@ -62,7 +62,7 @@ def main():
         check("whole: the room poking out of the hull is found on slide 7",
               any("slide 7 (s07)" in p and "room" in p for p in out["1"]), out["1"])
         check("in slices side by side: the same findings, the same slide number", out["1"] == out["3"], out)
-        check("2.55.0 a kit part's finding names its spec id ([part ER]), so the fix knows what to move",
+        check("2.56.0 a kit part's finding names its spec id ([part ER]), so the fix knows what to move",
               any("[part ER]" in p for p in out["1"]), out["1"])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

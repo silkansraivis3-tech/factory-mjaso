@@ -34,7 +34,7 @@ given - the screens that changed - and say, for each listed finding, FIXED or NO
 screen is clearly broken (a word or a part cut off or unreadable, a tap area on the wrong thing). Do not raise new points
 of polish on a re-review.
 
-**Label every problem BROKEN or POLISH** (2.55.0 - a fix to a drawing that already passes every check can break it again:
+**Label every problem BROKEN or POLISH** (2.56.0 - a fix to a drawing that already passes every check can break it again:
 IGF M02 s02 went PASS, then four failed builds, for polish):
 - `BROKEN` - a trainee or an instructor would misread it, miss it or be unable to do it: a word or a part cut off,
   covered or unreadable; a tap area on the wrong thing or on empty space; a label or leader pointing at the wrong

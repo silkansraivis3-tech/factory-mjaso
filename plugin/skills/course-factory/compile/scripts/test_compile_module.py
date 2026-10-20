@@ -13,7 +13,10 @@ Pinned:
   * an unapproved script builds nothing (only a --draft preview, which exits 1);
   * a deck changed by hand, or built by hand before the compiler, is never overwritten without --force;
   * a missing picture file is reported, never invented;
-  * no link inside a slide (L35: the deck never navigates away).
+  * no link inside a slide (L35: the deck never navigates away);
+  * L61 (2.52.0): every slide is one of the owner's thirteen layout templates, chosen from the slide or asked for by name;
+    the owner's rules - 55 / 45, dense text has a picture, never three teaching slides in a row without one, long words
+    in parts - are problems with the slide's id.
 """
 from __future__ import annotations
 
@@ -816,6 +819,136 @@ def build_of(c, mutate):
     mutate(sheet)
     cs.save(bp, sheet)
     return sheet
+
+
+LAYOUTS = cs.load(os.path.join(SKILLS, "course-module-ui", "knowledge", "layout-templates.json"))
+LONG_LINES = ["The tank connection space surrounds every pipe, valve and instrument that joins the fuel tank, and it is gas-tight "
+              "to the ship around it, so a leak at a flange or a valve gland stays inside the space.",
+              "• Its ventilation runs all the time and changes the air at least 30 times an hour.",
+              "• Gas detectors at the top and the bottom of the space raise the alarm at 20 % LEL.",
+              "• At 40 % LEL the master gas valve closes and the bunkering stops at once.",
+              "The space is entered only with a permit: the atmosphere is measured, the ventilation proved and a second person "
+              "stands at the entrance; inside, the escape route is kept clear and the lighting is certified for a gas atmosphere.",
+              "After work every opened flange is tested for tightness before gas is let back into the pipes, and the test is "
+              "written in the log with the pressure, the time and the name of the person who did it."]
+
+
+def layouts_part(tmp):
+    """L61 (2.52.0) - every slide is one of the owner's layout templates, in the brandbook's colours, with the official logo"""
+    print("\n-- L61: every slide is one of the owner's layout templates")
+    os.makedirs(os.path.join(tmp, "lt"))
+    c, md = new_course(os.path.join(tmp, "lt"), script())
+    code, out = run(COMPILE, c, "--module", "1")
+    page = deck(md)
+    slides = re.findall(r'<section [^>]*>', page)
+    named = [(re.search(r'data-template="([\w-]+)\.v(\d+)"', x), re.search(r'data-variant="([\w-]+)"', x)) for x in slides]
+    check("every slide names its template and variant", slides and all(t and v for t, v in named), [x[:160] for x in slides])
+    check("... and each is one of the catalogue's thirteen, with one of its variants",
+          len(LAYOUTS["templates"]) == 13 and all(t.group(1) in LAYOUTS["templates"] and v.group(1) in LAYOUTS["templates"][t.group(1)]["variants"]
+                                                   for t, v in named if t and v), [(t.group(0), v.group(0)) for t, v in named if t and v])
+    want = {"s01": ("photo-explain", "full"), "s02": ("explain-figure", "figure-right"), "s03": ("figure-stage", "figure"),
+            "t01": ("task-launch", "tablet"), "t02": ("task-launch", "check")}
+    got = {sid: (re.search(r'data-template="([\w-]+)\.', section(page, sid)) or re.search("$^", "")) for sid in want}
+    check("the template comes from the slide: a full photograph, a split figure, a stage, a task, the module check",
+          all(got[s] and (got[s].group(1), re.search(r'data-variant="([\w-]+)"', section(page, s)).group(1)) == w for s, w in want.items()),
+          {s: section(page, s)[:200] for s in want})
+    check("the deck loads the templates' look (gb_layouts.css) after gb_compose.css",
+          page.index("gb_compose.css") < page.index("gb_layouts.css"), page[:1500])
+    check("... and the module carries it, the official logo and the bundled Raleway (the brandbook's typeface, offline)",
+          all(os.path.isfile(os.path.join(md, "assets", f)) for f in ("gb_layouts.css", "novikontas_logo.svg", "raleway-variable.ttf")))
+    css = io.open(os.path.join(SKILLS, "course-module-ui", "templates", "gb_layouts.css"), encoding="utf-8").read()
+    brand = {"#0A2463", "#53A7DB", "#011111", "#415C8F", "#E7EBF0", "#FFFFFF"}
+    hexes = set(x.upper() for x in re.findall(r"#[0-9A-Fa-f]{6}\b", css))
+    check("its colours are the brandbook's six, and the few tints between them - no amber, no other blue",
+          brand <= hexes and not hexes & {"#E9A51E", "#E9AB39", "#2EB6F8"}, sorted(hexes))
+    check("... the logo is the official file, used as it is, on a white plate on dark slides",
+          'url("novikontas_logo.svg")' in css and "var(--lt-white) url(\"novikontas_logo.svg\")" in css)
+    check("the built deck still says exactly the approved words", run(MATCH, c, "--module", "1", "--part", "instructor")[0] == 0)
+
+    print("\n-- L61: the owner's rules - 55 / 45, dense text has a picture, never three slides in a row without one")
+    def fresh(name, screens, sheet=None):
+        os.makedirs(os.path.join(tmp, name))
+        c2, md2 = new_course(os.path.join(tmp, name), script(screens=screens))
+        if sheet:
+            build_of(c2, lambda b: b["screens"].update(sheet))
+        code2, out2 = run(COMPILE, c2, "--module", "1")
+        return c2, md2, code2, out2
+    c2, md2, code, out = fresh("split", SCREENS, {"s02": {"figure": "assets/fig/scale.svg", "split": 0.5}})
+    check("a build sheet sets the text share of a split slide: \"split\": 0.5 -> --lt-text:50",
+          code == 0 and 'style="--lt-text:50"' in section(deck(md2), "s02"), out + section(deck(md2), "s02")[:300])
+    c2, md2, code, out = fresh("split2", SCREENS, {"s02": {"figure": "assets/fig/scale.svg", "split": 0.7}})
+    check("caught: a split outside 50-60 % text", code == 1 and "\"split\": 0.7 - the text takes 50-60 %" in out, out)
+
+    dense = {"id": "s05", "kind": "slide", "title": "Why gas needs its own rules", "visual_kind": "none", "minutes": 3,
+             "text": "\n".join(LONG_LINES[:3])}
+    scr = json.loads(json.dumps(SCREENS))
+    scr.insert(4, dense)
+    c2, md2, code, out = fresh("dense", scr)
+    check("caught: a slide of more than 60 words with no picture beside it",
+          code == 1 and "words and no picture beside them - dense text always has" in out and "(s05)" in out, out)
+
+    short = lambda i: {"id": "x%d" % i, "kind": "slide", "title": "Point %d" % i, "visual_kind": "none", "minutes": 1,
+                       "text": "A short point, said plainly."}
+    scr = json.loads(json.dumps(SCREENS))
+    scr[4:4] = [short(1), short(2)]
+    c2, md2, code, out = fresh("two", scr)
+    check("two text-only slides in a row are fine", "three teaching slides in a row" not in out, out)
+    scr = json.loads(json.dumps(SCREENS))
+    scr[4:4] = [short(1), short(2), short(3)]
+    c2, md2, code, out = fresh("three", scr)
+    check("caught: a third teaching slide in a row without a teaching picture",
+          code == 1 and "three teaching slides in a row without a teaching picture (x1, x2, x3)" in out, out)
+    scr = json.loads(json.dumps(SCREENS))
+    i = [x["id"] for x in scr].index("t01")
+    scr[i:i] = [short(1), short(2)]
+    scr.insert(i + 4, short(3))         # x1 x2, the task launch t01 and its question, then x3: the task does not break the run
+    c2, md2, code, out = fresh("task", scr)
+    check("... a task launch between them neither counts nor breaks the run", "three teaching slides in a row" in out, out)
+
+    print("\n-- L61: a template asked for by name, and the ones built from the words")
+    c2, md2, code, out = fresh("unknown", SCREENS, {"s02": {"figure": "assets/fig/scale.svg", "template": "fancy-layout"}})
+    check("caught: a template the factory does not have", code == 1 and "asks for the template \"fancy-layout\" - the templates are" in out, out)
+    c2, md2, code, out = fresh("unfit", SCREENS, {"s02": {"figure": "assets/fig/scale.svg", "template": "photo-explain"}})
+    check("caught: a template that does not suit the slide (photo-explain without a photograph)",
+          code == 1 and "asks for the template photo-explain, which needs a photograph" in out, out)
+    c2, md2, code, out = fresh("variant", SCREENS, {"s02": {"figure": "assets/fig/scale.svg", "template": "explain-figure", "variant": "diagonal"}})
+    check("caught: a variant the template does not have", code == 1 and "has no variant \"diagonal\"" in out, out)
+    c2, md2, code, out = fresh("stage", SCREENS, {"s02": {"figure": "assets/fig/scale.svg", "template": "figure-stage"}})
+    s = section(deck(md2), "s02")
+    check("a template asked for by name decides the layout (figure-stage -> a stage)",
+          'data-template="figure-stage.v1"' in s and "slide-body stage" in s, s[:400])
+
+    long_slide = {"id": "s05", "kind": "slide", "title": "The tank connection space", "layout": "split", "visual_kind": "schematic",
+                  "visual": "The space.", "minutes": 5, "text": "\n".join(LONG_LINES)}
+    table = {"id": "s06", "kind": "slide", "title": "Three fuels compared", "layout": "split", "visual_kind": "comparison", "visual": "Tanks.",
+             "minutes": 3, "text": "LNG | about -162 °C\nLPG | about -42 °C\nMethanol | room temperature\nThe colder the fuel, the more insulation."}
+    blocks = {"id": "s07", "kind": "slide", "title": "The safety system", "layout": "split", "visual_kind": "schematic", "visual": "Loop.",
+              "minutes": 3, "text": "Detection\nThe gas is found.\nShutdown\nThe valve closes.\nVentilation\nThe gas is cleared."}
+    two = {"id": "s08", "kind": "slide", "title": "Drawing and ship", "layout": "split", "visual_kind": "comparison", "visual": "Both.",
+           "minutes": 2, "text": "The drawing\nHow the parts connect.\nThe ship\nWhat you see on board."}
+    scr = json.loads(json.dumps(SCREENS))
+    scr[4:4] = [long_slide, table, blocks, two]
+    c2, md2, code, out = fresh("built", scr, {
+        "s05": {"figure": "assets/fig/scale.svg"}, "s06": {"figure": "assets/fig/scale.svg"},
+        "s07": {"figure": "assets/fig/scale.svg", "template": "three-content-blocks", "blocks": [[1, 2], [3, 4], [5, 6]]},
+        "s08": {"figure": "assets/fig/scale.svg", "figure_b": "hull.svg", "template": "compare-two", "blocks": [[1, 2], [3, 4]]}})
+    page = deck(md2)
+    s5, s6, s7, s8 = (section(page, x) for x in ("s05", "s06", "s07", "s08"))
+    parts = re.findall(r'<div class="lt-part[^"]*" data-part="(\d)">', s5)
+    order = [int(x) for x in re.findall(r'data-i="(\d+)"', s5)]
+    check("more than 135 words beside a picture become content-in-parts: two parts or more, the first shown",
+          'data-template="content-in-parts.v1"' in s5 and len(parts) >= 2 and 'class="lt-part on" data-part="1"' in s5, s5[:600])
+    check("... every approved line in a part, once, in order - nothing cut", order == list(range(1, len(LONG_LINES) + 1)), order)
+    check("... with a numbered tab for each part (Next walks them too - gb_deck.js)",
+          len(re.findall(r'<button type="button" class="lt-tab', s5)) == len(parts) and "lt-part" in io.open(os.path.join(md2, "assets", "gb_deck.js"), encoding="utf-8").read())
+    check("lines with cells \" | \" are a table: reference-table, one row a line, the separator kept (hidden)",
+          'data-template="reference-table.v1"' in s6 and s6.count('<tr data-script-field="text"') == 3 and '<span class="lt-sep"> | </span>' in s6, s6[:700])
+    check("three-content-blocks: three numbered blocks beside the picture", 'data-template="three-content-blocks.v1"' in s7
+          and s7.count('class="lt-block"') == 3, s7[:700])
+    check("compare-two: two cards, each its own picture and its block", 'data-template="compare-two.v1"' in s8
+          and s8.count('class="lt-card"') == 2 and s8.count("<svg") >= 2, s8[:900])
+    check("... and all of it still says exactly the approved words",
+          run(MATCH, c2, "--module", "1", "--part", "instructor")[0] == 0, run(MATCH, c2, "--module", "1", "--part", "instructor")[1])
 
 
 def fixes_part(tmp):
@@ -1922,6 +2055,7 @@ def main():
         v2494_part(tmp)
         v2497_part(tmp)
         v2520_part(tmp)
+        layouts_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

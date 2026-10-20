@@ -16,6 +16,27 @@ Values (the exact colours, sizes, radii) live in `knowledge/tokens.json` and the
 
 ---
 
+## 0 · The owner's layout templates — every compiled slide is one (L61, `gb_layouts.css`)
+
+Since 2.52.0 a compiled slide also names one of thirteen templates in `data-template` (the template's name and its
+version, e.g. explain-figure, version 1) and `data-variant` - and `gb_layouts.css` (loaded after `gb_compose.css`) gives
+it the owner-reviewed look of `design/course-layout-templates/`: the top line and the official logo, the large title,
+numbered points, the Navy figure panel, 55 / 45 split slides, the thin bottom line - in the brandbook's colours only,
+in Raleway (`raleway-variable.ttf`, bundled; SIL Open Font License, `templates/fonts/OFL.txt`). The list, the variants
+and the owner's rules are `knowledge/layout-templates.json`; the compositions below are still the structure inside each
+template. A hand-built deck without `data-template` looks as it always did.
+
+The few classes of its own, all written by the compiler:
+
+| Class | What it is |
+|---|---|
+| `.lt-parts` · `.lt-part` · `.lt-part.on` · `.lt-tabs` · `.lt-tab` | content-in-parts: the parts of one slide, the one shown, its numbered tabs (`gb_deck.js` walks them with Next / Back) |
+| `.lt-table` · `.lt-sep` | reference-table: one row a line; the hidden ` \| ` that keeps the row the approved line |
+| `.lt-block` | three-content-blocks: one numbered block of lines |
+| `.lt-compare` · `.lt-card` · `.lt-card-visual` · `.lt-card-copy` · `.lt-compare-note` | compare-two: two cards, each its picture and its lines |
+| `.lt-light` | a figure panel in Light Grey for a drawing made for a white page (`"panel": "light"`); the panel is Navy otherwise |
+| `.kit-screen` | the figure kit's own screen (course-visuals/kit) - transparent inside the Navy panel, so the drawing sits on the panel |
+
 ## 1 · Screen compositions — put ONE on `.slide-body` (`gb_compose.css`)
 
 Pick the composition the **content** needs. Never the same one three screens running out of habit.

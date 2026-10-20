@@ -1350,7 +1350,25 @@ the vent at y 230 instead of 196 and no hand label boxes, M01 **PASSes** in one 
 `vent-puffs` (a vent 22 under a room: was inside on some frames, now clean) and `bad-mover` (a plain moving disc, the
 determinism case the puffs were), `test_audit_drawing.py`.
 
-## 4zz6 · Six things a trainee or an instructor saw (2.53.0 - built as 2.52.0 on its own branch, 2026-10-20)
+## 4zz6 · Every slide is one of the owner's layout templates (L61, 2.52.0, 2026-10-20)
+
+The owner reviewed thirteen layout templates on 2026-10-20 (`design/course-layout-templates/`, handoff
+`docs/LAYOUT_TEMPLATE_IMPLEMENTATION.md`) and made them the rule for every slide, with the official logo and the
+brandbook's colours. Built: `course-module-ui/knowledge/layout-templates.json` (the thirteen, their variants, the rules
+as numbers); `course-module-ui/templates/gb_layouts.css` (the look, scoped to `[data-template]` so a deck from before
+looks as it did; brandbook colours only - amber is Novikontas Blue; the official `novikontas_logo.svg` top right, on a
+white plate on dark slides; Raleway bundled, `templates/fonts/` with its OFL licence), shipped by `design_system.py`;
+`compile_module.py` names each slide's template and variant (`auto_template`, `pick_template`), builds the four that
+need their own structure (content-in-parts, reference-table, three-content-blocks, compare-two), and checks the owner's
+rules - split 55 / 45, a picture beside dense text, never three teaching slides in a row without one, parts instead of
+cut words; `gb_deck.js` walks a slide's parts with Next / Back and its tabs. Measured on a sample module with every
+template at 1280 x 800 (`run_audits.py`): no low contrast, small text, spill, tap or collision problems; the long slide
+that spilled 38 px before is in two parts now. What it costs: a drawing is about 45 % of the slide wide, not 60 % - one
+whose labels fall under the floor at that width is reported by the drawing check. Tests: `test_compile_module.py`
+`layouts_part` (every slide named; the mapping; the brand colours and the logo; split, dense, sequence, unknown and
+unsuitable templates; parts, table, blocks, comparison - all still word for word).
+
+## 4zz7 · Six things a trainee or an instructor saw (2.54.0 - built as 2.52.0 on its own branch, 2026-10-20)
 
 Each found by both benchmark runs of IGF M01 + M02 (`M01_benchmark\workflow_before`, `workflow_after`); each fixed with a
 test that fails on 2.51.0.
@@ -1394,7 +1412,7 @@ test that fails on 2.51.0.
    colon; a map row's own `"clauses"` list, when given, is used as it is (additive - no approved map changes). Whether
    it ever blocks is the owner's decision.
 
-## 4zz7 · Shared subject libraries: read first, save back (2.54.0 - built as 2.52.0 on its own branch, 2026-10-20)
+## 4zz8 · Shared subject libraries: read first, save back (2.55.0 - built as 2.52.0 on its own branch, 2026-10-20)
 
 Aigars Klūga asked for one shared knowledge base + asset library for the gas courses (GAS BASIC, GAS ADVANCED, IGF
 Basic, IGF Advanced); it was built on the company's Drive (`Gas Library`: pictures with provenance, reference PDFs with
@@ -1425,7 +1443,7 @@ the first.
   detector" 4 shippable photos + 4 blocked, "type C tank" 1 photo + 2 figures, 4 blocked, the AI cutaway held back,
   "LNG bunkering" 6 photos; with the library switched off the resolver answers as before (exit 3).
 
-## 4zz8 · Physical equipment is drawn as it looks on board (L61, 2.55.0 - built as 2.52.0 on its own branch, 2026-10-20)
+## 4zz9 · Physical equipment is drawn as it looks on board (L62, 2.56.0 - built as 2.52.0 / L61 on its own branch, 2026-10-20)
 
 Aleksis approved a plain-vs-realistic mock-up of the figure kit ("yes we like this new kit styling") and asked for it in
 the kit itself, on in every deck: no spec option, no per-slide ask. Then: "also do the Parts added from courses", "make

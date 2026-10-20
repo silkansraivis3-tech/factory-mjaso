@@ -191,7 +191,7 @@ GEOM = ("x", "y", "w", "h", "r", "x1", "y1", "x2", "y2", "at", "size", "d", "poi
 
 
 def parts_together(spec_path, block):
-    """(2.55.0) the spec's own parts a figure's findings name ("[part TK1]", audit_drawing.js), each as the spec has it -
+    """(2.56.0) the spec's own parts a figure's findings name ("[part TK1]", audit_drawing.js), each as the spec has it -
     so every number a fix may touch is on one screen, and a fix for one finding is made knowing what it moves for the
     others (one fix, two new problems: IGF M02 s02, 2026-10-20). Then the studio command that tries a fix in seconds"""
     ids = list(dict.fromkeys(re.findall(r"\[part ([^\]\s]+)\]", block)))
@@ -1055,7 +1055,7 @@ def run_all(course, module, fix=True, jobs=4):
             if p == []:
                 return item, probs, r, json.loads(old), rec_old.get("how", "re-fitted")
         # --no-fix makes no NEW fit, but the compiler draws a saved one that is still clean - judging the spec as written
-        # instead failed a deck that was right (2.55.0: IGF M02 s09, the QA's re-run against the builder's PASS)
+        # instead failed a deck that was right (2.56.0: IGF M02 s09, the QA's re-run against the builder's PASS)
         if not fix:
             return item, probs, r, None, None
         new, how, best = try_fixes(sp, sid, spec, r, probs, None)

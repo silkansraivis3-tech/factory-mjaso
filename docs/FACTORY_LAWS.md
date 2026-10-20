@@ -529,7 +529,19 @@ the best candidate and why. A recommendation, never a block (2.18.1): the operat
 half the teaching slides, never instead of a real photograph, the speed and tap rules of the compile GUIDE 2b.
 → `course-factory` (`scripts/content_script.py` `best_3d`, `build_findings`; `compile/scripts/compile_module.py`), 2.49.7
 
-**L61 · Physical equipment is drawn as it looks on board.** Aleksis, 2026-10-20, approving a plain-vs-realistic mock-up of
+**L61 · Every slide is one of the owner's layout templates, in the brandbook's colours, with the official logo.** The
+owner, 2026-10-20: *"Implement the layout templates. All slides for all modules that will be made need to be in this style, it's a RULE. Configure the compiler so it does this style - of course the logo should be our official one, and the colours from the brandbook."* The thirteen owner-reviewed templates of `design/course-layout-templates/` (explain-figure,
+figure-stage, photo-explain, compare-two, procedure, task-launch, recap, opening, long-explanation, three-content-blocks,
+reference-table, reading-with-figure, content-in-parts) are a production contract; every compiled slide names its
+template and variant, chosen from the approved script and the build sheet or asked for by name, and an unknown or
+unsuitable one is a problem. The look is `gb_layouts.css`: brandbook colours only (the reference's amber is Novikontas
+Blue), the official logo file top right (a white plate on dark slides), Raleway bundled for the offline classroom. The
+owner's rules are build problems: 55 / 45 on a split slide (50-60 % text), a picture beside every dense slide (more than
+60 words), never three teaching slides in a row without a teaching picture, and words that need more room in readable
+parts - never cut, never smaller type. → `course-factory` (`compile/scripts/compile_module.py`) and `course-module-ui`
+(`knowledge/layout-templates.json`, `templates/gb_layouts.css`), 2.52.0
+
+**L62 · Physical equipment is drawn as it looks on board.** Aleksis, 2026-10-20, approving a plain-vs-realistic mock-up of
 the figure kit: *"yes we like this new kit styling"*, then *"also do the Parts added from courses"* and *"make the ship look
 realistic aswell, look at real images of it"*. (1) Every kit part that is a physical thing - a tank, a pipe, a valve, a
 pump, an exchanger, an engine, a vent, a hose, a coupling, a ship - is drawn in its material (cladding, brushed
@@ -544,10 +556,10 @@ A new part declares its `look` (`equipment`, `screen` or `diagram`) and an equip
 `KIT.h.body` / `KIT.h.equip` and the kit's materials; `check_kit.py` refuses one that does not. →
 `course-visuals` (`kit/kit.js` materials, `KIT.h.body`, `equip`, `flange`; `kit/kit.css` `--mat-*`; `SPEC.md` "Rules of
 the look"; `PARTS.md`; `scripts/check_kit.py`), `course-module-ux` (`audit_drawing.js` judges one piece of equipment as
-one object, `data-kit-body`), 2.52.0
+one object, `data-kit-body`), 2.56.0 (built as 2.52.0 / L61 on its own branch, renumbered at the merge with the owner's L61)
 
-**All sixty-one laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L61 are enforced first through `course-factory/SKILL.md`'s
+**All sixty-two laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L62 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

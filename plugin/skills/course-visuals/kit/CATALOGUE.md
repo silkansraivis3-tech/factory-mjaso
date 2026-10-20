@@ -27,7 +27,7 @@ value at the mark; `then` moves to start the moment it is crossed; marks fire in
 
 ## Parts
 `name` (family) - options (default) - value: what the number means - ex: one part as written in a spec.
-Colours, sizes and label places are the kit's: a spec sets none of them. So is the look (L61, 2.52.0): physical
+Colours, sizes and label places are the kit's: a spec sets none of them. So is the look (L62, 2.52.0): physical
 equipment is drawn as it looks on board - its material, light and shade, its flanges, actuators and supports - and the
 screens stay calm ISA-101 screens. A valve is automatic (an actuator) unless `"actuator": false` (a handwheel).
 

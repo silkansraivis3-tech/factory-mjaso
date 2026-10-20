@@ -156,7 +156,7 @@ def main() -> int:
         code, d = resolve(["portable gas detector", "--project", empty_project, "--library", modern, "--no-library"],
                           {SL.ENV_ALL: "off"})
         check("--no-library skips 2a", not any(x.startswith("2a") for x in d.get("levels_searched", [])), d)
-        # 2.55.0 - a library picture's record passes the asset check in every state the library may ship
+        # 2.56.0 - a library picture's record passes the asset check in every state the library may ship
         # (check_assets.py had its own list without OWNER_CLEARED / GENERATED: IGF M02 with the Gas Library)
         import check_assets as CA
         with open(os.path.join(os.path.dirname(HERE), "source", "knowledge", "asset-pipeline.json"), encoding="utf-8") as fh:

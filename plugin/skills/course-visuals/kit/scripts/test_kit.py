@@ -68,46 +68,46 @@ check("a concatenated css is still checked as css (a colour in a piece is refuse
 check("a part named for its module is refused",
       bool(ck.check_part("M03_tray", ck.blocks(GOOD.replace("oil_tray", "M03_tray"))[0][1])))
 
-# ---------------------------------------------------------------- 2.52.0, L61: physical equipment is drawn as it looks on board
+# ---------------------------------------------------------------- 2.52.0, L62: physical equipment is drawn as it looks on board
 def part_with(old, new):
     return ck.check_part("oil_tray", ck.blocks(GOOD.replace(old, new))[0][1])
 
 
-check("L61: a part that does not say what it is drawn as (look) is refused",
+check("L62: a part that does not say what it is drawn as (look) is refused",
       any("look:" in x for x in part_with("look: 'equipment', ", "")), part_with("look: 'equipment', ", ""))
-check("L61: a look that is not equipment, screen or diagram is refused",
+check("L62: a look that is not equipment, screen or diagram is refused",
       any("look:" in x for x in part_with("look: 'equipment'", "look: 'pretty'")))
 FLAT = "h.el('rect', { width: w, height: 18, rx: 4, 'class': 'kit-shell' }, eq);"
 probs = part_with("h.body('rect', { width: w, height: 18, rx: 4 }, eq, { mat: 'steel', shade: 'box' });", FLAT)
-check("L61: equipment drawn with no material (no KIT.h.body / equip / kit-m-*) is refused",
+check("L62: equipment drawn with no material (no KIT.h.body / equip / kit-m-*) is refused",
       any("draws no body in a material" in x for x in probs), probs)
-check("L61: equipment drawn with a flat ISA body class (kit-shell) is refused",
+check("L62: equipment drawn with a flat ISA body class (kit-shell) is refused",
       any("flat kit-shell" in x for x in probs), probs)
 probs = part_with("'.kit-oil-tray-rim{stroke:var(--dim-d)}'", "'.kit-oil-tray-rim{fill:var(--deep-3);stroke:var(--dim-d)}'")
-check("L61: equipment whose css fills a body flat (var(--deep-3)) is refused", any("fills a body flat" in x for x in probs), probs)
-check("L61: a body filled with a kit material in css (var(--kit-steel)) passes",
+check("L62: equipment whose css fills a body flat (var(--deep-3)) is refused", any("fills a body flat" in x for x in probs), probs)
+check("L62: a body filled with a kit material in css (var(--kit-steel)) passes",
       part_with("'.kit-oil-tray-rim{stroke:var(--dim-d)}'", "'.kit-oil-tray-rim{fill:var(--kit-steel);stroke:var(--dim-d)}'") == [])
 SCREEN = GOOD.replace("look: 'equipment'", "look: 'screen'").replace(
     "h.body('rect', { width: w, height: 18, rx: 4 }, eq, { mat: 'steel', shade: 'box' });",
     "h.el('rect', { width: w, height: 18, rx: 4, 'class': 'kit-tile' }, g);")
-check("L61: a screen stays a flat ISA-101 HMI - no material asked of it",
+check("L62: a screen stays a flat ISA-101 HMI - no material asked of it",
       ck.check_part("oil_tray", ck.blocks(SCREEN)[0][1]) == [], ck.check_part("oil_tray", ck.blocks(SCREEN)[0][1]))
 merged = dict(ck.blocks(ck.read(ck.KIT_JS)))
 bad_look = sorted(n for n, b in merged.items() if ck.meta_field(b, "look") not in ck.LOOKS)
-check("L61: every part merged into kit.js says what it is drawn as", not bad_look, bad_look)
+check("L62: every part merged into kit.js says what it is drawn as", not bad_look, bad_look)
 equipment = sorted(n for n, b in merged.items() if ck.meta_field(b, "look") == "equipment")
-check("L61: the kit's physical parts are drawn as equipment (cylinder, coupling, manifold, person, ga ...)",
+check("L62: the kit's physical parts are drawn as equipment (cylinder, coupling, manifold, person, ga ...)",
       {"cylinder", "coupling", "manifold", "person", "ga", "hose", "relief_valve", "gas_cylinder"} <= set(equipment), equipment)
 kitjs, kitcss = ck.read(ck.KIT_JS), ck.read(os.path.join(os.path.dirname(ck.KIT_JS), "kit.css"))
-check("L61: kit.js draws the materials once per page and gives parts KIT.h.body, equip, flange",
+check("L62: kit.js draws the materials once per page and gives parts KIT.h.body, equip, flange",
       all(x in kitjs for x in ("function materials()", "body: body", "equip: equip", "flange: flange", "'kit-materials'")))
-check("L61: the materials are tokens (--mat-*), with a set of their own for a light page (.kit-mat-light, .kit.kit-light)",
+check("L62: the materials are tokens (--mat-*), with a set of their own for a light page (.kit-mat-light, .kit.kit-light)",
       all(x in kitcss for x in ("--mat-steel:", "--mat-steel-l:", ".kit-mat-light{", "--kit-steel:url(#kit-m-steel-l)")))
-check("L61: the materials' textures are never display:none (Chrome then drops their paint servers)",
+check("L62: the materials' textures are never display:none (Chrome then drops their paint servers)",
       "display:none" not in kitjs.split("function materials()", 1)[1].split("function body(", 1)[0])
 for t in ("valve", "tank", "pipe", "exchanger", "pump", "engine", "vent", "well"):
     src = kitjs.split("TYPES.%s = function" % t, 1)[1].split("\n  };", 1)[0]
-    check("L61: the kit's own %s is drawn in its material (body / equip / flange)" % t,
+    check("L62: the kit's own %s is drawn in its material (body / equip / flange)" % t,
           bool(re.search(r"\b(?:body|equip|flange)\(", src)))
 
 # ---------------------------------------------------------------- specs

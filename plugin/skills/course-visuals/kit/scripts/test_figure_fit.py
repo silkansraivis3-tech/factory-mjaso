@@ -136,7 +136,7 @@ def inside_part():
 
 
 def together_part():
-    print("-- 2.55.0 the parts a figure's findings name, with their spec numbers, and the studio command")
+    print("-- 2.56.0 the parts a figure's findings name, with their spec numbers, and the studio command")
     tmp = tempfile.mkdtemp(prefix="test_ff_tog_")
     try:
         sp = os.path.join(tmp, "s02.kit.json")

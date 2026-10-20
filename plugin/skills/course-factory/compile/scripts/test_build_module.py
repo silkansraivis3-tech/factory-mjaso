@@ -58,7 +58,7 @@ def main():
           b.own_package_findings(0, "Ready", "module01") == (0, "Ready", 0)
           and b.own_package_findings(2, "Stopped", "module01") == (2, "Stopped", 0))
     last = {"inputs": "k1", "only_figures": True}
-    check("2.55.0 a figures-only round: only figures fail, the last full build failed on figures alone, same inputs -> stop",
+    check("2.56.0 a figures-only round: only figures fail, the last full build failed on figures alone, same inputs -> stop",
           b.figures_only_round(["figures"], False, last, "k1"))
     check("... never when the script or build sheet changed, the last build failed on more, --full, or nothing failed yet",
           not b.figures_only_round(["figures"], False, last, "k2")

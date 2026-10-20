@@ -9,6 +9,8 @@
     {"name": "gb_tokens.css",       "from": "course-module-ui/templates/gb_tokens.css",   "for": "every page - the token set, loaded first"},
     {"name": "gb_shell.css",        "from": "course-module-ui/templates/gb_shell.css",    "for": "the deck frame"},
     {"name": "gb_compose.css",      "from": "course-module-ui/templates/gb_compose.css",  "for": "what sits on a deck screen - compositions and blocks"},
+    {"name": "gb_layouts.css",      "from": "course-module-ui/templates/gb_layouts.css",  "for": "the owner's layout templates (L61, 2.52.0) - every compiled slide is one of them, brandbook colours, the official logo"},
+    {"name": "raleway-variable.ttf", "from": "course-module-ui/templates/fonts/raleway-variable.ttf", "for": "Raleway, the brandbook's typeface, bundled so it works offline (SIL Open Font License - templates/fonts/OFL.txt); gb_layouts.css loads it"},
     {"name": "gb_page.css",         "from": "course-module-ui/templates/gb_page.css",     "for": "document pages and the frame of task pages"},
     {"name": "gb_task.css",         "from": "course-task-ux/assets/gb_task.css",          "for": "task controls, on top of gb_page.css"},
     {"name": "gb_answer.css",       "from": "course-task-ux/assets/gb_answer.css",        "for": "the screens of every compiled task page - choose, tap the picture, drag and drop, the result ring"},

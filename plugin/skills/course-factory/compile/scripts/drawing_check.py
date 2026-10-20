@@ -46,7 +46,7 @@ KEEP = ("check", "where", "part", "other", "detail")
 WRITE = ("function __done(r){var p=document.createElement('pre');p.id='%s';p.textContent=JSON.stringify(r);"
          "document.body.appendChild(p);}"
          "function __keep(f,pre){return {check:f.check,where:(pre||'')+f.where,part:f.part,other:f.other||'',detail:f.detail||''};}" % OUT)
-# a deck: every slide in turn, as the deck shows it (audit_drawing.js all() presses Start). 2.55.0: a long deck is checked
+# a deck: every slide in turn, as the deck shows it (audit_drawing.js all() presses Start). 2.56.0: a long deck is checked
 # in slices side by side - each browser keeps only its slides [__LO, __HI) and the finding's slide number is put back
 # in <head>, before the page is read: a slide outside the slice is taken out as the parser adds it, so neither the deck
 # nor the figure kit ever lays it out (removing it after the load left every browser drawing the whole deck)
@@ -151,7 +151,7 @@ def run_page(exe, page, prof, tmp, rng=None):
 
 
 def jobs_for(n):
-    """how many hidden browsers check at once (2.55.0): the deck in slices and every task page side by side, each its own
+    """how many hidden browsers check at once (2.56.0): the deck in slices and every task page side by side, each its own
     browser with its own profile - half the computer's cores, at most 8, CF_DRAWING_JOBS to set it (1 = one page at a
     time, the deck whole, as before). The findings are the same and come back in the pages' and slides' order."""
     try:
