@@ -752,9 +752,11 @@
          run 5, s06), as the drawing check now finds on every build */
       var anims = motions(svg), held = anims.map(function (a) { return { a: a, t: a.currentTime, run: a.playState === 'running' }; });
       try {
-        (anims.length ? MOTION_PHASES : [null]).forEach(function (ph) {
+        /* 2.52.0: what does not move is measured once per state; the later phases measure only what the motions move */
+        var movers = anims.map(function (a) { return a.effect.target; });
+        (anims.length ? MOTION_PHASES : [null]).forEach(function (ph, pi) {
           if (ph !== null) holdAt(anims, ph);
-          measure();
+          measure(pi > 0 ? movers : null);
         });
       } finally {
         var live = document.getAnimations();
@@ -766,12 +768,13 @@
     });
     return G;
 
-    function measure() {
+    function measure(only) {
       var ctm = svg.getScreenCTM();
       if (!ctm) return;
       var inv = ctm.inverse(), s = det(ctm), memo = new Map();
       G.scale = s;
       q(svg, GEOM).forEach(function (n, idx) {
+        if (only && !only.some(function (t) { return t === n || t.contains(n); })) return;
         /* a body's light and shade (body()) is the same shape again: measured once, as the body; a bolt always sits on a
            body that is measured (2.52.0) */
         if (n.classList.contains('kit-sh') || n.classList.contains('kit-m-bolt') || notDrawn(n, svg) || !seen(n, svg, memo) || !painted(n)) return;
@@ -1469,9 +1472,9 @@
   /* 2.52.0: drawn as the tank is on deck - aluminium cladding over its insulation, cladding straps, standing on two
      saddles, with its dome (a flange on top) where a pipe of the spec leaves it, else near its right end. The lower part
      stays cut away so the LNG level is seen, pale at its surface and deep blue below. */
-  var TANK_FOOT = 12;
   TYPES.tank = function (fig, part, g, p) {
     var w = p.w || 190, h = p.h || 110, ex = h * 0.28, cid = fig.uid + '-' + p.id + '-t';
+    var TANK_FOOT = clamp(h * 0.1, 4, 12);             // the saddles' feet below the shell: a low tank in a tight hold keeps to it
     var shape = 'M' + ex + ' 0 H' + (w - ex) + ' A' + ex + ' ' + (h / 2) + ' 0 0 1 ' + (w - ex) + ' ' + h +
       ' H' + ex + ' A' + ex + ' ' + (h / 2) + ' 0 0 1 ' + ex + ' 0 Z';
     el('path', { d: shape }, el('clipPath', { id: cid }, el('defs', {}, g)));
@@ -1484,7 +1487,7 @@
       body('rect', { x: cx - sw - 6, y: h + TANK_FOOT - 4, width: 2 * sw + 12, height: 4, rx: 1 }, eq, { mat: 'paint' });
     });
     body('path', { d: shape }, eq, { mat: 'clad', shade: 'cyl' });
-    var straps = el('g', { 'clip-path': 'url(#' + cid + ')' }, eq);
+    var straps = el('g', { 'clip-path': 'url(#' + cid + ')', 'data-may-overlap': '' }, eq);   // surface detail: words written on the tank may cross them
     [0.36, 0.5, 0.64].forEach(function (f) {            // the cladding straps
       body('rect', { x: w * f - 2, y: 0, width: 4, height: h }, straps, { mat: 'steel', shade: 'cyl' });
     });
@@ -1621,12 +1624,10 @@
        a pipe or another part is in the way there, left out when both ends are taken (decided at layout, from what is
        drawn: a spool piece's pipe runs into the block as well as a pipe does) */
     var tg = el('g', {}, eq);
-    el('path', { d: 'M-13 12 V-13 H10', 'class': 'kit-engine-exh' }, tg);            // the exhaust from the manifold down to the turbine
     body('rect', { x: -6, y: 16, width: 8, height: 12 }, tg, { mat: 'steel' });
     body('rect', { x: -31, y: 15, width: 9, height: 14, rx: 2 }, tg, { mat: 'steel', shade: 'cyl' });   // the intake silencer
     body('circle', { cx: -13, cy: 22, r: 11 }, tg, { mat: 'cast', shade: 'round' });
     el('circle', { cx: -13, cy: 22, r: 4.5, 'class': 'kit-m-hole' }, tg);
-    var mf = body('rect', { x: 8, y: -18, width: w - 16, height: 9, rx: 3 }, eq, { mat: 'clad', shade: 'cyl' });   // the insulated exhaust manifold
     function taken(B, own) {
       if (pipeThrough(fig, B)) return true;
       return q(fig.svg, '.kit-part').some(function (o) {
@@ -1635,7 +1636,8 @@
         try { b = o.getBBox(); } catch (e) { return false; }
         if (!b.width && !b.height) return false;
         var ox = m ? +m[1] : 0, oy = m ? +m[2] : 0, R = { x: ox + b.x, y: oy + b.y, x2: ox + b.x + b.width, y2: oy + b.y + b.height };
-        if (R.x <= own.x && R.y <= own.y && R.x2 >= own.x2 && R.y2 >= own.y2) return false;   // a room the engine stands in
+        /* a room the engine stands in: the turbocharger must fit inside it too, never through its wall */
+        if (R.x <= own.x && R.y <= own.y && R.x2 >= own.x2 && R.y2 >= own.y2) return !(B.x >= R.x + 2 && B.x2 <= R.x2 - 2);
         return meets(R, B);
       });
     }
@@ -1678,7 +1680,6 @@
       plate.setAttribute('y', base - up - py); plate.setAttribute('height', up + down + 2 * py);
       reshape(block, { x: x0, width: bw, height: bh });
       reshape(bed, { x: x0 - 4, width: bw + 8, y: bh - 3 });
-      reshape(mf, { x: x0 + 8, width: bw - 16 });
       var own = { x: X + x0, y: Y - 10, x2: X + x0 + bw, y2: Y + bh + 5 };
       var side = !taken({ x: X + x0 - 32, y: Y + 10, x2: X + x0 - 1, y2: Y + 34 }, own) ? -1 :
                  !taken({ x: X + x0 + bw + 1, y: Y + 10, x2: X + x0 + bw + 32, y2: Y + 34 }, own) ? 1 : 0;
@@ -2068,7 +2069,8 @@ KIT.define('ga', function (fig, part, g, p) {
   var ship = h.equip(g, { shadow: false });
   if (!plan) {                                          // the rudder under the counter, the bulbous bow under the stem
     h.el('path', { d: 'M' + (w * 0.042) + ' ' + (d * 0.6) + ' H' + (w * 0.075) + ' V' + (d * 0.96) + ' H' + (w * 0.05) + ' Z', 'class': 'kit-m-bottom', 'data-may-cross': '' }, ship);
-    if (d >= 30) h.el('ellipse', { cx: w * 0.948, cy: d * 0.8, rx: w * 0.04, ry: d * 0.13, 'class': 'kit-m-bottom kit-ga-bulb', 'data-may-cross': '' }, ship);
+    if (d >= 30) h.el('path', { d: 'M' + (w * 0.9) + ' ' + (d * 0.68) + ' Q' + (w * 0.985) + ' ' + (d * 0.66) + ' ' + (w * 0.985) + ' ' + (d * 0.8) +
+                                    ' Q' + (w * 0.985) + ' ' + (d * 0.93) + ' ' + (w * 0.88) + ' ' + (d * 0.96) + ' Z', 'class': 'kit-m-bottom', 'data-may-cross': '' }, ship);
   }
   h.body('path', { d: hull }, ship, { mat: plan ? 'deck' : 'hull' });
   var paint = h.el('g', { 'clip-path': 'url(#' + cid + ')' }, ship);
@@ -2128,7 +2130,7 @@ KIT.define('ga', function (fig, part, g, p) {
   css: '.kit-ga-hull{fill:none;stroke:var(--dim-d);stroke-width:2;stroke-linejoin:round;transition:stroke .3s}.kit-ga-sea{fill:var(--cold);opacity:.12}' +
     '.kit-ga-boot{stroke:var(--mat-stem);stroke-width:1.5}.kit-ga-anchor{fill:none;stroke:var(--mat-yoke);stroke-width:1.6;stroke-linecap:round}' +
     '.kit-ga-rail{fill:none;stroke:var(--dim-d);stroke-width:1}.kit-ga-band{fill:var(--mat-hull)}' +
-    '.kit-ga-mast{fill:none;stroke:var(--dim-d);stroke-width:2;stroke-linecap:round}.kit-ga-bulb{stroke:var(--mat-yoke);stroke-width:1.2}' +
+    '.kit-ga-mast{fill:none;stroke:var(--dim-d);stroke-width:2;stroke-linecap:round}' +
     '.kit-ga-bulwark{fill:none;stroke:var(--mat-white);stroke-width:6}' +
     '.kit-ga-frame{stroke:var(--faint-d);stroke-width:1;stroke-dasharray:3 4}.kit-lit .kit-ga-hull{stroke:var(--blue)}',
   example: { size: [420, 200], parts: [
@@ -2329,7 +2331,7 @@ KIT.define('cylinder', function (fig, part, g, p) {
   why: 'M01 s06: a dual-fuel engine cylinder in gas mode (gas jet lit by a pilot oil spray), on a gas trip, and in fuel-oil mode; M06 and M13 need it too',
   value: '0 stopped · 1 gas mode (gas jet + pilot spray) · 1.5 gas supply stopped (pilot only) · 2 fuel-oil mode (oil spray)',
   css: '.kit-cylinder-ring{stroke:var(--mat-edge);stroke-width:2}.kit-cylinder-stem{stroke-width:3}' +
-    '.kit-cylinder-crown{fill:none;stroke:var(--mat-edge);stroke-width:1.5}.kit-cylinder-spring{fill:none;stroke:var(--mat-stem);stroke-width:1.6;stroke-linejoin:round}' +
+    '.kit-cylinder-crown{fill:none;stroke:var(--mat-edge);stroke-width:1.5}.kit-cylinder-spring{fill:none;stroke:var(--dim-d);stroke-width:1.6;stroke-linejoin:round}' +
     '.kit-cylinder-gas line{stroke:var(--txt-d);stroke-width:3;stroke-linecap:round;stroke-dasharray:2 6}.kit-cylinder-pilot line,.kit-cylinder-oil line{stroke:var(--cold);stroke-width:2.5;stroke-dasharray:5 4}.kit-cylinder-fire{opacity:0}.kit-cylinder-flame{fill:var(--mat-flame);opacity:.92}.kit-cylinder-fire-gas .kit-cylinder-flame{fill:var(--cold);opacity:.6}.kit-cylinder-fire-gas .kit-cylinder-core{opacity:.75}.kit-light .kit-cylinder-flame{stroke:var(--mat-flame-edge);stroke-width:1.5}.kit-light .kit-cylinder-fire-gas .kit-cylinder-flame{opacity:.9}.kit-cylinder-core{fill:var(--txt-d)}.kit-cylinder-run .kit-cylinder-flick{transform-box:fill-box;transform-origin:50% 0;animation:kit-cylinder-flicker .3s ease-in-out infinite alternate}@keyframes kit-cylinder-flicker{to{transform:scale(1.05,.94)}}.kit-cylinder-run .kit-cylinder-moving{animation:kit-cylinder-stroke .9s ease-in-out infinite alternate}.kit-cylinder-run .kit-cylinder-gas line,.kit-cylinder-run .kit-cylinder-pilot line,.kit-cylinder-run .kit-cylinder-oil line{animation:kit-flow .8s linear infinite}.kit-cylinder-run .kit-state{fill:var(--txt-d)}.kit-cylinder-trip .kit-state{fill:var(--warn-d)}@keyframes kit-cylinder-stroke{to{transform:translateY(34px)}}',
   example: { size: [420, 330], parts: [
     { id: 'C', type: 'cylinder', x: 140, y: 50, w: 140, h: 230 } ],
@@ -2392,6 +2394,11 @@ KIT.define('zone', function (fig, part, g, p) {
   var grow = h.el('g', {}, g);
   var at = round ? { cx: p.r, cy: p.r, r: p.r } : { width: w, height: ht, rx: p.rx != null ? p.rx : 6 };
   at['class'] = 'kit-zone-area kit-zone-z' + z;
+  /* a zone laid over a tank sits on its light cladding (2.52.0): it takes the deep inks a light surface needs */
+  var zx = (p.x || 0) + w / 2, zy = (p.y || 0) + ht / 2;
+  if ((fig.spec.parts || []).some(function (q) { return q.type === 'tank' && zx >= (q.x || 0) && zx <= (q.x || 0) + (q.w || 190) && zy >= (q.y || 0) && zy <= (q.y || 0) + (q.h || 110); })) {
+    g.classList.add('kit-zone-onlight');
+  }
   at['data-may-cross'] = '';                       // a zone reaches over walls and decks by its nature
   at['data-no-contain'] = '';
   h.el(round ? 'circle' : 'rect', at, grow);
@@ -2407,7 +2414,8 @@ KIT.define('zone', function (fig, part, g, p) {
   look: 'diagram',
   why: 'M02 s12: hazardous zones 0, 1 and 2 growing around tanks, spaces and openings on an IGF ship',
   value: 'how far the zone has grown from its origin, 0..1',
-  css: '.kit-zone-area{stroke-width:2;stroke-dasharray:6 4}.kit-zone-z0{fill:var(--warn-d);fill-opacity:.38;stroke:var(--warn-d)}.kit-zone-z1{fill:var(--amber);fill-opacity:.3;stroke:var(--amber)}.kit-zone-z2{fill:var(--amber);fill-opacity:.1;stroke:var(--amber);stroke-dasharray:2 4}',
+  css: '.kit-zone-area{stroke-width:2;stroke-dasharray:6 4}.kit-zone-z0{fill:var(--warn-d);fill-opacity:.38;stroke:var(--warn-d)}.kit-zone-z1{fill:var(--amber);fill-opacity:.3;stroke:var(--amber)}.kit-zone-z2{fill:var(--amber);fill-opacity:.1;stroke:var(--amber);stroke-dasharray:2 4}' +
+    '.kit-zone-onlight .kit-zone-z0{stroke:var(--mat-trip)}.kit-zone-onlight .kit-zone-z1,.kit-zone-onlight .kit-zone-z2{stroke:var(--amber-ink)}',
   example: { size: [320, 190], parts: [
     { id: 'Z2', type: 'zone', zone: 2, x: 100, y: 35, r: 60 },
     { id: 'Z1', type: 'zone', zone: 1, x: 130, y: 65, r: 30 },
@@ -2666,8 +2674,8 @@ KIT.define('relief_valve', function (fig, part, g, p) {
   why: 'M03 s03 and s09: a spring-loaded relief valve - the spring holds the disc on its seat until the pressure beats it, then the disc lifts and the vapour goes to the vent',
   value: 'how far the disc has lifted, 0 closed .. 1 fully open; inlet at (0, size) below, outlet at (size, 0) to the side',
   css: '.kit-relief-valve-win{fill:var(--mat-hole);stroke:var(--mat-edge);stroke-width:1}.kit-relief-valve-lever{stroke-width:2.4}.kit-relief-valve-spindle{stroke-width:2}' +
-    '.kit-relief-valve-spring{fill:none;stroke:var(--kit-steel);stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}' +
-    '.kit-relief-valve-disc{fill:var(--mat-stem);stroke:var(--txt-d);stroke-width:1.5}.kit-relief-valve-lift .kit-relief-valve-spring{stroke:var(--amber)}.kit-relief-valve-lift .kit-relief-valve-disc{fill:var(--amber)}.kit-relief-valve-lift .kit-state{fill:var(--amber)}',
+    '.kit-relief-valve-spring{fill:none;stroke:var(--kit-steel);stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}.kit-light .kit-relief-valve-spring{stroke:var(--dim-d)}' +
+    '.kit-relief-valve-disc{fill:var(--mat-stem);stroke:var(--txt-d);stroke-width:1.5}.kit-relief-valve-lift .kit-relief-valve-spring{stroke:var(--amber)}.kit-relief-valve-lift .kit-state{fill:var(--amber)}',
   example: { size: [320, 200], parts: [
     { id: 'P', type: 'pipe', fluid: 'gas', d: 'M120 170 V114', value: 0 },
     { id: 'O', type: 'pipe', fluid: 'gas', d: 'M134 100 H240 V40', value: 0 },
@@ -2873,7 +2881,7 @@ KIT.define('detector', function (fig, part, g, p) {
     h.reshape(gland, { d: 'M' + (x0 - 6) + ' ' + (mid - 3.5) + ' H' + x0 + ' V' + (mid + 3.5) + ' H' + (x0 - 6) + ' L' + (x0 - 7.5) + ' ' + mid + ' Z' });
     h.reshape(sensor, { y: bot }); h.reshape(guard, { y: sb });
     slits.setAttribute('d', 'M-4 ' + (sb + 1) + ' V' + (sb + 3.5) + ' M0 ' + (sb + 1) + ' V' + (sb + 3.5) + ' M4 ' + (sb + 1) + ' V' + (sb + 3.5));
-    lamp.setAttribute('cx', -x0 - 7); lamp.setAttribute('cy', top - 1);
+    lamp.setAttribute('cx', -x0 + 3); lamp.setAttribute('cy', top + 4);           // on the box's side, clear of its tag
     h.reshape(bracket, { y: top - 9 }); h.reshape(foot, { y: top - 12 });
     if (val) {
       val.setAttribute('x', at === 'below' ? 0 : (at === 'left' ? -1 : 1) * (bw / 2 + (at === 'left' ? 16 : 8)));
@@ -3224,7 +3232,7 @@ KIT.define('gas_cylinder', function (fig, part, g, p) {
      breathing air white and black - in the kit's neutral paints, never the alarm colours */
   var code = { N2: ['dark'], CO2: ['grey'], AIR: ['white', 'dark'] }[String(p.gas || '').toUpperCase()] || [];
   var shoulder = h.el('g', { 'clip-path': 'url(#' + cid + ')' }, eq), bands = code.map(function (c) {
-    return h.el('rect', { y: -ht, height: w * 0.55, 'class': 'kit-gas-cylinder-sh-' + c }, shoulder);
+    return h.el('rect', { y: -ht, height: w * 0.55, 'class': 'kit-gas-cylinder-sh-' + c, 'data-low-contrast': '' }, shoulder);   // a band of paint on the bottle: the bottle carries the shape
   });
   var fill = h.el('g', { 'clip-path': 'url(#' + cid + ')' }, eq);
   var gas = h.el('rect', { x: -w / 2, width: w, 'class': 'kit-gas-cylinder-fill', 'data-low-contrast': '' }, fill);   // the fill is quiet on purpose: the surface line above it carries the contrast
@@ -4221,7 +4229,8 @@ KIT.define('spill', function (fig, part, g, p) {
   var nz = Math.max(10, Math.min(46, S - 78));                           // the nozzle, shortened when the box is
   var nzl = h.equip(g);                                                  // the leaking pipe end and its flange, in steel
   h.body('rect', { x: fx - 7, y: S - 78 - nz, width: 14, height: nz }, nzl, { mat: 'steel', shade: 'cylv' });
-  h.flange(nzl, fx, S - 74.5, 90, 30, 7);
+  h.body('rect', { x: fx - 15, y: S - 78, width: 30, height: 7, rx: 2 }, nzl, { mat: 'steel', shade: 'box' });   // its flange, bolted
+  [-1, 1].forEach(function (sd) { h.el('circle', { cx: fx + sd * 11.5, cy: S - 74.5, r: 1.3, 'class': 'kit-m-bolt' }, nzl); });
   var stream = h.el('line', { x1: fx, x2: fx, y1: S - 71, y2: S - 1, 'class': 'kit-spill-stream', 'data-may-cross': '' }, g);
   var pool = h.el('path', { d: 'M' + fx + ' ' + S, 'class': 'kit-spill-pool kit-m-lng', 'data-may-cross': '' }, g);
   var fr = [-0.82, -0.52, -0.22, 0.12, 0.42, 0.72, 0.95];
@@ -4470,7 +4479,7 @@ KIT.define('lamp', function (fig, part, g, p) {
     var a = 25 + i * 21.67, q0 = h.polar(r0, a), q1 = h.polar(r0 + 12, a);
     h.el('line', { x1: q0[0].toFixed(1), y1: (cy + q0[1]).toFixed(1), x2: q1[0].toFixed(1), y2: (cy + q1[1]).toFixed(1) }, rays);
   }
-  h.el('circle', { cx: 0, cy: cy, r: 16, 'class': 'kit-lamp-bulb' }, g);
+  h.el('circle', { cx: 0, cy: cy, r: 16, 'class': 'kit-lamp-bulb', 'data-no-contain': '' }, g);   // the glass: its fitting meets it by nature
   /* 2.52.0: an ordinary fitting has a light wire guard over its glass; an explosion-protected (Ex) one is a heavy bolted
      cast housing with its cable glands, a flange ring, thick glass and a steel cage - the enclosure that holds any spark in */
   if (!ex) h.el('path', { d: 'M-15 4 C-20 30 -8 40 0 40 C8 40 20 30 15 4 M0 4 V40', 'class': 'kit-lamp-guard', 'data-may-cross': '', 'data-no-contain': '' }, g);
@@ -4500,7 +4509,8 @@ KIT.define('lamp', function (fig, part, g, p) {
     '.kit-lamp-bulb{fill:var(--deep);stroke:var(--dim-d);stroke-width:2.5}' +
     '.kit-lamp-on .kit-lamp-bulb{fill:var(--txt-d);stroke:var(--txt-d)}' +
     '.kit-lamp-rays line{stroke:var(--txt-d);stroke-width:3;stroke-linecap:round;stroke-dasharray:6 5}' +
-    '.kit-lamp-guard{fill:none;stroke:var(--mat-yoke);stroke-width:1.4}.kit-lamp-cage{fill:none;stroke:var(--kit-steel);stroke-width:3;stroke-linecap:round}' +
+    '.kit-lamp-guard{fill:none;stroke:var(--dim-d);stroke-width:1.4}.kit-lamp-cage{fill:none;stroke:var(--kit-steel);stroke-width:3;stroke-linecap:round}' +
+    '.kit-light .kit-lamp-cage{stroke:var(--dim-d)}' +
     '.kit-lamp-exg .kit-lamp-bulb{stroke-width:4.5}',
   example: { size: [380, 190], parts: [
     { id: 'A', type: 'lamp', x: 100, y: 40, label: 'ordinary lamp' },

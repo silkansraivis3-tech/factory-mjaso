@@ -265,9 +265,7 @@
 .kit-block{fill:var(--deep-3,#122A52);stroke:var(--dim-d,#A2B7CF);stroke-width:2}
 .kit-head{fill:var(--deep,#0A182E);stroke:var(--dim-d,#A2B7CF);stroke-width:1.5}
 .kit-piston{fill:var(--kit-steel)}
-.kit-engine-recess{fill:var(--mat-hole)}                                            /* the dark crankcase behind its door */
-.kit-engine-exh{fill:none;stroke:var(--kit-clad);stroke-width:5;stroke-linejoin:round}
-.kit-running .kit-piston{animation:kit-piston .5s ease-in-out infinite alternate}
+.kit-engine-recess{fill:var(--mat-hole)}                                            /* the dark crankcase behind its door */.kit-running .kit-piston{animation:kit-piston .5s ease-in-out infinite alternate}
 .kit-running .kit-state{fill:var(--txt-d,#F3F8FD)}
 .kit-puffs circle{fill:var(--txt-d,#F3F8FD);opacity:0;transform-box:fill-box;transform-origin:center}
 .kit-venting .kit-puffs circle{animation:kit-puff 1.35s ease-out infinite}

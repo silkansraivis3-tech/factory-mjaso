@@ -302,7 +302,15 @@
     return p;
   }
   function toScreen(el, x, y) { return pt(el, x, y).matrixTransform(el.getScreenCTM()); }
-  function toLocal(el, p) { return pt(el, p.x, p.y).matrixTransform(el.getScreenCTM().inverse()); }
+  /* INV (2.52.0): each shape's inverse screen matrix, kept for one pass over a still drawing (the checks below ask it again
+     for every point they test; a figure-kit drawing of real equipment has twice the shapes, and an audit ran past the
+     studio's time). Started and ended by the pass that uses it; nothing moves inside a pass */
+  var INV = null;
+  function toLocal(el, p) {
+    var m = INV && INV.get(el);
+    if (!m) { m = el.getScreenCTM().inverse(); if (INV) { INV.set(el, m); } }
+    return pt(el, p.x, p.y).matrixTransform(m);
+  }
   /* a part's outline as screen points - its real geometry where it has one, its box otherwise */
   function outline(el) {
     var pts = [], i;
@@ -373,9 +381,12 @@
   }
 
   /* every painted part of a drawing that is laid out, with its outline as screen points and its box */
+  /* a figure-kit body's light and shade or its section hatching (2.52.0, kit.js body(): class kit-sh) is a second copy of
+     the body's own shape - judged once, as the body; a bolt sits on a body that is judged */
+  function kitCopy(el) { return el.classList && (el.classList.contains("kit-sh") || el.classList.contains("kit-m-bolt")); }
   function painted(svg) {
     return qa(svg, PARTS).filter(function (el) {
-      return !inHiddenRoot(el, svg) && laidOut(el) && (fills(el) || strokes(el));
+      return !kitCopy(el) && !inHiddenRoot(el, svg) && laidOut(el) && (fills(el) || strokes(el));
     }).map(function (el) {
       var pts;
       try { pts = outline(el); } catch (e) { pts = []; }
@@ -402,6 +413,10 @@
         items = geom.filter(function (it) { return shown(it.el, svg); });
       };
       var shapes = function (out) {
+      INV = new Map();
+      try { shapesNow(out); } finally { INV = null; }
+      };
+      var shapesNow = function (out) {
       /* ---- 1 INSIDE ---- */
       var holders = items.filter(function (it) {
         return closed(it.el) && strokes(it.el) && !upFlag(it.el, "data-no-contain", svg);
@@ -413,6 +428,8 @@
         holders.forEach(function (S) {
           if (S === P || S.b.w * S.b.h < CONFIG.minAreaRatio * P.b.w * P.b.h) { return; }
           if (pb && pb === kitBody(S.el, svg)) { return; }   /* two pieces of one piece of equipment (2.52.0) */
+          /* a centre outside the holder's box is never in its fill: no point test needed (2.52.0, speed only) */
+          if (P.b.cx < S.b.x - 0.5 || P.b.cx > S.b.x + S.b.w + 0.5 || P.b.cy < S.b.y - 0.5 || P.b.cy > S.b.y + S.b.h + 0.5) { return; }
           /* held only when the part's centre is truly inside - a roof bar centred ON a deckhouse's line overhangs by design */
           if (!inFill(S.el, { x: P.b.cx, y: P.b.cy }) || onStroke(S.el, { x: P.b.cx, y: P.b.cy })) { return; }
           var tol = CONFIG.tolPx, worst = 0, n = 0;
@@ -466,6 +483,7 @@
         var zone = { x: T.b.x - pad, y: T.b.y - pad, x2: T.b.x + T.b.w + pad, y2: T.b.y + T.b.h + pad };
         var covers = items.filter(function (C) {
           if (C === T || !closed(C.el) || !fills(C.el) || C.b.w * C.b.h <= T.b.w * T.b.h) { return false; }
+          if (C.b.x > zone.x + 0.5 || C.b.y > zone.y + 0.5 || C.b.x + C.b.w < zone.x2 - 0.5 || C.b.y + C.b.h < zone.y2 - 0.5) { return false; }   /* cannot hold the zone (speed only) */
           var cs = getComputedStyle(C.el), c = parseRgba(cs.fill), op = parseFloat(cs.fillOpacity);
           if (!c || c[3] * (isNaN(op) ? 1 : op) * groupOpacity(C.el, svg) < 0.95) { return false; }
           return [[zone.x, zone.y], [zone.x2, zone.y], [zone.x, zone.y2], [zone.x2, zone.y2]].every(function (q) { return inFill(C.el, { x: q[0], y: q[1] }); });
@@ -473,6 +491,10 @@
         items.forEach(function (E) {
           if (E === T || E.el.contains(T.el) || upFlag(E.el, "data-may-overlap", svg)) { return; }
           if (E.t !== "text" && covers.some(function (C) { return C !== E && (E.el.compareDocumentPosition(C.el) & 4); })) { return; }
+          if (E.t !== "text") {                    /* a shape nowhere near the label's zone cannot touch it (2.52.0, speed only) */
+            var hx = strokeHalfPx(E.el) + 1;
+            if (E.b.x - hx > zone.x2 + hx || E.b.x + E.b.w + hx < zone.x - hx || E.b.y - hx > zone.y2 + hx || E.b.y + E.b.h + hx < zone.y - hx) { return; }
+          }
           if (E.t === "text") {
             /* two labels: their letters may not overlap. Lines of one label stacked one under the other are
                a paragraph - only side by side do they need the safe zone between them */
@@ -884,6 +906,7 @@
       for (k = shapes.length - 1; k >= 0; k--) {          /* the latest opaque shape drawn under it that holds its centre */
         var S = shapes[k];
         if (S === P || !(S.el.compareDocumentPosition(P.el) & 4) || S.b.w * S.b.h <= P.b.w * P.b.h) { continue; }
+        if (P.b.cx < S.b.x - 0.5 || P.b.cx > S.b.x + S.b.w + 0.5 || P.b.cy < S.b.y - 0.5 || P.b.cy > S.b.y + S.b.h + 0.5) { continue; }   /* speed only */
         if (inFill(S.el, { x: P.b.cx, y: P.b.cy })) { behind = over(paintOf(S.el, svg, "fill"), panel); break; }
       }
       var cs = getComputedStyle(P.el), why = "", worst = 99, need = 0, what = "";

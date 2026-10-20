@@ -1366,8 +1366,9 @@ the ship look realistic aswell, look at real images of it", "definitely ... the 
 - **Every physical part reworked** - base: valve (cast body, end flanges, bonnet; positioner and diaphragm actuator, or a
   yoke head and handwheel with `actuator: false`; the ISA bow-tie a light plate, red only on a trip), pipe (stainless,
   mating flanges at every end), tank (cladding, straps, saddles, dome over the pipe that leaves it, LNG in the cut-away),
-  exchanger (shell-and-tube, copper coil), pump, engine (bedplate, covers, crankcase doors the pistons work behind, exhaust
-  manifold, a turbocharger on the end no part is drawn at, RUNNING on a name plate), vent, well. From courses: all 18
+  exchanger (shell-and-tube, copper coil), pump, engine (bedplate, covers, crankcase doors the pistons work behind, a
+  turbocharger with its intake silencer on the end no part is drawn at and inside the engine's room, RUNNING on a name
+  plate), vent, well. From courses: all 18
   equipment parts, the ship (from photos of LNG-fuelled ships: plating, sheer stripe, rail, boot-top, bottom paint, bulb,
   rudder, propeller, anchor, white house with windows, mast, funnel band), the worker (navy workwear, real PPE), the fixed
   gas detector (junction box, sensor head, gland, alarm lamp), the relief valve (round angle body, cut-away seat and disc,
