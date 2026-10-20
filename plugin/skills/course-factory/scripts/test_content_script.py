@@ -997,6 +997,18 @@ def main():
             check("the publisher sorts %s as INTERNAL" % n, gates.classify(repo, plat, base + n) == "INTERNAL", gates.classify(repo, plat, base + n))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+    # 2.52.0 - the space between a numbered step's marker and its bold term is part of the words (M02 s04: "3Gas detection")
+    import check_script_match as csm
+    col = csm.Collect()
+    col.feed('<section data-script="s04"><ol><li data-script-field="text" data-i="3"><span class="n">3</span> <b>Gas detection</b>'
+             ' - 40 % LEL on two detectors.</li><li data-script-field="text" data-i="4"><b>Fuel</b>\n  <i>tank</i></li></ol></section>')
+    got = [csm.norm(x) for x in col.screens["s04"]["fields"]["text"]]
+    check("check_script_match: the space between </span> and <b> (and between two tags on two lines) is read as a space - "
+          "\"3 Gas detection\", never \"3Gas detection\"", got == ["3 Gas detection - 40 % LEL on two detectors.", "Fuel tank"], got)
+    col2 = csm.Collect()
+    col2.feed('<section data-script="s05"><p data-script-field="text"><b>Fuel</b><i>tank</i></p></section>')
+    check("... and only a space the page has: words glued in the page still read glued (the check is not loosened)",
+          [csm.norm(x) for x in col2.screens["s05"]["fields"]["text"]] == ["Fueltank"], col2.screens["s05"])
     print("\n" + "=" * 72)
     print("%d passed, %d failed" % (len(PASS), len(FAIL)))
     if FAIL:

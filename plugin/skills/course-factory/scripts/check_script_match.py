@@ -116,6 +116,12 @@ class Collect(HTMLParser):
 
     def handle_data(self, data):
         if not data.strip():
+            # 2.52.0 - the space between two tags is part of the words: a numbered step's marker and its bold term,
+            # <span class="n">3</span> <b>Gas detection</b>, read "3Gas detection" and failed the match (M02, both
+            # benchmark runs). Kept as one space inside a field; norm() collapses and trims it
+            sid, field, _ = self._ctx()
+            if field and sid in self.screens and self.screens[sid]["fields"].get(field) and self.screens[sid]["fields"][field][-1]:
+                self.screens[sid]["fields"][field][-1] += " "
             return
         sid, field, exempt = self._ctx()
         if sid not in self.screens:

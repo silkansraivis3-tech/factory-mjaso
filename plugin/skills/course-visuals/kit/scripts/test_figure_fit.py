@@ -35,6 +35,106 @@ SPEC = {"size": [640, 390], "label": "two ways", "parts": [
     {"id": "E", "type": "engine", "x": 476, "y": 296, "w": 130, "h": 70}]}
 
 
+# 2.52.0 INSIDE - M01 s04 as the benchmark builder first drew it: the tank connection space over the stern's slope, the fuel
+# preparation room's floor under the keel, the tank past its room's side (builds 1-3: "inside ... pokes out of
+# path.kit-ga-hull" on the slide and on q01 / q03, which draw the same spec)
+GA = {"size": [640, 390], "label": "ship", "parts": [
+    {"id": "G", "type": "ga", "x": 20, "y": 120, "w": 600, "h": 150, "label": "LNG-fuelled ship, side view"},
+    {"id": "TCS", "type": "space", "x": 26, "y": 130, "w": 130, "h": 100, "label": "Tank connection space"},
+    {"id": "FT", "type": "tank", "x": 60, "y": 150, "w": 110, "h": 50, "label": "Fuel tank", "value": 0.6},
+    {"id": "FPR", "type": "space", "x": 240, "y": 160, "w": 150, "h": 116, "label": "Fuel preparation room"},
+    {"id": "ER", "type": "space", "x": 430, "y": 140, "w": 150, "h": 100, "label": "Engine room"}]}
+
+
+def in_hull(spec):
+    """the parts that poke out of the ga's hull outline (with the 5-unit margin), or past their room"""
+    g = next(p for p in spec["parts"] if p["type"] == "ga")
+    bad = []
+    for p in spec["parts"]:
+        if p["type"] == "ga":
+            continue
+        x0, y0, x1, y1 = p["x"], p["y"], p["x"] + p["w"], p["y"] + p["h"]
+        if p["id"] == "FT":
+            r = next(q for q in spec["parts"] if q["id"] == "TCS")
+            if x0 < r["x"] or x1 > r["x"] + r["w"] or y0 < r["y"] or y1 > r["y"] + r["h"]:
+                bad.append("FT past its room")
+            continue
+        lo, hi = ff.hull_x(g, y0), ff.hull_x(g, y1)
+        if x0 < max(lo[0], hi[0]) + 4.9 or x1 > min(lo[1], hi[1]) - 4.9 or y0 < g["y"] + 4.9 or y1 > g["y"] + g["h"] - 4.9:
+            bad.append(p["id"])
+    return bad
+
+
+def inside_part():
+    print("-- INSIDE (2.52.0): every part drawn inside what it sits in - the hull's outline, its room")
+    check("the spec as the builder drew it pokes out (the case it fixes): the stern room, the room under the keel, the room "
+          "in the bow's curve, the tank past its room", sorted(in_hull(GA)) == ["ER", "FPR", "FT past its room", "TCS"], in_hull(GA))
+    fixed, n = ff.inside_fix(GA)
+    check("inside_fix: the stern room and the room under the keel moved or drawn inside the hull, the tank inside its room",
+          n >= 3 and in_hull(fixed) == [], (n, in_hull(fixed), fixed["parts"]))
+    tcs0, tcs1 = GA["parts"][1], fixed["parts"][1]
+    ft0, ft1 = GA["parts"][2], fixed["parts"][2]
+    check("... a room takes its parts with it (the tank moved off the stern with the tank connection space, then into it)",
+          tcs1["x"] > tcs0["x"] and ft1["x"] > ft0["x"] and tcs1["x"] <= ft1["x"] <= tcs1["x"] + tcs1["w"] - ft1["w"], (tcs1, ft1))
+    check("... never smaller than 70 % of the size the spec gave, nothing moved onto another part, the spec not touched",
+          all(p1.get("w", 1) >= 0.7 * p0.get("w", 1) - 0.1 and p1.get("h", 1) >= 0.7 * p0.get("h", 1) - 0.1
+              for p0, p1 in zip(GA["parts"], fixed["parts"])) and ff.spoiled(GA, fixed) == [] and GA["parts"][1]["x"] == 26,
+          fixed["parts"])
+    check("a spec with nothing out: no repair", ff.inside_fix(fixed)[1] == 0, ff.inside_fix(fixed)[1])
+    eng = {"size": [640, 390], "parts": [{"id": "R", "type": "space", "x": 84, "y": 248, "w": 100, "h": 88},
+                                         {"id": "E", "type": "engine", "x": 94, "y": 255, "w": 80, "h": 52}]}
+    e2, k2 = ff.inside_fix(eng)
+    check("an engine's cylinder heads (10 units over its block) count: the engine moved down inside its room (M01 run, s03: "
+          "rect.kit-head poked out of the room)", k2 == 1 and e2["parts"][1]["y"] - 10 >= 248 + 5 - 0.01, e2["parts"][1])
+    # the task page draws the fit figure_fit wrote for its question, only while the spec is the one it was made from
+    import task_pages
+    tmp = tempfile.mkdtemp(prefix="ff_task_")
+    try:
+        text = json.dumps(GA)
+        io.open(os.path.join(tmp, "s04.kit.json"), "w", encoding="utf-8").write(text)
+        fp = cm.fit_path(tmp, "s04.kit.json", "q01")
+        os.makedirs(os.path.dirname(fp))
+        io.open(fp, "w", encoding="utf-8").write(json.dumps({"source": cm.sha(text), "column": ff.TASK_COLUMN, "spec": fixed}))
+        q = {"id": "q01", "mechanic": "hotspot", "visual": "The ship."}
+        b = {"figure": "s04.kit.json", "areas": {"Tank connection space": "TCS"}}
+        got = task_pages.figure_for(q, b, tmp, tmp, [], "q01")
+        other = task_pages.figure_for(dict(q, id="q03"), b, tmp, tmp, [], "q03")
+        tx = lambda f: next(p["x"] for p in f.spec_parts if p.get("id") == "TCS")   # noqa: E731
+        check("task_pages.py draws q01's fit (its tap areas on the moved parts), and q03 - with no fit - the spec as written",
+              got and other and tx(got) == tcs1["x"] and tx(other) == 26 and got.name != other.name, (got and tx(got), other and tx(other)))
+        io.open(os.path.join(tmp, "s04.kit.json"), "w", encoding="utf-8").write(text.replace('"x": 430', '"x": 420'))
+        again = task_pages.figure_for(q, b, tmp, tmp, [], "q01")
+        check("... the spec edited since: the spec as written again", again and tx(again) == 26, again and tx(again))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    if not ff.studio.find_browser():
+        print("  skip  the task page measured by the drawing check (no Chrome or Edge)")
+        return
+    # the same check the build runs: a course whose self-check is answered on this ship, measured on the task page as the
+    # compile builds it - INSIDE before, the fit made by itself, and the compile's own drawing check clean after
+    import test_compile_module as tcm
+    tmp = tempfile.mkdtemp(prefix="ff_page_")
+    try:
+        screens = [
+            {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the new spaces", "text": "Self-check now.", "minutes": 2},
+            {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the tank connection space.",
+             "visual": "the ship", "answer": "Tank connection space*\nEngine room", "feedback": "Around the tank's valves."}]
+        build = {"module": 1, "screens": {"t01": {"try_tablet": False},
+                                          "q01": {"figure": "ship.kit.json", "areas": {"Tank connection space": "TCS", "Engine room": "ER"}}}}
+        c, md = tcm.figures_course(tmp, build=build, screens=screens)
+        figdir = os.path.join(c, "working_claude", "figures", "M01")
+        io.open(os.path.join(figdir, "ship.kit.json"), "w", encoding="utf-8").write(json.dumps(GA))
+        got, left = ff.fix_tasks(c, 1, figdir)
+        check("fix_tasks: the task page measured as the compile builds it finds the parts out, and fixes them by itself",
+              len(got) == 1 and got[0].startswith("q01 (ship.kit.json, task page): fixed by itself - INSIDE")
+              and os.path.isfile(cm.fit_path(figdir, "ship.kit.json", "q01")), (got, left))
+        code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks", "--drawing-check")
+        check("... and the compile's own drawing check of the page finds no part out", "inside" not in out and "pokes out" not in out,
+              out[-1200:])
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     print("-- squeeze: positions and stretchable lengths follow the column, part sizes stay")
     s = ff.squeeze(SPEC, 0.5, x0=20)
@@ -178,6 +278,7 @@ def main():
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
+    inside_part()
     print("\n%s - %d passed, %d failed" % ("ALL PASS" if not FAIL else "FAILED", len(PASS), len(FAIL)))
     return 1 if FAIL else 0
 

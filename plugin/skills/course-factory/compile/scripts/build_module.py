@@ -18,8 +18,12 @@ process, the independent ones at once, and the answer is short:
                   (asked, answered wrong, answered right) onto a few sheets - only the screens changed since the last
                   review - and checks that every question grades right and wrong answers as such (compile GUIDE 2f)
 
+  0  (2.52.0) a build sheet that still has --init-build's blanks (a slide with no picture, a question on no picture, a
+                  planned 3D scene not written) builds nothing: one line says what to fill (--draft builds anyway)
+
 Printed: each failure with its file, slide or question, and what to do; a figure's problems once per part, not once per
-step; then one line - PASS, or how many problems. Everything else is in the full log (its path is the last line).
+step; then one line - PASS, or how many problems. Everything else is in the full log (its path is the last line), which
+ends with each stage's seconds (2.52.0).
 --no-course-pages: a module agent in a parallel build (orchestration Rule 3 - one process writes COURSE.html).
 Exit 0 PASS, 1 problems to fix, 2 stopped (the compiler refused: not approved, changed by hand, design files edited).
 """
@@ -99,6 +103,62 @@ def own_package_findings(code, out, folder):
         + (sep + tail if sep else ""), left
 
 
+def starter_blanks(course, module):
+    """2.52.0 - what --init-build left for the builder to fill and is still empty: [(screen ids, what to fill)]. Each is a
+    problem the compile reports anyway (no picture file, a question on no picture, a planned 3D scene not written); said
+    before anything runs, the build that would only have found them is not spent (M01 workflow benchmark run 1: 68 s,
+    eight compile problems, all of them blanks)."""
+    import content_script as cs
+    import compile_module as cm
+    bp = cm.build_path(course, module)
+    p = cs.paths(course, module)
+    if not (os.path.isfile(bp) and os.path.isfile(p["script"])):
+        return []
+    try:
+        build, script = cs.load(bp), cs.load(p["script"])
+    except (OSError, ValueError):
+        return []                                   # the compile says what is wrong with the file
+    screens = build.get("screens") or {}
+    mdir, _ = cm.module_folder(course, module)
+    figdir = workspace_figdir(course, module)
+    pics, ons, scenes = [], [], []
+    for s in script.get("screens") or []:
+        e = screens.get(s["id"])
+        if e is None:
+            continue
+        fig = (e.get("figure") or "").strip()
+        if s["kind"] == "slide" and not s.get("recap") and not fig and (s.get("visual_kind") or "none") != "none":
+            pics.append(s["id"])
+        elif s["kind"] in cs.TASKS and cs.mech(s) in cm.STARTER_ON_PICTURE and not fig:
+            ons.append(s["id"])
+        elif s["kind"] == "slide" and re.fullmatch(r"m\w+_%s_3d\.html" % re.escape(s["id"]), fig) \
+                and not (build.get("declined_3d") or e.get("declined_3d")) \
+                and not any(os.path.isfile(os.path.join(d, fig)) for d in (figdir, mdir) if d):
+            scenes.append(s["id"] + " (" + fig + ")")
+    out = []
+    if pics:
+        out.append((pics, "its picture: \"figure\" - a photo in assets\\img, a drawing, or a kit spec"))
+    if ons:
+        out.append((ons, "the drawing or photo the question is answered on: \"figure\" (and its places, \"areas\" / \"labels\")"))
+    if scenes:
+        out.append((scenes, "the planned 3D scene is not written - build it, or keep the 2D starter (\"_2d\") with the operator's "
+                            "reason in \"declined_3d\""))
+    return out
+
+
+def write_stages(log, stages, t0):
+    """2.52.0 - each stage's seconds at the end of the build log: which stage a slow build spent its time in (M01/M02
+    workflow benchmark: build runs of 100-400 s, and no way to tell the figures from the audits from the review sheets)"""
+    log.write("\n===== stage seconds\n%s\n%-52s %6.0f s\n" % ("\n".join("%-52s %6.0f s" % (k, v) for k, v in stages),
+                                                            "total", time.time() - t0))
+
+
+def workspace_figdir(course, module):
+    import workspace
+    import content_script as cs
+    return workspace.claude_path(course, "figures", cs.mid(module))
+
+
 def figure_slides(text):
     """the slide ids the figure pre-check already reported (their compile drawing findings say the same thing again)"""
     return set(re.findall(r"^  (s\d+\w*) \(", text, re.M))
@@ -128,11 +188,22 @@ def main(argv=None):
     m = cs.mid(o.module) if str(o.module).isdigit() else str(o.module)
     logdir = workspace.claude_path(course, "_build")
     os.makedirs(logdir, exist_ok=True)
+    blanks = [] if o.draft else starter_blanks(course, o.module)
+    if blanks:                       # 2.52.0: nothing is built on a sheet with the starter's blanks in it
+        print("FAIL %s - nothing built: the build sheet %s still has the starter's blanks - fill %s"
+              % (m, os.path.basename(cm.build_path(course, o.module)),
+                 "; ".join("%s: %s" % (", ".join(ids), what) for ids, what in blanks)))
+        return 1
     log = io.open(os.path.join(logdir, "%s_build.log" % m), "w", encoding="utf-8")
     say, fails, notes = [], [], []
+    stages = []                      # 2.52.0: (stage, seconds) - written into the log, so a slow stage is seen
 
     def logged(title, out):
         log.write("\n===== %s\n%s\n" % (title, out))
+
+    def timed(title, since):
+        stages.append((title, time.time() - since))
+        return time.time()
 
     # 1 - every figure at once, before the compile
     fig_text = ""
@@ -149,13 +220,16 @@ def main(argv=None):
             say += body
         if fcode:
             fails.append("figures")
+    t = timed("figures (figure_fit.py)", t0)
     # 2 - the compile (with its own drawing check)
     cmd = [PY, os.path.join(HERE, "compile_module.py"), course, "--module", str(o.module)]
     cmd += ["--draft"] if o.draft else []
     cmd += ["--force"] if o.force else []
     ccode, cout = run(cmd)
     logged("compile_module.py", cout)
+    t = timed("compile (compile_module.py, its drawing check)", t)
     if ccode == 2:
+        write_stages(log, stages, t0)
         print("\n".join(say + ["", "COMPILE - stopped:"] + ["  " + x for x in lines_of(cout, 25)]))
         print("Full log: %s" % log.name)
         log.close()
@@ -205,19 +279,28 @@ def main(argv=None):
         import shutil
         shutil.rmtree(pending, ignore_errors=True)
         jobs["review sheets"] = ["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, pending, "--base=" + out_dir]
-    results = {}
+    results, took = {}, {}
+
+    def run_timed(k, c):
+        s = time.time()
+        r = run(c)
+        took[k] = time.time() - s
+        return r
+    pkg_cmd = [PY, os.path.join(FACTORY, "check_course_package.py"), os.path.join(course, workspace.MODULES)]
     with cf.ThreadPoolExecutor(max_workers=7) as ex:
-        futs = {ex.submit(run, c): k for k, c in jobs.items()}
+        futs = {ex.submit(run_timed, k, c): k for k, c in jobs.items()}
         pkg = None
         for f in cf.as_completed(futs):
             results[futs[f]] = f.result()
             # the importer reads every file of the module folder: it waits for the audits, whose probe pages come and go
             # in presentation\, and for the course pages; it then runs beside the review sheets
             if pkg is None and all(k in results for k in jobs if k != "review sheets"):
-                pkg = ex.submit(run, [PY, os.path.join(FACTORY, "check_course_package.py"), os.path.join(course, workspace.MODULES)])
+                pkg = ex.submit(run_timed, "course package", pkg_cmd)
         if pkg is None:
-            pkg = ex.submit(run, [PY, os.path.join(FACTORY, "check_course_package.py"), os.path.join(course, workspace.MODULES)])
+            pkg = ex.submit(run_timed, "course package", pkg_cmd)
         results["course package"] = pkg.result()
+    t = timed("the checks, at the same time (wall clock)", t)
+    stages += [("  " + k, took[k]) for k in list(jobs) + ["course package"] if k in took]
     if o.no_course_pages:
         pcode, pout, left = own_package_findings(*results["course package"], folder=os.path.basename(mdir))
         if left and pcode != 0:
@@ -262,6 +345,7 @@ def main(argv=None):
                       "Visual review: no screen changed since the last review - nothing new to look at.")
         else:
             notes.append("Review sheets not made (%s) - do the visual review by hand (GUIDE 2f)" % (lines_of(rout, 1) or ["?"])[0])
+    write_stages(log, stages, t0)
     log.close()
     for x in say:
         print(x)

@@ -382,7 +382,7 @@
      Measured on the drawing as it is on screen, at the end of every step, so a part that only shows later is
      never covered either.
      ========================================================================== */
-  var FIGS = [], UP_MAX = 2, ZOOM_MAX = 1.5, GROW_MAX = 1.3, FLOOR_PX = 12.5, PAD_PX = 4.5, CELL = 2;
+  var FIGS = [], UP_MAX = 2, UP_MARGIN = 1.02, ZOOM_MAX = 1.5, GROW_MAX = 1.3, FLOOR_PX = 12.5, PAD_PX = 4.5, CELL = 2;
   var GEOM = 'rect, circle, ellipse, line, polyline, polygon, path, text, image';
   var NOT_DRAWN = 'defs, symbol, clipPath, mask, marker, pattern';
 
@@ -828,9 +828,13 @@
 
   function setView(svg, V) { svg.setAttribute('viewBox', V.map(function (v) { return +v.toFixed(2); }).join(' ')); }
   function scaleNow(svg) { var m = svg.getScreenCTM(); return m ? det(m) : 1; }
-  /* 0.1 % over 1/s: a word grown to exactly 12.5 px once drawn read 12.4999 to the deck audit's svgSmall, which compares
-     declared x rendered width / viewBox width against 12.5 (2.49.2) */
-  function upFor(s) { return Math.min(UP_MAX, Math.max(1, 1.001 / s)); }
+  /* 2 % over 1/s (2.52.0; 0.1 % before): a word grown to exactly 12.5 px once drawn read 12.4999 to the deck audit's
+     svgSmall, which compares declared x rendered width / viewBox width against 12.5 (2.49.2) - and a frame grown a little
+     after the words were sized left them at 12.4 px (scales 0.978-0.996, M01/M02 workflow benchmark 2026-10-20) */
+  function upFor(s) { return Math.min(UP_MAX, Math.max(1, UP_MARGIN / s)); }
+  /* words under the floor at the scale shown now grow at once, however small the change; larger words shrink back only
+     past 1 %, so a few rounds of a frame settling do not re-lay the labels for nothing */
+  function regrow(up2, up) { return up2 > up + 1e-4 || up - up2 >= 0.01; }
   /* the height a deck figure may take: its column, less the step buttons (0 when it is not in a deck's figure column) */
   function roomPx(svg) {
     var col = svg.closest && svg.closest('.kit-fig');
@@ -889,7 +893,7 @@
            them again: past GROW_MAX the words stop growing (the drawing audit's SMALL TEXT then says so) */
         if (V[2] > f.base[2] * GROW_MAX) crowded = true;
         var up2 = upFor(s);
-        if (!crowded && Math.abs(up2 - up) >= 0.01) { up = up2; upTo(up); }
+        if (!crowded && regrow(up2, up)) { up = up2; upTo(up); }
         G = gather(f, states);
         extra = null;
       }
@@ -917,7 +921,7 @@
           zoom = z;
           s = scaleNow(svg);
           var up3 = upFor(s);
-          if (Math.abs(up3 - up) > 0.01) {
+          if (regrow(up3, up)) {
             up = up3; upTo(up);
             G = gather(f, states);
             P = PAD_PX / s;
@@ -925,6 +929,15 @@
           }
         }
       }
+    }
+    /* measured again once laid out: whatever moved the frame or the drawing's size on the way, no word is left under
+       the floor at the scale it is shown at now (2.52.0) */
+    s = scaleNow(svg);
+    if (!crowded && up < UP_MAX && regrow(upFor(s), up)) {
+      up = upFor(s); upTo(up);
+      G = gather(f, states);
+      P = PAD_PX / s;
+      res = place(f, G, V, P);
     }
     return { theme: f.tone, scale: +s.toFixed(3), up: +up.toFixed(3), zoom: +zoom.toFixed(3), view: V.map(function (v) { return +v.toFixed(1); }),
              minTextPx: G.minPx < 1e8 ? +(G.minPx * scaleNow(svg) / G.scale).toFixed(2) : null, labels: res.labels, moved: res.moved,
@@ -1732,10 +1745,12 @@ KIT.define('ga', function (fig, part, g, p) {
   });
   if (!plan && p.house) {
     var hs = p.house;
-    h.el('rect', { x: hs.x, y: -hs.h, width: hs.w, height: hs.h, rx: 3, 'class': 'kit-ga-house' }, g);
+    /* data-kit-place (2.52.0): a task question asks for "G.house" / "G.funnel" (task_pages.py kit_places) and its tap area
+       is laid on this shape (gb_answer.js placeParts) */
+    h.el('rect', { x: hs.x, y: -hs.h, width: hs.w, height: hs.h, rx: 3, 'class': 'kit-ga-house', 'data-kit-place': 'house' }, g);
     if (p.funnel) {
       var f = p.funnel, fh = f.h || 22;
-      h.el('rect', { x: f.x, y: -hs.h - fh, width: f.w || 18, height: fh, rx: 2, 'class': 'kit-ga-house' }, g);
+      h.el('rect', { x: f.x, y: -hs.h - fh, width: f.w || 18, height: fh, rx: 2, 'class': 'kit-ga-house', 'data-kit-place': 'funnel' }, g);
     }
   }
   if (p.label) h.label(fig, g, { x: w / 2, y: d + (plan ? 22 : 30), 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);

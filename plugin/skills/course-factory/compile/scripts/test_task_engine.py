@@ -313,13 +313,17 @@ PROBE = r"""
       q.kit = {mounted: !!k.__kit, n: k.__kit && k.__kit.n, steps: k.__kit && k.__kit.steps(), still: k.hasAttribute('data-kit-still'),
                motion: k.hasAttribute('data-motion'), want: k.getAttribute('data-kit-step'), inside: [], leaders: [], boxes: {}, hots: {}};
       Object.keys(k.__kit.parts).forEach(function (id) { q.kit.boxes[id] = R(k.__kit.parts[id].g); });
+      /* a named place inside a part ("G.funnel", 2.52.0): its own shape */
+      function shape(pid) { var d = pid.indexOf('.'), g = k.__kit.parts[d > 0 ? pid.slice(0, d) : pid].g;
+                            return d > 0 ? g.querySelector('[data-kit-place="' + pid.slice(d + 1) + '"]') : g; }
       [].forEach.call(s.querySelectorAll('.hot[data-part]'), function (h) {
-        var pr = R(k.__kit.parts[h.getAttribute('data-part')].g), hr = R(h);
+        var pr = R(shape(h.getAttribute('data-part'))), hr = R(h);
+        if (h.getAttribute('data-part').indexOf('.') > 0) { q.kit.boxes[h.getAttribute('data-part')] = pr; }
         q.kit.hots[h.getAttribute('data-part')] = hr;
         q.kit.inside.push({part: h.getAttribute('data-part'), ok: hr.l <= pr.l + 1 && hr.r >= pr.r - 1 && hr.t <= pr.t + 1 && hr.b >= pr.b - 1 && hr.w >= 55 && hr.h >= 55});
       });
       [].forEach.call(s.querySelectorAll('line[data-part]'), function (ln) {
-        var pr = R(k.__kit.parts[ln.getAttribute('data-part')].g), g = R(ga), x = g.l + g.w * parseFloat(ln.getAttribute('x2')) / 100, y = g.t + g.h * parseFloat(ln.getAttribute('y2')) / 100;
+        var pr = R(shape(ln.getAttribute('data-part'))), g = R(ga), x = g.l + g.w * parseFloat(ln.getAttribute('x2')) / 100, y = g.t + g.h * parseFloat(ln.getAttribute('y2')) / 100;
         q.kit.leaders.push({part: ln.getAttribute('data-part'), ok: x >= pr.l - 2 && x <= pr.r + 2 && y >= pr.t - 2 && y <= pr.b + 2});
       });
     }
@@ -385,6 +389,17 @@ FIGURE_TASKS_VENT = [
      "answer": "Vent mast*\nFuel tank\nPump", "feedback": "The tall pipe with the outlet on top."}]
 VENT_BUILD = {"module": 1, "screens": {"t01": {"try_tablet": False},
               "q01": {"figure": "vent.kit.json", "unlabel": "answers", "areas": {"Vent mast": "vm", "Fuel tank": "tk", "Pump": "pp"}}}}
+# 2.52.0 (IGF M01 q03, 5 of 5 benchmark builds hand-built a % box for it) - a ga's funnel is a place a question can name
+FUNNEL_KIT = {"size": [640, 300], "label": "An LNG-fuelled ship, side view", "parts": [
+    {"id": "G", "type": "ga", "x": 30, "y": 140, "w": 580, "h": 110, "house": {"x": 440, "w": 110, "h": 60},
+     "funnel": {"x": 470, "w": 30, "h": 40}, "label": "LNG-fuelled ship"},
+    {"id": "ft", "type": "tank", "x": 80, "y": 160, "w": 150, "h": 60, "label": "Fuel tank", "value": 0.6}]}
+FUNNEL_TASKS = [
+    {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the funnel", "text": "Self-check on your tablet now.", "minutes": 2},
+    {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the funnel.", "visual": "the ship",
+     "answer": "Funnel*\nFuel tank", "feedback": "The exhaust goes up the funnel."}]
+FUNNEL_BUILD = {"module": 1, "screens": {"t01": {"try_tablet": False},
+                "q01": {"figure": "ship.kit.json", "areas": {"Funnel": "G.funnel", "Fuel tank": "ft"}}}}
 
 
 def figures_part(exe, tmp):
@@ -448,6 +463,21 @@ def figures_part(exe, tmp):
     check("the vent mast's tap area covers its whole mast - the pipe run under the outlet, not the cap alone",
           bool(hot and mast) and hot["t"] <= mast["t"] + 1 and hot["b"] >= mast["b"] - 1 and hot["l"] <= mast["l"] + 1 and hot["r"] >= mast["r"] - 1,
           {"hot": hot, "mast": mast, "errors": r.get("errors")})
+
+    # 2.52.0 (IGF M01 q03) - "areas": {"Funnel": "G.funnel"}: a named place inside a ga, no box in % by hand
+    os.makedirs(os.path.join(tmp, "funnel"))
+    c, md = tcm.figures_course(os.path.join(tmp, "funnel"), build=FUNNEL_BUILD, screens=FUNNEL_TASKS)
+    io.open(os.path.join(c, "working_claude", "figures", "M01", "ship.kit.json"), "w", encoding="utf-8").write(json.dumps(FUNNEL_KIT))
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    check("a hotspot on a ga's funnel, named \"G.funnel\", builds clean - no box in %", code == 0, out)
+    pages = [os.path.join(md, "tasks", x) for x in os.listdir(os.path.join(md, "tasks")) if x.startswith("sc1_")]
+    r = probe(exe, pages[0], tmp) if pages else {}
+    k = ({q["id"]: q for q in r.get("qs", [])}.get("q01") or {}).get("kit") or {}
+    hot, fun, ship = (k.get("hots") or {}).get("G.funnel"), (k.get("boxes") or {}).get("G.funnel"), (k.get("boxes") or {}).get("G")
+    check("the funnel's tap area lies on the funnel drawn (at least 56 px), not on the whole ship",
+          bool(hot and fun and ship) and hot["l"] <= fun["l"] + 1 and hot["r"] >= fun["r"] - 1 and hot["t"] <= fun["t"] + 1
+          and hot["b"] >= fun["b"] - 1 and hot["w"] >= 55 and hot["w"] < ship["w"] / 2 and not r.get("errors"),
+          {"hot": hot, "funnel": fun, "errors": r.get("errors")})
 
 
 # ---------------------------------------------------------------- 2.46.0: what rebuilding IGF M01-M03 found in the engine

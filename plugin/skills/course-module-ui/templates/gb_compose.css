@@ -782,6 +782,14 @@ figure{margin:0}
 @keyframes rc-draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes rc-nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(7px)}}
 
+/* a short screen (1024 x 768): the boxes' own padding and gaps give way, never the words' size - six two-line recap
+   boxes put "Next: the module check" 9 px under the deck's chrome (IGF M02 s16, both 2026-10-20 benchmark runs) */
+@media (max-height:780px){
+  .slide-body.recap{gap:min(1.6vmin,14px)}
+  .rc-grid{gap:min(1.8vmin,16px)}
+  .rc-item{gap:.4em;padding:min(2.2vmin,20px) min(2.6vmin,24px) min(2vmin,18px)}
+  .rc-item::before{height:2em;min-width:2.1em}
+}
 @media (max-width:900px){
   .rc-grid,.rc-grid[data-n="4"]{grid-template-columns:repeat(2,minmax(0,1fr))}
 }

@@ -489,6 +489,27 @@ def kit_box(p):
         return None
 
 
+def kit_places(parts):
+    """2.52.0 - the named places drawn inside a part, that a question may ask for by "<part id>.<place>": a side-view ga's
+    house and funnel ({"G.funnel": (x, y, w, h)} in the spec's units, as kit.js draws them: the house on the deck at y, the
+    funnel on the house). M01 workflow benchmark: 5 of 5 builds hand-built a % box for "Funnel" on q03."""
+    out = {}
+    for p in parts:
+        hs = p.get("house")
+        if p.get("type") != "ga" or not p.get("id") or p.get("view") == "plan" or not isinstance(hs, dict):
+            continue
+        try:
+            gx, gy, hh = float(p.get("x") or 0), float(p.get("y") or 0), float(hs.get("h") or 0)
+            out[p["id"] + ".house"] = (gx + float(hs.get("x") or 0), gy - hh, float(hs.get("w") or 0), hh)
+            f = p.get("funnel")
+            if isinstance(f, dict):
+                fh = float(f.get("h") or 22)
+                out[p["id"] + ".funnel"] = (gx + float(f.get("x") or 0), gy - hh - fh, float(f.get("w") or 18), fh)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
 def part_extent(p, grow=0.0):
     """a kit part's box (x0, y0, x1, y1): its own w x h or radius, else the corners of its path "d" (M, L, H, V, absolute)"""
     box = kit_box(p)
@@ -544,7 +565,7 @@ def callouts_of(parts, answer_ids, reach=24.0):
     return gone
 
 
-def kit_fig(q, b, text, rel, probs, where, bands, side=0.0):
+def kit_fig(q, b, text, rel, probs, where, bands, side=0.0, fit=False):
     """a figure-kit drawing in a task: the same *.kit.json the deck plays (course-visuals/kit/SPEC.md), drawn STILL at
     the end of its last step - or of the step the build sheet names ("kit_step": 2, or a word of a step's title). The
     parts the answers are about are found by their ids; "unlabel": "all" or ["P1", "V2"] takes the words off the parts,
@@ -564,6 +585,10 @@ def kit_fig(q, b, text, rel, probs, where, bands, side=0.0):
         for k in ("id", "label", "tag", "title"):
             if p.get("id") and isinstance(p.get(k), str):
                 names.setdefault(re.sub(r"\s+", " ", p[k]).strip().lower(), p["id"])
+    places = kit_places(parts)                          # a ga's funnel and house: "G.funnel", and the word "funnel" finds it
+    for pid in places:
+        names.setdefault(pid.lower(), pid)
+        names.setdefault(pid.split(".", 1)[1], pid)
     hide = b.get("unlabel")
     if hide not in (None, False, "all", "answers") and not isinstance(hide, list):
         probs.append("%s: \"unlabel\" is \"answers\", \"all\" or a list of part ids" % where)
@@ -628,7 +653,8 @@ def kit_fig(q, b, text, rel, probs, where, bands, side=0.0):
         spec["label"] = cm.first_sentence(q.get("visual")) or ""
     # 2.49.7 (IGF M01 q01/q03) - "answers" takes off each question's own answers: two questions with other answers are two
     # drawings, never one shared - q03 was given q01's, which still named the vent mast it asked for
-    key = json.dumps([n, sorted(mine_ids) if hide == "answers" else hide, bool(bands)] + ([round(side, 2)] if side else []), sort_keys=True)
+    key = json.dumps([n, sorted(mine_ids) if hide == "answers" else hide, bool(bands)] + ([round(side, 2)] if side else [])
+                     + ([q["id"]] if fit else []), sort_keys=True)          # a question's own fit is its own drawing
     name = cm.slug(rel) + ("" if key == json.dumps([len(steps), None, False]) else "-" + cm.sha(key)[:6])
     data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 
@@ -636,10 +662,14 @@ def kit_fig(q, b, text, rel, probs, where, bands, side=0.0):
         sid = "kit-task-" + uid
         return ('<svg class="taskfig" data-kit="#%s" data-kit-step="%d"%s></svg><script type="application/json" id="%s">%s</script>'
                 % (sid, n, ' data-fig="%s"' % a(name) if shared else "", sid, data))
-    fig = Fig("kit", name, vb, make, parts=names, ids=ids)
+    fig = Fig("kit", name, vb, make, parts=names, ids=ids + list(places))
     fig.spec_parts = parts
+    fig.places = places
     fig.raw_vb = raw if bands else None
     return fig
+
+
+TRY = {}            # {spec file name: spec} - drawn instead of the file and its fits: figure_fit.py measuring a candidate
 
 
 def figure_for(q, b, mdir, figdir, probs, where, bands=False, wrap=False, side=0.0):
@@ -654,7 +684,12 @@ def figure_for(q, b, mdir, figdir, probs, where, bands=False, wrap=False, side=0
         probs.append("%s: its %s %s %s" % (where, "photograph" if rel.lower().endswith(cm.IMAGES) else "drawing", rel, err))
         return None
     if rel.lower().endswith(cm.KIT_SPEC):
-        return kit_fig(q, b, body, rel, probs, where, bands, side)
+        # 2.52.0 - a fit figure_fit.py made for this question (INSIDE), drawn while the spec is the one it was made from;
+        # TRY: a candidate figure_fit.py is measuring on the real page
+        name = os.path.basename(rel)
+        fit = json.dumps(TRY[name], ensure_ascii=False) if name in TRY else (
+            cm.fitted(figdir, name, body, "task", q["id"]) if figdir else None)
+        return kit_fig(q, b, fit or body, rel, probs, where, bands, side, fit=bool(fit))
     if body is None:                                   # a photograph: shipped in the module folder
         return photo_fig(q, b, rel, mdir, probs, where, bands, wrap, side)
     return svg_fig(body, cm.slug(rel), viewbox(body), where, rel, probs, bands, side)
@@ -672,7 +707,7 @@ def area(fig, name, b, where, probs):
                          "(parts: %s)" % (where, name, name, ", ".join(sorted(fig.ids))))
             return None, pid or cm.slug(name)
         part = next((p for p in (fig.spec_parts or []) if p.get("id") == pid), None)
-        box = kit_box(part) if part else None
+        box = kit_box(part) if part else (getattr(fig, "places", {}) or {}).get(pid)
         return (pct_box(box, fig.vb) if box else [40.0, 40.0, 20.0, 20.0]), pid
     if fig.kind == "img":
         probs.append("%s: \"%s\" has no place on the photograph - give its box in %% of the photograph in the build sheet: "
