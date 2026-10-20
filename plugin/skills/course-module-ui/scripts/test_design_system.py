@@ -36,6 +36,7 @@ VOCAB = os.path.join(SKILL, "references", "vocabulary.md")
 SPEC = json.load(io.open(os.path.join(SKILL, "knowledge", "design-system.json"), encoding="utf-8"))
 STYLE_FILES = [
     os.path.join(SKILL, "templates", "gb_compose.css"),
+    os.path.join(SKILL, "templates", "gb_layouts.css"),          # L61 (2.52.0): the owner's layout templates
     os.path.join(SKILL, "templates", "gb_shell.css"),
     os.path.join(SKILL, "templates", "gb_page.css"),
     os.path.join(SKILLS, "course-task-ux", "assets", "gb_task.css"),]
@@ -219,7 +220,7 @@ def main():
             check("every class in %s is in the vocabulary" % os.path.basename(path), not missing, missing)
         defined = set().union(*[css_classes(p) for p in STYLE_FILES])
         api = re.sub(r"\b[A-Z]\w*\.\w+", "", ticked)   # GBDeck.init is an engine call, not a class
-        dotted = set(re.findall(r"\.([a-z][\w-]*)", api)) - {"css", "js", "html", "json", "md", "svg", "py"}
+        dotted = set(re.findall(r"\.([a-z][\w-]*)", api)) - {"css", "js", "html", "json", "md", "svg", "py", "ttf", "txt"}
         invented = sorted(dotted - defined)
         check("no class in the vocabulary is invented", not invented, invented)
         toks = set(re.findall(r"(--[a-z][\w-]*)\s*:", io.open(TOKENS, encoding="utf-8").read()))

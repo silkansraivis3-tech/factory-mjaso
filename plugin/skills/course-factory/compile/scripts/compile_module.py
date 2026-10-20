@@ -47,6 +47,18 @@ TWO FILES IN, ONE PAGE OUT
   It goes into the page as data, with the deck's step buttons; kit.js and kit.css are shipped with the
   module like gb_deck.js, and assets/kit_parts.js too when the course has added parts of its own.
 
+EVERY SLIDE IS ONE OF THE OWNER'S LAYOUT TEMPLATES (L61, 2.52.0)
+  course-module-ui/knowledge/layout-templates.json names thirteen templates (explain-figure, figure-stage, photo-explain,
+  compare-two, procedure, task-launch, recap, opening, long-explanation, three-content-blocks, reference-table,
+  reading-with-figure, content-in-parts). Each slide carries data-template="<id>.v1" and data-variant, chosen from the
+  layout below - or asked for in the build sheet: "template": "reference-table", "variant": "figure-left",
+  "split": 0.55 (text share, 0.5-0.6), "blocks": [[1, 3], [4, 6]] (compare-two, three-content-blocks), "parts":
+  [[1, 4], [5, 9]] (content-in-parts), "figure_b" (compare-two's second picture). An unknown or unsuitable template is
+  a problem with the slide's id. gb_layouts.css gives every template the owner's look, in the brandbook's colours,
+  with the official logo. The owner's rules are checked here: a dense slide (more than 60 words) always has a picture
+  beside it; never three teaching slides in a row without a teaching picture; words that need more room than a
+  figure slide holds (more than 135) go into readable parts - never cut, never smaller type.
+
 HOW A SLIDE IS LAID OUT (the same for every module)
   layout visual_full  + a photograph   -> .slide.photo, the photo is the screen, the words over it
   layout visual_full  + a drawing      -> composition "stage"
@@ -97,7 +109,7 @@ import content_script as cs  # noqa: E402
 import workspace  # noqa: E402
 
 SHELL = os.path.join(SKILLS, "course-module-ui", "templates", "gb_shell.html")
-STYLES = ("gb_tokens.css", "gb_shell.css", "gb_compose.css")
+STYLES = ("gb_tokens.css", "gb_shell.css", "gb_compose.css", "gb_layouts.css")   # gb_layouts.css: the owner's templates (L61)
 IMAGES = (".jpg", ".jpeg", ".png", ".webp", ".gif")
 KIT_SPEC = ".kit.json"                       # a figure made from the figure kit (course-visuals/kit)
 KIT_FILES = ("kit.css", "kit.js")             # shipped with the module by design_system.py, like gb_deck.js
@@ -111,6 +123,13 @@ STATEMENT_MAX_WORDS = 22
 # 105 / 92 / 79 px off the slide - so the line is drawn between 82 and 91
 INSET_MAX_WORDS = {"two-col": 86, "wide-left": 86, "wide-right": 86, "photo-split": 96}
 CHECK_PAGES = {"MC": "../assessment/check.html", "FA": "../assessment/final.html"}   # the module check and the (single) final
+LAYOUTS = json.load(io.open(os.path.join(SKILLS, "course-module-ui", "knowledge", "layout-templates.json"), encoding="utf-8"))
+TEMPLATES = LAYOUTS["templates"]
+DENSE_WORDS = LAYOUTS["dense"]["words"]
+PARTS_FROM, PART_WORDS = LAYOUTS["parts"]["auto_from_words"], LAYOUTS["parts"]["part_words"]
+SPLIT_LO, SPLIT_HI = LAYOUTS["split"]["text"]
+NO_VISUAL_RUN = LAYOUTS["sequence"]["max_without_visual_in_a_row"]
+FIGURE_FREE = {("explain-figure", "text-only"), ("procedure", "text-only"), ("opening", "statement")}
 RECORD = "compiled.json"
 FINAL_SET = re.compile(r"^F[A-Z]$")           # 2.49.2 - a final assessment's set: FA, and FB when it has a second variant
 DRAFT_MARK = "DRAFT_NOT_PACKAGED.txt"         # 2.49.2 - in a module folder built from a script that is not approved (--draft)
@@ -1065,6 +1084,190 @@ def attrs(d):
     return " ".join('%s="%s"' % (k, a(str(v))) for k, v in d.items() if v not in (None, ""))
 
 
+# ------------------------------------------------------------------ the layout templates (L61)
+def template_attrs(d, tid, variant, split=None):
+    """name the slide's template on it: data-template="<id>.v1" and data-variant - gb_layouts.css styles by them, so the
+    slide's classes stay what every check already reads"""
+    d["data-template"] = "%s.v%d" % (tid, TEMPLATES[tid]["version"])
+    d["data-variant"] = variant
+    if split:
+        d["style"] = "--lt-text:%g" % round(100 * split, 1)
+    return d
+
+
+def is_steps(lines):
+    """the script numbers its own steps 1, 2, 3 ... - all lines but at most one (a lead) are those steps"""
+    nums = [int(m.group(1).rstrip(".)")) for m in (STEP_NUM.match(x) for x in lines) if m]
+    return len(nums) >= 2 and nums == list(range(1, len(nums) + 1)) and len(nums) >= len(lines) - 1
+
+
+def is_table(lines):
+    rows = [x for x in lines if " | " in x]
+    return len(rows) >= 2 and len({len(x.split(" | ")) for x in rows}) == 1
+
+
+def is_3d(s):
+    return (cs.MEDIA["visual_kinds"].get(s.get("visual_kind") or "", {}) or {}).get("family") == "3d"
+
+
+def auto_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col):
+    """the template the approved script and the build sheet already describe"""
+    words = cs.wc(" ".join(lines))
+    side = "figure-left" if b.get("figure_first") else "figure-right"
+    if comp == "opener":
+        return "opening", "photo" if is_photo else "statement"
+    if is_photo and comp == "photo":
+        return "photo-explain", "split" if split_photo else "full"
+    if photo_col:
+        return "photo-explain", "column"
+    if not has_fig:
+        return ("procedure", "text-only") if is_steps(lines) else ("explain-figure", "text-only")
+    if comp == "stage":
+        return "figure-stage", "figure"
+    if is_table(lines):
+        return "reference-table", "with-figure"
+    if is_steps(lines):
+        return "procedure", "with-figure"
+    if words > PARTS_FROM:
+        return "content-in-parts", "with-figure"
+    if words > DENSE_WORDS:
+        return ("long-explanation", "model") if is_3d(s) else ("reading-with-figure", side)
+    return "explain-figure", side
+
+
+TEMPLATE_COMPOSITION = {"figure-stage": "stage", "opening": "opener", "explain-figure": "two-col", "reading-with-figure": "two-col",
+                        "long-explanation": "two-col", "procedure": "two-col", "content-in-parts": "two-col",
+                        "three-content-blocks": "two-col", "reference-table": "two-col"}
+
+
+def asked_composition(b):
+    """a template asked for in the build sheet decides the composition, unless the sheet names one itself"""
+    tid = (b.get("template") or "").split(".v")[0]
+    if tid in TEMPLATE_COMPOSITION and not b.get("composition"):
+        return dict(b, composition=TEMPLATE_COMPOSITION[tid])
+    return b
+
+
+def line_ranges(spec, n, howmany=None):
+    """[[1, 3], [4, 6]] - line ranges in order, each line once; None when they are not that"""
+    try:
+        rs = [(int(r[0]), int(r[-1])) for r in spec]
+    except (TypeError, ValueError, IndexError):
+        return None
+    if howmany and len(rs) != howmany:
+        return None
+    if any(lo < 1 or hi > n or lo > hi for lo, hi in rs) or any(a_[1] >= b_[0] for a_, b_ in zip(rs, rs[1:])):
+        return None
+    return rs
+
+
+def pick_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col, probs, where):
+    auto = auto_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col)
+    want = (b.get("template") or "").split(".v")[0]
+    if not want:
+        tid, var = auto
+    elif want not in TEMPLATES:
+        probs.append("%s: the build sheet asks for the template \"%s\" - the templates are %s (L61)"
+                     % (where, b["template"], ", ".join(sorted(TEMPLATES))))
+        tid, var = auto
+    else:
+        tid, var = want, auto[1] if auto[0] == want else TEMPLATES[want]["variants"][0]
+        why = None
+        if tid in ("task-launch", "recap"):
+            why = "is for a task slide or the module's recap, not a teaching slide"
+        elif tid == "photo-explain" and not is_photo:
+            why = "needs a photograph"
+        elif tid not in ("explain-figure", "procedure", "opening") and not has_fig:
+            why = "needs a picture beside the words"
+        elif tid == "procedure" and not is_steps(lines):
+            why = "needs steps the script numbers itself (1, 2, 3 ...)"
+        elif tid == "reference-table" and not is_table(lines):
+            why = "needs table rows - the cells of a line separated by \" | \""
+        elif tid == "long-explanation" and not is_3d(s):
+            why = "is the 3D template - the slide's picture is not a 3D model"
+        elif tid == "compare-two" and not (line_ranges(b.get("blocks"), len(lines), 2) and b.get("figure_b")):
+            why = "needs \"blocks\": two line ranges and \"figure_b\", the second picture"
+        elif tid == "three-content-blocks" and not line_ranges(b.get("blocks"), len(lines), 3):
+            why = "needs \"blocks\": three line ranges"
+        if why:
+            probs.append("%s: the build sheet asks for the template %s, which %s (L61)" % (where, tid, why))
+            tid, var = auto
+    if b.get("variant") and tid == want:
+        if b["variant"] in TEMPLATES[tid]["variants"]:
+            var = b["variant"]
+        else:
+            probs.append("%s: the template %s has no variant \"%s\" - its variants are %s (L61)"
+                         % (where, tid, b["variant"], ", ".join(TEMPLATES[tid]["variants"])))
+    if not has_fig and (tid, var) not in FIGURE_FREE and tid != "photo-explain":
+        var = "text-only" if "text-only" in TEMPLATES[tid]["variants"] else var
+    return tid, var
+
+
+def auto_parts(lines, ranges=None):
+    """the slide's lines in readable parts, in order: the build sheet's "parts", or about PART_WORDS words each"""
+    if ranges:
+        return [list(range(lo, hi + 1)) for lo, hi in ranges]
+    total = cs.wc(" ".join(lines))
+    k = max(2, -(-total // PART_WORDS))
+    target = total / float(k)
+    parts, cur, acc = [], [], 0
+    for i, x in enumerate(lines, 1):
+        w = cs.wc(x)
+        if cur and acc + w / 2.0 > target and len(parts) < k - 1:
+            parts.append(cur)
+            cur, acc = [], 0
+        cur.append(i)
+        acc += w
+    parts.append(cur)
+    return parts
+
+
+def parts_html(lines, parts, emph):
+    """content-in-parts: every part on the slide, the first shown; Next walks them (gb_deck.js), the numbered tabs too"""
+    out = ['<div class="lt-parts" data-parts="%d">' % len(parts)]
+    for k, ix in enumerate(parts, 1):
+        words = words_html([lines[i - 1] for i in ix], first_statement=(k == 1), emph=emph, idx=ix)
+        out.append('  <div class="lt-part%s" data-part="%d">' % (" on" if k == 1 else "", k))
+        out += ["    " + y for y in words]
+        out.append("  </div>")
+    out.append('  <div class="lt-tabs">%s</div>' % "".join(
+        '<button type="button" class="lt-tab%s" data-part="%d" aria-label="Part %d of %d">%d</button>'
+        % (" on" if k == 1 else "", k, k, len(parts), k) for k in range(1, len(parts) + 1)))
+    out.append("</div>")
+    return out
+
+
+def table_html(lines, idx=None):
+    """reference-table: the lines with " | " are the rows; the separator stays in the line (hidden), so the slide
+    still says exactly the approved words"""
+    idx = list(idx or range(1, len(lines) + 1))
+    pre, rows, post = [], [], []
+    for i, x in zip(idx, lines):
+        (rows if " | " in x else (post if rows else pre)).append((i, x))
+    out = words_html([x for _, x in pre], idx=[i for i, _ in pre]) if pre else []
+    tr = []
+    for i, x in rows:
+        cells = x.split(" | ")
+        tr.append('<tr data-script-field="text" data-i="%d">%s</tr>' % (i, "".join(
+            '<td>%s%s</td>' % (e(c), '<span class="lt-sep"> | </span>' if n < len(cells) - 1 else "") for n, c in enumerate(cells))))
+    out.append('<table class="lt-table"><tbody>%s</tbody></table>' % "".join(tr))
+    if post:
+        out += words_html([x for _, x in post], first_statement=False, idx=[i for i, _ in post])
+    return out
+
+
+def has_teaching_visual(slide):
+    """for the sequence rule: a teaching slide with a picture - not a task launch or the recap (they do not count)"""
+    t = re.search(r'\bdata-template="([\w-]+)\.v\d+"', slide)
+    v = re.search(r'\bdata-variant="([\w-]+)"', slide)
+    if not t:
+        return None
+    tid, var = t.group(1), v.group(1) if v else ""
+    if tid in ("task-launch", "recap"):
+        return None
+    return (tid, var) not in FIGURE_FREE
+
+
 def recap_html(s, base, m, n, total, lines):
     """L51 - the module's closing slide, "what to take away", in the one shared design (gb_compose.css 15): one box
     per approved line, "Short title - one sentence"; the numbers are drawn by CSS, so the slide says exactly the
@@ -1072,6 +1275,7 @@ def recap_html(s, base, m, n, total, lines):
     d = {"class": "slide dark recap", "data-title": s.get("title"), "data-kind": "Summary",
          "data-block": "%s · %d" % (m, n), "data-visual": "none"}
     d.update(base)
+    template_attrs(d, "recap", "cards")
     items = []
     for x in lines:
         t, sep, rest = x.partition(" - ")
@@ -1113,6 +1317,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
             d["data-link-hint"] = b.get("link_hint") or (lines[0] if lines else "")
         d.update(base)
         d["data-track"] = "practice" if kind == "activity" else "theory"
+        template_attrs(d, "task-launch", "room" if kind == "activity" else "check" if graded else "tablet")
         body = ['<p class="act-code" data-script-ignore>%s</p>' % e(code),
                 '<h2 class="act-title" data-script-field="title">%s</h2>' % e(title)]
         if kind == "task-slide":
@@ -1126,6 +1331,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     if kind == "slide" and s.get("recap"):
         return recap_html(s, base, m, n, total, lines)
 
+    b = asked_composition(b)                      # L61: a template asked for by name decides the composition
     fig, credit, is_photo = figure_html(mdir, figdir, s, b, probs, where)
     comp = composition(s, b, is_photo, bool(fig))
     if comp not in COMPOSITIONS + ("photo",):
@@ -1140,7 +1346,34 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     photo_col = is_photo and comp in ("wide-left", "wide-right")
     if split_photo:
         comp = "photo"
+    # L61 - the slide's template, and the owner's rules for it
+    tid, variant = pick_template(s, b, comp, is_photo, bool(fig), lines, split_photo, photo_col, probs, where)
+    nwords_all = cs.wc(" ".join(lines))
+    if kind == "slide" and not fig and nwords_all > DENSE_WORDS:
+        probs.append("%s: %d words and no picture beside them - dense text always has a drawing, a photograph, an animation or a "
+                     "3D model beside it (L61, more than %d words is dense)" % (where, nwords_all, DENSE_WORDS))
+    split = b.get("split")
+    if split is not None:
+        try:
+            split = float(split)
+        except (TypeError, ValueError):
+            split = -1
+        if not SPLIT_LO <= split <= SPLIT_HI:
+            probs.append("%s: \"split\": %s - the text takes %d-%d %% of a split slide, the picture the rest (L61)"
+                         % (where, b.get("split"), 100 * SPLIT_LO, 100 * SPLIT_HI))
+            split = None
+    if tid == "compare-two" and comp not in ("photo",):
+        comp = "compare"
+    if tid == "opening" and variant == "photo":            # the opening's photograph is the screen, the title over it
+        comp = "photo"
+    if b.get("panel") not in (None, "light"):
+        probs.append("%s: \"panel\": %s - the picture's panel is the Navy one, or \"light\" for a drawing made for a white page (L61)"
+                     % (where, b.get("panel")))
+    light = b.get("panel") == "light"                         # a drawing made for a white page: the light panel (gb_layouts.css)
+    box_of = lambda f: fill(f).replace('class="fill fig"', 'class="fill fig lt-light"', 1) if light else fill(f)
     emph = {k: b[k] for k in ("boxes", "box_alt", "conclusion", "groups", "hooks") if k in b}
+    if tid == "three-content-blocks":
+        emph["groups"] = [{"lines": [lo, hi], "class": "lt-block"} for lo, hi in line_ranges(b.get("blocks"), len(lines), 3)]
     inset = inset_html(mdir, b["inset"], probs, where) if b.get("inset") else ""
     aside = ""
     if b.get("aside"):                    # a small drawing that belongs with the words (two mini figures on a photo)
@@ -1187,6 +1420,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
          "data-title": s.get("title"), "data-kind": "Theory", "data-block": "%s · %d" % (m, n),
          "data-visual": s.get("visual_kind") or "none"}
     d.update(base)
+    template_attrs(d, tid, variant, split)
     label = "Theory"
     if act:
         code = (s.get("opens") or "").strip() or sid.upper()
@@ -1218,29 +1452,56 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                                                idx=[i for i, _ in ps], **kw) if ps else []
             above = ind(part(pre), 4) if pre else ""
             below = "\n    ".join(y for y in (ind(part(mid, legend=True), 4), ind(part(post), 4), ind(extra, 4)) if y)
-            body = "\n    ".join(y for y in (above, fill(fig), below) if y)
+            body = "\n    ".join(y for y in (above, box_of(fig), below) if y)
         else:
             words = words_html(lines, first_statement=False, emph=emph, legend=bool(leg))
-            body = fill(fig) + "\n    " + (ind(words + extra, 4) if leg else copy(words, 4))
+            body = box_of(fig) + "\n    " + (ind(words + extra, 4) if leg else copy(words, 4))
         return ('<section %s>\n%s\n  %s\n  <div class="slide-body stage">\n    %s\n  </div>%s\n</section>'
                 % (attrs(d), head, h2, body, credit_html))
     if comp in ("two-col", "wide-left", "wide-right"):
         # a drawing, an animation or a 3D model gets the wider column (owner, 2026-10-15: bigger pictures)
         cls = "two-col " + (comp if comp != "two-col" else "fig-wide")
-        box = fill(fig)
+        box = box_of(fig)
         if photo_col:                      # the photograph is cropped to its column, which has the slide's height
             box = box.replace('class="fill fig"', 'class="fill fig photo-col"', 1)
             cls += " photo-col"
-        cols = [copy(words_html(lines, emph=emph), 4), box]
+        if tid == "content-in-parts":
+            ranges = line_ranges(b.get("parts"), len(lines)) if b.get("parts") else None
+            if b.get("parts") and not ranges:
+                probs.append("%s: \"parts\" must be line ranges in order, each line once - e.g. [[1, 4], [5, 9]] (L61)" % where)
+            if ranges and sum(hi - lo + 1 for lo, hi in ranges) != len(lines):
+                probs.append("%s: \"parts\" leave out some lines - every approved line is in a part (L61)" % where)
+                ranges = None
+            reading = copy(parts_html(lines, auto_parts(lines, ranges), emph), 4)
+        elif tid == "reference-table":
+            reading = copy(table_html(lines), 4)
+        else:
+            reading = copy(words_html(lines, emph=emph), 4)
+        cols = [reading, box]
         if b.get("figure_first"):          # the drawing on the left, the words on the right
             cols.reverse()
             cls = cls.replace("fig-wide", "fig-wide fig-first")
         return ('<section %s>\n%s\n  %s\n  <div class="slide-body %s">\n    %s\n    %s\n  </div>%s\n</section>'
                 % (attrs(d), head, h2, cls, cols[0], cols[1], credit_html))
+    if comp == "compare":
+        fig_b, credit_b, _ = figure_html(mdir, figdir, s, dict(b, figure=b.get("figure_b")), probs, where)
+        rs = line_ranges(b.get("blocks"), len(lines), 2)
+        inside = set(i for lo, hi in rs for i in range(lo, hi + 1))
+        cards = []
+        for (lo, hi), pic in zip(rs, (fig, fig_b)):
+            ix = list(range(lo, hi + 1))
+            cards.append('<div class="lt-card"><div class="lt-card-visual">%s</div><div class="lt-card-copy">\n      %s\n    </div></div>'
+                         % (pic, ind(words_html([lines[i - 1] for i in ix], first_statement=False, idx=ix, emph=emph), 6)))
+        rest = [i for i in range(1, len(lines) + 1) if i not in inside]
+        note = ind(words_html([lines[i - 1] for i in rest], first_statement=False, idx=rest), 4) if rest else ""
+        credits = " · ".join(x for x in (credit, credit_b) if x)
+        return ('<section %s>\n%s\n  %s\n  <div class="slide-body lt-compare">\n    %s\n  </div>%s%s\n</section>'
+                % (attrs(d), head, h2, "\n    ".join(cards), ("\n  <div class=\"lt-compare-note\">%s</div>" % note) if note else "",
+                   '\n  <div class="credit">%s</div>' % e(credits) if credits else ""))
     if comp == "opener":
         return ('<section %s>\n%s\n  <div class="slide-body opener mid">\n    %s\n    %s\n  </div>%s\n</section>'
                 % (attrs(d), head, h2, ind(words_html(lines, first_statement=False), 4), credit_html))
-    figure = ("\n    " + fill(fig)) if fig else ""
+    figure = ("\n    " + box_of(fig)) if fig else ""
     return ('<section %s>\n%s\n  %s\n  <div class="slide-body">\n    %s%s\n  </div>%s\n</section>'
             % (attrs(d), head, h2, copy(words_html(lines, emph=emph), 4), figure, credit_html))
 
@@ -1562,6 +1823,16 @@ def compile_deck(script, build, mdir, figdir, version, approved):
         b = (build.get("screens") or {}).get(s["id"]) or {}
         teach += s["kind"] == "slide"
         slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken))
+    # L61 - never three teaching slides in a row without a teaching picture (a task launch and the recap do not count)
+    run = []
+    for s, page in zip(screens, slides):
+        seen = has_teaching_visual(page)
+        if seen is None:
+            continue
+        run = [] if seen else run + [s["id"]]
+        if len(run) == NO_VISUAL_RUN + 1:
+            probs.append("%s: three teaching slides in a row without a teaching picture (%s) - at most %d; give one of them a drawing, "
+                         "a photograph, an animation or a 3D model (L61)" % (cs.place(script, s["id"]), ", ".join(run), NO_VISUAL_RUN))
     blind = sorted(n for n, m, d, _ in pool if os.path.abspath(d) == os.path.abspath(mdir) and not m.get("shows"))
     if blind:
         notes.append((None, None, "%d photograph(s) without \"shows\" in _photo_meta.json, so no drawing can use them (L57): %s"

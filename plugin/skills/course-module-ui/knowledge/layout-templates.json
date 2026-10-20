@@ -1,0 +1,31 @@
+{
+  "_authority": "Owner, 2026-10-20 (L61, course-factory 2.52.0): 'implement the layout templates. All slides for all modules that will be made need to be in this style, it's a RULE. Configure the compiler so it does this style - of course the logo should be our official one, and the colours from the brandbook.' The design is the owner-reviewed library design/course-layout-templates/ (preview.html, 13 templates, 2026-10-20); this file is its production contract.",
+  "version": 1,
+  "rule": "Every slide the compiler builds is one of the templates below, named on the slide as data-template=\"<id>.v1\" with a supported data-variant. The compiler chooses it from the approved script and the build sheet; a build sheet may ask for a template or variant by name, and an unknown or unsuitable one is a problem with the slide's id. No slide invents its own structure or overrides the shared layout CSS (gb_layouts.css).",
+  "look": {
+    "stylesheet": "course-module-ui/templates/gb_layouts.css - loaded after gb_compose.css; every rule is scoped to [data-template], so a deck built before 2.52.0 looks as it did",
+    "stage": "one logical 1280 x 800 slide: sizes in vmin with reading floors, so 1 vmin = 8 px at 1280 x 800 and the slide scales evenly on a projector",
+    "logo": "the official file assets/novikontas_logo.svg (plugin/resources/brand), exactly as provided, top right of every slide; on a dark or photo slide it sits on a white plate (brandbook: only on a high-contrast background, safe area kept)",
+    "colours": "brandbook only: Navy #0A2463, Novikontas Blue #53A7DB, Pitch Black #011111, Steel Blue #415C8F, Light Grey #E7EBF0, Pure White #FFFFFF. The reference design's amber is replaced by Novikontas Blue everywhere; the semantic correct / wrong / hazard colours of drawings and tasks stay what they are (they carry meaning, not brand)",
+    "type": "Raleway - Bold titles, Medium body, SemiBold labels (brandbook); never smaller than the reading floors of gb_shell.css"
+  },
+  "split": {"text": [0.5, 0.6], "default": 0.55, "_why": "owner: 50-60 % text, 40-50 % visual, default 55 / 45 - never the old 80 / 20, and the picture itself large in its area. A build sheet may set \"split\": 0.5 ... 0.6."},
+  "sequence": {"max_without_visual_in_a_row": 2, "_why": "owner: never more than two teaching slides in a row without a meaningful teaching visual. Counted over the deck's teaching slides in order; a task launch and the recap neither count nor break a run (they are not teaching slides). A logo, a border, a button, an icon or a gradient is not a teaching visual."},
+  "dense": {"words": 60, "_why": "owner: dense text always has an image, diagram, animation, interactive visual or 3D object beside it. 'Dense' is more than 60 words on the slide - the factory's starting value, the owner may change it here. No universal word cap: the reference examples hold about 85-135 words."},
+  "parts": {"auto_from_words": 135, "part_words": 110, "_why": "owner: when the approved words need more room, keep them in readable parts - never cut, summarise, shrink the type or drop the picture. A slide with a picture and more than 135 words becomes content-in-parts: its lines in order, in parts of about 110 words, Next walks the parts, every part reachable."},
+  "templates": {
+    "explain-figure":       {"version": 1, "name": "Text + figure", "variants": ["figure-right", "figure-left", "text-only"], "needs": "figure (or none: text-only, short text)", "auto": "a split or column layout with a picture, up to 60 words; text-only: a short slide with no picture"},
+    "figure-stage":         {"version": 1, "name": "Large figure", "variants": ["figure"], "needs": "figure", "auto": "layout visual_full or visual_wide with a drawing and few words"},
+    "photo-explain":        {"version": 1, "name": "Photo + explanation", "variants": ["full", "split", "column"], "needs": "photograph", "auto": "a photograph: full screen, beside the words, or in its own column"},
+    "compare-two":          {"version": 1, "name": "Comparison", "variants": ["two-visuals"], "needs": "figure + figure_b + \"blocks\": two line ranges", "auto": "never - asked for in the build sheet"},
+    "procedure":            {"version": 1, "name": "Sequence of actions", "variants": ["with-figure", "text-only"], "needs": "steps the script numbers itself, 1, 2, 3 ...", "auto": "a slide whose lines are numbered steps"},
+    "task-launch":          {"version": 1, "name": "Task opening", "variants": ["tablet", "room", "check"], "needs": "a task slide or a room activity", "auto": "every task slide and room activity"},
+    "recap":                {"version": 1, "name": "Summary", "variants": ["cards"], "needs": "the module's closing slide (\"recap\": true)", "auto": "the recap slide - one design for every module (L51)"},
+    "opening":              {"version": 1, "name": "Module opening", "variants": ["statement", "photo"], "needs": "composition opener", "auto": "the opener composition"},
+    "long-explanation":     {"version": 1, "name": "Long explanation + 3D", "variants": ["model"], "needs": "a 3D figure and more than 60 words", "auto": "a 3D slide with dense text"},
+    "three-content-blocks": {"version": 1, "name": "Three content blocks", "variants": ["with-figure"], "needs": "figure + \"blocks\": three line ranges", "auto": "never - asked for in the build sheet"},
+    "reference-table":      {"version": 1, "name": "Table + conclusion", "variants": ["with-figure"], "needs": "figure + lines with cells separated by \" | \"", "auto": "a slide whose lines are table rows"},
+    "reading-with-figure":  {"version": 1, "name": "A lot of text + figure", "variants": ["figure-right", "figure-left"], "needs": "figure and more than 60 words", "auto": "a split or column layout with a picture and dense text"},
+    "content-in-parts":     {"version": 1, "name": "One slide, several parts", "variants": ["with-figure"], "needs": "figure; \"parts\": line ranges, or more than 135 words", "auto": "a slide with a picture and more than 135 words"}
+  }
+}

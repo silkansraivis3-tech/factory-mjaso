@@ -94,6 +94,35 @@ to the tablets. Write a fragment as the deck sees it: its links start `../assets
 
 ## 2 · How a slide is laid out — the same in every module
 
+**Every slide is one of the owner's thirteen layout templates (L61, 2.52.0).** The compiler chooses it from the rows
+below and names it on the slide: `data-template="explain-figure.v1"` `data-variant="figure-right"`
+(`course-module-ui/knowledge/layout-templates.json`). `gb_layouts.css` gives it the owner's look in the brandbook's
+colours, the official logo top right, Raleway bundled. What the compiler chooses on its own:
+
+| The slide | Its template |
+|---|---|
+| a photograph full screen / beside the words / in its own column | `photo-explain` `full` / `split` / `column` |
+| a drawing on a stage | `figure-stage` |
+| a picture beside up to 60 words | `explain-figure` `figure-right` (`figure-left` with `"figure_first"`) |
+| a picture beside more than 60 words | `reading-with-figure` - or `long-explanation` when the picture is 3D |
+| a picture beside more than 135 words | `content-in-parts`: the lines in order, in parts of about 110 words; Next walks the parts, every part has a tab |
+| lines numbered 1, 2, 3 ... | `procedure` (`with-figure`, or `text-only`) |
+| lines whose cells are separated by ` \| ` | `reference-table` - one row a line, the separator kept in the line (hidden) |
+| a short slide with no picture | `explain-figure` `text-only` |
+| the opener / the recap / a task slide or room activity | `opening` / `recap` / `task-launch` (`tablet`, `check`, `room`) |
+
+Asked for by name in the build sheet: `"template"` (any of the thirteen; `compare-two` needs `"blocks": [[1, 2], [3, 4]]`
+and `"figure_b"`, `three-content-blocks` needs three `"blocks"`), `"variant"`, `"split": 0.5`-`0.6` (the text's share),
+`"parts": [[1, 4], [5, 9]]`, `"panel": "light"` (a drawing made for a white page; the panel is Navy otherwise). An
+unknown or unsuitable template or variant is a problem with the slide's id.
+
+**The owner's rules, checked at every build:** a split slide is 55 / 45 (50-60 % text, never 80 / 20); more than 60
+words always has a picture beside it; never three teaching slides in a row without a teaching picture (a task launch and
+the recap neither count nor break the run); approved words are never cut, summarised or set smaller - when they need
+more room they go into parts. A drawing is now about 45 % of the slide wide, not 60 %: one whose labels become too
+small at that width is reported by the drawing check like any other - give it bigger labels, `"split": 0.5`, or the
+`figure-stage` template.
+
 | In the script, or in the delivery file | On the screen |
 |---|---|
 | `layout` `visual_full` + a photograph | `.slide.photo` — the photo is the screen, the words over it |

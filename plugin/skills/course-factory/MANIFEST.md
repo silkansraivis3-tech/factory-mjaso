@@ -1350,6 +1350,24 @@ the vent at y 230 instead of 196 and no hand label boxes, M01 **PASSes** in one 
 `vent-puffs` (a vent 22 under a room: was inside on some frames, now clean) and `bad-mover` (a plain moving disc, the
 determinism case the puffs were), `test_audit_drawing.py`.
 
+## 4zz6 · Every slide is one of the owner's layout templates (L61, 2.52.0, 2026-10-20)
+
+The owner reviewed thirteen layout templates on 2026-10-20 (`design/course-layout-templates/`, handoff
+`docs/LAYOUT_TEMPLATE_IMPLEMENTATION.md`) and made them the rule for every slide, with the official logo and the
+brandbook's colours. Built: `course-module-ui/knowledge/layout-templates.json` (the thirteen, their variants, the rules
+as numbers); `course-module-ui/templates/gb_layouts.css` (the look, scoped to `[data-template]` so a deck from before
+looks as it did; brandbook colours only - amber is Novikontas Blue; the official `novikontas_logo.svg` top right, on a
+white plate on dark slides; Raleway bundled, `templates/fonts/` with its OFL licence), shipped by `design_system.py`;
+`compile_module.py` names each slide's template and variant (`auto_template`, `pick_template`), builds the four that
+need their own structure (content-in-parts, reference-table, three-content-blocks, compare-two), and checks the owner's
+rules - split 55 / 45, a picture beside dense text, never three teaching slides in a row without one, parts instead of
+cut words; `gb_deck.js` walks a slide's parts with Next / Back and its tabs. Measured on a sample module with every
+template at 1280 x 800 (`run_audits.py`): no low contrast, small text, spill, tap or collision problems; the long slide
+that spilled 38 px before is in two parts now. What it costs: a drawing is about 45 % of the slide wide, not 60 % - one
+whose labels fall under the floor at that width is reported by the drawing check. Tests: `test_compile_module.py`
+`layouts_part` (every slide named; the mapping; the brand colours and the logo; split, dense, sequence, unknown and
+unsuitable templates; parts, table, blocks, comparison - all still word for word).
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

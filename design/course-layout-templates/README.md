@@ -1,5 +1,10 @@
 # Course layout reference library
 
+> **Implemented in `course-factory` 2.52.0 (L61, owner 2026-10-20: "all slides for all modules ... in this style, it's
+> a RULE").** Production contract: `plugin/skills/course-module-ui/knowledge/layout-templates.json`; look:
+> `plugin/skills/course-module-ui/templates/gb_layouts.css` (brandbook colours, the official logo, Raleway bundled);
+> the compiler names every slide's template. This folder stays the design reference.
+
 13 inspectable HTML layout specimens, reviewed with the owner on 2026-10-20. The latest revision uses approximately **55% text / 45% visual** for the five information-heavy layouts, with shorter sample copy. This is a design reference and implementation handoff, not a compiler integration or a plugin release.
 
 Open [`preview.html`](preview.html) in a browser. To serve it locally from the repository root:

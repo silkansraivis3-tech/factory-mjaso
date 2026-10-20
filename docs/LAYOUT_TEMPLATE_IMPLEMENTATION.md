@@ -1,5 +1,11 @@
 # Implement the owner-reviewed layout templates
 
+> **Status, 2026-10-20: implemented in `course-factory` 2.52.0 (L61).** Templates and rules:
+> `plugin/skills/course-module-ui/knowledge/layout-templates.json`; look: `templates/gb_layouts.css`; the compiler
+> (`compile_module.py`) names every slide's template and checks the owner's rules; `gb_deck.js` walks content parts. Not
+> done here, as this brief says: the classroom `/display` synchronisation (needs the classroom's own code and devices),
+> and migrating courses built before 2.52.0 (each is rebuilt by compiling it again).
+
 Owner-reviewed design handoff, 2026-10-20. Baseline examined: `0f8d252f5a9d3321959e4c394085d2b003fa1b8d` (`course-factory` context says 2.51.0). This change adds references only. **No compiler integration, course migration or live classroom fix has been implemented.**
 
 Start with [`design/course-layout-templates/README.md`](../design/course-layout-templates/README.md) and open its `preview.html`. The source of truth for the latest appearance is the checked-in HTML/CSS and generators, not an earlier discussion or the initially denser specimens.

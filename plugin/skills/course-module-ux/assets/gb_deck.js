@@ -155,6 +155,7 @@ var GBDeck = (function (w, d) {
       });
       cur = idx;
       var s = slides[idx];
+      if (s.querySelector(".lt-part")) { setPart(s, 0); }
       if (counter) { counter.innerHTML = "<b>" + (idx + 1) + "</b> / " + slides.length; }
       if (progress) { progress.style.width = (100 * (idx + 1) / slides.length) + "%"; }
       if (blockTag) {
@@ -180,12 +181,43 @@ var GBDeck = (function (w, d) {
       s.scrollTop = 0;
     }
 
+    /* L61 (2.52.0) - a content-in-parts slide (.lt-part): Next / Back walk its parts first, every part reachable */
+    function setPart(s, j) {
+      each(s.querySelectorAll(".lt-part"), function (p, k) { p.classList[k === j ? "add" : "remove"]("on"); });
+      each(s.querySelectorAll(".lt-tab"), function (t, k) {
+        t.classList[k === j ? "add" : "remove"]("on");
+        t.setAttribute("aria-pressed", k === j ? "true" : "false");
+      });
+    }
+    function partStep(dir) {
+      var s = slides[cur], ps = s ? s.querySelectorAll(".lt-part") : [], i = 0, k;
+      if (!ps.length) { return false; }
+      for (k = 0; k < ps.length; k++) { if (ps[k].classList.contains("on")) { i = k; } }
+      if (i + dir < 0 || i + dir >= ps.length) { return false; }
+      setPart(s, i + dir);
+      return true;
+    }
+    d.addEventListener("click", function (e) {
+      var t = e.target && e.target.closest ? e.target.closest(".lt-tab") : null;
+      var s = t && t.closest(".slide");
+      if (!t || !s) { return; }
+      setPart(s, (parseInt(t.getAttribute("data-part"), 10) || 1) - 1);
+    });
+
     function stepHere(dir) {
+      if (partStep(dir)) { return true; }
       var h = hookFor(cur);
       return !!(h && h.step && h.step(dir));
     }
     function next() { if (stepHere(1)) { return; } if (cur < slides.length - 1) { show(cur + 1); } }
-    function prev() { if (stepHere(-1)) { return; } if (cur > 0) { show(cur - 1); } }
+    function prev() {
+      if (stepHere(-1)) { return; }
+      if (cur > 0) {
+        show(cur - 1);
+        var ps = slides[cur].querySelectorAll(".lt-part");          /* back into a parts slide: its last part first */
+        if (ps.length) { setPart(slides[cur], ps.length - 1); }
+      }
+    }
 
     /* ---- start / exit --------------------------------------------------- */
     function start() {

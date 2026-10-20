@@ -1,0 +1,299 @@
+/* ==========================================================================
+   gb_layouts.css — the owner's layout templates (L61, course-factory 2.52.0)
+
+   WHY IT EXISTS
+   Owner, 2026-10-20: "All slides for all modules that will be made need to be
+   in this style, it's a RULE ... the logo should be our official one, and the
+   colours from the brandbook." The style is the owner-reviewed library in
+   design/course-layout-templates/ (13 templates); this file is its production
+   look. The compiler names every slide's template on the slide -
+   data-template="explain-figure.v1" data-variant="figure-right" - and only those slides are styled here, so a deck
+   built before 2.52.0 looks exactly as it did.
+
+   THE BRANDBOOK, AND NOTHING ELSE, FOR THE SLIDE ITSELF
+     Navy #0A2463 · Novikontas Blue #53A7DB · Pitch Black #011111
+     Steel Blue #415C8F · Light Grey #E7EBF0 · Pure White #FFFFFF
+   The reference design's amber accent is Novikontas Blue here. The meaning
+   colours inside a drawing or a task (correct, wrong, hazard, the line a figure
+   is on) are the drawing's own and are not repainted.
+   The logo is the official file (assets/novikontas_logo.svg, exactly as
+   provided), top right; on a dark or photo slide it sits on a white plate -
+   brandbook: only on a high-contrast background, safe area kept.
+
+   ONE LOGICAL SLIDE
+   Sizes are in vmin with reading floors: at 1280 x 800, 1 vmin = 8 px, so the
+   numbers below are the reference's pixels / 8. A projector scales the same
+   slide evenly. Type is never set below the shell's floors.
+
+   REQUIRES gb_tokens.css, gb_shell.css, gb_compose.css - then this file.
+   ========================================================================== */
+
+/* Raleway, the brandbook's typeface (Bold titles, Medium body, SemiBold labels), bundled: the classroom is offline and
+   Google Fonts never load there. Variable font, SIL Open Font License 1.1 (course-module-ui/templates/fonts/OFL.txt). */
+@font-face{font-family:"Raleway";src:url("raleway-variable.ttf") format("truetype");font-style:normal;font-weight:100 900;font-display:block}
+
+:root{
+  --lt-navy:#0A2463;
+  --lt-blue:#53A7DB;
+  --lt-black:#011111;
+  --lt-steel:#415C8F;
+  --lt-grey:#E7EBF0;
+  --lt-white:#FFFFFF;
+  --lt-paper:#F7F8FA;          /* Light Grey lifted half way to white: the slide ground */
+  --lt-panel:#0A2463;          /* the figure panel: Navy */
+  --lt-panel-glow:rgba(83,167,219,.16);
+  --lt-deep:#06173D;           /* a dark slide: Navy deepened towards Pitch Black */
+  --lt-line:#DCE3EB;
+  --lt-line-d:rgba(83,167,219,.22);
+  --lt-dim-d:#B8C7DA;
+  --lt-text:55;                /* text share of a split slide, %: 50-60 (owner, default 55) */
+  --lt-gap:min(4vmin,32px);
+  --lt-pad-x:min(8vmin,64px);
+  --lt-top:min(10.5vmin,84px);
+  --lt-fs:clamp(15px,2.5vmin,30px);
+  --lt-fs-lead:clamp(16px,2.6vmin,31px);
+  --lt-ring:#C7D3DF;
+  --lt-on-photo:#D5E2EE;
+  --lt-box:#EEF5FB;
+  --lt-shadow:rgba(1,17,17,.25);
+  --lt-blue-06:rgba(83,167,219,.06);
+  --lt-blue-08:rgba(83,167,219,.08);
+}
+
+/* ---------------------------------------------------------------- the slide */
+.slide[data-template]{
+  /* Raleway's default figures are old-style ("Mo1", a low "-162"): lining figures read as numbers on a slide */
+  font-variant-numeric:lining-nums;font-feature-settings:"lnum" 1;
+  background:var(--lt-paper);color:var(--lt-black);
+  padding:var(--lt-top) var(--lt-pad-x) max(92px,11.5vmin);
+  font-family:"Raleway","Segoe UI",Arial,sans-serif;
+}
+.slide[data-template].dark,.slide[data-template].photo{background:var(--lt-deep);color:var(--lt-white)}
+.slide[data-template].dark::before{opacity:.035}
+
+/* the top line: what this slide is, left; the official logo, right */
+.slide[data-template] .slide-kind{
+  position:absolute;left:0;right:0;top:0;height:var(--lt-top);
+  background:transparent;color:var(--lt-steel);
+  display:flex;align-items:center;gap:.6em;padding:0 var(--lt-pad-x);
+  font-size:clamp(12.5px,1.5vmin,18px);font-weight:600;letter-spacing:.18em;text-transform:uppercase;z-index:3;
+}
+.slide[data-template] .slide-kind b{color:var(--lt-navy);font-weight:700}
+.slide[data-template].dark .slide-kind,.slide[data-template].photo .slide-kind{color:var(--lt-dim-d);background:transparent}
+.slide[data-template].dark .slide-kind b,.slide[data-template].photo .slide-kind b{color:var(--lt-blue)}
+.slide[data-template] .slide-kind::after{
+  content:"";position:absolute;left:auto;bottom:auto;right:var(--lt-pad-x);top:50%;transform:translateY(-50%);
+  width:clamp(66px,10vmin,120px);height:clamp(55px,8.3vmin,100px);
+  background:url("novikontas_logo.svg") center/contain no-repeat;
+}
+/* a dark or photo slide: the logo on a white plate - never navy on navy */
+.slide[data-template].dark .slide-kind::after,.slide[data-template].photo .slide-kind::after{
+  background:var(--lt-white) url("novikontas_logo.svg") center/88% no-repeat;border-radius:min(1vmin,8px);
+  box-shadow:0 2px 10px var(--lt-shadow);
+}
+
+/* the bottom line: the module's short title, under a hairline */
+.slide[data-template]::after{
+  height:min(6vmin,48px);background:transparent;color:var(--lt-steel);
+  border-top:1px solid var(--lt-line);margin:0 var(--lt-pad-x);left:0;right:0;padding:0;
+  bottom:min(1.2vmin,10px);align-items:center;
+  font-size:clamp(12.5px,1.35vmin,16px);letter-spacing:.18em;font-weight:600;
+}
+.slide[data-template].dark::after,.slide[data-template].photo::after{color:var(--lt-dim-d);border-top-color:var(--lt-line-d);background:transparent}
+.slide[data-template].photo::after{z-index:3}
+/* the classroom chrome sits over the bottom right; the progress bar in the brand's blue */
+body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
+
+/* the title */
+.slide[data-template] > h2,.slide[data-template] .photo-copy h2{
+  margin:0;font-size:clamp(28px,5.75vmin,62px);font-weight:700;line-height:1.1;letter-spacing:-.025em;
+  color:var(--lt-navy);text-wrap:balance;max-width:24em;
+}
+.slide[data-template].dark > h2,.slide[data-template].photo .photo-copy h2{color:var(--lt-white)}
+
+/* ---------------------------------------------------------------- the words */
+.slide[data-template] .slide-body{margin-top:min(3.4vmin,28px);padding-bottom:0;gap:var(--lt-gap)}
+.slide[data-template] .copy{--fs:var(--lt-fs);gap:min(2.4vmin,20px)}
+.slide[data-template] .copy .statement,.slide[data-template] .statement{font-size:clamp(18px,3vmin,38px);line-height:1.35;font-weight:600;color:var(--lt-navy)}
+.slide[data-template].dark .copy .statement,.slide[data-template].dark .statement{color:var(--lt-white)}
+.slide[data-template] .copy .lead,.slide[data-template] .lead{font-size:var(--lt-fs-lead);line-height:1.55;color:var(--lt-steel);font-weight:500}
+.slide[data-template].dark .copy .lead{color:var(--lt-dim-d)}
+.slide[data-template] .copy b,.slide[data-template] .lead b{color:var(--lt-navy)}
+.slide[data-template].dark .copy b{color:var(--lt-white)}
+
+/* the points: numbered 01, 02 ... in the brand's blue - the reference's numbered list */
+.slide[data-template] .support{counter-reset:lt;gap:min(2.6vmin,22px)}
+.slide[data-template] .support li{counter-increment:lt;padding-left:min(5vmin,44px);font-size:var(--lt-fs);line-height:1.5;color:var(--lt-steel);font-weight:500}
+.slide[data-template].dark .support li{color:var(--lt-dim-d)}
+.slide[data-template] .support li b{color:var(--lt-navy)}
+.slide[data-template].dark .support li b{color:var(--lt-white)}
+.slide[data-template] .support li::before{
+  content:counter(lt,decimal-leading-zero);width:auto;height:auto;background:none;border-radius:0;
+  top:.42em;left:0;font-size:clamp(12.5px,1.5vmin,18px);font-weight:700;letter-spacing:.08em;color:var(--lt-steel);
+}
+.slide[data-template].dark .support li::before{color:var(--lt-blue)}
+/* numbered steps: the step's own number in a ring (the reference's procedure) */
+.slide[data-template] .support.seq li{padding-left:min(7vmin,58px);min-height:min(5.4vmin,44px)}
+.slide[data-template] .support.seq li::before{content:none}
+.slide[data-template] .support.seq .n{
+  width:min(5.2vmin,42px);height:min(5.2vmin,42px);min-width:0;top:-.1em;border-radius:50%;
+  background:var(--lt-white);color:var(--lt-navy);border:1px solid var(--lt-ring);
+  font-size:clamp(12.5px,1.85vmin,22px);font-weight:700;display:flex;align-items:center;justify-content:center;
+}
+.slide[data-template].dark .support.seq .n{background:transparent;color:var(--lt-white);border-color:var(--lt-line-d)}
+.slide[data-template] .support.seq li:first-child .n{background:var(--lt-navy);color:var(--lt-white);border-color:var(--lt-navy)}
+.slide[data-template].dark .support.seq li:first-child .n{background:var(--lt-blue);color:var(--lt-navy);border-color:var(--lt-blue)}
+
+/* boxes and the conclusion keep their meaning, in brand colours */
+.slide[data-template] .copy .box{border-left-color:var(--lt-blue);background:var(--lt-box);border-radius:min(1vmin,8px)}
+.slide[data-template] .copy .box.alt{border-left-color:var(--lt-steel);background:var(--lt-grey)}
+.slide[data-template] .copy .call{background:var(--lt-navy);color:var(--lt-white);border-radius:min(1.4vmin,12px)}
+
+/* ---------------------------------------------------------------- the figure panel */
+/* the picture's area: a Navy panel with a soft glow, the drawing large inside it (the reference's figure panel; the
+   figure kit, 3D and animations are drawn for it). A drawing made for a white page asks for a light panel in the build
+   sheet - "panel": "light" - so its own colours stay readable. A photograph is never put in a panel: it fills its area. */
+.slide[data-template] .fill.fig{
+  background:radial-gradient(ellipse at 50% 46%,var(--lt-panel-glow) 0,transparent 70%),var(--lt-panel);
+  border-radius:min(2.5vmin,20px);padding:min(1.5vmin,12px);   /* thin: the drawing itself stays as large as its area allows */
+  align-self:stretch;min-height:0;overflow:hidden;
+}
+.slide[data-template] .fill.fig.lt-light{background:var(--lt-white);border:1px solid var(--lt-line)}
+.slide[data-template].dark .fill.fig{background:radial-gradient(ellipse at 50% 46%,var(--lt-panel-glow) 0,transparent 70%),rgba(83,167,219,.07);
+  border:1px solid var(--lt-line-d)}
+.slide[data-template] .fill.fig .kit-screen{background:transparent}
+.slide[data-template] .fill.fig:has(> img:only-child){background:none;border:0;padding:0}
+.slide[data-template] .fill.fig > img:only-child{width:100%;height:100%;object-fit:cover;border-radius:min(2.2vmin,18px)}
+
+/* ---------------------------------------------------------------- split slides: text 55 % / picture 45 % */
+.slide[data-template] .slide-body.two-col,
+.slide[data-template] .slide-body.two-col.fig-wide,
+.slide[data-template] .slide-body.two-col.wide-left,
+.slide[data-template] .slide-body.two-col.wide-right{
+  grid-template-columns:calc((100% - var(--lt-gap)) * var(--lt-text) / 100) minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);gap:var(--lt-gap);align-items:center;
+}
+.slide[data-template] .slide-body.two-col.fig-first,
+.slide[data-template] .slide-body.two-col.fig-wide.fig-first{
+  grid-template-columns:minmax(0,1fr) calc((100% - var(--lt-gap)) * var(--lt-text) / 100);
+}
+.slide[data-template] .slide-body.two-col > .fill{height:100%;max-height:100%}
+.slide[data-template] .slide-body.two-col > .copy{align-self:center}
+.slide[data-template] .slide-body.two-col.photo-col > .fill.photo-col{border-radius:min(2.2vmin,18px);overflow:hidden;background:none;border:0;padding:0}
+
+/* text only (a short slide): one reading column, left-aligned with the title, centred in the height the title leaves -
+   a short text pinned to the top leaves the lower half of the screen empty (audit_compose: a cluster, not a composition) */
+.slide[data-template][data-variant="text-only"] .slide-body{justify-content:safe center;align-items:flex-start;margin-top:min(4.4vmin,36px)}
+.slide[data-template][data-variant="text-only"] .slide-body > .copy{max-width:min(118vmin,950px);align-items:flex-start;align-self:flex-start;text-align:left}
+.slide[data-template][data-variant="text-only"] .copy .lead:first-child{font-size:clamp(17px,2.9vmin,35px);color:var(--lt-navy);line-height:1.45}
+
+/* a sequence of actions: each step a row, the first one the active step (the reference's procedure) */
+.slide[data-template^="procedure."] .support.seq{gap:min(1.5vmin,12px);width:100%}
+.slide[data-template^="procedure."] .support.seq li{display:flex;align-items:center;min-height:min(9vmin,72px);padding:min(1.8vmin,14px) min(2.4vmin,20px)
+  min(1.8vmin,14px) min(9.4vmin,76px);border:1px solid transparent;border-radius:min(1.5vmin,12px);font-size:clamp(16px,2.75vmin,32px);color:var(--lt-steel)}
+.slide[data-template^="procedure."] .support.seq .n{left:min(2.4vmin,20px);top:50%;transform:translateY(-50%)}
+.slide[data-template^="procedure."] .support.seq li:first-child{background:var(--lt-white);border-color:var(--lt-line);color:var(--lt-navy);
+  box-shadow:0 8px 24px rgba(10,36,99,.06)}
+.slide[data-template^="procedure."].dark .support.seq li:first-child{background:var(--lt-blue-08);border-color:var(--lt-line-d);color:var(--lt-white)}
+.slide[data-template^="procedure."][data-variant="text-only"] .slide-body > .copy{width:min(100%,110vmin)}
+
+/* ---------------------------------------------------------------- large figure */
+.slide[data-template^="figure-stage."] .slide-body.stage{gap:min(2.2vmin,18px)}
+.slide[data-template^="figure-stage."] .slide-body.stage > .fill.fig{flex:1;width:100%}
+.slide[data-template^="figure-stage."] .slide-body.stage > .copy{flex:0 0 auto}
+
+/* ---------------------------------------------------------------- photo + explanation */
+.slide[data-template].photo .photo-copy{left:var(--lt-pad-x);max-width:min(64vmin,560px)}
+.slide[data-template].photo .photo-copy .lead{color:var(--lt-on-photo);font-size:var(--lt-fs)}
+.slide[data-template].photo .photo-scrim{background:linear-gradient(90deg,rgba(6,23,61,.92) 0,rgba(6,23,61,.7) 38%,rgba(6,23,61,.05) 72%)}
+/* split: the photograph framed on the right, the words on the dark ground - the reference's photo-explain */
+.slide[data-template^="photo-explain."][data-variant="split"] .photo-wrap{
+  left:auto;right:var(--lt-pad-x);top:var(--lt-top);bottom:max(92px,11.5vmin);
+  width:calc((100% - 2 * var(--lt-pad-x) - var(--lt-gap)) * (100 - var(--lt-text)) / 100);
+  border-radius:min(2.2vmin,18px);
+}
+.slide[data-template^="photo-explain."][data-variant="split"] .photo-scrim{display:none}
+.slide[data-template^="photo-explain."][data-variant="split"] .photo-copy{
+  max-width:calc((100% - 2 * var(--lt-pad-x) - var(--lt-gap)) * var(--lt-text) / 100);
+}
+.slide[data-template].photo .credit{background:rgba(6,23,61,.78)}
+
+/* ---------------------------------------------------------------- module opening */
+.slide[data-template^="opening."] .slide-body.opener h2,.slide[data-template^="opening."] > h2{font-size:clamp(34px,8vmin,86px);letter-spacing:-.03em;line-height:1.02}
+.slide[data-template^="opening."][data-variant="photo"] .photo-copy h2{font-size:clamp(34px,8vmin,86px);line-height:1.02;letter-spacing:-.03em}
+.slide[data-template^="opening."] .lead{font-size:clamp(17px,2.8vmin,34px)}
+
+/* ---------------------------------------------------------------- task opening */
+.slide[data-template^="task-launch."] .slide-body.activity{
+  display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);column-gap:min(8vmin,70px);
+  align-content:center;justify-items:start;text-align:left;
+}
+.slide[data-template^="task-launch."] .act-code{
+  grid-column:1;grid-row:1 / span 3;align-self:center;justify-self:end;
+  font-family:"Raleway","Segoe UI",Arial,sans-serif;font-size:clamp(64px,19vmin,200px);font-weight:700;
+  letter-spacing:-.06em;line-height:1.15;padding-bottom:.04em;overflow:visible;color:var(--lt-blue);
+}
+.slide[data-template^="task-launch."] .act-title{grid-column:2;margin:0;font-size:clamp(26px,6.5vmin,64px);letter-spacing:-.02em;line-height:1.08;color:var(--lt-white)}
+.slide[data-template^="task-launch."] .slide-body.activity > svg{grid-column:2;grid-row:1;justify-self:start;margin:0 0 min(2vmin,16px)}
+.slide[data-template^="task-launch."] .slide-body.activity > svg ~ .act-title{grid-row:2}
+.slide[data-template^="task-launch."] .act-lines{grid-column:2;margin-top:min(3vmin,24px);text-align:left;justify-self:start;align-items:flex-start}
+.slide[data-template^="task-launch."] .act-inst{margin:0 0 .4em;color:var(--lt-dim-d);font-size:var(--lt-fs);max-width:30em}
+
+/* ---------------------------------------------------------------- recap: one design for every module (L51) */
+.slide[data-template^="recap."] .rc-item{border-color:var(--lt-line-d)}
+.slide[data-template^="recap."] .rc-item::after{background:var(--lt-blue)}
+.slide[data-template^="recap."] .rc-item::before{color:var(--lt-blue);background:rgba(83,167,219,.12)}
+
+/* ---------------------------------------------------------------- one slide, several parts */
+.slide[data-template] .lt-parts{display:flex;flex-direction:column;gap:min(2.4vmin,20px)}
+.slide[data-template] .lt-part{display:none;flex-direction:column;gap:min(2.4vmin,20px)}
+.slide[data-template] .lt-part.on{display:flex}
+.slide[data-template] .lt-tabs{display:flex;gap:min(1.2vmin,10px);margin-top:min(1.6vmin,14px)}
+.slide[data-template] .lt-tab{
+  width:min(6vmin,48px);height:min(6vmin,48px);border-radius:50%;border:1px solid var(--lt-ring);background:var(--lt-white);
+  color:var(--lt-navy);font:700 clamp(13px,1.85vmin,20px) "Raleway","Segoe UI",Arial,sans-serif;cursor:pointer;
+}
+.slide[data-template] .lt-tab.on{background:var(--lt-navy);border-color:var(--lt-navy);color:var(--lt-white)}
+.slide[data-template].dark .lt-tab{background:transparent;border-color:var(--lt-line-d);color:var(--lt-white)}
+.slide[data-template].dark .lt-tab.on{background:var(--lt-blue);border-color:var(--lt-blue);color:var(--lt-navy)}
+
+/* ---------------------------------------------------------------- three content blocks */
+.slide[data-template^="three-content-blocks."] .copy{counter-reset:ltb;gap:0}
+.slide[data-template^="three-content-blocks."] .copy .lt-block{counter-increment:ltb;position:relative;padding:min(2.2vmin,18px) 0 min(2.2vmin,18px) min(5vmin,44px);
+  border-top:1px solid var(--lt-line)}
+.slide[data-template^="three-content-blocks."] .copy .lt-block:first-of-type{border-top:0}
+.slide[data-template^="three-content-blocks."] .copy .lt-block::before{content:counter(ltb,decimal-leading-zero);position:absolute;left:0;top:min(2.6vmin,22px);
+  font-size:clamp(12.5px,1.5vmin,18px);font-weight:700;letter-spacing:.08em;color:var(--lt-steel)}
+.slide[data-template^="three-content-blocks."] .copy .lt-block > p:first-child{font-weight:700;color:var(--lt-navy);font-size:var(--lt-fs-lead)}
+.slide[data-template^="three-content-blocks."].dark .copy .lt-block{border-top-color:var(--lt-line-d)}
+.slide[data-template^="three-content-blocks."].dark .copy .lt-block > p:first-child{color:var(--lt-white)}
+.slide[data-template^="three-content-blocks."].dark .copy .lt-block::before{color:var(--lt-blue)}
+
+/* ---------------------------------------------------------------- table + conclusion */
+.slide[data-template] .lt-table{width:100%;border-collapse:collapse;font-size:var(--lt-fs)}
+.slide[data-template] .lt-table td{padding:min(1.8vmin,14px) min(1.6vmin,13px);border-bottom:1px solid var(--lt-line);vertical-align:top;line-height:1.45;color:var(--lt-steel)}
+.slide[data-template] .lt-table tr td:first-child{font-weight:700;color:var(--lt-navy);width:34%}
+.slide[data-template] .lt-table tr:first-child td{border-top:2px solid var(--lt-navy)}
+.slide[data-template] .lt-sep{display:none}
+.slide[data-template].dark .lt-table td{border-bottom-color:var(--lt-line-d);color:var(--lt-dim-d)}
+.slide[data-template].dark .lt-table tr td:first-child{color:var(--lt-white)}
+
+/* ---------------------------------------------------------------- comparison */
+.slide[data-template] .slide-body.lt-compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:min(3vmin,24px);align-items:stretch}
+.slide[data-template] .lt-card{display:flex;flex-direction:column;border:1px solid var(--lt-line);background:var(--lt-white);border-radius:min(2vmin,16px);overflow:hidden;min-height:0}
+.slide[data-template] .lt-card-visual{flex:0 0 46%;min-height:0;background:var(--lt-panel);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slide[data-template] .lt-card-visual > svg,.slide[data-template] .lt-card-visual > img{width:100%;height:100%;object-fit:cover}
+.slide[data-template] .lt-card-visual > svg{object-fit:contain;padding:min(1.6vmin,12px) min(4vmin,32px)}
+.slide[data-template] .lt-card-copy{padding:min(3vmin,24px) min(3.5vmin,28px);display:flex;flex-direction:column;gap:min(1.4vmin,12px)}
+.slide[data-template] .lt-card-copy > .lead:first-child{font-weight:700;color:var(--lt-navy);font-size:clamp(18px,3.4vmin,40px);line-height:1.2}
+.slide[data-template].dark .lt-card-copy > .lead:first-child{color:var(--lt-white)}
+.slide[data-template] .lt-compare-note{margin-top:min(2vmin,16px);text-align:center;color:var(--lt-steel)}
+.slide[data-template].dark .lt-card{background:var(--lt-blue-06);border-color:var(--lt-line-d)}
+
+/* a narrow or portrait screen keeps the gb_compose.css fallbacks: one column */
+@media (max-aspect-ratio:1/1){
+  .slide[data-template] .slide-body.two-col,.slide[data-template] .slide-body.lt-compare{grid-template-columns:1fr;grid-template-rows:none}
+  .slide[data-template^="task-launch."] .slide-body.activity{grid-template-columns:1fr}
+  .slide[data-template^="task-launch."] .act-code{grid-row:auto;justify-self:start}
+}
+@media (prefers-reduced-motion:reduce){.slide[data-template] .lt-part{transition:none}}
