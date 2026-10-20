@@ -47,6 +47,13 @@ giving L12 and L13 a real enforcing skill.
 
 ---
 
+## Owner-reviewed layout reference (2026-10-20)
+
+The [13-template preview library](design/course-layout-templates/README.md) and its
+[Claude implementation brief](docs/LAYOUT_TEMPLATE_IMPLEMENTATION.md) are ready as a design handoff.
+The selected dense split is 55% text / 45% visual, with shorter sample copy and an adjacent teaching
+visual. This is a reference-only addition; it does not change the compiler or release version.
+
 ## Read in this order
 
 | | | |

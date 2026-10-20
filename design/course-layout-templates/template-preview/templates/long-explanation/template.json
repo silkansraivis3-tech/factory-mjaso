@@ -1,0 +1,61 @@
+{
+  "id": "long-explanation.v1",
+  "status": "design-preview-not-compiler-integrated",
+  "name": "Garš skaidrojums",
+  "entry": "template.html",
+  "logicalViewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "scaling": "uniform-contain",
+  "slots": [
+    {
+      "name": "title",
+      "required": true
+    },
+    {
+      "name": "leftText",
+      "required": true
+    },
+    {
+      "name": "rightText",
+      "required": true
+    },
+    {
+      "name": "takeaway",
+      "required": true
+    },
+    {
+      "name": "visual",
+      "required": true
+    }
+  ],
+  "allowedExtras": [],
+  "overflowPolicy": "report-do-not-shrink-text",
+  "contentChanges": "require-source-approval",
+  "assets": [
+    "../../assets/template.css",
+    "../../assets/preview-runtime.js",
+    "../../assets/raleway-variable.ttf"
+  ],
+  "notes": "Proposed contract. Current preview supplies sample content; production slot binding and compiler validation are not implemented.",
+  "visualPolicy": {
+    "maxConsecutiveTextOnlySlides": 2,
+    "denseContentRequiresAdjacentVisual": true,
+    "isDenseContent": true,
+    "sequenceValidationImplemented": false
+  },
+  "contentBalance": {
+    "textShare": 0.55,
+    "visualShare": 0.45,
+    "textShareRange": [
+      0.5,
+      0.6
+    ],
+    "visualShareRange": [
+      0.4,
+      0.5
+    ],
+    "overflow": "use-more-parts-not-smaller-fonts"
+  }
+}

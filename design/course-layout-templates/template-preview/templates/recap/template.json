@@ -1,0 +1,40 @@
+{
+  "id": "recap.v1",
+  "status": "design-preview-not-compiler-integrated",
+  "name": "Kopsavilkums",
+  "entry": "template.html",
+  "logicalViewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "scaling": "uniform-contain",
+  "slots": [
+    {
+      "name": "title",
+      "required": true
+    },
+    {
+      "name": "takeaways",
+      "required": true
+    },
+    {
+      "name": "nextLabel",
+      "required": true
+    }
+  ],
+  "allowedExtras": [],
+  "overflowPolicy": "report-do-not-shrink-text",
+  "contentChanges": "require-source-approval",
+  "assets": [
+    "../../assets/template.css",
+    "../../assets/preview-runtime.js",
+    "../../assets/raleway-variable.ttf"
+  ],
+  "notes": "Proposed contract. Current preview supplies sample content; production slot binding and compiler validation are not implemented.",
+  "visualPolicy": {
+    "maxConsecutiveTextOnlySlides": 2,
+    "denseContentRequiresAdjacentVisual": true,
+    "isDenseContent": false,
+    "sequenceValidationImplemented": false
+  }
+}

@@ -1,0 +1,39 @@
+Tev ir dots mana Course Factory izkārtojumu šablonu dizaina komplekts.
+
+Vispirms izlasi manas papildu instrukcijas šajā sarunā. Tās var precizēt vai mainīt šo dizaina pamatu. Ja tās atšķiras no komplekta agrākajiem aprakstiem, izmanto manas jaunākās instrukcijas.
+
+Kas ir komplektā:
+- design/course-layout-templates/preview.html — interaktīva 13 šablonu galerija. To atver pārlūkā, lai redzētu paredzēto izskatu.
+- design/course-layout-templates/template-preview/templates/<id>/template.html — katra šablona īstā HTML struktūra ar data-slot atzīmēm.
+- Turpat template.json — piedāvātais šablona līgums, nevis jau integrēts kompilatora formāts.
+- assets/template.css — kopīgais priekšskatījuma dizains; preview-runtime.js — demonstrācijas soļi, animācija un grozāms 3D modelis.
+- build_preview.py un dense_templates.py — priekšskatījuma avoti; pārbūve pārraksta ģenerētos HTML/JSON.
+- course-layout-rules.json — mani pašreizējie izkārtojuma noteikumi.
+- docs/LAYOUT_TEMPLATE_IMPLEMENTATION.md — detalizēts ieviešanas plāns, pārbaudes un zināmās robežas.
+
+Pašreizējais izvēlētais virziens:
+1. Kompilators izmanto noteiktus, versētus HTML/CSS šablonus. AI izvēlas piemērotāko šablonu un atļauto variantu, nevis katram slaidam izdomā savu HTML/CSS.
+2. Sadalījums ir aptuveni 55% tekstam un 45% vizuālim. Atļautais diapazons: 50–60% tekstam un 40–50% vizuālim. Nelieto agrāko 80/20 sadalījumu. Arī pašam attēlam vai 3D objektam jābūt lielam savā zonā.
+3. Īsam tekstam var būt slaids bez attēla, bet kursā nedrīkst būt vairāk par diviem slaidiem pēc kārtas bez jēgpilna mācību vizuāļa. Logo, dekoratīva ikona, fons vai navigācijas poga neskaitās mācību vizuālis.
+4. Blīvākam tekstam blakus obligāti ir attēls, diagramma, animācija, interaktīvs vizuālis vai grozāms 3D objekts.
+5. Galīgajos paraugos teksts ir saīsināts: aptuveni 85–135 vārdi skatā. Tas nav universāls vārdu limits. Ja apstiprinātais kurss satur vairāk teksta, saglabā to lasāmās daļās vai izvēlies citu derīgu šablonu. Nesamazini fontu, neapgriez tekstu un nepārraksti apstiprināto saturu bez esošā satura apstiprināšanas procesa.
+6. Priekšskatījumā ir vienots 1280x800 loģiskais slaids, kuru mērogo proporcionāli. Vienāda datora izšķirtspēja vai Windows mērogs vien neatrisina atšķirīgus iframe izmērus.
+
+Svarīgi par ieviešanu:
+Šis komplekts ir dizaina reference, nevis jau gatava integrācija. Nekopē parauga tekstu, ģenerēto kuģa attēlu vai galerijas autorēšanas vadību īstos kursos. Kuģa attēls un 3D modelis nav tehniski validēts mācību saturs.
+
+Vispirms izlasi repozitorija pašreizējo _claude/CONTEXT.md un attiecīgo skill dokumentāciju. Integrē ar esošo compile_module.py, kanonisko course-module-ui dizainu, design_system.py un build_module.py pārbaudēm. Saglabā esošās navigācijas, uzdevumu, satura atbilstības un lomu nodalīšanas garantijas. Nesāc ar visu veco kursu automātisku pārveidošanu; izmanto vienu pilotmoduli.
+
+Pierakstītie noteikumi JSON failos vēl netiek izpildīti kompilatorā. Tev jāievieš kontraktu validācija, satura sasaistīšana ar apstiprināto avotu, vizuāļa prasība, slaidu secības pārbaude un satura daļu navigācija. Priekšskatījuma JavaScript ir moderns; ražošanas kodam jāatbilst repozitorija faktiskajām WebView saderības prasībām.
+
+Planšetes un /display pogu neatbilstība šajā komplektā nav novērsta. Priekšskatījums nesinhronizē darbības ar classroom sistēmu. Pārbaudi īsto vadības protokolu; lieto stabilu vadīklas identitāti un konkrētu vēlamo stāvokli, nevis cita izmēra ekrāna klikšķa pozīciju vai neskaidru pogas kārtas numuru. Nesaki, ka šī problēma atrisināta, pirms pārbaudīts īstais classroom kods un abas ierīces.
+
+Pārbaudi 1280x800 un 1024x768, garākus virsrakstus, katru satura daļu, figūras soļus, kredītus, vadības pogas un apakšējo navigāciju. Nodrošini, ka teksts nepārklājas, vizuālis saglabājas liels un visi apstiprinātie vārdi ir sasniedzami. Izmanto esošos auditus un vizuālo pārbaudi.
+
+Komplekta pārbaude no repo saknes:
+python design/course-layout-templates/validate_preview.py
+
+Pēc manu papildu instrukciju izlasīšanas veic atbilstošo ieviešanu un skaidri norādi, kas ir ieviests, kas pārbaudīts un kam vēl vajag īsto classroom sistēmu vai ierīču pārbaudi.
+
+MANAS PAPILDU INSTRUKCIJAS:
+[Šeit es pievienošu savus precizējumus.]
