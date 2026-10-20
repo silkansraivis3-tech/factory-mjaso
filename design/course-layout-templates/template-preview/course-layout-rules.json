@@ -1,0 +1,29 @@
+{
+  "status": "proposed-not-compiler-enforced",
+  "maxConsecutiveTextOnlySlides": 2,
+  "denseContentRequiresAdjacentVisual": true,
+  "splitBalance": {
+    "textShareRange": [
+      0.5,
+      0.6
+    ],
+    "visualShareRange": [
+      0.4,
+      0.5
+    ],
+    "default": [
+      0.55,
+      0.45
+    ]
+  },
+  "allowedVisuals": [
+    "image",
+    "diagram",
+    "animation",
+    "interactive",
+    "model_3d"
+  ],
+  "overflowPolicy": "paginate-approved-content-or-choose-another-template",
+  "textOnlyPolicy": "short-content-only",
+  "notes": "Course sequence must be validated by the compiler. This gallery is a template catalogue, not a course sequence. Dense preview layouts always include an adjacent visual."
+}
