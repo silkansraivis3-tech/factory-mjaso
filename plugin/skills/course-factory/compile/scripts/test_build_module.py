@@ -51,6 +51,15 @@ def main():
     code, out, left = b.own_package_findings(1, OUT, "module02")
     check("module 2: its own problem (a task page with no <title>) still fails it",
           code == 1 and left == 5 and "sc1_a.html has no <title>" in out, (code, left))
+    pre = OUT.replace("6 thing(s)", "9 thing(s)").replace(
+        "  - _course_shell/course_map.js",
+        "  - the classroom's importer: The course ID must be a unique name without spaces.\n"
+        "  - the classroom's importer: Give the course title.\n"
+        "  - .tmp.drivedownload\\ is not a module (module01 ...) - the factory's own material belongs in working_claude\n"
+        "  - _course_shell/course_map.js")
+    code, out, left = b.own_package_findings(1, pre, "module01")
+    check("2.58.0 before assembly: the importer's missing course ID / title and a sync tool's folder are not module 1's "
+          "(the IGF full build: no module ever saw PASS)", code == 0 and left == 9, (code, left, out))
     mine = OUT.replace("  - module02/tasks/sc1_a.html has no <title>", "  - module01/presentation/index.html has no data-title")
     check("a module's own finding beside the course-page ones fails it",
           b.own_package_findings(1, mine, "module01")[0] == 1)

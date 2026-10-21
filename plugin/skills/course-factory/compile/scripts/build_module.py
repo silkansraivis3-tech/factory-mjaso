@@ -88,7 +88,11 @@ def lines_of(out, n=12):
     return keep[-n:]
 
 
-COURSE_PAGES = re.compile(r"START_HERE|START_COURSE|COURSE\.html|course_map|_course_shell")
+# the course's own pages - and (2.58.0) what follows from them not existing yet: the importer reads the course's ID and
+# title from COURSE.html, so before assembly it says "The course ID must be ..." / "Give the course title." / no
+# descriptor; and a sync tool's leftovers beside the modules. None of them is one module's to fix in a parallel build
+COURSE_PAGES = re.compile(r"START_HERE|START_COURSE|COURSE\.html|course_map|_course_shell|The course ID must be|"
+                          r"Give the course title|course descriptor is missing|\.tmp\.drive|desktop\.ini")
 
 
 def own_package_findings(code, out, folder):
@@ -329,8 +333,11 @@ def main(argv=None):
     # 3 - the checks, at the same time
     deck = os.path.join(mdir, "presentation", "index.html")
     jobs = {
-        "words (instructor)": [PY, os.path.join(FACTORY, "check_script_match.py"), course, "--module", str(o.module), "--part", "instructor"],
-        "words (trainee)": [PY, os.path.join(FACTORY, "check_script_match.py"), course, "--module", str(o.module), "--part", "trainee"],
+        # --module-dir (2.58.0): the folder this build resolved - for "final" check_script_match looked in modules\mfinal
+        "words (instructor)": [PY, os.path.join(FACTORY, "check_script_match.py"), course, "--module", str(o.module), "--part", "instructor",
+                               "--module-dir", mdir],
+        "words (trainee)": [PY, os.path.join(FACTORY, "check_script_match.py"), course, "--module", str(o.module), "--part", "trainee",
+                            "--module-dir", mdir],
         "navigation": [PY, os.path.join(MEASURE, "check_navigation.py"), mdir],
     }
     sizes = ["1024x768"] + [v for v in o.viewport if v not in ("1280x800", "1024x768")]

@@ -247,6 +247,12 @@ course-module-ui or course-task-ux: the compiler builds their standard.
         working_claude/review/M${two(m)}/POLISH.md and list it in your report.
     a figure problem: fix it in the studio (studio.py <spec> --step all, seconds), then one build.
 
+RUN build_module.py IN THE FOREGROUND and wait for its last line (it takes 1-5 minutes; give the
+shell call a long timeout). Never start it in the background and never end your turn while it
+runs: your report is read as the module's result (2.58.0 - the IGF full build: a builder that
+ended "waiting on the build" left Module 15 half-built). Your report's FIRST line is the last
+line build_module.py printed.
+
 A way of answering the compiler leaves "as it is" is the one page you make by hand, to
 course-task-ux.
 
@@ -315,19 +321,75 @@ const QA_SCHEMA = {
 /* Module 3 is verified while Module 7 is still being written. No wasted wall-clock.
    An approved module is built and checked on Sonnet; a draft gets its script written on the session's model and
    has nothing built to check, so no QA agent is spent on it. */
-const results = await pipeline(
-  A.modules,
-  (m) => APPROVED.has(String(m.id))
-    ? agent(build(m), { label: `build:${m.id}`, phase: 'Build', ...MECHANICAL }).then((r) => ({ m, r, built: true }))
-    : agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' }).then((r) => ({ m, r, built: false })),
-  ({ m, built }) => built
-    ? agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
-    : { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] }
-)
+/* 2.58.0 - a builder's report is checked, not trusted: no "PASS" line from build_module.py (only the course package
+   failing counts as passed in a parallel build - it is judged after assembly) and a fresh agent carries the module on
+   from its files, at most A.retries times (default 1). The IGF full build's Module 15 builder ended mid-build */
+const passed = (r) => /\bPASS (M\d+|final)\b/.test(String(r || '')) ||
+  /\bFAIL (M\d+|final) - course package \(/.test(String(r || ''))
+const carryOn = (m, last) => `${build(m)}
 
-/* ------------------------------------------------------------ + · CROSS-CHECK */
+THIS MODULE WAS STARTED BY ANOTHER AGENT, WHICH STOPPED BEFORE build_module.py printed PASS. Its
+build sheet, figure specs and pages are where it left them - do NOT start again from --init-build.
+Run build_module.py, fix what it prints, until PASS, then the review. Its last report was:
+
+${String(last || '(no report)').slice(0, 2500)}`
+async function buildUntilPass(m) {
+  let r = await agent(build(m), { label: `build:${m.id}`, phase: 'Build', ...MECHANICAL })
+  for (let k = 1; k <= (A.retries === undefined ? 1 : A.retries) && !passed(r); k++) {
+    log(`module ${m.id}: no PASS in the builder's report - a fresh agent carries it on (${k})`)
+    r = await agent(carryOn(m, r), { label: `build:${m.id}+${k}`, phase: 'Build', ...MECHANICAL })
+  }
+  return r
+}
+
+/* the modules in waves of A.wave (default: all at once) - each build runs headless browsers, so on one PC a wave of 3
+   keeps it from being pinned at 99 % (the IGF full build ran in waves of 3) */
+const WAVE = A.wave || A.modules.length
+const results = []
+for (let i = 0; i < A.modules.length; i += WAVE) {
+  const chunk = A.modules.slice(i, i + WAVE)
+  if (WAVE < A.modules.length) log(`wave ${i / WAVE + 1}: modules ${chunk.map((m) => m.id).join(', ')}`)
+  results.push(...await pipeline(
+    chunk,
+    (m) => APPROVED.has(String(m.id))
+      ? buildUntilPass(m).then((r) => ({ m, r, built: true }))
+      : agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' }).then((r) => ({ m, r, built: false })),
+    ({ m, built }) => built
+      ? agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
+      : { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] }
+  ))
+}
+
+/* the final assessment (args.final), when its script is approved - built after the modules it draws on */
+const finalReport = A.final ? await agent(`Invoke ${SKILL} and follow it. BUILD the FINAL ASSESSMENT from its approved script.
+
+  Course folder:   ${A.course}
+  The final:       working_claude/script/FINAL.json (approved), built into the module folder after the last
+                   planned module (variants A and B are both graded: final_a.html / final_b.html - compile/GUIDE.md)
+
+    compile_module.py <course> --module final --init-build      (once, if the build sheet is missing)
+    fill the build sheet; build_module.py <course> --module final --no-course-pages   until PASS - in the
+    FOREGROUND, never ending your turn while it runs
+    then the review the Quickstart names (BROKEN fixed, POLISH listed in working_claude/review/FINAL/POLISH.md)
+
+You may write only inside the final's module folder and working_claude/script/FINAL.* and working_claude/figures/FINAL/.
+Report: FIRST line = the last line build_module.py printed; then how many runs it took and what the review found.${NOTES}`,
+  { label: 'build:final', phase: 'Build', ...MECHANICAL }) : null
+
+/* ------------------------------------------------- + · ASSEMBLY (2.58.0), then CROSS-CHECK */
 
 phase('Cross-check')
+/* one process writes the course's own pages once every module is in (Rule 3), the ILO map is refreshed from the scripts,
+   and only then is the whole course judged - before, the cross-check ran on a course with no START_HERE pages and
+   called every module unreachable, and the ILO map still said "planned - module not built" */
+const assembly = await agent(`Run exactly these, in ONE shell call, and report what they printed (the last 40 lines each):
+
+    python ${SCRIPTS}/compile/scripts/compile_course.py "${A.course}"
+    python ${SCRIPTS}/scripts/ilo_map.py refresh "${A.course}"
+    python ${SCRIPTS}/scripts/check_course_package.py "${A.course}/modules"
+
+Do not fix anything.`,
+  { label: 'assemble:course', phase: 'Cross-check', model: 'sonnet', effort: 'low' })
 
 const cross = await agent(
   `One pass over the WHOLE course at ${A.course} — the questions a single-module agent
@@ -354,13 +416,13 @@ const blocking = results
 return {
   modules: A.modules.length,
   qa: results,
+  final: finalReport,
+  assembly,
   cross,
   blocking: blocking.map((q) => q.module),
   next: blocking.length
-    ? 'Blocking findings. Fix them in the named modules before assembly.'
+    ? 'Blocking findings. Fix them in the named modules, then run compile_course.py and check_course_package.py again.'
     : 'Approve every script still awaiting approval and run pass 2 again (approved modules are rebuilt '
-      + 'from their scripts, unchanged ones stay the same bytes). Then assemble, one process, not an '
-      + 'agent each: compile/scripts/compile_course.py <course> (COURSE.html, course_map.js, every '
-      + 'module\'s start pages), scripts/check_course_package.py <course>/modules, the handout, the run '
-      + 'content. Then course-tablet-publisher.',
+      + 'from their scripts, unchanged ones stay the same bytes). The course pages are assembled above; then '
+      + 'the handout, the run content, and course-tablet-publisher.',
 }

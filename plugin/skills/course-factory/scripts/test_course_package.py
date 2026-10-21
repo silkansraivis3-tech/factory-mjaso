@@ -172,6 +172,14 @@ def main():
         code, out = run(un)
         check("a picture left out of the package (assets/img/_unused/) is no part of it - its size and name are not the classroom's",
               code == 0 and "old big.jpg" not in out and "15 MB" not in out, out)
+        # 2.58.0 - an EMPTY sync-tool folder beside the modules (Google Drive's .tmp.drivedownload) ships nothing: a note
+        sy = os.path.join(tmp, "sync", "modules")
+        shutil.copytree(c, sy)
+        os.makedirs(os.path.join(sy, ".tmp.drivedownload"))
+        code, out = run(sy)
+        check("an empty sync-tool folder (.tmp.drivedownload) is a note, not a problem", code == 0 and "empty sync-tool folder" in out, out)
+        broken("... one with a file in it is still a folder that is not a module",
+               lambda b: w(os.path.join(b, ".tmp.driveupload", "x.html"), "x"), ".tmp.driveupload\\ is not a module")
         broken("a working folder inside the course", lambda b: w(os.path.join(b, "notes", "draft.html"), "x"), "notes\\ is not a module")
         broken("a trainee page linking back to START_HERE.html", lambda b: w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
                (TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "done(1,1,[],'');")).replace("<body>", "<body><a href=\"../START_HERE.html\">Back</a>")),

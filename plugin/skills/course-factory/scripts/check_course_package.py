@@ -249,6 +249,11 @@ def check(folder):
         probs.append("no module folders named module01, module02 ...")
     for d in sorted(os.listdir(folder)):
         full = os.path.join(folder, d)
+        if os.path.isdir(full) and d.startswith(".") and not any(fs for _, _, fs in os.walk(full)):
+            # an empty sync-tool folder (Google Drive's .tmp.drivedownload / .tmp.driveupload): nothing in it ships (2.58.0 -
+            # the IGF full build: every module's package check failed on two of them copied in from a synced folder)
+            notes.append("%s\\ is an empty sync-tool folder - nothing in it ships; delete it when the sync tool is done" % d)
+            continue
         if os.path.isdir(full) and not MODULE.match(d) and not d.startswith("_") and d != "assets":
             probs.append("%s\\ is not a module (module01 ...) - the factory's own material belongs in working_claude, or in a folder starting with _" % d)
         if os.path.isfile(full) and d not in ("COURSE.html",) and not d.lower().endswith((".html", ".css", ".js", ".png", ".jpg", ".jpeg", ".svg", ".webp", ".ico")):

@@ -35,13 +35,18 @@ const agent = async (prompt, o) => {
   if (o.label === 'qa:2') return null                       // the QA agent for module 2 brought back nothing
   if (o.label.startsWith('qa:')) return { module: o.label.slice(3), classification: 'OK', blocking: false, findings: [] }
   if (o.label.startsWith('read:')) return { modules: [] }
+  const b = /^build:(\w+)$/.exec(o.label)                   // a builder: PASS, or (args._stuck) stopped mid-build
+  if (b) return (args._stuck || []).indexOf(b[1]) >= 0 ? 'The first build is still running in the background.'
+    : (args._pkgfail || []).indexOf(b[1]) >= 0 ? 'FAIL M0' + b[1] + ' - course package (60 s)' : 'PASS M0' + b[1] + ' - figures ... (40 s)'
+  if (/^build:\w+\+\d+$/.test(o.label)) return 'PASS - carried on'
   return {}
 }
 const pipeline = (items, a, b) => Promise.all(items.map(async (x) => b(await a(x))))
 const parallel = (fs_) => Promise.all(fs_.map((f) => f()))
 const phase = () => {}
+const log = () => {}
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
-new AsyncFunction('args', 'agent', 'pipeline', 'parallel', 'phase', src)(args, agent, pipeline, parallel, phase)
+new AsyncFunction('args', 'agent', 'pipeline', 'parallel', 'phase', 'log', src)(args, agent, pipeline, parallel, phase, log)
   .then((r) => console.log(JSON.stringify({ labels, opts, prompts, r })))
   .catch((e) => { console.log(JSON.stringify({ error: String(e && e.stack || e) })); process.exit(1) })
 """
@@ -98,6 +103,25 @@ def main():
               "script:2" in labels and "build:2" not in labels and "qa:2" not in labels
               and o.get("script:2") == {"model": None, "effort": None}
               and three.get("r", {}).get("blocking") == [], three)
+        four = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_stuck": ["2"], "_pkgfail": ["1"],
+                         "final": True, "factory": "C:/f/skills"})
+        l4, o4, p4 = four.get("labels", []), four.get("opts", {}), four.get("prompts", {})
+        check("2.58.0 a builder whose report has no PASS (it stopped mid-build) is carried on by a fresh agent, on Sonnet",
+              "build:2+1" in l4 and o4.get("build:2+1") == {"model": "sonnet", "effort": "medium"}
+              and "do NOT start again from --init-build" in p4.get("build:2+1", "") and "still running" in p4.get("build:2+1", ""), four)
+        check("... one that passed, or failed only the course package (judged after assembly), is not",
+              "build:1+1" not in l4 and not any(x.startswith("build:3") for x in l4), l4)
+        check("... the builder is told to run build_module.py in the foreground and never end its turn while it runs",
+              "IN THE FOREGROUND" in p4.get("build:1", ""), p4.get("build:1", "")[-900:])
+        check("2.58.0 the final is built after the modules, then the course is assembled and its ILO map refreshed, "
+              "and only then cross-checked",
+              l4.index("build:final") > l4.index("qa:1") and l4.index("assemble:course") > l4.index("build:final")
+              and l4.index("crosscheck:course") > l4.index("assemble:course")
+              and "compile_course.py" in p4.get("assemble:course", "") and "ilo_map.py refresh" in p4.get("assemble:course", "")
+              and "C:/f/skills/course-factory/scripts/check_course_package.py" in p4.get("assemble:course", ""), l4)
+        l5 = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "wave": 1}).get("labels", [])
+        check("args.wave builds the modules in waves: module 2 starts after module 1's QA",
+              l5.index("build:2") > l5.index("qa:1") and "build:final" not in l5, l5)
         check("args.factory pins the skills every agent reads, args.notes reaches every module agent",
               "C:/f/skills/course-factory/SKILL.md" in pr.get("build:1", "")
               and "C:/f/skills/course-factory/scripts/course_gate.py" in pr.get("gate:ilo-map+kb", "")
