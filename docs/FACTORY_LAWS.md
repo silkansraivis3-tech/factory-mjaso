@@ -541,7 +541,7 @@ owner's rules are build problems: 55 / 45 on a split slide (50-60 % text), a pic
 parts - never cut, never smaller type. → `course-factory` (`compile/scripts/compile_module.py`) and `course-module-ui`
 (`knowledge/layout-templates.json`, `templates/gb_layouts.css`), 2.52.0
 
-**L62 · Physical equipment is drawn as it looks on board.** Aleksis, 2026-10-20, approving a plain-vs-realistic mock-up of
+**L63 · Physical equipment is drawn as it looks on board.** Aleksis, 2026-10-20, approving a plain-vs-realistic mock-up of
 the figure kit: *"yes we like this new kit styling"*, then *"also do the Parts added from courses"* and *"make the ship look
 realistic aswell, look at real images of it"*. (1) Every kit part that is a physical thing - a tank, a pipe, a valve, a
 pump, an exchanger, an engine, a vent, a hose, a coupling, a ship - is drawn in its material (cladding, brushed
@@ -556,10 +556,16 @@ A new part declares its `look` (`equipment`, `screen` or `diagram`) and an equip
 `KIT.h.body` / `KIT.h.equip` and the kit's materials; `check_kit.py` refuses one that does not. →
 `course-visuals` (`kit/kit.js` materials, `KIT.h.body`, `equip`, `flange`; `kit/kit.css` `--mat-*`; `SPEC.md` "Rules of
 the look"; `PARTS.md`; `scripts/check_kit.py`), `course-module-ux` (`audit_drawing.js` judges one piece of equipment as
-one object, `data-kit-body`), 2.56.0 (built as 2.52.0 / L61 on its own branch, renumbered at the merge with the owner's L61)
+one object, `data-kit-body`), 2.56.0 (built as 2.52.0 / L61 on its own branch, renumbered at the merge with the owner's L61,
+and L62 -> L63 at the merge with the owner's L62)
 
-**All sixty-two laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L62 are enforced first through `course-factory/SKILL.md`'s
+**L62 · Never the same look twice in a row; a larger logo; no blocky photographs.** The owner, 2026-10-21, after the
+gas course's Module 1 came out with 29 of 33 slides in one layout: *"Check module 1 - it is now done with the new templates, see how bad it is. Optimise the factory so the logo looks bigger and better, and images are upscaled, not this pixel stuff. Also make sure that two types of slides never repeat in a row - now 6-7 slides are exactly the same layout, and it hurts the eyes."* Two slides next to each other never look the same. A slide's look is what the eye sees - its shape (picture right, picture left, a photograph across the top with the words in two columns under it, a photograph full or framed on the dark ground, text only, the task, recap and opening screens) and its ground (light, or dark / photo). When a slide would repeat the one before it, the compiler builds it another way that holds the same approved words and picture, and avoids the looks of the three slides before it when it can; a repeat it cannot avoid is a build problem. Only a photograph or a figure-kit drawing moves to the dark ground - a drawing or a widget made for a white page keeps the light one, so its own controls stay readable; a light panel stays white, with dark words, on a dark slide. The official logo shows larger: its artwork about 8 vmin tall, its built-in clear space running into the slide's margin, the file unchanged. A photograph smaller than 1600 px on its long side is enlarged once in the module (Lanczos and a light sharpening, at most four times), its original kept in working_claude/photo_originals/; one under 800 px is listed - find a larger original. Then (owner, same day: "bigger logo, and on blue slides the logo should be white without background"): the artwork about 10.5 vmin tall; on a dark (blue) or photo slide the white version, no plate - the official file with its one colour switched to white (plugin/resources/brand/novikontas_logo_white.svg; the brand note allows white on a dark ground when asked), and over a full photograph the corner behind it is darkened, never the logo.
+→ `course-factory` (`compile/scripts/compile_module.py`) and `course-module-ui` (`templates/gb_layouts.css`), 2.53.0 on main, 2.62.0 here (the owner's number was taken by the 2.53.0-2.61.0 line
+built the same days on its own branch)
+
+**All sixty-three laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L63 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

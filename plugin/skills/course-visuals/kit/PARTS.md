@@ -54,7 +54,7 @@ KIT.define('oil_tray', function (fig, part, g, p) {
 }, {
   family: 'piping',                 // instruments | piping | spaces | cutaways | gas-fire-machinery | charts | procedures
   status: 'new',                    // "new" until merged; promote sets "kit"
-  look: 'equipment',                // equipment (a physical thing) | screen (an ISA-101 HMI) | diagram - L62, below
+  look: 'equipment',                // equipment (a physical thing) | screen (an ISA-101 HMI) | diagram - L63, below
   course: 'IGF Basic', module: 'M03', made: '2026-10-15',
   why: 'M03 s07: liquid caught under the bunker manifold',
   value: 'how full the tray is, 0..1',
@@ -65,7 +65,7 @@ KIT.define('oil_tray', function (fig, part, g, p) {
 /* end kit-part */
 ```
 
-## Physical equipment looks like the real equipment (L62, 2.52.0)
+## Physical equipment looks like the real equipment (L63, 2.52.0)
 
 Every part says what it is drawn as - `look: 'equipment'`, `'screen'` or `'diagram'` - and `check_kit.py parts`
 refuses one that does not.
@@ -127,7 +127,7 @@ in `kit.css`), and the drawing audit's contrast judges what a part's own `css` p
 ## The rules - `check_kit.py parts` enforces them
 - **The markers** `/* kit-part: name */` … `/* end kit-part */` are required, one part per block. They are how
   promotion finds the part.
-- **Say what it is drawn as** (`look`), and draw equipment in its material (`KIT.h.equip / body / reshape / flange`) - L62, above.
+- **Say what it is drawn as** (`look`), and draw equipment in its material (`KIT.h.equip / body / reshape / flange`) - L63, above.
 - **Use the helpers** `KIT.h.el / label / lines / widest / readings / clamp / fmt / polar / arc`. Don't use
   `innerHTML`, and don't make your own `createElementNS`.
 - **Colours come only from the kit's classes or `var(--token)` in `css`.** Don't use `#hex`, `rgb()` or named

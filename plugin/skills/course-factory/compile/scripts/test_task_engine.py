@@ -635,7 +635,7 @@ def fixes_part(exe, tmp):
     check("the answer key's tables: the head row sits on its first question, not pushed down over it (gb_page.css .scroll th)",
           len(rows) == 2 and all(x["th"]["b"] <= x["td"]["t"] + 1 for x in rows), rows or key)
     o, s = r.get("open") or {}, r.get("closed") or {}
-    # 2.52.0 (L62): the valve is a real valve whose ISA bow-tie is a light plate on its cast body - closed, the bow-tie is
+    # 2.52.0 (L63): the valve is a real valve whose ISA bow-tie is a light plate on its cast body - closed, the bow-tie is
     # filled in the plate's dark ink, so "closed" reads against the plate, not against the screen
     check("operate the panel: the valve is drawn on the deck's dark screen, closed = filled (dark on its light plate), open = hollow, as in the deck",
           s.get("bg") == o.get("bg") == "rgb(12, 30, 58)" and float(s.get("op", 0)) > 0.9 and float(o.get("op", 1)) < 0.1

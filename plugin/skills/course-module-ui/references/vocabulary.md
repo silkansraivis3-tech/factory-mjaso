@@ -37,6 +37,11 @@ The few classes of its own, all written by the compiler:
 | `.lt-light` | a figure panel in Light Grey for a drawing made for a white page (`"panel": "light"`); the panel is Navy otherwise |
 | `.kit-screen` | the figure kit's own screen (course-visuals/kit) - transparent inside the Navy panel, so the drawing sits on the panel |
 
+L62 (2.53.0): the compiler varies the look of neighbouring slides - the picture's side (`fig-first`), the ground
+(`dark`), and for a photograph the `figure-stage` variant `figure-top` (the photograph across the slide, the words in
+two columns under it) or `photo-explain` `split`. The official logo is drawn larger, its own clear space running into
+the margin; a light panel stays white with dark words on a dark slide.
+
 ## 1 · Screen compositions — put ONE on `.slide-body` (`gb_compose.css`)
 
 Pick the composition the **content** needs. Never the same one three screens running out of habit.
@@ -211,4 +216,5 @@ colours in the set; adding one is an owner decision (`knowledge/tokens.json` § 
 | `gb_answer.js` + `gb_answer.css` | the one shared engine and screens of every compiled task page - choose, tap the picture, drag and drop, label the drawing, the result ring; grading by `data-key`, `gb-task-done`, `gb-timer` (`course-factory/compile/scripts/task_pages.py`) |
 | `kbd_escape.js` + `kbd_escape.css` | the three ways out of the soft keyboard (`course-task-ux` §5) |
 | `task_complete.js` + `task_complete.css` | the one shared ending for every task (`course-task-ux` §9) |
-| `novikontas_logo.svg` | the logo for the landing screen |
+| `novikontas_logo.svg` | the logo for the landing screen, and the top right of every light slide |
+| `novikontas_logo_white.svg` | the same official logo, its one colour switched to white: the top right of every dark (blue) or photo slide, no plate (owner, 2026-10-21) |

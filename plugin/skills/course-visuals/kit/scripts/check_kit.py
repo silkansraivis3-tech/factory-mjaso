@@ -39,7 +39,7 @@ PERSON_WEAR = ("helmet", "visor", "goggles", "respirator", "gloves", "suit", "ap
 BLOCK = re.compile(r"/\*\s*kit-part:\s*([\w]+)\s*\*/(.*?)/\*\s*end kit-part\s*\*/", re.S)
 DEFINE = re.compile(r"KIT\.define\(\s*['\"](\w+)['\"]")
 MIN_PX = 12.5
-# L62 (2.52.0): what a part is drawn as. "equipment" - a physical thing, drawn in its material with light and shade and
+# L63 (2.52.0): what a part is drawn as. "equipment" - a physical thing, drawn in its material with light and shade and
 # its real features (KIT.h.body / KIT.h.equip, the kit's .kit-m-* classes); "screen" - an ISA-101 HMI, flat; "diagram" -
 # a zone, a chart, a cloud, a pictogram
 LOOKS = ("equipment", "screen", "diagram")
@@ -128,19 +128,19 @@ def check_part(name, block):
     look = meta_field(block, "look")
     if look not in LOOKS:
         probs.append("%s: say what it is drawn as - look: 'equipment' (a physical thing: in its material, PARTS.md), "
-                     "'screen' (an ISA-101 HMI) or 'diagram' (L62)" % name)
+                     "'screen' (an ISA-101 HMI) or 'diagram' (L63)" % name)
     elif look == "equipment":
         if not MATERIAL.search(body_no_css):
             probs.append("%s: is equipment but draws no body in a material - KIT.h.body(tag, attrs, parent, {mat, shade}) "
-                         "in KIT.h.equip(g), as it looks on board (L62, PARTS.md)" % name)
+                         "in KIT.h.equip(g), as it looks on board (L63, PARTS.md)" % name)
         for cls in FLAT_BODIES:
             if re.search(r"['\" ]%s['\" ]" % re.escape(cls), body_no_css):
-                probs.append("%s: is equipment drawn with the flat %s - give the body a material (KIT.h.body) (L62)" % (name, cls))
+                probs.append("%s: is equipment drawn with the flat %s - give the body a material (KIT.h.body) (L63)" % (name, cls))
         for rule in re.findall(r"\{[^}]*\}", css):
             m = re.search(r"(?<![-\w])fill\s*:\s*var\((--[\w-]+)", rule)
             if m and m.group(1) in FLAT_FILLS:
                 probs.append("%s: is equipment and its css fills a body flat with var(%s) - a body takes a kit material "
-                             "(KIT.h.body, var(--kit-*), --mat-*) (L62)" % (name, m.group(1)))
+                             "(KIT.h.body, var(--kit-*), --mat-*) (L63)" % (name, m.group(1)))
     if css:
         if re.search(r"#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\(", css):
             probs.append("%s: its css writes a colour - only var(--token)" % name)

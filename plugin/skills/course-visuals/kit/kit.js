@@ -115,7 +115,7 @@
     return w || t.textContent.length * fallbackPerChar;
   }
 
-  /* MATERIALS (2.52.0, L62) - physical equipment is drawn as it looks on board: in its material, with light and shade, and
+  /* MATERIALS (2.52.0, L63) - physical equipment is drawn as it looks on board: in its material, with light and shade, and
      its real features. The textures are drawn ONCE per page, in a hidden <svg id="kit-materials"> (never display:none -
      Chrome then drops its paint servers), and a part names a material by class (kit.css .kit-m-*), most often through
      body() below. Their colours are the kit's --mat-* tokens (kit.css); a paint server takes the colours of the place it
@@ -2097,7 +2097,7 @@
     /* the drawing helpers every part uses - a new part uses these too, never its own */
     h: { el: el, lines: lines, label: label, gone: gone, widest: widest, readings: readings, clamp: clamp, num: num, fmt: fmt, polar: polar, arc: arc,
          flagMark: flagMark, textWidth: textWidth, NS: NS,
-         /* physical equipment in its material, its light and shade, its flanges (2.52.0, L62) */
+         /* physical equipment in its material, its light and shade, its flanges (2.52.0, L63) */
          equip: equip, body: body, reshape: reshape, flange: flange },
     figures: FIGS,
     /* the label solver alone, in plain numbers - for any drawing that can say where its outlines are (a 3D figure's

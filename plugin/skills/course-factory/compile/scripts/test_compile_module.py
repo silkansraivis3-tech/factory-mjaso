@@ -16,7 +16,9 @@ Pinned:
   * no link inside a slide (L35: the deck never navigates away);
   * L61 (2.52.0): every slide is one of the owner's thirteen layout templates, chosen from the slide or asked for by name;
     the owner's rules - 55 / 45, dense text has a picture, never three teaching slides in a row without one, long words
-    in parts - are problems with the slide's id.
+    in parts - are problems with the slide's id;
+  * L62 (2.53.0): two slides in a row never look the same (shape and ground); a drawing made for a white page keeps
+    the light ground; a photograph smaller than 1600 px is enlarged once, its original kept.
 """
 from __future__ import annotations
 
@@ -863,8 +865,9 @@ def layouts_part(tmp):
     hexes = set(x.upper() for x in re.findall(r"#[0-9A-Fa-f]{6}\b", css))
     check("its colours are the brandbook's six, and the few tints between them - no amber, no other blue",
           brand <= hexes and not hexes & {"#E9A51E", "#E9AB39", "#2EB6F8"}, sorted(hexes))
-    check("... the logo is the official file, used as it is, on a white plate on dark slides",
-          'url("novikontas_logo.svg")' in css and "var(--lt-white) url(\"novikontas_logo.svg\")" in css)
+    check("... the logo is the official file, used as it is; on a dark (blue) slide its white version, no plate (owner, 2026-10-21)",
+          'url("novikontas_logo.svg")' in css and 'url("novikontas_logo_white.svg")' in css
+          and os.path.isfile(os.path.join(md, "assets", "novikontas_logo_white.svg")))
     check("the built deck still says exactly the approved words", run(MATCH, c, "--module", "1", "--part", "instructor")[0] == 0)
 
     print("\n-- L61: the owner's rules - 55 / 45, dense text has a picture, never three slides in a row without one")
@@ -951,6 +954,71 @@ def layouts_part(tmp):
           and s8.count('class="lt-card"') == 2 and s8.count("<svg") >= 2, s8[:900])
     check("... and all of it still says exactly the approved words",
           run(MATCH, c2, "--module", "1", "--part", "instructor")[0] == 0, run(MATCH, c2, "--module", "1", "--part", "instructor")[1])
+
+
+def variety_part(tmp):
+    """L62 (2.53.0) - two slides in a row never look the same; small photographs enlarged, never blocky"""
+    print("\n-- L62: never the same look twice in a row")
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    from PIL import Image
+    words = "The tank connection space holds every valve and flange of the fuel tank, so a leak stays inside it.\n" \
+            "• Its ventilation runs all the time.\n• Detectors raise the alarm at 20 % LEL."
+    drawn = [{"id": "d%d" % i, "kind": "slide", "title": "Drawing slide %d" % i, "layout": "split", "visual_kind": "schematic",
+              "visual": "The space.", "minutes": 2, "text": words} for i in range(1, 7)]
+    shot = [{"id": "p%d" % i, "kind": "slide", "title": "Photo slide %d" % i, "layout": "split", "visual_kind": "photo",
+             "visual": "A ship.", "minutes": 2, "text": words} for i in range(1, 5)]
+    os.makedirs(os.path.join(tmp, "var"))
+    c, md = new_course(os.path.join(tmp, "var"), script(screens=drawn + shot + SCREENS[-2:]))
+    meta = cs.load(os.path.join(md, "assets", "img", "_photo_meta.json"))
+    for i in range(1, 5):
+        io.open(os.path.join(md, "assets", "img", "p%d.png" % i), "wb").write(png(400, 250, (40 * i, 90, 160)))
+        meta["p%d.png" % i] = dict(PHOTO_META["ship.jpg"], description="Ship %d." % i, url_or_origin="https://example.org/ship%d" % i)
+    cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
+    sheet = {x["id"]: {"figure": "ga.html"} for x in drawn}
+    sheet.update({x["id"]: {"figure": "assets/img/%s.png" % x["id"]} for x in shot})
+    build_of(c, lambda b: b.__setitem__("screens", sheet))
+    code, out = run(COMPILE, c, "--module", "1")
+    page = deck(md)
+    secs = re.findall(r"<section [^>]*>.*?</section>", page, re.S)
+    keys = [cm.layout_key(x) for x in secs]
+    ids = [re.search(r'id="(\w+)"', x).group(1) for x in secs]
+    check("ten split slides in a row, all with the same layout asked for: no two neighbours look the same",
+          all(a != b for a, b in zip(keys, keys[1:])) and "looks exactly like the slide before it" not in out, list(zip(ids, keys)))
+    drawn_keys = [k for i, k in zip(ids, keys) if i.startswith("d")]
+    check("... the drawings (made for a white page) keep the light ground - they move side instead",
+          all(g == "light" for _, g in drawn_keys) and {s for s, _ in drawn_keys} == {"picture-right", "picture-left"}, drawn_keys)
+    shot_keys = [k for i, k in zip(ids, keys) if i.startswith("p")]
+    check("... the photographs take more looks: on top, the other side, the dark ground, framed",
+          len(set(shot_keys)) >= 3, shot_keys)
+    check("... and each slide still says exactly the approved words", run(MATCH, c, "--module", "1", "--part", "instructor")[0] == 0)
+
+    print("\n-- L62: a small photograph is enlarged, never shown as blocks of pixels")
+    big = Image.open(os.path.join(md, "assets", "img", "p1.png")).size
+    keep = os.path.join(c, "working_claude", "photo_originals", "M01", "p1.png")
+    check("a 400 x 250 photograph is shipped at 1600 px on its long side (never more than 4 times larger)", max(big) == 1600 and big == (1600, 1000), big)
+    check("... its original is kept for the factory (working_claude/photo_originals/M01/)",
+          os.path.isfile(keep) and Image.open(keep).size == (400, 250))
+    check("... and the build says it was small - find a larger one", "p1.png was only 400 x 250 px - enlarged to 1600 x 1000" in out, out)
+    code2, out2 = run(COMPILE, c, "--module", "1", "--force")
+    check("built again, it is not enlarged twice and the original stays the original",
+          Image.open(os.path.join(md, "assets", "img", "p1.png")).size == (1600, 1000) and Image.open(keep).size == (400, 250)
+          and "p1.png was only" not in out2, out2[-600:])
+
+    print("\n-- L62: the logo is larger, and a light panel stays light on a dark slide")
+    css = io.open(os.path.join(SKILLS, "course-module-ui", "templates", "gb_layouts.css"), encoding="utf-8").read()
+    check("the logo box is sized for the artwork (10.5 vmin tall) with the file's own clear space running into the margin",
+          "--lt-logo-h:16.9vmin" in css and "right:calc(var(--lt-pad-x) - var(--lt-logo-w) * .159)" in css)
+    white = io.open(os.path.join(SKILLS, "..", "resources", "brand", "novikontas_logo_white.svg"), encoding="utf-8").read()
+    navy = io.open(os.path.join(SKILLS, "..", "resources", "brand", "novikontas_logo.svg"), encoding="utf-8").read()
+    check("the white logo is the official file with its one colour switched - the same shapes, nothing else changed",
+          white.replace('fill="#FFFFFF"', 'fill="#022367"').replace(" (white, for dark backgrounds)", "") == navy)
+    check("... on a dark slide no plate, and over a photograph the corner behind it is darkened, not the logo",
+          "border-radius:0;box-shadow:none" in css and ".slide[data-template].photo .slide-kind::before" in css)
+    check("... and a long title leaves room for it", "max-width:min(24em,calc(100% - var(--lt-logo-w)))" in css)
+    check("a light panel on a dark slide keeps its white ground and dark words",
+          ".slide[data-template].dark .fill.fig.lt-light{background:var(--lt-white)" in css
+          and ".fill.fig.lt-light{color:var(--lt-black)}" in css)
 
 
 def fixes_part(tmp):
@@ -2100,6 +2168,7 @@ def main():
         v2520_part(tmp)
         layouts_part(tmp)
         three_part(tmp)
+        variety_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

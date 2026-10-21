@@ -188,7 +188,7 @@ largest blank piece is (side and pixels). A whole ship for five spaces,
 - **A lit line is a button.** Every line a step lights (or the box a line heads) becomes a tap target: tap it or press
   Enter and that step plays (`.kit-tap`, 44 px). The first step that lights a line owns it.
 
-## Rules of the look (L62, 2.52.0)
+## Rules of the look (L63, 2.52.0)
 **Physical equipment looks like the real equipment; a screen looks like a screen.** The kit does it in every deck by
 itself - a spec has no option for it and a slide never asks for it.
 - **Equipment** - a tank, a pipe, a valve, a pump, an exchanger, an engine, a vent, a hose, a coupling, a manifold, a

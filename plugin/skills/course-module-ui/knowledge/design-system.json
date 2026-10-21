@@ -26,7 +26,8 @@
     {"name": "gb_fit.js",           "from": "course-module-ux/assets/gb_fit.js",          "for": "no drawing cut off at its edges - the frame grows to hold it (L53)"},    {"name": "kit.js",             "from": "course-visuals/kit/kit.js",                  "for": "the figure kit - draws and moves every *.kit.json figure (L55)"},
     {"name": "kit.css",             "from": "course-visuals/kit/kit.css",                 "for": "the figure kit's look"},
     {"name": "gb_run.css",          "from": "course-module-ux/assets/gb_run.css",         "for": "the step runner's look"},
-    {"name": "novikontas_logo.svg", "from": "../resources/brand/novikontas_logo.svg",     "for": "the landing screen"}
+    {"name": "novikontas_logo.svg", "from": "../resources/brand/novikontas_logo.svg",     "for": "the landing screen, and the top right of every light slide (L61)"},
+    {"name": "novikontas_logo_white.svg", "from": "../resources/brand/novikontas_logo_white.svg", "for": "the top right of every dark (blue) or photo slide - the official file with its one colour switched to white for a dark ground (owner, 2026-10-21, L62)"}
   ],
   "starter_deck": {"from": "course-module-ui/templates/gb_shell.html", "to": "module.html",
                    "_note": "written only when the module has no module.html yet, and never checked for identity afterwards - it is the deck the module is built in"},

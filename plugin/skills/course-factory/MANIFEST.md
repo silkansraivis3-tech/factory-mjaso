@@ -1443,7 +1443,7 @@ the first.
   detector" 4 shippable photos + 4 blocked, "type C tank" 1 photo + 2 figures, 4 blocked, the AI cutaway held back,
   "LNG bunkering" 6 photos; with the library switched off the resolver answers as before (exit 3).
 
-## 4zz9 · Physical equipment is drawn as it looks on board (L62, 2.56.0 - built as 2.52.0 / L61 on its own branch, 2026-10-20)
+## 4zz9 · Physical equipment is drawn as it looks on board (L63 - L62 until the owner's L62 merged, 2.56.0 - built as 2.52.0 / L61 on its own branch, 2026-10-20)
 
 Aleksis approved a plain-vs-realistic mock-up of the figure kit ("yes we like this new kit styling") and asked for it in
 the kit itself, on in every deck: no spec option, no per-slide ask. Then: "also do the Parts added from courses", "make
@@ -1537,6 +1537,23 @@ IGF M01 / M02 `--full` on a scratch copy, interleaved: median 82 -> 57 s and 183
 build log, review fingerprint and grading the same, and a planted engine out of its room found word for word
 (`Desktop\M01_benchmark\speed_test\SPEED.md`). Not done: scoping `getAnimations()` (0.13 s of 53 s) and letting the
 drawing check skip a figure figure_fit judged (another frame and timing - not provably the same findings).
+
+## 4zz12 · Never the same look twice in a row; a larger logo; no blocky photographs (L62, 2.62.0 - the owner's 2.53.0 on main, 2026-10-21)
+
+The gas course's Module 1, the first built in the templates, came out with 29 of 33 slides as content-in-parts with
+the picture on the right - its build sheet asked for that template on every slide, and nothing stopped a run. Its
+photographs were 350-1100 px (s01: 400 x 293) stretched to ~500 x 600 px at 1280 x 800, and the logo's artwork was
+about 55 px wide inside its clear space. Now: `layout_key` (shape and ground), `layout_options` (the ways one slide can
+be built that hold its words and picture), `choose_layout` (its own unless it repeats; else unlike the last three);
+the dark ground only for a photograph or a kit drawing (the module's own step widgets lost their controls on dark:
+2.06 and 1.07 contrast on s07, s15, s19, s26 - caught by run_audits, fixed); the figure-stage variant `figure-top` for
+photographs up to 110 words; a build problem if two neighbours still look the same; `enlarge_photos` (Pillow,
+Lanczos + UnsharpMask, at most 4x, to 1600 px, originals in working_claude/photo_originals/M01/, under 800 px listed);
+the logo box sized for 10.5 vmin of artwork, and on dark (blue) or photo slides the white version (`plugin/resources/brand/novikontas_logo_white.svg`, the official paths with the one colour switched), no plate; a light panel stays white on a dark slide; the recap fits six take-aways
+under the template's top line (41 px spill before). Proved on a copy of that module: 33 slides, no neighbours alike,
+five looks among the photographs, `run_audits.py` at 1280 x 800 and 1024 x 768 with no contrast, size, spill, tap,
+collision or scroll problem. Tests: `test_compile_module.py` `variety_part`. Merged on top of 2.61.0: the kit's realistic
+look (4zz9) is L63 now; the template recap keeps 2.60.0's compact spacing under 780 px height.
 
 ## 5 · Known gaps / before this goes live
 
