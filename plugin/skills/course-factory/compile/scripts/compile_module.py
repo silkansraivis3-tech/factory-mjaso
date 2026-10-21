@@ -97,6 +97,7 @@ import io
 import json
 import os
 import re
+import shutil
 import sys
 import unicodedata
 
@@ -1892,6 +1893,7 @@ def sibling_sheets(bp):
 
 
 THREE_JS = "assets/vendor/three.min.js"
+THREE_SRC = os.path.join(SKILLS, "course-module-ui", "templates", "vendor", "three.min.js")   # the factory's copy (2.59.0)
 
 
 def starter_scene(script, sid, scripts):
@@ -1908,7 +1910,7 @@ def starter_scene(script, sid, scripts):
                         "[data-stage] holder and a flat fallback drawing - and the scene %s, built like IGF M03's "
                         "m03_station3d.js (compile GUIDE 2b): one shared renderer, the scene built while the slide before is "
                         "on screen (its GB_HOOKS), window.__noPrepare and window.__scene3d for perf3d.mjs, a tap highlights a "
-                        "part; first frame under 1 s at 4x CPU (measure GUIDE 2b). Copy three.min.js into assets\\vendor\\. "
+                        "part; first frame under 1 s at 4x CPU (measure GUIDE 2b). three.min.js (r128) is the factory's - the compile puts it in assets\\vendor\\. "
                         "Or keep a 2D figure: put it in \"figure\" (--init-build writes its starter, see \"_2d\"), take the two "
                         "scene files off \"scripts\", and write the operator's reason in \"declined_3d\"." % (m.upper(), m, sid, js))}
 
@@ -2338,6 +2340,13 @@ def compile_deck(script, build, mdir, figdir, version, approved):
         if os.path.isfile(canon) and (not os.path.isfile(mine) or io.open(mine, "rb").read() != io.open(canon, "rb").read()):
             probs.append("the module's copy of %s is not the factory's current one - run course-module-ui\\scripts\\"
                          "design_system.py install --update on the module folder" % x)
+    # 2.59.0 - the 3D engine every scene is written for ships with the factory (three.js r128, MIT): a sheet that names it
+    # gets the factory's copy - before, a builder had to find one, and IGF M03's declined its 3D scene for the lack of it
+    if THREE_JS in build.get("scripts", []) and os.path.isfile(THREE_SRC):
+        mine = os.path.join(mdir, *THREE_JS.split("/"))
+        if not os.path.isfile(mine) or io.open(mine, "rb").read() != io.open(THREE_SRC, "rb").read():
+            os.makedirs(os.path.dirname(mine), exist_ok=True)
+            shutil.copyfile(THREE_SRC, mine)
     for rel in build.get("styles", []) + build.get("scripts", []):
         if not os.path.isfile(os.path.join(mdir, rel)):
             probs.append("the build sheet names %s, which is not in the module folder" % rel)

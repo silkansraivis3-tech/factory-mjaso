@@ -155,8 +155,54 @@ def together_part():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def failing_cache_part():
+    """2.59.0 - a figure failing at the last build, nothing about it changed: its report is repeated, nothing measured"""
+    print("-- 2.59.0 an unchanged failing figure is not measured or fixed again")
+    import compile_module as cm2
+    import content_script as cs2
+    tmp = tempfile.mkdtemp(prefix="test_ff_fail_")
+    calls = {"measure": 0, "fix": 0}
+    saved = (ff.deck_figures, ff.all_specs, ff.measure, ff.try_fixes, cs2.paths, cs2.load, cm2.compile_deck, cm2.fitted)
+    try:
+        figdir = os.path.join(tmp, "figures", "M01")
+        os.makedirs(figdir)
+        sp = os.path.join(figdir, "s03.kit.json")
+        io.open(sp, "w", encoding="utf-8").write(json.dumps({"size": [640, 390], "parts": [{"id": "S5", "type": "space", "x": 1, "y": 1}]}))
+        ff.deck_figures = lambda c, m: ([("s03", sp, {})], figdir)
+        ff.all_specs = lambda c, m: []
+        prob = [(1, 0, "label", "S5 [part S5]", "found no clear place")]
+        def measure(spec_path, sid, spec=None, strip=True):
+            calls["measure"] += 1
+            return list(prob), {"report": {"scale": 1}, "states": [{"svg": [640, 390], "panel": [640, 390]}], "parts": {}}
+        def try_fixes(*a):
+            calls["fix"] += 1
+            return None, "no deterministic fix", None
+        ff.measure, ff.try_fixes = measure, try_fixes
+        cs2.paths = lambda c, m: {"script": os.path.join(tmp, "M01.json"), "dir": tmp}
+        cs2.load = lambda p: {"screens": [{"id": "s03"}]} if p.endswith("M01.json") else {}
+        cm2.compile_deck = lambda *a: ('<section id="s03">words</section>', None, None)
+        cm2.fitted = lambda *a: None
+        c1, t1, _ = ff.run_all(tmp, 1)
+        first = dict(calls)
+        c2, t2, _ = ff.run_all(tmp, 1)
+        check("the first build measures the failing figure and tries its fixes; the second, nothing changed, does neither "
+              "and says its last report again", c1 == 1 and c2 == 1 and first == {"measure": 1, "fix": 1} and calls == first
+              and "unchanged since the last build" in t2 and "found no clear place" in t2, (calls, t2[-400:]))
+        ff.run_all(tmp, 1, full=True)
+        check("... --full measures it again", calls["measure"] == 2, calls)
+        ff.run_all(tmp, 1, fix=False)
+        check("... another fix mode (--no-fix) measures it again", calls["measure"] == 3, calls)
+        io.open(sp, "w", encoding="utf-8").write(json.dumps({"size": [640, 390], "parts": [{"id": "S5", "type": "space", "x": 2, "y": 1}]}))
+        ff.run_all(tmp, 1)
+        check("... and a changed spec is measured again", calls["measure"] == 4, calls)
+    finally:
+        (ff.deck_figures, ff.all_specs, ff.measure, ff.try_fixes, cs2.paths, cs2.load, cm2.compile_deck, cm2.fitted) = saved
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     together_part()
+    failing_cache_part()
     print("-- squeeze: positions and stretchable lengths follow the column, part sizes stay")
     s = ff.squeeze(SPEC, 0.5, x0=20)
     p = {q.get("id") or q["type"]: q for q in s["parts"]}

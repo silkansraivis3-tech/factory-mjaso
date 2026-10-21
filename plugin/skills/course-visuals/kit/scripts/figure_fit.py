@@ -1025,6 +1025,18 @@ def run_all(course, module, fix=True, jobs=4, full=False):
         keys = {}
     skipped = [] if full else [x for x in todo if keys.get(x[0]) and cache.get(x[0]) == keys[x[0]]]
     todo = [x for x in todo if x not in skipped]
+    # 2.59.0 - a figure that FAILED at the last run, whose slide, spec and kit files are byte for byte what they were (the
+    # same key) in the same fix mode, fails the same way again: measuring it and trying every fix again only repeats the
+    # last report (the audits are deterministic since 2.50.6). Its last report is said again, marked so, and nothing is
+    # opened. Any change to it, --full, or another fix mode measures it again
+    fail_path = os.path.join(figdir or "", cm.FIT_DIR, "_failing.json")
+    try:
+        failing = json.load(io.open(fail_path, encoding="utf-8"))
+    except (OSError, ValueError):
+        failing = {}
+    reused = [] if full else [x for x in todo if keys.get(x[0]) and (failing.get(x[0]) or {}).get("key") == keys[x[0]]
+                              and (failing.get(x[0]) or {}).get("fix") == bool(fix)]
+    todo = [x for x in todo if x not in reused]
     results, entry = {}, {}
     with cf.ThreadPoolExecutor(max_workers=jobs) as ex:
         futs = {ex.submit(measure, sp, sid): (sid, sp) for sid, sp, e in todo}
@@ -1125,6 +1137,14 @@ def run_all(course, module, fix=True, jobs=4, full=False):
             block += parts_together(sp, "\n".join(block))
             left.append("\n".join(block))
             d["left"] = [list(x) for x in probs]
+            if keys.get(sid):
+                failing[sid] = {"key": keys[sid], "fix": bool(fix), "block": "\n".join(block), "left": d["left"]}
+    for sid, sp, e in reused:              # unchanged and failing: the last report, not measured again (2.59.0)
+        f0 = failing[sid]
+        left.append(f0["block"] + "\n    (unchanged since the last build - its report is repeated, not measured again; "
+                    "change the spec or the slide, or build_module.py --full)")
+        data["figures"][sid] = {"spec": os.path.basename(sp), "problems": len(f0.get("left") or []), "left": f0.get("left"),
+                                "reused": True}
     for sid, sp, e in figs:            # a figure clean as written needs no fit: an old one is removed
         fp = cm.fit_path(figdir, os.path.basename(sp), sid)
         dd = data["figures"].get(sid) or {}
@@ -1146,10 +1166,15 @@ def run_all(course, module, fix=True, jobs=4, full=False):
                     cache[sid] = sha(base + (m.group(0) if m else "") + io.open(sp, encoding="utf-8").read())
         except Exception:                                # noqa: BLE001
             pass
+    for sid, sp, e in figs:                # clean or fixed now, or gone: no longer failing
+        dd = data["figures"].get(sid)
+        if dd is None or dd.get("problems") == 0 or dd.get("fixed"):
+            failing.pop(sid, None)
     if figdir and keys:
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
         io.open(cache_path, "w", encoding="utf-8").write(json.dumps(cache, indent=1, sort_keys=True))
-    n = len(todo) + len(skipped)
+        io.open(fail_path, "w", encoding="utf-8").write(json.dumps(failing, indent=1, sort_keys=True))
+    n = len(todo) + len(skipped) + len(reused)
     # 2.52.0 - the task pages' figures, as their pages draw them: INSIDE fixed by itself. What is left is said here and
     # judged by the compile's drawing check (which reads the same pages)
     try:

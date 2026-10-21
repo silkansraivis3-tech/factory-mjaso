@@ -1408,6 +1408,20 @@ STEP_KIT = {"size": [400, 200], "parts": [{"id": "T", "type": "tank", "x": 40, "
             "steps": [{"title": "The tank", "show": ["T"], "line": 1}]}
 
 
+def three_part(tmp):
+    """2.59.0 - the 3D engine ships with the factory: a sheet naming assets/vendor/three.min.js gets the factory's copy (IGF
+    M03 declined its 3D scene overnight because no copy was to be found)"""
+    print("\n-- 2.59.0: three.js comes with the factory")
+    c, md = new_course(os.path.join(tmp, "three59"), script())
+    build_of(c, lambda s: s.update(scripts=["assets/vendor/three.min.js"]))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    mine = os.path.join(md, "assets", "vendor", "three.min.js")
+    src = os.path.join(SKILLS, "course-module-ui", "templates", "vendor", "three.min.js")
+    check("a build sheet naming three.min.js gets the factory's r128 copy, byte for byte, and no 'not in the module folder'",
+          os.path.isfile(mine) and open(mine, "rb").read() == open(src, "rb").read() and 'const e="128"' in open(src, encoding="utf-8").read()
+          and "three.min.js, which is not in the module folder" not in out, out[-600:])
+
+
 def v2520_part(tmp):
     """2.52.0 (IGF M01 + M02 benchmark, 2026-10-20) - six things a trainee or an instructor saw"""
     print("\n-- 2.52.0: what the deck says is what was built; only what is shown ships")
@@ -2056,6 +2070,7 @@ def main():
         v2497_part(tmp)
         v2520_part(tmp)
         layouts_part(tmp)
+        three_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
