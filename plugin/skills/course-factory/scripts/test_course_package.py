@@ -238,6 +238,21 @@ def main():
         broken("the course map not matching the modules", lambda b: w(os.path.join(b, "_course_shell", "course_map.js"),
                'window.COURSE_MAP = [{"code":"module01","title":"Gas tankers","entry":"presentation/index.html"}];'), "_course_shell/course_map.js lists module01, the folder has module01, module02")
         broken("no START_HERE_EXTENDED.html (L43)", lambda b: os.remove(os.path.join(b, "module02", "START_HERE_EXTENDED.html")), "module02/START_HERE_EXTENDED.html is missing")
+        # 2.63.0 - a course may declare its own module order (working_claude\course.build.json "module_order")
+        rev = ('window.COURSE_MAP = [{"code":"module02","title":"Final","entry":"presentation/index.html"},'
+               '{"code":"module01","title":"Gas tankers","entry":"presentation/index.html"}];')
+        broken("a course map in another order than the folders, with no order declared",
+               lambda b: w(os.path.join(b, "_course_shell", "course_map.js"), rev), "names it in working_claude\\course.build.json \"module_order\"")
+        import json
+        b2 = os.path.join(tmp, "order_ok", "modules")
+        shutil.copytree(c, b2)
+        w(os.path.join(b2, "_course_shell", "course_map.js"), rev)
+        w(os.path.join(tmp, "order_ok", "working_claude", "course.build.json"), json.dumps({"module_order": [2, 1]}))
+        code, out = run(b2, "--no-importer")
+        check("... the same map is accepted when course.build.json declares that order", "course_map.js lists" not in out, out[-600:])
+        w(os.path.join(tmp, "order_ok", "working_claude", "course.build.json"), json.dumps({"module_order": [1, 2]}))
+        code, out = run(b2, "--no-importer")
+        check("... and caught when the declared order is another one", "course.build.json \"module_order\" says module01, module02" in out, out[-600:])
 
         print("\n-- 2.49.2: drafts and final variants (IGF M07-M15)")
         dr = os.path.join(tmp, "draftcourse", "modules")

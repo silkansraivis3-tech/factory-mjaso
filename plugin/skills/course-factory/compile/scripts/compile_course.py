@@ -20,7 +20,9 @@ them is new content:
   the instructor's files    what is in the module folder: instructor\\*.html, assessment\\*answer_key*.html, handout\\
   how the course is named   working_claude\\course.build.json - delivery, not content (like M01.build.json):
                                 {"regulation": "STCW Regulation V/3, Table A-V/3-1",
-                                 "programme": "LJA standard programme 13-51-306 v2"}
+                                 "programme": "LJA standard programme 13-51-306 v2",
+                                 "module_order": [1, 4, 6, 8, 2, 3, 5, 7]}   (2.63.0: the order the classroom shows,
+                                 when it is not the folders' - course_map.js and COURSE.html follow it)
 
 THE COURSE ID NEVER CHANGES
 The classroom makes the course ID from COURSE.html's <title> when the course is first added. So the title is recorded
@@ -280,6 +282,26 @@ def course_page(title, infos, planned, sheet, prog, lang, w):
         ["</div>", "</body>", "</html>", ""])
 
 
+def ordered(sheet, infos, probs):
+    """the modules in the course's own order (2.63.0, the instructors' review of IGF Basic: 1, 4, 6, 8, 2, 3, 5, 7, 9 ...):
+    course.build.json "module_order": [module numbers] - delivery, like the course's name; the folders, the scripts and
+    "Module n" on each deck stay as they are. A module it leaves out follows in folder order, and is said."""
+    order = sheet.get("module_order")
+    if not order:
+        return infos
+    have = [i["n"] for i in infos]
+    bad = [x for x in order if not isinstance(x, int) or x not in have]
+    if bad or len(set(order)) != len(order):
+        probs.append("course.build.json \"module_order\" %s: every entry once, a module number this course has (%s) - %s"
+                     % (order, ", ".join(map(str, have)), "not there: %s" % bad if bad else "one is named twice"))
+        return infos
+    left = [n for n in have if n not in order]
+    if left:
+        probs.append("course.build.json \"module_order\" leaves out module(s) %s - they follow in folder order; name them" % left)
+    by = {i["n"]: i for i in infos}
+    return [by[n] for n in list(order) + left]
+
+
 def course_map(infos):
     rows = ",\n".join('  {"code": %s, "title": %s, "entry": "presentation/index.html"}'
                       % (json.dumps(i["code"]), json.dumps(i["title"], ensure_ascii=False)) for i in infos)
@@ -338,7 +360,7 @@ def main(argv=None):
                      % (arch.get("course") or {}).get("course_language"))
     sheet = load_or(workspace.claude_path(course, "course.build.json"), {})
     prog = load_or(workspace.claude_path(course, "programme.json"), {})
-    infos = [module_info(course, arch, m, probs) for m in mods]
+    infos = ordered(sheet, [module_info(course, arch, m, probs) for m in mods], probs)
     planned = len(arch.get("modules") or []) + (1 if arch.get("final_assessment") else 0)
     only = None
     if o.module:

@@ -270,8 +270,21 @@ def check(folder):
             probs.append("_course_shell/course_map.js cannot be read as data - it must be: window.COURSE_MAP = [ ... ];")
         else:
             codes = [x.get("code") for x in cmap]
-            if codes != mods:
-                probs.append("_course_shell/course_map.js lists %s, the folder has %s" % (", ".join(map(str, codes)), ", ".join(mods)))
+            # 2.63.0 - a course may declare its own order (working_claude\course.build.json "module_order", the
+            # instructors' review of IGF Basic): course_map.js may then list every module once, in that order
+            declared = None
+            cbp = os.path.join(os.path.dirname(os.path.abspath(folder)), "working_claude", "course.build.json")
+            if os.path.isfile(cbp):
+                try:
+                    declared = ["module%02d" % int(x) for x in (json.loads(read(cbp)).get("module_order") or [])] or None
+                except (ValueError, TypeError):
+                    declared = None
+            same_set = sorted(map(str, codes)) == sorted(mods) and len(set(codes)) == len(codes)
+            if codes != mods and not (same_set and declared and codes == declared + [x for x in mods if x not in declared]):
+                probs.append("_course_shell/course_map.js lists %s, the folder has %s%s" % (
+                    ", ".join(map(str, codes)), ", ".join(mods),
+                    " (course.build.json \"module_order\" says %s)" % ", ".join(declared) if declared else
+                    " - a course in its own order names it in working_claude\\course.build.json \"module_order\""))
             for x in cmap:
                 if not os.path.isfile(os.path.join(folder, str(x.get("code")), str(x.get("entry", "")))):
                     probs.append("_course_shell/course_map.js: %s's entry %s is not there" % (x.get("code"), x.get("entry")))

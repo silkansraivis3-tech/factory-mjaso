@@ -85,6 +85,19 @@ def main():
         check("course_map.js is data: module01, its title from the approved script (not the plan)",
               data == [{"code": "module01", "title": "IGF ships", "entry": "presentation/index.html"}], cmap)
 
+        # 2.63.0 - a course's own module order (the instructors' review of IGF Basic: 1, 4, 6, 8, 2, 3 ...)
+        import compile_course as cc
+        infos = [{"n": n, "code": "module%02d" % n} for n in range(1, 6)]
+        probs = []
+        check("course.build.json \"module_order\" orders the course map; a module it leaves out follows, and is said",
+              [i["n"] for i in cc.ordered({"module_order": [1, 4, 2]}, infos, probs)] == [1, 4, 2, 3, 5]
+              and len(probs) == 1 and "leaves out module(s) [3, 5]" in probs[0], probs)
+        probs = []
+        check("... an order naming a module the course has not, or one twice, is a problem and the folder order stays",
+              [i["n"] for i in cc.ordered({"module_order": [1, 9]}, infos, probs)] == [1, 2, 3, 4, 5] and "not there: [9]" in probs[0]
+              and [i["n"] for i in cc.ordered({"module_order": [2, 2, 1, 3, 4, 5]}, infos, probs)] == [1, 2, 3, 4, 5], probs)
+        check("... and no order is the folder's", cc.ordered({}, infos, []) == infos)
+
         sh, ext = read(md, "START_HERE.html"), read(md, "START_HERE_EXTENDED.html")
         check("START_HERE.html opens the deck at once", 'content="0; url=presentation/index.html"' in sh and "<title>M01 — Start</title>" in sh, sh)
         hrefs = re.findall(r'href="([^"]+)"', ext)
