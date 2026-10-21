@@ -974,6 +974,21 @@ def layouts_part(tmp):
     code_b, out_b = run(COMPILE, c2, "--module", "1", "--force")
     check("... a layout asked for by name over its budget is an early warning at compile, with the budget",
           re.search(r"Note: Slide \d+ \(s05\) - \d+ words beside a picture; the layout holds about 85 at 1024 x 768", out_b), out_b[-900:])
+    import contextlib
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):            # the studio and figure_fit compile one deck many times in one process
+        for _ in range(3):
+            cm.compile_deck(cs.load(os.path.join(c2, "working_claude", "script", "M01.json")), sheet_b, md2,
+                            os.path.join(c2, "working_claude", "figures", "M01"), "x", True)
+    check("... and said once in a process, however often the deck is compiled (IGF M01 v263: 84 times in one build)",
+          buf.getvalue().count("holds about 85") == 1, buf.getvalue().count("holds about 85"))
+    sv = json.loads(json.dumps(SCREENS))
+    next(x for x in sv if x["id"] == "t02")["text"] = "Module check on your tablet now.\nYou see PASSED or NOT PASSED."
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        cm.compile_deck(script(screens=sv), {}, md2, None, "x", True)
+    check("2.63.0 - a module-check slide whose approved words promise PASSED / NOT PASSED is a Note (L27: the score only)",
+          "promise a pass mark or PASSED / NOT PASSED" in buf.getvalue() and "(t02)" in buf.getvalue(), buf.getvalue()[-600:])
     check("lines with cells \" | \" are a table: reference-table, one row a line, the separator kept (hidden)",
           'data-template="reference-table.v1"' in s6 and s6.count('<tr data-script-field="text"') == 3 and '<span class="lt-sep"> | </span>' in s6, s6[:700])
     check("three-content-blocks: three numbered blocks beside the picture", 'data-template="three-content-blocks.v1"' in s7

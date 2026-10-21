@@ -145,6 +145,17 @@ BUDGETS = LAYOUTS["budgets"]
 INSET_MAX_WORDS.update({k: BUDGETS["beside_picture_with_inset"] for k in ("two-col", "wide-left", "wide-right")})
 
 
+_SAID = set()
+
+
+def note_once(text):
+    """a compiler's Note: printed once in a process - the studio and figure_fit compile the same deck many times in one
+    (IGF M01 v263: one slide's budget note 84 times in a build's answer)"""
+    if text not in _SAID:
+        _SAID.add(text)
+        print(text)
+
+
 def word_budget(tid, variant, inset=False):
     """(words the layout holds, what it is) - None for one with no measured budget (a recap, a task launch, a comparison)"""
     if inset and tid not in ("photo-explain", "figure-stage"):
@@ -2070,6 +2081,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         template_attrs(d, "task-launch", "room" if kind == "activity" else "check" if graded else "tablet")
         body = ['<p class="act-code" data-script-ignore>%s</p>' % e(code),
                 '<h2 class="act-title" data-script-field="title">%s</h2>' % e(title)]
+        if code == "MC" and re.search(r"\bPASSED\b|\bpass mark\b|\bnot passed\b", " ".join(lines), re.I):
+            # 2.63.0 (L27, owner 2026-10-21): the module check shows no verdict - approved words that promise one are the
+            # operator's to change (IGF M01 v263: "You see PASSED or NOT PASSED" on the launch slide)
+            note_once("Note: %s - its approved words promise a pass mark or PASSED / NOT PASSED; a module check shows the score "
+                      "only (L27, 2.63.0) - change the words: content_script.py propose" % where)
         pic = task_picture(mdir, b, probs, where)          # 2.63.0: the exercise's photo, else an icon that says what it is
         body.append(pic or task_icon(script, code, "room" if kind == "activity" else "tablet"))
         body.append('<div class="act-lines">')
@@ -2172,8 +2188,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if sh and sh[0] < UNDER_MIN_SHARE and not (cap and nwords > cap):
             # 2.63.0 - the drawing keeps its size and the photo goes under the words, which now give it the room they leave
             # (gb_compose.css): reported, a run lost each time (IGF M01 v262 run 3: s02 / s03 / s04 / s07 at 33-49 %)
-            print("Note: %s - the inset is under the words, not under the drawing: there it would leave the drawing only about "
-                  "%d %% of its panel" % (where, round(100 * sh[0])))
+            note_once("Note: %s - the inset is under the words, not under the drawing: there it would leave the drawing only "
+                      "about %d %% of its panel" % (where, round(100 * sh[0])))
         elif sh and sh[0] < UNDER_MIN_SHARE:
             probs.append("%s: the inset under the drawing leaves the drawing only about %d %% of its panel (about %d of %d px high at "
                          "1280 x 800), so the drawing is drawn at about half its size - put the inset under the words, lay it "
@@ -2195,8 +2211,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
             rr = line_ranges(b.get("parts"), len(lines)) if b.get("parts") else None
             many = max(cs.wc(" ".join(lines[i - 1] for i in ix)) for ix in auto_parts(lines, rr))
         if many > bud[0]:
-            print("Note: %s - %d words %s; the layout holds about %d at 1024 x 768 (measured, layout-templates.json \"budgets\"): "
-                  "expect the audit to find it spilling - %s" % (where, many, bud[1], bud[0],
+            note_once("Note: %s - %d words %s; the layout holds about %d at 1024 x 768 (measured, layout-templates.json "
+                      "\"budgets\"): expect the audit to find it spilling - %s" % (where, many, bud[1], bud[0],
                   "make the parts smaller (\"parts\")" if tid == "content-in-parts" else
                   "let the compiler choose the layout, or put the words in parts (\"template\": \"content-in-parts\")"))
     # L57: a drawing of real things carries their real photographs, under the drawing - unasked
