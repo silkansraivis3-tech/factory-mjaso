@@ -201,9 +201,39 @@ def slot(wait_note=None):
 
 
 def run(cmd, **kw):
-    """subprocess.run(cmd, **kw) while holding a slot"""
+    """subprocess.run(cmd, **kw) while holding a slot - a timeout ends the browser's whole process tree (run_tree)"""
     with slot():
-        return subprocess.run(cmd, **kw)
+        return run_tree(cmd, **kw)
+
+
+def kill_tree(pid):
+    """end a process and every process it started. subprocess's own kill ends only the browser's first process on
+    Windows: a timed-out hidden Chrome left its GPU, utility and page processes running for a minute or more (2.62.1)"""
+    try:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(pid)], capture_output=True, timeout=30)
+        else:
+            os.killpg(os.getpgid(pid), 9)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+def run_tree(cmd, timeout=None, input=None, capture_output=False, **kw):
+    """subprocess.run with the same answer, except that on a timeout the whole process tree is ended before
+    TimeoutExpired is raised"""
+    if capture_output:
+        kw["stdout"], kw["stderr"] = subprocess.PIPE, subprocess.PIPE
+    if os.name != "nt":
+        kw.setdefault("start_new_session", True)
+    with subprocess.Popen(cmd, stdin=subprocess.PIPE if input is not None else None, **kw) as p:
+        try:
+            out, err = p.communicate(input, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            kill_tree(p.pid)
+            p.kill()
+            p.communicate()
+            raise
+        return subprocess.CompletedProcess(p.args, p.returncode, out, err)
 
 
 def held():

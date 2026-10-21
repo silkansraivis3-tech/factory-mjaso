@@ -103,13 +103,17 @@ def measure(exe, deck, size, budget, offset=(0, 0), only=None):
     t0 = t1 = time.time()
     try:
         page.write_text(html[:i] + inject + html[i:] if i >= 0 else html + inject, encoding="utf-8")
+        # 2.62.1 - a limit from the slides measured (a deck's audit takes 6-30 s), not 15 minutes, and a timeout ends the
+        # browser's whole process tree: a stalled page held a build 600-900 s and its processes outlived the kill
+        n = len(only) if only is not None else len(re.findall(r'<section\b[^>]*\bclass="[^"]*\bslide\b', html))
+        limit = min(900, 120 + 15 * n)
         with browser_slots.slot():
             t1 = time.time()
-            p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
-                                "--window-size=%d,%d" % size, "--virtual-time-budget=%d" % budget, "--dump-dom", page.as_uri()],
-                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
+            p = browser_slots.run_tree([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
+                                        "--window-size=%d,%d" % size, "--virtual-time-budget=%d" % budget, "--dump-dom", page.as_uri()],
+                                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=limit)
     except subprocess.TimeoutExpired:
-        return None, "the browser did not finish in 15 minutes"
+        return None, "the browser did not finish in %d s - a slide's own script may never let the page settle" % limit
     finally:
         if page.exists():
             page.unlink()

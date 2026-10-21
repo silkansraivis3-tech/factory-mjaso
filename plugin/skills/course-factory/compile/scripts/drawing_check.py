@@ -145,6 +145,21 @@ def renumber(res, keep):
     return res
 
 
+def time_limit(page, keep):
+    """seconds a hidden browser may take for this piece of work (2.62.1): a slide takes 1-3 s and a 3-slide piece 4-10 s,
+    so a stalled page is stopped in about a minute, not 600 s (IGF M01, 2.62.0: slides 3-5 with a 3D scene held the
+    build for 600 s twice). A single slide 45 s (CF_DRAWING_SLIDE_SECONDS), a piece of n slides 45 x (1 + 0.45 n) - 106 s for
+    three - at most 600; a task page 60 s"""
+    try:
+        one = float(os.environ.get("CF_DRAWING_SLIDE_SECONDS") or 45)
+    except ValueError:
+        one = 45.0
+    if not is_deck(page):
+        return one * 4 / 3
+    n = len(keep) if keep is not None else len(SLIDE_TAG.findall(io.open(page, encoding="utf-8").read()))
+    return one if n == 1 else min(600, one * (1 + 0.45 * n))
+
+
 def run_page(exe, page, prof, tmp, keep=None):
     deck = is_deck(page)
     w = os.path.join(tmp, "check_%d_%s.html" % (abs(hash(page)), "-".join(map(str, keep[:1] + keep[-1:])) if keep else "all"))
@@ -153,11 +168,17 @@ def run_page(exe, page, prof, tmp, keep=None):
     try:
         with browser_slots.slot():
             t1 = time.time()
-            p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--mute-audio",
-                                "--user-data-dir=" + prof, "--allow-file-access-from-files", "--window-size=%d,%d" % window_for(exe),
-                                "--virtual-time-budget=%d" % (120000 if deck else 8000), "--dump-dom", Path(w).as_uri()],
-                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
-    except (OSError, subprocess.TimeoutExpired) as err:
+            # --disable-3d-apis (2.62.1): the drawing check judges drawings and words, never a WebGL render - a 3D scene
+            # shows its poster, as on a tablet without WebGL. Software WebGL was the stalled pages' one common part, and the
+            # check of three slides with a 3D scene took 3.7 s instead of 9.8 s
+            p = browser_slots.run_tree([exe, "--headless=new", "--disable-gpu", "--disable-3d-apis", "--hide-scrollbars", "--no-first-run",
+                                "--mute-audio", "--user-data-dir=" + prof, "--allow-file-access-from-files",
+                                "--window-size=%d,%d" % window_for(exe), "--virtual-time-budget=%d" % (120000 if deck else 8000),
+                                "--dump-dom", Path(w).as_uri()],
+                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=time_limit(page, keep))
+    except subprocess.TimeoutExpired as err:
+        return {"error": "the hidden browser did not finish in %.0f s" % err.timeout, "timeout": True}
+    except OSError as err:
         return {"error": str(err)}
     m = re.search(r'<pre id="%s">(.*?)</pre>' % OUT, p.stdout, re.S)
     try:
@@ -234,11 +255,24 @@ def check(pages, root=None, cache=None, full=False):
             work, got = work + again, got + judge(again)
             for p in odd:
                 prints[p] = None
+        # 2.62.1 - a piece that ran out of time: its slides one by one, so the slide that stalls is named and the others
+        # are still judged
+        k = 0
+        while k < len(work):
+            (page, keep), r = work[k], got[k]
+            if r.get("timeout") and keep and len(keep) > 1:
+                singles = [(page, [x]) for x in keep]
+                work[k:k + 1], got[k:k + 1] = singles, judge(singles)
+                k += len(singles)
+            else:
+                k += 1
         done = []                            # one answer per page, its slices joined in slide order
         for page in pages:
             parts = [(keep, r) for (p, keep), r in zip(work, got) if p == page]
-            bad = [r for _, r in parts if r.get("error") or r.get("aborted")]
-            done.append(bad[0] if bad else {"drawings": sum(r.get("drawings", 0) for _, r in parts),
+            stalls = [keep[0] for keep, r in parts if r.get("timeout") and keep and len(keep) == 1]
+            bad = [r for keep, r in parts if (r.get("error") and not (r.get("timeout") and keep and len(keep) == 1))
+                   or r.get("aborted")]
+            done.append(bad[0] if bad else {"drawings": sum(r.get("drawings", 0) for _, r in parts), "stalls": stalls,
                                             "findings": [f for _, r in parts for f in r.get("findings", [])]})
             # 2.57.0 - what was judged clean is recorded; a slide or page with a finding, or that did not finish, is not
             units = prints.get(page)
@@ -250,6 +284,7 @@ def check(pages, root=None, cache=None, full=False):
             elif is_deck(page):
                 nums = [re.match(r"slide (\d+)", f.get("where", "")) for f in done[-1]["findings"]]
                 hit = set(judged) if not all(nums) else {int(m.group(1)) - 1 for m in nums}
+                hit |= set(done[-1].get("stalls") or [])        # a slide that stalled is judged again next time
             else:
                 hit = set(judged) if done[-1]["findings"] else set()
             for k in judged:
@@ -260,6 +295,10 @@ def check(pages, root=None, cache=None, full=False):
             if res.get("error") or res.get("aborted"):
                 probs.append("%s: the drawing check could not finish - %s" % (name, res.get("error") or res.get("aborted")))
                 continue
+            for k in res.get("stalls") or []:
+                probs.append("%s, slide %d: stalls the hidden browser - the page never settles in %.0f s, so its drawings were not "
+                             "judged (the other slides were); look at what this slide runs - a 3D scene or a module script that "
+                             "never lets the page finish - and open the slide alone in a browser" % (name, k + 1, time_limit(page, [k])))
             for f in res.get("findings", []):
                 if f.get("check") == "contrast":     # a kit figure's part that cannot be seen on its dark panel (finding 13)
                     probs.append("%s, %s: contrast - %s %s (L54: colour the part for the figure's dark panel, or mark one "
