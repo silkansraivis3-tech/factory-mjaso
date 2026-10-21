@@ -125,6 +125,9 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
   margin:0;font-size:clamp(28px,5.75vmin,62px);font-weight:700;line-height:1.1;letter-spacing:-.025em;
   color:var(--lt-navy);text-wrap:balance;max-width:min(24em,calc(100% - var(--lt-logo-w)));
 }
+/* the words over a photograph stand in their own column at the left, never under the logo: their title keeps the
+   column's width (cut by the logo's, the opening's split photo grew 42 px too tall at 1024 x 768 - 2.62.0 merge) */
+.slide[data-template] .photo-copy h2{max-width:min(24em,100%)}
 .slide[data-template].dark > h2,.slide[data-template].photo .photo-copy h2{color:var(--lt-white)}
 
 /* ---------------------------------------------------------------- the words */
