@@ -1436,6 +1436,102 @@ def write_to_take(course, script, notes):
     return p
 
 
+# ------------------------------------------------------------------ facts a drawing states (2.63.0)
+# IGF M01 v262 s02: the kit drawing said "LNG flashpoint −188 °C" - not in the approved script, every check green. The words
+# on a slide are the script's by construction (check_script_match); a drawing's are not. A number with its unit that a
+# figure prints must be in the approved script or in what the course read from its knowledge base (working_claude: the
+# retrieval packs, the fact sheets, the text extracts) - or the build sheet names where it is from ("facts").
+FACT_UNIT = (r"°\s?C|°\s?F|degrees?\s+C\b|K\b|barg?\b|mbar\b|kPa\b|MPa\b|%\s?LEL\b|%|ppm\b|m³|m3\b|mm\b|cm\b|km\b|m\b|kg\b|"
+             r"tonnes?\b|t\b|kW\b|MW\b|kV\b|V\b|min\b|h\b|s\b|nm\b|kn\b|knots\b")
+# a sign is "minus", a true minus, or a dash right before the digits - "Vent mast - 6 m" is a separator, not -6 m
+FACT = re.compile(r"(?<![\w.,])(minus\s+|−\s?|[-–](?=\d))?(\d+(?:[.,]\d+)?)(?:\s?(?:-|–|to)\s?(\d+(?:[.,]\d+)?))?\s?(" + FACT_UNIT + r")",
+                  re.I)
+FACT_SKIP = {"id", "type", "d", "fluid", "kind", "dir", "captionAt", "class", "from", "fromIn", "src", "look", "mat", "shade",
+             "fill", "tone", "side", "anchor", "path", "ease", "mode"}
+
+
+def fact_unit(u):
+    u = re.sub(r"\s+", "", u.lower())
+    return {"degreesc": "°c", "degreec": "°c", "°c": "°c", "°f": "°f", "barg": "bar", "m3": "m³", "tonne": "t", "tonnes": "t",
+            "knots": "kn", "%lel": "%"}.get(u, u)
+
+
+def facts_in(text):
+    """[(the fact as written, (sign, value, unit))] - a range is two facts"""
+    out = []
+    for m in FACT.finditer(text or ""):
+        unit = fact_unit(m.group(4))
+        for k, v in enumerate((m.group(2), m.group(3))):
+            if v:
+                v = v.replace(",", ".")
+                v = v.rstrip("0").rstrip(".") if "." in v else v
+                out.append((m.group(0).strip(), ("-" if m.group(1) and k == 0 else "", v, unit)))
+    return out
+
+
+def figure_texts(raw):
+    """the words a figure source prints: a kit spec's strings (not its ids, types or path data), an SVG's / fragment's text"""
+    out = []
+
+    def walk(x, key=None):
+        if isinstance(x, dict):
+            for k, v in x.items():
+                if k not in FACT_SKIP:
+                    walk(v, k)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v, key)
+        elif isinstance(x, str) and key not in FACT_SKIP:
+            out.append(x)
+    try:
+        walk(json.loads(raw))
+        return out
+    except ValueError:
+        pass
+    for m in re.finditer(r'<script type="application/json"[^>]*>(.*?)</script>', raw, re.S):
+        try:
+            walk(json.loads(m.group(1).replace("<\\/", "</")))
+        except ValueError:
+            pass
+    body = re.sub(r"<script\b.*?</script>|<style\b.*?</style>", " ", raw, flags=re.S | re.I)
+    out.append(html.unescape(re.sub(r"<[^>]+>", " ", body)))
+    return out
+
+
+def fact_corpus(course, script):
+    """every (sign, value, unit) the approved script and the course's sources state"""
+    texts = [json.dumps(script, ensure_ascii=False)]
+    wc = workspace.claude_path(course)
+    for d in (wc, os.path.join(wc, "retrieval")):
+        for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+            if f.lower().endswith((".md", ".txt")) and os.path.isfile(os.path.join(d, f)):
+                texts.append(io.open(os.path.join(d, f), encoding="utf-8", errors="replace").read())
+    return {k for t in texts for _, k in facts_in(t)}
+
+
+def unsupported_facts(script, build, figdir, mdir, course):
+    """[(where, figure, fact as drawn)] for each number with a unit a figure of the module prints that neither the approved
+    script nor the course's sources state, and the build sheet does not cite"""
+    corpus, found, seen = None, [], set()
+    for sid, b in sorted((build.get("screens") or {}).items()):
+        cited = {re.sub(r"\s+", "", k.lower()) for k in (b.get("facts") or {})}
+        for rel in (b.get("figure"), b.get("aside")):
+            if not rel or not str(rel).lower().endswith((".kit.json", ".svg", ".html")):
+                continue
+            raw, err = read_figure(mdir, rel, figdir)
+            if err or not raw:
+                continue
+            for text in figure_texts(raw):
+                for shown, key in facts_in(text):
+                    if (sid, shown) in seen or re.sub(r"\s+", "", shown.lower()) in cited:
+                        continue
+                    corpus = fact_corpus(course, script) if corpus is None else corpus
+                    if key not in corpus:
+                        seen.add((sid, shown))
+                        found.append((cs.place(script, sid) if sid in {s["id"] for s in script.get("screens", [])} else sid, rel, shown))
+    return found
+
+
 # ------------------------------------------------------------------ one slide
 def composition(s, b, is_photo, has_fig):
     c = b.get("composition")
@@ -2936,6 +3032,12 @@ def main(argv=None):
         rec["index.html"] = sha(page)
         cs.save(rec_path, rec)
         probs += credit_path_problems(page, "presentation/index.html")
+        # 2.63.0 - a number with its unit a figure prints is the approved script's or the course's sources' (L29)
+        for where, rel, shown in unsupported_facts(script, build, figdir, mdir, o.course):
+            probs.append("%s: its figure %s says \"%s\" - not in the approved script or the course's sources (working_claude: "
+                         "retrieval packs, fact sheets, text extracts). Take it off the drawing, put it in the script "
+                         "(content_script.py propose), or name where it is from in the build sheet: \"facts\": {\"%s\": "
+                         "\"<source, page>\"}" % (where, rel, shown, shown))
         n = sum(1 for s in script["screens"] if s["kind"] in cs.INSTRUCTOR)
         print("Built %s - %d screens from the %s script.\n    %s" % (cs.mid(o.module), n, "approved" if approved else "DRAFT", out))
     if o.only in ("all", "tasks"):

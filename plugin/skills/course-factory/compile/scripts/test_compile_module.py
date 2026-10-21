@@ -1262,6 +1262,31 @@ def fixes_part(tmp):
     code, out = run(COMPILE, c, "--module", "1", "--force")
     check("C7: the same inset under the words is not reported", "leaves the drawing only" not in out, out)
 
+    # 2.63.0 - a number with its unit that a drawing prints is the approved script's or the course's sources'
+    # (IGF M01 v262 s02 drew "LNG flashpoint −188 °C", not in the script, and every check was green)
+    os.makedirs(os.path.join(tmp, "facts"))
+    c, md = new_course(os.path.join(tmp, "facts"), script())
+    io.open(os.path.join(c, "working_claude", "figures", "M01", "fp.kit.json"), "w", encoding="utf-8").write(json.dumps(
+        {"size": [400, 220], "parts": [{"id": "t", "type": "tank", "x": 20, "y": 50, "w": 150, "h": 110, "value": 0.3,
+                                        "label": "LNG flashpoint −188 °C"},
+                                       {"type": "text", "x": 220, "y": 40, "text": "Flashpoint line 60 °C - tank 2-6 bar"}]},
+        ensure_ascii=False))
+    build_of(c, lambda s: s["screens"].update(s02={"figure": "fp.kit.json"}))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    check("F-facts: a drawing's number with its unit that the script does not state is a problem, named with its figure",
+          code == 1 and "fp.kit.json says \"−188 °C\"" in out and "\"facts\"" in out, out[-900:])
+    check("F-facts: ... one the script states (60 °C) is not; a range the script does not state (2-6 bar) is",
+          "\"60 °C\"" not in out.split("To fix", 1)[-1] and "2-6 bar" in out, out[-900:])
+    os.makedirs(os.path.join(c, "working_claude", "retrieval"), exist_ok=True)
+    io.open(os.path.join(c, "working_claude", "retrieval", "2026-10-21_flashpoint.md"), "w", encoding="utf-8").write(
+        "ICS sheet 29: the flashpoint of LNG is about -188 °C. Tank design pressure 2 bar to 6 bar.")
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    check("F-facts: a fact the course read from its knowledge base (a retrieval pack) is supported", "says \"" not in out, out[-900:])
+    os.remove(os.path.join(c, "working_claude", "retrieval", "2026-10-21_flashpoint.md"))
+    build_of(c, lambda s: s["screens"]["s02"].update(facts={"−188 °C": "ICS safety sheet 29", "2-6 bar": "maker's data"}))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    check("F-facts: ... and one the build sheet names a source for is accepted", "says \"" not in out, out[-900:])
+
     # C8 / C9 - a photo in a real column; a photo in a figure fragment keeps its visible credit
     os.makedirs(os.path.join(tmp, "c8"))
     c, md = new_course(os.path.join(tmp, "c8"), script())
