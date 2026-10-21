@@ -269,7 +269,7 @@ PROBE = r"""
 <script>
 (function () {
   var SHOT = %(shot)s;
-  function out(r) { var p = document.createElement('pre'); p.id = '%(out)s'; p.textContent = JSON.stringify(r); document.body.appendChild(p); }
+  function out(r) { r.virt = Math.round(performance.now()); var p = document.createElement('pre'); p.id = '%(out)s'; p.textContent = JSON.stringify(r); document.body.appendChild(p); }
   function frames(n, cb) { setTimeout(cb, 40 * n); }      // a hidden browser's virtual clock runs timers, not frames
   function run() {
     var sb = document.getElementById('startBtn');
@@ -430,6 +430,7 @@ class _Run(object):
         self.out = os.path.join(prof, "dom.html")
         self.slot = browser_slots.slot()
         self.slot.__enter__()
+        self.t0, self.what = time.time(), "%s %dx%d" % ("shot" if shot_png else "probe", size[0], size[1])
         try:
             self.fh = io.open(self.out, "w", encoding="utf-8", errors="replace")
             self.p = subprocess.Popen(args + [url], stdout=self.fh, stderr=subprocess.DEVNULL, cwd=prof)
@@ -448,7 +449,12 @@ class _Run(object):
         finally:
             self.slot.__exit__(None, None, None)
         self.fh.close()
-        return ok, io.open(self.out, encoding="utf-8", errors="replace").read() if ok else ""
+        text = io.open(self.out, encoding="utf-8", errors="replace").read() if ok else ""
+        if os.environ.get("CF_TIMING"):            # 2.61.0: the run's real seconds and the page's own clock
+            import cf_timing
+            v = re.search(r'&quot;virt&quot;:(\d+)|"virt":(\d+)', text)
+            cf_timing.note("studio", self.what, time.time() - self.t0, virt=int(v.group(1) or v.group(2)) if v else None, ok=ok)
+        return ok, text
 
 
 def chrome(exe, url, size, prof, shot_png=None):

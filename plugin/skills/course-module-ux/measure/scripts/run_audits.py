@@ -30,6 +30,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from html import unescape
 from pathlib import Path
 
@@ -38,6 +39,7 @@ sys.path.insert(0, str(HERE))
 from test_audit_drawing import browser  # noqa: E402  - the one place that finds Chrome or Edge
 sys.path.insert(0, str(HERE.parents[2] / "course-factory" / "scripts"))
 import browser_slots  # noqa: E402  - one pool of hidden browsers for the whole computer (2.57.0)
+import cf_timing  # noqa: E402  - CF_TIMING: each run's real seconds and the page's own clock (2.61.0)
 import check_cache  # noqa: E402  - a slide audited clean is not measured again until it changes (2.57.0)
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -54,7 +56,7 @@ RUN = """<script>
        var r=await g.all(%s); o[n]={res:r, exit:window.__auditExit}; }
   catch(e){ o[n]={ABORTED:String(e&&e.stack||e)}; }
  }
- o.viewport=[window.innerWidth,window.innerHeight];
+ o.viewport=[window.innerWidth,window.innerHeight]; o.virt=Math.round(performance.now());
  var p=document.createElement('pre');p.id='AUDIT_OUT';p.textContent=JSON.stringify(o);document.body.appendChild(p);
 })();
 </script>"""
@@ -96,13 +98,16 @@ def measure(exe, deck, size, budget, offset=(0, 0), only=None):
     inject = scripts + RUN % (json.dumps([[n, g] for n, _, g in PROBES]), json.dumps(only))
     html = deck.read_text(encoding="utf-8")
     i = html.lower().rfind("</body>")
-    page = deck.with_name("_audit_%d.html" % os.getpid())
+    page = deck.with_name("_audit_%d_%dx%d.html" % ((os.getpid(),) + tuple(size)))     # one per viewport: they run side by side
     prof = tempfile.mkdtemp(prefix="run_audits_")
+    t0 = t1 = time.time()
     try:
         page.write_text(html[:i] + inject + html[i:] if i >= 0 else html + inject, encoding="utf-8")
-        p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
-                               "--window-size=%d,%d" % size, "--virtual-time-budget=%d" % budget, "--dump-dom", page.as_uri()],
-                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
+        with browser_slots.slot():
+            t1 = time.time()
+            p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
+                                "--window-size=%d,%d" % size, "--virtual-time-budget=%d" % budget, "--dump-dom", page.as_uri()],
+                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
     except subprocess.TimeoutExpired:
         return None, "the browser did not finish in 15 minutes"
     finally:
@@ -110,9 +115,12 @@ def measure(exe, deck, size, budget, offset=(0, 0), only=None):
             page.unlink()
         shutil.rmtree(prof, ignore_errors=True)
     m = re.search(r'<pre id="AUDIT_OUT">(.*?)</pre>', p.stdout, re.S)
+    res = json.loads(unescape(m.group(1))) if m else None
+    cf_timing.note("run_audits", "%dx%d %s" % (size[0] - offset[0], size[1] - offset[1], "slides %s" % len(only) if only else "whole"),
+                   time.time() - t1, queued=round(t1 - t0, 3), virt=(res or {}).get("virt"))
     if not m:
         return None, "the page gave no result (the deck may not load, or the budget is too short): " + p.stderr[-200:].strip()
-    return json.loads(unescape(m.group(1))), ""
+    return res, ""
 
 
 def short(items, n=4):
@@ -240,6 +248,8 @@ def main(argv=None):
     ap.add_argument("--cache", metavar="FILE", help="the slides last audited clean (2.57.0): a slide unchanged in everything "
                                                     "it loads since is not measured again (outside the course)")
     ap.add_argument("--full", action="store_true", help="with --cache: measure every slide again (and record the clean ones)")
+    ap.add_argument("--jobs", type=int, default=0, help="viewports measured at once (default: all of them, each taking a slot "
+                                                       "of the computer's pool of hidden browsers; 1 = one after the other)")
     a = ap.parse_args(argv)
     exe = browser()
     if not exe:
@@ -259,15 +269,15 @@ def main(argv=None):
     salt = check_cache.salt(*[str(HERE / js) for _, js, _ in PROBES], __file__,
                             extra="%s|%d|%s" % (check_cache.browser_id(exe), a.budget, offset))
     fps = check_cache.fingerprints(str(deck), True, salt) if a.cache else None
-    for size in sizes:
+
+    def viewport(size):
+        """one viewport measured: (label, units, slides to judge [] = none, only, result, error). 2.61.0: the viewports
+        run side by side, each in its own thread and hidden browser (a slot of the computer's pool each)"""
         label = "%dx%d" % size
         units = [("%s#%d" % (label, k), check_cache.sha(fp, label)) for k, (_, fp) in enumerate(fps)] if fps else None
         todo = [k for k, (key, fp) in enumerate(units) if not store.clean(key, fp)] if units else None
         if todo == []:
-            judged.append("0 of %d slides at %s" % (len(units), label))
-            if not a.quiet:
-                print("%s  unchanged  every slide clean at its last audit (%d slides) - not measured again" % (label, len(units)))
-            continue
+            return label, units, todo, None, None, ""
         only = todo if units and len(todo) < len(units) else None
         res, err = measure(exe, deck, size, a.budget, offset) if only is None else measure(exe, deck, size, a.budget, offset, only)
         if res is not None and units and counted(res) != {len(units)}:
@@ -275,6 +285,17 @@ def main(argv=None):
             if only is not None:
                 res, err = measure(exe, deck, size, a.budget, offset)
             units, only = None, None
+        return label, units, todo, only, res, err
+    import concurrent.futures as cf
+    with cf.ThreadPoolExecutor(max_workers=max(1, min(len(sizes), a.jobs or len(sizes)))) as ex:
+        measured = list(ex.map(viewport, sizes))
+    # what each viewport found is recorded and said in the viewports' order, as when they ran one after the other
+    for label, units, todo, only, res, err in measured:
+        if todo == []:
+            judged.append("0 of %d slides at %s" % (len(units), label))
+            if not a.quiet:
+                print("%s  unchanged  every slide clean at its last audit (%d slides) - not measured again" % (label, len(units)))
+            continue
         if res is None:
             print("%s  NOT MEASURED  %s" % (label, err))
             worst = 2

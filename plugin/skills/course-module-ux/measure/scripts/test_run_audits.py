@@ -87,6 +87,31 @@ def main():
         check("every probe clean: exit 0, three PASS lines", code == 0 and out.count("PASS") >= 3 and "every probe passed" in out, out)
         code, out = cli(str(STEPS), "--quiet")
         check("--quiet prints no passing line", code == 0 and "deck  " not in out, out)
+        # 2.61.0 - the viewports are measured side by side, and said in their own order whichever finishes first
+        import threading
+        import time
+        live, most, lock = [0], [0], threading.Lock()
+
+        def slow(exe, deck, size, budget, offset=(0, 0)):
+            with lock:
+                live[0] += 1
+                most[0] = max(most[0], live[0])
+            time.sleep(0.6 if size[0] == 1280 else 0.45)         # the first viewport finishes last
+            with lock:
+                live[0] -= 1
+            return dict(clean, viewport=list(size)), ""
+        ra.measure = slow
+        t = time.time()
+        code, out = cli(str(STEPS), "--viewport", "1024x768", "--viewport", "1920x1080")
+        took = time.time() - t
+        lines = [x.split()[0] for x in out.splitlines() if " PASS " in x]
+        check("three viewports run at once (2.61.0): all three measured together, in about the slowest one's time "
+              "(one after the other: 1.5 s)", code == 0 and most[0] == 3 and took < 1.4, (most[0], round(took, 2), out))
+        check("... and are said in the order asked for, not the order they finished",
+              lines == ["1280x800"] * 3 + ["1024x768"] * 3 + ["1920x1080"] * 3, lines)
+        live[0] = most[0] = 0
+        code, out = cli(str(STEPS), "--viewport", "1024x768", "--jobs", "1")
+        check("--jobs 1 measures one viewport after the other", code == 0 and most[0] == 1, most[0])
         ra.measure = lambda exe, deck, size, budget, offset=(0, 0): (None, "boom")
         code, out = cli(str(STEPS))
         check("a page that gave no result is exit 2, not a pass", code == 2 and "NOT MEASURED" in out, out)
@@ -113,6 +138,13 @@ def main():
           code == 1 and "1280x800  deck     PASS" in out and "1280x800  compose  FAIL" in out and out.count("WEAK -") >= 3, out)
     check("... and every probe wrote the verdict the others write (__auditExit 0/1)",
           all(full["1280x800"][k]["exit"] in (0, 1) for k in ("deck", "collide", "compose")), full.get("1280x800"))
+    # 2.61.0 - side by side, every probe finds exactly what one viewport after the other found (the page clock aside)
+    one_json = out_json.with_name("one.json")
+    code1, out1 = cli(str(STEPS), "--viewport", "1024x768", "--json", str(one_json), "--jobs", "1")
+    one = json.loads(one_json.read_text(encoding="utf-8")) if one_json.is_file() else {}
+    strip = lambda d: {k: {n: r for n, r in v.items() if n != "virt"} for k, v in d.items()}   # noqa: E731
+    check("the viewports side by side give the same results and the same report as one after the other",
+          one and strip(one) == strip(full) and (code1, out1) == (code, out), (code1, code))
     code, out = cli(str(STEPS), "--quiet")
     check("--quiet leaves out the passing probes", code == 1 and "deck  " not in out and "compose" in out, out)
     code, out = cli(str(SCROLL))

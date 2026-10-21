@@ -187,6 +187,26 @@ def main():
               scrolls("scrolls") and "8 px more than it shows" in scrolls("scrolls")[0]["detail"], sc)
         check("a slide that fits, and 1 px of scrollHeight rounding, are silent", not scrolls("fits") and not scrolls("rounding"), sc)
 
+        # 2.61.0 - a shape's outline is sampled once while its geometry is unchanged: every finding the same as when it was
+        # sampled every time (CONFIG.outlineCache false), on every fixture with findings, a moving one at two moments too
+        diffs, n = [], 0
+        for name, hash_ in (("drawing_defects.html", ""), ("drawing_contrast.html", ""), ("drawing_settle.html", ""),
+                            ("drawing_empty_kit.html", ""), ("drawing_motion.html", "#0"), ("drawing_motion.html", "#0.5"),
+                            ("drawing_photo.html", ""), ("deck_scroll.html", "")):
+            src = FIX / name
+            off = src.with_name("_off_" + name)
+            off.write_text(re.sub(r"<head>", "<head><script>window.__auditDrawingConfig={outlineCache:false}</script>",
+                                  src.read_text(encoding="utf-8"), count=1, flags=re.I), encoding="utf-8")
+            try:
+                a, b = page_out(exe, off, prof, hash_), page_out(exe, src, prof, hash_)
+            finally:
+                off.unlink()
+            n += len((b or {}).get("findings", []))
+            if a is None or a != b:
+                diffs.append((name + hash_, a, b))
+        check("the outline kept while its geometry is unchanged (2.61.0) finds exactly what sampling it every time found - "
+              "%d findings on 8 pages" % n, not diffs and n >= 20, diffs)
+
         fit = page_out(exe, FIX / "drawing_fit.html", prof) or {}
         sp = [float(v) for v in (fit.get("spills") or "0 0 0 0").split()]
         check("gb_fit widens a frame a drawing reaches past (up and right)", sp[1] < -16 and sp[0] + sp[2] > 108, fit)

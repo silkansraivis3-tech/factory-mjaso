@@ -46,6 +46,7 @@ import json
 import os
 import re
 import sys
+import threading
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -570,12 +571,13 @@ def task_page_findings(exe, script, slide, code, qs, build, mdir, figdir, tries=
     import tempfile
     import task_pages
     import drawing_check
-    task_pages.TRY.clear()
-    task_pages.TRY.update(tries or {})
-    try:
-        page = task_pages.page_html(script, slide, code, qs, build, mdir, figdir, "FIT", True, False, [])
-    finally:
+    with _TRY_LOCK:                # task_pages.TRY is one for the process: one page is built at a time (2.61.0)
         task_pages.TRY.clear()
+        task_pages.TRY.update(tries or {})
+        try:
+            page = task_pages.page_html(script, slide, code, qs, build, mdir, figdir, "FIT", True, False, [])
+        finally:
+            task_pages.TRY.clear()
     where = os.path.dirname(task_pages.page_path(mdir, slide, code, script))
     os.makedirs(where, exist_ok=True)
     f = os.path.join(where, "__fit_%s.html" % re.sub(r"\W", "", code.lower()))
@@ -611,48 +613,59 @@ def fix_tasks(course, module, figdir, fix=True):
         return [], []
     p = cs.paths(course, module)
     script, build = cs.load(p["script"]), cs.load(os.path.join(p["dir"], cs.mid(module) + ".build.json"))
+    # 2.61.0 - the pages are measured side by side, each in its own hidden browser (a slot of the computer's pool); a page's
+    # fits are its own questions', so no page changes another's. Said in the pages' order, as one after the other
+    sets = [(slide, code, qs) for slide, code, qs in task_pages.sets(script) if any(q["id"] in figs for q in qs)]
+    with cf.ThreadPoolExecutor(max_workers=max(1, min(4, len(sets)))) as ex:
+        done = list(ex.map(lambda st: task_set(exe, script, build, mdir, figdir, figs, fix, *st), sets))
+    return [x for f, _ in done for x in f], [x for _, l in done for x in l]
+
+
+_TRY_LOCK = threading.Lock()
+
+
+def task_set(exe, script, build, mdir, figdir, figs, fix, slide, code, qs):
+    """one task page's kit figures: measured, INSIDE fixed by itself where it can be -> ([lines fixed], [lines left])"""
+    import compile_module as cm
     fixed, left = [], []
-    for slide, code, qs in task_pages.sets(script):
-        mine = [q["id"] for q in qs if q["id"] in figs]
-        if not mine:
+    mine = [q["id"] for q in qs if q["id"] in figs]
+    base = task_page_findings(exe, script, slide, code, qs, build, mdir, figdir)
+    if base is None:
+        return fixed, left
+    out = {qid: [x for x in base.get(qid, [])] for qid in mine}
+    for name in sorted({os.path.basename(figs[q][0]) for q in mine}):
+        users = [q for q in mine if os.path.basename(figs[q][0]) == name]
+        bad = [q for q in users if any(x[0] == "inside" for x in out[q])]
+        if not (fix and bad):
             continue
-        base = task_page_findings(exe, script, slide, code, qs, build, mdir, figdir)
-        if base is None:
+        text = io.open(figs[users[0]][0], encoding="utf-8").read().strip()
+        try:
+            spec = json.loads(text)
+        except ValueError:
+            continue                                  # check_kit.py says so above
+        cand, k = inside_fix(spec)
+        if not k or spoiled(spec, cand):
             continue
-        out = {qid: [x for x in base.get(qid, [])] for qid in mine}
-        for name in sorted({os.path.basename(figs[q][0]) for q in mine}):
-            users = [q for q in mine if os.path.basename(figs[q][0]) == name]
-            bad = [q for q in users if any(x[0] == "inside" for x in out[q])]
-            if not (fix and bad):
-                continue
-            text = io.open(figs[users[0]][0], encoding="utf-8").read().strip()
-            try:
-                spec = json.loads(text)
-            except ValueError:
-                continue                                  # check_kit.py says so above
-            cand, k = inside_fix(spec)
-            if not k or spoiled(spec, cand):
-                continue
-            after = task_page_findings(exe, script, slide, code, qs, build, mdir, figdir, {name: cand})
-            if after is None:
-                continue
-            for q in bad:
-                now = after.get(q, [])
-                if any(x[0] == "inside" for x in now) or len(now) >= len(out[q]) or \
-                        not {x[0] for x in now} <= {x[0] for x in out[q]}:
-                    continue                              # never kept when it leaves a part out, or brings a new problem
-                how = "INSIDE: %d part(s) moved or drawn smaller to sit inside what they are on, measured on its task page" % k
-                fp = cm.fit_path(figdir, name, q)
-                os.makedirs(os.path.dirname(fp), exist_ok=True)
-                io.open(fp, "w", encoding="utf-8").write(json.dumps(
-                    {"source": cm.sha(text), "column": TASK_COLUMN, "how": how, "made_by": "figure_fit.py", "spec": cand},
-                    ensure_ascii=False, indent=1))
-                fixed.append("%s (%s, task page): fixed by itself - %s" % (q, name, how))
-                out[q] = now
-        for q in mine:
-            if out[q]:
-                left.append("%s (%s, task page): %s" % (q, os.path.basename(figs[q][0]),
-                                                        "; ".join(sorted({"%s - %s" % (c, short(pt)) for c, pt, _ in out[q]}))[:300]))
+        after = task_page_findings(exe, script, slide, code, qs, build, mdir, figdir, {name: cand})
+        if after is None:
+            continue
+        for q in bad:
+            now = after.get(q, [])
+            if any(x[0] == "inside" for x in now) or len(now) >= len(out[q]) or \
+                    not {x[0] for x in now} <= {x[0] for x in out[q]}:
+                continue                              # never kept when it leaves a part out, or brings a new problem
+            how = "INSIDE: %d part(s) moved or drawn smaller to sit inside what they are on, measured on its task page" % k
+            fp = cm.fit_path(figdir, name, q)
+            os.makedirs(os.path.dirname(fp), exist_ok=True)
+            io.open(fp, "w", encoding="utf-8").write(json.dumps(
+                {"source": cm.sha(text), "column": TASK_COLUMN, "how": how, "made_by": "figure_fit.py", "spec": cand},
+                ensure_ascii=False, indent=1))
+            fixed.append("%s (%s, task page): fixed by itself - %s" % (q, name, how))
+            out[q] = now
+    for q in mine:
+        if out[q]:
+            left.append("%s (%s, task page): %s" % (q, os.path.basename(figs[q][0]),
+                                                    "; ".join(sorted({"%s - %s" % (c, short(pt)) for c, pt, _ in out[q]}))[:300]))
     return fixed, left
 
 

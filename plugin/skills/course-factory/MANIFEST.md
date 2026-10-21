@@ -1518,6 +1518,26 @@ processes each starting their own hidden browsers (a test suite, a module rebuil
   planted on one slide re-checks that slide only and IS found, and again on the next run; a changed photo re-checks its
   slide, a changed design file every slide; the audits the same.
 
+## 4zz11 · A build's time measured, and the probes' own work cut - every check finds what it found (2.61.0, 2026-10-21)
+
+Aleksis: "why do builds wait so long on build_module.py". Measured first (`CF_TIMING=<file.jsonl>`: every hidden-browser
+run writes its real seconds and its page clock, `course-factory/scripts/cf_timing.py` adds them up; CPU profiles): the
+waits under `--virtual-time-budget` are nearly free, endless animations or not; the time is the drawing probe's own work -
+`getPointAtLength` was 21 of 53 s on IGF M02's deck, every outline sampled again at each motion phase and step.
+- `audit_drawing.js`: a shape's outline in its own units is kept while its geometry is unchanged (attributes, the CSS
+  geometry properties, its length, the number of points); only where it lands on screen is worked out each time, the
+  screen matrix once per shape. `CONFIG.outlineCache: false` samples every time. `test_audit_drawing.py`: 66 findings on
+  the defect fixtures identical either way.
+- `review_sheets.mjs`: a wait ends when every page timer the old fixed sleep let run has run and two frames are drawn -
+  never later than the sleep; gb_zoom's scan, which only adds, runs at once. `--fixed-waits` is the old way.
+  `test_review_sheets.py`: the same screens, pictures and grading either way.
+- `run_audits.py`: the viewports side by side (`--jobs 1`: one after the other); `figure_fit.fix_tasks`: the task pages
+  side by side.
+IGF M01 / M02 `--full` on a scratch copy, interleaved: median 82 -> 57 s and 183 -> 112 s, the review sheets halved; every
+build log, review fingerprint and grading the same, and a planted engine out of its room found word for word
+(`Desktop\M01_benchmark\speed_test\SPEED.md`). Not done: scoping `getAnimations()` (0.13 s of 53 s) and letting the
+drawing check skip a figure figure_fit judged (another frame and timing - not provably the same findings).
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.
