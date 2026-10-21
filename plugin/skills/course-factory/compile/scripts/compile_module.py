@@ -1837,6 +1837,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if photo_col:                      # the photograph is cropped to its column, which has the slide's height
             box = box.replace('class="fill fig"', 'class="fill fig photo-col"', 1)
             cls += " photo-col"
+            if credit_html:                # 2.60.0 - its credit is a strip at the column's foot, under the photo: the photo
+                # crops a little, the words beside it lose nothing (IGF M15 s01 / s06: a three-line credit under the slide
+                # made 108-133 words spill at 1024 x 768)
+                head_, tail_ = box.rsplit("</div>", 1)
+                box, credit_html = head_ + credit_html.strip() + "</div>" + tail_, ""
         if tid == "content-in-parts":
             ranges = line_ranges(b.get("parts"), len(lines)) if b.get("parts") else None
             if b.get("parts") and not ranges:

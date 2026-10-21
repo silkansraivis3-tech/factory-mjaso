@@ -730,12 +730,15 @@
     var dx = Math.max(0, b.x - a.x2, a.x - b.x2), dy = Math.max(0, b.y - a.y2, a.y - b.y2);
     return Math.sqrt(dx * dx + dy * dy);
   }
-  /* a label's words as the drawing audit judges them: the letters, the middle three-quarters of the line box */
+  /* a label's words as the drawing audit judges them: the letters, the middle three-quarters of the line box - of ONE
+     line (2.60.0): trimmed by the whole block, a four-line text lost a line's height and its last line was laid over the
+     next text's first (M01 benchmark s07, "cool the liquid" over the venting caption) */
   function textBox(t, M) {
     var b;
     try { b = t.getBBox(); } catch (e) { return null; }
     if (!b || (!b.width && !b.height)) return null;
-    var y = b.y + 0.18 * b.height, h = 0.74 * b.height;
+    var rows = Math.max(1, q(t, 'tspan').filter(function (s) { return s.style.display !== 'none'; }).length), lh = b.height / rows;
+    var y = b.y + 0.18 * lh, h = b.height - 0.26 * lh;
     return boxOf([onto(M, b.x, y), onto(M, b.x + b.width, y), onto(M, b.x, y + h), onto(M, b.x + b.width, y + h)]);
   }
   function outline(n, M) {
@@ -1880,7 +1883,7 @@
 
   /* log - the alarm list: newest on top, time-stamped, flashing until it settles */
   TYPES.log = function (fig, part, g, p) {
-    var w = p.w || 560, rows = p.rows || 2, rh = 24, k = 1, tx = 94, two = {}, lines2 = false;
+    var w = p.w || 560, rows = p.rows || 2, rh = 24, k = 1, tx = 94, two = {}, lines2 = false, msgY = 15.5;
     var box = el('rect', { width: w, height: 32 + rows * rh, rx: 10, 'class': 'kit-logbox' }, g);
     var head = el('text', { x: 14, y: 20, 'class': 'kit-tl' }, g, p.label || 'ALARM LOG');
     var body = el('g', { transform: 'translate(0 29)' }, g);
@@ -1919,7 +1922,21 @@
         }
       });
       g.removeChild(probe);
-      rh = (8 + 16 * lines2) * k;
+      /* 2.60.0: a row of several lines is as tall as its words MEASURED, with 7 above and below them, and they sit in its
+         middle - 16 a line fell behind the words once they grew to the 12.5 px floor: a three-line alarm stood 4 px under
+         the row's top, a narrow log's six-to-eight-line one on its foot (0-1 px). The drawing audit's old whole-block trim
+         hid both; it measures one line's letters now. A one-line row is as it was. */
+      rh = (8 + 16 * lines2) * k; msgY = 15.5 * k;
+      if (lines2 > 1) {
+        var pg = el('g', { 'aria-hidden': 'true' }, g), pb;          // lines2 rows of tall and deep letters, as styled
+        lines(pg, { x: 0, y: 0, 'class': 'kit-msg' }, new Array(lines2 + 1).join('Hg\n').slice(0, -1));
+        try { pb = pg.getBBox(); } catch (e) { pb = null; }
+        g.removeChild(pg);
+        if (pb && pb.height) {
+          rh = Math.max(rh, pb.height + 14 * k + 3);
+          msgY = (rh - 3 - pb.height) / 2 - pb.y;
+        }
+      }
       box.setAttribute('height', 32 * k + rows * rh);
       head.setAttribute('y', 20 * k);
       body.setAttribute('transform', 'translate(0 ' + (29 * k) + ')');
@@ -1933,10 +1950,10 @@
         var row = el('g', { 'class': 'kit-row kit-' + a.kind + (a === newest ? ' kit-new' : '') }, at);
         el('rect', { width: w - 16, height: rh - 3, rx: 5 }, row);
         el('rect', { width: 5, height: rh - 3, rx: 2, 'class': 'kit-sev' }, row);
-        el('text', { x: 16, y: 15.5 * k, 'class': 'kit-time' }, row, clock(fig, a.t));
+        el('text', { x: 16, y: msgY, 'class': 'kit-time' }, row, clock(fig, a.t));       // on the message's first line
         /* a wrapped alarm keeps the space it was broken at: lines() puts an undrawn space between rows, so "HIGH PRESSURE"
            over "ALARM" reads "HIGH PRESSURE ALARM" to a screen reader and to the drawing audit (K11, 2.49.1) */
-        lines(row, { x: tx, y: 15.5 * k, 'class': 'kit-msg' }, two[a.text] ? two[a.text].join('\n') : a.text);
+        lines(row, { x: tx, y: msgY, 'class': 'kit-msg' }, two[a.text] ? two[a.text].join('\n') : a.text);
       });
     };
   };

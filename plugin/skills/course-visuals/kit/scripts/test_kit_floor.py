@@ -124,6 +124,55 @@ window.addEventListener('load', function () {
 </script></body></html>"""
 
 
+# 2.60.0 - M01 benchmark s07: two revealed texts, "cool the liquid" (the last of four lines) printed on "no venting to
+# atmosphere"; the studio and the drawing check were clean, only the review sheet saw it
+STACK = {"size": [640, 390], "label": "boil-off", "parts": [
+    {"id": "BO", "type": "boil_off", "x": 20, "y": 44, "w": 260, "h": 140, "heatLabel": "heat leaks in"},
+    {"id": "TW", "type": "text", "x": 14, "y": 280, "anchor": "start", "reveal": True,
+     "text": "reliquefy the vapour\nburn it in a thermal oxidiser\nlet pressure build in the tank\ncool the liquid"},
+    {"id": "TV", "type": "text", "x": 14, "y": 336, "anchor": "start", "reveal": True, "text": "no venting to atmosphere,\nexcept in an emergency"}],
+    "steps": [{"title": "1", "play": [["BO", 1, 0]]}, {"title": "2", "play": [["TW", 1, 0]]}, {"title": "3", "play": [["TV", 1, 0]]}]}
+STACK_PAGE = """<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="%(css)s">
+<style>body{margin:0;background:#0d1b2a}.w{width:560px}.w svg{display:block;width:100%%;height:auto}</style>
+</head><body><div class="w"></div><pre id="out"></pre><script src="%(js)s"></script><script src="%(aud)s"></script>
+<script>
+window.addEventListener('load', function () {
+  var f = KIT.mount(document.querySelector('.w'), %(spec)s), out = {};
+  setTimeout(function () {
+    KIT.layoutAll(true);
+    f.go(3, true);
+    function box(id) { return f.svg.querySelector('[data-kit-id="' + id + '"] text').getBoundingClientRect(); }
+    function zone() { return (AuditDrawing.page().findings || []).filter(function (x) { return x.check === 'text zone' &&
+      /part TW/.test(x.part + x.other) && /part TV/.test(x.part + x.other); }).length; }
+    out.gap = +(box('TV').top - box('TW').bottom).toFixed(1);
+    out.laid = zone();
+    /* the benchmark's placement: the venting words moved up until their line box stands 4 px into the last line's */
+    var g = f.svg.querySelector('[data-kit-id="TV"] .kit-lbl'), d = box('TV').top - box('TW').bottom + 4, k = f.svg.getScreenCTM().a;
+    g.setAttribute('transform', 'translate(0 ' + (-d / k).toFixed(2) + ') ' + (g.getAttribute('transform') || ''));
+    out.forced = +(box('TV').top - box('TW').bottom).toFixed(1);
+    out.found = zone();
+    document.getElementById('out').textContent = JSON.stringify(out);
+  }, 300);
+});
+</script></body></html>"""
+
+
+def stack_part(exe, tmp):
+    page = tmp / "stack.html"
+    aud = KIT.parent.parent / "course-module-ux" / "measure" / "scripts" / "audit_drawing.js"
+    page.write_text(STACK_PAGE % {"css": (KIT / "kit.css").as_uri(), "js": (KIT / "kit.js").as_uri(), "aud": aud.as_uri(),
+                                  "spec": json.dumps(STACK)}, encoding="utf-8")
+    p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + str(tmp / "prof3"),
+                        "--allow-file-access-from-files", "--window-size=1000,700", "--virtual-time-budget=8000",
+                        "--dump-dom", page.as_uri()], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
+    m = re.search(r'<pre id="out">(.*?)</pre>', p.stdout, re.S)
+    r = json.loads(unescape(m.group(1))) if m and m.group(1).strip() else {}
+    check("2.60.0: the kit lays two revealed texts apart - the venting words stand clear of the four-line text's last line",
+          r.get("gap", -9) >= 0 and r.get("laid") == 0, r)
+    check("... and the drawing audit reports two different labels whose lines stand into each other (4 px), stacked as they were",
+          r.get("forced", 9) < -3 and r.get("found", 0) >= 1, r)
+
+
 def gone_part(exe, tmp):
     page = tmp / "gone.html"
     page.write_text(GONE_PAGE % {"css": (KIT / "kit.css").as_uri(), "js": (KIT / "kit.js").as_uri(), "spec": json.dumps(GONE)},
@@ -152,6 +201,7 @@ def main():
     tmp = Path(tempfile.mkdtemp(prefix="kitfloor_"))
     try:
         gone_part(exe, tmp)
+        stack_part(exe, tmp)
         widths = list(range(560, 760, 2))
         hosts = "".join('<div class="w" style="width:%dpx"></div>' % w for w in widths)
         page = tmp / "floor.html"

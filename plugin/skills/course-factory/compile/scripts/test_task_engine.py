@@ -769,7 +769,7 @@ DECK_FIT = r"""
         out.vp = [innerWidth, innerHeight];
         function show(s) { slides.forEach(function (x) { x.classList.remove('active'); }); s.classList.add('active'); void s.offsetHeight; }
         slides.forEach(function (s) {
-          var c = s.querySelector(':scope > .credit'), rb = s.querySelector('.slide-body.recap');
+          var c = s.querySelector('.credit'), rb = s.querySelector('.slide-body.recap');
           if (c) {
             show(s);
             var cr = R(c), bad = [], w, n;
@@ -794,7 +794,7 @@ DECK_FIT = r"""
             }
             var sb2 = s.querySelector('.slide-body');
             if (sb2 && sb2.scrollHeight - sb2.clientHeight > 1) { bad.push('the body spills ' + (sb2.scrollHeight - sb2.clientHeight) + ' px'); }
-            out.credits.push({id: s.id, cls: s.className, h: Math.round(cr.b - cr.t), bad: bad});
+            out.credits.push({id: s.id, cls: s.className, h: Math.round(cr.b - cr.t), bad: bad, inCol: !!c.closest('.fill.photo-col')});
           }
           if (rb) {
             show(s);
@@ -869,17 +869,21 @@ def deck_fit_part(exe, tmp):
              "text": tcm.M01_S01, "visual": "A gas-fuelled ship - a real photograph.", "minutes": 4},
             {"id": "s03", "kind": "slide", "title": "The safety principles of the IGF Code", "layout": "split", "visual_kind": "photo",
              "text": M05_S03, "visual": "A fixed gas detector - a real photograph.", "minutes": 4},
+            {"id": "s04", "kind": "slide", "title": "The bunker station", "layout": "visual_wide", "visual_kind": "photo",
+             "text": "The hose is earthed before it is connected.", "visual": "The bunker station - a real photograph.", "minutes": 2},
         ] + json.loads(json.dumps(tcm.SCREENS[4:6])) + [
             {"id": "s05", "kind": "slide", "recap": True, "title": "What to take away", "visual_kind": "none", "text": recap, "minutes": 2},
         ] + json.loads(json.dumps(tcm.SCREENS[6:]))
         c, md = tcm.new_course(os.path.join(tmp, "fit_" + name), tcm.script(screens=screens), build=False)
         img = os.path.join(md, "assets", "img")
-        for k, f in enumerate(("ship.jpg", "deck.jpg", "station.jpg")):     # three pictures, not one shown three times (L58)
+        for k, f in enumerate(("ship.jpg", "deck.jpg", "station.jpg", "hose.jpg")):   # four pictures, not one shown four times (L58)
             io.open(os.path.join(img, f), "wb").write(tcm.png(1200, 800, (90 + 20 * k, 110, 140)))
-        tcm.cs.save(os.path.join(img, "_photo_meta.json"), {"ship.jpg": LONG_CREDIT, "deck.jpg": LONG_CREDIT, "station.jpg": MID_CREDIT})
+        tcm.cs.save(os.path.join(img, "_photo_meta.json"), {"ship.jpg": LONG_CREDIT, "deck.jpg": LONG_CREDIT, "station.jpg": LONG_CREDIT,
+                                                            "hose.jpg": MID_CREDIT})
         tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
             "s01": {"figure": "assets/img/ship.jpg"}, "s02": {"figure": "assets/img/deck.jpg"},
-            "s03": {"figure": "assets/img/station.jpg", "composition": "wide-left", "split": 0.6}, "t01": {"try_tablet": False}}})
+            "s03": {"figure": "assets/img/station.jpg", "composition": "wide-left", "split": 0.6},
+            "s04": {"figure": "assets/img/hose.jpg", "composition": "stage"}, "t01": {"try_tablet": False}}})
         code, out = tcm.run(tcm.COMPILE, c, "--module", "1")
         page = os.path.join(md, "presentation", "index.html")
         check("%s: the photo and recap fixture builds" % name, code == 0 and os.path.isfile(page), out[-600:])
@@ -889,7 +893,8 @@ def deck_fit_part(exe, tmp):
             check("%s: no script error, measured at the size asked for" % tag, not r.get("errors") and r.get("vp") == list(size), r.get("errors") or r.get("vp"))
             if name == "m02":
                 cr = r.get("credits") or []
-                check("%s: three photo slides with a credit (full screen, split, photo column)" % tag, len(cr) == 3, cr)
+                check("%s: four photo slides with a credit (full screen, split, photo column - its credit at the column's foot - "
+                      "and a stage)" % tag, len(cr) == 4 and [x["inCol"] for x in cr] == [False, False, True, False], cr)
                 check("%s: no credit lies over its photograph, a word, the footer line or under the chrome - and the body beside a "
                       "photo column (M05 s03's 121 words) keeps its room" % tag, cr and not any(x["bad"] for x in cr),
                       [(x["id"], x["bad"][:3]) for x in cr if x["bad"]])
@@ -897,6 +902,45 @@ def deck_fit_part(exe, tmp):
             check("%s: the %s-box recap fits the slide - nothing past its foot, no box cutting its words, 'Next' clear of the chrome"
                   % (tag, rc.get("n")), rc.get("over", 99) <= 0 and rc.get("cut", 99) <= 1 and not rc.get("chrome"), rc)
             check("%s: ... with the words at their size (17 px or more)" % tag, rc.get("fs", 0) >= 17, rc)
+
+
+INSET_KIT = {"size": [400, 220], "label": "A fuel tank and the vent mast", "parts": [
+    {"id": "T", "type": "tank", "x": 30, "y": 100, "w": 200, "h": 80, "label": "Fuel tank", "value": 0.5},
+    {"id": "V", "type": "vent", "x": 330, "y": 60, "label": "Vent mast"}],
+    "steps": [{"title": "The tank fills", "line": 1, "play": [["T", 0.8, 0]]}]}
+
+
+def inset_part(exe, tmp):
+    """2.60.0 (M01 benchmark, compiler_v259 runs 5-9: four of eleven runs only the review sheet saw it) - a real photo laid
+    "over" a kit drawing: the photo and its wrapped caption / credit lay over the kit's labels and ran onto the step
+    buttons, and the drawing check was clean. Now it is a finding (audit_drawing.js INSET); a short credit on a blank
+    corner is not."""
+    print("\n-- 2.60.0: a photo laid over a kit drawing, judged against its words and the buttons")
+    for name, over, cap, want in (
+            ("covers", {"x": 20, "y": 90, "w": 230}, "The deck tanks of a gas-fuelled ferry, seen from the bridge wing, before bunkering.", True),
+            ("corner", {"x": 245, "y": 110, "w": 100}, "", False)):
+        os.makedirs(os.path.join(tmp, "in_" + name))
+        c, md = tcm.new_course(os.path.join(tmp, "in_" + name), tcm.script(), build=False)
+        io.open(os.path.join(md, "assets", "img", "ship.jpg"), "wb").write(tcm.png(300, 200, (120, 130, 150)))
+        tcm.cs.save(os.path.join(c, "working_claude", "figures", "M01", "tank.kit.json"), INSET_KIT)
+        ins = {"photo": "assets/img/ship.jpg", "over": over, "credit": "Photo: J. Doe · CC BY-SA 4.0" if not cap else
+               "Photo: Jane Doe (Wikimedia Commons user), own work · Wikimedia Commons · CC BY-SA 4.0 · resized"}
+        if cap:
+            ins["caption"] = cap
+        tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+            "s01": {"figure": "assets/fig/scale.svg"}, "s02": {"figure": "tank.kit.json", "dark": True, "inset": ins},
+            "s04": {"figure": "hull.svg", "dark": True, "declined_3d": "the fixture's hull stays flat"}, "t01": {"try_tablet": False}}})
+        code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
+        page = os.path.join(md, "presentation", "index.html")
+        check("%s: the kit slide with its photo 'over' builds" % name, os.path.isfile(page) and 'class="inset over"' in io.open(page, encoding="utf-8").read(), out[-500:])
+        probs, note = drawing_check.check([page], root=md)
+        found = [x for x in probs if ": inset - " in x]
+        if want:
+            check("covers: the photo and its caption are found over the drawing's words (Fuel tank) - and past the drawing",
+                  any("Fuel tank" in x and "lies over the drawing's words" in x for x in found) and any("past the drawing" in x for x in found),
+                  found or probs or note)
+        else:
+            check("corner: a short credit on a blank corner of the drawing is clean", not found and not note, found or note)
 
 
 BLIND_LOOK = ("var seen = []; document.querySelectorAll('.scr[data-script]').forEach(function (s) {"
@@ -977,6 +1021,7 @@ def main():
               "fixed" in look.get("cargo", "") and look.get("cargo", "").endswith("|tray") and look.get("permit", "").endswith("|3"), look)
         blind_part(exe, page, tmp)
         deck_fit_part(exe, tmp)
+        inset_part(exe, tmp)
         figures_part(exe, tmp)
         fixes_part(exe, tmp)
         picture_part(exe, tmp)
