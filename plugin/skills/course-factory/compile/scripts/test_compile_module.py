@@ -1940,9 +1940,9 @@ def main():
         check("a task slide carries the tablet sign and its lines grouped",
               'class="act-ico"' in section(page, "t01") and '<div class="act-lines">' in section(page, "t01"))
         # 2.63.0 (the instructors' review: "bad iconography - an exercise photo or better icons")
-        check("... a tablet task's sign is a tablet - its bezel, screen and camera - with the way of answering on the screen; "
-              "the module check's a check list", 'data-icon="choose"' in section(page, "t01") and 'r="1.2"' in section(page, "t01")
-              and 'scale(.78)' in section(page, "t01") and 'data-icon="check"' in section(page, "t02"), section(page, "t02")[:900])
+        check("... a tablet task's sign is a tablet - its bezel, screen and camera - with the way of answering on the screen, "
+              "the module check's too", 'data-icon="choose"' in section(page, "t01") and 'r="1.2"' in section(page, "t01")
+              and 'scale(.78)' in section(page, "t01") and 'r="1.2"' in section(page, "t02"), section(page, "t02")[:900])
         sp = dict(script(), screens=json.loads(json.dumps(SCREENS)))
         pg = cm.compile_deck(sp, {"screens": {"t02": {"photo": "assets/img/ship.jpg"}}}, md, None, "x", True)[0]
         t2 = re.search(r'<section [^>]*data-activity="MC".*?</section>', pg, re.S).group(0)

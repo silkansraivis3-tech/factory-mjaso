@@ -79,6 +79,7 @@ Compiled slides (2.25.1, §13b — written by `course-factory/compile/`, usable 
 | `.slide-body.dom-fig` | written by the compiler (2.52.0): the figure first in the markup - first on a portrait tablet - and the words put back first on a landscape screen by CSS `order`; never typed by hand |
 | `.slide.photo.split` | a photograph filling the right of the screen, the words on the dark left |
 | `.act-ico` · `.act-lines` | the task slide's tablet sign · its lines grouped at reading size |
+| `.act-photo` | (2.63.0) the exercise's real photograph on its task slide, in place of the sign (build sheet `"photo"`); opens full screen with its record |
 | `.aside` | small drawings that belong with the words (mini figures on a photo slide) - compact, never pushing the words off the screen |
 | `.fig` · `.fig-wide` · `.fig-first` · `.dom-fig` · `.own-numbers` · `.split` | the modifiers above, named on their own for the vocabulary check |
 | `.cur` · `.lit` on a `[data-i]` line | **set by a figure that steps** — the line it is on (amber wash, amber ring and bar; it out-ranks every card look) and the lines already shown (blue). Amber on a line means "here now" only: no card at rest is amber. `audit_deck.js` fails a selected line that looks like itself or another line at rest |
