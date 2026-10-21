@@ -96,7 +96,7 @@ def main():
             with lock:
                 live[0] += 1
                 most[0] = max(most[0], live[0])
-            time.sleep(0.6 if size[0] == 1280 else 0.1)          # the first viewport finishes last
+            time.sleep(0.6 if size[0] == 1280 else 0.45)         # the first viewport finishes last
             with lock:
                 live[0] -= 1
             return dict(clean, viewport=list(size)), ""
@@ -105,8 +105,8 @@ def main():
         code, out = cli(str(STEPS), "--viewport", "1024x768", "--viewport", "1920x1080")
         took = time.time() - t
         lines = [x.split()[0] for x in out.splitlines() if " PASS " in x]
-        check("three viewports run at once (2.61.0): all three measured together, in about the slowest one's time",
-              code == 0 and most[0] == 3 and took < 1.2, (most[0], round(took, 2), out))
+        check("three viewports run at once (2.61.0): all three measured together, in about the slowest one's time "
+              "(one after the other: 1.5 s)", code == 0 and most[0] == 3 and took < 1.4, (most[0], round(took, 2), out))
         check("... and are said in the order asked for, not the order they finished",
               lines == ["1280x800"] * 3 + ["1024x768"] * 3 + ["1920x1080"] * 3, lines)
         live[0] = most[0] = 0

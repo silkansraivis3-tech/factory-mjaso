@@ -18,6 +18,8 @@
       clean check (the drawing check and the audits; the figures already did) - a failing one is judged every time,
       --full judges everything. Hidden browsers come from ONE pool for the whole computer (half the cores, at most 8,
       CF_BROWSER_SLOTS): two builds, or a build and the test suite, queue instead of overloading the PC.
+      (2.61.0) A slow build is measured, not guessed: set CF_TIMING=<file.jsonl> and every hidden-browser run writes its
+      real seconds and its page clock there; `python course-factory/scripts/cf_timing.py <file.jsonl>` adds them up.
 5  on PASS it has photographed every slide, every figure step and every question (asked, wrong, right) onto a few
       sheets and checked that every question grades right and wrong answers as such. Give the sheets to ONE review
       subagent (model haiku) with compile/REVIEW_PROMPT.md. It labels each finding BROKEN or POLISH (2.56.0). Fix every

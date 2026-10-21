@@ -46,9 +46,10 @@ const TIMERS = `(function(){ if (window.__rvq) return;
   var st=window.setTimeout, ct=window.clearTimeout, si=window.setInterval, ci=window.clearInterval, raf=window.requestAnimationFrame;
   var due=new Map(), now=function(){ return performance.now(); };
   function call(fn, a, self){ return typeof fn === 'function' ? fn.apply(self, a) : (0, eval)(String(fn)); }
-  window.setTimeout=function(fn, ms){ var a=[].slice.call(arguments, 2), id=st.call(window, function(){ due.delete(id); return call(fn, a, this); }, ms);
-    due.set(id, now() + Math.max(0, +ms || 0)); return id; };
-  window.clearTimeout=function(id){ due.delete(id); return ct.call(window, id); };
+  var zoom = new Set();               /* gb_zoom.js's scan, 250 ms after every change of the page - see wait() */
+  window.setTimeout=function(fn, ms){ var a=[].slice.call(arguments, 2), id=st.call(window, function(){ due.delete(id); zoom.delete(id); return call(fn, a, this); }, ms);
+    due.set(id, now() + Math.max(0, +ms || 0)); if (window.GBZoom && fn === window.GBZoom.scan) zoom.add(id); return id; };
+  window.clearTimeout=function(id){ due.delete(id); zoom.delete(id); return ct.call(window, id); };
   window.setInterval=function(fn, ms){ var a=[].slice.call(arguments, 2), p=Math.max(0, +ms || 0), id=si.call(window, function(){ due.set(id, now() + p); return call(fn, a, this); }, ms);
     due.set(id, now() + p); return id; };
   window.clearInterval=function(id){ due.delete(id); return ci.call(window, id); };
@@ -57,6 +58,14 @@ const TIMERS = `(function(){ if (window.__rvq) return;
       function end(){ if (!done) { done = true; res(1); } }
       st.call(window, end, Math.max(0, until - now()) + 20);            /* never past the fixed wait, frames or not */
       (function tick(){ raf.call(window, function(){ frames++; if (done) return; var busy=false;
+        /* gb_zoom's scan only ADDS (a class on each picture, a corner button where there is none) from what the page
+           is: run now, it leaves what it would leave at its time - its own button re-arms it, and the scan after
+           that changes nothing. So a scan due before the end of the wait is run at once, not waited for (it was
+           most of the new waits: 8 of 10 s on M01's task pages) */
+        var early = []; zoom.forEach(function(id){ if (due.get(id) <= until) early.push(id); });
+        for (var z = 0; early.length && z < 5; z++) { early.forEach(function(id){ due.delete(id); zoom.delete(id); });
+          try { window.GBZoom.scan(); } catch (e) {}
+          early = []; zoom.forEach(function(id){ if (due.get(id) <= until) early.push(id); }); }
         due.forEach(function(d){ if (d <= until) busy = true; });
         if (now() >= until || (frames >= 2 && !busy)) end(); else tick(); }); })(); }); } };
 })()`;
