@@ -225,10 +225,12 @@ def long_layouts_part(tmp):
     sys.path.insert(0, HERE)
     import compile_module as cm
     s = {"layout": "visual_full", "text": M01_S01}
-    check("a full-screen photograph with more than %d words is laid out beside them (two-col: the split photo); a short one "
-          "stays full screen" % cm.STAGE_MAX_WORDS,
-          cm.composition(s, {}, True, True) == "two-col" and cm.composition(dict(s, text="Gas as fuel."), {}, True, True) == "photo"
-          and cm.composition(s, {"composition": "photo"}, True, True) == "photo", cm.composition(s, {}, True, True))
+    check("a full-screen photograph with more than %d words is laid out beside them in its own column (wide-left, 2.62.1 - "
+          "the split photo's fixed box spilled in every M01 / M02 run); a short one stays full screen; asked for, either stays"
+          % cm.STAGE_MAX_WORDS,
+          cm.composition(s, {}, True, True) == "wide-left" and cm.composition(dict(s, text="Gas as fuel."), {}, True, True) == "photo"
+          and cm.composition(s, {"composition": "photo"}, True, True) == "photo"
+          and cm.composition(s, {"composition": "two-col"}, True, True) == "two-col", cm.composition(s, {}, True, True))
     os.makedirs(os.path.join(tmp, "rl"))
     screens = json.loads(json.dumps(SCREENS))
     screens[0]["text"] = M01_S01
@@ -236,7 +238,8 @@ def long_layouts_part(tmp):
                                                              "visual_kind": "none", "text": M02_S16, "minutes": 2})
     c, md = new_course(os.path.join(tmp, "rl"), script(screens=screens))
     code, out = run(COMPILE, c, "--module", "1")
-    check("the long fixture builds", code == 0 and 'class="slide photo split"' in section(deck(md), "s01"), out)
+    check("the long fixture builds - the opening's photo in its own column beside the words",
+          code == 0 and "wide-left photo-col" in section(deck(md), "s01") and "photo split" not in section(deck(md), "s01"), out)
     audits = os.path.join(SKILLS, "course-module-ux", "measure", "scripts", "run_audits.py")
     code, aout = run(audits, os.path.join(md, "presentation", "index.html"), "--viewport", "1024x768", "--quiet")
     bad = [x for x in aout.splitlines() if re.search(r"\((s01|s05)\)", x) and re.search(r"spills|under #chrome|over-filled", x)]
@@ -1013,10 +1016,11 @@ def variety_part(tmp):
           cm.choose_layout(dr, [dr[0]["key"]], left) == (dr[0], False), left)
     s = {"id": "d1", "title": "T", "text": "Words."}
     av = {"d1": {"words": cm.words_key(s), "avoid": [["picture-left", "light"]]}}
-    check("a measured-out way holds while the slide's approved words and build-sheet entry are the same, and is forgotten "
-          "when either changes (the builder's \"parts\" may make it fit)",
+    check("a measured-out way holds while the slide's approved words and picture are the same, and is forgotten when "
+          "either changes; an edit to the rest of its build-sheet entry keeps it (2.62.1)",
           cm.measured_out(av, s) == [("picture-left", "light")] and cm.measured_out(av, dict(s, text="Other words.")) == []
-          and cm.measured_out(av, s, {"parts": [[1, 1]]}) == []
+          and cm.measured_out(av, s, {"figure": "other.html"}) == []
+          and cm.measured_out(av, s, {"labels": {"T1": "below"}}) == [("picture-left", "light")]
           and cm.measured_out({}, s) == [] and cm.measured_out(None, s) == [])
     sid, vk = moved[0][0], re.search(r'data-varied="([\w-]+)\|(\w+)\|(\w+)"', moved[0][1]).groups()
     os.makedirs(os.path.join(c, "working_claude", "_build"), exist_ok=True)
@@ -1028,6 +1032,28 @@ def variety_part(tmp):
           again and cm.layout_key(again) != (vk[0], vk[1]) and 'data-varied="%s|%s|' % (vk[0], vk[1]) not in again,
           (vk, again and cm.layout_key(again)))
     os.remove(os.path.join(c, "working_claude", "_build", "M01_layout_avoid.json"))
+
+    print("\n-- 2.62.1: a slide keeps the way it was built last time")
+    lay = os.path.join(c, "working_claude", "_build", "M01_layouts.json")
+    kept = json.load(io.open(lay, encoding="utf-8")) if os.path.isfile(lay) else {}
+    page2 = deck(md)
+    secs2 = {re.search(r'id="(\w+)"', x).group(1): x for x in re.findall(r"<section [^>]*>.*?</section>", page2, re.S)}
+    check("the compile writes each teaching slide's way and its words' key (M01_layouts.json)",
+          kept and all(tuple(v["key"]) == cm.layout_key(secs2[k]) for k, v in kept.items() if k in secs2)
+          and set(kept) >= {i for i in ids if i.startswith(("d", "p"))}, (sorted(kept), sorted(secs2)))
+    o = cm.layout_options("explain-figure", "figure-right", True, 40, {}, "wide-left", False, False, True)
+    left_ = next(x for x in o if x["key"][0] == "picture-left")
+    check("the way it had last time is kept while it is unlike the slide before - even where the first fresh choice would "
+          "be another", cm.choose_layout(o, [("text", "light")], (), left_["key"]) == (left_, True))
+    check("... never when it now repeats the slide before, and never once it was measured out",
+          cm.choose_layout(o, [left_["key"]], (), left_["key"])[0] is not left_
+          and cm.choose_layout(o, [("text", "light")], [left_["key"]], left_["key"])[0] is not left_)
+    check("... and only while the slide's words and picture are the same",
+          cm.last_layout({"d1": {"words": cm.words_key(s), "key": ["picture-left", "light"]}}, s) == ("picture-left", "light")
+          and cm.last_layout({"d1": {"words": cm.words_key(s), "key": ["picture-left", "light"]}}, dict(s, text="New.")) is None)
+    run(COMPILE, c, "--module", "1", "--force")
+    check("built again unchanged, every slide keeps its way", {k: cm.layout_key(v) for k, v in secs2.items()} ==
+          {re.search(r'id="(\w+)"', x).group(1): cm.layout_key(x) for x in re.findall(r"<section [^>]*>.*?</section>", deck(md), re.S)})
 
     print("\n-- L62: a small photograph is enlarged, never shown as blocks of pixels")
     big = Image.open(os.path.join(md, "assets", "img", "p1.png")).size

@@ -1399,9 +1399,12 @@ def composition(s, b, is_photo, has_fig):
     if lay == "visual_full":
         # 2.52.0 - words over a full-screen photograph sit in a fixed column on a scrim: past STAGE_MAX_WORDS they spill off
         # the slide (IGF M01 s01, 70 words: 18 px at 1280 x 800, 42 px at 1024 x 768, every benchmark build; M02 s01, 82
-        # words: 8 / 32 px), and M03-M15 each set "two-col" by hand. A long one is the photo beside the words (split).
+        # words: 8 / 32 px), and M03-M15 each set "two-col" by hand. A long one is the photo beside the words.
+        # 2.62.1 - in its own column (wide-left), not the split photo: the split's words sit in one fixed box with no parts,
+        # and with the larger logo the openings spilled 19-46 px in all 5 runs of the M01 / M02 build (14 of 64 logged
+        # runs since 2.56, M01 M02 M13); a builder's "parts" there did nothing. The column takes parts and is measured
         if is_photo:
-            return "photo" if cs.wc(s.get("text", "")) <= STAGE_MAX_WORDS else "two-col"
+            return "photo" if cs.wc(s.get("text", "")) <= STAGE_MAX_WORDS else "wide-left"
         return "stage"
     if lay == "split":
         return "two-col" if has_fig else "flow"
@@ -1685,11 +1688,17 @@ def layout_options(tid, variant, is_photo, words, b, comp, own_left, own_dark, d
     return opts
 
 
-def choose_layout(opts, recent, measured_out=()):
+def choose_layout(opts, recent, measured_out=(), prefer=None):
     """the first way that looks unlike the last VARIETY_WINDOW slides - the slide's own first; failing that, unlike the
     slide before; failing that, its own (the build then reports the repeat). measured_out: the other ways this slide was
-    built and the audit found did not fit (build_module.py, 2.62.0) - never tried again while its words are the same"""
+    built and the audit found did not fit (build_module.py, 2.62.0) - never tried again while its words are the same.
+    prefer (2.62.1): the way it was built last time, kept while it is still unlike the slide before - a fix on one slide
+    no longer moves its neighbours to a new way the audit has not seen (every 2.62.0 build retried other slides)"""
     opts = opts[:1] + [o for o in opts[1:] if o["key"] not in measured_out]
+    if prefer:
+        p = next((o for o in opts if o["key"] == tuple(prefer)), None)
+        if p and (not recent or p["key"] != recent[-1]):
+            return p, p is not opts[0]
     for avoid in (recent[-VARIETY_WINDOW:], recent[-1:]):
         for o in opts:
             if o["key"] not in avoid:
@@ -1787,21 +1796,47 @@ def active_mins(s):
 
 
 def words_key(s, b=None):
-    """the slide's approved words and its build-sheet entry, short - a layout measured out (layout_avoid) holds only
-    while both are the same (the builder's "parts" or another picture may make it fit)"""
-    return hashlib.sha1(("%s\n%s\n%s" % (s.get("title") or "", s.get("text") or "", json.dumps(b or {}, sort_keys=True)))
+    """the slide's approved words and its picture, short - a layout measured out (layout_avoid) or kept from the last
+    build (layouts) holds only while both are the same. 2.62.1: the picture only, not the whole build-sheet entry - every
+    edit a builder made to a slide's entry (its labels, a split) forgot what was measured and tried the misfits again"""
+    return hashlib.sha1(("%s\n%s\n%s" % (s.get("title") or "", s.get("text") or "", (b or {}).get("figure") or ""))
                         .encode("utf-8")).hexdigest()[:12]
 
 
+def load_layout_avoid(work, mid_):
+    """working_claude\\_build\\<M01>_layout_avoid.json - the layouts build_module.py measured out; {} when there is none.
+    Every builder of the deck reads it - the compile and the studio / figure_fit alike, so a figure is measured on the
+    layout the deck really has (2.62.1)"""
+    try:
+        return json.load(io.open(os.path.join(work, "_build", "%s_layout_avoid.json" % mid_), encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def load_layouts(work, mid_):
+    """working_claude\\_build\\<M01>_layouts.json - each teaching slide's way as the last compile built it
+    {sid: {"words": words_key, "key": [shape, ground]}}; {} when there is none (2.62.1)"""
+    try:
+        return json.load(io.open(os.path.join(work, "_build", "%s_layouts.json" % mid_), encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
 def measured_out(avoid, s, b=None):
-    """the layouts build_module.py measured out for this slide: [(shape, ground), ...] while its words and build-sheet
-    entry are unchanged"""
+    """the layouts build_module.py measured out for this slide: [(shape, ground), ...] while its words and picture are
+    unchanged"""
     a = (avoid or {}).get(s.get("id")) or {}
     return [tuple(k) for k in a.get("avoid") or []] if a.get("words") == words_key(s, b) else []
 
 
+def last_layout(last, s, b=None):
+    """the way this slide was built at the last compile, while its words and picture are unchanged - or None"""
+    a = (last or {}).get(s.get("id")) or {}
+    return tuple(a["key"]) if a.get("key") and a.get("words") == words_key(s, b) else None
+
+
 def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, pool=None, taken=None, build=None,
-               recent=None, avoid=None):
+               recent=None, avoid=None, last=None):
     m = cs.mid(script.get("module"))
     sid, kind = s["id"], s["kind"]
     where = "%s (%s)" % (cs.place(script, sid), sid)
@@ -1891,7 +1926,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         # widget made for a white page keeps the light one - its own controls would vanish (gas M01 s07, s15, s19, s26)
         dark_ok = is_photo or bool(re.search(r'data-kit="|class="kit-screen', fig or ""))
         pick, moved = choose_layout(layout_options(tid, variant, is_photo, nwords_all, b, comp, bool(b.get("figure_first")),
-                                                   bool(b.get("dark")), dark_ok), recent, measured_out(avoid, s, b))
+                                                   bool(b.get("dark")), dark_ok), recent, measured_out(avoid, s, b),
+                                     last_layout(last, s, b))
         if moved:
             varied = pick["key"]
             tid, variant = pick["tid"], pick["variant"]
@@ -2470,7 +2506,7 @@ def starter_build(script, shared=(), figdir=None, specs=None, mdir=None):
     return sheet
 
 
-def compile_deck(script, build, mdir, figdir, version, approved, avoid=None):
+def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, last=None, chosen=None):
     probs = []
     CUE_FIXES.clear()
     m = cs.mid(script.get("module"))
@@ -2507,7 +2543,10 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None):
         b = (build.get("screens") or {}).get(s["id"]) or {}
         teach += s["kind"] == "slide"
         recent = [layout_key(x) for x in slides[-VARIETY_WINDOW:]]   # L62: the look of the slides just before this one
-        slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, build, recent, avoid))
+        slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, build, recent, avoid,
+                                 last))
+        if chosen is not None and s["kind"] == "slide" and not s.get("recap"):    # 2.62.1: kept for the next compile
+            chosen[s["id"]] = {"words": words_key(s, b), "key": list(layout_key(slides[-1]))}
     for a_, b_, s in zip(slides, slides[1:], screens[1:]):
         if layout_key(a_) == layout_key(b_) and layout_key(b_)[0] not in ("task-launch", "recap", ""):
             probs.append("%s: looks exactly like the slide before it (%s, %s ground) - two slides in a row never look the same "
@@ -2787,12 +2826,16 @@ def main(argv=None):
         written.append(out)
         # 2.62.0 - the layouts build_module.py measured out (a slide built another way for L62 that the audit found does
         # not fit), per slide while its words are unchanged
-        try:
-            mid_ = cs.mid(o.module) if str(o.module).isdigit() else str(o.module)
-            avoid = json.load(io.open(workspace.claude_path(o.course, "_build", "%s_layout_avoid.json" % mid_), encoding="utf-8"))
-        except (OSError, ValueError):
-            avoid = {}
-        page, probs, notes = compile_deck(script, build, mdir, figdir, plugin_version(), approved, avoid)
+        work_, mid_ = workspace.claude_path(o.course), cs.mid(o.module) if str(o.module).isdigit() else str(o.module)
+        avoid, chosen = load_layout_avoid(work_, mid_), {}
+        page, probs, notes = compile_deck(script, build, mdir, figdir, plugin_version(), approved, avoid,
+                                          load_layouts(work_, mid_), chosen)
+        try:                    # 2.62.1 - each slide's way, so the next compile keeps it while its words are unchanged
+            os.makedirs(os.path.join(work_, "_build"), exist_ok=True)
+            with io.open(os.path.join(work_, "_build", "%s_layouts.json" % mid_), "w", encoding="utf-8", newline="\n") as f:
+                f.write(json.dumps(chosen, indent=1, sort_keys=True))
+        except OSError:
+            pass
         probs = write_cue_fixes(o.course, o.module, probs)            # 2.52.0: the drafted cue lines, ready for propose
         os.makedirs(os.path.dirname(out), exist_ok=True)
         with io.open(out, "w", encoding="utf-8", newline="\n") as f:

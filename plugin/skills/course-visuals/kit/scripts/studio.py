@@ -39,6 +39,9 @@ import time
 from pathlib import Path
 
 _SLIDE_LOCK = threading.Lock()
+# 2.62.1 - the slide as compiled, per figure version, for this process: each size and mode built the whole deck again
+# (0.3-0.5 s a compile, behind _SLIDE_LOCK - up to 108 queued in one COLUMN fix round of figure_fit.py)
+_SLIDE_MEMO = {}
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KIT = os.path.dirname(HERE)
@@ -211,7 +214,18 @@ def real_slide(ctx):
     figdir = os.path.join(ctx["work"], "figures", "M%02d" % ctx["module"])
     probs = []
     name = os.path.basename(ctx["entry"].get("figure") or "")
+
+    def stamp(p):
+        try:
+            return os.path.getmtime(p)
+        except OSError:
+            return None
+    memo = json.dumps([ctx["script"], ctx["screen"], ctx["module"], ctx["entry"], ctx.get("spec_override"), ctx["build"],
+                       stamp(ctx["script"])] + [stamp(os.path.join(ctx["work"], "_build", "M%02d_%s.json" % (ctx["module"], k)))
+                                                 for k in ("layout_avoid", "layouts")], sort_keys=True, default=str)
     with _SLIDE_LOCK:                          # figure_fit.py runs several studios at once, in threads
+        if memo in _SLIDE_MEMO:
+            return dict(_SLIDE_MEMO[memo]), mdir, None
         cm.OVERRIDE.clear()
         if ctx.get("spec_override") is not None:     # draw the spec given (a candidate fix), else the file - never a stale fit
             cm.OVERRIDE[name] = ctx["spec_override"]
@@ -220,7 +234,11 @@ def real_slide(ctx):
             # the figure: the L57 photo row under it, an inset (IGF M01 benchmark: the studio drew s05 in a 369 x 361 panel,
             # the build in 369 x 239 under its photo row - a figure clean in the studio failed the build twice)
             build = dict(ctx["build"], screens=dict(ctx["build"].get("screens") or {}, **{s["id"]: ctx["entry"]}))
-            deck, _, _ = cm.compile_deck(script, build, mdir, figdir, "STUDIO", True)
+            # 2.62.1 - with the layouts build_module.py measured out, as the compile builds the deck: without them a figure
+            # was fitted to a column the deck no longer gave it after a layout retry
+            mid_ = "M%02d" % ctx["module"]
+            deck, _, _ = cm.compile_deck(script, build, mdir, figdir, "STUDIO", True, cm.load_layout_avoid(ctx["work"], mid_),
+                                         cm.load_layouts(ctx["work"], mid_))
             m = re.search(r'<section [^>]*\bid="%s"[^>]*>.*?</section>' % re.escape(s["id"]), deck, re.S)
             page = m.group(0) if m else cm.slide_html(script, s, 1, len(screens), ctx["entry"], mdir, figdir, "STUDIO", probs)
         finally:
@@ -229,7 +247,10 @@ def real_slide(ctx):
     extra = ["../" + x for x in ctx["build"].get("styles", [])]
     chrome = ('<div id="landing"><div class="landing-card"><button id="startBtn" type="button"><span class="btn-label">Start'
               '</span></button></div></div>' + cm.chrome_block())
-    return {"slide": page, "mdir": mdir, "styles": styles, "extra": extra, "probs": probs, "chrome": chrome}, mdir, None
+    real = {"slide": page, "mdir": mdir, "styles": styles, "extra": extra, "probs": probs, "chrome": chrome}
+    with _SLIDE_LOCK:
+        _SLIDE_MEMO[memo] = real
+    return dict(real), mdir, None
 
 
 def generic_slide(spec, panel):
