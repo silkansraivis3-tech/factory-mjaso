@@ -116,6 +116,15 @@ and `"figure_b"`, `three-content-blocks` needs three `"blocks"`), `"variant"`, `
 `"parts": [[1, 4], [5, 9]]`, `"panel": "light"` (a drawing made for a white page; the panel is Navy otherwise). An
 unknown or unsuitable template or variant is a problem with the slide's id.
 
+**Never the same look twice in a row (L62, 2.53.0).** A slide's look is its shape and its ground. When a slide would
+look like the one before it, the compiler builds it another way that holds the same words and picture: the picture on
+the other side, a photograph across the top with the words in two columns under it (`figure-stage` `figure-top`, up to
+110 words), a photograph framed on the dark ground (up to 100 words), or the dark ground - which only a photograph or a
+figure-kit drawing takes; a drawing or widget made for a white page stays light. It also avoids the looks of the three
+slides before it when it can. A build sheet's own layout is kept wherever it does not repeat. A photograph under
+1600 px on its long side is enlarged once (Lanczos, a light sharpening, at most four times; the original kept in
+`working_claude/photo_originals/M01/`); under 800 px it is listed - a larger original is still the real fix.
+
 **The owner's rules, checked at every build:** a split slide is 55 / 45 (50-60 % text, never 80 / 20); more than 60
 words always has a picture beside it; never three teaching slides in a row without a teaching picture (a task launch and
 the recap neither count nor break the run); approved words are never cut, summarised or set smaller - when they need

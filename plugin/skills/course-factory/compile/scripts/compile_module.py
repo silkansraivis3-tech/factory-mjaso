@@ -58,6 +58,12 @@ EVERY SLIDE IS ONE OF THE OWNER'S LAYOUT TEMPLATES (L61, 2.52.0)
   with the official logo. The owner's rules are checked here: a dense slide (more than 60 words) always has a picture
   beside it; never three teaching slides in a row without a teaching picture; words that need more room than a
   figure slide holds (more than 135) go into readable parts - never cut, never smaller type.
+  L62 (2.53.0): two slides next to each other never look the same - a slide's look is its template, its variant and its
+  ground (light, or dark / photo); when a slide would repeat the slide before it, it is built another way that holds
+  its words and picture (the picture on the other side, the other ground, a photograph framed on the dark ground, a
+  drawing on the stage), avoiding the slide before that one too. A photograph smaller than 1600 px on its long side is
+  enlarged in the module (Lanczos, a light sharpening) so a projector never shows blocks of pixels; the original is
+  kept in working_claude/photo_originals/M01/, and one under 800 px is still listed - find a larger one.
 
 HOW A SLIDE IS LAID OUT (the same for every module)
   layout visual_full  + a photograph   -> .slide.photo, the photo is the screen, the words over it
@@ -129,7 +135,13 @@ DENSE_WORDS = LAYOUTS["dense"]["words"]
 PARTS_FROM, PART_WORDS = LAYOUTS["parts"]["auto_from_words"], LAYOUTS["parts"]["part_words"]
 SPLIT_LO, SPLIT_HI = LAYOUTS["split"]["text"]
 NO_VISUAL_RUN = LAYOUTS["sequence"]["max_without_visual_in_a_row"]
+FRAMED_PHOTO_WORDS = LAYOUTS["variety"]["photo_framed_max_words"]
+STAGE_WORDS = LAYOUTS["variety"]["stage_max_words"]
+TOP_WORDS = LAYOUTS["variety"]["picture_top_max_words"]
+VARIETY_WINDOW = LAYOUTS["variety"]["window"]
+PHOTO_LONG, PHOTO_LOW = 1600, 800        # L62: a photograph is shipped at 1600 px on its long side or more; under 800 is low
 FIGURE_FREE = {("explain-figure", "text-only"), ("procedure", "text-only"), ("opening", "statement")}
+FIGURE_FREE_IDS = {"opening"}
 RECORD = "compiled.json"
 FINAL_SET = re.compile(r"^F[A-Z]$")           # 2.49.2 - a final assessment's set: FA, and FB when it has a second variant
 DRAFT_MARK = "DRAFT_NOT_PACKAGED.txt"         # 2.49.2 - in a module folder built from a script that is not approved (--draft)
@@ -1256,6 +1268,121 @@ def table_html(lines, idx=None):
     return out
 
 
+def shape_of(tid, variant, left=False):
+    """the shape the eye sees (L62) - two templates that look alike are one shape"""
+    if tid in ("task-launch", "recap", "opening", "compare-two"):
+        return tid
+    if variant == "text-only":
+        return "text"
+    if tid == "photo-explain" and variant in ("full", "split"):
+        return "photo-full" if variant == "full" else "photo-framed"
+    if tid == "figure-stage":
+        return "picture-top"
+    return "picture-left" if left or variant == "figure-left" else "picture-right"
+
+
+def layout_key(slide):
+    """what the eye sees of a slide (L62): its shape and its ground - light, or dark / photo"""
+    t = re.search(r'\bdata-template="([\w-]+)\.v\d+"', slide)
+    v = re.search(r'\bdata-variant="([\w-]+)"', slide)
+    c = re.search(r'<section class="([^"]*)"', slide)
+    body = re.search(r'<div class="slide-body ([^"]*)"', slide)
+    ground = "dark" if c and re.search(r"\b(dark|photo)\b", c.group(1)) else "light"
+    left = bool(body and "fig-first" in body.group(1).split())
+    return (shape_of(t.group(1) if t else "", v.group(1) if v else "", left), ground)
+
+
+LEFT = {"explain-figure": "figure-left", "reading-with-figure": "figure-left", "long-explanation": "figure-left",
+        "procedure": "figure-left", "content-in-parts": "figure-left", "three-content-blocks": "figure-left",
+        "reference-table": "figure-left"}
+RIGHT = {"explain-figure": "figure-right", "reading-with-figure": "figure-right", "long-explanation": "model",
+         "procedure": "with-figure", "content-in-parts": "with-figure", "three-content-blocks": "with-figure",
+         "reference-table": "with-figure"}
+
+
+def layout_options(tid, variant, is_photo, words, b, comp, own_left, own_dark, dark_ok=True):
+    """the ways one slide can be built - the first is its own; each a dict the slide builder applies (L62)"""
+    own = {"tid": tid, "variant": variant, "comp": None, "first": own_left, "dark": own_dark,
+           "key": (shape_of(tid, variant, own_left), "dark" if own_dark or comp == "photo" else "light")}
+    opts = [own]
+    if tid in ("compare-two", "opening", "recap", "task-launch"):
+        return opts
+    if variant == "text-only":                                   # no picture: the other ground is all there is
+        return opts + [dict(own, dark=not own_dark, key=("text", "light" if own_dark else "dark"))]
+    side = tid if tid in RIGHT else ("content-in-parts" if words > PARTS_FROM else "reading-with-figure" if words > DENSE_WORDS
+                                     else "explain-figure")
+    col = "wide-left" if is_photo else "two-col"
+    for dark in ((False, True) if dark_ok else (False,)):  # the dark ground only for a picture made for it
+        g = "dark" if dark else "light"
+        opts.append({"tid": side, "variant": RIGHT[side], "comp": col, "first": False, "dark": dark, "key": ("picture-right", g)})
+        opts.append({"tid": side, "variant": LEFT[side], "comp": col, "first": True, "dark": dark, "key": ("picture-left", g)})
+        if is_photo and words <= TOP_WORDS:     # a photograph across the slide; a chart, 3D or a drawing needs its height
+            opts.append({"tid": "figure-stage", "variant": "figure" if words <= STAGE_WORDS else "figure-top", "comp": "stage",
+                         "first": False, "dark": dark, "key": ("picture-top", g)})
+        if is_photo and words <= FRAMED_PHOTO_WORDS and not dark:
+            opts.append({"tid": "photo-explain", "variant": "split", "comp": "photo", "first": False, "dark": False,
+                         "key": ("photo-framed", "dark")})
+    return opts
+
+
+def choose_layout(opts, recent):
+    """the first way that looks unlike the last VARIETY_WINDOW slides - the slide's own first; failing that, unlike the
+    slide before; failing that, its own (the build then reports the repeat)"""
+    for avoid in (recent[-VARIETY_WINDOW:], recent[-1:]):
+        for o in opts:
+            if o["key"] not in avoid:
+                return o, o is not opts[0]
+    return opts[0], False
+
+
+def enlarge_photos(mdir, keep_dir, rels, notes):
+    """L62: a photograph shipped smaller than PHOTO_LONG px on its long side is enlarged in the module - Lanczos and a
+    light sharpening, so a projector shows a soft photograph instead of blocks of pixels. The original is kept once in
+    keep_dir. Under PHOTO_LOW px it is listed too: no enlargement makes detail that is not there - find a larger one."""
+    try:
+        from PIL import Image, ImageFilter
+    except ImportError:
+        if rels:
+            notes.append((None, None, "small photographs are not enlarged: the image library Pillow is not installed "
+                                      "(python -m pip install pillow) - L62"))
+        return []
+    done = []
+    for rel in sorted(set(rels)):
+        if not rel.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+            continue
+        p = os.path.join(mdir, rel)
+        try:
+            im = Image.open(p)
+            im.load()
+        except (OSError, ValueError):
+            continue
+        w, h = im.size
+        if max(w, h) >= PHOTO_LONG:
+            continue
+        keep = os.path.join(keep_dir, os.path.basename(rel))
+        if not os.path.isfile(keep):
+            os.makedirs(keep_dir, exist_ok=True)
+            with open(p, "rb") as src, open(keep, "wb") as dst:
+                dst.write(src.read())
+        k = min(4.0, PHOTO_LONG / float(max(w, h)))
+        size = (int(round(w * k)), int(round(h * k)))
+        fmt = (im.format or "").upper()
+        if fmt in ("JPEG", "JPG") and im.mode not in ("RGB", "L"):
+            im = im.convert("RGB")
+        big = im.resize(size, Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=1.4, percent=60, threshold=2))
+        if fmt == "PNG":
+            big.save(p, "PNG", optimize=True)
+        elif fmt == "WEBP":
+            big.save(p, "WEBP", quality=90)
+        else:
+            big.save(p, "JPEG", quality=90, optimize=True, progressive=True)
+        done.append((rel, w, h, size))
+        if max(w, h) < PHOTO_LOW:
+            notes.append((None, None, "%s was only %d x %d px - enlarged to %d x %d so it is not blocky, but a larger original "
+                                      "would be sharper; find one (L62)" % (rel, w, h, size[0], size[1])))
+    return done
+
+
 def has_teaching_visual(slide):
     """for the sequence rule: a teaching slide with a picture - not a task launch or the recap (they do not count)"""
     t = re.search(r'\bdata-template="([\w-]+)\.v\d+"', slide)
@@ -1288,7 +1415,7 @@ def recap_html(s, base, m, n, total, lines):
             % (attrs(d), m, n, total, e(s.get("title")), len(items), "\n      ".join(items)))
 
 
-def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, pool=None, taken=None):
+def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, pool=None, taken=None, recent=None):
     m = cs.mid(script.get("module"))
     sid, kind = s["id"], s["kind"]
     where = "%s (%s)" % (cs.place(script, sid), sid)
@@ -1366,6 +1493,22 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         comp = "compare"
     if tid == "opening" and variant == "photo":            # the opening's photograph is the screen, the title over it
         comp = "photo"
+    # L62 (owner, 2026-10-21) - never the same look on two slides in a row: built another way when it would repeat
+    if recent is not None and kind == "slide" and not s.get("recap"):
+        # a photograph, or a figure-kit drawing (made for the dark panel), may move to the dark ground; a drawing or a
+        # widget made for a white page keeps the light one - its own controls would vanish (gas M01 s07, s15, s19, s26)
+        dark_ok = is_photo or bool(re.search(r'data-kit="|class="kit-screen', fig or ""))
+        pick, moved = choose_layout(layout_options(tid, variant, is_photo, nwords_all, b, comp, bool(b.get("figure_first")),
+                                                   bool(b.get("dark")), dark_ok), recent)
+        if moved:
+            tid, variant = pick["tid"], pick["variant"]
+            b = dict(b, figure_first=pick["first"], dark=pick["dark"])
+            if pick["comp"] == "photo":
+                comp, split_photo, photo_col = "photo", True, False
+            elif pick["comp"] == "stage":
+                comp, split_photo, photo_col = "stage", False, False
+            elif pick["comp"] in ("wide-left", "two-col"):
+                comp, split_photo, photo_col = pick["comp"], False, is_photo and pick["comp"] == "wide-left"
     if b.get("panel") not in (None, "light"):
         probs.append("%s: \"panel\": %s - the picture's panel is the Navy one, or \"light\" for a drawing made for a white page (L61)"
                      % (where, b.get("panel")))
@@ -1480,7 +1623,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         cols = [reading, box]
         if b.get("figure_first"):          # the drawing on the left, the words on the right
             cols.reverse()
-            cls = cls.replace("fig-wide", "fig-wide fig-first")
+            cls = cls.replace("fig-wide", "fig-wide fig-first") if "fig-wide" in cls else cls + " fig-first"
         return ('<section %s>\n%s\n  %s\n  <div class="slide-body %s">\n    %s\n    %s\n  </div>%s\n</section>'
                 % (attrs(d), head, h2, cls, cols[0], cols[1], credit_html))
     if comp == "compare":
@@ -1822,7 +1965,14 @@ def compile_deck(script, build, mdir, figdir, version, approved):
     for n, s in enumerate(screens, 1):
         b = (build.get("screens") or {}).get(s["id"]) or {}
         teach += s["kind"] == "slide"
-        slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken))
+        recent = [layout_key(x) for x in slides[-VARIETY_WINDOW:]]   # L62: the look of the slides just before this one
+        slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, recent))
+    for a_, b_, s in zip(slides, slides[1:], screens[1:]):
+        if layout_key(a_) == layout_key(b_) and layout_key(b_)[0] not in ("task-launch", "recap", ""):
+            probs.append("%s: looks exactly like the slide before it (%s, %s ground) - two slides in a row never look the same "
+                         "(L62); give one of them a picture, or ask for another template" % ((cs.place(script, s["id"]),) + layout_key(b_)))
+    enlarge_photos(mdir, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(mdir))), "working_claude", "photo_originals", m),
+                   [r for x in slides for r in IMG_SRC.findall(x) if r.startswith("assets/img/")], notes)
     # L61 - never three teaching slides in a row without a teaching picture (a task launch and the recap do not count)
     run = []
     for s, page in zip(screens, slides):

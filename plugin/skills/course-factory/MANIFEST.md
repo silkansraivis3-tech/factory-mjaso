@@ -1368,6 +1368,22 @@ whose labels fall under the floor at that width is reported by the drawing check
 `layouts_part` (every slide named; the mapping; the brand colours and the logo; split, dense, sequence, unknown and
 unsuitable templates; parts, table, blocks, comparison - all still word for word).
 
+## 4zz7 · Never the same look twice in a row; a larger logo; no blocky photographs (L62, 2.53.0, 2026-10-21)
+
+The gas course's Module 1, the first built in the templates, came out with 29 of 33 slides as content-in-parts with
+the picture on the right - its build sheet asked for that template on every slide, and nothing stopped a run. Its
+photographs were 350-1100 px (s01: 400 x 293) stretched to ~500 x 600 px at 1280 x 800, and the logo's artwork was
+about 55 px wide inside its clear space. Now: `layout_key` (shape and ground), `layout_options` (the ways one slide can
+be built that hold its words and picture), `choose_layout` (its own unless it repeats; else unlike the last three);
+the dark ground only for a photograph or a kit drawing (the module's own step widgets lost their controls on dark:
+2.06 and 1.07 contrast on s07, s15, s19, s26 - caught by run_audits, fixed); the figure-stage variant `figure-top` for
+photographs up to 110 words; a build problem if two neighbours still look the same; `enlarge_photos` (Pillow,
+Lanczos + UnsharpMask, at most 4x, to 1600 px, originals in working_claude/photo_originals/M01/, under 800 px listed);
+the logo box sized for 10.5 vmin of artwork, and on dark (blue) or photo slides the white version (`plugin/resources/brand/novikontas_logo_white.svg`, the official paths with the one colour switched), no plate; a light panel stays white on a dark slide; the recap fits six take-aways
+under the template's top line (41 px spill before). Proved on a copy of that module: 33 slides, no neighbours alike,
+five looks among the photographs, `run_audits.py` at 1280 x 800 and 1024 x 768 with no contrast, size, spill, tap,
+collision or scroll problem. Tests: `test_compile_module.py` `variety_part`.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

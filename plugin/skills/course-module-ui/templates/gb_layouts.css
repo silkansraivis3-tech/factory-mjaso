@@ -58,6 +58,9 @@
   --lt-shadow:rgba(1,17,17,.25);
   --lt-blue-06:rgba(83,167,219,.06);
   --lt-blue-08:rgba(83,167,219,.08);
+  --lt-blue-12:rgba(83,167,219,.12);
+  --lt-corner:rgba(6,23,61,.78);
+  --lt-corner-mid:rgba(6,23,61,.42);
 }
 
 /* ---------------------------------------------------------------- the slide */
@@ -81,15 +84,28 @@
 .slide[data-template] .slide-kind b{color:var(--lt-navy);font-weight:700}
 .slide[data-template].dark .slide-kind,.slide[data-template].photo .slide-kind{color:var(--lt-dim-d);background:transparent}
 .slide[data-template].dark .slide-kind b,.slide[data-template].photo .slide-kind b{color:var(--lt-blue)}
+/* L62 (owner, 2026-10-21: "logo looks bigger and better", then "bigger logo, and on blue slides the logo white without
+   background"). The official file carries its own clear space - exactly the brandbook's two thirds of the symbol's
+   height on every side (artwork 614 x 464 of the 900 x 747 canvas). So the box is sized for the ARTWORK to stand about
+   10.5 vmin tall (84 px at 1280 x 800), and placed so the artwork's right edge lines up with the slide's content and its
+   top sits near the slide's edge: the clear space runs into the margin, where nothing else is. The file is used as it is. */
+.slide[data-template]{--lt-logo-h:16.9vmin;--lt-logo-w:20.36vmin}
 .slide[data-template] .slide-kind::after{
-  content:"";position:absolute;left:auto;bottom:auto;right:var(--lt-pad-x);top:50%;transform:translateY(-50%);
-  width:clamp(66px,10vmin,120px);height:clamp(55px,8.3vmin,100px);
-  background:url("novikontas_logo.svg") center/contain no-repeat;
+  content:"";position:absolute;left:auto;bottom:auto;transform:none;
+  right:calc(var(--lt-pad-x) - var(--lt-logo-w) * .159);top:calc(min(1.8vmin,14px) - var(--lt-logo-h) * .19);
+  width:var(--lt-logo-w);height:var(--lt-logo-h);
+  background:url("novikontas_logo.svg") center/100% 100% no-repeat;
 }
-/* a dark or photo slide: the logo on a white plate - never navy on navy */
+/* a dark (blue) or photo slide: the WHITE logo, no plate - the official file with its one colour switched to white for a
+   dark ground (brandbook: the white versions exist for dark backgrounds; never recoloured to anything else) */
 .slide[data-template].dark .slide-kind::after,.slide[data-template].photo .slide-kind::after{
-  background:var(--lt-white) url("novikontas_logo.svg") center/88% no-repeat;border-radius:min(1vmin,8px);
-  box-shadow:0 2px 10px var(--lt-shadow);
+  background:url("novikontas_logo_white.svg") center/100% 100% no-repeat;border-radius:0;box-shadow:none;
+}
+/* over a full photograph the corner behind the logo is darkened - the photograph, never the logo (no effects on it) - so
+   a bright sky or a white tank never swallows the white logo */
+.slide[data-template].photo .slide-kind::before{
+  content:"";position:absolute;right:0;top:0;width:min(46vmin,380px);height:min(30vmin,240px);z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse at 100% 0,var(--lt-corner) 0,var(--lt-corner-mid) 45%,transparent 72%);
 }
 
 /* the bottom line: the module's short title, under a hairline */
@@ -107,7 +123,7 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 /* the title */
 .slide[data-template] > h2,.slide[data-template] .photo-copy h2{
   margin:0;font-size:clamp(28px,5.75vmin,62px);font-weight:700;line-height:1.1;letter-spacing:-.025em;
-  color:var(--lt-navy);text-wrap:balance;max-width:24em;
+  color:var(--lt-navy);text-wrap:balance;max-width:min(24em,calc(100% - var(--lt-logo-w)));
 }
 .slide[data-template].dark > h2,.slide[data-template].photo .photo-copy h2{color:var(--lt-white)}
 
@@ -159,6 +175,10 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
   align-self:stretch;min-height:0;overflow:hidden;
 }
 .slide[data-template] .fill.fig.lt-light{background:var(--lt-white);border:1px solid var(--lt-line)}
+/* a light panel on a dark slide (L62 rotates the ground): the drawing inside is still on white, so its words are dark -
+   never the slide's white inherited onto a white panel (gas module s15: 2.06 contrast) */
+.slide[data-template].dark .fill.fig.lt-light,.slide[data-template] .fill.fig.lt-light{color:var(--lt-black)}
+.slide[data-template].dark .fill.fig.lt-light{background:var(--lt-white);border-color:var(--lt-line)}
 .slide[data-template].dark .fill.fig{background:radial-gradient(ellipse at 50% 46%,var(--lt-panel-glow) 0,transparent 70%),rgba(83,167,219,.07);
   border:1px solid var(--lt-line-d)}
 .slide[data-template] .fill.fig .kit-screen{background:transparent}
@@ -201,6 +221,17 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template^="figure-stage."] .slide-body.stage{gap:min(2.2vmin,18px)}
 .slide[data-template^="figure-stage."] .slide-body.stage > .fill.fig{flex:1;width:100%}
 .slide[data-template^="figure-stage."] .slide-body.stage > .copy{flex:0 0 auto}
+/* picture on top (L62): the picture across the slide, the words under it in two columns - a different shape from the
+   side-by-side slides around it, for up to about 100 words */
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage{gap:min(2.6vmin,22px);justify-content:flex-start}
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .fill.fig{flex:1 1 0;min-height:min(24vmin,190px)}
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .fill.fig > img:only-child{object-position:center 45%}
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .copy{
+  display:block;column-count:2;column-gap:min(5vmin,40px);width:100%;
+}
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .copy > *{break-inside:avoid;margin:0 0 min(1.4vmin,11px)}
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .copy .lead{font-size:var(--lt-fs)}
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .copy .statement{font-size:clamp(17px,2.7vmin,32px);column-span:all}
 
 /* ---------------------------------------------------------------- photo + explanation */
 .slide[data-template].photo .photo-copy{left:var(--lt-pad-x);max-width:min(64vmin,560px)}
@@ -208,7 +239,7 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template].photo .photo-scrim{background:linear-gradient(90deg,rgba(6,23,61,.92) 0,rgba(6,23,61,.7) 38%,rgba(6,23,61,.05) 72%)}
 /* split: the photograph framed on the right, the words on the dark ground - the reference's photo-explain */
 .slide[data-template^="photo-explain."][data-variant="split"] .photo-wrap{
-  left:auto;right:var(--lt-pad-x);top:var(--lt-top);bottom:max(92px,11.5vmin);
+  left:auto;right:var(--lt-pad-x);top:calc(var(--lt-logo-h) + min(2.4vmin,19px));bottom:max(92px,11.5vmin);
   width:calc((100% - 2 * var(--lt-pad-x) - var(--lt-gap)) * (100 - var(--lt-text)) / 100);
   border-radius:min(2.2vmin,18px);
 }
@@ -242,7 +273,13 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 /* ---------------------------------------------------------------- recap: one design for every module (L51) */
 .slide[data-template^="recap."] .rc-item{border-color:var(--lt-line-d)}
 .slide[data-template^="recap."] .rc-item::after{background:var(--lt-blue)}
-.slide[data-template^="recap."] .rc-item::before{color:var(--lt-blue);background:rgba(83,167,219,.12)}
+.slide[data-template^="recap."] .rc-item::before{color:var(--lt-blue);background:var(--lt-blue-12);border-color:var(--lt-line-d)}
+/* five or six take-aways fit the slide under the template's top line (s30 of the gas module spilled 41 px) */
+.slide[data-template^="recap."] .slide-body.recap{gap:min(1.6vmin,13px);margin-top:min(2.4vmin,19px)}
+.slide[data-template^="recap."] .rc-grid{gap:min(2vmin,16px)}
+.slide[data-template^="recap."] .rc-grid:not([data-n="3"]):not([data-n="4"]){--h:min(14vmin,112px)}
+.slide[data-template^="recap."] .rc-item{padding:min(2.4vmin,19px) min(2.6vmin,21px) min(2.2vmin,18px);gap:.45em}
+.slide[data-template^="recap."] .rc-item::before{height:2em;min-width:2em;font-size:clamp(14px,1.7vmin,20px)}
 
 /* ---------------------------------------------------------------- one slide, several parts */
 .slide[data-template] .lt-parts{display:flex;flex-direction:column;gap:min(2.4vmin,20px)}
