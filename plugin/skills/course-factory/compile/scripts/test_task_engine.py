@@ -1059,6 +1059,83 @@ def strip_contrast_part(exe, tmp):
           ("deck" in p.stdout or "every probe passed" in p.stdout) and not low, low or p.stdout[-600:])
 
 
+SHIP_PLAN = {"size": [640, 300], "label": "The spaces of an IGF ship", "parts": [
+    {"id": "ER", "type": "space", "x": 10, "y": 120, "w": 120, "h": 150, "label": "Engine room"},
+    {"id": "FPR", "type": "space", "x": 140, "y": 120, "w": 110, "h": 150, "label": "Fuel preparation room"},
+    {"id": "TCS", "type": "space", "x": 260, "y": 120, "w": 110, "h": 150, "label": "Tank connection space"},
+    {"id": "FT", "type": "space", "x": 380, "y": 120, "w": 140, "h": 150, "label": "Fuel tank"},
+    {"id": "BS", "type": "space", "x": 530, "y": 120, "w": 100, "h": 150, "label": "Bunkering station"},
+    {"id": "VM", "type": "space", "x": 260, "y": 10, "w": 110, "h": 90, "label": "Vent mast"}]}
+SHIP_PLAN_DRIVE = r"""
+(function () {
+  var out = {errors: [], taps: []};
+  window.addEventListener('error', function (e) { out.errors.push(String(e.message)); });
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      try {
+        var sb = document.getElementById('startBtn'); if (sb) { sb.click(); }
+        var s = document.querySelector('.slide svg[data-kit]').closest('.slide');
+        [].slice.call(document.querySelectorAll('.slide')).forEach(function (x) { x.classList.remove('active'); });
+        s.classList.add('active');
+        GBZoom.scan();
+        out.thumbs = s.querySelectorAll('.photo-strip img[data-part]').length;
+        out.tapOnly = s.querySelectorAll('.photo-taps img[data-part]').length;
+        [].slice.call(s.querySelectorAll('.gbz-part')).forEach(function (p) {
+          var shape = p.querySelector('rect, path') || p;
+          shape.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+          var im = document.querySelector('.gbz-stage img'), cap = document.querySelector('.gbz-cap');
+          out.taps.push({part: p.getAttribute('data-photo'), shown: im ? im.getAttribute('src').split('/').pop() : null,
+                         record: cap ? cap.textContent.replace(/\s+/g, ' ').trim().slice(0, 80) : ''});
+          GBZoom.close();
+        });
+      } catch (err) { out.errors.push(String(err && err.stack || err)); }
+      var pre = document.createElement('pre'); pre.id = 'gbtest'; pre.textContent = JSON.stringify(out);
+      document.body.appendChild(pre);
+    }, 600);
+  });
+}());
+"""
+
+
+def ship_plan_part(exe, tmp):
+    """2.63.0 (the instructors' review of IGF Basic, M01 3/11 and 4/11: "a clickable vessel - tap Engine room, FPR, TCS,
+    bunkering station, vent mast, oil fuel tank and see a real photo"): a ship plan whose six spaces have six real photos -
+    four as L57 thumbnails, two tap-only - and a tap on each drawn space opens ITS photo full screen, with its record"""
+    print("\n-- 2.63.0: a tap on a drawn space opens its real photograph")
+    os.makedirs(os.path.join(tmp, "sp"))
+    screens = json.loads(json.dumps(tcm.SCREENS))
+    screens[1]["text"] = "The spaces of an IGF ship.\n• engine room\n• fuel preparation room\n• tank connection space"
+    c, md = tcm.new_course(os.path.join(tmp, "sp"), tcm.script(screens=screens), build=False)
+    img, meta = os.path.join(md, "assets", "img"), {}
+    for k, name in enumerate(["Engine room", "Fuel preparation room", "Tank connection space", "Fuel tank", "Bunkering station", "Vent mast"]):
+        f = "sp%d.jpg" % k
+        io.open(os.path.join(img, f), "wb").write(tcm.png(900, 600, (40 + 30 * k, 90, 140)))
+        meta[f] = dict(MID_CREDIT, description="The %s of an LNG-fuelled ship." % name.lower(), shows=[name.lower()])
+    tcm.cs.save(os.path.join(img, "_photo_meta.json"), meta)
+    tcm.cs.save(os.path.join(c, "working_claude", "figures", "M01", "plan.kit.json"), SHIP_PLAN)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "s01": {"figure": "assets/fig/scale.svg"}, "s02": {"figure": "plan.kit.json", "composition": "two-col"},
+        "s04": {"figure": "hull.svg", "declined_3d": "the fixture's hull stays flat"}, "t01": {"try_tablet": False}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
+    page = os.path.join(md, "presentation", "index.html")
+    text = io.open(page, encoding="utf-8").read()
+    check("the plan builds with four thumbnails and the rest tap-only", 'class="photo-taps" hidden' in text, out[-500:])
+    w = os.path.join(md, "presentation", "_ship.html")
+    io.open(w, "w", encoding="utf-8").write(text.replace("</body>", "<script>%s</script></body>" % SHIP_PLAN_DRIVE))
+    p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--user-data-dir=" + os.path.join(tmp, "spp"),
+                           "--allow-file-access-from-files", "--window-size=1296,895", "--virtual-time-budget=10000", "--dump-dom",
+                           Path(w).as_uri()], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+    m = re.search(r'<pre id="gbtest">(.*?)</pre>', p.stdout, re.S)
+    r = json.loads(html.unescape(m.group(1))) if m else {"errors": ["no result"]}
+    taps = {t["part"]: t for t in r.get("taps") or []}
+    check("no script error; 4 thumbnails, 2 tap-only", not r.get("errors") and r.get("thumbs") == 4 and r.get("tapOnly") == 2, r)
+    check("all six drawn spaces open a photo when tapped - the thumbnail ones and the tap-only ones", len(taps) == 6, sorted(taps))
+    want = {"Engine room": "sp0.jpg", "Fuel preparation room": "sp1.jpg", "Tank connection space": "sp2.jpg", "Fuel tank": "sp3.jpg",
+            "Bunkering station": "sp4.jpg", "Vent mast": "sp5.jpg"}
+    check("... each its OWN photo, with its record under it", all((taps.get(k) or {}).get("shown") == v for k, v in want.items())
+          and all("LNG-fuelled ship" in (t.get("record") or "") for t in taps.values()), taps)
+
+
 BLIND_LOOK = ("var seen = []; document.querySelectorAll('.scr[data-script]').forEach(function (s) {"
               "  s.querySelectorAll('.checked,.right,.wrong,.fixed,.shake,.missed,.dim,.stopat,.good,.bad,.why.on').forEach("
               "    function (n) { seen.push(s.getAttribute('data-script') + ':' + (n.getAttribute('class') || '')); });"
@@ -1141,6 +1218,7 @@ def main():
         inset_empty_part(exe, tmp)
         inset_under_part(exe, tmp)
         strip_contrast_part(exe, tmp)
+        ship_plan_part(exe, tmp)
         figures_part(exe, tmp)
         fixes_part(exe, tmp)
         picture_part(exe, tmp)

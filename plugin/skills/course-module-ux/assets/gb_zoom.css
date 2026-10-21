@@ -17,6 +17,8 @@
   --gbz-btn-shadow: rgba(0,0,0,.35);
 }
 .gbz-can{cursor:zoom-in}
+/* 2.63.0 - a drawn part that opens its real photograph (gb_zoom.js wireParts) */
+.gbz-part{cursor:pointer}
 html.gbz-open,html.gbz-open body{overflow:hidden}
 
 .gbz{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;

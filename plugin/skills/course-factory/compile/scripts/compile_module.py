@@ -1349,7 +1349,7 @@ def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None, refu
     L58: a photograph the course already shows anywhere (`taken`) is never shown again - a different one, or none.
     `not_things` (build sheet "not_things", 2.49.1): words the drawing writes that are no real thing - an axis, a line
     of a chart - are left off the list altogether (`refuse` = "no photo fits", which stays on it)"""
-    strip, taken = [], taken if taken is not None else {}
+    strip, taps, taken = [], [], taken if taken is not None else {}
     for num, name in drawn_parts(lines, fig):
         if any(same_thing(name, x) for x in not_things):
             continue
@@ -1365,7 +1365,11 @@ def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None, refu
             if is_thing(name):
                 notes.append((where, num, name))
             continue
-        if len(strip) >= cs.MEDIA["floors"].get("photo_strip_max", 4):
+        # 2.63.0 (the instructors' review of IGF Basic: "a clickable vessel - tap Engine room, FPR, TCS, bunkering station,
+        # vent mast, fuel tank and see a real photo"): the drawn part itself opens its photo full screen (gb_zoom.js, by
+        # data-part); past the strip's few thumbnails a match is still kept, tap-only
+        tap_only = len(strip) >= cs.MEDIA["floors"].get("photo_strip_max", 4)
+        if tap_only and len(taps) >= cs.MEDIA["floors"].get("photo_taps_max", 8):
             continue
         n, meta, d, pid = hit
         if os.path.abspath(d) != os.path.abspath(mdir) or not os.path.isfile(os.path.join(mdir, "assets", "img", n)):
@@ -1374,10 +1378,14 @@ def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None, refu
         taken[pid] = where
         label = ("%d · " % num if num else "") + name
         alt = first_sentence(meta.get("description")) or name
-        strip.append('<figure class="pthumb"><img src="../%s" alt="%s" data-name="%s"%s><figcaption>%s%s</figcaption></figure>'
-                     % (a(rel), a(alt), a(label), photo_panel(meta, credit_line(meta), rel, [], where),
-                        '<b>%d</b> ' % num if num else "", e(name)))
-    return ('<div class="photo-strip" data-script-ignore>%s</div>' % "".join(strip)) if strip else ""
+        img = '<img src="../%s" alt="%s" data-name="%s" data-part="%s"%s>' % (a(rel), a(alt), a(label), a(name),
+                                                                            photo_panel(meta, credit_line(meta), rel, [], where))
+        if tap_only:
+            taps.append(img)
+            continue
+        strip.append('<figure class="pthumb">%s<figcaption>%s%s</figcaption></figure>' % (img, '<b>%d</b> ' % num if num else "", e(name)))
+    out = ('<div class="photo-strip" data-script-ignore>%s</div>' % "".join(strip)) if strip else ""
+    return out + (('<div class="photo-taps" hidden data-script-ignore>%s</div>' % "".join(taps)) if taps else "")
 
 
 FILL_BOX = re.compile(r'\s*<\w+\b[^>]*\bclass="[^"]*\bfill\b')

@@ -335,11 +335,35 @@ var GBZoom = (function (w, d) {
       b.addEventListener("click", (function (img) { return function (e) { e.preventDefault(); e.stopPropagation(); show(img); }; })(im));
       s.appendChild(b);
     }
+    wireParts();
+  }
+
+  /* 2.63.0 - a drawn part a real photograph shows opens that photograph (the instructors' review of IGF Basic: "a
+     clickable vessel - tap the engine room, the FPR, the TCS ... and see a real photo"). The compiler names each match
+     on the photo (data-part, L57: a thumbnail under the drawing, or tap-only in .photo-taps); the part whose own label
+     says that name is marked, and a tap on it shows the photo with its record - the drawing itself still opens from
+     anywhere else on it */
+  function norm(t) { return String(t || "").replace(/\s+/g, " ").trim().toLowerCase(); }
+  function wireParts() {
+    var ims = d.querySelectorAll(".photo-strip img[data-part], .photo-taps img[data-part]"), i, j;
+    for (i = 0; i < ims.length; i++) {
+      var im = ims[i], scope = closest(im, ".slide") || d.body, name = norm(im.getAttribute("data-part"));
+      var lbls = scope.querySelectorAll("svg .kit-lbl");
+      for (j = 0; j < lbls.length; j++) {
+        var part = closest(lbls[j], ".kit-part");
+        if (!part || part.__gbzPhoto || closest(part, "[data-key]") || norm(lbls[j].textContent) !== name) { continue; }
+        part.__gbzPhoto = im;
+        part.classList.add("gbz-part");
+        part.setAttribute("data-photo", im.getAttribute("data-part"));
+      }
+    }
   }
 
   /* ---- start ------------------------------------------------------------- */
   function onTap(e) {
     if (box && !box.hidden) { return; }
+    var part = closest(e.target, ".gbz-part");
+    if (part && part.__gbzPhoto) { e.preventDefault(); e.stopPropagation(); show(part.__gbzPhoto); return; }
     var p = pictureOf(e.target);
     if (!p || answeredOn(p) || !eligible(p)) { return; }
     e.preventDefault();
