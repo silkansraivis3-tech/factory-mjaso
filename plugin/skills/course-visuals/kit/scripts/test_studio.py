@@ -497,11 +497,39 @@ def main():
         shot = ((rs or {}).get("sizes", {}).get("1280x800") or {}).get("shot") or ""
         check("K13 --step all: one contact sheet of every step (rest + 2 steps = 3 panels) in one picture",
               shot.endswith("_all.png") and os.path.isfile(shot) and png_size(shot)[0] >= 1300 and png_size(shot)[1] >= 700, shot)
+        floor_parts_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     task_page_part()
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
     return 1 if FAILS else 0
+
+
+# IGF M07 s02 and M11 s04 as built: a part's own words (a scale's numbers, a step's digit) grown to the 12.5 px floor at the
+# scale the deck shows them, while their places stayed fixed - 11 and 33 text-zone findings on 2.62.1
+FLOOR_PARTS = {
+    "flammability": {"size": [640, 390], "label": "flammability", "parts": [
+        {"id": "F", "type": "flammability", "x": 70, "y": 40, "w": 540, "h": 260, "xmax": 100, "ymax": 25, "air": 21,
+         "xlabel": "% fuel gas in the mixture", "ylabel": "% oxygen", "zone": [[5, 19.95], [15, 17.85], [6, 12]], "value": 0}]},
+    "step_track": {"size": [640, 390], "label": "step track", "parts": [
+        {"id": "ST", "type": "step_track", "x": 24, "y": 30, "vertical": True, "gap": 62,
+         "steps": ["Authorise", "Isolate", "Ventilate", "Test the air", "Attendant, rescue", "Enter, keep testing"]}]}}
+
+
+def floor_parts_part(tmp):
+    """2.63.0 - the kit keeps a part's own words clear at the floor: the flammability chart's numbers move off its axis, the
+    step track's discs grow with their digits (never into a neighbour) - judged by the drawing audit at scale ~0.6"""
+    print("\n-- 2.63.0: a part's own words keep clear of its shapes at the 12.5 px floor")
+    for name, spec in FLOOR_PARTS.items():
+        p = os.path.join(tmp, "fp_%s.kit.json" % name)
+        io.open(p, "w", encoding="utf-8").write(json.dumps(spec))
+        r, why = studio.run(p, panel="420x300", sizes=((1280, 800),), out=os.path.join(tmp, "fp_" + name), shots=False)
+        v = ((r or {}).get("sizes") or {}).get("1280x800") or {}
+        zone = [f for st in v.get("states") or [] for f in st.get("findings") or []
+                if f.get("check") in ("text zone", "inside") and re.search(r"kit-tick|kit-badge-t", f.get("part", ""))]
+        rep = v.get("report") or {}
+        check("%s: drawn below 1:1 (scale %s, words grown %s x) - no number on its axis or its ring" % (name, rep.get("scale"), rep.get("up")),
+              r and (rep.get("up") or 0) > 1.3 and not zone, zone[:4] or why)
 
 
 if __name__ == "__main__":

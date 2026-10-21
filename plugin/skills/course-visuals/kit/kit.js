@@ -929,10 +929,13 @@
     var words = obs.filter(function (o) { return o.rect; }).map(function (o) { return o.rect; });   // the words drawn in parts
     labs.forEach(function (L) { L.opt = L.opt || {}; L.anchor = L.anchor || L.box; L.at = null; L.leader = null; });
     function inBounds(b) { return b.x >= bounds.x && b.y >= bounds.y && b.x2 <= bounds.x2 && b.y2 <= bounds.y2; }
-    /* the grid is coarse (a cell, plus half a cell round every obstacle): words inside a low room (a bilge 28 high) are
-       allowed one cell closer to its walls - still clear of them, and audit_drawing.js judges the true 4 px */
+    /* the grid marks every obstacle half a cell larger, so a box clear by `pad` on it is at least pad + half a cell from
+       the obstacle itself. Words inside a room keep P from its walls - the 4 px audit_drawing.js judges. 2.63.0: they were
+       let one cell closer (P - CELL, for a low bilge), which is 4.5 - s px on screen, 3.4-4 px at the usual scales - every
+       such name then failed "touches the edge of the shape it sits in" (30 findings on IGF M05 s07 alone); a room too
+       low for its name at that clearance sends the name beside it (search(L, true)) */
     function clear(b, inside) {
-      var pad = inside ? Math.max(1, P - CELL) : P;
+      var pad = inside ? Math.max(1, P - q2) : P;
       if (!inBounds(b) || grid.sum(grown(b, pad)) > 0) return false;
       for (var i = 0; i < taken.length; i++) if (meets(grown(taken[i], P), b)) return false;
       return true;
@@ -2761,24 +2764,44 @@ KIT.define('relief_valve', function (fig, part, g, p) {
 KIT.define('step_track', function (fig, part, g, p) {
   var h = KIT.h, steps = p.steps || [], n = steps.length, vert = !!p.vertical, box = !!p.boxes;
   var gap = vert ? (p.gap || 34) : (n > 1 ? (p.w || 600) / (n - 1) : 0);
+  var rails = [], discs = [];
   for (var k = 0; !box && k < n - 1; k++) {           // the rail runs between the circles, never under a number
     var a0 = gap * k + 20, a1 = gap * (k + 1) - 20;
-    h.el('line', vert ? { x1: 0, x2: 0, y1: a0, y2: a1, 'class': 'kit-step-track-rail' }
-                      : { x1: a0, x2: a1, y1: 0, y2: 0, 'class': 'kit-step-track-rail' }, g);
+    rails.push(h.el('line', vert ? { x1: 0, x2: 0, y1: a0, y2: a1, 'class': 'kit-step-track-rail' }
+                                 : { x1: a0, x2: a1, y1: 0, y2: 0, 'class': 'kit-step-track-rail' }, g));
   }
   var made = steps.map(function (label, i) {
     var sg = h.el('g', { transform: 'translate(' + (vert ? 0 : gap * i) + ' ' + (vert ? gap * i : 0) + ')', 'class': 'kit-step-track-step' }, g);
     if (box) h.el('rect', { x: -10, y: -10, width: 20, height: 20, rx: 4, 'class': 'kit-badge-o' }, sg);
     else {
-      h.el('circle', { r: 17, 'class': 'kit-badge-o' }, sg);              /* room for a digit at 0.8x (audit_drawing) */
-      h.el('circle', { r: 17, 'class': 'kit-badge' }, sg);
-      h.el('text', { y: 5, 'text-anchor': 'middle', 'class': 'kit-badge-t' }, sg, String(i + 1));
+      discs.push([h.el('circle', { r: 17, 'class': 'kit-badge-o' }, sg),              /* room for a digit at 0.8x (audit_drawing) */
+                  h.el('circle', { r: 17, 'class': 'kit-badge' }, sg),
+                  h.el('text', { y: 5, 'text-anchor': 'middle', 'class': 'kit-badge-t' }, sg, String(i + 1))]);
     }
     h.el('path', { d: 'M-6 0 L-2 5 L7 -6', 'class': 'kit-step-track-tick' }, sg);
-    h.label(fig, sg, vert ? { x: 24, y: 5, 'class': 'kit-cap' } : { x: 0, y: 34, 'text-anchor': 'middle', 'class': 'kit-cap' }, label,
-            { near: 22, lead: false });      // two long neighbours step apart, never far from their number
+    var lt = h.label(fig, sg, vert ? { x: 24, y: 5, 'class': 'kit-cap' } : { x: 0, y: 34, 'text-anchor': 'middle', 'class': 'kit-cap' }, label,
+                     { near: 22, lead: false }).querySelector('text');      // two long neighbours step apart, never far from their number
+    if (lt) discs.length && (discs[discs.length - 1][3] = lt);
     return sg;
   });
+  /* 2.63.0 - the disc grows with its digit (the 12.5 px floor, k), as the badge part's does - but never into its
+     neighbour - and the rail and the step's words keep clear of it: at r 17 a digit grown 1.5-1.8x touched its ring
+     (IGF M11 s04: 33 text-zone findings) */
+  if (!box) {
+    fig.fit(function (k) {
+      var r = Math.max(17, Math.min(17 * k, gap / 2 - 3));
+      discs.forEach(function (d) {
+        d[0].setAttribute('r', r.toFixed(1)); d[1].setAttribute('r', r.toFixed(1)); d[2].setAttribute('y', (5 * k).toFixed(1));
+        if (d[3] && vert) {               // its rows carry their own x (lines())
+          [d[3]].concat([].slice.call(d[3].querySelectorAll('tspan[x]'))).forEach(function (t) { t.setAttribute('x', (r + 7).toFixed(1)); });
+        } else if (d[3]) d[3].setAttribute('y', (r + 17).toFixed(1));
+      });
+      rails.forEach(function (ln, j) {
+        ln.setAttribute(vert ? 'y1' : 'x1', (gap * j + r + 3).toFixed(1));
+        ln.setAttribute(vert ? 'y2' : 'x2', (gap * (j + 1) - r - 3).toFixed(1));
+      });
+    });
+  }
   part.render = function (v) {
     made.forEach(function (sg, i) {
       var k = i + 1, cur = !box && Math.abs(v - k) < 0.5, done = box ? v >= k - 0.001 : v >= k + 0.5;
@@ -3941,18 +3964,24 @@ KIT.define('flammability', function (fig, part, g, p) {
   function sx(v) { return v / X * w; }
   function sy(v) { return ht - v / Y * ht; }
   function list(a) { return a.map(function (q) { return sx(q[0]).toFixed(1) + ' ' + sy(q[1]).toFixed(1); }); }
-  var v, i;
+  var v, i, xn = [], yn = [];
   h.el('path', { d: 'M0 0 V' + ht + ' H' + w, 'class': 'kit-flammability-axis' }, g);
   for (v = 0; v <= X + 1e-9; v += p.xevery || 20) {
     h.el('line', { x1: sx(v), x2: sx(v), y1: ht, y2: ht + 6, 'class': 'kit-tickl' }, g);
     if (v > 0) h.el('line', { x1: sx(v), x2: sx(v), y1: 0, y2: ht, 'class': 'kit-flammability-grid', 'data-may-cross': '', 'data-may-overlap': '', 'data-low-contrast': '' }, g);   // a quiet grid
-    h.el('text', { x: sx(v), y: ht + 22, 'text-anchor': 'middle', 'class': 'kit-tick' }, g, String(v));
+    xn.push(h.el('text', { x: sx(v), y: ht + 22, 'text-anchor': 'middle', 'class': 'kit-tick' }, g, String(v)));
   }
   for (v = 0; v <= Y + 1e-9; v += p.yevery || 5) {
     h.el('line', { x1: -6, x2: 0, y1: sy(v), y2: sy(v), 'class': 'kit-tickl' }, g);
     if (v > 0) h.el('line', { x1: 0, x2: w, y1: sy(v), y2: sy(v), 'class': 'kit-flammability-grid', 'data-may-cross': '', 'data-may-overlap': '', 'data-low-contrast': '' }, g);
-    h.el('text', { x: -15, y: sy(v) + 4.5, 'text-anchor': 'end', 'class': 'kit-tick' }, g, String(v));
+    yn.push(h.el('text', { x: -15, y: sy(v) + 4.5, 'text-anchor': 'end', 'class': 'kit-tick' }, g, String(v)));
   }
+  /* 2.63.0 - the scale's numbers keep their distance from the axis as the 12.5 px floor grows them (k): at a fixed
+     ht + 22 their tops came down onto the axis and its ticks (IGF M06 s03, M07 s02: 11-20 text-zone findings a figure) */
+  fig.fit(function (k) {
+    xn.forEach(function (t) { t.setAttribute('y', (ht + 12 + 10 * k).toFixed(1)); });
+    yn.forEach(function (t) { t.setAttribute('x', (-9 - 6 * k).toFixed(1)); });
+  });
   h.label(fig, g, { x: w / 2, y: ht + 48, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.xlabel || '% fuel in the mixture');
   h.label(fig, g, { x: 0, y: -14, 'text-anchor': 'start', 'class': 'kit-cap' }, p.ylabel || '% oxygen');
   /* the flammable zone is a polygon of [fuel %, oxygen %] points: a course gives its own numbers from its sources */
