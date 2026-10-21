@@ -32,6 +32,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 FIX = Path(__file__).resolve().parent.parent / "fixtures" / "deck_rise_in.html"
 MARK = FIX.parent / "deck_mark.html"
 CALL = FIX.parent / "deck_call_dark.html"
+LOGO = FIX.parent / "deck_logo_overhang.html"
 PASS, FAIL = [], []
 
 
@@ -73,6 +74,12 @@ def main():
         call = run(exe, prof, "", CALL)
         check("a conclusion on a dark stepping slide passes contrast - its bold term and its words (M01 run 4, s02 / s07)",
               bool(call) and call.get("low") == 0 and call.get("verdict") == "VERDICT: PASS", call)
+        # 2.62.0 - the official logo's clear space hangs below the template's top line: a pseudo-element, no words
+        logo = run(exe, prof, "", LOGO)
+        check("the logo box hanging 35 px below the top line of a photograph slide is no scroll (IGF M04 s01, s08)",
+              bool(logo) and logo.get("scroll") == 0 and logo.get("verdict") == "VERDICT: PASS", logo)
+        words = run(exe, prof, "?words", LOGO)
+        check("... a line of words that falls out of the top line still is", bool(words) and words.get("scroll") == 1, words)
     finally:
         shutil.rmtree(prof, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

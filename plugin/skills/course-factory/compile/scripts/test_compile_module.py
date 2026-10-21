@@ -993,6 +993,42 @@ def variety_part(tmp):
           len(set(shot_keys)) >= 3, shot_keys)
     check("... and each slide still says exactly the approved words", run(MATCH, c, "--module", "1", "--part", "instructor")[0] == 0)
 
+    print("\n-- 2.62.0: a slide moved for L62 is marked, keeps the ground its picture was made for, and a way the audit "
+          "measured out is not tried again")
+    moved = [(i, x) for i, x in zip(ids, secs) if 'data-varied="' in x]
+    check("every slide built another way carries data-varied (its look and its words' key); a slide built its own way none",
+          moved and all(re.search(r'data-varied="[\w-]+\|(light|dark)\|\w{12}"', x) for _, x in moved)
+          and all('data-varied="' not in x for i, x in zip(ids, secs) if i not in dict(moved)), [i for i, _ in moved])
+    o3 = cm.layout_options("long-explanation", "model", False, 80, {}, "two-col", False, True, False)
+    check("a picture made for the dark ground (a 3D scene) moves side, never to the light ground - its white words were "
+          "1.89:1 there (IGF M01 s05)", len(o3) > 1 and all(o["dark"] and o["key"][1] == "dark" for o in o3), [o["key"] for o in o3])
+    ph = cm.layout_options("explain-figure", "figure-right", True, 40, {}, "wide-left", False, False, True)
+    pick, mv = cm.choose_layout(ph, [ph[0]["key"]])
+    pick2, mv2 = cm.choose_layout(ph, [ph[0]["key"]], [pick["key"]])
+    check("a way measured out is skipped: the slide takes its next way", mv and mv2 and pick2["key"] not in (pick["key"], ph[0]["key"]),
+          (pick["key"], pick2["key"]))
+    dr = cm.layout_options("explain-figure", "figure-right", False, 40, {}, "two-col", False, False, False)
+    left = [o["key"] for o in dr if o["key"] != dr[0]["key"]]
+    check("... and with every other way measured out it keeps its own (the build then reports the repeat)",
+          cm.choose_layout(dr, [dr[0]["key"]], left) == (dr[0], False), left)
+    s = {"id": "d1", "title": "T", "text": "Words."}
+    av = {"d1": {"words": cm.words_key(s), "avoid": [["picture-left", "light"]]}}
+    check("a measured-out way holds while the slide's approved words and build-sheet entry are the same, and is forgotten "
+          "when either changes (the builder's \"parts\" may make it fit)",
+          cm.measured_out(av, s) == [("picture-left", "light")] and cm.measured_out(av, dict(s, text="Other words.")) == []
+          and cm.measured_out(av, s, {"parts": [[1, 1]]}) == []
+          and cm.measured_out({}, s) == [] and cm.measured_out(None, s) == [])
+    sid, vk = moved[0][0], re.search(r'data-varied="([\w-]+)\|(\w+)\|(\w+)"', moved[0][1]).groups()
+    os.makedirs(os.path.join(c, "working_claude", "_build"), exist_ok=True)
+    io.open(os.path.join(c, "working_claude", "_build", "M01_layout_avoid.json"), "w", encoding="utf-8").write(
+        json.dumps({sid: {"words": vk[2], "avoid": [[vk[0], vk[1]]]}}))
+    run(COMPILE, c, "--module", "1", "--force")
+    again = section(deck(md), sid)
+    check("built again with %s's way measured out (build_module.py writes M01_layout_avoid.json): it is built another way" % sid,
+          again and cm.layout_key(again) != (vk[0], vk[1]) and 'data-varied="%s|%s|' % (vk[0], vk[1]) not in again,
+          (vk, again and cm.layout_key(again)))
+    os.remove(os.path.join(c, "working_claude", "_build", "M01_layout_avoid.json"))
+
     print("\n-- L62: a small photograph is enlarged, never shown as blocks of pixels")
     big = Image.open(os.path.join(md, "assets", "img", "p1.png")).size
     keep = os.path.join(c, "working_claude", "photo_originals", "M01", "p1.png")
@@ -1014,7 +1050,9 @@ def variety_part(tmp):
     check("the white logo is the official file with its one colour switched - the same shapes, nothing else changed",
           white.replace('fill="#FFFFFF"', 'fill="#022367"').replace(" (white, for dark backgrounds)", "") == navy)
     check("... on a dark slide no plate, and over a photograph the corner behind it is darkened, not the logo",
-          "border-radius:0;box-shadow:none" in css and ".slide[data-template].photo .slide-kind::before" in css)
+          "border-radius:0;box-shadow:none" in css and re.search(r"\.slide\[data-template\]\.photo \.photo-scrim\{background:\s*"
+                                                                 r"radial-gradient\(ellipse at 100% 0,var\(--lt-corner\)", css)
+          and ".photo .slide-kind::before" not in css)   # 2.62.0: a layer of the scrim - a box hanging off the top line "scrolled" it
     check("... and a long title leaves room for it", "max-width:min(24em,calc(100% - var(--lt-logo-w)))" in css)
     check("a light panel on a dark slide keeps its white ground and dark words",
           ".slide[data-template].dark .fill.fig.lt-light{background:var(--lt-white)" in css

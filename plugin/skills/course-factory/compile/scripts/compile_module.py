@@ -1670,7 +1670,9 @@ def layout_options(tid, variant, is_photo, words, b, comp, own_left, own_dark, d
     side = tid if tid in RIGHT else ("content-in-parts" if words > PARTS_FROM else "reading-with-figure" if words > DENSE_WORDS
                                      else "explain-figure")
     col = "wide-left" if is_photo else "two-col"
-    for dark in ((False, True) if dark_ok else (False,)):  # the dark ground only for a picture made for it
+    # the other ground only for a photograph or a kit drawing (dark_ok): any other picture keeps the ground it was made
+    # for - a 3D scene's white words on a light slide were 1.89:1 (IGF M01 s05, 2.62.0 merge)
+    for dark in ((False, True) if dark_ok else (bool(own_dark),)):
         g = "dark" if dark else "light"
         opts.append({"tid": side, "variant": RIGHT[side], "comp": col, "first": False, "dark": dark, "key": ("picture-right", g)})
         opts.append({"tid": side, "variant": LEFT[side], "comp": col, "first": True, "dark": dark, "key": ("picture-left", g)})
@@ -1683,9 +1685,11 @@ def layout_options(tid, variant, is_photo, words, b, comp, own_left, own_dark, d
     return opts
 
 
-def choose_layout(opts, recent):
+def choose_layout(opts, recent, measured_out=()):
     """the first way that looks unlike the last VARIETY_WINDOW slides - the slide's own first; failing that, unlike the
-    slide before; failing that, its own (the build then reports the repeat)"""
+    slide before; failing that, its own (the build then reports the repeat). measured_out: the other ways this slide was
+    built and the audit found did not fit (build_module.py, 2.62.0) - never tried again while its words are the same"""
+    opts = opts[:1] + [o for o in opts[1:] if o["key"] not in measured_out]
     for avoid in (recent[-VARIETY_WINDOW:], recent[-1:]):
         for o in opts:
             if o["key"] not in avoid:
@@ -1782,8 +1786,22 @@ def active_mins(s):
     return "%g" % cs.minutes(s) if on else "0"
 
 
+def words_key(s, b=None):
+    """the slide's approved words and its build-sheet entry, short - a layout measured out (layout_avoid) holds only
+    while both are the same (the builder's "parts" or another picture may make it fit)"""
+    return hashlib.sha1(("%s\n%s\n%s" % (s.get("title") or "", s.get("text") or "", json.dumps(b or {}, sort_keys=True)))
+                        .encode("utf-8")).hexdigest()[:12]
+
+
+def measured_out(avoid, s, b=None):
+    """the layouts build_module.py measured out for this slide: [(shape, ground), ...] while its words and build-sheet
+    entry are unchanged"""
+    a = (avoid or {}).get(s.get("id")) or {}
+    return [tuple(k) for k in a.get("avoid") or []] if a.get("words") == words_key(s, b) else []
+
+
 def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, pool=None, taken=None, build=None,
-               recent=None):
+               recent=None, avoid=None):
     m = cs.mid(script.get("module"))
     sid, kind = s["id"], s["kind"]
     where = "%s (%s)" % (cs.place(script, sid), sid)
@@ -1867,13 +1885,15 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     if tid == "opening" and variant == "photo":            # the opening's photograph is the screen, the title over it
         comp = "photo"
     # L62 (owner, 2026-10-21) - never the same look on two slides in a row: built another way when it would repeat
+    varied, wkey = None, words_key(s, b)
     if recent is not None and kind == "slide" and not s.get("recap"):
         # a photograph, or a figure-kit drawing (made for the dark panel), may move to the dark ground; a drawing or a
         # widget made for a white page keeps the light one - its own controls would vanish (gas M01 s07, s15, s19, s26)
         dark_ok = is_photo or bool(re.search(r'data-kit="|class="kit-screen', fig or ""))
         pick, moved = choose_layout(layout_options(tid, variant, is_photo, nwords_all, b, comp, bool(b.get("figure_first")),
-                                                   bool(b.get("dark")), dark_ok), recent)
+                                                   bool(b.get("dark")), dark_ok), recent, measured_out(avoid, s, b))
         if moved:
+            varied = pick["key"]
             tid, variant = pick["tid"], pick["variant"]
             b = dict(b, figure_first=pick["first"], dark=pick["dark"])
             if pick["comp"] == "photo":
@@ -1937,6 +1957,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
          "data-visual": vkind}
     d.update(base)
     template_attrs(d, tid, variant, split)
+    if varied:              # built another way for L62: build_module.py measures it out if the audit finds it does not fit
+        d["data-varied"] = "%s|%s|%s" % (varied[0], varied[1], wkey)
     label = "Theory"
     if act:
         code = (s.get("opens") or "").strip() or sid.upper()
@@ -2448,7 +2470,7 @@ def starter_build(script, shared=(), figdir=None, specs=None, mdir=None):
     return sheet
 
 
-def compile_deck(script, build, mdir, figdir, version, approved):
+def compile_deck(script, build, mdir, figdir, version, approved, avoid=None):
     probs = []
     CUE_FIXES.clear()
     m = cs.mid(script.get("module"))
@@ -2485,7 +2507,7 @@ def compile_deck(script, build, mdir, figdir, version, approved):
         b = (build.get("screens") or {}).get(s["id"]) or {}
         teach += s["kind"] == "slide"
         recent = [layout_key(x) for x in slides[-VARIETY_WINDOW:]]   # L62: the look of the slides just before this one
-        slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, build, recent))
+        slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, build, recent, avoid))
     for a_, b_, s in zip(slides, slides[1:], screens[1:]):
         if layout_key(a_) == layout_key(b_) and layout_key(b_)[0] not in ("task-launch", "recap", ""):
             probs.append("%s: looks exactly like the slide before it (%s, %s ground) - two slides in a row never look the same "
@@ -2763,7 +2785,14 @@ def main(argv=None):
     # file of the compiler's own that the next run refuses as "changed by hand"
     if o.only in ("all", "deck"):
         written.append(out)
-        page, probs, notes = compile_deck(script, build, mdir, figdir, plugin_version(), approved)
+        # 2.62.0 - the layouts build_module.py measured out (a slide built another way for L62 that the audit found does
+        # not fit), per slide while its words are unchanged
+        try:
+            mid_ = cs.mid(o.module) if str(o.module).isdigit() else str(o.module)
+            avoid = json.load(io.open(workspace.claude_path(o.course, "_build", "%s_layout_avoid.json" % mid_), encoding="utf-8"))
+        except (OSError, ValueError):
+            avoid = {}
+        page, probs, notes = compile_deck(script, build, mdir, figdir, plugin_version(), approved, avoid)
         probs = write_cue_fixes(o.course, o.module, probs)            # 2.52.0: the drafted cue lines, ready for propose
         os.makedirs(os.path.dirname(out), exist_ok=True)
         with io.open(out, "w", encoding="utf-8", newline="\n") as f:

@@ -202,6 +202,40 @@ def figure_slides(text):
     return set(re.findall(r"^  (s\d+\w*) \(", text, re.M))
 
 
+LAYOUT_ROUNDS = 2       # 2.62.0: how many times one build builds again the slides it moved for L62 that did not fit
+
+
+def moved_misfits(deck_html, audit_out):
+    """the slides the compiler built another way for L62 (data-varied) that the audit failed: {sid: (shape, ground, words)}.
+    No word count tells whether a slide fits another way (IGF M04 s05's 102 words over a photograph spilled 66 px, M05
+    s06's 105 beside a 3D model on the left scrolled 22 px): the audit measures it, and the slide is built its next way"""
+    bad = set(re.findall(r"slide \d+ \((\w+)\):", audit_out))
+    out = {}
+    for tag in re.findall(r"<section [^>]*>", deck_html):
+        sid = re.search(r'\bdata-script="(\w+)"', tag)
+        v = re.search(r'\bdata-varied="([^"|]+)\|([^"|]+)\|(\w+)"', tag)
+        if sid and v and sid.group(1) in bad:
+            out[sid.group(1)] = v.groups()
+    return out
+
+
+def measure_out(path, misfits):
+    """each misfit's layout joins its slide's measured-out list (compile_module.measured_out); a slide whose approved
+    words changed starts a new list"""
+    try:
+        avoid = json.load(io.open(path, encoding="utf-8"))
+    except (OSError, ValueError):
+        avoid = {}
+    for sid, (shape, ground, words) in misfits.items():
+        a = avoid.get(sid) or {}
+        if a.get("words") != words:
+            a = {"words": words, "avoid": []}
+        if [shape, ground] not in a["avoid"]:
+            a["avoid"].append([shape, ground])
+        avoid[sid] = a
+    io.open(path, "w", encoding="utf-8", newline="\n").write(json.dumps(avoid, indent=1, sort_keys=True))
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("course")
@@ -214,6 +248,7 @@ def main(argv=None):
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--full", action="store_true", help="never stop after the figures - every stage, every run; the drawing "
                                                         "check and the audits judge every slide and page again (2.57.0)")
+    ap.add_argument("--layout-round", type=int, default=0, help=argparse.SUPPRESS)
     o = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     t0 = time.time()
@@ -400,6 +435,21 @@ def main(argv=None):
             # the audits name every element and its words (run_audits.summarise), so they keep more lines - no --json run to find them
             say += ["  " + x for x in lines_of("\n".join(y for y in out.splitlines() if not y.startswith("Built ")),
                                                40 if k.startswith("audits") else 12)]
+    # 2.62.0 - a slide the compiler built another way for L62 that the audit found does not fit is measured out and built
+    # its next way, at once: the builder never pins a layout by hand for what the compiler chose
+    ak = next((k for k in jobs if k.startswith("audits")), None)
+    if ak in fails and o.layout_round < LAYOUT_ROUNDS and os.path.isfile(deck):
+        mis = moved_misfits(io.open(deck, encoding="utf-8").read(), results[ak][1])
+        if mis:
+            measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
+            write_stages(log, stages, t0)
+            log.close()
+            print("LAYOUT - %d slide(s) built another way so no two neighbours look alike (L62) did not fit: %s - built again "
+                  "their next way (%.0f s; kept in %s_layout_avoid.json while their words are unchanged)"
+                  % (len(mis), ", ".join("%s (%s, %s ground)" % (k, v[0], v[1]) for k, v in sorted(mis.items())),
+                     time.time() - t0, m))
+            sys.stdout.flush()
+            return main(list(sys.argv[1:] if argv is None else argv) + ["--layout-round", str(o.layout_round + 1)])
     passed = not fails
     review = ""
     if want_review and passed:

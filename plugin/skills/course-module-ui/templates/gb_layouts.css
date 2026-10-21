@@ -102,11 +102,9 @@
   background:url("novikontas_logo_white.svg") center/100% 100% no-repeat;border-radius:0;box-shadow:none;
 }
 /* over a full photograph the corner behind the logo is darkened - the photograph, never the logo (no effects on it) - so
-   a bright sky or a white tank never swallows the white logo */
-.slide[data-template].photo .slide-kind::before{
-  content:"";position:absolute;right:0;top:0;width:min(46vmin,380px);height:min(30vmin,240px);z-index:-1;pointer-events:none;
-  background:radial-gradient(ellipse at 100% 0,var(--lt-corner) 0,var(--lt-corner-mid) 45%,transparent 72%);
-}
+   a bright sky or a white tank never swallows the white logo. 2.62.0: a layer of the photograph's own scrim (below,
+   "photo + explanation"); as a box hanging 30 vmin from the 10.5 vmin top line it made that line "scroll" 150 px in the
+   deck audit (IGF M04 s01, s08) */
 
 /* the bottom line: the module's short title, under a hairline */
 .slide[data-template]::after{
@@ -241,7 +239,9 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 /* ---------------------------------------------------------------- photo + explanation */
 .slide[data-template].photo .photo-copy{left:var(--lt-pad-x);max-width:min(64vmin,560px)}
 .slide[data-template].photo .photo-copy .lead{color:var(--lt-on-photo);font-size:var(--lt-fs)}
-.slide[data-template].photo .photo-scrim{background:linear-gradient(90deg,rgba(6,23,61,.92) 0,rgba(6,23,61,.7) 38%,rgba(6,23,61,.05) 72%)}
+.slide[data-template].photo .photo-scrim{background:
+  radial-gradient(ellipse at 100% 0,var(--lt-corner) 0,var(--lt-corner-mid) 45%,transparent 72%) right top/min(46vmin,380px) min(30vmin,240px) no-repeat,
+  linear-gradient(90deg,rgba(6,23,61,.92) 0,rgba(6,23,61,.7) 38%,rgba(6,23,61,.05) 72%)}
 /* split: the photograph framed on the right, the words on the dark ground - the reference's photo-explain */
 .slide[data-template^="photo-explain."][data-variant="split"] .photo-wrap{
   left:auto;right:var(--lt-pad-x);top:calc(var(--lt-logo-h) + min(2.4vmin,19px));bottom:max(92px,11.5vmin);

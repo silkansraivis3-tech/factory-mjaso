@@ -77,6 +77,7 @@ def main():
           and not b.figures_only_round(["figures"], False, {}, "k1"))
     blanks_part()
     stages_part()
+    layout_part()
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
     return 1 if FAILS else 0
 
@@ -127,6 +128,34 @@ def stages_part():
     check("2.52.0: the build log ends with each stage's seconds and the total",
           "===== stage seconds" in text and "figures (figure_fit.py)" in text and "41 s" in text and "120 s" in text
           and "total" in text and "230 s" in text, text)
+
+
+def layout_part():
+    """2.62.0 - a slide the compiler built another way for L62 that the audit failed is measured out (IGF M04 s05: 102
+    words under a photograph across the slide spilled 66 px; no word count would have told)"""
+    import io
+    import json
+    import tempfile
+    deck = ('<section class="slide" data-script="s04" data-template="explain-figure.v1">\n'
+            '<section class="slide" id="s05" data-script="s05" data-varied="picture-top|light|a1b2c3d4e5f6">\n'
+            '<section class="slide dark" data-script="s06" data-varied="picture-left|dark|0123456789ab">')
+    audit = ("  1024x768  deck     FAIL n=3   13 slides\n              slide 5 (s05): spills ul.support by 66 px\n"
+             "              slide 4 (s04): spills div.copy by 7 px\n")
+    got = b.moved_misfits(deck, audit)
+    check("only a failing slide the compiler moved is a misfit - not one built its own way, not a moved one that passed",
+          got == {"s05": ("picture-top", "light", "a1b2c3d4e5f6")}, got)
+    path = os.path.join(tempfile.mkdtemp(prefix="bm_layout_"), "M01_layout_avoid.json")
+    b.measure_out(path, got)
+    b.measure_out(path, {"s05": ("picture-left", "light", "a1b2c3d4e5f6")})
+    b.measure_out(path, got)
+    av = json.load(io.open(path, encoding="utf-8"))
+    check("each misfit's way joins its slide's list once", av == {"s05": {"words": "a1b2c3d4e5f6", "avoid": [
+        ["picture-top", "light"], ["picture-left", "light"]]}}, av)
+    b.measure_out(path, {"s05": ("picture-right", "dark", "ffffffffffff")})
+    av = json.load(io.open(path, encoding="utf-8"))
+    check("... and a slide whose approved words changed starts a new list",
+          av["s05"] == {"words": "ffffffffffff", "avoid": [["picture-right", "dark"]]}, av)
+    check("one build builds the misfits again at most %d times" % b.LAYOUT_ROUNDS, b.LAYOUT_ROUNDS == 2)
 
 
 if __name__ == "__main__":

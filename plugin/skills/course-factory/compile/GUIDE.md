@@ -133,8 +133,13 @@ unknown or unsuitable template or variant is a problem with the slide's id.
 look like the one before it, the compiler builds it another way that holds the same words and picture: the picture on
 the other side, a photograph across the top with the words in two columns under it (`figure-stage` `figure-top`, up to
 110 words), a photograph framed on the dark ground (up to 100 words), or the dark ground - which only a photograph or a
-figure-kit drawing takes; a drawing or widget made for a white page stays light. It also avoids the looks of the three
-slides before it when it can. A build sheet's own layout is kept wherever it does not repeat. A photograph under
+figure-kit drawing takes; a drawing or widget made for a white page stays light, and one made for the dark ground (a 3D
+scene) stays dark. It also avoids the looks of the three slides before it when it can. A build sheet's own layout is
+kept wherever it does not repeat. A slide built another way carries `data-varied`; when the audit finds it does not fit
+there (2.62.0), `build_module.py` builds it its next way at once - the line `LAYOUT - ... built again their next way` -
+and keeps that in `_build\MNN_layout_avoid.json` while the slide's words and build-sheet entry are unchanged. Never pin
+a layout by hand for that. A slide whose OWN layout does not fit either (the larger logo can cost a long title its
+first line beside it) is yours: give it `"parts"` or a shorter picture column, as for any slide that spills. A photograph under
 1600 px on its long side is enlarged once (Lanczos, a light sharpening, at most four times; the original kept in
 `working_claude/photo_originals/M01/`); under 800 px it is listed - a larger original is still the real fix.
 

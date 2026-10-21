@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Fixture - the logo's clear space hangs below the top line (audit_deck.js: not a scroll)</title>
+<style>
+  html,body{margin:0;height:100%}
+  .slide{display:none;position:absolute;inset:0;overflow:hidden}
+  .slide.active{display:block}
+  /* a photograph slide has no .slide-body: the audit measures the slide's own children. The top line is 74 px tall and
+     its logo box (a pseudo-element, no words) runs 35 px below it - gb_layouts.css L62, IGF M04 s01 */
+  .slide-kind{position:absolute;left:0;right:0;top:0;height:74px;display:flex;align-items:center;padding:0 64px}
+  .slide-kind::after{content:"";position:absolute;right:40px;top:-10px;width:144px;height:119px;background:#022367}
+  .below{position:absolute;left:64px;top:110px}
+  .photo-wrap{position:absolute;left:44%;right:64px;top:140px;bottom:92px;background:#8aa}
+</style></head>
+<body>
+<main id="stage">
+  <section class="slide" id="s1"><div class="slide-kind"><b>Theory</b> · M04 · 1 / 9</div><div class="photo-wrap"></div></section>
+</main>
+<pre id="out"></pre>
+<script src="../scripts/audit_deck.js"></script>
+<script>
+  /* ?words: a real line of words inside the top line runs past its foot - that is still a finding */
+  if (location.search.indexOf("words") >= 0) {
+    var w = document.createElement("span"); w.className = "below"; w.textContent = "A note that falls out of the top line";
+    document.querySelector(".slide-kind").appendChild(w);
+  }
+  AuditDeck.all().then(function (res) {
+    document.getElementById("out").textContent = JSON.stringify({scroll: (res.totals || {}).scroll, verdict: res.verdict || "",
+      failing: res.failingSlides || []});
+  });
+</script>
+</body></html>

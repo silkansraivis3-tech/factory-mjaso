@@ -301,6 +301,16 @@
              right: (a.right - b.left) / sx, bottom: (a.bottom - b.top) / sy,
              scale: [sx, sy] };
   }
+  /* how far the box's real content - its words and elements, never a pseudo-element - runs past its foot, in its own
+     (unscaled) px; 0 or less when it all fits */
+  function realOverflow(el) {
+    var r = el.getBoundingClientRect(), sy = el.offsetHeight ? r.height / el.offsetHeight : 1;
+    var range = document.createRange();
+    range.selectNodeContents(el);
+    var c = range.getBoundingClientRect();
+    if (!c.height && !c.width) { return 0; }
+    return (c.bottom - (r.top + (el.clientTop + el.clientHeight) * (sy || 1))) / (sy || 1);
+  }
   function boxIn(el, root) {
     var o = offsetBox(el, root);
     if (o) { return o; }
@@ -506,6 +516,10 @@
         if (el !== body) {
           var st = getComputedStyle(el);
           if (/(auto|scroll)/.test(st.overflowY + st.overflow)) { return; }
+          /* 2.62.0 - what runs past a box that shows its overflow is judged by its real content, its words and
+             elements: a pseudo-element has none - the official logo's clear space hanging 35-40 px below the
+             template's top line (IGF M04 s01, s08) is no part of the slide anyone needs to reach */
+          if (st.overflowY === "visible" && realOverflow(el) <= CONFIG.scrollTolPx) { return; }
         }
         out.scroll.push({ el: el.tagName.toLowerCase() +
                               (el.className && el.className.baseVal === undefined &&
