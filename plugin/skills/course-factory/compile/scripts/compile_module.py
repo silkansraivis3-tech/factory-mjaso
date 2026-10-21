@@ -1795,11 +1795,18 @@ def active_mins(s):
     return "%g" % cs.minutes(s) if on else "0"
 
 
+# build-sheet fields that never decide a slide's layout - an edit to them keeps what was measured and built (2.62.1)
+NOT_LAYOUT = ("alt", "labels", "unlabel", "areas", "link_hint", "not_things", "declined_3d")
+
+
 def words_key(s, b=None):
-    """the slide's approved words and its picture, short - a layout measured out (layout_avoid) or kept from the last
-    build (layouts) holds only while both are the same. 2.62.1: the picture only, not the whole build-sheet entry - every
-    edit a builder made to a slide's entry (its labels, a split) forgot what was measured and tried the misfits again"""
-    return hashlib.sha1(("%s\n%s\n%s" % (s.get("title") or "", s.get("text") or "", (b or {}).get("figure") or ""))
+    """the slide's approved words and the build-sheet fields that decide its layout, short - a layout measured out
+    (layout_avoid) or kept from the last build (layouts) holds only while they are the same. 2.62.1: an edit to a label
+    or an alt text keeps it (every such edit used to forget what was measured and try the misfits again); a builder's
+    own "composition", "template", "split", picture ... always wins over a remembered layout"""
+    # the entry as slide_html reads it (asked_composition: a template's composition) - the same key wherever it is made
+    keep = {k: v for k, v in asked_composition(b or {}).items() if k not in NOT_LAYOUT and not k.startswith("_")}
+    return hashlib.sha1(("%s\n%s\n%s" % (s.get("title") or "", s.get("text") or "", json.dumps(keep, sort_keys=True)))
                         .encode("utf-8")).hexdigest()[:12]
 
 

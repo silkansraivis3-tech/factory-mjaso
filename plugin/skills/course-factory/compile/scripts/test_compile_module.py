@@ -1016,11 +1016,11 @@ def variety_part(tmp):
           cm.choose_layout(dr, [dr[0]["key"]], left) == (dr[0], False), left)
     s = {"id": "d1", "title": "T", "text": "Words."}
     av = {"d1": {"words": cm.words_key(s), "avoid": [["picture-left", "light"]]}}
-    check("a measured-out way holds while the slide's approved words and picture are the same, and is forgotten when "
-          "either changes; an edit to the rest of its build-sheet entry keeps it (2.62.1)",
+    check("a measured-out way holds while the slide's approved words and layout fields are the same, and is forgotten when "
+          "they change (another picture, the builder's own composition); a label or alt edit keeps it (2.62.1)",
           cm.measured_out(av, s) == [("picture-left", "light")] and cm.measured_out(av, dict(s, text="Other words.")) == []
-          and cm.measured_out(av, s, {"figure": "other.html"}) == []
-          and cm.measured_out(av, s, {"labels": {"T1": "below"}}) == [("picture-left", "light")]
+          and cm.measured_out(av, s, {"figure": "other.html"}) == [] and cm.measured_out(av, s, {"composition": "two-col"}) == []
+          and cm.measured_out(av, s, {"labels": {"T1": "below"}, "alt": "x"}) == [("picture-left", "light")]
           and cm.measured_out({}, s) == [] and cm.measured_out(None, s) == [])
     sid, vk = moved[0][0], re.search(r'data-varied="([\w-]+)\|(\w+)\|(\w+)"', moved[0][1]).groups()
     os.makedirs(os.path.join(c, "working_claude", "_build"), exist_ok=True)
@@ -1034,6 +1034,7 @@ def variety_part(tmp):
     os.remove(os.path.join(c, "working_claude", "_build", "M01_layout_avoid.json"))
 
     print("\n-- 2.62.1: a slide keeps the way it was built last time")
+    run(COMPILE, c, "--module", "1", "--force")         # a build with nothing measured out: the one the next must repeat
     lay = os.path.join(c, "working_claude", "_build", "M01_layouts.json")
     kept = json.load(io.open(lay, encoding="utf-8")) if os.path.isfile(lay) else {}
     page2 = deck(md)
@@ -1052,8 +1053,10 @@ def variety_part(tmp):
           cm.last_layout({"d1": {"words": cm.words_key(s), "key": ["picture-left", "light"]}}, s) == ("picture-left", "light")
           and cm.last_layout({"d1": {"words": cm.words_key(s), "key": ["picture-left", "light"]}}, dict(s, text="New.")) is None)
     run(COMPILE, c, "--module", "1", "--force")
-    check("built again unchanged, every slide keeps its way", {k: cm.layout_key(v) for k, v in secs2.items()} ==
-          {re.search(r'id="(\w+)"', x).group(1): cm.layout_key(x) for x in re.findall(r"<section [^>]*>.*?</section>", deck(md), re.S)})
+    before = {k: cm.layout_key(v) for k, v in secs2.items()}
+    after = {re.search(r'id="(\w+)"', x).group(1): cm.layout_key(x) for x in re.findall(r"<section [^>]*>.*?</section>", deck(md), re.S)}
+    check("built again unchanged, every slide keeps its way", before == after,
+          {k: (before.get(k), after.get(k)) for k in set(before) | set(after) if before.get(k) != after.get(k)})
 
     print("\n-- L62: a small photograph is enlarged, never shown as blocks of pixels")
     big = Image.open(os.path.join(md, "assets", "img", "p1.png")).size

@@ -881,7 +881,8 @@ def deck_fit_part(exe, tmp):
         tcm.cs.save(os.path.join(img, "_photo_meta.json"), {"ship.jpg": LONG_CREDIT, "deck.jpg": LONG_CREDIT, "station.jpg": LONG_CREDIT,
                                                             "hose.jpg": MID_CREDIT})
         tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
-            "s01": {"figure": "assets/img/ship.jpg"}, "s02": {"figure": "assets/img/deck.jpg"},
+            # s02 asks for the split photo by name: since 2.62.1 a long full-screen photo is a photo column by default
+            "s01": {"figure": "assets/img/ship.jpg"}, "s02": {"figure": "assets/img/deck.jpg", "composition": "two-col"},
             "s03": {"figure": "assets/img/station.jpg", "composition": "wide-left", "split": 0.6},
             "s04": {"figure": "assets/img/hose.jpg", "composition": "stage"}, "t01": {"try_tablet": False}}})
         code, out = tcm.run(tcm.COMPILE, c, "--module", "1")
