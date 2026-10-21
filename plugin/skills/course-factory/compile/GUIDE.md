@@ -238,7 +238,12 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   already built - geometry, materials, first render - while the trainees are still looking at the slide before: hook
   the slide before's entry in `window.GB_HOOKS` to build it (hidden), and the 3D slide's own hook only reveals the
   canvas and draws; honour `window.__noPrepare` and report `window.__scene3d` as `measure/GUIDE.md` §2b says - the
-  measuring tool reads it. A scene built when its slide opens took seconds on the throttled CPU in IGF M07-M15. **Measure it**: `node course-module-ux/measure/scripts/perf3d.mjs <deck.html>
+  measuring tool reads it. A scene built when its slide opens took seconds on the throttled CPU in IGF M07-M15.
+  **After every edit of a scene file, smoke-test it in seconds** before the next build:
+  `python course-module-ux/measure/scripts/smoke3d.py <deck.html> [--slide s05]` - the 3D slide alone (and the slide
+  before it) in a hidden browser with a 15 s limit: its first frame, or FAIL when it throws, never draws or hangs the
+  page (2.63.0; a hanging scene once cost a build three 600 s waits, IGF M01 v262 runs 6-8; M01 s05 checks in ~9 s).
+  **Measure it**: `node course-module-ux/measure/scripts/perf3d.mjs <deck.html>
   --slides=all` (Node + headless Chrome, CPU slowed 4x, warm and cold first frame, fps; exit 1 over budget; see
   `measure/GUIDE.md` §2b). **Every 3D scene answers a tap** (`three_d.interaction`): a tap - not a drag - on a part
   highlights it (blue glow, the camera frames it, its name shows); a second tap on it, or a tap beside the parts,
