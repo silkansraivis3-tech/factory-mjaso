@@ -1023,6 +1023,35 @@ def inset_under_part(exe, tmp):
               ins.get("fs", 0) >= 17 and ins.get("img", 0) >= 75, ins)
 
 
+RUN_AUDITS = os.path.join(HERE, "..", "..", "..", "course-module-ux", "measure", "scripts", "run_audits.py")
+
+
+def strip_contrast_part(exe, tmp):
+    """2.63.0 (IGF M02 v262 run 5, s03, builder's bug 3) - on a LIGHT slide the L57 photo strip under a kit drawing sits in
+    the Navy figure panel, but its captions kept the light page's grey: "Fuel tank" read 1.89:1, and the number badge was
+    Navy on Navy. With 80 / 20 (2.62.1) light is the default, so every such strip would fail. Measured by the deck audit."""
+    print("\n-- 2.63.0: the photo strip under a drawing on a light slide reads on the Navy panel")
+    os.makedirs(os.path.join(tmp, "sc"))
+    c, md = tcm.new_course(os.path.join(tmp, "sc"), tcm.script(), build=False)
+    io.open(os.path.join(md, "assets", "img", "tank.jpg"), "wb").write(tcm.png(600, 400, (150, 160, 170)))
+    tcm.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), dict(tcm.PHOTO_META, **{"tank.jpg": dict(
+        MID_CREDIT, description="A type C fuel tank on a ship's deck.", shows=["fuel tank"])}))
+    tcm.cs.save(os.path.join(c, "working_claude", "figures", "M01", "corner.kit.json"), CORNER_KIT)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "s01": {"figure": "assets/fig/scale.svg"}, "s02": {"figure": "corner.kit.json", "composition": "two-col"},
+        "s04": {"figure": "hull.svg", "declined_3d": "the fixture's hull stays flat"}, "t01": {"try_tablet": False}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
+    page = os.path.join(md, "presentation", "index.html")
+    text = io.open(page, encoding="utf-8").read() if os.path.isfile(page) else ""
+    s02 = re.search(r'<section class="slide"[^>]*data-title="The Code".*?</section>', text, re.S)
+    check("a light kit slide with the strip under its drawing, in the figure's panel", s02 and re.search(
+        r'class="fill fig[^"]*".*class="photo-strip"', s02.group(0), re.S), out[-600:])
+    p = subprocess.run([sys.executable, RUN_AUDITS, page, "--quiet"], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    low = [x.strip() for x in p.stdout.splitlines() if "low contrast" in x and "(s02)" in x]
+    check("no caption or badge of the strip under the contrast floor at 1280 x 800",
+          ("deck" in p.stdout or "every probe passed" in p.stdout) and not low, low or p.stdout[-600:])
+
+
 BLIND_LOOK = ("var seen = []; document.querySelectorAll('.scr[data-script]').forEach(function (s) {"
               "  s.querySelectorAll('.checked,.right,.wrong,.fixed,.shake,.missed,.dim,.stopat,.good,.bad,.why.on').forEach("
               "    function (n) { seen.push(s.getAttribute('data-script') + ':' + (n.getAttribute('class') || '')); });"
@@ -1104,6 +1133,7 @@ def main():
         inset_part(exe, tmp)
         inset_empty_part(exe, tmp)
         inset_under_part(exe, tmp)
+        strip_contrast_part(exe, tmp)
         figures_part(exe, tmp)
         fixes_part(exe, tmp)
         picture_part(exe, tmp)

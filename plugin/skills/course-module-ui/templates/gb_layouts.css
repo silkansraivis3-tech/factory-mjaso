@@ -185,6 +185,11 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template].dark .fill.fig{background:radial-gradient(ellipse at 50% 46%,var(--lt-panel-glow) 0,transparent 70%),rgba(83,167,219,.07);
   border:1px solid var(--lt-line-d)}
 .slide[data-template] .fill.fig .kit-screen{background:transparent}
+/* the L57 photo strip under a drawing is in the Navy panel on a light slide too: its captions and number badges take the
+   dark ground's colours - the light page's grey read 1.89:1 there and the Navy badge vanished (IGF M02 v262 s03) */
+.slide[data-template] .fill.fig:not(.lt-light) .photo-strip figcaption{color:var(--dim-d)}
+.slide[data-template] .fill.fig:not(.lt-light) .photo-strip figcaption b{background:var(--blue);color:var(--ink)}
+.slide[data-template] .fill.fig:not(.lt-light) .photo-strip .pthumb img{border-color:var(--line-d);box-shadow:var(--sh-d)}
 .slide[data-template] .fill.fig:has(> img:only-child){background:none;border:0;padding:0}
 .slide[data-template] .fill.fig > img:only-child{width:100%;height:100%;object-fit:cover;border-radius:min(2.2vmin,18px)}
 
