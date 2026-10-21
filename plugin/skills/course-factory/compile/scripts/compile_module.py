@@ -131,7 +131,7 @@ STATEMENT_MAX_WORDS = 22
 # 2.49.2 (F4) - how many words a column keeps room for when a photograph sits under them (inset), at 1280 x 800. Measured on IGF:
 # M01 s03 (58 words) and M04 s02 (82, audit_deck clean) fitted; M07 s08 (95), s12 (101) and M09 s06 (91) spilled
 # 105 / 92 / 79 px off the slide - so the line is drawn between 82 and 91
-INSET_MAX_WORDS = {"two-col": 86, "wide-left": 86, "wide-right": 86, "photo-split": 96}
+INSET_MAX_WORDS = {"two-col": 86, "wide-left": 86, "wide-right": 86, "photo-split": 96}   # 2.63.0: set from the budgets below
 CHECK_PAGES = {"MC": "../assessment/check.html", "FA": "../assessment/final.html"}   # the module check and the (single) final
 LAYOUTS = json.load(io.open(os.path.join(SKILLS, "course-module-ui", "knowledge", "layout-templates.json"), encoding="utf-8"))
 TEMPLATES = LAYOUTS["templates"]
@@ -140,6 +140,25 @@ PARTS_FROM, PART_WORDS = LAYOUTS["parts"]["auto_from_words"], LAYOUTS["parts"]["
 SPLIT_LO, SPLIT_HI = LAYOUTS["split"]["text"]
 NO_VISUAL_RUN = LAYOUTS["sequence"]["max_without_visual_in_a_row"]
 FRAMED_PHOTO_WORDS = LAYOUTS["variety"]["photo_framed_max_words"]
+# 2.63.0 - the words each layout holds, measured at 1024 x 768 with the real templates (layout-templates.json "budgets")
+BUDGETS = LAYOUTS["budgets"]
+INSET_MAX_WORDS.update({k: BUDGETS["beside_picture_with_inset"] for k in ("two-col", "wide-left", "wide-right")})
+
+
+def word_budget(tid, variant, inset=False):
+    """(words the layout holds, what it is) - None for one with no measured budget (a recap, a task launch, a comparison)"""
+    if inset and tid not in ("photo-explain", "figure-stage"):
+        return BUDGETS["beside_picture_with_inset"], "beside a picture with a photo under the words"
+    if tid == "photo-explain":
+        return {"full": (BUDGETS["photo_full"], "on a full-screen photograph"), "split": (BUDGETS["photo_framed"], "beside a framed photograph"),
+                "column": (BUDGETS["photo_column"], "beside a photo column")}.get(variant)
+    if tid == "figure-stage" and variant == "figure-top":
+        return BUDGETS["under_top_photo"], "under a photograph across the slide"
+    if tid == "content-in-parts":
+        return BUDGETS["part"], "in a part"
+    if tid in ("explain-figure", "reading-with-figure", "long-explanation", "procedure", "three-content-blocks") and variant != "text-only":
+        return BUDGETS["beside_picture"], "beside a picture"
+    return None
 STAGE_WORDS = LAYOUTS["variety"]["stage_max_words"]
 TOP_WORDS = LAYOUTS["variety"]["picture_top_max_words"]
 VARIETY_WINDOW = LAYOUTS["variety"]["window"]
@@ -1629,8 +1648,8 @@ def auto_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col):
         return "opening", "photo" if is_photo else "statement"
     if is_photo and comp == "photo":
         return "photo-explain", "split" if split_photo else "full"
-    if photo_col:
-        return "photo-explain", "column"
+    if photo_col:                       # 2.63.0: past the column's measured budget, its words in parts beside the photo
+        return ("content-in-parts", "with-figure") if words > PARTS_FROM else ("photo-explain", "column")
     if not has_fig:
         return ("procedure", "text-only") if is_steps(lines) else ("explain-figure", "text-only")
     if comp == "stage":
@@ -2134,6 +2153,18 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                      "with a photograph, so the photograph will spill about %d px off the slide at 1280 x 800 (IGF M07 s08 / s12, "
                      "M09 s06: 79-105 px at 91-101 words). Cut the words, show the photograph on a task question or another slide, "
                      "or lay it over a blank part of a kit drawing (\"over\")" % (where, nwords, cap, round((nwords - cap) * 4.5)))
+    # 2.63.0 - an early warning, before the audit measures it: the slide's words past the measured budget of its layout
+    bud = word_budget(tid, variant, bool(inset))
+    if bud and not (inset and cap and nwords > cap):
+        many = nwords
+        if tid == "content-in-parts":
+            rr = line_ranges(b.get("parts"), len(lines)) if b.get("parts") else None
+            many = max(cs.wc(" ".join(lines[i - 1] for i in ix)) for ix in auto_parts(lines, rr))
+        if many > bud[0]:
+            print("Note: %s - %d words %s; the layout holds about %d at 1024 x 768 (measured, layout-templates.json \"budgets\"): "
+                  "expect the audit to find it spilling - %s" % (where, many, bud[1], bud[0],
+                  "make the parts smaller (\"parts\")" if tid == "content-in-parts" else
+                  "let the compiler choose the layout, or put the words in parts (\"template\": \"content-in-parts\")"))
     # L57: a drawing of real things carries their real photographs, under the drawing - unasked
     strip = ""
     if fig and not is_photo and comp != "photo" and notes is not None and not strip_off(figdir, s, b):

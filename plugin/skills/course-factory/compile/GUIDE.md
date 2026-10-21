@@ -118,7 +118,13 @@ colours, the official logo top right, Raleway bundled. What the compiler chooses
 | a drawing on a stage | `figure-stage` |
 | a picture beside up to 60 words | `explain-figure` `figure-right` (`figure-left` with `"figure_first"`) |
 | a picture beside more than 60 words | `reading-with-figure` - or `long-explanation` when the picture is 3D |
-| a picture beside more than 135 words | `content-in-parts`: the lines in order, in parts of about 110 words; Next walks the parts, every part has a tab |
+| a picture beside more than 85 words | `content-in-parts`: the lines in order, in parts of about 75 words; Next walks the parts, every part has a tab |
+
+**Word budgets (2.63.0, measured at 1024 x 768 with these templates and the larger logo - `layout-templates.json`
+`budgets`):** beside a picture 85 words, with a photo under the words 70, beside a photo column 85, under a photograph
+across the slide 70, on a full-screen photograph 50, beside a framed photograph 50, a part 75. The compiler chooses by
+them; a slide built over its layout's budget (a template asked for by name) is a `Note:` in the build's answer before
+the audit measures it.
 | lines numbered 1, 2, 3 ... | `procedure` (`with-figure`, or `text-only`) |
 | lines whose cells are separated by ` \| ` | `reference-table` - one row a line, the separator kept in the line (hidden) |
 | a short slide with no picture | `explain-figure` `text-only` |
@@ -132,8 +138,8 @@ unknown or unsuitable template or variant is a problem with the slide's id.
 **Never the same look twice in a row (L62, 2.53.0) - and 80 / 20 light (owner, 2.62.1).** A slide's look is its shape
 and its ground. When a slide would look like the one before it, the compiler builds it another way that holds the same
 words and picture: the picture on the other side, or a photograph across the top with the words in two columns under it
-(`figure-stage` `figure-top`, up to 110 words); a slide on the dark ground may also be the photograph framed on it (up
-to 100 words). The ground is never changed to vary: at least 80 % of a module's slides are light (task launches, the
+(`figure-stage` `figure-top`, up to 70 words); a slide on the dark ground may also be the photograph framed on it (up
+to 50 words). The ground is never changed to vary: at least 80 % of a module's slides are light (task launches, the
 module check and the recap too, unless the sheet says `"dark": true`); more than a fifth on the Navy ground or framed
 on it is a build problem - a full-screen photograph does not count. It also avoids the looks of the three slides before
 it when it can. A build sheet's own layout is

@@ -952,6 +952,28 @@ def layouts_part(tmp):
     check("... every approved line in a part, once, in order - nothing cut", order == list(range(1, len(LONG_LINES) + 1)), order)
     check("... with a numbered tab for each part (Next walks them too - gb_deck.js)",
           len(re.findall(r'<button type="button" class="lt-tab', s5)) == len(parts) and "lt-part" in io.open(os.path.join(md2, "assets", "gb_deck.js"), encoding="utf-8").read())
+    # 2.63.0 - the measured word budgets choose the layout (layout-templates.json "budgets", 1024 x 768)
+    import compile_module as cm
+    words90 =["The fuel tank holds the LNG at about minus 162 degrees and it is never filled to the top."] + \
+              ["• the tank connection space holds every valve and pipe that leaves the tank, in one gas-tight room"] * 4
+    check("budgets: 90 words beside a picture are content-in-parts (the column holds 85 - 90 spilled 19 px; was from 135)",
+          cs.wc(" ".join(words90)) > 85 and cm.auto_template({}, {}, "two-col", False, True, words90, False, False)[0] == "content-in-parts")
+    check("... and its parts hold 75 words or fewer (a part of 85 spilled 68 px)",
+          all(cs.wc(" ".join(words90[i - 1] for i in ix)) <= 80 for ix in cm.auto_parts(words90)) and cm.PART_WORDS == 75)
+    top = lambda n: [o["key"][0] for o in cm.layout_options("explain-figure", "figure-right", True, n, {}, "two-col", False, False)]
+    check("... a photograph across the top only up to 70 words (102 spilled 66 px on IGF M04 s05; was up to 110)",
+          "picture-top" in top(70) and "picture-top" not in top(80), (top(70), top(80)))
+    check("... a photo under the words beside a picture: about 70 (was 86)", cm.INSET_MAX_WORDS["two-col"] == 70)
+    check("... a long photograph's column takes its words in parts past 85 (90-170 words: 0 of 32 texts spill; 2-4 of 4 did)",
+          cm.auto_template({}, {}, "wide-left", True, True, words90, False, True) == ("content-in-parts", "with-figure")
+          and cm.auto_template({}, {}, "wide-left", True, True, words90[:3], False, True) == ("photo-explain", "column"))
+    code_b, out_b = run(COMPILE, c2, "--module", "1", "--force")
+    sheet_b = cs.load(os.path.join(c2, "working_claude", "script", "M01.build.json"))
+    sheet_b["screens"]["s05"] = {"figure": "assets/fig/scale.svg", "template": "reading-with-figure"}
+    cs.save(os.path.join(c2, "working_claude", "script", "M01.build.json"), sheet_b)
+    code_b, out_b = run(COMPILE, c2, "--module", "1", "--force")
+    check("... a layout asked for by name over its budget is an early warning at compile, with the budget",
+          re.search(r"Note: Slide \d+ \(s05\) - \d+ words beside a picture; the layout holds about 85 at 1024 x 768", out_b), out_b[-900:])
     check("lines with cells \" | \" are a table: reference-table, one row a line, the separator kept (hidden)",
           'data-template="reference-table.v1"' in s6 and s6.count('<tr data-script-field="text"') == 3 and '<span class="lt-sep"> | </span>' in s6, s6[:700])
     check("three-content-blocks: three numbered blocks beside the picture", 'data-template="three-content-blocks.v1"' in s7

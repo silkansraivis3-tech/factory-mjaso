@@ -432,6 +432,8 @@ def main(argv=None):
         rows = [re.search(r"\((\w+), [\w_]+\): the real photograph (\S+)", x) for x in mt.group(1).strip().splitlines()]
         notes.append("NOTE - a real photograph could carry: " + ", ".join("%s (%s)" % (r.group(1), r.group(2)) for r in rows if r)
                      + " - the build-sheet lines are in the full log (compile_module.py)")
+    # 2.63.0 - the compiler's own notes: words past their layout's measured budget, an inset moved under the words
+    notes += [x.strip()[6:] for x in cout.splitlines() if x.startswith("Note: ")]
     # 3 - the checks, at the same time
     deck = os.path.join(mdir, "presentation", "index.html")
     jobs = {
