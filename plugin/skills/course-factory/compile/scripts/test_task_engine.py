@@ -944,6 +944,40 @@ def inset_part(exe, tmp):
             check("corner: a short credit on a blank corner of the drawing is clean", not found and not note, found or note)
 
 
+# the parts on the right and along the foot, the top-left corner left blank for a photo laid "over" it
+CORNER_KIT = {"size": [400, 220], "label": "A fuel tank, a day tank and the vent mast", "parts": [
+    {"id": "T", "type": "tank", "x": 200, "y": 110, "w": 180, "h": 90, "label": "Fuel tank", "value": 0.5},
+    {"id": "D", "type": "tank", "x": 20, "y": 150, "w": 150, "h": 55, "label": "Day tank", "value": 0.3},
+    {"id": "V", "type": "vent", "x": 330, "y": 40, "label": "Vent mast"}]}
+
+
+def inset_empty_part(exe, tmp):
+    """2.63.0 (IGF M01 v262 s02 / s04, builder's bug 2) - a figure drawn to leave a corner for a photo laid "over" it failed
+    EMPTY: the drawing check counted the corner the photo fills as blank, so the builder dropped the photo. The same
+    drawing without its photo is still EMPTY (the corner is really blank); with the photo there it is not."""
+    print("\n-- 2.63.0: the corner an 'over' photo fills is not empty space")
+    for name, with_photo in (("bare", False), ("photo", True)):
+        os.makedirs(os.path.join(tmp, "ie_" + name))
+        c, md = tcm.new_course(os.path.join(tmp, "ie_" + name), tcm.script(), build=False)
+        io.open(os.path.join(md, "assets", "img", "ship.jpg"), "wb").write(tcm.png(300, 200, (120, 130, 150)))
+        tcm.cs.save(os.path.join(c, "working_claude", "figures", "M01", "corner.kit.json"), CORNER_KIT)
+        s02 = {"figure": "corner.kit.json", "no_photo": ["Fuel tank", "Day tank", "Vent mast"]}
+        if with_photo:
+            s02["inset"] = {"photo": "assets/img/ship.jpg", "over": {"x": 8, "y": 6, "w": 170}, "credit": "J. Doe, CC BY 4.0"}
+        tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+            "s01": {"figure": "assets/fig/scale.svg"}, "s02": s02,
+            "s04": {"figure": "hull.svg", "declined_3d": "the fixture's hull stays flat"}, "t01": {"try_tablet": False}}})
+        code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
+        page = os.path.join(md, "presentation", "index.html")
+        check("%s: the kit slide builds" % name, os.path.isfile(page), out[-500:])
+        probs, note = drawing_check.check([page], root=md)
+        empty = [x for x in probs if ": empty - " in x and "s02" in x]
+        if with_photo:
+            check("photo: the corner the photo fills is not EMPTY", not empty and not note, empty or note)
+        else:
+            check("bare: without its photo the corner is blank - EMPTY (the fixture is a real hole)", empty, probs or note)
+
+
 BLIND_LOOK = ("var seen = []; document.querySelectorAll('.scr[data-script]').forEach(function (s) {"
               "  s.querySelectorAll('.checked,.right,.wrong,.fixed,.shake,.missed,.dim,.stopat,.good,.bad,.why.on').forEach("
               "    function (n) { seen.push(s.getAttribute('data-script') + ':' + (n.getAttribute('class') || '')); });"
@@ -1023,6 +1057,7 @@ def main():
         blind_part(exe, page, tmp)
         deck_fit_part(exe, tmp)
         inset_part(exe, tmp)
+        inset_empty_part(exe, tmp)
         figures_part(exe, tmp)
         fixes_part(exe, tmp)
         picture_part(exe, tmp)

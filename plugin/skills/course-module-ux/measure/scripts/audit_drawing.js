@@ -716,6 +716,13 @@
         var bb = el.getBoundingClientRect();
         if (bb.width && bb.height) { laid.push(bb); }
       });
+      /* a real photo laid "over" the drawing (figure.inset.over, its caption with it) fills the blank corner it was given:
+         counted blank, every figure drawn to carry one failed EMPTY (IGF M01 v262 s02 / s04 - the builder dropped the photo) */
+      qa(holder, "figure.inset.over").forEach(function (fig) {
+        if (fig.parentNode !== holder || getComputedStyle(fig).display === "none") { return; }
+        var bb = fig.getBoundingClientRect();
+        if (bb.width && bb.height) { laid.push(bb); }
+      });
     }
     /* one state of the drawing judged: the blank share, the largest blank rectangle and where it is */
     function judge(parts) {
