@@ -185,6 +185,11 @@ async function deck(tiles) {
 /* ------------------------------------------------------------------ a task page, answered by its own keys */
 const DRIVER = `
 window.__rv = (function(){
+  /* 2.63.0 - a blind final (data-blind, 2.60.0) shows no verdict on a question: what it graded is its report to the
+     classroom (gb-task-done, one ok per question), kept here as it is sent (IGF full build: all 90 questions of
+     final_a / final_b read as graded wrongly, and the final passed only with --no-review) */
+  window.__rvDone = null;
+  window.addEventListener('message', function(e){ if (e.data && e.data.type === 'gb-task-done') window.__rvDone = e.data; });
   function norm(s){ return String(s).replace(/\\s+/g,' ').replace(/^ | $/g,''); }
   function txt(el){ return norm(el.textContent); }
   function imul(a,b){ var ah=(a>>>16)&0xffff, al=a&0xffff, bh=(b>>>16)&0xffff, bl=b&0xffff; return ((al*bl)+(((ah*bl+al*bh)<<16)>>>0)|0); }
@@ -276,6 +281,8 @@ window.__rv = (function(){
       return { ok: !!(w && w.classList.contains('good')), bad: !!(w && w.classList.contains('bad')), vd: txt(sec.querySelector('.vd')||document.body).slice(0,90) };
     },
     next: function(){ return go(); },
+    blind: function(){ return document.body.hasAttribute('data-blind'); },
+    done: function(){ return window.__rvDone; },
     /* 2.50.1 (M01 benchmark: three re-reviews were spent on these) - every leader line of the question on screen, as the
        engine placed it: it must end ON something drawn of the part it names, and cross no words but its own box's */
     leaders: function(){
@@ -335,6 +342,7 @@ async function tasks(tiles, failures) {
     await load(url);
     await evaluate(DRIVER);
     const ids = await evaluate('__rv.ids()');
+    const blind = await evaluate('__rv.blind()');
     // pass 1: asked (with the overlay), then wrong; pass 2 (a fresh load): right
     for (const good of [false, true]) {
       if (good) { await load(url); await evaluate(DRIVER); }
@@ -354,13 +362,22 @@ async function tasks(tiles, failures) {
           failures.push(`${name} ${q}: answered ${good ? 'right' : 'wrong'} by the script - ${r.error}`);
           tiles.push({ id: `${name}/${q}/${good ? 'right' : 'wrong'}`, label: `${name} ${q} - could not be answered ${good ? 'right' : 'wrong'}: ${r.error}`, png: await shot() });
           break;
-        } else if (good && !r.ok) failures.push(`${name} ${q}: the RIGHT answer (by its own keys) was graded not right - "${r.vd}"`);
-        else if (!good && !r.bad) failures.push(`${name} ${q}: a WRONG answer was graded right - "${r.vd}"`);
+        } else if (!blind && good && !r.ok) failures.push(`${name} ${q}: the RIGHT answer (by its own keys) was graded not right - "${r.vd}"`);
+        else if (!blind && !good && !r.bad) failures.push(`${name} ${q}: a WRONG answer was graded right - "${r.vd}"`);
         if (!opt.asked) tiles.push({ id: `${name}/${q}/${good ? 'right' : 'wrong'}`, label: `${name} ${q} - answered ${good ? 'RIGHT' : 'WRONG'} and checked: "${r.vd || ''}"`
                      + (good ? '' : ' (pink: every tap area / drop zone, review overlay only)'), png: await shot() });
         if (!good) await evaluate('__rv.overlay(false)');
         await click('__rv.next()');
         await pause(180);
+      }
+      if (blind) {                     // what a blind page graded is in its report to the classroom, one item a question
+        let rep = null;
+        for (let k = 0; k < 20 && !rep; k++) { rep = await evaluate('__rv.done()'); if (!rep) await pause(100); }
+        if (!rep) failures.push(`${name}: a blind page never reported its result (gb-task-done) after the ${good ? 'right' : 'wrong'} answers`);
+        else (rep.items || []).forEach((it, i) => {
+          if (good && !it.ok) failures.push(`${name} ${ids[i] || i + 1}: the RIGHT answer (by its own keys) was graded not right - its report says ok: false`);
+          if (!good && it.ok) failures.push(`${name} ${ids[i] || i + 1}: a WRONG answer was graded right - its report says ok: true`);
+        });
       }
     }
     note('task ' + name, tp, { questions: ids.length, slept: (slept - sp) / 1000, waited: (waited - wp) / 1000 });

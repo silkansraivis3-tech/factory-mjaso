@@ -84,6 +84,28 @@ def module(tmp):
     return md, out
 
 
+def blind_part(md, tmp):
+    """2.63.0 (the IGF full build on 2.63.0: the final passed only with --no-review) - a blind page (a graded final, data-blind,
+    2.60.0) shows no verdict, so the probe read every right answer as graded wrong. It reads the page's report instead"""
+    print("\n-- 2.63.0: a blind page is graded by its report to the classroom")
+    bd = os.path.join(tmp, "blind_module")
+    shutil.copytree(md, bd)
+    pages = [os.path.join(bd, d, f) for d in ("tasks", "assessment") if os.path.isdir(os.path.join(bd, d))
+             for f in os.listdir(os.path.join(bd, d)) if f.endswith(".html") and "answer_key" not in f]
+    for p in pages:
+        t = io.open(p, encoding="utf-8").read()
+        io.open(p, "w", encoding="utf-8").write(t.replace("<body ", '<body data-blind="1" ', 1))
+    code, out, man, sheets, took = review(bd, os.path.join(tmp, "blind_out"))
+    check("every question of the blind pages graded as expected - right answers right, wrong ones not (%d pages)" % len(pages),
+          code == 0 and sheets.get("failures") == [] and "Every question graded as expected" in out, (code, sheets.get("failures"), out[-400:]))
+    eng = os.path.join(bd, "assets", "gb_answer.js")
+    src = io.open(eng, encoding="utf-8").read()        # read before the write opens (and empties) it
+    io.open(eng, "w", encoding="utf-8").write(src.replace("ok: !!(q.done && q.ok)", "ok: true", 1))
+    code, out, man, sheets, took = review(bd, os.path.join(tmp, "blind_bad"))
+    bad = [x for x in sheets.get("failures") or [] if "WRONG answer was graded right - its report says ok: true" in x]
+    check("... and an engine that reports every answer right is caught on them", code == 1 and bad, (code, (sheets.get("failures") or [])[:3]))
+
+
 def main():
     exe = browser()
     node = shutil.which("node")
@@ -116,6 +138,7 @@ def main():
         check("a heading a page timer changes 120 ms after the slide is shown is changed on its picture, as with the fixed waits",
               s05 and diff.get(s05[0], 999) <= 8, (s05, [diff.get(k) for k in s05]))
         check("the new waits are faster (%.1f s, the fixed ones %.1f s)" % (t1, t0), t1 < t0, (t0, t1))
+        blind_part(md, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
