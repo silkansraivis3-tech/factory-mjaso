@@ -74,7 +74,9 @@ WORDS = {"en": {
     "foot": "These buttons open the same pages on this device - to look at a task before the class, or after it.",
     "all_files": "All files", "hours": "{h} academic hours ({m} min)", "modules": "{n} modules",
     "later": "Modules {a} to {b} are added as each one is approved.", "later_one": "Module {a} is added when it is approved.",
-    "final": "Final assessment", "mc": "Module check"},
+    "final": "Final assessment", "mc": "Module check",
+    "credits": "Picture credits", "credits_note": "Every photograph the course shows, with its author, source and licence. "
+                                                  "The same credit is under each photograph when it is opened full screen."},
     # PROVISIONAL (2.40.0) - written by Claude, to be checked by a native speaker: compile/TRANSLATIONS_REVIEW.md.
     # The instructor's pages: the polite form; minutes and hours abbreviated, so no plural depends on the number.
     "lv": {
@@ -89,7 +91,9 @@ WORDS = {"en": {
     "all_files": "Visi faili", "hours": "{h} akad. st. ({m} min)", "modules": "Moduļi: {n}",
     "later": "Moduļi no {a} līdz {b} tiks pievienoti, kad katrs būs apstiprināts.",
     "later_one": "{a}. modulis tiks pievienots, kad būs apstiprināts.",
-    "final": "Noslēguma pārbaudījums", "mc": "Moduļa pārbaude"},
+    "final": "Noslēguma pārbaudījums", "mc": "Moduļa pārbaude",
+    "credits": "Attēlu autori", "credits_note": "Visas kursā rādītās fotogrāfijas ar autoru, avotu un licenci. Tā pati "
+                                                "norāde ir zem katras fotogrāfijas, kad to atver pilnekrānā."},
     "ru": {
     "start": "Начать", "everything": "Всё для этого модуля", "back": "Назад", "module": "Модуль",
     "opening": "Презентация открывается. Если ничего не происходит, нажмите кнопку.",
@@ -102,7 +106,9 @@ WORDS = {"en": {
     "all_files": "Все файлы", "hours": "{h} ак. ч. ({m} мин)", "modules": "Модулей: {n}",
     "later": "Модули с {a} по {b} добавляются по мере утверждения.",
     "later_one": "Модуль {a} будет добавлен после утверждения.",
-    "final": "Итоговая аттестация", "mc": "Проверка по модулю"}}
+    "final": "Итоговая аттестация", "mc": "Проверка по модулю",
+    "credits": "Авторы изображений", "credits_note": "Все фотографии курса с автором, источником и лицензией. Та же "
+                                                     "подпись видна под каждой фотографией, открытой на весь экран."}}
 assert all(set(WORDS[k]) == set(WORDS["en"]) for k in WORDS), "every language has every word"
 
 
@@ -255,7 +261,7 @@ def start_extended(info, course_title, tasks, mdir, lang, w, probs):
     return "\n".join(head(lang, "%s — %s" % (m, w["everything"]), ["assets/gb_tokens.css", "assets/gb_page.css"]) + body)
 
 
-def course_page(title, infos, planned, sheet, prog, lang, w):
+def course_page(title, infos, planned, sheet, prog, lang, w, credits=False):
     hours, ah = (prog.get("total_row") or {}).get("total"), prog.get("academic_hour_min")
     hours_txt = w["hours"].format(h=hours, m=ah) if hours and ah else ""
     named = [x for x in (sheet.get("regulation"), sheet.get("programme")) if x]
@@ -279,7 +285,45 @@ def course_page(title, infos, planned, sheet, prog, lang, w):
         (['  <p class="sub">%s</p>' % e(sub)] if sub else []) +
         ['  <div class="links">'] + rows + ["  </div>"] +
         (['  <div class="foot"><p>%s</p></div>' % e(later)] if later else []) +
+        (['  <p class="sub"><a href="_course_shell/credits.html">%s</a></p>' % e(w["credits"])] if credits else []) +
         ["</div>", "</body>", "</html>", ""])
+
+
+IMG_REF = re.compile(r'(?:src|href)="\.\./assets/img/([^"/]+)"')
+
+
+def credit_rows(root, infos):
+    """[(module code, file, what it shows, credit)] - every photograph a module's pages show, with its record's credit; a
+    generated picture carries none (L56) and a picture no page shows (assets\\img\\_unused) is not listed"""
+    rows = []
+    for i in infos:
+        md = os.path.join(root, i["code"])
+        meta = load_or(os.path.join(md, "assets", "img", "_photo_meta.json"), {})
+        shown = []
+        for sub in ("presentation", "tasks", "assessment"):
+            d = os.path.join(md, sub)
+            for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+                if f.endswith(".html") and not f.startswith("_"):
+                    shown += [x for x in IMG_REF.findall(read(os.path.join(d, f))) if x not in shown]
+        for f in shown:
+            m = meta.get(f) or {}
+            line = cm.credit_line(m) if m and not cm.is_generated(m) else ""
+            if line:
+                rows.append((i["code"], f, cm.first_sentence(m.get("description")) or f, line))
+    return rows
+
+
+def credits_page(title, infos, rows, lang, w):
+    """2.63.0 (owner Raivis, 2026-10-21): the photo credits are off the slides - in each photo's full-screen view and here"""
+    body = ["<body>", '<a class="gbt-topback" href="../COURSE.html">%s</a>' % e(w["back"]), '<div class="wrap">',
+            "  <h1>%s</h1>" % e(w["credits"]), '  <p class="sub">%s · %s</p>' % (e(title), e(w["credits_note"]))]
+    for i in infos:
+        mine = [r for r in rows if r[0] == i["code"]]
+        if mine:
+            body.append("  <h2>%s · %s</h2>" % (cs.mid(i["n"]), e(i["title"])))
+            body.append("  <ul>" + "".join("<li><b>%s</b> - %s</li>" % (e(r[2]), e(r[3])) for r in mine) + "</ul>")
+    return "\n".join(head(lang, "%s — %s" % (title, w["credits"]), ["gb_tokens.css", "gb_page.css"]) + body +
+                     ["</div>", "</body>", "</html>", ""])
 
 
 def ordered(sheet, infos, probs):
@@ -395,7 +439,11 @@ def main(argv=None):
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copyfile(src, dst)
     put(os.path.join(root, "_course_shell", "course_map.js"), course_map(infos), rec, "_course_shell/course_map.js")
-    put(cp, course_page(title, infos, planned, sheet, prog, lang, w), rec, "COURSE.html")
+    # 2.63.0 - the photo credits, off the slides: each photo's full-screen view and this page (CC BY-SA attribution, L56)
+    crows = credit_rows(root, infos)
+    if crows:
+        put(os.path.join(root, "_course_shell", "credits.html"), credits_page(title, infos, crows, lang, w), rec, "_course_shell/credits.html")
+    put(cp, course_page(title, infos, planned, sheet, prog, lang, w, credits=bool(crows)), rec, "COURSE.html")
     rec["title"] = title
     cs.save(rec_p, rec)
 

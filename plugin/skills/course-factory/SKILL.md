@@ -126,7 +126,7 @@ seems to collide with it. The record behind the rows: `references/laws-in-full.m
 | **L53** | **No empty space, good padding** - inside figures too. Decks are compiled (`compile/GUIDE.md`) and pass the layout audits before they are shown | now |
 | **L54** | **Every drawing whole and clean** - parts inside their real shapes, nothing cut off, labels 4 px clear. `audit_drawing.js` before a deck is shown | now |
 | **L55** | **Figures come from the figure kit** - a `NAME.kit.json` spec (`course-visuals/kit/SPEC.md`), never a one-off SVG; a missing part goes in the module's `kit_parts.js`, promoted after the module (ask before the push) | now |
-| **L56** | **Every photograph carries what it shows into the viewer, unasked** - its `description` and credit from `_photo_meta.json`, written when the photo comes in | now |
+| **L56** | **Every photograph carries what it shows into the viewer, unasked** - its `description` and credit from `_photo_meta.json`, written when the photo comes in. **No credit text on a slide or task page** (owner Raivis, 2026-10-21): the credit is in the full-screen view and on the course's credits page (`_course_shell/credits.html`) - attribution kept | now |
 | **L57** | **A drawing of real things carries their real photographs, unasked** - up to four thumbnails matched by `shows`; never one awaiting rights review; a missing one goes on `PHOTOS_TO_TAKE.md`, never blocks | now |
 | **L58** | **Every photograph once in the whole course** - a duplicate is replaced or dropped. Build every module again after photos change | now |
 | **L59** | **No module before its map** - the ILO map approved on the Stage 2 page and a knowledge-base decision recorded (suggest one, unasked, if none). `scripts/course_gate.py` enforces it | now |

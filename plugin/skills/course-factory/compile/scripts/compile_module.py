@@ -1572,10 +1572,11 @@ def inset_html(mdir, ins, probs, where):
     caption = (ins.get("caption") or "").strip()
     if is_generated(meta):              # no credit line for a generated picture
         credit = ""
-    cap = " ".join(x for x in (caption[:1].upper() + caption[1:], credit) if x)
+    cap = caption[:1].upper() + caption[1:]           # 2.63.0: the credit is in the full-screen view, never on the slide
     alt = ins.get("alt") or first_sentence(ins.get("caption")) or first_sentence(meta.get("description"))
-    return ('<figure class="inset"><img src="../%s" alt="%s"%s><figcaption data-script-ignore>%s</figcaption></figure>'
-            % (a(rel), a(alt), photo_panel(meta, credit_line(meta) or credit, rel, probs, where), e(cap)))
+    return ('<figure class="inset"><img src="../%s" alt="%s"%s>%s</figure>'
+            % (a(rel), a(alt), photo_panel(meta, credit or credit_line(meta), rel, probs, where),
+               '<figcaption data-script-ignore>%s</figcaption>' % e(cap) if cap else ""))
 
 
 def task_href(code, short, mdir, script=None):
@@ -2157,7 +2158,10 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         label = "Task"
     head = '  <div class="slide-kind"><b>%s</b> · %s · %d / %d</div>' % (label, m, n, total)
     h2 = '<h2 data-script-field="title">%s</h2>' % e(s.get("title"))
-    credit_html = '\n  <div class="credit">%s</div>' % e(credit) if credit else ""
+    # 2.63.0 (owner Raivis, 2026-10-21, the instructors' review: "remove the kallerna credit"): no credit text on the slide.
+    # It is the photo's record in its full-screen view (data-credit, gb_zoom) and the course's credits page
+    # (compile_course.py CREDITS.html) - CC BY-SA attribution kept. L56
+    credit_html = ""
     ind = lambda xs, k: ("\n" + " " * k).join(xs)
     copy = lambda xs, k: ('<div class="copy">\n' + " " * (k + 2) + ind(xs + extra, k + 2)
                           + "\n" + " " * k + "</div>")
@@ -2231,10 +2235,9 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                          % (pic, ind(words_html([lines[i - 1] for i in ix], first_statement=False, idx=ix, emph=emph), 6)))
         rest = [i for i in range(1, len(lines) + 1) if i not in inside]
         note = ind(words_html([lines[i - 1] for i in rest], first_statement=False, idx=rest), 4) if rest else ""
-        credits = " · ".join(x for x in (credit, credit_b) if x)
         return ('<section %s>\n%s\n  %s\n  <div class="slide-body lt-compare">\n    %s\n  </div>%s%s\n</section>'
                 % (attrs(d), head, h2, "\n    ".join(cards), ("\n  <div class=\"lt-compare-note\">%s</div>" % note) if note else "",
-                   '\n  <div class="credit">%s</div>' % e(credits) if credits else ""))
+                   credit_html))                       # 2.63.0: the credits are in each photo's full-screen view
     if comp == "opener":
         return ('<section %s>\n%s\n  <div class="slide-body opener mid">\n    %s\n    %s\n  </div>%s\n</section>'
                 % (attrs(d), head, h2, ind(words_html(lines, first_statement=False), 4), credit_html))

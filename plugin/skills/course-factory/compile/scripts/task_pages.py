@@ -794,8 +794,8 @@ def instrument_box(fig, uid):
     carries its credit as a line under it and the round corner button (gb_zoom's data-zoom="button") that opens it full
     screen - as on a slide; before, the credit was only inside the viewer and the picture showed no sign it could open"""
     zoom = ' data-zoom="button"' if fig.kind == "img" else ""
-    cred = '<p class="figcredit">%s</p>' % e(fig.credit) if fig.credit else ""
-    return '    <div class="instrument"><div class="ga"%s%s>%s%s</div></div>' % (zoom, fig.ar(), fig.html(False, uid), cred)
+    # 2.63.0 (owner, 2026-10-21): no credit line on the page - the full-screen view shows it (data-credit on the <img>)
+    return '    <div class="instrument"><div class="ga"%s%s>%s</div></div>' % (zoom, fig.ar(), fig.html(False, uid))
 
 
 # ------------------------------------------------------------------ set the value: the dial
@@ -1050,9 +1050,7 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
                              cs.gb_key(sid, t, 1 if t in right else 0), e(t)))
         out.append('    <div class="stage"><div class="%s" data-fig="%s" data-zoom="button"%s>'
                    % (ga_class(fig), a(fig.name if fig else ""), fig.ar() if fig else ""))
-        out += holder
-        if fig and fig.credit and fig.kind == "img":
-            out.append('      <p class="figcredit">%s</p>' % e(fig.credit))
+        out += holder                                  # its credit: in the full-screen view only (2.63.0)
         out.append("    </div></div>")
     elif m == "label_diagram":
         items, _ = cs.answer_items(q)

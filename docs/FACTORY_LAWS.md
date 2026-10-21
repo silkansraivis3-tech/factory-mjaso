@@ -475,7 +475,10 @@ of the IGF pilot: *"we need images to be expandable, so a lightbox with maybe mo
 2.27.0 is retired). (1) Every photograph's record - its `description` in `assets\img\_photo_meta.json`, written when the
 photo is brought in: what is in the picture and where to look, for a trainee, never more than the picture evidences -
 and its credit go onto the `<img>` (`data-about`, `data-credit`; `data-name` for an L57 thumbnail), and full screen
-shows them under the picture. (2) Nobody asks for it per slide: the compiler writes them on every photograph. A photo
+shows them under the picture. **The credit is never text on the slide or the task page** (owner Raivis, 2026-10-21,
+the instructors' review of IGF Basic: "remove the kallerna credit"): it is in the full-screen view and on the course's
+credits page (`_course_shell/credits.html`, `compile_course.py`, linked from `COURSE.html`) - so CC BY / CC BY-SA
+attribution is kept. (2) Nobody asks for it per slide: the compiler writes them on every photograph. A photo
 with no description is reported at build. (3) A picture made by an image model keeps its full record (`"generated":
 true`, `"generator"`, the prompt, the operator's yes - L47) but carries no credit line and no label on screen
 (operator, 2026-10-15), and L57 never places it as a thumbnail; the thing it stands in for stays on

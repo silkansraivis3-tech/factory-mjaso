@@ -1300,9 +1300,11 @@ def fixes_part(tmp):
     d2, d3 = section(deck(md), "s02"), section(deck(md), "s03")
     check("C8: a photograph slide with \"composition\": \"wide-left\" is a real column layout (the words as wide as asked), not 'photo split'",
           'class="slide-body two-col wide-left photo-col dom-fig"' in d2 and "photo split" not in d2 and 'class="slide photo' not in d2, d2[:700])
-    check("C8: ... the photo fills its own column and keeps its visible credit line",
-          '<div class="fill fig photo-col"><img src="../assets/img/ship.jpg"' in d2 and '<div class="credit">Photo: Jane Doe' in d2, d2)
-    check("C9: a photograph inside a figure fragment keeps the slide credit line", '<div class="credit">Photo: Jane Doe' in d3 and "data-credit=" in d3, d3)
+    # 2.63.0 (owner Raivis, 2026-10-21): no credit text on the slide - it is in the photo's full-screen view
+    check("C8: ... the photo fills its own column; its credit is in its full-screen view, not on the slide",
+          '<div class="fill fig photo-col"><img src="../assets/img/ship.jpg"' in d2 and 'class="credit"' not in d2
+          and 'data-credit="Photo: Jane Doe' in d2, d2)
+    check("C9: a photograph inside a figure fragment: its credit in the full-screen view only", 'class="credit"' not in d3 and "data-credit=" in d3, d3)
     css = io.open(os.path.join(md, "assets", "gb_compose.css"), encoding="utf-8").read()
     check("C8: the column layout is styled - the photo is cropped to its column, which has the slide's height",
           ".slide-body.two-col.photo-col{grid-template-rows:minmax(0,1fr)" in css and "object-fit:cover" in css.split(".photo-col > .fill.photo-col > img")[1][:200], css[:100])
@@ -1367,8 +1369,9 @@ def fixes_part(tmp):
     check("C12: a photo over a categorise / an order lays itself beside the cards on landscape (data-pic=beside), like a choice",
           all('data-pic="beside"' in q[k] and "instrument" in q[k] for k in ("q02", "q04", "q03")) and 'data-mech="categorise" data-pic="beside"' in q["q02"], q["q02"][:300])
     gcss = io.open(os.path.join(SKILLS, "course-task-ux", "assets", "gb_answer.css"), encoding="utf-8").read()
-    check("F20 (2.49.2): a photograph beside a question carries its credit as a line on the picture and the round open-full-screen button",
-          all('data-zoom="button"' in q[k] and '<p class="figcredit">Photo: ' in q[k] for k in ("q03", "q04")), q["q03"][:700])
+    check("F20 (2.49.2, 2.63.0): a photograph beside a question has the round open-full-screen button; its credit is in that "
+          "view (data-credit), not a line on the picture",
+          all('data-zoom="button"' in q[k] and "figcredit" not in q[k] and 'data-credit="Photo: ' in q[k] for k in ("q03", "q04")), q["q03"][:700])
     check("C12: the engine's stylesheet places the picture and the cards of a sort / put-in-order beside each other",
           '.scr[data-pic="beside"][data-mech="categorise"]>.grps{grid-column:1/-1}' in gcss and '[data-mech="order"],[data-mech="match"]' in gcss, "")
     check("C13: a task photograph's alt comes from the question's visual, else the photo's own record",
@@ -1842,7 +1845,8 @@ def main():
         s01, s02, s03, s04 = (section(page, x) for x in ("s01", "s02", "s03", "s04"))
         check("visual_full + a photograph -> .slide.photo with photo-wrap and photo-copy",
               'class="slide photo"' in s01 and '<div class="photo-wrap"><img src="../assets/img/ship.jpg"' in s01 and "photo-copy" in s01)
-        check("the photo's credit comes from _photo_meta.json", '<div class="credit">Photo: Jane Doe · Wikimedia Commons · CC BY-SA 4.0</div>' in s01, s01)
+        check("the photo's credit comes from _photo_meta.json - and is no text on the slide (2.63.0, owner 2026-10-21)",
+              'class="credit"' not in s01 and "Photo: Jane Doe · Wikimedia Commons · CC BY-SA 4.0" not in re.sub(r'data-credit="[^"]*"', "", s01), s01)
         check("L56: the photograph carries what it shows and its credit into the full-screen viewer, unasked",
               'data-about="A ship taking gas." data-credit="Photo: Jane Doe · Wikimedia Commons · CC BY-SA 4.0"' in s01, s01)
         check("L51: every compiled deck loads the one picture viewer, gb_zoom, after the deck engine - never a second one",
@@ -2100,8 +2104,9 @@ def main():
         check("split + a photograph -> the photo fills the right of the screen (.slide.photo.split), never a small photo in a column",
               'class="slide photo split"' in a2 and "photo-wrap" in a2 and "two-col" not in a2, a2)
         check("legend: true -> the lines as a numbered row under the drawing", '<ol class="legend">' in a3, a3)
-        check("inset: a real photograph under the words, its caption and credit marked data-script-ignore",
-              '<figure class="inset"><img src="../assets/img/ship.jpg"' in a4 and "<figcaption data-script-ignore>On board: the tanks. Photo:" in a4, a4)
+        check("inset: a real photograph under the words, its caption marked data-script-ignore - its credit in the full-screen "
+              "view only (2.63.0)", '<figure class="inset"><img src="../assets/img/ship.jpg"' in a4
+              and "<figcaption data-script-ignore>On board: the tanks.</figcaption>" in a4 and 'data-credit="Photo:' in a4, a4)
         check("L56: a photograph inside a drawing fragment gets its description and credit; data-no-zoom is left alone",
               '<img src="../assets/img/ship.jpg" alt="Truck to ship" data-about="A ship taking gas." data-credit="Photo:' in a3
               and '<img src="../assets/img/ship.jpg" alt="Logo" data-no-zoom />' in a3, a3)

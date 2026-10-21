@@ -85,6 +85,13 @@ def main():
         check("course_map.js is data: module01, its title from the approved script (not the plan)",
               data == [{"code": "module01", "title": "IGF ships", "entry": "presentation/index.html"}], cmap)
 
+        # 2.63.0 - the photo credits off the slides (owner Raivis, 2026-10-21): a course credits page, linked from COURSE.html
+        cred = read(root, "_course_shell", "credits.html") if os.path.isfile(os.path.join(root, "_course_shell", "credits.html")) else ""
+        check("the course's credits page lists every photograph a page shows, with its credit, under its module",
+              "<h2>M01 · IGF ships</h2>" in cred and "A ship taking gas." in cred and "Jane Doe" in cred and "CC BY-SA 4.0" in cred, cred[:900])
+        check("... COURSE.html links it, and it leads back to COURSE.html",
+              'href="_course_shell/credits.html"' in page and 'href="../COURSE.html"' in cred, page[-400:])
+
         # 2.63.0 - a course's own module order (the instructors' review of IGF Basic: 1, 4, 6, 8, 2, 3 ...)
         import compile_course as cc
         infos = [{"n": n, "code": "module%02d" % n} for n in range(1, 6)]

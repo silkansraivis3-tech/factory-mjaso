@@ -746,7 +746,7 @@ def steps_part(exe, tmp):
 
 DECK_FIT = r"""
 (function () {
-  var out = {errors: [], credits: [], recaps: [], insets: []};
+  var out = {errors: [], credits: [], recaps: [], insets: [], photos: []};
   window.addEventListener('error', function (e) { out.errors.push(String(e.message)); });
   function R(e) { var r = e.getBoundingClientRect(); return {l: r.left, t: r.top, r: r.right, b: r.bottom}; }
   function hit(a, b) { return Math.min(a.r, b.r) - Math.max(a.l, b.l) > 0.5 && Math.min(a.b, b.b) - Math.max(a.t, b.t) > 0.5; }
@@ -803,6 +803,13 @@ DECK_FIT = r"""
                              over: Math.round(Math.max(rb.scrollHeight - rb.clientHeight, R(nx || rb).b - bottom)),
                              chrome: !!(ch && nx && hit(R(nx), R(ch))),
                              fs: parseFloat(getComputedStyle(s.querySelector('.rc-d')).fontSize)});
+          }
+          var pim = s.querySelector('.photo-wrap img, .fill.photo-col > img, .slide-body.stage img');
+          if (pim) {                              /* a photo slide: its credit in the full-screen record (2.63.0) */
+            show(s);
+            var pb = s.querySelector('.slide-body');
+            out.photos.push({id: s.id, credit: pim.getAttribute('data-credit') || '', text: !!s.querySelector('.credit'),
+                             spill: pb ? Math.max(0, pb.scrollHeight - pb.clientHeight) : 0});
           }
           var ins = s.querySelector('.copy > .inset');
           if (ins) {                              /* a photo under the words beside a picture (2.63.0) */
@@ -900,12 +907,13 @@ def deck_fit_part(exe, tmp):
             tag = "%s %dx%d" % (name, size[0], size[1])
             check("%s: no script error, measured at the size asked for" % tag, not r.get("errors") and r.get("vp") == list(size), r.get("errors") or r.get("vp"))
             if name == "m02":
-                cr = r.get("credits") or []
-                check("%s: four photo slides with a credit (full screen, split, photo column - its credit at the column's foot - "
-                      "and a stage)" % tag, len(cr) == 4 and [x["inCol"] for x in cr] == [False, False, True, False], cr)
-                check("%s: no credit lies over its photograph, a word, the footer line or under the chrome - and the body beside a "
-                      "photo column (M05 s03's 121 words) keeps its room" % tag, cr and not any(x["bad"] for x in cr),
-                      [(x["id"], x["bad"][:3]) for x in cr if x["bad"]])
+                # 2.63.0 (owner Raivis, 2026-10-21): no credit text on a slide - the record carries it full screen
+                ph = r.get("photos") or []
+                check("%s: four photo slides (full screen, split, photo column, stage), no credit text on any - each photo's "
+                      "credit in its full-screen record" % tag, len(ph) == 4 and not r.get("credits")
+                      and all(x["credit"] and not x["text"] for x in ph), (ph, r.get("credits")))
+                check("%s: ... and the body beside a photo column (M05 s03's 121 words) keeps its room" % tag,
+                      ph and not any(x["spill"] > 1 for x in ph), ph)
             rc = (r.get("recaps") or [{}])[0]
             check("%s: the %s-box recap fits the slide - nothing past its foot, no box cutting its words, 'Next' clear of the chrome"
                   % (tag, rc.get("n")), rc.get("over", 99) <= 0 and rc.get("cut", 99) <= 1 and not rc.get("chrome"), rc)
