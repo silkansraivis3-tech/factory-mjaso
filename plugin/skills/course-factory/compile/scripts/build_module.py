@@ -63,7 +63,8 @@ def run(cmd, timeout=900):
     """(exit code, output) of one tool, run as its own process (as the person would run it)"""
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
     try:
-        p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout, env=env)
+        import browser_slots              # 2.62.1: a tool that runs out of time is ended with every browser it started
+        p = browser_slots.run_tree(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout, env=env)
         return p.returncode, (p.stdout or "") + (p.stderr or "")
     except subprocess.TimeoutExpired:
         return 2, "timed out after %d s: %s" % (timeout, " ".join(cmd))
@@ -158,11 +159,24 @@ def starter_blanks(course, module):
     return out
 
 
-def write_stages(log, stages, t0):
+def write_stages(log, stages, t0, timing=None):
     """2.52.0 - each stage's seconds at the end of the build log: which stage a slow build spent its time in (M01/M02
-    workflow benchmark: build runs of 100-400 s, and no way to tell the figures from the audits from the review sheets)"""
+    workflow benchmark: build runs of 100-400 s, and no way to tell the figures from the audits from the review sheets).
+    2.62.1 - and every hidden browser's real seconds (CF_TIMING, on by default): the browser runs per tool and the slowest
+    ones - a round of 824 s or 1333 s could not be explained afterwards (IGF M01 / M02 v262). -> the slowest (s, what)"""
     log.write("\n===== stage seconds\n%s\n%-52s %6.0f s\n" % ("\n".join("%-52s %6.0f s" % (k, v) for k, v in stages),
                                                             "total", time.time() - t0))
+    if not timing or not os.path.isfile(timing):
+        return None
+    try:
+        import cf_timing
+        rows = [json.loads(x) for x in io.open(timing, encoding="utf-8") if x.strip()]
+        log.write("\n===== hidden browsers (%s)\n%s\n" % (os.path.basename(timing), cf_timing.summary(timing)))
+        slow = sorted(rows, key=lambda r: -(r.get("wall") or 0))[:5]
+        log.write("slowest:\n%s\n" % "\n".join("  %6.1f s  %s  %s" % (r.get("wall") or 0, r.get("tool"), r.get("what")) for r in slow))
+        return (slow[0].get("wall") or 0, "%s %s" % (slow[0].get("tool"), slow[0].get("what"))) if slow else None
+    except (OSError, ValueError, ImportError):
+        return None
 
 
 def workspace_figdir(course, module):
@@ -269,6 +283,17 @@ def main(argv=None):
               % (m, os.path.basename(cm.build_path(course, o.module)),
                  "; ".join("%s: %s" % (", ".join(ids), what) for ids, what in blanks)))
         return 1
+    # 2.62.1 - every hidden browser of this build writes its real seconds (cf_timing.py); a round the layout retry
+    # replaces keeps its own log (_build\M01_build.round1.log) - both were lost when a round was slow (IGF M02 v262)
+    timing = os.environ.get("CF_TIMING") or os.path.join(logdir, "%s_timing.jsonl" % m)
+    if not os.environ.get("CF_TIMING") or o.layout_round == 0:
+        os.environ["CF_TIMING"] = timing
+        if o.layout_round == 0:
+            for old in [timing] + [os.path.join(logdir, "%s_build.round%d.log" % (m, k)) for k in range(1, LAYOUT_ROUNDS + 1)]:
+                try:
+                    os.remove(old)
+                except OSError:
+                    pass
     log = io.open(os.path.join(logdir, "%s_build.log" % m), "w", encoding="utf-8")
     say, fails, notes = [], [], []
     stages = []                      # 2.52.0: (stage, seconds) - written into the log, so a slow stage is seen
@@ -442,8 +467,10 @@ def main(argv=None):
         mis = moved_misfits(io.open(deck, encoding="utf-8").read(), results[ak][1])
         if mis:
             measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
-            write_stages(log, stages, t0)
+            log.write("\n===== this round's findings (the build runs again for the slides above)\n%s\n" % "\n".join(say))
+            write_stages(log, stages, t0, timing)
             log.close()
+            os.replace(log.name, os.path.join(logdir, "%s_build.round%d.log" % (m, o.layout_round + 1)))
             print("LAYOUT - %d slide(s) built another way so no two neighbours look alike (L62) did not fit: %s - built again "
                   "their next way (%.0f s; kept in %s_layout_avoid.json while their words are unchanged)"
                   % (len(mis), ", ".join("%s (%s, %s ground)" % (k, v[0], v[1]) for k, v in sorted(mis.items())),
@@ -476,8 +503,11 @@ def main(argv=None):
                       "Visual review: no screen changed since the last review - nothing new to look at.")
         else:
             notes.append("Review sheets not made (%s) - do the visual review by hand (GUIDE 2f)" % (lines_of(rout, 1) or ["?"])[0])
-    write_stages(log, stages, t0)
+    slowest = write_stages(log, stages, t0, timing)
     log.close()
+    if slowest and slowest[0] > 60:      # 2.62.1: one hidden browser for over a minute - a stalled page or a loaded PC
+        notes.append("SLOW: one hidden browser took %.0f s (%s) - a page that barely settles, or a busy computer; the "
+                     "build log lists the slowest runs" % slowest)
     try:                                   # what the next run may skip (2.56.0 - a figures-only round)
         io.open(os.path.join(logdir, "%s_last.json" % m), "w", encoding="utf-8").write(json.dumps(
             {"inputs": key, "fails": fails,
