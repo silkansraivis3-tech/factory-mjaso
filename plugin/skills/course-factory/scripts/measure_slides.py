@@ -264,17 +264,21 @@ def _open(browser, url, win, token, server, timeout):
     args = [browser, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--mute-audio",
             "--no-default-browser-check", "--user-data-dir=" + prof, "--window-size=%d,%d" % win,
             "--virtual-time-budget=600000", "--dump-dom", url]
-    p = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    t0 = time.time()
-    while token not in server.results and time.time() - t0 < timeout and p.poll() is None:
-        time.sleep(0.1)
-    for _ in range(20):                                      # the result may land just as the browser exits
-        if token in server.results:
-            break
-        time.sleep(0.1)
-    if p.poll() is None:
-        p.kill()
-    p.wait()
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    import browser_slots                                     # 2.57.0: one pool of hidden browsers for the whole computer
+    with browser_slots.slot():
+        p = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        t0 = time.time()
+        while token not in server.results and time.time() - t0 < timeout and p.poll() is None:
+            time.sleep(0.1)
+        for _ in range(20):                                  # the result may land just as the browser exits
+            if token in server.results:
+                break
+            time.sleep(0.1)
+        if p.poll() is None:
+            p.kill()
+        p.wait()
     shutil.rmtree(prof, ignore_errors=True)
     return server.results.pop(token, None)
 

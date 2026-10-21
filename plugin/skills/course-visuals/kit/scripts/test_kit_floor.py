@@ -22,6 +22,8 @@ from pathlib import Path
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 KIT = Path(__file__).resolve().parent.parent
 FAILS = []
+sys.path.insert(0, str(KIT.parent.parent / "course-factory" / "scripts"))
+import browser_slots  # noqa: E402  - one pool of hidden browsers for the whole computer (2.57.0)
 
 
 def check(what, ok, detail=""):
@@ -98,7 +100,7 @@ def main():
         page = tmp / "floor.html"
         page.write_text(PAGE % {"css": (KIT / "kit.css").as_uri(), "js": (KIT / "kit.js").as_uri(),
                                 "spec": json.dumps(SPEC), "hosts": hosts}, encoding="utf-8")
-        p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + str(tmp / "prof"),
+        p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + str(tmp / "prof"),
                             "--allow-file-access-from-files", "--window-size=1280,2600", "--virtual-time-budget=8000",
                             "--dump-dom", page.as_uri()], capture_output=True, text=True, encoding="utf-8",
                            errors="replace", timeout=180)

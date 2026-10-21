@@ -31,6 +31,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import drawing_check  # noqa: E402
 import test_compile_module as tcm  # noqa: E402
+import browser_slots  # noqa: E402  - on the path drawing_check put it on; one pool of hidden browsers (2.57.0)
 
 PASS, FAIL = [], []
 
@@ -146,7 +147,7 @@ def drive(exe, page, plan, tmp, look=True, size=None):
     w = os.path.join(tmp, "drive.html")
     io.open(w, "w", encoding="utf-8").write(text)
     win = ["--hide-scrollbars", "--window-size=%d,%d" % (size[0], size[1] + 95)] if size else ["--window-size=1280,800"]
-    p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--user-data-dir=" + os.path.join(tmp, "prof"),
+    p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--user-data-dir=" + os.path.join(tmp, "prof"),
                         "--allow-file-access-from-files"] + win + ["--virtual-time-budget=15000", "--dump-dom", Path(w).as_uri()],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
     m = re.search(r'<pre id="gbtest">(.*?)</pre>', p.stdout, re.S)
@@ -248,7 +249,7 @@ def drive_deck(exe, page, tmp, lang=None):
     text = text[:i] + "<script>%s</script>" % DECK_DRIVER + text[i:]
     w = os.path.join(tmp, "deck.html")
     io.open(w, "w", encoding="utf-8").write(text)
-    p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--user-data-dir=" + os.path.join(tmp, "prof"),
+    p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--user-data-dir=" + os.path.join(tmp, "prof"),
                         "--allow-file-access-from-files", "--window-size=1280,800", "--virtual-time-budget=10000", "--dump-dom", Path(w).as_uri()],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
     m = re.search(r'<pre id="gbtest">(.*?)</pre>', p.stdout, re.S)
@@ -370,7 +371,7 @@ def probe(exe, page, tmp, size=(1280, 800)):
     text = text[:i] + "<script>%s</script>" % PROBE + text[i:]
     w = os.path.join(tmp, "probe.html")
     io.open(w, "w", encoding="utf-8").write(text)
-    p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--hide-scrollbars",
+    p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--hide-scrollbars",
                         "--user-data-dir=" + os.path.join(tmp, "prof"), "--allow-file-access-from-files",
                         "--window-size=%d,%d" % (size[0], size[1] + 95), "--virtual-time-budget=20000", "--dump-dom", Path(w).as_uri()],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)

@@ -14,6 +14,10 @@
       compile and its drawing check, the words (instructor + trainee), navigation, the audits at 1280x800 and 1024x768,
       the course pages and the classroom's importer. It prints only what fails - file, slide or question, what to do -
       and one PASS line. Do not run those checks one by one: each separate run is a turn of the model.
+      (2.57.0) A rebuild judges again only the slides and task pages changed in anything they load since their last
+      clean check (the drawing check and the audits; the figures already did) - a failing one is judged every time,
+      --full judges everything. Hidden browsers come from ONE pool for the whole computer (half the cores, at most 8,
+      CF_BROWSER_SLOTS): two builds, or a build and the test suite, queue instead of overloading the PC.
 5  on PASS it has photographed every slide, every figure step and every question (asked, wrong, right) onto a few
       sheets and checked that every question grades right and wrong answers as such. Give the sheets to ONE review
       subagent (model haiku) with compile/REVIEW_PROMPT.md. It labels each finding BROKEN or POLISH (2.56.0). Fix every

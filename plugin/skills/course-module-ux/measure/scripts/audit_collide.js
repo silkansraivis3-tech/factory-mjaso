@@ -392,7 +392,9 @@
     return res;
   }
 
-  function slice(from, to) {
+  /* only = [slide index from 0, ...]: measure just those slides (run_audits.py 2.57.0 - the ones changed since their
+     last clean audit) */
+  function slice(from, to, only) {
     from = from || 0;
     var abort = guardViewport();
     if (abort) { return Promise.resolve(verdict(abort)); }
@@ -411,6 +413,7 @@
 
       function step(i) {
         if (i >= hi) { return Promise.resolve(); }
+        if (only && only.indexOf(i) < 0) { return step(i + 1); }
         activate(slides, i);
         revealFrags(slides[i]);
         return sleep(settleMs()).then(function () {
@@ -445,7 +448,7 @@
     });
   }
 
-  function all() { return slice(0, undefined); }
+  function all(only) { return slice(0, undefined, only); }
 
   var api = { all: all, slice: slice, collideSlide: collideSlide, spec: spec,
               CONFIG: CONFIG, settleMs: settleMs, guardViewport: guardViewport,

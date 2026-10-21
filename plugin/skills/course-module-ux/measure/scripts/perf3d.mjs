@@ -46,6 +46,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
+import { takeSlot } from './browser_slots.mjs';
 
 const VALUE_OPTS = ['slides', 'budget-ms', 'throttle', 'gate', 'min-fps', 'ms', 'dwell', 'wait-ms', 'w', 'h', 'dsf', 'gl', 'chrome', 'next', 'start', 'active-class'];
 const FLAGS = ['no-cold', 'no-fps', 'json', 'help'];
@@ -131,6 +132,7 @@ async function main() {
   const chromePath = findChrome(opt.chrome);
   if (!chromePath) bad('no Chrome found (set CHROME_PATH or pass --chrome=PATH)');
 
+  await takeSlot();           // 2.57.0: one slot of the computer's pool of hidden browsers, held until the process exits
   const profile = mkdtempSync(join(tmpdir(), 'perf3d-'));
   const glArgs = GL === 'none' ? ['--disable-3d-apis', '--disable-gpu', '--disable-software-rasterizer']
     : GL === 'gpu' ? ['--ignore-gpu-blocklist', '--enable-gpu-rasterization']

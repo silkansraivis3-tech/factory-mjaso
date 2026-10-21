@@ -1490,6 +1490,34 @@ the ship look realistic aswell, look at real images of it", "definitely ... the 
 - **The rule** (`SPEC.md` "Rules of the look", `PARTS.md`): a part declares `look` - `equipment`, `screen` or `diagram`;
   equipment draws its bodies in a kit material; screens stay ISA-101. `check_kit.py parts` enforces it (`test_kit.py`).
 
+## 4zz10 · Builds that do not overload the PC and do not judge again what did not change (2.57.0, 2026-10-20)
+
+Aleksis: "how to make builds stop taking so long on a busy PC". The 2.56.0 integration day showed two causes: several
+processes each starting their own hidden browsers (a test suite, a module rebuild and two test re-runs at once - CPU at
+99 %), and every rebuild judging every slide again when one to three had changed.
+- **One pool of hidden browsers for the whole computer** (`course-factory/scripts/browser_slots.py`, its Node twin
+  `course-module-ux/measure/scripts/browser_slots.mjs`). Every place that starts a hidden Chrome or Edge - the drawing check,
+  figure_fit and the studio, run_audits, measure_slides, review_sheets.mjs, perf3d.mjs and the tests that drive Chrome -
+  takes a slot first: a lock file `%TEMP%\cf_browser_slots\slot_N.lock` made with exclusive create, holding the PID, held for
+  the browser's life. A slot whose PID is not running (a crash, a kill) is reclaimed at once; one not touched for 5 minutes
+  (its holder's PID reused by another process) too. Slots: half the cores, at most 8, `CF_BROWSER_SLOTS` to set it. A slot is
+  held for one browser and never while waiting for another (the studio's two to four runs per figure now each take their
+  own, in threads), so no process waits on itself. `test_browser_slots.py`: two processes of four threads never hold more
+  than the slots, and do use all of them; a killed holder's slot reclaimed; Node waits in the same queue.
+- **A slide or task page judged clean is not judged again until something it shows changes**
+  (`course-factory/scripts/check_cache.py`), as figure_fit already did for figures. The fingerprint is the slide's section
+  (or the whole task page), its place in the deck, the deck around it, every file of `assets\` but the pictures, every file
+  the slide names (its photos, a 3D scene and what that names), the checker's own scripts, the window size and the browser.
+  The drawing check (`drawing_check.check(..., cache=, full=)`, from `compile_module.py`) keeps only the changed slides in
+  the page (the 2.56.0 slicing, now a list of slides); the audits (`run_audits.py --cache --full`, from `build_module.py`)
+  load the whole deck and measure only the changed slides (`AuditDeck.all(only)`, `AuditCollide.all(only)`,
+  `AuditCompose.all(only)` - compose still walks every screen with Next). Only clean results are kept, in
+  `working_claude\_build\MNN_drawing_clean.json` / `MNN_audits_clean.json`: a slide with a finding, a compose REVIEW screen,
+  a page that did not finish, a run that aborted or whose browser counted the slides differently from the fingerprints is
+  judged again next time. `build_module.py --full` judges everything (the figures too). `test_check_cache.py`: a defect
+  planted on one slide re-checks that slide only and IS found, and again on the next run; a changed photo re-checks its
+  slide, a changed design file every slide; the audits the same.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.
