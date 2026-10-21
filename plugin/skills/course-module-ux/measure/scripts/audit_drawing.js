@@ -111,6 +111,7 @@
     minTextPx: 12.5,         /* SMALL TEXT: a kit figure's words, as rendered */
     kitSteps: true,          /* all(): a kit figure is judged at the end of each of its steps as well as at step 0 */
     motionPhases: 9,         /* MOTION: checks 1-3 at this many phases (0 to 1) of every endless animation's cycle */
+    outlineCache: true,      /* a shape's outline sampled once while its geometry is unchanged (2.61.0) - false: every time */
     maxExamples: 40
   };
   if (global.__auditDrawingConfig) {
@@ -315,24 +316,48 @@
     if (!m) { m = el.getScreenCTM().inverse(); if (INV) { INV.set(el, m); } }
     return pt(el, p.x, p.y).matrixTransform(m);
   }
+  /* 2.61.0 - a shape's outline in its OWN units is the same while its geometry is: kept per shape and sampled again only
+     when its geometry changes (its attributes, the CSS geometry properties, its length, the number of points). A drawing
+     is measured at every frame of its motion (CONFIG.motionPhases) and at every step, and the kit's motions only move,
+     turn, fade or flow a shape (transform, opacity, stroke-dashoffset) - never change its own geometry: getPointAtLength
+     was 40 % of a deck's check (IGF M02: 21 of 53 s). Where the points are on screen is worked out every time, from the
+     shape's screen matrix - asked once per shape now, not once per point (the same matrix, the same points).
+     CONFIG.outlineCache false: sampled every time, as before (the test that the findings are the same) */
+  var LOCAL = typeof WeakMap === "function" ? new WeakMap() : null;
+  var GEO_ATTR = ["d", "x", "y", "width", "height", "cx", "cy", "r", "rx", "ry", "x1", "y1", "x2", "y2", "points", "pathLength", "transform"];
+  var GEO_CSS = ["d", "x", "y", "width", "height", "cx", "cy", "r", "rx", "ry"];
+  function geoKey(el, L, N, off) {
+    var cs = getComputedStyle(el), s = tag(el) + "|" + L + "|" + N + "|" + off, i;
+    for (i = 0; i < GEO_ATTR.length; i++) { s += "|" + el.getAttribute(GEO_ATTR[i]); }
+    for (i = 0; i < GEO_CSS.length; i++) { s += "|" + cs.getPropertyValue(GEO_CSS[i]); }
+    return s;
+  }
   /* a part's outline as screen points - its real geometry where it has one, its box otherwise */
   function outline(el) {
-    var pts = [], i;
+    var pts = [], i, m = el.getScreenCTM();
     if (typeof el.getTotalLength === "function" && tag(el) !== "text") {
       var L = 0;
       try { L = el.getTotalLength(); } catch (e) { L = 0; }
       if (L > 0) {
         /* a point every ~5 screen px along a long outline (a hull, a deck line), never fewer than CONFIG.samples */
-        var m = el.getScreenCTM(), sc = m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : 1;
+        var sc = m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : 1;
         var N = Math.min(600, Math.max(CONFIG.samples, Math.ceil(L * sc / 5)));
         /* a closed outline is sampled half a step off its seam: Chrome's isPointInFill misreads a circle's own
            start point at some scales (a gauge hub "poking out" of its dial at 1920 x 1080) */
         var off = closed(el) ? 0.5 : 0;
-        for (i = 0; i < N; i++) {
-          var a = el.getPointAtLength(L * (i + off) / N);
-          pts.push(toScreen(el, a.x, a.y));
+        var key = CONFIG.outlineCache && LOCAL ? geoKey(el, L, N, off) : null, kept = key && LOCAL.get(el), loc;
+        if (kept && kept.key === key) {
+          loc = kept.loc;
+        } else {
+          loc = [];
+          for (i = 0; i < N; i++) {
+            var a = el.getPointAtLength(L * (i + off) / N);
+            loc.push(a.x, a.y);
+          }
+          if (!closed(el)) { var z = el.getPointAtLength(L); loc.push(z.x, z.y); }
+          if (key) { LOCAL.set(el, { key: key, loc: loc }); }
         }
-        if (!closed(el)) { var z = el.getPointAtLength(L); pts.push(toScreen(el, z.x, z.y)); }
+        for (i = 0; i < loc.length; i += 2) { pts.push(pt(el, loc[i], loc[i + 1]).matrixTransform(m)); }
         return pts;
       }
     }
@@ -343,7 +368,7 @@
       b = { x: b.x, y: b.y + 0.18 * b.height, width: b.width, height: 0.74 * b.height };
     }
     [[0, 0], [0.5, 0], [1, 0], [1, 0.5], [1, 1], [0.5, 1], [0, 1], [0, 0.5]].forEach(function (f) {
-      pts.push(toScreen(el, b.x + f[0] * b.width, b.y + f[1] * b.height));
+      pts.push(pt(el, b.x + f[0] * b.width, b.y + f[1] * b.height).matrixTransform(m));
     });
     return pts;
   }

@@ -98,7 +98,7 @@ def measure(exe, deck, size, budget, offset=(0, 0), only=None):
     inject = scripts + RUN % (json.dumps([[n, g] for n, _, g in PROBES]), json.dumps(only))
     html = deck.read_text(encoding="utf-8")
     i = html.lower().rfind("</body>")
-    page = deck.with_name("_audit_%d.html" % os.getpid())
+    page = deck.with_name("_audit_%d_%dx%d.html" % ((os.getpid(),) + tuple(size)))     # one per viewport: they run side by side
     prof = tempfile.mkdtemp(prefix="run_audits_")
     t0 = t1 = time.time()
     try:
@@ -248,6 +248,8 @@ def main(argv=None):
     ap.add_argument("--cache", metavar="FILE", help="the slides last audited clean (2.57.0): a slide unchanged in everything "
                                                     "it loads since is not measured again (outside the course)")
     ap.add_argument("--full", action="store_true", help="with --cache: measure every slide again (and record the clean ones)")
+    ap.add_argument("--jobs", type=int, default=0, help="viewports measured at once (default: all of them, each taking a slot "
+                                                       "of the computer's pool of hidden browsers; 1 = one after the other)")
     a = ap.parse_args(argv)
     exe = browser()
     if not exe:
@@ -267,15 +269,15 @@ def main(argv=None):
     salt = check_cache.salt(*[str(HERE / js) for _, js, _ in PROBES], __file__,
                             extra="%s|%d|%s" % (check_cache.browser_id(exe), a.budget, offset))
     fps = check_cache.fingerprints(str(deck), True, salt) if a.cache else None
-    for size in sizes:
+
+    def viewport(size):
+        """one viewport measured: (label, units, slides to judge [] = none, only, result, error). 2.61.0: the viewports
+        run side by side, each in its own thread and hidden browser (a slot of the computer's pool each)"""
         label = "%dx%d" % size
         units = [("%s#%d" % (label, k), check_cache.sha(fp, label)) for k, (_, fp) in enumerate(fps)] if fps else None
         todo = [k for k, (key, fp) in enumerate(units) if not store.clean(key, fp)] if units else None
         if todo == []:
-            judged.append("0 of %d slides at %s" % (len(units), label))
-            if not a.quiet:
-                print("%s  unchanged  every slide clean at its last audit (%d slides) - not measured again" % (label, len(units)))
-            continue
+            return label, units, todo, None, None, ""
         only = todo if units and len(todo) < len(units) else None
         res, err = measure(exe, deck, size, a.budget, offset) if only is None else measure(exe, deck, size, a.budget, offset, only)
         if res is not None and units and counted(res) != {len(units)}:
@@ -283,6 +285,17 @@ def main(argv=None):
             if only is not None:
                 res, err = measure(exe, deck, size, a.budget, offset)
             units, only = None, None
+        return label, units, todo, only, res, err
+    import concurrent.futures as cf
+    with cf.ThreadPoolExecutor(max_workers=max(1, min(len(sizes), a.jobs or len(sizes)))) as ex:
+        measured = list(ex.map(viewport, sizes))
+    # what each viewport found is recorded and said in the viewports' order, as when they ran one after the other
+    for label, units, todo, only, res, err in measured:
+        if todo == []:
+            judged.append("0 of %d slides at %s" % (len(units), label))
+            if not a.quiet:
+                print("%s  unchanged  every slide clean at its last audit (%d slides) - not measured again" % (label, len(units)))
+            continue
         if res is None:
             print("%s  NOT MEASURED  %s" % (label, err))
             worst = 2
