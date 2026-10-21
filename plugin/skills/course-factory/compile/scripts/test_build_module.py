@@ -78,6 +78,7 @@ def main():
     blanks_part()
     stages_part()
     layout_part()
+    retry_part()
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
     return 1 if FAILS else 0
 
@@ -156,6 +157,37 @@ def layout_part():
     check("... and a slide whose approved words changed starts a new list",
           av["s05"] == {"words": "ffffffffffff", "avoid": [["picture-right", "dark"]]}, av)
     check("one build builds the misfits again at most %d times" % b.LAYOUT_ROUNDS, b.LAYOUT_ROUNDS == 2)
+
+
+def retry_part():
+    """2.63.0 - a round that will be built again does not wait for the review sheets or check the package: the moment the
+    audits say a slide the compiler moved does not fit, every check still running is ended and the package is not
+    started (IGF M01 / M02 v262: retried rounds waited 22-824 s, the sheets holding browser slots the next round needed)"""
+    import tempfile
+    import time
+    tmp = tempfile.mkdtemp(prefix="bm_retry_")
+    mark = os.path.join(tmp, "package_ran")
+    py = sys.executable
+    jobs = {"words (instructor)": [py, "-c", "print('ok')"],
+            "audits 1280x800 1024x768": [py, "-c", "import time, sys; time.sleep(1); print('slide 5 (s05): spills'); sys.exit(1)"],
+            "review sheets": [py, "-c", "import time; time.sleep(40)"]}
+    pkg = [py, "-c", "open(%r, 'w').write('x')" % mark]
+    asked = []
+
+    def retry(k, res):
+        asked.append(k)
+        return {"s05": ("picture-top", "light", "abc")} if k.startswith("audits") and res[0] else None
+    t = time.time()
+    results, took, again = b.run_checks(jobs, pkg, retry)
+    secs = time.time() - t
+    check("a round that will retry ends as soon as the audits say so - not after the 40 s review sheets (%.1f s)" % secs,
+          secs < 15 and again == {"s05": ("picture-top", "light", "abc")}, (secs, again))
+    check("... the package is never checked in that round", "course package" not in results and not os.path.exists(mark), results.keys())
+    check("... and the review sheets' answer is not one to read (it was ended)", results.get("review sheets", (0,))[0] != 0, results.get("review sheets"))
+    jobs["review sheets"] = [py, "-c", "print('sheets')"]
+    results, took, again = b.run_checks(jobs, pkg, lambda k, res: None)
+    check("a round that will not retry runs everything and checks the package once the others are done",
+          again is None and results["review sheets"][0] == 0 and results["course package"][0] == 0 and os.path.exists(mark), results)
 
 
 if __name__ == "__main__":

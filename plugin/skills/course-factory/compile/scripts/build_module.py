@@ -59,17 +59,59 @@ PY = sys.executable
 L54_TAIL = re.compile(r" \(L54: fix the drawing.*?\)$| \(try the figure in the studio:.*?\)$| \(see every step at once:.*?\)$")
 
 
-def run(cmd, timeout=900):
+def run(cmd, timeout=900, started=None):
     """(exit code, output) of one tool, run as its own process (as the person would run it)"""
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
     try:
         import browser_slots              # 2.62.1: a tool that runs out of time is ended with every browser it started
-        p = browser_slots.run_tree(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout, env=env)
+        p = browser_slots.run_tree(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout, env=env,
+                                   started=started)
         return p.returncode, (p.stdout or "") + (p.stderr or "")
     except subprocess.TimeoutExpired:
         return 2, "timed out after %d s: %s" % (timeout, " ".join(cmd))
     except OSError as err:
         return 2, "could not run %s: %s" % (cmd[0], err)
+
+
+def run_checks(jobs, pkg_cmd, retry=None):
+    """the checks at the same time, then the course package once the files it reads are still (it waits for every job but
+    the review sheets). -> (results, seconds, retry's answer). retry(key, result), asked as each check ends, says whether
+    the round will be built again (2.63.0): then every check still running is ended - the review sheets first, a third of
+    a round - and the package is not checked; the next round runs them all (IGF M01 / M02 v262: retried rounds of
+    22-824 s waited for sheets and a package check nobody read)."""
+    import browser_slots
+    results, took, live, again = {}, {}, {}, [None]
+
+    def run_timed(k, c):
+        s = time.time()
+        r = run(c, started=lambda p: live.__setitem__(k, p))
+        live.pop(k, None)
+        took[k] = time.time() - s
+        return r
+    with cf.ThreadPoolExecutor(max_workers=7) as ex:
+        futs = {ex.submit(run_timed, k, c): k for k, c in jobs.items()}
+        pkg = None
+        for f in cf.as_completed(futs):
+            k = futs[f]
+            results[k] = f.result()
+            if retry and again[0] is None and not k.startswith("review"):
+                again[0] = retry(k, results[k]) or None
+                if again[0]:
+                    for p in list(live.values()):
+                        browser_slots.kill_tree(p.pid)
+                        try:
+                            p.kill()
+                        except OSError:
+                            pass
+            # the importer reads every file of the module folder: it waits for the audits, whose probe pages come and go
+            # in presentation\, and for the course pages; it then runs beside the review sheets
+            if again[0] is None and pkg is None and all(x in results for x in jobs if x != "review sheets"):
+                pkg = ex.submit(run_timed, "course package", pkg_cmd)
+        if again[0] is None:
+            if pkg is None:
+                pkg = ex.submit(run_timed, "course package", pkg_cmd)
+            results["course package"] = pkg.result()
+    return results, took, again[0]
 
 
 def compile_problems(out):
@@ -420,29 +462,28 @@ def main(argv=None):
         import shutil
         shutil.rmtree(pending, ignore_errors=True)
         jobs["review sheets"] = ["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, pending, "--base=" + out_dir]
-    results, took = {}, {}
-
-    def run_timed(k, c):
-        s = time.time()
-        r = run(c)
-        took[k] = time.time() - s
-        return r
     pkg_cmd = [PY, os.path.join(FACTORY, "check_course_package.py"), os.path.join(course, workspace.MODULES)]
-    with cf.ThreadPoolExecutor(max_workers=7) as ex:
-        futs = {ex.submit(run_timed, k, c): k for k, c in jobs.items()}
-        pkg = None
-        for f in cf.as_completed(futs):
-            results[futs[f]] = f.result()
-            # the importer reads every file of the module folder: it waits for the audits, whose probe pages come and go
-            # in presentation\, and for the course pages; it then runs beside the review sheets
-            if pkg is None and all(k in results for k in jobs if k != "review sheets"):
-                pkg = ex.submit(run_timed, "course package", pkg_cmd)
-        if pkg is None:
-            pkg = ex.submit(run_timed, "course package", pkg_cmd)
-        results["course package"] = pkg.result()
+    ak = next((k for k in jobs if k.startswith("audits")), None)
+
+    def will_retry(k, res):
+        """the audits failed a slide the compiler built another way for L62: this round is built again (2.62.0)"""
+        if k != ak or res[0] == 0 or o.layout_round >= LAYOUT_ROUNDS or not os.path.isfile(deck):
+            return None
+        return moved_misfits(io.open(deck, encoding="utf-8").read(), res[1])
+    results, took, early = run_checks(jobs, pkg_cmd, will_retry)
     t = timed("the checks, at the same time (wall clock)", t)
     stages += [("  " + k, took[k]) for k in list(jobs) + ["course package"] if k in took]
-    if o.no_course_pages:
+    if early:
+        # 2.63.0 - the round is built again: what the checks found on the slides is said; the review sheets and the
+        # package check that were ended (or never started) run in the next round
+        code, out = results[ak]
+        logged(ak, out)
+        fails.append(ak)
+        say.append("%s - FAIL:" % ak.upper())
+        say += ["  " + x for x in lines_of("\n".join(y for y in out.splitlines() if not y.startswith("Built ")), 40)]
+        stopped = sorted(k for k in jobs if k not in took or k == "review sheets") + ["course package"]
+        log.write("\n===== ended early - this round is built again: %s\n" % ", ".join(stopped))
+    if early is None and o.no_course_pages:
         pcode, pout, left = own_package_findings(*results["course package"], folder=os.path.basename(mdir))
         if left and pcode != 0:
             # the module's own findings fail it; the left-out ones are only listed in the log
@@ -451,7 +492,7 @@ def main(argv=None):
         if left:
             notes.append("Course package: %d finding(s) about the course's own pages or other modules left to the check after "
                          "assembly (compile_course.py, then check_course_package.py)" % left)
-    for k in [x for x in jobs if x != "review sheets"] + ["course package"]:
+    for k in ([x for x in jobs if x != "review sheets"] + ["course package"]) if early is None else []:
         code, out = results[k]
         logged(k, out)
         if code != 0:
@@ -462,9 +503,8 @@ def main(argv=None):
                                                40 if k.startswith("audits") else 12)]
     # 2.62.0 - a slide the compiler built another way for L62 that the audit found does not fit is measured out and built
     # its next way, at once: the builder never pins a layout by hand for what the compiler chose
-    ak = next((k for k in jobs if k.startswith("audits")), None)
     if ak in fails and o.layout_round < LAYOUT_ROUNDS and os.path.isfile(deck):
-        mis = moved_misfits(io.open(deck, encoding="utf-8").read(), results[ak][1])
+        mis = early or moved_misfits(io.open(deck, encoding="utf-8").read(), results[ak][1])
         if mis:
             measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
             log.write("\n===== this round's findings (the build runs again for the slides above)\n%s\n" % "\n".join(say))

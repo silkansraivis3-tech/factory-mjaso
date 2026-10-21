@@ -221,14 +221,17 @@ def kill_tree(pid):
         pass
 
 
-def run_tree(cmd, timeout=None, input=None, capture_output=False, **kw):
+def run_tree(cmd, timeout=None, input=None, capture_output=False, started=None, **kw):
     """subprocess.run with the same answer, except that on a timeout the whole process tree is ended before
-    TimeoutExpired is raised"""
+    TimeoutExpired is raised. started(popen), when given, is told the process as it starts - so a caller can end its
+    tree early (kill_tree) when its answer is no longer wanted (build_module.py, a round that will be built again)"""
     if capture_output:
         kw["stdout"], kw["stderr"] = subprocess.PIPE, subprocess.PIPE
     if os.name != "nt":
         kw.setdefault("start_new_session", True)
     with subprocess.Popen(cmd, stdin=subprocess.PIPE if input is not None else None, **kw) as p:
+        if started:
+            started(p)
         try:
             out, err = p.communicate(input, timeout=timeout)
         except subprocess.TimeoutExpired:
