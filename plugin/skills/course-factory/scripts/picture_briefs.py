@@ -18,7 +18,9 @@ and generates only after their yes - the nano-banana tools refuse to run without
          nano_banana), and any other place a description was saved for: the slide, its title, what the script says
          the picture shows, and where it stands - to describe / described / made N time(s), about EUR x. For a place
          still to describe it prints the questions, each with the script's own words as the starting suggestion.
-  save   keeps the person's answers and the prompt written from them: brief.json = {"answers": {...}, "prompt": "..."}
+  save   keeps the person's answers and the prompt written from them: brief.json = {"answers": {...}, "prompt": "..."};
+         a builder may make the drafted prompt better without the person's answers - {"prompt": "...", "refined":
+         "<what was made better>"} - never inventing answers; it is shown as the builder's until the person's yes
   done   records one picture made: the file, the person's words of approval, the date; a slide whose build sheet
          names no picture yet gets this file as its "figure", so the next compile places it
   queue  the free browser route (nano-banana gemini-browser, owner 2026-10-16): every place still without a picture,
@@ -92,7 +94,9 @@ def cmd_list(course, module, script, store):
         state = ("made %d time(s), about EUR %.2f" % (n, paid([b]) * e)) if n else ("described - show the prompt and ask for a yes" if b.get("prompt") else "to describe")
         print("\n- %s (%s) \"%s\" - %s" % (cs.place(script, sid), sid, s.get("title") or s.get("question", ""), state))
         print("    the script says it shows: %s" % (s.get("visual") or "(nothing yet)"))
-        if b.get("prompt"):
+        if b.get("prompt") and b.get("refined"):
+            print("    prompt made better by the builder (%s), not yet the person's - show it and ask: %s" % (b["refined"], b["prompt"]))
+        elif b.get("prompt"):
             print("    agreed prompt: %s" % b["prompt"])
         elif not n:
             print("    ask the person, one place at a time - each picture costs about EUR %.2f, so the first try should be right:" % e)
@@ -189,7 +193,8 @@ def cmd_queue(course, module, script, store, every):
             "assets/img/%s_%s_%s%s.png" % (cs.mid(module).lower(), sid, slug(s.get("title")), "_3d" if how == "inset" else "")
         out.append({"slide": sid, "place": cs.place(script, sid), "title": s.get("title") or "", "aspect": aspect,
                     "place_as": "under the drawing (inset)" if how == "inset" else "the slide's picture",
-                    "prompt": prompt, "prompt_from": "the person" if b.get("prompt") else
+                    "prompt": prompt, "prompt_from": "the builder (%s) - show it to the person" % b["refined"]
+                    if b.get("prompt") and b.get("refined") else "the person" if b.get("prompt") else
                     ("drafted from the title - say in one line what the real thing looks like if the title is not a "
                      "thing on a ship" if how == "inset" and not (b.get("answers") or {}).get("subject") else "drafted from the script"),
                     "about": (s.get("visual") or s.get("title") or "").strip(), "rel": rel,
@@ -242,10 +247,19 @@ def main(argv=None):
     b = store.setdefault(a.slide, {})
     if a.cmd == "save":
         brief = json.load(io.open(a.brief, encoding="utf-8"))
-        if not (brief.get("prompt") or "").strip() or not isinstance(brief.get("answers"), dict):
-            print("Stopped - a brief is {\"answers\": {...the person's answers...}, \"prompt\": \"...\"}")
+        refined = (brief.get("refined") or "").strip() if isinstance(brief.get("refined"), str) else ""
+        if not (brief.get("prompt") or "").strip() or not (isinstance(brief.get("answers"), dict) or refined):
+            print("Stopped - a brief is {\"answers\": {...the person's answers...}, \"prompt\": \"...\"}, or - a builder making the "
+                  "drafted prompt better, with no answers of the person's - {\"prompt\": \"...\", \"refined\": \"<what was made "
+                  "better>\"}")
             return 2
-        b.update({"answers": brief["answers"], "prompt": brief["prompt"].strip(), "saved": time.strftime("%Y-%m-%d")})
+        if isinstance(brief.get("answers"), dict):
+            b.update({"answers": brief["answers"], "prompt": brief["prompt"].strip(), "saved": time.strftime("%Y-%m-%d")})
+            b.pop("refined", None)
+        else:
+            # 2.63.0 (IGF M02 v262: "prompts could not be improved here") - a builder may make the drafted prompt better; it
+            # never invents the person's answers: the ones kept stay, and the prompt is marked as the builder's
+            b.update({"prompt": brief["prompt"].strip(), "refined": refined, "saved": time.strftime("%Y-%m-%d")})
         print("Saved the description of %s (%s) - next: show the prompt and ask \"Generate this one picture (about EUR %.2f)?\"\n    %s"
               % (cs.place(script, a.slide), a.slide, GB["eur_per_image"], save_store(course, a.module, store)))
         return 0

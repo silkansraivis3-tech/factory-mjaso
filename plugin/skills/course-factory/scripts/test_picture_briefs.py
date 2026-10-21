@@ -97,6 +97,24 @@ def main():
               and by["s02"]["prompt_from"] == "the person", by["s02"])
         check("every line ends in a file in the module's own folder",
               all(x["save_as"].endswith(".png") and os.sep + "modules" + os.sep + "module01" + os.sep in x["save_as"] for x in q), q)
+
+        print("\n-- 2.63.0: a builder makes the drafted prompt better, without inventing the person's answers")
+        io.open(brief, "w", encoding="utf-8").write(json.dumps({"prompt": "Photograph of an LNG carrier alongside a terminal"}))
+        check("a prompt with neither the person's answers nor \"refined\" is still refused",
+              run("save", master, "--module", "1", "--slide", "s01", "--brief", brief)[0] == 2)
+        io.open(brief, "w", encoding="utf-8").write(json.dumps({"prompt": "Photograph of an LNG carrier alongside a terminal, the "
+                                                                          "loading arms connected, daylight", "refined": "the arms named"}))
+        code, out = run("save", master, "--module", "1", "--slide", "s01", "--brief", brief)
+        kept = json.load(io.open(os.path.join(master, "course", "working_claude", "picture_briefs", "M01.json"), encoding="utf-8"))
+        check("a refined prompt is saved; the person's answers already kept stay as they were",
+              code == 0 and kept["s01"]["prompt"].endswith("daylight") and kept["s01"]["answers"] == {"subject": "LNG carrier"}
+              and kept["s01"]["refined"] == "the arms named", (out, kept.get("s01")))
+        run("queue", master, "--module", "1", "--all")
+        q = {x["slide"]: x for x in json.load(io.open(os.path.join(master, "course", "working_claude", "picture_briefs", "M01.gemini.json"), encoding="utf-8"))}
+        check("the queue says the builder made it better and that the person sees it - never 'the person'",
+              q["s01"]["prompt"].endswith("daylight") and q["s01"]["prompt_from"].startswith("the builder (the arms named)"), q["s01"])
+        check("the list shows it as the builder's, to be shown and asked",
+              "made better by the builder (the arms named)" in run("list", master, "--module", "1")[1])
         bare = dict(SCRIPT, screens=SCRIPT["screens"] + [{"id": "s04", "kind": "slide", "title": "The bunkering station at night",
                                                              "text": "x", "visual_kind": "ai_illustration",
                                                              "visual": "The bunkering station of an LNG-fuelled ferry at night, drip tray under the manifold",
