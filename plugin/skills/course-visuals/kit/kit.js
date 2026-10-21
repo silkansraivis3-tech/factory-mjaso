@@ -66,6 +66,16 @@
     fig.labels.push(L);
     return w;
   }
+  /* a part's own words go and come back with what it draws (2.60.0): a fire that is out takes its name with it - "gas
+     burning at the mast" stood beside a mast with no flame (IGF M05 s10, M06 s12, M11 s08, M13 s02 / s04). Opacity, never
+     display: the words keep their place, so the layout and the steps where they show are unchanged. */
+  function gone(w, out) {
+    if (!w) return;
+    var o = out ? '0' : '';
+    w.style.opacity = o;
+    w.__kitFade = out ? '0' : null;
+    if (w.__kitLeader) w.__kitLeader.style.opacity = o;
+  }
   /* the width of the widest of these words in a text element as it is styled (restores what it said) */
   function widest(t, words) {
     var keep = t.textContent, w = 0;
@@ -2068,7 +2078,7 @@
     mount: mount, controls: controls, Figure: Figure, types: TYPES, define: define, local: LOCAL, added: ADDED,
     reducedMotion: reducedMotion,
     /* the drawing helpers every part uses - a new part uses these too, never its own */
-    h: { el: el, lines: lines, label: label, widest: widest, readings: readings, clamp: clamp, num: num, fmt: fmt, polar: polar, arc: arc,
+    h: { el: el, lines: lines, label: label, gone: gone, widest: widest, readings: readings, clamp: clamp, num: num, fmt: fmt, polar: polar, arc: arc,
          flagMark: flagMark, textWidth: textWidth, NS: NS,
          /* physical equipment in its material, its light and shade, its flanges (2.52.0, L62) */
          equip: equip, body: body, reshape: reshape, flange: flange },
@@ -2972,11 +2982,12 @@ KIT.define('flame', function (fig, part, g, p) {
   h.el('path', { d: tongue(1, 0, 0.12), 'class': 'kit-flame-outer kit-m-fire', 'data-may-cross': '', 'data-no-contain': '' }, body);
   h.el('path', { d: tongue(0.55, 0, 0.06), 'class': 'kit-flame-core', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, body);   // the hot core inside the flame: its outer tongue carries the contrast
   h.el('ellipse', { cx: 0, cy: -s * 0.04, rx: s * 0.2, ry: s * 0.08, 'class': 'kit-flame-root', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, body);
-  if (p.label) h.label(fig, g, { x: s * 0.6, y: -s * 0.6, 'class': 'kit-cap' }, p.label);
+  var lb = p.label ? h.label(fig, g, { x: s * 0.6, y: -s * 0.6, 'class': 'kit-cap' }, p.label) : null;
   part.render = function (v) {
     var k = h.clamp(v, 0, 1);
     grow.setAttribute('transform', 'scale(' + Math.max(k, 0.001).toFixed(3) + ')');
     grow.style.opacity = k > 0.02 ? '1' : '0';
+    h.gone(lb, k <= 0.02);
     g.classList.toggle('kit-flame-on', k > 0.05);
   };
 }, {
@@ -3880,6 +3891,7 @@ KIT.define('fire', function (fig, part, g, p) {
     var k = h.clamp(v, 0, 1);
     grow.setAttribute('transform', jet ? 'scale(' + Math.max(k, 0.001).toFixed(3) + ' ' + (0.5 + 0.5 * k).toFixed(3) + ')' : 'scale(1 ' + Math.max(k, 0.001).toFixed(3) + ')');
     grow.style.opacity = k > 0.02 ? '1' : '0';
+    if (!st) h.gone(lg, k <= 0.02);                // with a state line its words stay: "OUT" is what it says then
     g.classList.toggle('kit-fire-on', k > 0.05);
     if (st) st.textContent = k > 0.05 ? 'BURNING' : 'OUT';
   };
@@ -4675,11 +4687,12 @@ KIT.define('spark', function (fig, part, g, p) {
     [[0, 0], to].forEach(function (c) { h.body('circle', { cx: c[0], cy: c[1], r: 5.5 }, eqe, { mat: 'steel', shade: 'round' }); });
     cx = to[0] / 2; cy = to[1] / 2;
   }
-  if (p.label) h.label(fig, g, { x: cx, y: cy - (fric ? 44 : 26), 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  var lb = p.label ? h.label(fig, g, { x: cx, y: cy - (fric ? 44 : 26), 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label) : null;
   part.render = function (v) {
     var k = h.clamp(v, 0, 1);
     burst.setAttribute('transform', 'translate(' + cx + ' ' + cy + ') scale(' + (0.4 + 0.6 * k).toFixed(3) + ') translate(' + (-cx) + ' ' + (-cy) + ')');
     burst.style.opacity = k > 0.02 ? '1' : '0';
+    h.gone(lb, k <= 0.02);
     g.classList.toggle('kit-spark-on', k > 0.05);
   };
 }, {

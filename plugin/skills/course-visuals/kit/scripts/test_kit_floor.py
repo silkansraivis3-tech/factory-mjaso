@@ -6,6 +6,7 @@ word, measured the way both audits measure it (audit_deck.js svgSmall: declared 
 audit_drawing.js SMALL TEXT: declared x screen scale), must be 12.5 px or more.
 M01 workflow benchmark, 2026-10-20: words grown with a 0.1 % margin, and not grown again for a scale change under 1 %,
 read 12.4 px at scales of 0.978-0.996 (16 deck findings in one M01 run, 56 on M02 at 1024x768).
+Also (2.60.0): a flame's, a fire's and a spark's own words go with them at value 0 and come back when they burn.
 Run: python test_kit_floor.py  (SKIP without Chrome/Edge)"""
 from __future__ import annotations
 
@@ -88,6 +89,61 @@ window.addEventListener('load', function () {
 </script></body></html>"""
 
 
+# 2.60.0 - a part's own words at value 0: "gas burning at the mast" stood beside a mast with no flame after the fire was
+# out (IGF M05 s10, M06 s12, M11 s08, M13 s02 / s04). Lit at step 1, out again at step 2.
+GONE = {"size": [640, 300], "label": "words at value 0", "parts": [
+    {"id": "TK", "type": "tank", "x": 30, "y": 170, "w": 170, "h": 80, "label": "Fuel tank", "value": 0},
+    {"id": "FL", "type": "flame", "x": 300, "y": 120, "label": "gas burning at the mast", "value": 0},
+    {"id": "FP", "type": "fire", "x": 420, "y": 250, "w": 120, "label": "pool fire", "value": 0},
+    {"id": "FS", "type": "fire", "x": 250, "y": 280, "w": 80, "label": "the cargo fire", "state": True, "value": 0},
+    {"id": "SK", "type": "spark", "x": 560, "y": 120, "label": "spark", "value": 0}],
+    "steps": [{"title": "1", "play": [["FL", 1, 0], ["FP", 1, 0], ["SK", 1, 0]]},
+              {"title": "2", "play": [["FL", 0, 0], ["FP", 0, 0], ["SK", 0, 0]]}]}
+GONE_PAGE = """<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="%(css)s">
+<style>body{margin:0;background:#0d1b2a}.w{width:900px}.w svg{display:block;width:100%%;height:auto}</style>
+</head><body><div class="w"></div><pre id="out"></pre><script src="%(js)s"></script>
+<script>
+window.addEventListener('load', function () {
+  var f = KIT.mount(document.querySelector('.w'), %(spec)s), out = {};
+  setTimeout(function () {
+    KIT.layoutAll(true);
+    function shown(n) { var v = 1; for (; n && n.tagName.toLowerCase() !== 'svg'; n = n.parentNode) { var c = getComputedStyle(n);
+      if (c.display === 'none' || c.visibility === 'hidden') { return 0; } v *= parseFloat(c.opacity); } return +v.toFixed(2); }
+    [0, 1, 2].forEach(function (k) {
+      f.go(k, true);
+      var row = {};
+      ['TK', 'FL', 'FP', 'FS', 'SK'].forEach(function (id) {
+        var l = f.svg.querySelector('[data-kit-id="' + id + '"] .kit-lbl'), b = l ? l.getBBox() : null;
+        row[id] = l ? [shown(l), b && b.width > 0 ? 1 : 0, l.__kitLeader ? shown(l.__kitLeader) : -1] : null;
+      });
+      out['s' + k] = row;
+    });
+    document.getElementById('out').textContent = JSON.stringify(out);
+  }, 300);
+});
+</script></body></html>"""
+
+
+def gone_part(exe, tmp):
+    page = tmp / "gone.html"
+    page.write_text(GONE_PAGE % {"css": (KIT / "kit.css").as_uri(), "js": (KIT / "kit.js").as_uri(), "spec": json.dumps(GONE)},
+                    encoding="utf-8")
+    p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + str(tmp / "prof2"),
+                        "--allow-file-access-from-files", "--window-size=1000,700", "--virtual-time-budget=8000",
+                        "--dump-dom", page.as_uri()], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
+    m = re.search(r'<pre id="out">(.*?)</pre>', p.stdout, re.S)
+    r = json.loads(unescape(m.group(1))) if m and m.group(1).strip() else {}
+    s0, s1, s2 = r.get("s0") or {}, r.get("s1") or {}, r.get("s2") or {}
+    check("2.60.0: the flame's, the fire's and the spark's own words are not shown while the part is out (at rest and after "
+          "it goes out again)", all((s.get(i) or [1])[0] == 0 for s in (s0, s2) for i in ("FL", "FP", "SK")), r)
+    check("... and shown, laid out, while it burns (step 1) - the audit sees them at their visible step",
+          all((s1.get(i) or [0, 0])[:2] == [1, 1] for i in ("FL", "FP", "SK")), s1)
+    check("... a leader line, where one was drawn, goes with its words", all((s.get(i) or [0, 0, -1])[2] in (-1, 0)
+                                                                            for s in (s0, s2) for i in ("FL", "FP", "SK")), r)
+    check("... a part that still draws at 0 keeps its name (an empty tank), and a fire with a state line keeps its words "
+          "(it says OUT)", all((s.get("TK") or [0])[0] == 1 and (s.get("FS") or [0])[0] == 1 for s in (s0, s1, s2)), r)
+
+
 def main():
     exe = browser()
     if not exe:
@@ -95,6 +151,7 @@ def main():
         return 0
     tmp = Path(tempfile.mkdtemp(prefix="kitfloor_"))
     try:
+        gone_part(exe, tmp)
         widths = list(range(560, 760, 2))
         hosts = "".join('<div class="w" style="width:%dpx"></div>' % w for w in widths)
         page = tmp / "floor.html"

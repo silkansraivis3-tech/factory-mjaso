@@ -17,6 +17,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -62,6 +63,56 @@ TEXT = "<p>A cargo pump is never started against a closed suction.</p>"
 
 def levels(d, level):
     return [f for f in d["findings"] if f["level"] == level]
+
+
+SKILLS = os.path.dirname(os.path.dirname(HERE))
+# the check scripts that stopped at their first non-ASCII character under `python -I` on Windows (cp1252 stdout; -I
+# ignores PYTHONIOENCODING) - IGF analysis, 2026-10-21
+CRASHED = ["course-visuals/scripts/check_assets.py", "course-visuals/scripts/check_visuals.py",
+           "course-factory/hours/scripts/check_balance.py", "course-factory/coverage/scripts/check_syllabus_coverage.py",
+           "course-factory/retrofit/scripts/check_language.py", "course-factory/retrofit/scripts/classify_module.py",
+           "course-task-ux/scripts/check_task_pages.py", "course-module-ux/measure/scripts/check_static.py",
+           "course-factory/scripts/check_module_folder.py"]
+
+
+def tooling_part(tmp):
+    """2.60.0 - the check tooling itself: the nine scripts print UTF-8 whatever the console's code page, and check_assets
+    neither fails a module's assets\\ root for the logo the factory copied there nor walks a picture set aside"""
+    print("\n-- 2.60.0: the check tooling")
+    late = []
+    for rel in CRASHED:
+        src = io.open(os.path.join(SKILLS, rel), encoding="utf-8").read()
+        at = src.find('sys.stdout.reconfigure(encoding="utf-8", errors="replace")')
+        first, d = re.search(r"^(?!\s*#).*\bprint\(", src, re.M), src.find("\ndef ")
+        if at < 0 or (first and first.start() < at) or 0 <= d < at:
+            late.append(rel)
+    check("each of the nine scripts sets its output to UTF-8 at the top, before anything prints", not late, late)
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONIOENCODING", "PYTHONUTF8")}
+    p = subprocess.run([sys.executable, "-I", os.path.join(SKILLS, CRASHED[0]), os.path.join(tmp, "no such folder →")],
+                       capture_output=True, env=env)
+    check("check_assets.py under python -I prints a non-ASCII path instead of stopping on it",
+          p.returncode == 2 and "→".encode("utf-8") in p.stdout and b"UnicodeEncodeError" not in p.stderr, p.stdout + p.stderr)
+
+    mod = os.path.join(tmp, "assets_mod", "assets")
+    os.makedirs(os.path.join(mod, "img", "_unused"))
+    shutil.copy(os.path.join(SKILLS, os.pardir, "resources", "brand", "novikontas_logo.svg"), mod)
+    io.open(os.path.join(mod, "img", "tank.jpg"), "wb").write(b"\xff\xd8\xff\xd9")
+    io.open(os.path.join(mod, "img", "_photo_meta.json"), "w", encoding="utf-8").write(json.dumps({"tank.jpg": {
+        "source": "Novikontas", "rights_state": "PROJECT_OWNED", "description": "A tank.", "teaching_purpose": "the tank",
+        "used_in": "M01 s01", "visually_verified": "yes - a tank, 2026-10-21"}}))
+    io.open(os.path.join(mod, "img", "_unused", "old.jpg"), "wb").write(b"\xff\xd8\xff\xd9")
+    p = subprocess.run([sys.executable, "-I", os.path.join(SKILLS, CRASHED[0]), os.path.dirname(mod), "--json"],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    try:
+        found = json.loads(p.stdout)["findings"]
+    except (ValueError, KeyError):
+        found = [{"where": "?", "message": p.stdout + p.stderr}]
+    check("check_assets: an assets\\ root with only the factory's logo is not 'images and no provenance file', and "
+          "assets\\img\\_unused is not walked - the module is clean", p.returncode == 0 and not found, found)
+    io.open(os.path.join(mod, "img", "pump.jpg"), "wb").write(b"\xff\xd8\xff\xd9")
+    p = subprocess.run([sys.executable, "-I", os.path.join(SKILLS, CRASHED[0]), os.path.dirname(mod), "--json"],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    check("... while a course picture with no record still fails", p.returncode == 1 and "pump.jpg" in p.stdout, p.stdout[-400:])
 
 
 def main() -> int:
@@ -165,6 +216,8 @@ def main() -> int:
         d = run(r)
         check("a commented-out image does not satisfy the law",
               len(levels(d, "FAIL")) == 1, d["findings"])
+
+        tooling_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

@@ -290,6 +290,8 @@ def tasks_part(tmp):
           != ["Safety meeting", "Connect the hose", "Transfer", "Disconnect"])
     check("the course's first self-check opens with 'try your tablet first'; the module check with its pass mark",
           'id="tryScr"' in p and 'id="introScr"' in m and "Pass mark 70 % – 3 of 3 right" in m and 'data-pass="70"' in m)
+    check("2.60.0: the module check and a self-check are not blind - they show the right answer after each Check",
+          "data-blind" not in m and "data-blind" not in p)
     km = dict(keys_of(m))
     check("label the drawing: the key is the place's id, the boxes sit in bands added to the drawing",
           km.get("Fuel tank") == cs.gb_key("m01", "Fuel tank", "sp-tank") and 'viewBox="0 ' not in m.split('data-fig')[1][:80]
@@ -1224,6 +1226,10 @@ def v2492_part(tmp):
     fb = io.open(os.path.join(mf, "assessment", "final_b.html"), encoding="utf-8").read()
     check("F6: variant B is graded like the check - a pass mark, its own title FB",
           'data-pass="70"' in fb and "<title>FB — " in fb and "(FB2)" in fb and "(FA1)" not in fb, fb[:600])
+    fa = io.open(os.path.join(mf, "assessment", "final_a.html"), encoding="utf-8").read()
+    check("2.60.0: both final variants are blind (data-blind on the body) - the engine shows no answer until the score",
+          re.search(r'<body [^>]*data-blind="1"', fa) is not None and re.search(r'<body [^>]*data-blind="1"', fb) is not None,
+          re.search(r"<body[^>]*>", fb).group(0) if re.search(r"<body[^>]*>", fb) else fb[:300])
     key = io.open(os.path.join(mf, "assessment", "check_answer_key.html"), encoding="utf-8").read()
     check("F6: the instructor's key lists both variants and names their pages",
           "final_a.html" in key and "final_b.html" in key and "Final assessment A" in key and "Final assessment B" in key, key[:600])
@@ -1420,6 +1426,25 @@ def three_part(tmp):
     check("a build sheet naming three.min.js gets the factory's r128 copy, byte for byte, and no 'not in the module folder'",
           os.path.isfile(mine) and open(mine, "rb").read() == open(src, "rb").read() and 'const e="128"' in open(src, encoding="utf-8").read()
           and "three.min.js, which is not in the module folder" not in out, out[-600:])
+    # 2.60.0 - the scene's control hint failed check_script_match on IGF M05 s06, M13 s07, M15 s05
+    print("\n-- 2.60.0: a 3D scene's control hint is not script words")
+    c, md = new_course(os.path.join(tmp, "hint60"), script())
+    io.open(os.path.join(c, "working_claude", "figures", "M01", "m01_s04_3d.html"), "w", encoding="utf-8").write(
+        '<div class="fill fig" data-stage data-3d><canvas></canvas><div data-hint>Drag to turn - tap a part to look closer</div>'
+        '<p data-hint data-script-ignore>Tap it again</p></div>')
+    build_of(c, lambda s: s["screens"].update(s04={"figure": "m01_s04_3d.html", "dark": True}))
+    code, out = run(COMPILE, c, "--module", "1")
+    s04 = section(deck(md), "s04")
+    check("the hint's holder [data-hint] goes into the deck marked data-script-ignore - once, also where it already was",
+          '<div data-script-ignore data-hint>Drag to turn' in s04 and '<p data-hint data-script-ignore>Tap it again' in s04
+          and s04.count("data-script-ignore") == 2, s04[:800])
+    code, mout = run(MATCH, c, "--module", "1", "--part", "instructor")
+    check("... so check_script_match passes the slide: the approved words and a counted hint", code == 0 and "Drag to turn" not in mout, mout)
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    note = cm.starter_scene({"module": 1}, "s05", [])["_figure"]
+    check("the starter 3D entry says where the hint goes and that a class of the module's own needs a rule",
+          "<div data-hint></div>" in note and "data-script-ignore" in note and "no rule styles" in note, note)
 
 
 def v2520_part(tmp):
@@ -2019,7 +2044,11 @@ def main():
         p7 = deck(md7)
         k4 = section(p7, "s04")
         check("a .kit.json figure goes in as data for kit.js, never as a drawing",
-              '<svg data-kit="#kit-s04"></svg>' in k4 and '<script type="application/json" id="kit-s04">' in k4, k4[:600])
+              re.search(r'<svg data-kit="#kit-s04"[^>]*></svg>', k4) and '<script type="application/json" id="kit-s04">' in k4, k4[:600])
+        tag = re.search(r'<svg data-kit="#kit-s04"[^>]*>', k4)
+        check("2.60.0: the empty kit <svg> already says what kit.js will - role img, the spec's label, a viewBox - so "
+              "check_visuals.py does not warn on it", tag and 'role="img"' in tag.group(0) and 'aria-label="A valve closes on a pipe."' in tag.group(0)
+              and re.search(r'viewBox="0 0 [\d.]+ [\d.]+"', tag.group(0)), tag.group(0) if tag else k4[:400])
         check("... with the deck's own step buttons (.mediabar, prev / next / replay)",
               'class="mediabar"' in k4 and 'data-act="next"' in k4 and 'data-act="replay"' in k4, k4[-600:])
         check("... a '</script>' inside the spec cannot end the page's script early", "valve <\\/script>" in k4, k4)
@@ -2039,8 +2068,8 @@ def main():
         code, out = run(COMPILE, c7, "--module", "1", "--force")
         k4 = section(deck(md7), "s04")
         check("an inset photo 'over' a kit drawing lies on it in the drawing's units, inside the drawing's own box",
-              '<div class="kit-holder"><svg data-kit="#kit-s04"></svg><figure class="inset over" '
-              'style="left:10.00%;top:5.00%;width:30.00%"><img src="../assets/img/ship.jpg"' in k4, k4[:700])
+              re.search(r'<div class="kit-holder"><svg data-kit="#kit-s04"[^>]*></svg><figure class="inset over" '
+                        r'style="left:10.00%;top:5.00%;width:30.00%"><img src="../assets/img/ship.jpg"', k4), k4[:700])
         sheet["screens"]["s04"]["inset"]["over"] = {"x": 250, "y": 10, "w": 90}
         cs.save(bp, sheet)
         code, out = run(COMPILE, c7, "--module", "1", "--force")

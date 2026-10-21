@@ -73,7 +73,7 @@ DRIVER = r"""
     if (p[0] === 'eval') { queue.push(function () { (new Function('out', p[1]))(out); }); return; }
     queue.push(function () { answer(p[0], p[1]); });
     queue.push(function () { out.steps.push(p[0] + ':' + dock()); });     /* Check */
-    queue.push(function () { out.steps.push(p[0] + ':' + dock()); });     /* Next, or See my score */
+    if (!p[2]) { queue.push(function () { out.steps.push(p[0] + ':' + dock()); }); }    /* Next, or See my score; a blind final has none */
   });
   function run() {
     var f = queue.shift();
@@ -138,9 +138,11 @@ def check(name, ok, detail=""):
     print(("  ok    " if ok else "  FAIL  ") + name + (("  -> " + str(detail)[:600]) if detail and not ok else ""))
 
 
-def drive(exe, page, plan, tmp, look=True, size=None):
-    """size=(w, h): the page's viewport exactly that tablet's size, as probe() opens it"""
+def drive(exe, page, plan, tmp, look=True, size=None, blind=False):
+    """size=(w, h): the page's viewport exactly that tablet's size, as probe() opens it; blind: the page as a final's"""
     text = io.open(page, encoding="utf-8").read()
+    if blind:
+        text = text.replace("<body ", '<body data-blind="1" ', 1)
     text = re.sub(r"<head>", '<head><base href="%s/">' % Path(os.path.dirname(page)).as_uri(), text, count=1)
     i = text.rfind("</body>")
     text = text[:i] + "<script>%s</script>" % (DRIVER % (json.dumps(plan, ensure_ascii=False), "true" if look else "false")) + text[i:]
@@ -743,6 +745,197 @@ def steps_part(exe, tmp):
                   q.get("past") == [True, True, False] and all((p["b"] - p["t"]) < 0.5 * (q["parts"][2]["b"] - q["parts"][2]["t"]) for p in q["parts"][:2]), q)
 
 
+DECK_FIT = r"""
+(function () {
+  var out = {errors: [], credits: [], recaps: []};
+  window.addEventListener('error', function (e) { out.errors.push(String(e.message)); });
+  function R(e) { var r = e.getBoundingClientRect(); return {l: r.left, t: r.top, r: r.right, b: r.bottom}; }
+  function hit(a, b) { return Math.min(a.r, b.r) - Math.max(a.l, b.l) > 0.5 && Math.min(a.b, b.b) - Math.max(a.t, b.t) > 0.5; }
+  function clip(e) {                        /* what is seen of a picture: its box inside every clipping ancestor */
+    var r = R(e), p, q;
+    for (p = e.parentElement; p && !p.classList.contains('slide'); p = p.parentElement) {
+      if (getComputedStyle(p).overflow !== 'visible') { q = R(p); r = {l: Math.max(r.l, q.l), t: Math.max(r.t, q.t), r: Math.min(r.r, q.r), b: Math.min(r.b, q.b)}; }
+    }
+    return r;
+  }
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      try {
+        var st = document.createElement('style');
+        st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}';
+        document.head.appendChild(st);
+        var sb = document.getElementById('startBtn'); if (sb) { sb.click(); }
+        var ch = document.getElementById('chrome'), slides = [].slice.call(document.querySelectorAll('.slide'));
+        out.vp = [innerWidth, innerHeight];
+        function show(s) { slides.forEach(function (x) { x.classList.remove('active'); }); s.classList.add('active'); void s.offsetHeight; }
+        slides.forEach(function (s) {
+          var c = s.querySelector(':scope > .credit'), rb = s.querySelector('.slide-body.recap');
+          if (c) {
+            show(s);
+            var cr = R(c), bad = [], w, n;
+            if (cr.l < -0.5 || cr.t < -0.5 || cr.r > innerWidth + 0.5 || cr.b > innerHeight + 0.5) { bad.push('off the screen'); }
+            if (ch && hit(cr, R(ch))) { bad.push('under #chrome'); }
+            [].forEach.call(s.querySelectorAll('img,video,canvas'), function (m) {
+              var r = clip(m);
+              if (r.r - r.l > 1 && r.b - r.t > 1 && hit(cr, r)) { bad.push('over the ' + m.tagName.toLowerCase() + ' by ' + Math.round(Math.min(cr.b, r.b) - Math.max(cr.t, r.t)) + ' px'); }
+            });
+            w = document.createTreeWalker(s, NodeFilter.SHOW_TEXT);
+            while ((n = w.nextNode())) {
+              if (!n.textContent.trim() || c.contains(n) || n.parentElement.closest('.slide-kind')) { continue; }
+              var rg = document.createRange(); rg.selectNodeContents(n);
+              [].forEach.call(rg.getClientRects(), function (q) {
+                if (hit(cr, {l: q.left, t: q.top, r: q.right, b: q.bottom})) { bad.push('over the words "' + n.textContent.trim().slice(0, 30) + '"'); }
+              });
+            }
+            var fa = getComputedStyle(s, '::after');          /* the slide's footer line (its module title), drawn by CSS */
+            if (fa.content && fa.content !== 'none' && fa.position === 'absolute') {
+              var ft = R(s).b - parseFloat(fa.bottom) - parseFloat(fa.height);
+              if (cr.b > ft + 0.5) { bad.push('on the footer line by ' + Math.round(cr.b - ft) + ' px'); }
+            }
+            var sb2 = s.querySelector('.slide-body');
+            if (sb2 && sb2.scrollHeight - sb2.clientHeight > 1) { bad.push('the body spills ' + (sb2.scrollHeight - sb2.clientHeight) + ' px'); }
+            out.credits.push({id: s.id, cls: s.className, h: Math.round(cr.b - cr.t), bad: bad});
+          }
+          if (rb) {
+            show(s);
+            var bottom = R(s).b - parseFloat(getComputedStyle(s).paddingBottom), nx = s.querySelector('.rc-next'), cut = 0;
+            [].forEach.call(s.querySelectorAll('.rc-item'), function (it) { cut = Math.max(cut, it.scrollHeight - it.clientHeight); });
+            out.recaps.push({id: s.id, n: s.querySelectorAll('.rc-item').length, cut: cut,
+                             over: Math.round(Math.max(rb.scrollHeight - rb.clientHeight, R(nx || rb).b - bottom)),
+                             chrome: !!(ch && nx && hit(R(nx), R(ch))),
+                             fs: parseFloat(getComputedStyle(s.querySelector('.rc-d')).fontSize)});
+          }
+        });
+      } catch (err) { out.errors.push(String(err && err.stack || err)); }
+      var pre = document.createElement('pre'); pre.id = 'gbtest'; pre.textContent = JSON.stringify(out);
+      document.body.appendChild(pre);
+    }, 300);
+  });
+}());
+"""
+# the IGF recaps that spilled at 1280 x 800 (2.59.0 builders wrote module CSS for them), as approved
+M03_S18 = ("Pipes - double-walled in enclosed spaces, free to shrink in the cold, a relief valve wherever liquid can be trapped.\n"
+           "Valves - cryogenic valves with extended bonnets; on a gas trip two block valves close and the bleed valve opens.\n"
+           "Tanks - pressure kept in range, filled only to the loading limit; relief valves lift to the vent mast, a hazardous zone.\n"
+           "Vent fire - stop the venting, nitrogen into the mast, cool the mast head; never block the relief valve.\n"
+           "Bunkering - prepare, connect, inert, cool down, transfer, drain, purge, disconnect.\n"
+           "Spills and leaks - a drip tray and cold-tolerant steel protect the hull; fixed detectors find the leak.")
+M05_S11 = ("Goals first - the IGF Code sets goals and functional requirements; an alternative design must be just as safe.\n"
+           "Two barriers - a single failure must not let the fuel reach the people.\n"
+           "Layers of protection - contain, detect, no ignition, limit harm.\n"
+           "Machinery spaces - gas-safe with double-walled pipes, or ESD-protected with automatic shutdown at 40 % LEL.\n"
+           "ISM Code - the SMS, reporting and continuous improvement make a safety culture.")
+# IGF M05 s03 beside its photo column (wide-left, split 0.6): a credit strip that took its height from the body made it 102 %
+M05_S03 = ("Chapter 3 of the Code sets the safety principles for every IGF ship.\n• as safe and reliable as a ship with oil-fuelled "
+           "engines\n• a single failure must not lead to an unsafe situation\n• hazardous areas as small as possible, with few "
+           "ignition sources in them\n• no gas may gather where it is not meant to be - ventilation and fixed gas detection\n• "
+           "alarms, automatic shutdowns, fire detection and fire-fighting for each hazard\nRisk assessment - the risks to the "
+           "people, the environment and the ship are analysed, removed where possible, otherwise reduced, and written down.")
+# as long as IGF M05 s01's (three lines at 1024 x 768): a wrapped credit must still stop short of the chrome
+LONG_CREDIT = {"source": "Wikimedia Commons", "author": "Wolfmann (Wikimedia Commons user), own work", "licence": "CC BY-SA 4.0",
+               "title": "MF Raunefjord (Florø, Norway, 2007) LNWU, part of safety plan (sikkerhetsplan), drawing onboard ferry. "
+                        "Photo 2018-03-15", "modification": "resized", "attribution_required": True, "description": "A ship taking gas."}
+# as long as IGF M05 s08's - beside the photo column it wraps at 1024 x 768 and must still stop short of the chrome
+MID_CREDIT = {"source": "Wikimedia Commons", "author": "John Konrad", "licence": "CC BY-SA 3.0", "title": "ESD Button",
+              "modification": "resized", "attribution_required": True, "description": "A gas detector."}
+
+
+def deck_fit(exe, page, tmp, size):
+    text = io.open(page, encoding="utf-8").read()
+    text = re.sub(r"<head>", '<head><base href="%s/">' % Path(os.path.dirname(page)).as_uri(), text, count=1)
+    i = text.rfind("</body>")
+    w = os.path.join(tmp, "fit.html")
+    io.open(w, "w", encoding="utf-8").write(text[:i] + "<script>%s</script>" % DECK_FIT + text[i:])
+    p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--hide-scrollbars",
+                        "--user-data-dir=" + os.path.join(tmp, "prof"), "--allow-file-access-from-files",
+                        "--window-size=%d,%d" % (size[0] + 16, size[1] + 95), "--virtual-time-budget=10000", "--dump-dom", Path(w).as_uri()],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+    m = re.search(r'<pre id="gbtest">(.*?)</pre>', p.stdout, re.S)
+    return json.loads(html.unescape(m.group(1))) if m else {"errors": ["no result: " + p.stdout[-300:] + p.stderr[-300:]]}
+
+
+def deck_fit_part(exe, tmp):
+    """2.60.0 - what a trainee saw on the IGF build: the photo credit over the photograph's lower edge (seven modules) and
+    over the lead (M15 s01); six recap boxes 13-27 px taller than the slide at 1280 x 800 (M02, M03, M05 - each builder
+    wrote module CSS). Built from the factory's CSS alone and measured at 1280 x 800 and 1024 x 768: every credit is a
+    strip of its own (over no picture, no word, not under the chrome), and every recap fits with the words' size kept."""
+    print("\n-- 2.60.0: photo credits and recaps on the slide, at both tablet sizes")
+    for name, recap in (("m02", tcm.M02_S16), ("m03", M03_S18), ("m05", M05_S11)):
+        os.makedirs(os.path.join(tmp, "fit_" + name))
+        screens = [
+            {"id": "s01", "kind": "slide", "title": "Module 1 · Gas as fuel", "layout": "visual_full", "visual_kind": "photo",
+             "text": "Some ships burn gas as fuel.", "visual": "A ship bunkering - a real photograph.", "minutes": 3},
+            {"id": "s02", "kind": "slide", "title": "The IGF Code", "layout": "visual_full", "visual_kind": "photo",
+             "text": tcm.M01_S01, "visual": "A gas-fuelled ship - a real photograph.", "minutes": 4},
+            {"id": "s03", "kind": "slide", "title": "The safety principles of the IGF Code", "layout": "split", "visual_kind": "photo",
+             "text": M05_S03, "visual": "A fixed gas detector - a real photograph.", "minutes": 4},
+        ] + json.loads(json.dumps(tcm.SCREENS[4:6])) + [
+            {"id": "s05", "kind": "slide", "recap": True, "title": "What to take away", "visual_kind": "none", "text": recap, "minutes": 2},
+        ] + json.loads(json.dumps(tcm.SCREENS[6:]))
+        c, md = tcm.new_course(os.path.join(tmp, "fit_" + name), tcm.script(screens=screens), build=False)
+        img = os.path.join(md, "assets", "img")
+        for k, f in enumerate(("ship.jpg", "deck.jpg", "station.jpg")):     # three pictures, not one shown three times (L58)
+            io.open(os.path.join(img, f), "wb").write(tcm.png(1200, 800, (90 + 20 * k, 110, 140)))
+        tcm.cs.save(os.path.join(img, "_photo_meta.json"), {"ship.jpg": LONG_CREDIT, "deck.jpg": LONG_CREDIT, "station.jpg": MID_CREDIT})
+        tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+            "s01": {"figure": "assets/img/ship.jpg"}, "s02": {"figure": "assets/img/deck.jpg"},
+            "s03": {"figure": "assets/img/station.jpg", "composition": "wide-left", "split": 0.6}, "t01": {"try_tablet": False}}})
+        code, out = tcm.run(tcm.COMPILE, c, "--module", "1")
+        page = os.path.join(md, "presentation", "index.html")
+        check("%s: the photo and recap fixture builds" % name, code == 0 and os.path.isfile(page), out[-600:])
+        for size in ((1280, 800), (1024, 768)):
+            r = deck_fit(exe, page, tmp, size)
+            tag = "%s %dx%d" % (name, size[0], size[1])
+            check("%s: no script error, measured at the size asked for" % tag, not r.get("errors") and r.get("vp") == list(size), r.get("errors") or r.get("vp"))
+            if name == "m02":
+                cr = r.get("credits") or []
+                check("%s: three photo slides with a credit (full screen, split, photo column)" % tag, len(cr) == 3, cr)
+                check("%s: no credit lies over its photograph, a word, the footer line or under the chrome - and the body beside a "
+                      "photo column (M05 s03's 121 words) keeps its room" % tag, cr and not any(x["bad"] for x in cr),
+                      [(x["id"], x["bad"][:3]) for x in cr if x["bad"]])
+            rc = (r.get("recaps") or [{}])[0]
+            check("%s: the %s-box recap fits the slide - nothing past its foot, no box cutting its words, 'Next' clear of the chrome"
+                  % (tag, rc.get("n")), rc.get("over", 99) <= 0 and rc.get("cut", 99) <= 1 and not rc.get("chrome"), rc)
+            check("%s: ... with the words at their size (17 px or more)" % tag, rc.get("fs", 0) >= 17, rc)
+
+
+BLIND_LOOK = ("var seen = []; document.querySelectorAll('.scr[data-script]').forEach(function (s) {"
+              "  s.querySelectorAll('.checked,.right,.wrong,.fixed,.shake,.missed,.dim,.stopat,.good,.bad,.why.on').forEach("
+              "    function (n) { seen.push(s.getAttribute('data-script') + ':' + (n.getAttribute('class') || '')); });"
+              "  var vd = s.querySelector('.vd'); if (vd && vd.textContent.trim()) { seen.push(s.getAttribute('data-script') + ':vd ' + vd.textContent); }"
+              "}); out.looked = document.querySelectorAll('.scr[data-script=\"q05\"] .ffc.seen').length; out.shown = seen; out.result = document.getElementById('resScr').className;")
+
+
+def blind_part(exe, page, tmp):
+    """2.60.0 - a graded final is blind: the IGF build showed the right answer and the why after each question of final_a/b.
+    The EVERY_WAY page as a final's (data-blind): one press per part records the answer and moves on; nothing right or
+    wrong is marked, no verdict, no 'right so far'; the result screen and the classroom get the same score as a check."""
+    print("\n-- 2.60.0: a blind final, five answered wrong")
+    plan = []
+    for q, steps in WRONG:
+        once = []
+        for x in steps:                                   # a part's Check + Go on is one press on a blind final
+            if x == ["dock"] and once and once[-1] == ["dock"]:
+                continue
+            once.append(x)
+        plan.append([q, once, "once"])
+        if q == "q05":
+            plan.append(["eval", "out.got = document.getElementById('gotLbl').textContent;"])
+    plan.append(["eval", BLIND_LOOK])
+    r = drive(exe, page, plan, tmp, look=False, blind=True)
+    rep, steps = r.get("report") or {}, r.get("steps", [])
+    check("no script error on the blind page", not r.get("errors"), r.get("errors"))
+    check("the classroom hears the same 5 of 10 and the same items as on a check",
+          rep.get("ok") == 5 and [x["ok"] for x in rep.get("items", [])] == [False, True, False, False, True, True, False, True, False, True], rep)
+    check("one press per part: Next, Go on inside a scenario, See my score on the last - never Check",
+          not any(s.endswith(":Check") for s in steps) and "q01:Next" in steps and "q03:Go on" in steps
+          and steps[-1] == "q10:See my score", steps)
+    check("nothing is revealed: no right/wrong/amber/missed mark, no why, no verdict on any question", r.get("shown") == [], r.get("shown"))
+    check("a fault-finding panel shows only the reading the trainee looked at, not every part's", r.get("looked") == 1, r.get("looked"))
+    check("no 'right so far' between questions", r.get("got") == "", r.get("got"))
+    check("the result screen is open at the end", " on" in " " + (r.get("result") or ""), r.get("result"))
+
+
 def main():
     exe = drawing_check.find_browser()
     if not exe:
@@ -782,6 +975,8 @@ def main():
         check("a wrong value shows the band of right values", "wrong" in look.get("dial", "") and not look.get("dial", "").endswith("|"), look)
         check("a card that does not belong goes back to the bank; the one that belongs is put in its slot",
               "fixed" in look.get("cargo", "") and look.get("cargo", "").endswith("|tray") and look.get("permit", "").endswith("|3"), look)
+        blind_part(exe, page, tmp)
+        deck_fit_part(exe, tmp)
         figures_part(exe, tmp)
         fixes_part(exe, tmp)
         picture_part(exe, tmp)

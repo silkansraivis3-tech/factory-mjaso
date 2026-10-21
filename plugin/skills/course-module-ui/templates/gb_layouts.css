@@ -133,7 +133,9 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 }
 .slide[data-template].dark .support li::before{color:var(--lt-blue)}
 /* numbered steps: the step's own number in a ring (the reference's procedure) */
-.slide[data-template] .support.seq li{padding-left:min(7vmin,58px);min-height:min(5.4vmin,44px)}
+/* 44 px is a floor, never a ceiling (2.60.0): min(5.4vmin,44px) made a kit's tap line 41-43 px on a 768-800 px screen
+   (IGF M02, the audit's 44 px touch target) */
+.slide[data-template] .support.seq li{padding-left:min(7vmin,58px);min-height:44px}
 .slide[data-template] .support.seq li::before{content:none}
 .slide[data-template] .support.seq .n{
   width:min(5.2vmin,42px);height:min(5.2vmin,42px);min-width:0;top:-.1em;border-radius:50%;
@@ -189,7 +191,7 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 
 /* a sequence of actions: each step a row, the first one the active step (the reference's procedure) */
 .slide[data-template^="procedure."] .support.seq{gap:min(1.5vmin,12px);width:100%}
-.slide[data-template^="procedure."] .support.seq li{display:flex;align-items:center;min-height:min(9vmin,72px);padding:min(1.8vmin,14px) min(2.4vmin,20px)
+.slide[data-template^="procedure."] .support.seq li{display:flex;align-items:center;min-height:max(44px,min(9vmin,72px));padding:min(1.8vmin,14px) min(2.4vmin,20px)
   min(1.8vmin,14px) min(9.4vmin,76px);border:1px solid transparent;border-radius:min(1.5vmin,12px);font-size:clamp(16px,2.75vmin,32px);color:var(--lt-steel)}
 .slide[data-template^="procedure."] .support.seq .n{left:min(2.4vmin,20px);top:50%;transform:translateY(-50%)}
 .slide[data-template^="procedure."] .support.seq li:first-child{background:var(--lt-white);border-color:var(--lt-line);color:var(--lt-navy);
@@ -217,6 +219,16 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
   max-width:calc((100% - 2 * var(--lt-pad-x) - var(--lt-gap)) * var(--lt-text) / 100);
 }
 .slide[data-template].photo .credit{background:rgba(6,23,61,.78)}
+/* the template's footer line stands higher (its hairline ~58 px up): the credit sinks only to just above it */
+.slide[data-template] > .credit{margin-bottom:calc(62px - max(92px,11.5vmin))}
+/* 2.60.0 - the framed photo with a credit: a flex item like the full-screen one (gb_compose.css .credit), so it ends
+   above its credit strip; the slide keeps the template's own padding, the photo its column on the right */
+.slide[data-template^="photo-explain."][data-variant="split"]:has(> .credit){padding:var(--lt-top) var(--lt-pad-x) max(92px,11.5vmin)}
+.slide[data-template^="photo-explain."][data-variant="split"]:has(> .credit) > .photo-wrap{
+  position:relative;inset:auto;flex:1 1 0;min-height:0;align-self:flex-end;margin-left:0;
+  width:calc((100% - var(--lt-gap)) * (100 - var(--lt-text)) / 100);
+}
+.slide[data-template^="photo-explain."][data-variant="split"]:has(> .credit) > .credit{margin-right:0}
 
 /* ---------------------------------------------------------------- module opening */
 .slide[data-template^="opening."] .slide-body.opener h2,.slide[data-template^="opening."] > h2{font-size:clamp(34px,8vmin,86px);letter-spacing:-.03em;line-height:1.02}
@@ -243,16 +255,10 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template^="recap."] .rc-item{border-color:var(--lt-line-d)}
 .slide[data-template^="recap."] .rc-item::after{background:var(--lt-blue)}
 .slide[data-template^="recap."] .rc-item::before{color:var(--lt-blue);background:rgba(83,167,219,.12)}
-/* a short screen (1024 x 768): the template's own top space and the boxes' minimum height give way, never the words'
-   size - with the template's margin and chrome room, six recap boxes put "Next: the module check" under the deck's
-   chrome again (2.56.0, the merge of the templates with gb_compose.css's 780 px rule) */
+/* a short screen (1024 x 768): the template's own top space gives way too - the boxes' spacing is gb_compose.css's one
+   recap rule (2.60.0; 2.56.0 kept a second copy of it here) */
 @media (max-height:780px){
   .slide[data-template^="recap."] .slide-body{margin-top:min(1.2vmin,10px)}
-  .slide[data-template^="recap."] .slide-body.recap{gap:min(1vmin,8px)}
-  .slide[data-template^="recap."] .rc-grid{--h:min(12vmin,92px);gap:min(1.2vmin,10px)}
-  .slide[data-template^="recap."] .rc-item{gap:.3em;padding:min(1.6vmin,13px) min(2.2vmin,18px) min(1.4vmin,11px)}
-  .slide[data-template^="recap."] .rc-grid[data-n="3"]{--h:min(24vmin,184px)}
-  .slide[data-template^="recap."] .rc-grid[data-n="4"]{--h:min(15vmin,116px)}
 }
 
 /* ---------------------------------------------------------------- one slide, several parts */

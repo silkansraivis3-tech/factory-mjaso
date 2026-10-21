@@ -74,6 +74,39 @@ def css_classes(path):
     return set(re.findall(r"\.([a-zA-Z][\w-]*)", s))
 
 
+TOUCH = re.compile(r"seq li|kit-tap|legend li|\.cbtn|\.fbtn|mediabar|button")
+
+
+def css_px(expr, w, h):
+    """a CSS length - px, vmin, vh, vw inside min() / max() / clamp() - in px at a w x h viewport, or None"""
+    vm = min(w, h)
+    x = re.sub(r"(-?\d+(?:\.\d+)?)(vmin|vh|vw|px)\b",
+               lambda m: repr(float(m.group(1)) * {"vmin": vm, "vh": h, "vw": w, "px": 100}[m.group(2)] / 100), expr)
+    x = x.replace("clamp(", "_clamp(")
+    if not re.fullmatch(r"[\d\s.,()+*/-]*", re.sub(r"_clamp|min|max", "", x)):
+        return None
+    try:
+        return eval(x, {"__builtins__": {}}, {"min": min, "max": max, "_clamp": lambda a, b, c: max(a, min(b, c))})
+    except Exception:
+        return None
+
+
+def touch_floor_misses():
+    """[(file, selector, value, px)] for every touch rule's min-height under 44 px at 1280x800 or 1024x768"""
+    out = []
+    for path in STYLE_FILES:
+        text = re.sub(r"/\*.*?\*/", "", io.open(path, encoding="utf-8").read(), flags=re.S)
+        for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", text):
+            if not TOUCH.search(sel):
+                continue
+            for val in re.findall(r"(?<![\w-])min-height\s*:\s*([^;]+)", body):
+                for w, h in ((1280, 800), (1024, 768)):
+                    px = css_px(val.strip(), w, h)
+                    if px is not None and px < 44 - 0.01 and px > 0:
+                        out.append((os.path.basename(path), sel.strip()[-60:], val.strip(), round(px, 1)))
+    return out
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="ds_")
     try:
@@ -229,6 +262,11 @@ def main():
         check("no token in the vocabulary is invented", not (vt - toks), sorted(vt - toks))
         for item in SPEC["files"]:
             check("the vocabulary names %s" % item["name"], item["name"] in vocab)
+
+        print("\n-- a touch target is 44 px at every delivery size (2.60.0)")
+        low = touch_floor_misses()
+        check("every min-height on a tap line, a step or a button in the style files is >= 44 px at 1280x800 and 1024x768 "
+              "(min(5.4vmin,44px) was 41 px at 768 px)", not low, low)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

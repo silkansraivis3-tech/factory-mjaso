@@ -17,6 +17,7 @@ import os
 import re
 import sys
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
 SCHEMA_DIR = os.path.join(SKILL, "source", "schemas")
@@ -41,6 +42,22 @@ def valid_rights():
 
 
 VALID_RIGHTS = valid_rights()
+
+
+def design_files():
+    """the factory's own files that design_system.py install copies into a module's assets\\ (the logo among them): the
+    brand's, never a course asset - an assets\\ root holding only the logo failed "1 image(s) and no provenance file"
+    (2.60.0, IGF modules)"""
+    try:
+        with open(os.path.join(os.path.dirname(SKILL), "course-module-ui", "knowledge", "design-system.json"), encoding="utf-8") as fh:
+            return {f["name"] for f in json.load(fh).get("files", []) if f.get("name")}
+    except (OSError, ValueError, KeyError, TypeError):
+        return {"novikontas_logo.svg"}
+
+
+DESIGN_FILES = design_files()
+# folders that are not shipped and not asset folders: a picture set aside (assets\img\_unused) has no provenance to keep
+SKIP_DIRS = (".git", "__pycache__", "oldversion", "_unused")
 
 findings: list[dict] = []
 
@@ -76,7 +93,7 @@ HAS_DATE = re.compile(r"\d{4}-\d{2}-\d{2}|\d{1,2}\s+\w+\s+\d{4}")
 def check_folder(folder: str) -> None:
     entries = [e for e in os.listdir(folder)]
     images = sorted(e for e in entries
-                    if os.path.splitext(e)[1].lower() in IMAGE_EXT)
+                    if os.path.splitext(e)[1].lower() in IMAGE_EXT and e not in DESIGN_FILES)
     metas = {m: os.path.join(folder, m) for m in META_FILES if m in entries}
 
     if not images:
@@ -183,8 +200,8 @@ def main() -> int:
             print("not a directory: " + t)
             return 2
         for dp, dn, fn in os.walk(t):
-            dn[:] = [d for d in dn if d not in (".git", "__pycache__", "oldversion")]
-            if any(os.path.splitext(f)[1].lower() in IMAGE_EXT for f in fn):
+            dn[:] = [d for d in dn if d not in SKIP_DIRS]
+            if any(os.path.splitext(f)[1].lower() in IMAGE_EXT and f not in DESIGN_FILES for f in fn):
                 folders.add(dp)
 
     if not folders:

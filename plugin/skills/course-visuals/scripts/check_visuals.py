@@ -20,6 +20,7 @@ import os
 import re
 import sys
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
 MOTION = os.path.join(SKILL, "review", "knowledge", "motion-rules.json")

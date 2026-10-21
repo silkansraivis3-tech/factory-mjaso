@@ -228,6 +228,12 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   frame; buttons and taps share one mode. Reference: IGF M03 `m03_station3d.js` (the highlight, the tap logic on
   `pointerup`). A scene that only turns is not finished. A `[data-stage]` in a wide column takes the column's own
   height (2.49.2) - no module override needed.
+  **The scene's control hint** ("Drag to turn - tap a part to look closer") goes in an empty `<div data-hint></div>` in
+  the figure, filled by the scene's script; the compile marks every `[data-hint]` `data-script-ignore` (2.60.0), so
+  `check_script_match` counts it instead of failing on words the script never approved (IGF M05, M13, M15). The figure
+  uses the factory's classes (`fill fig`, `[data-stage]`); a class of the module's own (`m02-3d-col`, `cards4`,
+  `m04-3d`) needs a rule in the module's stylesheet or a query in its script - a class nothing styles or finds is a
+  defect in `audit_ui.py` / `check_task_pages.py`. Layout goes in the stylesheet, never in a `style=""` attribute.
   **At least one scene per module where the subject allows it - strongly recommended (L60, 2.49.7).** `--init-build`
   gives a `model_3d` slide a starter scene entry: its figure (`m01_s05_3d.html`), its scene file and `three.min.js` in
   `"scripts"`, and a `"_figure"` note on how to build it - the build reports the files missing until they are written.
@@ -267,7 +273,7 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
 | `"inset": {..., "over": {"x": 140, "y": 8, "w": 176}}` | the photo lies on a blank part of a kit drawing, in the drawing's units - the drawing keeps the whole column and its full size (a photo under a drawing squeezed it to half size, its labels to 7 px). It still opens full screen; look at it at every step, the drawing check does not see what a photo covers |
 | `"aside": "m02_s08_minis.html"` | small drawings that belong with the words |
 | `"figure_first": true` | the drawing on the left, the words on the right |
-| `"class": "m02-s3d"` | a hook for the module's drawing styles on the slide |
+| `"class": "m02-s3d"` | a hook for the module's drawing styles on the slide - only with a rule for it in the module's stylesheet (or a query in its script): a class nothing styles is an `audit_ui.py` defect (2.60.0) |
 
 A room activity with a drawing of its own (trace a path) is laid out like a teaching slide and keeps the classroom's
 Task marks. A task slide links to its set's page (`tasks\sc2_*.html`, `assessment\check.html`) - built by §2d.

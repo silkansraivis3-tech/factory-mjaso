@@ -35,6 +35,8 @@ import re
 import sys
 from pathlib import Path
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 # Function words, not vocabulary. A maritime English screen and a maritime
 # Latvian screen share most of their nouns and almost none of these.
 PROFILES = {

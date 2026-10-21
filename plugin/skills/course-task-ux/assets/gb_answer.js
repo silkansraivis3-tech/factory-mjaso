@@ -195,6 +195,9 @@
   var CODE = body.getAttribute('data-code') || '';
   var TITLE = body.getAttribute('data-title') || '';
   var PASS = parseInt(body.getAttribute('data-pass') || '0', 10);   /* % ; 0 = no pass mark */
+  /* 2.60.0 - a graded final (FA, FB; task_pages.py writes data-blind): each answer is recorded and the next question
+     opens - no right answer, no verdict, no why, no score so far; only the result screen at the end (L27/L45) */
+  var BLIND = body.hasAttribute('data-blind');
   var inFrame = CR.inFrame;
   var partEl = $('#partLbl'), gotEl = $('#gotLbl'), barEl = $('#barFill');
   var dock = $('#dock'), go = $('#go');
@@ -785,7 +788,7 @@
   function setGot() {
     if (!gotEl) { return; }
     var n = 0; each(qs, function (q) { if (q.done) { n++; } });
-    gotEl.textContent = n ? say('soFar', { n: okCount }) : '';
+    gotEl.textContent = n && !BLIND ? say('soFar', { n: okCount }) : '';
   }
   function setBtn(label, state) {
     go.textContent = label;
@@ -828,9 +831,15 @@
     setPart(say('question', { n: i + 1, of: qs.length }));
     setGot();
     setBar(i);
-    setBtn(say('check'), 'off');
+    setBtn(checkWord(q), 'off');
     toTop();
     hint(q);
+  }
+  /* what the dock says while a part waits for its answer: Check - or, on a blind final, where the press goes next */
+  function checkWord(q) {
+    if (!BLIND) { return say('check'); }
+    if (q.k < q.parts.length - 1) { return say('goOn'); }
+    return say(cur === qs.length - 1 ? 'seeScore' : 'next');
   }
   /* one Check per part; the question is right when every part is */
   function check() {
@@ -840,6 +849,11 @@
     p.ok = grade(p);
     p.done = true;
     lock(p);
+    if (BLIND) {                                       /* recorded, never shown: straight on to the next part or question */
+      if (q.k < q.parts.length - 1) { openPart(q, q.k + 1); return; }
+      finish(q);
+      return;
+    }
     reveal(p, p.ok);
     if (q.k < q.parts.length - 1) { setBtn(say('goOn'), 'next'); return; }
     finish(q);
@@ -849,6 +863,11 @@
     q.ok = allOk(q);
     if (q.ok) { okCount++; }
     each(q.parts, function (p) { del(p.el, 'stopping'); });
+    if (BLIND) {
+      setBar(cur + 1);
+      if (cur === qs.length - 1) { report(false); showResult(); } else { showQ(cur + 1); }
+      return;
+    }
     verdict(q);
     setGot();
     setBar(cur + 1);
@@ -865,7 +884,7 @@
     q.k = k;
     if (p.kind === 'stop') { p.groups = [mkStop(q, before)]; add(before.el, 'stopping'); } else { add(before.el, 'past'); }
     add(p.el, 'on');
-    setBtn(say('check'), 'off');
+    setBtn(checkWord(q), 'off');
     settle(p.el);                                      /* the part's own label ("Step 2 of 3") stays under the top bar */
   }
   function next() {

@@ -23,11 +23,14 @@ description: >
 > **Every reply to the operator** (owner, 2026-10-01, L25): three parts as short points - **Done · Check now · Next** -
 > in everyday words, for someone who knows nothing about IT. The full rule: `course-factory/SKILL.md`.
 
-> **The classroom system (L45, owner 2026-10-05).** The new online classroom takes a whole course folder through its
-> admin panel's **+**. Its rules are `course-factory/knowledge/classroom-system.json`, and its importer is copied here
-> unchanged: `vendor/package-core.mjs` (from `tablet-system-win/admin/package-core.mjs`), run by
-> `vendor/import_check.mjs`. `course-factory/scripts/check_course_package.py` runs it before a course is handed over.
-> The Android-app publishing below still holds for the app.
+> **The classroom system (L45, owner 2026-10-05) - how a course reaches the tablets now.** The online classroom takes
+> a whole course folder through its admin panel's **+** upload; that is the way a course goes onto the tablets. Its
+> rules are `course-factory/knowledge/classroom-system.json`, and its importer is copied here unchanged:
+> `vendor/package-core.mjs` (from `tablet-system-win/admin/package-core.mjs`), run by `vendor/import_check.mjs`.
+> `course-factory/scripts/check_course_package.py` runs it before a course is handed over.
+> **The flow below - a branch and a pull request into the Android app's `assets\` - is LEGACY for courses** (2.60.0):
+> it is kept for the app's own files and for the sorting and leak gates, which still apply; never send a course that
+> way unless the owner asks for it.
 
 **v1 (2026-09-08) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
