@@ -1939,6 +1939,16 @@ def main():
               and not [f for f in cs.media_findings(script(screens=more)) if f["rule"] == "v_few_photos"], few)
         check("a task slide carries the tablet sign and its lines grouped",
               'class="act-ico"' in section(page, "t01") and '<div class="act-lines">' in section(page, "t01"))
+        # 2.63.0 (the instructors' review: "bad iconography - an exercise photo or better icons")
+        check("... a tablet task's sign is a tablet - its bezel, screen and camera - with the way of answering on the screen; "
+              "the module check's a check list", 'data-icon="choose"' in section(page, "t01") and 'r="1.2"' in section(page, "t01")
+              and 'scale(.78)' in section(page, "t01") and 'data-icon="check"' in section(page, "t02"), section(page, "t02")[:900])
+        sp = dict(script(), screens=json.loads(json.dumps(SCREENS)))
+        pg = cm.compile_deck(sp, {"screens": {"t02": {"photo": "assets/img/ship.jpg"}}}, md, None, "x", True)[0]
+        t2 = re.search(r'<section [^>]*data-activity="MC".*?</section>', pg, re.S).group(0)
+        check("... and the build sheet's \"photo\" puts the exercise's real photograph there instead - opening full screen with "
+              "its record (credit in that view, not on the slide)", '<img class="act-photo" src="../assets/img/ship.jpg"' in t2
+              and 'data-credit="Photo: Jane Doe' in t2 and "act-ico" not in t2, t2[:900])
         check("the footer's title is cut at a whole word", 'data-foot="M01 · IGF SHIPS · NOVIKONTAS"' in s02
               and cm.compile_deck(dict(script(), title="IGF ship design and operational characteristics"), {}, md, None, "x", True)[0]
               .count('data-foot="M01 · IGF SHIP DESIGN AND OPERATIONAL · NOVIKONTAS"') == 6)

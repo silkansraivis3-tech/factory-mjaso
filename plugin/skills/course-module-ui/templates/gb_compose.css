@@ -686,6 +686,10 @@ figure{margin:0}
 }
 /* the task slide: its lines grouped at reading size, and the tablet sign */
 .act-ico{width:clamp(64px,11vmin,120px);height:auto;margin-top:2.6vmin;color:var(--blue)}
+/* 2.63.0 - the exercise's real photograph instead of the icon (build sheet "photo"): it opens full screen with its record */
+.act-photo{display:block;margin:2.2vmin auto 0;width:auto;max-width:min(60%,520px);max-height:min(30vh,260px);object-fit:cover;
+  border-radius:var(--r-m);box-shadow:var(--sh)}
+.slide.dark .act-photo{box-shadow:var(--sh-d)}
 .act-lines{margin-top:2.4vmin;display:flex;flex-direction:column;gap:.45em;align-items:center}
 .act-lines .act-inst{margin:0;font-size:clamp(15px,2.5vmin,34px);line-height:1.4;color:var(--txt-d);max-width:32em}
 .slide:not(.dark):not(.photo) .act-lines .act-inst{color:var(--ink)}

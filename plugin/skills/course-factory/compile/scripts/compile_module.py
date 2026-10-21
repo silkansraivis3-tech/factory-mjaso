@@ -226,15 +226,43 @@ ICON_GLYPH = {
     "cloze": '<path d="M13 18h11M40 18h11M13 31h38"/><rect x="26" y="13" width="12" height="10" rx="2" stroke-dasharray="3 2"/>'}
 
 
-def task_icon(script, code):
-    """the task slide's icon - the way of answering most of the set's questions use (the first one on a tie)"""
+# 2.63.0 (the instructors' review of IGF Basic, 2026-10-21: "bad iconography - use an exercise photo or better icons"):
+# the icon says what the trainee does - a tablet with the way of answering on its screen, a check list for a graded
+# check, two people at a table for work in the room. The build sheet's "photo" shows the exercise's real photograph instead.
+ICON_FRAME = {
+    "tablet": '<rect x="3" y="4" width="58" height="40" rx="7"/><rect x="10" y="9" width="44" height="30" rx="2" stroke-width="2"/>'
+              '<circle cx="6.6" cy="24" r="1.2" fill="currentColor" stroke="none"/>',
+    "check": '<rect x="14" y="7" width="36" height="38" rx="4"/><rect x="24" y="3" width="16" height="8" rx="2" fill="currentColor"/>'
+             '<path d="M20 20l3 3 5-6M33 20h11M20 32l3 3 5-6M33 32h11"/>',
+    "room": '<circle cx="21" cy="14" r="5"/><circle cx="43" cy="14" r="5"/><path d="M11 36c0-7 4.5-12 10-12s10 5 10 12'
+            'M33 36c0-7 4.5-12 10-12s10 5 10 12M6 42h52"/>'}
+
+
+def task_icon(script, code, kind="tablet"):
+    """the task slide's icon - for a tablet task the way of answering most of the set's questions use (the first one on
+    a tie), on a tablet's screen; a graded check's is a check list, a room activity's two people at a table"""
+    svg = ('<svg class="act-ico" data-icon="%s" viewBox="0 0 64 48" aria-hidden="true" fill="none" stroke="currentColor" '
+           'stroke-width="3" stroke-linecap="round" stroke-linejoin="round">%s</svg>')
+    if kind in ("check", "room"):
+        return svg % (kind, ICON_FRAME[kind])
     qs = [s for s in script.get("screens", []) if s.get("kind") in cs.TASKS and
           ((s.get("set") or "").strip() or {"self-check": "SC1", "module-check": "MC", "final": "FA"}[s["kind"]]) == code]
     fams = [ICON_FAMILY.get(cs.mech(s), "choose") for s in qs] or ["choose"]
     fam = max(fams, key=lambda f: (fams.count(f), -fams.index(f)))
-    return ('<svg class="act-ico" data-icon="%s" viewBox="0 0 64 48" aria-hidden="true" fill="none" stroke="currentColor" '
-            'stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="52" height="40" rx="5"/>%s</svg>'
-            % (fam, ICON_GLYPH[fam]))
+    return svg % (fam, ICON_FRAME["tablet"] + '<g transform="translate(32 24) scale(.78) translate(-32 -24)">%s</g>' % ICON_GLYPH[fam])
+
+
+def task_picture(mdir, b, probs, where):
+    """the exercise's real photograph on its task slide (build sheet "photo"), opening full screen with its record - or ''"""
+    rel = (b.get("photo") or "").replace("\\", "/")
+    if not rel:
+        return ""
+    if not os.path.isfile(os.path.join(mdir, rel)):
+        probs.append("%s: its \"photo\" %s is not in the module folder" % (where, rel))
+        return ""
+    meta = photo_meta(mdir, rel)
+    alt = b.get("alt") or first_sentence(meta.get("description")) or "The exercise"
+    return '<img class="act-photo" src="../%s" alt="%s"%s>' % (a(rel), a(alt), photo_panel(meta, credit_line(meta), rel, probs, where))
 e = lambda s: html.escape(s or "", quote=False)
 a = lambda s: html.escape(s or "", quote=True)
 
@@ -2036,8 +2064,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         template_attrs(d, "task-launch", "room" if kind == "activity" else "check" if graded else "tablet")
         body = ['<p class="act-code" data-script-ignore>%s</p>' % e(code),
                 '<h2 class="act-title" data-script-field="title">%s</h2>' % e(title)]
-        if kind == "task-slide":
-            body.append(task_icon(script, code))
+        pic = task_picture(mdir, b, probs, where)          # 2.63.0: the exercise's photo, else an icon that says what it is
+        body.append(pic or task_icon(script, code, "room" if kind == "activity" else "check" if graded else "tablet"))
         body.append('<div class="act-lines">')
         body += ['  <p class="act-inst" data-script-field="text">%s</p>' % e(x) for x in lines]
         body.append("</div>")
