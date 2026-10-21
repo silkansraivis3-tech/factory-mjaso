@@ -1208,6 +1208,48 @@ def photo_id(d, rel, meta=None):
         return "f:" + rel
 
 
+_LOOKS = {}
+LOOK_ALIKE = 6      # bits of 64: one photograph resized or saved again is 0-1 apart, two different IGF photos 17 or more
+
+
+def photo_look(d, rel):
+    """the picture's look as 64 bits - a difference hash of its 9 x 8 grey thumbnail - or None when it cannot be read.
+    2.62.1: L58 by record and bytes alone missed one photograph saved twice under two names (IGF M02 v262: the same
+    Commons photo as m02_viking_grace_tanks_at_yard.jpg and m01_typec_tanks_shipyard.jpg, "Own work" and no origin)"""
+    p = os.path.join(d, rel)
+    try:
+        k = (os.path.abspath(p), os.path.getmtime(p))
+    except OSError:
+        return None
+    if k not in _LOOKS:
+        try:
+            from PIL import Image
+            with Image.open(p) as im:
+                px = im.convert("L").resize((9, 8), Image.LANCZOS).tobytes()
+            h = sum(1 << i for i, (r, c) in enumerate((r, c) for r in range(8) for c in range(8))
+                    if px[r * 9 + c] > px[r * 9 + c + 1])
+            # a plain or evenly shaded picture (a flat colour, a gradient) has too little in it to tell two apart
+            _LOOKS[k] = h if 8 <= bin(h).count("1") <= 56 else None
+        except Exception:                                  # noqa: BLE001 - an SVG, a broken file: no look, no match
+            _LOOKS[k] = None
+    return _LOOKS[k]
+
+
+def same_look(a, b):
+    return a is not None and b is not None and bin(a ^ b).count("1") <= LOOK_ALIKE
+
+
+def looks_in(d, page):
+    """[(look, "M01 s04", placed by hand?, rel)] for every photograph a built deck shows - as shown_in, by look"""
+    out = []
+    for sec in re.finditer(r'<section [^>]*\bid="([^"]+)".*?</section>', page, re.S):
+        thumbs = set(IMG_SRC.findall("".join(STRIP.findall(sec.group(0)))))
+        for rel in set(IMG_SRC.findall(sec.group(0))):
+            if rel.startswith("assets/img/"):
+                out.append((photo_look(d, rel), "%s %s" % (module_label(d), sec.group(1)), rel not in thumbs, rel))
+    return out
+
+
 def module_label(d):
     m = re.search(r"(\d+)$", os.path.basename(os.path.abspath(d)))
     return "M%02d" % int(m.group(1)) if m else os.path.basename(d)
@@ -1228,14 +1270,17 @@ def shown_in(d, page):
     return out
 
 
-def shown_elsewhere(mdir):
-    """the photographs the course's other built decks already show"""
+def shown_elsewhere(mdir, looks=None):
+    """the photographs the course's other built decks already show; looks = a list to fill with looks_in's rows"""
     out = {}
     for d in other_modules(mdir):
         p = os.path.join(d, "presentation", "index.html")
         if os.path.isfile(p):
-            for k, v in shown_in(d, io.open(p, encoding="utf-8").read()).items():
+            page = io.open(p, encoding="utf-8").read()
+            for k, v in shown_in(d, page).items():
                 out.setdefault(k, v)
+            if looks is not None:
+                looks += looks_in(d, page)
     return out
 
 
@@ -2528,7 +2573,7 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
     # L58 - every photograph once in the whole course. First the photographs placed by hand (slide pictures, insets,
     # photos in drawings): one shown twice, or already shown by an EARLIER module, is a problem to fix. Then the L57
     # thumbnails take only what no deck of the course shows yet.
-    here, me = {}, module_label(mdir)
+    here, me, mine = {}, module_label(mdir), []
     for s in screens:
         b = (build.get("screens") or {}).get(s["id"]) or {}
         page = slide_html(script, s, 0, total, b, mdir, figdir, foot, [])
@@ -2538,14 +2583,34 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
                 if pid in here and here[pid] != at:
                     probs.append("%s (%s): the photograph %s is already shown on %s - a photograph is shown once in the "
                                  "course (L58): choose a different one, or none" % (cs.place(script, s["id"]), s["id"], rel, here[pid]))
+                elif pid not in here:
+                    mine.append((photo_look(mdir, rel), at, rel, pid))
                 here.setdefault(pid, at)
-    elsewhere = shown_elsewhere(mdir)
+    looks = []
+    elsewhere = shown_elsewhere(mdir, looks)
     for pid, at in sorted(here.items(), key=lambda x: x[1]):
         other, by_hand = elsewhere.get(pid, ("", False))
         if by_hand and other.split()[0] < me:      # the earlier module keeps it; a thumbnail there gives way instead
             probs.append("%s: its photograph is already shown on %s - a photograph is shown once in the course (L58): "
                          "choose a different one, or none" % (at, other))
+    # 2.62.1 - the same photograph under another name and another record: matched by its look
+    for i, (lk, at, rel, pid) in enumerate(mine):
+        twin = next((x for x in mine[:i] if x[1] != at and same_look(lk, x[0])), None)
+        if twin:
+            probs.append("%s: the photograph %s looks the same as %s on %s - one photograph saved twice under two names "
+                         "(L58: choose a different one, or none; and check both records - credit and rights)" % (at, rel, twin[2], twin[1]))
+            continue
+        old = next((x for x in looks if x[2] and x[1].split()[0] < me and same_look(lk, x[0])), None)
+        if old and pid not in elsewhere:
+            probs.append("%s: the photograph %s looks the same as %s already shown on %s - one photograph under two names "
+                         "(L58: choose a different one, or none; and check both records - credit and rights)" % (at, rel, old[3], old[1]))
     taken = dict({k: v[0] for k, v in elsewhere.items()}, **here)
+    seen = [(lk, at) for lk, at, _, _ in mine] + [(x[0], x[1]) for x in looks]
+    for item in pool:                              # an L57 thumbnail never shows a look-alike of a shown photograph
+        lk = photo_look(item[2], os.path.relpath(img_file(item[2], item[0]), item[2]).replace("\\", "/"))
+        hit = next((at for l2, at in seen if same_look(lk, l2)), None)
+        if hit and item[3] not in taken:
+            taken[item[3]] = hit
     for n, s in enumerate(screens, 1):
         b = (build.get("screens") or {}).get(s["id"]) or {}
         teach += s["kind"] == "slide"

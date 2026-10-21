@@ -1088,6 +1088,41 @@ def variety_part(tmp):
           and ".fill.fig.lt-light{color:var(--lt-black)}" in css)
 
 
+def look_part(tmp):
+    """2.62.1 - L58 by look: one photograph saved twice under two names and two records is found (IGF M02 v262: the same
+    Commons photo as m02_viking_grace_tanks_at_yard.jpg and m01_typec_tanks_shipyard.jpg, its copy "Own work")"""
+    print("\n-- 2.62.1: one photograph under two names is found by its look (L58)")
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    from PIL import Image, ImageDraw
+    a = Image.new("RGB", (480, 320), (200, 205, 210))
+    d = ImageDraw.Draw(a)
+    for k, (x, y, w, h, g) in enumerate(((20, 30, 180, 120, 40), (240, 20, 200, 90, 90), (60, 190, 130, 110, 150),
+                                         (300, 160, 150, 140, 20), (200, 120, 60, 60, 240))):
+        d.rectangle((x, y, x + w, y + h), fill=(g, g + 5, g + 10))
+    os.makedirs(os.path.join(tmp, "look"))
+    screens = json.loads(json.dumps(SCREENS))
+    screens[1].update(layout="split", visual_kind="photo")
+    c, md = new_course(os.path.join(tmp, "look"), script(screens=screens))
+    img = os.path.join(md, "assets", "img")
+    a.save(os.path.join(img, "tanks_yard.png"))
+    a.resize((384, 256), Image.LANCZOS).save(os.path.join(img, "typec_tanks.jpg"), quality=82)
+    meta = cs.load(os.path.join(img, "_photo_meta.json"))
+    meta["tanks_yard.png"] = dict(PHOTO_META["ship.jpg"], description="Two fuel tanks at the yard.", url_or_origin="https://example.org/yard")
+    meta["typec_tanks.jpg"] = dict(PHOTO_META["ship.jpg"], description="Type C tanks.", author="Own work", url_or_origin="")
+    cs.save(os.path.join(img, "_photo_meta.json"), meta)
+    check("the look of a resized JPEG copy is the look of its original; a plain colour has none",
+          cm.same_look(cm.photo_look(img, "tanks_yard.png"), cm.photo_look(img, "typec_tanks.jpg"))
+          and cm.photo_look(os.path.dirname(img), "_none.png") is None)
+    build_of(c, lambda b: b["screens"].update(s01={"figure": "assets/img/tanks_yard.png"}, s02={"figure": "assets/img/typec_tanks.jpg"}))
+    code, out = run(COMPILE, c, "--module", "1")
+    check("two slides showing one photograph under two names and records: a problem that names both (L58)",
+          "typec_tanks.jpg looks the same as assets/img/tanks_yard.png" in out and "credit and rights" in out, out[-900:])
+    a.transpose(Image.FLIP_LEFT_RIGHT).save(os.path.join(img, "typec_tanks.jpg"), quality=82)
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    check("... a different picture (the same shapes mirrored) is not", "looks the same as" not in out, out[-600:])
+
+
 def fixes_part(tmp):
     """2.49.1 - the problems found building IGF Module 6 with the compiler (C1-C16)"""
     print("\n-- 2.49.1: what building IGF Module 6 found")
@@ -2236,6 +2271,7 @@ def main():
         layouts_part(tmp)
         three_part(tmp)
         variety_part(tmp)
+        look_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
