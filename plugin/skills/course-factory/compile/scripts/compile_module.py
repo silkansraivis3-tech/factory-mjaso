@@ -2097,6 +2097,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     if kind == "slide" and s.get("recap"):
         return recap_html(s, base, m, n, total, lines, bool(b.get("dark")))
 
+    own_comp = b.get("composition")
     b = asked_composition(b)                      # L61: a template asked for by name decides the composition
     fig, credit, is_photo = figure_html(mdir, figdir, s, b, probs, where)
     # what picture was BUILT (2.54.0) - its own name: `kind` stays the slide's kind, which L61's dense rule below reads
@@ -2110,6 +2111,13 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         comp = "flow"
     if comp == "photo" and not is_photo:
         comp = "stage"
+    # 2.63.0 (IGF M01 v263 runs 2-3): a template asked for by name on a PHOTOGRAPH - words in parts, or the photo column -
+    # is the photo in its own column; its "two-col" made the framed photo with the words on it, and the ask did nothing
+    want_t = (b.get("template") or "").split(".v")[0]
+    if is_photo and not own_comp and comp in ("two-col", "photo") and (
+            want_t in TEMPLATE_COMPOSITION and TEMPLATE_COMPOSITION[want_t] == "two-col"
+            or (want_t == "photo-explain" and b.get("variant") == "column")):
+        comp = "wide-left"
     # a photograph beside the words fills the right of the screen (two-col: the words on a scrim, fixed width) - never a
     # small photo in a column. 2.49.1: "wide-left" / "wide-right" are honoured for a photograph - a real column layout, the
     # words as wide as asked and the photo filling its own column (cropped to it), its credit line still on the slide

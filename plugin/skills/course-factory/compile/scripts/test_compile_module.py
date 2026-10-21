@@ -982,6 +982,12 @@ def layouts_part(tmp):
                             os.path.join(c2, "working_claude", "figures", "M01"), "x", True)
     check("... and said once in a process, however often the deck is compiled (IGF M01 v263: 84 times in one build)",
           buf.getvalue().count("holds about 85") == 1, buf.getvalue().count("holds about 85"))
+    # 2.63.0 (IGF M01 v263 runs 2-3: the ask did nothing) - parts or the photo column asked for on a photograph slide
+    for ask in ({"template": "content-in-parts"}, {"template": "photo-explain", "variant": "column"}):
+        pg = cm.compile_deck(script(), {"screens": {"s01": dict(ask, figure="assets/img/ship.jpg")}}, md2, None, "x", True)[0]
+        s1 = re.search(r'<section [^>]*id="s01".*?</section>', pg, re.S).group(0)
+        check("an asked %s on a photograph is the photo in its own column, not the framed photo" % ask["template"],
+              "photo-col" in s1 and 'class="slide photo' not in s1 and 'data-template="%s.v1"' % ask["template"] in s1, s1[:500])
     sv = json.loads(json.dumps(SCREENS))
     next(x for x in sv if x["id"] == "t02")["text"] = "Module check on your tablet now.\nYou see PASSED or NOT PASSED."
     buf = io.StringIO()
