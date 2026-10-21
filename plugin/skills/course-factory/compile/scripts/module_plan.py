@@ -63,6 +63,7 @@ WORDS = {"en": {
     "opened": "opened by slide {n}, from minute {t}", "qs": "Questions: {n}",
     "pass": "Pass mark {pass} % – {need} of {total} right = PASSED, fewer = NOT PASSED",
     "no_pass": "No pass mark – the trainee sees their own score, it is not recorded as a grade",
+    "mc_no_pass": "No pass mark – the score tells the trainee and the instructor what was understood; the pass mark is the final assessment's",
     "team": "Team task – size {size}, roles: {roles}, hands in: {scope}", "scope_team": "one answer per team",
     "scope_member": "each member",
     "q_cols": ["#", "Id", "How the trainee answers", "Sub-ILO", "Question"],
@@ -102,6 +103,7 @@ WORDS = {"en": {
     "opened": "atver {n}. slaids, no {t}. minūtes", "qs": "Jautājumi: {n}",
     "pass": "Ieskaites slieksnis {pass} % – {need} no {total} pareizi = IESKAITĪTS, mazāk = NAV IESKAITĪTS",
     "no_pass": "Ieskaites sliekšņa nav – kursants redz savu rezultātu, tas netiek ierakstīts kā atzīme",
+    "mc_no_pass": "Ieskaites sliekšņa nav – rezultāts kursantam un instruktoram parāda, kas ir saprasts; ieskaites slieksnis ir tikai noslēguma pārbaudījumam",
     "team": "Komandas uzdevums – izmērs {size}, lomas: {roles}, iesniedz: {scope}", "scope_team": "viena atbilde komandai",
     "scope_member": "katrs dalībnieks",
     "q_cols": ["#", "Id", "Kā kursants atbild", "Apakšrezultāts", "Jautājums"],
@@ -140,6 +142,7 @@ WORDS = {"en": {
     "opened": "открывает слайд {n}, с {t}-й минуты", "qs": "Вопросы: {n}",
     "pass": "Проходной балл {pass} % – {need} из {total} правильно = ЗАЧТЕНО, меньше = НЕ ЗАЧТЕНО",
     "no_pass": "Проходного балла нет – слушатель видит свой результат, он не записывается как оценка",
+    "mc_no_pass": "Проходного балла нет – результат показывает слушателю и инструктору, что понято; проходной балл есть только у итоговой аттестации",
     "team": "Командное задание – размер {size}, роли: {roles}, сдаёт: {scope}", "scope_team": "один ответ от команды",
     "scope_member": "каждый участник",
     "q_cols": ["#", "Id", "Как отвечает слушатель", "Подрезультат", "Вопрос"],
@@ -361,11 +364,12 @@ def plan_page(script, build, mdir, course, version, approved, probs):
     if not found:
         body.append("  <p>%s</p>" % e(w["no_tasks"]))
     for slide, code, qs in found:
-        pm = tp.pass_mark_of(script, build)
+        pm = tp.pass_mark_for(script, build, code)            # 2.63.0: the final's only - a module check has none
         is_check = cm.is_check(code)
         head = "%s – %s" % (code, tp.short_title(slide.get("title")) if code.startswith("SC") else slide.get("title"))
         info = [w["opened"].format(n=slide_no[slide["id"]], t=num(start[slide["id"]])), w["qs"].format(n=len(qs)),
-                w["pass"].format(**{"pass": pm, "need": -(-len(qs) * pm // 100), "total": len(qs)}) if is_check else w["no_pass"]]
+                w["pass"].format(**{"pass": pm, "need": -(-len(qs) * pm // 100), "total": len(qs)}) if pm
+                else w["mc_no_pass"] if is_check else w["no_pass"]]
         team = slide.get("team")
         if isinstance(team, dict) and team:
             scope = w["scope_team"] if team.get("scope") == "team" else w["scope_member"]

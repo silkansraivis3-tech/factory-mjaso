@@ -281,9 +281,8 @@ def deck_language_part(exe, tmp):
     check("Start, the overview, the landing hint, the Back link and the cue's tag in Latvian",
           r.get("start") == "Sākt" and r.get("close") == "Aizvērt" and (r.get("ovHead") or "").startswith("Visi ekrāniPieskarieties ekrānam")
           and (r.get("hint") or "").startswith("→ / atstarpe – tālāk") and r.get("back") == "Atpakaļ" and r.get("cue") == "Norāde instruktoram", r)
-    check("the landing card's chips in Latvian: 1. modulis, 25 min, Mācību ekrāni: 0, Paškontrole SC1, Moduļa pārbaude MC",
-          (r.get("mod") or "").endswith("1. modulis") and "Mācību ekrāni: 0" in (r.get("chips") or "") and "Paškontrole SC1" in (r.get("chips") or "")
-          and "Moduļa pārbaude MC" in (r.get("chips") or ""), r)
+    check("the landing card's module in Latvian (1. modulis) - and no stats chips (2.63.0, the instructors' review)",
+          (r.get("mod") or "").endswith("1. modulis") and not r.get("chips"), r)
     check("no English word of the deck's own left on the Latvian landing or controls",
           not re.search(r"\b(Next|Back|Start|All screens|Instructor cue|Fullscreen|Leave|Close|teaching screens|Self-check|Module)\b",
                         json.dumps(r, ensure_ascii=False)), r)

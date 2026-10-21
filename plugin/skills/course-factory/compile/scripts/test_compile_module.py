@@ -293,8 +293,9 @@ def tasks_part(tmp):
           ks.get("Transfer") == cs.gb_key("q04", "Transfer", 3)
           and [t for t, _ in keys_of(p) if t in ("Safety meeting", "Connect the hose", "Transfer", "Disconnect")]
           != ["Safety meeting", "Connect the hose", "Transfer", "Disconnect"])
-    check("the course's first self-check opens with 'try your tablet first'; the module check with its pass mark",
-          'id="tryScr"' in p and 'id="introScr"' in m and "Pass mark 70 % – 3 of 3 right" in m and 'data-pass="70"' in m)
+    # 2.63.0 (owner Raivis, 2026-10-21): the module check shows its score - no pass mark, no PASSED / NOT PASSED
+    check("the course's first self-check opens with 'try your tablet first'; the module check with its intro and NO pass mark",
+          'id="tryScr"' in p and 'id="introScr"' in m and "Pass mark" not in m and 'data-pass="0"' in m)
     check("2.60.0: the module check and a self-check are not blind - they show the right answer after each Check",
           "data-blind" not in m and "data-blind" not in p)
     km = dict(keys_of(m))
@@ -325,8 +326,8 @@ def tasks_part(tmp):
           and "1. Safety meeting<br>2. Connect the hose" in k and "LNG is stored at <b>[-162]</b> °C." in k
           and "<b>%s</b> – No, only in an emergency" % lm["No, only in an emergency"] in k
           and "Fuel preparation room: pumps and vaporizers" in k, (l3, lm, k[k.find("q03"):k.find("q03") + 400]))
-    check("... how the pages mark: no pass mark on a self-check; the check's pass mark and what it needs",
-          "no pass mark" in k and "Pass mark 70 %: 3 of 3 right = PASSED" in k, k)
+    check("... how the pages mark: no pass mark on a self-check, none on the module check either (the final's alone)",
+          "no pass mark" in k and "No pass mark: the score tells" in k and "= PASSED" not in k, k)
     check("... and nothing in it a checker could take for a task page: no data-script, no data-key",
           "data-script" not in k and "data-key" not in k)
     # 2.46.0 - a label box as wide as its words: the 17 % box cut "Tank connection space" off once the tick appeared
@@ -374,8 +375,8 @@ def tasks_part(tmp):
                                                            "m01": {"figure": "assets/fig/ga.svg"}}})
     code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force")
     m, k = io.open(mc, encoding="utf-8").read(), io.open(kp, encoding="utf-8").read()
-    check("the script's pass mark is used on the check and in the answer key; the build sheet's other one is reported",
-          'data-pass="80"' in m and "Pass mark 80 %" in k and "the script's pass mark is 80 %, the build sheet still says 70 %" in out, out)
+    check("a module check takes no pass mark even when the script names one (the final's - 2.63.0)",
+          'data-pass="0"' in m and "Pass mark 80 %" not in k, out)
     cs.save(sp, sc)
 
     # ---- L54 at every build: a part poking out is found by the build itself, on a task page as on a deck
@@ -789,8 +790,10 @@ def language_part(tmp):
         m = io.open(os.path.join(md, "assessment", "check.html"), encoding="utf-8").read() if code == 0 else ""
         check("%s: compiled with no language problem, the page marked lang=\"%s\"" % (lang, code_l),
               code == 0 and '<html lang="%s">' % code_l in p and "not in the factory in that language" not in out, out)
-        check("%s: the page's own words are %s - start, the gap's prompt, the module check's title and pass mark" % (lang, lang),
-              start in p and cloze_say in p and "<title>MC — %s</title>" % mc_title in m and pass_line in m, (p[-600:], m[:900]))
+        # 2.63.0: the module check has no pass mark - its line is the final's alone (task_pages WORDS "pass" is kept for it)
+        check("%s: the page's own words are %s - start, the gap's prompt, the module check's title, and no pass mark on it" % (lang, lang),
+              start in p and cloze_say in p and "<title>MC — %s</title>" % mc_title in m and pass_line not in m
+              and pass_line.split(" 70")[0] in task_pages.WORDS[code_l]["pass"], (p[-600:], m[:900]))
         check("%s: no English word of the factory's left on the page" % lang,
               not re.search(r">(Start the self-check|Back|Your score|Start again|Tap a gap|Less|More)<", p + m))
         check("%s: the dial's scale reads −60 °C to 20 °C; its keys stay the same in every language (-43.0 / -42.5 / -42.0)" % lang,
@@ -1464,11 +1467,11 @@ def v2492_part(tmp):
           os.path.isfile(os.path.join(mf, "assessment", "final_a.html")) and os.path.isfile(os.path.join(mf, "assessment", "final_b.html"))
           and not os.path.isfile(os.path.join(mf, "assessment", "final.html")) and not os.path.isdir(os.path.join(mf, "tasks")), out)
     dk = deck(mf)
-    check("F6: the deck's slides open them as Check slides (data-kind Check), and the landing card names the variants",
+    check("F6: the deck's slides open them as Check slides (data-kind Check), one each (the landing card names no task since 2.63.0)",
           'data-task-href="../assessment/final_a.html"' in dk and 'data-task-href="../assessment/final_b.html"' in dk
-          and dk.count('data-kind="Check"') == 2 and "Final assessment A" in dk and "Final assessment B" in dk, dk[:300])
+          and dk.count('data-kind="Check"') == 2, dk[:300])
     fb = io.open(os.path.join(mf, "assessment", "final_b.html"), encoding="utf-8").read()
-    check("F6: variant B is graded like the check - a pass mark, its own title FB",
+    check("F6: variant B is graded - the pass mark (the final's alone since 2.63.0), its own title FB",
           'data-pass="70"' in fb and "<title>FB — " in fb and "(FB2)" in fb and "(FA1)" not in fb, fb[:600])
     fa = io.open(os.path.join(mf, "assessment", "final_a.html"), encoding="utf-8").read()
     check("2.60.0: both final variants are blind (data-blind on the body) - the engine shows no answer until the score",
@@ -1934,8 +1937,12 @@ def main():
               'data-visual="schematic"' in s04 and 'data-visual="photo"' in s01 and 'data-visual="interactive_diagram"' in s03)
         check("no question is ever on a slide", "q01" not in page and "m01" not in re.sub(r"(?i)M01", "", page))
         check("no link inside a slide", not re.search(r"<main.*<a\s[^>]*href", page, re.S))
-        check("the landing card shows the course line, the module, the minutes and the tasks",
-              "Basic training · IGF Code" in page and "25 min" in page and "Self-check SC1" in page and "Module check MC" in page)
+        # 2.63.0 - the instructors' review (IGF Basic, 2026-10-21): no stats chips on the landing card
+        land = re.search(r'<div id="landing">.*?</div>\s*</div>', page, re.S)
+        check("the landing card shows the course line, the module and its title - no stats chips (minutes, screens, tasks)",
+              land and "Basic training · IGF Code" in land.group(0) and "Module 1" in land.group(0) and "landing-meta" not in page
+              and "25 min" not in land.group(0) and "Self-check SC1" not in land.group(0) and "Module check MC" not in land.group(0),
+              land and land.group(0))
         check("figure hooks come from window.GB_HOOKS", "hooks: window.GB_HOOKS || {}" in page)
 
         # ---- the same in, the same out

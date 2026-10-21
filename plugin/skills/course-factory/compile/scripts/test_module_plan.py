@@ -81,7 +81,9 @@ def plan_course(tmp, allocated=21, language="English", screens=SCREENS, arch=Tru
     c, md = t.new_course(tmp, sc, build=False)
     cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"),
             {"module": 1, "screens": {"p01": {"link_hint": "Work in pairs at the simulator"},
-                                      "s01": {"figure": "assets/img/ship.jpg"}, "s02": {"figure": "assets/fig/scale.svg"}}})
+                                      "s01": {"figure": "assets/img/ship.jpg"},
+                                      # 2.63.0: the scale's "60 °C" is not in these screens' words - named where it is from
+                                      "s02": {"figure": "assets/fig/scale.svg", "facts": {"60 °C": "the fixture's scale"}}}})
     if arch:
         cs.save(os.path.join(c, "working_claude", "architecture.json"), ARCH)
         gate_fixture.open_gate(c)
@@ -166,8 +168,8 @@ def main():
               all(x in h for x in ("<td>Where is the fuel prepared?</td>", "<td>Put the fuel path in order.</td>",
                                    "<td>Which space holds the tank valves?</td>", ">q01<", ">q02<", ">m01<"))
               and cs.mech_label("single_choice") in h and cs.mech_label("order") in h, h[:1500])
-        check("... the self-check has no pass mark; the module check states its pass mark and what it needs",
-              "No pass mark" in h and "Pass mark 70 % – 1 of 1 right = PASSED" in h, h[:900])
+        check("... the self-check has no pass mark; nor has the module check - the final's alone (2.63.0, owner 2026-10-21)",
+              "No pass mark – the trainee sees" in h and "No pass mark – the score tells" in h and "= PASSED" not in h, h[:900])
         check("... and points to the answer key, which holds the answers - the plan holds none (no option, no answer line, no feedback)",
               "answer key" in h and not any(x in page for x in ("Pumps are there.", "Tank first.", "Vaporizer", "Galley",
                                                                 "It holds every tank connection.")), "")

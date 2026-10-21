@@ -34,6 +34,9 @@ WORDS = {"en": {
     "self": "Self-checks – one point per question, no pass mark. The trainee sees their own score; it is not recorded as a grade.",
     "check": "{name} – one point per question; a question with several parts counts only when every part is right. Pass mark "
              "{pass} %: {need} of {total} right = PASSED, fewer = NOT PASSED.",
+    "check_nopass": "{name} – one point per question; a question with several parts counts only when every part is right. "
+                    "No pass mark: the score tells the trainee and the instructor what was understood; the pass mark is the "
+                    "final assessment's.",
     "timer": "When the instructor's timer ends, a page marks what was done and reports it as timed out.",
     "shown": "After each answer the page shows what was right, moves wrong cards to where they belong, and shows the "
              "feedback below.",
@@ -54,6 +57,9 @@ WORDS = {"en": {
     "self": "Paškontrole – viens punkts par jautājumu, ieskaites sliekšņa nav. Kursants redz savu rezultātu; tas netiek ierakstīts kā atzīme.",
     "check": "{name} – viens punkts par jautājumu; jautājums ar vairākām daļām skaitās tikai tad, ja pareizas visas daļas. "
              "Ieskaites slieksnis {pass} %: {need} no {total} pareizi = IESKAITĪTS, mazāk = NAV IESKAITĪTS.",
+    "check_nopass": "{name} – viens punkts par jautājumu; jautājums ar vairākām daļām skaitās tikai tad, ja pareizas visas "
+                    "daļas. Ieskaites sliekšņa nav: rezultāts kursantam un instruktoram parāda, kas ir saprasts; ieskaites "
+                    "slieksnis ir tikai noslēguma pārbaudījumam.",
     "timer": "Kad instruktora taimeris beidzas, lapa novērtē paveikto un ziņo, ka laiks beidzās.",
     "shown": "Pēc katras atbildes lapa parāda, kas bija pareizi, pārliek kļūdainās kartītes savās vietās un parāda skaidrojumu.",
     "cols": ["#", "Kā kursants atbild", "Jautājums", "Pareizā atbilde", "Skaidrojums pēc atbildes"],
@@ -73,6 +79,9 @@ WORDS = {"en": {
     "self": "Самопроверка – один балл за вопрос, без проходного балла. Слушатель видит свой результат; он не записывается как оценка.",
     "check": "{name} – один балл за вопрос; вопрос из нескольких частей засчитывается, только если верны все части. "
              "Проходной балл {pass} %: {need} из {total} правильно = ЗАЧТЕНО, меньше = НЕ ЗАЧТЕНО.",
+    "check_nopass": "{name} – один балл за вопрос; вопрос из нескольких частей засчитывается, только если верны все части. "
+                    "Проходного балла нет: результат показывает слушателю и инструктору, что понято; проходной балл есть "
+                    "только у итоговой аттестации.",
     "timer": "Когда таймер инструктора заканчивается, страница оценивает сделанное и сообщает, что время вышло.",
     "shown": "После каждого ответа страница показывает, что было верно, переносит неверные карточки на их места и показывает пояснение.",
     "cols": ["#", "Как отвечает слушатель", "Вопрос", "Правильный ответ", "Пояснение после ответа"],
@@ -201,8 +210,9 @@ def key_page(script, build, mdir, version, approved, probs):
         how.append(w["self"])
     for (slide, code, qs), name in zip(found, names):
         if cm.is_check(code):
-            pm = tp.pass_mark_of(script, build)
-            how.append(w["check"].format(name=name, **{"pass": pm, "need": -(-len(qs) * pm // 100), "total": len(qs)}))
+            pm = tp.pass_mark_for(script, build, code)          # 2.63.0: the final's only
+            how.append(w["check"].format(name=name, **{"pass": pm, "need": -(-len(qs) * pm // 100), "total": len(qs)}) if pm
+                       else w["check_nopass"].format(name=name))
     how += [w["timer"], w["shown"]]
     m = cs.mid(script.get("module"))
     made = w["made"].format(m=m, by=script.get("approved_by") or "", on=script.get("approved_on") or "", v=version) if approved else w["draft"]

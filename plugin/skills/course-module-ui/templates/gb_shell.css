@@ -93,7 +93,6 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;
 .landing-title{margin-top:1.2vmin;font-size:clamp(30px,6.4vmin,74px);font-weight:700;
   line-height:1.05;letter-spacing:-.015em}
 .landing-title em{font-style:normal;color:var(--blue)}
-.landing-meta{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:3vmin}
 .chip{
   border:1px solid var(--line-d);background:var(--shl-blue-07);border-radius:999px;
   padding:.55em 1.1em;font-size:clamp(12.5px,1.55vmin,20.1px);color:var(--dim-d);font-weight:600;

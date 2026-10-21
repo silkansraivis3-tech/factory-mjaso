@@ -158,12 +158,9 @@ ru *пробел*.
 | key | English | Latvian (lv) | Russian (ru) |
 |---|---|---|---|
 | module | Module {n} | {n}. modulis | Модуль {n} |
-| min | {n} min | {n} min | {n} мин |
-| screens | {n} teaching screens | Mācību ekrāni: {n} | Учебных экранов: {n} |
-| sc | Self-check {c} | Paškontrole {c} | Самопроверка {c} |
-| mc | Module check MC | Moduļa pārbaude MC | Проверка по модулю MC |
-| fa | Final assessment | Noslēguma pārbaudījums | Итоговая аттестация |
-| task | Task {c} | Uzdevums {c} | Задание {c} |
+
+(2.63.0: the stats chips - minutes, screens, self-checks, module check - are gone from the landing card, the instructors'
+review of 2026-10-21; their words went with them.)
 
 ## 6 · Added in 2.46.0 — the engine's "missed" words and the instructor's answer key
 

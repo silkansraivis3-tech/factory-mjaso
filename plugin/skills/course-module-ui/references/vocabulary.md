@@ -136,7 +136,7 @@ there before the first screen. Write screens inside it; do not rebuild it.
 | `.slide` (+ `dark`, `photo`) | one screen. Light by default; `dark` or `photo` chosen per screen, never as a theme |
 | `.slide-kind` | the navy header band — says what KIND of screen this is, not the module name |
 | `.slide-body` | the content area — carries the composition class from §1 |
-| `.landing-card`, `.landing-title`, `.landing-meta`, `.landing-mod`, `.landing-note`, `.landing-hint`, `.landing-links`, `.landing-rule`, `.brand-chip` | the start (landing) screen before Start is pressed |
+| `.landing-card`, `.landing-title`, `.landing-mod`, `.landing-note`, `.landing-hint`, `.landing-links`, `.landing-rule`, `.brand-chip` | the start (landing) screen before Start is pressed |
 | `.ov-grid`, `.ov-head`, `.ov-item` | the overview of all screens |
 | `.chip`, `.cbtn`, `.btn-label`, `.fbtn`, `.tag`, `.t`, `.k`, `.n` | the chrome's own buttons, labels and counters |
 | `.gbt-topback` | the hidden Back link the Android hardware Back button clicks — every page needs one |

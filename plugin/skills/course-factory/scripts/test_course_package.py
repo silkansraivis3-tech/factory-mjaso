@@ -112,8 +112,9 @@ def docs_part():
         return io.open(os.path.join(*p), encoding="utf-8").read()
     skill = text(SKILLS, "course-factory", "SKILL.md")
     l27 = next((x for x in skill.splitlines() if x.startswith("| **L27**")), "")
-    check("the SKILL.md L27 row says the module check shows PASSED or NOT PASSED (L45), not 'never pass/fail'",
-          "PASSED or NOT PASSED" in l27 and "never pass/fail" not in l27, l27)
+    # 2.63.0 - owner Raivis, 2026-10-21: no pass mark and no PASSED / NOT PASSED on the module check, the final's only
+    check("the SKILL.md L27 row says the module check shows its score with no pass mark, and the final alone has PASSED / NOT PASSED",
+          "no pass mark and no PASSED / NOT PASSED" in l27 and "only one with the pass mark" in l27, l27)
     laws = text(SKILLS, "course-factory", "references", "laws-in-full.md")
     l36 = laws[laws.find("**L36 "):laws.find("**L37 ")]
     check("laws-in-full L36 sends the reader to theory-rules.json and repeats none of its numbers",
@@ -186,8 +187,12 @@ def main():
                "says neither where (data-task-href) nor how (data-link-hint)")
         broken("a task page that never reports its result", lambda b: w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
                "<title>SC1 " + D + " Keeping the cargo liquid</title><p>no report</p>"), "never reports its result (gb-task-done)")
-        broken("a module check without PASSED / NOT PASSED", lambda b: w(os.path.join(b, "module01", "assessment", "check.html"),
-               (TASK % ("MC " + D + " Module check", "MC", "done(5, 6, [], '');"))), "must report head 'PASSED' or 'NOT PASSED'")
+        broken("a final assessment without PASSED / NOT PASSED", lambda b: w(os.path.join(b, "module02", "assessment", "final.html"),
+               (TASK % ("FA " + D + " Final assessment", "FA", "done(5, 6, [], '');"))), "must report head 'PASSED' or 'NOT PASSED'")
+        # 2.63.0 (owner Raivis, 2026-10-21): a module check has no pass mark
+        broken("a module check with a pass mark", lambda b: w(os.path.join(b, "module01", "assessment", "check.html"),
+               (TASK % ("MC " + D + " Module check", "MC", "done(5, 6, [], '');")).replace("<body>", '<body data-code="MC" data-pass="70">')),
+               "is a module check: it has no pass mark")
         broken("a script from the internet", lambda b: w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
                (TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "done(1,1,[],'');")).replace("../assets/js/task.js", "https://cdn.example.com/x.js")),
                "loads a script from the internet")

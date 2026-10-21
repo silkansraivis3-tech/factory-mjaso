@@ -20,7 +20,8 @@ WHAT IT CHECKS - the course folder is course\\modules\\ (L44, L45)
     data-link-hint; one slide, one page; every task page in tasks/ and the module check are opened by a slide;
     teaching slides carry the instructor notes in data-cue
   per task page: <title> "CODE — Title" with the slide's code; reports gb-task-done with ok, total and items;
-    module checks and the final assessment report head PASSED / NOT PASSED; no task list page (L35)
+    the final assessment reports head PASSED / NOT PASSED against its pass mark, a module check has none (2.63.0);
+    no task list page (L35)
   every file: no space in its name, at most 15 MB, nothing from the internet, every src/href/url() inside the module
     folder (or _course_shell) and present; no trainee page links to an instructor-only file
   the whole course: at most 6000 files and 300 MB of distinct files
@@ -417,8 +418,16 @@ def check(folder):
                     for key in ("ok", "total", "items"):
                         if not re.search(r"\b%s\s*:" % key, txt):
                             probs.append("%s reports gb-task-done without %s" % (rel(p), key))
-                    if sub == "assessment" and not ("PASSED" in txt and "NOT PASSED" in txt):
-                        probs.append("%s is a check: it must report head 'PASSED' or 'NOT PASSED', with the pass mark on the page" % rel(p))
+                    # 2.63.0 (owner Raivis, 2026-10-21): the final assessment reports PASSED / NOT PASSED against its pass
+                    # mark; a module check has no pass mark (data-pass="0") - its score is for the trainee and the instructor
+                    dp = re.search(r'<body[^>]*\bdata-pass="(\d+)"', io.open(p, encoding="utf-8", errors="replace").read())
+                    final = os.path.basename(p).lower().startswith("final")
+                    if sub == "assessment" and final and not ("PASSED" in txt and "NOT PASSED" in txt and (not dp or int(dp.group(1)) > 0)):
+                        probs.append("%s is the final assessment: it must report head 'PASSED' or 'NOT PASSED', with the pass mark "
+                                     "on the page" % rel(p))
+                    if sub == "assessment" and not final and dp and int(dp.group(1)) > 0:
+                        probs.append("%s is a module check: it has no pass mark and no PASSED / NOT PASSED (data-pass=\"0\"; L27, "
+                                     "owner 2026-10-21) - only the final assessment has one" % rel(p))
                 if "gb-timer" not in txt:
                     notes.append("%s does not listen for the instructor's timer (gb-timer)" % rel(p))
                 elif not TIMEOUT_TRUE.search(txt):

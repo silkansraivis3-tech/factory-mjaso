@@ -1321,10 +1321,11 @@ def try_screen(w):
 def intro_screen(slide, title, n, pass_mark, w):
     need = -(-n * pass_mark // 100)
     lines = cs.lines_of(slide.get("text"))[1:] or [""]
-    body = ['    <p>%s</p>' % e(lines[0]),
-            '    <p><span class="pass">%s</span></p>' % e(w["pass"].format(**{"pass": pass_mark, "need": need, "total": n}))]
+    body = ['    <p>%s</p>' % e(lines[0])]
+    if pass_mark:                                       # the final assessment's only (2.63.0)
+        body.append('    <p><span class="pass">%s</span></p>' % e(w["pass"].format(**{"pass": pass_mark, "need": need, "total": n})))
     body += ['    <p>%s</p>' % e(x) for x in lines[1:]]
-    return "\n".join(['  <!-- before the first question: what this is and the pass mark -->',
+    return "\n".join(['  <!-- before the first question: what this is%s -->' % (" and the pass mark" if pass_mark else ""),
                       '  <section class="scr" id="introScr">',
                       '    <h1 class="q"><span class="stem">%s</span></h1>' % e(title),
                       '    <div class="intro">'] + ["  " + x for x in body] + ["    </div>", "  </section>"])
@@ -1354,6 +1355,13 @@ def result_screen(w):
         "  </section>"])
 
 
+def pass_mark_for(script, build, code, probs=None):
+    """the pass mark a set's page applies: the final assessment's (FA, FB) only. 2.63.0 (owner Raivis, 2026-10-21, the
+    instructors' review of IGF Basic): a module check shows no pass mark and no PASSED / NOT PASSED - its score tells the
+    trainee and the instructor what was understood; 70 % is the course's final assessment's alone (L27 / L45)"""
+    return pass_mark_of(script, build, probs) if cm.FINAL_SET.match(code or "") else 0
+
+
 def pass_mark_of(script, build, probs=None):
     """the check's pass mark in %: the approved script's "pass_mark" (2.46.0 - the operator corrects it like any
     other word of the script: content_script.py propose {"script_field": "pass_mark"}), else the build sheet's, else 70"""
@@ -1373,7 +1381,7 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
     if code == "MC":                                    # "Module check - Module 1" -> "Module 1 check"
         short = w["module_n_check"].format(n=script.get("module"))
     is_check = cm.is_check(code)                        # the module check, a final assessment variant (FA, FB): graded
-    pass_mark = pass_mark_of(script, build, probs) if is_check else 0
+    pass_mark = pass_mark_for(script, build, code, probs)
     sheet = build.get("screens") or {}
     try_tablet = (sheet.get(slide["id"]) or {}).get("try_tablet")
     if try_tablet is None:
