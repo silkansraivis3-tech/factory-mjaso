@@ -250,10 +250,22 @@
 .photo-badge{display:inline-block;background:var(--amber);color:var(--cmp-on-amber);font-weight:700;
   border-radius:6px;padding:.42em .95em;font-size:clamp(12.5px,1.4vmin,18.8px);
   letter-spacing:.14em;text-transform:uppercase;margin-bottom:1.6vmin}
-/* the credit clears #chrome, which owns the bottom 60px and never goes away */
-.credit{position:absolute;right:12px;bottom:max(70px,calc(min(3.4vmin,30px) + 10px));z-index:4;
+/* the credit is a strip of its own under the slide's content (2.60.0): in the slide's flow after the body, so the body
+   gives it its height - never over the photograph or the words (seven IGF modules: over the photo's lower edge, M15 s01
+   over the lead). It sits on the left, in the free band between the body and the footer (its negative bottom margin
+   gives the band back, so a one-line credit costs the body nothing - M05 s03's 121 words still fit), and stops short
+   of #chrome, which owns the bottom-right 492 x 68 px (measured: 474 px of buttons, 18 px from the edge) and never goes
+   away - 590 px is that, the slide's left padding (at most 86 px) and a gap. A longer credit wraps and the body gives
+   way to it - it never lies over anything */
+.credit{position:relative;z-index:4;flex:0 0 auto;align-self:flex-start;margin:4px 0 calc(36px - max(88px,8vmin));
   background:var(--cmp-night-72);color:var(--cmp-credit-text);font-size:clamp(12.5px,1.12vmin,15.4px);
-  padding:.42em .8em;border-radius:5px;max-width:min(52vw,620px);line-height:1.35}
+  padding:.42em .8em;border-radius:5px;max-width:calc(100vw - 590px);line-height:1.35}
+/* a full-screen photograph with a credit: the picture ends above its credit strip; the strip and the chrome share the
+   dark band under it. The photo is a flex item here, so the strip's own height (one line or four) is always room */
+.slide.photo:has(> .credit){padding:0 0 max(76px,8vmin)}
+.slide.photo:has(> .credit) > .photo-wrap{position:relative;inset:auto;flex:1 1 0;min-height:0}
+.slide.photo.split:has(> .credit) > .photo-wrap{margin-left:44%}
+.slide.photo:has(> .credit) > .credit{align-self:flex-end;margin:min(1vmin,8px) 12px 0 0;max-width:100%}
 
 /* ==========================================================================
    8 · ACTIVITY LAUNCH — centred, the code dominant, and nothing clickable.
@@ -583,6 +595,10 @@ figure{margin:0}
   border-radius:var(--r-l);overflow:hidden}
 .slide-body.two-col.photo-col > .fill.photo-col > img{position:absolute;inset:0;width:100%;height:100%;max-height:none;
   object-fit:cover}
+/* 2.60.0 - its credit is the column's own foot strip: the photo above it takes what is left, cropped to it */
+.slide-body.two-col.photo-col > .fill.photo-col:has(> .credit){display:flex;flex-direction:column}
+.slide-body.two-col.photo-col > .fill.photo-col:has(> .credit) > img{position:relative;inset:auto;flex:1 1 0;min-height:0;height:auto}
+.fill.photo-col > .credit{align-self:stretch;margin:0;max-width:none;border-radius:0;flex:0 0 auto}
 /* a stage with words above and a legend row under the drawing: the drawing takes what is left - so the
    furniture around it is packed tight (measured: a 5-step legend, the step buttons and two lines left a
    3.4:1 drawing 206 px of a 538 px stage) */
@@ -695,6 +711,7 @@ figure{margin:0}
   .slide-body.two-col.photo-col{grid-template-rows:none;align-items:start}
   .slide-body.two-col.photo-col > .fill.photo-col{min-height:34vh}
   .slide.photo.split .photo-wrap{left:0}
+  .slide.photo.split:has(> .credit) > .photo-wrap{margin-left:0}
   .slide.photo.split .photo-copy{max-width:min(78vw,620px)}
   .copy .inset img{width:36%;flex-basis:36%}
 }
@@ -745,15 +762,18 @@ figure{margin:0}
   radial-gradient(120% 90% at 88% -12%,var(--cmp-blue-18),transparent 62%),
   radial-gradient(90% 80% at -8% 112%,var(--cmp-amber-12),transparent 60%),
   var(--deep)}
+/* 2.60.0 - the boxes' padding and gaps are the compact ones at every height: at 1280 x 800 six boxes of two-to-four-line
+   sentences were 13-27 px taller than the slide (IGF M02, M03, M05 - each builder wrote module CSS). The words keep
+   their size; a short screen (max-height 780px, below) packs tighter still. One rule for every recap, template or not */
 .slide-body.recap{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;
-  gap:min(3vmin,30px);overflow:visible}   /* the rise-in must not flash a scrollbar; the measure still sees a real overflow */
-.rc-grid{--h:min(17vmin,170px);list-style:none;margin:0;padding:0;display:grid;gap:min(2.4vmin,24px);
+  gap:min(1.8vmin,16px);overflow:visible}   /* the rise-in must not flash a scrollbar; the measure still sees a real overflow */
+.rc-grid{--h:min(17vmin,170px);list-style:none;margin:0;padding:0;display:grid;gap:min(1.8vmin,16px);
   grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:minmax(var(--h),auto);counter-reset:rc}
 .rc-grid[data-n="3"]{--h:min(34vmin,330px)}
 .rc-grid[data-n="4"]{--h:min(21vmin,210px);grid-template-columns:repeat(2,minmax(0,1fr))}
 .rc-item{--d:.15s;position:relative;counter-increment:rc;display:flex;flex-direction:column;
-  gap:.6em;margin:0;overflow:hidden;
-  padding:min(3.4vmin,34px) min(3.2vmin,32px) min(3vmin,30px);
+  gap:.4em;margin:0;overflow:hidden;
+  padding:min(2.4vmin,22px) min(2.8vmin,26px) min(2.2vmin,20px);
   background:linear-gradient(180deg,var(--cmp-white-07),var(--cmp-white-02));
   border:1px solid var(--line-d);border-radius:var(--r-m);box-shadow:var(--sh-d)}
 .rc-item:nth-child(2){--d:.3s}
@@ -762,7 +782,7 @@ figure{margin:0}
 .rc-item:nth-child(5){--d:.75s}
 .rc-item:nth-child(6){--d:.9s}
 .rc-item::before{content:counter(rc,decimal-leading-zero);align-self:flex-start;display:inline-flex;
-  align-items:center;justify-content:center;min-width:2.4em;height:2.4em;padding:0 .5em;
+  align-items:center;justify-content:center;min-width:2.1em;height:2em;padding:0 .5em;
   border-radius:999px;border:1px solid var(--cmp-amber-45);background:var(--amber-wash-d);
   font-family:var(--mono);font-weight:700;color:var(--amber);font-size:clamp(16px,2vmin,26px);
   letter-spacing:.06em;line-height:1}
@@ -787,13 +807,15 @@ figure{margin:0}
 @keyframes rc-draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes rc-nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(7px)}}
 
-/* a short screen (1024 x 768): the boxes' own padding and gaps give way, never the words' size - six two-line recap
-   boxes put "Next: the module check" 9 px under the deck's chrome (IGF M02 s16, both 2026-10-20 benchmark runs) */
+/* a short screen (1024 x 768): the boxes' own padding, gaps and minimum height give way, never the words' size - six
+   two-line recap boxes put "Next: the module check" 9 px under the deck's chrome (IGF M02 s16, both 2026-10-20
+   benchmark runs). 2.60.0: the template's tighter 2.56.0 values (gb_layouts.css) are this one rule for every recap */
 @media (max-height:780px){
-  .slide-body.recap{gap:min(1.6vmin,14px)}
-  .rc-grid{gap:min(1.8vmin,16px)}
-  .rc-item{gap:.4em;padding:min(2.2vmin,20px) min(2.6vmin,24px) min(2vmin,18px)}
-  .rc-item::before{height:2em;min-width:2.1em}
+  .slide-body.recap{gap:min(1vmin,8px)}
+  .rc-grid{--h:min(12vmin,92px);gap:min(1.2vmin,10px)}
+  .rc-grid[data-n="3"]{--h:min(24vmin,184px)}
+  .rc-grid[data-n="4"]{--h:min(15vmin,116px)}
+  .rc-item{gap:.3em;padding:min(1.6vmin,13px) min(2.2vmin,18px) min(1.4vmin,11px)}
 }
 @media (max-width:900px){
   .rc-grid,.rc-grid[data-n="4"]{grid-template-columns:repeat(2,minmax(0,1fr))}

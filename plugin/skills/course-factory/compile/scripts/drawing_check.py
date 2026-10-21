@@ -266,6 +266,11 @@ def check(pages, root=None, cache=None, full=False):
                                  "column in the figure or an .inset - never on it; data-may-overlap does not excuse a photo)"
                                  % (name, f.get("where"), f.get("part"), f.get("other")))
                     continue
+                if f.get("check") == "inset":        # a photo laid "over" a kit drawing, its caption or credit on words or controls (2.60.0)
+                    probs.append("%s, %s: inset - %s: %s - %s (move \"over\" to a blank corner of the drawing, keep the credit "
+                                 "short, or put the photo beside the drawing: \"inset\" without \"over\")"
+                                 % (name, f.get("where"), f.get("part"), f.get("detail"), f.get("other")))
+                    continue
                 if f.get("check") == "empty":        # judged at the figure's busiest step; the finding names the blank piece (2.49.1)
                     probs.append("%s, %s: empty - %s: %s (see every step at once: course-visuals\\kit\\scripts\\studio.py "
                                  "<figure>.kit.json --step all)" % (name, f.get("where"), f.get("part"), f.get("detail")))

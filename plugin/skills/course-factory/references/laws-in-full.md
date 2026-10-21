@@ -495,9 +495,9 @@ already."*
 - A module's words fill its minutes; a self-check comes only after a block of new theory; every question's
   answer is in the slides the trainee has already seen; a module too short for a self-check has only its
   module check.
-- The numbers are in `knowledge/theory-rules.json` (50-150 words on a slide, 30 in the notes, 40 words per
-  theory minute, 10 min and 400 words before a self-check, 60 % of an answer's key words already taught)
-  and nowhere else. Every finding is shown on the review page; approval is refused while a must-fix one
+- The numbers are in `knowledge/theory-rules.json` (`slide`, `notes`, `module`, `before_self_check`,
+  `answers_taught_first`) and nowhere else - read them there; this text keeps none, because the owner has changed
+  them since (L49, 2026-10-15: shorter cycles before a self-check, words per minute over plain theory only). Every finding is shown on the review page; approval is refused while a must-fix one
   stands, unless the operator approves despite it (L26), which is recorded.
 - This refines `course-module-ux`'s compactness budgets: those govern the instructor's *working* screens
   during a session (runner cards, pre-flight), not a theory slide, which must carry the theory.

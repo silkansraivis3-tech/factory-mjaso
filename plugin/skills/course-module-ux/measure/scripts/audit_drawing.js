@@ -339,8 +339,13 @@
     var b = el.getBBox();
     if (tag(el) === "text") {
       /* SVG gives a label's box as its whole line (the em box); the letters themselves sit in about
-         the middle three-quarters - judged on that, a "1" in a badge or a word over a line is fair */
-      b = { x: b.x, y: b.y + 0.18 * b.height, width: b.width, height: 0.74 * b.height };
+         the middle three-quarters - judged on that, a "1" in a badge or a word over a line is fair.
+         2.60.0: the trim is one LINE's, not the block's - a four-line kit text lost a whole line's height off its foot
+         and its last line printed over the next text's first one unseen ("cool the liquid" over "no venting to
+         atmosphere", M01 benchmark s07; only the review sheet saw it) */
+      var rows = Math.max(1, qa(el, "tspan").filter(function (s) { return getComputedStyle(s).display !== "none"; }).length);
+      var lh = b.height / rows;
+      b = { x: b.x, y: b.y + 0.18 * lh, width: b.width, height: b.height - 0.26 * lh };
     }
     [[0, 0], [0.5, 0], [1, 0], [1, 0.5], [1, 1], [0.5, 1], [0, 1], [0, 0.5]].forEach(function (f) {
       pts.push(toScreen(el, b.x + f[0] * b.width, b.y + f[1] * b.height));
@@ -505,7 +510,11 @@
             var ox = Math.min(T.b.x + T.b.w, E.b.x + E.b.w) - Math.max(T.b.x, E.b.x);
             var oy = Math.min(T.b.y + T.b.h, E.b.y + E.b.h) - Math.max(T.b.y, E.b.y);
             var stacked = ox > 0 && oy <= 0;
-            var touch = stacked ? oy > 1 : (ox > -pad && oy > 1);
+            /* 2.60.0: that is so for the lines of ONE label (a valve's name and its state); two different labels stacked
+               may not meet either - "no venting to atmosphere" stood on "cool the liquid" (M01 benchmark s07) */
+            var lblT = T.el.closest ? T.el.closest(".kit-lbl") : null, lblE = E.el.closest ? E.el.closest(".kit-lbl") : null;
+            var apart = lblT && lblE && lblT !== lblE;
+            var touch = stacked ? (apart ? oy > -1 : oy > 1) : (ox > -pad && oy > 1);
             if (touch && (T.el.compareDocumentPosition(E.el) & 4)) {
               report(out, { check: "text zone", where: where, part: label(T.el), other: label(E.el),
                             detail: ox > 1 && oy > 1 ? "two labels print over each other" : "two labels touch" }, [T.el, E.el]);
@@ -786,6 +795,62 @@
              region: region, at: { x: res.x, y: res.y, w: res.w, h: res.h } };
   }
 
+  /* ---- INSET (2.60.0) ---- a real photo laid "over" a kit drawing (figure.inset.over in its .kit-holder) is not part of
+     the drawing: the kit places its labels without knowing it, so the photo, its caption and its credit lay over the
+     labels and ran past the drawing onto the step buttons (M01 benchmark s03: "Vent mast", "Bunkering station", Next /
+     Replay) - and every check was green, only the review sheet saw it. Each of the inset's boxes (the photo, every line
+     box of its caption) is judged against the drawing's shown words, against the controls, and against the drawing's
+     own box. */
+  function rectOf(r) { return { x: r.left, y: r.top, x2: r.right, y2: r.bottom }; }
+  function overlapPx(a, b) { return Math.min(Math.min(a.x2, b.x2) - Math.max(a.x, b.x), Math.min(a.y2, b.y2) - Math.max(a.y, b.y)); }
+  function checkInsets(svg, where, out) {
+    var holder = svg.parentElement;
+    if (!holder || !holder.querySelectorAll) { return; }
+    qa(holder, "figure.inset.over").forEach(function (fig) {
+      if (getComputedStyle(fig).display === "none") { return; }
+      var boxes = [];
+      qa(fig, "img").forEach(function (im) { var r = im.getBoundingClientRect(); if (r.width > 1 && r.height > 1) { boxes.push({ what: "the photo", r: rectOf(r) }); } });
+      qa(fig, "figcaption").forEach(function (fc) {
+        var rg = document.createRange();
+        rg.selectNodeContents(fc);
+        Array.prototype.forEach.call(rg.getClientRects(), function (r) {
+          if (r.width > 1 && r.height > 1) { boxes.push({ what: "its caption", r: rectOf(r) }); }
+        });
+      });
+      if (!boxes.length) { return; }
+      var name = "inset photo" + (fig.querySelector("img") && fig.querySelector("img").getAttribute("src") ?
+                 " " + fig.querySelector("img").getAttribute("src").split("/").pop() : "");
+      var seen = {};
+      function add(other, what, detail, els) {
+        var k = other + "|" + what;
+        if (seen[k]) { return; }
+        seen[k] = 1;
+        report(out, { check: "inset", where: where, part: name, other: other, detail: what + " " + detail }, els);
+      }
+      qa(svg, "text").forEach(function (t) {
+        if (!shown(t, svg) || !(t.textContent || "").trim()) { return; }
+        var tr = rectOf(t.getBoundingClientRect());
+        boxes.forEach(function (b) {
+          if (overlapPx(b.r, tr) > 1) { add(label(t), b.what, "lies over the drawing's words", [fig, t]); }
+        });
+      });
+      var slide = svg.closest ? (svg.closest(CONFIG.slideSel) || document.body) : document.body;
+      qa(slide, "button, [data-act], .mediabar").concat(qa(document, "#chrome")).forEach(function (c) {
+        if (fig.contains(c) || getComputedStyle(c).display === "none") { return; }
+        var cr = c.getBoundingClientRect();
+        if (cr.width < 1 || cr.height < 1) { return; }
+        boxes.forEach(function (b) {
+          if (overlapPx(b.r, rectOf(cr)) > 1) {
+            add(c.id ? "#" + c.id : (c.getAttribute("aria-label") || c.getAttribute("data-act") || tag(c)), b.what, "lies over a control", [fig, c]);
+          }
+        });
+      });
+      var sr = rectOf(svg.getBoundingClientRect()), past = 0;
+      boxes.forEach(function (b) { past = Math.max(past, sr.x - b.r.x, sr.y - b.r.y, b.r.x2 - sr.x2, b.r.y2 - sr.y2); });
+      if (past > CONFIG.tolPx) { add("the edge of the drawing", "it", "runs " + Math.round(past) + " px past the drawing", [fig]); }
+    });
+  }
+
   function checkPictures(root, where, out, stop) {
     qa(root, "img, canvas, video").forEach(function (el) {
       if (getComputedStyle(el).display === "none" || el.closest(".photo-wrap")) { return; }   /* a full-bleed photo crops by design */
@@ -988,7 +1053,10 @@
     if (ab) { return verdict(ab); }
     resetEmpty();
     var out = [], svgs = qa(document, "svg").filter(function (s) { return !s.ownerSVGElement && shown(s, s); });
-    svgs.forEach(function (s, i) { checkSvg(s, "drawing " + (i + 1) + (s.id ? " #" + s.id : ""), out, document.body); });
+    svgs.forEach(function (s, i) {
+      checkSvg(s, "drawing " + (i + 1) + (s.id ? " #" + s.id : ""), out, document.body);
+      checkInsets(s, "drawing " + (i + 1) + (s.id ? " #" + s.id : ""), out);
+    });
     checkPictures(document.body, "page", out, document.body);
     return verdict({ drawings: svgs.length, findings: out });
   }
@@ -1013,6 +1081,7 @@
             .forEach(function (v) {
               count++;
               checkSvg(v, where, out, s);
+              checkInsets(v, where, out);
               /* a figure that steps is judged at the end of every step too (2.48.0): an alarm row, a lit label or a moved
                  part that only appears in step 3 was never on screen when the deck was checked at step 0 */
               var f = v.__kit;
@@ -1023,6 +1092,7 @@
                 f.go(k, true);
                 var more = [];
                 checkSvg(v, where + " step " + k, more, s);
+                checkInsets(v, where + " step " + k, more);
                 more.forEach(function (x) {
                   var key = x.check + "|" + x.part + "|" + (x.other || "");
                   if (!seen[key]) { seen[key] = 1; out.push(x); }

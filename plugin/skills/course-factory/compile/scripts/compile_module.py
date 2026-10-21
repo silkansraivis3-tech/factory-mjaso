@@ -547,6 +547,17 @@ def fitted(figdir, name, text, key, sid):
     return json.dumps(rec.get("spec"), ensure_ascii=False)
 
 
+def kit_svg_attrs(spec, view=None):
+    """what kit.js sets on its drawing when it draws - role, the spec's label, the viewBox - already in the page (2.60.0):
+    check_visuals.py reads the page as written and warned 22-79 times a module on the empty <svg data-kit>"""
+    try:
+        vb = [float(v) for v in (view or spec.get("view") or [0, 0] + list(spec.get("size") or [])[:2])]
+    except (TypeError, ValueError):
+        vb = []
+    return ' role="img" aria-label="%s"%s' % (html.escape(spec.get("label") or "", quote=True),
+                                               ' viewBox="%s"' % " ".join("%g" % v for v in vb) if len(vb) == 4 else "")
+
+
 def kit_figure(text, s, probs, where):
     """a figure made from the figure kit (course-visuals/kit): its spec goes into the page as it is, and
     kit.js draws it there. The step buttons are the deck's own .mediabar. course-visuals/kit/scripts/
@@ -564,7 +575,7 @@ def kit_figure(text, s, probs, where):
     sid = "kit-" + s["id"]
     data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     out = ['<div class="fill fig kit-fig" data-kit-scope>',
-           '<div class="kit-screen"><svg data-kit="#%s"></svg></div>' % sid,
+           '<div class="kit-screen"><svg data-kit="#%s"%s></svg></div>' % (sid, kit_svg_attrs(spec)),
            '<script type="application/json" id="%s">%s</script>' % (sid, data)]
     if spec.get("steps"):
         chev = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="%s"/></svg>'
@@ -576,6 +587,17 @@ def kit_figure(text, s, probs, where):
                    % (chev % "M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z", chev % "M8.6 16.6 10 18l6-6-6-6-1.4 1.4L13.2 12z"))
     out.append("</div>")
     return "".join(out)
+
+
+# 2.60.0 - a 3D scene's control hint ("Drag to turn - tap a part to look closer") is the scene's own words for the screen,
+# not the script's: its holder [data-hint] is marked data-script-ignore as the figure goes in, so check_script_match counts
+# it instead of failing the build (IGF M05 s06, M13 s07, M15 s05 - each builder marked it by hand after a FAIL)
+HINT_TAG = re.compile(r"<([a-zA-Z][\w-]*)(\s[^>]*?\bdata-hint\b[^>]*)>")
+
+
+def hint_ignored(page):
+    return HINT_TAG.sub(lambda m: m.group(0) if "data-script-ignore" in m.group(2)
+                        else "<%s data-script-ignore%s>" % (m.group(1), m.group(2)), page)
 
 
 def figure_html(mdir, figdir, s, b, probs, where):
@@ -602,7 +624,7 @@ def figure_html(mdir, figdir, s, b, probs, where):
         return kit_figure(body, s, probs, where), "", False
     if body is not None:
         credits = []
-        page = photos_in(body, mdir, probs, where, credits)
+        page = hint_ignored(photos_in(body, mdir, probs, where, credits))
         return page, b.get("credit") or fragment_credit(page, credits), False
     meta = photo_meta(mdir, rel)
     alt = b.get("alt") or first_sentence(s.get("visual")) or first_sentence(meta.get("description"))
@@ -1262,7 +1284,7 @@ FILL_BOX = re.compile(r'\s*<\w+\b[^>]*\bclass="[^"]*\bfill\b')
 OWN_BOX = re.compile(r'\s*<div class="fill fig\b')            # the compiler's own column (fill(), a kit figure)
 
 
-KIT_SCREEN = re.compile(r'<div class="kit-screen">(<svg data-kit="#([\w-]+)"></svg>)</div>')
+KIT_SCREEN = re.compile(r'<div class="kit-screen">(<svg data-kit="#([\w-]+)"[^>]*></svg>)</div>')
 
 
 def over_figure(fig, inset, over, probs, where):
@@ -1815,6 +1837,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if photo_col:                      # the photograph is cropped to its column, which has the slide's height
             box = box.replace('class="fill fig"', 'class="fill fig photo-col"', 1)
             cls += " photo-col"
+            if credit_html:                # 2.60.0 - its credit is a strip at the column's foot, under the photo: the photo
+                # crops a little, the words beside it lose nothing (IGF M15 s01 / s06: a three-line credit under the slide
+                # made 108-133 words spill at 1024 x 768)
+                head_, tail_ = box.rsplit("</div>", 1)
+                box, credit_html = head_ + credit_html.strip() + "</div>" + tail_, ""
         if tid == "content-in-parts":
             ranges = line_ranges(b.get("parts"), len(lines)) if b.get("parts") else None
             if b.get("parts") and not ranges:
@@ -1907,7 +1934,9 @@ def starter_scene(script, sid, scripts):
             scripts.append(x)
     return {"figure": "%s_%s_3d.html" % (m, sid),
             "_figure": ("A 3D scene, planned by default (L46). Write the figure working_claude\\figures\\%s\\%s_%s_3d.html - a "
-                        "[data-stage] holder and a flat fallback drawing - and the scene %s, built like IGF M03's "
+                        "[data-stage] holder, a flat fallback drawing and, if the scene says how to use it, an empty "
+                        "<div data-hint></div> its script fills (the compile marks it data-script-ignore: the control hint is "
+                        "not script words); no class of the module's own that no rule styles - and the scene %s, built like IGF M03's "
                         "m03_station3d.js (compile GUIDE 2b): one shared renderer, the scene built while the slide before is "
                         "on screen (its GB_HOOKS), window.__noPrepare and window.__scene3d for perf3d.mjs, a tap highlights a "
                         "part; first frame under 1 s at 4x CPU (measure GUIDE 2b). three.min.js (r128) is the factory's - the compile puts it in assets\\vendor\\. "

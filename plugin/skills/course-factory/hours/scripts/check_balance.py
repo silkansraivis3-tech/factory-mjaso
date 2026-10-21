@@ -67,6 +67,7 @@ import re
 import sys
 from pathlib import Path
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 SLIDE = re.compile(r"<section[^>]*\bclass=[\"'][^\"']*\bslide\b[^\"']*[\"'][^>]*>", re.I)
 PRACTICE_KINDS = {"practical", "practical-run", "task", "activity-launch", "assessment",
                   "drill", "check", "marking"}

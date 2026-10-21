@@ -75,6 +75,7 @@ import pathlib
 import re
 import sys
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 STOP = set("""a an the and or but if of in on at to for from by with without as is are was were
 be been being it its this that these those there here what which who whom whose when where why
 how all any both each few more most other some such no nor not only own same so than too very

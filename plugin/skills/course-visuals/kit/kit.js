@@ -66,6 +66,16 @@
     fig.labels.push(L);
     return w;
   }
+  /* a part's own words go and come back with what it draws (2.60.0): a fire that is out takes its name with it - "gas
+     burning at the mast" stood beside a mast with no flame (IGF M05 s10, M06 s12, M11 s08, M13 s02 / s04). Opacity, never
+     display: the words keep their place, so the layout and the steps where they show are unchanged. */
+  function gone(w, out) {
+    if (!w) return;
+    var o = out ? '0' : '';
+    w.style.opacity = o;
+    w.__kitFade = out ? '0' : null;
+    if (w.__kitLeader) w.__kitLeader.style.opacity = o;
+  }
   /* the width of the widest of these words in a text element as it is styled (restores what it said) */
   function widest(t, words) {
     var keep = t.textContent, w = 0;
@@ -720,12 +730,15 @@
     var dx = Math.max(0, b.x - a.x2, a.x - b.x2), dy = Math.max(0, b.y - a.y2, a.y - b.y2);
     return Math.sqrt(dx * dx + dy * dy);
   }
-  /* a label's words as the drawing audit judges them: the letters, the middle three-quarters of the line box */
+  /* a label's words as the drawing audit judges them: the letters, the middle three-quarters of the line box - of ONE
+     line (2.60.0): trimmed by the whole block, a four-line text lost a line's height and its last line was laid over the
+     next text's first (M01 benchmark s07, "cool the liquid" over the venting caption) */
   function textBox(t, M) {
     var b;
     try { b = t.getBBox(); } catch (e) { return null; }
     if (!b || (!b.width && !b.height)) return null;
-    var y = b.y + 0.18 * b.height, h = 0.74 * b.height;
+    var rows = Math.max(1, q(t, 'tspan').filter(function (s) { return s.style.display !== 'none'; }).length), lh = b.height / rows;
+    var y = b.y + 0.18 * lh, h = b.height - 0.26 * lh;
     return boxOf([onto(M, b.x, y), onto(M, b.x + b.width, y), onto(M, b.x, y + h), onto(M, b.x + b.width, y + h)]);
   }
   function outline(n, M) {
@@ -1870,7 +1883,7 @@
 
   /* log - the alarm list: newest on top, time-stamped, flashing until it settles */
   TYPES.log = function (fig, part, g, p) {
-    var w = p.w || 560, rows = p.rows || 2, rh = 24, k = 1, tx = 94, two = {}, lines2 = false;
+    var w = p.w || 560, rows = p.rows || 2, rh = 24, k = 1, tx = 94, two = {}, lines2 = false, msgY = 15.5;
     var box = el('rect', { width: w, height: 32 + rows * rh, rx: 10, 'class': 'kit-logbox' }, g);
     var head = el('text', { x: 14, y: 20, 'class': 'kit-tl' }, g, p.label || 'ALARM LOG');
     var body = el('g', { transform: 'translate(0 29)' }, g);
@@ -1909,7 +1922,21 @@
         }
       });
       g.removeChild(probe);
-      rh = (8 + 16 * lines2) * k;
+      /* 2.60.0: a row of several lines is as tall as its words MEASURED, with 7 above and below them, and they sit in its
+         middle - 16 a line fell behind the words once they grew to the 12.5 px floor: a three-line alarm stood 4 px under
+         the row's top, a narrow log's six-to-eight-line one on its foot (0-1 px). The drawing audit's old whole-block trim
+         hid both; it measures one line's letters now. A one-line row is as it was. */
+      rh = (8 + 16 * lines2) * k; msgY = 15.5 * k;
+      if (lines2 > 1) {
+        var pg = el('g', { 'aria-hidden': 'true' }, g), pb;          // lines2 rows of tall and deep letters, as styled
+        lines(pg, { x: 0, y: 0, 'class': 'kit-msg' }, new Array(lines2 + 1).join('Hg\n').slice(0, -1));
+        try { pb = pg.getBBox(); } catch (e) { pb = null; }
+        g.removeChild(pg);
+        if (pb && pb.height) {
+          rh = Math.max(rh, pb.height + 14 * k + 3);
+          msgY = (rh - 3 - pb.height) / 2 - pb.y;
+        }
+      }
       box.setAttribute('height', 32 * k + rows * rh);
       head.setAttribute('y', 20 * k);
       body.setAttribute('transform', 'translate(0 ' + (29 * k) + ')');
@@ -1923,10 +1950,10 @@
         var row = el('g', { 'class': 'kit-row kit-' + a.kind + (a === newest ? ' kit-new' : '') }, at);
         el('rect', { width: w - 16, height: rh - 3, rx: 5 }, row);
         el('rect', { width: 5, height: rh - 3, rx: 2, 'class': 'kit-sev' }, row);
-        el('text', { x: 16, y: 15.5 * k, 'class': 'kit-time' }, row, clock(fig, a.t));
+        el('text', { x: 16, y: msgY, 'class': 'kit-time' }, row, clock(fig, a.t));       // on the message's first line
         /* a wrapped alarm keeps the space it was broken at: lines() puts an undrawn space between rows, so "HIGH PRESSURE"
            over "ALARM" reads "HIGH PRESSURE ALARM" to a screen reader and to the drawing audit (K11, 2.49.1) */
-        lines(row, { x: tx, y: 15.5 * k, 'class': 'kit-msg' }, two[a.text] ? two[a.text].join('\n') : a.text);
+        lines(row, { x: tx, y: msgY, 'class': 'kit-msg' }, two[a.text] ? two[a.text].join('\n') : a.text);
       });
     };
   };
@@ -2068,7 +2095,7 @@
     mount: mount, controls: controls, Figure: Figure, types: TYPES, define: define, local: LOCAL, added: ADDED,
     reducedMotion: reducedMotion,
     /* the drawing helpers every part uses - a new part uses these too, never its own */
-    h: { el: el, lines: lines, label: label, widest: widest, readings: readings, clamp: clamp, num: num, fmt: fmt, polar: polar, arc: arc,
+    h: { el: el, lines: lines, label: label, gone: gone, widest: widest, readings: readings, clamp: clamp, num: num, fmt: fmt, polar: polar, arc: arc,
          flagMark: flagMark, textWidth: textWidth, NS: NS,
          /* physical equipment in its material, its light and shade, its flanges (2.52.0, L62) */
          equip: equip, body: body, reshape: reshape, flange: flange },
@@ -2972,11 +2999,12 @@ KIT.define('flame', function (fig, part, g, p) {
   h.el('path', { d: tongue(1, 0, 0.12), 'class': 'kit-flame-outer kit-m-fire', 'data-may-cross': '', 'data-no-contain': '' }, body);
   h.el('path', { d: tongue(0.55, 0, 0.06), 'class': 'kit-flame-core', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, body);   // the hot core inside the flame: its outer tongue carries the contrast
   h.el('ellipse', { cx: 0, cy: -s * 0.04, rx: s * 0.2, ry: s * 0.08, 'class': 'kit-flame-root', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, body);
-  if (p.label) h.label(fig, g, { x: s * 0.6, y: -s * 0.6, 'class': 'kit-cap' }, p.label);
+  var lb = p.label ? h.label(fig, g, { x: s * 0.6, y: -s * 0.6, 'class': 'kit-cap' }, p.label) : null;
   part.render = function (v) {
     var k = h.clamp(v, 0, 1);
     grow.setAttribute('transform', 'scale(' + Math.max(k, 0.001).toFixed(3) + ')');
     grow.style.opacity = k > 0.02 ? '1' : '0';
+    h.gone(lb, k <= 0.02);
     g.classList.toggle('kit-flame-on', k > 0.05);
   };
 }, {
@@ -3880,6 +3908,7 @@ KIT.define('fire', function (fig, part, g, p) {
     var k = h.clamp(v, 0, 1);
     grow.setAttribute('transform', jet ? 'scale(' + Math.max(k, 0.001).toFixed(3) + ' ' + (0.5 + 0.5 * k).toFixed(3) + ')' : 'scale(1 ' + Math.max(k, 0.001).toFixed(3) + ')');
     grow.style.opacity = k > 0.02 ? '1' : '0';
+    if (!st) h.gone(lg, k <= 0.02);                // with a state line its words stay: "OUT" is what it says then
     g.classList.toggle('kit-fire-on', k > 0.05);
     if (st) st.textContent = k > 0.05 ? 'BURNING' : 'OUT';
   };
@@ -4675,11 +4704,12 @@ KIT.define('spark', function (fig, part, g, p) {
     [[0, 0], to].forEach(function (c) { h.body('circle', { cx: c[0], cy: c[1], r: 5.5 }, eqe, { mat: 'steel', shade: 'round' }); });
     cx = to[0] / 2; cy = to[1] / 2;
   }
-  if (p.label) h.label(fig, g, { x: cx, y: cy - (fric ? 44 : 26), 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  var lb = p.label ? h.label(fig, g, { x: cx, y: cy - (fric ? 44 : 26), 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label) : null;
   part.render = function (v) {
     var k = h.clamp(v, 0, 1);
     burst.setAttribute('transform', 'translate(' + cx + ' ' + cy + ') scale(' + (0.4 + 0.6 * k).toFixed(3) + ') translate(' + (-cx) + ' ' + (-cy) + ')');
     burst.style.opacity = k > 0.02 ? '1' : '0';
+    h.gone(lb, k <= 0.02);
     g.classList.toggle('kit-spark-on', k > 0.05);
   };
 }, {

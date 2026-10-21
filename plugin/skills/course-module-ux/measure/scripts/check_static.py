@@ -30,6 +30,7 @@ import re
 import sys
 from html.parser import HTMLParser
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = os.path.dirname(os.path.abspath(__file__))
 FLOOR_PATH = os.path.join(HERE, os.pardir, "knowledge", "floor.json")
 

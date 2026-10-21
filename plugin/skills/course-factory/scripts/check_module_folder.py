@@ -8,6 +8,7 @@ classroom system's own rules (L45) - check_course_package.py does it, and ends w
 import os
 import sys
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import check_course_package  # noqa: E402
 

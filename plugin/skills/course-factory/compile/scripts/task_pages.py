@@ -660,8 +660,8 @@ def kit_fig(q, b, text, rel, probs, where, bands, side=0.0, fit=False):
 
     def make(shared, uid):
         sid = "kit-task-" + uid
-        return ('<svg class="taskfig" data-kit="#%s" data-kit-step="%d"%s></svg><script type="application/json" id="%s">%s</script>'
-                % (sid, n, ' data-fig="%s"' % a(name) if shared else "", sid, data))
+        return ('<svg class="taskfig" data-kit="#%s" data-kit-step="%d"%s%s></svg><script type="application/json" id="%s">%s</script>'
+                % (sid, n, ' data-fig="%s"' % a(name) if shared else "", cm.kit_svg_attrs(spec), sid, data))
     fig = Fig("kit", name, vb, make, parts=names, ids=ids + list(places))
     fig.spec_parts = parts
     fig.places = places
@@ -909,9 +909,9 @@ def kit_symbol(sid, n, states, start, control=""):
         size = [200, 100]
     spec = {"size": size, "parts": [part]}
     sid_ = "kit-%s-%d" % (sid, n)
-    return ('<svg class="csym%s" data-kit="#%s" data-no-zoom aria-hidden="true"></svg>'
+    return ('<svg class="csym%s" data-kit="#%s" viewBox="0 0 %d %d" data-no-zoom aria-hidden="true"></svg>'
             '<script type="application/json" id="%s">%s</script>'
-            % (" tall" if kind == "button" else "", sid_, sid_, json.dumps(spec, separators=(",", ":"))))
+            % (" tall" if kind == "button" else "", sid_, size[0], size[1], sid_, json.dumps(spec, separators=(",", ":"))))
 
 
 # 2.46.0 - a label box is as wide as its words need. The 17 % box cut off "Tank connection space" once the tick
@@ -1405,7 +1405,10 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
     head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in PAGE_CSS + (("gb_zoom.css",) if pictures else ()) + (("kit.css",) if kit else ())]
     head.append("</head>")
     first = try_screen(w) if try_tablet else intro_screen(slide, short, len(qs), pass_mark, w) if is_check else ""
-    body = ['<body data-code="%s" data-title="%s" data-pass="%d">' % (a(code), a(short), pass_mark),
+    # 2.60.0 - a final assessment variant (FA, FB) is blind: the engine records each answer and moves on, and shows only
+    # the score at the end - no right answer, no why, no verdict between questions (L27/L45; the module check is unchanged)
+    blind = ' data-blind="1"' if cm.FINAL_SET.match(code or "") else ""
+    body = ['<body data-code="%s" data-title="%s" data-pass="%d"%s>' % (a(code), a(short), pass_mark, blind),
             '<a class="gbt-topback" href="#"><span class="gbt-ico">&#9664;</span> %s</a>' % e(w["back"]), ""]
     if team:                                            # filled by the engine from the classroom's gb-team
         body += ['<div class="teambar" id="teamBar" hidden><span class="tname" id="teamName"></span><span class="trole" id="teamRole">'

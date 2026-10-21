@@ -102,6 +102,35 @@ def good_course(c):
     w(os.path.join(f2, "assets", "final.css"), "x")
 
 
+def docs_part():
+    """2.60.0 - what the rules say about the classroom agrees with the classroom: the L27 row and L45 on the module check,
+    L36's numbers only in theory-rules.json, the read-me's version, and the way a course reaches the tablets"""
+    print("\n-- 2.60.0: the docs say what the factory does")
+    import json
+    import re
+    def text(*p):
+        return io.open(os.path.join(*p), encoding="utf-8").read()
+    skill = text(SKILLS, "course-factory", "SKILL.md")
+    l27 = next((x for x in skill.splitlines() if x.startswith("| **L27**")), "")
+    check("the SKILL.md L27 row says the module check shows PASSED or NOT PASSED (L45), not 'never pass/fail'",
+          "PASSED or NOT PASSED" in l27 and "never pass/fail" not in l27, l27)
+    laws = text(SKILLS, "course-factory", "references", "laws-in-full.md")
+    l36 = laws[laws.find("**L36 "):laws.find("**L37 ")]
+    check("laws-in-full L36 sends the reader to theory-rules.json and repeats none of its numbers",
+          "theory-rules.json" in l36 and not re.search(r"\d+ words per|\d+-\d+ words on a slide|\d+ min and \d+ words", l36), l36[-700:])
+    plugin = os.path.join(os.path.dirname(SKILLS), ".claude-plugin", "plugin.json")
+    version = json.load(io.open(plugin, encoding="utf-8"))["version"]
+    readme = text(os.path.dirname(os.path.dirname(SKILLS)), "00_READ_ME_FIRST.md")
+    check("00_READ_ME_FIRST.md names the plugin's own version (%s)" % version, "`course-factory` %s " % version in readme.splitlines()[2],
+          readme.splitlines()[2])
+    raw = text(SKILLS, "course-tablet-publisher", "knowledge", "platform.json")
+    note = (re.search(r'"_default_branch_note":\s*("(?:[^"\\]|\\.)*")', raw) or re.search("()", "")).group(1)
+    note = json.loads(note) if note else ""
+    pub = text(SKILLS, "course-tablet-publisher", "SKILL.md")
+    check("the publisher says a course reaches the tablets through the admin '+' and the assets\\ pull request is legacy",
+          "LEGACY" in note and "'+' upload" in note and "LEGACY for courses" in pub and "**+** upload" in pub, note)
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="cp_")
     try:
@@ -350,6 +379,7 @@ def main():
                   "the classroom's importer changed - copy it again: %s -> %s" % (ORIGINAL, VENDOR))
         else:
             check("(the classroom system is not on this computer - the copy cannot be compared here)", os.path.isfile(VENDOR))
+        docs_part()
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n" + "=" * 72)

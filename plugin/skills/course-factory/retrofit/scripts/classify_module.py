@@ -36,6 +36,7 @@ import re
 import sys
 from pathlib import Path
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = Path(__file__).resolve().parent
 SPEC = json.loads((HERE.parent / "knowledge" / "classify.json").read_text(encoding="utf-8"))
 

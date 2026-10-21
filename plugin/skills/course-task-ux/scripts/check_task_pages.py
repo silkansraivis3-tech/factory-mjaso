@@ -48,6 +48,7 @@ import subprocess
 import sys
 import tempfile
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 FLOOR_TEXT_PX = 12.5
 FLOOR_TAP_PX = 44.0
 

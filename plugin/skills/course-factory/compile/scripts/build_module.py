@@ -300,7 +300,7 @@ def main(argv=None):
     # every compile problem a drawing finding - the figures above again, or a task page's figure judged here: still a
     # figures-only build (2.56.0). Judged on the whole list, before the figures' repeats are taken out of it
     drawing_only = ccode == 1 and bool(probs) and all(re.search(r"\b(empty|text zone|inside|cut off|small text|label|contrast|"
-                                                                r"photo over drawing|scrolls)\b", x) for x in probs)
+                                                                r"photo over drawing|scrolls)\b|: inset - ", x) for x in probs)
     shown = figure_slides(fig_text)
     probs = [x for x in probs if not any(re.search(r"\(%s\)[ :]" % re.escape(s), x) and re.search(r"\b(empty|text zone|inside|"
                                                                                                     r"cut off|small text|label|contrast)\b", x)
