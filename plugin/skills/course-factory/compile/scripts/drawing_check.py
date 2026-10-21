@@ -32,6 +32,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -40,12 +41,14 @@ AUDIT = os.path.join(SKILLS, "course-module-ux", "measure", "scripts", "audit_dr
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "scripts"))
 from measure_slides import find_browser  # noqa: E402
 import browser_slots  # noqa: E402
+import cf_timing  # noqa: E402
 import check_cache  # noqa: E402
 
 SIZE = (1280, 800)
 OUT = "__audit_out"
 KEEP = ("check", "where", "part", "other", "detail")
-WRITE = ("function __done(r){var p=document.createElement('pre');p.id='%s';p.textContent=JSON.stringify(r);"
+# r.virt: the page's own clock at the end (virtual ms under the budget) - cf_timing.py sets it beside the real seconds
+WRITE = ("function __done(r){r.virt=Math.round(performance.now());var p=document.createElement('pre');p.id='%s';p.textContent=JSON.stringify(r);"
          "document.body.appendChild(p);}"
          "function __keep(f,pre){return {check:f.check,where:(pre||'')+f.where,part:f.part,other:f.other||'',detail:f.detail||''};}" % OUT)
 # a deck: every slide in turn, as the deck shows it (audit_drawing.js all() presses Start). 2.56.0: a long deck is checked
@@ -146,20 +149,25 @@ def run_page(exe, page, prof, tmp, keep=None):
     deck = is_deck(page)
     w = os.path.join(tmp, "check_%d_%s.html" % (abs(hash(page)), "-".join(map(str, keep[:1] + keep[-1:])) if keep else "all"))
     io.open(w, "w", encoding="utf-8").write(wrapper(page, deck, keep))
+    t0 = time.time()
     try:
-        p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--mute-audio",
-                               "--user-data-dir=" + prof, "--allow-file-access-from-files", "--window-size=%d,%d" % window_for(exe),
-                               "--virtual-time-budget=%d" % (120000 if deck else 8000), "--dump-dom", Path(w).as_uri()],
-                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
+        with browser_slots.slot():
+            t1 = time.time()
+            p = subprocess.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--mute-audio",
+                                "--user-data-dir=" + prof, "--allow-file-access-from-files", "--window-size=%d,%d" % window_for(exe),
+                                "--virtual-time-budget=%d" % (120000 if deck else 8000), "--dump-dom", Path(w).as_uri()],
+                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
     except (OSError, subprocess.TimeoutExpired) as err:
         return {"error": str(err)}
     m = re.search(r'<pre id="%s">(.*?)</pre>' % OUT, p.stdout, re.S)
-    if not m:
-        return {"error": "the page did not finish loading in the hidden browser"}
     try:
-        return json.loads(html.unescape(m.group(1)))
+        res = json.loads(html.unescape(m.group(1))) if m else {"error": "the page did not finish loading in the hidden browser"}
     except ValueError:
-        return {"error": "the probe's answer could not be read"}
+        res = {"error": "the probe's answer could not be read"}
+    cf_timing.note("drawing_check", "%s %s" % (os.path.basename(os.path.dirname(page)) + "/" + os.path.basename(page),
+                                               "slides %d-%d (%d)" % (keep[0] + 1, keep[-1] + 1, len(keep)) if keep else "whole"),
+                   time.time() - t1, queued=round(t1 - t0, 3), virt=res.get("virt"), drawings=res.get("drawings"))
+    return res
 
 
 def jobs_for(n):

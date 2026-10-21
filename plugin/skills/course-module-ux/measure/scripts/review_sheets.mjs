@@ -19,7 +19,7 @@
  * Exit 0 sheets made and every answer graded as expected; 1 an answer graded wrongly; 2 could not run.
  */
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { join, resolve, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -32,6 +32,14 @@ if (pos.length !== 2) { console.error('usage: node review_sheets.mjs <module fol
 const MDIR = resolve(pos[0]), OUT = resolve(pos[1]);
 const W = Number(opt.w || 1280), H = Number(opt.h || 800);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+/* 2.61.0 - CF_TIMING=<file.jsonl>: each slide, task page and the sheets write their real seconds there (cf_timing.py adds
+   them up); `slept` is the part of it spent in fixed waits */
+let slept = 0;
+const pause = ms => { slept += ms; return sleep(ms); };
+function note(what, t0, extra) {
+  if (!process.env.CF_TIMING) return;
+  try { appendFileSync(process.env.CF_TIMING, JSON.stringify(Object.assign({ tool: 'review_sheets', what, wall: (Date.now() - t0) / 1000, at: Date.now() / 1000, pid: process.pid }, extra || {})) + '\n'); } catch {}
+}
 
 function findChrome(explicit) {
   const c = [explicit, process.env.CF_BROWSER, process.env.CHROME_PATH].filter(Boolean);
@@ -79,7 +87,7 @@ async function load(url) {
   await send('Page.navigate', { url });
   await Promise.race([loaded, sleep(20000)]);
   await evaluate('document.fonts ? document.fonts.ready.then(() => 1) : 1');
-  await sleep(250);
+  await pause(250);
 }
 async function shot(height) {
   const r = await send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width: W, height: height || H, scale: 1 }, captureBeyondViewport: false });
@@ -98,12 +106,13 @@ async function deck(tiles) {
   if (!existsSync(page)) return;
   await load(pathToFileURL(page).href);
   await evaluate(`(function(){ var b=document.getElementById('startBtn'); if(b) b.click(); return 1; })()`);
-  await sleep(500);
+  await pause(500);
   /* one picture per slide, a stepping figure at its LAST step - its fullest state, as the round-1 review looked at it;
      the drawing check (L54) already judges every step by measurement */
   const seen = new Set();
+  let ts = Date.now();
   for (let n = 0; n < 400; n++) {
-    await sleep(160);
+    await pause(160);
     const st = await evaluate(`(function(){ var s=document.querySelector('.slide.active'); if(!s) return null;
       var k=s.querySelector('svg[data-kit]'), f=k&&k.__kit; var all=[].slice.call(document.querySelectorAll('.slide'));
       if (f && f.steps && f.steps()) { try { f.go(f.steps(), true); } catch(e){} }
@@ -111,18 +120,20 @@ async function deck(tiles) {
                last: !!(document.getElementById('btnNext')||{}).disabled }; })()`);
     if (!st) break;
     if (seen.has(st.id)) {                      // still on it (a step was taken): its picture is retaken at this later state
-      await evaluate(SETTLE); await sleep(140); await evaluate(SETTLE);
+      await evaluate(SETTLE); await pause(140); await evaluate(SETTLE);
       const t = tiles.find(x => x.id === 'deck/' + st.id);
       if (t) t.png = await shot();
+      note('deck ' + st.id + ' (step)', ts); ts = Date.now();
       if (st.last) break;
       await evaluate(`(function(){ var b=document.getElementById('btnNext'); if(b && !b.disabled) b.click(); return 1; })()`);
       continue;
     }
-    if (!seen.size) await sleep(900);           // the first slide fades in after Start
+    if (!seen.size) await pause(900);           // the first slide fades in after Start
     seen.add(st.id);
     await evaluate(`Promise.all([].slice.call(document.images).map(function(i){ return i.complete ? 1 : new Promise(function(r){ i.onload = i.onerror = r; setTimeout(r, 3000); }); })).then(function(){ return 1; })`);
-    await evaluate(SETTLE); await sleep(140); await evaluate(SETTLE);
+    await evaluate(SETTLE); await pause(140); await evaluate(SETTLE);
     tiles.push({ id: 'deck/' + st.id, label: `Deck slide ${st.i}/${st.of} (${st.id}) ${st.title}` + (st.steps ? ` - figure at its last step (${st.steps})` : ''), png: await shot() });
+    note('deck ' + st.id, ts); ts = Date.now();
     if (st.last) break;
     await evaluate(`(function(){ var b=document.getElementById('btnNext'); if(b && !b.disabled) b.click(); return 1; })()`);
   }
@@ -277,7 +288,7 @@ async function tasks(tiles, failures) {
     for (const f of readdirSync(dir).sort()) if (f.endsWith('.html') && !/answer_key/i.test(f)) pages.push(join(dir, f));
   }
   for (const page of pages) {
-    const url = pathToFileURL(page).href, name = basename(page);
+    const url = pathToFileURL(page).href, name = basename(page), tp = Date.now(), sp = slept;
     await load(url);
     await evaluate(DRIVER);
     const ids = await evaluate('__rv.ids()');
@@ -285,15 +296,15 @@ async function tasks(tiles, failures) {
     for (const good of [false, true]) {
       if (good) { await load(url); await evaluate(DRIVER); }
       await evaluate('__rv.start()');
-      await sleep(200);
+      await pause(200);
       for (let n = 0; n < ids.length; n++) {
         const q = await evaluate('__rv.current()');
         if (!q) break;
-        await evaluate(SETTLE); await sleep(150); await evaluate(SETTLE);
+        await evaluate(SETTLE); await pause(150); await evaluate(SETTLE);
         if (!good) for (const x of await evaluate('__rv.leaders()')) failures.push(`${name} ${q}: ${x}`);
         if (opt.asked && good) tiles.push({ id: `${name}/${q}/asked`, label: `${name} ${q} - as asked`, png: await shot() });
         const r = await evaluate(`__rv.answer(${good})`);
-        await sleep(220); await evaluate(SETTLE); await sleep(80);
+        await pause(220); await evaluate(SETTLE); await pause(80);
         if (!good) await evaluate('__rv.overlay(true)');      // the tap areas and drop zones, outlined on the wrong-answer screen
         if (r.error) {
           failures.push(`${name} ${q}: answered ${good ? 'right' : 'wrong'} by the script - ${r.error}`);
@@ -305,9 +316,10 @@ async function tasks(tiles, failures) {
                      + (good ? '' : ' (pink: every tap area / drop zone, review overlay only)'), png: await shot() });
         if (!good) await evaluate('__rv.overlay(false)');
         await evaluate('__rv.next()');
-        await sleep(180);
+        await pause(180);
       }
     }
+    note('task ' + name, tp, { questions: ids.length, slept: (slept - sp) / 1000 });
   }
 }
 
@@ -377,9 +389,13 @@ try {
   await send('Page.enable'); await send('Runtime.enable');
   await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false });
   const tiles = [], failures = [];
+  let t0 = Date.now(), s0 = slept;
   await deck(tiles);
+  note('deck (all slides)', t0, { slept: (slept - s0) / 1000 }); t0 = Date.now(); s0 = slept;
   await tasks(tiles, failures);
+  note('tasks (all pages)', t0, { slept: (slept - s0) / 1000 }); t0 = Date.now(); s0 = slept;
   const r = await sheets(tiles);
+  note('sheets', t0, { slept: (slept - s0) / 1000, tiles: tiles.length });
   const list = r.out.map(s => `  ${s.file}\n${s.screens.map(x => '      ' + x).join('\n')}`).join('\n');
   writeFileSync(join(OUT, 'sheets.json'), JSON.stringify({ sheets: r.out, failures, total: r.total, shown: r.shown }, null, 1));
   console.log(`Review sheets: ${r.shown} of ${r.total} screens ${opt.all ? '' : '(changed since the last review) '}on ${r.out.length} sheet(s) in ${OUT}`);
