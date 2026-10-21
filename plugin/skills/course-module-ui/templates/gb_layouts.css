@@ -284,11 +284,18 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template^="task-launch."] .slide-body.activity > svg ~ .act-title{grid-row:2}
 .slide[data-template^="task-launch."] .act-lines{grid-column:2;margin-top:min(3vmin,24px);text-align:left;justify-self:start;align-items:flex-start}
 .slide[data-template^="task-launch."] .act-inst{margin:0 0 .4em;color:var(--lt-dim-d);font-size:var(--lt-fs);max-width:30em}
+/* 2.62.1 - on the light ground, its default (80 / 20, owner 2026-10-21): the title and the lines in Navy */
+.slide[data-template^="task-launch."]:not(.dark):not(.photo) .act-title,
+.slide[data-template^="task-launch."]:not(.dark):not(.photo) .act-inst,
+.slide[data-template^="task-launch."]:not(.dark):not(.photo) .act-code{color:var(--lt-navy)}   /* the Blue code was 2.5:1 on white */
 
 /* ---------------------------------------------------------------- recap: one design for every module (L51) */
 .slide[data-template^="recap."] .rc-item{border-color:var(--lt-line-d)}
 .slide[data-template^="recap."] .rc-item::after{background:var(--lt-blue)}
 .slide[data-template^="recap."] .rc-item::before{color:var(--lt-blue);background:var(--lt-blue-12);border-color:var(--lt-line-d)}
+.slide[data-template^="recap."]:not(.dark) .rc-item,
+.slide[data-template^="recap."]:not(.dark) .rc-item::before{border-color:var(--lt-line)}       /* 2.62.1: the light recap */
+.slide[data-template^="recap."]:not(.dark) .rc-item::before{color:var(--lt-navy)}
 /* five or six take-aways fit the slide under the template's top line (s30 of the gas module spilled 41 px) */
 .slide[data-template^="recap."] .slide-body.recap{gap:min(1.6vmin,13px);margin-top:min(2.4vmin,19px)}
 .slide[data-template^="recap."] .rc-grid{gap:min(2vmin,16px)}

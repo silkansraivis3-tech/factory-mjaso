@@ -17,7 +17,7 @@ whose PID is no longer running is reclaimed, and so is one whose holder stopped 
 5 minutes - a crashed holder whose PID Windows gave to another process. The same files and rules are kept by
 course-module-ux/measure/scripts/browser_slots.mjs, so Python and Node share the pool.
 
-    CF_BROWSER_SLOTS       how many hidden browsers at once on this computer (default: half the cores, at most 8)
+    CF_BROWSER_SLOTS       how many hidden browsers at once on this computer (default: a quarter of the cores, 2-8)
     CF_BROWSER_SLOT_DIR    the folder of the lock files (default %TEMP%\\cf_browser_slots) - a test's private pool
 
 A slot is held for exactly one browser's life and never while waiting for another slot, so no process can wait on
@@ -40,12 +40,15 @@ _local = threading.local()
 
 
 def count():
-    """how many slots: CF_BROWSER_SLOTS, else half the cores, at most 8 (and at least 1)"""
+    """how many slots: CF_BROWSER_SLOTS, else a quarter of the cores, at least 2, at most 8 (2.62.1 - was half).
+    Measured on a 14-thread laptop (Core Ultra 7 265U, 2 performance cores), IGF M01's figure stage, the same work:
+    1 slot 65 s; 2 slots 35-37 s; 3-7 slots 31-50 s - no gain past 2, but 7 browsers held the CPU at 100 % and made a
+    second build several times slower"""
     try:
         want = int(os.environ.get("CF_BROWSER_SLOTS") or 0)
     except ValueError:
         want = 0
-    return max(1, want or min(8, max(1, (os.cpu_count() or 2) // 2)))
+    return max(1, want or min(8, max(2, (os.cpu_count() or 2) // 4)))
 
 
 def folder():

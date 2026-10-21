@@ -143,6 +143,7 @@ FRAMED_PHOTO_WORDS = LAYOUTS["variety"]["photo_framed_max_words"]
 STAGE_WORDS = LAYOUTS["variety"]["stage_max_words"]
 TOP_WORDS = LAYOUTS["variety"]["picture_top_max_words"]
 VARIETY_WINDOW = LAYOUTS["variety"]["window"]
+DARK_SHARE = 0.2            # 2.62.1 - 80 / 20 (owner, 2026-10-21): at most a fifth of a module's slides on the dark ground
 PHOTO_LONG, PHOTO_LOW = 1600, 800        # L62: a photograph is shipped at 1600 px on its long side or more; under 800 is low
 FIGURE_FREE = {("explain-figure", "text-only"), ("procedure", "text-only"), ("opening", "statement")}
 FIGURE_FREE_IDS = {"opening"}
@@ -1718,16 +1719,17 @@ def layout_options(tid, variant, is_photo, words, b, comp, own_left, own_dark, d
     side = tid if tid in RIGHT else ("content-in-parts" if words > PARTS_FROM else "reading-with-figure" if words > DENSE_WORDS
                                      else "explain-figure")
     col = "wide-left" if is_photo else "two-col"
-    # the other ground only for a photograph or a kit drawing (dark_ok): any other picture keeps the ground it was made
-    # for - a 3D scene's white words on a light slide were 1.89:1 (IGF M01 s05, 2.62.0 merge)
-    for dark in ((False, True) if dark_ok else (bool(own_dark),)):
+    # 2.62.1 - the ground is never a way to vary (owner, 2026-10-21: 80 / 20 - at least 80 % of a module's slides light;
+    # the instructors: "a lot of dark slides"): a slide keeps its own ground and varies its shape. dark_ok is kept for
+    # the callers: a picture made for one ground never changed it
+    for dark in (bool(own_dark),):
         g = "dark" if dark else "light"
         opts.append({"tid": side, "variant": RIGHT[side], "comp": col, "first": False, "dark": dark, "key": ("picture-right", g)})
         opts.append({"tid": side, "variant": LEFT[side], "comp": col, "first": True, "dark": dark, "key": ("picture-left", g)})
         if is_photo and words <= TOP_WORDS:     # a photograph across the slide; a chart, 3D or a drawing needs its height
             opts.append({"tid": "figure-stage", "variant": "figure" if words <= STAGE_WORDS else "figure-top", "comp": "stage",
                          "first": False, "dark": dark, "key": ("picture-top", g)})
-        if is_photo and words <= FRAMED_PHOTO_WORDS and not dark:
+        if is_photo and words <= FRAMED_PHOTO_WORDS and own_dark:     # the framed photo is a dark slide: dark ones only
             opts.append({"tid": "photo-explain", "variant": "split", "comp": "photo", "first": False, "dark": False,
                          "key": ("photo-framed", "dark")})
     return opts
@@ -1811,11 +1813,12 @@ def has_teaching_visual(slide):
     return (tid, var) not in FIGURE_FREE
 
 
-def recap_html(s, base, m, n, total, lines):
+def recap_html(s, base, m, n, total, lines, dark=False):
     """L51 - the module's closing slide, "what to take away", in the one shared design (gb_compose.css 15): one box
     per approved line, "Short title - one sentence"; the numbers are drawn by CSS, so the slide says exactly the
-    approved words. No picture, no layout choice - every module the same"""
-    d = {"class": "slide dark recap", "data-title": s.get("title"), "data-kind": "Summary",
+    approved words. No picture, no layout choice - every module the same. 2.62.1: on the light ground unless the build
+    sheet asks "dark" (owner, 2026-10-21: 80 / 20)"""
+    d = {"class": "slide %srecap" % ("dark " if dark else ""), "data-title": s.get("title"), "data-kind": "Summary",
          "data-block": "%s · %d" % (m, n), "data-visual": "none"}
     d.update(base)
     template_attrs(d, "recap", "cards")
@@ -1904,7 +1907,9 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         title = s.get("title") or ""
         short = title.split(" - ", 1)[1] if " - " in title else title
         graded = is_check(code)
-        d = {"class": "slide dark activity", "data-title": "%s — %s" % (code, short[:1].upper() + short[1:]),
+        # 2.62.1 - on the light ground unless the build sheet asks "dark" (owner, 2026-10-21: 80 / 20 - every task
+        # launch and module check was dark: 4-6 of a 20-slide module before any teaching slide)
+        d = {"class": "slide %sactivity" % ("dark " if b.get("dark") else ""), "data-title": "%s — %s" % (code, short[:1].upper() + short[1:]),
              "data-kind": "Check" if graded else "Task", "data-block": "%s · %s" % (m, code), "data-visual": "none",
              "data-activity": code}
         if kind == "task-slide":
@@ -1929,7 +1934,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                 % (attrs(d), d["data-kind"], m, code, "\n    ".join(body)))
 
     if kind == "slide" and s.get("recap"):
-        return recap_html(s, base, m, n, total, lines)
+        return recap_html(s, base, m, n, total, lines, bool(b.get("dark")))
 
     b = asked_composition(b)                      # L61: a template asked for by name decides the composition
     fig, credit, is_photo = figure_html(mdir, figdir, s, b, probs, where)
@@ -2507,7 +2512,7 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
                 if out is not None:
                     out[s["id"]] = spec
             continue
-        entry.update({"figure": name, "composition": "two-col", "dark": True})
+        entry.update({"figure": name, "composition": "two-col"})   # 2.62.1: its own Navy panel on the light slide (80 / 20)
         if not os.path.isfile(os.path.join(figdir, name)):
             entry["_figure"] = ("starter written by --init-build: replace the placeholder parts with the real drawing, one part per "
                                 "thing the script names (SPEC.md); the parts are placed on a grid and the steps light the slide's "
@@ -2623,6 +2628,16 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
         if layout_key(a_) == layout_key(b_) and layout_key(b_)[0] not in ("task-launch", "recap", ""):
             probs.append("%s: looks exactly like the slide before it (%s, %s ground) - two slides in a row never look the same "
                          "(L62); give one of them a picture, or ask for another template" % ((cs.place(script, s["id"]),) + layout_key(b_)))
+    # 2.62.1 - 80 / 20 (owner, 2026-10-21): at least 80 % of the module's slides on the light ground. The rule is the
+    # background's colour: a slide on the Navy ground ("dark") and a photograph framed on it count; a full-screen
+    # photograph is its own background and does not
+    dark = [s["id"] for s, x in zip(screens, slides)
+            if re.search(r'<section class="[^"]*\b(dark|split)\b', x) and re.search(r'<section class="[^"]*\b(dark|photo)\b', x)]
+    if len(dark) > DARK_SHARE * len(slides):
+        probs.append("%s: %d of its %d slides are on the dark ground (%s) - at most %d (80 / 20: at least 80 %% light, owner "
+                     "2026-10-21); give the others the light ground - take out \"dark\", or show a full-screen photograph in its "
+                     "own column (\"composition\": \"wide-left\")" % (m, len(dark), len(slides), ", ".join(dark),
+                                                                          int(DARK_SHARE * len(slides))))
     enlarge_photos(mdir, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(mdir))), "working_claude", "photo_originals", m),
                    [r for x in slides for r in IMG_SRC.findall(x) if r.startswith("assets/img/")], notes)
     # L61 - never three teaching slides in a row without a teaching picture (a task launch and the recap do not count)

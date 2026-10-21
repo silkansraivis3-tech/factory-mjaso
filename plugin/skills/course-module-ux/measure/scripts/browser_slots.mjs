@@ -6,7 +6,7 @@
  *
  * The same lock files and rules as course-factory/scripts/browser_slots.py (read its header): %TEMP%\cf_browser_slots\
  * slot_N.lock made with exclusive create, holding the PID; touched every 20 s while held; reclaimed when its PID is not
- * running or it was not touched for 5 minutes. CF_BROWSER_SLOTS sets how many (default half the cores, at most 8),
+ * running or it was not touched for 5 minutes. CF_BROWSER_SLOTS sets how many (default a quarter of the cores, 2-8),
  * CF_BROWSER_SLOT_DIR the folder.
  */
 import { closeSync, mkdirSync, openSync, readFileSync, statSync, unlinkSync, utimesSync, writeSync } from 'node:fs';
@@ -18,7 +18,8 @@ const HEARTBEAT = 20000, STALE = 300000;
 export function slotCount() {
   const want = parseInt(process.env.CF_BROWSER_SLOTS || '0', 10) || 0;
   const cores = typeof availableParallelism === 'function' ? availableParallelism() : cpus().length;
-  return Math.max(1, want || Math.min(8, Math.max(1, Math.floor((cores || 2) / 2))));
+  // 2.62.1: a quarter of the cores, at least 2, at most 8 - the same rule as browser_slots.py count() (measured there)
+  return Math.max(1, want || Math.min(8, Math.max(2, Math.floor((cores || 2) / 4))));
 }
 
 export function slotFolder() {

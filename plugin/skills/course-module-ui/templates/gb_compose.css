@@ -799,6 +799,15 @@ figure{margin:0}
   font-size:clamp(16px,2vmin,26px)}
 .rc-next::after{content:"\2192";display:inline-block;color:var(--amber);font-weight:700}
 
+/* 2.62.1 - the recap on the light ground, its default (owner, 2026-10-21: at least 80 % of a module's slides light):
+   the same boxes as white cards with dark words; a recap the build sheet asks "dark" keeps the design above */
+.slide.recap:not(.dark){background:radial-gradient(120% 90% at 88% -12%,var(--blue-wash-l),transparent 62%),var(--white)}
+.slide.recap:not(.dark) .rc-item{background:var(--white);border-color:var(--line-l);box-shadow:var(--sh)}
+.slide.recap:not(.dark) .rc-item::before{color:var(--navy);background:var(--blue-wash-l);border-color:var(--line-l)}
+.slide.recap:not(.dark) .rc-t{color:var(--navy)}
+.slide.recap:not(.dark) .rc-d{color:var(--dim-l)}
+.slide.recap:not(.dark) .rc-next{background:var(--blue-wash-l);border-color:var(--line-l);color:var(--navy)}
+.slide.recap:not(.dark) .rc-next::after{color:var(--blue)}
 .slide.recap.active .rc-item{animation:rc-rise .62s cubic-bezier(.2,.8,.2,1) var(--d) backwards}
 .slide.recap.active .rc-item::after{animation:rc-draw .7s ease-out calc(var(--d) + .25s) backwards}
 .slide.recap.active .rc-next{animation:rc-rise .6s cubic-bezier(.2,.8,.2,1) 1.15s backwards}
@@ -839,6 +848,6 @@ figure{margin:0}
   color:var(--dim-l);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .slide.dark .photo-strip figcaption{color:var(--dim-d)}
 .photo-strip figcaption b{flex:0 0 auto;display:inline-grid;place-items:center;width:1.6em;height:1.6em;border-radius:50%;
-  background:var(--navy);color:var(--white);font-size:.9em}
+  background:var(--navy);color:var(--white);font-size:max(12.5px,.9em)}   /* 2.62.1: .9em of the 12.5 px caption was 11.3 px - under the factory's own floor (IGF M01 v262) */
 .slide.dark .photo-strip figcaption b{background:var(--blue);color:var(--ink)}
 .slide.photo .photo-scrim{cursor:zoom-in}

@@ -16,7 +16,7 @@
       and one PASS line. Do not run those checks one by one: each separate run is a turn of the model.
       (2.57.0) A rebuild judges again only the slides and task pages changed in anything they load since their last
       clean check (the drawing check and the audits; the figures already did) - a failing one is judged every time,
-      --full judges everything. Hidden browsers come from ONE pool for the whole computer (half the cores, at most 8,
+      --full judges everything. Hidden browsers come from ONE pool for the whole computer (a quarter of the cores, 2-8,
       CF_BROWSER_SLOTS): two builds, or a build and the test suite, queue instead of overloading the PC.
       (2.61.0) A slow build is measured, not guessed: set CF_TIMING=<file.jsonl> and every hidden-browser run writes its
       real seconds and its page clock there; `python course-factory/scripts/cf_timing.py <file.jsonl>` adds them up.
@@ -129,12 +129,14 @@ and `"figure_b"`, `three-content-blocks` needs three `"blocks"`), `"variant"`, `
 `"parts": [[1, 4], [5, 9]]`, `"panel": "light"` (a drawing made for a white page; the panel is Navy otherwise). An
 unknown or unsuitable template or variant is a problem with the slide's id.
 
-**Never the same look twice in a row (L62, 2.53.0).** A slide's look is its shape and its ground. When a slide would
-look like the one before it, the compiler builds it another way that holds the same words and picture: the picture on
-the other side, a photograph across the top with the words in two columns under it (`figure-stage` `figure-top`, up to
-110 words), a photograph framed on the dark ground (up to 100 words), or the dark ground - which only a photograph or a
-figure-kit drawing takes; a drawing or widget made for a white page stays light, and one made for the dark ground (a 3D
-scene) stays dark. It also avoids the looks of the three slides before it when it can. A build sheet's own layout is
+**Never the same look twice in a row (L62, 2.53.0) - and 80 / 20 light (owner, 2.62.1).** A slide's look is its shape
+and its ground. When a slide would look like the one before it, the compiler builds it another way that holds the same
+words and picture: the picture on the other side, or a photograph across the top with the words in two columns under it
+(`figure-stage` `figure-top`, up to 110 words); a slide on the dark ground may also be the photograph framed on it (up
+to 100 words). The ground is never changed to vary: at least 80 % of a module's slides are light (task launches, the
+module check and the recap too, unless the sheet says `"dark": true`); more than a fifth on the Navy ground or framed
+on it is a build problem - a full-screen photograph does not count. It also avoids the looks of the three slides before
+it when it can. A build sheet's own layout is
 kept wherever it does not repeat. A slide built another way carries `data-varied`; when the audit finds it does not fit
 there (2.62.0), `build_module.py` builds it its next way at once - the line `LAYOUT - ... built again their next way` -
 and keeps that in `_build\MNN_layout_avoid.json` while the slide's words and build-sheet entry are unchanged. Never pin

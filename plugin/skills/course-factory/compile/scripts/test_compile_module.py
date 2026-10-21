@@ -192,8 +192,8 @@ def recap_part(tmp):
     c, md = new_course(os.path.join(tmp, "r"), script(screens=screens))
     code, out = run(COMPILE, c, "--module", "1")
     r = section(deck(md), "s05")
-    check("a recap slide is built in the shared closing design (slide dark recap, data-kind Summary)",
-          code == 0 and 'class="slide dark recap"' in r and 'data-kind="Summary"' in r, out + r[:400])
+    check("a recap slide is built in the shared closing design (slide recap - the light ground since 2.62.1 - data-kind Summary)",
+          code == 0 and 'class="slide recap"' in r and 'data-kind="Summary"' in r, out + r[:400])
     check("... one box per line, its title bold before ' - '",
           r.count('class="rc-item"') == 3 and '<b class="rc-t">Kept liquid</b><span class="rc-sep"> - </span>'
           '<span class="rc-d">cold, under pressure, or both.</span>' in r and '<span class="rc-d">The spaces are new.</span>' in r, r)
@@ -1088,6 +1088,43 @@ def variety_part(tmp):
           and ".fill.fig.lt-light{color:var(--lt-black)}" in css)
 
 
+def light_part(tmp):
+    """2.62.1 - 80 / 20 (owner, 2026-10-21: at least 80 % of a module's slides light; the instructors: "a lot of dark
+    slides"): the task launch, the module check and the recap are light by default and read at both tablet sizes; the
+    ground is never a way to vary; more than a fifth on the dark ground is a problem"""
+    print("\n-- 2.62.1: 80 / 20 - at least 80 % of the slides light")
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    os.makedirs(os.path.join(tmp, "light"))
+    screens = json.loads(json.dumps(SCREENS))
+    screens.insert([x["id"] for x in screens].index("t02"), {"id": "s05", "kind": "slide", "recap": True, "title": "What to take away",
+                                                             "visual_kind": "none", "text": M02_S16, "minutes": 2})
+    c, md = new_course(os.path.join(tmp, "light"), script(screens=screens))
+    code, out = run(COMPILE, c, "--module", "1")
+    page = deck(md)
+    t01, t02, s05 = section(page, "t01"), section(page, "t02"), section(page, "s05")
+    check("the task launch, the module check and the recap are on the light ground by default",
+          'class="slide activity"' in t01 and 'class="slide activity"' in t02 and 'class="slide recap"' in s05, (t01[:90], s05[:90]))
+    audits = os.path.join(SKILLS, "course-module-ux", "measure", "scripts", "run_audits.py")
+    code_a, aout = run(audits, os.path.join(md, "presentation", "index.html"), "--viewport", "1024x768", "--quiet")
+    bad = [x for x in aout.splitlines() if re.search(r"\((t01|t02|s05)\)", x)]
+    check("... and read at 1280 x 800 and 1024 x 768: no low contrast, small text, spill or chrome finding on them", "1024x768" in aout
+          and not bad, bad or aout[-600:])
+    o = cm.layout_options("explain-figure", "figure-right", True, 40, {}, "wide-left", False, False, True)
+    check("the other ways a light slide can be built are all light - the ground is never a way to vary",
+          len(o) > 2 and all(x["key"][1] == "light" for x in o), [x["key"] for x in o])
+    build_of(c, lambda b: [b["screens"].setdefault(k, {}).update(dark=True) for k in ("s02", "s03", "t01")])
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    n = len(re.findall(r"<section ", deck(md)))
+    check("three slides asked dark, and the fixture's 3D slide: a problem naming them, at most a fifth (80 / 20)",
+          code != 0 and "4 of its %d slides are on the dark ground (s02, s03, s04, t01) - at most %d (80 / 20" % (n, n // 5) in out,
+          [x for x in out.splitlines() if "dark ground" in x] or out[-400:])
+    build_of(c, lambda b: [b["screens"].get(k, {}).pop("dark", None) for k in ("s02", "s03", "s04")])
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    check("... one asked dark is within it - and is dark", "dark ground" not in out and 'class="slide dark activity"' in section(deck(md), "t01"),
+          [x for x in out.splitlines() if "dark ground" in x] or out[-300:])
+
+
 def look_part(tmp):
     """2.62.1 - L58 by look: one photograph saved twice under two names and two records is found (IGF M02 v262: the same
     Commons photo as m02_viking_grace_tanks_at_yard.jpg and m01_typec_tanks_shipyard.jpg, its copy "Own work")"""
@@ -1848,8 +1885,8 @@ def main():
         check("visual_wide with many words -> two-col wide-right; dark from the build sheet",
               "two-col wide-right" in s04 and 'class="slide dark"' in s04)
         t01, t02 = section(page, "t01"), section(page, "t02")
-        check("a task slide -> activity, Task, its code, data-task-href to tasks/sc1_<title>.html",
-              'class="slide dark activity"' in t01 and 'data-kind="Task"' in t01 and 'data-activity="SC1"' in t01
+        check("a task slide -> activity on the light ground (2.62.1, 80 / 20), Task, its code, data-task-href to tasks/sc1_<title>.html",
+              'class="slide activity"' in t01 and 'data-kind="Task"' in t01 and 'data-activity="SC1"' in t01
               and 'data-task-href="../tasks/sc1_the_new_spaces.html"' in t01 and '<p class="act-code" data-script-ignore>SC1</p>' in t01, t01)
         check("the module check slide -> Check, ../assessment/check.html",
               'data-kind="Check"' in t02 and 'data-task-href="../assessment/check.html"' in t02)
@@ -1916,9 +1953,9 @@ def main():
         figs = os.path.join(c4, "working_claude", "figures", "M01")
         s2e, s3e = sheet["screens"]["s02"], sheet["screens"]["s03"]
         check("2.50.0: --init-build writes a starter spec for each drawing slide and none for a photo slide, and the "
-              "slide's entry names it (two-col, dark, a note that it is a starter)",
+              "slide's entry names it (two-col, the light ground since 2.62.1's 80 / 20, a note that it is a starter)",
               {"s02.kit.json", "s03.kit.json"} <= set(os.listdir(figs)) and "s01.kit.json" not in os.listdir(figs)
-              and s2e["composition"] == "two-col" and s2e["dark"] is True and "starter" in s2e["_figure"]
+              and s2e["composition"] == "two-col" and "dark" not in s2e and "starter" in s2e["_figure"]
               and s3e["figure"] == "s03.kit.json" and "figure" in sheet["screens"]["s04"] and sheet["screens"]["s04"]["figure"] == "m01_s04_3d.html"
               and "starter figure: figures\\M01\\s03.kit.json - 3 parts, 3 steps" in out, (sorted(os.listdir(figs)), out))
         # 2.50.6 (M01 benchmark run 5, s05) - a model_3d slide gets its 2D starter too: declining the 3D ("declined_3d") edits
@@ -2272,6 +2309,7 @@ def main():
         three_part(tmp)
         variety_part(tmp)
         look_part(tmp)
+        light_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
