@@ -568,6 +568,16 @@ figure{margin:0}
 .copy .inset figcaption,.fill .inset figcaption{font-size:clamp(12.5px,1.5vmin,19px);line-height:1.4;color:var(--dim-l)}
 .slide.dark .copy .inset figcaption,.slide.dark .fill .inset figcaption{color:var(--dim-d)}
 .fill.fig > .inset{flex:0 0 auto}
+/* 2.63.0 - beside a picture, a photo under the words takes the room the words leave, never more: at its full 26 vh it ran
+   9-22 px off the slide under 57-68 words (IGF M01 v262 s02 / s03 / s04 / s07, every size; "split" did not help). The words
+   keep their size; the photo is cropped shorter, down to 10 vh - under that the build's word cap still says so. */
+@media (min-width:901px){
+  .slide-body.two-col:has(> .copy > .inset){grid-template-rows:minmax(0,1fr)}
+  .slide-body.two-col > .copy:has(> .inset){align-self:stretch;justify-content:center;min-height:0}
+  .slide-body.two-col > .copy:has(> .inset) > *{flex-shrink:0}
+  .slide-body.two-col > .copy > .inset{flex:1 1 0;min-height:min(10vh,80px);max-height:min(26vh,230px)}
+  .slide-body.two-col > .copy > .inset img{height:100%;max-height:100%}
+}
 /* the picture's box: a drawing with its own controls stacks them under it, and
    takes the room the words leave - never a small drawing in a large column */
 .fill.fig{flex-direction:column;gap:min(1.6vmin,14px)}

@@ -747,7 +747,7 @@ def steps_part(exe, tmp):
 
 DECK_FIT = r"""
 (function () {
-  var out = {errors: [], credits: [], recaps: []};
+  var out = {errors: [], credits: [], recaps: [], insets: []};
   window.addEventListener('error', function (e) { out.errors.push(String(e.message)); });
   function R(e) { var r = e.getBoundingClientRect(); return {l: r.left, t: r.top, r: r.right, b: r.bottom}; }
   function hit(a, b) { return Math.min(a.r, b.r) - Math.max(a.l, b.l) > 0.5 && Math.min(a.b, b.b) - Math.max(a.t, b.t) > 0.5; }
@@ -804,6 +804,14 @@ DECK_FIT = r"""
                              over: Math.round(Math.max(rb.scrollHeight - rb.clientHeight, R(nx || rb).b - bottom)),
                              chrome: !!(ch && nx && hit(R(nx), R(ch))),
                              fs: parseFloat(getComputedStyle(s.querySelector('.rc-d')).fontSize)});
+          }
+          var ins = s.querySelector('.copy > .inset');
+          if (ins) {                              /* a photo under the words beside a picture (2.63.0) */
+            show(s);
+            var bd = s.querySelector('.slide-body'), im = R(ins.querySelector('img')), lw = s.querySelector('.copy .support li, .copy .lead');
+            out.insets.push({id: s.id, spill: bd.scrollHeight - bd.clientHeight, off: Math.round(Math.max(0, R(bd).b - R(s).b)),
+                             img: Math.round(im.b - im.t), past: Math.round(Math.max(0, im.b - R(bd).b)),
+                             fs: lw ? parseFloat(getComputedStyle(lw).fontSize) : 0});
           }
         });
       } catch (err) { out.errors.push(String(err && err.stack || err)); }
@@ -978,6 +986,43 @@ def inset_empty_part(exe, tmp):
             check("bare: without its photo the corner is blank - EMPTY (the fixture is a real hole)", empty, probs or note)
 
 
+# as long as IGF M01 s03 (58 words), which with its photo under the words ran 21 px off the slide on 2.62.0 (18 at 1024)
+UNDER_S02 = ("The IGF ship has five spaces a ship on oil fuel does not have.\n• the fuel tank, in its own hold\n"
+             "• the tank connection space, around every pipe that leaves the tank\n• the fuel preparation room, with the pumps "
+             "and the vaporizer\n• the bunkering station, where the fuel comes on board\n• the vent mast, for the relief valves")
+
+
+def inset_under_part(exe, tmp):
+    """2.63.0 (IGF M01 v262 runs 4-5, builder's bug 4) - a photo under the words beside a kit drawing ran the slide body
+    9-22 px past its foot at both sizes (the photo at its full 26 vh); "split" 0.58-0.6 did not help. Now the photo takes
+    the room the words leave: nothing spills, the words keep their size, the photo stays a photo (80 px or more)."""
+    print("\n-- 2.63.0: a photo under the words beside a drawing takes only the room the words leave")
+    os.makedirs(os.path.join(tmp, "iu"))
+    screens = json.loads(json.dumps(tcm.SCREENS))
+    screens[1]["text"] = UNDER_S02
+    c, md = tcm.new_course(os.path.join(tmp, "iu"), tcm.script(screens=screens), build=False)
+    io.open(os.path.join(md, "assets", "img", "ship.jpg"), "wb").write(tcm.png(1200, 800, (120, 130, 150)))
+    tcm.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), {"ship.jpg": MID_CREDIT})
+    tcm.cs.save(os.path.join(c, "working_claude", "figures", "M01", "corner.kit.json"), CORNER_KIT)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "s01": {"figure": "assets/fig/scale.svg"},
+        "s02": {"figure": "corner.kit.json", "composition": "two-col", "no_photo": ["Fuel tank", "Day tank", "Vent mast"],
+                "inset": {"photo": "assets/img/ship.jpg", "caption": "Two LNG fuel tanks on the open aft deck of a ferry."}},
+        "s04": {"figure": "hull.svg", "declined_3d": "the fixture's hull stays flat"}, "t01": {"try_tablet": False}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
+    page = os.path.join(md, "presentation", "index.html")
+    check("the drawing slide with its photo under the words builds", os.path.isfile(page) and 'class="inset"' in io.open(page, encoding="utf-8").read(), out[-600:])
+    for size in ((1280, 800), (1024, 768)):
+        r = deck_fit(exe, page, tmp, size)
+        tag = "%dx%d" % size
+        ins = (r.get("insets") or [{}])[0]
+        check("%s: no script error, the slide measured" % tag, not r.get("errors") and ins.get("id"), r.get("errors") or r)
+        check("%s: nothing spills - the body neither scrolls nor runs past the slide, the photo ends inside it" % tag,
+              ins.get("spill", 99) <= 1 and ins.get("off", 99) <= 0 and ins.get("past", 99) <= 0, ins)
+        check("%s: the words keep their size (17 px or more) and the photo stays a photo (75 px or more)" % tag,
+              ins.get("fs", 0) >= 17 and ins.get("img", 0) >= 75, ins)
+
+
 BLIND_LOOK = ("var seen = []; document.querySelectorAll('.scr[data-script]').forEach(function (s) {"
               "  s.querySelectorAll('.checked,.right,.wrong,.fixed,.shake,.missed,.dim,.stopat,.good,.bad,.why.on').forEach("
               "    function (n) { seen.push(s.getAttribute('data-script') + ':' + (n.getAttribute('class') || '')); });"
@@ -1058,6 +1103,7 @@ def main():
         deck_fit_part(exe, tmp)
         inset_part(exe, tmp)
         inset_empty_part(exe, tmp)
+        inset_under_part(exe, tmp)
         figures_part(exe, tmp)
         fixes_part(exe, tmp)
         picture_part(exe, tmp)

@@ -2020,17 +2020,23 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     room_under = fig and not is_photo and (OWN_BOX.match(fig) or not FILL_BOX.match(fig))
     if inset and (b.get("inset") or {}).get("over"):
         fig, inset = over_figure(fig, inset, b["inset"]["over"], probs, where)
+    cap = INSET_MAX_WORDS.get("photo-split" if split_photo else comp)
+    nwords = cs.wc(" ".join(lines))
     if inset and (b.get("inset") or {}).get("under") == "figure" and room_under:
         sh = under_share(fig)
-        if sh and sh[0] < UNDER_MIN_SHARE:
+        if sh and sh[0] < UNDER_MIN_SHARE and not (cap and nwords > cap):
+            # 2.63.0 - the drawing keeps its size and the photo goes under the words, which now give it the room they leave
+            # (gb_compose.css): reported, a run lost each time (IGF M01 v262 run 3: s02 / s03 / s04 / s07 at 33-49 %)
+            print("Note: %s - the inset is under the words, not under the drawing: there it would leave the drawing only about "
+                  "%d %% of its panel" % (where, round(100 * sh[0])))
+        elif sh and sh[0] < UNDER_MIN_SHARE:
             probs.append("%s: the inset under the drawing leaves the drawing only about %d %% of its panel (about %d of %d px high at "
                          "1280 x 800), so the drawing is drawn at about half its size - put the inset under the words, lay it "
                          "over a blank part of the drawing (\"over\"), or draw the figure wider and less tall"
                          % (where, round(100 * sh[0]), round(sh[1] - INSET_H), round(sh[1])))
-        fig = under_figure(fig, inset)
-        inset = ""
-    cap = INSET_MAX_WORDS.get("photo-split" if split_photo else comp)
-    nwords = cs.wc(" ".join(lines))
+            fig, inset = under_figure(fig, inset), ""
+        else:
+            fig, inset = under_figure(fig, inset), ""
     if inset and cap and nwords > cap:                 # F4 (2.49.2): said at build, before the drawing check finds the spill
         probs.append("%s: %d words in the reading column and an inset photograph under them - the column holds about %d words "
                      "with a photograph, so the photograph will spill about %d px off the slide at 1280 x 800 (IGF M07 s08 / s12, "

@@ -202,6 +202,8 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 }
 .slide[data-template] .slide-body.two-col > .fill{height:100%;max-height:100%}
 .slide[data-template] .slide-body.two-col > .copy{align-self:center}
+/* a photo under the words takes what they leave (gb_compose.css 2.63.0): the column stretches to the row */
+@media (min-width:901px){.slide[data-template] .slide-body.two-col > .copy:has(> .inset){align-self:stretch}}
 .slide[data-template] .slide-body.two-col.photo-col > .fill.photo-col{border-radius:min(2.2vmin,18px);overflow:hidden;background:none;border:0;padding:0}
 
 /* text only (a short slide): one reading column, left-aligned with the title, centred in the height the title leaves -

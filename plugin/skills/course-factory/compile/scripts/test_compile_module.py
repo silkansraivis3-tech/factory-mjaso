@@ -1244,8 +1244,20 @@ def fixes_part(tmp):
         {"size": [640, 390], "parts": [{"id": "t", "type": "tank", "x": 20, "y": 50, "w": 150, "h": 110, "value": 0.3}]}))
     build_of(c, lambda s: s["screens"].update(s04={"figure": "ind.kit.json", "dark": True, "inset": {"photo": "assets/img/ship.jpg", "under": "figure"}}))
     code, out = run(COMPILE, c, "--module", "1")
-    check("C7: \"under\": \"figure\" that leaves the figure under ~60 % of its panel is reported at build",
-          code == 1 and "leaves the drawing only about 47 %" in out and "(s04)" in out, out)
+    d4 = re.search(r'<section[^>]*data-title="Two barriers".*?</section>', deck(md), re.S)
+    # 2.63.0 - it no longer costs a run (IGF M01 v262 run 3, four slides at 33-49 %): the photo goes under the words
+    check("C7: \"under\": \"figure\" that would leave the figure under ~60 % of its panel puts the photo under the words "
+          "instead - said, not a problem; the drawing keeps its panel",
+          "Note:" in out and "only about 47 %" in out and d4 and re.search(r'<div class="copy">.*class="inset"', d4.group(0), re.S)
+          and "(s04): the inset under the drawing leaves" not in out, out[-800:])
+    build_of(c, lambda s: s["screens"].update(s04={"figure": "ind.kit.json", "dark": True, "inset": {"photo": "assets/img/ship.jpg", "under": "figure"}}))
+    long4 = json.loads(json.dumps(SCREENS))
+    long4[3]["text"] += "\n" + " ".join(["More words about the two ways."] * 9)
+    cs.save(os.path.join(c, "working_claude", "script", "M01.json"), script(screens=long4))
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    check("C7: ... with too many words for a photo under them it is still reported at build",
+          code == 1 and "leaves the drawing only about 47 %" in out and "(s04)" in out, out[-800:])
+    cs.save(os.path.join(c, "working_claude", "script", "M01.json"), script())
     build_of(c, lambda s: s["screens"].update(s04={"figure": "ind.kit.json", "dark": True, "inset": {"photo": "assets/img/ship.jpg"}}))
     code, out = run(COMPILE, c, "--module", "1", "--force")
     check("C7: the same inset under the words is not reported", "leaves the drawing only" not in out, out)
