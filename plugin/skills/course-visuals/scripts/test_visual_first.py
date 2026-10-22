@@ -149,6 +149,24 @@ def main() -> int:
             check('"%s" is not judged as a topic screen' % title,
                   not d["findings"] and d["topic_screens"] == 0, d["findings"])
 
+        # 2.63.2: the compiler's task-launch screen (a graded check's has data-kind "Check", no "task" in its title) leads with
+        # its code and title and carries the task icon as its "figure" - it is a gate, not a topic screen
+        ICON = ('<svg class="act-ico" data-icon="choose" viewBox="0 0 64 48" aria-hidden="true">'
+                '<path d="M0 0"/></svg>')
+        LAUNCH = ('<section class="slide activity" data-title="MC - Module check" data-kind="Check" '
+                  'data-template="task-launch.v1" data-variant="check">\n'
+                  '  <div class="slide-body activity">\n    <p class="act-code">MC</p>\n'
+                  '    <h2 class="act-title">Module check</h2>\n    %s\n'
+                  '    <div class="act-lines"><p class="act-inst">Answer on the tablet.</p></div>\n'
+                  '  </div>\n</section>' % ICON)
+        d = run(deck(os.path.join(tmp, "launch"), LAUNCH))
+        check("a task-launch screen (task icon after its code line) is not judged as a topic screen",
+              not d["findings"] and d["topic_screens"] == 0, d)
+        d = run(deck(os.path.join(tmp, "launch2"),
+                     LAUNCH.replace(' data-template="task-launch.v1" data-variant="check"', "")
+                     .replace('class="slide activity"', 'class="slide"')))
+        check("... also by its slide-body.activity alone", not d["findings"] and d["topic_screens"] == 0, d)
+
         print("\n-- a declared exemption is a decision, not an escape hatch")
         r = deck(os.path.join(tmp, "d"),
                  '<section class="slide" data-title="Flammable limits" '

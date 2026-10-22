@@ -106,6 +106,12 @@ def heading_of(body):
 def is_topic(open_tag, body, rules):
     """A screen is a TOPIC screen unless it is navigation, an activity or a summary."""
     a = attrs_of(open_tag)
+    # 2.63.2: a task-launch screen (a graded check's launch has data-kind "Check" and no "task" in its title) is a gate to a
+    # task, not a topic - its "figure" is the task icon (svg.act-ico), so every module check warned "figure after the text"
+    if (re.match(r"task-launch\b", a.get("data-template", ""))
+            or re.search(r"\bactivity\b", a.get("class", ""))
+            or re.search(r'class="slide-body[^"]*\bactivity\b', body)):
+        return False, "task-launch"
     hay = " ".join([a.get("data-title", ""), a.get("class", ""),
                     a.get("data-kind", ""), heading_of(body)]).lower()
     for word in rules["topic_screen"]["not_a_topic_screen"]:
