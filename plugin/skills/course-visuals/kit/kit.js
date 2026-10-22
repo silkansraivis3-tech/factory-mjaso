@@ -4807,4 +4807,83 @@ KIT.define('composition_bar', function (fig, part, g, p) {
     steps: [ { title: 'Methane is most of it', play: [['C', 1, 900]] }, { title: 'The rest is ethane, propane and nitrogen', play: [['C', 4, 1800, 0, 'linear']] } ] }
 });
 /* end kit-part */
+/* kit-part: tank_type */
+KIT.define('tank_type', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 150, ht = p.h || 110, kind = p.kind || 'c', cx = w / 2, cy = ht / 2;
+  var eq = h.equip(g);
+  var bar = h.el('g', { 'class': 'kit-tank-type-bar', opacity: 0 }, g);      // the secondary barrier, brought in by the value
+  function barEl(tag, at) {                                                   // a dark halo under the dashed line: it reads on steel as well as on the panel
+    var halo = {}, k;
+    for (k in at) { halo[k] = at[k]; }
+    halo['class'] = 'kit-tank-type-halo';
+    halo['data-low-contrast'] = '';                                           // a dark halo, quiet on purpose
+    h.el(tag, halo, bar);
+    at['class'] = 'kit-tank-type-barline';
+    at['data-low-contrast'] = '';                                             // the dark halo under it keeps it legible on steel
+    return h.el(tag, at, bar);
+  }
+  if (kind === 'a') {
+    // type A: a prismatic tank of flat plates, chamfered corners, stiffeners on its walls
+    var a = 14, x0 = 14, y0 = 10, x1 = w - 14, y1 = ht - 14;
+    h.body('path', { d: 'M' + (x0 + a) + ' ' + y0 + ' H' + (x1 - a) + ' L' + x1 + ' ' + (y0 + a) + ' V' + (y1 - a) + ' L' + (x1 - a) + ' ' + y1 + ' H' + (x0 + a) + ' L' + x0 + ' ' + (y1 - a) + ' V' + (y0 + a) + ' Z' }, eq, { mat: 'clad', shade: 'box' });
+    [0.33, 0.66].forEach(function (f) {
+      h.el('line', { x1: x0 + 6, x2: x1 - 6, y1: y0 + (y1 - y0) * f, y2: y0 + (y1 - y0) * f, 'class': 'kit-tank-type-rib' }, eq);
+    });
+    barEl('rect', { x: x0 - 8, y: y0 - 7, width: x1 - x0 + 16, height: y1 - y0 + 14, rx: 4 });   // a complete barrier all round
+    h.body('rect', { x: 8, y: y1 + 8, width: w - 16, height: 8, rx: 2 }, eq, { mat: 'deck', shade: 'box' });
+  } else if (kind === 'b') {
+    // type B: a sphere on a cylindrical skirt at its equator
+    var r = Math.min(cx - 18, (ht - 20) / 2);
+    var sy = (ht - 14) / 2 + 4;
+    h.body('rect', { x: cx - r * 0.55, y: sy, width: r * 1.1, height: r + 8, rx: 2 }, eq, { mat: 'steel', shade: 'cylv' });
+    h.body('circle', { cx: cx, cy: sy, r: r }, eq, { mat: 'clad', shade: 'round' });
+    h.body('rect', { x: 8, y: sy + r + 8, width: w - 16, height: 8, rx: 2 }, eq, { mat: 'deck', shade: 'box' });
+    barEl('path', { d: 'M' + (cx - r - 10) + ' ' + (sy + r * 0.6) + ' V' + (sy + r + 4) + ' H' + (cx - r * 0.62) +
+                        ' M' + (cx + r + 10) + ' ' + (sy + r * 0.6) + ' V' + (sy + r + 4) + ' H' + (cx + r * 0.62) });   // two drip trays either side of the skirt   // a drip tray: a partial barrier
+  } else if (kind === 'membrane') {
+    // membrane tank: a thin corrugated metal layer inside insulation, carried by the hull
+    var m0 = 10, m1 = 10, mw = w - 20, mh = ht - 24;
+    h.body('rect', { x: m0, y: m1, width: mw, height: mh, rx: 5 }, eq, { mat: 'hull', shade: 'box' });
+    h.body('rect', { x: m0 + 7, y: m1 + 7, width: mw - 14, height: mh - 14, rx: 3 }, eq, { mat: 'foam', shade: 'box' });
+    var zig = 'M' + (m0 + 12) + ' ' + (m1 + 12);
+    var n = Math.floor((mw - 24) / 8);
+    for (var i = 0; i < n; i++) { zig += ' l4 -3 l4 3'; }
+    h.el('path', { d: zig, 'class': 'kit-tank-type-membrane' }, eq);
+    h.el('path', { d: 'M' + (m0 + 12) + ' ' + (m1 + mh - 12) + ' H' + (m0 + mw - 12), 'class': 'kit-tank-type-membrane' }, eq);
+    h.el('path', { d: 'M' + (m0 + 12) + ' ' + (m1 + 12) + ' V' + (m1 + mh - 12) + ' M' + (m0 + mw - 12) + ' ' + (m1 + 12) + ' V' + (m1 + mh - 12), 'class': 'kit-tank-type-membrane' }, eq);
+    barEl('rect', { x: m0 + 3, y: m1 + 3, width: mw - 6, height: mh - 6, rx: 3 });   // the second membrane: a complete barrier
+    h.body('rect', { x: 4, y: m1 + mh + 6, width: w - 8, height: 8, rx: 2 }, eq, { mat: 'deck', shade: 'box' });
+  } else {
+    // type C: a horizontal pressure vessel on two saddles - no secondary barrier
+    var bh = Math.min(ht - 38, (w - 32) * 0.55);                  // always a horizontal vessel, whatever the box
+    var cy0 = 14 + ((ht - 38) - bh) / 2;                            // centred in the room the other tanks fill
+    h.body('rect', { x: 16, y: cy0, width: w - 32, height: bh, rx: bh / 2 }, eq, { mat: 'clad', shade: 'cyl' });
+    [0.28, 0.72].forEach(function (f) {
+      h.body('rect', { x: 16 + (w - 32) * f - 8, y: cy0 + bh - 4, width: 16, height: 14, rx: 2 }, eq, { mat: 'steel', shade: 'box' });
+    });
+    h.body('rect', { x: 8, y: cy0 + bh + 10, width: w - 16, height: 8, rx: 2 }, eq, { mat: 'deck', shade: 'box' });
+  }
+  if (p.label) h.label(fig, g, { x: cx, y: ht + 14, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) {
+    bar.setAttribute('opacity', h.clamp(v, 0, 1));
+  };
+}, {
+  family: 'cutaways',
+  status: 'kit', merged_from: "IGF Basic M02",
+  look: 'equipment',
+  course: 'IGF Basic', module: 'M02', made: '2026-10-21',
+  why: 'M02 s07 and q05: the IMO tank types A, B and C and a membrane tank drawn side by side, the secondary barrier brought in by the value',
+  value: 'how much of the secondary barrier is drawn, 0..1',
+  css: '.kit-tank-type-halo{fill:none;stroke:var(--deep);stroke-width:7;stroke-linejoin:round}' +
+    '.kit-tank-type-barline{fill:none;stroke:var(--cold);stroke-width:3;stroke-dasharray:7 4;stroke-linecap:round}' +
+    '.kit-tank-type-rib{stroke:var(--mat-edge-clad);stroke-width:1.5}' +
+    '.kit-tank-type-membrane{fill:none;stroke:var(--mat-edge-steel);stroke-width:2;stroke-linejoin:round}',
+  example: { size: [640, 190], parts: [
+    { id: 'A', type: 'tank_type', kind: 'a', x: 10, y: 20, label: 'type A' },
+    { id: 'B', type: 'tank_type', kind: 'b', x: 170, y: 20, label: 'type B' },
+    { id: 'C', type: 'tank_type', kind: 'c', x: 330, y: 20, label: 'type C' },
+    { id: 'M', type: 'tank_type', kind: 'membrane', x: 490, y: 20, label: 'membrane' } ],
+    steps: [ { title: 'The secondary barrier', play: [['A', 1, 800], ['B', 1, 800], ['M', 1, 800]] } ] }
+});
+/* end kit-part */
 /* kit-parts: end */
