@@ -250,11 +250,15 @@
 .kit-lit .kit-space{stroke:var(--blue,#2EB6F8);stroke-width:2}
 /* a room's name keeps a halo of the panel's colour round its letters (2.52.0): it reads on whatever the room is drawn
    over - a ship's white superstructure, a painted hull, a pipe */
-.kit-sl{font-size:calc(12.5px * var(--kit-up,1));font-weight:700;letter-spacing:.06em;fill:var(--faint-d,#71879F);transition:fill .3s;
+/* 2.63.2 - a room's name not lit is the readable grey (--dim-d), not the faint one: 2.6:1 on the hull (IGF M01 s03 / s04,
+   M02 s12) */
+.kit-sl{font-size:calc(12.5px * var(--kit-up,1));font-weight:700;letter-spacing:.06em;fill:var(--dim-d,#A2B7CF);transition:fill .3s;
   paint-order:stroke;stroke:var(--deep,#0A182E);stroke-width:3.5px;stroke-linejoin:round;stroke-opacity:.9}
 .kit-lit .kit-sl{fill:var(--txt-d,#F3F8FD)}
-/* over light equipment the name is printed in dark ink, as on a nameplate (kit.js inkOn) */
-.kit-sl.kit-sl-ink,.kit-lit .kit-sl.kit-sl-ink,.kit-cap.kit-sl-ink{fill:var(--mat-ink);stroke:none}
+/* over light equipment the name is printed in dark ink, as on a nameplate (kit.js inkOn) - a part's own word on its light
+   contents too; on a dark ground a word that would not read keeps the panel's halo (2.63.2) */
+.kit-sl.kit-sl-ink,.kit-lit .kit-sl.kit-sl-ink,.kit-cap.kit-sl-ink,.kit-h.kit-sl-ink,.kit-state.kit-sl-ink{fill:var(--mat-ink);stroke:none}
+.kit-ink-halo{fill:var(--txt-d,#F3F8FD);paint-order:stroke;stroke:var(--deep,#0A182E);stroke-width:3.5px;stroke-linejoin:round;stroke-opacity:.9}
 
 /* machinery */
 .kit-shell{fill:var(--deep,#0A182E);stroke:var(--dim-d,#A2B7CF);stroke-width:2}

@@ -468,6 +468,7 @@
         self.tick(dt);
         if (self.tweens.length) return true;
         self.stop();
+        if (self.laid) inkSoon(self);                 // 2.63.2: the ground a word stands on may have changed with the step
         self.emit('settled', self.n);
         return false;
       }
@@ -521,6 +522,7 @@
         this.applyStep(n);
         if (instant || reducedMotion()) this.flush(); else this.run();
       }
+      if ((n === 0 || instant || reducedMotion()) && this.laid && !this.laying) inkSoon(this);   // 2.63.2: the step's ground
       if (!this.laying) {
         this.emit('step', n);
         if (!this.laid) this.layout();               // the first time it is on screen
@@ -604,20 +606,67 @@
   /* a name drawn over light equipment - a tank's cladding, the ship's white superstructure, machinery paint - is printed
      in dark ink as on a nameplate, not light letters in a dark halo (2.52.0, operator's review). Read once the labels are
      placed: the topmost painted shape under the name's centre (shades and hatches take no pointer, so they are passed by) */
+  /* 2.63.2 - the words are judged against what is there NOW: a shape that is not shown (a cloud before its step, a wash
+     at opacity 0) is no ground - the kit printed dark ink on the navy panel over a cloud not yet drawn (IGF M02 s15,
+     M06 s04, M06 s11: 1.4:1). And every word of a part, not only names and captions: a part's own word on its light
+     contents ("LNG" on the liquid of boil_off, 2:1, IGF M03 s06) gets the dark ink, or on a dark ground the panel's halo */
+  function shownAt(n, svg) {                    // its opacity times its ancestors' up to the drawing (0: not shown)
+    var o = 1;
+    for (var e = n; e && e.nodeType === 1; e = e.parentNode) {
+      var cs = getComputedStyle(e);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return 0;
+      var v = parseFloat(cs.opacity);
+      if (!isNaN(v)) o *= v;
+      if (e === svg) break;
+    }
+    return o;
+  }
+  function ratio(a, b) { var x = luminance(a), y = luminance(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+  /* now, and again once the kit's fades (0.3 s) have ended - a shape fading out still reads as ground halfway */
+  function inkSoon(f) {
+    inkOn(f);
+    clearTimeout(f.inkT);
+    f.inkT = setTimeout(function () { inkOn(f); }, 450);
+  }
+  /* 2.63.2 - a veil (a vapour cloud, data-veil) lies over shapes, never over words: a cloud listed after a part covered
+     that part's words (IGF M06 s04, "hot exhaust 540 °C" and "lamp not certified safe", fixed there by moving the words).
+     A cloud that covers an earlier part's words is drawn just before that part instead - the part and its words on top,
+     still inside the cloud. Where room is free the label solver keeps words out of it as well (gather: data-veil). */
+  function veilsUnder(f) {
+    q(f.svg, '[data-veil]').forEach(function (v) {
+      var cloud = v.closest ? v.closest('g.kit-part') : null, holder = cloud && cloud.parentNode;
+      if (!cloud || !holder) return;
+      var vr = v.getBoundingClientRect(), first = null;
+      if (!vr.width) return;
+      q(f.svg, 'g.kit-lbl text').forEach(function (t) {
+        var owner = t.closest('g.kit-part');
+        while (owner && owner.parentNode !== holder) owner = owner.parentNode.closest ? owner.parentNode.closest('g.kit-part') : null;
+        if (!owner || owner === cloud || !(owner.compareDocumentPosition(cloud) & 4)) return;   // 4: the cloud comes after
+        var r = t.getBoundingClientRect();
+        if (r.width && r.left < vr.right && r.right > vr.left && r.top < vr.bottom && r.bottom > vr.top &&
+            (!first || (owner.compareDocumentPosition(first) & 4))) first = owner;
+      });
+      if (first) holder.insertBefore(cloud, first);
+    });
+  }
   function inkOn(f) {
     if (!document.elementsFromPoint) return;
-    q(f.svg, 'text.kit-sl, text.kit-cap').forEach(function (t) {
+    veilsUnder(f);
+    q(f.svg, 'text.kit-sl, text.kit-cap, text.kit-h, text.kit-state').forEach(function (t) {
       t.classList.remove('kit-sl-ink');
-      var r = t.getBoundingClientRect();
-      if (!r.width) return;
+      t.classList.remove('kit-ink-halo');
+      var r = t.getBoundingClientRect(), name = t.classList.contains('kit-sl') || t.classList.contains('kit-cap');
+      if (!r.width || shownAt(t, f.svg) < 0.5) return;
       var under = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2);
       for (var i = 0; i < under.length; i++) {
         var n = under[i];
         if (n === f.svg || !f.svg.contains(n)) return;
         if (/^(text|tspan|g|line|polyline)$/.test(tagOf(n))) continue;
         var cs = getComputedStyle(n), c = rgba(cs.fill), op = parseFloat(cs.fillOpacity);
-        if (!c || c[3] < 0.5 || (!isNaN(op) && op < 0.5)) continue;
-        if (luminance(c) > 0.25) t.classList.add('kit-sl-ink');
+        if (!c || c[3] < 0.5 || (!isNaN(op) && op < 0.5) || shownAt(n, f.svg) < 0.5) continue;
+        if (name) { if (luminance(c) > 0.25) t.classList.add('kit-sl-ink'); return; }
+        var own = rgba(getComputedStyle(t).fill);              /* a part's own word: only when it does not read there */
+        if (own && ratio(own, c) < 3) t.classList.add(luminance(c) > 0.25 ? 'kit-sl-ink' : 'kit-ink-halo');
         return;
       }
     });
@@ -846,7 +895,9 @@
         G.body = join(G.body, pb);
         if (known) return;
         G.seenKeys[key] = { pts: pts };
-        if (!flagged(n, 'data-may-overlap', svg)) G.obs.push({ pts: pts, r: r });
+        /* 2.63.2: a veil (a vapour cloud) may lie over shapes, never over words - it is drawn after them and hid "hot
+           exhaust 540 °C" and "lamp not certified safe" in IGF M06 s04: the labels keep out of it */
+        if (!flagged(n, 'data-may-overlap', svg) || n.hasAttribute('data-veil')) G.obs.push({ pts: pts, r: r });
         if (part) {
           part.__kitBox = join(part.__kitBox, pb);
           part.__kitPts = (part.__kitPts || []).concat(pts.filter(function (p, i) { return i % 3 === 0; }));
@@ -2036,6 +2087,10 @@
     if (meta.css && document.head && !document.querySelector('style[data-kit-part="' + type + '"]')) {
       var st = document.createElement('style');
       st.setAttribute('data-kit-part', type);
+      /* 2.63.2 (item 4): a part merged into the kit has its colours calibrated in the gallery like kit.css's own rules, so
+         the drawing check (audit_drawing.js kitColourRules) treats this sheet as the kit's own - push_button's cap, lid and
+         tag failed 2.3:1 on a task page's symbol, where only kit.css was exempt */
+      if (!mine) st.setAttribute('data-kit-own', '');
       st.textContent = meta.css;
       document.head.appendChild(st);
     }
@@ -2582,6 +2637,7 @@ KIT.define('gas_cloud', function (fig, part, g, p) {
     .forEach(function (b, i) {
       var at = { cx: b[0] * w, cy: b[1] * ht, rx: b[2] * w, ry: b[3] * ht, 'class': 'kit-gas-cloud-puff',
                  'data-no-contain': '', 'data-may-overlap': '', 'data-low-contrast': '',     // pale by design: methane vapour has no colour
+                 'data-veil': '',                                                            // over shapes, never over words (2.63.2)
                  style: 'animation-delay:' + (-0.7 * i) + 's' };
       if (drift) at['data-may-cross'] = '';
       h.el('ellipse', at, grow);

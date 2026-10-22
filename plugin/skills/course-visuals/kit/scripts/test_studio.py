@@ -499,6 +499,7 @@ def main():
               shot.endswith("_all.png") and os.path.isfile(shot) and png_size(shot)[0] >= 1300 and png_size(shot)[1] >= 700, shot)
         floor_parts_part(tmp)
         flammability_part(tmp)
+        kit_words_part()
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     task_page_part()
@@ -602,6 +603,74 @@ def flammability_part(tmp):
         io.open(p, "w", encoding="utf-8").write(json.dumps(spec))
         r, why = studio.run(p, panel="two-col", sizes=((1280, 800), (1024, 768)), step="all", out=os.path.join(tmp, "fl_" + name[:3]), shots=False)
         check("IGF %s draws clean at 1280 x 800 and 1024 x 768, every step" % name, r and not findings(r), (findings(r) if r else why))
+
+
+# 2.63.2 (item 15) - the kit's own flaws found when the realistic kit replaced the old one in the IGF original course
+# (review_fixes CHANGES.md "Kit replaced"): IGF M06 s11 and M03 s06 as they stood before the hand fixes
+WORDS_M06S11 = {"size": [640, 390], "parts": [
+    {"id": "ACC", "type": "space", "x": 442, "y": 40, "w": 190, "h": 210, "style": "enclosure", "label": "accommodation"},
+    {"id": "SP", "type": "spill", "x": 6, "y": 100, "w": 628, "surface": "deck", "surfaceY": 150, "from": 170, "reach": 150, "label": "deck", "value": 0},
+    {"id": "C1", "type": "gas_cloud", "x": 30, "y": 160, "w": 300, "h": 90, "from": [146, 76], "value": 0},
+    {"id": "C2", "type": "gas_cloud", "x": 300, "y": 160, "w": 190, "h": 90, "from": [10, 76], "value": 0},
+    {"id": "AIR", "type": "fan", "x": 442, "y": 214, "dir": "right", "r": 18, "len": 64, "label": "air intake", "state": False, "value": 0},
+    {"id": "W", "type": "wind", "x": 30, "y": 30, "w": 330, "rows": 3, "gap": 26, "dir": 0, "label": "light wind", "words": ["CALM", "LIGHT", "LIGHT", "STRONG"], "value": 0},
+    {"type": "text", "x": 120, "y": 140, "to": [176, 230], "style": "cap", "text": "rich - too rich to burn"},
+    {"type": "text", "x": 300, "y": 140, "to": [330, 232], "style": "cap", "text": "flammable"},
+    {"type": "text", "x": 400, "y": 300, "to": [470, 238], "style": "cap", "text": "lean"}],
+    "steps": [{"play": [["SP", 1, 2600, 0, "linear"]]}, {"play": [["C1", 1, 2600, 0, "linear"]]}, {"play": [["C1", 1, 300]]},
+              {"play": [["W", 0.3, 800], ["C2", 1, 2800, 0, "linear"], ["AIR", 1, 600, 1800]]}]}
+WORDS_M03S06 = {"size": [625, 373], "parts": [
+    {"type": "text", "x": 290, "y": 30, "text": "boil-off gas"}, {"id": "BO", "type": "boil_off", "x": 30, "y": 90, "w": 225, "h": 125},
+    {"type": "text", "x": 142, "y": 292, "style": "h", "text": "LNG fuel tank"},
+    {"id": "G", "type": "pipe", "fluid": "gas", "d": "M142 90 V46 H566 V110", "value": 0},
+    {"id": "GB", "type": "pipe", "fluid": "gas", "d": "M380 46 V185", "value": 0},
+    {"id": "VG", "type": "valve", "x": 380, "y": 118, "rotate": 90, "labelAt": "right", "trip": False, "value": 0},
+    {"id": "GCU", "type": "space", "x": 312, "y": 185, "w": 136, "h": 78, "style": "enclosure", "label": "GAS\nCOMBUSTION\nUNIT"},
+    {"id": "E", "type": "engine", "x": 518, "y": 120, "w": 96, "h": 62, "label": "engine", "value": 0}],
+    "steps": [{"play": [["BO", 1, 1200]]}, {"play": [["G", 1, 500], ["E", 1, 400]]}, {"play": [["VG", 1, 600], ["GB", 1, 400, 300], ["GCU", 1, 500, 300]]}]}
+# a cloud listed after a part whose words it covers (IGF M06 s04: "hot exhaust 540 °C", "lamp not certified safe")
+WORDS_VEIL = {"size": [640, 360], "parts": [
+    {"id": "R", "type": "space", "x": 40, "y": 40, "w": 560, "h": 280, "label": "FUEL PREPARATION ROOM", "style": "room"},
+    {"id": "V", "type": "valve", "x": 300, "y": 180, "label": "fuel valve"},
+    {"id": "C", "type": "gas_cloud", "x": 40, "y": 40, "w": 560, "h": 280, "from": [260, 200], "value": 1}]}
+WORDS_JS = r"""
+var st = document.createElement('style'); st.textContent = '*{transition:none!important;animation:none!important}'; document.head.appendChild(st);
+function rgba(s){var m=/rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:[ ,/]+([\d.]+%?))?\s*\)/.exec(s||'');if(!m)return null;var a=m[4]===undefined?1:(/%$/.test(m[4])?parseFloat(m[4])/100:parseFloat(m[4]));return [+m[1],+m[2],+m[3],a];}
+function lum(c){function l(v){v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);}return 0.2126*l(c[0])+0.7152*l(c[1])+0.0722*l(c[2]);}
+function ratio(a,b){var x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
+function op(n){var o=1;for(var e=n;e&&e!==svg.parentNode;e=e.parentNode){var cs=getComputedStyle(e);if(cs.display==='none'||cs.visibility==='hidden')return 0;var v=parseFloat(cs.opacity);if(!isNaN(v))o*=v;}return o;}
+function hit(a,b){return a.left<b.right-1&&a.right>b.left+1&&a.top<b.bottom-1&&a.bottom>b.top+1;}
+var panel=rgba(getComputedStyle(svg.parentNode).backgroundColor)||[12,30,58,1], low=[], veiled=[], n=f.steps();
+for(var k=0;k<=n;k++){ f.go(k,true);
+  var puffs=[].filter.call(svg.querySelectorAll('[data-veil]'),function(p){return op(p)>0.05;});
+  [].forEach.call(svg.querySelectorAll('text.kit-sl,text.kit-cap,text.kit-h,text.kit-state'),function(t){
+    if(op(t)<0.5||!t.textContent.trim())return; var r=t.getBoundingClientRect(); if(!r.width)return;
+    puffs.forEach(function(p){ if((t.compareDocumentPosition(p)&4)&&hit(r,p.getBoundingClientRect())) veiled.push(k+':'+t.textContent.trim()); });
+    var under=document.elementsFromPoint(r.left+r.width/2,r.top+r.height/2), g=panel;
+    for(var i=0;i<under.length;i++){var u=under[i]; if(u===svg||!svg.contains(u))break; if(/^(text|tspan|g|line|polyline)$/i.test(u.tagName))continue;
+      var cs=getComputedStyle(u),c=rgba(cs.fill),fo=parseFloat(cs.fillOpacity); if(!c||c[3]<0.5||(!isNaN(fo)&&fo<0.5)||op(u)<0.5)continue; g=c; break;}
+    var ts=getComputedStyle(t), fc=rgba(ts.fill), sc=rgba(ts.stroke), sw=parseFloat(ts.strokeWidth)||0;
+    if(!fc)return; var halo=sc&&sw>=2.5&&ts.paintOrder.indexOf('stroke')===0?ratio(fc,sc):0;
+    if(ratio(fc,g)<3&&halo<4.5) low.push(k+':'+t.textContent.trim()+' '+ratio(fc,g).toFixed(2));
+  });}
+return {low: low, veiled: veiled};"""
+
+
+def kit_words_part():
+    """2.63.2 - the kit's words read on whatever they stand on, at every step: a ground that is not shown yet is no ground
+    (dark ink was printed on the navy panel over a cloud still to come - IGF M06 s11 "air intake" 1.4:1), a part's own word
+    on its light contents gets the dark ink (M03 s06 "LNG" on the liquid, 2:1), a room's name not lit is the readable grey,
+    and a vapour cloud is never drawn over a word"""
+    print("\n-- 2.63.2: the kit's words read on their ground at every step; a cloud never covers a word")
+    for name, spec in (("IGF M06 s11", WORDS_M06S11), ("IGF M03 s06", WORDS_M03S06), ("a cloud after a labelled valve", WORDS_VEIL)):
+        for wd in (680, 443):
+            v = kit_eval(spec, WORDS_JS, wd)
+            check("%s at %d px: no word under 3:1 on its ground (none with a halo under 4.5:1), none under a cloud drawn after it"
+                  % (name, wd), v and not v["low"] and not v["veiled"], v)
+    css = io.open(os.path.join(studio.KIT, "kit.css"), encoding="utf-8").read()
+    rule = re.search(r"\.kit-sl\{[^}]*\}", css)
+    check("a room's name not lit is --dim-d (was --faint-d, 2.6:1 on the hull: IGF M01 s03 / s04, M02 s12)",
+          rule and "fill:var(--dim-d" in rule.group(0), rule and rule.group(0)[:160])
 
 
 if __name__ == "__main__":
