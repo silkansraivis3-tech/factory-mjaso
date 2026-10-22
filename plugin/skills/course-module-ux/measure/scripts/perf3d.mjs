@@ -262,7 +262,7 @@ async function main() {
       const f0 = await frames();
       await sleep(500);
       f.drew = (await frames()) - f0;
-      f.on = await evaluate(`(function(){ var b = document.querySelector('.gb-fs3d-on'); if (!b) return null; var r = b.getBoundingClientRect(), c = b.querySelector('canvas'), cr = c && c.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), canvas: cr ? [Math.round(cr.width), Math.round(cr.height)] : null, real: document.fullscreenElement === b }; })()`);
+      f.on = await evaluate(`(function(){ var b = document.querySelector('.gb-fs3d-on'); if (!b) return null; var r = b.getBoundingClientRect(), c = b.querySelector('canvas'), cr = c && c.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), canvas: cr ? [Math.round(cr.width), Math.round(cr.height)] : null, buffer: c ? [c.width, c.height] : null, dpr: window.devicePixelRatio || 1, real: document.fullscreenElement === b }; })()`);
       await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', keyCode: 39, bubbles: true }))`);
       await sleep(150);
       f.keptSlide = await isActive(id);

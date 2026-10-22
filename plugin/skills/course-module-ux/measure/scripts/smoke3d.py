@@ -78,7 +78,9 @@ def full_screen(sid, fs):
                    % (sid, "; ".join(b["over"])))
     if not on:
         bad.append("%s: pressing Full screen did not fill the window with the scene" % sid)
-    elif (fs.get("drew") or 0) <= 0:
+    elif (fs.get("drew") or 0) <= 0 and (on.get("buffer") or [0])[0] < 0.8 * (on.get("w") or 1) * (on.get("dpr") or 1):
+        # a scene that draws only when something changes (IGF M01 s05) has no new frames: its renderer's own buffer grown
+        # to the box is the proof it redrew at the new size (the canvas's css size grows by itself)
         bad.append("%s: full screen, the scene stopped drawing (its renderer does not follow the box - listen to "
                    "window resize / gb3d-resize)" % sid)
     if on and fs.get("keptSlide") is False:
