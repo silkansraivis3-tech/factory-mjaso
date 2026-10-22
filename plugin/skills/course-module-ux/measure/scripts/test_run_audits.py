@@ -17,6 +17,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -152,8 +153,34 @@ def main():
           code == 2 and "1280x800  deck     FAIL" in out and "scrolls sideways" in out and "compose  ABORT" in out, out)
     check("the injected page is gone and the decks are untouched",
           not leftovers() and (STEPS.read_bytes(), SCROLL.read_bytes()) == before, leftovers())
+    overlay_part()
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
     return 1 if FAIL else 0
+
+
+def overlay_part():
+    """2.63.2 (the IGF M06 rebuild on 2.63.2: "box on box div.m06-3d / button.gb-fs3d-btn") - a control laid over a figure
+    on purpose (data-overlay: the 3D Full screen button, a part's camera badge) may sit on the figure's painted boxes, and
+    is judged never over a word"""
+    fs = HERE / "fixtures" / "deck_3d_fs.html"
+    base = fs.read_text(encoding="utf-8")
+    framed = base.replace(".fixture-stage { position: relative; height: 360px; }",
+                          ".fixture-stage { position: relative; height: 360px; margin-top: 24px; border: 2px solid #0A2463; }", 1)
+    over = framed.replace('<section class="slide" id="s1" data-visual="none"><div class="slide-body"><h2>Title</h2>',
+                          '<section class="slide" id="s1" data-visual="none"><div class="slide-body"><div style="position:relative">'
+                          '<h2>Title of the module</h2><button type="button" data-overlay style="position:absolute;left:0;top:0;'
+                          'width:220px;height:100%;background:#0A2463;border:0"></button></div>', 1)
+    for name, text, want in (("framed", framed, "no"), ("over a word", over, "yes")):
+        p = fs.with_name("_ov_%d.html" % os.getpid())
+        p.write_text(text, encoding="utf-8")
+        try:
+            code, out = cli(str(p), "--quiet")
+        finally:
+            p.unlink()
+        hit = "collide  FAIL" in out
+        check("2.63.2 overlay %s: %s" % (name, "the Full screen button on the scene's framed box is no collision" if want == "no"
+                                          else "an overlay control over a heading is a collision (like the chrome)"),
+              hit == (want == "yes") and (want == "no" or "Title of the module" in out or "under" in out), out[-700:])
 
 
 if __name__ == "__main__":

@@ -399,6 +399,7 @@ var GBDeck = (function (w, d) {
       btn.type = "button";
       btn.className = "gb-fs3d-btn";
       btn.setAttribute("data-no-zoom", "");
+      btn.setAttribute("data-overlay", "");          // laid over the scene's box: the audit judges it never over a word
       fsWord(btn, false);
       btn.addEventListener("click", function (e) {
         e.preventDefault(); e.stopPropagation();

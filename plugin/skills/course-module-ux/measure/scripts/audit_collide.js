@@ -246,12 +246,19 @@
       });
     });
 
-    var all = qa(s, "*").concat(chrome);
+    var all = qa(s, "*").concat(chrome), overlays = [];
     all.forEach(function (el) {
       if (el.namespaceURI && el.namespaceURI.indexOf("svg") >= 0) { return; }
       var st = getComputedStyle(el);
       if (st.display === "none") { return; }   /* NOT visibility — see header */
       if (CONFIG.skipOpacityZero && parseFloat(st.opacity) === 0) { return; }
+      /* 2.63.2 - a control laid over a figure on purpose (data-overlay: a 3D scene's Full screen button, a drawn part's
+         camera badge) sits on the figure's boxes by design - judged like the chrome: never over a word (check 3) */
+      if (el.hasAttribute("data-overlay") && s.contains(el)) {
+        var ovr = el.getBoundingClientRect();
+        if (ovr.width && ovr.height) { overlays.push({ q: label(el), r: ovr }); }
+        return;
+      }
       var ink = inkRects(el);
       if (ink.length) {
         texts.push({ el: el, ink: ink, sel: label(el),
@@ -277,6 +284,7 @@
         }
       });
     });
+    chromeBox = chromeBox.concat(overlays);
     var underChrome = [];
     texts.forEach(function (T) {
       if (!s.contains(T.el)) { return; }

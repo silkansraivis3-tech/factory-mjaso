@@ -372,6 +372,7 @@ var GBZoom = (function (w, d) {
     var b = btn("gbz-cam", T.photoOf.replace("{p}", lbl.textContent.replace(/\s+/g, " ").trim()), CAM);
     b.setAttribute("data-script-ignore", "");
     b.setAttribute("data-no-zoom", "");
+    b.setAttribute("data-overlay", "");                // laid over the drawing: the deck audit judges it never over a word
     b.__gbzPart = part;
     b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); show(im); }, false);
     if (w.getComputedStyle && w.getComputedStyle(host).position === "static") { host.style.position = "relative"; }
