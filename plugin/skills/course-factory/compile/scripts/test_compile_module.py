@@ -1993,6 +1993,14 @@ def exercise_part(tmp):
     check("... with room in the allocation the slide takes the form's 15 minutes as practice, and the hours add up",
           p2.get("minutes") == 15 and "practice_minutes" not in p2 and cs.summary(w2)["practice_min"] - cs.summary(roomy)["practice_min"] == 15
           and not [p for p in cs.validate(w2) if "(L1)" in p] and cm is not None, (p2, cs.validate(w2)))
+    rc = json.loads(json.dumps(SCREENS))
+    mci = next(i for i, x in enumerate(rc) if x.get("opens") == "MC")
+    rc.insert(mci, {"id": "s09", "kind": "slide", "recap": True, "title": "What to take away", "visual_kind": "none",
+                    "text": "Five spaces.\nTwo barriers.", "minutes": 1})
+    ch3 = exercises.proposal(script(screens=rc), ex)
+    _ch, w3 = cs.build_changes(script(screens=rc), ch3)
+    check("... placed before the recap that leads into the module check, never between them (L51; IGF M08 rebuild)",
+          ch3[0].get("before") == "s09" and not [p for p in cs.validate(w3) if "L51" in p], (ch3[0].get("before"), cs.validate(w3)))
 
 
 def sme_figures_part(tmp):

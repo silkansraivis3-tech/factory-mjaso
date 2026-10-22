@@ -164,7 +164,12 @@ def proposal(script, exs):
     script 21 minutes) - the exercise is the practical part, so the slide takes 0 deck minutes and says its own time in
     "practice_minutes" (the IGF original course: data-mins 0, data-practical-mins the form's time)"""
     ids = {s.get("id") for s in script.get("screens", [])}
-    mc = next((s["id"] for s in script.get("screens", []) if s.get("kind") == "task-slide" and (s.get("opens") or "") == "MC"), None)
+    sc = script.get("screens", [])
+    mc = next((i for i, s in enumerate(sc) if s.get("kind") == "task-slide" and (s.get("opens") or "") == "MC"), None)
+    if mc is not None:          # before the recap that leads into the module check (L51), not between them (IGF M08 rebuild)
+        while mc > 0 and sc[mc - 1].get("recap"):
+            mc -= 1
+        mc = sc[mc]["id"]
     alloc = float(script.get("minutes_allocated") or 0)
     used = sum(float(s.get("minutes") or 0) for s in script.get("screens", []) if s.get("kind") in ("slide", "task-slide", "activity"))
     out = []
