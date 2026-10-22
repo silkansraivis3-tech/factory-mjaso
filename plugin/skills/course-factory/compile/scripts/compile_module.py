@@ -132,7 +132,8 @@ STATEMENT_MAX_WORDS = 22
 # M01 s03 (58 words) and M04 s02 (82, audit_deck clean) fitted; M07 s08 (95), s12 (101) and M09 s06 (91) spilled
 # 105 / 92 / 79 px off the slide - so the line is drawn between 82 and 91
 INSET_MAX_WORDS = {"two-col": 86, "wide-left": 86, "wide-right": 86, "photo-split": 96}   # 2.63.0: set from the budgets below
-CHECK_PAGES = {"MC": "../assessment/check.html", "FA": "../assessment/final.html"}   # the module check and the (single) final
+MC_WORDS = "You see how many you got right - it shows what to review, it is not a grade."   # 2.63.2 (Aleksis, 2026-10-22)
+CHECK_PAGES = {"MC":"../assessment/check.html", "FA": "../assessment/final.html"}   # the module check and the (single) final
 LAYOUTS = json.load(io.open(os.path.join(SKILLS, "course-module-ui", "knowledge", "layout-templates.json"), encoding="utf-8"))
 TEMPLATES = LAYOUTS["templates"]
 DENSE_WORDS = LAYOUTS["dense"]["words"]
@@ -2084,8 +2085,9 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if code == "MC" and re.search(r"\bPASSED\b|\bpass mark\b|\bnot passed\b", " ".join(lines), re.I):
             # 2.63.0 (L27, owner 2026-10-21): the module check shows no verdict - approved words that promise one are the
             # operator's to change (IGF M01 v263: "You see PASSED or NOT PASSED" on the launch slide)
+            # 2.63.2: the note gives the approved sentence (Aleksis, 2026-10-22) to propose instead
             note_once("Note: %s - its approved words promise a pass mark or PASSED / NOT PASSED; a module check shows the score "
-                      "only (L27, 2.63.0) - change the words: content_script.py propose" % where)
+                      "only (L27, 2.63.0) - change the words with content_script.py propose, e.g. \"%s\"" % (where, MC_WORDS))
         pic = task_picture(mdir, b, probs, where)          # 2.63.0: the exercise's photo, else an icon that says what it is
         body.append(pic or task_icon(script, code, "room" if kind == "activity" else "tablet"))
         body.append('<div class="act-lines">')

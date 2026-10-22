@@ -278,10 +278,10 @@ one line and do what was asked.
 
 **L27 · Three test levels, all on the tablet, and only the final assessment is graded.**
 
-*(Owner, 2026-10-05, 2.21.0 - L45: a module check reports **PASSED or NOT PASSED** with a score, the pass mark stated
-on the page - for the trainee and the instructor to know whether the module was understood, not an official grade. The
-final assessment is the official one. Where this text says "never pass/fail, never red" for a module check, that is
-replaced.)*
+*(Owner Raivis, 2026-10-21, 2.63.0 - replaces 2.21.0's L45 verdict: a module check shows the **score only** - no pass
+mark, no verdict. Its words, in the script and on the page (Aleksis, 2026-10-22): "You see how many you got right - it
+shows what to review, it is not a grade." The final assessment is the official one and keeps its 70 % and its
+verdict.)*
 
 *Revised by the owner, 2026-09-30 (2.17.0): the tests are on the **trainee tablet only**, never inside the
 slides (L35); a self-check **does** show the trainee a score — "it's for himself"; the module check does too.
@@ -715,9 +715,10 @@ slide, and every result reaches the instructor and the admin panel."*
   no retry inside the classroom), which files are instructor-only, and what the importer skips.
 - **The instructor notes reach the panel as each slide's `data-cue`** - the importer skips `.md` files. The short notes
   of 2.18.1 are exactly that; the `.md` copy stays in `to_review\` for the operator to read.
-- **Module checks report PASSED or NOT PASSED** with a score and the pass mark on the page (owner, 2026-10-05: *"it can be
-  passed, it can be not passed, it can be graded, but that grade only for the trainee and instructor to know if the
-  trainee understood"*) - not an official grade; the final assessment is the official one. Self-checks: no pass mark.
+- **Module checks show the score only** - no pass mark, no verdict (owner Raivis, 2026-10-21, replacing the 2026-10-05
+  verdict). The words in the script and on the page (Aleksis, 2026-10-22): *"You see how many you got right - it shows
+  what to review, it is not a grade."* The final assessment is the official one and keeps its 70 % and its verdict.
+  Self-checks: no pass mark.
 - **Task pages are built for 1280 x 800 landscape** - the classroom's WebView - with L42's sizes.
 - **Proved:** `scripts/check_course_package.py` runs the classroom's whole before-handover list and then the admin
   panel's own importer (`course-tablet-publisher/vendor/package-core.mjs`, a byte-identical copy of

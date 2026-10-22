@@ -995,6 +995,18 @@ def layouts_part(tmp):
         cm.compile_deck(script(screens=sv), {}, md2, None, "x", True)
     check("2.63.0 - a module-check slide whose approved words promise PASSED / NOT PASSED is a Note (L27: the score only)",
           "promise a pass mark or PASSED / NOT PASSED" in buf.getvalue() and "(t02)" in buf.getvalue(), buf.getvalue()[-600:])
+    check("2.63.2 - the Note gives the approved module-check sentence to propose", cm.MC_WORDS in buf.getvalue(), buf.getvalue()[-600:])
+    # 2.63.2 (item 11): the factory's own guidance never tells a scriptwriter to promise a verdict on a module check
+    cf = os.path.dirname(os.path.dirname(HERE))
+    said = []
+    for rel in ("knowledge/page-labels.json", "knowledge/theory-rules.json", "references/laws-in-full.md", "SKILL.md",
+                "compile/GUIDE.md", "script/GUIDE.md"):
+        for n, ln in enumerate(io.open(os.path.join(cf, rel), encoding="utf-8"), 1):
+            if re.search(r"module.?check|s_module_check|tab_scores|moduļ|модул", ln, re.I) and \
+               re.search(r"PASSED or NOT PASSED|NOKĀRTOTS vai NENOKĀRTOTS|СДАНО или НЕ СДАНО|reports \*\*PASSED", ln):
+                said.append("%s:%d" % (rel, n))
+    check("2.63.2 - no guidance file promises PASSED / NOT PASSED on a module check (only the final keeps its verdict)",
+          not said, said)
     check("lines with cells \" | \" are a table: reference-table, one row a line, the separator kept (hidden)",
           'data-template="reference-table.v1"' in s6 and s6.count('<tr data-script-field="text"') == 3 and '<span class="lt-sep"> | </span>' in s6, s6[:700])
     check("three-content-blocks: three numbered blocks beside the picture", 'data-template="three-content-blocks.v1"' in s7
