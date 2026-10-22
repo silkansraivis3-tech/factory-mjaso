@@ -694,6 +694,40 @@ def picture_part(exe, tmp):
           and hot.get("tickbg") == "rgb(79, 214, 160)" and lum(hot.get("bg")) > 40, hot)
 
 
+ZOOM_CORNER_KIT = {"size": [640, 300], "label": "The spaces", "parts": [
+    {"id": "VM", "type": "space", "x": 520, "y": 8, "w": 112, "h": 96, "label": "Vent mast"},
+    {"id": "FT", "type": "space", "x": 20, "y": 150, "w": 200, "h": 120, "label": "Fuel tank"},
+    {"id": "ER", "type": "space", "x": 260, "y": 150, "w": 160, "h": 120, "label": "Engine room"}]}
+
+
+def corner_part(exe, tmp):
+    """2.63.2 (Aleksis, 2026-10-22; the 2.63.2 rebuild's M01 q03 / M08 m01 and the IGF original course's M03 SC2 q6, M04
+    check q2, M09 check q2) - the photo viewer's ⤢ button never sits on an answer picture's tap area or label: the right
+    area here is in its old corner (top right)"""
+    print("\n-- 2.63.2: the ⤢ button keeps off an answer picture's tap areas and labels")
+    screens = [{"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the corner", "text": "Self-check on your tablet now.", "minutes": 4},
+               {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the vent mast.", "visual": "the ship",
+                "answer": "Vent mast*\nFuel tank\nEngine room", "feedback": "High above the deck."}]
+    os.makedirs(os.path.join(tmp, "corner"))
+    c, md = tcm.new_course(os.path.join(tmp, "corner"), tcm.script(screens=screens), build=False)
+    io.open(os.path.join(c, "working_claude", "figures", "M01", "zoomcorner.kit.json"), "w", encoding="utf-8").write(json.dumps(ZOOM_CORNER_KIT))
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "t01": {"try_tablet": False}, "q01": {"figure": "zoomcorner.kit.json", "areas": {"Vent mast": "VM", "Fuel tank": "FT", "Engine room": "ER"}}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    page = os.path.join(md, "tasks", "sc1_the_corner.html")
+    check("the corner fixture page is built", code == 0 and os.path.isfile(page), out[-400:])
+    look = (RECT + "document.getElementById('go').click();"
+            " var s = document.querySelector('.scr.on'), b = s && s.querySelector('.gbz-corner');"
+            " function hit(a, c) { return a.l < c.r - 0.5 && a.r > c.l + 0.5 && a.t < c.b - 0.5 && a.b > c.t + 0.5; }"
+            " var things = [].slice.call(s.querySelectorAll('.hot, .zone, .lbox, svg text')).map(R).filter(function (x) { return x.r > x.l; });"
+            " out.corner = b ? {btn: R(b), over: things.filter(function (x) { return hit(R(b), x); }).length, n: things.length} : null;")
+    for size in ((1280, 800), (1024, 768)):
+        r = drive(exe, page, [["eval", look]], tmp, look=False, size=size)
+        cr = r.get("corner") or {}
+        check("%dx%d: the ⤢ button covers no tap area and no word of the answer picture (%s things measured)" % (size[0], size[1], cr.get("n")),
+              not r.get("errors") and cr and cr.get("n") and cr.get("over") == 0, (r.get("errors"), cr))
+
+
 STEPS = [
     {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the steps", "text": "Self-check on your tablet now.", "minutes": 4},
     {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "scenario", "question": "Three situations. In each one, choose what happens or what is done.",
@@ -1551,6 +1585,7 @@ def main():
         figures_part(exe, tmp)
         fixes_part(exe, tmp)
         picture_part(exe, tmp)
+        corner_part(exe, tmp)
         steps_part(exe, tmp)
         patterns_part(exe, tmp)
         team_part(exe, tmp)
