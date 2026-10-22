@@ -59,6 +59,14 @@ svg.gbz-media{max-width:none;max-height:none}   /* sized to fit by gb_zoom.js */
 /* on a slide that is a photograph: below the header band, clear of the words */
 .slide.photo > .gbz-corner.gbz-photo{top:calc(min(7.4vmin,62px) + 14px);right:14px}
 
+/* 2.63.2 - a drawn part that opens its photo shows a camera: the course's amber disc in a 44 px tap target, placed by
+   gb_zoom.js where it covers no word of the drawing */
+.gbz-btn.gbz-cam{position:absolute;z-index:4;width:44px;height:44px;border:0;background:transparent;box-shadow:none}
+.gbz-btn.gbz-cam::before{content:"";position:absolute;left:5px;top:5px;width:34px;height:34px;border-radius:50%;
+  background:var(--amber);box-shadow:0 2px 8px var(--gbz-btn-shadow)}
+.gbz-btn.gbz-cam svg{position:relative;width:20px;height:20px;fill:var(--navy)}
+.gbz-btn.gbz-cam:hover,.gbz-btn.gbz-cam:focus-visible{background:transparent;color:var(--navy);outline:3px solid var(--blue);outline-offset:-2px}
+
 @keyframes gbz-in{from{transform:scale(.94)}to{transform:scale(1)}}   /* movement only - never animate into visibility */
 @media (prefers-reduced-motion:reduce){
   .gbz-media{transition:none;animation:none}

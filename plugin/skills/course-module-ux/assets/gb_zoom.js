@@ -42,9 +42,9 @@ var GBZoom = (function (w, d) {
   var NEVER = "button,a,label,input,select,textarea,#landing,#overview,#chrome,.cbtn,.ov-item," +
               ".brand-chip,.logo,[data-no-zoom],[data-motion],.gbz";
   var L = {
-    en: { close: "Close", zin: "Zoom in", zout: "Zoom out", open: "Show the picture full screen" },
-    lv: { close: "Aizvērt", zin: "Tuvināt", zout: "Attālināt", open: "Rādīt attēlu pa visu ekrānu" },
-    ru: { close: "Закрыть", zin: "Приблизить", zout: "Отдалить", open: "Показать на весь экран" }
+    en: { close: "Close", zin: "Zoom in", zout: "Zoom out", open: "Show the picture full screen", photoOf: "Photo of {p}" },
+    lv: { close: "Aizvērt", zin: "Tuvināt", zout: "Attālināt", open: "Rādīt attēlu pa visu ekrānu", photoOf: "Foto: {p}" },
+    ru: { close: "Закрыть", zin: "Приблизить", zout: "Отдалить", open: "Показать на весь экран", photoOf: "Фото: {p}" }
   };
   var T = L[(d.documentElement.getAttribute("lang") || "en").slice(0, 2).toLowerCase()] || L.en;
 
@@ -355,8 +355,64 @@ var GBZoom = (function (w, d) {
         part.__gbzPhoto = im;
         part.classList.add("gbz-part");
         part.setAttribute("data-photo", im.getAttribute("data-part"));
+        badge(part, im, lbls[j]);
       }
     }
+  }
+
+  /* 2.63.2 (Aleksis, 2026-10-22, the IGF course's M01 ship plan: "you can click on a spot in the diagram and see picture,
+     add this to the factory - recommended but not obligatory") - a part that opens a photo shows it: a camera badge, the
+     course's amber disc in a 44 px tap target, "Photo of <part>". It sits at a corner of the part, the first that covers
+     no word of the drawing and no other badge (the part's own label included); placed again as the drawing is laid out.
+     Not on a slide that turned them off (the build sheet's "photo_badges": false -> data-photo-badges="off") */
+  var CAM = "M9 4 7.2 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.2L15 4zm3 4.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z";
+  function badge(part, im, lbl) {
+    var svg = closest(part, "svg"), host = svg && svg.parentNode;
+    if (!host || closest(part, '[data-photo-badges="off"]')) { return; }
+    var b = btn("gbz-cam", T.photoOf.replace("{p}", lbl.textContent.replace(/\s+/g, " ").trim()), CAM);
+    b.setAttribute("data-script-ignore", "");
+    b.setAttribute("data-no-zoom", "");
+    b.__gbzPart = part;
+    b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); show(im); }, false);
+    if (w.getComputedStyle && w.getComputedStyle(host).position === "static") { host.style.position = "relative"; }
+    host.appendChild(b);
+    placeBadges(host);
+    if (!host.__gbzWatch) {
+      host.__gbzWatch = true;
+      var again = function () { w.requestAnimationFrame(function () { placeBadges(host); }); };
+      if (w.ResizeObserver) { new w.ResizeObserver(again).observe(host); }
+      if (w.MutationObserver) { new w.MutationObserver(again).observe(svg, { attributes: true, subtree: true, attributeFilter: ["viewBox", "transform"] }); }
+      var sec = closest(host, ".slide");
+      if (sec && w.MutationObserver) { new w.MutationObserver(again).observe(sec, { attributes: true, attributeFilter: ["class"] }); }
+      w.addEventListener("resize", again);
+    }
+  }
+  function hits(a, b) { return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top; }
+  function placeBadges(host) {
+    var H = host.getBoundingClientRect(), svg = host.querySelector("svg");
+    if (!H.width || !svg) { return; }
+    var words = [], done = [];
+    [].forEach.call(svg.querySelectorAll("text"), function (t) {
+      var r = t.getBoundingClientRect();
+      if (r.width && r.height && (!t.style || t.style.opacity !== "0")) { words.push(r); }
+    });
+    [].forEach.call(host.querySelectorAll(".gbz-cam"), function (b) {
+      var r = (b.__gbzPart.querySelector("rect.kit-space") || b.__gbzPart).getBoundingClientRect(), S = 44, best = null;
+      if (!r.width) { return; }
+      /* inside the part's corners first, then just outside them */
+      var spots = [[r.right - S - 2, r.top + 2], [r.left + 2, r.top + 2], [r.right - S - 2, r.bottom - S - 2], [r.left + 2, r.bottom - S - 2],
+                   [r.right + 2, r.top], [r.left - S - 2, r.top], [r.right + 2, r.bottom - S], [r.left - S - 2, r.bottom - S],
+                   [r.left + r.width / 2 - S / 2, r.top - S - 2], [r.left + r.width / 2 - S / 2, r.bottom + 2]];
+      spots.forEach(function (p) {
+        var box = { left: p[0], top: p[1], right: p[0] + S, bottom: p[1] + S }, n = 0;
+        if (box.left < H.left || box.top < H.top || box.right > H.right || box.bottom > H.bottom) { n += 100; }
+        words.concat(done).forEach(function (q) { if (hits(box, q)) { n++; } });
+        if (!best || n < best.n) { best = { n: n, box: box }; }
+      });
+      b.style.left = (best.box.left - H.left).toFixed(1) + "px";
+      b.style.top = (best.box.top - H.top).toFixed(1) + "px";
+      done.push(best.box);
+    });
   }
 
   /* ---- start ------------------------------------------------------------- */

@@ -2001,7 +2001,7 @@ def active_mins(s):
 
 
 # build-sheet fields that never decide a slide's layout - an edit to them keeps what was measured and built (2.62.1)
-NOT_LAYOUT = ("alt", "labels", "unlabel", "areas", "link_hint", "not_things", "declined_3d", "photo_wanted")
+NOT_LAYOUT = ("alt", "labels", "unlabel", "areas", "link_hint", "not_things", "declined_3d", "photo_wanted", "photo_badges")
 
 
 def words_key(s, b=None):
@@ -2238,6 +2238,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
          "data-title": s.get("title"), "data-kind": "Theory", "data-block": "%s · %d" % (m, n),
          "data-visual": vkind}
     d.update(base)
+    if b.get("photo_badges") is False:          # 2.63.2: a part's camera badge is recommended, a builder may turn it off
+        d["data-photo-badges"] = "off"
     template_attrs(d, tid, variant, split)
     if varied:              # built another way for L62: build_module.py measures it out if the audit finds it does not fit
         d["data-varied"] = "%s|%s|%s" % (varied[0], varied[1], wkey)

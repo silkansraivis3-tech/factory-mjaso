@@ -1134,6 +1134,76 @@ def ship_plan_part(exe, tmp):
             "Bunkering station": "sp4.jpg", "Vent mast": "sp5.jpg"}
     check("... each its OWN photo, with its record under it", all((taps.get(k) or {}).get("shown") == v for k, v in want.items())
           and all("LNG-fuelled ship" in (t.get("record") or "") for t in taps.values()), taps)
+    # 2.63.2 (item 16): the parts that open a photo show it - a camera badge each, clear of every word, at both sizes
+    for size in ((1280, 800), (1024, 768)):
+        r = drive_page(exe, page, BADGE_DRIVE, os.path.join(tmp, "spb%d" % size[0]), size)
+        bd = r.get("badges") or []
+        check("%dx%d: a camera badge on each of the six parts with a photo, 44 px, 'Photo of <part>'" % size,
+              not r.get("errors") and len(bd) == 6 and all(b["w"] >= 44 and b["h"] >= 44 for b in bd)
+              and sorted(b["label"] for b in bd) == sorted("Photo of " + k for k in want), r)
+        check("%dx%d: no badge covers a word of the drawing or another badge" % size,
+              bd and not [b for b in bd if b["over"]], [b for b in bd if b["over"]])
+        check("%dx%d: a tap on a badge opens its part's photo full screen" % size,
+              r.get("opened") and all(r["opened"].get(k) == v for k, v in want.items()), r.get("opened"))
+    sheet = tcm.cs.load(os.path.join(c, "working_claude", "script", "M01.build.json"))
+    sheet["screens"]["s02"]["photo_badges"] = False
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), sheet)
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
+    r = drive_page(exe, page, BADGE_DRIVE, os.path.join(tmp, "spb0"), (1280, 800))
+    check("\"photo_badges\": false turns them off on that slide - the parts still open their photos",
+          'data-photo-badges="off"' in io.open(page, encoding="utf-8").read() and r.get("badges") == [] and r.get("parts") == 6,
+          (out[-300:], r))
+
+
+BADGE_DRIVE = r"""
+(function () {
+  var out = {errors: [], badges: [], opened: {}};
+  window.addEventListener('error', function (e) { out.errors.push(String(e.message)); });
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      try {
+        var sb = document.getElementById('startBtn'); if (sb) { sb.click(); }
+        var s = document.querySelector('.slide svg[data-kit]').closest('.slide');
+        [].slice.call(document.querySelectorAll('.slide')).forEach(function (x) { x.classList.remove('active'); });
+        s.classList.add('active');
+        GBZoom.scan();
+      } catch (err) { out.errors.push(String(err && err.stack || err)); }
+      setTimeout(function () {
+        try {
+          var s = document.querySelector('.slide.active'), words = [].slice.call(s.querySelectorAll('svg text')).map(function (t) { return t.getBoundingClientRect(); });
+          var bs = [].slice.call(s.querySelectorAll('.gbz-cam')), rs = bs.map(function (b) { return b.getBoundingClientRect(); });
+          function hit(a, b) { return a.left < b.right - 0.5 && a.right > b.left + 0.5 && a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5 && a.width && b.width; }
+          out.parts = s.querySelectorAll('.gbz-part').length;
+          bs.forEach(function (b, i) {
+            var r = rs[i], over = words.filter(function (w) { return hit(r, w); }).length + rs.filter(function (q, j) { return j !== i && hit(r, q); }).length;
+            out.badges.push({label: b.getAttribute('aria-label'), w: Math.round(r.width), h: Math.round(r.height), over: over});
+            b.click();
+            var im = document.querySelector('.gbz-stage img');
+            out.opened[b.getAttribute('aria-label').replace('Photo of ', '')] = im ? im.getAttribute('src').split('/').pop() : null;
+            GBZoom.close();
+          });
+        } catch (err) { out.errors.push(String(err && err.stack || err)); }
+        var pre = document.createElement('pre'); pre.id = 'gbtest'; pre.textContent = JSON.stringify(out); document.body.appendChild(pre);
+      }, 600);
+    }, 400);
+  });
+}());
+"""
+
+
+def drive_page(exe, page, js, prof, size):
+    """a compiled deck with a driver script added, at a window `size` (its viewport exactly that, as probe() opens it)"""
+    text = io.open(page, encoding="utf-8").read()
+    w = os.path.join(os.path.dirname(page), "_drive_%d.html" % os.getpid())
+    io.open(w, "w", encoding="utf-8").write(text.replace("</body>", "<script>%s</script></body>" % js))
+    try:
+        p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--user-data-dir=" + prof, "--hide-scrollbars",
+                               "--allow-file-access-from-files", "--window-size=%d,%d" % (size[0], size[1] + 95), "--virtual-time-budget=10000",
+                               "--dump-dom", Path(w).as_uri()], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+    finally:
+        os.remove(w)
+    m = re.search(r'<pre id="gbtest">(.*?)</pre>', p.stdout, re.S)
+    return json.loads(html.unescape(m.group(1))) if m else {"errors": ["no result: " + p.stdout[-300:] + p.stderr[-300:]]}
 
 
 BLIND_LOOK = ("var seen = []; document.querySelectorAll('.scr[data-script]').forEach(function (s) {"
