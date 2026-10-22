@@ -48,7 +48,9 @@
     teamRole: 'You are the {role}', teamOne: 'One answer for the whole team', handedIn: 'Handed in by {by} for {team}',
     got: 'You got {ok} of {total} right.', timeUp: ' The time was up.',
     passNote: 'Pass mark {pass} % – {need} of {total} right. This shows what to review. It is not a grade.',
-    passed: 'PASSED', notPassed: 'NOT PASSED'
+    passed: 'PASSED', notPassed: 'NOT PASSED',
+    yourAns: 'Your answer', rightAns: 'Right answer', yourOrder: 'Your order', rightOrder: 'Right order',
+    notPlaced: 'not placed', leftOut: 'does not belong here', onPic: 'its place is marked on the picture'
   };
   /* the course language (L19) - the page's <html lang>; PROVISIONAL (2.40.0), written by Claude, to be checked by a
      native speaker: course-factory/compile/TRANSLATIONS_REVIEW.md. The message to the classroom keeps 'PASSED' /
@@ -66,7 +68,9 @@
       teamRole: 'Tava loma: {role}', teamOne: 'Viena atbilde visai komandai', handedIn: '{team} atbildi iesniedza: {by}',
       got: 'Pareizi: {ok} no {total}.', timeUp: ' Laiks beidzās.',
       passNote: 'Ieskaites slieksnis {pass} % – {need} no {total} pareizi. Tas rāda, ko atkārtot. Tā nav atzīme.',
-      passed: 'IESKAITĪTS', notPassed: 'NAV IESKAITĪTS'
+      passed: 'IESKAITĪTS', notPassed: 'NAV IESKAITĪTS',
+      yourAns: 'Tava atbilde', rightAns: 'Pareizā atbilde', yourOrder: 'Tava secība', rightOrder: 'Pareizā secība',
+      notPlaced: 'nav novietots', leftOut: 'šeit nepieder', onPic: 'tā vieta ir atzīmēta attēlā'
     },
     ru: {
       tryFirst: 'Сначала попробуй планшет', startSelf: 'Начать самопроверку', moduleCheck: 'Проверка по модулю',
@@ -80,7 +84,9 @@
       teamRole: 'Твоя роль: {role}', teamOne: 'Один ответ на всю команду', handedIn: 'Ответ команды {team} сдал(а): {by}',
       got: 'Правильно: {ok} из {total}.', timeUp: ' Время вышло.',
       passNote: 'Проходной балл {pass} % – {need} из {total} правильно. Это показывает, что повторить. Это не оценка.',
-      passed: 'ЗАЧТЕНО', notPassed: 'НЕ ЗАЧТЕНО'
+      passed: 'ЗАЧТЕНО', notPassed: 'НЕ ЗАЧТЕНО',
+      yourAns: 'Твой ответ', rightAns: 'Правильный ответ', yourOrder: 'Твой порядок', rightOrder: 'Правильный порядок',
+      notPlaced: 'не размещено', leftOut: 'здесь лишнее', onPic: 'его место отмечено на рисунке'
     }
   };
   (function () {
@@ -669,6 +675,46 @@
     syncFor(p.el);
     if (p.q.parts.length > 1) { add(p.el, ok ? 'good' : 'bad'); }
   }
+  /* 2.63.2 (Aleksis, 2026-10-22: "for the checks you should be able to see your wrong answers and the reordered to
+     correct ones") - what a wrong part's trainee did and what was right, read at Check before the reveal moves the
+     cards, for the result screen's list. Worked out from the keys after the answer, so the answers are still never
+     readable in the page. A blind final takes none (L27). */
+  function nameOf(el) { return el ? txt(el) || el.getAttribute('aria-label') || el.getAttribute('title') || '' : ''; }
+  function zoneName(z) {
+    var row = z && z.parentNode, n = row && ($('.name', row) || $('.gname', row));
+    return n && n.parentNode === row ? txt(n) : '';
+  }
+  function snap(p) {
+    var out = [];
+    each(p.groups, function (g) {
+      if (gradeGroup(g)) { return; }
+      if (g.type === 'choose') {
+        out.push({ k: 'pick', mine: g.picked.map(function (it) { return nameOf(keyEl(it)); }),
+          right: g.items.filter(function (it) { return itemRight(g, it); }).map(function (it) { return nameOf(keyEl(it)); }) });
+      } else if (g.type === 'dial') {
+        var good = [], k;
+        for (k = 0; k <= g.n; k++) { if (g.good(k)) { good.push(g.shown(k)); } }
+        out.push({ k: 'pick', mine: [g.k >= 0 ? g.shown(g.k) + ' ' + g.unit : ''],
+          right: [good.length > 1 ? good[0] + ' – ' + good[good.length - 1] + ' ' + g.unit : (good[0] || '') + ' ' + g.unit] });
+      } else if (g.type === 'place' && $('.rows.order', g.sec)) {
+        /* put in order: the trainee's order beside the right one, the cards that moved marked */
+        var mine = g.zones.map(function (z) { var c = $('.chip', z); return c ? txt(c) : ''; }), right = [];
+        each(g.chips, function (c) {
+          var z = rightZone(g, c), i = z ? g.zones.indexOf(z) : -1;
+          if (i >= 0) { right[i] = txt(c); }
+        });
+        out.push({ k: 'order', mine: mine, right: right });
+      } else {
+        /* match, sort, label: each card not where it belongs - where the trainee put it, where it goes */
+        each(g.chips, function (c) {
+          if (chipGood(g, c)) { return; }
+          var z = rightZone(g, c), at = c.parentNode === g.tray ? say('notPlaced') : zoneName(c.parentNode) || '?';
+          out.push({ k: 'pair', card: txt(c), mine: at, right: z ? zoneName(z) || say('onPic') : say('leftOut') });
+        });
+      }
+    });
+    return out;
+  }
   function verdict(q) {
     var kind = 'notQuiteChoice';
     each(q.parts, function (p) {
@@ -848,6 +894,7 @@
     killHand();
     p.ok = grade(p);
     p.done = true;
+    if (!BLIND) { p.fix = snap(p); }                   /* before the reveal moves the cards (2.63.2) */
     lock(p);
     if (BLIND) {                                       /* recorded, never shown: straight on to the next part or question */
       if (q.k < q.parts.length - 1) { openPart(q, q.k + 1); return; }
@@ -939,9 +986,36 @@
     each(qs, function (q, i) {
       var cls = q.done ? (q.ok ? 'yes' : 'no') : 'skip';
       html += '<li class="' + cls + '"><i>' + (q.done ? (q.ok ? '✓' : '✕') : '–') + '</i><span>' + (i + 1) + '. ' +
-        q.text.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</span></li>';
+        esc(q.text) + (q.done && !q.ok ? fixes(q) : '') + '</span></li>';
     });
     list.innerHTML = html;
+  }
+  /* 2.63.2 - under a wrong question, on the result screen itself: the trainee's answer (marked) and the right one; an
+     order beside the right order, the moved cards marked; a card put in the wrong place and where it goes. Words only -
+     nothing to press after the result (classroom-system.json result_is_last), never on a blind final */
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function fixes(q) {
+    var h = '';
+    if (BLIND) { return ''; }
+    each(q.parts, function (p) {
+      each(p.fix || [], function (f) {
+        if (f.k === 'pick') {
+          h += '<span class="fx"><b>' + esc(say('yourAns')) + ':</b> <s class="mine">' + esc(f.mine.join('; ') || '–') + '</s></span>' +
+            '<span class="fx"><b>' + esc(say('rightAns')) + ':</b> <em class="good">' + esc(f.right.join('; ')) + '</em></span>';
+        } else if (f.k === 'order') {
+          var a = '', b = '';
+          each(f.right, function (t, n) {
+            a += '<li' + (f.mine[n] !== t ? ' class="moved"' : '') + '>' + esc(f.mine[n] || '–') + '</li>';
+            b += '<li>' + esc(t || '') + '</li>';
+          });
+          h += '<span class="fx ord"><span><b>' + esc(say('yourOrder')) + '</b><ol>' + a + '</ol></span>' +
+            '<span><b>' + esc(say('rightOrder')) + '</b><ol class="good">' + b + '</ol></span></span>';
+        } else {
+          h += '<span class="fx">' + esc(f.card) + ': <s class="mine">' + esc(f.mine) + '</s> → <em class="good">' + esc(f.right) + '</em></span>';
+        }
+      });
+    });
+    return h ? '<span class="fix">' + h + '</span>' : '';
   }
   function showResult() {
     killHand();
@@ -965,7 +1039,7 @@
     if (ended && reported) { return; }
     var q = cur >= 0 ? qs[cur] : null, p = q ? q.parts[q.k] : null;
     if (q && !q.done) {                       /* what was done is marked; a question half done counts as answered, not right */
-      if (!p.done && anyAnswer(p)) { p.ok = grade(p); p.done = true; lock(p); }
+      if (!p.done && anyAnswer(p)) { p.ok = grade(p); p.done = true; if (!BLIND) { p.fix = snap(p); } lock(p); }
       if (q.k > 0 || p.done) {
         q.done = true; q.ok = allOk(q);
         if (q.ok) { okCount++; }

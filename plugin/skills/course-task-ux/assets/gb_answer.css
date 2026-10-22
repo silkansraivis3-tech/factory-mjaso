@@ -441,4 +441,18 @@ body.handed .wrap{opacity:.55}
   background:var(--good)}
 .res li.no i{background:var(--warn)}
 .res li.skip i{background:var(--faint-l)}
+/* 2.63.2 - under a wrong question: the trainee's answer (struck, red) and the right one (green); an order beside the right
+   order, the moved cards amber. Words only - nothing to press after the result; the screen scrolls */
+.res li.no:has(.fix){align-items:flex-start}
+.res li>span{flex:1 1 auto;min-width:0}
+.res .fix{display:flex;flex-direction:column;gap:4px;margin:8px 0 2px;font-size:16px;line-height:1.4;color:var(--ink)}
+.res .fix .fx{display:block}
+.res .fix b{font-weight:700;color:var(--navy)}
+.res .fix s.mine{color:var(--warn);text-decoration-thickness:2px}
+.res .fix em.good{font-style:normal;font-weight:700;color:var(--good)}
+.res .fix .ord{display:flex;flex-wrap:wrap;gap:6px 28px}
+.res .fix .ord ol{display:block;list-style:decimal;margin:2px 0 0;padding-left:22px}
+.res .fix .ord li{display:list-item;min-height:0;padding:1px 0;border:0;border-radius:0;background:none;font-size:16px}
+.res .fix .ord li.moved{color:var(--amber-ink);font-weight:700}
+.res .fix .ord ol.good li{color:var(--good)}
 #again{max-width:420px;margin:16px auto 0}

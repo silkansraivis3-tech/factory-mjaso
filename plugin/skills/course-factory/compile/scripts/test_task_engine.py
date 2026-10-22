@@ -1159,7 +1159,9 @@ def blind_part(exe, page, tmp):
         if q == "q05":
             plan.append(["eval", "out.got = document.getElementById('gotLbl').textContent;"])
     plan.append(["eval", BLIND_LOOK])
+    plan.append(["eval", "out.fixes = document.querySelectorAll('#resList .fix').length;"])
     r = drive(exe, page, plan, tmp, look=False, blind=True)
+    check("2.63.2: the final's result lists no answers - it stays blind (L27)", r.get("fixes") == 0, r.get("fixes"))
     rep, steps = r.get("report") or {}, r.get("steps", [])
     check("no script error on the blind page", not r.get("errors"), r.get("errors"))
     check("the classroom hears the same 5 of 10 and the same items as on a check",
@@ -1171,6 +1173,83 @@ def blind_part(exe, page, tmp):
     check("a fault-finding panel shows only the reading the trainee looked at, not every part's", r.get("looked") == 1, r.get("looked"))
     check("no 'right so far' between questions", r.get("got") == "", r.get("got"))
     check("the result screen is open at the end", " on" in " " + (r.get("result") or ""), r.get("result"))
+
+
+# 2.63.2 (item 18, Aleksis 2026-10-22: "for the checks you should be able to see your wrong answers and the reordered to
+# correct ones") - a self-check and a module check answered partly wrong
+REVIEW = [
+    {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1", "text": "Self-check on your tablet now.", "minutes": 4},
+    {"id": "r01", "kind": "self-check", "set": "SC1", "mechanic": "match", "question": "Match each space to what it holds.",
+     "answer": "Fuel preparation room = pumps and vaporizers\nTank connection space = the tank valves\nVent mast = the vapour outlet",
+     "feedback": "Each space has one job."},
+    {"id": "r02", "kind": "self-check", "set": "SC1", "mechanic": "order", "question": "Put the bunkering steps in order.",
+     "answer": "Safety meeting\nConnect the hose\nTransfer\nDisconnect", "feedback": "Meeting first."},
+    {"id": "r03", "kind": "self-check", "set": "SC1", "mechanic": "single_choice", "question": "Which is the fuel?",
+     "options": ["LNG", "Coal"], "correct": "A", "feedback": "LNG."},
+    {"id": "r04", "kind": "self-check", "set": "SC1", "mechanic": "single_choice", "question": "Is venting acceptable?",
+     "options": ["Yes", "No, only in an emergency"], "correct": "B", "feedback": "Only in an emergency."},
+    {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Module check - Module 1", "text": "Module check on your tablet now.", "minutes": 5},
+    {"id": "m01", "kind": "module-check", "set": "MC", "mechanic": "categorise", "question": "Sort the fuels.",
+     "answer": "Detailed rules: LNG; CNG\nAlternative design: methanol; ammonia", "feedback": "Natural gas has detailed rules."},
+    {"id": "m02", "kind": "module-check", "set": "MC", "mechanic": "single_choice", "question": "Is venting acceptable?",
+     "options": ["Yes", "No, only in an emergency"], "correct": "B", "feedback": "Only in an emergency."},
+]
+RES_LOOK = ("var L=[].slice.call(document.querySelectorAll('#resList > li'));"
+            "out.res=L.map(function(li){var o={cls:li.className,fix:li.querySelector('.fix')?li.querySelector('.fix').textContent.replace(/\\s+/g,' ').trim():''};"
+            "o.mine=[].map.call(li.querySelectorAll('s.mine'),function(x){return x.textContent;});"
+            "o.good=[].map.call(li.querySelectorAll('em.good'),function(x){return x.textContent;});"
+            "o.order=[].map.call(li.querySelectorAll('.ord ol'),function(ol){return [].map.call(ol.children,function(x){return (x.className==='moved'?'*':'')+x.textContent;});});return o;});"
+            "var r=document.getElementById('resScr');"
+            "out.press=[].filter.call(r.querySelectorAll('#resList a, #resList button, #resList input, #resList [onclick], #resList [tabindex], #resList [role=button]'),function(){return true;}).length;"
+            "out.onRes=/\\bon\\b/.test(r.className);")
+
+
+def review_part(exe, tmp):
+    """2.63.2 - the result screen of a self-check and of a module check lists every wrong question: the trainee's answer
+    and the right one, an order beside the right order (the moved cards marked), the corrected pairs / groups; a right
+    one is not listed; nothing pressable is added; the classroom's report is unchanged"""
+    print("\n-- 2.63.2: the result shows the wrong answers and the right ones")
+    os.makedirs(os.path.join(tmp, "rv"))
+    c, md = tcm.new_course(os.path.join(tmp, "rv"), tcm.script(screens=REVIEW), build=False)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"),
+                {"module": 1, "screens": {"t01": {"try_tablet": False}, "t02": {"try_tablet": False}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    sc = [os.path.join(md, "tasks", f) for f in sorted(os.listdir(os.path.join(md, "tasks"))) if f.startswith("sc1")] if code == 0 else []
+    mc = os.path.join(md, "assessment", "check.html")
+    check("the self-check and module-check pages are built", code == 0 and sc and os.path.isfile(mc), out[-800:])
+    if not sc or not os.path.isfile(mc):
+        return
+    plan = [["r01", [["card", "the tank valves", 1], ["card", "pumps and vaporizers", 2], ["card", "the vapour outlet", 3]]],
+            ["r02", [["card", "Connect the hose", 1], ["card", "Safety meeting", 2], ["card", "Transfer", 3], ["card", "Disconnect", 4]]],
+            ["r03", [["tap", ".opt", "Coal"]]],
+            ["r04", [["tap", ".opt", "No, only in an emergency"]]],
+            ["eval", RES_LOOK]]
+    r = drive(exe, sc[0], plan, tmp, look=False)
+    res, rep = r.get("res") or [], r.get("report") or {}
+    check("no script error", not r.get("errors"), r.get("errors"))
+    check("the classroom hears the same report as before (1 of 4; the same fields, nothing added)",
+          rep.get("ok") == 1 and set(rep) == {"type", "code", "title", "ok", "total", "head", "items", "answered", "of", "timeout"}, rep)
+    check("the result screen is open, and every wrong question carries its correction - a right one none",
+          r.get("onRes") and [x["cls"] for x in res] == ["no", "no", "no", "yes"] and all(x["fix"] for x in res[:3]) and not res[3]["fix"], res)
+    m = res[0] if res else {}
+    check("match: each card in the wrong place - where the trainee put it (struck) and where it goes",
+          "the tank valves" in m.get("fix", "") and "Fuel preparation room" in m.get("mine", []) and "Tank connection space" in m.get("good", [])
+          and "Fuel preparation room" in m.get("good", []), m)
+    o = res[1] if len(res) > 1 else {}
+    check("order: the trainee's order beside the right order, the moved cards marked",
+          o.get("order") == [["*Connect the hose", "*Safety meeting", "Transfer", "Disconnect"],
+                             ["Safety meeting", "Connect the hose", "Transfer", "Disconnect"]], o)
+    ch = res[2] if len(res) > 2 else {}
+    check("a choice: the trainee's answer struck, the right one beside it", ch.get("mine") == ["Coal"] and ch.get("good") == ["LNG"], ch)
+    check("nothing to press is added after the result (result_is_last)", r.get("press") == 0, r.get("press"))
+    plan = [["m01", [["dock"], ["card", "LNG", 2], ["card", "CNG", 1], ["card", "methanol", 2], ["card", "ammonia", 2]]],
+            ["m02", [["tap", ".opt", "No, only in an emergency"]]], ["eval", RES_LOOK]]
+    r = drive(exe, mc, plan, tmp, look=False)
+    res = r.get("res") or []
+    g = res[0] if res else {}
+    check("module check, sort into groups: the card in the wrong group and its right group; the right question not listed",
+          not r.get("errors") and "LNG" in g.get("fix", "") and g.get("mine") == ["Alternative design"] and g.get("good") == ["Detailed rules"]
+          and len(res) == 2 and not res[1]["fix"], (r.get("errors"), res))
 
 
 def main():
@@ -1213,6 +1292,7 @@ def main():
         check("a card that does not belong goes back to the bank; the one that belongs is put in its slot",
               "fixed" in look.get("cargo", "") and look.get("cargo", "").endswith("|tray") and look.get("permit", "").endswith("|3"), look)
         blind_part(exe, page, tmp)
+        review_part(exe, tmp)
         deck_fit_part(exe, tmp)
         inset_part(exe, tmp)
         inset_empty_part(exe, tmp)
