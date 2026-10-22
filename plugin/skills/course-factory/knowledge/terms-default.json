@@ -1,0 +1,8 @@
+{
+  "_what": "2.63.2 - the factory's default synonym list for retrofit/scripts/check_terms.py: one key per PREFERRED term, its value the variants the course should not mix with it. A course adds or overrides entries in its own working_claude/terms.json (same shape; an empty list drops a default). From the IGF full build's cross-check, which found these by hand. A report, not a build block - the operator decides which form the course keeps.",
+  "LEL": ["LFL"],
+  "bunkering station": ["bunker station"],
+  "fuel preparation room": ["fuel preparation space"],
+  "hazardous area": ["hazardous zone", "hazardous space"],
+  "dry chemical powder": ["dry powder"]
+}

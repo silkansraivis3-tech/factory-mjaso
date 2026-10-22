@@ -393,7 +393,11 @@ const assembly = await agent(`Run exactly these, in ONE shell call, and report w
     python ${SCRIPTS}/compile/scripts/compile_course.py "${A.course}"
     python ${SCRIPTS}/scripts/ilo_map.py refresh "${A.course}"
     python ${SCRIPTS}/scripts/check_course_package.py "${A.course}/modules"
+    python ${SCRIPTS}/retrofit/scripts/check_terms.py "${A.course}"
 
+check_terms.py (2.63.2) is the course-wide terminology report - one thing under two names (LEL / LFL, bunkering
+station / bunker station ...) from the factory's list plus working_claude/terms.json. It is a REPORT, never a failure:
+print all of it, word for word, for the cross-check and the operator.
 Do not fix anything.`,
   { label: 'assemble:course', phase: 'Cross-check', model: 'sonnet', effort: 'low' })
 
@@ -402,8 +406,13 @@ const cross = await agent(
 could not answer:
 
   * task codes unique across every module, and every code the decks announce exists
-  * terminology and COURSE_LANGUAGE consistent across all modules (check_language.py)
-  * the hours total against the approved programme, both Track A buckets
+  * COURSE_LANGUAGE consistent across all modules (check_language.py)
+  * terminology: one thing, one name - the check_terms.py report the assembly printed (a MIXED group is a finding of
+    severity "warn" naming the forms, the modules and slides; the operator picks the form, never you); read the
+    scripts for any other pair the list does not hold (a quantity, a room, an extinguishing agent)
+  * the hours total against the approved programme, both Track A buckets (check_hours.py, with the programme)
+  * the syllabus coverage against the model course (check_syllabus_coverage.py), crosscheck_tasks.py and verify_links.py -
+    the checks that need every module, which the single-module QA agents were told to leave to this pass
   * one visual dialect, not several (audit_ui.py over every module's stylesheets)
   * every cross-reference between modules resolves
   * every row of working_claude/ilo_map.json is taught somewhere, and no outcome is claimed twice

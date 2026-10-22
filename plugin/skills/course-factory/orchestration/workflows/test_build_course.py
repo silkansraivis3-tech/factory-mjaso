@@ -130,6 +130,10 @@ def main():
               and l4.index("crosscheck:course") > l4.index("assemble:course")
               and "compile_course.py" in p4.get("assemble:course", "") and "ilo_map.py refresh" in p4.get("assemble:course", "")
               and "C:/f/skills/course-factory/scripts/check_course_package.py" in p4.get("assemble:course", ""), l4)
+        check("2.63.2 the assembly runs the course-wide terminology report (a report, never a failure) and the cross-check reads it",
+              "C:/f/skills/course-factory/retrofit/scripts/check_terms.py" in p4.get("assemble:course", "")
+              and "REPORT, never a failure" in p4.get("assemble:course", "")
+              and "check_terms.py" in p4.get("crosscheck:course", "") and "check_language.py" in p4.get("crosscheck:course", ""), p4.get("assemble:course"))
         l5 = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "wave": 1}).get("labels", [])
         check("args.wave builds the modules in waves: module 2 starts after module 1's QA",
               l5.index("build:2") > l5.index("qa:1") and "build:final" not in l5, l5)

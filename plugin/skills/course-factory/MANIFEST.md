@@ -171,6 +171,8 @@ to judgement:
 | `retrofit/knowledge/classify.json` | the A/B/C signals, and the `not_signals` list that keeps "the HTML works" out of the decision |
 | `retrofit/scripts/classify_module.py` | measures the six signals and returns the level |
 | `retrofit/scripts/check_language.py` | COURSE_LANGUAGE drift over course-facing files |
+| `retrofit/scripts/check_terms.py` | 2.63.2 - one thing, one name across the whole course: mixed use of a synonym group (LEL / LFL ...) with where each form is used; a report, run in `build_course.js` assembly. List: `knowledge/terms-default.json` + the course's `working_claude/terms.json` |
+| `retrofit/scripts/test_check_terms.py` | the report on a fixture course (approved vs draft scripts, a page-only module, an own list) |
 | `retrofit/scripts/test_routing.py` | 42 deterministic assertions over all three knowledge files |
 
 **Two things the classifier got wrong before it was right**, both worth keeping in mind if it is
