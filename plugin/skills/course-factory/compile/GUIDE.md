@@ -326,7 +326,9 @@ Task marks. A task slide links to its set's page (`tasks\sc2_*.html`, `assessmen
 **A practical exercise gets its slide (owner rule 2026-10-21; 2.63.2, `scripts/exercises.py`).** A module whose exercise
 forms are in `course\to_review\exercises\MNN\` (or `working_claude\exercises\MNN\`) - the novikontas-practical-exercises
 skill's `..._Trainee_v01.docx` and `..._Instructor_v01.docx` - shows each exercise on at least one slide: an
-`"activity"` screen with `"exercise": "8.1"`, its minutes the form's duration (practice, in the module's hours).
+`"activity"` screen with `"exercise": "8.1"`, its minutes the form's duration (practice, in the module's hours) - or,
+when the script's minutes already fill its allocation (the deck is the programme's theory part, as in IGF Basic),
+0 deck minutes and `"practice_minutes"` the form's time, the programme's practical part.
 `--init-build` and every compile that finds one without its slide write the proposal - from the TRAINEE form only:
 what the trainees do, what they need, the time - to `working_claude\script\MNN.exercise_slides.json`, to propose and
 approve like any change (`content_script.py propose`); until then it is a build problem. The instructor form is named

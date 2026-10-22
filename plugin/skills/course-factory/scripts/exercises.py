@@ -158,16 +158,28 @@ def screen(ex, sid):
 
 
 def proposal(script, exs):
-    """changes for content_script.py propose: each missing exercise's slide, before the module check's task slide"""
+    """changes for content_script.py propose: each missing exercise's slide, before the module check's task slide.
+    Its minutes: the form's time when the script's allocation has room for it; a script whose minutes already fill its
+    allocation gives the deck the programme's theory part only (IGF Basic: topic 8 theory 0.5 h + practical 0.5 h, the
+    script 21 minutes) - the exercise is the practical part, so the slide takes 0 deck minutes and says its own time in
+    "practice_minutes" (the IGF original course: data-mins 0, data-practical-mins the form's time)"""
     ids = {s.get("id") for s in script.get("screens", [])}
     mc = next((s["id"] for s in script.get("screens", []) if s.get("kind") == "task-slide" and (s.get("opens") or "") == "MC"), None)
+    alloc = float(script.get("minutes_allocated") or 0)
+    used = sum(float(s.get("minutes") or 0) for s in script.get("screens", []) if s.get("kind") in ("slide", "task-slide", "activity"))
     out = []
     for ex in exs:
         sid = "x" + re.sub(r"\W", "", ex["no"])
         while sid in ids:
             sid += "b"
         ids.add(sid)
-        ch = {"add_screen": screen(ex, sid)}
+        s = screen(ex, sid)
+        if alloc and used + s["minutes"] > alloc + 0.5:
+            s["practice_minutes"], s["minutes"] = s["minutes"], 0
+            s["notes"] += "\n- Its %d min are the module's practical hours, not the deck's minutes." % s["practice_minutes"]
+        else:
+            used += s["minutes"]
+        ch = {"add_screen": s}
         if mc:
             ch["before"] = mc
         out.append(ch)

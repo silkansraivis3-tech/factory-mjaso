@@ -1965,7 +1965,7 @@ def exercise_part(tmp):
     ch = cs.load(prop) if os.path.isfile(prop) else []
     new = (ch[0] if ch else {}).get("add_screen") or {}
     check("... the proposal: an activity screen from the TRAINEE form - what they do, what they need, the time - before the module check",
-          new.get("kind") == "activity" and new.get("exercise") == "1.1" and new.get("minutes") == 15
+          new.get("kind") == "activity" and new.get("exercise") == "1.1" and new.get("minutes") == 0 and new.get("practice_minutes") == 15
           and new.get("title") == "Exercise 1.1 - Walk the fuel line" and "Trace the fuel line from the tank to the engine" in new.get("text", "")
           and "You need: the ship model in room 12." in new.get("text", "") and "Time: 15 min" in new.get("text", "")
           and ch[0].get("before") == next(s["id"] for s in SCREENS if s.get("opens") == "MC"), ch)
@@ -1983,8 +1983,16 @@ def exercise_part(tmp):
     check("... no word of the instructor form on any page of the module", EX_SECRET not in page and not any(
         EX_SECRET in io.open(os.path.join(r, f), encoding="utf-8", errors="replace").read()
         for r, _d, fs in os.walk(md) for f in fs if f.endswith(".html")))
-    before, after = cs.summary(script())["practice_min"], cs.summary(sc)["practice_min"]
-    check("... and its 15 minutes count as practice in the module's hours", after - before == 15 and cm is not None, (before, after))
+    check("... the script's minutes already fill its allocation (IGF: the deck is the theory part): 0 deck minutes, its 15 "
+          "the practical part - the module's hours stay equal (L1)", not [p for p in cs.validate(sc) if "(L1)" in p], cs.validate(sc))
+    roomy = script()
+    roomy["minutes_allocated"] += 15
+    ex = exercises.found(c, 1)
+    p2 = exercises.proposal(roomy, ex)[0]["add_screen"]
+    _ch, w2 = cs.build_changes(roomy, exercises.proposal(roomy, ex))
+    check("... with room in the allocation the slide takes the form's 15 minutes as practice, and the hours add up",
+          p2.get("minutes") == 15 and "practice_minutes" not in p2 and cs.summary(w2)["practice_min"] - cs.summary(roomy)["practice_min"] == 15
+          and not [p for p in cs.validate(w2) if "(L1)" in p] and cm is not None, (p2, cs.validate(w2)))
 
 
 def sme_figures_part(tmp):
