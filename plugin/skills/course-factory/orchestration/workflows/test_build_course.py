@@ -96,6 +96,17 @@ def main():
         check("... the builder runs build_module.py, not the compile and the checks one by one",
               "build_module.py" in two.get("prompts", {}).get("build:1", "")
               and "--no-course-pages" in two.get("prompts", {}).get("build:1", ""), two.get("prompts", {}).get("build:1"))
+        qa1 = two.get("prompts", {}).get("qa:1", "")
+        step2 = qa1.split("the checks it does not run", 1)[-1].split("The module's START_HERE", 1)[0]
+        run_here, not_here = step2.split("NOT run here", 1) if "NOT run here" in step2 else (step2, "")
+        check("2.63.2 the QA agent gets check_balance with the module's OWN minutes (--theory-min 40 --practice-min 20), "
+              "never the whole course's programme total",
+              "--theory-min 40 --practice-min 20" in run_here and "--programme" not in run_here.replace("never --programme alone", ""), qa1[-1500:])
+        check("... and is told to run only the per-module checks: the whole-course tools are named as NOT run here",
+              all(t in run_here for t in ("check_slide_text", "check_visual_first", "check_visuals", "check_assets", "classify_module"))
+              and not any(t in run_here for t in ("check_hours", "check_syllabus_coverage", "crosscheck_tasks", "verify_links", "audit_navigation"))
+              and all(t in not_here for t in ("check_hours", "check_syllabus_coverage", "crosscheck_tasks", "verify_links", "audit_navigation")),
+              step2)
         three = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_approved": ["1"],
                           "factory": "C:/f/skills", "notes": "no paid pictures"})
         labels, o, pr = three.get("labels", []), three.get("opts", {}), three.get("prompts", {})

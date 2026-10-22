@@ -55,6 +55,14 @@ Usage
     check_balance.py <module.html> --theory-min 480 --practice-min 800
     check_balance.py <course_dir> --programme _work/programme.json
     check_balance.py <module.html> --programme p.json --target-active 0.8
+    check_balance.py <module.html> --programme p.json --module 7
+
+ONE MODULE OF A COURSE (2.63.2).  `--programme` alone compares the programme's WHOLE-course total
+row with the one deck given - a module of a 16-module course then "fails" by every other module's
+minutes (the IGF full build: every per-module QA agent reported 720 / 320 against one module).
+`--module N` reads that module's own allocation instead: the programme's topic N (a module is one
+programme topic, make_architecture_page.py), its theory and practical hours times academic_hour_min.
+`--theory-min` / `--practice-min` still win when given.
 
 Exit code 1 on a Track A mismatch or any Track B defect. Track B shortfall
 against the target is reported, not failed - the programme can make 80 %
@@ -105,11 +113,30 @@ def allocation_from_programme(p):
     return t["theory"] * h, t["practical"] * h
 
 
+def allocation_of_module(p, module):
+    """2.63.2 - one module's own minutes: the programme's topic `module` (keys "7" or "7." both read), hours * the
+    academic hour. None when the programme has no such topic."""
+    d = json.loads(Path(p).read_text(encoding="utf-8"))
+    h = d.get("academic_hour_min", 40)
+    want = int(str(module).strip().lstrip("Mm") or 0)
+    for key, t in (d.get("topics") or {}).items():
+        try:
+            n = int(float(str(key).rstrip(".")))
+        except ValueError:
+            continue
+        if n == want:
+            return (round(float(t.get("theory", 0) or 0) * h),
+                    round(float(t.get("practical", 0) or 0) * h))
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("target", help="a module.html, or a folder containing one")
     ap.add_argument("--programme", help="programme.json, to read the allocation from")
+    ap.add_argument("--module", help="with --programme: judge this module against its own topic's "
+                                     "allocation, not the whole course's total row")
     ap.add_argument("--theory-min", type=int, help="allocated theory minutes")
     ap.add_argument("--practice-min", type=int, help="allocated practice minutes")
     ap.add_argument("--target-active", type=float, default=0.8,
@@ -134,7 +161,17 @@ def main():
         base = Path(args.programme)
         if not base.is_absolute() and not base.exists():
             base = p.parent / args.programme
-        alloc_t, alloc_p = allocation_from_programme(base)
+        if args.module:
+            got = allocation_of_module(base, args.module)
+            if got is None:
+                print("check_balance - %s has no topic %s: a module is one programme topic" % (base, args.module))
+                return 1
+            alloc_t, alloc_p = got
+        else:
+            alloc_t, alloc_p = allocation_from_programme(base)
+    elif args.module:
+        print("check_balance - --module needs --programme (or give --theory-min / --practice-min)")
+        return 1
     if args.theory_min is not None:
         alloc_t = args.theory_min
     if args.practice_min is not None:
@@ -183,8 +220,10 @@ def main():
         if built_t != alloc_t or built_p != alloc_p:
             failures.append(
                 "the build does not deliver the allocation: theory %+d min, practice %+d min. "
-                "The allocation is the programme's and is not editable; the BUILD moves."
-                % (built_t - alloc_t, built_p - alloc_p))
+                "The allocation is the programme's and is not editable; the BUILD moves.%s"
+                % (built_t - alloc_t, built_p - alloc_p,
+                   " (the allocation is the programme's WHOLE-course total row - for one module of a course "
+                   "give --module N)" if args.programme and not args.module and args.theory_min is None else ""))
 
     # a kind that contradicts its declared track is how a bucket swap hides
     for b in blocks:

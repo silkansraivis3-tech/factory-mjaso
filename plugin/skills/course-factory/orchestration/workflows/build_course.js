@@ -283,12 +283,18 @@ Run the deterministic checks in TWO shell calls and READ their output:
      1280x800 and 1024x768, the importer and the review sheets' grading of every question (right
      and wrong), in one command. It rebuilds from the same approved inputs, so the bytes come out
      the same: anything it reports, or a stop (exit 2), is a finding.
-  2  the checks it does not run, chained in ONE call, each by the usage line at the top of its
-     file, printing only what fails: check_hours, check_balance on presentation/index.html (compiled
-     decks carry data-active from 2.52.0; "100% of a theory block active" on an active slide over 10
-     minutes is the owner's open decision, MANIFEST "Waiting on the owner" 2, not a finding), check_syllabus_coverage,
-     verify_links, audit_navigation, crosscheck_tasks, check_slide_text, check_visual_first,
-     check_visuals, check_assets and classify_module.py.
+  2  the checks it does not run - ONLY these, because only these can judge ONE module (2.63.2) - chained
+     in ONE call, each by the usage line at the top of its file, printing only what fails:
+       check_balance on presentation/index.html WITH THIS MODULE'S OWN allocation:
+         --theory-min ${m.theory} --practice-min ${m.practical}
+       (never --programme alone: that is the whole course's total row and fails every module; compiled
+       decks carry data-active from 2.52.0; "100% of a theory block active" on an active slide over 10
+       minutes is the owner's open decision, MANIFEST "Waiting on the owner" 2, not a finding),
+       check_slide_text, check_visual_first, check_visuals, check_assets and classify_module.py.
+     NOT run here, they judge the whole course and belong to the cross-check after assembly: check_hours,
+     check_syllabus_coverage, crosscheck_tasks (all need COURSE_START.json / the tablet manifest / every deck),
+     verify_links and audit_navigation (a link to ../START_HERE_EXTENDED.html or a page "reached from
+     nothing" is what a module looks like before compile_course.py writes the course's pages).
 The module's START_HERE pages, COURSE.html and course_map.js are written by compile_course.py once every
 module is in: their absence, and a link to them, is not a finding of this module.
 
