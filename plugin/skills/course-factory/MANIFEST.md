@@ -60,6 +60,7 @@ course-factory/
 ├── scripts/check_module_folder.py       kept as a short way in: runs check_course_package.py (2.21.0)
 ├── knowledge/classroom-system.json      the classroom system's own course-folder rules (L45, 2.21.0)
 ├── scripts/picture_briefs.py, test_picture_briefs.py   generated pictures: places, the person's description, cost (L47, 2.24.0)
+├── scripts/exercises.py                 a module's practical exercise forms; its slide proposed from the TRAINEE form (2.63.2)
 ├── bloom/GUIDE.md                       READ IN: judging or lifting a Bloom level - Stage 2, Stage 3, retrofit (L48, 2.25.0)
 ├── knowledge/bloom.json                 the six levels, verbs (en / lv / ru stems), each task type's usual and highest level, floors
 ├── scripts/bloom_map.py, test_bloom_map.py   the Bloom map: ILO levels, task levels, gaps, how to lift - drawn on both review pages

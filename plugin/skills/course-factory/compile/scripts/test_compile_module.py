@@ -1912,6 +1912,68 @@ def v2520_part(tmp):
           '"assets/img/plan.jpg", "areas": {"Fuel preparation room":' in out and "plan.jpg" not in fix_list, out)
 
 
+def docx(path, paras):
+    """a minimal Word file holding these paragraphs - the shape of the novikontas-practical-exercises forms"""
+    import zipfile
+    body = "".join('<w:p><w:r><w:t xml:space="preserve">%s</w:t></w:r></w:p>' % html.escape(p) for p in paras)
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("[Content_Types].xml", '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>')
+        z.writestr("word/document.xml", '<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/'
+                   'wordprocessingml/2006/main"><w:body>%s</w:body></w:document>' % body)
+
+
+EX_HEAD = ["Course", "IGF ships", "Exercise No.", "1.1", "Title", "Walk the fuel line", "Duration", "15 min",
+           "Objective of Exercise", "To let you trace the fuel line from the tank to the engine on the real ship model, and to show "
+           "you where each valve is.", "WHAT YOU NEED AND WHAT YOU HAND IN",
+           "What you need: the ship model in room 12; the GA drawing; your tablet."]
+EX_SECRET = "Reference answer: the master valve is the third one from the tank."
+
+
+def exercise_part(tmp):
+    """2.63.2 (owner rule 2026-10-21; IGF 2.63.0 cross-check: the 16 exercises had no slide) - a module with a practical
+    exercise form and no slide for it is a build problem, with the slide proposed from the TRAINEE form; with the slide it
+    passes, its minutes are practice; the instructor form's words reach no screen"""
+    print("\n-- 2.63.2: every module with a practical exercise gets a slide about it")
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    import exercises
+    os.makedirs(os.path.join(tmp, "ex"))
+    c, md = new_course(os.path.join(tmp, "ex"), script())
+    d = os.path.join(c, "to_review", "exercises", "M01")
+    os.makedirs(d)
+    docx(os.path.join(d, "IGF_Exercise_1.1_Trainee_v01.docx"), EX_HEAD + ["Exercise Description", "1. Find the tank valve."])
+    docx(os.path.join(d, "IGF_Exercise_1.1_Instructor_v01.docx"),
+         EX_HEAD + ["INSTRUCTOR COPY - contains reference answers.", EX_SECRET, "Teaching aids: the ship model; the valve key."])
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    prop = os.path.join(c, "working_claude", "script", "M01.exercise_slides.json")
+    check("an exercise form and no slide: a build problem naming it, and its slide proposed (a changes file to propose)",
+          code == 1 and "has a practical exercise and no slide for it: Exercise 1.1 - Walk the fuel line (15 min)" in out
+          and os.path.isfile(prop), out[-900:])
+    ch = cs.load(prop) if os.path.isfile(prop) else []
+    new = (ch[0] if ch else {}).get("add_screen") or {}
+    check("... the proposal: an activity screen from the TRAINEE form - what they do, what they need, the time - before the module check",
+          new.get("kind") == "activity" and new.get("exercise") == "1.1" and new.get("minutes") == 15
+          and new.get("title") == "Exercise 1.1 - Walk the fuel line" and "Trace the fuel line from the tank to the engine" in new.get("text", "")
+          and "You need: the ship model in room 12." in new.get("text", "") and "Time: 15 min" in new.get("text", "")
+          and ch[0].get("before") == next(s["id"] for s in SCREENS if s.get("opens") == "MC"), ch)
+    check("... the instructor form only named in the cue - none of its words in the proposal",
+          EX_SECRET not in json.dumps(ch) and "valve key" not in json.dumps(ch) and "IGF_Exercise_1.1_Instructor_v01.docx" in new.get("notes", ""), ch)
+    changes, work = cs.build_changes(script(), ch)
+    sc = script(screens=work["screens"])
+    cs.save(os.path.join(c, "working_claude", "script", "M01.json"), sc)
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    page = deck(md)
+    x = section(page, new.get("id", "x11"))
+    check("with the slide: no exercise problem; the slide is a room task, its minutes practice",
+          "has a practical exercise" not in out and 'data-track="practice"' in x and "Walk the fuel line" in x
+          and exercises.missing(c, sc) == [], out[-600:])
+    check("... no word of the instructor form on any page of the module", EX_SECRET not in page and not any(
+        EX_SECRET in io.open(os.path.join(r, f), encoding="utf-8", errors="replace").read()
+        for r, _d, fs in os.walk(md) for f in fs if f.endswith(".html")))
+    before, after = cs.summary(script())["practice_min"], cs.summary(sc)["practice_min"]
+    check("... and its 15 minutes count as practice in the module's hours", after - before == 15 and cm is not None, (before, after))
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="compile_")
     try:
@@ -2460,6 +2522,7 @@ def main():
         variety_part(tmp)
         look_part(tmp)
         light_part(tmp)
+        exercise_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

@@ -1592,6 +1592,35 @@ def unsupported_facts(script, build, figdir, mdir, course):
     return found
 
 
+def exercise_proposal(course, script):
+    """2.63.2 (owner rule 2026-10-21: every module with a practical exercise gets at least one deck slide about it) - the
+    slides of the module's exercises that have none, from their TRAINEE forms, written as a changes file to propose"""
+    import exercises
+    miss = exercises.missing(course, script)
+    if not miss:
+        return None
+    out = workspace.claude_path(course, "script", cs.mid(script["module"]) + ".exercise_slides.json")
+    with io.open(out, "w", encoding="utf-8", newline="\n") as f:
+        f.write(json.dumps(exercises.proposal(script, miss), ensure_ascii=False, indent=1))
+    print("  Exercise slide(s) proposed, unasked (owner rule): %s - from the trainee form(s), approved like any other change:\n"
+          "    content_script.py propose \"%s\" --module %s --changes \"%s\""
+          % (", ".join("Exercise %s %s" % (x["no"], x["title"]) for x in miss), course, script["module"], out))
+    return out
+
+
+def exercise_problems(course, script):
+    """a module whose practical exercise has no slide - a build problem, with the slide proposed to approve"""
+    import exercises
+    miss = exercises.missing(course, script)
+    if not miss:
+        return []
+    out = exercise_proposal(course, script)
+    return ["%s has a practical exercise and no slide for it: %s - every module with an exercise shows it on at least one "
+            "slide, timed (owner rule 2026-10-21). The slide is proposed from its trainee form in %s: content_script.py "
+            "propose, then approve; an activity screen says which exercise it is with \"exercise\": \"<no>\""
+            % (cs.mid(script["module"]), "; ".join("Exercise %s - %s (%d min)" % (x["no"], x["title"], x["minutes"]) for x in miss), out)]
+
+
 # ------------------------------------------------------------------ one slide
 def composition(s, b, is_photo, has_fig):
     c = b.get("composition")
@@ -3042,6 +3071,7 @@ def main(argv=None):
               "options: course-visuals\\kit\\CATALOGUE.md), then build and check in one command:\n    compile\\scripts\\"
               "build_module.py <course> --module %s" % (bp, o.module))
         sheet_screens = cs.load(bp).get("screens") or {}
+        exercise_proposal(o.course, script)             # 2.63.2: a module's practical exercise gets its slide, unasked
         for sid, spec in specs.items():                 # 2.50.0: starter figure-kit specs - edited, never written from nothing
             cs.save(os.path.join(figdir, "%s.kit.json" % sid), spec)
             print("  starter figure: figures\\%s\\%s.kit.json - %d parts, %d steps (edit it: the parts are placed on a grid)%s"
@@ -3130,6 +3160,7 @@ def main(argv=None):
                          "retrieval packs, fact sheets, text extracts). Take it off the drawing, put it in the script "
                          "(content_script.py propose), or name where it is from in the build sheet: \"facts\": {\"%s\": "
                          "\"<source, page>\"}" % (where, rel, shown, shown))
+        probs += exercise_problems(o.course, script)
         n = sum(1 for s in script["screens"] if s["kind"] in cs.INSTRUCTOR)
         print("Built %s - %d screens from the %s script.\n    %s" % (cs.mid(o.module), n, "approved" if approved else "DRAFT", out))
     if o.only in ("all", "tasks"):

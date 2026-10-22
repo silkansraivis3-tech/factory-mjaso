@@ -323,6 +323,15 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
 A room activity with a drawing of its own (trace a path) is laid out like a teaching slide and keeps the classroom's
 Task marks. A task slide links to its set's page (`tasks\sc2_*.html`, `assessment\check.html`) - built by §2d.
 
+**A practical exercise gets its slide (owner rule 2026-10-21; 2.63.2, `scripts/exercises.py`).** A module whose exercise
+forms are in `course\to_review\exercises\MNN\` (or `working_claude\exercises\MNN\`) - the novikontas-practical-exercises
+skill's `..._Trainee_v01.docx` and `..._Instructor_v01.docx` - shows each exercise on at least one slide: an
+`"activity"` screen with `"exercise": "8.1"`, its minutes the form's duration (practice, in the module's hours).
+`--init-build` and every compile that finds one without its slide write the proposal - from the TRAINEE form only:
+what the trainees do, what they need, the time - to `working_claude\script\MNN.exercise_slides.json`, to propose and
+approve like any change (`content_script.py propose`); until then it is a build problem. The instructor form is named
+in the slide's cue as the copy to run it from; none of its words reach a screen.
+
 ## 2d · The task pages (2.34.0)
 
 Every task slide that opens questions gets its page from the same script: `tasks\sc1_<title>.html`,
