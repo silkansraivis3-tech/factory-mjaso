@@ -127,6 +127,23 @@ def check_motion(path: str, raw: str) -> None:
 
 
 # ------------------------------------------------------------------- svg
+def in_named_control(raw: str, pos: int) -> bool:
+    """2.63.2 - is the svg at `pos` the symbol inside a <button> / <a> that already has its own name (an aria-label, a title, or
+    words beside the symbol)? Then the control is named, and the symbol must not be named a second time."""
+    last = None
+    for om in re.compile(r"<(button|a)\b([^>]*)>", re.I).finditer(raw, max(0, pos - 4000), pos):
+        last = om                                        # a control's symbol sits right inside it: look back 4000 characters
+    if not last:
+        return False
+    tag = last.group(1).lower()
+    close = re.search(r"</%s\s*>" % tag, raw[last.end():], re.I)
+    if not close or last.end() + close.start() < pos:
+        return False                                     # the control closed before this svg: it is not inside it
+    inner = raw[last.end(): last.end() + close.start()]
+    words = re.sub(r"<[^>]+>", " ", re.sub(r"<svg\b.*?</svg>", " ", inner, flags=re.S | re.I)).strip()
+    return bool(re.search(r"aria-label(?:ledby)?\s*=|\btitle\s*=", last.group(2), re.I) or words)
+
+
 def check_svg(path: str, raw: str) -> None:
     for m in re.finditer(r"<svg\b([^>]*)>", raw, re.I):
         attrs = m.group(1)
@@ -134,7 +151,10 @@ def check_svg(path: str, raw: str) -> None:
         if not vb:
             warn(path, "<svg> without a viewBox",
                  "a fixed-size SVG cannot scale to the tablet")
-        if "role=" not in attrs.lower() and "aria-label" not in attrs.lower():
+        # 2.63.2 (IGF full build: 11-39 warnings a module, nearly all control icons and gesture icons) - a decorative svg
+        # (aria-hidden="true") and a symbol inside a named button / link are not figures: nothing to describe
+        if "role=" not in attrs.lower() and "aria-label" not in attrs.lower() \
+                and not re.search(r'aria-hidden\s*=\s*["\']?true', attrs, re.I) and not in_named_control(raw, m.start()):
             warn(path, "<svg> without role/aria-label",
                  'add role="img" and an aria-label describing the whole figure')
 

@@ -115,6 +115,33 @@ def tooling_part(tmp):
     check("... while a course picture with no record still fails", p.returncode == 1 and "pump.jpg" in p.stdout, p.stdout[-400:])
 
 
+def svg_part(tmp):
+    """2.63.2 - check_visuals.py asks a figure for role / aria-label but not a decorative icon: an aria-hidden svg and a symbol
+    inside a button or link that is already named (an aria-label, a title, or words beside it) - 11-39 warnings a module on the
+    IGF full build were nearly all of those. A bare svg, and a symbol in an UNNAMED control, still warn."""
+    print("\n-- 2.63.2: decorative icons are not figures")
+    SVG = '<svg viewBox="0 0 24 24"%s><path d="M0 0"/></svg>'
+    cases = (("a bare svg", SVG % "", 1),
+             ("an svg with role=img and a label", SVG % ' role="img" aria-label="a pump"', 0),
+             ("an aria-hidden svg", SVG % ' aria-hidden="true"', 0),
+             ("an svg in a button with an aria-label", '<button aria-label="Next">%s</button>' % (SVG % ""), 0),
+             ("an svg in a button with words beside it", '<button class="b">%s Next</button>' % (SVG % ""), 0),
+             ("an svg in a link with a title", '<a href="x.html" title="Open">%s</a>' % (SVG % ""), 0),
+             ("an svg in a button with no name", '<button class="b">%s</button>' % (SVG % ""), 1),
+             ("an svg after its button closed", '<button aria-label="Next">x</button><p>%s</p>' % (SVG % ""), 1))
+    for name, markup, want in cases:
+        d = os.path.join(tmp, "svg_" + str(abs(hash(name))))
+        os.makedirs(d, exist_ok=True)
+        io.open(os.path.join(d, "p.html"), "w", encoding="utf-8").write("<!DOCTYPE html><html><body>%s</body></html>" % markup)
+        p = subprocess.run([sys.executable, "-I", os.path.join(HERE, "check_visuals.py"), d, "--json"],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        try:
+            n = sum(1 for f in json.loads(p.stdout)["findings"] if "without role/aria-label" in f["message"])
+        except (ValueError, KeyError):
+            n = -1
+        check("%s: %s" % (name, "warns" if want else "no warning"), n == want, "%d warning(s)\n%s" % (n, p.stdout + p.stderr))
+
+
 def main() -> int:
     tmp = tempfile.mkdtemp(prefix="visfirst_")
     print("=" * 72)
@@ -236,6 +263,7 @@ def main() -> int:
               len(levels(d, "FAIL")) == 1, d["findings"])
 
         tooling_part(tmp)
+        svg_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
