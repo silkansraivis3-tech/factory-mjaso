@@ -111,6 +111,20 @@ def main():
               and not any(t in run_here for t in ("check_hours", "check_syllabus_coverage", "crosscheck_tasks", "verify_links", "audit_navigation"))
               and all(t in not_here for t in ("check_hours", "check_syllabus_coverage", "crosscheck_tasks", "verify_links", "audit_navigation")),
               step2)
+        tail = qa1.split("Next alone?", 1)[-1].split("A module that still classifies C", 1)[0]
+        with open(os.path.join(HERE, "..", "..", "compile", "REVIEW_PROMPT.md"), encoding="utf-8") as f:
+            review = f.read()
+        check("2.63.2 the QA agent asks whether each picture shows what the question / slide names (an oxygen monitor on a %LEL "
+              "question) and a different instrument or part is BROKEN",
+              "show what the question or slide NAMES" in tail and "%LEL question" in tail and "spectacle blind" in tail
+              and "severity BROKEN" in tail and "REVIEW_PROMPT.md, item 6" in tail, tail)
+        rv_item6 = review.split("6. **The picture shows what the words name**", 1)[-1].split("**A re-review**", 1)[0]
+        rv_broken = review.split("- `BROKEN` -", 1)[-1].split("- `POLISH`", 1)[0]
+        check("2.63.2 REVIEW_PROMPT.md has the rule as item 6 - the picture is the instrument / part / place the words name - "
+              "and lists a different one under BROKEN (the sheets' reviewer, item numbers 1-6)",
+              "6. **The picture shows what the words name**" in review and "oxygen monitor on a %LEL" in rv_item6
+              and "portable explosimeter" in rv_item6 and "spectacle blind" in rv_item6
+              and "different instrument, part" in rv_broken and "item number (1-6)" in review, review[-1200:])
         three = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_approved": ["1"],
                           "factory": "C:/f/skills", "notes": "no paid pictures"})
         labels, o, pr = three.get("labels", []), three.get("opts", {}), three.get("prompts", {})

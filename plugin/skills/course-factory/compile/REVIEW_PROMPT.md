@@ -15,6 +15,7 @@ parallel, several Read calls in one message. Each sheet holds two screens, each 
 A deck slide whose drawing steps is shown at its last step. Every question is shown twice: answered WRONG and checked,
 then answered RIGHT and checked. The pink dashed boxes on a WRONG screen are NOT part of the page: they show you every
 tap area ("tap N") and drop zone ("zone N") the trainee can use. They are there so you can judge item 3.
+A photograph or drawing is judged against the words on its own screen (item 6) - the question, the title, the caption.
 
 Look at every screen against this list:
 
@@ -28,6 +29,12 @@ Look at every screen against this list:
    shows the right answer.
 5. **Nothing cut off or covered.** No word cut at a screen edge, no part of a drawing under the button bar at the
    bottom, nothing overlapping the slide's title or footer.
+6. **The picture shows what the words name** (2.63.2). Read the question, the slide's title and its caption, then look
+   at the picture beside them: is it the instrument, the part, the place the words name? An oxygen monitor on a %LEL
+   question, a portable explosimeter where a fixed detector head is meant, a spectacle blind where a spool piece is
+   asked, a LNG tank on a slide about the bunker line: every automatic check passed these, and only an eye found them.
+   A picture of a related thing is not the thing - and on a question it also gives the answer away or sends the trainee
+   to the wrong one. When the picture could be either, the caption must say which; with no caption, it is wrong.
 
 **A re-review** (the brief says "re-review" and lists the findings of the last review): look only at the sheets you are
 given - the screens that changed - and say, for each listed finding, FIXED or NOT FIXED; add a new problem only when a
@@ -38,14 +45,15 @@ of polish on a re-review.
 IGF M02 s02 went PASS, then four failed builds, for polish):
 - `BROKEN` - a trainee or an instructor would misread it, miss it or be unable to do it: a word or a part cut off,
   covered or unreadable; a tap area on the wrong thing or on empty space; a label or leader pointing at the wrong
-  thing; the wrong verdict or no right answer shown; a file path on screen. BROKEN is fixed before hand-over.
+  thing; the wrong verdict or no right answer shown; a file path on screen; a picture of a different instrument, part
+  or place than the words name (item 6). BROKEN is fixed before hand-over.
 - `POLISH` - right and readable, but could look better: spacing a little tight, a label close to a line but clear,
   balance, alignment. POLISH is listed for the operator, never fixed in the build loop.
 When unsure, it is POLISH.
 
 Return, in under 200 words:
 - `PASS` or `FAIL` on the first line - FAIL only when there is at least one BROKEN;
-- for each problem: `BROKEN` or `POLISH`, the screen's label exactly as written on the sheet, the item number (1-5),
+- for each problem: `BROKEN` or `POLISH`, the screen's label exactly as written on the sheet, the item number (1-6),
   and what is wrong, in one line - specific enough to fix without looking ("BROKEN q03: the tap area covers only the
   top of the vent mast, not the pipe below it").
 Report only what you can see. Do not report taste. Do not repeat a problem for each screen it is on - name the first

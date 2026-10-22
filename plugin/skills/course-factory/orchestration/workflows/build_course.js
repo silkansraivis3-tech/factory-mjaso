@@ -309,6 +309,11 @@ Then answer the questions no script can: is every outcome in the ILO map actuall
 taught here, or only mentioned? Does each figure teach something the text does not?
 Would an instructor who has never seen this module be able to run it from Start and
 Next alone?
+And (2.63.2): does each picture show what the question or slide NAMES? Read a question or slide, then open its picture
+(figure spec, photo and its _photo_meta.json "shows"): an oxygen monitor on a %LEL question, a portable explosimeter
+where a fixed detector head is meant, a spectacle blind where a spool piece is asked - the IGF course passed every
+check with these and they were found only by eye. A picture of a different instrument, part or place than the words
+name is a finding of severity BROKEN (compile/REVIEW_PROMPT.md, item 6, is the same rule for the sheets).
 
 A module that still classifies C has not finished — say so plainly. REPORT findings.
 Do not fix anything.`
