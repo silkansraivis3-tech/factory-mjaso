@@ -101,6 +101,36 @@ def markers_in(path, rel):
     return out
 
 
+# 2.63.2 (item 22) - the slide a mark belongs to. compile_module.py asks this before it writes over a deck: a drawing a person
+# fixed inside the deck is lost on a rebuild unless it is found and imported first. The IGF course's decks carried the marks on
+# the <section data-sme=...> and in <!-- SME: ... --> comments just before it (or inside it), never in a separate list.
+SECTION = re.compile(r'<section\b[^>]*?\bid="([\w-]+)"[^>]*>', re.I)
+
+
+def sections_of(raw):
+    """[(slide id, its chunk, its section)] of a deck: the section is <section id=...> to </section>; the chunk also takes what
+    stands between the section before and this one, where a comment about this slide sits. The first section's chunk starts at
+    the section - the head of the page is not a slide's."""
+    out, prev = [], None
+    for m in SECTION.finditer(raw):
+        end = raw.find("</section>", m.end())
+        end = len(raw) if end < 0 else end + len("</section>")
+        out.append((m.group(1), raw[(prev if prev is not None else m.start()):end], raw[m.start():end]))
+        prev = end
+    return out
+
+
+def marks_in_text(text):
+    """what a person marked in this stretch of a page: data-sme attributes and SME comments, as the lines markers_in() prints"""
+    marks = []
+    for m in SME_ATTR.finditer(text):
+        why = (m.group(2) or m.group(3) or "").strip()
+        marks.append("data-sme" + (' = "%s"' % why if why else ""))
+    for m in SME_COMMENT.finditer(text):
+        marks.append("<!-- SME: %s -->" % re.sub(r"\s+", " ", m.group(1)).strip()[:160])
+    return marks
+
+
 def git_touched(module):
     """Signal 3 - only where the course is in git, which a desktop folder rarely is."""
     try:

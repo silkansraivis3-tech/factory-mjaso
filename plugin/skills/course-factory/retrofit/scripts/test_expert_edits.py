@@ -104,6 +104,18 @@ def main() -> int:
         d = rj(r)
         check("a file left in _sme/ is protected", len(sigs(d, "marker")) == 1, d)
 
+        # ---- 2.63.2 item 22 · which slide a mark belongs to (compile_module.py uses it before it overwrites a deck)
+        print("\n-- the slide a mark belongs to")
+        sys.path.insert(0, HERE)
+        import detect_expert_edits as de
+        raw = ('<head><!-- SME: head note, no slide\'s --></head>\n<section class="slide" id="s01">one</section>\n'
+               '<!-- SME: s02 - the valve drawing -->\n<section class="slide" id="s02"><svg data-kit="#kit-s02"></svg></section>\n'
+               '<section class="slide" data-sme="reason" id="s03">three</section>\n<section id="s04">four</section>')
+        secs = {sid: de.marks_in_text(chunk) for sid, chunk, _ in de.sections_of(raw)}
+        check("a comment before a section and a data-sme on it mark that slide; the head's comment and a bare slide mark none",
+              [bool(secs.get(x)) for x in ("s01", "s02", "s03", "s04")] == [False, True, True, False]
+              and "the valve drawing" in secs["s02"][0] and secs["s03"] == ['data-sme = "reason"'], secs)
+
         # ---- 2 · the factory's own build record ------------------------
         print("\n-- the factory's own build record")
         r = os.path.join(tmp, "record")

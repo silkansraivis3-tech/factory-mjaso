@@ -485,6 +485,14 @@ drawings' colours only.
 - Built only from an **approved** script; `--draft` gives a preview, marked as such, never handed over.
 - A deck changed by hand — or built by hand before the compiler — is **not overwritten**; the change
   goes into the script or the build sheet, then `--force`.
+- **A drawing fixed by hand in the deck is never undone by a rebuild (2.63.2).** When a slide's inline kit spec
+  (`<script type="application/json" id="kit-sNN">`) differs from what this compile would write for it (the source spec
+  after `figure_fit`) AND its section carries `data-sme` or an `<!-- SME: -->` comment, the compile stops (exit 2), names
+  the slides and writes nothing. **`--force` does not skip it** - it only skips the "changed by hand" check, never a
+  person's mark. Put the deck's drawings back into the source specs with
+  `compile_module.py <course> --module N --import-sme-figures` (it writes only `working_claude\figures\MNN\sNN.kit.json`, a
+  decision made on purpose), then compile with `--force`: that slide's spec is byte-identical to the hand-fixed one. To drop a
+  fix instead, take the `data-sme` mark off that slide in the deck yourself. A slide without a mark behaves as before.
 - A missing picture is listed, never invented.
 - An inset photograph under more than about 75 words (90 on a photo split) is reported at build with the px it will
   spill (IGF M07 s08 / s12, M09 s06: 79-105 px at 91-101 words) - before the drawing check finds it. Cut the words,

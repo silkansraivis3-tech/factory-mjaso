@@ -1987,6 +1987,70 @@ def exercise_part(tmp):
     check("... and its 15 minutes count as practice in the module's hours", after - before == 15 and cm is not None, (before, after))
 
 
+def sme_figures_part(tmp):
+    """2.63.2 (item 22): a drawing fixed by hand inside the deck (its section marked data-sme) is never silently undone by a
+    rebuild - the IGF original's fixes lived only in its decks, its source specs in working_claude\\figures were not updated"""
+    os.makedirs(os.path.join(tmp, "sme"))
+    c, md = new_course(os.path.join(tmp, "sme"), script())
+    spec = {"size": [300, 200], "label": "A valve closes on a pipe.",
+            "parts": [{"id": "F", "type": "pipe", "d": "M10 100 H290", "value": 1},
+                      {"id": "V", "type": "valve", "x": 150, "y": 100, "value": 1, "label": "valve </script>"}],
+            "steps": [{"title": "The valve closes", "line": 2, "play": [["V", 0, 800], ["F", 0, 400]]}]}
+    src = os.path.join(c, "working_claude", "figures", "M01", "valve.kit.json")
+    cs.save(src, spec)
+    bp = os.path.join(c, "working_claude", "script", "M01.build.json")
+    sheet = cs.load(bp)
+    sheet["screens"]["s04"] = {"figure": "valve.kit.json", "dark": True, "declined_3d": "the fixture's kit figure stands in for the scene"}
+    cs.save(bp, sheet)
+    code, out = run(COMPILE, c, "--module", "1")
+    built = deck(md)
+    tag = lambda page: (re.search(r'<script type="application/json" id="kit-s04">.*?</script>', section(page, "s04"), re.S) or [""])[0]
+    check("item 22 setup: the fixture deck holds s04's kit spec inline", code in (0, 1) and tag(built), out)
+    original = tag(built)
+    fixed = dict(spec, label="Fixed by the instructor.", parts=spec["parts"] + [{"id": "W", "type": "text", "text": "Closed", "x": 20, "y": 20}])
+    hand = '<script type="application/json" id="kit-s04">%s</script>' % json.dumps(
+        fixed, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    dp = os.path.join(md, "presentation", "index.html")
+
+    def write(page):
+        io.open(dp, "w", encoding="utf-8", newline="\n").write(page)
+
+    # without data-sme: as before - refused without --force, overwritten with it, and no import is offered
+    write(built.replace(original, hand))
+    code, out = run(COMPILE, c, "--module", "1")
+    check("item 22: a hand-changed spec WITHOUT data-sme is refused as before (changed by hand) and offers no import",
+          code == 2 and "changed by hand" in out and "--import-sme-figures" not in out and tag(deck(md)) == hand, out)
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    check("... and --force rebuilds it as before (the spec back to the source's)",
+          code in (0, 1) and "--import-sme-figures" not in out and tag(deck(md)) == original, out)
+
+    # with data-sme: the compile stops, names the slide and the command, and --force does not skip it
+    marked = built.replace(original, hand)
+    sec = section(marked, "s04")
+    marked = marked.replace(sec, sec.replace("<section ", '<section data-sme="IGF review: the valve drawing" ', 1))
+    check("item 22 setup: s04's section carries the mark", 'data-sme="IGF review: the valve drawing"' in section(marked, "s04"))
+    write(marked)
+    code, out = run(COMPILE, c, "--module", "1")
+    check("item 22: a hand-changed spec with data-sme stops the compile (exit 2) and names the slide and the command",
+          code == 2 and "s04" in out and "--import-sme-figures" in out and deck(md) == marked and cs.load(src) == spec, out)
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    check("... --force does not skip it: exit 2, the same slide and command named, the deck and the source spec untouched",
+          code == 2 and "--force does not skip this" in out and "s04" in out and "--import-sme-figures" in out
+          and deck(md) == marked and cs.load(src) == spec, out)
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force")
+    check("... a compile that does not write the deck (--only tasks) is not stopped by it", code in (0, 1) and deck(md) == marked, out)
+
+    # the import writes the deck's spec into the source (a person's decision), never the deck; then a compile builds it byte-identical
+    code, out = run(COMPILE, c, "--module", "1", "--import-sme-figures")
+    check("item 22: --import-sme-figures writes the deck's spec into the source spec file and leaves the deck as it is",
+          code == 0 and "Imported s04" in out and cs.load(src) == fixed and deck(md) == marked, out)
+    code, out = run(COMPILE, c, "--module", "1", "--import-sme-figures")
+    check("... run again it has nothing to import", code == 0 and "Nothing to import" in out, out)
+    code, out = run(COMPILE, c, "--module", "1", "--force")
+    check("... and the compile then builds s04's inline spec byte-identical to the hand-fixed one (a label with </script> included)",
+          code in (0, 1) and tag(deck(md)) == hand and "data-sme" not in section(deck(md), "s04"), out)
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="compile_")
     try:
@@ -2558,6 +2622,7 @@ def main():
         look_part(tmp)
         light_part(tmp)
         exercise_part(tmp)
+        sme_figures_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

@@ -6,6 +6,8 @@
     compile_module.py <course folder> --module 1 --init-build    write a starter build sheet, make the module folder with the factory's style files, build nothing
     compile_module.py <course folder> --module 1 --draft         build from a script that is not approved yet (preview only)
     compile_module.py <course folder> --module 1 --force         overwrite a deck that was changed by hand
+    compile_module.py <course folder> --module 1 --import-sme-figures   2.63.2: put the drawings fixed by hand in the deck (section marked
+                                                                 data-sme / SME) back into the source specs; --force never skips this guard
     compile_module.py <course folder> --module 1 --only plan     build only instructor\\M01_PLAN.html (2.47.0: the module's plan,
                                                                  from the same approved script - compile\\scripts\\module_plan.py)
 
@@ -3056,6 +3058,110 @@ def ensure_design(mdir):
     return 0, say
 
 
+# ------------------------------------------------------------------ 2.63.2 (item 22): a hand-fixed drawing is never silently undone
+IMPORT_SME = "--import-sme-figures"
+
+
+def _edits():
+    """retrofit/scripts/detect_expert_edits.py - the one place that knows what a person's mark looks like (data-sme, SME comments)"""
+    p = os.path.join(SKILL, "retrofit", "scripts")
+    if p not in sys.path:
+        sys.path.insert(0, p)
+    import detect_expert_edits
+    return detect_expert_edits
+
+
+def inline_spec(section, sid):
+    """the figure-kit spec a deck's slide holds inline (<script type="application/json" id="kit-<slide>">), parsed; None when it
+    has none or it does not parse"""
+    m = re.search(r'<script\b[^>]*\bid="kit-%s"[^>]*>(.*?)</script>' % re.escape(sid), section or "", re.S)
+    try:
+        spec = json.loads(m.group(1).replace("<\\/", "</")) if m else None
+    except ValueError:
+        return None
+    return spec if isinstance(spec, dict) else None
+
+
+def sme_figure_diffs(old_page, new_page):
+    """[(slide id, the deck's spec, its marks)] - the slides whose inline kit spec in the deck on disk is not what this compile
+    writes for them (new_page: the figure_fit fit and the slide's layout already in it - like with like) AND whose section a
+    person marked (data-sme, an SME comment). A difference without a mark is a stale build, not somebody's decision"""
+    de = _edits()
+    new = {sid: sec for sid, _, sec in de.sections_of(new_page)}
+    out = []
+    for sid, chunk, sec in de.sections_of(old_page):
+        old_spec, new_spec = inline_spec(sec, sid), inline_spec(new.get(sid), sid)
+        if old_spec is None or new_spec is None or old_spec == new_spec:
+            continue
+        marks = de.marks_in_text(chunk)
+        if marks:
+            out.append((sid, old_spec, marks))
+    return out
+
+
+def sme_marked_drawings(old_page):
+    """the slides of a deck on disk that carry a mark and an inline kit spec - for the hint on a hand-changed deck's stop"""
+    de = _edits()
+    return [sid for sid, chunk, sec in de.sections_of(old_page) if inline_spec(sec, sid) is not None and de.marks_in_text(chunk)]
+
+
+def sme_source_file(build, figdir, mdir, sid):
+    """where a slide's source kit spec is (working_claude\\figures\\MNN\\sNN.kit.json), or None when its figure is not a kit spec"""
+    rel = (((build.get("screens") or {}).get(sid) or {}).get("figure") or "").replace("\\", "/")
+    if not rel.lower().endswith(KIT_SPEC):
+        return None
+    for base in (figdir, mdir):
+        p = os.path.normpath(os.path.join(base or "", rel))
+        if base and os.path.isfile(p):
+            return p
+    return None
+
+
+def sme_stop_message(diffs, o, mdir, build, figdir):
+    cmd = "compile_module.py <course folder> --module %s %s" % (o.module, IMPORT_SME)
+    lines = ["Stopped - nothing was overwritten (--force does not skip this).\n\n  These slides' drawings were fixed by hand in the deck "
+             "(their section is marked data-sme / SME) and differ from the source spec the compile draws from - a rebuild would "
+             "undo each fix:"]
+    for sid, _, marks in diffs:
+        src = sme_source_file(build, figdir, mdir, sid)
+        lines.append("    %s  (source: %s)  %s" % (sid, src or "no .kit.json figure in the build sheet - nothing to import into", marks[0]))
+    lines.append("  Import the deck's drawings back into the source specs (a decision - run it on purpose), then compile again:\n"
+                 "    %s\n"
+                 "  Not wanted any more? Take the mark off that slide in the deck yourself (that is the person's decision to drop "
+                 "the fix); --force never does it." % cmd)
+    return "\n".join(lines)
+
+
+def import_sme_figures(o, script, build, mdir, figdir, approved):
+    """--import-sme-figures: the deck's hand-fixed kit specs go into the source spec files (cs.save keeps each file's own
+    formatting), so the next compile draws exactly what the deck holds. Writes only those files - never the deck"""
+    out = os.path.join(mdir, "presentation", "index.html")
+    if not os.path.isfile(out):
+        print("Nothing to import - there is no deck yet:\n    %s" % out)
+        return 2
+    old = io.open(out, encoding="utf-8").read()
+    work_, mid_ = workspace.claude_path(o.course), cs.mid(o.module) if str(o.module).isdigit() else str(o.module)
+    page, _, _ = compile_deck(script, build, mdir, figdir, plugin_version(), approved, load_layout_avoid(work_, mid_), load_layouts(work_, mid_), {})
+    diffs = sme_figure_diffs(old, page)
+    if not diffs:
+        print("Nothing to import - no marked slide of the deck holds a drawing that differs from its source spec.")
+        return 0
+    missing = []
+    for sid, spec, marks in diffs:
+        p = sme_source_file(build, figdir, mdir, sid)
+        if not p:
+            missing.append(sid)
+            continue
+        cs.save(p, spec)
+        print("Imported %s's drawing into %s" % (sid, p))
+    if missing:
+        print("Not imported (the build sheet names no .kit.json figure for them): %s" % ", ".join(missing))
+        return 2
+    print("\nNext: compile again with --force - the deck differs from the compiler's record because it was changed by hand, "
+          "and --force is what rebuilds it. The imported drawings are drawn exactly as the deck holds them now.")
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("course")
@@ -3064,6 +3170,9 @@ def main(argv=None):
     ap.add_argument("--init-build", action="store_true", help="write a starter build sheet and stop")
     ap.add_argument("--draft", action="store_true", help="build from a script that is not approved yet - a preview")
     ap.add_argument("--force", action="store_true", help="overwrite a deck or task page that was changed by hand")
+    ap.add_argument(IMPORT_SME, action="store_true", dest="import_sme",
+                    help="2.63.2: put the drawings a person fixed inside the deck (section marked data-sme / SME) back into "
+                         "the source specs in working_claude\\figures, so a compile does not undo them; writes no deck")
     ap.add_argument("--only", choices=("all", "deck", "tasks", "plan"), default="all",
                     help="build only the deck, only the trainee task pages (and the answer key), or only the instructor's "
                          "plan (default: all three)")
@@ -3134,10 +3243,21 @@ def main(argv=None):
     rec_path = workspace.module_record(mdir, RECORD)
     rec = cs.load(rec_path) if os.path.isfile(rec_path) else {}
     by_hand = lambda path, key: os.path.isfile(path) and not o.force and sha(io.open(path, encoding="utf-8").read()) != rec.get(key)
+    figdir = workspace.claude_path(o.course, "figures", cs.mid(o.module))
+    if o.import_sme:                                   # 2.63.2 (item 22) - a person's decision, run on purpose; writes no deck
+        return import_sme_figures(o, script, build, mdir, figdir, approved)
     if o.only in ("all", "deck") and by_hand(out, "index.html"):
         print("Stopped - nothing was overwritten.\n\n  The deck was changed by hand, or was built before the compiler:\n    %s\n"
               "  A change made in the deck would be lost. Put it into the script (content_script.py propose) or the\n"
               "  build sheet, then compile again with --force." % out)
+        try:        # 2.63.2 (item 22): a drawing fixed in the deck is not put into the script or the build sheet - it has its own way back
+            drawn = sme_marked_drawings(io.open(out, encoding="utf-8").read())
+        except (OSError, UnicodeDecodeError):
+            drawn = []
+        if drawn:
+            print("\n  Slides with a hand-marked drawing in the deck: %s\n  Their drawings go back into the source specs with "
+                  "(run it before --force, or --force will refuse):\n    compile_module.py <course folder> --module %s %s"
+                  % (", ".join(drawn), o.module, IMPORT_SME))
         return 2
     # 2.49.2 (F7) - a preview built from a script that is not approved stays where its assets are, in the module's folder, but is
     # marked: check_course_package.py and compile_course.py leave a marked module out of the classroom package and say so
@@ -3153,7 +3273,6 @@ def main(argv=None):
     elif os.path.isfile(mark):     # the deck on disk is still the draft's - the mark goes only when the deck is built again
         print("The draft mark (%s) stays - the deck was built from the draft and --only %s does not rebuild it.\n"
               "  Compile with --only deck (or all) to bring the approved module into the classroom package." % (DRAFT_MARK, o.only))
-    figdir = workspace.claude_path(o.course, "figures", cs.mid(o.module))
     back = restore(mdir, named_again(mdir, build, figdir))       # 2.52.0: named again - back in the package
     if back:
         print("Back in the package (named again; they were in assets\\img\\%s\\): %s\n" % (UNUSED, ", ".join(back)))
@@ -3170,6 +3289,17 @@ def main(argv=None):
         avoid, chosen = load_layout_avoid(work_, mid_), {}
         page, probs, notes = compile_deck(script, build, mdir, figdir, plugin_version(), approved, avoid,
                                           load_layouts(work_, mid_), chosen)
+        # 2.63.2 (item 22) - a drawing a person fixed inside the deck (its section marked data-sme / SME) and not in its source
+        # spec is lost by this write. Checked here, after the compile, because only now is "what this compile writes" known
+        # (figure_fit's fit and the layout in it); --force does not skip it - it skips the by-hand check, not a person's mark
+        if os.path.isfile(out):
+            try:
+                diffs = sme_figure_diffs(io.open(out, encoding="utf-8").read(), page)
+            except (OSError, UnicodeDecodeError):
+                diffs = []
+            if diffs:
+                print(sme_stop_message(diffs, o, mdir, build, figdir))
+                return 2
         try:                    # 2.62.1 - each slide's way, so the next compile keeps it while its words are unchanged
             os.makedirs(os.path.join(work_, "_build"), exist_ok=True)
             with io.open(os.path.join(work_, "_build", "%s_layouts.json" % mid_), "w", encoding="utf-8", newline="\n") as f:
