@@ -854,12 +854,12 @@ MID_CREDIT = {"source": "Wikimedia Commons", "author": "John Konrad", "licence":
               "modification": "resized", "attribution_required": True, "description": "A gas detector."}
 
 
-def deck_fit(exe, page, tmp, size):
+def deck_fit(exe, page, tmp, size, js=DECK_FIT):
     text = io.open(page, encoding="utf-8").read()
     text = re.sub(r"<head>", '<head><base href="%s/">' % Path(os.path.dirname(page)).as_uri(), text, count=1)
     i = text.rfind("</body>")
     w = os.path.join(tmp, "fit.html")
-    io.open(w, "w", encoding="utf-8").write(text[:i] + "<script>%s</script>" % DECK_FIT + text[i:])
+    io.open(w, "w", encoding="utf-8").write(text[:i] + "<script>%s</script>" % js + text[i:])
     p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--hide-scrollbars",
                         "--user-data-dir=" + os.path.join(tmp, "prof"), "--allow-file-access-from-files",
                         "--window-size=%d,%d" % (size[0] + 16, size[1] + 95), "--virtual-time-budget=10000", "--dump-dom", Path(w).as_uri()],
@@ -1348,6 +1348,158 @@ def review_part(exe, tmp):
           and len(res) == 2 and not res[1]["fix"], (r.get("errors"), res))
 
 
+PATTERNS = [
+    {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the patterns", "text": "Self-check on your tablet now.", "minutes": 4},
+    {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "order", "question": "Put the three steps in order.",
+     "answer": "Ventilate the tank\nMeasure the atmosphere\nIssue the permit", "feedback": "Ventilate, measure, permit."},
+    {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "single_choice", "question": "Where is the fuel prepared?",
+     "options": ["Fuel preparation room", "Bridge", "Galley"], "correct": "A", "feedback": "Pumps and vaporizers are there."},
+    {"id": "q03", "kind": "self-check", "set": "SC1", "mechanic": "scenario", "question": "A leak in the fuel preparation room.",
+     "answer": "The detector alarms at 20 % LEL => Find the leak* | Silence it | Carry on\n"
+               "It reaches 40 % LEL => Leave the room* | Stay and look | Open the door wide", "feedback": "Find, leave."},
+    {"id": "q04", "kind": "self-check", "set": "SC1", "mechanic": "cloze", "question": "Complete the sentence.",
+     "answer": "LNG is stored at [-162 °C* | 0 °C | 20 °C], so the tank is [insulated* | painted | heated].", "feedback": "Very cold."},
+    {"id": "q05", "kind": "self-check", "set": "SC1", "mechanic": "order", "question": "Put the eight steps of opening a gas line in order.",
+     "answer": "\n".join(t for t, _ in PIPE), "feedback": "Make it safe first."},
+]
+PAT_PLAN = [
+    ["q01", [["card", "Ventilate the tank", 2], ["card", "Measure the atmosphere", 1], ["card", "Issue the permit", 3],
+             ["eval", "var t = s.querySelector('.tray');"          # every card placed, Check not pressed: the bank is empty and says so
+                      "out.tray0 = {attr: t.getAttribute('data-empty'), before: getComputedStyle(t, '::before').content,"
+                      " chips: t.querySelectorAll('.chip').length, display: getComputedStyle(t).display};"],
+             ["dock"],
+             ["eval", "function c(e, p) { return getComputedStyle(e)[p]; }"
+                      "var t = s.querySelector('.tray'), f = s.querySelector('.chip.fixed'), r = s.querySelector('.chip.right');"
+                      "out.fix = {tray: c(t, 'display'), nfixed: s.querySelectorAll('.chip.fixed').length,"
+                      " fb: c(f, 'borderTopColor'), fs: c(f, 'boxShadow'), fbg: c(f, 'backgroundColor'), rb: c(r, 'borderTopColor'), rbg: c(r, 'backgroundColor')};"]]],
+    ["q02", [["tap", ".opt", "Bridge"], ["dock"],
+             ["eval", "out.dim = [].map.call(s.querySelectorAll('.opt.dim'), function (o) { return parseFloat(getComputedStyle(o).opacity); });"]]],
+    ["q03", [["tap", ".opt", "Find the leak"], ["dock"], ["dock"],
+             ["eval", RECT + "var p = s.querySelectorAll('.part'); out.sc1 = {a: R(p[0]), b: R(p[1]), cls: [p[0].className, p[1].className]};"],
+             ["tap", ".opt", "Leave the room"], ["dock"],
+             ["eval", RECT + "var p = s.querySelectorAll('.part'); out.sc2 = {a: R(p[0]), b: R(p[1]), cls: [p[0].className, p[1].className]};"]]],
+    ["q04", [["tap", ".cg .opt", "-162 °C"], ["tap", ".cg .opt", "painted"], ["dock"],
+             ["eval", "function c(e, p) { return getComputedStyle(e)[p]; }"
+                      "var f = s.querySelector('.gap.fixed'), r = s.querySelector('.gap.right');"
+                      "out.gap = {fb: c(f, 'borderTopColor'), fs: c(f, 'boxShadow'), fbg: c(f, 'backgroundColor'), rb: c(r, 'borderTopColor')};"]]],
+    ["q05", [["card", t, n] for t, n in PIPE]          # eight rows: the places beside the bank (data-many); all placed right
+            + [["eval", RECT + "var t = s.querySelector('.tray'); out.many0 = {many: s.getAttribute('data-many'), label: getComputedStyle(t, '::before').content,"
+                              " tray: R(t), rows: R(s.querySelector('.rows'))};"],
+               ["dock"],
+               ["eval", RECT + "out.many1 = {tray: getComputedStyle(s.querySelector('.tray')).display, rows: R(s.querySelector('.rows')), vw: innerWidth};"]]],
+]
+# the deck's patterns: a five-card recap, and the lines a figure lights, measured on the compiled deck
+PATTERN_DECK = r"""
+(function () {
+  var out = {errors: [], recap: null, lit: [], tight: []};
+  window.addEventListener('error', function (e) { out.errors.push(String(e.message)); });
+  function R(e) { var r = e.getBoundingClientRect(); return {l: r.left, t: r.top, r: r.right, b: r.bottom}; }
+  function pads(e) { var c = getComputedStyle(e); return {tag: e.tagName.toLowerCase(), cls: e.className, box: e.classList.contains('box') || e.classList.contains('call'),
+                                                          pl: parseFloat(c.paddingLeft), pr: parseFloat(c.paddingRight)}; }
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      try {
+        var st = document.createElement('style');
+        st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}';
+        document.head.appendChild(st);
+        var sb = document.getElementById('startBtn'); if (sb) { sb.click(); }
+        out.vp = [innerWidth, innerHeight];
+        var g = document.querySelector('.rc-grid[data-n="5"]');
+        if (g) {
+          var s = g.closest('.slide');
+          [].forEach.call(document.querySelectorAll('.slide'), function (x) { x.classList.remove('active'); });
+          s.classList.add('active'); void s.offsetHeight;
+          out.recap = {grid: R(g), items: [].map.call(g.querySelectorAll('.rc-item'), R)};
+        }
+        var lines = [].slice.call(document.querySelectorAll('.copy [data-i]'));
+        out.lit = lines.map(pads);
+        [].forEach.call(document.querySelectorAll('.copy'), function (c) { if (c.querySelector('[data-i]')) { c.classList.add('tight'); } });
+        out.tight = lines.map(pads);
+      } catch (err) { out.errors.push(String(err && err.stack || err)); }
+      var pre = document.createElement('pre'); pre.id = 'gbtest'; pre.textContent = JSON.stringify(out);
+      document.body.appendChild(pre);
+    }, 300);
+  });
+}());
+"""
+
+
+def patterns_part(exe, tmp):
+    """2.63.2 item 19 (IGF slide review - every module had them, the course fixed each by hand): the shared patterns of the
+    task engine and the recap, each measured in a real browser. a) the dashed bank under a sort says "Cards not placed"
+    and goes after the check; b) the options not chosen stay readable (.8); c) a card or gap the check moved is amber
+    AND has the right-answer green on its edge; d) five recap cards: 3 + 2, the last row centred; e) a line a figure lights
+    keeps 10 px inside, `.copy.tight` opts out; f) a scenario's step in hand sits in the column of its folded steps."""
+    print("\n-- 2.63.2: the engine's and the recap's shared patterns (IGF slide review)")
+    os.makedirs(os.path.join(tmp, "pat"))
+    c, md = tcm.new_course(os.path.join(tmp, "pat"), tcm.script(screens=PATTERNS), build=False)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {"t01": {"try_tablet": False}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    page = os.path.join(md, "tasks", "sc1_the_patterns.html")
+    check("the pattern fixture page is built", code == 0 and os.path.isfile(page), out)
+    r = drive(exe, page, PAT_PLAN, tmp, look=False, size=(1280, 800))
+    check("no script error on the pattern page", not r.get("errors"), r.get("errors"))
+    t = r.get("tray0") or {}
+    check("a) every card placed, Check not yet pressed: the empty dashed bank says \"Cards not placed\"",
+          t.get("chips") == 0 and t.get("attr") == "Cards not placed" and t.get("before") == '"Cards not placed"' and t.get("display") != "none", t)
+    f = r.get("fix") or {}
+    check("a) ... after Check, with nothing left in it, the bank is gone", f.get("tray") == "none", f)
+    check("c) two cards moved to their place: the edge is the right-answer green (that of a right card), the wash stays amber, an amber bar on the left",
+          f.get("nfixed") == 2 and f.get("fb") == f.get("rb") and f.get("fbg") != f.get("rbg") and f.get("fs", "none") != "none"
+          and f.get("rb", "").startswith("rgb(") and f.get("fb", "").startswith("rgb("), f)
+    check("b) the options not chosen after the check: opacity .8 or more (was .55)", (r.get("dim") or [0]) and min(r.get("dim") or [0]) >= 0.8, r.get("dim"))
+    for k, when in (("sc1", "step 2 open"), ("sc2", "the last step checked")):
+        q = r.get(k) or {}
+        a, b = q.get("a") or {}, q.get("b") or {}
+        check("f) a scenario, %s: it has the left and right edge of the folded step above it (one centred column)" % when,
+              a and b and "past" in q["cls"][0] and "past" not in q["cls"][1] and abs(a["l"] - b["l"]) <= 1 and abs(a["r"] - b["r"]) <= 1, q)
+    g = r.get("gap") or {}
+    check("c) a gap the check filled with the right words: green edge as a right gap's, amber bar kept",
+          g.get("fb") == g.get("rb") and g.get("fb", "").startswith("rgb(") and g.get("fs", "none") != "none", g)
+    m0, m1 = r.get("many0") or {}, r.get("many1") or {}
+    check("a) eight places beside the bank (data-many): the empty bank, in its right-hand column, says \"Cards not placed\" there too",
+          m0.get("many") == "1" and m0.get("label") == '"Cards not placed"' and m0["tray"]["l"] > m0["rows"]["r"] - 1, m0)
+    check("a) ... after Check the bank is gone and the places take the whole width - not the left half with the right half blank",
+          m1.get("tray") == "none" and m1.get("rows", {}).get("r", 0) - m1.get("rows", {}).get("l", 0) >= 0.9 * m1.get("vw", 9e9), m1)
+    js = io.open(os.path.join(HERE, "..", "..", "..", "course-task-ux", "assets", "gb_answer.js"), encoding="utf-8").read()
+    check("a) the bank's words are in the engine's three languages (en, lv, ru)", js.count("trayEmpty:") == 3, js.count("trayEmpty:"))
+
+    # the deck: a five-card recap and the stepped lines
+    os.makedirs(os.path.join(tmp, "patd"))
+    screens = json.loads(json.dumps(tcm.SCREENS[:6])) + [
+        {"id": "s05", "kind": "slide", "recap": True, "title": "What to take away", "visual_kind": "none", "text": M05_S11, "minutes": 2}
+    ] + json.loads(json.dumps(tcm.SCREENS[6:]))
+    c, md = tcm.new_course(os.path.join(tmp, "patd"), tcm.script(screens=screens), build=False)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "s01": {"figure": "assets/img/ship.jpg"}, "s02": {"figure": "assets/fig/scale.svg"}, "s03": {"figure": "ga.html"},
+        "s04": {"figure": "hull.svg", "dark": True, "declined_3d": "the fixture's hull section stays a flat drawing"}, "t01": {"try_tablet": False}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
+    dpage = os.path.join(md, "presentation", "index.html")
+    check("the pattern deck is built", code == 0 and os.path.isfile(dpage), out[-600:])
+    for size in ((1280, 800), (1024, 768)):
+        r = deck_fit(exe, dpage, tmp, size, js=PATTERN_DECK)
+        tag = "%dx%d" % size
+        check("%s: no script error, measured at the size asked for" % tag, not r.get("errors") and r.get("vp") == list(size), r.get("errors") or r.get("vp"))
+        rc = r.get("recap") or {}
+        it, gd = rc.get("items") or [], rc.get("grid") or {}
+        if len(it) == 5:
+            top1 = [x["t"] for x in it[:3]]
+            top2 = [x["t"] for x in it[3:]]
+            mid = ((min(x["l"] for x in it[3:]) + max(x["r"] for x in it[3:])) / 2.0, (gd["l"] + gd["r"]) / 2.0)
+            ws = [x["r"] - x["l"] for x in it]
+            check("d) %s: five recap cards sit 3 + 2 - the last two centred under the three, every card the same width, no empty cell" % tag,
+                  max(top1) - min(top1) < 1 and max(top2) - min(top2) < 1 and min(top2) > max(x["b"] for x in it[:3]) - 1
+                  and abs(mid[0] - mid[1]) <= 2 and max(ws) - min(ws) <= 1, rc)
+        else:
+            check("d) %s: the five-card recap is on the slide" % tag, False, rc)
+        lit, tight = r.get("lit") or [], r.get("tight") or []
+        plain = [x for x in lit if not x["box"] and x["tag"] != "li"]
+        check("e) %s: a line a figure lights has 10 px inside on both sides (at rest) - and a bullet line 10 px on the right" % tag,
+              plain and all(x["pl"] == 10 and x["pr"] == 10 for x in plain) and all(x["pr"] == 10 for x in lit if x["tag"] == "li" and not x["box"]), lit)
+        check("e) %s: `.copy.tight` opts the slide out - no inner padding" % tag,
+              plain and all(x["pl"] == 0 and x["pr"] == 0 for x in tight if not x["box"] and x["tag"] != "li"), tight)
+
+
 def main():
     exe = drawing_check.find_browser()
     if not exe:
@@ -1400,6 +1552,7 @@ def main():
         fixes_part(exe, tmp)
         picture_part(exe, tmp)
         steps_part(exe, tmp)
+        patterns_part(exe, tmp)
         team_part(exe, tmp)
         language_part(exe, tmp)
         deck_language_part(exe, tmp)

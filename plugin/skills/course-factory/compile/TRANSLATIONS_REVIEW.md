@@ -171,6 +171,7 @@ review of 2026-10-21; their words went with them.)
 | notQuiteMissed | Not quite – what you missed is outlined in green. | Ne gluži – tas, ko palaidi garām, ir apvilkts zaļā krāsā. | Не совсем – пропущенное обведено зелёным. |
 | alsoRight | Also right | Arī pareizi | Тоже верно |
 | alsoWrong | Also wrong (spot the errors: a wrong line not flagged) | Arī kļūdaini | Тоже ошибка |
+| trayEmpty (2.63.2: written on the empty dashed bank under a sort / match list) | Cards not placed | Nenovietotās kartītes | Неразмещённые карточки |
 
 `compile/scripts/answer_key.py` WORDS - the instructor's page, the polite form: every string of its `lv` and `ru`
 tables (title, "Instructor only", how the pages mark, the column heads, Step / Why / The faulty part ...) is written by

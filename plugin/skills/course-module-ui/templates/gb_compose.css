@@ -548,6 +548,14 @@ figure{margin:0}
    selected line always changes - fill, an amber ring and an amber bar. audit_deck.js "mark" fails a deck where
    a selected line looks like itself or like another line at rest. */
 .copy [data-i]{border-radius:var(--r-s);transition:background-color .2s ease,box-shadow .2s ease}
+/* 2.63.2 (IGF slide review: M02, M03, M09, M11, M15): the line a figure lights - its wash and amber ring ran flush to the
+   words. 10 px of inner padding on every stepped line, at rest too (nothing moves when a line lights), drawn inside the
+   line so a clipping text column cannot cut the ring. A bullet line keeps its own left room for the bullet; a full slide
+   whose words reach the margins opts out with `.copy.tight`. A box and a conclusion (.call) have their own padding */
+.copy [data-i]:not(.box):not(.call):not(li){padding-left:10px;padding-right:10px;box-sizing:border-box}
+.copy li[data-i]:not(.box):not(.call){padding-right:10px}
+.copy.tight [data-i]:not(.box):not(.call):not(li){padding-left:0;padding-right:0}
+.copy.tight li[data-i]:not(.box){padding-right:0}
 .copy [data-i].lit{background:var(--blue-wash-l)}
 .slide.dark .copy [data-i].lit{background:var(--blue-wash-d)}
 .copy [data-i].cur,.copy .box[data-i].cur{background:var(--amber-wash-l);font-weight:600;
@@ -790,6 +798,19 @@ figure{margin:0}
   padding:min(2.4vmin,22px) min(2.8vmin,26px) min(2.2vmin,20px);
   background:linear-gradient(180deg,var(--cmp-white-07),var(--cmp-white-02));
   border:1px solid var(--line-d);border-radius:var(--r-m);box-shadow:var(--sh-d)}
+/* 2.63.2 (IGF slide review: nine modules' summaries): five cards in three columns left an empty sixth cell. Six
+   half-width columns: three cards span two each, the last two sit centred under them (3 + 2) - the same width as the rest.
+   Two columns (621-900 px): the fifth card is centred alone under the four */
+@media (min-width:901px){
+  .rc-grid[data-n="5"]{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .rc-grid[data-n="5"] > .rc-item{grid-column:span 2}
+  .rc-grid[data-n="5"] > .rc-item:nth-child(4){grid-column:2 / span 2}
+}
+@media (min-width:621px) and (max-width:900px){
+  .rc-grid[data-n="5"]{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .rc-grid[data-n="5"] > .rc-item{grid-column:span 2}
+  .rc-grid[data-n="5"] > .rc-item:nth-child(5){grid-column:2 / span 2}
+}
 .rc-item:nth-child(2){--d:.3s}
 .rc-item:nth-child(3){--d:.45s}
 .rc-item:nth-child(4){--d:.6s}

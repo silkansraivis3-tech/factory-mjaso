@@ -74,7 +74,7 @@
   box-shadow:inset 0 0 0 1px var(--good)}
 .opt.wrong,.opt.no{background:var(--warn-wash-l);border-color:var(--warn);
   box-shadow:inset 0 0 0 1px var(--warn)}
-.opt.dim{opacity:.55}
+.opt.dim{opacity:.8}      /* 2.63.2: was .55 - the options not chosen were light grey on near-white, too pale projected (IGF slide review) */
 .opt.right::after,.opt.ok::after{content:"✓";margin-left:auto;font-weight:700;
   color:var(--good)}
 .opt.wrong::after,.opt.no::after{content:"✕";margin-left:auto;font-weight:700;

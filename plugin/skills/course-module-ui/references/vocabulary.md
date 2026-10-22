@@ -69,7 +69,7 @@ Compiled slides (2.25.1, §13b — written by `course-factory/compile/`, usable 
 
 | Class | Use it for |
 |---|---|
-| `.copy` | the words beside or under a picture at reading size; holds `.statement`, `.lead`, `.support` |
+| `.copy` (+ `tight`) | the words beside or under a picture at reading size; holds `.statement`, `.lead`, `.support`. A line a figure lights (`data-i`) keeps 10 px of inner padding so its wash and amber ring clear the words (a bullet line keeps its bullet room); `.copy.tight` opts a full slide whose words reach the margins out (2.63.2) |
 | `.box` (+ `alt`) · `.call` | inside `.copy`: a line set apart (blue - every box the same) · `alt` only where the build sheet names `box_alt`, the other of two options (grey, never amber) · the conclusion line (navy) |
 | `.inset` (`img` + `figcaption`) | inside `.copy`: a small real photograph under the words, its caption and credit |
 | `.fill.fig` | the picture's box: the drawing and its controls stacked, taking the room the words leave |

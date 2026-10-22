@@ -50,7 +50,8 @@
     passNote: 'Pass mark {pass} % – {need} of {total} right. This shows what to review. It is not a grade.',
     passed: 'PASSED', notPassed: 'NOT PASSED',
     yourAns: 'Your answer', rightAns: 'Right answer', yourOrder: 'Your order', rightOrder: 'Right order',
-    notPlaced: 'not placed', leftOut: 'does not belong here', onPic: 'its place is marked on the picture'
+    notPlaced: 'not placed', leftOut: 'does not belong here', onPic: 'its place is marked on the picture',
+    trayEmpty: 'Cards not placed'                           /* 2.63.2: written on the empty dashed bank under a sort / match list */
   };
   /* the course language (L19) - the page's <html lang>; PROVISIONAL (2.40.0), written by Claude, to be checked by a
      native speaker: course-factory/compile/TRANSLATIONS_REVIEW.md. The message to the classroom keeps 'PASSED' /
@@ -70,7 +71,8 @@
       passNote: 'Ieskaites slieksnis {pass} % – {need} no {total} pareizi. Tas rāda, ko atkārtot. Tā nav atzīme.',
       passed: 'IESKAITĪTS', notPassed: 'NAV IESKAITĪTS',
       yourAns: 'Tava atbilde', rightAns: 'Pareizā atbilde', yourOrder: 'Tava secība', rightOrder: 'Pareizā secība',
-      notPlaced: 'nav novietots', leftOut: 'šeit nepieder', onPic: 'tā vieta ir atzīmēta attēlā'
+      notPlaced: 'nav novietots', leftOut: 'šeit nepieder', onPic: 'tā vieta ir atzīmēta attēlā',
+      trayEmpty: 'Nenovietotās kartītes'
     },
     ru: {
       tryFirst: 'Сначала попробуй планшет', startSelf: 'Начать самопроверку', moduleCheck: 'Проверка по модулю',
@@ -86,7 +88,8 @@
       passNote: 'Проходной балл {pass} % – {need} из {total} правильно. Это показывает, что повторить. Это не оценка.',
       passed: 'ЗАЧТЕНО', notPassed: 'НЕ ЗАЧТЕНО',
       yourAns: 'Твой ответ', rightAns: 'Правильный ответ', yourOrder: 'Твой порядок', rightOrder: 'Правильный порядок',
-      notPlaced: 'не размещено', leftOut: 'здесь лишнее', onPic: 'его место отмечено на рисунке'
+      notPlaced: 'не размещено', leftOut: 'здесь лишнее', onPic: 'его место отмечено на рисунке',
+      trayEmpty: 'Неразмещённые карточки'
     }
   };
   (function () {
@@ -458,6 +461,7 @@
     var g = { type: 'place', q: q, id: q.id, sec: part, chips: $$('.chip', part), zones: $$('.zone', part),
       tray: $('.tray', part), need: part.getAttribute('data-need') || 'all', locked: false, sel: null };
     g.onchange = function () { q.touched = true; refresh(); };
+    if (g.tray) { g.tray.setAttribute('data-empty', say('trayEmpty')); }       /* 2.63.2: the empty bank says what it is (CSS) */
     bindPlacement(g);
     return g;
   }
@@ -670,6 +674,7 @@
   }
   function reveal(p, ok) {
     each(p.groups, function (g) { revealGroup(g, gradeGroup(g)); });
+    each($$('.tray', p.el), function (t) { if (!$('.chip', t)) { add(t, 'spent'); } });    /* 2.63.2: an emptied bank goes (CSS) */
     each($$('.ffc', p.el), function (c) { add(c, 'seen'); });       /* every part's reading, once it is answered */
     add(p.el, 'checked');
     syncFor(p.el);
