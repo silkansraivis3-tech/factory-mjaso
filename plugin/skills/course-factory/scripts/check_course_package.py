@@ -33,6 +33,8 @@ WHAT IT CHECKS - the course folder is course\\modules\\ (L44, L45)
     the frame; no 'Answers' / 'Review' / 'Show solution' / 'Next task' / 'Menu' / 'Home' button - the result is last
   every trainee page: no answer readable in its source (data-correct, data-answer); no link into a _ folder;
     notes when a page that hears the timer never reports timeout: true, or offers "try again" inside the classroom
+  honesty markers (2.63.2): the alt, data-about, data-credit and title attributes of the deck and every trainee page carry none of
+    the factory's markers (PLACEHOLDER, UNKNOWN, VERIFY, TODO, TBD, PROVISIONAL, RIGHTS_REVIEW_REQUIRED, GENERATED_ASSET_REQUIRED ...)
   the recap (L51): every teaching module's deck has the recap slide straight before its module-check slide -
     class "recap", data-kind "Summary", 3 to 6 points (.rc-item) - the same design in every module
   the picture viewer (L51): every page of a module that shows a picture loads gb_zoom.js and gb_zoom.css
@@ -106,6 +108,15 @@ TRAINEE_FOLDERS = re.compile(r"(^|/)(tasks|handout|documents|assets|assessment)/
 REF_ATTR = {"src", "href", "poster", "data-src", "data-model", "data-video"}
 CSS_URL = re.compile(r"url\(\s*['\"]?([^'\")\s]+)['\"]?\s*\)")
 DASH = "—"
+# 2.63.2 - the attributes a trainee page shows or reads aloud (a photo's alt, its credit, its hover title) are scanned for the
+# factory's honesty markers with the SAME list check_slide_text.py uses for text, plus the upper-case words that are only
+# markers in an attribute (IGF M03 s16: a photo's alt said "RIGHTS_REVIEW_REQUIRED" and only a human cross-check saw it)
+MARKED_ATTRS = ("alt", "data-about", "data-credit", "title")
+_HONESTY = json.load(io.open(os.path.join(os.path.dirname(HERE), "knowledge", "slide-text-rules.json"), encoding="utf-8"))["honesty_markers"]
+ATTR_MARKERS = [(re.compile(p["pattern"]), p["label"]) for p in _HONESTY["patterns"] + _HONESTY.get("attribute_only_patterns", [])]
+# the deck is projected in front of the class, so it is a page a trainee reads although the importer files it as instructor-side
+DECK_PAGE = re.compile(r"(^|/)presentation/[^/]+\.html?$|(^|/)module\.html$", re.I)
+INSTRUCTOR_NAMES = re.compile(r"gb_review|gb_answers|gb_roster|gb_observe|answer[_-]?key|_paper\.html", re.I)
 
 
 class Page(HTMLParser):
@@ -114,9 +125,13 @@ class Page(HTMLParser):
         self.refs, self.links, self.slides, self.title, self._t, self.css, self.metas = [], [], [], "", False, [], {}
         self._style = False
         self.pictures = 0
+        self.marked = []      # (tag, attribute, value) of MARKED_ATTRS
 
     def handle_starttag(self, tag, attrs):
         a = {k: (v or "") for k, v in attrs}
+        for k in MARKED_ATTRS:
+            if a.get(k, "").strip():
+                self.marked.append((tag, k, a[k]))
         for k, v in a.items():
             if k in REF_ATTR and v:
                 self.refs.append((tag, k, v))
@@ -499,6 +514,16 @@ def check(folder):
                         viewer_probs.append("%s shows pictures but does not load gb_zoom.js and gb_zoom.css - every picture opens full "
                                             "screen and closes again (L51; design_system.py install copies them)" % rel(p))
                 trainee = TRAINEE_FOLDERS.search(rel(p)) and not INSTRUCTOR_ONLY.search(rel(p))
+                seen_marks = set()
+                if pg is not None and f.lower().endswith((".html", ".htm")) and not INSTRUCTOR_NAMES.search(rel(p)) \
+                        and (DECK_PAGE.search(rel(p)) or trainee):
+                    for tag, attr, val in pg.marked:
+                        for rx, label in ATTR_MARKERS:
+                            if rx.search(val) and (attr, val, label) not in seen_marks and len(seen_marks) < 6:
+                                seen_marks.add((attr, val, label))
+                                probs.append("%s: <%s %s=\"%s\"> carries the marker %s - a message to the owner (factory-notes.md), never on a page "
+                                             "a trainee sees or hears; write the real words, or take the picture out (2.63.2)"
+                                             % (rel(p), tag, attr, val if len(val) <= 90 else val[:87] + "...", label))
                 if trainee and f.lower().endswith((".html", ".htm")) and ANSWER_ATTR.search(text):
                     probs.append("%s (a trainee page) carries its answers in the page (data-correct / data-answer) - they can be read without doing "
                                  "the task; mark answers with data-key (classroom-system.json task_page.answer_keys)" % rel(p))

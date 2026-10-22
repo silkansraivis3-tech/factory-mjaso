@@ -218,6 +218,29 @@ def main():
         broken("a trainee page linking back to START_HERE.html", lambda b: w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
                (TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "done(1,1,[],'');")).replace("<body>", "<body><a href=\"../START_HERE.html\">Back</a>")),
                "(a trainee page) links to module01/START_HERE.html, which is instructor-only")
+        # 2.63.2 - honesty markers in the attributes a trainee page shows or reads aloud (IGF M03 s16's alt said RIGHTS_REVIEW_REQUIRED)
+        deck_path = os.path.join("module01", "presentation", "index.html")
+        deck_src = io.open(os.path.join(c, deck_path), encoding="utf-8").read()
+        task_path = os.path.join("module01", "tasks", "sc1_keeping_the_cargo_liquid.html")
+        task_src = io.open(os.path.join(c, task_path), encoding="utf-8").read()
+        broken("a photo alt on the deck saying RIGHTS_REVIEW_REQUIRED", lambda b: w(os.path.join(b, deck_path),
+               deck_src.replace('<img src="../assets/img/hull.jpg">', '<img src="../assets/img/hull.jpg" alt="the EMSA pictures are RIGHTS_REVIEW_REQUIRED">')),
+               'alt="the EMSA pictures are RIGHTS_REVIEW_REQUIRED"> carries the marker RIGHTS_REVIEW_REQUIRED')
+        broken("a data-credit saying PROVISIONAL on a task page", lambda b: w(os.path.join(b, task_path),
+               task_src.replace('<img src="../assets/img/hull.jpg">', '<img src="../assets/img/hull.jpg" data-credit="Photo: PROVISIONAL">')),
+               'data-credit="Photo: PROVISIONAL"> carries the marker PROVISIONAL')
+        broken("a title attribute saying UNKNOWN and a data-about saying VERIFY", lambda b: w(os.path.join(b, task_path),
+               task_src.replace("<body>", '<body><span title="source UNKNOWN" data-about="VERIFY the pressure">x</span>')),
+               'title="source UNKNOWN"> carries the marker UNKNOWN')
+        ok = os.path.join(tmp, "marks_ok", "modules")
+        shutil.copytree(c, ok)
+        w(os.path.join(ok, task_path), task_src.replace('<img src="../assets/img/hull.jpg">', '<img src="../assets/img/hull.jpg" alt="The hull; its origin is unknown">'
+                                                      ).replace("<body>", "<body><!-- TODO check --><p>TODO</p>"))
+        w(os.path.join(ok, "module01", "assessment", "check_answer_key.html"), '<p alt="PLACEHOLDER" title="TBD">1 A</p>')
+        w(os.path.join(ok, "module01", "instructor", "module_plan.html"), '<p alt="RIGHTS_REVIEW_REQUIRED">plan</p>')
+        code, out = run(ok, "--no-importer")
+        check("not flagged: lower-case 'unknown' in an alt, a marker in a comment or running text (check_slide_text's job), and an instructor page's alt",
+              "carries the marker" not in out and code == 0, out)
         broken("a space in a file name", lambda b: shutil.copy(os.path.join(b, "module01", "assets", "img", "hull.jpg"), os.path.join(b, "module01", "assets", "img", "lng carrier.jpg")),
                "a space in the name: module01/assets/img/lng carrier.jpg")
 

@@ -145,8 +145,27 @@
       {
         "pattern": "\\bAPPROVED\\s*\\.\\.\\.",
         "label": "an internal approval note"
+      },
+      {
+        "pattern": "\\bRIGHTS_REVIEW_REQUIRED\\b",
+        "label": "RIGHTS_REVIEW_REQUIRED"
+      },
+      {
+        "pattern": "\\bGENERATED_ASSET_REQUIRED\\b",
+        "label": "GENERATED_ASSET_REQUIRED"
       }
     ],
-    "_unknown_note": "UNKNOWN is deliberately NOT listed: it is an ordinary English word that appears in real teaching text ('the cargo is unknown'). The marker form is caught by the others."
+    "_unknown_note": "UNKNOWN is deliberately NOT listed: it is an ordinary English word that appears in real teaching text ('the cargo is unknown'). The marker form is caught by the others.",
+    "attribute_only_patterns": [
+      {
+        "pattern": "\\bUNKNOWN\\b",
+        "label": "UNKNOWN"
+      },
+      {
+        "pattern": "\\bVERIFY\\b",
+        "label": "VERIFY"
+      }
+    ],
+    "_attribute_note": "2.63.2 - the attributes a trainee page shows or reads aloud (alt, data-about, data-credit, title) are scanned by check_course_package.py with the patterns above PLUS these. In an attribute the upper-case word is always the marker (a photo's alt written 'RIGHTS_REVIEW_REQUIRED' shipped in IGF M03 s16), so UNKNOWN and VERIFY - ordinary words in lower case, matched here case-sensitively - are safe there but not in running text."
   }
 }
