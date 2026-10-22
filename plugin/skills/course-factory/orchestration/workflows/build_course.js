@@ -401,10 +401,12 @@ const assembly = await agent(`Run exactly these, in ONE shell call, and report w
     python ${SCRIPTS}/scripts/ilo_map.py refresh "${A.course}"
     python ${SCRIPTS}/scripts/check_course_package.py "${A.course}/modules"
     python ${SCRIPTS}/retrofit/scripts/check_terms.py "${A.course}"
+    python ${SCRIPTS}/retrofit/scripts/check_numbers.py "${A.course}"
 
 check_terms.py (2.63.2) is the course-wide terminology report - one thing under two names (LEL / LFL, bunkering
-station / bunker station ...) from the factory's list plus working_claude/terms.json. It is a REPORT, never a failure:
-print all of it, word for word, for the cross-check and the operator.
+station / bunker station ...) from the factory's list plus working_claude/terms.json. check_numbers.py (2.63.2) is the
+same for numbers - one quantity under two values (H2S 20 ppm on a slide, 25 ppm in a question; oxygen 20.9 % and
+21 %). Both are REPORTS, never a failure: print all of each, word for word, for the cross-check and the operator.
 Do not fix anything.`,
   { label: 'assemble:course', phase: 'Cross-check', model: 'sonnet', effort: 'low' })
 
@@ -416,7 +418,10 @@ could not answer:
   * COURSE_LANGUAGE consistent across all modules (check_language.py)
   * terminology: one thing, one name - the check_terms.py report the assembly printed (a MIXED group is a finding of
     severity "warn" naming the forms, the modules and slides; the operator picks the form, never you); read the
-    scripts for any other pair the list does not hold (a quantity, a room, an extinguishing agent)
+    scripts for any other pair the list does not hold (a room, an extinguishing agent)
+  * numbers: one quantity, one value - the check_numbers.py report the assembly printed (a DIFFERS quantity is a finding
+    of severity "warn" naming the values and the slides / questions; a different value can be right - another gas, another
+    standard - so the operator picks the one the course keeps, never you)
   * the hours total against the approved programme, both Track A buckets (check_hours.py, with the programme)
   * the syllabus coverage against the model course (check_syllabus_coverage.py), crosscheck_tasks.py and verify_links.py -
     the checks that need every module, which the single-module QA agents were told to leave to this pass

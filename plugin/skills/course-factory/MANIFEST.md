@@ -173,6 +173,8 @@ to judgement:
 | `retrofit/scripts/check_language.py` | COURSE_LANGUAGE drift over course-facing files |
 | `retrofit/scripts/check_terms.py` | 2.63.2 - one thing, one name across the whole course: mixed use of a synonym group (LEL / LFL ...) with where each form is used; a report, run in `build_course.js` assembly. List: `knowledge/terms-default.json` + the course's `working_claude/terms.json` |
 | `retrofit/scripts/test_check_terms.py` | the report on a fixture course (approved vs draft scripts, a page-only module, an own list) |
+| `retrofit/scripts/check_numbers.py` | 2.63.2 - one quantity, one value across the whole course: a number with its unit and the key word before it (`compile_module.facts_in`, imported) stated with close but different values in two places (20 ppm / 25 ppm, 20.9 % / 21 %) with where; a report, run in `build_course.js` assembly next to `check_terms.py` |
+| `retrofit/scripts/test_check_numbers.py` | the report on a fixture course (a slide against a question, close vs far values, the final test read once, a draft script, a page-only module) |
 | `retrofit/scripts/test_routing.py` | 42 deterministic assertions over all three knowledge files |
 
 **Two things the classifier got wrong before it was right**, both worth keeping in mind if it is

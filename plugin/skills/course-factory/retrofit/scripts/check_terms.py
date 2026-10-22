@@ -142,6 +142,12 @@ def sources(course, mode):
             continue
         m = re.fullmatch(r"module(\d+)", rel[0])
         pages.setdefault("M%02d" % int(m.group(1)) if m else rel[0], []).append(f)
+    # the final test's script is FINAL.json, its pages are the assessment/ folder of the last module (IGF: module16): one
+    # text, read once (2.63.2: check_numbers.py counted its answers twice, from the script and from the page)
+    if mode == "auto" and "FINAL" in scripts:
+        loose = sorted(t for t in pages if t not in scripts and re.fullmatch(r"M\d+", t))
+        if loose:
+            pages[loose[-1]] = [f for f in pages[loose[-1]] if f.parent.name != "assessment"]
     out = []
     if mode in ("scripts", "both", "auto"):
         for tag, p in scripts.items():
