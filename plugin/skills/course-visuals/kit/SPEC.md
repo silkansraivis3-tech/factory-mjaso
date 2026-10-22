@@ -118,6 +118,8 @@ Pre-built for IGF Basic modules 5-15 (2.48.0, from the architecture's media plan
 | `hose` | `d empty label` - a flexible bunkering hose | flow 0..1; **`<id>.fill`** like a pipe's |
 | `manifold` | `outlets:[{label}]` - a bunker manifold header | 0..n outlets connected |
 | `spool_piece` | `w t spool lift left right spoolLabel label` - segregation | 1 fitted, 0 removed + blanks |
+| `airlock` | `w h door side (or safeW hazardW: 0 draws no side) safe hazard label state words` - 2.63.2: two gas-tight steel doors in two bulkheads with the space between them, the SAFE side (green) and the HAZARDOUS side (the zone's amber) named; `state: false` leaves out the words "BOTH DOORS SHUT" / "ONE DOOR OPEN" | 0 both doors shut, 1 the safe-side door open, 2 the hazardous-side door open; from 1 to 2 the first door shuts before the second opens - two doors never open at once |
+| `hatch` | `w lift label state words` - 2.63.2: the bolted hatch in the open deck over a tank connection space: a steel cover bolted on its coaming | 0 bolted shut, 1 the cover lifted clear, the opening showing |
 | `tank_wall` | `w layers:[{label,kind,h}] insideLabel outsideLabel` - a cryogenic tank's wall layers | 0..n layer k picked out |
 | `spill` | `w h surface(deck/water) label from reach` - drawn inside its box x..x+w, y..y+h (2.49.2): the nozzle's top at `y`; `h` is 206 (deck) / 240 (water) with a one-line `label`, a shorter `h` shortens the nozzle; the wave is cut at `w` and `reach` is held to the room either side of `from` (it was drawn from y+26 to y+254, and 10 past `w`) | 0..1 spread; boils from 0.5 |
 | `wind` | `w rows gap dir max unit label` | 0..1 strength |
@@ -150,6 +152,32 @@ Pre-built for IGF Basic modules 5-15 (2.48.0, from the architecture's media plan
 - Step *n* always starts from the end of step *n-1*. **Previous** jumps back to that state, and
   **Replay** plays the step again. With reduced motion every step jumps to its end state.
 
+## Patterns - a spec to start from (2.63.2)
+`patterns/*.kit.json` are whole specs that were drawn, judged and fixed once, to copy and change - not a new part and not
+a template the compiler fills. Each passes `check_kit.py spec` and is clean in the studio at 1280 x 800 and 1024 x 768 on
+the dark panel and the task page's (`scripts/test_airlock.py`).
+
+**`patterns/fuel_space_access.kit.json` - "Getting into the fuel spaces"** (IGF Basic M02 s10; the instructors' review
+called the hand-drawn slide a bad diagram: pastel boxes, a bunkering station drawn as a cart, pale tiny labels, everything
+greyed out on the last step). A ship section: the hull and its open deck (`ga`, no sea), and in it
+- the **safe area** and the **airlock** (one `airlock`: `safeW` names and tints the safe side, no hazardous side - the
+  fuel preparation room beside it is that side), the doors played 1 then 2 so the trainee sees the one shut before the other opens;
+- the **fuel preparation room** (`space`) with its **own access** from the open deck (a narrow `space` enclosure that
+  crosses the deck: `crosses: true`);
+- the **fuel storage hold** with the **type C tank** (`tank`) and the **tank connection space** (`space`) on top of it, and the
+  **bolted hatch** (`hatch`) in the deck over it - the hatch lifts when the step enters through it;
+- the **bunkering station**: a `manifold` at the ship's side on the open deck, its `drip_tray` under the flange;
+- **one colour for every hazardous space**: a `zone` (zone 1, the kit's hazardous-zone amber) laid over each of the fuel
+  preparation room, the hold and the bunkering station - never a colour of the slide's own - and green only for the safe side.
+
+Its steps light one access route each: 1 the airlock (doors 1, then 2, the fuel preparation room's zone grows), 2 its own
+access, 3 the hatch to the tank connection space, 4 the bunkering station - each step puts the route before it back to
+quiet (`play` to 0) - and **the last step shows every hazardous space at full strength** (every zone and the picked-out
+spaces at 1). `check_kit.py` refuses a last step that leaves every picked-out part dimmed (`space`, `zone`, `ga` under
+0.5 after steps that picked them out one at a time).
+Copy it, move the rooms to the ship's own plan, keep the label count (10) and the room each name needs: a room too small
+for its name at the grown type (1024 x 768) sends the name outside with a leader line.
+
 ## The seven families
 Each family is a set of parts. A figure may mix families. When a module needs a part that doesn't
 exist yet, the part is added to its family here, never drawn once on a slide.
@@ -158,7 +186,7 @@ exist yet, the part is added to its family here, never drawn once on a slide.
 |---|---|---|---|---|
 | 1 | Instruments | panel, level, gauge (+ repeater), readout, well, log, detector, push_button | **built** | M02 s14, s15, q11 · M01 s07 · M03 · M09 · M14 |
 | 2 | Piping and flow | pipe (liquid/gas/air, double-walled, fill and drain), valve, tank, space, exchanger, pump, engine, vent, badge, wire, relief_valve, coupling, drip_tray, water_curtain, integral_tank, hose, manifold, spool_piece | **built** | M02 · M03 · M07 · M13 · M14 · M15 |
-| 3 | Ship and spaces | ga (side view, deck plan), zone overlay; named spaces are `space` | **built** | M01 s04, s09 · M02 s12 · M07 · M11 |
+| 3 | Ship and spaces | ga (side view, deck plan), zone overlay, airlock, hatch; named spaces are `space` | **built** | M01 s04, s09 · M02 s12 · M07 · M11 |
 | 4 | Cutaways | boil_off, pipe_section, sensor, tank_wall; tank types A/B/C still planned | **built** | M01 s07 · M03 · M07 · M09 |
 | 5 | Gas, fire and machinery | gas_cloud (grows, drifts), cylinder, flame, fire (pool, jet), spray, fan, gas_cylinder, static_charge, spill, wind, lamp, spark; a tank that ruptures (tank `burst`) | **built** | M01 · M02 · M03 · M05 · M06 · M10 · M11 · M13 · M15 |
 | 6 | Charts | scale, bands, curve_chart, flammability, range_bar, composition_bar | **built** | M01 s02 · M02 s11 · M04 · M06 · M07 |

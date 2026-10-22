@@ -170,6 +170,14 @@ Two patterns worth copying when a part needs a second value or a part that is on
 - **A part that crosses another by its nature** (a flame over a tank, a spark between two contacts, a cloud through a wall) is
   marked `data-may-cross` (and `data-no-contain` when it holds nothing), with the reason in a comment - not left to be flagged.
 
+## What the kit gained from the IGF review (2.63.2) - do not make these again
+`airlock` (two doors with the space between, the safe side and the hazardous side named, "two doors never open at once" as the
+value 0 / 1 / 2 and the words under it), `hatch` (a bolted deck hatch), and the pattern `patterns/fuel_space_access.kit.json`
+(SPEC.md, "Patterns"). A part whose value picks it out (`space`, `zone`, `ga`) is judged by `check_kit.py spec`: a figure that
+picks them out one at a time may not end on a step that greys every one of them out.
+Parts merged into kit.js have their colours treated as the kit's own by the drawing check (`<style data-kit-own>`): a course's own part
+in `kit_parts.js` is still judged - colour it for the panel (the dark-panel tokens).
+
 ## After the merge
 Promotion copies the block into the factory's `kit.js` with `status: 'kit'`. When colleagues update the
 plugin, their modules get the part from `kit.js`. A module that still carries its own copy in

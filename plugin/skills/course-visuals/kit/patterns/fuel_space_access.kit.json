@@ -1,0 +1,32 @@
+{
+  "size": [600, 372],
+  "label": "Section through the ship's fuel spaces, not to scale. From the safe area an airlock with two doors that never open together leads to the hazardous fuel preparation room, which also has its own access from the open deck. The tank connection space on top of the type C fuel tank is entered from the open deck through a bolted hatch. The bunkering station is on the open deck at the ship's side, its manifold over a drip tray.",
+  "parts": [
+    { "id": "G", "type": "ga", "x": 10, "y": 156, "w": 580, "h": 190, "draft": 0.62, "water": false },
+    { "id": "A", "type": "airlock", "x": 48, "y": 162, "w": 80, "h": 118, "safeW": 70, "hazardW": 0, "safe": "safe\narea", "label": "airlock", "state": false },
+    { "id": "Zf", "type": "zone", "zone": 1, "x": 200, "y": 162, "w": 108, "h": 118 },
+    { "id": "F", "type": "space", "x": 200, "y": 162, "w": 108, "h": 118, "label": "Fuel\npreparation\nroom" },
+    { "id": "X", "type": "space", "style": "enclosure", "x": 246, "y": 112, "w": 30, "h": 62, "label": "own access", "crosses": true },
+    { "id": "Zh", "type": "zone", "zone": 1, "x": 316, "y": 162, "w": 234, "h": 118 },
+    { "id": "Hold", "type": "space", "x": 316, "y": 162, "w": 234, "h": 118, "label": "fuel storage hold\n(type C tank)", "labelAt": "below" },
+    { "id": "K", "type": "tank", "x": 326, "y": 235, "w": 212, "h": 40, "value": 0.6 },
+    { "id": "T", "type": "space", "x": 322, "y": 166, "w": 222, "h": 64, "label": "tank connection\nspace", "crosses": true },
+    { "id": "H", "type": "hatch", "x": 330, "y": 134, "w": 44, "label": "bolted hatch", "state": false },
+    { "id": "Zb", "type": "zone", "zone": 1, "x": 458, "y": 36, "w": 96, "h": 120 },
+    { "id": "B", "type": "manifold", "x": 472, "y": 68, "w": 70, "h": 14, "drop": 20, "hose": 20, "label": "bunkering station", "outlets": [{ "label": "" }], "words": ["", ""] },
+    { "id": "D", "type": "drip_tray", "x": 476, "y": 126, "w": 62, "h": 12, "label": "drip tray", "labelAt": "left" },
+    { "type": "text", "x": 14, "y": 142, "text": "open deck", "anchor": "start" }
+  ],
+  "steps": [
+    { "title": "No direct access from a safe area into a hazardous one - an airlock, two doors, never open together", "line": 1,
+      "play": [["A", 1, 1100], ["A", 2, 1900, 1100], ["Zf", 1, 800, 2400]] },
+    { "title": "The fuel preparation room has its own access from the open deck", "line": 2,
+      "play": [["A", 0, 900], ["X", 1, 700]] },
+    { "title": "The tank connection space is entered from the open deck, through a bolted hatch", "line": 3,
+      "play": [["X", 0, 400], ["Zf", 0, 400], ["H", 1, 1100, 300], ["T", 1, 700, 600], ["Zh", 1, 800, 600]] },
+    { "title": "The bunkering station is on the open deck, over a drip tray", "line": 4,
+      "play": [["H", 0, 700], ["T", 0, 400], ["Zh", 0, 400], ["Zb", 1, 800, 300]] },
+    { "title": "Every hazardous space at full strength - one colour, one rule: no direct access from a safe area",
+      "play": [["Zf", 1, 700], ["Zh", 1, 700], ["T", 1, 700], ["X", 1, 700]] }
+  ]
+}

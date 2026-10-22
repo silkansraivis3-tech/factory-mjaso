@@ -303,7 +303,48 @@ def check_spec(spec, types, where):
         for ln in ([] if s.get("line") is None else [s["line"]] if not isinstance(s["line"], list) else s["line"]):
             if not isinstance(ln, int) or ln < 1:
                 bad("%s lights line %r - a line number from 1" % (what, ln))
+    last = last_step_dims_all(spec)
+    if last:
+        bad(last)
     return probs
+
+
+# 2.63.2 (item 12, IGF M02 s10 "Getting into the fuel spaces": "everything greyed out on the last step"): the parts whose
+# value is HOW STRONGLY THEY ARE PICKED OUT - a room (space), a hazardous zone, the ship (ga). A figure that picks them out
+# one route at a time (each step lights some and leaves the rest quiet) ends on a step that shows every one at full strength;
+# a last step that puts all of them back to quiet leaves the trainee with nothing picked out on the screen they keep
+PICKED = ("space", "zone", "ga")
+
+
+def last_step_dims_all(spec):
+    """the problem when a figure that picks parts out one at a time has a LAST step that leaves every one of them dimmed
+    (value under 0.5) after the step before it had some picked out - or None. Each step starts from the end of the one
+    before (a `reset` goes back to the start values); in a step the moves of one part queue up, the last one wins."""
+    parts = [p for p in spec.get("parts") or [] if isinstance(p, dict) and p.get("id") and p.get("type") in PICKED]
+    steps = [s for s in spec.get("steps") or [] if isinstance(s, dict)]
+    num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool)
+    if len(parts) < 2 or len(steps) < 2:
+        return None
+    start = {p["id"]: (p["value"] if num(p.get("value")) else 0) for p in parts}
+    now, selective, before = dict(start), False, None
+    for k, s in enumerate(steps, 1):
+        before = dict(now)
+        if s.get("reset"):
+            now = dict(start)
+        for ref, v in (s.get("set") or {}).items():
+            if ref in now and num(v):
+                now[ref] = v
+        for a in s.get("play") or []:
+            if isinstance(a, list) and len(a) >= 2 and a[0] in now and num(a[1]):
+                now[a[0]] = a[1]
+        lit = [i for i, v in now.items() if v >= 0.5]
+        if k < len(steps) and lit and len(lit) < len(now):
+            selective = True
+        if k == len(steps) and selective and not lit and any(v >= 0.5 for v in before.values()):
+            return ("the last step (%d) leaves every picked-out part dimmed (%s all under 0.5) after the steps before it picked "
+                    "them out one at a time - end on a step that shows every one at full strength (value 1), not one that "
+                    "greys them all out (2.63.2)" % (len(steps), ", ".join(sorted(now))))
+    return None
 
 
 def load_spec(path):
