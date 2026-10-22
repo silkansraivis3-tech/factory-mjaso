@@ -631,7 +631,8 @@
   /* 2.63.2 - a veil (a vapour cloud, data-veil) lies over shapes, never over words: a cloud listed after a part covered
      that part's words (IGF M06 s04, "hot exhaust 540 °C" and "lamp not certified safe", fixed there by moving the words).
      A cloud that covers an earlier part's words is drawn just before that part instead - the part and its words on top,
-     still inside the cloud. Where room is free the label solver keeps words out of it as well (gather: data-veil). */
+     still inside the cloud. (Kept out of the label solver: a room's own name inside its cloud found no place - the
+     gallery's gas_cloud card.) */
   function veilsUnder(f) {
     q(f.svg, '[data-veil]').forEach(function (v) {
       var cloud = v.closest ? v.closest('g.kit-part') : null, holder = cloud && cloud.parentNode;
@@ -895,9 +896,7 @@
         G.body = join(G.body, pb);
         if (known) return;
         G.seenKeys[key] = { pts: pts };
-        /* 2.63.2: a veil (a vapour cloud) may lie over shapes, never over words - it is drawn after them and hid "hot
-           exhaust 540 °C" and "lamp not certified safe" in IGF M06 s04: the labels keep out of it */
-        if (!flagged(n, 'data-may-overlap', svg) || n.hasAttribute('data-veil')) G.obs.push({ pts: pts, r: r });
+        if (!flagged(n, 'data-may-overlap', svg)) G.obs.push({ pts: pts, r: r });
         if (part) {
           part.__kitBox = join(part.__kitBox, pb);
           part.__kitPts = (part.__kitPts || []).concat(pts.filter(function (p, i) { return i % 3 === 0; }));
