@@ -3958,20 +3958,57 @@ KIT.define('fire', function (fig, part, g, p) {
 });
 /* end kit-part */
 /* kit-part: flammability */
+/* 2.63.2 - the standard flammability composition diagram (ISGOTT fig. 1-1 / SIGTTO layout - the one the instructors teach
+   from; IGF review 2026-10-21, M06 3/21 and M07 2/18 "the flammability diagram is wrong"): OXYGEN % by volume across
+   (0..22, air at 20.9), FUEL gas % by volume up (0..20); the air line from air up to the left (fuel added to air:
+   oxygen = air x (1 - fuel / 100)); the flammable zone the triangle on it between the LFL and the UFL with its nose at the
+   limiting oxygen (the spec's `lfl`, `ufl`, `nose`, methane 5 / 15 % and [12 %, 6 %] by default - or its own `zone`);
+   the line of critical dilution with air from air past the nose to the fuel axis; inerting is a path along the oxygen
+   axis below the zone, gas-freeing a path back to air under that line (the spec's `path`). Points are [oxygen %, fuel %];
+   null in a path lifts the pen. Before 2.63.2 the part drew fuel 0..100 across and oxygen up, so the zone was a sliver:
+   a spec in that form (points [fuel %, oxygen %], xmax 100 - or `axes: 'fuel-o2'`) is read into this layout, its steps
+   stopping where they did (the path's length is measured as the old part measured it). Layout: the IGF original
+   course's hand-built `flammability_o2` (M06 / M07 kit_parts.js, 2026-10-22). */
 KIT.define('flammability', function (fig, part, g, p) {
-  var h = KIT.h, w = p.w || 380, ht = p.h || 250, X = p.xmax || 100, Y = p.ymax || 25, air = p.air || 21;
-  var zone = p.zone || [], path = p.path || [[0, air], [100, 0]], words = p.words || ['NOT FLAMMABLE', 'FLAMMABLE'];
+  var h = KIT.h, w = p.w || 380, ht = p.h || 250;
+  /* the old form, told by its numbers: a scale past 25, a point more than 22 across, a path from [0, 21], or a zone whose
+     corners lie on the old air line (oxygen = 21 x (1 - fuel / 100)) rather than on this one */
+  function oldForm() {
+    if (p.axes) return p.axes === 'fuel-o2';
+    if ((p.xmax || 0) > 25) return true;
+    var a = p.air || 21, all = (p.zone || []).concat(p.path || []).concat([].concat.apply([], (p.lines || []).map(function (l) { return l.pts || []; })));
+    if (all.some(function (q) { return q && q[0] > 22.5; })) return true;
+    if (p.path && p.path[0] && p.path[0][0] === 0 && Math.abs(p.path[0][1] - a) < 0.3 && !(p.ymax > 20)) return true;
+    var o = 0, n = 0;
+    (p.zone || []).forEach(function (q) {
+      if (Math.abs(q[1] - a * (1 - q[0] / 100)) < 0.3) o++;
+      if (Math.abs(q[0] - a * (1 - q[1] / 100)) < 0.3) n++;
+    });
+    return o > n;
+  }
+  var old = oldForm(), air = p.air || (old ? 21 : 20.9);
+  var X = old ? Math.max(22, Math.ceil(air)) : p.xmax || 22, Y = old ? 20 : p.ymax || 20;
+  var words = p.words || ['NOT FLAMMABLE', 'FLAMMABLE'], byLegs = p.by === 'legs';
+  function pt(q) { return q == null ? null : old ? [h.clamp(q[1], 0, X), h.clamp(q[0], 0, Y)] : [h.clamp(q[0], 0, X), h.clamp(q[1], 0, Y)]; }
   function sx(v) { return v / X * w; }
   function sy(v) { return ht - v / Y * ht; }
-  function list(a) { return a.map(function (q) { return sx(q[0]).toFixed(1) + ' ' + sy(q[1]).toFixed(1); }); }
+  function xy(q) { return [sx(q[0]), sy(q[1])]; }
+  function list(a) { return a.map(function (q) { q = xy(q); return q[0].toFixed(1) + ' ' + q[1].toFixed(1); }); }
+  function onAir(f) { return [air * (1 - f / 100), f]; }
+  var zone = p.zone ? p.zone.map(pt) : p.zone === false ? [] : [onAir(+p.lfl || 5), onAir(+p.ufl || 15), p.nose || [12, 6]];
   var v, i, xn = [], yn = [];
+  g.classList.add('kit-flammability-o2');
   h.el('path', { d: 'M0 0 V' + ht + ' H' + w, 'class': 'kit-flammability-axis' }, g);
-  for (v = 0; v <= X + 1e-9; v += p.xevery || 20) {
+  for (v = 0; v <= X + 1e-9; v += (old ? 0 : p.xevery) || 5) {
     h.el('line', { x1: sx(v), x2: sx(v), y1: ht, y2: ht + 6, 'class': 'kit-tickl' }, g);
     if (v > 0) h.el('line', { x1: sx(v), x2: sx(v), y1: 0, y2: ht, 'class': 'kit-flammability-grid', 'data-may-cross': '', 'data-may-overlap': '', 'data-low-contrast': '' }, g);   // a quiet grid
-    xn.push(h.el('text', { x: sx(v), y: ht + 22, 'text-anchor': 'middle', 'class': 'kit-tick' }, g, String(v)));
+    if (Math.abs(v - air) > 1.6) xn.push(h.el('text', { x: sx(v), y: ht + 22, 'text-anchor': 'middle', 'class': 'kit-tick' }, g, String(v)));
   }
-  for (v = 0; v <= Y + 1e-9; v += p.yevery || 5) {
+  h.el('line', { x1: sx(air), x2: sx(air), y1: ht, y2: ht + 6, 'class': 'kit-tickl' }, g);
+  /* "air" a little lower than the numbers: every path starts at air, and its dot sits on the axis above the word */
+  var at = h.el('text', { x: sx(air), y: ht + 28, 'text-anchor': 'middle', 'class': 'kit-tick' }, g, p.airTick || 'air');
+  fig.fit(function (k) { at.setAttribute('y', (ht + 18 + 10 * k).toFixed(1)); });
+  for (v = 0; v <= Y + 1e-9; v += (old ? 0 : p.yevery) || 5) {
     h.el('line', { x1: -6, x2: 0, y1: sy(v), y2: sy(v), 'class': 'kit-tickl' }, g);
     if (v > 0) h.el('line', { x1: 0, x2: w, y1: sy(v), y2: sy(v), 'class': 'kit-flammability-grid', 'data-may-cross': '', 'data-may-overlap': '', 'data-low-contrast': '' }, g);
     yn.push(h.el('text', { x: -15, y: sy(v) + 4.5, 'text-anchor': 'end', 'class': 'kit-tick' }, g, String(v)));
@@ -3982,30 +4019,80 @@ KIT.define('flammability', function (fig, part, g, p) {
     xn.forEach(function (t) { t.setAttribute('y', (ht + 12 + 10 * k).toFixed(1)); });
     yn.forEach(function (t) { t.setAttribute('x', (-9 - 6 * k).toFixed(1)); });
   });
-  h.label(fig, g, { x: w / 2, y: ht + 48, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.xlabel || '% fuel in the mixture');
-  h.label(fig, g, { x: 0, y: -14, 'text-anchor': 'start', 'class': 'kit-cap' }, p.ylabel || '% oxygen');
-  /* the flammable zone is a polygon of [fuel %, oxygen %] points: a course gives its own numbers from its sources */
+  /* the old form's labels named fuel across and oxygen up - its words for the axes are the other way round now */
+  var xcap = h.label(fig, g, { x: w / 2, y: ht + 48, 'text-anchor': 'middle', 'class': 'kit-cap' }, (old ? p.ylabel : p.xlabel) || '% oxygen in the mixture');
+  fig.fit(function (k) {                         // the axis name stays under the scale's numbers as both grow
+    [].forEach.call(xcap.querySelectorAll('text'), function (t) { t.setAttribute('y', (ht + Math.max(48, 16 + 23 * k)).toFixed(1)); });
+  });
+  h.label(fig, g, { x: 0, y: -14, 'text-anchor': 'start', 'class': 'kit-cap' }, (old ? p.xlabel : p.ylabel) || '% fuel gas');
+  /* the flammable zone: a polygon of [oxygen %, fuel %] points - the LFL and UFL on the air line and the nose */
   if (zone.length > 2) {
     h.el('polygon', { points: list(zone).join(' '), 'class': 'kit-flammability-zone', 'data-no-contain': '', 'data-low-contrast': '' }, g);
   }
-  h.el('line', { x1: sx(0), y1: sy(air), x2: sx(100), y2: sy(0), 'class': 'kit-flammability-air', 'data-may-cross': '' }, g);
-  (p.lines || []).forEach(function (m) {
-    h.el('polyline', { points: list(m.pts).join(' '), 'class': 'kit-flammability-line', 'data-may-cross': '' }, g);
-    var e = m.pts[m.pts.length - 1];
-    if (m.label) h.label(fig, g, { x: sx(e[0]) - 6, y: sy(e[1]) - 9, 'text-anchor': 'end', 'class': 'kit-cap' }, m.label);
-  });
-  if (p.airLabel) h.label(fig, g, { x: sx(60) + 8, y: sy(air * 0.4) - 12, 'text-anchor': 'start', 'class': 'kit-cap' }, p.airLabel);
-  if (p.zoneLabel && zone.length > 2) {
-    var nose = zone.reduce(function (a, b) { return b[1] < a[1] ? b : a; });
-    h.label(fig, g, { x: sx(nose[0]) + 4, y: sy(nose[1] - 2.4) + 4.5, 'text-anchor': 'start', 'class': 'kit-cap' }, p.zoneLabel);
+  var top = onAir(Y);
+  h.el('line', { x1: sx(air), y1: sy(0), x2: sx(top[0]), y2: sy(Y), 'class': 'kit-flammability-air', 'data-may-cross': '' }, g);
+  /* the line of critical dilution with air: from air past the zone's nose (the zone's corner with the least fuel for the
+     oxygen it takes away) to the fuel axis - a mixture above it passes through the zone when air is let in */
+  var crit = null;
+  if (zone.length > 2 && p.dilution !== false) {
+    var m = Math.min.apply(null, zone.filter(function (q) { return q[0] < air - 0.01; }).map(function (q) { return q[1] / (air - q[0]); }));
+    if (isFinite(m) && m > 0) {
+      crit = air * m <= Y ? [0, air * m] : [air - Y / m, Y];
+      h.el('line', { x1: sx(crit[0]), y1: sy(crit[1]), x2: sx(air), y2: sy(0), 'class': 'kit-flammability-crit', 'data-may-cross': '' }, g);
+      if (p.dilutionLabel !== '') {
+        var cm = [crit[0] + (air - crit[0]) * 0.18, crit[1] * 0.82];
+        h.label(fig, g, { x: sx(cm[0]) + 4, y: sy(cm[1]) - 8, 'text-anchor': 'start', 'class': 'kit-cap' }, p.dilutionLabel || 'critical dilution with air');
+      }
+    }
   }
+  (p.lines || []).forEach(function (ln) {
+    var pts = ln.pts.map(pt), e = ln.at ? pt(ln.at) : pts[pts.length - 1], vert = pts[0][0] === e[0] && !ln.at;
+    if (vert) e = [e[0], Y * 0.9];
+    h.el('polyline', { points: list(pts).join(' '), 'class': 'kit-flammability-line', 'data-may-cross': '' }, g);
+    /* an oxygen line's words go on the side with more room: left of it, or between it and the air line */
+    var left = ln.side ? ln.side === 'left' : !vert || sx(e[0]) > sx(onAir(e[1])[0]) - sx(e[0]);
+    /* beside an upright line long words take two rows (the room is between two upright lines, not along one) */
+    var said = ln.label || '';
+    if (vert && said.length > 18 && said.indexOf('\n') < 0) {
+      var cut = said.split(' ').reduce(function (a, wd, n, all) { var l = all.slice(0, n).join(' ').length; return Math.abs(l - said.length / 2) < Math.abs(a - said.length / 2) ? l : a; }, 0);
+      if (cut > 0) said = said.slice(0, cut) + '\n' + said.slice(cut + 1);
+    }
+    if (said) h.label(fig, g, { x: sx(e[0]) + (left ? -8 : 8), y: sy(e[1]) + (vert ? 4.5 : -9), 'text-anchor': left ? 'end' : 'start', 'class': 'kit-cap' }, said);
+  });
+  (p.notes || []).forEach(function (n) {
+    var q = pt(n.at);
+    h.label(fig, g, { x: sx(q[0]), y: sy(q[1]), 'text-anchor': n.anchor || 'middle', 'class': 'kit-cap' }, n.text);
+  });
+  if (p.airLabel) { var al = onAir(Y * 0.8); h.label(fig, g, { x: sx(al[0]) + 10, y: sy(al[1]), 'text-anchor': 'start', 'class': 'kit-cap' }, p.airLabel); }
+  if (p.zoneLabel && zone.length > 2) {
+    var cx = 0, cy = 0;
+    zone.forEach(function (q) { cx += q[0] / zone.length; cy += q[1] / zone.length; });
+    h.label(fig, g, { x: sx(cx), y: sy(cy) + 4.5, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.zoneLabel);
+  }
+  /* the state sits above the plot at the right of the title row - inside the plot it read as the name of a region */
   var st = h.label(fig, g, {}, '');
-  var stText = h.el('text', { x: w - 6, y: 16, 'text-anchor': 'end', 'class': 'kit-state kit-flammability-st' }, st);
-  var P = path.map(function (q) { return [sx(q[0]), sy(q[1])]; }), cum = [0], total = 0;
-  for (i = 1; i < P.length; i++) { total += Math.sqrt(Math.pow(P[i][0] - P[i - 1][0], 2) + Math.pow(P[i][1] - P[i - 1][1], 2)); cum.push(total); }
+  var stText = h.el('text', { x: w, y: -14, 'text-anchor': 'end', 'class': 'kit-state kit-flammability-st' }, st);
+  /* the path in legs; a null lifts the pen (the point jumps, no trail). Its length is measured on the screen - or, for a
+     spec in the old form, on the old part's own scale, so a step's value stops the point where it stopped before */
+  var raw = p.path || [onAir(0), onAir(Y)], legs = [], last = null, lift = false, total = 0, cum = [0];
+  var oX = p.xmax || 100, oY = p.ymax || 25;
+  raw.forEach(function (q) {
+    if (q == null) { lift = true; return; }
+    if (last) {
+      var a = xy(pt(last)), b = xy(pt(q)), d = old ? Math.sqrt(Math.pow((q[0] - last[0]) / oX * w, 2) + Math.pow((q[1] - last[1]) / oY * ht, 2))
+        : Math.sqrt(Math.pow(b[0] - a[0], 2) + Math.pow(b[1] - a[1], 2));
+      legs.push({ a: a, b: b, jump: lift, d: lift ? 0 : d, len: Math.sqrt(Math.pow(b[0] - a[0], 2) + Math.pow(b[1] - a[1], 2)) || 1 });
+      total += lift ? 0 : d; cum.push(total);
+    }
+    last = q; lift = false;
+  });
   total = total || 1;
-  var trail = h.el('polyline', { points: P.map(function (q) { return q[0].toFixed(1) + ' ' + q[1].toFixed(1); }).join(' '), 'class': 'kit-flammability-trail', 'data-may-cross': '' }, g);
+  legs.forEach(function (s, k) {
+    var sc = (p.segClass || {})[String(k)];      // {leg: 'bad' | 'air'}: the forbidden leg amber, the way back to air green
+    if (!s.jump) s.el = h.el('line', { x1: s.a[0].toFixed(1), y1: s.a[1].toFixed(1), x2: s.b[0].toFixed(1), y2: s.b[1].toFixed(1), 'class': 'kit-flammability-trail' + (sc ? ' kit-flammability-trail-' + sc : ''), 'data-may-cross': '' }, g);
+  });
   var dot = h.el('circle', { r: 7, 'class': 'kit-flammability-dot', 'data-may-cross': '' }, g);
+  part.__fl = { zone: zone, air: [[air, 0], top], crit: crit, sx: sx, sy: sy, old: old, X: X, Y: Y };   // for the tests
   function near(px, py, a, b) {                       // px from the segment a-b
     var dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1;
     var t = h.clamp(((px - a[0]) * dx + (py - a[1]) * dy) / l2, 0, 1);
@@ -4020,14 +4107,18 @@ KIT.define('flammability', function (fig, part, g, p) {
     for (k = 0, j = z.length - 1; k < z.length; j = k++) if (near(px, py, z[k], z[j]) < 2.5) c = true;
     return c;
   }
+  /* value: 0..1 of the path's length - or, with by: 'legs', how many legs are done (1.5 = halfway along the second) */
   part.render = function (val) {
-    var s = h.clamp(val, 0, 1) * total, k = 1, f, x, y;
-    while (k < P.length - 1 && cum[k] < s) k++;
-    f = cum[k] > cum[k - 1] ? h.clamp((s - cum[k - 1]) / (cum[k] - cum[k - 1]), 0, 1) : 0;
-    x = P[k - 1][0] + f * (P[k][0] - P[k - 1][0]);
-    y = P[k - 1][1] + f * (P[k][1] - P[k - 1][1]);
+    var s = byLegs ? null : h.clamp(val, 0, 1) * total, x = legs.length ? legs[0].a[0] : sx(air), y = legs.length ? legs[0].a[1] : sy(0);
+    legs.forEach(function (L, k) {
+      var f = byLegs ? h.clamp(val - k, 0, 1) : L.d > 0 ? h.clamp((s - cum[k]) / L.d, 0, 1) : s > cum[k] + 1e-6 ? 1 : 0;
+      if (L.el) {                                    // a leg not yet begun is hidden: its round cap alone draws a dot
+        L.el.setAttribute('stroke-dasharray', (f * L.len).toFixed(1) + ' ' + (L.len * 2).toFixed(1));
+        L.el.style.visibility = f > 0 ? '' : 'hidden';
+      }
+      if (f > 0) { x = L.a[0] + f * (L.b[0] - L.a[0]); y = L.a[1] + f * (L.b[1] - L.a[1]); }
+    });
     dot.setAttribute('cx', x.toFixed(1)); dot.setAttribute('cy', y.toFixed(1));
-    trail.setAttribute('stroke-dasharray', s.toFixed(1) + ' ' + (total * 2).toFixed(1));
     var hot = inZone(x, y);
     g.classList.toggle('kit-flammability-hot', hot);
     stText.textContent = hot ? words[1] : words[0];
@@ -4037,28 +4128,32 @@ KIT.define('flammability', function (fig, part, g, p) {
   status: 'kit', merged_from: "IGF Basic M05-M15",
   course: 'IGF Basic', module: 'M05-M15', made: '2026-10-16',
   look: 'diagram',
-  why: 'M06 the flammability diagram for methane (fuel % against oxygen %, the air line, the flammable zone, a mixture moving along the air line) and M07 the inerting path that stays out of the zone (plan: the media plans of modules 6 and 7)',
-  value: '0..1 how far the point has travelled along path (a list of [fuel %, oxygen %]); the zone lights amber while the point is inside it',
+  why: 'M06 the flammability diagram for methane and M07 the inerting path that stays out of the zone (plan: the media plans of modules 6 and 7); 2.63.2 redrawn as the standard ISGOTT / SIGTTO flammability composition diagram (oxygen across, fuel up, the air line, the zone between the LFL and UFL, the line of critical dilution with air) after the instructors\' review (IGF M06 3/21, M07 2/18)',
+  value: '0..1 how far the point has travelled along path (a list of [oxygen %, fuel %], null lifts the pen), or with by: \'legs\' how many legs are done; the zone lights amber while the point is inside it',
   css: '.kit-flammability-axis{fill:none;stroke:var(--faint-d);stroke-width:2}' +
+    '.kit-flammability-crit{stroke:var(--dim-d);stroke-width:2;stroke-dasharray:3 5}' +
     '.kit-flammability-grid{stroke:var(--faint-d);stroke-width:1;stroke-dasharray:2 6;opacity:.7}' +
     '.kit-flammability-air{stroke:var(--dim-d);stroke-width:2.5}' +
     '.kit-flammability-zone{fill:var(--faint-d);fill-opacity:.25;stroke:var(--dim-d);stroke-width:2;stroke-dasharray:6 4;stroke-linejoin:round}' +
     '.kit-flammability-hot .kit-flammability-zone{fill:var(--amber);fill-opacity:.4;stroke:var(--amber);stroke-dasharray:none}' +
     '.kit-flammability-line{fill:none;stroke:var(--cold);stroke-width:2;stroke-dasharray:8 5}' +
     '.kit-flammability-trail{fill:none;stroke:var(--blue);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}' +
+    '.kit-flammability-trail-bad{stroke:var(--amber)}.kit-flammability-trail-air{stroke:var(--good-d)}' +
     '.kit-flammability-dot{fill:var(--txt-d);stroke:var(--blue);stroke-width:3}' +
     '.kit-flammability-hot .kit-flammability-dot{stroke:var(--amber)}' +
     '.kit-flammability-hot .kit-flammability-st{fill:var(--amber)}',
-  /* example data is methane, drawn from nothing but the corners the air line gives (5 and 15 % in air); a course gives
-     its own zone, lines and path from its sources */
-  example: { size: [520, 340], parts: [
-    { id: 'F', type: 'flammability', x: 70, y: 40, w: 400, h: 250,
-      zone: [[5, 19.95], [15, 17.85], [6, 12]], zoneLabel: 'flammable zone', airLabel: 'air line',
-      lines: [{ label: 'oxygen limit', pts: [[0, 12], [100, 12]] }],
-      path: [[0, 21], [100, 0]] } ],
-    steps: [ { title: 'Methane is added to air: too lean', play: [['F', 0.04, 1500, 0, 'linear']] },
-             { title: 'Between 5 and 15 % the mixture can burn', play: [['F', 0.1, 1500, 0, 'linear']] },
-             { title: 'Above 15 % it is too rich', play: [['F', 0.4, 1800, 0, 'linear']] } ] }
+  /* example data is methane (the part's own default zone: LFL 5 %, UFL 15 %, the nose at 12 % oxygen); a course gives its
+     own lfl / ufl / nose or zone, lines and path from its sources. Air straight to gas crosses the zone; inerting first
+     (along the oxygen axis), then the gas; gas-freeing - inert gas until the fuel is under the critical line, then air */
+  example: { size: [560, 360], parts: [
+    { id: 'F', type: 'flammability', x: 70, y: 40, w: 440, h: 250, by: 'legs', zoneLabel: 'flammable zone', airLabel: 'air line',
+      path: [[20.9, 0], [18.81, 10], [16.72, 20], null, [20.9, 0], [3, 0], [2.4, 20], [0.24, 2], [20.9, 0]],
+      segClass: { '0': 'bad', '1': 'bad', '6': 'air' } } ],
+    steps: [ { title: 'Gas added to air: between 5 and 15 % the mixture can burn', play: [['F', 1, 1600, 0, 'linear']] },
+             { title: 'More gas: above 15 % it is too rich', play: [['F', 2, 1200, 0, 'linear']] },
+             { title: 'Inerting first: the oxygen goes down, no fuel yet', play: [['F', 4, 1800, 0, 'linear']] },
+             { title: 'Then the gas goes in, left of the zone', play: [['F', 5, 1500, 0, 'linear']] },
+             { title: 'Gas-freeing: inert gas until the fuel is under the line, then air', play: [['F', 7, 2400, 0, 'linear']] } ] }
 });
 /* end kit-part */
 /* kit-part: range_bar */

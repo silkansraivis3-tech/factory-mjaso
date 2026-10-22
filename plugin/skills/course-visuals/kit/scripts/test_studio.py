@@ -498,6 +498,7 @@ def main():
         check("K13 --step all: one contact sheet of every step (rest + 2 steps = 3 panels) in one picture",
               shot.endswith("_all.png") and os.path.isfile(shot) and png_size(shot)[0] >= 1300 and png_size(shot)[1] >= 700, shot)
         floor_parts_part(tmp)
+        flammability_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     task_page_part()
@@ -530,6 +531,77 @@ def floor_parts_part(tmp):
         rep = v.get("report") or {}
         check("%s: drawn below 1:1 (scale %s, words grown %s x) - no number on its axis or its ring" % (name, rep.get("scale"), rep.get("up")),
               r and (rep.get("up") or 0) > 1.3 and not zone, zone[:4] or why)
+
+
+# 2.63.2 (item 8): IGF M06 s03 and M07 s02 as the 2.63.0 full-course build wrote them - the old form (fuel across 0-100,
+# oxygen up), which the instructors called wrong ("Flamability diagram is wrong", review 2026-10-21, M06 3/21, M07 2/18)
+FL_M06 = {"size": [640, 390], "label": "flammability M06", "idle": "Press Next step", "parts": [
+    {"id": "FD", "type": "flammability", "x": 70, "y": 30, "w": 520, "h": 310,
+     "zone": [[5, 19.95], [15, 17.85], [6, 12]], "zoneLabel": "flammable zone", "airLabel": "air line",
+     "lines": [{"label": "below 12 % oxygen nothing burns", "pts": [[0, 12], [100, 12]]}],
+     "path": [[0, 21], [10, 18.9], [0, 21], [0, 5], [90, 0]], "value": 0}],
+    "steps": [{"title": "1", "play": [["FD", 0.07, 1500, 0, "linear"]]}, {"title": "2", "play": [["FD", 0.14, 1000, 0, "linear"]]},
+              {"title": "3", "play": [["FD", 0.41, 1800, 0, "linear"]]}, {"title": "4", "play": [["FD", 1, 2200, 0, "linear"]]}]}
+FL_M07 = {"size": [640, 390], "label": "flammability M07", "idle": "Press Next step", "parts": [
+    {"id": "FD", "type": "flammability", "x": 70, "y": 30, "w": 520, "h": 310,
+     "zone": [[5, 19.95], [15, 17.85], [6, 12]], "zoneLabel": "flammable zone", "airLabel": "air line",
+     "lines": [{"label": "5 % oxygen - the inert limit", "pts": [[0, 5], [100, 5]]}],
+     "path": [[0, 21], [10, 18.9], [0, 21], [0, 5], [90, 0], [2, 0], [2, 21]], "value": 0}],
+    "steps": [{"title": "1", "play": [["FD", 0.0, 400, 0, "linear"]]}, {"title": "2", "play": [["FD", 0.043, 1500, 0, "linear"]]},
+              {"title": "3", "play": [["FD", 0.087, 1000, 0, "linear"]]}, {"title": "4", "play": [["FD", 0.537, 3000, 0, "linear"]]},
+              {"title": "5", "play": [["FD", 1, 3000, 0, "linear"]]}]}
+# the standard form: methane by the part's defaults, a path in legs
+FL_NEW = {"size": [640, 390], "label": "flammability", "parts": [
+    {"id": "FD", "type": "flammability", "x": 70, "y": 40, "w": 520, "h": 290, "by": "legs", "zoneLabel": "flammable zone",
+     "path": [[20.9, 0], [18.81, 10], [20.9, 0], [5, 0], [4, 20], [0.4, 2], [20.9, 0]], "segClass": {"0": "bad", "5": "air"}}],
+    "steps": [{"title": str(n), "play": [["FD", n, 600, 0, "linear"]]} for n in (1, 3, 4, 6)]}
+FL_JS = """var P=f.parts.FD, F=P.__fl, ux=F.sx(1), y0=F.sy(0), uy=F.sy(0)-F.sy(1);
+function d(q){return q&&[+(q[0]).toFixed(2), +(q[1]).toFixed(2)];}
+var o={old:F.old, zone:F.zone.map(d), air:F.air.map(d), crit:d(F.crit), st:[], dot:[]};
+for(var k=0;k<=f.steps();k++){f.go(k,true); if(f.flush)f.flush();
+  var c=svg.querySelector('.kit-flammability-dot');
+  o.st.push(svg.querySelector('.kit-flammability-st').textContent);
+  o.dot.push([+(+c.getAttribute('cx')/ux).toFixed(2), +((y0-c.getAttribute('cy'))/uy).toFixed(2)]);
+  if(!k) o.shown0=[].filter.call(svg.querySelectorAll('.kit-flammability-trail'),function(t){return t.style.visibility!=='hidden';}).length;}
+o.bad=svg.querySelectorAll('.kit-flammability-trail-bad').length; o.green=svg.querySelectorAll('.kit-flammability-trail-air').length;
+return o;"""
+
+
+def flammability_part(tmp):
+    """2.63.2 - the kit's flammability part is the standard (ISGOTT / SIGTTO) flammability composition diagram: oxygen
+    across, fuel up, the air line from air, the zone between the LFL and UFL with its nose, the line of critical dilution;
+    the old specs are read into it and their steps stop where they did; both IGF specs and the new form draw clean"""
+    print("\n-- 2.63.2: the flammability diagram is the standard one (oxygen across, fuel up)")
+    near = lambda a, b, t=0.06: a is not None and b is not None and all(abs(x - y) <= t for x, y in zip(a, b))
+    v = kit_eval(FL_NEW, FL_JS, 700)
+    check("the zone: LFL 5 % and UFL 15 % on the air line (19.86 / 17.77 % oxygen), the nose at 12 % oxygen, 6 % fuel",
+          v and not v["old"] and len(v["zone"]) == 3 and near(v["zone"][0], (19.86, 5)) and near(v["zone"][1], (17.77, 15))
+          and near(v["zone"][2], (12, 6)), v)
+    check("the air line runs from air (20.9 % oxygen, no fuel) up to the left (16.72 % at 20 % fuel)",
+          v and near(v["air"][0], (20.9, 0)) and near(v["air"][1], (16.72, 20)), v)
+    check("the line of critical dilution with air: from air past the nose to the fuel axis (20.9 x 6 / 8.9 = 14.09 %)",
+          v and near(v["crit"], (0, 14.09)), v)
+    check("legs: step 1 in the zone (FLAMMABLE), the others - back to air, inerted, gassed up, gas-freed - outside it",
+          v and v["st"] == ["NOT FLAMMABLE", "FLAMMABLE", "NOT FLAMMABLE", "NOT FLAMMABLE", "NOT FLAMMABLE"]
+          and near(v["dot"][1], (18.81, 10)) and near(v["dot"][2], (5, 0)) and near(v["dot"][3], (4, 20))
+          and near(v["dot"][4], (20.9, 0)), v)
+    check("segClass: the forbidden leg amber, the way back to air green", v and v["bad"] == 1 and v["green"] == 1, v)
+    check("at rest no leg is drawn - not even its round cap as a dot (the visual check saw dots at the path's corners)",
+          v and v.get("shown0") == 0, v)
+    for name, spec, st in (("M06 s03", FL_M06, ["NOT FLAMMABLE", "FLAMMABLE"] + ["NOT FLAMMABLE"] * 3),
+                           ("M07 s02", FL_M07, ["NOT FLAMMABLE"] * 2 + ["FLAMMABLE"] + ["NOT FLAMMABLE"] * 3)):
+        v = kit_eval(spec, FL_JS, 700)
+        check("IGF %s in the old form is read as it: oxygen across, its zone and lines turned, its steps stop as before (%s)"
+              % (name, "/".join(x[:3] for x in st)),
+              v and v["old"] and near(v["zone"][0], (19.95, 5)) and near(v["zone"][2], (12, 6)) and v["st"] == st
+              and near(v["air"][0], (21, 0)), v)
+        if v and name == "M06 s03":
+            check("... M06's step 3 is inerted (under 5 % oxygen, little fuel), step 4 gassed up at the top of the scale",
+                  v["dot"][3][0] < 5.5 and v["dot"][3][1] < 3 and near(v["dot"][4], (0, 20)), v["dot"])
+        p = os.path.join(tmp, "fl_%s.kit.json" % name[:3])
+        io.open(p, "w", encoding="utf-8").write(json.dumps(spec))
+        r, why = studio.run(p, panel="two-col", sizes=((1280, 800), (1024, 768)), step="all", out=os.path.join(tmp, "fl_" + name[:3]), shots=False)
+        check("IGF %s draws clean at 1280 x 800 and 1024 x 768, every step" % name, r and not findings(r), (findings(r) if r else why))
 
 
 if __name__ == "__main__":
