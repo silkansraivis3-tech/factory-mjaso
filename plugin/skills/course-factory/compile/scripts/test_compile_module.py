@@ -1985,6 +1985,14 @@ def exercise_part(tmp):
         for r, _d, fs in os.walk(md) for f in fs if f.endswith(".html")))
     check("... the script's minutes already fill its allocation (IGF: the deck is the theory part): 0 deck minutes, its 15 "
           "the practical part - the module's hours stay equal (L1)", not [p for p in cs.validate(sc) if "(L1)" in p], cs.validate(sc))
+    one = {"no": "9.2"}
+    prac = lambda t, **k: {"screens": [dict({"id": "s08", "kind": "slide", "track": "practical", "title": t}, **k)]}
+    check("2.63.3 - a practical-track slide that names the exercise is its slide (IGF reviewed scripts: 'Practical 8.1 - SDS "
+          "hunt', 'Practicals 9.1-9.3 - in the gas lab'); a plain slide or another range is not",
+          exercises.slide_of(prac("Practical 9.2 - measure"), one) and exercises.slide_of(prac("Practicals 9.1-9.3 - gas lab"), one)
+          and exercises.slide_of(prac("In the lab", practical_minutes=60, exercise="9.2"), one)
+          and not exercises.slide_of(prac("Practicals 9.3-9.5"), one) and not exercises.slide_of(prac("Practicals 10.1-10.5"), one)
+          and not exercises.slide_of({"screens": [{"id": "s02", "kind": "slide", "title": "Practical 9.2 - measure"}]}, one))
     roomy = script()
     roomy["minutes_allocated"] += 15
     ex = exercises.found(c, 1)

@@ -116,14 +116,28 @@ def found(course, module):
     return exs
 
 
+def names(title, no):
+    """the title names exercise <no>: "Exercise 9.2", "Practical 9.2", or a range that holds it, "Practicals 9.1-9.3" """
+    if re.search(r"\b(?:exercises?|practicals?)\s+%s\b" % re.escape(no), title, re.I):
+        return True
+    m = re.match(r"(\d+)\.(\d+)$", no)
+    for r in re.finditer(r"\b(?:exercises?|practicals?)\s+(\d+)\.(\d+)\s*[-–]\s*(?:(\d+)\.)?(\d+)\b", title, re.I):
+        if m and r.group(1) == m.group(1) and (r.group(3) or r.group(1)) == m.group(1) \
+                and int(r.group(2)) <= int(m.group(2)) <= int(r.group(4)):
+            return True
+    return False
+
+
 def slide_of(script, ex):
-    """the activity screen that is this exercise's slide, else None"""
+    """the activity screen that is this exercise's slide, else None. 2.63.3 - or a slide of the practical track that names
+    it (the IGF instructors' reviewed scripts: "kind": "slide", "track": "practical", "Practicals 9.1-9.3 - in the gas
+    lab"; the 2.63.2 full-course build failed M08-M15 on a slide that was there)"""
     for s in script.get("screens", []):
-        if s.get("kind") != "activity":
+        if s.get("kind") != "activity" and s.get("track") != "practical" and not s.get("practical_minutes"):
             continue
         if str(s.get("exercise") or "").strip() == ex["no"]:
             return s
-        if re.search(r"\bexercise\s+%s\b" % re.escape(ex["no"]), s.get("title") or "", re.I):
+        if names(s.get("title") or "", ex["no"]):
             return s
     return None
 
