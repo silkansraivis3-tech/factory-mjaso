@@ -4468,6 +4468,112 @@ KIT.define('spool_piece', function (fig, part, g, p) {
              { title: 'The spool is fitted again - the line is connected', play: [['S', 1, 1800], ['E', 1, 300, 1800]] } ] }
 });
 /* end kit-part */
+/* kit-part: airlock */
+KIT.define('airlock', function (fig, part, g, p) {
+  /* 2.63.2 (item 12, the instructors' review of IGF Basic M02 s10 "Getting into the fuel spaces"): the access to a fuel space
+     had no part - the slide drew an airlock as a white box with two bars. Two gas-tight steel doors in two bulkheads with the
+     space between them, the SAFE side on one hand and the HAZARDOUS side on the other, each named and tinted (green, and the
+     hazardous zone's amber); a door open is a gap in the bulkhead and its leaf swung into the airlock, a door shut is the
+     leaf in the bulkhead with its dogs. Value 0 both shut, 1 the safe-side door open, 2 the hazardous-side door open: the one
+     that is open shuts before the other opens, so the two are never open together (the words say so). */
+  var h = KIT.h, w = p.w || 130, H = p.h || 124, bt = 10, T = 8;
+  var sd = p.side != null ? p.side : 92, sd2 = p.hazardW != null ? p.hazardW : sd;      // the two sides' widths: "safeW" / "hazardW" (0 draws no side)
+  sd = p.safeW != null ? p.safeW : sd;
+  var W = sd + w + sd2, M = 2 * sd + w, dh = Math.min(p.door || 64, H - 2 * T - 14), top = H - T - dh, L = Math.min(38, (w - 2 * bt) * 0.42);
+  var words = p.words || ['BOTH DOORS SHUT', 'ONE DOOR OPEN'];
+  var safe = sd > 0 ? h.el('rect', { x: 0, y: 0, width: sd, height: H, rx: 4, 'class': 'kit-airlock-safe' }, g) : null;
+  var haz = sd2 > 0 ? h.el('rect', { x: sd + w, y: 0, width: sd2, height: H, rx: 4, 'class': 'kit-airlock-haz' }, g) : null;
+  var room = h.el('rect', { x: sd + bt, y: T, width: w - 2 * bt, height: H - 2 * T, 'class': 'kit-airlock-room' }, g);   // the space between the doors
+  /* the steel: the deck under all three spaces, the airlock's deckhead, and the two bulkheads over their doorways */
+  var eq = h.equip(g, { shadow: false });
+  h.body('rect', { x: 0, y: H - T, width: W, height: T }, eq, { mat: 'deck', shade: 'box' });
+  h.body('rect', { x: sd, y: 0, width: w, height: T }, eq, { mat: 'paint', shade: 'box' });
+  [sd, sd + w - bt].forEach(function (x) {
+    h.body('rect', { x: x, y: T, width: bt, height: top - T }, eq, { mat: 'paint', shade: 'box' });
+  });
+  function door(mirror) {                              // the safe-side door as drawn; the other is the same, turned about the airlock
+    var dg = h.el('g', mirror ? { transform: 'translate(' + M + ' 0) scale(-1 1)' } : {}, eq);
+    var hole = h.el('rect', { x: sd, y: top, width: bt, height: dh, 'class': 'kit-airlock-hole' }, dg);   // the doorway, dark once the leaf has swung
+    var leaf = h.body('path', { d: '' }, dg, { mat: 'steel', shade: 'box' });
+    var dogs = [0.2, 0.5, 0.8].map(function (f) { return h.el('circle', { cx: sd + bt / 2, cy: top + dh * f, r: 1.7, 'class': 'kit-m-bolt' }, dg); });
+    return function (o) {                              // o 0 shut .. 1 swung open into the airlock
+      var xh = sd + bt, xf = xh - bt + (bt + L) * o, e = 6 * o;
+      h.reshape(leaf, { d: 'M' + xh + ' ' + top + ' L' + xf.toFixed(1) + ' ' + (top + e).toFixed(1) + ' L' + xf.toFixed(1) + ' ' + (H - T - e).toFixed(1) + ' L' + xh + ' ' + (H - T) + ' Z' });
+      hole.style.opacity = h.clamp(o * 4, 0, 1).toFixed(2);
+      dogs.forEach(function (d) { d.style.opacity = (1 - h.clamp(o * 3, 0, 1)).toFixed(2); });
+    };
+  }
+  var doors = [door(false), door(true)];
+  /* the words: both sides named inside their tint, the airlock inside its own walls; the layout keeps each clear and puts one
+     outside with a leader line when the type has grown past its room */
+  if (safe && p.safe !== false) h.label(fig, g, { x: sd / 2, y: 24, 'text-anchor': 'middle', 'class': 'kit-h' }, p.safe || 'safe\nside', { inside: true, within: safe });
+  if (haz && p.hazard !== false) h.label(fig, g, { x: sd + w + sd2 / 2, y: 24, 'text-anchor': 'middle', 'class': 'kit-h' }, p.hazard || 'hazardous\nside', { inside: true, within: haz });
+  if (p.label !== false) h.label(fig, g, { x: sd + w / 2, y: 24, 'text-anchor': 'middle', 'class': 'kit-h' }, p.label || 'airlock', { inside: true, within: room });
+  var lg = h.label(fig, g, {}, '');
+  var st = p.state === false ? null : h.el('text', { x: sd + w / 2, y: H + 22, 'text-anchor': 'middle', 'class': 'kit-state' }, lg);
+  part.render = function (v) {
+    var c = h.clamp(v, 0, 2), a = c <= 1 ? c : h.clamp(3 - 2 * c, 0, 1), b = h.clamp(2 * (c - 1.5), 0, 1);
+    doors[0](a); doors[1](b);
+    var open = a > 0.02 || b > 0.02;
+    if (st) st.textContent = open ? words[1] : words[0];
+    g.classList.toggle('kit-airlock-open', open);
+  };
+}, {
+  family: 'spaces',
+  status: 'kit', merged_from: "IGF review 2026-10-21",
+  course: 'IGF Basic', module: 'M02', made: '2026-10-22',
+  look: 'equipment',
+  why: 'M02 s10 getting into the fuel spaces: no direct access from a safe area into a hazardous one - an airlock, two gas-tight doors with a space between them that are never open together',
+  value: '0 both doors shut, 1 the safe-side door open, 2 the hazardous-side door open; from 1 to 2 the first door shuts before the second opens (two doors never open at once); options w h door, side (or safeW / hazardW: 0 draws no side), safe / hazard / label (the words; false for none), state false (no BOTH DOORS SHUT / ONE DOOR OPEN under it), words',
+  css: '.kit-airlock-safe{fill:var(--good-d);fill-opacity:.26;stroke:var(--good-d);stroke-width:2}' +
+    '.kit-airlock-haz{fill:var(--amber);fill-opacity:.3;stroke:var(--amber);stroke-width:2;stroke-dasharray:6 4}' +
+    '.kit-airlock-room{fill:var(--cold);fill-opacity:.12}' +
+    '.kit-airlock-hole{fill:var(--mat-hole);stroke:var(--dim-d);stroke-width:1.5;stroke-dasharray:3 3;opacity:0}' +
+    '.kit-airlock-open .kit-state{fill:var(--txt-d)}',
+  example: { size: [340, 186], parts: [
+    { id: 'A', type: 'airlock', x: 13, y: 20 } ],
+    steps: [ { title: 'The safe-side door opens - the person steps in, the other door stays shut', play: [['A', 1, 1400]] },
+             { title: 'The safe-side door shuts, then the hazardous-side door opens', play: [['A', 2, 2400]] },
+             { title: 'Both doors shut again', play: [['A', 0, 1800]] } ] }
+});
+/* end kit-part */
+/* kit-part: hatch */
+KIT.define('hatch', function (fig, part, g, p) {
+  /* 2.63.2 (item 12): the bolted hatch in the open deck over a tank connection space - a steel cover bolted down on its
+     coaming; opened, it lifts clear and the opening shows. (x, y) is the top left of the cover when it is shut. */
+  var h = KIT.h, w = p.w || 64, t = 8, ch = 12, n = Math.max(3, Math.round(w / 15)), lift = p.lift || 24;
+  var words = p.words || ['BOLTED', 'OPEN'];
+  var eq = h.equip(g, { shadow: false });
+  h.el('rect', { x: 5, y: t, width: w - 10, height: ch, 'class': 'kit-hatch-opening' }, g);                    // the opening under the cover
+  h.body('rect', { x: 0, y: t, width: 6, height: ch, rx: 1 }, eq, { mat: 'cast', shade: 'box' });                // the coaming
+  h.body('rect', { x: w - 6, y: t, width: 6, height: ch, rx: 1 }, eq, { mat: 'cast', shade: 'box' });
+  var cover = h.el('g', {}, eq);
+  h.body('rect', { x: -3, y: 0, width: w + 6, height: t, rx: 2 }, cover, { mat: 'steel', shade: 'box' });         // the cover plate
+  for (var i = 0; i < n; i++) h.el('circle', { cx: 3 + (w - 6) * (i + 0.5) / n, cy: t / 2, r: 1.8, 'class': 'kit-m-bolt' }, cover);   // its bolts
+  if (p.label) h.label(fig, g, { x: w / 2, y: -10, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  var lg = h.label(fig, g, {}, '');
+  var st = p.state === false ? null : h.el('text', { x: w / 2, y: t + ch + 18, 'text-anchor': 'middle', 'class': 'kit-state' }, lg);
+  part.render = function (v) {
+    var c = h.clamp(v, 0, 1);
+    cover.setAttribute('transform', 'translate(0 ' + (-lift * c).toFixed(1) + ')');
+    cover.style.opacity = (1 - 0.35 * c).toFixed(2);
+    if (st) st.textContent = c > 0.5 ? words[1] : words[0];
+    g.classList.toggle('kit-hatch-open', c > 0.5);
+  };
+}, {
+  family: 'spaces',
+  status: 'kit', merged_from: "IGF review 2026-10-21",
+  course: 'IGF Basic', module: 'M02', made: '2026-10-22',
+  look: 'equipment',
+  why: 'M02 s10 the tank connection space is entered from the open deck through a bolted hatch (the space with the hatch then counts as hazardous)',
+  value: '0 bolted shut, 1 the cover lifted clear and the opening showing; options w, lift, label, state false, words',
+  css: '.kit-hatch-opening{fill:var(--mat-hole)}.kit-hatch-open .kit-state{fill:var(--txt-d)}',
+  example: { size: [240, 116], parts: [
+    { id: 'H', type: 'hatch', x: 40, y: 36, w: 160, label: 'hatch in the open deck' } ],
+    steps: [ { title: 'The bolts are undone and the cover lifted - the space is open', play: [['H', 1, 1400]] },
+             { title: 'Bolted down again', play: [['H', 0, 1200]] } ] }
+});
+/* end kit-part */
 /* kit-part: tank_wall */
 KIT.define('tank_wall', function (fig, part, g, p) {
   var h = KIT.h, w = p.w || 300, def = [{ label: 'inner tank', kind: 'steel', h: 28 }, { label: 'insulation', kind: 'foam', h: 90 },
