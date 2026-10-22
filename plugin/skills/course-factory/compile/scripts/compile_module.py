@@ -539,6 +539,8 @@ def credit_line(meta, with_title=True):
     stored size is not the original's. A generated picture has none."""
     if is_generated(meta):
         return ""
+    if named_clearance(meta) and not meta.get("licence") and (meta.get("source_work") or meta.get("credit")):
+        return "Source: " + (meta.get("credit") or meta.get("source_work"))   # 2.63.2: a cleared book figure - its book, edition, page
     if not meta or not (meta.get("attribution_required") or meta.get("licence")):
         return ""
     author = re.split(r"\s*[(,]", meta.get("author") or "")[0].strip()
@@ -912,7 +914,27 @@ JSON_DATA = re.compile(r'<script type="application/json"[^>]*>(.*?)</script>', r
 SVG_TEXT = re.compile(r"<text\b[^>]*>(.*?)</text>", re.S | re.I)
 IMG_SRC = re.compile(r'<img\b[^>]*\bsrc="\.\./([^"]+)"', re.I)
 NOT_CLEARED = ("REVIEW", "REJECT")
-GENERIC = {"tank", "space", "room", "engine", "pipe", "line", "valve", "pump", "unit", "deck", "panel", "station", "door",
+# 2.63.2 (item 10, L52): a source-book figure is used only on a named person's decision - "<name>, <date> - <reason>"
+# in the record's `cleared_by` (set by course-visuals/scripts/check_assets.py clear; the same pattern is there)
+NAMED_CLEARANCE = re.compile(r"^[^,\n]{2,},\s*\d{4}-\d{2}-\d{2}\s+-\s+\S")
+
+
+def named_clearance(meta):
+    """the `cleared_by` of a record that carries a valid one, else ''"""
+    cb = str((meta or {}).get("cleared_by") or "").strip()
+    return cb if NAMED_CLEARANCE.match(cb) else ""
+
+
+def rights_usable(meta):
+    """a record's rights let L57 place the picture: not under review or rejected, and a source-book figure (`source_work`)
+    or any record that names a clearance (`cleared_by`) has a valid one. OWNER_CLEARED without either stays as it was
+    (the knowledge base and the old course, owner 2026-10-01)"""
+    if any(x in str((meta or {}).get("rights_state") or "").upper() for x in NOT_CLEARED):
+        return False
+    return not ((meta.get("source_work") or "cleared_by" in meta) and not named_clearance(meta))
+
+
+GENERIC ={"tank", "space", "room", "engine", "pipe", "line", "valve", "pump", "unit", "deck", "panel", "station", "door",
            "hold", "vessel", "ship", "gas", "fuel", "button", "hose", "arm", "fan", "door"}
 ACRONYMS = {"LNG", "CNG", "LPG", "ESD", "GVU", "TCS", "FPR", "IGF", "LEL", "BOG", "GCU", "PRV", "ERS", "QCDC", "IMO"}
 TO_TAKE = "PHOTOS_TO_TAKE.md"
@@ -1068,8 +1090,8 @@ def photo_pool(mdir):
                 continue
         return [(name, m, d, photo_id(d, os.path.relpath(img_file(d, name), d).replace("\\", "/"), m))
                 for name, m in sorted(meta.items()) if isinstance(m, dict)
-                and not any(x in str(m.get("rights_state") or "").upper() for x in NOT_CLEARED)
-                and not is_generated(m)                    # L57 places real photographs only
+                and rights_usable(m)                       # 2.63.2: a book figure needs its named clearance
+                and not is_generated(m)                   # L57 places real photographs only
                 and os.path.isfile(img_file(d, name))]
     return of(mdir) + [x for d in other_modules(mdir) for x in of(d)]
 

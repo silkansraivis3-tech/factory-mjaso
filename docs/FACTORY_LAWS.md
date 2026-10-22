@@ -426,7 +426,13 @@ or a small real photograph goes beside the drawing (the build sheet's `inset`); 
 camera cannot show - insides, flows, principles. Looked for in the knowledge base, the old course and the source
 files first, then free-licensed photographs on the internet, credited (title, author, source, licence, "resized");
 photos still missing go on the "photos to take at Novikontas" list. Never an AI picture of equipment a trainee must
-recognise (L33). → `course-factory` (`knowledge/media-and-tasks.json` floors `real_photo_*`, `scripts/content_script.py`
+recognise (L33). **Source-book figures (2.63.2, Aleksis 2026-10-22: *"use them either way"*)** may be used, but only
+cleared by a named person: `course-visuals/scripts/check_assets.py clear <assets-dir> <file> --by "<name>" --reason
+"..." --source-work "<book, edition, page / figure>"` writes `rights_state: OWNER_CLEARED`, `cleared_by` (`"<name>,
+<date> - <reason>"`) and `source_work` into the picture's record - a person's decision, never automatic, and the
+command refuses without all three. `check_assets.py` accepts it; L57 may place it as a thumbnail; the credits page
+lists it with its source. Without a whole `cleared_by` it stays blocked (`RIGHTS_REVIEW_REQUIRED` blocks; an
+`OWNER_CLEARED` book figure without it fails, and is never used). → `course-factory` (`knowledge/media-and-tasks.json` floors `real_photo_*`, `scripts/content_script.py`
 suggestion `v_few_photos`, `compile/` inset and credit line, 2.25.1) and `course-visuals`
 
 **L53 · No empty space, good padding.** Owner, 2026-10-15. A picture takes the room the words leave - never a small
@@ -478,7 +484,8 @@ and its credit go onto the `<img>` (`data-about`, `data-credit`; `data-name` for
 shows them under the picture. **The credit is never text on the slide or the task page** (owner Raivis, 2026-10-21,
 the instructors' review of IGF Basic: "remove the kallerna credit"): it is in the full-screen view and on the course's
 credits page (`_course_shell/credits.html`, `compile_course.py`, linked from `COURSE.html`) - so CC BY / CC BY-SA
-attribution is kept. (2) Nobody asks for it per slide: the compiler writes them on every photograph. A photo
+attribution is kept; a cleared source-book figure (L52, `cleared_by`) is credited by its `source_work` (book, edition,
+page / figure) in the same two places. (2) Nobody asks for it per slide: the compiler writes them on every photograph. A photo
 with no description is reported at build. (3) A picture made by an image model keeps its full record (`"generated":
 true`, `"generator"`, the prompt, the operator's yes - L47) but carries no credit line and no label on screen
 (operator, 2026-10-15), and L57 never places it as a thumbnail; the thing it stands in for stays on

@@ -92,8 +92,23 @@ def main():
         check("... COURSE.html links it, and it leads back to COURSE.html",
               'href="_course_shell/credits.html"' in page and 'href="../COURSE.html"' in cred, page[-400:])
 
-        # 2.63.0 - a course's own module order (the instructors' review of IGF Basic: 1, 4, 6, 8, 2, 3 ...)
+        # 2.63.2 (item 10, L52) - a cleared source-book figure is listed with its book and page; one without cleared_by
+        # has no credit to list (it is not used)
         import compile_course as cc
+        rc = os.path.join(tmp, "credits_book")
+        os.makedirs(os.path.join(rc, "module09", "assets", "img"))
+        os.makedirs(os.path.join(rc, "module09", "presentation"))
+        io.open(os.path.join(rc, "module09", "presentation", "index.html"), "w", encoding="utf-8").write(
+            '<img src="../assets/img/book.jpg"><img src="../assets/img/bare.jpg">')
+        book = {"source": "ITF Guideline on the IGF Code", "rights_state": "OWNER_CLEARED", "description": "A render of a fuel system.",
+                "source_work": "ITF Guideline on the IGF Code, p. 10, Fig. 3"}
+        cs.save(os.path.join(rc, "module09", "assets", "img", "_photo_meta.json"), {
+            "book.jpg": dict(book, cleared_by="Aleksis Vejs, 2026-10-22 - classroom use decided by NOVIKONTAS"), "bare.jpg": dict(book)})
+        rows = cc.credit_rows(rc, [{"code": "module09"}])
+        check("the credits page lists a cleared source-book figure with its book and page, and never one without cleared_by",
+              rows == [("module09", "book.jpg", "A render of a fuel system.", "Source: ITF Guideline on the IGF Code, p. 10, Fig. 3")], rows)
+
+        # 2.63.0 - a course's own module order (the instructors' review of IGF Basic: 1, 4, 6, 8, 2, 3 ...)
         infos = [{"n": n, "code": "module%02d" % n} for n in range(1, 6)]
         probs = []
         check("course.build.json \"module_order\" orders the course map; a module it leaves out follows, and is said",

@@ -26,12 +26,21 @@
       "rights_state": {
         "enum": [
           "CLEARED",
+          "OWNER_CLEARED",
           "PROJECT_OWNED",
           "PUBLIC_DOMAIN",
           "ATTRIBUTION_REQUIRED",
           "RIGHTS_REVIEW_REQUIRED",
           "REJECTED"
         ]
+      },
+      "cleared_by": {
+        "type": "string",
+        "description": "2.63.2 (L52): a source-book figure ships only on a named person's decision - \"<name>, <YYYY-MM-DD> - <reason>\", with rights_state OWNER_CLEARED and source_work. Set by `check_assets.py clear`, never automatically"
+      },
+      "source_work": {
+        "type": "string",
+        "description": "a source-book figure's real source: book, edition, page / figure"
       },
       "shows": {
         "type": "string",

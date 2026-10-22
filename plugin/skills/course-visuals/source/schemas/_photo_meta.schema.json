@@ -41,12 +41,25 @@
       "rights_state": {
         "enum": [
           "CLEARED",
+          "OWNER_CLEARED",
           "PROJECT_OWNED",
           "PUBLIC_DOMAIN",
           "ATTRIBUTION_REQUIRED",
           "RIGHTS_REVIEW_REQUIRED",
           "REJECTED"
         ]
+      },
+      "cleared_by": {
+        "type": "string",
+        "description": "2.63.2 (L52): a source-book figure ships only on a named person's decision - \"<name>, <YYYY-MM-DD> - <reason>\", with rights_state OWNER_CLEARED and source_work. Set by `check_assets.py clear`, never automatically. Without a whole cleared_by the figure stays blocked (check_assets FAIL, never an L57 thumbnail)"
+      },
+      "source_work": {
+        "type": "string",
+        "description": "a source-book figure's real source: book, edition, page / figure. It is its credit in the full-screen view and on the course's credits page (unless a `credit` is written)"
+      },
+      "credit": {
+        "type": "string",
+        "description": "the credit shown for a cleared source-book figure; `check_assets.py clear` writes source_work here when empty"
       },
       "description": {
         "type": "string",

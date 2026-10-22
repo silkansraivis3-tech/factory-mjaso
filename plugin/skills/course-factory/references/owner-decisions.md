@@ -130,7 +130,7 @@ Pictures: KB → old course → source files → internet → authored → gener
 ## L52
 **Built out in:** now (2.25.1)
 
-**As many real photographs as possible** (owner, 2026-10-15) - in the presentation and the trainee tasks. Wherever a camera can show it: the slide's picture, or a small real photo beside the drawing (build sheet `inset`); KB, old course, source files first, then free-licensed and credited; missing ones on the "photos to take at Novikontas" list; never AI for equipment a trainee must recognise (L33). Checked on the script: `v_few_photos`
+**As many real photographs as possible** (owner, 2026-10-15) - in the presentation and the trainee tasks. Wherever a camera can show it: the slide's picture, or a small real photo beside the drawing (build sheet `inset`); KB, old course, source files first, then free-licensed and credited; missing ones on the "photos to take at Novikontas" list; never AI for equipment a trainee must recognise (L33). Checked on the script: `v_few_photos`. **Source-book figures** (Aleksis, 2026-10-22, 2.63.2): usable when a named person clears them - `check_assets.py clear` records `rights_state: OWNER_CLEARED`, `cleared_by` ("<name>, <date> - <reason>") and `source_work`; check_assets accepts it, L57 may use it, the credits page lists it with its source; without `cleared_by` it stays blocked
 
 ## L53
 **Built out in:** now (2.25.1, 2.26.3)
@@ -150,7 +150,7 @@ Pictures: KB → old course → source files → internet → authored → gener
 ## L56
 **Built out in:** now (2.27.0, 2.33.0)
 
-**Every photograph carries what it shows into the viewer - unasked** (operator, 2026-10-15, from Aigars's review: *"images expandable, a lightbox with more explanation about the photo"*; *"the factory needs to make it on its own"*). One viewer, L51's `gb_zoom.js`, in every compiled deck too: full screen shows a photo's record under it - what it shows (its `description` in `_photo_meta.json`: write it when the photo comes in, for a trainee, claiming only what the picture shows) and its credit. No build-sheet key; a photo without a description is reported at build. A generated picture keeps its full record but shows no credit and no label, and is never an L57 thumbnail
+**Every photograph carries what it shows into the viewer - unasked** (operator, 2026-10-15, from Aigars's review: *"images expandable, a lightbox with more explanation about the photo"*; *"the factory needs to make it on its own"*). One viewer, L51's `gb_zoom.js`, in every compiled deck too: full screen shows a photo's record under it - what it shows (its `description` in `_photo_meta.json`: write it when the photo comes in, for a trainee, claiming only what the picture shows) and its credit (a cleared source-book figure: its `source_work`, L52). No build-sheet key; a photo without a description is reported at build. A generated picture keeps its full record but shows no credit and no label, and is never an L57 thumbnail
 
 ## L57
 **Built out in:** now (2.27.0)

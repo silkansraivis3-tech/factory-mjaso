@@ -2341,6 +2341,28 @@ def main():
         check("L58: the slide's own photograph is never shown again as a thumbnail", p8.count('src="../assets/img/ship.jpg"') == 1, p8.count("ship.jpg"))
         check("L57: a photo awaiting a rights review is never used", "held.jpg" not in p8 and
               not os.path.isfile(os.path.join(md8, "assets", "img", "held.jpg")))
+        # 2.63.2 (item 10, L52): a source-book figure is a thumbnail only with a named clearance (cleared_by), and its
+        # source is its credit in the full-screen view and on the credits page
+        for tag, extra in (("cleared", {"cleared_by": "Aleksis Vejs, 2026-10-22 - classroom use decided by NOVIKONTAS"}), ("unsigned", {})):
+            os.makedirs(os.path.join(tmp, "j" + tag))
+            cj, mdj = new_course(os.path.join(tmp, "j" + tag), script())
+            cs.save(os.path.join(mdj, "assets", "img", "_photo_meta.json"), PHOTO_META)
+            sib = os.path.join(cj, "modules", "module02", "assets", "img")
+            os.makedirs(sib)
+            io.open(os.path.join(sib, "book.jpg"), "wb").write(b"\xff\xd8book\xff\xd9")
+            cs.save(os.path.join(sib, "_photo_meta.json"), {"book.jpg": dict(
+                {"source": "ITF Guideline on the IGF Code", "rights_state": "OWNER_CLEARED", "description": "A render of a gas safe machinery space.",
+                 "source_work": "ITF Guideline on the IGF Code, p. 10, Fig. 3", "shows": ["gas safe machinery space"]}, **extra)})
+            code, out = run(COMPILE, cj, "--module", "1")
+            pj = deck(mdj)
+            if tag == "cleared":
+                check("L57 (2.63.2): a source-book figure with cleared_by is placed as a thumbnail, its book and page its credit",
+                      'src="../assets/img/book.jpg"' in pj and 'data-credit="Source: ITF Guideline on the IGF Code, p. 10, Fig. 3"' in pj, section(pj, "s04")[-700:])
+                check("... and it is copied in with its record, clearance and all",
+                      cs.load(os.path.join(mdj, "assets", "img", "_photo_meta.json"))["book.jpg"].get("cleared_by", "").startswith("Aleksis Vejs"), out)
+            else:
+                check("L57 (2.63.2): a source-book figure without cleared_by is never used", "book.jpg" not in pj and
+                      not os.path.isfile(os.path.join(mdj, "assets", "img", "book.jpg")), section(pj, "s04")[-500:])
         check("L57: the photo strip's words are marked data-script-ignore, and the deck still matches the script",
               run(MATCH, c8, "--module", "1", "--part", "instructor")[0] == 0)
         check("L57: a slide that is a photograph gets no strip", "photo-strip" not in section(p8, "s01"))

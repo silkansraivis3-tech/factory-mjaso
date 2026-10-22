@@ -88,7 +88,7 @@
     "PROJECT_OWNED": "supplied by the operator from their own material - no external licence question",
     "PUBLIC_DOMAIN": "verified public domain or CC0",
     "ATTRIBUTION_REQUIRED": "usable, and the credit line must appear wherever the asset appears",
-    "OWNER_CLEARED": "in the course's knowledge base or old course - the owner declared all of these usable (2026-10-01). Credited where the source is known, listed in factory-notes.md; no licence question for the factory.",
+    "OWNER_CLEARED": "in the course's knowledge base or old course - the owner declared all of these usable (2026-10-01). Credited where the source is known, listed in factory-notes.md; no licence question for the factory. A source-book figure (2.63.2): also needs `cleared_by` (\"<name>, <date> - <reason>\") and `source_work`, set by check_assets.py clear - a named person's recorded decision; without it it stays blocked.",
     "RIGHTS_REVIEW_REQUIRED": "usage rights unclear or restricted on something downloaded from the internet. Since 2.19.0 it does NOT stop the build: it goes on the owner's licence list (factory-notes.md) with the page and what is known, for the owner to decide before publishing. Never resolved by assumption.",
     "REJECTED": "found and deliberately not used - record why, so the next search does not repeat it"
   },

@@ -6,12 +6,17 @@ required fields; visually_verified is real; rights states are valid; and
 nothing ships at RIGHTS_REVIEW_REQUIRED.
 
   python check_assets.py <assets-dir> [...] [--strict] [--json]
+  python check_assets.py clear <assets-dir> <file> --by "<name>" --reason "..." --source-work "<book, edition, page / figure>"
+
+`clear` (2.63.2, L52) records a person's decision that a source-book figure may be used: rights_state OWNER_CLEARED,
+cleared_by "<name>, <date> - <reason>", source_work. Without a whole cleared_by the figure stays blocked.
 
 Exit 0 clean (or warnings only) · 1 failures · 2 bad usage.
 """
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 import re
@@ -86,6 +91,10 @@ def required_fields(kind: str) -> list[str]:
                  "used_in", "visually_verified"])
 
 
+# 2.63.2 (item 10, L52): a source-book figure ships only on a named person's decision, recorded in the picture's record as
+# `cleared_by: "<name>, <date> - <reason>"` with `rights_state: OWNER_CLEARED` and `source_work` (book, edition, page / figure).
+# Set by `check_assets.py clear` - never by a script on its own. compile_module.py keeps the same pattern (NAMED_CLEARANCE).
+NAMED_CLEARANCE = re.compile(r"^[^,\n]{2,},\s*\d{4}-\d{2}-\d{2}\s+-\s+\S")
 VERIFIED_OK = re.compile(r"^\s*yes\b", re.I)
 HAS_DATE = re.compile(r"\d{4}-\d{2}-\d{2}|\d{1,2}\s+\w+\s+\d{4}")
 
@@ -147,11 +156,19 @@ def check_folder(folder: str) -> None:
                      "one of: " + ", ".join(sorted(VALID_RIGHTS)))
             elif rs == "RIGHTS_REVIEW_REQUIRED":
                 block(where, "RIGHTS_REVIEW_REQUIRED - this asset must not ship",
-                      "the owner decides; an uncleared publisher figure has "
-                      "blocked a whole course in this system before")
+                      "the owner decides, by name: check_assets.py clear <assets-dir> %s --by \"<name>\" --reason \"...\" "
+                      "--source-work \"<book, edition, page / figure>\" (a source-book figure); an uncleared publisher "
+                      "figure has blocked a whole course in this system before" % fname)
             elif rs == "REJECTED":
                 warn(where, "rights_state REJECTED but the file is still here",
                      "remove the file, or keep only the entry as a record")
+
+            # a source-book figure (`source_work`) or any record that names a clearance must carry a whole one; OWNER_CLEARED
+            # alone stays what it was (the knowledge base and the old course, owner 2026-10-01)
+            if rs == "OWNER_CLEARED" and (meta.get("source_work") or "cleared_by" in meta) \
+                    and not NAMED_CLEARANCE.match(str(meta.get("cleared_by") or "").strip()):
+                fail(where, "OWNER_CLEARED source-book figure without a valid cleared_by - it stays blocked",
+                     'cleared_by: "<name>, <YYYY-MM-DD> - <reason>"; set it with check_assets.py clear (a person\'s decision)')
 
             if rs == "ATTRIBUTION_REQUIRED" and not (
                     meta.get("author") or meta.get("attribution_required")):
@@ -187,7 +204,59 @@ def check_folder(folder: str) -> None:
                  "every asset carries provenance beside it (law L12)")
 
 
+def clear(argv) -> int:
+    """2.63.2 (item 10, L52): record a person's decision that a source-book figure may be used - never automatic.
+    Sets rights_state OWNER_CLEARED, cleared_by "<name>, <date> - <reason>" and source_work on the picture's record.
+    Refuses without --by, --reason and --source-work, for a file with no record, and for a generated or rejected one."""
+    ap = argparse.ArgumentParser(prog="check_assets.py clear", description=clear.__doc__.split("\n")[0])
+    ap.add_argument("folder", help="the assets folder holding the picture and its _photo_meta.json / _figure_meta.json")
+    ap.add_argument("file", help="the picture's file name")
+    ap.add_argument("--by", default="", help="who decides (a name)")
+    ap.add_argument("--reason", default="", help="why it may be used")
+    ap.add_argument("--source-work", default="", help="its real source: book, edition, page / figure")
+    ap.add_argument("--date", default="", help="YYYY-MM-DD (today when left out)")
+    a = ap.parse_args(argv)
+    by, reason, work = a.by.strip(), a.reason.strip(), a.source_work.strip()
+    if not (by and reason and work):
+        print("refused: a clearance is a named person's decision with a reason and the real source - give --by, --reason "
+              "and --source-work (book, edition, page / figure)")
+        return 2
+    if "," in by:
+        print("refused: --by is one name, without a comma")
+        return 2
+    date = a.date.strip() or datetime.date.today().isoformat()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+        print("refused: --date is YYYY-MM-DD")
+        return 2
+    for mname in META_FILES:
+        mpath = os.path.join(a.folder, mname)
+        try:
+            with open(mpath, encoding="utf-8-sig") as fh:
+                data = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        meta = data.get(a.file) if isinstance(data, dict) else None
+        if not isinstance(meta, dict):
+            continue
+        if meta.get("rights_state") == "REJECTED" or meta.get("generated") is True:
+            print("refused: %s is rejected or generated - there is nothing to clear" % a.file)
+            return 2
+        meta["rights_state"] = "OWNER_CLEARED"
+        meta["cleared_by"] = "%s, %s - %s" % (by, date, reason)
+        meta["source_work"] = work
+        meta.setdefault("credit", work)
+        with open(mpath, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False, indent=2)
+            fh.write("\n")
+        print("cleared: %s in %s - %s" % (a.file, mname, meta["cleared_by"]))
+        return 0
+    print("refused: %s has no record in %s - bring the picture in with its record first" % (a.file, a.folder))
+    return 2
+
+
 def main() -> int:
+    if len(sys.argv) > 1 and sys.argv[1] == "clear":
+        return clear(sys.argv[2:])
     ap = argparse.ArgumentParser()
     ap.add_argument("targets", nargs="+")
     ap.add_argument("--strict", action="store_true")

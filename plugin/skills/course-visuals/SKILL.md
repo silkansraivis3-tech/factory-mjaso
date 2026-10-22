@@ -207,6 +207,15 @@ generic HTML, which is where the card grids come from.
 > the internet and download it** into the course folder; the downloads are shown once per module as a list and made on
 > the operator's yes. An unclear licence on a download goes on the owner's licence list; it no longer blocks the build.
 
+> **Source-book figures (2.63.2, Aleksis 2026-10-22: "use them either way"):** a figure of a book, guideline or
+> manufacturer's manual (publisher, edition, page) is used only when a **named person has cleared it**, and that is
+> recorded, never automatic: `scripts/check_assets.py clear <assets-dir> <file> --by "<name>" --reason "..."
+> --source-work "<book, edition, page / figure>"` sets `rights_state: OWNER_CLEARED`, `cleared_by` (`"<name>, <date> -
+> <reason>"`) and `source_work` in the picture's `_photo_meta.json` / `_figure_meta.json`, and refuses without all three.
+> check_assets accepts it, L57 may place it as a thumbnail, and the credit - the full-screen view and the course's
+> credits page - is its `source_work`. Without a whole `cleared_by` it stays blocked: `RIGHTS_REVIEW_REQUIRED` blocks,
+> an `OWNER_CLEARED` book figure without it fails and L57 never uses it.
+
 **1 PROJECT** — `source_files/`, operator-supplied assets, manuals, drawings, the course's own
 existing assets. Search by more than the requester's phrasing: equipment name, manufacturer,
 alternate and older terminology, system name, likely figure captions, abbreviations, both
@@ -313,8 +322,8 @@ open it in the browser with the CPU slowed 4x: the first frame within a second, 
    motion, missing reduced-motion guard, tiny SVG labels, remote assets, missing alt, box-and-arrow
    chains, text-in-cards screens with no figure, disallowed file types.
 2. `scripts/check_assets.py <assets dir>` — provenance: every image has a metadata entry, every
-   entry has its required fields, `visually_verified` is real, rights states are valid, and nothing
-   sits at `RIGHTS_REVIEW_REQUIRED`.
+   entry has its required fields, `visually_verified` is real, rights states are valid, nothing
+   sits at `RIGHTS_REVIEW_REQUIRED`, and a source-book figure carries a whole `cleared_by` (2.63.2).
 3. `scripts/verify_figures.js` **in the page**, over http — `run()` proves each figure
    rendered at all, and `await motion()` proves it is alive: `MOVES`, `RESPONDS` or `STATIC`.
    Only `STATIC` fails. A figure that answers its own toggle, slider or tap is doing its job
@@ -339,7 +348,7 @@ skill's own:
 
 | Marker | Means |
 |---|---|
-| `RIGHTS_REVIEW_REQUIRED` | rights unclear or restricted. Blocks shipping. Owner decides. |
+| `RIGHTS_REVIEW_REQUIRED` | rights unclear or restricted. Blocks shipping. Owner decides - for a source-book figure, by name: `check_assets.py clear` (`cleared_by`, 2.63.2). |
 | `GENERATED_ASSET_REQUIRED` | no suitable asset exists at any level; a generation brief is attached. |
 
 Every marker written into an artefact must also appear in the notes file.
