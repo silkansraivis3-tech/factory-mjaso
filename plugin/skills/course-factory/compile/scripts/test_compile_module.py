@@ -982,6 +982,19 @@ def layouts_part(tmp):
                             os.path.join(c2, "working_claude", "figures", "M01"), "x", True)
     check("... and said once in a process, however often the deck is compiled (IGF M01 v263: 84 times in one build)",
           buf.getvalue().count("holds about 85") == 1, buf.getvalue().count("holds about 85"))
+    # 2.63.2 (item 1; IGF M06 s08 / s10 / s13, M05 s03 / s07-s09, M08 s01 in the 2.63.0 full-course build) - a split or wide
+    # photograph slide past the framed photo's 50-word budget is the photo in its own column, unasked
+    long_text = "\n".join(["The fuel preparation room holds the pumps, the vaporiser and the valves that feed the engines."] * 6)
+    for lay, n_words, framed in (("split", 82, False), ("visual_wide", 82, False), ("split", 40, True)):
+        sv = json.loads(json.dumps(SCREENS))
+        x = next(y for y in sv if y["id"] == "s02")
+        x.update(layout=lay, visual_kind="photo", text=" ".join(long_text.split()[:n_words]))
+        pg = cm.compile_deck(script(screens=sv), {"screens": {"s02": {"figure": "assets/img/ship.jpg"}}}, md2, None, "x", True)[0]
+        s2 = re.search(r'<section [^>]*id="s02".*?</section>', pg, re.S).group(0)
+        check("a %s photograph slide of %d words: %s" % (lay, n_words, "the framed photo (within its 50)" if framed else
+                                                           "the photo in its own column, not the framed photo (past its 50)"),
+              (('class="slide photo' in s2 and "photo-col" not in s2) if framed else ("photo-col" in s2 and 'class="slide photo' not in s2)),
+              s2[:400])
     # 2.63.0 (IGF M01 v263 runs 2-3: the ask did nothing) - parts or the photo column asked for on a photograph slide
     for ask in ({"template": "content-in-parts"}, {"template": "photo-explain", "variant": "column"}):
         pg = cm.compile_deck(script(), {"screens": {"s01": dict(ask, figure="assets/img/ship.jpg")}}, md2, None, "x", True)[0]

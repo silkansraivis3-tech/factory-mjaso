@@ -1659,11 +1659,18 @@ def composition(s, b, is_photo, has_fig):
         if is_photo:
             return "photo" if cs.wc(s.get("text", "")) <= STAGE_MAX_WORDS else "wide-left"
         return "stage"
+    # 2.63.2 - a photograph beside its words as "two-col" is the FRAMED photo (words on the photo), whose measured budget
+    # is 50 words: IGF M06 s08 / s10 / s13 (82-102 words), s01, M05 s03 / s07 / s08 / s09 and M08 s01 spilled up to 15 px
+    # at 1024 and their builders moved each to content-in-parts by hand, several rounds a module (2.63.0 full-course
+    # build). Past that budget the photo is its own column (wide-left), which takes 85 words and parts past them
+    long_photo = is_photo and cs.wc(s.get("text", "")) > BUDGETS["photo_framed"]
     if lay == "split":
-        return "two-col" if has_fig else "flow"
+        return ("wide-left" if long_photo else "two-col") if has_fig else "flow"
     if lay == "visual_wide":
         if not has_fig:
             return "flow"
+        if long_photo:
+            return "wide-left"
         return "stage" if cs.wc(s.get("text", "")) <= STAGE_MAX_WORDS else "wide-right"
     return "two-col" if has_fig else "flow"
 
