@@ -318,7 +318,7 @@ a.gbt-topback{display:inline-flex;align-items:center;gap:8px;min-height:48px;pad
    is a button for its part: a 44 px tap area around it, the words unchanged.
    ========================================================================== */
 .gb-fs3d{position:relative}
-.gb-fs3d-btn{position:absolute;top:8px;right:8px;z-index:6;width:44px;height:44px;padding:9px;border:0;
+.gb-fs3d-btn{position:absolute;bottom:8px;right:8px;z-index:6;width:44px;height:44px;padding:9px;border:0;
   border-radius:10px;background:var(--navy);color:var(--white);cursor:pointer;opacity:.88;
   display:flex;align-items:center;justify-content:center}
 .gb-fs3d-btn svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}

@@ -189,7 +189,9 @@ var GBDeck = (function (w, d) {
       if (fsBox && fsBox !== boxes3d[idx]) { fsLeave(); }
       if (boxes3d[idx]) {                            /* the scene's labels are placed once it draws */
         var bx = boxes3d[idx];
-        fsPlace(bx); setTimeout(function () { if (cur === idx) { fsPlace(bx); lblSync(bx); } }, 700);
+        fsPlace(bx);
+        w.requestAnimationFrame(function () { if (cur === idx) { fsPlace(bx); } });
+        each([150, 700], function (ms) { setTimeout(function () { if (cur === idx) { fsPlace(bx); lblSync(bx); } }, ms); });
       }
     }
 
@@ -349,17 +351,23 @@ var GBDeck = (function (w, d) {
         var r = x.getBoundingClientRect();
         if (r.width && r.height) { words.push(r); }
       });
-      each([["top", "right"], ["top", "left"], ["bottom", "right"], ["bottom", "left"]], function (c) {
-        var x = c[1] === "right" ? R.right - 52 : R.left + 8, y = c[0] === "top" ? R.top + 8 : R.bottom - 52, gap = 1e9;
+      /* the corners first, then the middles of the edges (IGF M01 s05 at 1024 x 768: every corner held a word or the
+         scene's own "Reset view"); the fewest things covered wins, then the widest gap */
+      each([[8, 8, "top", "right"], [8, 8, "top", "left"], [8, 8, "bottom", "right"], [8, 8, "bottom", "left"],
+            [8, (R.width - 44) / 2, "top", "left"], [8, (R.width - 44) / 2, "bottom", "left"],
+            [(R.height - 44) / 2, 8, "top", "right"], [(R.height - 44) / 2, 8, "top", "left"]], function (c) {
+        var x = c[3] === "right" ? R.right - c[1] - 44 : R.left + c[1], y = c[2] === "top" ? R.top + c[0] : R.bottom - c[0] - 44;
+        var gap = 1e9, hit = 0;
         each(words, function (r) {
           var dx = Math.max(r.left - (x + 44), x - r.right, 0), dy = Math.max(r.top - (y + 44), y - r.bottom, 0);
+          if (!dx && !dy) { hit++; }
           gap = Math.min(gap, Math.sqrt(dx * dx + dy * dy));
         });
-        if (!best || gap > best.gap + 0.5) { best = { c: c, gap: gap }; }
+        if (!best || hit < best.hit || (hit === best.hit && gap > best.gap + 0.5)) { best = { c: c, gap: gap, hit: hit }; }
       });
       btn.style.top = btn.style.bottom = btn.style.left = btn.style.right = "auto";   /* the stylesheet's top / right too */
-      btn.style[best.c[0]] = "8px";
-      btn.style[best.c[1]] = "8px";
+      btn.style[best.c[2]] = best.c[0].toFixed(0) + "px";
+      btn.style[best.c[3]] = best.c[1].toFixed(0) + "px";
     }
     /* labels: what the scene registered, found from the box */
     function scene(box) {
@@ -424,11 +432,19 @@ var GBDeck = (function (w, d) {
           if (e.target && e.target.closest && e.target.closest("[data-3d-part]")) { e.stopPropagation(); }
         }, ev === "touchstart" ? { passive: true } : false);
       });
-      if (w.MutationObserver) { new w.MutationObserver(function () { lblSync(box); }).observe(box, { childList: true, subtree: true }); }
+      var again = 0;                                   /* the scene adds its labels and controls as it builds: placed again */
+      if (w.MutationObserver) {
+        new w.MutationObserver(function (ms) {
+          if (ms.every(function (m) { return m.target === btn || btn.contains(m.target); })) { return; }
+          lblSync(box);
+          if (!again) { again = w.requestAnimationFrame(function () { again = 0; if (boxes3d[cur] === box) { fsPlace(box); } }); }
+        }).observe(box, { childList: true, subtree: true });
+      }
     });
     var KC3 = { 39: "ArrowRight", 37: "ArrowLeft", 32: " ", 34: "PageDown", 33: "PageUp", 36: "Home", 35: "End", 13: "Enter" };
     var DECK_KEYS = { ArrowRight: 1, Right: 1, ArrowLeft: 1, Left: 1, " ": 1, Spacebar: 1, PageDown: 1, PageUp: 1,
                       Home: 1, End: 1, f: 1, F: 1, g: 1, G: 1, n: 1, N: 1, Enter: 1 };
+    w.addEventListener("resize", function () { if (boxes3d[cur]) { w.requestAnimationFrame(function () { fsPlace(boxes3d[cur]); }); } });
     d.addEventListener("fullscreenchange", fsSync);
     d.addEventListener("webkitfullscreenchange", fsSync);
     w.GB3D = {
