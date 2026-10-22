@@ -96,6 +96,10 @@ def main():
         check("... the builder runs build_module.py, not the compile and the checks one by one",
               "build_module.py" in two.get("prompts", {}).get("build:1", "")
               and "--no-course-pages" in two.get("prompts", {}).get("build:1", ""), two.get("prompts", {}).get("build:1"))
+        b1 = two.get("prompts", {}).get("build:1", "")
+        check("2.63.2: the builder answers L60's RECOMMENDED - the scene, or a declined_3d reason at the top of the sheet "
+              "(M08, M10-M14 of the 2.63.0 build said nothing)",
+              "RECOMMENDED (L60)" in b1 and "declined_3d" in b1 and "Never leave it unanswered" in b1, b1[-900:])
         qa1 = two.get("prompts", {}).get("qa:1", "")
         step2 = qa1.split("the checks it does not run", 1)[-1].split("The module's START_HERE", 1)[0]
         run_here, not_here = step2.split("NOT run here", 1) if "NOT run here" in step2 else (step2, "")

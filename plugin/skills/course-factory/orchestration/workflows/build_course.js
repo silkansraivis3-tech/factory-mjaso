@@ -256,6 +256,13 @@ line build_module.py printed.
 A way of answering the compiler leaves "as it is" is the one page you make by hand, to
 course-task-ux.
 
+L60 (2.63.2 - the 2.63.0 full build: M08 and M10-M14 ended with no 3D scene and no word about it):
+when the build prints "RECOMMENDED (L60)", build the scene on the slide it names (its starter
+entry and compile/GUIDE.md 2b; smoke3d.py after each edit) - or, only when the subject has no
+shape, inside or layout in space to show, or a photo is wanted there, write the reason at the
+TOP of the build sheet, "declined_3d": "builder: <the reason>". Never leave it unanswered; your
+report says which (the scene's slide, or the reason).
+
 The look is the compiler's; what the picture should be is course-visuals'. Every TOPIC
 screen leads with a figure (L23) — search the source files and knowledge base first, then
 the internet for a real photograph, then the figure kit, then author or generate. The
