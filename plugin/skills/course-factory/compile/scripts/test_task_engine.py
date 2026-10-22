@@ -1059,6 +1059,32 @@ def strip_contrast_part(exe, tmp):
           ("deck" in p.stdout or "every probe passed" in p.stdout) and not low, low or p.stdout[-600:])
 
 
+PUSH_BUTTON_SC = [
+    {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1", "text": "Self-check on your tablet now.", "minutes": 4},
+    {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "panel_operate", "question": "Stop the bunkering now.",
+     "visual": "the panel", "answer": "ESD push button = pressed", "feedback": "The ESD stops the transfer."}]
+
+
+def push_button_part(exe, tmp):
+    """2.63.2 (item 4, IGF M14's builder) - the kit's push_button, drawn as the symbol of a ready / pressed position on the
+    light task page, failed the contrast check (cap 2.7:1, lid 2.7:1, tag plate 2.3:1 on the symbol's panel): its colours live
+    in kit.js, and only kit.css's rules were taken as the kit's own, so M14 worked around it with "waiting" / "pressed" (no
+    symbol). A part merged into the kit is now marked (<style data-kit-own>) and its colours are the kit's own too."""
+    print("\n-- 2.63.2: the kit's push_button as a task page's symbol passes the contrast check")
+    os.makedirs(os.path.join(tmp, "pb"))
+    c, md = tcm.new_course(os.path.join(tmp, "pb"), tcm.script(screens=PUSH_BUTTON_SC), build=False)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "t01": {"try_tablet": False}, "q01": {"states": {"ESD push button": ["ready", "pressed"]}}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    page = os.path.join(md, "tasks", "sc1_self_check_1.html")
+    text = io.open(page, encoding="utf-8").read() if os.path.isfile(page) else ""
+    check("a ready / pressed question on the task page carries the kit's push_button symbol", '"type":"push_button"' in text, out[-500:])
+    probs, note = drawing_check.check([page])
+    bad = [x for x in probs if "contrast" in x]
+    check("the push_button symbol passes the drawing check's contrast (cap, lid and tag plate are the kit's own colours)",
+          note is None and not bad, bad or note)
+
+
 SHIP_PLAN = {"size": [640, 300], "label": "The spaces of an IGF ship", "parts": [
     {"id": "ER", "type": "space", "x": 10, "y": 120, "w": 120, "h": 150, "label": "Engine room"},
     {"id": "FPR", "type": "space", "x": 140, "y": 120, "w": 110, "h": 150, "label": "Fuel preparation room"},
@@ -1368,6 +1394,7 @@ def main():
         inset_empty_part(exe, tmp)
         inset_under_part(exe, tmp)
         strip_contrast_part(exe, tmp)
+        push_button_part(exe, tmp)
         ship_plan_part(exe, tmp)
         figures_part(exe, tmp)
         fixes_part(exe, tmp)

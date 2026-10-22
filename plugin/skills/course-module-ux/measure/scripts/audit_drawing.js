@@ -985,7 +985,10 @@
       });
     }
     Array.prototype.forEach.call(document.styleSheets, function (sh) {
-      if (!/(^|\/)kit\.css(\?|#|$)/.test(sh.href || "")) { return; }
+      /* 2.63.2 (item 4): the css of a part merged into the kit (kit.js define(), <style data-kit-own>) is the kit's own too -
+         the gallery calibrates it; a course's own part (kit_parts.js, status "new") has no such mark and stays judged */
+      var own = sh.ownerNode && sh.ownerNode.hasAttribute && sh.ownerNode.hasAttribute("data-kit-own");
+      if (!own && !/(^|\/)kit\.css(\?|#|$)/.test(sh.href || "")) { return; }
       try { walk(sh.cssRules); } catch (e) { /* cross-origin: unreadable */ }
     });
     return kitRules;
