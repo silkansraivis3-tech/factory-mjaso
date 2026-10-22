@@ -221,6 +221,12 @@ def write_stages(log, stages, t0, timing=None):
         return None
 
 
+def stage_line(stages):
+    """2.63.2 - each stage's seconds on the build's own answer, PASS or FAIL, not only in the log: the M01 benchmark's
+    METRICS had per-stage seconds for a PASS and only the total for a FAIL - the run that most needs explaining"""
+    return "Stages: " + " · ".join("%s %.0f s" % (k.split(" (")[0], v) for k, v in stages) if stages else ""
+
+
 def workspace_figdir(course, module):
     import workspace
     import content_script as cs
@@ -382,6 +388,7 @@ def main(argv=None):
         print("FAIL %s - figures (%.0f s; a figures-only round: the rest passed on the last full build and the script and build "
               "sheet are unchanged - fix these in the studio, run again; the full build runs once they are clean, --full now)"
               % (m, time.time() - t0))
+        print(stage_line(stages))
         print("Full log: %s" % log.name)
         return 1
     # 2 - the compile (with its own drawing check)
@@ -568,6 +575,8 @@ def main(argv=None):
             print(review)
     else:
         print("FAIL %s - %s (%.0f s)" % (m, ", ".join(fails), secs))
+    if stages:
+        print(stage_line(stages))
     print("Full log: %s" % log.name)
     return 0 if passed else 1
 

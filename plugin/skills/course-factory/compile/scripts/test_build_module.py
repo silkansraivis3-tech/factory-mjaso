@@ -129,6 +129,14 @@ def stages_part():
     check("2.52.0: the build log ends with each stage's seconds and the total",
           "===== stage seconds" in text and "figures (figure_fit.py)" in text and "41 s" in text and "120 s" in text
           and "total" in text and "230 s" in text, text)
+    # 2.63.2 (the M01 benchmark's METRICS: a FAIL build gave only its total) - the stages on the build's own answer too
+    line = b.stage_line([("figures (figure_fit.py)", 41.2), ("compile (compile_module.py, its drawing check)", 63.0)])
+    check("2.63.2: the answer names each stage's seconds - 'Stages: figures 41 s · compile 63 s'",
+          line == "Stages: figures 41 s · compile 63 s", line)
+    src = io.open(os.path.join(HERE, "build_module.py"), encoding="utf-8").read()
+    tail = src[src.index('print("FAIL %s - %s (%.0f s)"'):]
+    check("... printed after a FAIL as after a PASS, and after a figures-only FAIL",
+          "print(stage_line(stages))" in tail[:300] and src.count("print(stage_line(stages))") >= 2, tail[:300])
 
 
 def layout_part():
