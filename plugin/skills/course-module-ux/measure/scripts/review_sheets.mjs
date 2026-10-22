@@ -24,6 +24,7 @@ import { appendFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmS
 import { tmpdir, homedir } from 'node:os';
 import { join, resolve, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { createHash } from 'node:crypto';
 import { takeSlot } from './browser_slots.mjs';
 
 const args = process.argv.slice(2);
@@ -159,8 +160,9 @@ async function deck(tiles) {
     const st = await evaluate(`(function(){ var s=document.querySelector('.slide.active'); if(!s) return null;
       var k=s.querySelector('svg[data-kit]'), f=k&&k.__kit; var all=[].slice.call(document.querySelectorAll('.slide'));
       if (f && f.steps && f.steps()) { try { f.go(f.steps(), true); } catch(e){} }
+      var src=[].map.call(s.querySelectorAll('script[type="application/json"],img'),function(e){return e.tagName==='IMG'?e.getAttribute('src'):e.textContent;}).join('|');
       return { id: s.id, i: all.indexOf(s)+1, of: all.length, title: s.getAttribute('data-title')||'', steps: f&&f.steps?f.steps():0,
-               last: !!(document.getElementById('btnNext')||{}).disabled }; })()`);
+               last: !!(document.getElementById('btnNext')||{}).disabled, src: src }; })()`);
     if (!st) break;
     if (seen.has(st.id)) {                      // still on it (a step was taken): its picture is retaken at this later state
       await evaluate(SETTLE); await pause(140); await evaluate(SETTLE);
@@ -175,7 +177,8 @@ async function deck(tiles) {
     seen.add(st.id);
     await evaluate(`Promise.all([].slice.call(document.images).map(function(i){ return i.complete ? 1 : new Promise(function(r){ i.onload = i.onerror = r; setTimeout(r, 3000); }); })).then(function(){ return 1; })`);
     await evaluate(SETTLE); await pause(140); await evaluate(SETTLE);
-    tiles.push({ id: 'deck/' + st.id, label: `Deck slide ${st.i}/${st.of} (${st.id}) ${st.title}` + (st.steps ? ` - figure at its last step (${st.steps})` : ''), png: await shot() });
+    tiles.push({ id: 'deck/' + st.id, label: `Deck slide ${st.i}/${st.of} (${st.id}) ${st.title}` + (st.steps ? ` - figure at its last step (${st.steps})` : ''), png: await shot(),
+                 src: st.src ? createHash('sha1').update(st.src).digest('hex').slice(0, 16) : '' });
     note('deck ' + st.id, ts); ts = Date.now();
     if (st.last) break;
     await click(`(function(){ var b=document.getElementById('btnNext'); if(b && !b.disabled) b.click(); return 1; })()`);
@@ -403,8 +406,15 @@ async function sheets(tiles) {
     return out; })()`);
   const now = {};
   tiles.forEach((t, i) => { t.fp = fps[i]; now[t.id] = Buffer.from(t.fp).toString('base64'); });
+  /* 2.63.2 - and on the slide's source: its figure's spec and its pictures. figure_fit re-fits a drawing after the review by
+     a few px - under the fingerprint's 8 grey levels - and QA asked whether the changed figure was re-reviewed (IGF M12 s02,
+     M14 s05: "no screen changed since the last review"). A changed spec or picture is a changed screen */
+  const srcPath = join(OUT, 'manifest_src.json'), srcBase = join(opt.base ? resolve(opt.base) : OUT, 'manifest_src.json');
+  const srcBefore = existsSync(srcBase) ? JSON.parse(readFileSync(srcBase, 'utf8')) : {}, srcNow = {};
+  tiles.forEach(t => { if (t.src) srcNow[t.id] = t.src; });
   const differs = t => {
     if (!before[t.id]) return true;
+    if (t.src && srcBefore[t.id] && srcBefore[t.id] !== t.src) return true;
     const a = Buffer.from(before[t.id], 'base64');
     if (a.length !== t.fp.length) return true;
     let worst = 0;
@@ -434,6 +444,7 @@ async function sheets(tiles) {
   }
   await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false });
   writeFileSync(manPath, JSON.stringify(now, null, 1));
+  writeFileSync(srcPath, JSON.stringify(srcNow, null, 1));
   return { out, total: tiles.length, shown: show.length };
 }
 

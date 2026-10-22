@@ -18,6 +18,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -84,6 +85,29 @@ def module(tmp):
     return md, out
 
 
+def refit_part(md, out):
+    """2.63.2 (QA of IGF M12 s02 / M14 s05: figure_fit re-fit a drawing after the review, and the build said "no screen
+    changed since the last review") - a figure whose spec changed is a changed screen, however few px it moved"""
+    print("\n-- 2.63.2: a re-fitted figure is reviewed again")
+    deck = os.path.join(md, "presentation", "index.html")
+    text = io.open(deck, encoding="utf-8").read()
+    sec = re.search(r'<section[^>]*id="s03".*?</section>', text, re.S)
+    spec = re.search(r'(<script type="application/json"[^>]*>)(.*?)(</script>)', sec.group(0), re.S) if sec else None
+    if not spec:
+        check("s03 carries its kit spec in the deck", False, sec and sec.group(0)[:300])
+        return
+    data = json.loads(spec.group(2).replace("<\\/", "</"))
+    data["parts"][0]["x"] = data["parts"][0].get("x", 0) + 0.3        # a third of a unit - a refit nudges this little
+    new_sec = sec.group(0).replace(spec.group(0), spec.group(1) + json.dumps(data).replace("</", "<\\/") + spec.group(3))
+    io.open(deck, "w", encoding="utf-8").write(text.replace(sec.group(0), new_sec))
+    p = subprocess.run(["node", REVIEW, md, out], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
+    sheets = json.load(io.open(os.path.join(out, "sheets.json"), encoding="utf-8")) if os.path.isfile(os.path.join(out, "sheets.json")) else {}
+    shown = [s for x in sheets.get("sheets", []) for s in x.get("screens", [])]
+    check("the slide whose figure moved a third of a unit (under the picture fingerprint) is on the new sheets; the others not",
+          p.returncode == 0 and any("s03" in str(s) for s in shown) and not any("s02" in str(s) for s in shown), (shown, p.stdout[-300:]))
+    io.open(deck, "w", encoding="utf-8").write(text)
+
+
 def blind_part(md, tmp):
     """2.63.0 (the IGF full build on 2.63.0: the final passed only with --no-review) - a blind page (a graded final, data-blind,
     2.60.0) shows no verdict, so the probe read every right answer as graded wrong. It reads the page's report instead"""
@@ -138,6 +162,7 @@ def main():
         check("a heading a page timer changes 120 ms after the slide is shown is changed on its picture, as with the fixed waits",
               s05 and diff.get(s05[0], 999) <= 8, (s05, [diff.get(k) for k in s05]))
         check("the new waits are faster (%.1f s, the fixed ones %.1f s)" % (t1, t0), t1 < t0, (t0, t1))
+        refit_part(md, os.path.join(tmp, "still"))
         blind_part(md, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
