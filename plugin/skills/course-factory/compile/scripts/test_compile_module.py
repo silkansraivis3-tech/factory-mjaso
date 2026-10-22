@@ -1701,6 +1701,42 @@ def v2497_part(tmp):
     check("L60: declined with the operator's reason - not proposed again, in the build or on the review page",
           "RECOMMENDED (L60)" not in out and not cs.build_findings(c6, script(screens=flat)), out)
 
+    # 2.63.2 (item 9): IGF M02 s07 became a 3D scene in the 2.62.0 build - the slide where the instructors asked for a photo
+    sc9 = script(screens=flat)
+    first = cs.best_3d(sc9)
+    sc9["photo_wanted"] = {first[0]: "instructors' review 2026-10-21: a photo instead of the diagram"} if first else {}
+    nxt = cs.best_3d(sc9)
+    check("photo_wanted: the flagged slide is never the L60 pick - the next candidate is named, or none",
+          first and first[0] == "s03" and (nxt is None or nxt[0] != "s03"), (first, nxt))
+    sc9b = script(screens=flat)
+    for x in sc9b["screens"]:
+        if x["kind"] == "slide":
+            x["photo_wanted"] = "test"
+    check("... a module whose every candidate wants a photo gets no pick", cs.best_3d(sc9b) is None, cs.best_3d(sc9b))
+    planned = json.loads(json.dumps(SCREENS))
+    sc9c = script(screens=planned)
+    sc9c["photo_wanted"] = {"s04": "the owner: a real photo of the hull here"}
+    check("... nor a slide the script plans as 3D (model_3d)", (cs.best_3d(sc9c) or ("",))[0] != "s04", cs.best_3d(sc9c))
+    del sheet["declined_3d"]
+    sheet["screens"]["s03"]["photo_wanted"] = "instructors' review: a photo, not a diagram"
+    cs.save(sp(c6), sheet)
+    found = cs.build_findings(c6, script(screens=flat))
+    check("... a build sheet's photo_wanted: the 'no 3D scene' recommendation never names that slide",
+          not any("s03" in f["detail"] for f in found if f["rule"] == "v_3d_none_built"), found)
+    os.makedirs(os.path.join(tmp, "l60p"))
+    sc9d = script(screens=flat)
+    sc9d["photo_wanted"] = {"s03": "instructors' review: a photo, not a diagram"}
+    c9, _md9 = new_course(os.path.join(tmp, "l60p"), sc9d, build=False)
+    gate_fixture.open_gate(c9)
+    code, out = run(COMPILE, c9, "--module", "1", "--init-build")
+    sh9 = cs.load(sp(c9))
+    check("... --init-build gives no starter scene to it, and writes the wish into its entry",
+          code == 0 and "_3d" not in sh9["screens"].get("s03", {}) and sh9["screens"]["s03"].get("photo_wanted")
+          and "assets/js/m01_s03_3d.js" not in sh9["scripts"], sh9["screens"].get("s03"))
+    c10, code, out = built("f9", {"figure": "assets/img/ship.jpg", "photo_wanted": "the owner: a real photo here"})
+    check("... a slide planned as 3D with a photo wanted, given the photo: no 'asks for a 3D scene'",
+          "asks for a 3D scene" not in out and not [f for f in cs.build_findings(c10, script()) if f["rule"] == "v_3d_flat_figure"], out)
+
     # IGF M01 q01/q03: two questions on one kit figure, "unlabel": "answers", other answers - two drawings, not one shared
     sys.path.insert(0, HERE)
     import task_pages

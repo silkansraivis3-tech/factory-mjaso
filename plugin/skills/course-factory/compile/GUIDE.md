@@ -270,7 +270,12 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   `"figure"`: to keep a 2D figure, point `"figure"` at it, take the scene files off `"scripts"` and write
   `"declined_3d"` - then edit the starter, never write a spec from nothing (M01 benchmark run 5, s05).
   A script with no `model_3d` slide gets the same entry on its best slide, unasked (`content_script.best_3d`: a shape,
-  an inside or a layout in space; never a real photo's slide), with a `"_3d"` note saying why. A module built with no
+  an inside or a layout in space; never a real photo's slide), with a `"_3d"` note saying why. **A photograph wanted
+  is never turned 3D (2.63.2):** `"photo_wanted": "<who asked, why>"` - on a build sheet screen, a script screen, or the
+  script's top-level `"photo_wanted": {"s07": "..."}` (outside the approved screens, like `"declined"`) - takes the slide
+  out of the pick and out of the RECOMMENDED block's candidates (the next one is named, or none), and is the reason a
+  planned 3D slide may carry its photo (IGF M02 s07 became a scene in the 2.62.0 build, the very slide where the
+  instructors asked for a photo). A module built with no
   scene gets a RECOMMENDED block in the build and its own card on the review page, naming the best candidate - never a
   block: the operator declines with their reason, `"declined_3d"` at the TOP of the build sheet, and it is not
   proposed again. A 3D slide whose

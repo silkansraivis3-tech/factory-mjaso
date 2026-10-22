@@ -932,25 +932,42 @@ def is_3d(s):
 
 def flat_3d(s, b, body):
     """the build sheet's 2D figure of a slide the script plans as 3D, else "". b is the slide's build-sheet entry, body the
-    figure file's text (None for a picture). No figure, a 3D scene, or a 2D figure kept with a reason -> ""."""
+    figure file's text (None for a picture). No figure, a 3D scene, or a 2D figure kept with a reason -> "". A photograph
+    wanted on the slide (photo_wanted, 2.63.2) is that reason."""
     rel = (b or {}).get("figure") or ""
-    if not rel or not is_3d(s) or str((b or {}).get("declined_3d") or "").strip():
+    if not rel or not is_3d(s) or any(str(x.get(k) or "").strip() for x in (b or {}, s) for k in ("declined_3d", "photo_wanted")):
         return ""
     if rel.lower().endswith((".html", ".htm")) and body and SCENE_MARK.search(body):
         return ""
     return rel
 
 
-def best_3d(script, skip=()):
+def photo_wanted(script, build=None):
+    """2.63.2 (L60) - {screen id: who asked and why} for the slides where a photograph is wanted, never a 3D scene: the
+    script's top-level "photo_wanted" {sid: reason} (outside the approved screens, like "declined"), a screen's own
+    "photo_wanted", and a build sheet screen's "photo_wanted". In the 2.62.0 build IGF M02 s07 became a live 3D scene - the
+    slide where the instructors asked for a photograph instead of a diagram."""
+    out = {str(k): str(v) for k, v in (script.get("photo_wanted") or {}).items() if str(v or "").strip()}
+    for s in script.get("screens", []):
+        if str(s.get("photo_wanted") or "").strip():
+            out[s["id"]] = str(s["photo_wanted"])
+    for sid, b in ((build or {}).get("screens") or {}).items():
+        if str((b or {}).get("photo_wanted") or "").strip():
+            out[sid] = str(b["photo_wanted"])
+    return out
+
+
+def best_3d(script, skip=(), build=None):
     """L60 (2.49.7) - the module's best slide for a 3D scene, as (screen id, why) or None: a slide the script already plans
     as 3D first, else the one propose_3d ranks first - its lesson a shape, an inside or a layout in space, never a slide
-    whose picture is a real photograph (L52) or a flat thing (L46). Slides in `skip` and in the script's "declined" 3d are
-    passed over. `why` is the words that make it fit ("" for a slide the script plans as 3D)."""
+    whose picture is a real photograph (L52) or a flat thing (L46). Slides in `skip`, in the script's "declined" 3d and
+    where a photo is wanted (photo_wanted, 2.63.2) are passed over. `why` is the words that make it fit ("" for a slide the
+    script plans as 3D)."""
     slides = [s for s in script.get("screens", []) if s.get("kind") == "slide"]
     teach = [s for s in slides if not s.get("recap")]
     if len(teach) == len(slides) and len(slides) > 1:     # a script from before the recap: its last slide sums up
         teach = slides[:-1]
-    skip = set(skip) | set((script.get("declined") or {}).get("3d") or {})
+    skip = set(skip) | set((script.get("declined") or {}).get("3d") or {}) | set(photo_wanted(script, build))
     planned = [s for s in teach if is_3d(s) and s["id"] not in skip]
     if planned:
         return planned[0]["id"], ""
@@ -990,7 +1007,8 @@ def build_findings(course, script):
             found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "visual_kind", "level": NOTE,
                           "rule": "v_3d_flat_figure", "detail": T(script, "v_3d_flat_figure", fig=flat), "fix": ""})
     if not scene and not found and not str(build.get("declined_3d") or "").strip():
-        best = best_3d(script, [sid for sid, b in (build.get("screens") or {}).items() if str((b or {}).get("declined_3d") or "").strip()])
+        best = best_3d(script, [sid for sid, b in (build.get("screens") or {}).items() if str((b or {}).get("declined_3d") or "").strip()],
+                       build=build)
         if best:
             found.append({"where": T(script, "s_the_module"), "screen": "", "field": "", "level": NOTE, "rule": "v_3d_none_built",
                           "detail": T(script, "v_3d_none_built", sid=best[0], title=next(
@@ -1064,7 +1082,7 @@ def media_findings(script):
                 add(s["id"], "visual", NOTE, "v_3d_flat", word=word)
         # 2.49.0 (operator, 2026-10-16): 3D and AI pictures proposed unasked, slide by slide - kept or struck
         declined = script.get("declined") or {}
-        for sid, words, rule in propose_3d(teach, three, declined.get("3d") or {}):
+        for sid, words, rule in propose_3d(teach, three, set(declined.get("3d") or {}) | set(photo_wanted(script))):
             add(sid, "visual_kind", NOTE, rule, words=", ".join(words))
         for sid, words, rule in propose_ai(teach, kinds, declined.get("ai") or {}):
             add(sid, "visual_kind", NOTE, rule, words=", ".join(words))

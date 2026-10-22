@@ -2001,7 +2001,7 @@ def active_mins(s):
 
 
 # build-sheet fields that never decide a slide's layout - an edit to them keeps what was measured and built (2.62.1)
-NOT_LAYOUT = ("alt", "labels", "unlabel", "areas", "link_hint", "not_things", "declined_3d")
+NOT_LAYOUT = ("alt", "labels", "unlabel", "areas", "link_hint", "not_things", "declined_3d", "photo_wanted")
 
 
 def words_key(s, b=None):
@@ -2728,16 +2728,20 @@ def starter_build(script, shared=(), figdir=None, specs=None, mdir=None):
         sheet["pass_mark"] = first("pass_mark")
     sheet.update({"styles": [], "scripts": [], "inline": []})
     screens = {}
+    photo = cs.photo_wanted(script)          # 2.63.2: a slide where a photograph is wanted never gets a scene, planned or not
     for s in script["screens"]:
         if s["kind"] in cs.INSTRUCTOR:
             screens[s["id"]] = ({"figure": "", "visual_kind": s.get("visual_kind") or "none"} if s["kind"] == "slide" else
                                 {"link_hint": ""} if s["kind"] == "activity" else {})
-            if s["kind"] == "slide" and cs.parse_kind(s.get("visual_kind", "")) == "model_3d":
+            if s["id"] in photo and s["kind"] == "slide":
+                screens[s["id"]]["photo_wanted"] = photo[s["id"]]
+            elif s["kind"] == "slide" and cs.parse_kind(s.get("visual_kind", "")) == "model_3d":
                 screens[s["id"]].update(starter_scene(script, s["id"], sheet["scripts"]))
         elif s["kind"] in cs.TASKS and cs.mech(s) in STARTER_ON_PICTURE:
             screens[s["id"]] = json.loads(json.dumps(STARTER_ON_PICTURE[cs.mech(s)]))
     # L60 - at least one 3D scene in every module where the subject allows it: with none planned, the best slide gets one, unasked
-    best = None if any(cs.parse_kind(s.get("visual_kind", "")) == "model_3d" for s in script["screens"]) else cs.best_3d(script)
+    best = None if any(cs.parse_kind(s.get("visual_kind", "")) == "model_3d" and s["id"] not in photo
+                       for s in script["screens"]) else cs.best_3d(script)
     if best and best[0] in screens:
         screens[best[0]].update(starter_scene(script, best[0], sheet["scripts"]))
         screens[best[0]]["_3d"] = ("Proposed by the factory, unasked (L60): this module has no 3D scene and this slide's lesson has a "

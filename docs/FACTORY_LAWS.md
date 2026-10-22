@@ -530,6 +530,9 @@ the best candidate and why. A recommendation, never a block (2.18.1): the operat
 (`"declined_3d"` at the top of the build sheet), and a declined scene is not proposed again. A slide the script plans as
 3D that is given a 2D figure stays a must-fix until its own `"declined_3d"` holds a reason. L46 is unchanged - at most
 half the teaching slides, never instead of a real photograph, the speed and tap rules of the compile GUIDE 2b.
+**A photograph wanted is never turned 3D** (Aleksis, 2026-10-22, after IGF M02 s07 became a scene on the slide where
+the instructors asked for a photo): a slide with `"photo_wanted": "<who asked, why>"` (build sheet, script screen, or
+the script's top-level `"photo_wanted"`) is never the pick and never the recommendation's candidate (2.63.2).
 → `course-factory` (`scripts/content_script.py` `best_3d`, `build_findings`; `compile/scripts/compile_module.py`), 2.49.7
 
 **L61 · Every slide is one of the owner's layout templates, in the brandbook's colours, with the official logo.** The
