@@ -141,6 +141,7 @@ there before the first screen. Write screens inside it; do not rebuild it.
 | `.ov-grid`, `.ov-head`, `.ov-item` | the overview of all screens |
 | `.chip`, `.cbtn`, `.btn-label`, `.fbtn`, `.tag`, `.t`, `.k`, `.n` | the chrome's own buttons, labels and counters |
 | `.gbt-topback` | the hidden Back link the Android hardware Back button clicks — every page needs one |
+| `.gb-fs3d`, `.gb-fs3d-btn`, `.gb-fs3d-on`, `.gb-fs3d-faked`, `.gb3d-lbl`, `.gb3d-on` | a 3D scene's box, its Full screen button, the box full screen (or in a full-window box), a label that selects its part and the selected one - **the engine sets them** (2.63.2); a scene marks its labels `data-3d-part` and calls `GB3D.wire` |
 | `.active`, `.cur`, `.on`, `.idle`, `.gone`, `.dark-active`, `.banded` | states **the engine sets** — never write them by hand (`.banded`: the corner tag, hidden on a screen whose header band names it) |
 
 ## 6 · Document pages — START_HERE, handout, practical cards, plans (`gb_page.css`)

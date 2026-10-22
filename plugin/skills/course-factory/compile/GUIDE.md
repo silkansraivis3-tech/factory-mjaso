@@ -257,6 +257,17 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   frame; buttons and taps share one mode. Reference: IGF M03 `m03_station3d.js` (the highlight, the tap logic on
   `pointerup`). A scene that only turns is not finished. A `[data-stage]` in a wide column takes the column's own
   height (2.49.2) - no module override needed.
+  **Full screen and labels that select (2.63.2, Aleksis: "the 3D scenes sit small"; "I want to be able to click on
+  the labels as well").** The deck engine (`gb_deck.js`) gives every 3D slide's box - `[data-3d-box]`, else the
+  `.fig` holding the `[data-stage]` - a 44 px Full screen button in its freest corner; canvas, labels, buttons and
+  hint go full screen together, Next / Back / the swipe stay off while it is, Esc or the button leave it. The scene
+  must **follow its box**: resize the renderer and camera on `window` "resize" and on the box's `gb3d-resize`. Every
+  label that names a part is a control for it: give it `data-3d-part="<part name>"` and register the scene's own
+  selection once, `GB3D.wire(stage, { select: function (name) { /* the same as a tap on the part; null lets it go */ },
+  current: function () { return selectedName; } })`, and call `GB3D.sync(stage)` after a tap on the part itself, so the
+  label shows as selected. The engine makes such a label a button (focus, Enter / Space, a 44 px tap area, a second tap
+  lets go) and keeps the deck's keys off it. `smoke3d.py` presses the button (the box fills the window and keeps
+  drawing, it covers no word) and taps a label (its part selected, then let go) - FAIL otherwise.
   **The scene's control hint** ("Drag to turn - tap a part to look closer") goes in an empty `<div data-hint></div>` in
   the figure, filled by the scene's script; the compile marks every `[data-hint]` `data-script-ignore` (2.60.0), so
   `check_script_match` counts it instead of failing on words the script never approved (IGF M05, M13, M15). The figure

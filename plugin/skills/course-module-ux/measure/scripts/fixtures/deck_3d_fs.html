@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture - a 3D slide on the factory deck engine (2.63.2)</title>
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_shell.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_compose.css">
+<style>
+  .fixture-stage { position: relative; height: 360px; }
+  .fixture-stage canvas { display: block; width: 100%; height: 100%; }
+  .fixture-lbl { position: absolute; padding: 2px 6px; background: #fff; color: #0A2463; font: 700 15px sans-serif; }
+</style>
+</head>
+<body>
+<!-- Test fixture for smoke3d.py / perf3d.mjs --fs3d. No three.js: a 2D canvas stands in for the scene. It is driven by the
+     factory's own gb_deck.js, which gives the 3D slide (data-visual="model_3d") its Full screen button and makes the
+     labels with data-3d-part controls for their parts. The scene:
+       - reports window.__scene3d = { enterT, firstFrameT, frames } on enter (the perf3d contract);
+       - follows its box: on "gb3d-resize" / window resize the canvas takes the stage's size (FIXTURE_FOLLOWS);
+       - registers its part selection with GB3D.wire(stage, { select, current }) (FIXTURE_WIRES).
+     test_smoke3d.py writes variants that break one of these. -->
+<div id="landing"><button id="startBtn" type="button"><span class="btn-label">Start</span></button></div>
+<div id="chrome"><button id="btnPrev" type="button">Back</button><button id="btnNext" type="button">Next</button></div>
+<main id="stage">
+  <section class="slide" id="s1" data-visual="none"><div class="slide-body"><h2>Title</h2></div></section>
+  <section class="slide" id="s3d" data-visual="model_3d"><div class="slide-body two-col fig-wide">
+    <div class="copy"><h2>The tank and its spaces</h2></div>
+    <div class="fill fig"><div class="fixture-stage" data-stage>
+      <span class="fixture-lbl" data-3d-part="tank" style="left:30%;top:46%">Fuel tank</span>
+      <span class="fixture-lbl" data-3d-part="tcs" style="left:30%;top:16%">Tank connection space</span>
+    </div></div>
+  </div></section>
+  <section class="slide" id="s3" data-visual="none"><div class="slide-body"><h2>After</h2></div></section>
+</main>
+<script src="../../../assets/gb_deck.js"></script>
+<script>
+var FIXTURE_FOLLOWS = true, FIXTURE_WIRES = true;
+(function () {
+  var stage = document.querySelector('#s3d [data-stage]'), cv = null, ctx, raf = 0, picked = null, stopped = false, sized = false;
+  function fit() {
+    if (!cv) return;
+    if (!FIXTURE_FOLLOWS && sized && cv.width !== stage.clientWidth) { stopped = true; return; }   /* a scene that does not follow */
+    sized = true;
+    cv.width = Math.max(1, stage.clientWidth); cv.height = Math.max(1, stage.clientHeight);
+  }
+  function draw() {
+    if (stopped) return;
+    var s = window.__scene3d, a = (s.frames % 360) * Math.PI / 180;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.save(); ctx.translate(cv.width / 2, cv.height / 2); ctx.rotate(a);
+    ctx.fillStyle = picked ? '#2EB6F8' : '#4a6'; ctx.fillRect(-50, -50, 100, 100); ctx.restore();
+    s.frames++;
+    if (!s.firstFrameT) s.firstFrameT = performance.now();
+    raf = requestAnimationFrame(draw);
+  }
+  function enter() {
+    window.__scene3d = { enterT: performance.now(), firstFrameT: 0, frames: 0 };
+    if (!cv) { cv = document.createElement('canvas'); stage.insertBefore(cv, stage.firstChild); ctx = cv.getContext('2d'); fit(); }
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', fit);
+  stage.addEventListener('gb3d-resize', fit);
+  if (FIXTURE_WIRES) {
+    GB3D.wire(stage, { select: function (name) { picked = name; }, current: function () { return picked; } });
+  }
+  GBDeck.init({ hooks: { s3d: { enter: enter, leave: function () { cancelAnimationFrame(raf); } } } });
+})();
+</script>
+</body></html>

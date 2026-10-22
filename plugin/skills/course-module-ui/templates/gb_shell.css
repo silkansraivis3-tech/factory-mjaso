@@ -311,6 +311,29 @@ a.gbt-topback[hidden]{display:none}
 a.gbt-topback{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 14px;
   background:var(--navy);color:var(--white);font:700 15px/1 var(--font);text-decoration:none}
 
+/* ==========================================================================
+   A 3D SCENE FULL SCREEN, ITS LABELS AS CONTROLS (2.63.2, gb_deck.js)
+   The scene's own box goes full screen; its stage fills it and the renderer
+   follows. The button is 44 px, in the corner the engine finds free. A label
+   is a button for its part: a 44 px tap area around it, the words unchanged.
+   ========================================================================== */
+.gb-fs3d{position:relative}
+.gb-fs3d-btn{position:absolute;top:8px;right:8px;z-index:6;width:44px;height:44px;padding:9px;border:0;
+  border-radius:10px;background:var(--navy);color:var(--white);cursor:pointer;opacity:.88;
+  display:flex;align-items:center;justify-content:center}
+.gb-fs3d-btn svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.gb-fs3d-btn:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.gb-fs3d.gb-fs3d-on{width:100vw;height:100vh;max-width:none;max-height:none;margin:0;background:var(--navy);
+  display:flex;flex-direction:column}
+.gb-fs3d.gb-fs3d-on [data-stage],.gb-fs3d.gb-fs3d-on [data-3d],.gb-fs3d.gb-fs3d-on [data-scene]{flex:1 1 auto;
+  width:100%;height:auto;min-height:0;max-height:none}
+.gb-fs3d.gb-fs3d-on canvas{max-height:none}
+html.gb-fs3d-faked .gb-fs3d.gb-fs3d-on{position:fixed;inset:0;z-index:1000}
+.gb3d-lbl{cursor:pointer}
+.gb3d-lbl::before{content:"";position:absolute;left:-8px;right:-8px;top:50%;height:max(44px,100%);transform:translateY(-50%)}
+.gb3d-lbl.gb3d-on{outline:2px solid var(--blue);outline-offset:2px}
+.gb3d-lbl:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+
 @media (prefers-reduced-motion: reduce){
   .slide{animation:none}
   #landing,#progress,#chrome{transition:none}

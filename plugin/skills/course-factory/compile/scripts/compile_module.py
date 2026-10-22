@@ -2389,7 +2389,10 @@ def starter_scene(script, sid, scripts):
                         "not script words); no class of the module's own that no rule styles - and the scene %s, built like IGF M03's "
                         "m03_station3d.js (compile GUIDE 2b): one shared renderer, the scene built while the slide before is "
                         "on screen (its GB_HOOKS), window.__noPrepare and window.__scene3d for perf3d.mjs, a tap highlights a "
-                        "part; first frame under 1 s at 4x CPU (measure GUIDE 2b). three.min.js (r128) is the factory's - the compile puts it in assets\\vendor\\. "
+                        "part; first frame under 1 s at 4x CPU (measure GUIDE 2b). It follows its box (resize on window "
+                        "resize and gb3d-resize - the deck adds a Full screen button), and each label that names a part "
+                        "carries data-3d-part=\"<name>\" with the selection registered by GB3D.wire(stage, {select, "
+                        "current}) - a tap on the label does what a tap on the part does (compile GUIDE 2b, 2.63.2). three.min.js (r128) is the factory's - the compile puts it in assets\\vendor\\. "
                         "Or keep a 2D figure: put it in \"figure\" (--init-build writes its starter, see \"_2d\"), take the two "
                         "scene files off \"scripts\", and write the operator's reason in \"declined_3d\"." % (m.upper(), m, sid, js))}
 

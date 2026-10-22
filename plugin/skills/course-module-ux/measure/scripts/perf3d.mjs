@@ -34,6 +34,9 @@
  *   --gl=swiftshader   swiftshader (software, works anywhere) | gpu | none (WebGL off)
  *   --chrome=PATH      Chrome/Chromium/Edge executable (else env CHROME_PATH, else the usual install places)
  *   --json             print one JSON document instead of the table
+ *   --fs3d             2.63.2: after the warm first frame, the scene's Full screen button (gb_deck.js) is pressed - is it
+ *                      there and 44 px, does the box fill the window and keep drawing, does Next stay off, does it leave -
+ *                      and a tap on a label ([data-3d-part]) must select its part (aria-pressed) and a second let it go
  *   --help
  * Exit code: 0 = every measured slide within the budget, 1 = at least one over (or never drew), 2 = bad input,
  *            no Chrome, no 3D slide found, or the deck does not offer window.__scene3d.
@@ -49,7 +52,7 @@ import { homedir } from 'node:os';
 import { takeSlot } from './browser_slots.mjs';
 
 const VALUE_OPTS = ['slides', 'budget-ms', 'throttle', 'gate', 'min-fps', 'ms', 'dwell', 'wait-ms', 'w', 'h', 'dsf', 'gl', 'chrome', 'next', 'start', 'active-class'];
-const FLAGS = ['no-cold', 'no-fps', 'json', 'help'];
+const FLAGS = ['no-cold', 'no-fps', 'json', 'help', 'fs3d'];
 
 function parseArgs(argv) {
   const pos = [], opt = {};
@@ -241,6 +244,37 @@ async function main() {
       return probe;
     }
 
+    // 2.63.2 - the scene full screen and its labels, as a person uses them (a real press: userGesture)
+    async function fullScreen(id) {
+      const tap = async expr => {
+        const r = await send('Runtime.evaluate', { expression: expr, userGesture: true, returnByValue: true });
+        return r.result && r.result.value;
+      };
+      const S = `document.getElementById(${q(id)})`;
+      const f = { deck: await evaluate(`typeof window.GBDeck !== 'undefined'`), button: await evaluate(`(function(){ var b = ${S}.querySelector('.gb-fs3d-btn'); if (!b) return null; var r = b.getBoundingClientRect(), over = [];
+        [].forEach.call(b.parentNode.querySelectorAll('[data-3d-part],[data-hint],button,label,span,p'), function (x) { if (x === b || b.contains(x)) return; var q = x.getBoundingClientRect();
+          if (q.width && q.height && /\\S/.test(x.textContent) && q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.top) over.push(x.textContent.trim().slice(0, 40)); });
+        return { w: Math.round(r.width), h: Math.round(r.height), over: over }; })()`) };
+      if (!f.button) return f;
+      const frames = () => evaluate(`window.__scene3d ? window.__scene3d.frames : 0`);
+      await tap(`${S}.querySelector('.gb-fs3d-btn').click()`);
+      await sleep(700);
+      const f0 = await frames();
+      await sleep(500);
+      f.drew = (await frames()) - f0;
+      f.on = await evaluate(`(function(){ var b = document.querySelector('.gb-fs3d-on'); if (!b) return null; var r = b.getBoundingClientRect(), c = b.querySelector('canvas'), cr = c && c.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), canvas: cr ? [Math.round(cr.width), Math.round(cr.height)] : null, real: document.fullscreenElement === b }; })()`);
+      await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', keyCode: 39, bubbles: true }))`);
+      await sleep(150);
+      f.keptSlide = await isActive(id);
+      await tap(`(function(){ var b = document.querySelector('.gb-fs3d-on .gb-fs3d-btn'); if (b) b.click(); })()`);
+      await sleep(500);
+      f.left = await evaluate(`!document.querySelector('.gb-fs3d-on')`);
+      f.label = await tap(`(function(){ var l = ${S}.querySelector('[data-3d-part]'); if (!l) return null; var name = l.getAttribute('data-3d-part'), r = l.getBoundingClientRect();
+        l.click(); var a = l.getAttribute('aria-pressed'); l.click(); var b = l.getAttribute('aria-pressed');
+        return { part: name, role: l.getAttribute('role'), selected: a === 'true', released: b === 'false', h: Math.round(r.height) }; })()`);
+      return f;
+    }
+
     async function measure(id, mode) {
       const r = { mode };
       await load(mode === 'cold');
@@ -252,6 +286,7 @@ async function main() {
         r.preparedAhead = await evaluate(`!!window.__scene3d.prepared`);
         r.marks = await evaluate(`window.__scene3d.marks || null`);
       } else { r.firstFrameMs = null; r.error = `no first frame within ${WAIT} ms`; }
+      if (mode === 'warm' && opt.fs3d && r.firstFrameMs !== null) r.fs3d = await fullScreen(id);
       if (mode === 'warm' && doFps && r.firstFrameMs !== null) {
         const hasSpin = await evaluate(`typeof window.__scene3d.spin === 'function'`);
         const run = hasSpin

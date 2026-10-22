@@ -48,6 +48,42 @@ def variant(tmp, name, delay, extra=""):
     return p
 
 
+FS_DECK = os.path.join(HERE, "fixtures", "deck_3d_fs.html")
+
+
+def full_screen_part():
+    """2.63.2 (Aleksis 2026-10-22: the 3D scenes sit small; a label should select its object too) - on the factory's deck
+    engine a 3D scene has a 44 px Full screen button; pressed, the scene's box fills the window and keeps drawing, Next
+    stays off, the button leaves it; a label tap selects its part and a second lets it go. Variants that break one each"""
+    print("\n-- 2.63.2: a 3D scene full screen, its labels select their parts")
+    code, out, secs = run(FS_DECK, "--limit", "8")
+    check("the fixture scene on gb_deck.js: Full screen fills the window and keeps drawing, a label selects its part (%.1f s)" % secs,
+          code == 0 and "full screen 1280x800 px, drawing" in out and "label \"tank\" selects its part" in out, out)
+    base = io.open(FS_DECK, encoding="utf-8").read()
+    for name, old, new, said in (
+            ("still", "var FIXTURE_FOLLOWS = true", "var FIXTURE_FOLLOWS = false", "full screen, the scene stopped drawing"),
+            ("unwired", "FIXTURE_WIRES = true", "FIXTURE_WIRES = false", "a tap on the label \"tank\" did not select its part"),
+            ("nobutton", '<script src="../../../assets/gb_deck.js"></script>',
+             '<script src="../../../assets/gb_deck.js"></script><script>GBDeck.init = (function (f) { return function (o) { var r = f(o);'
+             ' [].forEach.call(document.querySelectorAll(".gb-fs3d-btn"), function (b) { b.remove(); }); return r; }; })(GBDeck.init);</script>',
+             "no Full screen button on the scene")):
+        p = os.path.join(HERE, "fixtures", "_fs_%s_%d.html" % (name, os.getpid()))
+        io.open(p, "w", encoding="utf-8").write(base.replace(old, new, 1))
+        try:
+            code, out, secs = run(p, "--limit", "8")
+        finally:
+            os.remove(p)
+        check("%s: FAIL - %s" % (name, said), code == 1 and said in out, out)
+    p = os.path.join(HERE, "fixtures", "_fs_corner_%d.html" % os.getpid())
+    io.open(p, "w", encoding="utf-8").write(base.replace('style="left:30%;top:16%"', 'style="right:4px;top:4px"', 1))
+    try:
+        code, out, secs = run(p, "--limit", "8")
+    finally:
+        os.remove(p)
+    check("a label in the top right corner: the button goes to another corner, covering no word (IGF M04 s10)",
+          code == 0 and "covers the scene's words" not in out, out)
+
+
 def main():
     if not shutil.which("node"):
         print("skipped: no Node")
@@ -77,6 +113,7 @@ def main():
               code == 1 and "FAIL 3D smoke test" in out and secs < 90, out)
         check("a deck with no 3D slide, or a slide it has not, stops (exit 2)",
               run(good, "--slide", "s9")[0] == 2)
+        full_screen_part()
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

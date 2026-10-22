@@ -62,6 +62,38 @@ def alone(page, ids):
     return "".join(out) + page[last:]
 
 
+def full_screen(sid, fs):
+    """2.63.2 (Aleksis 2026-10-22: the 3D scenes sit small; labels should select their part) - ([problems], what it saw)
+    from perf3d.mjs --fs3d: the scene's Full screen button there and 44 px, the box filling the window and still drawing,
+    Next kept off, the button leaving it; a label a button that selects its part and lets it go"""
+    bad = []
+    if not fs.get("button"):
+        return (["%s: no Full screen button on the scene (gb_deck.js 2.63.2 adds it to a 3D slide's box)" % sid]
+                if fs.get("deck") else []), ("" if fs.get("deck") else "not a factory deck - full screen not checked")
+    b, on, lb = fs["button"], fs.get("on") or {}, fs.get("label")
+    if b.get("w", 0) < 44 or b.get("h", 0) < 44:
+        bad.append("%s: the Full screen button is %sx%s px - a tap needs 44" % (sid, b.get("w"), b.get("h")))
+    if b.get("over"):
+        bad.append("%s: the Full screen button covers the scene's words: %s (IGF M04 s10 \"1 Cold methane\")"
+                   % (sid, "; ".join(b["over"])))
+    if not on:
+        bad.append("%s: pressing Full screen did not fill the window with the scene" % sid)
+    elif (fs.get("drew") or 0) <= 0:
+        bad.append("%s: full screen, the scene stopped drawing (its renderer does not follow the box - listen to "
+                   "window resize / gb3d-resize)" % sid)
+    if on and fs.get("keptSlide") is False:
+        bad.append("%s: Next turned the slide while the scene was full screen" % sid)
+    if on and not fs.get("left"):
+        bad.append("%s: the button did not leave full screen" % sid)
+    if lb and not (lb.get("role") == "button" and lb.get("selected") and lb.get("released")):
+        bad.append("%s: a tap on the label \"%s\" did not select its part and let it go (data-3d-part + GB3D.wire, "
+                   "compile GUIDE 2b)" % (sid, lb.get("part")))
+    seen = "full screen %sx%s px, drawing (%s frames)%s; label %s" % (
+        on.get("w"), on.get("h"), fs.get("drew"), "" if on.get("real") else " (window box)",
+        ("\"%s\" selects its part" % lb["part"]) if lb and not bad else "none to tap" if not lb else "-")
+    return bad, seen
+
+
 def main(argv=None):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -90,7 +122,7 @@ def main(argv=None):
     io.open(tmp, "w", encoding="utf-8", newline="\n").write(alone(page, set(ids)))
     ms = int(o.limit * 1000)
     cmd = [node, PERF, tmp, "--slides=" + ",".join(ids), "--no-cold", "--no-fps", "--throttle=1", "--dwell=300",
-           "--wait-ms=%d" % ms, "--budget-ms=%d" % ms, "--json"]
+           "--wait-ms=%d" % ms, "--budget-ms=%d" % ms, "--json", "--fs3d"]
     t0, rep, said = time.time(), None, ""
     try:
         p = browser_slots.run_tree(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
@@ -123,6 +155,11 @@ def main(argv=None):
             bad.append("%s: no first frame within %.0f s%s" % (s.get("id"), o.limit, (" - " + w["error"]) if w.get("error") else ""))
         else:
             print("  %s: first frame %.0f ms%s" % (s.get("id"), ff, " (built ahead on the slide before)" if w.get("preparedAhead") else ""))
+            fs = w.get("fs3d") or {}
+            said_fs = full_screen(s.get("id"), fs)
+            bad += said_fs[0]
+            if said_fs[1]:
+                print("    " + said_fs[1])
     if rep.get("error"):
         bad.append(str(rep["error"]))
     bad += ["page error: %s" % e for e in errs]

@@ -28,6 +28,10 @@ var GBDeck = (function (w, d) {
 
   function el(id) { return d.getElementById(id); }
   function each(list, fn) { Array.prototype.forEach.call(list, fn); }
+  /* a scene's script loads before init: GB3D.wire is there from the start and keeps the scene's functions on its
+     element until the deck finds them (2.63.2 - init replaces this with the whole of it) */
+  w.GB3D = w.GB3D || { wire: function (e, api) { if (e) { e.__gb3dApi = api || {}; } return true; },
+                       sync: function () {}, full: function () { return null; }, leave: function () {} };
 
   /* the engine's own words. The deck is the instructor's, so lv / ru use the polite form, as the start pages do.
      The course language (L19) - the page's <html lang>; PROVISIONAL (2.41.0), written by Claude, to be checked by a
@@ -35,6 +39,7 @@ var GBDeck = (function (w, d) {
   var EN = {
     cue: "Instructor cue", noCue: "No cue for this screen.", start: "Start", screen: "Screen {n}", of: "of",
     next: "Next", back: "Back", grid: "All screens", full: "Fullscreen", leave: "Leave", close: "Close",
+    fsIn: "Full screen", fsOut: "Exit full screen",
     ovHint: "Tap a screen to jump there · G closes this view",
     hint: "→ / Space next · ← back · F fullscreen · G all screens · N instructor cue",
     missing: "Navigation controls are missing from this page. Add the chrome block from " +
@@ -44,6 +49,7 @@ var GBDeck = (function (w, d) {
     lv: {
       cue: "Norāde instruktoram", noCue: "Šim ekrānam norādes nav.", start: "Sākt", screen: "{n}. ekrāns", of: "no",
       next: "Tālāk", back: "Atpakaļ", grid: "Visi ekrāni", full: "Pilnekrāns", leave: "Iziet", close: "Aizvērt",
+      fsIn: "Pilnekrāns", fsOut: "Iziet no pilnekrāna",
       ovHint: "Pieskarieties ekrānam, lai uz to pārietu · G aizver šo skatu",
       hint: "→ / atstarpe – tālāk · ← atpakaļ · F pilnekrāns · G visi ekrāni · N norāde instruktoram",
       missing: "Šajā lapā trūkst navigācijas pogu. Pirms šī moduļa vadīšanas pievienojiet pogu bloku no gb_shell.html."
@@ -51,6 +57,7 @@ var GBDeck = (function (w, d) {
     ru: {
       cue: "Подсказка для инструктора", noCue: "Для этого экрана подсказки нет.", start: "Начать", screen: "Экран {n}",
       of: "из", next: "Далее", back: "Назад", grid: "Все экраны", full: "Полный экран", leave: "Выйти", close: "Закрыть",
+      fsIn: "Полный экран", fsOut: "Выйти из полного экрана",
       ovHint: "Коснитесь экрана, чтобы перейти к нему · G закрывает этот вид",
       hint: "→ / пробел – далее · ← назад · F полный экран · G все экраны · N подсказка для инструктора",
       missing: "На этой странице нет кнопок навигации. Перед проведением модуля добавьте блок кнопок из gb_shell.html."
@@ -179,6 +186,11 @@ var GBDeck = (function (w, d) {
       if (h && h.enter) { h.enter(); }
       markOverview();
       s.scrollTop = 0;
+      if (fsBox && fsBox !== boxes3d[idx]) { fsLeave(); }
+      if (boxes3d[idx]) {                            /* the scene's labels are placed once it draws */
+        var bx = boxes3d[idx];
+        fsPlace(bx); setTimeout(function () { if (cur === idx) { fsPlace(bx); lblSync(bx); } }, 700);
+      }
     }
 
     /* L61 (2.52.0) - a content-in-parts slide (.lt-part): Next / Back walk its parts first, every part reachable */
@@ -255,6 +267,183 @@ var GBDeck = (function (w, d) {
     var btnFull = el("btnFull");
     if (btnFull) { btnFull.addEventListener("click", toggleFull); }
 
+    /* ---- a 3D scene: full screen on its own, and its labels select their parts (2.63.2) ----------------
+       Aleksis, 2026-10-22: "the 3D scenes sit small" (both IGF builds) and "I want to be able to click on the labels as
+       well to highlight that object". Every 3D slide (data-visual of the 3D family, or a canvas / [data-3d] /
+       [data-scene] in it) gets a 44 px Full screen button in a free corner of the scene's own box - the [data-3d-box],
+       else the figure (.fig) that holds its [data-stage]: canvas, labels, buttons and hint go full screen together
+       (Fullscreen API, webkit fallback, else a fixed full-window box). Esc, the button or the browser leave it; inside
+       the deck's own full screen it stacks and leaving returns there. While a scene is full screen Next / Back / the
+       swipe never turn the slide. A window "resize" and a "gb3d-resize" on the box tell the scene to resize its
+       renderer and camera.
+       Labels: an element with data-3d-part="<name>" in the box is a control for that part - role="button", focusable,
+       Enter / Space, a 44 px tap area - and does what a tap on the part does, through the scene's own function:
+         GB3D.wire(stage or box, { select: function (name or null) {...}, current: function () { return name; } })
+       a second tap on the selected label lets it go; the selected label shows as selected (aria-pressed, .gb3d-on).
+       The scene calls GB3D.sync(stage) after a tap on the part itself. The deck's keys never fire from a label. */
+    var fsBox = null, fsFaked = false, boxes3d = [];
+    var ICON_IN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>';
+    var ICON_OUT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg>';
+    function fsNow() { return d.fullscreenElement || d.webkitFullscreenElement || null; }
+    function is3d(s) {
+      return /3d/i.test(s.getAttribute("data-visual") || "") || !!s.querySelector("canvas,[data-3d],[data-scene]");
+    }
+    function boxOf(s) {
+      var b = s.querySelector("[data-3d-box]"), st = s.querySelector("[data-stage],[data-3d],[data-scene],canvas");
+      if (b) { return b; }
+      return st ? (st.closest(".fig") || st.parentNode) : null;
+    }
+    function fsWord(b, on) {
+      b.setAttribute("aria-label", on ? T.fsOut : T.fsIn);
+      b.setAttribute("title", on ? T.fsOut + " (Esc)" : T.fsIn);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      b.innerHTML = on ? ICON_OUT : ICON_IN;
+    }
+    function kick(box) {
+      w.requestAnimationFrame(function () {
+        var e1, e2;
+        try { e1 = new Event("resize"); e2 = new CustomEvent("gb3d-resize", { bubbles: true }); }
+        catch (x) { e1 = d.createEvent("Event"); e1.initEvent("resize", true, true); e2 = d.createEvent("CustomEvent"); e2.initCustomEvent("gb3d-resize", true, true, null); }
+        w.dispatchEvent(e1);
+        if (box) { box.dispatchEvent(e2); }
+      });
+    }
+    function fsSync() {
+      var now = fsNow();
+      if (!fsFaked) { fsBox = (now && now.classList && now.classList.contains("gb-fs3d")) ? now : null; }
+      each(boxes3d, function (b) {
+        var on = b === fsBox, btn = b.querySelector(".gb-fs3d-btn");
+        b.classList[on ? "add" : "remove"]("gb-fs3d-on");
+        if (btn) { fsWord(btn, on); }
+      });
+      d.documentElement.classList[fsFaked ? "add" : "remove"]("gb-fs3d-faked");
+      kick(fsBox || boxes3d[cur] || null);
+    }
+    function fsFake(box) { fsFaked = true; fsBox = box; fsSync(); }
+    function fsEnter(box) {
+      var rq = box.requestFullscreen || box.webkitRequestFullscreen;
+      if (!rq) { fsFake(box); return; }
+      try {
+        var pr = rq.call(box);
+        if (pr && typeof pr["catch"] === "function") { pr["catch"](function () { fsFake(box); }); }
+      } catch (x) { fsFake(box); }
+    }
+    function fsLeave() {
+      if (fsFaked) { fsFaked = false; fsBox = null; fsSync(); return; }
+      var ex = d.exitFullscreen || d.webkitExitFullscreen;
+      if (fsNow() === fsBox && ex) {
+        try { var pr = ex.call(d); if (pr && typeof pr["catch"] === "function") { pr["catch"](function () {}); } } catch (x) {}
+      }
+    }
+    /* the button goes in the corner of the box farthest from the scene's words and controls (IGF M04 s10: a fixed
+       corner covered "1 Cold methane"); placed again each time the slide opens, as a scene's labels move with its view */
+    function fsPlace(box) {
+      var btn = box.querySelector(".gb-fs3d-btn"), R = box.getBoundingClientRect(), best = null;
+      if (!btn || !R.width) { return; }
+      var words = [];
+      each(box.querySelectorAll("button,a,[role=button],[data-3d-part],[data-hint],label,span,p,b,strong,div"), function (x) {
+        if (x === btn || btn.contains(x) || x.contains(btn)) { return; }
+        var own = false;
+        each(x.childNodes, function (c) { if (c.nodeType === 3 && /\S/.test(c.nodeValue)) { own = true; } });
+        if (!own && !/^(BUTTON|A)$/.test(x.tagName) && x.getAttribute("role") !== "button") { return; }
+        var r = x.getBoundingClientRect();
+        if (r.width && r.height) { words.push(r); }
+      });
+      each([["top", "right"], ["top", "left"], ["bottom", "right"], ["bottom", "left"]], function (c) {
+        var x = c[1] === "right" ? R.right - 52 : R.left + 8, y = c[0] === "top" ? R.top + 8 : R.bottom - 52, gap = 1e9;
+        each(words, function (r) {
+          var dx = Math.max(r.left - (x + 44), x - r.right, 0), dy = Math.max(r.top - (y + 44), y - r.bottom, 0);
+          gap = Math.min(gap, Math.sqrt(dx * dx + dy * dy));
+        });
+        if (!best || gap > best.gap + 0.5) { best = { c: c, gap: gap }; }
+      });
+      btn.style.top = btn.style.bottom = btn.style.left = btn.style.right = "auto";   /* the stylesheet's top / right too */
+      btn.style[best.c[0]] = "8px";
+      btn.style[best.c[1]] = "8px";
+    }
+    /* labels: what the scene registered, found from the box */
+    function scene(box) {
+      if (!box) { return null; }
+      if (box.__gb3d) { return box.__gb3d; }
+      var found = null;                                /* wired before the deck started: on its stage or canvas */
+      each(box.querySelectorAll("[data-stage],[data-3d],[data-scene],canvas"), function (x) { if (!found && x.__gb3dApi) { found = x.__gb3dApi; } });
+      return found;
+    }
+    function lblSync(box) {
+      var S = scene(box), now = S && S.current ? S.current() : null;
+      each(box.querySelectorAll("[data-3d-part]"), function (lb) {
+        if (!lb.hasAttribute("role")) {
+          lb.setAttribute("role", "button");
+          lb.setAttribute("tabindex", "0");
+          lb.classList.add("gb3d-lbl");
+          if (w.getComputedStyle && w.getComputedStyle(lb).position === "static") { lb.style.position = "relative"; }
+        }
+        var on = now != null && lb.getAttribute("data-3d-part") === String(now);
+        lb.setAttribute("aria-pressed", on ? "true" : "false");
+        lb.classList[on ? "add" : "remove"]("gb3d-on");
+      });
+    }
+    function lblPick(box, lb) {
+      var S = scene(box), name = lb.getAttribute("data-3d-part");
+      if (!S || !S.select) { return; }
+      S.select(S.current && String(S.current()) === name ? null : name);    /* a second tap lets it go */
+      lblSync(box);
+    }
+    each(slides, function (s, i) {
+      if (!is3d(s)) { return; }
+      var box = boxOf(s);
+      if (!box || boxes3d.indexOf(box) >= 0) { return; }
+      boxes3d[i] = box;
+      box.classList.add("gb-fs3d");
+      var btn = d.createElement("button");
+      btn.type = "button";
+      btn.className = "gb-fs3d-btn";
+      btn.setAttribute("data-no-zoom", "");
+      fsWord(btn, false);
+      btn.addEventListener("click", function (e) {
+        e.preventDefault(); e.stopPropagation();
+        if (fsBox === box) { fsLeave(); } else { fsEnter(box); }
+      });
+      box.appendChild(btn);
+      box.addEventListener("click", function (e) {
+        var lb = e.target && e.target.closest ? e.target.closest("[data-3d-part]") : null;
+        if (!lb || !box.contains(lb)) { return; }
+        e.stopPropagation();
+        lblPick(box, lb);
+        if (e.detail) { lb.blur(); }                  /* a mouse or a finger: the deck keeps its keys */
+      });
+      box.addEventListener("keydown", function (e) {
+        var lb = e.target && e.target.closest ? e.target.closest("[data-3d-part]") : null, kk = e.key || KC3[e.keyCode] || "";
+        if (!lb) { return; }
+        if (kk === "Enter" || kk === " " || kk === "Spacebar") { e.preventDefault(); lblPick(box, lb); }
+        if (DECK_KEYS[kk]) { e.stopPropagation(); }   /* never a slide turned from a label */
+      });
+      each(["pointerdown", "mousedown", "touchstart"], function (ev) {      /* a press on a label is not the scene's drag */
+        box.addEventListener(ev, function (e) {
+          if (e.target && e.target.closest && e.target.closest("[data-3d-part]")) { e.stopPropagation(); }
+        }, ev === "touchstart" ? { passive: true } : false);
+      });
+      if (w.MutationObserver) { new w.MutationObserver(function () { lblSync(box); }).observe(box, { childList: true, subtree: true }); }
+    });
+    var KC3 = { 39: "ArrowRight", 37: "ArrowLeft", 32: " ", 34: "PageDown", 33: "PageUp", 36: "Home", 35: "End", 13: "Enter" };
+    var DECK_KEYS = { ArrowRight: 1, Right: 1, ArrowLeft: 1, Left: 1, " ": 1, Spacebar: 1, PageDown: 1, PageUp: 1,
+                      Home: 1, End: 1, f: 1, F: 1, g: 1, G: 1, n: 1, N: 1, Enter: 1 };
+    d.addEventListener("fullscreenchange", fsSync);
+    d.addEventListener("webkitfullscreenchange", fsSync);
+    w.GB3D = {
+      wire: function (el, api) {
+        var box = el && (el.classList && el.classList.contains("gb-fs3d") ? el : el.closest && el.closest(".gb-fs3d"));
+        if (el) { el.__gb3dApi = api || {}; }
+        if (!box) { return false; }
+        box.__gb3d = api || {};
+        lblSync(box);
+        return true;
+      },
+      sync: function (el) { var box = el && el.closest && el.closest(".gb-fs3d"); if (box) { lblSync(box); } },
+      full: function () { return fsBox; },
+      leave: fsLeave
+    };
+
     /* ---- overview grid --------------------------------------------------- */
     var ovGrid = el("ovGrid");
     if (ovGrid && !ovGrid.children.length) {
@@ -304,6 +493,10 @@ var GBDeck = (function (w, d) {
                70: "f", 36: "Home", 35: "End", 13: "Enter", 71: "g", 78: "n", 27: "Escape" };
     d.addEventListener("keydown", function (e) {
       var k = e.key || KC[e.keyCode] || "";
+      if (fsBox) {                                    /* a 3D scene full screen: the deck turns no slide (2.63.2) */
+        if (k === "Escape" && fsFaked) { e.preventDefault(); fsLeave(); }
+        return;
+      }
       if (!started) {
         if (k === "Enter" || k === " ") { e.preventDefault(); start(); }
         return;
@@ -333,7 +526,7 @@ var GBDeck = (function (w, d) {
     var tx = null, ty = null;
     var GUARD = "input,textarea,select,button,a,.cbtn,.ov-item,[data-motion],svg";
     d.addEventListener("touchstart", function (e) {
-      if (!started || e.touches.length !== 1) { tx = null; return; }
+      if (!started || fsBox || e.touches.length !== 1) { tx = null; return; }
       var t = e.target;
       if (t && t.closest && t.closest(GUARD)) { tx = null; return; }
       tx = e.touches[0].clientX; ty = e.touches[0].clientY;
