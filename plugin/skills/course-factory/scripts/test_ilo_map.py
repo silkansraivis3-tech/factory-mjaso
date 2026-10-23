@@ -97,6 +97,9 @@ def main():
               "item with its own status, are left as they are",
               items and items[0]["status"].startswith("taught: slide 1 Why gas tankers are different")
               and items[1]["status"] == "planned - module not built yet" and items[2]["status"] == "the instructor's own note", items)
+        mm = ilo_map.load(mp)
+        mm.pop("mc713_items", None)
+        ilo_map.save(mp, mm)                           # the map as it was, for the checks below
 
         print("\n-- the script changes, the rows follow")
         moved = copy.deepcopy(script)
