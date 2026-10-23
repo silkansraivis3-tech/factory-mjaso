@@ -183,6 +183,8 @@ var GBDeck = (function (w, d) {
       var h = hookFor(idx);
       navState();
       if (h && h.enter) { h.enter(); }
+      var L0 = lockFor(idx);                          /* 2.63.3: a figure and its lines start together, at the first stop */
+      if (L0) { L0.pos = 0; lockLight(s, L0); }
       markOverview();
       s.scrollTop = 0;
       if (fsBox && fsBox !== boxes3d[idx]) { fsLeave(); }
@@ -227,7 +229,73 @@ var GBDeck = (function (w, d) {
       setPart(s, (parseInt(t.getAttribute("data-part"), 10) || 1) - 1);
     });
 
+    /* 2.63.3 - ONE counter for a slide's figure steps, its text lines and its parts (Aleksis, the 2.63.2 build: on IGF M06
+       s12 "the cloud finds a spark" Next walked both text parts first, then the figure's steps - and the lit line jumped
+       back to line 1 with them; the original deck, compiled before parts, stepped them together). A hook that says which
+       line(s) each of its steps lights - lines: [[1], [2], [3, 4] ...], go(n, animate) - is driven by the deck: each Next is
+       one stop, the figure at its step, that step's line lit (.cur, the lines before .lit) and the part holding it shown.
+       A line no step names is a stop of its own (the figure stays); a step that names no line keeps the last line lit.
+       Back mirrors it, and Back into the slide lands on its last stop. kit.js gives every deck figure such a hook; a 3D
+       scene with steps joins by giving its hook lines and go. */
+    function lockFor(i) {
+      var s = slides[i], h = hookFor(i);
+      if (!s || !h || !h.lines || !h.go) { return null; }
+      if (s.__lock && s.__lock.h === h) { return s.__lock; }
+      var nums = [], named = {}, stops = [{ n: 0, line: [] }], k, j;
+      each(s.querySelectorAll("[data-i]"), function (x) {
+        var v = parseInt(x.getAttribute("data-i"), 10);
+        if (!isNaN(v) && nums.indexOf(v) < 0 && !(x.closest && x.closest("svg"))) { nums.push(v); }
+      });
+      nums.sort(function (a, b) { return a - b; });
+      each(h.lines, function (ls) { each(ls || [], function (v) { named[v] = 1; }); });
+      var lone = nums.filter(function (v) { return !named[v]; }), at = 0;
+      for (k = 0; k < h.lines.length; k++) {
+        var ls = h.lines[k] || [], first = ls.length ? Math.min.apply(Math, ls) : null;
+        while (first !== null && at < lone.length && lone[at] < first) { stops.push({ n: k, line: [lone[at]] }); at++; }
+        stops.push({ n: k + 1, line: ls.slice() });
+      }
+      for (j = at; j < lone.length; j++) { stops.push({ n: h.lines.length, line: [lone[j]] }); }
+      s.__lock = { h: h, stops: stops, pos: 0, busy: false };
+      h.sync = function (n) {                           /* the figure stepped by itself (its buttons, a tapped line) */
+        var L = s.__lock;
+        if (!L || L.busy) { return; }
+        if (L.stops[L.pos].n !== n) {
+          for (k = 0; k < L.stops.length; k++) { if (L.stops[k].n === n) { L.pos = k; break; } }
+        }
+        lockLight(s, L);
+      };
+      return s.__lock;
+    }
+    function lockLight(s, L) {
+      var lit = [], curL = [], q;
+      for (q = 0; q <= L.pos; q++) {
+        if (L.stops[q].line.length) { lit = lit.concat(curL); curL = L.stops[q].line; }
+      }
+      each(s.querySelectorAll("[data-i]"), function (x) { x.classList.remove("cur", "lit"); });
+      each(lit, function (v) { each(s.querySelectorAll('[data-i="' + v + '"]'), function (x) { x.classList.add("lit"); }); });
+      each(curL, function (v) { each(s.querySelectorAll('[data-i="' + v + '"]'), function (x) { x.classList.add("cur"); }); });
+      var ln = curL.length ? s.querySelector('[data-i="' + curL[0] + '"]') : null, part = ln && ln.closest ? ln.closest(".lt-part") : null;
+      if (!part && !L.pos) { part = s.querySelector(".lt-part"); }
+      if (part && !part.classList.contains("on")) {
+        var ps = s.querySelectorAll(".lt-part"), k;
+        for (k = 0; k < ps.length; k++) { if (ps[k] === part) { setPart(s, k); } }
+      }
+    }
+    function lockGo(s, L, p, animate) {
+      L.pos = p;
+      L.busy = true;
+      try { L.h.go(L.stops[p].n, animate); } finally { L.busy = false; }
+      lockLight(s, L);
+    }
+
     function stepHere(dir) {
+      var L = lockFor(cur);
+      if (L) {
+        var p = L.pos + dir;
+        if (p < 0 || p >= L.stops.length) { return false; }
+        lockGo(slides[cur], L, p, true);
+        return true;
+      }
       if (partStep(dir)) { return true; }
       var h = hookFor(cur);
       return !!(h && h.step && h.step(dir));
@@ -237,6 +305,8 @@ var GBDeck = (function (w, d) {
       if (stepHere(-1)) { return; }
       if (cur > 0) {
         show(cur - 1);
+        var L = lockFor(cur);
+        if (L) { lockGo(slides[cur], L, L.stops.length - 1, false); return; }   /* back into it: its last stop */
         var ps = slides[cur].querySelectorAll(".lt-part");          /* back into a parts slide: its last part first */
         if (ps.length) { setPart(slides[cur], ps.length - 1); }
       }

@@ -2040,7 +2040,17 @@
         return false;
       }
     };
-    function ids(s) { return s && s.line != null ? [].concat(s.line) : []; }
+    function ids(s) { return s && s.line != null ? [].concat(s.line).map(Number) : []; }
+    /* 2.63.3 - the deck drives the figure, its lines and the slide's text parts from ONE counter (gb_deck.js lockFor): the
+       line(s) each step lights, and a way to put the figure at a step. Not when the module's own hook steps the slide */
+    if (!before.step && (f.spec.steps || []).length) {
+      root.GB_HOOKS[id].lines = (f.spec.steps || []).map(ids);
+      root.GB_HOOKS[id].go = function (n, animate) {
+        if (animate && n === f.n + 1) f.next();
+        else if (animate && n === f.n - 1) f.prev();
+        else if (n !== f.n) f.go(n, true);
+      };
+    }
     f.on('step', function (n) {
       [].forEach.call(slide.querySelectorAll('[data-i]'), function (x) { x.classList.remove('cur', 'lit'); });
       (f.spec.steps || []).slice(0, n).forEach(function (s, i) {
@@ -2049,6 +2059,8 @@
           if (line) line.classList.add(i === n - 1 ? 'cur' : 'lit');
         });
       });
+      var hk = root.GB_HOOKS[id];                       // the deck re-lights from its counter, and shows the line's part
+      if (hk && hk.sync) hk.sync(n);
     });
     /* a line a step lights is also the way to that step: the presenter taps "3 Fuel preparation room" (or
        focuses it and presses Enter) and step 3 plays - the hand-built decks did this, and a legend card that

@@ -1294,6 +1294,74 @@ def last_parts_part(exe, tmp):
           not r.get("errors") and (r.get("seen") or [])[:3] == ["s1", "s2:1", "s2:2 (Next off)"], r)
 
 
+LOCKSTEP_DRIVE = r"""
+(function () {
+  var out = {errors: [], fwd: [], back: []};
+  window.addEventListener('error', function (e) { out.errors.push(String(e.message)); });
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      try {
+        var nx = document.getElementById('btnNext'), bk = document.getElementById('btnPrev');
+        function at() {
+          var s = document.querySelector('.slide.active'), svg = s && s.querySelector('svg[data-kit]'), f = svg && svg.__kit;
+          var cur = s ? [].map.call(s.querySelectorAll('.cur'), function (x) { return x.getAttribute('data-i'); }).join(',') : '';
+          var lit = s ? [].map.call(s.querySelectorAll('.lit'), function (x) { return x.getAttribute('data-i'); }).join(',') : '';
+          var p = s && s.querySelector('.lt-part.on'), shown = '';
+          if (cur && p) { shown = p.querySelector('[data-i="' + cur.split(',')[0] + '"]') ? 'shown' : 'HIDDEN'; }
+          return (s ? s.id : '-') + (f ? ' step ' + f.n : '') + ' line ' + (cur || '-') + ' lit ' + (lit || '-') +
+                 (p ? ' part ' + p.getAttribute('data-part') : '') + (shown ? ' ' + shown : '');
+        }
+        document.getElementById('startBtn').click();
+        for (var i = 0; i < 6; i++) { out.fwd.push(at()); nx.click(); }
+        out.fwd.push(at());
+        for (var j = 0; j < 6; j++) { bk.click(); out.back.push(at()); }
+      } catch (err) { out.errors.push(String(err && err.stack || err)); }
+      var pre = document.createElement('pre'); pre.id = 'gbtest'; pre.textContent = JSON.stringify(out); document.body.appendChild(pre);
+    }, 500);
+  });
+}());
+"""
+
+
+def lockstep_part(exe, tmp):
+    """2.63.3 (Aleksis, the 2.63.2 build of IGF M06 s12 "the cloud finds a spark": Next walked both text parts first, then
+    the figure's steps, and the lit line jumped back to line 1; the original deck - before parts - stepped them together) -
+    ONE Next is one step of both: the figure at step k, line k lit and in the part shown; Back mirrors it"""
+    print("\n-- 2.63.3: a figure's steps, its lines and the text parts move together")
+    d = os.path.join(tmp, "lockstep")
+    os.makedirs(d)
+    a = Path(HERE).parent.parent.parent
+    spec = {"size": [400, 240], "label": "four steps",
+            "parts": [{"id": "T", "type": "tank", "x": 30, "y": 80, "w": 160, "h": 90, "label": "tank", "value": 0.2},
+                      {"id": "V", "type": "valve", "x": 300, "y": 125, "label": "valve", "value": 1}],
+            "steps": [{"title": "1", "line": 1, "play": [["T", 0.4, 0]]}, {"title": "2", "line": 2, "play": [["T", 0.6, 0]]},
+                      {"title": "3", "line": 3, "play": [["V", 0, 0]]}, {"title": "4", "line": 4, "play": [["T", 0.9, 0]]}]}
+    page = os.path.join(d, "index.html")
+    io.open(page, "w", encoding="utf-8").write(
+        '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="%s"></head><body>'
+        '<div id="landing"><button id="startBtn" type="button">Start</button></div>'
+        '<div id="chrome"><button id="btnPrev" type="button">Back</button><button id="btnNext" type="button">Next</button></div>'
+        '<main><section class="slide" id="s1"><h2>Cloud</h2><div class="fill fig kit-fig"><div class="kit-screen">'
+        '<svg data-kit="#kit-s1"></svg></div><script type="application/json" id="kit-s1">%s</script></div>'
+        '<div class="copy"><div class="lt-parts" data-parts="2"><div class="lt-part on" data-part="1"><p data-i="1">one</p>'
+        '<p data-i="2">two</p></div><div class="lt-part" data-part="2"><p data-i="3">three</p><p data-i="4">four</p></div>'
+        '<div class="lt-tabs"><button type="button" class="lt-tab on" data-part="1">1</button>'
+        '<button type="button" class="lt-tab" data-part="2">2</button></div></div></div></section>'
+        '<section class="slide" id="s2"><h2>After</h2></section></main>'
+        '<script src="%s"></script><script src="%s"></script><script>GBDeck.init({ hooks: window.GB_HOOKS || {} });</script>'
+        '</body></html>' % ((a / "course-visuals" / "kit" / "kit.css").as_uri(), json.dumps(spec),
+                            (a / "course-module-ux" / "assets" / "gb_deck.js").as_uri(), (a / "course-visuals" / "kit" / "kit.js").as_uri()))
+    r = drive_page(exe, page, LOCKSTEP_DRIVE, os.path.join(tmp, "lsp"), (1280, 800))
+    fwd, back = r.get("fwd") or [], r.get("back") or []
+    want = ["s1 step 0 line - lit - part 1", "s1 step 1 line 1 lit - part 1 shown", "s1 step 2 line 2 lit 1 part 1 shown",
+            "s1 step 3 line 3 lit 1,2 part 2 shown", "s1 step 4 line 4 lit 1,2,3 part 2 shown", "s2 line - lit -"]
+    check("each Next is one step of both - the figure at step k, line k lit and in the part shown, no extra presses: %s"
+          % " | ".join(fwd), not r.get("errors") and fwd[:6] == want, r)
+    check("... Back mirrors it, and Back into the slide lands on its last stop: %s" % " | ".join(back),
+          back[:5] == ["s1 step 4 line 4 lit 1,2,3 part 2 shown", "s1 step 3 line 3 lit 1,2 part 2 shown",
+                       "s1 step 2 line 2 lit 1 part 1 shown", "s1 step 1 line 1 lit - part 1 shown", "s1 step 0 line - lit - part 1"], back)
+
+
 def drive_page(exe, page, js, prof, size):
     """a compiled deck with a driver script added, at a window `size` (its viewport exactly that, as probe() opens it)"""
     text = io.open(page, encoding="utf-8").read()
@@ -1638,6 +1706,7 @@ def main():
         picture_part(exe, tmp)
         corner_part(exe, tmp)
         last_parts_part(exe, tmp)
+        lockstep_part(exe, tmp)
         steps_part(exe, tmp)
         patterns_part(exe, tmp)
         team_part(exe, tmp)
