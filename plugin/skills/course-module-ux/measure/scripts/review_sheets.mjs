@@ -203,9 +203,10 @@ async function deck(tiles) {
   for (const m of html.matchAll(/<section\b[^>]*\bid="([^"]+)"[^>]*>[\s\S]*?<\/section>/gi))
     keyOf[m[1]] = sha(ENGINE + '|' + sha(shell) + '|' + m[0] + '|' + loads(m[0], join(MDIR, 'presentation')));
   const seen = new Set(), visits = {};
-  let ts = Date.now(), first = true;
+  let ts = Date.now(), first = true, passing = false;
   for (let n = 0; n < 400; n++) {
-    await pause(160);
+    await pause(passing ? 20 : 160);            // past a kept slide only its id is read (the next one is settled as before)
+    passing = false;
     const st = await evaluate(`(function(){ var s=document.querySelector('.slide.active'); if(!s) return null;
       var k=s.querySelector('svg[data-kit]'), f=k&&k.__kit; var all=[].slice.call(document.querySelectorAll('.slide'));
       if (f && f.steps && f.steps()) { try { f.go(f.steps(), true); } catch(e){} }
@@ -230,6 +231,7 @@ async function deck(tiles) {
       if (old) {                                // unchanged since its picture was taken: the picture is kept (2.63.3)
         tiles.push(Object.assign(old, { id, label, reused: true, key }));
         reused++;
+        passing = true;
       } else {
         if (first) await pause(900);            // the first slide fades in after Start
         first = false;
