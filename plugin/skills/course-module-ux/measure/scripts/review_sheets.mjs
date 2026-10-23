@@ -213,10 +213,12 @@ async function deck(tiles) {
       var ps=s.querySelectorAll('.lt-part'), on=0; for (var j=0;j<ps.length;j++) if (ps[j].classList.contains('on')) on=j;
       var src=[].map.call(s.querySelectorAll('script[type="application/json"],img'),function(e){return e.tagName==='IMG'?e.getAttribute('src'):e.textContent;}).join('|');
       return { id: s.id, i: all.indexOf(s)+1, of: all.length, title: s.getAttribute('data-title')||'', steps: f&&f.steps?f.steps():0,
-               parts: ps.length, part: on + 1, last: !!(document.getElementById('btnNext')||{}).disabled, src: src }; })()`);
+               parts: ps.length, part: on + 1, lines: s.querySelectorAll('[data-i]').length,
+               last: !!(document.getElementById('btnNext')||{}).disabled, src: src }; })()`);
     if (!st) break;
     visits[st.id] = (visits[st.id] || 0) + 1;
-    if (visits[st.id] > st.parts + st.steps + 2) break;     // a Next that never moves on (IGF M11 s11: 381 times)
+    // a Next that never moves on (IGF M11 s11: 381 times); a figure's steps, its lines and its parts are one counter (2.63.3)
+    if (visits[st.id] > st.parts + st.steps + st.lines + 2) break;
     const id = 'deck/' + st.id + (st.part > 1 ? '#' + st.part : '');
     const key = keyOf[st.id] ? sha(keyOf[st.id] + '|' + st.i + '/' + st.of) : '';    // its place too: the deck shows "5 / 20"
     const label = `Deck slide ${st.i}/${st.of} (${st.id}) ${st.title}` + (st.parts > 1 ? ` - part ${st.part} of ${st.parts}` : '')
