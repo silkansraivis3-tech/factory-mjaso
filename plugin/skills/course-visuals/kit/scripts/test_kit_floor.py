@@ -226,6 +226,27 @@ def main():
                   not draw, ["w %d scale %.3f: %.2f px" % (r["w"], r["scale"], r["drawPx"]) for r in draw][:8])
             big = max([r["deckPx"] for r in grown] or [0])
             check("the margin stays small: shown below 1:1, a figure's smallest word is grown to 13.2 px at most", big <= 13.2, big)
+        # 2.63.3 (item 4 - the 2.63.2 run: "tiny labels" in 14 of 15 modules) - a deck figure (--kit-floor: 16, kit.css on a
+        # slide) keeps 16 px at every width, measured as both audits measure it; a task page's figure keeps 12.5
+        hosts16 = "".join('<div class="w" style="width:%dpx;--kit-floor:16"></div>' % w for w in widths)
+        page16 = tmp / "floor16.html"
+        page16.write_text(PAGE % {"css": (KIT / "kit.css").as_uri(), "js": (KIT / "kit.js").as_uri(),
+                                  "spec": json.dumps(SPEC), "hosts": hosts16}, encoding="utf-8")
+        p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + str(tmp / "prof16"),
+                               "--allow-file-access-from-files", "--window-size=1280,2600", "--virtual-time-budget=8000",
+                               "--dump-dom", page16.as_uri()], capture_output=True, text=True, encoding="utf-8",
+                              errors="replace", timeout=180)
+        m = re.search(r'<pre id="out">(.*?)</pre>', p.stdout, re.S)
+        r16 = json.loads(unescape(m.group(1))) if m and m.group(1).strip() else []
+        low16 = [r for r in r16 if r["deckPx"] < 16 or r["drawPx"] < 15.95]
+        check("2.63.3 a deck figure (--kit-floor: 16) keeps every word at 16 px or more at all %d widths" % len(r16),
+              len(r16) == len(widths) and not low16, ["w %d scale %.3f: %r %.2f px" % (r["w"], r["scale"], r["word"], r["deckPx"]) for r in low16][:8])
+        css = (KIT / "kit.css").read_text(encoding="utf-8")
+        sys.path.insert(0, str(KIT.parent.parent / "course-factory" / "compile" / "scripts"))
+        import compile_module as cm
+        check("... the floor is the course's choice (\"deck_label_px\" in its build sheet), never set by kit.css: the default "
+              "stays 12.5 (16 failed 16 of 34 finished IGF figures)", "--kit-floor:" not in css.replace("--kit-floor:16\"", "")
+              and cm.deck_floor({"deck_label_px": 16}) == 16 and cm.deck_floor({}) == 0 and cm.deck_floor({"deck_label_px": 10}) == 0)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d failure(s)" % len(FAILS) if FAILS else "\nALL PASS")

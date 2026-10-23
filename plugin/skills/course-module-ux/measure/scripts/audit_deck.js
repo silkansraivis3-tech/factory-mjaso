@@ -436,11 +436,13 @@
       var w = sv.getBoundingClientRect().width;
       if (!vb[2] || !w) { return; }
       var sc = w / vb[2];
+      /* 2.63.3 - a kit figure on a slide keeps its --kit-floor (16 px, kit.css); every other svg CONFIG.minFontPx */
+      var floor = Math.max(CONFIG.minFontPx, parseFloat(getComputedStyle(sv).getPropertyValue("--kit-floor")) || 0);
       qa(sv, "text").forEach(function (t) {
         var f = parseFloat(getComputedStyle(t).fontSize);
         if (!f || isNaN(f)) { f = parseFloat(t.getAttribute("font-size")) || 0; }
         var eff = f * sc;
-        if (eff && eff < CONFIG.minFontPx) {
+        if (eff && eff < floor) {
           out.svgSmall.push({ declaredPx: +f.toFixed(2), scale: +sc.toFixed(3),
                               effPx: +eff.toFixed(1),
                               txt: (t.textContent || "").trim()

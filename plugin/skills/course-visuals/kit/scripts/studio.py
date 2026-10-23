@@ -420,6 +420,12 @@ def page_html(spec, ctx, panel, parts_js, shot):
     if real:
         head = "".join('<link rel="stylesheet" href="../assets/%s">' % x for x in real["styles"])
         head += "".join('<link rel="stylesheet" href="%s">' % x for x in real["extra"])
+        try:                                     # 2.63.3: the course's projector floor for deck figures, as the deck has it
+            fl = float(ctx["build"].get("deck_label_px") or 0)
+        except (TypeError, ValueError):
+            fl = 0
+        if fl > 12.5:
+            head += "<style>.slide .kit-fig{--kit-floor:%g}</style>" % fl
         scripts = ["../assets/gb_deck.js", "../assets/gb_fit.js", "../assets/gb_zoom.js", uri(os.path.join(KIT, "kit.js"))]
         local = os.path.join(real["mdir"], "assets", "kit_parts.js")
         if parts_js or os.path.isfile(local):

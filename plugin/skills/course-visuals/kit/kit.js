@@ -1129,7 +1129,10 @@
   /* 2 % over 1/s (2.52.0; 0.1 % before): a word grown to exactly 12.5 px once drawn read 12.4999 to the deck audit's
      svgSmall, which compares declared x rendered width / viewBox width against 12.5 (2.49.2) - and a frame grown a little
      after the words were sized left them at 12.4 px (scales 0.978-0.996, M01/M02 workflow benchmark 2026-10-20) */
-  function upFor(s) { return Math.min(UP_MAX, Math.max(1, UP_MARGIN / s)); }
+  function upFor(s, fl) { var k = (fl || FLOOR_PX) / FLOOR_PX; return Math.min(UP_MAX * k, Math.max(1, UP_MARGIN * k / s)); }
+  /* 2.63.3 (item 4 - the 2.63.2 full-course run: "tiny labels" in 14 of 15 modules, a deck figure is read from the back of a
+     classroom): the floor a figure's words keep, from its --kit-floor (px) - 16 on a deck slide (kit.css), 12.5 elsewhere */
+  function floorOf(svg) { var v = parseFloat(getComputedStyle(svg).getPropertyValue('--kit-floor')); return v > 0 ? v : FLOOR_PX; }
   /* words under the floor at the scale shown now grow at once, however small the change; larger words shrink back only
      past 1 %, so a few rounds of a frame settling do not re-lay the labels for nothing */
   function regrow(up2, up) { return up2 > up + 1e-4 || up - up2 >= 0.01; }
@@ -1163,7 +1166,7 @@
     var zoomOK = !(still || f.spec.view || f.spec.fit === false ||
                    (svg.parentNode && svg.parentNode.querySelector && svg.parentNode.querySelector('.inset.over')));
     f.theme();
-    var V = f.base.slice();
+    var V = f.base.slice(), fl = floorOf(svg), upMax = UP_MAX * fl / FLOOR_PX;
     setView(svg, V);
     function upTo(u) {                    // the words' size, then every box sized to them, then the frames that hold boxes
       f.upNow = u;
@@ -1171,7 +1174,7 @@
       f.fits.forEach(function (fit) { if (!fit.late) fit(u); });
       f.fits.forEach(function (fit) { if (fit.late) fit(u); });
     }
-    var s = scaleNow(svg), up = upFor(s);
+    var s = scaleNow(svg), up = upFor(s, fl);
     upTo(up);
     f.labels.forEach(function (L) { L.g.removeAttribute('transform'); });
     var G = gather(f, states);
@@ -1190,7 +1193,7 @@
         /* words that need more room than the panel gives would grow the frame, which shows them smaller, which grows
            them again: past GROW_MAX the words stop growing (the drawing audit's SMALL TEXT then says so) */
         if (V[2] > f.base[2] * GROW_MAX) crowded = true;
-        var up2 = upFor(s);
+        var up2 = upFor(s, fl);
         if (!crowded && regrow(up2, up)) { up = up2; upTo(up); }
         G = gather(f, states);
         extra = null;
@@ -1218,7 +1221,7 @@
           setView(svg, V);
           zoom = z;
           s = scaleNow(svg);
-          var up3 = upFor(s);
+          var up3 = upFor(s, fl);
           if (regrow(up3, up)) {
             up = up3; upTo(up);
             G = gather(f, states);
@@ -1231,8 +1234,8 @@
     /* measured again once laid out: whatever moved the frame or the drawing's size on the way, no word is left under
        the floor at the scale it is shown at now (2.52.0) */
     s = scaleNow(svg);
-    if (!crowded && up < UP_MAX && regrow(upFor(s), up)) {
-      up = upFor(s); upTo(up);
+    if (!crowded && up < upMax && regrow(upFor(s, fl), up)) {
+      up = upFor(s, fl); upTo(up);
       G = gather(f, states);
       P = PAD_PX / s;
       res = place(f, G, V, P);
@@ -1240,7 +1243,7 @@
     inkOn(f);
     return { theme: f.tone, scale: +s.toFixed(3), up: +up.toFixed(3), zoom: +zoom.toFixed(3), view: V.map(function (v) { return +v.toFixed(1); }),
              minTextPx: G.minPx < 1e8 ? +(G.minPx * scaleNow(svg) / G.scale).toFixed(2) : null, labels: res.labels, moved: res.moved,
-             leaders: res.leaders, unplaced: res.unplaced, crowded: crowded, floorMet: !crowded && (up < UP_MAX || s * UP_MAX >= 1) };
+             leaders: res.leaders, unplaced: res.unplaced, crowded: crowded, floorMet: !crowded && (up < upMax || s * UP_MAX >= 1), floorPx: fl };
   }
 
   /* ------------------------------------------------------------------ parts */

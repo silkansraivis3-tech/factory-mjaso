@@ -624,12 +624,14 @@
       checkContrast(svg, where, items, out);
       /* ---- 6 SMALL TEXT ---- no word of a kit figure under CONFIG.minTextPx as it is shown (2.48.0) */
       if (svg.classList && svg.classList.contains("kit")) {
+        /* 2.63.3 - a deck figure's floor is its --kit-floor (16 px on a slide, kit.css), the kit's own */
+        var floor = Math.max(CONFIG.minTextPx, parseFloat(getComputedStyle(svg).getPropertyValue("--kit-floor")) || 0);
         items.forEach(function (T) {
           if (T.t !== "text" || !(T.el.textContent || "").trim()) { return; }
           var m = T.el.getScreenCTM(), px = parseFloat(getComputedStyle(T.el).fontSize) * (m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : 1);
-          if (px < CONFIG.minTextPx - 0.05) {
+          if (px < floor - 0.05) {
             report(out, { check: "small text", where: where, part: label(T.el), other: "",
-                          detail: "drawn at " + (Math.round(px * 10) / 10) + " px - the floor is " + CONFIG.minTextPx + " px (the kit sets " +
+                          detail: "drawn at " + (Math.round(px * 10) / 10) + " px - the floor is " + floor + " px (the kit sets " +
                                   "its own type classes larger by itself; a size set in a course part's css does not grow)" }, [T.el]);
           }
         });

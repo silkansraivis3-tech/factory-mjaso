@@ -100,6 +100,11 @@
 /* in a deck: the figure is a dark screen on a dark or a light slide alike (a monitor in the room),
    with the slide's own .mediabar under it */
 .kit-fig{display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:14px;min-height:0;width:100%}
+/* 2.63.3 (item 4): the floor a figure's words keep is its --kit-floor (kit.js floorOf, both audits), 12.5 px unless set. A
+   course may raise its deck figures' floor for a projector - course.build.json "deck_label_px": 16, written into the deck
+   by the compiler (task pages keep 12.5). Not the default: measured on the finished IGF M02 / M06 / M07, 16 px fails 16 of
+   34 clean figures (153 findings - text zone 92, small text 38, label 19, inside 4): their drawings need fewer, shorter
+   labels first (the operator's call, 2026-10-23) */
 /* the panel hugs the drawing's own shape and centres in the column: a panel stretched to a narrower, taller column
    (1024 x 768) left blank bands above and below the drawing (L53, audit_drawing EMPTY) */
 .kit-screen{flex:0 1 auto;min-height:0;width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;

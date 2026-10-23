@@ -2935,6 +2935,8 @@ def starter_build(script, shared=(), figdir=None, specs=None, mdir=None):
              "foot": short_title(script.get("title"))}
     if first("pass_mark") is not None:
         sheet["pass_mark"] = first("pass_mark")
+    if first("deck_label_px"):                        # 2.63.3: the course's projector floor for deck figures (item 4)
+        sheet["deck_label_px"] = first("deck_label_px")
     sheet.update({"styles": [], "scripts": [], "inline": []})
     screens = {}
     photo = cs.photo_wanted(script)          # 2.63.2: a slide where a photograph is wanted never gets a scene, planned or not
@@ -2986,6 +2988,16 @@ def practical_before_recap(screens):
     while at > 0 and rest[at - 1].get("recap"):
         at -= 1
     return rest[:at] + prac + rest[at:]
+
+
+def deck_floor(build):
+    """2.63.3 (item 4) - the build sheet's "deck_label_px" (from course.build.json at --init-build): the px a deck figure's words
+    keep (kit.js --kit-floor; both audits judge it), above the kit's 12.5; 0 when not set"""
+    try:
+        v = float(build.get("deck_label_px") or 0)
+    except (TypeError, ValueError):
+        return 0
+    return v if v > 12.5 else 0
 
 
 def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, last=None, chosen=None):
@@ -3124,6 +3136,8 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
     head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in STYLES + ("gb_zoom.css",)]
     if uses_kit:
         head.append('<link rel="stylesheet" href="../assets/kit.css">')
+        if deck_floor(build):                          # 2.63.3 (item 4): a course's projector floor for its deck figures
+            head.append("<style>.slide .kit-fig{--kit-floor:%g}</style>" % deck_floor(build))
     head += ['<link rel="stylesheet" href="../%s">' % a(x) for x in build.get("styles", [])]
     head.append("</head>")
     rule = build.get("landing_rule") or ""
