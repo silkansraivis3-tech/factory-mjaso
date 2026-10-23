@@ -32,8 +32,8 @@ studio, run again; once they are clean the whole build runs. --full runs everyth
 their last clean check (check_cache.py; the figures already did) - a failing one every time; --full judges everything.
 Every hidden browser takes a slot of one pool for the whole computer (browser_slots.py, CF_BROWSER_SLOTS).
 2.63.3 (the 2.63.2 full-course run, 4 h 34 min):
-  - a module's FIRST build waits its turn behind another module's first build (browser_slots.cold_turn, at most 5 min):
-    wave 1's three first builds overlapped and M01's took 1,076 s;
+  - a module's FIRST build waits its turn behind another module's first build (browser_slots.cold_turn - a queue since
+    2.65.0, at most 45 min; --long-pole goes first): wave 1's three first builds overlapped and M01's took 1,076 s;
   - a build that runs past ANSWER_WITHIN (9 min, CF_BUILD_ANSWER_WITHIN) is not lost to the shell's 10-minute limit: it
     goes on by itself and says "STILL BUILDING"; the same command with --wait waits for it and prints its answer (a builder
     whose shell call ended at 600 s waited blind). A second build of a module that is building waits for that one;
@@ -551,7 +551,7 @@ def main(argv=None):
         return time.time()
 
     # 2.63.3 - a module's first build (never built here: no _last.json) measures every figure and tries every fix: one at a
-    # time on the computer, the others wait their turn (at most 5 min) - held through the figures and the compile
+    # time on the computer, the others wait their turn (a queue, 2.65.0) - held through the figures and the compile
     cold = contextlib.ExitStack()
     if o.layout_round == 0 and not os.path.isfile(os.path.join(logdir, "%s_last.json" % m)):
         import browser_slots

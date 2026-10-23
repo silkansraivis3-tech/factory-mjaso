@@ -3511,6 +3511,10 @@ def seed_figures(script, sheet, figdir, seed, module, mdir_=None):
             fig = str(pe["figure"]).replace("\\", "/")
             src = os.path.join(pfig, fig)
             ok = fig.lower().endswith(IMAGES) and mdir_ and os.path.isfile(os.path.join(mdir_, fig))
+            # 2.65.0 - a picture the predecessor keeps in its MODULE folder (assets/fig/m01_ga.svg, IGF M01 q01 / q03 / m01):
+            # brought with its record; before, the question stayed a starter blank and the builder copied it by hand
+            if not ok and not os.path.isfile(src):
+                ok = carry_picture(seed, module, mdir_, fig)
             if not ok and os.path.isfile(src):
                 os.makedirs(figdir, exist_ok=True)
                 if os.path.normcase(os.path.abspath(src)) != os.path.normcase(os.path.abspath(os.path.join(figdir, fig))):
@@ -3549,13 +3553,25 @@ def seed_figures(script, sheet, figdir, seed, module, mdir_=None):
                 if not same and os.path.isfile(os.path.join(pfig, other)):
                     shutil.copyfile(os.path.join(pfig, other), os.path.join(figdir, other))
             done[s["id"]] = "the predecessor's drawing %s" % fig
-        elif fig.lower().endswith(IMAGES) and mdir_ and os.path.isfile(os.path.join(mdir_, fig)):
-            name = fig                                        # its photo, when this module has the same file
-            done[s["id"]] = "the predecessor's photo %s" % os.path.basename(fig)
+        elif fig.lower().endswith(IMAGES + (".svg",)) and mdir_ and (os.path.isfile(os.path.join(mdir_, fig))
+                                                                     or carry_picture(seed, module, mdir_, fig)):
+            name = fig                                        # its photo or module drawing - this module's, or brought (2.65.0)
+            done[s["id"]] = "the predecessor's picture %s" % os.path.basename(fig)
         if name:
-            e.update({k: v for k, v in pe.items() if k in ("composition", "dark", "visual_kind", "areas", "labels")})
+            # 2.65.0 - the slide's WHOLE hand-fixed entry, not five keys of it: its layout was fixed by hand with its drawing
+            # ("figure_first", "split", "boxes", "groups", "hooks", "inset", "class" - IGF M02 s04, s12), and without it the
+            # drawing landed in another column than the one it was fixed for. The pictures it names come along with records
+            e.update({k: v for k, v in pe.items() if not k.startswith("_") and k != "figure"})
+            for rel in [((pe.get("inset") or {}).get("photo") if isinstance(pe.get("inset"), dict) else None)]:
+                if rel:
+                    carry_picture(seed, module, mdir_, str(rel).replace("\\", "/"))
+            if pe.get("aside") and os.path.isfile(os.path.join(pfig, str(pe["aside"]))):
+                import shutil
+                os.makedirs(figdir, exist_ok=True)
+                if not os.path.isfile(os.path.join(figdir, str(pe["aside"]))):
+                    shutil.copyfile(os.path.join(pfig, str(pe["aside"])), os.path.join(figdir, str(pe["aside"])))
             if name.lower().endswith((".html", ".svg")) and pe.get("class"):
-                e["class"] = pe["class"]                 # 2.65.0: the module's own CSS for a hand-made drawing names its slide so
+                e["class"] = pe["class"]                 # the module's own CSS for a hand-made drawing names its slide so
             e["figure"] = name
             e.pop("_figure", None)
             e.pop("_2d", None)
@@ -3564,6 +3580,47 @@ def seed_figures(script, sheet, figdir, seed, module, mdir_=None):
     if any(str((screens.get(sid) or {}).get("figure") or "").lower().endswith((".html", ".svg")) for sid in done):
         carry_module_files(sheet, pbuild, seed, module, figdir, pfig, mdir_)
     return done
+
+
+PICTURE_META = ("_photo_meta.json", "_figure_meta.json")
+
+
+def carry_picture(seed, module, mdir_, rel):
+    """2.65.0 - a picture the predecessor's module folder holds (assets/img/x.jpg, assets/fig/x.svg) copied into this
+    module with its own record from the folder's _photo_meta.json / _figure_meta.json (where it came from, its rights) -
+    never a file this module already has, never one without a record (L58: no picture without its provenance).
+    True when the picture is here now"""
+    import shutil
+    if not mdir_ or not str(module).isdigit() or rel.startswith(("/", "..")) or not rel.lower().endswith(IMAGES + (".svg",)):
+        return False
+    src = os.path.join(seed, "modules", "module%02d" % int(module), rel)
+    dst = os.path.join(mdir_, rel)
+    if os.path.isfile(dst):
+        return True
+    if not os.path.isfile(src):
+        return False
+    rec, meta_name = None, None
+    for mn in PICTURE_META:
+        try:
+            meta = cs.load(os.path.join(os.path.dirname(src), mn))
+        except (OSError, ValueError):
+            continue
+        if isinstance(meta, dict) and isinstance(meta.get(os.path.basename(rel)), dict):
+            rec, meta_name = meta[os.path.basename(rel)], mn
+            break
+    if rec is None:
+        return False
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    shutil.copyfile(src, dst)
+    mp = os.path.join(os.path.dirname(dst), meta_name)
+    try:
+        have = cs.load(mp) if os.path.isfile(mp) else {}
+    except (OSError, ValueError):
+        have = None
+    if isinstance(have, dict) and os.path.basename(rel) not in have:
+        have[os.path.basename(rel)] = rec
+        cs.save(mp, have)
+    return True
 
 
 def carry_module_files(sheet, pbuild, seed, module, figdir, pfig, mdir_):

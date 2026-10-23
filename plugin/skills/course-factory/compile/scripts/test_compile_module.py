@@ -2205,9 +2205,15 @@ def seed_part(tmp):
     psheet = cs.load(bp)
     psheet.update(styles=["assets/m01_figures.css"], scripts=["assets/js/m01_hull3d.js", "assets/js/gone.js"], inline=["m01_defs.svg"])
     psheet["screens"]["s04"] = {"figure": "m01_s04_3d.html", "class": "m01-s04", "visual_kind": "model_3d"}
+    # a module drawing (assets/fig, with its record) on a slide whose layout was fixed by hand with it
+    os.makedirs(os.path.join(pmd, "assets", "fig"), exist_ok=True)
+    io.open(os.path.join(pmd, "assets", "fig", "m01_ga.svg"), "w", encoding="utf-8").write("<svg viewBox='0 0 10 10'></svg>")
+    cs.save(os.path.join(pmd, "assets", "fig", "_figure_meta.json"), {"m01_ga.svg": {"origin": "authored diagram", "shows": "the ship"}})
+    io.open(os.path.join(pmd, "assets", "fig", "norecord.svg"), "w", encoding="utf-8").write("<svg></svg>")
+    psheet["screens"]["s02"] = {"figure": "assets/fig/m01_ga.svg", "figure_first": True, "boxes": [1], "_note": "private"}
     cs.save(bp, psheet)
     io.open(deck_p, "w", encoding="utf-8").write(page.replace('id="kit-s04"', 'id="kit-gone"'))    # the deck holds no spec for it
-    sheet2 = {"screens": {"s04": {"figure": "", "_2d": "x"}}}
+    sheet2 = {"screens": {"s04": {"figure": "", "_2d": "x"}, "s02": {"figure": ""}}}
     script_ = cs.load(os.path.join(nc, "working_claude", "script", "M01.json"))
     figdir2, mdir2 = os.path.join(tmp, "seedn2", "figures"), os.path.join(tmp, "seedn2", "module01")
     os.makedirs(mdir2)
@@ -2222,6 +2228,16 @@ def seed_part(tmp):
           and os.path.isfile(os.path.join(mdir2, "assets", "js", "m01_hull3d.js"))
           and os.path.isfile(os.path.join(mdir2, "assets", "m01_figures.css")) and os.path.isfile(os.path.join(figdir2, "m01_defs.svg")),
           (got, sheet2))
+    e2 = sheet2["screens"]["s02"]
+    meta2 = os.path.join(mdir2, "assets", "fig", "_figure_meta.json")
+    check("2.65.0 a picture the predecessor keeps in its module folder (assets/fig) comes with its record, and the slide keeps "
+          "its whole hand-fixed entry (figure_first, boxes), never the private notes",
+          "s02" in got and e2.get("figure") == "assets/fig/m01_ga.svg" and e2.get("figure_first") is True and e2.get("boxes") == [1]
+          and "_note" not in e2 and os.path.isfile(os.path.join(mdir2, "assets", "fig", "m01_ga.svg"))
+          and os.path.isfile(meta2) and "m01_ga.svg" in cs.load(meta2), (got, e2))
+    check("... a picture with no record of where it came from is never carried (L58)",
+          cm.carry_picture(pc, 1, mdir2, "assets/fig/norecord.svg") is False
+          and not os.path.isfile(os.path.join(mdir2, "assets", "fig", "norecord.svg")))
 
 
 def figure_words_part(tmp):

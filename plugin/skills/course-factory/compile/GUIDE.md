@@ -22,8 +22,9 @@
       (2.61.0) A slow build is measured, not guessed: set CF_TIMING=<file.jsonl> and every hidden-browser run writes its
       real seconds and its page clock there; `python course-factory/scripts/cf_timing.py <file.jsonl>` adds them up.
       (2.63.3) A build that runs past 9 minutes answers "STILL BUILDING" (exit 3) and goes on by itself: run the SAME
-      command with --wait for its answer - never a second build meanwhile. A module's FIRST build waits its turn (at most
-      5 min) behind another module's first build on the same computer.
+      command with --wait for its answer - never a second build meanwhile. A module's FIRST build waits its turn behind
+      another module's first build on the same computer (2.65.0: a queue - at most 45 min, CF_COLD_WAIT; it was 5 min, and
+      three seeded first builds then ran their figure stages together for 30 min).
       (2.65.0) The answer says each problem ONCE with its fix and its file - a figure is one line per kind of problem
       ("FIGURE s03 - <spec> (scale 0.70 in a 480x238 px panel): small text x11", an example, the fix, the studio
       command); the audits per slide and kind with a count; the same compile line once with "(xN)". Every line is in the
@@ -65,7 +66,11 @@
   <predecessor course>` (or `"seed_from"` in `working_claude\course.build.json`) gives every slide and question whose words
   are unchanged the predecessor's drawing (the kit spec its DECK shows, else its source spec or .html / .svg drawing) or
   photo with its places, marked `"_seeded"`; only the rest get starters. (IGF M01-M03 from the hand-fixed original: 8, 20
-  and 17 screens seeded.) (2.65.0) The whole-course workflow passes its `seed_from` argument to every `--init-build`.
+  and 17 screens seeded.) (2.65.0) The whole-course workflow passes its `seed_from` argument to every `--init-build`. A
+  seeded slide keeps the predecessor's WHOLE entry (its layout keys - figure_first, split, boxes, inset ... - were fixed by
+  hand with the drawing); a picture the predecessor keeps in its module folder (`assets/fig`, `assets/img`) comes with its
+  record from `_figure_meta.json` / `_photo_meta.json` (never one without a record); a hand-made drawing brings the module
+  files it is drawn by (the sheet's `styles` / `scripts` / `inline`).
 - **The whole-course workflow (2.65.0)** builds the modules biggest first (`scripts/build_order.py`: screens, drawn
   figures, 3D scenes from the approved scripts, seeded ones counted less) in a rolling pool of `wave` at a time; its builder
   reads `compile/BUILDER_CARD.md`, not this guide. A module with a 3D-kit scene gets the 3D step after its build:
@@ -73,7 +78,8 @@
   step in `working_claude\review\MNN_3d\`), then a reviewer who did not build the scene judges the pictures; a BROKEN
   finding gets one fix round.
 - **Figure fits (2.65.0)**: the COLUMN re-fit tries one width at a time and stops at the first clean fit (the same fit the
-  parallel search kept, fewer probes). An EMPTY drawing on a
+  parallel search kept, fewer probes) and measures a figure at most 16 times (CF_FIT_MEASURES; every real fit on record was
+  found within 11, the searches that found nothing ran up to 53). An EMPTY drawing on a
   task page is cropped by itself, as a slide's is, and kept only when the page is then clean.
 - **A task question a real photo of the module can carry (2.63.3)** is answered on it: the compile names the photo and the
   build-sheet line in "To fix", or the sheet says why not, `"photo_declined": "<why>"` (2.63.2 run: 1 task photo; the

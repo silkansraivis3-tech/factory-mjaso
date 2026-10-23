@@ -27,7 +27,8 @@ python compile/scripts/build_module.py <course> --module N --no-course-pages [--
   `PARTS.md`) - place the parts as on board, delete `"_todo"`. The workflow's 3D step checks and photographs it after you.
 - Run build_module.py IN THE FOREGROUND with the shell's longest timeout (600000 ms). `STILL BUILDING` (exit 3): run the
   SAME command with `--wait` until it answers. Never a second build meanwhile, never an edit while it runs, never end your
-  turn while it runs. A first build may wait up to 5 min for another module's first build - expected.
+  turn while it runs. A first build waits its turn behind another module's first build (one at a time on this computer) -
+  expected: it answers STILL BUILDING meanwhile; keep running the same command with `--wait`.
 
 ## Reading its answer - one line per problem, with its fix and file
 The answer lists only what fails (the full log's path is its last line - open it only when a line is not enough).

@@ -206,13 +206,17 @@ def slot(wait_note=None):
                 time.sleep(0.05)
 
 
-COLD_WAIT = 300         # s a module's first build waits at most for another one's (2.63.3)
+# s a module's first build waits at most for another one's. 2.63.3: 300. 2.65.0: 2700 - a queue, not a short wait: in the
+# 2.65.0 M01-M03 run (seed_from on, so no module spent its first 40 min drawing) all three first builds reached the lock
+# within 2 minutes; after 5 minutes the other two went anyway and the three figure stages ran together for 29-34 min on two
+# performance cores (studio probes 2.9-4.9 s each, ~1 s alone). A stale holder (its PID gone) is still reclaimed at once
+COLD_WAIT = 2700
 
 
 @contextlib.contextmanager
 def cold_turn(wait_max=None, first=False):
     """2.63.3 - one module's FIRST build (no figure measured yet: every figure probed, every fix tried) at a time on this
-    computer; another first build waits for it, at most wait_max s (CF_COLD_WAIT, default 300), then goes anyway.
+    computer; another first build waits for it, at most wait_max s (CF_COLD_WAIT, default 2700 since 2.65.0), then goes anyway.
     WHY (the 2.63.2 full-course run): wave 1's three first builds overlapped on a laptop with two performance cores - M01's
     took 1,076 s, past the builder's 600 s shell limit (one blind wait); M02/M03's figures 186-260 s. Started one after the
     other they share nothing and each runs at the machine's full speed. Yields the seconds it waited.

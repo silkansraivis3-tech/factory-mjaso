@@ -228,14 +228,18 @@ def column_order_part():
               "parallel search ranked first (0.88 of the 480 px column - its first clean attempt)",
               new and len(calls) <= 3 and len({c[0] for c in calls}) <= 2 and new["size"][0] == round(480 * 0.88)
               and how.startswith("COLUMN"), (calls, how))
-        ff.measure = fake(0, gain=False)                # no width is ever clean: every width is tried to its last round
+        ff.measure = fake(0, gain=False)                # no width is ever clean
         del calls[:]
         new, how, best = ff.try_fixes("x.kit.json", "s01", spec, r0, probs0, None)
-        check("a search that finds nothing still tries every width to its last round (%d measurements) - a cut-off after a first "
-              "round with no gain lost 4 of 7 real IGF fits in the replay, so there is none" % len(calls),
-              new is None and len({c[0] for c in calls}) >= 3 and len(calls) > 9, (len(calls), how))
+        n_all = len(calls)
+        ff.MAX_MEASURES = 6
+        del calls[:]
+        new, how, best = ff.try_fixes("x.kit.json", "s01", spec, r0, probs0, None)
+        check("a search that finds nothing stops at CF_FIT_MEASURES measurements (here 6 of the %d it would take) and says so; "
+              "the default is 16 - every real IGF fit on record was found within 11" % n_all,
+              new is None and len(calls) == 6 < n_all and "stopped after 6" in how, (len(calls), how))
     finally:
-        ff.measure, ff.has_strip = real, strip_
+        ff.measure, ff.has_strip, ff.MAX_MEASURES = real, strip_, 16
 
 
 def task_empty_part():

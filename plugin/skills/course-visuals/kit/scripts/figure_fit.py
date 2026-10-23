@@ -65,6 +65,10 @@ STRETCH = {"space": ("w",), "panel": ("w",), "pipe_section": ("w", "branchAt"), 
            "range_bar": ("w",), "spill": ("w",), "wind": ("w",), "tank_wall": ("w",), "boil_off": ("w",),
            "drip_tray": ("w",), "gas_cloud": ("w",), "zone": ("w", "rx"), "water_curtain": ("w",)}
 PATHS = ("pipe", "wire", "hose")
+# 2.65.0 - the COLUMN search measures a figure at most this many times (CF_FIT_MEASURES). Replayed on every real IGF fit
+# on record (7 from the 2.63.2 / 2.63.3 runs, 3 from the 2.65.0 run's seeded figures): each was found within 11
+# measurements; the searches that found nothing ran up to 53 (one 112 s). Cut at 16, every one of those fits is kept
+MAX_MEASURES = int(os.environ.get("CF_FIT_MEASURES") or 16)
 GAP = 14            # between a moved part and what it was moved under, in the drawing's units
 PAD = 10            # a room's inside margin
 
@@ -927,6 +931,7 @@ def try_fixes(spec_path, sid, spec, r0, probs0, log):
         bx0 = {int(k): list(v[:4]) for k, v in boxes.items() if int(k) < len(spec["parts"])}
         own = owners(spec["parts"], bx0)
         hst = hosts(spec["parts"], bx0, own)
+        used = [0]                                        # 2.65.0: measurements spent by this search (MAX_MEASURES)
 
         def attempt(arg):
             wt, strip, boxes0 = arg
@@ -942,6 +947,9 @@ def try_fixes(spec_path, sid, spec, r0, probs0, log):
                         if not k:
                             continue
                         cand = nxt
+                    if used[0] >= MAX_MEASURES:
+                        return out
+                    used[0] += 1
                     p, r = measure(spec_path, sid, cand, strip)
                     if p is None:
                         return out
@@ -968,7 +976,8 @@ def try_fixes(spec_path, sid, spec, r0, probs0, log):
                 outs.append(o)
                 if not o[1]:
                     break
-        if not any(not o[1] for o in outs) and has_strip(spec_path, sid):   # the same slide without its photo row
+        if not any(not o[1] for o in outs) and used[0] < MAX_MEASURES and has_strip(spec_path, sid):   # without its photo row
+            used[0] += 1
             p_ns, r_ns = measure(spec_path, sid, None, False)
             pn = (r_ns.get("states") or [{}])[-1].get("panel") or panel
             if p_ns is not None:
@@ -992,6 +1001,8 @@ def try_fixes(spec_path, sid, spec, r0, probs0, log):
                               cand["size"][0], spec["size"][0], n)), None
         if best:
             tried.append("re-fitted to its %d px column: %d finding(s) left (was %d)" % (panel[0], len(best[1]), len(probs0)))
+        if used[0] >= MAX_MEASURES:
+            tried.append("the re-fit search stopped after %d measurements (every fit on record was found within 11)" % used[0])
     return None, "; ".join(tried) or "no deterministic fix for %s" % ", ".join(sorted(checks)), best
 
 
