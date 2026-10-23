@@ -49,6 +49,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import sys
 from datetime import date
 
@@ -313,6 +314,29 @@ def refresh(course, module=None, write=True):
             mname(k), n, len(rows), os.path.basename(sp),
             ("; unknown tag(s): " + ", ".join("%s on %s" % (t, s) for s, t in unknown)) if unknown else "",
             ("; " + "; ".join(gaps)) if gaps else ""))
+    # 2.63.3 (the 2.63.2 full-course run: 186 of 268 model-course rows still said "planned - module not built yet" after
+    # every module was built) - an item list beside the rows (mc713_items ...: "module" + "status") follows its module's script
+    built, items = {}, 0
+    for key, lst in list(m.items()):
+        if key == "rows" or not isinstance(lst, list):
+            continue
+        for it in lst:
+            if not (isinstance(it, dict) and str(it.get("status") or "").startswith("planned - module not built")):
+                continue
+            k = mkey(it.get("module"))
+            if not isinstance(k, int) or (only is not None and k != only):
+                continue
+            if k not in built:
+                built[k] = os.path.isfile(workspace.claude_path(course, "script", "%s.json" % mname(k)))
+            if not built[k]:
+                continue
+            tag = (re.match(r"\s*([\w.]+)", str(it.get("sub_ilo") or "")) or [None, ""])[1]
+            hit = [r for r in module_rows(m, k) if tag and r.get("taught_on") and under(str(r.get("sub_ilo_id")), tag)]
+            it["status"] = ("taught: %s" % "; ".join(r.get("where_taught") or "" for r in hit[:2])) if hit else \
+                "module built - %s" % ("Sub-ILO %s not tagged on a slide" % tag if tag else "see its Sub-ILO rows")
+            changed, items = True, items + 1
+    if items:
+        report.append("model-course items: %d \"planned - module not built\" item(s) of built modules refreshed" % items)
     if write and changed:
         m["script_synced"] = date.today().isoformat()
         save(path(course), m)

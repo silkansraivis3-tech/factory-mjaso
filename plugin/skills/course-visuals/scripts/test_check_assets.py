@@ -89,6 +89,23 @@ def main():
               and m["cleared_by"] == "Aleksis Vejs, 2026-10-22 - classroom use decided by NOVIKONTAS" and m["credit"] == m["source_work"], m)
         code, out = run(d)
         check("... and the cleared book figure now passes check_assets", code == 0, out[-400:])
+        # 2.63.3 (the 2.63.2 run, M09: a Gas Library photo record - page_url, commons_title, credit; no source, no shows)
+        lib = {"commons_title": "File:4 gas monitor forensics.jpg", "page_url": "https://commons.wikimedia.org/wiki/File%3A4_gas",
+               "credit": "Galatsis, own work", "author": "Galatsis", "rights_state": "ATTRIBUTION_REQUIRED",
+               "description": "4 gas monitor for personal safety. Clipped on.", "teaching_purpose": "a personal monitor",
+               "used_in": "M09 s08", "visually_verified": "yes - opened 2026-09-01", "library_id": "multigas_monitor_closeup"}
+        d = folder(tmp, "library", lib)
+        code, out = run(d, "--strict")
+        check("2.63.3 a Gas Library record (its page, no 'source') passes check_assets --strict", code == 0, out[-400:])
+        root = os.path.join(tmp, "gaslib", "assets")
+        os.makedirs(root)
+        json.dump([{"id": "multigas_monitor_closeup", "file": "assets/photos/m.jpg", "shows": ["personal 4-gas monitor"]}],
+                  open(os.path.join(root, "ASSETS.json"), "w", encoding="utf-8"))
+        code, out = run("normalise", d, "--library", os.path.join(tmp, "gaslib"))
+        m = json.load(open(os.path.join(d, "_photo_meta.json"), encoding="utf-8"))["fig.jpg"]
+        check("... normalise writes the factory's source (its page and credit) and shows (from the library's own entry)",
+              code == 0 and m.get("source", "").startswith("https://commons.wikimedia.org") and "Galatsis" in m["source"]
+              and m.get("shows") == ["personal 4-gas monitor"] and m["page_url"] == lib["page_url"], (out, m))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

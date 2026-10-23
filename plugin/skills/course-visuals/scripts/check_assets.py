@@ -99,6 +99,72 @@ VERIFIED_OK = re.compile(r"^\s*yes\b", re.I)
 HAS_DATE = re.compile(r"\d{4}-\d{2}-\d{2}|\d{1,2}\s+\w+\s+\d{4}")
 
 
+# 2.63.3 (the 2.63.2 full-course run, M09: a photo copied from the Gas Library with its library record - no `source`, no
+# `shows` - failed check_assets --strict). The library's own schema names where a picture is from in other fields; read
+# as the factory's `source`, and written so by `check_assets.py normalise <assets-dir>`
+LIBRARY_SOURCE = ("page_url", "source_url", "url_or_origin", "url", "commons_title")
+
+
+def library_source(meta: dict) -> str:
+    for k in LIBRARY_SOURCE:
+        if meta.get(k):
+            return "%s%s" % (meta[k], (" (%s)" % meta["credit"]) if meta.get("credit") and k != "commons_title" else "")
+    return ""
+
+
+def normalise(argv) -> int:
+    """check_assets.py normalise <assets-dir> [--library <Gas Library root>]: a photo record in the library's schema gets the
+    factory's fields - `source` from its page or title, `shows` from the library's ASSETS.json entry (by library_id or file
+    name) or, failing that, from its description. Nothing else is touched."""
+    ap = argparse.ArgumentParser(prog="check_assets.py normalise")
+    ap.add_argument("folder")
+    ap.add_argument("--library", default=os.environ.get("NOVIKONTAS_GAS_LIBRARY", ""))
+    a = ap.parse_args(argv)
+    mp = os.path.join(a.folder, "_photo_meta.json")
+    try:
+        with open(mp, encoding="utf-8-sig") as fh:
+            data = json.load(fh)
+    except Exception as exc:                          # noqa: BLE001
+        print("cannot read %s: %s" % (mp, exc))
+        return 2
+    lib = {}
+    idx = os.path.join(a.library, "assets", "ASSETS.json") if a.library else ""
+    if idx and os.path.isfile(idx):
+        try:
+            with open(idx, encoding="utf-8-sig") as fh:
+                raw = json.load(fh)
+            rows = raw if isinstance(raw, list) else raw.get("assets", list(raw.values()) if isinstance(raw, dict) else [])
+            for r in rows:
+                if isinstance(r, dict):
+                    lib[r.get("id")] = r
+                    lib[os.path.basename(str(r.get("file") or ""))] = r
+        except Exception:                             # noqa: BLE001
+            lib = {}
+    done = []
+    for fname, meta in data.items():
+        if not isinstance(meta, dict):
+            continue
+        got = []
+        if not meta.get("source") and library_source(meta):
+            meta["source"] = library_source(meta)
+            got.append("source")
+        if not meta.get("shows"):
+            row = lib.get(meta.get("library_id")) or lib.get(fname) or {}
+            if row.get("shows"):
+                meta["shows"] = list(row["shows"])
+                got.append("shows (library)")
+            elif meta.get("description"):
+                meta["shows"] = [re.split(r"[.;]\s", str(meta["description"]), 1)[0].strip()]
+                got.append("shows (description)")
+        if got:
+            done.append("%s: %s" % (fname, ", ".join(got)))
+    if done:
+        with open(mp, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(json.dumps(data, ensure_ascii=False, indent=1))
+    print("Normalised %d record(s) in %s%s" % (len(done), mp, "".join("\n  " + x for x in done)))
+    return 0
+
+
 def check_folder(folder: str) -> None:
     entries = [e for e in os.listdir(folder)]
     images = sorted(e for e in entries
@@ -142,6 +208,8 @@ def check_folder(folder: str) -> None:
                      "an orphan entry means a file was moved or renamed")
 
             missing = [f for f in req if f not in meta or meta[f] in ("", None)]
+            if "source" in missing and kind == "photo" and library_source(meta):
+                missing.remove("source")      # 2.63.3: a Gas Library record says where it is from in its own words
             if missing:
                 fail(where, "missing required field(s): " + ", ".join(missing),
                      "schema: source/schemas/" +
@@ -257,6 +325,8 @@ def clear(argv) -> int:
 def main() -> int:
     if len(sys.argv) > 1 and sys.argv[1] == "clear":
         return clear(sys.argv[2:])
+    if len(sys.argv) > 1 and sys.argv[1] == "normalise":
+        return normalise(sys.argv[2:])
     ap = argparse.ArgumentParser()
     ap.add_argument("targets", nargs="+")
     ap.add_argument("--strict", action="store_true")

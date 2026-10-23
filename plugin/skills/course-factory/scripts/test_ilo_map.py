@@ -85,6 +85,18 @@ def main():
         check("a second refresh changes nothing", ilo_map.refresh(c)[0][0].startswith("M01: 0 of 2 row(s) refreshed"), ilo_map.refresh(c)[0])
         ilo_map.build(c, quiet=True)
         check("a rebuild from the Stage 2 files keeps the refreshed columns", row(ilo_map.load(mp), 1, "1.2").get("where_taught") == a2["where_taught"])
+        # 2.63.3 (the 2.63.2 run: 186 of 268 MC 7.13 items still "planned - module not built yet" after every module was built)
+        mm = ilo_map.load(mp)
+        mm["mc713_items"] = [{"id": "C1", "module": "M01", "sub_ilo": "1.1", "status": "planned - module not built yet"},
+                             {"id": "C2", "module": "M02", "sub_ilo": "2.1", "status": "planned - module not built yet"},
+                             {"id": "C3", "module": "M01", "sub_ilo": "1.1", "status": "the instructor's own note"}]
+        ilo_map.save(mp, mm)
+        ilo_map.refresh(c)
+        items = ilo_map.load(mp).get("mc713_items") or []
+        check("2.63.3 a model-course item of a built module says where it is taught; one of a module with no script, and an "
+              "item with its own status, are left as they are",
+              items and items[0]["status"].startswith("taught: slide 1 Why gas tankers are different")
+              and items[1]["status"] == "planned - module not built yet" and items[2]["status"] == "the instructor's own note", items)
 
         print("\n-- the script changes, the rows follow")
         moved = copy.deepcopy(script)
