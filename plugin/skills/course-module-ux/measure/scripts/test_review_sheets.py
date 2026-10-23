@@ -162,7 +162,9 @@ def shots_part(md, tmp):
                        errors="replace", timeout=600, env=dict(os.environ, CF_TIMING=os.path.join(tmp, "loop.jsonl")))
     rows = [json.loads(x) for x in io.open(os.path.join(tmp, "loop.jsonl"), encoding="utf-8") if x.strip()] \
         if os.path.isfile(os.path.join(tmp, "loop.jsonl")) else []
-    steps = [r for r in rows if str(r.get("what", "")).startswith("deck ") and "(step)" in str(r.get("what"))]
+    shots = [str(r.get("what", "")) for r in rows if str(r.get("what", "")).startswith("deck ") and "(step)" not in str(r.get("what"))]
+    last = shots[-1].split()[1] if shots else "?"                 # the deck's last slide - the one whose Next never turns off
+    steps = [r for r in rows if str(r.get("what", "")) == "deck %s (step)" % last]
     check("a deck whose last slide never turns Next off: the walk stops after the slide's own parts and steps (%d extra visits)"
           % len(steps), p.returncode == 0 and len(steps) <= 3, (p.returncode, len(steps), p.stdout[-200:]))
 

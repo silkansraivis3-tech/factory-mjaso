@@ -213,7 +213,7 @@ async function deck(tiles) {
       var ps=s.querySelectorAll('.lt-part'), on=0; for (var j=0;j<ps.length;j++) if (ps[j].classList.contains('on')) on=j;
       var src=[].map.call(s.querySelectorAll('script[type="application/json"],img'),function(e){return e.tagName==='IMG'?e.getAttribute('src'):e.textContent;}).join('|');
       return { id: s.id, i: all.indexOf(s)+1, of: all.length, title: s.getAttribute('data-title')||'', steps: f&&f.steps?f.steps():0,
-               parts: ps.length, part: on + 1, lines: s.querySelectorAll('[data-i]').length,
+               parts: ps.length, part: on + 1, lines: f && f.steps && f.steps() ? s.querySelectorAll('[data-i]').length : 0,
                last: !!(document.getElementById('btnNext')||{}).disabled, src: src }; })()`);
     if (!st) break;
     visits[st.id] = (visits[st.id] || 0) + 1;
