@@ -211,9 +211,18 @@ def main():
         shutil.copytree(c, sy)
         os.makedirs(os.path.join(sy, ".tmp.drivedownload"))
         code, out = run(sy)
-        check("an empty sync-tool folder (.tmp.drivedownload) is a note, not a problem", code == 0 and "empty sync-tool folder" in out, out)
-        broken("... one with a file in it is still a folder that is not a module",
-               lambda b: w(os.path.join(b, ".tmp.driveupload", "x.html"), "x"), ".tmp.driveupload\\ is not a module")
+        check("an empty sync-tool folder (.tmp.drivedownload) is a note, not a problem",
+              code == 0 and "sync tool" in out and "not a module" not in out, out)
+        # 2.63.3 (the 2.63.2 full-course run: a copy taken while Drive uploaded - every module's build failed the package on
+        # "not a module" and the importer's "duplicate or disallowed file paths") - with files in it, and desktop.ini, too
+        w(os.path.join(sy, ".tmp.driveupload", "x.html"), "x")
+        w(os.path.join(sy, ".tmp.driveupload", "module01", "presentation", "index.html"), "x")
+        w(os.path.join(sy, "module01", "assets", "desktop.ini"), "[.ShellClassInfo]")
+        w(os.path.join(sy, "desktop.ini"), "[.ShellClassInfo]")
+        code, out = run(sy)
+        check("2.63.3 a sync folder WITH files in it and desktop.ini anywhere are left out of the package - a note, never a "
+              "problem, and the classroom's importer is run without them", code == 0 and "left out of the package" in out
+              and "not a module" not in out and "duplicate" not in out and "desktop.ini" in out, out[-900:])
         broken("a working folder inside the course", lambda b: w(os.path.join(b, "notes", "draft.html"), "x"), "notes\\ is not a module")
         broken("a trainee page linking back to START_HERE.html", lambda b: w(os.path.join(b, "module01", "tasks", "sc1_keeping_the_cargo_liquid.html"),
                (TASK % ("SC1 " + D + " Keeping the cargo liquid", "SC1", "done(1,1,[],'');")).replace("<body>", "<body><a href=\"../START_HERE.html\">Back</a>")),

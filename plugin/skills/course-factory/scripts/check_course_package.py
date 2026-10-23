@@ -222,11 +222,31 @@ def run_importer(folder):
         return None, "the admin panel's own import check could not run: %s" % err
 
 
+# 2.63.3 - what a sync tool or the operating system leaves in a folder: Google Drive's .tmp.driveupload / .tmp.drivedownload
+# (empty OR NOT - a copy taken while Drive uploads has files in it), desktop.ini, Thumbs.db, .DS_Store. Never course content:
+# left out of the package and of the importer's run, a note, never a finding (the 2.63.2 full-course run: every module's
+# build printed "not a module" and the importer's "duplicate or disallowed file paths", and builders spent turns on it)
+SYNC = re.compile(r"^(?:\.tmp\.drive.*|desktop\.ini|thumbs\.db|\.ds_store)$", re.I)
+
+
+def sync_items(folder):
+    """[relative path] of every sync-tool / system item in the folder"""
+    out = []
+    for dp, dn, fn in os.walk(folder):
+        for x in list(dn):
+            if SYNC.match(x):
+                out.append(os.path.relpath(os.path.join(dp, x), folder))
+                dn.remove(x)
+        out += [os.path.relpath(os.path.join(dp, f), folder) for f in fn if SYNC.match(f)]
+    return out
+
+
 def run_importer_without_drafts(folder):
-    """the importer on the package as the classroom would get it: a module marked as a draft (DRAFT_NOT_PACKAGED.txt) is left out -
-    on a copy made of hard links (a copy of the files where the disk will not link), removed again afterwards"""
+    """the importer on the package as the classroom would get it: a module marked as a draft (DRAFT_NOT_PACKAGED.txt) is left out,
+    and (2.63.3) every sync-tool / system item (SYNC) - on a copy made of hard links (a copy of the files where the disk will not
+    link), removed again afterwards"""
     drafts = {d for d in os.listdir(folder) if MODULE.match(d) and os.path.isfile(os.path.join(folder, d, DRAFT_MARK))}
-    if not drafts:
+    if not drafts and not sync_items(folder):
         return run_importer(folder)
     import tempfile
 
@@ -238,7 +258,8 @@ def run_importer_without_drafts(folder):
     tmp = tempfile.mkdtemp(prefix="package_")
     try:
         dst = os.path.join(tmp, os.path.basename(os.path.abspath(folder)))
-        shutil.copytree(folder, dst, ignore=lambda d, names: [n for n in names if d == folder and n in drafts], copy_function=link)
+        shutil.copytree(folder, dst, ignore=lambda d, names: [n for n in names if (d == folder and n in drafts) or SYNC.match(n)],
+                        copy_function=link)
         return run_importer(dst)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -263,8 +284,14 @@ def check(folder):
     mods = [d for d in mods if d not in drafts]
     if not mods:
         probs.append("no module folders named module01, module02 ...")
+    sync = sync_items(folder)
+    if sync:
+        notes.append("left out of the package - a sync tool's or the system's own files, never course content (delete them when "
+                     "the sync is done): %s" % ", ".join(sorted(sync)[:8]) + (" ..." if len(sync) > 8 else ""))
     for d in sorted(os.listdir(folder)):
         full = os.path.join(folder, d)
+        if SYNC.match(d):
+            continue
         if os.path.isdir(full) and d.startswith(".") and not any(fs for _, _, fs in os.walk(full)):
             # an empty sync-tool folder (Google Drive's .tmp.drivedownload / .tmp.driveupload): nothing in it ships (2.58.0 -
             # the IGF full build: every module's package check failed on two of them copied in from a synced folder)
@@ -313,7 +340,8 @@ def check(folder):
             dn[:] = [x for x in dn if x not in drafts]          # a draft module is not part of the package
         # 2.52.0 - a folder starting with _ (assets\img\_unused\, the pictures no page shows) is skipped by the classroom's
         # importer (package-core.mjs internal()), so it is no part of the package's files, sizes or names either
-        dn[:] = [x for x in dn if not x.startswith("_") or x == "_course_shell"]
+        dn[:] = [x for x in dn if (not x.startswith("_") or x == "_course_shell") and not SYNC.match(x)]
+        fn = [f for f in fn if not SYNC.match(f)]                       # 2.63.3: sync / system files ship nowhere
         for x in dn + fn:
             if " " in x:
                 probs.append("a space in the name: %s - the classroom needs names without spaces" % rel(os.path.join(dp, x)))
