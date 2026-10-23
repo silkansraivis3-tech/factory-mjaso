@@ -70,7 +70,11 @@
   seeded slide keeps the predecessor's WHOLE entry (its layout keys - figure_first, split, boxes, inset ... - were fixed by
   hand with the drawing); a picture the predecessor keeps in its module folder (`assets/fig`, `assets/img`) comes with its
   record from `_figure_meta.json` / `_photo_meta.json` (never one without a record); a hand-made drawing brings the module
-  files it is drawn by (the sheet's `styles` / `scripts` / `inline`).
+  files it is drawn by (the sheet's `styles` / `scripts` / `inline`). **Measured (2.65.0, IGF M01-M03 seeded from the
+  hand-fixed original): seeding is for quality, NOT speed.** The original's drawings were fixed against an older kit; today's
+  checks reject most of them (words at 12.2 px under the 12.5 floor, hand-made scenes' contrast) - M02 started at 56 findings
+  at 1280 x 800 and 132 at 1024 x 768, the builders needed 82 build runs (14 unseeded) and the wave took 121 min (114
+  unseeded). Seed a course whose predecessor was built with the current factory, or accept the fixing time.
 - **The whole-course workflow (2.65.0)** builds the modules biggest first (`scripts/build_order.py`: screens, drawn
   figures, 3D scenes from the approved scripts, seeded ones counted less) in a rolling pool of `wave` at a time; its builder
   reads `compile/BUILDER_CARD.md`, not this guide. A module with a 3D-kit scene gets the 3D step after its build:
