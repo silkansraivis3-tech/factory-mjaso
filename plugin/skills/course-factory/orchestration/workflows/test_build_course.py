@@ -36,7 +36,11 @@ const agent = async (prompt, o) => {
   if ((args._broken || []).indexOf(o.label.slice(3)) >= 0)  // a QA that found a picture of another thing (2.63.3)
     return { module: o.label.slice(3), classification: 'A', blocking: true,
              findings: [{ severity: 'BROKEN', where: 's03', what: 'an oxygen monitor on a %LEL slide' },
+                        { severity: 'BROKEN', where: 'SCRIPT: s05', what: 'a Your turn activity counts 5 practice minutes' },
                         { severity: 'POLISH', where: 's05', what: 'a label could sit closer' }] }
+  if ((args._scriptonly || []).indexOf(o.label.slice(3)) >= 0)  // only the operator can fix it (the approved script)
+    return { module: o.label.slice(3), classification: 'A', blocking: true,
+             findings: [{ severity: 'BROKEN', where: 'SCRIPT: s05', what: 'a Your turn activity counts 5 practice minutes' }] }
   if (o.label.startsWith('qa:')) return { module: o.label.slice(3), classification: 'OK', blocking: false, findings: [] }
   if (o.label.startsWith('fix:')) return 'PASS - fixed'
   if (o.label.startsWith('read:')) return { modules: [] }
@@ -184,6 +188,14 @@ def main():
         check("... the fix round is told exactly the BROKEN findings (not the POLISH), not to start again, and to stop at module clean",
               "s03: an oxygen monitor on a %LEL slide" in p6.get("fix:1", "") and "a label could sit closer" not in p6.get("fix:1", "")
               and "Do NOT start again from --init-build" in p6.get("fix:1", ""), p6.get("fix:1", "")[-800:])
+        check("... never the operator's (SCRIPT:), and the fix round may not edit the approved script nor approve it (2.63.3 "
+              "measurement: a fix round changed s05's kind and M02 stopped compiling)",
+              "a Your turn activity" not in p6.get("fix:1", "") and "NEVER edit working_claude/script/M01.json" in p6.get("fix:1", "")
+              and "Never run content_script.py approve" in p6.get("fix:1", ""), p6.get("fix:1", "")[-900:])
+        seven = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_scriptonly": ["1"]})
+        check("... a QA whose only BROKEN finding is the approved script's sends nothing back (reported, blocking)",
+              not any(x.startswith("fix:") for x in seven.get("labels", [])) and "1" in seven.get("r", {}).get("blocking", []),
+              seven.get("labels"))
         q6 = (six.get("r", {}).get("qa") or [None])[0] or {}
         check("... and the second QA's verdict is the module's (clean after the fix: not blocking), the first one's findings kept",
               "1" not in six.get("r", {}).get("blocking", []) and q6.get("module") == "1+fix"

@@ -339,17 +339,23 @@ Do not fix anything. Severity is one of three (2.63.3 - the 2.63.2 run's QA used
           words name, a number that contradicts the slide, a question graded wrongly, an outcome not taught, a
           failed check; blocking = true when there is one
   POLISH  works, could look or read better
-  INFO    worth knowing, nothing to change`
+  INFO    worth knowing, nothing to change
+A BROKEN finding whose fix is in the APPROVED SCRIPT (its words, a screen's kind or minutes - e.g. check_balance counting
+a "Your turn" activity's minutes as practice in a theory-only module) is the operator's: start its "where" with
+"SCRIPT:" - it is reported, never sent back to a builder (who may not change an approved script).`
 
 /* 2.63.3 - a BROKEN finding of QA sends the module back for ONE fix round, by a builder who fixes exactly those */
 const fixRound = (m, q) => `${build(m)}
 
 THIS MODULE IS BUILT AND WAS CHECKED BY QA. Do NOT start again from --init-build. Fix EXACTLY these BROKEN
 findings - nothing else (no polish, no other screen) - in the build sheet or the figure specs, then run
-build_module.py until module clean (PASS, or only the course package left) and STOP. A finding that needs the
-approved words changed is not yours to fix: say so in your report. The findings:
+build_module.py until module clean (PASS, or only the course package left) and STOP.
+NEVER edit working_claude/script/M${two(m)}.json - not a word, not a "kind", not a minute: ANY change to the approved
+script un-approves it and the module no longer builds (2.63.3 measurement: a fix round changed s05's "kind" to move
+5 minutes, and M02 stopped compiling). Never run content_script.py approve / apply. A finding whose fix is in the script
+is the operator's: leave it, and say so in your report. The findings:
 
-${((q && q.findings) || []).filter((f) => f.severity === 'BROKEN').map((f) => `  - ${f.where}: ${f.what}`).join('\n')}`
+${fixable(q).map((f) => `  - ${f.where}: ${f.what}`).join('\n')}`
 
 const QA_SCHEMA = {
   type: 'object',
@@ -371,7 +377,9 @@ const QA_SCHEMA = {
     },
   },
 }
-const broken = (q) => ((q && q.findings) || []).some((f) => f.severity === 'BROKEN')
+/* a BROKEN finding the builder can fix - not one that needs the approved script changed (owner: "SCRIPT" in its where) */
+const fixable = (q) => ((q && q.findings) || []).filter((f) => f.severity === 'BROKEN' && !/^\s*SCRIPT\b/i.test(f.where || ''))
+const broken = (q) => fixable(q).length > 0
 
 /* Module 3 is verified while Module 7 is still being written. No wasted wall-clock.
    An approved module is built and checked on Sonnet; a draft gets its script written on the session's model and
