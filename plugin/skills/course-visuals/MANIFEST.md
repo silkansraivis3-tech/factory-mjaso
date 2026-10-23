@@ -93,6 +93,18 @@ kit/                            the figure kit (L55): a figure is a spec of part
   scripts/check_kit.py · kit_parts.py   spec and part checks; list / promote a course's parts into kit.js
   scripts/test_kit.py · test_studio.py · test_gallery.py   the contract; the studio; every gallery figure clean at
                                     every step on both panels (browser tests skip without Chrome or Edge)
+kit3d/                          the 3D kit: a 3D scene is a spec of parts, labels and steps (three.js r128), made
+                                from the nine hand-made IGF scenes - their look, labels on the parts that never
+                                collide, framing that fills the box, tap / label select, Next-walked steps, full
+                                screen, build-ahead, poster fallback; static meshes merged per part
+  kit3d.js · kit3d.css              the engine, its parts (catalogue block = what check_kit3d.py reads) and the labels
+  SPEC.md · PARTS.md                the spec format; every part's settings; adding a part (KIT3D.define)
+  studio3d.html                     one spec in a slide-sized box (?spec=&w=&h=&step=&dark=), from a local server
+  examples/                         m01_hull, m02_tank, m03_station (the IGF ports) and catalogue (every part)
+  scripts/check_kit3d.py            is a spec drawable: types, ids, sub-parts, states, labels, steps, controls
+  scripts/shot3d.mjs                PNG shots of scenes from a hidden Chrome (plans of url / wait / do / clip)
+  scripts/test_kit3d.py · test_check_kit3d.py   the kit in a browser (build, labels on parts, framing, select,
+                                    steps in a real deck, full screen, no WebGL); the checker
 ```
 
 ## Deliberate omissions

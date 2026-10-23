@@ -1,0 +1,58 @@
+{
+  "_about": "IGF M01 s05 'Gas safe or ESD-protected' - the hand-made m01_hull3d.js (1,413 lines) as a 3D-kit spec. Bow on the right (+x), as on slide s04; 1 unit = 1 m; the double-walled pipe's outer wall drawn about 1.7x thicker than true so the annulus shows.",
+  "label": "3D hull section of an LNG-fuelled ship: the fuel tank cut open with its LNG level, the tank connection space with its valves, the fuel preparation room, the double-walled gas pipe and the dual-fuel engine in the engine room.",
+  "units": "m",
+  "view": {"az": 24, "el": 23},
+  "parts": [
+    {"id": "hull", "type": "hull", "pick": false, "x": [-22, 22], "half": 6, "bottom": -0.9, "floor": 0.5, "top": 10.4,
+     "spaces": [{"x": [5, 22], "tint": "#b8c6d4", "floor": "#cfd9e2"},
+                {"id": "tcs", "x": [-1.5, 5], "tint": "#f0c36a", "floor": "#f3dfb4"},
+                {"id": "fpr", "x": [-8.5, -1.5], "tint": "#7fcf9d", "floor": "#cfe9d7"},
+                {"id": "er", "x": [-22, -8.5], "tint": "#86b8ee", "floor": "#cfe0f4"}],
+     "bulkheads": [{"x": 5, "hole": [4.9, 3.4], "opacity": 0.2}]},
+    {"id": "tank", "type": "tank_c", "at": [12.25, 4.9, 0], "r": 3.4, "len": 14.5, "head": 1.7, "cut": true, "fill": 0.62,
+     "rings": [4.95, 1.35, -2.25, -5.65], "saddles": [3.95, -3.85], "base": -4.4, "saddle_w": 3.0, "subs": {"liquid": "lng"}},
+
+    {"id": "tcs", "type": "pipe", "mat": "cold", "r": 0.22, "path": [[4.25, 2.3, -1.6], [-2.2, 2.3, -1.6]], "flanges": [0]},
+    {"id": "tcs", "type": "valve", "at": [2.6, 2.3, -1.6]},
+    {"id": "tcs", "type": "pipe", "mat": "gas", "r": 0.17, "path": [[3.6, 6.3, -1.5], [0.6, 6.3, -1.5], [0.6, 11.7, -1.5]]},
+    {"id": "tcs", "type": "valve", "at": [2.2, 6.3, -1.5]},
+    {"id": "tcs", "type": "pipe", "mat": "cold", "r": 0.22, "path": [[3.5, 3.2, -0.4], [0.75, 3.2, -0.4], [0.75, 3.2, 5.9]], "flanges": [2]},
+    {"id": "tcs", "type": "valve", "at": [2.4, 3.2, -0.4]},
+
+    {"id": "fpr", "type": "vessel", "at": [-3.9, 2.3, -1.6], "r": 0.85, "len": 3.4, "base": -1.8},
+    {"id": "fpr", "type": "box", "at": [-6.4, 1.8, -4.1], "size": [3.2, 2.6, 2.6], "color": "#9db2c4"},
+    {"id": "fpr", "type": "box", "at": [-6.4, 3.16, -4.1], "size": [3.0, 0.12, 2.4], "color": "#7f95a8"},
+    {"id": "fpr", "type": "cylinder", "at": [-4.2, 1.2, -4.4], "r": 0.45, "len": 1.4, "color": "#7e8f9d"},
+    {"id": "fpr", "type": "cabinet", "at": [-6.6, 0.5, 2.1], "rot": -90, "size": [3.0, 5.3, 1.6]},
+    {"id": "fpr", "type": "pipe", "mat": "gas", "r": 0.18, "path": [[-5.6, 2.3, -1.6], [-6.8, 2.3, -1.6], [-6.8, 2.3, 1.45]]},
+
+    {"id": "er", "type": "engine", "at": [-14.4, 0.5, 0], "flip": "x", "n": 6, "exhaust": 11.2, "gas_rail": true},
+    {"id": "er", "type": "box", "at": [-15.25, 0.58, 5.0], "size": [13.5, 0.08, 1.4], "color": "#9aa8b6"},
+
+    {"id": "pipe", "type": "pipe_dw", "at": [-11.6, 5.0, 2.2], "len": 8.4, "r_in": 0.26, "r_out": 0.42,
+     "collars": [3.7, 1.0, -1.7, -3.9], "glands": [3.1], "spacers": [3.4, 1.6, -0.2, -2.0, -3.6],
+     "supports": [2.4, -0.4, -3.0], "base": -4.4, "subs": {"inner": "inner", "annulus": "annulus", "outer": "outer"}}
+  ],
+  "labels": [
+    {"part": "tank", "text": "Fuel tank", "at": [12.5, 8.3, 0], "up": 56},
+    {"part": "tcs", "text": "Tank connection space", "at": [1.75, 10.4, 0], "up": 40},
+    {"part": "fpr", "text": "Fuel preparation room", "at": [-5.0, -0.9, 6], "up": -14},
+    {"part": "pipe", "text": "Double-walled pipe", "at": [-9.8, 5.42, 2.2], "up": 70},
+    {"part": "er", "text": "Engine room", "at": [-15, 10.4, 0], "up": 40},
+    {"part": "lng", "text": "LNG liquid", "at": [14, 3.6, 0], "up": -58, "small": true},
+    {"text": "Bow →", "at": [21.5, -0.9, 6], "up": -30, "small": true},
+    {"text": "← Stern", "at": [-21.5, -0.9, 6], "up": -30, "small": true},
+    {"part": "inner", "text": "Inner pipe: gas", "at": [-8.1, 5.0, 2.2], "up": -64, "when": "pipe.cut > 0.5", "tone": "amber"},
+    {"part": "annulus", "text": "Annulus", "at": [-11.3, 4.66, 2.2], "up": -116, "when": "pipe.cut > 0.5", "tone": "amber"},
+    {"part": "outer", "text": "Outer wall", "at": [-14.6, 4.58, 2.2], "up": -64, "when": "pipe.cut > 0.5", "tone": "amber"}
+  ],
+  "steps": [
+    {},
+    {"view": {"az": 17, "el": 17, "frame": ["pipe"], "fill": 0.8}, "state": {"pipe.cut": 1}}
+  ],
+  "controls": [
+    {"text": "Cut the pipe open", "text_on": "Close the pipe again", "state": {"pipe.cut": 1},
+     "view": {"az": 17, "el": 17, "frame": ["pipe"], "fill": 0.8}}
+  ]
+}

@@ -35,8 +35,9 @@ import browser_slots  # noqa: E402  - a scene that hangs is ended with every bro
 
 PERF = os.path.join(HERE, "perf3d.mjs")
 SLIDE = re.compile(r'<section\b[^>]*\bclass="[^"]*\bslide\b[^"]*"[^>]*>.*?</section>', re.S)
-# a compiled deck marks its 3D slide data-visual="model_3d" - the scene makes its <canvas> itself (IGF M01 s05)
-IS_3D = re.compile(r'<canvas\b|\bdata-3d\b|\bdata-scene\b|\bdata-visual="model_3d"')
+# a compiled deck marks its 3D slide data-visual="model_3d" - the scene makes its <canvas> itself (IGF M01 s05); a 3D-kit
+# scene (course-visuals/kit3d) is a [data-kit3d] stage that kit3d.js fills
+IS_3D = re.compile(r'<canvas\b|\bdata-3d\b|\bdata-scene\b|\bdata-kit3d\b|\bdata-visual="model_3d"')
 
 
 def sid_of(sec):
@@ -114,7 +115,7 @@ def main(argv=None):
     found = [sid_of(m.group(0)) for m in SLIDE.finditer(page) if IS_3D.search(m.group(0))]
     ids = [x.strip() for x in o.slide.split(",") if x.strip()] or found
     if not ids:
-        print("Stopped - the deck has no 3D slide (a <canvas>, [data-3d] or [data-scene])")
+        print("Stopped - the deck has no 3D slide (a <canvas>, [data-3d], [data-scene] or [data-kit3d])")
         return 2
     unknown = [x for x in ids if x not in {sid_of(m.group(0)) for m in SLIDE.finditer(page)}]
     if unknown:

@@ -1,0 +1,66 @@
+{
+  "_about": "Every part of the 3D kit once, on a 10 m grid - the gallery (studio3d.html?spec=examples/catalogue.kit3d.json) and what test_kit3d.py builds. Not a teaching scene.",
+  "label": "The 3D kit's parts, one of each.",
+  "units": "m",
+  "view": {"az": 28, "el": 30},
+  "shadows": true,
+  "parts": [
+    {"id": "box", "type": "box", "at": [0, 0.5, 0], "size": [1.5, 1, 1]},
+    {"id": "cylinder", "type": "cylinder", "at": [3, 0.6, 0], "r": 0.5, "len": 1.2},
+    {"id": "sphere", "type": "sphere", "at": [6, 0.6, 0], "r": 0.6},
+    {"id": "hull", "type": "hull", "at": [-28, 0, 0], "x": [-6, 6], "half": 3, "bottom": 0, "floor": 0.5, "top": 4,
+     "spaces": [{"id": "hull_a", "x": [-6, 0], "tint": "amber"}, {"id": "hull_b", "x": [0, 6], "tint": "blue"}], "bottom_id": "hull_bottom"},
+    {"id": "deck", "type": "deck_plate", "at": [-14, 0, 4], "size": [6, 5], "side": 2, "rail": true},
+    {"id": "room", "type": "room", "at": [12, 0, 0], "size": [5, 2.6, 3.5], "glass": ["right"], "hole": [1, 0.4, 2, 1.4]},
+    {"id": "tcs", "type": "enclosure", "at": [20, 0, 0], "size": [3, 2.4, 3]},
+    {"id": "panel", "type": "panel", "at": [26, 1.5, -1], "size": [3, 3], "tint": "green"},
+    {"id": "house", "type": "accommodation", "at": [34, 0, 0], "size": [6, 5, 5], "decks": 3},
+
+    {"id": "tank_c", "type": "tank_c", "at": [-28, 3, 12], "r": 2, "len": 6, "cut": true, "fill": 0.6, "insulation": 0.25, "base": -3, "dome": true},
+    {"id": "tank_sphere", "type": "tank_sphere", "at": [-16, 3.5, 12], "r": 2.5, "cut": true, "fill": 0.5, "insulation": 0.2, "base": -3.5},
+    {"id": "tank_prism", "type": "tank_prism", "at": [-4, 3, 12], "size": [8, 5, 5], "fill": 0.55,
+     "layers": [{"id": "tank_prism_ins2", "t": 0.4, "mat": "insulation"}, {"id": "tank_prism_bar2", "t": 0.04, "mat": "barrier"},
+                {"t": 0.25, "mat": "insulation"}, {"id": "tank_prism_mem", "t": 0.04, "mat": "membrane"}]},
+
+    {"id": "pipe", "type": "pipe", "at": [6, 1, 12], "path": [[0, 0, 0], [3, 0, 0], [3, 2, 0], [5, 2, 0]], "r": 0.15, "mat": "gas", "flanges": "ends", "bands": 1.5},
+    {"id": "pipe_dw", "type": "pipe_dw", "at": [16, 1.5, 12], "len": 6, "r_in": 0.2, "r_out": 0.34, "collars": [-2, 0, 2], "spacers": [-1.5, 1.5], "supports": [-2.5, 2.5], "base": -1.5, "glands": [0]},
+    {"id": "valve", "type": "valve", "at": [24, 0.6, 12]},
+    {"id": "valve_act", "type": "valve", "at": [27, 0.6, 12], "actuator": true, "wheel": "grey"},
+    {"id": "relief", "type": "valve", "at": [29, 0, 14], "kind": "relief"},
+    {"id": "wind", "type": "arrow", "at": [36, 9, 12], "a": [2, 0, 0], "b": [-2, 0, 0], "r": 0.1},
+    {"id": "flange", "type": "flange", "at": [30, 0.6, 12], "r": 0.15},
+    {"id": "coupling", "type": "coupling", "at": [33, 0.6, 12], "kind": "dry"},
+    {"id": "coupling_b", "type": "coupling", "at": [35, 0.6, 12], "kind": "breakaway"},
+    {"id": "hose", "type": "hose", "at": [37, 1.5, 12], "path": [[0, 0, 0], [0, 0, 0.6], [0, -0.5, 1.1], [0, -1.4, 1.3]]},
+    {"id": "mast", "type": "vent_mast", "at": [40, 0, 12], "h": 6},
+
+    {"id": "vessel", "type": "vessel", "at": [-28, 1.4, 24], "r": 0.8, "len": 3, "base": -1.4},
+    {"id": "cabinet", "type": "cabinet", "at": [-22, 0, 24], "size": [1.6, 2.2, 1], "screen": true},
+    {"id": "engine", "type": "engine", "at": [-12, 0, 24], "n": 6, "exhaust": 7, "gas_rail": true},
+    {"id": "pump", "type": "pump", "at": [0, 0, 24]},
+    {"id": "tray", "type": "drip_tray", "at": [6, 0, 24], "size": [2, 3]},
+    {"id": "esd", "type": "esd_button", "at": [10, 0, 24]},
+    {"id": "detector", "type": "detector", "at": [13, 2.5, 24]},
+    {"id": "person", "type": "person", "at": [16, 0, 24]},
+    {"id": "intake", "type": "air_intake", "at": [20, 1, 24]},
+
+    {"id": "dim", "type": "dimension", "at": [24, 0, 24], "a": [0, 0, 0], "b": [0, 3, 0], "tick": [0.4, 0, 0], "text": "3 m"},
+    {"id": "limit", "type": "limit_box", "at": [28, 0, 24], "min": [0, 0, -1], "max": [3, 2, 1], "planes": {"y-": 0.16, "z-": 0.07}},
+    {"id": "zone", "type": "zone", "at": [36, 1.5, 24], "level": 1, "shape": "capsule", "r": 1.2, "half": 1.2, "axis": "x", "floor": 0},
+    {"id": "gas", "type": "gas", "at": [12, 0.5, 0], "kind": "rise", "to": 1.9, "area": [-2.2, -1.5, 2.2, 1.5], "n": 120},
+    {"id": "plume", "type": "gas", "at": [40, 6.6, 12], "kind": "plume", "to": 4},
+    {"id": "flow", "type": "flow", "at": [6, 1, 12], "path": [[0, 0, 0], [3, 0, 0], [3, 2, 0], [5, 2, 0]], "color": "#ffd23f"}
+  ],
+  "labels": [
+    {"part": "tank_c", "text": "tank_c"}, {"part": "tank_sphere", "text": "tank_sphere"}, {"part": "tank_prism", "text": "tank_prism"},
+    {"part": "engine", "text": "engine"}, {"part": "pipe_dw", "text": "pipe_dw"}, {"part": "hull", "text": "hull"},
+    {"part": "valve", "text": "valve"}, {"part": "room", "text": "room"}, {"part": "zone", "text": "zone"}
+  ],
+  "states": {"gas.on": 0, "plume.on": 0, "flow.on": 0},
+  "captions": [{"text": "Every part, every state on", "when": "gas.on"}],
+  "steps": [
+    {},
+    {"state": {"gas.on": 1, "plume.on": 1, "flow.on": 1, "pipe_dw.cut": 1, "tcs.open": 1, "detector.alarm": 1, "valve_act.shut": 1,
+               "relief.open": 1, "tank_c.ghost": 1}}
+  ]
+}

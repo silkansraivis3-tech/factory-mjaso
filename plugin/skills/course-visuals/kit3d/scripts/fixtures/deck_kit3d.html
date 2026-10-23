@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture - a 3D-kit scene on the factory deck engine</title>
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_shell.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_compose.css">
+<link rel="stylesheet" href="../../kit3d.css">
+<style>.kit3d-fig{height:520px}</style>
+</head>
+<body>
+<!-- Test fixture for test_kit3d.py: a kit3d scene the way compile_module.py writes it (SPEC.md "Where it goes"), driven
+     by the factory's own gb_deck.js - Next walks the scene's steps and lights the slide's lines, the deck wires the labels
+     (GB3D.wire) and gives the box its Full screen button, the scene is built ahead on the slide before. -->
+<div id="landing"><button id="startBtn" type="button"><span class="btn-label">Start</span></button></div>
+<div id="chrome"><button id="btnPrev" type="button">Back</button><button id="btnNext" type="button">Next</button></div>
+<main id="stage">
+  <section class="slide" id="s1" data-visual="none"><div class="slide-body"><h2>Before</h2></div></section>
+  <section class="slide" id="s2" data-visual="model_3d"><div class="slide-body two-col fig-wide">
+    <div class="copy"><h2>The tank and its pipe</h2>
+      <p data-i="1">A type C tank holds the LNG.</p>
+      <p data-i="2">The gas pipe is double-walled.</p></div>
+    <div class="fill fig kit3d-fig" data-3d-box><div class="kit3d-stage" data-stage data-3d data-kit3d="#k3-s2"></div><script type="application/json" id="k3-s2">
+{"label": "A fuel tank and a double-walled pipe", "units": "m", "view": {"az": 24, "el": 23},
+ "parts": [{"id": "tank", "type": "tank_c", "at": [4, 3, 0], "r": 2, "len": 6, "cut": true, "fill": 0.6, "base": -3},
+           {"id": "pipe", "type": "pipe_dw", "at": [-5, 3, 0], "len": 6, "r_in": 0.2, "r_out": 0.34, "spacers": [-1, 1], "subs": {"inner": "inner", "annulus": "annulus", "outer": "outer"}}],
+ "labels": [{"part": "tank", "text": "Fuel tank"}, {"part": "pipe", "text": "Double-walled pipe"}, {"part": "tank_liquid", "text": "LNG"},
+            {"part": "inner", "text": "Inner pipe", "when": "pipe.cut > 0.5", "up": -50}],
+ "steps": [{"line": 1}, {"view": {"az": 17, "el": 17, "frame": ["pipe"]}, "state": {"pipe.cut": 1}, "line": 2}]}
+</script></div>
+  </div></section>
+  <section class="slide" id="s3" data-visual="none"><div class="slide-body"><h2>After</h2></div></section>
+</main>
+<script src="../../../../course-module-ux/assets/gb_deck.js"></script>
+<script src="../../../../course-module-ui/templates/vendor/three.min.js"></script>
+<script src="../../kit3d.js"></script>
+<script>GBDeck.init({ hooks: window.GB_HOOKS || {} });</script>
+</body>
+</html>

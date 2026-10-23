@@ -229,8 +229,11 @@ modification is permitted, whether attribution is required. **Legally usable ass
 and packaged locally** — the tablet has no network and the app 403s every external host.
 **4 CREATE** — **from the figure kit first (L55).** Anything with topology, labels, state, flow or
 sequence is a kit spec, `NAME.kit.json` in `working_claude/figures/MNN/` (`kit/SPEC.md`), never a
-one-off SVG; a part the kit lacks is made into the kit (below). Hand-written SVG/HTML only for what
-the kit's families cannot be (a 3D model, a photo annotation); Canvas only where SVG genuinely fails;
+one-off SVG; a part the kit lacks is made into the kit (below). **A 3D model is a 3D-kit spec**,
+`sNN.kit3d.json` (`kit3d/SPEC.md`, `kit3d/PARTS.md`; made from the nine hand-made IGF scenes): parts in metres,
+labels on the parts, steps the deck's Next walks - full screen, clickable labels, the build-ahead and the poster
+come with it; never a hand-written three.js file per slide. Hand-written SVG/HTML only for what the kits cannot be
+(a photo annotation); Canvas only where SVG genuinely fails;
 a generated illustration only when a realistic scene is the right medium. **Never generated imagery
 in place of a structured technical schematic.**
 
