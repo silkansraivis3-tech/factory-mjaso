@@ -181,8 +181,7 @@ var GBDeck = (function (w, d) {
           (s.getAttribute("data-cue") || T.noCue);
       }
       var h = hookFor(idx);
-      if (btnPrev) { btnPrev.disabled = (idx === 0) && !(h && h.step); }
-      if (btnNext) { btnNext.disabled = (idx === slides.length - 1) && !(h && h.step); }
+      navState();
       if (h && h.enter) { h.enter(); }
       markOverview();
       s.scrollTop = 0;
@@ -202,6 +201,16 @@ var GBDeck = (function (w, d) {
         t.classList[k === j ? "add" : "remove"]("on");
         t.setAttribute("aria-pressed", k === j ? "true" : "false");
       });
+      if (s === slides[cur]) { navState(); }
+    }
+    /* Back is off on the first slide and Next on the last - unless the screen still has a step or a part that way.
+       2.63.2 (the 2.63.2 full-course run, M08-M10 and M12-M14): the parts were not counted, so on a deck whose LAST slide
+       holds parts (the practical slide) Next was off on part 1 and part 2 could not be reached with it */
+    function navState() {
+      var s = slides[cur], h = hookFor(cur), ps = s ? s.querySelectorAll(".lt-part") : [], on = 0, k;
+      for (k = 0; k < ps.length; k++) { if (ps[k].classList.contains("on")) { on = k; } }
+      if (btnPrev) { btnPrev.disabled = (cur === 0) && !(h && h.step) && !(ps.length && on > 0); }
+      if (btnNext) { btnNext.disabled = (cur === slides.length - 1) && !(h && h.step) && !(ps.length && on < ps.length - 1); }
     }
     function partStep(dir) {
       var s = slides[cur], ps = s ? s.querySelectorAll(".lt-part") : [], i = 0, k;

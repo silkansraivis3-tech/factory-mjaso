@@ -1251,6 +1251,49 @@ BADGE_DRIVE = r"""
 """
 
 
+LAST_PARTS_DRIVE = r"""
+(function () {
+  var out = {errors: [], seen: []};
+  window.addEventListener('error', function (e) { out.errors.push(String(e.message)); });
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      try {
+        var nx = document.getElementById('btnNext');
+        document.getElementById('startBtn').click();
+        for (var i = 0; i < 5; i++) {
+          var s = document.querySelector('.slide.active'), p = s && s.querySelector('.lt-part.on');
+          out.seen.push((s ? s.id : '-') + (p ? ':' + p.getAttribute('data-n') : '') + (nx.disabled ? ' (Next off)' : ''));
+          if (!nx.disabled) { nx.click(); }
+        }
+      } catch (err) { out.errors.push(String(err && err.stack || err)); }
+      var pre = document.createElement('pre'); pre.id = 'gbtest'; pre.textContent = JSON.stringify(out); document.body.appendChild(pre);
+    }, 300);
+  });
+}());
+"""
+
+
+def last_parts_part(exe, tmp):
+    """2.63.2 (the 2.63.2 full-course run: M08-M10, M12-M14 - the practical slide, in two parts, is the deck's last) - Next
+    walks the parts of the LAST slide too, and is off only on its last part"""
+    print("\n-- 2.63.2: Next walks the parts of the deck's last slide")
+    d = os.path.join(tmp, "lastparts")
+    os.makedirs(d)
+    deck = Path(HERE).parent.parent.parent / "course-module-ux" / "assets" / "gb_deck.js"
+    page = os.path.join(d, "index.html")
+    io.open(page, "w", encoding="utf-8").write(
+        '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"></head><body>'
+        '<div id="landing"><button id="startBtn" type="button">Start</button></div>'
+        '<div id="chrome"><button id="btnPrev" type="button">Back</button><button id="btnNext" type="button">Next</button></div>'
+        '<main><section class="slide" id="s1"><h2>One</h2></section>'
+        '<section class="slide" id="s2"><h2>Practical</h2><div class="lt-part" data-n="1">Part 1</div>'
+        '<div class="lt-part" data-n="2">Part 2</div></section></main>'
+        '<script src="%s"></script><script>GBDeck.init({});</script></body></html>' % deck.as_uri())
+    r = drive_page(exe, page, LAST_PARTS_DRIVE, os.path.join(tmp, "lpp"), (1280, 800))
+    check("on the last slide Next shows its part 2, then is off: %s" % " -> ".join(r.get("seen") or []),
+          not r.get("errors") and (r.get("seen") or [])[:3] == ["s1", "s2:1", "s2:2 (Next off)"], r)
+
+
 def drive_page(exe, page, js, prof, size):
     """a compiled deck with a driver script added, at a window `size` (its viewport exactly that, as probe() opens it)"""
     text = io.open(page, encoding="utf-8").read()
@@ -1586,6 +1629,7 @@ def main():
         fixes_part(exe, tmp)
         picture_part(exe, tmp)
         corner_part(exe, tmp)
+        last_parts_part(exe, tmp)
         steps_part(exe, tmp)
         patterns_part(exe, tmp)
         team_part(exe, tmp)
