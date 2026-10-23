@@ -3554,11 +3554,39 @@ def seed_figures(script, sheet, figdir, seed, module, mdir_=None):
             done[s["id"]] = "the predecessor's photo %s" % os.path.basename(fig)
         if name:
             e.update({k: v for k, v in pe.items() if k in ("composition", "dark", "visual_kind", "areas", "labels")})
+            if name.lower().endswith((".html", ".svg")) and pe.get("class"):
+                e["class"] = pe["class"]                 # 2.65.0: the module's own CSS for a hand-made drawing names its slide so
             e["figure"] = name
             e.pop("_figure", None)
+            e.pop("_2d", None)
             e["_seeded"] = ("seeded from the predecessor %s (%s) - it is the hand-fixed drawing, not a starter: build it as it is "
                             "and change only what the build reports" % (seed, done[s["id"]]))
+    if any(str((screens.get(sid) or {}).get("figure") or "").lower().endswith((".html", ".svg")) for sid in done):
+        carry_module_files(sheet, pbuild, seed, module, figdir, pfig, mdir_)
     return done
+
+
+def carry_module_files(sheet, pbuild, seed, module, figdir, pfig, mdir_):
+    """2.65.0 - a hand-made drawing seeded from the predecessor (an .html / .svg: IGF M01 s05's 3D hull) is drawn by the
+    predecessor module's OWN files - its sheet's "styles", "scripts" (assets/js/m01_hull3d.js, assets/vendor/three.min.js)
+    and "inline" (figures/MNN/m01_defs.svg). Without them the seeded slide showed only its fallback picture and the builder
+    rebuilt the scene by hand (2.63.3 M02: m02_s09_3d.html written again from m01's). Each file the predecessor has and this
+    module does not is copied, and named in the sheet as the predecessor named it; a file already here is never replaced"""
+    import shutil
+    pmdir = os.path.join(seed, "modules", "module%02d" % int(module)) if str(module).isdigit() else ""
+    for key, src_dir, dst_dir in (("styles", pmdir, mdir_), ("scripts", pmdir, mdir_), ("inline", pfig, figdir)):
+        for rel in pbuild.get(key) or []:
+            rel = str(rel).replace("\\", "/")
+            src = os.path.normpath(os.path.join(src_dir or "", rel))
+            if not src_dir or not dst_dir or not os.path.isfile(src) or rel.startswith(("/", "..")):
+                continue
+            dst = os.path.normpath(os.path.join(dst_dir, rel))
+            if not os.path.isfile(dst):
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copyfile(src, dst)
+            have = sheet.setdefault(key, [])
+            if rel not in have:
+                have.append(rel)
 
 
 def import_sme_figures(o, script, build, mdir, figdir, approved):
@@ -3648,6 +3676,7 @@ def main(argv=None):
             cs.save(bp, sheet_)
             for sid in seeded:
                 specs.pop(sid, None)
+                specs3.pop(sid, None)                   # 2.65.0: a seeded 3D slide keeps the predecessor's scene, no kit starter
             print("  seeded from the predecessor %s - %d slide(s) start from its drawings: %s"
                   % (seed_course(o.course, o.seed_from), len(seeded), ", ".join(sorted(seeded))))
         sheet_screens = cs.load(bp).get("screens") or {}

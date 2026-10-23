@@ -2192,6 +2192,36 @@ def seed_part(tmp):
     check("2.63.3 --init-build --seed-from: an unchanged slide starts from the predecessor deck's hand-fixed drawing",
           code == 0 and "seeded from the predecessor" in out and new.get("figure") == "s04.kit.json" and "HAND FIXED valve" in text
           and new.get("_seeded") and new.get("dark") is True, (code, out[-500:], new, text[:200]))
+    # 2.65.0 - a hand-made drawing (an .html scene, IGF M01 s05's 3D hull) is drawn by the predecessor module's own files:
+    # they come with it - its sheet's styles / scripts / inline, copied and named - and the slide's class
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    pfig = os.path.join(pc, "working_claude", "figures", "M01")
+    io.open(os.path.join(pfig, "m01_s04_3d.html"), "w", encoding="utf-8").write('<div class="fill m01-3d" data-stage id="hull3d"></div>')
+    io.open(os.path.join(pfig, "m01_defs.svg"), "w", encoding="utf-8").write("<svg><defs></defs></svg>")
+    os.makedirs(os.path.join(pmd, "assets", "js"), exist_ok=True)
+    io.open(os.path.join(pmd, "assets", "js", "m01_hull3d.js"), "w", encoding="utf-8").write("/* the scene */")
+    io.open(os.path.join(pmd, "assets", "m01_figures.css"), "w", encoding="utf-8").write(".m01-3d{height:100%}")
+    psheet = cs.load(bp)
+    psheet.update(styles=["assets/m01_figures.css"], scripts=["assets/js/m01_hull3d.js", "assets/js/gone.js"], inline=["m01_defs.svg"])
+    psheet["screens"]["s04"] = {"figure": "m01_s04_3d.html", "class": "m01-s04", "visual_kind": "model_3d"}
+    cs.save(bp, psheet)
+    io.open(deck_p, "w", encoding="utf-8").write(page.replace('id="kit-s04"', 'id="kit-gone"'))    # the deck holds no spec for it
+    sheet2 = {"screens": {"s04": {"figure": "", "_2d": "x"}}}
+    script_ = cs.load(os.path.join(nc, "working_claude", "script", "M01.json"))
+    figdir2, mdir2 = os.path.join(tmp, "seedn2", "figures"), os.path.join(tmp, "seedn2", "module01")
+    os.makedirs(mdir2)
+    got = cm.seed_figures(script_, sheet2, figdir2, pc, 1, mdir2)
+    e = sheet2["screens"]["s04"]
+    check("2.65.0 a seeded hand-made drawing brings the predecessor module's own files (styles, scripts, inline) and its slide's "
+          "class; a file the predecessor does not have is not named",
+          got.get("s04", "").endswith("m01_s04_3d.html") and e.get("figure") == "m01_s04_3d.html" and e.get("class") == "m01-s04"
+          and "_2d" not in e
+          and sheet2.get("scripts") == ["assets/js/m01_hull3d.js"] and sheet2.get("styles") == ["assets/m01_figures.css"]
+          and sheet2.get("inline") == ["m01_defs.svg"]
+          and os.path.isfile(os.path.join(mdir2, "assets", "js", "m01_hull3d.js"))
+          and os.path.isfile(os.path.join(mdir2, "assets", "m01_figures.css")) and os.path.isfile(os.path.join(figdir2, "m01_defs.svg")),
+          (got, sheet2))
 
 
 def figure_words_part(tmp):

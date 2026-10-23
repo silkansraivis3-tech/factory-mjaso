@@ -662,6 +662,43 @@ def task_set(exe, script, build, mdir, figdir, figs, fix, slide, code, qs):
                 ensure_ascii=False, indent=1))
             fixed.append("%s (%s, task page): fixed by itself - %s" % (q, name, how))
             out[q] = now
+    # 2.65.0 - EMPTY on a task page, cropped as a slide's figure is: a window on the canvas around what the parts show, in
+    # the page's own panel shape - kept only when the page's drawing check then finds nothing on those questions and nothing
+    # new. (The 2.63.3 M02 build: q05 44 % and q11 53-74 % blank were fixed by hand over three builds; a slide's EMPTY has
+    # been cropped by itself since 2.50.0.)
+    for name in sorted({os.path.basename(figs[q][0]) for q in mine}):
+        users = [q for q in mine if os.path.basename(figs[q][0]) == name]
+        bad = [q for q in users if out[q] and {x[0] for x in out[q]} <= {"empty"}]
+        if not (fix and bad) or any(cm.fitted(figdir, name, io.open(figs[q][0], encoding="utf-8").read().strip(), TASK_COLUMN, q)
+                                    for q in users):
+            continue
+        sp = figs[users[0]][0]
+        text = io.open(sp, encoding="utf-8").read().strip()
+        try:
+            spec = json.loads(text)
+        except ValueError:
+            continue
+        rt, _ = studio.run(sp, sizes=((1280, 800),), shots=False, panel="task")
+        rg, _ = studio.run(sp, sizes=((1280, 800),), shots=False, panel="two-col")
+        panel = ((((rt or {}).get("sizes") or {}).get(GATE) or {}).get("states") or [{}])[-1].get("panel")
+        boxes = (((rg or {}).get("sizes") or {}).get(GATE) or {}).get("parts") or {}
+        cand = crop(spec, boxes, panel) if panel and boxes else None
+        if not cand or spoiled(spec, cand):
+            continue
+        after = task_page_findings(exe, script, slide, code, qs, build, mdir, figdir, {name: cand})
+        if after is None or any(after.get(q) for q in bad) or \
+                any(not {x[0] for x in after.get(q, [])} <= {x[0] for x in out[q]} for q in users):
+            continue
+        how = ("EMPTY: cropped to what it shows (%s) in its task page's %d x %d panel, the parts not moved"
+               % (" ".join(fmt(v) for v in cand["view"]), panel[0], panel[1]))
+        for q in users:
+            fp = cm.fit_path(figdir, name, q)
+            os.makedirs(os.path.dirname(fp), exist_ok=True)
+            io.open(fp, "w", encoding="utf-8").write(json.dumps(
+                {"source": cm.sha(text), "column": TASK_COLUMN, "how": how, "made_by": "figure_fit.py", "spec": cand},
+                ensure_ascii=False, indent=1))
+            out[q] = after.get(q, [])
+        fixed += ["%s (%s, task page): fixed by itself - %s" % (q, name, how) for q in bad]
     for q in mine:
         if out[q]:
             left.append("%s (%s, task page): %s" % (q, os.path.basename(figs[q][0]),
@@ -918,14 +955,29 @@ def try_fixes(spec_path, sid, spec, r0, probs0, log):
                         return out
             return out
 
+        # 2.65.0 - one width at a time, in the order the parallel search ranked them, stopping at the first clean fit: the
+        # parallel search kept the FIRST clean attempt in this same order (a fit with the photo row before one without),
+        # so the fit is the same one - without the probes of the attempts after it. The photo row's alternative is
+        # measured only when no attempt with the row is clean. (IGF M02's cold build, 2.63.3: two COLUMN searches of
+        # ~54 measurements each, ~23 min of the 24-min build, neither found a fit.)
         args = [(panel[0] * f, True, boxes) for f in (0.88, 1.0, 1.14)]
-        if has_strip(spec_path, sid):                    # the same slide without its photo row, tried at the same time
+        outs = []
+        for a in args:
+            o = attempt(a)
+            if o:
+                outs.append(o)
+                if not o[1]:
+                    break
+        if not any(not o[1] for o in outs) and has_strip(spec_path, sid):   # the same slide without its photo row
             p_ns, r_ns = measure(spec_path, sid, None, False)
             pn = (r_ns.get("states") or [{}])[-1].get("panel") or panel
             if p_ns is not None:
-                args += [(pn[0] * f, False, r_ns.get("parts") or boxes) for f in (0.88, 1.0, 1.14)]
-        with cf.ThreadPoolExecutor(max_workers=len(args)) as ex:
-            outs = [x for x in ex.map(attempt, args) if x]
+                for a in [(pn[0] * f, False, r_ns.get("parts") or boxes) for f in (0.88, 1.0, 1.14)]:
+                    o = attempt(a)
+                    if o:
+                        outs.append(o)
+                        if not o[1]:
+                            break
         for o in outs:
             if best is None or len(o[1]) < len(best[1]) or (len(o[1]) == len(best[1]) and o[3] and not best[3]):
                 best = o

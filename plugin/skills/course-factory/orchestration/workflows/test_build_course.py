@@ -31,7 +31,14 @@ const agent = async (prompt, o) => {
   labels.push(o.label)
   opts[o.label] = { model: o.model || null, effort: o.effort || null }
   prompts[o.label] = prompt
-  if (o.label.startsWith('gate:')) return { open: true, output: 'open', approved: args._approved || ['1', '2'] }
+  if (o.label.startsWith('gate:')) return { open: true, output: 'open', approved: args._approved || ['1', '2'], order: args._order || [] }
+  if (/^3d:/.test(o.label)) return (args._scene || []).indexOf(o.label.slice(3)) >= 0
+    ? { has_scene: true, ok: true, shots: ['C:/c/r/s05_step1.png'], scenes: [{ slide: 's05', spec: 's05.kit3d.json' }] }
+    : { has_scene: false, ok: true, shots: [] }
+  if (/^fix3d:/.test(o.label)) return { has_scene: true, ok: true, shots: ['C:/c/r/s05_step1.png'] }
+  if (/^review3d:/.test(o.label)) return (args._bad3d || []).indexOf(o.label.slice(9)) >= 0
+    ? { findings: [{ severity: 'BROKEN', where: 's05 s05_step1.png', what: 'the labels are a row of buttons under the model' }] }
+    : { findings: [] }
   if (o.label === 'qa:2') return null                       // the QA agent for module 2 brought back nothing
   if ((args._broken || []).indexOf(o.label.slice(3)) >= 0)  // a QA that found a picture of another thing (2.63.3)
     return { module: o.label.slice(3), classification: 'A', blocking: true,
@@ -203,8 +210,43 @@ def main():
         l5 = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "wave": 1}).get("labels", [])
         check("args.wave builds the modules in waves: module 2 starts after module 1's QA",
               l5.index("build:2") > l5.index("qa:1") and "build:final" not in l5, l5)
+        # 2.65.0 - biggest first, a rolling pool, seed_from, the builder card, the 3D step
+        mods3 = mods + [{"id": 3, "title": "C", "minutes": 60, "theory": 60, "practical": 0}]
+        order = [{"id": 2, "cost": 112}, {"id": 3, "cost": 89}, {"id": 1, "cost": 51}]
+        p8 = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods3, "_approved": ["1", "2", "3"], "_order": order,
+                       "wave": 1, "factory": "C:/f/skills", "seed_from": "C:/old/course"})
+        l8, pr8 = p8.get("labels", []), p8.get("prompts", {})
+        builds = [x for x in l8 if x in ("build:1", "build:2", "build:3")]
+        check("2.65.0 the gate costs every module (build_order.py --json) and the modules build biggest first",
+              "build_order.py" in pr8.get("gate:ilo-map+kb", "") and "--modules 1,2,3 --json" in pr8.get("gate:ilo-map+kb", "")
+              and builds == ["build:2", "build:3", "build:1"], l8)
+        check("... a pool of args.wave: the next module starts when one finishes (its QA), not after a whole wave",
+              l8.index("build:3") > l8.index("qa:2") and l8.index("build:1") > l8.index("qa:3"), l8)
+        check("... only the biggest builds with --long-pole (its first build goes first)",
+              "--long-pole" in pr8.get("build:2", "") and "--long-pole" not in pr8.get("build:1", "")
+              and "--long-pole" not in pr8.get("build:3", ""), pr8.get("build:2", "")[-1600:])
+        check("... args.seed_from goes to every --init-build and to the cost",
+              all('--init-build --seed-from "C:/old/course"' in pr8.get("build:%d" % k, "") for k in (1, 2, 3))
+              and '--seed-from "C:/old/course"' in pr8.get("gate:ilo-map+kb", ""), pr8.get("build:1", "")[:2500])
+        check("... the builder reads the card, not the whole skill",
+              "C:/f/skills/course-factory/compile/BUILDER_CARD.md" in pr8.get("build:1", "")
+              and "Invoke the course-factory skill" not in pr8.get("build:1", ""), pr8.get("build:1", "")[:600])
+        nine = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods3, "_approved": ["1", "2", "3"],
+                         "factory": "C:/f/skills", "_scene": ["1", "3"], "_bad3d": ["3", "3+fix"]})
+        l9, p9, r9 = nine.get("labels", []), nine.get("prompts", {}), nine.get("r", {})
+        check("2.65.0 every built module gets the 3D step; one with no 3D-kit scene goes straight to QA",
+              all("3d:%d" % k in l9 for k in (1, 2, 3)) and "review3d:2" not in l9 and l9.index("qa:2") > l9.index("3d:2"), l9)
+        check("... a scene is checked by the script and judged by a SEPARATE reviewer, before QA",
+              "review3d:1" in l9 and l9.index("review3d:1") > l9.index("3d:1") and l9.index("qa:1") > l9.index("review3d:1")
+              and "scene3d_check.py" in p9.get("3d:1", "") and "You did NOT build this 3D scene" in p9.get("review3d:1", "")
+              and "C:/c/r/s05_step1.png" in p9.get("review3d:1", ""), l9)
+        check("... a BROKEN 3D finding: ONE fix round with exactly those findings, then the reviewer once more - never a third",
+              "fix3d:3" in l9 and "review3d:3+fix" in l9 and l9.count("fix3d:3") == 1 and "fix3d:1" not in l9
+              and "a row of buttons" in p9.get("fix3d:3", ""), l9)
+        check("... a BROKEN 3D finding still there after the fix blocks the module",
+              "3" in r9.get("blocking", []) and "1" not in r9.get("blocking", []), r9.get("blocking"))
         check("args.factory pins the skills every agent reads, args.notes reaches every module agent",
-              "C:/f/skills/course-factory/SKILL.md" in pr.get("build:1", "")
+              "C:/f/skills/course-factory/compile/BUILDER_CARD.md" in pr.get("build:1", "")
               and "C:/f/skills/course-factory/scripts/course_gate.py" in pr.get("gate:ilo-map+kb", "")
               and "no paid pictures" in pr.get("build:1", "") and "no paid pictures" in pr.get("script:2", ""), pr)
     finally:

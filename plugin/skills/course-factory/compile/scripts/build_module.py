@@ -205,14 +205,23 @@ def starter_blanks(course, module):
                 and not (build.get("declined_3d") or e.get("declined_3d")) \
                 and not any(os.path.isfile(os.path.join(d, fig)) for d in (figdir, mdir) if d):
             scenes.append(s["id"] + " (" + fig + ")")
+        elif s["kind"] == "slide" and fig.lower().endswith(".kit3d.json") and not (build.get("declined_3d") or e.get("declined_3d")):
+            # 2.65.0 - a 3D-kit scene: missing, or still --init-build's starter ("_todo": parts guessed, not placed)
+            p = os.path.join(figdir, fig)
+            try:
+                todo = bool(json.load(io.open(p, encoding="utf-8")).get("_todo"))
+            except (OSError, ValueError):
+                todo = not os.path.isfile(p)
+            if todo:
+                scenes.append(s["id"] + " (" + fig + ")")
     out = []
     if pics:
         out.append((pics, "its picture: \"figure\" - a photo in assets\\img, a drawing, or a kit spec"))
     if ons:
         out.append((ons, "the drawing or photo the question is answered on: \"figure\" (and its places, \"areas\" / \"labels\")"))
     if scenes:
-        out.append((scenes, "the planned 3D scene is not written - build it, or keep the 2D starter (\"_2d\") with the operator's "
-                            "reason in \"declined_3d\""))
+        out.append((scenes, "the planned 3D scene is not written (a .kit3d.json still the starter: place its parts as on board, "
+                            "delete \"_todo\") - build it, or keep the 2D starter (\"_2d\") with the operator's reason in \"declined_3d\""))
     return out
 
 
@@ -359,6 +368,121 @@ def mark_reviewed(out_dir, m):
     return 0
 
 
+# ------------------------------------------------------------------ 2.65.0: the short answer
+# WHY (the 2.63.3 M01-M03 run): a failing build answered up to 16,863 characters - every figure finding once per part,
+# four hint lines per figure, every audit line - and the builder carried each answer in every later turn (M02's builder:
+# 98 M cache-read tokens). The answer now says each problem ONCE with its fix and its file; the full log keeps every line.
+FIG_ITEM = re.compile(r"^    ([a-z][a-z ]*?) - (.*)$")
+FIG_HEAD = re.compile(r"^  (\w+) \(([^)]+)\) on its slide - drawn \S+ px in a (\S+) px panel, scale ([\d.]+):")
+FIG_HINT = {"empty": "crop what no step shows, spread the parts, or a column of the drawing's shape (\"composition\")",
+            "text zone": "give the part room for its words (larger w/h, or move it clear)",
+            "inside": "move the part into what it sits in, or make the room larger",
+            "cut off": "smaller, or a larger frame (\"size\")",
+            "small text": "fewer / shorter words in the drawing, or a wider column",
+            "label": "more room around that part, or shorter words",
+            "contrast": "kit colours for the dark panel",
+            "aborted": "the audit did not run on that step - try it in the studio",
+            "error": "the figure did not draw - check_kit.py spec, then the studio"}
+
+
+def short_figures(lines, figrel):
+    """figure_fit's report body -> one line per figure and kind of problem, each with its fix; the studio command once"""
+    out, fig = [], None
+
+    def flush():
+        if not fig:
+            return
+        sid, name, panel, scale, kinds, extra, same = fig
+        out.append("  FIGURE %s - %s (scale %s in a %s px panel): %s%s" % (
+            sid, os.path.join(figrel, name), scale, panel, ", ".join("%s x%d" % (k, len(v)) for k, v in kinds.items()),
+            " (unchanged since the last build - the same report)" if same else ""))
+        for k, v in kinds.items():
+            out.append("    %s - e.g. %s - fix: %s" % (k, v[0][:90], FIG_HINT.get(k, "see the full log")))
+        out.extend(extra)
+        out.append("    try it: course-visuals\\kit\\scripts\\studio.py %s --step all" % os.path.join(figrel, name))
+    for line in lines:
+        m = FIG_HEAD.match(line)
+        if m:
+            flush()
+            fig = [m.group(1), m.group(2), m.group(3), m.group(4), {}, [], False]
+            continue
+        if fig and line.startswith("    "):
+            it = FIG_ITEM.match(line)
+            if line.startswith("        "):                  # the saved candidate's own list: in the full log
+                continue
+            if line.startswith("    (unchanged since"):
+                fig[6] = True
+            elif line.startswith("    tried by itself:") and re.search(r"saved as (.+?\.kit\.json)", line):
+                fig[5].append("    a closer fit was saved: %s" % re.search(r"saved as (.+?\.kit\.json)", line).group(1)
+                              + " - copy it over the spec, then fix what it lists")
+            elif line.startswith(("    why EMPTY:", "    the parts named", "    fix (vent):")):
+                fig[5].append("    " + line.strip()[:220])
+            elif it and it.group(1) not in ("fix", "tried by itself", "try a fix in seconds"):
+                fig[4].setdefault(it.group(1), []).append(re.sub(r"\s+\(step [^)]*\)$", "", it.group(2)))
+            continue
+        flush()
+        fig = None
+        if line.strip():
+            out.append(line[:240])
+    flush()
+    return out
+
+
+def short_list(items, width=220):
+    """the same line once, with how many times it came ("cut off - circle 43.6 px" twice on one slide is one line)"""
+    seen = {}
+    for x in items:
+        seen[x] = seen.get(x, 0) + 1
+    return [(x[:width] + ("..." if len(x) > width else "")) + (" (x%d)" % n if n > 1 else "") for x, n in seen.items()]
+
+
+AUDIT_LINE = re.compile(r"^\s*(slide \d+ \(\w+\)): (.*)$")
+
+
+def short_audits(out):
+    """run_audits.py's answer -> per viewport and slide, each kind of finding once with its count and the range of px"""
+    lines, size, groups, order = [], "", {}, []
+    for raw in out.splitlines():
+        if raw.startswith("Built "):
+            continue
+        m0 = re.match(r"^\s*(\d+x\d+)\s+(\w+)\s+(FAIL|PASS|REVIEW)\b(.*)$", raw)
+        if m0:
+            size = m0.group(1)
+            if m0.group(3) != "PASS":
+                key = (size, "", raw.strip())
+                groups.setdefault(key, [])
+                order.append(key)
+            continue
+        m = AUDIT_LINE.match(raw)
+        if m:
+            what = m.group(2)
+            kind = re.sub(r'"[^"]*"|\d+(\.\d+)?', "", what)
+            kind = " ".join(kind.replace("px on screen", "").replace(" by  px", "").split())
+            key = (size, m.group(1), kind)
+            if key not in groups:
+                order.append(key)
+            groups.setdefault(key, []).append(what)
+            continue
+        if raw.strip() and not order:
+            lines.append(raw.rstrip())
+        elif raw.strip():
+            key = (size, "", raw.strip())
+            if key not in groups:
+                order.append(key)
+                groups[key] = []
+    for key in order:
+        size_, slide, kind = key
+        hits = groups[key]
+        if not slide:
+            lines.append("  " + kind[:200])
+            continue
+        px = sorted(float(v) for h in hits for v in re.findall(r"(\d+(?:\.\d+)?) px", h))
+        rng = (" (%g-%g px)" % (px[0], px[-1]) if px and px[0] != px[-1] else " (%g px)" % px[0] if px else "")
+        lines.append("  %s %s: %s%s%s" % (size_, slide, kind, " x%d" % len(hits) if len(hits) > 1 else "", rng)
+                     if len(hits) > 1 else "  %s %s: %s" % (size_, slide, hits[0][:200]))
+    return lines
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("course")
@@ -376,6 +500,10 @@ def main(argv=None):
                                                             "changes after them (2.63.3); builds nothing")
     ap.add_argument("--wait", action="store_true", help="wait for this module's build that said STILL BUILDING and print its "
                                                         "answer (2.63.3)")
+    ap.add_argument("--long-pole", action="store_true", help="the course's biggest module (build_order.py, 2.65.0): its first "
+                                                             "build never waits for another module's first build")
+    ap.add_argument("--full-output", action="store_true", help="print every finding in full, as the log has it (2.65.0: the "
+                                                               "answer is one line per problem, with its fix)")
     ap.add_argument("--inner", action="store_true", help=argparse.SUPPRESS)
     o = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -427,7 +555,7 @@ def main(argv=None):
     cold = contextlib.ExitStack()
     if o.layout_round == 0 and not os.path.isfile(os.path.join(logdir, "%s_last.json" % m)):
         import browser_slots
-        waited = cold.enter_context(browser_slots.cold_turn())
+        waited = cold.enter_context(browser_slots.cold_turn(first=o.long_pole))
         log.write("\n===== first build: waited %.0f s for another module's first build (browser_slots.cold_turn)\n" % waited)
         if waited >= 5:
             notes.append("First build: waited %.0f s for another module's first build to finish its figures (one at a time)" % waited)
@@ -451,7 +579,7 @@ def main(argv=None):
         body = [x for x in fig_text.splitlines()[1:-1]]
         if body:
             say.append("FIGURES")
-            say += body
+            say += body if o.full_output else short_figures(body, workspace_figdir(course, o.module))
         if fcode:
             fails.append("figures")
     t = timed("figures (figure_fit.py)", t0)
@@ -496,7 +624,7 @@ def main(argv=None):
     if ccode != 0 or probs:
         fails.append("compile")
         say.append("COMPILE - %d problem(s) to fix%s:" % (len(probs), " (the figures above not repeated)" if shown else ""))
-        say += ["  - " + x for x in probs]
+        say += ["  - " + x for x in (probs if o.full_output else short_list(probs))]
         if any("L54" in x or "drawing" in x for x in probs):
             say.append("  (a drawing problem: fix the drawing, or mark a crossing that is meant data-may-cross / data-no-contain / "
                        "data-may-overlap; a kit figure: studio.py <figure>.kit.json --step all)")
@@ -569,7 +697,8 @@ def main(argv=None):
         logged(ak, out)
         fails.append(ak)
         say.append("%s - FAIL:" % ak.upper())
-        say += ["  " + x for x in lines_of("\n".join(y for y in out.splitlines() if not y.startswith("Built ")), 40)]
+        say += short_audits(out) if not o.full_output else \
+            ["  " + x for x in lines_of("\n".join(y for y in out.splitlines() if not y.startswith("Built ")), 40)]
         stopped = sorted(k for k in jobs if k not in took or k == "review sheets") + ["course package"]
         log.write("\n===== ended early - this round is built again: %s\n" % ", ".join(stopped))
     if early is None and o.no_course_pages:
@@ -588,8 +717,11 @@ def main(argv=None):
             fails.append(k)
             say.append("%s - FAIL:" % k.upper())
             # the audits name every element and its words (run_audits.summarise), so they keep more lines - no --json run to find them
-            say += ["  " + x for x in lines_of("\n".join(y for y in out.splitlines() if not y.startswith("Built ")),
-                                               40 if k.startswith("audits") else 12)]
+            if k.startswith("audits") and not o.full_output:      # 2.65.0: per slide, each kind once with its count
+                say += short_audits(out)
+            else:
+                say += ["  " + x for x in lines_of("\n".join(y for y in out.splitlines() if not y.startswith("Built ")),
+                                                   40 if k.startswith("audits") else 12)]
     # 2.62.0 - a slide the compiler built another way for L62 that the audit found does not fit is measured out and built
     # its next way, at once: the builder never pins a layout by hand for what the compiler chose
     if ak in fails and o.layout_round < LAYOUT_ROUNDS and os.path.isfile(deck):

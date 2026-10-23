@@ -24,6 +24,13 @@
       (2.63.3) A build that runs past 9 minutes answers "STILL BUILDING" (exit 3) and goes on by itself: run the SAME
       command with --wait for its answer - never a second build meanwhile. A module's FIRST build waits its turn (at most
       5 min) behind another module's first build on the same computer.
+      (2.65.0) The answer says each problem ONCE with its fix and its file - a figure is one line per kind of problem
+      ("FIGURE s03 - <spec> (scale 0.70 in a 480x238 px panel): small text x11", an example, the fix, the studio
+      command); the audits per slide and kind with a count; the same compile line once with "(xN)". Every line is in the
+      full log; --full-output prints them all. --long-pole (the whole-course workflow gives it to the course's biggest
+      module, scripts/build_order.py): its first build never waits for another module's. Hidden browsers run in ONE
+      kept Chrome per slot of the pool, each page in a new browser context (browser_slots.run_dom; CF_CHROME_REUSE=off
+      starts a fresh Chrome per page as before).
 5  on PASS - or MODULE CLEAN in a parallel build (--no-course-pages: only the course package left, judged after assembly)
       - it has photographed every CHANGED slide (every part of a paged slide), figure step and question (asked, wrong,
       right) onto a few sheets, and checked that every question grades right and wrong answers as such. A screen
@@ -58,7 +65,16 @@
   <predecessor course>` (or `"seed_from"` in `working_claude\course.build.json`) gives every slide and question whose words
   are unchanged the predecessor's drawing (the kit spec its DECK shows, else its source spec or .html / .svg drawing) or
   photo with its places, marked `"_seeded"`; only the rest get starters. (IGF M01-M03 from the hand-fixed original: 8, 20
-  and 17 screens seeded.)
+  and 17 screens seeded.) (2.65.0) The whole-course workflow passes its `seed_from` argument to every `--init-build`.
+- **The whole-course workflow (2.65.0)** builds the modules biggest first (`scripts/build_order.py`: screens, drawn
+  figures, 3D scenes from the approved scripts, seeded ones counted less) in a rolling pool of `wave` at a time; its builder
+  reads `compile/BUILDER_CARD.md`, not this guide. A module with a 3D-kit scene gets the 3D step after its build:
+  `course-visuals/kit3d/scripts/scene3d_check.py <course> --module N` (spec check, smoke3d, perf3d, a picture of every
+  step in `working_claude\review\MNN_3d\`), then a reviewer who did not build the scene judges the pictures; a BROKEN
+  finding gets one fix round.
+- **Figure fits (2.65.0)**: the COLUMN re-fit tries one width at a time and stops at the first clean fit (the same fit the
+  parallel search kept, fewer probes). An EMPTY drawing on a
+  task page is cropped by itself, as a slide's is, and kept only when the page is then clean.
 - **A task question a real photo of the module can carry (2.63.3)** is answered on it: the compile names the photo and the
   build-sheet line in "To fix", or the sheet says why not, `"photo_declined": "<why>"` (2.63.2 run: 1 task photo; the
   hand-fixed original 6).

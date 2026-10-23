@@ -26,6 +26,15 @@
  * `factory` (optional): a folder holding the factory's skills (`<factory>/course-factory/SKILL.md` ...) to use
  *   instead of the installed plugin - a benchmark pins its version this way.
  * `notes` (optional): the operator's words for every module agent ("no paid pictures tonight", "decline 3D: ...").
+ * `seed_from` (optional, 2.65.0): the hand-fixed predecessor course a rebuild starts from - every module's --init-build
+ *   takes its drawings and photos for the screens whose words are unchanged (compile_module.py --seed-from). Without it
+ *   the course's own working_claude/course.build.json "seed_from" is used, when it names one.
+ * `wave` (optional): how many modules build at once (default: all). 2.65.0 - a rolling pool, biggest module first: the
+ *   gate measures each module's build cost (scripts/build_order.py) and the next module starts as soon as one finishes,
+ *   so the long pole starts first instead of a wave waiting for its slowest member (2.63.3 M01-M03: 114 min, M02 alone).
+ *
+ * 2.65.0 - the builder reads compile/BUILDER_CARD.md, not the whole skill; a module with a 3D-kit scene gets the 3D step
+ * after its build: scene3d_check.py (spec, smoke, timing, pictures), a SEPARATE reviewer of the pictures, one fix round.
  *
  * Models (2.51.0, the M01 benchmark: the mechanical loop was most of the bill): the reader and the script writer
  * keep the session's model - that is where the words come from. Building an approved script (build_module.py
@@ -53,6 +62,9 @@ const SKILL = A.factory
   : 'the course-factory skill (Skill tool, name "course-factory")'
 const SCRIPTS = A.factory ? `${A.factory}/course-factory` : '<the course-factory skill folder>'
 const NOTES = A.notes ? `\n\nTHE OPERATOR SAYS, FOR THIS RUN: ${A.notes}` : ''
+const CARD = A.factory ? `${SCRIPTS}/compile/BUILDER_CARD.md`
+  : 'compile/BUILDER_CARD.md in the course-factory skill\'s folder (the Skill tool, name "course-factory", names the folder)'
+const SEED = A.seed_from ? ` --seed-from "${A.seed_from}"` : ''
 /* the mechanical work - building an approved script, checking it - on Sonnet; see the header */
 const MECHANICAL = { model: 'sonnet', effort: 'medium' }
 
@@ -146,6 +158,10 @@ const GATE_SCHEMA = {
   properties: {
     open: { type: 'boolean' }, output: { type: 'string' },
     approved: { type: 'array', items: { type: 'string' }, description: 'the module ids whose script status says "approved"' },
+    order: {
+      type: 'array', description: 'build_order.py --json, as printed: the modules biggest first',
+      items: { type: 'object', required: ['id', 'cost'], properties: { id: { type: 'number' }, cost: { type: 'number' } } },
+    },
   },
 }
 
@@ -154,13 +170,20 @@ const gate = await agent(
 
     python ${SCRIPTS}/scripts/course_gate.py "${A.course}"
 ${A.modules.map((m) => `    python ${SCRIPTS}/scripts/content_script.py status "${A.course}" --module ${m.id}`).join('\n')}
+    python ${SCRIPTS}/scripts/build_order.py "${A.course}" --modules ${A.modules.map((m) => m.id).join(',')} --json${SEED}
 
 open = true only if course_gate.py exited 0. output = everything course_gate.py printed, word for word.
 approved = the module ids (as written after --module) whose status line says "approved by"; a draft, a
-missing script or an error is not approved. Do not fix anything, do not write any file.`,
+missing script or an error is not approved. order = the JSON list build_order.py printed, as it is (empty if it
+printed none). Do not fix anything, do not write any file.`,
   { label: 'gate:ilo-map+kb', phase: 'Read', schema: GATE_SCHEMA, model: 'sonnet', effort: 'low' }
 )
 const APPROVED = new Set(((gate && gate.approved) || []).map(String))
+/* 2.65.0 - biggest module first (build_order.py's cost); a module it did not cost keeps its place after the costed ones */
+const COST = new Map(((gate && gate.order) || []).map((r) => [String(r.id), Number(r.cost) || 0]))
+const ORDER = A.modules.map((m, i) => ({ m, i }))
+  .sort((a, b) => (COST.get(String(b.m.id)) || 0) - (COST.get(String(a.m.id)) || 0) || a.i - b.i)
+const LONG_POLE = ORDER.length > 1 && COST.size ? String(ORDER[0].m.id) : null
 
 if (!gate || !gate.open) {
   /* No module agent starts without the approved ILO map and the knowledge-base decision (owner, 2026-10-16). */
@@ -223,66 +246,46 @@ Report "awaiting approval", every honesty marker with its source, the planned Tr
 buckets and Track B ratio, and what you moved to the handout.`
 
 /* an approved module: the mechanical build, on Sonnet (MECHANICAL), in ONE command per round */
-const build = (m) => `Invoke ${SKILL} and follow it. BUILD ONE module from its approved script.
+/* 2.65.0 - the builder reads a one-page card (compile/BUILDER_CARD.md: the commands, the fix for each kind of line the
+   build prints, the stop, the report), not the whole skill: the 2.63.3 builders read ~130,000 characters of SKILL.md,
+   GUIDE.md, CATALOGUE.md and SPEC.md first and carried them in every turn (M02: 98 M cache-read tokens) */
+const build = (m) => `BUILD ONE module from its approved script. Read ${CARD} first - it is your whole job: the commands,
+what to do with each line the build prints, when to stop and what to report. The course-factory SKILL.md and
+compile/GUIDE.md are reference for a case the card does not cover - read only the section it names. The factory's
+scripts are under ${SCRIPTS}/.. (course-factory, course-visuals, course-module-ui, course-module-ux).
 
 ${brief(m)}
 
-Your script working_claude/script/M${two(m)}.json is approved: you never type the deck's or a
-task page's HTML, and you never change the approved words. Read the Quickstart at the top of
-course-factory compile/GUIDE.md and follow it step by step - it is the whole build - and the
-picture lanes it names (course-visuals/kit/CATALOGUE.md, never kit.js). NOT course-module-ux,
-course-module-ui or course-task-ux: the compiler builds their standard.
-
     design_system.py install modules/module${two(m)}                     (course-module-ui/scripts)
-    compile_module.py <course> --module ${m.id} --init-build              (once, if the build sheet is missing)
-        (2.63.3) when working_claude/course.build.json names a "seed_from" course (a hand-fixed predecessor), every
-        slide and question whose words are unchanged starts from ITS drawing or photo ("_seeded" in the sheet): build
-        those as they are and change only what the build reports - they are the hand-fixed ones
+    compile_module.py <course> --module ${m.id} --init-build${SEED}      (once, if the build sheet is missing)
+        screens marked "_seeded" start from a hand-fixed predecessor's drawing or photo: build them as they are and
+        change only what the build reports
     fill the build sheet, edit the starter figure specs
-    build_module.py <course> --module ${m.id} --no-course-pages           (compile/scripts)
-        ONE command runs the figures, the compile, every check and the review sheets and prints
-        only what fails. Fix what it prints in the build sheet or the figure specs and run it
-        again - never a check on its own, never the HTML. --no-course-pages: one process
-        writes COURSE.html afterwards.
-    STOP AT MODULE CLEAN (2.63.3): PASS, or "FAIL M${two(m)} - course package" with "MODULE CLEAN" under it
-        (the package is judged after assembly) - that is the end of your build. Do NOT review the sheets
-        yourself and do not polish: the QA agent behind you does the ONE visual review on the sheets this
-        build promoted, and a BROKEN finding comes back to the module for one fix round. (The 2.63.2
-        full-course run: 46 of 128 build calls came after module clean - a builder reviewing its own sheets,
-        whose fixes tripped the layout checks again.) Anything you would polish: list it in your report.
+    build_module.py <course> --module ${m.id} --no-course-pages${String(m.id) === LONG_POLE ? ' --long-pole' : ''}           (compile/scripts)
+        ONE command runs the figures, the compile, every check and the review sheets and prints only what fails, one
+        line each with its fix. Fix it in the build sheet or the figure specs and run it again - never a check on its
+        own, never the HTML.${String(m.id) === LONG_POLE ? `
+        --long-pole: this module is the course's biggest build (build_order.py) - its first build goes first.` : ''}
+    STOP AT MODULE CLEAN: PASS, or "FAIL M${two(m)} - course package" with "MODULE CLEAN" under it.
+        Do NOT review the sheets yourself and do not polish: the QA agent behind you does the ONE visual review, and a
+        BROKEN finding comes back for one fix round. Anything you would polish: list it in your report.
     a figure problem: fix it in the studio (studio.py <spec> --step all, seconds), then one build.
 
-RUN build_module.py IN THE FOREGROUND and wait for its last line; give the shell call the longest
-timeout it allows (600000 ms). A build that runs longer answers "STILL BUILDING" before that
-limit and goes on by itself: then run the SAME command with --wait (again, until it prints the
-build's answer) - never start a second build meanwhile, never edit the build sheet or a figure while
-it runs. A module's first build may first wait up to 5 min for another module's first build (one
-at a time on this computer) - that is expected. Never end your turn while a build runs: your report
-is read as the module's result (2.58.0 - the IGF full build: a builder that ended "waiting on the
-build" left Module 15 half-built). Your report's FIRST line is the PASS / FAIL line build_module.py
-printed.
+RUN build_module.py IN THE FOREGROUND with the shell call's longest timeout (600000 ms). "STILL BUILDING": run the SAME
+command with --wait until it prints the build's answer - never a second build meanwhile, never an edit while it runs, never
+end your turn while it runs (your report is read as the module's result). Your report's FIRST line is the PASS / FAIL line
+build_module.py printed.
 
-A way of answering the compiler leaves "as it is" is the one page you make by hand, to
-course-task-ux.
+L60: when the build prints "RECOMMENDED (L60)", build the scene on the slide it names (a 3D-kit spec, sNN.kit3d.json) - or,
+only when the subject has no shape, inside or layout in space to show, or a photo is wanted there, write the reason at the
+TOP of the build sheet, "declined_3d": "builder: <the reason>". Never leave it unanswered. A 3D-kit scene is checked and
+photographed by the workflow's 3D step after you, and judged by a reviewer who did not build it.
 
-L60 (2.63.2 - the 2.63.0 full build: M08 and M10-M14 ended with no 3D scene and no word about it):
-when the build prints "RECOMMENDED (L60)", build the scene on the slide it names (its starter
-entry and compile/GUIDE.md 2b; smoke3d.py after each edit) - or, only when the subject has no
-shape, inside or layout in space to show, or a photo is wanted there, write the reason at the
-TOP of the build sheet, "declined_3d": "builder: <the reason>". Never leave it unanswered; your
-report says which (the scene's slide, or the reason).
+Every TOPIC screen leads with a picture (L23): the source files and the knowledge base first, then a real photograph, then
+the figure kit. visual_kind "none" is how a screen honestly needs none. An image you cannot produce: its brief in
+_visual_briefs/, and keep going.
 
-The look is the compiler's; what the picture should be is course-visuals'. Every TOPIC
-screen leads with a figure (L23) — search the source files and knowledge base first, then
-the internet for a real photograph, then the figure kit, then author or generate. The
-script's visual_kind "none" is how a screen honestly needs no figure. Where an image needs
-generating and you cannot produce it, write the brief to _visual_briefs/ and keep going:
-the module is finished as far as it can go, and the handoff is written at the end.
-
-Report: the PASS / FAIL line build_module.py printed (PASS, or the problems left) and the path of
-its full log, how many build_module.py runs it took, every honesty marker with its source,
-the achieved Track A buckets and Track B ratio, what you moved to the handout, every line
-the compiler printed under "To fix" or "left as it is", and anything you would polish.`
+Report as the card says.`
 
 const qa = (m) => `You did NOT build this module. Check it.
 
@@ -406,31 +409,117 @@ async function buildUntilPass(m) {
   return r
 }
 
-/* the modules in waves of A.wave (default: all at once) - each build runs headless browsers, so on one PC a wave of 3
-   keeps it from being pinned at 99 % (the IGF full build ran in waves of 3) */
-const WAVE = A.wave || A.modules.length
-const results = []
-for (let i = 0; i < A.modules.length; i += WAVE) {
-  const chunk = A.modules.slice(i, i + WAVE)
-  if (WAVE < A.modules.length) log(`wave ${i / WAVE + 1}: modules ${chunk.map((m) => m.id).join(', ')}`)
-  results.push(...await pipeline(
-    chunk,
-    (m) => APPROVED.has(String(m.id))
-      ? buildUntilPass(m).then((r) => ({ m, r, built: true }))
-      : agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' }).then((r) => ({ m, r, built: false })),
-    ({ m, built }) => built
-      ? agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL }).then((q) => ({ m, q }))
-      : { m, q: { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] } },
-    /* 2.63.3 - BROKEN: one fix round, then QA once more (its sheets show only the screens the fix changed); never a third */
-    async ({ m, q }) => {
-      if (!broken(q)) return q
-      log(`module ${m.id}: QA found BROKEN - one fix round`)
-      await agent(fixRound(m, q), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL })
-      const q2 = await agent(qa(m), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
-      return q2 ? Object.assign({}, q2, { first_qa: q.findings }) : q
-    }
-  ))
+/* ------------------------------------------------- 2.65.0 · THE 3D STEP (a module with a 3D-kit scene) */
+/* the scene is the builder's spec; it is checked and photographed by a script and judged by a reviewer who did not
+   build it (the 2.63.2 run: every scene passed its checks while showing "a bare pipe" and "labels as buttons below") */
+const KIT3D_SCRIPTS = A.factory ? `${A.factory}/course-visuals/kit3d/scripts` : '<the course-visuals skill folder>/kit3d/scripts'
+const SCENE_SCHEMA = {
+  type: 'object',
+  required: ['has_scene', 'ok', 'shots'],
+  properties: {
+    has_scene: { type: 'boolean' }, ok: { type: 'boolean' },
+    shots: { type: 'array', items: { type: 'string' }, description: 'every picture path scene3d_check.py printed' },
+    scenes: { type: 'array', items: { type: 'object', properties: { slide: { type: 'string' }, spec: { type: 'string' } } } },
+    report: { type: 'string', description: 'what scene3d_check.py printed, word for word' },
+  },
 }
+const REVIEW3D_SCHEMA = {
+  type: 'object',
+  required: ['findings'],
+  properties: {
+    findings: {
+      type: 'array',
+      items: {
+        type: 'object', required: ['severity', 'where', 'what'],
+        properties: { severity: { type: 'string', enum: ['BROKEN', 'POLISH', 'INFO'] }, where: { type: 'string' }, what: { type: 'string' } },
+      },
+    },
+  },
+}
+const scene3d = (m, again) => `Run the 3D check of module ${m.id} - one command, in the FOREGROUND (timeout 600000 ms):
+
+    python ${KIT3D_SCRIPTS}/scene3d_check.py "${A.course}" --module ${m.id} --json
+
+Exit 2 ("No 3D-kit scene"): has_scene = false, ok = true, shots = [] - and stop.
+Otherwise has_scene = true, shots = every "shots" path in its JSON, scenes = each scene's slide and spec, report = its output.
+${again ? 'This runs after a fix round: do not change anything, only report.' : `If it found problems (a spec check, smoke3d, perf3d or the shots - "problems" in its JSON): fix exactly those in the
+scene's spec (or the module's assets/kit3d_parts.js - course-visuals/kit3d/SPEC.md, PARTS.md), rebuild with
+    python ${SCRIPTS}/compile/scripts/build_module.py "${A.course}" --module ${m.id} --no-course-pages
+(foreground; "STILL BUILDING": the same command with --wait), and run scene3d_check.py again - at most two rounds.`}
+ok = true only when its last run's JSON says "ok": true. You never judge the pictures - a reviewer who did not build the
+scene does that. Write only in figures/M${two(m)}/ and modules/module${two(m)}/.${NOTES}`
+const review3d = (m, s) => `You did NOT build this 3D scene. Judge it from its pictures - you change nothing.
+
+  Module ${m.id}, course ${A.course}. The scenes: ${JSON.stringify(s.scenes || [])}
+  Pictures (one per step, the scene as its slide shows it; open each ONCE, in order):
+${(s.shots || []).map((p) => `    ${p}`).join('\n')}
+
+For each scene read its slide's words first (working_claude/script/M${two(m)}.json, the screen with that id: title, text,
+and the step lines) and the spec's labels and step titles. Then judge each picture:
+  1 every label sits ON or right beside the part it names (not in a row of buttons, not over another part's name);
+  2 the scene shows what the slide teaches - the inside, the arrangement, the flow it names - not a bare outline;
+  3 the model fills its box (no small model in a big empty panel; nothing cut off at the edge);
+  4 each step shows what its title and the slide's line for it say (the part lit, opened or moved);
+  5 nothing contradicts the words (a part, a number, a direction).
+A failure of 1-5 that a trainee would misread or not see is BROKEN; worse than it could be is POLISH. "where" = the
+slide id and the picture's file name.`
+const fix3d = (m, s, r) => `${scene3d(m, false)}
+
+THEN fix exactly these BROKEN findings of the 3D review (a reviewer who did not build it) in the scene's spec - nothing else -
+rebuild with build_module.py (as above) to module clean, and run scene3d_check.py once more:
+
+${(r.findings || []).filter((f) => f.severity === 'BROKEN').map((f) => `  - ${f.where}: ${f.what}`).join('\n')}`
+async function threeD(m) {
+  const s = await agent(scene3d(m, false), { label: `3d:${m.id}`, phase: 'Build', schema: SCENE_SCHEMA, ...MECHANICAL })
+  if (!s || !s.has_scene) return null
+  const r = (s.shots || []).length ? await agent(review3d(m, s), { label: `review3d:${m.id}`, phase: 'Verify', schema: REVIEW3D_SCHEMA, ...MECHANICAL }) : null
+  if (!r || !(r.findings || []).some((f) => f.severity === 'BROKEN')) return { check: s, review: r }
+  log(`module ${m.id}: the 3D review found BROKEN - one fix round`)
+  const s2 = await agent(fix3d(m, s, r), { label: `fix3d:${m.id}`, phase: 'Build', schema: SCENE_SCHEMA, ...MECHANICAL })
+  const r2 = s2 && (s2.shots || []).length
+    ? await agent(review3d(m, s2), { label: `review3d:${m.id}+fix`, phase: 'Verify', schema: REVIEW3D_SCHEMA, ...MECHANICAL }) : null
+  return { check: s2 || s, review: r2 || r, first_review: r.findings }
+}
+
+/* one module, start to finish: built (or its script written), the 3D step, QA, one fix round */
+async function oneModule(m) {
+  if (!APPROVED.has(String(m.id))) {
+    await agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' })
+    return { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] }
+  }
+  await buildUntilPass(m)
+  const d3 = await threeD(m)
+  const q = await agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
+  /* 2.63.3 - BROKEN: one fix round, then QA once more (its sheets show only the screens the fix changed); never a third */
+  let out = q
+  if (broken(q)) {
+    log(`module ${m.id}: QA found BROKEN - one fix round`)
+    await agent(fixRound(m, q), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL })
+    const q2 = await agent(qa(m), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
+    out = q2 ? Object.assign({}, q2, { first_qa: q.findings }) : q
+  }
+  if (out && d3) {
+    const b3 = ((d3.review && d3.review.findings) || []).filter((f) => f.severity === 'BROKEN')
+    out = Object.assign({}, out, { three_d: d3 },
+      b3.length || (d3.check && !d3.check.ok) ? { blocking: true } : {})
+  }
+  return out
+}
+
+/* 2.65.0 - a rolling pool of A.wave modules (default: all at once), biggest first: the next module starts the moment one
+   finishes - each build runs hidden browsers, so on one PC 3 at a time keeps it from being pinned at 99 %. Waves of 3
+   waited for their slowest member (2.63.2: 95 / 54 / 41 / 33 / 39 min; 2.63.3 M01-M03: 114 min, M02 alone at the end) */
+const WAVE = Math.max(1, A.wave || A.modules.length)
+const results = new Array(A.modules.length).fill(null)
+const queue = ORDER.slice()
+log(`build order, biggest first: ${ORDER.map(({ m }) => `M${two(m)}${COST.has(String(m.id)) ? ` (${COST.get(String(m.id))})` : ''}`).join(', ')}`
+  + (WAVE < A.modules.length ? ` - ${WAVE} at a time` : ''))
+await parallel(Array.from({ length: Math.min(WAVE, queue.length) }, () => async () => {
+  while (queue.length) {
+    const { m, i } = queue.shift()
+    try { results[i] = await oneModule(m) } catch (e) { log(`module ${m.id}: ${e && e.message ? e.message : e}`) }
+  }
+}))
 
 /* the final assessment (args.final), when its script is approved - built after the modules it draws on */
 const finalReport = A.final ? await agent(`Invoke ${SKILL} and follow it. BUILD the FINAL ASSESSMENT from its approved script.

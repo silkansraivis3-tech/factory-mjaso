@@ -200,9 +200,79 @@ def failing_cache_part():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def column_order_part():
+    """2.65.0 - the COLUMN search one width at a time, stopping at the first clean fit: the same fit the parallel search kept
+    (its first clean attempt in this order), fewer measurements"""
+    print("-- 2.65.0 COLUMN: one width at a time, the first clean fit in the parallel search's order")
+    spec = json.loads(json.dumps(SPEC))
+    boxes = {str(i): [p.get("x", 0), p.get("y", 0), p.get("x", 0) + p.get("w", 40), p.get("y", 0) + p.get("h", 40), p.get("id"),
+                      p["type"]] for i, p in enumerate(spec["parts"])}
+    r0 = {"states": [{"panel": [480, 300]}], "parts": boxes, "report": {"scale": 0.7}}
+    probs0 = [("1280x800", "0", "small text", "x", "")] * 4
+    calls = []
+
+    def fake(clean_below, gain=True):
+        def measure(spec_path, sid, cand=None, strip=True):
+            calls.append((cand["size"][0] if cand else None, strip))
+            w = cand["size"][0] if cand else 640
+            n = 0 if w <= clean_below else (3 if gain else 4)
+            return [("1280x800", "0", "small text", "x", "")] * n, {"parts": boxes, "states": [{"panel": [480, 300]}]}
+        return measure
+    real, strip_ = ff.measure, ff.has_strip
+    try:
+        ff.has_strip = lambda sp, sid: False
+        ff.measure = fake(10000)                         # every width is clean: the first one (0.88 of the column) is kept
+        del calls[:]
+        new, how, _ = ff.try_fixes("x.kit.json", "s01", spec, r0, probs0, None)
+        check("every width would fit: only the first width is tried (its first unspoiled step), and the fit is the width the "
+              "parallel search ranked first (0.88 of the 480 px column - its first clean attempt)",
+              new and len(calls) <= 3 and len({c[0] for c in calls}) <= 2 and new["size"][0] == round(480 * 0.88)
+              and how.startswith("COLUMN"), (calls, how))
+        ff.measure = fake(0, gain=False)                # no width is ever clean: every width is tried to its last round
+        del calls[:]
+        new, how, best = ff.try_fixes("x.kit.json", "s01", spec, r0, probs0, None)
+        check("a search that finds nothing still tries every width to its last round (%d measurements) - a cut-off after a first "
+              "round with no gain lost 4 of 7 real IGF fits in the replay, so there is none" % len(calls),
+              new is None and len({c[0] for c in calls}) >= 3 and len(calls) > 9, (len(calls), how))
+    finally:
+        ff.measure, ff.has_strip = real, strip_
+
+
+def task_empty_part():
+    """2.65.0 - EMPTY on a task page cropped by itself, as a slide's figure is - kept only when the page is then clean"""
+    print("-- 2.65.0 EMPTY on a task page: cropped to what it shows, in the page's panel shape, the page measured again")
+    if not ff.studio.find_browser():
+        print("  skip  (no Chrome or Edge)")
+        return
+    import test_compile_module as tcm
+    tmp = tempfile.mkdtemp(prefix="ff_empty_")
+    try:
+        small = {"size": [640, 390], "label": "a tank", "parts": [
+            {"id": "FT", "type": "tank", "x": 30, "y": 30, "w": 150, "h": 70, "label": "Fuel tank", "value": 0.6},
+            {"id": "V", "type": "valve", "x": 200, "y": 55, "label": "Tank valve"}]}
+        screens = [
+            {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the tank", "text": "Self-check now.", "minutes": 2},
+            {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the fuel tank.",
+             "visual": "the tank", "answer": "Fuel tank*\nTank valve", "feedback": "The tank holds the fuel."}]
+        build = {"module": 1, "screens": {"t01": {"try_tablet": False},
+                                          "q01": {"figure": "tank.kit.json", "areas": {"Fuel tank": "FT", "Tank valve": "V"}}}}
+        c, md = tcm.figures_course(tmp, build=build, screens=screens)
+        figdir = os.path.join(c, "working_claude", "figures", "M01")
+        io.open(os.path.join(figdir, "tank.kit.json"), "w", encoding="utf-8").write(json.dumps(small))
+        got, left = ff.fix_tasks(c, 1, figdir)
+        check("fix_tasks: a small drawing in a big task-page frame is cropped by itself (EMPTY)",
+              any("EMPTY: cropped" in x for x in got) and os.path.isfile(cm.fit_path(figdir, "tank.kit.json", "q01")), (got, left))
+        code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks", "--drawing-check")
+        check("... and the compile's own drawing check of the page finds no empty space on it", "empty" not in out.lower(), out[-1200:])
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     together_part()
     failing_cache_part()
+    column_order_part()
+    task_empty_part()
     print("-- squeeze: positions and stretchable lengths follow the column, part sizes stay")
     s = ff.squeeze(SPEC, 0.5, x0=20)
     p = {q.get("id") or q["type"]: q for q in s["parts"]}

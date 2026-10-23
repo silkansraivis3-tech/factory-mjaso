@@ -5,7 +5,10 @@ way the figure kit (`../kit/`) draws a 2D figure. It is made from the best of th
 course (M01 hull, M02 tank, M03 bunker station, M04 leak, M05 spaces, M06 trapped liquid, M07 zones, M09 detection,
 M15 venting). A builder never writes three.js for a slide again: they write the parts, the labels and the steps.
 
-PARTS.md lists every part and its settings; `check_kit3d.py` checks a spec; `studio3d.html?spec=<file>` shows one.
+PARTS.md lists every part and its settings; `check_kit3d.py` checks a spec; `studio3d.html?spec=<file>[&parts=<url>]` shows
+one. `scripts/scene3d_check.py <course> --module N` (2.65.0) checks a built module's scenes in one command - the spec,
+smoke3d, perf3d and a picture of every step in `working_claude\review\MNN_3d\` - for a reviewer who did not build them
+(the whole-course workflow's 3D step).
 
 ## What the kit does by itself - nothing of this goes in a spec
 

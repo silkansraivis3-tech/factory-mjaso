@@ -462,6 +462,11 @@ class _Run(object):
         self.slot = browser_slots.slot()
         self.slot.__enter__()
         self.t0, self.what = time.time(), "%s %dx%d" % ("shot" if shot_png else "probe", size[0], size[1])
+        # 2.65.0 - a probe (--dump-dom) runs in this slot's kept Chrome when it can (browser_slots.run_dom), in wait()
+        self.cmd, self.p = (args + [url], None) if not shot_png and browser_slots.dom_job(args + [url]) else (None, None)
+        if self.cmd and browser_slots.reuse_on():
+            return
+        self.cmd = None
         try:
             self.fh = io.open(self.out, "w", encoding="utf-8", errors="replace")
             self.p = subprocess.Popen(args + [url], stdout=self.fh, stderr=subprocess.DEVNULL, cwd=prof)
@@ -470,17 +475,28 @@ class _Run(object):
             raise
 
     def wait(self, timeout):
-        try:
-            self.p.wait(timeout=timeout)
-            ok = True
-        except subprocess.TimeoutExpired:
-            self.p.kill()
-            self.p.wait()
-            ok = False
-        finally:
-            self.slot.__exit__(None, None, None)
-        self.fh.close()
-        text = io.open(self.out, encoding="utf-8", errors="replace").read() if ok else ""
+        if self.cmd:
+            import browser_slots
+            try:
+                p = browser_slots.run_dom(self.cmd, timeout=timeout, capture_output=True, text=True, encoding="utf-8",
+                                          errors="replace", cwd=os.path.dirname(self.out))
+                ok, text = True, p.stdout or ""
+            except subprocess.TimeoutExpired:
+                ok, text = False, ""
+            finally:
+                self.slot.__exit__(None, None, None)
+        else:
+            try:
+                self.p.wait(timeout=timeout)
+                ok = True
+            except subprocess.TimeoutExpired:
+                self.p.kill()
+                self.p.wait()
+                ok = False
+            finally:
+                self.slot.__exit__(None, None, None)
+            self.fh.close()
+            text = io.open(self.out, encoding="utf-8", errors="replace").read() if ok else ""
         if os.environ.get("CF_TIMING"):            # 2.61.0: the run's real seconds and the page's own clock
             import cf_timing
             v = re.search(r'&quot;virt&quot;:(\d+)|"virt":(\d+)', text)

@@ -103,7 +103,7 @@ def window_for(exe, size=SIZE):
             f = os.path.join(tmp, "cal.html")
             io.open(f, "w", encoding="utf-8").write("<html><body><script>var p=document.createElement('pre');p.id='cal';"
                                                     "p.textContent=innerWidth+'x'+innerHeight;document.body.appendChild(p)</script></body></html>")
-            p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--user-data-dir=" +
+            p = browser_slots.run_dom([exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--user-data-dir=" +
                                    os.path.join(tmp, "p"), "--window-size=1280,800", "--dump-dom", Path(f).as_uri()],
                                   capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
             m = re.search(r'<pre id="cal">(\d+)x(\d+)</pre>', p.stdout or "")
@@ -171,7 +171,8 @@ def run_page(exe, page, prof, tmp, keep=None):
             # --disable-3d-apis (2.62.1): the drawing check judges drawings and words, never a WebGL render - a 3D scene
             # shows its poster, as on a tablet without WebGL. Software WebGL was the stalled pages' one common part, and the
             # check of three slides with a 3D scene took 3.7 s instead of 9.8 s
-            p = browser_slots.run_tree([exe, "--headless=new", "--disable-gpu", "--disable-3d-apis", "--hide-scrollbars", "--no-first-run",
+            # 2.65.0: in this slot's kept Chrome when it can be (browser_slots.run_dom - the same page, a new context)
+            p = browser_slots.run_dom([exe, "--headless=new", "--disable-gpu", "--disable-3d-apis", "--hide-scrollbars", "--no-first-run",
                                 "--mute-audio", "--user-data-dir=" + prof, "--allow-file-access-from-files",
                                 "--window-size=%d,%d" % window_for(exe), "--virtual-time-budget=%d" % (120000 if deck else 8000),
                                 "--dump-dom", Path(w).as_uri()],

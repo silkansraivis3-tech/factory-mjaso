@@ -137,9 +137,9 @@ def main():
         import threading
         got = {}
 
-        def first(name, hold, wait_max):
+        def first(name, hold, wait_max, pole=False):
             t = time.time()
-            with browser_slots.cold_turn(wait_max) as waited:
+            with browser_slots.cold_turn(wait_max, first=pole) as waited:
                 got[name] = (time.time() - t, waited)
                 time.sleep(hold)
         a = threading.Thread(target=first, args=("a", 2.0, 30))
@@ -147,17 +147,129 @@ def main():
         time.sleep(0.3)
         b = threading.Thread(target=first, args=("b", 0.1, 30))
         c = threading.Thread(target=first, args=("c", 0.1, 0.5))
+        d = threading.Thread(target=first, args=("d", 0.1, 30, True))
         b.start()
         c.start()
-        for x in (a, b, c):
+        d.start()
+        for x in (a, b, c, d):
             x.join(60)
         check("a second first build waits for the one running (%.1f s)" % got["b"][0], 1.4 <= got["b"][0] < 10, got)
         check("... and one with a short limit goes anyway when it runs out (%.1f s)" % got["c"][0], 0.4 <= got["c"][0] < 1.4, got)
+        check("2.65.0 the long pole's first build (first=True) never waits (%.2f s)" % got["d"][0], got["d"][0] < 0.3, got)
         check("... the turn is freed afterwards", not os.path.exists(os.path.join(pool, "cold_build.lock")))
+        reuse_part(pool)
     finally:
         shutil.rmtree(pool, ignore_errors=True)
     print("%d failure(s)" % len(FAILS) if FAILS else "All browser-slot checks passed.")
     return 1 if FAILS else 0
+
+
+# 2.65.0 - a page that reports what a hidden browser gives it: its window, its clock after the virtual-time budget, what it
+# kept from an earlier job (storage), whether WebGL works and the scrollbar's width
+PAGE = """<!DOCTYPE html><html><body style="margin:0"><div style="height:3000px"></div><script>
+var gl = null; try { gl = document.createElement('canvas').getContext('webgl'); } catch (e) {}
+var before = localStorage.getItem('k'); localStorage.setItem('k', 'set');
+setTimeout(function () { var p = document.createElement('pre'); p.id = 'o';
+  p.textContent = JSON.stringify({w: innerWidth, h: innerHeight, sb: innerWidth - document.documentElement.clientWidth,
+    late: true, before: before, gl: !!gl}); document.body.appendChild(p); }, 5000);
+</script></body></html>"""
+
+
+def reuse_part(pool):
+    """one kept Chrome per slot (browser_slots.run_dom): the same answer as a fresh Chrome, nothing kept between jobs, a
+    restart every CF_CHROME_JOBS jobs, a stalled page ended, the Chrome ended when idle"""
+    import re
+    exe = None
+    for c in (os.environ.get("CF_BROWSER"), r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+              r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"):
+        if c and os.path.isfile(c):
+            exe = c
+            break
+    if not exe:
+        print("SKIP  the kept Chrome (no Chrome or Edge)")
+        return
+    tmp = tempfile.mkdtemp(prefix="cf_reuse_")
+    os.environ.update(CF_BROWSER_SLOTS="1", CF_CHROME_JOBS="3", CF_CHROME_IDLE="30")
+    try:
+        f = os.path.join(tmp, "p.html")
+        io_write(f, PAGE)
+        from pathlib import Path
+        n = [0]
+
+        def cmd(*extra):                                 # a fresh Chrome gets a profile of its own each time, as the tools give it
+            n[0] += 1
+            return [exe, "--headless=new", "--disable-gpu", "--no-first-run", "--user-data-dir=" + os.path.join(tmp, "prof%d" % n[0]),
+                    "--window-size=1100,700", "--virtual-time-budget=8000"] + list(extra) + ["--dump-dom", Path(f).as_uri()]
+
+        def ask(c, reuse):
+            os.environ["CF_CHROME_REUSE"] = "on" if reuse else "off"
+            t = time.time()
+            p = browser_slots.run_dom(c, timeout=60, capture_output=True, text=True, encoding="utf-8", errors="replace")
+            m = re.search(r'<pre id="o">(.*?)</pre>', p.stdout or "")
+            return (json.loads(m.group(1).replace("&quot;", '"')) if m else None), time.time() - t
+        check("dom_job reads a --dump-dom command; a flag it does not know is not reused",
+              browser_slots.dom_job(cmd()) and browser_slots.dom_job(cmd("--hide-scrollbars"))[4] == ("--hide-scrollbars",)
+              and browser_slots.dom_job(cmd("--force-device-scale-factor=2")) is None)
+        own = []
+        for extra in ((), ("--hide-scrollbars",), ("--disable-3d-apis",)):
+            fresh, t_fresh = ask(cmd(*extra), False)
+            kept1, _ = ask(cmd(*extra), True)
+            kept2, t_kept = ask(cmd(*extra), True)
+            own += [r for _, r in browser_slots.kept() if r and tuple(r.get("variant") or ()) == tuple(extra) and r.get("jobs") == 2]
+            check("%s: a kept Chrome gives the page the same window, the budget's late timer, the same scrollbar and WebGL as a "
+                  "fresh one (fresh %.2f s, kept %.2f s)" % (" ".join(extra) or "plain", t_fresh, t_kept),
+                  fresh and kept1 == fresh and kept2 == fresh and fresh["late"] and fresh["before"] is None, (fresh, kept1, kept2))
+        check("... nothing is kept between jobs (a new browser context: the second job sees no storage of the first)",
+              kept2 and kept2["before"] is None, kept2)
+        check("... one kept Chrome per flag set in the slot, each running both of its jobs",
+              len(own) == 3 and len({r["pid"] for r in own}) == 3, own)
+        for f_, _ in browser_slots.kept():               # start over: every kept Chrome retired
+            browser_slots._retire(os.path.join(browser_slots.folder(), f_))
+        ask(cmd(), True)                                 # a new plain one: its job 1
+        pid0 = next(r["pid"] for _, r in browser_slots.kept() if not r.get("variant"))
+        ask(cmd(), True)
+        ask(cmd(), True)                                 # job 3: retired after it
+        ask(cmd(), True)                                 # a fresh kept Chrome's job 1
+        pids = [r["pid"] for _, r in browser_slots.kept() if not r.get("variant")]
+        t = time.time()
+        while browser_slots.alive(pid0) and time.time() - t < 10:   # its keeper ends it within a second or two
+            time.sleep(0.2)
+        check("CF_CHROME_JOBS=3: after its third job the Chrome is restarted (a new one for the next job)",
+              pids and pids[0] != pid0 and not browser_slots.alive(pid0), (pid0, pids))
+        rec = next(r for _, r in browser_slots.kept() if not r.get("variant"))
+        if os.name == "nt":                              # the keeper ended ALONE (not its tree): its Chrome must not outlive it
+            subprocess.run(["taskkill", "/F", "/PID", str(rec["keeper"])], capture_output=True)
+            t = time.time()
+            while browser_slots.alive(int(rec["pid"])) and time.time() - t < 10:
+                time.sleep(0.2)
+            check("a keeper ended alone takes its Chrome with it (a job object) - no Chrome left running with no record",
+                  not browser_slots.alive(int(rec["pid"])), rec)
+        stall = os.path.join(tmp, "stall.html")
+        io_write(stall, "<html><body><script>while (true) {}</script></body></html>")
+        os.environ["CF_CHROME_REUSE"] = "on"
+        c = cmd()
+        c[-1] = Path(stall).as_uri()
+        t = time.time()
+        try:
+            browser_slots.run_dom(c, timeout=5, capture_output=True, text=True)
+            stalled = False
+        except subprocess.TimeoutExpired:
+            stalled = True
+        check("a page that never settles ends in its time limit (TimeoutExpired, %.1f s) and its Chrome is not reused"
+              % (time.time() - t), stalled and time.time() - t < 15 and not [1 for _, r in browser_slots.kept() if not r.get("variant")],
+              browser_slots.kept())
+        t = time.time()
+        while browser_slots.kept() and time.time() - t < 90:
+            time.sleep(0.5)
+        check("CF_CHROME_IDLE=30: unused, every kept Chrome ends by itself and its record goes (%.0f s)" % (time.time() - t),
+              not browser_slots.kept(),
+              browser_slots.kept())
+    finally:
+        for k in ("CF_CHROME_JOBS", "CF_CHROME_IDLE", "CF_CHROME_REUSE"):
+            os.environ.pop(k, None)
+        for _, r in browser_slots.kept():
+            browser_slots.kill_tree(int((r or {}).get("pid") or 0))
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def io_write(path, text):

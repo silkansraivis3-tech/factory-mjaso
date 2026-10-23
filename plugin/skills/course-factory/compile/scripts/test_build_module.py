@@ -81,6 +81,7 @@ def main():
     retry_part()
     review_part()
     long_part()
+    short_part()
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
     return 1 if FAILS else 0
 
@@ -117,8 +118,74 @@ def blanks_part():
         tcm.build_of(c, lambda s: s["screens"]["s04"].update(declined_3d="the operator keeps the flat drawing"))
         check("a 3D scene declined with the operator's reason is no blank", [x[0] for x in b.starter_blanks(c, 1)] == [["s01"], ["q02"]],
               b.starter_blanks(c, 1))
+        # 2.65.0 - a 3D-kit scene still --init-build's starter ("_todo") is a blank too; placed (no "_todo"), it is not
+        figdir = b.workspace_figdir(c, 1)
+        os.makedirs(figdir, exist_ok=True)
+        io.open(os.path.join(figdir, "s04.kit3d.json"), "w", encoding="utf-8").write(json.dumps({"_todo": "place the parts", "parts": []}))
+        tcm.build_of(c, lambda s: s["screens"]["s04"].update(figure="s04.kit3d.json", declined_3d=None))
+        check("2.65.0 a 3D-kit scene still the starter (\"_todo\") is a blank", ["s04 (s04.kit3d.json)"] in [x[0] for x in b.starter_blanks(c, 1)],
+              b.starter_blanks(c, 1))
+        io.open(os.path.join(figdir, "s04.kit3d.json"), "w", encoding="utf-8").write(json.dumps({"parts": [{"id": "T", "type": "tank_c"}]}))
+        check("... placed, it is not", ["s04 (s04.kit3d.json)"] not in [x[0] for x in b.starter_blanks(c, 1)], b.starter_blanks(c, 1))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
+
+# a 2.63.3 build's figure report and audit answer, as figure_fit.py and run_audits.py printed them (IGF M02, shortened)
+FIG = """  s02 (s02.kit.json) on its slide - drawn 456x277 px in a 480x301 px panel, scale 0.63:
+    label - Natural gas: detailed rules: found no clear place - give the figure more room (its size, a part moved), or shorten the  (step -)
+    small text - Ammonia-33°C: drawn at 9.7 px - the floor is 12.5 px (step 0)
+    small text - CNG compressed: drawn at 9.7 px - the floor is 12.5 px (step 0)
+    small text - LNG -162°C: drawn at 9.7 px - the floor is 12.5 px (step 0)
+    text zone - CNG compressed: two labels print over each other - text.kit-cap "Natural gas" (step 7)
+    fix (label): a label found no clear place: give the figure more room around that part, or shorter words
+    fix (small text): too many words for the room the figure has: give it a wider column or fewer words
+    fix (text zone): give the part room for its words (a larger w/h, or move it clear) - the label layout places words, not parts
+    tried by itself: re-fitted to its 480 px column: 4 finding(s) left (was 5) - saved as C:\\c\\figures\\M02\\_fit\\s02.s02.candidate.kit.json: copy it over s02.kit.json and fix what it leaves:
+        small text - LNG: drawn at 11 px (step 0)
+    the parts named, as the spec has them - change them together: T tree x 10 y 50 w 540
+    try a fix in seconds, every step at once: course-visuals\\kit\\scripts\\studio.py s02.kit.json --step all (then one build_module.py run)
+    (unchanged since the last build - its report is repeated, not measured again; change the spec or the slide, or build_module.py --full)
+  s05 (s05.kit.json): fixed by itself - COLUMN: re-fitted to its 480 x 301 px column - drawn 422 units wide (was 640), 2 round(s)
+  (the compile's drawing check judges) q05 (q05.kit.json, task page): empty - blank 44 % of the frame"""
+AUD = """1280x800  deck     FAIL n=2   20 slides
+            slide 5 (s05): scrolls div.slide-body by 21 px
+1024x768  deck     FAIL n=6   20 slides
+            slide 2 (s02): drawing text too small "IGF Code" 11.4 px on screen
+            slide 2 (s02): drawing text too small "LNG-162°C" 9.5 px on screen
+            slide 2 (s02): drawing text too small 10.2 px on screen
+            slide 2 (s02): scrolls div.slide-body by 64 px
+            slide 3 (s03): drawing text too small "Fuel tank" 11.2 px on screen"""
+
+
+def short_part():
+    """2.65.0 - the build's answer says each problem once, with its fix and its file; the full log keeps every line"""
+    print("-- 2.65.0 the short answer: one line per figure and kind of problem, with its fix; audits per slide and kind")
+    s = b.short_figures(FIG.splitlines(), r"C:\c\figures\M02")
+    text = "\n".join(s)
+    check("a figure is one header with its spec's path, its scale and panel, and each kind of problem counted",
+          s[0].startswith("  FIGURE s02 - C:\\c\\figures\\M02\\s02.kit.json (scale 0.63 in a 480x301 px panel): ")
+          and "small text x3" in s[0] and "label x1" in s[0] and "text zone x1" in s[0] and "unchanged since the last build" in s[0], s[:2])
+    check("... each kind once, with an example and its one fix (not one line per part and step)",
+          sum(1 for x in s if x.startswith("    small text - e.g.")) == 1 and "fix: fewer / shorter words" in text
+          and "Ammonia-33°C" in text and "LNG -162°C" not in text, text)
+    check("... the saved closer fit, the parts named and the studio command kept; the long hints and the candidate's list not",
+          "a closer fit was saved: C:\\c\\figures\\M02\\_fit\\s02.s02.candidate.kit.json" in text and "T tree x 10 y 50 w 540" in text
+          and "studio.py C:\\c\\figures\\M02\\s02.kit.json --step all" in text and "fix (label):" not in text
+          and "LNG: drawn at 11 px" not in text, text)
+    check("... a figure fixed by itself, and a task page's line, pass through as they are",
+          any(x.startswith("  s05 (s05.kit.json): fixed by itself") for x in s) and any("q05 (q05.kit.json, task page)" in x for x in s), s)
+    check("... and it is shorter than the report it replaces", len(text) < 0.8 * len(FIG), (len(text), len(FIG)))
+    check("the same compile line twice is one line with its count",
+          b.short_list(["slide 5 (s05): cut off - circle", "slide 5 (s05): cut off - circle", "slide 5 (s05): scrolls"])
+          == ["slide 5 (s05): cut off - circle (x2)", "slide 5 (s05): scrolls"])
+    a = b.short_audits(AUD)
+    check("audits: per viewport and slide, each kind once with its count and the range of px",
+          "  1024x768 slide 2 (s02): drawing text too small x3 (9.5-11.4 px)" in a and "  1280x800 slide 5 (s05): scrolls div.slide-body by 21 px" in a
+          and "  1024x768 slide 2 (s02): scrolls div.slide-body by 64 px" in a
+          and any(x.startswith("  1024x768 slide 3 (s03): drawing text too small") for x in a), a)
+    named = lambda t: {(m, k) for m in ("s02", "s03", "s05") for k in ("too small", "scrolls") if any(m in x and k in x for x in t.splitlines())}
+    check("... every slide and kind the audits named is still named", named(AUD) == named("\n".join(a)), (named(AUD), a))
 
 
 def stages_part():

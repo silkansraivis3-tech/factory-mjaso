@@ -31,7 +31,12 @@
   box.style.height = (q.h || 720) + 'px';
   if (q.dark) { document.body.className = 'dark'; }
   window.k3ready = false;
-  fetch(q.spec || 'examples/m01_hull.kit3d.json').then(function (r) { return r.json(); }).then(function (spec) {
+  // &parts=<url>: a module's own kit3d_parts.js (KIT3D.define), loaded before the scene (2.65.0 - scene3d_check.py)
+  var parts = q.parts ? new Promise(function (ok, no) {
+    var s = document.createElement('script'); s.src = q.parts; s.onload = ok; s.onerror = function () { no(new Error('parts: ' + q.parts)); };
+    document.head.appendChild(s);
+  }) : Promise.resolve();
+  parts.then(function () { return fetch(q.spec || 'examples/m01_hull.kit3d.json'); }).then(function (r) { return r.json(); }).then(function (spec) {
     window.k3 = KIT3D.mount(document.getElementById('stage'), spec);
     if (q.step) { window.k3.step(+q.step); }
     requestAnimationFrame(function () { requestAnimationFrame(function () { window.k3ready = true; }); });

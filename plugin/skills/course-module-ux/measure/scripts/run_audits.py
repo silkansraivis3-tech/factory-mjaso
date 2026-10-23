@@ -79,9 +79,9 @@ def frame_offset(exe):
     try:
         page = Path(d) / "cal.html"
         page.write_text('<body><pre id="o"></pre><script>o.textContent=innerWidth+"x"+innerHeight</script>', encoding="utf-8")
-        p = browser_slots.run([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + os.path.join(d, "p"),
+        p = browser_slots.run_dom([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + os.path.join(d, "p"),
                                "--window-size=1280,800", "--virtual-time-budget=1000", "--dump-dom", page.as_uri()],
-                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
+                              reuse=False, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
         m = re.search(r'<pre id="o">(\d+)x(\d+)</pre>', p.stdout)
         return (max(0, 1280 - int(m.group(1))), max(0, 800 - int(m.group(2)))) if m else (0, 0)
     except (subprocess.TimeoutExpired, OSError):
@@ -109,9 +109,11 @@ def measure(exe, deck, size, budget, offset=(0, 0), only=None):
         limit = min(900, 120 + 15 * n)
         with browser_slots.slot():
             t1 = time.time()
-            p = browser_slots.run_tree([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
+            # 2.65.0: a kept Chrome only when one of these flags is already running (browser_slots.run_dom reuse=False: two
+            # long decks a run - a keeper started for them cost more than it saved)
+            p = browser_slots.run_dom([exe, "--headless=new", "--disable-gpu", "--user-data-dir=" + prof, "--allow-file-access-from-files",
                                         "--window-size=%d,%d" % size, "--virtual-time-budget=%d" % budget, "--dump-dom", page.as_uri()],
-                                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=limit)
+                                       reuse=False, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=limit)
     except subprocess.TimeoutExpired:
         return None, "the browser did not finish in %d s - a slide's own script may never let the page settle" % limit
     finally:
