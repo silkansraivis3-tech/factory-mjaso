@@ -2139,6 +2139,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
             d["data-link-hint"] = b.get("link_hint") or (lines[0] if lines else "")
         d.update(base)
         d["data-track"] = "practice" if kind == "activity" else "theory"
+        if kind == "activity" and s.get("practice_minutes"):    # 2.63.2 item 13: an exercise in the practical hours
+            d.update({"data-mins": "0", "data-active": "0", "data-practical-mins": "%g" % float(s["practice_minutes"])})
         template_attrs(d, "task-launch", "room" if kind == "activity" else "check" if graded else "tablet")
         body = ['<p class="act-code" data-script-ignore>%s</p>' % e(code),
                 '<h2 class="act-title" data-script-field="title">%s</h2>' % e(title)]
@@ -2304,6 +2306,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     if varied:              # built another way for L62: build_module.py measures it out if the audit finds it does not fit
         d["data-varied"] = "%s|%s|%s" % (varied[0], varied[1], wkey)
     label = "Theory"
+    if is_practical(s):        # 2.63.2: the practical slide counts in the practical hours, not the theory minutes
+        pm = s.get("practical_minutes")
+        d.update({"data-kind": "Practical", "data-track": "practice", "data-mins": "0", "data-active": "0",
+                  "data-practical-mins": "%g" % float(pm) if pm not in (None, "") else ("%g" % cs.minutes(s))})
+        label = "Practical"
     if act:
         code = (s.get("opens") or "").strip() or sid.upper()
         d.update({"data-kind": "Task", "data-activity": code, "data-track": "practice", "data-block": "%s · %s" % (m, code),
@@ -2823,12 +2830,33 @@ def starter_build(script, shared=(), figdir=None, specs=None, mdir=None):
     return sheet
 
 
+def is_practical(s):
+    """2.63.2 - a slide about the module's practical exercise: the reviewed IGF scripts carry it as kind "slide",
+    "track": "practical", "practical_minutes": N ("Practicals 9.1-9.3 - in the gas lab")"""
+    return s.get("kind") == "slide" and (str(s.get("track") or "").lower().startswith("practic") or s.get("practical_minutes") is not None)
+
+
+def practical_before_recap(screens):
+    """2.63.2 (the 2.63.2 full-course run: M08-M15's practical slide came after the module check, built as theory) - the
+    deck shows a practical slide before the recap that leads into the module check (L51), whatever its place in the script"""
+    prac = [s for s in screens if is_practical(s)]
+    if not prac:
+        return screens
+    rest = [s for s in screens if not is_practical(s)]
+    at = next((i for i, s in enumerate(rest) if s.get("kind") == "task-slide" and (s.get("opens") or "") == "MC"), None)
+    if at is None:
+        return screens
+    while at > 0 and rest[at - 1].get("recap"):
+        at -= 1
+    return rest[:at] + prac + rest[at:]
+
+
 def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, last=None, chosen=None):
     probs = []
     CUE_FIXES.clear()
     m = cs.mid(script.get("module"))
     title = script.get("title") or ""
-    screens = [s for s in script["screens"] if s["kind"] in cs.INSTRUCTOR]
+    screens = practical_before_recap([s for s in script["screens"] if s["kind"] in cs.INSTRUCTOR])
     short = short_title(title)                           # whole words only - never "CHARACTE"
     foot = "%s · %s · NOVIKONTAS" % (m, build.get("foot") or short)
     total = len(screens)

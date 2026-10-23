@@ -1942,6 +1942,37 @@ EX_HEAD = ["Course", "IGF ships", "Exercise No.", "1.1", "Title", "Walk the fuel
 EX_SECRET = "Reference answer: the master valve is the third one from the tank."
 
 
+def practical_part(tmp):
+    """2.63.2 (the 2.63.2 full-course run, 8 of 12 blocking QA findings) - a slide with "track": "practical" (the reviewed
+    IGF scripts' practical slide, placed after the module check) is built as practice - kicker PRACTICAL, data-track
+    practice, data-mins 0, data-practical-mins its minutes - before the recap that leads into the module check (L51), and
+    check_balance counts its minutes as practice"""
+    print("\n-- 2.63.2: a practical-track slide is built as practice, before the recap")
+    sv = json.loads(json.dumps(SCREENS))
+    mci = next(i for i, x in enumerate(sv) if x.get("opens") == "MC")
+    sv.insert(mci, {"id": "s09", "kind": "slide", "recap": True, "title": "What to take away", "visual_kind": "none",
+                    "text": "Five spaces.\nTwo barriers.", "minutes": 1})
+    sv.append({"id": "s10", "kind": "slide", "title": "Practical 1.1 - walk the fuel line", "layout": "text", "visual_kind": "none",
+               "text": "After this deck: 30 minutes on the ship model, in pairs.\nOne traces the line, one checks each valve.",
+               "track": "practical", "practical_minutes": 30, "minutes": 0})
+    os.makedirs(os.path.join(tmp, "prac"))
+    c, md = new_course(os.path.join(tmp, "prac"), script(screens=sv))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    page = deck(md)
+    s10 = section(page, "s10")
+    check("built as practice: kicker Practical, data-track practice, 0 deck minutes, its 30 practical minutes",
+          'data-track="practice"' in s10 and 'data-mins="0"' in s10 and 'data-practical-mins="30"' in s10
+          and "<b>Practical</b>" in s10, s10[:500])
+    order = re.findall(r'<section [^>]*id="([^"]+)"', page)
+    mc = next(x["id"] for x in sv if x.get("opens") == "MC")
+    check("... shown before the recap that leads into the module check, not after the check (L51)",
+          order.index("s10") + 1 == order.index("s09") and order.index("s09") + 1 == order.index(mc), order)
+    p = subprocess.run([sys.executable, "-I", os.path.join(SKILL, "hours", "scripts", "check_balance.py"),
+                        os.path.join(md, "presentation", "index.html")], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    m = re.search(r"practice\s+(\d+) min", p.stdout)
+    check("... check_balance counts its 30 minutes as practice", m and int(m.group(1)) >= 30, p.stdout[-600:])
+
+
 def exercise_part(tmp):
     """2.63.2 (owner rule 2026-10-21; IGF 2.63.0 cross-check: the 16 exercises had no slide) - a module with a practical
     exercise form and no slide for it is a build problem, with the slide proposed from the TRAINEE form; with the slide it
@@ -2646,6 +2677,7 @@ def main():
         look_part(tmp)
         light_part(tmp)
         exercise_part(tmp)
+        practical_part(tmp)
         sme_figures_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

@@ -102,6 +102,8 @@ def read_blocks(path):
             "mins": int(mins),
             "track": attr(tag, "data-track"),
             "active": attr(tag, "data-active"),
+            # 2.63.2: a practical slide shows 0 deck minutes and the practical's own time - the programme's practical hours
+            "pmins": int(float(attr(tag, "data-practical-mins") or 0)),
         })
     return out
 
@@ -201,7 +203,7 @@ def main():
 
     # ---- TRACK A ------------------------------------------------------------
     built_t = sum(b["mins"] for b in blocks if b["track"] == "theory")
-    built_p = sum(b["mins"] for b in blocks if b["track"] == "practice")
+    built_p = sum(b["mins"] + b.get("pmins", 0) for b in blocks if b["track"] == "practice")
     total = built_t + built_p
 
     print("=" * 72)
