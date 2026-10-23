@@ -79,6 +79,8 @@ def main():
     stages_part()
     layout_part()
     retry_part()
+    review_part()
+    long_part()
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
     return 1 if FAILS else 0
 
@@ -136,7 +138,7 @@ def stages_part():
     src = io.open(os.path.join(HERE, "build_module.py"), encoding="utf-8").read()
     tail = src[src.index('print("FAIL %s - %s (%.0f s)"'):]
     check("... printed after a FAIL as after a PASS, and after a figures-only FAIL",
-          "print(stage_line(stages))" in tail[:300] and src.count("print(stage_line(stages))") >= 2, tail[:300])
+          "print(stage_line(stages))" in tail[:600] and src.count("print(stage_line(stages))") >= 2, tail[:600])
 
 
 def layout_part():
@@ -196,6 +198,77 @@ def retry_part():
     results, took, again = b.run_checks(jobs, pkg, lambda k, res: None)
     check("a round that will not retry runs everything and checks the package once the others are done",
           again is None and results["review sheets"][0] == 0 and results["course package"][0] == 0 and os.path.exists(mark), results)
+
+
+def review_part():
+    """2.63.3 (the 2.63.2 full-course run) - the sheets are promoted at module clean, a POLISH.md written into the review
+    folder survives the next promotion (five were deleted), and --reviewed makes the sheets just looked at the baseline"""
+    import io
+    import json
+    import shutil
+    import tempfile
+    tmp = tempfile.mkdtemp(prefix="bm_review_")
+    try:
+        out = os.path.join(tmp, "review", "M01")
+        os.makedirs(out)
+        io.open(os.path.join(out, "POLISH.md"), "w", encoding="utf-8").write("- s03: the label could sit closer\n")
+        io.open(os.path.join(out, "manifest.json"), "w", encoding="utf-8").write(json.dumps({"deck/s01": "AAA"}))
+        pend = out + ".pending"
+        os.makedirs(pend)
+        io.open(os.path.join(pend, "manifest.json"), "w", encoding="utf-8").write(json.dumps({"deck/s01": "BBB", "deck/s02": "CCC"}))
+        b.promote(pend, out)
+        kept = io.open(b.polish_path(out), encoding="utf-8").read() if os.path.isfile(b.polish_path(out)) else ""
+        check("a promotion keeps the builder's POLISH list (review\\M01_POLISH.md)", "label could sit closer" in kept, kept)
+        check("... and the new sheets replace the folder", json.load(io.open(os.path.join(out, "manifest.json"))) == {"deck/s01": "BBB", "deck/s02": "CCC"})
+        b.promote(pend if os.path.isdir(pend) else (os.makedirs(pend) or pend), out)
+        check("... a second promotion does not repeat the list", kept == io.open(b.polish_path(out), encoding="utf-8").read())
+        check("before --reviewed there is no baseline (every screen is new to the reviewer)", not os.path.isdir(b.reviewed_dir(out)))
+        io.open(os.path.join(out, "manifest.json"), "w", encoding="utf-8").write(json.dumps({"deck/s01": "BBB"}))
+        code = b.mark_reviewed(out, "M01")
+        check("--reviewed copies the sheets' manifest into review\\M01_reviewed, the next comparison's base",
+              code == 0 and json.load(io.open(os.path.join(b.reviewed_dir(out), "manifest.json"))) == {"deck/s01": "BBB"})
+        src = io.open(b.__file__, encoding="utf-8").read()
+        check("the review sheets compare with the reviewed baseline and keep their pictures in _build\\MNN_shots",
+              '"--base=" + reviewed_dir(out_dir)' in src and '"%s_shots" % m' in src)
+        check("a parallel build promotes at module clean (only the course package left)",
+              'clean = passed or (o.no_course_pages and fails == ["course package"])' in src)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def long_part():
+    """2.63.3 - a build that runs past the shell's limit is not lost: it answers STILL BUILDING (exit 3) and goes on; --wait
+    prints its own answer; a second build of the same module waits for the running one (IGF 2.63.2: M01's first build took
+    1,076 s, the builder's 600 s shell call ended with no answer)"""
+    import subprocess
+    import tempfile
+    import shutil
+    import time
+    tmp = tempfile.mkdtemp(prefix="bm_long_")
+    try:
+        course = os.path.join(tmp, "course")
+        for d in ("modules", "working_claude"):
+            os.makedirs(os.path.join(course, d))
+        env = dict(os.environ, CF_BUILD_ANSWER_WITHIN="2", CF_BUILD_TEST_SLEEP="7")
+        cmd = [sys.executable, "-I", os.path.join(HERE, "build_module.py"), course, "--module", "1"]
+        run = lambda extra=(): subprocess.run(cmd + list(extra), capture_output=True, text=True, encoding="utf-8", env=env, timeout=60)
+        t = time.time()
+        p = run()
+        check("a build past its answer time says STILL BUILDING and exits 3 within it (%.1f s)" % (time.time() - t),
+              p.returncode == 3 and "STILL BUILDING M01" in p.stdout and time.time() - t < 6, (p.returncode, p.stdout, p.stderr[-300:]))
+        p2 = run()
+        check("... a second build of the module waits for the running one instead of starting another",
+              "already running" in p2.stdout, (p2.returncode, p2.stdout))
+        env["CF_BUILD_ANSWER_WITHIN"] = "30"
+        p3 = run(["--wait"])
+        check("... --wait prints the build's own answer and its exit code (here: no module folder - Stopped, 2)",
+              p3.returncode == 2 and "Stopped" in p3.stdout, (p3.returncode, p3.stdout, p3.stderr[-300:]))
+        env["CF_BUILD_TEST_SLEEP"] = "0"
+        p4 = run()
+        check("a quick build answers at once, as before", p4.returncode == 2 and "Stopped" in p4.stdout and "STILL" not in p4.stdout,
+              (p4.returncode, p4.stdout))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 if __name__ == "__main__":

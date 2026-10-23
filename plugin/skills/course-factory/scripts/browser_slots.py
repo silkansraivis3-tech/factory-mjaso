@@ -203,6 +203,57 @@ def slot(wait_note=None):
                 time.sleep(0.05)
 
 
+COLD_WAIT = 300         # s a module's first build waits at most for another one's (2.63.3)
+
+
+@contextlib.contextmanager
+def cold_turn(wait_max=None):
+    """2.63.3 - one module's FIRST build (no figure measured yet: every figure probed, every fix tried) at a time on this
+    computer; another first build waits for it, at most wait_max s (CF_COLD_WAIT, default 300), then goes anyway.
+    WHY (the 2.63.2 full-course run): wave 1's three first builds overlapped on a laptop with two performance cores - M01's
+    took 1,076 s, past the builder's 600 s shell limit (one blind wait); M02/M03's figures 186-260 s. Started one after the
+    other they share nothing and each runs at the machine's full speed. Yields the seconds it waited."""
+    try:
+        limit = float(os.environ.get("CF_COLD_WAIT") or (COLD_WAIT if wait_max is None else wait_max))
+    except ValueError:
+        limit = COLD_WAIT
+    d = folder()
+    path = os.path.join(d, "cold_build.lock")
+    t0, mine = time.time(), False
+    while True:
+        try:
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, ("%d\n" % os.getpid()).encode("ascii"))
+            os.close(fd)
+            mine = True
+            break
+        except FileExistsError:
+            if stale(path):
+                _reclaim(d, path)
+                continue
+        except OSError:
+            pass
+        if time.time() - t0 >= limit:
+            break
+        time.sleep(min(1.0, max(0.05, limit / 50.0)))
+    beat = _Beat(path) if mine else None
+    if beat:
+        beat.start()
+    try:
+        yield time.time() - t0
+    finally:
+        if beat:
+            beat.stop.set()
+            for _ in range(20):
+                try:
+                    os.remove(path)
+                    break
+                except FileNotFoundError:
+                    break
+                except OSError:
+                    time.sleep(0.05)
+
+
 def run(cmd, **kw):
     """subprocess.run(cmd, **kw) while holding a slot - a timeout ends the browser's whole process tree (run_tree)"""
     with slot():

@@ -17,13 +17,20 @@
  * The photographs go two to a sheet (stacked, full width, each with its label) - sheet_01.png ... - and a manifest of each
  * screen's picture hash. A screen whose picture did not change since the last review (manifest.json in the out folder)
  * is left off the new sheets, unless --all: a re-review looks only at what changed.
+ * 2.63.3 - --shots=<folder>: a screen is photographed only when it changed. Each slide (and each task page) is keyed on
+ * its own source - the slide's markup in the deck, the page's file - with every file it loads (pictures, the module's
+ * assets, this script); an unchanged one keeps its picture from the folder and is not settled, waited for or shot (a task
+ * page that graded clean is not answered again either). Every part of a paged slide (.lt-part) gets its own picture, and
+ * the parts count as changed together. The deck walk stops on a slide visited more often than its parts and steps (IGF
+ * M11: a last slide whose Next stayed on looped 381 times - a 106 s sheet run). The 2.63.2 run: every screen was
+ * photographed in every round - 3,406 shots, 3,334 s.
  * Exit 0 sheets made and every answer graded as expected; 1 an answer graded wrongly; 2 could not run.
  */
 import { spawn } from 'node:child_process';
 import { appendFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
-import { join, resolve, basename } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { join, resolve, basename, dirname } from 'node:path';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { takeSlot } from './browser_slots.mjs';
 
@@ -81,6 +88,43 @@ async function pause(ms) {
 function note(what, t0, extra) {
   if (!process.env.CF_TIMING) return;
   try { appendFileSync(process.env.CF_TIMING, JSON.stringify(Object.assign({ tool: 'review_sheets', what, wall: (Date.now() - t0) / 1000, at: Date.now() / 1000, pid: process.pid }, extra || {})) + '\n'); } catch {}
+}
+
+/* ------------------------------------------------------------------ 2.63.3: the shot cache (--shots) */
+const SHOTS = opt.shots ? resolve(String(opt.shots)) : null;
+const sha = s => createHash('sha1').update(s).digest('hex').slice(0, 20);
+const fileHash = new Map();
+function bytesOf(p) {
+  if (!fileHash.has(p)) { let h = '-'; try { h = sha(readFileSync(p)); } catch {} fileHash.set(p, h); }
+  return fileHash.get(p);
+}
+/* every local file a piece of markup loads (src, href, data-src, url(...)), read from `base` - hashed with the markup */
+function loads(markup, base) {
+  const refs = new Set();
+  for (const m of markup.matchAll(/\b(?:src|href|data-src|data-photo|poster)\s*=\s*["']([^"'#?]+)/gi)) refs.add(m[1]);
+  for (const m of markup.matchAll(/url\(\s*["']?([^"')#?]+)/gi)) refs.add(m[1]);
+  return [...refs].filter(r => !/^(?:https?:|data:|mailto:|javascript:|#)/i.test(r)).sort()
+    .map(r => { let p; try { p = r.startsWith('file:') ? fileURLToPath(r) : resolve(base, decodeURIComponent(r)); } catch { p = resolve(base, r); } return r + '=' + bytesOf(p); }).join('|');
+}
+/* what every screen of the module loads: the module's own assets (css, js, fonts - not the pictures, which a screen names
+   itself), this script, the window */
+const ENGINE = (() => {
+  const a = join(MDIR, 'assets'), parts = [W + 'x' + H, bytesOf(fileURLToPath(import.meta.url))];
+  try { for (const f of readdirSync(a).sort()) if (/\.(css|js|mjs|woff2?|ttf|otf)$/i.test(f)) parts.push(f + '=' + bytesOf(join(a, f))); } catch {}
+  return sha(parts.join('|'));
+})();
+const shotIndex = (() => {
+  if (!SHOTS) return { slides: {}, pages: {}, tiles: {} };
+  try { return Object.assign({ slides: {}, pages: {}, tiles: {} }, JSON.parse(readFileSync(join(SHOTS, 'index.json'), 'utf8'))); }
+  catch { return { slides: {}, pages: {}, tiles: {} }; }
+})();
+const kept = { slides: {}, pages: {}, tiles: {} };       // what this run keeps (its screens only)
+let reused = 0;
+const tileFile = id => id.replace(/[^\w.-]+/g, '_') + '.png';
+function cachedTile(id) {
+  const t = shotIndex.tiles[id];
+  if (!SHOTS || !t) return null;
+  try { return Object.assign({}, t, { png: readFileSync(join(SHOTS, tileFile(id))) }); } catch { return null; }
 }
 
 function findChrome(explicit) {
@@ -151,35 +195,53 @@ async function deck(tiles) {
   await load(pathToFileURL(page).href);
   await click(`(function(){ var b=document.getElementById('startBtn'); if(b) b.click(); return 1; })()`);
   await pause(500);
-  /* one picture per slide, a stepping figure at its LAST step - its fullest state, as the round-1 review looked at it;
-     the drawing check (L54) already judges every step by measurement */
-  const seen = new Set();
-  let ts = Date.now();
+  /* one picture per slide - per PART of a paged slide (2.63.3) - a stepping figure at its LAST step, its fullest state, as
+     the round-1 review looked at it; the drawing check (L54) already judges every step by measurement */
+  const html = readFileSync(page, 'utf8');
+  const shell = html.replace(/<section\b[^>]*>[\s\S]*?<\/section>/gi, '');
+  const keyOf = {};                             // 2.63.3: each slide's key - its markup, what it loads, the deck around it
+  for (const m of html.matchAll(/<section\b[^>]*\bid="([^"]+)"[^>]*>[\s\S]*?<\/section>/gi))
+    keyOf[m[1]] = sha(ENGINE + '|' + sha(shell) + '|' + m[0] + '|' + loads(m[0], join(MDIR, 'presentation')));
+  const seen = new Set(), visits = {};
+  let ts = Date.now(), first = true;
   for (let n = 0; n < 400; n++) {
     await pause(160);
     const st = await evaluate(`(function(){ var s=document.querySelector('.slide.active'); if(!s) return null;
       var k=s.querySelector('svg[data-kit]'), f=k&&k.__kit; var all=[].slice.call(document.querySelectorAll('.slide'));
       if (f && f.steps && f.steps()) { try { f.go(f.steps(), true); } catch(e){} }
+      var ps=s.querySelectorAll('.lt-part'), on=0; for (var j=0;j<ps.length;j++) if (ps[j].classList.contains('on')) on=j;
       var src=[].map.call(s.querySelectorAll('script[type="application/json"],img'),function(e){return e.tagName==='IMG'?e.getAttribute('src'):e.textContent;}).join('|');
       return { id: s.id, i: all.indexOf(s)+1, of: all.length, title: s.getAttribute('data-title')||'', steps: f&&f.steps?f.steps():0,
-               last: !!(document.getElementById('btnNext')||{}).disabled, src: src }; })()`);
+               parts: ps.length, part: on + 1, last: !!(document.getElementById('btnNext')||{}).disabled, src: src }; })()`);
     if (!st) break;
-    if (seen.has(st.id)) {                      // still on it (a step was taken): its picture is retaken at this later state
-      await evaluate(SETTLE); await pause(140); await evaluate(SETTLE);
-      const t = tiles.find(x => x.id === 'deck/' + st.id);
-      if (t) t.png = await shot();
+    visits[st.id] = (visits[st.id] || 0) + 1;
+    if (visits[st.id] > st.parts + st.steps + 2) break;     // a Next that never moves on (IGF M11 s11: 381 times)
+    const id = 'deck/' + st.id + (st.part > 1 ? '#' + st.part : '');
+    const key = keyOf[st.id] ? sha(keyOf[st.id] + '|' + st.i + '/' + st.of) : '';    // its place too: the deck shows "5 / 20"
+    const label = `Deck slide ${st.i}/${st.of} (${st.id}) ${st.title}` + (st.parts > 1 ? ` - part ${st.part} of ${st.parts}` : '')
+      + (st.steps ? ` - figure at its last step (${st.steps})` : '');
+    const old = SHOTS && key && shotIndex.slides[st.id] === key ? cachedTile(id) : null;
+    if (seen.has(id)) {                         // still on it (a step was taken): its picture is retaken at this later state
+      const t = tiles.find(x => x.id === id);
+      if (t && !t.reused) { await evaluate(SETTLE); await pause(140); await evaluate(SETTLE); t.png = await shot(); }
       note('deck ' + st.id + ' (step)', ts); ts = Date.now();
-      if (st.last) break;
-      await click(`(function(){ var b=document.getElementById('btnNext'); if(b && !b.disabled) b.click(); return 1; })()`);
-      continue;
+    } else {
+      seen.add(id);
+      if (old) {                                // unchanged since its picture was taken: the picture is kept (2.63.3)
+        tiles.push(Object.assign(old, { id, label, reused: true, key }));
+        reused++;
+      } else {
+        if (first) await pause(900);            // the first slide fades in after Start
+        first = false;
+        await evaluate(`Promise.all([].slice.call(document.images).map(function(i){ return i.complete ? 1 : new Promise(function(r){ i.onload = i.onerror = r; setTimeout(r, 3000); }); })).then(function(){ return 1; })`);
+        await evaluate(SETTLE); await pause(140); await evaluate(SETTLE);
+        tiles.push({ id, key, label, png: await shot(),
+                     src: st.src ? createHash('sha1').update(st.src).digest('hex').slice(0, 16) : '' });
+      }
+      first = false;
+      if (key) kept.slides[st.id] = key;
+      note('deck ' + st.id + (st.part > 1 ? ' part ' + st.part : '') + (old ? ' (kept)' : ''), ts); ts = Date.now();
     }
-    if (!seen.size) await pause(900);           // the first slide fades in after Start
-    seen.add(st.id);
-    await evaluate(`Promise.all([].slice.call(document.images).map(function(i){ return i.complete ? 1 : new Promise(function(r){ i.onload = i.onerror = r; setTimeout(r, 3000); }); })).then(function(){ return 1; })`);
-    await evaluate(SETTLE); await pause(140); await evaluate(SETTLE);
-    tiles.push({ id: 'deck/' + st.id, label: `Deck slide ${st.i}/${st.of} (${st.id}) ${st.title}` + (st.steps ? ` - figure at its last step (${st.steps})` : ''), png: await shot(),
-                 src: st.src ? createHash('sha1').update(st.src).digest('hex').slice(0, 16) : '' });
-    note('deck ' + st.id, ts); ts = Date.now();
     if (st.last) break;
     await click(`(function(){ var b=document.getElementById('btnNext'); if(b && !b.disabled) b.click(); return 1; })()`);
   }
@@ -342,6 +404,21 @@ async function tasks(tiles, failures) {
   }
   for (const page of pages) {
     const url = pathToFileURL(page).href, name = basename(page), tp = Date.now(), sp = slept, wp = waited;
+    /* 2.63.3 - a page unchanged in everything it loads since it graded clean keeps its pictures and is not answered again */
+    let pkey = '';
+    try { const src = readFileSync(page, 'utf8'); pkey = sha(ENGINE + '|' + src + '|' + loads(src, dirname(page)) + '|' + !!opt.asked); } catch {}
+    const was = shotIndex.pages[name];
+    if (SHOTS && pkey && was && was.key === pkey) {
+      const olds = (was.tiles || []).map(cachedTile);
+      if (olds.length && olds.every(Boolean)) {
+        olds.forEach((t, i) => tiles.push(Object.assign(t, { id: was.tiles[i], reused: true })));
+        reused += olds.length;
+        kept.pages[name] = was;
+        note('task ' + name + ' (kept)', tp);
+        continue;
+      }
+    }
+    const before = tiles.length, nf = failures.length;
     await load(url);
     await evaluate(DRIVER);
     const ids = await evaluate('__rv.ids()');
@@ -384,6 +461,7 @@ async function tasks(tiles, failures) {
       }
     }
     note('task ' + name, tp, { questions: ids.length, slept: (slept - sp) / 1000, waited: (waited - wp) / 1000 });
+    if (pkey && failures.length === nf) kept.pages[name] = { key: pkey, tiles: tiles.slice(before).map(t => t.id) };
   }
 }
 
@@ -421,7 +499,20 @@ async function sheets(tiles) {
     for (let i = 0; i < a.length; i++) worst = Math.max(worst, Math.abs(a[i] - t.fp[i]));
     return worst > 8;
   };
-  const show = opt.all ? tiles : tiles.filter(differs);
+  /* 2.63.3 - the parts of a paged slide are changed together: one part changed puts every part of it on the sheets */
+  const slideOf = t => t.id.replace(/#\d+$/, '');
+  const changedSlides = new Set(tiles.filter(differs).map(slideOf));
+  const show = opt.all ? tiles : tiles.filter(t => changedSlides.has(slideOf(t)));
+  if (SHOTS) {                  // the pictures kept for the next run: this run's screens only
+    mkdirSync(SHOTS, { recursive: true });
+    for (const t of tiles) {
+      if (!t.reused) writeFileSync(join(SHOTS, tileFile(t.id)), t.png);
+      kept.tiles[t.id] = { label: t.label, src: t.src || '' };
+    }
+    const want = new Set(Object.keys(kept.tiles).map(tileFile));
+    for (const f of readdirSync(SHOTS)) if (f.endsWith('.png') && !want.has(f)) rmSync(join(SHOTS, f), { force: true });
+    writeFileSync(join(SHOTS, 'index.json'), JSON.stringify(kept, null, 1));
+  }
   for (const f of readdirSync(OUT)) if (/^sheet_\d+\.png$/.test(f)) rmSync(join(OUT, f));
   const LBL = 30, out = [];
   /* the sheet is a page of files, never a data: URL - one with a photo slide passed Chrome's 2 MB limit and came out black */
@@ -473,7 +564,8 @@ try {
   lap('sheets', { tiles: tiles.length });
   const list = r.out.map(s => `  ${s.file}\n${s.screens.map(x => '      ' + x).join('\n')}`).join('\n');
   writeFileSync(join(OUT, 'sheets.json'), JSON.stringify({ sheets: r.out, failures, total: r.total, shown: r.shown }, null, 1));
-  console.log(`Review sheets: ${r.shown} of ${r.total} screens ${opt.all ? '' : '(changed since the last review) '}on ${r.out.length} sheet(s) in ${OUT}`);
+  console.log(`Review sheets: ${r.shown} of ${r.total} screens ${opt.all ? '' : '(changed since the last review) '}on ${r.out.length} sheet(s) in ${OUT}`
+              + (SHOTS ? ` - ${tiles.length - reused} photographed, ${reused} unchanged kept` : ''));
   if (opt.list) console.log(list);
   failures.forEach(f => console.log('  FAIL ' + f));
   console.log(failures.length ? `${failures.length} task-page problem(s)` : 'Every question graded as expected: wrong answers not right, right answers right; every leader line ends on its part and crosses no words.');

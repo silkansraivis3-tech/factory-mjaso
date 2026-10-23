@@ -33,7 +33,12 @@ const agent = async (prompt, o) => {
   prompts[o.label] = prompt
   if (o.label.startsWith('gate:')) return { open: true, output: 'open', approved: args._approved || ['1', '2'] }
   if (o.label === 'qa:2') return null                       // the QA agent for module 2 brought back nothing
+  if ((args._broken || []).indexOf(o.label.slice(3)) >= 0)  // a QA that found a picture of another thing (2.63.3)
+    return { module: o.label.slice(3), classification: 'A', blocking: true,
+             findings: [{ severity: 'BROKEN', where: 's03', what: 'an oxygen monitor on a %LEL slide' },
+                        { severity: 'POLISH', where: 's05', what: 'a label could sit closer' }] }
   if (o.label.startsWith('qa:')) return { module: o.label.slice(3), classification: 'OK', blocking: false, findings: [] }
+  if (o.label.startsWith('fix:')) return 'PASS - fixed'
   if (o.label.startsWith('read:')) return { modules: [] }
   const b = /^build:(\w+)$/.exec(o.label)                   // a builder: PASS, or (args._stuck) stopped mid-build
   if (b) return (args._stuck || []).indexOf(b[1]) >= 0 ? 'The first build is still running in the background.'
@@ -41,7 +46,7 @@ const agent = async (prompt, o) => {
   if (/^build:\w+\+\d+$/.test(o.label)) return 'PASS - carried on'
   return {}
 }
-const pipeline = (items, a, b) => Promise.all(items.map(async (x) => b(await a(x))))
+const pipeline = (items, ...stages) => Promise.all(items.map(async (x) => { let r = x; for (const s of stages) r = await s(r); return r }))
 const parallel = (fs_) => Promise.all(fs_.map((f) => f()))
 const phase = () => {}
 const log = () => {}
@@ -157,6 +162,32 @@ def main():
               and "Both are REPORTS, never a failure" in p4.get("assemble:course", "")
               and "check_numbers.py" in p4.get("crosscheck:course", "") and "one quantity, one value" in p4.get("crosscheck:course", ""),
               p4.get("assemble:course"))
+        # 2.63.3 (the 2.63.2 full-course run: 46 of 128 build calls after module clean, builders reviewing their own sheets)
+        check("2.63.3 the builder stops at module clean and does not review its own sheets",
+              "STOP AT MODULE CLEAN" in b1 and "Do NOT review the sheets" in b1 and "review the sheets yourself against it" not in b1, b1[-2500:])
+        check("... and waits for a long build with --wait instead of blind (STILL BUILDING)",
+              "STILL BUILDING" in b1 and "--wait" in b1 and "600000" in b1, b1[-1500:])
+        check("2.63.3 the QA agent does the one visual review on the promoted sheets, marks them reviewed, keeps POLISH outside "
+              "the folder, and grades BROKEN / POLISH / INFO",
+              "THE ONE VISUAL REVIEW" in qa1 and "--reviewed" in qa1 and "M01_POLISH.md" in qa1 and "Look at\neach sheet ONCE" in qa1
+              and "BROKEN" in qa1 and "POLISH" in qa1 and "INFO" in qa1, qa1[-2000:])
+        with open(WORKFLOW, encoding="utf-8") as f:
+            wsrc = f.read()
+        check("... the QA schema's severity is the enum BROKEN / POLISH / INFO (five scales in the 2.63.2 run)",
+              "enum: ['BROKEN', 'POLISH', 'INFO']" in wsrc)
+        check("... a clean QA sends nothing back", not any(x.startswith("fix:") for x in labels), labels)
+        six = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_broken": ["1"]})
+        l6, p6 = six.get("labels", []), six.get("prompts", {})
+        check("2.63.3 a BROKEN QA finding sends the module back for ONE fix round, then QA once more - never a third",
+              "fix:1" in l6 and l6.index("fix:1") > l6.index("qa:1") and l6.index("qa:1+fix") > l6.index("fix:1")
+              and l6.count("fix:1") == 1 and not any(x.startswith("fix:2") for x in l6), l6)
+        check("... the fix round is told exactly the BROKEN findings (not the POLISH), not to start again, and to stop at module clean",
+              "s03: an oxygen monitor on a %LEL slide" in p6.get("fix:1", "") and "a label could sit closer" not in p6.get("fix:1", "")
+              and "Do NOT start again from --init-build" in p6.get("fix:1", ""), p6.get("fix:1", "")[-800:])
+        q6 = (six.get("r", {}).get("qa") or [None])[0] or {}
+        check("... and the second QA's verdict is the module's (clean after the fix: not blocking), the first one's findings kept",
+              "1" not in six.get("r", {}).get("blocking", []) and q6.get("module") == "1+fix"
+              and any(f.get("severity") == "BROKEN" for f in q6.get("first_qa") or []), six.get("r"))
         l5 = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "wave": 1}).get("labels", [])
         check("args.wave builds the modules in waves: module 2 starts after module 1's QA",
               l5.index("build:2") > l5.index("qa:1") and "build:final" not in l5, l5)

@@ -20,12 +20,21 @@
       CF_BROWSER_SLOTS): two builds, or a build and the test suite, queue instead of overloading the PC.
       (2.61.0) A slow build is measured, not guessed: set CF_TIMING=<file.jsonl> and every hidden-browser run writes its
       real seconds and its page clock there; `python course-factory/scripts/cf_timing.py <file.jsonl>` adds them up.
-5  on PASS it has photographed every slide, every figure step and every question (asked, wrong, right) onto a few
-      sheets and checked that every question grades right and wrong answers as such. Give the sheets to ONE review
-      subagent (model haiku) with compile/REVIEW_PROMPT.md. It labels each finding BROKEN or POLISH (2.56.0). Fix every
-      BROKEN one in one go, build again, and send the same reviewer a re-review (the changed screens only, with its
-      BROKEN list: FIXED / NOT FIXED - no new polish). POLISH is never fixed in the loop: write it to
-      working_claude\review\MNN\POLISH.md for the operator - a fix to a drawing that already passes can break it again
+      (2.63.3) A build that runs past 9 minutes answers "STILL BUILDING" (exit 3) and goes on by itself: run the SAME
+      command with --wait for its answer - never a second build meanwhile. A module's FIRST build waits its turn (at most
+      5 min) behind another module's first build on the same computer.
+5  on PASS - or MODULE CLEAN in a parallel build (--no-course-pages: only the course package left, judged after assembly)
+      - it has photographed every CHANGED slide (every part of a paged slide), figure step and question (asked, wrong,
+      right) onto a few sheets, and checked that every question grades right and wrong answers as such. A screen
+      unchanged in everything it loads keeps its picture (_build\MNN_shots); the sheets show what changed since the last
+      REVIEWED sheets. Give the sheets to ONE review subagent (model haiku) with compile/REVIEW_PROMPT.md. It labels each
+      finding BROKEN or POLISH (2.56.0). Then mark them looked at: build_module.py <course> --module 1 --reviewed (the next
+      sheets show only what changes after this). Fix every BROKEN one in one go, build again, and send the same reviewer
+      a re-review (the changed screens only, with its BROKEN list: FIXED / NOT FIXED - no new polish), --reviewed again.
+      In the whole-course workflow (orchestration/workflows/build_course.js) the BUILDER STOPS AT MODULE CLEAN and the QA
+      agent does this review; a BROKEN finding sends the module back for one fix round. POLISH is never fixed in the loop:
+      write it to working_claude\review\MNN_POLISH.md (beside the sheets' folder, which each promotion replaces; a
+      POLISH.md left inside it is moved there) for the operator - a fix to a drawing that already passes can break it again
       (IGF M02 s02: PASS, then four failed builds). Every BROKEN finding is fixed before hand-over, so the loop ends (M01
       benchmark: 6 open-ended review passes took 18 of 29 minutes).
    A FIGURE problem (from the build or the review): fix it in the studio, not in build after build -

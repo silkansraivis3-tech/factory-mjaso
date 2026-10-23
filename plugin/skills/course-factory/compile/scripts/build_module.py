@@ -31,12 +31,27 @@ studio, run again; once they are clean the whole build runs. --full runs everyth
 2.57.0: the drawing check and the audits judge again only the slides and task pages changed in anything they load since
 their last clean check (check_cache.py; the figures already did) - a failing one every time; --full judges everything.
 Every hidden browser takes a slot of one pool for the whole computer (browser_slots.py, CF_BROWSER_SLOTS).
-Exit 0 PASS, 1 problems to fix, 2 stopped (the compiler refused: not approved, changed by hand, design files edited).
+2.63.3 (the 2.63.2 full-course run, 4 h 34 min):
+  - a module's FIRST build waits its turn behind another module's first build (browser_slots.cold_turn, at most 5 min):
+    wave 1's three first builds overlapped and M01's took 1,076 s;
+  - a build that runs past ANSWER_WITHIN (9 min, CF_BUILD_ANSWER_WITHIN) is not lost to the shell's 10-minute limit: it
+    goes on by itself and says "STILL BUILDING"; the same command with --wait waits for it and prints its answer (a builder
+    whose shell call ended at 600 s waited blind). A second build of a module that is building waits for that one;
+  - the review sheets are promoted at MODULE CLEAN (in a parallel build only the course package is left, judged after
+    assembly), photographed only for the screens that changed (--shots), and compared with the last REVIEWED sheets
+    (review\\MNN_reviewed, written by --reviewed once someone looked at them) - not with the last build's, so no change
+    goes unseen when nobody reviewed in between; POLISH.md is kept outside the folder a promotion replaces
+    (review\\MNN_POLISH.md - five POLISH lists were deleted in the run).
+      build_module.py <course> --module 1 --reviewed     the sheets in review\\MNN were looked at: the next ones show
+                                                         only what changes after them
+Exit 0 PASS, 1 problems to fix, 2 stopped (the compiler refused: not approved, changed by hand, design files edited),
+3 still building (run the same command with --wait).
 """
 from __future__ import annotations
 
 import argparse
 import concurrent.futures as cf
+import contextlib
 import hashlib
 import io
 import json
@@ -298,6 +313,52 @@ def measure_out(path, misfits):
     io.open(path, "w", encoding="utf-8", newline="\n").write(json.dumps(avoid, indent=1, sort_keys=True))
 
 
+def reviewed_dir(out_dir):
+    """review\\MNN_reviewed - the manifests of the sheets someone last looked at (--reviewed): what "changed" is judged
+    against. Missing: every screen is new to the reviewer"""
+    return out_dir + "_reviewed"
+
+
+def polish_path(out_dir):
+    return out_dir + "_POLISH.md"
+
+
+def promote(pending, out_dir):
+    """the new sheets replace the folder of the last ones - and a POLISH.md written into that folder is kept beside it,
+    in review\\MNN_POLISH.md (2.63.3: the 2.63.2 run's re-check deleted five builders' POLISH lists this way)"""
+    import shutil
+    old = os.path.join(out_dir, "POLISH.md")
+    if os.path.isfile(old):
+        keep = io.open(old, encoding="utf-8", errors="replace").read()
+        dest = polish_path(out_dir)
+        have = io.open(dest, encoding="utf-8", errors="replace").read() if os.path.isfile(dest) else ""
+        if keep.strip() and keep.strip() not in have:
+            io.open(dest, "w", encoding="utf-8").write((have.rstrip() + "\n\n" if have.strip() else "") + keep.strip() + "\n")
+    shutil.rmtree(out_dir, ignore_errors=True)
+    os.replace(pending, out_dir)
+
+
+def mark_reviewed(out_dir, m):
+    """--reviewed: the promoted sheets were looked at - their manifests become the baseline the next sheets are compared
+    with, so the next review shows only what changes after this one"""
+    import shutil
+    man = os.path.join(out_dir, "manifest.json")
+    if not os.path.isfile(man):
+        print("Nothing to mark: %s has no review sheets yet (build_module.py makes them at module clean)" % out_dir)
+        return 1
+    base = reviewed_dir(out_dir)
+    os.makedirs(base, exist_ok=True)
+    for f in ("manifest.json", "manifest_src.json"):
+        src = os.path.join(out_dir, f)
+        if os.path.isfile(src):
+            shutil.copyfile(src, os.path.join(base, f))
+        elif os.path.isfile(os.path.join(base, f)):
+            os.remove(os.path.join(base, f))
+    n = len(json.load(io.open(man, encoding="utf-8")))
+    print("Reviewed %s: %d screens - the next review sheets show only what changes after this (%s)" % (m, n, base))
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("course")
@@ -311,6 +372,11 @@ def main(argv=None):
     ap.add_argument("--full", action="store_true", help="never stop after the figures - every stage, every run; the drawing "
                                                         "check and the audits judge every slide and page again (2.57.0)")
     ap.add_argument("--layout-round", type=int, default=0, help=argparse.SUPPRESS)
+    ap.add_argument("--reviewed", action="store_true", help="the review sheets were looked at: the next ones show only what "
+                                                            "changes after them (2.63.3); builds nothing")
+    ap.add_argument("--wait", action="store_true", help="wait for this module's build that said STILL BUILDING and print its "
+                                                        "answer (2.63.3)")
+    ap.add_argument("--inner", action="store_true", help=argparse.SUPPRESS)
     o = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     t0 = time.time()
@@ -325,6 +391,9 @@ def main(argv=None):
     m = cs.mid(o.module) if str(o.module).isdigit() else str(o.module)
     logdir = workspace.claude_path(course, "_build")
     os.makedirs(logdir, exist_ok=True)
+    out_dir = workspace.claude_path(course, "review", m)
+    if o.reviewed:
+        return mark_reviewed(out_dir, m)
     blanks = [] if o.draft else starter_blanks(course, o.module)
     if blanks:                       # 2.52.0: nothing is built on a sheet with the starter's blanks in it
         print("FAIL %s - nothing built: the build sheet %s still has the starter's blanks - fill %s"
@@ -353,6 +422,15 @@ def main(argv=None):
         stages.append((title, time.time() - since))
         return time.time()
 
+    # 2.63.3 - a module's first build (never built here: no _last.json) measures every figure and tries every fix: one at a
+    # time on the computer, the others wait their turn (at most 5 min) - held through the figures and the compile
+    cold = contextlib.ExitStack()
+    if o.layout_round == 0 and not os.path.isfile(os.path.join(logdir, "%s_last.json" % m)):
+        import browser_slots
+        waited = cold.enter_context(browser_slots.cold_turn())
+        log.write("\n===== first build: waited %.0f s for another module's first build (browser_slots.cold_turn)\n" % waited)
+        if waited >= 5:
+            notes.append("First build: waited %.0f s for another module's first build to finish its figures (one at a time)" % waited)
     # 1 - every figure at once, before the compile. 2.54.0 (built as 2.52.0 on its own branch): the module's design files are made the factory's first (the
     # compile does it too) - the figures are measured on their real slide with the module's own gb_compose.css, and a deck
     # built by a newer compiler (the figure first in the markup, .dom-fig) measured with the older style file puts the
@@ -399,6 +477,7 @@ def main(argv=None):
     ccode, cout = run(cmd)
     logged("compile_module.py", cout)
     t = timed("compile (compile_module.py, its drawing check)", t)
+    cold.close()                                 # the next module's first build may start
     if ccode == 2:
         write_stages(log, stages, t0)
         print("\n".join(say + ["", "COMPILE - stopped:"] + ["  " + x for x in lines_of(cout, 25)]))
@@ -464,13 +543,14 @@ def main(argv=None):
         jobs["course pages (compile_course.py)"] = [PY, os.path.join(HERE, "compile_course.py"), course]
     # 4 - the review sheets are made at the same time (2.50.1: they were a third of a passing build), into a folder of
     # their own: they become the review only when everything passes, so a failed build never hides a changed screen
-    out_dir = workspace.claude_path(course, "review", m)
+    # 2.63.3: compared with the last REVIEWED sheets, and a screen unchanged since its last picture is not photographed again
     pending = out_dir + ".pending"
     want_review = not o.no_review and not fails
     if want_review:
         import shutil
         shutil.rmtree(pending, ignore_errors=True)
-        jobs["review sheets"] = ["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, pending, "--base=" + out_dir]
+        jobs["review sheets"] = ["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, pending, "--base=" + reviewed_dir(out_dir),
+                                 "--shots=" + os.path.join(logdir, "%s_shots" % m)]
     pkg_cmd = [PY, os.path.join(FACTORY, "check_course_package.py"), os.path.join(course, workspace.MODULES)]
     ak = next((k for k in jobs if k.startswith("audits")), None)
 
@@ -527,13 +607,15 @@ def main(argv=None):
             sys.stdout.flush()
             return main(list(sys.argv[1:] if argv is None else argv) + ["--layout-round", str(o.layout_round + 1)])
     passed = not fails
+    # 2.63.3 - MODULE CLEAN: in a parallel build (--no-course-pages) everything but the course package passed - the package is
+    # judged after assembly. The sheets are promoted then too: before, nothing in a parallel build ever promoted, and the
+    # builders re-read stale sheets (IGF M09 re-reviewed a sheet from before its fix)
+    clean = passed or (o.no_course_pages and fails == ["course package"])
     review = ""
-    if want_review and passed:
+    if want_review and clean and "review sheets" in results:
         rcode, rout = results["review sheets"]
         if rcode == 0:                          # the sheets are the review now: the last review's folder is replaced
-            import shutil
-            shutil.rmtree(out_dir, ignore_errors=True)
-            os.replace(pending, out_dir)
+            promote(pending, out_dir)
             rout = rout.replace(pending, out_dir)
         logged("review_sheets.mjs", rout)
         if rcode == 1:                          # not promoted: the next review still compares with the last one shown
@@ -546,8 +628,11 @@ def main(argv=None):
             first = rout.strip().splitlines()[0] if rout.strip() else ""
             n = re.search(r"Review sheets: (\d+) of (\d+) screens.*?on (\d+) sheet", first)
             review = (("VISUAL REVIEW (required, GUIDE 2f): %s of %s screens changed since the last review, on %s sheet(s) in\n  %s\n"
-                       "  Give the sheets to ONE review subagent (model haiku or sonnet) with %s - it returns a short verdict."
-                       % (n.group(1), n.group(2), n.group(3), out_dir, os.path.join(SKILLS, "course-factory", "compile", "REVIEW_PROMPT.md")))
+                       "  Give the sheets to ONE review subagent (model haiku or sonnet) with %s - it returns a short verdict;\n"
+                       "  then mark them looked at: build_module.py <course> --module %s --reviewed (in a whole-course workflow the "
+                       "QA agent does this review, not the builder)"
+                       % (n.group(1), n.group(2), n.group(3), out_dir, os.path.join(SKILLS, "course-factory", "compile", "REVIEW_PROMPT.md"),
+                          o.module))
                       if n and n.group(1) != "0" else
                       "Visual review: no screen changed since the last review - nothing new to look at.")
         else:
@@ -575,11 +660,132 @@ def main(argv=None):
             print(review)
     else:
         print("FAIL %s - %s (%.0f s)" % (m, ", ".join(fails), secs))
+        if review and fails == ["course package"]:
+            print("MODULE CLEAN - only the course package is left, judged after assembly (compile_course.py, then "
+                  "check_course_package.py); the review sheets are promoted:")
+            print(review)
     if stages:
         print(stage_line(stages))
     print("Full log: %s" % log.name)
     return 0 if passed else 1
 
 
+ANSWER_WITHIN = 540     # s: a build still running then goes on by itself - under the shell's 10-minute limit (2.63.3)
+
+
+def running_files(course, module):
+    """(the running build's record, its answer file) for this module"""
+    import workspace
+    import content_script as cs
+    logdir = workspace.claude_path(workspace.work_folder(course, create=False), "_build")
+    m = cs.mid(module) if str(module).isdigit() else str(module)
+    return os.path.join(logdir, "%s_running.json" % m), os.path.join(logdir, "%s_answer.txt" % m), m
+
+
+def wait_answer(rec_path, ans_path, m, within):
+    """wait for the build in rec_path up to `within` s: (exit code, its answer) when it ended, else None"""
+    import browser_slots
+    t0 = time.time()
+    while True:
+        try:
+            rec = json.load(io.open(rec_path, encoding="utf-8"))
+        except (OSError, ValueError):                    # being written this instant
+            rec = None
+        done = rec.get("exit") if rec else None
+        if rec is not None and (done is not None or not browser_slots.alive(int(rec.get("pid") or 0))):
+            try:
+                text = io.open(ans_path, encoding="utf-8", errors="replace").read()
+            except OSError:
+                text = ""
+            if done is None:
+                return 1, text + "\nFAIL %s - the build ended without its last line (stopped from outside?) - run it again\n" % m
+            return int(done), text
+        if time.time() - t0 >= within:
+            return None
+        time.sleep(1)
+
+
+def entry(argv=None):
+    """2.63.3 - the build runs as its own process; this one answers within ANSWER_WITHIN s, with the build's own answer,
+    or with STILL BUILDING (exit 3) while the build goes on - the shell call never ends blind. --wait: wait (again) for it.
+    The IGF 2.63.2 run: M01's first build took 1,076 s and the builder's 600 s shell call ended without an answer"""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if "--inner" in argv or "--reviewed" in argv or "-h" in argv or "--help" in argv:
+        return main(argv)
+    ap = argparse.ArgumentParser(add_help=False)
+    ap.add_argument("course")
+    ap.add_argument("--module", required=True)
+    known, _ = ap.parse_known_args(argv)
+    try:
+        within = float(os.environ.get("CF_BUILD_ANSWER_WITHIN") or ANSWER_WITHIN)
+    except ValueError:
+        within = ANSWER_WITHIN
+    try:
+        rec_path, ans_path, m = running_files(known.course, known.module)
+    except Exception:                                    # noqa: BLE001 - main says what is wrong with the course
+        return main(argv)
+    import browser_slots
+    try:
+        rec = json.load(io.open(rec_path, encoding="utf-8"))
+    except (OSError, ValueError):
+        rec = {}
+    running = rec.get("exit") is None and browser_slots.alive(int(rec.get("pid") or 0))
+    wait = "--wait" in argv
+    if wait or running:
+        if not rec:
+            print("No build of %s to wait for - run build_module.py without --wait" % m)
+            return 1
+        if running and not wait:
+            print("A build of %s is already running (started %.0f s ago) - waiting for it instead of starting another."
+                  % (m, time.time() - rec.get("started", time.time())))
+    else:
+        args = [a for a in argv if a != "--wait"] + ["--inner"]
+        os.makedirs(os.path.dirname(rec_path), exist_ok=True)
+        fh = io.open(ans_path, "w", encoding="utf-8")
+        flags = 0
+        if os.name == "nt":                          # its own process group, no window; the shell call may end before it
+            flags = subprocess.CREATE_NEW_PROCESS_GROUP | 0x08000000      # CREATE_NO_WINDOW
+        env = dict(os.environ, PYTHONIOENCODING="utf-8", CF_BUILD_RUNNING=rec_path)
+        io.open(rec_path, "w", encoding="utf-8").write(json.dumps({"pid": os.getpid(), "started": time.time(), "args": args}))
+        p = subprocess.Popen([PY, os.path.abspath(__file__)] + args, stdout=fh, stderr=subprocess.STDOUT, env=env,
+                             creationflags=flags, **({} if os.name == "nt" else {"start_new_session": True}))
+        fh.close()
+        try:                                         # its PID, keeping an "exit" a very short build may have written already
+            rec = json.load(io.open(rec_path, encoding="utf-8"))
+        except (OSError, ValueError):
+            rec = {"started": time.time(), "args": args}
+        rec["pid"] = p.pid
+        io.open(rec_path, "w", encoding="utf-8").write(json.dumps(rec))
+    got = wait_answer(rec_path, ans_path, m, within)
+    if got is None:
+        print("STILL BUILDING %s - it goes on by itself (a first build, or a busy computer). Run the same command with --wait: "
+              "it waits up to %.0f s more and prints this build's answer. Do not edit the build sheet or the figures meanwhile."
+              % (m, within))
+        return 3
+    code, text = got
+    sys.stdout.write(text)
+    return code
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    if os.environ.get("CF_BUILD_RUNNING") and "--inner" in sys.argv:
+        _rec = os.environ["CF_BUILD_RUNNING"]
+        try:
+            time.sleep(float(os.environ.get("CF_BUILD_TEST_SLEEP") or 0))       # test_build_module.py: a build that takes long
+            _code = main()
+        except SystemExit as _e:
+            _code = _e.code if isinstance(_e.code, int) else 1
+        except BaseException:                            # noqa: BLE001 - said in the answer file, then the record
+            import traceback
+            traceback.print_exc()
+            _code = 2
+        sys.stdout.flush()
+        try:
+            _r = json.load(io.open(_rec, encoding="utf-8"))
+        except (OSError, ValueError):
+            _r = {}
+        _r["exit"] = _code
+        io.open(_rec, "w", encoding="utf-8").write(json.dumps(_r))
+        sys.exit(_code)
+    sys.exit(entry())

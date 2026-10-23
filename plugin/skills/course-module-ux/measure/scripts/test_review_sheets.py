@@ -108,6 +108,65 @@ def refit_part(md, out):
     io.open(deck, "w", encoding="utf-8").write(text)
 
 
+def shots_part(md, tmp):
+    """2.63.3 (the 2.63.2 full-course run: every screen photographed in every round, 3,406 shots / 3,334 s; the earlier parts
+    of 103 paged slides never photographed; M11's last slide looped 381 times) - --shots keeps the picture of a screen
+    unchanged in everything it loads; every part of a paged slide is its own picture, changed together; the walk stops"""
+    print("\n-- 2.63.3: only changed screens are photographed; every part of a paged slide; a Next that never stops")
+    pd = os.path.join(tmp, "parts_module")
+    shutil.copytree(md, pd)
+    deck = os.path.join(pd, "presentation", "index.html")
+    text = io.open(deck, encoding="utf-8").read()
+    sec = re.search(r'(<section[^>]*id="s02"[^>]*>)(.*?)(</section>)', text, re.S)
+    parted = sec.group(1) + sec.group(2) + ('<div class="lt-part on" data-part="1"><p>PART ONE words</p></div>'
+                                            '<div class="lt-part" data-part="2"><p>PART TWO words</p></div>') + sec.group(3)
+    io.open(deck, "w", encoding="utf-8").write(text.replace(sec.group(0), parted))
+    shots, base = os.path.join(tmp, "shots"), os.path.join(tmp, "nobase")
+
+    def go(out, base=base):
+        t = time.time()
+        p = subprocess.run(["node", REVIEW, pd, out, "--shots=" + shots, "--base=" + base], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=600)
+        man = json.load(io.open(os.path.join(out, "manifest.json"), encoding="utf-8")) if os.path.isfile(os.path.join(out, "manifest.json")) else {}
+        sh = json.load(io.open(os.path.join(out, "sheets.json"), encoding="utf-8")) if os.path.isfile(os.path.join(out, "sheets.json")) else {}
+        return p.returncode, p.stdout + p.stderr, man, sh, time.time() - t
+    c1, o1, m1, s1, t1 = go(os.path.join(tmp, "sh1"))
+    parts = [k for k in m1 if k.startswith("deck/s02")]
+    check("a paged slide gets one picture per part (deck/s02 and deck/s02#2)", c1 == 0 and sorted(parts) == ["deck/s02", "deck/s02#2"],
+          (c1, parts, o1[-300:]))
+    c2, o2, m2, s2, t2 = go(os.path.join(tmp, "sh2"))
+    m = re.search(r"(\d+) photographed, (\d+) unchanged kept", o2)
+    check("a second run with nothing changed photographs nothing and keeps every picture (%s)" % (m and m.group(0)),
+          c2 == 0 and m and m.group(1) == "0" and int(m.group(2)) == len(m1), o2[-300:])
+    diff = {k: worst(m1[k], m2[k]) for k in m1 if k in m2}
+    check("... the same screens with the same pictures, and the same grading (failures none)",
+          list(m1) == list(m2) and not any(v > 8 for v in diff.values()) and s1.get("failures") == s2.get("failures") == [],
+          (list(m1), list(m2), s2.get("failures")))
+    check("... and it is faster (%.1f s, the first %.1f s)" % (t2, t1), t2 < t1, (t1, t2))
+    text = io.open(deck, encoding="utf-8").read()
+    io.open(deck, "w", encoding="utf-8").write(text.replace("PART TWO words", "PART TWO words, changed"))
+    c3, o3, m3, s3, t3 = go(os.path.join(tmp, "sh3"), os.path.join(tmp, "sh2"))       # compared with the run before
+    m = re.search(r"(\d+) photographed", o3)
+    shown = [s for x in s3.get("sheets", []) for s in x.get("screens", [])]
+    check("one part's words changed: only that slide is photographed again (%s)" % (m and m.group(0)),
+          c3 == 0 and m and m.group(1) == "2", o3[-300:])
+    check("... and both of its parts are on the sheets, nothing else (parts change together)",
+          len(shown) == 2 and all("(s02)" in s for s in shown), shown)
+    # a last slide whose Next never turns off: the walk stops instead of looping 400 times
+    loop = ("<script>setInterval(function(){var b=document.getElementById('btnNext');if(b)b.disabled=false;},5);</script>")
+    text = io.open(deck, encoding="utf-8").read()
+    i = text.lower().rfind("</body>")
+    io.open(deck, "w", encoding="utf-8").write(text[:i] + loop + text[i:])
+    t = time.time()
+    p = subprocess.run(["node", REVIEW, pd, os.path.join(tmp, "sh4"), "--all"], capture_output=True, text=True, encoding="utf-8",
+                       errors="replace", timeout=600, env=dict(os.environ, CF_TIMING=os.path.join(tmp, "loop.jsonl")))
+    rows = [json.loads(x) for x in io.open(os.path.join(tmp, "loop.jsonl"), encoding="utf-8") if x.strip()] \
+        if os.path.isfile(os.path.join(tmp, "loop.jsonl")) else []
+    steps = [r for r in rows if str(r.get("what", "")).startswith("deck ") and "(step)" in str(r.get("what"))]
+    check("a deck whose last slide never turns Next off: the walk stops after the slide's own parts and steps (%d extra visits)"
+          % len(steps), p.returncode == 0 and len(steps) <= 3, (p.returncode, len(steps), p.stdout[-200:]))
+
+
 def blind_part(md, tmp):
     """2.63.0 (the IGF full build on 2.63.0: the final passed only with --no-review) - a blind page (a graded final, data-blind,
     2.60.0) shows no verdict, so the probe read every right answer as graded wrong. It reads the page's report instead"""
@@ -163,6 +222,7 @@ def main():
               s05 and diff.get(s05[0], 999) <= 8, (s05, [diff.get(k) for k in s05]))
         check("the new waits are faster (%.1f s, the fixed ones %.1f s)" % (t1, t0), t1 < t0, (t0, t1))
         refit_part(md, os.path.join(tmp, "still"))
+        shots_part(md, tmp)
         blind_part(md, tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

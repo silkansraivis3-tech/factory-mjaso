@@ -241,17 +241,23 @@ course-module-ui or course-task-ux: the compiler builds their standard.
         only what fails. Fix what it prints in the build sheet or the figure specs and run it
         again - never a check on its own, never the HTML. --no-course-pages: one process
         writes COURSE.html afterwards.
-    on PASS: the review the Quickstart names - ONE reviewer (model haiku, compile/REVIEW_PROMPT.md; with no
-        subagent tool, review the sheets yourself against it), fix every BROKEN finding, build again, ONE
-        re-review of the changed screens. No third pass. POLISH is never fixed here: write it to
-        working_claude/review/M${two(m)}/POLISH.md and list it in your report.
+    STOP AT MODULE CLEAN (2.63.3): PASS, or "FAIL M${two(m)} - course package" with "MODULE CLEAN" under it
+        (the package is judged after assembly) - that is the end of your build. Do NOT review the sheets
+        yourself and do not polish: the QA agent behind you does the ONE visual review on the sheets this
+        build promoted, and a BROKEN finding comes back to the module for one fix round. (The 2.63.2
+        full-course run: 46 of 128 build calls came after module clean - a builder reviewing its own sheets,
+        whose fixes tripped the layout checks again.) Anything you would polish: list it in your report.
     a figure problem: fix it in the studio (studio.py <spec> --step all, seconds), then one build.
 
-RUN build_module.py IN THE FOREGROUND and wait for its last line (it takes 1-5 minutes; give the
-shell call a long timeout). Never start it in the background and never end your turn while it
-runs: your report is read as the module's result (2.58.0 - the IGF full build: a builder that
-ended "waiting on the build" left Module 15 half-built). Your report's FIRST line is the last
-line build_module.py printed.
+RUN build_module.py IN THE FOREGROUND and wait for its last line; give the shell call the longest
+timeout it allows (600000 ms). A build that runs longer answers "STILL BUILDING" before that
+limit and goes on by itself: then run the SAME command with --wait (again, until it prints the
+build's answer) - never start a second build meanwhile, never edit the build sheet or a figure while
+it runs. A module's first build may first wait up to 5 min for another module's first build (one
+at a time on this computer) - that is expected. Never end your turn while a build runs: your report
+is read as the module's result (2.58.0 - the IGF full build: a builder that ended "waiting on the
+build" left Module 15 half-built). Your report's FIRST line is the PASS / FAIL line build_module.py
+printed.
 
 A way of answering the compiler leaves "as it is" is the one page you make by hand, to
 course-task-ux.
@@ -270,11 +276,10 @@ script's visual_kind "none" is how a screen honestly needs no figure. Where an i
 generating and you cannot produce it, write the brief to _visual_briefs/ and keep going:
 the module is finished as far as it can go, and the handoff is written at the end.
 
-Report: the last line build_module.py printed (PASS, or the problems left) and the path of
+Report: the PASS / FAIL line build_module.py printed (PASS, or the problems left) and the path of
 its full log, how many build_module.py runs it took, every honesty marker with its source,
 the achieved Track A buckets and Track B ratio, what you moved to the handout, every line
-the compiler printed under "To fix" or "left as it is", and what the review found and
-whether each finding was fixed.`
+the compiler printed under "To fix" or "left as it is", and anything you would polish.`
 
 const qa = (m) => `You did NOT build this module. Check it.
 
@@ -289,7 +294,8 @@ Run the deterministic checks in TWO shell calls and READ their output:
      - the compile, the drawing check (L54), both script matches, navigation, the audits at
      1280x800 and 1024x768, the importer and the review sheets' grading of every question (right
      and wrong), in one command. It rebuilds from the same approved inputs, so the bytes come out
-     the same: anything it reports, or a stop (exit 2), is a finding.
+     the same: anything it reports, or a stop (exit 2), is a finding. Give the shell call 600000 ms;
+     if it answers "STILL BUILDING", run the same command with --wait until it prints its answer.
   2  the checks it does not run - ONLY these, because only these can judge ONE module (2.63.2) - chained
      in ONE call, each by the usage line at the top of its file, printing only what fails:
        check_balance on presentation/index.html WITH THIS MODULE'S OWN allocation:
@@ -315,8 +321,32 @@ where a fixed detector head is meant, a spectacle blind where a spool piece is a
 check with these and they were found only by eye. A picture of a different instrument, part or place than the words
 name is a finding of severity BROKEN (compile/REVIEW_PROMPT.md, item 6, is the same rule for the sheets).
 
+THE ONE VISUAL REVIEW (2.63.3 - the builder stops at module clean and no longer reviews its own sheets): the
+review sheets of this module are in ${A.course}/working_claude/review/M${two(m)}/ (sheet_01.png ...; sheets.json
+names the screens on each) - the screens changed since the last review, promoted by the build above. Look at
+each sheet ONCE, in order, against course-factory/compile/REVIEW_PROMPT.md, and note findings as you go (never
+re-open a sheet you have read). Then mark them looked at, so the next sheets show only what changes after this:
+  python course-factory/compile/scripts/build_module.py "${A.course}" --module ${m.id} --reviewed
+Write the POLISH findings, one line each, to working_claude/review/M${two(m)}_POLISH.md (beside the folder, never
+inside it - a promotion replaces the folder).
+
 A module that still classifies C has not finished — say so plainly. REPORT findings.
-Do not fix anything.`
+Do not fix anything. Severity is one of three (2.63.3 - the 2.63.2 run's QA used five scales):
+  BROKEN  wrong, misleading or unusable for a trainee or the instructor - a picture of another thing than the
+          words name, a number that contradicts the slide, a question graded wrongly, an outcome not taught, a
+          failed check; blocking = true when there is one
+  POLISH  works, could look or read better
+  INFO    worth knowing, nothing to change`
+
+/* 2.63.3 - a BROKEN finding of QA sends the module back for ONE fix round, by a builder who fixes exactly those */
+const fixRound = (m, q) => `${build(m)}
+
+THIS MODULE IS BUILT AND WAS CHECKED BY QA. Do NOT start again from --init-build. Fix EXACTLY these BROKEN
+findings - nothing else (no polish, no other screen) - in the build sheet or the figure specs, then run
+build_module.py until module clean (PASS, or only the course package left) and STOP. A finding that needs the
+approved words changed is not yours to fix: say so in your report. The findings:
+
+${((q && q.findings) || []).filter((f) => f.severity === 'BROKEN').map((f) => `  - ${f.where}: ${f.what}`).join('\n')}`
 
 const QA_SCHEMA = {
   type: 'object',
@@ -330,11 +360,15 @@ const QA_SCHEMA = {
       items: {
         type: 'object',
         required: ['severity', 'where', 'what'],
-        properties: { severity: { type: 'string' }, where: { type: 'string' }, what: { type: 'string' } },
+        properties: {
+          severity: { type: 'string', enum: ['BROKEN', 'POLISH', 'INFO'] },
+          where: { type: 'string' }, what: { type: 'string' },
+        },
       },
     },
   },
 }
+const broken = (q) => ((q && q.findings) || []).some((f) => f.severity === 'BROKEN')
 
 /* Module 3 is verified while Module 7 is still being written. No wasted wall-clock.
    An approved module is built and checked on Sonnet; a draft gets its script written on the session's model and
@@ -348,7 +382,8 @@ const carryOn = (m, last) => `${build(m)}
 
 THIS MODULE WAS STARTED BY ANOTHER AGENT, WHICH STOPPED BEFORE build_module.py printed PASS. Its
 build sheet, figure specs and pages are where it left them - do NOT start again from --init-build.
-Run build_module.py, fix what it prints, until PASS, then the review. Its last report was:
+Run build_module.py (with --wait first if a build of it is still running), fix what it prints, until module
+clean, then STOP - QA does the review. Its last report was:
 
 ${String(last || '(no report)').slice(0, 2500)}`
 async function buildUntilPass(m) {
@@ -373,8 +408,16 @@ for (let i = 0; i < A.modules.length; i += WAVE) {
       ? buildUntilPass(m).then((r) => ({ m, r, built: true }))
       : agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' }).then((r) => ({ m, r, built: false })),
     ({ m, built }) => built
-      ? agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
-      : { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] }
+      ? agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL }).then((q) => ({ m, q }))
+      : { m, q: { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] } },
+    /* 2.63.3 - BROKEN: one fix round, then QA once more (its sheets show only the screens the fix changed); never a third */
+    async ({ m, q }) => {
+      if (!broken(q)) return q
+      log(`module ${m.id}: QA found BROKEN - one fix round`)
+      await agent(fixRound(m, q), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL })
+      const q2 = await agent(qa(m), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
+      return q2 ? Object.assign({}, q2, { first_qa: q.findings }) : q
+    }
   ))
 }
 

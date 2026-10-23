@@ -133,6 +133,27 @@ def main():
                 got = 0
             check("Node waited for the slot Python held, and got it once freed", got >= freed - 0.05, (got, freed, e[-300:]))
             check("Node freed it again", browser_slots.held() == [])
+        # 2.63.3 - one module's first build at a time: another waits its turn, at most wait_max s, then goes anyway
+        import threading
+        got = {}
+
+        def first(name, hold, wait_max):
+            t = time.time()
+            with browser_slots.cold_turn(wait_max) as waited:
+                got[name] = (time.time() - t, waited)
+                time.sleep(hold)
+        a = threading.Thread(target=first, args=("a", 2.0, 30))
+        a.start()
+        time.sleep(0.3)
+        b = threading.Thread(target=first, args=("b", 0.1, 30))
+        c = threading.Thread(target=first, args=("c", 0.1, 0.5))
+        b.start()
+        c.start()
+        for x in (a, b, c):
+            x.join(60)
+        check("a second first build waits for the one running (%.1f s)" % got["b"][0], 1.4 <= got["b"][0] < 10, got)
+        check("... and one with a short limit goes anyway when it runs out (%.1f s)" % got["c"][0], 0.4 <= got["c"][0] < 1.4, got)
+        check("... the turn is freed afterwards", not os.path.exists(os.path.join(pool, "cold_build.lock")))
     finally:
         shutil.rmtree(pool, ignore_errors=True)
     print("%d failure(s)" % len(FAILS) if FAILS else "All browser-slot checks passed.")
