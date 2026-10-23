@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import hashlib
 import html
 import io
 import json
@@ -177,7 +178,10 @@ def task_page_run(spec_path, spec, ctx, sizes, out, shots):
                     ok, _ = chrome(exe, uri(f), size, prof, png).wait(60)
                     r["shot"] = png if os.path.isfile(png) else None
                     continue
-                ok, so = chrome(exe, uri(f), drawing_check.window_for(exe, size), prof).wait(90)
+                win = drawing_check.window_for(exe, size)
+                text = io.open(f, encoding="utf-8").read()
+                ok, so = cached_probe(probe_cache_dir(ctx), probe_key(text, where, win, exe), "task probe %s" % key,
+                                      lambda: chrome(exe, uri(f), win, prof).wait(90))       # 2.63.3
                 m = re.search(r'<pre id="%s">(.*?)</pre>' % OUT_ID, so or "", re.S)
                 if not m:
                     r["error"] = "the task page did not finish in the hidden browser"
@@ -483,6 +487,102 @@ def chrome(exe, url, size, prof, shot_png=None):
     return _Run(exe, url, size, prof, shot_png)
 
 
+# ------------------------------------------------------------------ 2.63.3: the probe cache
+# WHY (the 2.63.2 full-course run): the figure stage was half of every build's seconds - 2,900 studio probes, 17,496 s of
+# hidden browsers - and a probe is a pure function of its page: the same page, the same files it loads, the same window,
+# the same browser give the same measurement (the audits are deterministic since 2.50.6). A probe whose page and every
+# file it loads are byte for byte what they were is answered from the cache - across runs (working_claude\_build\
+# studio_probes, or CF_PROBE_CACHE) and within one (figure_fit's candidates often repeat). Anything changed, a new kit.js,
+# audit or stylesheet, a picture, the spec: another key, measured. CF_PROBE_CACHE=off: never.
+PROBE_CACHE_VERSION = "1"
+_SHA_MEMO = {}
+_REF = re.compile(r"""\b(?:src|href)\s*=\s*["']([^"'#?]+)|url\(\s*["']?([^"')#?]+)""", re.I)
+
+
+def _file_sha(p):
+    try:
+        st = os.stat(p)
+    except OSError:
+        return "-"
+    if not os.path.isfile(p):                         # a folder (a <base href>, a link to ../): nothing to load
+        return "dir"
+    k = (p, st.st_mtime_ns, st.st_size)
+    if k not in _SHA_MEMO:
+        h = hashlib.sha256()
+        try:
+            with open(p, "rb") as f:
+                for chunk in iter(lambda: f.read(1 << 20), b""):
+                    h.update(chunk)
+        except OSError:
+            return "-"
+        _SHA_MEMO[k] = h.hexdigest()[:20]
+    return _SHA_MEMO[k]
+
+
+def _local(ref, base):
+    if re.match(r"(?i)^(https?|data|mailto|javascript|about):", ref):
+        return None
+    if ref.lower().startswith("file:"):
+        from urllib.request import url2pathname
+        from urllib.parse import urlparse
+        return os.path.normpath(url2pathname(urlparse(ref).path))
+    from urllib.parse import unquote
+    return os.path.normpath(os.path.join(base, unquote(ref)))
+
+
+def probe_key(doc, page_dir, win, exe):
+    """the key of one probe: its page, every local file it loads (a stylesheet's own url()s too), the window, the browser"""
+    m = re.search(r'<base href="([^"]+)"', doc)
+    base = _local(m.group(1), page_dir) if m else page_dir
+    parts, seen = [PROBE_CACHE_VERSION, str(exe), "%dx%d" % tuple(win), hashlib.sha256(doc.encode("utf-8")).hexdigest()], set()
+
+    def add(text, where, depth):
+        for a, b in _REF.findall(text):
+            p = _local((a or b).strip(), where)
+            if not p or p in seen:
+                continue
+            seen.add(p)
+            parts.append("%s=%s" % (p, _file_sha(p)))
+            if depth and p.lower().endswith(".css") and os.path.isfile(p):
+                add(io.open(p, encoding="utf-8", errors="replace").read(), os.path.dirname(p), depth - 1)
+    add(doc, base or page_dir, 1)
+    return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()[:32]
+
+
+def probe_cache_dir(ctx):
+    v = os.environ.get("CF_PROBE_CACHE") or ""
+    if v.lower() in ("off", "0", "no"):
+        return None
+    if v:
+        return v
+    return os.path.join(ctx["work"], "_build", "studio_probes") if ctx and ctx.get("work") else None
+
+
+def cached_probe(cache, key, what, fresh):
+    """(ok, text) of a probe: from the cache when its key is there, else fresh() - kept when it answered"""
+    if cache and key:
+        p = os.path.join(cache, key[:2], key + ".html")
+        try:
+            text = io.open(p, encoding="utf-8").read()
+            if os.environ.get("CF_TIMING"):
+                import cf_timing
+                cf_timing.note("studio_cache", what, 0.0)
+            return True, text
+        except OSError:
+            pass
+    ok, so = fresh()
+    m = re.search(r'<pre id="%s">.*?</pre>' % OUT_ID, so or "", re.S)
+    if cache and key and ok and m and "&quot;error&quot;" not in m.group(0) and '"error"' not in m.group(0):
+        try:
+            os.makedirs(os.path.join(cache, key[:2]), exist_ok=True)
+            tmp = os.path.join(cache, key[:2], "%s.%d.tmp" % (key, os.getpid()))
+            io.open(tmp, "w", encoding="utf-8").write(m.group(0))
+            os.replace(tmp, os.path.join(cache, key[:2], key + ".html"))
+        except OSError:
+            pass
+    return ok, so
+
+
 def window_for(size, exe=None):
     """the window that gives a page of exactly `size` - the drawing check's own measurement, so both see the same page"""
     sys.path.insert(0, COMPILE)
@@ -539,22 +639,29 @@ def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), ste
                 # a screenshot's page is its whole window; a page read back (--dump-dom) is smaller than its window
                 if not sheet:
                     win = size if png else window_for(size, exe)
-                procs.append((size, mode, png, (uri(f), win, png, prof)))
+                key = probe_key(doc, tmp, win, exe) if mode == "probe" else None      # 2.63.3: a probe is cached
+                procs.append((size, mode, png, (uri(f), win, png, prof), key))
+        cache = probe_cache_dir(ctx)
 
         def go(job):
             # 2.57.0: each browser in a thread of its own, holding one slot of the computer's pool while it runs - a
             # thread never holds one slot while it waits for the next (the runs used to start all at once, then be read)
-            size, mode, png, (u, win, shot, prof) = job
-            ok, so = chrome(exe, u, win, prof, shot).wait(30)
-            if not ok:                                 # a hidden browser that stalls is tried once more, on its own
-                if os.environ.get("KIT_STUDIO_DEBUG"):
-                    print("  (the %s run at %dx%d stalled - tried again)" % (mode, size[0], size[1]))
-                ok, so = chrome(exe, u, win, tempfile.mkdtemp(prefix="p_", dir=tmp), shot).wait(60)
-            return ok, so
+            size, mode, png, (u, win, shot, prof), key = job
+
+            def fresh():
+                ok, so = chrome(exe, u, win, prof, shot).wait(30)
+                if not ok:                             # a hidden browser that stalls is tried once more, on its own
+                    if os.environ.get("KIT_STUDIO_DEBUG"):
+                        print("  (the %s run at %dx%d stalled - tried again)" % (mode, size[0], size[1]))
+                    ok, so = chrome(exe, u, win, tempfile.mkdtemp(prefix="p_", dir=tmp), shot).wait(60)
+                return ok, so
+            if key:
+                return cached_probe(cache, key, "probe %dx%d" % size, fresh)
+            return fresh()
         import concurrent.futures as cf
         with cf.ThreadPoolExecutor(max_workers=max(1, len(procs))) as ex:
             outs = list(ex.map(go, procs))
-        for (size, mode, png, _), (ok, so) in zip(procs, outs):
+        for (size, mode, png, _, _), (ok, so) in zip(procs, outs):
             key = "%dx%d" % size
             r = res.setdefault(key, {})
             if mode == "shot":

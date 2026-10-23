@@ -498,6 +498,7 @@ def main():
         check("K13 --step all: one contact sheet of every step (rest + 2 steps = 3 panels) in one picture",
               shot.endswith("_all.png") and os.path.isfile(shot) and png_size(shot)[0] >= 1300 and png_size(shot)[1] >= 700, shot)
         floor_parts_part(tmp)
+        probe_cache_part(tmp)
         flammability_part(tmp)
         kit_words_part()
     finally:
@@ -516,6 +517,56 @@ FLOOR_PARTS = {
     "step_track": {"size": [640, 390], "label": "step track", "parts": [
         {"id": "ST", "type": "step_track", "x": 24, "y": 30, "vertical": True, "gap": 62,
          "steps": ["Authorise", "Isolate", "Ventilate", "Test the air", "Attendant, rescue", "Enter, keep testing"]}]}}
+
+
+def probe_cache_part(tmp):
+    """2.63.3 (the 2.63.2 full-course run: figures half of every build, 2,900 studio probes / 17,496 s) - a probe whose page
+    and every file it loads are unchanged is answered from the cache, with the very report a fresh probe gives; a changed
+    spec, or a changed file the page loads, is measured again"""
+    print("\n-- 2.63.3: the probe cache")
+    cache = os.path.join(tmp, "probe_cache")
+    parts_js = os.path.join(tmp, "parts_cache.js")
+    io.open(parts_js, "w", encoding="utf-8").write("/* no extra parts */\n")
+    sp = os.path.join(tmp, "cached.kit.json")
+    io.open(sp, "w", encoding="utf-8").write(json.dumps(BAD))
+    runs = [0]
+    real = studio._Run.__init__
+
+    def counting(self, *a, **k):
+        runs[0] += 1
+        return real(self, *a, **k)
+    studio._Run.__init__ = counting
+    old = os.environ.get("CF_PROBE_CACHE")
+    try:
+        def probe():
+            runs[0] = 0
+            r, why = studio.run(sp, parts=parts_js, panel="two-col", out=os.path.join(tmp, "pc"), shots=False)
+            return r, runs[0]
+        os.environ["CF_PROBE_CACHE"] = "off"
+        fresh, n0 = probe()
+        os.environ["CF_PROBE_CACHE"] = cache
+        first, n1 = probe()
+        again, n2 = probe()
+        strip = lambda r: {k: {kk: vv for kk, vv in v.items() if kk != "virt"} for k, v in r["sizes"].items()}
+        check("a probe the cache has answered is not run again (fresh %d browsers, first %d, again %d)" % (n0, n1, n2),
+              n0 == 2 and n1 == 2 and n2 == 0, (n0, n1, n2))
+        check("... and its findings are identical to a fresh probe's (every step, every check, both sizes)",
+              studio.problems(fresh) == studio.problems(first) == studio.problems(again) and studio.problems(fresh)
+              and strip(fresh) == strip(again), (studio.problems(fresh), studio.problems(again)))
+        spec = json.loads(json.dumps(BAD))
+        spec["parts"][1]["label"] = "fuel tank 2"
+        io.open(sp, "w", encoding="utf-8").write(json.dumps(spec))
+        _, n3 = probe()
+        check("a changed spec is measured again (%d browsers)" % n3, n3 == 2, n3)
+        io.open(parts_js, "w", encoding="utf-8").write("/* a changed file the page loads */\n")
+        _, n4 = probe()
+        check("a changed file the page loads is measured again (%d browsers)" % n4, n4 == 2, n4)
+    finally:
+        studio._Run.__init__ = real
+        if old is None:
+            os.environ.pop("CF_PROBE_CACHE", None)
+        else:
+            os.environ["CF_PROBE_CACHE"] = old
 
 
 def floor_parts_part(tmp):
