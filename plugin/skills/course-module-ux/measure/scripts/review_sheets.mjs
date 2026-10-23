@@ -434,7 +434,12 @@ async function tasks(tiles, failures) {
         const q = await evaluate('__rv.current()');
         if (!q) break;
         await evaluate(SETTLE); await pause(150); await evaluate(SETTLE);
-        if (!good) for (const x of await evaluate('__rv.leaders()')) failures.push(`${name} ${q}: ${x}`);
+        if (!good) {          // 2.63.3: judged once the course font is in and laid out (two frames) - as on the quiet tablet
+          await evaluate(`(document.fonts ? document.fonts.ready : Promise.resolve()).then(function(){ return new Promise(function(r){
+            requestAnimationFrame(function(){ requestAnimationFrame(function(){ r(1); }); }); }); })`);
+          await evaluate(SETTLE);
+          for (const x of await evaluate('__rv.leaders()')) failures.push(`${name} ${q}: ${x}`);
+        }
         if (opt.asked && good) tiles.push({ id: `${name}/${q}/asked`, label: `${name} ${q} - as asked`, png: await shot() });
         const r = await evaluate(`__rv.answer(${good})`);
         await mark();
@@ -554,6 +559,9 @@ try {
   await send('Page.enable'); await send('Runtime.enable');
   if (!opt['fixed-waits']) await send('Page.addScriptToEvaluateOnNewDocument', { source: TIMERS });   // before the page's own scripts
   await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false });
+  /* 2.63.3 - --cpu-throttle=N: the page runs N times slower, as on a busy computer (the test of item 9: leader lines placed
+     under load the way they are on a quiet one) */
+  if (Number(opt['cpu-throttle']) > 1) await send('Emulation.setCPUThrottlingRate', { rate: Number(opt['cpu-throttle']) });
   const tiles = [], failures = [];
   let t0 = Date.now(), s0 = slept, w0 = waited;
   const lap = (what, extra) => { note(what, t0, Object.assign({ slept: (slept - s0) / 1000, waited: (waited - w0) / 1000 }, extra || {}));

@@ -1919,10 +1919,15 @@ def v2520_part(tmp):
     cs.save(os.path.join(md3, "assets", "img", "_photo_meta.json"), pm)
     code, out = run(COMPILE, c3, "--module", "1", "--only", "tasks")
     fix_list = out.split("To fix before it is shown")[1] if "To fix before it is shown" in out else ""
-    check("3: a tap-the-place question about what a real photograph of the module shows: a note with the photo and the build-sheet "
-          "line - never in \"To fix\"", "Real photographs a task question could be answered on" in out
-          and '(q02, hotspot): the real photograph plan.jpg shows "fire control plan" - build-sheet line: "q02": {"figure": '
-          '"assets/img/plan.jpg", "areas": {"Fuel preparation room":' in out and "plan.jpg" not in fix_list, out)
+    check("3 (2.63.3): a tap-the-place question about what a real photograph of the module shows is answered on it - in \"To "
+          "fix\", with the photo and the build-sheet line, or a reason why not (photo_declined)",
+          '(q02, hotspot): the real photograph plan.jpg shows "fire control plan" - build-sheet line: "q02": {"figure": '
+          '"assets/img/plan.jpg", "areas": {"Fuel preparation room":' in fix_list and '"photo_declined"' in fix_list, out)
+    sheet = cs.load(sp(c3))
+    sheet["screens"]["q02"]["photo_declined"] = "the plan photo is too small to tap the rooms on a tablet"
+    cs.save(sp(c3), sheet)
+    code, out = run(COMPILE, c3, "--module", "1", "--only", "tasks")
+    check("... and a question whose build sheet says why not is left on its drawing", "plan.jpg" not in out and code == 0, out[-600:])
 
 
 def docx(path, paras):
@@ -2040,6 +2045,37 @@ def exercise_part(tmp):
     _ch, w3 = cs.build_changes(script(screens=rc), ch3)
     check("... placed before the recap that leads into the module check, never between them (L51; IGF M08 rebuild)",
           ch3[0].get("before") == "s09" and not [p for p in cs.validate(w3) if "L51" in p], (ch3[0].get("before"), cs.validate(w3)))
+
+
+def seed_part(tmp):
+    """2.63.3 (item 5 - the 2.63.2 full-course run: the quality gap to the hand-fixed original was its hand-fixed drawings,
+    and a rebuild started from starter specs) - --init-build --seed-from <predecessor>: a slide whose words are unchanged
+    starts from the drawing the predecessor's DECK shows (hand fixes included), not from a generic starter"""
+    os.makedirs(os.path.join(tmp, "seedp"))
+    pc, pmd = new_course(os.path.join(tmp, "seedp"), script())
+    spec = {"size": [300, 200], "label": "A valve closes on a pipe.",
+            "parts": [{"id": "F", "type": "pipe", "d": "M10 100 H290", "value": 1},
+                      {"id": "V", "type": "valve", "x": 150, "y": 100, "value": 1, "label": "valve"}],
+            "steps": [{"title": "The valve closes", "line": 2, "play": [["V", 0, 800]]}]}
+    cs.save(os.path.join(pc, "working_claude", "figures", "M01", "valve.kit.json"), spec)
+    bp = os.path.join(pc, "working_claude", "script", "M01.build.json")
+    sheet = cs.load(bp)
+    sheet["screens"]["s04"] = {"figure": "valve.kit.json", "dark": True, "declined_3d": "a flat drawing"}
+    cs.save(bp, sheet)
+    code, out = run(COMPILE, pc, "--module", "1")
+    deck_p = os.path.join(pmd, "presentation", "index.html")
+    page = io.open(deck_p, encoding="utf-8").read()
+    io.open(deck_p, "w", encoding="utf-8").write(page.replace('"label":"valve"', '"label":"HAND FIXED valve"'))   # the hand fix
+    os.makedirs(os.path.join(tmp, "seedn"))
+    nc, nmd = new_course(os.path.join(tmp, "seedn"), script(), build=False)
+    gate_fixture.open_gate(nc)
+    code, out = run(COMPILE, nc, "--module", "1", "--init-build", "--seed-from", pc)
+    new = cs.load(os.path.join(nc, "working_claude", "script", "M01.build.json"))["screens"].get("s04") or {}
+    drawn = os.path.join(nc, "working_claude", "figures", "M01", "s04.kit.json")
+    text = io.open(drawn, encoding="utf-8").read() if os.path.isfile(drawn) else ""
+    check("2.63.3 --init-build --seed-from: an unchanged slide starts from the predecessor deck's hand-fixed drawing",
+          code == 0 and "seeded from the predecessor" in out and new.get("figure") == "s04.kit.json" and "HAND FIXED valve" in text
+          and new.get("_seeded") and new.get("dark") is True, (code, out[-500:], new, text[:200]))
 
 
 def figure_words_part(tmp):
@@ -2725,6 +2761,7 @@ def main():
         practical_part(tmp)
         sme_figures_part(tmp)
         figure_words_part(tmp)
+        seed_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

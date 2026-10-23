@@ -826,6 +826,15 @@
     return box;
   }
   W.addEventListener('resize', function () { if (cur >= 0 && qs[cur]) { placeParts(qs[cur].sec); } });
+  /* 2.63.3 - placed again once the course font is in and kit.js has laid its words out with it (two frames later): under
+     load the font came after the first placing, and the leaders were placed and judged on the fallback font's words (IGF
+     M02 check m01 / m06 passed in the busy 2.63.2 build and failed on a quiet PC - the tablet is the quiet one) */
+  function settled(fn) {
+    var raf = W.requestAnimationFrame || function (f) { return setTimeout(f, 16); };
+    (D.fonts && D.fonts.ready ? D.fonts.ready : { then: function (f) { f(); } }).then(function () { raf(function () { raf(fn); }); });
+  }
+  function replace() { if (cur >= 0 && qs[cur]) { placeParts(qs[cur].sec); } }
+  if (D.fonts && D.fonts.addEventListener) { D.fonts.addEventListener('loadingdone', function () { settled(replace); }); }
   function neutralSpot(sec) {
     var ga = $('.ga', sec), r = ga.getBoundingClientRect();
     return { x: r.left + r.width * 0.83, y: r.top + r.height * 0.88 };
@@ -879,6 +888,7 @@
     moveFig(q.sec);
     add(q.sec, 'on');
     placeParts(q.sec);
+    settled(replace);
     setPart(say('question', { n: i + 1, of: qs.length }));
     setGot();
     setBar(i);

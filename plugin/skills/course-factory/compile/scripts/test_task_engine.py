@@ -1540,6 +1540,14 @@ def patterns_part(exe, tmp):
           m1.get("tray") == "none" and m1.get("rows", {}).get("r", 0) - m1.get("rows", {}).get("l", 0) >= 0.9 * m1.get("vw", 9e9), m1)
     js = io.open(os.path.join(HERE, "..", "..", "..", "course-task-ux", "assets", "gb_answer.js"), encoding="utf-8").read()
     check("a) the bank's words are in the engine's three languages (en, lv, ru)", js.count("trayEmpty:") == 3, js.count("trayEmpty:"))
+    # 2.63.3 (item 9 - IGF M02 check m01 / m06: passed in the busy 2.63.2 build, failed on a quiet PC)
+    check("2.63.3 the leaders are placed again once the course font is in and kit.js has laid it out (fonts.ready, two "
+          "frames, and on every font load)", "D.fonts.addEventListener('loadingdone', function () { settled(replace); })" in js
+          and "placeParts(q.sec);\n    settled(replace);" in js and "raf(function () { raf(fn); })" in js)
+    rv = io.open(os.path.join(HERE, "..", "..", "..", "course-module-ux", "measure", "scripts", "review_sheets.mjs"), encoding="utf-8").read()
+    check("... and review_sheets.mjs judges them only after the same (fonts.ready, two frames)",
+          "judged once the course font is in and laid out" in rv and "document.fonts.ready : Promise.resolve()).then(" in rv
+          and rv.index("judged once the course font is in") < rv.index("__rv.leaders()')) failures.push"))
 
     # the deck: a five-card recap and the stepped lines
     os.makedirs(os.path.join(tmp, "patd"))

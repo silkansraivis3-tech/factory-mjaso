@@ -1203,8 +1203,8 @@ def task_photo_notes(script, build, mdir):
     sheet, out = build.get("screens") or {}, []
     for q in [s for s in script.get("screens", []) if s.get("kind") in cs.TASKS and cs.mech(s) in PHOTO_TASKS]:
         b = sheet.get(q["id"]) or {}
-        if (b.get("figure") or "").lower().endswith(IMAGES):
-            continue                                       # already on a photograph
+        if (b.get("figure") or "").lower().endswith(IMAGES) or b.get("photo_declined"):
+            continue                                       # already on a photograph, or declined with a reason (2.63.3)
         subject = norm(" ".join(str(x) for x in [q.get("question"), q.get("answer"), q.get("visual")] + list(q.get("options") or [])))
         for n, meta in pool:
             # a thing of two words or more, said whole ("fire control plan"); one word only when it names one thing
@@ -3297,6 +3297,102 @@ def sme_stop_message(diffs, o, mdir, build, figdir):
     return "\n".join(lines)
 
 
+def seed_course(course, given=None):
+    """the course a rebuild is seeded from: --seed-from, else working_claude\\course.build.json "seed_from", else this course
+    itself (a deck already in the module folder); a relative "seed_from" is read from the course folder"""
+    p = given
+    if not p:
+        try:
+            cp = workspace.claude_path(course, "course.build.json")
+            p = (cs.load(cp) if os.path.isfile(cp) else {}).get("seed_from")
+        except (OSError, ValueError):
+            p = None
+    if p and not os.path.isabs(p):
+        p = os.path.normpath(os.path.join(course, p))
+    return p or course
+
+
+def seed_figures(script, sheet, figdir, seed, module, mdir_=None):
+    """2.63.3 (item 5 - the 2.63.2 full-course run: the whole quality gap to the hand-fixed original was in drawings it fixed
+    by hand; a rebuild started from starter specs and threw that work away). A slide whose words are the predecessor's own
+    (same id, title and text) gets the predecessor's drawing as its starting point instead of the generic starter: the kit
+    spec the predecessor's DECK holds for it (what was shown - hand fixes included, data-sme or not), else its source spec,
+    else its own drawing file (.html / .svg) with the files of its folder it names. Returns {slide id: what was seeded}."""
+    mid_ = cs.mid(module)
+    pwork = os.path.join(seed, "working_claude")
+    try:
+        pscript = cs.load(os.path.join(pwork, "script", mid_ + ".json"))
+    except (OSError, ValueError):
+        return {}
+    try:
+        pbuild = cs.load(os.path.join(pwork, "script", mid_ + ".build.json"))
+    except (OSError, ValueError):
+        pbuild = {}
+    pfig = os.path.join(pwork, "figures", mid_)
+    deck_p = os.path.join(seed, "modules", "module%02d" % int(module), "presentation", "index.html") if str(module).isdigit() else ""
+    deck = io.open(deck_p, encoding="utf-8").read() if deck_p and os.path.isfile(deck_p) else ""
+    norm_ = lambda s: " ".join(str(s or "").split())
+    before = {s["id"]: s for s in pscript.get("screens") or []}
+    screens, done = sheet.get("screens") or {}, {}
+    for s in script.get("screens") or []:
+        p, e = before.get(s["id"]), screens.get(s["id"])
+        pe = (pbuild.get("screens") or {}).get(s["id"]) or {}
+        if p and e is not None and s.get("kind") in cs.TASKS and s.get("kind") == p.get("kind") and pe.get("figure") and \
+                all(norm_(p.get(k)) == norm_(s.get(k)) for k in ("question", "answer", "options", "mechanic")):
+            # a question answered on a picture, unchanged: the predecessor's picture and its places (areas, labels ...)
+            fig = str(pe["figure"]).replace("\\", "/")
+            src = os.path.join(pfig, fig)
+            ok = fig.lower().endswith(IMAGES) and mdir_ and os.path.isfile(os.path.join(mdir_, fig))
+            if not ok and os.path.isfile(src):
+                os.makedirs(figdir, exist_ok=True)
+                if os.path.normcase(os.path.abspath(src)) != os.path.normcase(os.path.abspath(os.path.join(figdir, fig))):
+                    import shutil
+                    shutil.copyfile(src, os.path.join(figdir, fig))
+                ok = True
+            if ok:
+                e.clear()
+                e.update({k: v for k, v in pe.items() if not k.startswith("_")})
+                e["_seeded"] = "seeded from the predecessor %s: its picture and places for this unchanged question" % seed
+                done[s["id"]] = "the predecessor's picture %s" % os.path.basename(fig)
+            continue
+        if s.get("kind") != "slide" or not p or e is None or (norm_(p.get("title")), norm_(p.get("text"))) != (norm_(s.get("title")), norm_(s.get("text"))):
+            continue
+        fig = str(pe.get("figure") or "").replace("\\", "/")
+        sec = re.search(r'<section\b[^>]*\bid="%s"[^>]*>.*?</section>' % re.escape(s["id"]), deck, re.S)
+        spec = inline_spec(sec.group(0), s["id"]) if sec else None
+        name = None
+        if spec is None and fig.lower().endswith(KIT_SPEC) and os.path.isfile(os.path.join(pfig, fig)):
+            try:
+                spec = cs.load(os.path.join(pfig, fig))
+            except (OSError, ValueError):
+                spec = None
+        if spec is not None:
+            name = "%s.kit.json" % s["id"]
+            os.makedirs(figdir, exist_ok=True)
+            cs.save(os.path.join(figdir, name), spec)
+            done[s["id"]] = "its drawing as the predecessor's deck shows it"
+        elif fig.lower().endswith((".html", ".svg")) and os.path.isfile(os.path.join(pfig, fig)):
+            name = fig
+            os.makedirs(figdir, exist_ok=True)
+            import shutil
+            text = io.open(os.path.join(pfig, fig), encoding="utf-8", errors="replace").read()
+            same = os.path.normcase(os.path.abspath(pfig)) == os.path.normcase(os.path.abspath(figdir))
+            for other in [fig] + [x for x in os.listdir(pfig) if x != fig and x in text]:   # its own defs / parts files beside it
+                if not same and os.path.isfile(os.path.join(pfig, other)):
+                    shutil.copyfile(os.path.join(pfig, other), os.path.join(figdir, other))
+            done[s["id"]] = "the predecessor's drawing %s" % fig
+        elif fig.lower().endswith(IMAGES) and mdir_ and os.path.isfile(os.path.join(mdir_, fig)):
+            name = fig                                        # its photo, when this module has the same file
+            done[s["id"]] = "the predecessor's photo %s" % os.path.basename(fig)
+        if name:
+            e.update({k: v for k, v in pe.items() if k in ("composition", "dark", "visual_kind", "areas", "labels")})
+            e["figure"] = name
+            e.pop("_figure", None)
+            e["_seeded"] = ("seeded from the predecessor %s (%s) - it is the hand-fixed drawing, not a starter: build it as it is "
+                            "and change only what the build reports" % (seed, done[s["id"]]))
+    return done
+
+
 def import_sme_figures(o, script, build, mdir, figdir, approved):
     """--import-sme-figures: the deck's hand-fixed kit specs go into the source spec files (cs.save keeps each file's own
     formatting), so the next compile draws exactly what the deck holds. Writes only those files - never the deck"""
@@ -3333,6 +3429,8 @@ def main(argv=None):
     ap.add_argument("--module", required=True)
     ap.add_argument("--module-dir", help="the module folder (default: <course>\\modules\\module01)")
     ap.add_argument("--init-build", action="store_true", help="write a starter build sheet and stop")
+    ap.add_argument("--seed-from", help="2.63.3: with --init-build, the course a rebuild starts from - its hand-fixed drawings "
+                                        "for every slide whose words are unchanged (default: course.build.json \"seed_from\")")
     ap.add_argument("--draft", action="store_true", help="build from a script that is not approved yet - a preview")
     ap.add_argument("--force", action="store_true", help="overwrite a deck or task page that was changed by hand")
     ap.add_argument(IMPORT_SME, action="store_true", dest="import_sme",
@@ -3373,6 +3471,16 @@ def main(argv=None):
         print("Done - a starter build sheet:\n    %s\n  Next: fill in each slide's picture, edit the starter figures (parts and "
               "options: course-visuals\\kit\\CATALOGUE.md), then build and check in one command:\n    compile\\scripts\\"
               "build_module.py <course> --module %s" % (bp, o.module))
+        # 2.63.3 (item 5): the predecessor's hand-fixed drawings, where the slide's words are unchanged, instead of starters
+        sheet_ = cs.load(bp)
+        seeded = seed_figures(script, sheet_, figdir, seed_course(o.course, o.seed_from), o.module,
+                              module_folder(o.course, o.module, o.module_dir)[0])
+        if seeded:
+            cs.save(bp, sheet_)
+            for sid in seeded:
+                specs.pop(sid, None)
+            print("  seeded from the predecessor %s - %d slide(s) start from its drawings: %s"
+                  % (seed_course(o.course, o.seed_from), len(seeded), ", ".join(sorted(seeded))))
         sheet_screens = cs.load(bp).get("screens") or {}
         exercise_proposal(o.course, script)             # 2.63.2: a module's practical exercise gets its slide, unasked
         for sid, spec in specs.items():                 # 2.50.0: starter figure-kit specs - edited, never written from nothing
@@ -3568,13 +3676,14 @@ def main(argv=None):
             print("\nReal photographs still missing for what the drawings show (L57) - listed in\n    %s" % listed)
             for r in by_thing(parts) + [x[2] for x in notes if not x[0]]:
                 print("  - " + r)
-    if o.only in ("all", "tasks"):                     # 2.52.0 - a note, never a block
-        tnotes = task_photo_notes(script, build, mdir)
-        if tnotes:
-            print("\nReal photographs a task question could be answered on (a note - nothing is blocked; the places are "
-                  "boxes in % of the photo, measured on it):")
-            for x in tnotes:
-                print("  - " + x)
+    if o.only in ("all", "tasks"):
+        # 2.63.3 (Aleksis: as many real photographs as possible, in the trainee tasks too; the 2.63.2 full-course build put a
+        # real photo on 1 task question where the hand-fixed original has 6 - builders left this note unread since 2.52.0) -
+        # a question a real photo of the module can carry is answered on it, unless the build sheet says why not
+        for x in task_photo_notes(script, build, mdir):
+            qid = re.search(r"\((\w+), [\w_]+\): the real photograph", x)
+            probs.append("%s - use it (the places are boxes in %% of the photo, measured on it), or say why not: \"%s\": "
+                         "{\"photo_declined\": \"<why>\"}" % (x, qid.group(1) if qid else "<question>"))
     if probs:
         print("\nTo fix before it is shown:")
         for x in probs:

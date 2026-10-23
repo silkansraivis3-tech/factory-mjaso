@@ -235,6 +235,9 @@ course-module-ui or course-task-ux: the compiler builds their standard.
 
     design_system.py install modules/module${two(m)}                     (course-module-ui/scripts)
     compile_module.py <course> --module ${m.id} --init-build              (once, if the build sheet is missing)
+        (2.63.3) when working_claude/course.build.json names a "seed_from" course (a hand-fixed predecessor), every
+        slide and question whose words are unchanged starts from ITS drawing or photo ("_seeded" in the sheet): build
+        those as they are and change only what the build reports - they are the hand-fixed ones
     fill the build sheet, edit the starter figure specs
     build_module.py <course> --module ${m.id} --no-course-pages           (compile/scripts)
         ONE command runs the figures, the compile, every check and the review sheets and prints

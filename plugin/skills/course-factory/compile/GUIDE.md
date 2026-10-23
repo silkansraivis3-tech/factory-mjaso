@@ -53,6 +53,14 @@
   the spec and fix what it lists. To look at one figure at every step: `course-visuals\kit\scripts\studio.py <spec>
   --step all`. (2.63.3) A studio probe whose page and every file it loads are unchanged is answered from
   `working_claude\_build\studio_probes` (the same report; `CF_PROBE_CACHE=off` measures every time).
+- **A rebuild of a course that was fixed by hand (2.63.3)** starts from the hand-fixed drawings: `--init-build --seed-from
+  <predecessor course>` (or `"seed_from"` in `working_claude\course.build.json`) gives every slide and question whose words
+  are unchanged the predecessor's drawing (the kit spec its DECK shows, else its source spec or .html / .svg drawing) or
+  photo with its places, marked `"_seeded"`; only the rest get starters. (IGF M01-M03 from the hand-fixed original: 8, 20
+  and 17 screens seeded.)
+- **A task question a real photo of the module can carry (2.63.3)** is answered on it: the compile names the photo and the
+  build-sheet line in "To fix", or the sheet says why not, `"photo_declined": "<why>"` (2.63.2 run: 1 task photo; the
+  hand-fixed original 6).
 - **The figure shows what the slide says (2.63.3).** A kit readout (a part with a `"unit"`) must agree, at the end of a
   step, with the number its step's line states for that quantity: "fuel gas below 1 % of the LFL" with the LFL readout
   at 2 is a problem (IGF M07 s04; "below" / "up to" / "above" / an alarm level are read as such). A photo whose own record
