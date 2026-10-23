@@ -26,7 +26,7 @@ Tints (hull spaces, panels): amber, green, blue, grey, red, violet - or any `#he
 | `hull` | its own origin: x as given, y = 0 bottom shell, z = 0 centre line | `x` [from, to], `half` (half breadth), `bottom`, `floor` (top of the double bottom), `top` (main deck); `spaces` [{`id`, `x` [a, b], `tint`, `floor`, `wall`}] - each a sub-part; `bulkheads` [{`x`, `hole` [y, r], `opacity`}] (default: one at every space boundary); `near` / `far` / `ends` wall opacities; `ribs` (spacing); `bottom_id`, `side_id` (the double bottom / the far side as sub-parts) | M01, M02 |
 | `deck_plate` | deck top at the ship's side; z = 0 is the side, inboard -z | `size` [along, inboard], `thick`, `side` (depth of side plating, 3.2), `seams`, `rail` | M03, M07 |
 | `room` | floor centre | `size` [w, h, d], `open` "front" / "front+right" ..., `roof`, `glass` ["right", "roof" ...], `frames` (spacing 0.6), `hole` [x0, z0, x1, z1] (a bilge well's opening) | M04, M05, M09 |
-| `enclosure` | floor centre | `size`, `wall` (0.25), `floor`, `keep_frame` (its light outline stays when open); state **open** fades the walls away | M02 TCS |
+| `enclosure` | floor centre | `size`, `wall` (0.25), `floor`, `keep_frame` (its light outline stays when open), `open_opacity` (open, the walls stay as glass, 0.15 - still a space); state **open** fades the walls | M02 TCS |
 | `panel` | centre | `size` [w, h] in the x-y plane, `tint`, `opacity` | |
 | `accommodation` | base centre | `size` [w, h, d], `decks` (window rows) | M15 |
 

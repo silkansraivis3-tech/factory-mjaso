@@ -302,10 +302,17 @@ empty panel and labels are buttons below". Version left to the merge (no plugin.
   SwiftShader cost ~1 s: M01 warm first frame 1169 -> 148 ms); static meshes merged per part; poster fallback; no-WebGL
   message; `window.__scene3d`. `KIT3D.define` adds a part (in a module's `assets/kit3d_parts.js`, promoted like L55).
 - **Ports** (`kit3d/examples/`, each compared side by side with its original at the original's box size): M01 hull 58
-  lines (original 1,413), M02 tank 62 (1,320), M03 station 46 (1,177), M04 leak 119 (1,565), M07 zones 133 (1,561), M15
+  lines (original 1,413), M02 tank 61 (1,320), M03 station 46 (1,177), M04 leak 119 (1,565), M07 zones 133 (1,561), M15
   venting 58 (1,421); plus `catalogue.kit3d.json` (every part, every state). An independent reviewer (pairs only):
-  M01 **yes** as good as hand-made, M02 **nearly** (labels crowd the tank at 690 px - since then the settle pass keeps
-  pills off parts), M03 **yes**; "the kit scenes would not draw the quoted complaints". Still worse in places: M04
+  M01 **yes** as good as hand-made, M02 **nearly**, M03 **yes**; "the kit scenes would not draw the quoted complaints".
+  **M02 re-reviewed (Aleksis, 2026-10-23), four fresh reviewers, the last ones told the hand-made is a reference, not
+  the gold standard:** found 11 labels in one 690 x 418 view colliding (in the hand-made too), the B/5 and B/15 gaps not
+  visible in either. Fixed in the kit - a crowded box takes compact pills, re-judged when the shown labels change; the
+  settle tries four label orders and keeps the fewest touches (only while the view is still); value tags search 49
+  places; `open_opacity` keeps an opened space as glass - and in the spec: three Next steps (the parts; the two limits
+  in a section looking aft, the rule as a caption, the value tags on their lines; the space opened as glass with the
+  double-walled pipe cut open), the hand-made's cone tip and duplicate Open button dropped. Verdict: **better** than
+  the hand-made (labels, the inside, framing, the B/5 gap readable). Still worse in places: M04
   cloud shapes and missing floor seams, M07 zone 0 as a skin not a core, M15 no legend chip. Not ported: M05, M06, M09
   (their parts exist: room, pipe_dw, engine, detector, gas, gauge - no gauge part yet).
 - **Wired in, without build_course.js:** `compile_module.py` - a `*.kit3d.json` figure is a kit scene (`kit3d_figure`,
@@ -315,7 +322,7 @@ empty panel and labels are buttons below". Version left to the merge (no plugin.
   `compile/GUIDE.md` 2b teaches the kit first; `smoke3d.py` knows `data-kit3d`. `check_kit3d.py` (spec / module) like
   check_kit.py; `shot3d.mjs` saves PNGs of scenes from a hidden Chrome; `studio3d.html?spec=...` shows one spec.
 - **Proved:** IGF M01-M03 compiled with their kit specs: smoke3d PASS, run_audits PASS (deck, collide, compose);
-  perf3d (CPU 4x, SwiftShader) warm first frame M01 270 ms, M02 623 ms, M03 50 ms - budget 1,000 (the 2.63.2 factory
+  perf3d (CPU 4x, SwiftShader) warm first frame M01 270 ms, M02 735 ms (its re-reviewed spec), M03 50 ms - budget 1,000 (the 2.63.2 factory
   M01 scene: 2,307); cold 1.4-5.9 s; software-GL fps 7-10 (shadows + environment light per pixel; a real tablet GPU is
   not measured). `test_kit3d.py` (41 browser checks: build, labels on parts, framing at three sizes, label / tap select,
   steps in a real gb_deck, full screen, Labels button, every part and state, no WebGL), `test_check_kit3d.py`,

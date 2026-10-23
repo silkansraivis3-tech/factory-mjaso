@@ -679,6 +679,7 @@
     S.size(W, H);
     S.camera.aspect = W / H;
     S.camera.updateProjectionMatrix();
+    S.dense = false;                                    /* judged again at the new size (settle) */
     var small = W < 560;
     if (small !== S.small) { S.small = small; setCls(S.wrap, 'k3-small', small); S.labels.forEach(function (l) { l.pw = 0; }); }
     S.homeFit();
@@ -1106,15 +1107,57 @@
     }
     /* "side": 1 hangs the pill to the right of its stem, -1 to the left (IGF M03's labels), or "dx" in px */
     function pref(l) { return l.tag ? 0 : (l.side ? l.side * (l.pw / 2 - 12) : l.dx0); }
-    shown.forEach(function (l) { l.dx = place(l, pref(l)); });
-    for (pass = 0; pass < 3; pass++) {
+    /* a crowded box (the pills would cover more than 22 % of it - IGF M02: 11 labels in 690 x 418 covered 30 %) takes the
+       compact pills a small box has, so every name can find a free place (independent review of the M02 port,
+       2026-10-23). Compact words are smaller for the back of the class: better a second step than a crowded view */
+    var sig = shown.map(function (l) { return l.text; }).join('|');
+    if (S.dense && sig !== S.denseSig) {               /* other labels now (a step, a state): judged again at full size */
+      S.dense = S.small = false;
+      setCls(S.wrap, 'k3-small', false);
+      S.labels.forEach(function (l) { l.pw = 0; });
+      shown.forEach(function (l) { l.pw = l.pill.offsetWidth; l.ph = l.pill.offsetHeight; });
+    }
+    S.denseSig = sig;
+    if (!S.small && W && H) {
+      var area = 0;
+      shown.forEach(function (l) { area += l.pw * l.ph; });
+      if (area > 0.22 * W * H) {
+        S.dense = S.small = true;
+        setCls(S.wrap, 'k3-small', true);
+        S.labels.forEach(function (l) { l.pw = 0; });
+        shown.forEach(function (l) { l.pw = l.pill.offsetWidth; l.ph = l.pill.offsetHeight; });
+      }
+    }
+    /* the greedy pass depends on the order the labels are moved in: when a touch is left, the other orders are tried and
+       the arrangement with the fewest touches is kept (IGF M02 review, 2026-10-23: a fix in one place moved the clash) */
+    function reset() {
+      shown.forEach(function (l) { l.up = l.isUp; l.gap = l.base; if (l.tag && l.oy0 != null) { l.oy = l.oy0; } l.dx = place(l, pref(l)); });
+    }
+    function total() { var n = 0; shown.forEach(function (l) { n += confl(l); }); return n; }
+    function snap() { return shown.map(function (l) { return [l.up, l.gap, l.dx, l.oy]; }); }
+    var orders = [shown, shown.slice().reverse(), shown.slice().sort(function (p, q) { return p.sx - q.sx; }),
+                  shown.slice().sort(function (p, q) { return p.sy - q.sy; })], oi, bestN = 1e9, bestS = null, nNow;
+    var calm = !S.tween && !hasCls(S.wrap, 'k3-drag');   /* while the view moves, one order: a drag stays smooth */
+    for (oi = 0; oi < (calm ? orders.length : 1); oi++) {
+      reset();
+      solve(orders[oi]);
+      nNow = total();
+      if (nNow < bestN) { bestN = nNow; bestS = snap(); }
+      if (!nNow) { break; }
+    }
+    if (bestS && nNow !== bestN) {
+      shown.forEach(function (l, i) { l.up = bestS[i][0]; l.gap = bestS[i][1]; l.dx = bestS[i][2]; l.oy = bestS[i][3]; });
+    }
+    function solve(order) {
+    for (pass = 0; pass < 6; pass++) {                  /* until nothing moves: a label moved can free or block another */
       var changed = false;
-      for (k0 = 0; k0 < shown.length; k0++) {
-        a = shown[k0];
+      for (k0 = 0; k0 < order.length; k0++) {
+        a = order[k0];
         if (confl(a) === 0 && (a.tag || cover(a) === 0)) { continue; }
         var best = null, dir, g, up, c, cands, ci;
         if (a.tag) {
-          cands = [[0, 0], [0, 26], [0, -26], [40, 0], [-40, 0], [0, 48], [0, -48], [70, 0], [-70, 0]];
+          cands = [];                                   /* round its point, nearest first: up to 120 px across, 72 down / up */
+          [0, 40, -40, 80, -80, 120, -120].forEach(function (cx) { [0, 26, -26, 48, -48, 72, -72].forEach(function (cy) { cands.push([cx, cy]); }); });
           for (ci = 0; ci < cands.length; ci++) {
             a.oy = a.oy0 != null ? a.oy0 : a.oy; a.oy0 = a.oy;
             a.oy = a.oy0 + cands[ci][1];
@@ -1143,6 +1186,7 @@
         changed = true;
       }
       if (!changed) { break; }
+    }
     }
     shown.forEach(function (l) {
       if (l.tag) {
@@ -1252,6 +1296,7 @@
       start();
       if (count() === 0) {
         setCls(wrap, 'k3-drag', false);
+        S.schedule();                                   /* the labels settled once more, the view still */
         if (isUp && one && !gs.multi && gs.moved < 8 && now() - gs.t0 < 600) { S.tap(x, y); }
       }
     }
@@ -1858,10 +1903,11 @@
     if (p.floor) { walls.push(k.box(W, t, D, m, 0, 0, 0, { keep: true, cast: false })); }
     var e1 = k.lines(k.boxEdges(-W / 2, W / 2, 0, H, -D / 2, D / 2), '#7a5410');
     var e2 = k.lines(k.boxEdges(-W / 2 - 0.1, W / 2 + 0.1, 0, H + 0.1, -D / 2 - 0.1, D / 2 + 0.1), '#f7d58a', { order: 5 });
+    var o1 = num(p.open_opacity, 0);                    /* open_opacity: open, the walls stay as glass (0.15) - still a space */
     k.state(k.cur.id + '.open', 0, function (a) {
-      m.opacity = 1 - a;
+      m.opacity = 1 - a * (1 - o1);
       m.depthWrite = a < 0.02;
-      walls.forEach(function (x) { x.visible = a < 0.995; });
+      walls.forEach(function (x) { x.visible = o1 > 0 || a < 0.995; });
       e1.visible = a < 0.5;
       e2.visible = p.keep_frame || a < 0.98;           /* keep_frame: its light outline stays, so the space is still seen */
     });

@@ -147,4 +147,8 @@ choice; use steps for what the lesson walks through in order. 56 px buttons, bot
   shutdown, amber only on the label dots, the limits and zone 1, blue only for the selection.
 - The inside is the lesson: `cut` it open, ghost the near wall, never hide what the words name.
 - Every part a label names can be tapped; every label names a part (or a group) - no chips row under the scene.
-- 3 to 9 labels on a step; more is a second step.
+- 3 to 9 labels on a step; more is a second step. A crowded box gets smaller pills by itself - weaker at the back
+  of the room: walk the content in steps instead (IGF M02: the parts, then the limits, then the opened space).
+- The hand-made scenes are a reference, not the gold standard: they hide labels under labels and show rules no
+  trainee can see. Draw the rule where it is measured (a section view, the dimension across the real gap, the
+  rule's words as a caption), not where the original put it.
