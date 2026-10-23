@@ -1616,6 +1616,143 @@ def unsupported_facts(script, build, figdir, mdir, course):
     return found
 
 
+# ------------------------------------------------------------------ 2.63.3: a figure shows what its slide says
+_NUM_STOP = set("""a an the of in on at to for from by with and or is are be it its this that as not no into over under up down
+out off per about approx approximately around some any all only than then when while each every one two three""".split())
+_BELOW = re.compile(r"(?:below|under|less than|lower than|up to|at most|not more than|max(?:imum)?|<|≤)\s*$", re.I)
+_ABOVE = re.compile(r"(?:above|over|more than|at least|past|exceeds?|>|≥)\s*$", re.I)
+_LEVEL = re.compile(r"\b(alarms?|warns?|warning|trips?|shuts?|shutdown|latch(?:es)?|acts?|closes?|stops?)\b", re.I)
+
+
+def _cw(t):
+    return {w.lower() for w in re.findall(r"[^\W\d_]{2,}", t or "") if w.lower() not in _NUM_STOP}
+
+
+def stated_numbers(text):
+    """[(unit, value, bound, the clause's words)] for every number with its unit a line of words states. bound: "below"
+    (below / under / up to ...), "above" (above / over / at least ...), "level" (an alarm or trip level - a reading at or past
+    it shows it), or ''"""
+    out = []
+    for m in FACT.finditer(text or ""):
+        facts = facts_in(m.group(0))
+        if not facts:
+            continue
+        pre = text[max(0, m.start() - 60):m.start()]
+        pre = pre[max(pre.rfind(x) for x in (".", ";", "\n", ":", "|", ",")) + 1:]
+        post = text[m.end():m.end() + 40]
+        post = post[:min([i for i in (post.find(x) for x in (".", ";", "\n", ",", " - ")) if i >= 0] or [len(post)])]
+        bound = "below" if _BELOW.search(pre) else "above" if _ABOVE.search(pre) else "level" if _LEVEL.search(pre + post) else ""
+        for _, (sign, v, unit) in facts[:2]:
+            out.append((unit, float(sign + v), bound, _cw(pre) | _cw(post) | _cw(m.group(4))))
+    return out
+
+
+def _agrees(t, unit, s, bound):
+    if bound == "below":
+        return t <= s + 1e-9
+    if bound == "above" or bound == "level":           # a reading past an alarm level shows that level reached
+        return t >= s - 1e-9
+    return abs(t - s) <= max(0.15 * abs(s), 0.05)
+
+
+def figure_number_mismatches(build, figdir, mdir):
+    """[(screen, figure, step, the line, what it says, what the drawing shows)] - a kit figure's readouts (a part with a
+    "unit": readout, detector, gauge, scale) at the end of a step whose own line states a number of that unit and that
+    quantity (the readout's label and unit share a word with the clause), and none of those readouts shows it: the line
+    says "below 1 % of the LFL" while the LFL readout reads 2 (IGF M07 s04 / s05, the 2.63.2 full-course run - the
+    reviewers' top reason in six modules). Below / above / an alarm or trip level are read as such. A slide whose
+    drawing differs on purpose says why in the build sheet: "numbers_differ": "<why>"."""
+    out = []
+    for sid, b in sorted((build.get("screens") or {}).items()):
+        rel = str(b.get("figure") or "")
+        if not rel.lower().endswith(".kit.json") or b.get("numbers_differ"):
+            continue
+        raw, err = read_figure(mdir, rel, figdir)
+        try:
+            spec = json.loads(raw) if raw and not err else None
+        except ValueError:
+            spec = None
+        if not isinstance(spec, dict):
+            continue
+        ro = {p.get("id"): p for p in spec.get("parts") or [] if isinstance(p, dict) and p.get("unit") and p.get("id")}
+        if not ro:
+            continue
+        now = {k: p.get("value") for k, p in ro.items()}
+        for k, st in enumerate(spec.get("steps") or []):
+            for pl in st.get("play") or []:
+                if isinstance(pl, list) and len(pl) >= 2 and pl[0] in ro and isinstance(pl[1], (int, float)):
+                    now[pl[0]] = pl[1]
+            line = " ".join(str(st.get(x) or "") for x in ("title", "text", "caption")).strip()
+            judged = {}       # per quantity (the readouts a number is matched to): a list of one quantity ("30 % and 60 % LEL")
+            for unit, s, bound, ws in stated_numbers(line):          # is judged as a whole - one of its numbers shown is enough
+                cand = [(rid, now[rid], _cw(p.get("label") or "") | _cw(str(p["unit"]))) for rid, p in ro.items()
+                        if fact_unit(str(p["unit"])) == unit and isinstance(now.get(rid), (int, float))]
+                best = max([len(c[2] & ws) for c in cand] or [0])
+                if not best:
+                    continue
+                cand = [c for c in cand if len(c[2] & ws) == best]
+                said = "%s%g %s" % ({"below": "below ", "above": "above ", "level": "a level of "}.get(bound, ""), s, unit)
+                judged.setdefault(tuple(sorted(r for r, _, _ in cand)), []).append(
+                    (any(_agrees(float(v), unit, s, bound) for _, v, _ in cand), said, ", ".join("%s %g" % (r, v) for r, v, _ in cand)))
+            for js in judged.values():
+                if not any(ok for ok, _, _ in js):
+                    out.append((sid, rel, k + 1, line, js[0][1], js[0][2]))
+    return out
+
+
+_SETTING = set("""ship ships vessel vessels merchant naval marine shore land photo photograph render drawing plan picture image
+lab laboratory industry general real""".split())
+
+
+def photo_not_named(script, build, mdir):
+    """[(screen, photo, X)] - a photo whose own record says it is "not a X" sitting on a slide or question whose words, alt or
+    caption name X (all of X's words but the setting - ship, shore, photo ...). The 2.63.2 full-course run: three pictures
+    of another thing than the words name were caught only by QA's eye; each record said so. A use meant anyway says why in
+    the build sheet: "photo_ok": "<why>"."""
+    meta = {}
+    for root in (os.path.join(mdir, "assets", "img"), os.path.join(mdir, "assets", "img", "_unused")):
+        try:
+            meta.update(json.load(io.open(os.path.join(root, "_photo_meta.json"), encoding="utf-8")))
+        except (OSError, ValueError):
+            pass
+    if not meta:
+        return []
+    words = {s["id"]: s for s in script.get("screens") or []}
+    out = []
+    for sid, b in sorted((build.get("screens") or {}).items()):
+        if b.get("photo_ok") or sid not in words:
+            continue
+        pics = set()
+
+        def walk(x):
+            if isinstance(x, dict):
+                for v in x.values():
+                    walk(v)
+            elif isinstance(x, list):
+                for v in x:
+                    walk(v)
+            elif isinstance(x, str) and re.search(r"\.(jpe?g|png|webp)$", x, re.I):
+                pics.add(os.path.basename(x.replace("\\", "/")))
+        walk(b)
+        s = words[sid]
+        said = " ".join(str(v) for k, v in s.items() if isinstance(v, str) and k not in ("id", "kind", "notes", "visual", "from_old",
+                                                                                          "sub_ilo"))
+        said += " " + json.dumps([s.get(k) for k in ("options", "items", "answers", "pairs") if s.get(k)], ensure_ascii=False)
+        said += " " + " ".join(str(b.get(k) or "") for k in ("alt", "caption"))
+        have = _cw(said)
+        for p in sorted(pics):
+            rec = meta.get(p) or {}
+            for fld in ("caption_caveat", "caveat", "description", "shows", "teaching_purpose"):
+                v = rec.get(fld)
+                for text in (v if isinstance(v, list) else [v]):
+                    for m in re.finditer(r"\bnot (?:an?|the) ([^.;,()]+)", str(text or ""), re.I):
+                        x = re.split(r"\s[-–—]\s|\b(?:on|in|at|from|for|with|used|but|and|which|that|where)\b", m.group(1), 1)[0].strip()
+                        need = {w for w in _cw(x) if w not in _SETTING}
+                        if need and need <= have and (sid, p, x) not in out:
+                            out.append((sid, p, x))
+    return out
+
+
 def exercise_proposal(course, script):
     """2.63.2 (owner rule 2026-10-21: every module with a practical exercise gets at least one deck slide about it) - the
     slides of the module's exercises that have none, from their TRAINEE forms, written as a changes file to propose"""
@@ -3347,6 +3484,15 @@ def main(argv=None):
                          "retrieval packs, fact sheets, text extracts). Take it off the drawing, put it in the script "
                          "(content_script.py propose), or name where it is from in the build sheet: \"facts\": {\"%s\": "
                          "\"<source, page>\"}" % (where, rel, shown, shown))
+        # 2.63.3 - a figure shows what its slide says, and a photo is not one its own record says it is not
+        for sid, rel, k, line, said, shown in figure_number_mismatches(build, figdir, mdir):
+            probs.append("%s: its figure %s, step %d (\"%s\") - the words say %s, the drawing's readout shows %s. Make the "
+                         "readout agree in that step's \"play\", or say why it differs in the build sheet: \"numbers_differ\": "
+                         "\"<why>\"" % (cs.place(script, sid), rel, k, line[:80], said, shown))
+        for sid, pic, x in photo_not_named(script, build, mdir):
+            probs.append("%s: the photo %s is \"not a %s\" by its own record (_photo_meta.json) and the screen names %s - use a "
+                         "picture of the thing itself, or say why this one is right here: \"photo_ok\": \"<why>\""
+                         % (cs.place(script, sid), pic, x, x))
         probs += exercise_problems(o.course, script)
         n = sum(1 for s in script["screens"] if s["kind"] in cs.INSTRUCTOR)
         print("Built %s - %d screens from the %s script.\n    %s" % (cs.mid(o.module), n, "approved" if approved else "DRAFT", out))

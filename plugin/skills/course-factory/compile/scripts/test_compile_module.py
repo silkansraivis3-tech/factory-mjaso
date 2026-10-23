@@ -2042,6 +2042,51 @@ def exercise_part(tmp):
           ch3[0].get("before") == "s09" and not [p for p in cs.validate(w3) if "L51" in p], (ch3[0].get("before"), cs.validate(w3)))
 
 
+def figure_words_part(tmp):
+    """2.63.3 (the 2.63.2 full-course run: the reviewers' top reason in six modules, and three BROKEN pictures only QA
+    caught) - before anything is shown: a figure's readout agrees with the number its step's line states, and a photo is not
+    used for the thing its own record says it is not"""
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    fd, md = os.path.join(tmp, "fw", "figures"), os.path.join(tmp, "fw", "module01")
+    os.makedirs(fd)
+    os.makedirs(os.path.join(md, "assets", "img"))
+    tank = {"size": [400, 300], "parts": [
+        {"id": "FG", "type": "readout", "x": 10, "y": 10, "label": "fuel gas", "unit": "%", "value": 90},
+        {"id": "LF", "type": "readout", "x": 10, "y": 60, "label": "fuel gas, of the LFL", "unit": "%", "value": 100},
+        {"id": "OX", "type": "readout", "x": 10, "y": 110, "label": "oxygen", "unit": "%", "value": 0},
+        {"id": "D1", "type": "detector", "x": 200, "y": 10, "unit": "% LEL", "value": 0}],
+        "steps": [{"title": "Inert - the fuel gas goes down to about 2 %", "play": [["FG", 2, 900]]},
+                  {"title": "Aerate - oxygen up to 20.9 %, fuel gas below 1 % of the LFL", "play": [["OX", 20.9, 900], ["LF", 2, 900]]},
+                  {"title": "Gas detection - the alarm at 20 % LEL", "play": [["D1", 25, 900]]},
+                  {"title": "In a ventilated duct the levels are 30 % and 60 % LEL", "play": [["D1", 62, 900]]}]}
+    cs.save(os.path.join(fd, "tank.kit.json"), tank)
+    build = {"screens": {"s04": {"figure": "tank.kit.json"}}}
+    got = cm.figure_number_mismatches(build, fd, md)
+    check("2.63.3 a readout that contradicts its step's line is found: 'fuel gas below 1 % of the LFL' while the LFL readout "
+          "shows 2 (IGF M07 s04)", [(x[0], x[2], x[4], x[5]) for x in got] == [("s04", 2, "below 1 %", "LF 2")], got)
+    check("... not one that agrees: about 2 % shown as 2, an alarm level of 20 % passed at 25, one of '30 % and 60 %' shown",
+          not any(x[2] in (1, 3, 4) for x in got), got)
+    build["screens"]["s04"]["numbers_differ"] = "the readout shows the moment before the aeration ends"
+    check("... and a figure whose numbers differ on purpose says why in the build sheet (numbers_differ)",
+          cm.figure_number_mismatches(build, fd, md) == [])
+    io.open(os.path.join(md, "assets", "img", "_photo_meta.json"), "w", encoding="utf-8").write(json.dumps({
+        "o2.jpg": {"caption_caveat": "An oxygen sensor in a laboratory (French labels), not a methane head on a ship; same idea."},
+        "deck.jpg": {"description": "A gas carrier's deck. Not a ship of the IGF kind."}}))
+    sc = {"screens": [{"id": "s03", "kind": "slide", "title": "Fixed detection", "text": "A methane detector head on the tank."},
+                      {"id": "s05", "kind": "slide", "title": "Detection", "text": "An oxygen sensor reads 20.9 % on deck."},
+                      {"id": "s06", "kind": "slide", "title": "On deck", "text": "The deck of our ship."}]}
+    pb = {"screens": {"s03": {"figure": "assets/img/o2.jpg"}, "s05": {"figure": "assets/img/o2.jpg"},
+                      "s06": {"figure": "assets/img/deck.jpg"}}}
+    got = cm.photo_not_named(sc, pb, md)
+    check("2.63.3 a photo whose record says 'not a methane head' on a slide naming a methane head is found",
+          got == [("s03", "o2.jpg", "methane head")], got)
+    check("... not on a slide that names what it is, nor for a setting ('not a ship' - the ship is the setting)",
+          not any(x[0] in ("s05", "s06") for x in got), got)
+    pb["screens"]["s03"]["photo_ok"] = "the instructor says: the same kind of head"
+    check("... and a use meant anyway says why (photo_ok)", cm.photo_not_named(sc, pb, md) == [])
+
+
 def sme_figures_part(tmp):
     """2.63.2 (item 22): a drawing fixed by hand inside the deck (its section marked data-sme) is never silently undone by a
     rebuild - the IGF original's fixes lived only in its decks, its source specs in working_claude\\figures were not updated"""
@@ -2679,6 +2724,7 @@ def main():
         exercise_part(tmp)
         practical_part(tmp)
         sme_figures_part(tmp)
+        figure_words_part(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

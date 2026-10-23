@@ -51,7 +51,13 @@
   (a layout changed) is re-fitted to it. Kept only when every audit is clean (figures\M01\_fit\ - the spec is never
   rewritten). When it gets close but not clean, it saves the attempt as `_fit\sNN.sNN.candidate.kit.json`: copy it over
   the spec and fix what it lists. To look at one figure at every step: `course-visuals\kit\scripts\studio.py <spec>
-  --step all`.
+  --step all`. (2.63.3) A studio probe whose page and every file it loads are unchanged is answered from
+  `working_claude\_build\studio_probes` (the same report; `CF_PROBE_CACHE=off` measures every time).
+- **The figure shows what the slide says (2.63.3).** A kit readout (a part with a `"unit"`) must agree, at the end of a
+  step, with the number its step's line states for that quantity: "fuel gas below 1 % of the LFL" with the LFL readout
+  at 2 is a problem (IGF M07 s04; "below" / "up to" / "above" / an alarm level are read as such). A photo whose own record
+  says it is "not a X" may not sit on a screen whose words, alt or caption name X (IGF M05 s03: an oxygen sensor for
+  methane detection). On purpose: the build sheet says why - `"numbers_differ": "<why>"`, `"photo_ok": "<why>"`.
 - **Effort.** The mechanical loop - build, read the failure, change a number in a spec or a key in the build sheet, build
   again - needs no deep thinking: it can run at medium effort. Keep high effort for the design decisions: which picture
   teaches the slide, what a figure shows, 3D or not, what the operator must be asked.
