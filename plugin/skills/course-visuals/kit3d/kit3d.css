@@ -1,0 +1,68 @@
+/* kit3d.css - the 3D kit's labels, controls and box (course-visuals/kit3d). The look of the hand-made IGF scenes:
+   an amber dot on the part, a white stem, a white pill with a blue border; 56 px navy buttons; the selected part's
+   pill blue. Every colour is a token here (audit_ui.py: no raw chrome colours outside :root), taken from the deck's
+   own tokens where the deck has them. */
+:root{
+  --k3-navy:var(--navy,#0A2463);--k3-blue:var(--blue,#2EB6F8);--k3-amber:var(--amber,#E9A51E);--k3-deep:#0A182E;
+  --k3-white:#fff;--k3-ink:#1b1300;--k3-pill:rgba(255,255,255,.96);--k3-tag-white:rgba(255,255,255,.92);
+  --k3-dark-pill:rgba(10,36,99,.92);--k3-dark-edge:rgba(255,255,255,.7);--k3-stem-edge:rgba(10,36,99,.55);
+  --k3-red:#d0342c;--k3-green:#3f9b5a;--k3-shadow:rgba(10,24,46,.28);--k3-btn-shadow:rgba(10,24,46,.4);--k3-dot-shadow:rgba(0,0,0,.45)
+}
+.kit3d-fig{display:flex;flex-direction:column;min-height:0}
+.kit3d-stage{position:relative;flex:1 1 auto;width:100%;min-height:360px;height:100%}
+.kit3d-stage > [data-poster]{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.kit3d-stage.k3-ready > [data-poster]{display:none}
+.k3{position:absolute;inset:0;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;outline:none;font-family:Raleway,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif}
+.k3 canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;cursor:grab}
+.k3.k3-drag canvas{cursor:grabbing}
+.k3-labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.k3-lab{position:absolute;left:0;top:0;width:0;height:0;will-change:transform}
+.k3-lab.k3-off{display:none}
+.k3-dot{position:absolute;left:-6px;top:-6px;width:12px;height:12px;border-radius:50%;background:var(--k3-amber);
+  border:2px solid var(--k3-white);box-sizing:border-box;box-shadow:0 1px 4px var(--k3-dot-shadow)}
+.k3-stem{position:absolute;left:-1px;width:2px;background:var(--k3-white);box-shadow:0 0 0 1px var(--k3-stem-edge)}
+.k3-pill{position:absolute;left:0;white-space:normal;width:max-content;max-width:var(--k3-pill-max,190px);text-align:center;font-size:17px;
+  line-height:1.2;font-weight:700;color:var(--k3-navy);background:var(--k3-pill);border:2px solid var(--k3-blue);
+  border-radius:10px;padding:6px 10px;box-shadow:0 2px 8px var(--k3-shadow);box-sizing:border-box}
+.k3-pill.k3-up{transform:translate(-50%,-100%)}
+.k3-pill.k3-down{transform:translate(-50%,0)}
+.k3-pill.k3-sm{background:var(--k3-dark-pill);color:var(--k3-white);border-color:var(--k3-dark-edge);font-weight:600;font-size:15px}
+.k3-pill.k3-amber{border-color:var(--k3-amber)}
+.k3-pill.k3-red{border-color:var(--k3-red)}
+.k3-pill.k3-green{border-color:var(--k3-green)}
+.k3-pill.k3-tag{top:0;transform:translate(-50%,-50%);white-space:nowrap;max-width:none;background:var(--k3-amber);
+  color:var(--k3-ink);border:2px solid var(--k3-ink);font-weight:800;font-size:16px;padding:2px 9px;border-radius:8px}
+.k3-pill.k3-tag.k3-wrap{white-space:normal;max-width:var(--k3-pill-max,190px);text-align:center}
+.k3-cap{position:absolute;left:16px;top:16px;max-width:60%;font-size:18px;line-height:1.3;font-weight:700;color:var(--k3-white);
+  background:var(--k3-dark-pill);border-radius:12px;padding:8px 14px;pointer-events:none;z-index:4}
+.k3-small .k3-cap{font-size:14px;padding:5px 9px;left:10px;top:10px}
+.k3-ctl.k3-ctl-col{flex-direction:column;flex-wrap:nowrap;align-items:stretch;max-width:30%}
+.k3-pill.k3-tag.k3-white{background:var(--k3-tag-white);color:var(--k3-navy);border-color:var(--k3-navy)}
+.k3-pill.k3-hl,.k3-pill.gb3d-on{background:var(--k3-blue);color:var(--k3-deep);border-color:var(--k3-white)}
+/* a label is a button for its part: a 44 px tap area round it, the words unchanged (2.63.2) */
+.k3-pill[data-3d-part]{pointer-events:auto;cursor:pointer}
+.k3-pill[data-3d-part]::before{content:"";position:absolute;left:-6px;right:-6px;top:50%;height:max(calc(100% + 12px),44px);transform:translateY(-50%)}
+.k3-pill[data-3d-part]:focus{outline:none}
+.k3-pill[data-3d-part]:focus-visible{outline:3px solid var(--k3-amber);outline-offset:3px}
+.k3-ctl{position:absolute;right:16px;bottom:16px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:12px;max-width:calc(100% - 92px)}
+.k3-btn{min-height:56px;min-width:56px;padding:0 22px;border-radius:28px;border:3px solid var(--k3-white);background:var(--k3-navy);
+  color:var(--k3-white);font-weight:700;font-size:18px;line-height:1.1;font-family:inherit;cursor:pointer;
+  box-shadow:0 6px 18px var(--k3-btn-shadow);-webkit-appearance:none;appearance:none}
+.k3-btn:focus{outline:none}
+.k3-btn:focus-visible{outline:3px solid var(--k3-blue);outline-offset:2px}
+.k3-btn[aria-pressed="true"]{background:var(--k3-amber);color:var(--k3-ink);border-color:var(--k3-ink)}
+/* a small box (under 560 px wide): smaller pills and buttons, so the labels have room (IGF slide review 2026-10-22) */
+.k3-small .k3-pill{font-size:13px;padding:3px 7px;max-width:140px;border-radius:8px}
+.k3-small .k3-pill.k3-tag{font-size:13px;padding:1px 6px}
+.k3-small .k3-ctl{right:10px;bottom:10px;gap:8px}
+.k3-small .k3-btn{min-height:46px;padding:0 14px;font-size:15px}
+.k3-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;font-size:18px;
+  font-weight:600;color:var(--k3-navy);padding:24px;box-sizing:border-box}
+/* the kit's own Full screen button - only outside a deck (the deck's gb_shell.css styles .gb-fs3d-btn there) */
+.k3-fs{position:absolute;top:8px;right:8px;z-index:6;width:44px;height:44px;padding:9px;border:0;border-radius:10px;
+  background:var(--k3-navy);color:var(--k3-white);cursor:pointer;opacity:.88;display:flex;align-items:center;justify-content:center}
+.k3-fs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.k3-fake{position:fixed !important;inset:0;z-index:1000;width:100vw !important;height:100vh !important;background:var(--k3-navy)}
+.kit3d-stage:fullscreen{background:var(--k3-navy)}
+.kit-tap{cursor:pointer}

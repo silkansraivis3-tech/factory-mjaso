@@ -1,0 +1,61 @@
+{
+  "_about": "IGF M02 s09 'Where the fuel tank may be placed' - the hand-made m02_tank3d.js (1,320 lines) as a 3D-kit spec. Aft (the pipe to the engine room) on the right (+x), the camera on the +z side, as the original; 1 unit = 1 m, B = 30 m; the valves drawn 1.4x larger and the double-walled pipe's outer wall about 1.5x thicker than true so they can be seen. Label points, stems and sideways shifts are the original's; the kit settles them.",
+  "label": "3D hull section of an LNG-fuelled ship: an IMO type C fuel tank in its fuel storage hold space, at least B/5 from the ship's side and B/15 above the bottom shell, with the tank connection space at its aft end - opened, it shows the tank valves and the double-walled pipe to the engine room.",
+  "units": "m",
+  "view": {"az": 35.5, "el": 25.2, "fill": 1.12},
+  "pill_max": 176,
+  "parts": [
+    {"id": "hull", "type": "hull", "pick": false, "x": [-17.5, 18.5], "half": 15, "bottom": 0, "floor": 1.2, "top": 22,
+     "spaces": [{"id": "hold", "x": [-17.5, 18.5], "tint": "grey", "floor": "#a9b8c7"}],
+     "bottom_id": "bottom", "side_id": "side", "near": 0.07, "far": 0.24, "ends": 0.12, "ribs": 4.5},
+
+    {"id": "tank", "type": "tank_c", "at": [0, 10, 0], "r": 7, "len": 20, "head": 3.5,
+     "rings": [-8.6, -3.2, 3.2], "ring_t": 0.1, "saddles": [-6.5, 6.5], "saddle_w": 4.8, "base": -8.8},
+
+    {"id": "limit", "type": "limit_box", "pick": false, "min": [-17.5, 2, -9], "max": [18.5, 22, 9],
+     "planes": {"z-": 0.07, "z+": 0.07, "y-": 0.16}},
+    {"id": "dimS", "type": "dimension", "a": [-15.5, 10, -15], "b": [-15.5, 10, -9], "tick": [0, 1.3, 0], "r": 0.42},
+    {"id": "dimB", "type": "dimension", "a": [-15.5, 0, 0], "b": [-15.5, 2, 0], "tick": [0, 0, 1.3], "r": 0.34},
+    {"id": "breadth", "type": "dimension", "a": [-17.5, -1.7, -15], "b": [-17.5, -1.7, 15], "tick": [0, 1.0, 0], "r": 0.16, "white": true},
+
+    {"id": "tcs", "type": "enclosure", "at": [12, 13.6, 0], "size": [9, 7.4, 10], "wall": 0.25, "keep_frame": true, "open_opacity": 0.15},
+    {"id": "tcs", "type": "pipe", "mat": "cold", "r": 0.3, "path": [[8.2, 16.6, -2.4], [8.2, 18.4, -2.4], [13.2, 18.4, -2.4]], "flanges": [0]},
+    {"id": "tcs", "type": "pipe", "mat": "gas", "r": 0.3, "path": [[8.2, 17.0, 0], [8.2, 18.4, 0], [13.2, 18.4, 0]], "flanges": [0]},
+    {"id": "tcs", "type": "pipe", "mat": "cold", "r": 0.3, "path": [[8.2, 16.6, 2.4], [8.2, 18.4, 2.4], [13.2, 18.4, 2.4]], "flanges": [0]},
+    {"id": "tcs", "type": "pipe", "mat": "gas", "r": 0.3, "path": [[13.2, 18.4, -2.4], [13.2, 18.4, 2.4]]},
+
+    {"id": "valves", "type": "valve", "at": [10.6, 18.4, -2.4], "scale": 1.4},
+    {"id": "valves", "type": "valve", "at": [10.6, 18.4, 0], "scale": 1.4},
+    {"id": "valves", "type": "valve", "at": [10.6, 18.4, 2.4], "scale": 1.4},
+
+    {"id": "pipe", "type": "pipe", "mat": "gas", "r": 0.3, "path": [[13.2, 18.4, 0], [15.4, 18.4, 0]]},
+    {"id": "pipe", "type": "pipe_dw", "at": [18.8, 18.4, 0], "len": 6.8, "r_in": 0.3, "r_out": 0.62,
+     "collars": [-3.2, 1.8, 3.4], "glands": [-2.3, -0.3]}
+  ],
+  "labels": [
+    {"part": "hold", "text": "Fuel storage hold space", "at": [-14, 1.2, -4], "up": -60, "dx": 50, "when": "!tcs.open"},
+    {"part": "tank", "text": "Type C fuel tank (LNG)", "at": [-12.5, 13, 3], "up": 60, "side": -1, "steps": [0, 2]},
+    {"part": "tcs", "text": "Tank connection space", "at": [12, 21.13, 3.8], "up": 40, "side": -1, "steps": [0, 1]},
+    {"part": "tcs", "text": "Tank connection space", "at": [16.5, 21, 5], "up": 40, "side": -1, "steps": [2]},
+    {"part": "valves", "text": "Tank valves", "at": [10.6, 20.3, 0], "up": 90, "when": "tcs.open"},
+    {"part": "side", "text": "Ship's side", "at": [15, 6, -15], "up": -34, "when": "!tcs.open", "steps": [0]},
+    {"part": "side", "text": "Ship's side", "at": [-15.5, 5, -15], "up": -30, "side": 1, "steps": [1]},
+    {"part": "tank", "text": "Type C fuel tank (LNG)", "at": [-15.5, 13, 5.5], "up": 30, "side": 1, "steps": [1]},
+    {"part": "bottom", "text": "Bottom shell", "at": [-6, 0.2, 15], "up": -24, "dx": 30, "when": "!tcs.open", "steps": [0]},
+    {"part": "bottom", "text": "Bottom shell", "at": [-15.5, 0, 9], "up": -30, "steps": [1]},
+    {"part": "pipe", "text": "Double-walled pipe to engine room", "at": [20.4, 19.02, 0], "up": 64, "side": 1},
+    {"part": "dimS", "text": "B/5 = 6 m", "at": [-15.5, 10, -12], "tag": true, "oy": 22, "when": "!tcs.open"},
+    {"part": "dimB", "text": "B/15 = 2 m", "at": [-15.5, 1, 0], "tag": true, "ox": 64, "when": "!tcs.open"},
+    {"part": "breadth", "text": "B = 30 m", "at": [-17.5, -1.7, 0], "tag": true, "oy": 22, "tone": "white", "when": "!tcs.open"}
+  ],
+  "_steps": "The original shows all 11 labels at once (its own 'Tank connection space' covers 'Type C fuel tank'). The kit walks them with Next: the parts, then the two limits of IGF 5.3.3, then the opened space - at most 7 labels a view.",
+  "states": {"dimS.on": 0, "dimB.on": 0},
+  "captions": [{"text": "The tank at least B/5 or 11.5 m (the lesser) from the side, and B/15 or 2 m (the lesser) above the bottom", "when": "dimS.on"}],
+  "steps": [
+    {"labels": ["hold", "tank", "tcs", "side", "bottom", "pipe", "breadth"]},
+    {"view": {"az": -75, "el": 6, "frame": ["tank", "bottom", "dimS", "dimB"], "fill": 0.9}, "state": {"dimS.on": 1, "dimB.on": 1},
+     "labels": ["tank", "side", "bottom", "dimS", "dimB", "breadth"], "select": ["dimS", "dimB"]},
+    {"view": {"az": 45.8, "el": 31.5, "frame": ["valves", "pipe"], "fill": 0.95}, "state": {"tcs.open": 1, "pipe.cut": 1, "dimS.on": 0, "dimB.on": 0},
+     "labels": ["tcs", "valves", "pipe"]}
+  ]
+}

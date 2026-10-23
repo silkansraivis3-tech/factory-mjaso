@@ -126,6 +126,9 @@ IMAGES = (".jpg", ".jpeg", ".png", ".webp", ".gif")
 KIT_SPEC = ".kit.json"                       # a figure made from the figure kit (course-visuals/kit)
 KIT_FILES = ("kit.css", "kit.js")             # shipped with the module by design_system.py, like gb_deck.js
 KIT_PARTS = "assets/kit_parts.js"             # parts this course added to the kit, until they are merged
+KIT3D_SPEC = ".kit3d.json"                   # a 3D scene made from the 3D kit (course-visuals/kit3d/SPEC.md)
+KIT3D_FILES = ("kit3d.css", "kit3d.js")       # shipped with the module by design_system.py, like kit.js
+KIT3D_PARTS = "assets/kit3d_parts.js"         # 3D parts this course added to the kit (KIT3D.define), until they are merged
 PHOTO_FILES = ("gb_zoom.css", "gb_zoom.js")    # every picture opens full screen with its record (L51, L56), like gb_deck.js
 COMPOSITIONS = ("opener", "flow", "two-col", "wide-left", "wide-right", "stage")
 STAGE_MAX_WORDS = 45
@@ -658,6 +661,34 @@ def kit_figure(text, s, probs, where):
     return "".join(out)
 
 
+def kit3d_figure(text, s, probs, where, b=None):
+    """a 3D scene made from the 3D kit (course-visuals/kit3d, SPEC.md "Where it goes"): the spec goes into the page as it is
+    and kit3d.js draws it in the stage - full screen, clickable labels, built ahead on the slide before and
+    window.__scene3d all come from the kit. `b["poster"]` (a picture of the model under assets/img/) shows in the stage until
+    the first frame, and stays when there is no WebGL. course-visuals/kit3d/scripts/check_kit3d.py checks the spec itself;
+    here only what would stop the page from drawing it."""
+    try:
+        spec = json.loads(text)
+    except ValueError as err:
+        probs.append("%s: its 3D kit scene is not valid JSON - %s" % (where, err))
+        return ""
+    if not isinstance(spec, dict) or not spec.get("parts"):
+        probs.append("%s: its 3D kit scene has no parts" % where)
+        return ""
+    if spec.get("_todo"):                              # --init-build's starter, parts only guessed: placed on board, then the key goes
+        probs.append("%s: its 3D kit scene is still the starter (\"_todo\") - place the parts as they are on board "
+                     "(course-visuals\\kit3d\\SPEC.md), then delete the \"_todo\" key" % where)
+    if not spec.get("label"):
+        spec["label"] = first_sentence(s.get("visual")) or s.get("title") or ""
+    sid = "k3-" + s["id"]
+    data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    poster = ((b or {}).get("poster") or "").replace("\\", "/").strip()
+    img = '<img data-poster src="../%s" alt="%s">' % (a(poster), a(spec["label"])) if poster else ""
+    return ('<div class="fill fig kit3d-fig" data-3d-box>'
+            '<div class="kit3d-stage" data-stage data-3d data-kit3d="#%s">%s</div>'
+            '<script type="application/json" id="%s">%s</script></div>' % (sid, img, sid, data))
+
+
 # 2.60.0 - a 3D scene's control hint ("Drag to turn - tap a part to look closer") is the scene's own words for the screen,
 # not the script's: its holder [data-hint] is marked data-script-ignore as the figure goes in, so check_script_match counts
 # it instead of failing the build (IGF M05 s06, M13 s07, M15 s05 - each builder marked it by hand after a FAIL)
@@ -682,6 +713,8 @@ def figure_html(mdir, figdir, s, b, probs, where):
     if err:
         probs.append("%s: its picture file %s %s" % (where, rel, err))
         return "", "", False
+    if rel.lower().endswith(KIT3D_SPEC):               # a 3D kit scene is a 3D figure: no flat-3D finding
+        return kit3d_figure(body, s, probs, where, b), "", False
     if cs.flat_3d(s, b, body):                         # 2.49.7 (IGF M01 s05): a 3D slide is never quietly built in 2D
         probs.append(FLAT_3D % (where, s.get("visual_kind"), rel))
     if rel.lower().endswith(KIT_SPEC):
@@ -2579,28 +2612,128 @@ THREE_JS = "assets/vendor/three.min.js"
 THREE_SRC = os.path.join(SKILLS, "course-module-ui", "templates", "vendor", "three.min.js")   # the factory's copy (2.59.0)
 
 
-def starter_scene(script, sid, scripts):
-    """2.49.7 (IGF M01 s05) - a model_3d slide's starter entry plans its 3D scene by default: the figure and the scene file are
-    named, and the scene's two files go into the sheet's "scripts" - the build reports them missing until they are written,
-    so the 3D is built, or kept 2D with the operator's reason ("declined_3d"), never dropped without a word"""
-    m = cs.mid(script.get("module")).lower()
-    js = "assets/js/%s_%s_3d.js" % (m, sid)
-    for x in (THREE_JS, js):
-        if x not in scripts:
-            scripts.append(x)
-    return {"figure": "%s_%s_3d.html" % (m, sid),
-            "_figure": ("A 3D scene, planned by default (L46). Write the figure working_claude\\figures\\%s\\%s_%s_3d.html - a "
-                        "[data-stage] holder, a flat fallback drawing and, if the scene says how to use it, an empty "
-                        "<div data-hint></div> its script fills (the compile marks it data-script-ignore: the control hint is "
-                        "not script words); no class of the module's own that no rule styles - and the scene %s, built like IGF M03's "
-                        "m03_station3d.js (compile GUIDE 2b): one shared renderer, the scene built while the slide before is "
-                        "on screen (its GB_HOOKS), window.__noPrepare and window.__scene3d for perf3d.mjs, a tap highlights a "
-                        "part; first frame under 1 s at 4x CPU (measure GUIDE 2b). It follows its box (resize on window "
-                        "resize and gb3d-resize - the deck adds a Full screen button), and each label that names a part "
-                        "carries data-3d-part=\"<name>\" with the selection registered by GB3D.wire(stage, {select, "
-                        "current}) - a tap on the label does what a tap on the part does (compile GUIDE 2b, 2.63.2). three.min.js (r128) is the factory's - the compile puts it in assets\\vendor\\. "
-                        "Or keep a 2D figure: put it in \"figure\" (--init-build writes its starter, see \"_2d\"), take the two "
-                        "scene files off \"scripts\", and write the operator's reason in \"declined_3d\"." % (m.upper(), m, sid, js))}
+def starter_scene(script, sid, scripts=None):
+    """a model_3d slide's starter entry plans its 3D scene by default (2.49.7, IGF M01 s05): the figure is the 3D kit's scene
+    spec `sNN.kit3d.json` (course-visuals/kit3d) - --init-build writes a starter for it (starter_kit3d) - and nothing goes into
+    the sheet's "scripts": the compile ships three.js, kit3d.js and kit3d.css itself. The scene is built, or kept 2D with the
+    operator's reason ("declined_3d"), never dropped without a word. `scripts` is kept for the old call."""
+    m = cs.mid(script.get("module"))
+    name = "%s.kit3d.json" % sid
+    return {"figure": name,
+            "_figure": ("A 3D scene, planned by default (L46), drawn by the 3D kit from a short spec: working_claude\\figures\\%s\\%s "
+                        "(--init-build writes a starter - parts guessed from the slide's words, side by side: place them as they are on "
+                        "board, add steps and labels). Read course-visuals\\kit3d\\SPEC.md (the format) and PARTS.md (every part and its "
+                        "settings); the finished scenes of the IGF course are ported in course-visuals\\kit3d\\examples\\. Check it: "
+                        "course-visuals\\kit3d\\scripts\\check_kit3d.py spec <file>, then smoke3d.py and perf3d.mjs on the compiled "
+                        "deck (compile GUIDE 2b). Full screen, tappable labels, the scene built while the slide before is on screen and "
+                        "window.__scene3d come from the kit, unasked; three.min.js (r128), kit3d.js and kit3d.css are the factory's - the "
+                        "compile ships them. Optional: \"poster\": \"assets/img/<picture of the model>.png\" on this entry shows until the "
+                        "first frame. No three.js file per slide - a part the kit lacks is added with KIT3D.define in the module's "
+                        "assets\\kit3d_parts.js (PARTS.md). Or keep a 2D figure: put it in \"figure\" (--init-build writes its starter, see "
+                        "\"_2d\"), and write the operator's reason in \"declined_3d\"." % (m, name))}
+
+
+# The 3D starter spec (3D kit): one part per thing the slide names, laid side by side along x at metre sizes, for the builder to
+# place as they are on board. The script's word -> the kit part; the rule that matches latest in a name (its head noun) wins.
+KIT3D_WORDS = (
+    ("pipe_dw", r"double[- ]wall(?:ed)?|double[- ]pipes?|annul(?:us|ar)"),
+    ("drip_tray", r"drip[- ]trays?"),
+    ("vent_mast", r"vent(?:ing)?[- ]masts?|masts?|vents?"),
+    ("detector", r"detectors?|sensors?"),
+    ("tank_c", r"tanks?"),
+    ("engine", r"engines?|generators?"),
+    ("valve", r"valves?"),
+    ("pipe", r"pipes?|piping|pipelines?|hoses?"),
+    ("room", r"rooms?|spaces?|compartments?|enclosures?"),
+    ("station", r"stations?|manifolds?"))
+KIT3D_RX = [(k, re.compile(r"\b(?:%s)\b" % rx, re.I)) for k, rx in KIT3D_WORDS]
+# part type -> (width along x in m, height of its `at` in m, its own settings); a station is a deck plate, a pipe and a valve
+KIT3D_SIZE = {
+    "tank_c": (7.0, 2.0, {"r": 1.6, "len": 7.0, "cut": True, "fill": 0.6}),
+    "pipe_dw": (5.0, 1.2, {"len": 5.0}),
+    "pipe": (5.0, 1.2, {"path": [[-2.5, 0, 0], [2.5, 0, 0]]}),
+    "valve": (1.5, 1.2, {}), "engine": (4.0, 0.0, {}), "vent_mast": (1.5, 0.0, {}), "room": (5.0, 0.0, {}),
+    "drip_tray": (2.5, 0.0, {}), "detector": (1.0, 2.5, {}), "station": (6.0, 0.0, {})}
+KIT3D_GAP, KIT3D_MAX_PARTS = 1.0, 6
+
+
+def kit3d_hit(text, last=False):
+    """(kit 3D part type, the word as written) for the first - or, for a name, the last (head noun) - word in `text` the 3D kit
+    has a part for, else None. A double-walled pipe is a pipe_dw, never also a pipe."""
+    hits = sorted((m.start(), k, m.group(0)) for k, rx in KIT3D_RX for m in rx.finditer(text or ""))
+    if any(k == "pipe_dw" for _, k, _ in hits):
+        hits = [h for h in hits if h[1] != "pipe"]
+    if not hits:
+        return None
+    _, kind, word = hits[-1] if last else hits[0]
+    return kind, word
+
+
+def starter_kit3d(script, s):
+    """the starter 3D-kit scene spec (`sNN.kit3d.json`) of a 3D slide - so the build starts from something to edit, not from
+    nothing: a label from the slide, metres, a home view, and one part per thing the slide's lines name (the term before " - " or
+    ": ", else the kit's word in the line; the kit's words in the first sentence of `visual` the lines did not name; up to
+    KIT3D_MAX_PARTS), each with an id and a label in the script's own word, side by side along x. A slide that names nothing gets
+    a tank. "_todo" says to place the parts as they are on board."""
+    lines = cs.lines_of(s.get("text"))
+    statement = len(lines) > 1 and not TERM.match(lines[0]) and any(TERM.match(x) for x in lines[1:])
+    items, seen = [], set()
+
+    def add(kind, label):
+        key = (kind, label.lower())
+        if key not in seen and len(items) < KIT3D_MAX_PARTS:
+            seen.add(key)
+            items.append((kind, label))
+
+    for line in lines[1 if statement else 0:]:
+        m = TERM.match(line)
+        term = m.group(1).strip() if m and 1 <= len(m.group(1).split()) <= 4 and not m.group(1)[:1].islower() else ""
+        bare = re.sub(r"[.,;:!?]+$", "", line).strip()
+        if not term and not m and len(bare.split()) <= 4:
+            term = bare
+        hit = kit3d_hit(term, last=True) if term else kit3d_hit(line)
+        if hit:
+            add(hit[0], term or hit[1].capitalize())
+    visual = (s.get("visual") or "").strip()
+    first = re.split(r"(?<=[.!?])\s", visual, 1)[0] if visual else ""
+    named = {k for k, _ in items}
+    for _pos, kind, word in sorted((m.start(), k, m.group(0)) for k, rx in KIT3D_RX for m in rx.finditer(first)):
+        if kind not in named and not (kind == "pipe" and "pipe_dw" in named):
+            named.add(kind)
+            add(kind, word.lower())
+    if not items:
+        add("tank_c", " ".join(re.sub(r"[.,;:!?]+$", "", s.get("title") or "").split()[:4]) or "Tank")
+    width = sum(KIT3D_SIZE[k][0] for k, _ in items) + KIT3D_GAP * (len(items) - 1)
+    x, parts, labels, ids = -width / 2.0, [], [], set()
+
+    def ident(label, kind):
+        base = re.sub(r"[^a-z0-9]+", "_", label.lower()).strip("_")[:30].strip("_") or kind
+        base = base if base[0].isalpha() else "p_" + base
+        pid, n = base, 1
+        while pid in ids:
+            n += 1
+            pid = "%s_%d" % (base, n)
+        ids.add(pid)
+        return pid
+
+    for kind, label in items:
+        w, y, own = KIT3D_SIZE[kind]
+        cx = round(x + w / 2.0, 2)
+        if kind == "station":                        # a deck plate with a pipe and a valve on it
+            for k2, lab, at in (("deck_plate", label, [cx, 0, 0]), ("pipe", label + " pipe", [cx, 0.8, -1.2]),
+                                ("valve", label + " valve", [cx, 0.8, -1.2])):
+                pid = ident(lab, k2)
+                parts.append(dict({"id": pid, "type": k2, "at": at}, **(KIT3D_SIZE[k2][2] if k2 == "pipe" else {})))
+                labels.append({"part": pid, "text": lab})
+        else:
+            pid = ident(label, kind)
+            parts.append(dict({"id": pid, "type": kind, "at": [cx, y, 0]}, **own))
+            labels.append({"part": pid, "text": label})
+        x += w + KIT3D_GAP
+    return {"label": first or s.get("title") or "", "units": "m", "view": {"az": 24, "el": 23}, "parts": parts, "labels": labels,
+            "_todo": "Starter written by --init-build: the parts are guessed from the slide's words and laid side by side. Place them "
+                     "as they are on board (true metres, SPEC.md), size them, add steps for the slide's lines and a cut-away where the "
+                     "inside is the lesson; check_kit3d.py spec <file> says what is missing. Delete this key when it is done."}
 
 
 # ------------------------------------------------------------------ starter figure-kit specs (2.50.0)
@@ -2906,9 +3039,9 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
         if two_d:
             if not os.path.isfile(os.path.join(figdir, name)):
                 entry["_2d"] = ("Keeping a 2D figure instead of the 3D scene? Its starter is written: working_claude\\figures\\%s\\%s - "
-                                "set \"figure\": \"%s\", \"composition\": \"two-col\", \"dark\": true, take the scene files off "
-                                "\"scripts\", write the operator's reason in \"declined_3d\", and edit the starter (SPEC.md) - "
-                                "never write one from nothing." % (cs.mid(script.get("module")), name, name))
+                                "set \"figure\": \"%s\", \"composition\": \"two-col\", \"dark\": true, write the operator's reason "
+                                "in \"declined_3d\", and edit the starter (SPEC.md) - never write one from nothing."
+                                % (cs.mid(script.get("module")), name, name))
                 if out is not None:
                     out[s["id"]] = spec
             continue
@@ -2921,7 +3054,7 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
                 out[s["id"]] = spec
 
 
-def starter_build(script, shared=(), figdir=None, specs=None, mdir=None):
+def starter_build(script, shared=(), figdir=None, specs=None, mdir=None, specs3=None):
     """A starter build sheet. 2.49.1: the landing rule and the pass mark are the same in every module of a course, so they
     come from the course's other build sheets (the latest module that has them); the foot is this module's title; each
     question answered on a picture gets its entry (figure + places) to fill in. `mdir` (2.52.0): the module folder, whose
@@ -2957,7 +3090,7 @@ def starter_build(script, shared=(), figdir=None, specs=None, mdir=None):
         screens[best[0]].update(starter_scene(script, best[0], sheet["scripts"]))
         screens[best[0]]["_3d"] = ("Proposed by the factory, unasked (L60): this module has no 3D scene and this slide's lesson has a "
                                    "shape, an inside or a layout in space (%s). Strongly recommended, never required: to decline it, "
-                                   "give the slide its 2D figure, take the scene files off \"scripts\", and write the operator's reason "
+                                   "give the slide its 2D figure and write the operator's reason "
                                    "in the sheet's top-level \"declined_3d\" - it is not proposed again." % best[1])
     if figdir is not None:             # 2.50.0: a starter figure-kit spec for every drawing slide - not a photo; a 3D one's
         three_d = {s["id"] for s in script["screens"] if s["kind"] == "slide" and cs.parse_kind(s.get("visual_kind", "")) == "model_3d"}
@@ -2965,6 +3098,11 @@ def starter_build(script, shared=(), figdir=None, specs=None, mdir=None):
         taken = {k: v[0] for k, v in shown_elsewhere(mdir).items()} if pool else {}
         starter_figures(script, screens, figdir, skip={best[0]} if best else (), out=specs,      # is its 2D fallback (2.50.6)
                         fallback=three_d | ({best[0]} if best else set()), pool=pool, taken=taken)
+        if specs3 is not None:         # the 3D scenes' starter specs (3D kit): written when the file is not there, never over one
+            for s in script["screens"]:
+                name = (screens.get(s["id"]) or {}).get("figure") or ""
+                if s["kind"] == "slide" and name.endswith(KIT3D_SPEC) and not os.path.isfile(os.path.join(figdir, name)):
+                    specs3[s["id"]] = starter_kit3d(script, s)
     sheet["screens"] = screens
     return sheet
 
@@ -3098,6 +3236,9 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
     kit_parts = uses_kit and os.path.isfile(os.path.join(mdir, KIT_PARTS))
     shipped = [(x, os.path.join(SKILLS, "course-module-ux", "assets", x)) for x in PHOTO_FILES]
     shipped += [(x, os.path.join(SKILLS, "course-visuals", "kit", x)) for x in (KIT_FILES if uses_kit else ())]
+    uses_kit3d = any(" data-kit3d=" in x for x in slides)       # the 3D kit (course-visuals/kit3d)
+    kit3d_parts = uses_kit3d and os.path.isfile(os.path.join(mdir, KIT3D_PARTS))
+    shipped += [(x, os.path.join(SKILLS, "course-visuals", "kit3d", x)) for x in (KIT3D_FILES if uses_kit3d else ())]
     for x, canon in shipped:                  # shipped like the deck engine: the factory's copy, byte for byte
         mine = os.path.join(mdir, "assets", x)
         if os.path.isfile(canon) and (not os.path.isfile(mine) or io.open(mine, "rb").read() != io.open(canon, "rb").read()):
@@ -3105,7 +3246,8 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
                          "design_system.py install --update on the module folder" % x)
     # 2.59.0 - the 3D engine every scene is written for ships with the factory (three.js r128, MIT): a sheet that names it
     # gets the factory's copy - before, a builder had to find one, and IGF M03's declined its 3D scene for the lack of it
-    if THREE_JS in build.get("scripts", []) and os.path.isfile(THREE_SRC):
+    # the 3D kit - a deck with a 3D-kit scene gets the same copy whether or not the sheet names it (the kit needs it)
+    if (THREE_JS in build.get("scripts", []) or uses_kit3d) and os.path.isfile(THREE_SRC):
         mine = os.path.join(mdir, *THREE_JS.split("/"))
         if not os.path.isfile(mine) or io.open(mine, "rb").read() != io.open(THREE_SRC, "rb").read():
             os.makedirs(os.path.dirname(mine), exist_ok=True)
@@ -3138,6 +3280,8 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
         head.append('<link rel="stylesheet" href="../assets/kit.css">')
         if deck_floor(build):                          # 2.63.3 (item 4): a course's projector floor for its deck figures
             head.append("<style>.slide .kit-fig{--kit-floor:%g}</style>" % deck_floor(build))
+    if uses_kit3d:
+        head.append('<link rel="stylesheet" href="../assets/kit3d.css">')
     head += ['<link rel="stylesheet" href="../%s">' % a(x) for x in build.get("styles", [])]
     head.append("</head>")
     rule = build.get("landing_rule") or ""
@@ -3161,7 +3305,17 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
         body.append('<script src="../assets/kit.js"></script>')
     if kit_parts:
         body.append('<script src="../%s"></script>' % KIT_PARTS)
-    body += ['<script src="../%s"></script>' % a(x) for x in build.get("scripts", [])]
+    own = ['<script src="../%s"></script>' % a(x) for x in build.get("scripts", [])]
+    if uses_kit3d:                      # three.js, then kit3d.js (+ the course's own parts): before GBDeck.init, which reads the
+        k3 = ['<script src="../assets/kit3d.js"></script>']      # slide hooks kit3d.js registers - and after the sheet's own scripts,
+        if kit3d_parts:                                          # unless the sheet names three.min.js: kit3d.js then follows it
+            k3.append('<script src="../%s"></script>' % KIT3D_PARTS)
+        if THREE_JS in build.get("scripts", []):
+            at = build["scripts"].index(THREE_JS) + 1
+            own[at:at] = k3
+        else:
+            own += ['<script src="../%s"></script>' % THREE_JS] + k3
+    body += own
     body += ["<script>",
              'GBDeck.init({ hooks: window.GB_HOOKS || {} });',      # its words: the engine's, by <html lang>
              "</script>", "</body>", "</html>", ""]
@@ -3480,8 +3634,9 @@ def main(argv=None):
             shared.insert(0, cs.load(cp) if os.path.isfile(cp) else {})
         except (OSError, ValueError):
             pass
-        figdir, specs = workspace.claude_path(o.course, "figures", cs.mid(o.module)), {}
-        cs.save(bp, starter_build(script, shared, figdir=figdir, specs=specs, mdir=module_folder(o.course, o.module, o.module_dir)[0]))
+        figdir, specs, specs3 = workspace.claude_path(o.course, "figures", cs.mid(o.module)), {}, {}
+        cs.save(bp, starter_build(script, shared, figdir=figdir, specs=specs, specs3=specs3,
+                                  mdir=module_folder(o.course, o.module, o.module_dir)[0]))
         print("Done - a starter build sheet:\n    %s\n  Next: fill in each slide's picture, edit the starter figures (parts and "
               "options: course-visuals\\kit\\CATALOGUE.md), then build and check in one command:\n    compile\\scripts\\"
               "build_module.py <course> --module %s" % (bp, o.module))
@@ -3502,6 +3657,10 @@ def main(argv=None):
             print("  starter figure: figures\\%s\\%s.kit.json - %d parts, %d steps (edit it: the parts are placed on a grid)%s"
                   % (cs.mid(o.module), sid, len(spec["parts"]), len(spec["steps"]),
                      " - the 2D figure if the 3D scene is declined" if (sheet_screens.get(sid) or {}).get("_2d") else ""))
+        for sid, spec in specs3.items():                # the 3D kit's starter scenes - placed as on board, never written from nothing
+            cs.save(os.path.join(figdir, "%s%s" % (sid, KIT3D_SPEC)), spec)
+            print("  starter 3D scene: figures\\%s\\%s%s - %d parts (place them as they are on board: course-visuals\\kit3d\\SPEC.md, "
+                  "PARTS.md)" % (cs.mid(o.module), sid, KIT3D_SPEC, len(spec["parts"])))
         # the module's folder does not exist for a new module: make it and put the factory's style files and engines
         # in it, so the first compile does not stop (never inside the Android project - design_system.py refuses that).
         # 2.49.2: also when the folder is already there (assets\img made first) - the files are checked, not the folder

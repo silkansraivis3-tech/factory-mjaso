@@ -1,0 +1,47 @@
+{
+  "_about": "IGF M03 s13 'The bunkering station' - the hand-made m03_station3d.js (1,177 lines) as a 3D-kit spec. The ship's side is the plane z = 0 (outboard +z), the deck top y = 0, the manifold axis 0.9 m above it; 1 unit = 1 m. The valves are the kit's valve drawn at 0.59 (a DN200 pipe, r 0.11, not the kit's r 0.25). The original's Labels button and the All button are dropped: the kit's labels are always on, 'Reset view' is All. The couplings, valve wheels and the ESD button are a little larger than true, as in the original.",
+  "label": "3D model of an LNG bunkering station on the open deck at the ship's side: the bunker manifold with a remote shutdown valve and a manual stop valve, the dry-disconnect coupling at the connection, the breakaway coupling on the hose going over the side, the stainless drip tray under the manifold, and the emergency shutdown button.",
+  "units": "m",
+  "view": {"az": -48.7, "el": 19},
+  "box": [-1.5, 0, -3.9, 0.7, 2.3, 0.3],
+  "groups": {"leak": ["dd", "ba", "sv", "rv"], "spill": ["dt"]},
+  "parts": [
+    {"id": "deck", "type": "deck_plate", "pick": false, "at": [0, 0, 0], "size": [6, 5]},
+
+    {"type": "pipe", "mat": "steel", "r": 0.11, "path": [[0, 0, -4.6], [0, 0.9, -4.6], [0, 0.9, -1.35]], "flanges": [0]},
+    {"type": "flange", "at": [0, 0.9, -1.35], "axis": "z", "r": 0.11},
+    {"type": "box", "at": [0, 0.5, -3.65], "size": [0.1, 0.8, 0.1], "mat": "steel_dark"},
+    {"type": "box", "at": [0, 0.5, -1.7], "size": [0.1, 0.8, 0.1], "mat": "steel_dark"},
+    {"type": "box", "at": [0, 0.77, -3.65], "size": [0.3, 0.05, 0.22], "mat": "steel_dark"},
+    {"type": "box", "at": [0, 0.77, -1.7], "size": [0.3, 0.05, 0.22], "mat": "steel_dark"},
+
+    {"id": "rv", "type": "valve", "at": [0, 0.9, -3.1], "axis": "z", "actuator": true, "scale": 0.59, "mat": "steel_mid", "az": -41.3},
+    {"id": "sv", "type": "valve", "at": [0, 0.9, -2.1], "axis": "z", "wheel": "grey", "scale": 0.59, "mat": "steel_mid", "az": -41.3},
+
+    {"id": "dd", "type": "coupling", "kind": "dry", "at": [0, 0.9, -1.04], "az": -41.3},
+    {"type": "cylinder", "at": [0, 0.9, -0.64], "axis": "z", "r": 0.13, "len": 0.2, "mat": "rubber"},
+    {"id": "ba", "type": "coupling", "kind": "breakaway", "at": [0, 0.9, -0.3], "az": -41.3},
+    {"type": "hose", "r": 0.13, "path": [[0, 0.9, -0.03], [0, 0.9, 0.55], [0, 0.5, 1.0], [0, -0.4, 1.22], [0, -1.5, 1.28], [0, -2.4, 1.28]]},
+
+    {"id": "dt", "type": "drip_tray", "at": [0, 0, -2.1], "size": [2.2, 3.6], "az": -31.5},
+    {"id": "esd", "type": "esd_button", "at": [-1.5, 0, -2.2], "h": 1.24, "az": -31.5}
+  ],
+  "labels": [
+    {"part": "dd", "text": "Dry-disconnect coupling", "at": [0, 1.35, -1.04], "up": 34, "side": 1},
+    {"part": "ba", "text": "Breakaway coupling", "at": [0, 1.09, -0.3], "up": -44, "side": 1},
+    {"part": "sv", "text": "Manual stop valve", "at": [0, 1.72, -2.1], "up": 34, "side": 1},
+    {"part": "rv", "text": "Remote shutdown valve", "at": [0, 2.18, -3.1], "up": 34, "side": 1},
+    {"part": "dt", "text": "Drip tray", "at": [-0.5, 0.25, -1.4], "up": -40, "side": -1},
+    {"part": "esd", "text": "Emergency shutdown button", "at": [-1.5, 1.4, -2.2], "up": 40, "side": -1}
+  ],
+  "steps": [
+    {},
+    {"view": {"az": -51.6, "el": 17, "frame": ["leak"], "fill": 0.86}, "select": "leak", "labels": ["dd", "ba", "sv", "rv"]},
+    {"view": {"az": -31.5, "el": 25.8, "frame": ["spill"], "fill": 0.86}, "select": "spill", "labels": ["dt"]}
+  ],
+  "controls": [
+    {"text": "Stop a leak", "select": "leak"},
+    {"text": "Catch a spill", "select": "spill"}
+  ],
+  "reset": true
+}

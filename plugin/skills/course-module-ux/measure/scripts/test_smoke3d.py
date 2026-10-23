@@ -84,10 +84,29 @@ def full_screen_part():
           code == 0 and "covers the scene's words" not in out, out)
 
 
+def kit3d_part():
+    """a 3D-kit scene (course-visuals/kit3d: a [data-kit3d] stage kit3d.js fills) is a 3D slide for the smoke test - no
+    Node or Chrome needed: IS_3D finds it, and alone() keeps it with the slide before it"""
+    print("\n-- the 3D kit: a [data-kit3d] stage is a 3D slide")
+    sys.path.insert(0, HERE)
+    import smoke3d
+    sec = lambda sid, body: '<section class="slide" id="%s" data-title="x">%s</section>' % (sid, body)
+    kit = ('<div class="fill fig kit3d-fig" data-3d-box><div class="kit3d-stage" data-kit3d="#k3-s05"></div>'
+           '<script type="application/json" id="k3-s05">{"parts":[]}</script></div>')
+    page = "<main>" + sec("s01", "<h1>Title</h1>") + sec("s04", "<p>before</p>") + sec("s05", kit) + sec("s06", "<p>after</p>") + "</main>"
+    found = [smoke3d.sid_of(m.group(0)) for m in smoke3d.SLIDE.finditer(page) if smoke3d.IS_3D.search(m.group(0))]
+    check("a slide holding [data-kit3d] is a 3D slide, the others are not", found == ["s05"], found)
+    check("a bare data-kit3d attribute (no data-3d, no canvas) is enough", bool(smoke3d.IS_3D.search('<div data-kit3d="#k3-s05"></div>')))
+    only = smoke3d.alone(page, {"s05"})
+    check("alone() keeps the kit slide and the slide before it (its build-ahead hook), nothing else",
+          'id="s05"' in only and 'id="s04"' in only and 'id="s01"' not in only and 'id="s06"' not in only, only)
+
+
 def main():
+    kit3d_part()
     if not shutil.which("node"):
         print("skipped: no Node")
-        return 0
+        return 1 if FAIL else 0
     tmp = tempfile.mkdtemp(prefix="smoke3d_")
     try:
         good = variant(tmp, "good", 0)

@@ -282,6 +282,61 @@ invisible to it, which is why the human review in `course-visuals/review/GUIDE.m
 
 ---
 
+## 3D kit (to merge after 2.63.3)
+
+Branch `claude/kit-3d-347cf0` (cut from main = 2.63.2), 2026-10-23. Aleksis: *"the 3D is shit compared to the handmade ... let's
+create the kit now, can we already use some of the 3D we have on the handmade?"* - the 2.63.2 whole-course run's AI
+reviews: the factory scene "shows only a bare pipe and the part chips below do not point at anything", "small in a big
+empty panel and labels are buttons below". Version left to the merge (no plugin.json bump here).
+
+- **`course-visuals/kit3d/`** - the 3D equivalent of the figure kit, made from the nine hand-made IGF scenes (one engine
+  cloned per module: m01_hull3d ... m15_venting3d). A scene is a spec `sNN.kit3d.json`: parts in metres, labels, steps,
+  controls (SPEC.md); 34 part types (PARTS.md: hull, deck_plate, room, enclosure, tank_c / tank_sphere / tank_prism with
+  insulation and barriers seen at the cut, pipe, pipe_dw, valve incl. relief, flange, coupling, hose, vent_mast, vessel,
+  cabinet, engine, pump, drip_tray, esd_button, detector, person, air_intake, dimension, limit_box, zone, gas (rise /
+  sink / spread / plume, the M04 fuel colours), flow, arrow, primitives). Unasked, every scene gets: the hand-made look
+  (ACES, procedural studio env, one shadow pass); labels ON the parts that never touch each other, a control, the Full
+  screen button, the box edge or (where they can) the parts' pictures - the hand-made settle pass plus sideways places;
+  framing that fills the box at every size; tap / label select with glow and framing; the deck's Next walking the steps
+  and lighting the slide's lines; full screen (the deck's, or its own outside a deck); a Labels on/off button; captions;
+  build-ahead on the slide before with the canvas sized to the real box (measured on the hidden slide - a resize in
+  SwiftShader cost ~1 s: M01 warm first frame 1169 -> 148 ms); static meshes merged per part; poster fallback; no-WebGL
+  message; `window.__scene3d`. `KIT3D.define` adds a part (in a module's `assets/kit3d_parts.js`, promoted like L55).
+- **Ports** (`kit3d/examples/`, each compared side by side with its original at the original's box size): M01 hull 58
+  lines (original 1,413), M02 tank 61 (1,320), M03 station 46 (1,177), M04 leak 119 (1,565), M07 zones 133 (1,561), M15
+  venting 58 (1,421); plus `catalogue.kit3d.json` (every part, every state). An independent reviewer (pairs only):
+  M01 **yes** as good as hand-made, M02 **nearly**, M03 **yes**; "the kit scenes would not draw the quoted complaints".
+  **M02 re-reviewed (Aleksis, 2026-10-23), four fresh reviewers, the last ones told the hand-made is a reference, not
+  the gold standard:** found 11 labels in one 690 x 418 view colliding (in the hand-made too), the B/5 and B/15 gaps not
+  visible in either. Fixed in the kit - a crowded box takes compact pills, re-judged when the shown labels change; the
+  settle tries four label orders and keeps the fewest touches (only while the view is still); value tags search 49
+  places; `open_opacity` keeps an opened space as glass - and in the spec: three Next steps (the parts; the two limits
+  in a section looking aft, the rule as a caption, the value tags on their lines; the space opened as glass with the
+  double-walled pipe cut open), the hand-made's cone tip and duplicate Open button dropped. Verdict: **better** than
+  the hand-made (labels, the inside, framing, the B/5 gap readable). Still worse in places: M04
+  cloud shapes and missing floor seams, M07 zone 0 as a skin not a core, M15 no legend chip. Not ported: M05, M06, M09
+  (their parts exist: room, pipe_dw, engine, detector, gas, gauge - no gauge part yet).
+- **Wired in, without build_course.js:** `compile_module.py` - a `*.kit3d.json` figure is a kit scene (`kit3d_figure`,
+  the markup in SPEC.md, optional `"poster"`), kit3d.js / kit3d.css / three.min.js shipped and loaded in order; the L60
+  starter (`starter_scene`) plans `sNN.kit3d.json` and `--init-build` writes a drawable starter spec from the slide's
+  words (`starter_kit3d`); `content_script.py` accepts it as a scene; `design-system.json` installs the two files;
+  `compile/GUIDE.md` 2b teaches the kit first; `smoke3d.py` knows `data-kit3d`. `check_kit3d.py` (spec / module) like
+  check_kit.py; `shot3d.mjs` saves PNGs of scenes from a hidden Chrome; `studio3d.html?spec=...` shows one spec.
+- **Proved:** IGF M01-M03 compiled with their kit specs: smoke3d PASS, run_audits PASS (deck, collide, compose);
+  perf3d (CPU 4x, SwiftShader) warm first frame M01 270 ms, M02 735 ms (its re-reviewed spec), M03 50 ms - budget 1,000 (the 2.63.2 factory
+  M01 scene: 2,307); cold 1.4-5.9 s; software-GL fps 7-10 (shadows + environment light per pixel; a real tablet GPU is
+  not measured). `test_kit3d.py` (41 browser checks: build, labels on parts, framing at three sizes, label / tap select,
+  steps in a real gb_deck, full screen, Labels button, every part and state, no WebGL), `test_check_kit3d.py`,
+  compile 453/453, plugin validate --strict both.
+- **For the workflow after 2.63.3 lands** (`build_course.js`, not touched here): a dedicated 3D step per module that
+  writes the kit spec (not three.js), runs `check_kit3d.py spec`, smoke3d, perf3d, then shoots the scene with
+  `shot3d.mjs` (home + each step) and gives the pictures to its own visual review (labels on the parts they name, the
+  inside shown, the model filling its box) - fixes go into the spec, missing parts into kit3d_parts.js. `build_module.py`
+  still lists an unwritten `mNN_sNN_3d.html` as a blank; it should look for the `.kit3d.json` instead (the compile's
+  `_todo` guard covers an unedited starter meanwhile).
+
+---
+
 ## Next session
 
 **For Phase 5 step 6 (owner, 2026-09-30):** check **read-only** that the tablet app records final-assessment results

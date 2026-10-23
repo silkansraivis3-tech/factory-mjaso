@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D kit studio</title>
+<!-- studio3d.html?spec=examples/m01_hull.kit3d.json[&w=1280&h=720][&step=1][&dark=1] - one 3D-kit scene in a box of a
+     slide's size, from a web server (python -m http.server in the plugin folder): what a builder looks at while writing
+     a spec, and what the tests and the side-by-side screenshots load. window.k3 is the scene's api. -->
+<link rel="stylesheet" href="kit3d.css">
+<style>
+  :root{--navy:#0A2463;--blue:#2EB6F8;--amber:#E9A51E}
+  html,body{margin:0;background:#eef2f6;font-family:Raleway,"Segoe UI",Arial,sans-serif}
+  body.dark{background:#0A182E}
+  #box{position:relative;margin:0;background:#f7f9fb;overflow:hidden}
+  body.dark #box{background:#0f2340}
+  #box .kit3d-stage{position:absolute;inset:0;min-height:0}
+  #err{color:#b00;padding:8px 12px;font-weight:600;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div id="box"><div class="kit3d-stage" id="stage"></div></div>
+<div id="err"></div>
+<script src="../../course-module-ui/templates/vendor/three.min.js"></script>
+<script src="kit3d.js"></script>
+<script>
+(function () {
+  var q = {}, box = document.getElementById('box');
+  location.search.replace(/^\?/, '').split('&').forEach(function (kv) { var a = kv.split('='); if (a[0]) { q[a[0]] = decodeURIComponent(a[1] || ''); } });
+  box.style.width = (q.w || 1280) + 'px';
+  box.style.height = (q.h || 720) + 'px';
+  if (q.dark) { document.body.className = 'dark'; }
+  window.k3ready = false;
+  fetch(q.spec || 'examples/m01_hull.kit3d.json').then(function (r) { return r.json(); }).then(function (spec) {
+    window.k3 = KIT3D.mount(document.getElementById('stage'), spec);
+    if (q.step) { window.k3.step(+q.step); }
+    requestAnimationFrame(function () { requestAnimationFrame(function () { window.k3ready = true; }); });
+    var w = window.k3.info().warnings;
+    if (w && w.length) { document.getElementById('err').textContent = w.join('\n'); }
+  })['catch'](function (e) { document.getElementById('err').textContent = String(e); });
+}());
+</script>
+</body>
+</html>

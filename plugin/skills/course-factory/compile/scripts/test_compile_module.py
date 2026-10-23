@@ -1693,7 +1693,7 @@ def v2497_part(tmp):
     s3 = sheet["screens"].get("s03", {})
     check("L60: a module with no 3D slide in its script - --init-build gives the best slide (the spaces and their arrangement) "
           "a starter scene, unasked, and says why and how to decline",
-          code == 0 and s3.get("figure") == "m01_s03_3d.html" and "assets/js/m01_s03_3d.js" in sheet["scripts"]
+          code == 0 and s3.get("figure") == "s03.kit3d.json" and sheet["scripts"] == []
           and "L60" in s3.get("_3d", "") and "arrangement" in s3.get("_3d", "") and "declined_3d" in s3.get("_3d", ""), sheet)
     check("... never on a slide whose picture is a real photograph (L52)", "_3d" not in sheet["screens"].get("s01", {}), sheet)
     sheet["screens"]["s04"] = {"figure": "hull.svg", "dark": True}
@@ -1745,7 +1745,8 @@ def v2497_part(tmp):
     sh9 = cs.load(sp(c9))
     check("... --init-build gives no starter scene to it, and writes the wish into its entry",
           code == 0 and "_3d" not in sh9["screens"].get("s03", {}) and sh9["screens"]["s03"].get("photo_wanted")
-          and "assets/js/m01_s03_3d.js" not in sh9["scripts"], sh9["screens"].get("s03"))
+          and not (sh9["screens"]["s03"].get("figure") or "").endswith(".kit3d.json")
+          and "s03.kit3d.json" not in os.listdir(os.path.join(c9, "working_claude", "figures", "M01")), sh9["screens"].get("s03"))
     c10, code, out = built("f9", {"figure": "assets/img/ship.jpg", "photo_wanted": "the owner: a real photo here"})
     check("... a slide planned as 3D with a photo wanted, given the photo: no 'asks for a 3D scene'",
           "asks for a 3D scene" not in out and not [f for f in cs.build_findings(c10, script()) if f["rule"] == "v_3d_flat_figure"], out)
@@ -1797,8 +1798,123 @@ def three_part(tmp):
     sys.path.insert(0, HERE)
     import compile_module as cm
     note = cm.starter_scene({"module": 1}, "s05", [])["_figure"]
-    check("the starter 3D entry says where the hint goes and that a class of the module's own needs a rule",
-          "<div data-hint></div>" in note and "data-script-ignore" in note and "no rule styles" in note, note)
+    check("the starter 3D entry teaches the 3D kit: its spec, parts, checker, smoke test and reference ports - no scene file to write",
+          all(x in note for x in ("SPEC.md", "PARTS.md", "check_kit3d.py", "smoke3d.py", "examples", "KIT3D.define", "declined_3d"))
+          and "_3d.js" not in note, note)
+
+
+KIT3D_SPEC = {"label": "A fuel tank, cut open.", "units": "m",
+              "parts": [{"id": "tank", "type": "tank_c", "at": [0, 2, 0], "r": 1.6, "len": 7, "cut": True, "fill": 0.6},
+                        {"id": "vm", "type": "vent_mast", "at": [6, 0, 0]}],
+              "labels": [{"part": "tank", "text": "Fuel tank </script>"}, {"part": "vm", "text": "Vent mast"}]}
+
+
+def kit3d_part(tmp):
+    """the 3D kit (course-visuals/kit3d): a *.kit3d.json figure is a 3D scene - its markup, its poster, its starter spec and
+    the shipping of three.js, kit3d.js and kit3d.css in the right order"""
+    print("\n-- the 3D kit: sNN.kit3d.json figures")
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    s4 = {"id": "s04", "title": "Two barriers", "visual": "3D hull section. More."}
+    probs = []
+    h = cm.kit3d_figure(json.dumps(KIT3D_SPEC), s4, probs, "s04")
+    check("kit3d_figure: the markup of SPEC.md 'Where it goes' - the box, the stage [data-stage][data-3d][data-kit3d], the spec as data",
+          h.startswith('<div class="fill fig kit3d-fig" data-3d-box><div class="kit3d-stage" data-stage data-3d data-kit3d="#k3-s04">'
+                       '</div><script type="application/json" id="k3-s04">') and h.endswith("</script></div>") and not probs, (h, probs))
+    check("... a '</script>' inside the spec cannot end the page's script early, and the spec comes back whole",
+          "Fuel tank <\\/script>" in h and "</script>" not in h.split('id="k3-s04">')[1][:-len("</script></div>")]
+          and json.loads(h.split('id="k3-s04">')[1].rsplit("</script>", 1)[0].replace("<\\/", "</")) == KIT3D_SPEC, h)
+    check("... no poster named: nothing in the stage", "data-poster" not in h)
+    hp = cm.kit3d_figure(json.dumps(KIT3D_SPEC), s4, [], "s04", {"poster": "assets\\img\\tank.png"})
+    check("... the build sheet's poster goes into the stage as <img data-poster>, alt = the scene's label",
+          '<div class="kit3d-stage" data-stage data-3d data-kit3d="#k3-s04"><img data-poster src="../assets/img/tank.png" '
+          'alt="A fuel tank, cut open."></div>' in hp, hp)
+    nolabel = dict(KIT3D_SPEC)
+    del nolabel["label"]
+    check("... a spec with no label gets the slide's own (the first sentence of the picture's words)",
+          '"label":"3D hull section."' in cm.kit3d_figure(json.dumps(nolabel), s4, [], "s04"))
+    bad = []
+    check("... not JSON, or no parts: said, and nothing is built",
+          cm.kit3d_figure("{nope", s4, bad, "s04") == "" and cm.kit3d_figure('{"label": "x"}', s4, bad, "s04") == "" and len(bad) == 2
+          and "not valid JSON" in bad[0] and "has no parts" in bad[1], bad)
+    todo = []
+    cm.kit3d_figure(json.dumps(dict(KIT3D_SPEC, _todo="place the parts")), s4, todo, "s04")
+    check("... a spec still holding the starter's \"_todo\" is a problem (the guessed parts are not shipped as the lesson)",
+          len(todo) == 1 and "_todo" in todo[0], todo)
+
+    # the starter: parts guessed from the slide's words
+    st = cm.starter_scene({"module": 1}, "s04", [])
+    scripts = []
+    cm.starter_scene({"module": 1}, "s04", scripts)
+    check("starter_scene: the figure is sNN.kit3d.json, the scripts get nothing, the note teaches the kit",
+          st["figure"] == "s04.kit3d.json" and scripts == [] and "check_kit3d.py" in st["_figure"] and "kit3d_parts.js" in st["_figure"], st)
+    slide = {"id": "s05", "title": "Bunkering station", "visual": "A bunkering station and its double-walled pipe.",
+             "text": "What is on the deck.\nFuel tank.\nVent mast - high above the deck.\nDrip tray.\nGas detector - at the top of the space.\nBunkering station.\n"
+                     "Manifold valve - shuts the line."}
+    spec = cm.starter_kit3d({"module": 1}, slide)
+    types = [p["type"] for p in spec["parts"]]
+    check("starter_kit3d: the kit's parts for the slide's words (tank, vent mast, drip tray, detector, a station = deck plate + pipe + "
+          "valve), no more than six things", types[:4] == ["tank_c", "vent_mast", "drip_tray", "detector"]
+          and {"deck_plate", "pipe", "valve"} <= set(types) and len(types) <= 8, types)
+    xs = [p["at"][0] for p in spec["parts"]]
+    check("... each with an id and a label in the slide's own word, side by side along x, metres, a view, the label from the "
+          "slide, a \"_todo\"", all(p["id"] and len(p["at"]) == 3 for p in spec["parts"]) and len({p["id"] for p in spec["parts"]}) == len(types)
+          and {l["part"] for l in spec["labels"]} == {p["id"] for p in spec["parts"]}
+          and [l["text"] for l in spec["labels"]][:3] == ["Fuel tank", "Vent mast", "Drip tray"] and xs == sorted(xs)
+          and spec["units"] == "m" and spec["view"] and spec["label"] == "A bunkering station and its double-walled pipe."
+          and spec["_todo"] and spec["parts"][0]["cut"] is True and spec["parts"][0]["fill"] == 0.6, spec)
+    dw = cm.starter_kit3d({"module": 1}, {"id": "s06", "title": "Pipe", "text": "Double-walled pipe - gas inside, air outside.", "visual": ""})
+    check("... a double-walled pipe is a pipe_dw, never also a pipe",
+          [p["type"] for p in dw["parts"]] == ["pipe_dw"] and dw["labels"][0]["text"] == "Double-walled pipe", dw)
+    none = cm.starter_kit3d({"module": 1}, {"id": "s07", "title": "Why it matters now", "text": "Be careful.", "visual": ""})
+    check("... a slide that names nothing the kit has gets a tank, named by the slide's title",
+          [p["type"] for p in none["parts"]] == ["tank_c"] and none["labels"][0]["text"] == "Why it matters now", none)
+
+    # shipping: three.js, kit3d.js, kit3d.css in the page, in order, from the factory
+    os.makedirs(os.path.join(tmp, "k3"))
+    c, md = new_course(os.path.join(tmp, "k3"), script())
+    cs.save(os.path.join(c, "working_claude", "figures", "M01", "s04.kit3d.json"), KIT3D_SPEC)
+    io.open(os.path.join(md, "assets", "img", "tank.png"), "wb").write(png(40, 30))
+    build_of(c, lambda s: s["screens"].update(s04={"figure": "s04.kit3d.json", "dark": True, "poster": "assets/img/tank.png"}))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    p = deck(md)
+    sec4 = section(p, "s04")
+    check("a build-sheet figure s04.kit3d.json is a 3D scene: no 'asks for a 3D scene' finding, its stage and spec in the slide, poster in it",
+          "asks for a 3D scene" not in out and 'data-kit3d="#k3-s04"' in sec4 and 'id="k3-s04"' in sec4 and "data-poster" in sec4
+          and "kit3d-fig" in sec4, out + sec4[:500])
+    three, k3js, init = p.find('src="../assets/vendor/three.min.js"'), p.find('src="../assets/kit3d.js"'), p.find("GBDeck.init")
+    check("three.min.js then kit3d.js load after the deck's own engines, once each, before GBDeck.init; kit3d.css in the head",
+          0 < p.find("../assets/gb_zoom.js") < three < k3js < init and p.count("three.min.js") == 1 and p.count("kit3d.js") == 1
+          and p.index('href="../assets/kit3d.css"') < p.index("</head>"), p[-800:])
+    src3 = os.path.join(SKILLS, "course-module-ui", "templates", "vendor", "three.min.js")
+    kit3d_dir = os.path.join(SKILLS, "course-visuals", "kit3d")
+    same = lambda a, b: os.path.isfile(a) and os.path.isfile(b) and io.open(a, "rb").read() == io.open(b, "rb").read()
+    check("... the module holds the factory's three.js (the sheet did not name it), kit3d.js and kit3d.css, byte for byte "
+          "(design_system.py ships kit3d like kit)",
+          same(os.path.join(md, "assets", "vendor", "three.min.js"), src3)
+          and same(os.path.join(md, "assets", "kit3d.js"), os.path.join(kit3d_dir, "kit3d.js"))
+          and same(os.path.join(md, "assets", "kit3d.css"), os.path.join(kit3d_dir, "kit3d.css")), out)
+    check("... no 2D kit loaded for a 3D scene", "kit.js" not in p.replace("kit3d.js", "") and "assets/kit.css" not in p)
+    io.open(os.path.join(md, "assets", "kit3d_parts.js"), "w", encoding="utf-8").write("/* a course's new 3D parts */")
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck", "--force")
+    p = deck(md)
+    check("a course's own 3D parts (assets/kit3d_parts.js) load right after kit3d.js",
+          p.index("../assets/kit3d.js") < p.index("../assets/kit3d_parts.js") < p.index("GBDeck.init"), out)
+    # the sheet names three.min.js and its own scene scripts: kit3d.js follows three.js, nothing doubled
+    os.makedirs(os.path.join(md, "assets", "js"), exist_ok=True)
+    io.open(os.path.join(md, "assets", "js", "extra.js"), "w", encoding="utf-8").write("/* a module script */")
+    build_of(c, lambda s: s.update(scripts=["assets/vendor/three.min.js", "assets/js/extra.js"]))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck", "--force")
+    p = deck(md)
+    check("the sheet's scripts already name three.min.js: it is not loaded twice, kit3d.js goes right after it, before the sheet's other scripts",
+          p.count("three.min.js") == 1 and p.index("three.min.js") < p.index("../assets/kit3d.js") < p.index("kit3d_parts.js")
+          < p.index("assets/js/extra.js") < p.index("GBDeck.init"), out + p[-700:])
+    os.makedirs(os.path.join(tmp, "k3b"))
+    c2, md2 = new_course(os.path.join(tmp, "k3b"), script())
+    code, out = run(COMPILE, c2, "--module", "1", "--only", "deck")
+    p2 = deck(md2)
+    check("a deck with no 3D-kit scene loads none of it",
+          all(x not in p2 for x in ("kit3d.js", "kit3d.css", "three.min.js", "data-kit3d")), out)
 
 
 def v2520_part(tmp):
@@ -2368,6 +2484,7 @@ def main():
         code, out = run(COMPILE, c4, "--module", "1", "--init-build")
         check("--init-build writes a starter build sheet",
               code == 0 and os.path.isfile(os.path.join(c4, "working_claude", "script", "M01.build.json")), out)
+        out0 = out                       # the first --init-build's report (the later runs find the starters already there)
         sheet = cs.load(os.path.join(c4, "working_claude", "script", "M01.build.json"))
         check("the starter build sheet lists every slide with an empty figure (a photo's stays empty; a drawing's names its starter spec, 2.50.0)",
               sorted(sheet["screens"]) == ["s01", "s02", "s03", "s04", "t01", "t02"]
@@ -2380,7 +2497,7 @@ def main():
               "slide's entry names it (two-col, the light ground since 2.62.1's 80 / 20, a note that it is a starter)",
               {"s02.kit.json", "s03.kit.json"} <= set(os.listdir(figs)) and "s01.kit.json" not in os.listdir(figs)
               and s2e["composition"] == "two-col" and "dark" not in s2e and "starter" in s2e["_figure"]
-              and s3e["figure"] == "s03.kit.json" and "figure" in sheet["screens"]["s04"] and sheet["screens"]["s04"]["figure"] == "m01_s04_3d.html"
+              and s3e["figure"] == "s03.kit.json" and "figure" in sheet["screens"]["s04"] and sheet["screens"]["s04"]["figure"] == "s04.kit3d.json"
               and "starter figure: figures\\M01\\s03.kit.json - 3 parts, 3 steps" in out, (sorted(os.listdir(figs)), out))
         # 2.50.6 (M01 benchmark run 5, s05) - a model_3d slide gets its 2D starter too: declining the 3D ("declined_3d") edits
         # it, never writes a spec from nothing. The scene stays the plan: the entry still names the 3D figure
@@ -2389,7 +2506,7 @@ def main():
         spec4 = cs.load(s4k) if os.path.isfile(s4k) else {}
         check("2.50.6: --init-build writes a 2D starter spec for a model_3d slide - the script's own parts, a step per line - "
               "and its entry keeps the 3D scene as the plan, with a note how to switch to the starter (\"_2d\")",
-              bool(spec4.get("parts")) and len(spec4.get("steps") or []) >= 2 and s4e.get("figure") == "m01_s04_3d.html"
+              bool(spec4.get("parts")) and len(spec4.get("steps") or []) >= 2 and s4e.get("figure") == "s04.kit3d.json"
               and "s04.kit.json" in s4e.get("_2d", "") and "declined_3d" in s4e.get("_2d", "")
               and "_2d" in s4e.get("_figure", "")
               and "figures\\M01\\s04.kit.json" in out and "the 2D figure if the 3D scene is declined" in out, (s4e, spec4, out))
@@ -2428,12 +2545,25 @@ def main():
               code == 0 and cs.load(mine) == edited and "s03.kit.json" not in out and "s02.kit.json" not in out
               and again["screens"]["s03"]["figure"] == "s03.kit.json" and "_figure" not in again["screens"]["s03"], out)
         s4 = sheet["screens"]["s04"]
-        check("2.49.7: a model_3d slide's starter entry plans its scene by default - its figure, its scene file and three.js in "
-              "\"scripts\", how to build it (M03's m03_station3d.js, GUIDE 2b) and how to keep a 2D figure instead (\"declined_3d\")",
-              s4.get("figure") == "m01_s04_3d.html" and s4.get("visual_kind") == "model_3d"
-              and sheet["scripts"] == ["assets/vendor/three.min.js", "assets/js/m01_s04_3d.js"]
-              and "m03_station3d.js" in s4.get("_figure", "") and "declined_3d" in s4.get("_figure", "")
+        check("2.49.7: a model_3d slide's starter entry plans its scene by default - its figure is the 3D kit's spec (sNN.kit3d.json), "
+              "nothing goes into \"scripts\", the note teaches the kit and how to keep a 2D figure instead (\"declined_3d\")",
+              s4.get("figure") == "s04.kit3d.json" and s4.get("visual_kind") == "model_3d"
+              and sheet["scripts"] == []
+              and "SPEC.md" in s4.get("_figure", "") and "declined_3d" in s4.get("_figure", "")
               and "__scene3d" in s4.get("_figure", ""), sheet)
+        k3 = os.path.join(figs, "s04.kit3d.json")
+        spec3d = cs.load(k3) if os.path.isfile(k3) else {}
+        check("3D kit: --init-build writes the starter scene sNN.kit3d.json - valid JSON, a label from the slide, metres, a view, parts "
+              "with ids and labels in the slide's own words, a \"_todo\" - and says so; no scene .js is planned",
+              spec3d.get("units") == "m" and spec3d.get("view") and spec3d.get("label") and spec3d.get("parts")
+              and spec3d.get("labels") and spec3d.get("_todo")
+              and all(p.get("id") and p.get("type") and len(p.get("at") or []) == 3 for p in spec3d.get("parts", []))
+              and {l["part"] for l in spec3d["labels"]} == {p["id"] for p in spec3d["parts"]}
+              and "starter 3D scene: figures\\M01\\s04.kit3d.json" in out0 and not any(x.endswith("_3d.js") for x in sheet["scripts"]),
+              (spec3d, out0))
+        if spec3d:
+            code, kout = run(os.path.join(SKILLS, "course-visuals", "kit3d", "scripts", "check_kit3d.py"), "spec", k3)
+            check("3D kit: ... and the starter scene passes check_kit3d.py (no problem; notes allowed)", code == 0, kout)
         code, out = run(COMPILE, c4, "--module", "1", "--init-build")
         check("--init-build never replaces an existing build sheet", code == 2, out)
         # finding 8: a new module has no folder - --init-build makes it, with the factory's style files, ready to compile
@@ -2754,6 +2884,7 @@ def main():
         v2520_part(tmp)
         layouts_part(tmp)
         three_part(tmp)
+        kit3d_part(tmp)
         variety_part(tmp)
         look_part(tmp)
         light_part(tmp)

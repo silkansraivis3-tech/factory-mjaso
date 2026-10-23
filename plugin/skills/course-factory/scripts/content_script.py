@@ -939,6 +939,8 @@ def flat_3d(s, b, body):
         return ""
     if rel.lower().endswith((".html", ".htm")) and body and SCENE_MARK.search(body):
         return ""
+    if rel.lower().endswith(".kit3d.json"):               # a 3D-kit scene spec (course-visuals/kit3d) is a 3D scene
+        return ""
     return rel
 
 
@@ -1001,7 +1003,7 @@ def build_findings(course, script):
         rel, body = (b.get("figure") or "").replace("\\", "/"), None
         if rel.lower().endswith((".html", ".htm")) and os.path.isfile(os.path.join(figdir, rel)):
             body = io.open(os.path.join(figdir, rel), encoding="utf-8").read()
-        scene = scene or (rel.lower().endswith((".html", ".htm")) and scene_in(body))
+        scene = scene or rel.lower().endswith(".kit3d.json") or (rel.lower().endswith((".html", ".htm")) and scene_in(body))
         flat = flat_3d(s, b, body)
         if flat:
             found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "visual_kind", "level": NOTE,

@@ -5,8 +5,9 @@
 ```
 1  python compile/scripts/compile_module.py <course> --module 1 --init-build
       the build sheet (working_claude\script\M01.build.json), a STARTER figure-kit spec for every drawn slide
-      (working_claude\figures\M01\sNN.kit.json: the script's parts on a grid, a step per line) and the 3D starter entry -
-      a 3D slide gets both (2.50.6): declining the 3D ("declined_3d") edits its 2D starter
+      (working_claude\figures\M01\sNN.kit.json: the script's parts on a grid, a step per line) and the 3D starter - a 3D
+      slide gets a 3D-kit scene spec (sNN.kit3d.json, course-visuals\kit3d\SPEC.md) and its 2D starter (2.50.6):
+      declining the 3D ("declined_3d") edits the 2D starter
 2  read course-visuals\kit\CATALOGUE.md - one line per kit part, the spec format, marks and steps. Never kit.js.
 3  fill the build sheet (each slide's picture, layout, the photos) and EDIT the starter specs - never write one from nothing
 4  python compile/scripts/build_module.py <course> --module 1            again after every change, until PASS
@@ -260,28 +261,40 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   the scene, propose an AI picture unasked - `nano-banana:realistic-visuals`: describe it, show the prompt and the
   price, make it only after the person's yes, record it `"generated": true` in `_photo_meta.json`. Equipment a trainee
   must recognise is never an AI picture (L33): it stays a photo to take.
-- **A `model_3d` slide (2.49.0, L46).** The scene is the module's own three.js file, listed in the build sheet's
-  scripts like M03's `m03_station3d.js`, built to `knowledge/media-and-tasks.json` → `three_d.performance` (one shared
-  renderer, built with its slide, first frame within 1 s and 30 fps with the CPU slowed 4x).
-  **Build the scene on the slide BEFORE it (2.49.2).** The first frame under 1 s is only reachable when the scene is
+- **A `model_3d` slide (2.49.0, L46) - drawn with the 3D kit.** Do not write three.js. Write the scene as a short
+  JSON spec, `working_claude\figures\MNN\sNN.kit3d.json` (parts, labels, steps: `course-visuals\kit3d\SPEC.md` is the
+  format, `PARTS.md` lists every part; the finished IGF scenes are ported in `course-visuals\kit3d\examples\`), and
+  name it as the slide's `"figure": "sNN.kit3d.json"` - `--init-build` writes a starter for it. Optional on the
+  entry: `"poster": "assets/img/<picture of the model>.png"`, shown until the first frame and when there is no WebGL.
+  Check the spec: `python -I course-visuals/kit3d/scripts/check_kit3d.py spec <file>`; then smoke-test the compiled deck
+  (below), then measure it. **Full screen, clickable labels, building the scene on the slide before (so the first frame is
+  under 1 s), `window.__noPrepare` and `window.__scene3d` all come from the kit, unasked** - a spec never lists them. The
+  compile ships `three.min.js`, `kit3d.js` and `kit3d.css` with the module (loaded before `GBDeck.init`) and reports a
+  spec that still has the starter's `"_todo"` key. **A hand-written three.js scene only when the kit lacks a part:** add the
+  part to the kit instead - `KIT3D.define(...)` in the module's `assets/kit3d_parts.js` (PARTS.md says how; the compile
+  loads it after `kit3d.js`), and the part is promoted into the kit later, like the 2D kit's `kit_parts.js` (L55). Only if
+  even that cannot draw the slide, the scene is the module's own three.js file in the build sheet's scripts, like M03's
+  `m03_station3d.js`, built to `knowledge/media-and-tasks.json` → `three_d.performance` (one shared renderer, built with
+  its slide, first frame within 1 s and 30 fps with the CPU slowed 4x); the next paragraphs are its rules.
+  **A hand-written scene builds on the slide BEFORE it (2.49.2).** The first frame under 1 s is only reachable when the scene is
   already built - geometry, materials, first render - while the trainees are still looking at the slide before: hook
   the slide before's entry in `window.GB_HOOKS` to build it (hidden), and the 3D slide's own hook only reveals the
   canvas and draws; honour `window.__noPrepare` and report `window.__scene3d` as `measure/GUIDE.md` §2b says - the
   measuring tool reads it. A scene built when its slide opens took seconds on the throttled CPU in IGF M07-M15.
-  **After every edit of a scene file, smoke-test it in seconds** before the next build:
+  **After every edit of a scene (spec or file), smoke-test it in seconds** before the next build:
   `python course-module-ux/measure/scripts/smoke3d.py <deck.html> [--slide s05]` - the 3D slide alone (and the slide
   before it) in a hidden browser with a 15 s limit: its first frame, or FAIL when it throws, never draws or hangs the
   page (2.63.0; a hanging scene once cost a build three 600 s waits, IGF M01 v262 runs 6-8; M01 s05 checks in ~9 s).
   **Measure it**: `node course-module-ux/measure/scripts/perf3d.mjs <deck.html>
   --slides=all` (Node + headless Chrome, CPU slowed 4x, warm and cold first frame, fps; exit 1 over budget; see
-  `measure/GUIDE.md` §2b). **Every 3D scene answers a tap** (`three_d.interaction`): a tap - not a drag - on a part
+  `measure/GUIDE.md` §2b). **Every 3D scene answers a tap** (`three_d.interaction`; the kit does it for a spec): a tap - not a drag - on a part
   highlights it (blue glow, the camera frames it, its name shows); a second tap on it, or a tap beside the parts,
   puts the view back. The parts that can be tapped are the ones the labels name; raycast only on the tap, never per
   frame; buttons and taps share one mode. Reference: IGF M03 `m03_station3d.js` (the highlight, the tap logic on
   `pointerup`). A scene that only turns is not finished. A `[data-stage]` in a wide column takes the column's own
   height (2.49.2) - no module override needed.
   **Full screen and labels that select (2.63.2, Aleksis: "the 3D scenes sit small"; "I want to be able to click on
-  the labels as well").** The deck engine (`gb_deck.js`) gives every 3D slide's box - `[data-3d-box]`, else the
+  the labels as well") - the kit's scenes have both; a hand-written scene wires them itself.** The deck engine (`gb_deck.js`) gives every 3D slide's box - `[data-3d-box]`, else the
   `.fig` holding the `[data-stage]` - a 44 px Full screen button in its freest corner; canvas, labels, buttons and
   hint go full screen together, Next / Back / the swipe stay off while it is, Esc or the button leave it. The scene
   must **follow its box**: resize the renderer and camera on `window` "resize" and on the box's `gb3d-resize`. Every
@@ -298,10 +311,11 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   `m04-3d`) needs a rule in the module's stylesheet or a query in its script - a class nothing styles or finds is a
   defect in `audit_ui.py` / `check_task_pages.py`. Layout goes in the stylesheet, never in a `style=""` attribute.
   **At least one scene per module where the subject allows it - strongly recommended (L60, 2.49.7).** `--init-build`
-  gives a `model_3d` slide a starter scene entry: its figure (`m01_s05_3d.html`), its scene file and `three.min.js` in
-  `"scripts"`, and a `"_figure"` note on how to build it - the build reports the files missing until they are written.
+  gives a `model_3d` slide a starter scene entry: its figure (`s05.kit3d.json` - nothing goes into `"scripts"`), a
+  `"_figure"` note on how to build it, and writes the starter spec itself (a label, metres, a view, parts guessed from the
+  slide's words and laid side by side, each with a label, and a `"_todo"` to place them as on board - never overwritten).
   It also writes the slide's 2D starter spec (`sNN.kit.json`, 2.50.6), named in the entry's `"_2d"` note but not in
-  `"figure"`: to keep a 2D figure, point `"figure"` at it, take the scene files off `"scripts"` and write
+  `"figure"`: to keep a 2D figure, point `"figure"` at it and write
   `"declined_3d"` - then edit the starter, never write a spec from nothing (M01 benchmark run 5, s05).
   A script with no `model_3d` slide gets the same entry on its best slide, unasked (`content_script.best_3d`: a shape,
   an inside or a layout in space; never a real photo's slide), with a `"_3d"` note saying why. **A photograph wanted
@@ -313,7 +327,7 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   scene gets a RECOMMENDED block in the build and its own card on the review page, naming the best candidate - never a
   block: the operator declines with their reason, `"declined_3d"` at the TOP of the build sheet, and it is not
   proposed again. A 3D slide whose
-  figure is not a scene (a kit figure, an `.svg`, a photo - anything but an `.html` figure holding a `[data-stage]`,
+  figure is not a scene (a 2D kit figure, an `.svg`, a photo - anything but a `.kit3d.json` spec or an `.html` figure holding a `[data-stage]`,
   `data-3d`, `data-scene` or a `<canvas>`) is a must-fix in the build and a note on the script's review page:
   "asks for a 3D scene; it has a 2D figure". To keep the 2D figure, write the operator's reason in the slide's entry,
   `"declined_3d": "<their reason>"`; it is not flagged again. The deck's `data-visual` and the plan then say the 2D

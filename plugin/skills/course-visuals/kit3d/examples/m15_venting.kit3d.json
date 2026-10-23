@@ -1,0 +1,58 @@
+{
+  "_about": "IGF M15 s05 'Venting - only in an emergency' - the hand-made m15_venting3d.js (1,421 lines) as a 3D-kit spec. World axes as in the original: deck top y = 0, +x aft (the accommodation), z across (+z the ship's side towards the viewer), the deck is centred on z = 0; 1 unit = 1 m. The original's legend chip is the zone label; its Labels button is the kit's own.",
+  "label": "3D model of a ship's weather deck: a fuel tank with a relief valve on top, the vent line running from the valve along posts to the vent mast, and the mast outlet high above the deck, at least B/3 or 6 m, and at least 10 m from the air intake of the accommodation. The hazardous zone is drawn round the outlet. The Vent button shows the relief valve lifting and the gas leaving the mast and drifting downwind, away from the air intake.",
+  "units": "m",
+  "view": {"az": -31.5, "el": 17.2, "fill": 1.06},
+  "frame": {"top": 66},
+  "box": [-8.6, -0.4, -4.6, 14.8, 9.8, 4.6],
+  "parts": [
+    {"id": "deck", "type": "deck_plate", "pick": false, "at": [3.1, 0, 4.6], "size": [23.4, 9.2], "thick": 0.4, "side": 1.2, "rail": true},
+
+    {"id": "tank", "type": "tank_c", "at": [-4, 2, 0], "r": 1.5, "len": 4.8, "head": 0.8, "rings": 0, "saddles": [-1.6, 1.6], "base": -2, "dome": true},
+    {"id": "valve", "type": "valve", "kind": "relief", "at": [-4.6, 3.5, 0], "mat": "red", "lift": 0.16},
+
+    {"id": "vent", "type": "pipe", "mat": "pipe", "r": 0.14, "bands": 1.4, "path": [[-4.03, 3.82, 0], [-3.9, 3.82, 0], [-3.9, 5, 0], [0.15, 5, 0]]},
+    {"id": "vent", "type": "box", "at": [-2.4, 4.2, 0], "size": [0.14, 1.4, 0.14], "mat": "steel_dark"},
+    {"id": "vent", "type": "box", "at": [-0.5, 2.4, 0], "size": [0.14, 4.8, 0.14], "mat": "steel_dark"},
+
+    {"id": "mast", "type": "vent_mast", "at": [0.2, 0, 0], "h": 6.2, "r": 0.17, "stays": false},
+    {"id": "mast", "type": "pipe", "mat": "steel_dark", "r": 0.035, "path": [[0.2, 5.3, 0], [-2.2, 0.05, 0]]},
+    {"id": "mast", "type": "pipe", "mat": "steel_dark", "r": 0.035, "path": [[0.2, 5.3, 0], [2.6, 0.05, 0]]},
+    {"id": "mast", "type": "box", "at": [-2.2, 0.15, 0], "size": [0.3, 0.3, 0.3], "mat": "steel_dark"},
+    {"id": "mast", "type": "box", "at": [2.6, 0.15, 0], "size": [0.3, 0.3, 0.3], "mat": "steel_dark"},
+
+    {"id": "accom", "type": "accommodation", "at": [12.8, 0, 0], "rot": -90, "size": [8.8, 8.4, 3.6], "decks": 3},
+    {"id": "intake", "type": "air_intake", "at": [10.85, 3.2, 0], "rot": -90, "size": [2.4, 1.2, 0.3]},
+
+    {"type": "dimension", "white": true, "r": 0.04, "a": [2.1, 0.02, 0], "b": [2.1, 6.5, 0], "tick": [0.22, 0, 0],
+     "text": "At least B/3 or 6 m (the greater) above the deck", "ox": 90, "oy": 52},
+    {"type": "dimension", "color": "#ffe27a", "r": 0.04, "a": [0.2, 6.5, 0], "b": [10.7, 3.2, 0], "tick": [0, 0.25, 0],
+     "text": "At least 10 m from any air intake", "oy": -10},
+
+    {"id": "zone", "type": "zone", "level": 2, "shape": "sphere", "at": [0.2, 6.5, 0], "r": 4.5},
+    {"id": "zone", "type": "zone", "level": 1, "shape": "sphere", "at": [0.2, 6.5, 0], "r": 3},
+
+    {"id": "plume", "type": "gas", "kind": "plume", "pick": false, "at": [0.2, 6.75, 0], "to": 5, "wind": [-1, 0, 0], "size": 1.2, "opacity": 0.5},
+    {"id": "wind", "type": "arrow", "pick": false, "a": [7.1, 9.4, 0], "b": [2.2, 9.4, 0], "r": 0.12, "color": "#9fdcff", "on": 0}
+  ],
+  "labels": [
+    {"part": "tank", "text": "Fuel tank", "at": [-4.6, 1, 1.5], "up": -40},
+    {"part": "valve", "text": "Relief valve", "at": [-4.6, 4.9, 0], "up": 56, "side": -1},
+    {"part": "vent", "text": "Vent line", "at": [-2.2, 5.1, 0], "up": 50},
+    {"part": "mast", "text": "Vent mast outlet", "at": [0.2, 6.8, 0], "up": 46, "side": 1},
+    {"part": "accom", "text": "Accommodation", "at": [11.5, 8.45, 3.6], "up": 40},
+    {"part": "intake", "text": "Air intake", "at": [10.7, 3.7, -0.6], "up": -30, "side": -1},
+    {"part": "zone", "text": "Zone: 3 m + 1.5 m", "at": [-1.9, 8.6, 0], "up": 24, "side": -1, "tone": "amber", "steps": [0, 2]},
+    {"text": "Vented gas: up, then downwind", "at": [-3.2, 8.4, 0], "up": 30, "side": -1, "small": true, "when": "plume.on > 0.5"},
+    {"text": "Wind", "at": [3.6, 9.4, 0], "up": 28, "small": true, "when": "wind.on > 0.5"}
+  ],
+  "steps": [
+    {},
+    {"state": {"plume.on": 1, "wind.on": 1, "valve.open": 1}},
+    {"view": {"frame": ["zone"], "fill": 0.86}, "select": "zone", "state": {"plume.on": 1, "wind.on": 1, "valve.open": 1}}
+  ],
+  "controls": [
+    {"text": "Vent", "state": {"plume.on": 1, "wind.on": 1, "valve.open": 1}},
+    {"text": "Hide zone", "text_on": "Show zone", "state": {"zone.on": 0}}
+  ]
+}
