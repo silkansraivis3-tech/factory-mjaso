@@ -157,6 +157,7 @@ def main():
         check("... and one with a short limit goes anyway when it runs out (%.1f s)" % got["c"][0], 0.4 <= got["c"][0] < 1.4, got)
         check("2.65.0 the long pole's first build (first=True) never waits (%.2f s)" % got["d"][0], got["d"][0] < 0.3, got)
         check("... the turn is freed afterwards", not os.path.exists(os.path.join(pool, "cold_build.lock")))
+        foreground_part(pool)
         reuse_part(pool)
     finally:
         shutil.rmtree(pool, ignore_errors=True)
@@ -173,6 +174,24 @@ setTimeout(function () { var p = document.createElement('pre'); p.id = 'o';
   p.textContent = JSON.stringify({w: innerWidth, h: innerHeight, sb: innerWidth - document.documentElement.clientWidth,
     late: true, before: before, gl: !!gl}); document.body.appendChild(p); }, 5000);
 </script></body></html>"""
+
+
+def foreground_part(pool):
+    """2.66.4 - the hidden Chrome's pages are never backgrounded: Chrome lowers an invisible page's renderer to Windows Idle
+    priority (seen on the 2.66.3 IGF run: the kept Chromes' renderers at Idle, a figure probe 10-17 s real for ~1 s of page
+    clock, ~1.2 s alone) - on a laptop with two fast cores that work goes to the slow ones. Puppeteer passes these flags on
+    every launch; review_sheets.mjs and shot3d.mjs did already, the kept Chrome and the studio did not"""
+    import browser_slots as bs
+    args = bs.keeper_args("chrome.exe", os.path.join(pool, "prof"), ("--hide-scrollbars",))
+    check("2.66.4 the kept Chrome starts with every no-background flag (%s)" % ", ".join(bs.FOREGROUND),
+          all(f in args for f in bs.FOREGROUND) and "--remote-debugging-port=0" in args and args[-1] == "about:blank", args)
+    cmd = ["chrome.exe", "--headless=new", "--disable-gpu", "--window-size=1296,895", "--dump-dom"] + list(bs.FOREGROUND) + ["file:///x.html"]
+    check("... a probe command carrying them still runs in the kept Chrome (dom_job)", bs.dom_job(cmd) is not None, bs.dom_job(cmd))
+    rec_path = os.path.join(pool, "old_keeper.json")
+    io_write(rec_path, json.dumps({"pid": os.getpid(), "keeper": os.getpid(), "ws": "ws://x", "exe": "chrome.exe", "jobs": 0}))
+    check("... a kept Chrome started before 2.66.4 (no \"fg\" in its record) is not used again", not bs.current(json.load(open(rec_path)), "chrome.exe"))
+    check("... one started with them is", bs.current({"pid": os.getpid(), "keeper": os.getpid(), "exe": "chrome.exe", "jobs": 0,
+                                                      "fg": bs.FG}, "chrome.exe"))
 
 
 def reuse_part(pool):

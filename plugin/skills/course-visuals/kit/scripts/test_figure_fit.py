@@ -296,6 +296,13 @@ def column_order_part():
         check("a search that finds nothing stops at CF_FIT_MEASURES measurements (here 6 of the %d it would take) and says so; "
               "the default is 16 - every real IGF fit on record was found within 11" % n_all,
               new is None and len(calls) == 6 < n_all and "stopped after 6" in how, (len(calls), how))
+        ff.MAX_MEASURES = 16
+        del calls[:]
+        inside = [("1280x800", "0", "inside", "E", "pokes out of ER")] * 2
+        new, how, best = ff.try_fixes("x.kit.json", "s03", spec, r0, inside, None)
+        check("2.66.4 a figure whose only finding is INSIDE (not its words' size) gets at most %d re-fit measurements, not 16 "
+              "(the 2.66.3 run: IGF M01 s03 / s04, two searches of 16 probes at 10-17 s, every build, none found a fit)"
+              % ff.INSIDE_MEASURES, len(calls) <= ff.INSIDE_MEASURES and "stopped after" in how, (len(calls), how))
     finally:
         ff.measure, ff.has_strip, ff.MAX_MEASURES = real, strip_, 16
 

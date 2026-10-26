@@ -322,8 +322,13 @@ def held():
 # Any flag this does not know, any CDP error: the job runs the old way, a fresh Chrome. CF_CHROME_REUSE=off: always.
 REUSE_JOBS = 50
 REUSE_IDLE = 60
+# 2.66.4 - an invisible page's renderer is "backgrounded" by Chrome: Windows Idle priority (the 2.66.3 IGF run: every kept
+# Chrome's renderers at Idle, a figure probe 10-17 s real for ~1 s of page clock, ~1.2 s alone; on a laptop with two fast
+# cores such work runs on the slow ones). Puppeteer passes these on every launch; review_sheets.mjs and shot3d.mjs did already
+FOREGROUND = ("--disable-renderer-backgrounding", "--disable-background-timer-throttling", "--disable-backgrounding-occluded-windows")
+FG = 1              # in a kept Chrome's record: started with FOREGROUND (one started before is retired, not used)
 _HARMLESS = ("--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--no-default-browser-check",
-             "--allow-file-access-from-files", "--dump-dom")
+             "--allow-file-access-from-files", "--dump-dom") + FOREGROUND
 _VARIANT = ("--hide-scrollbars", "--disable-3d-apis")          # launch flags that change the page: the keeper's own
 
 
@@ -533,12 +538,25 @@ def _retire(state_file):
         kill_tree(int(rec["pid"]))
 
 
+def current(rec, exe):
+    """a kept Chrome's record still to be used: the same browser, it and its keeper alive, under CF_CHROME_JOBS jobs, started
+    with the FOREGROUND flags (2.66.4)"""
+    return bool(rec) and rec.get("exe") == exe and alive(int(rec.get("pid") or 0)) and alive(int(rec.get("keeper") or 0)) \
+        and int(rec.get("jobs") or 0) < _env_int("CF_CHROME_JOBS", REUSE_JOBS) and rec.get("fg") == FG
+
+
+def keeper_args(exe, prof, variant):
+    """the kept Chrome's command line"""
+    return [exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--no-default-browser-check",
+            "--allow-file-access-from-files", "--remote-debugging-port=0", "--user-data-dir=" + prof] + list(FOREGROUND) \
+        + list(variant) + ["about:blank"]
+
+
 def _kept(slot_path, exe, variant):
     """the record of this slot's kept Chrome for these flags - started when there is none (the keeper writes it)"""
     p = _keeper_file(slot_path, variant)
     rec = _read_json(p)
-    if rec and rec.get("exe") == exe and alive(int(rec.get("pid") or 0)) and alive(int(rec.get("keeper") or 0)) \
-            and int(rec.get("jobs") or 0) < _env_int("CF_CHROME_JOBS", REUSE_JOBS):
+    if current(rec, exe):
         return p, rec
     if rec or os.path.exists(p):
         _retire(p)
@@ -682,8 +700,7 @@ def _keep(state_file, exe, variant):
             shutil.rmtree(old, ignore_errors=True)
     shutil.rmtree(prof, ignore_errors=True)
     os.makedirs(prof, exist_ok=True)
-    args = [exe, "--headless=new", "--disable-gpu", "--no-first-run", "--mute-audio", "--no-default-browser-check",
-            "--allow-file-access-from-files", "--remote-debugging-port=0", "--user-data-dir=" + prof] + list(variant) + ["about:blank"]
+    args = keeper_args(exe, prof, variant)
     kw = {} if os.name == "nt" else {"start_new_session": True}
     p = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **kw)
     job = _bind(p)                                       # noqa: F841 - held for the keeper's life: its Chrome ends with it
@@ -703,7 +720,7 @@ def _keep(state_file, exe, variant):
         kill_tree(p.pid)
         return 1
     _write_json(state_file, {"pid": p.pid, "keeper": os.getpid(), "ws": ws, "exe": exe, "variant": list(variant),
-                             "jobs": 0, "busy": None, "used": time.time()})
+                             "jobs": 0, "busy": None, "used": time.time(), "fg": FG})
     idle = _env_int("CF_CHROME_IDLE", REUSE_IDLE)
     try:
         while p.poll() is None:

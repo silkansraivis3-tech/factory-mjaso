@@ -484,6 +484,7 @@ class _Run(object):
         args = [exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--mute-audio",
                 "--no-default-browser-check", "--user-data-dir=" + prof, "--allow-file-access-from-files",
                 "--window-size=%d,%d" % size, "--virtual-time-budget=%d" % (6000 if shot_png else 20000)]
+        args += list(browser_slots.FOREGROUND)      # 2.66.4: never an Idle-priority renderer (browser_slots.FOREGROUND)
         args += ["--screenshot=" + shot_png] if shot_png else ["--dump-dom"]
         self.out = os.path.join(prof, "dom.html")
         self.slot = browser_slots.slot()
