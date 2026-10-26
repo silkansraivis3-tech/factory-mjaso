@@ -1,15 +1,15 @@
 {
-  "size": [650, 330],
+  "size": [490, 310],
   "label": "How each IGF fuel is kept on board, on one temperature scale: hydrogen as a liquid at about -253 °C, LNG at about -162 °C, LPG and ammonia refrigerated at about -42 °C and -33 °C (or under pressure at room temperature), and at room temperature CNG as a gas compressed to 200-250 bar and methanol and ethanol as liquids.",
   "idle": "Press Next step",
   "parts": [
-    { "id": "S", "type": "scale", "orient": "h", "x": 40, "y": 290, "len": 560, "w": 18, "min": -260, "max": 60, "every": 40, "unit": "°C", "reach": 270,
+    { "id": "S", "type": "scale", "orient": "h", "x": 24, "y": 266, "len": 440, "w": 26, "min": -260, "max": 40, "every": 80, "unit": "°C", "reach": 270,
       "markers": [
-        { "label": "Hydrogen", "note": "liquid, -253 °C", "at": -253, "rise": 200 },
-        { "label": "LNG", "note": "liquid, -162 °C", "at": -162, "rise": 120 },
-        { "label": "LPG", "note": "-42 °C or pressure", "at": -42, "rise": 56, "side": "left" },
-        { "label": "Ammonia", "note": "toxic; -33 °C or pressure", "at": -33, "rise": 170, "side": "left" },
-        { "label": "CNG, methanol, ethanol", "note": "room temperature: CNG a gas at 200-250 bar,\nmethanol and ethanol liquids", "at": 20, "rise": 236, "side": "left" }
+        { "label": "Hydrogen", "note": "liquid, -253 °C", "at": -253, "rise": 190 },
+        { "label": "LNG", "note": "liquid, -162 °C", "at": -162, "rise": 115 },
+        { "label": "LPG", "note": "-42 °C or pressure", "at": -42, "rise": 60, "side": "left" },
+        { "label": "Ammonia", "note": "toxic; -33 °C or pressure", "at": -33, "rise": 155, "side": "left" },
+        { "label": "CNG, methanol, ethanol", "note": "room temperature: CNG a gas\nat 200-250 bar, the others liquids", "at": 20, "rise": 225, "side": "left" }
       ] }
   ],
   "steps": [

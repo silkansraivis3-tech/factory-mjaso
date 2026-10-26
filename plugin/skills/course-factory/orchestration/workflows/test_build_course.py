@@ -243,7 +243,13 @@ def main():
               "measurement: a fix round changed s05's kind and M02 stopped compiling)",
               "a Your turn activity" not in p6.get("fix:1", "") and "NEVER edit working_claude/script/M01.json" in p6.get("fix:1", "")
               and "Never run content_script.py approve" in p6.get("fix:1", ""), p6.get("fix:1", "")[-900:])
-        seven = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_scriptonly": ["1"]})
+        cap = [pf.get("fixfig:1", ""), p6.get("fix:1", "")]
+        check("2.66.0 a fix round (figure and QA) gets AT MOST TWO builds, tries each figure in the studio first, and stops "
+              "after the second whatever it prints (the second proof run: three figure fixers, 58-102 min and $50, "
+              "rebuilding \"until module clean\")",
+              all("AT MOST TWO build_module.py runs" in p and "studio.py" in p and "never a third build" in p
+                  and "until module clean" not in p for p in cap), [p[-700:] for p in cap])
+        seven =run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_scriptonly": ["1"]})
         check("... a QA whose only BROKEN finding is the approved script's sends nothing back (reported, blocking)",
               not any(x.startswith("fix:") for x in seven.get("labels", [])) and "1" in seven.get("r", {}).get("blocking", []),
               seven.get("labels"))

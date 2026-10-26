@@ -1,22 +1,22 @@
 {
-  "size": [640, 370],
+  "size": [500, 330],
   "label": "Ship-to-ship LNG bunkering seen along the ships, not to scale: the bunker vessel's line, its valve and a breakaway coupling, the bunker hose over the gap, the dry-disconnect coupling at the ship's bunkering station, the manifold valve and the ESD valve on the line to the fuel tank, a drip tray under the coupling and valves, and a water curtain running down the ship's side under the station.",
   "idle": "Press Next step",
   "parts": [
-    { "id": "BV", "type": "ga", "x": 10, "y": 218, "w": 200, "h": 110, "cut": true, "draft": 0.25, "label": "bunker vessel" },
-    { "id": "G", "type": "ga", "x": 234, "y": 150, "w": 396, "h": 178, "cut": true, "draft": 0.54, "label": "LNG-fuelled ship" },
-    { "id": "D", "type": "drip_tray", "on": "G.deck", "at": 300, "w": 112, "h": 8, "drip": 16, "label": "drip tray", "labelAt": "below" },
-    { "id": "P1", "type": "pipe", "fluid": "liquid", "from": [626, 112], "to": [270, 112], "value": 0, "fill": 0 },
-    { "id": "DC", "type": "coupling", "x": 270, "y": 112, "kind": "dry", "label": "dry-disconnect\ncoupling", "labelAt": "above", "value": 0 },
-    { "id": "MV", "type": "valve", "at": "P1@0.82", "label": "manifold valve", "trip": false, "value": 0 },
-    { "id": "EV", "type": "valve", "at": "P1@0.42", "label": "ESD valve", "value": 0 },
-    { "id": "WC", "type": "water_curtain", "on": "G.deck", "at": 226, "w": 12 },
-    { "id": "BC", "type": "coupling", "x": 120, "y": 200, "kind": "breakaway", "label": "breakaway\ncoupling", "labelAt": "above", "value": 1 },
+    { "id": "BV", "type": "ga", "x": 10, "y": 218, "w": 140, "h": 80, "cut": true, "draft": 0.25, "label": "bunker vessel" },
+    { "id": "G", "type": "ga", "x": 180, "y": 150, "w": 300, "h": 120, "cut": true, "draft": 0.54, "label": "LNG-fuelled ship" },
+    { "id": "D", "type": "drip_tray", "on": "G.deck", "at": 236, "w": 96, "h": 16, "drip": 14, "label": "drip tray", "labelAt": "above", "value": 0 },
+    { "id": "GC", "type": "gas_cloud", "x": 186, "y": 54, "w": 84, "h": 64, "from": [216, 112], "drift": [8, -14], "value": 0 },
+    { "id": "P1", "type": "pipe", "fluid": "liquid", "from": [496, 112], "to": [216, 112], "value": 0, "fill": 0 },
+    { "id": "DC", "type": "coupling", "x": 216, "y": 112, "kind": "dry", "label": "bunkering station:\ndry-disconnect\ncoupling", "labelAt": "above", "value": 0 },
+    { "id": "MV", "type": "valve", "at": "P1@0.8", "label": "manifold valve", "trip": false, "value": 0 },
+    { "id": "EV", "type": "valve", "at": "P1@0.5", "label": "ESD valve", "value": 0 },
+    { "id": "WC", "type": "water_curtain", "on": "G.deck", "at": 172, "w": 12 },
+    { "id": "BC", "type": "coupling", "x": 85, "y": 200, "kind": "breakaway", "label": "breakaway\ncoupling", "labelAt": "above", "value": 1 },
     { "id": "P2", "type": "pipe", "fluid": "liquid", "from": [14, 200], "to": "BC.left", "value": 0, "fill": 0 },
-    { "id": "BVv", "type": "valve", "at": "P2@0.45", "label": "valve", "labelAt": "right", "trip": false, "value": 0 },
-    { "id": "H", "type": "hose", "from": "BC.right", "to": "DC.left", "sag": 34, "label": "bunker hose", "value": 0, "fill": 0 },
-    { "id": "N1", "type": "text", "text": "to the LNG fuel tank", "x": 560, "y": 92 },
-    { "id": "N3", "type": "text", "text": "bunkering station", "for": "D" },
+    { "id": "BVv", "type": "valve", "at": "P2@0.3", "label": "valve", "labelAt": "above", "trip": false, "value": 0 },
+    { "id": "H", "type": "hose", "from": "BC.right", "to": "DC.left", "sag": 34, "label": "hose", "value": 0, "fill": 0 },
+    { "id": "N1", "type": "text", "text": "to the fuel tank", "x": 410, "y": 92 },
     { "id": "N4", "type": "text", "text": "water curtain", "for": "WC", "reveal": true }
   ],
   "steps": [
@@ -25,9 +25,9 @@
       "play": [["BVv", 1, 500], ["MV", 1, 500, 300], ["EV", 1, 500, 500], ["P2", 1, 300, 600], ["P2.fill", 1, 700, 600, "linear"],
                ["H", 1, 300, 1200], ["H.fill", 1, 900, 1200, "linear"], ["P1", 1, 300, 2000], ["P1.fill", 1, 1200, 2000, "linear"]] },
     { "title": "3 · A flange leaks: the drip tray catches the LNG, the water curtain protects the ship's side", "line": 3,
-      "play": [["D", 0.7, 2600, 0, "linear"], ["WC", 1, 700, 300], ["N4", 1, 500, 300]] },
+      "play": [["GC", 1, 900], ["D", 0.7, 2600, 0, "linear"], ["WC", 1, 700, 300], ["N4", 1, 500, 300]] },
     { "title": "4 · ESD: the ESD valve and the bunker vessel's valve shut - the flow stops", "line": 4,
-      "play": [["EV", 0, 600], ["BVv", 0, 600], ["MV", 0, 600, 200], ["P1", 0, 400], ["H", 0, 400], ["P2", 0, 400]] },
+      "play": [["EV", 0, 600], ["BVv", 0, 600], ["MV", 0, 600, 200], ["P1", 0, 400], ["H", 0, 400], ["P2", 0, 400], ["GC", 0, 900, 300]] },
     { "title": "5 · The ships drift apart: the breakaway coupling parts and both halves seal", "line": 5, "play": [["BC", 0, 900]] }
   ]
 }

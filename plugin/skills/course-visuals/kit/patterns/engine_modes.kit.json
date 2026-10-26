@@ -1,16 +1,15 @@
 {
-  "size": [580, 360],
+  "size": [450, 340],
   "label": "One dual-fuel engine cylinder in its three modes: in gas mode the gas admitted through the gas valve burns, lit by a small pilot injection of fuel oil; on a gas trip the gas valve closes and the gas supply stops; in fuel-oil mode the engine runs and burns fuel oil only.",
   "idle": "Press Next step",
   "parts": [
-    { "id": "M", "type": "step_track", "x": 40, "y": 120, "vertical": true, "gap": 70, "steps": ["Gas mode", "Gas trip", "Fuel-oil mode"] },
-    { "id": "C", "type": "cylinder", "x": 240, "y": 66, "w": 200, "h": 280 },
-    { "id": "F", "type": "flame", "x": 340, "y": 170, "size": 40, "value": 0 },
-    { "id": "O", "type": "pipe", "fluid": "liquid", "from": [284, 8], "to": "C.oil", "value": 0 },
-    { "id": "Gp", "type": "pipe", "fluid": "gas", "from": [536, 356], "via": [[536, 36], [396, 36]], "to": "C.gas", "value": 0 },
-    { "id": "VG", "type": "valve", "at": "Gp@0.3", "size": 11, "label": "gas valve", "labelAt": "right", "value": 1 },
-    { "id": "N1", "type": "text", "x": 274, "y": 22, "anchor": "end", "text": "fuel oil" },
-    { "id": "N2", "type": "text", "x": 500, "y": 250, "text": "fuel gas" }
+    { "id": "M", "type": "step_track", "x": 24, "y": 130, "vertical": true, "gap": 70, "steps": ["Gas mode", "Gas trip", "Fuel-oil mode"] },
+    { "id": "C", "type": "cylinder", "x": 188, "y": 62, "w": 165, "h": 240 },
+    { "id": "F", "type": "flame", "x": 270, "y": 160, "size": 38, "value": 0 },
+    { "id": "O", "type": "pipe", "fluid": "liquid", "from": [10, 44], "via": [[224, 44]], "to": "C.oil", "value": 0 },
+    { "id": "Gp", "type": "pipe", "fluid": "gas", "from": [446, 44], "via": [[317, 44]], "to": "C.gas", "value": 0 },
+    { "id": "VG", "type": "valve", "at": "Gp@0.3", "size": 11, "state": false, "label": "fuel gas valve", "labelAt": "above", "value": 1 },
+    { "id": "N1", "type": "text", "x": 14, "y": 30, "text": "fuel oil" }
   ],
   "steps": [
     { "title": "1 · Gas mode - the gas burns, lit by a small pilot injection of fuel oil", "line": 1,

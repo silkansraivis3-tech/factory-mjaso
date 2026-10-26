@@ -1,26 +1,26 @@
 {
-  "size": [640, 390],
+  "size": [592, 390],
   "label": "Side view of an LNG-fuelled ship, not to scale: the fuel tank in its fuel storage hold with the tank connection space on top of it, the fuel preparation room with its vaporizer, the engine room aft under the accommodation, the bunkering station on the open deck over its drip tray with the bunker line down to the tank, and the vent mast on the open deck with its vent line from the tank and its outlet high above the deck and the accommodation.",
   "idle": "Press Next step",
   "parts": [
-    { "id": "G", "type": "ga", "x": 14, "y": 200, "w": 612, "h": 150, "draft": 0.6, "house": { "x": 22, "w": 100, "h": 80 }, "funnel": { "x": 52, "w": 28, "h": 34 } },
-    { "id": "ER", "type": "space", "x": 74, "y": 208, "w": 116, "h": 122, "label": "Engine room" },
-    { "id": "E", "type": "engine", "in": "ER", "at": 0.58, "gap": 6, "w": 80, "h": 62, "cylinders": 4 },
-    { "id": "FPR", "type": "space", "x": 198, "y": 208, "w": 84, "h": 122, "label": "Fuel\npreparation\nroom" },
-    { "id": "X", "type": "exchanger", "in": "FPR", "at": 0.5, "gap": 30, "r": 15, "label": "vaporizer" },
-    { "id": "Hold", "type": "space", "x": 290, "y": 208, "w": 236, "h": 122, "label": "Fuel storage hold" },
-    { "id": "T", "type": "tank", "in": "Hold", "at": 0.5, "w": 196, "h": 66, "value": 0.6, "label": "LNG fuel tank" },
-    { "id": "TCS", "type": "space", "on": "T.top", "w": 146, "h": 30, "crosses": true, "label": "TCS" },
-    { "id": "S1", "type": "pipe", "fluid": "liquid", "from": "T.top@0.12", "to": "X.out", "via": [[347, 226], [270, 226], [270, 279]], "value": 0, "fill": 0 },
+    { "id": "G", "type": "ga", "x": 12, "y": 200, "w": 568, "h": 150, "draft": 0.6, "house": { "x": 20, "w": 90, "h": 80 }, "funnel": { "x": 44, "w": 26, "h": 34 } },
+    { "id": "ER", "type": "space", "x": 58, "y": 208, "w": 144, "h": 122, "label": "Engine room" },
+    { "id": "E", "type": "engine", "in": "ER", "at": 0.56, "gap": 6, "w": 66, "h": 56, "cylinders": 4 },
+    { "id": "FPR", "type": "space", "x": 208, "y": 208, "w": 114, "h": 122, "label": "Fuel\npreparation\nroom" },
+    { "id": "X", "type": "exchanger", "in": "FPR", "at": 0.5, "gap": 30, "r": 15, "label": "vaporizer", "labelAt": "below" },
+    { "id": "Hold", "type": "space", "x": 328, "y": 208, "w": 196, "h": 122, "label": "Fuel storage hold" },
+    { "id": "T", "type": "tank", "in": "Hold", "at": 0.5, "w": 170, "h": 66, "value": 0.6, "label": "LNG fuel tank" },
+    { "id": "TCS", "type": "space", "on": "T.top", "w": 120, "h": 30, "crosses": true },
+    { "id": "S1", "type": "pipe", "fluid": "liquid", "from": "T.top@0.12", "to": "X.out", "via": [[376, 226], [295, 226], [295, 279]], "value": 0, "fill": 0 },
     { "id": "S2", "type": "pipe", "fluid": "gas", "from": "X.in", "to": "E.right", "value": 0, "fill": 0 },
-    { "id": "D", "type": "drip_tray", "on": "G.deck", "at": 0.9, "w": 50, "h": 10 },
+    { "id": "D", "type": "drip_tray", "on": "G.deck", "at": 0.92, "w": 50, "h": 10 },
     { "id": "B", "type": "manifold", "on": "D.top", "w": 40, "h": 12, "drop": 14, "hose": 16, "outlets": [{ "label": "" }], "words": ["", ""] },
     { "id": "BL", "type": "pipe", "fluid": "liquid", "from": "B.left", "to": "T.top@0.86", "value": 0, "fill": 0 },
-    { "id": "V", "type": "vent", "on": "G.deck", "at": 0.552, "label": "vent mast", "labelAt": "left" },
+    { "id": "V", "type": "vent", "on": "G.deck", "at": 0.58, "label": "vent mast", "labelAt": "left" },
     { "id": "VL", "type": "pipe", "fluid": "gas", "from": "T.top@0.18", "to": "V.inlet", "value": 0 },
     { "id": "C", "type": "gas_cloud", "from": "V.outlet", "w": 96, "h": 52, "value": 0 },
-    { "id": "N1", "type": "text", "text": "tank connection space", "for": "TCS" },
-    { "id": "N2", "type": "text", "text": "bunkering station", "for": "B" }
+    { "id": "N1", "type": "text", "text": "tank connection\nspace", "for": "TCS" },
+    { "id": "N2", "type": "text", "text": "bunkering\nstation", "for": "B" }
   ],
   "steps": [
     { "title": "1 · The fuel tank - in its fuel storage hold, below the open deck", "line": 1, "play": [["Hold", 1, 500], ["T", 0.85, 900]] },
@@ -32,7 +32,7 @@
     { "title": "5 · The vent mast - from the tank up through the deck; the gas leaves high above the deck and the accommodation", "line": 5,
       "play": [["BL", 0, 400], ["VL", 1, 600], ["V", 1, 700, 500], ["C", 0.8, 1400, 700]] },
     { "title": "6 · The engine room - the gas goes to the dual-fuel engine", "line": 6,
-      "play": [["V", 0, 600], ["C", 0, 800], ["VL", 0, 400], ["ER", 1, 600], ["S2", 1, 400], ["S2.fill", 1, 1000, 0, "linear"], ["E", 1, 500, 900]] },
-    { "title": "Every new space and item of an IGF ship, all at once", "play": [["Hold", 1, 500], ["TCS", 1, 500], ["FPR", 1, 500], ["ER", 1, 500]] }
+      "play": [["V", 0, 600], ["C", 0, 800], ["VL", 0, 400], ["ER", 1, 600], ["S2", 1, 400], ["S2.fill", 1, 1000, 0, "linear"], ["E", 1, 500, 900],
+               ["Hold", 1, 500, 1500], ["TCS", 1, 500, 1500], ["FPR", 1, 500, 1500]] }
   ]
 }

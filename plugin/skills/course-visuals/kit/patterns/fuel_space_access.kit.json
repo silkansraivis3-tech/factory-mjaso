@@ -6,7 +6,7 @@
     { "id": "A", "type": "airlock", "x": 48, "y": 162, "w": 80, "h": 118, "safeW": 70, "hazardW": 0, "safe": "safe\narea", "label": "airlock", "state": false },
     { "id": "Zf", "type": "zone", "zone": 1, "x": 200, "y": 162, "w": 108, "h": 118 },
     { "id": "F", "type": "space", "x": 200, "y": 162, "w": 108, "h": 118, "label": "Fuel\npreparation\nroom" },
-    { "id": "X", "type": "space", "style": "enclosure", "x": 246, "y": 112, "w": 30, "h": 62, "label": "own access", "crosses": true },
+    { "id": "X", "type": "space", "style": "enclosure", "x": 246, "y": 112, "w": 30, "h": 62, "label": "own\naccess", "labelAt": "above", "crosses": true },
     { "id": "Zh", "type": "zone", "zone": 1, "x": 316, "y": 162, "w": 234, "h": 118 },
     { "id": "Hold", "type": "space", "x": 316, "y": 162, "w": 234, "h": 118, "label": "fuel storage hold\n(type C tank)", "labelAt": "below" },
     { "id": "K", "type": "tank", "x": 326, "y": 235, "w": 212, "h": 40, "value": 0.6 },
@@ -19,7 +19,7 @@
   ],
   "steps": [
     { "title": "No direct access from a safe area into a hazardous one - an airlock, two doors, never open together", "line": 1,
-      "play": [["A", 1, 1100], ["A", 2, 1900, 1100], ["Zf", 1, 800, 2400]] },
+      "play": [["A", 1, 1100], ["A", 2, 1900, 1100], ["A", 0, 900, 3000], ["Zf", 1, 800, 2400]] },
     { "title": "The fuel preparation room has its own access from the open deck", "line": 2,
       "play": [["A", 0, 900], ["X", 1, 700]] },
     { "title": "The tank connection space is entered from the open deck, through a bolted hatch", "line": 3,

@@ -42,12 +42,21 @@ PLUME_JS = ("f.go(f.steps(),true);f.layout(true);var v=svg.querySelector('[data-
             "return {plume: v ? +getComputedStyle(v).opacity : -1, circles: v ? v.querySelectorAll('circle').length : 0};")
 
 
+# 2.66.0 - the second proof run: a builder whose slide has many words gives it the narrow column ("wide-right": a 480 x 343
+# px panel at 1280 x 800, 424 x 297 at 1024 x 768), and the patterns, clean only in the wide one, came out 0.5-0.6 scale with
+# words grown to the 12.5 px floor colliding (engine_modes 17 findings, bunkering_line 41) - M01 and M02 rebuilt for 40
+# minutes on them. A pattern is clean in all three. (A "WxH" panel is the figure's box with its step bar: 57 px over it.)
+PANELS = (("two-col", "the wide column"), ("480x400", "the narrow column at 1280 x 800 (480 x 343)"),
+          ("424x354", "the narrow column at 1024 x 768 (424 x 297)"))
+
+
 def studio_part(tmp):
-    print("\n-- every pattern is drawn clean at 1280 x 800, every step")
+    print("\n-- every pattern is drawn clean, every step, in the wide column and in the narrow one")
     for p in sorted(glob.glob(os.path.join(KIT, "patterns", "*.kit.json"))):
-        r = studio.run(p, panel="two-col", sizes=((1280, 800),), out=os.path.join(tmp, "s"), quiet=True, shots=False)[0]
-        probs = [x for x in studio.problems(r) if x[0] == "1280x800"] if r else ["no result"]
-        check("%s clean at 1280 x 800" % os.path.basename(p), not probs, probs[:3])
+        for panel, what in PANELS:
+            r = studio.run(p, panel=panel, sizes=((1280, 800),), out=os.path.join(tmp, "s"), quiet=True, shots=False)[0]
+            probs = [x for x in studio.problems(r) if x[0] == "1280x800"] if r else ["no result"]
+            check("%s clean in %s" % (os.path.basename(p), what), not probs, probs[:3])
 
 
 def plume_part():

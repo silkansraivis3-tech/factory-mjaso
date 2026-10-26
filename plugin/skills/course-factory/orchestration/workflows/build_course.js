@@ -356,11 +356,19 @@ a "Your turn" activity's minutes as practice in a theory-only module) is the ope
 "SCRIPT:" - it is reported, never sent back to a builder (who may not change an approved script).`
 
 /* 2.63.3 - a BROKEN finding of QA sends the module back for ONE fix round, by a builder who fixes exactly those */
+/* 2.66.0 - the second proof run: the three figure fixers ran 58-102 minutes and $50 between them (one 102 min, $33),
+   rebuilding after every word they moved to fit a 480 px column - "build until module clean" had no end. A fix round
+   gets TWO builds; what the second still prints is the operator's list (NOTHING LOOPS, approved by Aleksis) */
+const FIX_CAP = `AT MOST TWO build_module.py runs in this round. Try every figure you change in the studio first -
+python ${A.factory ? `${A.factory}/course-visuals/kit/scripts` : '<the course-visuals skill folder>/kit/scripts'}/studio.py <spec> --step all
+(seconds; a "closer fit was saved" candidate: copy it over the spec) - until its own report is clean, THEN one build. After
+the second build STOP, whatever it prints: list what it still prints in your report (it goes to the operator's list) -
+never a third build, never another round of fitting words.`
 const fixRound = (m, q) => `${build(m)}
 
 THIS MODULE IS BUILT AND WAS CHECKED BY QA. Do NOT start again from --init-build. Fix EXACTLY these BROKEN
-findings - nothing else (no polish, no other screen) - in the build sheet or the figure specs, then run
-build_module.py until module clean (PASS, or only the course package left) and STOP.
+findings - nothing else (no polish, no other screen) - in the build sheet or the figure specs, then build and STOP.
+${FIX_CAP}
 NEVER edit working_claude/script/M${two(m)}.json - not a word, not a "kind", not a minute: ANY change to the approved
 script un-approves it and the module no longer builds (2.63.3 measurement: a fix round changed s05's "kind" to move
 5 minutes, and M02 stopped compiling). Never run content_script.py approve / apply. A finding whose fix is in the script
@@ -563,7 +571,8 @@ from it (course-visuals/kit/patterns/, SPEC.md "Patterns": ship_ga, bunkering_li
 engine_modes, fuel_types, fuel_space_access) and place every part by what it stands on or joins - "on", "in", "at",
 "from"/"to" (SPEC.md "Relations") - never by guessed raw coordinates. A finding you are sure is RIGHT on purpose (the pipe
 runs on to the shore, the words name what the slide says): leave the drawing and say why in the spec's "meaning_ok":
-{"<KIND> <part id>": "<why it is right>"} - the next reviewer reads it. Then build_module.py until module clean, and STOP.
+{"<KIND> <part id>": "<why it is right>"} - the next reviewer reads it. Then build and STOP.
+${FIX_CAP}
 NEVER edit working_claude/script/M${two(m)}.json. The findings:
 
 ${bad.map((f) => `  - ${f.slide}: ${f.what}`).join('\n')}`
