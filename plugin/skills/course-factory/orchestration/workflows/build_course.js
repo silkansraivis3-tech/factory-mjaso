@@ -260,7 +260,8 @@ it runs. A module's first build may first wait up to 5 min for another module's 
 at a time on this computer) - that is expected. Never end your turn while a build runs: your report
 is read as the module's result (2.58.0 - the IGF full build: a builder that ended "waiting on the
 build" left Module 15 half-built). Your report's FIRST line is the PASS / FAIL line build_module.py
-printed.
+printed; its SECOND line the "TIME M0N: ..." line it printed under the PASS, as it is (2.65.0 - the gold
+standard is 30-40 minutes a module, 20 for its fixes).
 
 A way of answering the compiler leaves "as it is" is the one page you make by hand, to
 course-task-ux.
@@ -406,31 +407,50 @@ async function buildUntilPass(m) {
   return r
 }
 
-/* the modules in waves of A.wave (default: all at once) - each build runs headless browsers, so on one PC a wave of 3
-   keeps it from being pinned at 99 % (the IGF full build ran in waves of 3) */
-const WAVE = A.wave || A.modules.length
-const results = []
-for (let i = 0; i < A.modules.length; i += WAVE) {
-  const chunk = A.modules.slice(i, i + WAVE)
-  if (WAVE < A.modules.length) log(`wave ${i / WAVE + 1}: modules ${chunk.map((m) => m.id).join(', ')}`)
-  results.push(...await pipeline(
-    chunk,
-    (m) => APPROVED.has(String(m.id))
-      ? buildUntilPass(m).then((r) => ({ m, r, built: true }))
-      : agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' }).then((r) => ({ m, r, built: false })),
-    ({ m, built }) => built
-      ? agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL }).then((q) => ({ m, q }))
-      : { m, q: { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] } },
-    /* 2.63.3 - BROKEN: one fix round, then QA once more (its sheets show only the screens the fix changed); never a third */
-    async ({ m, q }) => {
-      if (!broken(q)) return q
-      log(`module ${m.id}: QA found BROKEN - one fix round`)
-      await agent(fixRound(m, q), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL })
-      const q2 = await agent(qa(m), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
-      return q2 ? Object.assign({}, q2, { first_qa: q.findings }) : q
-    }
-  ))
+/* 2.65.0 - the gold standard (owner, 2026-10-26): 30-40 minutes a module, 20 for its fixes. A workflow has no clock,
+   so the build keeps it - compile_module.py --init-build starts it, build_module.py's first PASS prints
+   "TIME M01: 34 min from its starter build sheet to its first PASS - ..." - and the builder's report carries that line */
+const timeOf = (r) => {
+  const t = /TIME (M\d+|final): (\d+) min[^\n]*/.exec(String(r || ''))
+  return t ? { minutes: Number(t[2]), over: Number(t[2]) > 40, line: t[0] } : null
 }
+
+/* at most A.wave modules build at once (default: all) - each build runs headless browsers, so on one PC 3 keeps it from
+   being pinned at 99 % (the IGF full build ran in waves of 3).
+   2.65.0 - the biggest module first, in a rolling pool (owner: the gold standard, 30-40 min a module). The waves waited
+   for their slowest module before the next wave started (M01-M03: M02 the long pole); now the approved modules start
+   biggest first - the most minutes in the approved table - and the next one starts the moment a build ends. A QA agent
+   holds no place (it runs no figures stage); a fix round, which builds, does. */
+const WAVE = A.wave || A.modules.length
+const ORDER = A.modules.slice().sort((a, b) =>
+  (APPROVED.has(String(b.id)) - APPROVED.has(String(a.id))) || ((b.minutes || 0) - (a.minutes || 0)))
+let free = WAVE
+const waiting = []
+async function place(work) {
+  while (free === 0) await new Promise((go) => waiting.push(go))
+  free--
+  try { return await work() } finally { free++; const next = waiting.shift(); if (next) next() }
+}
+if (ORDER.length > 1) log(`build order, biggest first: modules ${ORDER.map((m) => m.id).join(', ')}` +
+  (WAVE < ORDER.length ? ` - ${WAVE} at a time, the next starting as one ends` : ''))
+const results = await pipeline(
+  ORDER,
+  (m) => APPROVED.has(String(m.id))
+    ? place(() => buildUntilPass(m)).then((r) => ({ m, r, built: true }))
+    : agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' }).then((r) => ({ m, r, built: false })),
+  ({ m, r, built }) => built
+    ? agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
+      .then((q) => ({ m, q: q && Object.assign({}, q, { time: timeOf(r) }) }))
+    : { m, q: { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] } },
+  /* 2.63.3 - BROKEN: one fix round, then QA once more (its sheets show only the screens the fix changed); never a third */
+  async ({ m, q }) => {
+    if (!broken(q)) return q
+    log(`module ${m.id}: QA found BROKEN - one fix round`)
+    await place(() => agent(fixRound(m, q), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL }))
+    const q2 = await agent(qa(m), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
+    return q2 ? Object.assign({}, q2, { first_qa: q.findings, time: q.time }) : q
+  }
+)
 
 /* the final assessment (args.final), when its script is approved - built after the modules it draws on */
 const finalReport = A.final ? await agent(`Invoke ${SKILL} and follow it. BUILD the FINAL ASSESSMENT from its approved script.
@@ -496,7 +516,7 @@ Report. Do not fix.`,
 
 /* a module whose build or QA brought back nothing is not verified - it blocks, it is never counted as clean */
 const blocking = results
-  .map((q, i) => q || { module: String(A.modules[i].id), blocking: true, classification: 'NOT VERIFIED - no QA result' })
+  .map((q, i) => q || { module: String(ORDER[i].id), blocking: true, classification: 'NOT VERIFIED - no QA result' })
   .filter((q) => q.blocking)
 
 return {
@@ -506,6 +526,12 @@ return {
   assembly,
   cross,
   blocking: blocking.map((q) => q.module),
+  /* 2.65.0 - each built module's minutes to its first PASS against the gold standard (30-40), and which went over */
+  gold_standard: {
+    target: '30-40 min a module, 20 min for its fixes',
+    minutes: results.filter((q) => q && q.time).map((q) => ({ module: q.module, minutes: q.time.minutes })),
+    over: results.filter((q) => q && q.time && q.time.over).map((q) => q.module),
+  },
   next: blocking.length
     ? 'Blocking findings. Fix them in the named modules, then run compile_course.py and check_course_package.py again.'
     : 'Approve every script still awaiting approval and run pass 2 again (approved modules are rebuilt '

@@ -10,6 +10,8 @@
     fix.py standard <course> [--add "<rule>" --said "<operator's words>" [--departs <design rule> --risk "..."]]
                                                          the course's house decisions; --departs: a design choice (L26)
     fix.py sync-shared <course> [--confirmed]            one shared file -> every module's own copy
+    fix.py rebuild  <course> [--modules 1-3] [--force]   built modules again from their approved words (2.65.0): the
+                                                         pre-check, the design files, the compile, then ONE check
 
 WHY THIS EXISTS
 On GAS ADVANCED one module took 1-1.5 h to build and a small fix about 30 minutes (FEEDBACK_LOG #61-#93).
@@ -49,6 +51,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from datetime import date, datetime
 from html.parser import HTMLParser
 
@@ -608,6 +611,71 @@ def cmd_check(course, kind, modules, slides=None, floor=None):
     return 1 if fails else 0
 
 
+# ---------------------------------------------------------------- a rebuild is a fix, not a build (2.65.0)
+
+def cmd_rebuild(course, modules, force=False):
+    """build already-built modules again from their APPROVED words - a newer factory, a changed build sheet, a design
+    file - as a fix (owner, 2026-10-26: "when I want to rebuild or fix something it does not go through the same thing,
+    it goes through the fix process"). For each module: the pre-check (precheck.py, seconds), the factory's design files
+    (design_system.py install --update), the compile (compile_module.py, with its own drawing check on what changed).
+    Then ONE check for all of them: the layout at 1280 x 800, and the course package. No figure stage, no review
+    sheets, no QA agent - a rebuild changes no words. What only a full build can settle (a drawing that no longer fits
+    its slide) is named, module by module, for build_module.py on that module alone."""
+    t0 = time.time()
+    mods = module_dirs(course)
+    chosen = parse_modules(modules, mods)
+    if not chosen:
+        print("Stopped - no built module matches %s" % (modules or "(all)"))
+        return 2
+    compile_py = os.path.join(os.path.dirname(HERE), "compile", "scripts", "compile_module.py")
+    design_py = os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-module-ui", "scripts", "design_system.py")
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE), "compile", "scripts"))
+    import precheck
+    built, full_build, stopped, lines = [], [], [], []
+    for m in chosen:
+        must, notes = precheck.check(course, m, rebuild=True)
+        if must is None:
+            lines.append("Module %d: no content script - nothing to rebuild from" % m)
+            stopped.append(m)
+            continue
+        if must:
+            lines.append("Module %d: not rebuilt - the pre-check found %d thing(s) to fix first:\n%s"
+                         % (m, len(must), "\n".join("    - " + x for x in must)))
+            stopped.append(m)
+            continue
+        run([design_py, "install", mods[m], "--update"])
+        rc, out = run([compile_py, course, "--module", str(m)] + (["--force"] if force else []))
+        if rc == 2:
+            lines.append("Module %d: not rebuilt - %s" % (m, (out.splitlines() or ["the compiler stopped"])[0]))
+            stopped.append(m)
+            continue
+        built.append(m)
+        import build_module                          # its reader of the compiler's "To fix before it is shown" list
+        probs, _ = build_module.compile_problems(out)
+        drawing = [x for x in probs if re.search(r"\b(empty|text zone|inside|cut off|small text|label|scrolls)\b", x)]
+        other = [x for x in probs if x not in drawing]
+        lines.append("Module %d: rebuilt from its approved words%s" % (m, "" if rc == 0 else " - %d thing(s) the compile reports" % len(probs)))
+        lines += ["    - " + x for x in other[:12]]
+        if drawing:
+            full_build.append(m)
+            lines.append("    - %d drawing finding(s) - a drawing no longer fits its slide; only the full build's figure stage settles "
+                         "that: build_module.py <course> --module %d" % (len(drawing), m))
+        lines += ["    note: " + x for x in notes]
+    print("\n".join(lines))
+    if not built:
+        print("\nNothing rebuilt.")
+        return 1
+    spec = ",".join(str(m) for m in built)
+    print("\nOne check for the rebuilt modules (%s):" % spec)
+    rc_layout = cmd_check(course, "layout", spec)
+    rc_pkg = cmd_check(course, "package", spec)
+    if full_build:
+        print("\nFor the full build (figures only): module(s) %s." % ", ".join(str(m) for m in full_build))
+    import cf_timing                                 # the gold standard: 20 min for a module's fixes (owner, 2026-10-26)
+    print(cf_timing.fix_line(time.time() - t0))
+    return 0 if not (stopped or full_build or rc_layout or rc_pkg) else 1
+
+
 # ---------------------------------------------------------------- the course's house decisions
 
 STANDARDS_HEAD = design_choices.STANDARDS_HEAD       # one head for the file, whoever writes it first
@@ -653,6 +721,7 @@ def main(argv=None):
     s = sub.add_parser("standard"); s.add_argument("course"); s.add_argument("--add"); s.add_argument("--said")
     s.add_argument("--departs", help="the design rule (knowledge/design-rules.json) this standard departs from - L26")
     s.add_argument("--risk", default="", help="the risk the operator was told before they chose")
+    s = sub.add_parser("rebuild"); s.add_argument("course"); s.add_argument("--modules"); s.add_argument("--force", action="store_true")
     s = sub.add_parser("sync-shared"); s.add_argument("course"); s.add_argument("--confirmed", action="store_true")
     s.add_argument("--from", dest="source")
     a = ap.parse_args(argv)
@@ -669,6 +738,8 @@ def main(argv=None):
         return cmd_check(a.course, a.kind, a.modules, a.slides, a.floor)
     if a.cmd == "standard":
         return cmd_standard(a.course, a.add, a.said, a.departs, a.risk)
+    if a.cmd == "rebuild":
+        return cmd_rebuild(a.course, a.modules, a.force)
     return cmd_sync_shared(a.course, a.confirmed, a.source)
 
 

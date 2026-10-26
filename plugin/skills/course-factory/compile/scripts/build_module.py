@@ -377,6 +377,8 @@ def main(argv=None):
     ap.add_argument("--wait", action="store_true", help="wait for this module's build that said STILL BUILDING and print its "
                                                         "answer (2.63.3)")
     ap.add_argument("--inner", action="store_true", help=argparse.SUPPRESS)
+    ap.add_argument("--no-precheck", action="store_true", help="skip the pre-check (precheck.py: missing pictures, photographs "
+                                                               "under 800 px, dense text with no picture ...) - 2.65.0")
     o = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     t0 = time.time()
@@ -391,6 +393,9 @@ def main(argv=None):
     m = cs.mid(o.module) if str(o.module).isdigit() else str(o.module)
     logdir = workspace.claude_path(course, "_build")
     os.makedirs(logdir, exist_ok=True)
+    import cf_timing                 # 2.65.0 - the module's clock (gold standard 30-40 min), if --init-build did not start it
+    if o.layout_round == 0:
+        cf_timing.clock_start(course, m, since="its first build run")
     out_dir = workspace.claude_path(course, "review", m)
     if o.reviewed:
         return mark_reviewed(out_dir, m)
@@ -400,6 +405,19 @@ def main(argv=None):
               % (m, os.path.basename(cm.build_path(course, o.module)),
                  "; ".join("%s: %s" % (", ".join(ids), what) for ids, what in blanks)))
         return 1
+    # 2.65.0 - the pre-check: what would fail the build or make it look poor, found in a second from the files alone
+    # (precheck.py) - a missing picture, a photograph under 800 px, dense text with no picture - before the figures stage,
+    # the slowest one, is spent on a build that could not pass (owner, 2026-10-26: "cut time and usage, quality the same")
+    pre_notes = []
+    if not o.no_precheck and str(o.module).isdigit() and o.layout_round == 0:
+        import precheck
+        must, pre_notes = precheck.check(course, o.module)
+        if must:
+            print("FAIL %s - nothing built: the pre-check found %d thing(s) to fix first (precheck.py; --no-precheck skips it)"
+                  % (cs.mid(o.module), len(must)))
+            print("\n".join("  - " + x for x in must))
+            print("\n".join("  note: " + x for x in pre_notes or []))
+            return 1
     # 2.62.1 - every hidden browser of this build writes its real seconds (cf_timing.py); a round the layout retry
     # replaces keeps its own log (_build\M01_build.round1.log) - both were lost when a round was slow (IGF M02 v262)
     timing = os.environ.get("CF_TIMING") or os.path.join(logdir, "%s_timing.jsonl" % m)
@@ -412,7 +430,7 @@ def main(argv=None):
                 except OSError:
                     pass
     log = io.open(os.path.join(logdir, "%s_build.log" % m), "w", encoding="utf-8")
-    say, fails, notes = [], [], []
+    say, fails, notes = [], [], ["Pre-check: " + x for x in pre_notes or []]
     stages = []                      # 2.52.0: (stage, seconds) - written into the log, so a slow stage is seen
 
     def logged(title, out):
@@ -656,6 +674,9 @@ def main(argv=None):
     if passed:
         print("PASS %s - figures, compile + drawing check, words (instructor, trainee), navigation, audits 1280x800 %s, course package"
               " (%.0f s)" % (m, " ".join(sizes), secs))
+        gold = cf_timing.clock_pass(course, m)          # 2.65.0 - at the first PASS: its minutes against 30-40
+        if gold:
+            print(gold)
         if review:
             print(review)
     else:

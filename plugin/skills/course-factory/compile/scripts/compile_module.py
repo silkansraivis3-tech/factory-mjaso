@@ -2165,10 +2165,9 @@ def enlarge_photos(mdir, keep_dir, rels, notes):
         if max(w, h) >= PHOTO_LONG:
             continue
         keep = os.path.join(keep_dir, os.path.basename(rel))
-        if not os.path.isfile(keep):
-            os.makedirs(keep_dir, exist_ok=True)
-            with open(p, "rb") as src, open(keep, "wb") as dst:
-                dst.write(src.read())
+        os.makedirs(keep_dir, exist_ok=True)              # the original as found - a new small picture put in its place
+        with open(p, "rb") as src, open(keep, "wb") as dst:   # replaces an older kept one (2.65.0)
+            dst.write(src.read())
         k = min(4.0, PHOTO_LONG / float(max(w, h)))
         size = (int(round(w * k)), int(round(h * k)))
         fmt = (im.format or "").upper()
@@ -3637,6 +3636,8 @@ def main(argv=None):
         figdir, specs, specs3 = workspace.claude_path(o.course, "figures", cs.mid(o.module)), {}, {}
         cs.save(bp, starter_build(script, shared, figdir=figdir, specs=specs, specs3=specs3,
                                   mdir=module_folder(o.course, o.module, o.module_dir)[0]))
+        import cf_timing                                # 2.65.0 - the module's clock starts: the gold standard is 30-40 min
+        cf_timing.clock_start(o.course, cs.mid(o.module) if str(o.module).isdigit() else str(o.module), reset=True)
         print("Done - a starter build sheet:\n    %s\n  Next: fill in each slide's picture, edit the starter figures (parts and "
               "options: course-visuals\\kit\\CATALOGUE.md), then build and check in one command:\n    compile\\scripts\\"
               "build_module.py <course> --module %s" % (bp, o.module))

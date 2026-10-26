@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""cf_timing - where a build's seconds go, measured inside the runners (2.61.0).
+"""cf_timing - where a build's seconds go, measured inside the runners (2.61.0); a module's minutes against the
+gold standard - 30-40 min a module, 20 min for its fixes (2.65.0: clock_start, clock_pass, fix_line).
 
     set CF_TIMING=<file.jsonl>      every hidden-browser run of a build writes one line there
     python cf_timing.py <file.jsonl>    the lines added up: per tool, real seconds and the page's own clock
@@ -34,6 +35,62 @@ def note(tool, what, wall, **kw):
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     except OSError:
         pass
+
+
+# ---------------------------------------------------------------- the gold standard (2.65.0)
+# Owner, 2026-10-26: "we want to aim for 30-40 minutes per module + 20 minutes possible fixes, that is our gold standard".
+# A module's clock starts when its starter build sheet is written (compile_module.py --init-build) - or at its first
+# build_module.py run when the sheet came from elsewhere - and stops at its first PASS. A fix (fix.py rebuild) is timed
+# on its own against the 20 minutes.
+GOLD_BUILD = (30, 40)       # minutes a module, from its starter build sheet to its first PASS
+GOLD_FIX = 20               # minutes for the fixes after it
+
+
+def _clock_file(course, m):
+    import workspace
+    return workspace.claude_path(workspace.work_folder(course, create=False), "_build", "%s_clock.json" % m)
+
+
+def clock_start(course, m, reset=False, since="its starter build sheet"):
+    """start the module's clock - again from now when reset (a new starter build sheet); never when it already runs"""
+    path = _clock_file(course, m)
+    if not reset and os.path.isfile(path):
+        return
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        io.open(path, "w", encoding="utf-8").write(json.dumps({"started": time.time(), "since": since}))
+    except OSError:
+        pass
+
+
+def clock_pass(course, m, now=None):
+    """at the module's FIRST PASS: its minutes against the gold standard, one line (and kept in the clock file);
+    None at a later PASS, or when no clock runs"""
+    path = _clock_file(course, m)
+    try:
+        rec = json.load(io.open(path, encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if rec.get("passed") or not rec.get("started"):
+        return None
+    rec["passed"] = now or time.time()
+    rec["minutes"] = mins = int(round((rec["passed"] - rec["started"]) / 60.0))
+    try:
+        io.open(path, "w", encoding="utf-8").write(json.dumps(rec))
+    except OSError:
+        pass
+    lo, hi = GOLD_BUILD
+    verdict = ("inside the gold standard (%d-%d min a module)" % (lo, hi) if mins <= hi else
+               "OVER the gold standard of %d-%d min by %d min - the stage seconds below and the build log say where it went"
+               % (lo, hi, mins - hi))
+    return "TIME %s: %d min from %s to its first PASS - %s" % (m, mins, rec.get("since") or "its start", verdict)
+
+
+def fix_line(seconds):
+    """a fix's minutes against the 20 the gold standard gives it"""
+    mins = seconds / 60.0
+    return ("TIME: this fix took %.0f min - inside the gold standard's %d min for fixes" % (mins, GOLD_FIX) if mins <= GOLD_FIX
+            else "TIME: this fix took %.0f min - OVER the gold standard's %d min for fixes" % (mins, GOLD_FIX))
 
 
 def summary(path):

@@ -122,6 +122,9 @@
   "naming_and_format": {
     "naming": "lower snake_case, subject first, no module number, no spaces",
     "photographs": "JPEG, quality ~82, max 2200 px on the long edge",
+    "photographs_min_long_px": 1600,
+    "photographs_floor_px": 800,
+    "_photograph_size": "2.65.0 (owner, 2026-10-26: 'images upscaled, not this pixel stuff'): a photograph is found at 1600 px or more on its long edge - the original file, never a web preview or thumbnail (Wikimedia: the Original file, not /thumb/). 800-1599 px only when nothing larger exists: the compile enlarges it (L62) and says so. Under 800 px no enlargement makes it sharp: find a larger original or a photograph to take, or record why it stays (\"low_resolution_ok\": \"<reason>\" in its _photo_meta.json entry) - the module pre-check (compile/scripts/precheck.py) stops a build on it.",
     "line_art_and_flat_colour": "PNG, or better, inline SVG",
     "diagrams": "inline SVG wherever the diagram is authored",
     "allowed_extensions": ["jpg", "jpeg", "png", "svg", "webp", "gif", "mp4", "webm"],

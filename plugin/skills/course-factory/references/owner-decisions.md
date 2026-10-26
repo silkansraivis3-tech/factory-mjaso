@@ -190,6 +190,26 @@ Module 1 came out with 29 of 33 slides in one layout: *"Check module 1 - it is n
 
 **Physical equipment is drawn as it looks on board** (Aleksis, 2026-10-20, approving the realistic kit mock-up: *"yes we like this new kit styling"*; *"also do the Parts added from courses"*; *"make the ship look realistic aswell, look at real images of it"*). Every figure-kit part that is a physical thing is drawn in its material, with light and shade and its real features (flanges, saddles, a dome, an actuator or a handwheel, a bedplate, a ship's plating and superstructure); screens stay flat ISA-101 and diagrams stay diagrams; the teaching state stays readable and amber / red stay for alarm / trip. The kit does it in every deck - no option, no per-slide ask. A new part declares its `look` and an `equipment` part draws with `KIT.h.body` / `KIT.h.equip` and the kit's materials (`course-visuals/kit/PARTS.md`, `check_kit.py`).
 
+## L64
+**Built out in:** now (2.65.0)
+
+**A module in 30-40 minutes, its fixes in 20: what would fail is caught before the build, photographs are found large,
+and a rebuild is a fix** (owner, 2026-10-26: *"How can we optimise the time of a build - cut some time and usage off, with the quality the same or even better? ... Build points 1 and 2"*; *"when I want to rebuild or fix something, it does not go through the same thing, it goes through the fix process"*; *"we want to aim for 30-40 minutes per module + 20 minutes for possible fixes, that is our gold standard"*). (1) **The pre-check** - `compile/scripts/precheck.py`,
+a second, from the files alone - runs first in every `build_module.py` and `fix.py rebuild`: a picture the build sheet
+names that is not there, a template or variant the factory does not have, a photograph under 800 px on its long side (no
+enlargement makes it sharp - unless its `_photo_meta.json` record says why in `"low_resolution_ok"`), more than 60 words
+with no picture, three teaching slides in a row without one: nothing is built until it is fixed. A photograph of
+800-1599 px and the same template forced on three slides in a row are notes. (2) **Photographs are found at 1600 px or
+larger** on their long side (`visual-sourcer`: the original file - Wikimedia's "Original file", never a /thumb/; Flickr's
+largest; a maker's press kit; its `"px"` recorded); `check_assets.py` warns under 1600 and under 800 at finding time,
+judging the size it was found at (the kept original, not L62's enlargement). (3) **A rebuild of a built module is a
+fix** - `fix.py rebuild <course> --modules N`: the pre-check, the design files, the compile from the approved words, ONE
+check; only what fix.py names goes to `build_module.py`; one named change in one built module is a fix too (routing.json
+`fix_triggers._built`). (4) **The gold standard**: a module's clock starts at `--init-build` (or its first build run) and
+its first PASS prints `TIME M01: <n> min ... - inside the gold standard (30-40 min a module)` or OVER by how much;
+`fix.py rebuild` prints its minutes against 20; the whole-course workflow returns `gold_standard` - every module's minutes
+and which went over (`scripts/cf_timing.py` `clock_start`, `clock_pass`, `fix_line`). A still rendered from the module's own 3D model is a note (render it again larger); a picture from the old course has no larger original, and the stop says so - find a larger photograph of the same thing; a REBUILD (`fix.py rebuild`, `precheck.py --rebuild`) is never stopped by the small pictures a module already has - they are notes (the gas course has 100+ old-course pictures under 800 px across its 22 modules). The whole-course workflow builds the biggest approved module first (the most minutes in the approved table) in a rolling pool of `args.wave`: the next build starts the moment one ends - no wave waits for its slowest module; a QA agent holds no place, a fix round does.
+
 ## L41
 **Built out in:** now (2.19.0)
 

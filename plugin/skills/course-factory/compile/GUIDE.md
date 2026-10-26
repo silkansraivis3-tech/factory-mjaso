@@ -15,6 +15,13 @@
       compile and its drawing check, the words (instructor + trainee), navigation, the audits at 1280x800 and 1024x768,
       the course pages and the classroom's importer. It prints only what fails - file, slide or question, what to do -
       and one PASS line. Do not run those checks one by one: each separate run is a turn of the model.
+      (2.65.0, L64) It starts with the PRE-CHECK (compile/scripts/precheck.py - a second, from the files alone): a picture
+      the sheet names that is not there, an unknown template or variant, a photograph under 800 px (unless its
+      _photo_meta.json record says why in "low_resolution_ok"), more than 60 words with no picture, three teaching
+      slides in a row without one - "FAIL M01 - nothing built: the pre-check found ..." and nothing is built until it is
+      fixed. Run it alone any time: python compile/scripts/precheck.py <course> --module 1. Under the first PASS: "TIME
+      M01: <n> min from its starter build sheet to its first PASS" against the gold standard, 30-40 min a module.
+      A module ALREADY BUILT is rebuilt as a fix, not here: scripts/fix.py rebuild <course> --modules 1 (fix/GUIDE.md 3b).
       (2.57.0) A rebuild judges again only the slides and task pages changed in anything they load since their last
       clean check (the drawing check and the audits; the figures already did) - a failing one is judged every time,
       --full judges everything. Hidden browsers come from ONE pool for the whole computer (a quarter of the cores, 2-8,

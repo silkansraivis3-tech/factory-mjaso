@@ -56,7 +56,7 @@ def check(name, got, want, detail=""):
 # ---------------------------------------------------------------------------
 # The router, implemented from routing.json. This is the rule under test.
 # ---------------------------------------------------------------------------
-def route(prompt, has_existing_material=True):
+def route(prompt, has_existing_material=True, built=False):
     """Which mode does routing.json select for this request?"""
     p = " " + prompt.lower().strip() + " "
 
@@ -93,6 +93,10 @@ def route(prompt, has_existing_material=True):
     if narrow and limited:
         return "restyle", hits
     if fix_shaped and has_existing_material:
+        return "fix", hits
+    # 2.65.0: on a module that is already built, a rebuild - or one named change - is a fix, not a build or an edit
+    rebuild_shaped = has(ft["rebuild_words"]) and not has(et["whole_module_words"])
+    if built and (rebuild_shaped or edit_shaped):
         return "fix", hits
     if edit_shaped:
         return "edit", hits
@@ -273,6 +277,21 @@ def main():
     m, _ = route("delete slide 5")
     check("L50 fix    · one named change in one module is still an edit", m, "edit")
     check("L50 fix    · the mode exists and points at fix/GUIDE.md", "fix/GUIDE.md" in ROUTING["modes"]["fix"], True)
+    # 2.65.0: a rebuild or a fix of a module that is ALREADY BUILT goes through the fix lane (owner, 2026-10-26)
+    for p in ["rebuild module 1", "rebuild module 1 with the new factory", "redo module 3 in the new templates",
+              "pārbūvē 1. moduli", "перестрой модуль 2"]:
+        m, _ = route(p, built=True)
+        check("2.65 fix   · built: %-38s -> fix" % p[:38], m, "fix")
+    m, _ = route("delete slide 5", built=True)
+    check("2.65 fix   · one named change in a BUILT module is a fix", m, "fix")
+    m, _ = route("delete slide 5", built=False)
+    check("2.65 fix   · ... in a module not built yet it is still an edit", m, "edit")
+    m, _ = route("rebuild module 1", built=False)
+    check("2.65 fix   · a rebuild word on a module not built yet is not sent to the fix lane", m != "fix", True)
+    m, _ = route("redesign all modules using the course factory", built=True)
+    check("2.65 fix   · 'redesign' a built course is still a retrofit", m, "retrofit")
+    check("2.65 fix   · the rule says how: fix.py rebuild, one check, the full build only for what fix.py names",
+          "fix.py rebuild" in ROUTING["fix_triggers"]["_built"] and "build_module.py" in ROUTING["fix_triggers"]["_built"], True)
     # ...and the neighbours keep their own modes
     m, _ = route("make it better", has_existing_material=True)
     check("L26 edit   · no change named, no object -> still ambiguous", m, "ambiguous")

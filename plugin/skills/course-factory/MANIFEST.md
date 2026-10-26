@@ -1560,6 +1560,28 @@ five looks among the photographs, `run_audits.py` at 1280 x 800 and 1024 x 768 w
 collision or scroll problem. Tests: `test_compile_module.py` `variety_part`. Merged on top of 2.61.0: the kit's realistic
 look (4zz9) is L63 now; the template recap keeps 2.60.0's compact spacing under 780 px height.
 
+## 4zz13 · Caught before the build; photographs found large; a rebuild is a fix; the gold standard (L64, 2.65.0, 2026-10-26)
+
+The owner asked how to cut a build's time and usage with the quality the same or better, chose two of the answers ("build
+points 1 and 2"), then: a rebuild or a fix goes the fix lane, and the gold standard is 30-40 minutes a module plus 20 for
+fixes. (1) `compile/scripts/precheck.py` - a second, standard library only - finds what would fail a build from the files:
+a missing figure / figure_b / aside / inset or a photograph missing inside a drawing, an unknown template or variant, a
+photograph under 800 px without `"low_resolution_ok"`, a teaching slide over `DENSE_WORDS` with no picture, three
+teaching slides in a row without one (MUST); a template forced on 3+ slides in a row and photographs of 800-1599 px
+(notes). 3D posters are skipped. `build_module.py` runs it before the figures stage (`--no-precheck` skips it); on the
+gas course's real M01 it found the 11 photographs under 800 px that L62 had enlarged into blur. (2)
+`course-visuals/scripts/image_size.py` - a picture's pixel size from its own header (JPEG, PNG, WebP, GIF; checked against
+Pillow on 42 photographs) and `found_size`, the size it was FOUND at (the kept original while the shipped file is still
+L62's enlargement); `check_assets.py` warns under 1600 / 800 px; `visual-sourcer` looks for the original file at 1600 px
+or more; `asset-pipeline.json` `photographs_min_long_px` / `photographs_floor_px`; `enlarge_photos` refreshes the kept
+original each time. (3) `fix.py rebuild` (pre-check, `design_system.py install --update`, compile, one layout and one
+package check; drawing findings named for `build_module.py` alone - ~20 s on the sample course); `routing.json`
+`fix_triggers.rebuild_words` / `_built`, `test_routing.py` `route(..., built=True)`; `fix/GUIDE.md` 3b. (4)
+`scripts/cf_timing.py` `clock_start` (at `--init-build`, or the first build run), `clock_pass` (the first PASS's
+`TIME M01: ...` line, once), `fix_line` (a rebuild against 20 min); `build_course.js` asks the builder for the TIME line
+and returns `gold_standard` (a workflow has no clock of its own: `Date.now()` is not allowed there). Tests:
+`compile/scripts/test_precheck.py` (33), `test_routing.py` (87), `test_build_course.py`. (5) Run on the real gas course: almost every small picture is the old course's own (M01 10 of 11, M09 24) - so: A still rendered from the module's own 3D model is a note (render it again larger); a picture from the old course has no larger original, and the stop says so - find a larger photograph of the same thing; a REBUILD (`fix.py rebuild`, `precheck.py --rebuild`) is never stopped by the small pictures a module already has - they are notes (the gas course has 100+ old-course pictures under 800 px across its 22 modules). (6) The whole-course workflow builds the biggest approved module first (the most minutes in the approved table) in a rolling pool of `args.wave`: the next build starts the moment one ends - no wave waits for its slowest module; a QA agent holds no place, a fix round does. (`build_course.js` `ORDER`, `place`; the IGF M01-M03 run had M02 as the long pole of its wave.)
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

@@ -582,8 +582,22 @@ as dark, a full-screen photograph (its own background) does not; more than a fif
 → `course-factory` (`compile/scripts/compile_module.py`) and `course-module-ui` (`templates/gb_layouts.css`), 2.53.0 on main, 2.62.0 here (the owner's number was taken by the 2.53.0-2.61.0 line
 built the same days on its own branch)
 
-**All sixty-three laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L63 are enforced first through `course-factory/SKILL.md`'s
+**L64 · A module in 30-40 minutes, its fixes in 20: what would fail is caught before the build, photographs are found
+large, and a rebuild is a fix.** The owner, 2026-10-26: *"How can we optimise the time of a build - cut some time and usage off, with the quality the same or even better? ... Build points 1 and 2"*, then *"when I want to rebuild or fix something, it does not go through the same thing, it goes through the fix process"* and *"we want to aim for 30-40 minutes per module + 20 minutes for possible fixes, that is our gold standard"*. (1) Every build and every
+rebuild starts with the pre-check - a second, from the files alone: a missing picture, an unknown template or variant, a
+photograph under 800 px (unless its record says why it stays), dense text with no picture, three teaching slides in a row
+without one. Nothing is built until it is fixed; a photograph under 1600 px and a template forced on three slides in a
+row are notes. (2) Photographs are found at 1600 px or larger - the original file, not a thumbnail - and the asset check
+says so at finding time, judging the size the photograph was found at. (3) A rebuild of a module already built, or one
+named change in it, is a fix (`fix.py rebuild`: the pre-check, the design files, the compile, one check), never the
+build's whole process. (4) The gold standard is measured, not hoped for: a module's minutes from its starter build sheet
+to its first PASS against 30-40, a fix's against 20, and the whole-course workflow lists every module's minutes and the
+ones that went over. A still rendered from the module's own 3D model is a note (render it again larger); a picture from the old course has no larger original, and the stop says so - find a larger photograph of the same thing; a REBUILD (`fix.py rebuild`, `precheck.py --rebuild`) is never stopped by the small pictures a module already has - they are notes (the gas course has 100+ old-course pictures under 800 px across its 22 modules). The whole-course workflow builds the biggest approved module first (the most minutes in the approved table) in a rolling pool of `args.wave`: the next build starts the moment one ends - no wave waits for its slowest module; a QA agent holds no place, a fix round does. → `course-factory` (`compile/scripts/precheck.py`, `build_module.py`, `scripts/fix.py rebuild`,
+`scripts/cf_timing.py`, `retrofit/knowledge/routing.json`, `orchestration/workflows/build_course.js`) and
+`course-visuals` (`scripts/image_size.py`, `scripts/check_assets.py`, `agents/visual-sourcer.md`), 2.65.0
+
+**All sixty-four laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L64 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

@@ -2,8 +2,8 @@
 
 **v1 (2026-10-15) · Maintained by Raivis · part of the `course-factory` plugin, shared with colleagues through the marketplace**
 
-Read this when the operator wants something changed in modules that are **already built**: one module, some, or
-all. "The last slide is bad in all modules, make it like this." "Modules 1–3 have too much free space, find it in
+Read this when the operator wants something changed - or rebuilt - in modules that are **already built**: one
+module, some, or all (§3b: a rebuild is a fix too). "The last slide is bad in all modules, make it like this." "Modules 1–3 have too much free space, find it in
 the others." "Text bigger everywhere." "Slide 7 in module 4 says X, it should say Y." A fix is **not a build**:
 it touches a few things, so it checks those things, once.
 
@@ -91,6 +91,28 @@ their approval (L26): `approve --by` with their name, once.
 - **A wish for every module** — *"the last slide like this"*, *"text bigger"*, *"all buttons 56 px"* — is also a
   **standard**, written once so new modules are built to it and it is never repaired again:
   `python scripts/fix.py standard <course> --add "<the rule>" --said "<their words>"`.
+
+## 3b · A rebuild is a fix too — and so is one change in one built module (2.65.0)
+
+> Owner, 2026-10-26: *"when I want to rebuild or fix something, it does not go through the same thing, it goes through the fix process"*
+
+A module that is **already built** - a newer factory version, a changed build sheet, a new design file - is built again
+from its **approved** words in the fix lane, not by the build's whole process:
+
+```
+python scripts/fix.py rebuild <course> --modules 1        one module; 1-3,7 for several; no --modules: all built ones
+```
+
+For each module: the **pre-check** (`compile/scripts/precheck.py`, a second - a missing picture, a photograph under
+800 px, dense text with no picture: the module is not rebuilt until that is fixed), the factory's **design files**,
+the **compile** with its own drawing check on what changed. Then **one check** for all of them - the layout at 1280 x
+800 and the course package. No figure stage, no review sheets, no QA agent: a rebuild changes no words. What only the
+full build settles - a drawing that no longer fits its slide - is named, module by module: run
+`compile/scripts/build_module.py <course> --module N` for that module alone.
+
+**One named change in one built module** ("slide 7 says X, it should say Y", "a bigger picture on slide 4") is a fix as
+well: words through `fix.py propose / apply / approve`, anything else changed in place, then the **one** `fix.py check`
+for its kind (§4). A module that is not built yet still goes the build's way.
 
 ## 4 · One check — only what the change can break, once
 

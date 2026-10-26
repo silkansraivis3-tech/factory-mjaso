@@ -27,8 +27,14 @@ const fs = require('fs')
 const src = fs.readFileSync(process.argv[2], 'utf8').replace(/^export const meta/m, 'const meta')
 const args = JSON.parse(process.argv[3])
 const labels = [], opts = {}, prompts = {}
+let building = 0, most = 0                                // builds at once (2.65.0: the pool), when args._slow
 const agent = async (prompt, o) => {
   labels.push(o.label)
+  if (args._slow && /^(build|fix):/.test(o.label)) {
+    most = Math.max(most, ++building)
+    await new Promise((go) => setTimeout(go, 30 * ((args._slow[o.label] || 1))))
+    building--
+  }
   opts[o.label] = { model: o.model || null, effort: o.effort || null }
   prompts[o.label] = prompt
   if (o.label.startsWith('gate:')) return { open: true, output: 'open', approved: args._approved || ['1', '2'] }
@@ -47,6 +53,7 @@ const agent = async (prompt, o) => {
   const b = /^build:(\w+)$/.exec(o.label)                   // a builder: PASS, or (args._stuck) stopped mid-build
   if (b) return (args._stuck || []).indexOf(b[1]) >= 0 ? 'The first build is still running in the background.'
     : (args._pkgfail || []).indexOf(b[1]) >= 0 ? 'FAIL M0' + b[1] + ' - course package (60 s)' : 'PASS M0' + b[1] + ' - figures ... (40 s)'
+      + ((args._time || {})[b[1]] ? '\nTIME M0' + b[1] + ': ' + args._time[b[1]] + ' min from its starter build sheet to its first PASS - x' : '')
   if (/^build:\w+\+\d+$/.test(o.label)) return 'PASS - carried on'
   return {}
 }
@@ -56,7 +63,7 @@ const phase = () => {}
 const log = () => {}
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
 new AsyncFunction('args', 'agent', 'pipeline', 'parallel', 'phase', 'log', src)(args, agent, pipeline, parallel, phase, log)
-  .then((r) => console.log(JSON.stringify({ labels, opts, prompts, r })))
+  .then((r) => console.log(JSON.stringify({ labels, opts, prompts, r, most })))
   .catch((e) => { console.log(JSON.stringify({ error: String(e && e.stack || e) })); process.exit(1) })
 """
 
@@ -95,6 +102,33 @@ def main():
               "error" not in two and "read:programme" not in labels and labels[:1] == ["gate:ilo-map+kb"], two)
         check("... a module whose QA brought back nothing blocks; a module with a clean QA does not",
               two.get("r", {}).get("blocking") == ["2"], two.get("r"))
+        b1 = two.get("prompts", {}).get("build:1", "")
+        check("2.65.0: the builder's report carries build_module.py's TIME line (the gold standard: 30-40 min a module)",
+              'its SECOND line the "TIME M0N: ..."' in b1 and "30-40 minutes a module" in b1, b1[-700:])
+        timed = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_approved": ["1", "2"],
+                          "_time": {"1": 52}})
+        g = timed.get("r", {}).get("gold_standard", {})
+        check("... and the workflow's answer lists each module's minutes, and which went over the 40",
+              g.get("minutes") == [{"module": "1", "minutes": 52}] and g.get("over") == ["1"]
+              and "20 min for its fixes" in g.get("target", ""), timed.get("r", {}).get("gold_standard") or timed)
+        sized = [{"id": 1, "title": "A", "minutes": 40, "theory": 30, "practical": 10},
+                 {"id": 2, "title": "B", "minutes": 200, "theory": 150, "practical": 50},
+                 {"id": 3, "title": "C", "minutes": 80, "theory": 60, "practical": 20},
+                 {"id": 4, "title": "D", "minutes": 300, "theory": 200, "practical": 100}]
+        big = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": sized, "wave": 2, "_approved": ["1", "2", "3"]})
+        builds = [x for x in big.get("labels", []) if x.startswith("build:")]
+        check("2.65.0: the biggest approved module is built first (200, 80, 40 min); a draft's script writer takes no "
+              "build place", builds == ["build:2", "build:3", "build:1"] and "script:4" in big.get("labels", []),
+              big.get("labels") or big)
+        sized4 = [dict(x, id=x["id"]) for x in sized]
+        pool = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": sized4, "wave": 2,
+                         "_approved": ["1", "2", "3", "4"], "_slow": {"build:4": 6}})
+        lp = pool.get("labels", [])
+        check("... a rolling pool, never more than A.wave builds at once: while the biggest (300 min) still builds, the "
+              "next ones start as each build ends - no wave waits for its slowest module",
+              pool.get("most") == 2 and lp.index("build:1") < lp.index("qa:4"), lp)
+        check("... and every module is still judged: the one whose QA brought back nothing blocks, under its own number",
+              big.get("r", {}).get("blocking") == ["2"], big.get("r"))
         o = two.get("opts", {})
         check("... an approved module is built and checked on Sonnet at medium effort (2.51.0)",
               o.get("build:1") == {"model": "sonnet", "effort": "medium"}
@@ -201,8 +235,8 @@ def main():
               "1" not in six.get("r", {}).get("blocking", []) and q6.get("module") == "1+fix"
               and any(f.get("severity") == "BROKEN" for f in q6.get("first_qa") or []), six.get("r"))
         l5 = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "wave": 1}).get("labels", [])
-        check("args.wave builds the modules in waves: module 2 starts after module 1's QA",
-              l5.index("build:2") > l5.index("qa:1") and "build:final" not in l5, l5)
+        check("args.wave 1: one build at a time - module 2's build starts after module 1's build (its QA holds no place)",
+              l5.index("build:2") > l5.index("build:1") and "build:final" not in l5, l5)
         check("args.factory pins the skills every agent reads, args.notes reaches every module agent",
               "C:/f/skills/course-factory/SKILL.md" in pr.get("build:1", "")
               and "C:/f/skills/course-factory/scripts/course_gate.py" in pr.get("gate:ilo-map+kb", "")
