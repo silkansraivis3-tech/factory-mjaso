@@ -272,10 +272,12 @@ def run(cmd, **kw):
 
 def kill_tree(pid):
     """end a process and every process it started. subprocess's own kill ends only the browser's first process on
-    Windows: a timed-out hidden Chrome left its GPU, utility and page processes running for a minute or more (2.62.1)"""
+    Windows: a timed-out hidden Chrome left its GPU, utility and page processes running for a minute or more (2.62.1).
+    CREATE_NO_WINDOW: without it every taskkill flashed a console window on the operator's screen (2.66.1)"""
     try:
         if os.name == "nt":
-            subprocess.run(["taskkill", "/T", "/F", "/PID", str(pid)], capture_output=True, timeout=30)
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(pid)], capture_output=True, timeout=30,
+                           creationflags=subprocess.CREATE_NO_WINDOW)
         else:
             os.killpg(os.getpgid(pid), 9)
     except (OSError, subprocess.SubprocessError):
