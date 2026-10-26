@@ -1,0 +1,26 @@
+{
+  "size": [640, 390],
+  "label": "A type C LNG fuel tank on the open deck with its pressure gauge, a spring relief valve on its top and the vent line up the vent mast: the pressure rises, the relief valve lifts, the gas leaves the vent mast outlet high above the deck into a hazardous zone, then the pressure falls and the valve shuts.",
+  "idle": "Press Next step",
+  "parts": [
+    { "id": "G", "type": "ga", "x": 10, "y": 330, "w": 620, "h": 54, "cut": true, "water": false },
+    { "id": "T", "type": "tank", "on": "G.deck", "at": 0.3, "w": 250, "h": 104, "value": 0.6 },
+    { "id": "NT", "type": "text", "text": "LNG fuel tank (type C)", "for": "T" },
+    { "id": "RV", "type": "relief_valve", "on": "T.top@0.78", "size": 13, "label": "relief valve", "labelAt": "right" },
+    { "id": "V", "type": "vent", "on": "G.deck", "at": 0.8, "mast": 240, "label": "vent mast", "labelAt": "right" },
+    { "id": "VL", "type": "pipe", "fluid": "gas", "from": "RV.outlet", "to": "V.outlet", "value": 0 },
+    { "id": "Z", "type": "zone", "zone": 1, "around": "V.outlet", "r": 44, "value": 0 },
+    { "id": "C", "type": "gas_cloud", "from": "V.outlet", "w": 130, "h": 70, "value": 0 },
+    { "id": "PG", "type": "readout", "x": 40, "y": 110, "w": 150, "h": 58, "label": "TANK PRESSURE", "unit": "bar", "decimals": 1,
+      "value": 4, "marks": [{ "at": 9, "kind": "alarm", "alarm": "TANK PRESSURE HIGH" }] },
+    { "id": "W", "type": "wire", "d": "M115 168 V216" }
+  ],
+  "steps": [
+    { "title": "1 · Normal: the tank pressure is held in range, the relief valve stays shut", "line": 1, "play": [["PG", 4.5, 900]] },
+    { "title": "2 · Heat leaks in, LNG boils off and the pressure rises to the valve's set point", "line": 2, "play": [["PG", 10, 2600, 0, "linear"]] },
+    { "title": "3 · The relief valve lifts and the gas leaves the vent mast outlet, high above the deck", "line": 3,
+      "play": [["RV", 1, 600], ["VL", 1, 400, 300], ["V", 1, 600, 600], ["C", 0.9, 1800, 800], ["Z", 1, 900, 800]] },
+    { "title": "4 · The pressure falls, the valve shuts and the venting stops", "line": 4,
+      "play": [["PG", 7, 1800], ["RV", 0, 600, 1200], ["VL", 0, 400, 1500], ["V", 0, 500, 1500], ["C", 0, 1400, 1500]] }
+  ]
+}

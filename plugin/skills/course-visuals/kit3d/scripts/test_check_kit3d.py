@@ -274,5 +274,17 @@ try:
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 
+# 2.66.0 - a part that stands on the open deck is never below it; "on": "<hull>.deck" places it there
+print("\n-- 2.66.0: deck parts on the deck")
+HULL = {"id": "H", "type": "hull", "at": [0, 0, 0], "x": [-10, 10], "half": 6, "top": 9}
+low = {"label": "t", "units": "m", "parts": [HULL, {"id": "V", "type": "vent_mast", "at": [2, 4, 0], "h": 10}]}
+check("a vent mast whose foot is below the hull's deck (inside the hull) fails",
+      any("below the deck" in x for x in run(low)[0]), run(low)[0])
+ok = {"label": "t", "units": "m", "parts": [HULL, {"id": "V", "type": "vent_mast", "on": "H.deck", "at": [2, 0, 0], "h": 10}]}
+check("the same mast \"on\": \"H.deck\" passes", not [x for x in run(ok)[0] if "deck" in x])
+check("deck_level reads the hull's deck as kit3d.js does (top 9 over its origin)", ck.deck_level(HULL) == 9)
+js = io.open(os.path.join(os.path.dirname(HERE), "kit3d.js"), encoding="utf-8").read()
+check("kit3d.js places a part \"on\" a hull's deck before it builds it", "function deckRelation" in js and "deckRelation(list, list[i], S)" in js)
+
 print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
 sys.exit(1 if FAILS else 0)

@@ -1,0 +1,22 @@
+{
+  "size": [650, 330],
+  "label": "How each IGF fuel is kept on board, on one temperature scale: hydrogen as a liquid at about -253 °C, LNG at about -162 °C, LPG and ammonia refrigerated at about -42 °C and -33 °C (or under pressure at room temperature), and at room temperature CNG as a gas compressed to 200-250 bar and methanol and ethanol as liquids.",
+  "idle": "Press Next step",
+  "parts": [
+    { "id": "S", "type": "scale", "orient": "h", "x": 40, "y": 290, "len": 560, "w": 18, "min": -260, "max": 60, "every": 40, "unit": "°C", "reach": 270,
+      "markers": [
+        { "label": "Hydrogen", "note": "liquid, -253 °C", "at": -253, "rise": 200 },
+        { "label": "LNG", "note": "liquid, -162 °C", "at": -162, "rise": 120 },
+        { "label": "LPG", "note": "-42 °C or pressure", "at": -42, "rise": 56, "side": "left" },
+        { "label": "Ammonia", "note": "toxic; -33 °C or pressure", "at": -33, "rise": 170, "side": "left" },
+        { "label": "CNG, methanol, ethanol", "note": "room temperature: CNG a gas at 200-250 bar,\nmethanol and ethanol liquids", "at": 20, "rise": 236, "side": "left" }
+      ] }
+  ],
+  "steps": [
+    { "title": "1 · Hydrogen - the coldest: a liquid only near -253 °C", "line": 1, "play": [["S", 1, 1200]] },
+    { "title": "2 · LNG - a cryogenic liquid at about -162 °C", "line": 2, "play": [["S", 2, 1200]] },
+    { "title": "3 · LPG - refrigerated, or kept liquid under pressure", "line": 3, "play": [["S", 3, 1200]] },
+    { "title": "4 · Ammonia - refrigerated or under pressure, and toxic", "line": 4, "play": [["S", 4, 1200]] },
+    { "title": "5 · CNG, methanol and ethanol - kept at room temperature", "line": 5, "play": [["S", 5, 1200]] }
+  ]
+}

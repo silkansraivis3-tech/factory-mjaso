@@ -67,8 +67,17 @@ def boxes(spec):
     return out
 
 
+# 2.66.0 - s03, s04 and s06 name a figure of the kit's library (ship plan, engine modes): their starter IS the pattern, and
+# the placeholder grid below is judged on a slide no pattern fits (s04 with its last three lines)
+GRID_S04 = dict(SLIDES["s04"], id="s04g", text="\n".join(SLIDES["s04"]["text"].split("\n")[2:5]))
+
+
 def canvas():
-    s4 = SLIDES["s04"]
+    for sid, want in (("s03", "ship_ga"), ("s04", "ship_ga"), ("s06", "engine_modes")):
+        spec = cm.starter_figure(SCRIPT, SLIDES[sid])
+        check("2.66.0 %s names a library figure: its starter is the %s pattern" % (sid, want),
+              spec and want in (spec.get("_pattern") or ""), spec and spec.get("_pattern"))
+    s4 = GRID_S04
     plain = cm.starter_figure(SCRIPT, s4)
     check("no photograph to show: the canvas is the two-col column's shape, 640 x 390", plain["size"] == [640, 390], plain["size"])
     pool = [("vm.jpg", {"shows": ["vent mast"]}, "m", "u:vm")]
@@ -77,8 +86,8 @@ def canvas():
           "the row, 640 x 274 (M01 s04: a 682 x 292 px panel)", strip["size"] == [640, 274], strip["size"])
     taken = cm.starter_figure(SCRIPT, s4, pool, {"u:vm": "M02 s03"})
     check("... not when the course already shows that photograph (L58: the row leaves it out)", taken["size"] == [640, 390], taken["size"])
-    for sid in ("s03", "s04"):                          # drawn parts only (s06 is mostly text callouts: the studio judges it)
-        spec = cm.starter_figure(SCRIPT, SLIDES[sid])
+    for sid, sl in (("s04g", GRID_S04),):              # drawn parts only (s06 is mostly text callouts: the studio judges it)
+        spec = cm.starter_figure(SCRIPT, sl)
         W, H = spec["size"]
         bx = boxes(spec)
         area = sum((x1 - x0) * (y1 - y0) for x0, y0, x1, y1 in bx)

@@ -1,0 +1,22 @@
+{
+  "size": [640, 390],
+  "label": "The vent mast with a flame at its outlet: the alarm logs, the tank pressure is lowered another way so venting stops, nitrogen goes up the mast and the flame goes out, then water spray cools the mast head.",
+  "idle": "Decide each step first",
+  "parts": [
+    { "id": "TK", "type": "tank", "x": 30, "y": 270, "w": 250, "h": 90, "label": "LNG tank", "value": 0.7 },
+    { "id": "GP", "type": "gauge", "x": 100, "y": 130, "r": 46, "label": "tank pressure", "numbers": false, "min": 0, "max": 10, "value": 8 },
+    { "id": "PV", "type": "pipe", "d": "M200 270 V210 H400 V90", "fluid": "gas", "value": 1 },
+    { "id": "VT", "type": "vent", "x": 400, "y": 90, "label": "vent mast", "labelAt": "left", "value": 1 },
+    { "id": "FL", "type": "flame", "x": 400, "y": 78, "size": 44, "label": "gas burning\nat the outlet", "value": 1 },
+    { "id": "N2", "type": "gas_cylinder", "x": 520, "y": 90, "w": 56, "h": 110, "gas": "N2", "label": "nitrogen", "value": 1 },
+    { "id": "NP", "type": "pipe", "d": "M548 200 V240 H400", "fluid": "air", "value": 0 },
+    { "id": "WS", "type": "spray", "x": 330, "y": 120, "nozzle": "hand", "agent": "water", "angle": 20, "reach": 60, "label": "water spray", "value": 0 },
+    { "id": "LG", "type": "log", "x": 330, "y": 300, "w": 290, "rows": 2, "label": "alarms" }
+  ],
+  "steps": [
+    { "title": "1 · Raise the alarm; keep everyone away", "line": 3, "play": [["LG", 1, 500]] },
+    { "title": "2 · Stop the venting: lower the pressure another way", "line": 4, "play": [["GP", 4, 2000], ["VT", 0, 800, 1500]] },
+    { "title": "3 · Nitrogen into the vent mast", "line": 5, "play": [["NP", 1, 900], ["FL", 0, 900, 700]] },
+    { "title": "4 · Cool the mast head with water spray", "line": 6, "play": [["WS", 1, 800]] }
+  ]
+}

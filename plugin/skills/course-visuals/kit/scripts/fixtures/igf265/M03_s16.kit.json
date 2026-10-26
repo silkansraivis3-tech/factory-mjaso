@@ -1,0 +1,21 @@
+{
+  "size": [330, 215],
+  "label": "A leak from a bunkering connection falls into a drip tray under it, so the cold LNG never reaches the hull steel; a water curtain down the hull is drawn as the marked alternative.",
+  "idle": "Press Next step",
+  "parts": [
+    { "id": "V1", "type": "valve", "x": 50, "y": 70, "label": "stop valve", "labelAt": "below", "actuator": false, "value": 1 },
+    { "id": "V2", "type": "valve", "x": 110, "y": 70, "label": "shutdown valve", "labelAt": "above", "value": 1 },
+    { "id": "P1", "type": "pipe", "d": "M10 70 H250", "fluid": "liquid", "value": 0 },
+    { "id": "DD", "type": "coupling", "x": 165, "y": 70, "kind": "dry", "label": "connection", "labelAt": "above", "value": 1 },
+    { "id": "DT", "type": "drip_tray", "x": 100, "y": 150, "w": 130, "drip": 65, "label": "drip tray", "labelAt": "below", "value": 0 },
+    { "id": "WC", "type": "water_curtain", "x": 270, "y": 30, "w": 50, "h": 146, "label": "water curtain", "labelAt": "left", "value": 0 },
+    { "id": "T1", "type": "text", "x": 110, "y": 14, "anchor": "middle", "reveal": true, "text": "cryogenic cracking" },
+    { "id": "T2", "type": "text", "x": 110, "y": 14, "anchor": "middle", "reveal": true, "text": "stainless steel" }
+  ],
+  "steps": [
+    { "title": "1 · Hull steel turns brittle in the cold", "line": 1, "play": [["T1", 1, 500]] },
+    { "title": "2 · The drip tray under the connection catches the spill", "line": 3, "play": [["T1", 0, 300], ["P1", 1, 600], ["DT", 0.7, 2500]] },
+    { "title": "3 · Stainless steel, or steel made for the cold, where LNG may land", "line": 4, "play": [["T2", 1, 500]] },
+    { "title": "4 · Another solution: a water curtain down the hull", "line": 5, "play": [["T2", 0, 300], ["WC", 1, 1000]] }
+  ]
+}

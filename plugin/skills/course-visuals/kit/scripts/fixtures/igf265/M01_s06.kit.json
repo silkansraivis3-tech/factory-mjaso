@@ -1,0 +1,117 @@
+{
+  "size": [
+    640,
+    274
+  ],
+  "label": "Engine cylinder in three steps: gas mode with pilot spray igniting gas, gas valves closing on a trip, fuel-oil mode.",
+  "idle": "Press Next step",
+  "parts": [
+    {
+      "id": "P1",
+      "type": "text",
+      "x": 107,
+      "y": 31,
+      "anchor": "middle",
+      "reveal": true,
+      "text": "Gas mode"
+    },
+    {
+      "id": "P2",
+      "type": "text",
+      "x": 320,
+      "y": 31,
+      "anchor": "middle",
+      "reveal": true,
+      "text": "Fuel-oil mode"
+    },
+    {
+      "id": "P3",
+      "type": "text",
+      "x": 533,
+      "y": 31,
+      "anchor": "middle",
+      "reveal": true,
+      "text": "Changeover"
+    },
+    {
+      "id": "P4",
+      "type": "engine",
+      "x": 14,
+      "y": 93,
+      "w": 218,
+      "h": 119,
+      "label": "Gas-only engines exist too"
+    },
+    {
+      "id": "P5",
+      "type": "cylinder",
+      "x": 314,
+      "y": 76,
+      "w": 110,
+      "h": 184,
+      "label": "cylinder"
+    },
+    {
+      "id": "P6L",
+      "type": "pipe",
+      "d": "M506 168 H626",
+      "fluid": "liquid"
+    },
+    {
+      "id": "P6",
+      "type": "valve",
+      "x": 566,
+      "y": 168,
+      "size": 18,
+      "labelAt": "right",
+      "trip": false,
+      "label": "valves"
+    }
+  ],
+  "steps": [
+    {
+      "title": "1 · Gas mode: gas burns, lit by a small injection of pilot fuel",
+      "line": 2,
+      "play": [
+        [
+          "P1",
+          1,
+          600
+        ]
+      ]
+    },
+    {
+      "title": "2 · Fuel-oil mode: the engine runs on oil fuel only.",
+      "line": 3,
+      "play": [
+        [
+          "P2",
+          1,
+          600
+        ]
+      ]
+    },
+    {
+      "title": "3 · Changeover: the engine switches between modes - planned, or",
+      "line": 4,
+      "play": [
+        [
+          "P3",
+          1,
+          600
+        ]
+      ]
+    },
+    {
+      "title": "4 · Gas-only engines exist too - they cannot switch to oil.",
+      "line": 5,
+      "play": [
+        [
+          "P4",
+          1,
+          600
+        ]
+      ]
+    }
+  ]
+}

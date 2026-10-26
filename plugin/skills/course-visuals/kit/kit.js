@@ -319,8 +319,397 @@
   function past(m, v) { return m.dir === 'down' ? v <= m.at : v >= m.at; }
   function flagMark(m, on) { if (m.node) m.node.classList.toggle('on', on); }
 
+  /* kit-relate */
+  /* ----------------------------------------------------------------- relations (2.66.0)
+     A part is placed BY WHAT IT STANDS ON, not by a raw y (IGF M01 s03, 2.65.0: a vent mast drawn at y 184 under the deck
+     line, inside the hull; a "Bunkering station" that was words with no manifold; pipes that ended in the air). A spec may
+     say, instead of x / y / d:
+       "on": "G.deck"            stand on an anchor - the part's foot on that line (a vent mast's foot, a manifold's flange)
+       "in": "S"                 stand on the floor of a space or of the ship's hold
+       "at": 0.7 | 312 | "K.top" across: a fraction of the host's length, a figure x, or another part's port
+       "at": "P1@0.4"            ON a pipe: that far along it, turned with it (a valve, a coupling)
+       "side": "left" | "right"  against that wall of the space it is in
+       "from": "K.top", "to": "V.inlet", "via": [[x, y], "R.outlet"], "level": y   a pipe or hose routed between ports
+       "for": "B"                (a text) a callout to that part - its leader ends on it
+       "around": "V.outlet", "r": 40 | "pad": 8    (a zone) round a port or a part
+       "from": "V.outlet"        (a gas cloud) grows from that port
+       "aim": "W"                (a spray) pointed at that part, reaching it
+     Anchors of a side-view ship (ga): deck, bottom, floor, waterline, side; of a plan view: port, starboard, side; of any
+     part: its ports (PARTS of GEOM below: top, bottom, left, right, center, inlet, outlet ... and "top@0.3" along an edge).
+     Pure numbers, no DOM: check_kit.py runs this block under node to judge what a figure MEANS (kit_relate.py). The
+     resolved spec keeps the relation keys; a part with no relation is left exactly as it was. */
+  var RELATE = (function () {
+    function n(v, d) { return typeof v === 'number' && isFinite(v) ? v : d; }
+    function cl(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function r1(v) { return Math.round(v * 10) / 10; }
+    function edges(x0, y0, x1, y1, more) {
+      var o = { top: [(x0 + x1) / 2, y0, 'up'], bottom: [(x0 + x1) / 2, y1, 'down'], left: [x0, (y0 + y1) / 2, 'left'],
+                right: [x1, (y0 + y1) / 2, 'right'], center: [(x0 + x1) / 2, (y0 + y1) / 2, null] };
+      for (var k in more || {}) o[k] = more[k];
+      return o;
+    }
+    /* each type's shape in its own units (origin = its x, y): box [x0, y0, x1, y1]; foot [x, y] - where it stands (or, for
+       a part that hangs, "hang" - where it hangs from); span [x0, x1] - the run "top@f" / "bottom@f" are measured along;
+       ports {name: [x, y, dir]} - where a pipe joins it, dir the way a pipe leaves it. Read from the parts' drawing code;
+       a type not here is judged by its w / h or r */
+    var GEOM = {
+      tank: function (p) {
+        var w = n(p.w, 190), h = n(p.h, 110), f = cl(h * 0.1, 4, 12);
+        return { box: [0, -10, w, h + f], foot: [w / 2, h + f], span: [h * 0.28, w - h * 0.28], ports: edges(0, -10, w, h, { top: [w / 2, -10, 'up'], vapour: [w / 2, -10, 'up'], liquid: [w / 2, h, 'down'] }) };
+      },
+      integral_tank: function (p) { var w = n(p.w, 160), h = n(p.h, 110); return { box: [0, 0, w, h], foot: [w / 2, h], ports: edges(0, 0, w, h) }; },
+      boil_off: function (p) { var w = n(p.w, 260), h = n(p.h, 150); return { box: [0, 0, w, h], foot: [w / 2, h], ports: edges(0, 0, w, h) }; },
+      tank_type: function (p) { var w = n(p.w, 150), h = n(p.h, 110); return { box: [0, 0, w, h], foot: [w / 2, h], ports: edges(0, 0, w, h) }; },
+      space: function (p) {
+        var w = n(p.w, 120), h = n(p.h, 90);
+        return { box: [0, 0, w, h], foot: [w / 2, h], floor: h - 3, room: true, ports: edges(0, 0, w, h, { floor: [w / 2, h - 3, 'up'], ceiling: [w / 2, 3, 'down'] }) };
+      },
+      vent: function (p) {
+        var m = typeof p.mast === 'number' ? p.mast : p.mast === true ? 60 : 0;
+        return { box: [-10, -46, 10, Math.max(m, 2)], foot: [0, m], ports: { inlet: [0, m, 'down'], outlet: [0, -7, 'up'], top: [0, -7, 'up'], bottom: [0, m, 'down'] }, gasFrom: [0, -12] };
+      },
+      valve: function (p) {
+        var s = n(p.size, 12), k = s * 0.72, hw = s + 9;
+        return { box: [-hw, -k - 3 - 1.45 * s, hw, k + 3], foot: [0, k + 3], ports: { in: [-hw, 0, 'left'], out: [hw, 0, 'right'], left: [-hw, 0, 'left'], right: [hw, 0, 'right'], center: [0, 0, null] }, turns: true };
+      },
+      relief_valve: function (p) {
+        var s = n(p.size, 14), k = s * 0.7, top = -s - 22, L = p.outlet === 'left' ? -1 : 1;
+        return { box: [L > 0 ? -k - 13 : -s - 8, top - 11, L > 0 ? s + 8 : k + 13, s + 8], foot: [0, s + 7.5],
+                 ports: { inlet: [0, s + 7.5, 'down'], outlet: [L * (s + 7.5), 0, L > 0 ? 'right' : 'left'], bottom: [0, s + 7.5, 'down'], center: [0, 0, null] } };
+      },
+      pump: function (p) {
+        var r = n(p.r, 15);
+        return { box: [-r - 4, -r, r + 8, r + 6], foot: [0, r + 6], ports: { inlet: [-r, 0, 'left'], outlet: [r + 8, -r + 4, 'right'], left: [-r, 0, 'left'], right: [r + 8, -r + 4, 'right'], center: [0, 0, null] } };
+      },
+      exchanger: function (p) {
+        var r = n(p.r, 18), a = r * 0.78 + 2.5;
+        return { box: [-a, -r * 0.83 - 2, a, r + 3], foot: [0, r + 3], ports: { in: [-a, 0, 'left'], out: [a, 0, 'right'], inlet: [-a, 0, 'left'], outlet: [a, 0, 'right'], left: [-a, 0, 'left'], right: [a, 0, 'right'], center: [0, 0, null] } };
+      },
+      engine: function (p) {
+        var w = n(p.w, 100), h = n(p.h, 70);
+        return { box: [-31, -10, w, h + 5], foot: [w / 2, h + 5], span: [0, w], ports: edges(0, -10, w, h, { inlet: [0, h / 2, 'left'], gas: [0, h / 2, 'left'] }) };
+      },
+      cylinder: function (p) { var w = n(p.w, 140), h = n(p.h, 230); return { box: [0, 0, w, h], foot: [w / 2, h], ports: edges(0, 0, w, h, { gas: [w * 0.78, 0, 'up'], oil: [w * 0.22, 0, 'up'] }) }; },
+      manifold: function (p) {
+        var outs = (p.outlets || []).length || 1, w = n(p.w, 560), hh = n(p.h, 24), y0 = hh + n(p.drop, 44) + 7, sp = w / outs, o = {};
+        for (var i = 0; i < outs; i++) o['out' + (i + 1)] = [sp * (i + 0.5), y0 + 9, 'down'];
+        o.outlet = o.out1; o.bottom = o.out1; o.left = [-8, hh / 2, 'left']; o.right = [w + 8, hh / 2, 'right']; o.top = [w / 2, -6, 'up']; o.center = [w / 2, hh / 2, null];
+        return { box: [-8, -6, w + 8, y0 + 9], foot: [w / 2, y0 + 9], span: [0, w], ports: o };
+      },
+      drip_tray: function (p) { var w = n(p.w, 160), d = n(p.h, 24); return { box: [-1.5, -1, w + 1.5, d + 11], foot: [w / 2, d + 11], ports: edges(-1.5, 0, w + 1.5, d + 11) }; },
+      water_curtain: function (p) {
+        var w = n(p.w, 36), h = n(p.h, 120);
+        return { box: [-6, -10, w + 6, h], hang: [w / 2, -10], ports: edges(-6, -10, w + 6, h, { header: [w / 2, -10, 'up'] }), water: [0, 0, w, h] };
+      },
+      coupling: function () { return { box: [-24, -16, 24, 16], foot: [0, 16], ports: { left: [-23.5, 0, 'left'], right: [23.5, 0, 'right'], in: [-23.5, 0, 'left'], out: [23.5, 0, 'right'], center: [0, 0, null] }, turns: true }; },
+      hatch: function (p) { var w = n(p.w, 64); return { box: [-3, 0, w + 3, 20], foot: [w / 2, 20], ports: edges(-3, 0, w + 3, 20) }; },
+      detector: function (p) { var r = n(p.r, 19); return { box: [-r, -22, r, 22], foot: [0, 22], hang: [0, -22], ports: edges(-r, -22, r, 22) }; },
+      lamp: function (p) { var r = p.ex ? 20 : 13; return { box: [-r, 0, r, 48], hang: [0, 0], ports: edges(-r, 0, r, 48) }; },
+      gas_cylinder: function (p) {                       // (x, y) is the middle of its foot ring; the valve on its neck
+        var w = n(p.w, 56), h = n(p.h, 150), s = cl(h / 150, 0.55, 1), top = -h - 34 * s;
+        return { box: [-w / 2 - 4, top, Math.max(w / 2 + 4, 22 * s), 2], foot: [0, 2],
+                 ports: edges(-w / 2 - 4, top, w / 2 + 4, 2, { valve: [22 * s, -h - 17.5 * s, 'right'], outlet: [22 * s, -h - 17.5 * s, 'right'], top: [0, top, 'up'] }) };
+      },
+      fan: function (p) {
+        var r = n(p.r, 26), hl = n(p.len, 170) / 2, wh = r + 9, vert = p.dir === 'up' || p.dir === 'down';
+        var b = vert ? [-wh, -hl, wh, hl] : [-hl, -wh, hl, wh];
+        return { box: b, foot: [0, b[3]], ports: edges(b[0], b[1], b[2], b[3], vert ? { inlet: [0, p.dir === 'up' ? hl : -hl, p.dir === 'up' ? 'down' : 'up'], outlet: [0, p.dir === 'up' ? -hl : hl, p.dir === 'up' ? 'up' : 'down'] }
+                                                                                      : { inlet: [p.dir === 'left' ? hl : -hl, 0, p.dir === 'left' ? 'right' : 'left'], outlet: [p.dir === 'left' ? -hl : hl, 0, p.dir === 'left' ? 'left' : 'right'] }) };
+      },
+      spool_piece: function (p) { var w = n(p.w, 560), t = n(p.t, 26); return { box: [0, -t / 2 - 5, w, t / 2 + 5], foot: [w / 2, t / 2 + 5], ports: edges(0, -t / 2, w, t / 2) }; },
+      push_button: function (p) { var h = n(p.h, 120), s = h / 182; return { box: [-60 * s, 0, 60 * s, h], foot: [0, h], ports: edges(-60 * s, 0, 60 * s, h) }; },
+      airlock: function (p) { var w = n(p.w, 130), h = n(p.h, 124), sd = n(p.safeW, n(p.side, 92)), sd2 = n(p.hazardW, sd); return { box: [0, 0, sd + w + sd2, h], foot: [(sd + w + sd2) / 2, h], ports: edges(0, 0, sd + w + sd2, h) }; },
+      badge: function () { return { box: [-17, -17, 17, 17], ports: edges(-17, -17, 17, 17) }; },
+      gauge: function (p) { var r = n(p.r, 40); return { box: [-r, -r, r, r + 20], ports: edges(-r, -r, r, r) }; },
+      flame: function (p) { var s = n(p.size, 44); return { box: [-s / 2, -s, s / 2, 0], foot: [0, 0], ports: edges(-s / 2, -s, s / 2, 0) }; },
+      scale: function (p) {                              // across: the bar along y, its markers on stems above it; upright: x, y the top
+        var bw = n(p.w, 22), rise = 0;
+        (p.markers || []).forEach(function (m) { rise = Math.max(rise, n(m && m.rise, 60)); });
+        if (p.orient === 'h') { var L = n(p.len, 400); return { box: [-10, -rise - 34, L + 10, bw + 34], ports: edges(0, 0, L, bw) }; }
+        var H = n(p.h, 300); return { box: [-40, -10, n(p.reach, bw + 300), H + 10], ports: edges(0, 0, bw, H) };
+      },
+      zone: function (p) { var w = p.r != null ? 2 * p.r : n(p.w, 80), h = p.r != null ? 2 * p.r : n(p.h, 60); return { box: [0, 0, w, h], ports: edges(0, 0, w, h) }; },
+      gas_cloud: function (p) { var w = n(p.w, 200), h = n(p.h, 120); return { box: [0, 0, w, h], ports: edges(0, 0, w, h) }; }
+    };
+    function shapeOf(p) {
+      if (GEOM[p.type]) return GEOM[p.type](p);
+      if (p.type === 'ga') return gaShape(p);
+      var w = n(p.w, 0), h = n(p.h, 0), r = n(p.r, 0);
+      if (w && h) return { box: [0, 0, w, h], foot: [w / 2, h], ports: edges(0, 0, w, h) };
+      if (r) return { box: [-r, -r, r, r], foot: [0, r], ports: edges(-r, -r, r, r) };
+      /* a part whose shape this table does not know: judged generously (approx), never failed on a guess */
+      return { box: [-100, -100, 100, 100], foot: [0, 10], approx: true, ports: edges(-10, -10, 10, 10) };
+    }
+    /* the hull of a side-view ship as kit.js draws it (TYPES.ga): deck at 0, stern line in to 0.1 w at the keel, the bow a
+       curve from (w, 0) to (0.87 w, h). hullX(y) = [left, right] of the hull at depth y */
+    function gaShape(p) {
+      var w = n(p.w, 600), d = n(p.h, 80), wl = n(p.draft, 0.55), plan = p.view === 'plan';
+      var up = p.house ? n(p.house.h, 0) + (p.funnel ? n(p.funnel.h, 22) : 0) + 20 : 6;
+      var o = { box: [0, -up, w, d], span: [0, w], ga: true, plan: plan, deckY: 0, keelY: d, wl: d * wl,
+                house: p.house ? [n(p.house.x, 0), -n(p.house.h, 0), n(p.house.x, 0) + n(p.house.w, 0), 0] : null,
+                houseTop: p.house ? -n(p.house.h, 0) - (p.funnel ? n(p.funnel.h, 22) : 0) : 0 };
+      o.ports = plan ? { port: [w / 2, 0, 'up'], starboard: [w / 2, d, 'down'], side: [w / 2, 0, 'up'], deck: [w / 2, d / 2, null], center: [w / 2, d / 2, null] }
+                     : { deck: [w / 2, 0, 'up'], bottom: [w / 2, d, 'down'], keel: [w / 2, d, 'down'], floor: [w / 2, d * 0.9, 'up'],
+                         waterline: [w / 2, d * wl, null], side: [w / 2, d * 0.28, null], center: [w / 2, d / 2, null] };
+      o.hullX = function (y) {
+        if (plan || p.cut) return [0, w];
+        var t = cl(y / d, 0, 1), left = t < 0.5 ? 0.03 * w * (t / 0.5) : 0.03 * w + 0.07 * w * ((t - 0.5) / 0.5);
+        var lo = 0, hi = 1;                                  /* the bow: y(s) = 2s(1-s) 0.62 d + s^2 d, x(s) = (1-s)^2 w + 2s(1-s) 0.97 w + s^2 0.87 w */
+        for (var i = 0; i < 30; i++) { var m = (lo + hi) / 2, ym = 2 * m * (1 - m) * 0.62 * d + m * m * d; if (ym < y) lo = m; else hi = m; }
+        var s = (lo + hi) / 2, right = (1 - s) * (1 - s) * w + 2 * s * (1 - s) * 0.97 * w + s * s * 0.87 * w;
+        return [left, right];
+      };
+      return o;
+    }
+    /* a pipe's path as straight runs between its vertices (M L H V; a curve's end points), in figure units */
+    function pathPts(d, ox, oy) {
+      var t = String(d || '').match(/[a-zA-Z]|-?\d*\.?\d+(?:e-?\d+)?/g) || [], N = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7 };
+      var cx = 0, cy = 0, cmd = '', i = 0, pts = [];
+      while (i < t.length) {
+        if (/[a-zA-Z]/.test(t[i])) { cmd = t[i++]; if (/z/i.test(cmd)) continue; }
+        var up = cmd.toUpperCase(), rel = cmd !== up, k = N[up];
+        if (!k) break;
+        var a = t.slice(i, i + k).map(Number), x = cx, y = cy; i += k;
+        if (up === 'H') x = a[0] + (rel ? cx : 0); else if (up === 'V') y = a[0] + (rel ? cy : 0);
+        else { x = a[k - 2] + (rel ? cx : 0); y = a[k - 1] + (rel ? cy : 0); }
+        if (up === 'M') cmd = rel ? 'l' : 'L';
+        cx = x; cy = y;
+        pts.push([(ox || 0) + cx, (oy || 0) + cy]);
+      }
+      return pts;
+    }
+    function along(pts, f) {
+      var L = 0, i, seg = [];
+      for (i = 1; i < pts.length; i++) { var l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(l); L += l; }
+      var want = cl(f, 0, 1) * L;
+      for (i = 0; i < seg.length; i++) {
+        if (want <= seg[i] || i === seg.length - 1) {
+          var k = seg[i] ? want / seg[i] : 0, a = pts[i], b = pts[i + 1];
+          return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, Math.abs(b[0] - a[0]) < Math.abs(b[1] - a[1]) ? 'v' : 'h'];
+        }
+        want -= seg[i];
+      }
+      return pts.length ? [pts[0][0], pts[0][1], 'h'] : [0, 0, 'h'];
+    }
+    var TURN = { up: 'right', right: 'down', down: 'left', left: 'up' };
+    function turnDir(d, deg) { var k = ((Math.round((deg || 0) / 90) % 4) + 4) % 4; while (k--) d = d ? TURN[d] : d; return d; }
+    function rot(pt, deg) {
+      var a = (deg || 0) * Math.PI / 180, c = Math.round(Math.cos(a) * 1e6) / 1e6, s = Math.round(Math.sin(a) * 1e6) / 1e6;
+      return [pt[0] * c - pt[1] * s, pt[0] * s + pt[1] * c];
+    }
+
+    function resolve(spec0) {
+      if (!spec0 || !spec0.parts) return spec0;
+      var spec = JSON.parse(JSON.stringify(spec0)), byId = {}, state = {}, errs = [];
+      spec.parts.forEach(function (p) { if (p && p.id) byId[p.id] = p; });
+      if (!spec.parts.some(related)) return spec;
+      function related(p) { return p && (p.on || p.in || p.at != null || p['for'] || p.around || p.aim ||
+                                         ((p.type === 'pipe' || p.type === 'hose' || p.type === 'wire') && (p.from || p.to)) ||
+                                         (p.type === 'gas_cloud' && typeof p.from === 'string')); }
+      function err(p, msg) { errs.push((p.id || p.type) + ': ' + msg); }
+      function shape(id) { var p = byId[id]; if (!p) return null; done(p); return shapeOf(p); }
+      function done(p) {                                  // a part referred to is placed first
+        if (state[p.id] === 2) return;
+        if (state[p.id] === 1) { err(p, 'its placement refers back to itself'); return; }
+        state[p.id] = 1; place(p); state[p.id] = 2;
+      }
+      /* "<id>.<anchor>" -> [x, y, dir, part] in figure units; "<pipe>@f" -> the point f along the pipe */
+      function anchor(ref, who) {
+        if (Array.isArray(ref)) return [n(ref[0], 0), n(ref[1], 0), null, null];
+        var s = String(ref), at = s.indexOf('@'), f = at >= 0 ? parseFloat(s.slice(at + 1)) : null, base = at >= 0 ? s.slice(0, at) : s;
+        var dot = base.indexOf('.'), id = dot >= 0 ? base.slice(0, dot) : base, name = dot >= 0 ? base.slice(dot + 1) : '';
+        var q = byId[id];
+        if (!q) { err(who, 'refers to ' + s + ' - there is no part ' + id); return null; }
+        done(q);
+        if ((q.type === 'pipe' || q.type === 'hose' || q.type === 'wire') && q.d) {
+          var pts = pathPts(q.d, q.x, q.y);
+          if (!pts.length) return null;
+          if (name === 'start' || (!name && f == null)) return [pts[0][0], pts[0][1], null, q];
+          if (name === 'end') return [pts[pts.length - 1][0], pts[pts.length - 1][1], null, q];
+          var a = along(pts, f != null ? f : 0.5);
+          return [a[0], a[1], a[2], q];
+        }
+        var S = shapeOf(q), X = n(q.x, 0), Y = n(q.y, 0);
+        if (!name) name = 'center';
+        var P = S.ports[name];
+        if (!P) { err(who, 'refers to ' + s + ' - a ' + q.type + ' has no "' + name + '" (it has ' + Object.keys(S.ports).join(', ') + ')'); return null; }
+        var px = P[0], py = P[1], dir = P[2];
+        if (f != null && (name === 'top' || name === 'bottom' || name === 'deck' || name === 'floor' || name === 'ceiling' || name === 'keel' || name === 'waterline' || name === 'side' || name === 'port' || name === 'starboard')) {
+          var sp = S.span || [S.box[0], S.box[2]]; px = sp[0] + cl(f, 0, 1) * (sp[1] - sp[0]);
+        } else if (f != null && (name === 'left' || name === 'right')) py = S.box[1] + cl(f, 0, 1) * (S.box[3] - S.box[1]);
+        if (S.turns && q.rotate) { var rp = rot([px, py], q.rotate); px = rp[0]; py = rp[1]; dir = turnDir(dir, q.rotate); }
+        return [X + px, Y + py, dir, q, S];
+      }
+      function acrossX(p, host, H) {                      // "at": a fraction of the host's length, a figure x, or a port
+        if (p.at == null) return null;
+        if (typeof p.at === 'number') {
+          if (p.at >= 0 && p.at <= 1 && host) { var sp = H.span || [H.box[0], H.box[2]]; return n(host.x, 0) + sp[0] + p.at * (sp[1] - sp[0]); }
+          return p.at;
+        }
+        var a = anchor(p.at, p);
+        return a ? a[0] : null;
+      }
+      function place(p) {
+        if (!related(p)) return;
+        var t = p.type;
+        if (t === 'pipe' || t === 'hose' || t === 'wire') return route(p);
+        if (t === 'text' && p['for']) {
+          var tgt = p['for'], a = String(tgt).indexOf('.') >= 0 ? anchor(tgt, p) : null, q = byId[tgt];
+          if (!a && !q) { err(p, 'is "for" ' + tgt + ', which is not a part'); return; }
+          var pt = a;
+          if (!pt && q && (q.type === 'pipe' || q.type === 'hose' || q.type === 'wire')) pt = anchor(tgt + '@0.5', p);   // a line: its middle
+          if (!pt) { done(q); var Q = shapeOf(q), qx = n(q.x, 0), qy = n(q.y, 0); pt = [qx + (Q.box[0] + Q.box[2]) / 2, qy + (Q.box[1] + Q.box[3]) / 2]; p._forBox = [qx + Q.box[0], qy + Q.box[1], qx + Q.box[2], qy + Q.box[3]]; }
+          p.to = [r1(pt[0]), r1(pt[1])];
+          if (p.x == null) p.x = p.to[0];
+          if (p.y == null) p.y = r1((p._forBox ? p._forBox[1] : pt[1]) - 22);
+          return;
+        }
+        if (t === 'zone' && p.around) {
+          var ar = anchor(p.around, p);
+          if (!ar) return;
+          if (p.r != null && String(p.around).indexOf('.') >= 0) { p.x = r1(ar[0] - p.r); p.y = r1(ar[1] - p.r); return; }
+          var zq = byId[String(p.around).split('.')[0]], ZS = shapeOf(zq), pad = n(p.pad, 8), zx = n(zq.x, 0), zy = n(zq.y, 0);
+          if (p.r != null) { p.x = r1(ar[0] - p.r); p.y = r1(ar[1] - p.r); return; }
+          p.x = r1(zx + ZS.box[0] - pad); p.y = r1(zy + ZS.box[1] - pad); p.w = r1(ZS.box[2] - ZS.box[0] + 2 * pad); p.h = r1(ZS.box[3] - ZS.box[1] + 2 * pad);
+          return;
+        }
+        if (t === 'gas_cloud' && typeof p.from === 'string') {
+          var fa = anchor(p.from, p);
+          if (!fa) return;
+          var gq = fa[3], gS = gq ? shapeOf(gq) : null, gx = fa[0], gy = fa[1];
+          if (gS && gS.gasFrom && /outlet|top$/.test(p.from)) { gx = n(gq.x, 0) + gS.gasFrom[0]; gy = n(gq.y, 0) + gS.gasFrom[1]; }
+          p._from = p.from; p.from = [r1(gx), r1(gy)]; p.fromIn = 'figure';
+          var cw = n(p.w, 200), ch = n(p.h, 120);
+          if (p.x == null) p.x = r1(gx - cw / 2);
+          if (p.y == null) p.y = r1(fa[2] === 'up' || /outlet/.test(p._from) ? gy - ch * 0.85 : gy - ch / 2);
+          return;
+        }
+        var S = shapeOf(p), host = null, H = null, ax = null;
+        if (t === 'spray' && p.aim) {
+          var tq = byId[String(p.aim).split('.')[0]], tp = String(p.aim).indexOf('.') >= 0 ? anchor(p.aim, p) : null;
+          if (!tq) { err(p, 'aims at ' + p.aim + ', which is not a part'); }
+          else {
+            if (!tp) { done(tq); var TS = shapeOf(tq), tx = n(tq.x, 0), ty = n(tq.y, 0); tp = [tx + (TS.box[0] + TS.box[2]) / 2, ty + (TS.box[1] + TS.box[3]) / 2]; }
+            var dx = tp[0] - n(p.x, 0), dy = tp[1] - n(p.y, 0);
+            if (p.angle == null) p.angle = r1(-Math.atan2(dy, dx) * 180 / Math.PI);
+            if (p.reach == null) p.reach = Math.max(30, r1(Math.hypot(dx, dy)));
+          }
+        }
+        if (p.on) {
+          var a2 = anchor(p.on, p);
+          if (!a2) return;
+          host = a2[3]; H = a2[4] || (host ? shapeOf(host) : null);
+          if (t === 'vent' && p.mast == null) {           // a mast stands clear above the superstructure, as the rules want
+            var hs = H && H.ga && !H.plan ? H : null;
+            p.mast = hs && hs.houseTop ? Math.max(60, -hs.houseTop + 14) : 60;
+            S = shapeOf(p);
+          }
+          if (t === 'water_curtain' && p.h == null && H && H.ga && !H.plan) { p.h = r1(Math.max(30, H.wl - 6)); S = shapeOf(p); }
+          var mount = S.hang || S.foot || [0, 0];
+          ax = acrossX(p, host, H);
+          if (ax == null && (p.x == null || /\.(top|bottom|inlet|outlet|floor|ceiling|in|out|left|right|center|valve|header)(@|$)/.test(p.on) && p.at == null && !(H && H.ga)))
+            ax = a2[0];
+          if (ax != null) p.x = r1(ax - mount[0]);
+          p.y = r1(a2[1] - mount[1] - (S.hang ? -n(p.gap, 0) : n(p.gap, 0)));
+        } else if (p['in']) {
+          var sq = byId[p['in']];
+          if (!sq) { err(p, 'is "in" ' + p['in'] + ', which is not a part'); return; }
+          done(sq);
+          var SS = shapeOf(sq), sx = n(sq.x, 0), sy = n(sq.y, 0), floor = SS.ga ? SS.keelY * 0.9 : SS.floor != null ? SS.floor : SS.box[3];
+          var ft = S.foot || [0, S.box[3]];
+          ax = acrossX(p, sq, SS);
+          if (p.side === 'left' || p.side === 'right') {
+            var lo = sx + (SS.ga ? SS.hullX(floor)[0] : SS.box[0]) + 6, hi = sx + (SS.ga ? SS.hullX(floor)[1] : SS.box[2]) - 6;
+            p.x = r1(p.side === 'left' ? lo - S.box[0] : hi - S.box[2]);
+          } else if (ax != null) p.x = r1(ax - ft[0]);
+          p.y = r1(sy + floor - ft[1] - n(p.gap, 0));
+        } else if (p.at != null) {
+          if (typeof p.at === 'string' && p.at.indexOf('@') >= 0) {   // ON a pipe: that far along it, turned with it
+            var a3 = anchor(p.at, p);
+            if (!a3) return;
+            p.x = r1(a3[0]); p.y = r1(a3[1]);
+            if (S.turns && p.rotate == null && a3[2] === 'v') p.rotate = 90;
+          } else {
+            var ax2 = acrossX(p, null, null);
+            if (ax2 != null) p.x = r1(ax2 - ((S.foot || [0])[0]));
+          }
+        }
+      }
+      function route(p) {
+        if (!p.from || !p.to) { err(p, 'needs both "from" and "to" (or neither, with a "d")'); return; }
+        var A = anchor(p.from, p), B = anchor(p.to, p);
+        if (!A || !B) return;
+        var mids = [], how = p.route;
+        (p.via || []).forEach(function (v) { var a = anchor(v, p); if (a) mids.push([a[0], a[1]]); });
+        var pts = [[A[0], A[1]]];
+        if (mids.length) pts = pts.concat(mids);
+        else if (Math.abs(A[0] - B[0]) > 0.5 && Math.abs(A[1] - B[1]) > 0.5) {
+          var vA = A[2] === 'up' || A[2] === 'down', vB = B[2] === 'up' || B[2] === 'down';
+          if (p.type === 'hose' && !how) how = 'curve';
+          how = how || (vA && !vB ? 'vh' : !vA && vB ? 'hv' : vA && vB ? 'vhv' : A[2] || B[2] ? 'hvh' : 'hv');
+          if (how === 'vh') pts.push([A[0], B[1]]);
+          else if (how === 'hv') pts.push([B[0], A[1]]);
+          else if (how === 'vhv') {
+            var my = p.level != null ? p.level : A[2] === 'up' && B[2] === 'up' ? Math.min(A[1], B[1]) - 24 : A[2] === 'down' && B[2] === 'down' ? Math.max(A[1], B[1]) + 24 : (A[1] + B[1]) / 2;
+            pts.push([A[0], my], [B[0], my]);
+          } else if (how === 'hvh') {
+            var mx = p.level != null ? p.level : A[2] === 'right' && B[2] === 'right' ? Math.max(A[0], B[0]) + 24 : A[2] === 'left' && B[2] === 'left' ? Math.min(A[0], B[0]) - 24 : (A[0] + B[0]) / 2;
+            pts.push([mx, A[1]], [mx, B[1]]);
+          }
+        }
+        pts.push([B[0], B[1]]);
+        var d;
+        if (how === 'curve') {                            // a hose hangs in a curve between its ends
+          var L = Math.hypot(B[0] - A[0], B[1] - A[1]) * 0.4, sag = n(p.sag, 30);
+          var dv = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }, ua = dv[A[2]] || [0, 1], ub = dv[B[2]] || [0, 1];
+          d = 'M' + r1(A[0]) + ' ' + r1(A[1]) + ' C' + r1(A[0] + ua[0] * L) + ' ' + r1(A[1] + ua[1] * L + sag) + ' ' +
+              r1(B[0] + ub[0] * L) + ' ' + r1(B[1] + ub[1] * L + sag) + ' ' + r1(B[0]) + ' ' + r1(B[1]);
+        } else {
+          d = pts.map(function (q, i) { return (i ? 'L' : 'M') + r1(q[0]) + ' ' + r1(q[1]); }).join(' ');
+        }
+        p.d = d; p.x = 0; p.y = 0;
+      }
+      spec.parts.forEach(function (p) { if (p && p.id) done(p); else if (p) place(p); });
+      if (errs.length) spec._relate = errs;
+      return spec;
+    }
+
+    /* every part's box and ports in figure units, for the checks (kit_relate.py) */
+    function geometry(spec) {
+      return (spec.parts || []).map(function (p) {
+        if (!p) return null;
+        var o = { id: p.id || null, type: p.type };
+        if ((p.type === 'pipe' || p.type === 'hose' || p.type === 'wire') && p.d) { o.pts = pathPts(p.d, p.x, p.y); return o; }
+        var S = shapeOf(p), X = n(p.x, 0), Y = n(p.y, 0), R = S.turns && p.rotate ? p.rotate : 0;
+        var bx = S.box;
+        if (R) { var c = [rot([bx[0], bx[1]], R), rot([bx[2], bx[3]], R)]; bx = [Math.min(c[0][0], c[1][0]), Math.min(c[0][1], c[1][1]), Math.max(c[0][0], c[1][0]), Math.max(c[0][1], c[1][1])]; }
+        o.box = [X + bx[0], Y + bx[1], X + bx[2], Y + bx[3]];
+        o.ports = {};
+        for (var k in S.ports) { var P = R ? rot(S.ports[k], R) : S.ports[k]; o.ports[k] = [X + P[0], Y + P[1], turnDir(S.ports[k][2], R)]; }
+        if (S.foot) o.foot = [X + S.foot[0], Y + S.foot[1]];
+        if (S.approx) o.approx = true;
+        if (S.ga) {
+          o.ga = { plan: S.plan, deck: Y, keel: Y + S.keelY, wl: Y + S.wl, house: S.house ? [X + S.house[0], Y + S.house[1], X + S.house[2], Y + S.house[3]] : null,
+                   houseTop: Y + S.houseTop, hull: [] };
+          for (var i = 0; i <= 20; i++) { var yy = S.keelY * i / 20, hx = S.hullX(yy); o.ga.hull.push([r1(Y + yy), r1(X + hx[0]), r1(X + hx[1])]); }
+        }
+        if (p.type === 'spray') {
+          var a = n(p.angle, p.nozzle === 'sprinkler' ? -90 : p.nozzle === 'hand' ? 12 : 22) * Math.PI / 180, rr = n(p.reach, p.nozzle === 'sprinkler' ? 90 : 130);
+          o.reach = [X + rr * Math.cos(a), Y - rr * Math.sin(a)];
+        }
+        if (p.type === 'gas_cloud' && Array.isArray(p.from)) o.from = p.fromIn === 'figure' ? p.from : (p.from[0] <= n(p.w, 200) && p.from[1] <= n(p.h, 120) ? [X + p.from[0], Y + p.from[1]] : p.from);
+        if (S.gasFrom) o.gasFrom = [X + S.gasFrom[0], Y + S.gasFrom[1]];
+        return o;
+      });
+    }
+    return { resolve: resolve, geometry: geometry, shapes: GEOM, pathPts: pathPts };
+  })();
+  /* end kit-relate */
+
   /* ----------------------------------------------------------------- figure */
   function Figure(host, spec) {
+    spec = RELATE.resolve(spec);
+    if (spec && spec._relate && root.console) root.console.warn('kit: ' + spec._relate.join('; '));
     var self = this, size = spec.size || [600, 440];
     this.spec = spec;
     this.uid = 'kit' + (++UID);
@@ -1605,14 +1994,19 @@
     var surf = el('line', { x1: 0, x2: w, 'class': 'kit-surface kit-m-lngs', 'clip-path': 'url(#' + cid + ')' }, eq);
     el('path', { d: shape, 'class': 'kit-vessel-o' }, eq);
     /* the dome: over the pipe that leaves the tank's top, else near its right end */
-    var tx = p.x || 0, ty = p.y || 0, dx = w - ex - 22;
-    pipeEnds(fig).some(function (e) {
-      if (Math.abs(e[1] - ty) <= 10 && e[0] - tx > ex && e[0] - tx < w - ex) { dx = e[0] - tx; return true; }
-      return false;
+    /* 2.66.0: a dome under EVERY pipe that leaves the top (a second one - the vent line beside the bunker line - ended 10
+       units over the shell, on nothing) */
+    var tx = p.x || 0, ty = p.y || 0, domes = [];
+    pipeEnds(fig).forEach(function (e) {
+      if (Math.abs(e[1] - ty) <= 10 && e[0] - tx > ex && e[0] - tx < w - ex &&
+          !domes.some(function (d) { return Math.abs(d - (e[0] - tx)) < 30; })) domes.push(e[0] - tx);
     });
+    if (!domes.length) domes.push(w - ex - 22);
     var dome = el('g', { 'data-may-cross': '' }, eq);        // it rises into the tank connection space over it, by nature
-    body('rect', { x: dx - 11, y: -8, width: 22, height: 11, rx: 2 }, dome, { mat: 'clad', shade: 'box' });
-    body('rect', { x: dx - 15, y: -10, width: 30, height: 3.5, rx: 1 }, dome, { mat: 'steel' });
+    domes.forEach(function (dx) {
+      body('rect', { x: dx - 11, y: -8, width: 22, height: 11, rx: 2 }, dome, { mat: 'clad', shade: 'box' });
+      body('rect', { x: dx - 15, y: -10, width: 30, height: 3.5, rx: 1 }, dome, { mat: 'steel' });
+    });
     if (p.label) label(fig, g, { x: w / 2, y: h + TANK_FOOT + 20, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
     part.render = function (v) {
       var y = h - clamp(v, 0, 1) * h;
@@ -1892,13 +2286,26 @@
     body('rect', { x: -10, y: -2, width: 20, height: 4, rx: 1 }, head, { mat: 'steel', shade: 'box' });
     body('rect', { x: -7, y: -7, width: 14, height: 5.5, rx: 1.2 }, head, { mat: 'cast', shade: 'box' });
     el('path', { d: 'M-4 -7 V-1.5 M0 -7 V-1.5 M4 -7 V-1.5', 'class': 'kit-m-spoke' }, head);     // the screen's mesh
+    /* 2.66.0 - the gas leaving, STILL: a plume over the outlet that stays while it vents. The puffs are pure animation from
+       opacity 0, so a still figure (a task page, a screenshot, reduced motion) showed a venting mast with no gas at all
+       (IGF 2.65.0 review: "the gas is not being ejected"). It rises as far as the puffs may (into free air only) */
+    var plume = el('g', { 'class': 'kit-plume', 'data-may-cross': '', 'data-no-contain': '', 'data-low-contrast': '' }, g);
+    [[0, -13, 5], [-3, -22, 6.5], [3, -31, 8]].forEach(function (c) { el('circle', { cx: c[0], cy: c[1], r: c[2] }, plume); });
     var puffs = el('g', { 'class': 'kit-puffs' }, g);
     [0, 0.45, 0.9].forEach(function (d, i) {
       el('circle', { cx: (i - 1) * 5, cy: -12, r: 7, style: 'animation-delay:' + d + 's' }, puffs);
     });
-    fig.fit(function () { puffs.style.setProperty('--rise', -ventRise(fig, g) + 'px'); }, true);
+    fig.fit(function () {
+      var rise = ventRise(fig, g);
+      puffs.style.setProperty('--rise', -rise + 'px');
+      plume.setAttribute('transform', 'translate(0 -8) scale(' + Math.max(0.35, Math.min(1, rise / PUFF_RISE)).toFixed(2) + ') translate(0 8)');
+    }, true);
     if (p.label) label(fig, g, { x: p.labelAt === 'left' ? -18 : 18, y: -2, 'text-anchor': p.labelAt === 'left' ? 'end' : 'start', 'class': 'kit-cap' }, p.label);
-    part.render = function (v) { puffs.style.opacity = clamp(v, 0, 1).toFixed(2); g.classList.toggle('kit-venting', v > 0.05); };
+    part.render = function (v) {
+      puffs.style.opacity = clamp(v, 0, 1).toFixed(2);
+      plume.style.opacity = (0.55 * clamp(v, 0, 1)).toFixed(2);
+      g.classList.toggle('kit-venting', v > 0.05);
+    };
   };
 
   /* badge - a numbered step marker. value 0..1 = lit */
@@ -2166,6 +2573,8 @@
   root.KIT = {
     mount: mount, controls: controls, Figure: Figure, types: TYPES, define: define, local: LOCAL, added: ADDED,
     reducedMotion: reducedMotion,
+    /* 2.66.0 - a spec's relations ("on", "at", "from"/"to" ...) resolved to x / y / d, and every part's box and ports */
+    relate: RELATE.resolve, geometry: RELATE.geometry,
     /* the drawing helpers every part uses - a new part uses these too, never its own */
     h: { el: el, lines: lines, label: label, gone: gone, widest: widest, readings: readings, clamp: clamp, num: num, fmt: fmt, polar: polar, arc: arc,
          flagMark: flagMark, textWidth: textWidth, NS: NS,
@@ -2195,9 +2604,17 @@ KIT.define('ga', function (fig, part, g, p) {
      under it, the rudder under the counter, the anchor in its hawse at the bow; a white superstructure with its bridge
      windows and a lower row, the funnel with its band and its sooty top. The outline is the one specs were placed on:
      a named space keeps its place. Seen from above ("plan") she is her painted deck inside a white bulwark. */
+  /* 2.66.0 "cut": true - a straight piece of the ship's side (deck edge, plating, boot-top, the sea) for a close-up: the
+     bunkering station, a vent mast's foot - something on board to stand on and hang from, never parts floating in air */
+  var cut = !plan && !!p.cut;
   if (plan) {
     var b = w * 0.16;
     hull = 'M0 0 H' + (w - b) + ' Q' + w + ' 0 ' + w + ' ' + (d / 2) + ' Q' + w + ' ' + d + ' ' + (w - b) + ' ' + d + ' H0 Z';
+  } else if (cut) {
+    hull = 'M0 0 H' + w + ' V' + d + ' H0 Z';
+    if (p.water !== false) {
+      h.el('rect', { x: -12, y: d * wl, width: w + 24, height: d * (1 - wl) + 10, 'class': 'kit-ga-sea', 'data-no-contain': '', 'data-may-overlap': '', 'data-low-contrast': '' }, g);
+    }
   } else {
     hull = 'M0 0 H' + w + ' Q' + (w * 0.97) + ' ' + (d * 0.62) + ' ' + (w * 0.87) + ' ' + d +
       ' H' + (w * 0.1) + ' L' + (w * 0.03) + ' ' + (d * 0.5) + ' Z';
@@ -2207,7 +2624,7 @@ KIT.define('ga', function (fig, part, g, p) {
   }
   h.el('path', { d: hull }, h.el('clipPath', { id: cid }, h.el('defs', {}, g)));
   var ship = h.equip(g, { shadow: false });
-  if (!plan) {                                          // the rudder under the counter, the bulbous bow under the stem
+  if (!plan && !cut) {                                  // the rudder under the counter, the bulbous bow under the stem
     h.el('path', { d: 'M' + (w * 0.042) + ' ' + (d * 0.6) + ' H' + (w * 0.075) + ' V' + (d * 0.96) + ' H' + (w * 0.05) + ' Z', 'class': 'kit-m-bottom', 'data-may-cross': '' }, ship);
     if (d >= 30) h.el('path', { d: 'M' + (w * 0.9) + ' ' + (d * 0.68) + ' Q' + (w * 0.985) + ' ' + (d * 0.66) + ' ' + (w * 0.985) + ' ' + (d * 0.8) +
                                     ' Q' + (w * 0.985) + ' ' + (d * 0.93) + ' ' + (w * 0.88) + ' ' + (d * 0.96) + ' Z', 'class': 'kit-m-bottom', 'data-may-cross': '' }, ship);
@@ -2222,8 +2639,8 @@ KIT.define('ga', function (fig, part, g, p) {
     h.el('rect', { x: 0, y: d * wl, width: w, height: d * (1 - wl) + 2, 'class': 'kit-m-bottom' }, paint);
     h.el('line', { x1: 0, x2: w, y1: d * wl, y2: d * wl, 'class': 'kit-ga-boot' }, paint);
     h.el('rect', { x: 0, y: 0, width: w, height: Math.max(2, Math.min(4, d * 0.07)), 'class': 'kit-m-white' }, paint);
-    if (d >= 30) h.body('ellipse', { cx: w * 0.088, cy: d * 0.8, rx: 2.6, ry: d * 0.15 }, paint, { mat: 'cast', shade: 'round' });   // the propeller
-    if (d >= 30) {                                     // the hawse pipe and the anchor in it, under the bulwark at the bow
+    if (d >= 30 && !cut) h.body('ellipse', { cx: w * 0.088, cy: d * 0.8, rx: 2.6, ry: d * 0.15 }, paint, { mat: 'cast', shade: 'round' });   // the propeller
+    if (d >= 30 && !cut) {                             // the hawse pipe and the anchor in it, under the bulwark at the bow
       var ax = w * 0.935, ay = d * 0.2;
       h.el('ellipse', { cx: ax, cy: ay, rx: 3.2, ry: 2.2, 'class': 'kit-m-window' }, paint);
       h.el('path', { d: 'M' + ax + ' ' + (ay + 2) + ' V' + (ay + 9) + ' M' + (ax - 4) + ' ' + (ay + 7) + ' Q' + ax + ' ' + (ay + 11) + ' ' + (ax + 4) + ' ' + (ay + 7),

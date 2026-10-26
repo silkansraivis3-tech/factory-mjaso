@@ -125,6 +125,59 @@ Pre-built for IGF Basic modules 5-15 (2.48.0, from the architecture's media plan
 | `wind` | `w rows gap dir max unit label` | 0..1 strength |
 | `tree` | `root children:[{label, children}] w minW` - an organisation or reporting chart. It is laid out to fit `w` (default: the figure's width less its x and 10) and never wider: tighter padding and gaps, then words broken at a space, so its words keep the 12.5 px floor (2.49.2) | 0..n box k lit |
 
+## Relations - place a part by what it stands on (2.66.0)
+A part is placed by WHAT IT STANDS ON OR JOINS, not by a guessed y (IGF 2.65.0: a vent mast at y 184 under the deck line,
+inside the hull; pipes ending in the air; a "Bunkering station" of words only). kit.js resolves these before it draws
+(`KIT.relate`); `check_kit.py` judges the result (`kit_relate.py` runs the same code under node). A spec with no relation
+draws exactly as before; a relation wins over the part's own x / y / d.
+
+| key | on | means |
+|---|---|---|
+| `"on": "G.deck"` | any part | stand on that anchor: the part's foot on the line (a vent mast's foot, a manifold's lowest flange, a tank's saddles, a hatch's coaming); a part that hangs (a water curtain, a detector, a lamp) hangs from it. A vent `on` a deck with no `mast` gets one that clears the accommodation; a water curtain on a ship's deck runs down to the waterline. `"gap"`: that far off the line |
+| `"in": "Hold"` | any part | stand on the floor of a space or of the ship's hold; `"side": "left"/"right"` against that wall |
+| `"at": 0.7` / `312` / `"K.top"` | with `on` / `in` | across: a fraction of the host's length, a figure x, or another part's port |
+| `"at": "P1@0.4"` | a valve, a coupling ... | ON that pipe, 0.4 of its length along, turned with it |
+| `"from": "T.top", "to": "V.inlet"` | pipe, hose, wire | routed between two ports (right-angled; a hose hangs in a curve, `"sag"`); `"via": [[x, y], "R.outlet"]` its bends, `"level"` the height (or x) of its middle run, `"route": "hv"/"vh"/"hvh"/"vhv"`. A point `[x, y]` at the figure's edge is a line that runs on off the picture |
+| `"for": "B"` | text | a callout to that part (or `"B.outlet"`, or a pipe's middle): its leader ends on it |
+| `"around": "V.outlet", "r": 40` | zone | a round zone centred on that port (a zone's `x, y` is the top left of its box, not its middle); `"around": "B", "pad": 8` a box round the part |
+| `"from": "V.outlet"` | gas_cloud | grows from that port - gas leaving the vent, a leak at a flange |
+| `"aim": "W"` | spray | pointed at that part, reaching it |
+
+**Anchors.** A side-view ship (`ga`): `deck`, `bottom`/`keel`, `floor` (the hold's floor), `waterline`, `side`; plan view:
+`port`, `starboard`, `side`; `"cut": true` draws a straight piece of the ship's side (deck edge, plating, sea) for a close-up
+- something to stand on and hang from. Every part: `top`, `bottom`, `left`, `right`, `center` (and `top@0.3`: 0.3 along that
+edge); and its own ports - tank `top`/`vapour`/`liquid` (a dome is drawn under every pipe that leaves its top), vent
+`inlet` (the mast's foot) / `outlet`, valve and coupling `in`/`out`, relief_valve `inlet`/`outlet`, pump and exchanger
+`inlet`/`outlet`, engine `inlet`, cylinder `gas`/`oil`, manifold `out1`..`outN`, gas_cylinder `valve`, space
+`floor`/`ceiling`, water_curtain `header`. `kit_relate.py --geometry <spec>` prints every part's box and ports.
+
+## What a figure must MEAN (2.66.0) - BLOCKs and NOTEs
+Every check before 2.66.0 was about the look. `scripts/kit_meaning.py` (its words and IGF must-be-true lists in
+`course-visuals/knowledge/figure-truths.json`) now judges what a figure means, at two levels (Aleksis: "if even a minuscule
+detail is off it flags it and there isn't any flexibility"):
+- **BLOCK** - a build FAIL (`check_kit.py spec`), only for a clear physical error: a thing the figure's words name drawn
+  nowhere (no part, no kin part beside the words - a box on deck may stand for the bunkering station, a pipe for a hose);
+  a vent mast, manifold or hatch inside the hull, a tank half through the deck; a pipe end far from every part, away from
+  the frame and with no words at it saying where it goes; a spray or curtain far from everything; a step that says the
+  gas vents with none leaving (a mark's `then` counts); a row of captions naming fuels or equipment over nothing; an
+  engine-mode caption over no engine.
+- **NOTE** - everything else (a label a little far, a near miss, a zone off its source, a must-be-true sentence): the
+  FIGURE review's reviewer judges it in context and calls it BROKEN only if a seafarer would.
+- **A waiver**: `"meaning_ok": {"<KIND> <part id>": "<why it is right>"}` in the spec accepts one finding on purpose (the
+  key is printed with every finding, e.g. `LOOSE END P1`); the build lists it, the reviewer reads the reason and may still
+  call it BROKEN. A waiver with no reason is itself a BLOCK; one naming no finding is a NOTE.
+Calibrated on the instructor-reviewed IGF original (96 specs): 4 BLOCKs (one a real error, a water curtain hanging from
+nothing); the 2.65.0 build's eight wrong figures all still BLOCK. The kinds:
+**NAMED** words on the figure, a part's label or a step title name a thing that is not drawn (a "Bunkering station" with no
+manifold, coupling or hose), or not there; **LOOSE END** a pipe or hose end on nothing (`"open": "start"|"end"|"both"` says a
+line is open to the air on purpose); **INSIDE** a vent mast, manifold or hatch inside the hull, a tank half through the deck;
+**NO GAS** a vent the words say vents - or a relief valve that lifts - with no step letting gas out of its outlet; **AIM** a
+spray aimed at nothing, a water curtain or detector attached to nothing, a round zone centred on nothing; **LEADER** a
+callout's leader on nothing, words floating far from anything drawn, a ship labelled "ship"; **GRID** a row of captions
+with drawings under only some of them (six fuel names over one tank); **SMALL** a small drawing lost in a big `panel`
+part (the figure's own frame is the drawing audit's EMPTY); **TRUTH** the figure kind's own list (ship plan, bunkering line, vent system, fuel supply, engine modes,
+fuel types). A fit `figure_fit.py` makes is refused when it breaks one.
+
 ## Marks - the heart of it
 ```json
 {"at": 98, "label": "shut-off", "kind": "trip", "dir": "up", "stop": true,
@@ -152,10 +205,25 @@ Pre-built for IGF Basic modules 5-15 (2.48.0, from the architecture's media plan
 - Step *n* always starts from the end of step *n-1*. **Previous** jumps back to that state, and
   **Replay** plays the step again. With reduced motion every step jumps to its end state.
 
-## Patterns - a spec to start from (2.63.2)
+## Patterns - a spec to start from (2.63.2; the figure library, 2.66.0)
 `patterns/*.kit.json` are whole specs that were drawn, judged and fixed once, to copy and change - not a new part and not
-a template the compiler fills. Each passes `check_kit.py spec` and is clean in the studio at 1280 x 800 and 1024 x 768 on
-the dark panel and the task page's (`scripts/test_airlock.py`).
+a template the compiler fills. Each passes `check_kit.py spec` (its meaning too) and is clean in the studio at 1280 x 800
+(`scripts/test_patterns.py`), and was judged at projector size by a reviewer who did not draw it.
+
+**Start from a pattern when one fits** - `compile_module.py --init-build` does it unasked: a slide whose title and lines name
+one of these gets the pattern as its starter, marked `"_pattern"` (keep the arrangement and its relations, rename the words to
+the script's, map the steps to the slide's lines). Made from the hand-fixed IGF Basic figures, with what those got wrong put
+right (a bunkering station drawn, the vent line joined, the gas seen leaving):
+
+| pattern | shows |
+|---|---|
+| `ship_ga` | side view: engine room aft with the dual-fuel engine, fuel preparation room with the vaporizer, the tank in its fuel storage hold with the TCS on it, the bunkering station (manifold over its drip tray) on the open deck with the bunker line down to the tank, the vent mast on the deck - its line from the tank, its outlet above the accommodation, gas leaving it |
+| `bunkering_line` | ship-to-ship, along the ships: bunker vessel valve, breakaway coupling, hose, dry-disconnect coupling, manifold and ESD valves, drip tray under them, water curtain down the ship's side; connect, transfer, leak, ESD, break away |
+| `vent_system` | type C tank on deck, readout of its pressure, relief valve on its top, vent line up the mast, gas out of the outlet into its zone |
+| `fuel_supply` | tank, tank valve in the TCS, vaporizer and heater in the FPR, master gas fuel valve outside the engine room, gas valve unit, double-walled pipe, engine; a gas trip |
+| `engine_modes` | one dual-fuel cylinder: gas mode (pilot oil, the gas burning), gas trip, fuel-oil mode, the modes listed beside it |
+| `fuel_types` | every IGF fuel on one temperature scale, how each is kept on board |
+| `fuel_space_access` | (below) |
 
 **`patterns/fuel_space_access.kit.json` - "Getting into the fuel spaces"** (IGF Basic M02 s10; the instructors' review
 called the hand-drawn slide a bad diagram: pastel boxes, a bunkering station drawn as a cart, pale tiny labels, everything

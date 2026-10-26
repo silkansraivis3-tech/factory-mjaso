@@ -39,6 +39,15 @@ const agent = async (prompt, o) => {
   if (/^review3d:/.test(o.label)) return (args._bad3d || []).indexOf(o.label.slice(9)) >= 0
     ? { findings: [{ severity: 'BROKEN', where: 's05 s05_step1.png', what: 'the labels are a row of buttons under the model' }] }
     : { findings: [] }
+  if (/^figshots:/.test(o.label)) return (args._figs || []).indexOf(o.label.slice(9).split('+')[0]) >= 0
+    ? { has_figures: true, manifest: 'C:/c/working_claude/review/M0' + o.label.slice(9, 10) + '_figures/figures.json' }
+    : { has_figures: false, manifest: '' }
+  if (/^reviewfig:/.test(o.label)) return ((args._badfig || []).indexOf(o.label.slice(10)) >= 0
+                                          || (args._stillbad || []).indexOf(o.label.slice(10).replace('+fix', '')) >= 0)
+    ? { figures: [{ slide: 's03', shows: 'a ship with the vent mast inside the hull', seafarer_ok: false,
+                    findings: [{ severity: 'BROKEN', what: 'the vent mast stands inside the hull, under the deck' },
+                               { severity: 'POLISH', what: 'a label could sit closer' }] }] }
+    : { figures: [{ slide: 's03', shows: 'a ship side view', seafarer_ok: true, findings: [] }] }
   if (o.label === 'qa:2') return null                       // the QA agent for module 2 brought back nothing
   if ((args._broken || []).indexOf(o.label.slice(3)) >= 0)  // a QA that found a picture of another thing (2.63.3)
     return { module: o.label.slice(3), classification: 'A', blocking: true,
@@ -137,10 +146,15 @@ def main():
         rv_item6 = review.split("6. **The picture shows what the words name**", 1)[-1].split("**A re-review**", 1)[0]
         rv_broken = review.split("- `BROKEN` -", 1)[-1].split("- `POLISH`", 1)[0]
         check("2.63.2 REVIEW_PROMPT.md has the rule as item 6 - the picture is the instrument / part / place the words name - "
-              "and lists a different one under BROKEN (the sheets' reviewer, item numbers 1-6)",
+              "and lists a different one under BROKEN (the sheets' reviewer, item numbers 1-7 since 2.66.0)",
               "6. **The picture shows what the words name**" in review and "oxygen monitor on a %LEL" in rv_item6
               and "portable explosimeter" in rv_item6 and "spectacle blind" in rv_item6
-              and "different instrument, part" in rv_broken and "item number (1-6)" in review, review[-1200:])
+              and "different instrument, part" in rv_broken and "item number (1-7)" in review, review[-1200:])
+        check("2.66.0 REVIEW_PROMPT.md item 7: a drawing a seafarer calls wrong (inside the hull, a named part missing, "
+              "unconnected, floating, incomplete) is BROKEN, never POLISH; so is it in the QA prompt",
+              "7. **The drawing is physically right and complete**" in review and "item 7" in rv_broken
+              and "(item 7) is BROKEN,\nnever POLISH" in review and "a minuscule detail is not that" in review
+              and "never POLISH (REVIEW_PROMPT.md item 7)" in open(WORKFLOW, encoding="utf-8").read())
         three = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_approved": ["1"],
                           "factory": "C:/f/skills", "notes": "no paid pictures"})
         labels, o, pr = three.get("labels", []), three.get("opts", {}), three.get("prompts", {})
@@ -187,6 +201,29 @@ def main():
         check("... the QA schema's severity is the enum BROKEN / POLISH / INFO (five scales in the 2.63.2 run)",
               "enum: ['BROKEN', 'POLISH', 'INFO']" in wsrc)
         check("... a clean QA sends nothing back", not any(x.startswith("fix:") for x in labels), labels)
+        fig = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_figs": ["1", "2"], "_badfig": ["1"],
+                        "factory": "C:/f/skills"})
+        lf, pf = fig.get("labels", []), fig.get("prompts", {})
+        check("2.66.0 the FIGURE step: every module with kit figures is photographed at projector size (figure_review.py) "
+              "and judged by a separate reviewer, before QA",
+              "figshots:1" in lf and "reviewfig:1" in lf and "reviewfig:2" in lf and lf.index("reviewfig:1") < lf.index("qa:1")
+              and "figure_review.py" in pf.get("figshots:1", "") and "1920 x 1080" in pf.get("reviewfig:1", "")
+              and "seafarer" in pf.get("reviewfig:1", ""), lf)
+        check("... its BROKEN findings (not POLISH) go back to the builder ONCE - start from a pattern, place by relations - "
+              "then only those figures are photographed and judged again; a clean module sends nothing back",
+              lf.count("fixfig:1") == 1 and "inside the hull" in pf.get("fixfig:1", "") and "could sit closer" not in pf.get("fixfig:1", "")
+              and "Relations" in pf.get("fixfig:1", "") and "patterns" in pf.get("fixfig:1", "")
+              and "--only s03" in pf.get("figshots:1+fix", "") and "reviewfig:1+fix" in lf and "fixfig:2" not in lf, lf)
+        still = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_figs": ["1"], "_stillbad": ["1"],
+                          "factory": "C:/f/skills"})
+        ls = still.get("labels", [])
+        q1 = [q for q in (still.get("r") or {}).get("qa", []) if q and q.get("module") == "1"]
+        check("2.66.0 NOTHING LOOPS: a figure still BROKEN after the one fix round goes on the operator's list (for_aleksis), "
+              "never a second fixfig, and the module is not failed for it; the reviewer gets BLOCK / NOTE / waived and the "
+              "fix round may accept a finding with a reason (meaning_ok)",
+              ls.count("fixfig:1") == 1 and q1 and any("FIGURE s03" in x for x in q1[0].get("for_aleksis", []))
+              and not q1[0].get("blocking") and '"block"' in pf.get("reviewfig:1", "") and '"note"' in pf.get("reviewfig:1", "")
+              and '"waived"' in pf.get("reviewfig:1", "") and "meaning_ok" in pf.get("fixfig:1", ""), q1)
         six = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_broken": ["1"]})
         l6, p6 = six.get("labels", []), six.get("prompts", {})
         check("2.63.3 a BROKEN QA finding sends the module back for ONE fix round, then QA once more - never a third",

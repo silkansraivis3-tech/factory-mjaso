@@ -426,7 +426,7 @@
     var k = new Builder(S), list = spec.parts || [], p, fn, ok = true;
     S.k = k;
     for (i = 0; i < list.length; i++) {
-      p = list[i];
+      p = deckRelation(list, list[i], S);
       fn = PART[p.type];
       if (!fn) { S.warn('part "' + (p.id || i) + '": the kit has no part type "' + p.type + '"'); continue; }
       k.g = S.root; k.stack = [];
@@ -1788,6 +1788,25 @@
      x: [from, to]; half (half breadth); bottom (0), floor (top of the double bottom), top (main deck);
      spaces [{id, x: [a, b], tint, floor, wall}]; bulkheads [{x, hole: [y, r], opacity}]; near / far / ends: wall
      opacities; ribs (spacing on the far side); bottom_id / side_id: the double bottom / far side as sub-parts */
+  /* 2.66.0 - "on": "<hull>.deck" | ".floor" | ".bottom" (or "<deck_plate>.deck"): the part's height is that level's, as in the
+     2D kit - a vent mast's foot, a drip tray, an ESD button, an air intake stand on the deck, never at a guessed y inside
+     the hull. The part's x and z stay its own. check_kit3d.py fails a deck part below the deck (the same numbers) */
+  function deckLevel(h, lvl) {
+    var bot = num(h.bottom, 0), fl = num(h.floor, bot + 1.2), top = num(h.top, fl + 9), y0 = (h.at || [0, 0, 0])[1] || 0;
+    if (h.type === 'deck_plate') return y0;
+    return y0 + (lvl === 'floor' ? fl : lvl === 'bottom' ? bot : top);
+  }
+  function deckRelation(list, p, S) {
+    var m = typeof p.on === 'string' && /^([\w-]+)\.(deck|floor|bottom)$/.exec(p.on);
+    if (!m) return p;
+    var h = list.filter(function (q) { return q && q.id === m[1] && (q.type === 'hull' || q.type === 'deck_plate'); })[0];
+    if (!h) { S.warn('part "' + (p.id || p.type) + '" is "on" ' + p.on + ' - there is no hull or deck_plate ' + m[1]); return p; }
+    var q = {}, a = (p.at || [0, 0, 0]).slice();
+    for (var key in p) q[key] = p[key];
+    a[1] = deckLevel(h, m[2]) + num(p.gap, 0);
+    q.at = a;
+    return q;
+  }
   define('hull', function (k, p) {
     var x = p.x || [-10, 10], x0 = x[0], x1 = x[1], hz = num(p.half, num(p.breadth, 12) / 2), bot = num(p.bottom, 0);
     var fl = num(p.floor, bot + 1.2), top = num(p.top, fl + 9), self = k.cur, edge = '#41566b', i;

@@ -281,6 +281,7 @@
 .kit-running .kit-state{fill:var(--txt-d,#F3F8FD)}
 .kit-puffs circle{fill:var(--txt-d,#F3F8FD);opacity:0;transform-box:fill-box;transform-origin:center}
 .kit-venting .kit-puffs circle{animation:kit-puff 1.35s ease-out infinite}
+.kit-plume{opacity:0;pointer-events:none}.kit-plume circle{fill:var(--txt-d,#F3F8FD)}
 
 /* step badges */
 .kit-badge-o{fill:var(--deep,#0A182E);stroke:var(--faint-d,#71879F);stroke-width:1.5}

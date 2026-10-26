@@ -1,0 +1,23 @@
+{
+  "size": [640, 340],
+  "label": "Side view of an LNG-fuelled ship with what is new on board lit one by one: the fuel tank, the tank connection space, the fuel preparation room, the bunkering station, the vent mast and the protected engine room.",
+  "idle": "Press Next step",
+  "parts": [
+    {"id": "P7", "type": "ga", "x": 14, "y": 120, "w": 612, "h": 200, "house": {"x": 24, "w": 96, "h": 60}, "funnel": {"x": 44, "w": 24, "h": 28}, "label": "ship"},
+    {"id": "P6", "type": "space", "x": 52, "y": 214, "w": 118, "h": 64, "label": "Protected engine room"},
+    {"id": "P3", "type": "space", "x": 180, "y": 214, "w": 112, "h": 64, "label": "Fuel preparation room"},
+    {"id": "P2", "type": "space", "x": 302, "y": 214, "w": 90, "h": 64, "label": "Tank connection space"},
+    {"id": "P1", "type": "tank", "x": 402, "y": 212, "w": 176, "h": 68, "label": "Fuel tank", "value": 0.6},
+    {"id": "P4", "type": "vent", "x": 347, "y": 184, "mast": 70, "labelAt": "right", "label": "Vent mast"},
+    {"id": "P5", "type": "text", "x": 540, "y": 168, "anchor": "middle", "reveal": true, "text": "Bunkering station"},
+    {"id": "P8", "type": "text", "x": 110, "y": 100, "anchor": "middle", "reveal": true, "text": "Gas, oil or both"}
+  ],
+  "steps": [
+    {"title": "1 · Fuel with a low flashpoint, often cryogenic", "line": 2, "play": [["P1", 0.9, 600]]},
+    {"title": "2 · A fuel tank with a tank connection space", "line": 3, "play": [["P2", 1, 600]]},
+    {"title": "3 · A fuel preparation room", "line": 4, "play": [["P3", 1, 600]]},
+    {"title": "4 · A bunkering station and a vent mast", "line": 5, "play": [["P5", 1, 600], ["P4", 1, 600]]},
+    {"title": "5 · A protected engine room", "line": 6, "play": [["P6", 1, 600]]},
+    {"title": "6 · Engines that run on gas, oil or both", "line": 7, "play": [["P8", 1, 600]]}
+  ]
+}

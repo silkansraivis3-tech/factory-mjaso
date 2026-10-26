@@ -2934,7 +2934,7 @@ def starter_part(pid, it, cell):
         p.update(labelAt="right")
     if kind == "scale":
         p.update(min=0, max=100, every=50, markers=[{"label": it["label"], "at": 50}])
-    if kind not in ("pipe", "scale"):
+    if kind not in ("pipe", "scale", "ga"):            # 2.66.0: a ship needs no "ship" / "hull" under its keel (LEADER)
         p["label"] = it["label"]
     if it["start"]:
         p["value"] = it["start"]
@@ -2944,6 +2944,68 @@ def starter_part(pid, it, cell):
     if kind == "pipe":                                    # a pipe has no words of its own: its name stands over it
         out.append({"type": "text", "x": cx, "y": cy - 16, "anchor": "middle", "text": wrap_words(it["label"], max(10, int(iw / 8.5)))})
     return out
+
+
+# 2.66.0 - the figure library: a slide whose words are one of the common IGF pictures starts from that picture's PATTERN
+# (course-visuals/kit/patterns: drawn once, physically checked, placed by relations), never from a grid of placeholders - the
+# 2.65.0 unseeded build drew every figure fresh from the grid and a vent mast ended inside the hull, a bunkering station was
+# only words. (pattern, words that must all appear in one group at least, how many of the group's words) - first match wins
+PATTERN_DIR = os.path.join(SKILLS, "course-visuals", "kit", "patterns")
+PATTERNS = (
+    ("fuel_space_access", [("airlock",), ("own access", "bolted hatch", "access to the fuel", "hatch")], 1),
+    ("engine_modes", [("gas mode", "fuel-oil mode", "fuel oil mode", "diesel mode", "gas trip", "pilot")], 2),
+    ("ship_ga", [("bunkering station", "vent mast", "fuel tank", "tank connection space", "fuel preparation", "engine room",
+                  "fuel storage hold", "hold space")], 4),
+    ("bunkering_line", [("hose", "coupling", "manifold", "drip tray", "water curtain", "breakaway", "dry-disconnect", "esd valve",
+                         "bunker vessel")], 3),
+    ("fuel_supply", [("master gas", "master fuel", "gas valve unit", "vaporiz", "vaporis", "heater", "double-walled",
+                      "tank connection space", "fuel preparation")], 3),
+    ("vent_system", [("vent mast", "relief valve", "venting", "vent line", "outlet"), ("tank",)], 2),
+    ("fuel_types", [("lng", "cng", "lpg", "methanol", "ammonia", "hydrogen", "ethanol")], 4),
+)
+
+
+def pattern_for(s):
+    """the pattern (name, spec copy) the slide's title and lines name enough of (PATTERNS: the first group's distinct words, at
+    least `need`, and a word of every other group), else None - the visual's own description is not read: it names what the
+    builder may draw, not what the slide teaches"""
+    if s.get("recap"):
+        return None
+    words = " ".join([s.get("title") or "", " ".join(cs.lines_of(s.get("text")) if s.get("text") else [])]).lower()
+    best = None
+    for name, groups, need in PATTERNS:                 # the one the words name most, for what it needs ("tank to engine"
+        hits = [sum(1 for w in g if re.search(r"(?<![a-z])" + re.escape(w), words)) for g in groups]   # names spaces too)
+        if hits[0] >= need and all(h >= 1 for h in hits[1:]) and (best is None or hits[0] / float(need) > best[0]):
+            best = (hits[0] / float(need), name)
+    p = os.path.join(PATTERN_DIR, best[1] + ".kit.json") if best else None
+    return (best[1], json.load(io.open(p, encoding="utf-8"))) if p and os.path.isfile(p) else None
+
+
+def pattern_starter(s):
+    """a starter spec from the slide's pattern, its steps lighting the slide's own lines (the line whose words its title shares
+    most, in order), the pattern named in "_pattern" - or None when no pattern fits"""
+    got = pattern_for(s)
+    if not got:
+        return None
+    name, spec = got
+    lines = cs.lines_of(s.get("text")) if s.get("text") else []
+    content = lambda t: {w for w in re.findall(r"[a-z][a-z-]{3,}", (t or "").lower())}
+    used, nxt = set(), 1
+    for st in spec.get("steps") or []:
+        if "line" not in st:
+            continue
+        tw = content(st.get("title"))
+        best = max(((len(tw & content(ln)), i) for i, ln in enumerate(lines, 1) if i not in used), default=(0, None))
+        k = best[1] if best[0] else next((i for i in range(nxt, len(lines) + 1) if i not in used), None)
+        if k is None:
+            st.pop("line", None)
+            continue
+        used.add(k)
+        nxt = k + 1
+        st["line"] = k
+    spec["_pattern"] = ("%s (course-visuals/kit/patterns, SPEC.md \"Patterns\"): a tested, physically correct figure - keep its "
+                        "arrangement and relations, rename its words to the script's, map its steps to the slide's lines" % name)
+    return spec
 
 
 def starter_figure(script, s, pool=None, taken=None):
@@ -2958,6 +3020,9 @@ def starter_figure(script, s, pool=None, taken=None):
     lines = cs.lines_of(s.get("text"))
     if not lines:
         return None
+    pat = pattern_starter(s)                           # 2.66.0 - one of the common IGF pictures: its pattern
+    if pat:
+        return pat
     # an opening statement: a plain sentence before lines that name things ("Many IGF ships have dual-fuel engines."); a list of
     # bare names ("Fuel tank." "Tank connection space.") has none
     statement = len(lines) > 1 and not TERM.match(lines[0]) and any(TERM.match(x) for x in lines[1:])

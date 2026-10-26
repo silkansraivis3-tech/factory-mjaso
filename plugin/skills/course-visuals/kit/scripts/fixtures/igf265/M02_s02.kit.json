@@ -1,0 +1,24 @@
+{
+  "size": [640, 390],
+  "label": "Six low-flashpoint fuels, each with how it is kept on board: LNG cold at minus 162 degrees, CNG compressed, LPG liquid under pressure, methanol and ethanol liquid at normal temperature, ammonia cold or under pressure, hydrogen compressed or cold.",
+  "idle": "Press Next step",
+  "parts": [
+    { "id": "F1", "type": "text", "x": 107, "y": 50, "anchor": "middle", "reveal": true, "text": "LNG\ncold: -162 °C" },
+    { "id": "F2", "type": "text", "x": 320, "y": 50, "anchor": "middle", "reveal": true, "text": "CNG\ncompressed gas" },
+    { "id": "F3", "type": "text", "x": 533, "y": 50, "anchor": "middle", "reveal": true, "text": "LPG\nliquid under pressure" },
+    { "id": "F4", "type": "text", "x": 107, "y": 150, "anchor": "middle", "reveal": true, "text": "Methanol, ethanol\nliquid at normal\ntemperature" },
+    { "id": "F5", "type": "text", "x": 320, "y": 150, "anchor": "middle", "reveal": true, "text": "Ammonia\n-33 °C or pressure\ntoxic" },
+    { "id": "F6", "type": "text", "x": 533, "y": 150, "anchor": "middle", "reveal": true, "text": "Hydrogen\ncompressed\nor -253 °C" },
+    { "id": "T1", "type": "tank", "x": 14, "y": 245, "w": 190, "h": 70, "label": "natural gas: detailed rules", "value": 0.7 },
+    { "id": "T2", "type": "text", "x": 430, "y": 280, "anchor": "middle", "reveal": true, "text": "the others: alternative design\nand IMO interim guidelines" }
+  ],
+  "steps": [
+    { "title": "1 · LNG - natural gas, liquid at about -162 °C", "line": 2, "play": [["F1", 1, 600]] },
+    { "title": "2 · CNG - natural gas compressed to high pressure", "line": 3, "play": [["F2", 1, 600]] },
+    { "title": "3 · LPG - propane and butane, kept liquid under pressure", "line": 4, "play": [["F3", 1, 600]] },
+    { "title": "4 · methanol and ethanol - liquids at normal temperature", "line": 5, "play": [["F4", 1, 600]] },
+    { "title": "5 · ammonia - liquid at -33 °C or under pressure; toxic", "line": 6, "play": [["F5", 1, 600]] },
+    { "title": "6 · hydrogen - compressed, or liquid at -253 °C", "line": 7, "play": [["F6", 1, 600]] },
+    { "title": "7 · The IGF Code covers them in different ways", "line": 8, "play": [["T1", 0.7, 600], ["T2", 1, 600]] }
+  ]
+}

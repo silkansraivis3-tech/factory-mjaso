@@ -1,0 +1,37 @@
+{
+  "size": [650, 300],
+  "label": "LNG fuel system from tank to engine: the fuel tank and its tank valve in the tank connection space, the vaporizer and the heater in the fuel preparation room, the master gas fuel valve outside the engine room, the gas valve unit, and the double-walled pipe to the dual-fuel engine.",
+  "idle": "Press Next step",
+  "parts": [
+    { "id": "S2", "type": "space", "x": 112, "y": 6, "w": 188, "h": 134, "label": "TANK CONNECTION\nSPACE", "crosses": true },
+    { "id": "S3", "type": "space", "x": 312, "y": 6, "w": 328, "h": 134, "label": "FUEL PREPARATION ROOM" },
+    { "id": "S4", "type": "space", "x": 10, "y": 166, "w": 630, "h": 128, "label": "ENGINE ROOM" },
+    { "id": "T1", "type": "tank", "x": 8, "y": 50, "w": 130, "h": 66, "value": 0.62, "label": "fuel tank" },
+    { "id": "X1", "type": "exchanger", "x": 400, "y": 83, "label": "vaporizer" },
+    { "id": "X2", "type": "exchanger", "x": 520, "y": 83, "label": "heater" },
+    { "id": "S5", "type": "space", "x": 470, "y": 196, "w": 104, "h": 66, "style": "enclosure", "label": "gas valve unit", "labelAt": "below" },
+    { "id": "E1", "type": "engine", "x": 116, "y": 200, "w": 104, "h": 60, "label": "dual-fuel engine" },
+    { "id": "P1", "type": "pipe", "fluid": "liquid", "from": "T1.right", "to": "X1.in", "fill": 0, "value": 0 },
+    { "id": "VT", "type": "valve", "at": "P1@0.33", "size": 10, "state": false, "label": "tank valve", "value": 1 },
+    { "id": "P2", "type": "pipe", "fluid": "gas", "from": "X1.out", "to": "X2.in", "fill": 0, "value": 0 },
+    { "id": "VG", "type": "valve", "x": 522, "y": 229, "size": 10, "state": false, "value": 1 },
+    { "id": "P3", "type": "pipe", "fluid": "gas", "from": "X2.out", "to": "VG.out", "via": [[616, 83], [616, 229]], "fill": 0, "value": 0 },
+    { "id": "MV", "type": "valve", "at": "P3@0.37", "size": 10, "label": "master gas\nfuel valve", "value": 1 },
+    { "id": "P4", "type": "pipe", "fluid": "gas", "double": true, "from": "VG.in", "to": "E1.right", "fill": 0, "value": 0 },
+    { "id": "N1", "type": "text", "text": "double-walled pipe", "for": "P4" }
+  ],
+  "steps": [
+    { "title": "1 · Fuel tank - LNG stored as a cold liquid", "line": 1, "play": [["T1", 0.7, 600]] },
+    { "title": "2 · Tank connection space - the tank valve and the first pipes", "line": 2,
+      "play": [["S2", 1, 500], ["P1.fill", 0.45, 900, 300, "linear"], ["P1", 1, 500, 300]] },
+    { "title": "3 · Vaporizer and heater - the liquid turns into gas and is warmed", "line": 3,
+      "play": [["S2", 0, 500], ["S3", 1, 500], ["P1.fill", 1, 700, 0, "linear"], ["X1", 1, 400, 700], ["P2.fill", 1, 700, 1100, "linear"], ["P2", 1, 400, 1100], ["X2", 1, 400, 1800]] },
+    { "title": "4 · Master gas fuel valve - outside the engine room, it can shut the gas off", "line": 4,
+      "play": [["S3", 0, 500], ["P3.fill", 1, 1400, 0, "linear"], ["P3", 1, 400]] },
+    { "title": "5 · Gas valve unit, then the double-walled pipe to the engine", "line": 5,
+      "play": [["S5", 1, 500], ["P4.fill", 1, 1000, 300, "linear"], ["P4", 1, 400, 300], ["E1", 1, 300, 1300]] },
+    { "title": "6 · A gas trip: the master gas fuel valve closes, the gas line is emptied and the engine changes over to fuel oil", "line": 6,
+      "play": [["S5", 0, 400], ["MV", 0, 600], ["P3", 0, 400, 300], ["P4", 0, 400, 300], ["P4.fill", 2, 1400, 600, "linear"]] },
+    { "title": "The whole line, tank to engine - every space it passes through", "play": [["S2", 1, 500], ["S3", 1, 500], ["S4", 1, 500], ["S5", 1, 500]] }
+  ]
+}

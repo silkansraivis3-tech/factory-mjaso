@@ -36,6 +36,9 @@
  * 2.65.0 - the builder reads compile/BUILDER_CARD.md, not the whole skill; a module with a 3D-kit scene gets the 3D step
  * after its build: scene3d_check.py (spec, smoke, timing, pictures), a SEPARATE reviewer of the pictures, one fix round.
  *
+ * 2.66.0 - then the FIGURE step: every kit figure photographed at projector size at every step (figure_review.py), judged
+ * by a reviewer who did not build it against the slide's words and the figure's must-be-true list; BROKEN goes back once.
+ *
  * Models (2.51.0, the M01 benchmark: the mechanical loop was most of the bill): the reader and the script writer
  * keep the session's model - that is where the words come from. Building an approved script (build_module.py
  * until PASS, the review, the fixes) and QA run on Sonnet at medium effort; the gate, one command, at low.
@@ -340,7 +343,10 @@ A module that still classifies C has not finished — say so plainly. REPORT fin
 Do not fix anything. Severity is one of three (2.63.3 - the 2.63.2 run's QA used five scales):
   BROKEN  wrong, misleading or unusable for a trainee or the instructor - a picture of another thing than the
           words name, a number that contradicts the slide, a question graded wrongly, an outcome not taught, a
-          failed check; blocking = true when there is one
+          failed check; and (2.66.0) ANY drawing a seafarer would call wrong: a wrong physical arrangement (a vent
+          mast or manifold inside the hull), a part the slide or a label names that is not drawn, something
+          unconnected or floating, an incomplete figure - never POLISH (REVIEW_PROMPT.md item 7); blocking = true
+          when there is one
   POLISH  works, could look or read better
   INFO    worth knowing, nothing to change
 A BROKEN finding whose fix is in the APPROVED SCRIPT (its words, a screen's kind or minutes - e.g. check_balance counting
@@ -481,7 +487,102 @@ async function threeD(m) {
   return { check: s2 || s, review: r2 || r, first_review: r.findings }
 }
 
-/* one module, start to finish: built (or its script written), the 3D step, QA, one fix round */
+/* ------------------------------------------------- 2.66.0 · THE FIGURE STEP (a module with kit figures) */
+/* the IGF 2.65.0 run: every check passed and QA's one look at small review sheets rated a vent mast inside the hull, a
+   "Bunkering station" of words only and pipes ending in the air POLISH - none went back. Every figure is photographed at
+   projector size at every step (figure_review.py) and judged by a reviewer who did not build it, against the slide's words
+   and the figure kind's must-be-true list; its BROKEN findings go back to the builder for one round */
+const KIT_SCRIPTS = A.factory ? `${A.factory}/course-visuals/kit/scripts` : '<the course-visuals skill folder>/kit/scripts'
+const FIGSHOT_SCHEMA = {
+  type: 'object',
+  required: ['has_figures', 'manifest'],
+  properties: {
+    has_figures: { type: 'boolean' },
+    manifest: { type: 'string', description: 'the figures.json path figure_review.py printed ("written: ...")' },
+    report: { type: 'string', description: 'what figure_review.py printed, word for word' },
+  },
+}
+const REVIEWFIG_SCHEMA = {
+  type: 'object',
+  required: ['figures'],
+  properties: {
+    figures: {
+      type: 'array',
+      items: {
+        type: 'object', required: ['slide', 'shows', 'seafarer_ok', 'findings'],
+        properties: {
+          slide: { type: 'string' },
+          shows: { type: 'string', description: 'one sentence: what the figure actually shows' },
+          seafarer_ok: { type: 'boolean', description: 'false when a seafarer would call anything in it wrong' },
+          findings: {
+            type: 'array',
+            items: { type: 'object', required: ['severity', 'what'], properties: { severity: { type: 'string', enum: ['BROKEN', 'POLISH'] }, what: { type: 'string' } } },
+          },
+        },
+      },
+    },
+  },
+}
+const figShots = (m, only) => `Photograph the figures of module ${m.id} for the figure review - ONE command, in the FOREGROUND
+(timeout 600000 ms):
+
+    python ${KIT_SCRIPTS}/figure_review.py "${A.course}" --module ${m.id}${only ? ` --only ${only}` : ''}
+
+Exit 2 ("No kit figure to review"): has_figures = false, manifest = "". Otherwise has_figures = true, manifest = the
+figures.json path it printed after "written:", report = what it printed. Change nothing.`
+const reviewFig = (m, s) => `You did NOT build these figures. Judge each from its pictures - you change nothing.
+
+Read ${s.manifest}. For each figure of module ${m.id} it gives the slide id, "pictures" (one per step at projector size,
+1920 x 1080: step0 = the rest state, then the end of each step, in order), "words" (the slide's title and lines),
+"step_titles", "kinds" (each with its "truths": what must be true in that kind of figure, IGF) and "meaning" - what the
+automatic meaning checks say: "block" (a clear physical error - BROKEN unless the pictures plainly show it is right: then
+say why), "note" (a possible problem - judge it in context: BROKEN only if a seafarer would call it wrong, else POLISH or
+nothing) and "waived" (the builder accepted it on purpose, with a reason - BROKEN only if the reason does not hold).
+Open every picture ONCE, in order.
+
+For EACH figure: "shows" = one sentence on what it actually shows; "seafarer_ok" = would a seafarer call it right?
+Then its findings:
+  BROKEN - a wrong physical arrangement (a vent mast, manifold or hatch inside the hull; a tank half through the deck);
+           a part the slide's words, a step title or a label name that is not drawn; a pipe, hose or line ending on
+           nothing; a spray, curtain or detector attached to or aimed at nothing; a vent said to vent with no gas leaving
+           it; a label floating over nothing; a row of captions with drawings under only some; a caption or panel title
+           with no panel; a small drawing lost in a big empty panel; a step whose picture does not show what its title
+           says; a "truths" sentence that is not true; a wrong fact.
+  POLISH - right and complete, but could look better - a label a little far from its part, a pipe a few units short
+           that still reads as joined, spacing. A minuscule detail is never BROKEN.
+"slide" = the slide id as written in the manifest. Be concrete: the step, the part, where - a builder fixes from it.`
+const brokenFigs = (r) => ((r && r.figures) || []).flatMap((f) => (f.findings || [])
+  .filter((x) => x.severity === 'BROKEN').map((x) => ({ slide: f.slide, what: x.what })))
+const fixFig = (m, bad) => `${build(m)}
+
+THIS MODULE IS BUILT. A reviewer who did not build it judged its figures at projector size. Fix EXACTLY these BROKEN
+findings in the figure specs (working_claude/figures/M${two(m)}/) - nothing else. Where a pattern fits the figure, start
+from it (course-visuals/kit/patterns/, SPEC.md "Patterns": ship_ga, bunkering_line, vent_system, fuel_supply,
+engine_modes, fuel_types, fuel_space_access) and place every part by what it stands on or joins - "on", "in", "at",
+"from"/"to" (SPEC.md "Relations") - never by guessed raw coordinates. A finding you are sure is RIGHT on purpose (the pipe
+runs on to the shore, the words name what the slide says): leave the drawing and say why in the spec's "meaning_ok":
+{"<KIND> <part id>": "<why it is right>"} - the next reviewer reads it. Then build_module.py until module clean, and STOP.
+NEVER edit working_claude/script/M${two(m)}.json. The findings:
+
+${bad.map((f) => `  - ${f.slide}: ${f.what}`).join('\n')}`
+async function figures(m) {
+  const s = await agent(figShots(m), { label: `figshots:${m.id}`, phase: 'Build', schema: FIGSHOT_SCHEMA, ...MECHANICAL })
+  if (!s || !s.has_figures || !s.manifest) return null
+  const r = await agent(reviewFig(m, s), { label: `reviewfig:${m.id}`, phase: 'Verify', schema: REVIEWFIG_SCHEMA, ...MECHANICAL })
+  const bad = brokenFigs(r)
+  if (!bad.length) return { review: r }
+  log(`module ${m.id}: the figure review found ${bad.length} BROKEN - one fix round`)
+  await agent(fixFig(m, bad), { label: `fixfig:${m.id}`, phase: 'Build', ...MECHANICAL })
+  const only = [...new Set(bad.map((f) => f.slide))].join(',')
+  const s2 = await agent(figShots(m, only), { label: `figshots:${m.id}+fix`, phase: 'Build', schema: FIGSHOT_SCHEMA, ...MECHANICAL })
+  const r2 = s2 && s2.has_figures && s2.manifest
+    ? await agent(reviewFig(m, s2), { label: `reviewfig:${m.id}+fix`, phase: 'Verify', schema: REVIEWFIG_SCHEMA, ...MECHANICAL }) : null
+  /* NOTHING LOOPS (2.66.0, approved by Aleksis): what is still BROKEN after the one fix round goes to the operator's list,
+     never back to a builder and never failing the module again */
+  return { review: r2 || r, first_review: (r && r.figures) || [], for_aleksis: brokenFigs(r2 || r) }
+}
+
+/* one module, start to finish: built (or its script written), the 3D step, the figure step, QA, one fix round */
 async function oneModule(m) {
   if (!APPROVED.has(String(m.id))) {
     await agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' })
@@ -489,6 +590,7 @@ async function oneModule(m) {
   }
   await buildUntilPass(m)
   const d3 = await threeD(m)
+  const fg = await figures(m)
   const q = await agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
   /* 2.63.3 - BROKEN: one fix round, then QA once more (its sheets show only the screens the fix changed); never a third */
   let out = q
@@ -496,12 +598,17 @@ async function oneModule(m) {
     log(`module ${m.id}: QA found BROKEN - one fix round`)
     await agent(fixRound(m, q), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL })
     const q2 = await agent(qa(m), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
-    out = q2 ? Object.assign({}, q2, { first_qa: q.findings }) : q
+    out = q2 ? Object.assign({}, q2, { first_qa: q.findings,       /* never a third round: what is left is the operator's list */
+      for_aleksis: fixable(q2).map((f) => `QA ${f.where}: ${f.what}`) }) : q
   }
   if (out && d3) {
     const b3 = ((d3.review && d3.review.findings) || []).filter((f) => f.severity === 'BROKEN')
     out = Object.assign({}, out, { three_d: d3 },
       b3.length || (d3.check && !d3.check.ok) ? { blocking: true } : {})
+  }
+  if (out && fg) {                                   /* the figures' left-overs are the operator's list, not a module failure */
+    const left = (fg.for_aleksis || []).map((f) => `FIGURE ${f.slide}: ${f.what}`)
+    out = Object.assign({}, out, { figures: fg, for_aleksis: ((out.for_aleksis) || []).concat(left) })
   }
   return out
 }

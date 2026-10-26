@@ -1,4 +1,4 @@
-# Builder card - one approved module, start to MODULE CLEAN (2.65.0)
+# Builder card - one approved module, start to MODULE CLEAN (2.66.0)
 
 The whole job of a module builder in the whole-course workflow (`orchestration/workflows/build_course.js`). Read this card,
 not the course-factory SKILL.md: the SKILL is the operator's process (intake, approval, the laws); the build is below.
@@ -25,6 +25,14 @@ python compile/scripts/build_module.py <course> --module N --no-course-pages [--
   operator names) and EDIT the starter figure specs (`figures/MNN/sNN.kit.json`; parts and options:
   `course-visuals/kit/CATALOGUE.md`; never kit.js). A 3D slide: its `sNN.kit3d.json` (`course-visuals/kit3d/SPEC.md`,
   `PARTS.md`) - place the parts as on board, delete `"_todo"`. The workflow's 3D step checks and photographs it after you.
+- **A figure is physically right before it is pretty (2.66.0).** A starter marked `"_pattern"` IS a tested, physically
+  correct IGF figure (ship plan, bunkering line, vent system, fuel supply, engine modes, fuel types - the kit's
+  `patterns/`): keep its arrangement and relations, rename its words to the script's, map its steps to the slide's
+  lines. Any other figure: place every part by what it stands on or joins - never a guessed y:
+  `"on": "G.deck"` (a vent mast, a manifold, a hatch stand ON the deck), `"in": "Hold"` (a tank in its hold),
+  `"at": 0.7` / `"at": "P1@0.4"` (along the host / ON a pipe), pipes and hoses `"from": "T.top", "to": "V.inlet"`,
+  words for a part `"for": "B"` (a callout), a zone `"around": "V.outlet"`, a cloud `"from": "V.outlet"`, a spray
+  `"aim": "W"` (`course-visuals/kit/SPEC.md` "Relations"). Every pipe ends on a part; every thing the words name is drawn.
 - Run build_module.py IN THE FOREGROUND with the shell's longest timeout (600000 ms). `STILL BUILDING` (exit 3): run the
   SAME command with `--wait` until it answers. Never a second build meanwhile, never an edit while it runs, never end your
   turn while it runs. A first build waits its turn behind another module's first build (one at a time on this computer) -
@@ -36,6 +44,7 @@ The answer lists only what fails (the full log's path is its last line - open it
 | the line says | do |
 |---|---|
 | `FIGURE sNN ... small text / label / text zone / inside / cut off` | fix the spec in the studio: `python ../course-visuals/kit/scripts/studio.py <spec> --step all` (seconds, every step, its real slide) until clean, then ONE build. Change the parts it names together. Fewer or shorter words, a part moved, the spec's `size` closer to the panel's shape |
+| `spec: sNN.kit.json: NAMED / LOOSE END / INSIDE / NO GAS / AIM / GRID / TRUTH <part> ...` | a BLOCK (2.66.0): the figure shows a clear physical error - draw the thing the words name (or take the words out), end the pipe on a part (`"to": "<id>.<port>"`), stand the part on the deck (`"on": "G.deck"`), play the vent in the step that vents, aim the spray (`"aim"`), a drawing under every named caption. The line says which. A pattern that fits does it all (`course-visuals/kit/patterns/`). Sure it is RIGHT on purpose (the line runs on to the shore)? Accept it with its reason in the spec - `"meaning_ok": {"LOOSE END P1": "runs on to the bunker vessel"}` (the key is the line's `<KIND> <part>`) - never twice the same build for one finding. Notes are the figure reviewer's, not yours |
 | `FIGURE sNN ... empty` | crop what no step shows, spread the parts, or give the slide `"composition": "wide-left"` when the drawing is tall and narrow |
 | `... a fit was saved as ... candidate.kit.json` | copy it over the spec, then fix only what it lists |
 | `COMPILE ... nothing built: ... starter's blanks` | fill exactly what it names in the build sheet |
@@ -54,7 +63,8 @@ pages, §2e drawings - read only that section.
 
 ## Stop
 At **PASS**, or **`FAIL MNN - course package`** with **`MODULE CLEAN`** under it (the package is judged after assembly).
-Do NOT review the sheets and do not polish - the QA agent does the one visual review. Anything you would polish: list it.
+Do NOT review the sheets and do not polish - the workflow's FIGURE review (every figure at projector size, a reviewer who
+did not build it) and the QA agent look after you. Anything you would polish: list it.
 
 ## Report (your final message)
 First line: the PASS / FAIL line build_module.py printed. Then: the full log's path, how many build_module.py runs, every

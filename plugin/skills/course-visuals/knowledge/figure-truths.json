@@ -1,0 +1,114 @@
+{
+  "_levels": "2.66.0 (Aleksis: no flexibility otherwise): a finding BLOCKS the build only for a clear physical error - a thing the words name drawn nowhere (no kin part either: 'kin' lists what may stand for it, a hose drawn as a pipe), a deck part inside the hull, a pipe end far from everything, a spray or curtain far from everything, a step that says the gas vents with none leaving, a row of named captions over nothing, a mode caption over no engine. Everything else is a NOTE the figure reviewer judges. A spec accepts a finding on purpose with \"meaning_ok\": {\"<KIND> <part id>\": \"<why it is right>\"}.",
+  "_what": "What a figure MEANS - read by course-visuals/kit/scripts/kit_meaning.py (check_kit.py spec, every build) and by the workflow's FIGURE review (2.66.0). 'names': words that name a thing, and the kit parts that draw it - words on a figure (a text part, a part's label) or in a step's title naming a thing the figure does not draw is a build FAIL. 'figures': the common IGF pictures and what must be true in each; a figure is of a kind when its words match 'when' (and it has the parts in 'needs_one_of', when given). Each 'truth' is a rule id kit_meaning.py knows, and 'says' is the sentence a builder and a reviewer read. Source: IGF Code (MSC.391(95)) and the IGF Basic hand-fixed course (Drosibas pamatkurss, 2026-10).",
+  "names": [
+    {"words": ["bunkering station", "bunker station", "bunker manifold", "bunkering manifold", "manifold"], "parts": ["manifold", "coupling", "hose"], "strict": true, "kin": ["space", "pipe", "valve"]},
+    {"words": ["vent mast", "vent outlet", "vent riser", "mast outlet"], "parts": ["vent"], "strict": true},
+    {"words": ["tank connection space", "tcs"], "parts": ["space", "zone"]},
+    {"words": ["fuel preparation room", "fuel preparation space"], "parts": ["space", "zone"]},
+    {"words": ["engine room", "machinery space"], "parts": ["space", "zone"]},
+    {"words": ["fuel storage hold", "hold space", "hold"], "parts": ["space", "ga", "zone"]},
+    {"words": ["gas valve unit", "gvu"], "parts": ["space", "valve"]},
+    {"words": ["fuel tank", "lng tank", "type c tank", "storage tank", "tank"], "parts": ["tank", "integral_tank", "boil_off", "tank_type", "tank_wall"], "strict": true, "room": true},
+    {"words": ["relief valve", "safety valve", "pressure relief valve", "prv"], "parts": ["relief_valve"], "strict": true},
+    {"words": ["master gas fuel valve", "master fuel valve", "master gas valve", "master valve", "block valve", "bleed valve", "shut-off valve", "shutoff valve", "stop valve", "shutdown valve", "esd valve", "bunkering valve", "tank valve", "manifold valve", "bunker valve", "valve"], "parts": ["valve", "relief_valve", "manifold"], "strict": true},
+    {"words": ["vaporizer", "vaporiser", "heat exchanger", "heater"], "parts": ["exchanger"], "strict": true},
+    {"words": ["pump"], "parts": ["pump"], "strict": true},
+    {"words": ["dual-fuel engine", "gas engine", "engine"], "parts": ["engine", "cylinder"], "strict": true},
+    {"words": ["cylinder", "injector", "pilot oil", "pilot injector", "gas admission valve"], "parts": ["cylinder", "engine", "gas_cylinder"], "strict": true, "kin": ["tank"]},
+    {"words": ["water curtain"], "parts": ["water_curtain"], "strict": true},
+    {"words": ["water spray", "spray", "fire monitor", "powder monitor"], "parts": ["spray", "water_curtain"], "strict": true},
+    {"words": ["drip tray"], "parts": ["drip_tray"], "strict": true},
+    {"words": ["gas detector", "detector"], "parts": ["detector", "sensor"], "strict": true},
+    {"words": ["hatch"], "parts": ["hatch"], "strict": true, "kin": ["space"]},
+    {"words": ["airlock", "air lock"], "parts": ["airlock"], "strict": true, "kin": ["space"]},
+    {"words": ["fan", "extraction fan", "ventilation fan"], "parts": ["fan"], "strict": true},
+    {"words": ["nitrogen bottle", "n2 bottle", "nitrogen cylinder", "n2 cylinder", "co2 cylinder", "gas cylinder", "gas bottle", "bottle"], "parts": ["gas_cylinder"], "strict": true},
+    {"words": ["hose"], "parts": ["hose", "manifold"], "strict": true, "kin": ["pipe"]},
+    {"words": ["breakaway coupling", "dry-disconnect coupling", "dry disconnect coupling", "coupling", "connection"], "parts": ["coupling", "manifold", "hose"], "strict": true},
+    {"words": ["double-walled pipe", "double walled pipe", "annular space", "pipe"], "parts": ["pipe", "pipe_section"]},
+    {"words": ["lamp", "light fitting"], "parts": ["lamp"], "strict": true, "kin": ["flame", "spark", "fire"]},
+    {"words": ["esd button", "push button", "emergency stop"], "parts": ["push_button"], "strict": true},
+    {"words": ["cofferdam"], "parts": ["integral_tank", "space"]},
+    {"words": ["gas cloud", "vapour cloud", "vapor cloud"], "parts": ["gas_cloud", "spill"]},
+    {"words": ["ship", "hull", "deck", "accommodation", "superstructure", "bridge", "funnel"], "parts": ["ga", "space"]},
+    {"words": ["spool piece"], "parts": ["spool_piece"], "strict": true},
+    {"words": ["air intake", "air inlet", "ventilation inlet"], "parts": ["fan", "space", "vent", "pipe"]}
+  ],
+  "deck_mounted": {
+    "_what": "parts that stand on or above the open deck of a side-view ship (ga): never inside the hull",
+    "types": ["vent", "manifold", "hatch"],
+    "vent_rise_min": 30
+  },
+  "generic_ship_labels": ["ship", "vessel", "hull", "side view", "plan view", "the ship", "a ship"],
+  "fuels": ["lng", "natural gas", "methane", "cng", "lpg", "methanol", "ethanol", "ammonia", "hydrogen", "ethane", "biogas", "dme", "diesel", "hfo", "mgo", "fuel oil"],
+  "figures": {
+    "ship_plan": {
+      "title": "Ship general arrangement with the IGF spaces",
+      "when": ["bunkering station", "vent mast", "fuel tank", "tank connection space", "fuel preparation", "fuel storage hold"],
+      "min_words": 2,
+      "needs_one_of": ["ga"],
+      "truths": [
+        {"rule": "vent_above_deck", "says": "every vent mast stands on the open deck and its outlet is clearly above the deck (and above the accommodation when one is drawn) - never inside the hull"},
+        {"rule": "deck_parts_on_deck", "says": "the bunkering station (manifold, coupling), a hatch and an air intake sit on or above the open deck"},
+        {"rule": "tank_in_hull", "says": "a fuel tank in a hold is inside the hull, below the deck"},
+        {"rule": "tcs_on_tank", "says": "the tank connection space sits on the tank (at its top or end), touching it"},
+        {"rule": "named_drawn", "says": "every space or item the words name is drawn - a bunkering station is a manifold on deck, not a word"}
+      ],
+      "source": "IGF Basic M01 s04 (hand-fixed), IGF Code 5.3 / 6.7 / 8.3"
+    },
+    "bunkering_line": {
+      "title": "Bunkering line at the bunkering station",
+      "when": ["bunker", "bunkering"],
+      "needs_one_of": ["manifold", "coupling", "hose"],
+      "truths": [
+        {"rule": "line_connected", "says": "the hose, coupling, valves and manifold form one connected line - every pipe and hose end meets a part"},
+        {"rule": "drip_tray_under", "says": "a drip tray is under the coupling / manifold flange, where a leak drips"},
+        {"rule": "curtain_on_hull", "says": "a water curtain hangs from the deck edge down the ship's side under the bunkering station - attached, not floating"},
+        {"rule": "named_drawn", "says": "every valve, coupling and tray the words name is drawn"}
+      ],
+      "source": "IGF Basic M03 s15 / s16, M07 s14, M13 s09 (hand-fixed); IGF Code 8.3, 8.4"
+    },
+    "vent_system": {
+      "title": "Vent system: tank, relief valve, vent mast, gas out",
+      "when": ["vent mast", "relief valve", "venting", "vented", "vent line", "relieving"],
+      "needs_one_of": ["vent"],
+      "truths": [
+        {"rule": "vent_connected", "says": "the vent mast is connected by its pipe to the relief valve (and the relief valve to the tank)"},
+        {"rule": "gas_leaves_vent", "says": "a step shows the gas leaving the vent outlet (puffs or a cloud from the outlet), the step the relief valve lifts"},
+        {"rule": "vent_highest", "says": "the vent outlet is the highest point of the gas path - the gas leaves upwards, into free air"},
+        {"rule": "vent_above_deck", "says": "with a ship drawn, the vent outlet is above the deck"}
+      ],
+      "source": "IGF Basic M03 s09, M15 s05 (hand-fixed); IGF Code 6.7"
+    },
+    "fuel_supply": {
+      "title": "Fuel supply: tank, TCS, FPR, master valve, engine",
+      "when": ["master valve", "master gas", "master fuel", "gas valve unit", "fuel preparation", "vaporiz", "vaporis", "fuel supply", "to the engine"],
+      "needs_one_of": ["engine", "cylinder"],
+      "truths": [
+        {"rule": "supply_path", "says": "one connected pipe path runs from the tank to the engine"},
+        {"rule": "valve_on_path", "says": "the master valve (and any valve the words name) sits on that path, outside the engine room"},
+        {"rule": "named_drawn", "says": "every item on the path the words name (vaporizer, pump, gas valve unit) is drawn on the path"}
+      ],
+      "source": "IGF Basic M02 s03 / s04 / s05 (hand-fixed); IGF Code 9.4"
+    },
+    "engine_modes": {
+      "title": "Dual-fuel engine modes",
+      "when": ["gas mode", "fuel-oil mode", "fuel oil mode", "diesel mode", "oil mode", "dual-fuel", "dual fuel", "pilot"],
+      "needs_one_of": ["engine", "cylinder"],
+      "truths": [
+        {"rule": "modes_drawn", "says": "each mode named as a caption heads its own drawing of the engine or cylinder in that mode (or the modes are steps of one drawing) - no caption over nothing, no caption over a different part"},
+        {"rule": "named_drawn", "says": "the injectors and valves the words name are drawn"}
+      ],
+      "source": "IGF Basic M01 s06 (hand-fixed)"
+    },
+    "fuel_types": {
+      "title": "Fuel types",
+      "when_fuels": 3,
+      "truths": [
+        {"rule": "each_fuel_drawn", "says": "each fuel named in the grid has its own drawing (its tank, its bar or its place on a scale) - never one tank and five words"}
+      ],
+      "source": "IGF Basic M01 s02 (hand-fixed: one scale, every fuel on it)"
+    }
+  }
+}

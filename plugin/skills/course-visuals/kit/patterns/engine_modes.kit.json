@@ -1,0 +1,23 @@
+{
+  "size": [580, 360],
+  "label": "One dual-fuel engine cylinder in its three modes: in gas mode the gas admitted through the gas valve burns, lit by a small pilot injection of fuel oil; on a gas trip the gas valve closes and the gas supply stops; in fuel-oil mode the engine runs and burns fuel oil only.",
+  "idle": "Press Next step",
+  "parts": [
+    { "id": "M", "type": "step_track", "x": 40, "y": 120, "vertical": true, "gap": 70, "steps": ["Gas mode", "Gas trip", "Fuel-oil mode"] },
+    { "id": "C", "type": "cylinder", "x": 240, "y": 66, "w": 200, "h": 280 },
+    { "id": "F", "type": "flame", "x": 340, "y": 170, "size": 40, "value": 0 },
+    { "id": "O", "type": "pipe", "fluid": "liquid", "from": [284, 8], "to": "C.oil", "value": 0 },
+    { "id": "Gp", "type": "pipe", "fluid": "gas", "from": [536, 356], "via": [[536, 36], [396, 36]], "to": "C.gas", "value": 0 },
+    { "id": "VG", "type": "valve", "at": "Gp@0.3", "size": 11, "label": "gas valve", "labelAt": "right", "value": 1 },
+    { "id": "N1", "type": "text", "x": 274, "y": 22, "anchor": "end", "text": "fuel oil" },
+    { "id": "N2", "type": "text", "x": 500, "y": 250, "text": "fuel gas" }
+  ],
+  "steps": [
+    { "title": "1 · Gas mode - the gas burns, lit by a small pilot injection of fuel oil", "line": 1,
+      "play": [["M", 1, 400], ["O", 1, 400], ["Gp", 1, 400], ["C", 1, 900, 300], ["F", 1, 600, 800]] },
+    { "title": "2 · Gas trip - the gas valve closes and the gas supply stops", "line": 2,
+      "play": [["M", 2, 400], ["VG", 0, 700], ["Gp", 0, 400, 300], ["C", 1.5, 900, 300], ["F", 0, 500, 300]] },
+    { "title": "3 · Fuel-oil mode - the engine runs and burns fuel oil only", "line": 3,
+      "play": [["M", 3, 400], ["C", 2, 1200], ["F", 1, 600, 900]] }
+  ]
+}

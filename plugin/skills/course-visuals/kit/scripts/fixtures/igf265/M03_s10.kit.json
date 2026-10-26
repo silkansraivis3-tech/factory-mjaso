@@ -1,0 +1,21 @@
+{
+  "size": [640, 390],
+  "label": "A ship in side view: the LNG tank on deck, the relief valve line rising to a tall vent mast, a hazardous zone around the outlet, and the accommodation and its air intake far from the mast.",
+  "idle": "Press Next step",
+  "parts": [
+    { "id": "G", "type": "ga", "x": 20, "y": 270, "w": 600, "h": 100, "water": false, "house": { "x": 20, "w": 120, "h": 70 } },
+    { "id": "TK", "type": "tank", "x": 280, "y": 236, "w": 240, "h": 34, "value": 0.6 },
+    { "id": "PV", "type": "pipe", "d": "M400 236 V200 H540 V70", "fluid": "gas", "value": 0 },
+    { "id": "Z", "type": "zone", "zone": 2, "x": 540, "y": 70, "r": 58, "value": 0 },
+    { "id": "VT", "type": "vent", "x": 540, "y": 70, "label": "vent mast outlet", "labelAt": "left", "value": 0 },
+    { "id": "T1", "type": "text", "x": 440, "y": 150, "anchor": "middle", "reveal": true, "text": "well above the deck" },
+    { "id": "T2", "type": "text", "x": 150, "y": 200, "anchor": "middle", "reveal": true, "text": "far from air intakes,\naccommodation, exhausts" },
+    { "id": "T3", "type": "text", "x": 150, "y": 140, "anchor": "middle", "reveal": true, "text": "gas straight up;\nscreen keeps objects out" }
+  ],
+  "steps": [
+    { "title": "1 · The vent mast outlet is a hazardous zone", "line": 1, "play": [["PV", 1, 800], ["VT", 1, 800], ["Z", 1, 900, 400]] },
+    { "title": "2 · Outlet well above the weather deck", "line": 3, "play": [["T1", 1, 500]] },
+    { "title": "3 · Far from air intakes, accommodation and exhausts", "line": 4, "play": [["T1", 0, 300], ["T2", 1, 500]] },
+    { "title": "4 · Straight up, with a protection screen", "line": 5, "play": [["T2", 0, 300], ["T3", 1, 500]] }
+  ]
+}

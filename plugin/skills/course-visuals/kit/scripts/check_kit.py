@@ -26,6 +26,9 @@ import re
 import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import kit_meaning  # noqa: E402
+import kit_relate  # noqa: E402
 
 KIT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KIT_JS = os.path.join(KIT, "kit.js")
@@ -198,7 +201,7 @@ def cloud_origin_problem(p, size):
             % (p.get("id") or "", f[0], f[1], "the cloud's own box" if how == "box" else "figure", ax, ay, size[0], size[1]))
 
 
-def check_spec(spec, types, where):
+def check_spec(spec, types, where, meaning=True):
     probs = []
 
     def bad(msg):
@@ -255,7 +258,7 @@ def check_spec(spec, types, where):
                 isinstance(p["mast"], (int, float)) and not isinstance(p["mast"], bool) and p["mast"] > 0)):
             bad("the vent %s has \"mast\": %r - true (a mast), false (the outlet alone) or a length in figure units"
                 % (pid or "", p["mast"]))
-        if t == "gas_cloud" and p.get("from") is not None:
+        if t == "gas_cloud" and p.get("from") is not None and not isinstance(p.get("from"), str):   # "V.outlet": a relation
             bad_origin = cloud_origin_problem(p, size)
             if bad_origin:
                 bad(bad_origin)
@@ -306,6 +309,10 @@ def check_spec(spec, types, where):
     last = last_step_dims_all(spec)
     if last:
         bad(last)
+    # 2.66.0 - what the figure MEANS (kit_meaning.py): a vent mast inside the hull, a bunkering station that is only words,
+    # a pipe ending in the air - judged on the geometry kit.js resolves. Only for a spec that would draw (no problem above)
+    if meaning and not probs:
+        probs += kit_meaning.check(spec, where)
     return probs
 
 
@@ -354,6 +361,15 @@ def load_spec(path):
         return None, "%s: not valid JSON - %s" % (path, err)
 
 
+def prefetch(files):
+    """every spec's relations resolved in ONE node run (kit_relate.py caches them), not one run per spec"""
+    specs = [s for s in (load_spec(f)[0] for f in files) if isinstance(s, dict)]
+    try:
+        kit_relate.run(specs)
+    except Exception:                                    # noqa: BLE001 - check_spec says it, spec by spec
+        pass
+
+
 def local_types(parts_js):
     return set(n for n, _ in blocks(read(parts_js))) if parts_js and os.path.isfile(parts_js) else set()
 
@@ -383,6 +399,7 @@ def main(argv=None):
     if o.cmd == "spec":
         types |= local_types(o.parts)
         probs = []
+        prefetch(o.files)
         for f in o.files:
             spec, err = load_spec(f)
             probs += [err] if err else check_spec(spec, types, os.path.basename(f))
@@ -391,6 +408,7 @@ def main(argv=None):
     probs, names = check_parts_file(parts_js) if os.path.isfile(parts_js) else ([], [])
     types |= set(names)
     specs = sorted(glob.glob(os.path.join(o.figures, "*.kit.json"))) if o.figures else []
+    prefetch(specs)
     for f in specs:
         spec, err = load_spec(f)
         probs += [err] if err else check_spec(spec, types, os.path.basename(f))

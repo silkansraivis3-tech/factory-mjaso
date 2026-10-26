@@ -1,0 +1,21 @@
+{
+  "size": [640, 340],
+  "label": "General arrangement of an LNG-fuelled ship in side view: engine room aft, fuel preparation room, tank connection space and the fuel tank forward, the bunkering station on the open deck and the vent mast above the deck.",
+  "idle": "Press Next step",
+  "parts": [
+    {"id": "P6", "type": "ga", "x": 14, "y": 120, "w": 612, "h": 200, "house": {"x": 24, "w": 96, "h": 60}, "funnel": {"x": 44, "w": 24, "h": 28}, "label": "ship"},
+    {"id": "P7", "type": "space", "x": 52, "y": 214, "w": 118, "h": 64, "label": "Engine room"},
+    {"id": "P3", "type": "space", "x": 180, "y": 214, "w": 112, "h": 64, "label": "Fuel preparation room"},
+    {"id": "P2", "type": "space", "x": 302, "y": 214, "w": 90, "h": 64, "label": "Tank connection space"},
+    {"id": "P1", "type": "tank", "x": 402, "y": 212, "w": 176, "h": 68, "label": "Fuel tank", "value": 0.6},
+    {"id": "P5", "type": "vent", "x": 347, "y": 52, "mast": 72, "labelAt": "right", "label": "Vent mast"},
+    {"id": "P4", "type": "text", "x": 540, "y": 168, "anchor": "middle", "reveal": true, "text": "Bunkering station"}
+  ],
+  "steps": [
+    {"title": "1 · Fuel tank - in a fuel storage hold space or on open deck.", "line": 1, "play": [["P1", 0.9, 600]]},
+    {"title": "2 · Tank connection space - surrounds all tank connections and tank valves.", "line": 2, "play": [["P2", 1, 600]]},
+    {"title": "3 · Fuel preparation room - pumps, compressors and vaporizers.", "line": 3, "play": [["P3", 1, 600]]},
+    {"title": "4 · Bunkering station - on open deck, where fuel is received.", "line": 4, "play": [["P4", 1, 600]]},
+    {"title": "5 · Vent mast - releases fuel vapour from the relief valves, high above the weather deck.", "line": 5, "play": [["P5", 1, 600]]}
+  ]
+}

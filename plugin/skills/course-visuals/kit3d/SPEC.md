@@ -84,6 +84,9 @@ and ships `three.min.js`, `kit3d.js`, `kit3d.css` with the module. Alone (a test
 
 - `at` - where the part stands, in metres (what point that is - a centre, a base - PARTS.md says per part);
   `rot` - degrees round the vertical; `scale` - drawn larger than true (say so in the slide's notes).
+- `on` (2.66.0) - `"H.deck"` / `"H.floor"` / `"H.bottom"` of a `hull` (or `"D.deck"` of a `deck_plate`): the part's height
+  is that level (+ `gap`), its x and z its own `at` - a vent mast, a drip tray, an ESD button, an air intake stand ON the
+  deck. `check_kit3d.py` fails one of those standing below a hull's deck, inside the hull (the 2D kit: SPEC.md "Relations").
 - `id` - a part with an id can be tapped, framed, lit and labelled; without one it is scenery.
   `"pick": false` keeps an id'd part from being tapped (a hull frame).
 - `mat` / `color` - another palette name or colour than the part's own.

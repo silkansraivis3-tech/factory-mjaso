@@ -35,6 +35,13 @@ Look at every screen against this list:
    asked, a LNG tank on a slide about the bunker line: every automatic check passed these, and only an eye found them.
    A picture of a related thing is not the thing - and on a question it also gives the answer away or sends the trainee
    to the wrong one. When the picture could be either, the caption must say which; with no caption, it is wrong.
+7. **The drawing is physically right and complete** (2.66.0 - IGF 2.65.0: a vent mast drawn inside the hull, a
+   "Bunkering station" that was only words, pipes ending in the air, a water curtain hanging from nothing, six fuel names
+   over one tank; QA saw some and called them POLISH, so none went back). Would a seafarer call it wrong? A part where it
+   cannot be (a vent mast, a manifold, a hatch inside the hull; a tank half through the deck); a part the words or a label
+   name that is not drawn; a pipe, hose or line that ends on nothing; a spray, curtain or detector attached to or aimed at
+   nothing; a vent that "vents" with no gas leaving it; a label floating over nothing; a row of captions with drawings
+   under only some of them; a caption or panel title with no panel; a small drawing lost in a big empty box.
 
 **A re-review** (the brief says "re-review" and lists the findings of the last review): look only at the sheets you are
 given - the screens that changed - and say, for each listed finding, FIXED or NOT FIXED; add a new problem only when a
@@ -46,14 +53,18 @@ IGF M02 s02 went PASS, then four failed builds, for polish):
 - `BROKEN` - a trainee or an instructor would misread it, miss it or be unable to do it: a word or a part cut off,
   covered or unreadable; a tap area on the wrong thing or on empty space; a label or leader pointing at the wrong
   thing; the wrong verdict or no right answer shown; a file path on screen; a picture of a different instrument, part
-  or place than the words name (item 6). BROKEN is fixed before hand-over.
+  or place than the words name (item 6); ANY failure of item 7 - a wrong physical arrangement, a part missing that the
+  slide or a label names, something unconnected or floating, an incomplete figure. BROKEN is fixed before hand-over.
 - `POLISH` - right and readable, but could look better: spacing a little tight, a label close to a line but clear,
-  balance, alignment. POLISH is listed for the operator, never fixed in the build loop.
-When unsure, it is POLISH.
+  balance, alignment; a label a little far from its part, a pipe a few units short that still reads as joined. POLISH
+  is listed for the operator, never fixed in the build loop.
+When unsure about LOOKS, it is POLISH. A drawing a seafarer would call physically wrong or incomplete (item 7) is BROKEN,
+never POLISH (2.66.0); a minuscule detail is not that - judge it as the seafarer would. Whatever is still BROKEN after the
+one fix round goes on the operator's list; nothing is sent back twice.
 
 Return, in under 200 words:
 - `PASS` or `FAIL` on the first line - FAIL only when there is at least one BROKEN;
-- for each problem: `BROKEN` or `POLISH`, the screen's label exactly as written on the sheet, the item number (1-6),
+- for each problem: `BROKEN` or `POLISH`, the screen's label exactly as written on the sheet, the item number (1-7),
   and what is wrong, in one line - specific enough to fix without looking ("BROKEN q03: the tap area covers only the
   top of the vent mast, not the pipe below it").
 Report only what you can see. Do not report taste. Do not repeat a problem for each screen it is on - name the first

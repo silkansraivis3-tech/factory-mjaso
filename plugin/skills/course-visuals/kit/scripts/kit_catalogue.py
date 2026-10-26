@@ -49,6 +49,11 @@ Full reference: SPEC.md (formats, rules), PARTS.md (making a new part). Check: `
 Also: `view:[x,y,w,h]` (task pages), `theme:"light"|"dark"`, `fit:false` (never zoom to fill), `clock:"10:42:00"`.
 Every part: `id` (unique), `type`, `x`, `y`, `value` (its starting value), plus its options below.
 
+## Relations - place by what a part stands on, never a guessed y (SPEC.md "Relations")
+`"on":"G.deck"` (vent mast, manifold, hatch) · `"in":"Hold"` · `"at":0.7|"K.top"|"P1@0.4"` (ON a pipe) · pipe/hose
+`"from":"T.top","to":"V.inlet"` · text `"for":"B"` · zone `"around":"V.outlet"` · cloud `"from":"V.outlet"` · spray
+`"aim":"W"` · ga `"cut":true`. A figure that MEANS something wrong fails the build. Start from `patterns/` when one fits.
+
 ## Marks (on level, gauge, readout: `marks:[...]`)
 `{"at":98, "label":"shut-off", "kind":"alarm|trip|limit", "dir":"up|down", "stop":true,
  "alarm":"text for the log and chip", "then":[["V1",0,700]]}`

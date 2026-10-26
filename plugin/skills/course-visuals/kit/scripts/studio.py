@@ -376,23 +376,27 @@ def generic_head(panel):
 PANEL_W = {1280: 682, 1024: 443}
 
 
-def sheet_size(spec, size):
-    """(cell width, columns, page width, page height) of the contact sheet for a window `size`"""
+def sheet_size(spec, size, split=False, n=None):
+    """(cell width, columns, page width, page height, cell height) of the contact sheet for a window `size`; split (2.66.0,
+    the FIGURE review): one column of cells of a fixed height, room for a frame the kit grows, so each step can be cut out"""
     cw = PANEL_W.get(size[0], int(size[0] * 0.53))
-    n = len(spec.get("steps") or []) + 1
-    cols = 1 if n == 1 else 2
-    ch = int(round(cw * spec["size"][1] / float(spec["size"][0]))) + 24 + 28            # the panel's padding, the caption
+    n = n or len(spec.get("steps") or []) + 1
+    cols = 1 if n == 1 or split else 2
+    ch = int(round(cw * spec["size"][1] / float(spec["size"][0]) * (1.3 if split else 1))) + 24 + 28   # the panel's padding, the caption
     rows = (n + cols - 1) // cols
-    return cw, cols, cols * cw + (cols + 1) * 16, rows * ch + (rows + 1) * 16
+    return cw, cols, cols * cw + (cols + 1) * 16, rows * ch + (rows + 1) * 16, ch
 
 
-def sheet_html(spec, parts_js, size):
+def sheet_html(spec, parts_js, size, split=False, ks=None):
     """ONE page that draws the figure at the end of every step side by side (step 0 = the rest state), each in a dark panel the
-    width of the real slide's - so one browser run gives the whole sequence, where a --step N run gave one picture"""
-    cw, cols, pw, ph = sheet_size(spec, size)
+    width of the real slide's - so one browser run gives the whole sequence, where a --step N run gave one picture.
+    ks: only these steps (a split sheet is taken a few steps a page: a page thousands of pixels tall came back with its
+    lower steps half painted at 1920 x 1080)"""
     steps = spec.get("steps") or []
+    ks = list(range(len(steps) + 1)) if ks is None else list(ks)
+    cw, cols, pw, ph, ch = sheet_size(spec, size, split, len(ks))
     cells = ""
-    for k in range(len(steps) + 1):
+    for k in ks:
         title = "Start" if k == 0 else (steps[k - 1].get("title") or "")
         cells += ('<div class="sheet-cell"><div class="sheet-cap">%s</div><div class="kit-screen"><svg data-kit="#kit-sheet" '
                   'data-sheet-step="%d"></svg></div></div>' % (html.escape("%s" % title if k == 0 else "Step %d - %s" % (k, title)), k))
@@ -403,9 +407,32 @@ def sheet_html(spec, parts_js, size):
            "f.go(k,true);f.layout(true);});"
            "if(document.getAnimations)document.getAnimations().forEach(function(a){try{var t=a.effect.getTiming();"
            "if(t.iterations===Infinity)a.pause();else a.finish();}catch(e){}});},400);</script>")
+    rows = ";grid-auto-rows:%dpx" % ch if split else ""
     return ('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">%s</head><body><div class="sheet" '
-            'style="grid-template-columns:repeat(%d,%dpx);width:%dpx">%s</div><script type="application/json" id="kit-sheet">%s</script>%s%s</body></html>'
-            % (generic_head("two-col"), cols, cw, pw, cells, data, "".join('<script src="%s"></script>' % uri(s) for s in scripts), run)), (pw, ph)
+            'style="grid-template-columns:repeat(%d,%dpx);width:%dpx%s">%s</div><script type="application/json" id="kit-sheet">%s</script>%s%s</body></html>'
+            % (generic_head("two-col"), cols, cw, pw, rows, cells, data, "".join('<script src="%s"></script>' % uri(s) for s in scripts), run)), (pw, ph)
+
+
+SPLIT_PAGE = 2          # steps on one page of a split sheet
+
+
+def split_chunks(spec):
+    n = len(spec.get("steps") or []) + 1
+    return [list(range(i, min(n, i + SPLIT_PAGE))) for i in range(0, n, SPLIT_PAGE)]
+
+
+def split_sheet(png, spec, size, ks):
+    """a split sheet's page cut into one picture per step (<stem>_step<k>.png) - [paths]; the cells sit where sheet_size put them"""
+    from PIL import Image
+    cw, cols, pw, ph, ch = sheet_size(spec, size, True, len(ks))
+    out = []
+    with Image.open(png) as im:
+        for i, k in enumerate(ks):
+            y = 16 + i * (ch + 16)
+            p = re.sub(r"_all(_p\d+)?\.png$", "_step%d.png" % k, png)
+            im.crop((16, y, 16 + cw, min(im.height, y + ch))).save(p)
+            out.append(p)
+    return out
 
 
 def page_html(spec, ctx, panel, parts_js, shot):
@@ -613,7 +640,7 @@ def window_for(size, exe=None):
 
 
 def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), step="final", out=None, quiet=False,
-        shots=True, spec=None, ctx=None):
+        shots=True, spec=None, ctx=None, split=False):
     """{size: {"states": [...], "report": {...}, "shot": png}} and a list of problems; None, why when it cannot run.
     2.50.0: shots=False only measures (no screenshot run); spec= draws this spec instead of the file's (a candidate fix,
     figure_fit.py), on the file's own slide; ctx= the slide context, when the caller already found it"""
@@ -648,27 +675,30 @@ def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), ste
         for size in sizes:
             for mode in ("probe", "shot") if shots else ("probe",):
                 sheet = mode == "shot" and step == "all"
-                if sheet:                       # ONE page with every step side by side: one browser run for the whole sequence
-                    doc, win = sheet_html(spec, parts, size)
-                    nts = []
-                else:
-                    doc, nts = page_html(spec, ctx, panel or "two-col", parts, None if mode == "probe" else step)
-                notes += nts
-                f = os.path.join(tmp, "%s_%dx%d.html" % (mode, size[0], size[1]))
-                io.open(f, "w", encoding="utf-8").write(doc)
-                prof = tempfile.mkdtemp(prefix="p_", dir=tmp)
-                png = os.path.join(out, "%s_%dx%d%s.png" % (stem, size[0], size[1], "_all" if sheet else "")) if mode == "shot" else None
-                # a screenshot's page is its whole window; a page read back (--dump-dom) is smaller than its window
-                if not sheet:
-                    win = size if png else window_for(size, exe)
-                key = probe_key(doc, tmp, win, exe) if mode == "probe" else None      # 2.63.3: a probe is cached
-                procs.append((size, mode, png, (uri(f), win, png, prof), key))
+                pages = split_chunks(spec) if sheet and split else [None]
+                for pi, ks in enumerate(pages):
+                    if sheet:                   # ONE page with every step side by side: one browser run for the whole sequence
+                        doc, win = sheet_html(spec, parts, size, split, ks)
+                        nts = []
+                    else:
+                        doc, nts = page_html(spec, ctx, panel or "two-col", parts, None if mode == "probe" else step)
+                    notes += nts
+                    f = os.path.join(tmp, "%s_%dx%d_%d.html" % (mode, size[0], size[1], pi))
+                    io.open(f, "w", encoding="utf-8").write(doc)
+                    prof = tempfile.mkdtemp(prefix="p_", dir=tmp)
+                    png = os.path.join(out, "%s_%dx%d%s.png" % (stem, size[0], size[1], ("_all_p%d" % pi if ks else "_all") if sheet else "")) \
+                        if mode == "shot" else None
+                    # a screenshot's page is its whole window; a page read back (--dump-dom) is smaller than its window
+                    if not sheet:
+                        win = size if png else window_for(size, exe)
+                    key = probe_key(doc, tmp, win, exe) if mode == "probe" else None      # 2.63.3: a probe is cached
+                    procs.append((size, mode, png, (uri(f), win, png, prof), key, ks))
         cache = probe_cache_dir(ctx)
 
         def go(job):
             # 2.57.0: each browser in a thread of its own, holding one slot of the computer's pool while it runs - a
             # thread never holds one slot while it waits for the next (the runs used to start all at once, then be read)
-            size, mode, png, (u, win, shot, prof), key = job
+            size, mode, png, (u, win, shot, prof), key, _ = job
 
             def fresh():
                 ok, so = chrome(exe, u, win, prof, shot).wait(30)
@@ -683,10 +713,15 @@ def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), ste
         import concurrent.futures as cf
         with cf.ThreadPoolExecutor(max_workers=max(1, len(procs))) as ex:
             outs = list(ex.map(go, procs))
-        for (size, mode, png, _, _), (ok, so) in zip(procs, outs):
+        for (size, mode, png, _, _, ks), (ok, so) in zip(procs, outs):
             key = "%dx%d" % size
             r = res.setdefault(key, {})
             if mode == "shot":
+                if ks is not None:              # a page of a split sheet: its steps, cut out
+                    if png and os.path.isfile(png):
+                        r.setdefault("pictures", []).extend(split_sheet(png, spec, size, ks))   # "steps" is the probe's
+                        r["shot"] = r.get("shot") or png
+                    continue
                 r["shot"] = png if png and os.path.isfile(png) else None
                 continue
             m = re.search(r'<pre id="%s">(.*?)</pre>' % OUT_ID, so or "", re.S)

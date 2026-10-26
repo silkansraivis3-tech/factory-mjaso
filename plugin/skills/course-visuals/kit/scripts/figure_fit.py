@@ -52,6 +52,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import studio  # noqa: E402
 import check_kit  # noqa: E402
+import kit_meaning  # noqa: E402
+import kit_relate  # noqa: E402
 
 sys.path.insert(0, studio.COMPILE)
 sys.path.insert(0, studio.FACTORY_SCRIPTS)
@@ -882,6 +884,9 @@ def usable(spec, new, how, best):
     """(fix, how, closest attempt) with anything spoiled() taken out: never a fit, never a saved "candidate", with a part
     out of its frame or on another part - and the words say why nothing was saved"""
     bad = spoiled(spec, new) if new else []
+    if new and not bad:                                  # 2.66.0 - a re-fit that breaks what the figure means is no fix
+        was = set(x.split(": ", 1)[-1] for x in kit_meaning.check(spec, "fit"))
+        bad = [x.split(": ", 1)[-1] for x in kit_meaning.check(new, "fit") if x.split(": ", 1)[-1] not in was][:2]
     if bad:
         new, how = None, "no fix: the re-fit %s" % "; ".join(bad)
     bad = spoiled(spec, best[0]) if best else []
@@ -1061,7 +1066,8 @@ def run_all(course, module, fix=True, jobs=4, full=False):
     if mdir and os.path.isfile(os.path.join(mdir, "assets", "kit_parts.js")):
         types |= check_kit.local_types(os.path.join(mdir, "assets", "kit_parts.js"))
     broken = set()
-    spec_probs = []
+    spec_probs, spec_waived = [], []
+    check_kit.prefetch([sp for sp in all_specs(course, module) if os.path.isfile(sp)])
     for sp in all_specs(course, module):
         name = os.path.basename(sp)
         if not os.path.isfile(sp):
@@ -1077,6 +1083,8 @@ def run_all(course, module, fix=True, jobs=4, full=False):
             spec_probs.append(x)
             if " is not a kit part" in x or "not valid" in x:
                 broken.add(sp)
+        if isinstance(spec.get("meaning_ok"), dict) and spec["meaning_ok"]:      # 2.66.0: findings accepted on purpose, counted
+            spec_waived += kit_meaning.analyse(spec, name)["waived"]
     figs, figdir = deck_figures(course, module)
     todo = [(sid, sp, e) for sid, sp, e in figs if sp not in broken and os.path.isfile(sp)]
     # 2.50.1 - a figure clean at the last run, whose slide (as the compiler builds it: words, layout, fit, photo row),
@@ -1129,7 +1137,9 @@ def run_all(course, module, fix=True, jobs=4, full=False):
         item = (sid, sp, e)
         probs, r = results[key]
         text = io.open(sp, encoding="utf-8").read().strip()      # as the compiler reads it (read_figure)
-        spec = json.loads(text)
+        # 2.66.0 - a spec placed by relations ("on", "at", "from"/"to") is written out to plain x / y / d first: a fix moves
+        # parts by their x, and a part kept on its relation would snap back to what it stands on
+        spec = kit_relate.freeze(json.loads(text))
         fp = cm.fit_path(figdir, os.path.basename(sp), sid)
         cand_path = re.sub(r"\.kit\.json$", ".candidate.kit.json", fp)
         if probs == [] or probs is None:
@@ -1261,13 +1271,16 @@ def run_all(course, module, fix=True, jobs=4, full=False):
     data["tasks"] = {"fixed": t_fixed, "left": t_left}
     lines += ["Figures: %d on slides, %d spec(s) checked" % (n, len(all_specs(course, module)))]
     lines += ["  spec: " + x for x in spec_probs]
+    if spec_waived:                                     # not a failure: the figure reviewer judges each reason
+        lines.append("  %d meaning finding(s) waived by \"meaning_ok\" (the figure review sees the reasons):" % len(spec_waived))
+        lines += ["    " + x for x in spec_waived]
     lines += ["  " + x for x in fixed]
     lines += ["  " + x for x in left]
     lines += ["  (the compile's drawing check judges) " + x for x in t_left]
     code = 1 if (left or spec_probs) else 0
     lines.append("Figures: %s" % ("every figure clean%s" % (" (%d fixed by itself)" % len(fixed) if fixed else "") if code == 0
                                   else "%d figure(s) to fix" % (len(left) + len(spec_probs))))
-    data.update({"fixed": fixed, "left": left, "spec_problems": spec_probs})
+    data.update({"fixed": fixed, "left": left, "spec_problems": spec_probs, "meaning_waived": spec_waived})
     return code, "\n".join(lines), data
 
 

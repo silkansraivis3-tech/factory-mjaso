@@ -296,7 +296,49 @@ def check_spec(spec, types):
         N.append("one view only - is there an inside to open or a part to show?")
     if not spec.get("units"):
         N.append("\"units\" missing - say \"m\": one unit is a metre")
+    P.extend(deck_problems(spec))
     return P, N
+
+
+# 2.66.0 - parts that stand on the open deck: never below it, inside the hull (IGF 2.65.0's 2D vent mast inside the ship)
+ON_DECK = ("vent_mast", "drip_tray", "esd_button", "air_intake")
+
+
+def deck_level(h, lvl="deck"):
+    """the world height of a hull's (or a deck plate's) deck, floor or bottom - as kit3d.js deckLevel()"""
+    n = lambda v, d: v if isinstance(v, (int, float)) and not isinstance(v, bool) else d
+    y0 = (h.get("at") or [0, 0, 0])[1] if is_at(h.get("at")) else 0
+    if h.get("type") == "deck_plate":
+        return y0
+    bot = n(h.get("bottom"), 0)
+    fl = n(h.get("floor"), bot + 1.2)
+    return y0 + {"floor": fl, "bottom": bot}.get(lvl, n(h.get("top"), fl + 9))
+
+
+def deck_problems(spec):
+    parts = [p for p in spec.get("parts") or [] if isinstance(p, dict)]
+    hulls = {p.get("id"): p for p in parts if p.get("type") in ("hull", "deck_plate") and p.get("id")}
+    out = []
+    for p in parts:
+        on = p.get("on")
+        if isinstance(on, str):
+            hid, _, lvl = on.partition(".")
+            if hid not in hulls or lvl not in ("deck", "floor", "bottom"):
+                out.append("part %s is \"on\": %r - name a hull or deck_plate and its deck, floor or bottom (\"H.deck\")" % (p.get("id") or p.get("type"), on))
+            continue                                         # placed by the relation: on its level by construction
+        if p.get("type") not in ON_DECK or not is_at(p.get("at")):
+            continue
+        x, y, z = p["at"]
+        for h in hulls.values():
+            if h.get("type") != "hull":
+                continue
+            hx = h.get("x") or [-10, 10]
+            ox, _, oz = h["at"] if is_at(h.get("at")) else (0, 0, 0)
+            half = h.get("half") or (h.get("breadth") or 12) / 2.0
+            if ox + hx[0] <= x <= ox + hx[1] and abs(z - oz) <= half and y < deck_level(h) - 0.05:
+                out.append("the %s %s stands at y %g, below the deck of %s (y %g) - inside the hull: it stands ON the open deck - "
+                           "\"on\": \"%s.deck\"" % (p["type"], p.get("id") or "", y, h.get("id"), deck_level(h), h.get("id")))
+    return out
 
 
 # ------------------------------------------------------------------ a module's files
