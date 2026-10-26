@@ -2760,6 +2760,9 @@ STARTER_PART = {
     "space": ("tl", 160, 80, 0, 1), "scale": ("tl", 90, 120, 0, 1), "ga": ("tl", 190, 56, 0, 1),
     "exchanger": ("c", 40, 56, 0, 1), "cylinder": ("tl", 140, 230, 0, 1)}
 STARTER_MAX_PARTS = 9
+# words that say gas is let out now (kit_meaning.py SAID_WORDS, short): a starter step on such a line plays the vent
+VENTS_NOW = re.compile(r"\bvents\b(?! mast| line| pipe| outlet)|\bvented\b|\bventing\b|\bgas (?:leaves|escapes|goes up)\b|"
+                       r"\breleas(?:e|es|ed|ing) (?:the )?(?:gas|vapou?r)")
 
 
 def kit_hit(text, last=False):
@@ -2940,7 +2943,8 @@ def starter_part(pid, it, cell):
         p["value"] = it["start"]
     out = [p]
     if kind == "valve":
-        out.insert(0, {"id": pid + "L", "type": "pipe", "d": "M%d %d H%d" % (int(x0 + m), cy, int(x0 + cw - m)), "fluid": "liquid"})
+        out.insert(0, {"id": pid + "L", "type": "pipe", "d": "M%d %d H%d" % (int(x0 + m), cy, int(x0 + cw - m)), "fluid": "liquid",
+                       "open": "both"})     # 2.66.0: a run of line through the valve, going on both ways (no LOOSE END)
     if kind == "pipe":                                    # a pipe has no words of its own: its name stands over it
         out.append({"type": "text", "x": cx, "y": cy - 16, "anchor": "middle", "text": wrap_words(it["label"], max(10, int(iw / 8.5)))})
     return out
@@ -3080,6 +3084,9 @@ def starter_figure(script, s, pool=None, taken=None):
         words = " ".join(lines[i - 1].split())
         title = "%d · %s" % (len(plan) + 1, words[:60].rstrip())
         plan.append({"title": title, "line": i, "play": [[ids[k], to, 600]]})
+        vent = next((ids[j] for j, x in enumerate(items) if x["kind"] == "vent"), None)
+        if vent and vent != ids[k] and VENTS_NOW.search(words.lower()):   # 2.66.0: a line that says the gas vents plays the vent
+            plan[-1]["play"].append([vent, 1, 600])
     label = first or (s.get("title") or "")
     return {"size": list(size), "label": label, "idle": "Press Next step", "parts": parts, "steps": plan}
 
@@ -3112,9 +3119,12 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
             continue
         entry.update({"figure": name, "composition": "two-col"})   # 2.62.1: its own Navy panel on the light slide (80 / 20)
         if not os.path.isfile(os.path.join(figdir, name)):
-            entry["_figure"] = ("starter written by --init-build: replace the placeholder parts with the real drawing, one part per "
-                                "thing the script names (SPEC.md); the parts are placed on a grid and the steps light the slide's "
-                                "lines. Try it with studio.py before compiling.")
+            # 2.66.0: "replace the placeholder parts ... try it with studio.py before compiling" sent the first 2.66.0 proof
+            # run's builders into redrawing every figure by hand before one build (50 min, nothing built)
+            entry["_figure"] = (("starter = the %s pattern (a tested, physically correct figure): keep it - change only its words "
+                                 "to the script's and its steps' lines. " % spec["_pattern"].split(" ")[0]) if spec.get("_pattern") else
+                                "starter written by --init-build: one part per thing the script names, its steps lighting the "
+                                "slide's lines. ") + "BUILD it as it is; change it only for what the build prints."
             if out is not None:
                 out[s["id"]] = spec
 
@@ -3787,8 +3797,8 @@ def main(argv=None):
         figdir, specs, specs3 = workspace.claude_path(o.course, "figures", cs.mid(o.module)), {}, {}
         cs.save(bp, starter_build(script, shared, figdir=figdir, specs=specs, specs3=specs3,
                                   mdir=module_folder(o.course, o.module, o.module_dir)[0]))
-        print("Done - a starter build sheet:\n    %s\n  Next: fill in each slide's picture, edit the starter figures (parts and "
-              "options: course-visuals\\kit\\CATALOGUE.md), then build and check in one command:\n    compile\\scripts\\"
+        print("Done - a starter build sheet:\n    %s\n  Next: fill in each slide's picture (the starter figures are drawn - "
+              "change one only for what the build prints), then build and check in one command:\n    compile\\scripts\\"
               "build_module.py <course> --module %s" % (bp, o.module))
         # 2.63.3 (item 5): the predecessor's hand-fixed drawings, where the slide's words are unchanged, instead of starters
         sheet_ = cs.load(bp)

@@ -77,6 +77,21 @@ def canvas():
         spec = cm.starter_figure(SCRIPT, SLIDES[sid])
         check("2.66.0 %s names a library figure: its starter is the %s pattern" % (sid, want),
               spec and want in (spec.get("_pattern") or ""), spec and spec.get("_pattern"))
+    # 2.66.0 - the first proof run: builders redrew every starter by hand before building. A starter is built AS IT IS, so it
+    # must pass the meaning checks' BLOCKs itself, and its build-sheet note must say "build it", not "replace the parts"
+    sys.path.insert(0, os.path.join(cm.SKILLS, "course-visuals", "kit", "scripts"))
+    import kit_meaning as km
+    vent = {"id": "sv", "kind": "slide", "title": "Vent mast", "visual_kind": "schematic",
+            "text": "The relief valve lifts.\nVent mast - the gas vents high above the deck.\nValve - the master valve closes."}
+    for sid, sl in list(SLIDES.items()) + [("s04g", GRID_S04), ("sv", vent)]:
+        spec = cm.starter_figure(SCRIPT, sl)
+        check("2.66.0 %s: its starter has no BLOCK of the meaning checks (it is built as it is)" % sid,
+              spec and not km.analyse(spec, sid)["block"], spec and km.analyse(spec, sid)["block"])
+    screens = {s["id"]: {} for s in SCRIPT["screens"]}
+    cm.starter_figures(SCRIPT, screens, tempfile.mkdtemp(prefix="sf_"), out={})
+    notes = [e.get("_figure", "") for e in screens.values() if e.get("_figure")]
+    check("2.66.0 the build sheet's note on a starter says BUILD it as it is (it said: replace the placeholder parts)",
+          notes and all("BUILD it as it is" in n and "replace the placeholder" not in n for n in notes), notes)
     s4 = GRID_S04
     plain = cm.starter_figure(SCRIPT, s4)
     check("no photograph to show: the canvas is the two-col column's shape, 640 x 390", plain["size"] == [640, 390], plain["size"])

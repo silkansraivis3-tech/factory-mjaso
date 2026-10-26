@@ -22,17 +22,15 @@ python compile/scripts/build_module.py <course> --module N --no-course-pages [--
 - `--init-build` writes the build sheet and starters. Screens marked `"_seeded"` start from a hand-fixed predecessor's
   drawing or photo: build them AS THEY ARE, change only what the build reports.
 - Fill the build sheet (each slide's picture, layout, photos - photos from `assets/img` or the Gas Library copy the
-  operator names) and EDIT the starter figure specs (`figures/MNN/sNN.kit.json`; parts and options:
+  operator names); a starter figure spec is edited only for what the build prints (`figures/MNN/sNN.kit.json`; parts and options:
   `course-visuals/kit/CATALOGUE.md`; never kit.js). A 3D slide: its `sNN.kit3d.json` (`course-visuals/kit3d/SPEC.md`,
   `PARTS.md`) - place the parts as on board, delete `"_todo"`. The workflow's 3D step checks and photographs it after you.
-- **A figure is physically right before it is pretty (2.66.0).** A starter marked `"_pattern"` IS a tested, physically
-  correct IGF figure (ship plan, bunkering line, vent system, fuel supply, engine modes, fuel types - the kit's
-  `patterns/`): keep its arrangement and relations, rename its words to the script's, map its steps to the slide's
-  lines. Any other figure: place every part by what it stands on or joins - never a guessed y:
-  `"on": "G.deck"` (a vent mast, a manifold, a hatch stand ON the deck), `"in": "Hold"` (a tank in its hold),
-  `"at": 0.7` / `"at": "P1@0.4"` (along the host / ON a pipe), pipes and hoses `"from": "T.top", "to": "V.inlet"`,
-  words for a part `"for": "B"` (a callout), a zone `"around": "V.outlet"`, a cloud `"from": "V.outlet"`, a spray
-  `"aim": "W"` (`course-visuals/kit/SPEC.md` "Relations"). Every pipe ends on a part; every thing the words name is drawn.
+- **BUILD FIRST, then fix only what the build prints (2.66.0 - the first 2.66.0 proof run: builders deleted the starters
+  and redrew every figure by hand in the studio, 50 minutes and no module built).** Fill the blanks the build names and
+  run the build - the starters are drawn already: never delete or rewrite a starter, never open the studio on a figure
+  the build did not name. A starter marked `"_pattern"` is a tested, physically correct IGF figure: change only its words
+  (to the script's) and its steps' lines. A figure you DO change: place parts by what they stand on or join
+  (`"on": "G.deck"`, `"in"`, `"at"`, pipes `"from"`/`"to"` - SPEC.md "Relations"), never a guessed y.
 - Run build_module.py IN THE FOREGROUND with the shell's longest timeout (600000 ms). `STILL BUILDING` (exit 3): run the
   SAME command with `--wait` until it answers. Never a second build meanwhile, never an edit while it runs, never end your
   turn while it runs. A first build waits its turn behind another module's first build (one at a time on this computer) -

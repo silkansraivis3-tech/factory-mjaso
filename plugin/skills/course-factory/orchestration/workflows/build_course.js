@@ -263,7 +263,9 @@ ${brief(m)}
     compile_module.py <course> --module ${m.id} --init-build${SEED}      (once, if the build sheet is missing)
         screens marked "_seeded" start from a hand-fixed predecessor's drawing or photo: build them as they are and
         change only what the build reports
-    fill the build sheet, edit the starter figure specs
+    fill the blanks the build names in the build sheet, then BUILD - the starter figures are drawn already: never delete
+        or rewrite one, never polish a figure the build did not name (2.66.0: the first proof run's builders redrew every
+        figure by hand before building - 50 minutes, nothing built)
     build_module.py <course> --module ${m.id} --no-course-pages${String(m.id) === LONG_POLE ? ' --long-pole' : ''}           (compile/scripts)
         ONE command runs the figures, the compile, every check and the review sheets and prints only what fails, one
         line each with its fix. Fix it in the build sheet or the figure specs and run it again - never a check on its
@@ -272,7 +274,7 @@ ${brief(m)}
     STOP AT MODULE CLEAN: PASS, or "FAIL M${two(m)} - course package" with "MODULE CLEAN" under it.
         Do NOT review the sheets yourself and do not polish: the QA agent behind you does the ONE visual review, and a
         BROKEN finding comes back for one fix round. Anything you would polish: list it in your report.
-    a figure problem: fix it in the studio (studio.py <spec> --step all, seconds), then one build.
+    a figure problem the build PRINTED: fix that figure in the studio (studio.py <spec> --step all, seconds), then one build.
 
 RUN build_module.py IN THE FOREGROUND with the shell call's longest timeout (600000 ms). "STILL BUILDING": run the SAME
 command with --wait until it prints the build's answer - never a second build meanwhile, never an edit while it runs, never

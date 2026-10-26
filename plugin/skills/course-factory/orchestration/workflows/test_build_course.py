@@ -214,6 +214,13 @@ def main():
               lf.count("fixfig:1") == 1 and "inside the hull" in pf.get("fixfig:1", "") and "could sit closer" not in pf.get("fixfig:1", "")
               and "Relations" in pf.get("fixfig:1", "") and "patterns" in pf.get("fixfig:1", "")
               and "--only s03" in pf.get("figshots:1+fix", "") and "reviewfig:1+fix" in lf and "fixfig:2" not in lf, lf)
+        b1f = pf.get("build:1", "")
+        with open(os.path.join(HERE, "..", "..", "compile", "BUILDER_CARD.md"), encoding="utf-8") as f:
+            card = f.read()
+        check("2.66.0 the builder BUILDS FIRST: the starters are drawn, never deleted or rewritten, no figure polished that the "
+              "build did not name (the first proof run's builders redrew every figure by hand: 50 min, nothing built)",
+              "then BUILD" in b1f and "never delete" in b1f and "the build PRINTED" in b1f
+              and "BUILD FIRST" in card and "never delete or rewrite a starter" in card, b1f[:1500])
         still = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_figs": ["1"], "_stillbad": ["1"],
                           "factory": "C:/f/skills"})
         ls = still.get("labels", [])
