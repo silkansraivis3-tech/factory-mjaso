@@ -1582,6 +1582,15 @@ package check; drawing findings named for `build_module.py` alone - ~20 s on the
 and returns `gold_standard` (a workflow has no clock of its own: `Date.now()` is not allowed there). Tests:
 `compile/scripts/test_precheck.py` (33), `test_routing.py` (87), `test_build_course.py`. (5) Run on the real gas course: almost every small picture is the old course's own (M01 10 of 11, M09 24) - so: A still rendered from the module's own 3D model is a note (render it again larger); a picture from the old course has no larger original, and the stop says so - find a larger photograph of the same thing; a REBUILD (`fix.py rebuild`, `precheck.py --rebuild`) is never stopped by the small pictures a module already has - they are notes (the gas course has 100+ old-course pictures under 800 px across its 22 modules). (6) The whole-course workflow builds the biggest approved module first (the most minutes in the approved table) in a rolling pool of `args.wave`: the next build starts the moment one ends - no wave waits for its slowest module; a QA agent holds no place, a fix round does. (`build_course.js` `ORDER`, `place`; the IGF M01-M03 run had M02 as the long pole of its wave.)
 
+**2.65.1 (2026-10-26) - the fix lane's first real rebuild** (the gas course's Module 1, after its 8 small ship photos
+were replaced by Wikimedia Commons originals of 2400 px). (1) The rebuild's one check was the fix lane's 16 px "text
+bigger" sweep: it called 14 slides small that the build passes (its floor is 12.5 px, a kit figure's 16) and did not
+look at 1024 x 768, where 6 slides scrolled. It is now the build's own audits at both sizes; a failure names
+`build_module.py` for that module. (2) `build_module.py` on a module built before (its deck exists) is a rebuild for the
+pre-check: the small pictures it already has are notes, not a stop - the 3 old-course pictures of M01 s22 / s23, which
+have no free replacement anywhere, would otherwise have blocked the very build fix.py names. (3) A fix under a minute
+says its seconds ("0 min" read as broken). Tests: `test_precheck.py` 35.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

@@ -89,8 +89,9 @@ def clock_pass(course, m, now=None):
 def fix_line(seconds):
     """a fix's minutes against the 20 the gold standard gives it"""
     mins = seconds / 60.0
-    return ("TIME: this fix took %.0f min - inside the gold standard's %d min for fixes" % (mins, GOLD_FIX) if mins <= GOLD_FIX
-            else "TIME: this fix took %.0f min - OVER the gold standard's %d min for fixes" % (mins, GOLD_FIX))
+    took = "%.0f s" % seconds if seconds < 60 else "%.0f min" % mins     # "0 min" read as broken (gas M01, 2026-10-26)
+    return ("TIME: this fix took %s - inside the gold standard's %d min for fixes" % (took, GOLD_FIX) if mins <= GOLD_FIX
+            else "TIME: this fix took %s - OVER the gold standard's %d min for fixes" % (took, GOLD_FIX))
 
 
 def summary(path):

@@ -411,7 +411,8 @@ def main(argv=None):
     pre_notes = []
     if not o.no_precheck and str(o.module).isdigit() and o.layout_round == 0:
         import precheck
-        must, pre_notes = precheck.check(course, o.module)
+        # a module built before is a rebuild: the small pictures it already has are notes (fix/GUIDE.md 3b)
+        must, pre_notes = precheck.check(course, o.module, rebuild=os.path.isfile(os.path.join(mdir, "presentation", "index.html")))
         if must:
             print("FAIL %s - nothing built: the pre-check found %d thing(s) to fix first (precheck.py; --no-precheck skips it)"
                   % (cs.mid(o.module), len(must)))

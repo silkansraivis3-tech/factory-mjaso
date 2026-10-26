@@ -618,7 +618,7 @@ def cmd_rebuild(course, modules, force=False):
     file - as a fix (owner, 2026-10-26: "when I want to rebuild or fix something it does not go through the same thing,
     it goes through the fix process"). For each module: the pre-check (precheck.py, seconds), the factory's design files
     (design_system.py install --update), the compile (compile_module.py, with its own drawing check on what changed).
-    Then ONE check for all of them: the layout at 1280 x 800, and the course package. No figure stage, no review
+    Then ONE check for all of them: the build's own audits (1280 x 800, 1024 x 768), and the course package. No figure stage, no review
     sheets, no QA agent - a rebuild changes no words. What only a full build can settle (a drawing that no longer fits
     its slide) is named, module by module, for build_module.py on that module alone."""
     t0 = time.time()
@@ -666,11 +666,24 @@ def cmd_rebuild(course, modules, force=False):
         print("\nNothing rebuilt.")
         return 1
     spec = ",".join(str(m) for m in built)
-    print("\nOne check for the rebuilt modules (%s):" % spec)
-    rc_layout = cmd_check(course, "layout", spec)
+    # the ONE check is the build's own: its audits at 1280x800 and 1024x768 (2.65.0, the gas course's M01 - the layout
+    # sweep's 16 px "text bigger" floor called 14 slides small that the build passes, and missed what scrolled at 1024)
+    audits = os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-module-ux", "measure", "scripts", "run_audits.py")
+    print("\nOne check for the rebuilt modules (%s) - the build's own audits, 1280x800 and 1024x768:" % spec)
+    rc_layout = 0
+    for m in built:
+        rc, out = run([audits, deck_file(mods[m]), "--viewport", "1024x768"])
+        found = [x for x in out.splitlines() if re.search(r"\bFAIL\b", x) or x.startswith("            ")]
+        print("Module %d: %s" % (m, "the audits pass" if rc == 0 else "\n" + "\n".join(found[:16])))
+        if rc:
+            rc_layout = 1
+            if m not in full_build:
+                full_build.append(m)
     rc_pkg = cmd_check(course, "package", spec)
     if full_build:
-        print("\nFor the full build (figures only): module(s) %s." % ", ".join(str(m) for m in full_build))
+        print("\nFor the full build: module(s) %s - build_module.py <course> --module N for each; its figure stage and its "
+              "layout retry settle a drawing that no longer fits or a slide that scrolls. A module already built is not "
+              "stopped there by the small pictures it already has (notes)." % ", ".join(str(m) for m in full_build))
     import cf_timing                                 # the gold standard: 20 min for a module's fixes (owner, 2026-10-26)
     print(cf_timing.fix_line(time.time() - t0))
     return 0 if not (stopped or full_build or rc_layout or rc_pkg) else 1

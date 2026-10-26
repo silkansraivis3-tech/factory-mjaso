@@ -174,15 +174,18 @@ def main():
               "OVER the gold standard of 30-40 min by 12 min" in cf_timing.clock_pass(c, "M01", now=st + 52 * 60))
         check("a fix inside 20 min / over it", "inside the gold standard's 20 min" in cf_timing.fix_line(17 * 60)
               and "OVER the gold standard's 20 min" in cf_timing.fix_line(25 * 60))
+        check("... a fix under a minute says its seconds, never \"0 min\"", "this fix took 24 s" in cf_timing.fix_line(24))
 
         print("\n-- a rebuild of a built module is a fix (fix.py rebuild)")
         c, md = course(tmp, "rebuild")
         run(tc.COMPILE, c, "--module", "1", "--no-drawing-check")
         t = time.time()
         code, out = run(FIX, "rebuild", c, "--modules", "1")
-        check("fix.py rebuild: the module built again from its approved words, then ONE layout check and the package check",
-              "Module 1: rebuilt from its approved words" in out and "One check for the rebuilt modules (1)" in out
-              and "layout at 1280x800" in out, out[-900:])
+        check("fix.py rebuild: the module built again from its approved words, then ONE check - the build's own audits at "
+              "1280x800 and 1024x768 (not the 16 px sweep) - and the package check",
+              "Module 1: rebuilt from its approved words" in out and "One check for the rebuilt modules (1) - the build's own "
+              "audits, 1280x800 and 1024x768" in out and ("Module 1: the audits pass" in out or "For the full build: module(s) 1" in out)
+              and "layout at 1280x800" not in out, out[-900:])
         check("... no figure stage, no review sheets", "figure_fit" not in out and "review sheets" not in out.lower(), out[-600:])
         check("... and it says its minutes against the 20 a fix gets", "TIME: this fix took" in out
               and "inside the gold standard's 20 min for fixes" in out, out[-300:])
@@ -195,6 +198,10 @@ def main():
         check("... a small picture the module already has does not stop a rebuild - it is a note to replace it",
               "Module 1: rebuilt from its approved words" in out and "1 picture(s) under 800 px the module already had" in out
               and "tiny.png 300x200" in out, out[-900:])
+        code, out = run(BUILD, c, "--module", "1", "--no-review", "--no-course-pages")
+        check("... and build_module.py on a module built before (the full build fix.py names) is not stopped by it either",
+              "nothing built: the pre-check" not in out and "Pre-check: 1 picture(s) under 800 px the module already had" in out,
+              out[-900:])
         tc.build_of(c, lambda b: b["screens"].update({"s01": {"figure": "assets/img/gone.png"}}))
         code, out = run(FIX, "rebuild", c, "--modules", "1")
         check("... a module the pre-check stops (a picture that is not there) is not rebuilt, and says why",
