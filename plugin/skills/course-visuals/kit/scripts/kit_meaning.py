@@ -17,6 +17,10 @@ kit.js itself resolves (kit_relate.py), against course-visuals/knowledge/figure-
   SMALL      a small drawing lost in a big panel part (the figure's frame: the drawing audit's EMPTY)
   TRUTH      the figure kind's own must-be-true list (ship plan, bunkering line, vent system, fuel supply, engine modes,
              fuel types) - figure-truths.json "figures"
+  STEP       (2.66.3, a NOTE) a step's title names a part the step does not play or change (a tank, a room, a pipe named is
+             where the step is - not judged); a step that only turns things off under a title saying something happens
+  LABEL      (2.66.3) a callout's leader ends on a part of another kind than its words name (a BLOCK: none in the hand-fixed
+             IGF original's 96 specs); its words name a thing not drawn (a NOTE)
 """
 from __future__ import annotations
 
@@ -579,6 +583,110 @@ def chk_words(F, bad):
                 "keel; leave the label out" % (p.get("id") or "", p["label"]), p)
 
 
+# 2.66.3 - the two kinds of fault the 2.66 audit still called BROKEN that no check saw: a step whose picture does not show
+# what its title says (6 of 11), a label on the wrong part or naming what is not drawn (4 of 11). NOTEs: the figure reviewer
+# judges them (a BLOCK only after a calibration on the hand-fixed IGF original says they are never wrong there)
+TAKE_AWAY = re.compile(r"\b(?:stop(?:s|ped|ping)?|shut(?:s|ting)?|clos(?:e|es|ed|ing)|trip(?:s|ped)?|isolat\w*|off|lost|"
+                       r"los(?:e|es|ing)|fall(?:s|ing)?|drop(?:s|ped)?|empt\w*|ends?|remov\w*|disconnect\w*|leav(?:e|es)|"
+                       r"out|down|reset|before|back|again|no longer|only|loss|free|crack\w*|break\w*|brittle)\b")
+SCENERY = ("tank", "integral_tank", "boil_off", "tank_type", "tank_wall", "space", "zone", "pipe", "pipe_section", "ga")
+
+
+def _refs(s):
+    """the part ids a step moves itself (set, play - "P1.fill" moves P1)"""
+    out = {str(r).split(".")[0] for r in (s.get("set") or {})}
+    out |= {a[0].split(".")[0] for a in s.get("play") or [] if isinstance(a, list) and a and isinstance(a[0], str)}
+    return out
+
+
+def chk_step(F, bad):
+    """STEP - a step's title names a part the step does not play or change; or the step only takes things away (hides,
+    turns off) while its title says something happens"""
+    steps = [s for s in F.r.get("steps") or [] if isinstance(s, dict)]
+    if not steps:
+        return
+    ids = {}
+    for p, g in F.items:
+        if p.get("id"):
+            ids.setdefault(p.get("type"), []).append(p["id"])
+    st = states(F.r)
+    rest = {p.get("id"): (float(p["value"]) if isinstance(p.get("value"), (int, float)) and not isinstance(p.get("value"), bool) else 0.0)
+            for p in F.r.get("parts") or [] if isinstance(p, dict) and p.get("id")}
+    before = dict(rest)
+    for (k, end, during), s in zip(st, steps):
+        if s.get("reset"):
+            before = dict(rest)
+        title = re.sub(r"^\s*\d+\s*[·.\-–:]\s*", "", str(s.get("title") or ""))
+        changed = _refs(s) | {i for i, v in end.items() if abs(v - before.get(i, 0.0)) > 1e-9}
+        # a tank, a room, a pipe a title names is mostly WHERE the step is (the hand-fixed original: "Fuel tank - in a fuel
+        # storage hold" lights the hold) - the parts that DO something are judged; a change on or beside one shows it
+        named = [(w, e, [i for t in e["parts"] if t not in SCENERY for i in ids.get(t, [])]) for w, e in names_in(title)
+                 if "ga" not in e["parts"]]
+        drawn = [(w, e, d) for w, e, d in named if d]
+        near = {q.get("id") for q, h in F.items if q.get("id") in changed and q.get("type") not in WORDLESS[:1] + ("wire",)}
+        boxes = {q.get("id"): (h.get("box") or (_pbox(h) if h.get("pts") else None)) for q, h in F.items if q.get("id")}
+        shown = lambda i: i in changed or any(boxes.get(i) and boxes.get(j) and gap(boxes[i], boxes[j]) <= 12 for j in near)
+        if drawn and not any(shown(i) for w, e, d in drawn for i in d):
+            w, e, d = drawn[0]
+            bad("STEP", "step %d (%r) names the %s (%s), and the step does not change it - play it in this step (it lights, "
+                "fills, moves), or the title says what the step shows" % (k, title[:60], w, ", ".join(d[:3])), "step%d" % k)
+        else:
+            moved = [i for i in changed if i in end or i in before]
+            down = [i for i in moved if end.get(i, 0.0) < before.get(i, 0.0) - 1e-9]
+            if moved and len(down) == len(moved) and not TAKE_AWAY.search(title.lower()):
+                bad("STEP", "step %d (%r) only takes things away (%s turned off or hidden) and shows nothing new - its title says "
+                    "something happens: draw it in this step" % (k, title[:60], ", ".join(sorted(down)[:3])), "step%d" % k)
+        before = dict(end)
+
+
+def _at(F, t):
+    """the part a point is on - a pipe under it first, else the smallest box holding it"""
+    hits = []
+    for q, h in F.items:
+        if q.get("type") in ("text", "wire"):
+            continue
+        if h.get("pts") and len(h["pts"]) >= 2 and poly_dist(t, h["pts"]) <= 4:
+            hits.append((0.0, q))
+        elif h.get("box") and not h.get("pts") and pt_box(t, h["box"]) <= 2:
+            hits.append((area(h["box"]) or 1.0, q))
+    return min(hits, key=lambda x: x[0]) if hits else (None, None)
+
+
+def chk_label(F, bad):
+    """LABEL - a callout's leader ends on a different part than its words name, or its words name a thing not drawn"""
+    for p, g in F.of("text"):
+        t = p.get("to")
+        if not (isinstance(t, list) and len(t) >= 2):
+            continue
+        said, level = None, NOTE
+        for w, e in names_in(p.get("text")):
+            if "ga" in e["parts"]:
+                continue
+            ok = e["parts"] + (e.get("kin") or [])
+            right = [(q, h) for q, h in F.items if q.get("type") in e["parts"]]
+            if not right:
+                if not e.get("strict"):                 # a strict name drawn nowhere is NAMED's (a BLOCK)
+                    said = said or ("the callout %r names the %s, and the figure draws none - draw it, or say it in the "
+                                    "slide's words" % (str(p.get("text"))[:40], w))
+                continue
+            if e.get("strict") and not any((h.get("box") and pt_box(t, h["box"]) <= 14) or (h.get("pts") and poly_dist(t, h["pts"]) <= 8)
+                                           for q, h in right):
+                continue                                # NAMED says it: the callout leads to no such part
+            size, hit = _at(F, t)
+            # the leader ends on a part of another kind, and no part of the named kind there is as small (a cofferdam's
+            # leader in the middle of its space, on the tank inside it: the label reads as the tank's)
+            if hit is not None and hit.get("type") not in ok and not any(
+                    (h.get("box") and not h.get("pts") and pt_box(t, h["box"]) <= 2 and area(h["box"]) <= size) or
+                    (h.get("pts") and poly_dist(t, h["pts"]) <= 4) for q, h in right):
+                # a BLOCK (2.66.3): none in the hand-fixed IGF original's 96 specs, none in 2.65.0's 42
+                said, level = ("the callout %r names the %s, and its leader ends on the %s %s - point it at the %s (\"for\": "
+                               "\"<its id>\"; a space's leader ends in its middle, where a part inside may be: \"for\": "
+                               "\"<id>.top@0.2\")" % (str(p.get("text"))[:40], w, hit.get("type"), hit.get("id") or "", w)), BLOCK
+                break
+        if said:
+            bad("LABEL", said, p, level)
+
+
 def _under(F, cap_box, cell):
     """the drawn things under (or over) a caption, in its column"""
     cx = center(cap_box)[0]
@@ -782,7 +890,7 @@ def analyse(spec, where="", resolved=None):
     for e in rspec.get("_relate") or []:
         bad("RELATION", e, None, BLOCK)
     F = Fig(spec, rspec, geo)
-    for fn in (chk_named, chk_loose, chk_deck, chk_gas, chk_aim, chk_grid, chk_words, chk_small, chk_truths):
+    for fn in (chk_named, chk_loose, chk_deck, chk_gas, chk_aim, chk_grid, chk_words, chk_small, chk_truths, chk_step, chk_label):
         fn(F, bad)
     ok = spec.get("meaning_ok") if isinstance(spec.get("meaning_ok"), dict) else {}
     norm = {re.sub(r"\s+", " ", str(k)).strip().lower(): (k, v) for k, v in ok.items()}

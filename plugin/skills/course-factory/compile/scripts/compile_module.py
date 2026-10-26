@@ -3182,6 +3182,98 @@ def starter_build(script, shared=(), figdir=None, specs=None, mdir=None, specs3=
     return sheet
 
 
+# 2.66.3 - words that say nothing about WHICH photograph (every IGF photo is of a ship and LNG)
+PREFILL_STOP = {"the", "and", "with", "from", "into", "taking", "takes", "their", "this", "that", "there", "real", "photo",
+                "photograph", "picture", "image", "wikimedia", "commons", "ship", "ships", "vessel", "board", "side", "view",
+                "shows", "showing", "work", "slide", "authored", "factory", "resized"}
+
+
+def _words(text):
+    return {w for w in re.findall(r"[a-z0-9]+", str(text or "").lower()) if len(w) >= 4 and w not in PREFILL_STOP}
+
+
+def prefill(script, sheet, mdir, figdir):
+    """2.66.3 - what --init-build can decide from the module's own files, filled in the starter sheet (the 2.66 run's
+    builders filled exactly these by hand, and their first build was refused for the blanks): a photo slide gets the
+    photograph whose record names that slide ("used_in": "... slide s01") or, failing that, the one whose description,
+    "shows" and file name share the most words with the slide's visual (two at least, and more than any other photo); a
+    question answered on "the GA from slide 4" gets slide 4's kit drawing and its places, each answer matched to a part's
+    own label or callout. A fill is only a start: the builder changes it like any entry. -> the lines to print"""
+    said, screens = [], sheet.get("screens") or {}
+    meta = {}
+    try:
+        meta = json.load(io.open(os.path.join(mdir, "assets", "img", "_photo_meta.json"), encoding="utf-8")) if mdir else {}
+    except (OSError, ValueError):
+        pass
+    mod = cs.mid(script.get("module")) if str(script.get("module") or "").isdigit() else ""
+    photos = {n: m for n, m in sorted(meta.items()) if isinstance(m, dict) and rights_usable(m) and not is_generated(m)
+              and os.path.isfile(os.path.join(mdir, "assets", "img", n))}
+    taken = {(e.get("figure") or "").replace("\\", "/").rsplit("/", 1)[-1] for e in screens.values() if isinstance(e, dict)}
+    want = [s for s in script["screens"] if s["kind"] == "slide" and s["id"] in screens
+            and not (screens[s["id"]].get("figure") or "").strip()
+            and (cs.parse_kind(s.get("visual_kind", "")) == "photo" or screens[s["id"]].get("photo_wanted"))]
+
+    def give(s, name, why):
+        screens[s["id"]]["figure"] = "assets/img/" + name
+        taken.add(name)
+        said.append("  %s: the photograph assets\\img\\%s (%s)" % (s["id"], name, why))
+    for s in list(want):                                 # the record names the slide
+        for n, m in photos.items():
+            u = str(m.get("used_in") or "")
+            if n not in taken and re.search(r"\bslide\s+%s\b" % re.escape(s["id"]), u) and (not mod or not re.search(r"\bM\d\d\b", u)
+                                                                                             or mod in u):
+                give(s, n, "its record: %s" % u[:60])
+                want.remove(s)
+                break
+    for s in want:                                       # the words the slide's visual and the photo's record share
+        mine = _words("%s %s" % (s.get("visual"), s.get("title")))
+        ranked = sorted(((len(mine & _words("%s %s %s" % (m.get("description"), m.get("shows"), re.sub(r"[_.-]", " ", n)))), n)
+                         for n, m in photos.items() if n not in taken), reverse=True)
+        if ranked and ranked[0][0] >= 2 and (len(ranked) == 1 or ranked[0][0] > ranked[1][0]):
+            give(s, ranked[0][1], "%d words of the slide's visual in its record" % ranked[0][0])
+    for s in script["screens"]:                          # a question on a slide's drawing
+        e = screens.get(s["id"])
+        if s["kind"] not in cs.TASKS or cs.mech(s) not in STARTER_ON_PICTURE or not isinstance(e, dict) or (e.get("figure") or "").strip():
+            continue
+        m = re.search(r"\bslide\s*(\d+)\b", str(s.get("visual") or ""), re.I)
+        src = (screens.get("s%02d" % int(m.group(1))) or {}).get("figure") or "" if m else ""
+        if not src.endswith(".kit.json") or not os.path.isfile(os.path.join(figdir, src)):
+            continue
+        try:
+            parts = json.load(io.open(os.path.join(figdir, src), encoding="utf-8")).get("parts") or []
+        except (OSError, ValueError):
+            continue
+        norm = lambda t: re.sub(r"[^a-z0-9]+", " ", str(t or "").lower()).strip()
+        names = {}
+        for p in parts:
+            if not isinstance(p, dict) or not p.get("id"):
+                continue
+            if p.get("type") == "text" and isinstance(p.get("for"), str):
+                names.setdefault(norm(p.get("text")), p["for"].split(".")[0])
+            elif isinstance(p.get("label"), str) and p["label"].strip():
+                names.setdefault(norm(p["label"]), p["id"])
+        try:                                             # "Fuel tank" -> the drawing's one tank (figure-truths.json names)
+            for ent in json.load(io.open(os.path.join(SKILLS, "course-visuals", "knowledge", "figure-truths.json"),
+                                         encoding="utf-8"))["names"]:
+                one = [p["id"] for p in parts if isinstance(p, dict) and p.get("id") and p.get("type") in ent["parts"]]
+                for w in ent["words"] if len(one) == 1 else []:
+                    names.setdefault(norm(w), one[0])
+        except (OSError, ValueError, KeyError):
+            pass
+        e["figure"] = src
+        answers = [a.strip().rstrip("*").strip() for a in str(s.get("answer") or "").splitlines() if a.strip()]
+        got = {a: names[norm(a)] for a in answers if norm(a) in names}
+        if cs.mech(s) == "label_diagram":
+            if not e.get("labels"):
+                e["labels"] = {a: {"at": i} for a, i in got.items()}
+        elif not e.get("areas"):
+            e["areas"] = got
+        said.append("  %s: slide %s's drawing %s, %d of %d answers placed on its parts%s" % (
+            s["id"], m.group(1), src, len(got), len(answers),
+            "" if len(got) == len(answers) else " (place the rest: %s)" % ", ".join(a for a in answers if a not in got)))
+    return said
+
+
 def is_practical(s):
     """2.63.2 - a slide about the module's practical exercise: the reviewed IGF scripts carry it as kind "slide",
     "track": "practical", "practical_minutes": N ("Practicals 9.1-9.3 - in the gas lab")"""
@@ -3822,6 +3914,11 @@ def main(argv=None):
             cs.save(os.path.join(figdir, "%s%s" % (sid, KIT3D_SPEC)), spec)
             print("  starter 3D scene: figures\\%s\\%s%s - %d parts (place them as they are on board: course-visuals\\kit3d\\SPEC.md, "
                   "PARTS.md)" % (cs.mid(o.module), sid, KIT3D_SPEC, len(spec["parts"])))
+        sheet_ = cs.load(bp)                            # 2.66.3: the photos and the questions' pictures its own files decide
+        said = prefill(script, sheet_, module_folder(o.course, o.module, o.module_dir)[0], figdir)
+        if said:
+            cs.save(bp, sheet_)
+            print("  filled from the module's own files (a start - change any of them like the rest of the sheet):\n%s" % "\n".join(said))
         # the module's folder does not exist for a new module: make it and put the factory's style files and engines
         # in it, so the first compile does not stop (never inside the Android project - design_system.py refuses that).
         # 2.49.2: also when the folder is already there (assets\img made first) - the files are checked, not the folder

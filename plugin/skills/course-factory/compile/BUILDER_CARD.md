@@ -20,7 +20,9 @@ python compile/scripts/compile_module.py <course> --module N --init-build [--see
 python compile/scripts/build_module.py <course> --module N --no-course-pages [--long-pole]               after every change
 ```
 - `--init-build` writes the build sheet and starters. Screens marked `"_seeded"` start from a hand-fixed predecessor's
-  drawing or photo: build them AS THEY ARE, change only what the build reports.
+  drawing or photo: build them AS THEY ARE, change only what the build reports. (2.66.3) It also fills what the module's
+  own files decide - a photo slide's photograph (its record's `used_in`, or its description), a question "on the GA from
+  slide 4" with that drawing and the places its labels name - and prints each: check them, fill only what is left.
 - Fill the build sheet (each slide's picture, layout, photos - photos from `assets/img` or the Gas Library copy the
   operator names); a starter figure spec is edited only for what the build prints (`figures/MNN/sNN.kit.json`; parts and options:
   `course-visuals/kit/CATALOGUE.md`; never kit.js). A 3D slide: its `sNN.kit3d.json` (`course-visuals/kit3d/SPEC.md`,
@@ -42,9 +44,10 @@ The answer lists only what fails (the full log's path is its last line - open it
 | the line says | do |
 |---|---|
 | `FIGURE sNN ... small text / label / text zone / inside / cut off` | fix the spec in the studio: `python ../course-visuals/kit/scripts/studio.py <spec> --step all` (seconds, every step, its real slide) until clean, then ONE build. Change the parts it names together. Fewer or shorter words, a part moved, the spec's `size` closer to the panel's shape |
-| `spec: sNN.kit.json: NAMED / LOOSE END / INSIDE / NO GAS / AIM / GRID / TRUTH <part> ...` | a BLOCK (2.66.0): the figure shows a clear physical error - draw the thing the words name (or take the words out), end the pipe on a part (`"to": "<id>.<port>"`), stand the part on the deck (`"on": "G.deck"`), play the vent in the step that vents, aim the spray (`"aim"`), a drawing under every named caption. The line says which. A pattern that fits does it all (`course-visuals/kit/patterns/`). Sure it is RIGHT on purpose (the line runs on to the shore)? Accept it with its reason in the spec - `"meaning_ok": {"LOOSE END P1": "runs on to the bunker vessel"}` (the key is the line's `<KIND> <part>`) - never twice the same build for one finding. Notes are the figure reviewer's, not yours |
+| `spec: sNN.kit.json: NAMED / LOOSE END / INSIDE / NO GAS / AIM / GRID / TRUTH / LABEL <part> ...` | a BLOCK (2.66.0): the figure shows a clear physical error - draw the thing the words name (or take the words out), end the pipe on a part (`"to": "<id>.<port>"`), stand the part on the deck (`"on": "G.deck"`), play the vent in the step that vents, aim the spray (`"aim"`), a drawing under every named caption, a callout's leader on the part it names (LABEL, 2.66.3: `"for": "<id>.top@0.1"` for a space with a part in its middle). The line says which. A pattern that fits does it all (`course-visuals/kit/patterns/`). Sure it is RIGHT on purpose (the line runs on to the shore)? Accept it with its reason in the spec - `"meaning_ok": {"LOOSE END P1": "runs on to the bunker vessel"}` (the key is the line's `<KIND> <part>`) - never twice the same build for one finding. Notes are the figure reviewer's, not yours |
 | `FIGURE sNN ... empty` | crop what no step shows, spread the parts, or give the slide `"composition": "wide-left"` when the drawing is tall and narrow |
-| `... a fit was saved as ... candidate.kit.json` | copy it over the spec, then fix only what it lists |
+| `the closer fit was applied to the spec by the build` | nothing to copy (2.66.3): fix only what it lists, in the spec as it now is |
+| `... a fit was saved as ... candidate.kit.json` | it was not applied (it would add a meaning BLOCK, or needs the photo row off): fix the spec yourself |
 | `COMPILE ... nothing built: ... starter's blanks` | fill exactly what it names in the build sheet |
 | `COMPILE ... looks exactly like the slide before it (L62)` | give one of the two another layout or picture in the build sheet |
 | `COMPILE ... the words say X, the drawing's readout shows Y` | make the step's readout agree (`play`), or `"numbers_differ": "<why>"` |
@@ -55,6 +58,7 @@ The answer lists only what fails (the full log's path is its last line - open it
 | `TASK PAGES - FAIL` | a question graded wrong or a leader line crosses words: the sheet's `"labels"` / `"areas"`, or the drawing |
 | `RECOMMENDED (L60)` | build the scene on that slide, or `"declined_3d": "builder: <reason>"` at the TOP of the sheet - never unanswered |
 | `LAYOUT - ... built again their next way` | nothing - the build did it (L62) |
+| `(nothing changed since this build's last answer ...)` | the same report again, nothing built (2.66.3): change what it lists first - a build with no change only repeats it |
 
 Anything the table does not cover: `compile/GUIDE.md` - §2 layout, §2b photos and empty space, §2c sheet choices, §2d task
 pages, §2e drawings - read only that section.

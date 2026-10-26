@@ -1,0 +1,442 @@
+{
+ "size": [
+  640,
+  490
+ ],
+ "label": "An oil-fuelled ship above an IGF ship, side views, not to scale: the IGF ship has in addition a fuel tank with its tank connection space, a fuel preparation room, a bunkering station, a vent mast and a protected engine room with a double-walled gas pipe, its engine running on gas, oil or both.",
+ "idle": "Press Next step",
+ "parts": [
+  {
+   "id": "G0",
+   "type": "ga",
+   "x": 14,
+   "y": 52,
+   "w": 290,
+   "h": 118,
+   "draft": 0.5,
+   "label": "Oil-fuelled ship",
+   "house": {
+    "x": 10,
+    "w": 50,
+    "h": 40
+   },
+   "funnel": {
+    "x": 22,
+    "w": 18,
+    "h": 20
+   }
+  },
+  {
+   "id": "E0",
+   "type": "engine",
+   "in": "G0",
+   "at": 0.4,
+   "w": 50,
+   "h": 34,
+   "gap": 20
+  },
+  {
+   "id": "T0",
+   "type": "tank",
+   "in": "G0",
+   "at": 0.76,
+   "w": 80,
+   "h": 30,
+   "value": 0.7,
+   "label": "fuel oil tank",
+   "gap": 20
+  },
+  {
+   "id": "O0",
+   "type": "pipe",
+   "fluid": "liquid",
+   "from": "T0.left",
+   "to": "E0.right",
+   "value": 0,
+   "fill": 0
+  },
+  {
+   "id": "G",
+   "type": "ga",
+   "x": 14,
+   "y": 326,
+   "w": 612,
+   "h": 150,
+   "draft": 0.6,
+   "house": {
+    "x": 22,
+    "w": 100,
+    "h": 80
+   },
+   "funnel": {
+    "x": 52,
+    "w": 28,
+    "h": 34
+   },
+   "label": "IGF ship"
+  },
+  {
+   "id": "ER",
+   "type": "space",
+   "x": 70,
+   "y": 334,
+   "w": 130,
+   "h": 122,
+   "label": "Engine room"
+  },
+  {
+   "id": "E",
+   "type": "engine",
+   "in": "ER",
+   "at": 0.5,
+   "gap": 24,
+   "w": 70,
+   "h": 52,
+   "cylinders": 4
+  },
+  {
+   "id": "FPR",
+   "type": "space",
+   "x": 206,
+   "y": 334,
+   "w": 80,
+   "h": 122,
+   "label": "Fuel\npreparation\nroom"
+  },
+  {
+   "id": "X",
+   "type": "exchanger",
+   "in": "FPR",
+   "at": 0.5,
+   "gap": 30,
+   "r": 15,
+   "label": "vaporizer"
+  },
+  {
+   "id": "Hold",
+   "type": "space",
+   "x": 290,
+   "y": 334,
+   "w": 236,
+   "h": 122,
+   "label": ""
+  },
+  {
+   "id": "T",
+   "type": "tank",
+   "in": "Hold",
+   "at": 0.5,
+   "w": 196,
+   "h": 66,
+   "value": 0.6,
+   "label": "LNG"
+  },
+  {
+   "id": "TCS",
+   "type": "space",
+   "on": "T.top",
+   "w": 120,
+   "h": 30,
+   "crosses": true,
+   "label": ""
+  },
+  {
+   "id": "S1",
+   "type": "pipe",
+   "fluid": "liquid",
+   "from": "T.top@0.12",
+   "to": "X.out",
+   "via": [
+    [
+     347,
+     352
+    ],
+    [
+     270,
+     352
+    ],
+    [
+     270,
+     405
+    ]
+   ],
+   "value": 0,
+   "fill": 0
+  },
+  {
+   "id": "S2",
+   "type": "pipe",
+   "fluid": "gas",
+   "from": "X.in",
+   "to": "E.right",
+   "value": 0,
+   "fill": 0,
+   "double": true
+  },
+  {
+   "id": "D",
+   "type": "drip_tray",
+   "on": "G.deck",
+   "at": 0.9,
+   "w": 50,
+   "h": 10
+  },
+  {
+   "id": "B",
+   "type": "manifold",
+   "on": "D.top",
+   "w": 40,
+   "h": 12,
+   "drop": 14,
+   "hose": 16,
+   "outlets": [
+    {
+     "label": ""
+    }
+   ],
+   "words": [
+    "",
+    ""
+   ]
+  },
+  {
+   "id": "BL",
+   "type": "pipe",
+   "fluid": "liquid",
+   "from": "B.left",
+   "to": "T.top@0.86",
+   "value": 0,
+   "fill": 0
+  },
+  {
+   "id": "V",
+   "type": "vent",
+   "on": "G.deck",
+   "at": 0.552,
+   "label": "vent mast",
+   "labelAt": "left"
+  },
+  {
+   "id": "VL",
+   "type": "pipe",
+   "fluid": "gas",
+   "from": "T.top@0.18",
+   "to": "V.inlet",
+   "value": 0
+  },
+  {
+   "id": "C",
+   "type": "gas_cloud",
+   "from": "V.outlet",
+   "w": 96,
+   "h": 52,
+   "value": 0
+  },
+  {
+   "id": "N1",
+   "type": "text",
+   "text": "tank connection space",
+   "for": "TCS"
+  },
+  {
+   "id": "N2",
+   "type": "text",
+   "text": "bunkering station",
+   "for": "B"
+  }
+ ],
+ "steps": [
+  {
+   "title": "1 · The fuel tank - in its fuel storage hold, below the open deck",
+   "line": 3,
+   "play": [
+    [
+     "Hold",
+     1,
+     500
+    ],
+    [
+     "T",
+     0.85,
+     900
+    ]
+   ]
+  },
+  {
+   "title": "2 · The tank connection space - on the tank, round its connections and valves",
+   "line": 4,
+   "play": [
+    [
+     "Hold",
+     0,
+     400
+    ],
+    [
+     "TCS",
+     1,
+     600
+    ]
+   ]
+  },
+  {
+   "title": "3 · The fuel preparation room - the LNG is turned into gas in the vaporizer",
+   "line": 6,
+   "play": [
+    [
+     "TCS",
+     0,
+     400
+    ],
+    [
+     "FPR",
+     1,
+     600
+    ],
+    [
+     "S1",
+     1,
+     400
+    ],
+    [
+     "S1.fill",
+     1,
+     1200,
+     0,
+     "linear"
+    ],
+    [
+     "X",
+     1,
+     500,
+     1000
+    ]
+   ]
+  },
+  {
+   "title": "4 · The bunkering station - on the open deck, over its drip tray; LNG goes down to the tank",
+   "line": 5,
+   "play": [
+    [
+     "FPR",
+     0,
+     400
+    ],
+    [
+     "B",
+     1,
+     900
+    ],
+    [
+     "BL",
+     1,
+     400,
+     900
+    ],
+    [
+     "BL.fill",
+     1,
+     1600,
+     900,
+     "linear"
+    ]
+   ]
+  },
+  {
+   "title": "5 · The vent mast - from the tank up through the deck; the gas leaves high above the deck and the accommodation",
+   "line": 7,
+   "play": [
+    [
+     "BL",
+     0,
+     400
+    ],
+    [
+     "VL",
+     1,
+     600
+    ],
+    [
+     "V",
+     1,
+     700,
+     500
+    ],
+    [
+     "C",
+     0.8,
+     1400,
+     700
+    ]
+   ]
+  },
+  {
+   "title": "6 · The engine room - the gas goes to the dual-fuel engine",
+   "play": [
+    [
+     "V",
+     0,
+     600
+    ],
+    [
+     "C",
+     0,
+     800
+    ],
+    [
+     "VL",
+     0,
+     400
+    ],
+    [
+     "ER",
+     1,
+     600
+    ],
+    [
+     "S2",
+     1,
+     400
+    ],
+    [
+     "S2.fill",
+     1,
+     1000,
+     0,
+     "linear"
+    ],
+    [
+     "E",
+     1,
+     500,
+     900
+    ]
+   ]
+  },
+  {
+   "title": "Every new space and item of an IGF ship, all at once",
+   "play": [
+    [
+     "Hold",
+     1,
+     500
+    ],
+    [
+     "TCS",
+     1,
+     500
+    ],
+    [
+     "FPR",
+     1,
+     500
+    ],
+    [
+     "ER",
+     1,
+     500
+    ]
+   ]
+  }
+ ],
+ "_pattern": "ship_ga (course-visuals/kit/patterns, SPEC.md \"Patterns\"): a tested, physically correct figure - keep its arrangement and relations, rename its words to the script's, map its steps to the slide's lines"
+}

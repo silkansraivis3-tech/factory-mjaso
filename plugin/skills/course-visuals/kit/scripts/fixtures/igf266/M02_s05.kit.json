@@ -1,0 +1,255 @@
+{
+ "size": [
+  560,
+  266
+ ],
+ "label": "Methanol fuel system from tank to engine: the integral fuel tank in its cofferdam, the fuel pump and fuel valve train and the master fuel valve in the fuel preparation space, and the double-walled pipe through to the engine in the engine room.",
+ "idle": "Press Next step",
+ "parts": [
+  {
+   "id": "S2",
+   "type": "space",
+   "x": 9,
+   "y": 5,
+   "w": 172,
+   "h": 114,
+   "label": "",
+   "crosses": true
+  },
+  {
+   "id": "S3",
+   "type": "space",
+   "x": 200,
+   "y": 5,
+   "w": 351,
+   "h": 114,
+   "label": "FUEL PREPARATION SPACE"
+  },
+  {
+   "id": "S4",
+   "type": "space",
+   "x": 9,
+   "y": 138,
+   "w": 542,
+   "h": 122,
+   "label": "ENGINE ROOM"
+  },
+  {
+   "id": "T1",
+   "type": "tank",
+   "x": 24,
+   "y": 32,
+   "w": 129,
+   "h": 57,
+   "value": 0.62,
+   "label": "integral fuel tank"
+  },
+  {
+   "id": "PU",
+   "type": "pump",
+   "x": 268,
+   "y": 56,
+   "r": 20,
+   "label": "fuel pump"
+  },
+  {
+   "id": "VT",
+   "type": "valve",
+   "x": 372,
+   "y": 56,
+   "size": 10,
+   "state": false,
+   "label": "fuel valve train",
+   "value": 1
+  },
+  {
+   "id": "VM",
+   "type": "valve",
+   "x": 482,
+   "y": 56,
+   "size": 10,
+   "state": false,
+   "label": "master fuel valve",
+   "value": 1
+  },
+  {
+   "id": "E1",
+   "type": "engine",
+   "x": 100,
+   "y": 174,
+   "w": 90,
+   "h": 52,
+   "label": "engine"
+  },
+  {
+   "id": "P1",
+   "type": "pipe",
+   "fluid": "liquid",
+   "from": "T1.right",
+   "to": "PU.inlet",
+   "fill": 0,
+   "value": 0
+  },
+  {
+   "id": "P2",
+   "type": "pipe",
+   "fluid": "liquid",
+   "from": "PU.outlet",
+   "to": "VT.in",
+   "fill": 0,
+   "value": 0
+  },
+  {
+   "id": "P3",
+   "type": "pipe",
+   "fluid": "liquid",
+   "from": "VT.out",
+   "to": "VM.in",
+   "fill": 0,
+   "value": 0
+  },
+  {
+   "id": "P4",
+   "type": "pipe",
+   "fluid": "liquid",
+   "double": true,
+   "from": "VM.out",
+   "to": "E1.right",
+   "via": [
+    [
+     538,
+     56
+    ],
+    [
+     538,
+     200
+    ]
+   ],
+   "fill": 0,
+   "value": 0
+  },
+  {
+   "id": "N1",
+   "type": "text",
+   "text": "double-walled pipe",
+   "for": "P4"
+  },
+  {
+   "id": "N2",
+   "type": "text",
+   "text": "cofferdam",
+   "for": "S2"
+  }
+ ],
+ "steps": [
+  {
+   "title": "1 - Integral fuel tank, part of the hull, in its cofferdam",
+   "line": 3,
+   "play": [
+    [
+     "S2",
+     1,
+     500
+    ],
+    [
+     "T1",
+     0.7,
+     600
+    ]
+   ]
+  },
+  {
+   "title": "2 - Fuel pump and fuel valve train in the fuel preparation space",
+   "line": 4,
+   "play": [
+    [
+     "S2",
+     0,
+     500
+    ],
+    [
+     "S3",
+     1,
+     500
+    ],
+    [
+     "P1.fill",
+     1,
+     800,
+     0,
+     "linear"
+    ],
+    [
+     "P1",
+     1,
+     400
+    ],
+    [
+     "P2.fill",
+     1,
+     700,
+     800,
+     "linear"
+    ],
+    [
+     "P2",
+     1,
+     400,
+     800
+    ]
+   ]
+  },
+  {
+   "title": "3 - Master fuel valve, shuts off the fuel automatically",
+   "line": 5,
+   "play": [
+    [
+     "P3.fill",
+     1,
+     1000,
+     0,
+     "linear"
+    ],
+    [
+     "P3",
+     1,
+     400
+    ]
+   ]
+  },
+  {
+   "title": "4 - Double-walled pipe through enclosed spaces to the engine room",
+   "line": 6,
+   "play": [
+    [
+     "S3",
+     0,
+     500
+    ],
+    [
+     "P4.fill",
+     1,
+     1400,
+     0,
+     "linear"
+    ],
+    [
+     "P4",
+     1,
+     400
+    ]
+   ]
+  },
+  {
+   "title": "5 - Engine",
+   "line": 7,
+   "play": [
+    [
+     "E1",
+     1,
+     400
+    ]
+   ]
+  }
+ ]
+}

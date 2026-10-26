@@ -1,0 +1,52 @@
+{
+  "size": [640, 390],
+  "label": "Four ways to bunker LNG in four cards: a road tanker on the quay with a hose to the ship; a bunker vessel alongside with a hose to the ship; a shore tank with a fixed pipe and a hose or loading arm to the ship at the berth; and LNG tank containers lifted on board by crane and connected on deck before the ship leaves.",
+  "idle": "Press Next step",
+  "parts": [
+    { "id": "C1T", "type": "text", "text": "Truck-to-ship", "x": 160, "y": 20, "anchor": "middle", "style": "h" },
+    { "id": "Q1", "type": "space", "style": "enclosure", "x": 8, "y": 112, "w": 116, "h": 36, "label": "quay" },
+    { "id": "RT", "type": "tank", "on": "Q1.top", "at": 0.5, "w": 90, "h": 38, "value": 0.7, "label": "road tanker" },
+    { "id": "S1", "type": "ga", "x": 150, "y": 112, "w": 160, "h": 54, "draft": 0.6, "house": { "x": 100, "w": 40, "h": 28 }, "value": 0 },
+    { "id": "K1", "type": "coupling", "on": "S1.deck", "at": 0.14, "kind": "dry", "state": false, "value": 1 },
+    { "id": "H1", "type": "hose", "from": "RT.right", "to": "K1.left", "sag": 12, "value": 0, "fill": 0 },
+
+    { "id": "C2T", "type": "text", "text": "Ship-to-ship", "x": 480, "y": 20, "anchor": "middle", "style": "h" },
+    { "id": "BV", "type": "ga", "x": 312, "y": 118, "w": 116, "h": 44, "draft": 0.6, "label": "bunker vessel", "value": 0 },
+    { "id": "BT", "type": "tank", "on": "BV.deck", "at": 0.4, "w": 70, "h": 26, "value": 0.8 },
+    { "id": "K2", "type": "coupling", "on": "BV.deck", "at": 0.85, "kind": "dry", "state": false, "value": 1 },
+    { "id": "S2", "type": "ga", "x": 480, "y": 112, "w": 156, "h": 54, "draft": 0.6, "house": { "x": 108, "w": 40, "h": 28 }, "value": 0 },
+    { "id": "K3", "type": "coupling", "on": "S2.deck", "at": 0.12, "kind": "dry", "state": false, "value": 1 },
+    { "id": "H2", "type": "hose", "from": "K2.right", "to": "K3.left", "sag": 12, "value": 0, "fill": 0 },
+
+    { "id": "C3T", "type": "text", "text": "Terminal-to-ship", "x": 160, "y": 214, "anchor": "middle", "style": "h" },
+    { "id": "Q3", "type": "space", "style": "enclosure", "x": 8, "y": 312, "w": 128, "h": 36 },
+    { "id": "ST", "type": "tank", "on": "Q3.top", "at": 0.4, "w": 100, "h": 60, "value": 0.8, "label": "shore tank" },
+    { "id": "PT", "type": "pipe", "fluid": "liquid", "from": "ST.right", "to": [134, 271], "value": 0, "fill": 0 },
+    { "id": "S3", "type": "ga", "x": 150, "y": 312, "w": 160, "h": 54, "draft": 0.6, "house": { "x": 100, "w": 40, "h": 28 }, "value": 0 },
+    { "id": "K4", "type": "coupling", "on": "S3.deck", "at": 0.14, "kind": "dry", "state": false, "value": 1 },
+    { "id": "H3", "type": "hose", "from": "PT.end", "to": "K4.left", "sag": 12, "label": "hose or loading arm", "value": 0, "fill": 0 },
+
+    { "id": "C4T", "type": "text", "text": "Portable tanks", "x": 480, "y": 214, "anchor": "middle", "style": "h" },
+    { "id": "Q4", "type": "space", "style": "enclosure", "x": 330, "y": 312, "w": 100, "h": 36 },
+    { "id": "QC", "type": "space", "style": "enclosure", "on": "Q4.top", "at": 0.5, "w": 56, "h": 34, "value": 0 },
+    { "id": "TQ1", "type": "tank", "in": "QC", "at": 0.5, "w": 44, "h": 16, "value": 0.8 },
+    { "id": "S4", "type": "ga", "x": 460, "y": 312, "w": 170, "h": 54, "draft": 0.6, "house": { "x": 10, "w": 40, "h": 28 }, "value": 0 },
+    { "id": "DC", "type": "space", "style": "enclosure", "on": "S4.deck", "at": 0.45, "w": 56, "h": 34, "value": 0 },
+    { "id": "TQ2", "type": "tank", "in": "DC", "at": 0.45, "w": 44, "h": 16, "value": 0.8 },
+    { "id": "K5", "type": "coupling", "on": "S4.deck", "at": 0.85, "kind": "dry", "state": false, "value": 1 },
+    { "id": "P4", "type": "pipe", "fluid": "liquid", "from": "TQ2.right", "to": "K5.left", "value": 0, "fill": 0 },
+    { "id": "WL", "type": "wire", "d": "M380 276 C380 236 536 236 536 276" },
+    { "id": "TL", "type": "text", "text": "tank container lifted on board by crane", "for": "DC", "reveal": true, "value": 0 }
+  ],
+  "steps": [
+    { "title": "1 · Truck-to-ship: a road tanker on the quay connects a hose to the ship - the most common way, used for ferries and small ships", "line": 1,
+      "play": [["S1", 1, 500], ["H1", 1, 300, 300], ["H1.fill", 1, 1200, 300, "linear"]] },
+    { "title": "2 · Ship-to-ship: a bunker vessel moors alongside, in port or at anchor - large amounts, fast", "line": 2,
+      "play": [["S1", 0, 400], ["H1", 0, 400], ["S2", 1, 500, 200], ["BV", 1, 500, 200], ["H2", 1, 300, 500], ["H2.fill", 1, 1200, 500, "linear"]] },
+    { "title": "3 · Terminal-to-ship: from a shore tank through a fixed pipe and a hose or loading arm at the berth", "line": 3,
+      "play": [["S2", 0, 400], ["BV", 0, 400], ["H2", 0, 400], ["S3", 1, 500, 200], ["PT", 1, 300, 400], ["PT.fill", 1, 700, 400, "linear"], ["H3", 1, 300, 1100], ["H3.fill", 1, 900, 1100, "linear"]] },
+    { "title": "4 · Portable tanks: LNG tank containers filled ashore, lifted on board and connected - before the ship leaves, never at sea", "line": 4,
+      "play": [["S3", 0, 400], ["PT", 0, 400], ["H3", 0, 400], ["S4", 1, 500, 200], ["QC", 1, 600, 300], ["TL", 1, 500, 800], ["DC", 1, 600, 1400], ["P4", 1, 300, 2000], ["P4.fill", 1, 800, 2000, "linear"]] },
+    { "title": "The four ways", "play": [["S1", 1, 400], ["S2", 1, 400], ["BV", 1, 400], ["S3", 1, 400], ["S4", 1, 400], ["QC", 1, 400], ["DC", 1, 400]] }
+  ]
+}

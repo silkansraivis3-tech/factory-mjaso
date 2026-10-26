@@ -1,0 +1,23 @@
+{
+  "size": [640, 390],
+  "label": "LNG fuel tank on the open deck: heat leaks in and LNG boils off into the vapour space, the tank pressure is held within its design range on the gauge, the gas goes by a pipe to the engines which burn it and the pressure falls; venting to the atmosphere through the vent mast is for an emergency only.",
+  "idle": "Press Next step",
+  "parts": [
+    { "id": "G", "type": "ga", "x": 10, "y": 336, "w": 620, "h": 48, "cut": true, "water": false },
+    { "id": "T", "type": "boil_off", "on": "G.deck", "at": 0.24, "w": 240, "h": 150, "value": 0 },
+    { "id": "PG", "type": "gauge", "x": 130, "y": 62, "r": 44, "min": 0, "max": 10, "normal": [2, 7], "numbers": false, "label": "tank pressure", "value": 4 },
+    { "id": "SP", "type": "space", "on": "G.deck", "at": 0.66, "w": 150, "h": 134, "label": "Engine room" },
+    { "id": "E", "type": "engine", "in": "SP", "at": 0.5, "gap": 18, "w": 80, "h": 50 },
+    { "id": "GP", "type": "pipe", "fluid": "gas", "from": "T.right", "to": "E.inlet", "value": 0, "fill": 0 },
+    { "id": "RV", "type": "relief_valve", "on": "T.top@0.7", "size": 11, "label": "relief valve", "labelAt": "right" },
+    { "id": "V", "type": "vent", "on": "G.deck", "at": 0.93, "mast": 250, "label": "vent mast", "labelAt": "left" },
+    { "id": "VL", "type": "pipe", "fluid": "gas", "from": "RV.outlet", "to": "V.outlet", "level": 150, "value": 0 },
+    { "id": "C", "type": "gas_cloud", "from": "V.outlet", "w": 100, "h": 60, "value": 0 }
+  ],
+  "steps": [
+    { "title": "1 · Heat leaks in, LNG boils off, and the tank pressure must stay within its design range", "line": [1, 2], "play": [["T", 0.7, 1800], ["PG", 6, 1800]] },
+    { "title": "2 · Ways to hold the pressure: reliquefy, thermal oxidiser, let it build, cool the liquid", "line": 3, "play": [["PG", 6.8, 900]] },
+    { "title": "3 · In service the engines burn the gas as fuel, and the pressure falls", "line": 4, "play": [["GP", 1, 400], ["GP.fill", 1, 1200, 0, "linear"], ["E", 1, 500, 1000], ["PG", 4.2, 1800, 800]] },
+    { "title": "4 · Venting to atmosphere - not acceptable, except in an emergency", "line": 5, "play": [["GP", 0, 300], ["E", 0, 300], ["PG", 9, 1200], ["RV", 1, 500, 800], ["VL", 1, 400, 1200], ["V", 1, 600, 1500], ["C", 0.9, 1400, 1500]] }
+  ]
+}

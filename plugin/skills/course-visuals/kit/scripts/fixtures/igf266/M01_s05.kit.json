@@ -1,0 +1,30 @@
+{
+  "size": [640, 390],
+  "label": "The gas supply from the fuel preparation room into the engine room in the two alternative ways: a gas safe machinery space, where the gas pipe runs inside an outer pipe and a detector watches it, and an ESD-protected machinery space, where a single-wall gas pipe may leak, the detector sees the gas and the ignition source is shut down automatically.",
+  "idle": "Press Next step",
+  "parts": [
+    { "id": "F", "type": "space", "x": 10, "y": 14, "w": 130, "h": 362, "label": "Fuel\npreparation\nroom" },
+    { "id": "SA", "type": "space", "x": 170, "y": 14, "w": 460, "h": 170, "label": "Gas safe machinery space" },
+    { "id": "E1", "type": "engine", "in": "SA", "at": 0.8, "gap": 14, "w": 90, "h": 56 },
+    { "id": "X1", "type": "exchanger", "x": 74, "y": 86, "r": 14, "label": "vaporizer" },
+    { "id": "X2", "type": "exchanger", "x": 74, "y": 304, "r": 14, "label": "vaporizer" },
+    { "id": "P1", "type": "pipe", "fluid": "gas", "double": true, "from": "X1.out", "to": "E1.inlet", "fill": 0, "value": 0 },
+    { "id": "N1", "type": "text", "text": "gas pipe inside an outer pipe", "for": "P1" },
+    { "id": "D1", "type": "detector", "x": 360, "y": 78, "tag": "G", "unit": "% LEL", "value": 0 },
+    { "id": "SB", "type": "space", "x": 170, "y": 206, "w": 460, "h": 170, "label": "ESD-protected machinery space" },
+    { "id": "E2", "type": "engine", "in": "SB", "at": 0.8, "gap": 14, "w": 90, "h": 56 },
+    { "id": "P2", "type": "pipe", "fluid": "gas", "from": "X2.out", "to": "E2.inlet", "fill": 0, "value": 0 },
+    { "id": "N2", "type": "text", "text": "single-wall gas pipe", "for": "P2" },
+    { "id": "D2", "type": "detector", "x": 360, "y": 282, "tag": "G", "unit": "% LEL", "value": 0,
+      "marks": [ { "at": 20, "kind": "alarm", "alarm": "gas detected", "then": [["L2", 0, 500], ["E2", 0, 700]] } ] },
+    { "id": "L2", "type": "lamp", "x": 470, "y": 270, "value": 1 },
+    { "id": "C2", "type": "gas_cloud", "from": [400, 322], "fromIn": "figure", "w": 84, "h": 46, "value": 0 }
+  ],
+  "steps": [
+    { "title": "1 · Two alternative ways to protect the engine room - each machinery space uses one", "line": 1, "play": [["SA", 1, 500], ["SB", 1, 500]] },
+    { "title": "2 · Gas safe machinery space - the gas pipe runs inside an outer pipe, a leak stays there and is detected", "line": 2,
+      "play": [["SB", 0, 400], ["P1", 1, 400], ["P1.fill", 1, 1400, 0, "linear"], ["E1", 1, 500, 1200]] },
+    { "title": "3 · ESD-protected machinery space - a leak is detected and the ignition sources shut down automatically", "line": 3,
+      "play": [["SA", 0, 400], ["SB", 1, 400], ["P2", 1, 400], ["P2.fill", 1, 1200, 0, "linear"], ["E2", 1, 400, 1000], ["C2", 0.8, 1200, 1400], ["D2", 30, 1000, 1800]] }
+  ]
+}

@@ -1,0 +1,391 @@
+{
+ "size": [
+  560,
+  512
+ ],
+ "label": "Gas detection and shutdown: a gas cloud grows in the tank connection space round the tank valve; two detectors reach 20 % LEL (alarm) and 40 % LEL (the tank valve closes and the gas supply to the engine room is shut); a detector in the ventilated duct round the gas pipe in the engine room; loss of ventilation starts the safety system; a remote stop from the bridge stops the pump and the fuel supply.",
+ "idle": "Press Next step",
+ "parts": [
+  {
+   "id": "S",
+   "type": "space",
+   "x": 110,
+   "y": 8,
+   "w": 440,
+   "h": 176,
+   "label": "TANK CONNECTION SPACE",
+   "crosses": true
+  },
+  {
+   "id": "ER",
+   "type": "space",
+   "x": 8,
+   "y": 256,
+   "w": 544,
+   "h": 248,
+   "label": "ENGINE ROOM"
+  },
+  {
+   "id": "T",
+   "type": "tank",
+   "x": 8,
+   "y": 62,
+   "w": 118,
+   "h": 66,
+   "value": 0.7,
+   "label": "tank"
+  },
+  {
+   "id": "E",
+   "type": "engine",
+   "x": 24,
+   "y": 340,
+   "w": 130,
+   "h": 70,
+   "label": "engine",
+   "value": 1
+  },
+  {
+   "id": "FN",
+   "type": "fan",
+   "x": 330,
+   "y": 340,
+   "dir": "right",
+   "r": 24,
+   "len": 150,
+   "label": "ventilation fan",
+   "value": 1
+  },
+  {
+   "id": "PU",
+   "type": "pump",
+   "x": 400,
+   "y": 440,
+   "r": 22,
+   "label": "pump",
+   "value": 1
+  },
+  {
+   "id": "VT",
+   "type": "valve",
+   "x": 195,
+   "y": 95,
+   "size": 12,
+   "label": "tank valve",
+   "value": 1
+  },
+  {
+   "id": "P1",
+   "type": "pipe",
+   "fluid": "liquid",
+   "from": "T.right",
+   "to": "VT.in",
+   "value": 1
+  },
+  {
+   "id": "P2",
+   "type": "pipe",
+   "fluid": "gas",
+   "double": true,
+   "from": "VT.out",
+   "to": "E.right",
+   "value": 1
+  },
+  {
+   "id": "C",
+   "type": "gas_cloud",
+   "x": 116,
+   "y": 14,
+   "w": 428,
+   "h": 164,
+   "from": [
+    195,
+    140
+   ],
+   "fromIn": "figure",
+   "value": 0
+  },
+  {
+   "id": "D1",
+   "type": "detector",
+   "x": 270,
+   "y": 44,
+   "r": 16,
+   "label": "detector",
+   "unit": "% LEL",
+   "value": 0,
+   "marks": [
+    {
+     "at": 20,
+     "kind": "alarm"
+    },
+    {
+     "at": 40,
+     "kind": "trip",
+     "then": [
+      [
+       "VT",
+       0,
+       600
+      ],
+      [
+       "P2",
+       0,
+       500,
+       300
+      ],
+      [
+       "E",
+       0,
+       500,
+       600
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "D2",
+   "type": "detector",
+   "x": 430,
+   "y": 44,
+   "r": 16,
+   "label": "detector",
+   "unit": "% LEL",
+   "value": 0
+  },
+  {
+   "id": "DD",
+   "type": "detector",
+   "x": 270,
+   "y": 296,
+   "r": 14,
+   "label": "duct detector",
+   "unit": "% LEL",
+   "value": 0,
+   "marks": [
+    {
+     "at": 30,
+     "kind": "alarm"
+    },
+    {
+     "at": 60,
+     "kind": "trip",
+     "then": [
+      [
+       "P2",
+       0,
+       500
+      ],
+      [
+       "E",
+       0,
+       500,
+       400
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "AL",
+   "type": "text",
+   "x": 400,
+   "y": 150,
+   "anchor": "middle",
+   "reveal": true,
+   "text": "alarm light and horn"
+  },
+  {
+   "id": "A2",
+   "type": "text",
+   "x": 400,
+   "y": 168,
+   "anchor": "middle",
+   "reveal": true,
+   "text": "tank valve and gas supply shut"
+  },
+  {
+   "id": "LV",
+   "type": "text",
+   "x": 280,
+   "y": 470,
+   "anchor": "middle",
+   "reveal": true,
+   "text": "LOSS OF VENTILATION - alarm"
+  },
+  {
+   "id": "AF",
+   "type": "text",
+   "x": 280,
+   "y": 490,
+   "anchor": "middle",
+   "reveal": true,
+   "text": "gas stays shut until the cause is found"
+  },
+  {
+   "id": "BT",
+   "type": "push_button",
+   "x": 14,
+   "y": 192,
+   "h": 62,
+   "tag": "",
+   "label": "bridge"
+  }
+ ],
+ "steps": [
+  {
+   "title": "1 · 20 % LEL - audible and visible alarm",
+   "line": 2,
+   "play": [
+    [
+     "C",
+     0.4,
+     1800
+    ],
+    [
+     "D1",
+     24,
+     1800,
+     0,
+     "linear"
+    ],
+    [
+     "D2",
+     22,
+     1800,
+     0,
+     "linear"
+    ],
+    [
+     "AL",
+     1,
+     500,
+     1200
+    ]
+   ]
+  },
+  {
+   "title": "2 · 40 % LEL at two detectors - the tank valve closes and the gas supply to the engine room shuts",
+   "line": 3,
+   "play": [
+    [
+     "C",
+     0.9,
+     2000
+    ],
+    [
+     "D1",
+     44,
+     2000,
+     0,
+     "linear"
+    ],
+    [
+     "D2",
+     44,
+     2000,
+     0,
+     "linear"
+    ],
+    [
+     "A2",
+     1,
+     500,
+     1800
+    ]
+   ]
+  },
+  {
+   "title": "3 · Ventilated ducts round gas pipes in the engine room - alarm at 30 %, gas supply shut at 60 % LEL",
+   "line": 4,
+   "reset": true,
+   "play": [
+    [
+     "DD",
+     65,
+     2600,
+     0,
+     "linear"
+    ]
+   ]
+  },
+  {
+   "title": "4 · Loss of ventilation - an alarm; the safety system starts and shuts the gas off",
+   "line": 5,
+   "reset": true,
+   "play": [
+    [
+     "FN",
+     0,
+     800
+    ],
+    [
+     "LV",
+     1,
+     500,
+     600
+    ],
+    [
+     "P2",
+     0,
+     500,
+     1200
+    ],
+    [
+     "VT",
+     0,
+     600,
+     1200
+    ],
+    [
+     "E",
+     0,
+     500,
+     1600
+    ]
+   ]
+  },
+  {
+   "title": "5 · After an automatic shutdown the gas stays shut until the cause is found",
+   "line": 6,
+   "play": [
+    [
+     "AF",
+     1,
+     600
+    ]
+   ]
+  },
+  {
+   "title": "6 · Pumps and fuel supply can be stopped remotely, for example from the bridge",
+   "line": 7,
+   "reset": true,
+   "play": [
+    [
+     "BT",
+     1,
+     500
+    ],
+    [
+     "PU",
+     0,
+     600,
+     400
+    ],
+    [
+     "P1",
+     0,
+     500,
+     600
+    ],
+    [
+     "VT",
+     0,
+     600,
+     600
+    ]
+   ]
+  }
+ ]
+}

@@ -1,0 +1,29 @@
+{
+  "size": [640, 390],
+  "label": "The bunker safety checklist with five checks that tick off one by one - the procedure and emergency plan agreed in writing, communications and the ship-shore link, gas and fire detection, remote-controlled valves, hoses and couplings - signed by the person in charge on the ship and the person in charge on the bunkering source, who keep in constant contact; if contact is lost or a condition is not met, the stop button is pressed and the transfer stops.",
+  "idle": "Press Next step",
+  "parts": [
+    { "id": "TCL", "type": "text", "text": "Bunker safety checklist", "x": 14, "y": 26, "style": "h" },
+    { "id": "CL", "type": "step_track", "x": 28, "y": 76, "vertical": true, "boxes": true, "gap": 58,
+      "steps": ["Procedure and emergency plan agreed in writing", "Communications and ship-shore link", "Gas and fire detection", "Remote-controlled valves", "Hoses and couplings"], "value": 0 },
+    { "id": "P1", "type": "person", "x": 440, "y": 330, "scale": 0.9, "wear": ["helmet"], "labels": false, "label": "person in charge, ship", "value": 0 },
+    { "id": "P2", "type": "person", "x": 580, "y": 330, "scale": 0.9, "wear": ["helmet"], "labels": false, "label": "person in charge, bunker source", "value": 0 },
+    { "id": "W", "type": "wire", "d": "M466 222 H554" },
+    { "id": "TC", "type": "text", "text": "constant contact", "to": [510, 222], "reveal": true, "value": 0 },
+    { "id": "S1", "type": "text", "text": "signed", "for": "P1", "reveal": true, "value": 0 },
+    { "id": "S2", "type": "text", "text": "signed", "for": "P2", "reveal": true, "value": 0 },
+    { "id": "BT", "type": "push_button", "x": 510, "y": 14, "h": 110, "tag": "STOP", "label": "stop the transfer" }
+  ],
+  "steps": [
+    { "title": "1 · The persons in charge agree in writing the transfer procedure and what to do in an emergency", "line": [1, 2],
+      "play": [["CL", 1, 900], ["P1", 1, 400], ["P2", 1, 400]] },
+    { "title": "2 · They check and sign the bunker safety checklist together", "line": 3,
+      "play": [["TC", 1, 600]] },
+    { "title": "3 · Each check on the list is ticked in turn - then both persons in charge sign", "line": 4,
+      "play": [["TC", 0, 300], ["CL", 5, 3600, 200, "linear"], ["S1", 1, 500, 3900], ["S2", 1, 500, 4300]] },
+    { "title": "4 · During the transfer the two persons in charge keep in constant contact", "line": 5,
+      "play": [["S1", 0, 300], ["S2", 0, 300], ["TC", 1, 600, 300]] },
+    { "title": "5 · Contact lost or a condition not met - stop the transfer", "line": 6,
+      "play": [["TC", 0, 500], ["BT", 1, 600, 300]] }
+  ]
+}

@@ -200,6 +200,64 @@ def failing_cache_part():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def applied_candidate_part():
+    """2.66.3 - a closer fit (fewer findings, not clean) is written over the spec by the build itself when it adds no meaning
+    BLOCK - the builder no longer copies it (2.66 run: every "a closer fit was saved" cost a builder turn and a build);
+    one that adds a BLOCK, or was measured without the slide's photo row, is only saved, as before"""
+    print("-- 2.66.3 the build applies its own closer fit when it adds no meaning BLOCK")
+    import compile_module as cm2
+    import content_script as cs2
+    tmp = tempfile.mkdtemp(prefix="test_ff_apply_")
+    saved = (ff.deck_figures, ff.all_specs, ff.measure, ff.try_fixes, cs2.paths, cs2.load, cm2.compile_deck, cm2.fitted,
+             ff.kit_meaning.check, ff.kit_relate.freeze)
+    try:
+        figdir = os.path.join(tmp, "figures", "M01")
+        os.makedirs(figdir)
+        sp = os.path.join(figdir, "s03.kit.json")
+        orig = {"size": [640, 390], "parts": [{"id": "S5", "type": "space", "x": 1, "y": 1, "w": 300, "h": 200}]}
+        cand = {"size": [480, 390], "parts": [{"id": "S5", "type": "space", "x": 1, "y": 1, "w": 230, "h": 200}]}
+        io.open(sp, "w", encoding="utf-8").write(json.dumps(orig))
+        ff.deck_figures = lambda c, m: ([("s03", sp, {})], figdir)
+        ff.all_specs = lambda c, m: []
+        five = [("1280x800", 1, "small text", "S5 [part S5]", "12 px")] * 4 + [("1280x800", 1, "label", "S5 [part S5]", "no place")]
+        one = [("1280x800", 1, "label", "S5 [part S5]", "found no clear place")]
+        state = {"best": (cand, one, 3, True, [480, 343]), "blocks": []}
+        ff.measure = lambda spec_path, sid, spec=None, strip=True: (list(five), {"report": {"scale": 0.6}, "parts": {},
+                                                                               "states": [{"svg": [480, 343], "panel": [480, 343]}]})
+        ff.try_fixes = lambda *a: (None, "re-fitted to its 480 px column: 1 finding(s) left (was 5)", state["best"])
+        ff.kit_relate.freeze = lambda s: s
+        ff.kit_meaning.check = lambda s, where="", resolved=None: list(state["blocks"]) if s.get("size") == [480, 390] else []
+        cs2.paths = lambda c, m: {"script": os.path.join(tmp, "M01.json"), "dir": tmp}
+        cs2.load = lambda p: {"screens": [{"id": "s03"}]} if p.endswith("M01.json") else {}
+        cm2.compile_deck = lambda *a: ('<section id="s03">words</section>', None, None)
+        cm2.fitted = lambda *a: None
+        code, text, data = ff.run_all(tmp, 1)
+        now = json.load(io.open(sp, encoding="utf-8"))
+        before = os.path.join(figdir, cm2.FIT_DIR, "s03.s03.before.kit.json")
+        check("the closer fit is written over the spec by the build, the spec as it was kept beside it, and the report says "
+              "so and lists only what the fit leaves", now == cand and os.path.isfile(before)
+              and json.load(io.open(before, encoding="utf-8")) == orig and "APPLIED to s03.kit.json" in text
+              and "found no clear place" in text and "12 px" not in text
+              and not os.path.isfile(os.path.join(figdir, cm2.FIT_DIR, "s03.s03.candidate.kit.json")), text[-700:])
+        import build_module as bm
+        short = "\n".join(bm.short_figures(text.splitlines(), "figures\\M01"))
+        check("... and the build's short answer says it was applied - no 'copy it over the spec' for the builder",
+              "closer fit was applied" in short and "copy it over" not in short, short)
+        io.open(sp, "w", encoding="utf-8").write(json.dumps(orig))
+        state["blocks"] = ["fit: INSIDE V: the vent V's outlet is below the deck"]
+        code, text, data = ff.run_all(tmp, 1)
+        check("a closer fit that adds a meaning BLOCK is not applied - only saved, and the report says why",
+              json.load(io.open(sp, encoding="utf-8")) == orig and "saved as" in text and "INSIDE V" in text, text[-700:])
+        state["blocks"], state["best"] = [], (cand, one, 3, False, [480, 343])
+        code, text, data = ff.run_all(tmp, 1, full=True)
+        check("... nor one measured without the slide's photo row (the spec would draw with the row back)",
+              json.load(io.open(sp, encoding="utf-8")) == orig and "saved as" in text, text[-500:])
+    finally:
+        (ff.deck_figures, ff.all_specs, ff.measure, ff.try_fixes, cs2.paths, cs2.load, cm2.compile_deck, cm2.fitted,
+         ff.kit_meaning.check, ff.kit_relate.freeze) = saved
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def column_order_part():
     """2.65.0 - the COLUMN search one width at a time, stopping at the first clean fit: the same fit the parallel search kept
     (its first clean attempt in this order), fewer measurements"""
@@ -275,6 +333,7 @@ def task_empty_part():
 def main():
     together_part()
     failing_cache_part()
+    applied_candidate_part()
     column_order_part()
     task_empty_part()
     print("-- squeeze: positions and stretchable lengths follow the column, part sizes stay")

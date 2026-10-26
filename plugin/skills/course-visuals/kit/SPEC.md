@@ -176,7 +176,12 @@ spray aimed at nothing, a water curtain or detector attached to nothing, a round
 callout's leader on nothing, words floating far from anything drawn, a ship labelled "ship"; **GRID** a row of captions
 with drawings under only some of them (six fuel names over one tank); **SMALL** a small drawing lost in a big `panel`
 part (the figure's own frame is the drawing audit's EMPTY); **TRUTH** the figure kind's own list (ship plan, bunkering line, vent system, fuel supply, engine modes,
-fuel types). A fit `figure_fit.py` makes is refused when it breaks one.
+fuel types); (2.66.3) **STEP** (a NOTE) a step's title names a part the step does not change (a tank, room or pipe named
+is where the step is, not judged), or the step only turns things off under a title saying something happens; **LABEL** a
+callout's leader ends on a part of another kind than its words name - a cofferdam's leader in its space's middle, on the
+tank inside (a BLOCK: none in the original's 96 specs; point it at the part's edge, `"for": "CD.top@0.1"`) - or its words
+name a thing not drawn (a NOTE). Calibrated as 2.66.0 was: STEP raises 2 notes on the original (both accepted by its
+instructors, so never a BLOCK), LABEL none. A fit `figure_fit.py` makes is refused when it breaks one.
 
 ## Marks - the heart of it
 ```json

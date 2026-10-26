@@ -2349,6 +2349,63 @@ def sme_figures_part(tmp):
           code in (0, 1) and tag(deck(md)) == hand and "data-sme" not in section(deck(md), "s04"), out)
 
 
+def prefill_part(tmp):
+    """2.66.3 - --init-build fills what the module's own files already decide: a photo slide gets the photograph its record
+    says it is for ("used_in": "... slide s01") or whose description names what the slide shows; a question answered "on the
+    GA from slide 4" gets slide 4's drawing and its places matched to the drawing's own labels (the 2.66 run's builders spent
+    their first minutes on exactly these, and a build refused for the blanks first)"""
+    print("-- 2.66.3 --init-build fills the photos and the questions' pictures and places it can decide")
+    sys.path.insert(0, HERE)
+    import compile_module as cm
+    d = os.path.join(tmp, "prefill")
+    md, figdir = os.path.join(d, "module01"), os.path.join(d, "figures")
+    os.makedirs(os.path.join(md, "assets", "img"))
+    os.makedirs(figdir)
+    rec = lambda desc, shows, used="": dict({"description": desc, "shows": shows, "source": "Wikimedia Commons", "author": "A",
+                                             "licence": "CC BY-SA 4.0", "rights": "cleared"}, **({"used_in": used} if used else {}))
+    meta = {"m01_aidacosma.jpg": rec("A cruise ship taking LNG from a bunker vessel alongside", ["ship-to-ship LNG bunkering"],
+                                     "M01 presentation, slide s01"),
+            "m01_bergensfjord_truck.jpg": rec("The ferry Bergensfjord alongside; a Gasnor LNG semi-trailer on the quay",
+                                              ["truck-to-ship LNG bunkering", "LNG bunker hose"]),
+            "m01_valve_test.jpg": rec("A valve in a bath of liquid nitrogen on a test bench", ["cryogenic valve test"])}
+    for n in meta:
+        io.open(os.path.join(md, "assets", "img", n), "wb").write(b"\xff\xd8 not really a jpeg")
+    io.open(os.path.join(md, "assets", "img", "_photo_meta.json"), "w", encoding="utf-8").write(json.dumps(meta))
+    io.open(os.path.join(figdir, "s04.kit.json"), "w", encoding="utf-8").write(json.dumps({"size": [640, 390], "parts": [
+        {"id": "G", "type": "ga"}, {"id": "TCS", "type": "space", "label": "Tank connection\nspace"},
+        {"id": "FPR", "type": "space", "label": "Fuel preparation room"}, {"id": "B", "type": "manifold"},
+        {"id": "N2", "type": "text", "text": "bunkering station", "for": "B"}, {"id": "V", "type": "vent", "label": "vent mast"}]}))
+    sc = {"module": 1, "screens": [
+        {"id": "s01", "kind": "slide", "visual_kind": "photo", "visual": "The cruise ship AIDAcosma taking LNG from a bunker vessel."},
+        {"id": "s04", "kind": "slide", "visual_kind": "diagram", "visual": "The IGF ship's general arrangement."},
+        {"id": "s08", "kind": "slide", "visual_kind": "photo", "visual": "The ferry Bergensfjord taking LNG from a Gasnor tank truck."},
+        {"id": "s09", "kind": "slide", "visual_kind": "photo", "visual": "An engine room control console."},
+        {"id": "q01", "kind": "self-check", "mechanic": "hotspot", "visual": "the GA from slide 4, no labels",
+         "answer": "Tank connection space*\nFuel preparation room\nBunkering station\nFunnel"},
+        {"id": "m01", "kind": "module-check", "mechanic": "label_diagram", "visual": "the GA from slide 4, empty label boxes",
+         "answer": "Vent mast\nTank connection space\nManifold"},
+        {"id": "q02", "kind": "self-check", "mechanic": "hotspot", "visual": "a photo of a bunkering station", "answer": "Drip tray*"}]}
+    sheet = {"screens": {"s01": {"figure": "", "visual_kind": "photo"}, "s04": {"figure": "s04.kit.json", "visual_kind": "diagram"},
+                         "s08": {"figure": "", "visual_kind": "photo"}, "s09": {"figure": "", "visual_kind": "photo"},
+                         "q01": {"figure": "", "areas": {}}, "m01": {"figure": "", "labels": {}}, "q02": {"figure": "", "areas": {}}}}
+    said = cm.prefill(sc, sheet, md, figdir)
+    s = sheet["screens"]
+    check("a photo slide gets the photograph whose record says it is for that slide",
+          s["s01"]["figure"] == "assets/img/m01_aidacosma.jpg", s["s01"])
+    check("... or the one whose description and \"shows\" name what the slide's visual names (Bergensfjord, tank truck)",
+          s["s08"]["figure"] == "assets/img/m01_bergensfjord_truck.jpg", s["s08"])
+    check("... and none when no photograph fits (the builder fills it)", s["s09"]["figure"] == "", s["s09"])
+    check("a question answered on 'the GA from slide 4' gets s04's drawing, its places matched to the drawing's labels and "
+          "callouts (a two-line label too); an answer the drawing does not name is left to the builder",
+          s["q01"]["figure"] == "s04.kit.json" and s["q01"]["areas"] == {"Tank connection space": "TCS", "Fuel preparation room": "FPR",
+                                                                         "Bunkering station": "B"}, s["q01"])
+    check("a label_diagram gets its labels at the parts - an answer naming a kind of thing the drawing has one of at that one",
+          s["m01"]["figure"] == "s04.kit.json" and
+          s["m01"]["labels"] == {"Vent mast": {"at": "V"}, "Tank connection space": {"at": "TCS"}, "Manifold": {"at": "B"}}, s["m01"])
+    check("a question on no named slide is left as it was", s["q02"] == {"figure": "", "areas": {}}, s["q02"])
+    check("... and what it filled is said, one line each", len(said) == 4 and any("s01" in x for x in said), said)
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="compile_")
     try:
@@ -2917,6 +2974,7 @@ def main():
         code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
         check("check_script_match still fails a changed word", code == 1 and "2016" in out, out)
 
+        prefill_part(tmp)
         recap_part(tmp)
         tasks_part(tmp)
         figures_part(tmp)

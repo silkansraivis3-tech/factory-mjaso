@@ -412,6 +412,9 @@ def short_figures(lines, figrel):
                 continue
             if line.startswith("    (unchanged since"):
                 fig[6] = True
+            elif line.startswith("    tried by itself:") and "APPLIED to " in line:      # 2.66.3: the build did it
+                fig[5].append("    the closer fit was applied to the spec by the build (%s) - fix only what it lists"
+                              % re.search(r"the spec as it was: (.+?\.kit\.json)", line).group(1))
             elif line.startswith("    tried by itself:") and re.search(r"saved as (.+?\.kit\.json)", line):
                 fig[5].append("    a closer fit was saved: %s" % re.search(r"saved as (.+?\.kit\.json)", line).group(1)
                               + " - copy it over the spec, then fix what it lists")
@@ -814,6 +817,47 @@ def running_files(course, module):
     return os.path.join(logdir, "%s_running.json" % m), os.path.join(logdir, "%s_answer.txt" % m), m
 
 
+def state_key(course, module, args):
+    """2.66.3 - everything a build reads and writes, as it is now: the script and build sheet, the module's figures and
+    folder (photos, kit_parts.js, what the last build wrote), its review baseline, the factory's own files, the arguments
+    and the CF_ settings - by name, size and time, so taking it costs a fraction of a second. Taken when a build ends; the
+    same key at the next call means nothing changed since that answer (the 2.66 run's builders built again to re-read a
+    report they already had)"""
+    import workspace
+    import content_script as cs
+    import compile_module as cm
+    h = hashlib.sha256()
+    h.update(json.dumps([sorted(a for a in args if a not in ("--wait", "--inner")),
+                         sorted((k, v) for k, v in os.environ.items() if k.startswith("CF_")
+                                and k not in ("CF_BUILD_RUNNING", "CF_TIMING", "CF_BUILD_ANSWER_WITHIN", "CF_BUILD_TEST_SLEEP"))]).encode())
+    course = workspace.work_folder(course, create=False)
+    m = cs.mid(module) if str(module).isdigit() else str(module)
+    mdir, _ = cm.module_folder(course, module)
+    p = cs.paths(course, module)
+    out_dir = workspace.claude_path(course, "review", m)
+    files = [p["script"], cm.build_path(course, module)] + [os.path.join(course, x) for x in sorted(os.listdir(course))
+                                                              if os.path.isfile(os.path.join(course, x))]
+    trees = [workspace_figdir(course, module), mdir or "", out_dir, reviewed_dir(out_dir), os.path.dirname(SKILLS)]
+    for f in files:
+        try:
+            st = os.stat(f)
+            h.update(("%s %d %d\n" % (f, st.st_size, st.st_mtime_ns)).encode("utf-8", "replace"))
+        except OSError:
+            h.update(("%s -\n" % f).encode("utf-8", "replace"))
+    for top in trees:
+        for root, dirs, names in os.walk(top) if top and os.path.isdir(top) else []:
+            dirs[:] = sorted(d for d in dirs if d not in ("__pycache__", ".git", "node_modules"))
+            for n in sorted(names):
+                if n.endswith(".pyc"):
+                    continue
+                try:
+                    st = os.stat(os.path.join(root, n))
+                except OSError:
+                    continue
+                h.update(("%s %d %d\n" % (os.path.join(root, n), st.st_size, st.st_mtime_ns)).encode("utf-8", "replace"))
+    return h.hexdigest()[:20]
+
+
 def wait_answer(rec_path, ans_path, m, within):
     """wait for the build in rec_path up to `within` s: (exit code, its answer) when it ended, else None"""
     import browser_slots
@@ -864,6 +908,18 @@ def entry(argv=None):
         rec = {}
     running = rec.get("exit") is None and browser_slots.alive(int(rec.get("pid") or 0))
     wait = "--wait" in argv
+    args = [a for a in argv if a != "--wait"] + ["--inner"]
+    if not wait and not running and rec.get("exit") in (0, 1) and rec.get("key") and rec.get("args") == args \
+            and not {"--full", "--force"} & set(argv) and os.path.isfile(ans_path):
+        try:                                             # 2.66.3: nothing changed since the last answer - that answer
+            same = state_key(known.course, known.module, args) == rec["key"]
+        except Exception:                                # noqa: BLE001 - not sure: build
+            same = False
+        if same:
+            print("(nothing changed since this build's last answer, %.0f min ago - the same report, nothing built; change a "
+                  "file, or --full to build again)" % ((time.time() - rec.get("ended", time.time())) / 60))
+            sys.stdout.write(io.open(ans_path, encoding="utf-8", errors="replace").read())
+            return int(rec["exit"])
     if wait or running:
         if not rec:
             print("No build of %s to wait for - run build_module.py without --wait" % m)
@@ -872,7 +928,6 @@ def entry(argv=None):
             print("A build of %s is already running (started %.0f s ago) - waiting for it instead of starting another."
                   % (m, time.time() - rec.get("started", time.time())))
     else:
-        args = [a for a in argv if a != "--wait"] + ["--inner"]
         os.makedirs(os.path.dirname(rec_path), exist_ok=True)
         fh = io.open(ans_path, "w", encoding="utf-8")
         flags = 0
@@ -917,7 +972,15 @@ if __name__ == "__main__":
             _r = json.load(io.open(_rec, encoding="utf-8"))
         except (OSError, ValueError):
             _r = {}
-        _r["exit"] = _code
+        _r["exit"], _r["ended"] = _code, time.time()
+        try:                                             # 2.66.3: the state this answer belongs to (entry() reuses it)
+            _a = argparse.ArgumentParser(add_help=False)
+            _a.add_argument("course")
+            _a.add_argument("--module", required=True)
+            _k, _ = _a.parse_known_args(sys.argv[1:])
+            _r["key"] = state_key(_k.course, _k.module, sys.argv[1:])
+        except Exception:                                # noqa: BLE001 - no key: the next call builds
+            pass
         io.open(_rec, "w", encoding="utf-8").write(json.dumps(_r))
         sys.exit(_code)
     sys.exit(entry())

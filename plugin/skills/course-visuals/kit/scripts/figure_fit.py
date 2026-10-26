@@ -29,8 +29,9 @@ turns did:
                       bands, the page's width) and get the same fix, as figures\\MNN\\_fit\\<question>.<spec>
              A fix is written to figures\\MNN\\_fit\\<slide>.<spec> with the spec's hash and the slide's layout: the
              compiler draws it only while both are unchanged. The spec itself is never rewritten. A figure no fix makes
-             clean is reported as it is, with what to do - and the closest attempt is saved beside it
-             (<slide>.<spec>.candidate.kit.json) to copy over the spec and finish, instead of redrawing.
+             clean is reported as it is, with what to do - and the closest attempt (2.66.3) is written over the spec
+             by the build when it adds no meaning BLOCK (the old spec kept as <slide>.<spec>.before.kit.json), else
+             saved beside it (<slide>.<spec>.candidate.kit.json) for the builder.
   3  SAY     one block per figure that still has a problem: the slide, the part, the check, the steps, a concrete fix.
 
 Exit 0 every figure clean (fixed ones included), 1 problems left, 2 could not run.
@@ -1170,13 +1171,28 @@ def run_all(course, module, fix=True, jobs=4, full=False):
             rec["spec"] = new
             io.open(fp, "w", encoding="utf-8").write(json.dumps(rec, ensure_ascii=False, indent=1))
         elif best and len(best[1]) < len(probs):      # the closest attempt, to edit instead of redrawing
+            # 2.66.3 - written over the spec by the build itself when it adds no meaning BLOCK and was measured with the
+            # slide's photo row (the spec draws with the row): in the 2.66 run every "copy it over the spec" cost the builder
+            # a turn and a build. The spec as it was is kept beside the fits; the report lists only what the fit leaves
+            adds = [x.split(": ", 1)[-1] for x in kit_meaning.check(best[0], "fit")
+                    if x.split(": ", 1)[-1] not in set(y.split(": ", 1)[-1] for y in kit_meaning.check(spec, "fit"))]
+            if not adds and best[3] and sum(1 for x in figs if x[1] == sp) == 1:
+                before = re.sub(r"\.kit\.json$", ".before.kit.json", fp)
+                os.makedirs(os.path.dirname(before), exist_ok=True)
+                io.open(before, "w", encoding="utf-8").write(text + "\n")
+                io.open(sp, "w", encoding="utf-8").write(json.dumps(best[0], ensure_ascii=False, indent=1))
+                applied[sid] = best[1]
+                return item, probs, r, None, how + " - APPLIED to %s by the build (the spec as it was: %s); fix what it leaves" % (
+                    os.path.basename(sp), os.path.normpath(before))
             os.makedirs(os.path.dirname(cand_path), exist_ok=True)
             io.open(cand_path, "w", encoding="utf-8").write(json.dumps(best[0], ensure_ascii=False, indent=1))
-            how += (" - saved as %s: copy it over %s and fix what it leaves:\n%s"
-                    % (os.path.normpath(cand_path), os.path.basename(sp),
+            how += (" - saved as %s%s: copy it over %s and fix what it leaves:\n%s"
+                    % (os.path.normpath(cand_path), " (not applied: it adds %s)" % "; ".join(adds[:2]) if adds else "",
+                       os.path.basename(sp),
                        "\n".join("        %s - %s: %s (step %s)" % (c, pt, dt, ",".join(sorted(set(st))))
                                  for (c, pt, dt), st in sorted(group(best[1]).items()))))
         return item, probs, r, new, how
+    applied = {}                           # 2.66.3: slide -> the findings its applied closer fit leaves
     with cf.ThreadPoolExecutor(max_workers=jobs) as ex:
         outs = list(ex.map(fix_one, sorted(results, key=lambda t: t[0])))
     for (sid, sp, e), probs, r, new, how in outs:
@@ -1193,6 +1209,9 @@ def run_all(course, module, fix=True, jobs=4, full=False):
             fixed.append("%s (%s): fixed by itself - %s" % (sid, name, how))
             d["fixed"] = how
             continue
+        if sid in applied:                 # the spec is now the closer fit: what IT leaves is the figure's list
+            probs = applied[sid]
+            d.update({"problems": len(probs), "applied": True})
         if probs:
             block = ["%s (%s) on its slide - drawn %s px in a %s px panel, scale %.2f:" % (
                 sid, name, "x".join(map(str, st.get("svg") or [])), "x".join(map(str, st.get("panel") or [])), rep.get("scale") or 0)]
@@ -1223,7 +1242,7 @@ def run_all(course, module, fix=True, jobs=4, full=False):
             block += parts_together(sp, "\n".join(block))
             left.append("\n".join(block))
             d["left"] = [list(x) for x in probs]
-            if keys.get(sid):
+            if keys.get(sid) and sid not in applied:      # an applied fit changed the spec: measured again next time
                 failing[sid] = {"key": keys[sid], "fix": bool(fix), "block": "\n".join(block), "left": d["left"]}
     for sid, sp, e in reused:              # unchanged and failing: the last report, not measured again (2.59.0)
         f0 = failing[sid]

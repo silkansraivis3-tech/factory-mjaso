@@ -361,7 +361,7 @@ a "Your turn" activity's minutes as practice in a theory-only module) is the ope
    gets TWO builds; what the second still prints is the operator's list (NOTHING LOOPS, approved by Aleksis) */
 const FIX_CAP = `AT MOST TWO build_module.py runs in this round. Try every figure you change in the studio first -
 python ${A.factory ? `${A.factory}/course-visuals/kit/scripts` : '<the course-visuals skill folder>/kit/scripts'}/studio.py <spec> --step all
-(seconds; a "closer fit was saved" candidate: copy it over the spec) - until its own report is clean, THEN one build. After
+(seconds; a closer fit the build applied is already in the spec) - until its own report is clean, THEN one build. After
 the second build STOP, whatever it prints: list what it still prints in your report (it goes to the operator's list) -
 never a third build, never another round of fitting words.`
 const fixRound = (m, q) => `${build(m)}

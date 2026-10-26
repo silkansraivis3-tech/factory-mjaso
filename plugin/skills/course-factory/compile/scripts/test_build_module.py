@@ -115,6 +115,25 @@ def blanks_part():
               p.returncode == 1 and out.strip().count("\n") == 0 and out.startswith("FAIL M01 - nothing built")
               and "s01" in out and "q02" in out and "declined_3d" in out
               and not os.path.isfile(os.path.join(md, "presentation", "index.html")), (p.returncode, out))
+        # 2.66.3 - the same build again, nothing changed since its answer: that answer at once, nothing built
+        import time
+        env = dict(os.environ, CF_BUILD_TEST_SLEEP="6", CF_BUILD_ANSWER_WITHIN="60")
+        again = lambda *extra: subprocess.run([sys.executable, os.path.join(HERE, "build_module.py"), c, "--module", "1"] + list(extra),
+                                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300, env=env)
+        t = time.time()
+        p2 = again()
+        t2 = time.time() - t
+        check("2.66.3 nothing changed since the last answer: the same report and exit code at once (%.1f s), said so" % t2,
+              p2.returncode == 1 and t2 < 5 and p.stdout.strip() in p2.stdout and "nothing changed since" in p2.stdout,
+              (p2.returncode, t2, p2.stdout))
+        t = time.time()
+        p3 = again("--full")
+        check("... --full builds again", time.time() - t >= 6 and p3.returncode == 1, (p3.returncode, p3.stdout))
+        tcm.build_of(c, lambda s: s["screens"]["s01"].update(caption="changed"))
+        t = time.time()
+        p4 = again()
+        check("... and so does a changed build sheet", time.time() - t >= 6 and "nothing changed" not in p4.stdout,
+              (p4.returncode, p4.stdout))
         tcm.build_of(c, lambda s: s["screens"]["s04"].update(declined_3d="the operator keeps the flat drawing"))
         check("a 3D scene declined with the operator's reason is no blank", [x[0] for x in b.starter_blanks(c, 1)] == [["s01"], ["q02"]],
               b.starter_blanks(c, 1))

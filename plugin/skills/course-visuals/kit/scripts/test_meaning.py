@@ -197,6 +197,54 @@ def igf265_part():
         check("%s: check_spec without the meaning checks (2.65.0) found it clean" % name, not ck.check_spec(spec, types, name, meaning=False))
 
 
+FIX266 = os.path.join(HERE, "fixtures", "igf266")
+# 2.66.3 - the 2.66 audit's 11 BROKEN figures (Desktop\IGF_course_2.66_figures\REPORT.md "your list"): what STEP and LABEL
+# catch in them. The other seven need what a spec does not hold - where kit.js prints a part's own label (M01 s02 / s03), an
+# animation's timing (M03 s08), an engine left running after its supply stops (M02 s15), where a leak is drawn (M01 s05),
+# methods that have no part (M01 s07), a valve drawn off its tank (M03 s07): the figure review judges those
+EXPECT266 = {"M03_s14": [("STEP", "checklist", "NOTE")], "M03_s17": [("STEP", "takes things away", "NOTE")],
+             "M02_s05": [("LABEL", "cofferdam", "BLOCK")], "M03_s12": [("LABEL", "crane", "NOTE")]}
+
+
+def igf266_part():
+    print("\n-- 2.66.3 the 2.66 audit's BROKEN figures: a step that does not show its title (STEP), a label on the wrong part "
+          "or naming what is not drawn (LABEL)")
+    for name, want in sorted(EXPECT266.items()):
+        a = km.analyse(load(os.path.join(FIX266, name + ".kit.json")), name)
+        for kind, word, level in want:
+            got = has(a["block"], kind, word) if level == "BLOCK" else has(a["note"], "note " + kind, word)
+            check("%s: %s %s (%s)" % (name, level, kind, word), got, a["block"] + a["note"])
+    check("the 11 fixtures are all there", len(glob.glob(os.path.join(FIX266, "*.kit.json"))) == 11)
+    track = {"id": "CL", "type": "step_track", "x": 40, "y": 60, "w": 200, "h": 200}
+    mute = small([track, {"id": "TC", "type": "text", "x": 420, "y": 300, "text": "constant contact"}],
+                 [{"title": "1 · They sign the safety checklist", "play": [["TC", 1, 300]]}])
+    check("STEP: a title naming the checklist, a step that only shows words elsewhere - a NOTE", has(km.analyse(mute)["note"],
+                                                                                                   "note STEP step1", "checklist"), km.analyse(mute))
+    lit = small([track], [{"title": "1 · They sign the safety checklist", "play": [["CL", 3, 900]]}])
+    check("... the step ticks the checklist: none", not has(lines(lit), "STEP"), lines(lit))
+    where = small([{"id": "T", "type": "tank", "x": 40, "y": 200, "w": 160, "h": 60}, {"id": "L", "type": "lamp", "x": 400, "y": 60}],
+                  [{"title": "1 · Fuel tank - in its hold", "play": [["L", 1, 300]]}])
+    check("... a tank, a room or a pipe a title names is where the step is, not what it does: none", not has(lines(where), "STEP"),
+          lines(where))
+    away = small([{"id": "D", "type": "detector", "x": 300, "y": 80, "value": 30}, {"id": "L", "type": "lamp", "x": 400, "y": 60, "value": 1}],
+                 [{"title": "1 · A dispersal study finds the best places", "play": [["D", 0, 300], ["L", 0, 300]]}])
+    check("STEP: a step that only turns things off under a title saying something happens - a NOTE",
+          has(km.analyse(away)["note"], "note STEP step1", "takes things away"), lines(away))
+    stop = small(away["parts"], [{"title": "1 · The alarm stops", "play": [["D", 0, 300], ["L", 0, 300]]}])
+    check("... 'stops', 'shut', 'lost' in the title say so on purpose: none", not has(lines(stop), "STEP"), lines(stop))
+    room = {"id": "CD", "type": "space", "x": 20, "y": 20, "w": 200, "h": 140}
+    tank = {"id": "T", "type": "tank", "x": 40, "y": 40, "w": 160, "h": 100}
+    on_tank = small([room, tank, {"id": "N", "type": "text", "x": 120, "y": 200, "text": "cofferdam", "for": "CD"}])
+    check("LABEL: 'cofferdam' leading to its space's middle, on the tank inside it - a BLOCK", has(blocks(on_tank), "LABEL N", "tank"),
+          lines(on_tank))
+    on_wall = small([room, tank, {"id": "N", "type": "text", "x": 120, "y": 200, "text": "cofferdam", "for": "CD.top@0.1"}])
+    check("... leading to the space's own edge: none", not has(lines(on_wall), "LABEL"), lines(on_wall))
+    if CALIB and os.path.isdir(CALIB):
+        specs = sorted(glob.glob(os.path.join(CALIB, "*.kit.json")))
+        found = [x for f in specs for x in lines(load(f)) if ": LABEL " in x or ": note LABEL " in x]
+        check("calibration: no LABEL in the hand-fixed set (%d specs) - why the wrong-part leader may BLOCK" % len(specs), not found, found)
+
+
 CALIB = os.environ.get("CF_MEANING_CALIBRATION")      # a folder of hand-fixed, instructor-reviewed specs (the IGF original's)
 
 
@@ -289,6 +337,7 @@ def main():
     relations_part()
     rules_part()
     igf265_part()
+    igf266_part()
     levels_part()
     patterns_part()
     starter_part()

@@ -58,8 +58,9 @@
 - **A figure problem** is reported once per figure and part, with the step. `figure_fit.py` has already tried the fixes
   with one right answer: a drawing lost in empty space is cropped to what it shows; a drawing whose column got narrower
   (a layout changed) is re-fitted to it. Kept only when every audit is clean (figures\M01\_fit\ - the spec is never
-  rewritten). When it gets close but not clean, it saves the attempt as `_fit\sNN.sNN.candidate.kit.json`: copy it over
-  the spec and fix what it lists. To look at one figure at every step: `course-visuals\kit\scripts\studio.py <spec>
+  rewritten). When it gets close but not clean, (2.66.3) the build writes the attempt over the spec itself when it adds
+  no meaning BLOCK (the spec as it was: `_fit\sNN.sNN.before.kit.json`) - fix only what it lists; an attempt it could not
+  apply is saved as `_fit\sNN.sNN.candidate.kit.json` with the reason. To look at one figure at every step: `course-visuals\kit\scripts\studio.py <spec>
   --step all`. (2.63.3) A studio probe whose page and every file it loads are unchanged is answered from
   `working_claude\_build\studio_probes` (the same report; `CF_PROBE_CACHE=off` measures every time).
 - **A rebuild of a course that was fixed by hand (2.63.3)** starts from the hand-fixed drawings: `--init-build --seed-from

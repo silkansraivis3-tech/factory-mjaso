@@ -30,6 +30,8 @@
     {"words": ["lamp", "light fitting"], "parts": ["lamp"], "strict": true, "kin": ["flame", "spark", "fire"]},
     {"words": ["esd button", "push button", "emergency stop"], "parts": ["push_button"], "strict": true},
     {"words": ["cofferdam"], "parts": ["integral_tank", "space"]},
+    {"words": ["safety checklist", "checklist", "check list"], "parts": ["step_track", "log", "panel"]},
+    {"words": ["provision crane", "hose crane", "crane", "davit"], "parts": ["crane"]},
     {"words": ["gas cloud", "vapour cloud", "vapor cloud"], "parts": ["gas_cloud", "spill"]},
     {"words": ["ship", "hull", "deck", "accommodation", "superstructure", "bridge", "funnel"], "parts": ["ga", "space"]},
     {"words": ["spool piece"], "parts": ["spool_piece"], "strict": true},
