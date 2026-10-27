@@ -35,6 +35,7 @@
   var T = null;                                   /* THREE, taken when the first scene is built */
   var NAVY = '#0A2463', BLUE = '#2EB6F8', AMBER = '#E9A51E';
   var DEG = Math.PI / 180;
+  var PIXEL_BUDGET = 2.4e6;           /* 2.70.0 - the most pixels a frame draws (P.size) */
   var PART = {};                                  /* part type -> builder(k, p) */
   var PART_INFO = {};                             /* part type -> {family, about} for check_kit3d / PARTS.md */
   var scenes = [];
@@ -724,6 +725,12 @@
     var S = this;
     if (W === S.bufW && H === S.bufH) { return; }
     S.bufW = W; S.bufH = H;
+    /* 2.70.0 - a pixel budget (owner: "better ... but not lagging"): at most ~2.4 million pixels a frame. A slide's box keeps
+       twice the screen's pixels; full screen on a sharp tablet (2560 x 1600) is drawn at 1.5x, still smoothed - about half
+       the work for the graphics chip, the part of the frame a slow tablet spends longest on. steady() may step it down further */
+    var pr = Math.min(w.devicePixelRatio || 1, 2, S.dpr || 2, Math.sqrt(PIXEL_BUDGET / Math.max(1, W * H)));
+    pr = Math.max(1, Math.round(pr * 4) / 4);
+    if (S.r.getPixelRatio() !== pr) { S.r.setPixelRatio(pr); }
     S.r.setSize(W, H, false);
   };
   /* the size the stage will have when its slide shows: the slide laid out for a moment, unseen, as the one on screen is */

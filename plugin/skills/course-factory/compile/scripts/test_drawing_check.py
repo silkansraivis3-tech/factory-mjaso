@@ -87,6 +87,14 @@ def main():
         check("the limits: 45 s a slide, 106 s for three, at most 600; a task page 60 s",
               dc.time_limit(deck, [3]) == 45 and round(dc.time_limit(deck, [0, 1, 2])) == 106
               and dc.time_limit(deck, list(range(40))) == 600 and dc.time_limit("x/tasks/a.html", None) == 60)
+        # 2.70.0 - a page with nothing drawn on it needs no browser
+        plain = os.path.join(tmp, "instructor", "plan.html")
+        os.makedirs(os.path.dirname(plain), exist_ok=True)
+        io.open(plain, "w", encoding="utf-8").write("<!doctype html><title>Plan</title><h1>Plan</h1><p>Words only.</p>")
+        t0 = time.time()
+        got = dc.check([plain], root=tmp)[0]
+        check("2.70.0 a page with nothing drawn on it (a plan, an answer key) is clean with no browser started",
+              got == [] and dc.LAST.get("pages") == (0, 1) and time.time() - t0 < 5, (got, dc.LAST, time.time() - t0))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))

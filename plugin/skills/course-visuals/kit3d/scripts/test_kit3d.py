@@ -247,9 +247,16 @@ try:
         {"url": (STUDIO % ("m02_tank", 800, 500)), "wait": "window.k3ready", "settle": 300,
          "do": "(function(){var S=k3.scene,t=0;S.r.setPixelRatio(2);for(var i=0;i<40;i++){t+=16;S.steady(true,t);}})()",
          "probe": J % "(function(){return {dpr:k3.scene.r.getPixelRatio()}})()"},
+        {"url": (STUDIO % ("m02_tank", 800, 500)), "wait": "window.k3ready", "settle": 300,
+         "do": "(function(){Object.defineProperty(window,'devicePixelRatio',{value:2,configurable:true});var S=k3.scene;"
+               "S.bufW=0;S.size(760,480);window.__p1=S.r.getPixelRatio();S.bufW=0;S.size(1280,800);window.__p2=S.r.getPixelRatio();})()",
+         "probe": J % "({box:window.__p1,full:window.__p2})"},
     ], "--w=900", "--h=600")
 finally:
     os.remove(GROUND)
+pb = r[4].get("probe") or {}
+check("2.70.0 the pixel budget on a 2x screen: a slide's box keeps 2x, full screen 1280 x 800 is drawn at 1.5x",
+      pb.get("box") == 2 and pb.get("full") == 1.5, pb)
 a, b, c, d = [x.get("probe") or {} for x in r[:4]]
 check("a model with no floor stands on a soft ground shadow", a.get("ok") and a.get("g") and a.get("vis"), (a, r[0].get("errors")))
 check("a model with its own deck or floor gets no second ground", not b.get("vis"), b)

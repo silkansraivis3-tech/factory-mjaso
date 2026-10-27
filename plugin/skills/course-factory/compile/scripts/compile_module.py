@@ -3587,7 +3587,10 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
     uses_kit3d = any(" data-kit3d=" in x for x in slides)       # the 3D kit (course-visuals/kit3d)
     kit3d_parts = uses_kit3d and os.path.isfile(os.path.join(mdir, KIT3D_PARTS))
     shipped += [(x, os.path.join(SKILLS, "course-visuals", "kit3d", x)) for x in (KIT3D_FILES if uses_kit3d else ())]
+    sys.path.insert(0, os.path.join(SKILLS, "course-module-ui", "scripts"))
+    import design_system
     for x, canon in shipped:                  # shipped like the deck engine: the factory's copy, byte for byte
+        canon = design_system.shipped_src(canon)              # 2.70.0 - kit.js / kit3d.js: their minified copy
         mine = os.path.join(mdir, "assets", x)
         if os.path.isfile(canon) and (not os.path.isfile(mine) or io.open(mine, "rb").read() != io.open(canon, "rb").read()):
             probs.append("the module's copy of %s is not the factory's current one - run course-module-ui\\scripts\\"

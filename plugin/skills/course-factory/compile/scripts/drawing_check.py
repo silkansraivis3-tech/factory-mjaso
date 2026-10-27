@@ -120,6 +120,7 @@ def is_deck(page):
 
 
 SLIDE_TAG = check_cache.SLIDE_TAG
+DRAWN = re.compile(r"<(?:svg|img|canvas|video|object|iframe)\b|\bdata-kit", re.I)   # what this check can judge on a page (2.70.0)
 
 
 def slices(page, jobs, todo=None):
@@ -226,6 +227,11 @@ def check(pages, root=None, cache=None, full=False):
             name = os.path.relpath(page, root).replace("\\", "/") if root else page
             prints[page] = [("%s#%d" % (name, k), fp) for k, (_, fp) in enumerate(fps)] if fps else None
             todo[page] = None if not fps else [k for k, (key, fp) in enumerate(prints[page]) if not store.clean(key, fp)]
+            # 2.70.0 - a page with nothing drawn on it (no svg, picture, canvas, video or kit figure - an instructor's plan,
+            # an answer key) has nothing for this check to judge: no browser for it (gas M15 on 2.67: 48 s and 21 s, plus
+            # up to 80 s waiting for a browser slot, on two pages that reported "drawings": 0)
+            if not is_deck(page) and not DRAWN.search(io.open(page, encoding="utf-8").read()):
+                todo[page] = []
         slides = [p for p in pages if is_deck(p)]
         n_sl = sum(len(prints[p]) if prints[p] else len(SLIDE_TAG.findall(io.open(p, encoding="utf-8").read())) for p in slides)
         LAST["slides"] = (sum(len(todo[p]) if todo[p] is not None else len(SLIDE_TAG.findall(io.open(p, encoding="utf-8").read()))

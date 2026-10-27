@@ -63,6 +63,7 @@ import json
 import os
 import re
 import struct
+import sys
 
 import compile_module as cm
 import content_script as cs
@@ -1400,6 +1401,9 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
     if kit:                                             # the panel's controls are drawn by the figure kit, shipped like the engine
         for x in cm.KIT_FILES:
             canon, mine = os.path.join(cm.SKILLS, "course-visuals", "kit", x), os.path.join(mdir, "assets", x)
+            sys.path.insert(0, os.path.join(cm.SKILLS, "course-module-ui", "scripts"))
+            import design_system
+            canon = design_system.shipped_src(canon)            # 2.70.0 - kit.js: its minified copy
             if not os.path.isfile(mine) or io.open(mine, "rb").read() != io.open(canon, "rb").read():
                 probs.append("the module's copy of %s is not the factory's current one - run course-module-ui\\scripts\\"
                              "design_system.py install --update on the module folder" % x)

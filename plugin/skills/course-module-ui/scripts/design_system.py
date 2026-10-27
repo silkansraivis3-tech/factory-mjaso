@@ -73,9 +73,17 @@ def load_list():
     with io.open(LIST, encoding="utf-8") as f:
         spec = json.load(f)
     for item in spec["files"]:
-        item["src"] = os.path.normpath(os.path.join(SKILLS, item["from"]))
+        item["src"] = shipped_src(os.path.normpath(os.path.join(SKILLS, item["from"])))
     spec["starter_deck"]["src"] = os.path.normpath(os.path.join(SKILLS, spec["starter_deck"]["from"]))
     return spec
+
+
+def shipped_src(src):
+    """the file a module gets for src: its minified copy while it is current (kit.js, kit3d.js - minify_engines.py,
+    2.70.0), else src itself"""
+    sys.path.insert(0, HERE)
+    import minify_engines
+    return minify_engines.fresh(src) or src
 
 
 def inside_android_project(path):

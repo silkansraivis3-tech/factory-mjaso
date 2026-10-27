@@ -1526,7 +1526,7 @@ def v2492_part(tmp):
     rec["files"]["kit.js"] = design_system.sha(kit)                     # what was installed once - the factory has moved on since
     json.dump(rec, io.open(rp, "w", encoding="utf-8"))
     code, out = run(COMPILE, c, "--module", "1")
-    canon = os.path.join(SKILLS, "course-visuals", "kit", "kit.js")
+    canon = design_system.shipped_src(os.path.join(SKILLS, "course-visuals", "kit", "kit.js"))   # 2.70.0: its minified copy
     check("F1: a kit.js that only fell behind is updated before the build - and the build says which file, and that it did",
           code == 0 and "updated from the factory" in out and "kit.js (older version)" in out
           and io.open(kit, "rb").read() == io.open(canon, "rb").read(), out)
@@ -1910,11 +1910,13 @@ def kit3d_part(tmp):
           and p.index('href="../assets/kit3d.css"') < p.index("</head>"), p[-800:])
     src3 = os.path.join(SKILLS, "course-module-ui", "templates", "vendor", "three.min.js")
     kit3d_dir = os.path.join(SKILLS, "course-visuals", "kit3d")
+    sys.path.insert(0, os.path.join(SKILLS, "course-module-ui", "scripts"))
+    import design_system
     same = lambda a, b: os.path.isfile(a) and os.path.isfile(b) and io.open(a, "rb").read() == io.open(b, "rb").read()
     check("... the module holds the factory's three.js (the sheet did not name it), kit3d.js and kit3d.css, byte for byte "
           "(design_system.py ships kit3d like kit)",
           same(os.path.join(md, "assets", "vendor", "three.min.js"), src3)
-          and same(os.path.join(md, "assets", "kit3d.js"), os.path.join(kit3d_dir, "kit3d.js"))
+          and same(os.path.join(md, "assets", "kit3d.js"), design_system.shipped_src(os.path.join(kit3d_dir, "kit3d.js")))
           and same(os.path.join(md, "assets", "kit3d.css"), os.path.join(kit3d_dir, "kit3d.css")), out)
     check("... no 2D kit loaded for a 3D scene", "kit.js" not in p.replace("kit3d.js", "") and "assets/kit.css" not in p)
     # 2.69.0 - a 3D model beside words takes at least 58 % of the width, whatever text share the sheet asks (gas M01 s26)

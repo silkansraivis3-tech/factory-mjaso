@@ -1706,6 +1706,27 @@ training app's join.js, staging): with a module open, the handout list is that m
 open, the whole course. Tests: test_run_audits 28, test_photo_focus 8, test_compile_module 467, test_compile_course 41,
 test_course_package 79, test_precheck 39, test_kit3d, test_smoke3d 15, test_perf3d 13, test_review_sheets 18.
 
+## 4zz18 · Lighter modules, lighter 3D, fewer hidden browsers (2.70.0, 2026-10-27)
+
+The owner: *"optimize this course factory as much as can, put maybe better and lower size 3d models but quality, so it dont
+lag ... so it does better work in smaller usage and less time"*. Measured before changing anything. (1) **The 3D scenes are
+already light** - the seven example scenes have 5-25 k triangles and 35-85 draw calls (the catalogue of every part 49 k / 155);
+a scene's spec is a few KB. What a tablet pays for is pixels: twice the screen's pixels, smoothed, full screen on a 2560 x 1600
+tablet is 4 million a frame. **kit3d's pixel budget** (`PIXEL_BUDGET` 2.4e6, `P.size`): a slide's box keeps 2x, full screen is
+drawn at 1.5x (still smoothed) - about half the graphics chip's work; 2.68.0's step-down on a slow tablet still applies on top.
+(2) **Every module carried the kits' comments**: kit.js 379 KB and kit3d.js 158 KB per module (about 11 MB on a 20-module
+course). `course-module-ui/scripts/minify_engines.py` makes `kit/min/kit.js` (221 KB) and `kit3d/min/kit3d.js` (88 KB) with
+esbuild (the copy the Vercel command line brings, or NOVIKONTAS_ESBUILD); each copy's first line names its source's sha256 (line
+ends as LF), and `design_system.shipped_src` ships the copy only while that matches - else the source, so an edit never ships an
+old copy. The compile's "is the module's copy the factory's" checks (compile_module, task_pages) ask the same function;
+`kit_parts.py promote` makes the copy again and names it in the git add. Globals and properties keep their names: the studio,
+the audits and test_kit3d / test_studio / test_figure_fit (52) pass on the minified copies. (3) **The compile's drawing check
+starts no browser for a page with nothing drawn on it** (`drawing_check.DRAWN`: no svg, img, canvas, video, object, iframe or
+kit figure) - on gas M15 (2.67) the instructor's plan and the answer key took 48 s and 21 s, plus up to 80 s waiting for a
+browser slot, and reported "drawings": 0. Measured but left: the figures stage's 330 s on that run was three modules building
+at once (the first-build lock and the browser queue), not drawing - judged again on a quiet computer's timed build. Tests:
+test_minify_engines 6, test_kit3d (+ the pixel budget), test_drawing_check (+ a plain page), test_compile_module 467.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.
