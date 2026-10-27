@@ -80,8 +80,9 @@
   figures, 3D scenes from the approved scripts, seeded ones counted less) in a rolling pool of `wave` at a time; its builder
   reads `compile/BUILDER_CARD.md`, not this guide. A module with a 3D-kit scene gets the 3D step after its build:
   `course-visuals/kit3d/scripts/scene3d_check.py <course> --module N` (spec check, smoke3d, perf3d, a picture of every
-  step in `working_claude\review\MNN_3d\`), then a reviewer who did not build the scene judges the pictures; a BROKEN
-  finding gets one fix round.
+  step in `working_claude\review\MNN_3d\`), then a reviewer who did not build the scene judges the pictures. 2.66.5: the
+  3D step, the figure step and QA judge the built module at the same time, and ONE fix round takes every BROKEN finding
+  of the three (two builds, at most six studio runs a figure); then only what was BROKEN is judged again.
 - **Figure fits (2.65.0)**: the COLUMN re-fit tries one width at a time and stops at the first clean fit (the same fit the
   parallel search kept, fewer probes) and measures a figure at most 16 times (CF_FIT_MEASURES; every real fit on record was
   found within 11, the searches that found nothing ran up to 53). An EMPTY drawing on a

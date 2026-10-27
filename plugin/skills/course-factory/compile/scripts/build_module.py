@@ -322,6 +322,103 @@ def measure_out(path, misfits):
     io.open(path, "w", encoding="utf-8", newline="\n").write(json.dumps(avoid, indent=1, sort_keys=True))
 
 
+# 2.66.5 - THE LAYOUT PRE-CHECK. WHY (Desktop\IGF_course_2.66_figures\SPEED_ANALYSIS.md): a slide the compiler built
+# another way for L62 that did not fit was found only by the deck audit at the END of a build, and the whole module was
+# built again (a LAYOUT round: the figures - a moved slide's figure measured and re-fitted in its new column - the
+# compile and every check) - 23.5 of IGF M03's 39.5 build-minutes in the 2.66.3 run, 30 of M02's in the 2.66 run 2,
+# where s02 / s14 went through it in four builds running. Now, before the figures, the deck is laid out in memory
+# (compile_deck, as figure_fit does) and ONLY the slides built another way that the last build did not build so are
+# audited, by run_audits.py's own probes at the build's sizes, the whole deck loaded (run_audits --only's way); a misfit
+# is measured out at once (MNN_layout_avoid.json, as before) and the deck laid out again, at most LAYOUT_ROUNDS times.
+# The audit at the end still judges every slide, and still builds again if one does not fit after all (a figure fitted
+# in the build can change its panel). CF_LAYOUT_PRECHECK=off: not run.
+def varied_new(deck_html, last, seen=()):
+    """{sid: slide index from 0} - the slides built another way for L62 (data-varied) that the last build did not build
+    that way (MNN_layouts.json: the same words and the same look), and not checked already (seen: (sid, shape, ground))"""
+    out = {}
+    for k, (sid, shape, ground, words) in varied_slides(deck_html):
+        a = (last or {}).get(sid) or {}
+        kept = a.get("words") == words and list(a.get("key") or []) == [shape, ground]
+        if not kept and (sid, shape, ground) not in seen:
+            out[sid] = k
+    return out
+
+
+def varied_slides(deck_html):
+    """[(slide index from 0, (sid, shape, ground, words key))] of the slides built another way for L62"""
+    out, k = [], 0
+    for tag in re.findall(r"<section [^>]*>", deck_html):
+        if not re.search(r'\bclass="[^"]*\bslide\b', tag):
+            continue
+        sid = re.search(r'\bdata-script="(\w+)"', tag)
+        v = re.search(r'\bdata-varied="([^"|]+)\|([^"|]+)\|(\w+)"', tag)
+        if sid and v:
+            out.append((k, (sid.group(1),) + v.groups()))
+        k += 1
+    return out
+
+
+def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None):
+    """-> ([log lines], {sid: (shape, ground)} measured out). audit(deck path, size, [slide index]) -> (result, error):
+    run_audits.measure by default (the test passes its own)"""
+    import workspace
+    import content_script as cs
+    import compile_module as cm
+    if MEASURE not in sys.path:
+        sys.path.insert(0, MEASURE)
+    import run_audits as ra
+    from pathlib import Path
+    mid_ = cs.mid(module)
+    work = workspace.claude_path(course)
+    p = cs.paths(course, module)
+    script, build = cs.load(p["script"]), cs.load(os.path.join(p["dir"], mid_ + ".build.json"))
+    figdir = os.path.join(os.path.dirname(p["dir"]), "figures", mid_)
+    last = cm.load_layouts(work, mid_)
+    lines, out, seen = [], {}, set()
+    if audit is None:
+        exe, offset = ra.browser(), []
+        if not exe:
+            return ["no Chrome or Edge - not checked (the audit at the end judges every slide)"], {}
+
+        def audit(deck, size, only):
+            if not offset:
+                offset.append(ra.frame_offset(exe))
+            return ra.measure(exe, Path(deck), size, 240000, offset[0], only)     # run_audits.py's own budget
+    for rnd in range(LAYOUT_ROUNDS + 1):
+        deck, _, _ = cm.compile_deck(script, build, mdir, figdir, "CACHE", True, cm.load_layout_avoid(work, mid_), last, {})
+        todo = varied_new(deck, last, seen)
+        if not todo:
+            break
+        page = os.path.join(mdir, "presentation", "_layout_precheck_%d.html" % os.getpid())
+        io.open(page, "w", encoding="utf-8", newline="\n").write(deck)
+        try:
+            import concurrent.futures as cf
+            with cf.ThreadPoolExecutor(max_workers=len(sizes)) as ex:
+                got = list(ex.map(lambda s: audit(page, s, sorted(todo.values())), sizes))
+        finally:
+            try:
+                os.remove(page)
+            except OSError:
+                pass
+        text = []
+        for res, err in got:
+            if res is None:
+                lines.append("not measured (%s) - the audit at the end judges every slide" % err)
+                return lines, out
+            for name, _, _ in ra.PROBES:
+                text += ra.summarise(name, res.get(name) or {"ABORTED": "no result"})[2]
+        mis = {k: v for k, v in moved_misfits(deck, "\n".join(text)).items() if k in todo}
+        seen |= {(sid, shape, ground) for _, (sid, shape, ground, _) in varied_slides(deck) if sid in todo}
+        lines.append("round %d: %d slide(s) built another way checked (%s)%s" % (
+            rnd + 1, len(todo), ", ".join(sorted(todo)), "; did not fit: " + ", ".join(
+                "%s (%s, %s ground)" % (k, v[0], v[1]) for k, v in sorted(mis.items())) if mis else " - every one fits"))
+        if not mis:
+            break
+        measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
+        out.update({k: v[:2] for k, v in mis.items()})
+    return lines, out
+
+
 def reviewed_dir(out_dir):
     """review\\MNN_reviewed - the manifests of the sheets someone last looked at (--reviewed): what "changed" is judged
     against. Missing: every screen is new to the reviewer"""
@@ -399,7 +496,7 @@ def short_figures(lines, figrel):
         for k, v in kinds.items():
             out.append("    %s - e.g. %s - fix: %s" % (k, v[0][:90], FIG_HINT.get(k, "see the full log")))
         out.extend(extra)
-        out.append("    try it: course-visuals\\kit\\scripts\\studio.py %s --step all" % os.path.join(figrel, name))
+        out.append("    try it: course-visuals\\kit\\scripts\\studio.py %s --quick (then one --step all to look)" % os.path.join(figrel, name))
     for line in lines:
         m = FIG_HEAD.match(line)
         if m:
@@ -553,6 +650,23 @@ def main(argv=None):
         stages.append((title, time.time() - since))
         return time.time()
 
+    # 2.66.5 - the slides built another way for L62 are audited before anything is built (layout_precheck); its seconds
+    # are a stage of their own, the figures' clock starts after it
+    t_fig = t0
+    if o.layout_round == 0 and not o.draft and str(o.module).isdigit() and os.path.isdir(os.path.join(mdir, "presentation")) \
+            and (os.environ.get("CF_LAYOUT_PRECHECK") or "").lower() not in ("off", "0", "no"):
+        try:
+            pre_lines, pre_out = layout_precheck(course, o.module, mdir, logdir, m,
+                                                 [(1280, 800), (1024, 768)] + [tuple(int(x) for x in v.split("x")) for v in o.viewport
+                                                                              if v not in ("1280x800", "1024x768")])
+        except Exception as err:                     # noqa: BLE001 - the audit at the end still judges every slide
+            pre_lines, pre_out = ["could not run (%s) - the audit at the end judges every slide" % err], {}
+        logged("layout pre-check (L62)", "\n".join(pre_lines) or "no slide built another way that the last build did not build so")
+        t_fig = timed("layout pre-check (L62)", t0)
+        if pre_out:
+            notes.append("LAYOUT (pre-check) - %d slide(s) built another way so no two neighbours look alike (L62) did not "
+                         "fit and are built their next way: %s (kept in %s_layout_avoid.json while their words are unchanged)"
+                         % (len(pre_out), ", ".join("%s (%s, %s ground)" % (k, v[0], v[1]) for k, v in sorted(pre_out.items())), m))
     # 2.63.3 - a module's first build (never built here: no _last.json) measures every figure and tries every fix: one at a
     # time on the computer, the others wait their turn (a queue, 2.65.0) - held through the figures and the compile
     cold = contextlib.ExitStack()
@@ -585,7 +699,7 @@ def main(argv=None):
             say += body if o.full_output else short_figures(body, workspace_figdir(course, o.module))
         if fcode:
             fails.append("figures")
-    t = timed("figures (figure_fit.py)", t0)
+    t = timed("figures (figure_fit.py)", t_fig)
     key = inputs_key(course, o.module)
     last = last_full(logdir, m)
     if figures_only_round(fails, o.full, last, key):

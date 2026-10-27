@@ -32,7 +32,7 @@ const agent = async (prompt, o) => {
   opts[o.label] = { model: o.model || null, effort: o.effort || null }
   prompts[o.label] = prompt
   if (o.label.startsWith('gate:')) return { open: true, output: 'open', approved: args._approved || ['1', '2'], order: args._order || [] }
-  if (/^3d:/.test(o.label)) return (args._scene || []).indexOf(o.label.slice(3)) >= 0
+  if (/^3d:/.test(o.label)) return (args._scene || []).indexOf(o.label.slice(3).split('+')[0]) >= 0
     ? { has_scene: true, ok: true, shots: ['C:/c/r/s05_step1.png'], scenes: [{ slide: 's05', spec: 's05.kit3d.json' }] }
     : { has_scene: false, ok: true, shots: [] }
   if (/^fix3d:/.test(o.label)) return { has_scene: true, ok: true, shots: ['C:/c/r/s05_step1.png'] }
@@ -205,15 +205,17 @@ def main():
                         "factory": "C:/f/skills"})
         lf, pf = fig.get("labels", []), fig.get("prompts", {})
         check("2.66.0 the FIGURE step: every module with kit figures is photographed at projector size (figure_review.py) "
-              "and judged by a separate reviewer, before QA",
-              "figshots:1" in lf and "reviewfig:1" in lf and "reviewfig:2" in lf and lf.index("reviewfig:1") < lf.index("qa:1")
+              "and judged by a separate reviewer - 2.66.5: at the same time as QA (QA starts before the figure review ends)",
+              "figshots:1" in lf and "reviewfig:1" in lf and "reviewfig:2" in lf and lf.index("qa:1") < lf.index("reviewfig:1")
               and "figure_review.py" in pf.get("figshots:1", "") and "1920 x 1080" in pf.get("reviewfig:1", "")
               and "seafarer" in pf.get("reviewfig:1", ""), lf)
         check("... its BROKEN findings (not POLISH) go back to the builder ONCE - start from a pattern, place by relations - "
               "then only those figures are photographed and judged again; a clean module sends nothing back",
-              lf.count("fixfig:1") == 1 and "inside the hull" in pf.get("fixfig:1", "") and "could sit closer" not in pf.get("fixfig:1", "")
-              and "Relations" in pf.get("fixfig:1", "") and "patterns" in pf.get("fixfig:1", "")
-              and "--only s03" in pf.get("figshots:1+fix", "") and "reviewfig:1+fix" in lf and "fixfig:2" not in lf, lf)
+              lf.count("fix:1") == 1 and "inside the hull" in pf.get("fix:1", "") and "could sit closer" not in pf.get("fix:1", "")
+              and "Relations" in pf.get("fix:1", "") and "patterns" in pf.get("fix:1", "") and "fixfig:1" not in lf
+              and lf.index("fix:1") > max(lf.index("reviewfig:1"), lf.index("qa:1"))
+              and "--only s03" in pf.get("figshots:1+fix", "") and "reviewfig:1+fix" in lf and "fix:2" not in lf
+              and "qa:1+fix" not in lf, lf)
         b1f = pf.get("build:1", "")
         with open(os.path.join(HERE, "..", "..", "compile", "BUILDER_CARD.md"), encoding="utf-8") as f:
             card = f.read()
@@ -228,9 +230,9 @@ def main():
         check("2.66.0 NOTHING LOOPS: a figure still BROKEN after the one fix round goes on the operator's list (for_aleksis), "
               "never a second fixfig, and the module is not failed for it; the reviewer gets BLOCK / NOTE / waived and the "
               "fix round may accept a finding with a reason (meaning_ok)",
-              ls.count("fixfig:1") == 1 and q1 and any("FIGURE s03" in x for x in q1[0].get("for_aleksis", []))
+              ls.count("fix:1") == 1 and q1 and any("FIGURE s03" in x for x in q1[0].get("for_aleksis", []))
               and not q1[0].get("blocking") and '"block"' in pf.get("reviewfig:1", "") and '"note"' in pf.get("reviewfig:1", "")
-              and '"waived"' in pf.get("reviewfig:1", "") and "meaning_ok" in pf.get("fixfig:1", ""), q1)
+              and '"waived"' in pf.get("reviewfig:1", "") and "meaning_ok" in pf.get("fix:1", ""), q1)
         six = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_broken": ["1"]})
         l6, p6 = six.get("labels", []), six.get("prompts", {})
         check("2.63.3 a BROKEN QA finding sends the module back for ONE fix round, then QA once more - never a third",
@@ -243,12 +245,15 @@ def main():
               "measurement: a fix round changed s05's kind and M02 stopped compiling)",
               "a Your turn activity" not in p6.get("fix:1", "") and "NEVER edit working_claude/script/M01.json" in p6.get("fix:1", "")
               and "Never run content_script.py approve" in p6.get("fix:1", ""), p6.get("fix:1", "")[-900:])
-        cap = [pf.get("fixfig:1", ""), p6.get("fix:1", "")]
+        cap = [pf.get("fix:1", ""), p6.get("fix:1", "")]
         check("2.66.0 a fix round (figure and QA) gets AT MOST TWO builds, tries each figure in the studio first, and stops "
               "after the second whatever it prints (the second proof run: three figure fixers, 58-102 min and $50, "
               "rebuilding \"until module clean\")",
               all("AT MOST TWO build_module.py runs" in p and "studio.py" in p and "never a third build" in p
                   and "until module clean" not in p for p in cap), [p[-700:] for p in cap])
+        check("2.66.5 ... and AT MOST SIX studio runs a figure, iterating with --quick (findings, no pictures) and one look "
+              "with --step all (run 2's M03 fixer: 59 studio-script runs, 58 min, on one drawing)",
+              all("AT MOST SIX studio runs" in p and "--quick" in p and "--step all" in p for p in cap), [p[-900:] for p in cap])
         seven =run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_scriptonly": ["1"]})
         check("... a QA whose only BROKEN finding is the approved script's sends nothing back (reported, blocking)",
               not any(x.startswith("fix:") for x in seven.get("labels", [])) and "1" in seven.get("r", {}).get("blocking", []),
@@ -286,13 +291,31 @@ def main():
         l9, p9, r9 = nine.get("labels", []), nine.get("prompts", {}), nine.get("r", {})
         check("2.65.0 every built module gets the 3D step; one with no 3D-kit scene goes straight to QA",
               all("3d:%d" % k in l9 for k in (1, 2, 3)) and "review3d:2" not in l9 and l9.index("qa:2") > l9.index("3d:2"), l9)
-        check("... a scene is checked by the script and judged by a SEPARATE reviewer, before QA",
-              "review3d:1" in l9 and l9.index("review3d:1") > l9.index("3d:1") and l9.index("qa:1") > l9.index("review3d:1")
+        check("... a scene is checked by the script and judged by a SEPARATE reviewer - 2.66.5: at the same time as QA",
+              "review3d:1" in l9 and l9.index("review3d:1") > l9.index("3d:1") and l9.index("qa:1") < l9.index("review3d:1")
               and "scene3d_check.py" in p9.get("3d:1", "") and "You did NOT build this 3D scene" in p9.get("review3d:1", "")
               and "C:/c/r/s05_step1.png" in p9.get("review3d:1", ""), l9)
-        check("... a BROKEN 3D finding: ONE fix round with exactly those findings, then the reviewer once more - never a third",
-              "fix3d:3" in l9 and "review3d:3+fix" in l9 and l9.count("fix3d:3") == 1 and "fix3d:1" not in l9
-              and "a row of buttons" in p9.get("fix3d:3", ""), l9)
+        check("... a BROKEN 3D finding: ONE fix round with exactly those findings, then the check and the reviewer once more "
+              "(the check only reports) - never a third",
+              "fix:3" in l9 and "3d:3+fix" in l9 and "review3d:3+fix" in l9 and l9.count("fix:3") == 1 and "fix:1" not in l9
+              and "fix3d:3" not in l9 and "a row of buttons" in p9.get("fix:3", "") and "scene3d_check.py" in p9.get("fix:3", "")
+              and "do not change anything" in p9.get("3d:3+fix", "")
+              and l9.index("3d:3+fix") > l9.index("fix:3") and l9.index("review3d:3+fix") > l9.index("3d:3+fix"), l9)
+        allx = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods3, "_approved": ["1", "2", "3"],
+                         "factory": "C:/f/skills", "_scene": ["1"], "_bad3d": ["1"], "_figs": ["1"], "_badfig": ["1"], "_broken": ["1"]})
+        la, pa = allx.get("labels", []), allx.get("prompts", {})
+        judges = ("3d:1", "figshots:1", "qa:1")
+        check("2.66.5 the 3D check, the figure photographs and QA start together after the build - none waits for another's "
+              "review (2.66.3 M01: 13 min of reviews one after the other before the first fixer)",
+              all(j in la for j in judges) and max(la.index(j) for j in judges) < min(la.index("review3d:1"), la.index("reviewfig:1"))
+              and min(la.index(j) for j in judges) > la.index("build:1"), la)
+        check("... ONE fixer gets the BROKEN findings of all three (3D, figures, QA) - no fix3d / fixfig agents - then only "
+              "what was BROKEN is judged again, again together",
+              la.count("fix:1") == 1 and not any(x.startswith(("fix3d:", "fixfig:")) for x in la)
+              and all(w in pa.get("fix:1", "") for w in ("a row of buttons", "inside the hull", "an oxygen monitor"))
+              and "(3D) (FIGURES) (QA)" in pa.get("fix:1", "")
+              and all(la.index(x) > la.index("fix:1") for x in ("3d:1+fix", "figshots:1+fix", "qa:1+fix"))
+              and la.count("qa:1+fix") == 1 and "fix:2" not in la, la)
         check("... a BROKEN 3D finding still there after the fix blocks the module",
               "3" in r9.get("blocking", []) and "1" not in r9.get("blocking", []), r9.get("blocking"))
         check("args.factory pins the skills every agent reads, args.notes reaches every module agent",

@@ -39,6 +39,10 @@
  * 2.66.0 - then the FIGURE step: every kit figure photographed at projector size at every step (figure_review.py), judged
  * by a reviewer who did not build it against the slide's words and the figure's must-be-true list; BROKEN goes back once.
  *
+ * 2.66.5 - the 3D step, the FIGURE step and QA judge the built module AT THE SAME TIME, and ONE fix round (two builds, at
+ * most six studio runs a figure) takes every BROKEN finding of the three; then only what was BROKEN is judged again
+ * (Desktop\IGF_course_2.66_figures\SPEED_ANALYSIS.md: up to three fixers one after the other on one module before).
+ *
  * Models (2.51.0, the M01 benchmark: the mechanical loop was most of the bill): the reader and the script writer
  * keep the session's model - that is where the words come from. Building an approved script (build_module.py
  * until PASS, the review, the fixes) and QA run on Sonnet at medium effort; the gate, one command, at low.
@@ -274,7 +278,8 @@ ${brief(m)}
     STOP AT MODULE CLEAN: PASS, or "FAIL M${two(m)} - course package" with "MODULE CLEAN" under it.
         Do NOT review the sheets yourself and do not polish: the QA agent behind you does the ONE visual review, and a
         BROKEN finding comes back for one fix round. Anything you would polish: list it in your report.
-    a figure problem the build PRINTED: fix that figure in the studio (studio.py <spec> --step all, seconds), then one build.
+    a figure problem the build PRINTED: fix that figure in the studio (studio.py <spec> --quick, seconds; one --step all
+        to look when it is clean), then one build.
 
 RUN build_module.py IN THE FOREGROUND with the shell call's longest timeout (600000 ms). "STILL BUILDING": run the SAME
 command with --wait until it prints the build's answer - never a second build meanwhile, never an edit while it runs, never
@@ -360,21 +365,46 @@ a "Your turn" activity's minutes as practice in a theory-only module) is the ope
    rebuilding after every word they moved to fit a 480 px column - "build until module clean" had no end. A fix round
    gets TWO builds; what the second still prints is the operator's list (NOTHING LOOPS, approved by Aleksis) */
 const FIX_CAP = `AT MOST TWO build_module.py runs in this round. Try every figure you change in the studio first -
-python ${A.factory ? `${A.factory}/course-visuals/kit/scripts` : '<the course-visuals skill folder>/kit/scripts'}/studio.py <spec> --step all
-(seconds; a closer fit the build applied is already in the spec) - until its own report is clean, THEN one build. After
-the second build STOP, whatever it prints: list what it still prints in your report (it goes to the operator's list) -
-never a third build, never another round of fitting words.`
-const fixRound = (m, q) => `${build(m)}
+python ${A.factory ? `${A.factory}/course-visuals/kit/scripts` : '<the course-visuals skill folder>/kit/scripts'}/studio.py <spec> --quick
+(its findings in seconds, no pictures; a closer fit the build applied is already in the spec) until its own report is
+clean, then ONE look at it with --step all, THEN one build. AT MOST SIX studio runs for any one figure (2.66.5 - the
+second proof run's M03 fixer ran its studio script 59 times, 58 min, on one drawing): a figure still not clean after
+its sixth is left as it is and listed in your report. After the second build STOP, whatever it prints: list what it
+still prints in your report (it goes to the operator's list) - never a third build, never another round of fitting words.`
+/* 2.66.5 - ONE fix round per module for everything its judges found (SPEED_ANALYSIS.md, Desktop\IGF_course_2.66_figures):
+   the 3D review, the FIGURE review and QA judge the built module at the same time (oneModule) and ONE fixer gets every
+   BROKEN finding - before, up to three fixers ran one after the other on the same module (3D, figures, QA), each
+   re-reading the card, the specs and the sheets, each with its own builds (the 2.66.3 run: 13 min of reviews before
+   M01's first fixer; run 2: figure fixers 58-102 min) */
+const fixAll = (m, b3, bf, bq) => `${build(m)}
 
-THIS MODULE IS BUILT AND WAS CHECKED BY QA. Do NOT start again from --init-build. Fix EXACTLY these BROKEN
-findings - nothing else (no polish, no other screen) - in the build sheet or the figure specs, then build and STOP.
+THIS MODULE IS BUILT AND WAS JUDGED by reviewers who did not build it${[b3.length && ' (3D)', bf.length && ' (FIGURES)',
+  bq.length && ' (QA)'].filter(Boolean).join('')}. Do NOT start again from --init-build. Fix EXACTLY the BROKEN findings
+below - nothing else (no polish, no other screen) - in the build sheet, the figure specs or the 3D scene specs, then
+build and STOP.
 ${FIX_CAP}
 NEVER edit working_claude/script/M${two(m)}.json - not a word, not a "kind", not a minute: ANY change to the approved
 script un-approves it and the module no longer builds (2.63.3 measurement: a fix round changed s05's "kind" to move
 5 minutes, and M02 stopped compiling). Never run content_script.py approve / apply. A finding whose fix is in the script
-is the operator's: leave it, and say so in your report. The findings:
+is the operator's: leave it, and say so in your report.${bf.length ? `
 
-${fixable(q).map((f) => `  - ${f.where}: ${f.what}`).join('\n')}`
+FIGURE findings (judged at projector size; the figure specs are in working_claude/figures/M${two(m)}/). Where a pattern
+fits the figure, start from it (course-visuals/kit/patterns/, SPEC.md "Patterns": ship_ga, bunkering_line, vent_system,
+fuel_supply, engine_modes, fuel_types, fuel_space_access) and place every part by what it stands on or joins - "on",
+"in", "at", "from"/"to" (SPEC.md "Relations") - never by guessed raw coordinates. A finding you are sure is RIGHT on
+purpose (the pipe runs on to the shore, the words name what the slide says): leave the drawing and say why in the spec's
+"meaning_ok": {"<KIND> <part id>": "<why it is right>"} - the next reviewer reads it:
+
+${bf.map((f) => `  - ${f.slide}: ${f.what}`).join('\n')}` : ''}${b3.length ? `
+
+3D findings (fix them in the scene's spec, sNN.kit3d.json, or the module's assets/kit3d_parts.js - course-visuals/kit3d/
+SPEC.md, PARTS.md; after your build run python ${KIT3D_SCRIPTS}/scene3d_check.py "${A.course}" --module ${m.id} once):
+
+${b3.map((f) => `  - ${f.where}: ${f.what}`).join('\n')}` : ''}${bq.length ? `
+
+QA findings:
+
+${bq.map((f) => `  - ${f.where}: ${f.what}`).join('\n')}` : ''}`
 
 const QA_SCHEMA = {
   type: 'object',
@@ -398,7 +428,6 @@ const QA_SCHEMA = {
 }
 /* a BROKEN finding the builder can fix - not one that needs the approved script changed (owner: "SCRIPT" in its where) */
 const fixable = (q) => ((q && q.findings) || []).filter((f) => f.severity === 'BROKEN' && !/^\s*SCRIPT\b/i.test(f.where || ''))
-const broken = (q) => fixable(q).length > 0
 
 /* Module 3 is verified while Module 7 is still being written. No wasted wall-clock.
    An approved module is built and checked on Sonnet; a draft gets its script written on the session's model and
@@ -479,22 +508,14 @@ and the step lines) and the spec's labels and step titles. Then judge each pictu
   5 nothing contradicts the words (a part, a number, a direction).
 A failure of 1-5 that a trainee would misread or not see is BROKEN; worse than it could be is POLISH. "where" = the
 slide id and the picture's file name.`
-const fix3d = (m, s, r) => `${scene3d(m, false)}
-
-THEN fix exactly these BROKEN findings of the 3D review (a reviewer who did not build it) in the scene's spec - nothing else -
-rebuild with build_module.py (as above) to module clean, and run scene3d_check.py once more:
-
-${(r.findings || []).filter((f) => f.severity === 'BROKEN').map((f) => `  - ${f.where}: ${f.what}`).join('\n')}`
-async function threeD(m) {
-  const s = await agent(scene3d(m, false), { label: `3d:${m.id}`, phase: 'Build', schema: SCENE_SCHEMA, ...MECHANICAL })
+const broken3d = (d) => ((d && d.review && d.review.findings) || []).filter((f) => f.severity === 'BROKEN')
+/* the 3D check (a script; it fixes only what the check itself prints) and its reviewer; tag '+fix': after the fix round */
+async function threeD(m, tag) {
+  const s = await agent(scene3d(m, !!tag), { label: `3d:${m.id}${tag || ''}`, phase: 'Build', schema: SCENE_SCHEMA, ...MECHANICAL })
   if (!s || !s.has_scene) return null
-  const r = (s.shots || []).length ? await agent(review3d(m, s), { label: `review3d:${m.id}`, phase: 'Verify', schema: REVIEW3D_SCHEMA, ...MECHANICAL }) : null
-  if (!r || !(r.findings || []).some((f) => f.severity === 'BROKEN')) return { check: s, review: r }
-  log(`module ${m.id}: the 3D review found BROKEN - one fix round`)
-  const s2 = await agent(fix3d(m, s, r), { label: `fix3d:${m.id}`, phase: 'Build', schema: SCENE_SCHEMA, ...MECHANICAL })
-  const r2 = s2 && (s2.shots || []).length
-    ? await agent(review3d(m, s2), { label: `review3d:${m.id}+fix`, phase: 'Verify', schema: REVIEW3D_SCHEMA, ...MECHANICAL }) : null
-  return { check: s2 || s, review: r2 || r, first_review: r.findings }
+  const r = (s.shots || []).length
+    ? await agent(review3d(m, s), { label: `review3d:${m.id}${tag || ''}`, phase: 'Verify', schema: REVIEW3D_SCHEMA, ...MECHANICAL }) : null
+  return { check: s, review: r }
 }
 
 /* ------------------------------------------------- 2.66.0 · THE FIGURE STEP (a module with kit figures) */
@@ -563,59 +584,50 @@ Then its findings:
 "slide" = the slide id as written in the manifest. Be concrete: the step, the part, where - a builder fixes from it.`
 const brokenFigs = (r) => ((r && r.figures) || []).flatMap((f) => (f.findings || [])
   .filter((x) => x.severity === 'BROKEN').map((x) => ({ slide: f.slide, what: x.what })))
-const fixFig = (m, bad) => `${build(m)}
-
-THIS MODULE IS BUILT. A reviewer who did not build it judged its figures at projector size. Fix EXACTLY these BROKEN
-findings in the figure specs (working_claude/figures/M${two(m)}/) - nothing else. Where a pattern fits the figure, start
-from it (course-visuals/kit/patterns/, SPEC.md "Patterns": ship_ga, bunkering_line, vent_system, fuel_supply,
-engine_modes, fuel_types, fuel_space_access) and place every part by what it stands on or joins - "on", "in", "at",
-"from"/"to" (SPEC.md "Relations") - never by guessed raw coordinates. A finding you are sure is RIGHT on purpose (the pipe
-runs on to the shore, the words name what the slide says): leave the drawing and say why in the spec's "meaning_ok":
-{"<KIND> <part id>": "<why it is right>"} - the next reviewer reads it. Then build and STOP.
-${FIX_CAP}
-NEVER edit working_claude/script/M${two(m)}.json. The findings:
-
-${bad.map((f) => `  - ${f.slide}: ${f.what}`).join('\n')}`
-async function figures(m) {
-  const s = await agent(figShots(m), { label: `figshots:${m.id}`, phase: 'Build', schema: FIGSHOT_SCHEMA, ...MECHANICAL })
+/* the figures photographed at projector size and judged; only = the slides to photograph again after the fix round */
+async function figures(m, only) {
+  const tag = only ? '+fix' : ''
+  const s = await agent(figShots(m, only), { label: `figshots:${m.id}${tag}`, phase: 'Build', schema: FIGSHOT_SCHEMA, ...MECHANICAL })
   if (!s || !s.has_figures || !s.manifest) return null
-  const r = await agent(reviewFig(m, s), { label: `reviewfig:${m.id}`, phase: 'Verify', schema: REVIEWFIG_SCHEMA, ...MECHANICAL })
-  const bad = brokenFigs(r)
-  if (!bad.length) return { review: r }
-  log(`module ${m.id}: the figure review found ${bad.length} BROKEN - one fix round`)
-  await agent(fixFig(m, bad), { label: `fixfig:${m.id}`, phase: 'Build', ...MECHANICAL })
-  const only = [...new Set(bad.map((f) => f.slide))].join(',')
-  const s2 = await agent(figShots(m, only), { label: `figshots:${m.id}+fix`, phase: 'Build', schema: FIGSHOT_SCHEMA, ...MECHANICAL })
-  const r2 = s2 && s2.has_figures && s2.manifest
-    ? await agent(reviewFig(m, s2), { label: `reviewfig:${m.id}+fix`, phase: 'Verify', schema: REVIEWFIG_SCHEMA, ...MECHANICAL }) : null
-  /* NOTHING LOOPS (2.66.0, approved by Aleksis): what is still BROKEN after the one fix round goes to the operator's list,
-     never back to a builder and never failing the module again */
-  return { review: r2 || r, first_review: (r && r.figures) || [], for_aleksis: brokenFigs(r2 || r) }
+  const r = await agent(reviewFig(m, s), { label: `reviewfig:${m.id}${tag}`, phase: 'Verify', schema: REVIEWFIG_SCHEMA, ...MECHANICAL })
+  return { review: r }
 }
 
-/* one module, start to finish: built (or its script written), the 3D step, the figure step, QA, one fix round */
+/* one module, start to finish: built (or its script written); then its judges AT THE SAME TIME - the 3D step, the figure
+   step and QA judge the same built module and none changes it (2.66.5); ONE fix round for all their BROKEN findings; then
+   only what was BROKEN is judged again, again at the same time. Never a second fix round (NOTHING LOOPS, 2.66.0): what is
+   still BROKEN goes on the operator's list - a 3D finding still blocks the module, as before */
 async function oneModule(m) {
   if (!APPROVED.has(String(m.id))) {
     await agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' })
     return { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] }
   }
   await buildUntilPass(m)
-  const d3 = await threeD(m)
-  const fg = await figures(m)
-  const q = await agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
-  /* 2.63.3 - BROKEN: one fix round, then QA once more (its sheets show only the screens the fix changed); never a third */
-  let out = q
-  if (broken(q)) {
-    log(`module ${m.id}: QA found BROKEN - one fix round`)
-    await agent(fixRound(m, q), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL })
-    const q2 = await agent(qa(m), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
-    out = q2 ? Object.assign({}, q2, { first_qa: q.findings,       /* never a third round: what is left is the operator's list */
+  const [d3a, fga, q] = await Promise.all([threeD(m), figures(m),
+    agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })])
+  const b3 = broken3d(d3a), bf = brokenFigs(fga && fga.review), bq = fixable(q)
+  let d3 = d3a, fg = fga, out = q
+  if (b3.length || bf.length || bq.length) {
+    log(`module ${m.id}: BROKEN - 3D ${b3.length}, figures ${bf.length}, QA ${bq.length} - one fix round`)
+    await agent(fixAll(m, b3, bf, bq), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL })
+    const [d3b, fgb, q2] = await Promise.all([
+      b3.length ? threeD(m, '+fix') : null,
+      bf.length ? figures(m, [...new Set(bf.map((f) => f.slide))].join(',')) : null,
+      bq.length ? agent(qa(m), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL }) : null])
+    if (b3.length) d3 = { check: (d3b && d3b.check) || d3a.check, review: (d3b && d3b.review) || d3a.review, first_review: d3a.review.findings }
+    /* NOTHING LOOPS (2.66.0, approved by Aleksis): what is still BROKEN after the one fix round goes to the operator's list,
+       never back to a builder and never failing the module again */
+    if (bf.length) {
+      const r = (fgb && fgb.review) || fga.review
+      fg = { review: r, first_review: (fga.review && fga.review.figures) || [], for_aleksis: brokenFigs(r) }
+    }
+    /* 2.63.3 - QA once more after the fix (its sheets show only the screens the fix changed); never a third */
+    if (bq.length) out = q2 ? Object.assign({}, q2, { first_qa: q.findings,
       for_aleksis: fixable(q2).map((f) => `QA ${f.where}: ${f.what}`) }) : q
   }
   if (out && d3) {
-    const b3 = ((d3.review && d3.review.findings) || []).filter((f) => f.severity === 'BROKEN')
     out = Object.assign({}, out, { three_d: d3 },
-      b3.length || (d3.check && !d3.check.ok) ? { blocking: true } : {})
+      broken3d(d3).length || (d3.check && !d3.check.ok) ? { blocking: true } : {})
   }
   if (out && fg) {                                   /* the figures' left-overs are the operator's list, not a module failure */
     const left = (fg.for_aleksis || []).map((f) => `FIGURE ${f.slide}: ${f.what}`)

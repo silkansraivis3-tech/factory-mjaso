@@ -78,6 +78,7 @@ def main():
     blanks_part()
     stages_part()
     layout_part()
+    precheck_part()
     retry_part()
     review_part()
     long_part()
@@ -190,7 +191,7 @@ def short_part():
           and "Ammonia-33°C" in text and "LNG -162°C" not in text, text)
     check("... the saved closer fit, the parts named and the studio command kept; the long hints and the candidate's list not",
           "a closer fit was saved: C:\\c\\figures\\M02\\_fit\\s02.s02.candidate.kit.json" in text and "T tree x 10 y 50 w 540" in text
-          and "studio.py C:\\c\\figures\\M02\\s02.kit.json --step all" in text and "fix (label):" not in text
+          and "studio.py C:\\c\\figures\\M02\\s02.kit.json --quick (then one --step all to look)" in text and "fix (label):" not in text
           and "LNG: drawn at 11 px" not in text, text)
     check("... a figure fixed by itself, and a task page's line, pass through as they are",
           any(x.startswith("  s05 (s05.kit.json): fixed by itself") for x in s) and any("q05 (q05.kit.json, task page)" in x for x in s), s)
@@ -253,6 +254,63 @@ def layout_part():
     check("... and a slide whose approved words changed starts a new list",
           av["s05"] == {"words": "ffffffffffff", "avoid": [["picture-right", "dark"]]}, av)
     check("one build builds the misfits again at most %d times" % b.LAYOUT_ROUNDS, b.LAYOUT_ROUNDS == 2)
+
+
+def precheck_part():
+    """2.66.5 - the slides built another way for L62 are audited BEFORE the build (layout_precheck): a misfit is measured out
+    in seconds instead of a whole LAYOUT round (the figures, the compile, every check) after the build. Replayed on the 2.66
+    run's IGF M02 (s04 picture-left did not fit): found by the pre-check in 6 s, the same layouts as the round chose"""
+    import io
+    import json
+    import shutil
+    import tempfile
+    import test_compile_module as tcm
+    import content_script as cs
+    tmp = tempfile.mkdtemp(prefix="bm_pre_")
+    try:
+        words = "The tank connection space holds every valve and flange of the fuel tank, so a leak stays inside it.\n" \
+                "• Its ventilation runs all the time.\n• Detectors raise the alarm at 20 % LEL."
+        drawn = [{"id": "d%d" % i, "kind": "slide", "title": "Drawing slide %d" % i, "layout": "split", "visual_kind": "schematic",
+                  "visual": "The space.", "minutes": 2, "text": words} for i in range(1, 7)]
+        c, md = tcm.new_course(tmp, tcm.script(screens=drawn + tcm.SCREENS[-2:]))
+        tcm.build_of(c, lambda bs: bs.__setitem__("screens", {x["id"]: {"figure": "ga.html"} for x in drawn}))
+        logdir = os.path.join(c, "working_claude", "_build")
+        os.makedirs(logdir, exist_ok=True)
+        os.makedirs(os.path.join(md, "presentation"), exist_ok=True)
+        calls = []
+
+        def audit(page, size, only):               # run_audits.measure's answer: the first slide checked does not fit, once
+            deck = io.open(page, encoding="utf-8").read()
+            calls.append((size, list(only), os.path.basename(page)))
+            sids = [sid for k, (sid, _, _, _) in b.varied_slides(deck) if k in only]
+            bad = [] if len(calls) > 2 else [{"slide": only[0] + 1, "id": sids[0], "spill": [{"sel": "div.copy", "px": 31}]}]
+            return {"deck": {"exit": 1 if bad else 0, "res": {"failingSlides": bad, "slidesTotal": 8}},
+                    "collide": {"exit": 0, "res": {}}, "compose": {"exit": 0, "res": {"screens": 8, "problems": []}}}, ""
+        lines, out = b.layout_precheck(c, 1, md, logdir, "M01", [(1280, 800), (1024, 768)], audit)
+        first = calls[0][1] if calls else []
+        check("only the slides built another way are audited (both sizes at once), before anything is built",
+              len(calls) >= 2 and {x[0] for x in calls[:2]} == {(1280, 800), (1024, 768)} and first and len(first) < 8, calls)
+        av = json.load(io.open(os.path.join(logdir, "M01_layout_avoid.json"), encoding="utf-8")) \
+            if os.path.isfile(os.path.join(logdir, "M01_layout_avoid.json")) else {}
+        check("a slide that does not fit is measured out at once (M01_layout_avoid.json, as the end-of-build round writes it)",
+              len(out) == 1 and set(av) == set(out) and [list(v) for v in out.values()] == list(av.values())[0]["avoid"], (out, av))
+        check("... the deck is laid out again and only the slides whose way is new are audited (the misfit built its own way, "
+              "its neighbours' turn to vary: d3, d5 - never d4 / d6 again) - then it stops (they fit)",
+              len(calls) == 4 and calls[2][1] == calls[3][1] and not set(calls[2][1]) & set(first)
+              and "did not fit" in lines[0] and "every one fits" in lines[-1], (calls, lines))
+        check("... the laid-out page is removed", not [f for f in os.listdir(os.path.join(md, "presentation"))
+                                                   if f.startswith("_layout_precheck_")], os.listdir(os.path.join(md, "presentation")))
+        tcm.run(tcm.COMPILE, c, "--module", "1", "--force")     # the build's compile: it writes M01_layouts.json
+        calls.clear()
+        lines2, out2 = b.layout_precheck(c, 1, md, logdir, "M01", [(1280, 800), (1024, 768)], audit)
+        check("the next build audits nothing: every slide is built the way the last build built it (M01_layouts.json)",
+              calls == [] and out2 == {}, (calls, lines2))
+        src = io.open(os.path.join(HERE, "build_module.py"), encoding="utf-8").read()
+        check("build_module.py runs it first (round 0), as a stage of its own, CF_LAYOUT_PRECHECK=off turns it off",
+              'timed("layout pre-check (L62)", t0)' in src and "CF_LAYOUT_PRECHECK" in src
+              and src.index("layout_precheck(course") < src.index("figure_fit.run_all("), "")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def retry_part():

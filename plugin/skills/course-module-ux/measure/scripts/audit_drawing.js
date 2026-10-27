@@ -418,8 +418,8 @@
   /* a figure-kit body's light and shade or its section hatching (2.52.0, kit.js body(): class kit-sh) is a second copy of
      the body's own shape - judged once, as the body; a bolt sits on a body that is judged */
   function kitCopy(el) { return el.classList && (el.classList.contains("kit-sh") || el.classList.contains("kit-m-bolt")); }
-  function painted(svg) {
-    return qa(svg, PARTS).filter(function (el) {
+  function painted(svg, sel) {
+    return qa(svg, sel || PARTS).filter(function (el) {
       return !kitCopy(el) && !inHiddenRoot(el, svg) && laidOut(el) && (fills(el) || strokes(el));
     }).map(function (el) {
       var pts;
@@ -428,7 +428,25 @@
     }).filter(function (it) { return it.pts.length && (it.b.w >= CONFIG.minPartPx || it.b.h >= CONFIG.minPartPx); });
   }
 
-  function checkSvg(svg, where, out, stop) {
+  /* ---- 6 SMALL TEXT ---- no word of a kit figure under CONFIG.minTextPx as it is shown (2.48.0) */
+  function smallText(svg, where, items, out) {
+    if (!(svg.classList && svg.classList.contains("kit"))) { return; }
+    /* 2.63.3 - a deck figure's floor is its --kit-floor (16 px on a slide, kit.css), the kit's own */
+    var floor = Math.max(CONFIG.minTextPx, parseFloat(getComputedStyle(svg).getPropertyValue("--kit-floor")) || 0);
+    items.forEach(function (T) {
+      if (T.t !== "text" || !(T.el.textContent || "").trim()) { return; }
+      var m = T.el.getScreenCTM(), px = parseFloat(getComputedStyle(T.el).fontSize) * (m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : 1);
+      if (px < floor - 0.05) {
+        report(out, { check: "small text", where: where, part: label(T.el), other: "",
+                      detail: "drawn at " + (Math.round(px * 10) / 10) + " px - the floor is " + floor + " px (the kit sets " +
+                              "its own type classes larger by itself; a size set in a course part's css does not grow)" }, [T.el]);
+      }
+    });
+  }
+
+  /* only = "small text" (2.66.5): that check alone, on the words as the full audit finds them - the figure fit's second
+     size (1024 x 768) keeps nothing else, and the full audit was 60 % of a studio probe (SPEED_ANALYSIS.md, the V8 profile) */
+  function checkSvg(svg, where, out, stop, only) {
     if (svg.hasAttribute("data-audit-ignore") || svg.ownerSVGElement) { return; }
     var r = svg.getBoundingClientRect();
     if (r.width < 4 || r.height < 4) { return; }
@@ -438,6 +456,20 @@
     settle(svg);
     var copies = expandUses(svg);
     var moving = endless(svg), held = moving.map(function (a) { return { a: a, t: a.currentTime, run: a.playState === "running" }; });
+    if (only === "small text") {
+      try {
+        if (moving.length) { holdAt(moving, 0); }      /* the words as the full audit judges them: the motion at its start */
+        smallText(svg, where, painted(svg, "text").filter(function (it) { return shown(it.el, svg); }), out);
+      } finally {
+        var live0 = document.getAnimations ? document.getAnimations() : [];
+        held.forEach(function (h) {
+          if (live0.indexOf(h.a) < 0) { return; }
+          try { h.a.currentTime = h.t; if (h.run) { h.a.play(); } } catch (e) { /* gone with its element */ }
+        });
+        copies.forEach(function (c) { c.parentNode.removeChild(c); });
+      }
+      return;
+    }
     try {
       /* every painted part that is laid out - also one faded out now that a later step of the figure shows
          (a zone ring, a highlight): it must not be cut off when it appears. Checks 1 and 3 judge what shows now. */
@@ -622,20 +654,7 @@
       }
       /* ---- 5 CONTRAST ---- every part of a kit figure can be seen against what is behind it */
       checkContrast(svg, where, items, out);
-      /* ---- 6 SMALL TEXT ---- no word of a kit figure under CONFIG.minTextPx as it is shown (2.48.0) */
-      if (svg.classList && svg.classList.contains("kit")) {
-        /* 2.63.3 - a deck figure's floor is its --kit-floor (16 px on a slide, kit.css), the kit's own */
-        var floor = Math.max(CONFIG.minTextPx, parseFloat(getComputedStyle(svg).getPropertyValue("--kit-floor")) || 0);
-        items.forEach(function (T) {
-          if (T.t !== "text" || !(T.el.textContent || "").trim()) { return; }
-          var m = T.el.getScreenCTM(), px = parseFloat(getComputedStyle(T.el).fontSize) * (m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : 1);
-          if (px < floor - 0.05) {
-            report(out, { check: "small text", where: where, part: label(T.el), other: "",
-                          detail: "drawn at " + (Math.round(px * 10) / 10) + " px - the floor is " + floor + " px (the kit sets " +
-                                  "its own type classes larger by itself; a size set in a course part's css does not grow)" }, [T.el]);
-          }
-        });
-      }
+      smallText(svg, where, items, out);
       /* ---- 7 PHOTO OVER THE DRAWING ---- */
       checkPhotos(svg, where, items, out);
     } finally {
@@ -1163,12 +1182,12 @@
   }
 
   /* figure(svg) - one drawing alone (the figure studio, course-visuals/kit/scripts/studio.py) */
-  function figure(svg, where) {
+  function figure(svg, where, only) {
     var ab = guard();
     if (ab) { return verdict(ab); }
     var out = [];
     svg.__emptyKey = null;
-    checkSvg(svg, where || "figure", out, (svg.closest && svg.closest(CONFIG.slideSel)) || document.body);
+    checkSvg(svg, where || "figure", out, (svg.closest && svg.closest(CONFIG.slideSel)) || document.body, only);
     return verdict({ drawings: 1, findings: out });
   }
 

@@ -498,6 +498,7 @@ def main():
         check("K13 --step all: one contact sheet of every step (rest + 2 steps = 3 panels) in one picture",
               shot.endswith("_all.png") and os.path.isfile(shot) and png_size(shot)[0] >= 1300 and png_size(shot)[1] >= 700, shot)
         floor_parts_part(tmp)
+        small_only_part(tmp)
         probe_cache_part(tmp)
         flammability_part(tmp)
         kit_words_part()
@@ -583,6 +584,28 @@ def floor_parts_part(tmp):
         rep = v.get("report") or {}
         check("%s: drawn below 1:1 (scale %s, words grown %s x) - no number on its axis or its ring" % (name, rep.get("scale"), rep.get("up")),
               r and (rep.get("up") or 0) > 1.3 and not zone, zone[:4] or why)
+
+
+def small_only_part(tmp):
+    """2.66.5 - figure_fit keeps only SMALL TEXT from its 1024 x 768 probe, so that probe runs that check alone (the full
+    drawing audit was 60 % of a probe, SPEED_ANALYSIS.md): the same small-text findings, nothing else measured; and
+    studio.py --quick gives the findings with no picture (a studio run while iterating took 51-129 s in the 2.66.3 run)"""
+    print("\n-- 2.66.5: the small-text-only probe and --quick")
+    p = os.path.join(tmp, "so_track.kit.json")
+    io.open(p, "w", encoding="utf-8").write(json.dumps(FLOOR_PARTS[sorted(FLOOR_PARTS)[0]]))
+    full, _ = studio.run(p, panel="200x130", sizes=((1024, 768),), out=os.path.join(tmp, "so_full"), shots=False)
+    quick, _ = studio.run(p, panel="200x130", sizes=((1024, 768),), out=os.path.join(tmp, "so_quick"), shots=False,
+                          small_only=((1024, 768),))
+    small = lambda r: sorted(x for x in studio.problems(r) if x[2] == "small text") if r else None
+    other = lambda r: sorted({x[2] for x in studio.problems(r)} - {"small text"}) if r else None
+    check("the small-text-only probe finds exactly the full audit's small-text findings (%d here)" % len(small(full) or []),
+          full and quick and small(full) and small(quick) == small(full), (small(full), small(quick)))
+    check("... and measures nothing else: no other check, no part boxes (the full one: %s)" % other(full),
+          other(quick) == [] and not ((quick or {}).get("sizes", {}).get("1024x768") or {}).get("parts"), (other(quick), quick and list(quick["sizes"])))
+    out = os.path.join(tmp, "so_cli")
+    code = studio.main([p, "--panel", "200x130", "--quick", "--out", out])
+    check("studio.py --quick: the findings (exit %s), no screenshot taken" % code,
+          code in (0, 1) and not [f for f in (os.listdir(out) if os.path.isdir(out) else []) if f.endswith(".png")])
 
 
 # 2.63.2 (item 8): IGF M06 s03 and M07 s02 as the 2.63.0 full-course build wrote them - the old form (fuel across 0-100,

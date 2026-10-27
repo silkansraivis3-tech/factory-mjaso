@@ -2,7 +2,7 @@
 """studio.py - the figure studio: one *.kit.json drawn, audited and photographed in seconds, without a module compile.
 
   studio.py <figure.kit.json> [--parts kit_parts.js] [--panel two-col|dark|wide-left|task|WxH]
-            [--sizes 1280x800,1024x768] [--step final|N|all] [--out <folder>] [--json]
+            [--sizes 1280x800,1024x768] [--step final|N|all] [--out <folder>] [--json] [--quick]
 
 WHY (IGF M01-M04, 2026-10-16): the modules took 3, ~10, ~12 and 17 compile runs, nearly all for drawings - a label
 overflowing, a part invisible on the dark panel, empty space, a 12 px label - each found only after a full build and its
@@ -293,7 +293,7 @@ PROBE = r"""
 <script src="%(audit)s"></script>
 <script>
 (function () {
-  var SHOT = %(shot)s;
+  var SHOT = %(shot)s, ONLY = %(only)s;     /* ONLY "small text": that check alone, no part boxes (2.66.5, figure_fit's 1024 x 768) */
   function out(r) { r.virt = Math.round(performance.now()); var p = document.createElement('pre'); p.id = '%(out)s'; p.textContent = JSON.stringify(r); document.body.appendChild(p); }
   function frames(n, cb) { setTimeout(cb, 40 * n); }      // a hidden browser's virtual clock runs timers, not frames
   function run() {
@@ -339,8 +339,8 @@ PROBE = r"""
         if (k > f.steps()) { res.report = f.layout(true); res.parts = boxes; out(res); return; }
         f.go(k, true);
         frames(2, function () {
-          partBoxes();
-          var a = AuditDrawing.figure(svg, 'step ' + k);
+          if (!ONLY) partBoxes();
+          var a = AuditDrawing.figure(svg, 'step ' + k, ONLY);
           var sb2 = svg.getBoundingClientRect(), host = svg.closest('.kit-screen') || svg.parentNode, hb = host.getBoundingClientRect();
           res.states.push({ step: k, findings: (a.findings || []).map(function (x) { return { check: x.check, part: x.part, other: x.other || '', detail: x.detail || '' }; }),
                             aborted: a.ABORTED || '', report: f.report, svg: [Math.round(sb2.width), Math.round(sb2.height)],
@@ -435,10 +435,10 @@ def split_sheet(png, spec, size, ks):
     return out
 
 
-def page_html(spec, ctx, panel, parts_js, shot):
+def page_html(spec, ctx, panel, parts_js, shot, only=None):
     """(html, base folder): the studio page, read from the module's presentation folder (course) or the kit"""
     shot_js = "null" if shot is None else json.dumps(shot)
-    probe = PROBE % {"audit": uri(AUDIT), "out": OUT_ID, "shot": shot_js}
+    probe = PROBE % {"audit": uri(AUDIT), "out": OUT_ID, "shot": shot_js, "only": json.dumps(only)}
     real = None
     if ctx:
         real, mdir, why = real_slide(ctx)
@@ -641,10 +641,12 @@ def window_for(size, exe=None):
 
 
 def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), step="final", out=None, quiet=False,
-        shots=True, spec=None, ctx=None, split=False):
+        shots=True, spec=None, ctx=None, split=False, small_only=()):
     """{size: {"states": [...], "report": {...}, "shot": png}} and a list of problems; None, why when it cannot run.
     2.50.0: shots=False only measures (no screenshot run); spec= draws this spec instead of the file's (a candidate fix,
-    figure_fit.py), on the file's own slide; ctx= the slide context, when the caller already found it"""
+    figure_fit.py), on the file's own slide; ctx= the slide context, when the caller already found it.
+    small_only (2.66.5): the sizes whose probe runs the SMALL TEXT check alone (no other check, no part boxes) - figure_fit
+    keeps nothing else from its second size"""
     exe = find_browser()
     if not exe:
         return None, "no Chrome or Edge on this computer (set CF_BROWSER)"
@@ -682,7 +684,8 @@ def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), ste
                         doc, win = sheet_html(spec, parts, size, split, ks)
                         nts = []
                     else:
-                        doc, nts = page_html(spec, ctx, panel or "two-col", parts, None if mode == "probe" else step)
+                        doc, nts = page_html(spec, ctx, panel or "two-col", parts, None if mode == "probe" else step,
+                                             "small text" if mode == "probe" and tuple(size) in tuple(map(tuple, small_only)) else None)
                     notes += nts
                     f = os.path.join(tmp, "%s_%dx%d_%d.html" % (mode, size[0], size[1], pi))
                     io.open(f, "w", encoding="utf-8").write(doc)
@@ -810,13 +813,17 @@ def main(argv=None):
     ap.add_argument("--out", help="where the screenshots go (default: _studio next to the spec)")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--inset-over", help="x,y,w: a stand-in photo laid over the drawing in its own units (the deck's \"inset over\"); not with --step all")
+    # 2.66.5 - the findings only: every step measured at every size, no picture (SPEED_ANALYSIS.md: a studio run while
+    # iterating took 51-129 s in the 2.66.3 run - its pictures are fresh hidden browsers, the measurements kept ones)
+    ap.add_argument("--quick", action="store_true", help="the findings only, in seconds - no screenshot; then one --step all to look")
     o = ap.parse_args(argv)
     if o.inset_over:
         global INSET_OVER
         INSET_OVER = tuple(float(v) for v in o.inset_over.split(","))
     sizes = tuple(tuple(int(v) for v in s.split("x")) for s in o.sizes.split(","))
     t0 = time.time()
-    result, why = run(o.spec, o.parts, o.panel, sizes, o.step if o.step in ("final", "all") else int(o.step), o.out)
+    result, why = run(o.spec, o.parts, o.panel, sizes, o.step if o.step in ("final", "all") else int(o.step), o.out,
+                      shots=not o.quick)
     if not result:
         print("Not run: " + why)
         return 2

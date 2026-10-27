@@ -146,7 +146,8 @@ def measure(spec_path, sid, spec=None, strip=True):
     ctx = ctx_for(spec_path, sid)
     if ctx and not strip:
         ctx = dict(ctx, entry=dict(ctx["entry"], _no_strip=True))
-    res, why = studio.run(spec_path, sizes=((1280, 800), (1024, 768)), shots=False, spec=spec, ctx=ctx)
+    # 2.66.5 - at 1024 x 768 only the words' size is kept (below): that probe runs the small-text check alone
+    res, why = studio.run(spec_path, sizes=((1280, 800), (1024, 768)), shots=False, spec=spec, ctx=ctx, small_only=((1024, 768),))
     if not res:
         return None, {"error": why}
     r = res["sizes"].get(GATE) or {}
@@ -222,8 +223,8 @@ def parts_together(spec_path, block):
             out.append("    the parts named, as the spec has them - change them together: " + " · ".join(rows))
     except (OSError, ValueError):
         pass
-    out.append("    try a fix in seconds, every step at once: course-visuals\\kit\\scripts\\studio.py %s --step all "
-               "(then one build_module.py run)" % os.path.basename(spec_path))
+    out.append("    try a fix in seconds, every step at once: course-visuals\\kit\\scripts\\studio.py %s --quick "
+               "(one --step all to look when it is clean, then one build_module.py run)" % os.path.basename(spec_path))
     return out
 
 

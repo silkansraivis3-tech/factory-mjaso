@@ -148,7 +148,8 @@ def together_part():
         line = out[0] if out else ""
         check("each named part once, in the order named, with its spec numbers; an unnamed part left out",
               "SC scale x 40 y 24 w 90 h 330 · G1 gauge x 500 y 100 r 40" in line and "Z tank" not in line, out)
-        check("... and the studio command for the spec", any("studio.py s02.kit.json --step all" in x for x in out), out)
+        check("... and the studio command for the spec (2.66.5: --quick to iterate, one --step all to look)",
+              any("studio.py s02.kit.json --quick" in x and "--step all" in x for x in out), out)
         check("a block that names no part still gets the studio command",
               ff.parts_together(sp, "    empty - blank 57 %") == [out[-1]], ff.parts_together(sp, "x"))
     finally:
