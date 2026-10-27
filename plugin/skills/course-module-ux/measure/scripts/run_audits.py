@@ -151,6 +151,9 @@ def finding(kind, f):
         return "spills %s by %s px" % (sel, f.get("byPx"))
     if kind == "tap":
         return "small tap target %s %sx%s px" % (sel, f.get("w"), f.get("h"))
+    if kind == "strip":
+        return ("photo cropped to a strip %s: %s %% of its %s shows in a %s frame - give it more height (the words in parts), "
+                "another layout, or a photo of that shape" % (sel, f.get("pct"), f.get("side"), f.get("box")))
     if kind == "svgSmall":
         return "drawing text too small%s %s px on screen" % (quote(f.get("txt")), f.get("effPx", f.get("declaredPx")))
     if kind == "scroll":
@@ -176,7 +179,7 @@ def summarise(name, rec):
     lines = []
     if name == "deck":
         for s in r.get("failingSlides") or []:
-            bits = [finding(k, f) for k in ("low", "small", "spill", "tap", "svgSmall", "scroll", "collide") for f in s.get(k) or []]
+            bits = [finding(k, f) for k in ("low", "small", "spill", "tap", "strip", "svgSmall", "scroll", "collide") for f in s.get(k) or []]
             # a line a stepping figure selects that does not look selected (IGF M05, 2026-10-19)
             bits += ["selected line looks unselected: %s (= %s)" % (m.get("txt") or m.get("sel"), m.get("looksLike"))
                      for m in s.get("mark") or []]
@@ -194,7 +197,9 @@ def summarise(name, rec):
                 bits = (["text on text %s%s / %s%s" % (c.get("a"), quote(c.get("aTxt"), 30), c.get("b"), quote(c.get("bTxt"), 30))
                          for c in s.get("text") or []]
                         + ["box on box %s / %s" % (c.get("a"), c.get("b")) for c in s.get("box") or []]
-                        + ["text under %s: %s%s" % (c.get("under"), c.get("sel"), quote(c.get("txt"), 30)) for c in s.get("chrome") or []])
+                        + ["text under %s: %s%s" % (c.get("under"), c.get("sel"), quote(c.get("txt"), 30)) for c in s.get("chrome") or []]
+                        + ["text cut off %s%s: %s px of it hidden by its box" % (c.get("sel"), quote(c.get("txt"), 30), c.get("px"))
+                           for c in s.get("cut") or []])
                 lines += ["%s: %s" % (where(s), b) for b in bits] or ["%s: collision" % where(s)]
         tail = "%s collision(s)" % r.get("totalCollisions", "?")
     else:

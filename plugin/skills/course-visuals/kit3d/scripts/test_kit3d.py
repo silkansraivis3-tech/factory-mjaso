@@ -231,6 +231,31 @@ a = r[0].get("probe") or {}
 check("without WebGL the scene says it cannot show, with no page error", a.get("ok") is False and "not available" in a.get("msg", "")
       and not r[0].get("errors"), r[0])
 
+# ---------------------------------------------------------------- 2.68.0 the ground shadow: under a model with no floor, never doubling a floor
+GROUND = os.path.join(KIT, "examples", "_t_ground.kit3d.json")
+with open(GROUND, "w", encoding="utf-8") as f:
+    json.dump({"label": "test: a tank standing on nothing", "units": "m",
+               "parts": [{"id": "tank", "type": "tank_c", "at": [0, 5, 0], "r": 3, "len": 10, "head": 1.5}]}, f)
+GP = J % "(function(){var g=k3.scene.groundMesh;return {ok:k3.info().ok,g:!!g,vis:!!(g&&g.visible),dpr:k3.scene.r.getPixelRatio()}})()"
+try:
+    r = run([
+        {"url": STUDIO % ("_t_ground", 800, 500), "wait": "window.k3ready", "settle": 400, "probe": GP},
+        {"url": STUDIO % ("m03_station", 800, 500), "wait": "window.k3ready", "settle": 400, "probe": GP},
+        {"url": (STUDIO % ("m02_tank", 800, 500)), "wait": "window.k3ready", "settle": 300,
+         "do": "(function(){var S=k3.scene,t=0;S.r.setPixelRatio(2);for(var i=0;i<22;i++){t+=60;S.steady(true,t);}})()",
+         "probe": J % "(function(){return {dpr:k3.scene.r.getPixelRatio(),seen:window.__scene3d&&window.__scene3d.dpr}})()"},
+        {"url": (STUDIO % ("m02_tank", 800, 500)), "wait": "window.k3ready", "settle": 300,
+         "do": "(function(){var S=k3.scene,t=0;S.r.setPixelRatio(2);for(var i=0;i<40;i++){t+=16;S.steady(true,t);}})()",
+         "probe": J % "(function(){return {dpr:k3.scene.r.getPixelRatio()}})()"},
+    ], "--w=900", "--h=600")
+finally:
+    os.remove(GROUND)
+a, b, c, d = [x.get("probe") or {} for x in r[:4]]
+check("a model with no floor stands on a soft ground shadow", a.get("ok") and a.get("g") and a.get("vis"), (a, r[0].get("errors")))
+check("a model with its own deck or floor gets no second ground", not b.get("vis"), b)
+check("a slow screen (frames of 60 ms) is drawn one step less sharp: 2 -> 1.5", c.get("dpr") == 1.5, c)
+check("a fast screen (frames of 16 ms) keeps its sharpness", d.get("dpr") == 2, d)
+
 # ---------------------------------------------------------------- every example spec passes the checker
 specs = sorted(glob.glob(os.path.join(KIT, "examples", "*.kit3d.json")))
 p = subprocess.run([sys.executable, "-I", os.path.join(HERE, "check_kit3d.py"), "spec"] + specs, capture_output=True, text=True)

@@ -16,7 +16,7 @@
       screen); cuts of one document: add "tiles_as": "strips" - never a hand-written fragment (2.67.0).
 4  python compile/scripts/build_module.py <course> --module 1            again after every change, until PASS
       ONE command runs everything: every figure on its real slide at once (auto-fixes what has one right answer), the
-      compile and its drawing check, the words (instructor + trainee), navigation, the audits at 1280x800 and 1024x768,
+      compile and its drawing check, the words (instructor + trainee), navigation, the audits at 1280x800, 1024x768 and 1280x720,
       the course pages and the classroom's importer. It prints only what fails - file, slide or question, what to do -
       and one PASS line. Do not run those checks one by one: each separate run is a turn of the model.
       (2.65.0, L64) It starts with the PRE-CHECK (compile/scripts/precheck.py - a second, from the files alone): a picture

@@ -68,6 +68,15 @@ def main():
 
         code, out = run(COURSE, c)
         check("built from the approved architecture, script and deck", code == 0, out)
+        # 2.69.0 - the trainee's handout: the one button on the tablet (owner, 2026-10-27)
+        hp = os.path.join(md, "handout", "index.html")
+        hand = read(hp) if os.path.isfile(hp) else ""
+        check("2.69.0 the module's handout is written: handout/index.html, every slide's title and lines, a contents list and a search",
+              "Gas as fuel" in hand and "Mandatory since 2017." in hand and "Tank connection space." in hand
+              and 'href="#h-s02"' in hand and 'id="q"' in hand and 'type="search"' in hand, hand[:600])
+        check("... never the instructor's notes or a check's answers", hand and "Stress the 60" not in hand and "Ask who has sailed" not in hand
+              and "Press OPEN TASK" not in hand, hand[-800:])
+        check("... and the instructor's start page links it", 'href="handout/index.html"' in read(md, "START_HERE_EXTENDED.html"))
         page = read(root, "COURSE.html")
         check("COURSE.html's <title> is the approved course title", "<title>%s</title>" % TITLE in page, page[:600])
         m = re.search(r'<meta name="description" content="([^"]+)">', page)

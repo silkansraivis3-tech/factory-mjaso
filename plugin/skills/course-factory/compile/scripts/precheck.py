@@ -171,7 +171,7 @@ def check(course, module, rebuild=False):
         notes.append("the build sheet forces the template %s on %d slides in a row (%s ... %s) - the compiler chooses the template "
                      "and varies the look of neighbouring slides itself (L62); take \"template\" out unless a slide really needs it"
                      % (tid, len(ids), ids[0], ids[-1]))
-    soft, kept, renders = [], [], []
+    soft, kept, renders, ai = [], [], [], []
     # the photographs: found large enough, or kept with a reason
     for rel, ids in sorted(photos.items()):
         size = photo_size(course, mdir, m, rel)
@@ -181,6 +181,13 @@ def check(course, module, rebuild=False):
         meta = cm.photo_meta(mdir, rel)
         on = ", ".join(sorted(set(ids)))
         origin = origin_of(meta)
+        # 2.68.0 - made sharp by the local enlarger (upscale_photos.py): judged at the size it was FOUND, said, never a stop
+        keep = os.path.join(course, "working_claude", "photo_originals", m, os.path.basename(rel))
+        if str(meta.get("enlarged") or "").startswith("Real-ESRGAN") and os.path.isfile(keep):
+            was = pixel_size(keep)
+            if was and max(was) < PHOTO_MIN_LONG:
+                ai.append("%s from %dx%d" % (os.path.basename(rel), was[0], was[1]))
+            continue
         if long < PHOTO_MIN_LONG and origin == "render":
             renders.append("%s %dx%d" % (os.path.basename(rel), size[0], size[1]))
         elif long < PHOTO_FLOOR and not (meta.get("low_resolution_ok") or "").strip() and rebuild:
@@ -198,6 +205,14 @@ def check(course, module, rebuild=False):
         notes.append("%d picture(s) under %d px the module already had - they stay for this rebuild, blurred on the "
                      "projector; replace them when you can (a larger photograph of the same thing): %s"
                      % (len(kept), PHOTO_FLOOR, ", ".join(kept)))
+    if ai:
+        notes.append("%d photograph(s) made sharp by the local enlarger (Real-ESRGAN) - it rebuilds detail, so a real larger "
+                     "photograph would still be truer: %s" % (len(ai), ", ".join(ai)))
+    else:
+        tiny = [x for x in soft + kept + [m_.split(" (on ")[0] for m_ in must if "no enlargement makes it sharp" in m_]]
+        if tiny:
+            notes.append("course-visuals/scripts/upscale_photos.py <course> --modules N makes the photographs under 1000 px sharp "
+                         "on this computer (Real-ESRGAN, nothing sent anywhere; never one with words or numbers in it)")
     if renders:
         notes.append("%d still(s) rendered from the module's own 3D model under %d px - render again at %d px or more: %s"
                      % (len(renders), PHOTO_MIN_LONG, PHOTO_MIN_LONG, ", ".join(renders)))

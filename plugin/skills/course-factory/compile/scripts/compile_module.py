@@ -145,6 +145,9 @@ TEMPLATES = LAYOUTS["templates"]
 DENSE_WORDS = LAYOUTS["dense"]["words"]
 PARTS_FROM, PART_WORDS = LAYOUTS["parts"]["auto_from_words"], LAYOUTS["parts"]["part_words"]
 SPLIT_LO, SPLIT_HI = LAYOUTS["split"]["text"]
+# 2.69.0 - a 3D model beside words takes at least 58 % of the width: at the owner's 50-60 % text share it had 40-50 % (gas M01
+# s26 at 1280x720: 640 x 440, nine names and six buttons over the model - owner: "all 3d models is almost invisible")
+SPLIT_3D = 0.42
 NO_VISUAL_RUN = LAYOUTS["sequence"]["max_without_visual_in_a_row"]
 FRAMED_PHOTO_WORDS = LAYOUTS["variety"]["photo_framed_max_words"]
 # 2.63.0 - the words each layout holds, measured at 1024 x 768 with the real templates (layout-templates.json "budgets")
@@ -278,7 +281,7 @@ def task_picture(mdir, b, probs, where):
         return ""
     meta = photo_meta(mdir, rel)
     alt = b.get("alt") or first_sentence(meta.get("description")) or "The exercise"
-    return '<img class="act-photo" src="../%s" alt="%s"%s>' % (a(rel), a(alt), photo_panel(meta, credit_line(meta), rel, probs, where))
+    return '<img class="act-photo" src="../%s" alt="%s"%s>' % (a(rel), a(alt), photo_panel(meta, credit_line(meta), rel, probs, where, mdir))
 e = lambda s: html.escape(s or "", quote=False)
 a = lambda s: html.escape(s or "", quote=True)
 
@@ -723,7 +726,7 @@ def tiles_figure(mdir, s, b, probs, where):
             probs.append("%s: the photograph %s needs a credit line, and its _photo_meta.json record gives none" % (where, rel))
         credits.append(credit)
         out.append('<figure class="lt-tile" data-zoom="button">%s<img src="../%s" alt="%s"%s>%s</figure>'
-                   % ('<b class="lt-n">%d</b>' % k if strips else "", a(rel), a(alt), photo_panel(meta, credit, rel, probs, where),
+                   % ('<b class="lt-n">%d</b>' % k if strips else "", a(rel), a(alt), photo_panel(meta, credit, rel, probs, where, mdir),
                       "<figcaption>%s</figcaption>" % html.escape(cap) if cap else ""))
     if not out:
         return "", "", False
@@ -767,10 +770,10 @@ def figure_html(mdir, figdir, s, b, probs, where):
     credit = b.get("credit") or credit_line(meta)
     if meta.get("attribution_required") and not credit:
         probs.append("%s: the photograph %s needs a credit line, and assets\\img\\_photo_meta.json does not give one" % (where, rel))
-    return '<img src="../%s" alt="%s"%s>' % (a(rel), a(alt), photo_panel(meta, credit, rel, probs, where)), credit, True
+    return '<img src="../%s" alt="%s"%s>' % (a(rel), a(alt), photo_panel(meta, credit, rel, probs, where, mdir)), credit, True
 
 
-def photo_panel(meta, credit, rel, probs, where):
+def photo_panel(meta, credit, rel, probs, where, mdir=None):
     """L56: every photograph carries its record into the L51 viewer (gb_zoom.js), which shows it under the picture
     full screen: what it shows and its credit. What it shows is the photo's own record, written when the photo was
     brought in: its "description" says what is in the picture and never more than the picture evidences."""
@@ -778,7 +781,63 @@ def photo_panel(meta, credit, rel, probs, where):
     if not about:
         probs.append("%s: the photograph %s has no \"description\" in its _photo_meta.json - full screen (L51, L56) it "
                      "would say nothing about what it shows" % (where, rel))
-    return "".join(' %s="%s"' % (k, a(v)) for k, v in (("data-about", about), ("data-credit", credit)) if v)
+    f = photo_focus(mdir, rel, meta) if mdir else None
+    style = "object-position:%d%% %d%%" % f if f else ""
+    return "".join(' %s="%s"' % (k, a(v)) for k, v in (("data-about", about), ("data-credit", credit), ("style", style)) if v)
+
+
+FOCUS_CACHE = {}
+
+
+def photo_focus(mdir, rel, meta):
+    """2.69.0 - where a photograph's subject is, in % across and down, so a frame that crops it keeps the subject (gas M01
+    s11: a ship photo in a wide strip showed sky and a mast - the crop took the middle). Its record's "focus": [x, y] says
+    it; otherwise the part of the picture with the most detail is found (strong edges - a ship, not the sky or the sea).
+    None when it is about the middle (the frame's own default then) or Pillow is missing"""
+    f = meta.get("focus")
+    if isinstance(f, (list, tuple)) and len(f) == 2:
+        try:
+            return max(0, min(100, int(round(float(f[0]))))), max(0, min(100, int(round(float(f[1])))))
+        except (TypeError, ValueError):
+            return None
+    p = os.path.join(mdir, rel)
+    try:
+        key = (p, os.path.getmtime(p))
+    except OSError:
+        return None
+    if key not in FOCUS_CACHE:
+        FOCUS_CACHE[key] = detail_centre(p)
+    c = FOCUS_CACHE[key]
+    if not c or (abs(c[0] - 50) < 8 and abs(c[1] - 50) < 8):
+        return None
+    return c
+
+
+def detail_centre(path):
+    """the centre of a picture's strong edges, in % (x, y), rounded to 5 - or None"""
+    try:
+        from PIL import Image, ImageFilter
+        im = Image.open(path).convert("L")
+    except (ImportError, OSError, ValueError):
+        return None
+    im.thumbnail((120, 120))
+    e = im.filter(ImageFilter.FIND_EDGES)
+    W, H = e.size
+    if W < 8 or H < 8:
+        return None
+    px = e.load()
+    inner = [(x, y) for y in range(2, H - 2) for x in range(2, W - 2)]
+    mean = sum(px[x, y] for x, y in inner) / float(len(inner))
+    sx = sy = sw = 0.0
+    for x, y in inner:
+        w = max(0.0, px[x, y] - 2 * mean) ** 2       # only the strong edges: the sea's ripples and the sky's grain stay out
+        sx += w * x
+        sy += w * y
+        sw += w
+    if not sw:
+        return None
+    r5 = lambda v: int(5 * round(20.0 * v))
+    return r5((sx / sw + .5) / W), r5((sy / sw + .5) / H)
 
 
 # a file-system path where a trainee reads a credit or a caption (IGF M04, 2026-10-16: a photograph's record carried the
@@ -1923,7 +1982,7 @@ def inset_html(mdir, ins, probs, where):
     cap = caption[:1].upper() + caption[1:]           # 2.63.0: the credit is in the full-screen view, never on the slide
     alt = ins.get("alt") or first_sentence(ins.get("caption")) or first_sentence(meta.get("description"))
     return ('<figure class="inset"><img src="../%s" alt="%s"%s>%s</figure>'
-            % (a(rel), a(alt), photo_panel(meta, credit or credit_line(meta), rel, probs, where),
+            % (a(rel), a(alt), photo_panel(meta, credit or credit_line(meta), rel, probs, where, mdir),
                '<figcaption data-script-ignore>%s</figcaption>' % e(cap) if cap else ""))
 
 
@@ -2449,6 +2508,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
             split = None
     if tid == "compare-two" and comp not in ("photo",):
         comp = "compare"
+    if (is_3d(s) or "data-3d-box" in (fig or "")) and TEMPLATE_COMPOSITION.get(tid) == "two-col" and variant != "text-only"             and (split is None or split > SPLIT_3D):
+        split = SPLIT_3D                                    # the model's room comes first; words past it go in parts
     if tid == "opening" and variant == "photo":            # the opening's photograph is the screen, the title over it
         comp = "photo"
     # L62 (owner, 2026-10-21) - never the same look on two slides in a row: built another way when it would repeat

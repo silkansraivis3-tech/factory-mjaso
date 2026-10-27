@@ -318,7 +318,8 @@ def spilled_own(deck_html, audit_out, course, module):
     build sheet, not built another way for L62), with a picture and more than one line: {slide id: its words key}. Their
     words go in parts at once (compile_module.wants_parts) - on gas M01 (2.65) six slides scrolled at 1024 x 768, each a
     builder's run to put them in parts by hand"""
-    bad = set(re.findall(r"slide \d+ \((\w+)\): (?:scrolls|spills)\b", audit_out or ""))
+    # 2.69.0 - and a photograph cropped to a strip: its words in parts give it the height (gas M01 s11, the ship cut through)
+    bad = set(re.findall(r"slide \d+ \((\w+)\): (?:scrolls|spills|photo cropped to a strip)\b", audit_out or ""))
     if not bad:
         return {}
     import compile_module as cm
@@ -406,7 +407,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("course")
     ap.add_argument("--module", required=True)
-    ap.add_argument("--viewport", action="append", default=[], help="another audit size, WxH (1280x800 and 1024x768 always run)")
+    ap.add_argument("--viewport", action="append", default=[], help="another audit size, WxH (1280x800, 1024x768 and 1280x720 always run)")
     ap.add_argument("--no-course-pages", action="store_true", help="a module agent in a parallel build: no compile_course.py")
     ap.add_argument("--no-fix", action="store_true", help="the figure pre-check makes no fix of its own")
     ap.add_argument("--no-review", action="store_true", help="no review sheets after a pass")
@@ -596,7 +597,9 @@ def main(argv=None):
                             "--module-dir", mdir],
         "navigation": [PY, os.path.join(MEASURE, "check_navigation.py"), mdir],
     }
-    sizes = ["1024x768"] + [v for v in o.viewport if v not in ("1280x800", "1024x768")]
+    # 2.69.0 - 1280x720 too: a 16:9 laptop at 150 % (1920x1080) or a 720p projector - the gas course's M01 s15 table cut
+    # its own headings and step names there, and 1280x800 / 1024x768 both passed it (owner's screenshots, 2026-10-27)
+    sizes = ["1024x768", "1280x720"] + [v for v in o.viewport if v not in ("1280x800", "1024x768", "1280x720")]
     if os.path.isfile(deck):
         # 2.57.0 - a slide audited clean and unchanged in everything it loads is not measured again (--full: every slide)
         a = [PY, os.path.join(MEASURE, "run_audits.py"), deck, "--quiet", "--cache", os.path.join(logdir, "%s_audits_clean.json" % m)]

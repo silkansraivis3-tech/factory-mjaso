@@ -216,6 +216,14 @@ generic HTML, which is where the card grids come from.
 > credits page - is its `source_work`. Without a whole `cleared_by` it stays blocked: `RIGHTS_REVIEW_REQUIRED` blocks,
 > an `OWNER_CLEARED` book figure without it fails and L57 never uses it.
 
+> **A small photograph made sharp on this computer (2.68.0):** `scripts/upscale_photos.py <course> --modules 1-3`
+> (`--list` first shows what it would do) enlarges a module's photographs under 1000 px with Real-ESRGAN, run locally on
+> the graphics card - nothing is sent anywhere. Never a picture with words or numbers (a page, label, gauge, chart,
+> screen: the enlarger would make them sharp and wrong), never one whose record says `"ai_enlarge": false`; the
+> original is kept in `working_claude/photo_originals/`, the record says `"enlarged"`, and the pre-check judges it at
+> the size it was found. Install once: unpack Real-ESRGAN's Windows zip to `~/.novikontas/tools/realesrgan/` (the
+> script prints the link). A real larger photograph is still truer - search first.
+
 **1 PROJECT** — `source_files/`, operator-supplied assets, manuals, drawings, the course's own
 existing assets. Search by more than the requester's phrasing: equipment name, manufacturer,
 alternate and older terminology, system name, likely figure captions, abbreviations, both

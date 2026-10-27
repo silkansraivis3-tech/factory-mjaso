@@ -243,6 +243,9 @@ CC BY, CC BY-SA). Save each into ${A.course}/modules/module${two(m)}/assets/img/
 _photo_meta.json (source, url_or_origin, author, licence, rights_state, credit, description of what it LITERALLY shows,
 shows, teaching_purpose naming the screen, used_in, visually_verified after you opened and looked at it).
 
+Then make the small ones sharp, on this computer, once: python ${SCRIPTS}/../course-visuals/scripts/upscale_photos.py
+"${A.course}" --modules ${m.id} (Real-ESRGAN - nothing is sent anywhere; it leaves a picture with words or numbers alone; if
+it says it is not installed, go on without it).
 Write the list to ${A.course}/working_claude/photo_candidates/M${two(m)}.md: each screen, the file you placed and why it fits -
 or "not found" and what would do. You may write only those two places: never the script, never the build sheet, never a page.
 Report the list.`
@@ -327,7 +330,7 @@ const qa = (m) => `You did NOT build this module. Check it.
 Run the deterministic checks in TWO shell calls and READ their output:
   1  python course-factory/compile/scripts/build_module.py "${A.course}" --module ${m.id} --no-course-pages --no-fix
      - the compile, the drawing check (L54), both script matches, navigation, the audits at
-     1280x800 and 1024x768, the importer and the review sheets' grading of every question (right
+     1280x800, 1024x768 and 1280x720, the importer and the review sheets' grading of every question (right
      and wrong), in one command. It rebuilds from the same approved inputs, so the bytes come out
      the same: anything it reports, or a stop (exit 2), is a finding. Give the shell call 600000 ms;
      if it answers "STILL BUILDING", run the same command with --wait until it prints its answer.

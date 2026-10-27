@@ -70,6 +70,7 @@ and ships `three.min.js`, `kit3d.js`, `kit3d.css` with the module. Alone (a test
 | `frame` | `{"top": 56}` - px kept free above the model for the labels |
 | `pill_max` | the widest a label's pill grows before its words wrap (190 px) |
 | `fov`, `exposure`, `sun` | camera field of view (32), tone-mapping exposure (1.05), sun direction `[0.45, 0.75, 0.5]` |
+| `ground`, `ground_shadow` | 2.68.0: the model stands on a soft shadow (an unseen ground that shows only the shadow - worked out once, nothing while it turns); `false` leaves it out; `ground_shadow` its darkness (0.24) |
 | `min_el`, `max_el`, `min_zoom`, `max_zoom`, `pick_fill` | limits of the presenter's turning (2 / 82 degrees, 0.06 / 1.5) and how much of the box a tapped part fills (0.62) |
 | `shadows`, `merge`, `fullscreen` | `false` turns that off |
 

@@ -1646,6 +1646,66 @@ builder hand-wrote five fragments, about 8 minutes); the starter's frame for con
 Tests: test_figure_library 7, test_precheck 39, test_compile_module 466, test_starter_figures, test_build_course,
 test_check_balance.
 
+## 4zz16 · Better pictures at the same speed: photographs made sharp on this computer, 3D that stands and never judders (2.68.0, 2026-10-27)
+
+The owner: *"how we can keep speed but upgrade quality? 3d models so it looks better but not lagging? how to upscale
+existing photos with plugin without other outside AI use?"* - then *"do both, download is ok"*. (1) **The local enlarger**
+(`course-visuals/scripts/upscale_photos.py`): Real-ESRGAN (ncnn-vulkan v0.2.5.0, model realesrgan-x4plus, ~45 MB, BSD-3)
+unpacked to `~/.novikontas/tools/realesrgan/` (`NOVIKONTAS_UPSCALER` overrides) enlarges a module's photographs under
+1000 px four times on the graphics card and the result is brought to 2400 px on its long side - nothing leaves the
+computer. A picture whose name or description says words or numbers (page, sheet, SDS, table, label, sign, screen, panel,
+gauge, chart, diagram, plan, document, scale, dial, meter...) is never enlarged - the enlarger invents detail and would make
+the letters sharp and wrong; `"ai_enlarge": false` on a record keeps any other out. It works from the original the compile
+keeps (`working_claude/photo_originals/MNN`), writes `"enlarged": "Real-ESRGAN realesrgan-x4plus on this computer, from W x H
+to W x H (date)"` on the record, and does nothing twice. `--list` says what it would do; `--check` whether it is installed
+(exit 3 with the link when not). Measured on a copy of gas M02: about 40 s a photograph on the Intel graphics; clearly
+sharper than the plain enlargement; photographs of 1000 px or more were slower (73-172 s) for little gain, hence the
+limit. (2) **The pre-check** judges an enlarged photograph at the size it was found and says it was made sharp locally -
+"a real larger photograph would still be truer" - never a stop; a small photograph with the enlarger installed gets the
+hint to run it. (3) **The whole-course workflow** (`build_course.js` `photoPrep`) runs it on the photographs it finds while
+the script waits for approval. (4) **kit3d, better looking at no cost while it turns**: a model with no floor of its own
+(no part covering 60 % of the scene's width and depth at its bottom) stands on an unseen ground that shows only its
+shadow (`ShadowMaterial`, darkness `ground_shadow` 0.24, `"ground": false` leaves it out) - the shadows are worked out
+once, so turning costs nothing more; the 7 example scenes all have decks or floors and are unchanged. A slow tablet: while
+the model moves its frames are timed, and 20 in a row averaging over 45 ms draw it one step less sharp from then on (pixel
+ratio 2 -> 1.5 -> 1; `window.__scene3d.dpr`) - a new drawing buffer costs up to a second, so it never goes back up.
+Tests: test_upscale_photos 10 (a stand-in enlarger, so it runs anywhere), test_kit3d +4 (the ground under a floor-less
+model, none over a deck, a slow screen steps down, a fast one keeps 2), test_precheck 39, test_smoke3d 15, test_perf3d 13,
+test_build_course.
+
+## 4zz17 · What a 16:9 screen showed, and the trainee's handout (2.69.0, 2026-10-27)
+
+The owner's three screenshots of the gas course's Module 1 (built on 2.65): *"all 3d models is almost invisible with these
+buttons to close up detail, also table is awkwardly layouted, also picture you cannot see ship at all, bad center - dont
+change gas basic for now, just fix course factory so in future courses its not the problem"*. Measured on a copy: the
+screenshots were 1280 x 720 CSS pixels (a 1920 x 1080 laptop at 150 %, or a 720p projector), and the build had only ever
+looked at 1280 x 800 and 1024 x 768 - s15's table cut its headings and its step names at 720 and nowhere else. (1) **The
+build's audits run at 1280x720 too** (`build_module.py`, `fix.py rebuild`, GUIDE, the workflow); the part tabs are 44 px
+there (`gb_layouts.css .lt-tab`, they were 43). (2) **audit_collide check 4, "text cut off"**: a line of words that a box
+hiding its overflow (hidden / clip - not a scroll box) cuts part of; a line hidden whole is not judged. (3) **audit_deck
+"strip"**: a cropped photograph (object-fit: cover, 160 px or wider) that shows under half of its height in a band, or under
+40 % of its width in a column, fails - and `spilled_own` puts that slide's words in parts in the same build, which gives the
+photograph its height. (4) **Every cropped photograph is framed on its subject** (`compile_module.photo_focus`): its record's
+`"focus": [x, y]` (per cent), else the centre of its strong edges (Pillow; a ship's superstructure and hull, not the sky or
+the ripples of the sea), written as `object-position` when it is 8 points or more off the middle - s11's ship came out at
+41 / 65. (5) **A 3D model beside words takes at least 58 % of the width** (`SPLIT_3D` 0.42, whatever text share the sheet
+asks; s26 had 50 % - 640 x 440 at 720 with nine names and six buttons over the model). (6) **kit3d in a small box** (under
+720 x 460): the compact names and buttons (44 px), and a wide bar of buttons gets a band under the model (up to 34 % of the
+height), never over it - the zones example filled 47 % of a 640 x 440 box and now 66 %. Still open: a builder may ask for
+words in parts on a 3D slide whose script asks for the full screen; the audits do not judge how much of a 3D model the
+names cover.
+
+**The trainee's handout** (owner: *"only ONE button possible, thats handout ... if you are not opened any modules, handout
+is big, with navigation, fast searching ... if module is opened, handout is about previous and this module"*). The
+classroom's trainee page already had the one Handout button and finds `trainee/<module>/handout/index.html`; no factory step
+wrote one. `compile/scripts/handout.py`, called by compile_course.py with the start pages: every approved module gets
+`handout/index.html` - each slide's title and lines (the term before " - " in bold) and its photographs with their record and
+credit, a task slide as its title; never the instructor's notes, a check's questions or a key - a contents list, a search
+that keeps only the slides holding the words (and marks them), a photo that opens to full width. The classroom side (the
+training app's join.js, staging): with a module open, the handout list is that module and the ones before it; with none
+open, the whole course. Tests: test_run_audits 28, test_photo_focus 8, test_compile_module 467, test_compile_course 41,
+test_course_package 79, test_precheck 39, test_kit3d, test_smoke3d 15, test_perf3d 13, test_review_sheets 18.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

@@ -339,7 +339,8 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .lt-part.on{display:flex}
 .slide[data-template] .lt-tabs{display:flex;gap:min(1.2vmin,10px);margin-top:min(1.6vmin,14px)}
 .slide[data-template] .lt-tab{
-  width:min(6vmin,48px);height:min(6vmin,48px);border-radius:50%;border:1px solid var(--lt-ring);background:var(--lt-white);
+  width:clamp(44px,6vmin,48px);height:clamp(44px,6vmin,48px);   /* 44 px at 1280x720 too (2.69.0) */
+  border-radius:50%;border:1px solid var(--lt-ring);background:var(--lt-white);
   color:var(--lt-navy);font:700 clamp(13px,1.85vmin,20px) "Raleway","Segoe UI",Arial,sans-serif;cursor:pointer;
 }
 .slide[data-template] .lt-tab.on{background:var(--lt-navy);border-color:var(--lt-navy);color:var(--lt-white)}

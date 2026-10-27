@@ -215,9 +215,9 @@ def main():
         t = time.time()
         code, out = run(FIX, "rebuild", c, "--modules", "1")
         check("fix.py rebuild: the module built again from its approved words, then ONE check - the build's own audits at "
-              "1280x800 and 1024x768 (not the 16 px sweep) - and the package check",
+              "1280x800, 1024x768 and 1280x720 (not the 16 px sweep) - and the package check",
               "Module 1: rebuilt from its approved words" in out and "One check for the rebuilt modules (1) - the build's own "
-              "audits, 1280x800 and 1024x768" in out and ("Module 1: the audits pass" in out or "For the full build: module(s) 1" in out)
+              "audits, 1280x800, 1024x768 and 1280x720" in out and ("Module 1: the audits pass" in out or "For the full build: module(s) 1" in out)
               and "layout at 1280x800" not in out, out[-900:])
         check("... no figure stage, no review sheets", "figure_fit" not in out and "review sheets" not in out.lower(), out[-600:])
         check("... and it says its minutes against the 20 a fix gets", "TIME: this fix took" in out

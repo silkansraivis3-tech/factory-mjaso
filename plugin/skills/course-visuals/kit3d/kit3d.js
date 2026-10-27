@@ -528,6 +528,34 @@
     sun.shadow.camera.near = 0.1; sun.shadow.camera.far = R * 4.5;
     sun.shadow.camera.updateProjectionMatrix();
     sun.shadow.normalBias = 0.03 * Math.max(0.3, Math.min(2, R / 20));
+    /* 2.68.0 - the model stands on something: an unseen ground just under its lowest point that shows only the shadow the
+       model throws on it (owner: "3D models so it looks better but not lagging"). The shadows are worked out once, so it
+       costs nothing while the model turns; it is never framed, never tapped, never merged. "ground": false leaves it out */
+    /* never under a scene that has a floor of its own (a deck, a bottom shell: a broad flat part at its foot) - there the
+       ground only showed stray shadow beyond the deck's edge (the m15 venting and m03 station examples) */
+    var floored = false;
+    each(S.parts, function (p) {
+      if (floored || !p.box || p.box.isEmpty()) { return; }
+      var ps = new T.Vector3();
+      p.box.getSize(ps);
+      if (ps.x >= 0.6 * sz.x && ps.z >= 0.6 * sz.z && ps.y <= 0.2 * sz.y + 0.01 && p.box.min.y <= S.box.min.y + 0.1 * sz.y + 0.01) {
+        floored = true;
+      }
+    });
+    if (S.groundMesh) { S.groundMesh.visible = !floored; }
+    if (S.spec.shadows !== false && S.spec.ground !== false && !floored) {
+      if (!S.groundMesh) {
+        var gm = new T.Mesh(new T.PlaneGeometry(1, 1), new T.ShadowMaterial({ opacity: num(S.spec.ground_shadow, 0.24) }));
+        gm.rotation.x = -Math.PI / 2;
+        gm.receiveShadow = true; gm.castShadow = false;
+        gm.userData.keep = true; gm.userData.noFrame = true;
+        gm.raycast = function () {};
+        S.scene.add(gm);
+        S.groundMesh = gm;
+      }
+      S.groundMesh.scale.set(R * 2.6, R * 2.6, 1);
+      S.groundMesh.position.set(c.x, S.box.min.y - Math.max(0.002, sz.y * 0.002), c.z);
+    }
   };
 
   /* static meshes of one part and one material become ONE mesh (the hand-made M05's bake): fewer draw calls on a tablet */
@@ -598,7 +626,7 @@
     else if (ch && cw > W * 0.55) { bot = ch; }             /* a wide control bar takes the bottom; a small one sits in a corner */
     else if (ch) { bot = Math.max(bot, ch * 0.5); }
     if (S.cap && S.cap.offsetHeight) { top = Math.max(top, S.cap.offsetHeight + 24); }   /* the caption, top left */
-    top = Math.min(top, H * 0.2); bot = Math.min(bot, H * 0.25);
+    top = Math.min(top, H * 0.2); bot = Math.min(bot, ch && cw > W * 0.55 ? H * 0.34 : H * 0.25);   /* a bar of buttons: never over the model */
     return { x0: 16, x1: x1, y0: top, y1: H - bot };
   };
   /* the distance and target that show box b from (az, el) as large as fill allows inside the reserve */
@@ -680,7 +708,9 @@
     S.camera.aspect = W / H;
     S.camera.updateProjectionMatrix();
     S.dense = false;                                    /* judged again at the new size (settle) */
-    var small = W < 560;
+    /* 2.69.0 - a slide's column (gas M01 s26 at 1280x720: 640 x 440 with nine names and six buttons - the model hidden under
+       them): under 720 x 460 the names and the buttons are the compact ones */
+    var small = W < 720 || H < 460;
     if (small !== S.small) { S.small = small; setCls(S.wrap, 'k3-small', small); S.labels.forEach(function (l) { l.pw = 0; }); }
     S.homeFit();
     /* the view follows its box: a step's view is fitted again; a view the presenter turned keeps its turn */
@@ -1241,7 +1271,32 @@
       sc.frames++;
       if (!sc.firstFrameT) { sc.firstFrameT = now(); S.ready(); }
     } else if (S.frames === 1) { S.ready(); }
+    S.steady(moving || S.spin, tnow);
     if (moving || S.spin) { S.schedule(); }
+  };
+  /* 2.68.0 - steady on a slow tablet: while the model moves, its frames are timed; when 20 in a row take over 45 ms on average
+     (under 22 a second - the turn judders) it is drawn one step less sharp from then on: twice the screen's pixels, then
+     1.5, then 1. Each step makes the drawing buffer once - the cost of a new buffer (perf3d: up to a second on a slowed CPU)
+     is why it never goes back and forth; a fast screen never loses sharpness. window.__scene3d.dpr says where it is */
+  P.steady = function (moving, tnow) {
+    var S = this;
+    if (!moving) { S.lastT = 0; S.dts = []; return; }
+    if (S.lastT) {
+      S.dts = S.dts || [];
+      S.dts.push(tnow - S.lastT);
+      if (S.dts.length > 20) { S.dts.shift(); }
+    }
+    S.lastT = tnow;
+    if (!S.dts || S.dts.length < 20) { return; }
+    var sum = 0;
+    S.dts.forEach(function (d) { sum += d; });
+    if (sum / 20 <= 45) { return; }
+    var pr = S.r.getPixelRatio(), next = pr > 1.5 ? 1.5 : pr > 1 ? 1 : 0;
+    S.dts = [];
+    if (!next) { return; }
+    S.r.setPixelRatio(next);
+    S.dpr = next;
+    if (w.__scene3d && w.__scene3d.__k3 === S) { w.__scene3d.dpr = next; }
   };
   P.ready = function () {
     var S = this;

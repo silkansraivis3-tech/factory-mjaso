@@ -673,14 +673,14 @@ def cmd_rebuild(course, modules, force=False):
         print("\nNothing rebuilt.")
         return 1
     spec = ",".join(str(m) for m in built)
-    # the ONE check is the build's own: its audits at 1280x800 and 1024x768 (2.65.0, the gas course's M01 - the layout
+    # the ONE check is the build's own: its audits at 1280x800, 1024x768 and 1280x720 (2.65.0, 2.69.0; the gas course's M01 - the layout
     # sweep's 16 px "text bigger" floor called 14 slides small that the build passes, and missed what scrolled at 1024)
     audits = os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-module-ux", "measure", "scripts", "run_audits.py")
-    print("\nOne check for the rebuilt modules (%s) - the build's own audits, 1280x800 and 1024x768:" % spec)
+    print("\nOne check for the rebuilt modules (%s) - the build's own audits, 1280x800, 1024x768 and 1280x720:" % spec)
     rc_layout = 0
 
     def audit(m):
-        return run([audits, deck_file(mods[m]), "--viewport", "1024x768"])
+        return run([audits, deck_file(mods[m]), "--viewport", "1024x768", "--viewport", "1280x720"])
     with cf.ThreadPoolExecutor(max_workers=max(1, min(4, len(built)))) as pool:       # side by side too (the browser pool)
         checked = list(pool.map(audit, built))
     for m, (rc, out) in zip(built, checked):

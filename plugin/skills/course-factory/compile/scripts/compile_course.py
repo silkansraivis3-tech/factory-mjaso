@@ -18,6 +18,8 @@ them is new content:
   the hours                 working_claude\\programme.json (total_row.total, academic_hour_min)
   the tasks of a module     its built deck: every task slide's data-activity / data-title / data-task-href
   the instructor's files    what is in the module folder: instructor\\*.html, assessment\\*answer_key*.html, handout\\
+  the trainee's handout     handout\\index.html - every slide's title, lines and photographs, from the approved script
+                            (handout.py, 2.69.0: the one button on the trainee's tablet)
   how the course is named   working_claude\\course.build.json - delivery, not content (like M01.build.json):
                                 {"regulation": "STCW Regulation V/3, Table A-V/3-1",
                                  "programme": "LJA standard programme 13-51-306 v2",
@@ -53,6 +55,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import compile_module as cm  # noqa: E402
+import handout  # noqa: E402
 import content_script as cs  # noqa: E402
 import workspace  # noqa: E402
 
@@ -461,6 +464,10 @@ def main(argv=None):
                 probs.append("%s\\assets has no %s - run course-module-ui\\scripts\\design_system.py install on it" % (info["code"], c))
         mrec_p = workspace.module_record(mdir, cm.RECORD)
         mrec = load_or(mrec_p, {})
+        # 2.69.0 - the trainee's handout (handout.py): the classroom's one button on the tablet opens it
+        hp = handout.build(course, info["n"], mdir, title, lang)
+        if hp:
+            put(os.path.join(mdir, "handout", "index.html"), hp, mrec, "handout/index.html")
         put(os.path.join(mdir, "START_HERE.html"), start_here(info, lang, w), mrec, "START_HERE.html")
         put(os.path.join(mdir, "START_HERE_EXTENDED.html"),
             start_extended(info, title, deck_tasks(read(deck_p)), mdir, lang, w, probs), mrec, "START_HERE_EXTENDED.html")

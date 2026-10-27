@@ -8,6 +8,8 @@
        small     text below the minimum readable px
        spill     elements overhanging the slide box
        tap       controls below the minimum touch-target px
+       strip     2.69.0 - a photograph its frame crops to a strip: under half of its height shows (a column: 40 % of its width)
+                 (gas M01 s11 at 1280x720: a ship photo 1.9 : 1 in a 5.6 : 1 band showed a third of it - sky and a mast)
        svgSmall  SVG <text> whose EFFECTIVE px (declared x render scale) is small
        scroll    a slide body taller than the screen - the deck has no scrollbar,
                  so whatever is below the fold is simply never delivered
@@ -120,6 +122,8 @@
     /* --- measurement thresholds --- */
     minFontPx: 12.5,
     minControlPx: 44,
+    minPhotoShown: 0.5,            /* 2.69.0 strip: at least half of a cropped photograph's height shows */
+    minPhotoShownCol: 0.4,         /* ... and in a photo column, 40 % of its width */
     contrastNormal: 4.5,
     contrastLarge: 3.0,
     largePx: 24,                   /* >= this px counts as large text */
@@ -378,7 +382,7 @@
 
   function auditSlide(s, n) {
     var ext = rootExtent(s);
-    var out = { slide: n, id: s.id || "", low: [], small: [], spill: [], tap: [],
+    var out = { slide: n, id: s.id || "", low: [], small: [], spill: [], tap: [], strip: [],
                 svgSmall: [], collide: [], scroll: [], mark: [] };
     out.mark = markCheck(s);
     var sizes = [], chars = 0;
@@ -424,6 +428,20 @@
       }
       if (w > 0 && (w < CONFIG.minControlPx || h < CONFIG.minControlPx)) {
         out.tap.push({ sel: label(e), w: Math.round(w), h: Math.round(h) });
+      }
+    });
+
+    qa(s, "img").forEach(function (im) {
+      var st = getComputedStyle(im);
+      if (st.display === "none" || st.objectFit !== "cover" || !im.naturalWidth || !im.naturalHeight) { return; }
+      var bw = im.clientWidth, bh = im.clientHeight;
+      if (bw < 160 || bh < 80) { return; }                 /* a card's or a thumbnail's picture: its crop is its design */
+      var ia = im.naturalWidth / im.naturalHeight, ba = bw / bh, shows = Math.min(ia / ba, ba / ia);
+      /* a band loses the photo's height (the sky and the sea are left - the ship cut through); a column its width - the
+         layout of a photo column, judged more leniently */
+      if (shows < (ba > ia ? CONFIG.minPhotoShown : CONFIG.minPhotoShownCol)) {
+        out.strip.push({ sel: label(im) + " " + (im.getAttribute("src") || "").split("/").pop(), pct: Math.round(100 * shows),
+                         side: ba > ia ? "height" : "width", box: Math.round(bw) + "x" + Math.round(bh) });
       }
     });
 
@@ -534,7 +552,7 @@
   }
 
   /* ------------------------------- the sweep ------------------------------ */
-  var KINDS = ["low", "small", "spill", "tap", "svgSmall", "collide", "scroll", "mark"];
+  var KINDS = ["low", "small", "spill", "tap", "strip", "svgSmall", "collide", "scroll", "mark"];
 
   function spec() {
     return {
@@ -604,7 +622,7 @@
   }
 
   function report(rows, slides, from, to) {
-    var totals = { low: 0, small: 0, spill: 0, tap: 0, svgSmall: 0, collide: 0,
+    var totals = { low: 0, small: 0, spill: 0, tap: 0, strip: 0, svgSmall: 0, collide: 0,
                    scroll: 0, mark: 0 };
     rows.forEach(function (r) {
       KINDS.forEach(function (k) { totals[k] += r[k].length; });
@@ -663,6 +681,7 @@
                  small: r.small.slice(0, CONFIG.maxExamples),
                  spill: r.spill.slice(0, CONFIG.maxExamples),
                  tap: r.tap.slice(0, CONFIG.maxTapExamples),
+                 strip: r.strip.slice(0, CONFIG.maxExamples),
                  svgSmall: r.svgSmall.slice(0, CONFIG.maxExamples),
                  scroll: r.scroll.slice(0, CONFIG.maxExamples),
                  collide: r.collide.slice(0, CONFIG.maxExamples),

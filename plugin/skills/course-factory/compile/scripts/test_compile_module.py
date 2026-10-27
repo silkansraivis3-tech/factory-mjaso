@@ -1917,6 +1917,13 @@ def kit3d_part(tmp):
           and same(os.path.join(md, "assets", "kit3d.js"), os.path.join(kit3d_dir, "kit3d.js"))
           and same(os.path.join(md, "assets", "kit3d.css"), os.path.join(kit3d_dir, "kit3d.css")), out)
     check("... no 2D kit loaded for a 3D scene", "kit.js" not in p.replace("kit3d.js", "") and "assets/kit.css" not in p)
+    # 2.69.0 - a 3D model beside words takes at least 58 % of the width, whatever text share the sheet asks (gas M01 s26)
+    build_of(c, lambda s: s["screens"]["s04"].update(template="explain-figure", split=0.55))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck", "--force")
+    sec4 = section(deck(md), "s04")
+    check("2.69.0 a 3D model beside words: the sheet's text share 0.55 becomes 0.42 (the model 58 %)",
+          code == 0 and 'style="--lt-text:42"' in sec4, out + sec4[:400])
+    build_of(c, lambda s: s["screens"]["s04"].pop("template") and s["screens"]["s04"].pop("split"))
     io.open(os.path.join(md, "assets", "kit3d_parts.js"), "w", encoding="utf-8").write("/* a course's new 3D parts */")
     code, out = run(COMPILE, c, "--module", "1", "--only", "deck", "--force")
     p = deck(md)
