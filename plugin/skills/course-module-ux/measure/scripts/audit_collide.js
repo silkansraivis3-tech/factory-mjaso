@@ -26,6 +26,13 @@
         for check 1 to catch. Every slide text line is therefore tested
         against the chrome's own BOX.
 
+     4  TEXT CUT OFF (2.69.0, gas M01 s15: a table's heading "-10 C and above"
+        lost its top line in a cell too small, and the step names under the
+        figure lost their second line - every check stayed green). A line of
+        words is cut when an ancestor that HIDES what overflows it (overflow
+        hidden / clip - not a scroll box, whose rows are read by scrolling) cuts
+        part of it away. A line hidden whole is not judged (a hidden part).
+
      Checks 1 and 2 ignore true nesting — a DOM ancestor/descendant pair, or
      one box fully inside another.
 
@@ -193,6 +200,41 @@
              x: left, y: top };
   }
 
+  /* the box only the ancestors that HIDE their overflow leave (check 4): a scroll box is read by scrolling */
+  function cutBox(el, stop) {
+    var box = { left: -1e6, top: -1e6, right: 1e6, bottom: 1e6 };
+    var n = el.parentElement;
+    while (n && n !== document.body) {
+      var st = window.getComputedStyle(n);
+      var hx = /(hidden|clip)/.test(st.overflowX), hy = /(hidden|clip)/.test(st.overflowY);
+      if (hx || hy) {
+        var r = n.getBoundingClientRect();
+        if (hx) { box.left = Math.max(box.left, r.left); box.right = Math.min(box.right, r.right); }
+        if (hy) { box.top = Math.max(box.top, r.top); box.bottom = Math.min(box.bottom, r.bottom); }
+      }
+      if (n === stop) { break; }
+      n = n.parentElement;
+    }
+    return box;
+  }
+  /* check 4: the worst part of a line of this element's own words cut away by such an ancestor, in px (0: none) */
+  function cutPx(el, stop) {
+    var box = null, worst = 0;
+    ownTextNodes(el).forEach(function (n) {
+      var r = document.createRange();
+      r.selectNodeContents(n);
+      Array.prototype.forEach.call(r.getClientRects(), function (b) {
+        if (b.width <= CONFIG.minInkPx || b.height <= CONFIG.minInkPx) { return; }
+        box = box || cutBox(el, stop);
+        var v = clipRect(b, box);
+        if (!v) { return; }                                /* hidden whole: not a cut */
+        worst = Math.max(worst, b.height - v.height, b.width - v.width);
+      });
+      if (r.detach) { r.detach(); }
+    });
+    return worst > CONFIG.tolPx + 1 ? Math.round(worst) : 0;
+  }
+
   /* one rect per rendered LINE of this element's OWN text, clipped to what is visible */
   function inkRects(el) {
     var out = [];
@@ -246,7 +288,7 @@
       });
     });
 
-    var all = qa(s, "*").concat(chrome), overlays = [];
+    var all = qa(s, "*").concat(chrome), overlays = [], cut = [];
     all.forEach(function (el) {
       if (el.namespaceURI && el.namespaceURI.indexOf("svg") >= 0) { return; }
       var st = getComputedStyle(el);
@@ -260,6 +302,10 @@
         return;
       }
       var ink = inkRects(el);
+      if (ink.length && s.contains(el) && parseFloat(st.opacity) !== 0) {
+        var px = cutPx(el, s);
+        if (px) { cut.push({ sel: label(el), txt: (el.textContent || "").trim().slice(0, CONFIG.txtSample), px: px }); }
+      }
       if (ink.length) {
         texts.push({ el: el, ink: ink, sel: label(el),
                      txt: (el.textContent || "").trim().slice(0, CONFIG.txtSample) });
@@ -334,8 +380,8 @@
                    ox: Math.round(o2.x), oy: Math.round(o2.y) });
       }
     }
-    return { slide: n, id: s.id || "", n: text.length + box.length + underChrome.length,
-             text: text, box: box, chrome: underChrome };
+    return { slide: n, id: s.id || "", n: text.length + box.length + underChrome.length + cut.length,
+             text: text, box: box, chrome: underChrome, cut: cut };
   }
 
   /* ------------------------------- the sweep ------------------------------ */
@@ -442,7 +488,8 @@
             return { slide: r.slide, id: r.id, n: r.n,
                      text: r.text.slice(0, CONFIG.maxExamples),
                      box: r.box.slice(0, CONFIG.maxExamples),
-                     chrome: r.chrome.slice(0, CONFIG.maxExamples) };
+                     chrome: r.chrome.slice(0, CONFIG.maxExamples),
+                     cut: r.cut.slice(0, CONFIG.maxExamples) };
           })
         };
         if (global.console) {

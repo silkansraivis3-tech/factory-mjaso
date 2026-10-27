@@ -77,7 +77,15 @@ not say where the image itself came from.
 **5 · Evaluate each candidate.** Technical credibility first, licence second, quality third:
 - Does it show *the actual thing*, not something that resembles it? Say what makes you confident.
 - Is it the right manufacturer, if the course names one?
-- Resolution ≥ 1200 px on the long edge; crop, clutter and legibility acceptable on a tablet.
+- **Resolution ≥ 1600 px on the long edge** (2.65.0, owner: *"not this pixel stuff"*): a photograph fills half a
+  projector at 1920 px, so a smaller one is stretched into blocks. Get the **original file, never a preview**: on
+  Wikimedia Commons the *Original file* link (not a `/thumb/` URL), on Flickr the largest size offered, a
+  manufacturer's press or media kit rather than its web page, a PDF's embedded image rather than a screenshot of the
+  page. Write its size in the record (`"px": "2400x1600"`). Under 1600 px only when nothing larger exists - say so and
+  give the size; **under 800 px is not recommended at all** (no enlargement makes it sharp): keep looking, or propose
+  the photograph to take at Novikontas. `course-visuals/scripts/check_assets.py` warns on both, and the module's
+  pre-check (`compile/scripts/precheck.py`) stops a build on a photograph under 800 px.
+- Crop, clutter and legibility acceptable on a tablet.
 - Licence: public domain, CC0, CC BY, CC BY-SA or explicit permission. Not NC, not ND, not "free
   to use" with no named licence.
 

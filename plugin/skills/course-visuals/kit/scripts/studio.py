@@ -293,7 +293,7 @@ PROBE = r"""
 <script src="%(audit)s"></script>
 <script>
 (function () {
-  var SHOT = %(shot)s, ONLY = %(only)s;     /* ONLY "small text": that check alone, no part boxes (2.66.5, figure_fit's 1024 x 768) */
+  var SHOT = %(shot)s, ONLY = %(only)s;     /* ONLY "small text": that check alone, no part boxes (2.72.5, figure_fit's 1024 x 768) */
   function out(r) { r.virt = Math.round(performance.now()); var p = document.createElement('pre'); p.id = '%(out)s'; p.textContent = JSON.stringify(r); document.body.appendChild(p); }
   function frames(n, cb) { setTimeout(cb, 40 * n); }      // a hidden browser's virtual clock runs timers, not frames
   function run() {
@@ -373,11 +373,13 @@ def generic_head(panel):
 
 # the figure's panel, as the deck shows it, at each window width - the contact sheet draws every step at this width, so the
 # words are grown (the 12.5 px floor) exactly as on the real slide
-PANEL_W = {1280: 682, 1024: 443}
+# 2.67.0 - the templates' figure column (L61): 504 px at 1280 x 800, 392 at 1024 x 768 - it was the old two-col 682 / 443, so
+# the sheet showed a drawing larger than its slide does and its words passed here and failed the build (gas M15)
+PANEL_W = {1280: 504, 1024: 392}
 
 
 def sheet_size(spec, size, split=False, n=None):
-    """(cell width, columns, page width, page height, cell height) of the contact sheet for a window `size`; split (2.66.0,
+    """(cell width, columns, page width, page height, cell height) of the contact sheet for a window `size`; split (2.72.0,
     the FIGURE review): one column of cells of a fixed height, room for a frame the kit grows, so each step can be cut out"""
     cw = PANEL_W.get(size[0], int(size[0] * 0.53))
     n = n or len(spec.get("steps") or []) + 1
@@ -484,13 +486,13 @@ class _Run(object):
         args = [exe, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--mute-audio",
                 "--no-default-browser-check", "--user-data-dir=" + prof, "--allow-file-access-from-files",
                 "--window-size=%d,%d" % size, "--virtual-time-budget=%d" % (6000 if shot_png else 20000)]
-        args += list(browser_slots.FOREGROUND)      # 2.66.4: never an Idle-priority renderer (browser_slots.FOREGROUND)
+        args += list(browser_slots.FOREGROUND)      # 2.72.4: never an Idle-priority renderer (browser_slots.FOREGROUND)
         args += ["--screenshot=" + shot_png] if shot_png else ["--dump-dom"]
         self.out = os.path.join(prof, "dom.html")
         self.slot = browser_slots.slot()
         self.slot.__enter__()
         self.t0, self.what = time.time(), "%s %dx%d" % ("shot" if shot_png else "probe", size[0], size[1])
-        # 2.65.0 - a probe (--dump-dom) runs in this slot's kept Chrome when it can (browser_slots.run_dom), in wait()
+        # 2.71.0 - a probe (--dump-dom) runs in this slot's kept Chrome when it can (browser_slots.run_dom), in wait()
         self.cmd, self.p = (args + [url], None) if not shot_png and browser_slots.dom_job(args + [url]) else (None, None)
         if self.cmd and browser_slots.reuse_on():
             return
@@ -645,7 +647,7 @@ def run(spec_path, parts=None, panel=None, sizes=((1280, 800), (1024, 768)), ste
     """{size: {"states": [...], "report": {...}, "shot": png}} and a list of problems; None, why when it cannot run.
     2.50.0: shots=False only measures (no screenshot run); spec= draws this spec instead of the file's (a candidate fix,
     figure_fit.py), on the file's own slide; ctx= the slide context, when the caller already found it.
-    small_only (2.66.5): the sizes whose probe runs the SMALL TEXT check alone (no other check, no part boxes) - figure_fit
+    small_only (2.72.5): the sizes whose probe runs the SMALL TEXT check alone (no other check, no part boxes) - figure_fit
     keeps nothing else from its second size"""
     exe = find_browser()
     if not exe:
@@ -813,8 +815,8 @@ def main(argv=None):
     ap.add_argument("--out", help="where the screenshots go (default: _studio next to the spec)")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--inset-over", help="x,y,w: a stand-in photo laid over the drawing in its own units (the deck's \"inset over\"); not with --step all")
-    # 2.66.5 - the findings only: every step measured at every size, no picture (SPEED_ANALYSIS.md: a studio run while
-    # iterating took 51-129 s in the 2.66.3 run - its pictures are fresh hidden browsers, the measurements kept ones)
+    # 2.72.5 - the findings only: every step measured at every size, no picture (SPEED_ANALYSIS.md: a studio run while
+    # iterating took 51-129 s in the 2.72.3 run - its pictures are fresh hidden browsers, the measurements kept ones)
     ap.add_argument("--quick", action="store_true", help="the findings only, in seconds - no screenshot; then one --step all to look")
     o = ap.parse_args(argv)
     if o.inset_over:

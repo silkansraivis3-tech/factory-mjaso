@@ -26,20 +26,20 @@
  * `factory` (optional): a folder holding the factory's skills (`<factory>/course-factory/SKILL.md` ...) to use
  *   instead of the installed plugin - a benchmark pins its version this way.
  * `notes` (optional): the operator's words for every module agent ("no paid pictures tonight", "decline 3D: ...").
- * `seed_from` (optional, 2.65.0): the hand-fixed predecessor course a rebuild starts from - every module's --init-build
+ * `seed_from` (optional, 2.71.0): the hand-fixed predecessor course a rebuild starts from - every module's --init-build
  *   takes its drawings and photos for the screens whose words are unchanged (compile_module.py --seed-from). Without it
  *   the course's own working_claude/course.build.json "seed_from" is used, when it names one.
- * `wave` (optional): how many modules build at once (default: all). 2.65.0 - a rolling pool, biggest module first: the
+ * `wave` (optional): how many modules build at once (default: all). 2.71.0 - a rolling pool, biggest module first: the
  *   gate measures each module's build cost (scripts/build_order.py) and the next module starts as soon as one finishes,
  *   so the long pole starts first instead of a wave waiting for its slowest member (2.63.3 M01-M03: 114 min, M02 alone).
  *
- * 2.65.0 - the builder reads compile/BUILDER_CARD.md, not the whole skill; a module with a 3D-kit scene gets the 3D step
+ * 2.71.0 - the builder reads compile/BUILDER_CARD.md, not the whole skill; a module with a 3D-kit scene gets the 3D step
  * after its build: scene3d_check.py (spec, smoke, timing, pictures), a SEPARATE reviewer of the pictures, one fix round.
  *
- * 2.66.0 - then the FIGURE step: every kit figure photographed at projector size at every step (figure_review.py), judged
+ * 2.72.0 - then the FIGURE step: every kit figure photographed at projector size at every step (figure_review.py), judged
  * by a reviewer who did not build it against the slide's words and the figure's must-be-true list; BROKEN goes back once.
  *
- * 2.66.5 - the 3D step, the FIGURE step and QA judge the built module AT THE SAME TIME, and ONE fix round (two builds, at
+ * 2.72.5 - the 3D step, the FIGURE step and QA judge the built module AT THE SAME TIME, and ONE fix round (two builds, at
  * most six studio runs a figure) takes every BROKEN finding of the three; then only what was BROKEN is judged again
  * (Desktop\IGF_course_2.66_figures\SPEED_ANALYSIS.md: up to three fixers one after the other on one module before).
  *
@@ -169,6 +169,7 @@ const GATE_SCHEMA = {
       type: 'array', description: 'build_order.py --json, as printed: the modules biggest first',
       items: { type: 'object', required: ['id', 'cost'], properties: { id: { type: 'number' }, cost: { type: 'number' } } },
     },
+    skill_dir: { type: 'string', description: 'the absolute folder of the course-factory skill the scripts ran from (it holds SKILL.md and scripts/)' },
   },
 }
 
@@ -182,15 +183,24 @@ ${A.modules.map((m) => `    python ${SCRIPTS}/scripts/content_script.py status "
 open = true only if course_gate.py exited 0. output = everything course_gate.py printed, word for word.
 approved = the module ids (as written after --module) whose status line says "approved by"; a draft, a
 missing script or an error is not approved. order = the JSON list build_order.py printed, as it is (empty if it
-printed none). Do not fix anything, do not write any file.`,
+printed none). skill_dir = the absolute folder of the course-factory skill these
+scripts ran from${A.factory ? '' : ' (find it with Glob - **/skills/course-factory/SKILL.md under the installed plugins, the newest version - and do not read that file)'}.
+Do not fix anything, do not write any file.`,
   { label: 'gate:ilo-map+kb', phase: 'Read', schema: GATE_SCHEMA, model: 'sonnet', effort: 'low' }
 )
 const APPROVED = new Set(((gate && gate.approved) || []).map(String))
-/* 2.65.0 - biggest module first (build_order.py's cost); a module it did not cost keeps its place after the costed ones */
+/* 2.71.0 - biggest module first (build_order.py's cost); a module it did not cost keeps its place after the costed ones.
+   (merge) Approved modules first, and with no cost from the gate the most minutes in the approved table (Raivis's 2.65.0) */
 const COST = new Map(((gate && gate.order) || []).map((r) => [String(r.id), Number(r.cost) || 0]))
+const size = (m) => (COST.size ? COST.get(String(m.id)) || 0 : Number(m.minutes) || 0)
 const ORDER = A.modules.map((m, i) => ({ m, i }))
-  .sort((a, b) => (COST.get(String(b.m.id)) || 0) - (COST.get(String(a.m.id)) || 0) || a.i - b.i)
+  .sort((a, b) => (APPROVED.has(String(b.m.id)) - APPROVED.has(String(a.m.id))) || size(b.m) - size(a.m) || a.i - b.i)
 const LONG_POLE = ORDER.length > 1 && COST.size ? String(ORDER[0].m.id) : null
+/* 2.66.0 (Raivis) - the factory's folder, for the builders: they read their instructions by path instead of loading the whole
+   skill (SKILL.md, 48 KB - the router for every mode), and that ~12,000 tokens stays out of every builder's context for its
+   whole run (the timed gas M02 build: 84 tool calls). (merge) What they read by it is the builder card */
+const DIR = A.factory ? `${A.factory}/course-factory` : ((gate && gate.skill_dir) || '').replace(/[\\/]SKILL\.md$/i, '') || null
+const CARD_AT = DIR ? `${DIR}/compile/BUILDER_CARD.md` : CARD
 
 if (!gate || !gate.open) {
   /* No module agent starts without the approved ILO map and the knowledge-base decision (owner, 2026-10-16). */
@@ -252,23 +262,50 @@ approves each script; nothing is built from words nobody approved.
 Report "awaiting approval", every honesty marker with its source, the planned Track A
 buckets and Track B ratio, and what you moved to the handout.`
 
+/* 2.67.0 - the photographs a script asks for are found while it waits for the operator's approval, not by the builder
+   afterwards (the builder's search for photos was time on the build's clock). One agent per written script, on Sonnet:
+   it places what it finds - with each one's rights record - and lists what it could not find; it never touches the words */
+const photoPrep = (m) => `The content script of module ${m.id} has just been written and waits for the operator's approval:
+${A.course}/working_claude/script/M${two(m)}.json. Find its PHOTOGRAPHS now, so the build does not wait for them.
+
+For every screen whose visual_kind is photo or annotated_photo, and every screen whose "visual" asks for a real photograph:
+search the course's own material first (the knowledge base, the old course's images - course-visuals' order: project, factory
+library, internet), then the internet - a real photograph, never AI-generated, 1600 px or more on its long side (the original
+file: Wikimedia's "Original file", never a /thumb/), on a licence a training course may use and change (public domain, CC0,
+CC BY, CC BY-SA). Save each into ${A.course}/modules/module${two(m)}/assets/img/ with its record in that folder's
+_photo_meta.json (source, url_or_origin, author, licence, rights_state, credit, description of what it LITERALLY shows,
+shows, teaching_purpose naming the screen, used_in, visually_verified after you opened and looked at it).
+
+Then make the small ones sharp, on this computer, once: python ${SCRIPTS}/../course-visuals/scripts/upscale_photos.py
+"${A.course}" --modules ${m.id} (Real-ESRGAN - nothing is sent anywhere; it leaves a picture with words or numbers alone; if
+it says it is not installed, go on without it).
+Write the list to ${A.course}/working_claude/photo_candidates/M${two(m)}.md: each screen, the file you placed and why it fits -
+or "not found" and what would do. You may write only those two places: never the script, never the build sheet, never a page.
+Report the list.`
+
 /* an approved module: the mechanical build, on Sonnet (MECHANICAL), in ONE command per round */
-/* 2.65.0 - the builder reads a one-page card (compile/BUILDER_CARD.md: the commands, the fix for each kind of line the
+/* 2.71.0 - the builder reads a one-page card (compile/BUILDER_CARD.md: the commands, the fix for each kind of line the
    build prints, the stop, the report), not the whole skill: the 2.63.3 builders read ~130,000 characters of SKILL.md,
    GUIDE.md, CATALOGUE.md and SPEC.md first and carried them in every turn (M02: 98 M cache-read tokens) */
-const build = (m) => `BUILD ONE module from its approved script. Read ${CARD} first - it is your whole job: the commands,
-what to do with each line the build prints, when to stop and what to report. The course-factory SKILL.md and
-compile/GUIDE.md are reference for a case the card does not cover - read only the section it names. The factory's
-scripts are under ${SCRIPTS}/.. (course-factory, course-visuals, course-module-ui, course-module-ux).
+const build = (m) => `BUILD ONE module from its approved script. Read ${CARD_AT} first - it is your whole job: the commands,
+what to do with each line the build prints, when to stop and what to report. Do NOT read the course-factory SKILL.md
+or load the skill (2.66.0: ~12,000 tokens in your context for your whole run); compile/GUIDE.md${DIR ? ` (${DIR}/compile/GUIDE.md)` : ''}
+is reference for a case the card does not cover - read only the section it names. The factory's scripts are under
+${DIR ? `${DIR}/..` : `${SCRIPTS}/..`} (course-factory, course-visuals, course-module-ui, course-module-ux) - use those, not another copy.
 
 ${brief(m)}
+
+Your script working_claude/script/M${two(m)}.json is approved: you never type the deck's or a task page's HTML, and you
+never change the approved words. Its photographs may already be in modules/module${two(m)}/assets/img, found while the
+script waited for approval (2.67.0) - if working_claude/photo_candidates/M${two(m)}.md exists it lists them: use those
+first. No list: the photographs in assets/img are the module's.
 
     design_system.py install modules/module${two(m)}                     (course-module-ui/scripts)
     compile_module.py <course> --module ${m.id} --init-build${SEED}      (once, if the build sheet is missing)
         screens marked "_seeded" start from a hand-fixed predecessor's drawing or photo: build them as they are and
         change only what the build reports
     fill the blanks the build names in the build sheet, then BUILD - the starter figures are drawn already: never delete
-        or rewrite one, never polish a figure the build did not name (2.66.0: the first proof run's builders redrew every
+        or rewrite one, never polish a figure the build did not name (2.72.0: the first proof run's builders redrew every
         figure by hand before building - 50 minutes, nothing built)
     build_module.py <course> --module ${m.id} --no-course-pages${String(m.id) === LONG_POLE ? ' --long-pole' : ''}           (compile/scripts)
         ONE command runs the figures, the compile, every check and the review sheets and prints only what fails, one
@@ -280,16 +317,22 @@ ${brief(m)}
         BROKEN finding comes back for one fix round. Anything you would polish: list it in your report.
     THE SAME FINDING THREE BUILDS RUNNING: the build says so ("SAME FINDING 3 BUILDS RUNNING") - never build for it again,
         list it in your report; when it says "STOP - everything ... 3 builds running", STOP and report: the judges and
-        the one fix round take it from there (2.66.5: M02 s05 failed in all 20 of its builds).
+        the one fix round take it from there (2.72.5: M02 s05 failed in all 20 of its builds).
     a figure problem the build PRINTED: fix that figure in the studio (studio.py <spec> --quick, seconds; one --step all
         to look when it is clean), then one build.
-    a layout you change (2.66.7): build_module.py <course> --module ${m.id} --slides <the slide ids> first - seconds, nothing
+    a layout you change (2.72.7): build_module.py <course> --module ${m.id} --slides <the slide ids> first - seconds, nothing
         written; the build's own pre-check already tries a wider words' column, paged words and the other ways by itself.
 
-RUN build_module.py IN THE FOREGROUND with the shell call's longest timeout (600000 ms). "STILL BUILDING": run the SAME
-command with --wait until it prints the build's answer - never a second build meanwhile, never an edit while it runs, never
-end your turn while it runs (your report is read as the module's result). Your report's FIRST line is the PASS / FAIL line
-build_module.py printed.
+RUN build_module.py IN THE FOREGROUND and wait for its last line; give the shell call the longest
+timeout it allows (600000 ms). A build that runs longer answers "STILL BUILDING" before that
+limit and goes on by itself: then run the SAME command with --wait (again, until it prints the
+build's answer) - never start a second build meanwhile, never edit the build sheet or a figure while
+it runs. A module's first build may first wait up to 5 min for another module's first build (one
+at a time on this computer) - that is expected. Never end your turn while a build runs: your report
+is read as the module's result (2.58.0 - the IGF full build: a builder that ended "waiting on the
+build" left Module 15 half-built). Your report's FIRST line is the PASS / FAIL line build_module.py
+printed; its SECOND line the "TIME M0N: ..." line it printed under the PASS, as it is (2.65.0 - the gold
+standard is 30-40 minutes a module, 20 for its fixes).
 
 L60: when the build prints "RECOMMENDED (L60)", build the scene on the slide it names (a 3D-kit spec, sNN.kit3d.json) - or,
 only when the subject has no shape, inside or layout in space to show, or a photo is wanted there, write the reason at the
@@ -313,7 +356,7 @@ const qa = (m) => `You did NOT build this module. Check it.
 Run the deterministic checks in TWO shell calls and READ their output:
   1  python course-factory/compile/scripts/build_module.py "${A.course}" --module ${m.id} --no-course-pages --no-fix
      - the compile, the drawing check (L54), both script matches, navigation, the audits at
-     1280x800 and 1024x768, the importer and the review sheets' grading of every question (right
+     1280x800, 1024x768 and 1280x720, the importer and the review sheets' grading of every question (right
      and wrong), in one command. It rebuilds from the same approved inputs, so the bytes come out
      the same: anything it reports, or a stop (exit 2), is a finding. Give the shell call 600000 ms;
      if it answers "STILL BUILDING", run the same command with --wait until it prints its answer.
@@ -335,7 +378,7 @@ module is in: their absence, and a link to them, is not a finding of this module
 YOURS: the words, the ILO teaching, the task pages, the photographs and the build. NOT YOURS - the kit figures
 (working_claude/figures/M${two(m)}/*.kit.json, a drawing on a dark panel): the FIGURE review judges every one at
 projector size, step by step, at the same time as you - how it is drawn, its labels, its parts, whether each step shows
-its title (2.66.7: in the 2.66.5 run ~13-16 of QA's 24 first BROKEN were the figure review's ground, and the fixer read
+its title (2.72.7: in the 2.72.5 run ~13-16 of QA's 24 first BROKEN were the figure review's ground, and the fixer read
 each fault twice). A kit figure's drawing is never a finding of yours; a drawing that is not a kit figure still is.
 
 Then answer the questions no script can: is every outcome in the ILO map actually
@@ -361,7 +404,7 @@ A module that still classifies C has not finished — say so plainly. REPORT fin
 Do not fix anything. Severity is one of three (2.63.3 - the 2.63.2 run's QA used five scales):
   BROKEN  wrong, misleading or unusable for a trainee or the instructor - a picture of another thing than the
           words name, a number that contradicts the slide, a question graded wrongly, an outcome not taught, a
-          failed check (a FIGURE line of the build too: say it once, as the build prints it); and (2.66.0) ANY
+          failed check (a FIGURE line of the build too: say it once, as the build prints it); and (2.72.0) ANY
           drawing that is not a kit figure a seafarer would call wrong: a wrong physical arrangement (a vent
           mast or manifold inside the hull), a part the slide or a label names that is not drawn, something
           unconnected or floating, an incomplete figure - never POLISH (REVIEW_PROMPT.md item 7); blocking = true
@@ -373,22 +416,22 @@ a "Your turn" activity's minutes as practice in a theory-only module) is the ope
 "SCRIPT:" - it is reported, never sent back to a builder (who may not change an approved script).`
 
 /* 2.63.3 - a BROKEN finding of QA sends the module back for ONE fix round, by a builder who fixes exactly those */
-/* 2.66.0 - the second proof run: the three figure fixers ran 58-102 minutes and $50 between them (one 102 min, $33),
+/* 2.72.0 - the second proof run: the three figure fixers ran 58-102 minutes and $50 between them (one 102 min, $33),
    rebuilding after every word they moved to fit a 480 px column - "build until module clean" had no end. A fix round
    gets TWO builds; what the second still prints is the operator's list (NOTHING LOOPS, approved by Aleksis) */
 const FIX_CAP = `AT MOST TWO build_module.py runs in this round. Try every figure you change in the studio first -
 python ${A.factory ? `${A.factory}/course-visuals/kit/scripts` : '<the course-visuals skill folder>/kit/scripts'}/studio.py <spec> --quick
 (its findings in seconds, no pictures; a closer fit the build applied is already in the spec) until its own report is
 clean, then ONE look at it with --step all, THEN one build. A slide whose layout or words' room you change (a "split",
-"parts", a template, a picture): check it first with build_module.py "${A.course}" --module <N> --slides <its id> (2.66.7:
-the deck laid out in memory, the slide audited at both sizes and its neighbours compared, in seconds - nothing written). AT MOST SIX studio runs for any one figure (2.66.5 - the
+"parts", a template, a picture): check it first with build_module.py "${A.course}" --module <N> --slides <its id> (2.72.7:
+the deck laid out in memory, the slide audited at both sizes and its neighbours compared, in seconds - nothing written). AT MOST SIX studio runs for any one figure (2.72.5 - the
 second proof run's M03 fixer ran its studio script 59 times, 58 min, on one drawing): a figure still not clean after
 its sixth is left as it is and listed in your report. After the second build STOP, whatever it prints: list what it
 still prints in your report (it goes to the operator's list) - never a third build, never another round of fitting words.`
-/* 2.66.5 - ONE fix round per module for everything its judges found (SPEED_ANALYSIS.md, Desktop\IGF_course_2.66_figures):
+/* 2.72.5 - ONE fix round per module for everything its judges found (SPEED_ANALYSIS.md, Desktop\IGF_course_2.66_figures):
    the 3D review, the FIGURE review and QA judge the built module at the same time (oneModule) and ONE fixer gets every
    BROKEN finding - before, up to three fixers ran one after the other on the same module (3D, figures, QA), each
-   re-reading the card, the specs and the sheets, each with its own builds (the 2.66.3 run: 13 min of reviews before
+   re-reading the card, the specs and the sheets, each with its own builds (the 2.72.3 run: 13 min of reviews before
    M01's first fixer; run 2: figure fixers 58-102 min) */
 const fixAll = (m, b3, bf, bq, figs) => `${build(m)}
 
@@ -396,7 +439,7 @@ THIS MODULE IS BUILT AND WAS JUDGED by reviewers who did not build it${[b3.lengt
   bq.length && ' (QA)'].filter(Boolean).join('')}. Do NOT start again from --init-build. Fix EXACTLY the BROKEN findings
 below - nothing else (no polish, no other screen) - in the build sheet, the figure specs or the 3D scene specs, then
 ${figs ? `STOP.
-DO NOT RUN build_module.py (2.66.7): figure fixers are changing the figures of ${figs.join(', ')} beside you - never edit those
+DO NOT RUN build_module.py (2.72.7): figure fixers are changing the figures of ${figs.join(', ')} beside you - never edit those
 figures' specs - and ONE build runs after all of you. Check a layout you change with build_module.py "${A.course}" --module
 ${m.id} --slides <its id> (seconds, nothing written); a 3D scene with its own check script, not a build.` : `build and STOP.
 ${FIX_CAP}`}
@@ -419,7 +462,7 @@ QA findings:
 
 ${bq.map((f) => `  - ${f.where}: ${f.what}`).join('\n')}` : ''}`
 
-/* 2.66.7 - THE FIX ROUND SPLIT BY FIGURE (Desktop\IGF_course_2.66_figures\NEXT_ROUND.md #5): the 2.66.5 run's ONE fixer per
+/* 2.72.7 - THE FIX ROUND SPLIT BY FIGURE (Desktop\IGF_course_2.66_figures\NEXT_ROUND.md #5): the 2.72.5 run's ONE fixer per
    module carried every BROKEN finding of three reviews - M03's ran 37 min (28 figure findings, 48 studio runs one after the
    other, 12.7 min of thinking), M02's 29. Now each figure with BROKEN findings gets its own small fixer, at most FIG_FIXERS
    at once (the computer's hidden-browser slots), each with its own studio cap and writing only its own spec; the 3D and QA
@@ -506,9 +549,9 @@ const fixable = (q) => ((q && q.findings) || []).filter((f) => f.severity === 'B
    from its files, at most A.retries times (default 1). The IGF full build's Module 15 builder ended mid-build */
 const passed = (r) => /\bPASS (M\d+|final)\b/.test(String(r || '')) ||
   /\bFAIL (M\d+|final) - course package \(/.test(String(r || ''))
-/* 2.66.7 - a fresh agent only for a REAL stop: the builder ended mid-build or with no build answer at all. A builder that
+/* 2.72.7 - a fresh agent only for a REAL stop: the builder ended mid-build or with no build answer at all. A builder that
    stopped on a build's FAIL line and listed what is left (BUILDER_CARD "Stop": the same finding three builds running) goes
-   to the judges - its findings reach the one fix round anyway (the 2.66.5 run: both retries, 21 and 27 min, 28 builds,
+   to the judges - its findings reach the one fix round anyway (the 2.72.5 run: both retries, 21 and 27 min, 28 builds,
    ended without PASS on findings the judges and the fixer got anyway) */
 const answered = (r) => /\bFAIL (M\d+|final) - /.test(String(r || ''))
 const stoppedShort = (r) => !passed(r) && !answered(r)
@@ -530,7 +573,15 @@ async function buildUntilPass(m) {
   return r
 }
 
-/* ------------------------------------------------- 2.65.0 · THE 3D STEP (a module with a 3D-kit scene) */
+/* 2.65.0 (Raivis) - the gold standard (owner, 2026-10-26): 30-40 minutes a module, 20 for its fixes. A workflow has no
+   clock, so the build keeps it - compile_module.py --init-build starts it, build_module.py's first PASS prints
+   "TIME M01: 34 min from its starter build sheet to its first PASS - ..." - and the builder's report carries that line */
+const timeOf = (r) => {
+  const t = /TIME (M\d+|final): (\d+) min[^\n]*/.exec(String(r || ''))
+  return t ? { minutes: Number(t[2]), over: Number(t[2]) > 40, line: t[0] } : null
+}
+
+/* ------------------------------------------------- 2.71.0 · THE 3D STEP (a module with a 3D-kit scene) */
 /* the scene is the builder's spec; it is checked and photographed by a script and judged by a reviewer who did not
    build it (the 2.63.2 run: every scene passed its checks while showing "a bare pipe" and "labels as buttons below") */
 const KIT3D_SCRIPTS = A.factory ? `${A.factory}/course-visuals/kit3d/scripts` : '<the course-visuals skill folder>/kit3d/scripts'
@@ -594,8 +645,8 @@ async function threeD(m, tag) {
   return { check: s, review: r }
 }
 
-/* ------------------------------------------------- 2.66.0 · THE FIGURE STEP (a module with kit figures) */
-/* the IGF 2.65.0 run: every check passed and QA's one look at small review sheets rated a vent mast inside the hull, a
+/* ------------------------------------------------- 2.72.0 · THE FIGURE STEP (a module with kit figures) */
+/* the IGF 2.71.0 run: every check passed and QA's one look at small review sheets rated a vent mast inside the hull, a
    "Bunkering station" of words only and pipes ending in the air POLISH - none went back. Every figure is photographed at
    projector size at every step (figure_review.py) and judged by a reviewer who did not build it, against the slide's words
    and the figure kind's must-be-true list; its BROKEN findings go back to the builder for one round */
@@ -670,15 +721,17 @@ async function figures(m, only) {
 }
 
 /* one module, start to finish: built (or its script written); then its judges AT THE SAME TIME - the 3D step, the figure
-   step and QA judge the same built module and none changes it (2.66.5); ONE fix round for all their BROKEN findings; then
-   only what was BROKEN is judged again, again at the same time. Never a second fix round (NOTHING LOOPS, 2.66.0): what is
+   step and QA judge the same built module and none changes it (2.72.5); ONE fix round for all their BROKEN findings; then
+   only what was BROKEN is judged again, again at the same time. Never a second fix round (NOTHING LOOPS, 2.72.0): what is
    still BROKEN goes on the operator's list - a 3D finding still blocks the module, as before */
 async function oneModule(m) {
   if (!APPROVED.has(String(m.id))) {
     await agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' })
+    /* 2.67.0 - its photographs are found while the script waits for approval, not on the build's clock */
+    await agent(photoPrep(m), { label: `photos:${m.id}`, phase: 'Build', ...MECHANICAL })
     return { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] }
   }
-  await buildUntilPass(m)
+  const time = timeOf(await place(() => buildUntilPass(m)))          // 2.65.0 (Raivis) - the module clock, from the builder's report
   const [d3a, fga, q] = await Promise.all([threeD(m), figures(m),
     agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })])
   const b3 = broken3d(d3a), bf = brokenFigs(fga && fga.review), bq = fixable(q)
@@ -686,20 +739,20 @@ async function oneModule(m) {
   if (b3.length || bf.length || bq.length) {
     log(`module ${m.id}: BROKEN - 3D ${b3.length}, figures ${bf.length}, QA ${bq.length} - one fix round`)
     if (bf.length) {
-      /* 2.66.7: a fixer per figure (at most FIG_FIXERS at once) and the module fixer beside them, none building; then one build */
+      /* 2.72.7: a fixer per figure (at most FIG_FIXERS at once) and the module fixer beside them, none building; then one build */
       const figs = [...new Set(bf.map((f) => f.slide))]
       await Promise.all([fixFigures(m, bf), b3.length || bq.length
         ? agent(fixAll(m, b3, [], bq, figs), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL }) : null])
-      await agent(fixBuild(m, b3, figs), { label: `fixbuild:${m.id}`, phase: 'Build', ...MECHANICAL })
+      await place(() => agent(fixBuild(m, b3, figs), { label: `fixbuild:${m.id}`, phase: 'Build', ...MECHANICAL }))
     } else {
-      await agent(fixAll(m, b3, bf, bq), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL })
+      await place(() => agent(fixAll(m, b3, bf, bq), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL }))
     }
     const [d3b, fgb, q2] = await Promise.all([
       b3.length ? threeD(m, '+fix') : null,
       bf.length ? figures(m, [...new Set(bf.map((f) => f.slide))].join(',')) : null,
       bq.length ? agent(qa(m), { label: `qa:${m.id}+fix`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL }) : null])
     if (b3.length) d3 = { check: (d3b && d3b.check) || d3a.check, review: (d3b && d3b.review) || d3a.review, first_review: d3a.review.findings }
-    /* NOTHING LOOPS (2.66.0, approved by Aleksis): what is still BROKEN after the one fix round goes to the operator's list,
+    /* NOTHING LOOPS (2.72.0, approved by Aleksis): what is still BROKEN after the one fix round goes to the operator's list,
        never back to a builder and never failing the module again */
     if (bf.length) {
       const r = (fgb && fgb.review) || fga.review
@@ -717,22 +770,28 @@ async function oneModule(m) {
     const left = (fg.for_aleksis || []).map((f) => `FIGURE ${f.slide}: ${f.what}`)
     out = Object.assign({}, out, { figures: fg, for_aleksis: ((out.for_aleksis) || []).concat(left) })
   }
-  return out
+  return out && time ? Object.assign({}, out, { time }) : out
 }
 
-/* 2.65.0 - a rolling pool of A.wave modules (default: all at once), biggest first: the next module starts the moment one
-   finishes - each build runs hidden browsers, so on one PC 3 at a time keeps it from being pinned at 99 %. Waves of 3
-   waited for their slowest member (2.63.2: 95 / 54 / 41 / 33 / 39 min; 2.63.3 M01-M03: 114 min, M02 alone at the end) */
+/* at most A.wave BUILDS at once (default: all) - each build runs hidden browsers, so on one PC 3 keeps it from being pinned
+   at 99 % (the IGF full build ran in waves of 3). Raivis's 2.65.0 and 2.71.0, merged: the biggest module first (build_order.py's
+   cost), and a rolling pool - the next build starts the moment one ends. Only a build holds a place: the builder (and its
+   retry), a fix round that builds, the one build after the figure fixers; the judges and QA run beside the builds (a QA
+   agent runs no figures stage). The waves waited for their slowest member (2.63.2: 95 / 54 / 41 / 33 / 39 min; 2.63.3
+   M01-M03: 114 min, M02 alone at the end) */
 const WAVE = Math.max(1, A.wave || A.modules.length)
-const results = new Array(A.modules.length).fill(null)
-const queue = ORDER.slice()
+let free = WAVE
+const waiting = []
+async function place(work) {
+  while (free === 0) await new Promise((go) => waiting.push(go))
+  free--
+  try { return await work() } finally { free++; const next = waiting.shift(); if (next) next() }
+}
 log(`build order, biggest first: ${ORDER.map(({ m }) => `M${two(m)}${COST.has(String(m.id)) ? ` (${COST.get(String(m.id))})` : ''}`).join(', ')}`
-  + (WAVE < A.modules.length ? ` - ${WAVE} at a time` : ''))
-await parallel(Array.from({ length: Math.min(WAVE, queue.length) }, () => async () => {
-  while (queue.length) {
-    const { m, i } = queue.shift()
-    try { results[i] = await oneModule(m) } catch (e) { log(`module ${m.id}: ${e && e.message ? e.message : e}`) }
-  }
+  + (WAVE < A.modules.length ? ` - ${WAVE} builds at a time, the next starting as one ends` : ''))
+const results = new Array(A.modules.length).fill(null)
+await parallel(ORDER.map(({ m, i }) => async () => {        // each asks for its place in this order: biggest first
+  try { results[i] = await oneModule(m) } catch (e) { log(`module ${m.id}: ${e && e.message ? e.message : e}`) }
 }))
 
 /* the final assessment (args.final), when its script is approved - built after the modules it draws on */
@@ -809,6 +868,12 @@ return {
   assembly,
   cross,
   blocking: blocking.map((q) => q.module),
+  /* 2.65.0 - each built module's minutes to its first PASS against the gold standard (30-40), and which went over */
+  gold_standard: {
+    target: '30-40 min a module, 20 min for its fixes',
+    minutes: results.filter((q) => q && q.time).map((q) => ({ module: q.module, minutes: q.time.minutes })),
+    over: results.filter((q) => q && q.time && q.time.over).map((q) => q.module),
+  },
   next: blocking.length
     ? 'Blocking findings. Fix them in the named modules, then run compile_course.py and check_course_package.py again.'
     : 'Approve every script still awaiting approval and run pass 2 again (approved modules are rebuilt '

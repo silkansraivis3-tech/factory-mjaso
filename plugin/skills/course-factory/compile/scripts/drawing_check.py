@@ -120,6 +120,7 @@ def is_deck(page):
 
 
 SLIDE_TAG = check_cache.SLIDE_TAG
+DRAWN = re.compile(r"<(?:svg|img|canvas|video|object|iframe)\b|\bdata-kit", re.I)   # what this check can judge on a page (2.70.0)
 
 
 def slices(page, jobs, todo=None):
@@ -171,7 +172,7 @@ def run_page(exe, page, prof, tmp, keep=None):
             # --disable-3d-apis (2.62.1): the drawing check judges drawings and words, never a WebGL render - a 3D scene
             # shows its poster, as on a tablet without WebGL. Software WebGL was the stalled pages' one common part, and the
             # check of three slides with a 3D scene took 3.7 s instead of 9.8 s
-            # 2.65.0: in this slot's kept Chrome when it can be (browser_slots.run_dom - the same page, a new context)
+            # 2.71.0: in this slot's kept Chrome when it can be (browser_slots.run_dom - the same page, a new context)
             p = browser_slots.run_dom([exe, "--headless=new", "--disable-gpu", "--disable-3d-apis", "--hide-scrollbars", "--no-first-run",
                                 "--mute-audio", "--user-data-dir=" + prof, "--allow-file-access-from-files",
                                 "--window-size=%d,%d" % window_for(exe), "--virtual-time-budget=%d" % (120000 if deck else 8000),
@@ -227,6 +228,11 @@ def check(pages, root=None, cache=None, full=False):
             name = os.path.relpath(page, root).replace("\\", "/") if root else page
             prints[page] = [("%s#%d" % (name, k), fp) for k, (_, fp) in enumerate(fps)] if fps else None
             todo[page] = None if not fps else [k for k, (key, fp) in enumerate(prints[page]) if not store.clean(key, fp)]
+            # 2.70.0 - a page with nothing drawn on it (no svg, picture, canvas, video or kit figure - an instructor's plan,
+            # an answer key) has nothing for this check to judge: no browser for it (gas M15 on 2.67: 48 s and 21 s, plus
+            # up to 80 s waiting for a browser slot, on two pages that reported "drawings": 0)
+            if not is_deck(page) and not DRAWN.search(io.open(page, encoding="utf-8").read()):
+                todo[page] = []
         slides = [p for p in pages if is_deck(p)]
         n_sl = sum(len(prints[p]) if prints[p] else len(SLIDE_TAG.findall(io.open(p, encoding="utf-8").read())) for p in slides)
         LAST["slides"] = (sum(len(todo[p]) if todo[p] is not None else len(SLIDE_TAG.findall(io.open(p, encoding="utf-8").read()))

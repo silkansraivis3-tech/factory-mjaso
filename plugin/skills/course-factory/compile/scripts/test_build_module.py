@@ -118,7 +118,7 @@ def blanks_part():
               p.returncode == 1 and out.strip().count("\n") == 0 and out.startswith("FAIL M01 - nothing built")
               and "s01" in out and "q02" in out and "declined_3d" in out
               and not os.path.isfile(os.path.join(md, "presentation", "index.html")), (p.returncode, out))
-        # 2.66.3 - the same build again, nothing changed since its answer: that answer at once, nothing built
+        # 2.72.3 - the same build again, nothing changed since its answer: that answer at once, nothing built
         import time
         env = dict(os.environ, CF_BUILD_TEST_SLEEP="6", CF_BUILD_ANSWER_WITHIN="60")
         again = lambda *extra: subprocess.run([sys.executable, os.path.join(HERE, "build_module.py"), c, "--module", "1"] + list(extra),
@@ -126,7 +126,7 @@ def blanks_part():
         t = time.time()
         p2 = again()
         t2 = time.time() - t
-        check("2.66.3 nothing changed since the last answer: the same report and exit code at once (%.1f s), said so" % t2,
+        check("2.72.3 nothing changed since the last answer: the same report and exit code at once (%.1f s), said so" % t2,
               p2.returncode == 1 and t2 < 5 and p.stdout.strip() in p2.stdout and "nothing changed since" in p2.stdout,
               (p2.returncode, t2, p2.stdout))
         t = time.time()
@@ -140,12 +140,12 @@ def blanks_part():
         tcm.build_of(c, lambda s: s["screens"]["s04"].update(declined_3d="the operator keeps the flat drawing"))
         check("a 3D scene declined with the operator's reason is no blank", [x[0] for x in b.starter_blanks(c, 1)] == [["s01"], ["q02"]],
               b.starter_blanks(c, 1))
-        # 2.65.0 - a 3D-kit scene still --init-build's starter ("_todo") is a blank too; placed (no "_todo"), it is not
+        # 2.71.0 - a 3D-kit scene still --init-build's starter ("_todo") is a blank too; placed (no "_todo"), it is not
         figdir = b.workspace_figdir(c, 1)
         os.makedirs(figdir, exist_ok=True)
         io.open(os.path.join(figdir, "s04.kit3d.json"), "w", encoding="utf-8").write(json.dumps({"_todo": "place the parts", "parts": []}))
         tcm.build_of(c, lambda s: s["screens"]["s04"].update(figure="s04.kit3d.json", declined_3d=None))
-        check("2.65.0 a 3D-kit scene still the starter (\"_todo\") is a blank", ["s04 (s04.kit3d.json)"] in [x[0] for x in b.starter_blanks(c, 1)],
+        check("2.71.0 a 3D-kit scene still the starter (\"_todo\") is a blank", ["s04 (s04.kit3d.json)"] in [x[0] for x in b.starter_blanks(c, 1)],
               b.starter_blanks(c, 1))
         io.open(os.path.join(figdir, "s04.kit3d.json"), "w", encoding="utf-8").write(json.dumps({"parts": [{"id": "T", "type": "tank_c"}]}))
         check("... placed, it is not", ["s04 (s04.kit3d.json)"] not in [x[0] for x in b.starter_blanks(c, 1)], b.starter_blanks(c, 1))
@@ -181,8 +181,8 @@ AUD = """1280x800  deck     FAIL n=2   20 slides
 
 
 def short_part():
-    """2.65.0 - the build's answer says each problem once, with its fix and its file; the full log keeps every line"""
-    print("-- 2.65.0 the short answer: one line per figure and kind of problem, with its fix; audits per slide and kind")
+    """2.71.0 - the build's answer says each problem once, with its fix and its file; the full log keeps every line"""
+    print("-- 2.71.0 the short answer: one line per figure and kind of problem, with its fix; audits per slide and kind")
     s = b.short_figures(FIG.splitlines(), r"C:\c\figures\M02")
     text = "\n".join(s)
     check("a figure is one header with its spec's path, its scale and panel, and each kind of problem counted",
@@ -211,11 +211,11 @@ def short_part():
 
 
 def streak_part():
-    """2.66.7 - the stop rule: the same finding three builds running (the 2.66.5 run: M02 s05 over-filled in all 20 builds)"""
+    """2.72.7 - the stop rule: the same finding three builds running (the 2.72.5 run: M02 s05 over-filled in all 20 builds)"""
     import io
     import json
     import tempfile
-    print("-- 2.66.7 the stop rule: the same finding three builds running")
+    print("-- 2.72.7 the stop rule: the same finding three builds running")
     say = ["FIGURES"] + b.short_figures(FIG.splitlines(), r"C:\c\figures\M02") + ["AUDITS 1280x800 1024x768 - FAIL:"] + b.short_audits(AUD)
     keys = b.finding_keys(say)
     check("each top-level finding is a key, a figure one per kind of problem; a figure fixed by itself is none",
@@ -242,7 +242,7 @@ def streak_part():
           not any("s02" in k for k in after) and b.streak(path, []) == {} and b.stop_lines({}, "M02") == [], after)
     src = io.open(os.path.join(HERE, "build_module.py"), encoding="utf-8").read()
     check("build_module.py says it on every builder's answer (the figures-only round too), never on QA's --no-fix check",
-          src.count("stop_lines(") >= 3 and src.count("# 2.66.7: a check (QA's --no-fix) is no build of the builder's") == 2, "")
+          src.count("stop_lines(") >= 3 and src.count("# 2.72.7: a check (QA's --no-fix) is no build of the builder's") == 2, "")
 
 
 def stages_part():
@@ -294,7 +294,7 @@ def layout_part():
 
 
 def precheck_part():
-    """2.66.5 - the slides built another way for L62 are audited BEFORE the build (layout_precheck): a misfit is measured out
+    """2.72.5 - the slides built another way for L62 are audited BEFORE the build (layout_precheck): a misfit is measured out
     in seconds instead of a whole LAYOUT round (the figures, the compile, every check) after the build. Replayed on the 2.66
     run's IGF M02 (s04 picture-left did not fit): found by the pre-check in 6 s, the same layouts as the round chose"""
     import io
@@ -337,7 +337,7 @@ def precheck_part():
               and "did not fit" in lines[0] and "every one fits" in lines[1], (calls, lines))
         mo = sorted(out)[0]
         before = next((x for x in sorted(av) if x != mo), "")
-        check("2.66.7 ... and the L62 repeat that left (%s back on its own way, like the slide before it - measured once more "
+        check("2.72.7 ... and the L62 repeat that left (%s back on its own way, like the slide before it - measured once more "
               "as it is now) is settled by the layout solver: the slide before it built its next way, both audited at both "
               "sizes, nothing else" % mo,
               len(calls) == 8 and calls[4][1] == calls[5][1] == [first[0]] and any("measured again as now built: %s" % mo in x
@@ -361,7 +361,7 @@ def precheck_part():
         tcm.build_of(c, lambda bs: bs["screens"][moved].__setitem__("figure", moved + ".html"))
         calls.clear()
         b.layout_precheck(c, 1, md, logdir, "M01", [(1280, 800), (1024, 768)], audit)
-        check("... but a slide kept its way whose markup changed (2.66.5's timed run: a fixer changed only the drawing on "
+        check("... but a slide kept its way whose markup changed (2.72.5's timed run: a fixer changed only the drawing on "
               "M02 s04 and it no longer fit) is checked again - only it", len(calls) >= 2 and len(calls[0][1]) == 1
               and calls[0][1] == calls[1][1], (moved, calls))
         src = io.open(os.path.join(HERE, "build_module.py"), encoding="utf-8").read()
@@ -373,16 +373,16 @@ def precheck_part():
 
 
 def solver_part():
-    """2.66.7 - the layout solver: words that do not fit are settled in the pre-check (a wider column, parts, both, its
+    """2.72.7 - the layout solver: words that do not fit are settled in the pre-check (a wider column, parts, both, its
     other ways), what settles is kept beside the measured-out ways, a try that failed is not made again, and --slides
-    checks slides in seconds writing nothing (the 2.66.5 run: M02 s05 over-filled in all 20 builds)"""
+    checks slides in seconds writing nothing (the 2.72.5 run: M02 s05 over-filled in all 20 builds)"""
     import io
     import json
     import shutil
     import tempfile
     import test_compile_module as tcm
     import compile_module as cm
-    print("-- 2.66.7 the layout solver and the slide check")
+    print("-- 2.72.7 the layout solver and the slide check")
     tmp = tempfile.mkdtemp(prefix="bm_solve_")
     try:
         words = "The tank connection space holds every valve and flange of the fuel tank.\n" \

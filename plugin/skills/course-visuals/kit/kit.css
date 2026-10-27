@@ -130,6 +130,11 @@
    gap, so neighbouring lines never overlap), so the words keep most of their layout */
 .copy .kit-tap:not(.box){padding-top:5px;padding-bottom:5px;margin-top:-5px;margin-bottom:-5px}
 .kit-tap:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+/* 2.66.0 - KIT.h.drag's area: paints nothing (the drawing check sees only what is drawn), a hand over it, the page never
+   scrolls or swipes under a finger that drags; the focus shows round it for the arrow keys */
+.kit-hit{fill:var(--txt-d);fill-opacity:0;stroke:none;cursor:grab;touch-action:none;outline:none}
+.kit-hit:active{cursor:grabbing}
+.kit-hit:focus-visible{stroke:var(--blue);stroke-width:2;stroke-dasharray:6 4;stroke-opacity:.7}
 
 /* frame */
 .kit-panel{fill:var(--deep-2,#0C1E3A);stroke:var(--line-d,rgba(46,182,248,.18));stroke-width:1.5}

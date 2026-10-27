@@ -6,7 +6,7 @@ course (M01 hull, M02 tank, M03 bunker station, M04 leak, M05 spaces, M06 trappe
 M15 venting). A builder never writes three.js for a slide again: they write the parts, the labels and the steps.
 
 PARTS.md lists every part and its settings; `check_kit3d.py` checks a spec; `studio3d.html?spec=<file>[&parts=<url>]` shows
-one. `scripts/scene3d_check.py <course> --module N` (2.65.0) checks a built module's scenes in one command - the spec,
+one. `scripts/scene3d_check.py <course> --module N` (2.71.0) checks a built module's scenes in one command - the spec,
 smoke3d, perf3d and a picture of every step in `working_claude\review\MNN_3d\` - for a reviewer who did not build them
 (the whole-course workflow's 3D step).
 
@@ -73,6 +73,7 @@ and ships `three.min.js`, `kit3d.js`, `kit3d.css` with the module. Alone (a test
 | `frame` | `{"top": 56}` - px kept free above the model for the labels |
 | `pill_max` | the widest a label's pill grows before its words wrap (190 px) |
 | `fov`, `exposure`, `sun` | camera field of view (32), tone-mapping exposure (1.05), sun direction `[0.45, 0.75, 0.5]` |
+| `ground`, `ground_shadow` | 2.68.0: the model stands on a soft shadow (an unseen ground that shows only the shadow - worked out once, nothing while it turns); `false` leaves it out; `ground_shadow` its darkness (0.24) |
 | `min_el`, `max_el`, `min_zoom`, `max_zoom`, `pick_fill` | limits of the presenter's turning (2 / 82 degrees, 0.06 / 1.5) and how much of the box a tapped part fills (0.62) |
 | `shadows`, `merge`, `fullscreen` | `false` turns that off |
 
@@ -84,7 +85,7 @@ and ships `three.min.js`, `kit3d.js`, `kit3d.css` with the module. Alone (a test
 
 - `at` - where the part stands, in metres (what point that is - a centre, a base - PARTS.md says per part);
   `rot` - degrees round the vertical; `scale` - drawn larger than true (say so in the slide's notes).
-- `on` (2.66.0) - `"H.deck"` / `"H.floor"` / `"H.bottom"` of a `hull` (or `"D.deck"` of a `deck_plate`): the part's height
+- `on` (2.72.0) - `"H.deck"` / `"H.floor"` / `"H.bottom"` of a `hull` (or `"D.deck"` of a `deck_plate`): the part's height
   is that level (+ `gap`), its x and z its own `at` - a vent mast, a drip tray, an ESD button, an air intake stand ON the
   deck. `check_kit3d.py` fails one of those standing below a hull's deck, inside the hull (the 2D kit: SPEC.md "Relations").
 - `id` - a part with an id can be tapped, framed, lit and labelled; without one it is scenery.

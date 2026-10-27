@@ -1560,6 +1560,173 @@ five looks among the photographs, `run_audits.py` at 1280 x 800 and 1024 x 768 w
 collision or scroll problem. Tests: `test_compile_module.py` `variety_part`. Merged on top of 2.61.0: the kit's realistic
 look (4zz9) is L63 now; the template recap keeps 2.60.0's compact spacing under 780 px height.
 
+## 4zz13 · Caught before the build; photographs found large; a rebuild is a fix; the gold standard (L64, 2.65.0, 2026-10-26)
+
+The owner asked how to cut a build's time and usage with the quality the same or better, chose two of the answers ("build
+points 1 and 2"), then: a rebuild or a fix goes the fix lane, and the gold standard is 30-40 minutes a module plus 20 for
+fixes. (1) `compile/scripts/precheck.py` - a second, standard library only - finds what would fail a build from the files:
+a missing figure / figure_b / aside / inset or a photograph missing inside a drawing, an unknown template or variant, a
+photograph under 800 px without `"low_resolution_ok"`, a teaching slide over `DENSE_WORDS` with no picture, three
+teaching slides in a row without one (MUST); a template forced on 3+ slides in a row and photographs of 800-1599 px
+(notes). 3D posters are skipped. `build_module.py` runs it before the figures stage (`--no-precheck` skips it); on the
+gas course's real M01 it found the 11 photographs under 800 px that L62 had enlarged into blur. (2)
+`course-visuals/scripts/image_size.py` - a picture's pixel size from its own header (JPEG, PNG, WebP, GIF; checked against
+Pillow on 42 photographs) and `found_size`, the size it was FOUND at (the kept original while the shipped file is still
+L62's enlargement); `check_assets.py` warns under 1600 / 800 px; `visual-sourcer` looks for the original file at 1600 px
+or more; `asset-pipeline.json` `photographs_min_long_px` / `photographs_floor_px`; `enlarge_photos` refreshes the kept
+original each time. (3) `fix.py rebuild` (pre-check, `design_system.py install --update`, compile, one layout and one
+package check; drawing findings named for `build_module.py` alone - ~20 s on the sample course); `routing.json`
+`fix_triggers.rebuild_words` / `_built`, `test_routing.py` `route(..., built=True)`; `fix/GUIDE.md` 3b. (4)
+`scripts/cf_timing.py` `clock_start` (at `--init-build`, or the first build run), `clock_pass` (the first PASS's
+`TIME M01: ...` line, once), `fix_line` (a rebuild against 20 min); `build_course.js` asks the builder for the TIME line
+and returns `gold_standard` (a workflow has no clock of its own: `Date.now()` is not allowed there). Tests:
+`compile/scripts/test_precheck.py` (33), `test_routing.py` (87), `test_build_course.py`. (5) Run on the real gas course: almost every small picture is the old course's own (M01 10 of 11, M09 24) - so: A still rendered from the module's own 3D model is a note (render it again larger); a picture from the old course has no larger original, and the stop says so - find a larger photograph of the same thing; a REBUILD (`fix.py rebuild`, `precheck.py --rebuild`) is never stopped by the small pictures a module already has - they are notes (the gas course has 100+ old-course pictures under 800 px across its 22 modules). (6) The whole-course workflow builds the biggest approved module first (the most minutes in the approved table) in a rolling pool of `args.wave`: the next build starts the moment one ends - no wave waits for its slowest module; a QA agent holds no place, a fix round does. (`build_course.js` `ORDER`, `place`; the IGF M01-M03 run had M02 as the long pole of its wave.)
+
+**2.65.1 (2026-10-26) - the fix lane's first real rebuild** (the gas course's Module 1, after its 8 small ship photos
+were replaced by Wikimedia Commons originals of 2400 px). (1) The rebuild's one check was the fix lane's 16 px "text
+bigger" sweep: it called 14 slides small that the build passes (its floor is 12.5 px, a kit figure's 16) and did not
+look at 1024 x 768, where 6 slides scrolled. It is now the build's own audits at both sizes; a failure names
+`build_module.py` for that module. (2) `build_module.py` on a module built before (its deck exists) is a rebuild for the
+pre-check: the small pictures it already has are notes, not a stop - the 3 old-course pictures of M01 s22 / s23, which
+have no free replacement anywhere, would otherwise have blocked the very build fix.py names. (3) A fix under a minute
+says its seconds ("0 min" read as broken). Tests: `test_precheck.py` 35.
+
+## 4zz14 · The speed round: a module in 19 minutes (2.66.0, 2026-10-26)
+
+The owner: *"now I need to optimise as much as I can in this course factory"*. Measured on the same module twice - the gas
+course's Module 2 (57 screens, 80 min), built from its approved script on a copy, by one Sonnet builder with the
+workflow's own builder prompt, its photographs already in the folder: on 2.65.0, **30 min** from the starter build sheet
+to the first PASS (33 min of builder time, 384 k tokens, 84 tool calls); on 2.66.0, **19 min** (22 min, 346 k tokens,
+93 tool calls). What the first run lost, fixed: (1) the starter drawing was 640 wide, but since the templates (L61) the
+figure column shows a drawing 456 px wide at 1280 x 800 and 345 px at 1024 x 768 - at 0.54 its words fell to 9 px, kit.js
+grew them into each other, and all 21 starters were redrawn before run 4: `STARTER_W` 416 (the same shape), and
+`STARTER_MIN_CELL` so a part and its words always fit their cell (`starter_cells`); SPEC.md, CATALOGUE.md, compile/GUIDE.md
+say 416 x 254. (2) the layout retry ran 447 s on the slides of drawings about to be redrawn: `build_module.py` builds no
+layout round while drawings are open (`drawings_open`), and says the slides it holds. (3) `"parts"` beside a picture is
+content-in-parts without naming the template; on a slide with no picture it is said (`pick_template`). (4) a picture the
+build sheet names that waits in assets/img/_unused/ is there for the pre-check (`precheck.parked`) - the compile brings it
+back. (5) a builder reads the Quickstart by its path, never SKILL.md (48 KB, every mode's router): the gate reports the
+skill's folder (`skill_dir`, found by Glob) and `build_course.js` `LEAN` sends it; a gate with no folder falls back to
+loading the skill. (6) CATALOGUE.md `MUST KNOW` lines, never clipped: the gauge's ticks / every (three builds lost to
+"0 0 1 1 2"), the gas bottle placed by its base. (7) Two control characters in precheck.py (a `\b` written through a
+shell) had silently disabled its 3D-poster rule and its .pptx origin: fixed, and no tracked file has one. (8) The kit parts the second run asked for (owner: "do the kit parts next"): **a drag** - `KIT.h.drag`, one invisible focusable area a finger, the mouse or the arrow keys move, the press and the keys never reaching the deck (tested in Chromium: 0 keys reached the page, the next step puts the part back); `curve_chart` `point.drag`, `point.curve: "all"` (every curve's value beside its own dot, only inside each curve's data) and `yaxis.log` (decades; between points straight in log); `scale` `markers[k].drag` (upright and across, its word reading the value); the new `molecule` part - a cargo's structural formula by name (methane ... butane, ethylene, propylene, butadiene, VCM, ammonia, N2, CO2, water) or as atoms and bonds, `build` bringing the skeleton then the hydrogens, centred and grown to its box. `audit_drawing.js` counts a kit group marked `data-kit-fills` by its box (a formula is atoms with air between, as a pipe's bends). The compiler's cue check sees a draggable kit figure (`figure_can`): a cue that says drag needs no `cue_kept` there. Studio clean on both panels at both sizes (the log chart with two cargoes and the cursor; propane building); a compiled deck with both passes every audit at 1280x800 and 1024x768. CATALOGUE.md 58 parts, MUST KNOW for each, still under 15 KB. Left for the
+next round (the second run's report): the fact check reads step titles ("3 H"); a generic word in a photo's `shows` asks for it on unrelated
+questions. Tests: test_starter_figures, test_compile_module 463, test_precheck 36, test_build_course, test_kit.
+
+## 4zz15 · Starters from the slide's words, a drawing library, spills fixed by the build, photos while the script waits (2.67.0, 2026-10-26)
+
+The owner, after the 2.66 round: *"do all"* - the seven items left by the timed gas M02 build. (1) **The starter picks the
+part the words ask for** (`starter_special`): a slide about formulas, molecules or atoms that names cargoes starts with
+their `molecule`s (in the lines' order, one step each; side by side, or one above the other in the figure column's shape
+when long chains would get bonds under 34); a slide about vapour pressure / boiling points / curves starts with a
+`curve_chart` of the cargoes it names - their points ONLY the temperature / pressure pairs the slide states (a cargo with
+fewer than two is left out and named; no stated points: the grid starter - gas M07 s07, a ppm slide, had got two
+made-up curves); `yaxis.log` when the pressures span decades; a cue that says drag makes the point (`point.drag`) or a
+scale's marker draggable. (2) **A slide whose own layout spills is put in parts by the build** (`build_module.spilled_own`,
+`parts_out`, `compile_module.wants_parts`): the audit's "scrolls" / "spills" on a slide the compiler laid out itself (no
+"template" asked, not moved for L62, a picture, two lines or more) is recorded in `_layout_avoid.json` and built again in
+the same build with its words in parts; a template asked by name is never overruled. (3) **The figure library**
+(`compile/scripts/figure_library.py`): a module that passes keeps its kit drawings - in the course's
+`working_claude/figure_library/` and this computer's (`~/.novikontas/figure-library`, `NOVIKONTAS_FIGURE_LIBRARY`) - and
+`--init-build` starts a slide that names the same things (two or more, 60 % of its own) from that drawing, its steps made
+again for the slide's own lines; a course in the temp folder (every test's) never reads or fills this computer's library.
+(4) **Photographs while the script waits** (`build_course.js` `photoPrep`): a script written in a run gets one Sonnet agent
+that places its photographs with their rights records and lists them in `working_claude/photo_candidates/MNN.md`; the
+builder uses them first. (5) "3 H" is three hydrogen atoms, not three hours (`facts_in`). (6) A photo's one-word "shows"
+that says how a thing is ("pressurised") never asks for it on a question (`DESCRIBES`). (7) Measured: three modules built at
+once on a copy of the gas course (M02 43 screens, M07 24, M15 11 - the workflow's biggest-first order, the lean builder
+prompt): M07 **11 min** (2 runs), M15 **16 min** (7 runs), M02 see CONTEXT. What that run found, fixed: the starter curve
+rule above; the builder prompt says the photo list exists only when photographs were found during approval;
+`check_balance.py` crashed on a half-minute slide ("0.5"); the pre-check's size note says it judges the size a photograph
+was found at; CATALOGUE `MUST KNOW` for the valve (`state: false` hides OPEN / CLOSED - three runs on M15); the Quickstart
+says a question's drawing has a frame of its own (about 880 x 550) and a ghost label is still laid out. Kit, found on the
+way: curve names are labels the layout keeps clear of the reading point; a molecule's bonds across and down may differ by
+up to 1.6 times to fill its box. **Photo tiles, and Module 2 measured (same evening).** `"tiles"` on a slide: the compiler builds several photographs as one picture, each opening full screen with its record and credit (`tiles_figure`, `gb_layouts.css` `.lt-tiles`); `"tiles_as": "strips"` stacks numbered cuts of one document - gas M07's builder had hand-written five such fragments; the pre-check judges tiles like any photograph; `--init-build` puts the module's photographs on the slides their records name (`link_photos`: one is the figure, several the tiles - gas M02's 24 went on none and were moved to _unused). The three-module run's M02 took 124 min (12 runs) on a computer shared by three builders, the tests and another session (single runs of 257-471 s, one compile timed out at 900 s) - and the first version of the word-picked starters gave it seven placeholder curve charts and four wrong molecule sets: the curve rule now needs points the slide states, and the molecule rule reads only the slide's title and picture for formula / molecule / structural / atom - on all 22 gas modules it now picks 4 slides, each a formula slide. test_tiles 9. **The training app and the fix lane (same day).** (a) The task engine (`gb_answer.js`) sends each question WHOLE to the classroom - `{t, ok, a, c, w}` (asked, picked, right, why; 90 / 120 / 120 / 400 characters) and `detail: 2`; a blind final sends a, c and w empty (`classroom-system.json` result). A read-only check of github.com/silkansraivis3-tech/novikontas-training-app (HEAD 09eda10) found the import works (its package-core.mjs is the factory's, byte for byte; the full gas course imports, 23 modules) but its debrief re-read the screens when only `{t, ok}` came: gas M07's 4 questions became 11 items, the why always empty, for the trainee and the instructor. The app's side - believe a page that sends `detail: 2`, no 'YOUR ANSWERS' overlay and no answer buttons after a task (the owner: "after tasks only one page is visible, all answers and all questions, no buttons"), and `gb-team-done` to the page - is a patch for that repository, not in this one: factory-work/_app_patches/training-app-factory-results.patch. The handout already closes when the task does, and says "Back to the task" while one is open. (b) A labelling question's valves print no OPEN / CLOSED, and the engine ends a leader where it reaches its part (the point of the part's box nearest the label), not at its middle across its words (gas M15 m01: three runs). (c) `fix.py rebuild` compiles and audits the modules four at a time. The owner's fix sessions ("a build in 50-60 min, a fix 40-50 min; one slide in every module 1-2 h"): the gas course's session, read - 47 helper agents, `fix.py` used by none for a fix; every change a full build_module round (e.g. 54 min / 9 builds to rebuild one module, 193 min / 17 builds for one continued build) and a visual-review agent after each (6-19 min); and the computer still runs course-factory 2.53.0, which has no fix lane for a built module. Also (the same afternoon): the studio's contact sheet draws at the templates' figure column (504 / 392 px, was the old two-col 682 / 443 - words passed there and failed the build); a question that taps or reads a drawing gets no label bands (they are a labelling question's; gas M15 m05 was 54 % blank because a labelling question shared its drawing); the Quickstart line on a question's drawing corrected. Left for the next round: a recipe for slides of photo cuts that tap to reveal (M07's
+builder hand-wrote five fragments, about 8 minutes); the starter's frame for content-in-parts slides (534 x 228 at 1280).
+Tests: test_figure_library 7, test_precheck 39, test_compile_module 466, test_starter_figures, test_build_course,
+test_check_balance.
+
+## 4zz16 · Better pictures at the same speed: photographs made sharp on this computer, 3D that stands and never judders (2.68.0, 2026-10-27)
+
+The owner: *"how we can keep speed but upgrade quality? 3d models so it looks better but not lagging? how to upscale
+existing photos with plugin without other outside AI use?"* - then *"do both, download is ok"*. (1) **The local enlarger**
+(`course-visuals/scripts/upscale_photos.py`): Real-ESRGAN (ncnn-vulkan v0.2.5.0, model realesrgan-x4plus, ~45 MB, BSD-3)
+unpacked to `~/.novikontas/tools/realesrgan/` (`NOVIKONTAS_UPSCALER` overrides) enlarges a module's photographs under
+1000 px four times on the graphics card and the result is brought to 2400 px on its long side - nothing leaves the
+computer. A picture whose name or description says words or numbers (page, sheet, SDS, table, label, sign, screen, panel,
+gauge, chart, diagram, plan, document, scale, dial, meter...) is never enlarged - the enlarger invents detail and would make
+the letters sharp and wrong; `"ai_enlarge": false` on a record keeps any other out. It works from the original the compile
+keeps (`working_claude/photo_originals/MNN`), writes `"enlarged": "Real-ESRGAN realesrgan-x4plus on this computer, from W x H
+to W x H (date)"` on the record, and does nothing twice. `--list` says what it would do; `--check` whether it is installed
+(exit 3 with the link when not). Measured on a copy of gas M02: about 40 s a photograph on the Intel graphics; clearly
+sharper than the plain enlargement; photographs of 1000 px or more were slower (73-172 s) for little gain, hence the
+limit. (2) **The pre-check** judges an enlarged photograph at the size it was found and says it was made sharp locally -
+"a real larger photograph would still be truer" - never a stop; a small photograph with the enlarger installed gets the
+hint to run it. (3) **The whole-course workflow** (`build_course.js` `photoPrep`) runs it on the photographs it finds while
+the script waits for approval. (4) **kit3d, better looking at no cost while it turns**: a model with no floor of its own
+(no part covering 60 % of the scene's width and depth at its bottom) stands on an unseen ground that shows only its
+shadow (`ShadowMaterial`, darkness `ground_shadow` 0.24, `"ground": false` leaves it out) - the shadows are worked out
+once, so turning costs nothing more; the 7 example scenes all have decks or floors and are unchanged. A slow tablet: while
+the model moves its frames are timed, and 20 in a row averaging over 45 ms draw it one step less sharp from then on (pixel
+ratio 2 -> 1.5 -> 1; `window.__scene3d.dpr`) - a new drawing buffer costs up to a second, so it never goes back up.
+Tests: test_upscale_photos 10 (a stand-in enlarger, so it runs anywhere), test_kit3d +4 (the ground under a floor-less
+model, none over a deck, a slow screen steps down, a fast one keeps 2), test_precheck 39, test_smoke3d 15, test_perf3d 13,
+test_build_course.
+
+## 4zz17 · What a 16:9 screen showed, and the trainee's handout (2.69.0, 2026-10-27)
+
+The owner's three screenshots of the gas course's Module 1 (built on 2.65): *"all 3d models is almost invisible with these
+buttons to close up detail, also table is awkwardly layouted, also picture you cannot see ship at all, bad center - dont
+change gas basic for now, just fix course factory so in future courses its not the problem"*. Measured on a copy: the
+screenshots were 1280 x 720 CSS pixels (a 1920 x 1080 laptop at 150 %, or a 720p projector), and the build had only ever
+looked at 1280 x 800 and 1024 x 768 - s15's table cut its headings and its step names at 720 and nowhere else. (1) **The
+build's audits run at 1280x720 too** (`build_module.py`, `fix.py rebuild`, GUIDE, the workflow); the part tabs are 44 px
+there (`gb_layouts.css .lt-tab`, they were 43). (2) **audit_collide check 4, "text cut off"**: a line of words that a box
+hiding its overflow (hidden / clip - not a scroll box) cuts part of; a line hidden whole is not judged. (3) **audit_deck
+"strip"**: a cropped photograph (object-fit: cover, 160 px or wider) that shows under half of its height in a band, or under
+40 % of its width in a column, fails - and `spilled_own` puts that slide's words in parts in the same build, which gives the
+photograph its height. (4) **Every cropped photograph is framed on its subject** (`compile_module.photo_focus`): its record's
+`"focus": [x, y]` (per cent), else the centre of its strong edges (Pillow; a ship's superstructure and hull, not the sky or
+the ripples of the sea), written as `object-position` when it is 8 points or more off the middle - s11's ship came out at
+41 / 65. (5) **A 3D model beside words takes at least 58 % of the width** (`SPLIT_3D` 0.42, whatever text share the sheet
+asks; s26 had 50 % - 640 x 440 at 720 with nine names and six buttons over the model). (6) **kit3d in a small box** (under
+720 x 460): the compact names and buttons (44 px), and a wide bar of buttons gets a band under the model (up to 34 % of the
+height), never over it - the zones example filled 47 % of a 640 x 440 box and now 66 %. Still open: a builder may ask for
+words in parts on a 3D slide whose script asks for the full screen; the audits do not judge how much of a 3D model the
+names cover.
+
+**The trainee's handout** (owner: *"only ONE button possible, thats handout ... if you are not opened any modules, handout
+is big, with navigation, fast searching ... if module is opened, handout is about previous and this module"*). The
+classroom's trainee page already had the one Handout button and finds `trainee/<module>/handout/index.html`; no factory step
+wrote one. `compile/scripts/handout.py`, called by compile_course.py with the start pages: every approved module gets
+`handout/index.html` - each slide's title and lines (the term before " - " in bold) and its photographs with their record and
+credit, a task slide as its title; never the instructor's notes, a check's questions or a key - a contents list, a search
+that keeps only the slides holding the words (and marks them), a photo that opens to full width. The classroom side (the
+training app's join.js, staging): with a module open, the handout list is that module and the ones before it; with none
+open, the whole course. Tests: test_run_audits 28, test_photo_focus 8, test_compile_module 467, test_compile_course 41,
+test_course_package 79, test_precheck 39, test_kit3d, test_smoke3d 15, test_perf3d 13, test_review_sheets 18.
+
+## 4zz18 · Lighter modules, lighter 3D, fewer hidden browsers (2.70.0, 2026-10-27)
+
+The owner: *"optimize this course factory as much as can, put maybe better and lower size 3d models but quality, so it dont
+lag ... so it does better work in smaller usage and less time"*. Measured before changing anything. (1) **The 3D scenes are
+already light** - the seven example scenes have 5-25 k triangles and 35-85 draw calls (the catalogue of every part 49 k / 155);
+a scene's spec is a few KB. What a tablet pays for is pixels: twice the screen's pixels, smoothed, full screen on a 2560 x 1600
+tablet is 4 million a frame. **kit3d's pixel budget** (`PIXEL_BUDGET` 2.4e6, `P.size`): a slide's box keeps 2x, full screen is
+drawn at 1.5x (still smoothed) - about half the graphics chip's work; 2.68.0's step-down on a slow tablet still applies on top.
+(2) **Every module carried the kits' comments**: kit.js 379 KB and kit3d.js 158 KB per module (about 11 MB on a 20-module
+course). `course-module-ui/scripts/minify_engines.py` makes `kit/min/kit.js` (221 KB) and `kit3d/min/kit3d.js` (88 KB) with
+esbuild (the copy the Vercel command line brings, or NOVIKONTAS_ESBUILD); each copy's first line names its source's sha256 (line
+ends as LF), and `design_system.shipped_src` ships the copy only while that matches - else the source, so an edit never ships an
+old copy. The compile's "is the module's copy the factory's" checks (compile_module, task_pages) ask the same function;
+`kit_parts.py promote` makes the copy again and names it in the git add. Globals and properties keep their names: the studio,
+the audits and test_kit3d / test_studio / test_figure_fit (52) pass on the minified copies. (3) **The compile's drawing check
+starts no browser for a page with nothing drawn on it** (`drawing_check.DRAWN`: no svg, img, canvas, video, object, iframe or
+kit figure) - on gas M15 (2.67) the instructor's plan and the answer key took 48 s and 21 s, plus up to 80 s waiting for a
+browser slot, and reported "drawings": 0. Measured but left: the figures stage's 330 s on that run was three modules building
+at once (the first-build lock and the browser queue), not drawing - judged again on a quiet computer's timed build. Tests:
+test_minify_engines 6, test_kit3d (+ the pixel budget), test_drawing_check (+ a plain page), test_compile_module 467.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

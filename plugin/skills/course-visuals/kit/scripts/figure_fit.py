@@ -29,7 +29,7 @@ turns did:
                       bands, the page's width) and get the same fix, as figures\\MNN\\_fit\\<question>.<spec>
              A fix is written to figures\\MNN\\_fit\\<slide>.<spec> with the spec's hash and the slide's layout: the
              compiler draws it only while both are unchanged. The spec itself is never rewritten. A figure no fix makes
-             clean is reported as it is, with what to do - and the closest attempt (2.66.3) is written over the spec
+             clean is reported as it is, with what to do - and the closest attempt (2.72.3) is written over the spec
              by the build when it adds no meaning BLOCK (the old spec kept as <slide>.<spec>.before.kit.json), else
              saved beside it (<slide>.<spec>.candidate.kit.json) for the builder.
   3  SAY     one block per figure that still has a problem: the slide, the part, the check, the steps, a concrete fix.
@@ -68,12 +68,12 @@ STRETCH = {"space": ("w",), "panel": ("w",), "pipe_section": ("w", "branchAt"), 
            "range_bar": ("w",), "spill": ("w",), "wind": ("w",), "tank_wall": ("w",), "boil_off": ("w",),
            "drip_tray": ("w",), "gas_cloud": ("w",), "zone": ("w", "rx"), "water_curtain": ("w",)}
 PATHS = ("pipe", "wire", "hose")
-# 2.65.0 - the COLUMN search measures a figure at most this many times (CF_FIT_MEASURES). Replayed on every real IGF fit
-# on record (7 from the 2.63.2 / 2.63.3 runs, 3 from the 2.65.0 run's seeded figures): each was found within 11
+# 2.71.0 - the COLUMN search measures a figure at most this many times (CF_FIT_MEASURES). Replayed on every real IGF fit
+# on record (7 from the 2.63.2 / 2.63.3 runs, 3 from the 2.71.0 run's seeded figures): each was found within 11
 # measurements; the searches that found nothing ran up to 53 (one 112 s). Cut at 16, every one of those fits is kept
 MAX_MEASURES = int(os.environ.get("CF_FIT_MEASURES") or 16)
-# 2.66.4 - a figure none of whose findings is about its words' size (only INSIDE, say) is re-fitted at most this many times:
-# the 2.66.3 IGF run's M01 s03 / s04 (an engine past its room) spent two searches of 16 probes at 10-17 s each, every build,
+# 2.72.4 - a figure none of whose findings is about its words' size (only INSIDE, say) is re-fitted at most this many times:
+# the 2.72.3 IGF run's M01 s03 / s04 (an engine past its room) spent two searches of 16 probes at 10-17 s each, every build,
 # and found nothing - a width search answers words grown past their room, not a part placed outside it
 INSIDE_MEASURES = 4
 SIZE_KINDS = {"small text", "text zone", "label", "cut off", "empty"}
@@ -146,7 +146,7 @@ def measure(spec_path, sid, spec=None, strip=True):
     ctx = ctx_for(spec_path, sid)
     if ctx and not strip:
         ctx = dict(ctx, entry=dict(ctx["entry"], _no_strip=True))
-    # 2.66.5 - at 1024 x 768 only the words' size is kept (below): that probe runs the small-text check alone
+    # 2.72.5 - at 1024 x 768 only the words' size is kept (below): that probe runs the small-text check alone
     res, why = studio.run(spec_path, sizes=((1280, 800), (1024, 768)), shots=False, spec=spec, ctx=ctx, small_only=((1024, 768),))
     if not res:
         return None, {"error": why}
@@ -675,7 +675,7 @@ def task_set(exe, script, build, mdir, figdir, figs, fix, slide, code, qs):
                 ensure_ascii=False, indent=1))
             fixed.append("%s (%s, task page): fixed by itself - %s" % (q, name, how))
             out[q] = now
-    # 2.65.0 - EMPTY on a task page, cropped as a slide's figure is: a window on the canvas around what the parts show, in
+    # 2.71.0 - EMPTY on a task page, cropped as a slide's figure is: a window on the canvas around what the parts show, in
     # the page's own panel shape - kept only when the page's drawing check then finds nothing on those questions and nothing
     # new. (The 2.63.3 M02 build: q05 44 % and q11 53-74 % blank were fixed by hand over three builds; a slide's EMPTY has
     # been cropped by itself since 2.50.0.)
@@ -891,7 +891,7 @@ def usable(spec, new, how, best):
     """(fix, how, closest attempt) with anything spoiled() taken out: never a fit, never a saved "candidate", with a part
     out of its frame or on another part - and the words say why nothing was saved"""
     bad = spoiled(spec, new) if new else []
-    if new and not bad:                                  # 2.66.0 - a re-fit that breaks what the figure means is no fix
+    if new and not bad:                                  # 2.72.0 - a re-fit that breaks what the figure means is no fix
         was = set(x.split(": ", 1)[-1] for x in kit_meaning.check(spec, "fit"))
         bad = [x.split(": ", 1)[-1] for x in kit_meaning.check(new, "fit") if x.split(": ", 1)[-1] not in was][:2]
     if bad:
@@ -943,7 +943,7 @@ def try_fixes(spec_path, sid, spec, r0, probs0, log):
         bx0 = {int(k): list(v[:4]) for k, v in boxes.items() if int(k) < len(spec["parts"])}
         own = owners(spec["parts"], bx0)
         hst = hosts(spec["parts"], bx0, own)
-        used = [0]                                        # 2.65.0: measurements spent by this search (MAX_MEASURES)
+        used = [0]                                        # 2.71.0: measurements spent by this search (MAX_MEASURES)
         cap = MAX_MEASURES if checks & SIZE_KINDS or any(x[0] == SMALL_AT for x in probs0) else min(MAX_MEASURES, INSIDE_MEASURES)
 
         def attempt(arg):
@@ -976,7 +976,7 @@ def try_fixes(spec_path, sid, spec, r0, probs0, log):
                         return out
             return out
 
-        # 2.65.0 - one width at a time, in the order the parallel search ranked them, stopping at the first clean fit: the
+        # 2.71.0 - one width at a time, in the order the parallel search ranked them, stopping at the first clean fit: the
         # parallel search kept the FIRST clean attempt in this same order (a fit with the photo row before one without),
         # so the fit is the same one - without the probes of the attempts after it. The photo row's alternative is
         # measured only when no attempt with the row is clean. (IGF M02's cold build, 2.63.3: two COLUMN searches of
@@ -1092,7 +1092,7 @@ def run_all(course, module, fix=True, jobs=4, full=False):
             spec_probs.append(x)
             if " is not a kit part" in x or "not valid" in x:
                 broken.add(sp)
-        if isinstance(spec.get("meaning_ok"), dict) and spec["meaning_ok"]:      # 2.66.0: findings accepted on purpose, counted
+        if isinstance(spec.get("meaning_ok"), dict) and spec["meaning_ok"]:      # 2.72.0: findings accepted on purpose, counted
             spec_waived += kit_meaning.analyse(spec, name)["waived"]
     figs, figdir = deck_figures(course, module)
     todo = [(sid, sp, e) for sid, sp, e in figs if sp not in broken and os.path.isfile(sp)]
@@ -1146,7 +1146,7 @@ def run_all(course, module, fix=True, jobs=4, full=False):
         item = (sid, sp, e)
         probs, r = results[key]
         text = io.open(sp, encoding="utf-8").read().strip()      # as the compiler reads it (read_figure)
-        # 2.66.0 - a spec placed by relations ("on", "at", "from"/"to") is written out to plain x / y / d first: a fix moves
+        # 2.72.0 - a spec placed by relations ("on", "at", "from"/"to") is written out to plain x / y / d first: a fix moves
         # parts by their x, and a part kept on its relation would snap back to what it stands on
         spec = kit_relate.freeze(json.loads(text))
         fp = cm.fit_path(figdir, os.path.basename(sp), sid)
@@ -1179,7 +1179,7 @@ def run_all(course, module, fix=True, jobs=4, full=False):
             rec["spec"] = new
             io.open(fp, "w", encoding="utf-8").write(json.dumps(rec, ensure_ascii=False, indent=1))
         elif best and len(best[1]) < len(probs):      # the closest attempt, to edit instead of redrawing
-            # 2.66.3 - written over the spec by the build itself when it adds no meaning BLOCK and was measured with the
+            # 2.72.3 - written over the spec by the build itself when it adds no meaning BLOCK and was measured with the
             # slide's photo row (the spec draws with the row): in the 2.66 run every "copy it over the spec" cost the builder
             # a turn and a build. The spec as it was is kept beside the fits; the report lists only what the fit leaves
             adds = [x.split(": ", 1)[-1] for x in kit_meaning.check(best[0], "fit")
@@ -1200,7 +1200,7 @@ def run_all(course, module, fix=True, jobs=4, full=False):
                        "\n".join("        %s - %s: %s (step %s)" % (c, pt, dt, ",".join(sorted(set(st))))
                                  for (c, pt, dt), st in sorted(group(best[1]).items()))))
         return item, probs, r, new, how
-    applied = {}                           # 2.66.3: slide -> the findings its applied closer fit leaves
+    applied = {}                           # 2.72.3: slide -> the findings its applied closer fit leaves
     with cf.ThreadPoolExecutor(max_workers=jobs) as ex:
         outs = list(ex.map(fix_one, sorted(results, key=lambda t: t[0])))
     for (sid, sp, e), probs, r, new, how in outs:

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""figure_review.py - every figure of a module photographed at PROJECTOR size, one picture per step, for the FIGURE review (2.66.0)
+"""figure_review.py - every figure of a module photographed at PROJECTOR size, one picture per step, for the FIGURE review (2.72.0)
 
   figure_review.py <course> --module N [--only s03,s04] [--out <folder>] [--json]
   figure_review.py --specs <a.kit.json> <b.kit.json> ... --out <folder> [--json]      (figures outside a course)
 
-WHY (IGF 2.65.0, Aleksis: "the vent mast is INSIDE of the ship, the gas is not being ejected, ... not properly connected"):
+WHY (IGF 2.71.0, Aleksis: "the vent mast is INSIDE of the ship, the gas is not being ejected, ... not properly connected"):
 every check passed and QA's one look at small review sheets rated what it saw POLISH. The FIGURE review gives a reviewer who
 did not build the module each figure at 1920 x 1080 (the figure's panel as a projector shows it), at the rest state and the
 end of every step, with what it must show: the slide's words, the step titles, the figure kind's must-be-true list

@@ -5,10 +5,10 @@
     "plan": "an accredited programme exists, the modules do not. Design the delivery from scratch.",
     "retrofit": "the course content exists as a built module. Keep the content; rebuild the delivery.",
     "restyle": "the operator has named a NARROW cosmetic change and nothing else. Do that and stop.",
-    "edit": "the operator names a content, structure or emphasis change - add, remove, split, merge, move, reword, keep, more or fewer of something. Do it as asked (L26). It is not a restyle (it is not only cosmetic) and not a retrofit (the rest of the module stays as it is).",
+    "edit": "the operator names a content, structure or emphasis change - add, remove, split, merge, move, reword, keep, more or fewer of something. Do it as asked (L26). It is not a restyle (it is not only cosmetic) and not a retrofit (the rest of the module stays as it is). On a module that is already built, the same change is done in the fix lane (2.65.0, fix_triggers._built).",
     "ship": "a built course goes onto the two terminals.",
     "audit": "check an existing course against the programme and the terminals; change nothing.",
-    "fix": "the modules are already built and the operator wants something corrected in several or all of them - 'the last slide in every module', 'find the same free space in the others', 'text bigger everywhere'. Find every place at once, one list, one yes, change, one check (L50, fix/GUIDE.md). Not a retrofit (the modules stay as they are) and not one edit at a time."
+    "fix": "the modules are already built and the operator wants something corrected in several or all of them - 'the last slide in every module', 'find the same free space in the others', 'text bigger everywhere'. Find every place at once, one list, one yes, change, one check (L50, fix/GUIDE.md). Not a retrofit (the modules stay as they are) and not one edit at a time. Since 2.65.0 also ONE module that is already built: a rebuild of it (fix.py rebuild - a newer factory, a changed build sheet) or one named change in it - the owner: 'when I want to rebuild or fix something, it does not go through the same thing, it goes through the fix process'."
   },
   "retrofit_triggers": {
     "_match": "Any ONE of these intents, in any language, about material that already exists. The phrases are examples, not a whitelist - match the intent.",
@@ -269,7 +269,33 @@
       "исправ",
       "найди"
     ],
-    "behaviour": "Read fix/GUIDE.md and nothing else of the factory. If the operator says 'find it in the others' or names a problem without a list, sweep first (scripts/fix.py sweep) and show ONE numbered list; one yes covers it. Change once where it lives (content scripts in one batch, a shared part once + sync-shared, a generator not its output). Write a wish for every module as a standard. Then ONE check for the kind of change, by whoever made it - no QA agent after, no whole-course QA, at most 2 agents."
+    "behaviour": "Read fix/GUIDE.md and nothing else of the factory. If the operator says 'find it in the others' or names a problem without a list, sweep first (scripts/fix.py sweep) and show ONE numbered list; one yes covers it. Change once where it lives (content scripts in one batch, a shared part once + sync-shared, a generator not its output). Write a wish for every module as a standard. Then ONE check for the kind of change, by whoever made it - no QA agent after, no whole-course QA, at most 2 agents.",
+    "rebuild_words": [
+      "rebuild",
+      "re-build",
+      "build again",
+      "build it again",
+      "redo",
+      "re-do",
+      "recompile",
+      "refresh",
+      "new version",
+      "new factory",
+      "updated factory",
+      "new style",
+      "new templates",
+      "apply the new",
+      "pārbūvē",
+      "pārbūvēt",
+      "uzbūvē vēlreiz",
+      "uztaisi vēlreiz",
+      "no jauna",
+      "перестрой",
+      "пересобери",
+      "собери заново",
+      "сделай заново"
+    ],
+    "_built": "2.65.0 (owner, 2026-10-26: 'when I want to rebuild or fix something, it does not go through the same thing, it goes through the fix process'). On a module that is ALREADY BUILT (its presentation exists): a rebuild word, or one named change in that module, is a fix too - not a build and not an edit with a build's checks. A rebuild: scripts/fix.py rebuild <course> --modules N (the pre-check, the design files, the compile from the approved words, ONE check). Words: fix.py propose / apply / approve. Anything else: change it, then the one fix.py check for its kind. Only what fix.py says needs the full build (a drawing that no longer fits its slide) goes to build_module.py, for that module alone. A module not built yet still goes the build's way; 'redesign' / 'upgrade' (whole_module_words) is still a retrofit."
   },
   "ambiguous": {
     "_rule": "Ask only when the request is genuinely ambiguous about SCOPE, never about the A/B/C level - that is this skill's job to decide.",

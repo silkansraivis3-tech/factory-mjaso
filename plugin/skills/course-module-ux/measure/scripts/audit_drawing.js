@@ -444,7 +444,7 @@
     });
   }
 
-  /* only = "small text" (2.66.5): that check alone, on the words as the full audit finds them - the figure fit's second
+  /* only = "small text" (2.72.5): that check alone, on the words as the full audit finds them - the figure fit's second
      size (1024 x 768) keeps nothing else, and the full audit was 60 % of a studio probe (SPEED_ANALYSIS.md, the V8 profile) */
   function checkSvg(svg, where, out, stop, only) {
     if (svg.hasAttribute("data-audit-ignore") || svg.ownerSVGElement) { return; }
@@ -759,6 +759,14 @@
       qa(svg, "foreignObject, image").forEach(function (ph) {
         if (!isPhoto(ph) || inHiddenRoot(ph, svg) || !shown(ph, svg)) { return; }
         var bb = ph.getBoundingClientRect();
+        if (bb.width && bb.height) { mark(bb.left, bb.top, bb.right, bb.bottom); }
+      });
+      /* 2.66.0 - a kit part whose meaning is the whole area between its strokes (a molecule's structural formula: atoms
+         and bonds, air between them by nature) marks its drawing data-kit-fills: its box is content, as a pipe's bends are.
+         Set only by a part in the kit, never by a spec; a part not shown at this step counts nothing */
+      qa(svg, "[data-kit-fills]").forEach(function (fl) {
+        if (inHiddenRoot(fl, svg) || !shown(fl, svg)) { return; }
+        var bb = fl.getBoundingClientRect();
         if (bb.width && bb.height) { mark(bb.left, bb.top, bb.right, bb.bottom); }
       });
       parts.forEach(function (it) {

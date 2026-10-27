@@ -66,7 +66,7 @@ words for the 12.5 px floor, how many labels it moved, any it could not place, a
 |---|---|---|
 | `panel` | `w h title` - frame, title, alarm-state chip | - |
 | `level` | `w h label unit min max ticks readout decimals marks` - the tick numbers stand left of the column; a `pipe` that runs into that strip (a feed line) puts them on the right instead (2.49.2); `ticks`: `"right"`, `"left"` or `false` says it | the level |
-| `gauge` | `r label unit min max start sweep normal:[lo,hi] ticks every numbers readout decimals caption captionAt marks` | the reading |
+| `gauge` | `r label unit min max start sweep normal:[lo,hi] ticks every numbers readout decimals caption captionAt marks` - `ticks` is how many divisions min..max has (default 10), `every` makes each Nth one a long tick with its number (default 2); the numbers are whole, so choose them so each numbered step is a whole unit - (max - min) x every / ticks of 1 or more (0-2 bar with 10 ticks printed 0 0 1 1 2); `numbers: false` and the `readout` alone when the dial is small (2.66.0) | the reading |
 | gauge repeater | `source:"P1" mini:true` - copies the scale of P1 and follows it | - |
 | `readout` | `w h label unit sign decimals marks` - digital tile | the reading |
 | `well` | `w h tag` - bilge well, dripping leak, TT sensor | pool 0..1 |
@@ -89,14 +89,15 @@ Parts added from courses (merged by `kit_parts.py promote`; each block's `exampl
 |---|---|---|
 | `ga` | `w h view(side/plan) draft water house:{x,w,h} funnel:{x,w,h} frames label` - a ship's hull; named spaces are `space` parts on it | 0..1 picked out |
 | `zone` | `zone(0/1/2)` and `w h rx` or `r`, `from:[x,y]` - a hazardous-zone overlay | 0..1 grown from `from` |
-| `scale` | `h w min max every unit reach limits:[{at,label,side}] markers:[{label,note,at}]` - a vertical scale; `orient:"h"` with `len` runs it across, each marker on a stem at its `rise`, words to its `side` (left/right). A marker's word and note, and a limit's name, are labels the layout places and the audit judges; the tick numbers keep clear of the bar as the type grows (2.49.1) | 0..n: marker k slides (vertical) or drops (across) into place from k to k+1 |
+| `scale` | `h w min max every unit reach limits:[{at,label,side}] markers:[{label,note,at,drag}]` - 2.66.0: a marker with `drag: true` the trainee moves along the scale (finger, mouse, arrow keys), its word reading the value live (`decimals`, `step`); the next step puts it back. a vertical scale; `orient:"h"` with `len` runs it across, each marker on a stem at its `rise`, words to its `side` (left/right). A marker's word and note, and a limit's name, are labels the layout places and the audit judges; the tick numbers keep clear of the bar as the type grows (2.49.1) | 0..n: marker k slides (vertical) or drops (across) into place from k to k+1 |
 | `bands` | `w rowH chip axis rows:[{label,tone(z0/z1/z2),caption,gas:[[from,to]]}]` - time bands with a clock | 0..n: row k sweeps from k to k+1 |
 | `cylinder` | `w h labels` - a dual-fuel engine cylinder, injectors at 0.22 w and 0.78 w | 0 stopped · 1 gas mode · 1.5 gas supply stopped · 2 fuel-oil mode |
 | `boil_off` | `w h insulation level liquidLabel vapourLabel heatLabel` - an insulated LNG tank cutaway | 0..1 heat in, boiling |
 | `gas_cloud` | `w h from:[x,y] fromIn drift:[dx,dy]` - a pale cloud growing in a space. `from` is where it grows from: **figure coordinates, like every other part** (2.49.2) - or, as specs before 2.49.2 wrote it, in the cloud's own box. `fromIn: "figure"` / `"box"` says which; left out, a point inside the box is read in the box (an old spec draws as it did) and a point only inside it as figure coordinates (x - the cloud's x, y - its y) is read as figure coordinates. A point that lies inside the box both ways is read in the box - add `"fromIn": "figure"` to mean the other. `check_kit.py` warns when the origin lands off the figure. `drift` (or `true`: 0.4 w to the right) adds the value **`<id>.drift`** 0..1: the whole cloud moves that far and spreads a little - wind carrying a leak away; it crosses walls by design | 0..1 how much gas |
 | `integral_tank` | `w h cofferdam label cofferdamLabel hullLabel` - a hull tank in its cofferdam | liquid level 0..1 |
 | `pipe_section` · `relief_valve` · `step_track` · `coupling` · `drip_tray` · `water_curtain` · `detector` · `flame` | from IGF M03 (2.48.0): a cut along a double-walled pipe; a spring relief valve; numbered steps or a checklist (`boxes`); dry-disconnect / breakaway coupling; drip tray; water curtain; fixed gas detector head (marks); a flame at a point | see each part's `value` in `kit.js` |
-| `curve_chart` | from IGF M04: `xaxis yaxis curves:[{label,pts}] hline point` - curves that draw themselves, a point that slides along one | 0..n curves, n..n+1 the point |
+| `curve_chart` | from IGF M04: `xaxis yaxis curves:[{label,pts}] hline point` - curves that draw themselves, a point that slides along one. 2.66.0: `yaxis.log: true` - a log scale over decades (min > 0; `yaxis.ticks` to choose the numbers); `point.drag: true` - the trainee drags the point along the x axis (finger, mouse, arrow keys) and reads it live, the next step puts it back; `point.curve: "all"` - a line across the chart reads every curve drawn so far, each value beside its own dot ("pick a cargo, drag to 45 °C"); `point.decimals` | 0..n curves, n..n+1 the point |
+| `molecule` | 2.66.0: `formula w h build label bond atoms bonds` - a structural formula: `formula` names a cargo (methane, ethane, propane, butane, ethylene, propylene, butadiene, VCM / vinyl chloride, ammonia, nitrogen, CO2, water - or C3H8, C2H4 ...) or give `atoms: [[el, x, y]]` and `bonds: [[i, j, order]]` in bond lengths; in a box (`w h`) it grows to fill it, centred; its name and formula under it | `build: true`: 0..1 the skeleton, 1..2 the hydrogens; else whole |
 
 Pre-built for IGF Basic modules 5-15 (2.48.0, from the architecture's media plans; each in `GALLERY.html`, tested on both panels):
 
@@ -104,7 +105,7 @@ Pre-built for IGF Basic modules 5-15 (2.48.0, from the architecture's media plan
 |---|---|---|
 | `fan` | `label dir(right/left/up/down)` - ventilation fan in a duct or opening | 0 stopped … 1 running |
 | `spray` | `nozzle(monitor/hand/sprinkler) agent(powder/water/foam) angle reach reachLabel` | 0..1 how much is discharged |
-| `gas_cylinder` | `w h gas label bar kg liquid reading code` - the reading (number over its unit, on the plate) shows when the steps change the bottle, or with `reading: true`; N2 / CO2 / breathing-air bottle, opaque, one paint. `code: true` paints the shoulder in its EN 1089-3 code and names it in the caption (N2 black, CO2 grey, AIR black and white quarters) - only where the lesson teaches the code: EN 1089-3 does not cover fixed extinguishing-system cylinders. A compressed gas (N2, AIR) has a pressure gauge on its valve and its reading in bar on its plate (`bar`: full pressure, 200, or 300 for AIR). CO2 is a liquid: no gauge (its pressure stays at its vapour pressure, ~57 bar at 20 °C, until it is nearly empty) - its plate reads its weight in kg (`kg`: full, 45; CO2 is checked by weighing) and its liquid shows in a cut-away window with a "liquid" tag under it, inside the bottle (`liquid: false` leaves it out; `liquidLabel` renames it) | 0..1 how full |
+| `gas_cylinder` | `w h gas label bar kg liquid reading code` - `x y` is the middle of its BASE: the bottle stands up from y (2.66.0); the reading (number over its unit, on the plate) shows when the steps change the bottle, or with `reading: true`; N2 / CO2 / breathing-air bottle, opaque, one paint. `code: true` paints the shoulder in its EN 1089-3 code and names it in the caption (N2 black, CO2 grey, AIR black and white quarters) - only where the lesson teaches the code: EN 1089-3 does not cover fixed extinguishing-system cylinders. A compressed gas (N2, AIR) has a pressure gauge on its valve and its reading in bar on its plate (`bar`: full pressure, 200, or 300 for AIR). CO2 is a liquid: no gauge (its pressure stays at its vapour pressure, ~57 bar at 20 °C, until it is nearly empty) - its plate reads its weight in kg (`kg`: full, 45; CO2 is checked by weighing) and its liquid shows in a cut-away window with a "liquid" tag under it, inside the bottle (`liquid: false` leaves it out; `liquidLabel` renames it) | 0..1 how full |
 | `push_button` | `label tag h` - ESD mushroom button with a guard. `h`: the wall plate's height, 120 units (2.49.2; it was a fixed 182 - two did not stack in a 390-high figure); the words under it keep their size | 0 ready, 1 pressed (trip red) |
 | `person` | `wear:[helmet,visor,goggles,respirator,gloves,suit,apron,boots,scba] scale label labels` - a worker pictogram. `labels` (or `names`): `{item: words}` or a list in the order of `wear` names an item in the slide's own words, `{"visor": "GOGGLES", "scba": "BREATHING APPARATUS"}`; `false` names none (2.49.2) | 0..n PPE item k appears |
 | `sensor` | `kind(catalytic/infrared) oxygen` - how a gas sensor sees gas | 0..1 gas in the sensor |
@@ -125,8 +126,8 @@ Pre-built for IGF Basic modules 5-15 (2.48.0, from the architecture's media plan
 | `wind` | `w rows gap dir max unit label` | 0..1 strength |
 | `tree` | `root children:[{label, children}] w minW` - an organisation or reporting chart. It is laid out to fit `w` (default: the figure's width less its x and 10) and never wider: tighter padding and gaps, then words broken at a space, so its words keep the 12.5 px floor (2.49.2) | 0..n box k lit |
 
-## Relations - place a part by what it stands on (2.66.0)
-A part is placed by WHAT IT STANDS ON OR JOINS, not by a guessed y (IGF 2.65.0: a vent mast at y 184 under the deck line,
+## Relations - place a part by what it stands on (2.72.0)
+A part is placed by WHAT IT STANDS ON OR JOINS, not by a guessed y (IGF 2.71.0: a vent mast at y 184 under the deck line,
 inside the hull; pipes ending in the air; a "Bunkering station" of words only). kit.js resolves these before it draws
 (`KIT.relate`); `check_kit.py` judges the result (`kit_relate.py` runs the same code under node). A spec with no relation
 draws exactly as before; a relation wins over the part's own x / y / d.
@@ -151,8 +152,8 @@ edge); and its own ports - tank `top`/`vapour`/`liquid` (a dome is drawn under e
 `inlet`/`outlet`, engine `inlet`, cylinder `gas`/`oil`, manifold `out1`..`outN`, gas_cylinder `valve`, space
 `floor`/`ceiling`, water_curtain `header`. `kit_relate.py --geometry <spec>` prints every part's box and ports.
 
-## What a figure must MEAN (2.66.0) - BLOCKs and NOTEs
-Every check before 2.66.0 was about the look. `scripts/kit_meaning.py` (its words and IGF must-be-true lists in
+## What a figure must MEAN (2.72.0) - BLOCKs and NOTEs
+Every check before 2.72.0 was about the look. `scripts/kit_meaning.py` (its words and IGF must-be-true lists in
 `course-visuals/knowledge/figure-truths.json`) now judges what a figure means, at two levels (Aleksis: "if even a minuscule
 detail is off it flags it and there isn't any flexibility"):
 - **BLOCK** - a build FAIL (`check_kit.py spec`), only for a clear physical error: a thing the figure's words name drawn
@@ -167,7 +168,7 @@ detail is off it flags it and there isn't any flexibility"):
   key is printed with every finding, e.g. `LOOSE END P1`); the build lists it, the reviewer reads the reason and may still
   call it BROKEN. A waiver with no reason is itself a BLOCK; one naming no finding is a NOTE.
 Calibrated on the instructor-reviewed IGF original (96 specs): 4 BLOCKs (one a real error, a water curtain hanging from
-nothing); the 2.65.0 build's eight wrong figures all still BLOCK. The kinds:
+nothing); the 2.71.0 build's eight wrong figures all still BLOCK. The kinds:
 **NAMED** words on the figure, a part's label or a step title name a thing that is not drawn (a "Bunkering station" with no
 manifold, coupling or hose), or not there; **LOOSE END** a pipe or hose end on nothing (`"open": "start"|"end"|"both"` says a
 line is open to the air on purpose); **INSIDE** a vent mast, manifold or hatch inside the hull, a tank half through the deck;
@@ -176,11 +177,11 @@ spray aimed at nothing, a water curtain or detector attached to nothing, a round
 callout's leader on nothing, words floating far from anything drawn, a ship labelled "ship"; **GRID** a row of captions
 with drawings under only some of them (six fuel names over one tank); **SMALL** a small drawing lost in a big `panel`
 part (the figure's own frame is the drawing audit's EMPTY); **TRUTH** the figure kind's own list (ship plan, bunkering line, vent system, fuel supply, engine modes,
-fuel types); (2.66.3) **STEP** (a NOTE) a step's title names a part the step does not change (a tank, room or pipe named
+fuel types); (2.72.3) **STEP** (a NOTE) a step's title names a part the step does not change (a tank, room or pipe named
 is where the step is, not judged), or the step only turns things off under a title saying something happens; **LABEL** a
 callout's leader ends on a part of another kind than its words name - a cofferdam's leader in its space's middle, on the
 tank inside (a BLOCK: none in the original's 96 specs; point it at the part's edge, `"for": "CD.top@0.1"`) - or its words
-name a thing not drawn (a NOTE). Calibrated as 2.66.0 was: STEP raises 2 notes on the original (both accepted by its
+name a thing not drawn (a NOTE). Calibrated as 2.72.0 was: STEP raises 2 notes on the original (both accepted by its
 instructors, so never a BLOCK), LABEL none. A fit `figure_fit.py` makes is refused when it breaks one.
 
 ## Marks - the heart of it
@@ -210,7 +211,7 @@ instructors, so never a BLOCK), LABEL none. A fit `figure_fit.py` makes is refus
 - Step *n* always starts from the end of step *n-1*. **Previous** jumps back to that state, and
   **Replay** plays the step again. With reduced motion every step jumps to its end state.
 
-## Patterns - a spec to start from (2.63.2; the figure library, 2.66.0)
+## Patterns - a spec to start from (2.63.2; the figure library, 2.72.0)
 `patterns/*.kit.json` are whole specs that were drawn, judged and fixed once, to copy and change - not a new part and not
 a template the compiler fills. Each passes `check_kit.py spec` (its meaning too) and is clean in the studio at 1280 x 800
 (`scripts/test_patterns.py`), and was judged at projector size by a reviewer who did not draw it.
@@ -276,8 +277,9 @@ spec's optional `"view": [x, y, w, h]` shows another window on the canvas (the t
 for its empty label boxes); a deck never sets it.
 
 ## Fill the frame, and the words do the explaining (L53, operator 2026-10-15)
-- **Draw to the panel.** `size` has the shape of the panel the figure is shown in (the wide column of a `two-col`
-  slide: about 640 × 390, a dark slide 680 × 415), and the drawing covers it: `audit_drawing.js` EMPTY allows at most
+- **Draw to the panel.** `size` has the shape of the panel the figure is shown in, at the width it shows at (a slide's
+  figure column: about 416 × 254 - 2.66.0: the templates' column shows a drawing 456 px wide at 1280 × 800 and 345 px at
+  1024 × 768, so a 640-wide spec showed at half size there and its words collided), and the drawing covers it: `audit_drawing.js` EMPTY allows at most
   half of the panel blank and no blank piece over a fifth. A figure that steps is judged at its busiest step (a rest state is
 sparse by design), each step by what it shows - a part still to come is not counted (2.49.7) - and the finding names
 that step; a pipe counts by its bounding box, so the space inside its bends is not blank; and the finding says where the

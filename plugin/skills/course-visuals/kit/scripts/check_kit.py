@@ -309,7 +309,7 @@ def check_spec(spec, types, where, meaning=True):
     last = last_step_dims_all(spec)
     if last:
         bad(last)
-    # 2.66.0 - what the figure MEANS (kit_meaning.py): a vent mast inside the hull, a bunkering station that is only words,
+    # 2.72.0 - what the figure MEANS (kit_meaning.py): a vent mast inside the hull, a bunkering station that is only words,
     # a pipe ending in the air - judged on the geometry kit.js resolves. Only for a spec that would draw (no problem above)
     if meaning and not probs:
         probs += kit_meaning.check(spec, where)

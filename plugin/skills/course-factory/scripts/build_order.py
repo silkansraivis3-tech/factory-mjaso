@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""build_order - the modules of a parallel build, biggest first (2.65.0).
+"""build_order - the modules of a parallel build, biggest first (2.71.0).
 
     python build_order.py <course> --modules 1,2,3 [--seed-from <predecessor course>] [--json]
 

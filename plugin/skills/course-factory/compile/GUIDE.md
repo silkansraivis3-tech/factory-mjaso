@@ -9,12 +9,23 @@
       slide gets a 3D-kit scene spec (sNN.kit3d.json, course-visuals\kit3d\SPEC.md) and its 2D starter (2.50.6):
       declining the 3D ("declined_3d") edits the 2D starter
 2  read course-visuals\kit\CATALOGUE.md - one line per kit part, the spec format, marks and steps. Never kit.js.
+      A question's drawing keeps its own shape on the task page; a labelling question adds a band above and below it for
+      its label boxes. A "ghost" label is still laid out (leaders go round it); a valve's OPEN / CLOSED: "state": false.
 3  fill the build sheet (each slide's picture, layout, the photos) and EDIT the starter specs - never write one from nothing
+      Several photographs on one slide: "tiles": ["assets/img/a.jpg", {"photo": ..., "caption": ...}] (each opens full
+      screen); cuts of one document: add "tiles_as": "strips" - never a hand-written fragment (2.67.0).
 4  python compile/scripts/build_module.py <course> --module 1            again after every change, until PASS
       ONE command runs everything: every figure on its real slide at once (auto-fixes what has one right answer), the
-      compile and its drawing check, the words (instructor + trainee), navigation, the audits at 1280x800 and 1024x768,
+      compile and its drawing check, the words (instructor + trainee), navigation, the audits at 1280x800, 1024x768 and 1280x720,
       the course pages and the classroom's importer. It prints only what fails - file, slide or question, what to do -
       and one PASS line. Do not run those checks one by one: each separate run is a turn of the model.
+      (2.65.0, L64) It starts with the PRE-CHECK (compile/scripts/precheck.py - a second, from the files alone): a picture
+      the sheet names that is not there, an unknown template or variant, a photograph under 800 px (unless its
+      _photo_meta.json record says why in "low_resolution_ok"), more than 60 words with no picture, three teaching
+      slides in a row without one - "FAIL M01 - nothing built: the pre-check found ..." and nothing is built until it is
+      fixed. Run it alone any time: python compile/scripts/precheck.py <course> --module 1. Under the first PASS: "TIME
+      M01: <n> min from its starter build sheet to its first PASS" against the gold standard, 30-40 min a module.
+      A module ALREADY BUILT is rebuilt as a fix, not here: scripts/fix.py rebuild <course> --modules 1 (fix/GUIDE.md 3b).
       (2.57.0) A rebuild judges again only the slides and task pages changed in anything they load since their last
       clean check (the drawing check and the audits; the figures already did) - a failing one is judged every time,
       --full judges everything. Hidden browsers come from ONE pool for the whole computer (a quarter of the cores, 2-8,
@@ -23,9 +34,9 @@
       real seconds and its page clock there; `python course-factory/scripts/cf_timing.py <file.jsonl>` adds them up.
       (2.63.3) A build that runs past 9 minutes answers "STILL BUILDING" (exit 3) and goes on by itself: run the SAME
       command with --wait for its answer - never a second build meanwhile. A module's FIRST build waits its turn behind
-      another module's first build on the same computer (2.65.0: a queue - at most 45 min, CF_COLD_WAIT; it was 5 min, and
+      another module's first build on the same computer (2.71.0: a queue - at most 45 min, CF_COLD_WAIT; it was 5 min, and
       three seeded first builds then ran their figure stages together for 30 min).
-      (2.65.0) The answer says each problem ONCE with its fix and its file - a figure is one line per kind of problem
+      (2.71.0) The answer says each problem ONCE with its fix and its file - a figure is one line per kind of problem
       ("FIGURE s03 - <spec> (scale 0.70 in a 480x238 px panel): small text x11", an example, the fix, the studio
       command); the audits per slide and kind with a count; the same compile line once with "(xN)". Every line is in the
       full log; --full-output prints them all. --long-pole (the whole-course workflow gives it to the course's biggest
@@ -58,7 +69,7 @@
 - **A figure problem** is reported once per figure and part, with the step. `figure_fit.py` has already tried the fixes
   with one right answer: a drawing lost in empty space is cropped to what it shows; a drawing whose column got narrower
   (a layout changed) is re-fitted to it. Kept only when every audit is clean (figures\M01\_fit\ - the spec is never
-  rewritten). When it gets close but not clean, (2.66.3) the build writes the attempt over the spec itself when it adds
+  rewritten). When it gets close but not clean, (2.72.3) the build writes the attempt over the spec itself when it adds
   no meaning BLOCK (the spec as it was: `_fit\sNN.sNN.before.kit.json`) - fix only what it lists; an attempt it could not
   apply is saved as `_fit\sNN.sNN.candidate.kit.json` with the reason. To look at one figure at every step: `course-visuals\kit\scripts\studio.py <spec>
   --step all`. (2.63.3) A studio probe whose page and every file it loads are unchanged is answered from
@@ -67,23 +78,23 @@
   <predecessor course>` (or `"seed_from"` in `working_claude\course.build.json`) gives every slide and question whose words
   are unchanged the predecessor's drawing (the kit spec its DECK shows, else its source spec or .html / .svg drawing) or
   photo with its places, marked `"_seeded"`; only the rest get starters. (IGF M01-M03 from the hand-fixed original: 8, 20
-  and 17 screens seeded.) (2.65.0) The whole-course workflow passes its `seed_from` argument to every `--init-build`. A
+  and 17 screens seeded.) (2.71.0) The whole-course workflow passes its `seed_from` argument to every `--init-build`. A
   seeded slide keeps the predecessor's WHOLE entry (its layout keys - figure_first, split, boxes, inset ... - were fixed by
   hand with the drawing); a picture the predecessor keeps in its module folder (`assets/fig`, `assets/img`) comes with its
   record from `_figure_meta.json` / `_photo_meta.json` (never one without a record); a hand-made drawing brings the module
-  files it is drawn by (the sheet's `styles` / `scripts` / `inline`). **Measured (2.65.0, IGF M01-M03 seeded from the
+  files it is drawn by (the sheet's `styles` / `scripts` / `inline`). **Measured (2.71.0, IGF M01-M03 seeded from the
   hand-fixed original): seeding is for quality, NOT speed.** The original's drawings were fixed against an older kit; today's
   checks reject most of them (words at 12.2 px under the 12.5 floor, hand-made scenes' contrast) - M02 started at 56 findings
   at 1280 x 800 and 132 at 1024 x 768, the builders needed 82 build runs (14 unseeded) and the wave took 121 min (114
   unseeded). Seed a course whose predecessor was built with the current factory, or accept the fixing time.
-- **The whole-course workflow (2.65.0)** builds the modules biggest first (`scripts/build_order.py`: screens, drawn
+- **The whole-course workflow (2.71.0)** builds the modules biggest first (`scripts/build_order.py`: screens, drawn
   figures, 3D scenes from the approved scripts, seeded ones counted less) in a rolling pool of `wave` at a time; its builder
   reads `compile/BUILDER_CARD.md`, not this guide. A module with a 3D-kit scene gets the 3D step after its build:
   `course-visuals/kit3d/scripts/scene3d_check.py <course> --module N` (spec check, smoke3d, perf3d, a picture of every
-  step in `working_claude\review\MNN_3d\`), then a reviewer who did not build the scene judges the pictures. 2.66.5: the
+  step in `working_claude\review\MNN_3d\`), then a reviewer who did not build the scene judges the pictures. 2.72.5: the
   3D step, the figure step and QA judge the built module at the same time, and ONE fix round takes every BROKEN finding
   of the three (two builds, at most six studio runs a figure); then only what was BROKEN is judged again.
-- **Figure fits (2.65.0)**: the COLUMN re-fit tries one width at a time and stops at the first clean fit (the same fit the
+- **Figure fits (2.71.0)**: the COLUMN re-fit tries one width at a time and stops at the first clean fit (the same fit the
   parallel search kept, fewer probes) and measures a figure at most 16 times (CF_FIT_MEASURES; every real fit on record was
   found within 11, the searches that found nothing ran up to 53). An EMPTY drawing on a
   task page is cropped by itself, as a slide's is, and kept only when the page is then clean.
@@ -259,8 +270,8 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
 - **A kit figure is laid out beside its words, and drawn to its panel (L53, operator 2026-10-15).** A figure whose
   steps light the slide's lines takes `"composition": "two-col"` (the words at reading size in the left column, each
   lit line a tap target for its step; `"boxes"` when the lines are separate items) - not `stage` with a `legend`, where a
-  large drawing left the explanation in a row of small cards. Draw the spec to the panel's own shape (about 640 × 390 in
-  the wide column, `scales()` in a deck reports the real scale), crop what the steps do not show, and run
+  large drawing left the explanation in a row of small cards. Draw the spec to the panel's own shape (about 416 × 254 in
+  the figure column - 2.66.0, `scales()` in a deck reports the real scale), crop what the steps do not show, and run
   `audit_drawing.js` (its EMPTY check) at 1280 × 800, 1024 × 768 and 1920 × 1080, at step 0 and at the last step.
   `stage` stays for a figure that is the whole screen and has no lines to light.
 

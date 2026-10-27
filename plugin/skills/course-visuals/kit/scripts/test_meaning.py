@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""test_meaning.py - 2.66.0: relations in the kit, and the checks of what a figure MEANS. Run: python test_meaning.py
+"""test_meaning.py - 2.72.0: relations in the kit, and the checks of what a figure MEANS. Run: python test_meaning.py
 (node runs the kit's own resolver - kit_relate.py; without node it SKIPs)
 
-The IGF 2.65.0 unseeded build of M01-M03 (C:\\rvt\\s266) passed every check with figures a seafarer calls wrong (Aleksis,
+The IGF 2.71.0 unseeded build of M01-M03 (C:\\rvt\\s266) passed every check with figures a seafarer calls wrong (Aleksis,
 2026-10-26: "bunkering station is nowhere to be seen; the vent mast ... is INSIDE of the ship, the gas is not being ejected
 ... its not properly connected"). The eight figures he showed are fixtures/igf265/; each must now FAIL for what is wrong
 with it, and each of the kit's patterns must pass:
@@ -11,7 +11,7 @@ with it, and each of the kit's patterns must pass:
     hold's floor, "at" along a pipe, "from"/"to" route a pipe between two ports, "for" points a callout at its part,
     "around" centres a zone on a port, a cloud grows "from" a port; a spec with no relation is left byte for byte;
   * the meaning checks (kit_meaning.py) - NAMED, LOOSE END, INSIDE, NO GAS, AIM, LEADER, GRID, MODES, TRUTH - each on the
-    2.65.0 figure that showed it, and on a small spec built to show it alone;
+    2.71.0 figure that showed it, and on a small spec built to show it alone;
   * the patterns (ship_ga, bunkering_line, vent_system, fuel_supply, engine_modes, fuel_types, fuel_space_access) are clean;
   * the compiler starts a slide that names a pattern's figure from that pattern (compile_module.pattern_for).
 """
@@ -171,7 +171,7 @@ def rules_part():
     check("TRUTH ship_plan: a tank connection space beside the tank, not on it, fails", has(p, "TRUTH ship_plan", "tank connection"), p)
 
 
-EXPECT = {   # the 2.65.0 figure -> what Aleksis (and the subagent that mapped his screenshots) found wrong in it: BLOCK (the
+EXPECT = {   # the 2.71.0 figure -> what Aleksis (and the subagent that mapped his screenshots) found wrong in it: BLOCK (the
     # build fails), NOTE (the figure reviewer judges it)
     "M01_s03": [("INSIDE", "vent", "BLOCK"), ("NAMED", "bunkering station", "BLOCK"), ("LEADER", "ship", "NOTE")],   # 7.png
     "M01_s04": [("NAMED", "bunkering station", "BLOCK"), ("LEADER", "ship", "NOTE")],                               # 6.png
@@ -185,7 +185,7 @@ EXPECT = {   # the 2.65.0 figure -> what Aleksis (and the subagent that mapped h
 
 
 def igf265_part():
-    print("\n-- the eight 2.65.0 figures Aleksis showed: each is caught for what is wrong with it - a clear error BLOCKS")
+    print("\n-- the eight 2.71.0 figures Aleksis showed: each is caught for what is wrong with it - a clear error BLOCKS")
     types = ck.kit_types()
     for name, want in sorted(EXPECT.items()):
         spec = load(os.path.join(FIX, name + ".kit.json"))
@@ -194,11 +194,11 @@ def igf265_part():
         for kind, word, level in want:
             got = has(probs, kind, word) if level == "BLOCK" else has(a["note"], "note " + kind, word)
             check("%s: %s %s%s" % (name, level, kind, (" (" + word + ")") if word else ""), got, (probs, a["note"]))
-        check("%s: check_spec without the meaning checks (2.65.0) found it clean" % name, not ck.check_spec(spec, types, name, meaning=False))
+        check("%s: check_spec without the meaning checks (2.71.0) found it clean" % name, not ck.check_spec(spec, types, name, meaning=False))
 
 
 FIX266 = os.path.join(HERE, "fixtures", "igf266")
-# 2.66.3 - the 2.66 audit's 11 BROKEN figures (Desktop\IGF_course_2.66_figures\REPORT.md "your list"): what STEP and LABEL
+# 2.72.3 - the 2.66 audit's 11 BROKEN figures (Desktop\IGF_course_2.66_figures\REPORT.md "your list"): what STEP and LABEL
 # catch in them. The other seven need what a spec does not hold - where kit.js prints a part's own label (M01 s02 / s03), an
 # animation's timing (M03 s08), an engine left running after its supply stops (M02 s15), where a leak is drawn (M01 s05),
 # methods that have no part (M01 s07), a valve drawn off its tank (M03 s07): the figure review judges those
@@ -207,7 +207,7 @@ EXPECT266 = {"M03_s14": [("STEP", "checklist", "NOTE")], "M03_s17": [("STEP", "t
 
 
 def igf266_part():
-    print("\n-- 2.66.3 the 2.66 audit's BROKEN figures: a step that does not show its title (STEP), a label on the wrong part "
+    print("\n-- 2.72.3 the 2.66 audit's BROKEN figures: a step that does not show its title (STEP), a label on the wrong part "
           "or naming what is not drawn (LABEL)")
     for name, want in sorted(EXPECT266.items()):
         a = km.analyse(load(os.path.join(FIX266, name + ".kit.json")), name)
@@ -247,7 +247,7 @@ def igf266_part():
 
 CALIB = os.environ.get("CF_MEANING_CALIBRATION")      # a folder of hand-fixed, instructor-reviewed specs (the IGF original's)
 FIX2665 = os.path.join(HERE, "fixtures", "igf2665")
-# 2.66.7 - the 2.66.5 timed run's figure review (NEXT_ROUND.md): the run's own specs with the fault its first review called
+# 2.72.7 - the 2.72.5 timed run's figure review (NEXT_ROUND.md): the run's own specs with the fault its first review called
 # BROKEN put back (the fixers had fixed them) - each now caught for that fault
 EXPECT2665 = {"M03_s05_way": [("WAY step3", "says the valve closes, and the step opens it (B1, B2)", "BLOCK")],
               "M03_s05_alone": [("JOINS B1", "joins nothing", "BLOCK"), ("JOINS B2", "joins nothing", "BLOCK"),
@@ -257,7 +257,7 @@ EXPECT2665 = {"M03_s05_way": [("WAY step3", "says the valve closes, and the step
 
 
 def igf2665_part():
-    print("\n-- 2.66.7 the 2.66.5 run's BROKEN figures: a step that does the opposite of its title (WAY), a readout against its "
+    print("\n-- 2.72.7 the 2.72.5 run's BROKEN figures: a step that does the opposite of its title (WAY), a readout against its "
           "tank (READOUT), a part on no line (JOINS)")
     for name, want in sorted(EXPECT2665.items()):
         a = km.analyse(load(os.path.join(FIX2665, name + ".kit.json")), name)
@@ -299,12 +299,12 @@ def igf2665_part():
     if CALIB and os.path.isdir(CALIB):
         specs = sorted(glob.glob(os.path.join(CALIB, "*.kit.json")))
         found = [x for f in specs for x in km.analyse(load(f), os.path.basename(f))["block"] if any(": %s" % k in x for k in ("WAY", "READOUT", "JOINS"))]
-        check("calibration: no WAY / READOUT / JOINS BLOCK in the hand-fixed set (%d specs; 2.66.7: 0, two JOINS notes)" % len(specs),
+        check("calibration: no WAY / READOUT / JOINS BLOCK in the hand-fixed set (%d specs; 2.72.7: 0, two JOINS notes)" % len(specs),
               not found, found)
 
 
 def levels_part():
-    print("\n-- two levels, a waiver with a reason (2.66.0, Aleksis: 'no flexibility')")
+    print("\n-- two levels, a waiver with a reason (2.72.0, Aleksis: 'no flexibility')")
     loose = small([{"id": "T", "type": "tank", "x": 40, "y": 200, "w": 160, "h": 60}, {"id": "P", "type": "pipe", "d": "M200 230 H330"}])
     check("a pipe end 130 units from anything BLOCKS", has(blocks(loose), "LOOSE END P"), blocks(loose))
     near = small([{"id": "T", "type": "tank", "x": 40, "y": 200, "w": 160, "h": 60}, {"id": "P", "type": "pipe", "d": "M220 230 H330"},
@@ -341,7 +341,7 @@ def levels_part():
     if CALIB and os.path.isdir(CALIB):
         specs = sorted(glob.glob(os.path.join(CALIB, "*.kit.json")))
         nb = sum(len(km.analyse(load(f), os.path.basename(f))["block"]) for f in specs)
-        check("calibration: the hand-fixed set (%d specs) raises at most 6 BLOCKs (2.66.0: 5)" % len(specs), nb <= 6, nb)
+        check("calibration: the hand-fixed set (%d specs) raises at most 6 BLOCKs (2.72.0: 5)" % len(specs), nb <= 6, nb)
 
 
 def patterns_part():

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""kit_relate.py - a figure spec's relations resolved, and every part's box and ports, by kit.js itself (2.66.0)
+"""kit_relate.py - a figure spec's relations resolved, and every part's box and ports, by kit.js itself (2.72.0)
 
   kit_relate.py <file.kit.json> ...         print each spec resolved (x / y / d filled in from "on", "at", "from"/"to" ...)
   kit_relate.py --geometry <file.kit.json>  print every part's box and ports in figure units
 
 There is ONE resolver: the `/* kit-relate */` block of kit.js, the very code that places the parts on a slide. It is pure
 (no DOM), so this runs it under node - check_kit.py judges what a figure MEANS on the geometry the deck draws, never on a
-second copy of the rules that could drift (2.66.0). node is already needed by the build (the review sheets).
+second copy of the rules that could drift (2.72.0). node is already needed by the build (the review sheets).
 """
 from __future__ import annotations
 

@@ -1407,6 +1407,8 @@ def blind_part(exe, page, tmp):
     check("no script error on the blind page", not r.get("errors"), r.get("errors"))
     check("the classroom hears the same 5 of 10 and the same items as on a check",
           rep.get("ok") == 5 and [x["ok"] for x in rep.get("items", [])] == [False, True, False, False, True, True, False, True, False, True], rep)
+    check("2.67.0: ... and a blind final tells it no answer - what was picked, what is right and why stay empty",
+          all(not x.get("a") and not x.get("c") and not x.get("w") for x in rep.get("items", [])), rep.get("items"))
     check("one press per part: Next, Go on inside a scenario, See my score on the last - never Check",
           not any(s.endswith(":Check") for s in steps) and "q01:Next" in steps and "q03:Go on" in steps
           and steps[-1] == "q10:See my score", steps)
@@ -1468,8 +1470,16 @@ def review_part(exe, tmp):
     r = drive(exe, sc[0], plan, tmp, look=False)
     res, rep = r.get("res") or [], r.get("report") or {}
     check("no script error", not r.get("errors"), r.get("errors"))
-    check("the classroom hears the same report as before (1 of 4; the same fields, nothing added)",
-          rep.get("ok") == 1 and set(rep) == {"type", "code", "title", "ok", "total", "head", "items", "answered", "of", "timeout"}, rep)
+    check("the classroom hears the report (1 of 4) - its fields, and since 2.67.0 detail: 2 (each question whole)",
+          rep.get("ok") == 1 and set(rep) == {"type", "code", "title", "ok", "total", "head", "items", "answered", "of", "timeout",
+                                               "detail"} and rep.get("detail") == 2, rep)
+    its = rep.get("items") or []
+    check("2.67.0: each wrong question tells the classroom what was picked, what is right and why - so its debrief, the "
+          "instructor's list and the trainee's record say it as the page does (the training app re-read the screens: gas M07's "
+          "4 questions became 11 items, the why empty)",
+          len(its) == 4 and all(set(x) >= {"t", "ok", "a", "c", "w"} for x in its)
+          and all(x["c"] and x["a"] for x in its if x["ok"] is False) and all(len(x["t"]) <= 90 and len(x["w"]) <= 400 for x in its)
+          and its[2]["a"] == "Coal" and its[2]["c"] != "Coal", its)
     check("the result screen is open, and every wrong question carries its correction - a right one none",
           r.get("onRes") and [x["cls"] for x in res] == ["no", "no", "no", "yes"] and all(x["fix"] for x in res[:3]) and not res[3]["fix"], res)
     m = res[0] if res else {}

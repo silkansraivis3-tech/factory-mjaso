@@ -33,7 +33,7 @@ their last clean check (check_cache.py; the figures already did) - a failing one
 Every hidden browser takes a slot of one pool for the whole computer (browser_slots.py, CF_BROWSER_SLOTS).
 2.63.3 (the 2.63.2 full-course run, 4 h 34 min):
   - a module's FIRST build waits its turn behind another module's first build (browser_slots.cold_turn - a queue since
-    2.65.0, at most 45 min; --long-pole goes first): wave 1's three first builds overlapped and M01's took 1,076 s;
+    2.71.0, at most 45 min; --long-pole goes first): wave 1's three first builds overlapped and M01's took 1,076 s;
   - a build that runs past ANSWER_WITHIN (9 min, CF_BUILD_ANSWER_WITHIN) is not lost to the shell's 10-minute limit: it
     goes on by itself and says "STILL BUILDING"; the same command with --wait waits for it and prints its answer (a builder
     whose shell call ended at 600 s waited blind). A second build of a module that is building waits for that one;
@@ -206,7 +206,7 @@ def starter_blanks(course, module):
                 and not any(os.path.isfile(os.path.join(d, fig)) for d in (figdir, mdir) if d):
             scenes.append(s["id"] + " (" + fig + ")")
         elif s["kind"] == "slide" and fig.lower().endswith(".kit3d.json") and not (build.get("declined_3d") or e.get("declined_3d")):
-            # 2.65.0 - a 3D-kit scene: missing, or still --init-build's starter ("_todo": parts guessed, not placed)
+            # 2.71.0 - a 3D-kit scene: missing, or still --init-build's starter ("_todo": parts guessed, not placed)
             p = os.path.join(figdir, fig)
             try:
                 todo = bool(json.load(io.open(p, encoding="utf-8")).get("_todo"))
@@ -322,17 +322,17 @@ def measure_out(path, misfits):
     io.open(path, "w", encoding="utf-8", newline="\n").write(json.dumps(avoid, indent=1, sort_keys=True))
 
 
-# 2.66.5 - THE LAYOUT PRE-CHECK. WHY (Desktop\IGF_course_2.66_figures\SPEED_ANALYSIS.md): a slide the compiler built
+# 2.72.5 - THE LAYOUT PRE-CHECK. WHY (Desktop\IGF_course_2.66_figures\SPEED_ANALYSIS.md): a slide the compiler built
 # another way for L62 that did not fit was found only by the deck audit at the END of a build, and the whole module was
 # built again (a LAYOUT round: the figures - a moved slide's figure measured and re-fitted in its new column - the
-# compile and every check) - 23.5 of IGF M03's 39.5 build-minutes in the 2.66.3 run, 30 of M02's in the 2.66 run 2,
+# compile and every check) - 23.5 of IGF M03's 39.5 build-minutes in the 2.72.3 run, 30 of M02's in the 2.66 run 2,
 # where s02 / s14 went through it in four builds running. Now, before the figures, the deck is laid out in memory
 # (compile_deck, as figure_fit does) and ONLY the slides built another way that the last build did not build so are
 # audited, by run_audits.py's own probes at the build's sizes, the whole deck loaded (run_audits --only's way); a misfit
 # is measured out at once (MNN_layout_avoid.json, as before) and the deck laid out again, at most LAYOUT_ROUNDS times.
 # The audit at the end still judges every slide, and still builds again if one does not fit after all (a figure fitted
 # in the build can change its panel). CF_LAYOUT_PRECHECK=off: not run.
-# 2.66.5 (its timed run): "the last build built it so" was not enough - a fixer changed only the DRAWING on a slide kept
+# 2.72.5 (its timed run): "the last build built it so" was not enough - a fixer changed only the DRAWING on a slide kept
 # its way (M02 s04, M03 s02), it no longer fit, and the round at the end built the module again. A slide is passed over
 # only when it was checked fitting as it is now: its whole markup, the drawing in it, kept in MNN_precheck_fit.json
 def section_sha(deck_html, sid):
@@ -446,7 +446,7 @@ def slide_audit(got, deck_html):
 
 def fit_misses(deck_html, audit_out):
     """the slides whose words the build's audits found scrolling, spilling or over-filling (run_audits.py's answer) - the
-    next build's pre-check measures them first and the layout solver settles them (2.66.7)"""
+    next build's pre-check measures them first and the layout solver settles them (2.72.7)"""
     ids = {k: sid for k, sid, _ in slide_order(deck_html)}
     out = set(re.findall(r"slide \d+ \((\w+)\): (?:scrolls|spills)\b", audit_out))
     for line in re.findall(r"over-filled: (.*)", audit_out):
@@ -454,7 +454,7 @@ def fit_misses(deck_html, audit_out):
     return sorted(x for x in out if x)
 
 
-# 2.66.7 - THE LAYOUT SOLVER. WHY (Desktop\IGF_course_2.66_figures\NEXT_ROUND.md, the 2.66.5 timed run): of its 53 builds
+# 2.72.7 - THE LAYOUT SOLVER. WHY (Desktop\IGF_course_2.66_figures\NEXT_ROUND.md, the 2.72.5 timed run): of its 53 builds
 # 24 failed on a slide whose words scroll or over-fill (M02 s05 in all 20 of M02's) and 29 on an L62 repeat (M03 s10 like
 # s09 in 12 running) - the builders searched layouts by hand, a full build (60-180 s) a try. The pre-check now settles
 # them before the figures, each try the deck laid out in memory and only the slides it changes audited, at both sizes,
@@ -470,7 +470,7 @@ SOLVE_TRIES = 6         # tries a build (each: the deck laid out in memory, ~1-2
 
 
 def worse(new, old):
-    """a try leaves a slide worse than it was: more findings on it, or its drawing's words smaller (the replay of the 2.66.5
+    """a try leaves a slide worse than it was: more findings on it, or its drawing's words smaller (the replay of the 2.72.5
     run's M02: a words' column at 60 % settled s04's L62 and took its drawing words from 12 to 10.4 px)"""
     n, o = (new or {}).get("other") or [], (old or {}).get("other") or []
     px = lambda xs: min([float(v) for x in xs if "too small" in x for v in re.findall(r"(\d+(?:\.\d+)?) px", x)] or [99.0])
@@ -542,7 +542,7 @@ def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, p
     deck, probs, _ = lay(av)
     other = lambda pr: len([x for x in pr if "looks exactly like the slide before it" not in x])
     lines, done, budget, fits = [], {}, [tries], {}
-    base = {sid: {"other": v} for sid, v in fit.items()}        # each slide's findings before the solver (2.66.7: worse())
+    base = {sid: {"other": v} for sid, v in fit.items()}        # each slide's findings before the solver (2.72.7: worse())
     base.update({sid: f for sid, f in (known or {}).items() if sid not in base})
 
     def taken(r, targets):
@@ -567,7 +567,7 @@ def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, p
     def screen(av2, gone=()):
         """a try laid out, not audited: ((deck, probs, changed slides), "") - or (None, why it is not worth an audit: it
         changes nothing, a slide then looks like its neighbour, the compile finds something new). An audit is ~8-10 s, a
-        lay-out 1-2 s: the replay of the 2.66.5 run's M02 spent 4 of 8 audits on tries the layout alone ruled out"""
+        lay-out 1-2 s: the replay of the 2.72.5 run's M02 spent 4 of 8 audits on tries the layout alone ruled out"""
         deck2, probs2, _ = lay(av2)
         cur = {i: x for _, i, x in slide_order(deck)}
         changed = {i for _, i, x in slide_order(deck2) if cur.get(i) != x}
@@ -668,14 +668,14 @@ def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, p
                              % (sid, why or "every try made before"))
             elif not plan and s.get("kind") == "activity" and not ((build.get("screens") or {}).get(sid) or {}).get("figure") \
                     and (s.get("visual_kind") or "none") != "none":
-                # the 2.66.5 run's M02 s05: 20 builds over-filled - a room activity whose script plans a picture
+                # the 2.72.5 run's M02 s05: 20 builds over-filled - a room activity whose script plans a picture
                 # (flow_animation) was built with none (--init-build writes no figure for an activity), as a task slide
                 # with all its lines; no composition, split or parts changes that layout
                 lines.append("%s: no way found that fits - it is a room activity built with no picture, so its %d lines "
                              "stand on the task slide; its script plans one (%s): give it its \"figure\" in the build sheet "
                              "(a kit spec) and it is laid out beside it, its words in parts" % (
                                  sid, len(cm.cs.lines_of(s.get("text"))), s.get("visual_kind")))
-    # 2 - an L62 repeat: the slide before it built its next way; then (the 2.66.5 run's M02 s04 / s05: s04's other side did
+    # 2 - an L62 repeat: the slide before it built its next way; then (the 2.72.5 run's M02 s04 / s05: s04's other side did
     # not fit, s05 an activity that never varies) a wider words' column or parts on either, so a side measured out beside
     # the old column may be built again
     # every try laid out first and the ones the layout already rules out dropped (no audit); then the slide with a side
@@ -719,7 +719,7 @@ def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, p
 
 def last_misses(logdir, m):
     """the slides whose words the last build's audits found not fitting (MNN_fit_misses.json) - "all" when no build has
-    measured them yet (2.66.7: the first build's pre-check measures every slide, the layout solver settles them before the
+    measured them yet (2.72.7: the first build's pre-check measures every slide, the layout solver settles them before the
     figures are fitted to their columns)"""
     try:
         return set(json.load(io.open(os.path.join(logdir, "%s_fit_misses.json" % m), encoding="utf-8")))
@@ -729,7 +729,7 @@ def last_misses(logdir, m):
 
 def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None, extra=None):
     """-> ([log lines], {sid: (shape, ground)} measured out). audit(deck path, size, [slide index]) -> (result, error):
-    run_audits.measure by default (the test passes its own). extra (2.66.7): slides to audit in the first round besides
+    run_audits.measure by default (the test passes its own). extra (2.72.7): slides to audit in the first round besides
     the ones built another way - the last build's misfits, or "all" (no build measured them yet); then the layout solver
     settles what does not fit and every L62 repeat (solve_layouts) - "settled: ..." lines"""
     import workspace
@@ -776,7 +776,7 @@ def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None, extra=No
         own_bad = []
         for sid in todo:                           # what fits as it is now is not checked again until it changes
             f = found.get(sid) or {}
-            # 2.66.7 - a slide whose words do not fit, as measured: {sid: (its markup then, its other findings)}
+            # 2.72.7 - a slide whose words do not fit, as measured: {sid: (its markup then, its other findings)}
             nofit[sid] = (section_sha(deck, sid), f.get("other") or []) if f.get("fit") else None
             if sid in mis or nofit[sid] is not None:
                 fitted.pop(sid, None)
@@ -795,7 +795,7 @@ def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None, extra=No
             break
         measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
         out.update({k: v[:2] for k, v in mis.items()})
-    # 2.66.7 - what still does not fit as it is laid out now, and every L62 repeat, to the layout solver
+    # 2.72.7 - what still does not fit as it is laid out now, and every L62 repeat, to the layout solver
     avoid = cm.load_layout_avoid(work, mid_)
     deck, _, _ = cm.compile_deck(script, build, mdir, figdir, "CACHE", True, avoid, last, {})
     bad = {sid: v[1] for sid, v in nofit.items() if v is not None and v[0] == section_sha(deck, sid)}
@@ -836,10 +836,10 @@ def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None, extra=No
 
 
 def check_slides(course, module, sids, sizes, audit=None):
-    """--slides s05,s10 (2.66.7): the deck laid out in memory as the next build lays it out (the layouts measured out and
+    """--slides s05,s10 (2.72.7): the deck laid out in memory as the next build lays it out (the layouts measured out and
     settled), those slides audited at both sizes, their neighbours compared (L62), the compile's lines on them, and - when
     one does not fit or repeats - what the layout solver would settle. Nothing is written: seconds, not a build.
-    WHY (NEXT_ROUND.md): most of the 2.66.5 run's 53 builds were a layout tried by hand; a build is 60-180 s and the agent
+    WHY (NEXT_ROUND.md): most of the 2.72.5 run's 53 builds were a layout tried by hand; a build is 60-180 s and the agent
     then reads its whole answer. -> (exit code: 0 clean, 1 not, 2 not measured; [lines])"""
     import workspace
     import content_script as cs
@@ -895,6 +895,51 @@ def check_slides(course, module, sids, sizes, audit=None):
     return (1 if bad else 0), lines
 
 
+def spilled_own(deck_html, audit_out, course, module):
+    """2.67.0 - the slides whose OWN layout scrolls or spills at the audit - the compiler's choice (no "template" in the
+    build sheet, not built another way for L62), with a picture and more than one line: {slide id: its words key}. Their
+    words go in parts at once (compile_module.wants_parts) - on gas M01 (2.65) six slides scrolled at 1024 x 768, each a
+    builder's run to put them in parts by hand"""
+    # 2.69.0 - and a photograph cropped to a strip: its words in parts give it the height (gas M01 s11, the ship cut through)
+    bad = set(re.findall(r"slide \d+ \((\w+)\): (?:scrolls|spills|photo cropped to a strip)\b", audit_out or ""))
+    if not bad:
+        return {}
+    import compile_module as cm
+    import content_script as cs
+    try:
+        script = cs.load(cs.paths(course, module)["script"])
+        sheet = cs.load(cm.build_path(course, module)).get("screens") or {}
+    except (OSError, ValueError, KeyError):
+        return {}
+    by_id = {x["id"]: x for x in script.get("screens", [])}
+    out = {}
+    for tag in re.findall(r"<section [^>]*>", deck_html):
+        sid = re.search(r'\bdata-script="(\w+)"', tag)
+        if not sid or sid.group(1) not in bad or "data-varied=" in tag or 'data-template="content-in-parts' in tag:
+            continue
+        sc, b = by_id.get(sid.group(1)), sheet.get(sid.group(1)) or {}
+        if not sc or sc.get("kind") != "slide" or b.get("template") or not b.get("figure") or len(cs.lines_of(sc.get("text"))) < 2:
+            continue
+        # (merge with 2.72.x) the layout record's one key, fit_key - the layout solver and measure_out read it too
+        out[sid.group(1)] = cm.fit_key(sc, b)
+    return out
+
+
+def parts_out(path, own):
+    """each slide's words go in parts while its words key is the same (compile_module.wants_parts)"""
+    try:
+        avoid = json.load(io.open(path, encoding="utf-8"))
+    except (OSError, ValueError):
+        avoid = {}
+    for sid, words in own.items():
+        a = avoid.get(sid) or {}
+        if a.get("words") != words:
+            a = {"words": words, "avoid": []}
+        a["parts"] = True
+        avoid[sid] = a
+    io.open(path, "w", encoding="utf-8", newline="\n").write(json.dumps(avoid, indent=1, sort_keys=True))
+
+
 def reviewed_dir(out_dir):
     """review\\MNN_reviewed - the manifests of the sheets someone last looked at (--reviewed): what "changed" is judged
     against. Missing: every screen is new to the reviewer"""
@@ -941,7 +986,7 @@ def mark_reviewed(out_dir, m):
     return 0
 
 
-# ------------------------------------------------------------------ 2.65.0: the short answer
+# ------------------------------------------------------------------ 2.71.0: the short answer
 # WHY (the 2.63.3 M01-M03 run): a failing build answered up to 16,863 characters - every figure finding once per part,
 # four hint lines per figure, every audit line - and the builder carried each answer in every later turn (M02's builder:
 # 98 M cache-read tokens). The answer now says each problem ONCE with its fix and its file; the full log keeps every line.
@@ -985,7 +1030,7 @@ def short_figures(lines, figrel):
                 continue
             if line.startswith("    (unchanged since"):
                 fig[6] = True
-            elif line.startswith("    tried by itself:") and "APPLIED to " in line:      # 2.66.3: the build did it
+            elif line.startswith("    tried by itself:") and "APPLIED to " in line:      # 2.72.3: the build did it
                 fig[5].append("    the closer fit was applied to the spec by the build (%s) - fix only what it lists"
                               % re.search(r"the spec as it was: (.+?\.kit\.json)", line).group(1))
             elif line.startswith("    tried by itself:") and re.search(r"saved as (.+?\.kit\.json)", line):
@@ -1004,8 +1049,8 @@ def short_figures(lines, figrel):
     return out
 
 
-# ------------------------------------------------------------------ 2.66.7: the stop rule
-# WHY (the 2.66.5 timed run, Desktop\IGF_course_2.66_figures\NEXT_ROUND.md): of its 53 builds only 2 passed - M02 and M03
+# ------------------------------------------------------------------ 2.72.7: the stop rule
+# WHY (the 2.72.5 timed run, Desktop\IGF_course_2.66_figures\NEXT_ROUND.md): of its 53 builds only 2 passed - M02 and M03
 # made 20 builds each re-failing the same few lines (M02 s05 over-filled in all 20, M03 s10 L62 in 12 running), and their
 # retry agents (21 / 27 min) ended without PASS on findings the judges and the fix round got anyway. The build itself now
 # counts how many builds running printed each finding, and says when the builder's edits have not moved one
@@ -1118,7 +1163,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("course")
     ap.add_argument("--module", required=True)
-    ap.add_argument("--viewport", action="append", default=[], help="another audit size, WxH (1280x800 and 1024x768 always run)")
+    ap.add_argument("--viewport", action="append", default=[], help="another audit size, WxH (1280x800, 1024x768 and 1280x720 always run)")
     ap.add_argument("--no-course-pages", action="store_true", help="a module agent in a parallel build: no compile_course.py")
     ap.add_argument("--no-fix", action="store_true", help="the figure pre-check makes no fix of its own")
     ap.add_argument("--no-review", action="store_true", help="no review sheets after a pass")
@@ -1131,14 +1176,16 @@ def main(argv=None):
                                                             "changes after them (2.63.3); builds nothing")
     ap.add_argument("--wait", action="store_true", help="wait for this module's build that said STILL BUILDING and print its "
                                                         "answer (2.63.3)")
-    ap.add_argument("--long-pole", action="store_true", help="the course's biggest module (build_order.py, 2.65.0): its first "
+    ap.add_argument("--long-pole", action="store_true", help="the course's biggest module (build_order.py, 2.71.0): its first "
                                                              "build never waits for another module's first build")
-    ap.add_argument("--full-output", action="store_true", help="print every finding in full, as the log has it (2.65.0: the "
+    ap.add_argument("--full-output", action="store_true", help="print every finding in full, as the log has it (2.71.0: the "
                                                                "answer is one line per problem, with its fix)")
-    ap.add_argument("--slides", metavar="s05,s10", help="check only these slides in seconds (2.66.7): the deck laid out in "
+    ap.add_argument("--slides", metavar="s05,s10", help="check only these slides in seconds (2.72.7): the deck laid out in "
                                                          "memory, the slides audited at 1280x800 and 1024x768, their "
                                                          "neighbours compared (L62) - nothing written, nothing built")
     ap.add_argument("--inner", action="store_true", help=argparse.SUPPRESS)
+    ap.add_argument("--no-precheck", action="store_true", help="skip the pre-check (precheck.py: missing pictures, photographs "
+                                                               "under 800 px, dense text with no picture ...) - 2.65.0")
     o = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     t0 = time.time()
@@ -1153,10 +1200,13 @@ def main(argv=None):
     m = cs.mid(o.module) if str(o.module).isdigit() else str(o.module)
     logdir = workspace.claude_path(course, "_build")
     os.makedirs(logdir, exist_ok=True)
+    import cf_timing                 # 2.65.0 - the module's clock (gold standard 30-40 min), if --init-build did not start it
+    if o.layout_round == 0:
+        cf_timing.clock_start(course, m, since="its first build run")
     out_dir = workspace.claude_path(course, "review", m)
     if o.reviewed:
         return mark_reviewed(out_dir, m)
-    if o.slides:                     # 2.66.7: a slide check in seconds - nothing built, nothing written
+    if o.slides:                     # 2.72.7: a slide check in seconds - nothing built, nothing written
         sizes = [(1280, 800), (1024, 768)] + [tuple(int(x) for x in v.split("x")) for v in o.viewport
                                               if v not in ("1280x800", "1024x768")]
         code, lines = check_slides(course, o.module, [x.strip() for x in o.slides.split(",") if x.strip()], sizes)
@@ -1170,6 +1220,20 @@ def main(argv=None):
               % (m, os.path.basename(cm.build_path(course, o.module)),
                  "; ".join("%s: %s" % (", ".join(ids), what) for ids, what in blanks)))
         return 1
+    # 2.65.0 - the pre-check: what would fail the build or make it look poor, found in a second from the files alone
+    # (precheck.py) - a missing picture, a photograph under 800 px, dense text with no picture - before the figures stage,
+    # the slowest one, is spent on a build that could not pass (owner, 2026-10-26: "cut time and usage, quality the same")
+    pre_notes = []
+    if not o.no_precheck and str(o.module).isdigit() and o.layout_round == 0:
+        import precheck
+        # a module built before is a rebuild: the small pictures it already has are notes (fix/GUIDE.md 3b)
+        must, pre_notes = precheck.check(course, o.module, rebuild=os.path.isfile(os.path.join(mdir, "presentation", "index.html")))
+        if must:
+            print("FAIL %s - nothing built: the pre-check found %d thing(s) to fix first (precheck.py; --no-precheck skips it)"
+                  % (cs.mid(o.module), len(must)))
+            print("\n".join("  - " + x for x in must))
+            print("\n".join("  note: " + x for x in pre_notes or []))
+            return 1
     # 2.62.1 - every hidden browser of this build writes its real seconds (cf_timing.py); a round the layout retry
     # replaces keeps its own log (_build\M01_build.round1.log) - both were lost when a round was slow (IGF M02 v262)
     timing = os.environ.get("CF_TIMING") or os.path.join(logdir, "%s_timing.jsonl" % m)
@@ -1182,7 +1246,7 @@ def main(argv=None):
                 except OSError:
                     pass
     log = io.open(os.path.join(logdir, "%s_build.log" % m), "w", encoding="utf-8")
-    say, fails, notes = [], [], []
+    say, fails, notes = [], [], ["Pre-check: " + x for x in pre_notes or []]
     stages = []                      # 2.52.0: (stage, seconds) - written into the log, so a slow stage is seen
 
     def logged(title, out):
@@ -1192,7 +1256,7 @@ def main(argv=None):
         stages.append((title, time.time() - since))
         return time.time()
 
-    # 2.66.5 - the slides built another way for L62 are audited before anything is built (layout_precheck); its seconds
+    # 2.72.5 - the slides built another way for L62 are audited before anything is built (layout_precheck); its seconds
     # are a stage of their own, the figures' clock starts after it
     t_fig = t0
     if o.layout_round == 0 and not o.draft and str(o.module).isdigit() and os.path.isdir(os.path.join(mdir, "presentation")) \
@@ -1210,12 +1274,12 @@ def main(argv=None):
             notes.append("LAYOUT (pre-check) - %d slide(s) built another way so no two neighbours look alike (L62) did not "
                          "fit and are built their next way: %s (kept in %s_layout_avoid.json while their words are unchanged)"
                          % (len(pre_out), ", ".join("%s (%s, %s ground)" % (k, v[0], v[1]) for k, v in sorted(pre_out.items())), m))
-        # 2.66.7 - what the layout solver settled, said once: nothing for the builder to copy
+        # 2.72.7 - what the layout solver settled, said once: nothing for the builder to copy
         notes += ["LAYOUT (pre-check) - %s (kept in %s_layout_avoid.json while its words, picture and sheet are unchanged; "
                   "nothing to copy)" % (x[len("settled: "):], m) for x in pre_lines if x.startswith("settled: ")]
         notes += ["LAYOUT (pre-check) - " + x for x in pre_lines if ": no way found that fits" in x]
     # 2.63.3 - a module's first build (never built here: no _last.json) measures every figure and tries every fix: one at a
-    # time on the computer, the others wait their turn (a queue, 2.65.0) - held through the figures and the compile
+    # time on the computer, the others wait their turn (a queue, 2.71.0) - held through the figures and the compile
     cold = contextlib.ExitStack()
     if o.layout_round == 0 and not os.path.isfile(os.path.join(logdir, "%s_last.json" % m)):
         import browser_slots
@@ -1259,7 +1323,7 @@ def main(argv=None):
               "sheet are unchanged - fix these in the studio, run again; the full build runs once they are clean, --full now)"
               % (m, time.time() - t0))
         print(stage_line(stages))
-        if not o.no_fix:                         # 2.66.7: a check (QA's --no-fix) is no build of the builder's
+        if not o.no_fix:                         # 2.72.7: a check (QA's --no-fix) is no build of the builder's
             for x in stop_lines(streak(os.path.join(logdir, "%s_streak.json" % m), finding_keys(say)), m):
                 print(x)
         print("Full log: %s" % log.name)
@@ -1288,6 +1352,10 @@ def main(argv=None):
     probs = [x for x in probs if not any(re.search(r"\(%s\)[ :]" % re.escape(s), x) and re.search(r"\b(empty|text zone|inside|"
                                                                                                     r"cut off|small text|label|contrast)\b", x)
                                          for s in shown)]
+    # 2.66.0 - drawings still to fix: no layout round this build (the timed gas M02 build's first run spent 447 s building
+    # again the slides of four drawings its builder was about to redraw - a drawing that changes moves its slide anyway)
+    drawings_open = "figures" in fails or any(re.search(r"\b(empty|text zone|inside|cut off|small text|label|contrast|"
+                                                        r"photo over drawing|scrolls)\b", x) for x in probs)
     if ccode != 0 or probs:
         fails.append("compile")
         say.append("COMPILE - %d problem(s) to fix%s:" % (len(probs), " (the figures above not repeated)" if shown else ""))
@@ -1325,7 +1393,9 @@ def main(argv=None):
                             "--module-dir", mdir],
         "navigation": [PY, os.path.join(MEASURE, "check_navigation.py"), mdir],
     }
-    sizes = ["1024x768"] + [v for v in o.viewport if v not in ("1280x800", "1024x768")]
+    # 2.69.0 - 1280x720 too: a 16:9 laptop at 150 % (1920x1080) or a 720p projector - the gas course's M01 s15 table cut
+    # its own headings and step names there, and 1280x800 / 1024x768 both passed it (owner's screenshots, 2026-10-27)
+    sizes = ["1024x768", "1280x720"] + [v for v in o.viewport if v not in ("1280x800", "1024x768", "1280x720")]
     if os.path.isfile(deck):
         # 2.57.0 - a slide audited clean and unchanged in everything it loads is not measured again (--full: every slide)
         a = [PY, os.path.join(MEASURE, "run_audits.py"), deck, "--quiet", "--cache", os.path.join(logdir, "%s_audits_clean.json" % m)]
@@ -1351,12 +1421,12 @@ def main(argv=None):
 
     def will_retry(k, res):
         """the audits failed a slide the compiler built another way for L62: this round is built again (2.62.0)"""
-        if k != ak or res[0] == 0 or o.layout_round >= LAYOUT_ROUNDS or not os.path.isfile(deck):
+        if k != ak or res[0] == 0 or o.layout_round >= LAYOUT_ROUNDS or not os.path.isfile(deck) or drawings_open:
             return None
         return moved_misfits(io.open(deck, encoding="utf-8").read(), res[1])
     results, took, early = run_checks(jobs, pkg_cmd, will_retry)
     t = timed("the checks, at the same time (wall clock)", t)
-    if ak in results and os.path.isfile(deck):    # 2.66.7: the slides whose words did not fit - the next pre-check's first
+    if ak in results and os.path.isfile(deck):    # 2.72.7: the slides whose words did not fit - the next pre-check's first
         try:
             io.open(os.path.join(logdir, "%s_fit_misses.json" % m), "w", encoding="utf-8").write(
                 json.dumps(fit_misses(io.open(deck, encoding="utf-8").read(), results[ak][1])))
@@ -1390,25 +1460,38 @@ def main(argv=None):
             fails.append(k)
             say.append("%s - FAIL:" % k.upper())
             # the audits name every element and its words (run_audits.summarise), so they keep more lines - no --json run to find them
-            if k.startswith("audits") and not o.full_output:      # 2.65.0: per slide, each kind once with its count
+            if k.startswith("audits") and not o.full_output:      # 2.71.0: per slide, each kind once with its count
                 say += short_audits(out)
             else:
                 say += ["  " + x for x in lines_of("\n".join(y for y in out.splitlines() if not y.startswith("Built ")),
                                                    40 if k.startswith("audits") else 12)]
     # 2.62.0 - a slide the compiler built another way for L62 that the audit found does not fit is measured out and built
     # its next way, at once: the builder never pins a layout by hand for what the compiler chose
-    if ak in fails and o.layout_round < LAYOUT_ROUNDS and os.path.isfile(deck):
-        mis = early or moved_misfits(io.open(deck, encoding="utf-8").read(), results[ak][1])
-        if mis:
-            measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
+    if ak in fails and drawings_open and o.layout_round < LAYOUT_ROUNDS and os.path.isfile(deck):
+        held = moved_misfits(io.open(deck, encoding="utf-8").read(), results[ak][1])
+        if held:
+            say.append("LAYOUT - %d slide(s) built another way for L62 did not fit (%s): built their next way once the drawings "
+                       "pass - not now, while drawings are still to fix (2.66.0)" % (len(held), ", ".join(sorted(held))))
+    if ak in fails and not drawings_open and o.layout_round < LAYOUT_ROUNDS and os.path.isfile(deck):
+        page_ = io.open(deck, encoding="utf-8").read()
+        mis = early or moved_misfits(page_, results[ak][1])
+        own = {} if early else spilled_own(page_, results[ak][1], course, o.module)
+        if mis or own:
+            if mis:
+                measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
+            if own:
+                parts_out(os.path.join(logdir, "%s_layout_avoid.json" % m), own)
+                print("PARTS - %d slide(s) whose own layout spilled at the audit: %s - built again with their words in parts "
+                      "(content-in-parts; kept while their words are unchanged)" % (len(own), ", ".join(sorted(own))))
             log.write("\n===== this round's findings (the build runs again for the slides above)\n%s\n" % "\n".join(say))
             write_stages(log, stages, t0, timing)
             log.close()
             os.replace(log.name, os.path.join(logdir, "%s_build.round%d.log" % (m, o.layout_round + 1)))
-            print("LAYOUT - %d slide(s) built another way so no two neighbours look alike (L62) did not fit: %s - built again "
-                  "their next way (%.0f s; kept in %s_layout_avoid.json while their words are unchanged)"
-                  % (len(mis), ", ".join("%s (%s, %s ground)" % (k, v[0], v[1]) for k, v in sorted(mis.items())),
-                     time.time() - t0, m))
+            if mis:
+                print("LAYOUT - %d slide(s) built another way so no two neighbours look alike (L62) did not fit: %s - built "
+                      "again their next way (%.0f s; kept in %s_layout_avoid.json while their words are unchanged)"
+                      % (len(mis), ", ".join("%s (%s, %s ground)" % (k, v[0], v[1]) for k, v in sorted(mis.items())),
+                         time.time() - t0, m))
             sys.stdout.flush()
             return main(list(sys.argv[1:] if argv is None else argv) + ["--layout-round", str(o.layout_round + 1)])
     passed = not fails
@@ -1461,6 +1544,14 @@ def main(argv=None):
     if passed:
         print("PASS %s - figures, compile + drawing check, words (instructor, trainee), navigation, audits 1280x800 %s, course package"
               " (%.0f s)" % (m, " ".join(sizes), secs))
+        try:                                             # 2.67.0 - its drawings, for the next slide that draws the same
+            import figure_library
+            figure_library.save(course, o.module)
+        except Exception:                                # noqa: BLE001 - the library is a help, never a stop
+            pass
+        gold = cf_timing.clock_pass(course, m)          # 2.65.0 - at the first PASS: its minutes against 30-40
+        if gold:
+            print(gold)
         if review:
             print(review)
     else:
@@ -1471,7 +1562,7 @@ def main(argv=None):
             print(review)
     if stages:
         print(stage_line(stages))
-    if not o.no_fix:                             # 2.66.7: a check (QA's --no-fix) is no build of the builder's
+    if not o.no_fix:                             # 2.72.7: a check (QA's --no-fix) is no build of the builder's
         done = passed or (o.no_course_pages and fails == ["course package"])        # after the task pages' verdict
         counts = streak(os.path.join(logdir, "%s_streak.json" % m), [] if done else finding_keys(say))
         for x in stop_lines(counts, m):
@@ -1493,7 +1584,7 @@ def running_files(course, module):
 
 
 def state_key(course, module, args):
-    """2.66.3 - everything a build reads and writes, as it is now: the script and build sheet, the module's figures and
+    """2.72.3 - everything a build reads and writes, as it is now: the script and build sheet, the module's figures and
     folder (photos, kit_parts.js, what the last build wrote), its review baseline, the factory's own files, the arguments
     and the CF_ settings - by name, size and time, so taking it costs a fraction of a second. Taken when a build ends; the
     same key at the next call means nothing changed since that answer (the 2.66 run's builders built again to re-read a
@@ -1564,7 +1655,7 @@ def entry(argv=None):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     if "--inner" in argv or "--reviewed" in argv or "-h" in argv or "--help" in argv:
         return main(argv)
-    slides = any(a == "--slides" or a.startswith("--slides=") for a in argv)     # 2.66.7: seconds, in this process
+    slides = any(a == "--slides" or a.startswith("--slides=") for a in argv)     # 2.72.7: seconds, in this process
     ap = argparse.ArgumentParser(add_help=False)
     ap.add_argument("course")
     ap.add_argument("--module", required=True)
@@ -1592,7 +1683,7 @@ def entry(argv=None):
     args = [a for a in argv if a != "--wait"] + ["--inner"]
     if not wait and not running and rec.get("exit") in (0, 1) and rec.get("key") and rec.get("args") == args \
             and not {"--full", "--force"} & set(argv) and os.path.isfile(ans_path):
-        try:                                             # 2.66.3: nothing changed since the last answer - that answer
+        try:                                             # 2.72.3: nothing changed since the last answer - that answer
             same = state_key(known.course, known.module, args) == rec["key"]
         except Exception:                                # noqa: BLE001 - not sure: build
             same = False
@@ -1654,7 +1745,7 @@ if __name__ == "__main__":
         except (OSError, ValueError):
             _r = {}
         _r["exit"], _r["ended"] = _code, time.time()
-        try:                                             # 2.66.3: the state this answer belongs to (entry() reuses it)
+        try:                                             # 2.72.3: the state this answer belongs to (entry() reuses it)
             _a = argparse.ArgumentParser(add_help=False)
             _a.add_argument("course")
             _a.add_argument("--module", required=True)

@@ -24,6 +24,8 @@ import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+from image_size import PHOTO_FLOOR, PHOTO_MIN_LONG, found_size, pixel_size  # noqa: E402
 SKILL = os.path.dirname(HERE)
 SCHEMA_DIR = os.path.join(SKILL, "source", "schemas")
 
@@ -165,6 +167,19 @@ def normalise(argv) -> int:
     return 0
 
 
+def original_of(folder: str, fname: str) -> str:
+    """the photograph as it was found: a module's compile enlarges one under 1600 px (L62) and keeps the original in
+    <course>/working_claude/photo_originals/M01/ - the size that says whether a larger one is needed is that one's"""
+    parts = os.path.abspath(folder).replace("\\", "/").split("/")
+    for i in range(len(parts) - 1, 0, -1):
+        if parts[i - 1] == "modules" and parts[i].startswith("module") and parts[i][6:].isdigit():
+            keep = os.path.join("/".join(parts[:i - 1]), "working_claude", "photo_originals", "M%02d" % int(parts[i][6:]), fname)
+            if os.path.isfile(keep):
+                return keep
+            break
+    return os.path.join(folder, fname)
+
+
 def check_folder(folder: str) -> None:
     entries = [e for e in os.listdir(folder)]
     images = sorted(e for e in entries
@@ -202,6 +217,17 @@ def check_folder(folder: str) -> None:
                 fail(where, "entry is not an object")
                 continue
             described[fname] = mname
+            # 2.65.0 - a photograph found at 1600 px or more on its long edge; under 800 px no enlargement makes it sharp
+            if kind == "photo" and os.path.splitext(fname)[1].lower() in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
+                kept = original_of(folder, fname)
+                size = found_size(os.path.join(folder, fname), kept if kept != os.path.join(folder, fname) else None)
+                if size and max(size) < PHOTO_FLOOR and not str(meta.get("low_resolution_ok") or "").strip():
+                    warn(where, "only %d x %d px - no enlargement makes it sharp, and the module's pre-check stops the build on it"
+                         % size, "find the original (%d px or more on its long edge - not a web preview), a photograph to take, "
+                         "or record why it stays: \"low_resolution_ok\": \"<reason>\"" % PHOTO_MIN_LONG)
+                elif size and max(size) < PHOTO_MIN_LONG:
+                    warn(where, "%d x %d px - under %d px the compile enlarges it; the original would be sharper"
+                         % (size[0], size[1], PHOTO_MIN_LONG), "the original file, not a web preview")
 
             if not os.path.isfile(os.path.join(folder, fname)):
                 warn(where, "entry describes a file that is not here",

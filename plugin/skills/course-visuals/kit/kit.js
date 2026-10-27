@@ -98,6 +98,43 @@
     return p.unit ? s + ' ' + p.unit : s;
   }
   function polar(r, deg) { var a = deg * Math.PI / 180; return [r * Math.cos(a), r * Math.sin(a)]; }
+  /* 2.66.0 - a drag (the approved scripts ask trainees to "drag the marker to 45 °C", and the kit had no way to): one
+     invisible, focusable area over box {x, y, w, h} in g's own coordinates, moved by a finger, the mouse or the arrow keys.
+     opt.move(x, y) gets the point in g's coordinates; opt.step(dx, dy) the arrow keys' nudges (-1 / +1). The press, the
+     touch and the key never reach the deck: no swipe, no slide turned by an arrow key while the drawing has the focus.
+     The area paints nothing (fill-opacity 0), so the drawing check sees only what is drawn. */
+  function drag(g, box, opt) {
+    var hit = el('rect', { x: box.x, y: box.y, width: box.w, height: box.h, 'class': 'kit-hit', tabindex: 0, role: 'slider',
+      'aria-label': opt.name || 'drag to read the value', 'data-may-cross': '', 'data-may-overlap': '', 'data-kit-hit': '' }, g);
+    var on = false;
+    function local(e) {
+      var m = g.getScreenCTM ? g.getScreenCTM() : null;
+      if (!m) return null;
+      m = m.inverse();
+      return [e.clientX * m.a + e.clientY * m.c + m.e, e.clientX * m.b + e.clientY * m.d + m.f];
+    }
+    function stop(e) { e.stopPropagation(); }
+    function to(e) { var q = local(e); if (q) opt.move(q[0], q[1]); }
+    hit.addEventListener('pointerdown', function (e) {
+      on = true; stop(e); e.preventDefault();
+      try { if (hit.setPointerCapture) hit.setPointerCapture(e.pointerId); } catch (x) { /* an old WebView */ }
+      try { hit.focus({ preventScroll: true }); } catch (x) { /* no focus() on svg there */ }
+      to(e);
+    });
+    hit.addEventListener('pointermove', function (e) { if (on) { stop(e); to(e); } });
+    ['pointerup', 'pointercancel'].forEach(function (ev) { hit.addEventListener(ev, function (e) { on = false; stop(e); }); });
+    ['touchstart', 'touchmove', 'touchend', 'mousedown', 'click'].forEach(function (ev) {
+      hit.addEventListener(ev, stop, ev.indexOf('touch') === 0 ? { passive: true } : false);
+    });
+    hit.addEventListener('keydown', function (e) {
+      var d = { ArrowLeft: [-1, 0], Left: [-1, 0], ArrowRight: [1, 0], Right: [1, 0], ArrowUp: [0, -1], Up: [0, -1],
+                ArrowDown: [0, 1], Down: [0, 1] }[e.key];
+      if (!d) return;
+      e.preventDefault(); stop(e);
+      if (opt.step) opt.step(d[0], d[1]);
+    });
+    return hit;
+  }
   function arc(r, d0, d1) {
     var p0 = polar(r, d0), p1 = polar(r, d1);
     return 'M' + p0[0].toFixed(2) + ' ' + p0[1].toFixed(2) + ' A' + r + ' ' + r + ' 0 ' +
@@ -320,8 +357,8 @@
   function flagMark(m, on) { if (m.node) m.node.classList.toggle('on', on); }
 
   /* kit-relate */
-  /* ----------------------------------------------------------------- relations (2.66.0)
-     A part is placed BY WHAT IT STANDS ON, not by a raw y (IGF M01 s03, 2.65.0: a vent mast drawn at y 184 under the deck
+  /* ----------------------------------------------------------------- relations (2.72.0)
+     A part is placed BY WHAT IT STANDS ON, not by a raw y (IGF M01 s03, 2.71.0: a vent mast drawn at y 184 under the deck
      line, inside the hull; a "Bunkering station" that was words with no manifold; pipes that ended in the air). A spec may
      say, instead of x / y / d:
        "on": "G.deck"            stand on an anchor - the part's foot on that line (a vent mast's foot, a manifold's flange)
@@ -1994,7 +2031,7 @@
     var surf = el('line', { x1: 0, x2: w, 'class': 'kit-surface kit-m-lngs', 'clip-path': 'url(#' + cid + ')' }, eq);
     el('path', { d: shape, 'class': 'kit-vessel-o' }, eq);
     /* the dome: over the pipe that leaves the tank's top, else near its right end */
-    /* 2.66.0: a dome under EVERY pipe that leaves the top (a second one - the vent line beside the bunker line - ended 10
+    /* 2.72.0: a dome under EVERY pipe that leaves the top (a second one - the vent line beside the bunker line - ended 10
        units over the shell, on nothing) */
     var tx = p.x || 0, ty = p.y || 0, domes = [];
     pipeEnds(fig).forEach(function (e) {
@@ -2286,9 +2323,9 @@
     body('rect', { x: -10, y: -2, width: 20, height: 4, rx: 1 }, head, { mat: 'steel', shade: 'box' });
     body('rect', { x: -7, y: -7, width: 14, height: 5.5, rx: 1.2 }, head, { mat: 'cast', shade: 'box' });
     el('path', { d: 'M-4 -7 V-1.5 M0 -7 V-1.5 M4 -7 V-1.5', 'class': 'kit-m-spoke' }, head);     // the screen's mesh
-    /* 2.66.0 - the gas leaving, STILL: a plume over the outlet that stays while it vents. The puffs are pure animation from
+    /* 2.72.0 - the gas leaving, STILL: a plume over the outlet that stays while it vents. The puffs are pure animation from
        opacity 0, so a still figure (a task page, a screenshot, reduced motion) showed a venting mast with no gas at all
-       (IGF 2.65.0 review: "the gas is not being ejected"). It rises as far as the puffs may (into free air only) */
+       (IGF 2.71.0 review: "the gas is not being ejected"). It rises as far as the puffs may (into free air only) */
     var plume = el('g', { 'class': 'kit-plume', 'data-may-cross': '', 'data-no-contain': '', 'data-low-contrast': '' }, g);
     [[0, -13, 5], [-3, -22, 6.5], [3, -31, 8]].forEach(function (c) { el('circle', { cx: c[0], cy: c[1], r: c[2] }, plume); });
     var puffs = el('g', { 'class': 'kit-puffs' }, g);
@@ -2573,10 +2610,11 @@
   root.KIT = {
     mount: mount, controls: controls, Figure: Figure, types: TYPES, define: define, local: LOCAL, added: ADDED,
     reducedMotion: reducedMotion,
-    /* 2.66.0 - a spec's relations ("on", "at", "from"/"to" ...) resolved to x / y / d, and every part's box and ports */
+    /* 2.72.0 - a spec's relations ("on", "at", "from"/"to" ...) resolved to x / y / d, and every part's box and ports */
     relate: RELATE.resolve, geometry: RELATE.geometry,
     /* the drawing helpers every part uses - a new part uses these too, never its own */
     h: { el: el, lines: lines, label: label, gone: gone, widest: widest, readings: readings, clamp: clamp, num: num, fmt: fmt, polar: polar, arc: arc,
+         drag: drag,
          flagMark: flagMark, textWidth: textWidth, NS: NS,
          /* physical equipment in its material, its light and shade, its flanges (2.52.0, L63) */
          equip: equip, body: body, reshape: reshape, flange: flange },
@@ -2604,7 +2642,7 @@ KIT.define('ga', function (fig, part, g, p) {
      under it, the rudder under the counter, the anchor in its hawse at the bow; a white superstructure with its bridge
      windows and a lower row, the funnel with its band and its sooty top. The outline is the one specs were placed on:
      a named space keeps its place. Seen from above ("plan") she is her painted deck inside a white bulwark. */
-  /* 2.66.0 "cut": true - a straight piece of the ship's side (deck edge, plating, boot-top, the sea) for a close-up: the
+  /* 2.72.0 "cut": true - a straight piece of the ship's side (deck edge, plating, boot-top, the sea) for a close-up: the
      bunkering station, a vent mast's foot - something on board to stand on and hang from, never parts floating in air */
   var cut = !plan && !!p.cut;
   if (plan) {
@@ -2737,13 +2775,43 @@ KIT.define('scale', function (fig, part, g, p) {
     limitT.forEach(function (o) { o.n.setAttribute('y', (o.y - (3.5 + 7.5 * k)).toFixed(1)); });
     markT.forEach(function (o) { o.word.setAttribute('y', (o.note ? -2 * k : 5 * k).toFixed(1)); if (o.note) o.note.setAttribute('y', (14 * k).toFixed(1)); });
   });
+  /* 2.66.0 - markers[k].drag: true - the trainee drags that marker along the scale (finger, mouse, the arrow keys) and its
+     word reads the value live (gas M02 s11: "two trainees drag the tank marker"); the next step puts it back */
+  var drag = dragger(fig, h, part, g, p, made, markT, lo, hi, every, function (v) { return 'translate(0 ' + y(v).toFixed(1) + ')'; },
+                     function (dm) { return { x: -4, y: 0, w: bw + 44, h: H }; },
+                     function (px, py) { return lo + h.clamp((H - py) / H, 0, 1) * (hi - lo); });
   part.render = function (v) {
     made.forEach(function (m, k) {
       var c = h.clamp(v - k, 0, 1), from = 0;            // from the top of the scale
       m.g.setAttribute('transform', 'translate(0 ' + (from + (m.at - from) * c).toFixed(1) + ')');
       m.g.style.opacity = c > 0.001 ? '1' : '0';
     });
+    drag(v);
   };
+  /* the dragged marker: one per scale - the first that asks (a second would take the first one's place under a finger) */
+  function dragger(fig, h, part, g, p, made, markT, lo, hi, every, at, box, value) {
+    var dm = -1;
+    (p.markers || []).forEach(function (m, k) { if (m.drag && dm < 0) dm = k; });
+    if (dm < 0) return function () {};
+    var mk = p.markers[dm], now = null, lastV = null, step = p.step || every / 4;
+    function put() {
+      made[dm].g.setAttribute('transform', at(now));
+      made[dm].g.style.opacity = '1';
+      markT[dm].word.textContent = (mk.label ? mk.label + ' ' : '') + h.fmt(now, { decimals: p.decimals || 0, unit: p.unit });
+    }
+    h.drag(g, box(dm), {
+      name: 'drag the ' + (mk.label || 'marker') + ' along the scale to read its value',
+      move: function (px, py) { now = value(px, py); put(); },
+      step: function (dx, dy) { now = h.clamp((now != null ? now : mk.at) + (dx - dy) * step, lo, hi); put(); }
+    });
+    return function (v) {
+      if (v !== lastV) {                                 // the steps moved the figure: the marker goes where they say
+        if (now != null) markT[dm].word.textContent = mk.label || '';
+        now = null; lastV = v;
+      }
+      if (now != null) put();
+    };
+  }
   /* orient "h": the scale runs across (len wide, w thick), each marker stands on a stem at its own height
      (rise) so the labels fill the panel above the axis instead of stacking in one column; side "left" puts a
      marker's words to the left of its stem */
@@ -2783,6 +2851,9 @@ KIT.define('scale', function (fig, part, g, p) {
         if (o.note) o.note.setAttribute('y', (-o.rise + 14 * k).toFixed(1));
       });
     });
+    var drag = dragger(fig, h, part, g, p, made, markT, lo, hi, every, function (v) { return 'translate(' + x(v).toFixed(1) + ' 0)'; },
+                       function (k) { var r = markT[k].rise; return { x: 0, y: -r - 14, w: L, h: r + th + 22 }; },
+                       function (px) { return lo + h.clamp(px / L, 0, 1) * (hi - lo); });
     part.render = function (v) {
       made.forEach(function (m, k) {
         var c = h.clamp(v - k, 0, 1);                     // drops onto its own place on the axis
@@ -2791,6 +2862,7 @@ KIT.define('scale', function (fig, part, g, p) {
         m.g.setAttribute('transform', 'translate(' + m.at.toFixed(1) + ' ' + (c > 0.001 ? -(1 - c) * 40 : 0).toFixed(1) + ')');
         m.g.style.opacity = c > 0.001 ? Math.min(1, c * 2).toFixed(2) : '0';
       });
+      drag(v);
     };
   }
 }, {
@@ -2799,7 +2871,7 @@ KIT.define('scale', function (fig, part, g, p) {
   course: 'IGF Basic', module: 'M01', made: '2026-10-15',
   look: 'diagram',
   why: 'M01 s02: oil fuel, methanol and LNG slide to their places on a temperature scale either side of the 60 °C line',
-  value: '0..number of markers - marker k slides from the top of the scale to its place while the value goes from k to k+1',
+  value: '0..number of markers - marker k slides from the top of the scale to its place while the value goes from k to k+1; a marker with drag: true the trainee moves too (2.66.0)',
   css: '.kit-scale-limit line{stroke:var(--blue);stroke-width:2.5;stroke-dasharray:8 5}.kit-scale-limit text{fill:var(--blue)}.kit-scale-stem{stroke:var(--dim-d);stroke-width:1.5}.kit-scale-pointer{fill:var(--txt-d)}.kit-scale-can{fill:var(--deep-3);stroke:var(--txt-d);stroke-width:1.5;stroke-linejoin:round}',
   example: { size: [360, 300], parts: [
     { id: 'S', type: 'scale', x: 60, y: 40, h: 220, min: -40, max: 100, every: 20, unit: '°C', reach: 270,
@@ -3537,17 +3609,27 @@ KIT.define('curve_chart', function (fig, part, g, p) {
   var h = KIT.h, w = p.w || 560, ht = p.h || 320;
   var X = p.xaxis || { min: 0, max: 100, every: 20, unit: '' }, Y = p.yaxis || { min: 0, max: 10, every: 2, unit: '' };
   var curves = p.curves || [], pt = p.point || null;
+  /* 2.66.0 - yaxis.log: true - a vapour-pressure chart over decades (0.1 ... 100 bar) reads on a log scale; the ticks are
+     the decades (yaxis.ticks to choose others), and between its points a curve runs straight on the log scale */
+  var ylog = !!Y.log && Y.min > 0 && Y.max > Y.min;
+  var L0 = ylog ? Math.log(Y.min) / Math.LN10 : 0, L1 = ylog ? Math.log(Y.max) / Math.LN10 : 1;
   function sx(v) { return (v - X.min) / (X.max - X.min) * w; }
-  function sy(v) { return ht - (v - Y.min) / (Y.max - Y.min) * ht; }
+  function sy(v) {
+    if (ylog) return ht - (Math.log(Math.max(v, Y.min / 1000)) / Math.LN10 - L0) / (L1 - L0) * ht;
+    return ht - (v - Y.min) / (Y.max - Y.min) * ht;
+  }
   var axes = h.el('g', { 'class': 'kit-curve-chart-axes' }, g);
   for (var xv = X.min; xv <= X.max + 1e-9; xv += X.every) {
     h.el('line', { x1: sx(xv), y1: 0, x2: sx(xv), y2: ht, 'class': 'kit-curve-chart-grid', 'data-may-cross': '', 'data-may-overlap': '', 'data-low-contrast': '' }, axes);
     h.el('text', { x: sx(xv), y: ht + 18, 'text-anchor': 'middle', 'class': 'kit-tick' }, axes, String(xv).replace('-', '−'));
   }
-  for (var yv = Y.min; yv <= Y.max + 1e-9; yv += Y.every) {
+  var yticks = Y.ticks || [];
+  if (!Y.ticks && ylog) for (var e = Math.ceil(L0 - 1e-9); e <= L1 + 1e-9; e++) yticks.push(Math.pow(10, e));
+  if (!Y.ticks && !ylog) for (var yv = Y.min; yv <= Y.max + 1e-9; yv += Y.every) yticks.push(yv);
+  yticks.forEach(function (yv) {
     h.el('line', { x1: 0, y1: sy(yv), x2: w, y2: sy(yv), 'class': 'kit-curve-chart-grid', 'data-may-cross': '', 'data-may-overlap': '', 'data-low-contrast': '' }, axes);
-    h.el('text', { x: -12, y: sy(yv) + 4, 'text-anchor': 'end', 'class': 'kit-tick' }, axes, String(yv));
-  }
+    h.el('text', { x: -12, y: sy(yv) + 4, 'text-anchor': 'end', 'class': 'kit-tick' }, axes, String(+yv.toPrecision(6)));
+  });
   h.el('path', { d: 'M0 0 V' + ht + ' H' + w, 'class': 'kit-curve-chart-frame', 'data-may-cross': '' }, axes);
   if (X.label) h.el('text', { x: w, y: ht + 38, 'text-anchor': 'end', 'class': 'kit-cap' }, axes, X.label);
   if (Y.label) h.el('text', { x: 0, y: -12, 'text-anchor': 'start', 'class': 'kit-cap' }, axes, Y.label);
@@ -3564,34 +3646,101 @@ KIT.define('curve_chart', function (fig, part, g, p) {
     var lab = null;
     if (c.label) {
       var at = c.labelAt || c.pts[c.pts.length - 1];
-      lab = h.el('text', { x: sx(at[0]), y: sy(at[1]), 'text-anchor': c.anchor || 'start', 'class': 'kit-cap' }, cg, c.label);
+      /* 2.67.0 - a label the layout keeps clear: a point read at a curve's last value sat on its name (the studio, gas M02) */
+      lab = h.label(fig, cg, { x: sx(at[0]), y: sy(at[1]), 'text-anchor': c.anchor || 'start', 'class': 'kit-cap' }, c.label, { near: 24, lead: false });
     }
     if (c.bp) {
       var bl = h.el('text', { x: sx(first[0]) + (c.bpDx || 0), y: sy(first[1]) + (c.bpDy != null ? c.bpDy : 22), 'text-anchor': 'middle', 'class': 'kit-num' }, cg, c.bp);
       lab = lab || bl; c._bp = bl;
     }
-    var len = 0; try { len = path.getTotalLength(); } catch (e) { len = 0; }
-    return { path: path, dot: dot, lab: lab, bpl: c._bp, len: len || 1000, g: cg };
+    var len = 0; try { len = path.getTotalLength(); } catch (e2) { len = 0; }
+    return { path: path, dot: dot, lab: lab, bpl: c._bp, len: len || 1000, g: cg, k: 0 };
   });
-  var mark = null;
-  if (pt) {
-    mark = h.el('g', { 'class': 'kit-curve-chart-point' }, g);
-    var gv = h.el('line', { 'class': 'kit-curve-chart-guide', 'data-may-cross': '' }, mark);
-    var gh = h.el('line', { 'class': 'kit-curve-chart-guide', 'data-may-cross': '' }, mark);
-    var pd = h.el('circle', { r: 7, 'class': 'kit-curve-chart-pdot' }, mark);
-    var pl = h.el('text', { 'class': 'kit-num', 'text-anchor': 'start' }, h.label(fig, mark, {}, '', { near: 30, lead: false }));   // the layout keeps the reading off the curves
-  }
-  function along(c, xv) {                              // the curve's value at xv, straight between its points
-    var q = curves[c].pts;
+  function along(c, xv) {                              // the curve's value at xv, straight between its points (on a log scale: in log)
+    var q = curves[c].pts, f;
+    if (xv <= q[0][0]) return q[0][1];
     for (var k = 1; k < q.length; k++) if (xv <= q[k][0]) {
-      var f = (xv - q[k - 1][0]) / (q[k][0] - q[k - 1][0]); return q[k - 1][1] + f * (q[k][1] - q[k - 1][1]);
+      f = (xv - q[k - 1][0]) / (q[k][0] - q[k - 1][0]);
+      if (ylog && q[k - 1][1] > 0 && q[k][1] > 0) return Math.exp(Math.log(q[k - 1][1]) + f * (Math.log(q[k][1]) - Math.log(q[k - 1][1])));
+      return q[k - 1][1] + f * (q[k][1] - q[k - 1][1]);
     }
     return q[q.length - 1][1];
+  }
+  /* the point: one, sliding along point.curve; or, with point.curve "all", a line across the chart that reads every curve
+     drawn so far. 2.66.0 - point.drag: true - a trainee drags it along the temperature axis (finger, mouse, arrow keys) and
+     reads the value live; a step that moves the figure's value puts it back where the steps say */
+  var all = pt && pt.curve === 'all', mark = null, gv, gh, pd, pl, dots = [];
+  var dx = pt ? (pt.decimals != null ? pt.decimals : 1) : 1;
+  if (pt) {
+    mark = h.el('g', { 'class': 'kit-curve-chart-point' }, g);
+    gv = h.el('line', { 'class': 'kit-curve-chart-guide', 'data-may-cross': '' }, mark);
+    if (!all) {
+      gh = h.el('line', { 'class': 'kit-curve-chart-guide', 'data-may-cross': '' }, mark);
+      pd = h.el('circle', { r: 7, 'class': 'kit-curve-chart-pdot' }, mark);
+    } else {
+      /* every curve's reading beside its own dot, the temperature over the line: each a label the layout places
+         (one line of every reading across the top printed over the axis numbers - the studio, 2.66.0) */
+      dots = curves.map(function () { return h.el('circle', { r: 6, 'class': 'kit-curve-chart-pdot' }, mark); });
+      dots.forEach(function (d) { d._t = h.el('text', { 'class': 'kit-num', 'text-anchor': 'start' }, h.label(fig, mark, {}, '', { near: 30, lead: false })); });
+    }
+    pl = h.el('text', { 'class': 'kit-num', 'text-anchor': 'start' }, h.label(fig, mark, {}, '', { near: 30, lead: false }));   // the layout keeps the reading off the curves
+  }
+  /* where the point may go: its curve's own points (every curve's, for "all") - never read past a curve's data */
+  var span = pt ? (all ? curves : [curves[pt.curve]]).filter(Boolean) : [];
+  var lo = pt ? (pt.min != null ? pt.min : Math.max(X.min, Math.min.apply(null, span.map(function (c) { return c.pts[0][0]; })))) : 0;
+  var hi = pt ? (pt.max != null ? pt.max : Math.min(X.max, Math.max.apply(null, span.map(function (c) { return c.pts[c.pts.length - 1][0]; })))) : 0;
+  function covers(i, xv) { var q = curves[i].pts; return xv >= q[0][0] - 1e-9 && xv <= q[q.length - 1][0] + 1e-9; }
+  function reading(xv) {
+    var xs = h.fmt(xv, { decimals: pt.xdecimals || 0, unit: X.unit });
+    if (!all) return xs + ' · ' + h.fmt(along(pt.curve, xv), { decimals: dx, unit: Y.unit });
+    return xs;
+  }
+  function place(xv, show, live) {
+    xv = h.clamp(xv, Math.min(lo, hi), Math.max(lo, hi));
+    mark.style.opacity = show > 0.001 ? '1' : '0';
+    var x = sx(xv), yTop = ht;
+    if (!all) {
+      var y = sy(along(pt.curve, xv));
+      gv.setAttribute('x1', x); gv.setAttribute('x2', x); gv.setAttribute('y1', y); gv.setAttribute('y2', ht);
+      gh.setAttribute('x1', 0); gh.setAttribute('x2', x); gh.setAttribute('y1', y); gh.setAttribute('y2', y);
+      pd.setAttribute('cx', x); pd.setAttribute('cy', y);
+      yTop = y;
+    } else {
+      gv.setAttribute('x1', x); gv.setAttribute('x2', x); gv.setAttribute('y1', 0); gv.setAttribute('y2', ht);
+      var side = pt.labelSide === 'left' || (pt.labelSide == null && x > w * 0.62);
+      dots.forEach(function (d, i) {
+        var y2 = sy(along(i, xv)), on = drawn[i].k > 0.95 && covers(i, xv), c = curves[i];
+        d.setAttribute('cx', x); d.setAttribute('cy', y2);
+        d.style.opacity = on ? '1' : '0';
+        d._t.setAttribute('text-anchor', side ? 'end' : 'start');
+        d._t.setAttribute('x', side ? x - 12 : x + 12); d._t.setAttribute('y', y2 + 5);
+        d._t.textContent = on && (live || show > 0.97) ? (c.label ? c.label + ' ' : '') + h.fmt(along(i, xv), { decimals: dx, unit: Y.unit }) : '';
+      });
+    }
+    var left = pt.labelSide === 'left' || (pt.labelSide == null && x > w * 0.62);
+    pl.setAttribute('text-anchor', all ? 'middle' : left ? 'end' : 'start');
+    pl.setAttribute('x', all ? x : left ? x - 14 : x + 12); pl.setAttribute('y', all ? -10 : (left ? yTop - 12 : yTop + 5));
+    // a step's reading is shown where the point stops (a moving number would sit on the labels it passes); a drag reads live
+    pl.textContent = live || show > 0.97 ? (!live && pt.label ? pt.label : reading(xv)) : '';
+    part.dragged = live ? xv : null;
+  }
+  var dragX = null, lastV = null, lastShow = 0;
+  if (pt && pt.drag) {
+    var stepBy = pt.step || (X.every || (X.max - X.min) / 10) / 4;
+    h.drag(g, { x: 0, y: 0, w: w, h: ht }, {
+      name: 'drag along the ' + (X.label || 'axis') + ' to read the value',
+      move: function (x) { dragX = X.min + h.clamp(x / w, 0, 1) * (X.max - X.min); place(dragX, 1, true); },
+      step: function (d) {
+        var from = dragX != null ? dragX : pt.from != null ? pt.from : lo;
+        dragX = h.clamp(from + d * stepBy, Math.min(lo, hi), Math.max(lo, hi)); place(dragX, 1, true);
+      }
+    });
   }
   part.render = function (v) {
     var n = curves.length;
     drawn.forEach(function (c, i) {
       var k = h.clamp(v - i, 0, 1);
+      c.k = k;
       c.path.setAttribute('stroke-dasharray', c.len);
       c.path.setAttribute('stroke-dashoffset', (c.len * (1 - k)).toFixed(1));
       c.g.style.opacity = k > 0.001 ? '1' : '0';
@@ -3600,17 +3749,11 @@ KIT.define('curve_chart', function (fig, part, g, p) {
       if (c.bpl) c.bpl.style.opacity = k > 0.95 ? '1' : '0';
     });
     if (mark) {
-      var m = h.clamp(v - n, 0, 1);
-      mark.style.opacity = m > 0.001 ? '1' : '0';
-      var xv = pt.from + (pt.to - pt.from) * m, yv = along(pt.curve, xv), x = sx(xv), y = sy(yv);
-      gv.setAttribute('x1', x); gv.setAttribute('x2', x); gv.setAttribute('y1', y); gv.setAttribute('y2', ht);
-      gh.setAttribute('x1', 0); gh.setAttribute('x2', x); gh.setAttribute('y1', y); gh.setAttribute('y2', y);
-      pd.setAttribute('cx', x); pd.setAttribute('cy', y);
-      var left = pt.labelSide === 'left';
-      pl.setAttribute('text-anchor', left ? 'end' : 'start');
-      pl.setAttribute('x', left ? x - 14 : x + 12); pl.setAttribute('y', left ? y - 12 : y + 5);
-      // the reading is shown where the point stops - a moving number would sit on the labels it passes
-      pl.textContent = m > 0.97 ? (pt.label || h.fmt(xv, { decimals: 0, unit: X.unit }) + ' · ' + h.fmt(yv, { decimals: 1, unit: Y.unit })) : '';
+      if (v !== lastV) { dragX = null; lastV = v; }   // the steps moved the figure: the point goes where they say
+      var m = h.clamp(v - n, 0, 1), from = pt.from != null ? pt.from : lo, to = pt.to != null ? pt.to : from;
+      lastShow = m;
+      if (dragX != null) place(dragX, 1, true);
+      else place(from + (to - from) * m, m, false);
     }
   };
 }, {
@@ -3618,16 +3761,120 @@ KIT.define('curve_chart', function (fig, part, g, p) {
   status: 'kit', merged_from: "IGF Basic M04",
   course: 'IGF Basic', module: 'M04', made: '2026-10-16',
   look: 'diagram',
-  why: 'M04 s03: vapour pressure against temperature for methane, propane and methanol - each curve meets the 1 bar line at its boiling point, then a point slides up the propane curve to 20 °C and reads about 8 bar (SPEC.md family 6: "curve with a moving point")',
-  value: '0..n: curve k draws itself from k to k+1; then n..n+1 the point slides along point.curve from point.from to point.to',
+  why: 'M04 s03: vapour pressure against temperature for methane, propane and methanol - each curve meets the 1 bar line at its boiling point, then a point slides up the propane curve to 20 °C and reads about 8 bar (SPEC.md family 6: "curve with a moving point"). 2.66.0 (gas M02 s11 / s14: "pick a cargo, drag to 45 °C"): yaxis.log, point.drag, point.curve "all"',
+  value: '0..n: curve k draws itself from k to k+1; then n..n+1 the point slides along point.curve from point.from to point.to (point.drag: the trainee moves it too)',
   css: '.kit-curve-chart-grid{stroke:var(--line-d);stroke-width:1}.kit-curve-chart-frame{fill:none;stroke:var(--faint-d);stroke-width:1.5}.kit-curve-chart-hline{stroke:var(--dim-d);stroke-width:2;stroke-dasharray:8 6}.kit-curve-chart-line{fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.kit-curve-chart-c0 .kit-curve-chart-line{stroke:var(--blue)}.kit-curve-chart-c0 .kit-curve-chart-dot{fill:var(--blue)}.kit-curve-chart-c1 .kit-curve-chart-line{stroke:var(--txt-d);stroke-dasharray:14 7}.kit-curve-chart-c1 .kit-curve-chart-dot{fill:var(--txt-d)}.kit-curve-chart-c2 .kit-curve-chart-line{stroke:var(--cold);stroke-width:5;stroke-dasharray:1 8}.kit-curve-chart-c2 .kit-curve-chart-dot{fill:var(--cold)}.kit-curve-chart-guide{stroke:var(--blue);stroke-width:1.5;stroke-dasharray:4 4}.kit-curve-chart-pdot{fill:var(--txt-d);stroke:var(--blue);stroke-width:3}',
   example: { size: [420, 260], parts: [
     { id: 'VP', type: 'curve_chart', x: 50, y: 30, w: 340, h: 180,
       xaxis: { min: -60, max: 60, every: 20, unit: '°C', label: 'temperature °C' }, yaxis: { min: 0, max: 16, every: 4, unit: 'bar', label: 'bar' },
       hline: { at: 1, label: '1 bar', labelX: -58 },
       curves: [{ label: 'propane', pts: [[-42, 1], [0, 4.7], [20, 8.4], [40, 13.7]], labelAt: [42, 14.5] }],
-      point: { curve: 0, from: -42, to: 20, label: '20 °C · about 8 bar' } } ],
+      point: { curve: 0, from: -42, to: 20, label: '20 °C · about 8 bar', drag: true } } ],
     steps: [ { title: 'The curve', play: [['VP', 1, 1500]] }, { title: 'Read it at 20 °C', play: [['VP', 2, 1500]] } ] }
+});
+/* end kit-part */
+/* kit-part: molecule */
+KIT.define('molecule', function (fig, part, g, p) {
+  /* 2.66.0 (gas M02 s20-s22: "condensed structural formulas, atom counts" drawn as text - the kit had no molecule): a
+     structural formula, the atoms as their letters in rings, single / double / triple bonds between them. A cargo by
+     its name ("formula": "propane", "C3H8", "ethylene", "VCM", "ammonia" ...) or any molecule as "atoms": [[el, x, y]] and
+     "bonds": [[i, j, order]] in bond lengths. "build": true - the value brings the skeleton (0..1), then the hydrogens (1..2) */
+  var h = KIT.h;
+  function alkane(n) {                                  // a straight chain: H above and below every carbon, one at each end
+    var at = [], bd = [], i;
+    for (i = 0; i < n; i++) { at.push(['C', i, 0]); if (i) bd.push([i - 1, i, 1]); }
+    for (i = 0; i < n; i++) {
+      at.push(['H', i, -1]); bd.push([i, at.length - 1, 1]);
+      at.push(['H', i, 1]); bd.push([i, at.length - 1, 1]);
+    }
+    at.push(['H', -1, 0]); bd.push([0, at.length - 1, 1]);
+    at.push(['H', n, 0]); bd.push([n - 1, at.length - 1, 1]);
+    return { atoms: at, bonds: bd };
+  }
+  var D = 0.72;                                         // a hydrogen on a double-bonded carbon stands off at 45 degrees
+  var KNOWN = {
+    methane: ['CH4', alkane(1)], ethane: ['C2H6', alkane(2)], propane: ['C3H8', alkane(3)], butane: ['C4H10', alkane(4)],
+    ethylene: ['C2H4', { atoms: [['C', 0, 0], ['C', 1, 0], ['H', -D, -D], ['H', -D, D], ['H', 1 + D, -D], ['H', 1 + D, D]],
+                         bonds: [[0, 1, 2], [0, 2, 1], [0, 3, 1], [1, 4, 1], [1, 5, 1]] }],
+    propylene: ['C3H6', { atoms: [['C', 0, 0], ['C', 1, 0], ['C', 2, 0], ['H', -D, -D], ['H', -D, D], ['H', 1, -1], ['H', 2, -1], ['H', 2, 1], ['H', 3, 0]],
+                          bonds: [[0, 1, 2], [1, 2, 1], [0, 3, 1], [0, 4, 1], [1, 5, 1], [2, 6, 1], [2, 7, 1], [2, 8, 1]] }],
+    butadiene: ['C4H6', { atoms: [['C', 0, 0], ['C', 1, 0], ['C', 2, 0], ['C', 3, 0], ['H', -D, -D], ['H', -D, D], ['H', 1, -1], ['H', 2, 1], ['H', 3 + D, -D], ['H', 3 + D, D]],
+                          bonds: [[0, 1, 2], [1, 2, 1], [2, 3, 2], [0, 4, 1], [0, 5, 1], [1, 6, 1], [2, 7, 1], [3, 8, 1], [3, 9, 1]] }],
+    'vinyl chloride': ['C2H3Cl', { atoms: [['C', 0, 0], ['C', 1, 0], ['H', -D, -D], ['H', -D, D], ['H', 1 + D, -D], ['Cl', 1 + D, D]],
+                                    bonds: [[0, 1, 2], [0, 2, 1], [0, 3, 1], [1, 4, 1], [1, 5, 1]] }],
+    ammonia: ['NH3', { atoms: [['N', 0, 0], ['H', -1, 0], ['H', 1, 0], ['H', 0, 1]], bonds: [[0, 1, 1], [0, 2, 1], [0, 3, 1]] }],
+    nitrogen: ['N2', { atoms: [['N', 0, 0], ['N', 1, 0]], bonds: [[0, 1, 3]] }],
+    'carbon dioxide': ['CO2', { atoms: [['O', 0, 0], ['C', 1, 0], ['O', 2, 0]], bonds: [[0, 1, 2], [1, 2, 2]] }],
+    water: ['H2O', { atoms: [['O', 0, 0], ['H', -0.8, 0.6], ['H', 0.8, 0.6]], bonds: [[0, 1, 1], [0, 2, 1]] }]
+  };
+  var ALIAS = { 'n-butane': 'butane', ethene: 'ethylene', propene: 'propylene', vcm: 'vinyl chloride', 'co2': 'carbon dioxide',
+                ch4: 'methane', c2h6: 'ethane', c3h8: 'propane', c4h10: 'butane', c2h4: 'ethylene', c3h6: 'propylene',
+                c4h6: 'butadiene', c2h3cl: 'vinyl chloride', nh3: 'ammonia', n2: 'nitrogen', h2o: 'water' };
+  var key = String(p.formula || '').toLowerCase().trim(), name = KNOWN[key] ? key : ALIAS[key] || null;
+  var mol = p.atoms ? { atoms: p.atoms, bonds: p.bonds || [] } : name ? KNOWN[name][1] : alkane(1);
+  var sub = function (f) { return String(f).replace(/\d/g, function (d) { return '₀₁₂₃₄₅₆₇₈₉'.charAt(+d); }); };
+  var caption = p.label != null ? p.label : name ? name + '  ' + sub(KNOWN[name][0]) : '';
+  var xs = mol.atoms.map(function (a) { return a[1]; }), ys = mol.atoms.map(function (a) { return a[2]; });
+  var x0 = Math.min.apply(null, xs), y0 = Math.min.apply(null, ys);
+  var spanX = Math.max.apply(null, xs) - x0, spanY = Math.max.apply(null, ys) - y0, pad = 18;
+  var L = p.bond || 46, LX, LY;                          // a box (w, h): the molecule grows to fill it, up to bonds of 90
+  if (p.w || p.h) {
+    L = p.bond || 90;
+    if (p.w) L = Math.min(L, (p.w - 2 * pad) / Math.max(spanX, 0.5));
+    if (p.h) L = Math.min(L, (p.h - 2 * pad - (caption ? 30 : 0)) / Math.max(spanY, 0.5));
+  }
+  /* 2.67.0 - a structural formula is a schema, not a scale drawing: in its box the bonds across and down may differ, by
+     at most 1.6 times, so a long flat chain fills a tall box instead of leaving it half blank (two and three cargoes on
+     one slide, the drawing check) */
+  LX = LY = L;
+  if (p.w && p.h && spanX > 0.5 && spanY > 0.5) {
+    LX = Math.min((p.w - 2 * pad) / spanX, L * 1.6, p.bond || 90);
+    LY = Math.min((p.h - 2 * pad - (caption ? 30 : 0)) / spanY, L * 1.6, p.bond || 90);
+  }
+  /* in a box, the molecule stands in its middle: a flat one (ethylene) in a tall box left all its room under it */
+  var cx = p.w ? Math.max(0, (p.w - 2 * pad - spanX * LX) / 2) : 0;
+  var cy = p.h ? Math.max(0, (p.h - 2 * pad - (caption ? 30 : 0) - spanY * LY) / 2) : 0;
+  function at(a) { return [pad + cx + (a[1] - x0) * LX, pad + cy + (a[2] - y0) * LY]; }
+  var heavy = function (a) { return a[0] !== 'H'; };
+  /* the formula's whole area is its content (data-kit-fills: the drawing check counts its box, as a pipe's bends) */
+  var body = h.el('g', { 'data-kit-fills': '' }, g);
+  var gB = [h.el('g', {}, body), h.el('g', {}, body)], gA = [h.el('g', {}, body), h.el('g', {}, body)];   // [skeleton, hydrogens]
+  mol.bonds.forEach(function (b) {
+    var A = mol.atoms[b[0]], B = mol.atoms[b[1]], pa = at(A), pb = at(B), n = b[2] || 1;
+    var dx = pb[0] - pa[0], dy = pb[1] - pa[1], len = Math.sqrt(dx * dx + dy * dy) || 1, ox = -dy / len, oy = dx / len;
+    var off = n === 1 ? [0] : n === 2 ? [-3.6, 3.6] : [-5.5, 0, 5.5];
+    var layer = gB[heavy(A) && heavy(B) ? 0 : 1];
+    off.forEach(function (o) {
+      h.el('line', { x1: (pa[0] + ox * o).toFixed(1), y1: (pa[1] + oy * o).toFixed(1), x2: (pb[0] + ox * o).toFixed(1), y2: (pb[1] + oy * o).toFixed(1),
+                     'class': 'kit-molecule-bond', 'data-may-cross': '', 'data-may-overlap': '' }, layer);
+    });
+  });
+  var rings = [];
+  mol.atoms.forEach(function (a) {
+    var q = at(a), layer = gA[heavy(a) ? 0 : 1], el = String(a[0]);
+    var ag = h.el('g', { transform: 'translate(' + q[0].toFixed(1) + ' ' + q[1].toFixed(1) + ')', 'data-may-overlap': '' }, layer);
+    var ring = h.el('circle', { r: heavy(a) ? 13 : 10, 'class': 'kit-molecule-atom kit-molecule-' + (el === 'C' ? 'c' : el === 'H' ? 'h' : 'x') }, ag);
+    h.el('text', { y: 4.5, 'text-anchor': 'middle', 'class': heavy(a) ? 'kit-h' : 'kit-cap' }, ag, el);
+    rings.push({ ring: ring, r: heavy(a) ? 13 : 10, el: el });
+  });
+  fig.fit(function (k) { rings.forEach(function (o) { o.ring.setAttribute('r', (o.r * Math.max(1, k * (o.el.length > 1 ? 1.15 : 1))).toFixed(1)); }); });
+  var cap = caption ? h.label(fig, g, { x: (pad + cx + spanX * LX / 2).toFixed(1), y: (pad * 2 + cy + spanY * LY + 14).toFixed(1), 'text-anchor': 'middle', 'class': 'kit-cap' }, caption) : null;
+  part.render = function (v) {
+    var a = p.build ? h.clamp(v, 0, 1) : 1, b = p.build ? h.clamp(v - 1, 0, 1) : 1;
+    if (cap) cap.style.opacity = a > 0.001 ? a.toFixed(2) : '0';     // its name comes in with it
+    gB[0].style.opacity = gA[0].style.opacity = a > 0.001 ? a.toFixed(2) : '0';
+    gB[1].style.opacity = gA[1].style.opacity = b > 0.001 ? b.toFixed(2) : '0';
+  };
+}, {
+  family: 'charts',
+  status: 'kit',
+  course: 'GAS BASIC', module: 'M02', made: '2026-10-26',
+  look: 'diagram',
+  why: 'gas M02 s20-s22 (the timed 2.65 build): the cargoes\' structural formulas - methane to butane, the double bond of ethylene and propylene, VCM, ammonia - were drawn as lines of text; the kit had no molecule',
+  value: 'with build: true, 0..1 the skeleton (every atom but hydrogen, and its bonds) comes in, 1..2 the hydrogens; without build the whole molecule shows',
+  css: '.kit-molecule-bond{stroke:var(--txt-d);stroke-width:2.5;stroke-linecap:round}.kit-molecule-atom{fill:var(--deep-3);stroke-width:2}.kit-molecule-c{stroke:var(--blue);stroke-width:2.5}.kit-molecule-h{stroke:var(--faint-d)}.kit-molecule-x{stroke:var(--cold);stroke-width:2.5}',
+  example: { size: [300, 200], parts: [{ id: 'M', type: 'molecule', x: 30, y: 20, formula: 'propane', build: true }],
+    steps: [{ title: 'Three carbons in a chain', play: [['M', 1, 1200]] }, { title: 'Eight hydrogens', play: [['M', 2, 1200]] }] }
 });
 /* end kit-part */
 /* kit-part: fan */

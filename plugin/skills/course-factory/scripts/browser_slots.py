@@ -19,7 +19,7 @@ course-module-ux/measure/scripts/browser_slots.mjs, so Python and Node share the
 
     CF_BROWSER_SLOTS       how many hidden browsers at once on this computer (default: a quarter of the cores, 2-8)
     CF_BROWSER_SLOT_DIR    the folder of the lock files (default %TEMP%\\cf_browser_slots) - a test's private pool
-    CF_CHROME_REUSE        off: every --dump-dom run starts its own Chrome (2.65.0: one kept Chrome per slot - run_dom)
+    CF_CHROME_REUSE        off: every --dump-dom run starts its own Chrome (2.71.0: one kept Chrome per slot - run_dom)
     CF_CHROME_JOBS         jobs a kept Chrome runs before it is restarted (50); CF_CHROME_IDLE s unused before it ends (60)
 
 A slot is held for exactly one browser's life and never while waiting for another slot, so no process can wait on
@@ -206,8 +206,8 @@ def slot(wait_note=None):
                 time.sleep(0.05)
 
 
-# s a module's first build waits at most for another one's. 2.63.3: 300. 2.65.0: 2700 - a queue, not a short wait: in the
-# 2.65.0 M01-M03 run (seed_from on, so no module spent its first 40 min drawing) all three first builds reached the lock
+# s a module's first build waits at most for another one's. 2.63.3: 300. 2.71.0: 2700 - a queue, not a short wait: in the
+# 2.71.0 M01-M03 run (seed_from on, so no module spent its first 40 min drawing) all three first builds reached the lock
 # within 2 minutes; after 5 minutes the other two went anyway and the three figure stages ran together for 29-34 min on two
 # performance cores (studio probes 2.9-4.9 s each, ~1 s alone). A stale holder (its PID gone) is still reclaimed at once
 COLD_WAIT = 2700
@@ -216,11 +216,11 @@ COLD_WAIT = 2700
 @contextlib.contextmanager
 def cold_turn(wait_max=None, first=False):
     """2.63.3 - one module's FIRST build (no figure measured yet: every figure probed, every fix tried) at a time on this
-    computer; another first build waits for it, at most wait_max s (CF_COLD_WAIT, default 2700 since 2.65.0), then goes anyway.
+    computer; another first build waits for it, at most wait_max s (CF_COLD_WAIT, default 2700 since 2.71.0), then goes anyway.
     WHY (the 2.63.2 full-course run): wave 1's three first builds overlapped on a laptop with two performance cores - M01's
     took 1,076 s, past the builder's 600 s shell limit (one blind wait); M02/M03's figures 186-260 s. Started one after the
     other they share nothing and each runs at the machine's full speed. Yields the seconds it waited.
-    first=True (2.65.0, build_module.py --long-pole - the course's biggest module, build_order.py): never waits - it takes
+    first=True (2.71.0, build_module.py --long-pole - the course's biggest module, build_order.py): never waits - it takes
     the turn when it is free, so the others wait for IT, and goes at once when another holds it (2.63.3 M01-M03: M02, the
     long pole, waited behind M01's first build)"""
     try:
@@ -273,7 +273,7 @@ def run(cmd, **kw):
 def kill_tree(pid):
     """end a process and every process it started. subprocess's own kill ends only the browser's first process on
     Windows: a timed-out hidden Chrome left its GPU, utility and page processes running for a minute or more (2.62.1).
-    CREATE_NO_WINDOW: without it every taskkill flashed a console window on the operator's screen (2.66.1)"""
+    CREATE_NO_WINDOW: without it every taskkill flashed a console window on the operator's screen (2.72.1)"""
     try:
         if os.name == "nt":
             subprocess.run(["taskkill", "/T", "/F", "/PID", str(pid)], capture_output=True, timeout=30,
@@ -311,7 +311,7 @@ def held():
     return [(f, holder(os.path.join(d, f))) for f in sorted(os.listdir(d)) if f.startswith("slot_") and f.endswith(".lock")]
 
 
-# ------------------------------------------------------------------ 2.65.0: one Chrome per slot, reused over CDP
+# ------------------------------------------------------------------ 2.71.0: one Chrome per slot, reused over CDP
 # WHY (the 2.63.2 whole-course run: studio 2,900, review sheets 3,406, drawing check 687 hidden-browser runs; the 2.63.3
 # M02 build 316 studio probes): every --dump-dom run started a fresh Chrome with a fresh profile. Measured on an IGF M02
 # probe page (1296 x 895, budget 20 s): a fresh Chrome 1.29-1.58 s, the same page in a kept Chrome 0.54-0.95 s, the same
@@ -322,7 +322,7 @@ def held():
 # Any flag this does not know, any CDP error: the job runs the old way, a fresh Chrome. CF_CHROME_REUSE=off: always.
 REUSE_JOBS = 50
 REUSE_IDLE = 60
-# 2.66.4 - an invisible page's renderer is "backgrounded" by Chrome: Windows Idle priority (the 2.66.3 IGF run: every kept
+# 2.72.4 - an invisible page's renderer is "backgrounded" by Chrome: Windows Idle priority (the 2.72.3 IGF run: every kept
 # Chrome's renderers at Idle, a figure probe 10-17 s real for ~1 s of page clock, ~1.2 s alone; on a laptop with two fast
 # cores such work runs on the slow ones). Puppeteer passes these on every launch; review_sheets.mjs and shot3d.mjs did already
 FOREGROUND = ("--disable-renderer-backgrounding", "--disable-background-timer-throttling", "--disable-backgrounding-occluded-windows")
@@ -540,7 +540,7 @@ def _retire(state_file):
 
 def current(rec, exe):
     """a kept Chrome's record still to be used: the same browser, it and its keeper alive, under CF_CHROME_JOBS jobs, started
-    with the FOREGROUND flags (2.66.4)"""
+    with the FOREGROUND flags (2.72.4)"""
     return bool(rec) and rec.get("exe") == exe and alive(int(rec.get("pid") or 0)) and alive(int(rec.get("keeper") or 0)) \
         and int(rec.get("jobs") or 0) < _env_int("CF_CHROME_JOBS", REUSE_JOBS) and rec.get("fg") == FG
 
@@ -620,7 +620,7 @@ def _dom_in_kept(slot_path, job, timeout):
 
 
 def run_dom(cmd, timeout=None, reuse=True, **kw):
-    """2.65.0 - a hidden browser's `--dump-dom` command (with its own flags, window, budget and URL) answered by this slot's
+    """2.71.0 - a hidden browser's `--dump-dom` command (with its own flags, window, budget and URL) answered by this slot's
     kept Chrome when it can be, exactly as a fresh one answers it; else (or CF_CHROME_REUSE=off) run as given (run_tree).
     Holds a slot (re-entrant: inside slot() it is the same one). -> subprocess.CompletedProcess with the DOM as stdout;
     a page that does not finish in `timeout` raises subprocess.TimeoutExpired, as run_tree does.

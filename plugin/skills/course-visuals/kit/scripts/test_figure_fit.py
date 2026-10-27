@@ -148,7 +148,7 @@ def together_part():
         line = out[0] if out else ""
         check("each named part once, in the order named, with its spec numbers; an unnamed part left out",
               "SC scale x 40 y 24 w 90 h 330 · G1 gauge x 500 y 100 r 40" in line and "Z tank" not in line, out)
-        check("... and the studio command for the spec (2.66.5: --quick to iterate, one --step all to look)",
+        check("... and the studio command for the spec (2.72.5: --quick to iterate, one --step all to look)",
               any("studio.py s02.kit.json --quick" in x and "--step all" in x for x in out), out)
         check("a block that names no part still gets the studio command",
               ff.parts_together(sp, "    empty - blank 57 %") == [out[-1]], ff.parts_together(sp, "x"))
@@ -202,10 +202,10 @@ def failing_cache_part():
 
 
 def applied_candidate_part():
-    """2.66.3 - a closer fit (fewer findings, not clean) is written over the spec by the build itself when it adds no meaning
+    """2.72.3 - a closer fit (fewer findings, not clean) is written over the spec by the build itself when it adds no meaning
     BLOCK - the builder no longer copies it (2.66 run: every "a closer fit was saved" cost a builder turn and a build);
     one that adds a BLOCK, or was measured without the slide's photo row, is only saved, as before"""
-    print("-- 2.66.3 the build applies its own closer fit when it adds no meaning BLOCK")
+    print("-- 2.72.3 the build applies its own closer fit when it adds no meaning BLOCK")
     import compile_module as cm2
     import content_script as cs2
     tmp = tempfile.mkdtemp(prefix="test_ff_apply_")
@@ -260,9 +260,9 @@ def applied_candidate_part():
 
 
 def column_order_part():
-    """2.65.0 - the COLUMN search one width at a time, stopping at the first clean fit: the same fit the parallel search kept
+    """2.71.0 - the COLUMN search one width at a time, stopping at the first clean fit: the same fit the parallel search kept
     (its first clean attempt in this order), fewer measurements"""
-    print("-- 2.65.0 COLUMN: one width at a time, the first clean fit in the parallel search's order")
+    print("-- 2.71.0 COLUMN: one width at a time, the first clean fit in the parallel search's order")
     spec = json.loads(json.dumps(SPEC))
     boxes = {str(i): [p.get("x", 0), p.get("y", 0), p.get("x", 0) + p.get("w", 40), p.get("y", 0) + p.get("h", 40), p.get("id"),
                       p["type"]] for i, p in enumerate(spec["parts"])}
@@ -301,16 +301,16 @@ def column_order_part():
         del calls[:]
         inside = [("1280x800", "0", "inside", "E", "pokes out of ER")] * 2
         new, how, best = ff.try_fixes("x.kit.json", "s03", spec, r0, inside, None)
-        check("2.66.4 a figure whose only finding is INSIDE (not its words' size) gets at most %d re-fit measurements, not 16 "
-              "(the 2.66.3 run: IGF M01 s03 / s04, two searches of 16 probes at 10-17 s, every build, none found a fit)"
+        check("2.72.4 a figure whose only finding is INSIDE (not its words' size) gets at most %d re-fit measurements, not 16 "
+              "(the 2.72.3 run: IGF M01 s03 / s04, two searches of 16 probes at 10-17 s, every build, none found a fit)"
               % ff.INSIDE_MEASURES, len(calls) <= ff.INSIDE_MEASURES and "stopped after" in how, (len(calls), how))
     finally:
         ff.measure, ff.has_strip, ff.MAX_MEASURES = real, strip_, 16
 
 
 def task_empty_part():
-    """2.65.0 - EMPTY on a task page cropped by itself, as a slide's figure is - kept only when the page is then clean"""
-    print("-- 2.65.0 EMPTY on a task page: cropped to what it shows, in the page's panel shape, the page measured again")
+    """2.71.0 - EMPTY on a task page cropped by itself, as a slide's figure is - kept only when the page is then clean"""
+    print("-- 2.71.0 EMPTY on a task page: cropped to what it shows, in the page's panel shape, the page measured again")
     if not ff.studio.find_browser():
         print("  skip  (no Chrome or Edge)")
         return

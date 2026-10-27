@@ -12,7 +12,7 @@ animation paused (what a hidden / preview pane does). Pinned:
     shipped gb_compose.css passes (IGF M05, 2026-10-19);
   * (deck_call_dark.html) a conclusion on a dark stepping slide passes contrast: its bold term takes the callout's
     colour, and the mark check restores the last line with no fade left running (M01 benchmark run 4);
-  * (deck_svg_floor.html) drawing words 0.03 px under the floor pass, as in audit_drawing.js (2.66.7, one rule).
+  * (deck_svg_floor.html) drawing words 0.03 px under the floor pass, as in audit_drawing.js (2.72.7, one rule).
 Skips, and says so, when no Chrome or Edge is installed.
 """
 from __future__ import annotations
@@ -82,7 +82,7 @@ def main():
               bool(logo) and logo.get("scroll") == 0 and logo.get("verdict") == "VERDICT: PASS", logo)
         words = run(exe, prof, "?words", LOGO)
         check("... a line of words that falls out of the top line still is", bool(words) and words.get("scroll") == 1, words)
-        # 2.66.7 - one 12.5 px rule: the deck audit keeps audit_drawing.js's 0.05 px tolerance (2.66.5 run: 27 builds
+        # 2.72.7 - one 12.5 px rule: the deck audit keeps audit_drawing.js's 0.05 px tolerance (2.72.5 run: 27 builds
         # failed only on drawing words "12.5 px" that the studio called clean)
         fl = run(exe, prof, "", FLOOR)
         check("drawing words at 12.47 px pass, as in the figure audit; words at 12.4 px still fail",

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""test_patterns.py - 2.66.0: the figure library drawn, and what the FIGURE review is shown. Run: python test_patterns.py
+"""test_patterns.py - 2.72.0: the figure library drawn, and what the FIGURE review is shown. Run: python test_patterns.py
 (SKIPs without Chrome/Edge)
 
   * every pattern (patterns/*.kit.json) is drawn clean by the studio at 1280 x 800, every step;
   * a venting vent shows its gas in a STILL picture (reduced motion, a task page, a screenshot): its plume is painted - the
-    puffs are animation from opacity 0, so before 2.66.0 a still venting mast showed no gas at all ("the gas is not being
-    ejected", IGF 2.65.0);
+    puffs are animation from opacity 0, so before 2.72.0 a still venting mast showed no gas at all ("the gas is not being
+    ejected", IGF 2.71.0);
   * a tank with two pipes on its top has a dome under each (the second ended 10 units over the shell, on nothing);
   * figure_review.py photographs a figure at projector size, one picture per step (the rest state and every step), each
     1017 px wide - the figure's panel on a 1920 x 1080 projector - and writes the figure's words and must-be-true list.
@@ -42,7 +42,7 @@ PLUME_JS = ("f.go(f.steps(),true);f.layout(true);var v=svg.querySelector('[data-
             "return {plume: v ? +getComputedStyle(v).opacity : -1, circles: v ? v.querySelectorAll('circle').length : 0};")
 
 
-# 2.66.0 - the second proof run: a builder whose slide has many words gives it the narrow column ("wide-right": a 480 x 343
+# 2.72.0 - the second proof run: a builder whose slide has many words gives it the narrow column ("wide-right": a 480 x 343
 # px panel at 1280 x 800, 424 x 297 at 1024 x 768), and the patterns, clean only in the wide one, came out 0.5-0.6 scale with
 # words grown to the 12.5 px floor colliding (engine_modes 17 findings, bunkering_line 41) - M01 and M02 rebuilt for 40
 # minutes on them. A pattern is clean in all three. (A "WxH" panel is the figure's box with its step bar: 57 px over it.)

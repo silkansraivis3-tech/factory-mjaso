@@ -1,5 +1,5 @@
 {
-  "_fixture": "2.66.5 timed run, M03 s07 (C:\\rvt\\s2665 final spec) with the fault its first figure review called BROKEN put back: \"The tank drawing is frozen at about 20% liquid in every step, while the gauge shows 60, 90 and 95%\"",
+  "_fixture": "2.72.5 timed run, M03 s07 (C:\\rvt\\s2665 final spec) with the fault its first figure review called BROKEN put back: \"The tank drawing is frozen at about 20% liquid in every step, while the gauge shows 60, 90 and 95%\"",
   "size": [540, 330],
   "label": "An LNG tank filled through its filling line during bunkering: the tank level readout rises to the loading limit, stays below the 98 % filling limit, and the high-level alarm and the overfill sensor in the top of the tank stop the filling by closing the filling valve.",
   "idle": "Press Next step",

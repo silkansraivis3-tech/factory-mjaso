@@ -496,7 +496,10 @@ def main():
         rs, _ = studio.run(sheet_spec, panel="two-col", sizes=((1280, 800),), step="all", out=os.path.join(tmp, "sheet"))
         shot = ((rs or {}).get("sizes", {}).get("1280x800") or {}).get("shot") or ""
         check("K13 --step all: one contact sheet of every step (rest + 2 steps = 3 panels) in one picture",
-              shot.endswith("_all.png") and os.path.isfile(shot) and png_size(shot)[0] >= 1300 and png_size(shot)[1] >= 700, shot)
+              shot.endswith("_all.png") and os.path.isfile(shot) and png_size(shot)[0] >= 2 * studio.PANEL_W[1280]
+              and png_size(shot)[1] >= 400, (shot, png_size(shot) if os.path.isfile(shot) else None))
+        check("2.67.0: the sheet's panels are the templates' figure column (504 / 392 px - the old two-col 682 / 443 showed a "
+              "drawing larger than its slide does)", studio.PANEL_W == {1280: 504, 1024: 392}, studio.PANEL_W)
         floor_parts_part(tmp)
         small_only_part(tmp)
         probe_cache_part(tmp)
@@ -587,10 +590,10 @@ def floor_parts_part(tmp):
 
 
 def small_only_part(tmp):
-    """2.66.5 - figure_fit keeps only SMALL TEXT from its 1024 x 768 probe, so that probe runs that check alone (the full
+    """2.72.5 - figure_fit keeps only SMALL TEXT from its 1024 x 768 probe, so that probe runs that check alone (the full
     drawing audit was 60 % of a probe, SPEED_ANALYSIS.md): the same small-text findings, nothing else measured; and
-    studio.py --quick gives the findings with no picture (a studio run while iterating took 51-129 s in the 2.66.3 run)"""
-    print("\n-- 2.66.5: the small-text-only probe and --quick")
+    studio.py --quick gives the findings with no picture (a studio run while iterating took 51-129 s in the 2.72.3 run)"""
+    print("\n-- 2.72.5: the small-text-only probe and --quick")
     p = os.path.join(tmp, "so_track.kit.json")
     io.open(p, "w", encoding="utf-8").write(json.dumps(FLOOR_PARTS[sorted(FLOOR_PARTS)[0]]))
     full, _ = studio.run(p, panel="200x130", sizes=((1024, 768),), out=os.path.join(tmp, "so_full"), shots=False)

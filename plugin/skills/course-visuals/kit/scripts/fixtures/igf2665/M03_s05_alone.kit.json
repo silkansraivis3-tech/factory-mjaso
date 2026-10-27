@@ -1,5 +1,5 @@
 {
-  "_fixture": "2.66.5 timed run, M03 s05 (C:\\rvt\\s2665 final spec) with the fault its first figure review called BROKEN put back: \"There is no pipe path from the tank to the engine. Every part sits on its own ... no pipe joins the valves to anything\"",
+  "_fixture": "2.72.5 timed run, M03 s05 (C:\\rvt\\s2665 final spec) with the fault its first figure review called BROKEN put back: \"There is no pipe path from the tank to the engine. Every part sits on its own ... no pipe joins the valves to anything\"",
   "size": [640, 390],
   "label": "Double block and bleed on the gas line from the LNG tank to the dual-fuel engine: the tank valve and two block valves in series with a bleed valve between them that leads to a vent mast in the open air, a gas detector in the engine room, and a fuel oil line to the engine.",
   "idle": "Press Next step",

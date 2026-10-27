@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""test_build_order - the modules of a parallel build, biggest first (2.65.0). No browser.
+"""test_build_order - the modules of a parallel build, biggest first (2.71.0). No browser.
 
     python test_build_order.py
 """

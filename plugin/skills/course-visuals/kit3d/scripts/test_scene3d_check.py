@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_scene3d_check.py - the workflow's 3D step, its script half (2.65.0): a module's 3D-kit scenes found from the build
+"""test_scene3d_check.py - the workflow's 3D step, its script half (2.71.0): a module's 3D-kit scenes found from the build
 sheet, checked, and photographed at every step for a reviewer who did not build them. Needs Node and Chrome; ~1 minute.
 
     python test_scene3d_check.py

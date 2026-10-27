@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""scene3d_check.py - a module's 3D-kit scenes checked and photographed for a reviewer who did not build them (2.65.0).
+"""scene3d_check.py - a module's 3D-kit scenes checked and photographed for a reviewer who did not build them (2.71.0).
 
   scene3d_check.py <course> --module 2 [--out <folder>] [--size 720x450] [--no-perf]
 

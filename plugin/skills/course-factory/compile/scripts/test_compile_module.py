@@ -967,6 +967,28 @@ def layouts_part(tmp):
     check("... a long photograph's column takes its words in parts past 85 (90-170 words: 0 of 32 texts spill; 2-4 of 4 did)",
           cm.auto_template({}, {}, "wide-left", True, True, words90, False, True) == ("content-in-parts", "with-figure")
           and cm.auto_template({}, {}, "wide-left", True, True, words90[:3], False, True) == ("photo-explain", "column"))
+    chart = {"size": [416, 254], "parts": [{"id": "VP", "type": "curve_chart", "curves": [{"pts": [[0, 1], [40, 9]]}],
+                                            "point": {"curve": 0, "from": 0, "drag": True}}], "steps": [{"play": [["VP", 2, 900]]}]}
+    held = '<div class="fill fig kit-fig"><script type="application/json" id="k">%s</script></div>'
+    can = cm.figure_can(held % json.dumps(chart), "schematic", False, {}, "", "s14")
+    chart["parts"][0]["point"].pop("drag")
+    cant = cm.figure_can(held % json.dumps(chart), "schematic", False, {}, "", "s14")
+    check("2.66.0: a kit chart whose point the trainee drags answers a cue that says drag (gas M02 s11 / s14 needed cue_kept)",
+          "drag" in can and "drag" not in cant, (can, cant))
+    check("2.67.0: \"3 H\" on a molecule is three hydrogen atoms, not three hours (gas M02 s21 failed the facts check)",
+          cm.facts_in("propane: 3 C, 8 H") == [] and cm.facts_in("purge for 2 h") == [("2 h", ("", "2", "h"))])
+    check("... and a photo's one-word \"shows\" that says how a thing is (\"pressurised\") never asks for it on a question - a "
+          "thing's name does (\"airlock\", \"manifold\"; a \"cable\" is a thing)",
+          cm.DESCRIBES.search("pressurised") and cm.DESCRIBES.search("refrigerated")
+          and not any(cm.DESCRIBES.search(w) for w in ("airlock", "manifold", "cable", "plan", "carrier")))
+    pp = []
+    got = cm.pick_template({}, {"parts": [[1, 2], [3, 4]]}, "two-col", False, True, words90[:4], False, False, pp, "s22")
+    check("2.66.0: \"parts\" alone, beside a picture, is content-in-parts - no \"template\" needed (gas M02 s22: two runs)",
+          got[0] == "content-in-parts" and not pp, (got, pp))
+    pp = []
+    got = cm.pick_template({}, {"parts": [[1, 2], [3, 4]]}, "flow", False, False, words90[:4], False, False, pp, "s22")
+    check("... on a slide with no picture it is said, never silently ignored", got[0] != "content-in-parts"
+          and any('"parts" walks the words in parts beside a picture' in x for x in pp), (got, pp))
     code_b, out_b = run(COMPILE, c2, "--module", "1", "--force")
     sheet_b = cs.load(os.path.join(c2, "working_claude", "script", "M01.build.json"))
     sheet_b["screens"]["s05"] = {"figure": "assets/fig/scale.svg", "template": "reading-with-figure"}
@@ -1088,7 +1110,7 @@ def variety_part(tmp):
     s = {"id": "d1", "title": "T", "text": "Words."}
     av = {"d1": {"words": cm.words_key(s), "avoid": [["picture-left", "light"]]}}
     check("a measured-out way holds while the slide's approved words and picture are the same, and is forgotten when they "
-          "change (other words, another picture, another split); a label or alt edit keeps it (2.62.1) - and (2.66.7) so does "
+          "change (other words, another picture, another split); a label or alt edit keeps it (2.62.1) - and (2.72.7) so does "
           "an edit of its own way (composition, figure_first): the other ways never read them",
           cm.measured_out(av, s) == [("picture-left", "light")] and cm.measured_out(av, dict(s, text="Other words.")) == []
           and cm.measured_out(av, s, {"figure": "other.html"}) == [] and cm.measured_out(av, s, {"split": 0.6}) == []
@@ -1096,13 +1118,13 @@ def variety_part(tmp):
           and cm.measured_out(av, s, {"labels": {"T1": "below"}, "alt": "x"}) == [("picture-left", "light")]
           and cm.measured_out({}, s) == [] and cm.measured_out(None, s) == [])
     own_out = cm.choose_layout(dr, [("text", "light")], [dr[0]["key"]])
-    check("2.66.7 the slide's OWN way can be measured out (the layout solver: its words do not fit it) - another way is "
+    check("2.72.7 the slide's OWN way can be measured out (the layout solver: its words do not fit it) - another way is "
           "built while one is left, the own way when none is",
           own_out[1] and own_out[0]["key"] != dr[0]["key"]
           and cm.choose_layout(dr, [("text", "light")], [o["key"] for o in dr]) == (dr[0], False), own_out)
     st = {"d1": {"words": cm.fit_key(s, {"figure": "ga.html"}), "avoid": [], "set": {"split": 0.6}}}
     got = cm.settled(st, s, {"figure": "ga.html"})
-    check("2.66.7 what the layout solver settled (\"set\") is built while the sheet is the one it was settled from, and keeps "
+    check("2.72.7 what the layout solver settled (\"set\") is built while the sheet is the one it was settled from, and keeps "
           "that sheet's key - so the ways measured out beside it hold",
           got.get("split") == 0.6 and cm.fit_key(s, got) == st["d1"]["words"]
           and cm.settled(st, s, {"figure": "other.html"}) == {"figure": "other.html"}
@@ -1518,7 +1540,7 @@ def v2492_part(tmp):
     rec["files"]["kit.js"] = design_system.sha(kit)                     # what was installed once - the factory has moved on since
     json.dump(rec, io.open(rp, "w", encoding="utf-8"))
     code, out = run(COMPILE, c, "--module", "1")
-    canon = os.path.join(SKILLS, "course-visuals", "kit", "kit.js")
+    canon = design_system.shipped_src(os.path.join(SKILLS, "course-visuals", "kit", "kit.js"))   # 2.70.0: its minified copy
     check("F1: a kit.js that only fell behind is updated before the build - and the build says which file, and that it did",
           code == 0 and "updated from the factory" in out and "kit.js (older version)" in out
           and io.open(kit, "rb").read() == io.open(canon, "rb").read(), out)
@@ -1902,13 +1924,22 @@ def kit3d_part(tmp):
           and p.index('href="../assets/kit3d.css"') < p.index("</head>"), p[-800:])
     src3 = os.path.join(SKILLS, "course-module-ui", "templates", "vendor", "three.min.js")
     kit3d_dir = os.path.join(SKILLS, "course-visuals", "kit3d")
+    sys.path.insert(0, os.path.join(SKILLS, "course-module-ui", "scripts"))
+    import design_system
     same = lambda a, b: os.path.isfile(a) and os.path.isfile(b) and io.open(a, "rb").read() == io.open(b, "rb").read()
     check("... the module holds the factory's three.js (the sheet did not name it), kit3d.js and kit3d.css, byte for byte "
           "(design_system.py ships kit3d like kit)",
           same(os.path.join(md, "assets", "vendor", "three.min.js"), src3)
-          and same(os.path.join(md, "assets", "kit3d.js"), os.path.join(kit3d_dir, "kit3d.js"))
+          and same(os.path.join(md, "assets", "kit3d.js"), design_system.shipped_src(os.path.join(kit3d_dir, "kit3d.js")))
           and same(os.path.join(md, "assets", "kit3d.css"), os.path.join(kit3d_dir, "kit3d.css")), out)
     check("... no 2D kit loaded for a 3D scene", "kit.js" not in p.replace("kit3d.js", "") and "assets/kit.css" not in p)
+    # 2.69.0 - a 3D model beside words takes at least 58 % of the width, whatever text share the sheet asks (gas M01 s26)
+    build_of(c, lambda s: s["screens"]["s04"].update(template="explain-figure", split=0.55))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck", "--force")
+    sec4 = section(deck(md), "s04")
+    check("2.69.0 a 3D model beside words: the sheet's text share 0.55 becomes 0.42 (the model 58 %)",
+          code == 0 and 'style="--lt-text:42"' in sec4, out + sec4[:400])
+    build_of(c, lambda s: s["screens"]["s04"].pop("template") and s["screens"]["s04"].pop("split"))
     io.open(os.path.join(md, "assets", "kit3d_parts.js"), "w", encoding="utf-8").write("/* a course's new 3D parts */")
     code, out = run(COMPILE, c, "--module", "1", "--only", "deck", "--force")
     p = deck(md)
@@ -2206,7 +2237,7 @@ def seed_part(tmp):
     check("2.63.3 --init-build --seed-from: an unchanged slide starts from the predecessor deck's hand-fixed drawing",
           code == 0 and "seeded from the predecessor" in out and new.get("figure") == "s04.kit.json" and "HAND FIXED valve" in text
           and new.get("_seeded") and new.get("dark") is True, (code, out[-500:], new, text[:200]))
-    # 2.65.0 - a hand-made drawing (an .html scene, IGF M01 s05's 3D hull) is drawn by the predecessor module's own files:
+    # 2.71.0 - a hand-made drawing (an .html scene, IGF M01 s05's 3D hull) is drawn by the predecessor module's own files:
     # they come with it - its sheet's styles / scripts / inline, copied and named - and the slide's class
     sys.path.insert(0, HERE)
     import compile_module as cm
@@ -2233,7 +2264,7 @@ def seed_part(tmp):
     os.makedirs(mdir2)
     got = cm.seed_figures(script_, sheet2, figdir2, pc, 1, mdir2)
     e = sheet2["screens"]["s04"]
-    check("2.65.0 a seeded hand-made drawing brings the predecessor module's own files (styles, scripts, inline) and its slide's "
+    check("2.71.0 a seeded hand-made drawing brings the predecessor module's own files (styles, scripts, inline) and its slide's "
           "class; a file the predecessor does not have is not named",
           got.get("s04", "").endswith("m01_s04_3d.html") and e.get("figure") == "m01_s04_3d.html" and e.get("class") == "m01-s04"
           and "_2d" not in e
@@ -2244,7 +2275,7 @@ def seed_part(tmp):
           (got, sheet2))
     e2 = sheet2["screens"]["s02"]
     meta2 = os.path.join(mdir2, "assets", "fig", "_figure_meta.json")
-    check("2.65.0 a picture the predecessor keeps in its module folder (assets/fig) comes with its record, and the slide keeps "
+    check("2.71.0 a picture the predecessor keeps in its module folder (assets/fig) comes with its record, and the slide keeps "
           "its whole hand-fixed entry (figure_first, boxes), never the private notes",
           "s02" in got and e2.get("figure") == "assets/fig/m01_ga.svg" and e2.get("figure_first") is True and e2.get("boxes") == [1]
           and "_note" not in e2 and os.path.isfile(os.path.join(mdir2, "assets", "fig", "m01_ga.svg"))
@@ -2364,11 +2395,11 @@ def sme_figures_part(tmp):
 
 
 def prefill_part(tmp):
-    """2.66.3 - --init-build fills what the module's own files already decide: a photo slide gets the photograph its record
+    """2.72.3 - --init-build fills what the module's own files already decide: a photo slide gets the photograph its record
     says it is for ("used_in": "... slide s01") or whose description names what the slide shows; a question answered "on the
     GA from slide 4" gets slide 4's drawing and its places matched to the drawing's own labels (the 2.66 run's builders spent
     their first minutes on exactly these, and a build refused for the blanks first)"""
-    print("-- 2.66.3 --init-build fills the photos and the questions' pictures and places it can decide")
+    print("-- 2.72.3 --init-build fills the photos and the questions' pictures and places it can decide")
     sys.path.insert(0, HERE)
     import compile_module as cm
     d = os.path.join(tmp, "prefill")
@@ -2638,7 +2669,7 @@ def main():
               [p["type"] for p in spec3["parts"]] == ["tank", "space", "space"]
               and [p["label"] for p in spec3["parts"]] == ["Fuel tank", "Tank connection space", "Fuel preparation room"]
               and [t["line"] for t in spec3["steps"]] == [1, 2, 3] and [t["play"][0][0] for t in spec3["steps"]] == ids3
-              and spec3["size"] == [640, 390] and spec3["idle"] == "Press Next step" and spec3["label"] == "General arrangement."
+              and spec3["size"] == [416, 254] and spec3["idle"] == "Press Next step" and spec3["label"] == "General arrangement."
               and spec3["steps"][0]["title"].startswith("1 · Fuel tank"), spec3)
         check("... a line the kit has no word for becomes a text callout the step reveals, a scale word a scale; none overlap",
               [p["type"] for p in spec2["parts"]] == ["ga", "text", "scale"]

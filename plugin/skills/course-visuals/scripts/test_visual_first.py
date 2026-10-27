@@ -166,13 +166,13 @@ def main() -> int:
         check("a figure BELOW the prose is a warning, not a pass",
               len(levels(d, "WARN")) == 1 and not levels(d, "FAIL"), d["findings"])
 
-        # 2.65.0 - a 3D-kit scene is a figure: kit3d.js draws its <canvas> when the slide opens (IGF M01 s05, M02 s09 were
+        # 2.71.0 - a 3D-kit scene is a figure: kit3d.js draws its <canvas> when the slide opens (IGF M01 s05, M02 s09 were
         # reported "no figure at all" and QA called M02 BROKEN for it)
         r = deck(os.path.join(tmp, "k3"),
                  '<section class="slide" data-title="Where the tank may be">'
                  '<div class="kit3d-stage" data-stage data-3d data-kit3d="#k3-s09"></div>%s</section>' % TEXT)
         d = run(r)
-        check("2.65.0 a 3D-kit scene (data-kit3d) above the prose passes", not d["findings"], d["findings"])
+        check("2.71.0 a 3D-kit scene (data-kit3d) above the prose passes", not d["findings"], d["findings"])
 
         print("\n-- what is not a topic screen")
         for title, cls in (("Opening", "slide opener"), ("Running order", "slide"),

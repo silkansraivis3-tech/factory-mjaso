@@ -53,6 +53,15 @@ def main():
         with open(prog, "w", encoding="utf-8") as f:
             json.dump(PROGRAMME, f)
 
+        half = os.path.join(tmp, "half", "module.html")
+        os.makedirs(os.path.dirname(half))
+        with open(half, "w", encoding="utf-8") as f:
+            f.write(DECK.replace('data-mins="40"', 'data-mins="39.5"') + '<section class="slide" data-block="b3" '
+                    'data-kind="teaching" data-title="Short" data-mins="0.5" data-track="theory" data-active="0"></section>')
+        code, out = run(half, "--theory-min", "40", "--practice-min", "20")
+        check("2.67.0: a slide of half a minute is counted, never a crash (gas M07 / M15: invalid literal for int(): '0.5')",
+              "Traceback" not in out and "ValueError" not in out, out)
+
         code, out = run(deck, "--programme", prog)
         check("--programme alone: the one deck is judged against the WHOLE course's total row - a false FAIL, and it says so",
               code == 1 and "does not deliver the allocation" in out and "--module N" in out, out)

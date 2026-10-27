@@ -55,7 +55,7 @@ SCREEN_OPEN = re.compile(
 # What counts as a figure. Deliberately generous about the CONTAINER and strict
 # about the content: an <img>, an inline <svg>, a <canvas>, a <video>, a mounted
 # interactive figure, or a <figure> element that holds one of those.
-# 2.65.0 - and a 3D-kit scene (kit3d.js makes its <canvas> when the slide opens; the page holds <div data-kit3d="#k3-s05">):
+# 2.71.0 - and a 3D-kit scene (kit3d.js makes its <canvas> when the slide opens; the page holds <div data-kit3d="#k3-s05">):
 # IGF M01 s05 / M02 s09 were reported "a topic screen with no figure" and QA called M02 BROKEN for it
 FIGURE = re.compile(
     r"<(?:img|svg|canvas|video|picture)\b"

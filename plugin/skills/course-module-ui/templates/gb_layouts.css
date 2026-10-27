@@ -191,6 +191,21 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .fill.fig:not(.lt-light) .photo-strip figcaption b{background:var(--blue);color:var(--ink)}
 .slide[data-template] .fill.fig:not(.lt-light) .photo-strip .pthumb img{border-color:var(--line-d);box-shadow:var(--sh-d)}
 .slide[data-template] .fill.fig:has(> img:only-child){background:none;border:0;padding:0}
+/* 2.67.0 - "tiles": several photographs on one slide, each opens full screen; "strips": cuts of one document, numbered */
+.slide[data-template] .lt-tiles-fig{display:flex;align-items:center;justify-content:center}
+.slide[data-template] .lt-tiles{display:grid;width:100%;height:100%;gap:min(1.6vmin,12px);grid-auto-rows:1fr;
+  grid-template-columns:repeat(auto-fit,minmax(min(24vmin,190px),1fr));align-content:center}
+.slide[data-template] .lt-strips{display:flex;flex-direction:column;width:100%;height:100%;gap:min(1.2vmin,10px);justify-content:center}
+.slide[data-template] .lt-strips .lt-tile{flex:1 1 0}
+.slide[data-template] .lt-tile{position:relative;margin:0;display:flex;flex-direction:column;min-height:0;min-width:0;
+  background:var(--lt-white);border:1px solid var(--lt-line);border-radius:min(1.5vmin,12px);overflow:hidden;cursor:zoom-in}
+.slide[data-template] .lt-tile img{display:block;width:100%;flex:1 1 auto;min-height:0;object-fit:cover}
+.slide[data-template] .lt-strips .lt-tile img{object-fit:contain}
+.slide[data-template] .lt-tile figcaption{padding:min(.8vmin,6px) min(1.2vmin,10px);font-size:clamp(16px,2vmin,22px);
+  line-height:1.2;font-weight:600;color:var(--lt-navy)}
+.slide[data-template] .lt-tile .lt-n{position:absolute;top:min(.8vmin,6px);left:min(.8vmin,6px);min-width:1.7em;height:1.7em;
+  border-radius:50%;background:var(--lt-navy);color:var(--lt-white);font-size:clamp(16px,2vmin,22px);display:flex;
+  align-items:center;justify-content:center}
 .slide[data-template] .fill.fig > img:only-child{width:100%;height:100%;object-fit:cover;border-radius:min(2.2vmin,18px)}
 
 /* ---------------------------------------------------------------- split slides: text 55 % / picture 45 % */
@@ -324,7 +339,8 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .lt-part.on{display:flex}
 .slide[data-template] .lt-tabs{display:flex;gap:min(1.2vmin,10px);margin-top:min(1.6vmin,14px)}
 .slide[data-template] .lt-tab{
-  width:min(6vmin,48px);height:min(6vmin,48px);border-radius:50%;border:1px solid var(--lt-ring);background:var(--lt-white);
+  width:clamp(44px,6vmin,48px);height:clamp(44px,6vmin,48px);   /* 44 px at 1280x720 too (2.69.0) */
+  border-radius:50%;border:1px solid var(--lt-ring);background:var(--lt-white);
   color:var(--lt-navy);font:700 clamp(13px,1.85vmin,20px) "Raleway","Segoe UI",Arial,sans-serif;cursor:pointer;
 }
 .slide[data-template] .lt-tab.on{background:var(--lt-navy);border-color:var(--lt-navy);color:var(--lt-white)}

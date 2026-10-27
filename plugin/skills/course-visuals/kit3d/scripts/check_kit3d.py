@@ -300,7 +300,7 @@ def check_spec(spec, types):
     return P, N
 
 
-# 2.66.0 - parts that stand on the open deck: never below it, inside the hull (IGF 2.65.0's 2D vent mast inside the ship)
+# 2.72.0 - parts that stand on the open deck: never below it, inside the hull (IGF 2.71.0's 2D vent mast inside the ship)
 ON_DECK = ("vent_mast", "drip_tray", "esd_button", "air_intake")
 
 

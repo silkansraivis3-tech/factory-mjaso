@@ -154,6 +154,7 @@ def main():
     check("the injected page is gone and the decks are untouched",
           not leftovers() and (STEPS.read_bytes(), SCROLL.read_bytes()) == before, leftovers())
     overlay_part()
+    cut_and_strip_part()
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
     return 1 if FAIL else 0
 
@@ -181,6 +182,35 @@ def overlay_part():
         check("2.63.2 overlay %s: %s" % (name, "the Full screen button on the scene's framed box is no collision" if want == "no"
                                           else "an overlay control over a heading is a collision (like the chrome)"),
               hit == (want == "yes") and (want == "no" or "Title of the module" in out or "under" in out), out[-700:])
+
+
+def cut_and_strip_part():
+    """2.69.0 (the owner's screenshots of gas M01 at 1280x720) - words a box cuts in half, and a photograph its frame crops
+    to a strip, both fail; the same words in a box of their size, and the photograph in a frame of its shape, pass"""
+    from PIL import Image
+    fs = HERE / "fixtures" / "deck_3d_fs.html"
+    base = fs.read_text(encoding="utf-8")
+    head = '<section class="slide" id="s1" data-visual="none"><div class="slide-body"><h2>Title</h2>'
+    img = fs.with_name("_strip_%d.png" % os.getpid())
+    Image.new("RGB", (800, 400), (90, 120, 160)).save(img)
+    words = ('<div style="overflow:hidden;height:%dpx;width:160px;font-size:20px;line-height:26px">'
+             '<b>Ethylene -104 C below the line</b></div>')
+    photo = '<div style="width:%dpx;height:%dpx"><img src="%s" alt="ship" style="width:100%%;height:100%%;object-fit:cover"></div>'
+    cases = (("words cut by their box", words % 40, "text cut off", True),
+             ("the same words in a box of their size", words % 120, "text cut off", False),
+             ("a photograph in a band a third of its height", photo % (900, 150, img.name), "photo cropped to a strip", True),
+             ("the photograph in a frame of its own shape", photo % (600, 300, img.name), "photo cropped to a strip", False))
+    try:
+        for name, extra, said, bad in cases:
+            p = fs.with_name("_cut_%d.html" % os.getpid())
+            p.write_text(base.replace(head, head + extra, 1), encoding="utf-8")
+            try:
+                code, out = cli(str(p), "--quiet")
+            finally:
+                p.unlink()
+            check("2.69.0 %s: %s" % (name, "fails, and says so" if bad else "passes"), (said in out) == bad, out[-700:])
+    finally:
+        img.unlink()
 
 
 if __name__ == "__main__":

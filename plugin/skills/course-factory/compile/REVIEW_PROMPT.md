@@ -35,7 +35,7 @@ Look at every screen against this list:
    asked, a LNG tank on a slide about the bunker line: every automatic check passed these, and only an eye found them.
    A picture of a related thing is not the thing - and on a question it also gives the answer away or sends the trainee
    to the wrong one. When the picture could be either, the caption must say which; with no caption, it is wrong.
-7. **The drawing is physically right and complete** (2.66.0 - IGF 2.65.0: a vent mast drawn inside the hull, a
+7. **The drawing is physically right and complete** (2.72.0 - IGF 2.71.0: a vent mast drawn inside the hull, a
    "Bunkering station" that was only words, pipes ending in the air, a water curtain hanging from nothing, six fuel names
    over one tank; QA saw some and called them POLISH, so none went back). Would a seafarer call it wrong? A part where it
    cannot be (a vent mast, a manifold, a hatch inside the hull; a tank half through the deck); a part the words or a label
@@ -59,7 +59,7 @@ IGF M02 s02 went PASS, then four failed builds, for polish):
   balance, alignment; a label a little far from its part, a pipe a few units short that still reads as joined. POLISH
   is listed for the operator, never fixed in the build loop.
 When unsure about LOOKS, it is POLISH. A drawing a seafarer would call physically wrong or incomplete (item 7) is BROKEN,
-never POLISH (2.66.0); a minuscule detail is not that - judge it as the seafarer would. Whatever is still BROKEN after the
+never POLISH (2.72.0); a minuscule detail is not that - judge it as the seafarer would. Whatever is still BROKEN after the
 one fix round goes on the operator's list; nothing is sent back twice.
 
 Return, in under 200 words:

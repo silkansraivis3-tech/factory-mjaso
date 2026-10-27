@@ -103,6 +103,16 @@ def cmd_promote(dirs, factory, dry):
         print("Would add to %s: %s" % (kit_js, names))
         return 0
     io.open(kit_js, "w", encoding="utf-8", newline="\n").write(new_text)
+    # 2.70.0 - the minified copy the modules ship is made again from the new kit.js (else they ship the full source)
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
+                                    "course-module-ui", "scripts"))
+    import minify_engines
+    min_rel = ""
+    try:
+        minify_engines.make(kit_js)
+        min_rel = " " + os.path.relpath(minify_engines.min_path(kit_js), factory).replace(os.sep, "/")
+    except SystemExit as why:
+        print("The minified kit.js was not made again (%s) - the modules ship the full kit.js until it is" % why)
     plugin = os.path.join(factory, PLUGIN_REL)
     old = new = None
     if os.path.isfile(plugin):
@@ -116,7 +126,7 @@ def cmd_promote(dirs, factory, dry):
     print("Promoted into %s: %s%s" % (kit_js, names, " · plugin %s -> %s" % (old, new) if new else ""))
     print("\nNext - ASK THE OPERATOR before the push and the merge request:")
     print('  git -C "%s" switch -c kit/%s' % (factory, slug))
-    print('  git -C "%s" add %s %s' % (factory, KIT_REL.replace(os.sep, "/"), PLUGIN_REL.replace(os.sep, "/")))
+    print('  git -C "%s" add %s%s %s' % (factory, KIT_REL.replace(os.sep, "/"), min_rel, PLUGIN_REL.replace(os.sep, "/")))
     print('  git -C "%s" commit -m "%s - figure kit: %s (from a course build)"' % (factory, new or "kit", names))
     print('  git -C "%s" push -u origin kit/%s' % (factory, slug))
     print('  gh pr create --repo silkansraivis3-tech/factory-mjaso --base main --head kit/%s '

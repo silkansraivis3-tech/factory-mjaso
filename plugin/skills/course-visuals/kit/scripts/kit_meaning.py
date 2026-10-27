@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""kit_meaning.py - does a figure-kit spec MEAN what a seafarer would see? (2.66.0, run by check_kit.py spec, every build)
+"""kit_meaning.py - does a figure-kit spec MEAN what a seafarer would see? (2.72.0, run by check_kit.py spec, every build)
 
-Every check before 2.66.0 was about LOOK (overlap, contrast, size, fit), and "module clean" meant those passed - so the
-2.65.0 IGF M01-M03 build drew a vent mast inside the hull, a "Bunkering station" that was only words, pipes ending in the
+Every check before 2.72.0 was about LOOK (overlap, contrast, size, fit), and "module clean" meant those passed - so the
+2.71.0 IGF M01-M03 build drew a vent mast inside the hull, a "Bunkering station" that was only words, pipes ending in the
 air, a water curtain hanging from nothing, six fuel names over one tank. These are build FAILs now, judged on the geometry
 kit.js itself resolves (kit_relate.py), against course-visuals/knowledge/figure-truths.json:
 
@@ -17,15 +17,15 @@ kit.js itself resolves (kit_relate.py), against course-visuals/knowledge/figure-
   SMALL      a small drawing lost in a big panel part (the figure's frame: the drawing audit's EMPTY)
   TRUTH      the figure kind's own must-be-true list (ship plan, bunkering line, vent system, fuel supply, engine modes,
              fuel types) - figure-truths.json "figures"
-  STEP       (2.66.3, a NOTE) a step's title names a part the step does not play or change (a tank, a room, a pipe named is
+  STEP       (2.72.3, a NOTE) a step's title names a part the step does not play or change (a tank, a room, a pipe named is
              where the step is - not judged); a step that only turns things off under a title saying something happens
-  LABEL      (2.66.3) a callout's leader ends on a part of another kind than its words name (a BLOCK: none in the hand-fixed
+  LABEL      (2.72.3) a callout's leader ends on a part of another kind than its words name (a BLOCK: none in the hand-fixed
              IGF original's 96 specs); its words name a thing not drawn (a NOTE)
-  WAY        (2.66.7, a BLOCK) a step whose title says its valve closes / opens, its pump or engine stops / starts, while
+  WAY        (2.72.7, a BLOCK) a step whose title says its valve closes / opens, its pump or engine stops / starts, while
              every one it moves goes the other way
-  READOUT    (2.66.7) a level readout and its tank disagree after a step (a BLOCK with one tank; a NOTE when paired to the
+  READOUT    (2.72.7) a level readout and its tank disagree after a step (a BLOCK with one tank; a NOTE when paired to the
              nearest of several)
-  JOINS      (2.66.7) in a figure with pipes, a valve / pump / line part on no pipe and mounted on nothing (a BLOCK); a tank or
+  JOINS      (2.72.7) in a figure with pipes, a valve / pump / line part on no pipe and mounted on nothing (a BLOCK); a tank or
              engine no pipe reaches, or a figure whose words say a path with no pipe at all (NOTEs). Calibrated on the
              hand-fixed original's 96 specs: 0 BLOCKs, 2 notes
 """
@@ -590,7 +590,7 @@ def chk_words(F, bad):
                 "keel; leave the label out" % (p.get("id") or "", p["label"]), p)
 
 
-# 2.66.3 - the two kinds of fault the 2.66 audit still called BROKEN that no check saw: a step whose picture does not show
+# 2.72.3 - the two kinds of fault the 2.66 audit still called BROKEN that no check saw: a step whose picture does not show
 # what its title says (6 of 11), a label on the wrong part or naming what is not drawn (4 of 11). NOTEs: the figure reviewer
 # judges them (a BLOCK only after a calibration on the hand-fixed IGF original says they are never wrong there)
 TAKE_AWAY = re.compile(r"\b(?:stop(?:s|ped|ping)?|shut(?:s|ting)?|clos(?:e|es|ed|ing)|trip(?:s|ped)?|isolat\w*|off|lost|"
@@ -685,7 +685,7 @@ def chk_label(F, bad):
             if hit is not None and hit.get("type") not in ok and not any(
                     (h.get("box") and not h.get("pts") and pt_box(t, h["box"]) <= 2 and area(h["box"]) <= size) or
                     (h.get("pts") and poly_dist(t, h["pts"]) <= 4) for q, h in right):
-                # a BLOCK (2.66.3): none in the hand-fixed IGF original's 96 specs, none in 2.65.0's 42
+                # a BLOCK (2.72.3): none in the hand-fixed IGF original's 96 specs, none in 2.71.0's 42
                 said, level = ("the callout %r names the %s, and its leader ends on the %s %s - point it at the %s (\"for\": "
                                "\"<its id>\"; a space's leader ends in its middle, where a part inside may be: \"for\": "
                                "\"<id>.top@0.2\")" % (str(p.get("text"))[:40], w, hit.get("type"), hit.get("id") or "", w)), BLOCK
@@ -694,7 +694,7 @@ def chk_label(F, bad):
             bad("LABEL", said, p, level)
 
 
-# 2.66.7 - three kinds of fault the 2.66.5 timed run's figure review called BROKEN that no check saw (Desktop\IGF_course_
+# 2.72.7 - three kinds of fault the 2.72.5 timed run's figure review called BROKEN that no check saw (Desktop\IGF_course_
 # 2.66_figures\NEXT_ROUND.md: of its 63 first BROKEN, 21 a step not showing its title, 11 a part not drawn or standing on
 # its own): M03 s05 "Step 3 ('Both block valves close') shows the valves going OPEN" and "every part sits on its own";
 # M03 s07 "the tank drawing is frozen at about 20 % liquid while the gauge shows 60, 90 and 95 %"
@@ -799,7 +799,7 @@ def chk_joins(F, bad):
     for comp in components(F):
         if not any(kinds.get(i) in ("pipe", "hose") for i in comp):
             alone |= comp
-    # calibrated on the hand-fixed IGF original (2.66.7): a relief valve on its tank's top, a vaporizer on a pipe's corner,
+    # calibrated on the hand-fixed IGF original (2.72.7): a relief valve on its tank's top, a vaporizer on a pipe's corner,
     # a drain valve on its drip tray are mounted - joined - though no pipe END meets them
     on_line = lambda b: any(pt_box(pt, b) <= PORT for q, h in lines_ for a_, b_ in zip(h["pts"], h["pts"][1:])
                             for pt in [(a_[0] + (b_[0] - a_[0]) * t / 8.0, a_[1] + (b_[1] - a_[1]) * t / 8.0) for t in range(9)])
@@ -986,7 +986,7 @@ def analyse(spec, where="", resolved=None):
     """{"block": [lines], "note": [lines], "waived": [lines], "findings": [dicts]} - every meaning finding of one spec.
     BLOCK (a build FAIL, BROKEN for the reviewer) only for a clear physical error; NOTE for the figure reviewer to judge in
     context. A spec's "meaning_ok": {"<KIND> <part id>": "<why it is right>"} accepts one finding on purpose - the reviewer
-    sees the reason, the build counts it; a waiver with no reason is itself a BLOCK (2.66.0, Aleksis: "if even a minuscule
+    sees the reason, the build counts it; a waiver with no reason is itself a BLOCK (2.72.0, Aleksis: "if even a minuscule
     detail is off it flags it and there isn't any flexibility")"""
     res = {"block": [], "note": [], "waived": [], "findings": []}
     if not isinstance(spec, dict) or not spec.get("parts"):

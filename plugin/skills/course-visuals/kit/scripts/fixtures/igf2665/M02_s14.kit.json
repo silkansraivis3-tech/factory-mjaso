@@ -1,5 +1,5 @@
 {
-  "_fixture": "2.66.5 timed run, M02 s14 (C:\\rvt\\s2665 final spec) with the fault its first figure review called BROKEN put back: \"In step 1 the tank is drawn nearly full while the level reads 20 ... The tank fill is the same at steps 1 to 4 even though the level goes up\"",
+  "_fixture": "2.72.5 timed run, M02 s14 (C:\\rvt\\s2665 final spec) with the fault its first figure review called BROKEN put back: \"In step 1 the tank is drawn nearly full while the level reads 20 ... The tank fill is the same at steps 1 to 4 even though the level goes up\"",
   "size": [640, 330],
   "label": "A tank monitoring screen: the tank with its level bar and the high-level alarm line, a pressure gauge with its high alarm and red relief limit, and a temperature reading from the bilge well in the tank connection space.",
   "idle": "Press Next step",
