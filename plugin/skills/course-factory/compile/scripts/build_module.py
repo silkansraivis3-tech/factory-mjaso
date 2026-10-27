@@ -196,7 +196,7 @@ def starter_blanks(course, module):
         e = screens.get(s["id"])
         if e is None:
             continue
-        fig = (e.get("figure") or "").strip()
+        fig = (e.get("figure") or "").strip() or ("tiles" if e.get("tiles") else "")   # (merge) "tiles" are its picture too
         if s["kind"] == "slide" and not s.get("recap") and not fig and (s.get("visual_kind") or "none") != "none":
             pics.append(s["id"])
         elif s["kind"] in cs.TASKS and cs.mech(s) in cm.STARTER_ON_PICTURE and not fig:

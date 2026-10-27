@@ -3479,6 +3479,9 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
                 out[s["id"]] = spec
 
 
+PHOTO_KINDS = ("photo", "photo_to_take", "annotated_photo")      # visual kinds that are a photograph (media_kinds.json)
+
+
 def link_photos(mdir, script, screens):
     """2.67.0 - the module's photographs whose records name a slide ("teaching_purpose": "s06 - ...", "used_in": "... s06")
     put on that slide in the starter sheet: one is its "figure", several its "tiles" (gas M02's timed build: 24 pictures
@@ -3493,16 +3496,25 @@ def link_photos(mdir, script, screens):
     for name, rec in sorted(meta.items()):
         if not isinstance(rec, dict) or not name.lower().endswith(IMAGES) or not os.path.isfile(img_file(mdir, name)):
             continue
-        m = re.search(r"\b(s\d{2,3})\b", "%s %s" % (rec.get("teaching_purpose") or "", rec.get("used_in") or ""))
+        # (merge, 2.72.7) "teaching_purpose" names the slide a photograph was found FOR; "used_in" only where it was shown
+        # before - in a rebuild that is often the photo row under a drawing (L57): the 2.66.5 run's M02 s03 / s07 / s12 lost
+        # their planned animation, cutaway and diagram to photo tiles at a fresh --init-build
+        tp = re.search(r"\b(s\d{2,3})\b", rec.get("teaching_purpose") or "")
+        m = tp or re.search(r"\b(s\d{2,3})\b", rec.get("used_in") or "")
         if m:
-            by.setdefault(m.group(1), []).append("assets/img/" + name)
+            by.setdefault(m.group(1), []).append(("assets/img/" + name, bool(tp)))
     kinds = {s["id"]: s for s in script.get("screens", [])}
     done = set()
-    for sid, names in by.items():
+    for sid, found in by.items():
         e = screens.get(sid)
         s = kinds.get(sid) or {}
         if e is None or s.get("kind") != "slide" or e.get("figure") or e.get("tiles") or \
                 cs.parse_kind(s.get("visual_kind", "")) == "model_3d":
+            continue
+        # a slide whose approved script plans a drawing keeps it unless a photograph was found for it by name
+        wants_photo = cs.parse_kind(s.get("visual_kind", "")) in ("", "none") + PHOTO_KINDS
+        names = [n for n, purpose in found if purpose or wants_photo]
+        if not names:
             continue
         if len(names) == 1:
             e["figure"] = names[0]
@@ -4286,8 +4298,13 @@ def main(argv=None):
               "build_module.py <course> --module %s" % (bp, o.module))
         # 2.63.3 (item 5): the predecessor's hand-fixed drawings, where the slide's words are unchanged, instead of starters
         sheet_ = cs.load(bp)
-        seeded = seed_figures(script, sheet_, figdir, seed_course(o.course, o.seed_from), o.module,
-                              module_folder(o.course, o.module, o.module_dir)[0])
+        # (merge, 2.72.7) the course is its own predecessor only for a module it built before (its deck is there - a
+        # rebuild, 2.65.1): a fresh module "seeded" from the sheet just written lost its starters (the 2.66.5 run's M02 s12)
+        seed_ = seed_course(o.course, o.seed_from)
+        mdir_ = module_folder(o.course, o.module, o.module_dir)[0]
+        rebuilt = bool(mdir_) and os.path.isfile(os.path.join(mdir_, "presentation", "index.html"))
+        seeded = seed_figures(script, sheet_, figdir, seed_, o.module, mdir_) \
+            if rebuilt or os.path.normpath(seed_) != os.path.normpath(o.course) else {}
         if seeded:
             cs.save(bp, sheet_)
             for sid in seeded:

@@ -95,6 +95,33 @@ def main():
               and "linked by --init-build" in sheet[one].get("_photo", ""), sheet[one])
         check("... several are its tiles (gas M02: 24 photographs found for its slides went on none)",
               sheet[many].get("tiles") == ["assets/img/p_a.png", "assets/img/p_b.png", "assets/img/p_c.png"], sheet[many])
+        import build_module as bm
+        check("(merge, 2.72.7) a slide whose picture is its tiles is no starter blank - the build is not stopped on it",
+              not any(many in ids for ids, _ in bm.starter_blanks(c2, 1)), bm.starter_blanks(c2, 1))
+
+        print("\n-- (merge, 2.72.7) a record that only says where a photograph was SHOWN does not replace a planned drawing")
+        os.makedirs(os.path.join(tmp, "c"))
+        c3, md3 = tc.new_course(os.path.join(tmp, "c"), tc.script(screens=tc.SCREENS))
+        sc3 = tc.cs.load(os.path.join(c3, "working_claude", "script", "M01.json"))
+        drawn = next(x["id"] for x in sc3["screens"] if x["kind"] == "slide" and x.get("visual_kind") == "interactive_diagram")
+        shot = next(x["id"] for x in sc3["screens"] if x["kind"] == "slide" and x.get("visual_kind") == "photo")
+        photos(md3, ["u_a.png", "u_b.png", "u_c.png"])
+        meta = tc.cs.load(os.path.join(md3, "assets", "img", "_photo_meta.json"))
+        meta["u_a.png"]["used_in"] = "M01 presentation, slide %s" % drawn         # shown in the drawing's photo row before
+        meta["u_b.png"]["used_in"] = "M01 presentation, slide %s" % drawn
+        meta["u_c.png"]["used_in"] = "M01 presentation, slide %s" % shot
+        tc.cs.save(os.path.join(md3, "assets", "img", "_photo_meta.json"), meta)
+        os.remove(cm.build_path(c3, 1))
+        tc.gate_fixture.open_gate(c3)
+        code, out = run(tc.COMPILE, c3, "--module", "1", "--init-build")
+        sheet3 = tc.cs.load(cm.build_path(c3, 1))["screens"]
+        check("the planned diagram (%s) keeps its starter drawing, not the photos only shown there before (the 2.66.5 run's M02 "
+              "s03 / s07 / s12 became photo tiles)" % drawn, not sheet3[drawn].get("tiles")
+              and str(sheet3[drawn].get("figure") or "").endswith((".kit.json", ".html")), sheet3[drawn])
+        check("... a slide that plans a photograph takes the one its record names", sheet3[shot].get("figure") == "assets/img/u_c.png",
+              sheet3[shot])
+        check("... and a fresh module is not 'seeded' from the sheet just written (the course is its own predecessor only for "
+              "a module it built before)", "seeded from the predecessor" not in out, out[-600:])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n" + "=" * 72 + "\n%d passed, %d failed" % (len(PASS), len(FAIL)))
