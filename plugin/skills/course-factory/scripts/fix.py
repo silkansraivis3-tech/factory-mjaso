@@ -631,36 +631,43 @@ def cmd_rebuild(course, modules, force=False):
     design_py = os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-module-ui", "scripts", "design_system.py")
     sys.path.insert(0, os.path.join(os.path.dirname(HERE), "compile", "scripts"))
     import precheck
-    built, full_build, stopped, lines = [], [], [], []
-    for m in chosen:
+    import build_module                              # its reader of the compiler's "To fix before it is shown" list
+
+    def one(m):
+        """one module rebuilt: (its lines, "built" | "stopped", whether only the full build settles a drawing)"""
+        out_ = []
         must, notes = precheck.check(course, m, rebuild=True)
         if must is None:
-            lines.append("Module %d: no content script - nothing to rebuild from" % m)
-            stopped.append(m)
-            continue
+            return ["Module %d: no content script - nothing to rebuild from" % m], "stopped", False
         if must:
-            lines.append("Module %d: not rebuilt - the pre-check found %d thing(s) to fix first:\n%s"
-                         % (m, len(must), "\n".join("    - " + x for x in must)))
-            stopped.append(m)
-            continue
+            return (["Module %d: not rebuilt - the pre-check found %d thing(s) to fix first:\n%s"
+                     % (m, len(must), "\n".join("    - " + x for x in must))], "stopped", False)
         run([design_py, "install", mods[m], "--update"])
         rc, out = run([compile_py, course, "--module", str(m)] + (["--force"] if force else []))
         if rc == 2:
-            lines.append("Module %d: not rebuilt - %s" % (m, (out.splitlines() or ["the compiler stopped"])[0]))
-            stopped.append(m)
-            continue
-        built.append(m)
-        import build_module                          # its reader of the compiler's "To fix before it is shown" list
+            return ["Module %d: not rebuilt - %s" % (m, (out.splitlines() or ["the compiler stopped"])[0])], "stopped", False
         probs, _ = build_module.compile_problems(out)
         drawing = [x for x in probs if re.search(r"\b(empty|text zone|inside|cut off|small text|label|scrolls)\b", x)]
         other = [x for x in probs if x not in drawing]
-        lines.append("Module %d: rebuilt from its approved words%s" % (m, "" if rc == 0 else " - %d thing(s) the compile reports" % len(probs)))
-        lines += ["    - " + x for x in other[:12]]
+        out_.append("Module %d: rebuilt from its approved words%s" % (m, "" if rc == 0 else " - %d thing(s) the compile reports" % len(probs)))
+        out_ += ["    - " + x for x in other[:12]]
         if drawing:
+            out_.append("    - %d drawing finding(s) - a drawing no longer fits its slide; only the full build's figure stage settles "
+                        "that: build_module.py <course> --module %d" % (len(drawing), m))
+        out_ += ["    note: " + x for x in notes]
+        return out_, "built", bool(drawing)
+
+    # 2.67.0 - the modules side by side (owner: "to fix in each module one slide takes 1-2 h"): each compile is its own
+    # process and the hidden browsers come from the computer's one pool (browser_slots), so four at once never overload it
+    import concurrent.futures as cf
+    with cf.ThreadPoolExecutor(max_workers=max(1, min(4, len(chosen)))) as pool:
+        done = list(pool.map(one, chosen))
+    built, full_build, stopped, lines = [], [], [], []
+    for m, (ls, how, drawn) in zip(chosen, done):
+        lines += ls
+        (built if how == "built" else stopped).append(m)
+        if drawn:
             full_build.append(m)
-            lines.append("    - %d drawing finding(s) - a drawing no longer fits its slide; only the full build's figure stage settles "
-                         "that: build_module.py <course> --module %d" % (len(drawing), m))
-        lines += ["    note: " + x for x in notes]
     print("\n".join(lines))
     if not built:
         print("\nNothing rebuilt.")
@@ -671,8 +678,12 @@ def cmd_rebuild(course, modules, force=False):
     audits = os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-module-ux", "measure", "scripts", "run_audits.py")
     print("\nOne check for the rebuilt modules (%s) - the build's own audits, 1280x800 and 1024x768:" % spec)
     rc_layout = 0
-    for m in built:
-        rc, out = run([audits, deck_file(mods[m]), "--viewport", "1024x768"])
+
+    def audit(m):
+        return run([audits, deck_file(mods[m]), "--viewport", "1024x768"])
+    with cf.ThreadPoolExecutor(max_workers=max(1, min(4, len(built)))) as pool:       # side by side too (the browser pool)
+        checked = list(pool.map(audit, built))
+    for m, (rc, out) in zip(built, checked):
         found = [x for x in out.splitlines() if re.search(r"\bFAIL\b", x) or x.startswith("            ")]
         print("Module %d: %s" % (m, "the audits pass" if rc == 0 else "\n" + "\n".join(found[:16])))
         if rc:

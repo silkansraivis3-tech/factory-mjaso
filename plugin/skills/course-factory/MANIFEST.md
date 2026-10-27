@@ -1591,6 +1591,61 @@ pre-check: the small pictures it already has are notes, not a stop - the 3 old-c
 have no free replacement anywhere, would otherwise have blocked the very build fix.py names. (3) A fix under a minute
 says its seconds ("0 min" read as broken). Tests: `test_precheck.py` 35.
 
+## 4zz14 · The speed round: a module in 19 minutes (2.66.0, 2026-10-26)
+
+The owner: *"now I need to optimise as much as I can in this course factory"*. Measured on the same module twice - the gas
+course's Module 2 (57 screens, 80 min), built from its approved script on a copy, by one Sonnet builder with the
+workflow's own builder prompt, its photographs already in the folder: on 2.65.0, **30 min** from the starter build sheet
+to the first PASS (33 min of builder time, 384 k tokens, 84 tool calls); on 2.66.0, **19 min** (22 min, 346 k tokens,
+93 tool calls). What the first run lost, fixed: (1) the starter drawing was 640 wide, but since the templates (L61) the
+figure column shows a drawing 456 px wide at 1280 x 800 and 345 px at 1024 x 768 - at 0.54 its words fell to 9 px, kit.js
+grew them into each other, and all 21 starters were redrawn before run 4: `STARTER_W` 416 (the same shape), and
+`STARTER_MIN_CELL` so a part and its words always fit their cell (`starter_cells`); SPEC.md, CATALOGUE.md, compile/GUIDE.md
+say 416 x 254. (2) the layout retry ran 447 s on the slides of drawings about to be redrawn: `build_module.py` builds no
+layout round while drawings are open (`drawings_open`), and says the slides it holds. (3) `"parts"` beside a picture is
+content-in-parts without naming the template; on a slide with no picture it is said (`pick_template`). (4) a picture the
+build sheet names that waits in assets/img/_unused/ is there for the pre-check (`precheck.parked`) - the compile brings it
+back. (5) a builder reads the Quickstart by its path, never SKILL.md (48 KB, every mode's router): the gate reports the
+skill's folder (`skill_dir`, found by Glob) and `build_course.js` `LEAN` sends it; a gate with no folder falls back to
+loading the skill. (6) CATALOGUE.md `MUST KNOW` lines, never clipped: the gauge's ticks / every (three builds lost to
+"0 0 1 1 2"), the gas bottle placed by its base. (7) Two control characters in precheck.py (a `\b` written through a
+shell) had silently disabled its 3D-poster rule and its .pptx origin: fixed, and no tracked file has one. (8) The kit parts the second run asked for (owner: "do the kit parts next"): **a drag** - `KIT.h.drag`, one invisible focusable area a finger, the mouse or the arrow keys move, the press and the keys never reaching the deck (tested in Chromium: 0 keys reached the page, the next step puts the part back); `curve_chart` `point.drag`, `point.curve: "all"` (every curve's value beside its own dot, only inside each curve's data) and `yaxis.log` (decades; between points straight in log); `scale` `markers[k].drag` (upright and across, its word reading the value); the new `molecule` part - a cargo's structural formula by name (methane ... butane, ethylene, propylene, butadiene, VCM, ammonia, N2, CO2, water) or as atoms and bonds, `build` bringing the skeleton then the hydrogens, centred and grown to its box. `audit_drawing.js` counts a kit group marked `data-kit-fills` by its box (a formula is atoms with air between, as a pipe's bends). The compiler's cue check sees a draggable kit figure (`figure_can`): a cue that says drag needs no `cue_kept` there. Studio clean on both panels at both sizes (the log chart with two cargoes and the cursor; propane building); a compiled deck with both passes every audit at 1280x800 and 1024x768. CATALOGUE.md 58 parts, MUST KNOW for each, still under 15 KB. Left for the
+next round (the second run's report): the fact check reads step titles ("3 H"); a generic word in a photo's `shows` asks for it on unrelated
+questions. Tests: test_starter_figures, test_compile_module 463, test_precheck 36, test_build_course, test_kit.
+
+## 4zz15 · Starters from the slide's words, a drawing library, spills fixed by the build, photos while the script waits (2.67.0, 2026-10-26)
+
+The owner, after the 2.66 round: *"do all"* - the seven items left by the timed gas M02 build. (1) **The starter picks the
+part the words ask for** (`starter_special`): a slide about formulas, molecules or atoms that names cargoes starts with
+their `molecule`s (in the lines' order, one step each; side by side, or one above the other in the figure column's shape
+when long chains would get bonds under 34); a slide about vapour pressure / boiling points / curves starts with a
+`curve_chart` of the cargoes it names - their points ONLY the temperature / pressure pairs the slide states (a cargo with
+fewer than two is left out and named; no stated points: the grid starter - gas M07 s07, a ppm slide, had got two
+made-up curves); `yaxis.log` when the pressures span decades; a cue that says drag makes the point (`point.drag`) or a
+scale's marker draggable. (2) **A slide whose own layout spills is put in parts by the build** (`build_module.spilled_own`,
+`parts_out`, `compile_module.wants_parts`): the audit's "scrolls" / "spills" on a slide the compiler laid out itself (no
+"template" asked, not moved for L62, a picture, two lines or more) is recorded in `_layout_avoid.json` and built again in
+the same build with its words in parts; a template asked by name is never overruled. (3) **The figure library**
+(`compile/scripts/figure_library.py`): a module that passes keeps its kit drawings - in the course's
+`working_claude/figure_library/` and this computer's (`~/.novikontas/figure-library`, `NOVIKONTAS_FIGURE_LIBRARY`) - and
+`--init-build` starts a slide that names the same things (two or more, 60 % of its own) from that drawing, its steps made
+again for the slide's own lines; a course in the temp folder (every test's) never reads or fills this computer's library.
+(4) **Photographs while the script waits** (`build_course.js` `photoPrep`): a script written in a run gets one Sonnet agent
+that places its photographs with their rights records and lists them in `working_claude/photo_candidates/MNN.md`; the
+builder uses them first. (5) "3 H" is three hydrogen atoms, not three hours (`facts_in`). (6) A photo's one-word "shows"
+that says how a thing is ("pressurised") never asks for it on a question (`DESCRIBES`). (7) Measured: three modules built at
+once on a copy of the gas course (M02 43 screens, M07 24, M15 11 - the workflow's biggest-first order, the lean builder
+prompt): M07 **11 min** (2 runs), M15 **16 min** (7 runs), M02 see CONTEXT. What that run found, fixed: the starter curve
+rule above; the builder prompt says the photo list exists only when photographs were found during approval;
+`check_balance.py` crashed on a half-minute slide ("0.5"); the pre-check's size note says it judges the size a photograph
+was found at; CATALOGUE `MUST KNOW` for the valve (`state: false` hides OPEN / CLOSED - three runs on M15); the Quickstart
+says a question's drawing has a frame of its own (about 880 x 550) and a ghost label is still laid out. Kit, found on the
+way: curve names are labels the layout keeps clear of the reading point; a molecule's bonds across and down may differ by
+up to 1.6 times to fill its box. **Photo tiles, and Module 2 measured (same evening).** `"tiles"` on a slide: the compiler builds several photographs as one picture, each opening full screen with its record and credit (`tiles_figure`, `gb_layouts.css` `.lt-tiles`); `"tiles_as": "strips"` stacks numbered cuts of one document - gas M07's builder had hand-written five such fragments; the pre-check judges tiles like any photograph; `--init-build` puts the module's photographs on the slides their records name (`link_photos`: one is the figure, several the tiles - gas M02's 24 went on none and were moved to _unused). The three-module run's M02 took 124 min (12 runs) on a computer shared by three builders, the tests and another session (single runs of 257-471 s, one compile timed out at 900 s) - and the first version of the word-picked starters gave it seven placeholder curve charts and four wrong molecule sets: the curve rule now needs points the slide states, and the molecule rule reads only the slide's title and picture for formula / molecule / structural / atom - on all 22 gas modules it now picks 4 slides, each a formula slide. test_tiles 9. **The training app and the fix lane (same day).** (a) The task engine (`gb_answer.js`) sends each question WHOLE to the classroom - `{t, ok, a, c, w}` (asked, picked, right, why; 90 / 120 / 120 / 400 characters) and `detail: 2`; a blind final sends a, c and w empty (`classroom-system.json` result). A read-only check of github.com/silkansraivis3-tech/novikontas-training-app (HEAD 09eda10) found the import works (its package-core.mjs is the factory's, byte for byte; the full gas course imports, 23 modules) but its debrief re-read the screens when only `{t, ok}` came: gas M07's 4 questions became 11 items, the why always empty, for the trainee and the instructor. The app's side - believe a page that sends `detail: 2`, no 'YOUR ANSWERS' overlay and no answer buttons after a task (the owner: "after tasks only one page is visible, all answers and all questions, no buttons"), and `gb-team-done` to the page - is a patch for that repository, not in this one: factory-work/_app_patches/training-app-factory-results.patch. The handout already closes when the task does, and says "Back to the task" while one is open. (b) A labelling question's valves print no OPEN / CLOSED, and the engine ends a leader where it reaches its part (the point of the part's box nearest the label), not at its middle across its words (gas M15 m01: three runs). (c) `fix.py rebuild` compiles and audits the modules four at a time. The owner's fix sessions ("a build in 50-60 min, a fix 40-50 min; one slide in every module 1-2 h"): the gas course's session, read - 47 helper agents, `fix.py` used by none for a fix; every change a full build_module round (e.g. 54 min / 9 builds to rebuild one module, 193 min / 17 builds for one continued build) and a visual-review agent after each (6-19 min); and the computer still runs course-factory 2.53.0, which has no fix lane for a built module. Also (the same afternoon): the studio's contact sheet draws at the templates' figure column (504 / 392 px, was the old two-col 682 / 443 - words passed there and failed the build); a question that taps or reads a drawing gets no label bands (they are a labelling question's; gas M15 m05 was 54 % blank because a labelling question shared its drawing); the Quickstart line on a question's drawing corrected. Left for the next round: a recipe for slides of photo cuts that tap to reveal (M07's
+builder hand-wrote five fragments, about 8 minutes); the starter's frame for content-in-parts slides (534 x 228 at 1280).
+Tests: test_figure_library 7, test_precheck 39, test_compile_module 466, test_starter_figures, test_build_course,
+test_check_balance.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

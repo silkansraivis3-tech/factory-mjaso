@@ -967,6 +967,28 @@ def layouts_part(tmp):
     check("... a long photograph's column takes its words in parts past 85 (90-170 words: 0 of 32 texts spill; 2-4 of 4 did)",
           cm.auto_template({}, {}, "wide-left", True, True, words90, False, True) == ("content-in-parts", "with-figure")
           and cm.auto_template({}, {}, "wide-left", True, True, words90[:3], False, True) == ("photo-explain", "column"))
+    chart = {"size": [416, 254], "parts": [{"id": "VP", "type": "curve_chart", "curves": [{"pts": [[0, 1], [40, 9]]}],
+                                            "point": {"curve": 0, "from": 0, "drag": True}}], "steps": [{"play": [["VP", 2, 900]]}]}
+    held = '<div class="fill fig kit-fig"><script type="application/json" id="k">%s</script></div>'
+    can = cm.figure_can(held % json.dumps(chart), "schematic", False, {}, "", "s14")
+    chart["parts"][0]["point"].pop("drag")
+    cant = cm.figure_can(held % json.dumps(chart), "schematic", False, {}, "", "s14")
+    check("2.66.0: a kit chart whose point the trainee drags answers a cue that says drag (gas M02 s11 / s14 needed cue_kept)",
+          "drag" in can and "drag" not in cant, (can, cant))
+    check("2.67.0: \"3 H\" on a molecule is three hydrogen atoms, not three hours (gas M02 s21 failed the facts check)",
+          cm.facts_in("propane: 3 C, 8 H") == [] and cm.facts_in("purge for 2 h") == [("2 h", ("", "2", "h"))])
+    check("... and a photo's one-word \"shows\" that says how a thing is (\"pressurised\") never asks for it on a question - a "
+          "thing's name does (\"airlock\", \"manifold\"; a \"cable\" is a thing)",
+          cm.DESCRIBES.search("pressurised") and cm.DESCRIBES.search("refrigerated")
+          and not any(cm.DESCRIBES.search(w) for w in ("airlock", "manifold", "cable", "plan", "carrier")))
+    pp = []
+    got = cm.pick_template({}, {"parts": [[1, 2], [3, 4]]}, "two-col", False, True, words90[:4], False, False, pp, "s22")
+    check("2.66.0: \"parts\" alone, beside a picture, is content-in-parts - no \"template\" needed (gas M02 s22: two runs)",
+          got[0] == "content-in-parts" and not pp, (got, pp))
+    pp = []
+    got = cm.pick_template({}, {"parts": [[1, 2], [3, 4]]}, "flow", False, False, words90[:4], False, False, pp, "s22")
+    check("... on a slide with no picture it is said, never silently ignored", got[0] != "content-in-parts"
+          and any('"parts" walks the words in parts beside a picture' in x for x in pp), (got, pp))
     code_b, out_b = run(COMPILE, c2, "--module", "1", "--force")
     sheet_b = cs.load(os.path.join(c2, "working_claude", "script", "M01.build.json"))
     sheet_b["screens"]["s05"] = {"figure": "assets/fig/scale.svg", "template": "reading-with-figure"}
@@ -2521,7 +2543,7 @@ def main():
               [p["type"] for p in spec3["parts"]] == ["tank", "space", "space"]
               and [p["label"] for p in spec3["parts"]] == ["Fuel tank", "Tank connection space", "Fuel preparation room"]
               and [t["line"] for t in spec3["steps"]] == [1, 2, 3] and [t["play"][0][0] for t in spec3["steps"]] == ids3
-              and spec3["size"] == [640, 390] and spec3["idle"] == "Press Next step" and spec3["label"] == "General arrangement."
+              and spec3["size"] == [416, 254] and spec3["idle"] == "Press Next step" and spec3["label"] == "General arrangement."
               and spec3["steps"][0]["title"].startswith("1 · Fuel tank"), spec3)
         check("... a line the kit has no word for becomes a text callout the step reveals, a scale word a scale; none overlap",
               [p["type"] for p in spec2["parts"]] == ["ga", "text", "scale"]

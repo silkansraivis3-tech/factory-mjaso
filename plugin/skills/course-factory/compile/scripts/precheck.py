@@ -49,11 +49,22 @@ PHOTO_EXT = (".jpg", ".jpeg", ".png", ".webp", ".gif")
 FORCED_RUN = 3
 
 
+def parked(mdir, rel):
+    """a picture the build sheet names that waits in assets/img/_unused/ - the compile brings it back with its record
+    (compile_module.restore), so it is there (2.66.0: the timed gas M02 build's run 5 was stopped for one)"""
+    rel = rel.replace("\\", "/")
+    if not rel.startswith("assets/img/"):
+        return None
+    p = os.path.join(mdir, "assets", "img", "_unused", rel[len("assets/img/"):])
+    return p if os.path.isfile(p) else None
+
+
 def photo_size(course, mdir, m, rel):
     """the size the photograph was found at - its kept original's while the module's file is still the compile's
     enlargement of it (L62), the file's own once a new picture has been put in its place"""
     keep = os.path.join(course, "working_claude", "photo_originals", m, os.path.basename(rel))
-    return found_size(os.path.join(mdir, rel), keep if os.path.isfile(keep) else None)
+    here = os.path.join(mdir, rel)
+    return found_size(here if os.path.isfile(here) else (parked(mdir, rel) or here), keep if os.path.isfile(keep) else None)
 
 
 def origin_of(meta):
@@ -61,7 +72,7 @@ def origin_of(meta):
     o = "%s %s %s" % (meta.get("url_or_origin") or "", meta.get("source") or "", " ".join(meta.get("shows") or []))
     if re.search(r"render of|3D model still", o, re.I):
         return "render"
-    if re.search(r"old.course|\.pptx|course hand-out|knowledge base", o, re.I):
+    if re.search(r"old.course|\.pptx\b|course hand-out|knowledge base", o, re.I):
         return "old"
     return ""
 
@@ -113,22 +124,34 @@ def check(course, module, rebuild=False):
             if not rel:
                 continue
             body, err = cm.read_figure(mdir, rel, figdir)
+            if err and parked(mdir, rel):
+                body, err = "", None
+                notes.append("%s: its %s %s waits in assets/img/_unused/ - the build brings it back, with its record" % (where, key, rel))
             if err:
                 must.append("%s: its %s %s %s" % (where, key, rel, err))
                 continue
             has_pic = has_pic or key == "figure"
             if rel.lower().endswith(PHOTO_EXT):
                 photos.setdefault(rel, []).append(sid)
-            poster = bool(re.search(r"data-(?:3d|model3d|model)", body or ""))   # a 3D scene's still: not judged
+            poster = bool(re.search(r"\bdata-(?:3d|model3d|model)\b", body or ""))   # a 3D scene's still: not judged
             for inner in ([] if poster else cm.IMG_SRC.findall(body or "")):
                 if inner.lower().endswith(PHOTO_EXT):
                     photos.setdefault(inner, []).append(sid)
                     if not os.path.isfile(os.path.join(mdir, inner)):
                         must.append("%s: its drawing %s shows %s, which is not in the module folder" % (where, rel, inner))
+        for t in b.get("tiles") or []:                 # 2.67.0 - photo tiles: each is there, and is a picture of the slide
+            rel = str(t.get("photo") if isinstance(t, dict) else t or "").replace("\\", "/")
+            if not rel:
+                continue
+            if not os.path.isfile(os.path.join(mdir, rel)) and not parked(mdir, rel):
+                must.append("%s: its tile %s is not in the module folder" % (where, rel))
+            else:
+                photos.setdefault(rel, []).append(sid)
+                has_pic = True
         ins = b.get("inset") or {}
         if ins.get("photo"):
             rel = ins["photo"].replace("\\", "/")
-            if not os.path.isfile(os.path.join(mdir, rel)):
+            if not os.path.isfile(os.path.join(mdir, rel)) and not parked(mdir, rel):
                 must.append("%s: its inset photograph %s is not in the module folder" % (where, rel))
             else:
                 photos.setdefault(rel, []).append(sid)
@@ -179,7 +202,8 @@ def check(course, module, rebuild=False):
         notes.append("%d still(s) rendered from the module's own 3D model under %d px - render again at %d px or more: %s"
                      % (len(renders), PHOTO_MIN_LONG, PHOTO_MIN_LONG, ", ".join(renders)))
     if soft:
-        notes.append("%d photograph(s) under %d px - the compile enlarges them (L62), a larger original would be sharper: %s"
+        notes.append("%d photograph(s) found under %d px (the size it was found at - the compile's enlargement is not judged; L62) "
+                     "- a larger original would be sharper: %s"
                      % (len(soft), PHOTO_MIN_LONG, ", ".join(soft)))
     return must, notes
 

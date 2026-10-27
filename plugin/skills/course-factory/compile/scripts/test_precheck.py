@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -91,7 +92,7 @@ def main():
         c, md = course(tmp, "mid", sheet={"s01": {"figure": "assets/img/mid.png"}}, photos={"mid.png": (1200, 800)})
         code, out = run(PRE, c, "--module", "1")
         check("a 1200 px photograph is a note - the compile enlarges it - never a stop",
-              code == 0 and "1 photograph(s) under 1600 px" in out and "mid.png 1200x800" in out, out)
+              code == 0 and "1 photograph(s) found under 1600 px" in out and "mid.png 1200x800" in out, out)
         code, out = run(tc.COMPILE, c, "--module", "1", "--no-drawing-check")
         keep = os.path.join(c, "working_claude", "photo_originals", "M01", "mid.png")
         check("built: the photograph is enlarged to 1600 px, its original kept",
@@ -115,6 +116,12 @@ def main():
         c, md = course(tmp, "missing", sheet={"s02": {"figure": "assets/fig/none.svg"}})
         code, out = run(PRE, c, "--module", "1")
         check("a picture the build sheet names that is not there", code == 1 and "s02) : its figure assets/fig/none.svg".replace(") :", "):") in out, out)
+        c, md = course(tmp, "parked", sheet={"s02": {"figure": "assets/img/back.png"}}, photos={"back.png": (1800, 1200)})
+        os.makedirs(os.path.join(md, "assets", "img", "_unused"))
+        os.replace(os.path.join(md, "assets", "img", "back.png"), os.path.join(md, "assets", "img", "_unused", "back.png"))
+        code, out = run(PRE, c, "--module", "1")
+        check("2.66.0: a picture waiting in assets/img/_unused/ is there - the build brings it back (gas M02 run 5 was stopped)",
+              code == 0 and "waits in assets/img/_unused/ - the build brings it back" in out, out)
         c, md = course(tmp, "tmpl", sheet={"s02": {"figure": "assets/fig/scale.svg", "template": "fancy"},
                                            "s03": {"figure": "ga.html", "template": "explain-figure", "variant": "diagonal"}})
         code, out = run(PRE, c, "--module", "1")
@@ -175,6 +182,32 @@ def main():
         check("a fix inside 20 min / over it", "inside the gold standard's 20 min" in cf_timing.fix_line(17 * 60)
               and "OVER the gold standard's 20 min" in cf_timing.fix_line(25 * 60))
         check("... a fix under a minute says its seconds, never \"0 min\"", "this fix took 24 s" in cf_timing.fix_line(24))
+
+        print("\n-- 2.67.0: a slide whose own layout spills is built again with its words in parts - not a builder's run")
+        import build_module as bm
+        import compile_module as cm
+        c, md = course(tmp, "spill")
+        run(tc.COMPILE, c, "--module", "1", "--no-drawing-check")
+        sc = tc.cs.load(os.path.join(c, "working_claude", "script", "M01.json"))
+        sheet = tc.cs.load(cm.build_path(c, 1))["screens"]
+        sid = next(x["id"] for x in sc["screens"] if x["kind"] == "slide" and (sheet.get(x["id"]) or {}).get("figure")
+                   and not (sheet.get(x["id"]) or {}).get("template") and len(tc.cs.lines_of(x.get("text"))) >= 2)
+        deck_html = io.open(os.path.join(md, "presentation", "index.html"), encoding="utf-8").read()
+        own = bm.spilled_own(deck_html, "1024x768  deck  FAIL\n   slide 3 (%s): scrolls div.slide-body by 40 px" % sid, c, 1)
+        check("the audit's \"scrolls\" on a slide the compiler laid out itself is found (%s)" % sid, list(own) == [sid], own)
+        avoid_p = os.path.join(c, "working_claude", "_build", "M01_layout_avoid.json")
+        bm.parts_out(avoid_p, own)
+        run(tc.COMPILE, c, "--module", "1", "--no-drawing-check")
+        tag = re.search(r'<section [^>]*data-script="%s"[^>]*>' % sid, io.open(os.path.join(md, "presentation", "index.html"),
+                                                                              encoding="utf-8").read()).group(0)
+        check("... and the next compile builds it with its words in parts (content-in-parts)", 'data-template="content-in-parts' in tag, tag)
+        tc.build_of(c, lambda b: b["screens"][sid].update({"template": "explain-figure"}))
+        own2 = bm.spilled_own(deck_html, "slide 3 (%s): scrolls div.slide-body by 40 px" % sid, c, 1)
+        run(tc.COMPILE, c, "--module", "1", "--no-drawing-check")
+        tag2 = re.search(r'<section [^>]*data-script="%s"[^>]*>' % sid, io.open(os.path.join(md, "presentation", "index.html"),
+                                                                               encoding="utf-8").read()).group(0)
+        check("... a template the builder asked for by name is never overruled", own2 == {} and 'data-template="explain-figure' in tag2,
+              (own2, tag2))
 
         print("\n-- a rebuild of a built module is a fix (fix.py rebuild)")
         c, md = course(tmp, "rebuild")

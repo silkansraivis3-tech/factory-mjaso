@@ -9,7 +9,11 @@
       slide gets a 3D-kit scene spec (sNN.kit3d.json, course-visuals\kit3d\SPEC.md) and its 2D starter (2.50.6):
       declining the 3D ("declined_3d") edits the 2D starter
 2  read course-visuals\kit\CATALOGUE.md - one line per kit part, the spec format, marks and steps. Never kit.js.
+      A question's drawing keeps its own shape on the task page; a labelling question adds a band above and below it for
+      its label boxes. A "ghost" label is still laid out (leaders go round it); a valve's OPEN / CLOSED: "state": false.
 3  fill the build sheet (each slide's picture, layout, the photos) and EDIT the starter specs - never write one from nothing
+      Several photographs on one slide: "tiles": ["assets/img/a.jpg", {"photo": ..., "caption": ...}] (each opens full
+      screen); cuts of one document: add "tiles_as": "strips" - never a hand-written fragment (2.67.0).
 4  python compile/scripts/build_module.py <course> --module 1            again after every change, until PASS
       ONE command runs everything: every figure on its real slide at once (auto-fixes what has one right answer), the
       compile and its drawing check, the words (instructor + trainee), navigation, the audits at 1280x800 and 1024x768,
@@ -238,8 +242,8 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
 - **A kit figure is laid out beside its words, and drawn to its panel (L53, operator 2026-10-15).** A figure whose
   steps light the slide's lines takes `"composition": "two-col"` (the words at reading size in the left column, each
   lit line a tap target for its step; `"boxes"` when the lines are separate items) - not `stage` with a `legend`, where a
-  large drawing left the explanation in a row of small cards. Draw the spec to the panel's own shape (about 640 × 390 in
-  the wide column, `scales()` in a deck reports the real scale), crop what the steps do not show, and run
+  large drawing left the explanation in a row of small cards. Draw the spec to the panel's own shape (about 416 × 254 in
+  the figure column - 2.66.0, `scales()` in a deck reports the real scale), crop what the steps do not show, and run
   `audit_drawing.js` (its EMPTY check) at 1280 × 800, 1024 × 768 and 1920 × 1080, at step 0 and at the last step.
   `stage` stays for a figure that is the whole screen and has no lines to light.
 

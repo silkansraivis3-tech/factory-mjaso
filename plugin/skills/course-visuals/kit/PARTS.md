@@ -178,6 +178,17 @@ picks them out one at a time may not end on a step that greys every one of them 
 Parts merged into kit.js have their colours treated as the kit's own by the drawing check (`<style data-kit-own>`): a course's own part
 in `kit_parts.js` is still judged - colour it for the panel (the dark-panel tokens).
 
+## What the kit gained from the gas course's timed build (2.66.0) - do not work round these again
+- **A drag.** `KIT.h.drag(g, box, { move(x, y), step(dx, dy), name })` - one invisible, focusable area that a finger, the
+  mouse or the arrow keys move; the press and the keys never reach the deck (no swipe, no slide turned). A part that a
+  trainee moves uses it: `curve_chart` `point.drag`, `scale` `markers[k].drag`. A step that moves the figure puts the
+  part back where the steps say - the drag is the trainee trying it, never the lesson's own state.
+- `curve_chart` reads on a **log scale** (`yaxis.log`) and reads **every curve at once** (`point.curve: "all"`) - a
+  cargo's vapour pressure over decades, "pick a cargo, drag to 45 °C".
+- `molecule` - a cargo's structural formula by name, or any molecule as atoms and bonds; `build` brings the skeleton,
+  then the hydrogens. Its group carries `data-kit-fills`: the drawing check counts its box as content (a formula is
+  atoms and bonds with air between them, as a pipe's bends are) - a kit part may set it, a spec never does.
+
 ## After the merge
 Promotion copies the block into the factory's `kit.js` with `status: 'kit'`. When colleagues update the
 plugin, their modules get the part from `kit.js`. A module that still carries its own copy in

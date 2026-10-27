@@ -112,6 +112,7 @@
         sent = true;
         var msg = { type: 'gb-task-done', code: r.code, title: r.title, ok: r.ok, total: r.total,
           head: r.head, items: r.items, answered: r.answered, of: r.of, timeout: r.timeout === true };
+        if (r.detail) { msg.detail = r.detail; }     /* 2.67.0 - each item whole: asked, picked, right, why */
         if (TEAM.handsIn()) {                        /* one answer for the team: the classroom records it for every member */
           var t = { scope: 'team', team: TEAM.team.name, by: TEAM.team.me }, k;
           for (k in t) { if (t.hasOwnProperty(k)) { msg[k] = t[k]; } }
@@ -800,6 +801,21 @@
            the part's box was empty deck (IGF M01 m01, found by three reviews and now by review_sheets.mjs) */
         var pb = dot > 0 ? r : paintedBox(part.g);
         if (pb) { cx = (pb.left + pb.right) / 2 - g.left; cy = (pb.top + pb.bottom) / 2 - g.top; }
+        /* 2.67.0 - it stops where it reaches the part: along its own line to the part's middle, where that line enters the
+           part's box, then 12 px further in - onto what is drawn. Run to the middle it crossed the part's own words and its
+           neighbours' (gas M15 m01: "isolating valve", "OPEN"); stopped at the box's nearest corner it could end in the blank
+           corner of a round tank (review_sheets: "ends 11 px from anything drawn") */
+        var lx = parseFloat(h.getAttribute('x1')), ly = parseFloat(h.getAttribute('y1'));
+        if (pb && !isNaN(lx) && !isNaN(ly)) {
+          var sx = g.left + lx * g.width / 100, sy = g.top + ly * g.height / 100, ex = cx + g.left, ey = cy + g.top;
+          var dx = ex - sx, dy = ey - sy, t = 0;
+          if (sx < pb.left && dx) { t = Math.max(t, (pb.left - sx) / dx); } else if (sx > pb.right && dx) { t = Math.max(t, (pb.right - sx) / dx); }
+          if (sy < pb.top && dy) { t = Math.max(t, (pb.top - sy) / dy); } else if (sy > pb.bottom && dy) { t = Math.max(t, (pb.bottom - sy) / dy); }
+          t = Math.min(Math.max(t, 0), 1);
+          var px = sx + dx * t, py = sy + dy * t, rest = Math.sqrt((ex - px) * (ex - px) + (ey - py) * (ey - py));
+          var k = rest > 0 ? Math.min(1, 12 / rest) : 0;
+          cx = px + (ex - px) * k - g.left; cy = py + (ey - py) * k - g.top;
+        }
         h.setAttribute('x2', (100 * cx / g.width).toFixed(2)); h.setAttribute('y2', (100 * cy / g.height).toFixed(2));
         return;
       }
@@ -974,9 +990,16 @@
     if (reported) { return; }
     reported = true;
     var t = totals(), items = [];
-    each(qs, function (q, i) { items.push({ t: (i + 1) + '. ' + q.text, ok: !!(q.done && q.ok) }); });
+    /* 2.67.0 - each question whole: asked (t), picked (a), right (c) and why (w), so the classroom's debrief, the instructor's
+       list and the trainee's record say it exactly as this page does - it re-read the screens and split one question into
+       several, the why always empty (the training app, gas M07: 4 questions became 11 items). Never on a blind final */
+    each(qs, function (q, i) {
+      var s = BLIND ? { a: '', c: '' } : said(q);
+      items.push({ t: cut((i + 1) + '. ' + q.text, 90), ok: !!(q.done && q.ok), a: cut(s.a, 120), c: cut(s.c, 120),
+        w: BLIND || !q.why ? '' : cut([].map.call(q.why.childNodes, function (n) { return n.textContent; }).join(' '), 400) });
+    });
     buildResult(t, timeout);
-    CR.send({ code: CODE, title: TITLE, ok: t.ok, total: t.total, head: head(t), items: items,
+    CR.send({ code: CODE, title: TITLE, ok: t.ok, total: t.total, head: head(t), items: items, detail: 2,
       answered: t.answered, of: t.total, timeout: !!timeout });
   }
   function buildResult(t, timeout) {
@@ -1009,6 +1032,19 @@
      order beside the right order, the moved cards marked; a card put in the wrong place and where it goes. Words only -
      nothing to press after the result (classroom-system.json result_is_last), never on a blind final */
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function cut(s, n) { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+  /* what the trainee answered and the right answer, in words, from the marking each Check left (p.fix) */
+  function said(q) {
+    var a = [], c = [];
+    each(q.parts, function (p) {
+      each(p.fix || [], function (f) {
+        if (f.k === 'pick') { a.push(f.mine.join('; ') || '–'); c.push(f.right.join('; ')); }
+        else if (f.k === 'order') { a.push(f.mine.join(' → ')); c.push(f.right.join(' → ')); }
+        else { a.push(f.card + ': ' + f.mine); c.push(f.card + ': ' + f.right); }
+      });
+    });
+    return { a: a.join(' | '), c: c.join(' | ') };
+  }
   function fixes(q) {
     var h = '';
     if (BLIND) { return ''; }

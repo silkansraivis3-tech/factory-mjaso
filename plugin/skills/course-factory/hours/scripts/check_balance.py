@@ -99,7 +99,7 @@ def read_blocks(path):
             "block": attr(tag, "data-block") or "?",
             "kind": attr(tag, "data-kind") or "?",
             "title": attr(tag, "data-title") or "",
-            "mins": int(mins),
+            "mins": (lambda f: int(f) if f.is_integer() else f)(float(mins)),   # 2.67.0: "0.5" crashed it
             "track": attr(tag, "data-track"),
             "active": attr(tag, "data-active"),
             # 2.63.2: a practical slide shows 0 deck minutes and the practical's own time - the programme's practical hours

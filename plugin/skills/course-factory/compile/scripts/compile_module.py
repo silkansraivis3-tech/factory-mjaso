@@ -103,6 +103,7 @@ import hashlib
 import html
 import io
 import json
+import math
 import os
 import re
 import shutil
@@ -700,9 +701,42 @@ def hint_ignored(page):
                         else "<%s data-script-ignore%s>" % (m.group(1), m.group(2)), page)
 
 
+def tiles_figure(mdir, s, b, probs, where):
+    """2.67.0 - "tiles": several photographs on one slide, each opening full screen with its own record (gb_zoom, L51 / L56):
+    ["assets/img/a.jpg", {"photo": "assets/img/b.jpg", "caption": "The shipper's SDS"}]; "tiles_as": "strips" stacks them
+    as numbered cuts of one document, in the order of the slide's lines. Built by the compiler - gas M07's builder
+    hand-wrote five fragments of tiles and strips (about 8 of its 11 minutes)"""
+    strips = b.get("tiles_as") == "strips"
+    out, credits = [], []
+    for k, t in enumerate(b.get("tiles") or [], 1):
+        t = {"photo": t} if isinstance(t, str) else dict(t or {})
+        rel = str(t.get("photo") or "").replace("\\", "/")
+        if not rel or not (os.path.isfile(os.path.join(mdir, rel))
+                           or (rel.startswith("assets/img/") and os.path.isfile(img_file(mdir, rel[len("assets/img/"):])))):
+            probs.append("%s: its tile %s is not in the module folder" % (where, rel or "(no \"photo\")"))
+            continue
+        meta = photo_meta(mdir, rel)
+        cap = str(t.get("caption") or "").strip()
+        alt = cap or first_sentence(meta.get("description")) or os.path.basename(rel)
+        credit = t.get("credit") or credit_line(meta)
+        if meta.get("attribution_required") and not credit:
+            probs.append("%s: the photograph %s needs a credit line, and its _photo_meta.json record gives none" % (where, rel))
+        credits.append(credit)
+        out.append('<figure class="lt-tile" data-zoom="button">%s<img src="../%s" alt="%s"%s>%s</figure>'
+                   % ('<b class="lt-n">%d</b>' % k if strips else "", a(rel), a(alt), photo_panel(meta, credit, rel, probs, where),
+                      "<figcaption>%s</figcaption>" % html.escape(cap) if cap else ""))
+    if not out:
+        return "", "", False
+    page = ('<div class="fill fig lt-light lt-tiles-fig" data-script-ignore><div class="%s" style="--n:%d">%s</div></div>'
+            % ("lt-strips" if strips else "lt-tiles", len(out), "".join(out)))
+    return page, b.get("credit") or fragment_credit(page, credits), False
+
+
 def figure_html(mdir, figdir, s, b, probs, where):
     """the slide's picture, as it goes into the page, and its credit line"""
     rel = (b.get("figure") or "").replace("\\", "/")
+    if not rel and b.get("tiles"):
+        return tiles_figure(mdir, s, b, probs, where)
     if not rel:
         if (s.get("visual_kind") or "none") != "none":
             probs.append("%s has no picture file in the build sheet - it is planned as %s: %s%s"
@@ -875,7 +909,13 @@ def figure_can(fig, kind, is_photo, build, mdir, sid):
         return {"tap"}                                 # it opens full screen (L51)
     spec = kit_spec_of(fig)
     if spec is not None:                               # the step buttons and the lines its steps light are buttons (kit.js)
-        return {"tap"} if spec.get("steps") else set()
+        can = {"tap"} if spec.get("steps") else set()
+        # 2.66.0 - a kit part the trainee drags (KIT.h.drag): a curve chart's point, a scale's marker
+        if any(isinstance(q, dict) and ((q.get("point") or {}).get("drag") or any(isinstance(m, dict) and m.get("drag")
+                                                                                   for m in q.get("markers") or []))
+               for q in spec.get("parts") or []):
+            can.add("drag")
+        return can
     can = set()
     if TAP_MARK.search(fig):
         can |= {"tap", "tap_part"}
@@ -1225,6 +1265,14 @@ def where_shown(mdir, name, texts):
 
 
 PHOTO_TASKS = ("hotspot", "spot_the_hazard", "label_diagram", "read_instrument")
+DESCRIBES_END = re.compile(r"(?:ised|ized|ated|ed|ous|ive|ful|less|able|ible)$")
+NOUNS_LIKE_THAT = {"cable", "table", "shed", "bed", "seabed", "steed", "feed", "speed"}
+
+
+class DESCRIBES:                                         # a word that says how a thing is ("pressurised"), not what it is
+    @staticmethod
+    def search(word):
+        return bool(DESCRIBES_END.search(word)) and word not in NOUNS_LIKE_THAT and not is_thing(word)
 
 
 def task_photo_notes(script, build, mdir):
@@ -1242,8 +1290,11 @@ def task_photo_notes(script, build, mdir):
         for n, meta in pool:
             # a thing of two words or more, said whole ("fire control plan"); one word only when it names one thing
             # ("airlock", never "tank")
-            hit = next((x for x in meta.get("shows") or [] if norm(x) and (len(norm(x)) >= 2 or (norm(x)[0] not in GENERIC
-                        and len(norm(x)[0]) > 4)) and any(subject[i:i + len(norm(x))] == norm(x)
+            # 2.66.0 - and never a word that says how a thing is, not what it is ("pressurised" matched two gauge
+            # questions on the gas M02 build): a thing's name ends in a noun
+            hit = next((x for x in meta.get("shows") or [] if norm(x) and not DESCRIBES.search(norm(x)[-1])
+                        and (len(norm(x)) >= 2 or (norm(x)[0] not in GENERIC and (is_thing(x) or len(norm(x)[0]) > 4)))
+                        and any(subject[i:i + len(norm(x))] == norm(x)
                                                            for i in range(len(subject) - len(norm(x)) + 1))), None)
             if not hit:
                 continue
@@ -1577,6 +1628,8 @@ def facts_in(text):
     """[(the fact as written, (sign, value, unit))] - a range is two facts"""
     out = []
     for m in FACT.finditer(text or ""):
+        if m.group(4) == "H":                          # 2.66.0 - "3 H": three hydrogen atoms, not three hours (gas M02 s21)
+            continue
         unit = fact_unit(m.group(4))
         for k, v in enumerate((m.group(2), m.group(3))):
             if v:
@@ -1967,9 +2020,19 @@ def line_ranges(spec, n, howmany=None):
     return rs
 
 
-def pick_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col, probs, where):
+def pick_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col, probs, where, in_parts=False):
     auto = auto_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col)
     want = (b.get("template") or "").split(".v")[0]
+    if not want and in_parts and has_fig and len(lines) >= 2:
+        want = "content-in-parts"                      # 2.67.0 - its own layout spilled at the build's audit (wants_parts)
+    # 2.66.0 - "parts" asks for the words in parts: content-in-parts, without naming it too (the timed gas M02 build: s22's
+    # "parts" did nothing beside a picture until "template" said it as well - two runs)
+    if not want and b.get("parts") and auto[0] != "content-in-parts":
+        if has_fig:
+            want = "content-in-parts"
+        else:
+            probs.append("%s: \"parts\" walks the words in parts beside a picture (content-in-parts) - this slide has no picture, "
+                         "so its parts are not used; give it a picture, or take \"parts\" out (L61)" % where)
     if not want:
         tid, var = auto
     elif want not in TEMPLATES:
@@ -2270,6 +2333,14 @@ def measured_out(avoid, s, b=None):
     return [tuple(k) for k in a.get("avoid") or []] if a.get("words") == words_key(s, b) else []
 
 
+def wants_parts(avoid, s, b=None):
+    """2.67.0 - build_module.py found this slide's OWN layout (the compiler's choice - no "template" asked) scrolling or
+    spilling at the audit: built with its words in parts while its words and picture are unchanged (gas M01 on 2.65: six
+    slides scrolled at 1024 x 768, each one a builder's run). A template asked by name is never overruled"""
+    a = (avoid or {}).get(s.get("id")) or {}
+    return bool(a.get("parts")) and a.get("words") == words_key(s, b) and not (b or {}).get("template")
+
+
 def last_layout(last, s, b=None):
     """the way this slide was built at the last compile, while its words and picture are unchanged - or None"""
     a = (last or {}).get(s.get("id")) or {}
@@ -2359,7 +2430,9 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     if split_photo:
         comp = "photo"
     # L61 - the slide's template, and the owner's rules for it
-    tid, variant = pick_template(s, b, comp, is_photo, bool(fig), lines, split_photo, photo_col, probs, where)
+    # 2.67.0 - build_module.py measured this slide's own layout spilling (its words unchanged since): its words go in parts
+    in_parts = wants_parts(avoid, s, b)
+    tid, variant = pick_template(s, b, comp, is_photo, bool(fig), lines, split_photo, photo_col, probs, where, in_parts)
     nwords_all = cs.wc(" ".join(lines))
     if kind == "slide" and not fig and nwords_all > DENSE_WORDS:
         probs.append("%s: %d words and no picture beside them - dense text always has a drawing, a photograph, an animation or a "
@@ -2788,10 +2861,15 @@ def wrap_words(text, width):
 # every one): each part kept its default size in a cell twice as large, a row of three left a blank cell, and a slide with
 # an L57 photo row under the drawing showed it in a 682 x 292 px panel, so the 390-high canvas was drawn at 0.75 with
 # bands of blank either side (M01 workflow benchmark, 2026-10-20).
-STARTER_W = 640
+# 2.66.0 - 416 wide, not 640: since the templates (L61) the figure column is 504 x 546 px at 1280 x 800 and 392 x 472 at
+# 1024 x 768, and a drawing of this shape shows 456 px wide and 345 px wide in it. Drawn 640 wide it showed at 0.54 at
+# 1024 - its 16 px words at 9 px, grown back to the floor by kit.js into each other - and the gas course's timed M02 build
+# (2026-10-26) redrew all 21 starters at 416 x 254 before its first PASS (3 of its 4 runs). The shape is unchanged.
+STARTER_W = 416
 STARTER_PANEL = (682.0, 416.0)       # the two-col figure column at 1280 x 800, the composition every starter is given
 STARTER_STRIP_H = 124.0              # the L57 photo row under a drawing at 1280 x 800 (M01 s04: the panel 682 x 292 px)
 STARTER_MARGIN, STARTER_LABEL = 14, 30   # round each part inside its cell; the room its label takes beside it
+STARTER_MIN_CELL = (96.0, 2 * 14 + 30 + 50.0)   # the smallest cell a drawn part and its words fit in (w, h)
 STARTER_CELL_ASPECT = 1.5            # the cell shape the parts draw best in (a tank, an engine, a room: wider than tall)
 # the parts that are a fixed small symbol (and a text callout) take a narrower cell than the parts that grow to theirs
 STARTER_GLYPH = {"valve", "vent", "detector", "pump", "exchanger", "text"}
@@ -2838,6 +2916,10 @@ def starter_cells(items, size):
     for rows in starter_rows(len(items)):
         cells = starter_grid(items, size, rows)
         cost = sum(abs(math.log((w / max(h, 1)) / STARTER_SHAPE.get(k, STARTER_CELL_ASPECT))) for k, (_, _, w, h) in zip(kinds, cells))
+        # 2.66.0 - on the 416-wide canvas a cell can be too small for a part and its words: never choose one that is,
+        # when another sharing out of the parts has none (three rows of 85 px put a dial and a vent over the top edge)
+        cost += 10 * sum(max(0.0, STARTER_MIN_CELL[1] - h) / STARTER_MIN_CELL[1] + max(0.0, STARTER_MIN_CELL[0] - w) / STARTER_MIN_CELL[0]
+                         for k, (_, _, w, h) in zip(kinds, cells) if k != "text")
         if best is None or cost < best[0] - 1e-9:
             best = (cost, cells)
     return best[1]
@@ -2945,6 +3027,164 @@ def starter_part(pid, it, cell):
     return out
 
 
+# ------------------------------------------------------------------ 2.67.0: the starter picks the part the words ask for
+# The timed gas M02 build (2.66): 90 % of the builder's 19 minutes went on designing ~20 drawings from grid placeholders - a
+# vapour-pressure slide got a scale, a formula slide text callouts. A slide whose own words name what it shows now starts
+# from that part: a cargo's molecule, a curve chart of the cargoes it names (points only from the numbers the slide itself
+# states - never made up), a scale the trainee drags when the cue says drag.
+CARGOES = [("methane", r"methane|\bLNG\b|\bCH4\b"), ("ethane", r"\bethane\b|\bC2H6\b"), ("propane", r"propane|\bC3H8\b"),
+           ("butane", r"\b(?:n-)?butane\b|\bC4H10\b"), ("ethylene", r"ethylene|ethene\b|\bC2H4\b"),
+           ("propylene", r"propylene|propene\b|\bC3H6\b"), ("butadiene", r"butadiene|\bC4H6\b"),
+           ("vinyl chloride", r"vinyl chloride|\bVCM\b"), ("ammonia", r"ammonia|\bNH3\b"), ("nitrogen", r"\bnitrogen\b|\bN2\b"),
+           ("carbon dioxide", r"carbon dioxide|\bCO2\b")]
+# each cargo's molecule as kit.js draws it: (width, height) in bond lengths, hydrogens included
+MOL_SPAN = {"methane": (2, 2), "ethane": (3, 2), "propane": (4, 2), "butane": (5, 2), "ethylene": (2.44, 1.44),
+            "propylene": (3.72, 2), "butadiene": (4.44, 1.44), "vinyl chloride": (2.44, 1.44), "ammonia": (2, 1),
+            "nitrogen": (1, 0.5), "carbon dioxide": (2, 0.5), "water": (1.6, 0.6)}
+# what the slide is ABOUT - its title or what its picture is to show, never any line: "a production chain", "the structure of
+# the trade" put molecules on gas M02 s03 and s17 (the timed 2.67 build)
+MOLECULE_CUE = re.compile(r"(?i)\b(formulas?|formulae|molecul\w*|structural|atoms?)\b")
+CURVE_CUE = re.compile(r"(?i)(vapou?r pressure|boiling point|\bcurves?\b|\bgraph\b|\bchart\b|against (?:the )?temperature|saturat\w*)")
+DRAG_CUE = re.compile(r"(?i)\bdrag\w*")
+
+
+def cargoes_in(text, written=False):
+    """the cargoes a text names, in the order it names them - with written=True, (name, as the text writes it)"""
+    found = []
+    for name, rx in CARGOES:
+        m = re.search(rx, text or "", re.I)
+        if m:
+            found.append((m.start(), name, m.group(0)))
+    return [(n, w) if written else n for _, n, w in sorted(found)]
+
+
+def temp_pressure_points(line):
+    """(°C, bar) pairs a line states, in order: each temperature with the pressure written after it"""
+    pts, t = [], None
+    for _, (sign, v, unit) in facts_in(line):
+        val = float(sign + v)
+        if unit == "°c":
+            t = val
+        elif unit == "bar" and t is not None:
+            pts.append([t, val])
+            t = None
+    return pts
+
+
+def starter_special(script, s, lines):
+    """the starter spec for a slide whose words say what it shows - a molecule, a curve chart - or None (the grid starter)"""
+    words = " ".join(lines + [s.get("title") or "", s.get("visual") or ""])     # the lines' order first
+    named = cargoes_in(words, written=True)[:3]
+    names = [n for n, _ in named]
+    cue = s.get("notes") or ""
+    W, H = 416, 254
+    about = " ".join([s.get("title") or "", s.get("visual") or ""])
+    if names and MOLECULE_CUE.search(about) and not CURVE_CUE.search(words):
+        n = len(names)
+        # side by side, or one above the other - whichever draws them larger (a chain is long and flat: butane in a third
+        # of the width left the panel half blank - the studio, 2.67.0)
+        span = [MOL_SPAN.get(x, (2.0, 2.0)) for x in names]
+        cols = min(min((W / n - 44) / w, (H - 66) / h) for w, h in span)
+        if cols >= 34 or n == 1:                          # side by side, each bond at least 34 (an atom's ring is 26 across)
+            boxes = [(int(k * W / n) + 4, 6, int(W / n) - 8, H - 12) for k in range(n)]
+        else:                                             # one above the other in a taller frame - the figure column's shape
+            H = int(W * 546 / 504.0)                      # (504 x 546 at 1280 x 800): three chains side by side had bonds of 19
+            boxes = [(4, int(k * H / n) + 2, W - 8, int(H / n) - 4) for k in range(n)]
+        parts = [{"id": "M%d" % (k + 1), "type": "molecule", "x": bx, "y": by, "w": bw, "h": bh, "formula": name, "build": True}
+                 for k, (name, (bx, by, bw, bh)) in enumerate(zip(names, boxes))]
+        steps = []
+        for k, name in enumerate(names):
+            at = next((i for i, ln in enumerate(lines, 1) if name in cargoes_in(ln)), None)
+            st = {"title": "%d · %s" % (len(steps) + 1, (lines[at - 1] if at else name)[:60].rstrip()), "play": [["M%d" % (k + 1), 2, 1200]]}
+            if at:
+                st["line"] = at
+            steps.append(st)
+        return {"size": [W, H], "label": first_sentence(s.get("visual")) or s.get("title") or "", "idle": "Press Next step",
+                "parts": parts, "steps": steps,
+                "_note": "starter written by --init-build from the slide's words: the molecule of each cargo it names (kit "
+                         "`molecule`, by name) - check the names and the order; one step brings each in"}
+    if names and (CURVE_CUE.search(words) or cs.parse_kind(s.get("visual_kind", "")) == "chart"):
+        curves, todo = [], []
+        for name in names:
+            pts = []
+            for ln in lines:
+                if name in cargoes_in(ln):
+                    pts += temp_pressure_points(ln)
+            pts = sorted({p[0]: p for p in pts}.values())
+            if len(pts) < 2:                              # no curve the slide does not state (M07 s07 - a ppm slide - got
+                todo.append(name)                         # two made-up vapour-pressure curves from placeholder points)
+                continue
+            curves.append({"label": dict(named)[name], "pts": pts})
+        if not curves:
+            return None                                   # nothing stated to draw: the grid starter
+        # the script's own word for it
+        xs = [p[0] for c in curves for p in c["pts"]]
+        ys = [p[1] for c in curves for p in c["pts"]]
+        x0, x1 = 20 * math.floor((min(xs) - 10) / 20.0), 20 * math.ceil((max(xs) + 10) / 20.0)
+        logy = max(ys) / max(min(ys), 1e-6) > 30
+        yaxis = ({"min": 0.1, "max": 100, "log": True, "unit": "bar", "label": "bar"} if logy else
+                 {"min": 0, "max": max(2, 2 * math.ceil(max(ys) * 0.6)), "every": max(1, 2 * math.ceil(max(ys) * 0.6) // 4),
+                  "unit": "bar", "label": "bar"})
+        stated_t = [t for t, _ in (temp_pressure_points(cue) or [])] or [x for _, (sg, v, u) in facts_in(cue) for x in [float(sg + v)] if u == "°c"]
+        point = {"curve": "all" if len(curves) > 1 else 0, "from": stated_t[0] if stated_t else max(xs)}
+        if DRAG_CUE.search(cue):
+            point["drag"] = True
+        part = {"id": "VP", "type": "curve_chart", "x": 52, "y": 22, "w": 330, "h": 176,
+                "xaxis": {"min": x0, "max": x1, "every": 20, "unit": "°C", "label": "temperature °C"},
+                "yaxis": yaxis, "curves": curves, "point": point}
+        if re.search(r"(?i)boiling", words):
+            part["hline"] = {"at": 1, "label": "1 bar"}
+        steps = [{"title": "%d · %s" % (k + 1, c["label"]), "play": [["VP", k + 1, 1200]]} for k, c in enumerate(curves)]
+        steps.append({"title": "%d · read it" % (len(curves) + 1), "play": [["VP", len(curves) + 1, 900]]})
+        note = ("starter written by --init-build from the slide's words: a curve chart of the cargoes it names, their points "
+                "taken only from the numbers the slide states (a temperature, then the pressure, in one line)")
+        if todo:
+            note += ("; the slide states no points for %s - its curve is left out (add it from the fact sheet, with the "
+                     "build sheet's \"facts\" naming where they are from)" % ", ".join(todo))
+        if point.get("drag"):
+            note += "; the cue says drag: the trainee drags the point (point.drag)"
+        return {"size": [W, H], "label": first_sentence(s.get("visual")) or s.get("title") or "", "idle": "Press Next step",
+                "parts": [part], "steps": steps, "_note": note}
+    return None
+
+
+STARTER_COURSE = [None]      # the course --init-build writes for: its figure library is read first (figure_library.py)
+
+
+def starter_from_library(script, s, lines, items, steps, label):
+    """2.67.0 - a kit drawing a module passed its build with, that names this slide's things (figure_library.find): its
+    parts as they were, its steps made again from this slide's lines - each line lights the part that bears its name"""
+    try:
+        import figure_library
+        got = figure_library.find(STARTER_COURSE[0], [it["label"] for it in items if it["kind"] != "text"])
+    except Exception:                                    # noqa: BLE001 - a library is a help, never a stop
+        return None
+    if not got:
+        return None
+    spec, origin = got
+    by_label = {}
+    for p in spec.get("parts") or []:
+        if isinstance(p, dict) and p.get("id"):
+            for k in ("label", "text", "formula"):
+                if isinstance(p.get(k), str):
+                    by_label.setdefault(figure_library.norm(p[k]), p["id"])
+    plan = []
+    for i, k, _ in steps:
+        pid = by_label.get(figure_library.norm(items[k]["label"]))
+        if not pid:
+            continue
+        words = " ".join(lines[i - 1].split())
+        plan.append({"title": "%d · %s" % (len(plan) + 1, words[:60].rstrip()), "line": i,
+                     "play": [[pid, items[k]["to"] if items[k]["kind"] != "text" else 1, 600]]})
+    if len(plan) < 2:
+        return None
+    out = {k: v for k, v in spec.items() if k not in ("steps", "label")}
+    out.update(label=label or s.get("title") or "", idle=spec.get("idle") or "Press Next step", steps=plan,
+               _note="starter from the figure library: a drawing that passed its build in %s - it names this slide's things; "
+                     "check every part says what this slide says, and its steps light this slide's lines" % origin)
+    return out
+
+
 def starter_figure(script, s, pool=None, taken=None):
     """2.50.0 - a starter figure-kit spec for a drawing slide, so the build starts from something to edit, not from nothing
     (IGF M01 benchmark: 27 Edit/Write calls writing specs from scratch). One part per thing the script names - the term before
@@ -2957,6 +3197,9 @@ def starter_figure(script, s, pool=None, taken=None):
     lines = cs.lines_of(s.get("text"))
     if not lines:
         return None
+    special = starter_special(script, s, lines)          # 2.67.0 - the part the slide's own words ask for
+    if special:
+        return special
     # an opening statement: a plain sentence before lines that name things ("Many IGF ships have dual-fuel engines."); a list of
     # bare names ("Fuel tank." "Tank connection space.") has none
     statement = len(lines) > 1 and not TERM.match(lines[0]) and any(TERM.match(x) for x in lines[1:])
@@ -2997,6 +3240,9 @@ def starter_figure(script, s, pool=None, taken=None):
             continue
         have.add(kind)
         items.append({"kind": kind, "label": m.group(0).lower(), "start": STARTER_PART[kind][3], "to": STARTER_PART[kind][4]})
+    lib = starter_from_library(script, s, lines, items, steps, first)   # 2.67.0 - a drawing that passed before
+    if lib:
+        return lib
     size = starter_size(lines, items, pool, taken)
     parts, ids, now = [], [], []
     for k, (it, cell) in enumerate(zip(items, starter_cells(items, size))):
@@ -3015,6 +3261,11 @@ def starter_figure(script, s, pool=None, taken=None):
         title = "%d · %s" % (len(plan) + 1, words[:60].rstrip())
         plan.append({"title": title, "line": i, "play": [[ids[k], to, 600]]})
     label = first or (s.get("title") or "")
+    if DRAG_CUE.search(s.get("notes") or ""):           # 2.67.0 - the cue says drag: a scale's marker is the trainee's to move
+        for p in parts:
+            if p.get("type") == "scale":
+                for mk in p.get("markers") or []:
+                    mk["drag"] = True
     return {"size": list(size), "label": label, "idle": "Press Next step", "parts": parts, "steps": plan}
 
 
@@ -3035,6 +3286,7 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
             continue
         name = "%s.kit.json" % s["id"]
         entry = build_screens[s["id"]]
+        note = spec.pop("_note", None)                 # 2.67.0 - what the starter was made from: the build sheet says it
         if two_d:
             if not os.path.isfile(os.path.join(figdir, name)):
                 entry["_2d"] = ("Keeping a 2D figure instead of the 3D scene? Its starter is written: working_claude\\figures\\%s\\%s - "
@@ -3046,11 +3298,46 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
             continue
         entry.update({"figure": name, "composition": "two-col"})   # 2.62.1: its own Navy panel on the light slide (80 / 20)
         if not os.path.isfile(os.path.join(figdir, name)):
-            entry["_figure"] = ("starter written by --init-build: replace the placeholder parts with the real drawing, one part per "
-                                "thing the script names (SPEC.md); the parts are placed on a grid and the steps light the slide's "
-                                "lines. Try it with studio.py before compiling.")
+            entry["_figure"] = note or ("starter written by --init-build: replace the placeholder parts with the real drawing, one part "
+                                        "per thing the script names (SPEC.md); the parts are placed on a grid and the steps light the "
+                                        "slide's lines. Try it with studio.py before compiling.")
             if out is not None:
                 out[s["id"]] = spec
+
+
+def link_photos(mdir, script, screens):
+    """2.67.0 - the module's photographs whose records name a slide ("teaching_purpose": "s06 - ...", "used_in": "... s06")
+    put on that slide in the starter sheet: one is its "figure", several its "tiles" (gas M02's timed build: 24 pictures
+    found for its slides were on none, and the first build moved them all to _unused). Never over a picture already
+    named, never on a 3D slide. Returns the slides given one"""
+    img = os.path.join(mdir, "assets", "img")
+    try:
+        meta = json.load(io.open(os.path.join(img, "_photo_meta.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    by = {}
+    for name, rec in sorted(meta.items()):
+        if not isinstance(rec, dict) or not name.lower().endswith(IMAGES) or not os.path.isfile(img_file(mdir, name)):
+            continue
+        m = re.search(r"\b(s\d{2,3})\b", "%s %s" % (rec.get("teaching_purpose") or "", rec.get("used_in") or ""))
+        if m:
+            by.setdefault(m.group(1), []).append("assets/img/" + name)
+    kinds = {s["id"]: s for s in script.get("screens", [])}
+    done = set()
+    for sid, names in by.items():
+        e = screens.get(sid)
+        s = kinds.get(sid) or {}
+        if e is None or s.get("kind") != "slide" or e.get("figure") or e.get("tiles") or \
+                cs.parse_kind(s.get("visual_kind", "")) == "model_3d":
+            continue
+        if len(names) == 1:
+            e["figure"] = names[0]
+        else:
+            e["tiles"] = names[:6]
+        e["_photo"] = ("linked by --init-build: the photograph record%s name%s this slide - check %s, or put another picture"
+                       % ("s" if len(names) > 1 else "", "" if len(names) > 1 else "s", "they fit" if len(names) > 1 else "it fits"))
+        done.add(sid)
+    return done
 
 
 def starter_build(script, shared=(), figdir=None, specs=None, mdir=None, specs3=None):
@@ -3091,11 +3378,12 @@ def starter_build(script, shared=(), figdir=None, specs=None, mdir=None, specs3=
                                    "shape, an inside or a layout in space (%s). Strongly recommended, never required: to decline it, "
                                    "give the slide its 2D figure and write the operator's reason "
                                    "in the sheet's top-level \"declined_3d\" - it is not proposed again." % best[1])
+    linked = link_photos(mdir, script, screens) if mdir and os.path.isdir(mdir) else set()      # 2.67.0
     if figdir is not None:             # 2.50.0: a starter figure-kit spec for every drawing slide - not a photo; a 3D one's
         three_d = {s["id"] for s in script["screens"] if s["kind"] == "slide" and cs.parse_kind(s.get("visual_kind", "")) == "model_3d"}
         pool = photo_pool(mdir) if mdir and os.path.isdir(mdir) else []
         taken = {k: v[0] for k, v in shown_elsewhere(mdir).items()} if pool else {}
-        starter_figures(script, screens, figdir, skip={best[0]} if best else (), out=specs,      # is its 2D fallback (2.50.6)
+        starter_figures(script, screens, figdir, skip=({best[0]} if best else set()) | linked, out=specs,   # its 2D fallback (2.50.6)
                         fallback=three_d | ({best[0]} if best else set()), pool=pool, taken=taken)
         if specs3 is not None:         # the 3D scenes' starter specs (3D kit): written when the file is not there, never over one
             for s in script["screens"]:
@@ -3634,6 +3922,7 @@ def main(argv=None):
         except (OSError, ValueError):
             pass
         figdir, specs, specs3 = workspace.claude_path(o.course, "figures", cs.mid(o.module)), {}, {}
+        STARTER_COURSE[0] = o.course                       # 2.67.0 - its figure library is read first
         cs.save(bp, starter_build(script, shared, figdir=figdir, specs=specs, specs3=specs3,
                                   mdir=module_folder(o.course, o.module, o.module_dir)[0]))
         import cf_timing                                # 2.65.0 - the module's clock starts: the gold standard is 30-40 min

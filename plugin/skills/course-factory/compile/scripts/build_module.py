@@ -313,6 +313,49 @@ def measure_out(path, misfits):
     io.open(path, "w", encoding="utf-8", newline="\n").write(json.dumps(avoid, indent=1, sort_keys=True))
 
 
+def spilled_own(deck_html, audit_out, course, module):
+    """2.67.0 - the slides whose OWN layout scrolls or spills at the audit - the compiler's choice (no "template" in the
+    build sheet, not built another way for L62), with a picture and more than one line: {slide id: its words key}. Their
+    words go in parts at once (compile_module.wants_parts) - on gas M01 (2.65) six slides scrolled at 1024 x 768, each a
+    builder's run to put them in parts by hand"""
+    bad = set(re.findall(r"slide \d+ \((\w+)\): (?:scrolls|spills)\b", audit_out or ""))
+    if not bad:
+        return {}
+    import compile_module as cm
+    import content_script as cs
+    try:
+        script = cs.load(cs.paths(course, module)["script"])
+        sheet = cs.load(cm.build_path(course, module)).get("screens") or {}
+    except (OSError, ValueError, KeyError):
+        return {}
+    by_id = {x["id"]: x for x in script.get("screens", [])}
+    out = {}
+    for tag in re.findall(r"<section [^>]*>", deck_html):
+        sid = re.search(r'\bdata-script="(\w+)"', tag)
+        if not sid or sid.group(1) not in bad or "data-varied=" in tag or 'data-template="content-in-parts' in tag:
+            continue
+        sc, b = by_id.get(sid.group(1)), sheet.get(sid.group(1)) or {}
+        if not sc or sc.get("kind") != "slide" or b.get("template") or not b.get("figure") or len(cs.lines_of(sc.get("text"))) < 2:
+            continue
+        out[sid.group(1)] = cm.words_key(sc, b)
+    return out
+
+
+def parts_out(path, own):
+    """each slide's words go in parts while its words key is the same (compile_module.wants_parts)"""
+    try:
+        avoid = json.load(io.open(path, encoding="utf-8"))
+    except (OSError, ValueError):
+        avoid = {}
+    for sid, words in own.items():
+        a = avoid.get(sid) or {}
+        if a.get("words") != words:
+            a = {"words": words, "avoid": []}
+        a["parts"] = True
+        avoid[sid] = a
+    io.open(path, "w", encoding="utf-8", newline="\n").write(json.dumps(avoid, indent=1, sort_keys=True))
+
+
 def reviewed_dir(out_dir):
     """review\\MNN_reviewed - the manifests of the sheets someone last looked at (--reviewed): what "changed" is judged
     against. Missing: every screen is new to the reviewer"""
@@ -512,6 +555,10 @@ def main(argv=None):
     probs = [x for x in probs if not any(re.search(r"\(%s\)[ :]" % re.escape(s), x) and re.search(r"\b(empty|text zone|inside|"
                                                                                                     r"cut off|small text|label|contrast)\b", x)
                                          for s in shown)]
+    # 2.66.0 - drawings still to fix: no layout round this build (the timed gas M02 build's first run spent 447 s building
+    # again the slides of four drawings its builder was about to redraw - a drawing that changes moves its slide anyway)
+    drawings_open = "figures" in fails or any(re.search(r"\b(empty|text zone|inside|cut off|small text|label|contrast|"
+                                                        r"photo over drawing|scrolls)\b", x) for x in probs)
     if ccode != 0 or probs:
         fails.append("compile")
         say.append("COMPILE - %d problem(s) to fix%s:" % (len(probs), " (the figures above not repeated)" if shown else ""))
@@ -575,7 +622,7 @@ def main(argv=None):
 
     def will_retry(k, res):
         """the audits failed a slide the compiler built another way for L62: this round is built again (2.62.0)"""
-        if k != ak or res[0] == 0 or o.layout_round >= LAYOUT_ROUNDS or not os.path.isfile(deck):
+        if k != ak or res[0] == 0 or o.layout_round >= LAYOUT_ROUNDS or not os.path.isfile(deck) or drawings_open:
             return None
         return moved_misfits(io.open(deck, encoding="utf-8").read(), res[1])
     results, took, early = run_checks(jobs, pkg_cmd, will_retry)
@@ -611,18 +658,31 @@ def main(argv=None):
                                                40 if k.startswith("audits") else 12)]
     # 2.62.0 - a slide the compiler built another way for L62 that the audit found does not fit is measured out and built
     # its next way, at once: the builder never pins a layout by hand for what the compiler chose
-    if ak in fails and o.layout_round < LAYOUT_ROUNDS and os.path.isfile(deck):
-        mis = early or moved_misfits(io.open(deck, encoding="utf-8").read(), results[ak][1])
-        if mis:
-            measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
+    if ak in fails and drawings_open and o.layout_round < LAYOUT_ROUNDS and os.path.isfile(deck):
+        held = moved_misfits(io.open(deck, encoding="utf-8").read(), results[ak][1])
+        if held:
+            say.append("LAYOUT - %d slide(s) built another way for L62 did not fit (%s): built their next way once the drawings "
+                       "pass - not now, while drawings are still to fix (2.66.0)" % (len(held), ", ".join(sorted(held))))
+    if ak in fails and not drawings_open and o.layout_round < LAYOUT_ROUNDS and os.path.isfile(deck):
+        page_ = io.open(deck, encoding="utf-8").read()
+        mis = early or moved_misfits(page_, results[ak][1])
+        own = {} if early else spilled_own(page_, results[ak][1], course, o.module)
+        if mis or own:
+            if mis:
+                measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
+            if own:
+                parts_out(os.path.join(logdir, "%s_layout_avoid.json" % m), own)
+                print("PARTS - %d slide(s) whose own layout spilled at the audit: %s - built again with their words in parts "
+                      "(content-in-parts; kept while their words are unchanged)" % (len(own), ", ".join(sorted(own))))
             log.write("\n===== this round's findings (the build runs again for the slides above)\n%s\n" % "\n".join(say))
             write_stages(log, stages, t0, timing)
             log.close()
             os.replace(log.name, os.path.join(logdir, "%s_build.round%d.log" % (m, o.layout_round + 1)))
-            print("LAYOUT - %d slide(s) built another way so no two neighbours look alike (L62) did not fit: %s - built again "
-                  "their next way (%.0f s; kept in %s_layout_avoid.json while their words are unchanged)"
-                  % (len(mis), ", ".join("%s (%s, %s ground)" % (k, v[0], v[1]) for k, v in sorted(mis.items())),
-                     time.time() - t0, m))
+            if mis:
+                print("LAYOUT - %d slide(s) built another way so no two neighbours look alike (L62) did not fit: %s - built "
+                      "again their next way (%.0f s; kept in %s_layout_avoid.json while their words are unchanged)"
+                      % (len(mis), ", ".join("%s (%s, %s ground)" % (k, v[0], v[1]) for k, v in sorted(mis.items())),
+                         time.time() - t0, m))
             sys.stdout.flush()
             return main(list(sys.argv[1:] if argv is None else argv) + ["--layout-round", str(o.layout_round + 1)])
     passed = not fails
@@ -675,6 +735,11 @@ def main(argv=None):
     if passed:
         print("PASS %s - figures, compile + drawing check, words (instructor, trainee), navigation, audits 1280x800 %s, course package"
               " (%.0f s)" % (m, " ".join(sizes), secs))
+        try:                                             # 2.67.0 - its drawings, for the next slide that draws the same
+            import figure_library
+            figure_library.save(course, o.module)
+        except Exception:                                # noqa: BLE001 - the library is a help, never a stop
+            pass
         gold = cf_timing.clock_pass(course, m)          # 2.65.0 - at the first PASS: its minutes against 30-40
         if gold:
             print(gold)

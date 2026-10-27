@@ -31,6 +31,7 @@ The few classes of its own, all written by the compiler:
 | Class | What it is |
 |---|---|
 | `.lt-parts` · `.lt-part` · `.lt-part.on` · `.lt-tabs` · `.lt-tab` | content-in-parts: the parts of one slide, the one shown, its numbered tabs (`gb_deck.js` walks them with Next / Back) |
+| `.lt-tiles-fig` · `.lt-tiles` · `.lt-strips` · `.lt-tile` · `.lt-n` | 2.67.0 "tiles": several photographs on one slide, each opens full screen; "strips": cuts of one document, numbered (the compiler builds them - `tiles_figure`) |
 | `.lt-table` · `.lt-sep` | reference-table: one row a line; the hidden ` \| ` that keeps the row the approved line |
 | `.lt-block` | three-content-blocks: one numbered block of lines |
 | `.lt-compare` · `.lt-card` · `.lt-card-visual` · `.lt-card-copy` · `.lt-compare-note` | compare-two: two cards, each its picture and its lines |

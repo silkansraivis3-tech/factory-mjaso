@@ -146,6 +146,7 @@ const GATE_SCHEMA = {
   properties: {
     open: { type: 'boolean' }, output: { type: 'string' },
     approved: { type: 'array', items: { type: 'string' }, description: 'the module ids whose script status says "approved"' },
+    skill_dir: { type: 'string', description: 'the absolute folder of the course-factory skill the scripts ran from (it holds SKILL.md and scripts/)' },
   },
 }
 
@@ -157,10 +158,16 @@ ${A.modules.map((m) => `    python ${SCRIPTS}/scripts/content_script.py status "
 
 open = true only if course_gate.py exited 0. output = everything course_gate.py printed, word for word.
 approved = the module ids (as written after --module) whose status line says "approved by"; a draft, a
-missing script or an error is not approved. Do not fix anything, do not write any file.`,
+missing script or an error is not approved. skill_dir = the absolute folder of the course-factory skill these
+scripts ran from${A.factory ? '' : ' (find it with Glob - **/skills/course-factory/SKILL.md under the installed plugins, the newest version - and do not read that file)'}.
+Do not fix anything, do not write any file.`,
   { label: 'gate:ilo-map+kb', phase: 'Read', schema: GATE_SCHEMA, model: 'sonnet', effort: 'low' }
 )
 const APPROVED = new Set(((gate && gate.approved) || []).map(String))
+/* 2.66.0 - the factory's folder, for the builders: they read the Quickstart by its path instead of loading the whole skill
+   (SKILL.md, 48 KB - the router for every mode, which says itself a module agent needs only the Quickstart), and that
+   ~12,000 tokens stays out of every builder's context for its whole run (the timed gas M02 build: 84 tool calls) */
+const DIR = A.factory ? `${A.factory}/course-factory` : ((gate && gate.skill_dir) || '').replace(/[\\/]SKILL\.md$/i, '') || null
 
 if (!gate || !gate.open) {
   /* No module agent starts without the approved ILO map and the knowledge-base decision (owner, 2026-10-16). */
@@ -222,13 +229,37 @@ approves each script; nothing is built from words nobody approved.
 Report "awaiting approval", every honesty marker with its source, the planned Track A
 buckets and Track B ratio, and what you moved to the handout.`
 
+/* 2.67.0 - the photographs a script asks for are found while it waits for the operator's approval, not by the builder
+   afterwards (the builder's search for photos was time on the build's clock). One agent per written script, on Sonnet:
+   it places what it finds - with each one's rights record - and lists what it could not find; it never touches the words */
+const photoPrep = (m) => `The content script of module ${m.id} has just been written and waits for the operator's approval:
+${A.course}/working_claude/script/M${two(m)}.json. Find its PHOTOGRAPHS now, so the build does not wait for them.
+
+For every screen whose visual_kind is photo or annotated_photo, and every screen whose "visual" asks for a real photograph:
+search the course's own material first (the knowledge base, the old course's images - course-visuals' order: project, factory
+library, internet), then the internet - a real photograph, never AI-generated, 1600 px or more on its long side (the original
+file: Wikimedia's "Original file", never a /thumb/), on a licence a training course may use and change (public domain, CC0,
+CC BY, CC BY-SA). Save each into ${A.course}/modules/module${two(m)}/assets/img/ with its record in that folder's
+_photo_meta.json (source, url_or_origin, author, licence, rights_state, credit, description of what it LITERALLY shows,
+shows, teaching_purpose naming the screen, used_in, visually_verified after you opened and looked at it).
+
+Write the list to ${A.course}/working_claude/photo_candidates/M${two(m)}.md: each screen, the file you placed and why it fits -
+or "not found" and what would do. You may write only those two places: never the script, never the build sheet, never a page.
+Report the list.`
+
 /* an approved module: the mechanical build, on Sonnet (MECHANICAL), in ONE command per round */
-const build = (m) => `Invoke ${SKILL} and follow it. BUILD ONE module from its approved script.
+const LEAN = (dir) => `You BUILD ONE module from its approved script, for the course-factory skill whose files are under
+${dir} (use those - not another copy). Do NOT read its SKILL.md or load the skill: a builder needs only the Quickstart -
+read ${dir}/compile/GUIDE.md from the top down to the heading "## 1 · What goes where" and stop there (about 130 lines);
+open another section of it, or ${dir}/../course-visuals/kit/CATALOGUE.md, only when the Quickstart or a build line names it.`
+const build = (m) => `${DIR ? LEAN(DIR) : `Invoke ${SKILL} and follow it. BUILD ONE module from its approved script.`}
 
 ${brief(m)}
 
 Your script working_claude/script/M${two(m)}.json is approved: you never type the deck's or a
-task page's HTML, and you never change the approved words. Read the Quickstart at the top of
+task page's HTML, and you never change the approved words. Its photographs may already be in modules/module${two(m)}/assets/img,
+found while the script waited for approval (2.67.0) - if working_claude/photo_candidates/M${two(m)}.md exists it lists them:
+use those first. No list: the photographs in assets/img are the module's. Read the Quickstart at the top of
 course-factory compile/GUIDE.md and follow it step by step - it is the whole build - and the
 picture lanes it names (course-visuals/kit/CATALOGUE.md, never kit.js). NOT course-module-ux,
 course-module-ui or course-task-ux: the compiler builds their standard.
@@ -437,7 +468,8 @@ const results = await pipeline(
   ORDER,
   (m) => APPROVED.has(String(m.id))
     ? place(() => buildUntilPass(m)).then((r) => ({ m, r, built: true }))
-    : agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' }).then((r) => ({ m, r, built: false })),
+    : agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' })
+      .then((r) => agent(photoPrep(m), { label: `photos:${m.id}`, phase: 'Build', ...MECHANICAL }).then(() => ({ m, r, built: false }))),
   ({ m, r, built }) => built
     ? agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })
       .then((q) => ({ m, q: q && Object.assign({}, q, { time: timeOf(r) }) }))

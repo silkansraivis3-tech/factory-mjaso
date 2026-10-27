@@ -373,7 +373,9 @@ def generic_head(panel):
 
 # the figure's panel, as the deck shows it, at each window width - the contact sheet draws every step at this width, so the
 # words are grown (the 12.5 px floor) exactly as on the real slide
-PANEL_W = {1280: 682, 1024: 443}
+# 2.67.0 - the templates' figure column (L61): 504 px at 1280 x 800, 392 at 1024 x 768 - it was the old two-col 682 / 443, so
+# the sheet showed a drawing larger than its slide does and its words passed here and failed the build (gas M15)
+PANEL_W = {1280: 504, 1024: 392}
 
 
 def sheet_size(spec, size):

@@ -9,6 +9,7 @@ whose QA brought back nothing blocks instead of being counted clean.
 """
 from __future__ import annotations
 
+import io
 import json
 import os
 import shutil
@@ -37,7 +38,8 @@ const agent = async (prompt, o) => {
   }
   opts[o.label] = { model: o.model || null, effort: o.effort || null }
   prompts[o.label] = prompt
-  if (o.label.startsWith('gate:')) return { open: true, output: 'open', approved: args._approved || ['1', '2'] }
+  if (o.label.startsWith('gate:')) return { open: true, output: 'open', approved: args._approved || ['1', '2'],
+                                            skill_dir: args._skill_dir }
   if (o.label === 'qa:2') return null                       // the QA agent for module 2 brought back nothing
   if ((args._broken || []).indexOf(o.label.slice(3)) >= 0)  // a QA that found a picture of another thing (2.63.3)
     return { module: o.label.slice(3), classification: 'A', blocking: true,
@@ -238,9 +240,36 @@ def main():
         check("args.wave 1: one build at a time - module 2's build starts after module 1's build (its QA holds no place)",
               l5.index("build:2") > l5.index("build:1") and "build:final" not in l5, l5)
         check("args.factory pins the skills every agent reads, args.notes reaches every module agent",
-              "C:/f/skills/course-factory/SKILL.md" in pr.get("build:1", "")
+              "C:/f/skills/course-factory/compile/GUIDE.md" in pr.get("build:1", "")
               and "C:/f/skills/course-factory/scripts/course_gate.py" in pr.get("gate:ilo-map+kb", "")
               and "no paid pictures" in pr.get("build:1", "") and "no paid pictures" in pr.get("script:2", ""), pr)
+        # 2.67.0 - a written script's photographs are found while it waits for approval, not on the build's clock
+        ph_run = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_approved": ["1"]})
+        lb, ph = ph_run.get("labels", []), ph_run.get("prompts", {}).get("photos:2", "")
+        check("2.67.0: a script written in this run gets its photographs found at once (photos:N after script:N, on Sonnet), "
+              "never touching the words", "photos:2" in lb and lb.index("photos:2") > lb.index("script:2")
+              and ph_run.get("opts", {}).get("photos:2") == {"model": "sonnet", "effort": "medium"}
+              and "never the script, never the build sheet" in ph and "photo_candidates/M02.md" in ph, (lb, ph[-400:]))
+        check("... and the builder is told to use them first", "photo_candidates/M01.md exists it lists them"
+              in ph_run.get("prompts", {}).get("build:1", ""), ph_run.get("prompts", {}).get("build:1", "")[:1600])
+        # 2.66.0 - a builder reads the Quickstart by its path, never the whole skill (SKILL.md, 48 KB, the router for every mode)
+        b1 = pr.get("build:1", "")
+        check("2.66.0: a builder is sent to the Quickstart by its path - not SKILL.md, not the skill loaded",
+              "Do NOT read its SKILL.md or load the skill" in b1 and not b1.startswith("Invoke"), b1[:500])
+        dflt = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods,
+                         "_skill_dir": "C:/u/plugins/cf/2.66.0/skills/course-factory/SKILL.md"})
+        db = dflt.get("prompts", {}).get("build:1", "")
+        check("... the installed plugin too: the gate reports the skill's folder (by Glob, never reading SKILL.md) and the "
+              "builders get it", "C:/u/plugins/cf/2.66.0/skills/course-factory/compile/GUIDE.md" in db
+              and "do not read that file" in dflt.get("prompts", {}).get("gate:ilo-map+kb", ""), db[:400])
+        none = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods}).get("prompts", {}).get("build:1", "")
+        check("... a gate that brought back no folder: the builder loads the skill as before",
+              none.startswith("Invoke the course-factory skill"), none[:200])
+        guide = os.path.join(os.path.dirname(HERE), "..", "compile", "GUIDE.md")
+        head = io.open(guide, encoding="utf-8").read().splitlines()
+        stop = next((i for i, x in enumerate(head) if x.startswith("## 1 \u00b7 What goes where")), 999)
+        check("... and the Quickstart still ends where the builder is told to stop reading (within about 130 lines)",
+              stop <= 135, stop)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))

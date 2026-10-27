@@ -625,6 +625,10 @@ def kit_fig(q, b, text, rel, probs, where, bands, side=0.0, fit=False):
             ghost.append(gid)
             keep.append(dict([(k, v) for k, v in p.items() if k not in PLAIN_WORDS], id=gid))
         spec = dict(spec, parts=keep, ghost=ghost)
+    if cs.mech(q) == "label_diagram":                   # 2.67.0 - a labelling question asks what a part is, never whether
+        spec = dict(spec, parts=[dict(p, state=False) if isinstance(p, dict) and p.get("type") == "valve" and "state" not in p
+                                 else p for p in spec.get("parts") or []])   # a valve is open: its OPEN / CLOSED word is in
+        # the way of the leaders (gas M15 m01: two of its three failed runs); "state" in the build sheet's spec keeps it
     steps = spec.get("steps") or []
     want = b.get("kit_step", "final")
     n = len(steps)
@@ -1020,7 +1024,9 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
             extra += ' data-pic="beside"'
         out += opt_buttons(sid, q, multi=m == "multi_select")
     elif m == "read_instrument":
-        fig = figure_for(q, b, mdir, figdir, probs, where, (b.get("figure") or "").strip() in figs["_bands"])
+        # 2.68.0 - no label bands: only a labelling question has labels to put in them; on a question that reads or taps
+        # the drawing they were blank (gas M15 m05: 54 % blank because a labelling question shared its drawing)
+        fig = figure_for(q, b, mdir, figdir, probs, where)
         if fig:
             figs["_pic"] = True
             figs["_kit"] = figs.get("_kit") or fig.kind == "kit"
@@ -1029,7 +1035,7 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         out += opt_buttons(sid, q)
     elif m in ("hotspot", "spot_the_hazard"):
         items, right = cs.answer_items(q)
-        fig = figure_for(q, b, mdir, figdir, probs, where, (b.get("figure") or "").strip() in figs["_bands"])
+        fig = figure_for(q, b, mdir, figdir, probs, where)               # 2.68.0 - no label bands (read_instrument, above)
         if len(right) > 1:
             extra = ' data-multi="1"'
         holder = []

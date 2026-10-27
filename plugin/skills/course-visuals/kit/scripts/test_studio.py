@@ -496,7 +496,10 @@ def main():
         rs, _ = studio.run(sheet_spec, panel="two-col", sizes=((1280, 800),), step="all", out=os.path.join(tmp, "sheet"))
         shot = ((rs or {}).get("sizes", {}).get("1280x800") or {}).get("shot") or ""
         check("K13 --step all: one contact sheet of every step (rest + 2 steps = 3 panels) in one picture",
-              shot.endswith("_all.png") and os.path.isfile(shot) and png_size(shot)[0] >= 1300 and png_size(shot)[1] >= 700, shot)
+              shot.endswith("_all.png") and os.path.isfile(shot) and png_size(shot)[0] >= 2 * studio.PANEL_W[1280]
+              and png_size(shot)[1] >= 400, (shot, png_size(shot) if os.path.isfile(shot) else None))
+        check("2.67.0: the sheet's panels are the templates' figure column (504 / 392 px - the old two-col 682 / 443 showed a "
+              "drawing larger than its slide does)", studio.PANEL_W == {1280: 504, 1024: 392}, studio.PANEL_W)
         floor_parts_part(tmp)
         probe_cache_part(tmp)
         flammability_part(tmp)

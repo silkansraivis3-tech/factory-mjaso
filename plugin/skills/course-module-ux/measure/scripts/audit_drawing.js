@@ -742,6 +742,14 @@
         var bb = ph.getBoundingClientRect();
         if (bb.width && bb.height) { mark(bb.left, bb.top, bb.right, bb.bottom); }
       });
+      /* 2.66.0 - a kit part whose meaning is the whole area between its strokes (a molecule's structural formula: atoms
+         and bonds, air between them by nature) marks its drawing data-kit-fills: its box is content, as a pipe's bends are.
+         Set only by a part in the kit, never by a spec; a part not shown at this step counts nothing */
+      qa(svg, "[data-kit-fills]").forEach(function (fl) {
+        if (inHiddenRoot(fl, svg) || !shown(fl, svg)) { return; }
+        var bb = fl.getBoundingClientRect();
+        if (bb.width && bb.height) { mark(bb.left, bb.top, bb.right, bb.bottom); }
+      });
       parts.forEach(function (it) {
         var b = it.b, a = b.w * b.h;
         if (a >= 0.8 * fr.w * fr.h) { return; }                    /* a panel or background is not content */
