@@ -2127,17 +2127,20 @@ def choose_layout(opts, recent, measured_out=(), prefer=None):
     slide before; failing that, its own (the build then reports the repeat). measured_out: the other ways this slide was
     built and the audit found did not fit (build_module.py, 2.62.0) - never tried again while its words are the same.
     prefer (2.62.1): the way it was built last time, kept while it is still unlike the slide before - a fix on one slide
-    no longer moves its neighbours to a new way the audit has not seen (every 2.62.0 build retried other slides)"""
-    opts = opts[:1] + [o for o in opts[1:] if o["key"] not in measured_out]
+    no longer moves its neighbours to a new way the audit has not seen (every 2.62.0 build retried other slides).
+    2.66.7: the slide's OWN way may be measured out too (build_module.py's layout solver: its words do not fit it, or the
+    slide after it has no other way that fits) - while another way is left"""
+    own = opts[0]
+    opts = [o for o in opts if o["key"] not in measured_out] or opts[:1]
     if prefer:
         p = next((o for o in opts if o["key"] == tuple(prefer)), None)
         if p and (not recent or p["key"] != recent[-1]):
-            return p, p is not opts[0]
+            return p, p is not own
     for avoid in (recent[-VARIETY_WINDOW:], recent[-1:]):
         for o in opts:
             if o["key"] not in avoid:
-                return o, o is not opts[0]
-    return opts[0], False
+                return o, o is not own
+    return opts[0], opts[0] is not own
 
 
 def enlarge_photos(mdir, keep_dir, rels, notes):
@@ -2245,6 +2248,30 @@ def words_key(s, b=None):
                         .encode("utf-8")).hexdigest()[:12]
 
 
+# 2.66.7 - the build-sheet fields that only pick the slide's OWN way: the other ways the compiler builds it never read them
+# (layout_options sets their own column and side), so an edit to them changes nothing about whether those ways fit
+OWN_WAY = ("composition", "figure_first", "dark")
+
+
+def fit_key(s, b=None):
+    """the key a measured-out way (and a layout the solver settled) holds by: the slide's words, its picture and the
+    fields that change what fits beside it (split, parts, template, an inset ...) - not OWN_WAY. WHY (the 2.66.5 timed run):
+    M03's builders tried flow, wide-left and wide-right on s10, and each edit forgot every way measured out before - 12
+    builds of the same L62 repeat. A slide built with a settled layout keeps the key of the sheet it was settled from"""
+    if b and b.get("_fit_key"):
+        return b["_fit_key"]
+    return words_key(s, {k: v for k, v in (b or {}).items() if k not in OWN_WAY})
+
+
+def settled(avoid, s, b):
+    """the build-sheet entry with what build_module.py's layout solver settled for this slide ("set": {"split": 0.6} or
+    {"parts": [[1, 3], [4, 6], [7, 8]]}, 2.66.7), while the words, picture and sheet it was settled from are the same"""
+    a = (avoid or {}).get(s.get("id")) or {}
+    if not a.get("set") or a.get("words") != fit_key(s, b):
+        return b
+    return dict(b, _fit_key=a["words"], **a["set"])
+
+
 def load_layout_avoid(work, mid_):
     """working_claude\\_build\\<M01>_layout_avoid.json - the layouts build_module.py measured out; {} when there is none.
     Every builder of the deck reads it - the compile and the studio / figure_fit alike, so a figure is measured on the
@@ -2266,9 +2293,9 @@ def load_layouts(work, mid_):
 
 def measured_out(avoid, s, b=None):
     """the layouts build_module.py measured out for this slide: [(shape, ground), ...] while its words and picture are
-    unchanged"""
+    unchanged (2.66.7: fit_key - an edit of its own composition keeps them)"""
     a = (avoid or {}).get(s.get("id")) or {}
-    return [tuple(k) for k in a.get("avoid") or []] if a.get("words") == words_key(s, b) else []
+    return [tuple(k) for k in a.get("avoid") or []] if a.get("words") == fit_key(s, b) else []
 
 
 def last_layout(last, s, b=None):
@@ -2380,7 +2407,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     if tid == "opening" and variant == "photo":            # the opening's photograph is the screen, the title over it
         comp = "photo"
     # L62 (owner, 2026-10-21) - never the same look on two slides in a row: built another way when it would repeat
-    varied, wkey = None, words_key(s, b)
+    varied, wkey = None, fit_key(s, b)                   # 2.66.7: the key build_module.py measures a way out by
     if recent is not None and kind == "slide" and not s.get("recap"):
         # a photograph, or a figure-kit drawing (made for the dark panel), may move to the dark ground; a drawing or a
         # widget made for a white page keeps the light one - its own controls would vanish (gas M01 s07, s15, s19, s26)
@@ -2763,6 +2790,11 @@ STARTER_MAX_PARTS = 9
 # words that say gas is let out now (kit_meaning.py SAID_WORDS, short): a starter step on such a line plays the vent
 VENTS_NOW = re.compile(r"\bvents\b(?! mast| line| pipe| outlet)|\bvented\b|\bventing\b|\bgas (?:leaves|escapes|goes up)\b|"
                        r"\breleas(?:e|es|ed|ing) (?:the )?(?:gas|vapou?r)")
+# 2.66.7 - a line that says its valve closes (its pump or engine stops): the starter's part starts open (running) and the step
+# takes it to 0 - lit to 1 it OPENED a valve whose line says it closes (kit_meaning.py WAY; the words are its CLOSE_W / STOP_W)
+GOES_OFF = {"valve": re.compile(r"\bclos(?:e|es|ed|ing)\b(?!\s+(?:to|by)\b)|\bshut(?:s|ting)?\b(?!\s+down)|\bisolat\w*"),
+            "pump": re.compile(r"\bstop(?:s|ped|ping)?\b|\btrip(?:s|ped)?\b|\bshut(?:s|ting)?\s+down\b|\bshutdown\b")}
+GOES_OFF["engine"] = GOES_OFF["pump"]
 
 
 def kit_hit(text, last=False):
@@ -3054,6 +3086,8 @@ def starter_figure(script, s, pool=None, taken=None):
                 continue
             index[key] = len(items)
             start, to = (0, 1) if kind == "text" else STARTER_PART[kind][3:5]
+            if kind in GOES_OFF and GOES_OFF[kind].search(line.lower()):
+                start, to = to, start
             items.append({"kind": kind, "label": label, "start": start, "to": to})
         steps.append((i, index[key], flipped))
     if not steps:
@@ -3358,7 +3392,7 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
         if hit and item[3] not in taken:
             taken[item[3]] = hit
     for n, s in enumerate(screens, 1):
-        b = (build.get("screens") or {}).get(s["id"]) or {}
+        b = settled(avoid, s, (build.get("screens") or {}).get(s["id"]) or {})     # 2.66.7: the layout solver's settle
         recent =[layout_key(x) for x in slides[-VARIETY_WINDOW:]]   # L62: the look of the slides just before this one
         slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, build, recent, avoid,
                                  last))

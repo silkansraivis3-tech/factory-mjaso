@@ -1,0 +1,18 @@
+{
+  "_fixture": "2.66.5 timed run, M03 s07 (C:\\rvt\\s2665 final spec) with the fault its first figure review called BROKEN put back: \"The tank drawing is frozen at about 20% liquid in every step, while the gauge shows 60, 90 and 95%\"",
+  "size": [540, 330],
+  "label": "An LNG tank filled through its filling line during bunkering: the tank level readout rises to the loading limit, stays below the 98 % filling limit, and the high-level alarm and the overfill sensor in the top of the tank stop the filling by closing the filling valve.",
+  "idle": "Press Next step",
+  "parts": [
+    {"id": "T", "type": "tank", "x": 20, "y": 100, "w": 290, "h": 190, "label": "LNG tank", "value": 0.2},
+    {"id": "PL", "type": "pipe", "fluid": "liquid", "from": [14, 52], "to": "T.top@0.14", "route": "hv", "value": 1},
+    {"id": "FV", "type": "valve", "at": "PL@0.35", "size": 12, "actuator": true, "trip": false, "value": 1, "label": "filling valve", "labelAt": "above"},
+    {"id": "OS", "type": "detector", "x": 262, "y": 132, "r": 18, "tag": "LS", "label": "overfill sensor", "unit": "%", "value": 20, "marks": [{"at": 94, "kind": "alarm"}]},
+    {"id": "P3", "type": "level", "x": 410, "y": 30, "w": 110, "h": 280, "min": 0, "max": 100, "label": "tank level", "unit": "%", "value": 20, "marks": [{"at": 90, "label": "loading limit", "kind": "limit"}, {"at": 98, "label": "filling limit", "kind": "limit"}, {"at": 95, "kind": "alarm", "alarm": "HIGH LEVEL ALARM - filling stops", "stop": true, "then": [["FV", 0, 700]]}]}
+  ],
+  "steps": [
+    {"title": "1 · Filling limit - at most 98 % of the tank volume", "line": 2, "play": [["P3", 60, 1800], ["OS", 60, 1800]]},
+    {"title": "2 · Loading limit - lower for today's cold LNG", "line": 3, "play": [["P3", 90, 1500], ["OS", 90, 1500]]},
+    {"title": "3 · The high-level alarm and the overfill sensor stop the filling", "line": 4, "play": [["P3", 96, 1200], ["OS", 95, 1200]]}
+  ]
+}

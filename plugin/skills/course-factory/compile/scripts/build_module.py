@@ -364,16 +364,380 @@ def varied_slides(deck_html):
     return out
 
 
-def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None):
+def browser_audit():
+    """audit(deck path, size, [slide index]) -> (result, error): run_audits.measure at its own budget, the window's frame
+    measured once - None when there is no Chrome or Edge"""
+    if MEASURE not in sys.path:
+        sys.path.insert(0, MEASURE)
+    import run_audits as ra
+    from pathlib import Path
+    exe, offset = ra.browser(), []
+    if not exe:
+        return None
+
+    def audit(deck, size, only):
+        if not offset:
+            offset.append(ra.frame_offset(exe))
+        return ra.measure(exe, Path(deck), size, 240000, offset[0], only)     # run_audits.py's own budget
+    return audit
+
+
+def audit_in_memory(deck_html, mdir, sizes, only, audit):
+    """the deck as laid out in memory, written beside the real one (its relative paths) for the audit and removed
+    again: -> [(size, result, error)], every size at once"""
+    import concurrent.futures as cf
+    page = os.path.join(mdir, "presentation", "_layout_precheck_%d.html" % os.getpid())
+    io.open(page, "w", encoding="utf-8", newline="\n").write(deck_html)
+    try:
+        with cf.ThreadPoolExecutor(max_workers=len(sizes)) as ex:
+            return list(ex.map(lambda s: (s,) + tuple(audit(page, s, sorted(only))), sizes))
+    finally:
+        try:
+            os.remove(page)
+        except OSError:
+            pass
+
+
+def slide_order(deck_html):
+    """[(slide index from 0, sid, its section)] - every slide of the deck, in order"""
+    out = []
+    for mt in re.finditer(r"<section [^>]*>.*?</section>", deck_html, re.S):
+        tag = re.match(r"<section [^>]*>", mt.group(0)).group(0)
+        if re.search(r'\bclass="[^"]*\bslide\b', tag):
+            sid = re.search(r'\bdata-script="(\w+)"', tag)
+            out.append((len(out), sid.group(1) if sid else "", mt.group(0)))
+    return out
+
+
+def l62_pairs(deck_html):
+    """[(the slide before, the slide)] - two slides in a row that look the same (L62), as compile_deck reports them"""
+    import compile_module as cm
+    secs = slide_order(deck_html)
+    return [(a_, b_) for (_, a_, x), (_, b_, y) in zip(secs, secs[1:])
+            if cm.layout_key(x) == cm.layout_key(y) and cm.layout_key(y)[0] not in ("task-launch", "recap", "")]
+
+
+FIT_WORDS = re.compile(r"\b(scrolls|spills|over-filled)\b")
+
+
+def slide_audit(got, deck_html):
+    """{sid: {"fit": [what], "other": [what]}} of the slides an audit measured: fit = its words scroll, spill or over-fill
+    the slide (at any size), other = every other finding on it. got = [(size, result, error)]"""
+    if MEASURE not in sys.path:
+        sys.path.insert(0, MEASURE)
+    import run_audits as ra
+    ids = {k: sid for k, sid, _ in slide_order(deck_html)}
+    out = {}
+    for size, res, _ in got:
+        tag = "%dx%d" % tuple(size)
+        for name, _, _ in ra.PROBES:
+            for x in ra.summarise(name, (res or {}).get(name) or {"ABORTED": "no result"})[2]:
+                f = re.match(r"^slide (\d+) \((\w+)\): (.*)$", x) or re.match(r"^screen (\d+)() (.*)$", x)
+                sid = f and (f.group(2) or ids.get(int(f.group(1)) - 1))
+                if sid:
+                    out.setdefault(sid, {"fit": [], "other": []})["fit" if FIT_WORDS.search(f.group(3)) else "other"].append(
+                        "%s %s" % (tag, f.group(3)))
+        for o in (((res or {}).get("deck") or {}).get("res") or {}).get("overfilledSlides") or []:
+            sid = ids.get(int(o.get("slide") or 0) - 1)
+            if sid:
+                out.setdefault(sid, {"fit": [], "other": []})["fit"].append("%s over-filled %s %%" % (tag, o.get("fillPct")))
+    return out
+
+
+def fit_misses(deck_html, audit_out):
+    """the slides whose words the build's audits found scrolling, spilling or over-filling (run_audits.py's answer) - the
+    next build's pre-check measures them first and the layout solver settles them (2.66.7)"""
+    ids = {k: sid for k, sid, _ in slide_order(deck_html)}
+    out = set(re.findall(r"slide \d+ \((\w+)\): (?:scrolls|spills)\b", audit_out))
+    for line in re.findall(r"over-filled: (.*)", audit_out):
+        out |= {ids.get(int(n) - 1) for n in re.findall(r"(\d+) \(\d+ %\)", line)}
+    return sorted(x for x in out if x)
+
+
+# 2.66.7 - THE LAYOUT SOLVER. WHY (Desktop\IGF_course_2.66_figures\NEXT_ROUND.md, the 2.66.5 timed run): of its 53 builds
+# 24 failed on a slide whose words scroll or over-fill (M02 s05 in all 20 of M02's) and 29 on an L62 repeat (M03 s10 like
+# s09 in 12 running) - the builders searched layouts by hand, a full build (60-180 s) a try. The pre-check now settles
+# them before the figures, each try the deck laid out in memory and only the slides it changes audited, at both sizes,
+# by run_audits' own probes (a few seconds):
+#   words that do not fit - the words' column at the owner's 60 % ("split"), the words in parts (content-in-parts; one
+#     part more when they are in parts already), both, then the slide's other ways (L62's, its own measured out);
+#   an L62 repeat - the slide BEFORE it built its next way (the repeat's own ways did not fit).
+# A try is taken only when the slides it changed fit, no slide looks like its neighbour that did not before and the
+# compile finds nothing new. What settles is kept in MNN_layout_avoid.json ("set", beside the ways measured out) while
+# the slide's words, picture and sheet are the same (compile_module.fit_key); the build sheet stays the builder's. A try
+# that failed is not tried again for those words ("tried"). CF_LAYOUT_PRECHECK=off: not run.
+SOLVE_TRIES = 6         # tries a build (each: the deck laid out in memory, ~1-2 s, and one audit at both sizes, ~8-10 s)
+
+
+def worse(new, old):
+    """a try leaves a slide worse than it was: more findings on it, or its drawing's words smaller (the replay of the 2.66.5
+    run's M02: a words' column at 60 % settled s04's L62 and took its drawing words from 12 to 10.4 px)"""
+    n, o = (new or {}).get("other") or [], (old or {}).get("other") or []
+    px = lambda xs: min([float(v) for x in xs if "too small" in x for v in re.findall(r"(\d+(?:\.\d+)?) px", x)] or [99.0])
+    return len(n) > len(o) or px(n) < px(o) - 0.3
+
+
+def parts_in(lines, k):
+    """[[lo, hi], ...] - the lines in k parts of about the same words, in order (compile_module.auto_parts' way)"""
+    import content_script as cs
+    target = sum(cs.wc(x) for x in lines) / float(k)
+    parts, cur, acc = [], [], 0
+    for i, x in enumerate(lines, 1):
+        w = cs.wc(x)
+        if cur and acc + w / 2.0 > target and len(parts) < k - 1:
+            parts.append(cur)
+            cur, acc = [], 0
+        cur.append(i)
+        acc += w
+    parts.append(cur)
+    return [[p[0], p[-1]] for p in parts]
+
+
+def fit_tries(s, b, have, sec):
+    """the solver's tries for a slide whose words do not fit: [(what it is, the record's "set")], least change first -
+    each changes what is beside the words, never the words. have: what is settled already ("set")"""
+    import compile_module as cm
+    import content_script as cs
+    if not re.search(r'<div class="slide-body two-col', sec):       # words beside a picture: the only kind with a column
+        return []
+    now, lines = dict(b, **have), cs.lines_of(s.get("text"))
+    try:
+        split = float(now["split"]) if now.get("split") is not None else cm.LAYOUTS["split"]["default"]
+    except (TypeError, ValueError):
+        split = cm.LAYOUTS["split"]["default"]
+    wider = {"split": cm.SPLIT_HI} if split < cm.SPLIT_HI else {}
+    paged, said = {}, ""
+    if len(lines) >= 2:
+        if 'data-template="content-in-parts.' in sec:
+            n = int((re.search(r'data-parts="(\d+)"', sec) or re.search(r"()", "")).group(1) or 0)
+            more = parts_in(lines, n + 1) if n else []
+            if len(more) > n:
+                paged, said = {"parts": more}, "its words in %d parts (\"parts\": %s)" % (len(more), json.dumps(more))
+        else:
+            paged, said = {"template": "content-in-parts"}, "its words in parts (\"template\": \"content-in-parts\")"
+    w = "the words' column at %d %% (\"split\": %g)" % (round(100 * cm.SPLIT_HI), cm.SPLIT_HI)
+    out = [(w, dict(have, **wider))] if wider else []
+    out += [(said, dict(have, **paged))] if paged else []
+    out += [(said + " and " + w, dict(have, **dict(paged, **wider)))] if wider and paged else []
+    return out
+
+
+def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, pairs=None, tries=SOLVE_TRIES, known=None):
+    """-> (avoid as it settled, [log lines], {sid: how it settled}, {sid: section_sha} of the slides a taken try measured
+    with no finding at all - checked fitting as they are now). fit: the slides whose words do not fit as the pre-check
+    measured them, {sid: their other findings}; the L62 repeats are found in the deck laid out (pairs: only these).
+    Nothing is written here"""
+    import copy
+    import compile_module as cm
+    screens = {s["id"]: s for s in script.get("screens") or []}
+    av = copy.deepcopy(avoid or {})
+    laid = {}
+
+    def lay(a):
+        """the deck laid out with the record a - once for each record (a compile is 1-2 s, 7 s cold)"""
+        k = json.dumps(a, sort_keys=True)
+        if k not in laid:
+            laid[k] = cm.compile_deck(script, build, mdir, figdir, "CACHE", True, a, last, {})
+        return laid[k]
+    deck, probs, _ = lay(av)
+    other = lambda pr: len([x for x in pr if "looks exactly like the slide before it" not in x])
+    lines, done, budget, fits = [], {}, [tries], {}
+    base = {sid: {"other": v} for sid, v in fit.items()}        # each slide's findings before the solver (2.66.7: worse())
+    base.update({sid: f for sid, f in (known or {}).items() if sid not in base})
+
+    def taken(r, targets):
+        """a try taken: the slides it measured with nothing found are checked fitting as they are now"""
+        for i in set(targets) | r[3]:
+            if i not in r[2]:
+                fits[i] = section_sha(r[0], i)
+            else:
+                fits.pop(i, None)
+
+    def rec(a_, sid):
+        """the slide's record in a_, a fresh one when its words, picture or sheet changed since"""
+        s = screens[sid]
+        k = cm.fit_key(s, (build.get("screens") or {}).get(sid) or {})
+        if (a_.get(sid) or {}).get("words") != k:
+            a_[sid] = {"words": k, "avoid": []}
+        return a_[sid]
+
+    def sec_of(d, sid):
+        return next((x for _, i, x in slide_order(d) if i == sid), "")
+
+    def screen(av2, gone=()):
+        """a try laid out, not audited: ((deck, probs, changed slides), "") - or (None, why it is not worth an audit: it
+        changes nothing, a slide then looks like its neighbour, the compile finds something new). An audit is ~8-10 s, a
+        lay-out 1-2 s: the replay of the 2.66.5 run's M02 spent 4 of 8 audits on tries the layout alone ruled out"""
+        deck2, probs2, _ = lay(av2)
+        cur = {i: x for _, i, x in slide_order(deck)}
+        changed = {i for _, i, x in slide_order(deck2) if cur.get(i) != x}
+        if not changed:
+            return None, "it changes nothing"
+        new = set(l62_pairs(deck2)) - (set(l62_pairs(deck)) - set(gone))
+        if new:
+            return None, "then %s looks like the slide before it (L62)" % ", ".join(b_ for _, b_ in sorted(new))
+        if set(gone) & set(l62_pairs(deck2)):
+            return None, "still alike"
+        if other(probs2) > other(probs):
+            return None, "the compile finds something new: %s" % next(x for x in probs2 if x not in probs)[:120]
+        return (deck2, probs2, changed), ""
+
+    def measure(pre, targets):
+        """the targets and every slide the try changed, audited at every size -> {sid: findings}, None when not measured"""
+        budget[0] -= 1
+        got = audit_in_memory(pre[0], mdir, sizes, [k for k, i, _ in slide_order(pre[0]) if i in set(targets) | pre[2]], audit)
+        return slide_audit(got, pre[0]) if all(res is not None for _, res, _ in got) else None
+
+    def judge(pre, f, targets):
+        """'' when the try is good, else why not: words that still do not fit, or a slide left worse than it was (its
+        findings before measured once, only when the try found something on it)"""
+        look = set(targets) | pre[2]
+        bad = sorted(i for i in look if (f.get(i) or {}).get("fit"))
+        if bad:
+            return "the words still do not fit on %s (%s)" % (", ".join(bad), (f.get(bad[0]) or {}).get("fit", [""])[0])
+        unseen = sorted(i for i in look if f.get(i) and i not in base and i in screens)
+        if unseen and budget[0] > 0:
+            budget[0] -= 1
+            got = audit_in_memory(deck, mdir, sizes, [k for k, i, _ in slide_order(deck) if i in unseen], audit)
+            if all(res is not None for _, res, _ in got):
+                f0 = slide_audit(got, deck)
+                base.update({i: f0.get(i) or {} for i in unseen})
+        hurt = sorted(i for i in look if f.get(i) and (i not in base or worse(f.get(i), base[i])))
+        if hurt:
+            return "it leaves %s worse (%s)" % (", ".join(hurt), ((f.get(hurt[0]) or {}).get("other") or ["more findings"])[-1][:90])
+        return ""
+
+    def ways(t, n=2):
+        """[(what, record)] - the slide's next way, then the one after it (its current ways measured out, one by one)"""
+        out, a_ = [], copy.deepcopy(av)
+        for _ in range(n):
+            key = list(cm.layout_key(sec_of(lay(a_)[0], t)))
+            r_ = rec(a_, t)
+            if key in r_["avoid"]:
+                break
+            a_ = copy.deepcopy(a_)
+            rec(a_, t)["avoid"].append(key)
+            out.append(("its way %s measured out" % "/".join(rec(a_, t)["avoid"][-1]), a_))
+        return out
+
+    def with_set(t, st):
+        """the record with this settle for t - and the ways measured out beside the old column forgotten (they may fit
+        beside this one)"""
+        a_ = copy.deepcopy(av)
+        r_ = rec(a_, t)
+        r_["set"], r_["avoid"] = st, []
+        return a_
+
+    # 1 - words that do not fit: a wider column, parts, both - then the slide's other ways
+    for sid in [x for x in fit if x in screens]:
+        s = screens[sid]
+        a0 = rec(copy.deepcopy(av), sid)
+        tried = set(a0.get("tried") or [])
+        plan = [(w, with_set(sid, st), True) for w, st in fit_tries(s, (build.get("screens") or {}).get(sid) or {},
+                                                                  a0.get("set") or {}, sec_of(deck, sid)) if w not in tried]
+        if s.get("kind") == "slide" and not s.get("recap"):
+            plan += [(w, a_, False) for w, a_ in ways(sid)]
+        why = ""
+        for what, av2, is_set in plan:
+            if budget[0] <= 0:
+                lines.append("%s: no tries left in this build (%d) - the next build goes on" % (sid, tries))
+                break
+            pre, why = screen(av2)
+            if pre is None:
+                lines.append("tried %s on %s (laid out, not audited): %s" % (what, sid, why))
+                continue
+            f = measure(pre, [sid])
+            if f is None:
+                lines.append("%s: not measured - the audit at the end judges every slide" % sid)
+                return av, lines, done, fits
+            why = judge(pre, f, [sid])
+            if not why:
+                if rec(av, sid).get("tried"):              # the tries that failed before this one stay tried
+                    rec(av2, sid)["tried"] = list(rec(av, sid)["tried"])
+                av, deck, probs = av2, pre[0], pre[1]
+                taken((pre[0], None, f, pre[2]), [sid])
+                done[sid] = what
+                lines.append("settled: %s - its words did not fit; %s" % (sid, what))
+                break
+            lines.append("tried %s on %s: %s" % (what, sid, why))
+            if is_set:
+                rec(av, sid).setdefault("tried", []).append(what)
+        else:
+            if sid not in done and plan:
+                lines.append("%s: no way found that fits (%s) - fewer words in a part, or a smaller picture beside them"
+                             % (sid, why or "every try made before"))
+            elif not plan and s.get("kind") == "activity" and not ((build.get("screens") or {}).get(sid) or {}).get("figure") \
+                    and (s.get("visual_kind") or "none") != "none":
+                # the 2.66.5 run's M02 s05: 20 builds over-filled - a room activity whose script plans a picture
+                # (flow_animation) was built with none (--init-build writes no figure for an activity), as a task slide
+                # with all its lines; no composition, split or parts changes that layout
+                lines.append("%s: no way found that fits - it is a room activity built with no picture, so its %d lines "
+                             "stand on the task slide; its script plans one (%s): give it its \"figure\" in the build sheet "
+                             "(a kit spec) and it is laid out beside it, its words in parts" % (
+                                 sid, len(cm.cs.lines_of(s.get("text"))), s.get("visual_kind")))
+    # 2 - an L62 repeat: the slide before it built its next way; then (the 2.66.5 run's M02 s04 / s05: s04's other side did
+    # not fit, s05 an activity that never varies) a wider words' column or parts on either, so a side measured out beside
+    # the old column may be built again
+    # every try laid out first and the ones the layout already rules out dropped (no audit); then the slide with a side
+    # measured out and the slide before it built its next way, fewest slides changed first; then the rest
+    for prev, sid in [x for x in l62_pairs(deck) if pairs is None or x in pairs]:
+        if (prev, sid) not in l62_pairs(deck):
+            continue
+        cands = []
+        for t in (prev, sid):
+            st_ = screens.get(t) or {}
+            if st_.get("kind") == "slide" and not st_.get("recap"):
+                have = rec(copy.deepcopy(av), t)
+                cands += [(bool(have.get("avoid")), "%s: %s" % (t, w), with_set(t, st), t)
+                          for w, st in fit_tries(st_, (build.get("screens") or {}).get(t) or {}, have.get("set") or {}, sec_of(deck, t))]
+        sp = screens.get(prev) or {}
+        if sp.get("kind") == "slide" and not sp.get("recap"):
+            cands += [(True, "%s, the slide before it: %s" % (prev, w), a_, prev) for w, a_ in ways(prev)]
+        ready = []
+        for first, what, av2, t in cands:
+            pre, why = screen(av2, [(prev, sid)])
+            if pre is None:
+                lines.append("tried %s for %s's L62 (laid out, not audited): %s" % (what, sid, why))
+            else:
+                ready.append((not first, len(pre[2]), what, av2, t, pre))
+        for _, _, what, av2, t, pre in sorted(ready, key=lambda x: x[:2]):
+            if budget[0] <= 0:
+                break
+            f = measure(pre, [prev, sid])
+            if f is None:
+                return av, lines, done, fits
+            why = judge(pre, f, [prev, sid])
+            if not why:
+                av, deck, probs = av2, pre[0], pre[1]
+                taken((pre[0], None, f, pre[2]), [prev, sid])
+                done[sid] = "%s (now %s)" % (what, "/".join(cm.layout_key(sec_of(deck, t))))
+                lines.append("settled: %s looked like %s (L62) - %s" % (sid, prev, done[sid]))
+                break
+            lines.append("tried %s for %s's L62: %s" % (what, sid, why))
+    return av, lines, done, fits
+
+
+def last_misses(logdir, m):
+    """the slides whose words the last build's audits found not fitting (MNN_fit_misses.json) - "all" when no build has
+    measured them yet (2.66.7: the first build's pre-check measures every slide, the layout solver settles them before the
+    figures are fitted to their columns)"""
+    try:
+        return set(json.load(io.open(os.path.join(logdir, "%s_fit_misses.json" % m), encoding="utf-8")))
+    except (OSError, ValueError):
+        return "all"
+
+
+def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None, extra=None):
     """-> ([log lines], {sid: (shape, ground)} measured out). audit(deck path, size, [slide index]) -> (result, error):
-    run_audits.measure by default (the test passes its own)"""
+    run_audits.measure by default (the test passes its own). extra (2.66.7): slides to audit in the first round besides
+    the ones built another way - the last build's misfits, or "all" (no build measured them yet); then the layout solver
+    settles what does not fit and every L62 repeat (solve_layouts) - "settled: ..." lines"""
     import workspace
     import content_script as cs
     import compile_module as cm
     if MEASURE not in sys.path:
         sys.path.insert(0, MEASURE)
     import run_audits as ra
-    from pathlib import Path
     mid_ = cs.mid(module)
     work = workspace.claude_path(course)
     p = cs.paths(course, module)
@@ -385,58 +749,150 @@ def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None):
         fitted = json.load(io.open(fit_path, encoding="utf-8"))
     except (OSError, ValueError):
         fitted = {}
-    lines, out, seen = [], {}, set()
+    lines, out, seen, nofit, known = [], {}, set(), {}, {}
     if audit is None:
-        exe, offset = ra.browser(), []
-        if not exe:
+        audit = browser_audit()
+        if audit is None:
             return ["no Chrome or Edge - not checked (the audit at the end judges every slide)"], {}
-
-        def audit(deck, size, only):
-            if not offset:
-                offset.append(ra.frame_offset(exe))
-            return ra.measure(exe, Path(deck), size, 240000, offset[0], only)     # run_audits.py's own budget
     for rnd in range(LAYOUT_ROUNDS + 1):
         deck, _, _ = cm.compile_deck(script, build, mdir, figdir, "CACHE", True, cm.load_layout_avoid(work, mid_), last, {})
         todo = varied_new(deck, fitted, seen)
+        if rnd == 0 and extra:
+            todo.update({sid: k for k, sid, _ in slide_order(deck) if sid and (extra == "all" or sid in extra)})
         if not todo:
             break
-        page = os.path.join(mdir, "presentation", "_layout_precheck_%d.html" % os.getpid())
-        io.open(page, "w", encoding="utf-8", newline="\n").write(deck)
-        try:
-            import concurrent.futures as cf
-            with cf.ThreadPoolExecutor(max_workers=len(sizes)) as ex:
-                got = list(ex.map(lambda s: audit(page, s, sorted(todo.values())), sizes))
-        finally:
-            try:
-                os.remove(page)
-            except OSError:
-                pass
+        got = audit_in_memory(deck, mdir, sizes, todo.values(), audit)
         text = []
-        for res, err in got:
+        for _, res, err in got:
             if res is None:
                 lines.append("not measured (%s) - the audit at the end judges every slide" % err)
                 return lines, out
             for name, _, _ in ra.PROBES:
                 text += ra.summarise(name, res.get(name) or {"ABORTED": "no result"})[2]
         mis = {k: v for k, v in moved_misfits(deck, "\n".join(text)).items() if k in todo}
+        found = slide_audit(got, deck)
+        known.update({sid: found.get(sid) or {} for sid in todo})
         seen |= {(sid, shape, ground) for _, (sid, shape, ground, _) in varied_slides(deck) if sid in todo}
+        own_bad = []
         for sid in todo:                           # what fits as it is now is not checked again until it changes
-            if sid in mis:
+            f = found.get(sid) or {}
+            # 2.66.7 - a slide whose words do not fit, as measured: {sid: (its markup then, its other findings)}
+            nofit[sid] = (section_sha(deck, sid), f.get("other") or []) if f.get("fit") else None
+            if sid in mis or nofit[sid] is not None:
                 fitted.pop(sid, None)
+                own_bad += [sid] if sid not in mis and nofit[sid] is not None else []
             else:
                 fitted[sid] = section_sha(deck, sid)
         try:
             io.open(fit_path, "w", encoding="utf-8", newline="\n").write(json.dumps(fitted, indent=1, sort_keys=True))
         except OSError:
             pass
-        lines.append("round %d: %d slide(s) built another way checked (%s)%s" % (
-            rnd + 1, len(todo), ", ".join(sorted(todo)), "; did not fit: " + ", ".join(
-                "%s (%s, %s ground)" % (k, v[0], v[1]) for k, v in sorted(mis.items())) if mis else " - every one fits"))
+        said = ["%s (%s, %s ground)" % (k, v[0], v[1]) for k, v in sorted(mis.items())] + ["%s (its words)" % k for k in sorted(own_bad)]
+        lines.append("round %d: %d slide(s) %s checked (%s)%s" % (
+            rnd + 1, len(todo), "built another way or not fitting last time" if rnd == 0 and extra else "built another way",
+            ", ".join(sorted(todo)), "; did not fit: " + ", ".join(said) if said else " - every one fits"))
         if not mis:
             break
         measure_out(os.path.join(logdir, "%s_layout_avoid.json" % m), mis)
         out.update({k: v[:2] for k, v in mis.items()})
+    # 2.66.7 - what still does not fit as it is laid out now, and every L62 repeat, to the layout solver
+    avoid = cm.load_layout_avoid(work, mid_)
+    deck, _, _ = cm.compile_deck(script, build, mdir, figdir, "CACHE", True, avoid, last, {})
+    bad = {sid: v[1] for sid, v in nofit.items() if v is not None and v[0] == section_sha(deck, sid)}
+    moved = {sid: k for k, sid, _ in slide_order(deck) if nofit.get(sid) is not None and sid not in bad}
+    if moved:                                # did not fit, and built another way since: measured once more as it is now
+        got = audit_in_memory(deck, mdir, sizes, moved.values(), audit)
+        if all(res is not None for _, res, _ in got):
+            found = slide_audit(got, deck)
+            known.update({sid: found.get(sid) or {} for sid in moved})
+            for sid in moved:
+                f = found.get(sid) or {}
+                if f.get("fit"):
+                    bad[sid] = f.get("other") or []
+                elif not f:
+                    fitted[sid] = section_sha(deck, sid)
+            lines.append("measured again as now built: %s%s" % (", ".join(sorted(moved)), "; did not fit: " + ", ".join(
+                sorted(x for x in moved if x in bad)) if set(moved) & set(bad) else " - every one fits"))
+    if bad or l62_pairs(deck):
+        t = time.time()
+        av, said, done, fits = solve_layouts(script, build, mdir, figdir, avoid, last,
+                                             {sid: bad[sid] for _, sid, _ in slide_order(deck) if sid in bad}, audit, sizes,
+                                             known=known)
+        lines += said
+        fitted.update(fits)
+        if av != avoid:
+            try:
+                io.open(os.path.join(logdir, "%s_layout_avoid.json" % m), "w", encoding="utf-8", newline="\n").write(
+                    json.dumps(av, indent=1, sort_keys=True))
+            except OSError:
+                pass
+        lines.append("the layout solver: %d settled, %.0f s" % (len(done), time.time() - t))
+    if moved or bad:
+        try:
+            io.open(fit_path, "w", encoding="utf-8", newline="\n").write(json.dumps(fitted, indent=1, sort_keys=True))
+        except OSError:
+            pass
     return lines, out
+
+
+def check_slides(course, module, sids, sizes, audit=None):
+    """--slides s05,s10 (2.66.7): the deck laid out in memory as the next build lays it out (the layouts measured out and
+    settled), those slides audited at both sizes, their neighbours compared (L62), the compile's lines on them, and - when
+    one does not fit or repeats - what the layout solver would settle. Nothing is written: seconds, not a build.
+    WHY (NEXT_ROUND.md): most of the 2.66.5 run's 53 builds were a layout tried by hand; a build is 60-180 s and the agent
+    then reads its whole answer. -> (exit code: 0 clean, 1 not, 2 not measured; [lines])"""
+    import workspace
+    import content_script as cs
+    import compile_module as cm
+    mid_ = cs.mid(module)
+    work = workspace.claude_path(course)
+    p = cs.paths(course, module)
+    script, build = cs.load(p["script"]), cs.load(os.path.join(p["dir"], mid_ + ".build.json"))
+    mdir, _ = cm.module_folder(course, module)
+    figdir = os.path.join(os.path.dirname(p["dir"]), "figures", mid_)
+    avoid, last = cm.load_layout_avoid(work, mid_), cm.load_layouts(work, mid_)
+    t0 = time.time()
+    deck, probs, _ = cm.compile_deck(script, build, mdir, figdir, "CACHE", True, avoid, last, {})
+    order = slide_order(deck)
+    idx = {sid: k for k, sid, _ in order}
+    lines = ["  %s: not a slide of the deck (its slides: %s)" % (x, ", ".join(i for _, i, _ in order if i)) for x in sids if x not in idx]
+    want = [x for x in sids if x in idx]
+    if not want:
+        return 1, lines
+    if audit is None:
+        audit = browser_audit()
+        if audit is None:
+            return 2, lines + ["  no Chrome or Edge - nothing measured"]
+    got = audit_in_memory(deck, mdir, sizes, [idx[x] for x in want], audit)
+    if any(res is None for _, res, _ in got):
+        return 2, lines + ["  not measured: %s" % next(err for _, res, err in got if res is None)]
+    found, pairs = slide_audit(got, deck), l62_pairs(deck)
+    secs = {sid: x for _, sid, x in order}
+    bad, fit = False, {}
+    for sid in want:
+        t = re.search(r'\bdata-template="([\w-]+)\.v\d+"', secs[sid])
+        v = re.search(r'\bdata-variant="([\w-]+)"', secs[sid])
+        key = cm.layout_key(secs[sid])
+        f = found.get(sid) or {}
+        mine = [x for x in probs if "(%s)" % sid in x]
+        alike = ["looks like the slide before it, %s (L62)" % a_ for a_, b_ in pairs if b_ == sid] + \
+                ["the slide after it, %s, looks like it (L62)" % b_ for a_, b_ in pairs if a_ == sid]
+        lines.append("  %s - %s / %s, %s %s: %s" % (sid, t.group(1) if t else "?", v.group(1) if v else "?", key[0], key[1],
+                                                    "fits at %s" % " and ".join("%dx%d" % s for s in sizes)
+                                                    if not f.get("fit") else "DOES NOT FIT - " + "; ".join(f["fit"][:3])))
+        lines += ["    " + x for x in alike + (f.get("other") or [])[:6] + ["compile: " + x[:200] for x in mine[:4]]]
+        bad = bad or bool(f.get("fit") or alike or mine or f.get("other"))
+        if f.get("fit"):
+            fit[sid] = f.get("other") or []
+    mypairs = [x for x in pairs if set(x) & set(want)]
+    if fit or mypairs:
+        _, said, done, _ = solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, pairs=mypairs)
+        lines += ["  the next build's pre-check: " + x for x in said if x.startswith("settled: ") or "no way found" in x]
+        if not done:
+            lines.append("  the next build's pre-check settles none of it by itself - change the build sheet (fewer words in a "
+                         "part, \"parts\", a smaller picture) and check again")
+    lines.append("  (%.0f s; nothing written)" % (time.time() - t0))
+    return (1 if bad else 0), lines
 
 
 def reviewed_dir(out_dir):
@@ -548,6 +1004,61 @@ def short_figures(lines, figrel):
     return out
 
 
+# ------------------------------------------------------------------ 2.66.7: the stop rule
+# WHY (the 2.66.5 timed run, Desktop\IGF_course_2.66_figures\NEXT_ROUND.md): of its 53 builds only 2 passed - M02 and M03
+# made 20 builds each re-failing the same few lines (M02 s05 over-filled in all 20, M03 s10 L62 in 12 running), and their
+# retry agents (21 / 27 min) ended without PASS on findings the judges and the fix round got anyway. The build itself now
+# counts how many builds running printed each finding, and says when the builder's edits have not moved one
+STREAK = 3              # the same finding this many builds running: never built for again, listed in the report
+STREAK_SKIP = re.compile(r"fixed by itself|waived by \"meaning_ok\"|^  \(a drawing problem|^  \d+x\d+\s+\w+\s+(FAIL|REVIEW)\b")
+
+
+def finding_keys(say):
+    """the answer's findings as keys that stay the same while the finding does: each top-level line (a figure: one per kind
+    of problem), without its numbers (px, seconds, counts and sizes move as the builder edits)"""
+    keys = []
+    for x in say:
+        if not re.match(r"^  \S", x) or STREAK_SKIP.search(x):
+            continue
+        f = re.match(r"^  FIGURE (\S+) - .*?\): (.*?)(?: \(unchanged since.*)?$", x)
+        if f:
+            keys += ["FIGURE %s: %s" % (f.group(1), re.sub(r" x\d+$", "", k.strip())) for k in f.group(2).split(", ")]
+            continue
+        k = re.sub(r"\s\(?x\d+\)?|\s*\([\d.\- ]+px\)", "", x.strip())
+        k = re.sub(r"(?<![A-Za-z\d])\d+(?:\.\d+)?|(?<=\dx)\d+", "#", k)          # never a slide id's (s05)
+        keys.append(" ".join(k.split()))
+    return list(dict.fromkeys(keys))
+
+
+def streak(path, keys):
+    """-> {finding: builds running} after this build. A finding counts on while every build prints it, and starts again
+    when one does not; a clean build ([] keys) starts every count again"""
+    try:
+        old = json.load(io.open(path, encoding="utf-8"))
+    except (OSError, ValueError):
+        old = {}
+    new = {k: int(old.get(k) or 0) + 1 for k in keys}
+    try:
+        io.open(path, "w", encoding="utf-8", newline="\n").write(json.dumps(new, indent=1, sort_keys=True))
+    except OSError:
+        pass
+    return new
+
+
+def stop_lines(counts, m):
+    """the lines the builder stops by (BUILDER_CARD "Stop"): the findings STREAK builds running, and STOP when they are all
+    that is left"""
+    stuck = [k for k, n in counts.items() if n >= STREAK]
+    if not stuck:
+        return []
+    out = ["SAME FINDING %d BUILDS RUNNING (BUILDER_CARD \"Stop\") - your changes have not moved it: never build for it again, "
+           "list it in your report: %s" % (STREAK, "; ".join(stuck[:8]) + (" ..." if len(stuck) > 8 else ""))]
+    if len(stuck) == len(counts):
+        out.append("STOP - everything this build prints has failed %d builds running: stop building %s and report it (the "
+                   "judges and the one fix round take it from here)" % (STREAK, m))
+    return out
+
+
 def short_list(items, width=220):
     """the same line once, with how many times it came ("cut off - circle 43.6 px" twice on one slide is one line)"""
     seen = {}
@@ -624,6 +1135,9 @@ def main(argv=None):
                                                              "build never waits for another module's first build")
     ap.add_argument("--full-output", action="store_true", help="print every finding in full, as the log has it (2.65.0: the "
                                                                "answer is one line per problem, with its fix)")
+    ap.add_argument("--slides", metavar="s05,s10", help="check only these slides in seconds (2.66.7): the deck laid out in "
+                                                         "memory, the slides audited at 1280x800 and 1024x768, their "
+                                                         "neighbours compared (L62) - nothing written, nothing built")
     ap.add_argument("--inner", action="store_true", help=argparse.SUPPRESS)
     o = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -642,6 +1156,14 @@ def main(argv=None):
     out_dir = workspace.claude_path(course, "review", m)
     if o.reviewed:
         return mark_reviewed(out_dir, m)
+    if o.slides:                     # 2.66.7: a slide check in seconds - nothing built, nothing written
+        sizes = [(1280, 800), (1024, 768)] + [tuple(int(x) for x in v.split("x")) for v in o.viewport
+                                              if v not in ("1280x800", "1024x768")]
+        code, lines = check_slides(course, o.module, [x.strip() for x in o.slides.split(",") if x.strip()], sizes)
+        print("SLIDES %s - %s (laid out in memory as the next build lays it out):" % (m, "clean" if code == 0 else "NOT CLEAN"
+                                                                                       if code == 1 else "not measured"))
+        print("\n".join(lines))
+        return code
     blanks = [] if o.draft else starter_blanks(course, o.module)
     if blanks:                       # 2.52.0: nothing is built on a sheet with the starter's blanks in it
         print("FAIL %s - nothing built: the build sheet %s still has the starter's blanks - fill %s"
@@ -678,7 +1200,8 @@ def main(argv=None):
         try:
             pre_lines, pre_out = layout_precheck(course, o.module, mdir, logdir, m,
                                                  [(1280, 800), (1024, 768)] + [tuple(int(x) for x in v.split("x")) for v in o.viewport
-                                                                              if v not in ("1280x800", "1024x768")])
+                                                                              if v not in ("1280x800", "1024x768")],
+                                                 extra=last_misses(logdir, m))
         except Exception as err:                     # noqa: BLE001 - the audit at the end still judges every slide
             pre_lines, pre_out = ["could not run (%s) - the audit at the end judges every slide" % err], {}
         logged("layout pre-check (L62)", "\n".join(pre_lines) or "no slide built another way that the last build did not build so")
@@ -687,6 +1210,10 @@ def main(argv=None):
             notes.append("LAYOUT (pre-check) - %d slide(s) built another way so no two neighbours look alike (L62) did not "
                          "fit and are built their next way: %s (kept in %s_layout_avoid.json while their words are unchanged)"
                          % (len(pre_out), ", ".join("%s (%s, %s ground)" % (k, v[0], v[1]) for k, v in sorted(pre_out.items())), m))
+        # 2.66.7 - what the layout solver settled, said once: nothing for the builder to copy
+        notes += ["LAYOUT (pre-check) - %s (kept in %s_layout_avoid.json while its words, picture and sheet are unchanged; "
+                  "nothing to copy)" % (x[len("settled: "):], m) for x in pre_lines if x.startswith("settled: ")]
+        notes += ["LAYOUT (pre-check) - " + x for x in pre_lines if ": no way found that fits" in x]
     # 2.63.3 - a module's first build (never built here: no _last.json) measures every figure and tries every fix: one at a
     # time on the computer, the others wait their turn (a queue, 2.65.0) - held through the figures and the compile
     cold = contextlib.ExitStack()
@@ -732,6 +1259,9 @@ def main(argv=None):
               "sheet are unchanged - fix these in the studio, run again; the full build runs once they are clean, --full now)"
               % (m, time.time() - t0))
         print(stage_line(stages))
+        if not o.no_fix:                         # 2.66.7: a check (QA's --no-fix) is no build of the builder's
+            for x in stop_lines(streak(os.path.join(logdir, "%s_streak.json" % m), finding_keys(say)), m):
+                print(x)
         print("Full log: %s" % log.name)
         return 1
     # 2 - the compile (with its own drawing check)
@@ -826,6 +1356,12 @@ def main(argv=None):
         return moved_misfits(io.open(deck, encoding="utf-8").read(), res[1])
     results, took, early = run_checks(jobs, pkg_cmd, will_retry)
     t = timed("the checks, at the same time (wall clock)", t)
+    if ak in results and os.path.isfile(deck):    # 2.66.7: the slides whose words did not fit - the next pre-check's first
+        try:
+            io.open(os.path.join(logdir, "%s_fit_misses.json" % m), "w", encoding="utf-8").write(
+                json.dumps(fit_misses(io.open(deck, encoding="utf-8").read(), results[ak][1])))
+        except OSError:
+            pass
     stages += [("  " + k, took[k]) for k in list(jobs) + ["course package"] if k in took]
     if early:
         # 2.63.0 - the round is built again: what the checks found on the slides is said; the review sheets and the
@@ -935,6 +1471,11 @@ def main(argv=None):
             print(review)
     if stages:
         print(stage_line(stages))
+    if not o.no_fix:                             # 2.66.7: a check (QA's --no-fix) is no build of the builder's
+        done = passed or (o.no_course_pages and fails == ["course package"])        # after the task pages' verdict
+        counts = streak(os.path.join(logdir, "%s_streak.json" % m), [] if done else finding_keys(say))
+        for x in stop_lines(counts, m):
+            print(x)
     print("Full log: %s" % log.name)
     return 0 if passed else 1
 
@@ -1023,6 +1564,7 @@ def entry(argv=None):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     if "--inner" in argv or "--reviewed" in argv or "-h" in argv or "--help" in argv:
         return main(argv)
+    slides = any(a == "--slides" or a.startswith("--slides=") for a in argv)     # 2.66.7: seconds, in this process
     ap = argparse.ArgumentParser(add_help=False)
     ap.add_argument("course")
     ap.add_argument("--module", required=True)
@@ -1041,6 +1583,11 @@ def entry(argv=None):
     except (OSError, ValueError):
         rec = {}
     running = rec.get("exit") is None and browser_slots.alive(int(rec.get("pid") or 0))
+    if slides:                                   # never beside a running build of the module: it reads the same folder
+        if running:
+            print("A build of %s is running - check the slides after it answers (the same build command with --wait)" % m)
+            return 3
+        return main(argv)
     wait = "--wait" in argv
     args = [a for a in argv if a != "--wait"] + ["--inner"]
     if not wait and not running and rec.get("exit") in (0, 1) and rec.get("key") and rec.get("args") == args \

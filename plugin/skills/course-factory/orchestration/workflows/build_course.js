@@ -278,8 +278,13 @@ ${brief(m)}
     STOP AT MODULE CLEAN: PASS, or "FAIL M${two(m)} - course package" with "MODULE CLEAN" under it.
         Do NOT review the sheets yourself and do not polish: the QA agent behind you does the ONE visual review, and a
         BROKEN finding comes back for one fix round. Anything you would polish: list it in your report.
+    THE SAME FINDING THREE BUILDS RUNNING: the build says so ("SAME FINDING 3 BUILDS RUNNING") - never build for it again,
+        list it in your report; when it says "STOP - everything ... 3 builds running", STOP and report: the judges and
+        the one fix round take it from there (2.66.5: M02 s05 failed in all 20 of its builds).
     a figure problem the build PRINTED: fix that figure in the studio (studio.py <spec> --quick, seconds; one --step all
         to look when it is clean), then one build.
+    a layout you change (2.66.7): build_module.py <course> --module ${m.id} --slides <the slide ids> first - seconds, nothing
+        written; the build's own pre-check already tries a wider words' column, paged words and the other ways by itself.
 
 RUN build_module.py IN THE FOREGROUND with the shell call's longest timeout (600000 ms). "STILL BUILDING": run the SAME
 command with --wait until it prints the build's answer - never a second build meanwhile, never an edit while it runs, never
@@ -327,12 +332,18 @@ Run the deterministic checks in TWO shell calls and READ their output:
 The module's START_HERE pages, COURSE.html and course_map.js are written by compile_course.py once every
 module is in: their absence, and a link to them, is not a finding of this module.
 
+YOURS: the words, the ILO teaching, the task pages, the photographs and the build. NOT YOURS - the kit figures
+(working_claude/figures/M${two(m)}/*.kit.json, a drawing on a dark panel): the FIGURE review judges every one at
+projector size, step by step, at the same time as you - how it is drawn, its labels, its parts, whether each step shows
+its title (2.66.7: in the 2.66.5 run ~13-16 of QA's 24 first BROKEN were the figure review's ground, and the fixer read
+each fault twice). A kit figure's drawing is never a finding of yours; a drawing that is not a kit figure still is.
+
 Then answer the questions no script can: is every outcome in the ILO map actually
-taught here, or only mentioned? Does each figure teach something the text does not?
+taught here, or only mentioned? Does each slide's picture earn its place - teach something the text does not?
 Would an instructor who has never seen this module be able to run it from Start and
 Next alone?
-And (2.63.2): does each picture show what the question or slide NAMES? Read a question or slide, then open its picture
-(figure spec, photo and its _photo_meta.json "shows"): an oxygen monitor on a %LEL question, a portable explosimeter
+And (2.63.2): does each PHOTOGRAPH show what the question or slide NAMES? Read a question or slide, then open its photo
+and its _photo_meta.json "shows": an oxygen monitor on a %LEL question, a portable explosimeter
 where a fixed detector head is meant, a spectacle blind where a spool piece is asked - the IGF course passed every
 check with these and they were found only by eye. A picture of a different instrument, part or place than the words
 name is a finding of severity BROKEN (compile/REVIEW_PROMPT.md, item 6, is the same rule for the sheets).
@@ -341,7 +352,7 @@ THE ONE VISUAL REVIEW (2.63.3 - the builder stops at module clean and no longer 
 review sheets of this module are in ${A.course}/working_claude/review/M${two(m)}/ (sheet_01.png ...; sheets.json
 names the screens on each) - the screens changed since the last review, promoted by the build above. Look at
 each sheet ONCE, in order, against course-factory/compile/REVIEW_PROMPT.md, and note findings as you go (never
-re-open a sheet you have read). Then mark them looked at, so the next sheets show only what changes after this:
+re-open a sheet you have read). A kit figure on a sheet: only the slide around it (its words, its layout) is yours. Then mark them looked at, so the next sheets show only what changes after this:
   python course-factory/compile/scripts/build_module.py "${A.course}" --module ${m.id} --reviewed
 Write the POLISH findings, one line each, to working_claude/review/M${two(m)}_POLISH.md (beside the folder, never
 inside it - a promotion replaces the folder).
@@ -350,7 +361,8 @@ A module that still classifies C has not finished — say so plainly. REPORT fin
 Do not fix anything. Severity is one of three (2.63.3 - the 2.63.2 run's QA used five scales):
   BROKEN  wrong, misleading or unusable for a trainee or the instructor - a picture of another thing than the
           words name, a number that contradicts the slide, a question graded wrongly, an outcome not taught, a
-          failed check; and (2.66.0) ANY drawing a seafarer would call wrong: a wrong physical arrangement (a vent
+          failed check (a FIGURE line of the build too: say it once, as the build prints it); and (2.66.0) ANY
+          drawing that is not a kit figure a seafarer would call wrong: a wrong physical arrangement (a vent
           mast or manifold inside the hull), a part the slide or a label names that is not drawn, something
           unconnected or floating, an incomplete figure - never POLISH (REVIEW_PROMPT.md item 7); blocking = true
           when there is one
@@ -367,7 +379,9 @@ a "Your turn" activity's minutes as practice in a theory-only module) is the ope
 const FIX_CAP = `AT MOST TWO build_module.py runs in this round. Try every figure you change in the studio first -
 python ${A.factory ? `${A.factory}/course-visuals/kit/scripts` : '<the course-visuals skill folder>/kit/scripts'}/studio.py <spec> --quick
 (its findings in seconds, no pictures; a closer fit the build applied is already in the spec) until its own report is
-clean, then ONE look at it with --step all, THEN one build. AT MOST SIX studio runs for any one figure (2.66.5 - the
+clean, then ONE look at it with --step all, THEN one build. A slide whose layout or words' room you change (a "split",
+"parts", a template, a picture): check it first with build_module.py "${A.course}" --module <N> --slides <its id> (2.66.7:
+the deck laid out in memory, the slide audited at both sizes and its neighbours compared, in seconds - nothing written). AT MOST SIX studio runs for any one figure (2.66.5 - the
 second proof run's M03 fixer ran its studio script 59 times, 58 min, on one drawing): a figure still not clean after
 its sixth is left as it is and listed in your report. After the second build STOP, whatever it prints: list what it
 still prints in your report (it goes to the operator's list) - never a third build, never another round of fitting words.`
@@ -376,24 +390,23 @@ still prints in your report (it goes to the operator's list) - never a third bui
    BROKEN finding - before, up to three fixers ran one after the other on the same module (3D, figures, QA), each
    re-reading the card, the specs and the sheets, each with its own builds (the 2.66.3 run: 13 min of reviews before
    M01's first fixer; run 2: figure fixers 58-102 min) */
-const fixAll = (m, b3, bf, bq) => `${build(m)}
+const fixAll = (m, b3, bf, bq, figs) => `${build(m)}
 
 THIS MODULE IS BUILT AND WAS JUDGED by reviewers who did not build it${[b3.length && ' (3D)', bf.length && ' (FIGURES)',
   bq.length && ' (QA)'].filter(Boolean).join('')}. Do NOT start again from --init-build. Fix EXACTLY the BROKEN findings
 below - nothing else (no polish, no other screen) - in the build sheet, the figure specs or the 3D scene specs, then
-build and STOP.
-${FIX_CAP}
+${figs ? `STOP.
+DO NOT RUN build_module.py (2.66.7): figure fixers are changing the figures of ${figs.join(', ')} beside you - never edit those
+figures' specs - and ONE build runs after all of you. Check a layout you change with build_module.py "${A.course}" --module
+${m.id} --slides <its id> (seconds, nothing written); a 3D scene with its own check script, not a build.` : `build and STOP.
+${FIX_CAP}`}
 NEVER edit working_claude/script/M${two(m)}.json - not a word, not a "kind", not a minute: ANY change to the approved
 script un-approves it and the module no longer builds (2.63.3 measurement: a fix round changed s05's "kind" to move
 5 minutes, and M02 stopped compiling). Never run content_script.py approve / apply. A finding whose fix is in the script
 is the operator's: leave it, and say so in your report.${bf.length ? `
 
-FIGURE findings (judged at projector size; the figure specs are in working_claude/figures/M${two(m)}/). Where a pattern
-fits the figure, start from it (course-visuals/kit/patterns/, SPEC.md "Patterns": ship_ga, bunkering_line, vent_system,
-fuel_supply, engine_modes, fuel_types, fuel_space_access) and place every part by what it stands on or joins - "on",
-"in", "at", "from"/"to" (SPEC.md "Relations") - never by guessed raw coordinates. A finding you are sure is RIGHT on
-purpose (the pipe runs on to the shore, the words name what the slide says): leave the drawing and say why in the spec's
-"meaning_ok": {"<KIND> <part id>": "<why it is right>"} - the next reviewer reads it:
+FIGURE findings (judged at projector size; the figure specs are in working_claude/figures/M${two(m)}/).
+${FIG_HOW}
 
 ${bf.map((f) => `  - ${f.slide}: ${f.what}`).join('\n')}` : ''}${b3.length ? `
 
@@ -405,6 +418,62 @@ ${b3.map((f) => `  - ${f.where}: ${f.what}`).join('\n')}` : ''}${bq.length ? `
 QA findings:
 
 ${bq.map((f) => `  - ${f.where}: ${f.what}`).join('\n')}` : ''}`
+
+/* 2.66.7 - THE FIX ROUND SPLIT BY FIGURE (Desktop\IGF_course_2.66_figures\NEXT_ROUND.md #5): the 2.66.5 run's ONE fixer per
+   module carried every BROKEN finding of three reviews - M03's ran 37 min (28 figure findings, 48 studio runs one after the
+   other, 12.7 min of thinking), M02's 29. Now each figure with BROKEN findings gets its own small fixer, at most FIG_FIXERS
+   at once (the computer's hidden-browser slots), each with its own studio cap and writing only its own spec; the 3D and QA
+   findings go to one module fixer beside them that does not build; then ONE build, then the re-checks as before */
+const FIG_FIXERS = 3
+const KIT_SPEC = A.factory ? `${A.factory}/course-visuals/kit/SPEC.md` : '<the course-visuals skill folder>/kit/SPEC.md'
+const FIG_HOW = `Where a pattern fits the figure, start from it (course-visuals/kit/patterns/, SPEC.md "Patterns": ship_ga,
+bunkering_line, vent_system, fuel_supply, engine_modes, fuel_types, fuel_space_access) and place every part by what it stands
+on or joins - "on", "in", "at", "from"/"to" (SPEC.md "Relations") - never by guessed raw coordinates. A finding you are sure is
+RIGHT on purpose (the pipe runs on to the shore, the words name what the slide says): leave the drawing and say why in the
+spec's "meaning_ok": {"<KIND> <part id>": "<why it is right>"} - the next reviewer reads it.`
+const fixFig = (m, slide, fs) => `FIX ONE FIGURE of module ${m.id} - slide ${slide} - for exactly the BROKEN findings below, judged
+at projector size (1920 x 1080) by a reviewer who did not build it. Nothing else: no polish, no other figure.
+
+  Course folder:  ${A.course}
+  The figure:     the kit spec the build sheet working_claude/script/M${two(m)}.build.json names as slide ${slide}'s "figure"
+                  (in working_claude/figures/M${two(m)}/); the slide's words: working_claude/script/M${two(m)}.json (read only)
+  The kit:        ${KIT_SPEC} - read only the sections "Relations" and "Patterns", and a part's line in CATALOGUE.md beside it
+
+YOU MAY WRITE ONLY THAT ONE SPEC FILE - never the build sheet, another figure, the approved script or a module file. NEVER run
+build_module.py: other fixers work on this module beside you, and ONE build runs after all of you (not yours).
+
+Work in the studio: python ${KIT_SCRIPTS}/studio.py <the spec> --quick (its findings at both sizes in seconds, every step,
+its real slide, no pictures) until its report is clean, and python ${KIT_SCRIPTS}/kit_meaning.py <the spec> (what the figure
+means - every BLOCK fixed); then ONE look with --step all. AT MOST SIX studio runs: a figure still not clean after its sixth
+is left as it is and listed in your report.
+${FIG_HOW}
+
+FIGURE findings for ${slide}:
+
+${fs.map((f) => `  - ${f.what}`).join('\n')}
+
+Report: the spec's path, what you changed, how many studio runs, and what is still not clean.${NOTES}`
+/* the build after the split round: ONE build of what the fixers changed, at most two runs, then STOP */
+const fixBuild = (m, b3, figs) => `${build(m)}
+
+THIS MODULE WAS JUST FIXED by ${figs.length} figure fixer(s) (${figs.join(', ')})${b3.length ? ' and a module fixer (3D, QA)' : ''},
+none of whom built it. Do NOT start again from --init-build and change nothing the build does not print. Run build_module.py
+ONCE; if it prints a problem the fixers' changes made, fix exactly that and run it once more - AT MOST TWO build_module.py
+runs, then STOP whatever it prints and list what it still prints in your report (it goes to the operator's list).${b3.length ? `
+After your last build run python ${KIT3D_SCRIPTS}/scene3d_check.py "${A.course}" --module ${m.id} once.` : ''}
+NEVER edit working_claude/script/M${two(m)}.json. Your report's FIRST line is the PASS / FAIL line build_module.py printed.`
+async function fixFigures(m, bf) {
+  const by = new Map()
+  for (const f of bf) by.set(f.slide, (by.get(f.slide) || []).concat([f]))
+  const todo = [...by.entries()]
+  await parallel(Array.from({ length: Math.min(FIG_FIXERS, todo.length) }, () => async () => {
+    while (todo.length) {
+      const [slide, fs] = todo.shift()
+      await agent(fixFig(m, slide, fs), { label: `fixfig:${m.id}:${slide}`, phase: 'Build', ...MECHANICAL })
+    }
+  }))
+  return [...by.keys()]
+}
 
 const QA_SCHEMA = {
   type: 'object',
@@ -437,6 +506,12 @@ const fixable = (q) => ((q && q.findings) || []).filter((f) => f.severity === 'B
    from its files, at most A.retries times (default 1). The IGF full build's Module 15 builder ended mid-build */
 const passed = (r) => /\bPASS (M\d+|final)\b/.test(String(r || '')) ||
   /\bFAIL (M\d+|final) - course package \(/.test(String(r || ''))
+/* 2.66.7 - a fresh agent only for a REAL stop: the builder ended mid-build or with no build answer at all. A builder that
+   stopped on a build's FAIL line and listed what is left (BUILDER_CARD "Stop": the same finding three builds running) goes
+   to the judges - its findings reach the one fix round anyway (the 2.66.5 run: both retries, 21 and 27 min, 28 builds,
+   ended without PASS on findings the judges and the fixer got anyway) */
+const answered = (r) => /\bFAIL (M\d+|final) - /.test(String(r || ''))
+const stoppedShort = (r) => !passed(r) && !answered(r)
 const carryOn = (m, last) => `${build(m)}
 
 THIS MODULE WAS STARTED BY ANOTHER AGENT, WHICH STOPPED BEFORE build_module.py printed PASS. Its
@@ -447,10 +522,11 @@ clean, then STOP - QA does the review. Its last report was:
 ${String(last || '(no report)').slice(0, 2500)}`
 async function buildUntilPass(m) {
   let r = await agent(build(m), { label: `build:${m.id}`, phase: 'Build', ...MECHANICAL })
-  for (let k = 1; k <= (A.retries === undefined ? 1 : A.retries) && !passed(r); k++) {
-    log(`module ${m.id}: no PASS in the builder's report - a fresh agent carries it on (${k})`)
+  for (let k = 1; k <= (A.retries === undefined ? 1 : A.retries) && stoppedShort(r); k++) {
+    log(`module ${m.id}: no build answer in the builder's report (it stopped mid-build) - a fresh agent carries it on (${k})`)
     r = await agent(carryOn(m, r), { label: `build:${m.id}+${k}`, phase: 'Build', ...MECHANICAL })
   }
+  if (!passed(r)) log(`module ${m.id}: the builder stopped on a build's FAIL and listed what is left - no retry, to the judges`)
   return r
 }
 
@@ -609,7 +685,15 @@ async function oneModule(m) {
   let d3 = d3a, fg = fga, out = q
   if (b3.length || bf.length || bq.length) {
     log(`module ${m.id}: BROKEN - 3D ${b3.length}, figures ${bf.length}, QA ${bq.length} - one fix round`)
-    await agent(fixAll(m, b3, bf, bq), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL })
+    if (bf.length) {
+      /* 2.66.7: a fixer per figure (at most FIG_FIXERS at once) and the module fixer beside them, none building; then one build */
+      const figs = [...new Set(bf.map((f) => f.slide))]
+      await Promise.all([fixFigures(m, bf), b3.length || bq.length
+        ? agent(fixAll(m, b3, [], bq, figs), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL }) : null])
+      await agent(fixBuild(m, b3, figs), { label: `fixbuild:${m.id}`, phase: 'Build', ...MECHANICAL })
+    } else {
+      await agent(fixAll(m, b3, bf, bq), { label: `fix:${m.id}`, phase: 'Build', ...MECHANICAL })
+    }
     const [d3b, fgb, q2] = await Promise.all([
       b3.length ? threeD(m, '+fix') : null,
       bf.length ? figures(m, [...new Set(bf.map((f) => f.slide))].join(',')) : null,

@@ -119,6 +119,10 @@
 
     /* --- measurement thresholds --- */
     minFontPx: 12.5,
+    /* 2.66.7 - drawing words count as small only this far under the floor: audit_drawing.js's own tolerance, so the two
+       audits judge a word alike (2.66.5 run: 27 builds failed only on words the kit grew to 12.45-12.49 px, the studio
+       called them clean). 0.05 px is not visible */
+    svgFloorTolPx: 0.05,
     minControlPx: 44,
     contrastNormal: 4.5,
     contrastLarge: 3.0,
@@ -442,7 +446,7 @@
         var f = parseFloat(getComputedStyle(t).fontSize);
         if (!f || isNaN(f)) { f = parseFloat(t.getAttribute("font-size")) || 0; }
         var eff = f * sc;
-        if (eff && eff < floor) {
+        if (eff && eff < floor - CONFIG.svgFloorTolPx) {
           out.svgSmall.push({ declaredPx: +f.toFixed(2), scale: +sc.toFixed(3),
                               effPx: +eff.toFixed(1),
                               txt: (t.textContent || "").trim()

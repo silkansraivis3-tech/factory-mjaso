@@ -1087,12 +1087,26 @@ def variety_part(tmp):
           cm.choose_layout(dr, [dr[0]["key"]], left) == (dr[0], False), left)
     s = {"id": "d1", "title": "T", "text": "Words."}
     av = {"d1": {"words": cm.words_key(s), "avoid": [["picture-left", "light"]]}}
-    check("a measured-out way holds while the slide's approved words and layout fields are the same, and is forgotten when "
-          "they change (another picture, the builder's own composition); a label or alt edit keeps it (2.62.1)",
+    check("a measured-out way holds while the slide's approved words and picture are the same, and is forgotten when they "
+          "change (other words, another picture, another split); a label or alt edit keeps it (2.62.1) - and (2.66.7) so does "
+          "an edit of its own way (composition, figure_first): the other ways never read them",
           cm.measured_out(av, s) == [("picture-left", "light")] and cm.measured_out(av, dict(s, text="Other words.")) == []
-          and cm.measured_out(av, s, {"figure": "other.html"}) == [] and cm.measured_out(av, s, {"composition": "two-col"}) == []
+          and cm.measured_out(av, s, {"figure": "other.html"}) == [] and cm.measured_out(av, s, {"split": 0.6}) == []
+          and cm.measured_out(av, s, {"composition": "two-col", "figure_first": True}) == [("picture-left", "light")]
           and cm.measured_out(av, s, {"labels": {"T1": "below"}, "alt": "x"}) == [("picture-left", "light")]
           and cm.measured_out({}, s) == [] and cm.measured_out(None, s) == [])
+    own_out = cm.choose_layout(dr, [("text", "light")], [dr[0]["key"]])
+    check("2.66.7 the slide's OWN way can be measured out (the layout solver: its words do not fit it) - another way is "
+          "built while one is left, the own way when none is",
+          own_out[1] and own_out[0]["key"] != dr[0]["key"]
+          and cm.choose_layout(dr, [("text", "light")], [o["key"] for o in dr]) == (dr[0], False), own_out)
+    st = {"d1": {"words": cm.fit_key(s, {"figure": "ga.html"}), "avoid": [], "set": {"split": 0.6}}}
+    got = cm.settled(st, s, {"figure": "ga.html"})
+    check("2.66.7 what the layout solver settled (\"set\") is built while the sheet is the one it was settled from, and keeps "
+          "that sheet's key - so the ways measured out beside it hold",
+          got.get("split") == 0.6 and cm.fit_key(s, got) == st["d1"]["words"]
+          and cm.settled(st, s, {"figure": "other.html"}) == {"figure": "other.html"}
+          and cm.settled({}, s, {"figure": "ga.html"}) == {"figure": "ga.html"}, got)
     sid, vk = moved[0][0], re.search(r'data-varied="([\w-]+)\|(\w+)\|(\w+)"', moved[0][1]).groups()
     os.makedirs(os.path.join(c, "working_claude", "_build"), exist_ok=True)
     io.open(os.path.join(c, "working_claude", "_build", "M01_layout_avoid.json"), "w", encoding="utf-8").write(

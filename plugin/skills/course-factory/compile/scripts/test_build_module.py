@@ -79,10 +79,12 @@ def main():
     stages_part()
     layout_part()
     precheck_part()
+    solver_part()
     retry_part()
     review_part()
     long_part()
     short_part()
+    streak_part()
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))
     return 1 if FAILS else 0
 
@@ -208,6 +210,41 @@ def short_part():
     check("... every slide and kind the audits named is still named", named(AUD) == named("\n".join(a)), (named(AUD), a))
 
 
+def streak_part():
+    """2.66.7 - the stop rule: the same finding three builds running (the 2.66.5 run: M02 s05 over-filled in all 20 builds)"""
+    import io
+    import json
+    import tempfile
+    print("-- 2.66.7 the stop rule: the same finding three builds running")
+    say = ["FIGURES"] + b.short_figures(FIG.splitlines(), r"C:\c\figures\M02") + ["AUDITS 1280x800 1024x768 - FAIL:"] + b.short_audits(AUD)
+    keys = b.finding_keys(say)
+    check("each top-level finding is a key, a figure one per kind of problem; a figure fixed by itself is none",
+          "FIGURE s02: small text" in keys and "FIGURE s02: label" in keys and not any("s05 (s05.kit.json)" in k for k in keys)
+          and "#x# slide # (s05): scrolls div.slide-body by # px" in keys, keys)
+    moved = [x.replace("21 px", "34 px").replace("64 px", "12 px").replace("x3 (9.5-11.4 px)", "x2 (11.9-12.2 px)")
+             .replace("scale 0.63", "scale 0.71").replace("small text x3", "small text x1") for x in say]
+    check("... the same while only its numbers move (px, counts, the figure's scale)", b.finding_keys(moved) == keys,
+          (b.finding_keys(moved), keys))
+    path = os.path.join(tempfile.mkdtemp(prefix="bm_streak_"), "M02_streak.json")
+    got = [b.stop_lines(b.streak(path, keys), "M02") for _ in range(2)]
+    check("two builds running: nothing said", got == [[], []], got)
+    third = b.stop_lines(b.streak(path, b.finding_keys(moved)), "M02")
+    check("the third: SAME FINDING 3 BUILDS RUNNING names them, and STOP - everything left is such a finding",
+          len(third) == 2 and third[0].startswith("SAME FINDING 3 BUILDS RUNNING") and "FIGURE s02: small text" in third[0]
+          and third[1].startswith("STOP - everything this build prints has failed 3 builds running"), third)
+    new = keys + ["COMPILE line: - Slide 9 (s09) looks exactly like the slide before it (L62)"]
+    fourth = b.stop_lines(b.streak(path, new), "M02")
+    check("... a new finding beside them: they are still named, but no STOP (there is work the build can still show)",
+          len(fourth) == 1 and fourth[0].startswith("SAME FINDING") and "s09" not in fourth[0], fourth)
+    b.streak(path, [k for k in keys if "s02" not in k])
+    after = json.load(io.open(path, encoding="utf-8"))
+    check("a finding a build does not print starts again; a clean build starts every count again",
+          not any("s02" in k for k in after) and b.streak(path, []) == {} and b.stop_lines({}, "M02") == [], after)
+    src = io.open(os.path.join(HERE, "build_module.py"), encoding="utf-8").read()
+    check("build_module.py says it on every builder's answer (the figures-only round too), never on QA's --no-fix check",
+          src.count("stop_lines(") >= 3 and src.count("# 2.66.7: a check (QA's --no-fix) is no build of the builder's") == 2, "")
+
+
 def stages_part():
     import io
     import time
@@ -293,11 +330,21 @@ def precheck_part():
         av = json.load(io.open(os.path.join(logdir, "M01_layout_avoid.json"), encoding="utf-8")) \
             if os.path.isfile(os.path.join(logdir, "M01_layout_avoid.json")) else {}
         check("a slide that does not fit is measured out at once (M01_layout_avoid.json, as the end-of-build round writes it)",
-              len(out) == 1 and set(av) == set(out) and [list(v) for v in out.values()] == list(av.values())[0]["avoid"], (out, av))
+              len(out) == 1 and all(av.get(k, {}).get("avoid", [])[:1] == [list(v)] for k, v in out.items()), (out, av))
         check("... the deck is laid out again and only the slides whose way is new are audited (the misfit built its own way, "
               "its neighbours' turn to vary: d3, d5 - never d4 / d6 again) - then it stops (they fit)",
-              len(calls) == 4 and calls[2][1] == calls[3][1] and not set(calls[2][1]) & set(first)
-              and "did not fit" in lines[0] and "every one fits" in lines[-1], (calls, lines))
+              len(calls) >= 4 and calls[2][1] == calls[3][1] and not set(calls[2][1]) & set(first)
+              and "did not fit" in lines[0] and "every one fits" in lines[1], (calls, lines))
+        mo = sorted(out)[0]
+        before = next((x for x in sorted(av) if x != mo), "")
+        check("2.66.7 ... and the L62 repeat that left (%s back on its own way, like the slide before it - measured once more "
+              "as it is now) is settled by the layout solver: the slide before it built its next way, both audited at both "
+              "sizes, nothing else" % mo,
+              len(calls) == 8 and calls[4][1] == calls[5][1] == [first[0]] and any("measured again as now built: %s" % mo in x
+                                                                                    for x in lines)
+              and calls[6][1] == calls[7][1] == sorted(calls[6][1]) and len(calls[6][1]) == 2
+              and any(x.startswith("settled: %s looked like %s (L62)" % (mo, before)) for x in lines)
+              and av.get(before, {}).get("avoid") and "the layout solver: 1 settled" in lines[-1], (calls, lines, av))
         check("... the laid-out page is removed", not [f for f in os.listdir(os.path.join(md, "presentation"))
                                                    if f.startswith("_layout_precheck_")], os.listdir(os.path.join(md, "presentation")))
         tcm.run(tcm.COMPILE, c, "--module", "1", "--force")     # the build's compile: it writes M01_layouts.json
@@ -306,7 +353,8 @@ def precheck_part():
         check("the next build audits nothing: every slide built another way was checked fitting as it is now "
               "(M01_precheck_fit.json)", calls == [] and out2 == {}, (calls, lines2))
         fit = json.load(io.open(os.path.join(logdir, "M01_precheck_fit.json"), encoding="utf-8"))
-        moved = sorted(fit)[0]
+        held = json.load(io.open(os.path.join(logdir, "M01_layout_avoid.json"), encoding="utf-8"))
+        moved = sorted(x for x in fit if x not in held)[0]      # moved by the compiler alone, not by a kept record
         figs = os.path.join(c, "working_claude", "figures", "M01")
         io.open(os.path.join(figs, moved + ".html"), "w", encoding="utf-8").write(        # the same drawing, one part changed
             io.open(os.path.join(figs, "ga.html"), encoding="utf-8").read().replace("</svg>", '<circle cx="9" cy="9" r="3"/></svg>', 1))
@@ -314,11 +362,124 @@ def precheck_part():
         calls.clear()
         b.layout_precheck(c, 1, md, logdir, "M01", [(1280, 800), (1024, 768)], audit)
         check("... but a slide kept its way whose markup changed (2.66.5's timed run: a fixer changed only the drawing on "
-              "M02 s04 and it no longer fit) is checked again - only it", len(calls) == 2 and len(calls[0][1]) == 1, (moved, calls))
+              "M02 s04 and it no longer fit) is checked again - only it", len(calls) >= 2 and len(calls[0][1]) == 1
+              and calls[0][1] == calls[1][1], (moved, calls))
         src = io.open(os.path.join(HERE, "build_module.py"), encoding="utf-8").read()
         check("build_module.py runs it first (round 0), as a stage of its own, CF_LAYOUT_PRECHECK=off turns it off",
               'timed("layout pre-check (L62)", t0)' in src and "CF_LAYOUT_PRECHECK" in src
               and src.index("layout_precheck(course") < src.index("figure_fit.run_all("), "")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def solver_part():
+    """2.66.7 - the layout solver: words that do not fit are settled in the pre-check (a wider column, parts, both, its
+    other ways), what settles is kept beside the measured-out ways, a try that failed is not made again, and --slides
+    checks slides in seconds writing nothing (the 2.66.5 run: M02 s05 over-filled in all 20 builds)"""
+    import io
+    import json
+    import shutil
+    import tempfile
+    import test_compile_module as tcm
+    import compile_module as cm
+    print("-- 2.66.7 the layout solver and the slide check")
+    tmp = tempfile.mkdtemp(prefix="bm_solve_")
+    try:
+        words = "The tank connection space holds every valve and flange of the fuel tank.\n" \
+                "• Its ventilation runs all the time.\n• Detectors raise the alarm at 20 % LEL.\n• The doors close by themselves."
+        drawn = [{"id": "d%d" % i, "kind": "slide", "title": "Drawing slide %d" % i, "layout": "split", "visual_kind": "schematic",
+                  "visual": "The space.", "minutes": 2, "text": words} for i in range(1, 5)]
+        act = {"id": "a1", "kind": "activity", "title": "Your turn - trace the path", "layout": "split", "visual_kind": "schematic",
+               "visual": "The path.", "minutes": 3, "text": words}
+        c, md = tcm.new_course(tmp, tcm.script(screens=drawn + [act] + tcm.SCREENS[-2:]))
+        tcm.build_of(c, lambda bs: bs.__setitem__("screens", {x["id"]: {"figure": "ga.html"} for x in drawn + [act]}))
+        logdir = os.path.join(c, "working_claude", "_build")
+        os.makedirs(logdir, exist_ok=True)
+        os.makedirs(os.path.join(md, "presentation"), exist_ok=True)
+        sheet = os.path.join(c, "working_claude", "script", "M01.build.json")
+        sheet0 = io.open(sheet, encoding="utf-8").read()
+        calls, rule = [], {}
+
+        def audit(page, size, only):              # run_audits.measure's answer: a slide fits as rule[sid](its section) says
+            deck = io.open(page, encoding="utf-8").read()
+            calls.append((size, list(only)))
+            secs = {k: (sid, x) for k, sid, x in b.slide_order(deck)}
+            bad = [{"slide": k + 1, "id": secs[k][0], "scroll": [{"sel": "div.slide-body", "overflowPx": 21}]}
+                   for k in only if not rule.get(secs[k][0], lambda x: True)(secs[k][1])]
+            return {"deck": {"exit": 1 if bad else 0, "res": {"failingSlides": bad, "slidesTotal": len(secs)}},
+                    "collide": {"exit": 0, "res": {}}, "compose": {"exit": 0, "res": {"screens": len(secs), "problems": []}}}, ""
+        sizes = [(1280, 800), (1024, 768)]
+        rule["d2"] = lambda x: "--lt-text:60" in x                       # fits with the words' column at 60 %
+        rule["d3"] = lambda x: 'data-template="content-in-parts.' in x   # fits only in parts
+        lines, _ = b.layout_precheck(c, 1, md, logdir, "M01", sizes, audit, extra={"d2", "d3"})
+        av = json.load(io.open(os.path.join(logdir, "M01_layout_avoid.json"), encoding="utf-8"))
+        check("words that do not fit, found last build: the pre-check measures them first and settles them - d2 with the "
+              "words' column at 60 %, d3 in parts after the wider column did not do it",
+              any(x.startswith("settled: d2 - its words did not fit; the words' column at 60 %") for x in lines)
+              and any(x.startswith("settled: d3 - its words did not fit; its words in parts") for x in lines)
+              and av.get("d2", {}).get("set") == {"split": 0.6} and av.get("d3", {}).get("set") == {"template": "content-in-parts"}
+              and any("60 %" in t for t in av.get("d3", {}).get("tried", [])), (lines, av))
+        check("... each try audited only the slides it changed, at both sizes at once",
+              all(calls[k][1] == calls[k + 1][1] and calls[k][0] != calls[k + 1][0] for k in range(0, len(calls), 2))
+              and all(len(x[1]) <= 3 for x in calls[2:]), calls)
+        script = cm.cs.load(os.path.join(c, "working_claude", "script", "M01.json"))
+        page = cm.compile_deck(script, cm.cs.load(sheet), md, os.path.join(c, "working_claude", "figures", "M01"), "x", True,
+                               cm.load_layout_avoid(os.path.join(c, "working_claude"), "M01"))[0]
+        check("... the compile builds what settled (kept in M01_layout_avoid.json \"set\"); the build sheet is not touched",
+              "--lt-text:60" in tcm.section(page, "d2") and 'data-template="content-in-parts.' in tcm.section(page, "d3")
+              and io.open(sheet, encoding="utf-8").read() == sheet0, tcm.section(page, "d3")[:300])
+        rule["d3"] = lambda x: False                                     # the words changed: nothing fits any more
+        calls.clear()
+        av0 = json.load(io.open(os.path.join(logdir, "M01_layout_avoid.json"), encoding="utf-8"))
+        av0["d3"]["tried"] = ["the words' column at 60 % (\"split\": 0.6)"]
+        io.open(os.path.join(logdir, "M01_layout_avoid.json"), "w", encoding="utf-8").write(json.dumps(av0))
+        os.remove(os.path.join(logdir, "M01_precheck_fit.json"))
+        lines2, _ = b.layout_precheck(c, 1, md, logdir, "M01", sizes, audit, extra={"d3"})
+        check("a try made before for the same words is not made again; with every try made, the build says no way was found",
+              not any("tried the words' column at 60 % (\"split\": 0.6) on d3" in x for x in lines2)
+              and any(x.startswith("d3: no way found that fits") for x in lines2), lines2)
+        rule["a1"] = lambda x: False
+        calls.clear()
+        lines3, _ = b.layout_precheck(c, 1, md, logdir, "M01", sizes, audit, extra={"a1"})
+        check("an activity tries the wider column and parts, never another way (the room's task keeps its look)",
+              any("on a1" in x for x in lines3) and not any("measured out" in x and "a1" in x for x in lines3)
+              and any(x.startswith("a1: no way found") for x in lines3), lines3)
+        rule.clear()
+        rule["d4"] = lambda x: False
+        calls.clear()
+        before = io.open(os.path.join(logdir, "M01_layout_avoid.json"), encoding="utf-8").read()
+        code, out = b.check_slides(c, 1, ["d1", "d4", "zz"], sizes, audit)
+        text = "\n".join(out)
+        check("--slides: those slides audited at both sizes in one deck laid out in memory; a misfit and an unknown id said; "
+              "what the next build's pre-check would do; nothing written",
+              code == 1 and sorted(calls[:2]) == [((1024, 768), [0, 3]), ((1280, 800), [0, 3])] and "zz: not a slide of the deck" in text
+              and "d1 - " in text and "fits at 1280x800 and 1024x768" in text and "d4 - " in text and "DOES NOT FIT" in text
+              and "nothing written" in text
+              and io.open(os.path.join(logdir, "M01_layout_avoid.json"), encoding="utf-8").read() == before
+              and not [f for f in os.listdir(os.path.join(md, "presentation")) if f.startswith("_layout_precheck_")], text)
+        rule.clear()
+        calls.clear()
+        page = cm.compile_deck(script, cm.cs.load(sheet), md, os.path.join(c, "working_claude", "figures", "M01"), "x", True,
+                               cm.load_layout_avoid(os.path.join(c, "working_claude"), "M01"))[0]
+        alone = next(i for i in ("d1", "d2", "d3", "d4") if not any(i in p for p in b.l62_pairs(page)))
+        check("... a slide that fits and looks like neither neighbour: exit 0, one audit",
+              b.check_slides(c, 1, [alone], sizes, audit)[0] == 0 and len(calls) == 2, calls)
+        small_ = lambda px: {"other": ['1024x768 drawing text too small "engine" %s px on screen' % px] * 4}
+        check("a try may not leave a slide worse: more findings, or its drawing words smaller (the M02 replay: s04's L62 "
+              "settled by a 60 % words' column took its drawing words from 12 to 10.4 px)",
+              b.worse(small_(10.4), small_(12)) and not b.worse(small_(12), small_(12)) and b.worse(small_(12), {"other": []})
+              and not b.worse({}, small_(12)), "")
+        deck_html = '<section class="slide" data-script="s01">a</section><section class="slide" data-script="s02">b</section>' \
+                    '<section class="slide" data-script="s03">c</section>'
+        check("the build's audits name the next pre-check's slides: scrolls / spills by id, over-filled by number",
+              b.fit_misses(deck_html, "  slide 2 (s02): scrolls div.slide-body by 21 px\n  slide 1 (s01): drawing text too small"
+                                      "\n  over-filled: 3 (104 %)") == ["s02", "s03"]
+              and b.last_misses(logdir, "M09") == "all", b.fit_misses(deck_html, ""))
+        src = io.open(os.path.join(HERE, "build_module.py"), encoding="utf-8").read()
+        check("build_module.py: the pre-check gets the last build's misfits, the build writes them, and --slides runs "
+              "in its own process at once (never beside a running build of the module)",
+              "extra=last_misses(logdir, m)" in src and '"%s_fit_misses.json" % m' in src and "check_slides(course, o.module" in src
+              and "if slides:" in src, "")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

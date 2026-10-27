@@ -87,6 +87,10 @@ def canvas():
         spec = cm.starter_figure(SCRIPT, sl)
         check("2.66.0 %s: its starter has no BLOCK of the meaning checks (it is built as it is)" % sid,
               spec and not km.analyse(spec, sid)["block"], spec and km.analyse(spec, sid)["block"])
+    sv = cm.starter_figure(SCRIPT, vent)
+    valve = next((p for p in sv["parts"] if p.get("type") == "valve"), {})
+    check("2.66.7 a starter's valve on a line saying it closes starts open and its step closes it (lit to 1 it opened - WAY)",
+          valve.get("value") == 1 and [valve.get("id"), 0, 600] in [x for st in sv["steps"] for x in st["play"]], sv)
     screens = {s["id"]: {} for s in SCRIPT["screens"]}
     cm.starter_figures(SCRIPT, screens, tempfile.mkdtemp(prefix="sf_"), out={})
     notes = [e.get("_figure", "") for e in screens.values() if e.get("_figure")]

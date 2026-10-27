@@ -21,6 +21,13 @@ kit.js itself resolves (kit_relate.py), against course-visuals/knowledge/figure-
              where the step is - not judged); a step that only turns things off under a title saying something happens
   LABEL      (2.66.3) a callout's leader ends on a part of another kind than its words name (a BLOCK: none in the hand-fixed
              IGF original's 96 specs); its words name a thing not drawn (a NOTE)
+  WAY        (2.66.7, a BLOCK) a step whose title says its valve closes / opens, its pump or engine stops / starts, while
+             every one it moves goes the other way
+  READOUT    (2.66.7) a level readout and its tank disagree after a step (a BLOCK with one tank; a NOTE when paired to the
+             nearest of several)
+  JOINS      (2.66.7) in a figure with pipes, a valve / pump / line part on no pipe and mounted on nothing (a BLOCK); a tank or
+             engine no pipe reaches, or a figure whose words say a path with no pipe at all (NOTEs). Calibrated on the
+             hand-fixed original's 96 specs: 0 BLOCKs, 2 notes
 """
 from __future__ import annotations
 
@@ -687,6 +694,124 @@ def chk_label(F, bad):
             bad("LABEL", said, p, level)
 
 
+# 2.66.7 - three kinds of fault the 2.66.5 timed run's figure review called BROKEN that no check saw (Desktop\IGF_course_
+# 2.66_figures\NEXT_ROUND.md: of its 63 first BROKEN, 21 a step not showing its title, 11 a part not drawn or standing on
+# its own): M03 s05 "Step 3 ('Both block valves close') shows the valves going OPEN" and "every part sits on its own";
+# M03 s07 "the tank drawing is frozen at about 20 % liquid while the gauge shows 60, 90 and 95 %"
+OPENS = ("valve", "relief_valve", "hatch")              # value 1 open / lifted, 0 closed (CATALOGUE.md)
+RUNS = ("pump", "engine", "fan")                       # value 1 running, 0 stopped
+CLOSE_W = re.compile(r"\bclos(?:e|es|ed|ing)\b(?!\s+(?:to|by)\b)|\bshut(?:s|ting)?\b(?!\s+down)|\bisolat(?:e|es|ed|ing)\b")
+OPEN_W = re.compile(r"\bopen(?:s|ed|ing)?\b(?!\s+(?:deck|air|sea|end|ends|area|space|type|loop|position|to|for)\b)|"
+                    r"\blift(?:s|ed|ing)?\b")
+STOP_W = re.compile(r"\bstop(?:s|ped|ping)?\b|\btrip(?:s|ped)?\b|\bshut(?:s|ting)?\s+down\b|\bshutdown\b")
+START_W = re.compile(r"\b(?:re)?start(?:s|ed|ing)?\b|\bruns?\b|\brunning\b")
+
+
+def chk_way(F, bad):
+    """WAY - a step whose title says its part closes (opens, stops, starts) while every such part the step moves goes the
+    other way: a BLOCK - the picture shows the opposite of its words. A title saying both ways is not judged"""
+    steps = [s for s in F.r.get("steps") or [] if isinstance(s, dict)]
+    types = {p.get("id"): p.get("type") for p, g in F.items if p.get("id")}
+    rest = {p.get("id"): (float(p["value"]) if isinstance(p.get("value"), (int, float)) and not isinstance(p.get("value"), bool) else 0.0)
+            for p in F.r.get("parts") or [] if isinstance(p, dict) and p.get("id")}
+    before = dict(rest)
+    for (k, end, during), s in zip(states(F.r), steps):
+        if s.get("reset"):
+            before = dict(rest)
+        title = re.sub(r"^\s*\d+\s*[·.\-–:]\s*", "", str(s.get("title") or ""))
+        t = title.lower()
+        named = {x for w, e in names_in(title) for x in e["parts"]}
+        moved = {i: end.get(i, 0.0) - before.get(i, 0.0) for i in _refs(s) | set(end) if abs(end.get(i, 0.0) - before.get(i, 0.0)) > 1e-9}
+        for group, (shut, go), (off, on) in ((OPENS, (CLOSE_W, OPEN_W), ("closes", "opens")),
+                                             (RUNS, (STOP_W, START_W), ("stops", "starts"))):
+            down, up = bool(shut.search(t)), bool(go.search(t))
+            subj = sorted(i for i in moved if types.get(i) in group and types.get(i) in named)
+            if not subj or down == up:
+                continue
+            wrong = [i for i in subj if (moved[i] > 0) == down]
+            if len(wrong) == len(subj):
+                bad("WAY", "step %d (%r) says the %s %s, and the step %s it (%s) - play it the way its title says (\"%s\" to %d), "
+                    "or the title says what the step shows" % (k, title[:60], types[subj[0]].replace("_", " "), off if down else on,
+                                                               on if down else off, ", ".join(wrong[:3]), wrong[0], 0 if down else 1),
+                    "step%d" % k, BLOCK)
+        before = dict(end)
+
+
+LEVEL_ONLY = re.compile(r"\blel\b|\bo2\b|oxygen|\bgas\b|vapou?r|pressure|temperature|flow|speed|load")
+LEVEL_SAYS = re.compile(r"level|fill|full|liquid|content|tank|volume|ullage")
+
+
+def chk_readout(F, bad):
+    """READOUT - a level readout and the tank it belongs to disagree at the end of a step (the tank drawn at 20 % while its
+    level reads 95 %): a BLOCK when the figure has that one tank, a NOTE when the readout was paired to the nearest of several"""
+    tanks = [(p, g) for p, g in F.of("tank", "integral_tank") if p.get("id")]
+    if not tanks:
+        return
+    meters = []
+    for p, g in F.of("level", "gauge", "readout"):
+        words = ("%s %s" % (p.get("label") or "", p.get("unit") or "")).lower()
+        if not p.get("id") or LEVEL_ONLY.search(words):
+            continue
+        if p.get("type") == "level" or ("%" in str(p.get("unit") or "") and LEVEL_SAYS.search(words)):
+            meters.append((p, g))
+    for p, g in meters:
+        if len(tanks) == 1:
+            tank, level = tanks[0][0], BLOCK
+        else:
+            near = sorted((gap(g["box"], h["box"]), q) for q, h in tanks if g.get("box") and h.get("box"))
+            if not near or near[0][0] > NEAR:
+                continue
+            tank, level = near[0][1], NOTE
+        lo = float(p.get("min") or 0)
+        hi = float(p["max"]) if isinstance(p.get("max"), (int, float)) else (100.0 if p.get("type") == "level" or "%" in str(p.get("unit")) else 0.0)
+        if hi <= lo:
+            continue
+        rest = lambda q: float(q["value"]) if isinstance(q.get("value"), (int, float)) and not isinstance(q.get("value"), bool) else 0.0
+        seen = [(0, rest(p), rest(tank))] + [(k, end.get(p["id"], rest(p)), end.get(tank["id"], rest(tank))) for k, end, _ in states(F.r)]
+        for k, v, f in seen:
+            r = min(1.0, max(0.0, (v - lo) / (hi - lo)))
+            if abs(r - min(1.0, max(0.0, f))) > 0.3:
+                bad("READOUT", "%s the %s %s reads %g%s while the tank %s is drawn %d %% full - play the tank's liquid with it "
+                    "([\"%s\", %g, ...])" % ("at rest" if not k else "after step %d" % k, p.get("type"), p["id"], v,
+                                             (" " + str(p.get("unit"))) if p.get("unit") else "", tank["id"], round(100 * f),
+                                             tank["id"], round(r, 2)), p, level)
+                break
+
+
+INLINE = ("valve", "relief_valve", "pump", "exchanger", "manifold", "spool_piece")    # a thing that sits ON a line
+ENDS = ("tank", "integral_tank", "engine", "vent")                                    # where a line starts or ends
+PATH_SAYS = re.compile(r"\bfrom\b.{1,60}\bto\b|\bpath\b|\bflows?\b|\bsupply\b|\broute\b|\bline\b|\bpipe")
+
+
+def chk_joins(F, bad):
+    """JOINS - in a figure with pipes, a valve, pump or other line part on no pipe (a BLOCK: it sits on nothing); a tank or
+    an engine no pipe reaches (a NOTE). In a figure whose words say a path, with three or more such parts and no pipe at
+    all: every part on its own (a NOTE)"""
+    lines_ = F.pipes()
+    kinds = {(p.get("id") or "#%d" % i): p.get("type") for i, (p, g) in enumerate(F.items)}
+    things = [(p, g) for p, g in F.items if p.get("type") in INLINE + ENDS and p.get("id")]
+    if not lines_:
+        if len(things) >= 3 and PATH_SAYS.search(words_of(F.r)):
+            bad("JOINS", "%d parts of a line (%s) and no pipe joins them - the words say a path: route the pipes from part to "
+                "part (\"from\": \"<id>.<port>\", \"to\": ...)" % (len(things), ", ".join(p["id"] for p, g in things[:4])), None, NOTE)
+        return
+    alone = set()
+    for comp in components(F):
+        if not any(kinds.get(i) in ("pipe", "hose") for i in comp):
+            alone |= comp
+    # calibrated on the hand-fixed IGF original (2.66.7): a relief valve on its tank's top, a vaporizer on a pipe's corner,
+    # a drain valve on its drip tray are mounted - joined - though no pipe END meets them
+    on_line = lambda b: any(pt_box(pt, b) <= PORT for q, h in lines_ for a_, b_ in zip(h["pts"], h["pts"][1:])
+                            for pt in [(a_[0] + (b_[0] - a_[0]) * t / 8.0, a_[1] + (b_[1] - a_[1]) * t / 8.0) for t in range(9)])
+    mounted = lambda p, g: any(q is not p and h.get("box") and gap(g["box"], h["box"]) <= PORT for q, h in F.drawn())
+    for p, g in things:
+        if p["id"] in alone and g.get("box") and not on_line(g["box"]) and not mounted(p, g):
+            inline = p.get("type") in INLINE
+            bad("JOINS", "the %s %s joins nothing - %s" % (p.get("type").replace("_", " "), p["id"],
+                "a line part sits on a pipe: route a pipe through its ports (\"from\" / \"to\"), or place it \"at\" one"
+                if inline else "no pipe reaches it: end a pipe on it (\"to\": \"%s.<port>\")" % p["id"]), p, BLOCK if inline else NOTE)
+
+
 def _under(F, cap_box, cell):
     """the drawn things under (or over) a caption, in its column"""
     cx = center(cap_box)[0]
@@ -890,7 +1015,8 @@ def analyse(spec, where="", resolved=None):
     for e in rspec.get("_relate") or []:
         bad("RELATION", e, None, BLOCK)
     F = Fig(spec, rspec, geo)
-    for fn in (chk_named, chk_loose, chk_deck, chk_gas, chk_aim, chk_grid, chk_words, chk_small, chk_truths, chk_step, chk_label):
+    for fn in (chk_named, chk_loose, chk_deck, chk_gas, chk_aim, chk_grid, chk_words, chk_small, chk_truths, chk_step, chk_label,
+               chk_way, chk_readout, chk_joins):
         fn(F, bad)
     ok = spec.get("meaning_ok") if isinstance(spec.get("meaning_ok"), dict) else {}
     norm = {re.sub(r"\s+", " ", str(k)).strip().lower(): (k, v) for k, v in ok.items()}

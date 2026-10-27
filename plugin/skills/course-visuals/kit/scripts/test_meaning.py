@@ -246,6 +246,61 @@ def igf266_part():
 
 
 CALIB = os.environ.get("CF_MEANING_CALIBRATION")      # a folder of hand-fixed, instructor-reviewed specs (the IGF original's)
+FIX2665 = os.path.join(HERE, "fixtures", "igf2665")
+# 2.66.7 - the 2.66.5 timed run's figure review (NEXT_ROUND.md): the run's own specs with the fault its first review called
+# BROKEN put back (the fixers had fixed them) - each now caught for that fault
+EXPECT2665 = {"M03_s05_way": [("WAY step3", "says the valve closes, and the step opens it (B1, B2)", "BLOCK")],
+              "M03_s05_alone": [("JOINS B1", "joins nothing", "BLOCK"), ("JOINS B2", "joins nothing", "BLOCK"),
+                                ("JOINS T", "no pipe reaches it", "NOTE")],
+              "M03_s07": [("READOUT P3", "reads 60 % while the tank T is drawn 20 % full", "BLOCK")],
+              "M02_s14": [("READOUT P2", "at rest the level P2 reads 20 % while the tank P1 is drawn 90 % full", "BLOCK")]}
+
+
+def igf2665_part():
+    print("\n-- 2.66.7 the 2.66.5 run's BROKEN figures: a step that does the opposite of its title (WAY), a readout against its "
+          "tank (READOUT), a part on no line (JOINS)")
+    for name, want in sorted(EXPECT2665.items()):
+        a = km.analyse(load(os.path.join(FIX2665, name + ".kit.json")), name)
+        for kind, word, level in want:
+            got = has(a["block"], kind, word) if level == "BLOCK" else has(a["note"], "note " + kind, word)
+            check("%s: %s %s (%s)" % (name, level, kind, word), got, a["block"] + a["note"])
+    valve = lambda title, play, rest=1: small(
+        [{"id": "T", "type": "tank", "x": 40, "y": 200, "w": 160, "h": 60}, {"id": "P", "type": "pipe", "from": "T.right", "to": [600, 230]},
+         {"id": "V", "type": "valve", "at": "P@0.5", "value": rest}, {"id": "BL", "type": "valve", "at": "P@0.8", "value": 0}],
+        [{"title": title, "play": play}])
+    check("WAY: 'the valve closes' and the step opens it - a BLOCK", has(blocks(valve("1 · The valve closes", [["V", 1, 300]], 0)),
+                                                                      "WAY step1"), lines(valve("1 · The valve closes", [["V", 1, 300]], 0)))
+    check("... it closes it: none", not has(lines(valve("1 · The valve closes", [["V", 0, 300]])), "WAY"))
+    check("... a title saying both ways ('close ... opens') is not judged",
+          not has(lines(valve("1 · The block valve closes and the bleed valve opens", [["V", 1, 300], ["BL", 1, 300]], 0)), "WAY"))
+    check("... 'the open deck', 'close to' are places, not a valve opening or closing",
+          not has(lines(valve("1 · The valve on the open deck, close to the mast", [["V", 0, 300]])), "WAY"))
+    pump = lambda title, play, rest: small([{"id": "T", "type": "tank", "x": 40, "y": 200, "w": 160, "h": 60},
+                                            {"id": "P", "type": "pipe", "from": "T.right", "to": [600, 230]},
+                                            {"id": "PU", "type": "pump", "at": "P@0.5", "value": rest}], [{"title": title, "play": play}])
+    check("WAY: 'the pump stops' and the step starts it - a BLOCK; it stops it - none",
+          has(blocks(pump("1 · The fuel pump stops", [["PU", 1, 300]], 0)), "WAY step1")
+          and not has(lines(pump("1 · The fuel pump stops", [["PU", 0, 300]], 1)), "WAY"))
+    tank = {"id": "T", "type": "tank", "x": 40, "y": 100, "w": 200, "h": 150, "value": 0.2}
+    lv = {"id": "L", "type": "level", "x": 300, "y": 60, "w": 50, "h": 200, "label": "tank level", "unit": "%", "value": 20}
+    check("READOUT: the level rises to 90 % and the tank stays drawn at 20 % - a BLOCK; the tank rises with it - none",
+          has(blocks(small([tank, lv], [{"title": "1 · Filling", "play": [["L", 90, 900]]}])), "READOUT L")
+          and not has(lines(small([tank, lv], [{"title": "1 · Filling", "play": [["L", 90, 900], ["T", 0.9, 900]]}])), "READOUT"))
+    lel = dict(lv, type="gauge", r=40, label="gas detector", unit="% LEL", max=100)
+    check("... a % LEL reading is no tank level: none", not has(lines(small([tank, lel], [{"title": "1 · Gas", "play": [["L", 90, 900]]}])),
+                                                               "READOUT"))
+    rv = small([dict(tank, x=40, y=150), {"id": "RV", "type": "relief_valve", "x": 120, "y": 136},
+                {"id": "P", "type": "pipe", "from": "T.right", "to": [600, 200]}])
+    check("JOINS: a relief valve standing on its tank's top (no pipe end on it) is mounted: none (the hand-fixed IGF M03 s07)",
+          not has(lines(rv), "JOINS"), lines(rv))
+    alone = small([dict(tank, x=40, y=150), {"id": "P", "type": "pipe", "from": "T.right", "to": [600, 200]},
+                   {"id": "V", "type": "valve", "x": 400, "y": 60}])
+    check("JOINS: a valve away from every pipe in a figure with pipes - a BLOCK", has(blocks(alone), "JOINS V"), lines(alone))
+    if CALIB and os.path.isdir(CALIB):
+        specs = sorted(glob.glob(os.path.join(CALIB, "*.kit.json")))
+        found = [x for f in specs for x in km.analyse(load(f), os.path.basename(f))["block"] if any(": %s" % k in x for k in ("WAY", "READOUT", "JOINS"))]
+        check("calibration: no WAY / READOUT / JOINS BLOCK in the hand-fixed set (%d specs; 2.66.7: 0, two JOINS notes)" % len(specs),
+              not found, found)
 
 
 def levels_part():
@@ -338,6 +393,7 @@ def main():
     rules_part()
     igf265_part()
     igf266_part()
+    igf2665_part()
     levels_part()
     patterns_part()
     starter_part()

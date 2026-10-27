@@ -1,0 +1,23 @@
+{
+  "_fixture": "2.66.5 timed run, M02 s14 (C:\\rvt\\s2665 final spec) with the fault its first figure review called BROKEN put back: \"In step 1 the tank is drawn nearly full while the level reads 20 ... The tank fill is the same at steps 1 to 4 even though the level goes up\"",
+  "size": [640, 330],
+  "label": "A tank monitoring screen: the tank with its level bar and the high-level alarm line, a pressure gauge with its high alarm and red relief limit, and a temperature reading from the bilge well in the tank connection space.",
+  "idle": "Press Next step",
+  "parts": [
+    {"id": "P1", "type": "tank", "x": 200, "y": 20, "w": 290, "h": 120, "value": 0.9},
+    {"id": "P2", "type": "level", "x": 40, "y": 10, "w": 50, "h": 170, "min": 0, "max": 100, "label": "Level", "unit": "%", "value": 20, "ticks": "left",
+     "marks": [{"at": 90, "label": "high level", "kind": "alarm", "alarm": "HIGH LEVEL"}, {"at": 98, "kind": "trip", "stop": true, "alarm": "HIGH LEVEL SHUT-OFF · bunkering valve closed"}]},
+    {"id": "P3", "type": "gauge", "x": 556, "y": 100, "r": 70, "min": 0, "max": 10, "numbers": true, "unit": "bar", "label": "Pressure", "normal": [2, 7], "value": 4,
+     "marks": [{"at": 8, "label": "high", "kind": "alarm", "alarm": "TANK PRESSURE HIGH"}, {"at": 9, "kind": "trip"}], "every": 10, "sweep": 220},
+    {"id": "TCS", "type": "space", "x": 170, "y": 170, "w": 340, "h": 140, "label": "Tank connection space", "crosses": true},
+    {"id": "W", "type": "well", "x": 196, "y": 210, "w": 80, "h": 62, "tag": "TT", "value": 0},
+    {"id": "P4", "type": "readout", "x": 340, "y": 210, "w": 124, "h": 60, "label": "BILGE WELL", "unit": "°C", "value": 15,
+     "marks": [{"at": -30, "dir": "down", "kind": "trip", "alarm": "BILGE WELL COLD · liquid leaked"}]}
+  ],
+  "steps": [
+    {"title": "1 · Every essential value can be read locally and remotely - bunkering included", "line": 1, "play": [["P2", 35, 800]]},
+    {"title": "2 · Level: a high-level alarm, and a separate sensor that closes the bunkering valve so the tank never fills full", "line": 2, "play": [["P2", 97, 2600, 0, "linear"]]},
+    {"title": "3 · Pressure: a gauge on the tank, repeated on the bridge, marked with the highest and lowest allowed pressure; an alarm before the relief valves lift", "line": 3, "play": [["P3", 8.2, 2200, 0, "linear"]]},
+    {"title": "4 · Temperature: a sensor in the tank connection space bilge well - cold means liquid has leaked, and the safety system acts", "line": 4, "play": [["W", 1, 1200], ["P4", -60, 2400, 0, "linear"]]}
+  ]
+}

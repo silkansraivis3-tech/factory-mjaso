@@ -1,0 +1,23 @@
+{
+  "_fixture": "2.66.5 timed run, M03 s05 (C:\\rvt\\s2665 final spec) with the fault its first figure review called BROKEN put back: \"There is no pipe path from the tank to the engine. Every part sits on its own ... no pipe joins the valves to anything\"",
+  "size": [640, 390],
+  "label": "Double block and bleed on the gas line from the LNG tank to the dual-fuel engine: the tank valve and two block valves in series with a bleed valve between them that leads to a vent mast in the open air, a gas detector in the engine room, and a fuel oil line to the engine.",
+  "idle": "Press Next step",
+  "parts": [
+    {"id": "G", "type": "ga", "x": 10, "y": 200, "w": 620, "h": 180, "cut": true, "water": false},
+    {"id": "T", "type": "tank", "on": "G.deck", "at": 0.12, "w": 120, "h": 80, "value": 0.7, "label": "LNG tank"},
+    {"id": "ER", "type": "space", "x": 340, "y": 212, "w": 285, "h": 158, "label": "ENGINE ROOM"},
+    {"id": "E", "type": "engine", "x": 470, "y": 286, "w": 100, "h": 48, "cylinders": 4, "label": "dual-fuel engine", "value": 1},
+    {"id": "TV", "type": "valve", "x": 250, "y": 120, "size": 10, "actuator": true, "value": 1, "label": "tank valve", "labelAt": "above"},
+    {"id": "B1", "type": "valve", "x": 430, "y": 60, "size": 10, "actuator": true, "value": 1, "label": "block valve", "labelAt": "above"},
+    {"id": "B2", "type": "valve", "x": 500, "y": 60, "size": 10, "actuator": true, "value": 1, "label": "block valve", "labelAt": "above"},
+    {"id": "BL", "type": "valve", "x": 465, "y": 120, "size": 10, "actuator": true, "value": 0, "label": "bleed valve", "labelAt": "right"},
+    {"id": "V", "type": "vent", "on": "G.deck", "at": 0.95, "mast": 128, "label": "vent in the open air", "labelAt": "left"},
+    {"id": "P5", "type": "pipe", "fluid": "liquid", "from": "ER.left", "to": "E.left", "value": 0, "fill": 0},
+    {"id": "N5", "type": "text", "text": "fuel oil", "for": "P5", "reveal": true, "value": 0}
+  ],
+  "steps": [
+    {"title": "1 · Both block valves close", "line": 1, "play": [["B1", 0, 600], ["B2", 0, 600]]},
+    {"title": "2 · The bleed valve opens", "line": 2, "play": [["BL", 1, 600]]}
+  ]
+}

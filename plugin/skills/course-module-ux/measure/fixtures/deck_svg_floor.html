@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Fixture - drawing words a rounding under the floor (audit_deck.js svgSmall: one rule with audit_drawing.js)</title>
+<style>
+  html,body{margin:0;height:100%}
+  .slide{display:none;position:absolute;inset:0;overflow:hidden}
+  .slide.active{display:block}
+  /* a 1000-wide drawing shown 500 px wide: every word is drawn at half its declared size */
+  svg{position:absolute;left:40px;top:40px;width:500px}
+</style></head>
+<body>
+<main id="stage">
+  <section class="slide" id="s1">
+    <svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
+      <!-- 12.47 px: the kit's grown words at 1024 x 768 (2.66.5 run, 27 builds) - audit_drawing.js passes it -->
+      <text x="20" y="60" font-size="24.94">rounding</text>
+      <!-- 12.4 px: really under the floor, both audits fail it -->
+      <text x="20" y="160" font-size="24.8">under</text>
+      <!-- 13 px: fine -->
+      <text x="20" y="260" font-size="26">fine</text>
+    </svg>
+  </section>
+</main>
+<pre id="out"></pre>
+<script src="../scripts/audit_deck.js"></script>
+<script>
+  AuditDeck.all().then(function (res) {
+    var small = [];
+    (res.failingSlides || []).forEach(function (s) { (s.svgSmall || []).forEach(function (f) { small.push(f.txt); }); });
+    document.getElementById("out").textContent = JSON.stringify({svgSmall: (res.totals || {}).svgSmall, words: small,
+      verdict: res.verdict || ""});
+  });
+</script>
+</body></html>
