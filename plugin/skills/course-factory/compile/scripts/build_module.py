@@ -332,14 +332,20 @@ def measure_out(path, misfits):
 # is measured out at once (MNN_layout_avoid.json, as before) and the deck laid out again, at most LAYOUT_ROUNDS times.
 # The audit at the end still judges every slide, and still builds again if one does not fit after all (a figure fitted
 # in the build can change its panel). CF_LAYOUT_PRECHECK=off: not run.
-def varied_new(deck_html, last, seen=()):
-    """{sid: slide index from 0} - the slides built another way for L62 (data-varied) that the last build did not build
-    that way (MNN_layouts.json: the same words and the same look), and not checked already (seen: (sid, shape, ground))"""
+# 2.66.5 (its timed run): "the last build built it so" was not enough - a fixer changed only the DRAWING on a slide kept
+# its way (M02 s04, M03 s02), it no longer fit, and the round at the end built the module again. A slide is passed over
+# only when it was checked fitting as it is now: its whole markup, the drawing in it, kept in MNN_precheck_fit.json
+def section_sha(deck_html, sid):
+    m = re.search(r'<section [^>]*\bdata-script="%s"[^>]*>.*?</section>' % re.escape(sid), deck_html, re.S)
+    return hashlib.sha1(m.group(0).encode("utf-8")).hexdigest()[:16] if m else ""
+
+
+def varied_new(deck_html, fitted, seen=()):
+    """{sid: slide index from 0} - the slides built another way for L62 (data-varied) that were not checked fitting as
+    they are now (fitted: {sid: section_sha}), and not checked in this pre-check already (seen: (sid, shape, ground))"""
     out = {}
     for k, (sid, shape, ground, words) in varied_slides(deck_html):
-        a = (last or {}).get(sid) or {}
-        kept = a.get("words") == words and list(a.get("key") or []) == [shape, ground]
-        if not kept and (sid, shape, ground) not in seen:
+        if (fitted or {}).get(sid) != section_sha(deck_html, sid) and (sid, shape, ground) not in seen:
             out[sid] = k
     return out
 
@@ -374,6 +380,11 @@ def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None):
     script, build = cs.load(p["script"]), cs.load(os.path.join(p["dir"], mid_ + ".build.json"))
     figdir = os.path.join(os.path.dirname(p["dir"]), "figures", mid_)
     last = cm.load_layouts(work, mid_)
+    fit_path = os.path.join(logdir, "%s_precheck_fit.json" % m)
+    try:
+        fitted = json.load(io.open(fit_path, encoding="utf-8"))
+    except (OSError, ValueError):
+        fitted = {}
     lines, out, seen = [], {}, set()
     if audit is None:
         exe, offset = ra.browser(), []
@@ -386,7 +397,7 @@ def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None):
             return ra.measure(exe, Path(deck), size, 240000, offset[0], only)     # run_audits.py's own budget
     for rnd in range(LAYOUT_ROUNDS + 1):
         deck, _, _ = cm.compile_deck(script, build, mdir, figdir, "CACHE", True, cm.load_layout_avoid(work, mid_), last, {})
-        todo = varied_new(deck, last, seen)
+        todo = varied_new(deck, fitted, seen)
         if not todo:
             break
         page = os.path.join(mdir, "presentation", "_layout_precheck_%d.html" % os.getpid())
@@ -409,6 +420,15 @@ def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None):
                 text += ra.summarise(name, res.get(name) or {"ABORTED": "no result"})[2]
         mis = {k: v for k, v in moved_misfits(deck, "\n".join(text)).items() if k in todo}
         seen |= {(sid, shape, ground) for _, (sid, shape, ground, _) in varied_slides(deck) if sid in todo}
+        for sid in todo:                           # what fits as it is now is not checked again until it changes
+            if sid in mis:
+                fitted.pop(sid, None)
+            else:
+                fitted[sid] = section_sha(deck, sid)
+        try:
+            io.open(fit_path, "w", encoding="utf-8", newline="\n").write(json.dumps(fitted, indent=1, sort_keys=True))
+        except OSError:
+            pass
         lines.append("round %d: %d slide(s) built another way checked (%s)%s" % (
             rnd + 1, len(todo), ", ".join(sorted(todo)), "; did not fit: " + ", ".join(
                 "%s (%s, %s ground)" % (k, v[0], v[1]) for k, v in sorted(mis.items())) if mis else " - every one fits"))

@@ -303,8 +303,18 @@ def precheck_part():
         tcm.run(tcm.COMPILE, c, "--module", "1", "--force")     # the build's compile: it writes M01_layouts.json
         calls.clear()
         lines2, out2 = b.layout_precheck(c, 1, md, logdir, "M01", [(1280, 800), (1024, 768)], audit)
-        check("the next build audits nothing: every slide is built the way the last build built it (M01_layouts.json)",
-              calls == [] and out2 == {}, (calls, lines2))
+        check("the next build audits nothing: every slide built another way was checked fitting as it is now "
+              "(M01_precheck_fit.json)", calls == [] and out2 == {}, (calls, lines2))
+        fit = json.load(io.open(os.path.join(logdir, "M01_precheck_fit.json"), encoding="utf-8"))
+        moved = sorted(fit)[0]
+        figs = os.path.join(c, "working_claude", "figures", "M01")
+        io.open(os.path.join(figs, moved + ".html"), "w", encoding="utf-8").write(        # the same drawing, one part changed
+            io.open(os.path.join(figs, "ga.html"), encoding="utf-8").read().replace("</svg>", '<circle cx="9" cy="9" r="3"/></svg>', 1))
+        tcm.build_of(c, lambda bs: bs["screens"][moved].__setitem__("figure", moved + ".html"))
+        calls.clear()
+        b.layout_precheck(c, 1, md, logdir, "M01", [(1280, 800), (1024, 768)], audit)
+        check("... but a slide kept its way whose markup changed (2.66.5's timed run: a fixer changed only the drawing on "
+              "M02 s04 and it no longer fit) is checked again - only it", len(calls) == 2 and len(calls[0][1]) == 1, (moved, calls))
         src = io.open(os.path.join(HERE, "build_module.py"), encoding="utf-8").read()
         check("build_module.py runs it first (round 0), as a stage of its own, CF_LAYOUT_PRECHECK=off turns it off",
               'timed("layout pre-check (L62)", t0)' in src and "CF_LAYOUT_PRECHECK" in src
