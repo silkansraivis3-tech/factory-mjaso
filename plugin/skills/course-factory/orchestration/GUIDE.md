@@ -210,6 +210,11 @@ Two things that are genuinely harder than they look, and are worth knowing befor
 
 ## Running it
 
+**Whether it runs is asked, never assumed (2.73.1).** With the Stage 2 approval the operator is asked once - all modules at
+once with agents, or module by module in the session (SKILL.md, "How the modules are built") - and the answer is kept in
+`intake.json` `"build_mode"`. `"workflow"` is the operator's own request for this script: it runs without their having to
+name agents or workflows.
+
 `orchestration/workflows/build_course.js` is a ready script for the `Workflow` tool: reader → gate →
 parallel modules with QA pipelined behind each → the cross-module pass. Read it before running it —
 it is deliberately short, and the module prompt inside it is the thing worth editing for a

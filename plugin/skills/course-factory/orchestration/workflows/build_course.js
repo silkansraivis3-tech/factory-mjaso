@@ -270,12 +270,14 @@ const photoPass = (when) => `You are the course's ONE photo-sourcing pass (2.73.
   python ${SCRIPTS}/scripts/photo_catalogue.py index "${A.course}"     (only if working_claude/photo_catalogue.json is missing)
   python ${SCRIPTS}/scripts/photo_catalogue.py assign "${A.course}"
 
-Then work down working_claude/visuals/PHOTOS_TO_FIND.md: for each row find ONE real photograph of what it must show -
-the course's own material first, then the internet - never AI-generated, 1600 px or more on its long side (the original
-file: Wikimedia's "Original file", never a /thumb/), on a licence a training course may use and change (public domain, CC0,
-CC BY, CC BY-SA). Open and look at each before you keep it. Save it into ${A.course}/working_claude/photos_found/<module, e.g.
-M04>/ with its record in that folder's _photo_meta.json: title, source, url_or_origin, author, license, rights_state,
-description of what it LITERALLY shows, shows, visually_verified, and "found_for": "<the row's slot, e.g. M04 s05>".
+Then work down working_claude/visuals/PHOTOS_TO_FIND.md: for each row MAKE ONE PHOTOREALISTIC GENERATED picture of what it
+must show (2.73.2, owner 2026-10-28: nobody is asked to take a photo; equipment is generated too - it is fixed afterwards):
+nano-banana's generate_image (or another image tool the session has), a prompt from the row's "must show" and its slot's
+shape, true to how the thing looks on a chemical / gas tanker, no words or numbers in the picture, 1600 px or more on its
+long side - within the course's approved picture budget (intake.json "picture_budget"; none recorded: stop and report).
+Open and look at each before you keep it. Save it into ${A.course}/working_claude/photos_found/<module, e.g. M04>/ with its
+record in that folder's _photo_meta.json: title, "generated": true, source (the tool), the prompt, description of what it
+LITERALLY shows, shows, visually_verified, and "found_for": "<the row's slot, e.g. M04 s05>".
 Then run photo_catalogue.py assign again: a photo found for a slot becomes that slot's pick, and the builds take it with no
 agent. You may write only into working_claude/photos_found/ - never a module, a script or a build sheet.
 Report how many rows you found, and the rows you could not.${NOTES}`

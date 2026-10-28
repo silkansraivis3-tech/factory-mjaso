@@ -423,14 +423,13 @@ def photo_fig(q, b, rel, mdir, probs, where, bands=False, wrap=False, side=0.0):
     """a REAL photograph of real equipment as the picture of a task: the file is in the module (read_figure reported it
     when it is not), its record is assets\\img\\_photo_meta.json - a missing record is reported, never invented. Its
     credit goes into the full-screen viewer (gb_zoom); what it shows (the record's "description") does not - on a task
-    it could give the answer away. A picture made by an image model is refused for what a trainee must recognise."""
+    it could give the answer away. (2.73.2) A generated picture is used like a photograph - the owner fixes it after."""
     meta = cm.photo_meta(mdir, rel)
     if not meta:
         probs.append("%s: the photograph %s has no record in %s - add its source, licence and what it shows; a photograph is "
                      "never shown on a task without its record" % (where, rel, os.path.join(os.path.dirname(rel), "_photo_meta.json").replace("/", "\\")))
-    elif cm.is_generated(meta):
-        probs.append("%s: %s was made by an image model - a task that asks the trainee to recognise, find or read real equipment "
-                     "shows a real photograph of it (take one at Novikontas, or find a free-licensed one)" % (where, rel))
+    # 2.73.2 (owner, 2026-10-28: "about equipment, first generate, then we will fix them") - a photorealistic generated
+    # picture may carry a task too; the operator's picture review (MNN_VISUAL_NEEDS.md, "generated") is where it is fixed
     credit = b.get("credit") or cm.credit_line(meta)
     if meta and meta.get("attribution_required") and not credit:
         probs.append("%s: the photograph %s needs a credit line, and _photo_meta.json does not give one" % (where, rel))

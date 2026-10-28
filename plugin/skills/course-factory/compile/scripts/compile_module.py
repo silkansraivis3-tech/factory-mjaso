@@ -1075,9 +1075,9 @@ ACRONYMS = {"LNG", "CNG", "LPG", "ESD", "GVU", "TCS", "FPR", "IGF", "LEL", "BOG"
 TO_TAKE = "PHOTOS_TO_TAKE.md"
 CHART_PARTS = ("scale", "bands", "curve_chart", "flammability", "range_bar")   # the kit's chart family (SPEC.md family 6)
 # 2.49.0 (operator, 2026-10-16: AI pictures when needed) - what a missing photograph can become, said at the build
-NO_PHOTO_YET = (" - find the real photograph (the project, the factory library, a free-licence one: course-visuals); "
-                "if none exists and the slide only sets the scene, propose an AI picture unasked (nano-banana: described, "
-                "priced, said yes to, then made; never equipment to recognise, L33); equipment stays a photo to take")
+NO_PHOTO_YET = (" - the course's own picture first (photo_catalogue.py; a small one is reused and enlarged), else a "
+                "photorealistic GENERATED one (nano-banana, within the course's approved budget) - equipment too; nobody is "
+                "asked to take a photo (owner, 2026-10-28, 2.73.2)")
 # 2.49.7 (IGF M01 s05) - the script plans a 3D scene and the build sheet gives a 2D figure: said, until the operator keeps it
 FLAT_3D = ("%s asks for a 3D scene (%s); it has a 2D figure (%s) - build the scene (compile GUIDE 2b: an .html figure with a "
            "[data-stage], its three.js file in \"scripts\", like M03's m03_station3d.js), or keep the 2D figure with the "
@@ -1646,10 +1646,11 @@ def write_to_take(course, script, notes):
     p = workspace.claude_path(course, TO_TAKE)
     os.makedirs(os.path.dirname(p), exist_ok=True)
     m = cs.mid(script.get("module"))
-    head = ("# Photos to take at Novikontas\n\n"
-            "Every real thing a drawing names that has no real photograph yet (L57). The `## Mnn` sections are written by\n"
-            "compile_module.py on every build - add a photo with its `shows` in `_photo_meta.json` and build again.\n"
-            "Notes of your own go under `## Notes`, which is never touched.\n")
+    head = ("# Pictures still missing - found or generated, never taken\n\n"
+            "Every real thing a drawing names that has no picture yet (L57). Nobody is asked to take a photo (owner, 2026-10-28):\n"
+            "the course's own pictures first (reused, enlarged), else a photorealistic generated one. The `## Mnn` sections are\n"
+            "written by compile_module.py on every build - add the picture with its `shows` in `_photo_meta.json` and build\n"
+            "again. Notes of your own go under `## Notes`, which is never touched.\n")
     text = io.open(p, encoding="utf-8").read() if os.path.isfile(p) else head + "\n## Notes\n"
     rows = ["- " + r for r in by_thing(notes)] or ["- every drawn thing has its photograph"]
     sec = "## %s · %s\n\n%s\n" % (m, script.get("title") or "", "\n".join(rows))

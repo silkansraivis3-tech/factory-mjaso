@@ -1272,6 +1272,14 @@ def main(argv=None):
     # (precheck.py) - a missing picture, a photograph under 800 px, dense text with no picture - before the figures stage,
     # the slowest one, is spent on a build that could not pass (owner, 2026-10-26: "cut time and usage, quality the same")
     pre_notes = []
+    if str(o.module).isdigit() and o.layout_round == 0 and not o.draft:
+        # 2.73.2 (owner, 2026-10-28) - the course's small pictures are reused, made sharp on THIS computer first (Real-ESRGAN,
+        # once per picture, nothing sent anywhere; a picture with words keeps the plain enlargement); not installed: as before
+        up = os.path.join(SKILLS, "course-visuals", "scripts", "upscale_photos.py")
+        if os.path.isfile(up) and os.environ.get("CF_UPSCALE", "").lower() != "off":     # off: a test, the same on every PC
+            ucode, uout = run([PY, up, course, "--modules", str(int(o.module))], timeout=1800)
+            if ucode == 0 and re.search(r"\benlarged\b|made sharp", uout, re.I):
+                print("Photographs made sharp on this computer first (upscale_photos.py, Real-ESRGAN)")
     if not o.no_precheck and str(o.module).isdigit() and o.layout_round == 0:
         import precheck
         # a module built before is a rebuild: the small pictures it already has are notes (fix/GUIDE.md 3b)
@@ -1430,7 +1438,7 @@ def main(argv=None):
         notes.append("RECOMMENDED (L60): " + rec)
     mm = re.search(r"Real photographs still missing.*?listed in\s*\n\s*(\S.*?)\n((?:  - .*\n?)*)", cout)
     if mm:
-        notes.append("Real photographs still to take: %d thing(s), listed in %s" % (len(mm.group(2).strip().splitlines()), mm.group(1).strip()))
+        notes.append("Pictures still missing (found or generated - never taken, 2.73.2): %d thing(s), listed in %s" % (len(mm.group(2).strip().splitlines()), mm.group(1).strip()))
     # 2.52.0 - the compile's notes on pictures: left out of the package, and real photos a task question could stand on
     ml = re.search(r"Pictures no page shows - left out of the package.*?\n((?:  - .*\n?)*)", cout)
     if ml:

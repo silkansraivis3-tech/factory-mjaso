@@ -118,8 +118,8 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
     `visual`. Aim for one good 3D scene in a module whose subject is spatial; none in one that is not (procedures,
     charts, ideas). L46 still holds: at most half the teaching slides, never a real photo replaced, full quality.
   - **AI picture:** where a slide sets a scene or a situation that no real photograph shows (people at work, an
-    operation, an incident) - `ai_illustration`, context only, never equipment to recognise (L33). Planning it is
-    free; the picture itself is described, priced and said yes to before it is made (nano-banana, L47).
+    operation, an incident) - `ai_illustration`; (2.73.2) equipment too, first generated, then fixed. Planning it is
+    free; the pictures are made within the course's one approved budget (nano-banana, L47).
   - The review page names what you left out as proposals (`v_3d_propose`, `v_ai_propose`): the slide and the words
     that made it. Each one the operator keeps goes into the script (propose / apply); each one they strike goes into
     the script's `"declined"`, outside the approved words, so it is never proposed again:
@@ -167,8 +167,8 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   `interactive_diagram`, `model_3d`, `model_3d_scan`, `model_3d_licensed`, `video_real`,
   `video_generated`, `ai_illustration` — or `none`, only on the closing summary. Pick it from what the
   slide must teach (`course-visuals`, `decide/knowledge/learning-needs.json`): what moves or changes state
-  is animated; what has an inside is a cutaway or a 3D model; what must be recognised on board is a real
-  photograph, a scan or a photo to take at Novikontas — never an AI picture (L33).
+  is animated; what has an inside is a cutaway or a 3D model; what must be recognised on board is the course's own
+  photograph (reused, enlarged) or a photorealistic generated one - never a photo to take (L33, owner 2026-10-28).
 - `"from_old"` (optional, L41) — where in the old course the slide comes from and what changed: *"1. Liquefied Gas
   tankers.pptx, slides 37-40 - the photographs became a 3D model"*. Shown on the review page.
 - `"visual"` — what it shows and why, in one or two sentences; `"layout"` — `split` (text left, picture

@@ -104,7 +104,7 @@ seems to collide with it. The record behind the rows: `references/laws-in-full.m
 | **L30** | **Module 1 is a pilot**, built by five roles and approved before any other module is built | step 10 |
 | **L31** | Ask like a colleague: real expert questions batched as **one pop-up with options** at the next STOP, then carry on. No "needs SME review" spam. Honesty markers live in `factory-notes.md`, never on a slide, never a reason to stop; "next" at a STOP ratifies what it showed | now |
 | **L32** | `COURSE_STATE.md` updated at the end of every stage; every operator correction in `FEEDBACK_LOG.md`; a pattern file offered when the operator is happy — see *The course remembers* below | now |
-| **L33** | Pictures: KB → old course → source files → internet → authored → generated. **Every KB and old-course picture is usable as it is** (credited, listed); what is missing is **searched on the internet and downloaded**, the list confirmed once per module; equipment a trainee must recognise is **never** an AI image | step 8 |
+| **L33** | Pictures: KB → old course → source files → internet → authored → generated. **Every KB and old-course picture is usable as it is** (credited, listed); **a small one is reused and enlarged on this computer** (Real-ESRGAN, by the build); what the course does not have is a **photorealistic generated** picture - **equipment too: first generated, then fixed** (owner, 2026-10-28); **nobody is ever asked to take a photo** | step 8 (2.73.2) |
 | **L34** | **One module per programme topic**, in its order, with its hours. The final-assessment topic is the **last module, assessment only**. Topics never merged or split. An academic hour is the programme's (40 min when silent) | now |
 | **L35** | **Two tablets.** Slides on the instructor tablet (mirrored), notes on the instructor's panel; tasks **only** on the trainee tablet, opened by one **OPEN TASK** button. No task list, no browsing, no "back to tasks" | now; the app in step 6 |
 | **L36** | **Enough theory before any task.** A slide carries the teaching, not a headline; the notes what the instructor explains; words fill the minutes; a self-check only after new theory; every answer taught before its task. `knowledge/theory-rules.json` | now |
@@ -117,17 +117,17 @@ seems to collide with it. The record behind the rows: `references/laws-in-full.m
 | **L44** | **Three places in `course\`:** `to_review\` (what the operator checks), `modules\` (finished), `working_claude\` (factory only, all kept). Nothing loose. `workspace.py tidy` | now |
 | **L45** | **The course folder follows the classroom system's own rules** (`knowledge/classroom-system.json`) - layout, slide and task attributes, `gb-task-done`, ≤ 15 MB a file, offline, 1280 × 800; answers never readable; the result screen is the last screen, a task never leaves its page. `scripts/check_course_package.py` | steps 6-10 |
 | **L46** | **3D where it makes sense - at most half the teaching slides - at full quality and smooth on the tablet**: only for shape, inside or layout in space. The cap is on how many, never how good. `knowledge/media-and-tasks.json` → `three_d` | now; step 9 |
-| **L47** | **A generated picture only after the person described it and said yes** (about €0.10 each): one place at a time (`scripts/picture_briefs.py`), the prompt shown, generated once on a yes; a redo needs a new yes; the count and cost said every time | now |
+| **L47** | **A generated picture only within a budget the operator said yes to** (about €0.10 each): since 2.73.2 (owner, 2026-10-28) ONE yes per course, asked with the build mode at the Stage 2 approval - the estimated count and price, recorded as `intake.json` `"picture_budget"`; each picture's prompt is kept in its record; a redo past the budget needs a new yes; the count and cost said at the end | now |
 | **L48** | **Bloom level measured; the tablet lifts it** - suggestions only, Main ILOs verbatim. `knowledge/bloom.json`, `scripts/bloom_map.py`; read `bloom/GUIDE.md` when judging or lifting a level | now |
 | **L49** | **20 / 80 in class - the programme unchanged, every theory slide kept.** Plain theory aims at a fifth of the minutes, the rest the trainees do; **theory never removed to get there**; ~5-minute cycles; a suggestion, never a stop. The factory proposes per sub-topic, the operator keeps or strikes. Read `active/GUIDE.md` at Stage 2 | now |
 | **L50** | **A fix is not a build** - reads only `fix/GUIDE.md`, COURSE_STATE and `STANDARDS.md`; one sweep, one list, one yes, change, **one** check; no QA after the fixer, at most 2 agents; since 2.65.0 a rebuild of a built module and one change in one built module are fixes too (`fix.py rebuild`) | now |
 | **L51** | **Every picture opens full screen** (`gb_zoom.js`, every page with a picture) and **every module closes with the same recap** slide before the module check. Both are design (L26) | now |
-| **L52** | **As many real photographs as possible** in presentation and tasks: KB, old course, source files, then free-licensed and credited; missing ones on "photos to take at Novikontas"; never AI for equipment (L33). **A source-book figure** (publisher, edition, page) may be used **cleared by a named person** (Aleksis, 2026-10-22): `check_assets.py clear` records `rights_state: OWNER_CLEARED` + `cleared_by` + `source_work` - never automatic; without `cleared_by` it stays blocked | now |
+| **L52** | **As many real photographs as possible** in presentation and tasks: KB, old course, source files, then free-licensed and credited; small ones reused, enlarged; missing ones photorealistic generated, equipment too - never "photos to take" (L33, 2.73.2). **A source-book figure** (publisher, edition, page) may be used **cleared by a named person** (Aleksis, 2026-10-22): `check_assets.py clear` records `rights_state: OWNER_CLEARED` + `cleared_by` + `source_work` - never automatic; without `cleared_by` it stays blocked | now |
 | **L53** | **No empty space, good padding** - inside figures too. Decks are compiled (`compile/GUIDE.md`) and pass the layout audits before they are shown | now |
 | **L54** | **Every drawing whole and clean** - parts inside their real shapes, nothing cut off, labels 4 px clear. `audit_drawing.js` before a deck is shown | now |
 | **L55** | **Figures come from the figure kit** - a `NAME.kit.json` spec (`course-visuals/kit/SPEC.md`), never a one-off SVG; a missing part goes in the module's `kit_parts.js`, promoted after the module (ask before the push) | now |
 | **L56** | **Every photograph carries what it shows into the viewer, unasked** - its `description` and credit from `_photo_meta.json`, written when the photo comes in. **No credit text on a slide or task page** (owner Raivis, 2026-10-21): the credit is in the full-screen view and on the course's credits page (`_course_shell/credits.html`) - attribution kept; a cleared book figure's credit is its `source_work` (book, edition, page) | now |
-| **L57** | **A drawing of real things carries their real photographs, unasked** - up to four thumbnails matched by `shows`; never one awaiting rights review; a missing one goes on `PHOTOS_TO_TAKE.md`, never blocks; a drawn part that opens its photo shows a camera badge (44 px, clear of every word; `"photo_badges": false` turns them off on a slide - recommended, never required, 2.63.2) | now |
+| **L57** | **A drawing of real things carries their real photographs, unasked** - up to four thumbnails matched by `shows`; never one awaiting rights review; a missing one is listed (`PHOTOS_TO_TAKE.md`: found or generated, never taken), never blocks; a drawn part that opens its photo shows a camera badge (44 px, clear of every word; `"photo_badges": false` turns them off on a slide - recommended, never required, 2.63.2) | now |
 | **L58** | **Every photograph once in the whole course** - a duplicate is replaced or dropped. Build every module again after photos change | now |
 | **L59** | **No module before its map** - the ILO map approved on the Stage 2 page and a knowledge-base decision recorded (suggest one, unasked, if none). `scripts/course_gate.py` enforces it | now |
 | **L60** | **At least one 3D scene per module where the subject allows - strongly recommended**, never a block: `--init-build` picks the slide unasked; a module without one is said loud; declined only with the operator's reason (`"declined_3d"`); a slide with `"photo_wanted"` is never turned 3D (2.63.2) | now |
@@ -406,6 +406,29 @@ says "next"; then record it - `python scripts/make_architecture_page.py --course
 (2.42.0: it fingerprints the ILO map, and is refused while the knowledge-base decision is missing, a teaching
 module has nothing in the map, or a theory-as-activity proposal waits) - and in `COURSE_STATE.md` (L32). A later
 change to any Sub-ILO stops new modules until the page is approved again.
+
+## How the modules are built — asked once, with the Stage 2 approval (2.73.1)
+
+The operator never has to know about agents (owner, 2026-10-28: *"user dont need to tell about agents, it asks user"*).
+In the same pop-up as the Stage 2 "next" (L31: one pop-up), unless `intake.json` already has `"build_mode"`, ask:
+
+> **How should the modules be built?**
+> - **All at once, with agents (Recommended for 4 or more modules)** - the whole-course workflow
+>   (`orchestration/workflows/build_course.js`): this session leads and writes the words, Sonnet agents build and check,
+>   Phase A runs with no agent first. Fastest by the clock (a 21-module course in hours, not days); the most usage at once.
+> - **Module by module, in this session** - one module at a time, each shown before the next. Slower; less usage at once.
+>
+> **(2.73.2) And in the same pop-up: the picture budget** - "About N pictures will be generated (what the course's own
+> pictures do not show), about €X. Yes?" (N from `photo_catalogue.py assign`'s count to make, or the scripts' photo slots
+> less the catalogue's picks). Recorded as `"picture_budget": {"pictures": N, "eur": X, "said": "<date>"}`; with no yes,
+> nothing is generated and those slots wait in the needs file.
+
+Record the answer as `"build_mode": "workflow"` or `"session"` in `working_claude\intake.json` and as a row of
+COURSE_STATE's "Decided" - it is never asked again; the operator may change it by saying so. The answer IS the operator's
+own request for multi-agent orchestration: with `"workflow"` recorded, run `build_course.js` (the `Workflow` tool) when the
+modules' scripts are written and approved, without asking again. With `"session"`, build each module here with
+`compile/scripts/build_module.py` (Phase A first, then the needs file). A course already under way with neither recorded:
+ask at the next STOP.
 
 ## Stage 3 — the content script, approved before any HTML (L29)
 
