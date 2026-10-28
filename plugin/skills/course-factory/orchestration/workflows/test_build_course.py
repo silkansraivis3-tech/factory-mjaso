@@ -78,6 +78,7 @@ const agent = async (prompt, o) => {
   if (o.label.startsWith('qa:')) return { module: o.label.slice(3), classification: 'OK', blocking: false, findings: [] }
   if (o.label.startsWith('fix:')) return 'PASS - fixed'
   if (o.label.startsWith('read:')) return { modules: [] }
+  if (o.label === 'phase-a:modules') return args._phase_a ? { modules: args._phase_a } : {}   // 2.73.0 Phase A's lines
   const b = /^build:(\w+)$/.exec(o.label)                   // a builder: PASS, or (args._stuck) stopped mid-build
   if (b) return (args._stuck || []).indexOf(b[1]) >= 0 ? 'The first build is still running in the background.'
     : (args._listed || []).indexOf(b[1]) >= 0     // 2.72.7: stopped on a FAIL by the stop rule, what is left listed
@@ -416,15 +417,34 @@ def main():
               and "C:/f/skills/course-factory/compile/GUIDE.md" in pr.get("build:1", "")
               and "C:/f/skills/course-factory/scripts/course_gate.py" in pr.get("gate:ilo-map+kb", "")
               and "no paid pictures" in pr.get("build:1", "") and "no paid pictures" in pr.get("script:2", ""), pr)
-        # 2.67.0 - a written script's photographs are found while it waits for approval, not on the build's clock
+        # 2.73.0 - Phase A with no agent, the course's ONE photo pass, a builder only where Phase A left work
         ph_run = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": mods, "_approved": ["1"]})
-        lb, ph = ph_run.get("labels", []), ph_run.get("prompts", {}).get("photos:2", "")
-        check("2.67.0: a script written in this run gets its photographs found at once (photos:N after script:N, on Sonnet), "
-              "never touching the words", "photos:2" in lb and lb.index("photos:2") > lb.index("script:2")
-              and ph_run.get("opts", {}).get("photos:2") == {"model": "sonnet", "effort": "medium"}
-              and "never the script, never the build sheet" in ph and "photo_candidates/M02.md" in ph, (lb, ph[-400:]))
-        check("... and the builder is told to use them first", "photo_candidates/M01.md exists it lists them"
-              in ph_run.get("prompts", {}).get("build:1", ""), ph_run.get("prompts", {}).get("build:1", "")[:1600])
+        lb, op = ph_run.get("labels", []), ph_run.get("opts", {})
+        pa = ph_run.get("prompts", {}).get("phase-a:modules", "")
+        check("2.73.0: Phase A runs first, with no builder - one agent (Sonnet, low) runs the catalogue and phase_a.py for the "
+              "approved modules, and the course's ONE photo pass runs beside it", "phase-a:modules" in lb and "photos:course" in lb
+              and lb.index("phase-a:modules") < lb.index("build:1") and op.get("phase-a:modules") == {"model": "sonnet", "effort": "low"}
+              and "photo_catalogue.py assign" in pa and "phase_a.py" in pa and "--modules 1" in pa and "--wait" in pa, (lb, pa[-300:]))
+        pc_ = ph_run.get("prompts", {}).get("photos:course", "")
+        check("... the photo pass works down PHOTOS_TO_FIND.md into photos_found/ with found_for, never a module or a sheet",
+              "PHOTOS_TO_FIND.md" in pc_ and "photos_found" in pc_ and '"found_for"' in pc_ and "never a module" in pc_, pc_[-500:])
+        check("... a script written in this run gets the ONE photo pass after all scripts are written - not one agent per script",
+              "photos:drafts" in lb and lb.index("photos:drafts") > lb.index("script:2") and not any(x.startswith("photos:2") for x in lb), lb)
+        check("... and the builder is told the photo catalogue's candidates are in its needs file",
+              "M01_VISUAL_NEEDS.md" in ph_run.get("prompts", {}).get("build:1", ""), ph_run.get("prompts", {}).get("build:1", "")[:1600])
+        four = [{"id": i, "title": "M%d" % i, "minutes": 100 - i, "theory": 40, "practical": 20} for i in (1, 2, 3, 4)]
+        b_run = run(tmp, {"course": "C:/c", "programme": "C:/p.pdf", "modules": four, "_approved": ["1", "2", "3", "4"],
+                          "_phase_a": [{"module": "1", "line": "PASS M01 - figures, compile ... (300 s)"},
+                                       {"module": "2", "line": "PHASE A CLEAN M02 - every check that does not depend on the pictures passed"},
+                                       {"module": "3", "line": "FAIL M03 - compile (90 s)"},
+                                       {"module": "4", "line": "MODULE CLEAN M04 - only the course package is left"}]})
+        lb = b_run.get("labels", [])
+        b2 = b_run.get("prompts", {}).get("build:2", "")
+        check("... a module Phase A brought to PASS or MODULE CLEAN gets NO builder, only its judges and QA",
+              "build:1" not in lb and "build:4" not in lb and "qa:1" in lb and "qa:4" in lb, lb)
+        check("... the rest get a builder told Phase A's answer and sent to its needs file, --auto first, never --init-build",
+              "build:2" in lb and "build:3" in lb and "PHASE A CLEAN M02" in b2 and "M02_VISUAL_NEEDS.md" in b2
+              and "--auto" in b2 and "Do NOT start again from --init-build" in b2, b2[-1200:])
         # 2.66.0 (Raivis) - a builder reads its instructions by their path, never the whole skill (SKILL.md, 48 KB, the router
         # for every mode); (merge) what it reads is the builder card (2.65.0 / 2.72.x), the GUIDE named for reference
         b1 = pr.get("build:1", "")

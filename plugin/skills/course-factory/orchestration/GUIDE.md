@@ -22,9 +22,16 @@ guide exists is that the failures are all in that seam, not in the parallelism.
      |               course_gate.py checks both - no module agent starts until it says open.
      |
      v
-  1..N MODULE        one agent per module, all at once
-     |               each owns exactly one folder and nothing else
-     |               script -> operator approves -> compiled (never typed)
+  1..N SCRIPTS       one script writer per module, all at once; then ONE course-wide photo pass (2.73.0)
+     |               script -> operator approves (never typed by the builder)
+     v
+  A  PHASE A         no agent (2.73.0): photo_catalogue.py assign, then phase_a.py builds every approved module
+     |               in ONE local queue sized by the computer's browser slots - placeholders, every check, --auto picks;
+     |               beside it the course's ONE photo-sourcing pass (PHOTOS_TO_FIND.md -> working_claude\photos_found)
+     v
+  B  PHASE B         only the modules Phase A left at PHASE A CLEAN or FAIL: an agent reads the module's
+     |               MNN_VISUAL_NEEDS.md (BUILDER_CARD.md), fills the slots, builds to module clean -
+     |               then its judges and QA as in 2.72.x; a module Phase A finished goes straight to them
      v
   Q  QA              per module as it lands, then one cross-module pass
      |
@@ -145,6 +152,8 @@ the operator states during review goes into `working_claude\STANDARDS.md`, and b
 | **Reader** | the strongest available | read + search only | programme, model course, KB | `architecture.json`, `ilo_map.json` (via the Stage 2 page), the KB suggestion |
 | **Script writer** (a module whose script is not approved) | the strongest available | full | its own rows of the ILO map, its module in `architecture.json`, its source extracts, `script/GUIDE.md` | its script, review page and Word file - then STOP |
 | **Module** (an approved script) | Sonnet, medium effort (2.51.0) | full | its own rows of the ILO map (`ilo_map.py show`) and its module in `architecture.json`, its source extracts, `script/GUIDE.md`, then - once its script is approved - `compile/GUIDE.md` and the picture lanes (`course-visuals`). **Not** the HTML rules (`course-module-ux`, `course-module-ui`, `course-task-ux`): the compiler builds their standard | its script and build sheet, its figures, `modules/moduleNN/` - and never HTML by hand |
+| **Phase A** (2.73.0) | no model: one local process, `phase_a.py`, started and waited on by a Sonnet agent at low effort | nothing | every approved module as far as it goes with placeholders, and its `MNN_VISUAL_NEEDS.md` |
+| **Photo pass** (2.73.0) | Sonnet, medium effort - ONE for the course | `visuals/PHOTOS_TO_FIND.md` | `working_claude/photos_found/` with each photo's record and `found_for` |
 | **Visual** | the `nano-banana:image-director` agent (generates) or `course-factory:visual-sourcer` (finds) | read, write, web, the nano-banana tools | a `GENERATED_ASSET_REQUIRED` brief | the asset files named in the brief |
 | **QA** | Sonnet, medium effort (2.51.0); never the builder | read + run checks: `build_module.py --no-fix --no-review` once, the checks it does not run in one more call | the module, the two maps | a findings list — **never a fix** |
 
@@ -155,6 +164,27 @@ without asking. A **generated** one is never made automatically (L47 - every pic
 only then is it spawned on `nano-banana:image-director`, which makes it once. `course-visuals/scripts/write_visual_handoff.py` writes the same request to a file as the
 fallback, for when the agent is unavailable or generation is blocked (no key, billing off). Build the module as far as it
 goes either way; never leave it unfinished because one picture is missing.
+
+---
+
+## The limits of one computer - and of one workflow (2.73.0)
+
+Measured on the chem advanced run (2026-10-27, 21 modules, 2.70.0): 18 builder agents at once hit the **Workflow tool's
+cap of 20 subagents** (QA agents and script writers count too), the **CPU sat at 100 %**, and every build queued on the
+computer's **browser slots** (`scripts/browser_slots.py`: a quarter of the cores, 2-8; a build takes up to three hidden
+browsers - one per audit size - plus its figures) and on the **cold-build lock** (one module's first build at a time,
+2.63.3). More builder agents than the slots can serve buy nothing: they wait, and each wait is a model turn.
+
+So from 2.73.0 the build is queued by the computer, not by agents:
+
+- **Phase A** is `compile/scripts/phase_a.py <course> --modules 1-21` - one local process, `browser_slots.count() // 3`
+  modules at a time (`--jobs` to change it), no model at all. One agent starts it and waits (`--wait`, like a build).
+- **Phase B** builders only for the modules that need a judgement - their pictures - still at most `args.wave` builds at
+  once; a module Phase A brought to PASS or MODULE CLEAN spends no builder at all, so builders, judges, QA and the photo
+  pass stay further under the cap of 20.
+- **The photo search is ONE pass for the course** (`photos:course`), not one agent per script: the catalogue
+  (`scripts/photo_catalogue.py`) already holds every old-course and knowledge-base picture, and `PHOTOS_TO_FIND.md` lists
+  only what nothing in them shows.
 
 ---
 

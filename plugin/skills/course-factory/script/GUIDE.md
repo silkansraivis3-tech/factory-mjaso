@@ -173,6 +173,20 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   tankers.pptx, slides 37-40 - the photographs became a 3D model"*. Shown on the review page.
 - `"visual"` — what it shows and why, in one or two sentences; `"layout"` — `split` (text left, picture
   right), `visual_wide` or `visual_full`.
+- **`"picture"` — the slot, fixed here (2.73.0):** `{"kind": "photo|figure|3d|none", "aspect": "4:3", "shows": "<what it
+  must show>"}` on every slide but the recap, and on every question answered on a picture. The kind follows the visual:
+  a real picture (photo, document drawing, film still, generated) is `photo`; a schematic, cutaway, chart, comparison or
+  animation is `figure`; `model_3d*` is `3d`. It decides the slide's layout before anything is built, so the build's first
+  phase needs no agent (placeholders of this shape, compile/GUIDE.md 2g), and the course photo catalogue matches photos
+  to it by `shows`. Must fix: an unknown kind, a kind the visual does not need, a photo or figure with no aspect, nothing
+  it must show. A script from before 2.73.0 is read from `visual_kind` and `visual` (a reminder, never a block).
+- **The words a layout holds are a must-fix here (2.73.0)**, not a build-time note: beside a picture a slide's lines go
+  into parts of at most 75 words (1024 x 768, layout-templates.json "budgets"); the build can put lines in parts but never
+  cut one, so a single line over 75 words must be split in the script.
+- **The course's ship (2.73.0).** STANDARDS.md may carry a `## Ship profile` section - `- Pump arrangement: deepwell pumps`,
+  `- Not on board: pump room, cargo pump room` - and render then says (a note) every screen that names what the course's
+  ship does not have (chem advanced: four scripts written in parallel set scenes in a "pump room" on a deepwell-pump ship).
+  Write the profile at Stage 2, before the scripts are written in parallel.
 - **No quota** (2.18.1): wherever a picture, an animation or a realistic 3D illustration can show what the slide
   teaches, put it in. A slide with none, a long module where nothing moves, few kinds of picture - these come
   back as suggestions, never blocks; nothing is added only for variety (L13).

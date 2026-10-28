@@ -262,26 +262,44 @@ approves each script; nothing is built from words nobody approved.
 Report "awaiting approval", every honesty marker with its source, the planned Track A
 buckets and Track B ratio, and what you moved to the handout.`
 
-/* 2.67.0 - the photographs a script asks for are found while it waits for the operator's approval, not by the builder
-   afterwards (the builder's search for photos was time on the build's clock). One agent per written script, on Sonnet:
-   it places what it finds - with each one's rights record - and lists what it could not find; it never touches the words */
-const photoPrep = (m) => `The content script of module ${m.id} has just been written and waits for the operator's approval:
-${A.course}/working_claude/script/M${two(m)}.json. Find its PHOTOGRAPHS now, so the build does not wait for them.
+/* 2.73.0 - the course's ONE photo-sourcing pass (chem advanced, 2026-10-27: one photo agent per script, each searching the
+   same old-course and knowledge-base pictures). The catalogue (scripts/photo_catalogue.py) already holds every picture the
+   course owns; this pass finds only what PHOTOS_TO_FIND.md lists, and saves it where the builds take it with no agent */
+const photoPass = (when) => `You are the course's ONE photo-sourcing pass (2.73.0) - ${when}. Course: ${A.course}
 
-For every screen whose visual_kind is photo or annotated_photo, and every screen whose "visual" asks for a real photograph:
-search the course's own material first (the knowledge base, the old course's images - course-visuals' order: project, factory
-library, internet), then the internet - a real photograph, never AI-generated, 1600 px or more on its long side (the original
+  python ${SCRIPTS}/scripts/photo_catalogue.py index "${A.course}"     (only if working_claude/photo_catalogue.json is missing)
+  python ${SCRIPTS}/scripts/photo_catalogue.py assign "${A.course}"
+
+Then work down working_claude/visuals/PHOTOS_TO_FIND.md: for each row find ONE real photograph of what it must show -
+the course's own material first, then the internet - never AI-generated, 1600 px or more on its long side (the original
 file: Wikimedia's "Original file", never a /thumb/), on a licence a training course may use and change (public domain, CC0,
-CC BY, CC BY-SA). Save each into ${A.course}/modules/module${two(m)}/assets/img/ with its record in that folder's
-_photo_meta.json (source, url_or_origin, author, licence, rights_state, credit, description of what it LITERALLY shows,
-shows, teaching_purpose naming the screen, used_in, visually_verified after you opened and looked at it).
+CC BY, CC BY-SA). Open and look at each before you keep it. Save it into ${A.course}/working_claude/photos_found/<module, e.g.
+M04>/ with its record in that folder's _photo_meta.json: title, source, url_or_origin, author, license, rights_state,
+description of what it LITERALLY shows, shows, visually_verified, and "found_for": "<the row's slot, e.g. M04 s05>".
+Then run photo_catalogue.py assign again: a photo found for a slot becomes that slot's pick, and the builds take it with no
+agent. You may write only into working_claude/photos_found/ - never a module, a script or a build sheet.
+Report how many rows you found, and the rows you could not.${NOTES}`
 
-Then make the small ones sharp, on this computer, once: python ${SCRIPTS}/../course-visuals/scripts/upscale_photos.py
-"${A.course}" --modules ${m.id} (Real-ESRGAN - nothing is sent anywhere; it leaves a picture with words or numbers alone; if
-it says it is not installed, go on without it).
-Write the list to ${A.course}/working_claude/photo_candidates/M${two(m)}.md: each screen, the file you placed and why it fits -
-or "not found" and what would do. You may write only those two places: never the script, never the build sheet, never a page.
-Report the list.`
+/* 2.73.0 - PHASE A, with no agent (chem advanced: 18 builder agents at once hit the 20-subagent cap, the CPU sat at 100 %
+   and the browser slots serialised them - the agents mostly waited, every wait a model turn). phase_a.py builds every
+   approved module as far as it goes in ONE local queue sized by the computer's browser slots: --init-build (his prefill,
+   then placeholders of each picture slot's shape), the whole build, --auto picks. A module it brings to PASS or MODULE
+   CLEAN gets no builder; the rest get one whose brief is the module's needs file. Bench chem M11/M17/M18: 84 s, no agent */
+const PHASE_A_SCHEMA = {
+  type: 'object', required: ['modules'],
+  properties: { modules: { type: 'array', items: { type: 'object', required: ['module', 'line'],
+    properties: { module: { type: 'string', description: 'the module number, as in --modules' },
+                  line: { type: 'string', description: "phase_a.py's line for it, word for word" } } } } },
+}
+const phaseAPrompt = (ids) => `Run, in the FOREGROUND with the longest timeout the shell allows (600000 ms):
+
+    python ${SCRIPTS}/scripts/photo_catalogue.py index "${A.course}"      (only if working_claude/photo_catalogue.json is missing)
+    python ${SCRIPTS}/scripts/photo_catalogue.py assign "${A.course}"
+    python ${SCRIPTS}/compile/scripts/phase_a.py "${A.course}" --modules ${ids.join(',')}
+
+phase_a.py builds every module as far as it goes with no agent and prints one line per module. If it answers STILL
+RUNNING, run  python ${SCRIPTS}/compile/scripts/phase_a.py "${A.course}" --wait  again, until it prints its lines. Never
+start a second run, never edit a file. Report each module's line word for word (modules: [{module, line}]).`
 
 /* an approved module: the mechanical build, on Sonnet (MECHANICAL), in ONE command per round */
 /* 2.71.0 - the builder reads a one-page card (compile/BUILDER_CARD.md: the commands, the fix for each kind of line the
@@ -296,9 +314,9 @@ ${DIR ? `${DIR}/..` : `${SCRIPTS}/..`} (course-factory, course-visuals, course-m
 ${brief(m)}
 
 Your script working_claude/script/M${two(m)}.json is approved: you never type the deck's or a task page's HTML, and you
-never change the approved words. Its photographs may already be in modules/module${two(m)}/assets/img, found while the
-script waited for approval (2.67.0) - if working_claude/photo_candidates/M${two(m)}.md exists it lists them: use those
-first. No list: the photographs in assets/img are the module's.
+never change the approved words. Its photographs' candidates are in the course photo catalogue (2.73.0):
+working_claude/visuals/M${two(m)}_VISUAL_NEEDS.md lists each picture slot's, and the course's one sourcing pass saves what it
+finds in working_claude/photos_found/ - use those first.
 
     design_system.py install modules/module${two(m)}                     (course-module-ui/scripts)
     compile_module.py <course> --module ${m.id} --init-build${SEED}      (once, if the build sheet is missing)
@@ -563,11 +581,11 @@ Run build_module.py (with --wait first if a build of it is still running), fix w
 clean, then STOP - QA does the review. Its last report was:
 
 ${String(last || '(no report)').slice(0, 2500)}`
-async function buildUntilPass(m) {
-  let r = await agent(build(m), { label: `build:${m.id}`, phase: 'Build', ...MECHANICAL })
+async function buildUntilPass(m, extra) {
+  let r = await agent(build(m) + (extra || ''), { label: `build:${m.id}`, phase: 'Build', ...MECHANICAL })
   for (let k = 1; k <= (A.retries === undefined ? 1 : A.retries) && stoppedShort(r); k++) {
     log(`module ${m.id}: no build answer in the builder's report (it stopped mid-build) - a fresh agent carries it on (${k})`)
-    r = await agent(carryOn(m, r), { label: `build:${m.id}+${k}`, phase: 'Build', ...MECHANICAL })
+    r = await agent(carryOn(m, r) + (extra || ''), { label: `build:${m.id}+${k}`, phase: 'Build', ...MECHANICAL })
   }
   if (!passed(r)) log(`module ${m.id}: the builder stopped on a build's FAIL and listed what is left - no retry, to the judges`)
   return r
@@ -724,14 +742,36 @@ async function figures(m, only) {
    step and QA judge the same built module and none changes it (2.72.5); ONE fix round for all their BROKEN findings; then
    only what was BROKEN is judged again, again at the same time. Never a second fix round (NOTHING LOOPS, 2.72.0): what is
    still BROKEN goes on the operator's list - a 3D finding still blocks the module, as before */
+/* 2.73.0 - Phase A's line for a module, and what its builder is told */
+const num = (x) => String(x).replace(/\D/g, '')
+const lineOf = (m) => {
+  const row = ((phaseA && phaseA.modules) || []).find((x) => num(x.module) === num(m.id)
+    || new RegExp(`\\bM0*${num(m.id)}\\b`).test(x.line || ''))
+  return row ? String(row.line || '') : ''
+}
+const cleanA = (line) => /\bPASS M\d+/.test(line) || /\bMODULE CLEAN\b/.test(line)
+const phaseB = (m) => {
+  const line = lineOf(m)
+  return line ? `
+
+PHASE A HAS RUN (2.73.0): your module was built with no agent - --init-build's starters and placeholders, every check, the
+course catalogue's picks. Its answer: ${line}
+Do NOT start again from --init-build. Your brief is working_claude/visuals/M${two(m)}_VISUAL_NEEDS.md - each picture slot
+still to fill (its kind, shape, real px size, the words it teaches, what it must show, the catalogue's candidates), the
+figures at their starter and the 3D scenes to place - with the build's own answer. First run build_module.py <course>
+--module ${m.id} --no-course-pages --auto (the sourcing pass may have found photos since), then fill what is left (a photo:
+into assets/img with its _photo_meta.json record, 800 px or more; a question's picture: its answers' boxes onto the real
+things), place the 3D parts, fix what the build printed, and build again until module clean. A placeholder never ships.` : ''
+}
 async function oneModule(m) {
   if (!APPROVED.has(String(m.id))) {
     await agent(writeScript(m), { label: `script:${m.id}`, phase: 'Build' })
-    /* 2.67.0 - its photographs are found while the script waits for approval, not on the build's clock */
-    await agent(photoPrep(m), { label: `photos:${m.id}`, phase: 'Build', ...MECHANICAL })
+    /* 2.73.0 - its photographs: the course's ONE photo pass after every script of this run is written (photos:drafts) */
     return { module: String(m.id), classification: 'AWAITING APPROVAL - script written, nothing built', blocking: false, findings: [] }
   }
-  const time = timeOf(await place(() => buildUntilPass(m)))          // 2.65.0 (Raivis) - the module clock, from the builder's report
+  /* 2.73.0 - Phase A finished it (PASS / MODULE CLEAN): no builder, straight to the judges; else the builder's brief is its needs file */
+  const time = cleanA(lineOf(m)) ? null
+    : timeOf(await place(() => buildUntilPass(m, phaseB(m))))       // 2.65.0 (Raivis) - the module clock, from the builder's report
   const [d3a, fga, q] = await Promise.all([threeD(m), figures(m),
     agent(qa(m), { label: `qa:${m.id}`, phase: 'Verify', schema: QA_SCHEMA, ...MECHANICAL })])
   const b3 = broken3d(d3a), bf = brokenFigs(fga && fga.review), bq = fixable(q)
@@ -789,10 +829,24 @@ async function place(work) {
 }
 log(`build order, biggest first: ${ORDER.map(({ m }) => `M${two(m)}${COST.has(String(m.id)) ? ` (${COST.get(String(m.id))})` : ''}`).join(', ')}`
   + (WAVE < A.modules.length ? ` - ${WAVE} builds at a time, the next starting as one ends` : ''))
+const approvedIds = ORDER.filter(({ m }) => APPROVED.has(String(m.id))).map(({ m }) => m.id)
+const [phaseA] = approvedIds.length
+  ? await parallel([
+    () => agent(phaseAPrompt(approvedIds), { label: 'phase-a:modules', phase: 'Build', schema: PHASE_A_SCHEMA, model: 'sonnet', effort: 'low' }),
+    () => agent(photoPass('beside Phase A, while the approved modules build with no agent'),
+                { label: 'photos:course', phase: 'Build', ...MECHANICAL }),
+  ])
+  : [null]
 const results = new Array(A.modules.length).fill(null)
 await parallel(ORDER.map(({ m, i }) => async () => {        // each asks for its place in this order: biggest first
   try { results[i] = await oneModule(m) } catch (e) { log(`module ${m.id}: ${e && e.message ? e.message : e}`) }
 }))
+const drafted = ORDER.filter(({ m }) => !APPROVED.has(String(m.id))).map(({ m }) => m.id)
+const draftPhotos = drafted.length
+  ? await agent(photoPass('after this run wrote the scripts of modules ' + drafted.join(', ')
+      + " - their photographs are found while the operator reads them, not on the build's clock"),
+    { label: 'photos:drafts', phase: 'Build', ...MECHANICAL })
+  : null
 
 /* the final assessment (args.final), when its script is approved - built after the modules it draws on */
 const finalReport = A.final ? await agent(`Invoke ${SKILL} and follow it. BUILD the FINAL ASSESSMENT from its approved script.

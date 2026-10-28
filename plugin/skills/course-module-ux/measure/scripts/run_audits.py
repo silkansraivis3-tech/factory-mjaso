@@ -249,6 +249,19 @@ def counted(res):
     return {((res.get(n) or {}).get("res") or {}).get("slidesTotal" if n != "compose" else "screens") for n, _, _ in PROBES}
 
 
+def save_slots(path, full):
+    """2.73.0 - {viewport: {slot: [w, h]}}: what this run measured, over what the file had (a slide unchanged since its last
+    clean audit is not measured again and keeps its size)"""
+    try:
+        have = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        have = {}
+    for label, res in full.items():
+        for x in ((((res or {}).get("deck") or {}).get("res") or {}).get("slots")) or []:
+            have.setdefault(label, {})[x["slot"]] = [x["w"], x["h"]]
+    Path(path).write_text(json.dumps(have, indent=1, sort_keys=True), encoding="utf-8")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("deck")
@@ -261,6 +274,8 @@ def main(argv=None):
     ap.add_argument("--full", action="store_true", help="with --cache: measure every slide again (and record the clean ones)")
     ap.add_argument("--jobs", type=int, default=0, help="viewports measured at once (default: all of them, each taking a slot "
                                                        "of the computer's pool of hidden browsers; 1 = one after the other)")
+    ap.add_argument("--slots", metavar="FILE", help="2.73.0: the px size of every picture slot measured (data-slot), per "
+                                                    "viewport, merged into this file (the needs file reads it)")
     a = ap.parse_args(argv)
     exe = browser()
     if not exe:
@@ -328,6 +343,8 @@ def main(argv=None):
             if len(detail) > 12:
                 print("            ... %d more (--json has them all)" % (len(detail) - 12))
     store.save()
+    if a.slots:
+        save_slots(a.slots, full)
     if a.json:
         Path(a.json).write_text(json.dumps(full, ensure_ascii=False, indent=1), encoding="utf-8")
     print("run_audits: %s%s" % ("every probe passed" if worst == 0 else "a probe failed" if worst == 1 else "something could not be measured",

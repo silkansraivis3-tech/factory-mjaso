@@ -98,6 +98,7 @@ IMPORTER = os.path.join(SKILLS, "course-tablet-publisher", "vendor", "import_che
 MODULE = re.compile(r"^module\d{2}$")
 DRAFT_MARK = "DRAFT_NOT_PACKAGED.txt"       # written by compile/scripts/compile_module.py --draft
 FINAL_SET = re.compile(r"^F[A-Z]$")           # a final assessment's set: FA, FB ... (2.49.2)
+PLACEHOLDER_MARK = b"novikontas-placeholder"   # 2.73.0 - compile/scripts/placeholder.py's mark in a Phase A placeholder PNG
 # the importer's own two rules, word for word from package-core.mjs
 INSTRUCTOR_ONLY = re.compile(
     r"(^|/)(?:instructor[^/]*|presentation|plan|plans|prepare|record|answers|instructor_screens)(/|$)"
@@ -351,7 +352,11 @@ def check(folder):
             size = os.path.getsize(p)
             if size > LIM["file_bytes"]:
                 probs.append("%s is %.1f MB - the classroom takes at most %d MB per file" % (rel(p), size / 1048576.0, LIM["file_bytes"] // 1048576))
-            h = hashlib.sha256(open(p, "rb").read()).hexdigest()
+            body = open(p, "rb").read()
+            if f.lower().endswith(".png") and PLACEHOLDER_MARK in body[:256]:       # 2.73.0 - never shipped
+                probs.append("%s is a Phase A placeholder, not a picture - fill its slot (working_claude\\visuals\\MNN_VISUAL_NEEDS.md) "
+                             "and build the module again" % rel(p))
+            h = hashlib.sha256(body).hexdigest()
             if h not in seen:
                 seen.add(h)
                 distinct += size

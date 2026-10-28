@@ -1047,7 +1047,8 @@ THINGS = None
 JSON_DATA = re.compile(r'<script type="application/json"[^>]*>(.*?)</script>', re.S)
 SVG_TEXT = re.compile(r"<text\b[^>]*>(.*?)</text>", re.S | re.I)
 IMG_SRC = re.compile(r'<img\b[^>]*\bsrc="\.\./([^"]+)"', re.I)
-NOT_CLEARED = ("REVIEW", "REJECT")
+NOT_CLEARED = ("REVIEW", "REJECT", "PLACEHOLDER")    # 2.73.0: a Phase A placeholder is never a photo for L57
+PLACEHOLDER_IMG = re.compile(r"(?:^|/)_placeholder_[^/]+\.png$")
 # 2.63.2 (item 10, L52): a source-book figure is used only on a named person's decision - "<name>, <date> - <reason>"
 # in the record's `cleared_by` (set by course-visuals/scripts/check_assets.py clear; the same pattern is there)
 NAMED_CLEARANCE = re.compile(r"^[^,\n]{2,},\s*\d{4}-\d{2}-\d{2}\s+-\s+\S")
@@ -1465,7 +1466,7 @@ def looks_in(d, page):
     for sec in re.finditer(r'<section [^>]*\bid="([^"]+)".*?</section>', page, re.S):
         thumbs = set(IMG_SRC.findall("".join(STRIP.findall(sec.group(0)))))
         for rel in set(IMG_SRC.findall(sec.group(0))):
-            if rel.startswith("assets/img/"):
+            if rel.startswith("assets/img/") and not PLACEHOLDER_IMG.search(rel):     # 2.73.0: no placeholder is a photo
                 out.append((photo_look(d, rel), "%s %s" % (module_label(d), sec.group(1)), rel not in thumbs, rel))
     return out
 
@@ -1485,7 +1486,7 @@ def shown_in(d, page):
     for sec in re.finditer(r'<section [^>]*\bid="([^"]+)".*?</section>', page, re.S):
         thumbs = set(IMG_SRC.findall("".join(STRIP.findall(sec.group(0)))))
         for rel in IMG_SRC.findall(sec.group(0)):
-            if rel.startswith("assets/img/"):
+            if rel.startswith("assets/img/") and not PLACEHOLDER_IMG.search(rel):     # 2.73.0: no placeholder is a photo
                 out.setdefault(photo_id(d, rel), ("%s %s" % (module_label(d), sec.group(1)), rel not in thumbs))
     return out
 
@@ -2132,22 +2133,9 @@ def pick_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col, 
 
 
 def auto_parts(lines, ranges=None):
-    """the slide's lines in readable parts, in order: the build sheet's "parts", or about PART_WORDS words each"""
-    if ranges:
-        return [list(range(lo, hi + 1)) for lo, hi in ranges]
-    total = cs.wc(" ".join(lines))
-    k = max(2, -(-total // PART_WORDS))
-    target = total / float(k)
-    parts, cur, acc = [], [], 0
-    for i, x in enumerate(lines, 1):
-        w = cs.wc(x)
-        if cur and acc + w / 2.0 > target and len(parts) < k - 1:
-            parts.append(cur)
-            cur, acc = [], 0
-        cur.append(i)
-        acc += w
-    parts.append(cur)
-    return parts
+    """the slide's lines in readable parts, in order: the build sheet's "parts", or about PART_WORDS words each - the script's
+    own rule (content_script.parts_of, 2.73.0: no part over the budget when the lines allow it)"""
+    return cs.parts_of(lines, ranges, PART_WORDS)
 
 
 def parts_html(lines, parts, emph):
@@ -3377,6 +3365,7 @@ def starter_figure(script, s, pool=None, taken=None):
         if not term and not m and len(bare.split()) <= 4:        # a line that is only a name: "Tank connection space."
             term = bare
         hit = kit_hit(term, last=True) if term else kit_hit(line)
+        weak = bool(hit) and not term              # 2.73.0: a kit word inside a sentence ("tank preparation"), not a thing named
         if hit and term:
             kind, label = hit[0], term
         elif hit:
@@ -3393,7 +3382,7 @@ def starter_figure(script, s, pool=None, taken=None):
             start, to = (0, 1) if kind == "text" else STARTER_PART[kind][3:5]
             if kind in GOES_OFF and GOES_OFF[kind].search(line.lower()):
                 start, to = to, start
-            items.append({"kind": kind, "label": label, "start": start, "to": to})
+            items.append({"kind": kind, "label": label, "start": start, "to": to, "weak": weak})
         steps.append((i, index[key], flipped))
     if not steps:
         return None
@@ -3409,6 +3398,10 @@ def starter_figure(script, s, pool=None, taken=None):
     lib = starter_from_library(script, s, lines, items, steps, first)   # 2.67.0 - a drawing that passed before
     if lib:
         return lib
+    if sum(1 for it in items if it["kind"] == "text") >= 2 and all(it["kind"] == "text" or it.get("weak") for it in items):
+        track = starter_track(script, s, lines)      # 2.73.0 - nothing the kit draws is named: the lines as a step track
+        if track:
+            return track
     size = starter_size(lines, items, pool, taken)
     parts, ids, now = [], [], []
     for k, (it, cell) in enumerate(zip(items, starter_cells(items, size))):
@@ -3436,6 +3429,59 @@ def starter_figure(script, s, pool=None, taken=None):
                 for mk in p.get("markers") or []:
                     mk["drag"] = True
     return {"size": list(size), "label": label, "idle": "Press Next step", "parts": parts, "steps": plan}
+
+
+TRACK_CHARS = 46
+TRACK_SMALL = re.compile(r"^(?:of|and|or|the|a|an|to|in|on|at|for|with|by|from|is|are|was|were|be|than|that|which|no|not|during|until|into|its|their|our|as|if|when|while|but|so)$", re.I)
+
+
+def track_label(line, most=11):
+    """a step's words on the track: the line's own term ("Closed loop: ..." -> "Closed loop"; a one- or two-word term keeps
+    the start of what it says: "Case: 0400, three grades ..."), else its first clause - at most `most` words, never ending on
+    a small word ("at least 10 hours of" -> "at least 10 hours")"""
+    def clause(text, n, room):
+        first = re.split(r"(?<=[^\d])[.;!?](?:\s|$)|\s[-–]\s", text.strip(), 1)[0]
+        words = first.split()[:n]
+        while len(" ".join(words)) > room and len(words) > 2:            # the track's column holds about 46 characters
+            words.pop()
+        while words:                                                      # never ending on a comma or a small word
+            words[-1] = re.sub(r"[.,;:!?]+$", "", words[-1])
+            if words[-1] and not TRACK_SMALL.match(words[-1]):
+                break
+            words.pop()
+        return " ".join(words)
+    m = TERM.match(line)
+    if m and 3 <= len(m.group(1).split()) <= 6:
+        return m.group(1).strip()
+    if m and len(m.group(1).split()) <= 2:
+        term = m.group(1).strip()
+        rest = clause(line[m.end():], most - len(term.split()), TRACK_CHARS - len(term) - 2)
+        return ("%s: %s" % (term, rest)) if rest else term
+    return clause(line, most, TRACK_CHARS) or " ".join(line.split()[:3])
+
+
+def starter_track(script, s, lines, variant="v"):
+    """2.73.0 - a slide whose lines name no thing the kit draws (a rule, a scenario, an order and its read-back) gets its
+    lines as a numbered step track filling the panel, one step lighting each - not a few words floating on an empty panel
+    (chem M11 on 2.70: four of five such starters failed "empty" at 55-85 % blank, a tank drawn on an hours-of-rest slide)"""
+    statement = len(lines) > 1 and not TERM.match(lines[0]) and any(TERM.match(x) for x in lines[1:])
+    rows = [(i, track_label(lines[i - 1])) for i in range(2 if statement else 1, len(lines) + 1)]
+    rows = [(i, t) for i, t in rows if t][:7]
+    if len(rows) < 2:
+        return None
+    W, H = STARTER_W, int(round(STARTER_W * STARTER_PANEL[1] / float(STARTER_PANEL[0])))
+    n = len(rows)
+    gap = max(44, min(96, (H - 70) / float(n - 1)))
+    y0 = max(36, round((H - gap * (n - 1)) / 2.0))
+    part = {"id": "P1", "type": "step_track", "x": 30, "y": y0, "vertical": True, "gap": round(gap),
+            "steps": [t for _, t in rows], "value": 0}
+    first = (s.get("visual") or "").strip()
+    first = re.split(r"(?<=[.!?])\s", first, 1)[0] if first else ""
+    steps = [{"title": "%d · %s" % (k + 1, " ".join(lines[i - 1].split())[:60].rstrip()), "line": i, "play": [["P1", k + 1, 600]]}
+             for k, (i, _) in enumerate(rows)]
+    return {"size": [W, H], "label": first or (s.get("title") or ""), "idle": "Press Next step", "parts": [part], "steps": steps,
+            "_note": "starter written by --init-build (2.73.0): the slide's lines as a step track - it names no thing the kit "
+                     "draws. Draw the real thing if it has one; else keep the track and check every step's words"}
 
 
 def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(), pool=None, taken=None):
@@ -3494,7 +3540,8 @@ def link_photos(mdir, script, screens):
         return set()
     by = {}
     for name, rec in sorted(meta.items()):
-        if not isinstance(rec, dict) or not name.lower().endswith(IMAGES) or not os.path.isfile(img_file(mdir, name)):
+        if not isinstance(rec, dict) or not name.lower().endswith(IMAGES) or not os.path.isfile(img_file(mdir, name)) \
+                or PLACEHOLDER_IMG.search(name):
             continue
         # (merge, 2.72.7) "teaching_purpose" names the slide a photograph was found FOR; "used_in" only where it was shown
         # before - in a rebuild that is often the photo row under a drawing (L57): the 2.66.5 run's M02 s03 / s07 / s12 lost
@@ -3672,6 +3719,66 @@ def prefill(script, sheet, mdir, figdir):
     return said
 
 
+PLACE_ON_PICTURE = tuple(STARTER_ON_PICTURE) + ("read_instrument",)
+SLOT_BOX = re.compile(r'<img\b(?=[^>]*\bsrc="[^"]*_placeholder_[^"/]*\.png")')
+
+
+def mark_slot(section, sid):
+    """2.73.0 - a placeholder's <img> carries data-slot="<slide id>": the audits measure the slot's real size at every screen
+    size for the needs file (MNN_VISUAL_NEEDS.md). A slide with its real picture is left as it was"""
+    if "data-slot=" in section:
+        return section
+    m = SLOT_BOX.search(section)
+    return section if not m else section[:m.end()] + ' data-slot="%s"' % sid + section[m.end():]
+
+
+def grid_areas(items):
+    """a box per answer, in % of the picture, laid on a grid - the placeholder's places until Phase B puts each on its thing"""
+    n = len(items)
+    if not n:
+        return {}
+    cols = max(1, int(math.ceil(math.sqrt(n))))
+    rows = int(math.ceil(n / float(cols)))
+    w, h = 100.0 / cols, 100.0 / rows
+    return {t: [round(c * w + 0.15 * w, 1), round(r * h + 0.15 * h, 1), round(0.7 * w, 1), round(0.7 * h, 1)]
+            for t, (r, c) in zip(items, [divmod(k, cols) for k in range(n)])}
+
+
+def fill_slots(script, sheet, mdir):
+    """2.73.0 Phase A - every picture slot the starter left empty holds a placeholder of its shape (placeholder.py), so the
+    whole build runs with no agent: a slide's photo slot (or a figure the kit could not start), a question answered on a
+    picture (its answers' places on a grid). Never over a picture already named. Returns [(id, what)] - the slots filled"""
+    import placeholder
+    screens = sheet.setdefault("screens", {})
+    sheet["phase_a"] = True          # its deck is Phase A's: no picture in it is one the module "already had" (precheck)
+    done = []
+    for s in script.get("screens", []):
+        sid, kind = s["id"], s.get("kind")
+        p = cs.picture_of(s)
+        if kind == "slide" and cs.on_picture(s) and p["kind"] != "none":
+            e = screens.setdefault(sid, {"figure": "", "visual_kind": s.get("visual_kind") or "none"})
+            if (e.get("figure") or "").strip() or e.get("tiles"):
+                continue
+            e["figure"] = placeholder.write(mdir, sid, p["aspect"], p["shows"])
+            e["placeholder"] = p["kind"]
+            e["_placeholder"] = ("Phase A placeholder (%s slot, %s): replace it with the real picture - "
+                                 "working_claude\\visuals\\%s_VISUAL_NEEDS.md" % (p["kind"], p["aspect"], cs.mid(script.get("module"))))
+            done.append((sid, "%s slot %s" % (p["kind"], p["aspect"])))
+        elif kind in cs.TASKS and cs.mech(s) in PLACE_ON_PICTURE:
+            e = screens.setdefault(sid, {"figure": ""})
+            if (e.get("figure") or "").strip():
+                continue
+            e["figure"] = placeholder.write(mdir, sid, p["aspect"], p["shows"])
+            e["placeholder"] = p["kind"]
+            if cs.mech(s) != "read_instrument":
+                items, _ = cs.answer_items(s)
+                e["areas"] = grid_areas([t for t in items if t])
+            e["_placeholder"] = ("Phase A placeholder: replace the picture and put each answer's box on its thing - "
+                                 "working_claude\\visuals\\%s_VISUAL_NEEDS.md" % cs.mid(script.get("module")))
+            done.append((sid, "picture to answer on"))
+    return done
+
+
 def is_practical(s):
     """2.63.2 - a slide about the module's practical exercise: the reviewed IGF scripts carry it as kind "slide",
     "track": "practical", "practical_minutes": N ("Practicals 9.1-9.3 - in the gas lab")"""
@@ -3722,7 +3829,7 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
         b = (build.get("screens") or {}).get(s["id"]) or {}
         page = slide_html(script, s, 0, total, b, mdir, figdir, foot, [])
         for rel in IMG_SRC.findall(page):
-            if rel.startswith("assets/img/"):
+            if rel.startswith("assets/img/") and not PLACEHOLDER_IMG.search(rel):     # 2.73.0: a placeholder is no photo
                 pid, at = photo_id(mdir, rel), "%s %s" % (me, s["id"])
                 if pid in here and here[pid] != at:
                     probs.append("%s (%s): the photograph %s is already shown on %s - a photograph is shown once in the "
@@ -3758,8 +3865,8 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
     for n, s in enumerate(screens, 1):
         b = settled(avoid, s, (build.get("screens") or {}).get(s["id"]) or {})     # 2.72.7: the layout solver's settle
         recent =[layout_key(x) for x in slides[-VARIETY_WINDOW:]]   # L62: the look of the slides just before this one
-        slides.append(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, build, recent, avoid,
-                                 last))
+        slides.append(mark_slot(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, build, recent,
+                                           avoid, last), s["id"]))
         if chosen is not None and s["kind"] == "slide" and not s.get("recap"):    # 2.62.1: kept for the next compile
             chosen[s["id"]] = {"words": words_key(s, b), "key": list(layout_key(slides[-1]))}
     for a_, b_, s in zip(slides, slides[1:], screens[1:]):
@@ -4250,6 +4357,8 @@ def main(argv=None):
     ap.add_argument("--module", required=True)
     ap.add_argument("--module-dir", help="the module folder (default: <course>\\modules\\module01)")
     ap.add_argument("--init-build", action="store_true", help="write a starter build sheet and stop")
+    ap.add_argument("--fill-slots", action="store_true", help="2.73.0: an existing build sheet's empty picture slots get Phase A "
+                                                              "placeholders (a sheet from before 2.73.0), then stop")
     ap.add_argument("--seed-from", help="2.63.3: with --init-build, the course a rebuild starts from - its hand-fixed drawings "
                                         "for every slide whose words are unchanged (default: course.build.json \"seed_from\")")
     ap.add_argument("--draft", action="store_true", help="build from a script that is not approved yet - a preview")
@@ -4273,6 +4382,22 @@ def main(argv=None):
         return 2
     script = cs.load(p["script"])
     bp = build_path(o.course, o.module)
+    if o.fill_slots and not o.init_build:          # 2.73.0 - a sheet from before Phase A: its blanks become placeholders
+        if not os.path.isfile(bp):
+            print("Stopped - there is no build sheet yet: compile_module.py <course> --module %s --init-build" % o.module)
+            return 2
+        mdir, why = module_folder(o.course, o.module, o.module_dir)
+        if not mdir:
+            print("Stopped - " + why)
+            return 2
+        sheet_ = cs.load(bp)
+        filled = fill_slots(script, sheet_, mdir)
+        if filled:
+            cs.save(bp, sheet_)
+        import visual_needs
+        print("Phase A - %d empty picture slot(s) now hold a placeholder: %s\n  %s"
+              % (len(filled), ", ".join("%s (%s)" % x for x in filled) or "none was empty", visual_needs.write(o.course, o.module)))
+        return 0
     if o.init_build:
         if os.path.isfile(bp):
             print("Stopped - the build sheet is already there; it is changed with the Edit tool, never replaced:\n    %s" % bp)
@@ -4293,9 +4418,9 @@ def main(argv=None):
                                   mdir=module_folder(o.course, o.module, o.module_dir)[0]))
         import cf_timing                                # 2.65.0 - the module's clock starts: the gold standard is 30-40 min
         cf_timing.clock_start(o.course, cs.mid(o.module) if str(o.module).isdigit() else str(o.module), reset=True)
-        print("Done - a starter build sheet:\n    %s\n  Next: fill in each slide's picture (the starter figures are drawn - "
-              "change one only for what the build prints), then build and check in one command:\n    compile\\scripts\\"
-              "build_module.py <course> --module %s" % (bp, o.module))
+        print("Done - a starter build sheet:\n    %s\n  Next (2.73.0): build it as it is - Phase A, no agent: compile\\scripts\\"
+              "build_module.py <course> --module %s --auto. Then fill only what the needs file lists (the pictures, the starter "
+              "figures to check, the 3D parts; course-visuals\\kit\\CATALOGUE.md) and build again." % (bp, o.module))
         # 2.63.3 (item 5): the predecessor's hand-fixed drawings, where the slide's words are unchanged, instead of starters
         sheet_ = cs.load(bp)
         # (merge, 2.72.7) the course is its own predecessor only for a module it built before (its deck is there - a
@@ -4337,6 +4462,19 @@ def main(argv=None):
             return 2
         code, say = ensure_design(mdir)
         print("\n" + say)
+        if code == 0:                                   # 2.73.0 Phase A: no slot left empty - the build needs no agent
+            sheet_ = cs.load(bp)
+            filled = fill_slots(script, sheet_, mdir)
+            if filled:
+                cs.save(bp, sheet_)
+                print("\nPhase A - %d picture slot(s) hold a placeholder of their shape, so the module builds with no agent "
+                      "(build_module.py); the pictures are chosen after it, from working_claude\\visuals\\%s_VISUAL_NEEDS.md: %s"
+                      % (len(filled), cs.mid(o.module), ", ".join("%s (%s)" % x for x in filled)))
+            try:
+                import visual_needs
+                print("  " + visual_needs.write(o.course, o.module))
+            except Exception as why:                    # noqa: BLE001 - the needs file is written again by every build
+                print("  (the needs file is written by the first build: %s)" % why)
         return 0 if code == 0 else 2
     approved = script.get("status") == "approved" and script.get("approved_hash") == cs.content_hash(script)
     if not approved and not o.draft:

@@ -413,7 +413,14 @@
     "r_recap_place": "The recap slide must come straight before the task slide that opens the module check (L51).",
     "r_recap_twice": "The module has {n} recap slides - it closes with one (L51).",
     "r_recap_points": "The recap has {n} point(s) - it needs {lo} to {hi}, one line each (L51).",
-    "r_recap_long": "Recap point {i} has {w} words - keep each point to {max} or fewer, it is read at a glance (L51)."
+    "r_recap_long": "Recap point {i} has {w} words - keep each point to {max} or fewer, it is read at a glance (L51).",
+    "p_missing": "no picture slot written - read from visual_kind as \"{kind}\". Write \"picture\": {{\"kind\": \"photo|figure|3d|none\", \"aspect\": \"4:3\", \"shows\": \"...\"}} - it fixes the slide's layout before the build.",
+    "p_kind": "picture kind \"{kind}\" is not one the factory builds - use photo, figure, 3d or none.",
+    "p_kind_differs": "the picture slot says \"{kind}\", but the planned visual ({vk}) needs \"{want}\" - make the two say the same.",
+    "p_aspect": "the picture slot has no shape (\"aspect\": \"{aspect}\") - write it as width:height, e.g. 4:3, 16:9, 1:1.",
+    "p_shows": "the picture slot does not say what it must show - write \"shows\".",
+    "b_line": "line {n} has {words} words; a part of a slide holds about {most} at 1024 x 768 - split the line in two (the build can put lines in parts, never cut one).",
+    "sp_absent": "names \"{term}\" - the course's ship profile (STANDARDS.md) says its ship has none ({ship}). Keep it only where the slide compares another ship."
   },
   "lv": {
     "page_title": "Kursa uzbūve — jūsu pārskatīšanai",
@@ -815,7 +822,14 @@
     "r_recap_place": "Kopsavilkuma slaidam jābūt tieši pirms uzdevuma slaida, kas atver moduļa pārbaudi (L51).",
     "r_recap_twice": "Modulim ir {n} kopsavilkuma slaidi - tas beidzas ar vienu (L51).",
     "r_recap_points": "Kopsavilkumā ir {n} punkts(i) - vajag no {lo} līdz {hi}, katrs savā rindā (L51).",
-    "r_recap_long": "Kopsavilkuma {i}. punktā ir {w} vārdi - katrā punktā ne vairāk kā {max}, to izlasa vienā mirklī (L51)."
+    "r_recap_long": "Kopsavilkuma {i}. punktā ir {w} vārdi - katrā punktā ne vairāk kā {max}, to izlasa vienā mirklī (L51).",
+    "p_missing": "attēla vieta nav uzrakstīta - nolasīta no visual_kind kā \"{kind}\". Uzrakstiet \"picture\": {{\"kind\": \"photo|figure|3d|none\", \"aspect\": \"4:3\", \"shows\": \"...\"}} - tā nosaka slaida izkārtojumu pirms būvēšanas.",
+    "p_kind": "attēla veids \"{kind}\" nav tāds, ko rūpnīca būvē - izmantojiet photo, figure, 3d vai none.",
+    "p_kind_differs": "attēla vieta saka \"{kind}\", bet plānotajam attēlam ({vk}) vajag \"{want}\" - lai abi saka vienu un to pašu.",
+    "p_aspect": "attēla vietai nav formas (\"aspect\": \"{aspect}\") - uzrakstiet platums:augstums, piem. 4:3, 16:9, 1:1.",
+    "p_shows": "attēla vieta nepasaka, kas tajā jārāda - uzrakstiet \"shows\".",
+    "b_line": "{n}. rindā ir {words} vārdi; slaida daļā ietilpst ap {most} pie 1024 x 768 - sadaliet rindu divās (būvēšana var likt rindas daļās, bet nekad negriež rindu).",
+    "sp_absent": "nosauc \"{term}\" - kursa kuģa profils (STANDARDS.md) saka, ka kuģim tā nav ({ship}). Atstājiet tikai, ja slaids salīdzina ar citu kuģi."
   },
   "ru": {
     "page_title": "Структура курса — на ваше рассмотрение",
@@ -1217,6 +1231,13 @@
     "r_recap_place": "Итоговый слайд должен стоять прямо перед слайдом задания, который открывает проверку модуля (L51).",
     "r_recap_twice": "В модуле {n} итоговых слайда - он заканчивается одним (L51).",
     "r_recap_points": "В итоге {n} пункт(ов) - нужно от {lo} до {hi}, по одной строке (L51).",
-    "r_recap_long": "В пункте {i} итога {w} слов - не больше {max} в пункте, его читают одним взглядом (L51)."
+    "r_recap_long": "В пункте {i} итога {w} слов - не больше {max} в пункте, его читают одним взглядом (L51).",
+    "p_missing": "место для изображения не записано - прочитано из visual_kind как \"{kind}\". Запишите \"picture\": {{\"kind\": \"photo|figure|3d|none\", \"aspect\": \"4:3\", \"shows\": \"...\"}} - оно задаёт макет слайда до сборки.",
+    "p_kind": "вид изображения \"{kind}\" фабрика не строит - используйте photo, figure, 3d или none.",
+    "p_kind_differs": "место для изображения говорит \"{kind}\", а запланированному изображению ({vk}) нужно \"{want}\" - пусть оба говорят одно и то же.",
+    "p_aspect": "у места для изображения нет формы (\"aspect\": \"{aspect}\") - запишите ширина:высота, напр. 4:3, 16:9, 1:1.",
+    "p_shows": "место для изображения не говорит, что на нём должно быть - запишите \"shows\".",
+    "b_line": "в строке {n} {words} слов; часть слайда вмещает около {most} при 1024 x 768 - разделите строку на две (сборка может разложить строки по частям, но никогда не режет строку).",
+    "sp_absent": "называет \"{term}\" - профиль судна курса (STANDARDS.md) говорит, что на судне этого нет ({ship}). Оставьте, только если слайд сравнивает с другим судном."
   }
 }

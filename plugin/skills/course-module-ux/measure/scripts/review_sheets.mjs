@@ -3,6 +3,7 @@
  *
  *   node review_sheets.mjs <module folder> <out folder> [--all] [--base=<last review folder>] [--w=1280 --h=800] [--chrome=PATH]
  *                          [--fixed-waits]   (2.61.0: the waits end when the page is still, not after fixed times - see TIMERS)
+ *                          [--grade-only]    (2.73.0: Phase A - every question answered and graded, no deck walk, no sheets)
  *
  * WHY (IGF M01 benchmark, 2026-10-19): the required look at every screen was done by browser-driving subagents - 100 model
  * calls and $2.42 for one module, a third of the build's cost. The looking is still required; driving a browser to see is
@@ -568,6 +569,17 @@ try {
   let t0 = Date.now(), s0 = slept, w0 = waited;
   const lap = (what, extra) => { note(what, t0, Object.assign({ slept: (slept - s0) / 1000, waited: (waited - w0) / 1000 }, extra || {}));
     t0 = Date.now(); s0 = slept; w0 = waited; };
+  /* 2.73.0 - --grade-only (Phase A: the pictures are placeholders still): the questions are answered and graded, nothing is
+     photographed for a sheet - the deck walk and the sheets wait for the real pictures */
+  if (opt['grade-only']) {
+    await tasks(tiles, failures);
+    lap('tasks (graded only)');
+    failures.forEach(f => console.log('  FAIL ' + f));
+    console.log(failures.length ? `${failures.length} task-page problem(s)` : 'Graded only (Phase A): every question graded as expected - '
+                + 'wrong answers not right, right answers right. No sheets: the pictures are still placeholders.');
+    code = failures.length ? 1 : 0;
+    throw null;
+  }
   await deck(tiles);
   lap('deck (all slides)');
   await tasks(tiles, failures);
@@ -583,8 +595,10 @@ try {
   console.log(failures.length ? `${failures.length} task-page problem(s)` : 'Every question graded as expected: wrong answers not right, right answers right; every leader line ends on its part and crosses no words.');
   code = failures.length ? 1 : 0;
 } catch (e) {
-  console.error('review_sheets: ' + (e && e.message || e));
-  code = 2;
+  if (e !== null) {                           // null: --grade-only ended on purpose, its code is set
+    console.error('review_sheets: ' + (e && e.message || e));
+    code = 2;
+  }
 } finally {
   try { chrome.kill(); } catch {}
   await sleep(300);

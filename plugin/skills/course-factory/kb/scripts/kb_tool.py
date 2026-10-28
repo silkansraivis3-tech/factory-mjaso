@@ -589,6 +589,10 @@ def find_kbs(folder, max_depth=5, up=1):
         if not above or above == prev:
             break
         walk(above, 1, exclude=prev)                  # the folder above and its direct sub-folders only
+        # 2.73.0 - the Course Source Processor writes KNOWLEDGE_BASE inside source_files\ (chem advanced, 2026-10-27): from the
+        # work folder course\ that is two levels below the master folder
+        if os.path.isdir(os.path.join(above, "source_files")):
+            walk(os.path.join(above, "source_files"), 1)
     return found
 
 

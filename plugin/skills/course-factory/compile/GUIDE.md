@@ -3,11 +3,15 @@
 ## Quickstart - one module, start to PASS (2.50.0). Read this; the rest of the file is reference.
 
 ```
+0  (2.73.0) PHASE A needs no agent: compile/scripts/phase_a.py <course> --modules 1-21 does steps 1 and 4 for every module
+      in one local queue (and --auto: each photo slot whose course-catalogue pick is good takes it). A module it leaves at
+      PHASE A CLEAN (exit 4) has only its pictures left: PHASE B reads working_claude\visuals\M01_VISUAL_NEEDS.md (each
+      slot's kind, shape, px size, words, candidates) and CATALOGUE.md - nothing else - fills them, and runs step 4 once.
 1  python compile/scripts/compile_module.py <course> --module 1 --init-build
       the build sheet (working_claude\script\M01.build.json), a STARTER figure-kit spec for every drawn slide
-      (working_claude\figures\M01\sNN.kit.json: the script's parts on a grid, a step per line) and the 3D starter - a 3D
-      slide gets a 3D-kit scene spec (sNN.kit3d.json, course-visuals\kit3d\SPEC.md) and its 2D starter (2.50.6):
-      declining the 3D ("declined_3d") edits the 2D starter
+      (working_claude\figures\M01\sNN.kit.json: the script's parts on a grid, a step per line), the 3D starter (sNN.kit3d.json,
+      SPEC.md; declining it - "declined_3d" - edits its 2D starter) and (2.73.0) a PLACEHOLDER of its shape in every photo
+      slot and question picture - never a blank; a sheet from before 2.73.0: --fill-slots. A placeholder never ships.
 2  read course-visuals\kit\CATALOGUE.md - one line per kit part, the spec format, marks and steps. Never kit.js.
       A question's drawing keeps its own shape on the task page; a labelling question adds a band above and below it for
       its label boxes. A "ghost" label is still laid out (leaders go round it); a valve's OPEN / CLOSED: "state": false.
@@ -550,6 +554,38 @@ someone thought to measure; only looking finds the rest. So **looking is a requi
   reports a part of a kit figure that cannot be seen on the figure's dark panel (`contrast`: a label under 4.5:1, a
   shape or line under 3:1; the kit's own parts are exempt; `data-low-contrast` marks a part meant to be quiet), and a
   credit, caption or full-screen record that shows a file-system path or a drive letter is a **build problem**.
+
+## 2g · Phase A and Phase B - the picture decided as a KIND first, its CONTENT later (2.73.0)
+
+Chem advanced (2026-10-27, 21 modules on 2.70.0): 18 builders at once hit the 20-subagent cap, the CPU sat at 100 % and
+three browser slots serialised the work; a build with no agent refused to start ("the build sheet still has the starter's
+blanks - fill s07: its picture"). Choosing a picture is the one judgement in a build, so it is split off:
+
+- **The script fixes each slot** (`script/GUIDE.md`): `"picture": {"kind": "photo|figure|3d|none", "aspect": "4:3",
+  "shows": "..."}` - the kind decides the layout template before anything is built; the words a layout holds are a
+  must-fix at render (a line over a part's 75 words), not a build note.
+- **Phase A, no agent** (`phase_a.py`, or `--init-build` then `build_module.py`): a photo slot and a question's picture hold
+  a placeholder (`placeholder.py`: a grey PNG of the slot's shape, 1600 px, marked in the file itself; a question's
+  answers on a grid), a figure slot its starter spec, a 3D slot its kit3d starter. Every check that does not depend on the
+  picture runs - figures, compile, words, navigation, every question graded right and wrong (`review_sheets.mjs
+  --grade-only`, no sheets yet), the audits (which also measure each placeholder's px size, `data-slot`), the package.
+  The answer is `PHASE A CLEAN M04` (exit 4) - never PASS while a placeholder or an unplaced 3D starter is left; and
+  `check_course_package.py` refuses any placeholder, so none ever ships.
+- **The needs file** `working_claude\visuals\M04_VISUAL_NEEDS.md` (and `.json`), written by every build: per slot its kind,
+  shape, px size at 1280x800 / 1024x768 / 1280x720, the slide's words, what it must show and up to five candidates from
+  the course photo catalogue; the figures still at their starter; the 3D scenes to place; the auto picks.
+- **The course photo catalogue** (`scripts/photo_catalogue.py`): `index` once at intake (every old-course picture with
+  its slide's words, every knowledge-base picture with its caption or page text, the sourcing pass's finds; the same
+  bytes once), `assign` once the scripts are approved (each slot's five best by what it must show, its title, its words and
+  the script's `from_old`; one pick per picture for the whole course - L58) and `visuals\PHOTOS_TO_FIND.md` for ONE
+  visual-sourcer pass, which saves into `working_claude\photos_found\` with `"found_for": "M04 s05"`.
+- **`--auto`** (`build_module.py --auto`, `visual_needs.py fill --auto`): a SLIDE's photo slot whose pick scored 0.6 or more
+  and is 800 px or more takes it with no agent - copied in with its record, `"auto_picked"` in the sheet, listed in the
+  needs file for the visual review. A question's picture never (its answers' places need the real things). A module whose
+  slots all fill this way and whose figures pass from their starters is PASS with no agent - and still reviewed.
+- **Phase B** reads only the needs file and `CATALOGUE.md`, runs `build_module.py --auto` first, fills the rest (a photo
+  with its record; a question's boxes onto the real things; the 3D parts placed), then builds until PASS. In the workflow a module Phase A
+  finished gets no builder at all (`build_course.js`, 2.73.0).
 
 ## 3 · When the look is not enough
 

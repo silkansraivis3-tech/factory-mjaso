@@ -1727,6 +1727,51 @@ browser slot, and reported "drawings": 0. Measured but left: the figures stage's
 at once (the first-build lock and the browser queue), not drawing - judged again on a quiet computer's timed build. Tests:
 test_minify_engines 6, test_kit3d (+ the pixel budget), test_drawing_check (+ a plain page), test_compile_module 467.
 
+## 4zz19 · Phase A with no agent, Phase B only for the pictures (2.73.0, 2026-10-28)
+
+The owner's brief (2026-10-27, after the chem advanced run on 2.70.0): an average module in 10-15 min of AI time, builder
+usage at least halved, simple modules to PASS with no agent - no law or check weakened, the visual review kept. The run:
+21 modules, 18 builders at once hit the Workflow's 20-subagent cap, the CPU sat at 100 %, the browser slots and the cold-build
+lock serialised the work (M11 46 min, M12 38, M17 117, M18 107, M10 96, M08 89); a local build refused to start on "the
+starter's blanks - fill s07: its picture"; four scripts set scenes in a pump room the ship does not have; the gate passed on an
+intake field. What changed:
+
+1. **The picture slot in the script** (`content_script.py picture_of / picture_findings`): `"picture": {"kind":
+   "photo|figure|3d|none", "aspect", "shows"}`; must-fix an unknown kind, one the visual does not need, no aspect, nothing to
+   show; an older script is read from `visual_kind`. **The words a layout holds** are a must-fix at render (a line over a part's
+   75 words); `parts_of` (the compiler's `auto_parts`) keeps the old cut when it fits, else the cut whose largest part is
+   smallest (chem: 78-96-word parts on 9 slides). **Ship profile** (STANDARDS.md): a screen naming what the ship lacks is said.
+2. **Phase A** - `--init-build` (after the colleague's 2.72.3 prefill) fills every empty slot with a placeholder
+   (`compile/scripts/placeholder.py`: a grey PNG of the slot's shape at 1600 px, marked in the file, its record
+   `rights_state: PLACEHOLDER`; a question's answers on a grid); `--fill-slots` for an older sheet. Placeholders are never a
+   photo for L57, never an L58 duplicate. `build_module.py` grades the questions only (`review_sheets.mjs --grade-only`),
+   measures each slot (`data-slot`, `run_audits --slots`), answers `PHASE A CLEAN` (exit 4) - never PASS - and a deck Phase A
+   built is no "rebuild" until its first PASS (else new photographs under 800 px would pass as old ones; the M11 bench caught
+   it). `check_course_package.py` refuses any placeholder. `phase_a.py <course> --modules 1-21`: one local queue
+   (`browser_slots.count() // 3` at once), STILL RUNNING / --wait like a build.
+3. **The needs file** `working_claude\visuals\MNN_VISUAL_NEEDS.md/.json` (`visual_needs.py`): per slot kind, shape, px at three
+   sizes, words, what it must show, five catalogue candidates; the starter figures, the 3D scenes to place, the auto picks.
+4. **The course photo catalogue** (`scripts/photo_catalogue.py index / assign / show`): every old-course picture with its
+   slide's words, every knowledge-base picture with its caption or page text, the sourcing pass's finds; BM25 by what the slot
+   must show, its title and words, plus the script's `from_old` slides; one pick per picture course-wide; `PHOTOS_TO_FIND.md`
+   for ONE sourcing pass (`photos_found\`, `found_for`). Chem: 1,442 pictures in 10 s, 120 slots in 9 s; the builders' own
+   choices were in the top 5 for 11 of 20 slots. **Only 1 of 120 slots is good enough for `--auto`** - most old-course pictures
+   are under 800 px, which the pre-check rightly refuses: a simple module reaches PASS with no agent only once the sourcing
+   pass has found its photographs.
+5. **Starters**: a slide whose lines name no kit thing (a rule, a scenario, an order and its read-back) is a step track of its
+   lines (`starter_track`, labels within 46 characters, never ending on a small word). figure_fit on chem M11/M17/M18: 16 of 32
+   starters pass first time (2.70.0: 11 of 32, by the same measure without fixes 14 vs 11).
+6. **Workflow** (`build_course.js`, on the colleague's 2.72.x shape): Phase A + the course photo pass before any builder; a
+   module Phase A finished gets no builder (straight to the 3D step, the figure step and QA); a builder's brief is its needs
+   file; one photo pass for the drafts. orchestration/GUIDE.md documents the 20-subagent cap and the browser slots.
+7. **Gate**: only `kb_tool.py decision`'s record (with its date; yes / built: a folder that is a knowledge base) - never the
+   intake field. `kb_tool.py find` also looks in `source_files\`.
+
+Measured (bench copy of chem advanced, a quiet PC): Phase A M11 17 s, M17 38 s, M18 28 s (84 s for the three); Phase B on M11:
+one Sonnet agent, PASS in 4.5 min, 120 k tokens, 38 tool calls, 4 builds (2.70.0's run: 46 min). Not measured yet: Phase B on
+M17 / M18, a whole course. Not done: one agent serving several modules (the colleague's per-module judges and fix round keep
+one builder per module). The owner decides whether Phase A / B becomes a law row.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

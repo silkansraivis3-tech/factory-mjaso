@@ -1109,7 +1109,189 @@ def media_findings(script):
             run = run + 1 if mech(a) == mech(b) else 1
             if run == F["max_same_in_a_row"] + 1:
                 add(b["id"], "", NOTE, "m_same_in_a_row", n=run, how=mech_label(mech(b), lang))
-    return found + recap_findings(script)
+    return found + recap_findings(script) + picture_findings(script)
+
+
+# 2.73.0 - every slide's picture SLOT is fixed in the script: its kind (photo, figure, 3d, none), its shape and what it must
+# show. The layout template follows from the kind before anything is built, so the build's first step needs no agent: a photo
+# slot gets a placeholder of its shape, a figure slot its starter kit spec, a 3D slot its kit3d starter (compile --init-build)
+PICTURE_KINDS = ("photo", "figure", "3d", "none")
+SLOT_KIND = {"model_3d": "3d", "model_3d_scan": "3d", "model_3d_licensed": "3d", "none": "none",
+             "schematic": "figure", "cutaway": "figure", "chart": "figure", "comparison": "figure", "step_animation": "figure",
+             "flow_animation": "figure", "process_animation": "figure", "interactive_diagram": "figure"}
+DEFAULT_ASPECT = {"photo": "4:3", "figure": "4:3", "3d": "16:9"}
+ASPECT = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)\s*$")
+LAYOUT_RULES = json.load(io.open(os.path.join(SKILLS, "course-module-ui", "knowledge", "layout-templates.json"), encoding="utf-8"))
+PARTS_FROM, PART_WORDS = LAYOUT_RULES["parts"]["auto_from_words"], LAYOUT_RULES["budgets"]["part"]
+
+
+def slot_kind(visual_kind):
+    """the picture slot a planned visual kind needs: a real picture (photo, document drawing, film still, generated) is a photo"""
+    k = parse_kind(visual_kind or "")
+    return SLOT_KIND.get(k, "photo") if (k or "").strip() else "none"
+
+
+def on_picture(s):
+    """a slide that is not the recap, or a question answered on a picture"""
+    if s.get("kind") in ("slide", "activity"):
+        return not s.get("recap") and s.get("kind") == "slide"
+    return s.get("kind") in TASKS and "visual" in USES.get(mech(s), set())
+
+
+def picture_of(s):
+    """{"kind", "aspect", "shows", "declared"} - the screen's "picture", or (a script from before 2.73.0) its visual_kind and
+    visual read as one"""
+    p = s.get("picture") if isinstance(s.get("picture"), dict) else {}
+    kind = str(p.get("kind") or "").strip().lower() or slot_kind(s.get("visual_kind"))
+    if kind == "none" and s.get("kind") in TASKS and on_picture(s):
+        kind = "figure"
+    return {"kind": kind, "aspect": str(p.get("aspect") or DEFAULT_ASPECT.get(kind) or ""),
+            "shows": str(p.get("shows") or s.get("visual") or "").strip(), "declared": bool(p)}
+
+
+def aspect_of(text):
+    """"16:9" -> 1.778; None when it is not a ratio"""
+    m = ASPECT.match(str(text or ""))
+    return float(m.group(1)) / float(m.group(2)) if m and float(m.group(2)) else None
+
+
+def parts_of(lines, ranges=None, part_words=None):
+    """the slide's lines in readable parts, in order - the compiler lays a long slide out with exactly these (compile_module.
+    auto_parts). The build sheet's "parts" ranges win. Else about PART_WORDS words each, the old greedy cut; 2.73.0: when that
+    leaves a part over the budget (chem advanced: 78-96 words in a part on 9 slides), the cut that makes the largest part
+    smallest, with the fewest parts that fit"""
+    if ranges:
+        return [list(range(lo, hi + 1)) for lo, hi in ranges]
+    pw = part_words or PART_WORDS
+    w = [wc(x) for x in lines]
+    total = sum(w)
+    k = max(2, -(-total // pw))
+    target = total / float(k)
+    parts, cur, acc = [], [], 0
+    for i, n in enumerate(w, 1):
+        if cur and acc + n / 2.0 > target and len(parts) < k - 1:
+            parts.append(cur)
+            cur, acc = [], 0
+        cur.append(i)
+        acc += n
+    parts.append(cur)
+    if max(sum(w[i - 1] for i in p) for p in parts) <= pw or len(lines) < 2:
+        return parts
+    best = None
+    for k in range(max(2, -(-total // pw)), len(lines) + 1):
+        cut = min_max_cut(w, k)
+        if best is None or max(sum(w[i - 1] for i in p) for p in cut) < max(sum(w[i - 1] for i in p) for p in best):
+            best = cut
+        if max(sum(w[i - 1] for i in p) for p in cut) <= pw:
+            return cut
+    return best
+
+
+def min_max_cut(w, k):
+    """the lines (word counts w) in k parts, in order, the largest part as small as it can be"""
+    n = len(w)
+    pre = [0]
+    for x in w:
+        pre.append(pre[-1] + x)
+    INF = float("inf")
+    cost = [[INF] * (n + 1) for _ in range(k + 1)]
+    back = [[0] * (n + 1) for _ in range(k + 1)]
+    cost[0][0] = 0
+    for j in range(1, k + 1):
+        for i in range(j, n + 1):
+            for m in range(j - 1, i):
+                c = max(cost[j - 1][m], pre[i] - pre[m])
+                if c < cost[j][i]:
+                    cost[j][i], back[j][i] = c, m
+    out, i = [], n
+    for j in range(k, 0, -1):
+        m = back[j][i]
+        out.append(list(range(m + 1, i + 1)))
+        i = m
+    return out[::-1]
+
+
+def picture_findings(script):
+    """2.73.0 - the picture slot of every slide and every question answered on a picture, and the words its layout holds.
+    MUST: a slot that names no known kind, a kind that is not what visual_kind says, a photo or figure with no shape, a picture
+    that does not say what it shows, and a line longer than a part holds (75 words at 1024 x 768, layout-templates.json
+    "budgets") - the compiler can put a long slide's lines in parts, never cut a line. NOTE: no "picture" written (an older
+    script - the slot is read from visual_kind)."""
+    found = []
+    lang = script.get("operator_language", "en")
+
+    def add(sid, field, level, key, **kw):
+        found.append({"where": place(script, sid), "screen": sid, "field": field, "level": level, "rule": key,
+                      "detail": T(script, key, **kw), "fix": ""})
+
+    for s in script.get("screens", []):
+        if not on_picture(s):
+            continue
+        p = picture_of(s)
+        vk = parse_kind(s.get("visual_kind", ""))
+        if not p["declared"]:
+            if s.get("kind") == "slide":
+                add(s["id"], "picture", NOTE, "p_missing", kind=p["kind"])
+        elif p["kind"] not in PICTURE_KINDS:
+            add(s["id"], "picture", FAIL, "p_kind", kind=p["kind"])
+        else:
+            if vk in VISUAL_KINDS and slot_kind(vk) != p["kind"] and not (s.get("kind") in TASKS and p["kind"] in ("photo", "figure")):
+                add(s["id"], "picture", FAIL, "p_kind_differs", kind=p["kind"], vk=kind_label(vk, lang), want=slot_kind(vk))
+            if p["kind"] in ("photo", "figure") and not aspect_of(p["aspect"]):
+                add(s["id"], "picture", FAIL, "p_aspect", aspect=p["aspect"] or "-")
+            if p["kind"] != "none" and not p["shows"]:
+                add(s["id"], "picture", FAIL, "p_shows")
+        if s.get("kind") == "slide" and p["kind"] != "none":
+            lines = lines_of(s.get("text"))
+            for i, x in enumerate(lines, 1):
+                if wc(x) > PART_WORDS:
+                    add(s["id"], "text", FAIL, "b_line", n=i, words=wc(x), most=PART_WORDS)
+    return found
+
+
+# 2.73.0 - the course's own ship: STANDARDS.md's "Ship profile" names what the exercise ship has and has not; a script naming a
+# space or a machine the ship does not have is said at render (chem advanced, 2026-10-27: four scripts written in parallel set
+# scenes in a cargo "pump room" on a ship with deepwell pumps and no pump room)
+SHIP_HEAD = re.compile(r"^#{1,6}[^\n]*\bship profile\b[^\n]*$", re.I | re.M)
+NOT_ON_BOARD = re.compile(r"^(?:not on board|does not have|has no|no)\b", re.I)
+
+
+def ship_profile(course):
+    """{"rows": [(key, value)], "absent": [terms]} from the "Ship profile" section of working_claude\\STANDARDS.md - or None"""
+    try:
+        text = io.open(workspace.claude_path(course, "STANDARDS.md"), encoding="utf-8").read()
+    except (OSError, ValueError, TypeError):
+        return None
+    m = SHIP_HEAD.search(text)
+    if not m:
+        return None
+    body = re.split(r"^#{1,6}\s", text[m.end():], 1, flags=re.M)[0]
+    rows, absent = [], []
+    for line in body.splitlines():
+        mm = re.match(r"^\s*[-*|]\s*\**([^:*|]+?)\**\s*[:|]\s*(.+?)\s*\|?\s*$", line)
+        if not mm:
+            continue
+        key, value = mm.group(1).strip(), mm.group(2).strip()
+        rows.append((key, value))
+        if NOT_ON_BOARD.match(key):
+            absent += [t.strip().strip(".") for t in re.split(r"[,;]", value) if t.strip().strip(".")]
+    return {"rows": rows, "absent": absent} if rows else None
+
+
+def ship_findings(course, script):
+    """NOTE (never a stop - a slide may contrast another ship): a screen that names what the course's ship does not have"""
+    prof = ship_profile(course) if course else None
+    if not prof or not prof["absent"]:
+        return []
+    have = "; ".join("%s: %s" % kv for kv in prof["rows"] if not NOT_ON_BOARD.match(kv[0]))
+    found = []
+    for s in script.get("screens", []):
+        said = " ".join(as_text(s.get(f)) for f in ("title", "text", "notes", "visual", "question", "options", "answer", "feedback"))
+        for t in prof["absent"]:
+            if re.search(r"(?i)(?<![\w-])%ss?(?![\w-])" % re.escape(t), said):
+                found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "", "level": NOTE, "rule": "sp_absent",
+                              "detail": T(script, "sp_absent", term=t, ship=have or "-"), "fix": ""})
+    return found
 
 
 def recap_findings(script):
@@ -1272,7 +1454,7 @@ def clauses(text):
 
 def all_findings(script, course=None):
     th, _ = theory_findings(script)
-    return th + media_findings(script) + text_findings(script) + ilo_findings(course, script)
+    return th + media_findings(script) + text_findings(script) + ilo_findings(course, script) + ship_findings(course, script)
 
 
 def blocking(findings):
@@ -2402,7 +2584,8 @@ def render(course, module, quiet=False):
             print("\nThe script still has problems - fix them before showing it:\n" + "\n".join("  - " + x for x in probs))
         th, _ = theory_findings(script)
         for head, found in (("The theory check", th), ("The pictures-and-tasks check", media_findings(script)),
-                            ("The text check", text_findings(script)), ("The ILO map and sources check", ilo_findings(course, script))):
+                            ("The text check", text_findings(script)), ("The ILO map and sources check", ilo_findings(course, script)),
+                            ("The ship profile check (STANDARDS.md)", ship_findings(course, script))):
             if found:
                 print("\n%s found %d thing(s) - they are at the top of the review page and the Word file:" % (head, len(found)))
                 for f in found:

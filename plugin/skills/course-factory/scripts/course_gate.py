@@ -18,9 +18,11 @@ build sheet is started (compile_module.py --init-build), or a module agent runs 
      or declined with the operator's reason (kb_tool.py decision). A declined one is allowed; the
      Stage 2 page keeps showing it.
 
-An intake written before 2.42.0 that names a knowledge base (or "none") counts as the decision. A
-module whose script was approved before this gate existed keeps its approval: nothing here touches
-a script.
+2.73.0 - only the record kb_tool.py decision writes counts: "knowledge_base_decision" with its answer
+and date, and for yes / built a folder that IS a knowledge base now. The older intake field
+"knowledge_base" never does (chem advanced, 2026-10-27: the reader wrote it with the path of a
+knowledge base still being built, and the gate and --approve both passed on it). A module whose
+script was approved before this gate existed keeps its approval: nothing here touches a script.
 
 Standard library only.
 """
@@ -53,24 +55,38 @@ def intake(course):
     return _load(workspace.claude_path(course, "intake.json")) or {}
 
 
+def is_kb(path):
+    """a folder the factory can read as a knowledge base - kb_tool.detect's two shapes"""
+    return isinstance(path, str) and bool(path.strip()) and (
+        os.path.isfile(os.path.join(path, "SOURCE_MANIFEST.json")) and os.path.isdir(os.path.join(path, "sources"))
+        or os.path.isfile(os.path.join(path, "00_INDEX", "SOURCE_MANIFEST.json")))
+
+
 def kb_decision(course):
-    """{"answer": yes|built|declined, "path", "format", "reason", "decided", "legacy": bool} - or None when nobody decided."""
+    """{"answer": yes|built|declined, "path", "format", "reason", "decided"} - or None when no real decision is recorded.
+    2.73.0: only kb_tool.py decision's record, with its date; a yes / built one names a folder that is a knowledge base."""
+    d = intake(course).get("knowledge_base_decision")
+    if not isinstance(d, dict) or d.get("answer") not in ANSWERS or not d.get("decided"):
+        return None
+    if d["answer"] == "declined":
+        return dict(d) if (d.get("reason") or "").strip() else None
+    paths = d.get("path") if isinstance(d.get("path"), list) else [d.get("path")]
+    return dict(d) if paths and all(is_kb(x) for x in paths) else None
+
+
+def kb_problem(course):
+    """why there is no knowledge-base decision, said so the next step is plain (2.73.0)"""
     i = intake(course)
     d = i.get("knowledge_base_decision")
-    if isinstance(d, dict) and d.get("answer") in ANSWERS:
-        if d["answer"] == "declined" and not (d.get("reason") or "").strip():
-            return None
-        return dict(d, legacy=False)
-    kb = i.get("knowledge_base")                     # an intake from before 2.42.0
-    kbs = kb if isinstance(kb, list) else [kb] if kb else []
-    paths = [k.get("path") if isinstance(k, dict) else k for k in kbs]
-    paths = [p for p in paths if isinstance(p, str) and p.strip() and p.strip().lower() not in ("none", "no", "-")]
-    fmt = [k.get("format") for k in kbs if isinstance(k, dict)]
-    if paths and "none" not in fmt:
-        return {"answer": "yes", "path": paths[0] if len(paths) == 1 else paths, "legacy": True}
-    if kbs:
-        return {"answer": "declined", "reason": "answered 'no knowledge base' at intake", "legacy": True}
-    return None
+    cmd = "kb_tool.py decision <course> --yes <folder> | --built <folder> | --declined \"<their reason>\""
+    if isinstance(d, dict) and d.get("answer") in ("yes", "built") and d.get("decided"):
+        return ("The knowledge-base decision names %s, which is not a knowledge base the factory can read (yet) - wait until it "
+                "is built, then record it again: %s" % (d.get("path"), cmd))
+    if i.get("knowledge_base") and not isinstance(d, dict):
+        return ("intake.json names a knowledge base (\"knowledge_base\"), but that is an intake field, not a decision. Record "
+                "the operator's answer: %s" % cmd)
+    return ("Nobody has decided yet whether this course gets a knowledge base. At intake: kb_tool.py find <the course "
+            "material folder>. If none is found it suggests making one - tell the operator, and record their answer: " + cmd)
 
 
 def approval(arch):
@@ -112,9 +128,7 @@ def problems(course, module=None):
             out.append("Module %s has no Sub-ILO in the ILO map - write its Sub-ILOs into architecture.json, make the Stage 2 "
                        "page again and have it approved." % module)
     if kb_decision(course) is None:
-        out.append("Nobody has decided yet whether this course gets a knowledge base. At intake: kb_tool.py find <the course "
-                   "material folder>. If none is found it suggests making one - tell the operator, and record their answer: "
-                   "kb_tool.py decision <course> --yes <folder> | --built <folder> | --declined \"<their reason>\"")
+        out.append(kb_problem(course))
     return out
 
 

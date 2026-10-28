@@ -417,6 +417,10 @@ screen, with its answers, correct answer and feedback, ending on the trainee's o
 operator-stated facts are listed once. The operator gets a review page (prints to PDF) and a **Word file**; they correct by
 typing, by Word comment or in the chat.
 
+**(2.73.0) Before scripts are written in parallel**, `STANDARDS.md` gets the course's `## Ship profile` - what the exercise
+ship has and has not (`- Not on board: pump room ...`) - so every writer sets scenes on the same ship; render says each
+screen that names what the ship lacks. Every slide's script carries its picture slot (`"picture"`, `script/GUIDE.md`).
+
 **Every correction is shown before it is applied.** `read` / `propose` only print what was
 understood and leave it pending; show that list, and `apply --confirmed` only after the operator says
 yes. The theory check (L36 — thin slides, thin notes, words that do not fill the minutes, a self-check
@@ -464,6 +468,11 @@ Three orderings that are not negotiable, all three learned by getting them wrong
 - **Task pages before the deck announces them.** A screen that announces `T3` when the tablet
   has no `T3` is the worst failure in the room, and it is only caught by the three-way
   cross-check in `tablet/`.
+
+**(2.73.0) An approved module builds in two phases.** Phase A needs no agent - placeholders of each picture slot's shape,
+every check that does not depend on the pictures (`compile/scripts/phase_a.py` for many modules at once, queued by the
+computer's browser slots). Phase B is the one judgement - the pictures - from the module's `MNN_VISUAL_NEEDS.md` and the
+course photo catalogue (`scripts/photo_catalogue.py`). A placeholder never ships. `compile/GUIDE.md` 2g.
 
 ### The visual layer is routed, never improvised
 

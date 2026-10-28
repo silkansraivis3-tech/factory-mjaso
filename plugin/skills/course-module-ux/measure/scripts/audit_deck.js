@@ -389,6 +389,14 @@
     var out = { slide: n, id: s.id || "", low: [], small: [], spill: [], tap: [], strip: [],
                 svgSmall: [], collide: [], scroll: [], mark: [] };
     out.mark = markCheck(s);
+    /* 2.73.0 - a picture slot's real size (a Phase A placeholder carries data-slot): the needs file says it in px */
+    out.slots = [];
+    qa(s, "[data-slot]").forEach(function (el) {
+      var r = el.getBoundingClientRect();
+      if (r.width && r.height) {
+        out.slots.push({ slot: el.getAttribute("data-slot"), w: Math.round(r.width), h: Math.round(r.height) });
+      }
+    });
     var sizes = [], chars = 0;
 
     qa(s, "*").forEach(function (el) {
@@ -674,6 +682,7 @@
       totals: totals,
       failures: n,
       medians: rows.map(function (r) { return r.medianPx; }),
+      slots: [].concat.apply([], rows.map(function (r) { return r.slots || []; })),
       fills: rows.map(function (r) { return r.fillPct; }),
       overfilledSlides: overfill,
       linksInsideSlides: qa(document, CONFIG.slideSel + " a[href]").length,

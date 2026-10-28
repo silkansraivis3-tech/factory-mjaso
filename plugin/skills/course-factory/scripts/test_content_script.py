@@ -93,9 +93,10 @@ SCRIPT = {
     "sources": ["IGC Code 2016: 1.2, 4.21-4.24 (containment systems)", "SIGTTO Liquefied Gas Handling Principles, 4th ed.: ch. 1-2"],
     "screens": [
         {"id": "s01", "sub_ilo": "1.1", "kind": "slide", "title": "Why gas tankers are different", "text": S01_TEXT, "visual_kind": "photo",
-         "visual": "Photograph of a membrane LNG carrier alongside", "notes": S01_NOTES, "minutes": 5},
+         "visual": "Photograph of a membrane LNG carrier alongside", "picture": {"kind": "photo", "aspect": "4:3", "shows": "A membrane LNG carrier alongside"}, "notes": S01_NOTES, "minutes": 5},
         {"id": "s02", "sub_ilo": "1.1", "kind": "slide", "title": "Three ways to keep the cargo liquid", "text": S02_TEXT, "visual_kind": "chart",
-         "visual": "Pressure-temperature line for propane with the three ship types marked", "notes": S02_NOTES, "minutes": 5},
+         "visual": "Pressure-temperature line for propane with the three ship types marked",
+         "picture": {"kind": "figure", "aspect": "4:3", "shows": "The propane line with the three ship types marked"}, "notes": S02_NOTES, "minutes": 5},
         {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - keeping the cargo liquid",
          "text": "A short self-check opens on your tablet now: three questions on why gas is carried cold or under pressure.",
          "notes": "Press OPEN TASK. Give three minutes and watch who hesitates.", "minutes": 3},
@@ -109,7 +110,8 @@ SCRIPT = {
          "mechanic": "set_value", "visual_kind": "schematic", "visual": "A thermometer scale from -170 °C to +20 °C with a slider",
          "answer": "-104 °C ± 4, range -170 to 20", "feedback": "Ethylene is carried on semi-refrigerated ships, at about -104 °C."},
         {"id": "s03", "sub_ilo": "1.2", "kind": "slide", "title": "Four containment systems", "text": S03_TEXT, "visual_kind": "model_3d", "layout": "visual_wide",
-         "visual": "3D model of the four tank types in a hull section - turn it, and cut each one open; a real photo of a membrane tank's insulation beside it (L57)", "notes": S03_NOTES, "minutes": 3},
+         "visual": "3D model of the four tank types in a hull section - turn it, and cut each one open; a real photo of a membrane tank's insulation beside it (L57)",
+         "picture": {"kind": "3d", "aspect": "16:9", "shows": "The four tank types in a hull section"}, "notes": S03_NOTES, "minutes": 3},
         {"id": "s04", "kind": "slide", "recap": True, "title": "What to take away", "text": RECAP_TEXT, "visual_kind": "none",
          "visual": "", "notes": RECAP_NOTES, "minutes": 2},
         {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Module check - gas tankers",
@@ -332,10 +334,12 @@ def main():
         f = [x for x in cs.media_findings(still) if x["rule"] == "v_no_motion"]
         check("40 min of theory with nothing that moves, turns or can be explored is suggested, not blocked", f and f[0]["level"] == cs.NOTE, f)
         many = copy.deepcopy(SCRIPT)
-        extra = [dict(screen(SCRIPT, "s03"), id="s1%d" % i, visual_kind="photo") for i in range(4)]
+        extra = [dict(screen(SCRIPT, "s03"), id="s1%d" % i, visual_kind="photo", picture={"kind": "photo", "aspect": "4:3"})
+                 for i in range(4)]
         many["screens"][6:6] = extra
         for x in ("s01", "s02", "s03"):
             screen(many, x)["visual_kind"] = "photo" if x != "s03" else "step_animation"
+            screen(many, x)["picture"] = {"kind": "photo" if x != "s03" else "figure", "aspect": "4:3"}   # 2.73.0: the slot follows
         f = [x for x in cs.media_findings(many) if x["rule"] == "v_few_kinds"]
         check("six slides with only two kinds of picture is suggested, not blocked", f and f[0]["level"] == cs.NOTE, f)
         check("... so a module with only suggestions can still be approved", not cs.blocking(cs.media_findings(many)), cs.blocking(cs.media_findings(many)))

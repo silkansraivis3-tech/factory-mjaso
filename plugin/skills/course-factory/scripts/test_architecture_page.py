@@ -96,6 +96,11 @@ KB_YES = {"knowledge_base_decision": {"answer": "yes", "path": "C:\\courses\\gas
 def write_course(d, prog, arch, plan=None, intake=KB_YES):
     """intake: the Stage 1 record - by default the knowledge-base decision is made (2.42.0); None writes none."""
     os.makedirs(d, exist_ok=True)
+    if intake is KB_YES:                       # 2.73.0: a "yes" names a folder that is a knowledge base
+        kb = os.path.join(os.path.dirname(d), "_kb_" + os.path.basename(d))      # beside: a KNOWLEDGE_BASE inside makes d a master
+        os.makedirs(os.path.join(kb, "sources"), exist_ok=True)
+        io.open(os.path.join(kb, "SOURCE_MANIFEST.json"), "w", encoding="utf-8").write('{"sources": []}')
+        intake = {"knowledge_base_decision": dict(KB_YES["knowledge_base_decision"], path=kb)}
     for n, v in (("programme.json", prog), ("architecture.json", arch), ("plan.json", plan), ("intake.json", intake)):
         if v is not None:
             io.open(os.path.join(d, n), "w", encoding="utf-8").write(json.dumps(v, ensure_ascii=False))
@@ -285,7 +290,7 @@ def main():
         pg = page_of(g)
         lvk = lambda key, **kw: html.escape(LV[key].format(**kw) if kw else LV[key])     # ARCH's operator language is lv
         check("the page shows the ILO map, the knowledge base and that it waits for approval - in the operator's language",
-              lvk("im_title") in pg and SUB_NEW in pg and lvk("kb_yes", path="C:\\courses\\gas\\KNOWLEDGE_BASE") in pg
+              lvk("im_title") in pg and SUB_NEW in pg and lvk("kb_yes", path=os.path.join(os.path.dirname(g), "_kb_" + os.path.basename(g))) in pg
               and lvk("ap_wait") in pg, [x for x in ("im_title", "ap_wait") if lvk(x) not in pg])
         code, out = run("--course", g, "--approve")
         check("--approve without --by records nothing", code == 2 and "--by" in out and course_gate.approval(json.load(
@@ -317,7 +322,8 @@ def main():
         check("... and the page cannot be approved while it is missing", code == 2 and "NOT recorded" in out
               and course_gate.approval(json.load(io.open(os.path.join(nk, "architecture.json"), encoding="utf-8"))) is None, out)
         dk = write_course(os.path.join(tmp, "declined"), PROGRAMME, copy.deepcopy(ARCH),
-                          intake={"knowledge_base_decision": {"answer": "declined", "reason": "two pages of sources only"}})
+                          intake={"knowledge_base_decision": {"answer": "declined", "reason": "two pages of sources only",
+                                                            "decided": "2026-10-16"}})
         code, out = run("--course", dk, "--check")
         check("a declined knowledge base is allowed - --check passes and names it", code == 0 and "two pages of sources only" in out, out)
         run("--course", dk)

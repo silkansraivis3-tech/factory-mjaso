@@ -28,6 +28,13 @@ python compile/scripts/build_module.py <course> --module N --slides s05,s10     
   drawing or photo: build them AS THEY ARE, change only what the build reports. (2.72.3) It also fills what the module's
   own files decide - a photo slide's photograph (its record's `used_in`, or its description), a question "on the GA from
   slide 4" with that drawing and the places its labels name - and prints each: check them, fill only what is left.
+- (2.73.0) **Phase A, no agent:** `--init-build` then puts a PLACEHOLDER of its shape in every picture slot still empty
+  (photo slots, a question's picture with its answers' boxes on a grid) - never a blank. A build with placeholders (or a 3D
+  starter still `"_todo"`) answers `PHASE A CLEAN MNN` (exit 4) at best, never PASS. Usually Phase A has run already
+  (`phase_a.py`): your brief is then `working_claude\visuals\MNN_VISUAL_NEEDS.md` - each slot's kind, shape, real px size,
+  words, what it must show and the course catalogue's candidates. Run `build_module.py ... --auto` first (it takes the
+  catalogue's good picks), then fill the rest: a photograph 800 px or more into `assets/img` with its `_photo_meta.json`
+  record, its entry's `"figure"` on it, the `"placeholder"` keys and file gone. A placeholder never ships.
 - Fill the build sheet (each slide's picture, layout, photos - photos from `assets/img` or the Gas Library copy the
   operator names); a starter figure spec is edited only for what the build prints (`figures/MNN/sNN.kit.json`; parts and options:
   `course-visuals/kit/CATALOGUE.md`; never kit.js). A 3D slide: its `sNN.kit3d.json` (`course-visuals/kit3d/SPEC.md`,
@@ -53,7 +60,8 @@ The answer lists only what fails (the full log's path is its last line - open it
 | `FIGURE sNN ... empty` | crop what no step shows, spread the parts, or give the slide `"composition": "wide-left"` when the drawing is tall and narrow |
 | `the closer fit was applied to the spec by the build` | nothing to copy (2.72.3): fix only what it lists, in the spec as it now is |
 | `... a fit was saved as ... candidate.kit.json` | it was not applied (it would add a meaning BLOCK, or needs the photo row off): fix the spec yourself |
-| `COMPILE ... nothing built: ... starter's blanks` | fill exactly what it names in the build sheet |
+| `COMPILE ... nothing built: ... starter's blanks` | fill exactly what it names in the build sheet (or `compile_module.py ... --fill-slots`: placeholders, 2.73.0) |
+| `PHASE A CLEAN MNN ... picture slot(s) still hold Phase A's stand-ins` | fill each from the needs file (above), then ONE build |
 | `COMPILE ... looks exactly like the slide before it (L62)` | the build's layout solver tried the slide before it its next way already (2.72.7); still there: give one of the two another picture, or a template, in the build sheet - check with `--slides` first |
 | `COMPILE ... the words say X, the drawing's readout shows Y` | make the step's readout agree (`play`), or `"numbers_differ": "<why>"` |
 | `COMPILE ... the photo ... is "not a X" by its own record` | a picture of the thing itself, or `"photo_ok": "<why>"` |

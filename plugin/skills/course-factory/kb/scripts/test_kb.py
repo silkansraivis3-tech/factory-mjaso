@@ -307,6 +307,15 @@ def main():
               and "the factory has no tool that builds one" in out and "Without it:" in out and "kb_tool.py decision" in out, out)
         os.rmdir(empty); os.rmdir(os.path.dirname(empty))
         check("find wrote nothing anywhere", snapshot(tmp) == before_all)
+        chem = os.path.join(tmp, "chem", "chem-advanced")
+        build_csp(os.path.join(chem, "source_files"))                     # the KB builder writes it INSIDE source_files
+        os.makedirs(os.path.join(chem, "course", "working_claude"))
+        code, out = run("find", os.path.join(chem, "course"), "--json")
+        check("2.73.0 from the work folder course\\, a knowledge base in the master's source_files\\KNOWLEDGE_BASE is found",
+              code == 0 and any(os.path.normcase(k["path"]) == os.path.normcase(os.path.join(chem, "source_files", "KNOWLEDGE_BASE"))
+                                for k in json.loads(out)["found"]), out)
+        shutil.rmtree(os.path.join(tmp, "chem"))
+        before_all = snapshot(tmp)
 
         print("\n-- no knowledge base: suggested unasked, and the operator's answer recorded once (2.42.0)")
         master = os.path.join(tmp, "m", "IGF basic")
@@ -357,11 +366,21 @@ def main():
         legacy = os.path.join(tmp, "legacy")
         w(os.path.join(legacy, "working_claude", "intake.json"), json.dumps(
             {"knowledge_base": [{"path": "C:\\a\\KNOWLEDGE_BASE", "format": "course_source_processor"}]}))
-        check("an intake from before 2.42.0 that names a knowledge base counts as the decision",
-              (course_gate.kb_decision(legacy) or {}).get("answer") == "yes")
-        w(os.path.join(legacy, "working_claude", "intake.json"), json.dumps({"knowledge_base": {"path": "none", "format": "none"}}))
-        check("... and one that answered 'no knowledge base' counts as declined",
-              (course_gate.kb_decision(legacy) or {}).get("answer") == "declined")
+        check("2.73.0 an intake field naming a knowledge base is NOT a decision - only kb_tool.py decision's record is",
+              course_gate.kb_decision(legacy) is None and "intake field" in course_gate.kb_problem(legacy))
+        built_later = os.path.join(tmp, "not_yet", "KNOWLEDGE_BASE")
+        w(os.path.join(legacy, "working_claude", "intake.json"), json.dumps(
+            {"knowledge_base": {"path": built_later, "status": "being built"},
+             "knowledge_base_decision": {"answer": "built", "path": built_later, "format": "course_source_processor",
+                                         "decided": "2026-10-27"}}))
+        check("... a decision naming a knowledge base not built yet is no decision (chem advanced, 2026-10-27)",
+              course_gate.kb_decision(legacy) is None and "not a knowledge base" in course_gate.kb_problem(legacy))
+        check("... and the gate says so", any("not a knowledge base" in p for p in course_gate.problems(legacy)))
+        build_csp(os.path.dirname(built_later))
+        check("... once it is built, the same record opens the gate", (course_gate.kb_decision(legacy) or {}).get("answer") == "built")
+        w(os.path.join(legacy, "working_claude", "intake.json"), json.dumps(
+            {"knowledge_base_decision": {"answer": "built", "path": built_later}}))
+        check("... a record without its date (not written by kb_tool.py) is no decision", course_gate.kb_decision(legacy) is None)
         w(os.path.join(legacy, "working_claude", "intake.json"), json.dumps({"programme": "x.pdf"}))
         check("... an intake that never asked is no decision", course_gate.kb_decision(legacy) is None)
 

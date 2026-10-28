@@ -45,7 +45,8 @@ Every hidden browser takes a slot of one pool for the whole computer (browser_sl
       build_module.py <course> --module 1 --reviewed     the sheets in review\\MNN were looked at: the next ones show
                                                          only what changes after them
 Exit 0 PASS, 1 problems to fix, 2 stopped (the compiler refused: not approved, changed by hand, design files edited),
-3 still building (run the same command with --wait).
+3 still building (run the same command with --wait), 4 PHASE A CLEAN (2.73.0: every check passed, but picture slots still
+hold --init-build's placeholders or a 3D starter - fill them from working_claude\\visuals\\MNN_VISUAL_NEEDS.md, Phase B).
 """
 from __future__ import annotations
 
@@ -209,7 +210,9 @@ def starter_blanks(course, module):
             # 2.71.0 - a 3D-kit scene: missing, or still --init-build's starter ("_todo": parts guessed, not placed)
             p = os.path.join(figdir, fig)
             try:
-                todo = bool(json.load(io.open(p, encoding="utf-8")).get("_todo"))
+                # 2.73.0 - in a Phase A sheet the starter is built as it is (no agent yet): the module stays PHASE A CLEAN, never
+                # PASS, until its parts are placed (phase_a_slots); only a missing scene stops the build
+                todo = bool(json.load(io.open(p, encoding="utf-8")).get("_todo")) and not build.get("phase_a")
             except (OSError, ValueError):
                 todo = not os.path.isfile(p)
             if todo:
@@ -223,6 +226,46 @@ def starter_blanks(course, module):
         out.append((scenes, "the planned 3D scene is not written (a .kit3d.json still the starter: place its parts as on board, "
                             "delete \"_todo\") - build it, or keep the 2D starter (\"_2d\") with the operator's reason in \"declined_3d\""))
     return out
+
+
+def phase_a_slots(course, module):
+    """2.73.0 - the picture slots that still hold Phase A's stand-ins: [(screen id, what)] - a placeholder the build sheet
+    names (compile_module.fill_slots), a 3D starter scene whose parts are not placed yet ("_todo" in its spec). While any is
+    left the module is never PASS: it is PHASE A CLEAN at best, and the needs file says what to fill"""
+    import content_script as cs
+    import compile_module as cm
+    bp = cm.build_path(course, module)
+    try:
+        build = cs.load(bp)
+    except (OSError, ValueError):
+        return []
+    figdir = workspace_figdir(course, module)
+    out = []
+    for sid, e in sorted((build.get("screens") or {}).items()):
+        fig = (e.get("figure") or "").strip() if isinstance(e, dict) else ""
+        if e.get("placeholder") or cm.PLACEHOLDER_IMG.search(fig):
+            out.append((sid, "placeholder picture (%s slot)" % (e.get("placeholder") if isinstance(e.get("placeholder"), str) else "photo")))
+        elif fig.endswith(cm.KIT3D_SPEC) and figdir and os.path.isfile(os.path.join(figdir, fig)):
+            try:
+                if cs.load(os.path.join(figdir, fig)).get("_todo"):
+                    out.append((sid, "3D starter scene - parts not placed yet"))
+            except (OSError, ValueError):
+                pass
+    return out
+
+
+def without_placeholders(code, out):
+    """2.73.0 - Phase A: the package check's "is a Phase A placeholder" lines are the state this build is in, not a finding -
+    they are taken out of its answer (and its count) before anything else judges it; every other finding still fails it"""
+    if code != 1 or "Phase A placeholder" not in out:
+        return code, out
+    lines = out.splitlines()
+    gone = [x for x in lines if x.startswith("  - ") and "Phase A placeholder" in x]
+    lines = [x for x in lines if x not in gone]
+    out = "\n".join(lines) + "\n"
+    out = re.sub(r"(\d+) thing\(s\) to fix", lambda m: "%d thing(s) to fix" % (int(m.group(1)) - len(gone)), out, 1)
+    head = out.split("Worth a look", 1)[0]
+    return (1 if [x for x in head.splitlines() if x.startswith("  - ")] else 0), out
 
 
 def write_stages(log, stages, t0, timing=None):
@@ -1184,6 +1227,10 @@ def main(argv=None):
                                                          "memory, the slides audited at 1280x800 and 1024x768, their "
                                                          "neighbours compared (L62) - nothing written, nothing built")
     ap.add_argument("--inner", action="store_true", help=argparse.SUPPRESS)
+    ap.add_argument("--auto", action="store_true", help="2.73.0 Phase B with no agent: at PHASE A CLEAN, each slide's photo slot "
+                                                       "whose course-catalogue pick is good enough takes it, and the module is "
+                                                       "built again once (visual_needs.py fill --auto)")
+    ap.add_argument("--auto-round", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--no-precheck", action="store_true", help="skip the pre-check (precheck.py: missing pictures, photographs "
                                                                "under 800 px, dense text with no picture ...) - 2.65.0")
     o = ap.parse_args(argv)
@@ -1216,9 +1263,10 @@ def main(argv=None):
         return code
     blanks = [] if o.draft else starter_blanks(course, o.module)
     if blanks:                       # 2.52.0: nothing is built on a sheet with the starter's blanks in it
-        print("FAIL %s - nothing built: the build sheet %s still has the starter's blanks - fill %s"
+        print("FAIL %s - nothing built: the build sheet %s still has the starter's blanks - fill %s (or let Phase A hold "
+              "them: compile_module.py <course> --module %s --fill-slots, 2.73.0)"
               % (m, os.path.basename(cm.build_path(course, o.module)),
-                 "; ".join("%s: %s" % (", ".join(ids), what) for ids, what in blanks)))
+                 "; ".join("%s: %s" % (", ".join(ids), what) for ids, what in blanks), o.module))
         return 1
     # 2.65.0 - the pre-check: what would fail the build or make it look poor, found in a second from the files alone
     # (precheck.py) - a missing picture, a photograph under 800 px, dense text with no picture - before the figures stage,
@@ -1227,13 +1275,25 @@ def main(argv=None):
     if not o.no_precheck and str(o.module).isdigit() and o.layout_round == 0:
         import precheck
         # a module built before is a rebuild: the small pictures it already has are notes (fix/GUIDE.md 3b)
-        must, pre_notes = precheck.check(course, o.module, rebuild=os.path.isfile(os.path.join(mdir, "presentation", "index.html")))
+        # 2.73.0: a deck Phase A built is no rebuild until the module has PASSED - else Phase B's new pictures under 800 px
+        # would pass as "pictures it already had" (bench M11: three went in that way)
+        try:
+            was_passed = bool(json.load(io.open(os.path.join(logdir, "%s_clock.json" % m), encoding="utf-8")).get("passed"))
+        except (OSError, ValueError):
+            was_passed = False
+        try:
+            phase_a = bool(cs.load(cm.build_path(course, o.module)).get("phase_a"))
+        except (OSError, ValueError):
+            phase_a = False
+        built = os.path.isfile(os.path.join(mdir, "presentation", "index.html"))
+        must, pre_notes = precheck.check(course, o.module, rebuild=built and (was_passed or not phase_a))
         if must:
             print("FAIL %s - nothing built: the pre-check found %d thing(s) to fix first (precheck.py; --no-precheck skips it)"
                   % (cs.mid(o.module), len(must)))
             print("\n".join("  - " + x for x in must))
             print("\n".join("  note: " + x for x in pre_notes or []))
             return 1
+    slots_left = [] if o.draft else phase_a_slots(course, o.module)      # 2.73.0 - Phase A: placeholders still in
     # 2.62.1 - every hidden browser of this build writes its real seconds (cf_timing.py); a round the layout retry
     # replaces keeps its own log (_build\M01_build.round1.log) - both were lost when a round was slow (IGF M02 v262)
     timing = os.environ.get("CF_TIMING") or os.path.join(logdir, "%s_timing.jsonl" % m)
@@ -1400,6 +1460,7 @@ def main(argv=None):
         # 2.57.0 - a slide audited clean and unchanged in everything it loads is not measured again (--full: every slide)
         a = [PY, os.path.join(MEASURE, "run_audits.py"), deck, "--quiet", "--cache", os.path.join(logdir, "%s_audits_clean.json" % m)]
         a += ["--full"] if o.full else []
+        a += ["--slots", os.path.join(logdir, "%s_slots.json" % m)]          # 2.73.0: each picture slot's real px size
         for v in sizes:
             a += ["--viewport", v]
         jobs["audits 1280x800 %s" % " ".join(sizes)] = a
@@ -1415,7 +1476,7 @@ def main(argv=None):
         import shutil
         shutil.rmtree(pending, ignore_errors=True)
         jobs["review sheets"] = ["node", os.path.join(MEASURE, "review_sheets.mjs"), mdir, pending, "--base=" + reviewed_dir(out_dir),
-                                 "--shots=" + os.path.join(logdir, "%s_shots" % m)]
+                                 "--shots=" + os.path.join(logdir, "%s_shots" % m)] + (["--grade-only"] if slots_left else [])
     pkg_cmd = [PY, os.path.join(FACTORY, "check_course_package.py"), os.path.join(course, workspace.MODULES)]
     ak = next((k for k in jobs if k.startswith("audits")), None)
 
@@ -1444,6 +1505,8 @@ def main(argv=None):
             ["  " + x for x in lines_of("\n".join(y for y in out.splitlines() if not y.startswith("Built ")), 40)]
         stopped = sorted(k for k in jobs if k not in took or k == "review sheets") + ["course package"]
         log.write("\n===== ended early - this round is built again: %s\n" % ", ".join(stopped))
+    if early is None and slots_left and "course package" in results:
+        results["course package"] = without_placeholders(*results["course package"])
     if early is None and o.no_course_pages:
         pcode, pout, left = own_package_findings(*results["course package"], folder=os.path.basename(mdir))
         if left and pcode != 0:
@@ -1502,7 +1565,7 @@ def main(argv=None):
     review = ""
     if want_review and clean and "review sheets" in results:
         rcode, rout = results["review sheets"]
-        if rcode == 0:                          # the sheets are the review now: the last review's folder is replaced
+        if rcode == 0 and not slots_left:        # the sheets are the review now: the last review's folder is replaced
             promote(pending, out_dir)
             rout = rout.replace(pending, out_dir)
         logged("review_sheets.mjs", rout)
@@ -1512,6 +1575,8 @@ def main(argv=None):
             say.append("TASK PAGES - FAIL (review_sheets.mjs answered every question by its own keys and checked every leader "
                        "line as the engine placed it - fix the drawing or the build sheet's \"labels\"):")
             say += ["  " + x for x in rout.splitlines() if "FAIL" in x]
+        elif rcode == 0 and slots_left:          # 2.73.0 Phase A: graded only - the sheets wait for the real pictures
+            pass
         elif rcode == 0:
             first = rout.strip().splitlines()[0] if rout.strip() else ""
             n = re.search(r"Review sheets: (\d+) of (\d+) screens.*?on (\d+) sheet", first)
@@ -1541,6 +1606,32 @@ def main(argv=None):
     for x in notes:
         print(x)
     secs = time.time() - t0
+    needs = ""
+    if slots_left or os.path.isfile(os.path.join(workspace.claude_path(course, "visuals"), "%s_VISUAL_NEEDS.json" % m)):
+        try:                                             # 2.73.0 - what Phase B fills, with each slot's measured size
+            import visual_needs
+            needs = visual_needs.write(course, o.module)
+        except Exception as why:                         # noqa: BLE001 - the needs file is a help, never a stop
+            needs = "the needs file could not be written: %s" % why
+    if passed and slots_left and o.auto and not o.auto_round:
+        import visual_needs
+        filled = visual_needs.fill(course, o.module)
+        if filled:
+            print("AUTO - %d photo slot(s) filled from the course photo catalogue with no agent (%s) - built again once (%.0f s so far)"
+                  % (len(filled), ", ".join("%s <- %s" % x for x in filled), secs))
+            sys.stdout.flush()
+            return main(list(sys.argv[1:] if argv is None else argv) + ["--auto-round"])
+    if passed and slots_left:
+        print("PHASE A CLEAN %s - every check that does not depend on the pictures passed: figures, compile + drawing check, words, "
+              "navigation, every question graded right and wrong, audits 1280x800 %s, course package (%.0f s)"
+              % (m, " ".join(sizes), secs))
+        print("  %d picture slot(s) still hold Phase A's stand-ins: %s" % (len(slots_left), ", ".join("%s (%s)" % x for x in slots_left)))
+        print("  Phase B: fill them from %s - then build again (only the changed slides are judged) for PASS and the review sheets"
+              % needs)
+        if stages:
+            print(stage_line(stages))
+        print("Full log: %s" % log.name)
+        return 4
     if passed:
         print("PASS %s - figures, compile + drawing check, words (instructor, trainee), navigation, audits 1280x800 %s, course package"
               " (%.0f s)" % (m, " ".join(sizes), secs))

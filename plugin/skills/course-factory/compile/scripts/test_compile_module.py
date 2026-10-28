@@ -2634,10 +2634,14 @@ def main():
               code == 0 and os.path.isfile(os.path.join(c4, "working_claude", "script", "M01.build.json")), out)
         out0 = out                       # the first --init-build's report (the later runs find the starters already there)
         sheet = cs.load(os.path.join(c4, "working_claude", "script", "M01.build.json"))
-        check("the starter build sheet lists every slide with an empty figure (a photo's stays empty; a drawing's names its starter spec, 2.50.0)",
+        import placeholder
+        check("the starter build sheet lists every slide (2.73.0 Phase A: a photo's slot holds a placeholder of its shape, never "
+              "a blank; a drawing's names its starter spec, 2.50.0)",
               sorted(sheet["screens"]) == ["s01", "s02", "s03", "s04", "t01", "t02"]
-              and sheet["screens"]["s01"] == {"figure": "", "visual_kind": "photo"}
-              and sheet["screens"]["s02"].get("figure") == "s02.kit.json", sheet["screens"])
+              and sheet["screens"]["s01"]["figure"] == "assets/img/_placeholder_s01.png" and sheet["screens"]["s01"]["placeholder"] == "photo"
+              and placeholder.is_placeholder(os.path.join(md4, "assets", "img", "_placeholder_s01.png"))
+              and "Phase A - 1 picture slot(s) hold a placeholder" in out
+              and sheet["screens"]["s02"].get("figure") == "s02.kit.json", (sheet["screens"], out))
         # 2.50.0 - starter figure-kit specs: the agent edits them, it does not write them from nothing
         figs = os.path.join(c4, "working_claude", "figures", "M01")
         s2e, s3e = sheet["screens"]["s02"], sheet["screens"]["s03"]

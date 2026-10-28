@@ -180,9 +180,37 @@ def by_words():
           scales and all(m.get("drag") for p in scales for m in p.get("markers") or []), sc_["parts"])
 
 
+def track_part():
+    """2.73.0 - a slide whose lines name no thing the kit draws gets its lines as a step track, not words floating on an empty
+    panel (chem M11 on 2.70: four of five such starters failed "empty", 55-85 % blank; a tank on an hours-of-rest slide)"""
+    sc = {"module": 11, "screens": []}
+    rest = cm.starter_figure(sc, {"id": "s04", "kind": "slide", "title": "Hours of rest", "visual_kind": "chart",
+                                  "visual": "The rules, one by one.", "text":
+                                  "Chemical tanker port calls are round-the-clock: loading, discharging, tank preparation.\n"
+                                  "STCW applies to watchkeepers and everyone with safety duties.\n"
+                                  "at least 10 hours of rest in any 24 hours and 77 hours in any 7 days.\n"
+                                  "Individual records are mandatory - Port State Control checks them."})
+    tr = (rest or {}).get("parts") or [{}]
+    check("a rules slide (a kit word only inside a sentence - 'tank preparation') is a step track of its lines, one step lighting "
+          "each, its words never ending on a small word", len(tr) == 1 and tr[0].get("type") == "step_track"
+          and tr[0]["steps"][2] == "at least 10 hours of rest in any 24 hours" and len(rest["steps"]) == 4
+          and [st["play"][0][1] for st in rest["steps"]] == [1, 2, 3, 4] and all(len(x) <= cm.TRACK_CHARS for x in tr[0]["steps"]), rest)
+    case = cm.starter_figure(sc, {"id": "s07", "kind": "slide", "title": "A handover", "visual_kind": "step_animation",
+                                  "visual": "The case.", "text": "Case: 0400, our tanker loads three grades through three manifolds.\n"
+                                  "Handover: the Second Officer hands over to the Third Officer.\nReveal: what was missing."})
+    check("... a one-word term keeps the start of what its line says ('Case: 0400, our tanker loads three grades')",
+          case["parts"][0]["type"] == "step_track" and case["parts"][0]["steps"][0].startswith("Case: 0400, our tanker"), case["parts"])
+    pump = cm.starter_figure(sc, {"id": "s09", "kind": "slide", "title": "Deepwell pump", "visual_kind": "schematic",
+                                  "visual": "The pump in its tank.", "text": "Deepwell pump: one in each cargo tank.\n"
+                                  "Discharge line: from the pump to the manifold.\nStripping: the last cargo out."})
+    check("... a slide that NAMES a thing the kit draws keeps it (the deepwell pump stays a pump)",
+          any(p.get("type") == "pump" for p in pump["parts"]) and not any(p.get("type") == "step_track" for p in pump["parts"]), pump["parts"])
+
+
 def main():
     canvas()
     by_words()
+    track_part()
     studio_part()
     print("\n%d failure(s)" % len(FAILS) if FAILS else "\nALL PASS")
     return 1 if FAILS else 0
