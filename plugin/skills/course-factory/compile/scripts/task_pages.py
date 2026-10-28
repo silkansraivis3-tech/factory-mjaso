@@ -67,13 +67,14 @@ import sys
 
 import compile_module as cm
 import content_script as cs
+import interact_pages as ip       # 2.74.0 - the interactive task types (gb_interact.js)
 
-ENGINE = ("gb_answer.css", "gb_answer.js")
-PAGE_CSS = ("gb_tokens.css", "gb_page.css", "gb_task.css", "gb_answer.css")
+ENGINE = ("gb_answer.css", "gb_answer.js", "gb_interact.css", "gb_interact.js")
+PAGE_CSS = ("gb_tokens.css", "gb_page.css", "gb_task.css", "gb_answer.css", "gb_interact.css")
 BUILT = {"single_choice", "read_instrument", "multi_select", "hotspot", "spot_the_hazard",
          "match", "categorise", "label_diagram", "order",
          "cloze", "choose_and_justify", "scenario", "set_value", "find_the_fault", "spot_the_error",     # 2.38.0
-         "build_the_plan", "timeline", "compare", "panel_operate"}
+         "build_the_plan", "timeline", "compare", "panel_operate"} | set(ip.TYPES)    # 2.74.0 - the interactive types
 assert BUILT == set(cs.USES), "every way of answering an approved script can hold is compiled"
 ON_PICTURE = {"hotspot", "spot_the_hazard", "label_diagram"}
 # the ways of answering that are not answered ON a picture but may show one above their controls ("figure" in the build sheet)
@@ -113,7 +114,8 @@ WORDS = {"en": {
     "plan_say": "Put the cards that belong into the plan, in order. Not every card belongs – leave those where they are.",
     "timeline_order": "1. Put the events in the order they happened.",
     "timeline_stop": "2. Now tap the event where it should have been stopped.",
-    "panel_say": "Put every control in the position it must end in."},
+    "panel_say": "Put every control in the position it must end in.",
+    "sure_ask": "How sure are you?", "sure0": "Guessing", "sure1": "Fairly sure", "sure2": "Certain"},
     # PROVISIONAL (2.40.0) - written by Claude, to be checked by a native speaker: compile/TRANSLATIONS_REVIEW.md
     "lv": {
     "back": "Atpakaļ", "try_title": "Vispirms izmēģini planšeti", "try_tap": "Pieskaries šeit",
@@ -134,7 +136,8 @@ WORDS = {"en": {
     "plan_say": "Saliec plānā vajadzīgās kartītes pareizā secībā. Ne visas kartītes der – tās atstāj, kur ir.",
     "timeline_order": "1. Sakārto notikumus secībā, kādā tie notika.",
     "timeline_stop": "2. Tagad pieskaries notikumam, kurā tas bija jāaptur.",
-    "panel_say": "Iestati katru vadības elementu stāvoklī, kurā tam jābūt beigās."},
+    "panel_say": "Iestati katru vadības elementu stāvoklī, kurā tam jābūt beigās.",
+    "sure_ask": "Cik pārliecināts tu esi?", "sure0": "Minu", "sure1": "Diezgan pārliecināts", "sure2": "Pilnīgi pārliecināts"},
     "ru": {
     "back": "Назад", "try_title": "Сначала попробуй планшет", "try_tap": "Коснись здесь",
     "try_1": "Коснись большого синего круга.", "try_drag": "Перетащи меня",
@@ -154,7 +157,8 @@ WORDS = {"en": {
     "plan_say": "Разложи нужные карточки в план по порядку. Не все карточки подходят – их оставь на месте.",
     "timeline_order": "1. Расставь события в том порядке, в котором они произошли.",
     "timeline_stop": "2. Теперь коснись события, на котором его надо было остановить.",
-    "panel_say": "Установи каждый орган управления в положение, в котором он должен остаться."}}
+    "panel_say": "Установи каждый орган управления в положение, в котором он должен остаться.",
+    "sure_ask": "Насколько ты уверен?", "sure0": "Угадываю", "sure1": "Довольно уверен", "sure2": "Уверен"}}
 assert all(set(WORDS[k]) == set(WORDS["en"]) for k in WORDS), "every language has every word"
 e, a = cm.e, cm.a
 
@@ -736,7 +740,19 @@ def q_head(n, q):
 
 
 def q_why(q):
-    return ('    <div class="why"><b class="vd"></b><p data-script-field="feedback">%s</p></div>' % e(q.get("feedback")))
+    # 2.74.0 - "brief": the one short reason a wrong answer is given (never the right answer); the why is for a right one
+    brief = (q.get("brief") or "").strip()
+    return ('    <div class="why"><b class="vd"></b><p data-script-field="feedback">%s</p>%s</div>'
+            % (e(q.get("feedback")), '<p class="brief" data-script-field="brief">%s</p>' % e(brief) if brief else ""))
+
+
+def q_sure(q, w):
+    """2.74.0 - "confidence": true - how sure the trainee is, asked with the answer; the result counts certain-but-wrong"""
+    if not q.get("confidence") or cs.mech(q) == "true_false":
+        return []
+    bars = lambda n: "<i>%s</i>" % "".join('<b class="%s" style="height:%dpx"></b>' % ("f" if j <= n else "", 8 + 6 * j) for j in range(3))
+    return ['    <div class="sure"><p>%s</p>%s</div>' % (e(w["sure_ask"]), "".join(
+        '<button type="button" data-v="%d">%s%s</button>' % (n, bars(n), e(w["sure%d" % n])) for n in range(3)))]
 
 
 def opt_buttons(sid, q, multi=False, cls="opts"):
@@ -1012,6 +1028,12 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
     where = "%s (%s)" % (q.get("set") or "", sid)
     out = ['  <section class="scr" data-script="%s" data-mech="%s"%s>' % (sid, m, "%s"), q_head(n, q)]
     extra = ""
+    if m in ip.TYPES:                                   # 2.74.0 - true or false, a colleague, work it out, predict, explore, investigate, 3D
+        lines, extra = ip.question_html(n, q, b, mdir, figdir, probs, w, shuffle, opt_buttons)
+        figs["_3d"] = figs.get("_3d") or ip.needs_3d(q, b)
+        out += lines + q_sure(q, w) + [q_why(q), "  </section>"]
+        out[0] = out[0] % extra
+        return "\n".join(out)
     if m in ABOVE:                                      # a picture above the question's own controls, when the build sheet names one
         out += picture(q, b, mdir, figdir, figs, probs, where)
     if m in ("single_choice", "multi_select"):
@@ -1221,6 +1243,8 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         ls = cs.lines_of(q.get("answer"))
         good = [cs.unstar(x) for x in ls if cs.starred(x)]
         extra = ' data-need="slots"' + many(max(len(good), MANY if len(ls) >= 9 else 0))
+        if b.get("look") == "chain":                    # 2.74.0 - cause and effect: the slots joined by arrows (gb_answer.css)
+            extra += ' data-look="chain"'
         out.append('    <p class="opts-say">%s</p>' % e(w["plan_say"]))
         out += slots(len(good))
         out.append('    <div class="tray">')
@@ -1286,6 +1310,7 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
                    ' data-kv="%g"' % KIT_STATE[s.lower()][1] if sym else "",
                    cs.gb_key(sid, s, control if s.lower() == target.lower() else "-"), e(s)) for s in states))
         out.append("    </div>")
+    out += q_sure(q, w)
     out.append(q_why(q))
     out.append("  </section>")
     # 2.49.1 (IGF M06 q09): a picture over a categorise / order / match pushed the drop zones under the Check bar at
@@ -1417,13 +1442,18 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
         head += ['<meta name="task-mode" content="team">',
                  '<meta name="task-roles" content="%s">' % a("|".join(cs.team_roles(team))),
                  '<meta name="task-scope" content="%s">' % a(team.get("scope") if team.get("scope") in cs.TEAM_SCOPES else "team")]
-    head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in PAGE_CSS + (("gb_zoom.css",) if pictures else ()) + (("kit.css",) if kit else ())]
+    three = figs.get("_3d")                             # 2.74.0 - a 3D task: the factory's three.js and the 3D kit, as a 3D slide
+    head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in PAGE_CSS + (("gb_zoom.css",) if pictures else ()) + (("kit.css",) if kit else ())
+             + (("kit3d.css",) if three else ())]
     head.append("</head>")
     first = try_screen(w) if try_tablet else intro_screen(slide, short, len(qs), pass_mark, w) if is_check else ""
     # 2.60.0 - a final assessment variant (FA, FB) is blind: the engine records each answer and moves on, and shows only
     # the score at the end - no right answer, no why, no verdict between questions (L27/L45; the module check is unchanged)
     blind = ' data-blind="1"' if cm.FINAL_SET.match(code or "") else ""
-    body = ['<body data-code="%s" data-title="%s" data-pass="%d"%s>' % (a(code), a(short), pass_mark, blind),
+    # 2.74.0 (owner, 2026-10-28) - a wrong answer is told "not right" and its brief reason; the right answer is shown in the
+    # debrief, where the class checks it together. "feedback": "now" at the top of the build sheet keeps the old reveal.
+    reveal = "" if blind or (build.get("feedback") or "").lower() == "now" else ' data-reveal="debrief"'
+    body = ['<body data-code="%s" data-title="%s" data-pass="%d"%s%s>' % (a(code), a(short), pass_mark, blind, reveal),
             '<a class="gbt-topback" href="#"><span class="gbt-ico">&#9664;</span> %s</a>' % e(w["back"]), ""]
     if team:                                            # filled by the engine from the classroom's gb-team
         body += ['<div class="teambar" id="teamBar" hidden><span class="tname" id="teamName"></span><span class="trole" id="teamRole">'
@@ -1440,7 +1470,9 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
         body.append('<script src="../assets/kit.js"></script>')
         if os.path.isfile(os.path.join(mdir, cm.KIT_PARTS)):   # the course's own parts, as the deck loads them
             body.append('<script src="../%s"></script>' % cm.KIT_PARTS)
-    body += ['<script src="../assets/gb_answer.js"></script>']
+    if three:
+        body += ['<script src="../%s"></script>' % cm.THREE_JS, '<script src="../assets/kit3d.js"></script>']
+    body += ['<script src="../assets/gb_interact.js"></script>', '<script src="../assets/gb_answer.js"></script>']
     if pictures:
         body.append('<script src="../assets/gb_zoom.js"></script>')
     body += ["</body>", "</html>", ""]
@@ -1476,6 +1508,16 @@ def compile_tasks(script, build, mdir, figdir, version, approved):
             continue
         pages[page_path(mdir, slide, code, script)] = page_html(script, slide, code, qs, build, mdir, figdir, version, approved,
                                                        first_set, probs)
+    if any("assets/kit3d.js" in x for x in pages.values()):    # 2.74.0 - a 3D task: the 3D kit and three.js in the module
+        for x in cm.KIT3D_FILES:
+            mine = os.path.join(mdir, "assets", x)
+            if not os.path.isfile(mine):
+                probs.append("a 3D task needs %s in the module - run course-module-ui\\scripts\\design_system.py install --update" % x)
+        mine = os.path.join(mdir, *cm.THREE_JS.split("/"))
+        if os.path.isfile(cm.THREE_SRC) and (not os.path.isfile(mine) or io.open(mine, "rb").read() != io.open(cm.THREE_SRC, "rb").read()):
+            import shutil
+            os.makedirs(os.path.dirname(mine), exist_ok=True)
+            shutil.copyfile(cm.THREE_SRC, mine)
     import answer_key                                   # 2.46.0 - the instructor's key, from the same approved script
     key = answer_key.key_page(script, build, mdir, version, approved, probs)
     if key:

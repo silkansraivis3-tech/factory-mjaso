@@ -473,3 +473,28 @@ body.handed .wrap{opacity:.55}
 .res .fix .ord li.moved{color:var(--amber-ink);font-weight:700}
 .res .fix .ord ol.good li{color:var(--good)}
 #again{max-width:420px;margin:16px auto 0}
+
+/* ---- 2.74.0: the debrief rule, how sure, the interactive types ------------- */
+/* wrong: "Not right." with the question's brief reason; the right answer waits for the debrief (data-reveal="debrief") */
+.why .brief{display:none;margin:0;font-size:17px;line-height:1.45}
+.why .later{margin:4px 0 0;font-size:15px;color:var(--dim-l)}
+.gap.wrong{border:2px solid var(--warn);background:var(--warn-wash-l)}
+.res .fix .fx.brief{color:var(--ink)}
+.res .fix .fx.later{font-size:15px;color:var(--dim-l)}
+.res .calib{margin:0 0 10px;padding:10px 14px;border-radius:var(--r-m);background:var(--amber-wash-l);color:var(--amber-ink);font-size:16px;font-weight:600}
+/* how sure are you - three buttons after the answer; the question is answered once one is chosen */
+.sure{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0 4px;padding:10px 14px;border-radius:var(--r-m);
+  background:var(--blue-wash-l)}
+.sure p{flex:1 1 100%;margin:0;font-size:17px;font-weight:700;color:var(--navy)}
+.sure button{flex:1 1 0;min-width:150px;min-height:56px;border-radius:var(--r-m);border:2px solid var(--line-l);background:var(--white);
+  font:inherit;font-size:17px;font-weight:600;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px}
+.sure button i{display:inline-flex;align-items:flex-end;gap:3px;height:22px}
+.sure button i b{display:block;width:6px;border-radius:2px;background:var(--line-l)}
+.sure button i b.f{background:var(--blue)}
+.sure button.sel{border-color:var(--blue);background:var(--blue-wash-l);box-shadow:0 0 0 3px rgba(46,182,248,.25)}
+.sure.locked button{pointer-events:none}
+.sure.locked button:not(.sel){opacity:.45}
+/* build the plan as a chain of cause and effect (build sheet "look": "chain"): an arrow from each slot to the next */
+.scr[data-look="chain"] .rows .row+.row{position:relative;margin-top:18px}
+.scr[data-look="chain"] .rows .row+.row::before{content:"";position:absolute;left:50%;top:-16px;margin-left:-9px;
+  border-left:9px solid transparent;border-right:9px solid transparent;border-top:12px solid var(--steel)}

@@ -1,0 +1,79 @@
+{
+ "_what": "One self-check set written with every interactive task type (2.74.0) - Part A (check what was taught) first, then Part B (find it yourself). A builder copies a question, keeps the shape and writes the course's own words. Demo content (LPG cargo): every figure is checked against the course KB before use. The 3D scenes and build-sheet entries beside this file are the starting points for a deck, a room and a valve.",
+ "screens": [
+  {"id": "t10", "kind": "task-slide", "opens": "SC2", "title": "Self-check 2 - cargo hazards", "text": "Self-check on your tablet now.\nPart A first, then Part B.", "notes": "- Press OPEN TASK.", "minutes": 12},
+
+  {"id": "q20", "kind": "self-check", "set": "SC2", "mechanic": "true_false", "bloom": 2, "sub_ilo": "1.2",
+   "question": "True or false? Flick each card.",
+   "answer": "Propane vapour is heavier than air and collects in low places* => Its vapour is about 1.5 times as heavy as air.\nLPG boils at a higher temperature than water => Propane boils at about -42 °C.\nWarm methane vapour is lighter than air* => Its density is about 0.55 of air's once warm.\nA reading of 0 % LEL means a tank is safe to enter => Oxygen and toxic gas must be measured too.",
+   "feedback": "Heavy propane, cold LPG, light warm methane, and never only the LEL.", "brief": "Think about what each gas does when it leaks."},
+
+  {"id": "q21", "kind": "self-check", "set": "SC2", "mechanic": "single_choice", "bloom": 1, "sub_ilo": "1.1", "confidence": true,
+   "question": "At atmospheric pressure, propane boils at about…", "options": ["-42 °C", "-0.5 °C", "-162 °C"], "correct": "A",
+   "feedback": "Propane -42 °C, butane -0.5 °C, methane -162 °C.", "brief": "That is the boiling point of another cargo."},
+
+  {"id": "q22", "kind": "self-check", "set": "SC2", "mechanic": "calculate", "bloom": 3, "sub_ilo": "1.3",
+   "question": "The detector, calibrated for propane, shows a steady reading. What is the gas concentration in % by volume?",
+   "answer": "0.84 % vol ± 0.02\n! EX · PROPANE: 40 % LEL\n# Gas | LEL, % vol | UEL, % vol\n# Propane | 2.1 | 9.5\n# Butane | 1.8 | 8.4\n# Methane | 5.0 | 15.0",
+   "feedback": "40 % of propane's LEL: 0.40 × 2.1 = 0.84 % vol.", "brief": "Check which number you took from the data sheet, and the unit."},
+
+  {"id": "q23", "kind": "self-check", "set": "SC2", "mechanic": "predict", "bloom": 4, "sub_ilo": "1.4",
+   "question": "A propane tank is at 0 °C and 4.7 bar. The cargo warms to +40 °C. Where will the pressure be?",
+   "answer": "13.7 ± 1.5 @ 40\nx: Cargo temperature | °C | -45 | 50\ny: Tank pressure | bar abs | 0 | 18\ngiven: -42 | 1.0 | boils at 1 bar\ngiven: 0 | 4.7 | now\ncurve: -42 1.0; -30 1.7; -20 2.4; -10 3.4; 0 4.7; 10 6.4; 20 8.4; 30 10.8; 40 13.7; 50 17.1",
+   "feedback": "About 13.7 bar - vapour pressure climbs faster as the cargo warms.", "brief": "Pressure does not rise in a straight line."},
+
+  {"id": "q24", "kind": "self-check", "set": "SC2", "mechanic": "explore", "bloom": 4, "sub_ilo": "1.3",
+   "question": "Use the test rig to answer both challenges.",
+   "answer": "find: A mixture that burns with methane but will not burn with propane => x > 9.5 and x <= 15\nfind: With the detector covered, set propane to what it would read as 50 % LEL => Propane; 0.95 <= x <= 1.15; hide Detector",
+   "feedback": "Methane burns 5-15 %, propane 2.1-9.5 %; 50 % LEL of propane is 1.05 %.", "brief": "Spark both gases at the same mixture."},
+
+  {"id": "q25", "kind": "self-check", "set": "SC2", "mechanic": "investigate", "bloom": 4, "sub_ilo": "1.2",
+   "question": "06:10 - the gas alarm sounds in the compressor room. Open the sources, pin the evidence, then say what happened.",
+   "options": ["A leak at the compressor 2 flange; heavy vapour pools low because extraction stopped", "The floor detector head is faulty", "Normal vapour after loading that will clear by itself"],
+   "correct": "A",
+   "answer": "LOG | Gas detection log: Time | Floor | Upper ;; 05:40 | 2 % LEL | 0 ;; 06:10 | 35 % LEL ALARM | 4 *\nDATA | Cargo data sheet: Vapour density | 1.55 (air = 1) *\nROUND | Deck round note: Frost and a hiss at the compressor 2 suction flange *\nENGINE | Engine room log: 05:50 extraction fan 1 tripped, not restarted *\nWX | Weather report: Wind NW 12 kn, air 14 °C",
+   "feedback": "Floor ≫ upper, heavy vapour, frost at the flange, the fan stopped.", "brief": "Some of what you pinned does not explain the alarm, or the conclusion does not fit it."},
+
+  {"id": "q26", "kind": "self-check", "set": "SC2", "mechanic": "critique", "bloom": 5, "sub_ilo": "1.2",
+   "question": "The duty officer posted this before the watch. Keep each sentence that is right; correct the ones that are wrong.",
+   "answer": "Propane is lighter than air, so a leak on deck rises and clears away => Propane vapour is heavier than air and collects low* | Propane is lighter than air only when cold\nIf a cargo tank warms up, the pressure inside it rises => * | The pressure falls as it warms\nButane boils at -42 °C, the same as propane => Butane boils at about -0.5 °C* | Butane boils at about -162 °C",
+   "feedback": "Heavy propane, pressure up with heat, butane at -0.5 °C.", "brief": "Not every claim that sounds wrong is wrong."},
+
+  {"id": "q27", "kind": "self-check", "set": "SC2", "mechanic": "line_up", "bloom": 4, "sub_ilo": "1.5", "visual": "the cargo deck in 3D",
+   "question": "You take over the watch. Discharge tank 2 to shore through the port manifold; keep tank 1 out of the line.",
+   "answer": "goal: Tank 2 => Port manifold\nkeep out: Tank 1; Starboard manifold\nV101: Tank 1 valve = open\nV201: Header valve, tank 1 side = open\nV102: Tank 2 valve = shut\nV202: Header valve, tank 2 side = shut\nV301: Port manifold valve = shut\nV302: Starboard manifold valve = open",
+   "feedback": "Open V102, V202, V301; shut V302 and V201 (or V101).", "brief": "Follow the cargo from the pump - where else can it go?"},
+
+  {"id": "q28", "kind": "self-check", "set": "SC2", "mechanic": "inspect_round", "bloom": 4, "sub_ilo": "1.6", "visual": "the compressor room in 3D",
+   "question": "Morning round in the compressor room. There are 4 problems - find them.",
+   "answer": "Compressor suction line: frost on the flange, a faint hiss, mist sinking to the floor*\nPortable work lamp: an ordinary 230 V lamp, no Ex marking, plugged in*\nGas detector head, floor level: a red plastic cap over its inlet*\nExtraction fan No. 1: STOPPED lamp lit, the blades still*\nDry powder extinguisher: in its bracket, seal unbroken, needle in the green\nCompressor suction gauge: 0.2 bar, inside the 0-0.5 bar on its placard\nEmergency stop: guard closed, button out\nCargo compressor No. 2: stopped, casing dry\nDrip tray: dry and clean",
+   "feedback": "The leak, the non-Ex lamp, the capped detector, the stopped fan.", "brief": "Look low as well as high."},
+
+  {"id": "q29", "kind": "self-check", "set": "SC2", "mechanic": "take_apart", "bloom": 3, "sub_ilo": "1.7", "visual": "a ball valve in 3D",
+   "question": "Take the ball valve apart and find out how it works.",
+   "answer": "part: Cargo pipe: carbon steel, 100 mm bore\npart: Flange joint: two flanges, a gasket and eight bolts\npart: Valve body: cast steel; the stem comes out through its top\npart: Ball: a steel sphere with a round hole through it\npart: Seat rings: PTFE, one each side of the ball, pressed against it\npart: Stem: a steel shaft from the ball up to the handle\npart: Gland packing: graphite rings round the stem under a hexagon nut\npart: Handle: a steel lever; it moves a quarter turn\nfind: Which part stops cargo getting past the ball when the valve is closed? => Seat rings\nfind: Which part stops cargo leaking out along the stem? => Gland packing\nset: Close the valve => closed",
+   "feedback": "Seats seal the ball, the gland seals the stem, across the pipe is closed.", "brief": "Pull it apart and look at what touches what."},
+
+  {"id": "q30", "kind": "self-check", "set": "SC2", "mechanic": "test_atmosphere", "bloom": 3, "sub_ilo": "1.6",
+   "question": "Tank 2 has been gas-freed and ventilated. Test the atmosphere before anyone goes in.",
+   "answer": "space: Cargo tank 2 | 16\nlevels: 2; 8; 14 ± 2\nO₂ % | 20.9 @ 0; 20.9 @ 10; 19.2 @ 14; 19.0 @ 16 | below 19.5\nLEL % | 0 @ 0; 0 @ 9; 15 @ 14; 21 @ 16 | above 10\nH₂S ppm | 0 | above 5",
+   "feedback": "Top, middle and bottom, each after the sample arrived.", "brief": "A reading only counts once the sample has come up the hose - and the air is layered."},
+
+  {"id": "q31", "kind": "self-check", "set": "SC2", "mechanic": "single_choice", "bloom": 5, "sub_ilo": "1.6", "confidence": true,
+   "question": "From your readings: can anyone go into tank 2?",
+   "options": ["Yes - the readings near the hatch are fine", "Yes, with a filter mask on", "No - keep ventilating, then test every level again"], "correct": "C",
+   "feedback": "The bottom failed on oxygen and on LEL.", "brief": "Look at every level you tested, not only one."}
+ ],
+ "build": {
+  "q24": {"model": {"var": {"name": "Gas in air", "unit": "% vol", "min": 0, "max": 20, "step": 0.05, "start": 3},
+                    "choice": {"label": "Gas", "items": {"Propane": {"lel": 2.1, "uel": 9.5}, "Methane": {"lel": 5.0, "uel": 15.0}, "Butane": {"lel": 1.8, "uel": 8.4}}},
+                    "readouts": [{"name": "Detector", "unit": "% LEL", "expr": "x / lel * 100", "max": 100, "over": "OVER RANGE"}],
+                    "test": {"label": "Test with a spark", "rules": [{"if": "x < lel", "say": "No flame - too lean", "fx": "spark"},
+                                                                       {"if": "x > uel", "say": "No flame - too rich", "fx": "spark"},
+                                                                       {"say": "It burns", "fx": "flame"}]}}},
+  "q27": "deck_lineup.build.json",
+  "q28": "compressor_room.build.json",
+  "q29": "ball_valve.build.json",
+  "q30": {"hose": 4, "delay": 0.28}
+ }
+}
