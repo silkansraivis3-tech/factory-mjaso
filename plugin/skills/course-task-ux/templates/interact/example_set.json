@@ -36,7 +36,7 @@
 
   {"id": "q26", "kind": "self-check", "set": "SC2", "mechanic": "critique", "bloom": 5, "sub_ilo": "1.2",
    "question": "The duty officer posted this before the watch. Keep each sentence that is right; correct the ones that are wrong.",
-   "answer": "Propane is lighter than air, so a leak on deck rises and clears away => Propane vapour is heavier than air and collects low* | Propane is lighter than air only when cold\nIf a cargo tank warms up, the pressure inside it rises => * | The pressure falls as it warms\nButane boils at -42 °C, the same as propane => Butane boils at about -0.5 °C* | Butane boils at about -162 °C",
+   "answer": "Propane is lighter than air, so a leak on deck rises and clears away => Propane vapour is heavier than air and collects low* | Propane is lighter than air only when cold\nIf a cargo tank warms up, the pressure inside it rises => * | The pressure falls as it warms | The pressure stays the same - the tank is closed\nButane boils at -42 °C, the same as propane => Butane boils at about -0.5 °C* | Butane boils at about -162 °C",
    "feedback": "Heavy propane, pressure up with heat, butane at -0.5 °C.", "brief": "Not every claim that sounds wrong is wrong."},
 
   {"id": "q27", "kind": "self-check", "set": "SC2", "mechanic": "line_up", "bloom": 4, "sub_ilo": "1.5", "visual": "the cargo deck in 3D",

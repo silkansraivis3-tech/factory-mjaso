@@ -226,6 +226,13 @@ def _critique(sid, ls, q, probs):
     if len(claims) < 3 or not keep or len(keep) == len(claims):
         probs.append("%s: 'check a colleague' needs at least three claims - at least one right as written (=> * | ...) and at least "
                      "one wrong" % sid)
+    # 2.74.1 - the tablet adds "keep it as written" to every claim; a claim with fewer choices than the others would say which
+    # claims are right, so every claim shows the same number: a wrong one "fix* | wrong", a right one "* | decoy | decoy"
+    shown = sorted({len([o for o in c["opts"] if o]) + 1 for c in claims})
+    if len(shown) > 1:
+        probs.append("%s: every claim must offer the same number of choices, or the number gives the answer away - write a wrong "
+                     "claim as 'claim => right correction* | wrong correction' and a right one as 'claim => * | decoy | decoy' "
+                     "(now %s choices)" % (sid, " / ".join(str(n) for n in shown)))
     right = [c["opts"][c["right"]] for c in claims if c["opts"][c["right"]]] + [c["text"] for c in keep]
     wrong = [c["text"] for c in claims if c not in keep]
     items = [c["text"] for c in claims] + [o for c in claims for o in c["opts"] if o]

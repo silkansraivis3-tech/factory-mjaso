@@ -402,7 +402,7 @@
     h += '<line class="pr-at" x1="' + px(w.at) + '" y1="' + TOP + '" x2="' + px(w.at) + '" y2="' + B + '"/>';
     each(w.given || [], function (g) { h += '<circle class="pr-g" cx="' + px(g[0]) + '" cy="' + py(g[1]) + '" r="8"/><text class="pr-gl" x="' + (px(g[0]) + 12) + '" y="' + (py(g[1]) - 12) + '">' + esc(g[2] || '') + '</text>'; });
     h += '<path class="pr-curve" d=""/><circle class="pr-truth" r="10" cx="-99" cy="-99"/><g class="pr-h"><circle r="30" class="pr-h0"/><circle r="14" class="pr-h1"/></g><text class="pr-hv"></text>';
-    var box = el('div', 'pr-box', '<svg viewBox="0 0 ' + WD + ' ' + HT + '" xmlns="' + NS + '" role="img" aria-label="' + esc(X[0] + ' / ' + Y[0]) + '">' + h + '</svg>', root);
+    var box = el('div', 'pr-box', '<svg data-audit-ignore viewBox="0 0 ' + WD + ' ' + HT + '" xmlns="' + NS + '" role="img" aria-label="' + esc(X[0] + ' / ' + Y[0]) + '">' + h + '</svg>', root);
     each($$('.pr-given', root), function (g) { g.hidden = true; });
     var svg = $('svg', box), hd = $('.pr-h', svg), hv = $('.pr-hv', svg), fb = el('div', 'gi-fb', '<span class="gi-hint">' + esc(say('dragPoint')) + '</span>', root);
     var y0 = (w.given && w.given.length) ? w.given[w.given.length - 1][1] : (Y[2] + Y[3]) / 2;
@@ -714,6 +714,7 @@
     else { mount3d(stage, w.spec || {}, function (k) { if (k) { inspect(thingOfPart(k)); } }); }
     el('div', 'gi-tip', esc(say('lookHint')), stage);
     count();
+    root.__look = function (name) { inspect(byName[name] != null ? byName[name] : -1); };   /* the build's grader looks by name - a 360 photo has no parts to select */
     function good(i) { return (things[i].getAttribute('data-key') || '').toLowerCase() === api.key(api.id, txt($('b', things[i])), st[i] || 'fine'); }
     return {
       answered: function () { return Object.keys(seen).length >= Math.min(need, things.length); },
@@ -847,7 +848,8 @@
     var sec = root.closest ? root.closest('.scr') : root.parentNode, M = model3(sec), step = data(root, 'step'), ask = data(root, 'ask'), mine = null, active = false;
     if (!M) { return { answered: function () { return false; }, right: function () { return false; }, show: function () {} }; }
     var part = root.closest ? root.closest('.part') : null;
-    function on() { active = true; M.locked = false; if (step === 'find') { M.sel = null; if (M.k3) { M.k3.select(null); } } }
+    /* a set step can be handed in as it stands (its position may already be the one asked): Check wakes when the step opens */
+    function on() { active = true; M.locked = false; if (step === 'find') { M.sel = null; if (M.k3) { M.k3.select(null); } } setTimeout(api.changed, 0); }
     if (!part || part.classList.contains('on')) { on(); }
     else if (W.MutationObserver) { new W.MutationObserver(function () { if (part.classList.contains('on') && !active) { on(); } }).observe(part, { attributes: true, attributeFilter: ['class'] }); }
     M.subs.push(function () { if (active) { api.changed(); } });
@@ -881,7 +883,7 @@
     for (m = 2; m < depthMax; m += 2) { ticks += '<line x1="112" x2="132" y1="' + Y(m) + '" y2="' + Y(m) + '" class="at-tk"/><text x="140" y="' + (Y(m) + 5) + '" class="at-tt">' + m + ' m</text>'; }
     var rungs = '';
     for (m = Y0 + 20; m < Y1; m += 28) { rungs += '<line x1="470" x2="500" y1="' + m + '" y2="' + m + '" class="at-rung"/>'; }
-    sect.innerHTML = '<svg viewBox="0 0 760 620" xmlns="' + NS + '" role="img" aria-label="' + esc(w.space || '') + '">' +
+    sect.innerHTML = '<svg data-audit-ignore viewBox="0 0 760 620" xmlns="' + NS + '" role="img" aria-label="' + esc(w.space || '') + '">' +
       '<rect x="0" y="' + (Y0 - 14) + '" width="760" height="14" class="at-deck"/><rect x="110" y="' + Y0 + '" width="540" height="' + (Y1 - Y0) + '" class="at-tank"/>' +
       '<rect x="340" y="' + (Y0 - 14) + '" width="80" height="14" class="at-hole"/><rect x="330" y="' + (Y0 - 44) + '" width="10" height="30" class="at-coam"/><rect x="420" y="' + (Y0 - 44) + '" width="10" height="30" class="at-coam"/>' +
       '<line x1="470" x2="470" y1="' + Y0 + '" y2="' + Y1 + '" class="at-rail"/><line x1="500" x2="500" y1="' + Y0 + '" y2="' + Y1 + '" class="at-rail"/>' + rungs + ticks +

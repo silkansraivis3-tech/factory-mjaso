@@ -24,6 +24,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -163,6 +164,10 @@ def script_part():
     q = copy.deepcopy([x for x in qs if x["id"] == "q21"][0])
     q["brief"] = "The right answer is -42 °C."
     check("a brief that names the right answer is refused", any("gives the right answer away" in x for x in cs.read_answer(q)[0]))
+    q = copy.deepcopy([x for x in qs if x["id"] == "q26"][0])
+    q["answer"] = q["answer"].replace(" | The pressure stays the same - the tank is closed", "")
+    check("2.74.1 - check a colleague: claims with unequal numbers of choices are refused",
+          any("same number of choices" in x for x in cs.read_answer(q)[0]), cs.read_answer(q)[0])
     for m, ans in (("true_false", "Only one statement*"), ("critique", "A claim with no corrections"), ("calculate", "about one"),
                    ("predict", "13.7 @ 40"), ("explore", "find: something => x >> 3"), ("line_up", "goal: A"),
                    ("inspect_round", "Lamp: fine"), ("take_apart", "part: Ball: a ball"), ("test_atmosphere", "space: Tank")):
@@ -202,6 +207,14 @@ def main():
         check("the page carries the debrief rule, the 3D kit and gb_interact.js before gb_answer.js",
               'data-reveal="debrief"' in p and "assets/kit3d.js" in p and p.index("gb_interact.js") < p.index("gb_answer.js"))
         check("no right answer readable in the page", "data-correct" not in p and "data-answer" not in p)
+        crit = re.findall(r'<div class="cr-claim">(.*?)</div>', p)
+        check("2.74.1 - check a colleague: every claim ends with 'keep it' and offers the same number of choices",
+              crit and all(re.findall(r'data-o="([^"]*)"', x)[-1] == "*" for x in crit) and len({x.count('class="cr-o"') for x in crit}) == 1,
+              [re.findall(r'data-o="([^"]*)"', x) for x in crit])
+        rs = os.path.join(HERE, "..", "..", "..", "course-module-ux", "measure", "scripts", "review_sheets.mjs")
+        g = subprocess.run(["node", rs, md, os.path.join(tmp, "graded"), "--grade-only"], capture_output=True, text=True, encoding="utf-8", errors="replace")
+        check("2.74.1 - the build's grader answers every type right and wrong by its keys (review_sheets.mjs --grade-only)",
+              g.returncode == 0 and "every question graded as expected" in g.stdout, (g.stdout + g.stderr)[-900:])
         check("three.js is in the module for the 3D tasks", os.path.isfile(os.path.join(md, "assets", "vendor", "three.min.js")))
         _, md_now, _, _ = course(os.path.join(tmp, "b"), feedback="now")
         p_now = io.open(os.path.join(md_now, "tasks", "sc2_cargo_hazards.html"), encoding="utf-8").read()

@@ -6,6 +6,17 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.74.1 · The build grades the ten types; check a colleague gives nothing away (2026-10-28)
+
+- **Why.** Redoing a whole course's tasks with 2.74.0 (Chemical Tanker Advanced): the build's grader could answer none of
+  the ten types, and a "check a colleague" sheet told the trainee which claims were wrong - only wrong claims lacked
+  "keep it", and they had more choices.
+- **What.** `review_sheets.mjs` answers every type from its keys, right and wrong, and taps "how sure". Every claim's
+  sheet ends with "keep it as written"; every claim shows the same number of choices (content_script.py refuses
+  otherwise - a right claim is written `claim => * | decoy | decoy`). A take-apart set step wakes Check when it opens.
+  The predict chart and the test-before-entry section carry `data-audit-ignore`: live instruments, not drawings for L54.
+- **Watch.** `root.__look(name)` on an inspection round is the grader's door in, not the trainee's.
+
 ## 2.74.0 · Part A + Part B, ten interactive types, the debrief rule (2026-10-28)
 
 - **Why.** The owner tried the twelve prototypes (`design/task-prototypes/index.html`) and approved them: tasks that are

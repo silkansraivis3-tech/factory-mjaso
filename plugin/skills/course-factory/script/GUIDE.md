@@ -214,7 +214,7 @@ one line per item, `*` marking what is right:
 | `panel_operate` | `control = end state` per line |
 | `scenario` | `situation => right action* \| wrong \| wrong` per step |
 | `true_false` | `statement => why` per line, the true ones `*` (2.74.0, Part A) |
-| `critique` | `claim => right correction* \| wrong` - a claim that is right: `claim => * \| decoy` |
+| `critique` | `claim => right correction* \| wrong` - a claim that is right: `claim => * \| decoy \| decoy` (every claim the same number of choices; the tablet adds "keep it" to each) |
 | `calculate` | `0.84 % vol ± 0.02`, then `! what the device shows` and `# the \| data \| sheet` lines |
 | `predict` | `13.7 ± 1.5 @ 40`, `x: name \| unit \| low \| high`, `y: ...`, `given: x \| y \| label`, `curve: x y; x y` |
 | `explore` | `find: the challenge => x > 9.5 and x <= 15` (a choice's name; `hide <readout>`) - the model is the build sheet's |

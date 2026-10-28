@@ -77,7 +77,10 @@ def question_html(n, q, b, mdir, figdir, probs, w, shuffle, opt_buttons):
     elif m == "critique":
         out.append('    <div class="lab gi-crit" data-lab="critique">')
         for c in d["claims"]:
-            opts = shuffle(sid + c["text"], list(enumerate(c["opts"])), key=lambda x: x[1])
+            # 2.74.1 - every claim offers "keep it as written", last, whether or not it is right: a sheet without it told
+            # the trainee the claim was wrong (found in the chemical tanker course's redo)
+            fixes = [(i, o) for i, o in enumerate(c["opts"]) if o]
+            opts = shuffle(sid + c["text"], fixes, key=lambda x: x[1]) + [(c["opts"].index("") if "" in c["opts"] else -1, "")]
             btns = "".join('<button type="button" class="cr-o" data-o="%s" data-key="%s"%s>%s</button>'
                            % (a(o or "*"), k(sid, c["text"] + " => " + (o or "*"), 1 if i == c["right"] else 0),
                               ' data-script-field="answer"' if o else "", e(o)) for i, o in opts)
