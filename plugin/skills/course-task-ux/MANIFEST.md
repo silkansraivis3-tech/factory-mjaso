@@ -6,6 +6,13 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.74.2 · A self-check is answered once (2026-10-28)
+
+- **Why.** The owner: "you do it once and if you fail you will get the explanation in the debrief". Start again on the
+  result screen (outside the classroom frame) let a trainee answer the whole set again.
+- **What.** Under the debrief rule, and on a blind final, the result screen has no Start again (task_pages.py, and
+  gb_answer.js for an older page). Every part already locks at its Check - there is no per-question retry.
+
 ## 2.74.1 · The build grades the ten types; check a colleague gives nothing away (2026-10-28)
 
 - **Why.** Redoing a whole course's tasks with 2.74.0 (Chemical Tanker Advanced): the build's grader could answer none of

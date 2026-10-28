@@ -219,6 +219,8 @@ def main():
         _, md_now, _, _ = course(os.path.join(tmp, "b"), feedback="now")
         p_now = io.open(os.path.join(md_now, "tasks", "sc2_cargo_hazards.html"), encoding="utf-8").read()
         check('"feedback": "now" keeps the older reveal (no data-reveal)', "data-reveal" not in p_now)
+        check("2.74.2 - a self-check under the debrief rule is answered once: no Start again (a 'feedback: now' page keeps it)",
+              'id="again"' not in p and 'id="again"' in p_now)
         if not exe:
             print("  skip  no Chrome or Edge found - the page was not driven")
         else:

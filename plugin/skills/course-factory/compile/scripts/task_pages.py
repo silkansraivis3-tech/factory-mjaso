@@ -1360,7 +1360,9 @@ def intro_screen(slide, title, n, pass_mark, w):
                       '    <div class="intro">'] + ["  " + x for x in body] + ["    </div>", "  </section>"])
 
 
-def result_screen(w):
+def result_screen(w, again=True):
+    """the result screen; again=False (2.74.2, owner 2026-10-28: "you do it once and if you fail you will get the
+    explanation in the debrief") - no Start again: a set under the debrief rule, or a blind final, is answered once"""
     return "\n".join([
         '  <!-- result : the trainee\'s own score, for them only -->',
         '  <section class="scr" id="resScr">',
@@ -1379,7 +1381,7 @@ def result_screen(w):
         "        </div>",
         "      </div>",
         '      <ol id="resList"></ol>',
-        '      <button type="button" class="sub" id="again">%s</button>' % e(w["again"]),
+    ] + (['      <button type="button" class="sub" id="again">%s</button>' % e(w["again"])] if again else []) + [
         "    </div>",
         "  </section>"])
 
@@ -1463,7 +1465,7 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
             '  <div class="bar"><i id="barFill"></i></div>', "</header>", "", '<main class="wrap">', ""]
     if first:
         body += [first, ""]
-    body += ["\n\n".join(sections), "", result_screen(w), "", "</main>", "",
+    body += ["\n\n".join(sections), "", result_screen(w, again=not (blind or reveal)), "", "</main>", "",
              '<div class="dock" id="dock"><button type="button" class="sub" id="go" disabled>%s</button></div>'
              % e(w["start_check"] if is_check else w["start_self"]), ""]
     if kit:

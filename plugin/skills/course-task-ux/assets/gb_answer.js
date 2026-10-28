@@ -28,7 +28,8 @@
    The classroom: the result is reported once - parent.postMessage({type: 'gb-task-done', code, title, ok, total,
    head, items, answered, of, timeout: true|false}); the instructor's timer {type: 'gb-timer'} is heard, and at 0
    what was done is marked and reported with timeout: true. "Start again" exists only outside the classroom frame
-   (window.parent === window): inside it, one opening gives one result.
+   (window.parent === window): inside it, one opening gives one result. Never under the debrief rule or on a blind final:
+   those are answered once (2.74.2).
    The words on the controls are in the page's language (<html lang>: en, lv, ru - LANG below); a page may still
    override any of them with window.GB_ANSWER_TEXT. */
 (function () {
@@ -1250,7 +1251,9 @@
     go.addEventListener('click', onGo, false);
     var again = $('#again');
     if (again) {
-      if (inFrame) { again.style.display = 'none'; }          /* one opening, one result inside the classroom */
+      /* one opening, one result inside the classroom - and a set under the debrief rule (or a blind final) is answered
+         once wherever it is opened: no Start again (2.74.2, owner 2026-10-28) */
+      if (inFrame || LATER || BLIND) { again.parentNode.removeChild(again); }
       else { again.addEventListener('click', function () { W.location.reload(); }, false); }
     }
     if (tryScr) {
