@@ -872,15 +872,17 @@
     if (!key || key === S.sel) {
       S.sel = null;
       var st = S.steps()[S.step] || {};
-      S.go(st.view ? S.viewFor(st.view) : S.home, null, st.select ? [].concat(st.select) : []);
+      S.go(S.opt.keepView ? null : st.view ? S.viewFor(st.view) : S.home, null, st.select ? [].concat(st.select) : []);
     } else {
       S.sel = key;
-      S.go(S.frameSel(key), null, [key]);
+      S.go(S.opt.keepView ? null : S.frameSel(key), null, [key]);
     }
     S.free = false;
     S.ctlSync();
     S.pillsLit();
     S.syncDeck();
+    /* 2.74.0 - a tablet task (gb_interact.js) is told what was tapped; keepView: the camera stays where the trainee put it */
+    if (S.opt.onSelect) { try { S.opt.onSelect(S.sel); } catch (e9) { /* the task's own */ } }
   };
   P.current = function () { return this.sel; };
   P.syncDeck = function () { if (w.GB3D && w.GB3D.sync && this.wired) { try { w.GB3D.sync(this.stage); } catch (e4) { /* deck */ } } };

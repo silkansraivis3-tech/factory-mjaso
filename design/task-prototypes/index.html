@@ -1,0 +1,2028 @@
+<title>Bloom Task Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: task list | the tablet itself (1280 x 800, scaled to fit) | what the factory needs.
+   One dark look, taken from the factory's gb_lab tasks: the task is a place, controls on dark glass. */
+:root {
+  color-scheme: dark;
+  --bg: #050D1A;
+  --bg2: #0A1A33;
+  --shell: #08142A;
+  --glass: rgba(14, 34, 66, .78);
+  --glass-hi: rgba(24, 52, 94, .9);
+  --line: rgba(140, 190, 255, .16);
+  --line-hi: rgba(140, 190, 255, .34);
+  --text: #F2F7FD;
+  --dim: #9DB3CC;
+  --faint: #6E86A3;
+  --accent: #2EB6F8;
+  --accent2: #34E0C4;
+  --amber: #F2B33D;
+  --good: #3DDC97;
+  --bad: #FF6B5E;
+  --on-accent: #04263A;
+  --r: 22px;
+  --font: "Raleway", "Segoe UI", Roboto, Arial, sans-serif;
+  --mono: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--shell); color: var(--text); font-family: var(--font); font-size: 14px; }
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+
+/* ---------- gallery shell ---------- */
+.app { height: 100%; display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; }
+.list, .info { overflow: auto; min-width: 0; }
+.list { background: #050E1E; border-right: 1px solid var(--line); padding: 18px 14px 24px max(14px, env(safe-area-inset-left, 0px)); }
+.brand { font-weight: 800; font-size: 20px; letter-spacing: -.01em; margin: 0 4px 4px; }
+.brand-sub { margin: 0 4px 14px; color: var(--dim); font-size: 13px; line-height: 1.5; }
+.howset { margin: 0 0 16px; padding: 12px 14px; border-radius: 14px; background: rgba(46,182,248,.08); border: 1px solid var(--line); font-size: 12.8px; line-height: 1.5; color: var(--dim); }
+.howset b { color: var(--text); }
+.flow { display: flex; align-items: center; gap: 6px; margin: 8px 0 2px; flex-wrap: wrap; }
+.flow span { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 99px; background: rgba(255,255,255,.07); color: var(--text); }
+.flow span.a { background: rgba(52,224,196,.16); color: var(--accent2); }
+.flow span.b { background: rgba(242,179,61,.16); color: var(--amber); }
+.flow i { font-style: normal; color: var(--faint); }
+.part { margin: 18px 4px 8px; }
+.part h2 { margin: 0; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; font-weight: 800; }
+.part.a h2 { color: var(--accent2); }
+.part.b h2 { color: var(--amber); }
+.part p { margin: 3px 0 0; font-size: 12.5px; color: var(--faint); line-height: 1.4; }
+.ti { display: grid; grid-template-columns: 34px 1fr; gap: 0 10px; width: 100%; text-align: left; border: 0; border-radius: 12px; padding: 10px; margin: 0 0 4px; background: transparent; cursor: pointer; }
+.ti:hover { background: rgba(46,182,248,.08); }
+.ti.on { background: rgba(46,182,248,.16); box-shadow: inset 3px 0 0 var(--accent); }
+.ti .n { grid-row: span 2; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-size: 13px; background: rgba(255,255,255,.06); font-family: var(--mono); }
+.ti b { font-size: 14.5px; font-weight: 700; }
+.ti span { font-size: 12px; color: var(--dim); margin-top: 1px; }
+
+.stagearea { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 14px 18px; gap: 12px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; background: rgba(255,255,255,.06); border-radius: 12px; padding: 3px; }
+.seg button { border: 0; background: transparent; padding: 8px 14px; border-radius: 9px; font-weight: 700; font-size: 13px; cursor: pointer; color: var(--dim); }
+.seg button.on { background: var(--accent); color: var(--on-accent); }
+.tb { border: 1px solid var(--line-hi); background: transparent; border-radius: 12px; padding: 8px 14px; font-weight: 700; font-size: 13px; cursor: pointer; }
+.tb:hover { background: rgba(255,255,255,.06); }
+.toolbar .sp { flex: 1; }
+.toolbar .demo { font-size: 12px; color: var(--faint); }
+.fit { flex: 1; min-height: 0; position: relative; }
+.device { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: #0E131B; border-radius: 40px; padding: 20px; box-shadow: 0 30px 70px rgba(0,0,0,.55), inset 0 0 0 2px #1D2633; }
+.screen { position: relative; width: 1280px; height: 800px; border-radius: 16px; overflow: hidden; }
+
+.info { background: #050E1E; border-left: 1px solid var(--line); padding: 18px 18px 28px; padding-right: max(18px, env(safe-area-inset-right, 0px)); font-size: 13.5px; line-height: 1.55; }
+.info h3 { margin: 18px 0 6px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); font-weight: 800; }
+.info h3:first-child { margin-top: 0; }
+.info p { margin: 0 0 8px; color: var(--dim); }
+.info .big { font-size: 18px; font-weight: 800; color: var(--text); margin: 0 0 6px; text-wrap: balance; }
+.pills { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
+.pill { display: inline-block; font-size: 11.5px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: rgba(255,255,255,.08); white-space: nowrap; }
+.pill.a { background: rgba(52,224,196,.16); color: var(--accent2); }
+.pill.b { background: rgba(242,179,61,.18); color: var(--amber); }
+.pill.bl { background: rgba(46,182,248,.16); color: var(--accent); }
+.info pre { margin: 0; background: #0B1A33; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font: 11.5px/1.5 var(--mono); color: #CFE6FF; white-space: pre-wrap; word-break: break-word; max-height: 340px; overflow: auto; }
+.info ul { margin: 0; padding-left: 18px; color: var(--dim); }
+.info li { margin: 0 0 6px; }
+.info li b { color: var(--text); }
+.info .sent { border: 1px solid rgba(61,220,151,.4); }
+.info .muted { color: var(--faint); font-size: 12.5px; }
+
+/* solo: the tablet fills the window, for trying on a real tablet */
+body.solo .app { grid-template-columns: 1fr; }
+body.solo .list, body.solo .info, body.solo .toolbar { display: none; }
+body.solo .stagearea { padding: 0; }
+body.solo .device { padding: 0; border-radius: 0; box-shadow: none; background: #000; }
+body.solo .screen { border-radius: 0; }
+.exitsolo { display: none; position: fixed; z-index: 50; right: calc(10px + env(safe-area-inset-right, 0px)); top: calc(10px + env(safe-area-inset-top, 0px)); border: 1px solid var(--line-hi); background: rgba(5,13,26,.85); border-radius: 10px; padding: 6px 12px; font-weight: 700; font-size: 12px; cursor: pointer; }
+body.solo .exitsolo { display: block; }
+
+@media (max-width: 1180px) {
+  .app { grid-template-columns: 250px minmax(0, 1fr); }
+  .info { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); }
+  .app { height: auto; min-height: 100%; }
+  .stagearea { height: 78vh; }
+}
+@media (max-width: 760px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .list { border-right: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .stagearea { height: 62vw; min-height: 300px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .info { padding-left: max(16px, env(safe-area-inset-left, 0px)); }
+}
+
+/* ---------- inside the tablet ---------- */
+.T { position: absolute; left: 0; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; font-size: 19px; line-height: 1.4;
+  background: radial-gradient(ellipse 80% 70% at 78% -5%, #123064 0%, rgba(18,48,100,0) 100%),
+              radial-gradient(ellipse 70% 60% at -5% 105%, #0B3A4A 0%, rgba(11,58,74,0) 100%), var(--bg);
+  user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.t-top { display: flex; align-items: center; gap: 16px; padding: 18px 28px 10px; }
+.t-code { font: 600 15px var(--mono); color: var(--dim); padding: 6px 12px; border-radius: 10px; background: rgba(255,255,255,.06); }
+.t-title { font-size: 26px; font-weight: 800; letter-spacing: -.01em; flex: 1; min-width: 0; }
+.t-pill { font-size: 14px; font-weight: 800; padding: 6px 12px; border-radius: 99px; white-space: nowrap; }
+.t-pill.a { background: rgba(52,224,196,.16); color: var(--accent2); }
+.t-pill.b { background: rgba(242,179,61,.18); color: var(--amber); }
+.t-pill.bl { background: rgba(46,182,248,.16); color: var(--accent); }
+.t-now { margin: 0 28px; display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 18px; border-radius: 16px; background: var(--glass); border: 1px solid var(--line); min-height: 58px; }
+.t-now .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); flex: none; box-shadow: 0 0 12px var(--accent); }
+.t-now.warn .dot { background: var(--amber); box-shadow: 0 0 12px var(--amber); }
+.t-now.done .dot { background: var(--good); box-shadow: 0 0 12px var(--good); }
+.t-now .txt { flex: 1; font-size: 19px; }
+.t-now .txt b { color: var(--accent); }
+.t-now.warn .txt b { color: var(--amber); }
+.hintb { border: 1px solid var(--line-hi); background: rgba(255,255,255,.05); border-radius: 12px; min-height: 44px; padding: 0 16px; font-weight: 700; font-size: 16px; cursor: pointer; }
+.t-stage { flex: 1; min-height: 0; position: relative; padding: 14px 28px; }
+.t-foot { display: flex; align-items: center; gap: 16px; padding: 12px 28px 20px; }
+.t-prog { flex: 1; display: flex; gap: 8px; align-items: center; font: 600 15px var(--mono); color: var(--dim); }
+.t-prog i { width: 26px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); }
+.t-prog i.d { background: var(--accent); }
+.t-prog i.ok { background: var(--good); }
+.t-prog i.no { background: var(--bad); }
+.go { min-width: 280px; min-height: 64px; border: 0; border-radius: 18px; background: var(--accent); color: var(--on-accent); font-size: 21px; font-weight: 800; padding: 0 28px; cursor: pointer; transition: transform .12s, box-shadow .2s, opacity .2s; }
+.go:active { transform: scale(.97); }
+.go:disabled { background: rgba(255,255,255,.1); color: var(--faint); cursor: default; }
+.go.ready { box-shadow: 0 0 0 4px rgba(46,182,248,.25), 0 0 34px rgba(46,182,248,.55); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 7px rgba(46,182,248,.18), 0 0 44px rgba(46,182,248,.7); } }
+.toast { position: absolute; left: 50%; top: 150px; transform: translate(-50%, -10px); opacity: 0; z-index: 20; padding: 12px 22px; border-radius: 14px; background: var(--glass-hi); border: 1px solid var(--line-hi); font-weight: 700; font-size: 18px; pointer-events: none; transition: opacity .2s, transform .2s; max-width: 760px; text-align: center; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+.toast.good { border-color: var(--good); }
+.toast.bad { border-color: var(--bad); }
+
+/* opening card and result sheet */
+.veil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: 30; background: rgba(3,9,19,.72); display: flex; align-items: center; justify-content: center; padding: 30px; }
+.card { width: 760px; max-height: 100%; overflow: auto; background: linear-gradient(160deg, #0F2A52, #0A1A33); border: 1px solid var(--line-hi); border-radius: 28px; padding: 34px 38px; box-shadow: 0 30px 80px rgba(0,0,0,.5); }
+.card .k { font-size: 14px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--accent2); margin: 0 0 8px; }
+.card .k.b { color: var(--amber); }
+.card h2 { margin: 0 0 10px; font-size: 32px; letter-spacing: -.01em; text-wrap: balance; }
+.card .sit { font-size: 20px; color: var(--dim); margin: 0 0 20px; }
+.card ol { margin: 0 0 26px; padding: 0; list-style: none; counter-reset: s; }
+.card ol li { counter-increment: s; display: flex; gap: 14px; align-items: flex-start; margin: 0 0 12px; font-size: 19px; }
+.card ol li::before { content: counter(s); flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(46,182,248,.18); color: var(--accent); font-weight: 800; font-size: 16px; }
+.card .go { width: 100%; }
+.res { width: 980px; max-height: 100%; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.res .res-foot .go { width: auto; }
+.res-head { display: flex; align-items: center; gap: 24px; padding: 28px 34px 18px; border-bottom: 1px solid var(--line); }
+.ring { width: 96px; height: 96px; flex: none; }
+.res-head h2 { margin: 0; font-size: 30px; }
+.res-head p { margin: 4px 0 0; color: var(--dim); font-size: 18px; }
+.res-list { flex: 1; min-height: 0; overflow: auto; padding: 18px 34px; -webkit-overflow-scrolling: touch; }
+.res-extra { margin: 0 0 16px; }
+.ri { display: grid; grid-template-columns: 40px 1fr; gap: 4px 14px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.ri .m { grid-row: span 4; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 20px; }
+.ri .m.ok { background: rgba(61,220,151,.18); color: var(--good); }
+.ri .m.no { background: rgba(255,107,94,.18); color: var(--bad); }
+.ri .q { font-weight: 700; font-size: 19px; }
+.ri .l { font-size: 17px; color: var(--dim); }
+.ri .l b { color: var(--text); font-weight: 600; }
+.ri .l.c b { color: var(--good); }
+.ri .l.x b { color: var(--bad); text-decoration: line-through; text-decoration-color: rgba(255,107,94,.6); }
+.ri .w { font-size: 16.5px; color: var(--dim); background: rgba(255,255,255,.04); border-radius: 12px; padding: 8px 12px; margin-top: 4px; }
+.ri .w.no { border-left: 3px solid var(--bad); }
+.why .later, .ri .later { display: block; margin-top: 4px; font-size: 15px; color: var(--faint); }
+.ri .l.x b { text-decoration: none; }
+.res-foot { display: flex; gap: 14px; justify-content: flex-end; padding: 16px 34px 24px; border-top: 1px solid var(--line); }
+.ghostb { min-height: 64px; border: 1px solid var(--line-hi); background: transparent; border-radius: 18px; padding: 0 26px; font-weight: 800; font-size: 19px; cursor: pointer; }
+
+/* shared pieces */
+.opt { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 72px; text-align: left; border: 1.5px solid var(--line-hi); border-radius: 18px; background: var(--glass); padding: 14px 18px; font-size: 20px; font-weight: 600; cursor: pointer; transition: border-color .15s, background .15s, transform .1s; }
+.opt:active { transform: scale(.985); }
+.opt .lt { flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.07); font: 600 16px var(--mono); }
+.opt.sel { border-color: var(--accent); background: rgba(46,182,248,.16); }
+.opt.sel .lt { background: var(--accent); color: var(--on-accent); }
+.opt.right { border-color: var(--good); background: rgba(61,220,151,.14); }
+.opt.wrong { border-color: var(--bad); background: rgba(255,107,94,.12); }
+.opt[disabled] { cursor: default; }
+.why { margin-top: 12px; padding: 12px 16px; border-radius: 14px; background: rgba(255,255,255,.05); border-left: 4px solid var(--accent); font-size: 18px; color: var(--dim); }
+.why b { color: var(--text); }
+.why.ok { border-left-color: var(--good); }
+.why.no { border-left-color: var(--bad); }
+.ghost { position: fixed; z-index: 100; pointer-events: none; transform-origin: 0 0; opacity: .92; box-shadow: 0 18px 40px rgba(0,0,0,.5); }
+.shake { animation: shake .4s; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+
+/* A1 swipe */
+.sw { display: grid; grid-template-columns: 170px 1fr 170px; align-items: center; height: 100%; gap: 20px; }
+.sw-side { height: 340px; border-radius: 24px; display: grid; place-items: center; font-size: 26px; font-weight: 800; letter-spacing: .1em; border: 2px dashed var(--line-hi); color: var(--faint); transition: all .15s; cursor: pointer; background: transparent; }
+.sw-side.f.hot { border-color: var(--bad); color: var(--bad); background: rgba(255,107,94,.1); }
+.sw-side.t.hot { border-color: var(--good); color: var(--good); background: rgba(61,220,151,.1); }
+.sw-mid { position: relative; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.sw-deck { position: relative; width: 560px; height: 330px; }
+.sw-card { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border-radius: 28px; background: linear-gradient(160deg, #183B6E, #0F2549); border: 1.5px solid var(--line-hi); box-shadow: 0 24px 50px rgba(0,0,0,.45); padding: 34px 38px; display: flex; flex-direction: column; justify-content: center; touch-action: none; cursor: grab; }
+.sw-card.back { transform: translateY(16px) scale(.95); opacity: .55; pointer-events: none; }
+.sw-card .cn { font: 600 15px var(--mono); color: var(--dim); margin-bottom: 14px; }
+.sw-card .st { font-size: 27px; font-weight: 700; line-height: 1.3; text-wrap: balance; }
+.sw-card .hand { margin-top: auto; font-size: 15px; color: var(--faint); }
+.sw-card.fly { transition: transform .35s ease-in, opacity .35s; }
+.sw-card.spring { transition: transform .25s cubic-bezier(.2,1.4,.4,1); }
+.sw-fb { width: 640px; min-height: 92px; margin-top: 18px; }
+
+/* A2 sure */
+.su { display: grid; grid-template-columns: 1fr 360px; gap: 26px; height: 100%; }
+.su-q { font-size: 26px; font-weight: 700; margin: 0 0 16px; text-wrap: balance; }
+.su-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.su-side { background: var(--glass); border: 1px solid var(--line); border-radius: var(--r); padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.su-side h4 { margin: 0; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.conf { display: flex; flex-direction: column; gap: 10px; }
+.conf button { min-height: 64px; border-radius: 16px; border: 1.5px solid var(--line-hi); background: transparent; font-size: 19px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 0 16px; text-align: left; }
+.conf button .bars { display: inline-flex; gap: 3px; align-items: flex-end; }
+.conf button .bars i { width: 6px; border-radius: 2px; background: rgba(255,255,255,.18); }
+.conf button .bars i.f { background: var(--accent); }
+.conf button.sel { border-color: var(--accent); background: rgba(46,182,248,.14); }
+.calib { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.calib div { border-radius: 14px; padding: 12px 14px; background: rgba(255,255,255,.05); font-size: 16px; color: var(--dim); }
+.calib div b { display: block; font-size: 28px; color: var(--text); font-family: var(--mono); }
+.calib div.alarm { background: rgba(255,107,94,.12); border: 1px solid rgba(255,107,94,.4); }
+
+/* A3 chain */
+.ch { display: grid; grid-template-columns: 1fr 540px; gap: 26px; height: 100%; }
+.ch-slots { display: flex; flex-direction: column; gap: 6px; }
+.slot { position: relative; min-height: 70px; border-radius: 16px; border: 2px dashed var(--line-hi); display: flex; align-items: center; gap: 12px; padding: 6px 8px 6px 12px; transition: border-color .15s, background .15s; }
+.slot .sn { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.07); font: 600 15px var(--mono); color: var(--dim); }
+.slot .ph { color: var(--faint); font-size: 17px; }
+.slot.target { border-color: var(--accent); background: rgba(46,182,248,.08); }
+.slot.ok { border-style: solid; border-color: var(--good); }
+.slot.no { border-style: solid; border-color: var(--bad); }
+.arrow { height: 10px; display: flex; justify-content: center; margin: -2px 0; }
+.arrow::before { content: ""; width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; border-top: 10px solid var(--line-hi); }
+.chip { flex: 1; min-height: 56px; border-radius: 14px; border: 1.5px solid var(--line-hi); background: var(--glass-hi); padding: 8px 14px; font-size: 16.5px; font-weight: 600; text-align: left; cursor: pointer; touch-action: none; line-height: 1.3; }
+.chip.sel { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(46,182,248,.3); }
+.chip.lifting { opacity: .3; }
+.ch-bank { background: rgba(255,255,255,.03); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+.ch-bank h4 { margin: 0 0 2px; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.ch-bank .chip { flex: none; }
+
+/* B1 explore */
+.ex { display: grid; grid-template-columns: 330px 1fr 340px; gap: 22px; height: 100%; }
+.chamber { position: relative; border-radius: 26px; overflow: hidden; background: #071226; border: 1.5px solid var(--line-hi); }
+.chamber canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.chamber .lbl { position: absolute; left: 16px; top: 14px; font: 600 14px var(--mono); color: var(--dim); }
+.flame { position: absolute; left: 50%; bottom: 46px; width: 150px; height: 230px; margin-left: -75px; border-radius: 50% 50% 46% 46% / 62% 62% 38% 38%; background: radial-gradient(ellipse at 50% 80%, #FFF6C9 0%, #FFC14A 30%, #FF7A2E 60%, rgba(255,90,40,0) 75%); filter: blur(2px); opacity: 0; transform-origin: 50% 100%; transform: scale(.2); pointer-events: none; }
+.flame.on { animation: burn 1.6s ease-out forwards; }
+@keyframes burn { 0% { opacity: 0; transform: scale(.2); } 15% { opacity: 1; transform: scale(1.15); } 70% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(.9) translateY(-30px); } }
+.sparkfx { position: absolute; left: 50%; bottom: 40px; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: radial-gradient(circle, #fff 0%, #9FDBFF 35%, rgba(46,182,248,0) 70%); opacity: 0; pointer-events: none; }
+.sparkfx.on { animation: spark .45s ease-out; }
+@keyframes spark { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(2.4); } }
+.electrode { position: absolute; left: 50%; bottom: 0; width: 70px; height: 44px; margin-left: -35px; background: linear-gradient(#3A4A60, #222C3B); border-radius: 10px 10px 0 0; }
+.verdict { position: absolute; left: 16px; right: 16px; bottom: 60px; text-align: center; font-weight: 800; font-size: 22px; opacity: 0; transition: opacity .2s; }
+.verdict.on { opacity: 1; }
+.ex-mid { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.gases { display: flex; gap: 10px; }
+.gas { flex: 1; min-height: 60px; border-radius: 16px; border: 1.5px solid var(--line-hi); background: var(--glass); font-size: 19px; font-weight: 700; cursor: pointer; }
+.gas.sel { border-color: var(--accent); background: rgba(46,182,248,.18); }
+.gas:disabled { opacity: .35; cursor: default; }
+.readouts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ro { border-radius: 18px; background: #06101F; border: 1px solid var(--line); padding: 12px 16px; }
+.ro .k { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); font-weight: 800; }
+.ro .v { font: 600 42px/1.1 var(--mono); color: var(--accent2); text-shadow: 0 0 18px rgba(52,224,196,.45); }
+.ro .v small { font-size: 18px; color: var(--dim); text-shadow: none; }
+.ro.cover .v { color: var(--faint); text-shadow: none; font-size: 22px; padding: 10px 0; }
+.ro.over .v { color: var(--bad); text-shadow: 0 0 18px rgba(255,107,94,.5); font-size: 30px; padding: 4px 0; }
+.sl { display: flex; align-items: center; gap: 12px; }
+.fine { flex: none; width: 60px; height: 60px; border-radius: 16px; border: 1.5px solid var(--line-hi); background: var(--glass); font-size: 28px; font-weight: 700; cursor: pointer; }
+input[type=range].big { -webkit-appearance: none; appearance: none; flex: 1; height: 60px; background: transparent; touch-action: none; }
+input[type=range].big::-webkit-slider-runnable-track { height: 14px; border-radius: 7px; background: linear-gradient(90deg, rgba(46,182,248,.25), rgba(242,179,61,.5)); }
+input[type=range].big::-moz-range-track { height: 14px; border-radius: 7px; background: linear-gradient(90deg, rgba(46,182,248,.25), rgba(242,179,61,.5)); }
+input[type=range].big::-webkit-slider-thumb { -webkit-appearance: none; width: 50px; height: 50px; margin-top: -18px; border-radius: 50%; background: #fff; border: 6px solid var(--accent); box-shadow: 0 6px 18px rgba(0,0,0,.5); }
+input[type=range].big::-moz-range-thumb { width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 6px solid var(--accent); }
+.scale { display: flex; justify-content: space-between; font: 500 14px var(--mono); color: var(--faint); padding: 0 76px 0 76px; margin-top: -8px; }
+.spark { min-height: 64px; border-radius: 18px; border: 1.5px solid var(--amber); background: rgba(242,179,61,.12); color: var(--amber); font-size: 20px; font-weight: 800; cursor: pointer; }
+.ex-side { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.chal { border-radius: 18px; border: 1px solid var(--line); background: var(--glass); padding: 14px 16px; font-size: 17px; }
+.chal .h { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); font-weight: 800; margin-bottom: 4px; }
+.chal.done { opacity: .55; }
+.chal.done .h { color: var(--good); }
+.chal.active { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(242,179,61,.15); }
+.tests { flex: 1; min-height: 0; overflow: auto; border-radius: 18px; background: rgba(255,255,255,.03); border: 1px solid var(--line); padding: 12px 14px; }
+.tests h4 { margin: 0 0 6px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+.tests div { font: 500 15.5px/1.7 var(--mono); color: var(--dim); }
+.tests div b { font-weight: 600; }
+.tests .y { color: var(--amber); }
+.tests .n { color: var(--faint); }
+
+/* B2 predict */
+.pr { display: grid; grid-template-columns: 1fr 380px; gap: 24px; height: 100%; }
+.chart { border-radius: 22px; background: #06101F; border: 1px solid var(--line); position: relative; }
+.chart svg { width: 100%; height: 100%; display: block; touch-action: none; }
+.pr-side { display: flex; flex-direction: column; gap: 12px; }
+.pr-side .sit { background: var(--glass); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; font-size: 18px; color: var(--dim); }
+.pr-side .sit b { color: var(--text); }
+.pr-q { font-size: 18px; font-weight: 700; margin: 4px 0 2px; }
+.pr-side .opt { min-height: 60px; font-size: 17px; padding: 10px 14px; }
+
+/* B3 calculate */
+.ca { display: grid; grid-template-columns: 1fr 470px; gap: 26px; height: 100%; }
+.ca-left { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+.det { display: flex; gap: 20px; align-items: stretch; }
+.det-body { width: 250px; flex: none; border-radius: 30px; background: linear-gradient(#F4B526, #D69A0F); padding: 18px; box-shadow: 0 18px 40px rgba(0,0,0,.45); position: relative; }
+.det-body::after { content: "4-GAS"; position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; font: 800 13px var(--font); color: #3D2A00; letter-spacing: .2em; }
+.det-scr { background: #0B1A10; border-radius: 14px; padding: 12px 14px 30px; font-family: var(--mono); color: #9EFFB8; box-shadow: inset 0 0 18px rgba(0,0,0,.7); margin-bottom: 18px; }
+.det-scr .g { font-size: 14px; color: #6FD38C; }
+.det-scr .v { font-size: 46px; font-weight: 600; text-shadow: 0 0 14px rgba(158,255,184,.6); line-height: 1.1; }
+.det-scr .u { font-size: 16px; }
+.det-scr .al { font-size: 13px; color: #FFB86B; margin-top: 4px; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .2; } }
+.det-txt { flex: 1; font-size: 19px; color: var(--dim); background: var(--glass); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; }
+.det-txt b { color: var(--text); }
+.sheetbtn { align-self: flex-start; min-height: 56px; border-radius: 16px; border: 1.5px solid var(--accent); background: rgba(46,182,248,.12); color: var(--accent); font-weight: 800; font-size: 18px; padding: 0 20px; cursor: pointer; }
+.datasheet { border-radius: 18px; background: #F3F7FB; color: #0A1A33; padding: 14px 18px; font-size: 17px; }
+.datasheet h5 { margin: 0 0 8px; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: #415C8F; }
+.datasheet table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.datasheet th, .datasheet td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #D3DBE5; }
+.datasheet th { font-size: 14px; color: #415C8F; }
+.calc { background: #0B1426; border: 1px solid var(--line-hi); border-radius: 26px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.calc .disp { min-height: 96px; border-radius: 16px; background: #050B16; padding: 10px 16px; text-align: right; font-family: var(--mono); display: flex; flex-direction: column; justify-content: center; }
+.calc .ex { font-size: 26px; color: var(--text); word-break: break-all; min-height: 34px; }
+.calc .rs { font-size: 20px; color: var(--accent2); min-height: 26px; }
+.keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+.keys button { min-height: 62px; border: 0; border-radius: 14px; background: #16223A; font: 600 24px var(--mono); cursor: pointer; }
+.keys button:active { background: #24365A; }
+.keys button.op { background: #1B3358; color: var(--accent); }
+.keys button.c { color: var(--bad); }
+.keys button.eq { grid-column: span 3; background: #1F4A70; color: var(--accent2); }
+
+/* B4 investigate */
+.iv { display: grid; grid-template-columns: 250px 1fr 350px; gap: 18px; height: 100%; }
+.srcs { display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+.src { display: flex; align-items: center; gap: 12px; min-height: 62px; width: 100%; border: 1.5px solid var(--line); border-radius: 16px; background: var(--glass); padding: 8px 12px; text-align: left; cursor: pointer; font-size: 16.5px; font-weight: 600; line-height: 1.25; }
+.src .tg { flex: none; width: 54px; padding: 4px 0; text-align: center; border-radius: 8px; background: rgba(255,255,255,.08); font: 600 11.5px var(--mono); color: var(--dim); }
+.src.open { border-color: var(--accent); background: rgba(46,182,248,.14); }
+.src.pinned .tg { background: var(--amber); color: #2B1B00; }
+.src.seen:not(.open) { border-color: var(--line-hi); }
+.viewer { border-radius: 22px; background: #F3F7FB; color: #0A1A33; padding: 20px 24px; display: flex; flex-direction: column; min-height: 0; }
+.viewer .vh { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.viewer .vh h4 { margin: 0; flex: 1; font-size: 21px; }
+.viewer .body { flex: 1; overflow: auto; font-size: 17.5px; line-height: 1.5; }
+.viewer table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 16px; }
+.viewer th, .viewer td { padding: 7px 8px; border-bottom: 1px solid #D3DBE5; text-align: left; }
+.viewer th { font-family: var(--font); font-size: 13px; color: #415C8F; text-transform: uppercase; letter-spacing: .08em; }
+.viewer .al { color: #B4453A; font-weight: 700; }
+.viewer .note { font-family: var(--mono); background: #FFFBEA; border: 1px solid #EAD9A0; border-radius: 10px; padding: 12px 14px; font-size: 16px; }
+.viewer .empty { margin: auto; text-align: center; color: #415C8F; font-size: 19px; }
+.pinb { min-height: 52px; border-radius: 14px; border: 2px solid #E9A51E; background: #FDF4DE; color: #7A5300; font-weight: 800; font-size: 16px; padding: 0 16px; cursor: pointer; }
+.pinb.on { background: #E9A51E; color: #2B1B00; }
+.case { display: flex; flex-direction: column; gap: 9px; min-height: 0; overflow: auto; }
+.case h4 { margin: 0; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.case .opt { min-height: 60px; font-size: 16px; padding: 10px 12px; }
+.case .opt .lt { width: 30px; height: 30px; }
+.pins { display: flex; flex-wrap: wrap; gap: 6px; min-height: 34px; }
+.pins span { font: 600 13px var(--mono); padding: 5px 9px; border-radius: 8px; background: var(--amber); color: #2B1B00; }
+.pins em { font-style: normal; color: var(--faint); font-size: 15px; }
+
+/* B5 critique */
+.cr { display: grid; grid-template-columns: 1fr 380px; gap: 26px; height: 100%; }
+.thread { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.who { display: flex; align-items: center; gap: 12px; }
+.av { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #2EB6F8, #0A2463); display: grid; place-items: center; font-weight: 800; }
+.who b { font-size: 19px; }
+.who span { display: block; font-size: 15px; color: var(--faint); }
+.bubble { background: #E9F1FA; color: #0A1A33; border-radius: 6px 26px 26px 26px; padding: 12px; display: flex; flex-direction: column; gap: 4px; overflow: auto; }
+.cl { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; border: 2px solid transparent; background: transparent; border-radius: 14px; padding: 10px 12px; font-size: 19px; line-height: 1.4; cursor: pointer; color: #0A1A33; }
+.cl:hover { background: rgba(10,36,99,.05); }
+.cl .st { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px dashed #9DB3CC; display: grid; place-items: center; font-size: 15px; font-weight: 800; margin-top: 1px; }
+.cl.kept .st { border: 0; background: #12805A; color: #fff; }
+.cl.fixed { background: #FDF4DE; }
+.cl.fixed .st { border: 0; background: #E9A51E; color: #2B1B00; }
+.cl.fixed .orig { text-decoration: line-through; text-decoration-color: #B4453A; color: #41556A; }
+.cl .fx { display: block; margin-top: 4px; color: #7A5300; font-weight: 700; font-size: 17px; }
+.cl.ok { border-color: #12805A; }
+.cl.no { border-color: #B4453A; }
+.cr-side { display: flex; flex-direction: column; gap: 12px; }
+.cr-side .box { background: var(--glass); border: 1px solid var(--line); border-radius: 18px; padding: 16px; font-size: 17px; color: var(--dim); }
+.cr-side .box b { color: var(--text); }
+.legend { display: flex; flex-direction: column; gap: 8px; font-size: 16px; }
+.legend div { display: flex; gap: 10px; align-items: center; }
+.legend i { width: 22px; height: 22px; border-radius: 50%; flex: none; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 25; background: linear-gradient(#123064, #0A1A33); border-top: 1px solid var(--line-hi); border-radius: 28px 28px 0 0; padding: 22px 34px 26px; transform: translateY(105%); transition: transform .25s ease-out; box-shadow: 0 -20px 60px rgba(0,0,0,.5); }
+.sheet.on { transform: translateY(0); }
+.sheet .sq { font-size: 15px; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); font-weight: 800; margin-bottom: 6px; }
+.sheet .ss { font-size: 20px; margin-bottom: 14px; color: var(--dim); }
+.sheet .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sheet .opt { font-size: 17.5px; min-height: 66px; }
+.sheet .close { position: absolute; right: 24px; top: 16px; border: 0; background: rgba(255,255,255,.08); border-radius: 12px; min-width: 48px; min-height: 48px; font-size: 18px; font-weight: 700; cursor: pointer; }
+.sheetveil { position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: 24; background: rgba(3,9,19,.5); display: none; }
+.sheetveil.on { display: block; }
+
+/* 3D views and on-board tasks */
+.v3 { position: relative; border-radius: 22px; overflow: hidden; background: radial-gradient(ellipse at 50% 30%, #1B3A66 0%, #071226 75%); border: 1px solid var(--line); min-height: 0; }
+.v3 canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.v3-labels { position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; }
+.v3-lab { position: absolute; transform: translate(-50%, -100%); pointer-events: auto; min-height: 44px; padding: 6px 12px; border-radius: 10px; background: rgba(5,13,26,.85); border: 1.5px solid var(--line-hi); font: 600 16px var(--mono); white-space: nowrap; cursor: pointer; color: var(--text); }
+.v3-lab.static { pointer-events: none; min-height: 0; font-family: var(--font); font-weight: 800; letter-spacing: .06em; font-size: 14px; color: var(--dim); }
+.v3-lab.open { border-color: var(--good); color: var(--good); }
+.v3-lab.shut { border-color: var(--bad); color: var(--bad); }
+.v3-lab.sel { box-shadow: 0 0 0 4px rgba(242,179,61,.6); }
+.v3-bar { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px; z-index: 2; }
+.v3-bar button { width: 52px; height: 52px; border-radius: 14px; border: 1px solid var(--line-hi); background: rgba(5,13,26,.8); font-size: 22px; font-weight: 700; cursor: pointer; touch-action: none; }
+.v3-tip { position: absolute; left: 12px; top: 12px; font-size: 15px; color: var(--dim); background: rgba(5,13,26,.75); padding: 6px 12px; border-radius: 10px; pointer-events: none; }
+.nogl { position: absolute; left: 0; top: 0; right: 0; bottom: 0; display: grid; place-items: center; padding: 30px; text-align: center; color: var(--dim); font-size: 19px; }
+.g3 { display: grid; grid-template-columns: 1fr 370px; gap: 20px; height: 100%; }
+.side3 { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-x: hidden; overflow-y: auto; }
+.card3 { background: var(--glass); border: 1px solid var(--line); border-radius: 18px; padding: 12px 16px; font-size: 16.5px; color: var(--dim); }
+.card3 h4 { margin: 0 0 4px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); }
+.card3.part h4 { color: var(--accent); }
+.card3 b { color: var(--text); }
+.card3 .nm { font-size: 19px; font-weight: 800; color: var(--text); margin-bottom: 2px; }
+.side3 input[type=range].big { width: 100%; min-width: 0; height: 50px; }
+.steps3 { display: flex; flex-direction: column; gap: 8px; }
+.st3 { border-radius: 14px; padding: 7px 12px; background: rgba(255,255,255,.04); border: 1.5px solid var(--line); font-size: 15.5px; line-height: 1.35; color: var(--faint); }
+.st3 .r { display: block; margin-top: 3px; font-size: 14.5px; }
+.st3 .r b { color: var(--good); }
+.st3.no .r b { color: var(--bad); }
+.st3 .h { display: block; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; font-weight: 800; }
+.st3.on { border-color: var(--amber); color: var(--text); box-shadow: 0 0 0 3px rgba(242,179,61,.15); }
+.st3.on .h { color: var(--amber); }
+.st3.ok { border-color: rgba(61,220,151,.5); color: var(--dim); }
+.st3.ok .h { color: var(--good); }
+.st3.no { border-color: rgba(255,107,94,.5); color: var(--dim); }
+.st3.no .h { color: var(--bad); }
+.lab3 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); font-weight: 800; }
+.row3 { display: flex; gap: 8px; }
+.row3 > * { flex: 1; }
+.tgl { min-height: 58px; border-radius: 14px; border: 1.5px solid var(--line-hi); background: var(--glass); font-size: 17px; font-weight: 700; cursor: pointer; padding: 0 12px; }
+.tgl.on { border-color: var(--accent); background: rgba(46,182,248,.2); }
+.vsheet { position: absolute; left: 12px; right: 12px; bottom: 76px; z-index: 3; background: rgba(10,26,51,.95); border: 1px solid var(--line-hi); border-radius: 18px; padding: 12px 14px; display: flex; gap: 12px; align-items: center; transform: translateY(30px); opacity: 0; pointer-events: none; transition: transform .2s, opacity .2s; }
+.vsheet.on { transform: none; opacity: 1; pointer-events: auto; }
+.vsheet .t { flex: 1; font-size: 16.5px; color: var(--dim); }
+.vsheet .t b { display: block; font: 600 22px var(--mono); color: var(--text); }
+.vbtn { min-width: 130px; min-height: 62px; border-radius: 14px; border: 2px solid; font-size: 19px; font-weight: 800; cursor: pointer; background: transparent; }
+.vbtn.o { border-color: var(--good); color: var(--good); }
+.vbtn.c { border-color: var(--bad); color: var(--bad); }
+.vbtn.on.o { background: var(--good); color: #04261A; }
+.vbtn.on.c { background: var(--bad); color: #2B0500; }
+.vbtn:disabled { opacity: .35; }
+.vlist { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.vli { min-height: 50px; border-radius: 12px; border: 1.5px solid var(--line); background: rgba(255,255,255,.04); font: 600 15.5px var(--mono); cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; }
+.vli.sel { border-color: var(--amber); }
+.vli i { font-style: normal; font-family: var(--font); font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 99px; }
+.vli i.o { background: rgba(61,220,151,.2); color: var(--good); }
+.vli i.c { background: rgba(255,107,94,.2); color: var(--bad); }
+.pump { min-height: 64px; border-radius: 16px; border: 2px solid var(--amber); background: rgba(242,179,61,.14); color: var(--amber); font-size: 19px; font-weight: 800; cursor: pointer; }
+.pump.run { background: var(--amber); color: #2B1B00; }
+.outcome { border-radius: 14px; padding: 10px 14px; font-size: 16.5px; color: var(--text); }
+.outcome.ok { background: rgba(61,220,151,.12); border-left: 4px solid var(--good); }
+.outcome.no { background: rgba(255,107,94,.12); border-left: 4px solid var(--bad); }
+.insp-b { display: flex; gap: 8px; margin-top: 10px; }
+.insp-b button { flex: 1; min-height: 58px; border-radius: 14px; font-size: 16.5px; font-weight: 800; cursor: pointer; border: 1.5px solid var(--line-hi); background: transparent; }
+.insp-b button.rep.on { background: var(--amber); color: #2B1B00; border-color: var(--amber); }
+.insp-b button.fine.on { background: rgba(61,220,151,.2); border-color: var(--good); color: var(--good); }
+.found { display: flex; gap: 6px; margin-top: 6px; }
+.found i { flex: 1; height: 10px; border-radius: 5px; background: rgba(255,255,255,.1); }
+.found i.on { background: var(--amber); }
+.reticle { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border: 2px solid rgba(255,255,255,.5); border-radius: 50%; pointer-events: none; }
+/* gas test */
+.gt { display: grid; grid-template-columns: 1fr 420px; gap: 20px; height: 100%; }
+.sect { position: relative; border-radius: 22px; background: #06101F; border: 1px solid var(--line); overflow: hidden; }
+.sect svg { width: 100%; height: 100%; display: block; touch-action: none; }
+.lvl { position: absolute; right: 14px; top: 140px; display: flex; flex-direction: column; gap: 8px; }
+.lvl button { min-width: 120px; min-height: 54px; border-radius: 12px; border: 1.5px solid var(--line-hi); background: rgba(5,13,26,.85); font-weight: 800; font-size: 15.5px; cursor: pointer; }
+.gt-side { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: auto; }
+.meter { background: linear-gradient(#F4B526, #D69A0F); border-radius: 24px; padding: 12px; box-shadow: 0 14px 30px rgba(0,0,0,.45); }
+.mscr { background: #0B1A10; border-radius: 14px; padding: 10px 12px; font-family: var(--mono); color: #9EFFB8; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 10px; box-shadow: inset 0 0 18px rgba(0,0,0,.7); }
+.mscr .k { font-size: 12px; color: #6FD38C; }
+.mscr .v { font-size: 27px; font-weight: 600; text-shadow: 0 0 10px rgba(158,255,184,.5); }
+.mscr .v.al { color: #FF9C7A; text-shadow: 0 0 10px rgba(255,156,122,.6); }
+.mstat { grid-column: 1 / -1; font-size: 14px; color: #FFD27A; min-height: 20px; }
+.mbar { grid-column: 1 / -1; height: 8px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; }
+.mbar i { display: block; height: 100%; width: 0; background: #9EFFB8; }
+.mkeys { display: flex; gap: 8px; margin-top: 10px; }
+.mkeys button { flex: 1; min-height: 56px; border-radius: 12px; border: 0; background: #3D2A00; color: #FFE7B0; font-weight: 800; font-size: 15.5px; cursor: pointer; }
+.mkeys button:disabled { opacity: .4; cursor: default; }
+.logt { width: 100%; border-collapse: collapse; font: 500 15px var(--mono); font-variant-numeric: tabular-nums; }
+.logt th, .logt td { padding: 5px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+.logt th { font-family: var(--font); font-size: 12px; color: var(--faint); letter-spacing: .1em; text-transform: uppercase; }
+.logt .al { color: var(--bad); }
+.logt tr.stale td { color: var(--faint); }
+.gt-side .opt { min-height: 54px; font-size: 14.5px; line-height: 1.25; padding: 6px 10px; gap: 8px; }
+.dcg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.gt-side .opt .lt { width: 30px; height: 30px; }
+/* debrief, as the class screen shows it */
+.db { position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: 40; display: flex; flex-direction: column; background: #F3F7FB; color: #0A1A33; padding: 28px 40px 24px; }
+.db-k { display: flex; gap: 12px; align-items: center; font-size: 15px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #415C8F; }
+.db-k .sp { flex: 1; }
+.db-q { font-weight: 800; margin: 14px 0 18px; line-height: 1.25; text-wrap: balance; }
+.db-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: 430px 1fr; gap: 24px; }
+.db-box { border-radius: 20px; background: #fff; border: 1px solid #D3DBE5; padding: 18px 20px; overflow: auto; }
+.db-box h5 { margin: 0 0 10px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #415C8F; }
+.db-bar { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 18px; font-weight: 700; }
+.db-bar span { width: 96px; }
+.db-bar .tr { flex: 1; height: 26px; border-radius: 8px; background: #E7EBF0; overflow: hidden; }
+.db-bar .tr i { display: block; height: 100%; }
+.db-bar b { width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+.db-ans { font-size: 19px; line-height: 1.4; padding: 10px 12px; border-radius: 12px; background: #F3F7FB; margin: 6px 0; }
+.db-ans small { display: block; font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #415C8F; }
+.db-ans.no { background: #FBECEA; }
+.db-ans.no small { color: #B4453A; }
+.db-ans.ok { background: #E9F5EF; }
+.db-ans.ok small { color: #12805A; }
+.db-right { font-size: 24px; font-weight: 800; color: #12805A; line-height: 1.35; }
+.db-why { font-size: 21px; line-height: 1.5; color: #41556A; margin-top: 12px; }
+.db-hid { height: 100%; display: grid; place-items: center; text-align: center; color: #415C8F; font-size: 20px; }
+.db-foot { display: flex; gap: 12px; justify-content: space-between; align-items: center; margin-top: 16px; }
+.db-foot button { min-height: 60px; border-radius: 16px; padding: 0 24px; font-weight: 800; font-size: 18px; cursor: pointer; border: 1.5px solid #9DB3CC; background: #fff; color: #0A1A33; }
+.db-foot button.pri { background: #0A2463; color: #fff; border-color: #0A2463; }
+.db-foot button:disabled { opacity: .35; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+</style>
+
+<div class="app">
+  <nav class="list" aria-label="Task types">
+    <div class="brand">Bloom Task Lab</div>
+    <p class="brand-sub">Twelve task types for the trainee tablets. Each one is a working prototype, four of them in 3D. Demo content is about LPG cargo, but every type takes any course's content.</p>
+    <div class="howset">
+      <b>One task set, after each teaching block</b>
+      <div class="flow"><span>≈5 min theory</span><i>→</i><span class="a">Part A · Check</span><i>→</i><span class="b">Part B · Find it yourself</span><i>→</i><span>Debrief</span></div>
+      Part A checks everything taught so far in the module (2–4 min). Part B gives one harder problem the trainee solves with the tools on screen (4–8 min).
+    </div>
+    <div id="list"></div>
+  </nav>
+
+  <main class="stagearea">
+    <div class="toolbar">
+      <div class="seg" role="tablist" aria-label="Whose screen">
+        <button id="mT" class="on" role="tab" aria-selected="true">Trainee</button>
+        <button id="mI" role="tab" aria-selected="false">Instructor</button>
+        <button id="mD" role="tab" aria-selected="false">Debrief</button>
+      </div>
+      <button class="tb" id="restart">Start over</button>
+      <button class="tb" id="solo">Full screen on a tablet</button>
+      <span class="sp"></span>
+      <span class="demo">Demo content. Facts are to be checked against the course KB.</span>
+    </div>
+    <div class="fit" id="fit"><div class="device" id="device"><div class="screen" id="screen"></div></div></div>
+  </main>
+
+  <aside class="info" id="info" aria-live="polite"></aside>
+</div>
+<button class="exitsolo" id="exitsolo">Exit full screen</button>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script>
+(function () {
+'use strict';
+var D = document, SCALE = 1;
+function $(s, r) { return (r || D).querySelector(s); }
+function $$(s, r) { return Array.prototype.slice.call((r || D).querySelectorAll(s)); }
+function el(tag, cls, html) { var e = D.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+var LET = 'ABCDEFGH';
+var BLOOM = { 1: 'Remember', 2: 'Understand', 3: 'Apply', 4: 'Analyse', 5: 'Evaluate', 6: 'Create' };
+
+/* Drag, or tap then tap. The ghost is drawn at the tablet's scale so it looks the same size as the chip. */
+function dragTap(elm, o) {
+  var st = null, ghost = null;
+  elm.addEventListener('pointerdown', function (e) {
+    if (e.button > 0 || st) return;
+    st = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    try { elm.setPointerCapture(e.pointerId); } catch (x) {}
+  });
+  elm.addEventListener('pointermove', function (e) {
+    if (!st || e.pointerId !== st.id) return;
+    if (!ghost && Math.abs(e.clientX - st.x) + Math.abs(e.clientY - st.y) > 12 && (!o.canDrag || o.canDrag())) {
+      var r = elm.getBoundingClientRect();
+      ghost = elm.cloneNode(true); ghost.classList.add('ghost'); ghost.classList.remove('sel');
+      ghost.style.width = (r.width / SCALE) + 'px'; ghost.style.height = (r.height / SCALE) + 'px';
+      ghost.style.transform = 'scale(' + SCALE + ')';
+      st.ox = st.x - r.left; st.oy = st.y - r.top;
+      D.body.appendChild(ghost); elm.classList.add('lifting');
+    }
+    if (ghost) {
+      ghost.style.left = (e.clientX - st.ox) + 'px'; ghost.style.top = (e.clientY - st.oy) + 'px';
+      var t = D.elementFromPoint(e.clientX, e.clientY), d = t && t.closest('[data-drop]');
+      $$('[data-drop].target').forEach(function (x) { if (x !== d) x.classList.remove('target'); });
+      if (d) d.classList.add('target');
+    }
+  });
+  function end(e, cancel) {
+    if (!st || e.pointerId !== st.id) return;
+    $$('[data-drop].target').forEach(function (x) { x.classList.remove('target'); });
+    if (ghost) {
+      ghost.remove(); ghost = null; elm.classList.remove('lifting');
+      if (!cancel) { var t = D.elementFromPoint(e.clientX, e.clientY), d = t && t.closest('[data-drop]'); if (d && o.onDrop) o.onDrop(d); }
+    } else if (!cancel && o.onTap) o.onTap();
+    st = null;
+  }
+  elm.addEventListener('pointerup', function (e) { end(e, false); });
+  elm.addEventListener('pointercancel', function (e) { end(e, true); });
+}
+
+/* A tiny calculator: numbers and + - x / only. */
+function evalExpr(s) {
+  var t = String(s).replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').match(/\d*\.?\d+|[-+*/]/g);
+  if (!t) return null;
+  var i = 0;
+  function fact() { var k = t[i++]; if (k === '-') return -fact(); var n = parseFloat(k); if (isNaN(n)) throw 0; return n; }
+  function term() { var v = fact(); while (t[i] === '*' || t[i] === '/') { var op = t[i++], r = fact(); v = op === '*' ? v * r : v / r; } return v; }
+  function expr() { var v = term(); while (t[i] === '+' || t[i] === '-') { var op = t[i++], r = term(); v = op === '+' ? v + r : v - r; } return v; }
+  try { var v = expr(); return (i === t.length && isFinite(v)) ? v : null; } catch (e) { return null; }
+}
+function fmt(n, d) { return (Math.round(n * Math.pow(10, d)) / Math.pow(10, d)).toString(); }
+
+/* A 3D view for a task, fingers first: one finger turns (or looks around), two fingers zoom,
+   and the buttons in the corner do the same, so a pinch is never the only way. A tap picks
+   the part under the finger (anything with userData.pick). Stops itself when the task closes. */
+function V3(host, o) {
+  o = o || {};
+  function fail() { host.insertAdjacentHTML('beforeend', '<div class="nogl">The 3D view could not start here. It needs a tablet or browser with WebGL.</div>'); return null; }
+  if (!window.THREE) return fail();
+  var T = THREE, w = host.clientWidth || 800, h = host.clientHeight || 600, r;
+  try { r = new T.WebGLRenderer({ antialias: true, alpha: true }); } catch (e) { return fail(); }
+  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); r.setSize(w, h, false); r.outputEncoding = T.sRGBEncoding;
+  host.appendChild(r.domElement);
+  var scene = new T.Scene(), cam = new T.PerspectiveCamera(o.fov || 40, w / h, 0.05, 300);
+  scene.add(new T.HemisphereLight(0xDCEBFF, 0x1A2430, o.dim ? 0.55 : 0.85));
+  var sun = new T.DirectionalLight(0xffffff, o.dim ? 0.5 : 1.05); sun.position.set(6, 12, 8); scene.add(sun);
+  var fill = new T.DirectionalLight(0x9FC8FF, 0.35); fill.position.set(-8, 4, -6); scene.add(fill);
+  var labels = el('div', 'v3-labels'); host.appendChild(labels);
+  var labs = [], frames = [], look = !!o.look;
+  var tgt = new T.Vector3().fromArray(o.target || [0, 0, 0]), dist = o.dist || 10, az = o.az || 0.6, elv = o.el || 0.5;
+  var yaw = o.yaw || 0, pitch = o.pitch || 0, fov = o.fov || 40, eye = new T.Vector3().fromArray(o.eye || [0, 1.6, 0]);
+  var home = [dist, az, elv, yaw, pitch, fov];
+  function place() {
+    if (look) {
+      cam.fov = fov; cam.updateProjectionMatrix(); cam.position.copy(eye);
+      cam.lookAt(eye.x + Math.sin(yaw) * Math.cos(pitch), eye.y + Math.sin(pitch), eye.z - Math.cos(yaw) * Math.cos(pitch));
+    } else {
+      elv = Math.max(0.08, Math.min(1.45, elv)); dist = Math.max(o.min || 2, Math.min(o.max || 60, dist));
+      cam.position.set(tgt.x + dist * Math.cos(elv) * Math.sin(az), tgt.y + dist * Math.sin(elv), tgt.z + dist * Math.cos(elv) * Math.cos(az));
+      cam.lookAt(tgt);
+    }
+  }
+  function turn(dx, dy) { if (look) { yaw += dx; pitch = Math.max(-1.1, Math.min(1.1, pitch + dy)); } else { az -= dx; elv += dy; } }
+  function zoom(f) { if (look) fov = Math.max(25, Math.min(80, fov * f)); else dist *= f; }
+  var pts = {}, moved = 0, pinch0 = 0, cv = r.domElement;
+  function spread() { var p = Object.keys(pts).map(function (k) { return pts[k]; }); return Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); }
+  cv.addEventListener('pointerdown', function (e) {
+    pts[e.pointerId] = { x: e.clientX, y: e.clientY }; if (Object.keys(pts).length === 1) moved = 0;
+    try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+    if (Object.keys(pts).length === 2) { pinch0 = spread(); moved = 99; }
+  });
+  cv.addEventListener('pointermove', function (e) {
+    var p = pts[e.pointerId]; if (!p) return;
+    var dx = (e.clientX - p.x) / SCALE, dy = (e.clientY - p.y) / SCALE; p.x = e.clientX; p.y = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
+    var n = Object.keys(pts).length;
+    if (n === 1) turn(dx * (look ? -0.0045 : 0.008), dy * (look ? 0.0045 : 0.006));
+    else if (n === 2) { var d = spread(); if (pinch0 && d) zoom(pinch0 / d); pinch0 = d; }
+  });
+  var ray = new T.Raycaster();
+  function pick(cx, cy) { // a finger is wide: if nothing is right under it, look a little around it
+    var hit = pickAt(cx, cy), R = 20 * SCALE;
+    for (var k = 0; !hit && k < 8; k++) hit = pickAt(cx + Math.cos(k * Math.PI / 4) * R, cy + Math.sin(k * Math.PI / 4) * R);
+    return hit;
+  }
+  function pickAt(cx, cy) {
+    var rc = cv.getBoundingClientRect();
+    ray.setFromCamera(new T.Vector2((cx - rc.left) / rc.width * 2 - 1, -(cy - rc.top) / rc.height * 2 + 1), cam);
+    var hs = ray.intersectObjects(scene.children, true);
+    for (var i = 0; i < hs.length; i++) {
+      var ob = hs[i].object; if (!ob.visible || ob.userData.skip) continue;
+      while (ob && !ob.userData.pick) ob = ob.parent;
+      if (ob) return ob;
+    }
+    return null;
+  }
+  function up(e) {
+    var was = pts[e.pointerId]; delete pts[e.pointerId]; pinch0 = 0;
+    if (was && e.type === 'pointerup' && moved < 10 && !Object.keys(pts).length && o.onPick) { var hit = pick(e.clientX, e.clientY); o.onPick(hit ? hit.userData.pick : null); }
+  }
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  var bar = el('div', 'v3-bar'), held = 0;
+  [['←', 'Turn left', function () { turn(look ? -0.04 : 0.05, 0); }], ['→', 'Turn right', function () { turn(look ? 0.04 : -0.05, 0); }],
+   ['↑', look ? 'Look up' : 'Tilt up', function () { turn(0, look ? 0.03 : 0.04); }], ['↓', look ? 'Look down' : 'Tilt down', function () { turn(0, look ? -0.03 : -0.04); }],
+   ['+', 'Closer', function () { zoom(0.95); }], ['−', 'Further', function () { zoom(1.05); }],
+   ['⟲', 'Back to the start view', function () { dist = home[0]; az = home[1]; elv = home[2]; yaw = home[3]; pitch = home[4]; fov = home[5]; }]
+  ].forEach(function (b) {
+    var x = el('button', '', b[0]); x.setAttribute('aria-label', b[1]); x.title = b[1];
+    x.addEventListener('pointerdown', function () { b[2](); clearInterval(held); held = setInterval(b[2], 50); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) { x.addEventListener(ev, function () { clearInterval(held); }); });
+    bar.appendChild(x);
+  });
+  host.appendChild(bar);
+  if (o.tip) host.appendChild(el('div', 'v3-tip', o.tip));
+  function label(pos, html, cls, onClick) {
+    var b = el(onClick ? 'button' : 'div', 'v3-lab ' + (cls || '') + (onClick ? '' : ' static'), html);
+    if (onClick) b.onclick = onClick;
+    labels.appendChild(b); var L = { el: b, pos: new T.Vector3().fromArray(pos) }; labs.push(L); return b;
+  }
+  var v = new T.Vector3(), last = 0;
+  function loop(now) {
+    if (!host.isConnected) { clearInterval(held); r.dispose(); try { r.forceContextLoss(); } catch (e) {} return; }
+    var nw = host.clientWidth, nh = host.clientHeight;
+    if (nw && nh && (nw !== w || nh !== h)) { w = nw; h = nh; r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+    var dt = last ? Math.min(0.05, (now - last) / 1000) : 0; last = now;
+    frames.forEach(function (f) { f(dt, now / 1000); });
+    place(); r.render(scene, cam);
+    labs.forEach(function (L) {
+      v.copy(L.pos).project(cam);
+      var vis = v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05;
+      L.el.style.display = vis ? '' : 'none';
+      if (vis) { L.el.style.left = ((v.x + 1) / 2 * w) + 'px'; L.el.style.top = ((1 - v.y) / 2 * h) + 'px'; }
+    });
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+  return { T: T, scene: scene, cam: cam, frame: function (f) { frames.push(f); }, label: label };
+}
+// metalness is capped: with no environment map, a fully metallic surface renders black
+function mat(T, c, o) { o = o || {}; return new T.MeshStandardMaterial({ color: c, metalness: Math.min(0.6, o.m != null ? o.m : 0.5), roughness: o.r != null ? o.r : 0.45, emissive: o.e || 0, transparent: o.op != null, opacity: o.op != null ? o.op : 1 }); }
+function cyl(T, r1, r2, h, m, seg) { return new T.Mesh(new T.CylinderGeometry(r1, r2, h, seg || 32), m); }
+function box(T, x, y, z, m) { return new T.Mesh(new T.BoxGeometry(x, y, z), m); }
+function pipeBetween(T, a, b, r, m) { // a straight pipe from point a to point b
+  var A = new T.Vector3().fromArray(a), B = new T.Vector3().fromArray(b), d = B.clone().sub(A);
+  var p = cyl(T, r, r, d.length(), m, 20); p.position.copy(A).add(B).multiplyScalar(0.5);
+  p.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize()); return p;
+}
+
+/* =====================================================================
+   The eight task types. Each: what the factory would need (spec),
+   what it looks like for the instructor, and build(api) for the tablet.
+   ===================================================================== */
+var TASKS = [
+
+/* ---------------- A1 SWIPE ---------------- */
+{
+  id: 'swipe', code: 'SC2-A', part: 'A', bloom: 2, mins: '2 min', name: 'Swipe: true or false',
+  short: 'Flick statements left or right',
+  does: 'Six quick statements about everything taught so far in the module. The trainee flicks each card to TRUE or FALSE (or taps the side) and sees why at once.',
+  lift: 'Replaces a run of single-choice questions. It is faster, it covers more of the module in two minutes, and each "why" re-teaches the point while it is still fresh.',
+  any: 'Electrical: "An RCD protects against overload" → False. First aid: "Check for danger before you approach a casualty" → True.',
+  spec: { mechanic: 'swipe_true_false', bloom: 2, part: 'check', covers: ['B1', 'B2', 'B3'], cards: [{ text: 'Propane vapour is heavier than air…', truth: true, why: 'Vapour density about 1.5…', sub_ilo: '1.2' }, '… 5-8 cards, at least 2 true and 2 false'] },
+  intro: { sit: 'Six statements about what you have learned in this module so far.', steps: ['Read the card.', 'Flick it right if it is <b>TRUE</b>, left if it is <b>FALSE</b>. You can also tap a side.', 'Read why, then take the next card.'] },
+  instructor: {
+    key: ['1 True: vapour density about 1.5', '2 False: propane boils at −42 °C', '3 True: warm methane, density 0.55', '4 False: O₂ and toxic gas must also be measured', '5 True: 2.1–9.5 %', '6 False: pressure rises'],
+    ask: ['Card 4 is the one most people miss. Ask: "What else would you measure before entry, and why?"', 'Ask a trainee who got card 3 right to explain why cold methane behaves differently.']
+  },
+  cards: [
+    { s: 'Propane vapour is heavier than air and collects in low places.', t: true, n: 'Propane vapour is heavier than air.', w: 'Propane vapour is about 1.5 times as heavy as air. It flows along the deck and into low spaces.' },
+    { s: 'LPG boils at a higher temperature than water.', t: false, n: 'LPG boils far below 0 °C.', w: 'At atmospheric pressure propane boils at about −42 °C, far below water’s 100 °C. That is why a leak boils off at once.' },
+    { s: 'Methane vapour becomes lighter than air once it has warmed up.', t: true, n: 'Warm methane is lighter than air.', w: 'Very cold methane vapour is heavy, but once it warms its density is about 0.55 of air and it rises.' },
+    { s: 'A gas detector reading of 0 % LEL means a tank is safe to enter.', t: false, n: 'Flammable gas is only one of the readings you need.', w: '0 % LEL only rules out flammable gas. Oxygen and toxic gases must also be measured before anyone goes in.' },
+    { s: 'The flammable range of propane is roughly 2 to 10 % gas in air.', t: true, n: 'Those are propane’s limits.', w: 'Propane burns between about 2.1 % and 9.5 % in air. Below that it is too lean, above it too rich.' },
+    { s: 'Warming liquefied gas in a closed tank lowers its pressure.', t: false, n: 'Heat does the opposite.', w: 'Warming raises the vapour pressure, so the tank pressure goes up. This is why tanks have relief valves.' }
+  ],
+  build: function (api) {
+    var T = this, cards = T.cards, i = 0, items = [], busy = false;
+    api.stage.innerHTML =
+      '<div class="sw"><button class="sw-side f" data-v="0">FALSE</button>' +
+      '<div class="sw-mid"><div class="sw-deck"></div><div class="sw-fb"></div></div>' +
+      '<button class="sw-side t" data-v="1">TRUE</button></div>';
+    var deck = $('.sw-deck', api.stage), fb = $('.sw-fb', api.stage), sideF = $('.sw-side.f', api.stage), sideT = $('.sw-side.t', api.stage);
+    api.prog(cards.length, 0);
+    function cardEl(k, back) {
+      var c = el('div', 'sw-card' + (back ? ' back' : ''), '<div class="cn">' + (k + 1) + ' / ' + cards.length + '</div><div class="st">' + esc(cards[k].s) + '</div><div class="hand">Flick left or right</div>');
+      return c;
+    }
+    function show() {
+      deck.innerHTML = ''; fb.innerHTML = '';
+      if (i + 1 < cards.length) deck.appendChild(cardEl(i + 1, true));
+      var c = cardEl(i, false); deck.appendChild(c); wire(c);
+      api.now('Is it true? Flick the card <b>right for TRUE</b>, <b>left for FALSE</b>.');
+      api.go('Next card', null, false);
+    }
+    function wire(c) {
+      var st = null;
+      c.addEventListener('pointerdown', function (e) { if (busy || st) return; st = { x: e.clientX, id: e.pointerId }; c.classList.remove('spring'); try { c.setPointerCapture(e.pointerId); } catch (x) {} });
+      c.addEventListener('pointermove', function (e) {
+        if (!st || e.pointerId !== st.id) return;
+        var dx = (e.clientX - st.x) / SCALE; st.dx = dx;
+        c.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx / 22) + 'deg)';
+        sideT.classList.toggle('hot', dx > 60); sideF.classList.toggle('hot', dx < -60);
+      });
+      function up(e) {
+        if (!st || e.pointerId !== st.id) return;
+        var dx = st.dx || 0; st = null; sideT.classList.remove('hot'); sideF.classList.remove('hot');
+        if (Math.abs(dx) > 140) decide(dx > 0);
+        else { c.classList.add('spring'); c.style.transform = ''; }
+      }
+      c.addEventListener('pointerup', up); c.addEventListener('pointercancel', function (e) { st = null; c.classList.add('spring'); c.style.transform = ''; sideT.classList.remove('hot'); sideF.classList.remove('hot'); });
+    }
+    function decide(v) {
+      if (busy || i >= cards.length) return; busy = true;
+      var card = cards[i], ok = v === card.t, c = deck.lastChild;
+      c.classList.add('fly'); c.style.transform = 'translateX(' + (v ? 900 : -900) + 'px) rotate(' + (v ? 30 : -30) + 'deg)'; c.style.opacity = '0';
+      (v ? sideT : sideF).classList.add('hot'); setTimeout(function () { sideT.classList.remove('hot'); sideF.classList.remove('hot'); }, 380);
+      items.push({ t: (i + 1) + '. ' + card.s, ok: ok, a: v ? 'True' : 'False', c: card.t ? 'True' : 'False', w: card.w, n: card.n });
+      api.prog(cards.length, items);
+      fb.innerHTML = api.fb(ok, card.w, card.n);
+      api.toast(ok ? 'Right' : 'Not quite', ok ? 'good' : 'bad');
+      var last = i === cards.length - 1;
+      api.now(last ? 'That was the last card. Press <b>See results</b>.' : 'Read why, then press <b>Next card</b>.', last ? 'done' : '');
+      api.go(last ? 'See results' : 'Next card', function () { busy = false; i++; if (i >= cards.length) api.finish(items); else show(); }, true, true);
+    }
+    sideF.onclick = function () { decide(false); }; sideT.onclick = function () { decide(true); };
+    api.hint(function () { return 'Think back to the block where this was taught. The "why" after each card tells you where the idea comes from.'; });
+    show();
+  }
+},
+
+/* ---------------- A2 SURE ---------------- */
+{
+  id: 'sure', code: 'SC2-A', part: 'A', bloom: 2, mins: '3 min', name: 'How sure are you?',
+  short: 'Answer, then say how sure you are',
+  does: 'Each question is answered twice: the answer, then how sure the trainee is. The result shows "certain but wrong" answers in red. Those are the misconceptions the instructor needs to hear about.',
+  lift: 'Same content as a normal multiple-choice question, but it also measures confidence. A confident wrong answer is dangerous on board, and this is the only type that finds it.',
+  any: 'Works on any multiple-choice item from any course. The factory adds the confidence step to existing questions.',
+  spec: { mechanic: 'sure_check', bloom: 2, part: 'check', questions: [{ text: 'At atmospheric pressure, propane boils at about…', options: ['−42 °C', '−0.5 °C', '−162 °C', '+20 °C'], answer: 0, why: '…' }], confidence: ['Guessing', 'Fairly sure', 'Certain'] },
+  intro: { sit: 'Three questions. For each one, say how sure you are.', steps: ['Pick your answer.', 'Say how sure you are: guessing, fairly sure or certain.', 'Press <b>Lock answer</b>.'] },
+  instructor: {
+    key: ['1 −42 °C', '2 Ammonia', '3 The pressure rises'],
+    ask: ['The panel shows how many were "certain but wrong". Start the debrief there.', 'Ask: "Butane boils at about −0.5 °C. What does that mean for a deck leak on a cold day?"']
+  },
+  qs: [
+    { q: 'At atmospheric pressure, propane boils at about…', o: ['−42 °C', '−0.5 °C', '−162 °C', '+20 °C'], a: 0, n: [0, 'That is butane’s boiling point.', 'That is methane’s boiling point.', 'Propane boils far below 0 °C.'], w: 'Propane boils at about −42 °C. Butane boils at −0.5 °C and methane at −162 °C.' },
+    { q: 'Which of these cargoes is toxic as well as flammable?', o: ['Propane', 'Ammonia', 'Butane', 'Methane'], a: 1, n: ['Propane is flammable, but not toxic.', 0, 'Butane is flammable, but not toxic.', 'Methane is flammable, but not toxic.'], w: 'Ammonia is toxic and also flammable. Propane, butane and methane are flammable, and they asphyxiate by pushing out oxygen.' },
+    { q: 'A cargo tank holds propane at 0 °C. What happens to its pressure if it warms up?', o: ['It rises', 'It falls', 'It stays the same', 'It drops to zero'], a: 0, n: [0, 'Warming does not lower the pressure.', 'Tank pressure depends on temperature.', 'The tank still holds liquid and vapour.'], w: 'Vapour pressure rises with temperature, so a warming tank’s pressure goes up.' }
+  ],
+  build: function (api) {
+    var T = this, qs = T.qs, i = 0, items = [], pick = -1, conf = -1, locked = false, calib = { cw: 0, cr: 0, gr: 0 };
+    var CONF = ['Guessing', 'Fairly sure', 'Certain'];
+    api.prog(qs.length, 0);
+    function show() {
+      var q = qs[i]; pick = -1; conf = -1; locked = false;
+      api.stage.innerHTML =
+        '<div class="su"><div><div class="su-q">' + esc(q.q) + '</div><div class="su-opts">' +
+        q.o.map(function (o, k) { return '<button class="opt" data-k="' + k + '"><span class="lt">' + LET[k] + '</span>' + esc(o) + '</button>'; }).join('') +
+        '</div><div class="fbk"></div></div>' +
+        '<div class="su-side"><h4>How sure are you?</h4><div class="conf">' +
+        CONF.map(function (c, k) { return '<button data-c="' + k + '"><span class="bars">' + [0, 1, 2].map(function (b) { return '<i class="' + (b <= k ? 'f' : '') + '" style="height:' + (10 + b * 8) + 'px"></i>'; }).join('') + '</span>' + c + '</button>'; }).join('') +
+        '</div></div></div>';
+      $$('.opt', api.stage).forEach(function (b) { b.onclick = function () { if (locked) return; pick = +b.dataset.k; $$('.opt', api.stage).forEach(function (x) { x.classList.toggle('sel', x === b); }); upd(); }; });
+      $$('.conf button', api.stage).forEach(function (b) { b.onclick = function () { if (locked) return; conf = +b.dataset.c; $$('.conf button', api.stage).forEach(function (x) { x.classList.toggle('sel', x === b); }); upd(); }; });
+      upd();
+    }
+    function upd() {
+      if (pick < 0) api.now('Pick your <b>answer</b>.');
+      else if (conf < 0) api.now('Now say <b>how sure</b> you are.', 'warn');
+      else api.now('Press <b>Lock answer</b>.');
+      api.go('Lock answer', lock, pick >= 0 && conf >= 0, pick >= 0 && conf >= 0);
+    }
+    function lock() {
+      locked = true; var q = qs[i], ok = pick === q.a;
+      $$('.opt', api.stage).forEach(function (b, k) { b.disabled = true; if (k === pick) b.classList.add(ok ? 'right' : 'wrong'); });
+      $('.fbk', api.stage).innerHTML = api.fb(ok, q.w, q.n[pick]);
+      if (!ok && conf === 2) calib.cw++; else if (ok && conf === 2) calib.cr++; else if (conf === 0) calib.gr++;
+      items.push({ t: (i + 1) + '. ' + q.q, ok: ok, a: q.o[pick] + ' (' + CONF[conf].toLowerCase() + ')', c: q.o[q.a], w: q.w, n: q.n[pick], sure: CONF[conf] });
+      api.prog(qs.length, items);
+      var last = i === qs.length - 1;
+      api.now(last ? 'Press <b>See results</b>.' : 'Read why, then press <b>Next question</b>.', last ? 'done' : '');
+      api.go(last ? 'See results' : 'Next question', function () { i++; if (i >= qs.length) done(); else show(); }, true, true);
+    }
+    function done() {
+      api.finish(items, '<div class="calib">' +
+        '<div class="' + (calib.cw ? 'alarm' : '') + '"><b>' + calib.cw + '</b>Certain, but wrong</div>' +
+        '<div><b>' + calib.cr + '</b>Certain and right</div>' +
+        '<div><b>' + calib.gr + '</b>Guessed</div></div>');
+    }
+    api.hint(function () { return 'Be honest about how sure you are. It does not change your score. It tells your instructor what to explain again.'; });
+    show();
+  }
+},
+
+/* ---------------- A3 CHAIN ---------------- */
+{
+  id: 'chain', code: 'SC2-A', part: 'A', bloom: 2, mins: '3 min', name: 'Build the chain',
+  short: 'Cause, then effect, then effect',
+  does: 'Put what happens in order, from cause to final effect. Two cards in the bank do not belong in the chain. It works by drag or by tap-then-tap.',
+  lift: 'Order puts steps in a sequence. This links causes, and the trainee has to reject plausible wrong links. That checks understanding of why, not memory of the order.',
+  any: 'Electrical: loose terminal → resistance rises → heat → insulation fails → fire. Hydraulics: air in system → spongy response → …',
+  spec: { mechanic: 'cause_chain', bloom: 2, part: 'check', chain: ['Liquid propane leaks…', 'It boils off at once…', '…'], distractors: ['The vapour rises…', 'The liquid freezes…'], why: '…' },
+  intro: { sit: 'A flange on deck starts to leak liquid propane. What happens next?', steps: ['Drag a card from the bank into the next box, or tap a card, then tap a box.', 'Two cards do not belong. Leave them in the bank.', 'Press <b>Check the chain</b>.'] },
+  instructor: {
+    key: ['1 Liquid leaks', '2 Boils off at once', '3 Heavy vapour spreads low', '4 Mixes into 2–10 %', '5 Ignition → flash fire', 'Not in the chain: "rises and is carried away", "freezes solid"'],
+    ask: ['Ask: "Where on our ship would that cloud end up?"', 'Ask: "Which link in the chain can the crew break, and how?"']
+  },
+  chain: [
+    'Liquid propane leaks from a flange on deck',
+    'The liquid boils off at once, because the deck is far warmer than −42 °C',
+    'The cold vapour, heavier than air, spreads along the deck into low spaces',
+    'Where it mixes with air to between 2 and 10 %, the cloud can burn',
+    'An ignition source inside the cloud causes a flash fire'
+  ],
+  dis: ['The vapour rises and is carried away above the masts', 'The liquid freezes into a solid puddle and stays where it is'],
+  build: function (api) {
+    var T = this, n = T.chain.length, placed = [], sel = null, checked = false;
+    for (var k = 0; k < n; k++) placed.push(null);
+    var bank = shuffle(T.chain.concat(T.dis));
+    api.prog(n, 0);
+    function render() {
+      var slots = '';
+      for (var k = 0; k < n; k++) {
+        if (k) slots += '<div class="arrow"></div>';
+        slots += '<div class="slot" data-drop="' + k + '"><span class="sn">' + (k + 1) + '</span>' +
+          (placed[k] != null ? '<button class="chip" data-in="' + k + '">' + esc(placed[k]) + '</button>' : '<span class="ph">' + (k === 0 ? 'The cause' : k === n - 1 ? 'The final effect' : 'Then…') + '</span>') + '</div>';
+      }
+      var left = bank.filter(function (b) { return placed.indexOf(b) < 0; });
+      api.stage.innerHTML = '<div class="ch"><div class="ch-slots">' + slots + '</div><div class="ch-bank" data-drop="bank"><h4>Bank</h4>' +
+        left.map(function (b) { return '<button class="chip' + (sel === b ? ' sel' : '') + '" data-b="' + esc(b) + '">' + esc(b) + '</button>'; }).join('') + '</div></div>';
+      $$('.ch-bank .chip', api.stage).forEach(function (c) {
+        var txt = c.getAttribute('data-b');
+        dragTap(c, { canDrag: function () { return !checked; },
+          onTap: function () { if (checked) return; sel = sel === txt ? null : txt; render(); },
+          onDrop: function (d) { if (d.dataset.drop !== 'bank') put(txt, +d.dataset.drop); } });
+      });
+      $$('.slot .chip', api.stage).forEach(function (c) {
+        var k = +c.dataset.in;
+        dragTap(c, { canDrag: function () { return !checked; },
+          onTap: function () { if (checked) return; placed[k] = null; render(); },
+          onDrop: function (d) { var txt = placed[k]; if (d.dataset.drop === 'bank') { placed[k] = null; render(); } else put(txt, +d.dataset.drop); } });
+      });
+      $$('.slot', api.stage).forEach(function (s) { s.onclick = function (e) { if (checked || e.target.closest('.chip')) return; if (sel) put(sel, +s.dataset.drop); }; });
+      var full = placed.every(function (p) { return p != null; });
+      if (checked) return;
+      api.now(full ? 'All boxes are full. Press <b>Check the chain</b>.' : sel ? 'Now tap the <b>box</b> where it goes.' : 'Drag a card into the <b>next box</b>, or tap a card.', full ? 'done' : '');
+      api.go('Check the chain', check, full, full);
+    }
+    function put(txt, k) { var was = placed.indexOf(txt); if (was >= 0) placed[was] = placed[k]; placed[k] = txt; sel = null; render(); }
+    function check() {
+      checked = true; var items = [];
+      $$('.slot', api.stage).forEach(function (s, k) {
+        var ok = placed[k] === T.chain[k]; s.classList.add(ok ? 'ok' : 'no'); if (!ok) s.classList.add('shake');
+        items.push({ t: 'Link ' + (k + 1) + ' of the chain', ok: ok, a: placed[k], c: T.chain[k], n: 'This link is out of place.', w: k === 2 ? 'Propane vapour is heavier than air, so it does not rise away. It spreads low.' : 'Each link causes the next one.' });
+      });
+      var dis = T.dis.filter(function (d) { return placed.indexOf(d) >= 0; });
+      items.push({ t: 'Cards that do not belong in the chain', ok: dis.length === 0, a: dis.length ? 'Used: ' + dis.join('; ') : 'Left both in the bank', c: 'Leave both in the bank: ' + T.dis.join('; '), n: 'A card that does not belong is in your chain.', w: 'Propane vapour does not rise, and the liquid boils off rather than freezing.' });
+      api.prog(items.length, items);
+      var good = items.filter(function (x) { return x.ok; }).length;
+      api.toast(good === items.length ? 'The chain holds' : 'Some links are out of place', good === items.length ? 'good' : 'bad');
+      api.now('Green links are right, red ones are not. Press <b>See results</b>.', 'done');
+      api.go('See results', function () { api.finish(items); }, true, true);
+    }
+    api.hint(function () { return checked ? '' : 'Start with what happens to liquid at −42 °C on a warm deck. Then ask: is the vapour heavier or lighter than air?'; });
+    render();
+  }
+},
+
+/* ---------------- B1 EXPLORE ---------------- */
+{
+  id: 'explore', code: 'SC2-B', part: 'B', bloom: 4, mins: '6 min', name: 'Explore and find',
+  short: 'Experiment until you find it',
+  does: 'A small live model of the topic. The trainee changes the mixture, switches gas, presses the spark and watches. The answer is not given. It must be found by testing.',
+  lift: 'This is guided discovery. Nobody tells the trainee the limits. They find the gap between two flammable ranges by experimenting, and then use the LEL idea to set a value with the detector covered.',
+  any: 'Electrical: find a resistor value that keeps current under 2 A. Ballast: find a tank combination that brings the list to zero. Any rule with a number can become a model.',
+  spec: { mechanic: 'explore_find', bloom: 4, part: 'challenge', model: { variable: { name: 'Gas in air', unit: '% vol', min: 0, max: 20, step: 0.05 }, choices: { Propane: [2.1, 9.5], Methane: [5, 15], Butane: [1.8, 8.4] }, readouts: ['%vol', '%LEL'], test: 'spark: burns if inside [LEL, UEL]' }, challenges: [{ ask: 'burns with methane, not with propane', accept: '9.5 < x <= 15' }, { ask: 'propane at 50 % LEL, detector covered', accept: '|x - 1.05| <= 0.1' }] },
+  intro: { sit: 'This chamber is a test rig. You can change the gas, how much of it is in the air, and fire a spark.', steps: ['Choose a gas and slide the mixture.', 'Press <b>Test with a spark</b> and watch what happens.', 'Solve the two challenges on the right. Lock in your answer when you think you have it.'] },
+  instructor: {
+    key: ['Challenge 1: any value above 9.5 % and up to 15 %. Methane burns 5–15 %, propane only 2.1–9.5 %.', 'Challenge 2: 1.05 % propane (half of 2.1 %). Accepted from 0.95 to 1.15 %.'],
+    ask: ['Ask: "Our detector is calibrated for propane. What does 100 % LEL mean in % volume?"', 'Ask: "Can a mixture that is too rich still be dangerous?" (Yes: it becomes flammable as it dilutes.)']
+  },
+  build: function (api) {
+    var GAS = { Propane: [2.1, 9.5], Methane: [5, 15], Butane: [1.8, 8.4] };
+    var gas = 'Methane', x = 3, stage = 0, items = [], log = [], parts = [], raf = 0;
+    api.stage.innerHTML =
+      '<div class="ex"><div class="chamber"><canvas></canvas><div class="lbl">TEST CHAMBER</div><div class="flame"></div><div class="sparkfx"></div><div class="verdict"></div><div class="electrode"></div></div>' +
+      '<div class="ex-mid"><div class="gases">' + Object.keys(GAS).map(function (g) { return '<button class="gas" data-g="' + g + '">' + g + '</button>'; }).join('') + '</div>' +
+      '<div class="readouts"><div class="ro" id="roV"><div class="k">Gas in air</div><div class="v"></div></div><div class="ro" id="roL"><div class="k">Detector</div><div class="v"></div></div></div>' +
+      '<div><div class="sl"><button class="fine" data-d="-1" aria-label="Less gas">−</button><input id="mix" class="big" type="range" min="0" max="20" step="0.05" aria-label="Gas in air, percent by volume"><button class="fine" data-d="1" aria-label="More gas">+</button></div>' +
+      '<div class="scale"><span>0</span><span>5</span><span>10</span><span>15</span><span>20 %</span></div></div>' +
+      '<button class="spark">Test with a spark</button></div>' +
+      '<div class="ex-side"><div class="chal" id="c1"><div class="h">Challenge 1</div>Find a mixture that <b>burns with methane</b> but <b>will not burn with propane</b>.</div>' +
+      '<div class="chal" id="c2"><div class="h">Challenge 2</div>The detector is covered. Set <b>propane</b> to the mixture the detector would show as <b>50 % LEL</b>.</div>' +
+      '<div class="tests"><h4>Your spark tests</h4><div id="log"><span class="n">None yet</span></div></div></div></div>';
+    var S = api.stage, mix = $('#mix', S), cv = $('canvas', S), ctx = cv.getContext('2d');
+    mix.value = x;
+    function setGas(g) { gas = g; $$('.gas', S).forEach(function (b) { b.classList.toggle('sel', b.dataset.g === g); }); upd(); }
+    function upd() {
+      x = Math.round(parseFloat(mix.value) * 20) / 20;
+      $('#roV .v', S).innerHTML = x.toFixed(2) + '<small> % vol</small>';
+      var L = $('#roL', S), lel = x / GAS[gas][0] * 100;
+      L.classList.remove('cover', 'over');
+      if (stage === 1) { L.classList.add('cover'); $('.v', L).textContent = 'Covered'; }
+      else if (lel > 100) { L.classList.add('over'); $('.v', L).textContent = 'OVER RANGE'; }
+      else $('.v', L).innerHTML = Math.round(lel) + '<small> % LEL</small>';
+      $('#c1', S).className = 'chal' + (stage === 0 ? ' active' : ' done');
+      $('#c2', S).className = 'chal' + (stage === 1 ? ' active' : stage > 1 ? ' done' : '');
+      $$('.gas', S).forEach(function (b) { b.disabled = stage === 1 && b.dataset.g !== 'Propane'; });
+      seed();
+    }
+    function seed() { // dots in the chamber: orange gas, blue air, in the right share
+      var r = cv.getBoundingClientRect(); var w = cv.width = Math.round(r.width / SCALE), h = cv.height = Math.round(r.height / SCALE);
+      var N = 260, g = Math.round(N * x / 20 * 1.6); parts = [];
+      for (var k = 0; k < N; k++) parts.push({ x: Math.random() * w, y: Math.random() * (h - 60), vx: (Math.random() - .5) * .6, vy: (Math.random() - .5) * .6, g: k < g });
+      if (!raf) loop();
+    }
+    function loop() {
+      var w = cv.width, h = cv.height; ctx.clearRect(0, 0, w, h);
+      parts.forEach(function (p) {
+        p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > w) p.vx *= -1; if (p.y < 0 || p.y > h - 50) p.vy *= -1;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.g ? 4.5 : 2.6, 0, 6.3); ctx.fillStyle = p.g ? 'rgba(242,179,61,.9)' : 'rgba(143,194,255,.35)'; ctx.fill();
+      });
+      raf = (D.body.contains(cv)) ? requestAnimationFrame(loop) : 0;
+    }
+    function spark() {
+      var r = GAS[gas], burns = x >= r[0] && x <= r[1];
+      var sf = $('.sparkfx', S); sf.classList.remove('on'); void sf.offsetWidth; sf.classList.add('on');
+      var fl = $('.flame', S); fl.classList.remove('on');
+      var vd = $('.verdict', S);
+      setTimeout(function () {
+        if (burns) { void fl.offsetWidth; fl.classList.add('on'); }
+        vd.textContent = burns ? 'IT BURNS' : x < r[0] ? 'No flame. Too lean' : 'No flame. Too rich';
+        vd.style.color = burns ? 'var(--amber)' : 'var(--dim)'; vd.classList.add('on');
+        setTimeout(function () { vd.classList.remove('on'); }, 1800);
+      }, 200);
+      log.unshift('<div class="' + (burns ? 'y' : 'n') + '"><b>' + gas + '</b> ' + x.toFixed(2) + ' % → ' + (burns ? 'burns' : x < r[0] ? 'too lean' : 'too rich') + '</div>');
+      $('#log', S).innerHTML = log.slice(0, 9).join('');
+      if (stage === 0 && log.length >= 2) api.now('When you think you have found it, press <b>Lock this mixture</b>.');
+    }
+    function lockIt() {
+      if (stage === 0) {
+        var ok = x > 9.5 && x <= 15;
+        items.push({ t: 'Challenge 1. Find a mixture that burns with methane but will not burn with propane', ok: ok, a: x.toFixed(2) + ' % gas in air', c: 'Anything above 9.5 % and up to 15 %', n: 'At that mixture both gases behave the same.', w: 'Methane burns between 5 and 15 % in air, propane only between 2.1 and 9.5 %. In the gap, propane is too rich to burn and methane is not.' });
+        api.toast(ok ? 'Found it. Methane burns there, propane is too rich' : 'Not right. At that mixture both gases behave the same', ok ? 'good' : 'bad');
+        stage = 1; setGas('Propane'); mix.value = 0.5; upd();
+        api.prog(2, items);
+        api.go('Lock this mixture', lockIt, true);
+        api.now('Challenge 2: the detector is covered. Set propane to what would read <b>50 % LEL</b>, then lock it.', 'warn');
+      } else if (stage === 1) {
+        var ok2 = Math.abs(x - 1.05) <= 0.1;
+        items.push({ t: 'Challenge 2. With the detector covered, set propane to the mixture that reads 50 % LEL', ok: ok2, a: x.toFixed(2) + ' % propane in air', c: '1.05 % propane in air (0.95 to 1.15 accepted)', n: 'That mixture would not read 50 % LEL.', w: '% LEL is a share of the lower flammable limit. Propane’s LEL is 2.1 %, so 50 % LEL is 0.5 × 2.1 = 1.05 % in air.' });
+        stage = 2; upd(); api.prog(2, items);
+        api.toast(ok2 ? 'Spot on' : 'Not right. That would not read 50 % LEL', ok2 ? 'good' : 'bad');
+        api.now('Both challenges done. Press <b>See results</b>.', 'done');
+        api.go('See results', function () { api.finish(items); }, true, true);
+      }
+    }
+    $$('.gas', S).forEach(function (b) { b.onclick = function () { setGas(b.dataset.g); }; });
+    mix.addEventListener('input', upd);
+    $$('.fine', S).forEach(function (b) { b.onclick = function () { mix.value = Math.max(0, Math.min(20, parseFloat(mix.value) + 0.05 * (+b.dataset.d))); upd(); }; });
+    $('.spark', S).onclick = spark;
+    api.prog(2, 0);
+    api.now('Pick a gas, slide the mixture and press <b>Test with a spark</b>.');
+    api.go('Lock this mixture', lockIt, true);
+    api.hint(function () {
+      if (stage === 0) return 'Spark methane at about 12 %. Then switch to propane without moving the slider and spark again.';
+      if (stage === 1) return 'With the detector uncovered, 100 % LEL for propane appeared at 2.1 %. Half of that is…';
+      return '';
+    });
+    setGas('Methane');
+  }
+},
+
+/* ---------------- B2 PREDICT ---------------- */
+{
+  id: 'predict', code: 'SC2-B', part: 'B', bloom: 4, mins: '5 min', name: 'Predict, then reveal',
+  short: 'Commit to a guess, then see the data',
+  does: 'The trainee drags a point to predict a value on a real chart before seeing the data. The true curve is then drawn, and the gap is explained. A follow-up asks why the curve has that shape.',
+  lift: 'Predicting first makes the trainee use a model of the physics. Being wrong in front of real data is one of the strongest ways to correct a misconception.',
+  any: 'Any curve or table: pump curve vs flow, battery voltage vs charge, stopping distance vs speed, oxygen vs time in a closed space.',
+  spec: { mechanic: 'predict_reveal', bloom: 4, part: 'challenge', chart: { x: ['Temperature', '°C', -45, 50], y: ['Pressure', 'bar abs', 0, 18] }, given: [[-42, 1.0], [0, 4.7]], ask_at_x: 40, truth: 13.7, tolerance: 1.5, curve: '[[x,y]…] from the KB', follow_up: { text: 'Why…', options: ['…'], answer: 0 } },
+  intro: { sit: 'A propane tank sits at 0 °C and 4.7 bar. After a hot day in port the cargo reaches +40 °C.', steps: ['Drag the white point up or down to where you think the pressure will be at +40 °C.', 'Press <b>Reveal the curve</b> and compare.', 'Answer one question about the shape.'] },
+  instructor: {
+    key: ['At +40 °C propane is about 13.7 bar abs. Accepted 12.2 to 15.2.', 'Most trainees draw a straight line and predict about 9 bar.', 'Follow-up: the curve gets steeper.'],
+    ask: ['Ask: "What protects the tank if the pressure keeps rising?" (Relief valves, cooling, reliquefaction.)', 'Show the class the spread of predictions on the panel.']
+  },
+  pts: [[-42, 1.0], [-30, 1.7], [-20, 2.4], [-10, 3.4], [0, 4.7], [10, 6.4], [20, 8.4], [30, 10.8], [40, 13.7], [50, 17.1]],
+  build: function (api) {
+    var T = this, W = 860, H = 560, L = 80, R = 830, TOP = 30, B = 500;
+    function X(t) { return L + (t + 45) / 95 * (R - L); }
+    function Y(p) { return B - p / 18 * (B - TOP); }
+    function P(y) { return Math.max(0, Math.min(18, (B - y) / (B - TOP) * 18)); }
+    var pred = null, revealed = false, items = [];
+    var grid = '';
+    for (var t = -40; t <= 50; t += 10) grid += '<line x1="' + X(t) + '" y1="' + TOP + '" x2="' + X(t) + '" y2="' + B + '" stroke="rgba(140,190,255,.10)"/><text x="' + X(t) + '" y="' + (B + 26) + '" fill="#9DB3CC" font-size="15" text-anchor="middle" font-family="IBM Plex Mono, monospace">' + t + '</text>';
+    for (var p = 0; p <= 18; p += 2) grid += '<line x1="' + L + '" y1="' + Y(p) + '" x2="' + R + '" y2="' + Y(p) + '" stroke="rgba(140,190,255,.10)"/><text x="' + (L - 12) + '" y="' + (Y(p) + 5) + '" fill="#9DB3CC" font-size="15" text-anchor="end" font-family="IBM Plex Mono, monospace">' + p + '</text>';
+    // a smooth curve through the KB points (Catmull-Rom as cubic Beziers)
+    var c = T.pts.map(function (q) { return [X(q[0]), Y(q[1])]; }), d = 'M' + c[0][0] + ',' + c[0][1];
+    for (var k = 0; k < c.length - 1; k++) {
+      var p0 = c[k - 1] || c[k], p1 = c[k], p2 = c[k + 1], p3 = c[k + 2] || p2;
+      d += ' C' + (p1[0] + (p2[0] - p0[0]) / 6) + ',' + (p1[1] + (p2[1] - p0[1]) / 6) + ' ' + (p2[0] - (p3[0] - p1[0]) / 6) + ',' + (p2[1] - (p3[1] - p1[1]) / 6) + ' ' + p2[0] + ',' + p2[1];
+    }
+    api.stage.innerHTML =
+      '<div class="pr"><div class="chart"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Propane pressure against temperature">' + grid +
+      '<text x="' + ((L + R) / 2) + '" y="' + (H - 6) + '" fill="#6E86A3" font-size="15" text-anchor="middle">Cargo temperature, °C</text>' +
+      '<text transform="translate(20,' + ((TOP + B) / 2) + ') rotate(-90)" fill="#6E86A3" font-size="15" text-anchor="middle">Tank pressure, bar abs</text>' +
+      '<line x1="' + X(40) + '" y1="' + TOP + '" x2="' + X(40) + '" y2="' + B + '" stroke="#F2B33D" stroke-dasharray="6 6" stroke-width="2"/>' +
+      '<text x="' + (X(40) - 10) + '" y="' + (TOP + 18) + '" fill="#F2B33D" font-size="16" font-weight="700" text-anchor="end">+40 °C</text>' +
+      '<path id="curve" d="' + d + '" fill="none" stroke="#34E0C4" stroke-width="4" stroke-linecap="round" style="opacity:0"/>' +
+      '<line id="straight" x1="' + X(0) + '" y1="' + Y(4.7) + '" x2="' + X(40) + '" y2="' + Y(4.7) + '" stroke="rgba(255,255,255,.35)" stroke-width="2" stroke-dasharray="3 6"/>' +
+      '<circle cx="' + X(-42) + '" cy="' + Y(1) + '" r="8" fill="#2EB6F8"/><text x="' + (X(-42) + 14) + '" y="' + (Y(1) - 10) + '" fill="#F2F7FD" font-size="15">boils at 1 bar, −42 °C</text>' +
+      '<circle cx="' + X(0) + '" cy="' + Y(4.7) + '" r="8" fill="#2EB6F8"/><text x="' + (X(0) - 12) + '" y="' + (Y(4.7) - 14) + '" fill="#F2F7FD" font-size="15" text-anchor="end">now: 0 °C, 4.7 bar</text>' +
+      '<circle id="truth" cx="' + X(40) + '" cy="' + Y(13.7) + '" r="10" fill="#34E0C4" style="opacity:0"/>' +
+      '<g id="handle"><circle r="30" fill="rgba(255,255,255,.12)"/><circle r="15" fill="#fff" stroke="#2EB6F8" stroke-width="5"/></g>' +
+      '<text id="htxt" fill="#fff" font-size="18" font-weight="700" font-family="IBM Plex Mono, monospace"></text>' +
+      '</svg></div>' +
+      '<div class="pr-side"><div class="sit">At <b>0 °C</b> the gauge reads <b>4.7 bar</b>. The cargo warms to <b>+40 °C</b>. Where will the pressure be?</div><div class="fbk"></div></div></div>';
+    var S = api.stage, svg = $('svg', S), hd = $('#handle', S), ht = $('#htxt', S);
+    function place(v) {
+      pred = Math.round(v * 10) / 10;
+      hd.setAttribute('transform', 'translate(' + X(40) + ',' + Y(pred) + ')');
+      ht.setAttribute('x', X(40) - 38); ht.setAttribute('text-anchor', 'end'); ht.setAttribute('y', Y(pred) + 6); ht.textContent = pred.toFixed(1) + ' bar';
+      var s = $('#straight', S); s.setAttribute('y2', Y(pred));
+    }
+    place(4.7); pred = null; ht.textContent = 'drag me';
+    var drag = null;
+    svg.addEventListener('pointerdown', function (e) { if (revealed) return; drag = e.pointerId; try { svg.setPointerCapture(e.pointerId); } catch (x) {} move(e); });
+    svg.addEventListener('pointermove', function (e) { if (drag === e.pointerId) move(e); });
+    svg.addEventListener('pointerup', function (e) { if (drag === e.pointerId) drag = null; });
+    svg.addEventListener('pointercancel', function () { drag = null; });
+    function move(e) {
+      var r = svg.getBoundingClientRect(), y = (e.clientY - r.top) / r.height * H;
+      place(P(y));
+      api.now('Your prediction: <b>' + pred.toFixed(1) + ' bar</b>. Happy with it? Press <b>Reveal the curve</b>.');
+      api.go('Reveal the curve', reveal, true, true);
+    }
+    function reveal() {
+      revealed = true;
+      var cv = $('#curve', S), len = cv.getTotalLength();
+      cv.style.strokeDasharray = len; cv.style.strokeDashoffset = len; cv.style.opacity = 1;
+      cv.style.transition = 'stroke-dashoffset 1.6s ease-in-out'; requestAnimationFrame(function () { cv.style.strokeDashoffset = 0; });
+      setTimeout(function () { $('#truth', S).style.opacity = 1; }, 1500);
+      var ok = Math.abs(pred - 13.7) <= 1.5, diff = (pred - 13.7);
+      items.push({ t: '1. Predict the tank pressure when propane warms from 0 °C to +40 °C', ok: ok, a: pred.toFixed(1) + ' bar', c: 'About 13.7 bar (12.2 to 15.2 accepted)', n: 'Your point is ' + Math.abs(diff).toFixed(1) + ' bar from the curve.', w:'Propane’s vapour pressure rises from 4.7 bar at 0 °C to about 13.7 bar at +40 °C, nearly three times as much.' });
+      api.prog(2, items);
+      $('.fbk', S).innerHTML = '<div class="why ' + (ok ? 'ok' : 'no') + '"><b>' + (ok ? 'Close. ' : 'You were ' + Math.abs(diff).toFixed(1) + ' bar ' + (diff < 0 ? 'low' : 'high') + '. ') + '</b>The real value is about <b>13.7 bar</b>.</div>' +
+        '<div class="pr-q">From 0 to 20 °C the pressure rises 3.7 bar. From 20 to 40 °C it rises 5.3 bar. Why?</div>' +
+        ['The vapour pressure grows faster and faster as the liquid warms, so the curve gets steeper', 'The tank steel shrinks as it warms and squeezes the cargo', 'Pressure gauges read high at higher temperatures'].map(function (o, k) { return '<button class="opt" data-k="' + k + '"><span class="lt">' + LET[k] + '</span>' + o + '</button>'; }).join('');
+      $$('.pr-side .opt', S).forEach(function (b) { b.onclick = function () {
+        var k = +b.dataset.k, ok2 = k === 0;
+        $$('.pr-side .opt', S).forEach(function (x, j) { x.disabled = true; if (j === k) x.classList.add(ok2 ? 'right' : 'wrong'); });
+        b.insertAdjacentHTML('afterend', api.fb(ok2, 'The curve gets steeper as the cargo warms.', k === 1 ? 'The steel is not what pushes the pressure up.' : 'The gauge is not the reason.'));
+        items.push({ t: '2. Why does the pressure rise more between 20 and 40 °C than between 0 and 20 °C?', ok: ok2, a: b.textContent.slice(1), c: 'The vapour pressure grows faster and faster as the liquid warms, so the curve gets steeper', n: k === 1 ? 'The steel is not what pushes the pressure up.' : 'The gauge is not the reason.', w:'Vapour pressure rises roughly exponentially with temperature. Every extra degree adds more pressure than the one before.' });
+        api.prog(2, items);
+        api.now('Press <b>See results</b>.', 'done');
+        api.go('See results', function () { api.finish(items); }, true, true);
+      }; });
+      api.now('Compare the curve with your point, then answer the question on the right.', 'warn');
+      api.go('See results', null, false);
+    }
+    api.prog(2, 0);
+    api.now('Drag the <b>white point</b> on the +40 °C line to your prediction.');
+    api.go('Reveal the curve', null, false);
+    api.hint(function () { return revealed ? '' : 'Look at the two blue points. Does pressure climb evenly, or faster as it gets warmer?'; });
+  }
+},
+
+/* ---------------- B3 CALCULATE ---------------- */
+{
+  id: 'calc', code: 'SC2-B', part: 'B', bloom: 3, mins: '4 min', name: 'Work it out',
+  short: 'Read a device, look up data, calculate',
+  does: 'A real reading on a device and a data sheet the trainee has to open. They work the value out on a built-in calculator and hand it in. Then the worked solution is shown.',
+  lift: 'Multiple choice lets a trainee guess a number from four. This asks for the number itself, from a reading and a data sheet, as on board.',
+  any: 'Ohm’s law from a multimeter reading, ballast tonnage from soundings, dosage from a label, fuel from a flow meter.',
+  spec: { mechanic: 'calc_with_data', bloom: 3, part: 'challenge', device: { kind: 'gas_detector', gas: 'Propane', reading: '40 %LEL' }, datasheet: { cols: ['Gas', 'LEL %', 'UEL %'], rows: [['Propane', 2.1, 9.5], ['Butane', 1.8, 8.4], ['Methane', 5.0, 15.0]] }, ask: '% vol', answer: 0.84, tolerance: 0.02, worked: ['40 % of the LEL', '0.40 × 2.1 = 0.84 % vol'] },
+  intro: { sit: 'You are testing the air at a manifold. Your detector, calibrated for propane, shows a steady reading.', steps: ['Read the detector.', 'Open the <b>data sheet</b> and find what you need.', 'Work out the gas in air, in % by volume, on the calculator. Then hand in your answer.'] },
+  instructor: {
+    key: ['0.84 % vol (0.82 to 0.86 accepted): 0.40 × 2.1 %'],
+    ask: ['Ask: "Is 0.84 % in air safe to breathe? Is it safe for hot work?" Two different questions.', 'A common slip is 40 × 2.1 = 84. Ask what unit that would be in.']
+  },
+  build: function (api) {
+    var expr = '', val = null, sheet = false, items = [];
+    api.stage.innerHTML =
+      '<div class="ca"><div class="ca-left"><div class="det"><div class="det-body"><div class="det-scr"><div class="g">EX · PROPANE</div><div class="v">40</div><div class="u">%LEL</div><div class="al">ALARM 1</div></div></div>' +
+      '<div class="det-txt">What is the gas concentration at the manifold, <b>in % by volume</b>?<br><br><span style="font-size:16px">Answer to two decimal places.</span></div></div>' +
+      '<button class="sheetbtn" id="sb">Open the data sheet</button><div id="ds"></div></div>' +
+      '<div class="calc"><div class="disp"><div class="ex" id="ex"></div><div class="rs" id="rs"></div></div><div class="keys">' +
+      ['7', '8', '9', '÷', '4', '5', '6', '×', '1', '2', '3', '−', '0', '.', '⌫', '+', 'C', '='].map(function (k) {
+        var c = '÷×−+'.indexOf(k) >= 0 ? 'op' : k === 'C' ? 'c' : k === '=' ? 'eq' : '';
+        return '<button class="' + c + '" data-k="' + k + '">' + k + '</button>';
+      }).join('') + '</div></div></div>';
+    var S = api.stage;
+    $('#sb', S).onclick = function () {
+      sheet = !sheet;
+      $('#ds', S).innerHTML = sheet ? '<div class="datasheet"><h5>Cargo data sheet · flammable limits in air</h5><table><tr><th>Gas</th><th>LEL, % vol</th><th>UEL, % vol</th></tr><tr><td>Propane</td><td>2.1</td><td>9.5</td></tr><tr><td>Butane</td><td>1.8</td><td>8.4</td></tr><tr><td>Methane</td><td>5.0</td><td>15.0</td></tr></table></div>' : '';
+      $('#sb', S).textContent = sheet ? 'Close the data sheet' : 'Open the data sheet';
+      tell();
+    };
+    function tell() {
+      if (!sheet && val == null) api.now('Read the detector, then <b>open the data sheet</b>.');
+      else if (val == null) api.now('Work it out on the <b>calculator</b>.');
+      else api.now('Your answer is <b>' + fmt(val, 3) + ' % vol</b>. Hand it in, or keep working.', 'done');
+    }
+    function paint() {
+      $('#ex', S).textContent = expr || '0';
+      var v = evalExpr(expr); val = (expr && v != null) ? v : null;
+      $('#rs', S).textContent = val != null && /[-+×÷−]/.test(expr.slice(1)) ? '= ' + fmt(val, 4) : '';
+      api.go(val != null ? 'Hand in ' + fmt(val, 3) + ' % vol' : 'Hand in my answer', handIn, val != null, val != null);
+      tell();
+    }
+    $$('.keys button', S).forEach(function (b) { b.onclick = function () {
+      var k = b.dataset.k;
+      if (k === 'C') expr = '';
+      else if (k === '⌫') expr = expr.slice(0, -1);
+      else if (k === '=') { var v = evalExpr(expr); if (v != null) expr = fmt(v, 4); }
+      else if (expr.length < 22) expr += k;
+      paint();
+    }; });
+    function handIn() {
+      var ok = Math.abs(val - 0.84) <= 0.02;
+      var nb = Math.abs(val - 84) < 1 ? 'Check the unit: 40 % is 0.40.' : 'Check which number you took from the data sheet.';
+      items.push({ t: '1. The detector, calibrated for propane, reads 40 % LEL. What is the gas concentration in % by volume?', ok: ok, a: fmt(val, 3) + ' % vol', c: '0.84 % vol', n: nb, w: '40 % LEL means 40 % of the lower flammable limit. Propane’s LEL is 2.1 % vol, so 0.40 × 2.1 = 0.84 % vol.' });
+      api.prog(1, items);
+      api.toast(ok ? 'Correct' : 'Not right. ' + nb, ok ? 'good' : 'bad');
+      api.finish(items, ok ? '<div class="why ok"><b>Worked solution.</b> 40 % LEL = 40 % of propane’s LEL. LEL = 2.1 % vol (data sheet). 0.40 × 2.1 = <b>0.84 % vol</b>.</div>' : '');
+    }
+    api.prog(1, 0);
+    api.hint(function () { return sheet ? '% LEL is a percentage of the LEL. Which number in the sheet is the LEL for propane?' : 'You will need one number from the data sheet.'; });
+    paint();
+  }
+},
+
+/* ---------------- B4 INVESTIGATE ---------------- */
+{
+  id: 'investigate', code: 'SC2-B', part: 'B', bloom: 4, mins: '8 min', name: 'Investigate',
+  short: 'Open sources, pin evidence, conclude',
+  does: 'A real incident with a drawer of sources: logs, a data sheet, a deck-round note, a calibration record and some noise. The trainee opens them, pins the evidence that matters and states what happened.',
+  lift: 'This is the "find the answer yourself" task. Nothing is in a question stem. The trainee has to read real documents, tell evidence from noise and connect what they learned to a situation.',
+  any: 'Electrical: a tripped breaker with a load log, an IR test sheet and a photo. Engine: a high exhaust temperature with a trend log and a maintenance record. Medical: a casualty with vital-sign notes.',
+  spec: { mechanic: 'investigate', bloom: 4, part: 'challenge', case: 'Gas alarm in the compressor room at 06:10', sources: [{ id: 'S1', tag: 'LOG', title: 'Gas detection log', kind: 'table', relevant: true }, '…', { id: 'S7', title: 'Stores delivery', relevant: false }], conclusions: ['…'], answer: 0, min_evidence: 3 },
+  intro: { sit: '06:10. The gas alarm sounds for the cargo compressor room. You have seven sources to look at.', steps: ['Open each source on the left and read it.', 'Press <b>Pin as evidence</b> on the ones that explain what happened.', 'Choose what happened on the right, then hand in your finding.'] },
+  instructor: {
+    key: ['Finding A: a leak at compressor 2 flange, and heavy vapour pooling low because extraction stopped.', 'Evidence: gas log (floor ≫ upper), data sheet (density 1.55), deck round (frost at flange), engine log (fan tripped). The calibration record rules out a sensor fault.', 'Noise: weather, stores delivery.'],
+    ask: ['Ask the group who chose B (sensor fault): "Which source rules that out?"', 'Ask: "What would you do first at 06:10?"']
+  },
+  sources: [
+    { id: 'S1', tag: 'LOG', t: 'Gas detection log', rel: true, body: '<table><tr><th>Time</th><th>Floor head</th><th>Upper head</th></tr><tr><td>05:40</td><td>2 %LEL</td><td>0 %LEL</td></tr><tr><td>05:55</td><td>18 %LEL</td><td>1 %LEL</td></tr><tr><td>06:10</td><td class="al">35 %LEL · ALARM</td><td>4 %LEL</td></tr></table>' },
+    { id: 'S2', tag: 'DATA', t: 'Cargo data sheet', rel: true, body: '<table><tr><th>Cargo</th><td>Propane</td></tr><tr><th>Boiling point</th><td>−42 °C</td></tr><tr><th>Vapour density</th><td>1.55 (air = 1)</td></tr><tr><th>Flammable range</th><td>2.1 – 9.5 % vol</td></tr></table>' },
+    { id: 'S3', tag: 'ROUND', t: 'Deck round note, 06:05', rel: true, body: '<div class="note">06:05 round. Compressor room: frost on the flange of compressor 2 suction line. Hissing sound. Drip tray under it wet.</div>' },
+    { id: 'S4', tag: 'ENGINE', t: 'Engine room log, 05:50', rel: true, body: '<div class="note">05:50 Compressor room extraction fan No. 1 tripped on overload. Not restarted. Electrician informed.</div>' },
+    { id: 'S5', tag: 'CAL', t: 'Detector calibration record', rel: true, body: '<table><tr><th>Head</th><th>Last span check</th><th>Result</th></tr><tr><td>Floor</td><td>3 days ago</td><td>Within limits</td></tr><tr><td>Upper</td><td>3 days ago</td><td>Within limits</td></tr></table>' },
+    { id: 'S6', tag: 'WX', t: 'Weather report', rel: false, body: '<div class="note">Wind NW 12 kn. Air 14 °C. Sea slight. Visibility good.</div>' },
+    { id: 'S7', tag: 'STORES', t: 'Stores delivery list', rel: false, body: '<div class="note">Delivered 05:30: 40 × gloves, 12 × coveralls, 6 × torch batteries, 2 × drums lube oil.</div>' }
+  ],
+  concl: [
+    'A leak at the compressor 2 flange. Heavy vapour is pooling at floor level because the extraction fan stopped.',
+    'The floor detector head is faulty. The readings can be ignored.',
+    'A leak in a line under the deckhead. The gas is spreading downwards.',
+    'Normal vapour left after loading. It will clear by itself.'
+  ],
+  build: function (api) {
+    var T = this, open = null, pinned = {}, seen = {}, pick = -1;
+    api.stage.innerHTML =
+      '<div class="iv"><div class="srcs">' + T.sources.map(function (s) { return '<button class="src" data-s="' + s.id + '"><span class="tg">' + s.tag + '</span>' + esc(s.t) + '</button>'; }).join('') + '</div>' +
+      '<div class="viewer"><div class="empty">Open a source on the left.</div></div>' +
+      '<div class="case"><h4>What happened?</h4>' + T.concl.map(function (c, k) { return '<button class="opt" data-k="' + k + '"><span class="lt">' + LET[k] + '</span>' + esc(c) + '</button>'; }).join('') +
+      '<h4>Your evidence</h4><div class="pins"><em>Nothing pinned yet</em></div></div></div>';
+    var S = api.stage;
+    function src(id) { return T.sources.filter(function (s) { return s.id === id; })[0]; }
+    function showSrc(id) {
+      open = id; seen[id] = 1; var s = src(id);
+      $('.viewer', S).innerHTML = '<div class="vh"><h4>' + esc(s.t) + '</h4><button class="pinb' + (pinned[id] ? ' on' : '') + '">' + (pinned[id] ? 'Pinned' : 'Pin as evidence') + '</button></div><div class="body">' + s.body + '</div>';
+      $('.pinb', S).onclick = function () { if (pinned[id]) delete pinned[id]; else pinned[id] = 1; showSrc(id); };
+      paint();
+    }
+    function paint() {
+      $$('.src', S).forEach(function (b) { var id = b.dataset.s; b.classList.toggle('open', id === open); b.classList.toggle('pinned', !!pinned[id]); b.classList.toggle('seen', !!seen[id]); });
+      var ids = Object.keys(pinned);
+      $('.pins', S).innerHTML = ids.length ? ids.map(function (id) { return '<span>' + src(id).tag + '</span>'; }).join('') : '<em>Nothing pinned yet</em>';
+      var nSeen = Object.keys(seen).length, ready = pick >= 0 && ids.length >= 2;
+      if (nSeen < 3) api.now('Open the sources on the left. You have read <b>' + nSeen + ' of 7</b>.');
+      else if (!ids.length) api.now('<b>Pin</b> the sources that explain the alarm.', 'warn');
+      else if (pick < 0) api.now('Choose <b>what happened</b> on the right.', 'warn');
+      else api.now('Ready. Press <b>Hand in finding</b>.', 'done');
+      api.go('Hand in finding', handIn, ready, ready);
+    }
+    $$('.src', S).forEach(function (b) { b.onclick = function () { showSrc(b.dataset.s); }; });
+    $$('.case .opt', S).forEach(function (b) { b.onclick = function () { pick = +b.dataset.k; $$('.case .opt', S).forEach(function (x) { x.classList.toggle('sel', x === b); }); paint(); }; });
+    function handIn() {
+      var ids = Object.keys(pinned), rel = ids.filter(function (id) { return src(id).rel; }), noise = ids.filter(function (id) { return !src(id).rel; });
+      var ok1 = pick === 0, ok2 = rel.length >= 3 && noise.length === 0;
+      var items = [
+        { t: '1. What caused the gas alarm in the compressor room at 06:10?', ok: ok1, a: T.concl[pick], c: T.concl[0], n: 'The sources point to a different cause.', w:'Gas is far higher at the floor head than the upper head, propane vapour is heavier than air, there is frost at the compressor 2 flange, and the extraction fan tripped at 05:50. The heads were span-checked 3 days ago, so a sensor fault is unlikely.' },
+        { t: '2. Which sources support your finding?', ok: ok2, a: ids.map(function (id) { return src(id).t; }).join('; '), c: 'Gas detection log; Cargo data sheet; Deck round note; Engine room log; Detector calibration record (at least three, and no noise)', n: noise.length ? 'Some of what you pinned does not explain the alarm.' : 'Too little evidence for the finding.', w: noise.length ? 'Weather and stores delivery do not explain the alarm. Evidence must support the finding.' : 'Each pinned source should support the finding or rule out another explanation.' }
+      ];
+      api.prog(2, items);
+      $$('.case .opt', S).forEach(function (b, k) { b.disabled = true; if (k === pick) b.classList.add(ok1 ? 'right' : 'wrong'); });
+      api.finish(items);
+    }
+    api.prog(2, 0);
+    api.hint(function () { return Object.keys(seen).indexOf('S1') < 0 ? 'Start with the gas detection log. Compare the floor and upper heads.' : 'Ask yourself why gas would gather at the floor, and why it was not removed.'; });
+    paint();
+  }
+},
+
+/* ---------------- B5 CRITIQUE ---------------- */
+{
+  id: 'critique', code: 'SC2-B', part: 'B', bloom: 5, mins: '5 min', name: 'Check a colleague',
+  short: 'Find and fix the wrong claims',
+  does: 'A colleague’s message with five claims. Some are right and some are wrong. For each claim the trainee keeps it or picks the right correction, then sends the review.',
+  lift: 'Judging someone else’s reasoning is Bloom’s Evaluate level. The trainee must keep the right claims, which stops them from simply flagging everything, and must also know the right fix.',
+  any: 'A colleague’s permit, a handover note, a toolbox-talk script, an AI-written procedure step, a junior’s calculation.',
+  spec: { mechanic: 'critique', bloom: 5, part: 'challenge', from: 'Duty officer', claims: [{ text: 'Propane is lighter than air, so…', right: false, fixes: ['Propane vapour is heavier than air…', '…'], fix: 0 }, { text: 'If a cargo tank warms up…', right: true, decoys: ['…'] }] },
+  intro: { sit: 'The duty officer posted this in the ship’s group before a cargo watch. Some of it is wrong.', steps: ['Tap each sentence.', 'Keep it if it is right, or choose the correction if it is wrong.', 'When all five are reviewed, press <b>Send review</b>.'] },
+  instructor: {
+    key: ['1 Wrong: propane is heavier than air', '2 Right', '3 Wrong: 0 % LEL is not enough for entry', '4 Right', '5 Wrong: butane boils at about −0.5 °C'],
+    ask: ['Ask: "How would you say claim 3 to an officer senior to you?"', 'Ask the class which wrong claim would hurt someone first.']
+  },
+  claims: [
+    { s: 'Propane is lighter than air, so a leak on deck will rise and clear away.', right: false, opts: ['Propane vapour is heavier than air. It spreads low and collects in low spaces.', 'Propane is lighter than air only when it is very cold.'], fix: 0, w: 'Propane vapour is about 1.5 times as heavy as air.' },
+    { s: 'Its flammable range is about 2 to 10 % in air, so even a rich cloud can burn at its edges.', right: true, opts: ['Its flammable range is about 5 to 15 % in air.', 'A rich cloud cannot burn anywhere.'], w: 'Right. Where a rich cloud mixes with air at its edges, it passes through the flammable range.' },
+    { s: 'The detector reads 0 % LEL in the pump room, so it is safe to go in.', right: false, opts: ['0 % LEL rules out flammable gas only. Oxygen and toxic gases must also be measured before entry.', '0 % LEL means the detector is broken.'], fix: 0, w: 'A space can have no flammable gas and still lack oxygen or contain toxic gas.' },
+    { s: 'If a cargo tank warms up, the pressure inside it rises.', right: true, opts: ['If a cargo tank warms up, the pressure falls.', 'Tank pressure does not depend on temperature.'], w: 'Right. Vapour pressure rises with temperature.' },
+    { s: 'Butane boils at −42 °C, the same as propane.', right: false, opts: ['Butane boils at about −0.5 °C. Propane boils at about −42 °C.', 'Butane boils at about −162 °C.'], fix: 0, w: 'Butane boils at about −0.5 °C. On a cold day a butane leak may stay liquid on deck for longer.' }
+  ],
+  build: function (api) {
+    var T = this, rev = T.claims.map(function () { return null; }), cur = -1, sent = false, order = T.claims.map(function (c) { return shuffle(c.opts.map(function (o, k) { return k; })); });
+    api.stage.innerHTML =
+      '<div class="cr"><div class="thread"><div class="who"><div class="av">DO</div><div><b>Duty officer</b><span>Ship group · 07:42</span></div></div><div class="bubble"></div></div>' +
+      '<div class="cr-side"><div class="box">Tap each sentence. <b>Keep</b> it if it is right. If it is wrong, <b>choose the correction</b>.</div>' +
+      '<div class="box legend"><div><i style="border:2px dashed #9DB3CC"></i>Not reviewed yet</div><div><i style="background:#12805A"></i>Kept as right</div><div><i style="background:#E9A51E"></i>Corrected</div></div></div></div>' +
+      '<div class="sheetveil"></div><div class="sheet"><button class="close" aria-label="Close">✕</button><div class="sq">Review this claim</div><div class="ss"></div><div class="grid"></div></div>';
+    var S = api.stage;
+    function paint() {
+      $('.bubble', S).innerHTML = T.claims.map(function (c, k) {
+        var r = rev[k], cls = r == null ? '' : r === 'keep' ? 'kept' : 'fixed';
+        var mark = r == null ? '' : r === 'keep' ? '✓' : '!';
+        var res = sent ? (ok(k) ? ' ok' : ' no') : '';
+        return '<button class="cl ' + cls + res + '" data-k="' + k + '"><span class="st">' + mark + '</span><span><span class="orig">' + esc(c.s) + '</span>' + (r != null && r !== 'keep' ? '<span class="fx">→ ' + esc(c.opts[r]) + '</span>' : '') + '</span></button>';
+      }).join('');
+      $$('.cl', S).forEach(function (b) { b.onclick = function () { if (!sent) openSheet(+b.dataset.k); }; });
+      var n = rev.filter(function (r) { return r != null; }).length;
+      api.prog(T.claims.length, rev.map(function (r) { return r == null ? null : { ok: null }; }).filter(Boolean));
+      if (sent) return;
+      api.now(n < T.claims.length ? 'Tap a sentence to review it. <b>' + n + ' of ' + T.claims.length + '</b> reviewed.' : 'All reviewed. Press <b>Send review</b>.', n < T.claims.length ? '' : 'done');
+      api.go('Send review', send, n === T.claims.length, n === T.claims.length);
+    }
+    function openSheet(k) {
+      cur = k; var c = T.claims[k];
+      $('.ss', S).textContent = '“' + c.s + '”';
+      $('.grid', S).innerHTML = '<button class="opt" data-v="keep"><span class="lt">✓</span>It is right. Keep it.</button>' +
+        order[k].map(function (j) { return '<button class="opt" data-v="' + j + '"><span class="lt">→</span>' + esc(c.opts[j]) + '</button>'; }).join('');
+      $$('.sheet .opt', S).forEach(function (b) { if (String(rev[k]) === b.dataset.v) b.classList.add('sel'); b.onclick = function () { rev[k] = b.dataset.v === 'keep' ? 'keep' : +b.dataset.v; closeSheet(); paint(); }; });
+      $('.sheet', S).classList.add('on'); $('.sheetveil', S).classList.add('on');
+    }
+    function closeSheet() { $('.sheet', S).classList.remove('on'); $('.sheetveil', S).classList.remove('on'); }
+    $('.sheet .close', S).onclick = closeSheet; $('.sheetveil', S).onclick = closeSheet;
+    function ok(k) { var c = T.claims[k], r = rev[k]; return c.right ? r === 'keep' : r === c.fix; }
+    function send() {
+      sent = true; paint();
+      var items = T.claims.map(function (c, k) {
+        var r = rev[k];
+        return { t: (k + 1) + '. “' + c.s + '”', ok: ok(k), a: r === 'keep' ? 'Kept it as right' : 'Corrected to: ' + c.opts[r], c: c.right ? 'It is right. Keep it.' : 'Correct it to: ' + c.opts[c.fix], n: c.right ? 'This claim was right as written.' : r === 'keep' ? 'This claim is wrong.' : 'That correction is not right either.', w: c.w };
+      });
+      api.prog(items.length, items);
+      api.now('Green borders are right calls, red are not. Press <b>See results</b>.', 'done');
+      api.go('See results', function () { api.finish(items); }, true, true);
+    }
+    api.hint(function () { return 'Two of the five claims are right. Do not correct a claim just because it sounds alarming.'; });
+    paint();
+  }
+},
+
+/* ---------------- C1 VALVE IN 3D ---------------- */
+{
+  id: 'valve', grp: 'C', code: 'SC3-B', part: 'B', bloom: 3, mins: '5 min', name: 'Take it apart (3D)',
+  short: 'Turn, explode and operate a valve',
+  does: 'A ball valve in 3D. The trainee turns it with a finger, pulls it apart, looks inside with X-ray and operates the handle. The screen names each part and says what it is made of, but never what it is for. Working that out is the task.',
+  lift: 'Labelling a flat drawing is Remember. Here the trainee has to work out what each part does from where it sits and how it moves, then use the valve and watch the cargo stop. That is Understand and Apply in one task.',
+  any: 'Any equipment with parts: a centrifugal pump, a relief valve, a breathing-apparatus regulator, a circuit breaker, a fuel injector. The factory builds it from a kit of parametric parts, or loads a real 3D model (GLB) when one exists.',
+  spec: { mechanic: 'model_explore', bloom: 3, part: 'challenge', model: { kit: 'ball_valve', or_glb: 'img/ball_valve.glb', parts: [{ id: 'seat', name: 'Seat rings', says: 'PTFE, two rings, one each side of the ball', explode: [1, 0, 0] }, '… one entry per part'] }, steps: [{ ask: 'Find the part that stops cargo passing a closed valve', answer: 'seat' }, { ask: 'Find the part that stops cargo leaking along the stem', answer: 'gland' }, { do: 'Close the valve', check: 'handle == closed' }] },
+  intro: { sit: 'This ball valve comes from a cargo line. Take it apart and find out how it works.', steps: ['Turn it with one finger. Pinch, or use + and −, to zoom.', 'Pull it apart with <b>Explode</b>. Look inside with <b>X-ray</b>. Tap any part to see what it is.', 'Do the three steps on the right.'] },
+  instructor: {
+    key: ['1 Seat rings (PTFE)', '2 Gland packing', '3 Handle across the pipe = closed'],
+    ask: ['Ask: "The valve is shut but cargo still gets through. Which part has failed?" (The seats.)', 'Ask: "Cargo drips from under the handle. What do you do?" (The gland: report it, then tighten or repack it under the procedure.)']
+  },
+  build: function (api) {
+    var S = api.stage, step = 0, items = [], sel = null, xray = false, ang = 0, angT = 0, ex = 0;
+    var NAME = { pipe: 'Cargo pipe', flange: 'Flange joint', body: 'Valve body', ball: 'Ball', seat: 'Seat rings', stem: 'Stem', gland: 'Gland packing', handle: 'Handle' };
+    var SAYS = {
+      pipe: 'Carbon steel pipe, 100 mm bore.',
+      flange: 'Two flanges, a spiral-wound gasket between them and eight bolts.',
+      body: 'Cast steel. The pipe flanges bolt to it. The stem comes out through its top.',
+      ball: 'A polished steel sphere with a round hole (the bore) straight through it.',
+      seat: 'PTFE, a tough white plastic. Two rings, one each side of the ball, pressed against it.',
+      stem: 'A steel shaft from the top of the ball up to the handle.',
+      gland: 'Rings of graphite packing wrapped round the stem, squeezed down by a hexagon gland nut.',
+      handle: 'A steel lever on top of the stem. It moves a quarter turn.'
+    };
+    var STEPS = ['Find the part that stops cargo getting past the ball when the valve is <b>closed</b>.', 'Find the part that stops cargo leaking out <b>along the stem</b>.', '<b>Close</b> the valve. Check inside with X-ray that nothing passes.'];
+    var DEF = '<h4>Part</h4><div class="nm">Tap a part</div>Tap any part to see what it is.';
+    S.innerHTML = '<div class="g3"><div class="v3" id="v"></div><div class="side3"><div class="steps3">' +
+      STEPS.map(function (s, k) { return '<div class="st3"><span class="h">Step ' + (k + 1) + '</span>' + s + '</div>'; }).join('') + '</div>' +
+      '<div class="card3 part" id="pc">' + DEF + '</div>' +
+      '<div class="row3" style="align-items:center"><span class="lab3" style="flex:none">Explode</span><input id="exs" class="big" type="range" min="0" max="1" step="0.01" value="0" aria-label="Pull the valve apart"></div>' +
+      '<div class="row3"><button class="tgl" id="xr">X-ray</button><button class="tgl" id="hd">Turn the handle</button></div></div></div>';
+    var V = V3($('#v', S), { target: [0, 0.5, 0], dist: 11.5, az: 0.75, el: 0.32, min: 4, max: 20, tip: 'Drag to turn · tap a part', onPick: function (id) { if (id) choose(id); } });
+    api.prog(3, 0);
+    if (!V) { api.now('This screen cannot show 3D.', 'warn'); api.go('See results', function () { api.finish([]); }, true); return; }
+    var T = V.T, sc = V.scene, meshes = [], groups = [];
+    var M = {
+      pipe: mat(T, 0x8C99A6, { m: .8, r: .35 }), body: mat(T, 0x4F6E93, { m: .45, r: .45 }), fl: mat(T, 0x7D8A97, { m: .8, r: .35 }),
+      bolt: mat(T, 0xB9C2CC, { m: .9, r: .25 }), ball: mat(T, 0xE3E8EE, { m: 1, r: .12 }), bore: mat(T, 0x10161E, { m: .2, r: .9 }),
+      seat: mat(T, 0xF4F1E6, { m: 0, r: .6 }), stem: mat(T, 0xC9D0D8, { m: .95, r: .2 }), pack: mat(T, 0x34312C, { m: .1, r: .95 }),
+      lever: mat(T, 0xA8B2BC, { m: .9, r: .3 }), grip: mat(T, 0xD0342C, { m: .1, r: .6 }), flow: mat(T, 0x34E0C4, { m: 0, r: .4, e: 0x1C9C88 })
+    };
+    function G(dir, parent) { var g = new T.Group(); g.userData.dir = dir; (parent || sc).add(g); if (dir) groups.push(g); return g; }
+    function add(g, mesh, id, xr) { mesh.material = mesh.material.clone(); mesh.userData.pick = id; mesh.userData.xr = !!xr; g.add(mesh); meshes.push(mesh); return mesh; }
+    function onX(m) { m.rotation.z = Math.PI / 2; return m; }
+    [-1, 1].forEach(function (s) {
+      var g = G([s * 1.9, 0, 0]);
+      add(g, onX(cyl(T, .55, .55, 3, M.pipe)), 'pipe', true).position.x = s * 3.05;
+      add(g, onX(cyl(T, 1.05, 1.05, .22, M.fl)), 'flange', true).position.x = s * 1.55;
+      for (var k = 0; k < 8; k++) { var a = k / 8 * Math.PI * 2; add(g, onX(cyl(T, .07, .07, .72, M.bolt, 10)), 'flange').position.set(s * 1.42, Math.cos(a) * .82, Math.sin(a) * .82); }
+    });
+    var gb = G([0, -2.8, 0]);
+    add(gb, onX(cyl(T, .95, .95, 2.5, M.body)), 'body', true);
+    add(gb, new T.Mesh(new T.SphereGeometry(1.18, 40, 28), M.body), 'body', true);
+    [-1, 1].forEach(function (s) { add(gb, onX(cyl(T, 1.05, 1.05, .22, M.body)), 'body', true).position.x = s * 1.3; });
+    add(gb, cyl(T, .42, .5, .75, M.body), 'body', true).position.y = 1.3;
+    var rot = G(null);
+    add(rot, new T.Mesh(new T.SphereGeometry(.74, 40, 28), M.ball), 'ball');
+    add(rot, onX(cyl(T, .42, .42, 1.5, M.bore, 28)), 'ball');
+    [-1, 1].forEach(function (s) { var g = G([s * 1.05, 0, 0]); var t = new T.Mesh(new T.TorusGeometry(.52, .1, 14, 40), M.seat); t.rotation.y = Math.PI / 2; add(g, t, 'seat').position.x = s * .52; });
+    var gs = G([0, 1.2, 0]), stemRot = G(null, gs);
+    add(stemRot, cyl(T, .13, .13, 1.75, M.stem, 16), 'stem').position.y = 1.45;
+    var gg = G([0, 0.75, 0]);
+    add(gg, cyl(T, .3, .3, .4, M.pack, 24), 'gland').position.y = 1.5;
+    add(gg, cyl(T, .42, .42, .18, M.bolt, 6), 'gland').position.y = 1.8;
+    var gh = G([0, 1.55, 0]), piv = G(null, gh); piv.position.y = 2.42;
+    add(piv, box(T, 2.6, .12, .34, M.lever), 'handle').position.x = 1.15;
+    add(piv, box(T, .85, .24, .44, M.grip), 'handle').position.x = 2.25;
+    add(piv, cyl(T, .2, .2, .22, M.bolt, 6), 'handle');
+    var fg = new T.Group(), drops = []; sc.add(fg);
+    for (var k = 0; k < 48; k++) { var p = new T.Mesh(new T.SphereGeometry(.075, 8, 6), M.flow), rr = Math.random() * .3, aa = Math.random() * 6.28; p.position.set(-4.5 + Math.random() * 9, Math.cos(aa) * rr, Math.sin(aa) * rr); p.userData.skip = true; fg.add(p); drops.push(p); }
+    V.frame(function (dt) {
+      ang += Math.sign(angT - ang) * Math.min(Math.abs(angT - ang), dt * 2.4);
+      rot.rotation.y = ang; piv.rotation.y = ang; stemRot.rotation.y = ang;
+      groups.forEach(function (g) { var d = g.userData.dir; g.position.set(d[0] * ex, d[1] * ex, d[2] * ex); });
+      var flowing = Math.cos(ang) > 0.45;
+      fg.visible = xray && ex < 0.04;
+      drops.forEach(function (p, i) {
+        var x = p.position.x;
+        if (flowing) { x += dt * 2.2; if (x > 4.6) x = -4.6; }
+        else if (x < -0.6) x = Math.min(x + dt * 2.2, -0.6 - (i % 12) * 0.08);
+        else if (x > 0.6) { x += dt * 2.2; if (x > 4.6) x = 9; }
+        p.position.x = x; p.visible = x < 5;
+      });
+    });
+    function setX(on) {
+      xray = on; $('#xr', S).classList.toggle('on', on);
+      meshes.forEach(function (m) { if (!m.userData.xr) return; m.material.transparent = on; m.material.opacity = on ? .14 : 1; m.material.depthWrite = !on; m.userData.skip = on; m.material.needsUpdate = true; });
+    }
+    function choose(id) {
+      sel = id; meshes.forEach(function (m) { m.material.emissive.setHex(m.userData.pick === id ? 0x6A4300 : 0); });
+      $('#pc', S).innerHTML = '<h4>Part</h4><div class="nm">' + NAME[id] + '</div>' + SAYS[id]; tell();
+    }
+    function tell() {
+      $$('.st3', S).forEach(function (s, k) { s.classList.toggle('on', k === step); });
+      if (step < 2) {
+        api.now(sel ? 'Is it the <b>' + NAME[sel].toLowerCase() + '</b>? Press <b>This is my answer</b>, or keep looking.' : 'Turn the valve, pull it apart and <b>tap the part</b> you think it is.');
+        api.go(sel ? 'This is my answer' : 'Tap a part first', answer, !!sel, !!sel);
+      } else {
+        api.now('Set the valve with <b>Turn the handle</b>. Check inside with <b>X-ray</b>, then hand in.');
+        api.go('Hand in: valve is set', answer, true, true);
+      }
+    }
+    function answer() {
+      var it, ok;
+      if (step === 0) { ok = sel === 'seat'; it = { t: '1. Which part stops cargo getting past the ball when the valve is closed?', ok: ok, a: NAME[sel], c: 'Seat rings', n: sel === 'gland' ? 'The gland seals round the stem, not round the ball.' : 'That part does not seal against the ball.', w: 'The two PTFE seat rings press against the ball. With the bore turned across the pipe, they stop cargo getting round the ball.' }; }
+      else if (step === 1) { ok = sel === 'gland'; it = { t: '2. Which part stops cargo leaking out along the stem?', ok: ok, a: NAME[sel], c: 'Gland packing', n: sel === 'seat' ? 'The seats seal the ball, not the stem.' : 'That part does not seal round the stem.', w: 'Graphite packing rings round the stem, squeezed by the gland nut, stop cargo escaping along the stem.' }; }
+      else { ok = Math.cos(angT) < .5; it = { t: '3. Close the ball valve', ok: ok, a: ok ? 'Handle across the pipe' : 'Handle along the pipe', c: 'Closed: handle across the pipe', n: 'With the handle there, the bore lines up with the pipe.', w: 'On a quarter-turn valve the handle shows where the bore points: along the pipe is open, across the pipe is closed.' }; }
+      items.push(it); var sc3 = $$('.st3', S)[step]; sc3.classList.add(ok ? 'ok' : 'no');
+      // the done step shrinks to one line; the feedback goes in the part card until the next tap
+      sc3.innerHTML = '<span class="h">Step ' + (step + 1) + ' · ' + (ok ? 'right' : 'not right') + '</span>' + esc(it.a);
+      $('#pc', S).innerHTML = '<h4>' + (ok ? 'Right' : 'Not right') + '</h4>' + esc(ok ? it.w : it.n) + (ok ? '' : '<span class="later" style="display:block;margin-top:4px;font-size:14px;color:var(--faint)">We’ll check this one together in the debrief.</span>');
+      api.toast(ok ? 'Right' : 'Not right', ok ? 'good' : 'bad'); api.prog(3, items);
+      step++;
+      if (step < 3) { sel = null; meshes.forEach(function (m) { m.material.emissive.setHex(0); }); tell(); }
+      else { $$('.st3', S).forEach(function (s) { s.classList.remove('on'); }); api.now('All three steps done. Press <b>See results</b>.', 'done'); api.go('See results', function () { api.finish(items); }, true, true); }
+    }
+    $('#exs', S).addEventListener('input', function (e) { ex = parseFloat(e.target.value); });
+    $('#xr', S).onclick = function () { setX(!xray); };
+    $('#hd', S).onclick = function () { angT = angT ? 0 : Math.PI / 2; };
+    api.hint(function () {
+      return ['Pull the valve apart and look at what touches the ball on each side.', 'Follow the stem up from the ball. What is wrapped round it where it leaves the body?', 'Turn on X-ray and watch where the hole in the ball points as you turn the handle.'][step] || '';
+    });
+    tell();
+  }
+},
+
+/* ---------------- C2 DECK LINE-UP IN 3D ---------------- */
+{
+  id: 'lineup', grp: 'C', code: 'SC3-B', part: 'B', bloom: 4, mins: '7 min', name: 'Line it up (3D deck)',
+  short: 'Set the valves, start the pump, see what happens',
+  does: 'The cargo deck in 3D. The previous watch left the valves in another line-up. The trainee traces the pipes, opens and shuts valves on deck, then starts the pump. The cargo goes wherever the line-up sends it: ashore, into the wrong tank or against a blank flange.',
+  lift: 'Line-ups are learned on a flat drawing and then done on a real deck. This puts the trainee on the deck with real tags, and shows the consequence of the line-up, not just a red cross. Tracing the route is Analyse.',
+  any: 'Ballast line-ups, fuel transfer, bilge pumping, fire main isolation, electrical isolation (switch the right breakers, then "energise"). Any network of valves or switches with a source and a destination.',
+  spec: { mechanic: 'lineup_3d', bloom: 4, part: 'challenge', nodes: { T1: [-7, 1, 0], T2: [7, 1, 0], P: [0, 2.4, -7.2], S: [0, 2.4, 7.2] }, valves: [{ tag: 'V102', name: 'Tank 2 dome valve', between: ['T2', 'B'], start: 'shut' }, '…'], source: 'T2', goal: 'P', forbidden: ['T1', 'S'], why_bad: { T1: 'cargo runs into tank 1', S: 'cargo pushes against the blank flange' } },
+  intro: { sit: 'You take over the cargo watch. The previous watch left the valves set for another job.', steps: ['Read the order on the right.', 'Look round the deck. Tap a valve (on deck or in the list) to open or shut it.', 'Press <b>Start cargo pump 2</b> and watch where the cargo goes.'] },
+  instructor: {
+    key: ['Open V102, V202, V301. Shut V302. Shut V201 or V101 (both is better practice).', 'Start state: V101, V201 and V302 open; V102, V202, V301 shut.'],
+    ask: ['Ask: "Who left V302 open, and what would have happened at full rate?"', 'Ask: "Why shut both V101 and V201, when one is enough?" (Double isolation.)']
+  },
+  build: function (api) {
+    var S = api.stage, sel = null, running = false, tries = [], flowG = null;
+    var VAL = { V101: ['Tank 1 dome valve', true], V102: ['Tank 2 dome valve', false], V201: ['Header valve, tank 1 side', true], V202: ['Header valve, tank 2 side', false], V301: ['Port manifold valve', false], V302: ['Starboard manifold valve', true] };
+    var st = {}; Object.keys(VAL).forEach(function (k) { st[k] = VAL[k][1]; });
+    var NODE = { T1: [-7, 1.05, 0], A: [-7, 2.4, 0], X: [0, 2.4, 0], B: [7, 2.4, 0], T2: [7, 1.05, 0], P: [0, 2.4, -7.2], S: [0, 2.4, 7.2] };
+    var EDGE = [['V101', 'T1', 'A'], ['V102', 'T2', 'B'], ['V201', 'A', 'X'], ['V202', 'B', 'X'], ['V301', 'X', 'P'], ['V302', 'X', 'S']];
+    var VPOS = { V101: [-7, 1.75, 0], V102: [7, 1.75, 0], V201: [-3.5, 2.4, 0], V202: [3.5, 2.4, 0], V301: [0, 2.4, -3.6], V302: [0, 2.4, 3.6] };
+    S.innerHTML = '<div class="g3"><div class="v3" id="v"><div class="vsheet" id="vs"><div class="t" id="vst"></div><button class="vbtn o" id="vo">OPEN</button><button class="vbtn c" id="vc">SHUT</button></div></div>' +
+      '<div class="side3"><div class="card3"><h4>Order from the chief officer</h4>Discharge <b>tank 2</b> to shore through the <b>port manifold</b>. Keep <b>tank 1</b> out of the line.</div>' +
+      '<div class="lab3">Valves · tap one here or on deck</div><div class="vlist" id="vl"></div>' +
+      '<button class="pump" id="pump">Start cargo pump 2</button><div id="out"></div></div></div>';
+    var V = V3($('#v', S), { target: [0, 1.6, -1], dist: 31, az: 0.32, el: 0.78, min: 9, max: 44, tip: 'Drag to look round the deck · tap a valve', onPick: function (id) { if (id && VAL[id]) pick(id); else if (!id) { sel = null; $('#vs', S).classList.remove('on'); paint(); } } });
+    api.prog(1, 0);
+    if (!V) { api.now('This screen cannot show 3D.', 'warn'); api.go('See results', function () { api.finish([]); }, true); return; }
+    var T = V.T, sc = V.scene;
+    var deckM = mat(T, 0x2C4639, { m: .1, r: .9 }), pipeM = mat(T, 0xB8C2CC, { m: .6, r: .4 }), domeM = mat(T, 0xC9D3DD, { m: .3, r: .5 }), steelM = mat(T, 0x7A8794, { m: .8, r: .35 }),
+      hoseM = mat(T, 0x22262C, { m: .1, r: .8 }), blankM = mat(T, 0xC0392B, { m: .4, r: .5 }), flowM = mat(T, 0xF2B33D, { m: 0, r: .4, e: 0xC88A10 }), railM = mat(T, 0xE7EBF0, { m: .3, r: .5 });
+    var deck = box(T, 28, .3, 20, deckM); deck.position.y = -.15; sc.add(deck);
+    [-10, 10].forEach(function (z) { var r = box(T, 28, .7, .12, railM); r.position.set(0, .35, z); sc.add(r); });
+    var bow = new T.Mesh(new T.ConeGeometry(1.2, 2.4, 3), railM); bow.rotation.z = -Math.PI / 2; bow.position.set(13.2, .3, 0); bow.scale.set(1, 1, .2); sc.add(bow);
+    [-7, 7].forEach(function (x) {
+      var d = cyl(T, 2, 2.3, 1.0, domeM, 40); d.position.set(x, .5, 0); sc.add(d);
+      var lid = cyl(T, 1.3, 1.3, .12, steelM, 40); lid.position.set(x, 1.06, 0); sc.add(lid);
+    });
+    [['T1', 'A'], ['T2', 'B'], ['A', 'B'], ['P', 'S']].forEach(function (s) { sc.add(pipeBetween(T, NODE[s[0]], NODE[s[1]], .24, pipeM)); });
+    var pf = cyl(T, .6, .6, .16, steelM); pf.rotation.x = Math.PI / 2; pf.position.set(0, 2.4, -7.3); sc.add(pf);
+    var hose = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(0, 2.4, -7.4), new T.Vector3(0, 2.7, -8.8), new T.Vector3(0, 4.4, -10.2), new T.Vector3(0, 7, -11.2)]), 30, .34, 14), hoseM); sc.add(hose);
+    var bl = cyl(T, .66, .66, .34, blankM); bl.rotation.x = Math.PI / 2; bl.position.set(0, 2.4, 7.4); sc.add(bl);
+    V.label([-7, 1.3, 2.6], 'TANK 1'); V.label([7, 1.3, 2.6], 'TANK 2'); V.label([13.5, 1.6, 0], 'BOW');
+    V.label([0, 7.6, -11.2], 'PORT · shore hose'); V.label([0, 3.6, 7.6], 'STARBOARD · blank flange');
+    var vm = {};
+    Object.keys(VPOS).forEach(function (id) {
+      var g = new T.Group(); g.position.fromArray(VPOS[id]); g.userData.pick = id; sc.add(g);
+      g.add(new T.Mesh(new T.SphereGeometry(.44, 24, 16), steelM));
+      var stem = cyl(T, .06, .06, .8, steelM, 10); stem.position.y = .6; g.add(stem);
+      var wm = mat(T, 0x3DDC97, { m: .3, r: .5, e: 0x000000 }), wg = new T.Group(); wg.position.y = 1.0; g.add(wg);
+      var wheel = new T.Mesh(new T.TorusGeometry(.44, .08, 10, 28), wm); wheel.rotation.x = Math.PI / 2; wg.add(wheel);
+      var sp = box(T, .84, .06, .06, wm); wg.add(sp); var sp2 = sp.clone(); sp2.rotation.y = Math.PI / 2; wg.add(sp2);
+      vm[id] = { wm: wm, wg: wg, spin: 0, lab: V.label([VPOS[id][0], VPOS[id][1] + 1.8, VPOS[id][2]], id, '', function () { pick(id); }) };
+    });
+    V.frame(function (dt, t) {
+      Object.keys(vm).forEach(function (id) { var v = vm[id]; if (v.spin > 0) { v.spin -= dt; v.wg.rotation.y += dt * 9; } });
+      if (flowG) flowG.children.forEach(function (p) { var u = (p.userData.u + dt * p.userData.v) % 1; p.userData.u = u; p.position.lerpVectors(p.userData.a, p.userData.b, u); });
+    });
+    function paint() {
+      Object.keys(vm).forEach(function (id) {
+        var o = st[id]; vm[id].wm.color.setHex(o ? 0x3DDC97 : 0xFF6B5E); vm[id].wm.emissive.setHex(sel === id ? 0x553300 : 0);
+        vm[id].lab.className = 'v3-lab ' + (o ? 'open' : 'shut') + (sel === id ? ' sel' : ''); vm[id].lab.textContent = id + ' · ' + (o ? 'OPEN' : 'SHUT');
+      });
+      $('#vl', S).innerHTML = Object.keys(VAL).map(function (id) { return '<button class="vli' + (sel === id ? ' sel' : '') + '" data-v="' + id + '">' + id + '<i class="' + (st[id] ? 'o">OPEN' : 'c">SHUT') + '</i></button>'; }).join('');
+      $$('.vli', S).forEach(function (b) { b.onclick = function () { pick(b.dataset.v); }; });
+      if (sel) {
+        $('#vst', S).innerHTML = '<b>' + sel + '</b>' + VAL[sel][0];
+        $('#vo', S).classList.toggle('on', st[sel]); $('#vc', S).classList.toggle('on', !st[sel]);
+      }
+      if (!running && !tries.length) {
+        api.now('Set the line-up for the order, then press <b>Start cargo pump 2</b>.');
+        api.go('See results', null, false);
+      }
+    }
+    function pick(id) { sel = id; $('#vs', S).classList.add('on'); paint(); }
+    function set(v) {
+      if (running) { api.toast('Stop the pump before you change the line-up.'); return; }
+      if (st[sel] !== v) vm[sel].spin = 0.6;
+      st[sel] = v; paint();
+    }
+    $('#vo', S).onclick = function () { set(true); }; $('#vc', S).onclick = function () { set(false); };
+    function route() {
+      var seen = { T2: 1 }, q = ['T2'], segs = [];
+      while (q.length) {
+        var n = q.shift();
+        EDGE.forEach(function (e) { if (!st[e[0]]) return; var o = e[1] === n ? e[2] : e[2] === n ? e[1] : null; if (o && !seen[o]) { seen[o] = 1; q.push(o); segs.push([n, o]); } });
+      }
+      return { seen: seen, segs: segs };
+    }
+    function result(R) {
+      if (!R.segs.length) return { ok: false, s: 'Pump 2 is running against a shut valve. Nothing moves and the pump heats up.' };
+      var bad = [];
+      if (R.seen.T1) bad.push('Cargo is running into tank 1.');
+      if (R.seen.S) bad.push('Cargo is pushing against the blank flange on the starboard manifold.');
+      if (!R.seen.P) bad.push('Nothing reaches the port manifold.');
+      return bad.length ? { ok: false, s: bad.join(' ') } : { ok: true, s: 'Cargo flows from tank 2 through the port manifold and ashore.' };
+    }
+    $('#pump', S).onclick = function () {
+      var b = $('#pump', S);
+      if (running) { running = false; if (flowG) { sc.remove(flowG); flowG = null; } b.classList.remove('run'); b.textContent = 'Start cargo pump 2'; api.now('Pump stopped. Change the line-up, then start again.'); return; }
+      running = true; b.classList.add('run'); b.textContent = 'Stop cargo pump 2';
+      var R = route(), O = result(R), open = Object.keys(st).filter(function (k) { return st[k]; });
+      tries.push({ open: open, O: O });
+      flowG = new T.Group(); sc.add(flowG);
+      R.segs.forEach(function (s) {
+        var a = new T.Vector3().fromArray(NODE[s[0]]), c = new T.Vector3().fromArray(NODE[s[1]]), len = a.distanceTo(c);
+        for (var k = 0; k < Math.ceil(len * 1.4); k++) { var p = new T.Mesh(new T.SphereGeometry(.3, 12, 10), flowM); p.userData = { a: a, b: c, u: k / Math.ceil(len * 1.4), v: 2.6 / len }; flowG.add(p); }
+      });
+      $('#out', S).innerHTML = '<div class="outcome ' + (O.ok ? 'ok' : 'no') + '">' + esc(O.s) + '</div>';
+      api.toast(O.ok ? 'Cargo is going ashore' : 'Something is wrong with the line-up', O.ok ? 'good' : 'bad');
+      api.prog(1, [{ ok: tries[0].O.ok }]);
+      if (O.ok) { api.now('The line-up works. Press <b>See results</b>.', 'done'); api.go('See results', done, true, true); }
+      else { api.now('Stop the pump, put the line-up right and start again. Or press <b>Finish</b>.', 'warn'); api.go('Finish', done, true, false); }
+    };
+    function done() {
+      var f = tries[0], fixed = tries.some(function (x) { return x.O.ok; });
+      api.finish([{
+        t: '1. Line up so cargo pump 2 discharges tank 2 to shore through the port manifold, with tank 1 kept out of the line',
+        ok: f.O.ok,
+        a: 'First start with open: ' + (f.open.join(', ') || 'none') + '. Result: ' + f.O.s + (tries.length > 1 ? (fixed ? ' Put right after ' + tries.length + ' starts.' : ' Not put right after ' + tries.length + ' starts.') : ''),
+        c: 'Open V102, V202 and V301. Shut V302, and shut V201 or V101 so tank 1 stays out of the line.',
+        n: f.O.s,
+        w: 'Trace the route from the pump to the shore hose, then shut every branch that leaves it: the line to tank 1 and the blanked starboard manifold.'
+      }]);
+    }
+    api.hint(function () { return 'Follow the pipe from tank 2 to the shore hose. Every valve on that route must be open. Every branch off it must be shut.'; });
+    paint();
+  }
+},
+
+/* ---------------- C3 INSPECTION ROUND 360 ---------------- */
+{
+  id: 'round', grp: 'C', code: 'SC3-B', part: 'B', bloom: 4, mins: '6 min', name: 'Inspection round (360°)',
+  short: 'Stand in the room, look around, report',
+  does: 'The trainee stands inside the cargo compressor room and looks all around. Anything can be tapped and inspected up close. Four things are wrong and the rest is fine. They report what they would report on a real round.',
+  lift: 'Spotting a hazard on one photo shows the trainee where to look. Here they have to look around a whole space, low and high, and judge each thing on what they find. That is how hazards are missed or found on board.',
+  any: 'Engine room round, pump room before entry, galley fire check, switchboard room, a mooring deck before arrival. In the factory a real 360° photo (or a 3D room built from the kit) carries the same tap-to-inspect points.',
+  spec: { mechanic: 'look_around_inspect', bloom: 4, part: 'challenge', scene: { pano: 'img/compressor_room_360.jpg', or_kit: 'room' }, points: [{ id: 'lamp', at: { yaw: 40, pitch: -30 }, name: 'Portable work lamp', says: 'Ordinary 230 V lamp… no Ex marking', problem: true }, '… 6-12 points, 3-5 problems'], tell_count: true },
+  intro: { sit: 'Morning round in the cargo compressor room. There are 4 problems to find.', steps: ['Drag to look around. Look high and low.', 'Tap anything to inspect it up close.', 'Mark each thing <b>Looks fine</b> or <b>Report a problem</b>, then hand in your round.'] },
+  instructor: {
+    key: ['Problems: frost and hiss at the suction line flange (leak); ordinary non-Ex work lamp; red cap left on the floor gas detector head; extraction fan stopped.', 'Fine: extinguisher, suction gauge, emergency stop, door, compressor, drip tray.'],
+    ask: ['Ask: "Which of the four would you deal with first, and why?"', 'Ask: "Why does it matter that the detector head and the fan are both low down?"']
+  },
+  build: function (api) {
+    var S = api.stage, state = {}, seen = {}, cur = null;
+    var OBJ = {
+      leak: ['Compressor suction line', 'At the flange joint: white frost on the flange and the pipe either side. A faint hissing. A thin mist sinks to the floor.', 1, 'Frost and a hiss at a cold cargo line mean cold cargo vapour or liquid is escaping.'],
+      lamp: ['Portable work lamp', 'An ordinary 230 V lamp, IP44. No "Ex" marking on its label. Its cable runs out through the door to a socket in the corridor.', 1, 'Only certified safe (Ex) electrical equipment may be used in a gas-dangerous space. An ordinary lamp can ignite gas.'],
+      det: ['Gas detector head, floor level', 'Fixed sampling head 30 cm above the floor. A red plastic cap is pushed over its inlet.', 1, 'A capped head cannot sample the air, so a leak at floor level would not be detected.'],
+      fan: ['Extraction fan No. 1', 'Low-level exhaust grille. The status panel shows RUNNING off and STOPPED lit in red. The blades are still.', 1, 'Without extraction, heavy cargo vapour builds up at floor level.'],
+      ext: ['Dry powder extinguisher', 'In its bracket. Seal unbroken. Pressure needle in the green.', 0],
+      gauge: ['Compressor suction gauge', 'Reads 0.2 bar. The placard next to it gives the normal range as 0 to 0.5 bar.', 0],
+      estop: ['Emergency stop', 'Red mushroom button for the compressor, behind a hinged guard. Guard closed, button out.', 0],
+      door: ['Door to the deck', 'Self-closing, shut. Sign: GAS-DANGEROUS SPACE. VENTILATE BEFORE ENTRY.', 0],
+      comp: ['Cargo compressor No. 2', 'Stopped. Casing dry. Coupling guard in place, all bolts present.', 0],
+      tray: ['Drip tray', 'Under the compressor skid. Dry and clean.', 0]
+    };
+    var IDS = Object.keys(OBJ), NPROB = 4;
+    S.innerHTML = '<div class="g3"><div class="v3" id="v"><div class="reticle"></div></div><div class="side3">' +
+      '<div class="card3"><h4>Your round</h4>There are <b>4 problems</b> in this room. Look all around and judge each thing you find.<div class="found" id="fd"></div><div style="margin-top:6px;font-size:15px" id="fdt"></div></div>' +
+      '<div class="card3 part" id="ic"><h4>Inspect</h4><div class="nm">Tap anything</div>Drag to look around the room, high and low. Tap an object to look at it closely.</div></div></div>';
+    var V = V3($('#v', S), { look: true, eye: [0, 1.65, 0.8], yaw: 0, pitch: -0.15, fov: 64, dim: true, tip: 'Drag to look around · tap to inspect', onPick: function (id) { if (id) inspect(id); } });
+    api.prog(NPROB + 1, 0);
+    if (!V) { api.now('This screen cannot show 3D.', 'warn'); api.go('See results', function () { api.finish([]); }, true); return; }
+    var T = V.T, sc = V.scene;
+    var wallM = new T.MeshStandardMaterial({ color: 0x46566A, metalness: .2, roughness: .8, side: T.BackSide });
+    var room = box(T, 12, 4.4, 12, wallM); room.position.y = 2.2; sc.add(room);
+    var floor = new T.Mesh(new T.PlaneGeometry(12, 12), mat(T, 0x343E48, { m: .3, r: .85 })); floor.rotation.x = -Math.PI / 2; floor.position.y = .005; sc.add(floor);
+    var grid = new T.GridHelper(12, 24, 0x222A32, 0x222A32); grid.position.y = .01; sc.add(grid);
+    [[-3, -3], [3, -3], [0, 3]].forEach(function (p) { var l = box(T, 1.8, .08, .26, mat(T, 0xffffff, { e: 0xE8F2FF })); l.position.set(p[0], 4.36, p[1]); sc.add(l); var pl = new T.PointLight(0xE8F2FF, .32, 12); pl.position.set(p[0], 3.9, p[1]); sc.add(pl); });
+    var steel = mat(T, 0x8A96A3, { m: .8, r: .35 }), paintB = mat(T, 0x5D7C99, { m: .4, r: .5 }), motorM = mat(T, 0x2F6A9F, { m: .4, r: .45 }), guardM = mat(T, 0xE9A51E, { m: .2, r: .5 }),
+      redM = mat(T, 0xD8291F, { m: .3, r: .45, e: 0x300000 }), white = mat(T, 0xF2F4F6, { m: 0, r: .5 }), dark = mat(T, 0x1C232B, { m: .2, r: .8 }), frost = mat(T, 0xEEF6FF, { m: 0, r: 1, e: 0x1A2A3A });
+    function O(id) { var g = new T.Group(); g.userData.pick = id; sc.add(g); return g; }
+    function at(m, x, y, z) { m.position.set(x, y, z); return m; }
+    var c = O('comp');
+    c.add(at(box(T, 3.2, .25, 1.5, steel), -3.2, .25, -4.2));
+    c.add(at(box(T, 1.3, 1.1, 1.1, paintB), -3.95, .92, -4.2));
+    var mo = cyl(T, .55, .55, 1.5, motorM); mo.rotation.z = Math.PI / 2; c.add(at(mo, -2.4, .92, -4.2));
+    c.add(at(box(T, .5, .62, .62, guardM), -3.05, .92, -4.2));
+    var tr = O('tray'); tr.add(at(box(T, 3.6, .1, 1.8, mat(T, 0x8A939C, { m: .7, r: .4 })), -3.2, .06, -4.2));
+    var gaugeG = O('gauge'); var gf = cyl(T, .17, .17, .06, white); gf.rotation.x = Math.PI / 2; gaugeG.add(at(gf, -3.95, 1.2, -3.62));
+    var rim = new T.Mesh(new T.TorusGeometry(.17, .025, 8, 24), steel); gaugeG.add(at(rim, -3.95, 1.2, -3.6));
+    var lk = O('leak');
+    lk.add(pipeBetween(T, [-3.6, 1.45, -4.2], [-3.6, 1.45, -5.6], .16, steel));
+    lk.add(pipeBetween(T, [-3.6, 1.45, -5.6], [5.9, 1.45, -5.6], .16, steel));
+    var fl = cyl(T, .34, .34, .14, steel); fl.rotation.z = Math.PI / 2; lk.add(at(fl, 1.6, 1.45, -5.6));
+    var ice = new T.Mesh(new T.IcosahedronGeometry(.42, 2), frost); ice.scale.set(.75, 1, 1); lk.add(at(ice, 1.6, 1.45, -5.6));
+    [.95, 2.25].forEach(function (x) { var s = cyl(T, .23, .23, .8, frost, 16); s.rotation.z = Math.PI / 2; lk.add(at(s, x, 1.45, -5.6)); });
+    var mistM = new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .22, depthWrite: false }), mist = [];
+    for (var k = 0; k < 22; k++) { var m = new T.Mesh(new T.SphereGeometry(.12, 8, 6), mistM); m.userData = { u: Math.random() }; m.userData.skip = true; sc.add(m); mist.push(m); }
+    var lp = O('lamp');
+    var lb = cyl(T, .1, .1, .46, mat(T, 0xF2C230, { m: .1, r: .5 })); lb.rotation.z = Math.PI / 2; lp.add(at(lb, 2.4, .12, -2.4));
+    var rf = new T.Mesh(new T.ConeGeometry(.22, .24, 20, 1, true), mat(T, 0xD8DEE6, { m: 1, r: .2 })); rf.rotation.z = Math.PI / 2; lp.add(at(rf, 2.1, .14, -2.4));
+    lp.add(at(new T.Mesh(new T.SphereGeometry(.08, 12, 8), mat(T, 0xFFF2C0, { e: 0xFFD66B })), 2.02, .14, -2.4));
+    var lpl = new T.PointLight(0xFFD27A, .7, 3.2); lpl.position.set(1.9, .3, -2.4); sc.add(lpl);
+    lp.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(2.65, .06, -2.4), new T.Vector3(3.8, .04, -1.2), new T.Vector3(5.2, .04, 1.4), new T.Vector3(5.92, .3, 2.2)]), 40, .03, 6), dark));
+    var dt0 = O('det'); dt0.add(at(box(T, .2, .3, .24, mat(T, 0x9AA3AD, { m: .5, r: .4 })), -5.88, .45, -1.0));
+    dt0.add(at(cyl(T, .09, .09, .12, redM, 16), -5.88, .25, -1.0));
+    var fn = O('fan'); var gr = cyl(T, .48, .48, .08, dark, 32); gr.rotation.z = Math.PI / 2; fn.add(at(gr, -5.93, .65, 2.6));
+    var rng = new T.Mesh(new T.TorusGeometry(.48, .05, 8, 32), steel); rng.rotation.y = Math.PI / 2; fn.add(at(rng, -5.9, .65, 2.6));
+    for (var b = 0; b < 4; b++) { var bl = box(T, .03, .8, .12, steel); bl.rotation.x = b * Math.PI / 4; fn.add(at(bl, -5.88, .65, 2.6)); }
+    fn.add(at(box(T, .08, .5, .42, mat(T, 0xB9C2CC, { m: .4, r: .5 })), -5.92, 1.55, 3.5));
+    fn.add(at(new T.Mesh(new T.SphereGeometry(.06, 12, 8), mat(T, 0xFF4433, { e: 0xFF2211 })), -5.86, 1.66, 3.5));
+    fn.add(at(new T.Mesh(new T.SphereGeometry(.06, 12, 8), mat(T, 0x1F4D2E, { m: .2, r: .5 })), -5.86, 1.46, 3.5));
+    var ex = O('ext'); ex.add(at(cyl(T, .15, .15, .62, redM, 20), 5.72, .55, -1.8)); ex.add(at(cyl(T, .05, .05, .14, dark, 10), 5.72, .93, -1.8)); ex.add(at(box(T, .06, .5, .3, steel), 5.92, .6, -1.8));
+    var dr = O('door'); dr.add(at(box(T, .12, 2.1, 1.1, mat(T, 0x8C9AA8, { m: .5, r: .45 })), 5.94, 1.05, 2.6)); dr.add(at(box(T, .02, .36, .62, mat(T, 0xF2C230, { m: 0, r: .5 })), 5.86, 1.6, 2.6));
+    var es = O('estop'); es.add(at(box(T, .1, .32, .32, mat(T, 0xF2C230, { m: .1, r: .5 })), 5.92, 1.4, 1.4)); var mush = cyl(T, .08, .08, .07, redM, 18); mush.rotation.z = Math.PI / 2; es.add(at(mush, 5.84, 1.4, 1.4));
+    V.frame(function (d, t) {
+      mist.forEach(function (m, i) {
+        var u = (m.userData.u + d * 0.12) % 1; m.userData.u = u;
+        var a = i * 2.4; m.position.set(1.6 + Math.cos(a) * u * 1.1, 1.4 - u * 1.35, -5.5 + Math.sin(a) * .3 + u * 1.2);
+        var s = .6 + u * 2.2; m.scale.set(s, s * .6, s);
+      });
+    });
+    function inspect(id) {
+      cur = id; seen[id] = 1; var o = OBJ[id], s = state[id];
+      $('#ic', S).innerHTML = '<h4>Inspect</h4><div class="nm">' + o[0] + '</div>' + o[1] +
+        '<div class="insp-b"><button class="fine' + (s === 'fine' ? ' on' : '') + '">Looks fine</button><button class="rep' + (s === 'rep' ? ' on' : '') + '">Report a problem</button></div>';
+      $('#ic .fine', S).onclick = function () { state[id] = 'fine'; inspect(id); };
+      $('#ic .rep', S).onclick = function () { state[id] = 'rep'; inspect(id); };
+      paint();
+    }
+    function paint() {
+      var nRep = IDS.filter(function (i) { return state[i] === 'rep'; }).length, nSeen = Object.keys(seen).length, h = '';
+      for (var k = 0; k < NPROB; k++) h += '<i class="' + (k < nRep ? 'on' : '') + '"></i>';
+      $('#fd', S).innerHTML = h;
+      $('#fdt', S).textContent = 'Reported ' + nRep + ' · looked at ' + nSeen + ' things';
+      if (nSeen < 3) api.now('Look around the room. <b>Tap</b> anything to inspect it.');
+      else if (!nRep) api.now('Found something wrong? Press <b>Report a problem</b> on it.', 'warn');
+      else api.now('Keep looking, high and low. Press <b>Hand in my round</b> when you are done.');
+      api.go('Hand in my round', done, nSeen >= 5, nRep >= NPROB);
+    }
+    function done() {
+      var items = IDS.filter(function (i) { return OBJ[i][2]; }).map(function (i, k) {
+        var s = state[i], ok = s === 'rep';
+        return { t: (k + 1) + '. ' + OBJ[i][0] + ': ' + OBJ[i][1], ok: ok, a: ok ? 'Reported it' : s === 'fine' ? 'Marked it as fine' : 'Did not inspect it', c: 'Report it', n: s ? 'This one needed reporting.' : 'You did not look at this one.', w: OBJ[i][3] };
+      });
+      var wrong = IDS.filter(function (i) { return !OBJ[i][2] && state[i] === 'rep'; });
+      items.push({ t: (items.length + 1) + '. Things that were fine', ok: !wrong.length, a: wrong.length ? 'Reported: ' + wrong.map(function (i) { return OBJ[i][0]; }).join(', ') : 'Reported none of them', c: 'None of these needed reporting: ' + IDS.filter(function (i) { return !OBJ[i][2]; }).map(function (i) { return OBJ[i][0]; }).join(', '), n: 'Something you reported was fine.', w: 'A good round reports what is wrong and trusts what is right. False reports waste the time needed for real ones.' });
+      api.finish(items);
+    }
+    api.hint(function () { return Object.keys(seen).length < 5 ? 'Turn all the way round. Two of the problems are low down near the floor.' : 'Read what each thing says. Would it be allowed, and would it work, if gas leaked?'; });
+    paint();
+  }
+},
+
+/* ---------------- C4 TEST BEFORE ENTRY ---------------- */
+{
+  id: 'gastest', grp: 'C', code: 'SC3-B', part: 'B', bloom: 3, mins: '6 min', name: 'Test before entry',
+  short: 'Zero the meter, sample every level, decide',
+  does: 'A cargo tank in cross-section, with a 4-gas meter and a sampling hose. The trainee zeroes the meter in fresh air, lowers the hose, waits for each sample to come up and records the readings. Then they decide whether anyone can go in.',
+  lift: 'The procedure is done, not described. The meter behaves like a real one: the sample takes time to travel up the hose, and the air is layered, so a test made only near the hatch looks safe. The trainee finds that out by doing it.',
+  any: 'Any procedure with an instrument and a decision: insulation testing before work, a bump test, tank sounding and ullage, checking a BA set, a blood-pressure measurement. The factory defines the instrument, its timing and its readings.',
+  spec: { mechanic: 'procedure_instrument', bloom: 3, part: 'challenge', instrument: { kind: 'four_gas', delay_s_per_m: 0.28, zero: 'fresh air only' }, profile: { depth_m: 16, O2: '20.9; falls 0.42 %/m below 10 m', LEL: '0; rises 3 %/m below 9 m', H2S: 0, CO: 0 }, must: ['zero', 'sample top/middle/bottom after the sample arrives'], decide: { options: ['…'], answer: 2 } },
+  intro: { sit: 'Cargo tank 2 has been gas-freed and ventilated. Before anyone goes in, test the atmosphere.', steps: ['Zero the meter in fresh air, with the hose end at the hatch.', 'Lower the hose (drag the end, or use the level buttons). <b>Wait</b> until the sample reaches the meter, then <b>Record</b>.', 'When you have what you need, decide whether anyone can go in.'] },
+  instructor: {
+    key: ['Fresh readings needed at top (~2 m), middle (~8 m) and bottom (~14 m).', 'Bottom: O₂ about 19.2 %, about 15 % LEL. Fails.', 'Decision: do not enter; keep ventilating, then test every level again.'],
+    ask: ['Ask: "Who recorded a reading before the sample arrived? What did it show?"', 'Ask: "Why were the readings fine at the top and not at the bottom?"']
+  },
+  build: function (api) {
+    var S = api.stage, depth = 0, shown = 0, zeroed = false, transit = null, rows = [], dec = -1, raf = 0;
+    var DEC = ['Yes. The readings near the hatch are fine', 'Yes, with a filter mask on', 'No. Keep ventilating, then test every level again', 'Yes, but only for a quick look'];
+    var DEC_N = ['The hatch is not where people will work.', 'A filter mask does not give you oxygen.', '', 'A short entry is still an entry.'];
+    var Y0 = 130, Y1 = 590, PX = (Y1 - Y0) / 16;
+    function Y(d) { return Y0 + d * PX; }
+    function air(d) { return { o2: d > 10 ? 20.9 - (d - 10) * 0.42 : 20.9, lel: d > 9 ? Math.round((d - 9) * 3) : 0, h2s: 0, co: 0 }; }
+    var ticks = '';
+    for (var m = 2; m < 16; m += 2) ticks += '<line x1="112" x2="132" y1="' + Y(m) + '" y2="' + Y(m) + '" stroke="#6E86A3"/><text x="140" y="' + (Y(m) + 5) + '" fill="#6E86A3" font-size="14" font-family="IBM Plex Mono, monospace">' + m + ' m</text>';
+    var rungs = '';
+    for (var r = Y0 + 20; r < Y1; r += 28) rungs += '<line x1="470" x2="500" y1="' + r + '" y2="' + r + '" stroke="#5B6E84" stroke-width="3"/>';
+    S.innerHTML = '<div class="gt"><div class="sect"><svg viewBox="0 0 760 620" role="img" aria-label="Cargo tank cross-section with sampling hose">' +
+      '<defs><linearGradient id="tk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F2140"/><stop offset="1" stop-color="#0A1A33"/></linearGradient></defs>' +
+      '<rect x="0" y="' + (Y0 - 14) + '" width="760" height="14" fill="#5B6E84"/>' +
+      '<rect x="110" y="' + Y0 + '" width="540" height="' + (Y1 - Y0) + '" fill="url(#tk)" stroke="#5B6E84" stroke-width="4"/>' +
+      '<rect x="340" y="' + (Y0 - 14) + '" width="80" height="14" fill="#06101F"/>' +
+      '<rect x="330" y="' + (Y0 - 44) + '" width="10" height="30" fill="#7A8794"/><rect x="420" y="' + (Y0 - 44) + '" width="10" height="30" fill="#7A8794"/>' +
+      '<line x1="470" x2="470" y1="' + Y0 + '" y2="' + Y1 + '" stroke="#5B6E84" stroke-width="4"/><line x1="500" x2="500" y1="' + Y0 + '" y2="' + Y1 + '" stroke="#5B6E84" stroke-width="4"/>' + rungs + ticks +
+      '<text x="20" y="' + (Y0 - 24) + '" fill="#9DB3CC" font-size="15" font-weight="700">DECK</text>' +
+      '<text x="160" y="' + (Y1 - 16) + '" fill="#6E86A3" font-size="15">CARGO TANK 2 · 16 m deep</text>' +
+      '<rect x="560" y="' + (Y0 - 70) + '" width="70" height="52" rx="12" fill="#E5A51A"/><rect x="570" y="' + (Y0 - 62) + '" width="50" height="22" rx="4" fill="#0B1A10"/>' +
+      '<text x="595" y="' + (Y0 - 80) + '" fill="#F2B33D" font-size="14" font-weight="700" text-anchor="middle">METER</text>' +
+      '<path id="hose" fill="none" stroke="#1C232B" stroke-width="9" stroke-linecap="round"/><path id="hose2" fill="none" stroke="#3A4656" stroke-width="5" stroke-linecap="round"/>' +
+      '<g id="end"><circle r="26" fill="rgba(46,182,248,.18)"/><circle r="11" fill="#fff" stroke="#2EB6F8" stroke-width="5"/></g>' +
+      '<text id="dl" fill="#F2F7FD" font-size="17" font-weight="700" font-family="IBM Plex Mono, monospace"></text></svg>' +
+      '<div class="lvl"><button data-d="2">Top · 2 m</button><button data-d="8">Middle · 8 m</button><button data-d="14">Bottom · 14 m</button><button data-d="0">Up to hatch</button></div></div>' +
+      '<div class="gt-side"><div class="meter"><div class="mscr"><div><div class="k">O₂ %</div><div class="v" id="mo">--</div></div><div><div class="k">LEL %</div><div class="v" id="ml">--</div></div><div><div class="k">H₂S ppm</div><div class="v" id="mh">--</div></div><div><div class="k">CO ppm</div><div class="v" id="mc">--</div></div>' +
+      '<div class="mbar"><i id="mb"></i></div><div class="mstat" id="ms"></div></div>' +
+      '<div class="mkeys"><button id="kz">Zero in fresh air</button><button id="kr">Record reading</button></div></div>' +
+      '<div class="card3" style="font-size:14.5px;padding:8px 14px"><b>Entry criteria:</b> O₂ 20.9 % · below 1 % LEL · H₂S and CO 0 ppm, at every level.</div>' +
+      '<div class="card3" style="padding:8px 12px"><table class="logt"><thead><tr><th>Depth</th><th>O₂</th><th>LEL</th><th>H₂S</th><th>CO</th></tr></thead><tbody id="lg"><tr><td colspan="5" style="color:var(--faint)">No readings yet</td></tr></tbody></table></div>' +
+      '<div id="dc"></div></div></div>';
+    var svg = $('svg', S);
+    function drawHose() {
+      var y = Y(depth);
+      var d = 'M560,' + (Y0 - 40) + ' C500,' + (Y0 - 70) + ' 420,' + (Y0 - 60) + ' 380,' + (Y0 - 20) + ' L380,' + y;
+      $('#hose', S).setAttribute('d', d); $('#hose2', S).setAttribute('d', d);
+      $('#end', S).setAttribute('transform', 'translate(380,' + y + ')');
+      var dl = $('#dl', S); dl.setAttribute('x', 404); dl.setAttribute('y', y + 6); dl.textContent = depth ? depth.toFixed(1) + ' m' : 'at hatch';
+    }
+    function setDepth(d) {
+      d = Math.max(0, Math.min(15.5, Math.round(d * 2) / 2));
+      if (d === depth) return;
+      depth = d; drawHose();
+      if (zeroed) transit = { t: 0, total: (4 + depth) * 0.28, to: depth };
+      meter();
+    }
+    var dragging = null;
+    svg.addEventListener('pointerdown', function (e) { dragging = e.pointerId; try { svg.setPointerCapture(e.pointerId); } catch (x) {} mv(e); });
+    svg.addEventListener('pointermove', function (e) { if (dragging === e.pointerId) mv(e); });
+    svg.addEventListener('pointerup', function () { dragging = null; }); svg.addEventListener('pointercancel', function () { dragging = null; });
+    function mv(e) { var rc = svg.getBoundingClientRect(), y = (e.clientY - rc.top) / rc.height * 620; setDepth((y - Y0) / PX); }
+    $$('.lvl button', S).forEach(function (b) { b.onclick = function () { setDepth(+b.dataset.d); }; });
+    function meter() {
+      var ms = $('#ms', S), kz = $('#kz', S), kr = $('#kr', S);
+      kz.disabled = zeroed; kr.disabled = !zeroed;
+      if (!zeroed) {
+        ['#mo', '#ml', '#mh', '#mc'].forEach(function (s) { $(s, S).textContent = '--'; $(s, S).classList.remove('al'); });
+        ms.textContent = depth > 0.5 ? 'Bring the hose end up to the hatch to zero in fresh air.' : 'Press ZERO before sampling.';
+        $('#mb', S).style.width = '0';
+        return;
+      }
+      var a = air(shown);
+      $('#mo', S).textContent = a.o2.toFixed(1); $('#mo', S).classList.toggle('al', a.o2 < 19.5);
+      $('#ml', S).textContent = a.lel; $('#ml', S).classList.toggle('al', a.lel >= 10);
+      $('#mh', S).textContent = a.h2s; $('#mc', S).textContent = a.co;
+      if (transit) { ms.textContent = 'Sample travelling up the hose… ' + Math.max(0, transit.total - transit.t).toFixed(1) + ' s'; $('#mb', S).style.width = (transit.t / transit.total * 100) + '%'; }
+      else { ms.textContent = (a.o2 < 19.5 || a.lel >= 10) ? 'ALARM · sample from ' + shown.toFixed(1) + ' m' : 'Steady · sample from ' + (shown ? shown.toFixed(1) + ' m' : 'the hatch'); $('#mb', S).style.width = '100%'; }
+    }
+    function tick(now) {
+      if (!S.isConnected) return;
+      var dt = tick.l ? Math.min(.1, (now - tick.l) / 1000) : 0; tick.l = now;
+      if (transit) { transit.t += dt; if (transit.t >= transit.total) { shown = transit.to; transit = null; if (air(shown).lel >= 10 || air(shown).o2 < 19.5) api.toast('The meter is alarming', 'bad'); } meter(); }
+      raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    $('#kz', S).onclick = function () {
+      if (depth > 0.5) { api.toast('Zero only in fresh air. Bring the hose end up first.'); return; }
+      zeroed = true; shown = 0; transit = null; meter(); tell();
+    };
+    $('#kr', S).onclick = function () {
+      var a = air(shown), fresh = !transit && shown === depth;
+      rows.push({ d: depth, a: a, fresh: fresh });
+      $('#lg', S).innerHTML = rows.slice(-4).map(function (r) {
+        return '<tr class="' + (r.fresh ? '' : 'stale') + '"><td>' + (r.d ? r.d.toFixed(1) + ' m' : 'hatch') + (r.fresh ? '' : ' *') + '</td><td class="' + (r.a.o2 < 20.9 ? 'al' : '') + '">' + r.a.o2.toFixed(1) + '</td><td class="' + (r.a.lel >= 1 ? 'al' : '') + '">' + r.a.lel + '</td><td>' + r.a.h2s + '</td><td>' + r.a.co + '</td></tr>';
+      }).join('') + (rows.some(function (r) { return !r.fresh; }) ? '<tr><td colspan="5" style="color:var(--faint);font-size:13px">* recorded before the sample reached the meter</td></tr>' : '');
+      if (rows.length === 1) decision();
+      tell();
+    };
+    function decision() {
+      $('#dc', S).innerHTML = '<div class="lab3" style="margin:2px 0 6px">Can anyone go in?</div><div class="dcg">' + DEC.map(function (o, k) { return '<button class="opt" data-k="' + k + '"><span class="lt">' + LET[k] + '</span>' + o + '</button>'; }).join('') + '</div>';
+      $$('#dc .opt', S).forEach(function (b) { b.onclick = function () { dec = +b.dataset.k; $$('#dc .opt', S).forEach(function (x) { x.classList.toggle('sel', x === b); }); tell(); }; });
+    }
+    function tell() {
+      if (!zeroed) api.now('First <b>zero the meter</b> in fresh air, with the hose end at the hatch.');
+      else if (!rows.length) api.now('Lower the hose. <b>Wait</b> for the sample to reach the meter, then <b>Record reading</b>.');
+      else if (dec < 0) api.now('Record more levels if you need them, then decide <b>whether anyone can go in</b>.');
+      else api.now('Ready. Press <b>Hand in</b>, or keep testing.', 'done');
+      api.go('Hand in', done, rows.length > 0 && dec >= 0, dec >= 0);
+    }
+    function done() {
+      cancelAnimationFrame(raf);
+      var fr = rows.filter(function (r) { return r.fresh; }), has = function (lo, hi) { return fr.some(function (r) { return r.d >= lo && r.d <= hi; }); };
+      var top = has(0.5, 4), mid = has(5, 10), bot = has(12, 16), stale = rows.length - fr.length;
+      var ok1 = top && mid && bot, ok2 = dec === 2;
+      api.finish([
+        { t: '1. Test the tank atmosphere at the top, middle and bottom', ok: ok1, a: (fr.length ? 'Fresh readings at ' + fr.map(function (r) { return r.d ? r.d.toFixed(1) + ' m' : 'the hatch'; }).join(', ') : 'No fresh readings') + (stale ? '. ' + stale + ' recorded before the sample arrived.' : ''), c: 'Fresh readings at the top, middle and bottom of the tank', n: !bot ? 'You have no fresh reading near the bottom.' : 'A level is missing.', w: 'Gases form layers. Heavy vapour and low oxygen collect at the bottom. A reading only counts once the sample has come all the way up the hose.' },
+        { t: '2. Can anyone go into the tank?', ok: ok2, a: DEC[dec], c: DEC[2], n: DEC_N[dec], w: 'At the bottom oxygen was about 19.2 % and flammable gas about 15 % LEL. Both fail the criteria. Keep ventilating, test every level again, and enter only when every reading passes.' }
+      ]);
+    }
+    api.prog(2, 0);
+    api.hint(function () { return !zeroed ? 'Zero needs fresh air: the hose end must be at the hatch.' : 'Wait for the bar under the readings to fill before you record. Did you test right at the bottom?'; });
+    drawHose(); meter(); tell();
+  }
+}
+];
+
+/* =====================================================================
+   The tablet frame every task runs in
+   ===================================================================== */
+var screen = $('#screen'), info = $('#info'), current = null, mode = 'T', lastItems = null;
+
+function run(task) {
+  current = task; lastItems = null;
+  screen.innerHTML =
+    '<div class="T"><div class="t-top"><span class="t-code">' + task.code + '</span><span class="t-title">' + esc(task.name) + '</span>' +
+    '<span class="t-pill ' + (task.part === 'A' ? 'a' : 'b') + '">' + (task.part === 'A' ? 'Part A · Check' : 'Part B · Find it yourself') + '</span>' +
+    '<span class="t-pill bl">Bloom ' + task.bloom + ' · ' + BLOOM[task.bloom] + '</span></div>' +
+    '<div class="t-now"><span class="dot"></span><span class="txt"></span><button class="hintb">Hint</button></div>' +
+    '<div class="t-stage"></div><div class="t-foot"><div class="t-prog"></div><button class="go" disabled>…</button></div><div class="toast"></div></div>';
+  var root = $('.T', screen), goB = $('.go', root), hintFn = null, toastT = 0;
+  var api = {
+    stage: $('.t-stage', root),
+    now: function (html, state) { var n = $('.t-now', root); n.className = 't-now' + (state ? ' ' + state : ''); $('.txt', n).innerHTML = html; },
+    go: function (label, fn, enabled, ready) { goB.textContent = label; goB.onclick = fn ? function () { if (goB.disabled) return; goB.disabled = true; fn(); } : null; goB.disabled = !enabled; goB.classList.toggle('ready', !!ready && !!enabled); },
+    prog: function (total, items) {
+      var h = '', list = Array.isArray(items) ? items : [];
+      for (var k = 0; k < total; k++) { var it = list[k]; h += '<i class="' + (it ? (it.ok === true ? 'ok' : it.ok === false ? 'no' : 'd') : '') + '"></i>'; }
+      $('.t-prog', root).innerHTML = h + '<span style="margin-left:8px">' + list.length + ' / ' + total + '</span>';
+    },
+    hint: function (fn) { hintFn = fn; },
+    // Right: say why. Wrong: say so, one short reason, never the right answer. That is for the debrief.
+    fb: function (ok, why, brief) {
+      return ok ? '<div class="why ok"><b>Right. </b>' + esc(why) + '</div>'
+        : '<div class="why no"><b>Not right. </b>' + esc(brief || '') + '<span class="later">We’ll check this one together in the debrief.</span></div>';
+    },
+    toast: function (text, kind) { var t = $('.toast', root); t.textContent = text; t.className = 'toast on ' + (kind || ''); clearTimeout(toastT); toastT = setTimeout(function () { t.className = 'toast'; }, 1800); },
+    finish: function (items, extra) { lastItems = items; result(task, items, extra); paintInfo(); }
+  };
+  $('.hintb', root).onclick = function () { var h = hintFn && hintFn(); api.toast(h || 'No hint for this step. You have what you need on screen.'); };
+  var v = el('div', 'veil');
+  v.innerHTML = '<div class="card"><div class="k' + (task.part === 'B' ? ' b' : '') + '">' + (task.part === 'A' ? 'Part A · Check what you learned' : 'Part B · Find it yourself') + ' · ' + task.mins + '</div><h2>' + esc(task.name) + '</h2><p class="sit">' + task.intro.sit + '</p><ol>' +
+    task.intro.steps.map(function (s) { return '<li><span>' + s + '</span></li>'; }).join('') + '</ol><button class="go ready">Begin</button></div>';
+  root.appendChild(v);
+  task.build(api);
+  $('.go', v).onclick = function () { v.remove(); };
+  if (mode === 'D') debrief();
+  paintInfo();
+}
+
+function result(task, items, extra) {
+  var root = $('.T', screen), ok = items.filter(function (i) { return i.ok; }).length, n = items.length, pc = n ? ok / n : 0;
+  var R = 40, C = 2 * Math.PI * R;
+  var v = el('div', 'veil');
+  v.innerHTML = '<div class="card res"><div class="res-head"><svg class="ring" viewBox="0 0 96 96"><circle cx="48" cy="48" r="' + R + '" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="9"/>' +
+    '<circle cx="48" cy="48" r="' + R + '" fill="none" stroke="' + (pc >= .75 ? '#3DDC97' : pc >= .5 ? '#F2B33D' : '#FF6B5E') + '" stroke-width="9" stroke-linecap="round" stroke-dasharray="' + (C * pc) + ' ' + C + '" transform="rotate(-90 48 48)"/>' +
+    '<text x="48" y="56" text-anchor="middle" fill="#F2F7FD" font-size="24" font-weight="800" font-family="IBM Plex Mono, monospace">' + ok + '/' + n + '</text></svg>' +
+    '<div><h2>' + (pc === 1 ? 'All correct' : pc >= .5 ? 'Good work. Some points to talk through' : 'Let’s go through this together') + '</h2><p>' + (pc === 1 ? 'Well done.' : 'The right answers are shown in the debrief, where the class checks them together.') + '</p></div></div>' +
+    '<div class="res-list">' + (extra ? '<div class="res-extra">' + extra + '</div>' : '') + items.map(function (it, k) {
+      return '<div class="ri"><div class="m ' + (it.ok ? 'ok' : 'no') + '">' + (it.ok ? '✓' : '✕') + '</div><div class="q">' + esc(it.t) + '</div>' +
+        '<div class="l ' + (it.ok ? 'c' : 'x') + '">Your answer: <b>' + esc(it.a) + '</b></div>' +
+        (it.ok ? (it.w ? '<div class="w">' + esc(it.w) + '</div>' : '')
+          : '<div class="w no">' + esc(it.n || 'Not right.') + '<span class="later">We’ll check this one together in the debrief.</span></div>') + '</div>';
+    }).join('') + '</div><div class="res-foot"><button class="ghostb">Try again</button><button class="go">Done</button></div></div>';
+  root.appendChild(v);
+  $('.ghostb', v).onclick = function () { run(task); };
+  $('.res-foot .go', v).onclick = function () { v.remove(); };
+}
+
+/* =====================================================================
+   Gallery: list, info panel, fitting, full screen
+   ===================================================================== */
+function paintList() {
+  var h = '';
+  [['A', 'a', 'Part A · Check what you learned', 'Bloom 1–2 · covers the whole module so far · 2–4 min'], ['B', 'b', 'Part B · Find it yourself', 'Bloom 3–5 · one harder problem, solved with tools on screen · 4–8 min'],
+   ['C', 'b', 'Part B · On board, in 3D', 'Bloom 3–4 · real equipment, the deck and real procedures · 5–7 min']].forEach(function (p) {
+    h += '<div class="part ' + p[1] + '"><h2>' + p[2] + '</h2><p>' + p[3] + '</p></div>';
+    TASKS.filter(function (t) { return (t.grp || t.part) === p[0]; }).forEach(function (t, k) {
+      h += '<button class="ti' + (current === t ? ' on' : '') + '" data-id="' + t.id + '"><span class="n">' + p[0] + (k + 1) + '</span><b>' + esc(t.name) + '</b><span>' + esc(t.short) + ' · Bloom ' + t.bloom + '</span></button>';
+    });
+  });
+  $('#list').innerHTML = h;
+  $$('#list .ti').forEach(function (b) { b.onclick = function () { open(b.dataset.id); }; });
+}
+function open(id) {
+  var t = TASKS.filter(function (x) { return x.id === id; })[0] || TASKS[0];
+  try { history.replaceState(null, '', '#' + t.id); } catch (e) {}
+  run(t); paintList();
+}
+function paintInfo() {
+  var t = current; if (!t) return;
+  var h = '<div class="pills"><span class="pill ' + (t.part === 'A' ? 'a' : 'b') + '">' + (t.part === 'A' ? 'Part A · Check' : 'Part B · Find it yourself') + '</span><span class="pill bl">Bloom ' + t.bloom + ' · ' + BLOOM[t.bloom] + '</span><span class="pill">' + t.mins + '</span></div>';
+  if (mode === 'D') {
+    h += '<p class="big">Debrief: ' + esc(t.name) + '</p><p>This is what the class screen shows after the task. The question and every answer are always shown in full, never cut short.</p>' +
+      '<p>The right answer stays hidden until the instructor presses <b>Show the right answer</b>, so the class works it out together first. Trainees only ever see the right answer here.</p>' +
+      '<p class="muted">The class numbers on the slide are an example class of 12. In class they come from every tablet.</p>';
+  } else if (mode === 'I') {
+    h += '<p class="big">Instructor screen: ' + esc(t.name) + '</p><p>While the class works, the instructor sees the same task and this key beside it. The key never reaches the trainee tablets.</p>' +
+      '<h3>Answer key</h3><ul>' + t.instructor.key.map(function (k) { return '<li>' + esc(k) + '</li>'; }).join('') + '</ul>' +
+      '<h3>For the debrief</h3><ul>' + t.instructor.ask.map(function (k) { return '<li>' + esc(k) + '</li>'; }).join('') + '</ul>';
+  } else {
+    h += '<p class="big">' + esc(t.name) + '</p><p>' + esc(t.does) + '</p>' +
+      '<h3>Why it teaches more</h3><p>' + esc(t.lift) + '</p>' +
+      '<h3>Same type, any course</h3><p>' + esc(t.any) + '</p>' +
+      '<h3>What the factory needs from the script</h3><pre>' + esc(JSON.stringify(t.spec, null, 2)) + '</pre>';
+  }
+  h += '<h3>Sent to the debrief</h3>' + (lastItems
+    ? '<pre class="sent">' + esc(JSON.stringify(lastItems.map(function (i) { return { t: i.t, ok: i.ok, a: i.a, c: i.c, w: i.w }; }), null, 2)) + '</pre><p class="muted">Every field is the full text, never cut. Today the factory cuts the question to 90 characters and answers to 120. Switch to <b>Debrief</b> to see the slides.</p>'
+    : '<p class="muted">Finish the task to see exactly what the debrief receives.</p>');
+  info.innerHTML = h;
+}
+function fit() {
+  var f = $('#fit'), dev = $('#device'), solo = D.body.classList.contains('solo');
+  var pad = solo ? 0 : 40, w = f.clientWidth, h = f.clientHeight;
+  if (solo) { w = window.innerWidth; h = window.innerHeight; }
+  SCALE = Math.min(w / (1280 + pad), h / (800 + pad));
+  dev.style.transform = 'scale(' + SCALE + ')';
+  dev.style.left = Math.max(0, (w - (1280 + pad) * SCALE) / 2) + 'px';
+  dev.style.top = Math.max(0, (h - (800 + pad) * SCALE) / 2) + 'px';
+}
+function setMode(m) {
+  mode = m;
+  ['T', 'I', 'D'].forEach(function (k) { var b = $('#m' + k); b.classList.toggle('on', m === k); b.setAttribute('aria-selected', m === k); });
+  debrief(); paintInfo();
+}
+/* The debrief as the class screen shows it: whole question, whole answers, right answer only on reveal. */
+function debrief() {
+  var old = $('.db', screen); if (old) old.remove();
+  if (mode !== 'D') return;
+  var d = el('div', 'db'); screen.appendChild(d);
+  var items = lastItems;
+  if (!items || !items.length) { d.innerHTML = '<div class="db-hid"><div>Do the task on the <b>Trainee</b> screen first.<br>The debrief is built from the answers the class hands in.</div></div>'; return; }
+  var k = 0, shown = false, N = 12;
+  function bar(label, n, col) { return '<div class="db-bar"><span>' + label + '</span><div class="tr"><i style="width:' + (n / N * 100) + '%;background:' + col + '"></i></div><b>' + n + '</b></div>'; }
+  function draw() {
+    var it = items[k], right = it.ok ? 9 - (k % 3) : 4 + (k % 3), len = String(it.t).length, fs = len <= 90 ? 40 : len <= 170 ? 33 : 28;
+    d.innerHTML = '<div class="db-k"><span>Debrief · ' + esc(current.name) + '</span><span class="sp"></span><span>' + (k + 1) + ' / ' + items.length + '</span></div>' +
+      '<div class="db-q" style="font-size:' + fs + 'px">' + esc(it.t) + '</div>' +
+      '<div class="db-cols"><div class="db-box"><h5>The class answered</h5>' + bar('Right', right, '#12805A') + bar('Not right', N - right, '#B4453A') +
+      '<h5 style="margin-top:16px">This tablet</h5><div class="db-ans ' + (it.ok ? 'ok' : 'no') + '"><small>' + (it.ok ? 'Right' : 'Not right') + '</small>' + esc(it.a) + '</div></div>' +
+      '<div class="db-box">' + (shown
+        ? '<h5>The right answer</h5><div class="db-right">' + esc(it.c) + '</div>' + (it.w ? '<div class="db-why">' + esc(it.w) + '</div>' : '')
+        : '<div class="db-hid"><div>What do you think the right answer is, and why?<br><br>Talk it through, then the instructor shows the answer.</div></div>') + '</div></div>' +
+      '<div class="db-foot"><button id="dbp"' + (k ? '' : ' disabled') + '>Previous</button><button class="pri" id="dbs">' + (shown ? 'Hide the answer' : 'Show the right answer') + '</button><button id="dbn"' + (k < items.length - 1 ? '' : ' disabled') + '>Next</button></div>';
+    $('#dbp', d).onclick = function () { k--; shown = false; draw(); };
+    $('#dbn', d).onclick = function () { k++; shown = false; draw(); };
+    $('#dbs', d).onclick = function () { shown = !shown; draw(); };
+  }
+  draw();
+}
+$('#mT').onclick = function () { setMode('T'); };
+$('#mI').onclick = function () { setMode('I'); };
+$('#mD').onclick = function () { setMode('D'); };
+$('#restart').onclick = function () { if (current) run(current); };
+$('#solo').onclick = function () {
+  D.body.classList.add('solo'); fit();
+  try { var p = D.documentElement.requestFullscreen && D.documentElement.requestFullscreen(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+};
+$('#exitsolo').onclick = function () {
+  D.body.classList.remove('solo'); fit();
+  try { if (D.fullscreenElement && D.exitFullscreen) D.exitFullscreen().catch(function () {}); } catch (e) {}
+};
+window.addEventListener('resize', fit);
+D.addEventListener('fullscreenchange', function () { setTimeout(fit, 50); });
+
+var start = (location.hash || '').replace('#', '');
+paintList(); fit(); open(start);
+setTimeout(fit, 120);
+})();
+</script>

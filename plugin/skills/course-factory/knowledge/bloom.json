@@ -80,7 +80,17 @@
     "spot_the_error":     {"typical": 5, "ceiling": 5, "higher": ""},
     "build_the_plan":     {"typical": 5, "ceiling": 6, "higher": "give the situation the plan must fit, and cards from more than one procedure, so the trainee composes the plan for it"},
     "timeline":           {"typical": 4, "ceiling": 5, "higher": "ask where it should have been stopped, and why - the feedback names the barrier that failed"},
-    "compare":            {"typical": 5, "ceiling": 5, "higher": ""}
+    "compare":            {"typical": 5, "ceiling": 5, "higher": ""},
+    "true_false":         {"typical": 2, "ceiling": 2, "higher": "Part A - statements that state a reason (\"... because ...\"), not a bare fact"},
+    "critique":           {"typical": 5, "ceiling": 5, "higher": ""},
+    "calculate":          {"typical": 3, "ceiling": 4, "higher": "give more data than is needed, so the trainee has to choose what applies"},
+    "predict":            {"typical": 4, "ceiling": 4, "higher": ""},
+    "explore":            {"typical": 4, "ceiling": 4, "higher": ""},
+    "investigate":        {"typical": 4, "ceiling": 5, "higher": "add a source that rules out the tempting wrong conclusion, so the trainee has to weigh the evidence"},
+    "line_up":            {"typical": 4, "ceiling": 4, "higher": ""},
+    "inspect_round":      {"typical": 4, "ceiling": 4, "higher": ""},
+    "take_apart":         {"typical": 3, "ceiling": 3, "higher": "ask what a part does from where it sits, then operate it"},
+    "test_atmosphere":    {"typical": 3, "ceiling": 4, "higher": "follow it with the entry decision as its own question"}
   },
 
   "floors": {

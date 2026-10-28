@@ -1,0 +1,608 @@
+{
+ "label": "A gas carrier's cargo deck: two tanks, the liquid header, the crossover to the port and starboard manifolds",
+ "units": "m",
+ "view": {
+  "az": 28,
+  "el": 34
+ },
+ "parts": [
+  {
+   "type": "box",
+   "size": [
+    28,
+    0.3,
+    19
+   ],
+   "at": [
+    0,
+    -0.15,
+    0
+   ],
+   "color": "#3E5A4C"
+  },
+  {
+   "type": "box",
+   "size": [
+    28,
+    0.8,
+    0.12
+   ],
+   "at": [
+    0,
+    0.4,
+    -9.5
+   ],
+   "color": "#D6DDE5"
+  },
+  {
+   "type": "box",
+   "size": [
+    28,
+    0.8,
+    0.12
+   ],
+   "at": [
+    0,
+    0.4,
+    9.5
+   ],
+   "color": "#D6DDE5"
+  },
+  {
+   "id": "t1",
+   "type": "cylinder",
+   "r": 2.2,
+   "len": 1.0,
+   "axis": "y",
+   "at": [
+    -7,
+    0.5,
+    0
+   ],
+   "color": "#C9D3DD",
+   "name": "Tank 1 dome"
+  },
+  {
+   "id": "t2",
+   "type": "cylinder",
+   "r": 2.2,
+   "len": 1.0,
+   "axis": "y",
+   "at": [
+    7,
+    0.5,
+    0
+   ],
+   "color": "#C9D3DD",
+   "name": "Tank 2 dome"
+  },
+  {
+   "type": "pipe",
+   "path": [
+    [
+     -7,
+     1.05,
+     0
+    ],
+    [
+     -7,
+     2.4,
+     0
+    ],
+    [
+     7,
+     2.4,
+     0
+    ],
+    [
+     7,
+     1.05,
+     0
+    ]
+   ],
+   "r": 0.22,
+   "mat": "pipe",
+   "flanges": "ends"
+  },
+  {
+   "type": "pipe",
+   "path": [
+    [
+     0,
+     2.4,
+     -7.2
+    ],
+    [
+     0,
+     2.4,
+     7.2
+    ]
+   ],
+   "r": 0.22,
+   "mat": "pipe"
+  },
+  {
+   "type": "flange",
+   "at": [
+    0,
+    2.4,
+    -7.35
+   ],
+   "axis": "z",
+   "r": 0.22
+  },
+  {
+   "id": "hose",
+   "type": "hose",
+   "path": [
+    [
+     0,
+     2.4,
+     -7.45
+    ],
+    [
+     0,
+     2.7,
+     -8.8
+    ],
+    [
+     0,
+     4.4,
+     -10.2
+    ],
+    [
+     0,
+     7,
+     -11.2
+    ]
+   ],
+   "r": 0.32,
+   "name": "Shore hose"
+  },
+  {
+   "id": "blank",
+   "type": "cylinder",
+   "r": 0.6,
+   "len": 0.3,
+   "axis": "z",
+   "at": [
+    0,
+    2.4,
+    7.45
+   ],
+   "color": "#C0392B",
+   "name": "Blank flange"
+  },
+  {
+   "id": "v101",
+   "type": "valve",
+   "at": [
+    -5.75,
+    2.4,
+    0
+   ],
+   "axis": "x",
+   "wheel": "grey",
+   "scale": 2,
+   "name": "V101"
+  },
+  {
+   "id": "v201",
+   "type": "valve",
+   "at": [
+    -2.25,
+    2.4,
+    0
+   ],
+   "axis": "x",
+   "wheel": "grey",
+   "scale": 2,
+   "name": "V201"
+  },
+  {
+   "id": "v102",
+   "type": "valve",
+   "at": [
+    5.75,
+    2.4,
+    0
+   ],
+   "axis": "x",
+   "wheel": "grey",
+   "scale": 2,
+   "name": "V102"
+  },
+  {
+   "id": "v202",
+   "type": "valve",
+   "at": [
+    2.25,
+    2.4,
+    0
+   ],
+   "axis": "x",
+   "wheel": "grey",
+   "scale": 2,
+   "name": "V202"
+  },
+  {
+   "id": "v301",
+   "type": "valve",
+   "at": [
+    0,
+    2.4,
+    -3.6
+   ],
+   "axis": "z",
+   "wheel": "grey",
+   "scale": 2,
+   "name": "V301"
+  },
+  {
+   "id": "v302",
+   "type": "valve",
+   "at": [
+    0,
+    2.4,
+    3.6
+   ],
+   "axis": "z",
+   "wheel": "grey",
+   "scale": 2,
+   "name": "V302"
+  },
+  {
+   "id": "f_t1_a",
+   "type": "flow",
+   "path": [
+    [
+     -7,
+     1.05,
+     0
+    ],
+    [
+     -7,
+     2.4,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_a_t1",
+   "type": "flow",
+   "path": [
+    [
+     -7,
+     2.4,
+     0
+    ],
+    [
+     -7,
+     1.05,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_a_a2",
+   "type": "flow",
+   "path": [
+    [
+     -7,
+     2.4,
+     0
+    ],
+    [
+     -4.5,
+     2.4,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_a2_a",
+   "type": "flow",
+   "path": [
+    [
+     -4.5,
+     2.4,
+     0
+    ],
+    [
+     -7,
+     2.4,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_a2_x",
+   "type": "flow",
+   "path": [
+    [
+     -4.5,
+     2.4,
+     0
+    ],
+    [
+     0,
+     2.4,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_x_a2",
+   "type": "flow",
+   "path": [
+    [
+     0,
+     2.4,
+     0
+    ],
+    [
+     -4.5,
+     2.4,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_x_b2",
+   "type": "flow",
+   "path": [
+    [
+     0,
+     2.4,
+     0
+    ],
+    [
+     4.5,
+     2.4,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_b2_x",
+   "type": "flow",
+   "path": [
+    [
+     4.5,
+     2.4,
+     0
+    ],
+    [
+     0,
+     2.4,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_b2_b",
+   "type": "flow",
+   "path": [
+    [
+     4.5,
+     2.4,
+     0
+    ],
+    [
+     7,
+     2.4,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_b_b2",
+   "type": "flow",
+   "path": [
+    [
+     7,
+     2.4,
+     0
+    ],
+    [
+     4.5,
+     2.4,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_b_t2",
+   "type": "flow",
+   "path": [
+    [
+     7,
+     2.4,
+     0
+    ],
+    [
+     7,
+     1.05,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_t2_b",
+   "type": "flow",
+   "path": [
+    [
+     7,
+     1.05,
+     0
+    ],
+    [
+     7,
+     2.4,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_x_p",
+   "type": "flow",
+   "path": [
+    [
+     0,
+     2.4,
+     0
+    ],
+    [
+     0,
+     2.4,
+     -7.2
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_p_x",
+   "type": "flow",
+   "path": [
+    [
+     0,
+     2.4,
+     -7.2
+    ],
+    [
+     0,
+     2.4,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_x_s",
+   "type": "flow",
+   "path": [
+    [
+     0,
+     2.4,
+     0
+    ],
+    [
+     0,
+     2.4,
+     7.2
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  },
+  {
+   "id": "f_s_x",
+   "type": "flow",
+   "path": [
+    [
+     0,
+     2.4,
+     7.2
+    ],
+    [
+     0,
+     2.4,
+     0
+    ]
+   ],
+   "color": "#F2B33D",
+   "r": 0.12,
+   "pick": false
+  }
+ ],
+ "labels_button": false,
+ "labels": [
+  {
+   "part": "t1",
+   "text": "Tank 1"
+  },
+  {
+   "part": "t2",
+   "text": "Tank 2"
+  },
+  {
+   "part": "hose",
+   "text": "Port manifold · shore hose"
+  },
+  {
+   "part": "blank",
+   "text": "Starboard manifold · blank"
+  },
+  {
+   "part": "v101",
+   "text": "V101",
+   "up": 40
+  },
+  {
+   "part": "v201",
+   "text": "V201",
+   "up": 40
+  },
+  {
+   "part": "v102",
+   "text": "V102",
+   "up": 40
+  },
+  {
+   "part": "v202",
+   "text": "V202",
+   "up": 40
+  },
+  {
+   "part": "v301",
+   "text": "V301",
+   "up": 40
+  },
+  {
+   "part": "v302",
+   "text": "V302",
+   "up": 40
+  }
+ ]
+}

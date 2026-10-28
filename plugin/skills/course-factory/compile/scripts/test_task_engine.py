@@ -198,7 +198,7 @@ def language_part(exe, tmp):
     sc["course_language"] = "Latvian"
     sc.update(approved_hash=tcm.cs.content_hash(sc))
     c, md = tcm.new_course(os.path.join(tmp, "lv"), sc, build=False)
-    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {"t01": {"try_tablet": False}}})
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {"t01": {"try_tablet": False}}})
     tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
     page = os.path.join(md, "tasks", [f for f in os.listdir(os.path.join(md, "tasks")) if f.startswith("sc1_")][0])
     peek = "out.dial = document.querySelector('.dial-val').textContent;"
@@ -266,7 +266,7 @@ def deck_language_part(exe, tmp):
     sc["course_language"] = "Latvian"
     sc.update(approved_hash=tcm.cs.content_hash(sc))
     c, md = tcm.new_course(os.path.join(tmp, "dlv"), sc, build=False)
-    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {"t01": {"try_tablet": False}}})
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {"t01": {"try_tablet": False}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
     page = tcm.deck(md)
     check("the Latvian deck is built with no language problem, marked lang=\"lv\", no English words passed to the engine",
@@ -389,7 +389,7 @@ FIGURE_TASKS_VENT = [
     {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the vent mast", "text": "Self-check on your tablet now.", "minutes": 2},
     {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the vent mast.", "visual": "the vent mast",
      "answer": "Vent mast*\nFuel tank\nPump", "feedback": "The tall pipe with the outlet on top."}]
-VENT_BUILD = {"module": 1, "screens": {"t01": {"try_tablet": False},
+VENT_BUILD = {"module": 1, "feedback": "now", "screens": {"t01": {"try_tablet": False},
               "q01": {"figure": "vent.kit.json", "unlabel": "answers", "areas": {"Vent mast": "vm", "Fuel tank": "tk", "Pump": "pp"}}}}
 # 2.52.0 (IGF M01 q03, 5 of 5 benchmark builds hand-built a % box for it) - a ga's funnel is a place a question can name
 FUNNEL_KIT = {"size": [640, 300], "label": "An LNG-fuelled ship, side view", "parts": [
@@ -400,7 +400,7 @@ FUNNEL_TASKS = [
     {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the funnel", "text": "Self-check on your tablet now.", "minutes": 2},
     {"id": "q01", "kind": "self-check", "set": "SC1", "mechanic": "hotspot", "question": "Tap the funnel.", "visual": "the ship",
      "answer": "Funnel*\nFuel tank", "feedback": "The exhaust goes up the funnel."}]
-FUNNEL_BUILD = {"module": 1, "screens": {"t01": {"try_tablet": False},
+FUNNEL_BUILD = {"module": 1, "feedback": "now", "screens": {"t01": {"try_tablet": False},
                 "q01": {"figure": "ship.kit.json", "areas": {"Funnel": "G.funnel", "Fuel tank": "ft"}}}}
 
 
@@ -579,7 +579,7 @@ def fixes_part(exe, tmp):
     c, md = tcm.new_course(os.path.join(tmp, "fx"), tcm.script(screens=FIXES), build=False)
     io.open(os.path.join(md, "assets", "fig", "prep.svg"), "w", encoding="utf-8").write(PREP)
     io.open(os.path.join(md, "assets", "fig", "ga.svg"), "w", encoding="utf-8").write(tcm.GA)
-    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
         "t01": {"try_tablet": False}, "q01": {"figure": "assets/fig/prep.svg"}, "m01": {"figure": "assets/fig/ga.svg"}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
     check("the fixture pages are built", code in (0, 1) and os.path.isfile(os.path.join(md, "tasks", "sc1_the_room.html")), out)
@@ -668,7 +668,7 @@ def picture_part(exe, tmp):
     tcm.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), {"gloves.png": {"source": "Own photograph, Novikontas", "licence": "own work",
         "attribution_required": False, "description": "Thick blue gloves."}})
     io.open(os.path.join(c, "working_claude", "figures", "M01", "plant.kit.json"), "w", encoding="utf-8").write(json.dumps(tcm.PLANT_KIT))
-    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
         "t01": {"try_tablet": False}, "q01": {"figure": "assets/img/gloves.png"},
         "q02": {"figure": "plant.kit.json", "unlabel": "answers", "areas": {"Master valve": "mv", "Fuel tank": "tk", "Pump": "pp"}}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
@@ -711,7 +711,7 @@ def corner_part(exe, tmp):
     os.makedirs(os.path.join(tmp, "corner"))
     c, md = tcm.new_course(os.path.join(tmp, "corner"), tcm.script(screens=screens), build=False)
     io.open(os.path.join(c, "working_claude", "figures", "M01", "zoomcorner.kit.json"), "w", encoding="utf-8").write(json.dumps(ZOOM_CORNER_KIT))
-    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
         "t01": {"try_tablet": False}, "q01": {"figure": "zoomcorner.kit.json", "areas": {"Vent mast": "VM", "Fuel tank": "FT", "Engine room": "ER"}}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
     page = os.path.join(md, "tasks", "sc1_the_corner.html")
@@ -756,7 +756,7 @@ def steps_part(exe, tmp):
     print("\n-- 2.50.1: a 3-step scenario after its last Check")
     os.makedirs(os.path.join(tmp, "st"))
     c, md = tcm.new_course(os.path.join(tmp, "st"), tcm.script(screens=STEPS), build=False)
-    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {"t01": {"try_tablet": False}}})
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {"t01": {"try_tablet": False}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
     page = os.path.join(md, "tasks", "sc1_the_steps.html")
     check("the 3-step fixture page is built", code == 0 and os.path.isfile(page), out)
@@ -928,7 +928,7 @@ def deck_fit_part(exe, tmp):
             io.open(os.path.join(img, f), "wb").write(tcm.png(1200, 800, (90 + 20 * k, 110, 140)))
         tcm.cs.save(os.path.join(img, "_photo_meta.json"), {"ship.jpg": LONG_CREDIT, "deck.jpg": LONG_CREDIT, "station.jpg": LONG_CREDIT,
                                                             "hose.jpg": MID_CREDIT})
-        tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
             # s02 asks for the split photo by name: since 2.62.1 a long full-screen photo is a photo column by default
             "s01": {"figure": "assets/img/ship.jpg"}, "s02": {"figure": "assets/img/deck.jpg", "composition": "two-col"},
             "s03": {"figure": "assets/img/station.jpg", "composition": "wide-left", "split": 0.6},
@@ -977,7 +977,7 @@ def inset_part(exe, tmp):
                "Photo: Jane Doe (Wikimedia Commons user), own work · Wikimedia Commons · CC BY-SA 4.0 · resized"}
         if cap:
             ins["caption"] = cap
-        tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
             "s01": {"figure": "assets/fig/scale.svg"}, "s02": {"figure": "tank.kit.json", "dark": True, "inset": ins},
             "s04": {"figure": "hull.svg", "dark": True, "declined_3d": "the fixture's hull stays flat"}, "t01": {"try_tablet": False}}})
         code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
@@ -1013,7 +1013,7 @@ def inset_empty_part(exe, tmp):
         s02 = {"figure": "corner.kit.json", "no_photo": ["Fuel tank", "Day tank", "Vent mast"]}
         if with_photo:
             s02["inset"] = {"photo": "assets/img/ship.jpg", "over": {"x": 8, "y": 6, "w": 170}, "credit": "J. Doe, CC BY 4.0"}
-        tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
             "s01": {"figure": "assets/fig/scale.svg"}, "s02": s02,
             "s04": {"figure": "hull.svg", "declined_3d": "the fixture's hull stays flat"}, "t01": {"try_tablet": False}}})
         code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
@@ -1045,7 +1045,7 @@ def inset_under_part(exe, tmp):
     io.open(os.path.join(md, "assets", "img", "ship.jpg"), "wb").write(tcm.png(1200, 800, (120, 130, 150)))
     tcm.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), {"ship.jpg": MID_CREDIT})
     tcm.cs.save(os.path.join(c, "working_claude", "figures", "M01", "corner.kit.json"), CORNER_KIT)
-    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
         "s01": {"figure": "assets/fig/scale.svg"},
         "s02": {"figure": "corner.kit.json", "composition": "two-col", "no_photo": ["Fuel tank", "Day tank", "Vent mast"],
                 "inset": {"photo": "assets/img/ship.jpg", "caption": "Two LNG fuel tanks on the open aft deck of a ferry."}},
@@ -1078,7 +1078,7 @@ def strip_contrast_part(exe, tmp):
     tcm.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), dict(tcm.PHOTO_META, **{"tank.jpg": dict(
         MID_CREDIT, description="A type C fuel tank on a ship's deck.", shows=["fuel tank"])}))
     tcm.cs.save(os.path.join(c, "working_claude", "figures", "M01", "corner.kit.json"), CORNER_KIT)
-    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
         "s01": {"figure": "assets/fig/scale.svg"}, "s02": {"figure": "corner.kit.json", "composition": "two-col"},
         "s04": {"figure": "hull.svg", "declined_3d": "the fixture's hull stays flat"}, "t01": {"try_tablet": False}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
@@ -1107,7 +1107,7 @@ def push_button_part(exe, tmp):
     print("\n-- 2.63.2: the kit's push_button as a task page's symbol passes the contrast check")
     os.makedirs(os.path.join(tmp, "pb"))
     c, md = tcm.new_course(os.path.join(tmp, "pb"), tcm.script(screens=PUSH_BUTTON_SC), build=False)
-    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
         "t01": {"try_tablet": False}, "q01": {"states": {"ESD push button": ["ready", "pressed"]}}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
     page = os.path.join(md, "tasks", "sc1_self_check_1.html")
@@ -1173,7 +1173,7 @@ def ship_plan_part(exe, tmp):
         meta[f] = dict(MID_CREDIT, description="The %s of an LNG-fuelled ship." % name.lower(), shows=[name.lower()])
     tcm.cs.save(os.path.join(img, "_photo_meta.json"), meta)
     tcm.cs.save(os.path.join(c, "working_claude", "figures", "M01", "plan.kit.json"), SHIP_PLAN)
-    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
         "s01": {"figure": "assets/fig/scale.svg"}, "s02": {"figure": "plan.kit.json", "composition": "two-col"},
         "s04": {"figure": "hull.svg", "declined_3d": "the fixture's hull stays flat"}, "t01": {"try_tablet": False}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
@@ -1455,7 +1455,7 @@ def review_part(exe, tmp):
     os.makedirs(os.path.join(tmp, "rv"))
     c, md = tcm.new_course(os.path.join(tmp, "rv"), tcm.script(screens=REVIEW), build=False)
     tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"),
-                {"module": 1, "screens": {"t01": {"try_tablet": False}, "t02": {"try_tablet": False}}})
+                {"module": 1, "feedback": "now", "screens": {"t01": {"try_tablet": False}, "t02": {"try_tablet": False}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
     sc = [os.path.join(md, "tasks", f) for f in sorted(os.listdir(os.path.join(md, "tasks"))) if f.startswith("sc1")] if code == 0 else []
     mc = os.path.join(md, "assessment", "check.html")
@@ -1588,7 +1588,7 @@ def patterns_part(exe, tmp):
     print("\n-- 2.63.2: the engine's and the recap's shared patterns (IGF slide review)")
     os.makedirs(os.path.join(tmp, "pat"))
     c, md = tcm.new_course(os.path.join(tmp, "pat"), tcm.script(screens=PATTERNS), build=False)
-    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {"t01": {"try_tablet": False}}})
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {"t01": {"try_tablet": False}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
     page = os.path.join(md, "tasks", "sc1_the_patterns.html")
     check("the pattern fixture page is built", code == 0 and os.path.isfile(page), out)
@@ -1633,7 +1633,7 @@ def patterns_part(exe, tmp):
         {"id": "s05", "kind": "slide", "recap": True, "title": "What to take away", "visual_kind": "none", "text": M05_S11, "minutes": 2}
     ] + json.loads(json.dumps(tcm.SCREENS[6:]))
     c, md = tcm.new_course(os.path.join(tmp, "patd"), tcm.script(screens=screens), build=False)
-    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {
         "s01": {"figure": "assets/img/ship.jpg"}, "s02": {"figure": "assets/fig/scale.svg"}, "s03": {"figure": "ga.html"},
         "s04": {"figure": "hull.svg", "dark": True, "declined_3d": "the fixture's hull section stays a flat drawing"}, "t01": {"try_tablet": False}}})
     code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "deck")
@@ -1672,7 +1672,7 @@ def main():
     try:
         os.makedirs(os.path.join(tmp, "c"))
         c, md = tcm.new_course(os.path.join(tmp, "c"), tcm.script(screens=tcm.EVERY_WAY), build=False)
-        tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {"t01": {"try_tablet": False}}})
+        tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "feedback": "now", "screens": {"t01": {"try_tablet": False}}})
         code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
         page = os.path.join(md, "tasks", "sc1_every_way.html")
         check("the fixture page is built", code == 0 and os.path.isfile(page), out)

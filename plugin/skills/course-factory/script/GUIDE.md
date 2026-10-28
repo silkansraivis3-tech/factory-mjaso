@@ -213,6 +213,24 @@ one line per item, `*` marking what is right:
 | `set_value` | `-42 °C ± 3, range -170 to 20` |
 | `panel_operate` | `control = end state` per line |
 | `scenario` | `situation => right action* \| wrong \| wrong` per step |
+| `true_false` | `statement => why` per line, the true ones `*` (2.74.0, Part A) |
+| `critique` | `claim => right correction* \| wrong` - a claim that is right: `claim => * \| decoy` |
+| `calculate` | `0.84 % vol ± 0.02`, then `! what the device shows` and `# the \| data \| sheet` lines |
+| `predict` | `13.7 ± 1.5 @ 40`, `x: name \| unit \| low \| high`, `y: ...`, `given: x \| y \| label`, `curve: x y; x y` |
+| `explore` | `find: the challenge => x > 9.5 and x <= 15` (a choice's name; `hide <readout>`) - the model is the build sheet's |
+| `investigate` | options = the conclusions; `TAG \| title: what it says` per source, the relevant ones `*` |
+| `line_up` | `goal: from => to`, `keep out: name; name`, `TAG: valve name = open \| shut` (as found) |
+| `inspect_round` | `thing: what you see when you look`, the problems `*` |
+| `take_apart` | `part: name: what it is`, `find: question => part`, `set: instruction => position` |
+| `test_atmosphere` | `space: name \| depth`, `levels: 2; 8; 14`, `O₂ % \| 20.9 @ 0; 19.2 @ 14 \| below 19.5` |
+
+**Part A, then Part B (owner, 2026-10-28 - 2.74.0).** Write each self-check as Part A - quick questions that check what
+was taught (Bloom 1-2), at least one of them on a Sub-ILO from an earlier block - then Part B: one harder task the
+trainee works out alone (Bloom 3+). Every question gets a `"brief"`: one short line said when the answer is wrong - why
+it is not right, never which answer is ("That is the boiling point of another cargo.", not "It is -42 °C."). The right
+answer is shown in the debrief, where the class checks it together. Add `"confidence": true` to a Part A choice to ask
+how sure the trainee is. The ten interactive types, how each looks on the tablet and an example of each:
+`course-task-ux` §2b and `course-task-ux/templates/interact/example_set.json`.
 
 `hotspot`, `label_diagram`, `spot_the_hazard`, `read_instrument`, `set_value` and `panel_operate` also
 name their picture (`visual_kind`, `visual`). A self-check uses 2+ mechanics, a module check 3+,

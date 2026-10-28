@@ -1,0 +1,229 @@
+{
+ "label": "The cargo compressor room, cut open at the front",
+ "units": "m",
+ "view": {
+  "az": 12,
+  "el": 22
+ },
+ "parts": [
+  {
+   "id": "room",
+   "type": "room",
+   "size": [
+    12,
+    4.4,
+    10
+   ],
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "open": "front",
+   "pick": false
+  },
+  {
+   "id": "comp",
+   "type": "pump",
+   "r": 0.6,
+   "at": [
+    -3,
+    0,
+    -2.5
+   ],
+   "name": "Cargo compressor No. 2"
+  },
+  {
+   "id": "tray",
+   "type": "drip_tray",
+   "size": [
+    3,
+    1.8
+   ],
+   "at": [
+    -3,
+    0,
+    -2.5
+   ],
+   "name": "Drip tray"
+  },
+  {
+   "id": "line",
+   "type": "pipe",
+   "path": [
+    [
+     -3,
+     1.4,
+     -2.5
+    ],
+    [
+     -3,
+     1.4,
+     -4.6
+    ],
+    [
+     5.6,
+     1.4,
+     -4.6
+    ]
+   ],
+   "r": 0.16,
+   "mat": "steel",
+   "name": "Suction line"
+  },
+  {
+   "id": "fl",
+   "type": "flange",
+   "at": [
+    1.6,
+    1.4,
+    -4.6
+   ],
+   "axis": "x",
+   "r": 0.16
+  },
+  {
+   "id": "frost",
+   "type": "sphere",
+   "r": 0.42,
+   "at": [
+    1.6,
+    1.4,
+    -4.6
+   ],
+   "color": "#EEF6FF"
+  },
+  {
+   "id": "mist",
+   "type": "gas",
+   "kind": "sink",
+   "at": [
+    1.6,
+    1.4,
+    -4.4
+   ],
+   "to": 0.05,
+   "fuel": "propane",
+   "n": 30
+  },
+  {
+   "id": "lamp",
+   "type": "cylinder",
+   "r": 0.1,
+   "len": 0.5,
+   "axis": "x",
+   "at": [
+    2.2,
+    0.12,
+    -0.6
+   ],
+   "color": "#F2C230",
+   "name": "Work lamp"
+  },
+  {
+   "id": "lamp_head",
+   "type": "cylinder",
+   "r": 0.2,
+   "len": 0.18,
+   "axis": "x",
+   "at": [
+    1.88,
+    0.14,
+    -0.6
+   ],
+   "color": "#D8DEE6"
+  },
+  {
+   "id": "det",
+   "type": "detector",
+   "at": [
+    -5.85,
+    0.45,
+    0.5
+   ],
+   "face": "down",
+   "name": "Gas detector head"
+  },
+  {
+   "id": "det_cap",
+   "type": "cylinder",
+   "r": 0.09,
+   "len": 0.12,
+   "axis": "y",
+   "at": [
+    -5.85,
+    0.3,
+    0.5
+   ],
+   "color": "#D8291F"
+  },
+  {
+   "id": "fan",
+   "type": "cylinder",
+   "r": 0.5,
+   "len": 0.1,
+   "axis": "x",
+   "at": [
+    -5.94,
+    0.65,
+    2.6
+   ],
+   "color": "#1C232B",
+   "name": "Extraction fan grille"
+  },
+  {
+   "id": "fan_lamp",
+   "type": "sphere",
+   "r": 0.08,
+   "at": [
+    -5.86,
+    1.66,
+    3.5
+   ],
+   "color": "#FF4433"
+  },
+  {
+   "id": "ext",
+   "type": "cylinder",
+   "r": 0.15,
+   "len": 0.62,
+   "axis": "y",
+   "at": [
+    5.6,
+    0.55,
+    -1.6
+   ],
+   "color": "#D8291F",
+   "name": "Fire extinguisher"
+  },
+  {
+   "id": "esd",
+   "type": "esd_button",
+   "at": [
+    5.6,
+    0,
+    1.4
+   ],
+   "h": 1.3,
+   "name": "Emergency stop"
+  },
+  {
+   "id": "gauge",
+   "type": "cylinder",
+   "r": 0.17,
+   "len": 0.06,
+   "axis": "z",
+   "at": [
+    -3,
+    1.2,
+    -1.85
+   ],
+   "color": "#F3F3F3",
+   "name": "Suction gauge"
+  }
+ ],
+ "labels_button": false,
+ "states": {
+  "mist.on": 1
+ }
+}

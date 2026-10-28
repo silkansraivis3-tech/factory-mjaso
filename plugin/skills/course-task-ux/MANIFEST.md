@@ -6,6 +6,20 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.74.0 · Part A + Part B, ten interactive types, the debrief rule (2026-10-28)
+
+- **Why.** The owner tried the twelve prototypes (`design/task-prototypes/index.html`) and approved them: tasks that are
+  practical learning, Part A then Part B, 3D and on-board activities, and feedback that never gives the right answer away
+  on the tablet - the debrief shows it. "Not 1:1, but functionality and type" - so these are types any course fills.
+- **What.** §2b. `assets/gb_interact.js` + `.css` (ten types as groups of gb_answer.js - `GB_LAB[type](el, api)`, the
+  engine asks answered / right / show / said / word); `gb_answer.js` gets the lab hook, `data-reveal="debrief"`, the
+  `brief` line, `"confidence"` and whole result items. `templates/interact/` holds the example set and three 3D scenes.
+- **Kept.** Keys, not answers, in the page (every type); tap for every drag; no typing (the calculator is buttons); the
+  same dock, Check per part, result ring and classroom message.
+- **Watch.** A 3D task loads three.js + kit3d.js on the task page (`task_pages.py` adds them only when a question needs
+  them). The explore model's expressions and a curve are in the page (base64 - the world, not the answer); the answer
+  stays a key.
+
 
 v1 was a single 210-line `SKILL.md`: no header line, no MANIFEST, no assets, no scripts. It
 was already good and already close to course-agnostic. v2 does two things and deliberately
