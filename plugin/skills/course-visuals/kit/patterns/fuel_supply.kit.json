@@ -9,15 +9,14 @@
     { "id": "T1", "type": "tank", "x": 6, "y": 70, "w": 112, "h": 56, "value": 0.62, "label": "fuel tank" },
     { "id": "X1", "type": "exchanger", "x": 372, "y": 88, "label": "vaporizer" },
     { "id": "X2", "type": "exchanger", "x": 466, "y": 88, "label": "heater" },
-    { "id": "S5", "type": "space", "x": 340, "y": 238, "w": 104, "h": 56, "style": "enclosure", "label": "gas valve unit", "labelAt": "below" },
+    { "id": "G1", "type": "gvu", "x": 340, "y": 238, "w": 104, "h": 56, "label": "gas valve unit" },
     { "id": "E1", "type": "engine", "x": 64, "y": 248, "w": 104, "h": 56, "label": "dual-fuel engine" },
     { "id": "P1", "type": "pipe", "fluid": "liquid", "from": "T1.right", "to": "X1.in", "fill": 0, "value": 0 },
     { "id": "VT", "type": "valve", "at": "P1@0.33", "size": 10, "state": false, "label": "tank valve", "labelAt": "below", "value": 1 },
     { "id": "P2", "type": "pipe", "fluid": "gas", "from": "X1.out", "to": "X2.in", "fill": 0, "value": 0 },
-    { "id": "VG", "type": "valve", "x": 392, "y": 266, "size": 10, "state": false, "value": 1 },
-    { "id": "P3", "type": "pipe", "fluid": "gas", "from": "X2.out", "to": "VG.out", "via": [[520, 88], [520, 266]], "fill": 0, "value": 0 },
+    { "id": "P3", "type": "pipe", "fluid": "gas", "from": "X2.out", "to": "G1.right", "via": [[520, 88], [520, 266]], "fill": 0, "value": 0 },
     { "id": "MV", "type": "valve", "at": "P3@0.42", "size": 10, "label": "master gas\nfuel valve", "labelAt": "left", "value": 1 },
-    { "id": "P4", "type": "pipe", "fluid": "gas", "double": true, "from": "VG.in", "to": "E1.right", "fill": 0, "value": 0 },
+    { "id": "P4", "type": "pipe", "fluid": "gas", "double": true, "from": "G1.left", "to": "E1.right", "fill": 0, "value": 0 },
     { "id": "P5", "type": "pipe", "fluid": "liquid", "from": [12, 276], "to": "E1.left", "fill": 0, "value": 0 },
     { "id": "N2", "type": "text", "text": "fuel oil", "for": "P5", "reveal": true },
     { "id": "N1", "type": "text", "text": "double-walled pipe", "for": "P4" }
@@ -31,10 +30,10 @@
     { "title": "4 · Master gas fuel valve - outside the engine room, it can shut the gas off", "line": 4,
       "play": [["S3", 0, 500], ["P3.fill", 1, 1400, 0, "linear"], ["P3", 1, 400]] },
     { "title": "5 · Gas valve unit, then the double-walled pipe to the engine", "line": 5,
-      "play": [["S5", 1, 500], ["P4.fill", 1, 1000, 300, "linear"], ["P4", 1, 400, 300], ["E1", 1, 300, 1300]] },
+      "play": [["G1", 1, 500], ["P4.fill", 1, 1000, 300, "linear"], ["P4", 1, 400, 300], ["E1", 1, 300, 1300]] },
     { "title": "6 · A gas trip: the master gas fuel valve closes, the gas line is emptied and the engine changes over to fuel oil", "line": 6,
-      "play": [["S5", 0, 400], ["MV", 0, 600], ["P3", 0, 400, 300], ["P4", 0, 400, 300], ["P4.fill", 2, 1400, 600, "linear"],
+      "play": [["G1", 0, 400], ["MV", 0, 600], ["P3", 0, 400, 300], ["P4", 0, 400, 300], ["P4.fill", 2, 1400, 600, "linear"],
                ["P5", 1, 400, 600], ["P5.fill", 1, 1000, 600, "linear"], ["N2", 1, 500, 900],
-               ["S2", 1, 500, 600], ["S3", 1, 500, 600], ["S4", 1, 500, 600], ["S5", 1, 500, 600]] }
+               ["S2", 1, 500, 600], ["S3", 1, 500, 600], ["S4", 1, 500, 600]] }
   ]
 }

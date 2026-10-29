@@ -7,6 +7,8 @@ air, a water curtain hanging from nothing, six fuel names over one tank. These a
 kit.js itself resolves (kit_relate.py), against course-visuals/knowledge/figure-truths.json:
 
   NAMED      words on the figure, a part's label or a step's title name a thing the figure does not draw (or not there)
+  BOX        (2.77.0, a BLOCK) a room or enclosure box labelled with a machine (figure-truths.json "equipment": a gas valve
+             unit, a switchboard, a motor, a propeller, a pump ...) and with none of it drawn inside - draw the real part
   LOOSE END  a pipe or hose end that meets no part, port or other pipe
   INSIDE     a deck-mounted part (vent mast, manifold, hatch) inside the hull; a tank across the deck line
   NO GAS     a vent the words say vents (or a relief valve that lifts) with no step that lets gas out of its outlet
@@ -331,6 +333,8 @@ def chk_named(F, bad):
             continue                                       # "Tank valve" is a valve
         if p.get("type") == "space" and any(e.get("room") and re.search(_rx(w).pattern + r"\s*$", lab.lower()) for w, e in got):
             continue                                       # an "OIL FUEL TANK" drawn as a space IS a (structural) tank
+        if p.get("type") == "space" and any(e.get("equipment") for w, e in got):
+            continue                                       # a box named for a machine is BOX's
         for w, e in got:
             inside = [q for t in e["parts"] for q, h in have.get(t, []) if h.get("box") and gap(h["box"], g["box"]) <= 12]
             if not inside:                                 # none anywhere: the thing is missing; elsewhere: the room may stand for it
@@ -354,6 +358,25 @@ def chk_named(F, bad):
             if not any(have.get(t) for t in e["parts"]) and not _rx(w).search(read):
                 bad("NAMED", "step %d (%r) names the %s, and the figure draws none - draw it (type %s) or say it in "
                     "the slide's words, not the step's" % (k, str(s.get("title"))[:50], w, "/".join(e["parts"][:2])), "step%d" % k)
+
+
+def chk_box(F, bad):
+    """a room or enclosure box named for a machine, with none of it drawn inside: a placeholder, not the equipment"""
+    for p, g in F.of("space"):
+        lab, b = p.get("label"), g.get("box")
+        if not isinstance(lab, str) or not b or len(lab.split()) > 4:
+            continue                                       # longer words are a card's: "IAPH check-lists: ship, shore, truck"
+        for w, e in names_in(lab):
+            if not e.get("equipment"):
+                continue
+            kinds = set(e["parts"]) | set(e.get("kin") or [])
+            if any(q.get("type") in kinds and h.get("box") and b[0] <= center(h["box"])[0] <= b[2] and b[1] <= center(h["box"])[1] <= b[3]
+                   for q, h in F.items):
+                continue                                   # an enclosure round the real thing (a GVU's casing round its valves)
+            bad("BOX", "the %s %s is a plain box labelled %r, and none of it is drawn - equipment is drawn as the real thing: "
+                "type %s in place of the box (if the kit has no such part yet, make it - PARTS.md)"
+                % (p.get("style") or "room", p.get("id") or "", lab[:40], " / ".join(e["parts"][:2])), p, BLOCK)
+            break
 
 
 def _pbox(g):
@@ -1015,7 +1038,7 @@ def analyse(spec, where="", resolved=None):
     for e in rspec.get("_relate") or []:
         bad("RELATION", e, None, BLOCK)
     F = Fig(spec, rspec, geo)
-    for fn in (chk_named, chk_loose, chk_deck, chk_gas, chk_aim, chk_grid, chk_words, chk_small, chk_truths, chk_step, chk_label,
+    for fn in (chk_named, chk_box, chk_loose, chk_deck, chk_gas, chk_aim, chk_grid, chk_words, chk_small, chk_truths, chk_step, chk_label,
                chk_way, chk_readout, chk_joins):
         fn(F, bad)
     ok = spec.get("meaning_ok") if isinstance(spec.get("meaning_ok"), dict) else {}

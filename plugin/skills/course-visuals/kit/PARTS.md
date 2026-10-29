@@ -189,6 +189,14 @@ in `kit_parts.js` is still judged - colour it for the panel (the dark-panel toke
   then the hydrogens. Its group carries `data-kit-fills`: the drawing check counts its box as content (a formula is
   atoms and bonds with air between them, as a pipe's bends are) - a kit part may set it, a spec never does.
 
+## What the kit gained from IGF Advanced (2.77.0) - never a box for a machine
+`gvu` (the ventilated gas valve unit cabinet, its block-and-bleed valves seen through the door), `switchboard` (a row of
+switchgear cubicles; value 1 live), `motor` (a foot-mounted electric motor, the shaft seen turning), `propeller` (shaft,
+boss and blades, seen turning), `lng_truck` (an LNG road tanker, its level like a tank's). The build drew these as plain
+`space` enclosures with a name in them - the fuel_supply pattern itself did. `kit_meaning.py` BOX now fails a room or box
+labelled with a machine (figure-truths.json `"equipment": true`) when none of it is drawn inside: draw the part, or, when
+the kit has none (a compressor, a nitrogen generator, a strainer, a crane, a boiler), make it by the flow above.
+
 ## After the merge
 Promotion copies the block into the factory's `kit.js` with `status: 'kit'`. When colleagues update the
 plugin, their modules get the part from `kit.js`. A module that still carries its own copy in

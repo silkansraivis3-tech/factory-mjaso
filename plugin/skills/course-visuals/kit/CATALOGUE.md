@@ -44,7 +44,7 @@ screens stay calm ISA-101 screens. A valve is automatic (an actuator) unless `"a
 - `valve` (piping) - size label labelAt(right) rotate state(false) actuator(false) trip(false) [a real valve (cast body, flanges, bonnet] - value: 1 open, 0 closed - MUST KNOW: always prints OPEN/CLOSED: state:false hides it
 - `pipe` (piping) - d (SVG path) fluid(liquid/gas/air - air: a ventilation duct) double drain [its contents and their movement] - value: flow 0 still … 1; <id>.fill 0..1 the front advancing, 1..2 emptying towards drain
 - `tank` (piping) - w h label burst [horizontal type C tank] - value: liquid level 0..1
-- `space` (piping) - w h label labelAt(below) style(room/enclosure) crosses [a room (dashed) or an enclosure (solid)] - value: 0..1 picked out
+- `space` (piping) - w h label labelAt(below) style(room/enclosure) crosses [a room (dashed) or an enclosure (solid) round parts drawn i…] - value: 0..1 picked out
 - `exchanger` (piping) - r label [a shell-and-tube heat exchanger (vaporizer, heater), its co…] - value: 0..1 heating
 - `pump` (piping) - r label [a centrifugal pump: cast volute on its foot, the impeller t…] - value: 0 stopped, 1 running
 - `engine` (piping) - w h cylinders label [dual-fuel engine block] - value: 0 stopped, 1 running
@@ -68,8 +68,8 @@ screens stay calm ISA-101 screens. A valve is automatic (an actuator) unless `"a
 - `drip_tray` (piping) - w=160 h=24 drip dripAt label labelAt='below' - value: how full the tray is, 0..1 (drops fall while it fills); labelAt: below (default) | above | left | right - ex: `{"type":"drip_tray","x":70,"y":70,"w":160,"drip":50,"label":"drip tray"}`
 - `water_curtain` (piping) - w=36 h=120 label labelAt - value: how much water is running, 0..1 - ex: `{"type":"water_curtain","x":120,"y":30,"w":40,"h":120,"label":"water curtain"}`
 - `detector` (instruments) - r=19 readAt='right' tag='GD' readout label - value: the reading (for gas: % LEL); its marks turn it amber (alarm) or red (trip) - ex: `{"type":"detector","x":150,"y":70,"unit":"% LEL","label":"near the deckhead","marks":[{"at":20,"kind":"alarm","alarm":"GAS 20 % LEL · alarm"}]}`
-- `flame` (gas-fire-machinery) - size=44 label - value: the size of the flame, 0 out .. 1 full; it stands on its point (x, y) and burns upwards - ex: `{"type":"flame","x":120,"y":80,"label":"gas burning\nat the outlet"}`
-- `curve_chart` (charts) - w=560 h=320 xaxis yaxis curves=[] point hline - value: 0..n curves, n..n+1 the point - MUST KNOW: drag: point.drag; all curves: point.curve 'all'; decades: yaxis.log - ex: `{"type":"curve_chart","x":50,"y":30,"w":340,"h":180,"xaxis":{"min":-60,"max":60,"every":20,"unit":"°C","label":"temperature °C"},"yaxis":{"min":0,"max":16,"every":4,"unit":"bar","label":"bar"}}`
+- `flame` (gas-fire-machinery) - size=44 label - value: the size of the flame, 0 out .. 1 full; it stands on its point (x, y) and burns upwards
+- `curve_chart` (charts) - w=560 h=320 xaxis yaxis curves=[] point hline - value: 0..n curves, n..n+1 the point - MUST KNOW: drag: point.drag; all curves: point.curve 'all'; decades: yaxis.log - ex: `{"type":"curve_chart","x":50,"y":30,"w":340,"h":180,"xaxis":{"min":-60,"max":60,"every":20,"unit":"°C","label":"temperature °C"}}`
 - `molecule` (charts) - formula='' atoms bonds=[] label bond=46 w h build - value: build: true: 0..1 the skeleton, 1..2 the hydrogens; else whole - MUST KNOW: by name (propane, VCM ...), not text - ex: `{"type":"molecule","x":30,"y":20,"formula":"propane","build":true}`
 - `fan` (gas-fire-machinery) - label dir(right/left/up/down) - value: 0 stopped … 1 running - ex: `{"type":"fan","x":160,"y":56,"dir":"right","r":34,"len":300,"label":"extract fan"}`
 - `spray` (gas-fire-machinery) - nozzle(monitor/hand/sprinkler) agent(powder/water/foam) angle reach reachLabel - value: 0..1 how much is discharged - ex: `{"type":"spray","x":100,"y":235,"nozzle":"monitor","agent":"powder","angle":12,"reach":270,"label":"powder monitor"}`
@@ -77,20 +77,25 @@ screens stay calm ISA-101 screens. A valve is automatic (an actuator) unless `"a
 - `push_button` (instruments) - label tag h - value: 0 ready, 1 pressed (trip red) - ex: `{"type":"push_button","x":110,"y":114,"tag":"ESD 1","label":"navigation bridge"}`
 - `person` (procedures) - wear:[helmet,visor,goggles,respirator,gloves,suit,apron,boots,scba] scale label labels - value: 0..n PPE item k appears - ex: `{"type":"person","x":110,"y":290,"scale":1.3,"wear":["goggles","respirator","apron","gloves"],"labels":{"respirator":"HALF MASK"},"label":"sample handler"}`
 - `sensor` (cutaways) - kind(catalytic/infrared) oxygen - value: 0..1 gas in the sensor - ex: `{"type":"sensor","kind":"catalytic","x":70,"y":170,"label":"catalytic"}`
-- `static_charge` (gas-fire-machinery) - bonded labels - value: 0..1 charge, 1..1.2 spark - ex: `{"type":"static_charge","x":150,"y":80,"label":"not bonded"}`
+- `static_charge` (gas-fire-machinery) - bonded labels [charge on an isolated part, the spark] - value: 0..1 charge, 1..1.2 spark
 - `fire` (gas-fire-machinery) - kind(pool/jet) w height length angle label stub - value: 0 out … 1 full - ex: `{"type":"fire","kind":"jet","x":190,"y":90,"length":430,"angle":0,"value":1,"label":"jet fire\ngas leaks under pressure"}`
 - `flammability` (charts) - lfl ufl nose:[O2 %, fuel %] (methane 5 / 15 / [12, 6] by default) - value: 0..1 along the path, or legs done with by:'legs'; the zone lights while inside - ex: `{"type":"flammability","x":70,"y":40,"w":440,"h":250,"by":"legs","zoneLabel":"flammable zone","airLabel":"air line"}`
 - `range_bar` (charts) - w lel uel max label nums - value: the concentration % - ex: `{"type":"range_bar","x":20,"y":76,"w":520,"lel":5,"uel":15,"label":"methane in air","value":0}`
-- `hose` (piping) - d empty label - value: flow 0..1; <id>.fill like a pipe's - ex: `{"type":"hose","empty":true,"label":"bunker hose","value":0,"d":"M40 28 H560 C610 28 610 88 560 88 H80 C30 88 30 148 80 148 H560 C610 148 610 208 560 208 H80 C30 208 30 268 80 268 H600"}`
-- `manifold` (piping) - outlets:[{label}] - value: 0..n outlets connected - ex: `{"type":"manifold","x":40,"y":46,"w":560,"label":"bunker manifold","outlets":[{"label":"liquid 1"},{"label":"liquid 2"},{"label":"vapour return"},{"label":"spare"}],"value":0}`
-- `spool_piece` (piping) - w t spool lift left right spoolLabel label - value: 1 fitted, 0 removed + blanks - ex: `{"type":"spool_piece","x":140,"y":104,"w":370,"t":30,"spool":130,"lift":46,"label":"gas supply line","left":"tank side","right":"engine side","spoolLabel":"spool piece","value":1}`
-- `airlock` (spaces) - w h door side (or safeW hazardW: 0 draws no side) safe hazard label state words - value: 0 both doors shut, 1 the safe-side door open, 2 the hazardous-side door open; from 1 to 2 the first door shuts before t… - ex: `{"type":"airlock","x":13,"y":20}`
+- `hose` (piping) - d empty label - value: flow 0..1; <id>.fill like a pipe's - ex: `{"type":"hose","empty":true,"label":"bunker hose","value":0}`
+- `manifold` (piping) - outlets:[{label}] - value: 0..n outlets connected - ex: `{"type":"manifold","x":40,"y":46,"w":560,"label":"bunker manifold","outlets":[{"label":"liquid 1"},{"label":"liquid 2"},{"label":"vapour return"},{"label":"spare"}]}`
+- `spool_piece` (piping) - w t spool lift left right spoolLabel label - value: 1 fitted, 0 removed + blanks - ex: `{"type":"spool_piece","x":140,"y":104,"w":370,"t":30,"spool":130,"lift":46,"label":"gas supply line","left":"tank side","right":"engine side","spoolLabel":"spool piece"}`
+- `airlock` (spaces) - w h door side (or safeW hazardW: 0 draws no side) safe hazard label state words [2.63.2: two gas-tight steel doors in two bulkheads with the…] - value: 0 both doors shut, 1 the safe-side door open, 2 the hazardous-side door open; from 1 to 2 the first door shuts before t…
 - `hatch` (spaces) - w lift label state words - value: 0 bolted shut, 1 the cover lifted clear, the opening showing - ex: `{"type":"hatch","x":40,"y":36,"w":160,"label":"hatch in the open deck"}`
 - `tank_wall` (cutaways) - w layers:[{label,kind,h}] insideLabel outsideLabel - value: 0..n layer k picked out - ex: `{"type":"tank_wall","x":20,"y":16,"w":300,"insideLabel":"LNG, -163 °C","outsideLabel":"sea","value":0}`
 - `spill` (gas-fire-machinery) - w h surface(deck/water) label from reach - value: 0..1 spread; boils from 0.5 - ex: `{"type":"spill","x":10,"y":10,"w":300,"surface":"deck","label":"LNG on deck","value":0}`
 - `wind` (gas-fire-machinery) - w rows gap dir max unit label - value: 0..1 strength - ex: `{"type":"wind","x":320,"y":56,"w":300,"rows":6,"gap":40,"dir":0,"label":"wind","value":0}`
 - `tree` (procedures) - root children:[{label, children}] w minW - value: 0..n box k lit - ex: `{"type":"tree","x":10,"y":10,"root":"Master","value":0}`
-- `lamp` (gas-fire-machinery) - label ex - value: 0 off, 1 lit - ex: `{"type":"lamp","x":100,"y":40,"label":"ordinary lamp"}`
+- `lamp` (gas-fire-machinery) - label ex [a light fitting on its cable: electrical equipment, an igni…] - value: 0 off, 1 lit
 - `spark` (gas-fire-machinery) - kind(electric/friction) to:[dx,dy] label - value: 0..1 the spark - ex: `{"type":"spark","x":60,"y":110,"to":[110,0],"label":"electric spark"}`
 - `composition_bar` (charts) - w h segments:[{label,pct}] total unit label - value: 0..n: segment k fills from its left edge from k to k+1, its name and share appear once it is half drawn - ex: `{"type":"composition_bar","x":40,"y":100,"w":460,"label":"natural gas, share by volume"}`
 - `tank_type` (cutaways) - w=150 h=110 kind='c' label - value: how much of the secondary barrier is drawn, 0..1 - ex: `{"type":"tank_type","kind":"a","x":10,"y":20,"label":"type A"}`
+- `gvu` (piping) - w=100 h=56 label - value: 1 gas through, 0 shut off (the bleed open)
+- `switchboard` (piping) - w=140 h=64 panels label - value: 0 dead, 1 live - ex: `{"type":"switchboard","x":60,"y":20,"w":140,"label":"6.6 kV switchboard"}`
+- `motor` (gas-fire-machinery) - w=96 h=50 label - value: 0 stopped, 1 running
+- `propeller` (gas-fire-machinery) - w=70 h=90 label - value: 0 stopped, 1 turning
+- `lng_truck` (piping) - w=200 h=70 cab label - value: how full its tank is, 0..1 - ex: `{"type":"lng_truck","x":20,"y":20,"label":"LNG truck","value":0.8}`

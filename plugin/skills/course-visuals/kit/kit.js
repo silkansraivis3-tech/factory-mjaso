@@ -2081,7 +2081,8 @@
   };
 
   /* space - a room or enclosure, named. value 0..1 = how strongly it is picked out.
-     style "room" (dashed boundary, default) or "enclosure" (solid: a gas valve unit, a hood) */
+     style "room" (dashed boundary, default) or "enclosure" (solid: a hood, a casing round parts drawn in it - a machine is
+     its own part: gvu, switchboard, motor ...) */
   TYPES.space = function (fig, part, g, p) {
     var w = p.w || 120, h = p.h || 90;
     /* "crosses": true - a box laid over another shape on purpose (over a tank's rounded end, over a hull's line): it is
@@ -5819,6 +5820,241 @@ KIT.define('tank_type', function (fig, part, g, p) {
     { id: 'C', type: 'tank_type', kind: 'c', x: 330, y: 20, label: 'type C' },
     { id: 'M', type: 'tank_type', kind: 'membrane', x: 490, y: 20, label: 'membrane' } ],
     steps: [ { title: 'The secondary barrier', play: [['A', 1, 800], ['B', 1, 800], ['M', 1, 800]] } ] }
+});
+/* end kit-part */
+/* kit-part: gvu */
+KIT.define('gvu', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 100, ht = p.h || 56, my = ht / 2;
+  /* the gas valve unit as it stands in the engine room: a closed, ventilated steel cabinet round the valve train, the
+     extract duct on its roof, the gas line through its walls, and through the window in its bolted door the two block
+     valves with the bleed between them (double block and bleed) */
+  var eq = h.equip(g);
+  var dx = Math.min(w - 22, w * 0.62);
+  h.body('rect', { x: dx, y: -9, width: 14, height: 11, rx: 1.5 }, eq, { mat: 'steel', shade: 'box' });     // the extract duct
+  h.body('rect', { x: dx - 3, y: -11, width: 20, height: 3, rx: 1 }, eq, { mat: 'steel' });
+  h.body('rect', { width: w, height: ht, rx: 4 }, eq, { mat: 'paintl', shade: 'box' });                     // the cabinet
+  h.body('rect', { x: 3, y: ht - 1, width: w - 6, height: 4, rx: 1 }, eq, { mat: 'paint' });               // its plinth
+  h.el('rect', { x: 4, y: 4, width: w - 8, height: ht - 8, rx: 3, 'class': 'kit-gvu-door' }, eq);
+  [[8, 8], [w - 8, 8], [8, ht - 8], [w - 8, ht - 8]].forEach(function (b) { h.el('circle', { cx: b[0], cy: b[1], r: 1.2, 'class': 'kit-m-bolt' }, eq); });
+  [0.22, 0.7].forEach(function (f) { h.body('rect', { x: 1.2, y: ht * f, width: 3.2, height: 6, rx: 0.8 }, eq, { mat: 'cast', shade: 'box' }); });   // the door hinges
+  h.body('rect', { x: w - 8, y: my - 11, width: 3, height: 9, rx: 1 }, eq, { mat: 'cast', shade: 'box' });   // the door handle
+  for (var lv = 0; lv < 3; lv++) h.el('path', { d: 'M' + (dx + 2) + ' ' + (-7 + lv * 3) + ' H' + (dx + 12), 'class': 'kit-gvu-louvre' }, eq);   // the duct's louvres
+  var wx = 12, ww = w - 24, wy = Math.max(10, ht * 0.24), wh = ht - 2 * wy;
+  h.el('rect', { x: wx, y: wy, width: ww, height: wh, rx: 2, 'class': 'kit-m-hole' }, eq);                 // the window
+  h.flange(eq, 1.5, my, 0, Math.min(16, ht * 0.4), 3);                                                      // the line through the walls
+  h.flange(eq, w - 1.5, my, 0, Math.min(16, ht * 0.4), 3);
+  var line = h.el('path', { d: 'M' + wx + ' ' + my + ' H' + (wx + ww), 'class': 'kit-gvu-line' }, g);
+  var bleed = h.el('path', { d: 'M' + (w / 2) + ' ' + my + ' V' + (wy + 2), 'class': 'kit-gvu-bleed' }, g);
+  var s = Math.min(6, wh * 0.3);
+  [wx + ww * 0.24, wx + ww * 0.76, w / 2].forEach(function (cx, i) {                                       // block, block, bleed
+    var cy = i < 2 ? my : wy + wh * 0.3, vg = h.el('g', { transform: 'translate(' + cx.toFixed(1) + ' ' + cy.toFixed(1) + ')' + (i < 2 ? '' : ' rotate(90)'),
+                                                         'class': i < 2 ? 'kit-gvu-block' : 'kit-gvu-vent' }, g);
+    h.el('path', { d: 'M' + (-s) + ' ' + (-s * 0.8) + ' L' + s + ' ' + (s * 0.8) + ' V' + (-s * 0.8) + ' L' + (-s) + ' ' + (s * 0.8) + ' Z', 'class': 'kit-gvu-v' }, vg);
+  });
+  if (p.label) h.label(fig, g, { x: w / 2, y: ht + 22, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) { g.classList.toggle('kit-gvu-open', v > 0.5); };
+}, {
+  family: 'piping',
+  status: 'kit', merged_from: "IGF Advanced M03",
+  look: 'equipment',
+  course: 'IGF Advanced', module: 'M03', made: '2026-10-29',
+  why: 'M03 s07, M06 a01, M07 a01: the gas valve unit was a plain box; the trainee sees a ventilated cabinet with the valve train in it',
+  value: '1 gas through, 0 shut off (the bleed open)',
+  css: '.kit-gvu-door{fill:none;stroke:var(--mat-edge);stroke-width:1.2}.kit-gvu-louvre{stroke:var(--mat-edge-steel);stroke-width:.9}' +
+    '.kit-gvu-line{fill:none;stroke:var(--mat-stem);stroke-width:3.5}' +
+    '.kit-gvu-open .kit-gvu-line{stroke:var(--cold);stroke-dasharray:7 9;animation:kit-flow 1.2s linear infinite}' +
+    '.kit-gvu-bleed{fill:none;stroke:var(--mat-stem);stroke-width:2}' +
+    '.kit-gvu-v{fill:var(--kit-cast);stroke:var(--mat-edge);stroke-width:1.2}' +
+    '.kit-gvu-block .kit-gvu-v{fill:var(--mat-hole);stroke:var(--txt-d)}.kit-gvu-open .kit-gvu-block .kit-gvu-v{fill:var(--kit-cast);stroke:var(--mat-edge)}' +
+    '.kit-gvu-open .kit-gvu-vent .kit-gvu-v{fill:var(--mat-hole);stroke:var(--txt-d)}',
+  example: { size: [300, 130], parts: [
+    { id: 'G', type: 'gvu', x: 100, y: 24, label: 'gas valve unit' },
+    { id: 'P1', type: 'pipe', fluid: 'gas', d: 'M10 52 H100' },
+    { id: 'P2', type: 'pipe', fluid: 'gas', d: 'M200 52 H290' } ],
+    steps: [ { title: 'Gas to the engine', play: [['G', 1, 500], ['P1', 1, 500], ['P2', 1, 500]] },
+             { title: 'Gas shut off, the bleed vents the line', play: [['G', 0, 500], ['P2', 0, 500]] } ] }
+});
+/* end kit-part */
+/* kit-part: switchboard */
+KIT.define('switchboard', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 140, ht = p.h || 64, n = p.panels || Math.max(2, Math.min(6, Math.round(w / 34))), cw = w / n;
+  /* a main switchboard as it stands in the switchboard room: a row of steel cubicles on a plinth, each with its door,
+     a meter window, two indicating lamps and the breaker's control switch */
+  var eq = h.equip(g);
+  h.body('rect', { x: -2, y: -4, width: w + 4, height: 5, rx: 1 }, eq, { mat: 'steel', shade: 'box' });     // the top cover
+  h.body('rect', { width: w, height: ht - 5, rx: 2 }, eq, { mat: 'paintl', shade: 'box' });
+  h.body('rect', { x: -2, y: ht - 6, width: w + 4, height: 6, rx: 1 }, eq, { mat: 'paint', shade: 'box' });   // the plinth
+  var lamps = [], db = ht - 9;
+  for (var i = 0; i < n; i++) {
+    var x0 = cw * i;
+    h.body('rect', { x: x0 + 2.5, y: 3, width: cw - 5, height: db - 3, rx: 1.5 }, eq, { mat: 'paintl', shade: 'box' });   // the cubicle door, raised from the frame
+    h.el('rect', { x: x0 + 2.5, y: 3, width: cw - 5, height: db - 3, rx: 1.5, 'class': 'kit-sb-door' }, eq);
+    var mw = Math.min(16, cw * 0.5);
+    h.el('rect', { x: x0 + cw / 2 - mw / 2, y: 7, width: mw, height: Math.min(11, ht * 0.18), rx: 1.5, 'class': 'kit-m-hole' }, eq);   // the meter
+    [-1, 1].forEach(function (s) { lamps.push(h.el('circle', { cx: x0 + cw / 2 + s * Math.min(5, cw * 0.15), cy: ht * 0.4, r: 2.2, 'class': 'kit-sb-lamp' }, g)); });
+    h.body('circle', { cx: x0 + cw / 2, cy: ht * 0.56, r: 3.2 }, eq, { mat: 'cast', shade: 'round' });     // the breaker's switch
+    h.el('path', { d: 'M' + (x0 + cw / 2 - 2.8) + ' ' + (ht * 0.56 + 2.8) + ' L' + (x0 + cw / 2 + 2.8) + ' ' + (ht * 0.56 - 2.8), 'class': 'kit-sb-handle' }, eq);
+    for (var v = 0; v < 3; v++) h.el('path', { d: 'M' + (x0 + cw * 0.3) + ' ' + (db - 6 + v * 2) + ' H' + (x0 + cw * 0.7), 'class': 'kit-sb-louvre' }, eq);   // the ventilation louvres
+    h.body('rect', { x: x0 + cw - 6, y: 3 + (db - 3) * 0.45, width: 2, height: 9, rx: 1 }, eq, { mat: 'cast', shade: 'box' });   // the door's lever handle
+    [0.2, 0.75].forEach(function (f) { h.el('rect', { x: x0 + 1.5, y: 3 + (db - 3) * f, width: 1.8, height: 4, rx: 0.5, 'class': 'kit-sb-hinge' }, eq); });
+  }
+  if (p.label) h.label(fig, g, { x: w / 2, y: ht + 20, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) { g.classList.toggle('kit-sb-live', v > 0.5); };
+}, {
+  family: 'piping',
+  status: 'kit', merged_from: "IGF Advanced M03",
+  look: 'equipment',
+  course: 'IGF Advanced', module: 'M03', made: '2026-10-29',
+  why: 'M03 s07: the 6.6 kV switchboard of a diesel-electric ship was a plain box',
+  value: '0 dead, 1 live',
+  css: '.kit-sb-door{fill:none;stroke:var(--mat-edge);stroke-width:1.2}' +
+    '.kit-sb-louvre{stroke:var(--mat-edge);stroke-width:.9}.kit-sb-hinge{fill:var(--kit-cast);stroke:var(--mat-edge);stroke-width:.6}' +
+    '.kit-sb-lamp{fill:var(--mat-hole);stroke:var(--mat-edge);stroke-width:1}.kit-sb-live .kit-sb-lamp{fill:var(--txt-d)}' +
+    '.kit-sb-handle{stroke:var(--mat-stem);stroke-width:2;stroke-linecap:round}',
+  example: { size: [260, 120], parts: [
+    { id: 'S', type: 'switchboard', x: 60, y: 20, w: 140, label: '6.6 kV switchboard' } ],
+    steps: [ { title: 'The switchboard is live', play: [['S', 1, 400]] } ] }
+});
+/* end kit-part */
+/* kit-part: motor */
+KIT.define('motor', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 96, ht = p.h || 50, my = ht / 2, cid = fig.uid + '-' + p.id + '-sh';
+  /* an electric motor lying on its feet: the ribbed frame between its end shields, the fan cowl at the far end, the
+     terminal box on top and the shaft out to the driven end; the shaft is seen turning */
+  var eq = h.equip(g);
+  var b0 = w * 0.16, b1 = w * 0.78, bt = 4, bb = ht - 4;
+  [b0 + (b1 - b0) * 0.2, b0 + (b1 - b0) * 0.8].forEach(function (fx) {                                      // its feet
+    h.body('path', { d: 'M' + (fx - 9) + ' ' + (ht + 3) + ' L' + (fx - 5) + ' ' + (bb - 6) + ' H' + (fx + 5) + ' L' + (fx + 9) + ' ' + (ht + 3) + ' Z' }, eq, { mat: 'paint', shade: 'box' });
+  });
+  h.body('rect', { x: b0 - 4, y: ht + 2, width: b1 - b0 + 8, height: 4, rx: 1 }, eq, { mat: 'paint' });   // the base frame
+  h.body('rect', { x: 0, y: bt + 4, width: b0 + 2, height: bb - bt - 8, rx: 5 }, eq, { mat: 'steel', shade: 'cyl' });   // the fan cowl
+  for (var j = 1; j < 4; j++) h.el('path', { d: 'M' + (b0 * j / 4) + ' ' + (bt + 7) + ' V' + (bb - 7), 'class': 'kit-motor-grille' }, eq);
+  h.body('rect', { x: b0, y: bt, width: b1 - b0, height: bb - bt, rx: 4 }, eq, { mat: 'paint', shade: 'cyl' });   // the frame
+  for (var r = 1; r < 6; r++) h.el('path', { d: 'M' + (b0 + 6) + ' ' + (bt + (bb - bt) * r / 6) + ' H' + (b1 - 6), 'class': 'kit-motor-rib' }, eq);
+  [b0 - 1, b1 - 3].forEach(function (x) { h.body('rect', { x: x, y: bt - 1, width: 4, height: bb - bt + 2, rx: 1.5 }, eq, { mat: 'cast', shade: 'box' }); });
+  var tb = Math.min(22, (b1 - b0) * 0.36), tx = (b0 + b1) / 2 - tb / 2;
+  h.body('rect', { x: tx, y: -6, width: tb, height: bt + 9, rx: 1.5 }, eq, { mat: 'cast', shade: 'box' });   // the terminal box
+  h.body('rect', { x: tx + tb * 0.2, y: -9, width: tb * 0.6, height: 4, rx: 1 }, eq, { mat: 'cast', shade: 'box' });   // the cable gland
+  var lx = (b0 + b1) / 2 - tb * 1.1;
+  h.el('path', { d: 'M' + (lx - 3) + ' ' + (bt + 0.5) + ' V' + (bt - 3) + ' Q' + (lx - 3) + ' ' + (bt - 6) + ' ' + lx + ' ' + (bt - 6) + ' Q' + (lx + 3) + ' ' + (bt - 6) + ' ' + (lx + 3) + ' ' + (bt - 3) + ' V' + (bt + 0.5), 'class': 'kit-motor-eye' }, eq);   // the lifting eye
+  h.el('rect', { x: b1 - 17, y: my - 3, width: 11, height: 6, rx: 1, 'class': 'kit-motor-plate', 'data-low-contrast': '' }, eq);   // the rating plate
+  [bt + 3, bb - 3].forEach(function (y) { [b0 + 1, b1 - 1].forEach(function (x) { h.el('circle', { cx: x, cy: y, r: 0.9, 'class': 'kit-m-bolt' }, eq); }); });   // the end shield bolts
+  h.body('rect', { x: b1 + 1, y: my - 4, width: w - b1 - 1, height: 8 }, eq, { mat: 'steel', shade: 'cyl' });   // the shaft
+  h.body('rect', { x: w - 4, y: my - 8, width: 4, height: 16, rx: 1 }, eq, { mat: 'cast', shade: 'box' });   // the coupling half
+  h.el('path', { d: 'M' + (b1 + 1) + ' ' + (my - 4) + ' h' + (w - b1 - 1) + ' v8 h' + (-(w - b1 - 1)) + ' Z' }, h.el('clipPath', { id: cid }, h.el('defs', {}, g)));
+  var turn = h.el('g', { 'clip-path': 'url(#' + cid + ')' }, g);
+  var marks = h.el('g', { 'class': 'kit-motor-turn', 'data-low-contrast': '' }, turn);   // dark marks read on the shaft's steel, not on the panel
+  for (var k = -2; k < 3; k++) h.el('path', { d: 'M' + (b1 + 3) + ' ' + (my - 4 + k * 6) + ' l' + (w - b1 - 5) + ' 4', 'class': 'kit-motor-key' }, marks);
+  if (p.label) h.label(fig, g, { x: w / 2, y: ht + 24, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) { g.classList.toggle('kit-running', v > 0.5); };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Advanced M03",
+  look: 'equipment',
+  course: 'IGF Advanced', module: 'M03', made: '2026-10-29',
+  why: 'M03 s07: the propulsion motor of a diesel-electric ship was a plain box',
+  value: '0 stopped, 1 running',
+  css: '.kit-motor-grille{stroke:var(--mat-edge-steel);stroke-width:1.2}' +
+    '.kit-motor-eye{fill:none;stroke:var(--dim-d);stroke-width:2.2;stroke-linecap:round}' +
+    '.kit-motor-plate{fill:var(--kit-steel);stroke:var(--mat-edge);stroke-width:.8}' +
+    '.kit-motor-rib{stroke:var(--mat-edge);stroke-width:1.2;opacity:.8}' +
+    '.kit-motor-key{stroke:var(--mat-edge-steel);stroke-width:1.6}' +
+    '.kit-running .kit-motor-turn{animation:kit-motor-turn .35s linear infinite}' +
+    '@keyframes kit-motor-turn{to{transform:translateY(6px)}}',
+  example: { size: [260, 120], parts: [
+    { id: 'M', type: 'motor', x: 80, y: 30, label: 'propulsion motor' } ],
+    steps: [ { title: 'The motor runs', play: [['M', 1, 400]] } ] }
+});
+/* end kit-part */
+/* kit-part: propeller */
+KIT.define('propeller', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 70, ht = p.h || 90, my = ht / 2, R = ht / 2 - 2;
+  /* a fixed-pitch propeller seen from the side: the shaft out of the stern tube, the boss and its cone, and the blades,
+     seen turning as each one sweeps past - one piece whose blades move for ever, so no shadow */
+  var eq = h.equip(g, { shadow: false });
+  var hx = w * 0.6;
+  h.body('rect', { x: 0, y: my - 4, width: hx, height: 8 }, eq, { mat: 'steel', shade: 'cyl' });                 // the shaft
+  h.body('rect', { x: 0, y: my - 8, width: Math.min(12, w * 0.18), height: 16, rx: 2 }, eq, { mat: 'paint', shade: 'box' });   // the stern tube seal
+  var blades = h.el('g', {}, eq);
+  ['b', 'a'].forEach(function (k) {
+    var bg = h.el('g', { 'class': 'kit-prop-' + k }, blades);
+    var bw = Math.min(11, w * 0.16);
+    [-1, 1].forEach(function (s) {                 // a blade: narrow at the root, broad and swept back at the tip, with its pitch face
+      var Y = function (f) { return (my + s * R * f).toFixed(1); }, X = function (d) { return (hx + bw * d).toFixed(1); };
+      h.body('path', { d: 'M' + X(-0.4) + ' ' + Y(0.12) + ' C' + X(-0.7) + ' ' + Y(0.35) + ' ' + X(-1.6) + ' ' + Y(0.55) + ' ' + X(-1.3) + ' ' + Y(0.86) +
+                         ' C' + X(-1.1) + ' ' + Y(0.99) + ' ' + X(-0.2) + ' ' + Y(1.02) + ' ' + X(0.5) + ' ' + Y(0.95) +
+                         ' C' + X(1.3) + ' ' + Y(0.8) + ' ' + X(1.1) + ' ' + Y(0.4) + ' ' + X(0.6) + ' ' + Y(0.12) + ' Z' }, bg, { mat: 'cast', shade: 'round' });
+      h.el('path', { d: 'M' + X(0.1) + ' ' + Y(0.16) + ' C' + X(-0.3) + ' ' + Y(0.5) + ' ' + X(-0.9) + ' ' + Y(0.7) + ' ' + X(-0.7) + ' ' + Y(0.9), 'class': 'kit-prop-chord', 'data-low-contrast': '' }, bg);
+    });
+  });
+  var bh = Math.min(11, ht * 0.13);
+  h.body('path', { d: 'M' + (hx - 9) + ' ' + (my - bh) + ' H' + (hx + 7) + ' Q' + (w - 1) + ' ' + my + ' ' + (hx + 7) + ' ' + (my + bh) + ' H' + (hx - 9) + ' Z' }, eq, { mat: 'cast', shade: 'cyl' });   // the boss and cone
+  h.el('path', { d: 'M' + (hx - 9) + ' ' + (my - bh) + ' V' + (my + bh), 'class': 'kit-prop-seam', 'data-low-contrast': '' }, eq);        // the boss is bolted to the shaft flange
+  h.el('circle', { cx: hx + 2, cy: my - bh * 0.45, r: 1, 'class': 'kit-m-bolt' }, eq);
+  h.el('circle', { cx: hx + 2, cy: my + bh * 0.45, r: 1, 'class': 'kit-m-bolt' }, eq);
+  if (p.label) h.label(fig, g, { x: hx, y: ht + 18, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) { g.classList.toggle('kit-running', v > 0.5); };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Advanced M03",
+  look: 'equipment',
+  course: 'IGF Advanced', module: 'M03', made: '2026-10-29',
+  why: 'M03 s07: the propeller of a diesel-electric ship was a plain box',
+  value: '0 stopped, 1 turning',
+  css: '.kit-prop-seam{fill:none;stroke:var(--mat-edge);stroke-width:1.2}' +
+    '.kit-prop-chord{fill:none;stroke:var(--mat-edge);stroke-width:1;opacity:.7}' +
+    '.kit-prop-a,.kit-prop-b{transform-box:fill-box;transform-origin:center}' +
+    '.kit-prop-b{transform:scaleY(.35)}' +
+    '.kit-running .kit-prop-a{animation:kit-prop-turn .5s linear infinite}' +
+    '.kit-running .kit-prop-b{animation:kit-prop-turn .5s linear infinite;animation-delay:-.125s}' +
+    '@keyframes kit-prop-turn{0%{transform:scaleY(1)}25%{transform:scaleY(.08)}50%{transform:scaleY(-1)}75%{transform:scaleY(.08)}100%{transform:scaleY(1)}}',
+  example: { size: [220, 140], parts: [
+    { id: 'P', type: 'propeller', x: 80, y: 20, label: 'propeller' } ],
+    steps: [ { title: 'The propeller turns', play: [['P', 1, 400]] } ] }
+});
+/* end kit-part */
+/* kit-part: lng_truck */
+KIT.define('lng_truck', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 200, ht = p.h || 70, cid = fig.uid + '-' + p.id + '-t';
+  /* an LNG road tanker (truck-to-ship bunkering): the tractor's cab, the clad cryogenic tank on the semi-trailer's
+     chassis, its wheels, and the valve cabinet at the rear where the bunker hose is coupled. The tank's lower part is cut
+     away so the LNG in it shows, as on the tank part. cab: "right" turns the truck round */
+  var root = h.el('g', p.cab === 'right' ? { transform: 'translate(' + w + ' 0) scale(-1 1)' } : {}, g);
+  var eq = h.equip(root);
+  var cw = Math.min(46, w * 0.24), wr = Math.min(8, ht * 0.12), gy = ht - wr, ch = gy - wr - 3;
+  var t0 = cw + 4, t1 = w - 16, ty = 3, th = ch - ty - 1, rr = th / 2;
+  var shape = 'M' + (t0 + rr) + ' ' + ty + ' H' + (t1 - rr) + ' A' + rr + ' ' + rr + ' 0 0 1 ' + (t1 - rr) + ' ' + (ty + th) + ' H' + (t0 + rr) + ' A' + rr + ' ' + rr + ' 0 0 1 ' + (t0 + rr) + ' ' + ty + ' Z';
+  h.el('path', { d: shape }, h.el('clipPath', { id: cid }, h.el('defs', {}, g)));
+  h.body('rect', { x: cw - 6, y: ch, width: w - cw + 2, height: 5, rx: 1 }, eq, { mat: 'paint', shade: 'box' });   // the chassis
+  h.body('path', { d: 'M2 ' + (ch + 5) + ' V' + (ht * 0.32) + ' Q2 ' + ty + ' ' + (cw * 0.35) + ' ' + ty + ' H' + cw + ' V' + (ch + 5) + ' Z' }, eq, { mat: 'white', shade: 'box' });   // the cab
+  h.el('rect', { x: 5, y: ty + 5, width: cw * 0.42, height: Math.min(14, ht * 0.22), rx: 2, 'class': 'kit-m-hole' }, eq);   // its windscreen
+  h.body('path', { d: shape }, eq, { mat: 'clad', shade: 'cyl' });                                          // the tank
+  var liq = h.el('rect', { x: t0, width: t1 - t0, 'class': 'kit-liquid kit-m-lng', 'clip-path': 'url(#' + cid + ')' }, eq);
+  var surf = h.el('line', { x1: t0, x2: t1, 'class': 'kit-surface kit-m-lngs', 'clip-path': 'url(#' + cid + ')' }, eq);
+  h.el('path', { d: shape, 'class': 'kit-vessel-o' }, eq);
+  h.body('rect', { x: w - 16, y: ht / 2 - 11, width: 14, height: 22, rx: 2 }, eq, { mat: 'steel', shade: 'box' });   // the valve cabinet
+  h.flange(eq, w - 1.5, ht / 2, 0, 12, 3);
+  [cw * 0.32, cw + 10, w - 46, w - 28].forEach(function (x) {                                               // the wheels
+    h.body('circle', { cx: x, cy: gy, r: wr }, eq, { mat: 'rubber', shade: 'round' });
+    h.el('circle', { cx: x, cy: gy, r: wr * 0.4, 'class': 'kit-m-bolt' }, eq);
+  });
+  if (p.label) h.label(fig, g, { x: w / 2, y: ht + 18, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) {
+    var y = ty + th - h.clamp(v, 0, 1) * th;
+    liq.setAttribute('y', y); liq.setAttribute('height', ty + th - y);
+    surf.setAttribute('y1', y); surf.setAttribute('y2', y);
+  };
+}, {
+  family: 'piping',
+  status: 'kit', merged_from: "IGF Advanced M05",
+  look: 'equipment',
+  course: 'IGF Advanced', module: 'M05', made: '2026-10-29',
+  why: 'truck-to-ship bunkering figures drew the LNG truck as a plain box',
+  value: 'how full its tank is, 0..1',
+  example: { size: [300, 120], parts: [
+    { id: 'T', type: 'lng_truck', x: 20, y: 20, label: 'LNG truck', value: 0.8 },
+    { id: 'H', type: 'hose', d: 'M220 55 C250 55 260 90 290 90' } ],
+    steps: [ { title: 'The truck delivers', play: [['T', 0.3, 1600], ['H', 1, 400]] } ] }
 });
 /* end kit-part */
 /* kit-parts: end */

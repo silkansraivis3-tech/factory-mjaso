@@ -129,6 +129,19 @@ def rules_part():
     p = lines(small([{"id": "T", "type": "tank", "x": 40, "y": 200, "w": 160, "h": 60},
                         {"id": "P", "type": "pipe", "d": "M200 230 H330", "open": "end"}]))
     check("... and passes when it says it is open to the air", not has(p, "LOOSE END"), p)
+    tank = {"id": "T", "type": "tank", "x": 40, "y": 200, "w": 160, "h": 60}
+    for lab, part in (("gas valve unit", "gvu"), ("6.6 kV switchboard", "switchboard"), ("propulsion motor", "motor"),
+                      ("propeller", "propeller"), ("LNG truck", "lng_truck")):
+        p = lines(small([dict(tank), {"id": "B", "type": "space", "style": "enclosure", "x": 300, "y": 200, "w": 100, "h": 50, "label": lab}]))
+        check("BOX: a plain box labelled %r fails and names the part (IGF Advanced M03 s07)" % lab, has(p, "BOX B", "type " + part), p)
+    p = lines(small([dict(tank), {"id": "B", "type": "space", "style": "enclosure", "x": 300, "y": 200, "w": 100, "h": 50, "label": "gas valve unit"},
+                     {"id": "V", "type": "valve", "x": 350, "y": 225}]))
+    check("... a gas valve unit enclosure with its valve drawn inside passes", not has(p, "BOX"), p)
+    p = lines(small([dict(tank), {"id": "B", "type": "space", "style": "enclosure", "x": 300, "y": 200, "w": 160, "h": 50,
+                                  "label": "IAPH check-lists: ship, shore, truck"}]))
+    check("... a card of words that mentions a truck passes", not has(p, "BOX"), p)
+    p = lines(small([dict(tank), {"id": "B", "type": "space", "x": 300, "y": 160, "w": 160, "h": 120, "label": "switchboard room"}]))
+    check("... a room named for what is in it passes", not has(p, "BOX"), p)
     vent = [{"id": "T", "type": "tank", "x": 40, "y": 250, "w": 160, "h": 60}, {"id": "V", "type": "vent", "x": 300, "y": 80, "mast": 160},
             {"id": "P", "type": "pipe", "from": "T.top", "to": "V.inlet"}]
     p = lines(small(vent, [{"title": "The relief valve lifts and the gas vents", "play": [["T", 1, 300]]}]))

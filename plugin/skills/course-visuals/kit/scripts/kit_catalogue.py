@@ -42,7 +42,7 @@ MUST_KNOW = {
     "valve": "always prints OPEN/CLOSED: state:false hides it",
 }
 MAX_VALUE = 120
-MAX_EX = 200               # (merge, 2.72.7) both lines' new parts took CATALOGUE.md past 15 KB at 300
+MAX_EX = 170               # (merge, 2.72.7) both lines' new parts took CATALOGUE.md past 15 KB at 300; 2.77.0's five at 200
 OPTS_RX = r"((?:`[^`]*`\s*(?:\([^)]*\)\s*)?)+)"
 FAMILY = {"instruments": "instruments", "piping and flow": "piping", "ship and spaces": "spaces", "cutaways": "cutaways",
           "gas, fire and machinery": "gas-fire-machinery", "charts": "charts", "procedures": "procedures"}
@@ -165,6 +165,8 @@ def example_part(meta, name):
     if not pick:
         return ""
     pick = {k: v for k, v in pick.items() if k not in ("id", "type")}
+    if not set(pick) - {"x", "y", "label"}:
+        return ""                                      # a place and a name: the options say as much (2.77.0, the 15 KB)
     pick = {"type": name, **pick}
     while True:                                        # too long: drop the last keys, the line stays valid JSON
         s = json.dumps(pick, ensure_ascii=False, separators=(",", ":"))
