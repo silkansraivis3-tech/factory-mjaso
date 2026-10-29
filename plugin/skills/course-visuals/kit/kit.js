@@ -1256,7 +1256,11 @@
     var m = /drop-shadow\(\s*(rgba?\([^)]*\)|#[0-9a-f]+|[a-z]+)\s+(-?[\d.]+)px\s+(-?[\d.]+)px(?:\s+([\d.]+)px)?\s*\)/i.exec(fl);
     var b = null, ctm = null;
     try { b = n.getBBox(); ctm = n.getScreenCTM(); } catch (e) { b = null; }
-    if (!m || !b || !ctm || !(b.width || b.height)) return done();
+    if (!m) return done();
+    /* in a moving drawing the live filter goes now, not when the picture is ready: a slow or failed picture (a headless
+       browser, a busy tablet) leaves the piece without its shadow for a moment, never with the filter */
+    n.classList.add('kit-baked');
+    if (!b || !ctm || !(b.width || b.height)) return done();
     var dx = +m[2], dy = +m[3], blur = +(m[4] || 0), pad = 2 * blur + Math.max(Math.abs(dx), Math.abs(dy)) + 2;
     var x0 = b.x - pad, y0 = b.y - pad, W = b.width + 2 * pad, H = b.height + 2 * pad;
     var s = Math.min(4, Math.max(1, Math.sqrt(ctm.a * ctm.a + ctm.b * ctm.b) * (root.devicePixelRatio || 1)));
@@ -1287,7 +1291,7 @@
         im.setAttribute('width', W.toFixed(2)); im.setAttribute('height', H.toFixed(2));
         n.__kitShade = g; n.__kitSig = sig;
         n.classList.add('kit-baked');
-      } catch (e) { unshade(n); }                       // a picture the canvas will not give back: the live shadow stays
+      } catch (e) { unshade(n); n.classList.add('kit-baked'); }   // a picture the canvas will not give back: no shadow
       done();
     };
     img.onerror = function () { done(); };
@@ -1299,13 +1303,14 @@
   function bake(f) {
     f.__bakeT = 0;
     var svg = f.svg, r = svg.getBoundingClientRect ? svg.getBoundingClientRect() : null;
-    if (f.raf || f.laying || !r || r.width < 2 || r.height < 2) return;   // a step is playing, or it is not on screen
+    if (f.laying && r && r.width >= 2) return bakeSoon(f);                // on screen, still being laid out: once it is
+    if (f.raf || f.laying || !r || r.width < 2 || r.height < 2) return svg.removeAttribute('data-kit-baking');   // a step is playing, or it is not on screen
     var live = endless(svg);
     svg.classList.toggle('kit-moving', live.length > 0);
-    if (!live.length) return;
+    if (!live.length) return svg.removeAttribute('data-kit-baking');
     var skip = live.map(function (a) { return a.effect.target; });
     var todo = q(svg, '.kit-m-drop').filter(function (n) { return !notDrawn(n, svg); });
-    if (!todo.length) return;
+    if (!todo.length) return svg.removeAttribute('data-kit-baking');
     var left = todo.length;
     svg.setAttribute('data-kit-baking', '');            // the motion audit waits for this to go
     function done() { if (--left <= 0) svg.removeAttribute('data-kit-baking'); }
@@ -1314,17 +1319,30 @@
     });
   }
   function bakeSoon(f) {
-    if (!f.__bakeT) f.__bakeT = setTimeout(function () { bake(f); }, 30);
+    if (f.__bakeT) return;
+    f.svg.setAttribute('data-kit-baking', '');           // from the moment it is due: the motion audit waits for it
+    f.__bakeT = setTimeout(function () { bake(f); }, 30);
   }
 
   function watch(f) {
     FIGS.push(f);
     f.on('step', function () { bakeSoon(f); });
     f.on('settled', function () { bakeSoon(f); });
+    /* a slide shown again starts its drawing's endless animations a frame after it is laid out: baked when they start,
+       and whenever the drawing comes into view, however its slide was shown */
+    f.svg.addEventListener('animationstart', function () { bakeSoon(f); });
+    if (root.IntersectionObserver) {
+      try {
+        new root.IntersectionObserver(function (es) {
+          if (es.some(function (e) { return e.isIntersecting; })) setTimeout(function () { bakeSoon(f); }, 0);
+        }).observe(f.svg);
+      } catch (e) { /* baked on its steps */ }
+    }
     if (root.ResizeObserver) {
       /* after the notification, never inside it: the layout may change the drawing's height, and a change made inside
          a ResizeObserver callback is reported as a script error ("loop completed with undelivered notifications") */
-      try { new root.ResizeObserver(function () { setTimeout(function () { f.layout(); }, 0); }).observe(f.svg); }
+      /* and baked again: a figure left moving while its slide was hidden is baked the moment it is shown (L65) */
+      try { new root.ResizeObserver(function () { setTimeout(function () { f.layout(); bakeSoon(f); }, 0); }).observe(f.svg); }
       catch (e) { /* laid out on its first step */ }
     }
   }
@@ -2163,7 +2181,7 @@
     }
     var line = el('path', { d: p.d, 'class': 'kit-pipe' }, g);
     el('path', { d: p.d, 'class': 'kit-bore' }, g);
-    var mask = el('mask', { id: mid, maskUnits: 'userSpaceOnUse', x: -4000, y: -4000, width: 8000, height: 8000 }, el('defs', {}, g));
+    var mask = el('mask', { id: mid, maskUnits: 'userSpaceOnUse', x: -4000, y: -4000, width: 8000, height: 8000, 'data-kit-front': '' }, el('defs', {}, g));
     var reach = el('path', { d: p.d, 'class': 'kit-reach' }, mask);
     var inside = el('g', {}, g);                       // masked only while the front stands part-way (front(), L65)
     el('path', { d: p.d, 'class': 'kit-content' }, inside);
@@ -2815,6 +2833,9 @@
          /* L65 (2.78.0): a soft edge as a fill, never a blur filter; a line's fluid front, masked only while part-way */
          soft: soft, front: front },
     figures: FIGS,
+    /* L65: the figures in scope (a slide just shown) baked now if they move - the motion audit calls it, as a deck that
+       showed the slide would */
+    bake: function (scope) { FIGS.forEach(function (f) { if (f && f.svg && (!scope || scope.contains(f.svg))) bakeSoon(f); }); },
     /* the label solver alone, in plain numbers - for any drawing that can say where its outlines are (a 3D figure's
        projected parts); see solveLabels() */
     solveLabels: solveLabels,
@@ -5163,7 +5184,7 @@ KIT.define('hose', function (fig, part, g, p) {
   /* the corrugation rings and the bore are dark on the hose's own body: quiet on purpose, the body and the fluid carry it */
   h.el('path', { d: p.d, 'class': 'kit-hose-rib', 'data-low-contrast': '' }, g);
   h.el('path', { d: p.d, 'class': 'kit-hose-bore', 'data-low-contrast': '' }, g);
-  var mask = h.el('mask', { id: mid, maskUnits: 'userSpaceOnUse', x: -4000, y: -4000, width: 8000, height: 8000 }, h.el('defs', {}, g));
+  var mask = h.el('mask', { id: mid, maskUnits: 'userSpaceOnUse', x: -4000, y: -4000, width: 8000, height: 8000, 'data-kit-front': '' }, h.el('defs', {}, g));
   var reach = h.el('path', { d: p.d, 'class': 'kit-reach' }, mask);
   var inside = h.el('g', {}, g);                         // masked only while the front stands part-way (h.front, L65)
   h.el('path', { d: p.d, 'class': 'kit-hose-fluid', 'data-low-contrast': '' }, inside);      // translucent liquid, as the kit's own pipe content

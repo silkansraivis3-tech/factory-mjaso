@@ -12,7 +12,9 @@ WHAT IS IN IT - only what the class was shown, from the APPROVED script (nothing
   the slide's photographs (its figure, its tiles, its inset; a 3D scene's poster) with their record and credit;
   a task slide as its title only. NOT the instructor's notes, a check's questions or answers, or a task's key.
 On the page: the contents (each slide a link), a search box that keeps only the slides that hold the words, and a tap on a
-photo shows it at full width. It works offline, on its own, in the tablet's frame (the classroom adds its own style).
+photo opens it in the course's one picture viewer (gb_zoom, L51). The hidden a.gbt-topback is the Android Back button's
+hook, and steps back in history as the task pages do. It works offline, on its own, in the tablet's frame (the classroom
+adds its own style).
 
 WHICH MODULES A TRAINEE SEES is the classroom's choice (join.js): the modules up to the one open now - never the ones
 still to come - and the whole course when no module is open.
@@ -33,11 +35,11 @@ import workspace  # noqa: E402
 
 PICTURE = re.compile(r"\.(?:jpe?g|png|webp|gif)$", re.I)
 WORDS = {
-    "en": {"handout": "Handout", "module": "Module", "contents": "Contents", "search": "Search the handout",
+    "en": {"handout": "Handout", "back": "Back", "module": "Module", "contents": "Contents", "search": "Search the handout",
            "none": "Nothing in this handout has these words.", "task": "Task", "found": "slides hold these words"},
-    "lv": {"handout": "Izdales materiāls", "module": "Modulis", "contents": "Saturs", "search": "Meklēt materiālā",
+    "lv": {"handout": "Izdales materiāls", "back": "Atpakaļ", "module": "Modulis", "contents": "Saturs", "search": "Meklēt materiālā",
            "none": "Šajā materiālā šo vārdu nav.", "task": "Uzdevums", "found": "slaidos ir šie vārdi"},
-    "ru": {"handout": "Раздаточный материал", "module": "Модуль", "contents": "Содержание", "search": "Поиск по материалу",
+    "ru": {"handout": "Раздаточный материал", "back": "Назад", "module": "Модуль", "contents": "Содержание", "search": "Поиск по материалу",
            "none": "В этом материале таких слов нет.", "task": "Задание", "found": "слайдов с этими словами"},
 }
 e, a = cm.e, cm.a
@@ -71,8 +73,7 @@ section ul{margin:8px 0;padding-left:1.25em}
 section li{margin:6px 0}
 section.task h2{font-size:19px;color:var(--steel)}
 figure{margin:14px 0}
-figure img{display:block;max-width:100%;max-height:420px;border-radius:12px;cursor:zoom-in}
-figure.big img{max-height:none;width:100%;cursor:zoom-out}
+figure img{display:block;max-width:100%;max-height:420px;border-radius:12px}
 figcaption{font-size:14px;color:var(--steel);margin-top:6px}
 mark{background:#ffe8a3;color:inherit;border-radius:3px}
 .empty{color:var(--steel);font-style:italic;display:none}
@@ -100,7 +101,8 @@ JS = r"""
     info.textContent=words.length&&n?n+' '+info.getAttribute('data-found'):'';
   }
   box.addEventListener('input',run);
-  document.addEventListener('click',function(ev){var f=ev.target.closest&&ev.target.closest('figure');if(f)f.classList.toggle('big');});
+  var back=document.querySelector('.gbt-topback');
+  if(back)back.addEventListener('click',function(ev){ev.preventDefault();try{if(history.length>1)history.back();}catch(x){}});
 })();
 """
 
@@ -179,13 +181,15 @@ def page(course_title, n, title, screens, sheet, mdir, lang):
         "<!doctype html>", '<html lang="%s">' % a(lang), "<head>", '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
         "<title>%s - %s - %s</title>" % (e(w["handout"]), e(head), e(title)),
-        '<link rel="stylesheet" href="../assets/gb_tokens.css">', "<style>%s</style>" % CSS, "</head>", "<body>",
+        '<link rel="stylesheet" href="../assets/gb_tokens.css">', '<link rel="stylesheet" href="../assets/gb_zoom.css">',
+        "<style>%s</style>" % CSS, "</head>", "<body>",
+        '<a class="gbt-topback" href="#" hidden>%s</a>' % e(w["back"]),
         '<header><div class="k">%s · %s</div><h1>%s</h1></header>' % (e(course_title), e(head), e(title)),
         '<div class="find"><div><input id="q" type="search" placeholder="%s" aria-label="%s"><small id="qn" data-found="%s"></small></div></div>'
         % (a(w["search"]), a(w["search"]), a(w["found"])),
         "<main>", '<nav><h2>%s</h2><ol>%s</ol></nav>' % (e(w["contents"]), "".join(nav)),
         '<p class="empty" id="empty">%s</p>' % e(w["none"]), "\n".join(body), "</main>",
-        "<script>%s</script>" % JS, "</body>", "</html>", ""])
+        "<script>%s</script>" % JS, '<script src="../assets/gb_zoom.js"></script>', "</body>", "</html>", ""])
 
 
 def build(course, n, mdir, course_title, lang):

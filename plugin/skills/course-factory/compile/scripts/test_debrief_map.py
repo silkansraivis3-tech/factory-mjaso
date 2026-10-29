@@ -51,6 +51,9 @@ def main():
         c, md, code, out = ti.course(os.path.join(tmp, "a"))
         check("the example set compiles", code == 0, out[-600:])
         P = dm.paths(c, 1)
+        fin = dm.paths(c, "final")
+        check("the final's paths are its FINAL script, not a number (a build of the final crashed on int('final'))",
+              fin["script"].endswith("FINAL.json") and fin["tags"].endswith("FINAL.debrief.json"), fin)
         page = io.open(os.path.join(md, "tasks", "sc2_cargo_hazards.html"), encoding="utf-8").read()
         ch = dm.choices(page)
 

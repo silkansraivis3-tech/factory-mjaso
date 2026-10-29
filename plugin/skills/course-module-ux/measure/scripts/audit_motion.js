@@ -118,11 +118,17 @@
     return vis(el) > 0.001;
   }
   function filterOf(cs) { return cs.filter && cs.filter !== "none" ? cs.filter : ""; }
+  /* the kit's fluid front (data-kit-front): a mask sized to its own line while the front stands part-way - the one mask
+     L65 allows in a moving drawing */
+  function kitFront(v) {
+    var id = /#([^"')\s]+)/.exec(v || "");
+    var m = id ? document.getElementById(id[1]) : null;
+    return !!(m && m.hasAttribute("data-kit-front"));
+  }
   function maskOf(el, cs) {
     var m = cs.getPropertyValue("mask") || "", mi = cs.getPropertyValue("mask-image") || cs.getPropertyValue("-webkit-mask-image") || "";
-    if (m && m !== "none") { return m; }
-    if (mi && mi !== "none") { return mi; }
-    return (el.getAttribute && el.getAttribute("mask")) || "";
+    var v = m && m !== "none" ? m : mi && mi !== "none" ? mi : (el.getAttribute && el.getAttribute("mask")) || "";
+    return kitFront(v) ? "" : v;
   }
 
   /* one drawing: does something move for ever, and what makes its frame expensive */
@@ -195,6 +201,7 @@
   }
   function check(root) {
     var out = [];
+    try { if (global.KIT && global.KIT.bake) { global.KIT.bake(root); } } catch (e) { /* an older kit bakes on its own */ }
     return waitBakes(root).then(function () {
       drawingsIn(root).forEach(function (s) { merge(out, drawing(s)); });
       var figs = kitFigures(root);

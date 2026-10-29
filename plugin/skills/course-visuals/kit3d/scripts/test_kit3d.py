@@ -199,7 +199,8 @@ check("every state a step sets arrives (cut, open, alarm, shut, gas, flow)", all
 DECK = BASE + "course-visuals/kit3d/scripts/fixtures/deck_kit3d.html"
 API = "document.querySelector('[data-kit3d]').__k3"
 r = run([
-    {"url": DECK, "wait": "document.getElementById('startBtn')", "do": ["document.getElementById('startBtn').click()"], "settle": 1500},
+    {"url": DECK, "wait": "document.getElementById('startBtn')", "do": ["document.getElementById('startBtn').click()"], "settle": 1500,
+     "probe": J % "(function(){return {n:document.querySelectorAll('#s2 .k3-lab').length,drawn:document.querySelectorAll('#s2 .k3-lab:not(.k3-off)').length}})()"},
     {"do": "document.getElementById('btnNext').click()", "settle": 1200,
      "probe": J % ("(function(){var i=%s.info(),sc=window.__scene3d||{};return {active:document.querySelector('.slide.active').id,first:sc.firstFrameT>0,prepared:!!sc.prepared,"
                    "wired:i.wired,fs:!!document.querySelector('#s2 .gb-fs3d-btn'),step:i.step,line1:document.querySelector('[data-i=\"1\"]').className}})()" % API)},
@@ -213,6 +214,9 @@ r = run([
      "probe": J % ("(function(){return {active:document.querySelector('.slide.active').id,step:%s.info().step}})()" % API)},
 ], "--w=1280", "--h=800")
 a, b, c, d, e = (x.get("probe") or {} for x in r[1:])
+ahead = r[0].get("probe") or {}
+check("in a deck: a scene built ahead draws none of its label boxes until it is shown (none stacked on one spot)",
+      ahead.get("n", 0) > 0 and ahead.get("drawn") == 0, ahead)
 check("in a deck: the scene is built ahead on the slide before and draws on entering", a.get("active") == "s2" and a.get("first") and a.get("prepared"), a)
 check("in a deck: the labels are wired to the deck (GB3D.wire) and the box has the deck's Full screen button", a.get("wired") and a.get("fs"), a)
 check("in a deck: step 1 lights the slide's line 1", a.get("step") == 0 and "cur" in (a.get("line1") or ""), a)

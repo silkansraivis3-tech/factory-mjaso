@@ -1808,6 +1808,47 @@ equipment cast CSS drop-shadows and whose lines were masked 8000 x 8000 kept the
    (61 equipment shadows, 56 pipe masks, 8 gas-cloud blurs, 5 smoke / vapour / glow blurs); with the 2.78.0 kit - 0.
    GAS BASIC (hand-built) - 0. A rebuild of IGF on 2.78.0 clears it.
 
+## 4zz21 · Every IGF Advanced build failure put right in the factory (2.80.0, 2026-10-29)
+
+Aleksis: "fix all the failures" - the rebuild of six IGF Advanced modules on 2.79.0 failed on these, each now a factory fix:
+1. **L65 in a real deck run.** The motion audit runs after three other probes in the same page; they leave a figure at a
+   moving step while its slide is hidden, and showing the slide again by its class told the kit nothing - M03 s02, M06 s05
+   kept live drop-shadows. `KIT.bake(scope)` bakes the figures of a slide just shown and `audit_motion.js` calls it, as the
+   deck's own showing would; the kit also bakes on an animation's start and when the drawing comes into view, marks a
+   drawing `data-kit-baking` from the moment a bake is due, and turns the live filter off when a bake starts (a slow or
+   failed picture leaves no shadow, never the filter). A fluid front's mask (`data-kit-front`, sized to its line - L65
+   allows it) is no longer a hit (M06 a01 step 2).
+2. **Handouts** (`handout.py`): every handout had no way back (check_navigation FAIL, the learner trapped) and its own
+   picture viewer instead of gb_zoom (course package, L51). Now the back link with history-back and gb_zoom.js / .css,
+   as the deck and the task pages. `test_compile_course.py` +3.
+3. **3D label pills** (`audit_deck.js`): a pill's 44 px hit box is its `::before`; the tap-target check measured only the
+   26 px pill (M07 s01, three builds unchanged). It counts an absolute `::before` / `::after` that takes the tap.
+   `test_audit_deck.py` +1, fixture `deck_tap_hitbox.html`.
+4. **A task page the compiler builds no more** is removed unless a person changed it (M30's `tasks/fa1_variant_a.html`
+   beside `assessment/final_a.html`, opened by no slide). `test_compile_module.py` C2b.
+5. **`--module final`** is the folder that already holds the final (IGF Advanced: module30); counting the planned
+   modules made a second final in module31. C2c.
+6. **Words dressed as a drawing** (Aleksis, on M03 s08: "this doesn't move or do anything, just only shows text"): the
+   grid starter put parts guessed from the slide's description (an engine, a gauge, a scale) beside captions no step
+   ever moved, and those parts kept it from the step track a list of words gets. It adds none now when the lines name
+   nothing the kit draws (`test_starter_figures.py` +1). `kit_meaning.py` STILL (a BLOCK): steps that only bring in
+   free words beside machines or instruments that never move; a figure of nothing but words; a gauge, level or scale no
+   step moves and nothing sets. On IGF Advanced: M01 s14, M03 s08, M08 s09, M12 s07 (and M18 s02, words only) -
+   redrawn so every step moves what it names.
+7. **`debrief_map.py`** crashed on `--module final` (`int('final')`): the final's paths are FINAL.json and its folder.
+   `test_debrief_map.py` +1.
+8. **3D labels built ahead** (`kit3d.js`): the slide before builds the next scene, its labels in a hidden layer but
+   unplaced at (0, 0) - a probe that shows the slide by its class measured six pills on one spot (M05 s02). A label is
+   `k3-off` until a frame places it. `test_kit3d.py` +1.
+9. **The 3D full-screen button** (`gb_deck.js`) is placed for every 3D box on screen, not only the deck's current slide:
+   shown by a class it stayed in its corner over the scene's "Labels" (M14 s04).
+10. **`gb_interact.css`** (2.74.0) said "every colour a token" and held 38 raw colours: the factory's own strict look check
+   failed a freshly set-up module. Now `--gi-*` tokens in its `:root` (the same values) and `--blue` / `--txt-d`.
+   `references/vocabulary.md` names `gb_interact.js` + `.css` (two failures of `test_design_system.py`, on main too).
+Course findings put right in the build sheets: M03 s02 picture-left (L62), M14 s01 a photo cropped to the trucks and the
+vessel (a panorama a column cut to the terminal between them), M05 s01 a library photo shown nowhere else (L58), M14 m02 /
+s03 steps that move, M14 s03 picture-left (L62).
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

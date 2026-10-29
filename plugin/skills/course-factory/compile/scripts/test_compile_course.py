@@ -77,6 +77,13 @@ def main():
         check("... never the instructor's notes or a check's answers", hand and "Stress the 60" not in hand and "Ask who has sailed" not in hand
               and "Press OPEN TASK" not in hand, hand[-800:])
         check("... and the instructor's start page links it", 'href="handout/index.html"' in read(md, "START_HERE_EXTENDED.html"))
+        check("... it has a way back: a hidden a.gbt-topback that steps back in history, so a trainee is never trapped on it",
+              re.search(r'<a class="gbt-topback" href="#" hidden>[^<]+</a>', hand) and "history.back()" in hand, hand[:900])
+        check("... and it loads the one picture viewer, gb_zoom.css and gb_zoom.js (L51), with no viewer of its own",
+              'href="../assets/gb_zoom.css"' in hand and 'src="../assets/gb_zoom.js"' in hand and "classList.toggle" not in hand, hand[:900])
+        nav = os.path.join(t.SKILL, "..", "course-module-ux", "measure", "scripts", "check_navigation.py")
+        code, out = run(nav, os.path.join(md, "handout"))
+        check("... and check_navigation.py passes it", code == 0 and "FAIL" not in out and "WARN" not in out, out)
         page = read(root, "COURSE.html")
         check("COURSE.html's <title> is the approved course title", "<title>%s</title>" % TITLE in page, page[:600])
         m = re.search(r'<meta name="description" content="([^"]+)">', page)

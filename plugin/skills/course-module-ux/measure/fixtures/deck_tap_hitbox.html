@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Fixture - a small label with an invisible hit box (audit_deck.js tap counts the ::before box)</title>
+<style>
+  html,body{margin:0;height:100%}
+  .slide{display:none;position:absolute;inset:0;overflow:hidden}
+  .slide.active{display:block}
+  .pill{position:absolute;left:40px;width:90px;height:26px;box-sizing:border-box;background:#fff;color:#000;border:2px solid #06c;
+    font:16px/20px sans-serif;text-align:center}
+  #wide{top:40px}
+  /* a hit box laid round the pill: 12 px wider, never under 44 px tall */
+  #wide::before{content:"";position:absolute;left:-6px;right:-6px;top:50%;height:max(calc(100% + 12px),44px);transform:translateY(-50%)}
+  #bare{top:140px}
+  /* a box that takes no tap is no hit area */
+  #dead{top:240px}
+  #dead::before{content:"";position:absolute;left:-6px;right:-6px;top:50%;height:44px;transform:translateY(-50%);pointer-events:none}
+</style></head>
+<body>
+<main id="stage">
+  <section class="slide" id="s1">
+    <div class="pill" id="wide" role="button" tabindex="0">Tank</div>
+    <div class="pill" id="bare" role="button" tabindex="0">Pump</div>
+    <div class="pill" id="dead" role="button" tabindex="0">Valve</div>
+  </section>
+</main>
+<pre id="out"></pre>
+<script src="../scripts/audit_deck.js"></script>
+<script>
+  AuditDeck.all().then(function (res) {
+    var sels = [];
+    (res.failingSlides || []).forEach(function (s) { (s.tap || []).forEach(function (f) { sels.push(f.h + "x" + f.w); }); });
+    document.getElementById("out").textContent = JSON.stringify({tap: (res.totals || {}).tap, sels: sels});
+  });
+</script>
+</body></html>

@@ -143,12 +143,17 @@ def choices(page_text):
 
 # ---------------------------------------------------------------- where things are
 def paths(course, module):
-    m = "%02d" % int(module)
     root = os.path.join(course, "course") if os.path.isdir(os.path.join(course, "course", "working_claude")) else course
-    return {"tags": os.path.join(root, "working_claude", "script", "M%s.debrief.json" % m),
-            "script": os.path.join(root, "working_claude", "script", "M%s.json" % m),
-            "module": os.path.join(root, "modules", "module" + m),
-            "map": os.path.join(root, "modules", "module" + m, "instructor", MAP_NAME)}
+    if str(module).strip().lower() == "final":            # the final's script is FINAL.json, its folder the one that holds it
+        import compile_module
+        name, mdir = "FINAL", compile_module.module_folder(root, "final")[0] or os.path.join(root, "modules", "final")
+    else:
+        m = "%02d" % int(module)
+        name, mdir = "M" + m, os.path.join(root, "modules", "module" + m)
+    return {"tags": os.path.join(root, "working_claude", "script", "%s.debrief.json" % name),
+            "script": os.path.join(root, "working_claude", "script", "%s.json" % name),
+            "module": mdir,
+            "map": os.path.join(mdir, "instructor", MAP_NAME)}
 
 
 def pages(module_dir):

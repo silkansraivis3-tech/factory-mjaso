@@ -9,6 +9,8 @@ kit.js itself resolves (kit_relate.py), against course-visuals/knowledge/figure-
   NAMED      words on the figure, a part's label or a step's title name a thing the figure does not draw (or not there)
   BOX        (2.77.0, a BLOCK) a room or enclosure box labelled with a machine (figure-truths.json "equipment": a gas valve
              unit, a switchboard, a motor, a propeller, a pump ...) and with none of it drawn inside - draw the real part
+  STILL      (2.79.0, a BLOCK) every step only brings in free words while a machine or instrument drawn beside them never
+             moves - a list dressed as a drawing
   LOOSE END  a pipe or hose end that meets no part, port or other pipe
   INSIDE     a deck-mounted part (vent mast, manifold, hatch) inside the hull; a tank across the deck line
   NO GAS     a vent the words say vents (or a relief valve that lifts) with no step that lets gas out of its outlet
@@ -377,6 +379,40 @@ def chk_box(F, bad):
                 "type %s in place of the box (if the kit has no such part yet, make it - PARTS.md)"
                 % (p.get("style") or "room", p.get("id") or "", lab[:40], " / ".join(e["parts"][:2])), p, BLOCK)
             break
+
+
+def chk_still(F, bad):
+    """a figure whose steps only bring in words while the machines and instruments it draws never move: a list dressed as
+    a drawing (IGF Advanced M03 s08: six engine names revealed one by one beside an engine, a gauge and a scale at rest)"""
+    steps = [s for s in F.r.get("steps") or [] if isinstance(s, dict)]
+    if not steps:
+        return
+    kind = {p.get("id"): p for p, g in F.items if p.get("id")}
+    moved = set()
+    for s in steps:
+        moved |= {str(a[0]).split(".")[0] for a in s.get("play") or [] if isinstance(a, list) and a}
+        moved |= {str(k).split(".")[0] for k in s.get("set") or {}}
+    for p, g in F.items:
+        for m in p.get("marks") or []:
+            moved |= {str(a[0]).split(".")[0] for a in m.get("then") or [] if isinstance(a, list) and a}
+    for p, g in F.items:                                 # an instrument at rest with nothing set on it reads nothing
+        if p.get("type") in ("gauge", "level", "scale") and p.get("id") not in moved and not p.get("value") \
+                and not p.get("markers") and not p.get("source"):
+            bad("STILL", "the %s %s (%r) reads nothing - no step moves it and it has no value: play it to what the words say, "
+                "or it goes" % (p.get("type"), p.get("id") or "", str(p.get("label") or "")[:30]), p, BLOCK)
+    if F.items and all(p.get("type") == "text" for p, g in F.items):
+        bad("STILL", "the figure is only words - a list is the slide's text or a step track (step_track), a figure draws "
+            "the thing its words are about", F.items[0][0], BLOCK)
+        return
+    words = [kind[i] for i in moved if i in kind and kind[i].get("type") == "text"]
+    if not moved or len(words) < len(moved) or any(w.get("for") or w.get("to") for w in words):
+        return                                           # a step moves a part, or its words point at one: a drawing at work
+    still = [p for p, g in F.items if p.get("type") not in WORDLESS + SCENERY + CONTAINERS + ("badge",) and p.get("id") not in moved]
+    if still:
+        bad("STILL", "every step only brings in words, and the %s drawn beside them never move%s - a list is the slide's "
+            "text or a step track (step_track); a drawing's steps move what their words name (play the part), or the part "
+            "goes" % (", ".join("%s %s" % (p.get("type"), p.get("id") or "") for p in still[:4]), "s" if len(still) == 1 else ""),
+            still[0], BLOCK)
 
 
 def _pbox(g):
@@ -1038,7 +1074,7 @@ def analyse(spec, where="", resolved=None):
     for e in rspec.get("_relate") or []:
         bad("RELATION", e, None, BLOCK)
     F = Fig(spec, rspec, geo)
-    for fn in (chk_named, chk_box, chk_loose, chk_deck, chk_gas, chk_aim, chk_grid, chk_words, chk_small, chk_truths, chk_step, chk_label,
+    for fn in (chk_named, chk_box, chk_still, chk_loose, chk_deck, chk_gas, chk_aim, chk_grid, chk_words, chk_small, chk_truths, chk_step, chk_label,
                chk_way, chk_readout, chk_joins):
         fn(F, bad)
     ok = spec.get("meaning_ok") if isinstance(spec.get("meaning_ok"), dict) else {}

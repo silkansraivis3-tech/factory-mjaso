@@ -1302,6 +1302,33 @@ def fixes_part(tmp):
     check("C2: the next run then works - the compiler's own deck is not refused as 'changed by hand' (no --force)",
           code in (0, 1) and "changed by hand" not in out and "tasks/sc1_the_new_spaces.html" in out, out)
 
+    # C2b - a task page the compiler wrote before and builds no more (the IGF final's tasks/fa1_variant_a.html, left beside
+    # assessment/final_a.html and opened by no slide) is removed; one a person changed stays
+    old, kept = os.path.join(md, "tasks", "fa1_variant_a.html"), os.path.join(md, "tasks", "fa2_variant_b.html")
+    for p in (old, kept):
+        with io.open(p, "w", encoding="utf-8", newline="\n") as f:
+            f.write("<p>an old task page</p>")
+    recs = [os.path.join(r, f) for r, _, fs in os.walk(c) for f in fs if f == "compiled.json"]
+    rec = cs.load(recs[0])
+    rec["tasks/fa1_variant_a.html"] = cm.sha("<p>an old task page</p>")
+    rec["tasks/fa2_variant_b.html"] = cm.sha("<p>before a person changed it</p>")
+    cs.save(recs[0], rec)
+    code, out = run(COMPILE, c, "--module", "1")
+    check("C2b: a task page the compiler no longer builds is removed, and its record with it",
+          not os.path.isfile(old) and "tasks/fa1_variant_a.html" not in cs.load(recs[0]) and "Removed the task page" in out, out[-400:])
+    check("C2b: ... one changed by hand stays", os.path.isfile(kept), out[-400:])
+
+    # C2c - "final" is the folder that already holds the final (IGF Advanced: module30, its last planned module), not a new
+    # one after it
+    fc = os.path.join(tmp, "c2c")
+    fdeck = os.path.join(fc, "modules", "module03", "presentation")
+    os.makedirs(fdeck)
+    with io.open(os.path.join(fdeck, "index.html"), "w", encoding="utf-8") as f:
+        f.write('<section class="slide" data-block="FINAL · FA"></section>')
+    got, why = cm.module_folder(fc, "final")
+    check("C2c: --module final finds the folder that already holds the final",
+          got and os.path.normpath(got) == os.path.normpath(os.path.join(fc, "modules", "module03")), (got, why))
+
     # C3 - the starter build sheet takes the landing rule and the pass mark from the course's other sheets
     sc = json.loads(json.dumps(script()))
     sc["screens"] += [

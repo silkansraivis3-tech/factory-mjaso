@@ -181,6 +181,17 @@
     try { return Array.prototype.slice.call(root.querySelectorAll(sel)); }
     catch (e) { return []; }
   }
+  /* the size of the invisible box a control lays round itself with ::before / ::after (a label drawn small, tapped wide) */
+  function hitPseudo(e) {
+    var w = 0, h = 0;
+    ["::before", "::after"].forEach(function (which) {
+      var ps = getComputedStyle(e, which);
+      if (ps.content === "none" || ps.position !== "absolute" || ps.pointerEvents === "none") { return; }
+      w = Math.max(w, parseFloat(ps.width) || 0);
+      h = Math.max(h, parseFloat(ps.height) || 0);
+    });
+    return { w: w, h: h };
+  }
   function fireResize() {
     if (!CONFIG.dispatchResize) { return; }
     var ev;
@@ -438,8 +449,9 @@
       if (typeof w !== "number" || (!w && !h)) {
         var rr = e.getBoundingClientRect(); w = rr.width; h = rr.height;
       }
-      if (w > 0 && (w < CONFIG.minControlPx || h < CONFIG.minControlPx)) {
-        out.tap.push({ sel: label(e), w: Math.round(w), h: Math.round(h) });
+      var hit = hitPseudo(e);                              /* an invisible hit box of its own counts: a tap on it is a tap on the control */
+      if (w > 0 && (Math.max(w, hit.w) < CONFIG.minControlPx || Math.max(h, hit.h) < CONFIG.minControlPx)) {
+        out.tap.push({ sel: label(e), w: Math.round(Math.max(w, hit.w)), h: Math.round(Math.max(h, hit.h)) });
       }
     });
 

@@ -142,6 +142,16 @@ def rules_part():
     check("... a card of words that mentions a truck passes", not has(p, "BOX"), p)
     p = lines(small([dict(tank), {"id": "B", "type": "space", "x": 300, "y": 160, "w": 160, "h": 120, "label": "switchboard room"}]))
     check("... a room named for what is in it passes", not has(p, "BOX"), p)
+    words = [{"id": "W%d" % i, "type": "text", "x": 200, "y": 40 + 40 * i, "text": "ME-G%d" % i, "reveal": True} for i in range(3)]
+    gear = [{"id": "E", "type": "engine", "x": 40, "y": 200, "w": 120, "h": 60}, {"id": "G", "type": "gauge", "x": 330, "y": 230, "r": 25, "label": "pressure"}]
+    reveal = [{"title": "Engine %d" % i, "play": [["W%d" % i, 1, 300]]} for i in range(3)]
+    p = lines(small(words + gear, reveal))
+    check("STILL: steps that only bring in words beside an engine and a gauge that never move fail (IGF Advanced M03 s08)",
+          has(p, "STILL E") and has(p, "STILL G", "reads nothing"), p)
+    p = lines(small(words, reveal))
+    check("... and so does a figure that is only words", has(p, "STILL", "only words"), p)
+    p = lines(small(words + gear, reveal[:2] + [{"title": "Gas in", "play": [["E", 1, 300], ["G", 6, 600]]}]))
+    check("... and passes once a step runs the engine and moves the gauge", not has(p, "STILL"), p)
     vent = [{"id": "T", "type": "tank", "x": 40, "y": 250, "w": 160, "h": 60}, {"id": "V", "type": "vent", "x": 300, "y": 80, "mast": 160},
             {"id": "P", "type": "pipe", "from": "T.top", "to": "V.inlet"}]
     p = lines(small(vent, [{"title": "The relief valve lifts and the gas vents", "play": [["T", 1, 300]]}]))

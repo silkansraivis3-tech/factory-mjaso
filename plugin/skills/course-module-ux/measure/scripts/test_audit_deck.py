@@ -12,7 +12,9 @@ animation paused (what a hidden / preview pane does). Pinned:
     shipped gb_compose.css passes (IGF M05, 2026-10-19);
   * (deck_call_dark.html) a conclusion on a dark stepping slide passes contrast: its bold term takes the callout's
     colour, and the mark check restores the last line with no fade left running (M01 benchmark run 4);
-  * (deck_svg_floor.html) drawing words 0.03 px under the floor pass, as in audit_drawing.js (2.72.7, one rule).
+  * (deck_svg_floor.html) drawing words 0.03 px under the floor pass, as in audit_drawing.js (2.72.7, one rule);
+  * (deck_tap_hitbox.html) a small control with an invisible ::before hit box of 44 px passes tap; without one, or with a
+    box that takes no tap, it fails.
 Skips, and says so, when no Chrome or Edge is installed.
 """
 from __future__ import annotations
@@ -35,6 +37,7 @@ MARK = FIX.parent / "deck_mark.html"
 CALL = FIX.parent / "deck_call_dark.html"
 LOGO = FIX.parent / "deck_logo_overhang.html"
 FLOOR = FIX.parent / "deck_svg_floor.html"
+TAP = FIX.parent / "deck_tap_hitbox.html"
 PASS, FAIL = [], []
 
 
@@ -87,6 +90,10 @@ def main():
         fl = run(exe, prof, "", FLOOR)
         check("drawing words at 12.47 px pass, as in the figure audit; words at 12.4 px still fail",
               bool(fl) and fl.get("words") == ["under"], fl)
+        # a label drawn small and tapped wide lays an invisible ::before box round itself (the 3D kit's pills): it counts
+        tp = run(exe, prof, "", TAP)
+        check("a 26 px label with a 44 px hit box passes; the same label without one, or whose box takes no tap, fails",
+              bool(tp) and tp.get("tap") == 2 and tp.get("sels") == ["26x90", "26x90"], tp)
     finally:
         shutil.rmtree(prof, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

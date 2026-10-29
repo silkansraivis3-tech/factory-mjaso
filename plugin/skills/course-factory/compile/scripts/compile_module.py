@@ -3390,16 +3390,19 @@ def starter_figure(script, s, pool=None, taken=None):
     have = {it["kind"] for it in items}
     visual = (s.get("visual") or "").strip()
     first = re.split(r"(?<=[.!?])\s", visual, 1)[0] if visual else ""
+    # a slide whose lines name nothing the kit draws is a list: the step track, never captions beside parts guessed from the
+    # description that no step moves (IGF Advanced M03 s08: an engine, a gauge and a scale under six words, all standing still)
+    words_only = sum(1 for it in items if it["kind"] == "text") >= 2 and all(it["kind"] == "text" or it.get("weak") for it in items)
     for m in KIT_WORD.finditer(first):                 # the things the picture is described as holding
         kind = KIT_WORDS[m.group(1).lower()]
-        if kind in have or len(items) >= STARTER_MAX_PARTS:
+        if words_only or kind in have or len(items) >= STARTER_MAX_PARTS:
             continue
         have.add(kind)
         items.append({"kind": kind, "label": m.group(0).lower(), "start": STARTER_PART[kind][3], "to": STARTER_PART[kind][4]})
     lib = starter_from_library(script, s, lines, items, steps, first)   # 2.67.0 - a drawing that passed before
     if lib:
         return lib
-    if sum(1 for it in items if it["kind"] == "text") >= 2 and all(it["kind"] == "text" or it.get("weak") for it in items):
+    if words_only:
         track = starter_track(script, s, lines)      # 2.73.0 - nothing the kit draws is named: the lines as a step track
         if track:
             return track
@@ -4014,6 +4017,14 @@ def module_folder(course, module, module_dir=None):
     if m.isdigit():
         return os.path.join(course, workspace.MODULES, "module%02d" % int(m)), None
     if m == "final":
+        # the folder that already holds the final, when there is one (IGF Advanced keeps it in module30, its last planned
+        # module: counting made a second final in module31 beside it)
+        root_ = os.path.join(course, workspace.MODULES)
+        for d in sorted(os.listdir(root_)) if os.path.isdir(root_) else []:
+            deck = os.path.join(root_, d, "presentation", "index.html")
+            if re.match(r"module\d+$", d) and os.path.isfile(deck) and \
+                    'data-block="FINAL' in io.open(deck, encoding="utf-8", errors="replace").read():
+                return os.path.join(root_, d), None
         ap_ = workspace.claude_path(course, "architecture.json")
         try:
             n = len(cs.load(ap_).get("modules") or []) + 1 if os.path.isfile(ap_) else 0
@@ -4601,6 +4612,17 @@ def main(argv=None):
             cs.save(rec_path, rec)
             written.append(path)
             print("Built the task page %s" % key)
+        # a task page this compiler wrote before and builds no more (a set renamed or moved - a final's variants went to
+        # assessment\final_a.html, its old tasks\fa1_variant_a.html stayed, opened by no slide): gone, unless a person changed it
+        built = {os.path.relpath(p, mdir).replace("\\", "/") for p in pages}
+        for key in sorted(k for k in rec if k.startswith("tasks/") and k not in built):
+            path = os.path.join(mdir, *key.split("/"))
+            if os.path.isfile(path) and not by_hand(path, key):
+                os.remove(path)
+                print("Removed the task page %s - this compile no longer builds it" % key)
+            if not os.path.isfile(path):
+                rec.pop(key)
+                cs.save(rec_path, rec)
         for x in left:
             print("  left as it is: %s" % x)
         # the instructor's map of misconceptions and safety questions, from the approved tags and the pages just built

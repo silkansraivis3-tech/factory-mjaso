@@ -1025,7 +1025,7 @@
         side: ld.side === 1 || ld.side === -1 ? ld.side : 0, dx0: num(ld.dx, 0), ups: ld.up_steps || null,
         isUp0: up > 0, base0: Math.abs(up),
         oy: num(ld.oy, 0), pw: 0, ph: 0, tapOnly: !!ld.tap_only };
-      L.el = el('div', 'k3-lab', S.labelLayer);
+      L.el = el('div', 'k3-lab k3-off', S.labelLayer);        /* not drawn until the first frame places it */
       if (!L.tag) { L.stem = el('div', 'k3-stem', L.el); L.dot = el('div', 'k3-dot', L.el); }
       L.pill = el('div', 'k3-pill' + (L.tag ? ' k3-tag' : '') + (L.tag && String(ld.text).length > 24 ? ' k3-wrap' : '') +
         (L.small ? ' k3-sm' : '') + (ld.tone ? ' k3-' + ld.tone : ''), L.el);     /* a long value tag wraps (IGF M15) */

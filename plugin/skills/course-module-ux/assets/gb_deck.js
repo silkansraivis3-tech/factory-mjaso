@@ -516,14 +516,19 @@ var GBDeck = (function (w, d) {
         new w.MutationObserver(function (ms) {
           if (ms.every(function (m) { return m.target === btn || btn.contains(m.target); })) { return; }
           lblSync(box);
-          if (!again) { again = w.requestAnimationFrame(function () { again = 0; if (boxes3d[cur] === box) { fsPlace(box); } }); }
+          if (!again) { again = w.requestAnimationFrame(function () { again = 0; if (boxes3d[cur] === box || shown(box)) { fsPlace(box); } }); }
         }).observe(box, { childList: true, subtree: true });
       }
     });
     var KC3 = { 39: "ArrowRight", 37: "ArrowLeft", 32: " ", 34: "PageDown", 33: "PageUp", 36: "Home", 35: "End", 13: "Enter" };
     var DECK_KEYS = { ArrowRight: 1, Right: 1, ArrowLeft: 1, Left: 1, " ": 1, Spacebar: 1, PageDown: 1, PageUp: 1,
                       Home: 1, End: 1, f: 1, F: 1, g: 1, G: 1, n: 1, N: 1, Enter: 1 };
-    w.addEventListener("resize", function () { if (boxes3d[cur]) { w.requestAnimationFrame(function () { fsPlace(boxes3d[cur]); }); } });
+    /* every 3D box on screen, not only the current slide's: a slide shown another way than the deck's own turn (a probe
+       that sets its class) keeps the button off the scene's controls too */
+    function shown(box) { var r = box.getBoundingClientRect(); return r.width > 2 && r.height > 2; }
+    w.addEventListener("resize", function () {
+      w.requestAnimationFrame(function () { boxes3d.forEach(function (bx) { if (bx && (bx === boxes3d[cur] || shown(bx))) { fsPlace(bx); } }); });
+    });
     d.addEventListener("fullscreenchange", fsSync);
     d.addEventListener("webkitfullscreenchange", fsSync);
     w.GB3D = {

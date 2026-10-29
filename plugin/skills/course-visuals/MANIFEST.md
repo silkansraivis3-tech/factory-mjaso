@@ -93,7 +93,8 @@ kit/                            the figure kit (L55): a figure is a spec of part
   scripts/check_kit.py · kit_parts.py   spec and part checks; list / promote a course's parts into kit.js
   scripts/kit_meaning.py            what a figure MEANS (every build); BOX (2.77.0): a box labelled with a machine
                                     (knowledge/figure-truths.json "equipment") with none drawn in it fails - the
-                                    gas valve unit, switchboard, motor, propeller and LNG truck are kit parts now
+                                    gas valve unit, switchboard, motor, propeller and LNG truck are kit parts now;
+                                    STILL (2.80.0): steps that only bring in words beside parts that never move
   scripts/test_kit.py · test_studio.py · test_gallery.py   the contract; the studio; every gallery figure clean at
                                     every step on both panels (browser tests skip without Chrome or Edge)
 kit3d/                          the 3D kit: a 3D scene is a spec of parts, labels and steps (three.js r128), made

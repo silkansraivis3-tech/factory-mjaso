@@ -205,6 +205,13 @@ def track_part():
                                   "Discharge line: from the pump to the manifold.\nStripping: the last cargo out."})
     check("... a slide that NAMES a thing the kit draws keeps it (the deepwell pump stays a pump)",
           any(p.get("type") == "pump" for p in pump["parts"]) and not any(p.get("type") == "step_track" for p in pump["parts"]), pump["parts"])
+    eng = cm.starter_figure(sc, {"id": "s08", "kind": "slide", "title": "Two-stroke and four-stroke DF engines",
+                                 "visual_kind": "comparison", "visual": "Comparison: one row per engine, the gas pressure on a scale.",
+                                 "text": "ME-GI - Diesel cycle - gas about 300 bar.\nME-GA - Otto cycle - gas 5.5-12 bar(g).\n"
+                                 "X-DF - Otto cycle - gas 6-15 bar(g)."})
+    still = [p.get("type") for p in eng["parts"] if p.get("type") not in ("text", "step_track")]
+    check("... lines that name nothing the kit draws get no parts guessed from the description beside them - an engine, a "
+          "gauge, a scale no step moves (IGF Advanced M03 s08)", not still, eng["parts"])
 
 
 def main():
