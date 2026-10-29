@@ -251,6 +251,11 @@ try:
          "do": "(function(){Object.defineProperty(window,'devicePixelRatio',{value:2,configurable:true});var S=k3.scene;"
                "S.bufW=0;S.size(760,480);window.__p1=S.r.getPixelRatio();S.bufW=0;S.size(1280,800);window.__p2=S.r.getPixelRatio();})()",
          "probe": J % "({box:window.__p1,full:window.__p2})"},
+        {"url": (STUDIO % ("m02_tank", 800, 500)), "wait": "window.k3ready", "settle": 300,
+         "do": "(function(){var S=k3.scene,t=0;window.__l0=S.lite;S.r.setPixelRatio(1.5);for(var i=0;i<22;i++){t+=40;S.steady(true,t);}"
+               "window.__l1={lite:S.lite,dpr:S.r.getPixelRatio(),env:!!S.scene.environment,sh:S.r.shadowMap.enabled,"
+               "mem:localStorage.getItem('kit3d.lite')};localStorage.removeItem('kit3d.lite');})()",
+         "probe": J % "({before:window.__l0,after:window.__l1})"},
     ], "--w=900", "--h=600")
 finally:
     os.remove(GROUND)
@@ -262,6 +267,11 @@ check("a model with no floor stands on a soft ground shadow", a.get("ok") and a.
 check("a model with its own deck or floor gets no second ground", not b.get("vis"), b)
 check("a slow screen (frames of 60 ms) is drawn one step less sharp: 2 -> 1.5", c.get("dpr") == 1.5, c)
 check("a fast screen (frames of 16 ms) keeps its sharpness", d.get("dpr") == 2, d)
+pl = r[5].get("probe") or {}
+la = pl.get("after") or {}
+check("2.73.1 a slow screen at 1.5x (frames of 40 ms) goes lite before it loses sharpness, and the device is remembered",
+      pl.get("before") is False and la.get("lite") is True and la.get("dpr") == 1.5 and not la.get("env") and not la.get("sh")
+      and la.get("mem") == "1", pl)
 
 # ---------------------------------------------------------------- every example spec passes the checker
 specs = sorted(glob.glob(os.path.join(KIT, "examples", "*.kit3d.json")))

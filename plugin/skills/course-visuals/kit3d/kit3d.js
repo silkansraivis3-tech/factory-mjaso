@@ -1103,6 +1103,16 @@
       l.up = l.isUp; l.gap = l.base; l.dx = 0;
       shown.push(l);
     });
+    /* 2.73.1 - nothing on the picture moved since the last settle (a gas flow or a pulse redraws the frame, the view stands):
+       the pills keep their places, no search. While the view moves, one order is tried; every order once it is at rest (one
+       more frame is asked for). Was every order on every frame of a turn the presenter did not drag: m01 23 ms a frame */
+    var key = W + 'x' + H + '|' + S.step + '|' + (S.small ? 's' : '') + '|' + (S.cap ? S.cap.textContent : '') + '|' +
+      shown.map(function (l) { return l.text + ':' + Math.round(l.sx) + ',' + Math.round(l.sy); }).join(';');
+    var still = key === S.setKey;
+    if (still && S.setFull) {
+      shown.forEach(function (l) { if (l.f) { l.up = l.f[0]; l.gap = l.f[1]; l.dx = l.f[2]; l.oy = l.f[3]; } });
+      return;
+    }
     function pillR(l) {
       if (l.tag) { var tx = l.sx + l.ox + l.dx - l.pw / 2, ty = l.sy + l.oy - l.ph / 2; return { x1: tx, y1: ty, x2: tx + l.pw, y2: ty + l.ph }; }
       var x1 = l.sx - l.pw / 2 + l.dx, y1 = l.up ? l.sy - l.gap - l.ph : l.sy + l.gap;
@@ -1189,7 +1199,7 @@
     function snap() { return shown.map(function (l) { return [l.up, l.gap, l.dx, l.oy]; }); }
     var orders = [shown, shown.slice().reverse(), shown.slice().sort(function (p, q) { return p.sx - q.sx; }),
                   shown.slice().sort(function (p, q) { return p.sy - q.sy; })], oi, bestN = 1e9, bestS = null, nNow;
-    var calm = !S.tween && !hasCls(S.wrap, 'k3-drag');   /* while the view moves, one order: a drag stays smooth */
+    var calm = still && !S.tween && !hasCls(S.wrap, 'k3-drag');   /* while the view moves, one order: a turn stays smooth */
     for (oi = 0; oi < (calm ? orders.length : 1); oi++) {
       reset();
       solve(orders[oi]);
@@ -1221,10 +1231,17 @@
         } else {
           /* other stem lengths, the other side of the point, and the pill slid sideways along its stem's end -
              the wanted side first (the hand-made settleLabels tried the same) */
-          var lim = a.pw / 2 - 12, p0 = pref(a), dxs = [p0, 0, -lim, lim, -lim / 2, lim / 2], di;
+          var lim = a.pw / 2 - 12, p0 = pref(a), dxs = [p0, 0, -lim, lim, -lim / 2, lim / 2], di, gs = [], gi;
+          /* 2.73.1 - stem lengths nearest the wanted one first: once no length left can cost less than the best place found
+             (a length's own cost only grows with its distance), the rest are not tried - the same place, a fraction of the work */
+          for (g = 14; g <= a.base + 260; g += 6) { gs.push(g); }
+          gs.sort(function (p, q) { return Math.abs(p - a.base) - Math.abs(q - a.base) || p - q; });
           for (dir = 0; dir < 2; dir++) {
+            if (best && dir * 160 >= best.c) { break; }
             up = dir === 0 ? a.isUp : !a.isUp;
-            for (g = 14; g <= a.base + 260; g += 6) {
+            for (gi = 0; gi < gs.length; gi++) {
+              g = gs[gi];
+              if (best && Math.abs(g - a.base) + dir * 160 >= best.c) { break; }
               for (di = 0; di < dxs.length; di++) {
                 a.up = up; a.gap = g;
                 a.dx = place(a, dxs[di]);
@@ -1253,6 +1270,9 @@
       l.pill.style.top = (l.up ? -l.gap : l.gap) + 'px';
       l.pill.style.marginLeft = l.dx.toFixed(0) + 'px';
     });
+    shown.forEach(function (l) { l.f = [l.up, l.gap, l.dx, l.oy]; });
+    S.setKey = key; S.setFull = calm;
+    if (!calm) { S.schedule(); }
   };
 
   /* ======================================================================== drawing on demand */
@@ -1296,9 +1316,9 @@
     S.steady(moving || S.spin, tnow);
     if (moving || S.spin) { S.schedule(); }
   };
-  /* 2.68.0 - steady on a slow tablet: while the model moves, its frames are timed; when 20 in a row take over 45 ms on average
-     (under 22 a second - the turn judders) it is drawn one step less sharp from then on: twice the screen's pixels, then
-     1.5, then 1. Each step makes the drawing buffer once - the cost of a new buffer (perf3d: up to a second on a slowed CPU)
+  /* 2.68.0 - steady on a slow tablet: while the model moves, its frames are timed; when 20 in a row take over 30 ms on average
+     (under 33 a second - the turn judders; 2.73.1, was 45) it is drawn one step less sharp from then on: twice the screen's
+     pixels, then 1.5, then lite light (P.goLite), then 1. Each step makes the drawing buffer once - the cost of a new buffer (perf3d: up to a second on a slowed CPU)
      is why it never goes back and forth; a fast screen never loses sharpness. window.__scene3d.dpr says where it is */
   P.steady = function (moving, tnow) {
     var S = this;
@@ -1312,7 +1332,7 @@
     if (!S.dts || S.dts.length < 20) { return; }
     var sum = 0;
     S.dts.forEach(function (d) { sum += d; });
-    if (sum / 20 <= 45) { return; }
+    if (sum / 20 <= 30) { return; }
     var pr = S.r.getPixelRatio(), next = pr > 1.5 ? 1.5 : pr > 1 ? 1 : 0;
     S.dts = [];
     if (pr <= 1.5 && !S.lite && S.lightMode === 'auto') { S.goLite(); return; }    /* before the last sharpness step */
@@ -1794,7 +1814,8 @@
     },
     auto: auto,
     all: function () { return scenes.map(function (S) { return S.stage.__k3; }); },
-    _test: test
+    _test: test,
+    light: true                       /* 2.73.1: this kit chooses its own light ("light"); a host's lite patch leaves it be */
   };
   w.KIT3D = KIT3D;
 
