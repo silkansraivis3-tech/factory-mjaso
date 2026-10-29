@@ -6,6 +6,15 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.75.0 · The debrief knows the wrong ideas (2026-10-29)
+
+- **Why.** A debrief by question repeats itself when one wrong belief shows in several questions, and says nothing of which
+  mistakes can hurt someone. Tagging each wrong choice with the idea behind it lets the class be told "5 of 12 believed this".
+- **What.** compile/scripts/debrief_map.py (draft, check, review, approve, build, status) and the map it builds into each
+  module's instructor folder from approved tags; the compile builds it with the task pages. The map holds answer keys and
+  misconception ids only. The tags never reach a tablet: the training app's panel reads the map and sends one task's slice
+  with debrief_opened after the task is closed.
+
 ## 2.74.3 · Answers the class record can count (2026-10-29)
 
 - **Why.** To count across classes which questions are missed, which wrong choices are picked and who was sure and wrong,

@@ -4603,6 +4603,10 @@ def main(argv=None):
             print("Built the task page %s" % key)
         for x in left:
             print("  left as it is: %s" % x)
+        # the instructor's map of misconceptions and safety questions, from the approved tags and the pages just built
+        import debrief_map
+        if debrief_map.build(o.course, o.module, quiet=True):
+            probs.append("The misconception tags no longer fit the task pages - run debrief_map.py check and put them right")
     if o.only in ("all", "plan"):                      # 2.47.0 - the instructor's plan, from the same approved script
         import module_plan
         ppath, ppage = module_plan.plan_page(script, build, mdir, o.course, plugin_version(), approved, probs)

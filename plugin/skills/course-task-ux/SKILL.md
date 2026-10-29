@@ -234,7 +234,7 @@ classroom's debrief shows it, whole, when the instructor reveals it, so the clas
 still shows its why. The page carries `data-reveal="debrief"`; `"feedback": "now"` at the top of a build sheet keeps the
 older reveal (2.63.2) for a course whose owner wants it. The classroom receives every item whole - question, answer,
 right answer, why, the brief reason (`n`) and how sure (`sure`) - never cut to 90 / 120 characters again - and, for counting across classes, the question's id (`q`), the key of each choice made (`p`) and how sure as a number (`s`). **A self-check is answered once** (2.74.2): every part locks at its Check, and
-the result screen has no Start again - a trainee who got it wrong hears why in the debrief, not by trying again.
+the result screen has no Start again - a trainee who got it wrong hears why in the debrief, not by trying again. **The wrong ideas behind the wrong choices** are tagged per module once its tasks are built (`compile/scripts/debrief_map.py draft` → fill the tag file → `check` → `review` for the operator → `approve --by`): one id per wrong belief, shared by every choice that leads to it, and `safety` on a question where believing the wrong thing can hurt someone. The debrief then groups the class by those ideas, safety first. The map lives in the module's instructor folder and never reaches a tablet.
 
 | Type (`mechanic`) | Part | On the tablet | Graded by |
 |---|---|---|---|
