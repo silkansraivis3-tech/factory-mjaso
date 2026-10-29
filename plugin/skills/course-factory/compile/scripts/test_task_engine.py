@@ -1663,7 +1663,19 @@ def patterns_part(exe, tmp):
               plain and all(x["pl"] == 0 and x["pr"] == 0 for x in tight if not x["box"] and x["tag"] != "li"), tight)
 
 
+def hand_box_part():
+    print("\n-- a label box placed by hand: the compiler's boxes are not laid on it unsaid")
+    import task_pages
+    vb = [0, -20, 200, 140]
+    places = [{"t": "insulation", "at": [10, 2, 20], "hand": False}, {"t": "hold space", "at": [15, 2, 20], "hand": True},
+              {"t": "tank", "at": [60, 2, 20], "hand": False}]
+    got = task_pages.hand_box_overlaps(places, vb, "q06")
+    check("a compiler box on a hand-placed box is said, and one clear of it is not (IGF Advanced M06 q06)",
+          len(got) == 1 and '"insulation"' in got[0] and '"hold space"' in got[0], got)
+
+
 def main():
+    hand_box_part()
     exe = drawing_check.find_browser()
     if not exe:
         print("  skip  no Chrome or Edge found - the engine was not driven")

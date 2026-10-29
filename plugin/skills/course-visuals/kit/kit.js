@@ -5740,6 +5740,12 @@ KIT.define('tree', function (fig, part, g, p) {
       rowW = cols.reduce(function (a, b) { return a + b; }, 0) + gapX * Math.max(0, kids.length - 1);
       if (Math.max(rowW, root.w) <= W + 0.5) break;
     }
+    /* too many children for one row even at the tightest (IGF Advanced M16 s03: five who receive the leak report in 400
+       wide - the frame zoomed out, the words at 10.5 px): two rows, the second's boxes under the gaps of the first, so each
+       one's line drops clear between the boxes above it. Only when no child has children of its own */
+    if (Math.max(rowW, root.w) > W + 0.5 && kids.length >= 3 && !kids.some(function (o) { return o.kids.length; })) {
+      return twoRows(k, gapY);
+    }
     var total = Math.max(rowW, root.w), x = (total - rowW) / 2, d = '';
     put(root, (total - root.w) / 2, 0, k);
     var rcx = root.x + root.w / 2, busY = root.h + gapY / 2, y1 = root.h + gapY;
@@ -5764,6 +5770,30 @@ KIT.define('tree', function (fig, part, g, p) {
     });
     if (kids.length) d += 'M' + rcx.toFixed(1) + ' ' + root.h.toFixed(1) + ' V' + busY.toFixed(1) + ' M' + firstCx.toFixed(1) + ' ' + busY.toFixed(1) + ' H' + lastCx.toFixed(1);
     link.setAttribute('d', d || 'M0 0');
+  }
+  function twoRows(k, gapY) {
+    var c = CFG[2], gx = Math.max(c.gapX, 14), n = kids.length, m = Math.floor(n / 2) + 1, r = n - m;
+    var cell = (W - gx * (m - 1)) / m, rowH = 0, d = '', cx = [], i;
+    size(root, k, c, W);
+    kids.forEach(function (o) { size(o, k, c, cell); rowH = Math.max(rowH, o.h); });
+    kids.forEach(function (o) { o.h = rowH; });
+    put(root, (W - root.w) / 2, 0, k);
+    var busY = root.h + gapY / 2, y1 = root.h + gapY, y2 = y1 + rowH + gapY * 0.6;
+    for (i = 0; i < m; i++) {
+      var x0 = i * (cell + gx);
+      cx.push(x0 + cell / 2);
+      put(kids[i], x0 + (cell - kids[i].w) / 2, y1, k);
+      d += 'M' + cx[i].toFixed(1) + ' ' + busY.toFixed(1) + ' V' + y1.toFixed(1);
+    }
+    var off = Math.floor((m - 1 - r) / 2);
+    for (i = 0; i < r; i++) {
+      var gi = off + i, gcx = (gi + 1) * cell + gi * gx + gx / 2, o = kids[m + i];
+      put(o, gcx - o.w / 2, y2, k);
+      d += 'M' + gcx.toFixed(1) + ' ' + busY.toFixed(1) + ' V' + y2.toFixed(1);
+    }
+    d += 'M' + (W / 2).toFixed(1) + ' ' + root.h.toFixed(1) + ' V' + busY.toFixed(1) +
+         ' M' + cx[0].toFixed(1) + ' ' + busY.toFixed(1) + ' H' + cx[m - 1].toFixed(1);
+    link.setAttribute('d', d);
   }
   place(1);
   fig.fit(place);

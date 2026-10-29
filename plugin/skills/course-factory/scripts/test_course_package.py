@@ -153,6 +153,16 @@ def main():
             check("without Node the factory says plainly that the importer did not run", "Node is not installed" in out, out)
         check("... from the course folder and the modules folder too", run(os.path.join(master, "course"))[0] == 0 and run(c)[0] == 0)
 
+        print("\n-- another module's build working beside this check (run_audits.py's page beside a deck)")
+        tr = os.path.join(tmp, "transient", "modules")
+        shutil.copytree(c, tr)
+        deck_dir = os.path.dirname(next(os.path.join(dp, f) for dp, _, fs in os.walk(tr) for f in fs if f == "index.html"))
+        io.open(os.path.join(deck_dir, "_audit_41564_1040x863.html"), "w", encoding="utf-8").write("<p>audit</p>")
+        code, out = run(tr)
+        check("a build's working page (_audit_<pid>_WxH.html) is left out of the package and the importer's copy - not a "
+              "problem, not a note (the IGF Advanced builds side by side: the importer read one as it was removed, ENOENT)",
+              code == 0 and "_audit_" not in out, out[-600:])
+
         print("\n-- a task page whose reporting lives in the shared task file (gb_task.js)")
         sh = os.path.join(tmp, "shared", "modules")
         shutil.copytree(c, sh)
@@ -369,6 +379,8 @@ def main():
           " r.setPixelRatio(window.devicePixelRatio); r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap; light.shadow.mapSize.set(2048, 2048);")
         w(os.path.join(b, "module01", "assets", "fig", "pump3d.js"), "var r2 = new THREE.WebGLRenderer({antialias: true}); r2.setPixelRatio(1);"
           " r2.shadowMap.enabled = true; r2.shadowMap.autoUpdate = false;")
+        w(os.path.join(b, "module01", "presentation", "both3d.html"),
+          '<script src="../assets/fig/tanks3d.js"></script><script src="../assets/fig/pump3d.js"></script>')
         code, out = run(b, "--no-importer")
         for what, needle in (("two separate renderers", "makes 2 separate 3D renderers"), ("preserveDrawingBuffer on", "keeps preserveDrawingBuffer on"),
                              ("shadows worked out again on every frame", "tanks3d.js works out its shadows again on every frame"),
@@ -376,6 +388,12 @@ def main():
             check("noted, not blocked: " + what, code == 0 and needle in out, out)
         check("... and the quality itself is never questioned: soft shadows and a 2048 px shadow map pass without a word",
               "PCFSoftShadowMap" not in out and "1024" not in out and "pump3d.js works out its shadows" not in out, out)
+        os.remove(os.path.join(b, "module01", "presentation", "both3d.html"))
+        w(os.path.join(b, "module01", "presentation", "a3d.html"), '<script src="../assets/fig/tanks3d.js"></script>')
+        w(os.path.join(b, "module01", "tasks", "b3d.html"), '<script src="../assets/fig/pump3d.js"></script>')
+        code, out = run(b, "--no-importer")
+        check("... two renderers on two different pages (the deck's kit3d.js, a task page's gb_interact.js) are not a note",
+              "separate 3D renderers" not in out, out)
         nov = os.path.join(tmp, "novis", "modules")
         shutil.copytree(c, nov)
         w(os.path.join(nov, "module01", "assets", "lib", "three.min.js"), "/* three */")

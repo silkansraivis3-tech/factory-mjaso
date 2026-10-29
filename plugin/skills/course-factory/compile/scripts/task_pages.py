@@ -974,6 +974,26 @@ def label_boxes(places, vb, probs=None, where=""):
     return places
 
 
+def hand_box_overlaps(places, vb, where=""):
+    """the boxes the compiler placed that land on one the build sheet placed by hand - the layout does not know the hand
+    boxes (IGF Advanced M06 q06: "insulation" laid over "hold space"); said, so the builder places both or neither"""
+    h = 100.0 * BOX_PX / (vb[3] * ppu(vb))
+    box = lambda p: (p["at"][0], p["at"][1], p["at"][0] + p["at"][2], p["at"][1] + h)
+    hand = [p for p in places if p.get("hand") and p.get("at")]
+    out = []
+    for p in places:
+        if p.get("hand") or not p.get("at"):
+            continue
+        a = box(p)
+        for q in hand:
+            b = box(q)
+            if a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]:
+                out.append("%s: the label box the compiler placed for \"%s\" lands on the box the build sheet placed for \"%s\" - "
+                           "place \"%s\" by hand too (\"labels\": {\"%s\": {\"box\": [left, top, width]}}), or leave out "
+                           "\"box\" on both" % (where, p["t"], q["t"], p["t"], p["t"]))
+    return out
+
+
 def rows_fit(places, vb):
     """lay the boxes out (label_layout) in the drawing's two label rows: True when every one fits, else the boxes' width in %"""
     import label_layout
@@ -1106,6 +1126,7 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         auto = [p for p in places if not p["at"]]
         if auto and vb:
             label_boxes(auto, vb, probs, where)
+            probs += hand_box_overlaps(places, vb, where)
         probs += label_width_problems(places, vb, where)
         out.append('    <div class="stage"><div class="%s lab" data-fig="%s" data-zoom="button"%s>'
                    % (ga_class(fig), a(fig.name if fig else ""), fig.ar() if fig else ""))

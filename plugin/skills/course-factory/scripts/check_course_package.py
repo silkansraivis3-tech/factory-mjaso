@@ -228,6 +228,19 @@ def run_importer(folder):
 # left out of the package and of the importer's run, a note, never a finding (the 2.63.2 full-course run: every module's
 # build printed "not a module" and the importer's "duplicate or disallowed file paths", and builders spent turns on it)
 SYNC = re.compile(r"^(?:\.tmp\.drive.*|desktop\.ini|thumbs\.db|\.ds_store)$", re.I)
+# a build's own working files, there only while another module's checks run beside this one (run_audits.py's page beside
+# the deck, the drawing check's folder): read by the importer as they were removed, they failed the package ("ENOENT:
+# ...\_audit_41564_1040x863.html", the IGF Advanced builds run side by side) - left out, never a note
+TRANSIENT = re.compile(r"^(?:_audit_\d+(?:_\d+x\d+)?\.html?|__audit_out)$", re.I)
+
+
+def transient_items(folder):
+    """[relative path] of every build working file in the folder (TRANSIENT)"""
+    out = []
+    for dp, dn, fn in os.walk(folder):
+        out += [os.path.relpath(os.path.join(dp, x), folder) for x in dn + fn if TRANSIENT.match(x)]
+        dn[:] = [x for x in dn if not TRANSIENT.match(x)]
+    return out
 
 
 def sync_items(folder):
@@ -247,7 +260,7 @@ def run_importer_without_drafts(folder):
     and (2.63.3) every sync-tool / system item (SYNC) - on a copy made of hard links (a copy of the files where the disk will not
     link), removed again afterwards"""
     drafts = {d for d in os.listdir(folder) if MODULE.match(d) and os.path.isfile(os.path.join(folder, d, DRAFT_MARK))}
-    if not drafts and not sync_items(folder):
+    if not drafts and not sync_items(folder) and not transient_items(folder):
         return run_importer(folder)
     import tempfile
 
@@ -259,7 +272,8 @@ def run_importer_without_drafts(folder):
     tmp = tempfile.mkdtemp(prefix="package_")
     try:
         dst = os.path.join(tmp, os.path.basename(os.path.abspath(folder)))
-        shutil.copytree(folder, dst, ignore=lambda d, names: [n for n in names if (d == folder and n in drafts) or SYNC.match(n)],
+        shutil.copytree(folder, dst, ignore=lambda d, names: [n for n in names if (d == folder and n in drafts) or SYNC.match(n)
+                                                              or TRANSIENT.match(n)],
                         copy_function=link)
         return run_importer(dst)
     finally:
@@ -342,7 +356,7 @@ def check(folder):
         # 2.52.0 - a folder starting with _ (assets\img\_unused\, the pictures no page shows) is skipped by the classroom's
         # importer (package-core.mjs internal()), so it is no part of the package's files, sizes or names either
         dn[:] = [x for x in dn if (not x.startswith("_") or x == "_course_shell") and not SYNC.match(x)]
-        fn = [f for f in fn if not SYNC.match(f)]                       # 2.63.3: sync / system files ship nowhere
+        fn = [f for f in fn if not SYNC.match(f) and not TRANSIENT.match(f)]   # 2.63.3: sync / system files ship nowhere
         for x in dn + fn:
             if " " in x:
                 probs.append("a space in the name: %s - the classroom needs names without spaces" % rel(os.path.join(dp, x)))
@@ -435,7 +449,7 @@ def check(folder):
             if uses3d and not vis:
                 notes.append("%s uses 3D, but its slides do not say their kind of picture (data-visual) - the 3D share cannot be counted" % mod)
         # L46 - would a 3D scene lag on the tablet? read from the module's own scripts
-        slow, renderers = {}, []
+        slow, renderers, pages = {}, {}, []
         for dp, _, fn in os.walk(md):
             for f in fn:
                 p = os.path.join(dp, f)
@@ -444,15 +458,27 @@ def check(folder):
                 if not f.lower().endswith((".js", ".html", ".htm")) or THREE_LIB.match(f):
                     continue
                 text = read(p)
-                renderers += [rel(p)] * len(RENDERER.findall(text))
+                renderers[os.path.normcase(os.path.abspath(p))] = len(RENDERER.findall(text))
+                if f.lower().endswith((".html", ".htm")):
+                    pages.append((p, text))
                 for rx, why in SLOW:
                     if rx.search(text):
                         slow.setdefault(why, []).append(rel(p))
                 if SHADOWS_ON.search(text) and not SHADOWS_ONCE.search(text):
                     slow.setdefault("works out its shadows again on every frame - keep them as they are and work them out once while the model "
                                     "is still (shadowMap.autoUpdate = false, needsUpdate when something moves): the same look, far less work", []).append(rel(p))
-        if len(renderers) > 1:
-            notes.append("%s makes %d separate 3D renderers (%s) - one shared renderer for the whole deck runs smoother" % (mod, len(renderers), ", ".join(sorted(set(renderers)))))
+        # per page: the renderers of the scripts one page loads (the deck's kit3d.js and a task page's gb_interact.js are
+        # never on the same page - counted over the module they were a note on every 3D module)
+        for p, text in pages:
+            own = [(rel(p), renderers.get(os.path.normcase(os.path.abspath(p)), 0))]
+            for src in re.findall(r'<script[^>]+src="([^"#?]+)', text):
+                q = os.path.normcase(os.path.abspath(os.path.join(os.path.dirname(p), src)))
+                if renderers.get(q):
+                    own.append((rel(q), renderers[q]))
+            n = sum(k for _, k in own)
+            if n > 1:
+                notes.append("%s makes %d separate 3D renderers (%s) - one shared renderer for the whole page runs smoother"
+                             % (rel(p), n, ", ".join(sorted(f for f, k in own if k))))
         for why, files in slow.items():
             notes.append("%s %s (L46)" % (", ".join(files), why))
         for sub in ("tasks", "assessment"):

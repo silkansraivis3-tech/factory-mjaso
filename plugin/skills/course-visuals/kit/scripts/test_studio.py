@@ -94,6 +94,11 @@ SPECS = {
                       {"label": "Second officer\n(communications)", "children": ["Radio"]},
                       {"label": "Bosun", "children": ["Boundary cooling"]}]}],
         "steps": [{"title": "The master commands", "play": [["T", 1, 500]]}, {"title": "The deck team", "play": [["T", 5, 500]]}]},
+    "tree_wide": {"size": [416, 300], "label": "who receives the leak report", "parts": [
+        {"id": "T", "type": "tree", "x": 8, "y": 8, "w": 400, "root": "Ship person in charge", "value": 0,
+         "children": [{"label": "Barge person in charge"}, {"label": "Bridge"}, {"label": "SIMOPS supervisor"},
+                      {"label": "Company"}, {"label": "Port authority"}]}],
+        "steps": [{"title": "On board", "play": [["T", 4, 800]]}, {"title": "Ashore", "play": [["T", 6, 500]]}]},
     "level_feed": {"size": [520, 330], "label": "a tank level column fed from the left", "parts": [
         {"id": "L", "type": "level", "x": 330, "y": 50, "w": 60, "h": 200, "label": "TANK LEVEL", "min": 0, "max": 100, "unit": "%", "value": 20,
          "marks": [{"at": 90, "kind": "alarm", "label": "HIGH"}]},
@@ -178,9 +183,15 @@ EVALS = {
         {"id": "C", "type": "gas_cloud", "x": 20, "y": 250, "w": 280, "h": 120, "from": [110, 270], "fromIn": "figure"},
         {"id": "D", "type": "gas_cloud", "x": 350, "y": 250, "w": 250, "h": 120}],
         "steps": [{"title": "gas", "play": [["A", 1, 300], ["B", 1, 300], ["C", 1, 300], ["D", 1, 300]]}]},
-        "f.layout(true);f.go(1,true);var o={};['A','B','C','D'].forEach(function(i){var g=svg.querySelector('[data-kit-id=\"'+i+'\"] g[filter]');"
+        "f.layout(true);f.go(1,true);var o={};['A','B','C','D'].forEach(function(i){var g=svg.querySelector('[data-kit-id=\"'+i+'\"] g[transform*=\"scale\"]');"
         "var m=/translate\\(([-\\d.]+) ([-\\d.]+)\\) scale/.exec(g.getAttribute('transform'));o[i]=m?[+m[1],+m[2]]:g.getAttribute('transform');});return o;"),
     # F8: push_button 120 units by default (182 before), "h" sizes it; level ticks on the right when a pipe comes in on the left
+    "tree_rows": ({"size": [416, 300], "label": "who receives the leak report", "parts": [
+        {"id": "T", "type": "tree", "x": 8, "y": 8, "w": 400, "root": "Ship person in charge", "value": 0,
+         "children": ["Barge person in charge", "Bridge", "SIMOPS supervisor", "Company", "Port authority"]}],
+        "steps": [{"title": "On board", "play": [["T", 4, 300]]}]},
+        "f.layout(true);var ys={},right=0;[].forEach.call(svg.querySelectorAll('.kit-tree-box'),function(r){ys[Math.round(+r.getAttribute('y'))]=1;"
+        "right=Math.max(right,+r.getAttribute('x')+(+r.getAttribute('width')));});return {rows:Object.keys(ys).length,right:right};"),
     "push_h": ({"size": [640, 390], "label": "buttons", "parts": [
         {"id": "A", "type": "push_button", "x": 100, "y": 110, "tag": "ESD 1"},
         {"id": "B", "type": "push_button", "x": 300, "y": 110, "tag": "ESD 2", "h": 182},
@@ -394,8 +405,10 @@ def main():
         runs = {}
         for name, spec in SPECS.items():
             f = os.path.join(tmp, name + ".kit.json")
+            spec = dict(spec)
+            panel = spec.pop("_panel", "two-col")          # a case measured in the panel its slide really had
             io.open(f, "w", encoding="utf-8").write(json.dumps(spec))
-            runs[name] = studio.run(f, panel="two-col", out=os.path.join(tmp, "shots_" + name))[0]
+            runs[name] = studio.run(f, panel=panel, out=os.path.join(tmp, "shots_" + name))[0]
             check("%s: the studio runs" % name, runs[name] is not None)
         rep = lambda name, size="1280x800": (runs[name]["sizes"].get(size) or {}).get("report") or {}
         if all(runs.values()):
@@ -440,6 +453,10 @@ def main():
         if all(runs.values()):
             check("F8 push_button: two stacked in a 390-high figure, a full-size one beside them, and a log: clean at both sizes",
                   not findings(runs["stack"]), findings(runs["stack"]))
+            check("a tree of five children in 400 wide is clean, every word at 12.5 px, at both sizes",
+                  not findings(runs["tree_wide"]) and all((runs["tree_wide"]["sizes"][s].get("report") or {}).get("minTextPx", 0) >= 12.49
+                                                          for s in runs["tree_wide"]["sizes"]),
+                  (findings(runs["tree_wide"]), [(runs["tree_wide"]["sizes"][s].get("report") or {}).get("minTextPx") for s in runs["tree_wide"]["sizes"]]))
             check("F8 tree: four columns in a 640-wide figure keep every word at 12.5 px, at both sizes (it drew 11.5)",
                   not findings(runs["tree"]) and all((runs["tree"]["sizes"][s].get("report") or {}).get("minTextPx", 0) >= 12.49
                                                       for s in runs["tree"]["sizes"]),
@@ -454,6 +471,9 @@ def main():
         v = kit_eval(*EVALS["cloud_from"])
         check("F3 gas_cloud: \"from\" in figure coordinates, in the cloud's own box (old specs), and \"fromIn\": \"figure\" all grow from the right place",
               v and v["A"] == [100, 80] and v["B"] == [100, 80] and v["C"] == [90, 20] and v["D"] == [125, 72], v)
+        v = kit_eval(*EVALS["tree_rows"], width=290)    # shown at 0.7 as on the 1024 x 768 slide: the words grown 1.4x
+        check("tree: five children in 400 wide go to two rows below the root, inside the width (IGF Advanced M16 s03: one row, "
+              "zoomed out, words at 10.5 px)", v and v.get("rows") == 3 and v.get("right", 1e9) <= 401, v)
         v = kit_eval(*EVALS["push_h"])
         check("F8 push_button: the wall plate is 120 units by default (182 before) and \"h\" sizes it",
               v and 110 <= v["a"] <= 135 and 175 <= v["b"] <= 200, v)

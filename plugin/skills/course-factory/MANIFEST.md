@@ -1845,6 +1845,20 @@ Aleksis: "fix all the failures" - the rebuild of six IGF Advanced modules on 2.7
 10. **`gb_interact.css`** (2.74.0) said "every colour a token" and held 38 raw colours: the factory's own strict look check
    failed a freshly set-up module. Now `--gi-*` tokens in its `:root` (the same values) and `--blue` / `--txt-d`.
    `references/vocabulary.md` names `gb_interact.js` + `.css` (two failures of `test_design_system.py`, on main too).
+11. **"makes 2 separate 3D renderers"** (`check_course_package.py`) counted renderer code over the whole module: every
+   module with a 3D slide and an interactive task was noted, though the deck's `kit3d.js` and a task page's
+   `gb_interact.js` are never on one page. Now per page - the scripts a page loads. `test_course_package.py` +1.
+12. **Builds side by side** (`check_course_package.py`): the classroom's importer read another module's audit page
+   (`_audit_<pid>_WxH.html`, beside its deck while its checks run) as it was removed - "ENOENT", the package failed.
+   A build's working files (TRANSIENT) are left out of the importer's copy and of the checks. `test_course_package.py` +1.
+13. **A label box placed by hand** (`task_pages.py`): the compiler laid its own boxes in the label rows without knowing
+   the hand-placed ones (IGF Advanced M06 q06: "insulation" over "hold space", found only by the leader-crossing review).
+   `hand_box_overlaps` says it at compile, with the way out: place both, or neither. `test_task_engine.py` +1.
+14. **A `tree` with many children** (`kit.js`): three spacings tried, then the row was drawn wider than the figure and the
+   frame zoomed out - IGF Advanced M16 s03's five who receive a leak report were 10.5 px at 1024 x 768. With no
+   grandchildren they now go to two rows, the second's boxes under the gaps of the first. `test_studio.py` +1 (fails on
+   the old kit: the row reached 605 of 400 units). Also `test_studio.py`'s gas-cloud check looked for the blur filter
+   L65 replaced (`g[filter]`): it crashed on main; it reads the cloud's growing group now.
 Course findings put right in the build sheets: M03 s02 picture-left (L62), M14 s01 a photo cropped to the trucks and the
 vessel (a panorama a column cut to the terminal between them), M05 s01 a library photo shown nowhere else (L58), M14 m02 /
 s03 steps that move, M14 s03 picture-left (L62).
