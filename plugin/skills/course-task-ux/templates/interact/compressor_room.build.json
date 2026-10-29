@@ -1,0 +1,27 @@
+{
+ "scene": "compressor_room.kit3d.json",
+ "points": {
+  "Compressor suction line": [
+   "line",
+   "fl",
+   "frost"
+  ],
+  "Portable work lamp": [
+   "lamp",
+   "lamp_head"
+  ],
+  "Gas detector head, floor level": [
+   "det",
+   "det_cap"
+  ],
+  "Extraction fan No. 1": [
+   "fan",
+   "fan_lamp"
+  ],
+  "Dry powder extinguisher": "ext",
+  "Compressor suction gauge": "gauge",
+  "Emergency stop": "esd",
+  "Cargo compressor No. 2": "comp",
+  "Drip tray": "tray"
+ }
+}

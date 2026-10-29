@@ -1,0 +1,68 @@
+{
+ "scene": "deck_lineup.kit3d.json",
+ "valves": {
+  "V101": "v101",
+  "V201": "v201",
+  "V102": "v102",
+  "V202": "v202",
+  "V301": "v301",
+  "V302": "v302"
+ },
+ "pipes": [
+  {
+   "a": "Tank 1",
+   "b": "A",
+   "flow": "f_t1_a",
+   "back": "f_a_t1"
+  },
+  {
+   "a": "A",
+   "b": "A2",
+   "flow": "f_a_a2",
+   "back": "f_a2_a",
+   "valve": "V101"
+  },
+  {
+   "a": "A2",
+   "b": "X",
+   "flow": "f_a2_x",
+   "back": "f_x_a2",
+   "valve": "V201"
+  },
+  {
+   "a": "X",
+   "b": "B2",
+   "flow": "f_x_b2",
+   "back": "f_b2_x",
+   "valve": "V202"
+  },
+  {
+   "a": "B2",
+   "b": "B",
+   "flow": "f_b2_b",
+   "back": "f_b_b2",
+   "valve": "V102"
+  },
+  {
+   "a": "B",
+   "b": "Tank 2",
+   "flow": "f_b_t2",
+   "back": "f_t2_b"
+  },
+  {
+   "a": "X",
+   "b": "Port manifold",
+   "flow": "f_x_p",
+   "back": "f_p_x",
+   "valve": "V301"
+  },
+  {
+   "a": "X",
+   "b": "Starboard manifold",
+   "flow": "f_x_s",
+   "back": "f_s_x",
+   "valve": "V302"
+  }
+ ],
+ "start": "Start cargo pump 2"
+}

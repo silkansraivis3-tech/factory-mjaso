@@ -190,7 +190,9 @@ def check(course, module, rebuild=False):
             continue
         if long < PHOTO_MIN_LONG and origin == "render":
             renders.append("%s %dx%d" % (os.path.basename(rel), size[0], size[1]))
-        elif long < PHOTO_FLOOR and not (meta.get("low_resolution_ok") or "").strip() and rebuild:
+        elif long < PHOTO_FLOOR and not (meta.get("low_resolution_ok") or "").strip() and (rebuild or origin == "old"):
+            # 2.73.2 (owner, 2026-10-28: "if there is any pictures in old course it rescales upgrades quality for them and
+            # reuses them") - the course's own picture is reused, enlarged on this computer by the build (upscale_photos.py)
             kept.append("%s %dx%d" % (os.path.basename(rel), size[0], size[1]))
         elif long < PHOTO_FLOOR and not (meta.get("low_resolution_ok") or "").strip():
             find = ("it comes from the old course (%s), which has no larger original: find a larger photograph of the same "
@@ -202,9 +204,9 @@ def check(course, module, rebuild=False):
         elif long < PHOTO_MIN_LONG:
             soft.append("%s %dx%d" % (os.path.basename(rel), size[0], size[1]))
     if kept:
-        notes.append("%d picture(s) under %d px the module already had - they stay for this rebuild, blurred on the "
-                     "projector; replace them when you can (a larger photograph of the same thing): %s"
-                     % (len(kept), PHOTO_FLOOR, ", ".join(kept)))
+        notes.append("%d picture(s) under %d px - the course's own (old course, knowledge base) or ones the module already "
+                     "had - reused and enlarged (Real-ESRGAN when it is installed here: upscale_photos.py --check); a "
+                     "photorealistic generated one would be sharper: %s" % (len(kept), PHOTO_FLOOR, ", ".join(kept)))
     if ai:
         notes.append("%d photograph(s) made sharp by the local enlarger (Real-ESRGAN) - it rebuilds detail, so a real larger "
                      "photograph would still be truer: %s" % (len(ai), ", ".join(ai)))

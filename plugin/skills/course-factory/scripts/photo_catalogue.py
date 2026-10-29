@@ -47,7 +47,8 @@ from image_size import PHOTO_FLOOR, pixel_size  # noqa: E402
 
 CATALOGUE, PLAN, TO_FIND = "photo_catalogue.json", "photo_plan.json", "PHOTOS_TO_FIND.md"
 MIN_INDEX = 300          # px on the long side: smaller is a logo, an icon or a bullet - not indexed
-AUTO = 0.6               # a slide's top candidate at or above this (and PHOTO_FLOOR px or more) may be filled with no agent
+AUTO = 0.6               # a slide's top candidate at or above this may be filled with no agent (2.73.2: any size - the build
+                         # enlarges the course's small pictures, owner 2026-10-28)
 FIND = 0.35              # a slot whose best candidate is under this is listed to be found
 TOPIC_BONUS = 0.1        # the picture comes from the old course's (or the knowledge base's) section of the module's own topic
 FROM_OLD_BONUS = 0.35    # the picture sits on an old-course slide the script's own "from_old" names ("deck 5, slides 28-30")
@@ -345,7 +346,7 @@ def used_in_modules(course):
 
 def assign(course):
     """working_claude\\photo_plan.json: each photo slot's five best candidates and - course-wide, the best match first - one
-    pick a slot may take with no agent (score AUTO or more, PHOTO_FLOOR px or more, never given twice); and
+    pick a slot may take with no agent (score AUTO or more, never given twice - a small one is enlarged by the build); and
     visuals\\PHOTOS_TO_FIND.md: the slots nothing in the course's own pictures shows"""
     work = workspace.work_folder(course, create=False)
     cat = load(course, CATALOGUE)
@@ -365,7 +366,7 @@ def assign(course):
                      "candidates": [{"id": photos[k]["id"], "score": v} for v, k in top]}
         for v, k in top:
             p = photos[k]
-            if v >= AUTO and max(p.get("w") or 0, p.get("h") or 0) >= PHOTO_FLOOR and s.get("kind") == "slide":
+            if v >= AUTO and s.get("kind") == "slide":
                 offers.append((v, key, p["id"]))
     for v, key, pid in sorted(offers, key=lambda x: -x[0]):           # the best match first, each picture once (L58)
         if rows[key]["pick"] is None and pid not in taken:
@@ -374,15 +375,15 @@ def assign(course):
     plan = {"made": date.today().isoformat(), "auto": AUTO, "floor_px": PHOTO_FLOOR, "slots": rows}
     p = workspace.claude_path(work, PLAN)
     io.open(p, "w", encoding="utf-8", newline="\n").write(json.dumps(plan, ensure_ascii=False, indent=1))
-    find = [(k, r) for k, r in rows.items() if not r["pick"] and (not r["candidates"] or r["candidates"][0]["score"] < FIND
-                                                                   or all(max(by_id[c["id"]].get("w") or 0, by_id[c["id"]].get("h") or 0)
-                                                                          < PHOTO_FLOOR for c in r["candidates"]))]
+    find = [(k, r) for k, r in rows.items() if not r["pick"] and (not r["candidates"] or r["candidates"][0]["score"] < FIND)]
     vdir = workspace.claude_path(work, "visuals")
     os.makedirs(vdir, exist_ok=True)
-    lines = ["# Photographs to find - the whole course, one sourcing pass (2.73.0)", "",
-             "*Written by `photo_catalogue.py assign`. Nothing in the course's own pictures (old course, knowledge base) shows these "
-             "well enough at 800 px or more. ONE visual-sourcer pass finds them for the whole course, 1600 px or larger (L52, L64), "
-             "saved into the module's assets\\img with its record (`_photo_meta.json`, `shows`). Internal - never shipped.*", "",
+    lines = ["# Pictures to make - the whole course, one pass (2.73.2)", "",
+             "*Written by `photo_catalogue.py assign`. Nothing in the course's own pictures (old course, knowledge base) shows these. "
+             "ONE pass for the whole course makes each a PHOTOREALISTIC GENERATED picture (nano-banana or another image tool, at "
+             "1600 px or more, within the course's approved budget) - equipment too; nobody is asked to take a photo (owner, "
+             "2026-10-28). Saved into working_claude\\photos_found\\<module>\\ with its record (`_photo_meta.json`: "
+             "\"generated\": true, `shows`, `found_for`). Internal - never shipped.*", "",
              "| Slot | Shape | Must show | Best of the course's own (score, px) |", "|---|---|---|---|"]
     for k, r in find:
         best = r["candidates"][0] if r["candidates"] else None
@@ -430,9 +431,9 @@ def main(argv=None):
     if a.cmd == "assign":
         p, plan, n_find = assign(a.course)
         rows = plan["slots"]
-        print("%d photo slot(s) in the approved scripts: %d with a pick that can be filled with no agent (score %.2f+, %d px+, each "
-              "picture once), %d with candidates for the builder, %d to find (visuals\\%s). Written: %s"
-              % (len(rows), sum(1 for r in rows.values() if r["pick"]), AUTO, PHOTO_FLOOR,
+        print("%d photo slot(s) in the approved scripts: %d with a pick that can be filled with no agent (score %.2f+, each "
+              "picture once, a small one enlarged), %d with candidates for the builder, %d to generate (visuals\\%s). Written: %s"
+              % (len(rows), sum(1 for r in rows.values() if r["pick"]), AUTO,
                  sum(1 for r in rows.values() if not r["pick"] and r["candidates"]), n_find, TO_FIND, p))
         return 0
     plan = load(a.course, PLAN)

@@ -155,6 +155,10 @@
     "an answer key"
    ],
    [
+    "debrief_map",
+    "the instructor's map of misconceptions and safety questions - which wrong choice stands for which wrong idea"
+   ],
+   [
     "_INSTRUCTOR_NOTES\\.md$",
     "the instructor's notes for the panel (2.18.1) - they belong on the instructor tablet, never in the trainee tree or on a slide"
    ],

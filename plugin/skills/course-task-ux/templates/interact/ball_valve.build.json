@@ -1,0 +1,130 @@
+{
+ "scene": "ball_valve.kit3d.json",
+ "names": {
+  "pipe_l": "Cargo pipe",
+  "pipe_r": "Cargo pipe",
+  "fl_l": "Flange joint",
+  "fl_r": "Flange joint",
+  "body": "Valve body",
+  "body_c": "Valve body",
+  "bonnet": "Valve body",
+  "ball": "Ball",
+  "bore": "Ball",
+  "seat_l": "Seat rings",
+  "seat_r": "Seat rings",
+  "stem": "Stem",
+  "gland": "Gland packing",
+  "nut": "Gland packing",
+  "lever": "Handle",
+  "grip": "Handle"
+ },
+ "explode": {
+  "pipe_l": [
+   -1.9,
+   0,
+   0
+  ],
+  "fl_l": [
+   -1.9,
+   0,
+   0
+  ],
+  "pipe_r": [
+   1.9,
+   0,
+   0
+  ],
+  "fl_r": [
+   1.9,
+   0,
+   0
+  ],
+  "body": [
+   0,
+   -2.8,
+   0
+  ],
+  "body_c": [
+   0,
+   -2.8,
+   0
+  ],
+  "bonnet": [
+   0,
+   -2.8,
+   0
+  ],
+  "seat_l": [
+   -1.05,
+   0,
+   0
+  ],
+  "seat_r": [
+   1.05,
+   0,
+   0
+  ],
+  "stem": [
+   0,
+   1.2,
+   0
+  ],
+  "gland": [
+   0,
+   0.75,
+   0
+  ],
+  "nut": [
+   0,
+   0.75,
+   0
+  ],
+  "lever": [
+   0,
+   1.55,
+   0
+  ],
+  "grip": [
+   0,
+   1.55,
+   0
+  ]
+ },
+ "xray": [
+  "pipe_l",
+  "pipe_r",
+  "fl_l",
+  "fl_r",
+  "body",
+  "body_c",
+  "bonnet"
+ ],
+ "operate": {
+  "label": "Turn the handle",
+  "axis": [
+   0,
+   0
+  ],
+  "start": "open",
+  "states": {
+   "open": {
+    "rot": {},
+    "kit": {
+     "flow.on": 1
+    }
+   },
+   "closed": {
+    "rot": {
+     "ball": 90,
+     "bore": 90,
+     "lever": 90,
+     "grip": 90,
+     "stem": 90
+    },
+    "kit": {
+     "flow.on": 0
+    }
+   }
+  }
+ }
+}

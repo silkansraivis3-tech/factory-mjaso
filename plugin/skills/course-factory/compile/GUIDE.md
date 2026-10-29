@@ -302,8 +302,9 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
 - **A planned photo that does not exist (2.49.0).** The build names every photo slide with no picture file. Find the
   real one first (project, factory library, a free licence - `course-visuals`). If none exists and the slide only sets
   the scene, propose an AI picture unasked - `nano-banana:realistic-visuals`: describe it, show the prompt and the
-  price, make it only after the person's yes, record it `"generated": true` in `_photo_meta.json`. Equipment a trainee
-  must recognise is never an AI picture (L33): it stays a photo to take.
+  price, make it within the course's approved picture budget (2.73.2: one yes per course), record it `"generated": true`
+  in `_photo_meta.json`. (2.73.2, owner 2026-10-28) Equipment too - first generated, then fixed; nobody is asked to
+  take a photo, and the course's own small pictures are reused, enlarged by the build (Real-ESRGAN).
 - **A `model_3d` slide (2.49.0, L46) - drawn with the 3D kit.** Do not write three.js. Write the scene as a short
   JSON spec, `working_claude\figures\MNN\sNN.kit3d.json` (parts, labels, steps: `course-visuals\kit3d\SPEC.md` is the
   format, `PARTS.md` lists every part; the finished IGF scenes are ported in `course-visuals\kit3d\examples\`), and

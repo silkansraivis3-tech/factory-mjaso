@@ -6,6 +6,55 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.75.0 · The debrief knows the wrong ideas (2026-10-29)
+
+- **Why.** A debrief by question repeats itself when one wrong belief shows in several questions, and says nothing of which
+  mistakes can hurt someone. Tagging each wrong choice with the idea behind it lets the class be told "5 of 12 believed this".
+- **What.** compile/scripts/debrief_map.py (draft, check, review, approve, build, status) and the map it builds into each
+  module's instructor folder from approved tags; the compile builds it with the task pages. The map holds answer keys and
+  misconception ids only. The tags never reach a tablet: the training app's panel reads the map and sends one task's slice
+  with debrief_opened after the task is closed.
+
+## 2.74.3 · Answers the class record can count (2026-10-29)
+
+- **Why.** To count across classes which questions are missed, which wrong choices are picked and who was sure and wrong,
+  an answer has to say which question and which choice it is - the words alone change with a reworded question or another
+  language, and the confidence went only as words.
+- **What.** Each handed-in item adds `q`, `p` and `s` (gb_answer.js `pickedKeys`; the optional `keys()` of the swipe,
+  critique and evidence types in gb_interact.js). The training app's gate passes them through checked (8-hex keys, 0-2).
+
+## 2.74.2 · A self-check is answered once (2026-10-28)
+
+- **Why.** The owner: "you do it once and if you fail you will get the explanation in the debrief". Start again on the
+  result screen (outside the classroom frame) let a trainee answer the whole set again.
+- **What.** Under the debrief rule, and on a blind final, the result screen has no Start again (task_pages.py, and
+  gb_answer.js for an older page). Every part already locks at its Check - there is no per-question retry.
+
+## 2.74.1 · The build grades the ten types; check a colleague gives nothing away (2026-10-28)
+
+- **Why.** Redoing a whole course's tasks with 2.74.0 (Chemical Tanker Advanced): the build's grader could answer none of
+  the ten types, and a "check a colleague" sheet told the trainee which claims were wrong - only wrong claims lacked
+  "keep it", and they had more choices.
+- **What.** `review_sheets.mjs` answers every type from its keys, right and wrong, and taps "how sure". Every claim's
+  sheet ends with "keep it as written"; every claim shows the same number of choices (content_script.py refuses
+  otherwise - a right claim is written `claim => * | decoy | decoy`). A take-apart set step wakes Check when it opens.
+  The predict chart and the test-before-entry section carry `data-audit-ignore`: live instruments, not drawings for L54.
+- **Watch.** `root.__look(name)` on an inspection round is the grader's door in, not the trainee's.
+
+## 2.74.0 · Part A + Part B, ten interactive types, the debrief rule (2026-10-28)
+
+- **Why.** The owner tried the twelve prototypes (`design/task-prototypes/index.html`) and approved them: tasks that are
+  practical learning, Part A then Part B, 3D and on-board activities, and feedback that never gives the right answer away
+  on the tablet - the debrief shows it. "Not 1:1, but functionality and type" - so these are types any course fills.
+- **What.** §2b. `assets/gb_interact.js` + `.css` (ten types as groups of gb_answer.js - `GB_LAB[type](el, api)`, the
+  engine asks answered / right / show / said / word); `gb_answer.js` gets the lab hook, `data-reveal="debrief"`, the
+  `brief` line, `"confidence"` and whole result items. `templates/interact/` holds the example set and three 3D scenes.
+- **Kept.** Keys, not answers, in the page (every type); tap for every drag; no typing (the calculator is buttons); the
+  same dock, Check per part, result ring and classroom message.
+- **Watch.** A 3D task loads three.js + kit3d.js on the task page (`task_pages.py` adds them only when a question needs
+  them). The explore model's expressions and a curve are in the page (base64 - the world, not the answer); the answer
+  stays a key.
+
 
 v1 was a single 210-line `SKILL.md`: no header line, no MANIFEST, no assets, no scripts. It
 was already good and already close to course-agnostic. v2 does two things and deliberately

@@ -887,15 +887,17 @@
     if (!key || key === S.sel) {
       S.sel = null;
       var st = S.steps()[S.step] || {};
-      S.go(st.view ? S.viewFor(st.view) : S.home, null, st.select ? [].concat(st.select) : []);
+      S.go(S.opt.keepView ? null : st.view ? S.viewFor(st.view) : S.home, null, st.select ? [].concat(st.select) : []);
     } else {
       S.sel = key;
-      S.go(S.frameSel(key), null, [key]);
+      S.go(S.opt.keepView ? null : S.frameSel(key), null, [key]);
     }
     S.free = false;
     S.ctlSync();
     S.pillsLit();
     S.syncDeck();
+    /* 2.74.0 - a tablet task (gb_interact.js) is told what was tapped; keepView: the camera stays where the trainee put it */
+    if (S.opt.onSelect) { try { S.opt.onSelect(S.sel); } catch (e9) { /* the task's own */ } }
   };
   P.current = function () { return this.sel; };
   P.syncDeck = function () { if (w.GB3D && w.GB3D.sync && this.wired) { try { w.GB3D.sync(this.stage); } catch (e4) { /* deck */ } } };
@@ -1103,7 +1105,7 @@
       l.up = l.isUp; l.gap = l.base; l.dx = 0;
       shown.push(l);
     });
-    /* 2.73.1 - nothing on the picture moved since the last settle (a gas flow or a pulse redraws the frame, the view stands):
+    /* 2.75.2 - nothing on the picture moved since the last settle (a gas flow or a pulse redraws the frame, the view stands):
        the pills keep their places, no search. While the view moves, one order is tried; every order once it is at rest (one
        more frame is asked for). Was every order on every frame of a turn the presenter did not drag: m01 23 ms a frame */
     var key = W + 'x' + H + '|' + S.step + '|' + (S.small ? 's' : '') + '|' + (S.cap ? S.cap.textContent : '') + '|' +
@@ -1232,7 +1234,7 @@
           /* other stem lengths, the other side of the point, and the pill slid sideways along its stem's end -
              the wanted side first (the hand-made settleLabels tried the same) */
           var lim = a.pw / 2 - 12, p0 = pref(a), dxs = [p0, 0, -lim, lim, -lim / 2, lim / 2], di, gs = [], gi;
-          /* 2.73.1 - stem lengths nearest the wanted one first: once no length left can cost less than the best place found
+          /* 2.75.2 - stem lengths nearest the wanted one first: once no length left can cost less than the best place found
              (a length's own cost only grows with its distance), the rest are not tried - the same place, a fraction of the work */
           for (g = 14; g <= a.base + 260; g += 6) { gs.push(g); }
           gs.sort(function (p, q) { return Math.abs(p - a.base) - Math.abs(q - a.base) || p - q; });
@@ -1317,7 +1319,7 @@
     if (moving || S.spin) { S.schedule(); }
   };
   /* 2.68.0 - steady on a slow tablet: while the model moves, its frames are timed; when 20 in a row take over 30 ms on average
-     (under 33 a second - the turn judders; 2.73.1, was 45) it is drawn one step less sharp from then on: twice the screen's
+     (under 33 a second - the turn judders; 2.75.2, was 45) it is drawn one step less sharp from then on: twice the screen's
      pixels, then 1.5, then lite light (P.goLite), then 1. Each step makes the drawing buffer once - the cost of a new buffer (perf3d: up to a second on a slowed CPU)
      is why it never goes back and forth; a fast screen never loses sharpness. window.__scene3d.dpr says where it is */
   P.steady = function (moving, tnow) {
@@ -1815,7 +1817,7 @@
     auto: auto,
     all: function () { return scenes.map(function (S) { return S.stage.__k3; }); },
     _test: test,
-    light: true                       /* 2.73.1: this kit chooses its own light ("light"); a host's lite patch leaves it be */
+    light: true                       /* 2.75.2: this kit chooses its own light ("light"); a host's lite patch leaves it be */
   };
   w.KIT3D = KIT3D;
 

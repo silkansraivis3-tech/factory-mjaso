@@ -26,9 +26,10 @@
                     set the value: the unit, value - data-key lists one key per accepted step
 
    The classroom: the result is reported once - parent.postMessage({type: 'gb-task-done', code, title, ok, total,
-   head, items, answered, of, timeout: true|false}); the instructor's timer {type: 'gb-timer'} is heard, and at 0
+   head, items, answered, of, timeout: true|false}), each item {t, ok, a, c, w, n, sure, q, p, s}; the instructor's timer {type: 'gb-timer'} is heard, and at 0
    what was done is marked and reported with timeout: true. "Start again" exists only outside the classroom frame
-   (window.parent === window): inside it, one opening gives one result.
+   (window.parent === window): inside it, one opening gives one result. Never under the debrief rule or on a blind final:
+   those are answered once (2.74.2).
    The words on the controls are in the page's language (<html lang>: en, lv, ru - LANG below); a page may still
    override any of them with window.GB_ANSWER_TEXT. */
 (function () {
@@ -51,7 +52,11 @@
     passed: 'PASSED', notPassed: 'NOT PASSED',
     yourAns: 'Your answer', rightAns: 'Right answer', yourOrder: 'Your order', rightOrder: 'Right order',
     notPlaced: 'not placed', leftOut: 'does not belong here', onPic: 'its place is marked on the picture',
-    trayEmpty: 'Cards not placed'                           /* 2.63.2: written on the empty dashed bank under a sort / match list */
+    trayEmpty: 'Cards not placed',                          /* 2.63.2: written on the empty dashed bank under a sort / match list */
+    /* 2.74.0 - wrong is said briefly; the right answer waits for the debrief, where the class checks it together */
+    notRight: 'Not right.', later: 'We will check this one together in the debrief.',
+    sureAsk: 'How sure are you?', sure0: 'Guessing', sure1: 'Fairly sure', sure2: 'Certain',
+    calib: 'Certain but wrong: {cw} · Certain and right: {cr} · Guessed: {g}'
   };
   /* the course language (L19) - the page's <html lang>; PROVISIONAL (2.40.0), written by Claude, to be checked by a
      native speaker: course-factory/compile/TRANSLATIONS_REVIEW.md. The message to the classroom keeps 'PASSED' /
@@ -72,7 +77,10 @@
       passed: 'IESKAITĪTS', notPassed: 'NAV IESKAITĪTS',
       yourAns: 'Tava atbilde', rightAns: 'Pareizā atbilde', yourOrder: 'Tava secība', rightOrder: 'Pareizā secība',
       notPlaced: 'nav novietots', leftOut: 'šeit nepieder', onPic: 'tā vieta ir atzīmēta attēlā',
-      trayEmpty: 'Nenovietotās kartītes'
+      trayEmpty: 'Nenovietotās kartītes',
+      notRight: 'Nav pareizi.', later: 'Šo kopā pārrunāsim atskaitē.',
+      sureAsk: 'Cik pārliecināts tu esi?', sure0: 'Minu', sure1: 'Diezgan pārliecināts', sure2: 'Pilnīgi pārliecināts',
+      calib: 'Pārliecināts, bet kļūdījies: {cw} · Pārliecināts un pareizi: {cr} · Minēts: {g}'
     },
     ru: {
       tryFirst: 'Сначала попробуй планшет', startSelf: 'Начать самопроверку', moduleCheck: 'Проверка по модулю',
@@ -89,7 +97,10 @@
       passed: 'ЗАЧТЕНО', notPassed: 'НЕ ЗАЧТЕНО',
       yourAns: 'Твой ответ', rightAns: 'Правильный ответ', yourOrder: 'Твой порядок', rightOrder: 'Правильный порядок',
       notPlaced: 'не размещено', leftOut: 'здесь лишнее', onPic: 'его место отмечено на рисунке',
-      trayEmpty: 'Неразмещённые карточки'
+      trayEmpty: 'Неразмещённые карточки',
+      notRight: 'Неверно.', later: 'Разберём это вместе на разборе.',
+      sureAsk: 'Насколько ты уверен?', sure0: 'Угадываю', sure1: 'Довольно уверен', sure2: 'Уверен',
+      calib: 'Уверен, но ошибся: {cw} · Уверен и прав: {cr} · Угадал: {g}'
     }
   };
   (function () {
@@ -208,6 +219,11 @@
   /* 2.60.0 - a graded final (FA, FB; task_pages.py writes data-blind): each answer is recorded and the next question
      opens - no right answer, no verdict, no why, no score so far; only the result screen at the end (L27/L45) */
   var BLIND = body.hasAttribute('data-blind');
+  /* 2.74.0 (owner, 2026-10-28: "if it is wrong, it just tells that it is wrong, briefly explaining it, and then in the
+     debrief it will be shown, and the instructor together with the students can check it") - data-reveal="debrief":
+     a wrong answer is marked wrong with the question's brief reason; the right answer is never shown on the tablet.
+     A right answer still shows why. task_pages.py writes it unless the build sheet says "feedback": "now". */
+  var LATER = body.getAttribute('data-reveal') === 'debrief';
   var inFrame = CR.inFrame;
   var partEl = $('#partLbl'), gotEl = $('#gotLbl'), barEl = $('#barFill');
   var dock = $('#dock'), go = $('#go');
@@ -558,6 +574,7 @@
     }
     if ($('.chip', el)) { p.groups.push(mkPlace(q, el)); }
     each($$('.dial', el), function (d) { p.groups.push(mkDial(q, d)); });
+    each($$('.lab[data-lab]', el), function (l) { var g = mkLab(q, l, p); if (g) { p.groups.push(g); } });
     /* compare: a figure in a column chooses that column */
     each($$('.cmp [data-for]', el), function (c) {
       c.addEventListener('click', function () { var it = D.getElementById(c.getAttribute('data-for')); if (it) { it.click(); } }, false);
@@ -568,6 +585,19 @@
     });
     wireGaps(p);
     return p;
+  }
+  /* 2.74.0 - an interactive task type of gb_interact.js (a 3D model, a line-up, a calculator, a swipe deck ...): the
+     part's group is that type's own object, and it answers the engine's questions - answered(), touched(), right(),
+     show(ok, later), said() {a, c}, lock(), word() (what the dock says for it). Its answers are keys, like every other. */
+  function mkLab(q, el, p) {
+    var make = W.GB_LAB && W.GB_LAB[el.getAttribute('data-lab')];
+    if (!make) { return null; }
+    var g = { type: 'lab', q: q, id: q.id, el: el, locked: false };
+    g.impl = make(el, { id: q.id, key: gbKey, say: say, later: LATER, blind: BLIND,
+      lang: (D.documentElement.getAttribute('lang') || 'en').slice(0, 2).toLowerCase(),
+      changed: function () { q.touched = true; refresh(); },
+      check: function () { if (qs[cur] === q && q.parts[q.k] === p && !p.done && hasAnswer(p)) { check(); } } });
+    return g;
   }
   /* rebuild the incident, part two: the cards in their places are tapped to say where it should have stopped */
   function mkStop(q, before) {
@@ -589,16 +619,30 @@
     q.text = txt($('[data-script-field="question"]', sec));
     q.why = $('.why', sec);
     q.vd = $('.vd', sec);
+    q.brief = $('.why .brief', sec);
+    q.sure = $('.sure', sec);              /* 2.74.0 - "how sure are you?" after the answer (the script's "confidence": true) */
+    q.sureV = -1;
+    if (q.sure) {
+      each($$('button', q.sure), function (b) {
+        b.addEventListener('click', function () {
+          if (q.done || has(q.sure, 'locked')) { return; }
+          each($$('button', q.sure), function (x) { del(x, 'sel'); });
+          add(b, 'sel'); q.sureV = parseInt(b.getAttribute('data-v'), 10); q.touched = true; refresh();
+        }, false);
+      });
+    }
     each(ps.length ? ps : [sec], function (el, i) { q.parts.push(mkPart(q, el, i)); });
     if (ps.length) { add(ps[0], 'on'); }
     return q;
   }
   function groupAnswered(g) {
+    if (g.type === 'lab') { return !!g.impl.answered(); }
     if (g.type === 'choose') { return g.picked.length > 0; }
     if (g.type === 'dial') { return g.k >= 0; }
     return g.need === 'slots' ? slotsFull(g) : placed(g) === g.chips.length;
   }
   function groupTouched(g) {
+    if (g.type === 'lab') { return !!(g.impl.touched ? g.impl.touched() : g.impl.answered()); }
     if (g.type === 'choose') { return g.picked.length > 0; }
     if (g.type === 'dial') { return g.k >= 0; }
     return placed(g) > 0;
@@ -606,6 +650,7 @@
   function hasAnswer(p) {
     var ok = p.groups.length > 0;
     each(p.groups, function (g) { if (!groupAnswered(g)) { ok = false; } });
+    if (p.q.sure && p === p.q.parts[p.q.parts.length - 1] && p.q.sureV < 0) { ok = false; }    /* how sure: on its last part */
     return ok;
   }
   function anyAnswer(p) {
@@ -615,6 +660,7 @@
   }
   function gradeGroup(g) {
     var ok = true;
+    if (g.type === 'lab') { return !!g.impl.right(); }
     if (g.type === 'choose') {
       each(g.items, function (it) { if (has(it, 'sel') !== itemRight(g, it)) { ok = false; } });
       return ok && g.picked.length > 0;
@@ -630,10 +676,23 @@
   }
   function lock(p) {
     add(p.el, 'locked');
-    each(p.groups, function (g) { g.locked = true; if (g.type === 'place') { select(g, null); } });
+    each(p.groups, function (g) { g.locked = true; if (g.type === 'place') { select(g, null); } if (g.type === 'lab' && g.impl.lock) { g.impl.lock(); } });
+    if (p.q.sure && p === p.q.parts[p.q.parts.length - 1]) { add(p.q.sure, 'locked'); }
   }
   function revealGroup(g, ok) {
     var bad = [], lo = -1, hi = -1, k, band;
+    if (g.type === 'lab') { g.impl.show(ok, LATER); return; }
+    if (LATER && !ok) {                                  /* 2.74.0 - what was wrong is marked; the right answer is not shown */
+      if (g.type === 'choose') {
+        each(g.picked, function (it) { if (!itemRight(g, it)) { add(it, 'wrong'); add(it, 'shake'); } });
+        if (g.gap) { add(g.gap, 'wrong'); del(g.gap, 'act'); del(g.box, 'act'); }
+      } else if (g.type === 'dial') {
+        add(g.el, 'wrong');
+      } else {
+        each(g.chips, function (c) { if (!chipGood(g, c)) { add(c, 'wrong'); } });
+      }
+      return;
+    }
     if (g.type === 'choose') {
       each(g.items, function (it) {
         /* choose all that are right: a right one the trainee did not choose is shown as one ("Also right"), outlined -
@@ -694,7 +753,10 @@
     var out = [];
     each(p.groups, function (g) {
       if (gradeGroup(g)) { return; }
-      if (g.type === 'choose') {
+      if (g.type === 'lab') {
+        var s = g.impl.said ? g.impl.said() : { a: '', c: '' };
+        out.push({ k: 'pick', mine: [s.a || '–'], right: [s.c || ''] });
+      } else if (g.type === 'choose') {
         out.push({ k: 'pick', mine: g.picked.map(function (it) { return nameOf(keyEl(it)); }),
           right: g.items.filter(function (it) { return itemRight(g, it); }).map(function (it) { return nameOf(keyEl(it)); }) });
       } else if (g.type === 'dial') {
@@ -730,7 +792,14 @@
       });
     });
     if (kind === 'notQuiteChoice' && $('.missed', q.sec)) { kind = 'notQuiteMissed'; }
-    if (q.vd) { q.vd.textContent = q.ok ? say('correct') : say(kind); }
+    if (q.vd) { q.vd.textContent = q.ok ? say('correct') : say(LATER ? 'notRight' : kind); }
+    if (LATER && q.why) {                                /* wrong: the brief reason and "in the debrief"; right: why */
+      var fb = $('[data-script-field="feedback"]', q.why), lt = $('.later', q.why);
+      if (fb) { fb.style.display = q.ok ? '' : 'none'; }
+      if (q.brief) { q.brief.style.display = q.ok ? 'none' : 'block'; }
+      if (!q.ok && !lt) { lt = D.createElement('p'); lt.className = 'later'; q.why.appendChild(lt); }
+      if (lt) { lt.textContent = q.ok ? '' : say('later'); }
+    }
     if (q.why) {
       add(q.why, 'on'); add(q.why, q.ok ? 'good' : 'bad');
       /* above the dock, not under it - and a question of several parts keeps its last part's own label in view */
@@ -876,6 +945,8 @@
     var q = qs[cur], p = q.parts[q.k];
     if (q.done || p.done) { return; }
     go.disabled = !hasAnswer(p);
+    var wd = checkWord(q);                               /* 2.74.0 - an interactive type's dock words follow it ("Hand in 0.84 % vol") */
+    if (wd && go.textContent !== wd) { go.textContent = wd; }
   }
   function screensOff() { each($$('.scr'), function (s) { del(s, 'on'); }); }
   /* the hand shows a gesture once per way of answering: tap the picture, drag a card, slide the dial -
@@ -886,6 +957,7 @@
     shown[q.mech] = true;
     later(500, function () {
       if (qs[cur] !== q || q.touched || q.done || ended) { return; }
+      if (g.type === 'lab') { return; }                  /* an interactive type shows its own way in (gb_interact.js) */
       if (g.type === 'choose') { demoTap(neutralSpot(q.sec)); return; }
       if (g.type === 'dial') {
         var r = g.track.getBoundingClientRect();
@@ -914,7 +986,9 @@
   }
   /* what the dock says while a part waits for its answer: Check - or, on a blind final, where the press goes next */
   function checkWord(q) {
-    if (!BLIND) { return say('check'); }
+    var lw = '';
+    each(q.parts[q.k] ? q.parts[q.k].groups : [], function (g) { if (g.type === 'lab' && g.impl.word) { lw = g.impl.word() || lw; } });
+    if (!BLIND) { return lw || say('check'); }
     if (q.k < q.parts.length - 1) { return say('goOn'); }
     return say(cur === qs.length - 1 ? 'seeScore' : 'next');
   }
@@ -986,6 +1060,19 @@
     if (!PASS) { return ''; }
     return (t.ok * 100 >= PASS * t.total) ? 'PASSED' : 'NOT PASSED';
   }
+  /* the key of each choice the trainee made: an option picked, a card flicked true or false, a claim kept or corrected,
+     a source pinned. The same key the factory works out from the script, so a choice is known across classes even when
+     the trainee's words for it change language. Types with no single choice (order, value, 3D) give none - a says it */
+  function pickedKeys(q) {
+    var out = [];
+    each(q.parts, function (p) {
+      each(p.groups || [], function (g) {
+        if (g.type === 'choose') { each(g.picked, function (it) { var k = keyOf(keyEl(it)); if (k) { out.push(k); } }); }
+        else if (g.type === 'lab' && g.impl && g.impl.keys) { each(g.impl.keys() || [], function (k) { if (k) { out.push(k); } }); }
+      });
+    });
+    return out;
+  }
   function report(timeout) {
     if (reported) { return; }
     reported = true;
@@ -995,8 +1082,17 @@
        several, the why always empty (the training app, gas M07: 4 questions became 11 items). Never on a blind final */
     each(qs, function (q, i) {
       var s = BLIND ? { a: '', c: '' } : said(q);
-      items.push({ t: cut((i + 1) + '. ' + q.text, 90), ok: !!(q.done && q.ok), a: cut(s.a, 120), c: cut(s.c, 120),
-        w: BLIND || !q.why ? '' : cut([].map.call(q.why.childNodes, function (n) { return n.textContent; }).join(' '), 400) });
+      /* 2.74.0 - whole, never cut (owner, 2026-10-28: the debrief showed "Why this is the proper way to com..."): the
+         question, the answer, the right answer and why as the script has them; n the brief reason, sure how sure */
+      var fbk = q.why && $('[data-script-field="feedback"]', q.why), it = { t: clean((i + 1) + '. ' + q.text), ok: !!(q.done && q.ok),
+        a: clean(s.a), c: clean(s.c), w: BLIND || !fbk ? '' : clean(fbk.textContent) };
+      if (!BLIND && q.brief) { it.n = clean(q.brief.textContent); }
+      if (!BLIND && q.sure && q.sureV >= 0) { it.sure = say('sure' + q.sureV); it.s = q.sureV; }
+      /* for counting across classes: q the question's id in the module's script, p the key of each choice made,
+         s how sure as a number (0 guessing, 1 fairly sure, 2 sure) - the words above are for people to read */
+      if (q.id) { it.q = q.id; }
+      if (!BLIND) { var p = pickedKeys(q); if (p.length) { it.p = p; } }
+      items.push(it);
     });
     buildResult(t, timeout);
     CR.send({ code: CODE, title: TITLE, ok: t.ok, total: t.total, head: head(t), items: items, detail: 2,
@@ -1027,12 +1123,20 @@
         esc(q.text) + (q.done && !q.ok ? fixes(q) : '') + '</span></li>';
     });
     list.innerHTML = html;
+    var sure = qs.filter(function (q) { return q.sure && q.done && q.sureV >= 0; });
+    if (sure.length && !BLIND) {                         /* 2.74.0 - how sure: "certain but wrong" is where the debrief starts */
+      var cal = $('#resCalib') || D.createElement('p');
+      cal.id = 'resCalib'; cal.className = 'calib';
+      cal.textContent = say('calib', { cw: sure.filter(function (q) { return q.sureV === 2 && !q.ok; }).length,
+        cr: sure.filter(function (q) { return q.sureV === 2 && q.ok; }).length, g: sure.filter(function (q) { return q.sureV === 0; }).length });
+      if (!cal.parentNode) { list.parentNode.insertBefore(cal, list); }
+    }
   }
   /* 2.63.2 - under a wrong question, on the result screen itself: the trainee's answer (marked) and the right one; an
      order beside the right order, the moved cards marked; a card put in the wrong place and where it goes. Words only -
      nothing to press after the result (classroom-system.json result_is_last), never on a blind final */
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-  function cut(s, n) { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+  function clean(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
   /* what the trainee answered and the right answer, in words, from the marking each Check left (p.fix) */
   function said(q) {
     var a = [], c = [];
@@ -1048,6 +1152,12 @@
   function fixes(q) {
     var h = '';
     if (BLIND) { return ''; }
+    if (LATER) {                                         /* what the trainee answered and the brief reason - not the right answer */
+      var s = said(q), br = q.brief ? clean(q.brief.textContent) : '';
+      h = '<span class="fx"><b>' + esc(say('yourAns')) + ':</b> <s class="mine">' + esc(s.a || '–') + '</s></span>' +
+        (br ? '<span class="fx brief">' + esc(br) + '</span>' : '') + '<span class="fx later">' + esc(say('later')) + '</span>';
+      return '<span class="fix">' + h + '</span>';
+    }
     each(q.parts, function (p) {
       each(p.fix || [], function (f) {
         if (f.k === 'pick') {
@@ -1158,7 +1268,9 @@
     go.addEventListener('click', onGo, false);
     var again = $('#again');
     if (again) {
-      if (inFrame) { again.style.display = 'none'; }          /* one opening, one result inside the classroom */
+      /* one opening, one result inside the classroom - and a set under the debrief rule (or a blind final) is answered
+         once wherever it is opened: no Start again (2.74.2, owner 2026-10-28) */
+      if (inFrame || LATER || BLIND) { again.parentNode.removeChild(again); }
       else { again.addEventListener('click', function () { W.location.reload(); }, false); }
     }
     if (tryScr) {

@@ -118,8 +118,8 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
     `visual`. Aim for one good 3D scene in a module whose subject is spatial; none in one that is not (procedures,
     charts, ideas). L46 still holds: at most half the teaching slides, never a real photo replaced, full quality.
   - **AI picture:** where a slide sets a scene or a situation that no real photograph shows (people at work, an
-    operation, an incident) - `ai_illustration`, context only, never equipment to recognise (L33). Planning it is
-    free; the picture itself is described, priced and said yes to before it is made (nano-banana, L47).
+    operation, an incident) - `ai_illustration`; (2.73.2) equipment too, first generated, then fixed. Planning it is
+    free; the pictures are made within the course's one approved budget (nano-banana, L47).
   - The review page names what you left out as proposals (`v_3d_propose`, `v_ai_propose`): the slide and the words
     that made it. Each one the operator keeps goes into the script (propose / apply); each one they strike goes into
     the script's `"declined"`, outside the approved words, so it is never proposed again:
@@ -167,8 +167,8 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   `interactive_diagram`, `model_3d`, `model_3d_scan`, `model_3d_licensed`, `video_real`,
   `video_generated`, `ai_illustration` — or `none`, only on the closing summary. Pick it from what the
   slide must teach (`course-visuals`, `decide/knowledge/learning-needs.json`): what moves or changes state
-  is animated; what has an inside is a cutaway or a 3D model; what must be recognised on board is a real
-  photograph, a scan or a photo to take at Novikontas — never an AI picture (L33).
+  is animated; what has an inside is a cutaway or a 3D model; what must be recognised on board is the course's own
+  photograph (reused, enlarged) or a photorealistic generated one - never a photo to take (L33, owner 2026-10-28).
 - `"from_old"` (optional, L41) — where in the old course the slide comes from and what changed: *"1. Liquefied Gas
   tankers.pptx, slides 37-40 - the photographs became a 3D model"*. Shown on the review page.
 - `"visual"` — what it shows and why, in one or two sentences; `"layout"` — `split` (text left, picture
@@ -213,6 +213,24 @@ one line per item, `*` marking what is right:
 | `set_value` | `-42 °C ± 3, range -170 to 20` |
 | `panel_operate` | `control = end state` per line |
 | `scenario` | `situation => right action* \| wrong \| wrong` per step |
+| `true_false` | `statement => why` per line, the true ones `*` (2.74.0, Part A) |
+| `critique` | `claim => right correction* \| wrong` - a claim that is right: `claim => * \| decoy \| decoy` (every claim the same number of choices; the tablet adds "keep it" to each) |
+| `calculate` | `0.84 % vol ± 0.02`, then `! what the device shows` and `# the \| data \| sheet` lines |
+| `predict` | `13.7 ± 1.5 @ 40`, `x: name \| unit \| low \| high`, `y: ...`, `given: x \| y \| label`, `curve: x y; x y` |
+| `explore` | `find: the challenge => x > 9.5 and x <= 15` (a choice's name; `hide <readout>`) - the model is the build sheet's |
+| `investigate` | options = the conclusions; `TAG \| title: what it says` per source, the relevant ones `*` |
+| `line_up` | `goal: from => to`, `keep out: name; name`, `TAG: valve name = open \| shut` (as found) |
+| `inspect_round` | `thing: what you see when you look`, the problems `*` |
+| `take_apart` | `part: name: what it is`, `find: question => part`, `set: instruction => position` |
+| `test_atmosphere` | `space: name \| depth`, `levels: 2; 8; 14`, `O₂ % \| 20.9 @ 0; 19.2 @ 14 \| below 19.5` |
+
+**Part A, then Part B (owner, 2026-10-28 - 2.74.0).** Write each self-check as Part A - quick questions that check what
+was taught (Bloom 1-2), at least one of them on a Sub-ILO from an earlier block - then Part B: one harder task the
+trainee works out alone (Bloom 3+). Every question gets a `"brief"`: one short line said when the answer is wrong - why
+it is not right, never which answer is ("That is the boiling point of another cargo.", not "It is -42 °C."). The right
+answer is shown in the debrief, where the class checks it together. Add `"confidence": true` to a Part A choice to ask
+how sure the trainee is. The ten interactive types, how each looks on the tablet and an example of each:
+`course-task-ux` §2b and `course-task-ux/templates/interact/example_set.json`.
 
 `hotspot`, `label_diagram`, `spot_the_hazard`, `read_instrument`, `set_value` and `panel_operate` also
 name their picture (`visual_kind`, `visual`). A self-check uses 2+ mechanics, a module check 3+,

@@ -269,7 +269,7 @@ check("a slow screen (frames of 60 ms) is drawn one step less sharp: 2 -> 1.5", 
 check("a fast screen (frames of 16 ms) keeps its sharpness", d.get("dpr") == 2, d)
 pl = r[5].get("probe") or {}
 la = pl.get("after") or {}
-check("2.73.1 a slow screen at 1.5x (frames of 40 ms) goes lite before it loses sharpness, and the device is remembered",
+check("2.75.2 a slow screen at 1.5x (frames of 40 ms) goes lite before it loses sharpness, and the device is remembered",
       pl.get("before") is False and la.get("lite") is True and la.get("dpr") == 1.5 and not la.get("env") and not la.get("sh")
       and la.get("mem") == "1", pl)
 

@@ -4,6 +4,7 @@
  *   node review_sheets.mjs <module folder> <out folder> [--all] [--base=<last review folder>] [--w=1280 --h=800] [--chrome=PATH]
  *                          [--fixed-waits]   (2.61.0: the waits end when the page is still, not after fixed times - see TIMERS)
  *                          [--grade-only]    (2.73.0: Phase A - every question answered and graded, no deck walk, no sheets)
+ *                          [--tasks-only]    (2.74.1: the task pages' sheets alone - a task redo - no deck walk)
  *
  * WHY (IGF M01 benchmark, 2026-10-19): the required look at every screen was done by browser-driving subagents - 100 model
  * calls and $2.42 for one module, a third of the build's cost. The looking is still required; driving a browser to see is
@@ -317,6 +318,137 @@ window.__rv = (function(){
     });
     return did;
   }
+  /* 2.74.1 - the ten interactive types (gb_interact.js, .lab[data-lab]): each answered right or wrong from its own keys, as
+     the trainee would - flick, tap, type on the keypad, drag, set the model, lower the hose and wait. A line-up is not keyed:
+     its world is searched for a line-up that does the job. Resolves true, 'checked' (the type pressed Check itself), or false. */
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+  function ks(e, n){ return (e.getAttribute(n || 'data-keys') || '').toLowerCase().split(/\\s+/).filter(Boolean); }
+  function world(e){ try { return JSON.parse(decodeURIComponent(escape(atob(e.getAttribute('data-world') || '')))); } catch (x) { return {}; } }
+  function byText(sel, t, r){ return $$(sel, r).filter(function(b){ return txt(b) === t; })[0]; }
+  function grid(lo, hi, dec){ var S = Math.pow(10, dec), out = [], a = Math.round(lo * S), b = Math.round(hi * S), i; for (i = a; i <= b && out.length < 2000001; i++) out.push((i / S).toFixed(dec)); return out; }
+  function rightKey(it, id, t){ return k(it) === key(id, t, 1); }
+  async function lab(sec, el, good){
+    var id = sec.getAttribute('data-script'), out = false, L = $$('.lab[data-lab]', el);
+    for (var li = 0; li < L.length; li++) {
+      var root = L[li], type = root.getAttribute('data-lab');
+      if (type === 'swipe') {
+        var cards = $$('.sw-card', root), checked = false;
+        for (var c = 0; c < cards.length; c++) {
+          var st = txt(cards[c].querySelector('.sw-st')), tv = k(cards[c]) === key(id, st, 'true');
+          if (!good && c === 0) tv = !tv;
+          root.querySelector(tv ? '.sw-side.t' : '.sw-side.f').click(); await sleep(40);
+          if (c < cards.length - 1) { root.querySelector('.sw-next').click(); await sleep(40); } else checked = true;
+        }
+        out = checked ? 'checked' : true;
+      } else if (type === 'critique') {
+        var claims = $$('.cr-claim', root);
+        for (var q = 0; q < claims.length; q++) {
+          var ct = txt(claims[q].querySelector('.cr-text')), os = $$('.cr-o', claims[q]), ri = -1, wi = -1;
+          os.forEach(function(o, oi){ if (rightKey(o, id, ct + ' => ' + o.getAttribute('data-o'))) { if (ri < 0) ri = oi; } else if (wi < 0) wi = oi; });
+          var pick = (!good && q === 0 && wi >= 0) ? wi : ri;
+          if (pick < 0) return false;
+          claims[q].click(); await sleep(40);
+          var sh = $$('.gi-sh-o', root); if (!sh[pick]) return false; sh[pick].click(); await sleep(40);
+        }
+        out = true;
+      } else if (type === 'calc') {
+        var K = ks(root), unit = root.getAttribute('data-unit') || '', dec = parseInt(root.getAttribute('data-dec') || '2', 10), v = null, S = Math.pow(10, dec);
+        for (var nn = 0; nn < 3000000 && v == null; nn++) {                 /* outward from 0, both signs */
+          if (K.indexOf(key(id, unit, (nn / S).toFixed(dec))) >= 0) v = (nn / S).toFixed(dec);
+          else if (nn && K.indexOf(key(id, unit, (-nn / S).toFixed(dec))) >= 0) v = (-nn / S).toFixed(dec);
+        }
+        if (v == null) return false;
+        if (!good) v = (parseFloat(v) * 3 + 7).toFixed(dec);
+        var s = String(parseFloat(v)), keysB = $$('.cl-k', root);
+        for (var ci = 0; ci < s.length; ci++) {
+          var ch = s.charAt(ci), kb = ch === '-' ? byText('.cl-k', '−', root) : ch === '.' ? keysB.filter(function(b){ return !/[0-9÷×−+=C⌫]/.test(txt(b)); })[0] : byText('.cl-k', ch, root);
+          if (!kb) return false; kb.click();
+        }
+        out = true;
+      } else if (type === 'predict') {
+        var w = world(root), Y = w.y || ['', '', 0, 1], pd = w.dec || 1, PK = ks(root);
+        /* right: the middle of the accepted values, so a pixel either way still lands inside; wrong: the far end from them */
+        var acc = grid(Y[2], Y[3], pd).filter(function(g){ return PK.indexOf(key(id, Y[1] || 'y', g)) >= 0; });
+        if (!acc.length) return false;
+        var mid = parseFloat(acc[Math.floor(acc.length / 2)]), pv = good ? mid : (mid - Y[2] > Y[3] - mid ? Y[2] : Y[3]);
+        var svg = root.querySelector('.pr-box svg'), r = svg.getBoundingClientRect(), y = 462 - (pv - Y[2]) / (Y[3] - Y[2]) * 434;
+        var o = {bubbles:true, pointerId:7, isPrimary:true, clientX:r.left + r.width * 0.5, clientY:r.top + y / 520 * r.height};
+        svg.dispatchEvent(new PointerEvent('pointerdown', o)); svg.dispatchEvent(new PointerEvent('pointerup', o));
+        out = true;
+      } else if (type === 'explore') {
+        await sleep(60);                      /* the part's model wakes when the part opens (a MutationObserver) */
+        var host = sec.querySelector('.gi-model'), mw = world(host), V = mw['var'] || {min: 0, max: 10, step: 0.1}, items = mw.choice ? Object.keys(mw.choice.items || {}) : [''];
+        var only = root.getAttribute('data-only'), EK = ks(root), n = root.getAttribute('data-n') || '1', md = Math.max(0, Math.ceil(-Math.log(V.step || 0.1) / Math.LN10 - 1e-9)), hit = null;
+        if (only) items = [only];
+        items.forEach(function(it){ if (hit) return; var g = grid(V.min, V.max, md); for (var gi = 0; gi < g.length; gi++) {
+          if ((EK.indexOf(key(id, 'find' + n, it + '|' + g[gi])) >= 0) === good) { hit = [it, g[gi]]; break; } } });
+        if (!hit) return false;
+        var chip = byText('.ex-chip', hit[0], host); if (chip && !chip.disabled) chip.click();
+        var rng = host.querySelector('.ex-range'); rng.value = hit[1]; rng.dispatchEvent(new Event('input')); await sleep(40);
+        out = true;
+      } else if (type === 'evidence') {
+        var srcs = $$('.iv-src', root), noise = srcs.filter(function(x){ return !rightKey(x, id, txt(x.querySelector('.iv-tl'))); });
+        var pins = srcs.filter(function(x){ return rightKey(x, id, txt(x.querySelector('.iv-tl'))); }).concat(good ? [] : noise.slice(0, 1));
+        for (var pi = 0; pi < pins.length; pi++) { pins[pi].click(); await sleep(30); var pb = root.querySelector('.iv-pin'); if (!pb) return false; pb.click(); await sleep(30); }
+        out = true;
+      } else if (type === 'lineup') {
+        var lw = world(root), tags = Object.keys(lw.valves || {}), sol = null;
+        function reach(stt){ var seen = {}, qq = [lw.source], segs = 0; seen[lw.source] = true;
+          while (qq.length) { var nd = qq.shift(); (lw.pipes || []).forEach(function(p){ if (p.valve && !stt[p.valve]) return; var ot = p.a === nd ? p.b : p.b === nd ? p.a : null; if (ot && !seen[ot]) { seen[ot] = true; qq.push(ot); segs++; } }); }
+          return segs && seen[lw.goal] && !(lw.out || []).some(function(x){ return seen[x]; }); }
+        for (var m = 0; m < (1 << tags.length) && !sol; m++) { var stt = {}; tags.forEach(function(t, ti){ stt[t] = !!(m & (1 << ti)); }); if (reach(stt)) sol = stt; }
+        if (!sol) return false;
+        if (!good) tags.forEach(function(t){ sol[t] = false; });          /* everything shut: the pump runs against nothing */
+        for (var vi = 0; vi < tags.length; vi++) {
+          var vb = $$('.lu-v', root).filter(function(b){ var bb = b.querySelector('b'); return bb && txt(bb) === tags[vi]; })[0]; if (!vb) return false;
+          vb.click(); await sleep(30); root.querySelector(sol[tags[vi]] ? '.lu-o' : '.lu-s').click(); await sleep(30);
+        }
+        out = true;
+      } else if (type === 'inspect') {
+        var th = $$('.in-thing', root);
+        if (!root.__look) return false;
+        for (var ti2 = 0; ti2 < th.length; ti2++) {
+          var nm = txt(th[ti2].querySelector('b')), rep = k(th[ti2]) === key(id, nm, 'report');
+          if (!good && ti2 === 0) rep = !rep;
+          root.__look(nm); await sleep(30);
+          var bt = root.querySelector(rep ? '.in-rep' : '.in-fine'); if (!bt) return false; bt.click(); await sleep(30);
+        }
+        out = true;
+      } else if (type === 'takeapart') {
+        await sleep(60);
+        var h3 = sec.querySelector('.gi-model3d'), tw = world(h3), step = root.getAttribute('data-step'), ask = root.getAttribute('data-ask'), tk = k(root);
+        if (step === 'find') {
+          var stage = h3.querySelector('.ta-stage'), k3 = stage && stage.__k3, names = tw.names || {};
+          var pid = Object.keys(names).filter(function(p){ return (key(id, ask, names[p]) === tk) === good; })[0];
+          if (!k3 || !pid) return false; k3.select(pid); await sleep(60);
+        } else {
+          /* the model's position carries over from step to step: the driver keeps it as it turns the handle */
+          var sts = Object.keys((tw.operate && tw.operate.states) || {}), ob = $$('.ta-t', h3)[1], TA = window.__rvTa = window.__rvTa || {}, clicks = -1;
+          var word = TA[id] != null ? TA[id] : ((tw.operate && tw.operate.start) || ''), wd = word, z;
+          for (var cc = 0; cc <= sts.length; cc++) { wd = word; for (z = 0; z < cc; z++) wd = sts[(sts.indexOf(wd) + 1) % sts.length]; if ((key(id, ask, wd) === tk) === good) { clicks = cc; break; } }
+          if (clicks < 0 || (clicks && !ob)) return false;
+          for (z = 0; z < clicks; z++) { ob.click(); await sleep(40); }
+          TA[id] = wd;
+        }
+        out = true;
+      } else if (type === 'atmosphere') {
+        var aw = world(root), nL = parseInt(root.getAttribute('data-levels') || '0', 10), keysA = root.querySelector('.at-keys'), lv = $$('.at-lv button', root), depth = 0;
+        var at = $$('button', keysA); at[0].click(); await sleep(40);                        /* zero in fresh air, at the hatch */
+        for (var lvl = 0; lvl < nL; lvl++) {
+          var LK = ks(root, 'data-keys-' + lvl), dd = null;
+          for (var d = 0; d < (aw.depth || 16); d++) if (LK.indexOf(key(id, 'L' + lvl, d.toFixed(1))) >= 0) { dd = d; break; }
+          if (dd == null) return false;
+          while (depth < dd) { lv[1].click(); depth++; await sleep(15); }
+          while (depth > dd) { lv[0].click(); depth--; await sleep(15); }
+          if (good) { for (var wt = 0; wt < 300 && root.querySelector('.at-bar i').style.width !== '100%'; wt++) await sleep(100); await sleep(150); }
+          at[1].click(); await sleep(40);
+          if (!good) break;                     /* recorded before the sample came up: a stale reading that does not count */
+        }
+        out = true;
+      } else return false;
+    }
+    return out;
+  }
   return {
     start: function(){ if (!document.querySelector('.scr.on[data-script]')) go(); return 1; },     /* the try / intro screen's own button */
     current: function(){ var s = document.querySelector('.scr.on[data-script]') || $$('.scr[data-script]').filter(function(x){ return x.offsetParent; })[0]; return s ? s.getAttribute('data-script') : null; },
@@ -337,14 +469,18 @@ window.__rv = (function(){
       });
       document.body.appendChild(ov); return 1;
     },
-    answer: function(good){
+    answer: async function(good){
       var sec = document.querySelector('.scr.on[data-script]'); if (!sec) return {error:'no question on screen'};
       var parts = $$('.part', sec); if (!parts.length) parts = [sec];
       var prev = null, i;
       for (i = 0; i < parts.length; i++) {
-        if (!part(sec, parts[i], prev, good)) return {error:'could not answer part '+(i+1)};
-        if (!go()) return {error:'Check stayed off after answering part '+(i+1)};
-        if (i < parts.length - 1) { go(); }                                       /* "Go on": the next part opens */
+        var did = part(sec, parts[i], prev, good), lb = $$('.lab[data-lab]', parts[i]).length ? await lab(sec, parts[i], good) : false;
+        if (!did && !lb) return {error:'could not answer part '+(i+1)};
+        /* 2.74.1 - "how sure are you?" is answered with the last part (the script's "confidence": true) */
+        var sure = $$('.sure button', sec); if (sure.length && i === parts.length - 1) sure[Math.min(1, sure.length - 1)].click();
+        if (lb !== 'checked' && !go()) return {error:'Check stayed off after answering part '+(i+1)};
+        await sleep(60);
+        if (i < parts.length - 1) { go(); await sleep(120); }                     /* "Go on": the next part opens */
         prev = parts[i];
       }
       var w = sec.querySelector('.why');
@@ -580,8 +716,10 @@ try {
     code = failures.length ? 1 : 0;
     throw null;
   }
-  await deck(tiles);
-  lap('deck (all slides)');
+  if (!opt['tasks-only']) {                   // 2.74.1 - a task redo looks at the task pages alone: no deck walk
+    await deck(tiles);
+    lap('deck (all slides)');
+  }
   await tasks(tiles, failures);
   lap('tasks (all pages)');
   const r = await sheets(tiles);

@@ -208,6 +208,60 @@ each with its own Check (a scenario's steps; the incident's order, then its stop
 None of them hides information the trainee needs to answer: the readings in *find the fault* are one tap away and
 stay turned over; nothing is timed; a wrong answer is never an error message - it is a hint and another try (§1, L42).
 
+### 2b · Part A and Part B, and ten interactive types (owner, 2026-10-28 - 2.74.0)
+
+*"More interesting / modern / technology self checks, so self checks become practical learning as well ... first the
+trainee checks that he understood everything that was before that task in that module, and also there are tasks where
+they are given a little bit difficult task, where they need to find the answer by themselves"* - and *"3D deck view, 3D
+models, equipment in 3D, panorama, on-ship activities"*. The owner approved the prototypes of
+`design/task-prototypes/index.html` and asked for the same functionality and type in every course, not copies of them.
+
+**Every self-check is two parts, in this order** (content_script.py suggests it, never blocks - `t_no_challenge`,
+`t_ab_order`, `t_not_spaced`):
+
+- **Part A · check what you learned** - quick, Bloom 1-2, 2-4 minutes; covers the block just taught **and brings back at
+  least one Sub-ILO from an earlier block of the module** (spaced retrieval). Best types: *true or false*, a choice with
+  *how sure are you*, *build the plan* as a cause-and-effect chain.
+- **Part B · find it yourself** - one harder task, Bloom 3-5, 4-8 minutes, solved with what is on the screen, not
+  recalled: *work it out*, *predict*, *explore*, *investigate*, *check a colleague*, and on board in 3D: *line it up*,
+  *inspection round*, *take it apart*, *test before entry*. Difficult because it is real, never difficult for its own
+  sake (owner: "interestingly difficult").
+
+**The debrief rule (every task page).** A wrong answer says **Not right.**, the question's `brief` reason (one short
+line that never names the right answer - content_script.py refuses one that does) and *we will check this one together
+in the debrief*. The right answer is never shown on the tablet - not on the question, not on the result screen; the
+classroom's debrief shows it, whole, when the instructor reveals it, so the class works it out together. A right answer
+still shows its why. The page carries `data-reveal="debrief"`; `"feedback": "now"` at the top of a build sheet keeps the
+older reveal (2.63.2) for a course whose owner wants it. The classroom receives every item whole - question, answer,
+right answer, why, the brief reason (`n`) and how sure (`sure`) - never cut to 90 / 120 characters again - and, for counting across classes, the question's id (`q`), the key of each choice made (`p`) and how sure as a number (`s`). **A self-check is answered once** (2.74.2): every part locks at its Check, and
+the result screen has no Start again - a trainee who got it wrong hears why in the debrief, not by trying again. **The wrong ideas behind the wrong choices** are tagged per module once its tasks are built (`compile/scripts/debrief_map.py draft` → fill the tag file → `check` → `review` for the operator → `approve --by`): one id per wrong belief, shared by every choice that leads to it, and `safety` on a question where believing the wrong thing can hurt someone. The debrief then groups the class by those ideas, safety first. The map lives in the module's instructor folder and never reaches a tablet.
+
+| Type (`mechanic`) | Part | On the tablet | Graded by |
+|---|---|---|---|
+| **True or false** (`true_false`) | A | One card at a time; flick it right (true) or left (false), or tap a side. Each card answers at once; the last presses Check by itself. | a key per card |
+| **How sure are you?** (`"confidence": true` on any question) | A | Three buttons under the answer: guessing, fairly sure, certain. The result counts *certain but wrong* - where the debrief starts. | the question's own keys |
+| **Cause and effect** (`build_the_plan`, build sheet `"look": "chain"`) | A | The plan's slots joined by arrows; two plausible links stay out. | as *build the plan* |
+| **Work it out** (`calculate`) | B | A device's display (`!` lines), a data sheet to open (`#` lines), a calculator. The dock says *Hand in 0.84 % vol*. | keys over the tolerance |
+| **Predict, then see** (`predict`) | B | A real chart; drag the point to the prediction, then the true curve draws itself - or, when wrong under the debrief rule, only *too high / too low*. | keys over the tolerance |
+| **Explore and find** (`explore`) | B | A live model from the build sheet: a slider, choices, readouts worked out from expressions, a Test button with its rules (a spark, a flame, an alarm). Each challenge is a step: set it, lock it in. | keys over every setting that meets the condition |
+| **Investigate** (`investigate`) | B | Sources to open (logs as tables, notes, data sheets); pin the evidence; choose the conclusion. | the conclusion's key + every pin keyed relevant / noise |
+| **Check a colleague** (`critique`) | B | A colleague's message, one claim per line; tap a claim - keep it, or choose its correction. Every claim offers "keep it as written" and the same number of choices, so the sheet never says which claims are wrong. | a key per claim |
+| **Line it up** (`line_up`, 3D) | B | The deck in 3D (the 3D kit); tap a valve (or its tag in the list) - OPEN / SHUT; *Start the pump* runs it: the cargo flows where the line-up sends it - ashore, into the wrong tank, against a blank, or nowhere. | the network, worked out - any line-up that does the job |
+| **Inspection round** (`inspect_round`, 3D or 360°) | B | A space to look all around - a 3D-kit room or a real 360° photograph; tap anything to inspect it, then *looks fine* or *report a problem*. The question says how many problems there are. | a key per thing |
+| **Take it apart** (`take_apart`, 3D) | B | Equipment in 3D: turn it, pull it apart, X-ray it, operate it. The card names a part and what it is made of, never what it is for. Steps: *find the part that ...*, *set it to ...*. | a key per step |
+| **Test before entry** (`test_atmosphere`) | B | A space in section, a 4-gas meter and its hose: zero in fresh air, lower and raise the hose a metre at a time, wait for the sample to come up, record. A reading taken too early is marked and does not count. Follow it with the entry decision as its own question. | keys for every level the course asks for |
+
+The runtime is `assets/gb_interact.js` + `gb_interact.css` (shipped with gb_answer.js, loaded before it); the formats
+are `course-factory/scripts/interact_formats.py`; the compiler is `compile/scripts/interact_pages.py`. What the
+operator's text cannot say - a 3D scene, a pipe network, a model's expressions, a photograph - is the build sheet's
+(`interact_pages.py` docstring). A 3D type is drawn by the factory's 3D kit (`course-visuals/kit3d`, the deck's own parts
+and look); the starting points are `templates/interact/` - `deck_lineup`, `compressor_room` and `ball_valve` scenes with
+their build-sheet entries, and `example_set.json`, a whole Part A + Part B set. A task scene is NOT labelled where a
+label would give the answer away (check_kit3d.py's "a part nobody names" is expected there).
+
+Fingers first, as everywhere (§0): every drag has a tap, every pinch has + and -, a 3D tap forgives a near miss, 56 px
+targets, nothing hover-only. Nothing is ever typed: the calculator is buttons.
+
 ---
 
 ## 3 · Navigation — the rules broken most often

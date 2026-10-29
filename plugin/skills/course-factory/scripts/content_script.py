@@ -132,6 +132,7 @@ import check_slide_text as slide_text  # noqa: E402  - the same four rules the b
 import workspace  # noqa: E402  - the factory works in course\ beside the operator's material (L40)
 import bloom_map  # noqa: E402  - what level each question reaches, against its Sub-ILO (L48)
 import design_choices  # noqa: E402  - the operator's design choices are theirs, not must-fixes (L26, 2.30.0)
+import interact_formats  # noqa: E402  - the interactive task types' formats (2.74.0), read in one place
 import ilo_map  # noqa: E402  - what this module owes: its rows of the ILO map (2.42.0)
 import course_gate  # noqa: E402  - no module starts before the ILO map is approved and the KB decided (2.42.0)
 
@@ -153,6 +154,8 @@ USES = {"single_choice": {"options"}, "multi_select": {"options"}, "choose_and_j
         # L49 step 4 (2.28.0) - the higher Bloom levels: investigate, judge a document, build, rebuild, compare
         "find_the_fault": {"answer", "visual"}, "spot_the_error": {"answer"}, "build_the_plan": {"answer"},
         "timeline": {"answer"}, "compare": {"options", "answer"}}
+USES.update(interact_formats.USES)          # 2.74.0 - true or false, check a colleague, work it out, predict, explore, investigate,
+                                            # line it up, inspection round, take it apart, test before entry
 OLD_MECHANIC = {"tap to choose": "single_choice", "": "single_choice", None: "single_choice"}
 VISUAL_KINDS = [k for k in MEDIA["visual_kinds"] if not k.startswith("_")]
 ACTIVE = RULES["split"]["active_techniques"]        # what makes a slide active learning (L49)
@@ -412,6 +415,13 @@ def read_answer(s):
         wrong += [o for x, o in zip(letters(len(opts)), opts) if x not in L]
     if uses(s, "visual") and not (s.get("visual") or "").strip():
         probs.append("%s: '%s' needs the picture, drawing or panel it is done on - say what it shows" % (sid, mech_label(m)))
+    brief = (s.get("brief") or "").strip()
+    if brief and right and uses(s, "options") and any(len(o) > 3 and o.lower() in brief.lower() for o in right):
+        # 2.74.0 - a wrong answer is told only "not right" and this brief reason; the right answer waits for the debrief
+        probs.append("%s: the brief reason gives the right answer away (\"%s\") - say why the answer is wrong, not which one is right" % (sid, brief))
+    if m in interact_formats.TYPES:
+        p2, _, r2, w2, _ = interact_formats.parse(m, s)
+        return probs + p2, right + r2, wrong + w2
     if not uses(s, "answer"):
         return probs, right, wrong
     ls = lines_of(s.get("answer"))
@@ -530,6 +540,8 @@ def answer_items(s):
     data-script-field="answer" - and the ones marked right (data-correct="true"). check_script_match compares
     them as a set, since the tablet shuffles them."""
     m, ls, items, right = mech(s), lines_of(s.get("answer")), [], []
+    if m in interact_formats.TYPES:              # their pieces are keyed in other ways (gb_interact.js), so none is "marked right"
+        return interact_formats.parse(m, s)[4], []
     if m in ("order", "label_diagram"):
         items = [unstar(x) for x in ls]
     elif m in ("hotspot", "spot_the_hazard", "choose_and_justify"):
@@ -783,12 +795,14 @@ def theory_findings(script):
     # a block of new theory before every self-check; every answer taught before its task opens
     since_min = since_words = 0.0
     seen_slides = []
+    earlier_subs, block_subs, n_sc = set(), set(), 0        # 2.74.0 - Part A also checks the blocks before this one
     for s in screens:
         k = s.get("kind")
         if k == "slide":
             since_min += minutes(s)
             since_words += wc(s.get("title", ""), s.get("text", ""), s.get("notes", ""))
             seen_slides.append(s)
+            block_subs |= set(sub_ilos_of(s))
         elif k == "task-slide":
             st = set_of.get(s.get("opens"))
             if st and st["kind"] == "self-check":
@@ -801,6 +815,19 @@ def theory_findings(script):
                     add(s["id"], "", FAIL, "t_sc_small", set=set_name(script, st), q=n, lo=R["self_check"]["min_questions"])
                 elif n > R["self_check"]["max_questions"]:
                     add(s["id"], "", NOTE, "t_sc_big", set=set_name(script, st), q=n, hi=R["self_check"]["max_questions"])
+                # 2.74.0 (owner, 2026-10-28) - a self-check is Part A, checking what was taught before it in the module (Bloom
+                # 1-2), then Part B, a harder task the trainee solves alone (Bloom 3 or higher). Suggestions, never blocking.
+                lv = [bloom_map.task_level(mech(q), q.get("bloom"))["level"] for q in st["questions"]]
+                if n >= 3 and not any(x >= 3 for x in lv):
+                    add(s["id"], "", NOTE, "t_no_challenge", set=set_name(script, st))
+                if any(a >= 3 and b < 3 for a, b in zip(lv, lv[1:])):
+                    add(s["id"], "", NOTE, "t_ab_order", set=set_name(script, st))
+                n_sc += 1
+                asked = {t for q in st["questions"] for t in sub_ilos_of(q)}
+                if n_sc >= 2 and earlier_subs and asked and not asked & earlier_subs:
+                    add(s["id"], "", NOTE, "t_not_spaced", set=set_name(script, st))
+                earlier_subs |= block_subs
+                block_subs = set()
             if st and st["kind"] == "module-check" and len(st["questions"]) < R["module_check"]["min_questions"]:
                 add(s["id"], "", FAIL, "t_mc_small", q=len(st["questions"]), lo=R["module_check"]["min_questions"])
             if st:

@@ -165,7 +165,7 @@ def fill(course, module, auto=True):
             continue
         c = pc.candidates_for(course, module, sid)
         pick = (c or {}).get("pick")
-        if not pick or pick.get("id") in used or pick["score"] < pc.AUTO or max(pick.get("w") or 0, pick.get("h") or 0) < pc.PHOTO_FLOOR:
+        if not pick or pick.get("id") in used or pick["score"] < pc.AUTO:          # 2.73.2: a small one is enlarged by the build
             continue
         ext = os.path.splitext(pick["path"])[1].lower() or ".jpg"
         stem = re.sub(r"[^a-z0-9]+", "_", (cs.picture_of(s)["shows"] or sid).lower()).strip("_")[:40] or sid

@@ -559,8 +559,11 @@ def figures_part(tmp):
            build_with(q02={"figure": "assets/img/missing.png", "areas": {"Relief valve": [1, 1, 10, 10]}}), "its photograph assets/img/missing.png is not there")
     broken("a photograph with no record in _photo_meta.json is reported, never shown without one",
            build_with(q02={"figure": "assets/img/nometa.png", "areas": {"Relief valve": [1, 1, 10, 10]}}), "assets/img/nometa.png has no record")
-    broken("a picture made by an image model is refused for what a trainee must recognise",
-           build_with(q02={"figure": "assets/img/gen.png", "areas": {"Relief valve": [1, 1, 10, 10]}}), "assets/img/gen.png was made by an image model")
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"),
+            build_with(q02={"figure": "assets/img/gen.png", "areas": {"Relief valve": [1, 1, 10, 10]}}))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force")
+    check("2.73.2 (owner: equipment - first generate, then we fix) a generated picture carries a task like a photograph",
+          "was made by an image model" not in out, out)
     broken("an answer with no box on a photograph is reported, never guessed",
            build_with(q02={"figure": "assets/img/pump.png", "areas": {"Pump": [1, 1, 10, 10]}}), '"Relief valve" has no place on the photograph')
     broken("an answer that is no part of the kit drawing is reported, with the parts there are",

@@ -15,6 +15,8 @@
     {"name": "gb_task.css",         "from": "course-task-ux/assets/gb_task.css",          "for": "task controls, on top of gb_page.css"},
     {"name": "gb_answer.css",       "from": "course-task-ux/assets/gb_answer.css",        "for": "the screens of every compiled task page - choose, tap the picture, drag and drop, the result ring"},
     {"name": "gb_answer.js",        "from": "course-task-ux/assets/gb_answer.js",         "for": "the one shared engine of every compiled task page - grading by data-key, gb-task-done, gb-timer (L38, L42)"},
+    {"name": "gb_interact.js",      "from": "course-task-ux/assets/gb_interact.js",       "for": "the interactive task types beside gb_answer.js (2.74.0) - true or false, check a colleague, work it out, predict, explore, investigate, line it up (3D), inspection round (3D / 360), take it apart (3D), test before entry"},
+    {"name": "gb_interact.css",     "from": "course-task-ux/assets/gb_interact.css",      "for": "the interactive task types' look (2.74.0)"},
     {"name": "kbd_escape.css",      "from": "course-task-ux/assets/kbd_escape.css",       "for": "the Done pill"},
     {"name": "kbd_escape.js",       "from": "course-task-ux/assets/kbd_escape.js",        "for": "the three ways out of the soft keyboard"},
     {"name": "task_complete.css",   "from": "course-task-ux/assets/task_complete.css",    "for": "the completion panel"},

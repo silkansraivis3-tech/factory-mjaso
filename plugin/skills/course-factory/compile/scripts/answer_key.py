@@ -21,6 +21,7 @@ import re
 
 import compile_module as cm
 import content_script as cs
+import interact_pages as ip  # noqa: E402  - 2.74.0
 import task_pages as tp
 
 NAME = os.path.join("assessment", "check_answer_key.html")
@@ -127,6 +128,8 @@ def accepted(q, b, w):
 def right_answer(q, b, w):
     """the right answer of one question as lines of HTML, in the words of the approved script"""
     m, ls = cs.mech(q), cs.lines_of(q.get("answer"))
+    if m in ip.TYPES:                                   # 2.74.0 - the interactive types
+        return (lettered(q) if m == "investigate" else []) + ip.key_lines(q, b, w)
     if m in ("single_choice", "multi_select", "read_instrument"):
         return lettered(q)
     if m == "compare":                                  # its columns stay in the script's order

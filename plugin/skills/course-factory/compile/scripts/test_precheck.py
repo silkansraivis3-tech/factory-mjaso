@@ -17,6 +17,7 @@ import tempfile
 import time
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+os.environ["CF_UPSCALE"] = "off"     # 2.73.2: the build enlarges small photos first - off here, the same on every PC
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILLS = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 sys.path.insert(0, HERE)
@@ -82,13 +83,13 @@ def main():
         meta["still.png"].update(source="NOVIKONTAS - render of the module's own 3D model", url_or_origin="render of assets/m_3d.js")
         tc.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
         code, out = run(PRE, c, "--module", "1")
-        check("a picture from the old course: the stop says it has no larger original - find a larger photograph of the same thing",
-              code == 1 and "comes from the old course (old course, Liquefied Gas tankers, slide 23), which has no larger original" in out, out)
+        check("2.73.2 (owner, 2026-10-28) a small picture from the old course is reused and enlarged - a note, never a stop",
+              "old.png" not in out.split("PRE-CHECK notes")[0] and "reused and enlarged" in out and "old.png 400x300" in out, out)
         check("a still rendered from the module's own 3D model is a note - render it again larger - never a stop",
               "still.png" not in out.split("PRE-CHECK notes")[0] and "render again at 1600 px or more: still.png 798x497" in out, out)
         code, out = run(PRE, c, "--module", "1", "--rebuild")
         check("--rebuild (a module already built): its small pictures are a note, not a stop",
-              code == 0 and "1 picture(s) under 800 px the module already had" in out, out)
+              code == 0 and "1 picture(s) under 800 px" in out and "reused and enlarged" in out, out)
         c, md = course(tmp, "mid", sheet={"s01": {"figure": "assets/img/mid.png"}}, photos={"mid.png": (1200, 800)})
         code, out = run(PRE, c, "--module", "1")
         check("a 1200 px photograph is a note - the compile enlarges it - never a stop",
@@ -229,11 +230,11 @@ def main():
         tc.build_of(c, lambda b: b["screens"].update({"s01": {"figure": "assets/img/tiny.png"}}))
         code, out = run(FIX, "rebuild", c, "--modules", "1")
         check("... a small picture the module already has does not stop a rebuild - it is a note to replace it",
-              "Module 1: rebuilt from its approved words" in out and "1 picture(s) under 800 px the module already had" in out
+              "Module 1: rebuilt from its approved words" in out and "1 picture(s) under 800 px" in out
               and "tiny.png 300x200" in out, out[-900:])
         code, out = run(BUILD, c, "--module", "1", "--no-review", "--no-course-pages")
         check("... and build_module.py on a module built before (the full build fix.py names) is not stopped by it either",
-              "nothing built: the pre-check" not in out and "Pre-check: 1 picture(s) under 800 px the module already had" in out,
+              "nothing built: the pre-check" not in out and "Pre-check: 1 picture(s) under 800 px" in out,
               out[-900:])
         tc.build_of(c, lambda b: b["screens"].update({"s01": {"figure": "assets/img/gone.png"}}))
         code, out = run(FIX, "rebuild", c, "--modules", "1")
