@@ -121,7 +121,7 @@
   }
 
   var NS = "http://www.w3.org/2000/svg";
-  var HIDDEN_ROOTS = "defs, symbol, clipPath, mask, marker, pattern";
+  var HIDDEN_ROOTS = "defs, symbol, clipPath, mask, marker, pattern, [data-kit-shade]";   /* the kit's baked shadows (L65) */
   var PARTS = "rect, polygon, path, circle, ellipse, line, polyline, text, image";
   var CLOSED = { rect: 1, polygon: 1, circle: 1, ellipse: 1 };
 

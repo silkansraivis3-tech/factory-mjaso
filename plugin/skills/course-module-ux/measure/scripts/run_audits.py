@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""run_audits - the three browser probes on a deck, in headless Chrome or Edge, with no browser pane.
+"""run_audits - the four browser probes on a deck, in headless Chrome or Edge, with no browser pane.
 
     python run_audits.py <deck index.html | folder with one> [--viewport 1920x1080 ...] [--json out.json] [--quiet]
 
-Loads audit_deck.js, audit_collide.js and audit_compose.js into the deck, runs each one's `.all()` in turn at
+Loads audit_deck.js, audit_collide.js, audit_compose.js and audit_motion.js (2.78.0, L65) into the deck, runs each one's `.all()` in turn at
 1280x800 (and at every --viewport given), and prints one compact summary per probe and viewport:
 
     1280x800  deck     PASS   17 slides
@@ -44,7 +44,9 @@ import check_cache  # noqa: E402  - a slide audited clean is not measured again 
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 PROBES = (("deck", "audit_deck.js", "AuditDeck"), ("collide", "audit_collide.js", "AuditCollide"),
-          ("compose", "audit_compose.js", "AuditCompose"))
+          ("compose", "audit_compose.js", "AuditCompose"),
+          # 2.78.0 L65 - a drawing that moves for ever under a filter or a mask: it judders on the classroom tablets
+          ("motion", "audit_motion.js", "AuditMotion"))
 
 RUN = """<script>
 (async function(){
@@ -204,6 +206,12 @@ def summarise(name, rec):
                            for c in s.get("cut") or []])
                 lines += ["%s: %s" % (where(s), b) for b in bits] or ["%s: collision" % where(s)]
         tail = "%s collision(s)" % r.get("totalCollisions", "?")
+    elif name == "motion":
+        for s in r.get("failingSlides") or []:
+            lines += ["%s: %s" % (where(s), h) for h in s.get("hits") or []]
+            if s.get("more"):
+                lines.append("%s: ... %d more" % (where(s), s["more"]))
+        tail = "%s slides, %s moving drawing(s)" % (r.get("slidesTotal", "?"), r.get("movingDrawings", "?"))
     else:
         for p in r.get("problems") or []:
             lines.append("screen %s %s%s: %s" % (p.get("n"), p.get("verdict"), (" - " + p["title"]) if p.get("title") else "",
@@ -236,6 +244,8 @@ def slides_hit(res):
         elif name == "collide":
             found = [s.get("slide") for s in r.get("slides") or r.get("failingSlides") or []
                      if s.get("collisions") or s.get("total") or s.get("n")]
+        elif name == "motion":
+            found = [s.get("slide") for s in r.get("failingSlides") or []]
         else:
             found = [p.get("n") for p in r.get("problems") or []]
         if not all(isinstance(x, int) for x in found) or (ex == 1 and not found):

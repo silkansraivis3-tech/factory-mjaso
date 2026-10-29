@@ -320,6 +320,21 @@ itself - a spec has no option for it and a slide never asks for it.
 - The drawing check judges one piece of equipment as one object (`data-kit-body`): a valve's flange is not "poking out"
   of its own body, but the valve is, out of the room it stands in.
 
+## Smooth on the tablet when it moves (L65, 2.78.0)
+
+Measured on the classroom tablets (Yoga Tab 11, IGF M03): a flow running in a drawing with CSS drop-shadows and masks
+redrew the whole drawing every frame - 32-43 fps. In a drawing where anything moves for ever, the kit, unasked:
+- bakes each piece's soft shadow (`.kit-m-drop`) into a still picture under it once the figure is at rest
+  (`g[data-kit-shade]`, `.kit-baked`); a piece the playing step moves casts its live shadow until the step settles;
+- gives the drawing its own layer (`.kit-moving{will-change:transform}`) - never `overflow: hidden` to shrink it (4 fps);
+- masks a pipe's or hose's contents only while the fluid front stands part-way, sized to the line (`h.front`), and pauses
+  a flow whose value is 0;
+- draws smoke, vapour and glows as gradient fills (`h.soft(node, "--mat-…", sigma)`), never a blur filter.
+
+A NEW PART follows the same rule: no `filter` or `mask` on anything that moves, or in a drawing where something moves -
+use `h.soft` for a soft edge, `h.equip` (its shadow is baked) for a piece that casts one, and move it by `transform` or
+`opacity` where the look allows (`stroke-dashoffset` only for a flow). `measure/scripts/audit_motion.js` fails it.
+
 ## A task page's "label the drawing" boxes (2.48.0)
 `compile/scripts/label_layout.py` sizes and places them: one width for all the boxes of a question - what the longest
 label needs on two lines with its tick - in the band above the drawing for the places in its upper half and below for

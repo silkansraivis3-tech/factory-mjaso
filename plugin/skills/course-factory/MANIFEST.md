@@ -1779,6 +1779,35 @@ one Sonnet agent, PASS in 4.5 min, 120 k tokens, 38 tool calls, 4 builds (2.70.0
 M17 / M18, a whole course. Not done: one agent serving several modules (the colleague's per-module judges and fix round keep
 one builder per module). The owner decides whether Phase A / B becomes a law row.
 
+## 4zz20 · L65 a drawing that moves stays smooth on the tablet (2.78.0, 2026-10-29)
+
+Measured by the classroom session on a Lenovo Yoga Tab 11 (IGF M03 trainee deck): kit flows running in drawings whose
+equipment cast CSS drop-shadows and whose lines were masked 8000 x 8000 kept the graphics chip 97 % busy - 32-43 fps,
+65-100 ms hitches (its own layer: 38 -> 60 fps; no shadows: 33 -> 43). What changed, the look kept:
+
+1. **`course-visuals/kit/kit.js`** - in a figure where anything moves for ever (`endless()`: running, infinite animations)
+   each `.kit-m-drop` piece's shadow is **baked**: the piece written out as a stand-alone SVG (its computed styles, the
+   gradients, patterns and clips it uses; what moves for ever left out), drawn on a canvas as its shadow alone, and put
+   in as a PNG `<image>` under the piece (`g[data-kit-shade]`, never a shape to the layout or the drawing audit); the live
+   filter off (`.kit-baked`). Baked after layout, after a step settles and after a value set from outside; again only
+   when the piece changed; a piece the playing step moves casts its live shadow until it settles. The figure gets
+   `.kit-moving` (its own layer). **`h.front`**: a pipe's or hose's contents are masked only while the fluid front stands
+   part-way, the mask sized to the line (no mask full, nothing drawn empty). A flow at 0 is paused. **`h.soft`**: fire
+   smoke and glow, spill vapour, the gas cloud's drifting puffs (its group blur is gone) and the spark's glow are radial
+   (or, for a long flat shape, linear) gradient fills that
+   look as the blur did; the spark's halo is two soft strokes. `kit.css`: `.kit-moving{will-change:transform}`,
+   `.kit-m-drop.kit-baked{filter:none}`.
+2. **`course-module-ux/measure/scripts/audit_motion.js`** (`AuditMotion.all()` / `.page()`): every slide, and every step of
+   every kit figure on it - a filter or a mask in or round a drawing that moves for ever is a FAIL (named with its
+   element, the step and the value); no own layer and the `stroke-dashoffset` count are notes. Loaded by `run_audits.py`
+   with the deck, collide and compose probes (`motion` line). `audit_drawing.js` skips the baked shadows.
+3. **Tests**: `test_audit_motion.py` (fixture `measure/fixtures/motion_defects.html`: four bad drawings found, two good ones
+   silent, a kit figure passing at every step and failing with its bake undone; the kit's gallery passes its own rule).
+   `test_run_audits.py` knows the fourth probe.
+4. **Hit list** (`_claude/L65_HIT_LIST_2026-10-29.md`, on copies): IGF advanced as built - 130 hits in 19 of 30 modules
+   (61 equipment shadows, 56 pipe masks, 8 gas-cloud blurs, 5 smoke / vapour / glow blurs); with the 2.78.0 kit - 0.
+   GAS BASIC (hand-built) - 0. A rebuild of IGF on 2.78.0 clears it.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

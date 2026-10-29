@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>audit_motion fixture (L65)</title>
+<!-- test_audit_motion.py opens this in headless Chrome. A deck of seven slides, each one drawing:
+       s1 bad-filter   a flow running for ever, and a group in the same drawing with a CSS drop-shadow: FAIL filter
+       s2 bad-mask     a flow running for ever inside a masked group: FAIL mask
+       s3 bad-around   a flow running for ever in a drawing whose panel on the slide has a drop-shadow: FAIL filter around it
+       s4 bad-smil     a SMIL <animate> repeating for ever and a blurred circle in the same drawing: FAIL filter
+       s5 good-layer   a flow running for ever, its own layer, no filter, no mask: passes (a note: one stroke-dashoffset flow)
+       s6 good-still   a drop-shadow and a mask in a drawing where nothing moves: passes - they are drawn once
+       s7 good-kit     a kit figure - a tank, a valve, a pipe whose fluid flows: passes, the kit bakes its shadows (kit.js) -->
+<link rel="stylesheet" href="../../../course-visuals/kit/kit.css">
+<style>
+  body{margin:0;font-family:sans-serif;background:#0C1E3A;color:#fff}
+  .slide{display:none;width:900px;height:560px;padding:20px;box-sizing:border-box}
+  .slide.active{display:block}
+  .panel{background:#123;border-radius:12px;padding:10px;width:640px}
+  .shadowed{filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
+  .flow{fill:none;stroke:#8FC2FF;stroke-width:3;stroke-dasharray:7 9;animation:flow .8s linear infinite}
+  @keyframes flow{to{stroke-dashoffset:-32}}
+  .drop{filter:drop-shadow(0 3px 3px rgba(0,0,0,.5))}
+  .own{will-change:transform}
+</style>
+</head>
+<body>
+<section class="slide" id="s1"><div class="panel"><svg id="bad-filter" viewBox="0 0 600 300">
+  <g class="drop"><rect x="40" y="40" width="120" height="80" fill="#89a"/></g>
+  <path class="flow" d="M160 80 H560"/></svg></div></section>
+<section class="slide" id="s2"><div class="panel"><svg id="bad-mask" viewBox="0 0 600 300">
+  <defs><mask id="m2" maskUnits="userSpaceOnUse" x="-4000" y="-4000" width="8000" height="8000"><rect x="0" y="0" width="300" height="300" fill="#fff"/></mask></defs>
+  <g mask="url(#m2)"><path class="flow" d="M20 80 H560"/></g></svg></div></section>
+<section class="slide" id="s3"><div class="panel shadowed"><svg id="bad-around" viewBox="0 0 600 300">
+  <path class="flow" d="M20 80 H560"/></svg></div></section>
+<section class="slide" id="s4"><div class="panel"><svg id="bad-smil" viewBox="0 0 600 300">
+  <defs><filter id="blur4"><feGaussianBlur stdDeviation="4"/></filter></defs>
+  <circle cx="300" cy="150" r="40" fill="#fa0" filter="url(#blur4)"/>
+  <circle cx="100" cy="150" r="10" fill="#fff"><animate attributeName="cx" values="100;500;100" dur="2s" repeatCount="indefinite"/></circle>
+</svg></div></section>
+<section class="slide" id="s5"><div class="panel"><svg id="good-layer" class="own" viewBox="0 0 600 300">
+  <rect x="40" y="40" width="120" height="80" fill="#89a"/>
+  <path class="flow" d="M160 80 H560"/></svg></div></section>
+<section class="slide" id="s6"><div class="panel"><svg id="good-still" viewBox="0 0 600 300">
+  <defs><mask id="m6"><rect x="0" y="0" width="300" height="300" fill="#fff"/></mask></defs>
+  <g class="drop"><rect x="40" y="40" width="120" height="80" fill="#89a"/></g>
+  <g mask="url(#m6)"><path d="M20 80 H560" stroke="#8FC2FF" stroke-width="3"/></g></svg></div></section>
+<section class="slide" id="s7"><div class="panel"><svg id="good-kit" data-kit="#spec-kit"></svg></div></section>
+
+<script type="application/json" id="spec-kit">{"size":[600,300],"label":"a tank, a valve and a flowing pipe","fit":false,"parts":[
+ {"id":"T","type":"tank","x":30,"y":60,"w":180,"h":100,"label":"tank","value":0.6},
+ {"id":"P","type":"pipe","d":"M210 110 H570","value":1},
+ {"id":"V","type":"valve","x":390,"y":110,"label":"V1","value":1}],
+ "steps":[{"title":"the flow slows","play":[["P",0.4,400]]},{"title":"the line empties","play":[["P.fill",2,600]]}]}</script>
+<script src="../../../course-visuals/kit/kit.js"></script>
+</body>
+</html>

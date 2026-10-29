@@ -596,8 +596,23 @@ ones that went over. A still rendered from the module's own 3D model is a note (
 `scripts/cf_timing.py`, `retrofit/knowledge/routing.json`, `orchestration/workflows/build_course.js`) and
 `course-visuals` (`scripts/image_size.py`, `scripts/check_assets.py`, `agents/visual-sourcer.md`), 2.65.0
 
-**All sixty-four laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L64 are enforced first through `course-factory/SKILL.md`'s
+**L65 · A drawing that moves stays smooth on the tablet.** Measured on the classroom tablets (Lenovo Yoga Tab 11, IGF M03
+trainee deck, 2026-10-29), Aleksis, 2026-10-29: *"Yes, build it here"*. A flow running for ever in a drawing whose groups
+carried CSS drop-shadows and masks made the graphics chip draw the whole drawing again on every frame - 97 % busy, 32-43
+fps, 65-100 ms hitches; its own compositing layer took one slide from 38 to 60 fps, dropping the shadows another from 33
+to 43. In a drawing where anything moves for ever (a flow, a fan, a spray, an endless CSS or SMIL animation): (1) no CSS
+or SVG filter - drop-shadow, blur - on the drawing, on a shape or group in it, or round it on the slide; a shadow is drawn
+once into a still picture behind its piece (the kit bakes it), a soft edge is a gradient fill; (2) no mask round what
+moves - the kit masks a line only while its fluid front stands part-way, sized to the line; (3) the drawing has its own
+layer (`will-change: transform`), and what moves is kept small; (4) transform and opacity are cheaper to move than
+`stroke-dashoffset`, where the look allows; (5) never `overflow: hidden` on the drawing to shrink its layer - measured
+on the tablet it fell to 4 fps. A drawing where nothing moves keeps its filters: they are drawn once. The look does not
+change. → `course-visuals` (`kit/kit.js` bake, `soft`, `front`; `kit/kit.css` `.kit-moving`) and `course-module-ux`
+(`measure/scripts/audit_motion.js`, run by `run_audits.py` with the deck probes: a filter or a mask in or round a moving
+drawing fails the build, at every step of a kit figure), 2.78.0
+
+**All sixty-five laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L65 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

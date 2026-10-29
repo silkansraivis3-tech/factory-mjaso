@@ -305,6 +305,50 @@
   function equip(parent, o) {
     return el('g', { 'class': o && o.shadow === false ? 'kit-eq' : 'kit-eq kit-m-drop', 'data-kit-body': '' }, parent);
   }
+  /* L65 (2.78.0) - A SOFT EDGE WITHOUT A FILTER: a round shape (smoke, vapour, a glow) filled with a radial fade that looks as
+     the same shape blurred by sigma did - full in the middle, fading to nothing at its own outline. A blur filter
+     is drawn again on every frame of anything that moves in the same drawing (a tablet's graphics chip at 97 %, IGF M03);
+     a fill is not. token: the colour's variable ("--mat-smoke"), so the light and dark mappings still apply */
+  function soft(n, token, sigma) {
+    var circ = (n.tagName || '').toLowerCase() === 'circle';
+    var rx = parseFloat(n.getAttribute(circ ? 'r' : 'rx')) || 0, ry = circ ? rx : parseFloat(n.getAttribute('ry')) || 0;
+    if (!rx || !ry || !n.parentNode) return n;
+    function cdf(z) { return 1 / (1 + Math.exp(-1.702 * z)); }        // the normal distribution's, near enough
+    /* a long thin shape (the glow along a pool) fades across its short side only - a round fade would smear its length */
+    var flat = rx >= 4 * ry ? 'y' : ry >= 4 * rx ? 'x' : '', r = flat === 'y' ? ry : flat === 'x' ? rx : Math.sqrt(rx * ry);
+    /* the fade stays inside the shape's own outline: its size - and so the figure's fit and its labels' places - is
+       what it was. Half strength sits 1.6 sigma inside the edge, nothing at the edge */
+    var s1 = Math.min(sigma, r / 4), mid = r - 1.6 * s1, c = (2 * cdf(rx / s1) - 1) * (2 * cdf(ry / s1) - 1), id = 'kit-sf' + (++UID);
+    var gr = el(flat ? 'linearGradient' : 'radialGradient', flat === 'y' ? { id: id, x1: 0, y1: 0, x2: 0, y2: 1 } :
+                flat === 'x' ? { id: id, x1: 0, y1: 0, x2: 1, y2: 0 } : { id: id }, el('defs', {}, n.parentNode));
+    var stops = [[0, c], [mid - 2 * s1, cdf(2)], [mid - s1, cdf(1)], [mid, 0.5], [mid + s1, cdf(-1)], [r, 0]]
+      .filter(function (s, i) { return i === 0 || s[0] > 0; });
+    if (flat) stops = stops.slice().reverse().map(function (s) { return [-s[0], s[1]]; }).concat(stops.slice(1));   // both sides
+    stops.forEach(function (s) {
+      el('stop', { offset: (flat ? 0.5 + s[0] / (2 * r) : s[0] / r).toFixed(3),
+                   style: 'stop-color:var(' + token + ');stop-opacity:' + Math.min(c, s[1]).toFixed(3) }, gr);
+    });
+    n.style.fill = 'url(#' + id + ')';
+    n.classList.remove('kit-m-soft', 'kit-m-fog');
+    return n;
+  }
+  /* L65 (2.78.0) - THE FLUID FRONT IN A LINE (a pipe, a hose): its contents show only as far as the fluid has reached. A mask
+     does that, and a mask round a line whose flow runs is painted again on every frame - so the mask is there only while the
+     front stands part-way along, sized to the line; a full line has none, an empty one draws no contents at all.
+     s..e: the stretch of the line's length L that holds fluid */
+  function front(inside, reach, line, mid, L, s, e) {
+    reach.setAttribute('stroke-dasharray', '0 ' + s.toFixed(1) + ' ' + Math.max(0, e - s).toFixed(1) + ' ' + (2 * L).toFixed(1));
+    if (e - s <= 0.5) { inside.style.display = 'none'; inside.removeAttribute('mask'); return; }
+    inside.style.display = '';
+    if (s <= 0.5 && e >= L - 0.5) { inside.removeAttribute('mask'); return; }
+    var b = null, m = reach.parentNode;
+    try { b = line.getBBox(); } catch (err) { b = null; }
+    if (b && (b.width || b.height)) {                  // the line's own box and the reach's half width round it
+      m.setAttribute('x', (b.x - 14).toFixed(1)); m.setAttribute('y', (b.y - 14).toFixed(1));
+      m.setAttribute('width', (b.width + 28).toFixed(1)); m.setAttribute('height', (b.height + 28).toFixed(1));
+    }
+    inside.setAttribute('mask', 'url(#' + mid + ')');
+  }
   function reshape(n, attrs) {
     for (var k in attrs) {
       n.setAttribute(k, attrs[k]);
@@ -809,6 +853,8 @@
     paint: function (part) {
       if (part.render) part.render(part.v);
       part.mirrors.forEach(function (mm) { if (mm.render) mm.render(part.v); });
+      /* a value set from outside the steps (a task page's valve, a gallery control) may start or stop a flow: L65 */
+      if (!this.raf && !this.silent && !this.laying) bakeSoon(this);
     },
     repaint: function () {
       var self = this;
@@ -946,7 +992,12 @@
       this.n = n;
       if (n > 0) {
         this.applyStep(n);
-        if (instant || reducedMotion()) this.flush(); else this.run();
+        if (instant || reducedMotion()) this.flush();
+        else {
+          /* a piece this step moves casts its live shadow while it moves; baked again once the step settles (L65) */
+          this.tweens.forEach(function (t) { q(t.part.g, '.kit-baked').forEach(unshade); });
+          this.run();
+        }
       }
       if ((n === 0 || instant || reducedMotion()) && this.laid && !this.laying) inkSoon(this);   // 2.63.2: the step's ground
       if (!this.laying) {
@@ -988,6 +1039,7 @@
       }
       this.laid = svg.getBoundingClientRect().width || r.width;
       this.report = rep;
+      bakeSoon(this);                                  // on screen at its size now: its shadows baked (L65)
       /* a task page lays its tap areas on the drawn parts (gb_answer.js placeParts, on "resize"): tell it they may have moved */
       if (svg.hasAttribute('data-kit-still') && root.dispatchEvent) {
         setTimeout(function () { try { root.dispatchEvent(new Event('resize')); } catch (e) { /* an old WebView */ } }, 0);
@@ -1017,7 +1069,7 @@
      ========================================================================== */
   var FIGS = [], UP_MAX = 2, UP_MARGIN = 1.02, ZOOM_MAX = 1.5, GROW_MAX = 1.3, FLOOR_PX = 12.5, PAD_PX = 4.5, CELL = 2;
   var GEOM = 'rect, circle, ellipse, line, polyline, polygon, path, text, image';
-  var NOT_DRAWN = 'defs, symbol, clipPath, mask, marker, pattern';
+  var NOT_DRAWN = 'defs, symbol, clipPath, mask, marker, pattern, [data-kit-shade]';   // a baked shadow is no shape (L65)
 
   function rgba(s) {
     var m = /rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:[ ,/]+([\d.]+%?))?\s*\)/.exec(s || '');
@@ -1127,8 +1179,148 @@
     return t;
   }
 
+  /* ==========================================================================
+     L65 (2.78.0) - A DRAWING THAT MOVES STAYS SMOOTH ON A TABLET. Measured on the classroom tablets (Lenovo Yoga Tab 11,
+     IGF M03, 2026-10-29): a flow running in a drawing whose equipment casts CSS drop-shadows made the graphics chip draw the
+     whole drawing again every frame - 97 % busy, 32-43 fps, 65-100 ms hitches. So, in a drawing where something moves for
+     ever (a flow, a fan, a spray):
+       * it gets its own compositing layer (.kit-moving, kit.css) - 38 -> 60 fps on its own;
+       * each piece of equipment's soft shadow is BAKED: drawn once into a picture under the piece, the live filter off.
+         Baked again only when the piece has changed once a step has settled; while a step moves a piece its shadow is live.
+     The look stays the same. A drawing where nothing moves keeps its live shadows - they cost nothing there.
+     ========================================================================== */
+  function endless(svg) {                       // the animations in the drawing that run for ever, now
+    if (!svg.getAnimations) return [];
+    try {
+      return svg.getAnimations({ subtree: true }).filter(function (a) {
+        var t = a.effect && a.effect.getComputedTiming ? a.effect.getComputedTiming() : null;
+        return t && t.iterations === Infinity && a.playState === 'running';
+      });
+    } catch (e) { return []; }
+  }
+  var BAKE_STYLE = ['fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width', 'stroke-opacity', 'stroke-linecap', 'stroke-linejoin',
+                    'stroke-dasharray', 'stroke-dashoffset', 'stroke-miterlimit', 'opacity', 'display', 'visibility', 'stop-color',
+                    'stop-opacity', 'font-family', 'font-size', 'font-weight', 'font-style', 'letter-spacing', 'text-anchor',
+                    'dominant-baseline', 'paint-order', 'transform', 'transform-origin', 'transform-box'];
+  /* a piece of the drawing as a stand-alone SVG: every style written on its elements (the page's stylesheet is not there),
+     the gradients, patterns and clips it uses copied in, the parts that move for ever left out */
+  function standalone(n, skip) {
+    var ids = {}, defs = [], ser = new XMLSerializer();
+    function inline(o, c) {
+      var cs = getComputedStyle(o), st = [];
+      BAKE_STYLE.forEach(function (k) {
+        var v = cs.getPropertyValue(k);
+        if (!v) return;
+        v = v.replace(/url\(\s*["']?[^"')]*#([^"')]+)["']?\s*\)/g, function (m, id) { ids[id] = 1; return 'url(#' + id + ')'; });
+        st.push(k + ':' + v);
+      });
+      ['clip-path', 'mask', 'href', 'xlink:href'].forEach(function (a) {
+        var v = o.getAttribute(a);
+        if (v && /#/.test(v) && !/^data:/.test(v)) ids[v.replace(/^.*#|\).*$/g, '')] = 1;
+      });
+      c.setAttribute('style', st.join(';'));
+      c.removeAttribute('class');
+    }
+    function copy(o) {
+      var c = o.cloneNode(true), os = [o].concat(q(o, '*')), cl = [c].concat(q(c, '*')), out = [];
+      os.forEach(function (x, i) {
+        if (skip && skip.indexOf(x) >= 0) out.push(cl[i]);
+        else inline(x, cl[i]);
+      });
+      out.forEach(function (x) { if (x.parentNode) x.parentNode.removeChild(x); });
+      return c;
+    }
+    var c = copy(n), done = {};
+    c.style.filter = 'none'; c.style.transform = 'none'; c.style.opacity = '1';   // the piece in its own space, as drawn
+    for (var guard = 0; guard < 6; guard++) {           // what it uses, and what those use in turn
+      var more = Object.keys(ids).filter(function (id) { return !done[id]; });
+      if (!more.length) break;
+      more.forEach(function (id) {
+        done[id] = 1;
+        var d = document.getElementById(id);
+        if (d) defs.push(ser.serializeToString(copy(d)));
+      });
+    }
+    return { body: ser.serializeToString(c), defs: defs.join('') };
+  }
+  function unshade(n) {
+    if (n.__kitShade && n.__kitShade.parentNode) n.__kitShade.parentNode.removeChild(n.__kitShade);
+    n.__kitShade = null; n.__kitSig = null;
+    n.classList.remove('kit-baked');
+  }
+  function shade(f, n, skip, done) {
+    var had = n.classList.contains('kit-baked');
+    if (had) n.classList.remove('kit-baked');           // the live filter, read as the stylesheet gives it now (light or dark)
+    var fl = getComputedStyle(n).filter || '';
+    if (had) n.classList.add('kit-baked');
+    var m = /drop-shadow\(\s*(rgba?\([^)]*\)|#[0-9a-f]+|[a-z]+)\s+(-?[\d.]+)px\s+(-?[\d.]+)px(?:\s+([\d.]+)px)?\s*\)/i.exec(fl);
+    var b = null, ctm = null;
+    try { b = n.getBBox(); ctm = n.getScreenCTM(); } catch (e) { b = null; }
+    if (!m || !b || !ctm || !(b.width || b.height)) return done();
+    var dx = +m[2], dy = +m[3], blur = +(m[4] || 0), pad = 2 * blur + Math.max(Math.abs(dx), Math.abs(dy)) + 2;
+    var x0 = b.x - pad, y0 = b.y - pad, W = b.width + 2 * pad, H = b.height + 2 * pad;
+    var s = Math.min(4, Math.max(1, Math.sqrt(ctm.a * ctm.a + ctm.b * ctm.b) * (root.devicePixelRatio || 1)));
+    s = Math.min(s, 2048 / Math.max(W, H));
+    var piece = standalone(n, skip), sig = [piece.body, piece.defs, m[0], s.toFixed(2)].join('|');
+    if (sig === n.__kitSig) return done();
+    var cw = Math.max(1, Math.ceil(W * s)), ch = Math.max(1, Math.ceil(H * s));
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var cv = document.createElement('canvas'), cx = cv.getContext('2d');
+        cv.width = cw; cv.height = ch;
+        /* the shadow alone: the piece drawn one canvas width off to the left, its shadow thrown back onto the canvas */
+        cx.shadowColor = m[1]; cx.shadowBlur = blur * s; cx.shadowOffsetX = cw + dx * s; cx.shadowOffsetY = dy * s;
+        cx.drawImage(img, -cw, 0, cw, ch);
+        var url = cv.toDataURL('image/png');
+        var g = n.__kitShade;
+        if (!g || !g.parentNode) {
+          g = el('g', { 'data-kit-shade': '', 'aria-hidden': 'true', 'class': 'kit-shade' });
+          n.parentNode.insertBefore(g, n);
+          el('image', { preserveAspectRatio: 'none' }, g);
+        }
+        var t = n.getAttribute('transform');
+        if (t) g.setAttribute('transform', t); else g.removeAttribute('transform');
+        var im = g.firstChild;
+        im.setAttribute('href', url);
+        im.setAttribute('x', x0.toFixed(2)); im.setAttribute('y', y0.toFixed(2));
+        im.setAttribute('width', W.toFixed(2)); im.setAttribute('height', H.toFixed(2));
+        n.__kitShade = g; n.__kitSig = sig;
+        n.classList.add('kit-baked');
+      } catch (e) { unshade(n); }                       // a picture the canvas will not give back: the live shadow stays
+      done();
+    };
+    img.onerror = function () { done(); };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + cw + '" height="' + ch +
+      '" viewBox="' + [x0, y0, W, H].map(function (v) { return v.toFixed(2); }).join(' ') + '"><defs>' + piece.defs + '</defs>' +
+      piece.body + '</svg>');
+  }
+  function bake(f) {
+    f.__bakeT = 0;
+    var svg = f.svg, r = svg.getBoundingClientRect ? svg.getBoundingClientRect() : null;
+    if (f.raf || f.laying || !r || r.width < 2 || r.height < 2) return;   // a step is playing, or it is not on screen
+    var live = endless(svg);
+    svg.classList.toggle('kit-moving', live.length > 0);
+    if (!live.length) return;
+    var skip = live.map(function (a) { return a.effect.target; });
+    var todo = q(svg, '.kit-m-drop').filter(function (n) { return !notDrawn(n, svg); });
+    if (!todo.length) return;
+    var left = todo.length;
+    svg.setAttribute('data-kit-baking', '');            // the motion audit waits for this to go
+    function done() { if (--left <= 0) svg.removeAttribute('data-kit-baking'); }
+    todo.forEach(function (n) {
+      try { shade(f, n, skip, done); } catch (e) { done(); }
+    });
+  }
+  function bakeSoon(f) {
+    if (!f.__bakeT) f.__bakeT = setTimeout(function () { bake(f); }, 30);
+  }
+
   function watch(f) {
     FIGS.push(f);
+    f.on('step', function () { bakeSoon(f); });
+    f.on('settled', function () { bakeSoon(f); });
     if (root.ResizeObserver) {
       /* after the notification, never inside it: the layout may change the drawing's height, and a change made inside
          a ResizeObserver callback is reported as a script error ("loop completed with undelivered notifications") */
@@ -1969,11 +2161,11 @@
       el('path', { d: p.d, 'class': 'kit-jacket' }, g);
       el('path', { d: p.d, 'class': 'kit-annulus' }, g);
     }
-    el('path', { d: p.d, 'class': 'kit-pipe' }, g);
+    var line = el('path', { d: p.d, 'class': 'kit-pipe' }, g);
     el('path', { d: p.d, 'class': 'kit-bore' }, g);
     var mask = el('mask', { id: mid, maskUnits: 'userSpaceOnUse', x: -4000, y: -4000, width: 8000, height: 8000 }, el('defs', {}, g));
     var reach = el('path', { d: p.d, 'class': 'kit-reach' }, mask);
-    var inside = el('g', { mask: 'url(#' + mid + ')' }, g);
+    var inside = el('g', {}, g);                       // masked only while the front stands part-way (front(), L65)
     el('path', { d: p.d, 'class': 'kit-content' }, inside);
     var flow = el('path', { d: p.d, 'class': 'kit-flow' }, inside);
     var L = 0;
@@ -1994,12 +2186,13 @@
     part.render = function (v) {
       flow.style.opacity = v > 0.02 ? Math.min(1, 0.35 + v).toFixed(2) : 0;
       flow.style.animationDuration = (0.8 / Math.max(v, 0.2)).toFixed(2) + 's';
+      flow.style.animationPlayState = v > 0.02 ? '' : 'paused';      // a still line does not repaint itself (L65)
     };
     fig.sub(part, 'fill', p.fill != null ? +p.fill : 1, function (f) {
       var s, e;
       if (f <= 1) { s = 0; e = clamp(f, 0, 1) * L; }
       else { var k = clamp(f - 1, 0, 1); s = k * drain * L; e = L - k * (1 - drain) * L; }
-      reach.setAttribute('stroke-dasharray', '0 ' + s.toFixed(1) + ' ' + Math.max(0, e - s).toFixed(1) + ' ' + (2 * L).toFixed(1));
+      front(inside, reach, line, mid, L, s, e);
     });
   };
 
@@ -2618,7 +2811,9 @@
          drag: drag,
          flagMark: flagMark, textWidth: textWidth, NS: NS,
          /* physical equipment in its material, its light and shade, its flanges (2.52.0, L63) */
-         equip: equip, body: body, reshape: reshape, flange: flange },
+         equip: equip, body: body, reshape: reshape, flange: flange,
+         /* L65 (2.78.0): a soft edge as a fill, never a blur filter; a line's fluid front, masked only while part-way */
+         soft: soft, front: front },
     figures: FIGS,
     /* the label solver alone, in plain numbers - for any drawing that can say where its outlines are (a 3D figure's
        projected parts); see solveLabels() */
@@ -3128,15 +3323,14 @@ KIT.define('gas_cloud', function (fig, part, g, p) {
     var asFig = p.fromIn === 'figure' || (p.fromIn !== 'box' && !inBox(fx0, fy0) && inBox(fx0 - cx0, fy0 - cy0));
     ox = asFig ? fx0 - cx0 : fx0; oy = asFig ? fy0 - cy0 : fy0;
   }
-  var fid = fig.uid + '-' + p.id + '-soft';
-  h.el('feGaussianBlur', { stdDeviation: Math.max(4, Math.min(w, ht) * 0.05) },
-       h.el('filter', { id: fid, x: '-20%', y: '-20%', width: '140%', height: '140%' }, h.el('defs', {}, g)));
+  /* the puffs' soft edge is a gradient fill, not a blur on the group: the puffs drift for ever while it spreads (L65, 2.78.0) */
+  var sigma = Math.max(4, Math.min(w, ht) * 0.05);
   /* DRIFT (2.49.1): "drift": [dx, dy] (or true: 0.4 w to the right) gives the cloud a second value, "<id>.drift" 0..1 - the
      whole cloud moves that far, spreading a little as it goes (wind carrying a leak away from where it began). It crosses
      walls and openings by design (data-may-cross); leave the room for its end place in the figure. */
   var drift = p.drift === true ? [w * 0.4, 0] : (p.drift && p.drift.length === 2 ? p.drift : null);
   var wrap = h.el('g', {}, g);
-  var grow = h.el('g', { filter: 'url(#' + fid + ')' }, wrap);
+  var grow = h.el('g', {}, wrap);
   [[0.5, 0.56, 0.34, 0.3], [0.29, 0.62, 0.21, 0.25], [0.71, 0.6, 0.23, 0.26], [0.42, 0.4, 0.22, 0.2], [0.61, 0.42, 0.2, 0.2]]
     .forEach(function (b, i) {
       var at = { cx: b[0] * w, cy: b[1] * ht, rx: b[2] * w, ry: b[3] * ht, 'class': 'kit-gas-cloud-puff',
@@ -3144,7 +3338,7 @@ KIT.define('gas_cloud', function (fig, part, g, p) {
                  'data-veil': '',                                                            // over shapes, never over words (2.63.2)
                  style: 'animation-delay:' + (-0.7 * i) + 's' };
       if (drift) at['data-may-cross'] = '';
-      h.el('ellipse', at, grow);
+      h.soft(h.el('ellipse', at, grow), '--txt-d', sigma);
     });
   var level = 0, moved = 0;
   function put() {
@@ -4644,8 +4838,9 @@ KIT.define('fire', function (fig, part, g, p) {
        a white-hot glow along the pool, smoke above the flames where the core runs out of air */
     var n = Math.max(3, Math.round(w / 34)), sp = w / n, top = p.height || Math.min(w * 0.55, 140);
     [[0.3, -0.9, 0.17, 0.2], [0.56, -1, 0.21, 0.22], [0.8, -0.86, 0.15, 0.17]].forEach(function (q) {      // the smoke, over the tips
-      h.el('ellipse', { cx: (w * q[0]).toFixed(1), cy: (top * q[1]).toFixed(1), rx: (w * q[2]).toFixed(1), ry: (top * q[3]).toFixed(1),
-                        'class': 'kit-fire-smoke kit-m-smoke kit-m-fog', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, grow);
+      h.soft(h.el('ellipse', { cx: (w * q[0]).toFixed(1), cy: (top * q[1]).toFixed(1), rx: (w * q[2]).toFixed(1), ry: (top * q[3]).toFixed(1),
+                               'class': 'kit-fire-smoke kit-m-smoke', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, grow),
+             '--mat-smoke', 5);
     });
     for (i = 0; i < n; i++) {
       var cx = (i + 0.5) * sp, s = top * (0.5 + 0.5 * rnd()), wd = sp * (0.85 + 0.6 * rnd()), lean = s * (0.1 + 0.08 * rnd());
@@ -4656,7 +4851,8 @@ KIT.define('fire', function (fig, part, g, p) {
       h.el('path', { d: 'M' + (cx - wd * 0.5).toFixed(1) + ' 0 C' + (cx - wd * 0.6).toFixed(1) + ' ' + (-s * 0.15).toFixed(1) + ' ' + (cx - wd * 0.2 + lean * 0.2).toFixed(1) + ' ' + (-s * 0.35).toFixed(1) + ' ' + (cx + lean * 0.5).toFixed(1) + ' ' + (-s * 0.5).toFixed(1) +
         ' C' + (cx + wd * 0.3 + lean * 0.3).toFixed(1) + ' ' + (-s * 0.35).toFixed(1) + ' ' + (cx + wd * 0.6).toFixed(1) + ' ' + (-s * 0.15).toFixed(1) + ' ' + (cx + wd * 0.5).toFixed(1) + ' 0 Z', 'class': 'kit-fire-core', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, c2);   // the hot core inside each billow
     }
-    h.el('ellipse', { cx: w / 2, cy: -2, rx: w / 2, ry: 7, 'class': 'kit-fire-glow kit-m-soft', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, grow);
+    h.soft(h.el('ellipse', { cx: w / 2, cy: -2, rx: w / 2, ry: 7, 'class': 'kit-fire-glow', 'data-low-contrast': '', 'data-may-cross': '', 'data-no-contain': '' }, grow),
+           '--mat-fire-hot', 2.5);
     lx = w / 2; ly = 36;
   }
   var lg = p.label || p.state ? h.label(fig, g, {}, '') : null;
@@ -4963,13 +5159,13 @@ KIT.define('range_bar', function (fig, part, g, p) {
 KIT.define('hose', function (fig, part, g, p) {
   var h = KIT.h, fluid = p.fluid === 'gas' ? 'gas' : 'liquid', mid = fig.uid + '-' + (p.id || 'hs') + '-m';
   g.classList.add('kit-hose-' + fluid);
-  h.el('path', { d: p.d, 'class': 'kit-hose-body kit-ms-rubber' }, g);      // 2.52.0: rubber, its steel couplings bolted on
+  var line = h.el('path', { d: p.d, 'class': 'kit-hose-body kit-ms-rubber' }, g);      // 2.52.0: rubber, its steel couplings bolted on
   /* the corrugation rings and the bore are dark on the hose's own body: quiet on purpose, the body and the fluid carry it */
   h.el('path', { d: p.d, 'class': 'kit-hose-rib', 'data-low-contrast': '' }, g);
   h.el('path', { d: p.d, 'class': 'kit-hose-bore', 'data-low-contrast': '' }, g);
   var mask = h.el('mask', { id: mid, maskUnits: 'userSpaceOnUse', x: -4000, y: -4000, width: 8000, height: 8000 }, h.el('defs', {}, g));
   var reach = h.el('path', { d: p.d, 'class': 'kit-reach' }, mask);
-  var inside = h.el('g', { mask: 'url(#' + mid + ')' }, g);
+  var inside = h.el('g', {}, g);                         // masked only while the front stands part-way (h.front, L65)
   h.el('path', { d: p.d, 'class': 'kit-hose-fluid', 'data-low-contrast': '' }, inside);      // translucent liquid, as the kit's own pipe content
   var flow = h.el('path', { d: p.d, 'class': 'kit-flow' }, inside);
   var L = 0, m0 = null;
@@ -5002,13 +5198,14 @@ KIT.define('hose', function (fig, part, g, p) {
   part.render = function (v) {                         // the flow, as a pipe's
     flow.style.opacity = v > 0.02 ? Math.min(1, 0.35 + v).toFixed(2) : 0;
     flow.style.animationDuration = (0.8 / Math.max(v, 0.2)).toFixed(2) + 's';
+    flow.style.animationPlayState = v > 0.02 ? '' : 'paused';
   };
   var drain = p.drain != null ? +p.drain : 1;
   fig.sub(part, 'fill', p.fill != null ? +p.fill : (p.empty ? 0 : 1), function (f) {     // "<id>.fill": the front advancing, 1..2 emptying
     var s, e;
     if (f <= 1) { s = 0; e = h.clamp(f, 0, 1) * L; }
     else { var k = h.clamp(f - 1, 0, 1); s = k * drain * L; e = L - k * (1 - drain) * L; }
-    reach.setAttribute('stroke-dasharray', '0 ' + s.toFixed(1) + ' ' + Math.max(0, e - s).toFixed(1) + ' ' + (2 * L).toFixed(1));
+    h.front(inside, reach, line, mid, L, s, e);
   });
 }, {
   family: 'piping',
@@ -5346,11 +5543,13 @@ KIT.define('spill', function (fig, part, g, p) {
   var fr = [-0.82, -0.52, -0.22, 0.12, 0.42, 0.72, 0.95];
   /* 2.52.0: LNG boiling off makes a dense, low white fog that hugs the surface and rolls outward (it was drawn as squiggles
      that read as steam or wires); the liquid flashes where the stream lands; the pool seethes with fine bubbles */
-  var flash = h.el('ellipse', { cx: fx, cy: S - 5, rx: 11, ry: 6, 'class': 'kit-spill-flash kit-m-vapour kit-m-fog', 'data-low-contrast': '', 'data-may-cross': '' }, g);
+  var flash = h.soft(h.el('ellipse', { cx: fx, cy: S - 5, rx: 11, ry: 6, 'class': 'kit-spill-flash kit-m-vapour', 'data-low-contrast': '', 'data-may-cross': '' }, g),
+                     '--mat-vapour', 5);
   fr.forEach(function (f, j) {
     bubs.push(h.el('circle', { r: 1.4 + 0.5 * (j % 3), 'class': 'kit-spill-bub', 'data-low-contrast': '', 'data-may-cross': '' }, g));
     var wg = h.el('g', {}, g);
-    h.el('ellipse', { cx: 0, cy: -9, rx: 20, ry: 10, 'class': 'kit-spill-wisp kit-m-vapour kit-m-fog', 'data-low-contrast': '', 'data-may-cross': '' }, wg);
+    h.soft(h.el('ellipse', { cx: 0, cy: -9, rx: 20, ry: 10, 'class': 'kit-spill-wisp kit-m-vapour', 'data-low-contrast': '', 'data-may-cross': '' }, wg),
+           '--mat-vapour', 5);
     wisps.push(wg);
   });
   var lg = h.label(fig, g, {}, ''), ly = S + T + 30, nl = 0;       // under the plate or the water: its name, then the word for what the pool does
@@ -5645,7 +5844,7 @@ KIT.define('spark', function (fig, part, g, p) {
                      'class': 'kit-spark-ray' }, flick);
       if (i % 3 === 1) h.el('circle', { cx: q1[0].toFixed(1), cy: (q1[1] + drop).toFixed(1), r: 1.8, 'class': 'kit-spark-hot' }, flick);
     }
-    h.el('circle', { cx: 0, cy: 0, r: 8, 'class': 'kit-spark-glow kit-m-soft', 'data-low-contrast': '' }, flick);   // the glow round the contact
+    h.soft(h.el('circle', { cx: 0, cy: 0, r: 8, 'class': 'kit-spark-glow', 'data-low-contrast': '' }, flick), '--mat-fire-mid', 2.5);   // the glow round the contact
     h.el('circle', { cx: 0, cy: 0, r: 4, 'class': 'kit-spark-hot' }, flick);
   } else {
     /* electric (2.52.0, as it looks): an arc jumps between two steel terminals - an irregular, branched path, a blue halo
@@ -5662,7 +5861,10 @@ KIT.define('spark', function (fig, part, g, p) {
       var q = pts[b[0]], e = [q[0] + (ux * 0.5 - uy * b[2]) * amp * b[1] * 1.6, q[1] + (uy * 0.5 + ux * b[2]) * amp * b[1] * 1.6];
       d += ' M' + q[0].toFixed(1) + ' ' + q[1].toFixed(1) + ' L' + e[0].toFixed(1) + ' ' + e[1].toFixed(1);
     });
-    h.el('path', { d: d, 'class': 'kit-spark-halo kit-m-soft', 'data-low-contrast': '' }, flick);   // the glow round the arc: its core carries it
+    /* the glow round the arc: its core carries it. Two soft strokes, wide and faint over narrow and stronger - the blur
+       it had was drawn again on every flicker (L65, 2.78.0) */
+    h.el('path', { d: d, 'class': 'kit-spark-halo kit-spark-halo-o', 'data-low-contrast': '' }, flick);
+    h.el('path', { d: d, 'class': 'kit-spark-halo', 'data-low-contrast': '' }, flick);
     h.el('path', { d: d, 'class': 'kit-spark-bolt' }, flick);
     h.el('path', { d: d, 'class': 'kit-spark-core', 'data-low-contrast': '' }, flick);
     var eqe = h.equip(g, { shadow: false });                                  // the two terminals stay drawn at rest
@@ -5684,7 +5886,7 @@ KIT.define('spark', function (fig, part, g, p) {
   look: 'diagram',
   why: 'M06 ignition sources: an electric spark (a switch or a loose contact) and a frictional spark (a tool, a chain or a rope scraping steel) - the small energy that lights a gas-air mixture',
   value: '0 no spark, 1 the spark at full; kind "electric" (default: an arc jumps from this point to to: [dx, dy]) or "friction" (hot particles thrown from this point, off a steel edge); the two terminals of an electric spark stay drawn at rest',
-  css: '.kit-spark-halo{fill:none;stroke:var(--cold);stroke-width:10;opacity:.35;stroke-linejoin:round;stroke-linecap:round}' +
+  css: '.kit-spark-halo{fill:none;stroke:var(--cold);stroke-width:5;opacity:.2;stroke-linejoin:round;stroke-linecap:round}.kit-spark-halo-o{stroke-width:10;opacity:.14}' +
     '.kit-spark-bolt{fill:none;stroke:var(--cold);stroke-width:4;stroke-linejoin:round;stroke-linecap:round}' +
     '.kit-spark-core{fill:none;stroke:var(--mat-vapour);stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}' +
     '.kit-spark-ray{fill:none;stroke:var(--mat-fire-mid);stroke-width:2.2;stroke-linecap:round}.kit-light .kit-spark-ray{stroke:var(--mat-flame-edge)}' +

@@ -210,6 +210,24 @@ its first PASS prints `TIME M01: <n> min ... - inside the gold standard (30-40 m
 `fix.py rebuild` prints its minutes against 20; the whole-course workflow returns `gold_standard` - every module's minutes
 and which went over (`scripts/cf_timing.py` `clock_start`, `clock_pass`, `fix_line`). A still rendered from the module's own 3D model is a note (render it again larger); a picture from the old course has no larger original, and the stop says so - find a larger photograph of the same thing; a REBUILD (`fix.py rebuild`, `precheck.py --rebuild`) is never stopped by the small pictures a module already has - they are notes (the gas course has 100+ old-course pictures under 800 px across its 22 modules). The whole-course workflow builds the biggest approved module first (the most minutes in the approved table) in a rolling pool of `args.wave`: the next build starts the moment one ends - no wave waits for its slowest module; a QA agent holds no place, a fix round does.
 
+## L65
+**Built out in:** now (2.78.0)
+
+**A drawing that moves stays smooth on the tablet** (Aleksis, 2026-10-29: *"Yes, build it here"*, on the rule the
+classroom session proposed after measuring the trainee decks on the tablets). On a Lenovo Yoga Tab 11 (Helio G90T,
+Mali-G76 MC4, DPR 1.5, Android 12, Chrome 156), IGF M03's trainee deck: kit flows animating `stroke-dashoffset` in a
+drawing whose groups carried CSS drop-shadows and masks kept the GPU raster thread about 97 % busy - s02, s05 and s07 at
+32-43 fps with 65-100 ms hitches. Removing the shadows took s05 from 33 to 43 fps; giving the drawing its own layer took
+s02 from 38 to 60; `overflow: hidden` on the drawing dropped it to 4 fps; the 3D slides ran at 56-60. In a drawing where
+anything moves for ever: no filter in or round it, no mask round what moves, its own layer, transform or opacity before
+`stroke-dashoffset` where the look allows, never `overflow: hidden`. **The look stays** - Aleksis wants the best
+performance on the tablet with no delay and the full look (as for the 3D kit's light, 2.73.1): the kit bakes each
+equipment shadow into a still picture under its piece once the figure is at rest (`kit.js` bake; live while a step moves
+that piece), draws smoke, vapour and glows as gradient fills (`h.soft`), masks a line only while its fluid front stands
+part-way, sized to the line (`h.front`), pauses a flow whose value is 0, and gives a moving drawing its own layer
+(`.kit-moving`). `audit_motion.js` (run by `run_audits.py` with the deck probes) fails a slide with a filter or a mask in
+or round a moving drawing, at every step of a kit figure; a missing own layer and the `stroke-dashoffset` count are notes.
+
 ## L41
 **Built out in:** now (2.19.0)
 

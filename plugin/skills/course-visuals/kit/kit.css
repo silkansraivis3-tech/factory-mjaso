@@ -361,6 +361,12 @@
 .kit-sh-cyl{fill:var(--kit-sh-cyl)}.kit-sh-cylv{fill:var(--kit-sh-cylv)}.kit-sh-box{fill:var(--kit-sh-box)}.kit-sh-round{fill:var(--kit-sh-round)}
 /* the soft shadow a piece of equipment casts on what is behind it */
 .kit-m-drop{filter:drop-shadow(0 3px 3px var(--mat-drop))}
+/* L65 (2.78.0) - a drawing where something moves for ever: its own layer, so a frame repaints the drawing and not the slide,
+   and each shadow baked into a picture under its piece (kit.js bake), so a frame never runs a filter.
+   Never overflow:hidden on the drawing for this - measured on the tablet it fell to 4 fps */
+.kit-moving{will-change:transform}
+.kit-m-drop.kit-baked{filter:none}
+.kit-shade{pointer-events:none}
 
 /* reduced motion: every figure jumps to its end state (kit.js), and nothing flashes or flows */
 @media (prefers-reduced-motion:reduce){.kit *{animation:none!important;transition:none!important}}

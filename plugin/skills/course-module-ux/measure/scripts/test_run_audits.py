@@ -81,7 +81,10 @@ def main():
     real_measure, real_browser, real_offset = ra.measure, ra.browser, ra.frame_offset
     try:
         clean = {"deck": ok, "collide": {"res": {"totalCollisions": 0, "slides": []}, "exit": 0},
-                 "compose": {"res": {"screens": 5, "review": 0, "weak": 0, "verdict": "COMPOSED", "problems": []}, "exit": 0}, "viewport": [1280, 800]}
+                 "compose": {"res": {"screens": 5, "review": 0, "weak": 0, "verdict": "COMPOSED", "problems": []}, "exit": 0},
+                 "motion": {"res": {"slidesTotal": 5, "movingDrawings": 0, "failures": 0, "failingSlides": [], "notes": [],
+                                    "verdict": "VERDICT: PASS"}, "exit": 0},   # 2.78.0 L65
+                 "viewport": [1280, 800]}
         ra.browser, ra.frame_offset = (lambda: "stub"), (lambda exe: (0, 0))
         ra.measure = lambda exe, deck, size, budget, offset=(0, 0): (clean, "")
         code, out = cli(str(STEPS))
@@ -109,7 +112,7 @@ def main():
         check("three viewports run at once (2.61.0): all three measured together, in about the slowest one's time "
               "(one after the other: 1.5 s)", code == 0 and most[0] == 3 and took < 1.4, (most[0], round(took, 2), out))
         check("... and are said in the order asked for, not the order they finished",
-              lines == ["1280x800"] * 3 + ["1024x768"] * 3 + ["1920x1080"] * 3, lines)
+              lines == ["1280x800"] * 4 + ["1024x768"] * 4 + ["1920x1080"] * 4, lines)   # four probes since 2.78.0
         live[0] = most[0] = 0
         code, out = cli(str(STEPS), "--viewport", "1024x768", "--jobs", "1")
         check("--jobs 1 measures one viewport after the other", code == 0 and most[0] == 1, most[0])
