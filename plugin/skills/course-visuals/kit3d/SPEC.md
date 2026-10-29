@@ -76,6 +76,7 @@ and ships `three.min.js`, `kit3d.js`, `kit3d.css` with the module. Alone (a test
 | `ground`, `ground_shadow` | 2.68.0: the model stands on a soft shadow (an unseen ground that shows only the shadow - worked out once, nothing while it turns); `false` leaves it out; `ground_shadow` its darkness (0.24) |
 | `min_el`, `max_el`, `min_zoom`, `max_zoom`, `pick_fill` | limits of the presenter's turning (2 / 82 degrees, 0.06 / 1.5) and how much of the box a tapped part fills (0.62) |
 | `shadows`, `merge`, `fullscreen` | `false` turns that off |
+| `light` | 2.73.1: `"auto"` (default) - full light (studio reflections, soft shadows, the ground shadow) until the model judders while it turns; then, before the last sharpness step, the scene drops its shadows and studio light at once and the device is remembered (localStorage `kit3d.lite`), so every later scene there builds lite. `"lite"` - always lite: Lambert materials lit per corner, no studio light, no shadows (2-3x the frames of full on a slowed software GPU: m03 17 -> 41 fps, m07 12 -> 30). `"full"` - never lite. `window.__scene3d.light` and `info().light` say which is on |
 
 ## Parts - all take `id`, `type`, `at`, `rot`, `name`, `pick`
 

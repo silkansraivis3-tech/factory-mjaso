@@ -36,6 +36,14 @@
   var NAVY = '#0A2463', BLUE = '#2EB6F8', AMBER = '#E9A51E';
   var DEG = Math.PI / 180;
   var PIXEL_BUDGET = 2.4e6;           /* 2.70.0 - the most pixels a frame draws (P.size) */
+  /* lite light: a device a scene juddered on is remembered, and every scene after builds lite there (P.goLite) */
+  var LITE_KEY = 'kit3d.lite';
+  function slowDevice(set) {
+    try {
+      if (set) { w.localStorage.setItem(LITE_KEY, '1'); }
+      return w.localStorage.getItem(LITE_KEY) === '1';
+    } catch (e) { return !!set; }
+  }
   var PART = {};                                  /* part type -> builder(k, p) */
   var PART_INFO = {};                             /* part type -> {family, about} for check_kit3d / PARTS.md */
   var scenes = [];
@@ -138,7 +146,10 @@
     if (x.emissive) { p.emissive = this.col(x.emissive); p.emissiveIntensity = num(x.emissiveIntensity, 1); }
     if (x.depthTest === false) { p.depthTest = false; }
     if (x.flat) { p.flatShading = true; }
-    var m = new T.MeshStandardMaterial(p);
+    var m;
+    /* lite: lit once per corner, not per pixel - no roughness, no metal shine */
+    if (S.lite) { delete p.roughness; delete p.metalness; m = new T.MeshLambertMaterial(p); }
+    else { m = new T.MeshStandardMaterial(p); }
     this.reg(m);
     S.matCache[key] = m;
     return m;
@@ -331,6 +342,10 @@
     S.built = false; S.live = false; S.dead = false; S.frames = 0; S.step = 0; S.sel = null; S.lit = {};
     S.free = false;                     /* the presenter turned the view by hand since the last step / pick */
     S.raf = 0; S.tween = null; S.shadowsDone = false;
+    /* "light": "full" | "lite" | "auto" (lite on a device a scene juddered on before, and lite from the moment one does) */
+    S.lightMode = spec.light === 'full' || spec.light === 'lite' ? spec.light : 'auto';
+    S.lite = S.lightMode === 'lite' || (S.lightMode === 'auto' && slowDevice());
+    S.shadows = spec.shadows !== false && !S.lite;
   }
   var P = Scene.prototype;
 
@@ -364,7 +379,7 @@
     r.toneMapping = T.ACESFilmicToneMapping;
     r.toneMappingExposure = num(S.spec.exposure, 1.05);
     r.localClippingEnabled = true;
-    r.shadowMap.enabled = S.spec.shadows !== false;
+    r.shadowMap.enabled = S.shadows;
     r.shadowMap.type = T.PCFSoftShadowMap;
     r.shadowMap.autoUpdate = false;               /* the scene stands still: shadows are worked out once */
     r.setClearColor(0x000000, 0);
@@ -413,12 +428,12 @@
     S.scene = new T.Scene();
     S.root = new T.Group();
     S.scene.add(S.root);
-    var envOk = true;
-    try { S.env(); } catch (e2) { envOk = false; S.scene.environment = null; }
+    var envOk = !S.lite;
+    if (envOk) { try { S.env(); } catch (e2) { envOk = false; S.scene.environment = null; } }
     S.hemi = new T.HemisphereLight(0xf2f7ff, 0x5a6672, envOk ? 0.30 : 0.95);
     S.scene.add(S.hemi);
     S.sun = new T.DirectionalLight(0xfff6e8, envOk ? 0.85 : 1.0);
-    S.sun.castShadow = spec.shadows !== false;
+    S.sun.castShadow = S.shadows;
     S.sun.shadow.mapSize.set(2048, 2048);
     S.sun.shadow.bias = -0.0006;
     S.sun.shadow.normalBias = 0.03;
@@ -447,7 +462,7 @@
     var txt = JSON.stringify(spec.steps || []) + JSON.stringify(spec.controls || []) + JSON.stringify(spec.states || {});
     each(S.parts, function (p) {
       if (txt.indexOf('"' + p.id + '.ghost"') < 0) { return; }
-      var ms = p.mats.filter(function (m) { return m.isMeshStandardMaterial; });
+      var ms = p.mats.filter(function (m) { return m.isMeshStandardMaterial || m.isMeshLambertMaterial; });
       k.cur = p;
       k.state(p.id + '.ghost', 0, function (v) {
         ms.forEach(function (m) {
@@ -544,7 +559,7 @@
       }
     });
     if (S.groundMesh) { S.groundMesh.visible = !floored; }
-    if (S.spec.shadows !== false && S.spec.ground !== false && !floored) {
+    if (S.shadows && S.spec.ground !== false && !floored) {
       if (!S.groundMesh) {
         var gm = new T.Mesh(new T.PlaneGeometry(1, 1), new T.ShadowMaterial({ opacity: num(S.spec.ground_shadow, 0.24) }));
         gm.rotation.x = -Math.PI / 2;
@@ -1300,10 +1315,28 @@
     if (sum / 20 <= 45) { return; }
     var pr = S.r.getPixelRatio(), next = pr > 1.5 ? 1.5 : pr > 1 ? 1 : 0;
     S.dts = [];
+    if (pr <= 1.5 && !S.lite && S.lightMode === 'auto') { S.goLite(); return; }    /* before the last sharpness step */
     if (!next) { return; }
     S.r.setPixelRatio(next);
     S.dpr = next;
     if (w.__scene3d && w.__scene3d.__k3 === S) { w.__scene3d.dpr = next; }
+  };
+  /* lite from now on: this scene drops its shadows and its studio light at once (its materials stay; their metal is turned
+     down so it does not go black without the studio light - one shader rebuild), and the device is remembered as slow, so
+     every scene after builds lite from the start. "light": "full" never comes here; window.__scene3d.light says where it is */
+  P.goLite = function () {
+    var S = this;
+    S.lite = true; S.shadows = false;
+    slowDevice(true);
+    S.r.shadowMap.enabled = false;
+    S.sun.castShadow = false;
+    if (S.groundMesh) { S.groundMesh.visible = false; }
+    if (S.scene.environment) { S.scene.environment = null; S.hemi.intensity = 0.95; S.sun.intensity = 1.0; }
+    S.mats.forEach(function (m) {
+      if (m.isMeshStandardMaterial) { m.metalness = Math.min(m.metalness, 0.2); }
+      if (m.lights) { m.needsUpdate = true; }
+    });
+    if (w.__scene3d && w.__scene3d.__k3 === S) { w.__scene3d.light = 'lite'; }
   };
   P.ready = function () {
     var S = this;
@@ -1590,7 +1623,8 @@
     }
     var lr = S.labelLayer.getBoundingClientRect();
     return {
-      ok: true, frames: S.frames, size: [S.W, S.H], pixelRatio: S.r.getPixelRatio(), step: S.step, steps: S.steps().length,
+      ok: true, frames: S.frames, size: [S.W, S.H], pixelRatio: S.r.getPixelRatio(), light: S.lite ? 'lite' : 'full',
+      step: S.step, steps: S.steps().length,
       selected: S.sel, lit: Object.keys(S.lit), wired: !!S.wired,
       calls: S.r.info.render.calls, triangles: S.r.info.render.triangles, geometries: S.r.info.memory.geometries,
       parts: S.order.filter(function (k0) { return S.parts[k0].pick; }),
@@ -1685,7 +1719,7 @@
     hook(id, {
       enter: function () {
         clearTimeout(timer);
-        w.__scene3d = { __k3: S, enterT: now(), firstFrameT: 0, frames: 0, prepared: !!S.prepared,
+        w.__scene3d = { __k3: S, enterT: now(), firstFrameT: 0, frames: 0, prepared: !!S.prepared, light: S.lite ? 'lite' : 'full',
           spin: function (ms, cb) {
             var t0 = now(), f0 = S.frames;
             S.spin = true; S.schedule();
