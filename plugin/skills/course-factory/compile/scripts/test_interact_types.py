@@ -242,6 +242,19 @@ def main():
             it = (rep.get("items") or [{}, {}])[1]
             check("the classroom gets the wrong item whole: answer, right answer, why, brief, how sure",
                   it.get("a") == "-0.5 °C" and it.get("c") == "-42 °C" and it.get("w") and it.get("n") and it.get("sure") == "Certain", it)
+            items = rep.get("items") or []
+            order = re.findall(r'<section class="scr" data-script="(q\d+)"', p)
+            check("every item says which question it is (q, the script's id)", [x.get("q") for x in items] == order,
+                  [[x.get("q") for x in items], order])
+            q21 = p[p.index('data-script="q21"'):]
+            q21 = q21[:q21.index("</section>")]
+            k05 = [m.group(1) for m in re.finditer(r'<button[^>]*data-key="([0-9a-f]{8})"[^>]*>\s*([^<]*)', q21) if m.group(2).strip().startswith("-0.5")]
+            check("the wrong pick goes as its key (p) and how sure as a number (s): the factory can count it across classes",
+                  k05 and it.get("p") == k05 and it.get("s") == 2, [it.get("p"), k05, it.get("s")])
+            np_ = {x.get("q"): len(x.get("p") or []) for x in items}
+            n_cards = len(re.findall(r'class="sw-card"', p))
+            check("true or false, check a colleague, investigate: one key per choice (each card, each claim, each pin and the pick)",
+                  np_.get(items[0].get("q")) == n_cards and sorted(np_.values()).count(3) >= 1 and 5 in np_.values(), np_)
             longest = max((x.get("t") or "" for x in rep.get("items", [])), key=len)
             check("questions reach the classroom uncut (the longest is %d characters, never ending in …)" % len(longest),
                   len(longest) > 90 and not longest.endswith("…"), longest)

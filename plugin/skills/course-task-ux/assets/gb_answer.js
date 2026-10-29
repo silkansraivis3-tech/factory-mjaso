@@ -26,7 +26,7 @@
                     set the value: the unit, value - data-key lists one key per accepted step
 
    The classroom: the result is reported once - parent.postMessage({type: 'gb-task-done', code, title, ok, total,
-   head, items, answered, of, timeout: true|false}); the instructor's timer {type: 'gb-timer'} is heard, and at 0
+   head, items, answered, of, timeout: true|false}), each item {t, ok, a, c, w, n, sure, q, p, s}; the instructor's timer {type: 'gb-timer'} is heard, and at 0
    what was done is marked and reported with timeout: true. "Start again" exists only outside the classroom frame
    (window.parent === window): inside it, one opening gives one result. Never under the debrief rule or on a blind final:
    those are answered once (2.74.2).
@@ -1060,6 +1060,19 @@
     if (!PASS) { return ''; }
     return (t.ok * 100 >= PASS * t.total) ? 'PASSED' : 'NOT PASSED';
   }
+  /* the key of each choice the trainee made: an option picked, a card flicked true or false, a claim kept or corrected,
+     a source pinned. The same key the factory works out from the script, so a choice is known across classes even when
+     the trainee's words for it change language. Types with no single choice (order, value, 3D) give none - a says it */
+  function pickedKeys(q) {
+    var out = [];
+    each(q.parts, function (p) {
+      each(p.groups || [], function (g) {
+        if (g.type === 'choose') { each(g.picked, function (it) { var k = keyOf(keyEl(it)); if (k) { out.push(k); } }); }
+        else if (g.type === 'lab' && g.impl && g.impl.keys) { each(g.impl.keys() || [], function (k) { if (k) { out.push(k); } }); }
+      });
+    });
+    return out;
+  }
   function report(timeout) {
     if (reported) { return; }
     reported = true;
@@ -1074,7 +1087,11 @@
       var fbk = q.why && $('[data-script-field="feedback"]', q.why), it = { t: clean((i + 1) + '. ' + q.text), ok: !!(q.done && q.ok),
         a: clean(s.a), c: clean(s.c), w: BLIND || !fbk ? '' : clean(fbk.textContent) };
       if (!BLIND && q.brief) { it.n = clean(q.brief.textContent); }
-      if (!BLIND && q.sure && q.sureV >= 0) { it.sure = say('sure' + q.sureV); }
+      if (!BLIND && q.sure && q.sureV >= 0) { it.sure = say('sure' + q.sureV); it.s = q.sureV; }
+      /* for counting across classes: q the question's id in the module's script, p the key of each choice made,
+         s how sure as a number (0 guessing, 1 fairly sure, 2 sure) - the words above are for people to read */
+      if (q.id) { it.q = q.id; }
+      if (!BLIND) { var p = pickedKeys(q); if (p.length) { it.p = p; } }
       items.push(it);
     });
     buildResult(t, timeout);

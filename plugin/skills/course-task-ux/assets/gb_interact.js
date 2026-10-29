@@ -9,6 +9,7 @@
    A compiled question (task_pages.py) holds an element <div class="lab" data-lab="TYPE"> inside its part. gb_answer.js
    asks window.GB_LAB[TYPE](el, api) for the part's group and then talks to it like any other group:
      answered()  touched()  right()  show(ok, later)  said() -> {a, c}  lock()  word()  (the dock's words for its Check)
+     keys() -> [key]  (optional) one key per choice the trainee made, so the class record can count who picked what
    api: id (the screen), key(id, text, value) (the page's gbKey), say(k), later (the debrief rule: a wrong answer is
    never followed by the right one), blind (a graded final), lang, changed() (tell the engine), check() (press Check).
 
@@ -279,6 +280,7 @@
       right: function () { return this.answered() && done.every(function (x) { return x.ok; }); },
       show: function (ok) { count.textContent = done.filter(function (x) { return x && x.ok; }).length + ' / ' + n; },
       lock: function () { locked = true; },
+      keys: function () { return done.filter(function (x) { return !!x; }).map(function (x) { return api.key(api.id, x.st, x.v ? 'true' : 'false'); }); },
       said: function () {
         var bad = done.filter(function (x) { return x && !x.ok; });
         return { a: bad.map(function (x) { return x.st + ' → ' + (x.v ? say('t') : say('f')); }).join(' | '),
@@ -325,6 +327,11 @@
       right: function () { return claims.every(function (c, k) { return good(k); }); },
       show: function () { each(claims, function (c, k) { cls(c, good(k) ? 'ok' : 'no'); }); },
       lock: function () { locked = true; sh.close(); },
+      keys: function () {
+        var out = [];
+        each(claims, function (c, k) { var o = $$('.cr-o', c)[pick[k]]; if (o) { out.push((o.getAttribute('data-key') || '').toLowerCase()); } });
+        return out;
+      },
       said: function () {
         var a = [], r = [];
         each(claims, function (c, k) {
@@ -602,6 +609,7 @@
       right: function () { var ids = Object.keys(pinned); return ids.length >= min && ids.every(function (i) { return good(i); }); },
       show: function () { each(Object.keys(pinned), function (i) { cls(srcs[i], good(i) ? 'ok' : 'no'); }); },
       lock: function () { locked = true; },
+      keys: function () { return Object.keys(pinned).map(function (i) { return (srcs[i].getAttribute('data-key') || '').toLowerCase(); }); },
       said: function () { return { a: Object.keys(pinned).map(function (i) { return txt($('.iv-tl', srcs[i])); }).join('; '), c: srcs.filter(function (s, i) { return good(i); }).map(function (s) { return txt($('.iv-tl', s)); }).join('; ') }; }
     };
   };

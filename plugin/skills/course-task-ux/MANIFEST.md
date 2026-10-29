@@ -6,6 +6,14 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.74.3 · Answers the class record can count (2026-10-29)
+
+- **Why.** To count across classes which questions are missed, which wrong choices are picked and who was sure and wrong,
+  an answer has to say which question and which choice it is - the words alone change with a reworded question or another
+  language, and the confidence went only as words.
+- **What.** Each handed-in item adds `q`, `p` and `s` (gb_answer.js `pickedKeys`; the optional `keys()` of the swipe,
+  critique and evidence types in gb_interact.js). The training app's gate passes them through checked (8-hex keys, 0-2).
+
 ## 2.74.2 · A self-check is answered once (2026-10-28)
 
 - **Why.** The owner: "you do it once and if you fail you will get the explanation in the debrief". Start again on the

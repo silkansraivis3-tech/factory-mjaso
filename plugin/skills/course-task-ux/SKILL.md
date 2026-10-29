@@ -233,7 +233,7 @@ in the debrief*. The right answer is never shown on the tablet - not on the ques
 classroom's debrief shows it, whole, when the instructor reveals it, so the class works it out together. A right answer
 still shows its why. The page carries `data-reveal="debrief"`; `"feedback": "now"` at the top of a build sheet keeps the
 older reveal (2.63.2) for a course whose owner wants it. The classroom receives every item whole - question, answer,
-right answer, why, the brief reason (`n`) and how sure (`sure`) - never cut to 90 / 120 characters again. **A self-check is answered once** (2.74.2): every part locks at its Check, and
+right answer, why, the brief reason (`n`) and how sure (`sure`) - never cut to 90 / 120 characters again - and, for counting across classes, the question's id (`q`), the key of each choice made (`p`) and how sure as a number (`s`). **A self-check is answered once** (2.74.2): every part locks at its Check, and
 the result screen has no Start again - a trainee who got it wrong hears why in the debrief, not by trying again.
 
 | Type (`mechanic`) | Part | On the tablet | Graded by |
