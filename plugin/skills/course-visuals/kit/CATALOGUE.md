@@ -82,8 +82,8 @@ screens stay calm ISA-101 screens. A valve is automatic (an actuator) unless `"a
 - `flammability` (charts) - lfl ufl nose:[O2 %, fuel %] (methane 5 / 15 / [12, 6] by default) - value: 0..1 along the path, or legs done with by:'legs'; the zone lights while inside - ex: `{"type":"flammability","x":70,"y":40,"w":440,"h":250,"by":"legs","zoneLabel":"flammable zone","airLabel":"air line"}`
 - `range_bar` (charts) - w lel uel max label nums - value: the concentration % - ex: `{"type":"range_bar","x":20,"y":76,"w":520,"lel":5,"uel":15,"label":"methane in air","value":0}`
 - `hose` (piping) - d empty label - value: flow 0..1; <id>.fill like a pipe's - ex: `{"type":"hose","empty":true,"label":"bunker hose","value":0}`
-- `manifold` (piping) - outlets:[{label}] - value: 0..n outlets connected - ex: `{"type":"manifold","x":40,"y":46,"w":560,"label":"bunker manifold","outlets":[{"label":"liquid 1"},{"label":"liquid 2"},{"label":"vapour return"},{"label":"spare"}]}`
-- `spool_piece` (piping) - w t spool lift left right spoolLabel label - value: 1 fitted, 0 removed + blanks - ex: `{"type":"spool_piece","x":140,"y":104,"w":370,"t":30,"spool":130,"lift":46,"label":"gas supply line","left":"tank side","right":"engine side","spoolLabel":"spool piece"}`
+- `manifold` (piping) - outlets:[{label}] - value: 0..n outlets connected - ex: `{"type":"manifold","x":40,"y":46,"w":560,"label":"bunker manifold"}`
+- `spool_piece` (piping) - w t spool lift left right spoolLabel label - value: 1 fitted, 0 removed + blanks - ex: `{"type":"spool_piece","x":140,"y":104,"w":370,"t":30,"spool":130,"lift":46,"label":"gas supply line","left":"tank side","right":"engine side"}`
 - `airlock` (spaces) - w h door side (or safeW hazardW: 0 draws no side) safe hazard label state words [2.63.2: two gas-tight steel doors in two bulkheads with the…] - value: 0 both doors shut, 1 the safe-side door open, 2 the hazardous-side door open; from 1 to 2 the first door shuts before t…
 - `hatch` (spaces) - w lift label state words - value: 0 bolted shut, 1 the cover lifted clear, the opening showing - ex: `{"type":"hatch","x":40,"y":36,"w":160,"label":"hatch in the open deck"}`
 - `tank_wall` (cutaways) - w layers:[{label,kind,h}] insideLabel outsideLabel - value: 0..n layer k picked out - ex: `{"type":"tank_wall","x":20,"y":16,"w":300,"insideLabel":"LNG, -163 °C","outsideLabel":"sea","value":0}`
@@ -95,7 +95,10 @@ screens stay calm ISA-101 screens. A valve is automatic (an actuator) unless `"a
 - `composition_bar` (charts) - w h segments:[{label,pct}] total unit label - value: 0..n: segment k fills from its left edge from k to k+1, its name and share appear once it is half drawn - ex: `{"type":"composition_bar","x":40,"y":100,"w":460,"label":"natural gas, share by volume"}`
 - `tank_type` (cutaways) - w=150 h=110 kind='c' label - value: how much of the secondary barrier is drawn, 0..1 - ex: `{"type":"tank_type","kind":"a","x":10,"y":20,"label":"type A"}`
 - `gvu` (piping) - w=100 h=56 label - value: 1 gas through, 0 shut off (the bleed open)
-- `switchboard` (piping) - w=140 h=64 panels label - value: 0 dead, 1 live - ex: `{"type":"switchboard","x":60,"y":20,"w":140,"label":"6.6 kV switchboard"}`
+- `switchboard` (piping) - w=140 h=64 panels label - value: 0 dead, 1 live
 - `motor` (gas-fire-machinery) - w=96 h=50 label - value: 0 stopped, 1 running
 - `propeller` (gas-fire-machinery) - w=70 h=90 label - value: 0 stopped, 1 turning
-- `lng_truck` (piping) - w=200 h=70 cab label - value: how full its tank is, 0..1 - ex: `{"type":"lng_truck","x":20,"y":20,"label":"LNG truck","value":0.8}`
+- `lng_truck` (piping) - w=200 h=70 cab view label - value: how full its tank is, 0..1
+- `strainer` (piping) - r=14 label - value: 0 clean, 1 clogged
+- `n2_generator` (gas-fire-machinery) - w=140 h=70 modules=3 label - value: 0 stopped, 1 running
+- `crane` (gas-fire-machinery) - w=44 h=56 view label - value: 0 hook up, 1 lowered

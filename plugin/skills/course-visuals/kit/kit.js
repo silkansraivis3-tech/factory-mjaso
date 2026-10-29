@@ -6114,7 +6114,7 @@ KIT.define('switchboard', function (fig, part, g, p) {
     '.kit-sb-lamp{fill:var(--mat-hole);stroke:var(--mat-edge);stroke-width:1}.kit-sb-live .kit-sb-lamp{fill:var(--txt-d)}' +
     '.kit-sb-handle{stroke:var(--mat-stem);stroke-width:2;stroke-linecap:round}',
   example: { size: [260, 120], parts: [
-    { id: 'S', type: 'switchboard', x: 60, y: 20, w: 140, label: '6.6 kV switchboard' } ],
+    { id: 'S', type: 'switchboard', x: 60, y: 20, label: '6.6 kV switchboard' } ],
     steps: [ { title: 'The switchboard is live', play: [['S', 1, 400]] } ] }
 });
 /* end kit-part */
@@ -6220,8 +6220,33 @@ KIT.define('lng_truck', function (fig, part, g, p) {
   var h = KIT.h, w = p.w || 200, ht = p.h || 70, cid = fig.uid + '-' + p.id + '-t';
   /* an LNG road tanker (truck-to-ship bunkering): the tractor's cab, the clad cryogenic tank on the semi-trailer's
      chassis, its wheels, and the valve cabinet at the rear where the bunker hose is coupled. The tank's lower part is cut
-     away so the LNG in it shows, as on the tank part. cab: "right" turns the truck round */
+     away so the LNG in it shows, as on the tank part. cab: "right" turns the truck round. view: "plan" - seen from above
+     on a quay beside a ship's plan: the cab's roof, the tank lying along the trailer, the valve cabinet at the rear */
   var root = h.el('g', p.cab === 'right' ? { transform: 'translate(' + w + ' 0) scale(-1 1)' } : {}, g);
+  if (p.view === 'plan') {
+    var peq = h.equip(root), pc = Math.min(16, w * 0.24), pr = Math.min(5, w * 0.08);
+    var wt = Math.max(1.8, ht * 0.11), wl = Math.min(9, w * 0.075), bi = wt * 0.65;
+    [pc * 0.3, w - pr - wl * 1.0 - 2, w - pr - wl * 2.1 - 2, w - pr - wl * 3.2 - 2].forEach(function (x) {           // the wheels, seen at the sides
+      [0, ht - wt * 1.5].forEach(function (y) { h.body('rect', { x: x, y: y, width: wl, height: wt * 1.5, rx: 0.8 }, peq, { mat: 'rubber', shade: 'box' }); });
+    });
+    h.body('rect', { x: pc - 4, y: ht * 0.3, width: 8, height: ht * 0.4 }, peq, { mat: 'paint' });                  // the fifth wheel under the join
+    h.body('rect', { x: pc - 2, y: bi, width: w - pc - pr + 2, height: ht - 2 * bi, rx: 1 }, peq, { mat: 'paint', shade: 'box' });   // the trailer
+    h.body('rect', { x: pc + 1, y: bi + 1.5, width: w - pc - pr - 3, height: ht - 2 * bi - 3, rx: (ht - 2 * bi - 3) / 2 }, peq, { mat: 'clad', shade: 'cyl' });   // the tank
+    if (ht >= 28) {
+      var mr = ht * 0.14, mxp = pc + 1 + (w - pc - pr - 3) * 0.5;
+      h.body('circle', { cx: mxp, cy: ht / 2, r: mr }, peq, { mat: 'steel', shade: 'round' });                    // the manway
+      h.el('circle', { cx: mxp, cy: ht / 2, r: mr * 0.35, 'class': 'kit-m-bolt' }, peq);
+      h.body('circle', { cx: mxp - mr * 2.6, cy: ht / 2, r: mr * 0.5 }, peq, { mat: 'steel', shade: 'round' });   // a relief valve
+    }
+    h.body('rect', { x: 0, y: bi, width: pc - 3, height: ht - 2 * bi, rx: 2 }, peq, { mat: 'white', shade: 'box' });   // the cab roof
+    h.el('rect', { x: 0.5, y: bi + 1.5, width: 2.5, height: ht - 2 * bi - 3, rx: 1, 'class': 'kit-m-hole' }, peq);   // its windscreen
+    h.body('rect', { x: pc * 0.45, y: bi + 2, width: (pc - 3) * 0.4, height: ht - 2 * bi - 4, rx: 1 }, peq, { mat: 'paintl', shade: 'box' });   // its roof hatch
+    h.body('rect', { x: w - pr - 1, y: ht / 2 - ht * 0.3, width: pr + 1, height: ht * 0.6, rx: 1 }, peq, { mat: 'steel', shade: 'box' });   // the valve cabinet
+    h.el('rect', { x: w - pr * 0.45, y: ht / 2 - ht * 0.26, width: 0.9, height: ht * 0.52, 'class': 'kit-m-hole' }, peq);   // its door seam
+    if (p.label) h.label(fig, g, { x: w / 2, y: ht + 18, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+    part.render = function () {};
+    return;
+  }
   var eq = h.equip(root);
   var cw = Math.min(46, w * 0.24), wr = Math.min(8, ht * 0.12), gy = ht - wr, ch = gy - wr - 3;
   var t0 = cw + 4, t1 = w - 16, ty = 3, th = ch - ty - 1, rr = th / 2;
@@ -6257,6 +6282,141 @@ KIT.define('lng_truck', function (fig, part, g, p) {
     { id: 'T', type: 'lng_truck', x: 20, y: 20, label: 'LNG truck', value: 0.8 },
     { id: 'H', type: 'hose', d: 'M220 55 C250 55 260 90 290 90' } ],
     steps: [ { title: 'The truck delivers', play: [['T', 0.3, 1600], ['H', 1, 400]] } ] }
+});
+/* end kit-part */
+/* kit-part: strainer */
+KIT.define('strainer', function (fig, part, g, p) {
+  var h = KIT.h, r = p.r || 14;
+  /* a Y-type strainer in the line, its centre on the line: the cast body with its end flanges, and the screen leg
+     slanting down to its bolted cover and drain plug */
+  var eq = h.equip(g), ang = 52, lw = r * 0.27, ll = r * 0.85;
+  var leg = h.el('g', { transform: 'translate(' + (r * 0.1) + ' ' + (r * 0.2) + ') rotate(' + ang + ')' }, eq);
+  h.body('rect', { x: 0, y: -lw, width: ll, height: lw * 2, rx: 1.5 }, leg, { mat: 'cast', shade: 'cyl' });              // the screen leg
+  h.flange(leg, ll, 0, 0, r * 0.74, 2.6);                                                                               // its cover flange
+  h.body('rect', { x: ll + 1.3, y: -lw * 0.8, width: r * 0.12, height: lw * 1.6, rx: 1 }, leg, { mat: 'steel', shade: 'box' });   // the cover
+  h.body('rect', { x: ll + 1.3 + r * 0.12, y: -lw * 0.28, width: r * 0.14, height: lw * 0.56, rx: 0.8 }, leg, { mat: 'steel', shade: 'box' });   // the drain plug
+  h.body('rect', { x: -r * 0.8, y: -r * 0.36, width: r * 1.6, height: r * 0.72, rx: r * 0.3 }, eq, { mat: 'cast', shade: 'cyl' });   // the body
+  h.body('rect', { x: -r * 0.2, y: -r * 0.5, width: r * 0.22, height: r * 0.2, rx: 0.8 }, eq, { mat: 'steel', shade: 'box' });   // the gauge plug on top
+  h.flange(eq, -r * 0.85, 0, 0, r * 1.1, 3);
+  h.flange(eq, r * 0.85, 0, 0, r * 1.1, 3);
+  if (p.label) h.label(fig, g, { x: 0, y: r * 1.18 + 20, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  h.el('path', { d: 'M' + (-r * 0.05) + ' ' + (r * 0.01) + ' L' + (r * 0.47) + ' ' + (r * 0.67), 'class': 'kit-strainer-screen' }, g);
+  part.render = function (v) { g.classList.toggle('kit-strainer-dirty', v > 0.5); };
+}, {
+  family: 'piping',
+  status: 'kit', merged_from: "IGF Advanced M06",
+  look: 'equipment',
+  course: 'IGF Advanced', module: 'M06', made: '2026-10-29',
+  why: 'M06 m02: the strainer in the bunker line was a plain box',
+  value: '0 clean, 1 clogged',
+  css: '.kit-strainer-screen{stroke:var(--mat-stem);stroke-width:2;stroke-dasharray:2 2}.kit-strainer-dirty .kit-strainer-screen{stroke:var(--amber);stroke-dasharray:none}',
+  example: { size: [240, 90], parts: [
+    { id: 'P1', type: 'pipe', fluid: 'liquid', d: 'M10 34 H108' },
+    { id: 'S', type: 'strainer', x: 120, y: 34, label: 'strainer' },
+    { id: 'P2', type: 'pipe', fluid: 'liquid', d: 'M132 34 H230' } ],
+    steps: [ { title: 'LNG through the strainer', play: [['P1', 1, 400], ['P2', 1, 400]] } ] }
+});
+/* end kit-part */
+/* kit-part: n2_generator */
+KIT.define('n2_generator', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 140, ht = p.h || 70, n = p.modules || 3;
+  /* a membrane nitrogen generator on its skid: the membrane modules standing between their headers (air in at the
+     left, nitrogen out at the right), and its control cabinet with the purity display */
+  var eq = h.equip(g);
+  var cw = Math.min(34, w * 0.26), mx0 = 12, mx1 = w - cw - 8, top = 12, bot = ht - 12, mw = Math.min(16, (mx1 - mx0) / n - 6);
+  h.body('rect', { x: 0, y: ht - 6, width: w, height: 6, rx: 1 }, eq, { mat: 'paint', shade: 'box' });                 // the skid
+  [3, w - cw - 6].forEach(function (x) { h.body('rect', { x: x, y: ht - 9, width: 3, height: 4, rx: 0.5 }, eq, { mat: 'steel' }); });   // its lifting lugs
+  h.body('rect', { x: 0, y: top - 3, width: mx1 + 4, height: 6, rx: 3 }, eq, { mat: 'steel', shade: 'cyl' });           // the air header
+  h.body('rect', { x: mx0 - 4, y: bot - 3, width: w - mx0 - cw + 1, height: 6, rx: 3 }, eq, { mat: 'steel', shade: 'cyl' });   // the nitrogen header
+  h.flange(eq, 2, top, 0, 11, 2.6);                                                                                      // the air inlet
+  h.flange(eq, w - cw - 2, bot, 0, 11, 2.6);                                                                             // the nitrogen outlet to the cabinet side
+  var gx = mx0 + (mx1 - mx0) * 0.3;
+  h.body('rect', { x: gx - 0.8, y: top - 8, width: 1.6, height: 6 }, eq, { mat: 'steel' });                              // the pressure gauge on the air header
+  h.body('circle', { cx: gx, cy: top - 9, r: 3.4 }, eq, { mat: 'white', shade: 'round' });
+  for (var i = 0; i < n; i++) {
+    var cx = mx0 + (mx1 - mx0) * (i + 0.5) / n;
+    h.body('rect', { x: cx - mw / 2, y: top, width: mw, height: bot - top, rx: mw / 2 }, eq, { mat: 'steel', shade: 'cylv' });
+    [top + 3, bot - 5].forEach(function (y) {
+      h.body('rect', { x: cx - mw / 2 - 2, y: y, width: mw + 4, height: 3, rx: 1 }, eq, { mat: 'cast', shade: 'box' });   // the clamp ring of an end cap
+      h.el('circle', { cx: cx, cy: y + 1.5, r: 0.9, 'class': 'kit-m-bolt' }, eq);
+    });
+    h.body('rect', { x: cx - 1.4, y: top - 3, width: 2.8, height: 5 }, eq, { mat: 'steel' });                            // its feed nipple
+  }
+  h.body('rect', { x: w - cw, y: top - 4, width: cw, height: ht - top - 2, rx: 2 }, eq, { mat: 'paintl', shade: 'box' });   // the cabinet
+  h.el('rect', { x: w - cw + 4, y: top - 1, width: cw - 8, height: Math.min(12, ht * 0.18), rx: 1.5, 'class': 'kit-m-hole' }, eq);
+  for (var s = 0; s < 3; s++) h.el('rect', { x: w - cw + 5, y: bot + 0.5 + s * 2.4, width: cw - 10, height: 1, 'class': 'kit-m-hole' }, eq);   // the vent slots
+  h.body('rect', { x: w - 7, y: top + Math.min(12, ht * 0.18) + 8, width: 2, height: 6, rx: 0.8 }, eq, { mat: 'steel' });   // the door handle
+  var lamp = h.el('circle', { cx: w - cw / 2, cy: top + Math.min(12, ht * 0.18) + 6, r: 2.4, 'class': 'kit-n2g-lamp' }, g);
+  var flow = h.el('path', { d: 'M' + mx0 + ' ' + bot + ' H' + (w - cw - 6), 'class': 'kit-n2g-flow' }, g);
+  if (p.label) h.label(fig, g, { x: w / 2, y: ht + 18, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) { var on = v > 0.5; g.classList.toggle('kit-running', on); flow.style.opacity = on ? '1' : '0'; lamp.setAttribute('data-on', on ? '1' : '0'); };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Advanced M06",
+  look: 'equipment',
+  course: 'IGF Advanced', module: 'M06', made: '2026-10-29',
+  why: 'M06 s15: the membrane nitrogen generator was a plain box',
+  value: '0 stopped, 1 running',
+  css: '.kit-n2g-lamp{fill:var(--mat-hole);stroke:var(--mat-edge);stroke-width:1}.kit-running .kit-n2g-lamp{fill:var(--txt-d)}' +
+    '.kit-n2g-flow{fill:none;stroke:var(--cold);stroke-width:2;stroke-dasharray:7 9;animation:kit-flow 1.2s linear infinite}',
+  example: { size: [260, 120], parts: [
+    { id: 'N', type: 'n2_generator', x: 60, y: 16, label: 'N2 generator' } ],
+    steps: [ { title: 'The generator makes nitrogen', play: [['N', 1, 400]] } ] }
+});
+/* end kit-part */
+/* kit-part: crane */
+KIT.define('crane', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 44, ht = p.h || 56, plan = p.view === 'plan';
+  /* a stores (provision) crane: from the side its pedestal, the slewing house, the jib and the wire with its hook; from
+     above (view "plan") the pedestal's ring and the jib reaching out */
+  var eq = h.equip(g), hook = null, wire = null, tipx = w - 3, tipy = 4;
+  if (plan) {
+    var c = Math.min(w, ht) * 0.34, cy = ht / 2, hw = c * 0.78, jw = Math.max(2.4, c * 0.3);
+    h.body('rect', { x: c, y: cy - jw, width: (w - 3 - c) * 0.58, height: jw * 2, rx: 1.2 }, eq, { mat: 'paint', shade: 'box' });   // the jib's base section
+    h.body('rect', { x: c + (w - 3 - c) * 0.5, y: cy - jw * 0.62, width: (w - 3 - c) * 0.5 + 2, height: jw * 1.24, rx: 1 }, eq, { mat: 'paintl', shade: 'box' });   // its telescopic end
+    h.body('circle', { cx: c, cy: cy, r: c }, eq, { mat: 'steel', shade: 'round' });                                       // the pedestal's flange
+    h.el('circle', { cx: c, cy: cy, r: c * 0.82, 'class': 'kit-crane-ring' }, eq);   // its bolt ring
+    h.body('rect', { x: c - hw, y: cy - hw * 0.8, width: hw * 1.7, height: hw * 1.6, rx: 2 }, eq, { mat: 'paintl', shade: 'box' });   // the slewing house
+    h.el('rect', { x: c + hw * 0.3, y: cy - hw * 0.5, width: hw * 0.55, height: hw * 1.0, rx: 1, 'class': 'kit-m-hole' }, eq);   // its cab window
+    h.el('circle', { cx: w - 2, cy: cy, r: 2, 'class': 'kit-crane-hook' }, g);
+  } else {
+    var pw = Math.min(12, w * 0.26), px = pw / 2 + 4, hy = ht * 0.42;
+    var rx0 = px, ry0 = hy - 6, ang = Math.atan2(tipy - ry0, tipx - rx0), jl = Math.sqrt((tipx - rx0) * (tipx - rx0) + (tipy - ry0) * (tipy - ry0)), jw = Math.max(2.4, pw * 0.3);
+    h.body('rect', { x: 0, y: ht - 4, width: pw + 8, height: 4, rx: 1 }, eq, { mat: 'paint', shade: 'box' });               // its foot
+    h.body('rect', { x: px - pw / 2 + 2, y: hy + 6, width: pw - 4, height: ht - hy - 9 }, eq, { mat: 'paint', shade: 'cylv' });   // the pedestal
+    h.flange(eq, px, hy + 6, 90, pw + 2, 2.6);                                                                           // its flange under the house
+    h.body('rect', { x: px - pw / 2 - 3, y: hy - 7, width: pw + 6, height: 12, rx: 2 }, eq, { mat: 'paintl', shade: 'box' });   // the slewing house, its counterweight behind
+    h.el('rect', { x: px + 1, y: hy - 5, width: pw * 0.4, height: 6, rx: 1, 'class': 'kit-m-hole' }, eq);               // its cab window
+    var jib = h.el('g', { transform: 'translate(' + rx0.toFixed(2) + ' ' + ry0.toFixed(2) + ') rotate(' + (ang * 57.2958).toFixed(2) + ')' }, eq);
+    h.body('rect', { x: 0, y: -jw, width: jl * 0.6, height: jw * 2, rx: 1.2 }, jib, { mat: 'paint', shade: 'cyl' });     // the jib's base section
+    h.body('rect', { x: jl * 0.5, y: -jw * 0.62, width: jl * 0.5, height: jw * 1.24, rx: 1 }, jib, { mat: 'paintl', shade: 'cyl' });   // its telescopic end
+    h.el('circle', { cx: 0, cy: 0, r: 1.6, 'class': 'kit-m-bolt' }, jib);                                               // the jib's pin
+    var rax = px + pw * 0.3, ray = hy + 2, rbx = rx0 + (tipx - rx0) * 0.42, rby = ry0 + (tipy - ry0) * 0.42;
+    var ra = Math.atan2(rby - ray, rbx - rax), rl = Math.sqrt((rbx - rax) * (rbx - rax) + (rby - ray) * (rby - ray));
+    var ram = h.el('g', { transform: 'translate(' + rax.toFixed(2) + ' ' + ray.toFixed(2) + ') rotate(' + (ra * 57.2958).toFixed(2) + ')' }, eq);
+    h.body('rect', { x: 0, y: -1.1, width: rl, height: 2.2, rx: 0.8 }, ram, { mat: 'steel', shade: 'cyl' });             // the luffing cylinder
+    wire = h.el('line', { x1: tipx, y1: tipy + 2, x2: tipx, y2: tipy + 12, 'class': 'kit-crane-wire' }, g);
+    hook = h.el('path', { d: 'M0 0 v4 a2.5 2.5 0 1 1 -3 2.5', 'class': 'kit-crane-hook' }, g);
+  }
+  if (p.label) h.label(fig, g, { x: w / 2, y: ht + 18, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+  part.render = function (v) {
+    if (!wire) return;
+    var y = tipy + 12 + h.clamp(v, 0, 1) * (ht * 0.5);
+    wire.setAttribute('y2', y);
+    hook.setAttribute('transform', 'translate(' + tipx + ' ' + y.toFixed(1) + ')');
+  };
+}, {
+  family: 'gas-fire-machinery',
+  status: 'kit', merged_from: "IGF Advanced M14",
+  look: 'equipment',
+  course: 'IGF Advanced', module: 'M14', made: '2026-10-29',
+  why: 'M14 m02: the stores crane on the quay was a plain box',
+  value: '0 hook up, 1 lowered',
+  css: '.kit-crane-ring{fill:none;stroke:var(--mat-bolt);stroke-width:.8;stroke-dasharray:1.4 2.2}.kit-crane-wire{stroke:var(--mat-stem);stroke-width:1.4}.kit-crane-hook{fill:none;stroke:var(--txt-d);stroke-width:1.8}',
+  example: { size: [220, 110], parts: [
+    { id: 'C', type: 'crane', x: 40, y: 20, label: 'stores crane' },
+    { id: 'D', type: 'crane', x: 140, y: 30, w: 40, h: 30, view: 'plan', label: 'from above' } ],
+    steps: [ { title: 'The hook goes down', play: [['C', 1, 800]] } ] }
 });
 /* end kit-part */
 /* kit-parts: end */

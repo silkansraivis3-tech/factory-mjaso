@@ -195,7 +195,8 @@ switchgear cubicles; value 1 live), `motor` (a foot-mounted electric motor, the 
 boss and blades, seen turning), `lng_truck` (an LNG road tanker, its level like a tank's). The build drew these as plain
 `space` enclosures with a name in them - the fuel_supply pattern itself did. `kit_meaning.py` BOX now fails a room or box
 labelled with a machine (figure-truths.json `"equipment": true`) when none of it is drawn inside: draw the part, or, when
-the kit has none (a compressor, a nitrogen generator, a strainer, a crane, a boiler), make it by the flow above.
+the kit has none (a compressor, a boiler), make it by the flow above. 2.79.0 added `strainer`, `n2_generator`, `crane`
+(side or `view: "plan"`) and `lng_truck` `view: "plan"`.
 
 ## After the merge
 Promotion copies the block into the factory's `kit.js` with `status: 'kit'`. When colleagues update the
