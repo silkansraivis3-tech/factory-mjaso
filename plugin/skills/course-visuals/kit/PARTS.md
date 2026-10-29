@@ -196,7 +196,8 @@ boss and blades, seen turning), `lng_truck` (an LNG road tanker, its level like 
 `space` enclosures with a name in them - the fuel_supply pattern itself did. `kit_meaning.py` BOX now fails a room or box
 labelled with a machine (figure-truths.json `"equipment": true`) when none of it is drawn inside: draw the part, or, when
 the kit has none (a compressor, a boiler), make it by the flow above. 2.79.0 added `strainer`, `n2_generator`, `crane`
-(side or `view: "plan"`) and `lng_truck` `view: "plan"`.
+(side or `view: "plan"`), `lng_truck` `view: "plan"` and `gvu` `open: true` (the cabinet with its door off, for a figure
+that draws its own named valves inside it - never a plain enclosure round them).
 
 ## After the merge
 Promotion copies the block into the factory's `kit.js` with `status: 'kit'`. When colleagues update the

@@ -94,7 +94,7 @@ screens stay calm ISA-101 screens. A valve is automatic (an actuator) unless `"a
 - `spark` (gas-fire-machinery) - kind(electric/friction) to:[dx,dy] label - value: 0..1 the spark - ex: `{"type":"spark","x":60,"y":110,"to":[110,0],"label":"electric spark"}`
 - `composition_bar` (charts) - w h segments:[{label,pct}] total unit label - value: 0..n: segment k fills from its left edge from k to k+1, its name and share appear once it is half drawn - ex: `{"type":"composition_bar","x":40,"y":100,"w":460,"label":"natural gas, share by volume"}`
 - `tank_type` (cutaways) - w=150 h=110 kind='c' label - value: how much of the secondary barrier is drawn, 0..1 - ex: `{"type":"tank_type","kind":"a","x":10,"y":20,"label":"type A"}`
-- `gvu` (piping) - w=100 h=56 label - value: 1 gas through, 0 shut off (the bleed open)
+- `gvu` (piping) - w=100 h=56 open label - value: 1 gas through, 0 shut off (the bleed open)
 - `switchboard` (piping) - w=140 h=64 panels label - value: 0 dead, 1 live
 - `motor` (gas-fire-machinery) - w=96 h=50 label - value: 0 stopped, 1 running
 - `propeller` (gas-fire-machinery) - w=70 h=90 label - value: 0 stopped, 1 turning

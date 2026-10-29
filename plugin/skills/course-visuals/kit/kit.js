@@ -6036,11 +6036,21 @@ KIT.define('gvu', function (fig, part, g, p) {
   h.body('rect', { x: dx - 3, y: -11, width: 20, height: 3, rx: 1 }, eq, { mat: 'steel' });
   h.body('rect', { width: w, height: ht, rx: 4 }, eq, { mat: 'paintl', shade: 'box' });                     // the cabinet
   h.body('rect', { x: 3, y: ht - 1, width: w - 6, height: 4, rx: 1 }, eq, { mat: 'paint' });               // its plinth
+  for (var lv = 0; lv < 3; lv++) h.el('path', { d: 'M' + (dx + 2) + ' ' + (-7 + lv * 3) + ' H' + (dx + 12), 'class': 'kit-gvu-louvre' }, eq);   // the duct's louvres
+  /* open: true - the door off, the dark inside seen whole, so the figure's own valves (V03, V04 ... drawn after it in the
+     spec) stand in the real cabinet */
+  if (p.open) {
+    h.el('rect', { x: 5, y: 5, width: w - 10, height: ht - 10, rx: 2, 'class': 'kit-m-hole' }, eq);
+    h.flange(eq, 1.5, my, 0, Math.min(16, ht * 0.4), 3);
+    h.flange(eq, w - 1.5, my, 0, Math.min(16, ht * 0.4), 3);
+    if (p.label) h.label(fig, g, { x: w / 2, y: ht + 22, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.label);
+    part.render = function () {};
+    return;
+  }
   h.el('rect', { x: 4, y: 4, width: w - 8, height: ht - 8, rx: 3, 'class': 'kit-gvu-door' }, eq);
   [[8, 8], [w - 8, 8], [8, ht - 8], [w - 8, ht - 8]].forEach(function (b) { h.el('circle', { cx: b[0], cy: b[1], r: 1.2, 'class': 'kit-m-bolt' }, eq); });
   [0.22, 0.7].forEach(function (f) { h.body('rect', { x: 1.2, y: ht * f, width: 3.2, height: 6, rx: 0.8 }, eq, { mat: 'cast', shade: 'box' }); });   // the door hinges
   h.body('rect', { x: w - 8, y: my - 11, width: 3, height: 9, rx: 1 }, eq, { mat: 'cast', shade: 'box' });   // the door handle
-  for (var lv = 0; lv < 3; lv++) h.el('path', { d: 'M' + (dx + 2) + ' ' + (-7 + lv * 3) + ' H' + (dx + 12), 'class': 'kit-gvu-louvre' }, eq);   // the duct's louvres
   var wx = 12, ww = w - 24, wy = Math.max(10, ht * 0.24), wh = ht - 2 * wy;
   h.el('rect', { x: wx, y: wy, width: ww, height: wh, rx: 2, 'class': 'kit-m-hole' }, eq);                 // the window
   h.flange(eq, 1.5, my, 0, Math.min(16, ht * 0.4), 3);                                                      // the line through the walls
