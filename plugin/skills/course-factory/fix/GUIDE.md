@@ -116,6 +116,22 @@ by the small pictures it already has: they are notes, as in the rebuild (2.65.1)
 well: words through `fix.py propose / apply / approve`, anything else changed in place, then the **one** `fix.py check`
 for its kind (§4). A module that is not built yet still goes the build's way.
 
+## 3c · Fixes made in the training app's editor mode
+
+The office can fix a slide with Claude in the training app (`/classroom/editor/`); the fix goes into a draft release
+and onto the tablets when the office publishes it. The course folder is still the source: until the script says the
+same, the next build takes the fix away. **Export for the factory** in the editor downloads the draft's fixes; then
+
+```
+python scripts/editor_fixes.py read    <course> <export.json>     what each fix changes in the script
+python scripts/editor_fixes.py propose <course> <export.json>     the same, as PENDING script changes
+```
+
+A fixed title, line of text or instructor note becomes a script change and waits like any correction: the operator
+reads the list and says yes (`content_script.py apply --confirmed`), approves, and the module is compiled again
+(§3b). The command names what it cannot take: a fix made on a slide that has changed since, a slide not built from
+the script, and anything else a fix changed (a layout, a picture, a class) - that goes into the build sheet by hand.
+
 ## 4 · One check — only what the change can break, once
 
 | The change was | Run | It proves |

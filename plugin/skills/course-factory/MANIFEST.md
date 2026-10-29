@@ -7,6 +7,13 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.75.1 · Editor-mode fixes back into the script (2026-10-29)
+
+- **Why.** The training app's editor fixes a slide with Claude and publishes it as a draft release, but the course folder
+  is the source: a fix that never reaches the script is undone by the next build.
+- **What.** `scripts/editor_fixes.py read | propose` turns the editor's export into PENDING script changes (title, text,
+  notes), applied only on the operator's yes; what it cannot take is named. fix/GUIDE.md section 3c.
+
 ## 1 · Design principles
 
 - **This skill is a router and a law, not a builder.** It owns order, the hours law, ILO
