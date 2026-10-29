@@ -1,0 +1,32 @@
+name: Factory request
+# A change to the course factory asked for from the training app's editor mode ("Suggest a factory
+# change"). The app opens an issue here labelled factory-request that mentions @claude; Claude works
+# on it in this repository, on the API key in the repository's secrets, and offers a pull request.
+# Nothing is merged without the owner. A comment with @claude on the same issue asks for more.
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude:
+    if: >-
+      contains(github.event.issue.labels.*.name, 'factory-request') && (
+        (github.event_name == 'issues' && contains(github.event.issue.body, '@claude')) ||
+        (github.event_name == 'issue_comment' && !github.event.issue.pull_request && contains(github.event.comment.body, '@claude'))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
