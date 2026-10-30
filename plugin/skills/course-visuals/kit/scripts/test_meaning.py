@@ -142,6 +142,14 @@ def rules_part():
     check("... a card of words that mentions a truck passes", not has(p, "BOX"), p)
     p = lines(small([dict(tank), {"id": "B", "type": "space", "x": 300, "y": 160, "w": 160, "h": 120, "label": "switchboard room"}]))
     check("... a room named for what is in it passes", not has(p, "BOX"), p)
+    piped = [dict(tank), {"id": "B", "type": "space", "style": "enclosure", "x": 300, "y": 200, "w": 100, "h": 60, "label": "seawater scrubber"},
+             {"id": "P", "type": "pipe", "from": "T.right", "to": "B.left"}]
+    p = lines(small(piped))
+    check("BOX: a solid box a pipe runs into fails whatever its name (IGF Advanced M04 s02 'seawater scrubber', no list held it)",
+          has(p, "BOX B", "pipe runs into"), p)
+    piped[1] = dict(piped[1], style="room", label="fuel preparation room")
+    p = lines(small(piped))
+    check("... a room a pipe runs into passes", not has(p, "BOX"), p)
     words = [{"id": "W%d" % i, "type": "text", "x": 200, "y": 40 + 40 * i, "text": "ME-G%d" % i, "reveal": True} for i in range(3)]
     gear = [{"id": "E", "type": "engine", "x": 40, "y": 200, "w": 120, "h": 60}, {"id": "G", "type": "gauge", "x": 330, "y": 230, "r": 25, "label": "pressure"}]
     reveal = [{"title": "Engine %d" % i, "play": [["W%d" % i, 1, 300]]} for i in range(3)]

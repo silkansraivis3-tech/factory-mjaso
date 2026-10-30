@@ -192,6 +192,13 @@ EVALS = {
         "steps": [{"title": "On board", "play": [["T", 4, 300]]}]},
         "f.layout(true);var ys={},right=0;[].forEach.call(svg.querySelectorAll('.kit-tree-box'),function(r){ys[Math.round(+r.getAttribute('y'))]=1;"
         "right=Math.max(right,+r.getAttribute('x')+(+r.getAttribute('width')));});return {rows:Object.keys(ys).length,right:right};"),
+    "layers": ({"size": [416, 254], "label": "a dryer and its pipes", "parts": [
+        {"id": "R", "type": "space", "x": 10, "y": 10, "w": 396, "h": 234, "label": "room"},
+        {"id": "X", "type": "exchanger", "x": 200, "y": 120, "r": 30, "label": "dryer"},
+        {"id": "P", "type": "pipe", "from": [20, 120], "to": "X.in"},
+        {"id": "N", "type": "text", "x": 300, "y": 40, "text": "words"}],
+        "steps": [{"title": "gas", "play": [["P", 1, 300]]}]},
+        "var t=[].map.call(svg.querySelectorAll('g.kit-part'),function(g){return g.getAttribute('data-kit-id');});return {order:t.join('')};"),
     "push_h": ({"size": [640, 390], "label": "buttons", "parts": [
         {"id": "A", "type": "push_button", "x": 100, "y": 110, "tag": "ESD 1"},
         {"id": "B", "type": "push_button", "x": 300, "y": 110, "tag": "ESD 2", "h": 182},
@@ -474,6 +481,9 @@ def main():
         v = kit_eval(*EVALS["tree_rows"], width=290)    # shown at 0.7 as on the 1024 x 768 slide: the words grown 1.4x
         check("tree: five children in 400 wide go to two rows below the root, inside the width (IGF Advanced M16 s03: one row, "
               "zoomed out, words at 10.5 px)", v and v.get("rows") == 3 and v.get("right", 1e9) <= 401, v)
+        v = kit_eval(*EVALS["layers"])
+        check("layers: the room at the back, the pipe over it, the equipment and words on top - though the spec lists the "
+              "dryer before its pipe (IGF Advanced M04 s02: the dryer under its pipes)", v and v.get("order") == "RPXN", v)
         v = kit_eval(*EVALS["push_h"])
         check("F8 push_button: the wall plate is 120 units by default (182 before) and \"h\" sizes it",
               v and 110 <= v["a"] <= 135 and 175 <= v["b"] <= 200, v)

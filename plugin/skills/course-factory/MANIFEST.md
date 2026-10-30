@@ -1859,6 +1859,24 @@ Aleksis: "fix all the failures" - the rebuild of six IGF Advanced modules on 2.7
    grandchildren they now go to two rows, the second's boxes under the gaps of the first. `test_studio.py` +1 (fails on
    the old kit: the row reached 605 of 400 units). Also `test_studio.py`'s gas-cloud check looked for the blur filter
    L65 replaced (`g[filter]`): it crashed on main; it reads the cloud's growing group now.
+
+## 4zz22 · Never a box for a thing - the kit makes the part (2.81.0, 2026-10-30)
+
+The owner, on IGF Advanced M04 after 2.80.0: *"why didnt you create for other modules the unique kits???"*, *"also the
+elements here are behind the pipes"*, *"remember this in the factory, dont just write these boxes MAKE THE KITS ASWELL"*.
+1. **BOX by what a box does, not by its name** (`kit_meaning.py`): the 2.77.0 check knew a list of machine names, and a
+   flame drawn inside a box let a "combustion chamber" pass. Now a solid `space` a pipe or hose runs into fails whatever
+   its name (M04: combustion chamber, seawater scrubber, adsorption dryer, vessels A and B, expansion tank, membrane
+   module; M09 / M12 / M17 suppliers; M20 calibration cradle). `test_meaning.py` +2.
+2. **Pipes behind equipment** (`kit.js` `layer()`): parts were drawn in the spec's order, so a pipe listed after a dryer
+   ran over it. Rooms and zones at the back, then lines, then equipment and words. `test_studio.py` +1.
+3. **L55 (4)** in `docs/FACTORY_LAWS.md` and the builder card: never a box for a thing - the part the kit lacks is made.
+4. **Eleven parts made and used** (course-visuals kit, promoted from the IGF Advanced build): `vessel` (kind plain,
+   adsorber, scrubber, expansion, membrane), `burner` (an inert gas generator's chamber), `gas_monitor` (a portable
+   multi-gas detector, its channels live, in its calibration cradle or seen from above), `flange_joint` (plain,
+   insulating, bad), `hose_saddle`, `road_tanker`, `gangway`, `ramp`, `vehicle_queue`, `gantry`, `workstation`;
+   figure-truths.json names them (equipment). 21 IGF Advanced figures redrawn with them (M04 x8, M09, M12 x3, M14, M17,
+   M20 x3, M22, M23 x3, M27 x2). CATALOGUE.md's budget 15 -> 18 KB (a part a builder cannot find is drawn as a box).
 Course findings put right in the build sheets: M03 s02 picture-left (L62), M14 s01 a photo cropped to the trucks and the
 vessel (a panorama a column cut to the terminal between them), M05 s01 a library photo shown nowhere else (L58), M14 m02 /
 s03 steps that move, M14 s03 picture-left (L62).

@@ -199,6 +199,13 @@ the kit has none (a compressor, a boiler), make it by the flow above. 2.79.0 add
 (side or `view: "plan"`), `lng_truck` `view: "plan"` and `gvu` `open: true` (the cabinet with its door off, for a figure
 that draws its own named valves inside it - never a plain enclosure round them).
 
+## What the kit gained in 2.81.0 - a box is never the answer (L55 (4))
+`vessel` (`kind` plain / adsorber / scrubber / expansion / membrane), `burner`, `gas_monitor`, `flange_joint`, `hose_saddle`,
+`road_tanker`, `gangway`, `ramp`, `vehicle_queue`, `gantry`, `workstation`. BOX now fails ANY solid `space` a pipe or hose
+runs into, whatever its name: a line ends at a machine. When a figure needs a thing the kit lacks - a machine, a vessel, a
+device, a structure - make the part by the flow above; never a rectangle with a name. Pipes are drawn behind equipment
+whatever order the spec lists them in.
+
 ## After the merge
 Promotion copies the block into the factory's `kit.js` with `status: 'kit'`. When colleagues update the
 plugin, their modules get the part from `kit.js`. A module that still carries its own copy in

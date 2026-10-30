@@ -363,9 +363,19 @@ def chk_named(F, bad):
 
 
 def chk_box(F, bad):
-    """a room or enclosure box named for a machine, with none of it drawn inside: a placeholder, not the equipment"""
+    """a room or enclosure box named for a machine, with none of it drawn inside: a placeholder, not the equipment; and,
+    whatever its name, a solid box a pipe or hose runs into - a line ends at machines, not at rectangles (IGF Advanced M04
+    s02 "combustion chamber", "seawater scrubber", "adsorption dryer"; M04 "vessel A: drying" - names no list held)"""
+    ends = [pts[k] for p, g in F.pipes() for pts in [g["pts"]] for k in (0, -1)]
     for p, g in F.of("space"):
-        lab, b = p.get("label"), g.get("box")
+        b = g.get("box")
+        if b and p.get("style") == "enclosure" and not p.get("crosses") and \
+                any(pt_box(e, b) <= PORT and not (b[0] + PORT < e[0] < b[2] - PORT and b[1] + PORT < e[1] < b[3] - PORT) for e in ends):
+            bad("BOX", "the enclosure %s (%r) is a plain box a pipe runs into - a line ends at a machine: draw the real part (a "
+                "vessel, a tower, an exchanger, a pump ... CATALOGUE.md) in place of the box, and if the kit has none, MAKE it "
+                "(PARTS.md) - never a rectangle with a name" % (p.get("id") or "", str(p.get("label") or "")[:40]), p, BLOCK)
+            continue
+        lab = p.get("label")
         if not isinstance(lab, str) or not b or len(lab.split()) > 4:
             continue                                       # longer words are a card's: "IAPH check-lists: ship, shore, truck"
         for w, e in names_in(lab):

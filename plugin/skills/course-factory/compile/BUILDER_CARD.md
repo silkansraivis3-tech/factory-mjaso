@@ -37,7 +37,9 @@ python compile/scripts/build_module.py <course> --module N --slides s05,s10     
   record, its entry's `"figure"` on it, the `"placeholder"` keys and file gone. A placeholder never ships.
 - Fill the build sheet (each slide's picture, layout, photos - photos from `assets/img` or the Gas Library copy the
   operator names); a starter figure spec is edited only for what the build prints (`figures/MNN/sNN.kit.json`; parts and options:
-  `course-visuals/kit/CATALOGUE.md`; never kit.js). A 3D slide: its `sNN.kit3d.json` (`course-visuals/kit3d/SPEC.md`,
+  `course-visuals/kit/CATALOGUE.md`; never kit.js). **Never a box for a thing (L55 (4)):** a machine, vessel, device or
+  structure the kit lacks is MADE as a kit part in the module's `assets/kit_parts.js` (`course-visuals/kit/PARTS.md`) - a
+  `space` box a pipe runs into, or one named for equipment, fails the build (BOX). A 3D slide: its `sNN.kit3d.json` (`course-visuals/kit3d/SPEC.md`,
   `PARTS.md`) - place the parts as on board, delete `"_todo"`. The workflow's 3D step checks and photographs it after you.
 - **BUILD FIRST, then fix only what the build prints (2.72.0 - the first 2.72.0 proof run: builders deleted the starters
   and redrew every figure by hand in the studio, 50 minutes and no module built).** Fill the blanks the build names and

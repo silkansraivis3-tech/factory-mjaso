@@ -102,3 +102,14 @@ screens stay calm ISA-101 screens. A valve is automatic (an actuator) unless `"a
 - `strainer` (piping) - r=14 label - value: 0 clean, 1 clogged
 - `n2_generator` (gas-fire-machinery) - w=140 h=70 modules=3 label - value: 0 stopped, 1 running
 - `crane` (gas-fire-machinery) - w=44 h=56 view label - value: 0 hook up, 1 lowered
+- `vessel` (piping) - kind='plain' w=70 h=130 orient fibres=5 fibreAt regen label - value: 0..1 - adsorber: drying running (the moisture front moves down the bed, the gas flows; regen:true - the purge flows and… - ex: `{"type":"vessel","kind":"scrubber","x":10,"y":20,"w":70,"h":130,"label":"scrubber"}`
+- `burner` (gas-fire-machinery) - w=110 h=70 label - value: 0 not firing, 1 firing (the flame grows in the cut-away, the sight glass glows) - ex: `{"type":"burner","x":90,"y":24,"w":110,"h":70,"label":"combustion chamber"}`
+- `gas_monitor` (instruments) - view cradle empty channels=[] w=120 h count=1 label - value: gas at the sensor, 0..1: each channel\'s reading goes from its value (clean air) to its peak (no peak: it stays), and a… - ex: `{"type":"gas_monitor","x":20,"y":14,"w":130,"h":200,"label":"gas detector"}`
+- `flange_joint` (piping) - w=64 h=40 kind support label - value: plain / insulating: 0..1 the joint picked out (a ring round it); bad: 0 tight .. 1 leaking, spray out of the gap - ex: `{"type":"flange_joint","x":10,"y":20,"w":90,"h":48,"label":"flange"}`
+- `hose_saddle` (piping) - w=44 h=46 label - value: 0..1 the saddle picked out (a ring round it) - ex: `{"type":"hose_saddle","x":36,"y":36,"w":44,"h":40,"label":"hose saddle"}`
+- `road_tanker` (piping) - w=190 h=70 outlets cab view label gap - value: how full the tank is, 0..1, shown only by the narrow sight tube beside the valve cabinet (side view); the plan view ign… - ex: `{"type":"road_tanker","x":10,"y":12,"w":190,"h":76,"label":"methanol road tanker","value":0.7}`
+- `gangway` (spaces) - foot view w h ship label labelAt - value: the gangway picked out (outline, people walking on it), 0..1 - ex: `{"type":"gangway","x":20,"y":20,"w":150,"h":22,"label":"shore gangway"}`
+- `ramp` (spaces) - w=60 h=28 queue=0 toe ramp=0.38 label labelAt - value: the ramp picked out, and the queue moving up to it, 0..1 - ex: `{"type":"ramp","x":20,"y":20,"w":90,"h":30,"label":"stern ramp"}`
+- `vehicle_queue` (spaces) - w=150 h=28 n=4 head label labelAt - value: the queue moving up toward its head, 0..1 - ex: `{"type":"vehicle_queue","x":20,"y":20,"w":170,"h":30,"n":4,"label":"vehicle queue"}`
+- `gantry` (gas-fire-machinery) - view w h reach label labelAt - value: the boom swung out, 0 stowed, 1 out over the ship - ex: `{"type":"gantry","x":20,"y":20,"w":110,"h":30,"reach":"right","label":"gantry from above"}`
+- `workstation` (spaces) - w=160 h=60 n label labelAt - value: the screens lit, one after the next, 0..1 - ex: `{"type":"workstation","x":20,"y":20,"w":260,"h":56,"n":4,"label":"simulator workstation"}`

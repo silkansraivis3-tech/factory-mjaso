@@ -470,8 +470,12 @@ spec (`NAME.kit.json`: parts and steps), never a one-off SVG; the kit draws it, 
 each alarm as its value crosses its mark, and lights the slide's lines. (2) A part the kit lacks is made to the kit's
 contract in the module's own `assets/kit_parts.js` - kit helpers, course tokens, ISA-101 colour, an example spec - and
 used at once. (3) Once the module is complete it is promoted into the factory's kit and a merge request goes to the
-owner; in a parallel build only the orchestrator promotes, at assembly, so no two modules write the kit. Real
-photographs still come first for anything a trainee must recognise (L52). → `course-visuals` (`kit/`: `kit.js`,
+owner; in a parallel build only the orchestrator promotes, at assembly, so no two modules write the kit. (4) Never
+a box for a thing (owner, 2026-10-30, on IGF Advanced M04: *"dont just write these boxes MAKE THE KITS ASWELL"*): a
+machine, a vessel, a device or a structure is drawn as itself - a `space` is a room, a zone or a casing round parts drawn
+in it, never a rectangle with a name; a solid box a pipe or hose runs into, or one named for equipment, fails the build
+(kit_meaning BOX), and the part the kit lacks is made by (2). Real photographs still come first for anything a trainee
+must recognise (L52). → `course-visuals` (`kit/`: `kit.js`,
 `kit.css`, `SPEC.md`, `PARTS.md`, `scripts/check_kit.py`, `scripts/kit_parts.py`, `GALLERY.html`), `course-factory`
 (the compiler places a kit spec and ships the kit) and `course-module-ui` (`design-system.json` installs it), 2.26.0
 
