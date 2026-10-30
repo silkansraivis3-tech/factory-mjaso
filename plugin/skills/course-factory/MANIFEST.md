@@ -93,6 +93,7 @@ course-factory/
 ├── compile/scripts/compile_course.py, test_compile_course.py   COURSE.html, course_map.js, every module's start pages (2.37.0)
 ├── compile/scripts/task_pages.py, test_task_engine.py   every trainee task page, all 19 ways of answering; the engine driven in Chrome (2.38.0)
 ├── scripts/ilo_map.py                    the ILO map file, built from programme.json + architecture.json (2.42.0)
+├── scripts/ilo_coverage.py, test_ilo_coverage.py   _course_shell/ilo_coverage.json for the admin panel, written by compile_course.py (2.83.0)
 ├── scripts/course_gate.py, gate_fixture.py   no module before the approved ILO map and the KB decision; the tests' opener (2.42.0)
 ├── hours/                                READ IN: plan mode, and audit
 │   ├── GUIDE.md
@@ -1903,6 +1904,24 @@ five draft tasks were made by hand the same day; this makes it a step of every a
 4. **The step**: build order 4c (before the GATE; blocked without the syllabus and the old course), SKILL.md's gate
    section and L66 row, orchestration Rule 1 (simulator tasks settled before the fan-out; one agent per manual, then per
    competences, then per draft), `course_gate.py` says an incomplete map on every module start and never stops on it.
+
+## 4zz24 · Every build carries its ILO map for the admin panel (2.83.0, 2026-10-30)
+
+Aigars asked for an ILO map per course in the admin panel (every intended learning outcome, where it is taught, where it is
+checked). The training app reads `instructor/_course_shell/ilo_coverage.json` from the published package; until now a node
+tool in the training app (`tools/ilo-coverage.mjs`) made it by hand. The factory now makes it.
+1. **`scripts/ilo_coverage.py <course> [out]`** - a port of that tool, the same format (`kind: "ilo-coverage"`, `version: 1`,
+   course, built, approved, final_rule, main, modules, rows with taught slides, checked sets, practical exercises, a final
+   count, `whole` / `exam` flags). Read off `working_claude/ilo_map.json`, `architecture.json`, `assessment_map.json` and
+   `script/M*.json` + `FINAL.json`; nothing typed. Prints what is taught or checked nowhere and any tag no row owns.
+   Checked against the node tool on the IGF Advanced and the IGF Basic courses: byte-identical output.
+2. **Wired** into `compile/scripts/compile_course.py` (the step that finishes the modules folder, build order 15, run in the
+   Cross-check assembly of `build_course.js` and by the publisher's compile): it writes
+   `modules/_course_shell/ilo_coverage.json` on every build, rewritten each time; a course with no ILO map gets a line,
+   never a stop.
+3. **The publisher** (`course-tablet-publisher/knowledge/platform.json` `ships_in_course_shell_globs`, `gates.py classify`):
+   the file ships with the course, sorted INSTRUCTOR before any internal glob is tried - never internal, never a trainee file.
+4. **Proof:** `scripts/test_ilo_coverage.py` (18), two new checks in `test_compile_course.py`, three in `test_publisher.py`.
 
 ## 5 · Known gaps / before this goes live
 

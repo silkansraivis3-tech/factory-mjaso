@@ -195,6 +195,9 @@ def classify(repo: str, plat: dict, path: str) -> str:
     roots = plat["asset_roots"]
     shared = plat["role_rules"]["shared_engine_globs"]
     name = os.path.basename(r)
+    for pat in plat["role_rules"].get("ships_in_course_shell_globs", []):     # 2.83.0 - ilo_coverage.json ships, instructor-side
+        if re.search(pat, r, re.I) and r.startswith(roots["instructor"]):
+            return "INSTRUCTOR"
     for pat in plat["role_rules"]["internal_globs"]:
         if re.search(pat, r, re.I):
             return "INTERNAL"

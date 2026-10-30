@@ -57,6 +57,7 @@ sys.path.insert(0, HERE)
 import compile_module as cm  # noqa: E402
 import handout  # noqa: E402
 import content_script as cs  # noqa: E402
+import ilo_coverage  # noqa: E402
 import workspace  # noqa: E402
 
 RECORD = "compiled_course.json"
@@ -442,6 +443,10 @@ def main(argv=None):
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copyfile(src, dst)
     put(os.path.join(root, "_course_shell", "course_map.js"), course_map(infos), rec, "_course_shell/course_map.js")
+    # 2.83.0 - the ILO map the admin shows (every Sub-ILO, where it is taught and checked), read off the scripts on every
+    # build. It is generated, so it is rewritten each time; a course with no ILO map yet gets a line, never a stop
+    cov, said = ilo_coverage.make(course)
+    print(said if cov is None else "Built _course_shell/ilo_coverage.json\n  " + "\n  ".join(said.splitlines()[:-1]))
     # 2.63.0 - the photo credits, off the slides: each photo's full-screen view and this page (CC BY-SA attribution, L56)
     crows = credit_rows(root, infos)
     if crows:

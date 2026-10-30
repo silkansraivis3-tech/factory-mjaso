@@ -68,6 +68,16 @@ def main():
 
         code, out = run(COURSE, c)
         check("built from the approved architecture, script and deck", code == 0, out)
+        # 2.83.0 - the ILO coverage the admin reads is written with the course files, when the course has an ILO map
+        cov_p = os.path.join(root, "_course_shell", "ilo_coverage.json")
+        check("2.83.0 no ILO map yet: a line says so, no ilo_coverage.json, the build is not stopped",
+              "No ILO map:" in out and not os.path.isfile(cov_p), out)
+        cs.save(os.path.join(wc, "ilo_map.json"), {"rows": [{"module": "M01", "module_title": "IGF ships", "sub_ilo_id": "1.1", "sub_ilo": "Explain it"}]})
+        code, out = run(COURSE, c)
+        cov = json.loads(read(cov_p)) if os.path.isfile(cov_p) else {}
+        check("2.83.0 with an ILO map: _course_shell/ilo_coverage.json is built, kind ilo-coverage, the course's title, the module's row",
+              code == 0 and "Built _course_shell/ilo_coverage.json" in out and cov.get("kind") == "ilo-coverage" and cov.get("course") == TITLE
+              and [r["id"] for r in cov.get("rows", [])] == ["1.1"], out)
         # 2.69.0 - the trainee's handout: the one button on the tablet (owner, 2026-10-27)
         hp = os.path.join(md, "handout", "index.html")
         hand = read(hp) if os.path.isfile(hp) else ""

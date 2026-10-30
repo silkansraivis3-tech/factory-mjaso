@@ -880,6 +880,10 @@ const assembly = await agent(`Run exactly these, in ONE shell call, and report w
     python ${SCRIPTS}/retrofit/scripts/check_terms.py "${A.course}"
     python ${SCRIPTS}/retrofit/scripts/check_numbers.py "${A.course}"
 
+compile_course.py (2.83.0) also writes modules/_course_shell/ilo_coverage.json - the ILO map the admin panel shows - and
+prints, among its lines, which Sub-ILOs are taught or checked nowhere and any tag no row owns: report those lines word
+for word, they are findings for the cross-check, never yours to fix.
+
 check_terms.py (2.63.2) is the course-wide terminology report - one thing under two names (LEL / LFL, bunkering
 station / bunker station ...) from the factory's list plus working_claude/terms.json. check_numbers.py (2.63.2) is the
 same for numbers - one quantity under two values (H2S 20 ppm on a slide, 25 ppm in a question; oxygen 20.9 % and

@@ -123,6 +123,10 @@
    "index.html"
   ],
   "_shared_note": "Shared engines live ONCE at the terminal root and are referenced, never copied into a course. A copy goes stale the first time the engine is fixed - that has already happened here: the per-module gb_done.js exists in five identical copies.",
+  "ships_in_course_shell_globs": [
+   "(^|/)_course_shell/ilo_coverage\\.json$"
+  ],
+  "_ships_note": "2.83.0 - the ILO map the admin panel reads (the factory writes it into modules/_course_shell/ by compile_course.py). It is a generated file beside course_map.js, not a working file: it ships with the course, in the instructor tree (the importer keeps _course_shell/ under instructor/), and NEVER reaches a trainee tablet. These globs are tested BEFORE internal_globs, so no broader internal pattern can swallow it.",
   "internal_globs": [
    "(^|/)working_claude/",
    "(^|/)to_review/",

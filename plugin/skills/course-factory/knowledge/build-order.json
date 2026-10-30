@@ -156,7 +156,7 @@
       "n": 15,
       "step": "terminals",
       "owner": "course-factory/tablet",
-      "does": "course pack into the trainee terminal; plans, prepare and record into the instructor terminal; regenerate the run script. First the course's own pages, once for the whole course and by one process (never a module agent): compile/scripts/compile_course.py writes COURSE.html, _course_shell/course_map.js and every module's two start pages from the approved architecture, the scripts and the built decks; then scripts/check_course_package.py runs the classroom's own importer on course/modules",
+      "does": "course pack into the trainee terminal; plans, prepare and record into the instructor terminal; regenerate the run script. First the course's own pages, once for the whole course and by one process (never a module agent): compile/scripts/compile_course.py writes COURSE.html, _course_shell/course_map.js and every module's two start pages from the approved architecture, the scripts and the built decks, and (2.83.0) _course_shell/ilo_coverage.json - every Sub-ILO, where it is taught and where it is checked, read off the ILO map and the scripts by scripts/ilo_coverage.py, for the admin panel's ILO map card; then scripts/check_course_package.py runs the classroom's own importer on course/modules",
       "rule": "no app code, no forked terminal, no copied shared engine. The course title is the classroom's course ID - compile_course.py never changes it without --retitle"
     },
     {

@@ -285,6 +285,18 @@ def main() -> int:
         globs = plat["role_rules"]["internal_globs"]
         check("REVIEW.html is internal by pattern",
               any("REVIEW" in g for g in globs))
+        # 2.83.0 - the ILO map ships inside _course_shell/, instructor-side - never sorted as internal, never a trainee file
+        import re as _re
+        sys.path.insert(0, HERE)
+        import gates as _gates
+        shell = "app/src/instructor/assets/instructor_terminal/courses/c/modules/_course_shell/ilo_coverage.json"
+        check("2.83.0 ilo_coverage.json matches no internal glob", not any(_re.search(g, shell, _re.I) for g in globs))
+        check("2.83.0 ... and is sorted INSTRUCTOR (it ships in _course_shell/), also if a broader internal glob would match it",
+              _gates.classify("/r", plat, "/r/" + shell) == "INSTRUCTOR"
+              and _gates.classify("/r", dict(plat, role_rules=dict(plat["role_rules"], internal_globs=globs + ["(^|/)_course_shell/"])),
+                                  "/r/" + shell) == "INSTRUCTOR")
+        check("2.83.0 ... while the ILO map's own working file, ilo_map.json, stays internal",
+              _gates.classify("/r", plat, "/r/app/src/instructor/assets/instructor_terminal/courses/c/working_claude/ilo_map.json") == "INTERNAL")
 
         # ---- 5 · gitpub commit / push on a real repository (2.49.4) ----------
         pr = os.path.join(tmp, "pubrepo")
