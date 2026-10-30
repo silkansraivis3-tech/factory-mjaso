@@ -57,6 +57,13 @@ has to be settled by the reader and frozen at the gate:
 | **The visual system** | The token set (`course-module-ui`). Eight agents inventing eight dialects is exactly what `audit_ui.py --strict` exists to stop. |
 | **Task code ranges** | Module 3 owning `GAS3xx` and nobody else touching it. |
 | **The ILO map** | Below. This is the one that actually makes parallelism work. |
+| **The simulator tasks** (L66) | An advanced course's `SIM_COVERAGE.json` says which module runs which simulator task and for how many minutes; two module agents each inventing a simulator exercise for the same item is the overlap it prevents. |
+
+**Making the simulator coverage (L66) in parallel**, before the gate (`coverage/SIMULATORS.md`): one Sonnet agent per
+simulator manual writes its part of `SIM_MAP.md` (capabilities, procedures, faults - every fact with its page); then one
+agent per two or three competences judges their syllabus rows in `SIM_COVERAGE.json` against the finished map; then
+this session ranks the GAP tasks and one agent per task drafts its exercise forms. Each agent writes its own file; this
+session merges, recounts and runs `sim_coverage.py check`.
 
 > If something is not on that list and two modules could still collide over it, it belongs on that
 > list. Add it before the run, not after the merge.

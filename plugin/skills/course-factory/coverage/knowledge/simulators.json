@@ -1,0 +1,50 @@
+{
+  "_what": "The school's physical simulators, their manuals, and which advanced course trains on which (L66). Read by coverage/scripts/sim_coverage.py; SIM_MAP.md cites every manual by its short name and PDF page. A simulator is listed here when its manual is on the company Drive - whether a model is installed, and which options (e-Tutor, fault injection, saved states) it has, is checked with the course director, never assumed.",
+  "_written": "2026-10-30",
+  "manual_folders": [
+    {"where": "G:\\My Drive\\Gas Library\\documents\\manual\\", "what": "every simulator manual below (trainee manuals, product specifications, model notes); brochures in ..\\publication\\"},
+    {"where": "G:\\My Drive\\_staging Gas Library 2026-10-23\\", "what": "the copies staged on 2026-10-23, the ones the IGF Advanced map was made from; also the DFDE and steam-turbine LNG carrier manuals"},
+    {"where": "Google Drive folders shared by the course director (Aigars Kluga, 2026-10-30): the LCHS simulator manuals and the IGF simulator manuals", "what": "the source the Gas Library copies came from - record each folder's link here when it is known; a manual found only there is copied into the Gas Library manual folder before it is cited"}
+  ],
+  "simulators": [
+    {"code": "LNG", "name": "Wartsila LCHS-5000 TechSim LNG Bunkering (LNGPac)", "family": "LCHS 5000",
+     "manuals": [{"short": "LNGBunk", "file": "LCHS-5000_LNG_Bunkering_Trainee_Manual.pdf", "pages": 70, "note": "PDF page = printed page; section 11 procedures, section 12.1 instructor faults"},
+                 {"short": "LNG-Spec", "file": "TechSim5000_LNGBunkering_PLSpec_November2019.pdf", "pages": 24, "note": "the e-Tutor scenario list is here (p19), not in the trainee manual"}]},
+    {"code": "MeOH", "name": "Wartsila LCHS-5000 TechSim Methanol Bunkering (MethanolPac)", "family": "LCHS 5000",
+     "manuals": [{"short": "MeOH", "file": "LCHS 5000 TechSim Methanol Bunkering Simulator Trainee Manual.pdf", "pages": 45, "note": "no instructor fault list in the manual"},
+                 {"short": "MeOH-Spec", "file": "TechSim5000_MethanolPac_PLSpec_May2025.pdf", "pages": 15}]},
+    {"code": "ERS", "name": "Wartsila ERS TechSim Low Speed Engine, dual-fuel Aframax tanker with LNG fuel gas supply system", "family": "ERS",
+     "manuals": [{"short": "ERS", "file": "ERS-TechSim_LowSpeedEngine_DFTanker_Trainee_Manual.pdf", "pages": 384, "note": "instructor faults p332-338, p351"}]},
+    {"code": "LPG", "name": "Wartsila LCHS TechSim LPG Tanker (generic) v1.0", "family": "LCHS",
+     "manuals": [{"short": "LPG", "file": "LCHS-TechSim_LPG_Tanker_Generic_v.1.0_Trainee_Manual.pdf", "pages": 116}]},
+    {"code": "LNG-MEM", "name": "Wartsila LCHS-5000 LNG Membrane Tanker v2.0", "family": "LCHS 5000",
+     "manuals": [{"short": "LNG-MEM", "file": "LCHS-5000_LNG_Membrane_Tanker_v2.0_Trainee_Manual_April,2019.pdf", "pages": 113}]},
+    {"code": "LNG-SPH", "name": "Wartsila LCHS-5000 LNG Spherical (Moss) Tanker", "family": "LCHS 5000",
+     "manuals": [{"short": "LNG-SPH", "file": "LCHS-5000_LNG_Spherical_Tanker_Trainee_Manual_April,2019.pdf", "pages": 176}]},
+    {"code": "LNG-REGAS", "name": "Wartsila LCHS-5000 LNG Regasification Terminal v2.0", "family": "LCHS 5000",
+     "manuals": [{"short": "LNG-REGAS", "file": "LCHS-5000_LNG_Regasification_Terminal_v2.0_Trainee_Manual_April,2019.pdf", "pages": 47}]},
+    {"code": "LCC", "name": "Wartsila LCHS TechSim LCC Tanker v2.0 (crude oil tanker: cargo, ballast, crude oil washing, inert gas)", "family": "LCHS",
+     "manuals": [{"short": "LCC", "file": "LCHS-TechSim_LCC_2-0.pdf", "pages": 125}]},
+    {"code": "DFDE", "name": "Wartsila ERS TechSim dual-fuel diesel-electric LNG carrier", "family": "ERS",
+     "manuals": [{"short": "DFDE", "file": "DualFuel-DieselElectric_(2019_Wartsila).pdf", "pages": 458, "note": "operating instructions from p391, incl. changing fuel type p396"}]},
+    {"code": "ST-LNGC", "name": "Wartsila ERS steam turbine LNG carrier (Kawasaki UA-400)", "family": "ERS",
+     "manuals": [{"short": "ST-LNGC", "file": "Steam_Turbine_(Kawasaki_UA-400)_LNG_Carrier.pdf"}]},
+    {"code": "SAFE-LNG", "name": "MPRI SAFE Cargo LNG carrier models 11-U-L16 / L17 / L18 (membrane GTT Mk III and NO96)", "family": "MPRI",
+     "manuals": [{"short": "LNG21-1", "file": "LCHS LNG 21 model (1).pdf", "pages": 56}, {"short": "LNG21-2", "file": "LCHS LNG 21 model (2).pdf", "pages": 58},
+                 {"short": "11-U-L16", "file": "LNG (Membrane) Carrier Model Notes (11-U-L16).pdf", "pages": 31}],
+     "note": "not Wartsila TechSim; the only source with gassing-up by methane vapour; export-control notice on the cover - whether the school runs these models is to be confirmed"},
+    {"code": "SAFE-LPG", "name": "MPRI SAFE Cargo LPG carrier models 06-U-L22 / L23, 10-U-L22", "family": "MPRI",
+     "manuals": [{"short": "06-U-L22", "file": "06-U-L22 (Lpg Model Notes).pdf", "pages": 42}, {"short": "06-U-L23", "file": "06-U-L23 (Lpg Cargo Manual).pdf", "pages": 45},
+                 {"short": "10-U-L22", "file": "Lpg Model Notes - updated (10-U-L22).pdf", "pages": 47}],
+     "note": "whether the school runs these models is to be confirmed"}
+  ],
+  "courses": {
+    "igf-advanced": {"simulators": ["LNG", "MeOH", "ERS"], "match": ["IGF"], "worked_example": "the IGF Advanced course folder (Kursi\\Paplašinātais kurss IGF\\course): working_claude\\SIM_MAP.md, SIM_COVERAGE.md / .json, to_review\\exercises\\sim_drafts\\ - 332 items of MC 7.14, five draft tasks"},
+    "gas-advanced": {"simulators": ["LPG", "LNG-MEM", "LNG-SPH", "LNG-REGAS", "DFDE", "ST-LNGC", "SAFE-LNG", "SAFE-LPG"], "match": ["liquefied gas", "gas tanker", "sašķidrināt", "сжиженн"]},
+    "oil-advanced": {"simulators": ["LCC"], "match": ["oil tanker", "naftas", "нефт"]},
+    "chemical-advanced": {"simulators": [], "match": ["chemical tanker", "ķīmisk", "химовоз", "химическ"],
+                          "note": "no chemical tanker simulator manual was found on G: (2026-10-30) - ask the course director for the LCHS chemical model's manual; until then the map is made from LCC for the tanker operations both share, and says so"}
+  },
+  "advanced_markers": ["advanced", "paplašināt", "расширенн", "A-V/1-1-2", "A-V/1-1-3", "A-V/1-2-2", "A-V/3-2", "V/1-1-2", "V/1-1-3", "V/1-2-2", "V/3-2"],
+  "simulator_words": ["simulator", "тренаж"]
+}

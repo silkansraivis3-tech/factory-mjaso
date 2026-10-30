@@ -136,6 +136,7 @@ seems to collide with it. The record behind the rows: `references/laws-in-full.m
 | **L63** | **Physical equipment is drawn as it looks on board** - the kit draws tanks, pipes, valves, machines and the ship in their materials, light and shade and real features, in every deck unasked; screens stay flat ISA-101; a new kit part declares its `look` and an `equipment` part uses `KIT.h.body` / `equip` (`course-visuals/kit/PARTS.md`) | now (2.56.0) |
 | **L64** | **A module in 30-40 min, its fixes in 20** - every build and rebuild starts with the pre-check (`compile/scripts/precheck.py`, a second: a missing picture, an unknown template, a photograph under 800 px, dense text with no picture - nothing built until fixed); photographs are found at 1600 px or larger (`visual-sourcer`, `check_assets.py`); a rebuild or one change of a BUILT module is a fix (`fix.py rebuild`, one check); the first PASS prints the module's minutes against 30-40 and a rebuild its minutes against 20 (`scripts/cf_timing.py`) | now (2.65.0) |
 | **L65** | **A drawing that moves stays smooth on the tablet** - where anything moves for ever (a flow, a fan, a spray): no filter (drop-shadow, blur) in it or round it, no mask round what moves, its own layer (`will-change: transform`), never `overflow: hidden` to shrink it. The kit does it unasked (shadows baked, soft edges as fills, a line masked only while its front stands part-way); `measure/scripts/audit_motion.js` in `run_audits.py` fails a build that breaks it, at every step of a kit figure | now (2.78.0) |
+| **L66** | **Every item a simulator can train is trained on one** - every advanced course (Oil, Chemical, Gas, IGF Advanced) and any whose programme names a simulator, unasked, at Stage 2 before the gate: `SIM_MAP.md` from the simulators' manuals (with pages), `SIM_COVERAGE.json` / `.md` - every syllabus item COVERED / PARTLY / GAP / NOT-SIM - and every GAP in a task drafted as an exercise (Trainee card + Instructor sheet, paper is fine) in `to_review\exercises\sim_drafts\`. ILOs and hours unchanged. `coverage/SIMULATORS.md`, `coverage/scripts/sim_coverage.py check` | now (2.82.0) |
 | **L41** | **The old course is the foundation.** Read it whole at intake (`scripts/old_course.py inventory`, `images`); at Stage 2 every module says what it **keeps**, **modernises** and **adds** | now |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
@@ -407,6 +408,12 @@ says "next"; then record it - `python scripts/make_architecture_page.py --course
 (2.42.0: it fingerprints the ILO map, and is refused while the knowledge-base decision is missing, a teaching
 module has nothing in the map, or a theory-as-activity proposal waits) - and in `COURSE_STATE.md` (L32). A later
 change to any Sub-ILO stops new modules until the page is approved again.
+
+**Simulators (L66), before the gate, unasked.** `python coverage/scripts/sim_coverage.py needed <course>` - for an
+advanced course, or one whose programme names a simulator, read `coverage/SIMULATORS.md` and make the simulator map,
+the coverage map and the GAP task drafts; `sim_coverage.py check <course>` passes before the operator's "next" is
+recorded. The page's practical tasks are planned from it; its decisions for the course director (what is installed,
+which minutes move) go into the same one pop-up, and the drafts' review README points at them.
 
 ## How the modules are built — asked once, with the Stage 2 approval (2.73.1)
 

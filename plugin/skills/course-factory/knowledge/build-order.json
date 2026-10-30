@@ -55,6 +55,15 @@
       "output": "course\\working_claude\\OLD_COURSE_INVENTORY.md, old_course_inventory.json, old_course_images\\ (2.19.0)"
     },
     {
+      "n": "4c",
+      "step": "simulator coverage",
+      "owner": "course-factory/coverage (coverage/SIMULATORS.md, coverage/scripts/sim_coverage.py)",
+      "does": "L66, unasked, for every advanced course and any course whose programme names a simulator (sim_coverage.py needed): what each of the school's simulators can do, from its manuals with pages; every leaf syllabus item judged COVERED / PARTLY / GAP / NOT-SIM against them; every GAP item in a proposed simulator task, each drafted as an exercise - Trainee card and Instructor sheet - for the course director's review. ILOs and hours unchanged: a task's minutes come from inside its module.",
+      "blocked_without": "the transcribed model-course syllabus (step 2) and the old course's simulator tasks (step 4b)",
+      "output": "course\\working_claude\\SIM_MAP.md, SIM_COVERAGE.md, SIM_COVERAGE.json; to_review\\exercises\\sim_drafts\\MNN\\ forms + README_FOR_REVIEW.md (2.82.0)",
+      "check": "sim_coverage.py check <course> passes before the GATE's next is recorded"
+    },
+    {
       "n": 5,
       "step": "module split",
       "owner": "course-factory/hours",

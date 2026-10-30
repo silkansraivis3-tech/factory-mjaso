@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SIM_COVERAGE.json",
+  "description": "The simulator coverage map of one course (L66): every leaf Knowledge / Understanding / Proficiency item of the IMO model course's syllabus against the school's simulators, and the simulator tasks proposed for what a simulator can train and the course does not. Lives in course\\working_claude\\, beside SIM_MAP.md and SIM_COVERAGE.md. Validated by coverage/scripts/sim_coverage.py check, which also checks what a schema cannot: one row per syllabus item, the counts, every GAP in a task, every GAP task drafted.",
+  "type": "object",
+  "required": ["_what", "sim_codes", "counts", "counts_by_competence", "total_leaf_items", "kup_items", "proposed_tasks", "sim_minutes"],
+  "properties": {
+    "_what": {"type": "string", "description": "what this file is, the model course and the sources"},
+    "verdict_meaning": {"type": "object", "description": "the four verdicts in words, for the reader"},
+    "sim_use_meaning": {"type": "object"},
+    "sim_codes": {
+      "type": "object",
+      "description": "the simulators this course is mapped against: code -> name; codes from coverage/knowledge/simulators.json",
+      "minProperties": 1,
+      "additionalProperties": {"type": "string"}
+    },
+    "counts": {"$ref": "#/definitions/counts"},
+    "counts_by_competence": {"type": "object", "additionalProperties": {"$ref": "#/definitions/counts"}},
+    "total_leaf_items": {"type": "integer", "minimum": 1},
+    "kup_items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["competence", "kup_id", "kup_text", "sim", "pages", "covered_by", "verdict", "note", "sim_use"],
+        "properties": {
+          "competence": {"type": "string", "description": "the competence as the model course names it, its id first (C1 ...)"},
+          "kup_id": {"type": "string", "description": "the syllabus item's own number (4.5.1.a)"},
+          "kup_text": {"type": "string", "description": "the item's words, as the syllabus has them"},
+          "sim": {"type": "string", "description": "the simulator code(s) that can train it, or \"-\""},
+          "scenario": {"type": "string", "description": "which procedure, scenario or fault trains it"},
+          "pages": {"type": "string", "description": "manual short name + PDF page (\"LNG p62\"), and the model course page"},
+          "covered_by": {"type": "string", "description": "the exercise that does it on the simulator now, or \"-\""},
+          "verdict": {"enum": ["COVERED", "PARTLY", "GAP", "NOT-SIM"]},
+          "note": {"type": "string", "description": "why; for NOT-SIM the practical alternative; what must be checked on the installation"},
+          "sim_use": {"enum": ["assess", "illustrate", "none"]}
+        }
+      }
+    },
+    "proposed_tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "simulator", "kup", "module", "minutes", "net_sim_minutes", "scenario", "pages", "minutes_from"],
+        "properties": {
+          "id": {"type": "string", "description": "P1, P2 ... ranked, most value first"},
+          "title": {"type": "string"},
+          "simulator": {"type": "string", "description": "the code it runs on (and a variant on another, in words)"},
+          "kup": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+          "module": {"type": "string", "description": "the module it belongs to (M29 ...)"},
+          "sub_ilo": {"type": "string", "description": "the Sub-ILO it practises - never a changed ILO"},
+          "minutes": {"type": "integer", "minimum": 0, "description": "0 for an inject inside an exercise that already runs"},
+          "net_sim_minutes": {"type": "integer", "description": "simulator minutes the course gains (0 when the minutes move from another simulator part)"},
+          "scenario": {"type": "string"},
+          "faults": {"type": "string"},
+          "pages": {"type": "string"},
+          "old_task": {"type": "string", "description": "the old course's simulator task it renews, if any"},
+          "minutes_from": {"type": "string", "description": "where the minutes come from inside the module's approved hours"},
+          "needs": {"type": "string", "description": "what has to be checked on the installation or decided"},
+          "draft": {"type": "string", "description": "the draft exercise's number (29.1); its forms are in to_review\\exercises\\sim_drafts\\MNN\\"}
+        }
+      }
+    },
+    "sim_minutes": {
+      "type": "object",
+      "required": ["now_total", "proposed_total", "by_module"],
+      "properties": {
+        "now_total": {"type": "integer"},
+        "proposed_total": {"type": "integer"},
+        "by_module": {
+          "type": "array",
+          "items": {"type": "object", "required": ["module", "now", "proposed"],
+                    "properties": {"module": {"type": "string"}, "now": {"type": "integer"}, "proposed": {"type": "integer"}, "sim": {"type": "string"}, "change": {"type": "string"}}}
+        }
+      }
+    },
+    "old_e_tasks": {"type": "array", "description": "the old course's simulator tasks and where each lives now"}
+  },
+  "definitions": {
+    "counts": {
+      "type": "object",
+      "propertyNames": {"enum": ["COVERED", "PARTLY", "GAP", "NOT-SIM"]},
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    }
+  }
+}

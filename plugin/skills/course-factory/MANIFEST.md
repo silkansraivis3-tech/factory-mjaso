@@ -1881,6 +1881,29 @@ Course findings put right in the build sheets: M03 s02 picture-left (L62), M14 s
 vessel (a panorama a column cut to the terminal between them), M05 s01 a library photo shown nowhere else (L58), M14 m02 /
 s03 steps that move, M14 s03 picture-left (L62).
 
+## 4zz23 · L66 every item a simulator can train is trained on one (2.82.0, 2026-10-30)
+
+Course director Aigars Klūga, 2026-10-30 (team chat, in Latvian): the advanced courses use the school's physical
+simulators for their practical tasks to the maximum - find which model-course competences they can cover and cover them
+all; a simulator task may be on paper, the instructor grading from the instructor sheet. On IGF Advanced the map and
+five draft tasks were made by hand the same day; this makes it a step of every advanced course.
+1. **The lane** `coverage/SIMULATORS.md`: SIM_MAP.md from the manuals (every fact with its page), SIM_COVERAGE.json /
+   .md - every leaf syllabus item COVERED / PARTLY / GAP / NOT-SIM - every GAP in a proposed task with the minutes'
+   source inside its module, every such task drafted as an exercise (Trainee + Instructor form) in
+   `to_review\exercises\sim_drafts\MNN\`, the decisions in the one Stage 2 pop-up. ILOs and hours unchanged.
+2. **The school's simulators** `coverage/knowledge/simulators.json`: twelve models with their manuals (file, pages, page
+   rule) on `G:\My Drive\Gas Library\documents\manual\` and the 2026-10-23 staging copy; which advanced course trains on
+   which (IGF: LNG, MeOH, ERS; Gas: LPG, LNG membrane / spherical / regas, DFDE, steam LNGC, MPRI models; Oil: LCC); no
+   chemical tanker manual was found - asked of the course director. Installation and options are asked, never assumed.
+3. **The schema and the check** `coverage/knowledge/sim_coverage.schema.json`, `coverage/scripts/sim_coverage.py needed
+   | init | check`: one row per leaf item (a line that only introduces children is not one), a page for every verdict on a
+   simulator, the counts recounted, every GAP in a task, every GAP task's two forms present, minutes with their source.
+   `test_sim_coverage.py` 23. On the hand-made IGF Advanced map it reports what is still open there: P1-P3 and P5 not
+   linked to their drafts (29.1, 27.2, 8.2, 11.3), the injects P7, P8, P11 not drafted, GAP 3.3.5.a in no task.
+4. **The step**: build order 4c (before the GATE; blocked without the syllabus and the old course), SKILL.md's gate
+   section and L66 row, orchestration Rule 1 (simulator tasks settled before the fan-out; one agent per manual, then per
+   competences, then per draft), `course_gate.py` says an incomplete map on every module start and never stops on it.
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.

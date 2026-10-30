@@ -2,6 +2,10 @@
 
 Read this lane when the mode is **audit**, or before you claim a built course is complete.
 
+An advanced course, or one whose programme names a simulator, also checks the same syllabus against the school's
+simulators at Stage 2 - which items a simulator can train, and a drafted task for each one no exercise trains yet:
+`SIMULATORS.md` (L66).
+
 Two documents govern content, and they are not the same document.
 
 | | gives you | governs |

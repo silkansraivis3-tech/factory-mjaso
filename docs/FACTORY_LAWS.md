@@ -615,8 +615,24 @@ change. → `course-visuals` (`kit/kit.js` bake, `soft`, `front`; `kit/kit.css` 
 (`measure/scripts/audit_motion.js`, run by `run_audits.py` with the deck probes: a filter or a mask in or round a moving
 drawing fails the build, at every step of a kit figure), 2.78.0
 
-**All sixty-five laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L65 are enforced first through `course-factory/SKILL.md`'s
+**L66 · Every item a simulator can train is trained on one.** Course director Aigars Klūga, 2026-10-30 (team chat, in
+Latvian, given here in English): the advanced courses must use the school's physical simulators for their practical
+tasks - they cost hundreds of thousands and are to be used to the maximum; find which IMO model course competences the
+simulators can cover, and cover them all; the course as practical as the school's equipment allows. A simulator task
+may be on paper, printed and laminated as course material; the instructor grades from the instructor sheet (on the
+instructor's tablet later). For every advanced course (Oil, Chemical, Gas, IGF Advanced) and any course whose programme
+names a simulator, unasked, at Stage 2 before the gate: (1) `SIM_MAP.md` - what each of the school's simulators can do,
+from its manuals, every fact with its page; (2) `SIM_COVERAGE.json` / `.md` - every leaf Knowledge / Understanding /
+Proficiency item of the model course's syllabus judged COVERED, PARTLY, GAP or NOT-SIM against them; (3) every GAP item
+in a proposed simulator task, and every such task drafted as an exercise - the Trainee card and the Instructor sheet of
+the existing exercise forms - in `to_review\exercises\sim_drafts\`, for the course director's review. The ILOs and the
+hours never change: a task's minutes come from inside its module. Whether a model is installed and which options it has
+is asked, never assumed. → `course-factory` (`coverage/SIMULATORS.md`, `coverage/knowledge/simulators.json`,
+`coverage/knowledge/sim_coverage.schema.json`, `coverage/scripts/sim_coverage.py` - `check` fails an incomplete map;
+`scripts/course_gate.py` says it on every module start, never a stop), 2.82.0
+
+**All sixty-six laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L66 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

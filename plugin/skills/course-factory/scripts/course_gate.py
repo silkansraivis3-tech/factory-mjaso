@@ -132,6 +132,20 @@ def problems(course, module=None):
     return out
 
 
+def sim_note(course):
+    """L66, said loud and never a stop: an advanced course whose simulator coverage map is not complete"""
+    sys.path.insert(0, os.path.join(HERE, "..", "coverage", "scripts"))
+    import sim_coverage
+    n = sim_coverage.needed(course)
+    if not n["needed"]:
+        return None
+    probs = sim_coverage.check(course)[0]
+    if not probs:
+        return None
+    return ("Simulators (L66): %s, and its simulator coverage map is not complete - %d thing(s) to do; the first: %s\n"
+            "  Run: coverage/scripts/sim_coverage.py check <course> (coverage/SIMULATORS.md)." % (n["why"], len(probs), probs[0]))
+
+
 def stop_message(module, probs, what="started"):
     who = "Module %s" % module if module is not None else "No module"
     return ("Stopped - nothing was written. %s cannot be %s yet: every module is written against the approved\n"
@@ -155,6 +169,9 @@ def main(argv=None):
     print("Open - the ILO map was approved by %s on %s; knowledge base: %s.%s" % (
         ok["by"], ok.get("on", "?"), d["answer"] + ((" (" + d["reason"] + ")") if d.get("reason") else ""),
         ("\n  Module %s's rows: ilo_map.py show <course> --module %s" % (a.module, a.module)) if a.module else ""))
+    note = sim_note(course)
+    if note:
+        print(note)
     return 0
 
 

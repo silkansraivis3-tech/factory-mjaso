@@ -228,6 +228,25 @@ part-way, sized to the line (`h.front`), pauses a flow whose value is 0, and giv
 (`.kit-moving`). `audit_motion.js` (run by `run_audits.py` with the deck probes) fails a slide with a filter or a mask in
 or round a moving drawing, at every step of a kit figure; a missing own layer and the `stroke-dashoffset` count are notes.
 
+## L66
+**Built out in:** now (2.82.0)
+
+**Every item a simulator can train is trained on one** (course director Aigars Klūga, 2026-10-30, team chat, in Latvian:
+the advanced courses use the physical simulators for their practical tasks - they cost hundreds of thousands and are to
+be used to the maximum; find which IMO model course competences the simulators can cover, and cover them all; the course
+as practical as the school's equipment allows; simulator tasks may be on paper, printed and laminated, the instructor
+grading from the instructor sheet - on the instructor's tablet later). Every advanced course (Oil, Chemical, Gas, IGF
+Advanced) and any course whose programme names a simulator, unasked, at Stage 2 before the gate - the lane is
+`coverage/SIMULATORS.md`: `SIM_MAP.md` (each simulator's capabilities from its manuals, with pages), `SIM_COVERAGE.json`
+/ `.md` (every leaf syllabus item COVERED / PARTLY / GAP / NOT-SIM), every GAP item in a proposed task and every such
+task drafted as an exercise - Trainee card + Instructor sheet - in `to_review\exercises\sim_drafts\MNN\`. The ILOs and
+the hours never change: a task's minutes come from inside its module. The school's simulators and their manuals are in
+`coverage/knowledge/simulators.json`; whether a model is installed and its options are asked, never assumed (L28 still
+assumes every simulator the model course lists is available - this law uses the ones the school has). The decisions
+for the course director go into the one Stage 2 pop-up (L31). `coverage/scripts/sim_coverage.py check` fails an
+incomplete map; `scripts/course_gate.py` says it on every module start and never stops on it. Worked example: IGF
+Advanced - 332 items of MC 7.14, 69 COVERED, 43 PARTLY, 18 GAP (fire the biggest), 202 NOT-SIM; five drafts.
+
 ## L41
 **Built out in:** now (2.19.0)
 
