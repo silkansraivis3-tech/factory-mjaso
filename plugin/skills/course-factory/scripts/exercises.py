@@ -18,6 +18,12 @@ WHAT IT DOES
   (room task) screen before the module check, its minutes the form's duration (practice minutes, counted in the module's
   hours), to be proposed and approved like any other change: content_script.py propose ... --changes <that file>.
   The compiler says a module with an exercise and no slide for it as a build problem (compile_module.py).
+
+SIMULATOR EXERCISES (knowledge/simulator-exercises.json)
+  An exercise whose trainee form names the simulator is done on paper at the simulator. Its slide is the handover - the
+  class goes to the simulator, the instructor hands out the papers - and nothing opens on the tablets. Its papers are
+  written from the simulator manual, which must be in the master folder's source_files: a module with a simulator
+  exercise and no manual there stops here and at the build, so the operator is asked for it.
 """
 from __future__ import annotations
 
@@ -37,6 +43,9 @@ import workspace  # noqa: E402
 TRAINEE = re.compile(r"trainee", re.I)
 INSTRUCTOR = re.compile(r"instructor", re.I)
 NUMBER = re.compile(r"exercise[ _-]*(\d+(?:[._]\d+)?)", re.I)
+SIM = json.load(io.open(os.path.join(HERE, "..", "knowledge", "simulator-exercises.json"), encoding="utf-8"))
+SIM_WORDS = re.compile(SIM["simulator_words"], re.I)
+SIM_MANUAL = re.compile(SIM["manual"]["patterns"], re.I)
 
 
 def mid(module):
@@ -111,9 +120,28 @@ def found(course, module):
             continue
         r = read(e["trainee"])
         r["no"] = r["no"] or key
-        r.update(trainee=e["trainee"], instructor=e["instructor"])
+        r.update(trainee=e["trainee"], instructor=e["instructor"],
+                 simulator=bool(SIM_WORDS.search(" ".join((r["title"], r["objective"], r["need"], os.path.basename(e["trainee"]))))))
         exs.append(r)
     return exs
+
+
+def manuals(course):
+    """the simulator manuals in the master folder's source_files - the only place they count"""
+    src = os.path.join(workspace.master_of(course), SIM["manual"]["folder"])
+    out = []
+    for root, _dirs, files in os.walk(src):
+        for f in files:
+            p = os.path.join(root, f)
+            if os.path.splitext(f)[1].lower() in SIM["manual"]["extensions"] and SIM_MANUAL.search(os.path.relpath(p, src)):
+                out.append(p)
+    return sorted(out)
+
+
+def no_manual(course, exs):
+    """the simulator exercises that cannot be written: there is no simulator manual in source_files"""
+    sims = [ex for ex in exs if ex.get("simulator")]
+    return sims if sims and not manuals(course) else []
 
 
 def names(title, no):
@@ -166,9 +194,16 @@ def screen(ex, sid):
         lines.append("You need: " + first_sentence(ex["need"].split(";")[0]))
     if ex["minutes"]:
         lines.append("Time: %d min" % ex["minutes"])
-    notes = "- Run it from the instructor copy%s." % (": " + os.path.basename(ex["instructor"]) if ex["instructor"] else "")
-    return {"id": sid, "kind": "activity", "exercise": ex["no"], "title": "Exercise %s - %s" % (ex["no"], ex["title"]),
-            "text": "\n".join(x for x in lines if x), "notes": notes, "minutes": ex["minutes"] or 1}
+    copy = ": " + os.path.basename(ex["instructor"]) if ex["instructor"] else ""
+    notes = "- Run it from the instructor copy%s." % copy
+    if ex.get("simulator"):          # on paper at the simulator: the slide is the handover, nothing opens on the tablets
+        lines.insert(0, SIM["handover"]["first_line"])
+        notes = SIM["handover"]["notes"].format(no=ex["no"], copy=" (%s)" % copy[2:] if copy else "")
+    s = {"id": sid, "kind": "activity", "exercise": ex["no"], "title": "Exercise %s - %s" % (ex["no"], ex["title"]),
+         "text": "\n".join(x for x in lines if x), "notes": notes, "minutes": ex["minutes"] or 1}
+    if ex.get("simulator"):
+        s["simulator"] = True
+    return s
 
 
 def proposal(script, exs):
@@ -221,7 +256,16 @@ def main(argv=None):
     miss = [ex for ex in exs if not slide_of(script, ex)]
     for ex in exs:
         s = slide_of(script, ex)
-        print("  Exercise %s - %s (%d min): %s" % (ex["no"], ex["title"], ex["minutes"], ("slide " + s["id"]) if s else "NO SLIDE"))
+        print("  Exercise %s - %s (%d min)%s: %s" % (ex["no"], ex["title"], ex["minutes"], " - on paper, at the simulator" if ex["simulator"] else "",
+                                                     ("slide " + s["id"]) if s else "NO SLIDE"))
+    if any(ex["simulator"] for ex in exs):
+        man = manuals(o.course)
+        print("  Simulator manuals in source_files: %s" % ("; ".join(os.path.basename(m) for m in man) or "NONE"))
+    if no_manual(o.course, exs):
+        print("STOP: %s has a simulator exercise and no simulator manual in %s. Ask the operator which simulator and which "
+              "manual, and to put it in source_files - the papers are written from it, never invented."
+              % (mid(o.module), os.path.join(workspace.master_of(o.course), SIM["manual"]["folder"])))
+        return 1
     if o.propose and miss:
         out = workspace.claude_path(o.course, "script", mid(o.module) + ".exercise_slides.json")
         with io.open(out, "w", encoding="utf-8", newline="\n") as f:

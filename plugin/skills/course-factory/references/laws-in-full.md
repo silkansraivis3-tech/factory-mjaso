@@ -499,6 +499,10 @@ already."*
   `answers_taught_first`) and nowhere else - read them there; this text keeps none, because the owner has changed
   them since (L49, 2026-10-15: shorter cycles before a self-check, words per minute over plain theory only). Every finding is shown on the review page; approval is refused while a must-fix one
   stands, unless the operator approves despite it (L26), which is recorded.
+- **Revised 2.84.0 (owner, 2026-11-02): fewer words, in points.** *"A little bit less words on slide, more bullet
+  point style."* A slide is a short lead line and 3-6 short points (`slide.lines`); a paragraph, prose or a slide over
+  the word ceiling is a must-fix. The floor and ceiling came down and the notes may run longer, so the explanation moves
+  from the slide to the instructor and the module's words still fill its minutes.
 - This refines `course-module-ux`'s compactness budgets: those govern the instructor's *working* screens
   during a session (runner cards, pre-flight), not a theory slide, which must carry the theory.
 - → `scripts/content_script.py` (`theory_findings`), `scripts/make_architecture_page.py` (whether the
@@ -512,6 +516,11 @@ example to give, what to stress. The theory itself is on the slide. `content_scr
 for the instructor's panel; the publisher treats `*_INSTRUCTOR_NOTES.md` as instructor-only, and the word-for-word
 check fails a slide that carries the notes. The density floor became 25 words a theory minute and the block before a
 self-check 250 words, because the long notes no longer count towards them.
+
+**Revised 2.85.0 (owner, 2026-11-02): the notes are the box beside the slide on the instructor's panel.** *"That
+text should be max human text, not technical, but humanly good text for instructor so he can just look there and
+understand what's on slide."* The first line says in everyday words what is going on on the slide; then what to ask,
+show or stress. No screen ids, task codes, ILO or law numbers, file names or page code (`notes.plain`, must fix).
 
 ### Added by the owner after reviewing the rebuilt example pages (2026-09-30, 2.18.0)
 

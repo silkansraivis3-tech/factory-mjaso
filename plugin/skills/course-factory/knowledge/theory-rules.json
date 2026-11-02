@@ -2,13 +2,34 @@
   "_authority": "How much theory a module carries, and how much must be taught before a trainee is asked anything (L36). The owner, 2026-09-30: 'slide text is too small ... with that low info can [the] topic/ILO be taught?' and 'before [a self-check] there should be enough theory so the trainee can actually do that task and understand it - not 100 words of theory and the task already.' Read by scripts/content_script.py (Stage 3 - every finding is shown on the review page and must be fixed before approval, unless the operator approves despite it, L26) and scripts/make_architecture_page.py (Stage 2 - whether the planned self-checks fit the module's theory time). Change a number here and both follow; nothing else restates them.",
 
   "slide": {
-    "min_words": 50,
-    "max_words": 150,
-    "_why": "A slide carries the teaching itself - the facts, numbers, names and reasons the Sub-ILO needs - not a headline for the instructor to fill in. The title counts. Under min_words the slide is too thin to teach from (must fix). Over max_words the room cannot read it from the classroom screen: split it into two slides (a note, not a must - NEW_ENTRANT wants more slides, L28)."
+    "min_words": 30,
+    "max_words": 90,
+    "_why": "A slide carries the teaching itself - the facts, numbers, names and reasons the Sub-ILO needs - not a headline for the instructor to fill in. The title counts. Under min_words the slide is too thin to teach from (must fix). Over max_words the room cannot read it from the classroom screen: split it into two slides (must fix - NEW_ENTRANT wants more slides, L28).",
+    "_fewer_words": "Owner, 2026-11-02: 'a little bit less words on slide, more bullet point style'. Was 50-150, over 150 a note. The detail the slide no longer shows goes into the instructor notes (notes.max_words 50 -> 80), so the module's words a minute still fill its hours.",
+    "lines": {
+      "max_words": 15,
+      "lead_lines": 1,
+      "min_points": 3,
+      "max_points": 6,
+      "_what": "A teaching slide is one short lead line, then its points - each line that starts with a bullet (•, -, *) or a step number is a point. The title is not a line.",
+      "_why": "The room reads points at a glance and the instructor explains them. A line over max_words is a paragraph; more than lead_lines lines that are not points is prose; fewer than min_points or more than max_points points is not a list the room can follow. Each is a must fix on the script review (L26: the operator may approve despite it). The recap has its own rule (recap.max_words_per_point)."
+    }
   },
   "notes": {
     "min_words": 10,
-    "max_words": 50,
+    "max_words": 80,
+    "plain": {
+      "_what": "The notes are the box beside the slide on the instructor's panel (data-cue). Plain, human text an instructor understands at a glance, never technical. The first line says, in everyday words, what the slide shows and what the room should take from it; then what to ask, show or stress.",
+      "_why": "An instructor glances at the box mid-sentence. A screen id, a task code, a law number or a file name is the factory talking to itself - it tells the instructor nothing and makes the box look like an internal working file. Each is a must fix on the script review.",
+      "patterns": [
+        {"pattern": "\\b[sqmt]\\d{2}\\b", "label": "a screen id", "case": true},
+        {"pattern": "\\bSub-?ILOs?\\b|\\bILOs?\\s*\\d", "label": "an ILO number"},
+        {"pattern": "\\bL\\d{1,2}\\b", "label": "a factory law number", "case": true},
+        {"pattern": "\\b(SC|MC|TT)\\d+\\b", "label": "a task code", "case": true},
+        {"pattern": "\\.(html|json|js|css|md|py|svg|glb)\\b", "label": "a file name"},
+        {"pattern": "\\bdata-[a-z]|\\bvisual_kind\\b|\\bbuild sheet\\b|\\bkit spec\\b", "label": "page code"}
+      ]
+    },
     "_why": "Owner, 2026-09-30 (2.18.1): the instructor notes are compact - two to four short points, one per line starting '- ' - because they live on the instructor's panel, in the module's own INSTRUCTOR_NOTES.md file, never on a slide. What to ask the room, the one example to give, what to stress. Under min_words there is nothing to go on; over max_words it is a speech, not a prompt - the theory belongs on the slide (both must fix). Before 2.18.1 the floor was 30 words and there was no ceiling."
   },
   "module": {

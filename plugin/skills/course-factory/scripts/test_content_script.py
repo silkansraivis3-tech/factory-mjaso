@@ -54,27 +54,34 @@ import gate_fixture  # noqa: E402
 LV, EN = cs.LABELS["lv"], cs.LABELS["en"]
 PASS, FAIL = [], []
 
-S01_TEXT = ("Liquefied gases are carried as liquids only because the ship keeps them cold, under pressure, or both.\n"
-            "LNG is mostly methane and boils at about -162 °C at atmospheric pressure, so it is carried fully refrigerated.\n"
-            "Propane boils at -42 °C and butane at -0.5 °C; small ships carry them fully pressurised at ambient temperature.\n"
-            "If the containment fails, the liquid boils off at once and forms a heavy, cold vapour cloud that can burn, explode or displace oxygen.\n"
-            "Tanks, pipes, valves, gas detection and emergency shutdown all exist to keep the cargo liquid and inside its containment.")
+S01_TEXT = ("The ship keeps the cargo liquid: cold, under pressure, or both.\n"
+            "• LNG is mostly methane; it boils at about -162 °C.\n"
+            "• Propane boils at -42 °C, butane at -0.5 °C.\n"
+            "• A leak boils off at once into a heavy, cold vapour cloud.\n"
+            "• The cloud can burn, explode or displace oxygen.\n"
+            "• Tanks, pipes, valves, gas detection and ESD keep the cargo contained.")
 S01_NOTES = ("- Ask who has sailed on a gas tanker, and with which cargo.\n"
-             "- Ask: what happens to liquid at -162 °C on a warm steel deck?\n"
-             "- Stress: boil-off never stops; it is managed.")
-S02_TEXT = ("Fully pressurised ships carry LPG and ammonia at ambient temperature in pressure vessels designed for about 18 bar; most are under 5,000 m³.\n"
-            "Semi-pressurised, semi-refrigerated ships cool the cargo and hold it at about 5 to 7 bar, down to about -48 °C, or -104 °C for ethylene.\n"
-            "Fully refrigerated ships carry large LPG cargoes at about -50 °C and LNG at about -162 °C, just above atmospheric pressure.\n"
-            "The colder the cargo, the less pressure the tank must hold - and the more insulation and boil-off handling the ship needs.")
+             "- Ask: what happens to liquid at -162 °C on a warm steel deck? It boils at once.\n"
+             "- Explain why small ships carry propane and butane fully pressurised, at ambient temperature, in strong steel tanks.\n"
+             "- Stress: boil-off never stops on a gas tanker, whatever its cargo; it is managed, never ignored.")
+S02_TEXT = ("Three ship types, by how they keep the cargo liquid.\n"
+            "• Fully pressurised: LPG and ammonia at ambient temperature, tanks for about 18 bar.\n"
+            "• Most fully pressurised ships are small, under 5,000 m³.\n"
+            "• Semi-refrigerated: about 5 to 7 bar, down to -48 °C; ethylene at -104 °C.\n"
+            "• Fully refrigerated: large LPG cargoes at about -50 °C, LNG at -162 °C.\n"
+            "• Colder cargo: less pressure, but more insulation and boil-off handling.")
 S02_NOTES = ("- Draw the propane pressure-temperature line; mark the three ship types on it.\n"
              "- Ask which type suits a short coastal trade, and which an ocean voyage.\n"
-             "- Point out the ethylene carrier.")
+             "- Point out the ethylene carrier, and why ethylene is carried at -104 °C.\n"
+             "- Explain why a colder tank holds less pressure but needs thicker insulation.")
 S03_TEXT = ("The IGC Code names four cargo containment systems.\n"
-            "Independent type A tanks are prismatic, built for less than 0.7 bar, and need a full secondary barrier.\n"
-            "Independent type B tanks - spherical Moss tanks or prismatic SPB tanks - are designed in such detail that a partial secondary barrier is enough.\n"
-            "Independent type C tanks are pressure vessels, cylindrical or bilobe, and need no secondary barrier at all.\n"
-            "Membrane tanks are thin metal barriers that rely on the hull, through the insulation, for their strength, and need a full secondary barrier.")
-S03_NOTES = ("- Let the room name each tank type on the model first.\n"
+            "• Type A: prismatic, under 0.7 bar, full secondary barrier.\n"
+            "• Type B: Moss spheres or prismatic SPB, partial secondary barrier.\n"
+            "• Type C: pressure vessels, cylindrical or bilobe, no secondary barrier.\n"
+            "• Membrane tanks rely on the hull, through the insulation, for their strength.\n"
+            "• Membrane tanks need a full secondary barrier.")
+S03_NOTES = ("- The four ways a gas tanker holds its cargo, side by side; a likelier leak needs a fuller barrier.\n"
+             "- Let the room name each tank type on the model first.\n"
              "- Ask: why does a pressure vessel need no secondary barrier?\n"
              "- Stress: how likely a leak is decides the barrier.")
 
@@ -255,7 +262,27 @@ def main():
         long_ = copy.deepcopy(SCRIPT)
         screen(long_, "s03")["text"] = S03_TEXT + "\n" + S01_TEXT
         f = [x for x in cs.theory_findings(long_)[0] if x["rule"] == "t_long_slide"]
-        check("a slide the room cannot read from the screen is a note, not a must-fix", f and f[0]["level"] == cs.NOTE, f)
+        check("a slide the room cannot read from the screen (over 90 words) is a must-fix", f and f[0]["level"] == cs.FAIL, f)
+        short = copy.deepcopy(SCRIPT)
+        screen(short, "s03")["text"] = "\n".join(S03_TEXT.splitlines()[:4])
+        check("... and a slide of 40 words, once too thin, is enough now", 30 <= cs.wc("Four containment systems", screen(short, "s03")["text"]) < 50
+              and not [x for x in cs.theory_findings(short)[0] if x["screen"] == "s03"])
+        prose = copy.deepcopy(SCRIPT)
+        screen(prose, "s03")["text"] = S03_TEXT.replace("• ", "")
+        f = [x for x in cs.theory_findings(prose)[0] if x["screen"] == "s03" and x["rule"] == "t_prose"]
+        check("a slide written as prose, not a lead line and points, is a must-fix", f and f[0]["level"] == cs.FAIL, f)
+        para = copy.deepcopy(SCRIPT)
+        screen(para, "s03")["text"] = S03_TEXT.replace("• Type C: pressure vessels, cylindrical or bilobe, no secondary barrier.",
+                                                       "• Type C tanks are pressure vessels, cylindrical or bilobe, and they need no secondary barrier at all.")
+        f = [x for x in cs.theory_findings(para)[0] if x["rule"] == "t_long_line"]
+        check("a point over 15 words is a must-fix, on that line", f and f[0]["level"] == cs.FAIL and "4" in f[0]["detail"], f)
+        two = copy.deepcopy(SCRIPT)
+        screen(two, "s03")["text"] = "\n".join(S03_TEXT.splitlines()[:3])
+        check("two points are a headline, not a list", "t_points" in rules_of(two), rules_of(two))
+        steps = copy.deepcopy(SCRIPT)
+        screen(steps, "s03")["text"] = re.sub(r"(?m)^• ", lambda m, n=iter(range(1, 9)): "%d. " % next(n), S03_TEXT)
+        check("numbered steps are points too", not [x for x in cs.theory_findings(steps)[0] if x["screen"] == "s03"],
+              [x["rule"] for x in cs.theory_findings(steps)[0] if x["screen"] == "s03"])
         slow = copy.deepcopy(SCRIPT)
         screen(slow, "s03")["minutes"] = 25
         check("a module whose words do not fill its minutes is found", "t_density" in rules_of(slow), rules_of(slow))
@@ -486,9 +513,24 @@ def main():
               and "**OPEN TASK** → Module check, 5 questions" in md)
         check("... in the course language, whatever the operator's", "instructor notes" in md and "slaids" not in md)
         longn = copy.deepcopy(SCRIPT)
-        screen(longn, "s02")["notes"] = S01_TEXT
+        screen(longn, "s02")["notes"] = S01_NOTES + "\n" + S02_NOTES
+        check("notes of up to 80 words carry the detail the slide no longer shows", 50 < cs.wc(S01_NOTES) <= 80
+              and "t_long_notes" not in rules_of(SCRIPT))
         f = [x for x in cs.theory_findings(longn)[0] if x["rule"] == "t_long_notes"]
         check("notes that are a speech, not points, must be shortened", f and f[0]["level"] == cs.FAIL and f[0]["screen"] == "s02", f)
+        for bad_note, found in (("- Same drawing as s02; checked again in SC1.", "s02"), ("- Covers Sub-ILO 1.2, see L36.", "Sub-ILO"),
+                                ("- The 3D scene is in M01_tanks.glb.", ".glb"), ("- The picture's visual_kind is cutaway.", "visual_kind")):
+            tech = copy.deepcopy(SCRIPT)
+            screen(tech, "s03")["notes"] = S03_NOTES + "\n" + bad_note
+            f = [x for x in cs.theory_findings(tech)[0] if x["rule"] == "t_notes_technical"]
+            check("the panel's box is plain words - %r in the notes is a must-fix" % found,
+                  f and f[0]["level"] == cs.FAIL and f[0]["screen"] == "s03" and found in f[0]["detail"], f)
+        tech = copy.deepcopy(SCRIPT)
+        screen(tech, "t01")["notes"] = "Press OPEN TASK - SC1 opens on the tablets."
+        check("... on a task slide too", [x["screen"] for x in cs.theory_findings(tech)[0] if x["rule"] == "t_notes_technical"] == ["t01"])
+        check("... while ordinary words that look alike pass (an L-shaped deck, the 3D model, the S-bend)",
+              not cs.re.search(cs.RULES["notes"]["plain"]["patterns"][0]["pattern"], "an L-shaped deck, the 3D model, the S-bend")
+              and "t_notes_technical" not in rules_of(SCRIPT))
         shortn = copy.deepcopy(SCRIPT)
         screen(shortn, "s02")["notes"] = "- Draw it."
         check("notes with nothing to go on are found too", "t_thin_notes" in rules_of(shortn), rules_of(shortn))

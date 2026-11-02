@@ -26,7 +26,9 @@ are counted from) and which advanced course trains on which. `needed` picks the 
 `intake.json` → `"simulators": ["LNG", "MeOH"]` overrides it. The manuals are on
 `G:\My Drive\Gas Library\documents\manual\` (copies of 2026-10-23 in `G:\My Drive\_staging Gas Library 2026-10-23\`);
 they are INSTRUCTOR_ONLY sources - read, cited by page, never copied into a trainee page. A simulator or manual not in
-the file is added there (a factory change), so the next course finds it.
+the file is added there (a factory change), so the next course finds it. Before a simulator exercise is built into a
+module, the course's own copy of its manual is in the course's `source_files` (`knowledge/simulator-exercises.json`):
+without it `exercises.py` proposes no slide and the build says what is missing.
 
 Whether a model is installed, and which options it has (e-Tutor, fault injection, saved states, time compression), is
 **checked with the course director, never assumed** - such things go in the decisions list (§5), not into a verdict.

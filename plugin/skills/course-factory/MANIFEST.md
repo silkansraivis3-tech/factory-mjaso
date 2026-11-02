@@ -7,6 +7,36 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.86.1 · Short photo slides no longer use up the dark ground (2026-11-02)
+
+- **Why.** 2.84.0's shorter slides made most photo slides framed photos (dark), and a module with two of them failed the
+  compiler's own 80 / 20 rule - found by the first test drive.
+- **What.** `compile_module.py`: once a module's dark share is used, a short photo slide is the photo column (`_dark_full`).
+
+## 2.86.0 · Simulator exercises, on paper, from the manual in source_files (2026-11-02)
+
+- **Why.** The owner: the factory must make simulator exercises; they are on paper for now, and every simulator manual
+  is in source_files. A simulator procedure written without the manual would teach the wrong buttons.
+- **What.** `knowledge/simulator-exercises.json`; `scripts/exercises.py` (`simulator`, `manuals`, `no_manual`, the
+  handover slide); `compile_module.py` `exercise_problems` (no manual = build problem); intake question 9;
+  `coverage/SIMULATORS.md` §1: the L66 lane's manuals reach the course as its own copy in source_files.
+
+## 2.85.0 · The notes are the panel's box, in plain words (2026-11-02)
+
+- **Why.** The instructor panel shows the slide's notes in a box beside it; the owner wants it to read as one colleague
+  telling another what is on the slide, not as the factory's working notes.
+- **What.** The box reads `data-cue` (from the script's `notes`, unchanged). script/GUIDE.md: first line = what is going on
+  on the slide, in everyday words. `theory-rules.json` `notes.plain.patterns`, `content_script.py` `t_notes_technical`
+  (screen ids, task codes, ILO / law numbers, file names, page code - must fix).
+
+## 2.84.0 · Fewer words on a slide, in points (2026-11-02)
+
+- **Why.** The owner: "little bit less words on slide, more bullet point style". The 50-word floor of 2.17.0 had pushed
+  slides toward paragraphs the room reads instead of listening.
+- **What.** `knowledge/theory-rules.json`: slide 30-90 words, over 90 a must-fix; `slide.lines` - a short lead line and
+  3-6 points of 15 words or fewer; notes up to 80 words, so the hours stay filled. `content_script.py` `point_findings`
+  (`t_long_line`, `t_prose`, `t_points`). script/GUIDE.md "Points, not prose".
+
 ## 2.75.1 · Editor-mode fixes back into the script (2026-10-29)
 
 - **Why.** The training app's editor fixes a slide with Claude and publishes it as a draft release, but the course folder

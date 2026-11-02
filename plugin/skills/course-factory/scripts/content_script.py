@@ -754,6 +754,26 @@ def slide_terms(s):
     return terms("%s\n%s\n%s" % (s.get("title", ""), s.get("text", ""), s.get("notes", "")))
 
 
+POINT = re.compile(r"\s*(\d+[.)]?\s|[-*•]\s)")
+
+
+def point_findings(text):
+    """A teaching slide is a short lead line and its points (theory-rules.json slide.lines): every line short,
+    at most lead_lines lines that are not points, and min_points to max_points points."""
+    L = RULES["slide"]["lines"]
+    lines = [ln for ln in str(text or "").splitlines() if ln.strip()]
+    out = []
+    for i, ln in enumerate(lines, 1):
+        if wc(ln) > L["max_words"]:
+            out.append(("t_long_line", {"i": i, "w": wc(ln), "max": L["max_words"]}))
+    points = sum(1 for ln in lines if POINT.match(ln))
+    if len(lines) - points > L["lead_lines"]:
+        out.append(("t_prose", {"n": len(lines) - points}))
+    elif not L["min_points"] <= points <= L["max_points"]:
+        out.append(("t_points", {"n": points, "lo": L["min_points"], "hi": L["max_points"]}))
+    return out
+
+
 def theory_findings(script):
     """Everything L36 asks, as findings shown at the top of the review page. Also returns, for every
     question, the slide(s) that teach its answer - the page shows them beside the question."""
@@ -781,11 +801,20 @@ def theory_findings(script):
         elif w_slide < R["slide"]["min_words"]:
             add(s["id"], "text", FAIL, "t_thin_slide", w=w_slide, min=R["slide"]["min_words"])
         elif w_slide > R["slide"]["max_words"]:
-            add(s["id"], "text", NOTE, "t_long_slide", w=w_slide, max=R["slide"]["max_words"])
+            add(s["id"], "text", FAIL, "t_long_slide", w=w_slide, max=R["slide"]["max_words"])
+        if not s.get("recap"):
+            for key, kw in point_findings(s.get("text", "")):
+                add(s["id"], "text", FAIL, key, **kw)
         if w_notes < R["notes"]["min_words"]:
             add(s["id"], "notes", FAIL, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
         elif w_notes > R["notes"]["max_words"]:
             add(s["id"], "notes", FAIL, "t_long_notes", w=w_notes, max=R["notes"]["max_words"])
+    for s in screens:
+        if s.get("kind") in ("slide", "task-slide", "activity"):
+            for p in R["notes"]["plain"]["patterns"]:
+                m = re.search(p["pattern"], s.get("notes") or "", 0 if p.get("case") else re.I)
+                if m:
+                    add(s["id"], "notes", FAIL, "t_notes_technical", what=p["label"], text=m.group(0))
     if th_min and not final:
         rate = th_words / th_min
         if rate < R["module"]["min_words_per_theory_minute"]:

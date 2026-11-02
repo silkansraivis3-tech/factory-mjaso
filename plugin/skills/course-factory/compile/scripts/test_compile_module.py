@@ -2238,6 +2238,85 @@ def exercise_part(tmp):
           ch3[0].get("before") == "s09" and not [p for p in cs.validate(w3) if "L51" in p], (ch3[0].get("before"), cs.validate(w3)))
 
 
+def simulator_part(tmp):
+    """A simulator exercise is on paper, and its manual is in source_files: the exercise's slide is the handover to the
+    simulator; without a manual in source_files the build stops and asks"""
+    print("\n-- simulator exercises: on paper, from the manual in source_files")
+    import exercises
+    master = os.path.join(tmp, "sim")
+    os.makedirs(os.path.join(master, "source_files"))
+    os.makedirs(os.path.join(master, "knowledge_base"))
+    io.open(os.path.join(master, "knowledge_base", "LCHS_TechSim_manual.md"), "w", encoding="utf-8").write("# LCHS")
+    c, md = new_course(master, script())
+    d = os.path.join(c, "to_review", "exercises", "M01")
+    os.makedirs(d)
+    head = [x.replace("Walk the fuel line", "Bunkering on the simulator").replace("the ship model in room 12", "the LCHS simulator")
+            for x in EX_HEAD]
+    docx(os.path.join(d, "IGF_Exercise_1.1_Trainee_v01.docx"), head + ["Exercise Description", "1. Line up the bunker line."])
+    docx(os.path.join(d, "IGF_Exercise_1.1_Instructor_v01.docx"), head + [EX_SECRET])
+    ex = exercises.found(c, 1)
+    check("a trainee form that names the simulator is a simulator exercise", ex and ex[0]["simulator"], ex)
+    check("... a manual in the knowledge base does not count - only source_files", exercises.no_manual(c, ex) == ex)
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    check("no simulator manual in source_files: a build problem that says to ask the operator for it",
+          code == 1 and "has a simulator exercise and no simulator manual in source_files: Exercise 1.1 - Bunkering on the simulator" in out
+          and "Ask the operator" in out, out[-900:])
+    code, out = run(os.path.join(HERE, "..", "..", "scripts", "exercises.py"), c, "--module", "1", "--propose")
+    check("... and exercises.py stops before proposing anything", code == 1 and "STOP" in out and "Simulator manuals in source_files: NONE" in out
+          and "Proposed" not in out, out)
+    man = os.path.join(master, "source_files", "Simulator Manuals", "LCHS-TechSim_LPG_Tanker_Generic_v.1.0_Tr")
+    os.makedirs(man)
+    io.open(os.path.join(man, "content.md"), "w", encoding="utf-8").write("# 15.8.2 Bunkering")
+    check("with the manual in source_files (any depth, a converted content.md) it is found", exercises.manuals(c) == [os.path.join(man, "content.md")]
+          and exercises.no_manual(c, ex) == [])
+    p = exercises.proposal(script(), ex)[0]["add_screen"]
+    lines = p["text"].split("\n")
+    check("the slide is the handover: the class goes to the simulator, the instructor hands out the papers - then the trainee form's words",
+          p["kind"] == "activity" and p.get("simulator") is True and lines[0] == exercises.SIM["handover"]["first_line"]
+          and "You need: the LCHS simulator." in lines and EX_SECRET not in json.dumps(p), p)
+    check("... its notes say in plain words what happens, for the panel's box", p["notes"].startswith("- The class goes to the simulator now")
+          and "Exercise 1.1" in p["notes"] and not [f for f in cs.theory_findings(script(screens=SCREENS + [p]))[0] if f["rule"] == "t_notes_technical"], p["notes"])
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    check("... the build no longer asks for the manual (the slide itself is still proposed)",
+          "no simulator manual" not in out and "has a practical exercise and no slide for it" in out, out[-600:])
+    _ch, work = cs.build_changes(script(), exercises.proposal(script(), ex))
+    cs.save(os.path.join(c, "working_claude", "script", "M01.json"), script(screens=work["screens"]))
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    x = section(deck(md), p["id"])
+    check("built: a room task whose hint is the handover line, and no task page opens on the tablets",
+          "has a practical exercise" not in out and 'data-link-hint="%s"' % html.escape(exercises.SIM["handover"]["first_line"], quote=True) in x
+          and "data-task-href" not in x, out[-600:])
+
+
+def dark_share_part(tmp):
+    """Photo slides under 50 words are each the framed photo, a dark slide: without the cap the module's second one
+    became a build problem of the compiler's own making"""
+    print("\n-- 80 / 20: short photo slides do not use up the dark ground")
+    sc = json.loads(json.dumps(SCREENS))
+    short = "Gas fuel needs its own spaces.\n• A tank space.\n• A connection space.\n• A preparation room."
+    for i, sid in enumerate(("s02", "s03")):
+        x = next(s for s in sc if s["id"] == sid)
+        x.update(layout="split", visual_kind="photo", text=short.replace("Gas", "Gas %d" % i))
+    os.makedirs(os.path.join(tmp, "dark"))
+    c, md = new_course(os.path.join(tmp, "dark"), script(screens=sc))
+    bp = os.path.join(c, "working_claude", "script", "M01.build.json")
+    sheet = cs.load(bp)
+    io.open(os.path.join(md, "assets", "img", "ship2.jpg"), "wb").write(b"\xff\xd8\xff\xd9\x00")
+    meta = cs.load(os.path.join(md, "assets", "img", "_photo_meta.json"))
+    meta["ship2.jpg"] = dict(PHOTO_META["ship.jpg"], description="Another ship taking gas.")
+    cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
+    sheet["screens"]["s02"] = {"figure": "assets/img/ship.jpg"}
+    sheet["screens"]["s03"] = {"figure": "assets/img/ship2.jpg"}
+    sheet["screens"]["s04"].pop("dark")                 # the fixture's hull drawing asks the dark ground; not here
+    cs.save(bp, sheet)
+    _code, out = run(COMPILE, c, "--module", "1", "--only", "deck")
+    page = deck(md)
+    s2, s3 = section(page, "s02"), section(page, "s03")
+    check("two short photo slides: the first is the framed photo, the second the photo column - one dark slide, not two",
+          'class="slide photo split"' in s2 and "photo split" not in s3 and 'data-variant="column"' in s3
+          and "on the dark ground" not in out, (s2[:120], s3[:200], out[-400:]))
+
+
 def seed_part(tmp):
     """2.63.3 (item 5 - the 2.63.2 full-course run: the quality gap to the hand-fixed original was its hand-fixed drawings,
     and a rebuild started from starter specs) - --init-build --seed-from <predecessor>: a slide whose words are unchanged
@@ -3072,6 +3151,8 @@ def main():
         look_part(tmp)
         light_part(tmp)
         exercise_part(tmp)
+        simulator_part(tmp)
+        dark_share_part(tmp)
         practical_part(tmp)
         sme_figures_part(tmp)
         figure_words_part(tmp)

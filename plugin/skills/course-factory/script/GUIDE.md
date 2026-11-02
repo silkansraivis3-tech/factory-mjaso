@@ -134,8 +134,8 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   The review page then shows every question below its Sub-ILO and how the tablet would lift it.
   Aim the tasks at the Sub-ILO's level, and above *Remember* wherever the content allows (`bloom/GUIDE.md`).
 - **Enough theory (L36, `knowledge/theory-rules.json`).** A slide carries the teaching itself - the facts,
-  numbers, names and reasons its Sub-ILO needs - not a headline (50-150 words, title included); the notes
-  carry what the instructor explains, adds or asks beyond it (30 words or more); the module's slides and
+  numbers, names and reasons its Sub-ILO needs - not a headline (30-90 words, title included); the notes
+  carry what the instructor explains, adds or asks beyond it; the module's slides and
   notes together fill its PLAIN theory minutes (25 words a minute or more - an active slide's minutes are
   what the trainees do). A self-check comes only after a block of new theory (5 min and 125 words since the
   last task - short cycles, L49), and every question's correct answer
@@ -143,8 +143,22 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   A module with less theory than that has no self-check; its module check covers it.
 - Course text (titles, text, questions, answers, feedback) is in COURSE_LANGUAGE; the notes on the
   page and in the Word file around it are in the operator's language.
-- **Instructor notes are short** (2.18.1): two to four points per slide, one per line starting `- `, 10-50 words -
-  what to ask, the one example to give, what to stress. The theory is on the slide. `render` writes them to
+- **Points, not prose (2.84.0, owner 2026-11-02: "a little bit less words on slide, more bullet point style").** A
+  teaching slide's `text` is one short lead line, then 3 to 6 points, each its own line starting `• ` (or `1. ` for
+  steps), every line 15 words or fewer - a fact, a number, a name, a reason, never a paragraph:
+  `"The IGC Code names four cargo containment systems.\n• Type A: prismatic, under 0.7 bar, full secondary barrier.\n..."`.
+  The sentence that explains a point goes into the notes, not onto the slide. A long line, prose, or too few or too many
+  points is a must-fix on the review page (`t_long_line`, `t_prose`, `t_points`); the recap keeps its own rule.
+- **Instructor notes are short** (2.18.1): two to four points per slide, one per line starting `- `, 10-80 words -
+  what to ask, the one example to give, what to stress, and the explanation the slide's points leave out.
+- **The notes are the box beside the slide on the instructor's panel (2.85.0, owner 2026-11-02: "max human text, not
+  technical ... so he can just look there and understand what's on slide").** Write them as one colleague tells
+  another, in the operator's language. The **first line says what is going on on this slide** - what the picture
+  shows and what the room should take from it - in everyday words; then what to ask, show or stress:
+  `- The four ways a gas tanker holds its cargo, side by side; the point is that a likelier leak needs a fuller barrier.`
+  `- Let the room name each tank type on the model first.` No screen ids (s03), task codes (SC1), ILO or law numbers,
+  file names or page code - the review page fails them (`t_notes_technical`). On a task slide, the first line says
+  what the trainees are about to do. `render` writes them to
   `to_review/M01_INSTRUCTOR_NOTES.md` for the instructor's panel; they are never on a slide.
 - Kinds: `slide`, `task-slide`, `activity` (instructor tablet); `self-check`, `module-check`, `final`
   (trainee tablet). Module checks are never graded (L27) and come at the end of the module; a
