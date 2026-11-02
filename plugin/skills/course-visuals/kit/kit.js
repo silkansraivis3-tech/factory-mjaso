@@ -1345,7 +1345,7 @@
   function watch(f) {
     FIGS.push(f);
     f.on('step', function () { bakeSoon(f); });
-    f.on('settled', function () { bakeSoon(f); });
+    f.on('settled', function () { bakeSoon(f); aheadSoon(); });
     /* a slide shown again starts its drawing's endless animations a frame after it is laid out: baked when they start,
        and whenever the drawing comes into view, however its slide was shown */
     f.svg.addEventListener('animationstart', function () { bakeSoon(f); });
@@ -1375,7 +1375,76 @@
     });
   }
   if (document.fonts && document.fonts.addEventListener) {          // the course font arrives: the words have their real width
-    document.fonts.addEventListener('loadingdone', function () { FIGS.forEach(function (f) { if (f.laid) f.layout(true); }); });
+    document.fonts.addEventListener('loadingdone', function () {
+      FIGS.forEach(function (f) {
+        if (!f.laid) return;
+        var r = f.svg.getBoundingClientRect();
+        if (r.width < 2) f.laid = 0;                 // laid out ahead on a hidden slide: again when it is shown (2.84.0)
+        else f.layout(true);
+      });
+    });
+  }
+
+  /* 2.84.0 - LAID OUT AHEAD OF THE NEXT PRESS. A figure is laid out the first time it is on screen, and that took the press of
+     Next that showed it: 0.4-1.9 s with the screen frozen on the classroom tablet (IGF M06, the instructor panel). So, once
+     a slide is shown and nothing on it moves, the figures on the next slides are laid out while the instructor talks: their
+     slide is shown for that moment far off to the side (the deck hides a slide with display:none, and a figure takes its size
+     from the slide), one figure at a time, in the browser's idle time; the slide is put back as it was. Shown later at the
+     same size, the figure is not laid out again - the press only shows it. Fonts first: words measured in a stand-in font
+     would be laid out again anyway. */
+  var AHEAD = 2, aheadT = 0;
+  function aheadSoon(ms) {
+    if (aheadT || !document.querySelector) return;
+    aheadT = setTimeout(function () {
+      aheadT = 0;
+      var cur = document.querySelector('.slide.active');
+      if (!cur || document.hidden) return;
+      if (FIGS.some(function (f) { return f.raf || f.laying; })) { aheadSoon(700); return; }   // a step still playing
+      var f = nextToLay(cur);
+      if (!f) return;
+      var idle = root.requestIdleCallback || function (fn) { return setTimeout(fn, 0); };
+      idle(function () {
+        if (cur !== document.querySelector('.slide.active')) { aheadSoon(700); return; }   // moved on meanwhile
+        layAhead(f);
+        aheadSoon(150);
+      }, { timeout: 2000 });
+    }, ms == null ? 700 : ms);
+  }
+  function nextToLay(cur) {
+    for (var s = cur.nextElementSibling, k = 0; s && k < AHEAD; s = s.nextElementSibling) {
+      if (!s.classList || !s.classList.contains('slide')) continue;
+      k++;
+      for (var i = 0; i < FIGS.length; i++) {
+        var f = FIGS[i];
+        if (!f.laid && !f.aheadDone && s.contains(f.svg)) return f;
+      }
+    }
+    return null;
+  }
+  function layAhead(f) {
+    var slide = f.svg.closest('.slide');
+    f.aheadDone = true;                              // tried once: a figure that cannot be laid out off screen waits for its press
+    if (!slide || slide.classList.contains('active')) return;
+    var keep = slide.getAttribute('style');
+    slide.style.setProperty('display', 'flex');
+    slide.style.setProperty('transform', 'translateX(-400vw)');
+    slide.style.setProperty('animation', 'none');
+    slide.style.setProperty('pointer-events', 'none');
+    slide.setAttribute('aria-hidden', 'true');
+    try { f.layout(); } catch (e) { /* laid out on its press, as before */ }
+    finally {
+      if (keep == null) slide.removeAttribute('style'); else slide.setAttribute('style', keep);
+      slide.removeAttribute('aria-hidden');
+    }
+  }
+  function aheadWatch() {
+    if (!root.MutationObserver) return;
+    var slides = document.querySelectorAll('.slide');
+    if (!slides.length || !FIGS.length) return;
+    var mo = new root.MutationObserver(function () { aheadSoon(); });
+    [].forEach.call(slides, function (s) { mo.observe(s, { attributes: true, attributeFilter: ['class'] }); });
+    var go = function () { aheadSoon(); };
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(go, go); else go();
   }
 
   function q(rootEl, sel) { return Array.prototype.slice.call(rootEl.querySelectorAll(sel)); }
@@ -1445,12 +1514,170 @@
     var y = b.y + 0.18 * lh, h = b.height - 0.26 * lh;
     return boxOf([onto(M, b.x, y), onto(M, b.x + b.width, y), onto(M, b.x, y + h), onto(M, b.x + b.width, y + h)]);
   }
+  /* 2.84.0 - a shape's outline is sampled ONCE, in its own space, and only carried onto the screen (M) after: getPointAtLength
+     walks the path from its start every time, and the layout measured every shape again at every step's end, in every
+     round of contain(), at every motion phase - half of a figure's first layout on the classroom tablet (IGF M06: 0.7 s on
+     average to open a slide with a figure, 1.9 s at worst, in the instructor panel). Sampled again when the shape's own
+     geometry changes, or when it is shown so much larger that the old points are too far apart. */
+  function ownGeom(n) {
+    var s = '';
+    ['d', 'x', 'y', 'width', 'height', 'cx', 'cy', 'r', 'rx', 'ry', 'x1', 'y1', 'x2', 'y2', 'points', 'pathLength'].forEach(function (k) {
+      var v = n.getAttribute(k);
+      if (v != null) s += k + v + '|';
+    });
+    return s;
+  }
+  /* The shape as short straight pieces, worked out from its own attributes in script: the same points getPointAtLength gives
+     (to a hundredth of a unit on a curve), without it - on the tablet it took 0.4 ms a point on a path with an arc.
+     null when the shape is one this does not read (getPointAtLength is asked then). */
+  function flatPieces(n) {
+    var t = tagOf(n), xs = [], A = function (k) {
+      var v = n.getAttribute(k);
+      if (v != null && /[%a-df-z]/i.test(v)) throw new Error('unit');   // 50 %, 2em: the browser's own reading
+      return parseFloat(v) || 0;
+    };
+    var sub = null;
+    function move(x, y) { sub = [x, y]; xs.push(sub); }
+    function line(x, y) { sub.push(x, y); }
+    function ell(cx, cy, rx, ry, a0, da, rot) {           // an elliptical arc from angle a0 through da (radians), axes turned rot
+      var k = Math.max(4, Math.ceil(Math.abs(da) / (Math.PI / 32))), cr = Math.cos(rot), sr = Math.sin(rot);
+      for (var j = 1; j <= k; j++) {
+        var a = a0 + da * j / k, ex = rx * Math.cos(a), ey = ry * Math.sin(a);
+        line(cx + ex * cr - ey * sr, cy + ex * sr + ey * cr);
+      }
+    }
+    if (t === 'line') { move(A('x1'), A('y1')); line(A('x2'), A('y2')); }
+    else if (t === 'polyline' || t === 'polygon') {
+      var v = (n.getAttribute('points') || '').trim().split(/[\s,]+/).map(parseFloat);
+      if (v.length < 4 || v.some(isNaN)) return null;
+      move(v[0], v[1]);
+      for (var p = 2; p + 1 < v.length; p += 2) line(v[p], v[p + 1]);
+      if (t === 'polygon') line(v[0], v[1]);
+    } else if (t === 'circle' || t === 'ellipse') {
+      var rx0 = t === 'circle' ? A('r') : A('rx'), ry0 = t === 'circle' ? A('r') : A('ry');
+      if (!(rx0 > 0 && ry0 > 0)) return null;
+      move(A('cx') + rx0, A('cy'));
+      ell(A('cx'), A('cy'), rx0, ry0, 0, 2 * Math.PI, 0);
+    } else if (t === 'rect') {
+      var x = A('x'), y = A('y'), w = A('width'), h = A('height');
+      if (!(w > 0 && h > 0)) return null;
+      var hasX = n.hasAttribute('rx'), hasY = n.hasAttribute('ry'), rr = hasX ? A('rx') : A('ry'), ss = hasY ? A('ry') : rr;
+      if (!hasX && !hasY) { rr = 0; ss = 0; }
+      rr = Math.min(Math.max(rr, 0), w / 2); ss = Math.min(Math.max(ss, 0), h / 2);
+      move(x + rr, y);
+      line(x + w - rr, y); if (rr && ss) ell(x + w - rr, y + ss, rr, ss, -Math.PI / 2, Math.PI / 2, 0);
+      line(x + w, y + h - ss); if (rr && ss) ell(x + w - rr, y + h - ss, rr, ss, 0, Math.PI / 2, 0);
+      line(x + rr, y + h); if (rr && ss) ell(x + rr, y + h - ss, rr, ss, Math.PI / 2, Math.PI / 2, 0);
+      line(x, y + ss); if (rr && ss) ell(x + rr, y + ss, rr, ss, Math.PI, Math.PI / 2, 0);
+      line(x + rr, y);
+    } else if (t === 'path') {
+      var d = n.getAttribute('d') || '', i = 0, cmd = '', cx = 0, cy = 0, sx = 0, sy = 0, qx = 0, qy = 0, last = '';
+      var white = function () { while (i < d.length && /[\s,]/.test(d[i])) i++; };
+      var num = function () {
+        white();
+        var m = /^[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?/.exec(d.slice(i, i + 40));
+        if (!m) throw new Error('path');
+        i += m[0].length; return parseFloat(m[0]);
+      };
+      var flag = function () { white(); var c = d[i++]; if (c !== '0' && c !== '1') throw new Error('path'); return c === '1'; };
+      var bez = function (pts) {                         // a cubic or quadratic curve from (cx, cy), 24 pieces
+        for (var j = 1; j <= 24; j++) {
+          var s = j / 24, u = 1 - s, X, Y;
+          if (pts.length === 4) { X = u * u * cx + 2 * u * s * pts[0] + s * s * pts[2]; Y = u * u * cy + 2 * u * s * pts[1] + s * s * pts[3]; }
+          else { X = u * u * u * cx + 3 * u * u * s * pts[0] + 3 * u * s * s * pts[2] + s * s * s * pts[4]; Y = u * u * u * cy + 3 * u * u * s * pts[1] + 3 * u * s * s * pts[3] + s * s * s * pts[5]; }
+          line(X, Y);
+        }
+      };
+      var arc = function (rx, ry, phi, large, sweep, x2, y2) {   // SVG 1.1 F.6.5: endpoints to centre
+        rx = Math.abs(rx); ry = Math.abs(ry);
+        if (!rx || !ry || (x2 === cx && y2 === cy)) { line(x2, y2); return; }
+        var r = phi * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+        var dx = (cx - x2) / 2, dy = (cy - y2) / 2, x1 = c * dx + s * dy, y1 = -s * dx + c * dy;
+        var lam = x1 * x1 / (rx * rx) + y1 * y1 / (ry * ry);
+        if (lam > 1) { rx *= Math.sqrt(lam); ry *= Math.sqrt(lam); }
+        var num2 = rx * rx * ry * ry - rx * rx * y1 * y1 - ry * ry * x1 * x1, den = rx * rx * y1 * y1 + ry * ry * x1 * x1;
+        var co = (large === sweep ? -1 : 1) * Math.sqrt(Math.max(0, num2 / den));
+        var ccx = co * rx * y1 / ry, ccy = -co * ry * x1 / rx;
+        var ox = c * ccx - s * ccy + (cx + x2) / 2, oy = s * ccx + c * ccy + (cy + y2) / 2;
+        var ang = function (ux, uy, vx, vy) { return Math.atan2(ux * vy - uy * vx, ux * vx + uy * vy); };
+        var a0 = ang(1, 0, (x1 - ccx) / rx, (y1 - ccy) / ry), da = ang((x1 - ccx) / rx, (y1 - ccy) / ry, (-x1 - ccx) / rx, (-y1 - ccy) / ry);
+        if (!sweep && da > 0) da -= 2 * Math.PI; else if (sweep && da < 0) da += 2 * Math.PI;
+        ell(ox, oy, rx, ry, a0, da, r);
+        var tail = sub.length; sub[tail - 2] = x2; sub[tail - 1] = y2;   // land exactly on the end point
+      };
+      white();
+      while (i < d.length) {
+        if (/[A-Za-z]/.test(d[i])) { cmd = d[i++]; }
+        else if (!cmd || cmd === 'Z' || cmd === 'z') throw new Error('path');
+        var rel = cmd === cmd.toLowerCase(), C = cmd.toUpperCase(), ox0 = rel ? cx : 0, oy0 = rel ? cy : 0, x1, y1, x2, y2, x3, y3;
+        if (C === 'Z') { if (sub) line(sx, sy); cx = sx; cy = sy; last = 'Z'; white(); continue; }
+        if (C === 'M') { cx = ox0 + num(); cy = oy0 + num(); sx = cx; sy = cy; move(cx, cy); cmd = rel ? 'l' : 'L'; last = 'M'; white(); continue; }
+        if (!sub) move(cx, cy);
+        if (C === 'L') { cx = ox0 + num(); cy = oy0 + num(); line(cx, cy); }
+        else if (C === 'H') { cx = ox0 + num(); line(cx, cy); }
+        else if (C === 'V') { cy = oy0 + num(); line(cx, cy); }
+        else if (C === 'C' || C === 'S') {
+          if (C === 'C') { x1 = ox0 + num(); y1 = oy0 + num(); }
+          else if (last === 'C' || last === 'S') { x1 = 2 * cx - qx; y1 = 2 * cy - qy; } else { x1 = cx; y1 = cy; }
+          x2 = ox0 + num(); y2 = oy0 + num(); x3 = ox0 + num(); y3 = oy0 + num();
+          bez([x1, y1, x2, y2, x3, y3]); qx = x2; qy = y2; cx = x3; cy = y3;
+        } else if (C === 'Q' || C === 'T') {
+          if (C === 'Q') { x1 = ox0 + num(); y1 = oy0 + num(); }
+          else if (last === 'Q' || last === 'T') { x1 = 2 * cx - qx; y1 = 2 * cy - qy; } else { x1 = cx; y1 = cy; }
+          x3 = ox0 + num(); y3 = oy0 + num();
+          bez([x1, y1, x3, y3]); qx = x1; qy = y1; cx = x3; cy = y3;
+        } else if (C === 'A') {
+          var arx = num(), ary = num(), aphi = num(), al = flag(), asw = flag();
+          x3 = ox0 + num(); y3 = oy0 + num();
+          arc(arx, ary, aphi, al, asw, x3, y3); cx = x3; cy = y3;
+        } else throw new Error('path');
+        last = C; white();
+      }
+    } else return null;
+    return xs.filter(function (s) { return s.length >= 4; });
+  }
+  /* N + 1 points evenly along the pieces by length, as getPointAtLength(L * i / N) gives them; the length too */
+  function flatLength(xs) {
+    var L = 0;
+    xs.forEach(function (s) { for (var j = 2; j < s.length; j += 2) L += Math.hypot(s[j] - s[j - 2], s[j + 1] - s[j - 1]); });
+    return L;
+  }
+  function flatSample(xs, L, N) {
+    var out = [], want = 0, k = 0, done = 0;
+    for (var si = 0; si < xs.length; si++) {
+      var s = xs[si];
+      for (var j = 2; j < s.length; j += 2) {
+        var x0 = s[j - 2], y0 = s[j - 1], seg = Math.hypot(s[j] - x0, s[j + 1] - y0);
+        while (k <= N && want <= done + seg + 1e-9) {
+          var f = seg ? (want - done) / seg : 0;
+          out.push(x0 + (s[j] - x0) * f, y0 + (s[j + 1] - y0) * f);
+          k++; want = L * k / N;
+        }
+        done += seg;
+      }
+    }
+    var e = xs[xs.length - 1];
+    while (k <= N) { out.push(e[e.length - 2], e[e.length - 1]); k++; }   // rounding at the very end
+    return out;
+  }
   function outline(n, M) {
-    var pts = [], L = 0, i;
-    try { L = n.getTotalLength(); } catch (e) { L = 0; }
+    var pts = [], L = 0, i, k = ownGeom(n), c = n.__kitOutline;
+    if (!c || c.k !== k) {
+      var xs = null;
+      try { xs = flatPieces(n); } catch (e0) { xs = null; }
+      if (xs && xs.length) L = flatLength(xs);
+      else { xs = null; try { L = n.getTotalLength(); } catch (e) { L = 0; } }
+      c = n.__kitOutline = { k: k, L: L, N: 0, own: null, xs: xs };
+    }
+    L = c.L;
     if (L > 0) {
       var N = Math.max(8, Math.min(1500, Math.ceil(L * det(M) / CELL)));
-      for (i = 0; i <= N; i++) { var a = n.getPointAtLength(L * i / N); pts.push(onto(M, a.x, a.y)); }
+      if (!c.own || c.N < N * 0.75) {
+        c.N = N;
+        if (c.xs) c.own = flatSample(c.xs, L, N);
+        else { c.own = []; for (i = 0; i <= N; i++) { var a = n.getPointAtLength(L * i / N); c.own.push(a.x, a.y); } }
+      }
+      for (i = 0; i < c.own.length; i += 2) pts.push(onto(M, c.own[i], c.own[i + 1]));
       return pts;
     }
     try {
@@ -2822,6 +3049,7 @@
       controls(fig, host.closest('[data-kit-scope]') || host.parentNode);
       still(host, fig);
     });
+    aheadWatch();
   }
 
   /* TASK MODE (2.43.0): <svg data-kit="#spec" data-kit-step="3"> is drawn STILL, at the end of step 3 ("final" or empty

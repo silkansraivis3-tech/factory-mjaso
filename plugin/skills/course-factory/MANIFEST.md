@@ -1923,6 +1923,36 @@ tool in the training app (`tools/ilo-coverage.mjs`) made it by hand. The factory
    the file ships with the course, sorted INSTRUCTOR before any internal glob is tried - never internal, never a trainee file.
 4. **Proof:** `scripts/test_ilo_coverage.py` (18), two new checks in `test_compile_course.py`, three in `test_publisher.py`.
 
+## 4zz25 · A slide with a figure opens at once on the classroom tablet (2.84.0, 2026-11-02)
+
+Aleksis: "is it me or 2d kit is slowing the slides down". It was the kit. Measured on the classroom tablet (Lenovo Yoga Tab 11,
+Instructor TEST APK, IGF Advanced M06 in the instructor panel, Next pressed through the deck): a slide with a 2D kit figure
+froze the screen 0.74 s on average and 1.9 s at worst when it came up; a step inside a figure and a slide without one took
+under 0.1 s. All of it was the figure's first layout (`fig.layout()`), which ran inside the press that showed the slide.
+Half of that layout was `outline()` asking `getPointAtLength` for up to 1,500 points of every shape - again at every
+step's end, in every round of `contain()`, at every motion phase - and Chrome walks a path from its start for each point
+(0.4 ms a point on a path with an arc).
+1. **Outlines sampled in script, once** (`kit.js` `flatPieces` / `flatLength` / `flatSample`, `outline()`): rect (rounded
+   corners too), circle, ellipse, line, polyline, polygon and path (M L H V C S Q T A Z, absolute and relative) are turned
+   into short pieces from their own attributes and sampled evenly by length, as `getPointAtLength(L * i / N)` did. Kept on
+   the shape (`__kitOutline`) and carried onto the screen by its matrix each time; sampled again only when the shape's own
+   geometry changes or it is shown much larger. An attribute with a unit or a %, or a path this cannot read, still asks the
+   browser. On the 1,237 shapes of IGF M06: 20 ms against 2,221 ms, every point within 0.4 units of the browser's. Chrome
+   measures a small circle short (r 5: 30.6 instead of 31.4), so its points left a gap at the end of each circle; these go
+   all the way round - two labels of 19 figures (M03, M06) stand 4 and 12.6 units from where they stood, every label
+   still placed, frames and word sizes unchanged.
+2. **Laid out ahead of the press** (`kit.js` `aheadSoon` / `nextToLay` / `layAhead`): once a slide is shown and nothing on it
+   moves (and the fonts have loaded), the figures on the next two slides are laid out in the browser's idle time, one at a
+   time, their slide shown for that moment 400vw off to the side (the deck hides slides with `display:none`, and a figure
+   takes its size from its slide; `visibility:hidden` would make the kit read every shape as not drawn). The slide's own
+   style is put back. Shown later at the same width, the figure is not laid out again. A font arriving afterwards marks a
+   figure laid out off screen to be laid out again when it is shown. All 13 figures of M06 come out identical laid out
+   ahead or on screen.
+3. **Result on the tablet** (M06, instructor panel, 2.2 s between presses): a slide with a figure comes up in 0.17 s on
+   average, 0.22 s at worst (main 2.83.0: 0.89 s / 1.53 s); the layout during the press is 0. Steps and plain slides as
+   before. The decks take it at their next build (`min/kit.js` refreshed by `minify_engines.py`, esbuild 0.24.2;
+   `min/kit3d.js` refreshed with it - it had been older than `kit3d.js` since 2.80.0, so modules shipped the full source).
+
 ## 5 · Known gaps / before this goes live
 
 Rewritten 2026-10-19 at 2.49.6. The list of 2026-09-10 said the factory had never driven a real course: it has since.
