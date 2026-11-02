@@ -1919,14 +1919,23 @@ def exercise_proposal(course, script):
 def exercise_problems(course, script):
     """a module whose practical exercise has no slide - a build problem, with the slide proposed to approve"""
     import exercises
+    probs = []
+    if course and script.get("module"):
+        sims = exercises.no_manual(course, exercises.found(course, script["module"]))
+        if sims:
+            probs.append("%s has a simulator exercise and no simulator manual in source_files: %s - simulator exercises are "
+                         "written on paper from the simulator's own manual, never invented (knowledge/simulator-exercises.json). "
+                         "Ask the operator which simulator and which manual, and to put it in %s"
+                         % (cs.mid(script["module"]), "; ".join("Exercise %s - %s" % (x["no"], x["title"]) for x in sims),
+                            os.path.join(workspace.master_of(course), exercises.SIM["manual"]["folder"])))
     miss = exercises.missing(course, script)
     if not miss:
-        return []
+        return probs
     out = exercise_proposal(course, script)
-    return ["%s has a practical exercise and no slide for it: %s - every module with an exercise shows it on at least one "
-            "slide, timed (owner rule 2026-10-21). The slide is proposed from its trainee form in %s: content_script.py "
-            "propose, then approve; an activity screen says which exercise it is with \"exercise\": \"<no>\""
-            % (cs.mid(script["module"]), "; ".join("Exercise %s - %s (%d min)" % (x["no"], x["title"], x["minutes"]) for x in miss), out)]
+    return probs + ["%s has a practical exercise and no slide for it: %s - every module with an exercise shows it on at least one "
+                    "slide, timed (owner rule 2026-10-21). The slide is proposed from its trainee form in %s: content_script.py "
+                    "propose, then approve; an activity screen says which exercise it is with \"exercise\": \"<no>\""
+                    % (cs.mid(script["module"]), "; ".join("Exercise %s - %s (%d min)" % (x["no"], x["title"], x["minutes"]) for x in miss), out)]
 
 
 # ------------------------------------------------------------------ one slide
@@ -1951,7 +1960,9 @@ def composition(s, b, is_photo, has_fig):
     # build). Past that budget the photo is its own column (wide-left), which takes 85 words and parts past them
     long_photo = is_photo and cs.wc(s.get("text", "")) > BUDGETS["photo_framed"]
     if lay == "split":
-        return ("wide-left" if long_photo else "two-col") if has_fig else "flow"
+        # the framed photo is a dark slide (80 / 20): once the module's dark slides are used up, a short photo slide is
+        # the photo column too (_dark_full, set by the module loop) - at 30-90 words most photo slides are under 50
+        return ("wide-left" if long_photo or (is_photo and b.get("_dark_full")) else "two-col") if has_fig else "flow"
     if lay == "visual_wide":
         if not has_fig:
             return "flow"
@@ -2184,6 +2195,11 @@ def shape_of(tid, variant, left=False):
     if tid == "figure-stage":
         return "picture-top"
     return "picture-left" if left or variant == "figure-left" else "picture-right"
+
+
+def is_dark(slide):
+    """on the dark ground for 80 / 20: a slide on the Navy ground, or a photograph framed on it (not a full-screen photo)"""
+    return bool(re.search(r'<section class="[^"]*\b(dark|split)\b', slide) and re.search(r'<section class="[^"]*\b(dark|photo)\b', slide))
 
 
 def layout_key(slide):
@@ -3869,6 +3885,8 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
     for n, s in enumerate(screens, 1):
         b = settled(avoid, s, (build.get("screens") or {}).get(s["id"]) or {})     # 2.72.7: the layout solver's settle
         recent =[layout_key(x) for x in slides[-VARIETY_WINDOW:]]   # L62: the look of the slides just before this one
+        if not b.get("composition") and len([x for x in slides if is_dark(x)]) >= int(DARK_SHARE * len(screens)):
+            b = dict(b, _dark_full=True)                             # 80 / 20: no more framed photos in this module
         slides.append(mark_slot(slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes, pool, taken, build, recent,
                                            avoid, last), s["id"]))
         if chosen is not None and s["kind"] == "slide" and not s.get("recap"):    # 2.62.1: kept for the next compile
@@ -3880,8 +3898,7 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
     # 2.62.1 - 80 / 20 (owner, 2026-10-21): at least 80 % of the module's slides on the light ground. The rule is the
     # background's colour: a slide on the Navy ground ("dark") and a photograph framed on it count; a full-screen
     # photograph is its own background and does not
-    dark = [s["id"] for s, x in zip(screens, slides)
-            if re.search(r'<section class="[^"]*\b(dark|split)\b', x) and re.search(r'<section class="[^"]*\b(dark|photo)\b', x)]
+    dark = [s["id"] for s, x in zip(screens, slides) if is_dark(x)]
     if len(dark) > DARK_SHARE * len(slides):
         probs.append("%s: %d of its %d slides are on the dark ground (%s) - at most %d (80 / 20: at least 80 %% light, owner "
                      "2026-10-21); give the others the light ground - take out \"dark\", or show a full-screen photograph in its "

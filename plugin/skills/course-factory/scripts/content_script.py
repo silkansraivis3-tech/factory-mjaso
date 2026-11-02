@@ -754,6 +754,21 @@ def slide_terms(s):
     return terms("%s\n%s\n%s" % (s.get("title", ""), s.get("text", ""), s.get("notes", "")))
 
 
+def block_findings(text):
+    """A teaching slide is a short lead line and its blocks, one per line (theory-rules.json slide.blocks): every
+    block short, and min_blocks to max_blocks of them. A bullet or a number in front of a line is allowed, never needed."""
+    B = RULES["slide"]["blocks"]
+    lines = [ln for ln in str(text or "").splitlines() if ln.strip()]
+    out = []
+    for i, ln in enumerate(lines, 1):
+        if wc(ln) > B["max_words"]:
+            out.append(("t_long_line", {"i": i, "w": wc(ln), "max": B["max_words"]}))
+    blocks = len(lines) - B["lead_lines"]
+    if not B["min_blocks"] <= blocks <= B["max_blocks"]:
+        out.append(("t_blocks", {"n": max(blocks, 0), "lo": B["min_blocks"], "hi": B["max_blocks"]}))
+    return out
+
+
 def theory_findings(script):
     """Everything L36 asks, as findings shown at the top of the review page. Also returns, for every
     question, the slide(s) that teach its answer - the page shows them beside the question."""
@@ -782,10 +797,19 @@ def theory_findings(script):
             add(s["id"], "text", FAIL, "t_thin_slide", w=w_slide, min=R["slide"]["min_words"])
         elif w_slide > R["slide"]["max_words"]:
             add(s["id"], "text", NOTE, "t_long_slide", w=w_slide, max=R["slide"]["max_words"])
+        if not s.get("recap"):
+            for key, kw in block_findings(s.get("text", "")):
+                add(s["id"], "text", FAIL, key, **kw)
         if w_notes < R["notes"]["min_words"]:
             add(s["id"], "notes", FAIL, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
         elif w_notes > R["notes"]["max_words"]:
             add(s["id"], "notes", FAIL, "t_long_notes", w=w_notes, max=R["notes"]["max_words"])
+    for s in screens:
+        if s.get("kind") in ("slide", "task-slide", "activity"):
+            for p in R["notes"]["plain"]["patterns"]:
+                m = re.search(p["pattern"], s.get("notes") or "", 0 if p.get("case") else re.I)
+                if m:
+                    add(s["id"], "notes", FAIL, "t_notes_technical", what=p["label"], text=m.group(0))
     if th_min and not final:
         rate = th_words / th_min
         if rate < R["module"]["min_words_per_theory_minute"]:

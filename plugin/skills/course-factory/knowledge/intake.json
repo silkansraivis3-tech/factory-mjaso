@@ -46,11 +46,16 @@
      "rule": "Record the answer with kb_tool.py decide. From then on the factory cites only the current edition; a search leaves the other out."},
     {"n": 8, "id": "expert_edits", "header": "Hand edits", "ask_when": "retrofit only, and only when retrofit/scripts/detect_expert_edits.py says nothing-to-go-on (L24)",
      "question": "Has anyone changed this module by hand since it was made?",
-     "options": ["No - nobody touched it", "Yes - I will say which screens"]}
+     "options": ["No - nobody touched it", "Yes - I will say which screens"]},
+    {"n": 9, "id": "simulator_manual", "header": "Simulator", "ask_when": "the programme or the IMO model course has exercises on a simulator and scripts/exercises.py (or a look in source_files) finds no simulator manual in the master folder's source_files",
+     "question": "The simulator exercises are written on paper from the simulator's own manual, and there is none in source_files. Which simulator is it, and can you put its manual there?",
+     "options": ["I put it in source_files (Recommended)", "It is somewhere else - I will point to it", "There is no manual"],
+     "rule": "Owner, 2026-11-02: every simulator manual is in source_files. A manual found elsewhere is copied there by the operator, not read from where it lies. With no manual, the simulator exercises are not written - never invent a simulator procedure; the papers wait, and exercises.py and the build say it as a problem until the manual is there (knowledge/simulator-exercises.json).",
+     "blocking": "the simulator exercises only - everything else proceeds"}
   ],
 
   "never_ask": ["the module split", "the screen count", "the task codes", "the pass marks", "the file layout", "which lane or skill to load", "whether the school has an instrument or simulator the IMO model course lists - it is assumed available (L28)"],
-  "equipment": "Every instrument and simulator the IMO model course lists for this course is assumed available at Novikontas (L28). Practical tasks are designed for it. The factory asks only if the operator says something is not available.",
+  "equipment": "Every instrument and simulator the IMO model course lists for this course is assumed available at Novikontas (L28). Practical tasks are designed for it. The factory asks only if the operator says something is not available. A simulator is assumed; its MANUAL is not - simulator exercises are written on paper from it, so it must be in source_files (question 9).",
   "no_web_search": "Never web-search during intake. Something not in the brief, the folder, the programme or the knowledge base is asked in the pop-up; UNKNOWN means it was asked and the operator did not know.",
 
   "record": {

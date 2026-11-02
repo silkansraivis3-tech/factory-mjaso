@@ -1,0 +1,21 @@
+{
+  "_authority": "How a simulator exercise is made, and what it is made from. Read by scripts/exercises.py and, through it, compile/scripts/compile_module.py. Edit this file, not the scripts.",
+  "_why": "Owner, 2026-10-29 and 2026-11-02: simulator exercises (on the real simulator, e.g. the LCHS) are made ON PAPER for now - a trainee sheet and an instructor sheet, written with the novikontas-practical-exercises skill from the simulator's own manual and the approved programme / IMO model course. The tablet only shows the handover: the class goes to the simulator, the instructor hands out the papers. Every simulator manual the course uses is in the master folder's source_files - a procedure that is not in the manual is never invented. Moving them onto the tablet may come later, not now.",
+
+  "simulator_words": "simulat|симулятор|тренаж",
+  "_simulator_words": "An exercise is a simulator exercise when its trainee form's title, objective, what the trainees need or file name matches this (case-insensitive). Latvian 'simulators' and English 'simulator' / 'simulation' both match 'simulat'.",
+
+  "manual": {
+    "folder": "source_files",
+    "patterns": "simulat|sim[ _-]?manual|LCHS|TechSim|NTPRO|K-?Sim|Kongsberg|Wärtsilä|Wartsila|Transas",
+    "extensions": [".pdf", ".docx", ".doc", ".md", ".txt", ".html", ".htm"],
+    "_what": "A file in <master>\\source_files\\ (any depth) whose path matches patterns, with one of these extensions, is a simulator manual. A converted manual (content.md beside its PDF) counts too. Nowhere else counts: not the knowledge base, not the old course, not the subject library - the operator puts every simulator manual in source_files.",
+    "_missing": "A module with a simulator exercise and no simulator manual in source_files is a build problem, and exercises.py stops: ask the operator for the manual (which simulator, which manual, put it in source_files). Never write a simulator procedure without it."
+  },
+
+  "handover": {
+    "first_line": "We now go to the simulator - the instructor hands you the papers.",
+    "_what": "The slide's first line - also the line the class screen and the trainee tablets show as the room task's hint (data-link-hint). Then what the trainees do, what they need and the time, from the TRAINEE form. COURSE_LANGUAGE is English, so this line is not translated.",
+    "notes": "- The class goes to the simulator now; the trainees work from the paper sheets and the tablets wait.\n- Hand out the trainee sheets for Exercise {no} and run it from your instructor copy{copy}."
+  }
+}

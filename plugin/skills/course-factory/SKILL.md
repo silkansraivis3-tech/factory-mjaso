@@ -107,7 +107,7 @@ seems to collide with it. The record behind the rows: `references/laws-in-full.m
 | **L33** | Pictures: KB → old course → source files → internet → authored → generated. **Every KB and old-course picture is usable as it is** (credited, listed); **a small one is reused and enlarged on this computer** (Real-ESRGAN, by the build); what the course does not have is a **photorealistic generated** picture - **equipment too: first generated, then fixed** (owner, 2026-10-28); **nobody is ever asked to take a photo** | step 8 (2.73.2) |
 | **L34** | **One module per programme topic**, in its order, with its hours. The final-assessment topic is the **last module, assessment only**. Topics never merged or split. An academic hour is the programme's (40 min when silent) | now |
 | **L35** | **Two tablets.** Slides on the instructor tablet (mirrored), notes on the instructor's panel; tasks **only** on the trainee tablet, opened by one **OPEN TASK** button. No task list, no browsing, no "back to tasks" | now; the app in step 6 |
-| **L36** | **Enough theory before any task.** A slide carries the teaching, not a headline; the notes what the instructor explains; words fill the minutes; a self-check only after new theory; every answer taught before its task. `knowledge/theory-rules.json` | now |
+| **L36** | **Enough theory before any task.** A slide carries the teaching, not a headline - a short lead line and 2-6 short blocks, one per line, never a paragraph - and never cut below what the trainee needs; the notes what the instructor explains; words fill the minutes; a self-check only after new theory; every answer taught before its task. `knowledge/theory-rules.json` | now |
 | **L37** | **Every slide leaves room for its picture** and names its kind, what it shows, the layout and **who makes it**. 40+ min of theory: something that moves, turns or can be explored. `knowledge/media-and-tasks.json` | now; steps 8-9 |
 | **L38** | **Tasks varied and hands-on** - 19 ways of answering, none typing (`course-task-ux` §2a). Self-check 2+ kinds, module check 3+; "choose one" ≤ 40 %; one hands-on question per module | now; step 6 |
 | **L39** | **Who tests where.** A colleague gets **only the HTML**; **the real-tablet test is the owner's, at the end**. Instructor notes are short points in `instructor_notes/`, never on a slide. Pictures have no quota | now |
@@ -292,6 +292,9 @@ KNOWLEDGE_BASE to be created"*). `content_script.py` and `compile_module.py --in
 and `scripts/course_gate.py <course>` says what is missing.
 
 Every instrument and simulator in the IMO model course is **assumed available** (L28) — never asked.
+Its **manual is not assumed**: simulator exercises are paper forms written from the simulator's manual in
+`source_files\`, the tablet shows only the handover to the simulator, and with no manual there the factory asks for it
+and writes no simulator procedure (`knowledge/simulator-exercises.json`, compile/GUIDE.md).
 Never ask the module split, screen count, task codes, pass marks, file layout or which lane to
 load: those are derived. Never web-search during intake; `UNKNOWN` means asked and not known.
 

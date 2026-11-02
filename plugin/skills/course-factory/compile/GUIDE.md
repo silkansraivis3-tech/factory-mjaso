@@ -415,6 +415,16 @@ what the trainees do, what they need, the time - to `working_claude\script\MNN.e
 approve like any change (`content_script.py propose`); until then it is a build problem. The instructor form is named
 in the slide's cue as the copy to run it from; none of its words reach a screen.
 
+**A simulator exercise is on paper (2.86.0, owner; `knowledge/simulator-exercises.json`).** Exercises on the real
+simulator are written as the two paper forms with the novikontas-practical-exercises skill, from the simulator's own
+manual and the approved programme / IMO model course - never as a tablet task, and never a procedure the manual does
+not give. Every simulator manual is in the master folder's `source_files\` (a converted `content.md` counts; the
+knowledge base, the old course and the subject library do not). A trainee form that names the simulator makes the
+exercise a simulator exercise: its proposed slide opens *"We now go to the simulator - the instructor hands you the
+papers."* - the room task's hint on the class screen and the tablets - and nothing opens on the tablets. A module with a
+simulator exercise and no manual in `source_files\` is a build problem and `exercises.py` stops: ask the operator for
+the manual (intake question 9).
+
 ## 2d · The task pages (2.34.0)
 
 Every task slide that opens questions gets its page from the same script: `tasks\sc1_<title>.html`,

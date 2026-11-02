@@ -246,7 +246,7 @@ def main():
                      "- Ask: what happens to liquid at -162 °C on a warm steel deck?\n"
                      "- Stress: boil-off never stops; it is managed.")
         s02_lines = tcs.S02_TEXT.split("\n")
-        s02_new = "\n".join(s02_lines[:3] + ["The colder the cargo, the lower the pressure the tank must hold - and the more insulation and boil-off handling the ship needs."])
+        s02_new = "\n".join(s02_lines[:5] + ["• The colder the cargo, the lower the tank pressure - and the more insulation."])
         s03_lines = tcs.S03_TEXT.split("\n")
         s03_new = "\n".join(["The IGC Code names four systems for containing the cargo."] + s03_lines[1:])
         changes = [{"module": 1, "field": "s03.title", "new": "The four containment systems"},
@@ -303,14 +303,14 @@ def main():
               'data-cue="%s"' % html.escape(cue(new_notes), quote=True) in sec and "LPG or LNG carrier" in sec, sec[:400])
         sec = section(d1, "s02")
         check("the changed text line is replaced, the other lines left as they were",
-              '<p data-script-field="text">The colder the cargo, the lower the pressure' in sec
-              and all('<p data-script-field="text">%s</p>' % html.escape(x, quote=False) in sec for x in s02_lines[:3]), sec)
+              '<p data-script-field="text">• The colder the cargo, the lower the tank pressure' in sec
+              and all('<p data-script-field="text">%s</p>' % html.escape(x, quote=False) in sec for x in s02_lines[:5]), sec)
         sec = section(d2, "t01")
         check("module 2: a task slide's title, in h2 and data-title",
               'data-title="Self-check 1 - why the cargo stays liquid"' in sec and ">Self-check 1 - why the cargo stays liquid</h2>" in sec, sec[:300])
         check("module 2: the first text line of s03 is replaced", '<p data-script-field="text">The IGC Code names four systems for containing the cargo.</p>' in section(d2, "s03"))
         check("module 2: the line with formatting inside it, not changed, keeps its formatting",
-              "<strong>Liquefied gases</strong>" in section(d2, "s01"))
+              "<strong>%s</strong>" % " ".join(tcs.S01_TEXT.split()[:2]) in section(d2, "s01"))
         check("everything else in the deck is byte for byte as it was", d1.count("\n") == read_lines(decks_before[1])
               and section(d1, "s03").replace("The four containment systems", "Four containment systems") == section(decks_before[1].decode("utf-8"), "s03"))
         check("the untouched module 3 is byte-identical - deck and tasks", raw(deck(c, 3)) == decks_before[3]
@@ -345,17 +345,17 @@ def main():
         print("\n-- hand work: what apply will not guess")
         before = {m: raw(deck(c, m)) for m in (1, 2)}
         s01_lines = tcs.S01_TEXT.split("\n")
-        hand = [{"module": 1, "field": "s02.text", "new": "\n".join(s02_lines[:3])},                 # 4 lines -> 3
-                {"module": 2, "field": "s01.text", "new": "\n".join(["Liquefied gases travel as liquids only because the ship keeps them cold, under pressure, or both."] + s01_lines[1:])}]
+        hand = [{"module": 1, "field": "s02.text", "new": "\n".join(s02_lines[:5])},                 # 6 lines -> 5
+                {"module": 2, "field": "s01.text", "new": "\n".join(["The ship keeps every cargo liquid: cold, under pressure, or both."] + s01_lines[1:])}]
         fix("propose", c, "--changes", write_changes(tmp, "hand.json", hand))
         code, out = fix("apply", c, "--confirmed")
         check("a text change with a different number of lines is hand work, named by module and slide",
-              code == 0 and re.search(r"hand work: Module 1, .*has 4 text line\(s\) and the new words have 3", out) is not None, out)
+              code == 0 and re.search(r"hand work: Module 1, .*has 6 text line\(s\) and the new words have 5", out) is not None, out)
         check("a changed line with formatting inside it is hand work",
               re.search(r"hand work: Module 2, .*formatting inside it", out) is not None and "0 place(s) on the built slides" in out, out)
         check("... and both slides are left exactly as they were", raw(deck(c, 1)) == before[1] and raw(deck(c, 2)) == before[2])
         check("... while the scripts did change (the operator said yes) - so the words check now fails until the hand work is done",
-              screen(cs.load(cs.paths(c, 1)["script"]), "s02")["text"] == "\n".join(s02_lines[:3])
+              screen(cs.load(cs.paths(c, 1)["script"]), "s02")["text"] == "\n".join(s02_lines[:5])
               and fix("check", c, "--kind", "words", "--modules", "1")[0] == 1)
 
         print("\n-- standards: what the operator decided once")

@@ -1362,6 +1362,35 @@ def lockstep_part(exe, tmp):
                        "s1 step 2 line 2 lit 1 part 1 shown", "s1 step 1 line 1 lit - part 1 shown", "s1 step 0 line - lit - part 1"], back)
 
 
+def blocks_part(exe, tmp):
+    """2.87.0 (owner: "text will be block by block, and pressing next just that box will be attentioned") - on a teaching
+    slide with no figure, Next lights its lead and each block in turn, then moves on; a task slide and a one-line slide
+    are one press; Back into the slide lands on its last block"""
+    print("\n-- 2.87.0: Next lights a text slide block by block")
+    d = os.path.join(tmp, "blocks")
+    os.makedirs(d)
+    a = Path(HERE).parent.parent.parent
+    text = lambda i, x: '<p data-script-field="text" data-i="%d">%s</p>' % (i, x)
+    page = os.path.join(d, "index.html")
+    io.open(page, "w", encoding="utf-8").write(
+        '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"></head><body>'
+        '<div id="landing"><button id="startBtn" type="button">Start</button></div>'
+        '<div id="chrome"><button id="btnPrev" type="button">Back</button><button id="btnNext" type="button">Next</button></div>'
+        '<main><section class="slide" data-kind="Theory" id="s1"><h2>Blocks</h2><div class="copy">%s%s%s</div></section>'
+        '<section class="slide activity" data-kind="Task" id="s2"><h2>Task</h2><div class="copy">%s%s</div></section>'
+        '<section class="slide" data-kind="Theory" id="s3"><h2>One line</h2><div class="copy">%s</div></section></main>'
+        '<script src="%s"></script><script>GBDeck.init({});</script></body></html>'
+        % (text(1, "lead"), text(2, "block one"), text(3, "block two"), text(1, "open it"), text(2, "now"), text(1, "only"),
+           (a / "course-module-ux" / "assets" / "gb_deck.js").as_uri()))
+    r = drive_page(exe, page, LOCKSTEP_DRIVE, os.path.join(tmp, "blp"), (1280, 800))
+    fwd, back = r.get("fwd") or [], r.get("back") or []
+    check("each Next lights the next block of a text slide, then the slide moves on; a task slide and a one-line slide "
+          "are one press: %s" % " | ".join(fwd), not r.get("errors") and fwd[:6] == [
+              "s1 line - lit -", "s1 line 1 lit -", "s1 line 2 lit 1", "s1 line 3 lit 1,2", "s2 line - lit -", "s3 line - lit -"], r)
+    check("... Back into the text slide lands on its last block, then walks back block by block: %s" % " | ".join(back),
+          back[:5] == ["s2 line - lit -", "s1 line 3 lit 1,2", "s1 line 2 lit 1", "s1 line 1 lit -", "s1 line - lit -"], back)
+
+
 def drive_page(exe, page, js, prof, size):
     """a compiled deck with a driver script added, at a window `size` (its viewport exactly that, as probe() opens it)"""
     text = io.open(page, encoding="utf-8").read()
@@ -1729,6 +1758,7 @@ def main():
         corner_part(exe, tmp)
         last_parts_part(exe, tmp)
         lockstep_part(exe, tmp)
+        blocks_part(exe, tmp)
         steps_part(exe, tmp)
         patterns_part(exe, tmp)
         team_part(exe, tmp)
