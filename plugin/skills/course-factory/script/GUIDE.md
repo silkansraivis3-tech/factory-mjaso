@@ -143,12 +143,15 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   A module with less theory than that has no self-check; its module check covers it.
 - Course text (titles, text, questions, answers, feedback) is in COURSE_LANGUAGE; the notes on the
   page and in the Word file around it are in the operator's language.
-- **Points, not prose (2.84.0, owner 2026-11-02: "a little bit less words on slide, more bullet point style").** A
-  teaching slide's `text` is one short lead line, then 3 to 6 points, each its own line starting `• ` (or `1. ` for
-  steps), every line 15 words or fewer - a fact, a number, a name, a reason, never a paragraph:
-  `"The IGC Code names four cargo containment systems.\n• Type A: prismatic, under 0.7 bar, full secondary barrier.\n..."`.
-  The sentence that explains a point goes into the notes, not onto the slide. A long line, prose, or too few or too many
-  points is a must-fix on the review page (`t_long_line`, `t_prose`, `t_points`); the recap keeps its own rule.
+- **Block by block (2.84.0, 2.87.0, owner 2026-11-02: "less words on slide ... text will be block by block, and
+  pressing next just that box will be attentioned ... dont make text less just because it needs to be less").** A
+  teaching slide's `text` is one short lead line, then 2 to 6 blocks, each its own line - one or two short sentences,
+  25 words at most, a fact with its number, name or reason. No bullet or number is needed (write `1. ` only for the
+  steps of a procedure); the deck shows each block plain and Next lights one at a time:
+  `"The IGC Code names four cargo containment systems.\nType A tanks are prismatic, under 0.7 bar, with a full secondary barrier.\n..."`.
+  Fewer words, never less to learn: everything a question asks is on a slide before it. A block over 25 words or a
+  slide that is one paragraph is a must-fix on the review page (`t_long_line`, `t_blocks`); over 90 words is a note -
+  split it into two slides. The recap keeps its own rule.
 - **Instructor notes are short** (2.18.1): two to four points per slide, one per line starting `- `, 10-80 words -
   what to ask, the one example to give, what to stress, and the explanation the slide's points leave out.
 - **The notes are the box beside the slide on the instructor's panel (2.85.0, owner 2026-11-02: "max human text, not

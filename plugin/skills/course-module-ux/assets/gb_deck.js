@@ -184,7 +184,7 @@ var GBDeck = (function (w, d) {
       navState();
       if (h && h.enter) { h.enter(); }
       var L0 = lockFor(idx);                          /* 2.63.3: a figure and its lines start together, at the first stop */
-      if (L0) { L0.pos = 0; lockLight(s, L0); }
+      if (L0) { L0.pos = 0; lockLight(s, L0); navState(); }
       markOverview();
       s.scrollTop = 0;
       if (fsBox && fsBox !== boxes3d[idx]) { fsLeave(); }
@@ -209,10 +209,13 @@ var GBDeck = (function (w, d) {
        2.63.2 (the 2.63.2 full-course run, M08-M10 and M12-M14): the parts were not counted, so on a deck whose LAST slide
        holds parts (the practical slide) Next was off on part 1 and part 2 could not be reached with it */
     function navState() {
-      var s = slides[cur], h = hookFor(cur), ps = s ? s.querySelectorAll(".lt-part") : [], on = 0, k;
+      var s = slides[cur], h = hookFor(cur), L = lockFor(cur), ps = s ? s.querySelectorAll(".lt-part") : [], on = 0, k;
       for (k = 0; k < ps.length; k++) { if (ps[k].classList.contains("on")) { on = k; } }
-      if (btnPrev) { btnPrev.disabled = (cur === 0) && !(h && h.step) && !(ps.length && on > 0); }
-      if (btnNext) { btnNext.disabled = (cur === slides.length - 1) && !(h && h.step) && !(ps.length && on < ps.length - 1); }
+      if (btnPrev) { btnPrev.disabled = (cur === 0) && !(h && h.step) && !(L && L.pos > 0) && !(ps.length && on > 0); }
+      if (btnNext) {
+        btnNext.disabled = (cur === slides.length - 1) && !(h && h.step) && !(L && L.pos < L.stops.length - 1) &&
+          !(ps.length && on < ps.length - 1);
+      }
     }
     function partStep(dir) {
       var s = slides[cur], ps = s ? s.querySelectorAll(".lt-part") : [], i = 0, k;
@@ -237,8 +240,23 @@ var GBDeck = (function (w, d) {
        A line no step names is a stop of its own (the figure stays); a step that names no line keeps the last line lit.
        Back mirrors it, and Back into the slide lands on its last stop. kit.js gives every deck figure such a hook; a 3D
        scene with steps joins by giving its hook lines and go. */
+    /* a teaching slide with no figure of its own is read block by block too: each Next lights its next line of text
+       (the lead, then each block), then the slide moves on - the same counter, with a hook that only names lines.
+       A slide in parts already steps part by part */
+    function blocksHook(s) {
+      if (!s || s.getAttribute("data-kind") !== "Theory" || s.querySelector(".lt-part")) { return null; }
+      if (s.__blocks !== undefined) { return s.__blocks; }
+      var nums = [];
+      each(s.querySelectorAll('[data-script-field="text"][data-i]'), function (x) {
+        var v = parseInt(x.getAttribute("data-i"), 10);
+        if (!isNaN(v) && nums.indexOf(v) < 0 && !(x.closest && x.closest("svg"))) { nums.push(v); }
+      });
+      nums.sort(function (a, b) { return a - b; });
+      s.__blocks = nums.length < 2 ? null : { lines: nums.map(function (v) { return [v]; }), go: function () {} };
+      return s.__blocks;
+    }
     function lockFor(i) {
-      var s = slides[i], h = hookFor(i);
+      var s = slides[i], h = hookFor(i) || blocksHook(s);
       if (!s || !h || !h.lines || !h.go) { return null; }
       if (s.__lock && s.__lock.h === h) { return s.__lock; }
       var nums = [], named = {}, stops = [{ n: 0, line: [] }], k, j;
@@ -286,6 +304,7 @@ var GBDeck = (function (w, d) {
       L.busy = true;
       try { L.h.go(L.stops[p].n, animate); } finally { L.busy = false; }
       lockLight(s, L);
+      navState();
     }
 
     function stepHere(dir) {

@@ -138,17 +138,13 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .copy b,.slide[data-template] .lead b{color:var(--lt-navy)}
 .slide[data-template].dark .copy b{color:var(--lt-white)}
 
-/* the points: numbered 01, 02 ... in the brand's blue - the reference's numbered list */
-.slide[data-template] .support{counter-reset:lt;gap:min(2.6vmin,22px)}
-.slide[data-template] .support li{counter-increment:lt;padding-left:min(5vmin,44px);font-size:var(--lt-fs);line-height:1.5;color:var(--lt-steel);font-weight:500}
+/* the blocks: each line its own block of text, no number and no marker - Next lights one block at a time */
+.slide[data-template] .support{gap:min(2.6vmin,22px)}
+.slide[data-template] .support li{padding-left:10px;font-size:var(--lt-fs);line-height:1.5;color:var(--lt-steel);font-weight:500}
 .slide[data-template].dark .support li{color:var(--lt-dim-d)}
 .slide[data-template] .support li b{color:var(--lt-navy)}
 .slide[data-template].dark .support li b{color:var(--lt-white)}
-.slide[data-template] .support li::before{
-  content:counter(lt,decimal-leading-zero);width:auto;height:auto;background:none;border-radius:0;
-  top:.42em;left:0;font-size:clamp(12.5px,1.5vmin,18px);font-weight:700;letter-spacing:.08em;color:var(--lt-steel);
-}
-.slide[data-template].dark .support li::before{color:var(--lt-blue)}
+.slide[data-template] .support li::before{content:none}
 /* numbered steps: the step's own number in a ring (the reference's procedure) */
 /* 44 px is a floor, never a ceiling (2.60.0): min(5.4vmin,44px) made a kit's tap line 41-43 px on a 768-800 px screen
    (IGF M02, the audit's 44 px touch target) */

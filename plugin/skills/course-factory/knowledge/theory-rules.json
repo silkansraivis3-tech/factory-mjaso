@@ -4,15 +4,15 @@
   "slide": {
     "min_words": 30,
     "max_words": 90,
-    "_why": "A slide carries the teaching itself - the facts, numbers, names and reasons the Sub-ILO needs - not a headline for the instructor to fill in. The title counts. Under min_words the slide is too thin to teach from (must fix). Over max_words the room cannot read it from the classroom screen: split it into two slides (must fix - NEW_ENTRANT wants more slides, L28).",
-    "_fewer_words": "Owner, 2026-11-02: 'a little bit less words on slide, more bullet point style'. Was 50-150, over 150 a note. The detail the slide no longer shows goes into the instructor notes (notes.max_words 50 -> 80), so the module's words a minute still fill its hours.",
-    "lines": {
-      "max_words": 15,
+    "_why": "A slide carries the teaching itself - the facts, numbers, names and reasons the Sub-ILO needs - not a headline for the instructor to fill in. The title counts. Under min_words the slide is too thin to teach from (must fix). Over max_words the room cannot read it from the classroom screen: split it into two slides, keeping every fact the trainee needs (a note, not a must - the words are never cut only to reach a number).",
+    "_fewer_words": "Owner, 2026-11-02: 'a little bit less words on slide, more bullet point style' - then: 'text will be block by block, and pressing next just that box will be attentioned ... text should be less, but that means that this text should be also enough for trainee to learn that, dont make text less just because it needs to be less'. Was 50-150. Every question's answer must still be on a slide before it (t_not_taught), and the module's words still fill its hours.",
+    "blocks": {
+      "max_words": 25,
       "lead_lines": 1,
-      "min_points": 3,
-      "max_points": 6,
-      "_what": "A teaching slide is one short lead line, then its points - each line that starts with a bullet (•, -, *) or a step number is a point. The title is not a line.",
-      "_why": "The room reads points at a glance and the instructor explains them. A line over max_words is a paragraph; more than lead_lines lines that are not points is prose; fewer than min_points or more than max_points points is not a list the room can follow. Each is a must fix on the script review (L26: the operator may approve despite it). The recap has its own rule (recap.max_words_per_point)."
+      "min_blocks": 2,
+      "max_blocks": 6,
+      "_what": "A teaching slide is one short lead line, then its blocks - each line after the lead is a block of its own: one or two short sentences, a fact with its number, name or reason. No bullet or number is needed; the deck shows each block plain, and Next lights one block at a time. The title is not a line.",
+      "_why": "The room reads one block at a time while the instructor explains it. A line over max_words is a paragraph: split it into two blocks - never cut what the trainee needs to learn. Fewer than min_blocks is a paragraph or a headline, more than max_blocks is two slides. Each is a must fix on the script review (L26: the operator may approve despite it). The recap has its own rule (recap.max_words_per_point)."
     }
   },
   "notes": {

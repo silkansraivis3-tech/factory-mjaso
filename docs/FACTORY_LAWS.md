@@ -318,7 +318,8 @@ trainee task list. → `course-factory` (`scripts/content_script.py`, 2.17.0); t
 the words fill the minutes; a self-check only after a block of new theory; every answer taught before
 its task opens. Floors in `course-factory/knowledge/theory-rules.json`, checked on the content script.
 Amended by L49 (2.26.0): ~5-minute cycles; the density counts plain theory only. Amended 2.84.0 (owner,
-2026-11-02): fewer words on a slide, as a short lead line and points; the explanation goes into the notes.
+2026-11-02): fewer words on a slide, as a short lead line and its blocks, one per line, no bullet or number needed;
+never fewer words than the trainee needs to learn it (2.87.0).
 → `course-factory` (`scripts/content_script.py`, 2.17.0)
 
 **L37 · Every slide leaves room for its picture.** Each slide names the kind of visual, what it shows, its layout,

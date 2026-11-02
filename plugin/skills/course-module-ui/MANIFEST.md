@@ -103,6 +103,13 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## Slide lines are plain blocks — 2.87.0 (2026-11-02)
+
+The owner: a slide's text "block by block", Next lighting one block, and no numbers or bullet marks. `gb_layouts.css`
+drops the 01, 02 counter of the layout templates' `.support` list and `gb_compose.css` the square marker (also over a
+photograph, `.lead.sub`); the lines keep their spacing and the deck's highlight. A procedure's own numbered steps
+(`.support.seq`) and a drawing's legend keep their numbers.
+
 ## Known gaps
 
 1. **Not eval-tested.** No `evals/` directory, consistent with the rest of the family — and the

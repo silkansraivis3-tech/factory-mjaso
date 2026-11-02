@@ -7,6 +7,19 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.87.0 · Block by block, not a list of points (2026-11-02)
+
+- **Why.** The owner, on the test drive of 2.84.0: not every slide a list of bullet points - the text block by block, Next
+  lighting one block, fewer words but never fewer than the trainee needs to learn it. Then chose blocks with no numbers.
+- **What.** `knowledge/theory-rules.json` `slide.blocks` (lead + 2-6 blocks, 25 words each, no marker needed) in place of
+  `slide.lines`; `content_script.py` `block_findings` (`t_blocks`, `t_long_line`), `t_prose` / `t_points` gone, `t_long_slide`
+  a note again; page-labels en/lv/ru; script/GUIDE.md "Block by block"; `course-module-ui` CSS draws the lines as plain
+  blocks; `course-module-ux` `gb_deck.js` lights a text slide block by block on Next (`blocksHook`, the drawings'
+  counter), Back and Next on at the deck's ends while a slide has blocks. L36 text in FACTORY_LAWS, laws-in-full, SKILL.md.
+- **Checked.** test_content_script: unmarked lines are clean blocks, one paragraph fails, a 26-word block fails on its
+  line, a lead and one block fails, numbered steps pass, over 90 words is a note. test_task_engine `blocks_part`: Next
+  lights lead, block, block, then moves on; a task slide and a one-line slide are one press; Back mirrors it.
+
 ## 2.86.1 · Short photo slides no longer use up the dark ground (2026-11-02)
 
 - **Why.** 2.84.0's shorter slides made most photo slides framed photos (dark), and a module with two of them failed the

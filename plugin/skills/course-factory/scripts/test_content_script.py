@@ -262,26 +262,31 @@ def main():
         long_ = copy.deepcopy(SCRIPT)
         screen(long_, "s03")["text"] = S03_TEXT + "\n" + S01_TEXT
         f = [x for x in cs.theory_findings(long_)[0] if x["rule"] == "t_long_slide"]
-        check("a slide the room cannot read from the screen (over 90 words) is a must-fix", f and f[0]["level"] == cs.FAIL, f)
+        check("a slide over 90 words is a note, never a must - it is split into two slides, the facts are not cut", f and f[0]["level"] == cs.NOTE, f)
         short = copy.deepcopy(SCRIPT)
         screen(short, "s03")["text"] = "\n".join(S03_TEXT.splitlines()[:4])
         check("... and a slide of 40 words, once too thin, is enough now", 30 <= cs.wc("Four containment systems", screen(short, "s03")["text"]) < 50
               and not [x for x in cs.theory_findings(short)[0] if x["screen"] == "s03"])
+        plain = copy.deepcopy(SCRIPT)
+        screen(plain, "s03")["text"] = S03_TEXT.replace("• ", "")
+        check("lines with no bullet are blocks - a mark in front of a line is never needed",
+              not [x for x in cs.theory_findings(plain)[0] if x["screen"] == "s03"], [x["rule"] for x in cs.theory_findings(plain)[0] if x["screen"] == "s03"])
         prose = copy.deepcopy(SCRIPT)
-        screen(prose, "s03")["text"] = S03_TEXT.replace("• ", "")
-        f = [x for x in cs.theory_findings(prose)[0] if x["screen"] == "s03" and x["rule"] == "t_prose"]
-        check("a slide written as prose, not a lead line and points, is a must-fix", f and f[0]["level"] == cs.FAIL, f)
+        screen(prose, "s03")["text"] = " ".join(S03_TEXT.replace("• ", "").splitlines())
+        rules = [x["rule"] for x in cs.theory_findings(prose)[0] if x["screen"] == "s03" and x["level"] == cs.FAIL]
+        check("a slide written as one paragraph, not block by block, is a must-fix", "t_blocks" in rules and "t_long_line" in rules, rules)
         para = copy.deepcopy(SCRIPT)
         screen(para, "s03")["text"] = S03_TEXT.replace("• Type C: pressure vessels, cylindrical or bilobe, no secondary barrier.",
-                                                       "• Type C tanks are pressure vessels, cylindrical or bilobe, and they need no secondary barrier at all.")
+                                                       "• Type C tanks are pressure vessels, cylindrical or bilobe, built so strong that a leak "
+                                                       "is very unlikely, and so they need no secondary barrier of any kind at all.")
         f = [x for x in cs.theory_findings(para)[0] if x["rule"] == "t_long_line"]
-        check("a point over 15 words is a must-fix, on that line", f and f[0]["level"] == cs.FAIL and "4" in f[0]["detail"], f)
-        two = copy.deepcopy(SCRIPT)
-        screen(two, "s03")["text"] = "\n".join(S03_TEXT.splitlines()[:3])
-        check("two points are a headline, not a list", "t_points" in rules_of(two), rules_of(two))
+        check("a block over 25 words is a must-fix, on that line - split into two blocks", f and f[0]["level"] == cs.FAIL and "4" in f[0]["detail"], f)
+        one = copy.deepcopy(SCRIPT)
+        screen(one, "s03")["text"] = "\n".join(S03_TEXT.splitlines()[:2])
+        check("a lead line and one block is a headline, not a slide to teach from", "t_blocks" in rules_of(one), rules_of(one))
         steps = copy.deepcopy(SCRIPT)
         screen(steps, "s03")["text"] = re.sub(r"(?m)^• ", lambda m, n=iter(range(1, 9)): "%d. " % next(n), S03_TEXT)
-        check("numbered steps are points too", not [x for x in cs.theory_findings(steps)[0] if x["screen"] == "s03"],
+        check("numbered steps are blocks too", not [x for x in cs.theory_findings(steps)[0] if x["screen"] == "s03"],
               [x["rule"] for x in cs.theory_findings(steps)[0] if x["screen"] == "s03"])
         slow = copy.deepcopy(SCRIPT)
         screen(slow, "s03")["minutes"] = 25

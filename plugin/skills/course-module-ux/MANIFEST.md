@@ -274,6 +274,16 @@ channel and it has never been filled in. At the next revision, read it first.
 
 ---
 
+## Text slides step block by block — 2.87.0 (2026-11-02)
+
+The owner: "pressing next just that box will be attentioned". `assets/gb_deck.js` `blocksHook` gives a teaching slide
+(`data-kind="Theory"`) with two or more text lines and no figure hook the same one counter the stepping drawings use:
+each Next lights the next line (`.cur`, earlier ones `.lit`), then the slide moves on; Back mirrors it and lands on the
+last block. `navState` follows the block at the deck's ends (Next off only on the last block of the last slide). A
+slide in parts (`.lt-part`) still steps part by part. `measure/scripts/review_sheets.mjs` counts every slide's
+`[data-i]` lines in its walk guard. Tested by `course-factory/compile/scripts/test_task_engine.py` `blocks_part` and
+`test_review_sheets.py`.
+
 ## 6 · Cost pass — `novikontas-token-economics`, run 2026-09-03
 
 ### Always-on

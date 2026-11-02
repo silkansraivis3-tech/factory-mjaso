@@ -754,23 +754,18 @@ def slide_terms(s):
     return terms("%s\n%s\n%s" % (s.get("title", ""), s.get("text", ""), s.get("notes", "")))
 
 
-POINT = re.compile(r"\s*(\d+[.)]?\s|[-*•]\s)")
-
-
-def point_findings(text):
-    """A teaching slide is a short lead line and its points (theory-rules.json slide.lines): every line short,
-    at most lead_lines lines that are not points, and min_points to max_points points."""
-    L = RULES["slide"]["lines"]
+def block_findings(text):
+    """A teaching slide is a short lead line and its blocks, one per line (theory-rules.json slide.blocks): every
+    block short, and min_blocks to max_blocks of them. A bullet or a number in front of a line is allowed, never needed."""
+    B = RULES["slide"]["blocks"]
     lines = [ln for ln in str(text or "").splitlines() if ln.strip()]
     out = []
     for i, ln in enumerate(lines, 1):
-        if wc(ln) > L["max_words"]:
-            out.append(("t_long_line", {"i": i, "w": wc(ln), "max": L["max_words"]}))
-    points = sum(1 for ln in lines if POINT.match(ln))
-    if len(lines) - points > L["lead_lines"]:
-        out.append(("t_prose", {"n": len(lines) - points}))
-    elif not L["min_points"] <= points <= L["max_points"]:
-        out.append(("t_points", {"n": points, "lo": L["min_points"], "hi": L["max_points"]}))
+        if wc(ln) > B["max_words"]:
+            out.append(("t_long_line", {"i": i, "w": wc(ln), "max": B["max_words"]}))
+    blocks = len(lines) - B["lead_lines"]
+    if not B["min_blocks"] <= blocks <= B["max_blocks"]:
+        out.append(("t_blocks", {"n": max(blocks, 0), "lo": B["min_blocks"], "hi": B["max_blocks"]}))
     return out
 
 
@@ -801,9 +796,9 @@ def theory_findings(script):
         elif w_slide < R["slide"]["min_words"]:
             add(s["id"], "text", FAIL, "t_thin_slide", w=w_slide, min=R["slide"]["min_words"])
         elif w_slide > R["slide"]["max_words"]:
-            add(s["id"], "text", FAIL, "t_long_slide", w=w_slide, max=R["slide"]["max_words"])
+            add(s["id"], "text", NOTE, "t_long_slide", w=w_slide, max=R["slide"]["max_words"])
         if not s.get("recap"):
-            for key, kw in point_findings(s.get("text", "")):
+            for key, kw in block_findings(s.get("text", "")):
                 add(s["id"], "text", FAIL, key, **kw)
         if w_notes < R["notes"]["min_words"]:
             add(s["id"], "notes", FAIL, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])

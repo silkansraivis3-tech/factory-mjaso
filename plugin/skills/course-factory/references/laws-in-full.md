@@ -503,6 +503,12 @@ already."*
   point style."* A slide is a short lead line and 3-6 short points (`slide.lines`); a paragraph, prose or a slide over
   the word ceiling is a must-fix. The floor and ceiling came down and the notes may run longer, so the explanation moves
   from the slide to the instructor and the module's words still fill its minutes.
+- **Revised 2.87.0 (owner, 2026-11-02): block by block, not a list of points.** *"Text will be block by block, and
+  pressing next just that box will be attentioned ... dont make text less just because it needs to be less."* A
+  slide is a short lead line and 2-6 blocks (`slide.blocks`), each line one or two short sentences of 25 words at
+  most; no bullet or number is needed, and the deck shows the blocks plain, with no 01, 02 or square marker. A long
+  block is split, never cut; a slide over the ceiling is a note again (split it into two slides). The floor and
+  every answer being on a slide before its question (`t_not_taught`) keep the slide enough to learn from.
 - This refines `course-module-ux`'s compactness budgets: those govern the instructor's *working* screens
   during a session (runner cards, pre-flight), not a theory slide, which must carry the theory.
 - → `scripts/content_script.py` (`theory_findings`), `scripts/make_architecture_page.py` (whether the

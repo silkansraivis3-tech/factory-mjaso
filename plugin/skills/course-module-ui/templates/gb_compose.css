@@ -97,12 +97,11 @@
 .support{display:grid;gap:min(1.4vmin,14px);max-width:46em;margin:0;padding:0}
 /* NOT display:flex. A flex container makes every child its own flex item, so an
    inline <b> mid-sentence lays out as a separate column and the line becomes
-   unreadable. The bullet is positioned; the text flows normally. */
-.support li{list-style:none;position:relative;padding-left:1.45em;
+   unreadable. The text flows normally. */
+.support li{list-style:none;position:relative;padding-left:10px;
   font-size:clamp(12.5px,1.78vmin,25.5px);line-height:1.5;color:var(--dim-l)}
 .slide.dark .support li{color:var(--dim-d)}
-.support li::before{content:"";position:absolute;left:0;top:.62em;width:.55em;height:.55em;
-  border-radius:2px;background:var(--blue)}
+.support li::before{content:none}
 .support li b{color:var(--ink)}
 .slide.dark .support li b{color:var(--white)}
 /* numbered steps: the step's own number is its marker - a navy disc in place of the square, every step
@@ -543,7 +542,7 @@ figure{margin:0}
 /* a bold term in the conclusion takes the conclusion's colour - on a dark slide too, where `.slide.dark .copy b`
    (white) out-ranked it: white on the blue callout was 2.29:1 (M01 benchmark run 4, s02) */
 .copy .call b,.slide.dark .copy .call b{color:inherit}
-/* a line a stepping figure is on (the figure sets .cur / .lit on [data-i]). Amber means "where we are now" and
+/* a line a stepping figure is on, or the block Next has reached on a text slide (the deck sets .cur / .lit on [data-i]). Amber means "where we are now" and
    nothing else: no card at rest is amber, and these rules come AFTER every card look and out-rank it, so the
    selected line always changes - fill, an amber ring and an amber bar. audit_deck.js "mark" fails a deck where
    a selected line looks like itself or like another line at rest. */
@@ -656,12 +655,11 @@ figure{margin:0}
 .slide.photo .photo-copy .lead{font-size:clamp(14px,2.1vmin,27px);line-height:1.45;color:var(--txt-d)}
 .slide.photo.split .photo-copy .lead{margin-top:min(1.4vmin,12px);padding-left:.85em;
   border-left:3px solid var(--amber)}
-/* a "•" line over a photograph: the same square marker as the .support list on a text slide, no left rule
-   (IGF M06 s08, 2026-10-19). Its heading lines (.head) are set further down, after the split size rule */
-.slide.photo .photo-copy .lead.sub{position:relative;border-left:0;padding-left:1.45em;
+/* a "•" line over a photograph: a block of its own, like a .support line on a text slide - no marker, no left
+   rule. Its heading lines (.head) are set further down, after the split size rule */
+.slide.photo .photo-copy .lead.sub{position:relative;border-left:0;padding-left:0;
   margin-top:min(.8vmin,7px)}
-.slide.photo .photo-copy .lead.sub::before{content:"";position:absolute;left:0;top:.5em;width:.55em;height:.55em;
-  border-radius:2px;background:var(--blue)}
+.slide.photo .photo-copy .lead.sub::before{content:none}
 /* an inset photograph on a photograph slide (IGF M04 s02, 2026-10-16): the .copy/.fill rules above do not reach
    .photo-copy, so the inset ran at its natural size and spilled 74 px off the slide. Here it is a compact row under the
    words, small enough that the centred column keeps inside the slide */
