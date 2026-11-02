@@ -103,6 +103,23 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## The logo's gap — 2.84.1 (2026-11-02)
+
+The owner: the logo was padded on the right but close to the top; it should be padded the same both ways. Measured on the
+compiled slides at 1280 x 800, the artwork stood 64 px from the right edge and 14 px from the top. The official file
+carries the brandbook's clear space inside its own box (X = 2/3 of the symbol's height: artwork x 143-757, y 142-606 of
+900 x 747, symbol 214 units tall), and the box let that space run off the top of the slide, so the top was also under X
+(about 26 px there).
+
+`templates/gb_layouts.css` now places the artwork with one gap, `--lt-logo-gap: min(6vmin, 48px)`, from the top and the
+right. Tried on the real slides at 1280 x 800 and 1024 x 768 first: 64 px both ways lines up with the slide margins but
+brings the logo within about 14 px of a figure panel under it; 32 px moves it past the content edge and onto the photo
+slide's full-screen button. The logo's size is unchanged. The photo slide's full-screen button (`gb_zoom.js`) moves from
+the logo's corner to just under the artwork.
+
+`course-factory/compile/scripts/test_compile_module.py` (L62 block) checks that the top and right both use the gap less
+the file's own margin and that the gap is never under X at either classroom size; it fails on 2.84.0.
+
 ## Known gaps
 
 1. **Not eval-tested.** No `evals/` directory, consistent with the rest of the family — and the

@@ -87,12 +87,14 @@
 /* L62 (owner, 2026-10-21: "logo looks bigger and better", then "bigger logo, and on blue slides the logo white without
    background"). The official file carries its own clear space - exactly the brandbook's two thirds of the symbol's
    height on every side (artwork 614 x 464 of the 900 x 747 canvas). So the box is sized for the ARTWORK to stand about
-   10.5 vmin tall (84 px at 1280 x 800), and placed so the artwork's right edge lines up with the slide's content and its
-   top sits near the slide's edge: the clear space runs into the margin, where nothing else is. The file is used as it is. */
-.slide[data-template]{--lt-logo-h:16.9vmin;--lt-logo-w:20.36vmin}
+   10.5 vmin tall (84 px at 1280 x 800), and placed so the artwork stands the same gap from the slide's top and right edges
+   (--lt-logo-gap, 48 px at 1280 x 800; more than the clear space, about 26 px there): the file's clear space runs into
+   the margin, where nothing else is. The artwork starts .159 of the box's width in from its right and .19 of its height
+   down from its top (artwork x 143-757, y 142-606 of 900 x 747). The file is used as it is. */
+.slide[data-template]{--lt-logo-h:16.9vmin;--lt-logo-w:20.36vmin;--lt-logo-gap:min(6vmin,48px)}
 .slide[data-template] .slide-kind::after{
   content:"";position:absolute;left:auto;bottom:auto;transform:none;
-  right:calc(var(--lt-pad-x) - var(--lt-logo-w) * .159);top:calc(min(1.8vmin,14px) - var(--lt-logo-h) * .19);
+  right:calc(var(--lt-logo-gap) - var(--lt-logo-w) * .159);top:calc(var(--lt-logo-gap) - var(--lt-logo-h) * .19);
   width:var(--lt-logo-w);height:var(--lt-logo-h);
   background:url("novikontas_logo.svg") center/100% 100% no-repeat;
 }
@@ -101,6 +103,8 @@
 .slide[data-template].dark .slide-kind::after,.slide[data-template].photo .slide-kind::after{
   background:url("novikontas_logo_white.svg") center/100% 100% no-repeat;border-radius:0;box-shadow:none;
 }
+/* a photo slide's full-screen button (gb_zoom.js) sits just under the logo's artwork (.621 of the box's height), never on it */
+.slide[data-template].photo > .gbz-corner.gbz-photo{top:calc(var(--lt-logo-gap) + var(--lt-logo-h) * .621 + 12px);right:calc(var(--lt-logo-gap) - 8px)}
 /* over a full photograph the corner behind the logo is darkened - the photograph, never the logo (no effects on it) - so
    a bright sky or a white tank never swallows the white logo. 2.62.0: a layer of the photograph's own scrim (below,
    "photo + explanation"); as a box hanging 30 vmin from the 10.5 vmin top line it made that line "scroll" 150 px in the

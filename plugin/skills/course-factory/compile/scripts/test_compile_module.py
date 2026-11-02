@@ -1183,7 +1183,21 @@ def variety_part(tmp):
     print("\n-- L62: the logo is larger, and a light panel stays light on a dark slide")
     css = io.open(os.path.join(SKILLS, "course-module-ui", "templates", "gb_layouts.css"), encoding="utf-8").read()
     check("the logo box is sized for the artwork (10.5 vmin tall) with the file's own clear space running into the margin",
-          "--lt-logo-h:16.9vmin" in css and "right:calc(var(--lt-pad-x) - var(--lt-logo-w) * .159)" in css)
+          "--lt-logo-h:16.9vmin" in css and "right:calc(var(--lt-logo-gap) - var(--lt-logo-w) * .159)" in css)
+    # The artwork starts .159 of the box's width in from its right and .19 of its height down from its top (x 143-757,
+    # y 142-606 of the 900 x 747 file); its clear space X is 2/3 of the symbol's 214-unit height = 143 units.
+    lw = float(re.search(r"--lt-logo-w:([\d.]+)vmin", css).group(1))
+    gm = re.search(r"--lt-logo-gap:min\(([\d.]+)vmin,(\d+)px\)", css)
+    top = re.search(r"\.slide\[data-template\] \.slide-kind::after\{[^}]*top:calc\(var\(--lt-logo-gap\) - var\(--lt-logo-h\) \* \.19\)", css)
+    gaps_ok = bool(gm and top)
+    for vw, vh in ((1280, 800), (1024, 768)):
+        vmin = min(vw, vh) / 100.0
+        gap = min(float(gm.group(1)) * vmin, float(gm.group(2))) if gm else 0
+        gaps_ok = gaps_ok and gap >= 143 / 900.0 * lw * vmin
+    check("the logo artwork stands the same gap from the top as from the right, never inside the brandbook's clear space",
+          gaps_ok, "top and right must both be var(--lt-logo-gap) less the file's own margin (.19 of the height, .159 of the width)")
+    check("... and a photo slide's full-screen button sits under the logo, not on it",
+          ".slide[data-template].photo > .gbz-corner.gbz-photo{top:calc(var(--lt-logo-gap) + var(--lt-logo-h) * .621 + 12px)" in css)
     white = io.open(os.path.join(SKILLS, "..", "resources", "brand", "novikontas_logo_white.svg"), encoding="utf-8").read()
     navy = io.open(os.path.join(SKILLS, "..", "resources", "brand", "novikontas_logo.svg"), encoding="utf-8").read()
     check("the white logo is the official file with its one colour switched - the same shapes, nothing else changed",
