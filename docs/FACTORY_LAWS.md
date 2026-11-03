@@ -356,7 +356,9 @@ everything. → `course-factory` (`scripts/check_module_folder.py`, 2.19.3), `co
 
 **L44 · Three places in the work folder.** `to_review\` - only what the operator checks; `modules\` - the finished
 modules; `working_claude\` - everything only the factory uses, all kept (state, logs, notes, data, checkpoints).
-Nothing loose. → `course-factory` (`scripts/workspace.py`, every tool, `tidy` for older courses, 2.20.0)
+Nothing loose. Beside them since 2.94.0, `additional-materials\` - the paper every build writes for the auditor, the
+office and the instructor (`compile/GUIDE.md` §5b). → `course-factory` (`scripts/workspace.py`, every tool, `tidy` for
+older courses, 2.20.0)
 
 **L45 · The course folder is built to the classroom system's own rules.** `course\modules\` is the folder added to the
 classroom: COURSE.html, `_course_shell\course_map.js`, `module01\` ... with `presentation\index.html` (slides with

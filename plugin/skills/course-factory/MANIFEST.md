@@ -7,6 +7,24 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.94.0 · The additional materials - the paper beside the tablets (2026-11-03)
+
+- **Why.** The owner: the auditor needs the ACP in Word and every practical task as PDF and Word (3D and interactive
+  tasks too); the instructor a friendly plan on the tablet, course and module, and the simulator and equipment papers
+  to print at the start of the day; the office every task in the course folder, without the site.
+- **What.** `compile/scripts/additional_materials.py` (run by `compile_course.py`; `--no-pdf`, `--check`):
+  `course\additional-materials\` (ACP, practical-tasks pdf/docx, simulator-and-equipment by day, INDEX.html),
+  `modules\_course_shell\advanced_course_plan.html`, `moduleNN\instructor\advanced_module_plan.html`. Layout and rules:
+  `compile/GUIDE.md` §5b. `workspace.ADDITIONAL`; the publisher's `internal_globs` gain `additional-materials/`.
+  Tests: `test_additional_materials.py`; a check in `test_compile_course.py` and `test_publisher.py`.
+- **Decisions that will look odd.** The Word files are written by hand (zip and XML, like the content script's), no
+  library; every numbered list is its own `w:num` so it counts from 1. A Word file's record includes the tool's own
+  code, so a change to the writer rewrites every file. The tablet pages carry their style inline and no link: the panel
+  shows them in an overlay, where a link would navigate away. Days follow `course.build.json` `"days"` when the
+  programme's timetable splits a module otherwise than filling each day does (chem advanced: days 3 and 4).
+- **Open.** The documents' own headings in Latvian and Russian; the ACP's responsible person per course
+  (`course.build.json` `"responsible"`).
+
 ## 2.93.0 · The answer looks of the live references (2026-11-03)
 
 - **Why.** The owner: the new answer looks next.
