@@ -43,6 +43,40 @@ L62 (2.53.0): the compiler varies the look of neighbouring slides - the picture'
 two columns under it) or `photo-explain` `split`. The official logo is drawn larger, its own clear space running into
 the margin; a light panel stays white with dark words on a dark slide.
 
+## 0b · The upgraded templates (owner, 2026-11-03, 2.88.0, `gb_upgrade.css` + `gb_steps.js` + `gb_scene.js`)
+
+The same frame as §0 - top line, logo, title, bottom line, type - with a better body. The reference is
+`design/slide-templates/` (28 live slides, open `presentation/index.html`). A picture is live 3D, a static 3D render or a
+photograph - **never a flat line drawing** (owner, 2026-11-03). Next walks a slide's stops with `gb_steps.js`: a stop is
+every `[data-stop]` in order, or the elements sharing `data-k` (`data-k="0 2"` = shown at both); the stop now gets `.cur`,
+the ones before `.lit`; the slide gets `data-at`, `data-last`, and `data-stops` when the marks do not give the count.
+
+| Class | What it is |
+|---|---|
+| `.lt-in` (its place in the order set on it) | a part that rises into place when the slide comes up, in reading order |
+| `.stage.lt-duo` > `.lt-col` > `figure` + `.copy` | large figure in two columns: a visual on top of each, its words in a boxed card under it |
+| `.lt-steps` · `.lt-row` · `.lt-step` · `.lt-ill` · `.lt-b` · `.lt-track` | sequence of actions as step boxes; the line under them fills |
+| `.lt-blocks` · `.lt-show.lt-3d` · `.lt-list` · `.lt-blk` · `.lt-read` (its state `.ok` `.alarm` `.vent`; a tag `.leak`) | three blocks beside one live scene with its reading |
+| `.lt-split` (its columns set on it) · `.lt-points` · `.lt-rail` (`.tight`) · `.lt-ask` | words beside a picture box: short numbered points, or a rail of stops (3D fly-through, predict then play) |
+| `.lt-3dbox` (`data-lt-scene`) · `.lt-tag` (`data-tag`, `data-at`, `.ok` `.hz` `.big` `.r` `.num`) | a live 3D scene box and the name tags that follow its parts |
+| `.lt-link` · `.spot` · `.hs` | reading with figure: a line and its part light together |
+| `.lt-spots` · `.lt-spot` (`data-x`, `data-y` in the photo's pixels) | a photo's parts light up one a stop |
+| `.lt-zoom` · `.lt-ring` (lines carry `data-z`, `data-x`, `data-y`) | a split photo zooms to the part each line names |
+| `.lt-qa` · `.lt-qcol` · `.lt-think` · `.lt-ans` · `.lt-qfig` | opening question: think first, then the answer opens beside it |
+| `.lt-pts` · `.lt-pt` · `.lt-ptabs` | words in parts, each part a tab that names it |
+| `.lt-boxes` | short boxes under a card's picture, lit with the part now |
+| `.lt-task2` · `.lt-tab3d` · `.lt-chips` | task opening: the words left, the tablet in 3D right, time and count as chips |
+| `.lt-path` | module check opening: the module's topics tick off towards the check |
+| `.lt-ask4` · `.lt-q2` · `.lt-tap` · `.lt-shine` | the summary: white cards on the pattern, each a question that opens on Next or a tap |
+| `.lt-work` · `.lt-meter` (`data-meter`, `data-max`) | worked example, then the room's turn, beside a meter that counts |
+| `.lt-tf` · `.lt-claim` · `.lt-vote` · `.lt-why` · `.lt-pic` | true or false, then why |
+| `.lt-opts` · `.lt-opt` (`.ok` / `.no`, `.fb`) | what would you do: a situation and its choices, then why each |
+| `.lt-name` | name the parts on a live scene (`.lt-tag.num`) |
+| `.lt-nbody` · `.lt-nums` | numbers to remember: the number first, then what it means |
+| `.lt-ba` (`data-x`) · `.lt-diff` | spot the difference: a slider between two static 3D pictures |
+| `.lt-drill` · `.lt-timer` (`data-secs`, `data-run`) · `.lt-acts` · `.lt-qf` · `.lt-find` | quick drills before the module check: the clock runs, and at zero the answer shows by itself |
+| inner parts | `.lt-canvas` (the scene's canvas) · `.lt-no3d` · `.lt-cmp` · `.lt-concl` (a table's conclusion) · `.lt-tcopy` · `.lt-sit` · `.lt-do` · `.lt-dcopy` · `.lt-alarm` · `.lt-trow` · `.lt-hint` · `.lt-ask2` · `.lt-qf-dots` · `.lt-qf-list` · `.lt-diff-h` · `.lt-edge` · `.lt-pill` · `.lt-t` · `.kind` - and inside them `.ac` `.an` `.ask` `.bc` `.blank` `.clear` `.dev` `.done` `.drag` `.fc` `.fl` `.ic` `.ln` `.low` `.mc` `.nn` `.open` `.picked` `.pr` `.rd` `.ring` `.scale` `.scr` `.side` `.sm` `.st` `.stamp` `.tf` `.ticks` `.you`; `.kit3d-fig` / `.kit3d-stage` are the 3D kit's own, sized inside `.lt-split`. Set on an element by the compiler or gb_steps.js: the entry order, the split's columns, the slider's place |
+
 ## 1 · Screen compositions — put ONE on `.slide-body` (`gb_compose.css`)
 
 Pick the composition the **content** needs. Never the same one three screens running out of habit.
@@ -224,3 +258,7 @@ colours in the set; adding one is an owner decision (`knowledge/tokens.json` § 
 | `task_complete.js` + `task_complete.css` | the one shared ending for every task (`course-task-ux` §9) |
 | `novikontas_logo.svg` | the logo for the landing screen, and the top right of every light slide |
 | `novikontas_logo_white.svg` | the same official logo, its one colour switched to white: the top right of every dark (blue) or photo slide, no plate (owner, 2026-10-21) |
+| `na_pattern_on_light.svg` · `na_pattern_on_navy.svg` | the brandbook's NA pattern, only where nobody reads: the opening, task, check and summary slides, the start screen (2.88.0) |
+| `gb_upgrade.css` | the upgraded templates' bodies (§0b), after `gb_layouts.css` - loaded by every compiled deck |
+| `gb_steps.js` | Next walks an upgraded slide's stops and drives its scene, photo, meter, slider or clock (§0b) - before `gb_deck.js` in every compiled deck |
+| `gb_scene.js` | a picture box's live 3D scene (three.js r128): one shared canvas, draws only while its slide is up, still for reduced motion; the scenes are the course's own file (`course-visuals/scene/examples/m01_scenes.js` is the reference) |

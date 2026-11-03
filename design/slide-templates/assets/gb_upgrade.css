@@ -1,0 +1,664 @@
+/* gb_upgrade.css - the upgraded slide templates (owner, 2026-11-03, 2.88.0), loaded after gb_layouts.css. The frame - top
+   line, logo, title, bottom line, type sizes - stays the template's; this is what goes inside the slide body and how it
+   moves. gb_steps.js walks the stops ([data-k] / [data-stop]), gb_scene.js draws the live 3D picture boxes. Pictures are
+   live 3D, static 3D renders or photographs, never a flat line drawing. Everything settles for prefers-reduced-motion.
+   The reference deck: design/slide-templates/. */
+
+/* the colours of the upgraded bodies: the brandbook's, and the states built from them */
+:root{
+  --up-14684a:#14684a;
+  --up-2fb980:#2fb980;
+  --up-4fd6a0:#4fd6a0;
+  --up-7fd9b5:#7fd9b5;
+  --up-9ff0cf:#9ff0cf;
+  --up-a0004:rgba(0,0,0,.4);
+  --up-a00045:rgba(0,0,0,.45);
+  --up-a0005:rgba(0,0,0,.5);
+  --up-a0006:rgba(0,0,0,.6);
+  --up-a10369914:rgba(10,36,99,.14);
+  --up-a10369918:rgba(10,36,99,.18);
+  --up-a10369925:rgba(10,36,99,.25);
+  --up-a10369928:rgba(10,36,99,.28);
+  --up-a10369935:rgba(10,36,99,.35);
+  --up-a1036994:rgba(10,36,99,.4);
+  --up-a10369945:rgba(10,36,99,.45);
+  --up-a1036995:rgba(10,36,99,.5);
+  --up-a10369955:rgba(10,36,99,.55);
+  --up-a10369982:rgba(10,36,99,.82);
+  --up-a10369986:rgba(10,36,99,.86);
+  --up-a1171728:rgba(1,17,17,.28);
+  --up-a1171755:rgba(1,17,17,.55);
+  --up-a12721718118:rgba(127,217,181,.18);
+  --up-a180403085:rgba(180,40,30,.85);
+  --up-a180403088:rgba(180,40,30,.88);
+  --up-a18040309:rgba(180,40,30,.9);
+  --up-a201108088:rgba(20,110,80,.88);
+  --up-a20110809:rgba(20,110,80,.9);
+  --up-a2551079425:rgba(255,107,94,.25);
+  --up-a25525525504:rgba(255,255,255,.04);
+  --up-a25525525505:rgba(255,255,255,.05);
+  --up-a25525525506:rgba(255,255,255,.06);
+  --up-a2552552551:rgba(255,255,255,.1);
+  --up-a25525525512:rgba(255,255,255,.12);
+  --up-a25525525514:rgba(255,255,255,.14);
+  --up-a2552552554:rgba(255,255,255,.4);
+  --up-a2552552556:rgba(255,255,255,.6);
+  --up-a25559480:rgba(255,59,48,0);
+  --up-a255594845:rgba(255,59,48,.45);
+  --up-a7921416012:rgba(79,214,160,.12);
+  --up-a7921416014:rgba(79,214,160,.14);
+  --up-a792141605:rgba(79,214,160,.5);
+  --up-a831672190:rgba(83,167,219,0);
+  --up-a8316721916:rgba(83,167,219,.16);
+  --up-a8316721918:rgba(83,167,219,.18);
+  --up-a831672192:rgba(83,167,219,.2);
+  --up-a8316721922:rgba(83,167,219,.22);
+  --up-a8316721925:rgba(83,167,219,.25);
+  --up-a831672193:rgba(83,167,219,.3);
+  --up-a8316721935:rgba(83,167,219,.35);
+  --up-a831672196:rgba(83,167,219,.6);
+  --up-a831672197:rgba(83,167,219,.7);
+  --up-a831672198:rgba(83,167,219,.8);
+  --up-b4281e:#b4281e;
+  --up-c8ffe8:#c8ffe8;
+  --up-d9473b:#d9473b;
+  --up-dce7f3:#dce7f3;
+  --up-e3f8ef:#e3f8ef;
+  --up-e6f2fa:#e6f2fa;
+  --up-f3f6fa:#f3f6fa;
+  --up-ff3b30:#ff3b30;
+  --up-ff6b5e:#ff6b5e;
+  --up-ff8c82:#ff8c82;
+  --up-ffb3ab:#ffb3ab;
+}
+
+/* Proposal: the large figure in two columns. Each column is one visual (photograph, drawing, 3D model, animation or an
+   interactive figure) with its own words under it. Sizes come from the existing stage and type scale. */
+.slide[data-template^="figure-stage."] .slide-body.stage.lt-duo{
+  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr) auto;grid-auto-flow:column;
+  column-gap:min(4vmin,32px);row-gap:0;padding-bottom:min(2.4vmin,19px);box-sizing:border-box;align-items:stretch;flex:1;min-height:0}
+/* each column's picture and words join the slide's grid: both pictures share one bottom edge, whatever the words */
+.slide[data-template^="figure-stage."] .lt-duo > .lt-col{display:contents}
+.slide[data-template^="figure-stage."] .lt-col > figure{margin:0;position:relative;min-height:0;max-height:none;border-radius:min(2.2vmin,18px);overflow:hidden;
+  background:radial-gradient(ellipse at 50% 46%,rgba(83,167,219,.16) 0,transparent 70%),#0A2463;display:flex;align-items:center;justify-content:center}
+.slide[data-template^="figure-stage."] .lt-col > figure > svg{width:100%;height:100%;max-height:none;display:block}
+.slide[data-template^="figure-stage."] .lt-col > figure > img{width:100%;height:100%;max-height:none;object-fit:cover;display:block}
+.slide[data-template^="figure-stage."] .lt-col > figure > .kind{position:absolute;left:min(1.6vmin,13px);bottom:min(1.4vmin,11px);font-size:clamp(11px,1.3vmin,15px);
+  letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--lt-white);background:var(--up-a1171755);padding:.45em .7em;border-radius:6px}
+/* each column is one card: the visual on top, a blue rule, then its words in a box with a soft shadow, centred both ways */
+.slide[data-template^="figure-stage."] .lt-col > figure{border-radius:min(2.2vmin,18px) min(2.2vmin,18px) 0 0;box-shadow:0 12px 24px -8px var(--up-a10369928)}
+.slide[data-template^="figure-stage."] .lt-col > .copy{flex:none;align-self:stretch;width:100%;margin:0;min-height:min(13vmin,104px);box-sizing:border-box;
+  padding:min(2.2vmin,18px) min(2.8vmin,22px);display:flex;flex-direction:column;gap:min(.8vmin,6px);align-items:center;justify-content:center;text-align:center;
+  background:var(--lt-white);border:1.5px solid var(--lt-line);border-top:min(.5vmin,4px) solid var(--lt-blue);border-radius:0 0 min(2.2vmin,18px) min(2.2vmin,18px);
+  box-shadow:0 12px 24px -8px var(--up-a10369928)}
+.slide[data-template^="figure-stage."] .lt-col > .copy .lead{margin:0;font-size:var(--lt-fs-lead);line-height:1.4;font-weight:600;color:var(--lt-navy)}
+.slide.dark[data-template^="figure-stage."] .lt-col > .copy{background:var(--up-a25525525506);border-color:var(--lt-line-d);border-top-color:var(--lt-blue);box-shadow:0 12px 24px -8px var(--up-a0005)}
+.slide.dark[data-template^="figure-stage."] .lt-col > .copy .lead{color:var(--lt-white)}
+
+/* Proposal: a sequence of actions as step boxes. Each step is a box with its illustration on top and the approved line
+   under it; a line under the boxes fills as the steps are reached. Next walks the steps: the step now lifts and its
+   illustration draws itself in, the steps done keep a tick. Sizes from the template's own scale. */
+.slide[data-template^="procedure."] .slide-body.lt-steps{display:flex;flex-direction:column;justify-content:center;flex:1;min-height:0;gap:min(3vmin,24px)}
+.lt-steps .lt-row{display:grid;grid-template-columns:repeat(var(--n,3),1fr);gap:min(3vmin,24px);align-items:stretch}
+.lt-steps .lt-step{position:relative;display:flex;flex-direction:column;gap:min(2vmin,16px);padding:min(3vmin,24px);
+  border-radius:min(2.2vmin,18px);background:var(--up-a25525525505);border:1.5px solid var(--up-a8316721922);color:var(--lt-dim-d);
+  transition:transform .45s cubic-bezier(.2,.7,.2,1),background .4s,border-color .4s,color .4s,opacity .4s;opacity:.55}
+.lt-steps .lt-step .lt-ill{height:min(19vmin,152px);display:flex;align-items:center;justify-content:center;border-radius:min(1.6vmin,13px);
+  background:radial-gradient(ellipse at 50% 55%,rgba(83,167,219,.2) 0,transparent 70%)}
+.lt-steps .lt-step .lt-ill svg{height:100%;width:auto;overflow:visible}
+.lt-steps .lt-ill .ln{fill:none;stroke:#DCE7F3;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:100;stroke-dashoffset:0}
+.lt-steps .lt-ill .ac{fill:none;stroke:var(--lt-blue);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.lt-steps .lt-ill .fl{fill:var(--lt-blue)}
+.lt-steps .lt-ill .hz{fill:#D9473B}
+.lt-steps .lt-step .lt-t{font-size:var(--lt-fs-lead);line-height:1.35;font-weight:600;color:inherit}
+.lt-steps .lt-step .lt-b{position:absolute;top:min(2vmin,16px);left:min(2vmin,16px);width:min(5vmin,40px);height:min(5vmin,40px);border-radius:50%;
+  display:grid;place-items:center;font-weight:800;font-size:clamp(14px,2vmin,20px);background:var(--up-a2552552551);color:var(--lt-white);transition:background .4s,color .4s}
+.lt-steps .lt-step .lt-b .ok{display:none}
+/* the step now */
+.lt-steps .lt-step.cur{opacity:1;transform:translateY(calc(-1 * min(1.2vmin,10px)));background:var(--up-a8316721916);border-color:var(--lt-blue);color:var(--lt-white)}
+.lt-steps .lt-step.cur .lt-b{background:var(--lt-blue);color:var(--lt-navy)}
+.lt-steps .lt-step.cur .lt-ill .ln{animation:lt-draw 1.1s ease-out both}
+.lt-steps .lt-step.cur .lt-ill .ac,.lt-steps .lt-step.cur .lt-ill .fl,.lt-steps .lt-step.cur .lt-ill .hz{animation:lt-pop .5s .7s cubic-bezier(.2,.8,.3,1.3) both;transform-box:fill-box;transform-origin:center}
+/* the steps done */
+.lt-steps .lt-step.lit{opacity:.9;color:var(--up-dce7f3)}
+.lt-steps .lt-step.lit .lt-b{background:var(--up-4fd6a0);color:var(--lt-navy)}
+.lt-steps .lt-step.lit .lt-b .nn{display:none}.lt-steps .lt-step.lit .lt-b .ok{display:block}
+/* the line that fills */
+.lt-steps .lt-track{position:relative;height:min(.8vmin,6px);border-radius:99px;background:var(--up-a25525525512);margin:0 calc(50% / var(--n,3))}
+.lt-steps .lt-track i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--lt-blue);width:var(--fill,0%);transition:width .6s cubic-bezier(.2,.7,.2,1)}
+@keyframes lt-draw{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+@keyframes lt-pop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.lt-steps *{animation:none!important;transition:none!important}}
+
+/* Proposals for more interactive slides, on top of the factory's own templates (gb_layouts.css). The frame - top line,
+   logo, title, bottom line, type sizes - is the template's; only what is inside the slide body moves. Next walks every
+   one of them (proposals.js), and everything stops for prefers-reduced-motion. */
+
+/* ------------------------------------------------ a slide's parts arrive in reading order when the slide comes up */
+.slide.active .lt-in{animation:lt-rise .55s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 90ms + 120ms)}
+@keyframes lt-rise{from{opacity:0;transform:translateY(min(2.4vmin,19px))}to{opacity:1;transform:none}}
+
+/* ------------------------------------------------ three content blocks: one big moving illustration, the blocks beside it */
+.slide[data-template^="three-content-blocks."] .slide-body.lt-blocks{display:grid;grid-template-columns:45fr 55fr;gap:var(--lt-gap);flex:1;min-height:0}
+.lt-blocks .lt-show{position:relative;border-radius:min(2.2vmin,18px);overflow:hidden;min-height:0;
+  background:radial-gradient(ellipse at 50% 50%,rgba(83,167,219,.2) 0,transparent 70%),#0A2463}
+.lt-blocks .lt-list{display:flex;flex-direction:column;justify-content:center;gap:min(1.8vmin,14px)}
+.lt-blocks .lt-blk{display:grid;grid-template-columns:min(7vmin,56px) 1fr;gap:min(2vmin,16px);align-items:center;padding:min(2vmin,16px) min(2.4vmin,19px);
+  border-radius:min(1.8vmin,14px);background:var(--lt-white);border:1.5px solid var(--lt-line);cursor:pointer;
+  transition:transform .45s cubic-bezier(.2,.7,.2,1),border-color .35s,box-shadow .35s,opacity .35s;opacity:.6}
+.lt-blocks .lt-blk .ic{width:min(7vmin,56px);height:min(7vmin,56px);border-radius:50%;background:var(--up-e6f2fa);display:grid;place-items:center;transition:background .35s}
+.lt-blocks .lt-blk .ic svg{width:62%;height:62%}
+.lt-blocks .lt-blk .ic svg *{stroke:var(--lt-navy);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:stroke .35s}
+.lt-blocks .lt-blk b{display:block;color:var(--lt-navy);font-size:var(--lt-fs-lead);line-height:1.25}
+.lt-blocks .lt-blk span{display:block;color:var(--lt-steel);font-size:var(--lt-fs);line-height:1.4}
+.lt-blocks .lt-blk.cur{opacity:1;transform:translateX(calc(-1 * min(1.2vmin,10px)));border-color:var(--lt-blue);box-shadow:0 10px 30px var(--up-a10369914)}
+.lt-blocks .lt-blk.cur .ic{background:var(--lt-navy)}.lt-blocks .lt-blk.cur .ic svg *{stroke:#fff}
+.lt-blocks .lt-blk.lit{opacity:.9}
+@keyframes lt-wave{0%{transform:scale(.5);opacity:.9}100%{transform:scale(1.6);opacity:0}}
+
+/* a live scene in the picture box (lt_stage.js): the canvas fills it, a reading and name tags sit on top in the slide's type */
+.lt-3d > .lt-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.lt-3d .lt-tag{position:absolute;left:0;top:0;z-index:2;pointer-events:none;white-space:nowrap;font-size:clamp(11px,1.5vmin,16px);font-weight:700;letter-spacing:.02em;
+  color:var(--lt-white);background:var(--up-a10369982);border:1px solid var(--up-a831672197);padding:.35em .7em;border-radius:99px;margin:-2.6em 0 0 -1.2em;
+  opacity:0;transition:opacity .45s;backdrop-filter:blur(4px)}
+.lt-3d .lt-tag.on{opacity:1}
+.lt-3d .lt-tag.leak{background:var(--up-a180403085);border-color:var(--up-ff8c82)}
+.lt-3d .lt-read{position:absolute;left:min(2vmin,16px);top:min(2vmin,16px);z-index:3;min-width:min(26vmin,210px);padding:min(1.4vmin,11px) min(1.8vmin,14px);
+  border-radius:min(1.4vmin,11px);background:var(--up-a1171755);border:1px solid var(--up-a8316721935);backdrop-filter:blur(6px);color:var(--lt-white);transition:border-color .3s,box-shadow .3s}
+.lt-3d .lt-read .k{display:block;font-size:clamp(10px,1.2vmin,13px);letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--lt-dim-d)}
+.lt-3d .lt-read b{display:block;font-size:clamp(20px,3.6vmin,40px);line-height:1.15;font-weight:800;font-variant-numeric:tabular-nums}
+.lt-3d .lt-read b i{font-style:normal}
+.lt-3d .lt-read .bar{position:relative;display:block;height:min(.8vmin,6px);border-radius:99px;background:var(--up-a25525525514);margin:.5em 0 .6em}
+.lt-3d .lt-read .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#53A7DB,#FF6B5E);width:0}
+.lt-3d .lt-read .bar em{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--up-a2552552556)}
+.lt-3d .lt-read .st{display:inline-block;font-size:clamp(11px,1.4vmin,15px);font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:.25em .65em;border-radius:99px}
+.lt-3d .lt-read .st.ok{background:var(--up-4fd6a0);color:var(--lt-navy)}.lt-3d .lt-read .st.alarm{background:var(--up-ff3b30);color:var(--lt-white)}.lt-3d .lt-read .st.vent{background:var(--lt-blue);color:var(--lt-navy)}
+.lt-3d .lt-read.hot{border-color:var(--up-ff3b30);box-shadow:0 0 0 1px var(--up-ff3b30),0 0 28px var(--up-a255594845)}
+.lt-3d.lt-no3d{display:grid;place-items:center}
+
+/* ------------------------------------------------ long explanation: the points, each one flies the 3D camera */
+.slide .lt-points{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:min(1.6vmin,13px)}
+.slide .lt-points li{position:relative;padding:min(1.4vmin,11px) min(2vmin,16px) min(1.4vmin,11px) min(5.4vmin,43px);border-radius:min(1.4vmin,11px);
+  font-size:var(--lt-fs);line-height:1.4;color:var(--lt-steel);cursor:pointer;transition:background .35s,color .35s,box-shadow .35s}
+.slide .lt-points li::before{content:attr(data-i);position:absolute;left:min(1.4vmin,11px);top:50%;transform:translateY(-50%);width:min(3.2vmin,26px);height:min(3.2vmin,26px);
+  border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:clamp(11px,1.4vmin,15px);background:var(--lt-grey);color:var(--lt-navy);transition:background .35s,color .35s}
+.slide .lt-points li b{color:var(--lt-navy);font-weight:700}
+.slide .lt-points li.cur{background:var(--up-e6f2fa);box-shadow:inset min(.5vmin,4px) 0 var(--lt-blue);color:var(--lt-black)}
+.slide .lt-points li.cur::before{background:var(--lt-navy);color:var(--lt-white)}
+.slide .lt-points li.lit::before{background:var(--lt-blue);color:var(--lt-navy)}
+.slide.dark .lt-points li{color:var(--lt-dim-d)}.slide.dark .lt-points li b{color:var(--lt-white)}
+.slide.dark .lt-points li::before{background:var(--up-a25525525512);color:var(--lt-white)}
+.slide.dark .lt-points li.cur{background:var(--up-a8316721918);color:var(--lt-white)}
+.slide.dark .lt-points li.cur::before{background:var(--lt-blue);color:var(--lt-navy)}
+.slide .lt-split{display:grid;grid-template-columns:var(--cols,44fr 56fr);gap:var(--lt-gap);flex:1;min-height:0}
+.slide .lt-split > .copy{display:flex;flex-direction:column;justify-content:center;min-width:0}
+.slide .lt-split > .fill{min-height:0;min-width:0}
+.slide .lt-split .kit3d-fig{height:100%}
+.slide .lt-split .kit3d-stage{height:100%;min-height:0}
+
+/* ------------------------------------------------ reading with figure: the line and its part light together */
+.slide .lt-link{position:relative;border-radius:min(2.2vmin,18px);overflow:hidden;min-height:0;
+  background:radial-gradient(ellipse at 50% 46%,rgba(83,167,219,.16) 0,transparent 70%),#0A2463;display:flex;align-items:center;justify-content:center}
+.slide .lt-link > svg{width:100%;height:100%;display:block}
+.lt-link .spot{transition:transform .6s cubic-bezier(.3,.7,.2,1),opacity .4s;opacity:0}
+.lt-link .spot.on{opacity:1}
+.lt-link .spot circle{fill:rgba(83,167,219,.16);stroke:#53A7DB;stroke-width:3}
+.lt-link .spot .ring{fill:none;stroke:#53A7DB;stroke-width:2;transform-box:fill-box;transform-origin:center;animation:lt-wave 1.8s ease-out infinite}
+.lt-link .hs{cursor:pointer}
+.lt-link .hs circle{fill:#53A7DB;stroke:#fff;stroke-width:3}
+.lt-link .hs text{fill:#0A2463;font:800 14px Raleway,Arial,sans-serif;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+
+/* ------------------------------------------------ 3D explore and predict-then-play: a rail of lines beside the model */
+.slide .lt-rail{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:min(1.2vmin,10px);justify-content:center}
+.slide .lt-rail li{display:grid;grid-template-columns:min(3.6vmin,29px) 1fr;gap:min(1.4vmin,11px);align-items:start;padding:min(1.4vmin,11px) min(1.8vmin,14px);
+  border-radius:min(1.4vmin,11px);border:1.5px solid var(--up-a8316721922);cursor:pointer;transition:background .35s,border-color .35s,transform .35s}
+.slide .lt-rail li .n{width:min(3.6vmin,29px);height:min(3.6vmin,29px);border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:clamp(11px,1.4vmin,15px);
+  background:var(--up-a25525525512);color:var(--lt-white)}
+.slide .lt-rail li b{display:block;font-size:var(--lt-fs);line-height:1.3;color:var(--lt-white)}
+.slide .lt-rail li span{display:block;font-size:clamp(13px,1.9vmin,22px);line-height:1.35;color:var(--lt-dim-d)}
+.slide .lt-rail li.cur{background:var(--up-a8316721918);border-color:var(--lt-blue);transform:translateX(min(1vmin,8px))}
+.slide .lt-rail li.cur .n{background:var(--lt-blue);color:var(--lt-navy)}
+.slide .lt-rail li.lit .n{background:var(--up-4fd6a0);color:var(--lt-navy)}
+.slide:not(.dark) .lt-rail li{border-color:var(--lt-line);background:var(--lt-white)}
+.slide:not(.dark) .lt-rail li b{color:var(--lt-navy)}.slide:not(.dark) .lt-rail li span{color:var(--lt-steel)}
+.slide:not(.dark) .lt-rail li .n{background:var(--lt-grey);color:var(--lt-navy)}
+.slide:not(.dark) .lt-rail li.cur{background:var(--up-e6f2fa)}
+.slide:not(.dark) .lt-rail li.cur .n{background:var(--lt-navy);color:var(--lt-white)}
+/* predict, then play: the answer stays hidden until its step plays; a long list keeps to one line a fuel */
+.slide .lt-rail.tight{gap:min(.9vmin,7px)}
+.slide .lt-rail.tight li{padding:min(.9vmin,7px) min(1.4vmin,11px);align-items:center}
+.slide .lt-rail.tight li b{display:inline}
+.slide .lt-rail.tight li .q{display:inline;margin-left:.6em;font-size:clamp(12px,1.7vmin,20px)}
+.slide .lt-rail li .ans{display:block;padding:0;border:0;background:none;font-size:clamp(12px,1.7vmin,20px)}
+.slide .lt-rail li .ans{max-height:0;opacity:0;overflow:hidden;transition:max-height .5s,opacity .4s}
+.slide .lt-rail li.cur .ans,.slide .lt-rail li.lit .ans{max-height:6em;opacity:1}
+.slide .lt-rail li .q{color:var(--lt-blue);font-weight:700}
+.slide .lt-rail li.cur .q,.slide .lt-rail li.lit .q{display:none}
+.slide .lt-ask{font-size:var(--lt-fs-lead);font-weight:700;color:var(--lt-navy);margin:0 0 min(1.2vmin,10px)}
+.slide.dark .lt-ask{color:var(--lt-white)}
+
+@media (prefers-reduced-motion:reduce){
+  .slide .lt-in,.lt-show *,.lt-link *,.lt-blocks *,.lt-points *,.lt-rail *{animation:none!important;transition:none!important}
+}
+
+/* The rest of the templates, upgraded. The frame stays the template's; the picture box can hold a live 3D scene
+   (lt_stage.js), and Next walks each slide's stops (proposals.js). Everything settles for prefers-reduced-motion. */
+
+/* the upgraded bodies are laid out to fit; while their parts slide in on entry they must not show a scrollbar */
+.slide .slide-body.lt-split,.slide .slide-body.lt-blocks,.slide .slide-body.lt-compare,.slide .slide-body.lt-task2,.slide .slide-body.lt-qf,
+.slide .slide-body.lt-nbody,.slide .slide-body.lt-steps,.slide .slide-body.stage.lt-duo,.slide .slide-body.lt-qa{overflow:hidden}
+
+/* ------------------------------------------------ a picture box that holds a live scene */
+.slide .lt-3dbox{position:relative;overflow:hidden;min-height:0;min-width:0;border-radius:min(2.2vmin,18px);
+  background:radial-gradient(ellipse at 50% 42%,rgba(83,167,219,.22) 0,transparent 70%),#0A2463;box-shadow:0 14px 34px -10px var(--up-a10369945)}
+.slide .lt-3dbox > .lt-canvas,.lt-3d > .lt-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.slide .lt-3dbox .lt-tag,.lt-3d .lt-tag{position:absolute;left:0;top:0;z-index:2;pointer-events:none;white-space:nowrap;font-size:clamp(11px,1.5vmin,16px);font-weight:700;
+  letter-spacing:.02em;color:var(--lt-white);background:var(--up-a10369982);border:1px solid var(--up-a831672197);padding:.35em .75em;border-radius:99px;margin:-2.6em 0 0 -1.2em;
+  opacity:0;transition:opacity .45s;backdrop-filter:blur(4px)}
+.slide .lt-3dbox .lt-tag.on{opacity:1}
+.slide .lt-3dbox .lt-tag.ok{background:var(--up-a201108088);border-color:var(--up-4fd6a0)}
+.slide .lt-3dbox .lt-tag.hz{background:var(--up-a180403088);border-color:var(--up-ff8c82)}
+.slide .lt-3dbox .lt-tag.big{font-size:clamp(13px,2vmin,22px)}
+.slide .lt-3dbox .lt-tag.r{margin-left:1.2em;translate:-100% 0}
+.slide .lt-3dbox.clear{background:none;box-shadow:none;overflow:visible}
+
+/* ------------------------------------------------ photo: the photograph breathes, its parts light up one a stop */
+.slide.active[data-template^="photo-explain."] .photo-wrap > img{animation:lt-kb 26s ease-out both}
+@keyframes lt-kb{from{transform:scale(1.001)}to{transform:scale(1.07)}}
+.photo-wrap .lt-spots{position:absolute;inset:0;pointer-events:none}
+.lt-spot{position:absolute;width:0;height:0;pointer-events:auto;cursor:pointer}
+.lt-spot i{position:absolute;left:-1.1vmin;top:-1.1vmin;width:2.2vmin;height:2.2vmin;min-width:16px;min-height:16px;border-radius:50%;background:var(--lt-blue);
+  box-shadow:0 0 0 3px var(--lt-white),0 6px 18px var(--up-a0004);transform:scale(0);transition:transform .45s cubic-bezier(.2,.8,.3,1.4)}
+.lt-spot i::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--lt-blue);animation:lt-ping 1.8s ease-out infinite}
+.lt-spot b{position:absolute;left:2.4vmin;top:-1.9vmin;white-space:nowrap;font-size:clamp(13px,2.1vmin,24px);font-weight:700;color:var(--lt-white);background:var(--up-a10369986);
+  border:1px solid var(--up-a831672198);padding:.3em .8em;border-radius:99px;opacity:0;transform:translateX(-8px);transition:opacity .4s .15s,transform .4s .15s;backdrop-filter:blur(4px)}
+.lt-spot.cur i,.lt-spot.lit i{transform:scale(1)}
+.lt-spot.cur b{opacity:1;transform:none}
+.lt-spot.lit i{background:var(--lt-dim-d)}.lt-spot.lit i::after{display:none}
+@keyframes lt-ping{from{transform:scale(.6);opacity:1}to{transform:scale(2.2);opacity:0}}
+
+/* ------------------------------------------------ split photo: the photograph zooms to the part the line names */
+.slide[data-template^="photo-explain."].lt-zoom .photo-wrap > img{transform-origin:0 0;transition:transform 1.3s cubic-bezier(.3,.7,.2,1);animation:none!important}
+.lt-zoom .lt-ring{position:absolute;width:13vmin;height:13vmin;margin:-6.5vmin 0 0 -6.5vmin;border-radius:50%;border:3px solid var(--lt-blue);
+  box-shadow:0 0 0 2000px var(--up-a1171728),0 0 30px var(--up-a831672196);opacity:0;transition:opacity .5s .7s,left 1.3s,top 1.3s;pointer-events:none}
+.lt-zoom .lt-ring.on{opacity:1}
+.lt-zoom .photo-copy .lead.sub{cursor:pointer;transition:color .3s,transform .3s}
+.lt-zoom .photo-copy .lead.cur{color:var(--lt-white);transform:translateX(min(1vmin,8px))}
+.lt-zoom .photo-copy .lead.sub.cur::before{background:var(--lt-blue);box-shadow:0 0 0 4px var(--up-a831672193)}
+
+/* ------------------------------------------------ the opening question: think first, then the answer opens beside it */
+.slide[data-template^="opening."] .slide-body.opener.lt-qa{display:grid;grid-template-columns:1fr 0fr;gap:0;align-items:stretch;justify-content:stretch;
+  transition:grid-template-columns 1s cubic-bezier(.3,.7,.2,1),gap 1s;flex:1;min-height:0}
+.slide[data-template^="opening."] .slide-body.opener.lt-qa.open{grid-template-columns:40fr 60fr;gap:var(--lt-gap)}
+/* the picture opens below the logo's corner */
+.lt-qa .lt-qfig{margin:calc(var(--lt-logo-gap) + var(--lt-logo-h) * .621 + min(2vmin,16px) - var(--lt-top)) 0 0}
+.lt-qa .lt-qcol{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-width:0;transition:align-items .6s}
+.lt-qa .lt-qcol h2{transition:font-size .9s cubic-bezier(.3,.7,.2,1)}
+.lt-qa.open .lt-qcol{align-items:flex-start;text-align:left}
+.lt-qa.open .lt-qcol h2{font-size:clamp(24px,5vmin,52px)}
+.lt-qa .lt-qfig{opacity:0;transform:scale(.96);transition:opacity .7s .35s,transform .9s .3s}
+.lt-qa.open .lt-qfig{opacity:1;transform:none}
+.lt-think{display:flex;align-items:center;gap:min(1.4vmin,11px);margin-top:min(3vmin,24px);color:var(--lt-steel);font-weight:700;font-size:clamp(13px,1.9vmin,21px);
+  letter-spacing:.08em;text-transform:uppercase;transition:opacity .4s}
+.lt-think svg{width:min(6vmin,48px);height:min(6vmin,48px);transform:rotate(-90deg)}
+.lt-think .tr{fill:none;stroke:var(--lt-grey);stroke-width:4}
+.lt-think .tf{fill:none;stroke:#53A7DB;stroke-width:4;stroke-linecap:round;stroke-dasharray:113;stroke-dashoffset:0}
+.slide.active .lt-think .tf{animation:lt-count 20s linear both}
+@keyframes lt-count{to{stroke-dashoffset:113}}
+.lt-qa.open .lt-think{display:none}
+.lt-ans{list-style:none;margin:min(3vmin,24px) 0 0;padding:0;display:none;flex-direction:column;gap:min(1.6vmin,13px)}
+.lt-qa.open .lt-ans{display:flex}
+.lt-ans li{position:relative;padding:min(1.6vmin,13px) min(2vmin,16px) min(1.6vmin,13px) min(2.6vmin,21px);border-radius:min(1.4vmin,11px);background:var(--lt-white);
+  border:1.5px solid var(--lt-line);border-left:min(.6vmin,5px) solid var(--lt-blue);font-size:var(--lt-fs);line-height:1.4;color:var(--lt-steel);
+  box-shadow:0 10px 24px -12px var(--up-a10369935);animation:lt-rise .6s cubic-bezier(.2,.7,.2,1) both}
+.lt-ans li:nth-child(2){animation-delay:.25s}
+.lt-ans li b{color:var(--lt-navy)}
+
+/* ------------------------------------------------ the parts slide: tabs that name their part */
+.lt-ptabs{display:flex;gap:min(1.2vmin,10px);margin-top:min(1vmin,8px)}
+.lt-ptabs button{display:flex;align-items:center;gap:.6em;border:1.5px solid var(--lt-line);background:var(--lt-white);color:var(--lt-steel);border-radius:99px;
+  padding:.45em 1em .45em .45em;font:700 clamp(12px,1.7vmin,18px)/1 inherit;cursor:pointer;transition:border-color .3s,background .3s,color .3s}
+.lt-ptabs button i{font-style:normal;width:1.9em;height:1.9em;border-radius:50%;display:grid;place-items:center;background:var(--lt-grey);color:var(--lt-navy)}
+.lt-ptabs button.on{border-color:var(--lt-blue);background:var(--up-e6f2fa);color:var(--lt-navy)}
+.lt-ptabs button.on i{background:var(--lt-navy);color:var(--lt-white)}
+/* its own parts, so the deck's part stepping leaves them to Next's stops */
+.lt-pts{display:flex;flex-direction:column;gap:min(2.4vmin,20px)}
+.lt-pt{display:none;flex-direction:column}
+.lt-pt.on{display:flex}
+.slide .lt-pt.on .lt-points{animation:lt-rise .5s cubic-bezier(.2,.7,.2,1) both}
+
+/* ------------------------------------------------ table: the row now lights, the conclusion arrives last */
+.slide[data-template^="reference-table."] .lt-table tr{cursor:pointer;transition:background .35s,opacity .35s}
+.slide[data-template^="reference-table."] .lt-table tr td{transition:background .35s,color .35s}
+.slide[data-template^="reference-table."] .lt-table tr.cur td{background:var(--up-a831672192)}
+.slide[data-template^="reference-table."] .lt-table tr.cur td:first-child{box-shadow:inset min(.6vmin,5px) 0 var(--lt-blue)}
+.slide[data-template^="reference-table."] .lt-concl{opacity:.35;transition:opacity .5s,transform .5s;transform:translateY(6px)}
+.slide[data-template^="reference-table."] .lt-concl.cur{opacity:1;transform:none}
+.slide.dark[data-template^="reference-table."] .lt-table td{color:var(--lt-dim-d);border-color:var(--lt-line-d)}
+.slide.dark[data-template^="reference-table."] .lt-table td:first-child{color:var(--lt-white)}
+.slide.dark[data-template^="reference-table."] .lt-table tr.cur td{color:var(--lt-white)}
+.slide.dark[data-template^="reference-table."] .lt-concl{color:var(--lt-white)}
+
+/* ------------------------------------------------ drawing and 3D model, side by side */
+.slide[data-template^="compare-two."] .lt-card-visual.lt-3dbox{border-radius:0}
+.slide[data-template^="compare-two."] .lt-card-visual{position:relative}
+/* the card's words fill it: a line, then three boxes that light with the part now */
+.slide[data-template^="compare-two."] .lt-cmp .lt-card-visual{flex:0 0 42%}
+.slide[data-template^="compare-two."] .lt-cmp .lt-card-copy{flex:1;min-height:0;padding:min(2.2vmin,18px) min(2.6vmin,21px);gap:min(.8vmin,6px)}
+.slide[data-template^="compare-two."] .lt-cmp .lt-card-copy > .lead:first-child{font-size:clamp(17px,2.9vmin,32px)}
+.lt-boxes{list-style:none;margin:min(.8vmin,6px) 0 0;padding:0;display:flex;flex-direction:column;gap:min(1vmin,8px);flex:1;justify-content:flex-end}
+.lt-boxes li{display:grid;grid-template-columns:min(4.2vmin,34px) 1fr;gap:min(1.4vmin,11px);align-items:center;padding:min(1vmin,8px) min(1.4vmin,11px);border-radius:min(1.2vmin,10px);
+  background:var(--up-f3f6fa);border:1.5px solid var(--lt-line);box-shadow:0 8px 18px -14px var(--up-a1036995);cursor:pointer;transition:all .35s}
+.lt-boxes li i{font-style:normal;width:min(4.2vmin,34px);height:min(4.2vmin,34px);border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:clamp(11px,1.5vmin,16px);
+  background:var(--lt-grey);color:var(--lt-navy);transition:all .35s}
+.lt-boxes li b{display:block;color:var(--lt-navy);font-size:clamp(13px,2vmin,22px);line-height:1.2}
+.lt-boxes li span{display:block;color:var(--lt-steel);font-size:clamp(12px,1.75vmin,19px);line-height:1.3}
+.lt-boxes li.cur{background:var(--up-e6f2fa);border-color:var(--lt-blue);transform:translateX(min(.8vmin,6px))}
+.lt-boxes li.cur i{background:var(--lt-navy);color:var(--lt-white)}
+.lt-boxes li.lit i{background:var(--lt-blue);color:var(--lt-navy)}
+.lt-cmp .spot{transition:transform .6s cubic-bezier(.3,.7,.2,1),opacity .4s;opacity:0}
+.lt-cmp .spot.on{opacity:1}
+.lt-cmp .spot circle{fill:rgba(83,167,219,.16);stroke:#53A7DB;stroke-width:3}
+.lt-cmp .spot .ring{fill:none;stroke:#53A7DB;stroke-width:2;transform-box:fill-box;transform-origin:center;animation:lt-ping 1.8s ease-out infinite}
+
+/* ------------------------------------------------ task: the tablet, in 3D, the room is about to pick up */
+/* the words on the left; the tablet, large, takes the right half */
+.slide[data-template^="task-launch."] .slide-body.lt-task2{display:grid;grid-template-columns:44fr 56fr;gap:var(--lt-gap);align-items:center;flex:1;min-height:0}
+.lt-task2 .lt-tcopy{display:flex;flex-direction:column;gap:min(1.6vmin,13px);min-width:0}
+.slide[data-template^="task-launch."] .lt-task2 .act-code{text-align:left;justify-self:start;align-self:start;margin:0;font-size:clamp(48px,13vmin,130px);line-height:.85;font-weight:900;letter-spacing:-.04em;color:var(--lt-navy)}
+.slide[data-template^="task-launch."] .lt-task2 .act-title{color:var(--lt-navy);font-size:clamp(22px,4.6vmin,48px)}
+.lt-task2 .act-inst{margin:0;font-size:var(--lt-fs);color:var(--lt-steel);line-height:1.4}
+.slide .lt-task2 .lt-tab3d{height:100%;min-height:0;min-width:0;align-self:stretch}
+.slide[data-template^="task-launch."] .slide-body.lt-task2{overflow:hidden}
+.lt-chips{display:flex;flex-wrap:wrap;gap:min(1vmin,8px);margin-top:min(2vmin,16px)}
+.lt-chips span{display:inline-flex;align-items:center;gap:.5em;padding:.4em .9em;border-radius:99px;background:var(--lt-white);border:1.5px solid var(--lt-line);
+  color:var(--lt-navy);font-weight:700;font-size:clamp(12px,1.7vmin,18px);box-shadow:0 8px 20px -12px var(--up-a1036994)}
+.lt-chips span b{color:var(--lt-blue)}
+.slide.active .lt-chips span{animation:lt-rise .5s cubic-bezier(.2,.7,.2,1) both}
+.slide.active .lt-chips span:nth-child(2){animation-delay:.12s}.slide.active .lt-chips span:nth-child(3){animation-delay:.24s}
+
+/* ------------------------------------------------ module check: the module's path, ticked off, ending at the check */
+.lt-path{display:flex;align-items:center;gap:0;margin-top:min(3vmin,24px);flex-wrap:nowrap}
+.lt-path .st{display:flex;flex-direction:column;align-items:center;gap:.5em;min-width:0;flex:1}
+.lt-path .st i{width:min(4.6vmin,37px);height:min(4.6vmin,37px);border-radius:50%;display:grid;place-items:center;background:var(--lt-grey);color:var(--lt-navy);
+  font-style:normal;font-weight:800;font-size:clamp(12px,1.7vmin,18px);transform:scale(.6);opacity:0}
+.lt-path .st span{font-size:clamp(11px,1.5vmin,16px);font-weight:700;color:var(--lt-steel);text-align:center;opacity:0}
+.lt-path .bar{flex:1;height:min(.6vmin,5px);border-radius:99px;background:var(--lt-grey);position:relative;overflow:hidden;margin:0 0 min(3.4vmin,27px)}
+.lt-path .bar::after{content:"";position:absolute;inset:0;background:var(--lt-blue);transform:scaleX(0);transform-origin:0 50%}
+.lt-path .st.mc i{width:min(6.4vmin,51px);height:min(6.4vmin,51px);background:var(--lt-navy);color:var(--lt-white);box-shadow:0 0 0 0 var(--up-a831672196)}
+.lt-path .st.mc span{color:var(--lt-navy)}
+.slide.active .lt-path .st i{animation:lt-pop2 .45s cubic-bezier(.2,.8,.3,1.4) both,lt-done .3s both;animation-delay:calc(var(--d) * .45s + .3s),calc(var(--d) * .45s + .55s)}
+.slide.active .lt-path .st span{animation:lt-rise .4s both;animation-delay:calc(var(--d) * .45s + .35s)}
+.slide.active .lt-path .bar::after{animation:lt-fill .4s ease-out both;animation-delay:calc(var(--d) * .45s + .55s)}
+.slide.active .lt-path .st.mc i{animation:lt-pop2 .5s cubic-bezier(.2,.8,.3,1.4) both,lt-glow 1.8s ease-out infinite;animation-delay:calc(var(--d) * .45s + .3s),calc(var(--d) * .45s + .9s)}
+@keyframes lt-pop2{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+@keyframes lt-done{to{background:var(--up-4fd6a0)}}
+@keyframes lt-fill{to{transform:none}}
+@keyframes lt-glow{0%{box-shadow:0 0 0 0 var(--up-a831672196)}100%{box-shadow:0 0 0 min(3vmin,24px) var(--up-a831672190)}}
+
+/* ------------------------------------------------ summary: the same white cards, each a question first; Next or a tap opens it */
+.slide.lt-ask4 .rc-item{position:relative;overflow:hidden;cursor:pointer;transition:box-shadow .5s,transform .5s cubic-bezier(.2,.7,.2,1)}
+/* the question, until the card opens; then it stays above the answer, small */
+.lt-ask4 .lt-q2{display:block;color:var(--lt-navy);font-weight:700;font-size:clamp(16px,2.7vmin,30px);line-height:1.25;
+  transition:font-size .6s cubic-bezier(.3,.7,.2,1),color .5s,opacity .5s}
+/* a tap icon in the corner says the card opens; it leaves when the card does */
+.lt-ask4 .lt-tap{position:absolute;right:min(2vmin,16px);bottom:min(1.6vmin,13px);display:flex;align-items:center;gap:.5em;font-weight:700;font-size:clamp(11px,1.5vmin,16px);
+  color:var(--lt-steel);letter-spacing:.02em;transition:opacity .35s}
+.lt-ask4 .lt-tap i{position:relative;width:min(4.6vmin,37px);height:min(4.6vmin,37px);border-radius:50%;display:grid;place-items:center;background:var(--up-e6f2fa);color:var(--lt-navy)}
+.lt-ask4 .lt-tap i svg{width:62%;height:62%;animation:lt-tapme 1.8s ease-in-out infinite}
+.lt-ask4 .lt-tap i::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--lt-blue);animation:lt-ping 1.8s ease-out infinite}
+@keyframes lt-tapme{0%,100%{transform:translate(0,0)}40%{transform:translate(-6%,-10%)}55%{transform:translate(0,0) scale(.92)}}
+.lt-ask4 .rc-item.cur .lt-tap,.lt-ask4 .rc-item.lit .lt-tap{opacity:0}
+.lt-ask4 .rc-item.cur .lt-q2,.lt-ask4 .rc-item.lit .lt-q2{font-size:clamp(11px,1.55vmin,17px);color:var(--lt-steel);opacity:.85}
+/* the answer: hidden below its line, it rises into place, the words a moment after the name */
+.slide.lt-ask4 .rc-t,.slide.lt-ask4 .rc-d{clip-path:inset(0 0 100% 0);transform:translateY(.6em);opacity:0;filter:blur(4px);
+  transition:clip-path .7s cubic-bezier(.3,.7,.2,1) .25s,transform .7s cubic-bezier(.3,.7,.2,1) .25s,opacity .5s .25s,filter .7s .25s}
+.slide.lt-ask4 .rc-d{transition-delay:.45s}
+.slide.lt-ask4 .rc-item.cur .rc-t,.slide.lt-ask4 .rc-item.cur .rc-d,.slide.lt-ask4 .rc-item.lit .rc-t,.slide.lt-ask4 .rc-item.lit .rc-d{clip-path:inset(0 0 -20% 0);transform:none;opacity:1;filter:none}
+/* the blue rule draws across the top when the card opens, and a light passes over it */
+.slide.lt-ask4.active .rc-item::after{animation:none;transform:scaleX(0);transform-origin:0 50%;transition:transform .8s cubic-bezier(.3,.7,.2,1)}
+.slide.lt-ask4 .rc-item.cur::after,.slide.lt-ask4 .rc-item.lit::after{transform:none}
+.lt-ask4 .lt-shine{position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 30%,rgba(83,167,219,.22) 48%,rgba(255,255,255,.7) 52%,transparent 70%);
+  transform:translateX(-120%)}
+.lt-ask4 .rc-item.cur .lt-shine{animation:lt-sweep 1.1s cubic-bezier(.3,.6,.2,1) .1s both}
+@keyframes lt-sweep{to{transform:translateX(120%)}}
+/* the number turns blue with a small pop; the card now lifts */
+.slide.lt-ask4 .rc-item::before{transition:background .4s,color .4s,border-color .4s}
+.slide.lt-ask4 .rc-item.cur::before,.slide.lt-ask4 .rc-item.lit::before{background:var(--lt-blue);color:var(--lt-white);border-color:var(--lt-blue)}
+.slide.lt-ask4 .rc-item.cur::before{animation:lt-pop2 .45s cubic-bezier(.2,.8,.3,1.5) both}
+.slide.lt-ask4 .rc-item.cur{transform:translateY(calc(-1 * min(.8vmin,6px)));box-shadow:0 0 0 2px var(--lt-blue),0 22px 40px -18px var(--up-a10369955)}
+/* once all four are open, the way on to the module check */
+.slide.lt-ask4 .rc-next{transition:transform .4s,box-shadow .4s}
+.slide.lt-ask4 .rc-next.cur{transform:scale(1.06);box-shadow:0 0 0 2px var(--lt-blue),0 10px 24px -12px var(--up-a1036995)}
+
+@media (prefers-reduced-motion:reduce){
+  .slide.lt-ask4 .rc-item::after,.slide.lt-ask4 .rc-t,.slide.lt-ask4 .rc-d,.lt-ask4 .lt-q2{transition:none!important}
+  .lt-tag,.lt-spot *,.lt-zoom *,.lt-qa,.lt-qa *,.lt-ptabs *,.lt-cmp *,.lt-chips *,.lt-path *,.rc-item *,.lt-ans *{animation:none!important;transition:none!important}
+  .lt-path .st i,.lt-path .st span{opacity:1;transform:none}.lt-path .bar::after{transform:none}.lt-path .st:not(.mc) i{background:var(--up-4fd6a0)}
+}
+
+/* Six new layouts, each a different way of learning, in the deck's frame (title, logo, top and bottom lines). Next walks
+   each one's stops (proposals.js); everything settles for prefers-reduced-motion. */
+.slide .lt-pic{position:relative;margin:0;min-height:0;min-width:0;border-radius:min(2.2vmin,18px);overflow:hidden;background:var(--lt-navy);box-shadow:0 14px 34px -10px var(--up-a10369945)}
+.slide .lt-pic > img{width:100%;height:100%;object-fit:cover;display:block}
+.slide.active .lt-pic > img{animation:lt-kb 20s ease-out both}
+.slide .lt-pic .kind,.slide .lt-ba .kind{position:absolute;left:min(1.6vmin,13px);bottom:min(1.4vmin,11px);font-size:clamp(10px,1.2vmin,13px);letter-spacing:.16em;
+  text-transform:uppercase;font-weight:700;color:var(--lt-white);background:var(--up-a1171755);padding:.45em .7em;border-radius:6px}
+.slide .lt-pic figcaption{position:absolute;left:0;right:0;top:0;padding:min(2vmin,16px) min(2.4vmin,19px) min(5vmin,40px);font-size:var(--lt-fs);line-height:1.35;color:var(--lt-white);font-weight:600;
+  background:linear-gradient(180deg,rgba(1,17,17,.8),rgba(1,17,17,0))}
+
+/* ------------------------------------------------ worked example: the steps, then the room's own turn; a detector's display beside them */
+.lt-work{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:min(1.4vmin,11px)}
+.lt-work li{display:grid;grid-template-columns:min(4.4vmin,35px) 1fr;gap:min(1.6vmin,13px);align-items:start;padding:min(1.6vmin,13px) min(2vmin,16px);border-radius:min(1.4vmin,11px);
+  border:1.5px solid var(--up-a8316721922);opacity:.45;transition:opacity .4s,background .4s,border-color .4s,transform .4s;cursor:pointer}
+.lt-work li .n{width:min(4.4vmin,35px);height:min(4.4vmin,35px);border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--up-a25525525512);color:var(--lt-white)}
+.lt-work li b{display:block;color:var(--lt-white);font-size:var(--lt-fs);line-height:1.3}
+.lt-work li div > span{display:block;color:var(--lt-dim-d);font-size:clamp(13px,2vmin,23px);line-height:1.35;margin-top:.2em}
+.lt-work li.cur{opacity:1;background:var(--up-a8316721916);border-color:var(--lt-blue);transform:translateX(min(1vmin,8px))}
+.lt-work li.cur .n{background:var(--lt-blue);color:var(--lt-navy)}
+.lt-work li.lit{opacity:.85}.lt-work li.lit .n{background:var(--up-4fd6a0);color:var(--lt-navy)}
+.lt-work li.you{border-style:dashed;border-color:var(--up-a2552552554)}
+.lt-work li.you .ask{color:var(--lt-blue);font-weight:700}
+.lt-work li.you .ans{display:none}
+.slide[data-last] .lt-work li.you .ans{display:block;color:var(--lt-white);font-weight:600;animation:lt-rise .5s both}
+.slide[data-last] .lt-work li.you .ask{display:none}
+.slide[data-last] .lt-work li.you{opacity:1;border-style:solid;border-color:var(--up-4fd6a0);background:var(--up-a7921416012)}
+.lt-meter{display:flex;align-items:center;justify-content:center;min-height:0}
+.lt-meter .dev{width:100%;max-width:min(64vmin,520px);padding:min(3vmin,24px);border-radius:min(3vmin,24px);background:linear-gradient(160deg,#e9eef5,#b9c8d8);
+  box-shadow:0 30px 60px -20px var(--up-a0006),inset 0 2px 0 var(--lt-white),inset 0 -3px 0 var(--up-a10369925)}
+.lt-meter .scr{display:grid;grid-template-columns:1fr 1fr;gap:min(1.6vmin,13px);padding:min(2.4vmin,19px);border-radius:min(1.8vmin,14px);
+  background:radial-gradient(ellipse at 30% 0,#16408f,#06173D 70%);box-shadow:inset 0 0 0 2px var(--lt-navy),inset 0 8px 24px var(--up-a0006)}
+.lt-meter .rd span{display:block;font-size:clamp(10px,1.4vmin,15px);letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--up-7fd9b5)}
+.lt-meter .rd b{display:block;font:800 clamp(24px,5vmin,52px)/1.05 ui-monospace,Consolas,monospace;color:var(--up-c8ffe8);text-shadow:0 0 18px var(--up-a792141605)}
+.lt-meter .rd b i{font-style:normal}
+.lt-meter .rd.big b{font-size:clamp(32px,7.4vmin,78px);color:var(--lt-white)}
+.lt-meter .st{grid-column:1/-1;justify-self:start;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:clamp(11px,1.6vmin,17px);padding:.35em .8em;border-radius:99px;
+  background:var(--up-a12721718118);color:var(--up-7fd9b5);transition:background .3s,color .3s}
+.lt-meter .st.hz{background:var(--up-ff3b30);color:var(--lt-white);animation:lt-blink 1s steps(2) infinite}
+@keyframes lt-blink{50%{opacity:.55}}
+.lt-meter .scale{position:relative;height:min(2.2vmin,18px);margin:min(4vmin,32px) 0 min(1vmin,8px);border-radius:99px;background:var(--up-a10369918);
+  box-shadow:inset 0 1px 3px var(--up-a1036994)}
+.lt-meter .scale .fill{position:absolute;left:0;top:0;bottom:0;width:var(--f,0%);border-radius:99px;background:linear-gradient(90deg,#4FD6A0,#53A7DB 30%,#FF6B5E);
+  transition:width .8s cubic-bezier(.3,.7,.2,1)}
+.lt-meter .scale em{position:absolute;top:-6px;bottom:-6px;width:2px;background:var(--lt-navy)}
+.lt-meter .scale em s{position:absolute;bottom:calc(100% + 2px);left:50%;transform:translateX(-50%);white-space:nowrap;text-decoration:none;font-size:clamp(10px,1.3vmin,14px);
+  font-weight:700;color:var(--lt-navy)}
+.lt-meter .scale em:last-of-type s{transform:translateX(-100%)}
+.lt-meter .ticks{display:flex;justify-content:space-between;font-size:clamp(10px,1.3vmin,14px);font-weight:700;color:var(--lt-steel)}
+
+/* ------------------------------------------------ true or false: the claim, the room's vote, then the verdict and why */
+.lt-tf{gap:min(2.6vmin,21px)}
+.lt-claim{margin:0;font-size:clamp(22px,4.4vmin,46px);line-height:1.18;font-weight:800;color:var(--lt-navy);position:relative;padding-left:min(3vmin,24px)}
+.lt-claim::before{content:"";position:absolute;left:0;top:.15em;bottom:.15em;width:min(.8vmin,6px);border-radius:99px;background:var(--lt-blue)}
+.lt-vote{display:flex;gap:min(1.6vmin,13px)}
+.lt-vote button{flex:1;padding:min(1.8vmin,14px);border-radius:min(1.6vmin,13px);border:2px solid var(--lt-line);background:var(--lt-white);font:800 var(--lt-fs-lead)/1 inherit;
+  color:var(--lt-navy);cursor:pointer;transition:all .3s;box-shadow:0 10px 24px -14px var(--up-a1036994)}
+.lt-vote button.picked{border-color:var(--lt-blue);background:var(--up-e6f2fa);transform:translateY(-2px)}
+.slide[data-last] .lt-vote button[data-v="f"]{border-color:var(--up-2fb980);background:var(--up-e3f8ef);color:var(--up-14684a)}
+.slide[data-last] .lt-vote button[data-v="t"]{opacity:.45;text-decoration:line-through}
+.lt-why{display:none;gap:min(1.6vmin,13px);align-items:flex-start;padding:min(1.8vmin,14px) min(2.2vmin,18px);border-radius:min(1.6vmin,13px);background:var(--lt-white);
+  border:1.5px solid var(--lt-line);box-shadow:0 14px 30px -16px var(--up-a10369945)}
+.lt-why.cur{display:flex;animation:lt-rise .5s both}
+.lt-why .stamp{flex:none;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--lt-white);background:var(--up-d9473b);padding:.4em .7em;border-radius:8px;transform:rotate(-4deg);
+  font-size:clamp(13px,1.9vmin,21px);animation:lt-stamp .45s cubic-bezier(.2,.8,.3,1.4) both}
+.lt-why p{margin:0;font-size:var(--lt-fs);line-height:1.4;color:var(--lt-steel)}.lt-why p b{color:var(--lt-navy)}
+@keyframes lt-stamp{from{transform:rotate(-4deg) scale(2);opacity:0}to{transform:rotate(-4deg) scale(1);opacity:1}}
+.lt-pic .lt-edge{position:absolute;left:6%;right:2%;top:26%;bottom:4%;border:3px dashed var(--up-ff8c82);border-radius:50%;opacity:0;transform:scale(.7);
+  transition:opacity .5s .3s,transform .9s .3s cubic-bezier(.2,.7,.2,1)}
+.lt-pic .lt-edge.cur{opacity:1;transform:none}
+.lt-pic .lt-pill{position:absolute;right:5%;top:18%;font-weight:700;font-size:clamp(12px,1.7vmin,18px);color:var(--lt-white);background:var(--up-a18040309);border:1px solid var(--up-ff8c82);
+  padding:.35em .8em;border-radius:99px;opacity:0;transition:opacity .4s .8s}
+.lt-pic .lt-pill.cur{opacity:1}
+
+/* ------------------------------------------------ what would you do: the situation in the picture, three choices, then why each */
+.slide[data-template^="scenario."] .lt-pic figcaption{top:auto;bottom:0;padding:min(6vmin,48px) min(2.4vmin,19px) min(2vmin,16px);background:linear-gradient(0deg,rgba(1,17,17,.85),rgba(1,17,17,0))}
+.slide[data-template^="scenario."] .lt-pic > img{object-position:0 0}
+.slide[data-template^="scenario."] .lt-pic .kind{left:auto;right:min(1.6vmin,13px);bottom:auto;top:min(1.4vmin,11px)}
+.lt-opts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:min(1.4vmin,11px)}
+.lt-opt{display:grid;grid-template-columns:min(5vmin,40px) 1fr;gap:min(1.6vmin,13px);align-items:start;padding:min(1.6vmin,13px) min(2vmin,16px);border-radius:min(1.4vmin,11px);
+  border:1.5px solid var(--up-a8316721925);background:var(--up-a25525525504);cursor:pointer;transition:all .35s}
+.lt-opt .l{width:min(5vmin,40px);height:min(5vmin,40px);border-radius:min(1.2vmin,10px);display:grid;place-items:center;font-weight:900;background:var(--up-a25525525512);
+  color:var(--lt-white);font-size:clamp(14px,2.2vmin,24px)}
+.lt-opt b{display:block;color:var(--lt-white);font-size:var(--lt-fs);line-height:1.3;font-weight:700}
+.lt-opt .fb{display:none;margin-top:.3em;font-size:clamp(13px,1.9vmin,22px);line-height:1.35}
+.lt-opt.picked{border-color:var(--lt-blue);background:var(--up-a8316721916)}.lt-opt.picked .l{background:var(--lt-blue);color:var(--lt-navy)}
+.slide[data-last] .lt-opt .fb{display:block;animation:lt-rise .45s both}
+.slide[data-last] .lt-opt.ok{border-color:var(--up-4fd6a0);background:var(--up-a7921416014)}.slide[data-last] .lt-opt.ok .l{background:var(--up-4fd6a0);color:var(--lt-navy)}
+.slide[data-last] .lt-opt.ok .fb{color:var(--up-9ff0cf)}
+.slide[data-last] .lt-opt.no{opacity:.75}.slide[data-last] .lt-opt.no .l{background:var(--up-a2551079425);color:var(--up-ff8c82)}
+.slide[data-last] .lt-opt.no .fb{color:var(--up-ffb3ab)}
+
+/* ------------------------------------------------ name the parts: numbers on the live room, the names come one at a time */
+.lt-name{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:min(1.2vmin,10px)}
+.lt-name li{display:grid;grid-template-columns:min(4.4vmin,35px) 1fr;gap:min(1.6vmin,13px);align-items:center;padding:min(1.2vmin,10px) min(1.8vmin,14px);
+  border-radius:min(1.4vmin,11px);background:var(--lt-white);border:1.5px solid var(--lt-line);cursor:pointer;transition:all .35s;min-height:min(6vmin,48px);box-sizing:border-box}
+.lt-name li .n{width:min(4.4vmin,35px);height:min(4.4vmin,35px);border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--lt-navy);color:var(--lt-white)}
+.lt-name li .blank{grid-column:2;grid-row:1;height:3px;border-radius:99px;background:repeating-linear-gradient(90deg,#B8C7DA 0 10px,transparent 10px 16px);
+  align-self:end;margin-bottom:.5em;transition:opacity .3s}
+.lt-name li b{grid-column:2;grid-row:1;color:var(--lt-navy);font-size:var(--lt-fs);opacity:0;transform:translateY(6px);transition:opacity .4s,transform .4s}
+.lt-name li.cur,.lt-name li.lit{border-color:var(--lt-blue)}
+.lt-name li.cur{background:var(--up-e6f2fa);box-shadow:0 10px 24px -14px var(--up-a10369945)}
+.lt-name li.cur b,.lt-name li.lit b{opacity:1;transform:none}.lt-name li.cur .blank,.lt-name li.lit .blank{opacity:0}
+.lt-name li.lit .n{background:var(--up-4fd6a0);color:var(--lt-navy)}
+.slide .lt-3dbox .lt-tag.num{width:2.2em;height:2.2em;padding:0;display:grid;place-items:center;border-radius:50%;margin:-1.1em 0 0 -1.1em;font-size:clamp(13px,1.9vmin,20px);
+  font-weight:800;background:var(--lt-navy);border:2px solid var(--lt-white);box-shadow:0 6px 16px var(--up-a0004);transition:background .3s,box-shadow .3s,opacity .45s}
+.slide .lt-3dbox .lt-tag.num.hot{background:var(--lt-blue);color:var(--lt-navy);box-shadow:0 0 0 6px var(--up-a8316721935),0 6px 16px var(--up-a0004)}
+
+/* ------------------------------------------------ numbers to remember: the number first, then what it means */
+.slide-body.lt-nbody{display:flex;align-items:center;flex:1;min-height:0}
+.lt-nums{list-style:none;margin:0;padding:0;width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:min(2vmin,16px)}
+.lt-nums li{position:relative;height:min(23vmin,184px);perspective:1000px;cursor:pointer}
+.lt-nums .fc,.lt-nums .bc{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:.3em;padding:min(2.4vmin,19px);border-radius:min(2vmin,16px);
+  backface-visibility:hidden;transition:transform .8s cubic-bezier(.3,.7,.2,1)}
+.lt-nums .fc{background:linear-gradient(150deg,#16408f,#0d2a6b);border:1.5px solid var(--up-a8316721935);box-shadow:0 18px 34px -16px var(--up-a0006)}
+.lt-nums .bc{background:var(--lt-white);transform:rotateY(180deg);box-shadow:0 18px 34px -16px var(--up-a0006)}
+.lt-nums b{font-size:clamp(24px,5.2vmin,54px);font-weight:900;letter-spacing:-.02em;line-height:1}
+.lt-nums .fc b{color:var(--lt-white)}.lt-nums .bc b{color:var(--lt-navy);font-size:clamp(16px,2.8vmin,30px)}
+.lt-nums .fc .q{color:var(--lt-blue);font-weight:700;font-size:clamp(12px,1.7vmin,18px)}
+.lt-nums .bc span{color:var(--lt-steel);font-size:var(--lt-fs);line-height:1.3;font-weight:600}
+.lt-nums li.cur .fc,.lt-nums li.lit .fc{transform:rotateY(-180deg)}
+.lt-nums li.cur .bc,.lt-nums li.lit .bc{transform:none}
+.lt-nums li.cur .bc{box-shadow:0 0 0 3px var(--lt-blue),0 18px 34px -16px var(--up-a0006)}
+
+/* ------------------------------------------------ spot the difference: one picture over the other; the line between them is dragged, or Next moves it */
+@property --x{syntax:'<percentage>';inherits:true;initial-value:50%}
+.slide .lt-ba{position:relative;min-height:0;border-radius:min(2.2vmin,18px);overflow:hidden;background:var(--lt-navy);box-shadow:0 14px 34px -10px var(--up-a10369945);
+  transition:--x .9s cubic-bezier(.3,.7,.2,1);touch-action:none;cursor:ew-resize;user-select:none}
+.slide .lt-ba.drag{transition:none}
+.lt-ba img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.lt-ba img.b{clip-path:inset(0 0 0 var(--x))}
+.lt-ba .bar{position:absolute;top:0;bottom:0;left:var(--x);width:3px;margin-left:-1.5px;background:var(--lt-white);box-shadow:0 0 12px var(--up-a0005)}
+.lt-ba .bar i{position:absolute;top:50%;left:50%;width:min(6vmin,48px);height:min(6vmin,48px);margin:calc(min(6vmin,48px) / -2) 0 0 calc(min(6vmin,48px) / -2);border-radius:50%;
+  background:var(--lt-white);box-shadow:0 6px 18px var(--up-a00045)}
+.lt-ba .bar i::before,.lt-ba .bar i::after{content:"";position:absolute;top:50%;width:0;height:0;border:min(1vmin,8px) solid transparent;margin-top:calc(min(1vmin,8px) * -1)}
+.lt-ba .bar i::before{left:2%;border-right-color:var(--lt-navy)}.lt-ba .bar i::after{right:2%;border-left-color:var(--lt-navy)}
+.lt-ba .side{position:absolute;top:min(1.8vmin,14px);font-weight:800;font-size:clamp(12px,1.8vmin,19px);color:var(--lt-white);padding:.35em .85em;border-radius:99px}
+.lt-ba .side.l{left:min(1.8vmin,14px);background:var(--up-a20110809)}.lt-ba .side.r{right:min(1.8vmin,14px);background:var(--up-a18040309)}
+.slide .lt-ba .kind{left:auto;right:min(1.6vmin,13px)}
+.lt-diff-h,.lt-diff li{display:grid;grid-template-columns:28fr 36fr 36fr;gap:min(1.2vmin,10px);align-items:center}
+.lt-diff-h{margin-bottom:min(1vmin,8px);padding:0 min(1.6vmin,13px)}
+.lt-diff-h span{font-weight:800;font-size:clamp(11px,1.5vmin,16px);letter-spacing:.08em;text-transform:uppercase}
+.lt-diff-h .a{color:var(--up-14684a)}.lt-diff-h .b{color:var(--up-b4281e)}
+.lt-diff{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:min(1.2vmin,10px)}
+.lt-diff li{padding:min(1.4vmin,11px) min(1.6vmin,13px);border-radius:min(1.4vmin,11px);background:var(--lt-white);border:1.5px solid var(--lt-line);cursor:pointer;transition:all .35s}
+.lt-diff li b{color:var(--lt-navy);font-size:clamp(13px,2vmin,22px)}
+.lt-diff li span{font-size:clamp(12px,1.8vmin,20px);line-height:1.3;opacity:0;transition:opacity .4s}
+.lt-diff li .a{color:var(--up-14684a)}.lt-diff li .b{color:var(--up-b4281e)}
+.lt-diff li.cur,.lt-diff li.lit{border-color:var(--lt-blue)}.lt-diff li.cur span,.lt-diff li.lit span{opacity:1}
+.lt-diff li.cur{background:var(--up-e6f2fa);box-shadow:0 10px 24px -14px var(--up-a10369945)}
+
+@media (prefers-reduced-motion:reduce){
+  .lt-work *,.lt-meter *,.lt-vote *,.lt-why,.lt-why *,.lt-pic *,.lt-opt,.lt-opt *,.lt-name *,.lt-nums *,.lt-ba,.lt-ba *,.lt-diff *{animation:none!important;transition:none!important}
+}
+
+/* Quick drills: a big clock, little to read, something to do now. Next starts the clock, Next again shows the answer.
+   Everything settles for prefers-reduced-motion. */
+.lt-timer{position:relative;width:min(20vmin,160px);height:min(20vmin,160px);flex:none}
+.lt-timer.sm{width:min(13vmin,104px);height:min(13vmin,104px)}
+.lt-timer svg{width:100%;height:100%;transform:rotate(-90deg)}
+.lt-timer .tr{fill:none;stroke:rgba(83,167,219,.18);stroke-width:9}
+.lt-timer .tf{fill:none;stroke:#53A7DB;stroke-width:9;stroke-linecap:round;stroke-dasharray:339.3;stroke-dashoffset:calc(339.3 * (1 - var(--left,1)));
+  transition:stroke-dashoffset .25s linear,stroke .3s}
+.lt-timer b{position:absolute;inset:0;display:grid;place-items:center;font:900 clamp(30px,7vmin,64px)/1 Raleway,Arial,sans-serif;color:var(--lt-white);font-variant-numeric:tabular-nums;
+  padding-bottom:.35em}
+.lt-timer.sm b{font-size:clamp(22px,4.6vmin,42px)}
+.lt-timer span{position:absolute;left:0;right:0;bottom:24%;text-align:center;font-size:clamp(9px,1.2vmin,13px);letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--lt-dim-d)}
+.lt-timer.sm span{display:none}
+.slide:not(.dark):not(.photo) .lt-timer b{color:var(--lt-navy)}
+.lt-timer.low .tf{stroke:#FF3B30}.lt-timer.low b{color:var(--up-ff6b5e)!important;animation:lt-tick 1s steps(1) infinite}
+.lt-timer.done .tf{stroke:#FF3B30}.lt-timer.done{animation:lt-shake .5s}
+@keyframes lt-tick{50%{transform:scale(1.08)}}
+@keyframes lt-shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.lt-trow{display:flex;align-items:center;gap:min(2.4vmin,19px)}
+.lt-hint{display:none;font-weight:700;font-size:clamp(12px,1.8vmin,19px);color:var(--lt-blue);letter-spacing:.04em}
+.lt-hint.cur{display:inline-block;animation:lt-blink 1.4s ease-in-out infinite}
+
+/* say it: the alarm in the picture, the order, the clock, then the three actions */
+.lt-dcopy{gap:min(2.2vmin,18px)}
+.slide.lt-drill .lt-alarm > img{object-position:0 0}
+.lt-sit{margin:0;font-size:var(--lt-fs-lead);line-height:1.35;color:var(--lt-dim-d);font-weight:600}
+.lt-do{margin:0;font-size:clamp(22px,4.2vmin,44px);line-height:1.15;font-weight:900;color:var(--lt-white)}
+.slide.lt-drill .lt-alarm::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 0 var(--up-a25559480);pointer-events:none}
+.slide.lt-drill[data-running] .lt-alarm::after{animation:lt-red 1s ease-in-out infinite}
+@keyframes lt-red{50%{box-shadow:inset 0 0 0 5px var(--up-ff3b30),inset 0 0 60px var(--up-a255594845)}}
+.lt-acts{list-style:none;margin:0;padding:0;display:none;flex-direction:column;gap:min(1.2vmin,10px)}
+.lt-acts.cur{display:flex}
+.lt-acts li{display:flex;align-items:center;gap:min(1.6vmin,13px);padding:min(1.4vmin,11px) min(2vmin,16px);border-radius:min(1.4vmin,11px);background:var(--up-a7921416014);
+  border:1.5px solid var(--up-4fd6a0);color:var(--lt-white);font-weight:800;font-size:var(--lt-fs-lead);animation:lt-rise .5s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i) * .18s)}
+.lt-acts li i{font-style:normal;width:1.7em;height:1.7em;border-radius:50%;display:grid;place-items:center;background:var(--up-4fd6a0);color:var(--lt-navy);font-size:.8em}
+.slide.lt-drill[data-reveal]:not(.lt-find) .lt-trow{display:none}
+
+/* quick fire: one prompt at a time, a bar that runs out, then the answer */
+.slide-body.lt-qf{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:min(3vmin,24px);flex:1;min-height:0}
+.lt-qf-dots{display:flex;gap:min(1.2vmin,10px)}
+.lt-qf-dots i{width:min(4.4vmin,35px);height:min(1vmin,8px);border-radius:99px;background:var(--lt-grey);transition:background .3s}
+.lt-qf-dots i.cur{background:var(--lt-blue)}.lt-qf-dots i.lit{background:var(--lt-navy)}
+.lt-qf-list{list-style:none;margin:0;padding:0;position:relative;width:min(100%,min(110vmin,880px));height:min(34vmin,272px)}
+.lt-qf-list li{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:min(2vmin,16px);text-align:center;
+  border-radius:min(3vmin,24px);background:var(--lt-white);border:1.5px solid var(--lt-line);box-shadow:0 30px 60px -30px var(--up-a1036995);overflow:hidden;
+  opacity:0;transform:translateX(12%) scale(.96);transition:opacity .35s,transform .45s cubic-bezier(.2,.7,.2,1);pointer-events:none}
+.lt-qf-list li.lit{transform:translateX(-12%) scale(.96)}
+.lt-qf-list li.cur{opacity:1;transform:none;pointer-events:auto}
+.lt-qf-list .pr{margin:0;padding:0 min(4vmin,32px);font-size:clamp(22px,4.6vmin,48px);font-weight:800;line-height:1.15;color:var(--lt-navy)}
+.lt-qf-list .an{font-size:clamp(30px,8vmin,80px);font-weight:900;color:var(--lt-blue);letter-spacing:-.02em;line-height:1;opacity:0;transform:scale(.6)}
+.lt-qf-list li.cur .an{animation:lt-pop2 .45s cubic-bezier(.2,.8,.3,1.5) 6s forwards}
+.lt-qf-list .bar{position:absolute;left:0;right:0;bottom:0;height:min(1.2vmin,10px);background:var(--lt-blue);transform-origin:0 50%;transform:scaleX(1)}
+.lt-qf-list li.cur .bar{animation:lt-drain 6s linear forwards}
+@keyframes lt-drain{to{transform:scaleX(0);background:var(--up-ff3b30)}}
+
+/* find it: the order on the photograph, a small clock; the spot shows when the clock ends */
+.lt-find .lt-ask2{display:none;font-size:clamp(20px,3.6vmin,38px)!important;line-height:1.2}
+.lt-find .lt-ask2.cur{display:block;animation:lt-rise .4s both}
+.slide.lt-find .photo-copy .lt-ask2 b{color:var(--lt-white)!important;font-weight:900;box-shadow:inset 0 -.18em var(--lt-blue)}
+.lt-find .photo-copy .lt-trow{margin-top:min(2vmin,16px)}
+/* while the answer shows, the clock steps aside until the next question */
+.lt-find[data-reveal] .lt-trow{visibility:hidden}
+
+@media (prefers-reduced-motion:reduce){
+  .lt-timer *,.lt-timer,.lt-hint,.lt-acts *,.lt-qf-list *,.lt-qf-list li,.lt-qf-dots *,.lt-ask2,.lt-alarm::after{animation:none!important;transition:none!important}
+  .lt-qf-list li.cur .an{opacity:1;transform:none}.lt-qf-list li.cur .bar{transform:scaleX(.35)}
+}
+
+/* the figure kit keeps its own alarm amber inside its screen: there it is a meaning, not a decoration */
+:root{--kit-alarm:#E9A51E;--kit-alarm-ink:#7A5300;--kit-alarm-wash-d:rgba(233,165,30,.14);--kit-alarm-wash-l:#FDF4DE}
+.kit-screen{--amber:var(--kit-alarm);--amber-ink:var(--kit-alarm-ink);--amber-wash-d:var(--kit-alarm-wash-d);--amber-wash-l:var(--kit-alarm-wash-l)}

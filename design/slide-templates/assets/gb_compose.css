@@ -1,0 +1,888 @@
+/* ==========================================================================
+   gb_compose.css — the canonical NOVIKONTAS screen-composition vocabulary.
+
+   gb_shell.css gives a screen its frame: the stage, the header band, the
+   footer strip, the chrome. This file decides HOW CONTENT SITS INSIDE IT.
+
+   WHY IT EXISTS
+   Phase 4B extracted the shell and stopped there, and the result was screens
+   that passed every check and still looked wrong: a large container filling
+   the viewport with a small cluster of text in its top-left corner and two
+   thirds of the screen doing nothing. The validator called that a high "screen
+   fill", because it measured the BOX. A big empty box is not a composition.
+
+   The fix is not a percentage rule. It is a vocabulary. Every composition
+   below is taken from GAS BASIC, where the same problem was solved once and
+   properly, and every one of them shares a single mechanic:
+
+       THE COMPOSITION CLAIMS THE STAGE. `flex:1`, `min-height:0`, and content
+       positioned deliberately within it — centred, split, or filled. Nothing
+       is left to fall wherever the normal flow happens to drop it.
+
+   HOW TO USE IT
+   Put the composition class on `.slide-body`:
+
+       <div class="slide-body opener">        one strong statement
+       <div class="slide-body two-col">       explanation | visual
+       <div class="slide-body two-col wide-left">
+       <div class="slide-body stage">         one dominant teaching visual
+       <div class="slide-body activity">      an activity announcement
+       <div class="slide-body checkbody">     a knowledge check
+       <div class="slide-body sum">           a summary grid (a day, a block)
+       <div class="slide-body recap">         THE module's closing slide - section 15 (L51)
+       <div class="slide-body">               ordinary flow: lead, cards, takeaway
+
+   Pick the composition the CONTENT needs. Do not reach for the same one twice
+   in a row out of habit — a module built from one repeated card grid is a
+   different kind of failure from a badly balanced screen, and just as visible.
+
+   REQUIRES gb_tokens.css, then gb_shell.css, then this file.
+   OWNS     composition, cards, callouts, tables, figures, activity launch,
+            knowledge check, summary, photo screens.
+   NOT HERE course-specific technical drawings. Those belong to the course.
+   ========================================================================== */
+
+:root{
+  /* Phase 5 step 11c (2.11.2): every colour this file paints with, named. Values are the
+     exact text that used to be written inline, so nothing renders differently. Names that
+     equal a canonical token follow it, with the old value as fallback so the file still
+     works on its own. */
+  --cmp-amber-45: rgba(233,165,30,.45);
+  --cmp-blue-1: rgba(46,182,248,.1);
+  --cmp-credit-text: #B9CBDD;
+  --cmp-night-72: rgba(6,14,28,.72);
+  --cmp-on-amber: #22190A;
+  --cmp-white-035: rgba(255,255,255,.035);
+  --cmp-white-04: rgba(255,255,255,.04);
+  --cmp-white-16: rgba(255,255,255,.16);
+  /* 15 · RECAP (L51, 2.30.0) */
+  --cmp-blue-18: rgba(46,182,248,.18);
+  --cmp-amber-12: rgba(233,165,30,.12);
+  --cmp-white-07: rgba(255,255,255,.07);
+  --cmp-white-02: rgba(255,255,255,.02);
+}
+
+
+/* ==========================================================================
+   1 · OPENER — one strong statement, vertically centred, nothing else.
+   The module cover, a day opener, a block opener, a question the room is
+   left holding. Deliberately sparse: the sparsity IS the composition.
+   ========================================================================== */
+.slide-body.opener{flex:1;display:flex;flex-direction:column;justify-content:center;
+  max-width:min(1180px,88vw)}
+.opener .tagline{color:var(--amber);letter-spacing:.24em;text-transform:uppercase;
+  font-weight:600;font-size:clamp(12.5px,1.6vmin,22.8px);margin:0 0 2vmin}
+.slide:not(.dark):not(.photo) .opener .tagline{color:var(--amber-ink)}
+.opener h2{margin:0;font-size:clamp(32px,7vmin,84px);line-height:1.04;letter-spacing:-.015em}
+.opener .q{margin:3vmin 0 0;font-size:clamp(15px,2.5vmin,38.9px);line-height:1.45;
+  color:var(--dim-d);max-width:24em}
+.slide:not(.dark):not(.photo) .opener .q{color:var(--dim-l)}
+.opener .q b{color:var(--white)}
+.slide:not(.dark):not(.photo) .opener .q b{color:var(--navy)}
+
+/* the centred variant: nothing to the left, nothing to the right */
+.slide-body.opener.mid{align-items:center;text-align:center;margin:0 auto}
+.slide-body.opener.mid .q{max-width:30em}
+
+/* ==========================================================================
+   2 · STATEMENT + SUPPORT — one claim, then the evidence under it.
+   The workhorse for "here is the idea, here is why".
+   ========================================================================== */
+.statement{margin:0;font-size:clamp(17px,3vmin,48.2px);line-height:1.32;font-weight:600;
+  color:var(--navy);max-width:22em}
+.slide.dark .statement,.slide.photo .statement{color:var(--white)}
+.statement em{font-style:normal;color:var(--amber-ink);font-weight:700}
+.slide.dark .statement em{color:var(--amber)}
+
+.support{display:grid;gap:min(1.4vmin,14px);max-width:46em;margin:0;padding:0}
+/* NOT display:flex. A flex container makes every child its own flex item, so an
+   inline <b> mid-sentence lays out as a separate column and the line becomes
+   unreadable. The bullet is positioned; the text flows normally. */
+.support li{list-style:none;position:relative;padding-left:1.45em;
+  font-size:clamp(12.5px,1.78vmin,25.5px);line-height:1.5;color:var(--dim-l)}
+.slide.dark .support li{color:var(--dim-d)}
+.support li::before{content:"";position:absolute;left:0;top:.62em;width:.55em;height:.55em;
+  border-radius:2px;background:var(--blue)}
+.support li b{color:var(--ink)}
+.slide.dark .support li b{color:var(--white)}
+/* numbered steps: the step's own number is its marker - a navy disc in place of the square, every step
+   the same size. The number stays in the words (.n), so the match check reads "1 Risk ..." whole (IGF M11 s04) */
+.support.seq li{padding-left:1.95em}
+.support.seq li::before{content:none}
+.support.seq .n,.photo-copy .lead.step .n{position:absolute;left:0;top:.24em;min-width:1.45em;height:1.45em;
+  padding:0 .25em;box-sizing:border-box;border-radius:.725em;background:var(--navy);color:var(--white);
+  font-size:.78em;font-weight:700;line-height:1.45em;text-align:center}
+.slide.dark .support.seq .n,.slide.photo .photo-copy .lead.step .n{background:var(--blue);color:var(--on-blue)}
+
+/* ==========================================================================
+   3 · TWO-COL — explanation beside a visual. The single most useful
+   composition in the system, and the one that stops a figure from being a
+   small object adrift in a wide screen.
+   ========================================================================== */
+.slide-body.two-col{display:grid;grid-template-columns:1.05fr .95fr;gap:min(4vmin,48px);
+  flex:1;align-items:center;min-height:0}
+.slide-body.two-col.wide-left{grid-template-columns:1.35fr .65fr}
+.slide-body.two-col.wide-right{grid-template-columns:.65fr 1.35fr}
+.slide-body.two-col > *{min-width:0}
+/* 2.52.0 (L23) - a compiled slide writes its figure FIRST in the markup (.dom-fig), so a portrait tablet - one column, under
+   900 px - shows the figure in its first screen and a screen reader meets it first. On a landscape screen `order` puts
+   the words back where the layout has them (left of the figure in a two-col, above it in a flow): the projector
+   picture is the one it was. A hand-built deck has no .dom-fig and is not touched */
+@media (min-width:901px){.slide-body.dom-fig > .copy{order:-1}}
+
+/* the column that holds the visual. It takes the height it is given. */
+.fill{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+  align-self:stretch}
+/* `max-height:100%` alone was wrong here: a `.fill` inside a two-col is a grid
+   item with align-items:center, so its height is content-based and 100% has
+   nothing to resolve against. The component then grew past its own cap and its
+   control row landed under the chrome. The cap still applies inside a column. */
+/* height:auto, not 100%. A percentage height resolves against the column's
+   content-based height, which is indefinite, so `min(100%, …)` silently gave
+   up and the figure grew to its natural 490 px - 45 px past the screen, with
+   its control row under the chrome. The cap is the one knob; let it be the
+   one knob. */
+.fill svg,.fill img,.fill canvas{width:100%;height:auto;object-fit:contain;
+  max-height:var(--fig-max, 100%)}
+
+/* ==========================================================================
+   4 · STAGE — one dominant teaching visual, as large as the screen allows.
+   This is the answer to a terminal board floating in a big empty panel: the
+   drawing is `flex:1` and eats every pixel the caption and controls leave.
+   ========================================================================== */
+.slide-body.stage{flex:1;display:flex;flex-direction:column;gap:min(2vmin,20px);min-height:0}
+.slide-body.stage > svg,
+.slide-body.stage > .fill,
+.slide-body.stage > [data-stage]{flex:1;width:100%;min-height:0}
+.slide-body.stage > svg{height:auto;max-height:100%}
+/* a mounted component on a stage: the component's own root grows, and the
+   --fig-max cap the shell applies to a loose figure is lifted, because a stage
+   figure is sized BY the stage rather than by a guess about the furniture. */
+/* A mounted component takes its own height and the STAGE centres it.
+   `flex:1` (= 1 1 0%) squeezed a component whose own furniture made it taller than the
+   stage - measured at 42 px on a real course - and its last element painted over the
+   caption below. `1 0 auto` fixed that and created the opposite problem in portrait: the
+   mount grew to fill a tall stage while the component inside kept its own height, so the
+   bottom half of three screens was empty. `0 0 auto` plus a centred stage is right in
+   both: the figure is sized by --fig-max, and whatever slack is left is shared above and
+   below it rather than dumped underneath. */
+.slide-body.stage{justify-content:center}
+.slide-body.stage > div{flex:0 0 auto;min-height:0;display:flex;flex-direction:column}
+/* A stage screen carries the figure and almost nothing else, so the shell's
+   cap - sized for a figure sharing a screen with text - is too tight here.
+   The cap is RAISED, not removed: `max-height:none` was tried and the three
+   stage screens immediately overflowed by 40, 197 and 218 px, because a
+   mounted component's own furniture (head, caption, control row, note) is
+   below the drawing and the drawing had stopped leaving room for it. */
+.slide-body.stage{--fig-max:max(220px, calc(100vh - 300px))}
+
+/* a caption or control row under a stage must not be allowed to grow */
+.slide-body.stage > .cap,
+.slide-body.stage > .srcline,
+.slide-body.stage > .mediabar{flex:0 0 auto}
+
+/* ==========================================================================
+   5 · CARDS — two, three or four. Never one, never five.
+   A single card is a paragraph with a border; five is a table.
+   ========================================================================== */
+.cards{display:grid;gap:min(2.2vmin,22px);margin:0}
+.cards.c2{grid-template-columns:repeat(2,1fr)}
+.cards.c3{grid-template-columns:repeat(3,1fr)}
+.cards.c4{grid-template-columns:repeat(4,1fr)}
+/* a card row that is the screen's main content centres itself in the stage
+   instead of sitting against the top edge */
+.slide-body > .cards{align-content:center}
+
+.card{background:var(--white);border:1px solid var(--line-l);border-radius:var(--r-m);
+  padding:min(2.6vmin,26px);box-shadow:var(--sh);display:flex;flex-direction:column;gap:.7em}
+.slide.dark .card{background:var(--deep-2);border-color:var(--line-d);box-shadow:var(--sh-d)}
+.card .n{width:2.1em;height:2.1em;border-radius:9px;background:var(--blue-wash-l);
+  color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;
+  font-size:clamp(13px,1.9vmin,26.8px);flex:none}
+.slide.dark .card .n{background:var(--blue-wash-d);color:var(--blue)}
+.card h3,.card h4{margin:0;color:var(--navy);font-size:clamp(14px,1.95vmin,26px);font-weight:700}
+.slide.dark .card h3,.slide.dark .card h4{color:var(--txt-d)}
+.card p{margin:0;font-size:clamp(12.5px,1.72vmin,24.1px);line-height:1.5;color:var(--dim-l)}
+.slide.dark .card p{color:var(--dim-d)}
+.card ul,.card ol{margin:0;padding-left:1.2em}
+.card li{font-size:clamp(12.5px,1.65vmin,22px);line-height:1.5;color:var(--dim-l)}
+.slide.dark .card li{color:var(--dim-d)}
+.card .tag{font-size:clamp(12.5px,1.25vmin,16.8px);letter-spacing:.16em;text-transform:uppercase;
+  font-weight:700;color:var(--amber-ink)}
+.slide.dark .card .tag{color:var(--amber)}
+.card.key{border-left:4px solid var(--blue)}
+.card.step{border-left:4px solid var(--amber)}
+.card.warn{border-left:4px solid var(--warn)}
+.card.good{border-left:4px solid var(--good)}
+
+/* ==========================================================================
+   6 · TRIO — three photographs or three framed figures, filling the stage.
+   ========================================================================== */
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:min(2.2vmin,22px);flex:1;
+  min-height:0;max-height:100%;margin:0}
+.trio figure{display:flex;flex-direction:column;border-radius:var(--r-m);overflow:hidden;
+  border:1px solid var(--line-l);box-shadow:var(--sh);background:var(--white);min-height:0;margin:0}
+.slide.dark .trio figure{background:var(--deep-2);border-color:var(--line-d);box-shadow:var(--sh-d)}
+.trio img,.trio svg{width:100%;flex:1;object-fit:cover;min-height:0}
+.trio figcaption{padding:min(1.7vmin,17px) min(1.8vmin,18px);
+  font-size:clamp(12.5px,1.55vmin,21.4px);line-height:1.45;color:var(--dim-l)}
+.slide.dark .trio figcaption{color:var(--dim-d)}
+.trio figcaption b{display:block;color:var(--navy);font-size:1.06em;margin-bottom:.3em}
+.slide.dark .trio figcaption b{color:var(--txt-d)}
+
+/* ==========================================================================
+   7 · PHOTOGRAPH — full bleed, copy over a scrim. The photograph IS the
+   screen; the copy sits on it. Never a photograph in a box with text below.
+   ========================================================================== */
+.photo-wrap{position:absolute;inset:0;overflow:hidden}
+.photo-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-scrim{position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(6,14,28,.92) 0%,rgba(6,14,28,.62) 34%,rgba(6,14,28,.05) 62%),
+             linear-gradient(0deg,rgba(6,14,28,.72),transparent 42%)}
+.photo-scrim.right{
+  background:linear-gradient(270deg,rgba(6,14,28,.92) 0%,rgba(6,14,28,.6) 34%,rgba(6,14,28,.05) 62%),
+             linear-gradient(0deg,rgba(6,14,28,.72),transparent 42%)}
+.photo-copy{position:absolute;left:min(7vmin,86px);top:50%;transform:translateY(-50%);
+  max-width:min(38vw,540px);z-index:3}
+.photo-copy.right{left:auto;right:min(7vmin,86px)}
+.photo-copy h2{margin:0;font-size:clamp(24px,4.4vmin,50px);color:var(--white);line-height:1.1}
+.photo-copy .lead{margin-top:1.4vmin;color:#C9DAEB}
+.photo-badge{display:inline-block;background:var(--amber);color:var(--cmp-on-amber);font-weight:700;
+  border-radius:6px;padding:.42em .95em;font-size:clamp(12.5px,1.4vmin,18.8px);
+  letter-spacing:.14em;text-transform:uppercase;margin-bottom:1.6vmin}
+/* the credit is a strip of its own under the slide's content (2.60.0): in the slide's flow after the body, so the body
+   gives it its height - never over the photograph or the words (seven IGF modules: over the photo's lower edge, M15 s01
+   over the lead). It sits on the left, in the free band between the body and the footer (its negative bottom margin
+   gives the band back, so a one-line credit costs the body nothing - M05 s03's 121 words still fit), and stops short
+   of #chrome, which owns the bottom-right 492 x 68 px (measured: 474 px of buttons, 18 px from the edge) and never goes
+   away - 590 px is that, the slide's left padding (at most 86 px) and a gap. A longer credit wraps and the body gives
+   way to it - it never lies over anything */
+.credit{position:relative;z-index:4;flex:0 0 auto;align-self:flex-start;margin:4px 0 calc(36px - max(88px,8vmin));
+  background:var(--cmp-night-72);color:var(--cmp-credit-text);font-size:clamp(12.5px,1.12vmin,15.4px);
+  padding:.42em .8em;border-radius:5px;max-width:calc(100vw - 590px);line-height:1.35}
+/* a full-screen photograph with a credit: the picture ends above its credit strip; the strip and the chrome share the
+   dark band under it. The photo is a flex item here, so the strip's own height (one line or four) is always room */
+.slide.photo:has(> .credit){padding:0 0 max(76px,8vmin)}
+.slide.photo:has(> .credit) > .photo-wrap{position:relative;inset:auto;flex:1 1 0;min-height:0}
+.slide.photo.split:has(> .credit) > .photo-wrap{margin-left:44%}
+.slide.photo:has(> .credit) > .credit{align-self:flex-end;margin:min(1vmin,8px) 12px 0 0;max-width:100%}
+
+/* ==========================================================================
+   8 · ACTIVITY LAUNCH — centred, the code dominant, and nothing clickable.
+   The deck ANNOUNCES an activity; it never opens one. A link inside a slide
+   navigates the single page away mid-session.
+   The whole screen is the announcement: `.slide.dark.activity`, no card.
+   ========================================================================== */
+.slide-body.activity{flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center}
+/* The eyebrow stays LEFT, unlike the golden deck's, and that is a decision
+   rather than an oversight. Centring it was tried: `.slide-kind` is
+   position:absolute and full width, so the centred label lands directly above
+   the centred `.act-code` and the driven sweep measured their painted lines
+   overlapping by 15 px on ten screens. The golden gets away with it because
+   its activity body starts lower. A left eyebrow also matches every other
+   screen in the deck, and internal consistency is worth more here than this
+   one detail of fidelity. */
+.act-code{margin:0;font-family:var(--mono);font-size:clamp(38px,9vmin,110px);font-weight:700;
+  color:var(--amber);letter-spacing:.06em;line-height:1}
+.act-title{margin:2.4vmin 0 0;font-size:clamp(20px,3.6vmin,42px);font-weight:700;color:var(--white)}
+.slide:not(.dark):not(.photo) .act-title{color:var(--navy)}
+.act-inst{margin:2vmin 0 0;font-size:clamp(13px,2.05vmin,30.8px);color:var(--dim-d);max-width:26em}
+.slide:not(.dark):not(.photo) .act-inst{color:var(--dim-l)}
+.act-steps{display:flex;gap:min(2.4vmin,26px);margin-top:4vmin;flex-wrap:wrap;justify-content:center}
+.act-step{border:1px solid var(--line-d);border-radius:var(--r-m);padding:1.1em 1.4em;
+  min-width:180px;background:var(--cmp-white-035);text-align:left}
+.slide:not(.dark):not(.photo) .act-step{border-color:var(--line-l);background:var(--white)}
+.act-step .s{color:var(--blue);font-weight:700;font-size:clamp(12.5px,1.4vmin,17.4px);
+  letter-spacing:.18em;text-transform:uppercase}
+.act-step p{margin-top:.4em;font-size:clamp(12.5px,1.65vmin,22.8px);color:var(--dim-d);
+  line-height:1.45}
+.slide:not(.dark):not(.photo) .act-step p{color:var(--dim-l)}
+.act-note{margin-top:2.2vmin;font-size:clamp(12.5px,1.4vmin,18.1px);color:var(--faint-d)}
+
+/* the announcement line. A left rule, not a button - nothing here is pressable. */
+.act-now{margin:3vmin 0 0;border-left:3px solid var(--blue);padding-left:min(1.8vmin,18px);
+  font-size:clamp(12.5px,1.66vmin,22.8px);line-height:1.45;color:var(--dim-d);
+  text-align:left;max-width:34em}
+.slide:not(.dark):not(.photo) .act-now{color:var(--dim-l)}
+.act-now b{color:var(--white);font-weight:700}
+.slide:not(.dark):not(.photo) .act-now b{color:var(--navy)}
+.act-now code{font-family:var(--mono);background:var(--amber-wash-d);color:var(--amber);
+  border:1px solid var(--cmp-amber-45);border-radius:6px;padding:0 .4em;
+  font-size:max(12.5px,.94em);font-weight:700;white-space:nowrap}
+.slide:not(.dark):not(.photo) .act-now code{background:var(--amber-wash-l);color:var(--amber-ink)}
+
+/* ==========================================================================
+   9 · KNOWLEDGE CHECK and DEBRIEF
+   ========================================================================== */
+.slide-body.checkbody{display:flex;flex-direction:column;gap:min(3vmin,32px);
+  align-items:flex-start;justify-content:center;flex:1;min-height:0}
+h2.bigcall{font-size:clamp(28px,6vmin,86px);line-height:1.02}
+.checkbody .bigq{font-size:clamp(15px,2.5vmin,36px);line-height:1.3;margin:0;color:var(--dim-d)}
+.slide:not(.dark):not(.photo) .checkbody .bigq{color:var(--dim-l)}
+
+.quiz{flex:1;display:flex;flex-direction:column;gap:min(2vmin,20px);min-height:0}
+.q-head{display:flex;align-items:baseline;gap:14px}
+.q-head .qn{color:var(--blue);font-weight:700;font-size:clamp(12.5px,1.5vmin,18.8px);
+  letter-spacing:.16em;text-transform:uppercase}
+.q-text{font-size:clamp(15px,2.5vmin,38.9px);font-weight:600;color:var(--navy);line-height:1.3}
+.slide.dark .q-text{color:var(--white)}
+.q-opts{display:grid;gap:min(1.4vmin,14px);margin-top:min(1vmin,10px)}
+.q-opt{text-align:left;border:1.5px solid var(--line-l);background:var(--white);
+  border-radius:var(--r-m);padding:min(1.9vmin,19px) min(2.2vmin,22px);cursor:pointer;
+  font-size:clamp(12.5px,1.82vmin,25.5px);color:var(--ink);font-weight:500;line-height:1.4;
+  transition:border-color .14s ease,background .14s ease;min-height:52px;
+  display:flex;gap:.9em;align-items:center;font-family:var(--font)}
+.q-opt .mk{width:1.85em;height:1.85em;border-radius:8px;background:var(--grey);color:var(--steel);
+  display:flex;align-items:center;justify-content:center;font-weight:700;flex:none;
+  font-size:max(12.5px,.88em)}
+.q-opt.right{border-color:var(--good);background:var(--good-wash-l)}
+.q-opt.right .mk{background:var(--good);color:var(--white)}
+.q-opt.wrong{border-color:var(--warn);background:var(--warn-wash-l)}
+.q-opt.wrong .mk{background:var(--warn);color:var(--white)}
+.q-why{margin-top:min(1.6vmin,16px);border-left:3px solid var(--amber);
+  background:var(--amber-wash-l);padding:min(1.7vmin,17px) min(2vmin,20px);
+  border-radius:0 var(--r-s) var(--r-s) 0;font-size:clamp(12.5px,1.7vmin,24.1px);
+  line-height:1.5;color:var(--ink);display:none}
+.q-why.on{display:block}
+.q-why b{color:var(--navy)}
+
+.ans-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:min(2vmin,20px);flex:1;
+  align-content:center;min-height:0}
+.ans{border:1px solid var(--line-l);border-left:4px solid var(--blue);border-radius:var(--r-s);
+  padding:min(2vmin,20px);background:#F7FAFD}
+.slide.dark .ans{background:var(--deep-2);border-color:var(--line-d);border-left-color:var(--blue)}
+.ans.key{border-left-color:var(--amber)}
+.ans h3{margin:0;color:var(--navy);font-size:clamp(13.5px,1.95vmin,26.8px)}
+.slide.dark .ans h3{color:var(--txt-d)}
+.ans p{margin-top:.5em;font-size:clamp(12.5px,1.6vmin,22.8px);line-height:1.5;color:var(--dim-l)}
+.slide.dark .ans p{color:var(--dim-d)}
+
+/* ==========================================================================
+   10 · SUMMARY — the closing grid. One column per block, rules on top.
+   ========================================================================== */
+.slide-body.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:min(1.8vmin,18px);flex:1;align-content:center}
+.sum .item{border-top:3px solid var(--blue);padding-top:min(1.8vmin,18px);display:flex;
+  flex-direction:column;gap:.6em}
+.sum .item:nth-child(even){border-top-color:var(--amber)}
+.sum .k{font-family:var(--mono);color:var(--steel);font-size:clamp(12.5px,1.5vmin,20.1px);
+  font-weight:700}
+.slide.dark .sum .k{color:var(--blue)}
+.sum .item h3{margin:0;color:var(--navy);font-size:clamp(13px,1.95vmin,28.1px)}
+.slide.dark .sum .item h3{color:var(--txt-d)}
+.sum .item p{margin:0;font-size:clamp(12.5px,1.55vmin,21.4px);line-height:1.45;color:var(--dim-l)}
+.slide.dark .sum .item p{color:var(--dim-d)}
+
+/* ==========================================================================
+   11 · TAKEAWAY — the line the room should leave with, pinned above the
+   chrome so it reads as a conclusion rather than as the next paragraph.
+   ========================================================================== */
+.takeaway{position:absolute;left:min(7vmin,86px);right:min(7vmin,86px);bottom:max(72px,6.4vmin);
+  border-left:3px solid var(--amber);padding:.85em 1.2em;background:var(--cmp-white-04);
+  border-radius:0 var(--r-s) var(--r-s) 0;font-size:clamp(12.5px,1.75vmin,24.1px);
+  color:var(--dim-d);margin:0}
+.takeaway .tk{color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:.15em;
+  font-size:max(12.5px,.78em);margin-right:.7em}
+/* On a light slide rgba(255,255,255,.04) is white and --dim-d measures 2.06:1.
+   The light variant gets the amber wash the system already uses for a note. */
+.slide:not(.dark):not(.photo) .takeaway{background:var(--amber-wash-l);color:var(--dim-l)}
+.slide:not(.dark):not(.photo) .takeaway .tk{color:var(--amber-ink)}
+.slide:not(.dark):not(.photo) .takeaway b{color:var(--ink)}
+/* a body that shares its screen with a pinned takeaway leaves room for it */
+.slide:has(> .takeaway) .slide-body{padding-bottom:max(140px,14vmin)}
+
+/* ==========================================================================
+   12 · CONTENT BLOCKS — callouts, tables, figures, meta.
+   The vocabulary a screen body is written in, whatever composition holds it.
+   ========================================================================== */
+.lead{margin:0;font-size:clamp(14px,2.15vmin,32.2px);line-height:1.5;color:var(--dim-l)}
+.slide.dark .lead{color:var(--dim-d)}
+
+/* SUPERSCRIPT AND SUBSCRIPT.
+   The browser shrinks these to ~0.6em on its own, which on a 15 px caption is 9 px -
+   under the 12.5 px readable floor, on a tablet, at the back of a room. Every per-course
+   dialect this system replaced carried `sub,sup{font-size:13px}` for exactly that reason;
+   the canonical files were extracted without it and the floor was lost. A technical course
+   is full of them - 10⁶, mm², R_ie, cos φ - and ETPA4 alone renders 28.
+   0.78em keeps the typographic effect and clears the floor at every size the deck uses. */
+sup,sub,small{font-size:max(12.5px,.78em)}
+sup,sub{line-height:0}
+sup{vertical-align:.42em}
+sub{vertical-align:-.28em}
+/* `small` was missed on the first pass of this fix and the new check caught it on the
+   very next run - the same browser mechanism shrinks all three, so all three get the
+   same floor. A fix that covers two of three cases is a fix that will be rediscovered. */
+
+.src,.srcline{margin:0;font-size:clamp(12.5px,1.2vmin,16.8px);line-height:1.45;color:var(--faint-l)}
+.slide.dark .src,.slide.dark .srcline{color:var(--faint-d)}
+
+.cap{margin:0;font-size:clamp(12.5px,1.5vmin,20px);line-height:1.4;color:var(--dim-l);
+  text-align:center}
+.slide.dark .cap{color:var(--dim-d)}
+
+.law{background:var(--amber-wash-l);border:1px solid var(--amber);border-left:4px solid var(--amber);
+  border-radius:0 var(--r-s) var(--r-s) 0;padding:min(1.8vmin,16px) min(2.2vmin,20px);margin:0}
+.law p{margin:0 0 .4em;font-size:clamp(13.5px,1.8vmin,24px);line-height:1.45;color:var(--amber-ink)}
+.law .ref{margin:0;font-size:clamp(12.5px,1.5vmin,18px);font-weight:700;color:var(--amber-ink)}
+.slide.dark .law{background:var(--amber-wash-d);border-color:var(--amber)}
+.slide.dark .law p{color:var(--txt-d)}
+.slide.dark .law .ref{color:var(--amber)}
+
+.warnbox{background:var(--white);border:1px solid var(--warn);border-left:4px solid var(--warn);
+  border-radius:0 var(--r-s) var(--r-s) 0;padding:min(1.6vmin,14px) min(2.2vmin,20px);margin:0}
+.warnbox p{margin:0 0 .4em;font-size:clamp(13.5px,1.8vmin,24px);line-height:1.45}
+.warnbox b{color:var(--warn)}
+.slide.dark .warnbox{background:var(--deep-2);border-color:var(--warn-d)}
+.slide.dark .warnbox b{color:var(--warn-d)}
+
+.fin{background:var(--white);border:1px solid var(--good);border-left:4px solid var(--good);
+  border-radius:0 var(--r-s) var(--r-s) 0;padding:min(1.6vmin,14px) min(2.2vmin,20px);margin:0;
+  font-size:clamp(14px,1.85vmin,26px);line-height:1.45;color:var(--ink)}
+.fin b{color:var(--good)}
+.slide.dark .fin{background:var(--deep-2);border-color:var(--good-d);color:var(--txt-d)}
+.slide.dark .fin b{color:var(--good-d)}
+
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin:0}
+.meta span{background:var(--blue-wash-l);border:1px solid var(--line-l);border-radius:var(--r-s);
+  padding:4px 12px;font-size:clamp(12.5px,1.55vmin,20px);color:var(--dim-l)}
+.slide.dark .meta span{background:var(--blue-wash-d);border-color:var(--line-d);color:var(--dim-d)}
+
+.num{display:inline-block;min-width:2.2em;font-family:var(--mono);font-weight:700;color:var(--navy)}
+.slide.dark .num{color:var(--blue)}
+
+.steps{margin:0;padding-left:1.4em;display:grid;gap:min(1.4vmin,12px)}
+.steps li{font-size:clamp(13.5px,1.8vmin,25px);line-height:1.45;color:var(--ink)}
+.slide.dark .steps li{color:var(--txt-d)}
+.steps li strong{color:var(--navy)}
+.slide.dark .steps li strong{color:var(--blue)}
+
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--r-m)}
+table,.tbl{border-collapse:collapse;width:100%;background:var(--white);
+  font-size:clamp(12.5px,1.55vmin,22.8px)}
+th,td{padding:min(1.2vmin,12px) min(1.4vmin,14px);text-align:left;vertical-align:top;
+  border-bottom:1px solid var(--line-l)}
+th{background:var(--navy);color:var(--white);font-weight:700;font-size:max(12.5px,.92em);
+  letter-spacing:.06em;text-transform:uppercase}
+td{color:var(--dim-l)}
+td:first-child{color:var(--ink);font-weight:600}
+tr:nth-child(even) td{background:#F7FAFD}
+td.n,.tbl .num{font-family:var(--mono);color:var(--navy)}
+.slide.dark table,.slide.dark .tbl{background:var(--deep-2);color:var(--txt-d)}
+.slide.dark th{background:var(--deep-3);color:var(--txt-d);border-color:var(--line-d)}
+.slide.dark td{border-color:var(--line-d);color:var(--dim-d)}
+.slide.dark tr:nth-child(even) td{background:rgba(255,255,255,.03)}
+.slide.dark td:first-child{color:var(--txt-d)}
+
+svg.fig{display:block;max-width:100%;height:auto;margin:0 auto;background:var(--white);
+  border:1px solid var(--line-l);border-radius:var(--r-m)}
+.slide.dark svg.fig{background:var(--deep-2);border-color:var(--line-d)}
+figure{margin:0}
+
+/* ==========================================================================
+   13 · CONTROLS UNDER A GRAPHIC — the bar that steps an animation.
+   Centred under the figure, 44 px minimum, never hover-only.
+   ========================================================================== */
+.mediabar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;margin:0}
+.mediabar .fbtn{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line-d);
+  background:var(--cmp-blue-1);color:var(--txt-d);border-radius:10px;padding:.7em 1.25em;
+  font-size:clamp(12.5px,1.62vmin,21.4px);font-weight:600;cursor:pointer;min-height:44px;
+  font-family:var(--font)}
+.slide:not(.dark) .mediabar .fbtn{border-color:var(--line-l);background:var(--blue-wash-l);
+  color:var(--navy)}
+.mediabar .fbtn.primary{background:var(--navy);color:var(--white);border-color:var(--navy)}
+.mediabar .fbtn:active{transform:translateY(1px)}
+.dots{display:flex;gap:6px}
+.dots i{width:9px;height:9px;border-radius:50%;background:var(--cmp-white-16);display:block;
+  transition:background .3s ease}
+.slide:not(.dark) .dots i{background:var(--line-l)}
+/* the light-slide rule above outranks a bare ".dots i.on" - so a light slide showed no current step */
+.dots i.on,.slide:not(.dark) .dots i.on{background:var(--blue)}
+.caption{text-align:center;font-size:clamp(12.5px,1.85vmin,26.8px);line-height:1.45;
+  color:var(--dim-d);max-width:44em;margin:0 auto}
+.slide:not(.dark) .caption{color:var(--dim-l)}
+.caption b{color:var(--white)}
+.slide:not(.dark) .caption b{color:var(--navy)}
+
+/* progressive reveal */
+.frag{opacity:0;transform:translateY(10px);transition:opacity .4s ease,transform .4s ease}
+.frag.on{opacity:1;transform:none}
+
+/* ==========================================================================
+   13b · COMPILED SLIDES (2.25.1) — the reading column, emphasis, legend, inset
+   photograph, a photograph beside the words, and the task-slide lines.
+   Taken from the IGF pilot's own module file (m01.css), where they were written
+   for one module; a deck built from the script (compile_module.py) gets them
+   in every module. Measured on the pilot: the shared .support list is 14 px and
+   grey - a SUPPORTING size - and every slide that used it for its main words
+   read as plainer than the hand-built one at 18 px.
+   ========================================================================== */
+/* the words beside or under a picture, at reading size */
+.copy{--fs:clamp(15px,2.3vmin,30px);display:flex;flex-direction:column;gap:min(2vmin,18px);
+  min-width:0;align-self:center;align-self:safe center}
+.copy p{margin:0}
+.copy .statement{font-size:calc(var(--fs) * 1.22);max-width:none}
+.copy .lead{font-size:var(--fs);line-height:1.45;color:var(--ink)}
+.slide.dark .copy .lead{color:var(--txt-d)}
+.copy .support{max-width:none;gap:min(1.3vmin,12px)}
+.copy .support li{font-size:var(--fs);line-height:1.45;color:var(--ink)}
+.slide.dark .copy .support li{color:var(--txt-d)}
+.copy b{color:var(--navy);font-weight:700}
+.slide.dark .copy b{color:var(--white)}
+/* emphasis chosen in the build sheet: a line in a box, and the conclusion. One box look - blue and amber boxes
+   side by side read as "this one is selected", and an amber box never changed when it was (IGF M05, 2026-10-19).
+   .alt only where the build sheet names "box_alt" (the other of two options): grey, NEVER amber. */
+.copy .box{padding:.6em .95em;border-left:4px solid var(--blue);background:var(--blue-wash-l);
+  border-radius:0 var(--r-s) var(--r-s) 0;font-size:var(--fs);line-height:1.45;color:var(--ink)}
+.copy .box.alt{border-left-color:var(--navy);background:var(--grey)}
+.slide.dark .copy .box{background:var(--blue-wash-d);color:var(--txt-d)}
+.slide.dark .copy .box.alt{border-left-color:var(--dim-d);background:rgba(255,255,255,.06)}
+.copy .call{padding:.75em 1em;border-radius:var(--r-m);background:var(--navy);color:var(--white);
+  font-size:var(--fs);line-height:1.45;font-weight:600}
+.slide.dark .copy .call{background:var(--blue);color:var(--on-blue)}
+/* a bold term in the conclusion takes the conclusion's colour - on a dark slide too, where `.slide.dark .copy b`
+   (white) out-ranked it: white on the blue callout was 2.29:1 (M01 benchmark run 4, s02) */
+.copy .call b,.slide.dark .copy .call b{color:inherit}
+/* a line a stepping figure is on (the figure sets .cur / .lit on [data-i]). Amber means "where we are now" and
+   nothing else: no card at rest is amber, and these rules come AFTER every card look and out-rank it, so the
+   selected line always changes - fill, an amber ring and an amber bar. audit_deck.js "mark" fails a deck where
+   a selected line looks like itself or like another line at rest. */
+.copy [data-i]{border-radius:var(--r-s);transition:background-color .2s ease,box-shadow .2s ease}
+/* 2.63.2 (IGF slide review: M02, M03, M09, M11, M15): the line a figure lights - its wash and amber ring ran flush to the
+   words. 10 px of inner padding on every stepped line, at rest too (nothing moves when a line lights), drawn inside the
+   line so a clipping text column cannot cut the ring. A bullet line keeps its own left room for the bullet; a full slide
+   whose words reach the margins opts out with `.copy.tight`. A box and a conclusion (.call) have their own padding */
+.copy [data-i]:not(.box):not(.call):not(li){padding-left:10px;padding-right:10px;box-sizing:border-box}
+.copy li[data-i]:not(.box):not(.call){padding-right:10px}
+.copy.tight [data-i]:not(.box):not(.call):not(li){padding-left:0;padding-right:0}
+.copy.tight li[data-i]:not(.box){padding-right:0}
+.copy [data-i].lit{background:var(--blue-wash-l)}
+.slide.dark .copy [data-i].lit{background:var(--blue-wash-d)}
+.copy [data-i].cur,.copy .box[data-i].cur{background:var(--amber-wash-l);font-weight:600;
+  box-shadow:inset 0 0 0 2px var(--amber)}
+.copy .box[data-i].cur{border-left-color:var(--amber)}
+.slide.dark .copy [data-i].cur,.slide.dark .copy .box[data-i].cur{background:var(--amber-wash-d)}
+/* a stepping figure washes a lit callout light: its white text turns to ink (dark slide: light text) -
+   white on the light wash was unreadable (M03, 2026-10-15) */
+.copy .call[data-i].lit,.copy .call[data-i].cur{color:var(--ink)}
+.slide.dark .copy .call[data-i].lit,.slide.dark .copy .call[data-i].cur{color:var(--txt-d)}
+/* a box that holds a heading and its list: the heading line is bold */
+.copy div.box > p:first-child{font-weight:700;margin:0 0 .35em}
+/* a real photograph under the words, beside the drawing */
+.copy .inset,.fill .inset{display:flex;gap:min(2vmin,18px);align-items:center;margin:min(1vmin,8px) 0 0;width:100%}
+.copy .inset img,.fill .inset img{width:44%;flex:0 0 44%;max-height:min(26vh,230px);object-fit:cover;border-radius:var(--r-m);
+  box-shadow:var(--sh)}
+.slide.dark .copy .inset img,.slide.dark .fill .inset img{box-shadow:var(--sh-d)}
+.copy .inset figcaption,.fill .inset figcaption{font-size:clamp(12.5px,1.5vmin,19px);line-height:1.4;color:var(--dim-l)}
+.slide.dark .copy .inset figcaption,.slide.dark .fill .inset figcaption{color:var(--dim-d)}
+.fill.fig > .inset{flex:0 0 auto}
+/* 2.63.0 - beside a picture, a photo under the words takes the room the words leave, never more: at its full 26 vh it ran
+   9-22 px off the slide under 57-68 words (IGF M01 v262 s02 / s03 / s04 / s07, every size; "split" did not help). The words
+   keep their size; the photo is cropped shorter, down to 10 vh - under that the build's word cap still says so. */
+@media (min-width:901px){
+  .slide-body.two-col:has(> .copy > .inset){grid-template-rows:minmax(0,1fr)}
+  .slide-body.two-col > .copy:has(> .inset){align-self:stretch;justify-content:center;min-height:0}
+  .slide-body.two-col > .copy:has(> .inset) > *{flex-shrink:0}
+  .slide-body.two-col > .copy > .inset{flex:1 1 0;min-height:min(10vh,80px);max-height:min(26vh,230px)}
+  .slide-body.two-col > .copy > .inset img{height:100%;max-height:100%}
+}
+/* the picture's box: a drawing with its own controls stacks them under it, and
+   takes the room the words leave - never a small drawing in a large column */
+.fill.fig{flex-direction:column;gap:min(1.6vmin,14px)}
+.fill.fig > svg,.fill.fig > img,.fill.fig > canvas{flex:0 1 auto;min-height:0;width:100%;
+  max-height:max(300px,calc(100vh - 330px))}
+.fill.fig > .mediabar{flex:0 0 auto}
+/* a group of small figures as the picture (two mini drawings side by side): they share the column's width -
+   a module's own height cap for them is lifted here, where they are the main picture */
+.fill.fig > div:not(.mediabar):not(.inset){width:100%}
+.fill.fig figure svg,.fill.fig figure img{width:100%;height:auto;max-height:max(220px,calc(100vh - 360px))}
+/* an inset photo under a drawing keeps its inset size - the figure rule above would grow it to the column and squash
+   a kit drawing to nothing (IGF M02 s15, M03 s14, 2026-10-15) */
+.fill.fig figure.inset img{width:44%;max-height:min(26vh,230px)}
+.fill.fig figure figcaption{font-size:clamp(12.5px,1.6vmin,18px)}
+/* `.fill svg{width:100%}` above is for the drawing; a control's icon inside the box keeps its own size -
+   measured: without this the step buttons' chevrons grew to 40 px and their labels broke onto two lines */
+.fill .mediabar svg,.fill button svg{width:1.05em;height:1.05em;max-height:none;flex:0 0 auto}
+.slide-body.two-col.fig-wide{grid-template-columns:.8fr 1.2fr;grid-template-rows:minmax(0,1fr)}
+.slide-body.two-col.fig-wide > .fill{max-height:100%}
+.slide-body.two-col.fig-wide.fig-first{grid-template-columns:1.2fr .8fr}
+/* a photograph in a real column (wide-left / wide-right, 2.49.1): the words are as wide as the layout says, the photo
+   fills its own column to the slide's height, cropped to it - its credit line stays on the slide (.credit) */
+.slide-body.two-col.photo-col{grid-template-rows:minmax(0,1fr);align-items:stretch}
+.slide-body.two-col.photo-col > .fill.photo-col{position:relative;display:block;min-height:0;max-height:none;
+  border-radius:var(--r-l);overflow:hidden}
+.slide-body.two-col.photo-col > .fill.photo-col > img{position:absolute;inset:0;width:100%;height:100%;max-height:none;
+  object-fit:cover}
+/* 2.60.0 - its credit is the column's own foot strip: the photo above it takes what is left, cropped to it */
+.slide-body.two-col.photo-col > .fill.photo-col:has(> .credit){display:flex;flex-direction:column}
+.slide-body.two-col.photo-col > .fill.photo-col:has(> .credit) > img{position:relative;inset:auto;flex:1 1 0;min-height:0;height:auto}
+.fill.photo-col > .credit{align-self:stretch;margin:0;max-width:none;border-radius:0;flex:0 0 auto}
+/* a stage with words above and a legend row under the drawing: the drawing takes what is left - so the
+   furniture around it is packed tight (measured: a 5-step legend, the step buttons and two lines left a
+   3.4:1 drawing 206 px of a 538 px stage) */
+.slide-body.stage > .copy,.slide-body.stage > p{flex:0 0 auto}
+.slide-body.stage:has(> .legend){gap:min(1.2vmin,12px)}
+.slide-body.stage > .fill.fig{gap:min(1vmin,10px)}
+/* the legend is the words of the screen, so it is set at reading size (the .copy size) - at 13-15 px the
+   information under a large drawing was too small to read from the room (operator, 2026-10-15, M01 s04) */
+.slide-body.stage > .legend li{padding-top:.4em;padding-bottom:.4em;font-size:clamp(15px,2.3vmin,30px)}
+/* a 3D model or a live component in the wide column takes the column's height, not a guess */
+/* 2.49.2 (IGF M07-M15, F12): the stage was "the screen's height less 300 px" - 500 px at 1280 x 800 in a column that is 474 px high (the
+   slide's header, gap and bottom padding scale with the screen, a fixed 300 px does not), so every 3D stage overran its
+   column by ~28 px and each module patched it. Now the stage takes the column's own height: the column is stretched to
+   its grid row and the stage fills what the column holds (a step bar under it keeps its place), never less than 320 px
+   (or 44 vh on a short screen) */
+.slide-body.two-col.fig-wide > .fill:has([data-stage]){align-self:stretch;min-height:0}
+.slide-body.two-col.fig-wide [data-stage]{width:100%;flex:1 1 0;align-self:stretch;min-height:min(320px,44vh);max-height:100%}
+/* a numbered legend row under a stage drawing - its numbers match the drawing's */
+.legend{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:min(1.2vmin,12px)}
+.legend li{position:relative;min-height:44px;padding:.55em .75em .55em 2.5em;border:1.5px solid var(--line-l);
+  border-radius:var(--r-s);background:var(--white);color:var(--ink);cursor:pointer;
+  font-size:clamp(15px,2.3vmin,30px);line-height:1.35}
+.legend.own-numbers li{padding-left:.75em}
+.legend.own-numbers li::before{content:none}
+.legend li::before{content:attr(data-n);position:absolute;left:.65em;top:.55em;width:1.45em;height:1.45em;
+  border-radius:50%;background:var(--navy);color:var(--white);font-size:.82em;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.legend li.cur{border-color:var(--amber);background:var(--amber-wash-l);font-weight:600}
+.slide.dark .legend li{background:var(--deep-2);border-color:var(--line-d);color:var(--txt-d)}
+.slide.dark .legend li.cur{background:var(--amber-wash-d)}
+/* a photograph beside the words: the photo fills the right of the screen, the words sit on the dark left */
+.slide.photo.split .photo-wrap{left:44%}
+.slide.photo.split .photo-scrim{
+  background:linear-gradient(90deg,var(--deep) 0%,var(--deep) 44%,transparent 58%),
+             linear-gradient(0deg,var(--cmp-night-72),transparent 30%)}
+.slide.photo .photo-copy .lead{font-size:clamp(14px,2.1vmin,27px);line-height:1.45;color:var(--txt-d)}
+.slide.photo.split .photo-copy .lead{margin-top:min(1.4vmin,12px);padding-left:.85em;
+  border-left:3px solid var(--amber)}
+/* a "•" line over a photograph: the same square marker as the .support list on a text slide, no left rule
+   (IGF M06 s08, 2026-10-19). Its heading lines (.head) are set further down, after the split size rule */
+.slide.photo .photo-copy .lead.sub{position:relative;border-left:0;padding-left:1.45em;
+  margin-top:min(.8vmin,7px)}
+.slide.photo .photo-copy .lead.sub::before{content:"";position:absolute;left:0;top:.5em;width:.55em;height:.55em;
+  border-radius:2px;background:var(--blue)}
+/* an inset photograph on a photograph slide (IGF M04 s02, 2026-10-16): the .copy/.fill rules above do not reach
+   .photo-copy, so the inset ran at its natural size and spilled 74 px off the slide. Here it is a compact row under the
+   words, small enough that the centred column keeps inside the slide */
+.photo-copy .inset{display:flex;gap:min(1.6vmin,14px);align-items:center;margin:min(1.2vmin,10px) 0 0;width:100%}
+.photo-copy .inset img{width:34%;flex:0 0 34%;height:auto;max-height:min(16vh,150px);object-fit:cover;
+  border-radius:var(--r-m);box-shadow:var(--sh-d)}
+.photo-copy .inset figcaption{font-size:clamp(12.5px,1.4vmin,17px);line-height:1.35;color:var(--dim-d)}
+/* small drawings that belong with the words (two mini figures beside a photo): compact, side by side.
+   Measured on the IGF pilot M02: at the module's own 140 px they pushed the photo's words 102 px off the screen */
+.aside{margin-top:min(1.6vmin,14px)}
+.photo-copy .aside svg,.photo-copy .aside img,.copy .aside svg,.copy .aside img{height:auto;max-height:min(13vh,100px)}
+.photo-copy .aside figcaption,.copy .aside figcaption{font-size:clamp(12.5px,1.5vmin,17px)}
+/* a photo beside long words: the words get a little more width and a little less size before they overflow */
+.slide.photo.split .photo-copy{max-width:min(42vw,600px)}
+.slide.photo.split .photo-copy .lead{font-size:clamp(14px,1.95vmin,25px)}
+.slide.photo .photo-copy .lead{line-height:1.38}
+/* the lines that head the points: bold, white and a step larger - how a text slide marks its opening line - and
+   no amber rule, which elsewhere means a takeaway or a law, not a heading */
+.slide.photo .photo-copy .lead.head{border-left:0;padding-left:0;margin-top:min(2.2vmin,20px);font-weight:700;
+  color:var(--white);font-size:clamp(15.5px,2.35vmin,30px)}
+.slide.photo.split .photo-copy .lead.head{font-size:clamp(15.5px,2.2vmin,28px)}
+.slide.photo .photo-copy .lead.sub.step{padding-left:1.95em}
+.slide.photo .photo-copy .lead.sub.step::before{content:none}
+/* a smaller projector (1024 x 768): the words take half the width and step down a little in size - measured on
+   the IGF pilot M02, nine word-heavy slides overflowed their column by 10 to 100 px at the full size */
+@media (max-width:1100px) and (min-width:901px){
+  .copy{--fs:clamp(14px,2vmin,30px)}
+  .slide-body.two-col.fig-wide{grid-template-columns:1fr 1fr}
+  .slide-body.two-col.fig-wide.fig-first{grid-template-columns:1fr 1fr}
+}
+/* the task slide: its lines grouped at reading size, and the tablet sign */
+.act-ico{width:clamp(64px,11vmin,120px);height:auto;margin-top:2.6vmin;color:var(--blue)}
+/* 2.63.0 - the exercise's real photograph instead of the icon (build sheet "photo"): it opens full screen with its record */
+.act-photo{display:block;margin:2.2vmin auto 0;width:auto;max-width:min(60%,520px);max-height:min(30vh,260px);object-fit:cover;
+  border-radius:var(--r-m);box-shadow:var(--sh)}
+.slide.dark .act-photo{box-shadow:var(--sh-d)}
+.act-lines{margin-top:2.4vmin;display:flex;flex-direction:column;gap:.45em;align-items:center}
+.act-lines .act-inst{margin:0;font-size:clamp(15px,2.5vmin,34px);line-height:1.4;color:var(--txt-d);max-width:32em}
+.slide:not(.dark):not(.photo) .act-lines .act-inst{color:var(--ink)}
+
+/* ==========================================================================
+   14 · NARROW FALLBACK — a portrait tablet is 800 px wide.
+   Multi-column compositions collapse; nothing is allowed to squeeze.
+   ========================================================================== */
+@media (max-width:900px){
+  /* A collapsed two-col is still a composition. `align-items:start` stacked
+     both columns against the top of a 1280 px portrait screen and left the
+     lower third empty - measured at centroid y=0.29. The rows size to their
+     content; the STACK centres. */
+  .slide-body.two-col,
+  .slide-body.two-col.wide-left,
+  .slide-body.two-col.wide-right{grid-template-columns:1fr;
+    grid-auto-rows:min-content;align-content:center;align-items:start}
+  .cards.c3,.cards.c4{grid-template-columns:repeat(2,1fr)}
+  /* `repeat(auto-fit,minmax(150px,1fr))` produced a FOURTH COLUMN OF ZERO WIDTH on an
+     800 px portrait screen - 219.7px x 3 plus 0px - and the item in it collapsed onto its
+     neighbour. Measured as four overlapping text pairs on a real hand-off screen. At this
+     width the summary is two columns, stated rather than derived. */
+  .slide-body.sum{grid-template-columns:repeat(2,1fr)}
+  /* An activity body stays CENTRED here, and that is deliberate. Anchoring it under its
+     title was tried, to close a 350 px gap on one screen, and it emptied the bottom of
+     every tall portrait activity screen instead - the composition probe went from one
+     weak screen to twelve in a single run. A gap above the content is a smaller defect
+     than a dead half below it, and the probe was right about which. */
+  .trio{grid-template-columns:1fr;max-height:none}
+  .ans-grid{grid-template-columns:1fr}
+  .photo-copy{max-width:min(78vw,620px)}
+  .slide-body.two-col.fig-wide{grid-template-columns:1fr;grid-template-rows:none}
+  .slide-body.two-col.photo-col{grid-template-rows:none;align-items:start}
+  .slide-body.two-col.photo-col > .fill.photo-col{min-height:34vh}
+  .slide.photo.split .photo-wrap{left:0}
+  .slide.photo.split:has(> .credit) > .photo-wrap{margin-left:0}
+  .slide.photo.split .photo-copy{max-width:min(78vw,620px)}
+  .copy .inset img{width:36%;flex-basis:36%}
+}
+@media (max-width:620px){
+  .cards.c2,.cards.c3,.cards.c4{grid-template-columns:1fr}
+  .slide-body.sum{grid-template-columns:1fr}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .frag{transition:none}
+}
+
+
+/* ==========================================================================
+   15 · RECAP — "what to take away", the closing slide of EVERY module (L51).
+   Owner, 2026-10-15: "each module should of course end in module check, but
+   before it it should be beautiful summary in same design, like beautiful
+   animation, boxes, main points what to take away from this module, and all
+   modules should be same closing slide design."
+
+   One design, every module - never restyled per module (a course that wants
+   it otherwise records that as its own choice, L26). It is the slide straight
+   before the module check's task slide. The markup is fixed:
+
+     <section class="slide dark recap" data-script="s24" data-kind="Summary"
+              data-title="What to take away" data-visual="none" data-cue="...">
+       <div class="slide-kind"><b>Summary</b> · M01</div>
+       <h2 data-script-field="title">What to take away</h2>
+       <div class="slide-body recap">
+         <ol class="rc-grid" data-n="4">
+           <li class="rc-item" data-script-field="text"><b class="rc-t">Kept liquid</b><span
+               class="rc-sep"> - </span><span class="rc-d">cold, under pressure, or both</span></li>
+           ... one <li> per line of the approved recap: "Short title - one sentence"
+         </ol>
+         <p class="rc-next" data-script-ignore>Next: the module check</p>
+       </div>
+     </section>
+
+   The numbers are drawn by CSS, so the slide says exactly the approved words.
+   Boxes rise in one after another, a blue-to-amber rule draws across each, then
+   the "next" strip arrives and nudges twice toward the module check. All of it
+   finishes in about two seconds and stays still after - the instructor talks
+   over a quiet screen. Only movement is animated, never visibility: where an
+   animation stalls (a preview pane), every word is still on the screen.
+   prefers-reduced-motion shows it all at once.
+   ========================================================================== */
+.slide.recap{background:
+  radial-gradient(120% 90% at 88% -12%,var(--cmp-blue-18),transparent 62%),
+  radial-gradient(90% 80% at -8% 112%,var(--cmp-amber-12),transparent 60%),
+  var(--deep)}
+/* 2.60.0 - the boxes' padding and gaps are the compact ones at every height: at 1280 x 800 six boxes of two-to-four-line
+   sentences were 13-27 px taller than the slide (IGF M02, M03, M05 - each builder wrote module CSS). The words keep
+   their size; a short screen (max-height 780px, below) packs tighter still. One rule for every recap, template or not */
+.slide-body.recap{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;
+  gap:min(1.8vmin,16px);overflow:visible}   /* the rise-in must not flash a scrollbar; the measure still sees a real overflow */
+.rc-grid{--h:min(17vmin,170px);list-style:none;margin:0;padding:0;display:grid;gap:min(1.8vmin,16px);
+  grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:minmax(var(--h),auto);counter-reset:rc}
+.rc-grid[data-n="3"]{--h:min(34vmin,330px)}
+.rc-grid[data-n="4"]{--h:min(21vmin,210px);grid-template-columns:repeat(2,minmax(0,1fr))}
+.rc-item{--d:.15s;position:relative;counter-increment:rc;display:flex;flex-direction:column;
+  gap:.4em;margin:0;overflow:hidden;
+  padding:min(2.4vmin,22px) min(2.8vmin,26px) min(2.2vmin,20px);
+  background:linear-gradient(180deg,var(--cmp-white-07),var(--cmp-white-02));
+  border:1px solid var(--line-d);border-radius:var(--r-m);box-shadow:var(--sh-d)}
+/* 2.63.2 (IGF slide review: nine modules' summaries): five cards in three columns left an empty sixth cell. Six
+   half-width columns: three cards span two each, the last two sit centred under them (3 + 2) - the same width as the rest.
+   Two columns (621-900 px): the fifth card is centred alone under the four */
+@media (min-width:901px){
+  .rc-grid[data-n="5"]{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .rc-grid[data-n="5"] > .rc-item{grid-column:span 2}
+  .rc-grid[data-n="5"] > .rc-item:nth-child(4){grid-column:2 / span 2}
+}
+@media (min-width:621px) and (max-width:900px){
+  .rc-grid[data-n="5"]{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .rc-grid[data-n="5"] > .rc-item{grid-column:span 2}
+  .rc-grid[data-n="5"] > .rc-item:nth-child(5){grid-column:2 / span 2}
+}
+.rc-item:nth-child(2){--d:.3s}
+.rc-item:nth-child(3){--d:.45s}
+.rc-item:nth-child(4){--d:.6s}
+.rc-item:nth-child(5){--d:.75s}
+.rc-item:nth-child(6){--d:.9s}
+.rc-item::before{content:counter(rc,decimal-leading-zero);align-self:flex-start;display:inline-flex;
+  align-items:center;justify-content:center;min-width:2.1em;height:2em;padding:0 .5em;
+  border-radius:999px;border:1px solid var(--cmp-amber-45);background:var(--amber-wash-d);
+  font-family:var(--mono);font-weight:700;color:var(--amber);font-size:clamp(16px,2vmin,26px);
+  letter-spacing:.06em;line-height:1}
+.rc-item::after{content:"";position:absolute;left:0;top:0;width:100%;height:4px;
+  background:linear-gradient(90deg,var(--blue),var(--amber));transform-origin:left center}
+.rc-t{display:block;color:var(--txt-d);font-weight:700;line-height:1.22;
+  font-size:clamp(20px,3.1vmin,42px)}
+.rc-sep{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.rc-d{display:block;color:var(--dim-d);line-height:1.45;font-size:clamp(17px,2.35vmin,30px)}
+.rc-next{align-self:center;display:inline-flex;align-items:center;gap:.7em;margin:0;
+  padding:.65em 1.5em;border-radius:999px;background:var(--amber-wash-d);
+  border:1px solid var(--cmp-amber-45);color:var(--txt-d);font-weight:600;
+  font-size:clamp(16px,2vmin,26px)}
+.rc-next::after{content:"\2192";display:inline-block;color:var(--amber);font-weight:700}
+
+/* 2.62.1 - the recap on the light ground, its default (owner, 2026-10-21: at least 80 % of a module's slides light):
+   the same boxes as white cards with dark words; a recap the build sheet asks "dark" keeps the design above */
+.slide.recap:not(.dark){background:radial-gradient(120% 90% at 88% -12%,var(--blue-wash-l),transparent 62%),var(--white)}
+.slide.recap:not(.dark) .rc-item{background:var(--white);border-color:var(--line-l);box-shadow:var(--sh)}
+.slide.recap:not(.dark) .rc-item::before{color:var(--navy);background:var(--blue-wash-l);border-color:var(--line-l)}
+.slide.recap:not(.dark) .rc-t{color:var(--navy)}
+.slide.recap:not(.dark) .rc-d{color:var(--dim-l)}
+.slide.recap:not(.dark) .rc-next{background:var(--blue-wash-l);border-color:var(--line-l);color:var(--navy)}
+.slide.recap:not(.dark) .rc-next::after{color:var(--blue)}
+.slide.recap.active .rc-item{animation:rc-rise .62s cubic-bezier(.2,.8,.2,1) var(--d) backwards}
+.slide.recap.active .rc-item::after{animation:rc-draw .7s ease-out calc(var(--d) + .25s) backwards}
+.slide.recap.active .rc-next{animation:rc-rise .6s cubic-bezier(.2,.8,.2,1) 1.15s backwards}
+.slide.recap.active .rc-next::after{animation:rc-nudge .9s ease-in-out 1.8s 2}
+@keyframes rc-rise{from{transform:translateY(28px) scale(.95)}to{transform:none}}   /* movement only: a stalled animation still shows every word (course-module-ux build/GUIDE.md 9) */
+@keyframes rc-draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes rc-nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(7px)}}
+
+/* a short screen (1024 x 768): the boxes' own padding, gaps and minimum height give way, never the words' size - six
+   two-line recap boxes put "Next: the module check" 9 px under the deck's chrome (IGF M02 s16, both 2026-10-20
+   benchmark runs). 2.60.0: the template's tighter 2.56.0 values (gb_layouts.css) are this one rule for every recap */
+@media (max-height:780px){
+  .slide-body.recap{gap:min(1vmin,8px)}
+  .rc-grid{--h:min(12vmin,92px);gap:min(1.2vmin,10px)}
+  .rc-grid[data-n="3"]{--h:min(24vmin,184px)}
+  .rc-grid[data-n="4"]{--h:min(15vmin,116px)}
+  .rc-item{gap:.3em;padding:min(1.6vmin,13px) min(2.2vmin,18px) min(1.4vmin,11px)}
+}
+@media (max-width:900px){
+  .rc-grid,.rc-grid[data-n="4"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:620px){
+  .rc-grid,.rc-grid[data-n="4"]{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion: reduce){
+  .slide.recap *,.slide.recap *::before,.slide.recap *::after{animation:none !important}
+}
+
+/* ---- 16 · L57: the real photographs of what a drawing shows, in a row under it - small, numbered like the
+   drawing, each one opening full screen with its record (gb_zoom.js, L51/L56). Labels stay at the 12.5 px floor. */
+.photo-strip{flex:0 0 auto;display:flex;justify-content:center;gap:min(1.4vmin,14px);width:100%;margin:0}
+.photo-strip .pthumb{margin:0;flex:0 1 min(19vmin,180px);min-width:0;display:flex;flex-direction:column;gap:.35em}
+.slide .photo-strip .pthumb img{display:block;width:100%;height:min(11vh,104px);max-height:none;object-fit:cover;border-radius:var(--r-s);
+  border:1px solid var(--line-l);box-shadow:var(--sh);background:var(--ink)}
+.copy .photo-strip{justify-content:flex-start}
+.slide.dark .photo-strip .pthumb img{border-color:var(--line-d);box-shadow:var(--sh-d)}
+.photo-strip figcaption{display:flex;align-items:baseline;gap:.4em;font-size:clamp(12.5px,1.3vmin,16px);line-height:1.25;
+  color:var(--dim-l);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slide.dark .photo-strip figcaption{color:var(--dim-d)}
+.photo-strip figcaption b{flex:0 0 auto;display:inline-grid;place-items:center;width:1.6em;height:1.6em;border-radius:50%;
+  background:var(--navy);color:var(--white);font-size:max(12.5px,.9em)}   /* 2.62.1: .9em of the 12.5 px caption was 11.3 px - under the factory's own floor (IGF M01 v262) */
+.slide.dark .photo-strip figcaption b{background:var(--blue);color:var(--ink)}
+.slide.photo .photo-scrim{cursor:zoom-in}

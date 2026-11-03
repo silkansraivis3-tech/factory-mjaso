@@ -42,7 +42,7 @@
   --lt-paper:#F7F8FA;          /* Light Grey lifted half way to white: the slide ground */
   --lt-panel:#0A2463;          /* the figure panel: Navy */
   --lt-panel-glow:rgba(83,167,219,.16);
-  --lt-deep:#06173D;           /* a dark slide: Navy deepened towards Pitch Black */
+  --lt-deep:#0A2463;           /* a dark slide, and the ground under a photograph: brand Navy, never Pitch Black */
   --lt-line:#DCE3EB;
   --lt-line-d:rgba(83,167,219,.22);
   --lt-dim-d:#B8C7DA;
@@ -391,3 +391,18 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
   .slide[data-template^="task-launch."] .act-code{grid-row:auto;justify-self:start}
 }
 @media (prefers-reduced-motion:reduce){.slide[data-template] .lt-part{transition:none}}
+
+/* ------------------------------------------------ the brandbook's colours on every deck file (owner, 2026-11-03, 2.88.0).
+   Blue is the one accent; dark slides and photographs stand on Navy, never Pitch Black; the NA pattern goes only where
+   nobody reads - the opening, the task and check slides, the summary and the start screen. */
+:root{
+  --amber:#53A7DB; --amber-ink:#0A2463; --amber-wash-d:rgba(83,167,219,.16); --amber-wash-l:#E6F2FA;
+  --blue:#53A7DB; --blue2:#53A7DB; --on-blue:#0A2463;
+  --deep:#0A2463; --deep-2:#0D2A6C; --deep-3:#123378;
+}
+.slide[data-template].photo{background:#0A2463}
+.slide[data-template^="opening."]:not(.dark):not(.photo),.slide[data-template^="task-launch."]:not(.dark),.slide[data-template^="recap."]:not(.dark){
+  background:linear-gradient(100deg,#F7F8FA 0,rgba(247,248,250,.96) 40%,rgba(247,248,250,.15) 100%),url("na_pattern_on_light.svg") 0 0/120px auto,#F7F8FA}
+.slide[data-template^="opening."].dark,.slide[data-template^="task-launch."].dark,.slide[data-template^="recap."].dark{
+  background:linear-gradient(100deg,#0A2463 0,rgba(10,36,99,.92) 40%,rgba(10,36,99,.3) 100%),url("na_pattern_on_navy.svg") 0 0/120px auto,#0A2463}
+#landing{background:linear-gradient(180deg,rgba(10,36,99,.5),rgba(10,36,99,.88)),url("na_pattern_on_navy.svg") 0 0/120px auto,#0A2463!important}

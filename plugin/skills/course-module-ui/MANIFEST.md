@@ -103,6 +103,24 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## The upgraded templates and the brandbook's colours — 2.88.0 (2026-11-03)
+
+The owner approved, in the template gallery, a new body for every L61 template, six learning layouts and quick drills,
+and ruled out flat line drawings as pictures (L67). This skill now owns:
+
+- `templates/gb_layouts.css`, last block: Blue as the one accent, dark and photo slides on Navy (never Pitch Black),
+  the NA pattern behind opening, task, check and summary slides and the start screen. `--lt-deep` is Navy.
+- `templates/gb_upgrade.css`: the upgraded bodies (vocabulary §0b), every colour a token in its own `:root`, nothing
+  tied to one slide's stop number. Made from the gallery's six proposal files; the flat-drawing animations of the
+  three-blocks slide are left out (the live scene replaced them).
+- `knowledge/design-system.json`: ships `gb_upgrade.css`, `gb_steps.js` (course-module-ux), `gb_scene.js`
+  (course-visuals/scene) and the two pattern files.
+
+The compiler loads `gb_upgrade.css` and `gb_steps.js` in every deck; neither changes a slide that does not use the new
+markup. `design/slide-templates/` is the reference, built from these files only. `scripts/test_design_system.py` checks
+the grounds, the pattern's places, that no rule names a stop number or a slide id, that no flat-drawing motion is left,
+and that `gb_steps.js` is valid.
+
 ## The logo's gap — 2.84.1 (2026-11-02)
 
 The owner: the logo was padded on the right but close to the top; it should be padded the same both ways. Measured on the

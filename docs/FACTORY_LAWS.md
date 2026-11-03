@@ -631,8 +631,22 @@ is asked, never assumed. → `course-factory` (`coverage/SIMULATORS.md`, `covera
 `coverage/knowledge/sim_coverage.schema.json`, `coverage/scripts/sim_coverage.py` - `check` fails an incomplete map;
 `scripts/course_gate.py` says it on every module start, never a stop), 2.82.0
 
-**All sixty-six laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L66 are enforced first through `course-factory/SKILL.md`'s
+**L67 · A picture is 3D or a photograph, never a flat line drawing; every slide moves on Next.** The owner, 2026-11-03,
+reviewing the template gallery ("svg SUCKS"; "I don't want to risk that sometimes you will think it's standard"): the
+picture on a slide or a task screen is live 3D, a static 3D render of a 3D scene, a real photograph or a proper raster
+image - never the figure kit's flat line drawing as the illustration (small icons are not pictures). Of a module's
+slides, 60-80 % carry 3D that the room steps through; the rest may be static 3D. The upgraded templates are the frame of
+L61 with a better body (`design/slide-templates/`, 28 live slides): two-column large figure, step boxes, live 3D picture
+boxes, short points with the full words in the instructor notes, photo spots and zoom, the question that opens, the
+summary that asks before it opens, six learning layouts (worked example, true or false, what would you do, name the
+parts, numbers to remember, spot the difference), quick drills before the module check in every second or third module,
+and a "before the self-check" list. Dark slides and photographs stand on Navy, never Pitch Black; the NA pattern only
+where nobody reads. → `course-module-ui` (`templates/gb_upgrade.css`, `references/vocabulary.md` §0b),
+`course-module-ux` (`assets/gb_steps.js`), `course-visuals` (`scene/gb_scene.js`); the compiler writing every template
+in its upgraded body is the next step, 2.88.0
+
+**All sixty-seven laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L67 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

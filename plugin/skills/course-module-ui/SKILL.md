@@ -108,6 +108,30 @@ it**, never the one that matches the last screen you wrote.
 
 `--txt-d` is body text on a dark slide. There is no `--txt-l`; light slides use `--ink`.
 
+## The upgraded templates - 2.88.0 (owner, 2026-11-03, L67)
+
+The owner approved a new body for every L61 template, and six new ones, in the template gallery; the reference is
+`design/slide-templates/` - open `presentation/index.html` and press Next through 28 slides. The frame is unchanged
+(top line, the logo 48 px from the top and the right, title, bottom line, Raleway). What is new:
+
+- **Pictures.** Live 3D (`gb_scene.js`, a course's scenes registered on `LTStage.scenes`), a static 3D render of the
+  same scenes, or a photograph. **Never the flat line drawing as the illustration** - not in a template, not in a demo.
+- **Colours.** Blue is the one accent; dark slides and photographs on Navy `#0A2463`, never Pitch Black; the NA pattern
+  only behind opening, task, check and summary slides and the start screen (`gb_layouts.css`, its last block).
+- **Motion.** Every upgraded slide has stops that Next walks (`gb_steps.js`); parts rise in reading order on entry;
+  everything settles for reduced motion.
+- **The mix.** 60-80 % of a module's slides step through 3D; the rest may be static 3D. Neighbouring slides change
+  ground (light / Navy) and kind of activity.
+- **Room activity.** The summary asks each card as a question first (the instructor notes say to ask the room); a
+  "before the self-check" list; quick drills (say it, quick fire, find it - 20 to 60 s, the answer shows itself when the
+  clock ends) before the module check in every second or third module, never every module.
+- **Words.** Long explanations become short points with the key word first; the full approved words and the key idea
+  go to the instructor notes (`data-cue`). Summary questions, drill prompts and the self-check list are words like any
+  other: written and approved in the content script, never made up by the compiler.
+
+Every class is in `references/vocabulary.md` §0b. `gb_upgrade.css` and `gb_steps.js` load in every compiled deck; the
+compiler writing each template in its upgraded body (and the content script carrying the new fields) is the next step.
+
 ## Where to look
 
 | You are doing | Read |

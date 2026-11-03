@@ -122,7 +122,7 @@ import content_script as cs  # noqa: E402
 import workspace  # noqa: E402
 
 SHELL = os.path.join(SKILLS, "course-module-ui", "templates", "gb_shell.html")
-STYLES = ("gb_tokens.css", "gb_shell.css", "gb_compose.css", "gb_layouts.css")   # gb_layouts.css: the owner's templates (L61)
+STYLES = ("gb_tokens.css", "gb_shell.css", "gb_compose.css", "gb_layouts.css", "gb_upgrade.css")   # gb_layouts.css: the owner's templates (L61); gb_upgrade.css: their upgraded bodies (2.88.0)
 IMAGES = (".jpg", ".jpeg", ".png", ".webp", ".gif")
 KIT_SPEC = ".kit.json"                       # a figure made from the figure kit (course-visuals/kit)
 KIT_FILES = ("kit.css", "kit.js")             # shipped with the module by design_system.py, like gb_deck.js
@@ -3977,6 +3977,7 @@ def compile_deck(script, build, mdir, figdir, version, approved, avoid=None, las
                 "  </div>", "</div>"]
     body = ["<body>", '<a class="gbt-topback" href="../START_HERE_EXTENDED.html" hidden>Back</a>']
     body += inline + landing + [chrome_block(), '<main id="stage">', "\n\n".join(slides), "</main>",
+                                '<script src="../assets/gb_steps.js"></script>',     # 2.88.0: Next walks an upgraded slide's stops; before the deck
                                 '<script src="../assets/gb_deck.js"></script>',
                                 '<script src="../assets/gb_fit.js"></script>',
                                 '<script src="../assets/gb_zoom.js"></script>']

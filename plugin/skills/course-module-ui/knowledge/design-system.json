@@ -31,7 +31,12 @@
     {"name": "kit3d.css",           "from": "course-visuals/kit3d/kit3d.css",             "for": "the 3D kit's look"},
     {"name": "gb_run.css",          "from": "course-module-ux/assets/gb_run.css",         "for": "the step runner's look"},
     {"name": "novikontas_logo.svg", "from": "../resources/brand/novikontas_logo.svg",     "for": "the landing screen, and the top right of every light slide (L61)"},
-    {"name": "novikontas_logo_white.svg", "from": "../resources/brand/novikontas_logo_white.svg", "for": "the top right of every dark (blue) or photo slide - the official file with its one colour switched to white for a dark ground (owner, 2026-10-21, L62)"}
+    {"name": "novikontas_logo_white.svg", "from": "../resources/brand/novikontas_logo_white.svg", "for": "the top right of every dark (blue) or photo slide - the official file with its one colour switched to white for a dark ground (owner, 2026-10-21, L62)"},
+    {"name": "na_pattern_on_light.svg", "from": "../resources/brand/na_pattern_on_light.svg", "for": "the brandbook's NA pattern, Navy at 5 %, behind light opening, task and summary slides - never where people read (2.88.0)"},
+    {"name": "na_pattern_on_navy.svg", "from": "../resources/brand/na_pattern_on_navy.svg", "for": "the NA pattern, Blue at 12 %, behind dark opening, task and summary slides and the start screen (2.88.0)"},
+    {"name": "gb_upgrade.css", "from": "course-module-ui/templates/gb_upgrade.css", "for": "the upgraded templates (2.88.0): two-column large figure, step boxes, moving blocks, short points, live 3D boxes, photo spots and zoom, question then answer, summary that asks first, six learning layouts, quick drills - loaded after gb_layouts.css"},
+    {"name": "gb_steps.js", "from": "course-module-ux/assets/gb_steps.js", "for": "Next walks an upgraded slide's stops ([data-k] / [data-stop]) and drives its live scene, photo, timer or slider (2.88.0) - loaded before gb_deck.js"},
+    {"name": "gb_scene.js", "from": "course-visuals/scene/gb_scene.js", "for": "a slide's live 3D scene in its picture box ([data-lt-scene]) - one shared canvas for the deck, still for reduced motion (2.88.0); a course's scenes file registers its scenes after it"}
   ],
   "starter_deck": {"from": "course-module-ui/templates/gb_shell.html", "to": "module.html",
                    "_note": "written only when the module has no module.html yet, and never checked for identity afterwards - it is the deck the module is built in"},

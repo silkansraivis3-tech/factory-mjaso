@@ -1,0 +1,408 @@
+/* ==========================================================================
+   gb_layouts.css — the owner's layout templates (L61, course-factory 2.52.0)
+
+   WHY IT EXISTS
+   Owner, 2026-10-20: "All slides for all modules that will be made need to be
+   in this style, it's a RULE ... the logo should be our official one, and the
+   colours from the brandbook." The style is the owner-reviewed library in
+   design/course-layout-templates/ (13 templates); this file is its production
+   look. The compiler names every slide's template on the slide -
+   data-template="explain-figure.v1" data-variant="figure-right" - and only those slides are styled here, so a deck
+   built before 2.52.0 looks exactly as it did.
+
+   THE BRANDBOOK, AND NOTHING ELSE, FOR THE SLIDE ITSELF
+     Navy #0A2463 · Novikontas Blue #53A7DB · Pitch Black #011111
+     Steel Blue #415C8F · Light Grey #E7EBF0 · Pure White #FFFFFF
+   The reference design's amber accent is Novikontas Blue here. The meaning
+   colours inside a drawing or a task (correct, wrong, hazard, the line a figure
+   is on) are the drawing's own and are not repainted.
+   The logo is the official file (assets/novikontas_logo.svg, exactly as
+   provided), top right; on a dark or photo slide it sits on a white plate -
+   brandbook: only on a high-contrast background, safe area kept.
+
+   ONE LOGICAL SLIDE
+   Sizes are in vmin with reading floors: at 1280 x 800, 1 vmin = 8 px, so the
+   numbers below are the reference's pixels / 8. A projector scales the same
+   slide evenly. Type is never set below the shell's floors.
+
+   REQUIRES gb_tokens.css, gb_shell.css, gb_compose.css - then this file.
+   ========================================================================== */
+
+/* Raleway, the brandbook's typeface (Bold titles, Medium body, SemiBold labels), bundled: the classroom is offline and
+   Google Fonts never load there. Variable font, SIL Open Font License 1.1 (course-module-ui/templates/fonts/OFL.txt). */
+@font-face{font-family:"Raleway";src:url("raleway-variable.ttf") format("truetype");font-style:normal;font-weight:100 900;font-display:block}
+
+:root{
+  --lt-navy:#0A2463;
+  --lt-blue:#53A7DB;
+  --lt-black:#011111;
+  --lt-steel:#415C8F;
+  --lt-grey:#E7EBF0;
+  --lt-white:#FFFFFF;
+  --lt-paper:#F7F8FA;          /* Light Grey lifted half way to white: the slide ground */
+  --lt-panel:#0A2463;          /* the figure panel: Navy */
+  --lt-panel-glow:rgba(83,167,219,.16);
+  --lt-deep:#0A2463;           /* a dark slide, and the ground under a photograph: brand Navy, never Pitch Black */
+  --lt-line:#DCE3EB;
+  --lt-line-d:rgba(83,167,219,.22);
+  --lt-dim-d:#B8C7DA;
+  --lt-text:55;                /* text share of a split slide, %: 50-60 (owner, default 55) */
+  --lt-gap:min(4vmin,32px);
+  --lt-pad-x:min(8vmin,64px);
+  --lt-top:min(10.5vmin,84px);
+  --lt-fs:clamp(15px,2.5vmin,30px);
+  --lt-fs-lead:clamp(16px,2.6vmin,31px);
+  --lt-ring:#C7D3DF;
+  --lt-on-photo:#D5E2EE;
+  --lt-box:#EEF5FB;
+  --lt-shadow:rgba(1,17,17,.25);
+  --lt-blue-06:rgba(83,167,219,.06);
+  --lt-blue-08:rgba(83,167,219,.08);
+  --lt-blue-12:rgba(83,167,219,.12);
+  --lt-corner:rgba(6,23,61,.78);
+  --lt-corner-mid:rgba(6,23,61,.42);
+}
+
+/* ---------------------------------------------------------------- the slide */
+.slide[data-template]{
+  /* Raleway's default figures are old-style ("Mo1", a low "-162"): lining figures read as numbers on a slide */
+  font-variant-numeric:lining-nums;font-feature-settings:"lnum" 1;
+  background:var(--lt-paper);color:var(--lt-black);
+  padding:var(--lt-top) var(--lt-pad-x) max(92px,11.5vmin);
+  font-family:"Raleway","Segoe UI",Arial,sans-serif;
+}
+.slide[data-template].dark,.slide[data-template].photo{background:var(--lt-deep);color:var(--lt-white)}
+.slide[data-template].dark::before{opacity:.035}
+
+/* the top line: what this slide is, left; the official logo, right */
+.slide[data-template] .slide-kind{
+  position:absolute;left:0;right:0;top:0;height:var(--lt-top);
+  background:transparent;color:var(--lt-steel);
+  display:flex;align-items:center;gap:.6em;padding:0 var(--lt-pad-x);
+  font-size:clamp(12.5px,1.5vmin,18px);font-weight:600;letter-spacing:.18em;text-transform:uppercase;z-index:3;
+}
+.slide[data-template] .slide-kind b{color:var(--lt-navy);font-weight:700}
+.slide[data-template].dark .slide-kind,.slide[data-template].photo .slide-kind{color:var(--lt-dim-d);background:transparent}
+.slide[data-template].dark .slide-kind b,.slide[data-template].photo .slide-kind b{color:var(--lt-blue)}
+/* L62 (owner, 2026-10-21: "logo looks bigger and better", then "bigger logo, and on blue slides the logo white without
+   background"). The official file carries its own clear space - exactly the brandbook's two thirds of the symbol's
+   height on every side (artwork 614 x 464 of the 900 x 747 canvas). So the box is sized for the ARTWORK to stand about
+   10.5 vmin tall (84 px at 1280 x 800), and placed so the artwork stands the same gap from the slide's top and right edges
+   (--lt-logo-gap, 48 px at 1280 x 800; more than the clear space, about 26 px there): the file's clear space runs into
+   the margin, where nothing else is. The artwork starts .159 of the box's width in from its right and .19 of its height
+   down from its top (artwork x 143-757, y 142-606 of 900 x 747). The file is used as it is. */
+.slide[data-template]{--lt-logo-h:16.9vmin;--lt-logo-w:20.36vmin;--lt-logo-gap:min(6vmin,48px)}
+.slide[data-template] .slide-kind::after{
+  content:"";position:absolute;left:auto;bottom:auto;transform:none;
+  right:calc(var(--lt-logo-gap) - var(--lt-logo-w) * .159);top:calc(var(--lt-logo-gap) - var(--lt-logo-h) * .19);
+  width:var(--lt-logo-w);height:var(--lt-logo-h);
+  background:url("novikontas_logo.svg") center/100% 100% no-repeat;
+}
+/* a dark (blue) or photo slide: the WHITE logo, no plate - the official file with its one colour switched to white for a
+   dark ground (brandbook: the white versions exist for dark backgrounds; never recoloured to anything else) */
+.slide[data-template].dark .slide-kind::after,.slide[data-template].photo .slide-kind::after{
+  background:url("novikontas_logo_white.svg") center/100% 100% no-repeat;border-radius:0;box-shadow:none;
+}
+/* a photo slide's full-screen button (gb_zoom.js) sits just under the logo's artwork (.621 of the box's height), never on it */
+.slide[data-template].photo > .gbz-corner.gbz-photo{top:calc(var(--lt-logo-gap) + var(--lt-logo-h) * .621 + 12px);right:calc(var(--lt-logo-gap) - 8px)}
+/* over a full photograph the corner behind the logo is darkened - the photograph, never the logo (no effects on it) - so
+   a bright sky or a white tank never swallows the white logo. 2.62.0: a layer of the photograph's own scrim (below,
+   "photo + explanation"); as a box hanging 30 vmin from the 10.5 vmin top line it made that line "scroll" 150 px in the
+   deck audit (IGF M04 s01, s08) */
+
+/* the bottom line: the module's short title, under a hairline */
+.slide[data-template]::after{
+  height:min(6vmin,48px);background:transparent;color:var(--lt-steel);
+  border-top:1px solid var(--lt-line);margin:0 var(--lt-pad-x);left:0;right:0;padding:0;
+  bottom:min(1.2vmin,10px);align-items:center;
+  font-size:clamp(12.5px,1.35vmin,16px);letter-spacing:.18em;font-weight:600;
+}
+.slide[data-template].dark::after,.slide[data-template].photo::after{color:var(--lt-dim-d);border-top-color:var(--lt-line-d);background:transparent}
+.slide[data-template].photo::after{z-index:3}
+/* the classroom chrome sits over the bottom right; the progress bar in the brand's blue */
+body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
+
+/* the title */
+.slide[data-template] > h2,.slide[data-template] .photo-copy h2{
+  margin:0;font-size:clamp(28px,5.75vmin,62px);font-weight:700;line-height:1.1;letter-spacing:-.025em;
+  color:var(--lt-navy);text-wrap:balance;max-width:min(24em,calc(100% - var(--lt-logo-w)));
+}
+/* the words over a photograph stand in their own column at the left, never under the logo: their title keeps the
+   column's width (cut by the logo's, the opening's split photo grew 42 px too tall at 1024 x 768 - 2.62.0 merge) */
+.slide[data-template] .photo-copy h2{max-width:min(24em,100%)}
+.slide[data-template].dark > h2,.slide[data-template].photo .photo-copy h2{color:var(--lt-white)}
+
+/* ---------------------------------------------------------------- the words */
+.slide[data-template] .slide-body{margin-top:min(3.4vmin,28px);padding-bottom:0;gap:var(--lt-gap)}
+.slide[data-template] .copy{--fs:var(--lt-fs);gap:min(2.4vmin,20px)}
+.slide[data-template] .copy .statement,.slide[data-template] .statement{font-size:clamp(18px,3vmin,38px);line-height:1.35;font-weight:600;color:var(--lt-navy)}
+.slide[data-template].dark .copy .statement,.slide[data-template].dark .statement{color:var(--lt-white)}
+.slide[data-template] .copy .lead,.slide[data-template] .lead{font-size:var(--lt-fs-lead);line-height:1.55;color:var(--lt-steel);font-weight:500}
+.slide[data-template].dark .copy .lead{color:var(--lt-dim-d)}
+.slide[data-template] .copy b,.slide[data-template] .lead b{color:var(--lt-navy)}
+.slide[data-template].dark .copy b{color:var(--lt-white)}
+
+/* the points: numbered 01, 02 ... in the brand's blue - the reference's numbered list */
+.slide[data-template] .support{counter-reset:lt;gap:min(2.6vmin,22px)}
+.slide[data-template] .support li{counter-increment:lt;padding-left:min(5vmin,44px);font-size:var(--lt-fs);line-height:1.5;color:var(--lt-steel);font-weight:500}
+.slide[data-template].dark .support li{color:var(--lt-dim-d)}
+.slide[data-template] .support li b{color:var(--lt-navy)}
+.slide[data-template].dark .support li b{color:var(--lt-white)}
+.slide[data-template] .support li::before{
+  content:counter(lt,decimal-leading-zero);width:auto;height:auto;background:none;border-radius:0;
+  top:.42em;left:0;font-size:clamp(12.5px,1.5vmin,18px);font-weight:700;letter-spacing:.08em;color:var(--lt-steel);
+}
+.slide[data-template].dark .support li::before{color:var(--lt-blue)}
+/* numbered steps: the step's own number in a ring (the reference's procedure) */
+/* 44 px is a floor, never a ceiling (2.60.0): min(5.4vmin,44px) made a kit's tap line 41-43 px on a 768-800 px screen
+   (IGF M02, the audit's 44 px touch target) */
+.slide[data-template] .support.seq li{padding-left:min(7vmin,58px);min-height:44px}
+.slide[data-template] .support.seq li::before{content:none}
+.slide[data-template] .support.seq .n{
+  width:min(5.2vmin,42px);height:min(5.2vmin,42px);min-width:0;top:-.1em;border-radius:50%;
+  background:var(--lt-white);color:var(--lt-navy);border:1px solid var(--lt-ring);
+  font-size:clamp(12.5px,1.85vmin,22px);font-weight:700;display:flex;align-items:center;justify-content:center;
+}
+.slide[data-template].dark .support.seq .n{background:transparent;color:var(--lt-white);border-color:var(--lt-line-d)}
+.slide[data-template] .support.seq li:first-child .n{background:var(--lt-navy);color:var(--lt-white);border-color:var(--lt-navy)}
+.slide[data-template].dark .support.seq li:first-child .n{background:var(--lt-blue);color:var(--lt-navy);border-color:var(--lt-blue)}
+
+/* boxes and the conclusion keep their meaning, in brand colours */
+.slide[data-template] .copy .box{border-left-color:var(--lt-blue);background:var(--lt-box);border-radius:min(1vmin,8px)}
+.slide[data-template] .copy .box.alt{border-left-color:var(--lt-steel);background:var(--lt-grey)}
+.slide[data-template] .copy .call{background:var(--lt-navy);color:var(--lt-white);border-radius:min(1.4vmin,12px)}
+
+/* ---------------------------------------------------------------- the figure panel */
+/* the picture's area: a Navy panel with a soft glow, the drawing large inside it (the reference's figure panel; the
+   figure kit, 3D and animations are drawn for it). A drawing made for a white page asks for a light panel in the build
+   sheet - "panel": "light" - so its own colours stay readable. A photograph is never put in a panel: it fills its area. */
+.slide[data-template] .fill.fig{
+  background:radial-gradient(ellipse at 50% 46%,var(--lt-panel-glow) 0,transparent 70%),var(--lt-panel);
+  border-radius:min(2.5vmin,20px);padding:min(1.5vmin,12px);   /* thin: the drawing itself stays as large as its area allows */
+  align-self:stretch;min-height:0;overflow:hidden;
+}
+.slide[data-template] .fill.fig.lt-light{background:var(--lt-white);border:1px solid var(--lt-line)}
+/* a light panel on a dark slide (L62 rotates the ground): the drawing inside is still on white, so its words are dark -
+   never the slide's white inherited onto a white panel (gas module s15: 2.06 contrast) */
+.slide[data-template].dark .fill.fig.lt-light,.slide[data-template] .fill.fig.lt-light{color:var(--lt-black)}
+.slide[data-template].dark .fill.fig.lt-light{background:var(--lt-white);border-color:var(--lt-line)}
+.slide[data-template].dark .fill.fig{background:radial-gradient(ellipse at 50% 46%,var(--lt-panel-glow) 0,transparent 70%),rgba(83,167,219,.07);
+  border:1px solid var(--lt-line-d)}
+.slide[data-template] .fill.fig .kit-screen{background:transparent}
+/* the L57 photo strip under a drawing is in the Navy panel on a light slide too: its captions and number badges take the
+   dark ground's colours - the light page's grey read 1.89:1 there and the Navy badge vanished (IGF M02 v262 s03) */
+.slide[data-template] .fill.fig:not(.lt-light) .photo-strip figcaption{color:var(--dim-d)}
+.slide[data-template] .fill.fig:not(.lt-light) .photo-strip figcaption b{background:var(--blue);color:var(--ink)}
+.slide[data-template] .fill.fig:not(.lt-light) .photo-strip .pthumb img{border-color:var(--line-d);box-shadow:var(--sh-d)}
+.slide[data-template] .fill.fig:has(> img:only-child){background:none;border:0;padding:0}
+/* 2.67.0 - "tiles": several photographs on one slide, each opens full screen; "strips": cuts of one document, numbered */
+.slide[data-template] .lt-tiles-fig{display:flex;align-items:center;justify-content:center}
+.slide[data-template] .lt-tiles{display:grid;width:100%;height:100%;gap:min(1.6vmin,12px);grid-auto-rows:1fr;
+  grid-template-columns:repeat(auto-fit,minmax(min(24vmin,190px),1fr));align-content:center}
+.slide[data-template] .lt-strips{display:flex;flex-direction:column;width:100%;height:100%;gap:min(1.2vmin,10px);justify-content:center}
+.slide[data-template] .lt-strips .lt-tile{flex:1 1 0}
+.slide[data-template] .lt-tile{position:relative;margin:0;display:flex;flex-direction:column;min-height:0;min-width:0;
+  background:var(--lt-white);border:1px solid var(--lt-line);border-radius:min(1.5vmin,12px);overflow:hidden;cursor:zoom-in}
+.slide[data-template] .lt-tile img{display:block;width:100%;flex:1 1 auto;min-height:0;object-fit:cover}
+.slide[data-template] .lt-strips .lt-tile img{object-fit:contain}
+.slide[data-template] .lt-tile figcaption{padding:min(.8vmin,6px) min(1.2vmin,10px);font-size:clamp(16px,2vmin,22px);
+  line-height:1.2;font-weight:600;color:var(--lt-navy)}
+.slide[data-template] .lt-tile .lt-n{position:absolute;top:min(.8vmin,6px);left:min(.8vmin,6px);min-width:1.7em;height:1.7em;
+  border-radius:50%;background:var(--lt-navy);color:var(--lt-white);font-size:clamp(16px,2vmin,22px);display:flex;
+  align-items:center;justify-content:center}
+.slide[data-template] .fill.fig > img:only-child{width:100%;height:100%;object-fit:cover;border-radius:min(2.2vmin,18px)}
+
+/* ---------------------------------------------------------------- split slides: text 55 % / picture 45 % */
+.slide[data-template] .slide-body.two-col,
+.slide[data-template] .slide-body.two-col.fig-wide,
+.slide[data-template] .slide-body.two-col.wide-left,
+.slide[data-template] .slide-body.two-col.wide-right{
+  grid-template-columns:calc((100% - var(--lt-gap)) * var(--lt-text) / 100) minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);gap:var(--lt-gap);align-items:center;
+}
+.slide[data-template] .slide-body.two-col.fig-first,
+.slide[data-template] .slide-body.two-col.fig-wide.fig-first{
+  grid-template-columns:minmax(0,1fr) calc((100% - var(--lt-gap)) * var(--lt-text) / 100);
+}
+.slide[data-template] .slide-body.two-col > .fill{height:100%;max-height:100%}
+.slide[data-template] .slide-body.two-col > .copy{align-self:center}
+/* a photo under the words takes what they leave (gb_compose.css 2.63.0): the column stretches to the row */
+@media (min-width:901px){.slide[data-template] .slide-body.two-col > .copy:has(> .inset){align-self:stretch}}
+.slide[data-template] .slide-body.two-col.photo-col > .fill.photo-col{border-radius:min(2.2vmin,18px);overflow:hidden;background:none;border:0;padding:0}
+
+/* text only (a short slide): one reading column, left-aligned with the title, centred in the height the title leaves -
+   a short text pinned to the top leaves the lower half of the screen empty (audit_compose: a cluster, not a composition) */
+.slide[data-template][data-variant="text-only"] .slide-body{justify-content:safe center;align-items:flex-start;margin-top:min(4.4vmin,36px)}
+.slide[data-template][data-variant="text-only"] .slide-body > .copy{max-width:min(118vmin,950px);align-items:flex-start;align-self:flex-start;text-align:left}
+.slide[data-template][data-variant="text-only"] .copy .lead:first-child{font-size:clamp(17px,2.9vmin,35px);color:var(--lt-navy);line-height:1.45}
+
+/* a sequence of actions: each step a row, the first one the active step (the reference's procedure) */
+.slide[data-template^="procedure."] .support.seq{gap:min(1.5vmin,12px);width:100%}
+.slide[data-template^="procedure."] .support.seq li{display:flex;align-items:center;min-height:max(44px,min(9vmin,72px));padding:min(1.8vmin,14px) min(2.4vmin,20px)
+  min(1.8vmin,14px) min(9.4vmin,76px);border:1px solid transparent;border-radius:min(1.5vmin,12px);font-size:clamp(16px,2.75vmin,32px);color:var(--lt-steel)}
+.slide[data-template^="procedure."] .support.seq .n{left:min(2.4vmin,20px);top:50%;transform:translateY(-50%)}
+.slide[data-template^="procedure."] .support.seq li:first-child{background:var(--lt-white);border-color:var(--lt-line);color:var(--lt-navy);
+  box-shadow:0 8px 24px rgba(10,36,99,.06)}
+.slide[data-template^="procedure."].dark .support.seq li:first-child{background:var(--lt-blue-08);border-color:var(--lt-line-d);color:var(--lt-white)}
+.slide[data-template^="procedure."][data-variant="text-only"] .slide-body > .copy{width:min(100%,110vmin)}
+
+/* ---------------------------------------------------------------- large figure */
+.slide[data-template^="figure-stage."] .slide-body.stage{gap:min(2.2vmin,18px)}
+.slide[data-template^="figure-stage."] .slide-body.stage > .fill.fig{flex:1;width:100%}
+.slide[data-template^="figure-stage."] .slide-body.stage > .copy{flex:0 0 auto}
+/* picture on top (L62): the picture across the slide, the words under it in two columns - a different shape from the
+   side-by-side slides around it, for up to about 100 words */
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage{gap:min(2.6vmin,22px);justify-content:flex-start}
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .fill.fig{flex:1 1 0;min-height:min(24vmin,190px)}
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .fill.fig > img:only-child{object-position:center 45%}
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .copy{
+  display:block;column-count:2;column-gap:min(5vmin,40px);width:100%;
+}
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .copy > *{break-inside:avoid;margin:0 0 min(1.4vmin,11px)}
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .copy .lead{font-size:var(--lt-fs)}
+.slide[data-template^="figure-stage."][data-variant="figure-top"] .slide-body.stage > .copy .statement{font-size:clamp(17px,2.7vmin,32px);column-span:all}
+
+/* ---------------------------------------------------------------- photo + explanation */
+.slide[data-template].photo .photo-copy{left:var(--lt-pad-x);max-width:min(64vmin,560px)}
+.slide[data-template].photo .photo-copy .lead{color:var(--lt-on-photo);font-size:var(--lt-fs)}
+.slide[data-template].photo .photo-scrim{background:
+  radial-gradient(ellipse at 100% 0,var(--lt-corner) 0,var(--lt-corner-mid) 45%,transparent 72%) right top/min(46vmin,380px) min(30vmin,240px) no-repeat,
+  linear-gradient(90deg,rgba(6,23,61,.92) 0,rgba(6,23,61,.7) 38%,rgba(6,23,61,.05) 72%)}
+/* split: the photograph framed on the right, the words on the dark ground - the reference's photo-explain */
+.slide[data-template^="photo-explain."][data-variant="split"] .photo-wrap{
+  left:auto;right:var(--lt-pad-x);top:calc(var(--lt-logo-h) + min(2.4vmin,19px));bottom:max(92px,11.5vmin);
+  width:calc((100% - 2 * var(--lt-pad-x) - var(--lt-gap)) * (100 - var(--lt-text)) / 100);
+  border-radius:min(2.2vmin,18px);
+}
+.slide[data-template^="photo-explain."][data-variant="split"] .photo-scrim{display:none}
+.slide[data-template^="photo-explain."][data-variant="split"] .photo-copy{
+  max-width:calc((100% - 2 * var(--lt-pad-x) - var(--lt-gap)) * var(--lt-text) / 100);
+}
+.slide[data-template].photo .credit{background:rgba(6,23,61,.78)}
+/* the template's footer line stands higher (its hairline ~58 px up): the credit sinks only to just above it */
+.slide[data-template] > .credit{margin-bottom:calc(62px - max(92px,11.5vmin))}
+/* 2.60.0 - the framed photo with a credit: a flex item like the full-screen one (gb_compose.css .credit), so it ends
+   above its credit strip; the slide keeps the template's own padding, the photo its column on the right */
+.slide[data-template^="photo-explain."][data-variant="split"]:has(> .credit){padding:var(--lt-top) var(--lt-pad-x) max(92px,11.5vmin)}
+.slide[data-template^="photo-explain."][data-variant="split"]:has(> .credit) > .photo-wrap{
+  position:relative;inset:auto;flex:1 1 0;min-height:0;align-self:flex-end;margin-left:0;
+  width:calc((100% - var(--lt-gap)) * (100 - var(--lt-text)) / 100);
+}
+.slide[data-template^="photo-explain."][data-variant="split"]:has(> .credit) > .credit{margin-right:0}
+
+/* ---------------------------------------------------------------- module opening */
+.slide[data-template^="opening."] .slide-body.opener h2,.slide[data-template^="opening."] > h2{font-size:clamp(34px,8vmin,86px);letter-spacing:-.03em;line-height:1.02}
+.slide[data-template^="opening."][data-variant="photo"] .photo-copy h2{font-size:clamp(34px,8vmin,86px);line-height:1.02;letter-spacing:-.03em}
+.slide[data-template^="opening."] .lead{font-size:clamp(17px,2.8vmin,34px)}
+
+/* ---------------------------------------------------------------- task opening */
+.slide[data-template^="task-launch."] .slide-body.activity{
+  display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);column-gap:min(8vmin,70px);
+  align-content:center;justify-items:start;text-align:left;
+}
+.slide[data-template^="task-launch."] .act-code{
+  grid-column:1;grid-row:1 / span 3;align-self:center;justify-self:end;
+  font-family:"Raleway","Segoe UI",Arial,sans-serif;font-size:clamp(64px,19vmin,200px);font-weight:700;
+  letter-spacing:-.06em;line-height:1.15;padding-bottom:.04em;overflow:visible;color:var(--lt-blue);
+}
+.slide[data-template^="task-launch."] .act-title{grid-column:2;margin:0;font-size:clamp(26px,6.5vmin,64px);letter-spacing:-.02em;line-height:1.08;color:var(--lt-white)}
+.slide[data-template^="task-launch."] .slide-body.activity > svg{grid-column:2;grid-row:1;justify-self:start;margin:0 0 min(2vmin,16px)}
+.slide[data-template^="task-launch."] .slide-body.activity > svg ~ .act-title{grid-row:2}
+.slide[data-template^="task-launch."] .act-lines{grid-column:2;margin-top:min(3vmin,24px);text-align:left;justify-self:start;align-items:flex-start}
+.slide[data-template^="task-launch."] .act-inst{margin:0 0 .4em;color:var(--lt-dim-d);font-size:var(--lt-fs);max-width:30em}
+/* 2.62.1 - on the light ground, its default (80 / 20, owner 2026-10-21): the title and the lines in Navy */
+.slide[data-template^="task-launch."]:not(.dark):not(.photo) .act-title,
+.slide[data-template^="task-launch."]:not(.dark):not(.photo) .act-inst,
+.slide[data-template^="task-launch."]:not(.dark):not(.photo) .act-code{color:var(--lt-navy)}   /* the Blue code was 2.5:1 on white */
+
+/* ---------------------------------------------------------------- recap: one design for every module (L51) */
+.slide[data-template^="recap."] .rc-item{border-color:var(--lt-line-d)}
+.slide[data-template^="recap."] .rc-item::after{background:var(--lt-blue)}
+.slide[data-template^="recap."] .rc-item::before{color:var(--lt-blue);background:var(--lt-blue-12);border-color:var(--lt-line-d)}
+.slide[data-template^="recap."]:not(.dark) .rc-item,
+.slide[data-template^="recap."]:not(.dark) .rc-item::before{border-color:var(--lt-line)}       /* 2.62.1: the light recap */
+.slide[data-template^="recap."]:not(.dark) .rc-item::before{color:var(--lt-navy)}
+/* five or six take-aways fit the slide under the template's top line (s30 of the gas module spilled 41 px) */
+.slide[data-template^="recap."] .slide-body.recap{gap:min(1.6vmin,13px);margin-top:min(2.4vmin,19px)}
+.slide[data-template^="recap."] .rc-grid{gap:min(2vmin,16px)}
+.slide[data-template^="recap."] .rc-grid:not([data-n="3"]):not([data-n="4"]){--h:min(14vmin,112px)}
+.slide[data-template^="recap."] .rc-item{padding:min(2.4vmin,19px) min(2.6vmin,21px) min(2.2vmin,18px);gap:.45em}
+.slide[data-template^="recap."] .rc-item::before{height:2em;min-width:2em;font-size:clamp(14px,1.7vmin,20px)}
+/* a short screen (1024 x 768): the template's own spacing gives way to gb_compose.css's compact recap rule, and its top
+   space too - six two-line boxes put "Next: the module check" under the deck's chrome (IGF M02 s16, 2.60.0) */
+@media (max-height:780px){
+  .slide[data-template^="recap."] .slide-body.recap{gap:min(1vmin,8px);margin-top:min(1.2vmin,10px)}
+  .slide[data-template^="recap."] .rc-grid{gap:min(1.2vmin,10px)}
+  .slide[data-template^="recap."] .rc-grid:not([data-n="3"]):not([data-n="4"]){--h:min(12vmin,92px)}
+  .slide[data-template^="recap."] .rc-item{gap:.3em;padding:min(1.6vmin,13px) min(2.2vmin,18px) min(1.4vmin,11px)}
+}
+
+/* ---------------------------------------------------------------- one slide, several parts */
+.slide[data-template] .lt-parts{display:flex;flex-direction:column;gap:min(2.4vmin,20px)}
+.slide[data-template] .lt-part{display:none;flex-direction:column;gap:min(2.4vmin,20px)}
+.slide[data-template] .lt-part.on{display:flex}
+.slide[data-template] .lt-tabs{display:flex;gap:min(1.2vmin,10px);margin-top:min(1.6vmin,14px)}
+.slide[data-template] .lt-tab{
+  width:clamp(44px,6vmin,48px);height:clamp(44px,6vmin,48px);   /* 44 px at 1280x720 too (2.69.0) */
+  border-radius:50%;border:1px solid var(--lt-ring);background:var(--lt-white);
+  color:var(--lt-navy);font:700 clamp(13px,1.85vmin,20px) "Raleway","Segoe UI",Arial,sans-serif;cursor:pointer;
+}
+.slide[data-template] .lt-tab.on{background:var(--lt-navy);border-color:var(--lt-navy);color:var(--lt-white)}
+.slide[data-template].dark .lt-tab{background:transparent;border-color:var(--lt-line-d);color:var(--lt-white)}
+.slide[data-template].dark .lt-tab.on{background:var(--lt-blue);border-color:var(--lt-blue);color:var(--lt-navy)}
+
+/* ---------------------------------------------------------------- three content blocks */
+.slide[data-template^="three-content-blocks."] .copy{counter-reset:ltb;gap:0}
+.slide[data-template^="three-content-blocks."] .copy .lt-block{counter-increment:ltb;position:relative;padding:min(2.2vmin,18px) 0 min(2.2vmin,18px) min(5vmin,44px);
+  border-top:1px solid var(--lt-line)}
+.slide[data-template^="three-content-blocks."] .copy .lt-block:first-of-type{border-top:0}
+.slide[data-template^="three-content-blocks."] .copy .lt-block::before{content:counter(ltb,decimal-leading-zero);position:absolute;left:0;top:min(2.6vmin,22px);
+  font-size:clamp(12.5px,1.5vmin,18px);font-weight:700;letter-spacing:.08em;color:var(--lt-steel)}
+.slide[data-template^="three-content-blocks."] .copy .lt-block > p:first-child{font-weight:700;color:var(--lt-navy);font-size:var(--lt-fs-lead)}
+.slide[data-template^="three-content-blocks."].dark .copy .lt-block{border-top-color:var(--lt-line-d)}
+.slide[data-template^="three-content-blocks."].dark .copy .lt-block > p:first-child{color:var(--lt-white)}
+.slide[data-template^="three-content-blocks."].dark .copy .lt-block::before{color:var(--lt-blue)}
+
+/* ---------------------------------------------------------------- table + conclusion */
+.slide[data-template] .lt-table{width:100%;border-collapse:collapse;font-size:var(--lt-fs)}
+.slide[data-template] .lt-table td{padding:min(1.8vmin,14px) min(1.6vmin,13px);border-bottom:1px solid var(--lt-line);vertical-align:top;line-height:1.45;color:var(--lt-steel)}
+.slide[data-template] .lt-table tr td:first-child{font-weight:700;color:var(--lt-navy);width:34%}
+.slide[data-template] .lt-table tr:first-child td{border-top:2px solid var(--lt-navy)}
+.slide[data-template] .lt-sep{display:none}
+.slide[data-template].dark .lt-table td{border-bottom-color:var(--lt-line-d);color:var(--lt-dim-d)}
+.slide[data-template].dark .lt-table tr td:first-child{color:var(--lt-white)}
+
+/* ---------------------------------------------------------------- comparison */
+.slide[data-template] .slide-body.lt-compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:min(3vmin,24px);align-items:stretch}
+.slide[data-template] .lt-card{display:flex;flex-direction:column;border:1px solid var(--lt-line);background:var(--lt-white);border-radius:min(2vmin,16px);overflow:hidden;min-height:0}
+.slide[data-template] .lt-card-visual{flex:0 0 46%;min-height:0;background:var(--lt-panel);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slide[data-template] .lt-card-visual > svg,.slide[data-template] .lt-card-visual > img{width:100%;height:100%;object-fit:cover}
+.slide[data-template] .lt-card-visual > svg{object-fit:contain;padding:min(1.6vmin,12px) min(4vmin,32px)}
+.slide[data-template] .lt-card-copy{padding:min(3vmin,24px) min(3.5vmin,28px);display:flex;flex-direction:column;gap:min(1.4vmin,12px)}
+.slide[data-template] .lt-card-copy > .lead:first-child{font-weight:700;color:var(--lt-navy);font-size:clamp(18px,3.4vmin,40px);line-height:1.2}
+.slide[data-template].dark .lt-card-copy > .lead:first-child{color:var(--lt-white)}
+.slide[data-template] .lt-compare-note{margin-top:min(2vmin,16px);text-align:center;color:var(--lt-steel)}
+.slide[data-template].dark .lt-card{background:var(--lt-blue-06);border-color:var(--lt-line-d)}
+
+/* a narrow or portrait screen keeps the gb_compose.css fallbacks: one column */
+@media (max-aspect-ratio:1/1){
+  .slide[data-template] .slide-body.two-col,.slide[data-template] .slide-body.lt-compare{grid-template-columns:1fr;grid-template-rows:none}
+  .slide[data-template^="task-launch."] .slide-body.activity{grid-template-columns:1fr}
+  .slide[data-template^="task-launch."] .act-code{grid-row:auto;justify-self:start}
+}
+@media (prefers-reduced-motion:reduce){.slide[data-template] .lt-part{transition:none}}
+
+/* ------------------------------------------------ the brandbook's colours on every deck file (owner, 2026-11-03, 2.88.0).
+   Blue is the one accent; dark slides and photographs stand on Navy, never Pitch Black; the NA pattern goes only where
+   nobody reads - the opening, the task and check slides, the summary and the start screen. */
+:root{
+  --amber:#53A7DB; --amber-ink:#0A2463; --amber-wash-d:rgba(83,167,219,.16); --amber-wash-l:#E6F2FA;
+  --blue:#53A7DB; --blue2:#53A7DB; --on-blue:#0A2463;
+  --deep:#0A2463; --deep-2:#0D2A6C; --deep-3:#123378;
+}
+.slide[data-template].photo{background:#0A2463}
+.slide[data-template^="opening."]:not(.dark):not(.photo),.slide[data-template^="task-launch."]:not(.dark),.slide[data-template^="recap."]:not(.dark){
+  background:linear-gradient(100deg,#F7F8FA 0,rgba(247,248,250,.96) 40%,rgba(247,248,250,.15) 100%),url("na_pattern_on_light.svg") 0 0/120px auto,#F7F8FA}
+.slide[data-template^="opening."].dark,.slide[data-template^="task-launch."].dark,.slide[data-template^="recap."].dark{
+  background:linear-gradient(100deg,#0A2463 0,rgba(10,36,99,.92) 40%,rgba(10,36,99,.3) 100%),url("na_pattern_on_navy.svg") 0 0/120px auto,#0A2463}
+#landing{background:linear-gradient(180deg,rgba(10,36,99,.5),rgba(10,36,99,.88)),url("na_pattern_on_navy.svg") 0 0/120px auto,#0A2463!important}

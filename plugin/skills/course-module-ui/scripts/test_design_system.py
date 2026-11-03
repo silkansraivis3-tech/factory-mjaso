@@ -37,6 +37,7 @@ SPEC = json.load(io.open(os.path.join(SKILL, "knowledge", "design-system.json"),
 STYLE_FILES = [
     os.path.join(SKILL, "templates", "gb_compose.css"),
     os.path.join(SKILL, "templates", "gb_layouts.css"),          # L61 (2.52.0): the owner's layout templates
+    os.path.join(SKILL, "templates", "gb_upgrade.css"),          # 2.88.0: the upgraded templates' bodies
     os.path.join(SKILL, "templates", "gb_shell.css"),
     os.path.join(SKILL, "templates", "gb_page.css"),
     os.path.join(SKILLS, "course-task-ux", "assets", "gb_task.css"),]
@@ -269,6 +270,26 @@ def main():
               "(min(5.4vmin,44px) was 41 px at 768 px)", not low, low)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
+    print("\n-- the brandbook's grounds and the upgraded templates (owner, 2026-11-03, 2.88.0)")
+    lay = io.open(os.path.join(SKILL, "templates", "gb_layouts.css"), encoding="utf-8").read()
+    up = io.open(os.path.join(SKILL, "templates", "gb_upgrade.css"), encoding="utf-8").read()
+    steps = io.open(os.path.join(SKILLS, "course-module-ux", "assets", "gb_steps.js"), encoding="utf-8").read()
+    check("a dark slide and a photograph stand on Navy, never Pitch Black",
+          "--lt-deep:#0A2463" in lay and ".slide[data-template].photo{background:#0A2463}" in lay and "background:#011111" not in lay + up)
+    check("the NA pattern only behind opening, task, check and summary slides and the start screen",
+          lay.count('url("na_pattern_on_') == 3 and "na_pattern" not in up)
+    check("no upgraded rule is tied to one slide's stop number (data-at=\"N\"): a stop is named by the slide's own marks",
+          'data-at="' not in up and "#p" not in re.sub(r"#[0-9a-fA-F]{3,8}\b", "", up))
+    check("no flat-drawing motion left in the upgraded bodies - a picture box is a live scene, a render or a photograph",
+          not re.search(r"\.lt-show\s*>\s*svg|\.lt-show \.(gas|wave|fan|air|flow|wheel)\b", up))
+    check("gb_steps.js finds a slide by its marks, not by its id",
+          "getElementById" not in steps and "[data-stop]" in steps and "data-stops" in steps)
+    node = shutil.which("node")
+    if node:
+        r = subprocess.run([node, "-e", "new Function(require('fs').readFileSync(process.argv[1],'utf8'))",
+                            os.path.join(SKILLS, "course-module-ux", "assets", "gb_steps.js")], capture_output=True, text=True)
+        check("gb_steps.js is valid JavaScript", r.returncode == 0, r.stderr[-300:])
 
     print("\n" + "=" * 72)
     print("%d passed, %d failed" % (len(PASS), len(FAIL)))
