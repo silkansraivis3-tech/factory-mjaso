@@ -526,3 +526,10 @@ body.handed .wrap{opacity:.55}
 .scr[data-look="chain"] .rows .row+.row{position:relative;margin-top:18px}
 .scr[data-look="chain"] .rows .row+.row::before{content:"";position:absolute;left:50%;top:-16px;margin-left:-9px;
   border-left:9px solid transparent;border-right:9px solid transparent;border-top:12px solid var(--steel)}
+
+/* ---- a framed task (gb_interact.js LAB.frame): the task's own page across the screen under the question; it has its own
+   big button, so the set's dock waits until the task has reported, then says Next ------------------------------------ */
+.lab.gi-frame{margin:0}
+.lab.gi-frame iframe{display:block;width:100%;height:calc(100vh - 150px);border:0;border-radius:var(--r-l);background:var(--navy)}
+body:has(.scr.on[data-frame="1"]:not(.locked)) .dock{visibility:hidden}
+.scr[data-frame="1"].locked .lab.gi-frame iframe{height:calc(100vh - 330px)}

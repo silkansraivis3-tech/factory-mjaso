@@ -6,6 +6,12 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.95.0 · The richer tasks, framed (2026-11-03)
+
+`engines/` holds the richer tasks as templates: the reference's logic, the course's data in one JSON block. Built so far:
+`deck_round.html`. `scripts/engine_theme.py` gives them the brand's Navy and white themes (`assets/gb_lab_navy.css`,
+`gb_lab_white.css`); a set shows one in a frame and counts its report (`gb_interact.js` LAB.frame).
+
 ## 2.93.0 · Answers that are pictures, the rail, the match line, the knob (2026-11-03)
 
 The answers of a choose one / choose all can be pictures to tap (build sheet `"figures"`, a tile each, the same answer

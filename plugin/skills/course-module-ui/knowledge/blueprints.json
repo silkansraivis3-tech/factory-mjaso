@@ -94,7 +94,7 @@
     {"id": "stop-it", "for": "watch, and stop it in time", "frame": "engine", "fill": {"s": ["Animation", "the camera's clip"], "i": ["Info", "what happened, your watch"]}, "ref": "engines#16_stop_it"},
     {"id": "radio-call", "for": "the right words on the radio", "frame": "engine", "fill": {"s": ["Picture", "the handheld radio (static 3D), the call"], "i": ["Info", "the ship's status"]}, "ref": "engines#17_radio_call"},
     {"id": "ba-check", "for": "check equipment before use", "frame": "engine", "fill": {"s": ["3D", "the set, its points"], "i": ["Info", "the gauge, the checks, the decision"]}, "ref": "engines#18_ba_check"},
-    {"id": "deck-round", "for": "find what is wrong, place by place", "frame": "engine", "fill": {"s": ["Picture", "the place"], "i": ["Info", "your round"]}, "ref": "engines#19_deck_round"}
+    {"id": "deck-round", "for": "find what is wrong, place by place - built by the factory: deck_round (a framed task)", "frame": "engine", "fill": {"s": ["Picture", "the place"], "i": ["Info", "your round"]}, "ref": "engines#19_deck_round"}
   ],
   "frames": {"engine": {"grid": ["t t", "s i"], "cols": "70fr 30fr", "rows": "1fr 9fr", "fill": {"t": ["Title", "the task"]}, "go": "one big button under it"}}
 }

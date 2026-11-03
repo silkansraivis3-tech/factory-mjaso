@@ -981,4 +981,32 @@
       }
     };
   };
+
+  /* ================================================================ A FRAMED TASK - a richer task of its own (course-task-ux/engines)
+     <div class="lab gi-frame" data-lab="frame"><iframe src="../tasks/frame_<id>.html"></iframe></div>
+     The task runs in its frame with its own big button and reports once, as a task does to the classroom (gb-task-done);
+     here that report is the question's answer: right when every item of it is right, its wrong items what was said. */
+  LAB.frame = function (root, api) {
+    var fr = $('iframe', root), rep = null, locked = false;
+    W.addEventListener('message', function (e) {
+      var m = e.data;
+      if (!fr || e.source !== fr.contentWindow || !m || m.type !== 'gb-task-done' || rep) { return; }
+      rep = m;
+      root.className += ' done';
+      api.changed();
+      api.check();
+    }, false);
+    return {
+      answered: function () { return !!rep; },
+      touched: function () { return !!rep; },
+      right: function () { return !!rep && rep.total > 0 && rep.ok === rep.total; },
+      show: function () {},
+      lock: function () { locked = true; },
+      keys: function () { return []; },
+      said: function () {
+        var bad = ((rep && rep.items) || []).filter(function (x) { return !x.ok; });
+        return { a: bad.map(function (x) { return x.t + ': ' + x.a; }).join(' | '), c: bad.map(function (x) { return x.t + ': ' + x.c; }).join(' | ') };
+      }
+    };
+  };
 }());

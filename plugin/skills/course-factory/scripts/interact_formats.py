@@ -33,6 +33,12 @@ is the build sheet's (knowledge/media-and-tasks.json "_build_sheet" per type), n
                      find: question => part name          set: instruction => position word
     test_atmosphere  space: name | depth in m             levels: 2; 8; 14 (± 2)       the depths that need a fresh reading
                      name unit | value @ depth; ... | below 19.5 (or above 10)      one line per reading
+
+The richer tasks (design/task-templates/engines), each a framed task of its own on its screen (course-task-ux/engines):
+    deck_round       context: where and when                intro: title | what the trainee is told
+                     place: name                          and under it, for each fault to find on its photograph:
+                     fault: name | label on the photo     see: what is there   hint: where to look
+                     do: what to do* | do: a wrong one    why: the reason      (the photos and tap zones: the build sheet)
 """
 from __future__ import annotations
 
@@ -41,10 +47,12 @@ import json
 import re
 
 TYPES = ("true_false", "critique", "calculate", "predict", "explore", "investigate", "line_up", "inspect_round",
-         "take_apart", "test_atmosphere")
+         "take_apart", "test_atmosphere", "deck_round")
+FRAMED = ("deck_round",)          # a framed task: its own page in the set's screen (interact_pages.framed)
 USES = {"true_false": {"answer"}, "critique": {"answer"}, "calculate": {"answer"}, "predict": {"answer"},
         "explore": {"answer"}, "investigate": {"options", "answer"}, "line_up": {"answer", "visual"},
-        "inspect_round": {"answer", "visual"}, "take_apart": {"answer", "visual"}, "test_atmosphere": {"answer"}}
+        "inspect_round": {"answer", "visual"}, "take_apart": {"answer", "visual"}, "test_atmosphere": {"answer"},
+        "deck_round": {"answer"}}
 NUM = r"-?\d+(?:[.,]\d+)?"
 OPEN_WORDS = {"open", "opened", "atvērts", "atverts", "открыт", "открыто", "on"}
 SHUT_WORDS = {"shut", "closed", "close", "aizvērts", "aizverts", "закрыт", "закрыто", "off"}
@@ -468,3 +476,55 @@ def _test_atmosphere(sid, ls, q, probs):
         if d["depth"] and not 0 < lv < d["depth"]:
             probs.append("%s: the level %g m is not inside the space (0 to %g m)" % (sid, lv, d["depth"]))
     return probs, d, [g["name"] for g in d["gases"]], [], [d["space"]] + [g["name"] for g in d["gases"]]
+
+
+def _deck_round(sid, ls, q, probs):
+    """a deck round: the places walked one after the other, on each the faults to find on its photograph and what to do"""
+    d = {"context": "", "intro": {"title": "", "text": ""}, "places": [], "faults": []}
+    f = None
+    for ln in ls:
+        key, sep, rest = ln.partition(":")
+        k, rest = key.strip().lower(), rest.strip()
+        if not sep or k not in ("context", "intro", "place", "fault", "see", "hint", "do", "why"):
+            probs.append("%s: a deck round's line starts with context:, intro:, place:, fault:, see:, hint:, do: or why: - not %r" % (sid, ln))
+            continue
+        if k == "context":
+            d["context"] = rest
+        elif k == "intro":
+            t, _, x = rest.partition("|")
+            d["intro"] = {"title": t.strip(), "text": x.strip()}
+        elif k == "place":
+            d["places"].append({"name": rest})
+        elif k == "fault":
+            if not d["places"]:
+                probs.append("%s: the fault %r comes before any place: - each fault belongs to the place above it" % (sid, rest))
+                continue
+            name, _, label = rest.partition("|")
+            f = {"place": d["places"][-1]["name"], "name": name.strip(), "label": label.strip() or name.strip(),
+                 "see": "", "hint": "", "do": [], "right": None, "why": ""}
+            d["faults"].append(f)
+        elif f is None:
+            probs.append("%s: %s: comes before any fault: - it belongs to the fault above it" % (sid, k))
+        elif k == "do":
+            if starred(rest):
+                f["right"] = unstar(rest)
+            f["do"].append(unstar(rest))
+        else:
+            f[k] = rest
+    if len(d["places"]) < 2 or len(d["faults"]) < 2:
+        probs.append("%s: a deck round needs at least two places and two faults (place: ... then fault: ... under it)" % sid)
+    for p in d["places"]:
+        if not any(x["place"] == p["name"] for x in d["faults"]):
+            probs.append("%s: the place %r has no fault to find" % (sid, p["name"]))
+    for x in d["faults"]:
+        if len(x["do"]) < 2 or sum(1 for o in x["do"] if o == x["right"]) != 1:
+            probs.append("%s: the fault %r needs two or more do: lines, exactly one marked *" % (sid, x["name"]))
+        for need in ("see", "why"):
+            if not x[need]:
+                probs.append("%s: the fault %r has no %s: line" % (sid, x["name"], need))
+    if not d["intro"]["title"]:
+        probs.append("%s: a deck round opens with its card: intro: title | what the trainee is told" % sid)
+    words = [d["context"], d["intro"]["title"], d["intro"]["text"]] + [p["name"] for p in d["places"]] + \
+        [w for x in d["faults"] for w in [x["name"], x["label"], x["see"], x["hint"]] + x["do"] + [x["why"]]]
+    return probs, d, [x["right"] for x in d["faults"] if x["right"]], \
+        [o for x in d["faults"] for o in x["do"] if o != x["right"]], [w for w in words if w]

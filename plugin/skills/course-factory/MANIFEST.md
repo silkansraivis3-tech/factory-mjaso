@@ -7,6 +7,14 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.95.0 · The deck round, the first richer task built by the factory (2026-11-03)
+
+- **Why.** The owner: the nineteen prototypes as factory templates, starting with deck round, dress a buddy, lay out.
+- **What.** `scripts/interact_formats.py` (`deck_round`, `FRAMED`), `knowledge/media-and-tasks.json`, `compile/scripts/interact_pages.py`
+  (`framed`, `deck_round_data`), `compile/scripts/task_pages.py` (a framed task gets its screen's theme and the course's language),
+  `course-task-ux/engines/` (the template, `gb_lab.js`, `gb_lab.css`), `course-task-ux/scripts/engine_theme.py`, `gb_interact.js`
+  (LAB.frame), `gb_answer.css`. Test: `test_task_engine.py` "a richer task built by the factory".
+- **Next.** Dress a buddy, lay out the equipment; the tasks' own words in Latvian and Russian.
 ## 2.94.0 · The additional materials - the paper beside the tablets (2026-11-03)
 
 - **Why.** The owner: the auditor needs the ACP in Word and every practical task as PDF and Word (3D and interactive

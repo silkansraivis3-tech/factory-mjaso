@@ -1779,6 +1779,95 @@ def widgets_part(exe, tmp):
           ".rows.order::before" in css and ".rows:not(.order) .row .name::after" in css and ".rows:not(.order) .row .slot::before" in css)
 
 
+DECK_ROUND = """context: Deck round · at the berth
+intro: Cargo starts soon. Walk the deck first. | Some things on deck are not ready. Find them and put them right.
+place: The manifold
+fault: No drip tray under the manifold flanges | No drip tray
+see: Bare deck under the manifold connection.
+hint: Look at the deck right under the flange.
+do: Put a drip tray under the flanges before connecting *
+do: Nothing - spilt LPG just boils off
+why: Cold cargo on the steel can crack it.
+place: The gangway
+fault: Gangway with no safety net | No net
+see: Open water under the gangway, no net.
+do: Rig a safety net under it *
+do: Tell everyone to hold the handrail
+do: Nothing - the jetty is close
+why: Access is secured with a safety net."""
+PNG = lambda w, h: b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR" + __import__("struct").pack(">II", w, h) + b"\x08\x02\x00\x00\x00"
+FRAME_KEYS = ("var T=JSON.parse(document.getElementById('task-data').textContent);out.keys=T.faults.map(function(f){"
+              "return f.ch.filter(function(c){return GBLab.key(T.id,f.name+' => '+c,1)===f.key;}).length;});"
+              "out.framed=document.documentElement.className;out.places=T.places.map(function(p){return p.aspect;});")
+FRAME_REPORT = ("var s=document.querySelector('.scr[data-script=\"q02\"]');out.on=/\bon\b/.test(s.className);var f=s.querySelector('iframe');f.removeAttribute('src');"
+                "f.srcdoc=\"<script>parent.postMessage({type:'gb-task-done',ok:%d,total:3,items:[{t:'Found: No net',ok:%s,a:'walked past',c:'found'}]},'*')<\\/script>\";")
+FRAME_LOOK = ("var s=document.querySelector('.scr[data-script=\"q02\"]');out.frame=[/\\blocked\\b/.test(s.className),(s.querySelector('.why')||{}).className||'',"
+              "getComputedStyle(document.getElementById('dock')).visibility];")
+
+
+def framed_part(exe, tmp):
+    """the richer tasks, built by the factory (course-task-ux/engines): a deck round written as the operator's text, its photos
+    and tap zones in the build sheet, compiled to its own page in a frame on its question's screen; the set page counts the
+    task's report as the question's answer"""
+    print("\n-- a richer task built by the factory: the deck round")
+    screens = json.loads(json.dumps(tcm.SCREENS))
+    at = [i for i, s in enumerate(screens) if s["id"] == "q01"][0]
+    screens.insert(at + 1, {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "deck_round", "answer": DECK_ROUND,
+                            "question": "Check 2 places before cargo starts.", "feedback": "A deck round puts right what it finds."})
+    sc = tcm.script(screens=screens)
+    check("the operator's text is a valid deck round", not [x for x in tcm.cs.validate(sc) if "q02" in x], tcm.cs.validate(sc))
+    os.makedirs(os.path.join(tmp, "fr"))
+    c, md = tcm.new_course(os.path.join(tmp, "fr"), sc, build=False)
+    meta = dict(tcm.PHOTO_META)
+    for f in ("man.png", "gang.png"):
+        io.open(os.path.join(md, "assets", "img", f), "wb").write(PNG(1024, 572 if f == "man.png" else 768))
+        meta[f] = dict(tcm.PHOTO_META["ship.jpg"], description="A deck photograph.")
+    tcm.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
+    sheet = {"t01": {"try_tablet": False}, "s01": {"figure": "assets/img/ship.jpg"}, "q02": {
+        "places": {"The manifold": "assets/img/man.png", "The gangway": "assets/img/gang.png"},
+        "zones": {"No drip tray under the manifold flanges": [[60, 48, 6]], "Gangway with no safety net": [[18, 50, 8], [35, 45, 8]]}}}
+    bp = os.path.join(c, "working_claude", "script", "M01.build.json")
+    tcm.cs.save(bp, {"module": 1, "screens": sheet})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    page, frame = os.path.join(md, "tasks", "sc1_the_new_spaces.html"), os.path.join(md, "tasks", "frame_q02.html")
+    text = io.open(page, encoding="utf-8").read() if os.path.isfile(page) else ""
+    sec = re.search(r'<section[^>]*data-script="q02".*?</section>', text, re.S)
+    sec = sec.group(0) if sec else ""
+    check("the deck round is its own page, in a frame on its question's screen", code == 0 and os.path.isfile(frame)
+          and 'data-frame="1"' in sec and 'iframe src="../tasks/frame_q02.html"' in sec, (out[-800:], sec[:600]))
+    fr = io.open(frame, encoding="utf-8").read() if os.path.isfile(frame) else ""
+    theme = re.search(r'<section class="scr (th-[wn])" data-script="q02"', text)
+    check("... in its screen's theme, with the factory's own engine and tokens", theme and
+          ('href="../assets/gb_lab_white.css"' if theme.group(1) == "th-w" else 'href="../assets/gb_lab_navy.css"') in fr
+          and 'src="../assets/gb_lab.js"' in fr and os.path.isfile(os.path.join(md, "assets", "gb_lab.js")), fr[:600])
+    check("... its words are the course's: the places, the faults, the choices - none of the template's own sample",
+          "The gangway" in fr and "Rig a safety net under it" in fr and "acetylene" not in fr and "{{" not in fr)
+    data = json.loads(re.search(r'id="task-data">(.*?)</script>', fr, re.S).group(1).replace("<\\/", "</")) if fr else {}
+    check("... and no right answer is readable in the page: no mark on a choice, only its key", data and "*" not in json.dumps(data)
+          and all(len(f["key"]) == 8 for f in data.get("faults", [])), data)
+    code_m, out_m = tcm.run(tcm.MATCH, c, "--module", "1", "--part", "trainee")
+    check("check_script_match finds exactly the approved words of the deck round on its screen", code_m == 0, out_m[-900:])
+    r = drive(exe, frame, [["eval", FRAME_KEYS]], tmp, look=False)
+    check("in the browser: each fault has exactly one right choice by its key - the page's keys are the factory's; each "
+          "place its own photo's shape", r.get("keys") == [1, 1] and r.get("places") == ["1024:572", "1024:768"], r)
+    for ok, want in ((3, True), (2, False)):
+        r = drive(exe, page, [["q01", [["tap", ".opt", "Fuel preparation room"]]], ["eval", FRAME_REPORT % (ok, "true" if want else "false")],
+                              ["eval", "out.wait=1;"], ["eval", "out.wait=2;"], ["eval", FRAME_LOOK]], tmp, look=False)
+        fl = r.get("frame") or []
+        check("the set page counts the task's report as the question's answer - %s, its verdict shown, then Next"
+              % ("all right: right" if want else "one wrong: wrong"),
+              len(fl) == 3 and fl[0] and ("good" if want else "bad") in fl[1] and fl[2] == "visible", fl or r.get("errors"))
+    sc["screens"][at + 1]["answer"] = DECK_ROUND.replace("do: Rig a safety net under it *", "do: Rig a safety net under it")
+    check("a fault without its right choice (do: ... *) is caught before the build",
+          any("needs two or more do: lines, exactly one marked *" in x for x in tcm.cs.validate(sc)), tcm.cs.validate(sc))
+    del sheet["q02"]["zones"]["Gangway with no safety net"]
+    sheet["q02"]["places"]["The gangway"] = "assets/img/none.png"
+    tcm.cs.save(bp, {"module": 1, "screens": sheet})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    check("a place without its photograph, a fault without its tap zones, is reported", "the place 'The gangway' needs its photograph" in out
+          and "needs its tap zones" in out, out[-1200:])
+
+
 def look_part(exe, page, tmp):
     """the task screens in the brandbook's look (gb_task_look.css, loaded last): each question's screen white or Navy, picked
     so neighbouring screens do not repeat, the page round it following the screen on show; a build sheet may ask for one"""
@@ -1885,6 +1974,7 @@ def main():
               "fixed" in look.get("cargo", "") and look.get("cargo", "").endswith("|tray") and look.get("permit", "").endswith("|3"), look)
         look_part(exe, page, tmp)
         widgets_part(exe, tmp)
+        framed_part(exe, tmp)
         blind_part(exe, page, tmp)
         review_part(exe, tmp)
         deck_fit_part(exe, tmp)

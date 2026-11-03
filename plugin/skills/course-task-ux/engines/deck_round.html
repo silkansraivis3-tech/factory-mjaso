@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>{{TITLE}}</title>
+<link rel="stylesheet" href="../assets/gb_tokens.css">
+<link rel="stylesheet" href="../assets/{{LAB_CSS}}">
+<style>
+  #scene { cursor: pointer; }
+  #scene .tl-photo { transition: opacity .25s ease; }
+  #scene.turning .tl-photo { opacity: .1; }
+  /* what was tapped: a ring on the photo */
+  .dw-mark { position: absolute; z-index: 2; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; pointer-events: none;
+    border: 3px solid var(--tl-good); background: rgba(61,220,151,.22); box-shadow: 0 0 16px rgba(61,220,151,.7); animation: dw-pop .35s ease-out; }
+  .dw-mark span { position: absolute; left: 50%; top: 48px; transform: translateX(-50%); white-space: nowrap; padding: 3px 9px; border-radius: 8px;
+    background: rgba(3,10,22,.85); color: #EAF3FF; font: 700 13px var(--tl-font, sans-serif); }
+  .dw-mark.miss { width: 26px; height: 26px; margin: -13px 0 0 -13px; border: 2px dashed var(--tl-amber); background: none; box-shadow: none; }
+  .dw-mark.bad { border-color: var(--tl-bad); background: rgba(255,107,94,.25); box-shadow: 0 0 16px rgba(255,107,94,.8); }
+  @keyframes dw-pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  /* the round: the places, one after the other */
+  .dw-steps { display: grid; gap: 8px; }
+  .dw-step { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 6px 12px; border-radius: 12px; text-align: left;
+    border: 1px solid var(--tl-line); background: rgba(255,255,255,.03); color: var(--tl-dim); font: 600 15px var(--tl-font, sans-serif); touch-action: manipulation; }
+  .dw-step b { flex: 0 0 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.08); color: #EAF3FF; font-size: 15px; }
+  .dw-step em { margin-left: auto; font-style: normal; font-size: 14px; white-space: nowrap; }
+  .dw-step.on { border-color: var(--tl-accent); background: rgba(46,182,248,.12); color: #EAF3FF; box-shadow: 0 0 12px rgba(46,182,248,.3); }
+  .dw-step.on b { background: var(--tl-accent); color: #04121F; }
+  .dw-step.ok b { background: var(--tl-good); color: #04121F; }
+  .dw-step:disabled { opacity: .45; }
+  .dw-misses { margin: 10px 0 0; font-size: 14px; color: var(--tl-dim); } .dw-misses b { color: var(--tl-amber); }
+  /* the choice */
+  .dw-ch { display: grid; gap: 10px; margin-top: 6px; }
+  .dw-ch .tl-btn { text-align: left; min-height: 56px; }
+  /* in a set's frame the set page shows the question above the frame: the task does not say it again */
+  .framed .tl-ask { display: none; }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye" id="eye"></span><span id="ask"></span>
+    <small>The highlighted line always says what to do next.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage">
+      <div class="tl-scene" id="scene"><img class="tl-photo" id="photo" alt=""></div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card">
+        <h3>Your round</h3>
+        <div class="dw-steps" id="steps"></div>
+        <p class="dw-misses" id="misses"></p>
+      </div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Next place</button></div>
+</div>
+<!-- the approved words of this task, for check_script_match: built from the same data as the task below -->
+{{WORDS}}
+<script type="application/json" id="task-data">{{DATA}}</script>
+<script src="../assets/gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  /* a deck round: walk the places one after the other, find what is wrong on each photograph, decide what to do about it.
+     The course's places, faults, choices and why come from #task-data (the factory writes it from the approved script
+     and the build sheet); a right choice is known only by its key: GBLab.key(id, fault + ' => ' + choice, 1). */
+  var T = JSON.parse(document.getElementById('task-data').textContent);
+  if (window.parent !== window) document.documentElement.className += ' framed';
+  GBLab.init({ code: T.id, title: T.title, mode: 'self' });
+  document.getElementById('eye').textContent = T.eye || '';
+  document.getElementById('ask').textContent = T.ask;
+  var STOPS = T.places, FIND = T.faults;
+  var S = { at: 0, reached: 0, found: {}, choice: {}, right: {}, hinted: {}, marks: [], misses: 0, over: false };
+  var scene = document.getElementById('scene'), photo = document.getElementById('photo');
+  function here(stop) { return FIND.filter(function (f) { return f.stop === (stop || STOPS[S.at].id); }); }
+  function left(stop) { return here(stop).filter(function (f) { return !S.found[f.id]; }); }
+  function rightOf(f) { var r = ''; f.ch.forEach(function (c) { if (GBLab.key(T.id, f.name + ' => ' + c, 1) === f.key) r = c; }); return r; }
+  STOPS.forEach(function (s) { var im = new Image(); im.src = s.src; }); // ready before the trainee walks there
+
+  /* ---- the round, one place after the other ------------------------------------------------------- */
+  var steps = document.getElementById('steps');
+  STOPS.forEach(function (s, i) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'dw-step'; b.setAttribute('data-stop', s.id);
+    b.addEventListener('click', function () { if (i <= S.reached) show(i); });
+    steps.appendChild(b);
+  });
+  function show(i, now) {
+    if (GBLab.sheetOpen() || (i === S.at && !now)) return;
+    S.at = i; S.reached = Math.max(S.reached, i);
+    if (now) return draw();
+    scene.classList.add('turning');
+    setTimeout(function () { draw(); scene.classList.remove('turning'); }, 180);
+  }
+  function draw() {
+    var s = STOPS[S.at];
+    scene.setAttribute('data-aspect', s.aspect);
+    photo.src = s.src; photo.alt = s.name; GBLab.fitScenes();
+    [].forEach.call(scene.querySelectorAll('.dw-mark'), function (m) { m.parentNode.removeChild(m); });
+    S.marks.forEach(function (m) { if (m.stop === s.id) ring(m); });
+    side();
+  }
+  function side() {
+    var l = left(), last = S.at === STOPS.length - 1, place = '<b>Place ' + (S.at + 1) + ' of ' + STOPS.length + '</b> · ' + GBLab.esc(STOPS[S.at].name) + ' - ';
+    if (S.over) GBLab.now('');
+    else if (!l.length) GBLab.now(place + 'all found. Press <b>' + (last ? 'Finish the round' : 'Next place') + '</b>', 'done');
+    else GBLab.now(place + 'find <b>' + l.length + ' problem' + (l.length > 1 ? 's' : '') + '</b> and tap ' + (l.length > 1 ? 'them' : 'it'));
+    [].forEach.call(steps.children, function (b, i) {
+      var h = here(STOPS[i].id), f = h.filter(function (x) { return S.found[x.id]; }).length;
+      b.className = 'dw-step' + (i === S.at ? ' on' : '') + (f === h.length ? ' ok' : '');
+      b.disabled = i > S.reached;
+      b.innerHTML = '<b>' + (f === h.length ? '✓' : i + 1) + '</b>' + GBLab.esc(STOPS[i].name) + (i <= S.reached ? '<em>' + f + ' of ' + h.length + '</em>' : '');
+    });
+    document.getElementById('misses').innerHTML = S.misses ? '<b>' + S.misses + '</b> tap' + (S.misses > 1 ? 's' : '') + ' on things that were fine' : '';
+    GBLab.go(last ? 'Finish the round' : 'Next place  →', last ? finishRound : function () { show(S.at + 1); });
+    GBLab.goReady(!l.length && !S.over);
+  }
+  function ring(m) {
+    var e = document.createElement('div'); e.className = 'dw-mark ' + (m.cls || '');
+    e.style.left = m.x + '%'; e.style.top = m.y + '%';
+    if (m.label) e.innerHTML = '<span>' + GBLab.esc(m.label) + '</span>';
+    scene.appendChild(e);
+  }
+
+  /* ---- a tap on the photo ------------------------------------------------------------------------ */
+  scene.addEventListener('click', function (ev) {
+    if (S.over || GBLab.sheetOpen()) return;
+    var p = GBLab.toScene(ev, scene); if (!p.inside) return;
+    var a = STOPS[S.at].aspect.split(':'), stop = STOPS[S.at].id, k = +a[1] / +a[0], best = null, bd = 1e9;
+    here().forEach(function (f) {
+      f.zones.forEach(function (z) {
+        var dx = p.x - z[0], dy = (p.y - z[1]) * k, d = Math.sqrt(dx * dx + dy * dy);
+        if (d <= z[2] && d < bd) { bd = d; best = f; }
+      });
+    });
+    if (!best) {
+      S.misses++; S.marks.push({ stop: stop, x: p.x, y: p.y, cls: 'miss' }); ring(S.marks[S.marks.length - 1]);
+      GBLab.sfx('tap'); GBLab.toast('That one is fine. Keep looking.', 'hint');
+      return side();
+    }
+    if (S.found[best.id]) return GBLab.toast('Already found: ' + best.name.toLowerCase() + '.', 'info');
+    S.found[best.id] = true;
+    S.marks.push({ stop: stop, x: p.x, y: p.y, label: best.label }); ring(S.marks[S.marks.length - 1]);
+    GBLab.sfx('good'); side(); decide(best);
+  });
+  GBLab.hint(function () {
+    var l = left();
+    if (!l.length) return 'Everything here is found - press ' + (S.at === STOPS.length - 1 ? 'Finish the round.' : 'Next place.');
+    S.hinted[l[0].id] = true; return l[0].hint;
+  });
+
+  function decide(f) {
+    var box = document.createElement('div'), sh = null; box.className = 'dw-ch';
+    f.ch.forEach(function (c) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'tl-btn'; b.textContent = c;
+      b.addEventListener('click', function () {
+        if (S.choice[f.id] != null) return;
+        S.choice[f.id] = c;
+        S.right[f.id] = GBLab.key(T.id, f.name + ' => ' + c, 1) === f.key;
+        sh.close(); side();
+        var more = left().length;
+        GBLab.toast((S.right[f.id] ? 'Right. ' : 'Noted - see your result at the end. ') +
+          (more ? more + ' more problem' + (more > 1 ? 's' : '') + ' here.' : S.at < STOPS.length - 1 ? 'All found here - go to the next place.' : 'All found - finish the round.'), S.right[f.id] ? 'ok' : 'info');
+      });
+      box.appendChild(b);
+    });
+    sh = GBLab.show({ tag: 'Problem found', title: f.name, text: GBLab.esc(f.see) + '<br><b>What do you do?</b>', node: box, buttons: [] });
+  }
+
+  /* ---- the opening card ---------------------------------------------------------------------------- */
+  show(0, true);
+  GBLab.intro({ tag: 'Deck round', title: T.intro.title, text: T.intro.text,
+    steps: ['Look at the photo of the place.', 'Tap the problem you see - right on it.', 'Choose what you do about it.',
+            'Press <b>Next place</b>. ' + STOPS.length + ' places in all.'],
+    start: 'Start: ' + STOPS[0].name.charAt(0).toLowerCase() + STOPS[0].name.slice(1) });
+
+  /* ---- the end: what was walked past, then the result ---------------------------------------------- */
+  function finishRound() {
+    var missed = FIND.filter(function (f) { return !S.found[f.id]; });
+    GBLab.sure(function (lvl) {
+      GBLab.sureNote(lvl, !missed.length && FIND.every(function (f) { return S.right[f.id]; }));
+      S.over = true; walk(missed, 0);
+    });
+  }
+  function walk(missed, i) {
+    if (i >= missed.length) return result();
+    var f = missed[i], z = f.zones[0], at = 0;
+    STOPS.forEach(function (s, j) { if (s.id === f.stop) at = j; });
+    S.marks.push({ stop: f.stop, x: z[0], y: z[1], cls: 'bad', label: f.label });
+    show(at, true);
+    GBLab.show({ tag: 'Walked past', kind: 'no', title: f.name, text: GBLab.esc(f.see),
+      buttons: [{ label: i + 1 < missed.length ? 'Next' : 'See my result', fn: function () { walk(missed, i + 1); } }] });
+  }
+  function result() {
+    var items = [];
+    FIND.forEach(function (f) { items.push({ t: 'Found: ' + f.name, ok: !!S.found[f.id], a: S.found[f.id] ? (S.hinted[f.id] ? 'found with a hint' : 'found') : 'walked past', c: 'found', w: f.why }); });
+    FIND.forEach(function (f) { items.push({ t: 'Put right: ' + f.name, ok: !!S.right[f.id], a: S.choice[f.id] || 'not decided', c: rightOf(f), w: f.why }); });
+    items.push({ t: 'Few false alarms (3 or fewer)', ok: S.misses <= 3, a: S.misses + ' tap' + (S.misses === 1 ? '' : 's') + ' on fine things', c: '3 or fewer',
+      w: 'A round looks at everything - but a report full of non-faults hides the real one.' });
+    GBLab.finish({ items: items });
+  }
+})();
+</script>
+</body>
+</html>

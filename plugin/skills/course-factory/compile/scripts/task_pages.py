@@ -1474,7 +1474,7 @@ def theme_of(q, b, last, probs):
 def picture_notes(q, html_q):
     """every task screen shows the thing it asks about - a static 3D render, a photograph or a live 3D scene (blueprints.json
     "tasks", L67): a screen with no picture, or with a flat drawing as its picture, is said at build"""
-    if cs.mech(q) in ("panel_operate", "set_value", "compare") or "<canvas" in html_q or "data-3d" in html_q:
+    if cs.mech(q) in ("panel_operate", "set_value", "compare") or "<canvas" in html_q or "data-3d" in html_q or "gi-frame" in html_q:
         return
     if not re.search(r'class="(ga|instrument)\b|<img\b', html_q):
         cm.note_once("Note: %s (%s) has no picture - a task screen shows the thing it asks about: a static 3D render or a "
@@ -1503,8 +1503,9 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
                                  if cs.mech(q) == "label_diagram"}}, []
     last = "th-w"                                       # the opening screen is white
     for n, q in enumerate(qs, 1):
-        html_q = question_html(n, q, sheet.get(q["id"]) or {}, mdir, figdir, figs, probs, w)
         last = theme_of(q, sheet.get(q["id"]) or {}, last, probs)
+        # a framed task's page takes its screen's theme and the course's language
+        html_q = question_html(n, q, dict(sheet.get(q["id"]) or {}, _theme=last, _lang=lang), mdir, figdir, figs, probs, w)
         html_q = html_q.replace('<section class="scr"', '<section class="scr %s"' % last, 1)
         picture_notes(q, html_q)
         sections.append(("  <!-- %s : %s -->\n" % (q["id"], cs.mech(q))) + html_q)

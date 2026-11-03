@@ -121,7 +121,10 @@
     "take_apart":         {"family": "locate",      "hands_on": true,  "part": "challenge", "en": "Take it apart in 3D - find the parts, operate it", "lv": "Izjauc 3D - atrodi daļas, darbini", "ru": "Разбери в 3D - найди детали, управляй",
                            "answer": "part: name: what it is (never what it is for); find: question => part name; set: instruction => position; the model is the build sheet's"},
     "test_atmosphere":    {"family": "operate",     "hands_on": true,  "part": "challenge", "en": "Test before entry - sample every level, read the meter", "lv": "Pārbaudi pirms ieiešanas - ņem paraugus visos līmeņos", "ru": "Проверь перед входом - отбери пробы на всех уровнях",
-                           "answer": "space: name | depth m; levels: depth; depth; depth (± band); one reading per line: name unit | value @ depth; ... | below N or above N (its alarm)"}
+                           "answer": "space: name | depth m; levels: depth; depth; depth (± band); one reading per line: name unit | value @ depth; ... | below N or above N (its alarm)"},
+    "deck_round":         {"family": "locate",      "hands_on": true,  "part": "challenge", "en": "Deck round - walk the places, find what is wrong, put it right", "lv": "Klāja apgaita - apej vietas, atrodi kļūdas, izlabo", "ru": "Обход палубы - пройди места, найди неполадки, исправь",
+                           "answer": "context: where and when; intro: title | what the trainee is told; then per place: place: name, and under it per fault: fault: name | label, see: what is there, hint: where to look, do: the right action *, do: a wrong one, why: the reason",
+                           "build_sheet": "places: {place: photo}, zones: {fault: [[x %, y %, r %], ...]} - the tap zones on that place's photo"}
   },
 
   "trainee_tablet_experience": {

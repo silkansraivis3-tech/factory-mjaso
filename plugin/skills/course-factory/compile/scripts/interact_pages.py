@@ -15,6 +15,10 @@ What the operator's text cannot say is the build sheet's, per question (working_
     take_apart       "scene": "valve.kit3d.json" (merge false), "names": {"part id": "part name"}, "explode": {"part id": [x, y, z]},
                      "xray": ["part id"], "operate": {"label", "states": {"open": {"rot": {"ball": 0}}, "closed": {...}}, "start": "open"}
     test_atmosphere  "hose": 4 (m of hose on deck), "delay": 0.28 (s per m)
+    deck_round       "places": {"place": "assets/img/x.jpg"}, "zones": {"fault": [[x %, y %, r %], ...]} - its tap zones on its place's photo
+A framed task (deck_round, fm.FRAMED) is its own page, tasks/frame_<id>.html, built from course-task-ux/engines/<type>.html in
+its screen's theme (engine_theme.py) and shown in a frame on its question's screen; it reports to the set page, which counts
+it as the question's answer (gb_interact.js LAB.frame).
 A 3D scene is a 3D-kit spec (course-visuals/kit3d/SPEC.md) - the same parts and look as the deck's 3D slides.
 """
 from __future__ import annotations
@@ -62,10 +66,12 @@ def question_html(n, q, b, mdir, figdir, probs, w, shuffle, opt_buttons):
     """the markup of one question of an interactive type: (lines, extra attributes of the section)"""
     sid, m = q["id"], cs.mech(q)
     where = "%s (%s)" % (q.get("set") or "", sid)
-    p2, d, _, _, _ = fm.parse(m, q)
+    p2, d, _, _, words = fm.parse(m, q)
     if p2:
         probs += ["%s: %s" % (where, x) for x in p2]
         return [], ""
+    if m in fm.FRAMED:
+        return framed(q, b, d, mdir, probs, where, shuffle, words)
     out, extra = [], ' data-lab-type="%s"' % m
     if m == "true_false":
         import task_pages as tp
@@ -255,3 +261,79 @@ def key_lines(q, b, w):
     if m == "test_atmosphere":
         return ["A fresh reading at <b>%s m</b> (± %g m)" % (e("; ".join("%g" % x for x in d["levels"])), d["band"])]
     return []
+
+
+# ------------------------------------------------------------------ the framed tasks (course-task-ux/engines)
+ENGINES = os.path.join(cm.SKILLS, "course-task-ux", "engines")
+sys.path.insert(0, os.path.join(cm.SKILLS, "course-task-ux", "scripts"))
+import engine_theme  # noqa: E402  - the one colour code of the richer tasks
+
+
+def photo_of(rel, mdir, probs, where, what):
+    """a photograph named by the build sheet: (its path from tasks/, "w:h") - None, said, when it is not there or has no record"""
+    rel = (rel or "").replace("\\", "/")
+    import task_pages
+    size = task_pages.image_size(os.path.join(mdir, rel)) if rel and os.path.isfile(os.path.join(mdir, rel)) else None
+    if not rel or not size:
+        probs.append("%s: %s needs its photograph in the build sheet - %s is not a picture in the module folder" % (where, what, rel or "none"))
+        return None
+    if not cm.photo_meta(mdir, rel):
+        probs.append("%s: the photograph %s has no record in assets/img/_photo_meta.json" % (where, rel))
+    return "../" + rel, "%d:%d" % size
+
+
+def zones_of(v):
+    try:
+        z = [[float(x) for x in c] for c in v]
+    except (TypeError, ValueError):
+        return None
+    return z if z and all(len(c) == 3 and 0 <= c[0] <= 100 and 0 <= c[1] <= 100 and 0 < c[2] <= 50 for c in z) else None
+
+
+def deck_round_data(q, b, d, mdir, probs, where, shuffle):
+    sid, places, faults = q["id"], [], []
+    pics, zones = b.get("places") or {}, b.get("zones") or {}
+    for i, p in enumerate(d["places"], 1):
+        ph = photo_of(pics.get(p["name"]), mdir, probs, where, "the place %r" % p["name"])
+        if ph:
+            places.append({"id": "p%d" % i, "name": p["name"], "src": ph[0], "aspect": ph[1]})
+    pid = {p["name"]: p["id"] for p in places}
+    for i, f in enumerate(d["faults"], 1):
+        z = zones_of(zones.get(f["name"]))
+        if not z:
+            probs.append("%s: the fault %r needs its tap zones on the photograph - \"zones\": {\"%s\": [[x %%, y %%, r %%], ...]}"
+                         % (where, f["name"], f["name"]))
+            continue
+        faults.append({"id": "f%d" % i, "stop": pid.get(f["place"], ""), "name": f["name"], "label": f["label"], "see": f["see"],
+                       "hint": f["hint"], "why": f["why"], "zones": z, "ch": shuffle(sid + f["name"], f["do"], key=lambda x: x),
+                       "key": k(sid, f["name"] + " => " + f["right"], 1)})
+    return {"id": sid, "title": q.get("question", ""), "eye": d["context"], "ask": q.get("question", ""), "intro": d["intro"],
+            "places": places, "faults": faults}
+
+
+FRAMED_DATA = {"deck_round": deck_round_data}
+
+
+def framed(q, b, d, mdir, probs, where, shuffle, words):
+    """a richer task: its own page (tasks/frame_<id>.html, from the engine template, in the screen's theme), in a frame on
+    the question's screen. The page reports to the set page (gb_interact.js LAB.frame), which counts it as the question's
+    answer. Its approved words are listed here, built from the same data, for check_script_match"""
+    m, sid = cs.mech(q), q["id"]
+    data = FRAMED_DATA[m](q, b, d, mdir, probs, where, shuffle)
+    theme = "light" if b.get("_theme") == "th-w" else "dark"
+    src = io.open(os.path.join(ENGINES, m + ".html"), encoding="utf-8").read()
+    lab = io.open(os.path.join(ENGINES, "gb_lab.css"), encoding="utf-8").read()
+    i, j = src.index("<style>") + len("<style>"), src.index("</style>")
+    src = src[:i] + engine_theme.page_css(theme, src[i:j]) + src[j:]
+    lang = cm.lang_code(b.get("_lang") or "English") or "en"
+    page = (src.replace("{{LANG}}", lang).replace("{{TITLE}}", e(q.get("question", "")))
+            .replace("{{LAB_CSS}}", "gb_lab_white.css" if theme == "light" else "gb_lab_navy.css")
+            .replace("{{WORDS}}", "").replace("{{DATA}}", json.dumps(data, ensure_ascii=False).replace("</", "<\\/")))
+    tdir = os.path.join(mdir, "tasks")
+    os.makedirs(tdir, exist_ok=True)
+    io.open(os.path.join(tdir, "frame_%s.html" % sid), "w", encoding="utf-8", newline="\n").write(page)
+    assert lab                                                     # the engine's style ships as assets/gb_lab_*.css
+    out = ['    <div class="lab gi-frame" data-lab="frame"><iframe src="../tasks/frame_%s.html" title="%s" allow="fullscreen"></iframe></div>'
+           % (sid, a(q.get("question", ""))),
+           '    <template>%s</template>' % "".join('<span data-script-field="answer">%s</span>' % e(x) for x in words)]
+    return out, ' data-lab-type="%s" data-frame="1"' % m
