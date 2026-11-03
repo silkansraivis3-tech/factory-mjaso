@@ -54,7 +54,7 @@ the ones before `.lit`; the slide gets `data-at`, `data-last`, and `data-stops` 
 | Class | What it is |
 |---|---|
 | `.lt-in` (its place in the order set on it) | a part that rises into place when the slide comes up, in reading order |
-| `.stage.lt-duo` > `.lt-col` > `figure` + `.copy` | large figure in two columns: a visual on top of each, its words in a boxed card under it |
+| `.stage.lt-duo` > `.lt-col` > `figure` + `.copy` (the build sheet's `figure_b`) | large figure in two columns: a visual on top of each, its words in a boxed card under it |
 | `.lt-steps` · `.lt-row` · `.lt-step` · `.lt-ill` · `.lt-b` · `.lt-track` | sequence of actions as step boxes; the line under them fills |
 | `.lt-blocks` · `.lt-show.lt-3d` · `.lt-list` · `.lt-blk` · `.lt-read` (its state `.ok` `.alarm` `.vent`; a tag `.leak`) | three blocks beside one live scene with its reading |
 | `.lt-split` (its columns set on it) · `.lt-points` · `.lt-rail` (`.tight`) · `.lt-ask` | words beside a picture box: short numbered points, or a rail of stops (3D fly-through, predict then play) |
@@ -65,9 +65,9 @@ the ones before `.lit`; the slide gets `data-at`, `data-last`, and `data-stops` 
 | `.lt-qa` · `.lt-qcol` · `.lt-think` · `.lt-ans` · `.lt-qfig` | opening question: think first, then the answer opens beside it |
 | `.lt-pts` · `.lt-pt` · `.lt-ptabs` | words in parts, each part a tab that names it |
 | `.lt-boxes` | short boxes under a card's picture, lit with the part now |
-| `.lt-task2` · `.lt-tab3d` · `.lt-chips` | task opening: the words left, the tablet in 3D right, time and count as chips |
+| `.lt-task2` · `.lt-tcopy` · `.lt-tab3d` (`.lt-photo`) · `.lt-tabimg` · `.lt-chips` | task opening: the words left with time, questions and alone / in teams as chips; on the right the exercise's photograph or the tablet render |
 | `.lt-path` | module check opening: the module's topics tick off towards the check |
-| `.lt-ask4` · `.lt-q2` · `.lt-tap` · `.lt-shine` | the summary: white cards on the pattern, each a question that opens on Next or a tap |
+| `.lt-ask4` · `.lt-q2` · `.lt-tap` (its words in `data-label`) · `.lt-shine` | the summary: white cards on the pattern, each a question that opens on Next or a tap |
 | `.lt-work` · `.lt-meter` (`data-meter`, `data-max`) | worked example, then the room's turn, beside a meter that counts |
 | `.lt-tf` · `.lt-claim` · `.lt-vote` · `.lt-why` · `.lt-pic` | true or false, then why |
 | `.lt-opts` · `.lt-opt` (`.ok` / `.no`, `.fb`) | what would you do: a situation and its choices, then why each |
@@ -258,6 +258,7 @@ colours in the set; adding one is an owner decision (`knowledge/tokens.json` § 
 | `task_complete.js` + `task_complete.css` | the one shared ending for every task (`course-task-ux` §9) |
 | `novikontas_logo.svg` | the logo for the landing screen, and the top right of every light slide |
 | `novikontas_logo_white.svg` | the same official logo, its one colour switched to white: the top right of every dark (blue) or photo slide, no plate (owner, 2026-10-21) |
+| `task_tablet.png` | a task slide's picture when the exercise has no photograph: the tablet in 3D with an empty task screen, no words (2.89.0) |
 | `na_pattern_on_light.svg` · `na_pattern_on_navy.svg` | the brandbook's NA pattern, only where nobody reads: the opening, task, check and summary slides, the start screen (2.88.0) |
 | `gb_upgrade.css` | the upgraded templates' bodies (§0b), after `gb_layouts.css` - loaded by every compiled deck |
 | `gb_steps.js` | Next walks an upgraded slide's stops and drives its scene, photo, meter, slider or clock (§0b) - before `gb_deck.js` in every compiled deck |

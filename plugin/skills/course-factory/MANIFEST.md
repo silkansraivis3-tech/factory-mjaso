@@ -7,6 +7,18 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.89.0 · The compiler writes the upgraded slide bodies (2026-11-03)
+
+- **Why.** 2.88.0 put the upgraded templates' look and step engine in every deck, but the compiler still wrote the old
+  bodies, so no course got them.
+- **What.** `compile/scripts/compile_module.py`: the summary that opens card by card, the task slide with chips and a
+  picture, step boxes, a comparison's boxed lines, the two-column large figure (`"figure_b"`), photo `"spots"` and a split
+  photo's `"zoom"`. Only the body round the approved words changes; the compiler's own words (chips, "Tap to open") are in
+  `LANDING`, in English, Latvian and Russian (PROVISIONAL, like the landing card's), marked `data-script-ignore` or kept
+  in an attribute. compile/GUIDE.md section 2h.
+- **Next.** New approved words in the content script: the summary's questions, drill prompts, the before-the-self-check
+  list, short points with the full words in the instructor notes.
+
 ## 2.75.1 · Editor-mode fixes back into the script (2026-10-29)
 
 - **Why.** The training app's editor fixes a slide with Claude and publishes it as a draft release, but the course folder

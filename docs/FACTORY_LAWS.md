@@ -642,8 +642,8 @@ summary that asks before it opens, six learning layouts (worked example, true or
 parts, numbers to remember, spot the difference), quick drills before the module check in every second or third module,
 and a "before the self-check" list. Dark slides and photographs stand on Navy, never Pitch Black; the NA pattern only
 where nobody reads. → `course-module-ui` (`templates/gb_upgrade.css`, `references/vocabulary.md` §0b),
-`course-module-ux` (`assets/gb_steps.js`), `course-visuals` (`scene/gb_scene.js`); the compiler writing every template
-in its upgraded body is the next step, 2.88.0
+`course-module-ux` (`assets/gb_steps.js`), `course-visuals` (`scene/gb_scene.js`), 2.88.0; the compiler writes the
+upgraded bodies (`course-factory/compile/GUIDE.md` §2h), 2.89.0
 
 **All sixty-seven laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
 `course-visuals` was built; L26–L67 are enforced first through `course-factory/SKILL.md`'s

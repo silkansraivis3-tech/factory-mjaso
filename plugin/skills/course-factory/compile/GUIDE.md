@@ -588,6 +588,24 @@ blanks - fill s07: its picture"). Choosing a picture is the one judgement in a b
   with its record; a question's boxes onto the real things; the 3D parts placed), then builds until PASS. In the workflow a module Phase A
   finished gets no builder at all (`build_course.js`, 2.73.0).
 
+## 2h · The upgraded slide bodies (2.89.0, L67)
+
+Every compiled deck loads `gb_upgrade.css` and `gb_steps.js`; the compiler writes these bodies by itself, and Next walks
+their stops. The approved words never change - only what is round them.
+
+| Slide | What the compiler writes | Build sheet |
+|---|---|---|
+| the summary (`"recap": true`) | cards that open one by one on Next or a tap; the instructor asks the room first | - |
+| a task slide | its words on the left with chips (minutes, the set's questions, alone / in teams); the exercise's `"photo"` on the right, else the tablet render | `"photo"` |
+| numbered steps, no picture | step boxes, a badge each, a line under them that fills | - |
+| `compare-two` | each card's first line its name, the lines under it boxes that Next lights | `"figure_b"`, `"blocks"` |
+| `figure-stage` with two visuals | two columns, each its visual and its lines boxed under it | `"figure_b"`, `"blocks"` |
+| a full photograph | a point lights on the photo with its line | `"spots": {"2": [x, y]}` |
+| a split photograph | the photo zooms to the part the line names, a ring round it | `"zoom": {"2": [x, y, 2.2]}` (scale 1-4) |
+
+`"spots"` and `"zoom"` are in the photograph's own pixels and keyed by line number; a wrong one is reported. A slide
+without these fields is built as before.
+
 ## 3 · When the look is not enough
 
 If a slide needs something the shared style files cannot do, the answer is **never** a module style

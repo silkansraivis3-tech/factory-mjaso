@@ -289,7 +289,12 @@ a = lambda s: html.escape(s or "", quote=True)
 NATIVE = {"latviešu": "lv", "latviesu": "lv", "русский": "ru", "english": "en"}
 # the deck's landing card: the compiler's own words beside the engine's (gb_deck.js LANG). PROVISIONAL (2.41.0) - written
 # by Claude, to be checked by a native speaker: compile/TRANSLATIONS_REVIEW.md. Counts as "label: n" - no plural forms.
-LANDING = {"en": {"module": "Module {n}"}, "lv": {"module": "{n}. modulis"}, "ru": {"module": "Модуль {n}"}}
+LANDING = {"en": {"module": "Module {n}", "minutes": "{n} min", "questions": "Questions: {n}", "alone": "On your own",
+                  "team": "In teams of {n}", "tap": "Tap to open"},
+           "lv": {"module": "{n}. modulis", "minutes": "{n} min", "questions": "Jautājumi: {n}", "alone": "Patstāvīgi",
+                  "team": "Komandās pa {n}", "tap": "Pieskaries, lai atvērtu"},
+           "ru": {"module": "Модуль {n}", "minutes": "{n} мин", "questions": "Вопросов: {n}", "alone": "Самостоятельно",
+                  "team": "В командах по {n}", "tap": "Нажмите, чтобы открыть"}}
 assert all(set(LANDING[k]) == set(LANDING["en"]) for k in LANDING), "every language has every word"
 
 
@@ -2313,25 +2318,96 @@ def has_teaching_visual(slide):
     return (tid, var) not in FIGURE_FREE
 
 
-def recap_html(s, base, m, n, total, lines, dark=False):
+# 2.89.0 - the upgraded bodies of gb_upgrade.css (L67, owner 2026-11-03): Next walks their stops (gb_steps.js, [data-k] /
+# [data-stop]). The approved words stay exactly as they are; what the compiler adds - a step's number badge, the chips on a
+# task slide - is data-script-ignore, and the summary's "Tap to open" is an attribute the CSS shows, never page text.
+TABLET_PIC = "task_tablet.png"          # a static 3D tablet with an empty task screen (design-system.json ships it)
+TAP_SVG = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" '
+           'aria-hidden="true"><path d="M9 11.5V4.8a1.6 1.6 0 0 1 3.2 0v5.4"/><path d="M12.2 9.6a1.6 1.6 0 0 1 3.2 0v1.2"/>'
+           '<path d="M15.4 10.4a1.6 1.6 0 0 1 3.2 0V14c0 3.6-2.6 6.3-6.2 6.3h-1.1c-2 0-3.3-.8-4.4-2.3l-2.7-3.6a1.6 1.6 0 0 1 2.5-2L9 15"/></svg>')
+
+
+def words_of(script):
+    """the compiler's own few words in the course language (LANDING), English when the language is not in the factory"""
+    return LANDING.get(lang_code(script.get("course_language") or "English")) or LANDING["en"]
+
+
+def set_questions(script, code):
+    """how many questions the set a task slide opens holds"""
+    return len([q for q in script.get("screens", []) if q.get("kind") in cs.TASKS and
+                ((q.get("set") or "").strip() or {"self-check": "SC1", "module-check": "MC", "final": "FA"}.get(q["kind"], "")) == code])
+
+
+def steps_body(lines):
+    """2.89.0 - numbered steps as step boxes, a badge each (its own number, done = a tick) and the line under them that
+    fills as Next walks them; up to four boxes a row. None when the lines are not all numbered steps"""
+    nums = [STEP_NUM.match(x) for x in lines]
+    if len(lines) < 2 or not all(nums) or [int(m.group(1).rstrip(".)")) for m in nums] != list(range(1, len(lines) + 1)):
+        return None
+    per = len(lines) if len(lines) <= 4 else (len(lines) + 1) // 2
+    boxes = []
+    for i, (x, m) in enumerate(zip(lines, nums), 1):
+        boxes.append('<div class="lt-step lt-in" data-stop style="--i:%d"><span class="lt-b" data-script-ignore><span class="nn">%d</span>'
+                     '<span class="ok">✓</span></span>\n          <p class="lt-t" data-script-field="text" data-i="%d"><span class="n">%s</span>%s%s</p></div>'
+                     % (i, i, i, e(m.group(1)), m.group(2), marked(x[m.end():], True)))
+    rows = ['<div class="lt-row">\n        %s\n      </div>' % "\n        ".join(boxes[k:k + per]) for k in range(0, len(boxes), per)]
+    return ('<div class="slide-body lt-steps" style="--n:%d">\n      %s\n      <div class="lt-track"><i></i></div>\n    </div>'
+            % (per, "\n      ".join(rows)))
+
+
+def boxed_lines(lines, idx, k0=0):
+    """2.89.0 - a card's lines under its picture as boxes that Next lights one by one (data-k from k0); the box's number is
+    the compiler's mark, the line the approved words"""
+    return ['<ul class="lt-boxes">'] + ['  <li data-k="%d"><i data-script-ignore>%02d</i><div><b data-script-field="text" data-i="%d">%s</b></div></li>'
+                                        % (k0 + j, j + 1, i, marked(x, False)) for j, (i, x) in enumerate(zip(idx, lines))] + ["</ul>"]
+
+
+def step_marks(words, marks):
+    """data-k (and the photo's zoom) on each approved line: marks = {line: extra attributes}; a line with none still walks"""
+    def one(m):
+        i = int(m.group(1))
+        return 'data-i="%d" data-k="%d"%s' % (i, i, marks.get(i, ""))
+    return [re.sub(r'data-i="(\d+)"', one, w) for w in words]
+
+
+def photo_points(b, nlines, key, probs, where, z=False):
+    """the build sheet's "spots" {line: [x, y]} or "zoom" {line: [x, y, scale]} in the photograph's own pixels, checked"""
+    out = {}
+    for k, v in (b.get(key) or {}).items():
+        try:
+            i, v = int(k), [float(x) for x in v]
+        except (TypeError, ValueError):
+            i, v = 0, []
+        if not 1 <= i <= nlines or len(v) != (3 if z else 2) or (z and not 1 <= v[2] <= 4):
+            probs.append("%s: \"%s\" %s: %s - give a line number of the slide and %s in the photograph's own pixels"
+                         % (where, key, k, v, "[x, y, scale 1-4]" if z else "[x, y]"))
+            continue
+        out[i] = v
+    return out
+
+
+def recap_html(s, base, m, n, total, lines, dark=False, tap="Tap to open"):
     """L51 - the module's closing slide, "what to take away", in the one shared design (gb_compose.css 15): one box
     per approved line, "Short title - one sentence"; the numbers are drawn by CSS, so the slide says exactly the
     approved words. No picture, no layout choice - every module the same. 2.62.1: on the light ground unless the build
     sheet asks "dark" (owner, 2026-10-21: 80 / 20)"""
-    d = {"class": "slide %srecap" % ("dark " if dark else ""), "data-title": s.get("title"), "data-kind": "Summary",
+    d = {"class": "slide %srecap lt-ask4" % ("dark " if dark else ""), "data-title": s.get("title"), "data-kind": "Summary",
          "data-block": "%s · %d" % (m, n), "data-visual": "none"}
     d.update(base)
     template_attrs(d, "recap", "cards")
     items = []
-    for x in lines:
+    # 2.89.0: the cards open one by one (Next or a tap), the instructor asking the room first; the tap mark's words are
+    # an attribute, so the card holds only its approved line
+    for k, x in enumerate(lines, 1):
         t, sep, rest = x.partition(" - ")
-        items.append('<li class="rc-item" data-script-field="text">'
+        items.append('<li class="rc-item" data-script-field="text" data-k="%d">' % k
                      + ('<b class="rc-t">%s</b><span class="rc-sep"> - </span><span class="rc-d">%s</span>' % (e(t), e(rest))
-                        if sep else '<span class="rc-d">%s</span>' % e(x)) + "</li>")
+                        if sep else '<span class="rc-d">%s</span>' % e(x))
+                     + '<span class="lt-shine"></span><span class="lt-tap" data-label="%s"><i>%s</i></span></li>' % (a(tap), TAP_SVG))
     return ('<section %s>\n  <div class="slide-kind"><b>Summary</b> · %s · %d / %d</div>\n'
             '  <h2 data-script-field="title">%s</h2>\n  <div class="slide-body recap">\n    <ol class="rc-grid" data-n="%d">\n'
-            '      %s\n    </ol>\n    <p class="rc-next" data-script-ignore>Next: the module check</p>\n  </div>\n</section>'
-            % (attrs(d), m, n, total, e(s.get("title")), len(items), "\n      ".join(items)))
+            '      %s\n    </ol>\n    <p class="rc-next" data-script-ignore data-k="%d">Next: the module check</p>\n  </div>\n</section>'
+            % (attrs(d), m, n, total, e(s.get("title")), len(items), "\n      ".join(items), len(items)))
 
 
 def active_mins(s):
@@ -2467,7 +2543,24 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
             note_once("Note: %s - its approved words promise a pass mark or PASSED / NOT PASSED; a module check shows the score "
                       "only (L27, 2.63.0) - change the words with content_script.py propose, e.g. \"%s\"" % (where, MC_WORDS))
         pic = task_picture(mdir, b, probs, where)          # 2.63.0: the exercise's photo, else an icon that says what it is
-        body.append(pic or task_icon(script, code, "room" if kind == "activity" else "tablet"))
+        icon = task_icon(script, code, "room" if kind == "activity" else "tablet")
+        if kind == "task-slide":
+            # 2.89.0 (L67): the words on the left with how long, how many questions and alone or in teams; on the right the
+            # exercise's photograph, or the tablet the trainees are about to pick up (a static 3D render, no words on it)
+            w = words_of(script)
+            team = (s.get("team") or {}).get("size")
+            chips = ([w["minutes"].format(n="%g" % cs.minutes(s))] if cs.minutes(s) else []) + \
+                    ([w["questions"].format(n=set_questions(script, code))] if set_questions(script, code) else []) + \
+                    [w["team"].format(n=team) if team else w["alone"]]
+            left = ([] if pic else [icon]) + body + ['<div class="act-lines">'] + \
+                   ['  <p class="act-inst" data-script-field="text">%s</p>' % e(x) for x in lines] + ["</div>"] + \
+                   ['<div class="lt-chips" data-script-ignore>%s</div>' % "".join("<span>%s</span>" % e(c) for c in chips)]
+            right = ('<div class="lt-tab3d lt-3dbox lt-photo lt-in" style="--i:1">%s</div>' % pic if pic else
+                     '<div class="lt-tab3d lt-3dbox clear lt-in" style="--i:1"><img class="lt-tabimg" src="../assets/%s" alt="" data-no-zoom></div>' % TABLET_PIC)
+            return ('<section %s>\n  <div class="slide-kind"><b>%s</b> · %s · %s</div>\n  <div class="slide-body lt-task2">\n'
+                    '    <div class="lt-tcopy lt-in" style="--i:0">\n      %s\n    </div>\n    %s\n  </div>\n</section>'
+                    % (attrs(d), d["data-kind"], m, code, "\n      ".join(left), right))
+        body.append(pic or icon)
         body.append('<div class="act-lines">')
         body += ['  <p class="act-inst" data-script-field="text">%s</p>' % e(x) for x in lines]
         body.append("</div>")
@@ -2475,7 +2568,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                 % (attrs(d), d["data-kind"], m, code, "\n    ".join(body)))
 
     if kind == "slide" and s.get("recap"):
-        return recap_html(s, base, m, n, total, lines, bool(b.get("dark")))
+        return recap_html(s, base, m, n, total, lines, bool(b.get("dark")), words_of(script)["tap"])
 
     own_comp = b.get("composition")
     b = asked_composition(b)                      # L61: a template asked for by name decides the composition
@@ -2647,9 +2740,35 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                           + "\n" + " " * k + "</div>")
 
     if comp == "photo":
-        return ('<section %s>\n  <div class="photo-wrap">%s</div>\n  <div class="photo-scrim"></div>\n%s\n'
+        words, layer = words_html(lines, dark_photo=True), ""
+        # 2.89.0: "spots" {line: [x, y]} - a point lights on the photograph with its line; "zoom" {line: [x, y, scale]} on a
+        # split photo - the photograph zooms to the part its line names. Both in the photograph's own pixels
+        spots = photo_points(b, len(lines), "spots", probs, where)
+        zoom = photo_points(b, len(lines), "zoom", probs, where, z=True) if split_photo else {}
+        if b.get("zoom") and not split_photo:
+            probs.append("%s: \"zoom\" is for a photograph beside its words (photo-explain split) - use \"spots\" on a full photograph" % where)
+        if spots or zoom:
+            words = step_marks(words, dict((i, ' data-x="%g" data-y="%g" data-z="%g"' % tuple(v)) for i, v in zoom.items()))
+            if spots:
+                layer = '<div class="lt-spots">%s</div>' % "".join('<span class="lt-spot" data-k="%d" data-x="%g" data-y="%g"><i></i></span>'
+                                                                   % (i, x, y) for i, (x, y) in sorted(spots.items()))
+            if zoom:
+                d["class"] += " lt-zoom"
+                layer += '<span class="lt-ring"></span>'
+        return ('<section %s>\n  <div class="photo-wrap">%s%s</div>\n  <div class="photo-scrim"></div>\n%s\n'
                 '  <div class="photo-copy">\n    %s\n    %s\n  </div>%s\n</section>'
-                % (attrs(d), fig, head, h2, ind(words_html(lines, dark_photo=True) + extra, 4), credit_html))
+                % (attrs(d), fig, layer, head, h2, ind(words + extra, 4), credit_html))
+    if comp == "stage" and b.get("figure_b") and not b.get("legend"):
+        # 2.89.0: two visuals - each its own column, its lines boxed under it ("blocks": the lines of each, else halves)
+        fig_b, _, _ = figure_html(mdir, figdir, s, dict(b, figure=b.get("figure_b")), probs, where)
+        cols = []
+        for k, ((lo, hi), pic) in enumerate(zip(line_ranges(b.get("blocks"), len(lines), 2), (fig, fig_b))):
+            ix = list(range(lo, hi + 1))
+            words = words_html([lines[i - 1] for i in ix], first_statement=False, emph=emph, idx=ix) if ix else []
+            cols.append('<div class="lt-col"><figure class="lt-in" style="--i:%d">%s</figure>\n      <div class="copy lt-in" style="--i:%d">\n        %s\n      </div></div>'
+                        % (k, pic, k + 2, ind(words, 8)))
+        return ('<section %s>\n%s\n  %s\n  <div class="slide-body stage lt-duo">\n    %s\n  </div>%s\n</section>'
+                % (attrs(d), head, h2, "\n    ".join(cols), credit_html))
     if comp == "stage":
         leg = b.get("legend")
         if isinstance(leg, list) and len(leg) == 2:
@@ -2708,19 +2827,28 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         fig_b, credit_b, _ = figure_html(mdir, figdir, s, dict(b, figure=b.get("figure_b")), probs, where)
         rs = line_ranges(b.get("blocks"), len(lines), 2)
         inside = set(i for lo, hi in rs for i in range(lo, hi + 1))
-        cards = []
+        cards, k0 = [], 0
         for (lo, hi), pic in zip(rs, (fig, fig_b)):
             ix = list(range(lo, hi + 1))
+            # 2.89.0: the card's first line is its name; the lines under it are boxes that Next lights one by one
+            words = words_html([lines[ix[0] - 1]], first_statement=False, idx=ix[:1], emph=emph) if ix else []
+            if len(ix) > 1:
+                words += boxed_lines([lines[i - 1] for i in ix[1:]], ix[1:], k0)
+                k0 += len(ix) - 1
             cards.append('<div class="lt-card"><div class="lt-card-visual">%s</div><div class="lt-card-copy">\n      %s\n    </div></div>'
-                         % (pic, ind(words_html([lines[i - 1] for i in ix], first_statement=False, idx=ix, emph=emph), 6)))
+                         % (pic, ind(words, 6)))
         rest = [i for i in range(1, len(lines) + 1) if i not in inside]
         note = ind(words_html([lines[i - 1] for i in rest], first_statement=False, idx=rest), 4) if rest else ""
-        return ('<section %s>\n%s\n  %s\n  <div class="slide-body lt-compare">\n    %s\n  </div>%s%s\n</section>'
+        return ('<section %s>\n%s\n  %s\n  <div class="slide-body lt-compare lt-cmp">\n    %s\n  </div>%s%s\n</section>'
                 % (attrs(d), head, h2, "\n    ".join(cards), ("\n  <div class=\"lt-compare-note\">%s</div>" % note) if note else "",
                    credit_html))                       # 2.63.0: the credits are in each photo's full-screen view
     if comp == "opener":
         return ('<section %s>\n%s\n  <div class="slide-body opener mid">\n    %s\n    %s\n  </div>%s\n</section>'
                 % (attrs(d), head, h2, ind(words_html(lines, first_statement=False), 4), credit_html))
+    if tid == "procedure" and not fig and not extra and not emph:
+        sb = steps_body(lines)                     # 2.89.0: numbered steps without a picture are step boxes
+        if sb:
+            return '<section %s>\n%s\n  %s\n  %s%s\n</section>' % (attrs(d), head, h2, sb, credit_html)
     figure = (box_of(fig) + "\n    ") if fig else ""      # 2.54.0 (L23): first in the markup, placed under the words by CSS
     return ('<section %s>\n%s\n  %s\n  <div class="slide-body%s">\n    %s%s\n  </div>%s\n</section>'
             % (attrs(d), head, h2, " dom-fig" if fig else "", figure, copy(words_html(lines, emph=emph), 4), credit_html))

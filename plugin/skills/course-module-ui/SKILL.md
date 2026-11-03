@@ -129,8 +129,10 @@ The owner approved a new body for every L61 template, and six new ones, in the t
   go to the instructor notes (`data-cue`). Summary questions, drill prompts and the self-check list are words like any
   other: written and approved in the content script, never made up by the compiler.
 
-Every class is in `references/vocabulary.md` §0b. `gb_upgrade.css` and `gb_steps.js` load in every compiled deck; the
-compiler writing each template in its upgraded body (and the content script carrying the new fields) is the next step.
+Every class is in `references/vocabulary.md` §0b. `gb_upgrade.css` and `gb_steps.js` load in every compiled deck; since
+2.89.0 the compiler writes the summary, the task slide, step boxes, compare boxes, the two-column figure and photo spots
+and zoom (`course-factory/compile/GUIDE.md` §2h). The content script carrying the new words (summary questions, drills,
+the self-check list, short points with full notes) is the next step.
 
 ## Where to look
 

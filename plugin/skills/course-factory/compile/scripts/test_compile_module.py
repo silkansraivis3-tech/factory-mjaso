@@ -193,15 +193,97 @@ def recap_part(tmp):
     code, out = run(COMPILE, c, "--module", "1")
     r = section(deck(md), "s05")
     check("a recap slide is built in the shared closing design (slide recap - the light ground since 2.62.1 - data-kind Summary)",
-          code == 0 and 'class="slide recap"' in r and 'data-kind="Summary"' in r, out + r[:400])
+          code == 0 and 'class="slide recap' in r and 'data-kind="Summary"' in r, out + r[:400])
     check("... one box per line, its title bold before ' - '",
           r.count('class="rc-item"') == 3 and '<b class="rc-t">Kept liquid</b><span class="rc-sep"> - </span>'
           '<span class="rc-d">cold, under pressure, or both.</span>' in r and '<span class="rc-d">The spaces are new.</span>' in r, r)
     check("... with the 'next: the module check' strip outside the script's words",
-          '<p class="rc-next" data-script-ignore>' in r, r)
+          '<p class="rc-next" data-script-ignore' in r, r)
     code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
     check("... and check_script_match finds exactly the approved words on it", code == 0, out)
     long_layouts_part(tmp)
+
+
+def upgrade_part(tmp):
+    """2.89.0 (L67) - the compiler writes the upgraded bodies of gb_upgrade.css: Next walks their stops (gb_steps.js) and the
+    approved words stay exactly as they are; a slide without the build sheet's new fields is built as before"""
+    print("\n-- 2.89.0: the upgraded slide bodies")
+    os.makedirs(os.path.join(tmp, "up"))
+    by = {x["id"]: x for x in json.loads(json.dumps(SCREENS))}
+    screens = [by["s01"],
+               {"id": "s20", "kind": "slide", "title": "Recognise it on board", "layout": "split", "visual_kind": "photo",
+                "text": "Look at the real ship.\nThe tanks on deck.", "visual": "The ship at sea.", "notes": "- Find the parts.", "minutes": 2},
+               {"id": "s21", "kind": "slide", "title": "Three steps before bunkering", "visual_kind": "none",
+                "text": "1 Agree the plan with the supplier\n2 Check the safety zone is clear\n3 Test the emergency shutdown",
+                "notes": "- Who does each step?", "minutes": 2},
+               by["s02"],
+               {"id": "s22", "kind": "slide", "title": "Drawing and ship", "visual_kind": "comparison",
+                "text": "The drawing\nShows how the parts connect.\nThe ship\nShows what you will see on board.", "visual": "Two pictures.",
+                "notes": "- Compare.", "minutes": 2},
+               {"id": "s23", "kind": "slide", "title": "Two views of the plant", "layout": "visual_wide", "visual_kind": "comparison",
+                "text": "The scale.\nThe plant.\nThe valves.", "visual": "Two drawings.", "notes": "- Point at both.", "minutes": 2},
+               {"id": "s24", "kind": "slide", "recap": True, "title": "What to take away", "visual_kind": "none",
+                "text": "Kept liquid - cold, under pressure, or both.\nTwo barriers - between the gas and people.", "notes": "- Ask the room.", "minutes": 2},
+               by["t01"], by["q01"],
+               {"id": "q09", "kind": "self-check", "set": "SC1", "question": "Which is the fuel?", "options": ["LNG", "Coal"], "correct": "A",
+                "feedback": "LNG.", "mechanic": "single_choice"},
+               by["t02"], by["m01"]]
+    c, md = new_course(os.path.join(tmp, "up"), script(screens=screens), build=False)
+    io.open(os.path.join(md, "assets", "img", "ship2.jpg"), "wb").write(b"\xff\xd8\xff\xd9")
+    cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"),
+            dict(PHOTO_META, **{"ship2.jpg": dict(PHOTO_META["ship.jpg"], description="The ship at sea.")}))
+    io.open(os.path.join(md, "assets", "fig", "plant.svg"), "w", encoding="utf-8").write(SVG.replace("Scale", "Plant"))
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "s01": {"figure": "assets/img/ship.jpg", "spots": {"1": [900, 400], "5": [1200, 600]}},
+        "s20": {"figure": "assets/img/ship2.jpg", "composition": "two-col", "zoom": {"2": [700, 380, 2.2]}},
+        "s02": {"figure": "assets/fig/scale.svg"},
+        "s22": {"template": "compare-two.v1", "figure": "assets/fig/scale.svg", "figure_b": "assets/fig/plant.svg", "blocks": [[1, 2], [3, 4]]},
+        "s23": {"template": "figure-stage.v1", "figure": "assets/fig/scale.svg", "figure_b": "assets/fig/plant.svg", "blocks": [[1, 2], [3, 3]]},
+        "t01": {"try_tablet": False}}})
+    code, out = run(COMPILE, c, "--module", "1")
+    page = deck(md) if os.path.isfile(os.path.join(md, "presentation", "index.html")) else ""
+    check("the fixture deck is built", code in (0, 1) and page, out[-1500:])
+    if not page:
+        return
+    check("every deck loads the upgraded bodies' look and the step engine, before the deck engine",
+          "gb_upgrade.css" in page and page.index("gb_steps.js") < page.index("gb_deck.js")
+          and os.path.isfile(os.path.join(md, "assets", "task_tablet.png")))
+    r = section(page, "s24")
+    check("the summary's cards open one by one: lt-ask4, each card a stop, the next strip the last, the tap mark's words an attribute",
+          "lt-ask4" in r and 'data-k="1"' in r and 'data-k="2"' in r and 'class="rc-next" data-script-ignore data-k="2"' in r
+          and 'class="lt-tap" data-label="Tap to open"' in r and r.count('class="lt-shine"') == 2 and ">Tap to open<" not in r, r[:900])
+    t = section(page, "t01")
+    check("the task slide: the words left with how long, how many questions and alone - the chips outside the approved words",
+          'class="slide-body lt-task2"' in t and '<div class="act-lines">' in t and 'class="act-ico"' in t
+          and '<div class="lt-chips" data-script-ignore><span>4 min</span><span>Questions: 2</span><span>On your own</span></div>' in t, t[:1200])
+    check("... and on the right the tablet render, never opened full screen, no words on it",
+          'class="lt-tab3d lt-3dbox clear lt-in"' in t and 'src="../assets/task_tablet.png"' in t and "data-no-zoom" in t, t[:1200])
+    p = section(page, "s21")
+    check("numbered steps with no picture are step boxes: a badge each (data-script-ignore), the line under them, each a stop",
+          'class="slide-body lt-steps" style="--n:3"' in p and p.count("data-stop") == 3 and p.count('class="lt-b" data-script-ignore') == 3
+          and '<div class="lt-track"><i></i></div>' in p
+          and 'data-script-field="text" data-i="2"><span class="n">2</span> Check the safety zone is clear</p>' in p, p[:1200])
+    q = section(page, "s22")
+    check("compare: each card's name first, the lines under it boxes that Next lights (data-k across both cards)",
+          "lt-cmp" in q and q.count('class="lt-boxes"') == 2 and '<li data-k="0"><i data-script-ignore>01</i>' in q and '<li data-k="1">' in q
+          and 'data-i="4">Shows what you will see on board.</b>' in q, q[:1400])
+    g = section(page, "s23")
+    check("a large figure with a second visual (\"figure_b\") is two columns, each its visual and its lines under it",
+          'class="slide-body stage lt-duo"' in g and g.count('<div class="lt-col">') == 2 and "plant" in g.lower(), g[:1200])
+    f = section(page, "s01")
+    check("a photograph's \"spots\": a point on the photo for each named line, every line a stop",
+          '<div class="lt-spots">' in f and 'class="lt-spot" data-k="1" data-x="900" data-y="400"' in f and 'data-i="3" data-k="3"' in f, f[:1400])
+    z = section(page, "s20")
+    check("a split photo's \"zoom\": the slide zooms to the part its line names (lt-zoom, data-z on the line, the ring)",
+          "lt-zoom" in z.split(">")[0] and 'data-i="2" data-k="2" data-x="700" data-y="380" data-z="2.2"' in z and 'class="lt-ring"' in z, z[:1400])
+    o = section(page, "s02")
+    body = o.split(">", 1)[1] if ">" in o else o
+    check("a slide without the new fields is built as before: no stops, no upgraded body",
+          "data-k=" not in o and "data-stop" not in o and not re.search(r'class="[^"]*\blt-(steps|duo|boxes|spots|ring|task2|ask4|zoom)\b', body), o[:900])
+    code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
+    check("... and check_script_match finds exactly the approved words on every upgraded slide", code == 0, out[-1500:])
+    probs = [x for x in out.splitlines() if "\"spots\"" in x or "\"zoom\"" in x]
+    check("the build sheet's spots and zoom are checked: none reported for good ones", not probs, probs)
 
 
 # IGF M01 s01 and M02 s16, as approved: the words that spilled in every 2026-10-20 benchmark build
@@ -1228,7 +1310,7 @@ def light_part(tmp):
     page = deck(md)
     t01, t02, s05 = section(page, "t01"), section(page, "t02"), section(page, "s05")
     check("the task launch, the module check and the recap are on the light ground by default",
-          'class="slide activity"' in t01 and 'class="slide activity"' in t02 and 'class="slide recap"' in s05, (t01[:90], s05[:90]))
+          'class="slide activity"' in t01 and 'class="slide activity"' in t02 and re.search(r'class="slide recap( lt-ask4)?"', s05), (t01[:90], s05[:90]))
     audits = os.path.join(SKILLS, "course-module-ux", "measure", "scripts", "run_audits.py")
     code_a, aout = run(audits, os.path.join(md, "presentation", "index.html"), "--viewport", "1024x768", "--quiet")
     bad = [x for x in aout.splitlines() if re.search(r"\((t01|t02|s05)\)", x)]
@@ -3069,6 +3151,7 @@ def main():
 
         prefill_part(tmp)
         recap_part(tmp)
+        upgrade_part(tmp)
         tasks_part(tmp)
         figures_part(tmp)
         every_way_part(tmp)

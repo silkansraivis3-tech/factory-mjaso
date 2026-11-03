@@ -254,7 +254,7 @@ def main():
             check("every class in %s is in the vocabulary" % os.path.basename(path), not missing, missing)
         defined = set().union(*[css_classes(p) for p in STYLE_FILES])
         api = re.sub(r"\b[A-Z]\w*\.\w+", "", ticked)   # GBDeck.init is an engine call, not a class
-        dotted = set(re.findall(r"\.([a-z][\w-]*)", api)) - {"css", "js", "html", "json", "md", "svg", "py", "ttf", "txt"}
+        dotted = set(re.findall(r"\.([a-z][\w-]*)", api)) - {"css", "js", "html", "json", "md", "svg", "py", "ttf", "txt", "png"}
         invented = sorted(dotted - defined)
         check("no class in the vocabulary is invented", not invented, invented)
         toks = set(re.findall(r"(--[a-z][\w-]*)\s*:", io.open(TOKENS, encoding="utf-8").read()))

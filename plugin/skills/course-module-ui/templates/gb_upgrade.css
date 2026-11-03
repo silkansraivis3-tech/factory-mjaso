@@ -365,7 +365,7 @@
 /* the words on the left; the tablet, large, takes the right half */
 .slide[data-template^="task-launch."] .slide-body.lt-task2{display:grid;grid-template-columns:44fr 56fr;gap:var(--lt-gap);align-items:center;flex:1;min-height:0}
 .lt-task2 .lt-tcopy{display:flex;flex-direction:column;gap:min(1.6vmin,13px);min-width:0}
-.slide[data-template^="task-launch."] .lt-task2 .act-code{text-align:left;justify-self:start;align-self:start;margin:0;font-size:clamp(48px,13vmin,130px);line-height:.85;font-weight:900;letter-spacing:-.04em;color:var(--lt-navy)}
+.slide[data-template^="task-launch."] .lt-task2 .act-code{text-align:left;justify-self:start;align-self:start;margin:0;font-size:clamp(48px,13vmin,130px);line-height:1;font-weight:900;letter-spacing:-.04em;color:var(--lt-navy)}
 .slide[data-template^="task-launch."] .lt-task2 .act-title{color:var(--lt-navy);font-size:clamp(22px,4.6vmin,48px)}
 .lt-task2 .act-inst{margin:0;font-size:var(--lt-fs);color:var(--lt-steel);line-height:1.4}
 .slide .lt-task2 .lt-tab3d{height:100%;min-height:0;min-width:0;align-self:stretch}
@@ -662,3 +662,29 @@
 /* the figure kit keeps its own alarm amber inside its screen: there it is a meaning, not a decoration */
 :root{--kit-alarm:#E9A51E;--kit-alarm-ink:#7A5300;--kit-alarm-wash-d:rgba(233,165,30,.14);--kit-alarm-wash-l:#FDF4DE}
 .kit-screen{--amber:var(--kit-alarm);--amber-ink:var(--kit-alarm-ink);--amber-wash-d:var(--kit-alarm-wash-d);--amber-wash-l:var(--kit-alarm-wash-l)}
+
+/* ------------------------------------------------ what the compiler writes (2.89.0) */
+/* the summary's tap mark: its words are an attribute, so the card holds only its approved line */
+.lt-ask4 .lt-tap::after{content:attr(data-label)}
+/* the task slide's picture: the tablet render whole, or the exercise's photograph filling the box */
+.lt-tab3d .lt-tabimg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 26px 30px rgba(10,36,99,.28))}
+.lt-tab3d.lt-photo > img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.lt-task2 .act-ico{width:min(10vmin,80px);height:auto;color:var(--lt-blue)}
+.slide.dark .lt-task2 .act-code,.slide.dark .lt-task2 .act-title{color:var(--lt-white)}
+.slide.dark .lt-task2 .act-inst{color:var(--lt-dim-d)}
+/* step boxes with no illustration: the badge above the words, the step's own number hidden in its approved line */
+.lt-steps .lt-t .n{display:none}
+.lt-steps .lt-step:not(:has(.lt-ill)) .lt-t{margin-top:min(6vmin,48px)}
+.lt-steps .lt-row + .lt-row{margin-top:min(1.4vmin,11px)}
+/* step boxes on the light ground */
+.slide:not(.dark) .lt-steps .lt-step{background:var(--lt-white);border-color:var(--lt-line);color:var(--lt-steel);box-shadow:0 10px 24px -16px rgba(10,36,99,.4)}
+.slide:not(.dark) .lt-steps .lt-step .lt-b{background:var(--lt-grey);color:var(--lt-navy)}
+.slide:not(.dark) .lt-steps .lt-step.cur{background:var(--up-e6f2fa);border-color:var(--lt-blue);color:var(--lt-navy)}
+.slide:not(.dark) .lt-steps .lt-step.cur .lt-b{background:var(--lt-navy);color:var(--lt-white)}
+.slide:not(.dark) .lt-steps .lt-step.lit{color:var(--lt-navy)}
+.slide:not(.dark) .lt-steps .lt-step.lit .lt-b{background:var(--up-4fd6a0);color:var(--lt-navy)}
+.slide:not(.dark) .lt-steps .lt-track{background:var(--lt-grey)}
+/* compare: the boxes follow the card's name, never pushed to its foot */
+.slide[data-template^="compare-two."] .lt-cmp .lt-boxes{flex:none;justify-content:flex-start}
+/* the large figure in two columns: a figure's own box fills its column */
+.slide[data-template^="figure-stage."] .lt-col > figure > div{width:100%;height:100%}

@@ -103,6 +103,17 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## The compiler writes the upgraded bodies — 2.89.0 (2026-11-03)
+
+`course-factory/compile/scripts/compile_module.py` now writes, for the classes of vocabulary §0b: the summary that opens
+card by card (`lt-ask4`), the task slide (`lt-task2`, the chips, `task_tablet.png` when the exercise has no photograph),
+step boxes for numbered steps with no picture (`lt-steps`), a comparison's boxed lines (`lt-boxes`), the two-column large
+figure (`lt-duo`, build sheet `"figure_b"`), photo spots and a split photo's zoom (`lt-spots`, `lt-zoom`). New here:
+the rules those bodies needed on the light ground and without an illustration (step boxes), the tap mark's words from
+its `data-label`, the tablet render and the exercise photograph filling the task slide's picture box, compare boxes that
+follow the card's name. `task_tablet.png` (`resources/brand/`) is a still of the tablet scene with its screen's words
+left out; `design-system.json` ships it.
+
 ## The upgraded templates and the brandbook's colours — 2.88.0 (2026-11-03)
 
 The owner approved, in the template gallery, a new body for every L61 template, six learning layouts and quick drills,
