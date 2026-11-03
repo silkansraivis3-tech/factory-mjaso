@@ -243,7 +243,7 @@ def main():
             check("the classroom gets the wrong item whole: answer, right answer, why, brief, how sure",
                   it.get("a") == "-0.5 °C" and it.get("c") == "-42 °C" and it.get("w") and it.get("n") and it.get("sure") == "Certain", it)
             items = rep.get("items") or []
-            order = re.findall(r'<section class="scr" data-script="(q\d+)"', p)
+            order = re.findall(r'<section class="scr[^"]*" data-script="(q\d+)"', p)
             check("every item says which question it is (q, the script's id)", [x.get("q") for x in items] == order,
                   [[x.get("q") for x in items], order])
             q21 = p[p.index('data-script="q21"'):]

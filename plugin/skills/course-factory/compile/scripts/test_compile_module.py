@@ -502,7 +502,7 @@ def tasks_part(tmp):
           ks.get("LNG") == cs.gb_key("q03", "LNG", 1) and ks.get("CNG") == cs.gb_key("q03", "CNG", 1)
           and ks.get("Coal") == cs.gb_key("q03", "Coal", 0) and 'class="opts multi"' in p)
     check("... and its screen says data-multi=\"1\", so the engine keeps every option tapped, not only the last",
-          '<section class="scr" data-script="q03" data-mech="multi_select" data-multi="1">' in p,
+          re.search(r'<section class="scr( th-[wn])?" data-script="q03" data-mech="multi_select" data-multi="1">', p),
           re.search(r'<section[^>]*data-script="q03"[^>]*>', p).group(0) if re.search(r'<section[^>]*data-script="q03"[^>]*>', p) else p[:300])
     check("a single-choice screen is not multi", re.search(r'data-script="m03" data-mech="single_choice">', io.open(mc, encoding="utf-8").read()) is not None)
     check("put in order: the key is the place, and the cards are not shown in order",
@@ -854,7 +854,7 @@ def every_way_part(tmp):
     check("choose the action, then the reason: the actions as options, the reasons keyed 1 / 0, one Check",
           'class="cj"' in p and ks.get("Send the gas to the gas combustion unit") == cs.gb_key("q02", "Send the gas to the gas combustion unit", 1)
           and ks.get("It burns the gas safely without venting") == cs.gb_key("q02", "It burns the gas safely without venting", 1))
-    sec3 = re.search(r'<section class="scr" data-script="q03".*?</section>', p, re.S).group(0)
+    sec3 = re.search(r'<section class="scr[^"]*" data-script="q03".*?</section>', p, re.S).group(0)
     check("scenario: one part per step, each with its situation and its actions",
           sec3.count('<div class="part step">') == 2 and '<p class="sit" data-script-field="answer">Gas alarm at 20 % LEL</p>' in sec3
           and ks.get("the gas is shut off") == cs.gb_key("q03", "the gas is shut off", 1))

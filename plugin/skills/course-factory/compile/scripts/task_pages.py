@@ -37,6 +37,12 @@ THE BUILD SHEET, PER QUESTION (working_claude\\script\\M01.build.json "screens",
         (spec "ghost", 2.50.4), so the words left stay where the deck has them. The engine lays each area on the drawn part.
     "q04": {"step": 0.5}                                          the dial's step (default: worked out from the tolerance)
     "q10": {"states": {"Purge mode": ["Off", "Sweep", "Hold"]}, "start": {"Vent fan": "stopped"}}   a panel's positions
+  ANSWERS THAT ARE PICTURES: "q02": {"figures": {"LNG": "assets/img/lng.jpg", "CNG": "assets/img/cng.jpg", "Coal": ...}}
+  makes each answer of a choose one / choose all a tile to tap - its picture and its words; on a true-or-false question
+  the claims' pictures go behind the cards. Every answer has one or the sheet is reported; the grading is unchanged.
+  THE LOOK: every question's screen is white or Navy (gb_task_look.css), the other one than the screen before, so the
+  screens do not repeat; "q04": {"theme": "navy"} (or "white") asks for one. A screen with no picture, or with a flat
+  drawing as its picture, is said at build: a task screen shows the thing it asks about (blueprints.json "tasks", L67).
   The page sets: "pass_mark": 70 at the top of the build sheet (checks; default 70), "try_tablet": true|false on the
   task slide's entry (default: the course's first self-check opens with "try your tablet first").
 
@@ -70,7 +76,10 @@ import content_script as cs
 import interact_pages as ip       # 2.74.0 - the interactive task types (gb_interact.js)
 
 ENGINE = ("gb_answer.css", "gb_answer.js", "gb_interact.css", "gb_interact.js")
-PAGE_CSS = ("gb_tokens.css", "gb_page.css", "gb_task.css", "gb_answer.css", "gb_interact.css")
+PAGE_CSS = ("gb_tokens.css", "gb_page.css", "gb_task.css", "gb_answer.css", "gb_interact.css", "gb_task_look.css")
+# the two looks of a task screen (gb_task_look.css): white and Navy, one a screen, picked so neighbours do not repeat;
+# a question's build sheet may ask for one ("theme": "white" | "navy")
+THEMES = {"white": "th-w", "navy": "th-n"}
 BUILT = {"single_choice", "read_instrument", "multi_select", "hotspot", "spot_the_hazard",
          "match", "categorise", "label_diagram", "order",
          "cloze", "choose_and_justify", "scenario", "set_value", "find_the_fault", "spot_the_error",     # 2.38.0
@@ -755,14 +764,39 @@ def q_sure(q, w):
         '<button type="button" data-v="%d">%s%s</button>' % (n, bars(n), e(w["sure%d" % n])) for n in range(3)))]
 
 
-def opt_buttons(sid, q, multi=False, cls="opts"):
+def answer_pictures(q, b, words, mdir, probs, where):
+    """the build sheet's "figures": {answer's words: picture} - each answer a picture to recognise (a static 3D render or a
+    photograph in assets/img, with its record); all or none: {} when the sheet names none, a problem for a wrong one"""
+    figs = b.get("figures") or {}
+    if not figs or cs.mech(q) == "compare":
+        return {}
+    out = {}
+    for t in words:
+        rel = (figs.get(t) or "").replace("\\", "/")
+        if not rel:
+            probs.append("%s: \"figures\" gives a picture for some answers - every answer needs one, \"%s\" has none" % (where, t))
+        elif not os.path.isfile(os.path.join(mdir, rel)) or not rel.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+            probs.append("%s: the picture %s for \"%s\" is not a .jpg / .png / .webp in the module folder" % (where, rel, t))
+        elif not cm.photo_meta(mdir, rel):
+            probs.append("%s: the picture %s has no record in assets/img/_photo_meta.json" % (where, rel))
+        else:
+            out[t] = '<img class="tl-img" src="../%s" alt="" data-no-zoom>' % a(rel)
+    for t in set(figs) - set(words):
+        probs.append("%s: \"figures\" names \"%s\", which is not one of its answers" % (where, t))
+    return out if len(out) == len(words) else {}
+
+
+def opt_buttons(sid, q, multi=False, cls="opts", pics=None):
     opts, right = q.get("options", []), cs.correct_letters(q)
-    out = ['    <div class="%s%s">' % (cls, " multi" if multi else "")]
+    pics = pics or {}
+    out = ['    <div class="%s%s%s"%s>' % (cls, " multi" if multi else "", " tiles" if pics else "",
+                                     ' style="--n:%d"' % len(opts) if pics else "")]
     # out of the script's order, like every other answer: a script writes the right one first (IGF M05: A was right in
     # every choose-one question, so always tapping the first option passed) - the same order on every build
     for L, o in shuffle(sid, list(zip(cs.letters(len(opts)), opts)), key=lambda x: x[1]):
-        out.append('      <button type="button" class="opt" data-script-field="opt.%s" data-key="%s">%s</button>'
-                   % (L, cs.gb_key(sid, o, 1 if L in right else 0), e(o)))
+        out.append('      <button type="button" class="opt%s" data-script-field="opt.%s" data-key="%s">%s</button>'
+                   % (" tile" if pics else "", L, cs.gb_key(sid, o, 1 if L in right else 0),
+                      '%s<span class="tl">%s</span>' % (pics[o], e(o)) if pics else e(o)))
     out.append("    </div>")
     return out
 
@@ -858,7 +892,8 @@ def dial(sid, q, b, w, where, probs):
     shown = lambda x: ("%.*f" % (decimals(x), x)).replace("-", "−").replace(".", w["decimal"])
     return ['    <div class="dial" data-lo="%g" data-hi="%g" data-step="%g" data-dec="%d" data-unit="%s" data-key="%s">'
             % (lo, hi, step, dec, a(unit), " ".join(keys)),
-            '      <div class="dial-read"><b class="dial-val">&#8211;</b> <span class="dial-unit">%s</span></div>' % e(unit),
+            '      <div class="dial-read"><span class="dial-knob" aria-hidden="true"><i></i></span><b class="dial-val">&#8211;</b> '
+            '<span class="dial-unit">%s</span></div>' % e(unit),
             '      <div class="dial-row"><button type="button" class="dial-minus" aria-label="%s">&#8722;</button>'
             '<div class="dial-track"><i class="dial-band"></i><i class="dial-fill"></i><span class="dial-thumb"></span></div>'
             '<button type="button" class="dial-plus" aria-label="%s">+</button></div>' % (a(w["less"]), a(w["more"])),
@@ -1064,7 +1099,10 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
         if pic:
             out += pic
             extra += ' data-pic="beside"'
-        out += opt_buttons(sid, q, multi=m == "multi_select")
+        tiles = answer_pictures(q, b, q.get("options", []), mdir, probs, where)    # the answers ARE pictures: tap the right ones
+        if tiles:
+            extra += ' data-tiles="1"'
+        out += opt_buttons(sid, q, multi=m == "multi_select", pics=tiles)
     elif m == "read_instrument":
         # 2.68.0 - no label bands: only a labelling question has labels to put in them; on a question that reads or taps
         # the drawing they were blank (gas M15 m05: 54 % blank because a labelling question shared its drawing)
@@ -1346,7 +1384,7 @@ def question_html(n, q, b, mdir, figdir, figs, probs, w=None):
 def try_screen(w):
     return "\n".join([
         '  <!-- first screen of the course\'s first task: try the tablet (not scored, never repeated) -->',
-        '  <section class="scr" id="tryScr">',
+        '  <section class="scr th-w" id="tryScr">',
         '    <h1 class="q"><span class="stem">%s</span></h1>' % e(w["try_title"]),
         '    <div class="try">',
         '      <div class="try-step" id="try1">',
@@ -1376,7 +1414,7 @@ def intro_screen(slide, title, n, pass_mark, w):
         body.append('    <p><span class="pass">%s</span></p>' % e(w["pass"].format(**{"pass": pass_mark, "need": need, "total": n})))
     body += ['    <p>%s</p>' % e(x) for x in lines[1:]]
     return "\n".join(['  <!-- before the first question: what this is%s -->' % (" and the pass mark" if pass_mark else ""),
-                      '  <section class="scr" id="introScr">',
+                      '  <section class="scr th-w" id="introScr">',
                       '    <h1 class="q"><span class="stem">%s</span></h1>' % e(title),
                       '    <div class="intro">'] + ["  " + x for x in body] + ["    </div>", "  </section>"])
 
@@ -1386,7 +1424,7 @@ def result_screen(w, again=True):
     explanation in the debrief") - no Start again: a set under the debrief rule, or a blind final, is answered once"""
     return "\n".join([
         '  <!-- result : the trainee\'s own score, for them only -->',
-        '  <section class="scr" id="resScr">',
+        '  <section class="scr th-n" id="resScr">',
         '    <div class="res">',
         '      <div class="res-top">',
         '        <div class="ring" id="resRing">',
@@ -1424,6 +1462,28 @@ def pass_mark_of(script, build, probs=None):
     return int(s or b or DEFAULT_PASS)
 
 
+def theme_of(q, b, last, probs):
+    """the look of a question's screen: the build sheet's "theme", else the other one than the screen before"""
+    want = (b.get("theme") or "").strip().lower()
+    if want and want not in THEMES:
+        probs.append("%s: \"theme\": %r - a task screen is \"white\" or \"navy\"" % (q["id"], b.get("theme")))
+        want = ""
+    return THEMES[want] if want else ("th-n" if last == "th-w" else "th-w")
+
+
+def picture_notes(q, html_q):
+    """every task screen shows the thing it asks about - a static 3D render, a photograph or a live 3D scene (blueprints.json
+    "tasks", L67): a screen with no picture, or with a flat drawing as its picture, is said at build"""
+    if cs.mech(q) in ("panel_operate", "set_value", "compare") or "<canvas" in html_q or "data-3d" in html_q:
+        return
+    if not re.search(r'class="(ga|instrument)\b|<img\b', html_q):
+        cm.note_once("Note: %s (%s) has no picture - a task screen shows the thing it asks about: a static 3D render or a "
+                     "photograph in the build sheet's \"figure\" (blueprints.json \"tasks\")" % (q["id"], cs.mech(q)))
+    elif re.search(r'<svg[^>]*class="taskfig', html_q):
+        cm.note_once("Note: %s (%s) shows a flat drawing - a task screen's picture is a static 3D render, a photograph or a "
+                     "live 3D scene, never a flat line drawing (L67)" % (q["id"], cs.mech(q)))
+
+
 def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, first_set, probs):
     m = cs.mid(script.get("module"))
     lang = (script.get("course_language") or "English")
@@ -1441,8 +1501,13 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
     # a drawing labelled on this page gets its label bands on every question of the page - it is in the page once
     figs, sections = {"_bands": {((sheet.get(q["id"]) or {}).get("figure") or "").strip() for q in qs
                                  if cs.mech(q) == "label_diagram"}}, []
+    last = "th-w"                                       # the opening screen is white
     for n, q in enumerate(qs, 1):
-        sections.append(("  <!-- %s : %s -->\n" % (q["id"], cs.mech(q))) + question_html(n, q, sheet.get(q["id"]) or {}, mdir, figdir, figs, probs, w))
+        html_q = question_html(n, q, sheet.get(q["id"]) or {}, mdir, figdir, figs, probs, w)
+        last = theme_of(q, sheet.get(q["id"]) or {}, last, probs)
+        html_q = html_q.replace('<section class="scr"', '<section class="scr %s"' % last, 1)
+        picture_notes(q, html_q)
+        sections.append(("  <!-- %s : %s -->\n" % (q["id"], cs.mech(q))) + html_q)
     pictures = any(not k.startswith("_") for k in figs) or figs.get("_pic") or any(cs.mech(q) == "read_instrument" for q in qs)
     kit = figs.get("_kit")
     if kit:                                             # the panel's controls are drawn by the figure kit, shipped like the engine
@@ -1466,8 +1531,8 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
                  '<meta name="task-roles" content="%s">' % a("|".join(cs.team_roles(team))),
                  '<meta name="task-scope" content="%s">' % a(team.get("scope") if team.get("scope") in cs.TEAM_SCOPES else "team")]
     three = figs.get("_3d")                             # 2.74.0 - a 3D task: the factory's three.js and the 3D kit, as a 3D slide
-    head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in PAGE_CSS + (("gb_zoom.css",) if pictures else ()) + (("kit.css",) if kit else ())
-             + (("kit3d.css",) if three else ())]
+    head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in PAGE_CSS[:-1] + (("gb_zoom.css",) if pictures else ()) + (("kit.css",) if kit else ())
+             + (("kit3d.css",) if three else ()) + PAGE_CSS[-1:]]         # the look last: it outranks nothing's sizes, only colours
     head.append("</head>")
     first = try_screen(w) if try_tablet else intro_screen(slide, short, len(qs), pass_mark, w) if is_check else ""
     # 2.60.0 - a final assessment variant (FA, FB) is blind: the engine records each answer and moves on, and shows only

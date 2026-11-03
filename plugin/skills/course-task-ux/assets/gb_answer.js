@@ -499,10 +499,12 @@
     g.at = function (k) { return ((LO + k * ST) / S).toFixed(dec); };
     g.good = function (k) { return g.keys.indexOf(gbKey(g.id, g.unit, g.at(k))) >= 0; };
     g.shown = function (k) { return g.at(k).replace('-', '−').replace('.', T.decimal); };
+    var knob = $('.dial-knob', el);
     g.paint = function () {
       var p = 100 * Math.max(g.k, 0) / n;
       thumb.style.left = p + '%';
       fill.style.width = p + '%';
+      if (knob) { knob.style.setProperty('--turn', (-135 + 2.7 * p) + 'deg'); }     /* the knob turns with the value */
       out.textContent = g.k < 0 ? '–' : g.shown(g.k);
     };
     g.set = function (k) {
@@ -533,6 +535,25 @@
     }, false);
     D.addEventListener('mousemove', function (e) { if (drag) { g.set(at(e)); } }, false);
     D.addEventListener('mouseup', function () { drag = false; }, false);
+    /* the knob: turned with a finger round its middle, from -135 to +135 degrees over the range */
+    if (knob) {
+      var turning = false;
+      var turn = function (e) {
+        var r = knob.getBoundingClientRect(), x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
+        var deg = Math.atan2(x, -y) * 180 / Math.PI;
+        g.set(Math.round((Math.max(-135, Math.min(135, deg)) + 135) / 270 * n));
+      };
+      knob.addEventListener('pointerdown', function (e) {
+        if (g.locked) { return; }
+        turning = true;
+        if (knob.setPointerCapture) { knob.setPointerCapture(e.pointerId); }
+        turn(e);
+        e.preventDefault();
+      }, false);
+      knob.addEventListener('pointermove', function (e) { if (turning) { turn(e); } }, false);
+      knob.addEventListener('pointerup', function () { turning = false; }, false);
+      knob.addEventListener('pointercancel', function () { turning = false; }, false);
+    }
     $('.dial-minus', el).addEventListener('click', function () { g.set(Math.max(g.k, 0) - 1); }, false);
     $('.dial-plus', el).addEventListener('click', function () { g.set(Math.max(g.k, 0) + 1); }, false);
     g.paint();

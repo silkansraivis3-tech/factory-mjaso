@@ -1,0 +1,144 @@
+/* ==========================================================================
+   gb_task_look.css - the trainee task screens in the brandbook's look, the one the slides have.
+   Loads LAST, after gb_answer.css and gb_interact.css, and changes only how the screens look - the ground, the two
+   themes, colour and shape - never a size, a place, a typeface's weight or a behaviour (a bolder word wraps another way): every layout rule, tap area and fit of
+   gb_answer.css stands. The reference is design/task-templates/live (blueprints.json "tasks").
+
+   TWO THEMES, ONE A SCREEN   each question's section carries th-w (white) or th-n (Navy); task_pages.py picks them so
+   neighbouring screens do not look the same. The page round the screen - its ground, the progress line, the big
+   button - follows the screen on show (body:has(.scr.on.th-n)).
+   ========================================================================== */
+:root{--tk-navy:#0A2463;--tk-blue:#53A7DB;--tk-page:#F7F8FA;--tk-line:#DCE3EB;--tk-steel:#415C8F;--tk-grey:#E7EBF0;--tk-pale:#EEF4FB;
+  --tk-white:#FFFFFF;--tk-off:#C9D3E0;--tk-ok:#1E9E6E;--tk-ok-l:#E3F8EF;--tk-bad:#D9473B;--tk-bad-l:#FDECEA;--tk-dim-n:#B8C7DA;
+  --tk-glass-n:rgba(255,255,255,.08);--tk-glass-hi:rgba(255,255,255,.14);--tk-line-n:rgba(255,255,255,.18);--tk-ring:rgba(83,167,219,.28);
+  --tk-shadow:rgba(10,36,99,.45);--tk-shadow-n:rgba(0,8,30,.55);--tk-ok-n:rgba(79,214,160,.16);--tk-bad-n:rgba(255,140,130,.16);
+  --tk-ok-ink-n:#7FE3BC;--tk-bad-ink-n:#FFB3AB}
+
+/* ---- the ground: white with the brand pattern at the right, or Navy ------ */
+body{background:var(--tk-page);color:var(--tk-navy);transition:background .35s}
+body::before{content:"";position:fixed;right:-6%;top:0;bottom:0;width:42%;pointer-events:none;z-index:-1;opacity:.5;
+  background:url(na_pattern_on_light.svg) 0 0/150px auto;-webkit-mask-image:linear-gradient(90deg,transparent,#000 70%);
+  mask-image:linear-gradient(90deg,transparent,#000 70%)}
+body:has(.scr.on.th-n){background:var(--tk-navy);color:var(--tk-white)}
+body:has(.scr.on.th-n)::before{background-image:url(na_pattern_on_navy.svg);opacity:.45}
+
+/* ---- the line along the top: how far through the set ---------------------- */
+.state{background:transparent;border-bottom-color:transparent}
+.state .part{color:var(--tk-steel)}
+.state .got{color:var(--tk-steel)}
+.state .bar{background:var(--tk-grey)}
+.state .bar i{background:var(--tk-navy)}
+body:has(.scr.on.th-n) .state .part,body:has(.scr.on.th-n) .state .got{color:var(--tk-dim-n)}
+body:has(.scr.on.th-n) .state .bar{background:var(--tk-glass-hi)}
+body:has(.scr.on.th-n) .state .bar i{background:var(--tk-blue)}
+
+/* ---- the question ------------------------------------------------------- */
+.q .num{background:var(--tk-navy);color:var(--tk-white)}
+.q .stem{color:var(--tk-navy)}
+.opts-say,.hint{color:var(--tk-steel)}
+.th-n .q .num{background:var(--tk-blue);color:var(--tk-navy)}
+.th-n .q .stem,.th-n .stem{color:var(--tk-white)}
+.th-n .opts-say{color:var(--tk-dim-n)}
+/* a part on its own pale card - a scenario's situation line, what you notice, a part to check, a control - stays as it is
+   on white, on the Navy screen too: dark words, white buttons */
+.th-n .phead{color:var(--tk-white)}
+.th-n :is(.sit,.sym,.ffc,.ctl),.th-n :is(.sym,.ffc,.ctl) .phead{color:var(--tk-navy)}
+.th-n :is(.ffc,.ctl) .opt{background:var(--tk-white);border-color:var(--tk-line);color:var(--tk-navy)}
+.th-n :is(.ffc,.ctl) .opt.sel{border-color:var(--tk-navy);background:var(--tk-pale)}
+.ff-tap{color:var(--tk-steel)}
+/* the interactive types (gb_interact.css): their small labels lighter on Navy, their pale cards dark-worded */
+.th-n :is(.sw-count,.ex-log p,.ex-log span.none,.iv-ph,.iv-pins em,.cr-count,.ta-ex span){color:var(--tk-dim-n)}
+.th-n :is(.cr-claim,.lu-orders){color:var(--tk-navy)}
+
+/* ---- the picture: a Navy box, rounded, lifted --------------------------- */
+.ga{border-radius:18px;box-shadow:0 22px 44px -24px var(--tk-shadow)}
+.ga img.taskfig{border-radius:18px}
+.ga img.taskfig{background:var(--tk-navy)}
+.th-n .ga{box-shadow:0 22px 44px -22px var(--tk-shadow-n),0 0 0 1px var(--tk-line-n)}
+
+/* ---- answer tiles: big, alive ------------------------------------------- */
+.opt{background:var(--tk-white);border-color:var(--tk-line);border-radius:16px;color:var(--tk-navy);
+  box-shadow:0 10px 22px -16px var(--tk-shadow);transition:transform .15s,border-color .2s,background .2s,box-shadow .2s}
+.opt::before{border-color:transparent;border-radius:12px;background:var(--tk-grey);color:var(--tk-navy)}
+.opt.sel{border-color:var(--tk-navy);background:var(--tk-pale);box-shadow:0 0 0 4px var(--tk-ring),0 14px 26px -16px var(--tk-shadow)}
+.opt.sel::before{background:var(--tk-navy);color:var(--tk-white)}
+.opt.right{border-color:var(--tk-ok);background:var(--tk-ok-l)}
+.opt.right::before{background:var(--tk-ok);color:var(--tk-white)}
+.opt.wrong{border-color:var(--tk-bad);background:var(--tk-bad-l)}
+.opt.wrong::before{background:var(--tk-bad);color:var(--tk-white)}
+.th-n .opt{background:var(--tk-glass-n);border-color:var(--tk-line-n);color:var(--tk-white);box-shadow:none}
+.th-n .opt::before{background:var(--tk-glass-hi);color:var(--tk-white)}
+.th-n .opt.sel{border-color:var(--tk-blue);background:var(--tk-glass-hi);box-shadow:0 0 0 4px var(--tk-ring)}
+.th-n .opt.sel::before{background:var(--tk-blue);color:var(--tk-navy)}
+.th-n .opt.right{border-color:var(--tk-ok-ink-n);background:var(--tk-ok-n)}
+.th-n .opt.wrong{border-color:var(--tk-bad-ink-n);background:var(--tk-bad-n)}
+.th-n .opt.missed{background:transparent}
+
+/* how sure: three buttons on a pale band */
+.sure{border-radius:14px;background:var(--tk-pale)}
+.sure button{border-radius:12px;border-color:var(--tk-line);background:var(--tk-white);color:var(--tk-navy)}
+.th-n .sure{background:var(--tk-glass-n)}
+.th-n .sure p{color:var(--tk-dim-n)}
+.th-n .sure button{background:var(--tk-glass-n);border-color:var(--tk-line-n);color:var(--tk-white)}
+
+/* ---- cards to drag, places to put them: order, match, sort, the plan ---- */
+.chip{background:var(--tk-white);border-color:var(--tk-line);border-radius:14px;color:var(--tk-navy);box-shadow:0 10px 22px -16px var(--tk-shadow)}
+.chip.sel{border-color:var(--tk-blue);background:var(--tk-pale)}
+.slot,.zone,.tray{border-radius:14px}
+.row .name{border-radius:14px}
+.rows.order .name{background:var(--tk-navy);color:var(--tk-white)}
+.grp{border-radius:16px}
+.grp .gname{background:var(--tk-navy)}
+.th-n .chip:not(.right):not(.wrong):not(.fixed){background:var(--tk-glass-n);border-color:var(--tk-line-n);color:var(--tk-white);box-shadow:none}
+.th-n .chip.sel:not(.right):not(.wrong):not(.fixed){border-color:var(--tk-blue);background:var(--tk-glass-hi)}
+/* a card's verdict - right, wrong, moved to its place - keeps the engine's own colours on either ground */
+.th-n .row .name{background:var(--tk-glass-n);color:var(--tk-white);border-color:var(--tk-line-n)}
+.th-n .rows.order .name{background:var(--tk-blue);color:var(--tk-navy)}
+.th-n .slot,.th-n .zone,.th-n .tray{border-color:var(--tk-line-n);background:transparent}
+.th-n .tray[data-empty]:not(:has(.chip))::before{color:var(--tk-dim-n)}
+.th-n .grp{border-color:var(--tk-blue);background:var(--tk-glass-n)}
+.th-n .grp .gname{background:var(--tk-blue);color:var(--tk-navy)}
+
+/* a document to check: paper on the desk */
+.doc{background:var(--tk-white);border-color:transparent;border-radius:6px;box-shadow:0 26px 50px -26px var(--tk-shadow),0 0 0 1px var(--tk-line)}
+.th-n .doc{box-shadow:0 26px 50px -24px var(--tk-shadow-n)}
+.th-n .doc .opt{background:var(--tk-white);color:var(--tk-navy);border-color:var(--tk-line)}
+.th-n .doc .opt::before{background:var(--tk-grey);color:var(--tk-navy)}
+
+/* compare: the columns' cells */
+.cmp td{border-radius:12px}
+.th-n .cmp{background:transparent}
+.th-n .cmp th.what{color:var(--tk-white)}
+.th-n .cmp td{background:var(--tk-glass-n);border-color:var(--tk-line-n);color:var(--tk-white)}
+
+/* ---- the verdict: a card with its colour down the side ------------------ */
+.why.on{background:var(--tk-white);border-radius:16px;box-shadow:inset 6px 0 0 var(--tk-steel),0 18px 40px -20px var(--tk-shadow)}
+.why.good{box-shadow:inset 6px 0 0 var(--tk-ok),0 18px 40px -20px var(--tk-shadow)}
+.why.bad{box-shadow:inset 6px 0 0 var(--tk-bad),0 18px 40px -20px var(--tk-shadow)}
+.why p{color:var(--tk-steel)}
+.th-n .why.on{background:var(--tk-glass-hi);box-shadow:inset 6px 0 0 var(--tk-dim-n)}
+.th-n .why.good{box-shadow:inset 6px 0 0 var(--tk-ok-ink-n)}
+.th-n .why.bad{box-shadow:inset 6px 0 0 var(--tk-bad-ink-n)}
+.th-n .why p{color:var(--tk-white)}
+.th-n .why .vd{color:var(--tk-white)}
+.th-n .why.good .vd{color:var(--tk-ok-ink-n)}
+.th-n .why.bad .vd{color:var(--tk-bad-ink-n)}
+
+/* ---- the dock: one big button, always in the same place ----------------- */
+.dock{background:transparent;border-top-color:transparent}
+.dock .sub{border-radius:18px;background:var(--tk-navy);border-color:var(--tk-navy);color:var(--tk-white);
+  box-shadow:0 16px 30px -16px var(--tk-shadow)}
+.dock .sub[disabled]{opacity:1;background:var(--tk-off);border-color:var(--tk-off);box-shadow:none}
+.dock .sub.next{background:var(--tk-blue);border-color:var(--tk-blue);color:var(--tk-navy)}
+body:has(.scr.on.th-n) .dock .sub{background:var(--tk-blue);border-color:var(--tk-blue);color:var(--tk-navy);box-shadow:none}
+body:has(.scr.on.th-n) .dock .sub[disabled]{background:var(--tk-glass-hi);border-color:transparent;color:var(--tk-dim-n)}
+body:has(.scr.on.th-n) .dock .sub.next{background:var(--tk-white);border-color:var(--tk-white)}
+
+/* ---- the result: the score ring on Navy --------------------------------- */
+.th-n .res-top{background:var(--tk-glass-n);color:var(--tk-white)}
+.th-n .res-top h1{color:var(--tk-white)}
+.th-n .ring .trk{stroke:var(--tk-glass-hi)}
+.th-n .ring .arc{stroke:var(--tk-blue)}
+.th-n .ring .num{color:var(--tk-white)}
+.th-n #resList li{background:var(--tk-glass-n);color:var(--tk-white);border-color:var(--tk-line-n)}
+.th-n #resNote,.th-n #resLine{color:var(--tk-dim-n)}
