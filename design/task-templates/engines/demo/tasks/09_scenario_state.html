@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>SC1 — A watch that remembers</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<link rel="stylesheet" href="../../gb_hmi.css">
+<!-- SOURCES
+     Simulator trainee manual (Wärtsilä LCHS TechSim LPG Tanker): §4.2.4 / §7.3 the ESD button opens a pop-up
+     with the EMERGENCY STOP button (the ESD box on deck); §6.9 ESD shuts the hydraulic valves and trips the pumps;
+     §17.4.1 gas detection. ICS Tanker Safety Guide (Liquefied Gas): stop cargo on gas detection, approach a
+     release from upwind, liquid trapped between closed valves (line relief valves).
+     VERIFY: loading rate 600 m3/h, line pressure about 5 bar, fixed detector alarm level, and the exact
+     company procedure for a manifold leak (stop / isolate / drain and purge / renew gasket / nitrogen test /
+     slow restart) are generic. The operator replaces them with the ship's and terminal's own figures. -->
+<style>
+  /* the photograph is the place; everything that changes sits over it as a .tl-pin at % of the photo */
+  .sc-pin { position: absolute; transform: translate(-50%, -50%); transition: left 1.2s ease, top 1.2s ease, opacity .5s ease; z-index: 3; pointer-events: none; }
+  .sc-pin.off { opacity: 0; pointer-events: none; }
+  .sc-badge { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 999px; white-space: nowrap;
+    background: rgba(5,13,26,.84); border: 1px solid var(--tl-line, rgba(140,190,255,.16)); color: var(--tl-text, #F2F7FD);
+    font: 700 15px/1.2 var(--tl-font, sans-serif); box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+  .sc-badge i { flex: 0 0 auto; width: 11px; height: 11px; border-radius: 50%; background: var(--tl-faint, #6E86A3); }
+  .sc-badge.open i, .sc-badge.good i { background: var(--tl-good, #3DDC97); box-shadow: 0 0 8px var(--tl-good, #3DDC97); }
+  .sc-badge.shut i, .sc-badge.bad i { background: var(--tl-bad, #FF6B5E); box-shadow: 0 0 8px var(--tl-bad, #FF6B5E); }
+  .sc-badge.warn i { background: var(--tl-amber, #F2B33D); box-shadow: 0 0 8px var(--tl-amber, #F2B33D); }
+  .sc-badge.alarm { background: rgba(180,40,30,.92); animation: tl-pulse 1s ease infinite; }
+  .sc-badge b { font: 800 17px var(--tl-mono, monospace); font-variant-numeric: tabular-nums; }
+  .sc-ring { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%;
+    border: 3px solid #fff; box-shadow: 0 0 0 3px rgba(255,107,94,.85), 0 0 18px rgba(255,107,94,.6); animation: tl-pulse 1.1s ease infinite; }
+  .sc-flange .sc-badge { position: absolute; left: 50%; top: 34px; transform: translateX(-50%); }
+  .sc-flange.fixed .sc-ring { box-shadow: 0 0 0 3px rgba(61,220,151,.9); animation: none; }
+
+  /* the vapour: it sinks and drifts downwind from the leak; its size follows the reading */
+  .sc-cloud { position: absolute; width: 44%; height: 26%; z-index: 2; pointer-events: none; transform-origin: 92% 45%;
+    background: radial-gradient(ellipse at 80% 45%, rgba(255,255,255,.88) 0%, rgba(236,242,248,.62) 34%, rgba(236,242,248,.25) 56%, rgba(236,242,248,0) 72%);
+    transition: transform 1s ease, opacity 1s ease; }
+  .sc-jet { position: absolute; width: 9%; height: 5%; z-index: 2; pointer-events: none; opacity: 0;
+    background: linear-gradient(270deg, rgba(255,255,255,.95), rgba(255,255,255,0)); border-radius: 50%; transition: opacity .3s ease; }
+  .sc-jet.on { opacity: 1; animation: tl-pulse .25s linear infinite; }
+  /* a phone shows the photo small: smaller badges, and the two that repeat the panel step aside */
+  @media (max-width: 600px) {
+    .sc-badge { font-size: 12px; padding: 4px 8px; gap: 5px; }
+    .sc-badge b { font-size: 13px; }
+    .sc-ring { width: 34px; height: 34px; margin: -17px 0 0 -17px; }
+    .sc-flange .sc-badge { top: 22px; }
+    #p-wind, #p-gauge, #p-armv { display: none; }
+  }
+
+  /* the two things the trainee works on the photo: the ESD box and the ship's manifold valve */
+  .sc-act { width: 56px; height: 56px; z-index: 4; padding: 0; border-radius: 50%; cursor: pointer;
+    background: rgba(5,13,26,.82); border: 2px solid rgba(140,190,255,.55); color: #EAF3FF;
+    font: 800 12px/1 var(--tl-mono, monospace); letter-spacing: .04em; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+  .sc-act:active { transform: translate(-50%, -50%) scale(.94); }
+  .sc-act.esd { background: #C0281F; border-color: #FFD400; color: #fff; }
+  .sc-act.esd.tripped { animation: tl-pulse .6s ease infinite; }
+  .sc-act.valve.open { border-color: #3DDC97; } .sc-act.valve.shut { border-color: #FF6B5E; } .sc-act.valve.moving { border-color: #F2B33D; }
+  .sc-act.due { box-shadow: 0 0 0 4px rgba(242,179,61,.9), 0 0 26px rgba(242,179,61,.8); }
+  .sc-panel { z-index: 8; width: 250px; }
+  .sc-panel .hm-b { min-width: 0; }
+  @media (max-width: 600px) { .sc-act { width: 46px; height: 46px; font-size: 10px; } }
+  /* side panel */
+  .tl-side { flex-basis: 372px; }
+  @media (max-aspect-ratio: 1/1) { .tl-side { flex-basis: auto; } }
+  .sc-st { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+  .sc-st div { min-width: 0; }
+  .sc-st span { display: block; font-size: 13px; font-weight: 600; color: var(--tl-dim, #9DB3CC); }
+  .sc-st b { display: block; font: 700 19px/1.25 var(--tl-font, sans-serif); color: var(--tl-text, #F2F7FD); }
+  .sc-st b.hi { color: var(--tl-bad, #FF6B5E); }
+  .sc-st b.ok { color: var(--tl-good, #3DDC97); }
+  .sc-st b.mid { color: var(--tl-amber, #F2B33D); }
+  .sc-st b.chg { animation: tl-pulse .5s ease 3; }
+  .sc-opts { display: grid; gap: 8px; }
+  .sc-step { margin-bottom: 8px; font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--tl-dim, #9DB3CC); }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye">Live system · Manifold leak</span><span id="q">Loading propane. The manifold gas detector has started to read.</span>
+    <small>Tap an option, then Decide. Every choice changes the situation - and what you can do next.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage">
+      <div class="tl-scene" data-aspect="1024:572" id="frame">
+        <img class="tl-photo" src="../img/09_scenario_state_manifold.jpg" alt="The ship's liquid manifold during loading, with the shore loading arm connected" onerror="this.remove()">
+        <div class="sc-cloud" id="cloud"></div>
+        <div class="sc-jet" id="jet"></div>
+      </div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card dark">
+        <h3>The watch so far</h3>
+        <div class="sc-st">
+          <div><span>Gas at manifold</span><b id="s-gas"></b></div>
+          <div><span>Loading rate</span><b id="s-rate"></b></div>
+          <div><span>At the manifold</span><b id="s-crew"></b></div>
+          <div><span>ESD</span><b id="s-esd"></b></div>
+          <div><span>Leaking section</span><b id="s-sec"></b></div>
+          <div><span>Wind</span><b id="s-wind">8 kn from seaward</b></div>
+        </div>
+      </div>
+      <div class="tl-card">
+        <div class="sc-step" id="step">Decision 1</div>
+        <div class="sc-opts" id="opts"></div>
+      </div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Decide</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'SC1', title: 'A watch that remembers', mode: 'self' });
+
+  /* ---- where things are on the photo, in % of its width and height. Re-position these
+     once the real photo exists; nothing else needs to change. ------------------------------ */
+  var SPOTS = {
+    flange: { x: 36, y: 58 },  // the bolted flange between the rusty spool and the loading arm elbow - the leak
+    shipv:  { x: 22, y: 7 },   // ship's manifold valve: label above its hand wheel (wheel 22/17, body 22/31)
+    valve:  { x: 22, y: 25 },  // the ship's manifold valve itself - tap it to work it (between wheel and body)
+    armv:   { x: 54, y: 31 },  // terminal's valve on the loading arm, at its flanged joint
+    det:    { x: 44, y: 92 },  // fixed gas detector on its stand, low on deck (head about 44/76); label under it
+    esd:    { x: 61, y: 72 },  // the red ESD push-button box - tap it for the EMERGENCY STOP panel
+    gauge:  { x: 66, y: 43 },  // the small pressure gauges at the manifold (63-65/48)
+    flow:   { x: 66, y: 7 },   // loading flow badge, along the arm at the top
+    wind:   { x: 89, y: 9 },   // wind badge, top right over the sky
+    pair:   { x: 79, y: 72 },  // two crew on the walkway, upwind (seaward) of the leak
+    lone:   { x: 22, y: 78 },  // a lone AB on the deck under the spool, in the sinking vapour
+    out:    { x: 86, y: 90 },  // the deck by the rail, well clear
+    ccr:    { x: 73, y: 42 }   // up the walkway, towards the accommodation, where crew come from
+  };
+
+
+  var frame = document.getElementById('frame');
+
+  function pin(id, spot, html, cls) {
+    var p = document.createElement('div');
+    p.className = 'sc-pin ' + (cls || '');
+    p.id = 'p-' + id;
+    p.innerHTML = html;
+    frame.appendChild(p);
+    move(p, spot);
+    return p;
+  }
+  function move(p, spot) { p.style.left = SPOTS[spot].x + '%'; p.style.top = SPOTS[spot].y + '%'; }
+
+  var pDet = pin('det', 'det', '<span class="sc-badge warn"><i></i>Detector <b id="b-gas">12</b> %LEL</span>');
+  var pShip = pin('shipv', 'shipv', '<span class="sc-badge open" id="b-shipv"><i></i>Ship valve OPEN</span>');
+  var pArm = pin('armv', 'armv', '<span class="sc-badge open" id="b-armv"><i></i>Arm valve OPEN</span>');
+  var pGauge = pin('gauge', 'gauge', '<span class="sc-badge"><i></i>Spool <b id="b-sp">5.0</b> bar</span>');
+  var pFlow = pin('flow', 'flow', '<span class="sc-badge"><i></i>Loading <b id="b-rate">600</b> m³/h</span>');
+  pin('wind', 'wind', '<span class="sc-badge"><i></i>← Wind 8 kn</span>');
+  var pFlange = pin('flange', 'flange', '<span class="sc-ring"></span><span class="sc-badge bad" id="b-fl"><i></i>Frost · hiss</span>', 'sc-flange off');
+  var pPair = pin('pair', 'ccr', '<span class="sc-badge good"><i></i>2 crew · detector</span>', 'off');
+  var pLone = pin('lone', 'ccr', '<span class="sc-badge bad" id="b-lone"><i></i>AB · no detector</span>', 'off');
+
+  /* ---- the controls on the photo: tap -> their own panel, as on the simulator (gb_hmi look) ---- */
+  function act(id, spot, label, cls) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.id = 'a-' + id;
+    b.className = 'tl-pin sc-act ' + cls;
+    b.textContent = label;
+    b.style.left = SPOTS[spot].x + '%'; b.style.top = SPOTS[spot].y + '%';
+    frame.appendChild(b);
+    b.addEventListener('click', function (e) { e.stopPropagation(); openAct(id); });
+    return b;
+  }
+  var aEsd = act('esd', 'esd', 'ESD', 'esd'), aValve = act('valve', 'valve', 'VALVE', 'valve open');
+  var panel = null, pending = null, vMoving = false;
+  function closeAct() { if (panel && panel.parentNode) panel.parentNode.removeChild(panel); panel = null; }
+  document.getElementById('stage').addEventListener('click', function (e) { if (panel && !panel.contains(e.target)) closeAct(); });
+  function openAct(id) {
+    if (busy && !pending) return;
+    closeAct();
+    GBLab.sfx('tap');
+    var due = pending && pending.o.act.pin === (id === 'esd' ? 'esd' : 'shipv'), html;
+    var wait = due ? '' : '<p class="hm-note">' + (pending ? 'Your decision is worked on the other control.' : 'Decide on the right first - then do it here.') + '</p>';
+    var dis = due ? '' : ' disabled';
+    if (id === 'esd') {
+      html = '<h4>ESD</h4><p class="hm-what">Emergency shutdown: stops the cargo pumps and shuts the ESD valves.</p>' +
+        (S.esd ? '<div class="hm-row"><button type="button" class="hm-b go" data-esd="reset"' + dis + '>RESET ESD</button></div>'
+               : '<div class="hm-row"><button type="button" class="hm-b esd" data-esd="stop"' + dis + '>EMERGENCY STOP</button></div>') + wait;
+    } else {
+      var pos = vMoving ? 50 : S.shipv ? 100 : 0;
+      html = '<h4>LIQUID MANIFOLD VALVE</h4><p class="hm-what">Ship’s manifold valve, port - hand wheel</p>' +
+        '<div class="hm-pos"><b class="hm-p">' + (vMoving ? 'moving' : pos + ' %') + '</b><span class="hm-bar"><i style="width:' + pos + '%"></i></span></div>' +
+        '<div class="hm-row"><button type="button" class="hm-b go" data-to="100"' + dis + '>OPEN</button><button type="button" class="hm-b stop" data-to="0"' + dis + '>CLOSE</button></div>' + wait;
+    }
+    panel = document.createElement('div');
+    panel.className = 'hm-panel sc-panel';
+    panel.innerHTML = '<button type="button" class="hm-x" aria-label="Close">&times;</button>' + html;
+    var stage = document.getElementById('stage');
+    stage.appendChild(panel);
+    panel.querySelector('.hm-x').addEventListener('click', function (e) { e.stopPropagation(); closeAct(); });
+    [].forEach.call(panel.querySelectorAll('[data-esd],[data-to]'), function (b) {
+      b.addEventListener('click', function (e) { e.stopPropagation(); doAct(b); });
+    });
+    // next to the control, kept inside the stage
+    var sr = stage.getBoundingClientRect(), br = (id === 'esd' ? aEsd : aValve).getBoundingClientRect();
+    var pw = panel.offsetWidth, ph = panel.offsetHeight, cx = br.left + br.width / 2 - sr.left, cy = br.top + br.height / 2 - sr.top;
+    var left = cx + 40 + pw < sr.width ? cx + 40 : cx - 40 - pw;
+    panel.style.left = Math.max(6, Math.min(sr.width - pw - 6, left)) + 'px';
+    panel.style.top = Math.max(6, Math.min(sr.height - ph - 6, cy - ph / 2)) + 'px';
+  }
+  function doAct(b) {
+    if (!pending) return;
+    var a = pending.o.act;
+    closeAct();
+    if (b.hasAttribute('data-esd')) {
+      if (b.getAttribute('data-esd') === 'stop' && !a.reset) { S.esd = true; S.rate = 0; GBLab.sound.play([[740, 200, 100], [740, 200, 0]], 0.07); }
+      else if (a.reset) { S.esd = false; }
+      else return;
+      render();
+      return done();
+    }
+    var to = +b.getAttribute('data-to');
+    if (to !== a.to) return GBLab.toast(to ? 'That opens it. Your decision was to shut it.' : 'That shuts it. Your decision was to open it.', 'hint');
+    if (!!S.shipv === !!to) return done();         // already where you want it: confirmed locally
+    vMoving = true; render();
+    GBLab.sound.play([[340, 50, 0, 'triangle']], 0.04);
+    setTimeout(function () { vMoving = false; S.shipv = !!to; GBLab.sound.play([[520, 40, 0, 'triangle']], 0.035); render(); done(); }, 2200);
+  }
+  function done() {
+    var p = pending;
+    pending = null;
+    render();
+    proceed(p.o, p.ok, p.at);
+  }
+
+  var cloud = document.getElementById('cloud'), jet = document.getElementById('jet');
+  cloud.style.left = (SPOTS.flange.x - 44 * 0.92) + '%';
+  cloud.style.top = (SPOTS.flange.y + 6 - 26 * 0.45) + '%';
+  jet.style.left = (SPOTS.flange.x - 9) + '%';
+  jet.style.top = (SPOTS.flange.y - 2.5) + '%';
+
+  /* ---- the state of the watch --------------------------------------------------------- */
+  var S = { gas: 12, rate: 600, crew: 'none', esd: false, shipv: true, armv: true, sp: 5, sec: 'full', found: false, fixed: false,
+    injury: false, peak: 12, esdTrips: 0 };
+  var SEC = { full: 'Full, ~5 bar', iso: 'Shut in, full', hot: 'Shut in, rising', drained: 'Drained, 0 bar', tight: 'Tested tight' };
+  var CREW = { none: 'Nobody', lone: '1 AB, no detector', pair: '2 crew, detector', hurt: 'Nobody (AB hurt)' };
+
+  function $(id) { return document.getElementById(id); }
+  function set(id, txt, cls) {
+    var b = $(id), changed = b.textContent && b.textContent !== txt;
+    cls = cls || '';
+    if (changed) { b.className = cls; void b.offsetWidth; b.className = cls + ' chg'; } // restart the pulse
+    else b.className = cls + (b.className.indexOf('chg') >= 0 ? ' chg' : '');
+    b.textContent = txt;
+  }
+  function render(g) {
+    var gas = g == null ? S.gas : g;
+    set('s-gas', Math.round(gas) + ' %LEL', gas >= 20 ? 'hi' : gas >= 5 ? 'mid' : 'ok');
+    set('s-rate', S.rate ? S.rate + ' m³/h' : 'Stopped', S.rate ? '' : 'ok');
+    set('s-crew', CREW[S.crew], S.crew === 'lone' || S.crew === 'hurt' ? 'hi' : S.crew === 'pair' ? 'ok' : '');
+    set('s-esd', S.esd ? 'TRIPPED' : 'Armed', S.esd ? 'hi' : 'ok');
+    set('s-sec', SEC[S.sec], S.sec === 'hot' ? 'hi' : S.sec === 'tight' || S.sec === 'drained' ? 'ok' : '');
+    // the scene
+    $('b-gas').textContent = Math.round(gas);
+    pDet.firstChild.className = 'sc-badge ' + (gas >= 30 ? 'alarm' : gas >= 5 ? 'warn' : 'good');
+    $('b-shipv').className = 'sc-badge ' + (S.shipv ? 'open' : 'shut');
+    $('b-shipv').lastChild.textContent = 'Ship valve ' + (S.shipv ? 'OPEN' : 'SHUT');
+    $('b-armv').className = 'sc-badge ' + (S.armv ? 'open' : 'shut');
+    $('b-armv').lastChild.textContent = 'Arm valve ' + (S.armv ? 'OPEN' : 'SHUT');
+    aEsd.className = 'tl-pin sc-act esd' + (S.esd ? ' tripped' : '') + (pending && pending.o.act.pin === 'esd' ? ' due' : '');
+    aValve.className = 'tl-pin sc-act valve ' + (vMoving ? 'moving' : S.shipv ? 'open' : 'shut') + (pending && pending.o.act.pin === 'shipv' ? ' due' : '');
+    $('b-sp').textContent = S.sp.toFixed(1);
+    $('b-rate').textContent = S.rate;
+    pFlow.className = 'sc-pin' + (S.rate ? '' : ' off');
+    pFlange.className = 'sc-pin sc-flange' + (S.found ? '' : ' off') + (S.fixed ? ' fixed' : '');
+    $('b-fl').className = 'sc-badge ' + (S.fixed ? 'good' : 'bad');
+    $('b-fl').lastChild.textContent = S.fixed ? 'New gasket · tight' : S.sec === 'drained' ? 'Open for repair' : 'Frost · hiss';
+    var sc = Math.max(0, Math.min(1.7, gas / 18));
+    cloud.style.transform = 'scale(' + sc.toFixed(2) + ')';
+    cloud.style.opacity = gas > 0.5 ? Math.min(1, 0.45 + gas / 40).toFixed(2) : '0';
+    pPair.className = 'sc-pin' + (S.crew === 'pair' ? '' : ' off');
+    move(pPair, S.crew === 'pair' ? 'pair' : 'ccr');
+    pLone.className = 'sc-pin' + (S.crew === 'lone' || S.crew === 'hurt' ? '' : ' off');
+    move(pLone, S.crew === 'lone' ? 'lone' : S.crew === 'hurt' ? 'out' : 'ccr');
+    $('b-lone').lastChild.textContent = S.crew === 'hurt' ? 'AB · cold burn, first aid' : 'AB · no detector';
+  }
+  /* badges built with <i></i>Text: give each a text node to rewrite */
+  ['b-shipv', 'b-armv', 'b-fl', 'b-lone'].forEach(function (id) { var b = $(id); if (b.lastChild.nodeType !== 3) b.appendChild(document.createTextNode('')); });
+
+  /* ---- the decisions. h = answer key (GBLab.key(id, text, 1) matches only the best option).
+     fx = what happens, step by step, shown on the scene. ------------------------------------ */
+  var NODES = {
+    detect: {
+      q: 'Loading propane at 600 m³/h. The manifold gas detector reads 12 %LEL and is creeping up. What do you do first?',
+      t: 'Gas at the manifold while loading: the first action',
+      w: 'A leak on a full, pressurised line does not stop by itself. A stop agreed with the terminal takes the drive off it without the surge of an emergency shutdown.',
+      opts: [
+        { id: 'stop', h: 'c5385fde', t: 'Call the terminal on the ship-shore link and stop loading now',
+          fx: [{ rate: 0, say: 'Terminal: stopping pumps.' }, { gas: 10, sp: 4 }], tag: 'Loading stopped', title: 'The flow stops - the leak does not',
+          text: 'The terminal stops its pumps in a controlled way. But the line is still full of liquid under pressure, so the reading settles at 10 %LEL. It does not go away.', nx: 'team' },
+        { id: 'reduce', h: '3590a366', t: 'Ask the terminal to halve the rate and keep watching',
+          fx: [{ rate: 300 }, { gas: 18 }], tag: 'Half rate', title: 'Half the flow, the same leak',
+          text: 'The rate halves, but the pressure on the leaking joint hardly changes. The reading keeps climbing - 18 %LEL.', nx: 'climb' },
+        { id: 'carry', h: '0c7d61d1', t: 'Carry on - 12 %LEL is below the alarm level',
+          fx: [{ gas: 22 }, { gas: 32, say: 'Terminal gas alarm - ESD!' }, { rate: 0, esd: true, shipv: false, armv: false, sp: 4, jet: true }, { gas: 22, jet: false }],
+          tag: 'Terminal ESD', title: 'The terminal stopped it for you',
+          text: 'The vapour drifted over the jetty and the terminal’s own detector alarmed. The terminal tripped the ESD: pumps stopped, valves closed in seconds, and the surge made the leaking flange spit harder. Loading was stopped by an emergency system instead of by you.', nx: 'team' },
+        { id: 'esd', h: 'a57197ce', t: 'Push the ship’s ESD button at once',
+          act: { pin: 'esd', hint: 'Now do it: tap the red ESD box on the photo and press EMERGENCY STOP.' }, fx: [{ rate: 0, esd: true, shipv: false, armv: false, sp: 4, jet: true }, { gas: 11, jet: false }], tag: 'ESD', title: 'Stopped - the hard way',
+          text: 'Everything stops within seconds and the ESD valves close. It worked - but an emergency shutdown sends a pressure surge through the arms, and restarting needs a joint ESD reset with the terminal. At 12 %LEL, with time to act, a controlled stop does the same with less stress on a leaking line.', nx: 'team' }
+      ]
+    },
+    climb: {
+      q: 'At half rate the reading is now 24 %LEL and still rising. The detector alarm will sound soon.',
+      t: 'Reading still climbing at reduced rate',
+      w: 'Reducing the rate barely reduces the pressure on the joint; only stopping does. Every minute of delay grows the cloud.',
+      opts: [
+        { id: 'stop', h: '978e9648', t: 'Stop loading now, on the ship-shore link',
+          fx: [{ rate: 0 }, { gas: 20, sp: 4 }], tag: 'Loading stopped', title: 'Stopped - a few minutes late',
+          text: 'The terminal stops its pumps. The cloud is larger than it needed to be, and the line is still full and under pressure - the reading settles at 20 %LEL.', nx: 'team' },
+        { id: 'hold', h: '1aa43178', t: 'Keep the half rate and send someone to look',
+          fx: [{ gas: 30 }, { gas: 34, say: 'Terminal gas alarm - ESD!' }, { rate: 0, esd: true, shipv: false, armv: false, sp: 4, jet: true }, { gas: 24, jet: false }],
+          tag: 'Terminal ESD', title: 'The terminal stopped it for you',
+          text: 'The reading passed 30 %LEL, the vapour reached the jetty and the terminal tripped the ESD. Valves slammed shut and the surge made the flange spit harder. Nobody has gone to look yet.', nx: 'team' },
+        { id: 'esd', h: '79b70fea', t: 'Push the ship’s ESD button now',
+          act: { pin: 'esd', hint: 'Now do it: tap the red ESD box on the photo and press EMERGENCY STOP.' }, fx: [{ rate: 0, esd: true, shipv: false, armv: false, sp: 4, jet: true }, { gas: 22, jet: false }], tag: 'ESD', title: 'Stopped by the ESD',
+          text: 'Everything stops and the ESD valves close. Defensible this close to the alarm - but the surge stresses a joint that is already leaking, and a stop on the ship-shore link was still possible a moment ago.', nx: 'team' }
+      ]
+    },
+    team: {
+      q: 'Loading has stopped. Someone has to find the leak. Who goes, and how?',
+      t: 'Who goes to find the leak, and how',
+      w: 'Nobody goes into a gas release alone, blind, or from downwind: a portable detector, protection against cold liquid, a partner, and the upwind approach.',
+      opts: [
+        { id: 'pair', h: 'bbe91497', t: 'Two crew with a portable gas detector, gloves and face shields, coming in from upwind',
+          fx: [{ crew: 'pair' }, { found: true }], tag: 'Leak found', title: 'Frost on the flange, and a hiss',
+          text: 'They come in from the seaward side, upwind, reading the portable detector as they go. At the manifold they find frost on the flange between the ship’s manifold valve and the loading arm, and hear a hiss.', nx: 'isolate' },
+        { id: 'lone', h: '38d00341', t: 'Send the nearest AB to have a quick look',
+          fx: [{ crew: 'lone' }, { gas: '+3' }], tag: 'Into the cloud', title: 'He walked in from downwind',
+          text: 'He comes along the deck from the accommodation side - downwind - and straight into the vapour. With no detector he cannot know that the white cloud is only condensed moisture: the propane itself spreads further, low along the deck, because it is heavier than air.', nx: 'recall' },
+        { id: 'wait', h: '860a2333', t: 'Wait in the cargo control room for the reading to fall',
+          fx: [{ gas: '+3' }, { crew: 'pair', found: true }], tag: 'Twenty minutes lost', title: 'The reading did not fall',
+          text: 'Twenty minutes pass and the reading is higher, not lower: a leaking joint on a full, pressurised line does not stop by itself. The chief officer sends two crew with a portable detector. They find frost and a hiss at the flange.', nx: 'isolate' }
+      ]
+    },
+    recall: {
+      q: 'The AB is standing in the vapour at the manifold, with no detector. Near the leak the gas is far richer than the fixed detector shows.',
+      t: 'A crew member in the vapour without a detector',
+      w: 'The white cloud is condensed moisture; flammable propane spreads further and lower. Get people out upwind first, then send an equipped team.',
+      opts: [
+        { id: 'out', h: '011fc2bc', t: 'Call him out upwind at once, then send two crew with a detector and face shields',
+          fx: [{ crew: 'none' }, { crew: 'pair', found: true }], tag: 'Out, then in properly', title: 'He is clear; the team finds the leak',
+          text: 'He walks out to the seaward side, upwind, and the pair goes in properly equipped. They find frost on the flange between the manifold valve and the arm, and a hiss.', nx: 'isolate' },
+        { id: 'tighten', h: '7171fdb5', t: 'Tell him to tighten the flange bolts while he is there',
+          fx: [{ jet: true, gas: 30, found: true }, { crew: 'hurt', injury: true, jet: false }, { crew: 'pair', gas: 18 }], tag: 'Injury', title: 'Liquid spray, a cold burn',
+          text: 'He puts a spanner on a joint full of liquid under pressure. The gasket shifts and liquid propane sprays out: a cold burn on his hand and wrist, and the cloud doubles. He is helped out and given first aid; two crew with a detector take over.', nx: 'isolate' },
+        { id: 'stay', h: 'a17c2b47', t: 'Tell him to stay there and keep an eye on it',
+          fx: [{ gas: '+4' }, { crew: 'pair', found: true }], tag: 'In the cloud', title: 'Standing in a flammable cloud',
+          text: 'He stays inside the vapour with nothing to tell him how rich it is. One spark - a dropped tool, a radio that is not certified safe - could ignite it. The chief officer orders him out and sends two crew with a detector; they find the leaking flange.', nx: 'isolate' }
+      ]
+    },
+    isolate: {
+      q: 'The leak is at the flange between the ship’s manifold valve and the loading arm. The line is full and under pressure. What now?',
+      t: 'Isolating the leaking flange',
+      w: 'Shut the leak in from both sides before touching it. Tightening a joint under pressure can shift the gasket and turn a seep into a jet.',
+      opts: [
+        { id: 'both', h: '25c2d84b', t: 'Shut the ship’s manifold valve and ask the terminal to shut the arm valve',
+          act: { pin: 'shipv', to: 0, hint: 'Now do it: tap the ship’s manifold valve on the photo and CLOSE it.' }, fx: [{ shipv: false }, { armv: false, sec: 'iso' }, { gas: 6 }], tag: 'Isolated', title: 'Shut in from both sides',
+          text: 'Both valves are shut. Only the short spool between them still feeds the leak, so the reading drops to 6 %LEL - but that spool is still full of liquid propane.', nx: 'trapped' },
+        { id: 'tighten', h: 'e6bb3500', t: 'Tighten the flange bolts now, under pressure',
+          fx: [{ jet: true, gas: 34 }, { jet: false, shipv: false }, { armv: false, sec: 'iso', gas: 8 }], tag: 'Jet of liquid', title: 'The seep became a jet',
+          text: 'Tightening a joint under pressure shifted the gasket: a jet of liquid, the cloud spread across the deck. Gloves and face shields saved the team from a cold burn. The chief officer then had both valves shut.', nx: 'trapped' },
+        { id: 'ship', h: '50daed1a', t: 'Shut only the ship’s manifold valve',
+          act: { pin: 'shipv', to: 0, hint: 'Now do it: tap the ship’s manifold valve on the photo and CLOSE it.' }, fx: [{ shipv: false }, { gas: '+1' }, { armv: false, sec: 'iso', gas: 7 }], tag: 'Half isolated', title: 'The shore side kept feeding it',
+          text: 'The ship side is closed, but the loading arm is still open to the shore line, full of liquid under the shore’s pressure. The leak went on until the terminal shut the arm valve on your second call.', nx: 'trapped' }
+      ]
+    },
+    isolateEsd: {
+      q: 'The ESD has already shut the ship’s manifold valve and the arm valve. The leaking spool between them is full of liquid. What now?',
+      t: 'Isolating the leaking flange',
+      w: 'An ESD isolates, but the section between the valves stays full and under pressure. Confirm the isolation and keep it until the section is made safe.',
+      opts: [
+        { id: 'confirm', h: '1b8b454f', t: 'Check locally that both valves are fully shut, and keep the ESD tripped until the section is safe',
+          act: { pin: 'shipv', to: 0, hint: 'Now do it: tap the ship’s manifold valve on the photo and CLOSE it.' }, fx: [{ sec: 'iso' }, { gas: 7 }], tag: 'Isolation confirmed', title: 'Both valves confirmed shut',
+          text: 'Both valves are confirmed shut at the valves themselves, and the ESD stays tripped. The reading falls to 7 %LEL - the spool between the valves is still full of liquid.', nx: 'trapped' },
+        { id: 'reset', h: 'c4248611', t: 'Reset the ESD now so loading can restart quickly',
+          fx: [{ gas: '+2' }, { sec: 'iso', gas: 8 }], tag: 'Reset refused', title: 'Too early to reset',
+          text: 'A reset needs the terminal’s agreement, and restarting would put pressure back on a joint that is still leaking. The terminal refuses; the time is lost. The section stays shut in.', nx: 'trapped' },
+        { id: 'tighten', h: '43c57f73', t: 'Tighten the bolts now - the valves are shut',
+          fx: [{ jet: true, gas: 30 }, { jet: false, sec: 'iso', gas: 8 }], tag: 'Jet of liquid', title: 'Shut valves, but a full spool',
+          text: 'The valves are shut, but the spool between them is still full of liquid under pressure. The gasket shifted and liquid sprayed; gloves and face shields saved the team from a cold burn.', nx: 'trapped' }
+      ]
+    },
+    trapped: {
+      q: 'The spool between the two shut valves is full of liquid propane, and the sun is on the deck. Before anyone works on the flange:',
+      t: 'Liquid trapped between two shut valves',
+      w: 'Liquid trapped between two closed valves warms, expands and can burst the line - that is why lines have relief valves. Drain and depressurise before any work.',
+      opts: [
+        { id: 'leave', h: 'd1604bf3', t: 'Leave it shut in and tighten the bolts while it is still cold',
+          fx: [{ sec: 'hot', sp: 9 }, { sp: 16, gas: 20, say: 'Line relief valve lifting.' }, { sec: 'drained', sp: 0, gas: 0 }], tag: 'Pressure rising', title: 'The trapped liquid warmed up',
+          text: 'Liquid trapped between two shut valves warmed and expanded with nowhere to go. The spool pressure climbed fast, the line relief valve lifted and the weak joint leaked harder. Then the section was drained and purged after all.', nx: 'fix' },
+        { id: 'drain', h: '515506ed', t: 'Drain the liquid back to the ship, purge the spool with nitrogen, and check 0 bar on the gauge',
+          fx: [{ sp: 2 }, { sp: 0, sec: 'drained', gas: 0 }], tag: 'Made safe', title: 'Empty, purged, 0 bar',
+          text: 'The liquid drains back, nitrogen pushes out the remaining vapour, the gauge reads 0 bar and the portable detector reads 0 at the flange. Now it is safe to work on.', nx: 'fix' },
+        { id: 'crack', h: 'd28ed448', t: 'Slacken the flange bolts a little to let the pressure out',
+          fx: [{ jet: true, gas: 38 }, { jet: false, gas: 26 }, { sp: 0, sec: 'drained', gas: 0 }], tag: 'Release on purpose', title: 'A leak, made bigger by hand',
+          text: 'Slackening the bolts opened the leak on purpose: liquid propane flashed into a cold, heavy cloud that rolled along the deck. Then the spool was drained and purged properly.', nx: 'fix' }
+      ]
+    },
+    fix: {
+      q: 'The spool is empty and at 0 bar. The gasket is damaged. How is the joint made good?',
+      t: 'Making the joint good',
+      w: 'A damaged gasket is renewed, the bolts are tightened evenly in a cross pattern, and the joint is proven with an inert gas before any cargo goes through it.',
+      opts: [
+        { id: 'renew', h: '2148ccb0', t: 'Fit a new gasket, tighten the bolts evenly in a cross pattern, then test with nitrogen',
+          fx: [{ fixed: true }, { sec: 'tight' }], tag: 'Tested tight', title: 'The joint holds the nitrogen test',
+          text: 'New gasket, bolts drawn up evenly so the faces stay parallel, then a nitrogen pressure test with leak-detection spray. No bubbles, no drop on the gauge.', nx: 'resume' },
+        { id: 'hard', h: '19adffd3', t: 'Re-use the gasket and tighten the bolts on the leaking side hard',
+          fx: [{ fixed: true }, { sec: 'tight' }], tag: 'Remade', title: 'Tight on one side, open on the other',
+          text: 'Uneven tightening tilted the flange faces: tight where you pulled, open on the far side. The nitrogen test found the leak; the joint was remade with a new gasket and tested again.', nx: 'resume' },
+        { id: 'cargo', h: '162d0db5', t: 'Tighten it and see if it leaks when loading restarts',
+          fx: [{ fixed: true }, { sec: 'tight' }], tag: 'Tested with nitrogen first', title: 'Testing with cargo is testing with propane',
+          text: 'Testing with cargo means finding a leak with propane, at full pressure, with people standing next to it. A nitrogen test finds the same leak with an inert gas. The chief officer had it tested with nitrogen first.', nx: 'resume' }
+      ]
+    },
+    resume: {
+      q: 'The joint holds the nitrogen test and the detector reads 0 %LEL. How do you restart?',
+      t: 'Restarting the loading',
+      w: 'A remade joint is most likely to leak in the first minutes. Restart slowly, agreed with the terminal, with eyes and a detector on it.',
+      opts: [
+        { id: 'slow', h: '764ef728', t: 'Agree the restart with the terminal, start at a low rate with the pair watching the flange, then build up',
+          act: { pin: 'shipv', to: 100, hint: 'Now do it: tap the ship’s manifold valve on the photo and OPEN it.' }, fx: [{ shipv: true, armv: true, sec: 'tight', sp: 5 }, { rate: 150 }, { rate: 600 }], tag: 'Loading again', title: 'A slow, watched restart',
+          text: 'Valves open, a low rate first, the pair watching the flange with the detector. No frost, no reading. The terminal builds the rate back up to 600 m³/h.', nx: null },
+        { id: 'full', h: '411bf956', t: 'Restart straight at 600 m³/h - the joint is tested',
+          act: { pin: 'shipv', to: 100, hint: 'Now do it: tap the ship’s manifold valve on the photo and OPEN it.' }, fx: [{ shipv: true, armv: true, sp: 5, crew: 'none' }, { rate: 600 }], tag: 'Loading again', title: 'It held - this time',
+          text: 'The joint held. But had it not, the leak would have come at full rate and full pressure, with nobody watching. A slow start is how you find out cheaply.', nx: null },
+        { id: 'away', h: '732f5a7a', t: 'Restart and send everyone away from the manifold to be safe',
+          act: { pin: 'shipv', to: 100, hint: 'Now do it: tap the ship’s manifold valve on the photo and OPEN it.' }, fx: [{ crew: 'none' }, { shipv: true, armv: true, sp: 5, rate: 600 }], tag: 'Nobody watching', title: 'No eyes on a new joint',
+          text: 'Nobody is at the manifold to see frost or hear a hiss in the first minutes, when a remade joint is most likely to leak. The fixed detector only alarms once a cloud has reached it.', nx: null }
+      ]
+    },
+    resumeEsd: {
+      q: 'The joint holds the nitrogen test and the detector reads 0 %LEL. The ESD is still tripped. How do you restart?',
+      t: 'Restarting the loading',
+      w: 'After an ESD, the reset is agreed by both sides. Then restart slowly, with eyes and a detector on the remade joint.',
+      opts: [
+        { id: 'slow', h: '999263b5', t: 'Reset the ESD jointly with the terminal, start at a low rate with the pair watching, then build up',
+          act: { pin: 'esd', reset: true, hint: 'Now do it: tap the ESD box on the photo and RESET it - agreed with the terminal.' }, fx: [{ esd: false }, { shipv: true, armv: true, sp: 5, rate: 150 }, { rate: 600 }], tag: 'Loading again', title: 'A joint reset, a slow restart',
+          text: 'Both sides confirm and reset the ESD. A low rate first, the pair watching the flange with the detector. No frost, no reading. The rate builds back up to 600 m³/h.', nx: null },
+        { id: 'full', h: 'ca169590', t: 'Reset the ESD and restart straight at 600 m³/h',
+          act: { pin: 'esd', reset: true, hint: 'Now do it: tap the ESD box on the photo and RESET it - agreed with the terminal.' }, fx: [{ esd: false, crew: 'none' }, { shipv: true, armv: true, sp: 5, rate: 600 }], tag: 'Loading again', title: 'It held - this time',
+          text: 'The joint held. But had it not, the leak would have come at full rate, straight after an ESD, with nobody watching. A slow start is how you find out cheaply.', nx: null },
+        { id: 'away', h: '638d2a51', t: 'Reset, restart, and send everyone away from the manifold to be safe',
+          act: { pin: 'esd', reset: true, hint: 'Now do it: tap the ESD box on the photo and RESET it - agreed with the terminal.' }, fx: [{ esd: false, crew: 'none' }, { shipv: true, armv: true, sp: 5, rate: 600 }], tag: 'Nobody watching', title: 'No eyes on a new joint',
+          text: 'Nobody is at the manifold to see frost or hear a hiss in the first minutes, when a remade joint is most likely to leak. The fixed detector only alarms once a cloud has reached it.', nx: null }
+      ]
+    }
+  };
+
+  /* the photograph shown on top of each consequence: '../img/09_scenario_state_<name>.jpg' */
+  var PICS = {
+    'detect.stop': 'stop', 'detect.reduce': 'cloud', 'detect.carry': 'esd', 'detect.esd': 'esd',
+    'climb.stop': 'stop', 'climb.hold': 'esd', 'climb.esd': 'esd',
+    'team.pair': 'team', 'team.lone': 'lone', 'team.wait': 'cloud',
+    'recall.out': 'team', 'recall.tighten': 'spray', 'recall.stay': 'lone',
+    'isolate.both': 'isolated', 'isolate.tighten': 'spray', 'isolate.ship': 'cloud',
+    'isolateEsd.confirm': 'isolated', 'isolateEsd.reset': 'esd', 'isolateEsd.tighten': 'spray',
+    'trapped.leave': 'isolated', 'trapped.drain': 'drain', 'trapped.crack': 'spray',
+    'fix.renew': 'gasket', 'fix.hard': 'gasket', 'fix.cargo': 'gasket',
+    'resume.slow': 'restart', 'resume.full': 'restart', 'resume.away': 'restart',
+    'resumeEsd.slow': 'restart', 'resumeEsd.full': 'restart', 'resumeEsd.away': 'restart'
+  };
+  /* load a photograph first; a sheet gets it only if it exists, so a missing file never shows as a hole */
+  function pic(src, fn) {
+    var im = new Image(), done = false;
+    function out(v) { if (!done) { done = true; fn(v); } }
+    im.onload = function () { out(src); };
+    im.onerror = function () { out(null); };
+    setTimeout(function () { out(null); }, 1500);
+    im.src = src;
+  }
+
+  /* ---- running the watch ---------------------------------------------------------------- */
+  var node = 'detect', picked = null, busy = false, sureAt = null, items = [], count = 0;
+
+  function route(name) {
+    if (name === 'isolate' && S.esd) return 'isolateEsd';
+    if (name === 'resume' && S.esd) return 'resumeEsd';
+    return name;
+  }
+  function best(n) { // which option the key marks as best - worked out, never stored
+    var N = NODES[n], i;
+    for (i = 0; i < N.opts.length; i++) if (GBLab.key('SC1.' + n + '.' + N.opts[i].id, N.opts[i].t, 1) === N.opts[i].h) return N.opts[i];
+    return null;
+  }
+
+  function showNode() {
+    var N = NODES[node], box = $('opts');
+    count++;
+    picked = null;
+    $('q').textContent = N.q;
+    $('step').textContent = 'Decision ' + count;
+    box.innerHTML = '';
+    N.opts.forEach(function (o) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tl-btn';
+      b.textContent = o.t;
+      b.addEventListener('click', function () {
+        if (busy) return;
+        picked = o;
+        var all = box.querySelectorAll('.tl-btn');
+        for (var i = 0; i < all.length; i++) all[i].className = 'tl-btn' + (all[i] === b ? ' on' : '');
+        GBLab.goEnabled(true);
+      });
+      box.appendChild(b);
+    });
+    GBLab.go('Decide', ask);
+    GBLab.goEnabled(false);
+  }
+
+  function ask() {
+    if (busy) return;
+    if (!picked) return GBLab.toast('Tap one of the options first.', 'hint');
+    GBLab.sure(decide);
+  }
+
+  function decide(level) {
+    var at = node, N = NODES[node], o = picked, ok = GBLab.key('SC1.' + node + '.' + o.id, o.t, 1) === o.h, b = best(node);
+    busy = true;
+    GBLab.go('…', null);
+    GBLab.sureNote(level, ok);
+    items.push({ t: N.t, ok: ok, a: o.t, c: b ? b.t : '', w: N.w });
+    if (o.act) {                        // the decision is made; now the trainee does it on the photo
+      pending = { o: o, ok: ok, at: at };
+      GBLab.go('Do it on the photo', null);
+      GBLab.toast(o.act.hint, 'hint');
+      render();
+      return;
+    }
+    proceed(o, ok, at);
+  }
+  function proceed(o, ok, at) {
+    play(o.fx, 0, function () {
+      var nx = o.nx ? route(o.nx) : null;
+      GBLab.show({
+        img: '../img/09_scenario_state_' + PICS[at + '.' + o.id] + '.jpg', tag: o.tag, kind: ok ? 'ok' : 'no', title: o.title, text: o.text,
+        buttons: [{ label: nx ? 'Continue the watch' : 'End of the watch', fn: function () {
+          busy = false;
+          if (nx) { node = nx; showNode(); } else summary();
+        } }]
+      });
+    });
+  }
+
+  /* apply each step of what happens, so it plays out on the scene before it is explained */
+  function play(fx, i, done) {
+    if (i >= fx.length) return setTimeout(done, 500);
+    var f = fx[i], from = S.gas, k, to = from;
+    for (k in f) {
+      if (k === 'say') GBLab.toast(f.say, 'info');
+      else if (k === 'jet') jet.className = 'sc-jet' + (f.jet ? ' on' : '');
+      else if (k === 'gas') to = typeof f.gas === 'string' ? from + Number(f.gas) : f.gas;
+      else S[k] = f[k];
+    }
+    if (S.esd && f.esd) { S.esdTrips++; GBLab.sound.play([[740, 200, 100], [740, 200, 0]], 0.07); }
+    S.gas = to;
+    S.peak = Math.max(S.peak, to);
+    render(from);
+    var t0 = null;
+    function step(ts) {
+      if (!t0) t0 = ts;
+      var p = Math.min(1, (ts - t0) / 800);
+      render(from + (to - from) * p);
+      if (p < 1) return window.requestAnimationFrame(step);
+      setTimeout(function () { play(fx, i + 1, done); }, 450);
+    }
+    window.requestAnimationFrame(step);
+  }
+
+  function summary() {
+    GBLab.go('See my result', result);
+    GBLab.show({
+      tag: 'The watch', title: 'What your watch left behind',
+      text: 'Highest reading at the manifold: <b>' + Math.round(S.peak) + ' %LEL</b>. Emergency shutdowns: <b>' + S.esdTrips + '</b>. Injuries: <b>' + (S.injury ? 'one cold burn' : 'none') + '</b>.<br><br>Each choice changed what the next one could be. On board, there is no going back to an earlier decision.',
+      buttons: [{ label: 'See my result', fn: result }]
+    });
+  }
+  function result() { GBLab.finish({ items: items }); }
+
+  /* ---- start ------------------------------------------------------------------------------ */
+  GBLab.fitScenes();
+  render();
+  showNode();
+  setTimeout(function () { var b = document.querySelector('#opts .tl-btn'); if (b) GBLab.hand('tap-option', b); }, 600);
+})();
+</script>
+</body>
+</html>

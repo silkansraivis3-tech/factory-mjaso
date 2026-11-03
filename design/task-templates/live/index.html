@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Proposed task screens</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:Raleway;src:url(raleway-variable.ttf) format("truetype");font-weight:100 900}
+:root{--N:#0A2463;--B:#53A7DB;--W:#fff;--P:#F7F8FA;--L:#DCE3EB;--S:#415C8F;--G:#E7EBF0;--ok:#1E9E6E;--okl:#E3F8EF;--bad:#D9473B;--badl:#FDECEA;--amb:#F2B33D}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--P);font-family:Raleway,Arial,sans-serif;color:var(--N);-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+.tk{position:fixed;inset:0;display:none;flex-direction:column;background:var(--P)}
+.tk.on{display:flex}
+.tk.on .in{animation:rise .5s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 70ms + 60ms)}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.tk::before{content:"";position:absolute;right:-6%;top:0;bottom:0;width:42%;background:url(na_pattern_on_light.svg) 0 0/150px auto;opacity:.55;pointer-events:none;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 70%);mask-image:linear-gradient(90deg,transparent,#000 70%)}
+.tk.dk{background:var(--N);color:#fff}.tk.dk::before{background-image:url(na_pattern_on_navy.svg);opacity:.5}
+/* the line along the top: how far through the set */
+.prog{position:relative;display:flex;gap:6px;padding:18px 36px 0}
+.prog i{flex:1;height:6px;border-radius:99px;background:var(--G)}
+.prog i.d{background:var(--N)}.prog i.c{background:var(--B)}
+.tk.dk .prog i{background:rgba(255,255,255,.14)}.tk.dk .prog i.d{background:#fff}.tk.dk .prog i.c{background:var(--B)}
+/* question beside its picture */
+.body{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:47fr 53fr;gap:30px;padding:22px 36px 18px}
+.body.wide{grid-template-columns:60fr 40fr}
+.body.one{grid-template-columns:1fr}
+.pic{position:relative;border-radius:22px;overflow:hidden;background:var(--N);box-shadow:0 22px 44px -22px rgba(10,36,99,.55);min-height:0}
+.pic>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:opacity .6s}
+.pic .tag3d{position:absolute;left:14px;bottom:12px;font:700 11px/1 Raleway;letter-spacing:.16em;text-transform:uppercase;color:#fff;background:rgba(10,36,99,.7);padding:6px 9px;border-radius:6px}
+.col{display:flex;flex-direction:column;min-height:0;min-width:0}
+.qn{display:inline-flex;align-items:center;gap:8px;font:800 13px/1 Raleway;letter-spacing:.14em;text-transform:uppercase;color:var(--S);margin-bottom:10px}
+.qn b{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--N);color:#fff;letter-spacing:0;font-size:14px}
+.qn .part{padding:5px 9px;border-radius:99px;background:#E6F2FA;color:var(--N);letter-spacing:.08em}
+.tk.dk .qn{color:#B8C7DA}.tk.dk .qn b{background:var(--B);color:var(--N)}.tk.dk .qn .part{background:rgba(83,167,219,.2);color:#fff}
+h1{margin:0;font-size:29px;line-height:1.2;font-weight:800;letter-spacing:-.01em}
+.hint{margin:8px 0 0;font-size:17px;color:var(--S);font-weight:600}
+.tk.dk .hint{color:#B8C7DA}
+/* answer tiles: big, alive */
+.opts{display:flex;flex-direction:column;gap:12px;margin-top:20px}
+.opt{all:unset;box-sizing:border-box;display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;min-height:68px;padding:10px 18px 10px 12px;border-radius:16px;
+  background:#fff;border:2px solid var(--L);box-shadow:0 10px 22px -16px rgba(10,36,99,.45);font-size:20px;font-weight:600;cursor:pointer;
+  transition:transform .15s,border-color .2s,background .2s,box-shadow .2s}
+.opt:active{transform:scale(.985)}
+.opt .l{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:900;background:var(--G);color:var(--N);transition:background .2s,color .2s}
+.opt.sel{border-color:var(--N);background:#EEF4FB;box-shadow:0 0 0 4px rgba(83,167,219,.25),0 14px 26px -16px rgba(10,36,99,.5)}
+.opt.sel .l{background:var(--N);color:#fff}
+.opt .mk{width:30px;height:30px;border-radius:50%;display:none;place-items:center;color:#fff;font-weight:900}
+.opt.ok{border-color:var(--ok);background:var(--okl)}.opt.ok .l{background:var(--ok);color:#fff}.opt.ok .mk{display:grid;background:var(--ok)}
+.opt.no{border-color:var(--bad);background:var(--badl);animation:shake .4s}.opt.no .l{background:var(--bad);color:#fff}
+.lock .opt{pointer-events:none}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+/* how sure are you */
+.sure{display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px 14px;border-radius:14px;background:#EEF4FB}
+.sure span{font-weight:700;font-size:15px;color:var(--S);margin-right:4px}
+.sure button{all:unset;flex:1;text-align:center;padding:12px 6px;border-radius:12px;background:#fff;border:2px solid var(--L);font-weight:700;font-size:16px;cursor:pointer;transition:all .2s}
+.sure button i{display:inline-block;margin-right:6px;letter-spacing:-2px;color:var(--B);font-style:normal}
+.sure button.sel{border-color:var(--N);background:var(--N);color:#fff}.sure button.sel i{color:#fff}
+/* the dock: one big button, always in the same place */
+.dock{position:relative;padding:0 36px 22px}
+.go{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:12px;width:100%;height:68px;border-radius:18px;background:#C9D3E0;color:#fff;
+  font:800 22px/1 Raleway;letter-spacing:.01em;cursor:pointer;transition:background .25s,transform .15s,box-shadow .25s}
+.go.ready{background:var(--N);box-shadow:0 16px 30px -16px rgba(10,36,99,.7)}
+.go.ready:active{transform:scale(.99)}
+.go.next{background:var(--B);color:var(--N)}
+.tk.dk .go{background:rgba(255,255,255,.14)}.tk.dk .go.ready{background:var(--B);color:var(--N)}.tk.dk .go.next{background:#fff;color:var(--N)}
+/* feedback: the verdict rises above the dock */
+.fb{position:absolute;left:36px;right:36px;bottom:100%;margin-bottom:12px;display:flex;gap:14px;align-items:flex-start;padding:14px 18px;border-radius:16px;background:#fff;
+  box-shadow:0 18px 40px -18px rgba(10,36,99,.55);border-left:6px solid var(--ok);opacity:0;transform:translateY(12px);transition:opacity .3s,transform .4s cubic-bezier(.2,.7,.2,1);pointer-events:none;z-index:5}
+.fb.show{opacity:1;transform:none}
+.fb b{display:block;font-size:20px;margin-bottom:2px}
+.fb p{margin:0;font-size:16px;line-height:1.4;color:var(--S)}
+.fb .ic{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:20px;color:#fff;background:var(--ok)}
+.fb.bad{border-left-color:var(--bad)}.fb.bad .ic{background:var(--bad)}
+.fb .later{display:block;margin-top:4px;font-weight:700;color:var(--N)}
+/* picture tiles: choose all that are right */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1;min-height:0;margin-top:18px}
+.tile{all:unset;position:relative;border-radius:18px;overflow:hidden;cursor:pointer;background:var(--N);box-shadow:0 16px 30px -18px rgba(10,36,99,.6);border:3px solid transparent;transition:transform .15s,border-color .2s,box-shadow .2s}
+.tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tile .cap{position:absolute;left:0;right:0;bottom:0;padding:26px 14px 10px;background:linear-gradient(0deg,rgba(10,36,99,.92),rgba(10,36,99,0));color:#fff;font-weight:700;font-size:16px}
+.tile .box{position:absolute;right:10px;top:10px;width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.9);border:2px solid #fff;display:grid;place-items:center;color:#fff;font-weight:900;transition:background .2s}
+.tile.sel{border-color:var(--B);box-shadow:0 0 0 4px rgba(83,167,219,.35)}.tile.sel .box{background:var(--B)}.tile.sel .box::after{content:"\2713"}
+.tile:active{transform:scale(.98)}
+.tile.ok{border-color:var(--ok)}.tile.ok .box{background:var(--ok)}.tile.no{border-color:var(--bad);animation:shake .4s}.tile.no .box{background:var(--bad)}
+/* true or false: a stack of picture cards */
+.tf{position:relative;flex:1;display:grid;grid-template-columns:120px 1fr 120px;gap:22px;align-items:center;min-height:0}
+.tf .side{all:unset;height:72%;border-radius:22px;border:3px dashed var(--L);display:grid;place-items:center;font:900 22px/1 Raleway;letter-spacing:.12em;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.6)}
+.tf .side.f{color:var(--bad)}.tf .side.t{color:var(--ok)}
+.tf .side:active,.tf .side.hot{transform:scale(1.04);background:#fff;border-style:solid}
+.tf .side.f.hot{border-color:var(--bad)}.tf .side.t.hot{border-color:var(--ok)}
+.stack{position:relative;height:100%}
+.card{position:absolute;inset:0;border-radius:24px;overflow:hidden;background:var(--N);color:#fff;box-shadow:0 30px 50px -26px rgba(10,36,99,.7);transition:transform .5s cubic-bezier(.3,.7,.2,1),opacity .5s;touch-action:none;cursor:grab}
+.card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55}
+.card .st{position:absolute;left:0;right:0;bottom:0;padding:60px 28px 26px;background:linear-gradient(0deg,rgba(10,36,99,.97) 30%,rgba(10,36,99,0));font-size:28px;font-weight:800;line-height:1.2}
+.card .n{position:absolute;left:20px;top:18px;font:800 13px/1 Raleway;letter-spacing:.14em;text-transform:uppercase;background:rgba(10,36,99,.7);padding:7px 10px;border-radius:8px}
+.card.back1{transform:translateY(14px) scale(.96);opacity:.85}.card.back2{transform:translateY(28px) scale(.92);opacity:.6}
+.card.gone-t{transform:translateX(130%) rotate(14deg);opacity:0}.card.gone-f{transform:translateX(-130%) rotate(-14deg);opacity:0}
+.tfres{display:flex;gap:10px;justify-content:center;margin-top:12px}
+.tfres i{width:34px;height:34px;border-radius:50%;background:var(--G);display:grid;place-items:center;font-style:normal;font-weight:900;color:#fff}
+.tfres i.t{background:var(--ok)}.tfres i.f{background:var(--bad)}.tfres i.a{background:var(--N)}
+/* order: a rail of slots, cards that fly into place */
+.ord{display:grid;grid-template-columns:1fr 1fr;gap:26px;flex:1;min-height:0;margin-top:18px}
+.rail{position:relative;display:flex;flex-direction:column;gap:10px}
+.rail::before{content:"";position:absolute;left:27px;top:20px;bottom:20px;width:4px;border-radius:99px;background:var(--G)}
+.slot{position:relative;display:grid;grid-template-columns:58px 1fr;align-items:center;gap:12px;min-height:66px}
+.slot>b{position:relative;z-index:1;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:#fff;border:3px solid var(--L);font-weight:900;font-size:20px;transition:all .3s}
+.slot .ph{height:60px;border-radius:14px;border:2px dashed #B8C7DA;background:rgba(255,255,255,.5);display:flex;align-items:center}
+.slot.full>b{background:var(--N);border-color:var(--N);color:#fff}
+.slot.ok>b{background:var(--ok);border-color:var(--ok)}.slot.no>b{background:var(--bad);border-color:var(--bad)}
+.bank{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:18px;background:#EEF4FB}
+.bank small{font-weight:700;color:var(--S);font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+.chip{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:8px 14px;border-radius:14px;background:#fff;border:2px solid var(--L);
+  font-weight:700;font-size:18px;cursor:pointer;box-shadow:0 8px 18px -14px rgba(10,36,99,.6);transition:transform .2s,border-color .2s}
+.chip .gr{color:#B8C7DA;font-size:20px;letter-spacing:-3px}
+.chip .ico{width:38px;height:38px;border-radius:50%;flex:none;display:grid;place-items:center;background:#E6F2FA;color:var(--N)}
+.chip .ico svg{width:22px;height:22px}
+.chip.pick{border-color:var(--B);transform:translateY(-3px) scale(1.02);box-shadow:0 0 0 4px rgba(83,167,219,.3)}
+.slot .chip{border-color:var(--N)}
+.chip.land{animation:land .35s cubic-bezier(.2,.8,.3,1.4)}
+@keyframes land{from{transform:scale(.85)}to{transform:none}}
+/* match: tap a left, tap a right, a line joins them */
+.mt{position:relative;display:grid;grid-template-columns:1fr 120px 1fr;flex:1;min-height:0;margin-top:20px;align-items:center}
+.mt svg.lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.mt svg.lines path{fill:none;stroke:var(--N);stroke-width:4;stroke-linecap:round}
+.mt svg.lines path.ok{stroke:var(--ok)}.mt svg.lines path.no{stroke:var(--bad);stroke-dasharray:8 8}
+.mcol{display:flex;flex-direction:column;gap:22px}
+.mi{all:unset;box-sizing:border-box;position:relative;display:flex;align-items:center;gap:14px;min-height:104px;font-size:20px!important;padding:8px 14px;border-radius:16px;background:#fff;border:2px solid var(--L);
+  font-weight:700;font-size:18px;cursor:pointer;box-shadow:0 10px 22px -16px rgba(10,36,99,.5);transition:all .2s}
+.mi img{width:120px;height:84px;object-fit:cover;border-radius:10px;flex:none}
+.mi .dot{position:absolute;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:50%;background:#fff;border:4px solid var(--N)}
+.mcol.l .mi .dot{right:-11px}.mcol.r .mi .dot{left:-11px}
+.mi.pick{border-color:var(--B);box-shadow:0 0 0 4px rgba(83,167,219,.3)}
+.mi.used{border-color:var(--N)}
+/* tap the place on the 3D picture */
+.tap{position:relative;border-radius:22px;overflow:hidden;cursor:crosshair;align-self:center;width:100%;aspect-ratio:1280/820;background:var(--N)}
+.tap img{width:100%;height:100%;object-fit:cover;display:block}
+.tap .mark{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;border:4px solid #fff;background:rgba(83,167,219,.45);box-shadow:0 0 0 4px var(--B),0 8px 20px rgba(0,0,0,.4);
+  transform:scale(0);transition:transform .3s cubic-bezier(.2,.8,.3,1.5),left .25s,top .25s;pointer-events:none}
+.tap .mark.on{transform:scale(1)}
+.tap .mark.ok{background:rgba(30,158,110,.55);box-shadow:0 0 0 4px var(--ok)}.tap .mark.no{background:rgba(217,71,59,.5);box-shadow:0 0 0 4px var(--bad)}
+.tap .hint2{position:absolute;left:16px;top:14px;background:rgba(10,36,99,.8);color:#fff;font-weight:700;font-size:15px;padding:8px 12px;border-radius:10px}
+/* read the instrument: a real-looking gauge */
+.gwrap{display:grid;place-items:center;background:radial-gradient(ellipse at 50% 40%,#24427e,#0A2463 70%)}
+.gwrap canvas{width:min(92%,460px);height:auto;aspect-ratio:1;filter:drop-shadow(0 30px 40px rgba(0,0,0,.5))}
+/* spot the errors on the paper permit */
+.paper{position:relative;align-self:stretch;margin:4px 6px;padding:26px 34px 20px;border-radius:6px;background:linear-gradient(180deg,#fffdf6,#f6f1e2);color:#2b2b2b;
+  box-shadow:0 30px 50px -24px rgba(10,36,99,.6),0 1px 0 #e6dfc8;transform:rotate(-.6deg);overflow:hidden}
+.paper::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 37px,rgba(83,167,219,.13) 37px 38px);pointer-events:none}
+.paper h3{margin:0 0 4px;font:900 20px/1.1 Raleway;letter-spacing:.06em;text-transform:uppercase;color:#7a2d22}
+.paper .sub{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8a7b5a;margin-bottom:12px}
+.pl{all:unset;position:relative;display:grid;grid-template-columns:140px 1fr;align-items:end;gap:10px;min-height:48px;padding:6px 8px;border-radius:8px;cursor:pointer;z-index:1}
+.pl .k{font-size:14px;font-weight:700;color:#5d5340;text-transform:uppercase;letter-spacing:.06em}
+.pl .v{font:600 30px/1 Caveat,"Segoe Print",cursive;color:#1f3d8a}
+.pl .circ{position:absolute;left:130px;right:10px;top:-2px;bottom:-4px;border:3px solid var(--bad);border-radius:50% 46% 52% 44%/60% 50% 56% 48%;transform:rotate(-1.5deg) scale(.6);opacity:0;transition:all .3s cubic-bezier(.2,.8,.3,1.4)}
+.pl.flag .circ{opacity:1;transform:rotate(-1.5deg) scale(1)}
+.pl.ok .circ{border-color:var(--ok)}.pl.miss .circ{opacity:1;transform:rotate(-1.5deg);border-color:var(--ok);border-style:dashed}
+.stamp{position:absolute;right:26px;bottom:20px;z-index:1;font:900 18px/1 Raleway;letter-spacing:.14em;color:rgba(122,45,34,.55);border:3px solid rgba(122,45,34,.55);padding:8px 12px;border-radius:8px;transform:rotate(-8deg)}
+/* scenario: the picture changes with each step */
+.steps{display:flex;gap:8px;margin:14px 0 4px}
+.steps i{flex:1;height:8px;border-radius:99px;background:var(--G)}.steps i.c{background:var(--B)}.steps i.d{background:var(--ok)}
+.sit{margin-top:12px;padding:12px 16px;border-radius:14px;background:#FFF6E2;border-left:6px solid var(--amb);font-size:19px;font-weight:700;line-height:1.35}
+/* set the value: a rotary knob */
+.knobwrap{display:grid;grid-template-columns:1fr;place-items:center;gap:18px;background:radial-gradient(ellipse at 50% 30%,#2a4a88,#0A2463 70%)}
+.lcd{min-width:260px;padding:14px 22px;border-radius:14px;background:radial-gradient(ellipse at 30% 0,#16408f,#06173D 70%);box-shadow:inset 0 0 0 2px #0A2463,inset 0 8px 24px rgba(0,0,0,.6),0 0 0 6px #c9d4e2;text-align:center}
+.lcd small{display:block;font:700 12px/1 Raleway;letter-spacing:.16em;text-transform:uppercase;color:#7fd9b5;margin-bottom:6px}
+.lcd b{font:800 54px/1 ui-monospace,Consolas,monospace;color:#c8ffe8;text-shadow:0 0 18px rgba(79,214,160,.5)}
+.knob{position:relative;width:250px;height:250px;border-radius:50%;touch-action:none;cursor:grab;
+  background:radial-gradient(circle at 50% 50%,transparent 58%,rgba(255,255,255,.08) 59%,transparent 61%),conic-gradient(from 225deg,#53A7DB 0 var(--a,0deg),rgba(255,255,255,.12) var(--a,0deg) 270deg,transparent 270deg)}
+.knob .cap{position:absolute;inset:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f4f7fb,#aeb9c8 60%,#7d8a9e);box-shadow:0 18px 30px rgba(0,0,0,.5),inset 0 -6px 12px rgba(0,0,0,.25),inset 0 4px 8px #fff;
+  transform:rotate(calc(var(--a,0deg) - 135deg))}
+.knob .cap::after{content:"";position:absolute;left:50%;top:12px;width:8px;height:44px;margin-left:-4px;border-radius:99px;background:var(--N)}
+.kbtn{display:flex;gap:14px}
+.kbtn button{all:unset;width:70px;height:58px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.12);color:#fff;font:800 26px/1 Raleway;cursor:pointer}
+.kbtn button:active{background:var(--B);color:var(--N)}
+/* result: the score ring */
+.res{display:grid;grid-template-columns:44fr 56fr;gap:36px;align-items:center;flex:1;padding:10px 60px}
+.ring{position:relative;width:340px;height:340px;justify-self:center}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:22}
+.ring .tr{stroke:rgba(255,255,255,.12)}.ring .fl{stroke:url(#rg);stroke-linecap:round;stroke-dasharray:942;stroke-dashoffset:942;transition:stroke-dashoffset 1.6s cubic-bezier(.3,.7,.2,1) .3s}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font:900 92px/1 Raleway;padding-bottom:40px}
+.ring span{position:absolute;left:0;right:0;bottom:118px;text-align:center;font-weight:700;color:#B8C7DA;font-size:18px}
+.rlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.rlist li{display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.07);font-weight:700;font-size:17px;
+  animation:rise .5s both;animation-delay:calc(var(--i) * .12s + 1.2s)}
+.rlist li i{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:900;background:var(--ok);color:#fff}
+.rlist li.w i{background:rgba(255,255,255,.18)}.rlist li em{font-style:normal;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#B8C7DA}
+.calib{margin-top:14px;padding:14px 18px;border-radius:14px;background:rgba(242,179,61,.16);border-left:6px solid var(--amb);font-weight:600;font-size:17px;line-height:1.4}
+/* try the tablet */
+.try{display:grid;grid-template-columns:1fr 1fr;gap:30px;flex:1;padding:10px 60px;align-items:center}
+.tbox{height:330px;border-radius:24px;background:#fff;box-shadow:0 22px 44px -22px rgba(10,36,99,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;position:relative}
+.tbox h2{margin:0;font-size:24px}
+.big{all:unset;width:150px;height:150px;border-radius:50%;background:var(--N);color:#fff;display:grid;place-items:center;font:900 22px/1 Raleway;cursor:pointer;box-shadow:0 0 0 0 rgba(83,167,219,.6);animation:glow 1.8s ease-out infinite}
+.big.done,.tdone .big{background:var(--ok);animation:none}
+@keyframes glow{to{box-shadow:0 0 0 30px rgba(83,167,219,0)}}
+.hand{position:absolute;width:56px;height:56px;pointer-events:none;color:var(--N);animation:handmove 2.4s ease-in-out infinite}
+@keyframes handmove{0%,100%{transform:translate(40px,60px)}45%{transform:translate(0,0) scale(.92)}55%{transform:translate(0,0) scale(.92)}}
+.tdone .hand,.dragdone .hand2{display:none}
+.drg{display:flex;gap:40px;align-items:center}
+.dslot{width:170px;height:76px;border-radius:16px;border:3px dashed #B8C7DA;display:grid;place-items:center;color:#8aa0bf;font-weight:700}
+.dslot.full{border-style:solid;border-color:var(--ok);background:var(--okl)}
+.tok{font-size:84px;color:var(--ok);font-weight:900;transform:scale(0);transition:transform .4s cubic-bezier(.2,.8,.3,1.6)}
+.allok .tok{transform:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.ring .fl{stroke-dashoffset:var(--off,942)}}
+</style></head>
+<body>
+
+<!-- 1 · try the tablet -->
+<section class="tk" id="s1" data-type="try">
+  <div class="prog"><i class="c"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="body one" style="padding-bottom:0"><div class="col"><span class="qn in"><span class="part">Before you start · 20 seconds</span></span>
+    <h1 class="in" style="--i:1">Try the tablet</h1><p class="hint in" style="--i:2">Two things you will do in every task. Nothing here is scored.</p></div></div>
+  <div class="try" style="flex:3">
+    <div class="tbox in" style="--i:3" id="tryTap"><h2>1 · Tap</h2><button class="big" type="button">Tap me</button>
+      <svg class="hand" style="left:52%;top:52%" viewBox="0 0 24 24" fill="#fff" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M9 11.5V4.8a1.6 1.6 0 0 1 3.2 0v5.4M12.2 9.6a1.6 1.6 0 0 1 3.2 0v1.2M15.4 10.4a1.6 1.6 0 0 1 3.2 0V14c0 3.6-2.6 6.3-6.2 6.3h-1.1c-2 0-3.3-.8-4.4-2.3l-2.7-3.6a1.6 1.6 0 0 1 2.5-2L9 15z"/></svg></div>
+    <div class="tbox in" style="--i:4" id="tryDrag"><h2>2 · Move it into the box</h2>
+      <div class="drg"><button class="chip" type="button" style="width:170px" id="tchip"><span class="gr">⋮⋮</span>Fuel tank</button><div class="dslot" id="tslot">here</div></div>
+      <p class="hint" style="margin:0">Drag it - or tap it, then tap the box.</p><div class="tok">&#10003;</div></div>
+  </div>
+  <div class="dock"><button class="go" type="button" data-go>Tap and move first</button></div>
+</section>
+
+<!-- 2 · choose one, with a picture, and how sure -->
+<section class="tk" id="s2" data-type="choose">
+  <div class="prog"><i class="d"></i><i class="c"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="body"><div class="pic in"><img src="img/s3d_safety0.jpg" alt="The tank connection space, the detector alarming" style="object-position:0 0"><span class="tag3d">3D</span></div>
+    <div class="col"><span class="qn in" style="--i:1"><b>1</b>Part A · check what you learned</span>
+      <h1 class="in" style="--i:2">The detector reads 22 % LEL. What is happening?</h1><p class="hint in" style="--i:3">Choose one.</p>
+      <div class="opts in" style="--i:4" data-one data-key="B" data-why="The alarm sounds at 20 % LEL. The master gas valve closes at 40 %." data-brief="Look at the reading again: which limit has it passed?">
+        <button class="opt" type="button" data-v="A"><span class="l">A</span>Nothing yet - the alarm is at 40 %<span class="mk">&#10003;</span></button>
+        <button class="opt" type="button" data-v="B"><span class="l">B</span>The gas alarm has sounded<span class="mk">&#10003;</span></button>
+        <button class="opt" type="button" data-v="C"><span class="l">C</span>The master gas valve has closed<span class="mk">&#10003;</span></button>
+        <button class="opt" type="button" data-v="D"><span class="l">D</span>Someone must enter to find the leak<span class="mk">&#10003;</span></button></div>
+      <div class="sure in" style="--i:5"><span>How sure?</span><button type="button"><i>▂</i>Guessing</button><button type="button"><i>▂▄</i>Fairly sure</button><button type="button"><i>▂▄▆</i>Certain</button></div></div></div>
+  <div class="dock"><div class="fb"></div><button class="go" type="button" data-go>Check</button></div>
+</section>
+
+<!-- 3 · choose all that are right, the answers are pictures -->
+<section class="tk" id="s3" data-type="tiles">
+  <div class="prog"><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="body one"><div class="col"><span class="qn in"><b>2</b>Part A · check what you learned</span>
+      <h1 class="in" style="--i:1">Tap every picture where gas has reached the room.</h1><p class="hint in" style="--i:2">Choose all that are right.</p>
+      <div class="tiles in" style="--i:3;grid-template-columns:repeat(4,1fr)" data-many data-key="b,c" data-why="In both, gas is out in the space. In the gas safe room it stays in the outer pipe." data-brief="Look at where the gas is in each picture - inside a pipe, or out in the room?">
+        <button class="tile" type="button" data-v="a"><img src="img/s3d_cmp_safe.jpg" alt=""><span class="box"></span><span class="cap">Engine room A</span></button>
+        <button class="tile" type="button" data-v="b"><img src="img/s3d_cmp_esd.jpg" alt=""><span class="box"></span><span class="cap">Engine room B</span></button>
+        <button class="tile" type="button" data-v="c"><img src="img/s3d_safety0.jpg" alt="" style="object-position:0 0"><span class="box"></span><span class="cap">Tank connection space</span></button>
+        <button class="tile" type="button" data-v="d"><img src="img/s3d_tank_plain.jpg" alt=""><span class="box"></span><span class="cap">Fuel tank</span></button></div></div></div>
+  <div class="dock"><div class="fb"></div><button class="go" type="button" data-go>Check</button></div>
+</section>
+
+<!-- 4 · true or false, picture cards -->
+<section class="tk dk" id="s4" data-type="tf">
+  <div class="prog"><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="body one"><div class="col"><span class="qn in"><b>3</b>Part A · true or false</span>
+      <h1 class="in" style="--i:1">True or false? Flick each card - or tap a side.</h1>
+      <div class="tf in" style="--i:2;margin-top:16px"><button class="side f" type="button" data-tf="f">FALSE</button>
+        <div class="stack" data-key="f,t,t" data-why="The cloud is frozen water in the air - the gas reaches beyond it. 40 % LEL closes the valve; a gas safe room holds the leak in the outer pipe.">
+          <div class="card" data-k="2"><img src="img/s3d_cmp_safe.jpg" alt=""><span class="n">Card 3 of 3</span><div class="st">In a gas safe engine room, a leak stays in the outer pipe.</div></div>
+          <div class="card" data-k="1"><img src="img/s3d_safety1.jpg" alt=""><span class="n">Card 2 of 3</span><div class="st">At 40 % LEL the master gas valve closes.</div></div>
+          <div class="card" data-k="0"><img src="img/s3d_cloud.jpg" alt=""><span class="n">Card 1 of 3</span><div class="st">The white cloud shows where the gas is.</div></div></div>
+        <button class="side t" type="button" data-tf="t">TRUE</button></div>
+      <div class="tfres in" style="--i:3"><i></i><i></i><i></i></div></div></div>
+  <div class="dock"><div class="fb"></div><button class="go" type="button" data-go>Answer all three</button></div>
+</section>
+
+<!-- 5 · order, a rail with slots -->
+<section class="tk" id="s5" data-type="order">
+  <div class="prog"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="body one"><div class="col"><span class="qn in"><b>4</b>Part A · put it in order</span>
+      <h1 class="in" style="--i:1">Bunkering, start to end: put the steps in order.</h1><p class="hint in" style="--i:2">Tap a card - it goes to the next empty place. Tap a placed card to send it back.</p>
+      <div class="ord in" style="--i:3" data-key="plan,zone,esd,transfer,disc" data-why="Plan, clear the zone and prove the shutdown before any fuel moves." data-brief="What must be proven before any fuel moves?">
+        <div class="rail"><div class="slot"><b>1</b><div class="ph"></div></div><div class="slot"><b>2</b><div class="ph"></div></div><div class="slot"><b>3</b><div class="ph"></div></div><div class="slot"><b>4</b><div class="ph"></div></div><div class="slot"><b>5</b><div class="ph"></div></div></div>
+        <div class="bank"><small>Steps</small>
+          <button class="chip" type="button" data-v="transfer"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12h13"/><path d="M12 8l4 4-4 4"/><path d="M19.5 7.5c-1.4 1.9-2 3-2 4a2 2 0 0 0 4 0c0-1-.6-2.1-2-4z"/></svg></span>Transfer the fuel</button>
+          <button class="chip" type="button" data-v="esd"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 6.5v5.5M8.6 8.8a5 5 0 1 0 6.8 0"/></svg></span>Test the emergency shutdown</button>
+          <button class="chip" type="button" data-v="disc"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12h4M7 8.5v7M7 10h3v4H7M21 12h-4M17 8.5v7M17 10h-3v4h3"/></svg></span>Disconnect and report</button>
+          <button class="chip" type="button" data-v="plan"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v3H8z"/><path d="M8 5.5H6a1 1 0 0 0-1 1V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6.5a1 1 0 0 0-1-1h-2"/><path d="M8.5 12l2 2 4-4"/></svg></span>Agree the plan with the supplier</button>
+          <button class="chip" type="button" data-v="zone"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8.5" stroke-dasharray="3 2.4"/><path d="M12 7.5l3 9.5H9z"/></svg></span>Check the safety zone is clear</button></div></div></div></div>
+  <div class="dock"><div class="fb"></div><button class="go" type="button" data-go>Check</button></div>
+</section>
+
+<!-- 6 · match by lines -->
+<section class="tk" id="s6" data-type="match">
+  <div class="prog"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i><i></i><i></i></div>
+  <div class="body one"><div class="col"><span class="qn in"><b>5</b>Part A · match</span>
+      <h1 class="in" style="--i:1">Join each space to what it holds.</h1><p class="hint in" style="--i:2">Tap a space, then what it holds - a line joins them. Tap a line's end to undo it.</p>
+      <div class="mt in" style="--i:3" data-key="fpr:pv,tcs:tv,vm:vo" data-why="Each space has one job: the room turns liquid to gas, the connection space holds the tank's valves, the mast lets vapour out." data-brief="Think what each space is for.">
+        <svg class="lines"></svg>
+        <div class="mcol l"><button class="mi" type="button" data-v="fpr"><img src="img/s3d_fpr_plain.jpg" alt="">Fuel preparation room<span class="dot"></span></button>
+          <button class="mi" type="button" data-v="tcs"><img src="img/s3d_tank_plain.jpg" alt="">Tank connection space<span class="dot"></span></button>
+          <button class="mi" type="button" data-v="vm"><img src="img/s3d_vent.jpg" alt="">Vent mast<span class="dot"></span></button></div>
+        <div></div>
+        <div class="mcol r"><button class="mi" type="button" data-v="vo"><span class="dot"></span>The vapour outlet</button>
+          <button class="mi" type="button" data-v="pv"><span class="dot"></span>Pumps and vaporizers</button>
+          <button class="mi" type="button" data-v="tv"><span class="dot"></span>The tank's valves</button></div></div></div></div>
+  <div class="dock"><div class="fb"></div><button class="go" type="button" data-go>Check</button></div>
+</section>
+
+<!-- 7 · tap the place on the 3D picture -->
+<section class="tk" id="s7" data-type="tap">
+  <div class="prog"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i><i></i></div>
+  <div class="body wide"><div class="tap in" data-x="50.8" data-y="40" data-r="9" data-why="It surrounds every pipe and valve that joins the tank - here, where the pipes leave the tank." data-brief="Follow the pipes from the tank: where do they join it?">
+      <img src="img/s3d_hull_bare.jpg" alt="The ship's spaces in 3D, unnamed"><span class="hint2">Tap the place</span><span class="mark"></span></div>
+    <div class="col" style="justify-content:center"><span class="qn in" style="--i:1"><b>6</b>Part B · find it yourself</span>
+      <h1 class="in" style="--i:2">Tap the tank connection space.</h1><p class="hint in" style="--i:3">Tap right on it. You can tap again to move your mark.</p></div></div>
+  <div class="dock"><div class="fb"></div><button class="go" type="button" data-go>Check</button></div>
+</section>
+
+<!-- 8 · read the instrument -->
+<section class="tk" id="s8" data-type="gauge">
+  <div class="prog"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i></div>
+  <div class="body"><div class="pic gwrap in"><canvas width="900" height="900" id="gauge"></canvas></div>
+    <div class="col" style="justify-content:center"><span class="qn in" style="--i:1"><b>7</b>Part A · read the instrument</span>
+      <h1 class="in" style="--i:2">What pressure does the tank gauge show?</h1><p class="hint in" style="--i:3">Choose one.</p>
+      <div class="opts in" style="--i:4" data-one data-key="B" data-why="The needle sits three small marks past 4: 4.6 bar." data-brief="Count the small marks after the last number.">
+        <button class="opt" type="button" data-v="A"><span class="l">A</span>4.3 bar<span class="mk">&#10003;</span></button>
+        <button class="opt" type="button" data-v="B"><span class="l">B</span>4.6 bar<span class="mk">&#10003;</span></button>
+        <button class="opt" type="button" data-v="C"><span class="l">C</span>5.6 bar<span class="mk">&#10003;</span></button>
+        <button class="opt" type="button" data-v="D"><span class="l">D</span>6.4 bar<span class="mk">&#10003;</span></button></div></div></div>
+  <div class="dock"><div class="fb"></div><button class="go" type="button" data-go>Check</button></div>
+</section>
+
+<!-- 9 · spot the errors on the real paper -->
+<section class="tk" id="s9" data-type="paper">
+  <div class="prog"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i></div>
+  <div class="body" style="grid-template-columns:42fr 58fr"><div class="col" style="justify-content:center"><span class="qn in"><b>8</b>Part B · check a colleague</span>
+      <h1 class="in" style="--i:1">The permit is on the bridge for signing. Circle every line that is wrong.</h1>
+      <p class="hint in" style="--i:2">Tap a line to circle it, tap again to take it off.</p></div>
+    <div class="paper in" style="--i:3" data-key="o2,rescue" data-why="Oxygen must be 21 % before entry, and a rescue team must stand by." data-brief="Read each line as if you were the one going in.">
+      <h3>Enclosed space entry permit</h3><div class="sub">No. 0417 · valid 1 shift</div>
+      <button class="pl" type="button" data-v="space"><span class="k">Space</span><span class="v">Cargo tank 2</span><span class="circ"></span></button>
+      <button class="pl" type="button" data-v="o2"><span class="k">Oxygen</span><span class="v">18.5 %</span><span class="circ"></span></button>
+      <button class="pl" type="button" data-v="hc"><span class="k">Hydrocarbon</span><span class="v">0 % LFL</span><span class="circ"></span></button>
+      <button class="pl" type="button" data-v="rescue"><span class="k">Rescue team</span><span class="v">not assigned</span><span class="circ"></span></button>
+      <button class="pl" type="button" data-v="sig"><span class="k">Signed</span><span class="v">J. Ozols, C/O</span><span class="circ"></span></button>
+      <span class="stamp">For signing</span></div></div>
+  <div class="dock"><div class="fb"></div><button class="go" type="button" data-go>Check</button></div>
+</section>
+
+<!-- 10 · scenario, the picture follows the situation -->
+<section class="tk" id="s10" data-type="scenario">
+  <div class="prog"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i></div>
+  <div class="body"><div class="pic in"><img src="img/s3d_safety0.jpg" alt="" style="object-position:0 0" data-p="0"><img src="img/s3d_safety1.jpg" alt="" style="object-position:0 0;opacity:0" data-p="1"><span class="tag3d">3D</span></div>
+    <div class="col"><span class="qn in" style="--i:1"><b>9</b>Part B · what do you do?</span>
+      <h1 class="in" style="--i:2">You are on bunkering watch.</h1><div class="steps in" style="--i:3"><i class="c"></i><i></i></div>
+      <div class="sc in" style="--i:4" data-steps='[{"sit":"The detector in the tank connection space alarms: 22 % LEL.","o":["Silence the alarm and carry on","Stop the transfer and tell the bridge","Go in and find the leak"],"k":1,"why":"Stop the transfer, report, keep everyone out.","brief":"What stops more gas from coming?"},{"sit":"The reading reaches 40 % LEL. The master gas valve closes.","o":["Open the valve again to finish the bunkering","Keep everyone out and follow the procedure","Switch the ventilation off"],"k":1,"why":"The system has done its job; the ventilation clears the space.","brief":"Which choice lets the system do its work?"}]'>
+        <div class="sit"></div><div class="opts" data-one></div></div></div></div>
+  <div class="dock"><div class="fb"></div><button class="go" type="button" data-go>Check</button></div>
+</section>
+
+<!-- 11 · set the value, a rotary knob -->
+<section class="tk" id="s11" data-type="knob">
+  <div class="prog"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i></div>
+  <div class="body"><div class="pic knobwrap in"><div class="lcd"><small>Alarm set point · % LEL</small><b data-kv>0</b></div><div class="knob" data-v="0" data-key="20" data-tol="0"><div class="cap"></div></div>
+      <div class="kbtn"><button type="button" data-d="-1">−</button><button type="button" data-d="1">+</button></div></div>
+    <div class="col" style="justify-content:center"><span class="qn in" style="--i:1"><b>10</b>Part B · set it up</span>
+      <h1 class="in" style="--i:2">The new detector is fitted. Set its gas alarm.</h1><p class="hint in" style="--i:3">Turn the knob, or use − and +.</p></div></div>
+  <div class="dock"><div class="fb" data-why="20 % LEL: the alarm; at 40 % the master gas valve closes." data-brief="The alarm comes before the shutdown - which limit is that?"></div><button class="go" type="button" data-go>Check</button></div>
+</section>
+
+<!-- 12 · the result -->
+<section class="tk dk" id="s12" data-type="result">
+  <div class="body one" style="padding-top:30px"><div class="col"><span class="qn in"><span class="part">Self-check 1 · done</span></span><h1 class="in" style="--i:1">Your result - for you only</h1></div></div>
+  <div class="res" style="flex:4"><div class="ring in" style="--i:2"><svg viewBox="0 0 340 340"><defs><linearGradient id="rg" x1="0" x2="1"><stop offset="0" stop-color="#53A7DB"/><stop offset="1" stop-color="#4FD6A0"/></linearGradient></defs>
+      <circle class="tr" cx="170" cy="170" r="150"/><circle class="fl" cx="170" cy="170" r="150"/></svg><b data-score>0</b><span>of 10 right</span></div>
+    <div><ul class="rlist">
+        <li style="--i:0"><i>&#10003;</i>Reading the detector<em>right</em></li>
+        <li style="--i:1"><i>&#10003;</i>Where the gas is<em>right</em></li>
+        <li style="--i:2" class="w"><i>•</i>Order of bunkering<em>in the debrief</em></li>
+        <li style="--i:3"><i>&#10003;</i>Spaces and what they hold<em>right</em></li>
+        <li style="--i:4" class="w"><i>•</i>The entry permit<em>in the debrief</em></li></ul>
+      <div class="calib in" style="--i:8">Once you were certain and it was not right. That is where we start in the debrief.</div></div></div>
+  <div class="dock" style="height:90px"></div>
+</section>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (s, r) { return (r || document).querySelector(s); }, $$ = function (s, r) { return [].slice.call((r || document).querySelectorAll(s)); };
+  var screens = $$('.tk'), cur = 0;
+  function show(n) {
+    cur = Math.max(0, Math.min(screens.length - 1, n));
+    screens.forEach(function (s, i) { s.classList.toggle('on', i === cur); });
+    var s = screens[cur]; if (s._enter) { s._enter(); }
+    try { parent.postMessage({ type: 'task-screen', n: cur + 1 }, '*'); } catch (e) {}
+  }
+  window.__T = { show: function (n) { show(n - 1); }, count: screens.length };
+  window.addEventListener('message', function (e) { if (e.data && e.data.type === 'show-task') { show(e.data.n - 1); } });
+
+  /* the dock and the verdict, shared by every screen: Check, then Next */
+  function dock(s, ready, grade, done) {
+    var go = $('[data-go]', s), fb = $('.fb', s), state = 'ask';
+    function setReady(r) { if (state === 'ask') { go.classList.toggle('ready', !!r); } }
+    go.addEventListener('click', function () {
+      if (state === 'next') { show(cur + 1); return; }
+      if (!go.classList.contains('ready')) { return; }
+      var r = grade();
+      if (r === null) { return; }
+      verdict(fb, r.ok, r.why, r.brief);
+      state = 'next'; go.classList.remove('ready'); go.classList.add('next'); go.textContent = 'Next  ›';
+      if (done) { done(r.ok); }
+    });
+    s._reset = function () { state = 'ask'; go.classList.remove('next', 'ready'); go.textContent = 'Check'; if (fb) { fb.className = 'fb'; } };
+    return setReady;
+  }
+  function verdict(fb, ok, why, brief) {
+    if (!fb) { return; }
+    fb.innerHTML = ok ? '<span class="ic">&#10003;</span><div><b>Right.</b><p>' + why + '</p></div>'
+                      : '<span class="ic">!</span><div><b>Not right.</b><p>' + brief + '<span class="later">We will check this one together in the debrief.</span></p></div>';
+    fb.className = 'fb show' + (ok ? '' : ' bad');
+  }
+  function lockOpts(box, key, picked, many) {
+    $$('[data-v]', box).forEach(function (o) {
+      var v = o.getAttribute('data-v'), isKey = key.indexOf(v) >= 0, sel = picked.indexOf(v) >= 0;
+      if (sel && isKey) { o.classList.add('ok'); } else if (sel) { o.classList.add('no'); }
+    });
+    box.classList.add('lock');
+  }
+
+  /* 1 · try the tablet */
+  (function () {
+    var s = $('#s1'), go = $('[data-go]', s), tap = $('#tryTap'), chip = $('#tchip'), slot = $('#tslot'), ok1 = false, ok2 = false, picked = false;
+    function upd() { if (ok1 && ok2) { go.classList.add('ready'); go.textContent = 'I am ready  ›'; $('#tryDrag').classList.add('allok'); } }
+    $('.big', tap).addEventListener('click', function () { ok1 = true; tap.classList.add('tdone'); this.textContent = '✓'; upd(); });
+    function place() { if (ok2) { return; } slot.textContent = ''; slot.appendChild(chip); chip.classList.remove('pick'); chip.classList.add('land'); slot.classList.add('full'); ok2 = true; upd(); }
+    chip.addEventListener('click', function () { picked = !picked; chip.classList.toggle('pick', picked); });
+    slot.addEventListener('click', function () { if (picked) { place(); } });
+    var sx, sy, dragging = false;
+    chip.addEventListener('pointerdown', function (e) { sx = e.clientX; sy = e.clientY; dragging = true; chip.setPointerCapture(e.pointerId); });
+    chip.addEventListener('pointermove', function (e) { if (dragging && !ok2) { chip.style.transform = 'translate(' + (e.clientX - sx) + 'px,' + (e.clientY - sy) + 'px)'; } });
+    chip.addEventListener('pointerup', function (e) {
+      if (!dragging) { return; } dragging = false; chip.style.transform = '';
+      var r = slot.getBoundingClientRect(); if (e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom) { place(); }
+    });
+    go.addEventListener('click', function () { if (go.classList.contains('ready')) { show(cur + 1); } });
+  })();
+
+  /* choose one (with how sure) - screens 2 and 8 */
+  ['#s2', '#s8'].forEach(function (id) {
+    var s = $(id), box = $('[data-one]', s), pick = null, sure = $$('.sure button', s), sureOk = !sure.length;
+    var ready = dock(s, null, function () {
+      var key = box.getAttribute('data-key'), ok = pick === key; lockOpts(box, [key], [pick]);
+      return { ok: ok, why: box.getAttribute('data-why'), brief: box.getAttribute('data-brief') };
+    });
+    $$('.opt', box).forEach(function (o) { o.addEventListener('click', function () { $$('.opt', box).forEach(function (x) { x.classList.toggle('sel', x === o); }); pick = o.getAttribute('data-v'); ready(pick && sureOk); }); });
+    sure.forEach(function (b) { b.addEventListener('click', function () { sure.forEach(function (x) { x.classList.toggle('sel', x === b); }); sureOk = true; ready(pick && sureOk); }); });
+  });
+
+  /* 3 · picture tiles, choose all */
+  (function () {
+    var s = $('#s3'), box = $('.tiles', s), picks = [];
+    var ready = dock(s, null, function () {
+      var key = box.getAttribute('data-key').split(','), ok = picks.length === key.length && key.every(function (k) { return picks.indexOf(k) >= 0; });
+      lockOpts(box, key, picks); return { ok: ok, why: box.getAttribute('data-why'), brief: box.getAttribute('data-brief') };
+    });
+    $$('.tile', box).forEach(function (t) { t.addEventListener('click', function () {
+      var v = t.getAttribute('data-v'), i = picks.indexOf(v); if (i >= 0) { picks.splice(i, 1); } else { picks.push(v); }
+      t.classList.toggle('sel', i < 0); ready(picks.length > 0); }); });
+  })();
+
+  /* 4 · true or false: flick or tap a side */
+  (function () {
+    var s = $('#s4'), stack = $('.stack', s), cards = $$('.card', stack).reverse(), key = stack.getAttribute('data-key').split(','), ans = [], dots = $$('.tfres i', s);
+    var go = $('[data-go]', s), fb = $('.fb', s);
+    function lay() { cards.forEach(function (c, i) { var k = i - ans.length; c.classList.remove('back1', 'back2'); if (k === 1) { c.classList.add('back1'); } if (k === 2) { c.classList.add('back2'); } c.style.zIndex = 10 - i; }); }
+    function answer(v) {
+      if (ans.length >= cards.length) { return; }
+      var c = cards[ans.length]; c.classList.add(v === 't' ? 'gone-t' : 'gone-f'); dots[ans.length].className = 'a'; ans.push(v);
+      var side = $('.side.' + v, s); side.classList.add('hot'); setTimeout(function () { side.classList.remove('hot'); }, 300);
+      lay();
+      if (ans.length === cards.length) {
+        var right = 0; ans.forEach(function (a, i) { var ok = a === key[i]; right += ok; dots[i].className = ok ? 't' : 'f'; });
+        verdict(fb, right === key.length, stack.getAttribute('data-why'), right + ' of ' + key.length + ' right. Think again about what the cloud really is.');
+        go.classList.add('next'); go.textContent = 'Next  ›';
+      }
+    }
+    $$('.side', s).forEach(function (b) { b.addEventListener('click', function () { answer(b.getAttribute('data-tf')); }); });
+    var x0 = null;
+    stack.addEventListener('pointerdown', function (e) { x0 = e.clientX; });
+    stack.addEventListener('pointermove', function (e) { if (x0 !== null && cards[ans.length]) { cards[ans.length].style.transform = 'translateX(' + (e.clientX - x0) + 'px) rotate(' + (e.clientX - x0) / 25 + 'deg)'; } });
+    stack.addEventListener('pointerup', function (e) { if (x0 === null) { return; } var dx = e.clientX - x0; x0 = null; if (cards[ans.length]) { cards[ans.length].style.transform = ''; } if (Math.abs(dx) > 80) { answer(dx > 0 ? 't' : 'f'); } });
+    go.addEventListener('click', function () { if (go.classList.contains('next')) { show(cur + 1); } });
+    lay();
+  })();
+
+  /* 5 · order: tap a card, it flies to the next empty slot */
+  (function () {
+    var s = $('#s5'), box = $('.ord', s), bank = $('.bank', s), slots = $$('.slot', s);
+    var ready = dock(s, null, function () {
+      var key = box.getAttribute('data-key').split(','), all = true;
+      slots.forEach(function (sl, i) { var c = $('.chip', sl), ok = c && c.getAttribute('data-v') === key[i]; sl.classList.add(ok ? 'ok' : 'no'); all = all && ok; });
+      box.style.pointerEvents = 'none'; return { ok: all, why: box.getAttribute('data-why'), brief: box.getAttribute('data-brief') };
+    });
+    $$('.chip', bank).forEach(function (c) { c.addEventListener('click', function () {
+      if (c.parentNode.classList.contains('ph')) { var sl = c.parentNode.parentNode; bank.appendChild(c); sl.classList.remove('full'); }
+      else { var free = slots.filter(function (sl) { return !$('.chip', sl); })[0]; if (!free) { return; } $('.ph', free).appendChild(c); free.classList.add('full'); }
+      c.classList.remove('land'); void c.offsetWidth; c.classList.add('land');
+      ready(slots.every(function (sl) { return $('.chip', sl); }));
+    }); });
+  })();
+
+  /* 6 · match: tap left then right, a curved line joins them */
+  (function () {
+    var s = $('#s6'), box = $('.mt', s), svg = $('svg.lines', s), left = null, pairs = {};
+    function center(el, side) { var r = el.getBoundingClientRect(), b = box.getBoundingClientRect(); return [side === 'l' ? r.right - b.left : r.left - b.left, r.top + r.height / 2 - b.top]; }
+    function draw(cls) {
+      svg.innerHTML = '';
+      Object.keys(pairs).forEach(function (l) {
+        var a = center($('.mcol.l [data-v="' + l + '"]', s), 'l'), z = center($('.mcol.r [data-v="' + pairs[l] + '"]', s), 'r'), mx = (a[0] + z[0]) / 2;
+        var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        p.setAttribute('d', 'M' + a[0] + ' ' + a[1] + ' C' + mx + ' ' + a[1] + ' ' + mx + ' ' + z[1] + ' ' + z[0] + ' ' + z[1]);
+        if (cls) { p.setAttribute('class', cls[l]); } svg.appendChild(p);
+      });
+      $$('.mi', s).forEach(function (m) { var v = m.getAttribute('data-v'); m.classList.toggle('used', !!pairs[v] || Object.keys(pairs).some(function (k) { return pairs[k] === v; })); });
+    }
+    var ready = dock(s, null, function () {
+      var key = {}, cls = {}, all = true; box.getAttribute('data-key').split(',').forEach(function (kv) { kv = kv.split(':'); key[kv[0]] = kv[1]; });
+      Object.keys(pairs).forEach(function (l) { cls[l] = pairs[l] === key[l] ? 'ok' : 'no'; all = all && cls[l] === 'ok'; });
+      draw(cls); box.style.pointerEvents = 'none'; return { ok: all, why: box.getAttribute('data-why'), brief: box.getAttribute('data-brief') };
+    });
+    $$('.mcol.l .mi', s).forEach(function (m) { m.addEventListener('click', function () {
+      var v = m.getAttribute('data-v'); if (pairs[v]) { delete pairs[v]; draw(); }
+      left = v; $$('.mcol.l .mi', s).forEach(function (x) { x.classList.toggle('pick', x === m); }); ready(Object.keys(pairs).length === 3); }); });
+    $$('.mcol.r .mi', s).forEach(function (m) { m.addEventListener('click', function () {
+      var v = m.getAttribute('data-v');
+      Object.keys(pairs).forEach(function (k) { if (pairs[k] === v) { delete pairs[k]; } });
+      if (left) { pairs[left] = v; left = null; $$('.mi', s).forEach(function (x) { x.classList.remove('pick'); }); }
+      draw(); ready(Object.keys(pairs).length === 3); }); });
+    s._enter = function () { setTimeout(draw, 60); };
+    window.addEventListener('resize', function () { draw(); });
+  })();
+
+  /* 7 · tap the place: a mark where the finger lands, a near miss forgiven */
+  (function () {
+    var s = $('#s7'), box = $('.tap', s), mark = $('.mark', box), at = null;
+    var ready = dock(s, null, function () {
+      var dx = at[0] - +box.getAttribute('data-x'), dy = (at[1] - +box.getAttribute('data-y')) * 0.64, ok = Math.sqrt(dx * dx + dy * dy) <= +box.getAttribute('data-r');
+      mark.classList.add(ok ? 'ok' : 'no'); box.style.pointerEvents = 'none'; return { ok: ok, why: box.getAttribute('data-why'), brief: box.getAttribute('data-brief') };
+    });
+    box.addEventListener('click', function (e) {
+      var r = box.getBoundingClientRect(); at = [(e.clientX - r.left) / r.width * 100, (e.clientY - r.top) / r.height * 100];
+      mark.style.left = at[0] + '%'; mark.style.top = at[1] + '%'; mark.classList.add('on'); ready(true);
+    });
+  })();
+
+  /* 8 · the gauge, drawn like the real one: a steel bezel, the dial, the needle and the glass */
+  (function () {
+    var c = $('#gauge'), g = c.getContext('2d'), W = 900, C = 450, val = 4.6;
+    function draw() {
+      g.clearRect(0, 0, W, W);
+      var bz = g.createLinearGradient(0, 0, W, W); bz.addColorStop(0, '#f5f7fa'); bz.addColorStop(.45, '#9aa6b6'); bz.addColorStop(.55, '#c9d2dd'); bz.addColorStop(1, '#5d6a7d');
+      g.beginPath(); g.arc(C, C, 430, 0, 7); g.fillStyle = bz; g.fill();
+      g.beginPath(); g.arc(C, C, 392, 0, 7); g.fillStyle = '#2c3442'; g.fill();
+      var face = g.createRadialGradient(C, C - 80, 40, C, C, 380); face.addColorStop(0, '#ffffff'); face.addColorStop(1, '#e3e8ef');
+      g.beginPath(); g.arc(C, C, 380, 0, 7); g.fillStyle = face; g.fill();
+      var a0 = Math.PI * .75, a1 = Math.PI * 2.25, max = 10;
+      function ang(v) { return a0 + (a1 - a0) * v / max; }
+      g.lineWidth = 26; g.beginPath(); g.arc(C, C, 318, ang(8), ang(10)); g.strokeStyle = '#D9473B'; g.stroke();
+      for (var i = 0; i <= 50; i++) {
+        var a = ang(i / 5), big = i % 5 === 0, r1 = big ? 290 : 308;
+        g.beginPath(); g.moveTo(C + Math.cos(a) * r1, C + Math.sin(a) * r1); g.lineTo(C + Math.cos(a) * 334, C + Math.sin(a) * 334);
+        g.lineWidth = big ? 9 : 4; g.strokeStyle = '#1b2333'; g.stroke();
+        if (big) { g.fillStyle = '#1b2333'; g.font = '800 46px Raleway, Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(i / 5), C + Math.cos(a) * 238, C + Math.sin(a) * 238); }
+      }
+      g.fillStyle = '#415C8F'; g.font = '800 40px Raleway, Arial'; g.fillText('bar', C, C + 150); g.font = '700 26px Raleway, Arial'; g.fillText('TANK 2 · PI 0127', C, C + 200);
+      var na = ang(val); g.save(); g.translate(C, C); g.rotate(na); g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 18; g.shadowOffsetY = 10;
+      g.beginPath(); g.moveTo(-60, -10); g.lineTo(320, -3); g.lineTo(320, 3); g.lineTo(-60, 10); g.closePath(); g.fillStyle = '#c0281c'; g.fill(); g.restore();
+      var hub = g.createRadialGradient(C - 10, C - 10, 4, C, C, 46); hub.addColorStop(0, '#fff'); hub.addColorStop(1, '#5d6a7d');
+      g.beginPath(); g.arc(C, C, 42, 0, 7); g.fillStyle = hub; g.fill();
+      var gl = g.createLinearGradient(C - 300, C - 380, C + 100, C + 60); gl.addColorStop(0, 'rgba(255,255,255,.55)'); gl.addColorStop(.5, 'rgba(255,255,255,0)');
+      g.beginPath(); g.arc(C, C, 380, Math.PI * 1.02, Math.PI * 1.98); g.closePath(); g.fillStyle = gl; g.fill();
+    }
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(draw); } draw();
+  })();
+
+  /* 9 · circle the wrong lines on the paper */
+  (function () {
+    var s = $('#s9'), box = $('.paper', s), flags = [];
+    var ready = dock(s, null, function () {
+      var key = box.getAttribute('data-key').split(','), ok = flags.length === key.length && key.every(function (k) { return flags.indexOf(k) >= 0; });
+      $$('.pl', box).forEach(function (l) { var v = l.getAttribute('data-v'); if (flags.indexOf(v) >= 0 && key.indexOf(v) >= 0) { l.classList.add('ok'); } });
+      box.style.pointerEvents = 'none'; return { ok: ok, why: box.getAttribute('data-why'), brief: box.getAttribute('data-brief') };
+    });
+    $$('.pl', box).forEach(function (l) { l.addEventListener('click', function () {
+      var v = l.getAttribute('data-v'), i = flags.indexOf(v); if (i >= 0) { flags.splice(i, 1); } else { flags.push(v); } l.classList.toggle('flag', i < 0); ready(flags.length > 0); }); });
+  })();
+
+  /* 10 · scenario: each step changes the situation and the picture */
+  (function () {
+    var s = $('#s10'), sc = $('.sc', s), steps = JSON.parse(sc.getAttribute('data-steps')), k = 0, pick = -1, sit = $('.sit', sc), opts = $('.opts', sc), bars = $$('.steps i', s);
+    var go = $('[data-go]', s), fb = $('.fb', s), phase = 'ask';
+    function build() {
+      var st = steps[k]; sit.textContent = st.sit; opts.innerHTML = ''; opts.classList.remove('lock'); pick = -1; phase = 'ask';
+      $$('.pic img', s).forEach(function (im) { im.style.opacity = +im.getAttribute('data-p') === k ? 1 : 0; });
+      bars.forEach(function (b, i) { b.className = i < k ? 'd' : i === k ? 'c' : ''; });
+      st.o.forEach(function (t, i) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'opt'; b.innerHTML = '<span class="l">' + 'ABC'[i] + '</span>' + t + '<span class="mk">&#10003;</span>';
+        b.addEventListener('click', function () { $$('.opt', opts).forEach(function (x) { x.classList.toggle('sel', x === b); }); pick = i; go.classList.add('ready'); });
+        opts.appendChild(b);
+      });
+      go.className = 'go'; go.textContent = 'Check'; fb.className = 'fb';
+    }
+    go.addEventListener('click', function () {
+      if (phase === 'next') { if (k < steps.length - 1) { k++; build(); } else { show(cur + 1); } return; }
+      if (!go.classList.contains('ready')) { return; }
+      var st = steps[k], ok = pick === st.k, b = $$('.opt', opts)[pick]; b.classList.add(ok ? 'ok' : 'no'); opts.classList.add('lock');
+      verdict(fb, ok, st.why, st.brief); phase = 'next'; go.className = 'go next'; go.textContent = k < steps.length - 1 ? 'What happens next  ›' : 'Next  ›';
+    });
+    s._enter = function () { k = 0; build(); };
+  })();
+
+  /* 11 · the knob: turn it with a finger, or − and + */
+  (function () {
+    var s = $('#s11'), kn = $('.knob', s), lcd = $('[data-kv]', s), v = 0, fbx = $('.fb', s);
+    var ready = dock(s, null, function () { var ok = v === +kn.getAttribute('data-key'); return { ok: ok, why: fbx.getAttribute('data-why'), brief: fbx.getAttribute('data-brief') }; });
+    function set(n) { v = Math.max(0, Math.min(100, Math.round(n))); kn.style.setProperty('--a', (v / 100 * 270) + 'deg'); lcd.textContent = v; ready(v > 0); }
+    $$('.kbtn button', s).forEach(function (b) { b.addEventListener('click', function () { set(v + +b.getAttribute('data-d')); }); });
+    var on = false;
+    function at(e) { var r = kn.getBoundingClientRect(), a = Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; a = (a + 360 + 225) % 360; if (a > 300) { a = 0; } set(Math.min(270, a) / 270 * 100); }
+    kn.addEventListener('pointerdown', function (e) { on = true; kn.setPointerCapture(e.pointerId); at(e); });
+    kn.addEventListener('pointermove', function (e) { if (on) { at(e); } });
+    kn.addEventListener('pointerup', function () { on = false; });
+    set(0);
+  })();
+
+  /* 12 · result: the ring fills, the score counts */
+  (function () {
+    var s = $('#s12'), fl = $('.fl', s), sc = $('[data-score]', s), got = 8;
+    s._enter = function () {
+      if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { fl.style.strokeDashoffset = 942 * (1 - got / 10); sc.textContent = got; return; }
+      fl.style.strokeDashoffset = 942; sc.textContent = 0;
+      setTimeout(function () { fl.style.strokeDashoffset = 942 * (1 - got / 10); fl.style.setProperty('--off', 942 * (1 - got / 10)); }, 60);
+      var t0 = null; requestAnimationFrame(function f(t) { t0 = t0 || t; var e = Math.min(1, (t - t0) / 1600); sc.textContent = Math.round(got * e); if (e < 1) { requestAnimationFrame(f); } });
+    };
+  })();
+
+  var m = /^#t(\d+)$/.exec(location.hash); show(m ? +m[1] - 1 : 0);
+})();
+</script>
+</body></html>

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>SV1 — Survey before entry</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<!--
+  SOURCES (GAS BASIC knowledge base)
+  - ICS Tanker Safety Guide (Liquefied Gas) 3rd ed. 2018, 8.4 Testing Before Entry: oxygen nominal 21 % by volume; flammable
+    vapour below 1 % LFL; toxic gases within the OEL; ventilation stopped about 10 minutes before the tests; readings from
+    different locations and levels using extension hoses; heavier-than-air vapour is found at the bottom and where the
+    ventilating airflow is least effective; personal multi-gas detectors are not for pre-entry testing.
+  - ICS TSG-LG appendix, enclosed space entry permit: "At least 21 % by volume / Not more than 1 % LFL / Not more than
+    50 % OEL of the specific gas" (= IMO Res. A.1050(27), cited in ICS 8.3 and SIGTTO LGHP p.499).
+  - GAS BASIC hand-out 7.1.1: most cargo vapours are denser than air - layering and pockets behind structure; samples
+    from several positions; oxygen first, then flammable, then toxic.
+  - COSWP 15.6.3/15.6.6: test by remote means before entry, a pumped meter with a sample hose.
+  - SIGTTO LGHP Table 2.6 and hand-out 2.2.4: propane flammable range 2.1 - 9.5 % by volume (LFL 2.1 %).
+  - Readings are physically consistent: propane displaces air, O2 = 20.9 x (1 - propane % vol / 100),
+    propane % vol = LEL % x 2.1 / 100 (58 % LEL = 1.2 % vol -> O2 20.6).
+  VERIFY: portable meter alarm set points (here LEL 10 %, O2 19.5 %) - maker and company settings, not in the KB.
+  VERIFY: sample transit time per metre of hose and the fresh-air check before use - in the meter maker's manual,
+          not in the KB; the transit here is shortened for class.
+-->
+<style>
+  /* moving things over the photo: the sample hose, and the gas layer revealed at the end */
+  .sv-over { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+  .sv-hose { fill: none; stroke: var(--tl-amber, #F2B33D); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 1200; stroke-dashoffset: 1200; opacity: 0; }
+  .sv-hose.on { opacity: 1; animation: sv-reel .9s ease forwards; }
+  .sv-flow { fill: none; stroke: #FFE7A8; stroke-width: 2; stroke-dasharray: 3 14; opacity: 0; }
+  .sv-flow.on { opacity: .9; animation: sv-draw .8s linear infinite; }
+  @keyframes sv-reel { to { stroke-dashoffset: 0; } }
+  @keyframes sv-draw { to { stroke-dashoffset: 17; } }
+  .sv-gas { opacity: 0; transition: opacity 1.4s ease; }
+  .sv-gas.on { opacity: 1; }
+  /* labels on the photo: never tappable */
+  .sv-note { position: absolute; z-index: 2; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap; padding: 4px 10px; border-radius: 9px;
+    font-size: 15px; font-weight: 800; color: var(--tl-amber, #F2B33D); background: var(--tl-glass, rgba(10,26,51,.72)); border: 1px solid var(--tl-amber, #F2B33D); }
+
+  /* sampling points: pins on the photo, 60 css px to tap at any screen size */
+  .sv-pt { width: 60px; height: 60px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+  .sv-mk { position: absolute; left: 50%; top: 50%; width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%; pointer-events: none;
+    background: rgba(3,10,22,.75); border: 3.5px solid var(--tl-accent, #2EB6F8); box-shadow: 0 0 14px rgba(46,182,248,.6); transition: background .2s ease, transform .1s ease; }
+  .sv-mk:after { content: ""; position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: var(--tl-accent, #2EB6F8); }
+  .sv-ring { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; pointer-events: none;
+    border: 3px solid var(--tl-accent, #2EB6F8); opacity: .55; animation: tl-pulse 1.8s ease infinite; }
+  .sv-pt:active .sv-mk { transform: scale(.85); }
+  .sv-nm { position: absolute; top: 52px; left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 2px 9px; border-radius: 8px; pointer-events: none;
+    font: 700 16px var(--tl-font, sans-serif); color: var(--tl-text, #F2F7FD); background: var(--tl-glass, rgba(10,26,51,.72)); border: 1px solid var(--tl-line, rgba(140,190,255,.16)); }
+  .sv-tg { display: none; position: absolute; white-space: nowrap; padding: 4px 10px; border-radius: 10px; text-align: left; pointer-events: none;
+    background: var(--tl-glass, rgba(10,26,51,.72)); border: 1.5px solid var(--tl-accent, #2EB6F8); box-shadow: 0 6px 16px rgba(0,0,0,.35);
+    font: 700 16px var(--tl-mono, monospace); color: var(--tl-text, #F2F7FD); line-height: 1.25; }
+  .sv-tg em { display: block; font: 800 11.5px var(--tl-font, sans-serif); font-style: normal; letter-spacing: .1em; text-transform: uppercase; color: var(--tl-dim, #9DB3CC); }
+  .sv-tg i { font-style: normal; }
+  .sv-tg.r { left: 50px; top: 50%; transform: translateY(-50%); }
+  .sv-tg.l { right: 50px; top: 50%; transform: translateY(-50%); }
+  .sv-tg.u { bottom: 46px; left: 50%; transform: translateX(-60%); }
+  .sv-pt.now .sv-mk { border-color: var(--tl-amber, #F2B33D); box-shadow: 0 0 20px var(--tl-amber, #F2B33D); }
+  .sv-pt.now .sv-ring { border-color: var(--tl-amber, #F2B33D); animation-duration: .7s; }
+  .sv-pt.done .sv-mk { background: var(--tl-accent, #2EB6F8); }
+  .sv-pt.done .sv-mk:after { background: var(--tl-bg, #050D1A); }
+  .sv-pt.done .sv-ring, .sv-pt.done .sv-nm { display: none; }
+  .sv-pt.done .sv-tg { display: block; }
+  .sv-pt.alarm .sv-mk { background: var(--tl-bad, #FF6B5E); border-color: var(--tl-bad, #FF6B5E); box-shadow: 0 0 16px rgba(255,107,94,.8); }
+  .sv-pt.alarm .sv-tg { border-color: var(--tl-bad, #FF6B5E); color: var(--tl-bad, #FF6B5E); }
+  .sv-pt.off { opacity: .35; }
+  .sv-pt.sel .sv-mk { border-color: var(--tl-amber, #F2B33D); border-width: 6px; box-shadow: 0 0 20px var(--tl-amber, #F2B33D); }
+  .sv-pt.sel, .sv-pt.now { z-index: 4; }
+  /* a phone shows the photo small: keep the dots, shorten the labels */
+  @media (max-width: 600px) {
+    .sv-nm, .sv-tg em, .sv-tg i { display: none; }
+    .sv-tg { font-size: 13px; padding: 2px 6px; }
+    .sv-note { font-size: 12px; padding: 2px 6px; }
+  }
+  /* a phone in portrait: the photo takes only its own height, the meter and its button stay in reach */
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) {
+    .tl-stage { flex: 0 0 auto; height: 58vw; }
+    .tl-side { flex: 1 1 auto; }
+    .sv-lcd { padding: 6px 10px 8px; margin-bottom: 8px; }
+    .sv-row b { font-size: 21px; }
+    .sv-row { grid-template-columns: 44px 1fr 44px; }
+  }
+
+  /* the meter: a pumped 4-gas instrument display */
+  .sv-lcd { margin: 2px 0 10px; padding: 10px 14px 12px; border-radius: 12px; background: #06120D; border: 3px solid #2A3644; position: relative; }
+  .sv-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; font: 700 12px var(--tl-mono, monospace); color: #6FCBA0; letter-spacing: .08em; }
+  .sv-top b { color: #B8F5D6; font-weight: 800; }
+  .sv-top b.ok { color: var(--tl-good, #3DDC97); }
+  .sv-top b.al { color: var(--tl-bad, #FF6B5E); animation: tl-pulse .5s ease infinite; }
+  .sv-led { width: 30px; height: 8px; border-radius: 4px; background: #4A1A16; flex: 0 0 auto; }
+  .sv-led.on { background: #FF5A4A; box-shadow: 0 0 12px #FF5A4A; animation: tl-pulse .35s ease infinite; }
+  .sv-row { display: grid; grid-template-columns: 52px 1fr 48px; align-items: baseline; font-family: var(--tl-mono, monospace); }
+  .sv-row span { font-size: 14px; font-weight: 700; color: #6FCBA0; }
+  .sv-row b { font-size: 27px; font-weight: 700; color: #B8F5D6; text-align: right; padding-right: 6px; font-variant-numeric: tabular-nums; text-shadow: 0 0 10px rgba(111,203,160,.45); }
+  .sv-row b.hi { color: var(--tl-bad, #FF6B5E); text-shadow: 0 0 12px rgba(255,107,94,.7); }
+  .sv-row small { font-size: 11px; color: #6FCBA0; }
+  .sv-bar { height: 6px; margin-top: 8px; border-radius: 3px; background: #173326; overflow: hidden; }
+  .sv-bar i { display: block; height: 100%; width: 0; background: #6FCBA0; transition: width .12s linear; }
+  .sv-now { margin: 0; padding: 0; list-style: none; font-size: 15.5px; line-height: 1.45; }
+  .sv-now li { padding: 3px 0 3px 16px; position: relative; color: var(--tl-text, #F2F7FD); }
+  .sv-now li:before { content: ""; position: absolute; left: 0; top: 11px; width: 7px; height: 7px; border-radius: 50%; background: var(--tl-accent, #2EB6F8); }
+  .sv-now li.w:before { background: var(--tl-amber, #F2B33D); }
+  .sv-log { list-style: none; margin: 0; padding: 0; font-size: 16px; }
+  .sv-log li { padding: 6px 0; border-top: 1px solid var(--tl-line, rgba(140,190,255,.16)); }
+  .sv-log li:first-child { border-top: 0; }
+  .sv-log li b { display: block; font: 700 15px var(--tl-mono, monospace); color: var(--tl-accent, #2EB6F8); }
+  .sv-log li.alarm b { color: var(--tl-bad, #FF6B5E); }
+  .sv-empty { font-size: 16px; color: var(--tl-dim, #9DB3CC); }
+  .sv-choices { display: grid; gap: 9px; }
+  .sv-pm { width: 100%; border-collapse: collapse; margin: 0 0 10px; font-size: 15px; }
+  .sv-pm th { text-align: left; font-weight: 600; color: var(--tl-dim, #9DB3CC); padding: 4px 6px 4px 0; }
+  .sv-pm td { padding: 4px 0; text-align: right; font: 700 16px var(--tl-mono, monospace); color: var(--tl-accent, #2EB6F8); white-space: nowrap; }
+  .sv-pm td.req { font: 600 13px var(--tl-font, sans-serif); color: var(--tl-dim, #9DB3CC); padding-right: 8px; text-align: left; }
+  .sv-pm tr + tr th, .sv-pm tr + tr td { border-top: 1px solid var(--tl-line, rgba(140,190,255,.16)); }
+  .sv-step { font-size: 16px; line-height: 1.4; margin: 0 0 8px; }
+  .sv-step b { color: var(--tl-amber, #F2B33D); }
+  .sv-hide { display: none !important; }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye">Survey &middot; Enclosed space entry</span><span id="ask">Test the space before anyone goes in, then decide on the entry permit.</span>
+    <small id="how">Fresh-air check first. Then tap a point: the pump draws the sample up the hose - record it when the meter says STABLE.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage">
+      <div class="tl-scene" data-aspect="1024:572" id="scene">
+        <img class="tl-photo" src="../img/04_survey_space_section.jpg" alt="Inside an enclosed space next to the cargo tank: daylight hatch and vertical ladder on the left, a railed platform, a deep web frame, and a dark far end on the right" onerror="this.remove()">
+        <svg class="sv-over" viewBox="0 0 1000 558.6" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="g-gas" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#F2B33D" stop-opacity="0"/>
+              <stop offset=".45" stop-color="#F2B33D" stop-opacity=".30"/>
+              <stop offset="1" stop-color="#E07B1F" stop-opacity=".65"/>
+            </linearGradient>
+            <filter id="f-soft" x="-5%" y="-20%" width="110%" height="140%"><feGaussianBlur stdDeviation="7"/></filter>
+          </defs>
+          <polygon id="gas" class="sv-gas" fill="url(#g-gas)" filter="url(#f-soft)" points=""/>
+          <path id="hose" class="sv-hose" d="M0 0"/>
+          <path id="flow" class="sv-flow" d="M0 0"/>
+        </svg>
+        <div class="sv-note sv-gas" id="gas-l">propane - heavier than air</div>
+        <div class="sv-note sv-gas" id="src-l">leaking flange</div>
+        <div id="pts"></div>
+      </div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card dark">
+        <h3>Pumped 4-gas meter</h3>
+        <div class="sv-lcd">
+          <div class="sv-top"><i class="sv-led" id="led1"></i><span id="m-pt">ON DECK</span><b id="m-st">NO CHECK</b><i class="sv-led" id="led2"></i></div>
+          <div class="sv-row"><span>O2</span><b id="m-o2">--.-</b><small>%VOL</small></div>
+          <div class="sv-row"><span>LEL</span><b id="m-lel">--</b><small>%</small></div>
+          <div class="sv-row"><span>H2S</span><b id="m-h2s">--</b><small>PPM</small></div>
+          <div class="sv-row"><span>CO</span><b id="m-co">--</b><small>PPM</small></div>
+          <div class="sv-bar"><i id="m-bar"></i></div>
+        </div>
+        <button type="button" class="tl-btn" id="mbtn">Fresh-air check on deck</button>
+      </div>
+      <div class="tl-card"><h3>On the screen now</h3><ul class="sv-now" id="now"></ul></div>
+      <div class="tl-card" id="logcard"><h3>Recorded readings</h3><div id="log"><p class="sv-empty">Nothing recorded yet.</p></div></div>
+      <div class="tl-card sv-hide" id="deccard">
+        <h3>Entry permit - pre-entry atmosphere test</h3>
+        <p class="sv-step"><b>1.</b> Tap the reading on the picture that goes on the permit - the worst one.</p>
+        <table class="sv-pm">
+          <tr><th>Oxygen</th><td class="req">at least 21 % vol</td><td id="pm-o2">-</td></tr>
+          <tr><th>Hydrocarbon</th><td class="req">not more than 1 % LFL</td><td id="pm-lel">-</td></tr>
+          <tr><th>Toxic gases</th><td class="req">not more than 50 % OEL</td><td id="pm-tox">-</td></tr>
+        </table>
+        <p class="sv-step"><b>2.</b> Your decision as the responsible officer:</p>
+        <div class="sv-choices" id="choices"></div>
+      </div>
+      <button type="button" class="tl-btn sv-hide" id="backbtn">Back to the survey - take more readings</button>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Go to the permit</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'SV1', title: 'Survey before entry', mode: 'self' });
+
+  /* ==== PLACEMENT TABLE - % of the photo 04_survey_space_section.jpg (1024 x 572), x from the left, y from the top.
+     Move these to fit the photo; nothing else needs to change. */
+  var HATCH = { x: 31, y: 9 };                       // the daylight hatch: the meter stays on deck, the hose goes in here
+  // the propane layer, revealed at the end: low, from the ladder foot deepening towards the far end and the flange
+  var GAS = [[20, 100], [20, 94], [40, 90], [52, 84], [62, 74], [78, 70], [100, 74], [100, 100]];
+  var GAS_LABEL = { x: 58, y: 95 }, SRC_LABEL = { x: 92, y: 95 };
+  // tg = which side the recorded reading sits: r right, l left, u up · hose = metres of sample hose from the hatch
+  var PTS = [
+    { id: 'P1', nm: 'Hatch', x: 31, y: 17, tg: 'r', lv: 'top', hose: 2, o2: 20.9, lel: 0, h2s: 0, co: 0 },
+    { id: 'P2', nm: 'Top', x: 42, y: 28, tg: 'r', lv: 'top', hose: 5, o2: 20.9, lel: 0, h2s: 0, co: 0 },
+    { id: 'P8', nm: 'Top, far end', x: 70, y: 24, tg: 'r', lv: 'top', hose: 13, o2: 20.9, lel: 0, h2s: 0, co: 0 },
+    { id: 'P3', nm: 'Platform', x: 39, y: 56, tg: 'r', lv: 'mid', hose: 8, o2: 20.9, lel: 0, h2s: 0, co: 0 },
+    { id: 'P5', nm: 'Middle, far end', x: 74, y: 52, tg: 'r', lv: 'mid', hose: 15, o2: 20.9, lel: 2, h2s: 0, co: 0 },
+    { id: 'P4', nm: 'Ladder foot', x: 31, y: 88, tg: 'r', lv: 'bot', hose: 12, o2: 20.9, lel: 5, h2s: 0, co: 0 },
+    { id: 'P6', nm: 'Far bottom corner', x: 72, y: 76, tg: 'l', lv: 'bot', far: true, hose: 18, o2: 20.6, lel: 58, h2s: 0, co: 0 },
+    { id: 'P7', nm: 'By the flange', x: 88.5, y: 84, tg: 'u', lv: 'bot', far: true, hose: 17, o2: 20.8, lel: 31, h2s: 0, co: 0 }
+  ];
+  // the meter (VERIFY, see the head of the page): alarm set points, and transit = seconds per metre of hose, shortened for class
+  var AL_LEL = 10, AL_O2 = 19.5, TRANSIT_BASE = 0.6, TRANSIT_PER_M = 0.12, SETTLE = 2.2;
+  var KEY_DEC = '80bc92a4', KEY_PT = 'f905859f';
+  var CHOICES = ['Sign - the space is safe for entry', 'Do not sign - ventilate, find the leak, re-test', 'Sign for entry with breathing apparatus only'];
+
+  var SX = 10, SY = 5.586;                            // overlay units: 1000 wide, as tall as the photo
+  var $ = function (id) { return document.getElementById(id); };
+  var byId = {}, rec = {}, order = [], phase = 'survey', choice = null, picked = null, sureAt = null;
+  var firstSampled = null, fresh = false, freshBefore = true, cur = null, timer = 0, shown = { o2: null, lel: null, h2s: null, co: null };
+  function alarmOf(v) { return v.lel >= AL_LEL || v.o2 < AL_O2; }
+
+  $('gas').setAttribute('points', GAS.map(function (q) { return q[0] * SX + ',' + q[1] * SY; }).join(' '));
+  $('gas-l').style.left = GAS_LABEL.x + '%'; $('gas-l').style.top = GAS_LABEL.y + '%';
+  $('src-l').style.left = SRC_LABEL.x + '%'; $('src-l').style.top = SRC_LABEL.y + '%';
+
+  /* ---- sampling points ---------------------------------------------------------------------- */
+  PTS.forEach(function (p) {
+    byId[p.id] = p;
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tl-pin sv-pt';
+    b.setAttribute('data-p', p.id);
+    b.setAttribute('aria-label', 'Sample at: ' + p.nm);
+    b.style.left = p.x + '%'; b.style.top = p.y + '%';
+    b.innerHTML = '<i class="sv-ring"></i><i class="sv-mk"></i><span class="sv-nm">' + p.nm + '</span><span class="sv-tg ' + p.tg + '"></span>';
+    b.addEventListener('click', function () { tapPoint(p); });
+    $('pts').appendChild(b);
+    p.el = b;
+  });
+
+  function setCls(p) {
+    var c = 'tl-pin sv-pt', r = rec[p.id];
+    if (r) c += ' done' + (alarmOf(r) ? ' alarm' : '');
+    if (cur && cur.p === p && phase === 'survey') c += ' now';
+    if (phase === 'decide' && !r) c += ' off';
+    if (picked === p.id) c += ' sel';
+    p.el.className = c;
+  }
+  function paintAll() { PTS.forEach(setCls); now(); }
+
+  function tapPoint(p) {
+    if (phase === 'done') return;
+    if (phase === 'decide') {
+      if (!rec[p.id]) return GBLab.toast('Nothing recorded there. Pick one of your recorded readings - or go back to the survey.', 'hint');
+      picked = p.id;
+      var r = rec[p.id];
+      $('pm-o2').textContent = r.o2.toFixed(1) + ' %';
+      $('pm-lel').textContent = Math.round(r.lel) + ' %';
+      $('pm-tox').textContent = 'H₂S ' + r.h2s + ' / CO ' + r.co;
+      paintAll();
+      return ready();
+    }
+    if (cur && cur.p === p) return GBLab.toast('Already sampling there - wait for STABLE, then record it.', 'hint');
+    if (!fresh) freshBefore = false;
+    sample(p);
+  }
+
+  /* ---- the meter ----------------------------------------------------------------------------- */
+  function paintMeter(v, alarm) {
+    $('m-o2').textContent = v.o2 == null ? '--.-' : v.o2.toFixed(1);
+    $('m-lel').textContent = v.lel == null ? '--' : String(Math.round(v.lel));
+    $('m-h2s').textContent = v.h2s == null ? '--' : String(Math.round(v.h2s));
+    $('m-co').textContent = v.co == null ? '--' : String(Math.round(v.co));
+    $('m-lel').className = alarm && v.lel >= AL_LEL ? 'hi' : '';
+    $('m-o2').className = alarm && v.o2 < AL_O2 ? 'hi' : '';
+    $('led1').className = $('led2').className = 'sv-led' + (alarm ? ' on' : '');
+  }
+  function status(txt, cls) { $('m-st').textContent = txt; $('m-st').className = cls || ''; }
+  var alarmT = 0;
+  function alarmSound(on) {
+    clearInterval(alarmT);
+    if (!on) return;
+    var beep = function () { GBLab.sound.play([[2600, 110, 70], [2600, 110, 70], [2600, 110, 0]], 0.06); };
+    beep();
+    alarmT = setInterval(beep, 1400);
+  }
+
+  // the fresh-air check on deck: the meter must read clean air before it is trusted
+  function freshCheck() {
+    stopSample();
+    status('CHECKING');
+    $('m-pt').textContent = 'ON DECK';
+    var t = 0;
+    timer = setInterval(function () {
+      t++;
+      $('m-bar').style.width = Math.min(100, t * 7) + '%';
+      if (t >= 15) {
+        clearInterval(timer); timer = 0;
+        fresh = true;
+        shown = { o2: 20.9, lel: 0, h2s: 0, co: 0 };
+        paintMeter(shown, false);
+        status('FRESH AIR OK', 'ok');
+        GBLab.sound.play([[1250, 70, 0, 'sine']], 0.07);
+        $('m-bar').style.width = '0';
+        button();
+        now();
+      }
+    }, 100);
+    button('checking');
+  }
+
+  // a reading: the hose goes down, the pump draws the sample up it, then the sensors settle
+  var hose = $('hose'), flow = $('flow');
+  function sample(p) {
+    stopSample();
+    var hx = HATCH.x * SX, hy = HATCH.y * SY, px = p.x * SX, py = p.y * SY;
+    var d = 'M' + hx + ' ' + hy + ' L' + hx + ' ' + (hy + 50) + ' Q' + (hx + (px - hx) * 0.15) + ' ' + (py + 20) + ' ' + px + ' ' + py;
+    hose.setAttribute('d', d); flow.setAttribute('d', d);
+    hose.setAttribute('class', 'sv-hose');
+    hose.getBoundingClientRect();
+    hose.setAttribute('class', 'sv-hose on');
+    flow.setAttribute('class', 'sv-flow on');
+    if (!firstSampled) firstSampled = p.id;      // the order of testing is part of the procedure
+    var from = { o2: shown.o2 == null ? 20.9 : shown.o2, lel: shown.lel || 0, h2s: shown.h2s || 0, co: shown.co || 0 };
+    shown = from;
+    cur = { p: p, t0: Date.now(), transit: TRANSIT_BASE + TRANSIT_PER_M * p.hose, from: from, stable: false };
+    $('m-pt').textContent = p.nm.toUpperCase();
+    status(p.hose + ' m HOSE');
+    paintAll();
+    button('sampling');
+    var pump = [], i;
+    for (i = 0; i < 6; i++) pump.push([140, 40, 90, 'sine']);
+    GBLab.sound.play(pump, 0.04);
+    timer = setInterval(tick, 100);
+  }
+  function tick() {
+    if (!cur) return;
+    var p = cur.p, t = (Date.now() - cur.t0) / 1000, v;
+    if (t < cur.transit) {
+      // the meter still shows what is in the hose: the old air
+      $('m-bar').style.width = Math.round(t / (cur.transit + SETTLE) * 100) + '%';
+      status('DRAWING ' + p.hose + ' m');
+      v = cur.from;
+    } else {
+      var s = Math.min(1, (t - cur.transit) / SETTLE), f = (1 - Math.exp(-3.5 * s)) / (1 - Math.exp(-3.5));
+      v = { o2: cur.from.o2 + (p.o2 - cur.from.o2) * f, lel: cur.from.lel + (p.lel - cur.from.lel) * f,
+        h2s: cur.from.h2s + (p.h2s - cur.from.h2s) * f, co: cur.from.co + (p.co - cur.from.co) * f };
+      $('m-bar').style.width = Math.round(Math.min(1, t / (cur.transit + SETTLE)) * 100) + '%';
+      if (s >= 1 && !cur.stable) {
+        cur.stable = true;
+        GBLab.sound.play([[1250, 70, 0, 'sine']], 0.07);
+        now();
+      }
+      if (s < 1) status('SETTLING');
+    }
+    shown = v;
+    var al = alarmOf(v);
+    paintMeter(v, al);
+    if (cur.stable) status(al ? 'ALARM - STABLE' : 'STABLE', al ? 'al' : 'ok');
+    if (al !== !!cur.al) { cur.al = al; alarmSound(al); now(); }
+  }
+  function stopSample() {
+    clearInterval(timer); timer = 0;
+    alarmSound(false);
+    cur = null;
+    hose.setAttribute('class', 'sv-hose');
+    flow.setAttribute('class', 'sv-flow');
+    $('m-bar').style.width = '0';
+  }
+
+  // record what the meter shows now - early is the trainee's choice, and it records the hose's old air
+  function record() {
+    if (!cur) return;
+    var p = cur.p, v = { o2: Math.round(shown.o2 * 10) / 10, lel: Math.round(shown.lel), h2s: Math.round(shown.h2s), co: Math.round(shown.co), settled: cur.stable };
+    rec[p.id] = v;
+    var i = order.indexOf(p.id);
+    if (i >= 0) order.splice(i, 1);
+    order.push(p.id);
+    p.el.querySelector('.sv-tg').innerHTML = '<em>' + p.nm + '</em>LEL ' + v.lel + '<i> &middot; O₂ ' + v.o2.toFixed(1) + '</i>';
+    stopSample();
+    status('RECORDED', 'ok');
+    paintAll();
+    log();
+    button();
+    GBLab.goEnabled(phase === 'survey');
+  }
+
+  function log() {
+    var h = '<ul class="sv-log">';
+    order.forEach(function (id) {
+      var q = byId[id], r = rec[id];
+      h += '<li' + (alarmOf(r) ? ' class="alarm"' : '') + '>' + q.nm + '<b>O₂ ' + r.o2.toFixed(1) +
+        ' &middot; LEL ' + r.lel + ' &middot; H₂S ' + r.h2s + ' &middot; CO ' + r.co + '</b></li>';
+    });
+    $('log').innerHTML = order.length ? h + '</ul>' : '<p class="sv-empty">Nothing recorded yet.</p>';
+  }
+
+  // the one meter button: what it does follows the meter's state
+  var mbtn = $('mbtn'), mState = 'fresh';
+  function button(s) {
+    mState = s || (cur ? 'sampling' : fresh ? 'idle' : 'fresh');
+    mbtn.disabled = mState === 'checking' || mState === 'idle';
+    mbtn.textContent = mState === 'fresh' ? 'Fresh-air check on deck' : mState === 'checking' ? 'Checking in fresh air...' :
+      mState === 'sampling' ? 'Record this reading' : 'Tap a point on the picture to sample';
+    mbtn.className = 'tl-btn' + (mState === 'sampling' ? ' on' : '');
+  }
+  mbtn.addEventListener('click', function () {
+    if (phase !== 'survey') return;
+    if (mState === 'fresh') freshCheck();
+    else if (mState === 'sampling') record();
+  });
+
+  /* ---- "On the screen now": what the plant and the meter are doing --------------------------- */
+  function now() {
+    var L = ['Ventilation stopped about 10 min ago for the tests'], w = [];
+    if (phase === 'decide') L.push('Survey closed - the permit is open');
+    else if (!fresh && !cur) w.push('Meter not checked in fresh air yet');
+    else if (cur && !cur.stable) L.push('Pump drawing the sample from ' + cur.p.nm.toLowerCase() + ' through ' + cur.p.hose + ' m of hose');
+    else if (cur && cur.stable) (cur.al ? w : L).push('Reading at ' + cur.p.nm.toLowerCase() + ' is stable' + (cur.al ? ' - meter in alarm' : ''));
+    else L.push('Meter on deck at the hatch, pump running');
+    L.push(order.length + ' of ' + PTS.length + ' points recorded');
+    $('now').innerHTML = L.map(function (t) { return '<li>' + t + '</li>'; }).join('') + w.map(function (t) { return '<li class="w">' + t + '</li>'; }).join('');
+  }
+
+  /* ---- the permit decision ----------------------------------------------------------------------- */
+  var chBox = $('choices');
+  CHOICES.forEach(function (txt) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tl-btn';
+    b.textContent = txt;
+    b.addEventListener('click', function () {
+      if (phase !== 'decide') return;
+      choice = txt;
+      var all = chBox.querySelectorAll('.tl-btn'), i;
+      for (i = 0; i < all.length; i++) all[i].className = 'tl-btn' + (all[i] === b ? ' on' : '');
+      if (!picked) GBLab.toast('Now tap the reading on the picture that goes on the permit.', 'hint');
+      ready();
+    });
+    chBox.appendChild(b);
+  });
+
+  function setPhase(ph) {
+    phase = ph;
+    var dec = ph === 'decide';
+    if (dec) stopSample();
+    if (!dec) { picked = null; ['pm-o2', 'pm-lel', 'pm-tox'].forEach(function (id) { $(id).textContent = '-'; }); }
+    $('ask').textContent = dec ? 'Fill in the entry permit and decide: can anyone go in?' : 'Test the space before anyone goes in, then decide on the entry permit.';
+    $('how').textContent = dec ? 'Tap the reading that goes on the permit, choose your decision, then press the button.'
+      : 'Fresh-air check first. Then tap a point: the pump draws the sample up the hose - record it when the meter says STABLE.';
+    $('logcard').className = 'tl-card' + (dec ? ' sv-hide' : '');
+    $('deccard').className = 'tl-card' + (dec ? '' : ' sv-hide');
+    $('backbtn').className = 'tl-btn' + (dec ? '' : ' sv-hide');
+    mbtn.className = 'tl-btn' + (dec ? ' sv-hide' : '');
+    if (!dec) button();
+    paintAll();
+    if (dec) { GBLab.go('Decide on the permit', commit); ready(); }
+    else { GBLab.go('Go to the permit', toDecide); GBLab.goEnabled(order.length > 0); }
+  }
+  function toDecide() { if (order.length) setPhase('decide'); }
+  $('backbtn').addEventListener('click', function () { if (phase === 'decide') setPhase('survey'); });
+  function ready() { if (phase === 'decide') GBLab.goEnabled(!!(choice && picked)); }
+
+  function commit() {
+    if (phase === 'decide' && choice && picked) GBLab.sure(function (lvl) { sureAt = lvl; judge(); });
+  }
+
+  function judge() {
+    if (phase !== 'decide') return;
+    phase = 'done';
+    GBLab.go('Checking...', null);
+    var decOk = GBLab.key('SV1-dec', choice, 1) === KEY_DEC;
+    var ptOk = GBLab.key('SV1-pt', picked, 1) === KEY_PT;
+    GBLab.sureNote(sureAt, decOk);
+    // show what was there all along
+    $('gas').setAttribute('class', 'sv-gas on');
+    $('gas-l').className = 'sv-note sv-gas on';
+    $('src-l').className = 'sv-note sv-gas on';
+    paintAll();
+    var worst = byId.P6, o;
+    if (decOk) {
+      o = { img: '../img/04_survey_space_ventilate.jpg', tag: 'Permit not signed', kind: 'ok', title: 'Nobody went in - the space is being ventilated',
+        text: 'The hatch and the top read clean, but propane from a leaking flange was lying along the bottom: ' + worst.lel +
+          ' % LEL in the far corner. Fans on, the flange isolated, and the space tested again at every level - with the fans stopped for the test - before a permit is signed.' };
+    } else if (choice === CHOICES[0]) {
+      o = { img: '../img/04_survey_space_alarm.jpg', tag: 'Gas alarm in the space', kind: 'no', title: 'The entrant climbed down into propane',
+        text: 'At the foot of the ladder his personal monitor alarmed. Propane from a leaking flange had collected along the bottom, up to ' +
+          worst.lel + ' % LEL in the far corner - more than half way to a flammable mixture, one spark from a tool or a torch away. The hatch and the top read clean because propane is heavier than air.' };
+    } else {
+      o = { tag: 'Flammable atmosphere', kind: 'no', title: 'Breathing apparatus does not stop a fire',
+        text: 'The entrant breathed safely, but the bottom of the space held propane at up to ' + worst.lel +
+          ' % LEL. Breathing apparatus protects the lungs, not against ignition. A space that fails the entry criteria is ventilated and tested again; it is not a routine entry with breathing apparatus.' };
+    }
+    if (!ptOk) o.text += '<br><br>The reading that belongs on the permit is the worst one: the <b>far bottom corner</b>, ' + worst.lel + ' % LEL.';
+    o.buttons = [{ label: 'See my result', fn: function () { result(decOk, ptOk); } }];
+    setTimeout(function () { GBLab.show(o); }, 1400);
+  }
+
+  function result(decOk, ptOk) {
+    var lv = { top: false, mid: false, bot: false }, far = false, early = 0;
+    order.forEach(function (id) { lv[byId[id].lv] = true; if (byId[id].far) far = true; if (!rec[id].settled) early++; });
+    var got = [];
+    if (lv.top) got.push('top');
+    if (lv.mid) got.push('middle');
+    if (lv.bot) got.push('bottom');
+    var first = firstSampled, pk = byId[picked];
+    GBLab.finish({
+      items: [
+        { t: 'Permit decision: do not sign - ventilate, find the leak, re-test', ok: decOk, a: choice, c: CHOICES[1],
+          w: 'IMO A.1050(27) and the ICS entry permit: at least 21 % oxygen by volume, not more than 1 % LFL, toxic gases not more than 50 % OEL. 58 % LEL fails by far, and breathing apparatus does not make a flammable space safe.' },
+        { t: 'The reading on the permit: the worst one, the far bottom corner', ok: ptOk, a: pk ? pk.nm + ', LEL ' + rec[picked].lel + ' %' : '', c: 'Far bottom corner, LEL 58 %',
+          w: 'One bad reading anywhere decides. Even 2 or 5 % LEL - which do not set the meter off - already fail the 1 % LFL entry criterion.' },
+        { t: 'Tested top, middle and bottom before deciding', ok: got.length === 3, a: got.join(', ') || 'none', c: 'top, middle and bottom',
+          w: 'Most cargo vapours are heavier than air and layer in a space; readings at one level tell you nothing about the others (ICS TSG-LG 8.4).' },
+        { t: 'Tested the far, low end of the space', ok: far, a: far ? 'tested' : 'not tested', c: 'far bottom corner or by the flange',
+          w: 'Propane is heavier than air: it collects at the bottom, in pockets behind structure and where the ventilation reaches least - far from the hatch.' },
+        { t: 'Recorded every reading only once it was stable', ok: order.length > 0 && early === 0, a: early + ' recorded before STABLE', c: 'none early',
+          w: 'The pump needs time to draw the sample up the hose and the sensors need time to settle. A reading taken early shows the old air in the hose - clean air from the last point.' },
+        { t: 'Checked the meter in fresh air before testing', ok: freshBefore && fresh, a: freshBefore && fresh ? 'checked first' : 'not checked first', c: 'fresh-air check on deck',
+          w: 'A meter is only trusted when it reads clean air correctly first. Test equipment must be maintained and calibrated (ICS TSG-LG 8.4).' },
+        { t: 'Started at the hatch, from outside', ok: first === 'P1', a: first ? byId[first].nm : '', c: 'Hatch first, then deeper',
+          w: 'Test by remote means from outside first, at the opening, then deeper with the hose. Nobody leans into a space that has not been tested (COSWP 15.6.3).' }
+      ]
+    });
+  }
+
+  GBLab.go('Go to the permit', toDecide);
+  GBLab.goEnabled(false);
+  button();
+  paintMeter(shown, false);
+  now();
+  setTimeout(function () { GBLab.hand('tap-point', mbtn); }, 500);
+})();
+</script>
+</body>
+</html>

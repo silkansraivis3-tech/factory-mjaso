@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>TR1 — Triage</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<link rel="stylesheet" href="../../gb_hmi.css">
+<!-- SOURCES
+     ICS Tanker Safety Guide (Liquefied Gas) 3rd ed. 2018:
+       9.3.2 cargo spillage / leaking flange: raise the general alarm and inform the terminal immediately; activate
+             the ESD, stop all cargo operations, close liquid valves; water spray; shut accommodation doors and all
+             ventilation; no naked lights; BA and firefighting gear assembled.
+       9.3.6 personnel overcome: raise the general alarm, mobilise the rescue team, follow the rescue plan.
+       8.7.3 enclosed space rescue by a drilled rescue team.
+     Enclosed Spaces Guidance for merchant vessel operators (IACS figure): "do not attempt to enter. Sound the general
+       alarm, and take action to prepare for an organised entry"; over 50 % of those who die in enclosed spaces were
+       trying to rescue others.
+     Course Hand Out 9.2.1: alongside, the ship takes first autonomous action by initiating cargo transfer ESD.
+     LCHS TechSim LPG Tanker Trainee Manual:
+       4.2.4 / 13.3 an ESD button opens a pop-up with the EMERGENCY STOP button; 13.3.2 EMERGENCY SHUT DOWN No 18 at CCR;
+       13.1 sensors read 0-100 % LEL, GAS ALARM at 30 % LEL, the gas detection system can activate the ESD;
+       13.2 A1 lamp at 20 % LEL, A2 at 40 % LEL; Q1102 = compressor shelter 1 bottom; Q8101 = accommodation air inlet.
+     VERIFY: the manifold sensor tag Q-MAN (not in the simulator's list), that A2 (40 % LEL) trips the ESD here,
+       gas growth per five minutes, two BA sets at the locker, a two-person BA team, the galley pan fire, the
+       600 / 900 m3/h rates - demo values for the operator to set. ICS 9.3.2 also says emergency parties working
+       with water spray should wear BA; the leak team here is not required to (VERIFY with the operator). -->
+<style>
+  /* ---- the board: event cards float in the bands above and below the ship ------- */
+  .tr-deck {
+    position: absolute; z-index: 3; top: 10px; right: 10px; bottom: 10px; left: 10px; pointer-events: none;
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: auto 1fr auto;
+    grid-template-areas: "t1 t2 t3" ". . ." "b1 b2 b3"; column-gap: 12px;
+  }
+  .tr-card {
+    position: relative; pointer-events: auto; width: 100%; max-width: 300px; padding: 10px 12px 10px 15px; border-radius: 16px;
+    background: var(--tl-glass, rgba(10,26,51,.72)); border: 1px solid var(--tl-line, rgba(140,190,255,.16));
+    -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%);
+    box-shadow: 0 14px 34px rgba(0,0,0,.35), inset 4px 0 0 var(--k, var(--tl-amber, #F2B33D));
+    color: var(--tl-text, #F2F7FD); animation: tr-in .45s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes tr-in { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
+  .k-red { --k: var(--tl-bad, #FF6B5E); } .k-amber { --k: var(--tl-amber, #F2B33D); }
+  .k-blue { --k: var(--tl-accent, #2EB6F8); } .k-steel { --k: var(--tl-dim, #9DB3CC); }
+  .tr-a-galley { grid-area: t1; justify-self: start; align-self: start; }
+  .tr-a-leak { grid-area: t2; justify-self: center; align-self: start; }
+  .tr-a-radio { grid-area: t3; justify-self: end; align-self: start; }
+  .tr-a-ccr { grid-area: b1; justify-self: start; align-self: end; }
+  .tr-a-casualty { grid-area: b2; justify-self: center; align-self: end; }
+  .tr-a-ba { grid-area: b3; justify-self: end; align-self: end; }
+  .tr-ct { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 16.5px; line-height: 1.2; }
+  .tr-ico { flex: 0 0 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    background: var(--k, var(--tl-amber, #F2B33D)); color: #04121F; box-shadow: 0 0 14px var(--k, #F2B33D); }
+  .tr-ico svg { width: 17px; height: 17px; }
+  .tr-desc { margin-top: 5px; font-size: 16px; line-height: 1.35; color: var(--tl-text, #F2F7FD); opacity: .88; }
+  .tr-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .tr-stat { flex: 1 1 auto; min-width: 0; font: 800 15px/1.25 var(--tl-font, sans-serif); color: var(--k, #F2B33D); }
+  .tr-crew {
+    flex: 0 1 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 5px; min-height: 42px; min-width: 104px;
+    padding: 3px 5px; border: 1.5px dashed var(--tl-line, rgba(140,190,255,.16)); border-radius: 12px;
+  }
+  .tr-crew em { font-style: normal; font-size: 14px; color: var(--tl-faint, #6E86A3); padding: 0 4px; }
+  .tr-chip {
+    position: relative; width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    font: 800 12.5px var(--tl-font, sans-serif); color: var(--tl-text, #F2F7FD); background: var(--tl-bg2, #0A1A33);
+    border: 2px solid var(--tl-accent, #2EB6F8);
+  }
+  .tr-chip.ba::after, .tr-ini.ba::after {
+    content: "BA"; position: absolute; right: -9px; bottom: -5px; padding: 1px 4px; border-radius: 6px;
+    font: 800 9.5px var(--tl-font, sans-serif); color: #241800; background: var(--tl-amber, #F2B33D);
+  }
+  .tr-ans-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 9px; }
+  .tr-ans { min-height: 56px; justify-content: center; text-align: center; padding: 8px 6px; font-size: 16px; }
+
+  /* ---- pins on the photograph: where it is happening ----------------------- */
+  .tr-pin { width: 60px; height: 60px; border-radius: 50%; display: none; align-items: center; justify-content: center; cursor: pointer; }
+  .tr-pin.on { display: flex; }
+  .tr-pin i {
+    position: relative; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: var(--k, #F2B33D); color: #04121F; box-shadow: 0 0 0 4px rgba(4,18,31,.55), 0 0 22px var(--k, #F2B33D);
+  }
+  .tr-pin i svg { width: 17px; height: 17px; }
+  .tr-pin.ev i::before { content: ""; position: absolute; top: -9px; left: -9px; right: -9px; bottom: -9px; border-radius: 50%;
+    border: 2px solid var(--k, #F2B33D); animation: tr-ring 1.6s ease-out infinite; }
+  @keyframes tr-ring { from { opacity: .9; transform: scale(.7); } to { opacity: 0; transform: scale(1.5); } }
+  .tr-pin b { position: absolute; right: 2px; top: 2px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+    font: 800 12px/20px var(--tl-font, sans-serif); text-align: center; color: #04121F; background: var(--tl-text, #F2F7FD); }
+  .tr-pin b:empty { display: none; }
+
+  /* ---- the side panel ---------------------------------------------------------- */
+  .tl-side { gap: 10px; }
+  .tr-now { padding: 11px 15px; }
+  .tr-now h3 { margin-bottom: 5px; }
+  .tr-now p { font-size: 15.5px; line-height: 1.38; }
+  #crewbox { padding: 12px 14px; }
+  .tr-now b.tr-rate { color: var(--tl-accent, #2EB6F8); font-family: var(--tl-mono, monospace); }
+  .tr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .tr-p {
+    display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 10px; border-radius: 14px;
+    background: rgba(255,255,255,.06); border: 1px solid var(--tl-line, rgba(140,190,255,.16)); color: var(--tl-text, #F2F7FD);
+    transition: transform .1s ease, background .18s ease;
+  }
+  .tr-p:active { transform: scale(.97); }
+  .tr-ini {
+    position: relative; flex: 0 0 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font: 800 13px var(--tl-font, sans-serif); background: var(--tl-bg2, #0A1A33); border: 2px solid var(--tl-accent, #2EB6F8);
+    box-shadow: 0 0 12px rgba(46,182,248,.35);
+  }
+  .tr-p b { display: block; font-size: 16px; line-height: 1.15; }
+  .tr-p em { display: block; font-style: normal; font-size: 13.5px; color: var(--tl-dim, #9DB3CC); margin-top: 2px; }
+  .tr-p.down { opacity: .4; }
+  .tr-p.down .tr-ini { border-color: var(--tl-bad, #FF6B5E); box-shadow: none; }
+  .tr-console { padding: 0; overflow: hidden; height: 204px; flex: 0 0 auto; }
+  /* the two console buttons that are not the ESD, drawn in the screen's own style */
+  /* gb_hmi's .hm-esd circle rule also paints the invisible touch circle; keep it invisible here */
+  #console .hm-esd circle.hm-hit { fill: transparent; stroke: none; filter: none; animation: none; }
+  .tr-ga circle:not(.hm-hit) { fill: #8A5A00; stroke: #FFD400; stroke-width: 4; filter: drop-shadow(0 0 8px rgba(242,179,61,.6)); }
+  .tr-ga.on circle:not(.hm-hit) { fill: #F2B33D; animation: hm-blink .5s ease infinite alternate; }
+  .tr-ga text.l { font: 900 12px var(--tl-font, sans-serif); fill: #fff; letter-spacing: .06em; }
+  .tr-vent rect.b { fill: #1F7A50; stroke: #3DDC97; stroke-width: 2; }
+  .tr-vent.off rect.b { fill: #142338; stroke: #4C7DB0; }
+  .tr-vent text.l { font: 800 11px var(--tl-mono, monospace); fill: #EAF3FF; }
+
+  /* what happened: one line per outcome */
+  .tr-out { list-style: none; margin: 0 0 6px; padding: 0; }
+  .tr-out li { display: grid; grid-template-columns: 28px 1fr; gap: 8px; padding: 9px 0; border-top: 1px solid var(--tl-line, rgba(140,190,255,.16)); font-size: 16px; line-height: 1.45; }
+  .tr-out li i { font-style: normal; font-weight: 800; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; background: rgba(255,255,255,.08); }
+  .tr-out li.ok i { color: var(--tl-good, #3DDC97); background: rgba(61,220,151,.18); }
+  .tr-out li.no i { color: var(--tl-bad, #FF6B5E); background: rgba(255,107,94,.18); }
+
+  /* a narrow or tall stage: photo on top, the cards listed under it */
+  .tr-tall .tr-deck {
+    grid-template-columns: 1fr 1fr; grid-template-rows: none; grid-template-areas: none; grid-auto-rows: auto;
+    align-content: start; gap: 8px; overflow-y: auto; -webkit-overflow-scrolling: touch; top: 0; bottom: 0; left: 0; right: 0; padding: 0 2px 6px;
+  }
+  .tr-tall .tr-card { grid-area: auto; max-width: none; justify-self: stretch; align-self: stretch; }
+  .tr-tall .tr-a-casualty { order: 1; } .tr-tall .tr-a-leak { order: 2; } .tr-tall .tr-a-galley { order: 3; }
+  .tr-tall .tr-a-radio { order: 4; } .tr-tall .tr-a-ccr { order: 5; } .tr-tall .tr-a-ba { order: 6; }
+  .tr-tight .tr-card:not(.tr-radio) .tr-desc { display: none; }
+  .tr-tight .tr-card { padding: 9px 9px 9px 13px; }
+  .tr-tight .tr-ct { font-size: 15.5px; }
+  .tr-tight .tr-foot { flex-wrap: wrap; }
+  .tr-tight .tr-crew { min-width: 0; flex: 1 1 100%; justify-content: flex-start; }
+  @media (max-aspect-ratio: 1/1) { .tl-stage { flex: 1 1 64%; } .tl-side { flex: 0 1 36%; } }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye">Triage · emergencies alongside · ICS TSG(LG) 9.3</span>Loading propane alongside, things go wrong at once - put your people where they matter most.
+    <small>Drag a person onto an event or a station (or tap the person, then the place). The ESD and the alarms are on the CCR panel. Then let five minutes pass.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage">
+      <div class="tl-scene" data-aspect="1024:572" id="scene">
+        <img class="tl-photo" src="../img/08_triage_deck.jpg" alt="A gas carrier alongside the loading terminal, seen from above and astern: accommodation with the funnel, compressor house, tank domes, manifold with loading arms to the jetty" onerror="this.remove()">
+      </div>
+      <div class="tr-deck" id="deck"></div>
+    </div>
+    <aside class="tl-side" id="side">
+      <div class="tl-card tr-now"><h3 id="sit">Now · situation 1 of 4</h3><p id="now"></p></div>
+      <div class="tl-card tr-drop" id="crewbox" data-t="free">
+        <h3 id="crewh">Crew · 6 of 6 able</h3>
+        <div class="tr-grid" id="crew"></div>
+      </div>
+      <div class="tl-card dark tr-console" id="console"></div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Next 5 minutes</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script src="../../gb_hmi.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'TR1', title: 'Triage', mode: 'self' });
+
+  /* ---- where things are on the photograph: x %, y % of 08_triage_deck.jpg (1024 x 572, aerial from
+     astern-starboard). Cards float above ~23 % and below ~78 %, so the pins stay between. ---------- */
+  var PINS = {
+    galley:   [23, 64],  // galley: lower accommodation, starboard side
+    ccr:      [36, 55],  // cargo control room: accommodation front, window row
+    ba:       [41, 68],  // BA locker / fire station: accommodation front at main deck level
+    casualty: [70, 43],  // cargo compressor shelter door: the white deck house by the forward domes
+    leak:     [56, 36]   // liquid manifold flange, where the loading arms come down
+  };
+
+  /* ---- answer keys: GBLab.key(id, option, value), value 1 right / 0 wrong - only the hashes -- */
+  var H = {
+    'TR1-esd': { '1': '11b11753', '2': '6c500671', '3': 'fdcc412e', '4': '62ac58d7', never: 'c617527d' },
+    'TR1-alarm': { '1': '6fcb06fe', '2': '93b279f3', '3': '1149de8b', '4': 'd5ab203a', never: '97a0d2fc' },
+    'TR1-rate': { accept: '244e3075', decline: 'a10c49b2' },
+    'TR1-resume': { resume: 'cd45307d', wait: 'ec83bd84' }
+  };
+  function right(id, opt) { return !!opt && GBLab.key(id, opt, 1) === H[id][opt]; }
+
+  var IMG = '../img/08_triage_';
+  var ICON = {
+    drop: '<svg viewBox="0 0 24 24"><path d="M12 3c3 4.4 6 7.8 6 11a6 6 0 0 1-12 0c0-3.2 3-6.6 6-11z" fill="currentColor"/></svg>',
+    person: '<svg viewBox="0 0 24 24"><circle cx="12" cy="6" r="3.2" fill="currentColor"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8z" fill="currentColor"/></svg>',
+    flame: '<svg viewBox="0 0 24 24"><path d="M12 2c1 3.5 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.6 1.3-4.2 2.6-5.4.2 1.8 1 2.9 2.2 3.4C11 8.8 11 5.4 12 2z" fill="currentColor"/></svg>',
+    radio: '<svg viewBox="0 0 24 24"><rect x="6" y="7" width="12" height="15" rx="2.5" fill="currentColor"/><path d="M9 7V2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><rect x="8.5" y="10" width="7" height="4" rx="1" fill="#04121F"/></svg>',
+    screen: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2" fill="currentColor"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+    mask: '<svg viewBox="0 0 24 24"><path d="M5 8c0-2.5 3-4 7-4s7 1.5 7 4v5c0 3.5-3 6-7 6s-7-2.5-7-6z" fill="currentColor"/><circle cx="12" cy="13" r="2.6" fill="#04121F"/></svg>'
+  };
+
+  /* ---- the board ----------------------------------------------------------------- */
+  var EV = {
+    ccr:      { area: 'ccr', k: 'steel', icon: 'screen', title: 'Cargo control room', desc: 'Watches levels, pressures and the gas detection panel.', drop: true },
+    ba:       { area: 'ba', k: 'steel', icon: 'mask', title: 'BA locker - kit up', desc: 'Two breathing apparatus sets. Kitting up takes these five minutes.', drop: true },
+    leak:     { area: 'leak', k: 'amber', icon: 'drop', title: 'Leak at the manifold', desc: 'Liquid drips from the port liquid manifold flange; frost on the bolts.', drop: true, pin: true },
+    rate:     { area: 'radio', k: 'blue', icon: 'radio', title: 'Terminal on the radio', desc: '"Can we raise the loading rate from 600 to 900 m³/h?"', ask: [['accept', 'Accept'], ['decline', 'Decline']] },
+    casualty: { area: 'casualty', k: 'red', icon: 'person', title: 'Down in the compressor shelter', desc: 'Through the door window: the 3rd Engineer lies on the floor, not moving.', drop: true, pin: true },
+    galley:   { area: 'galley', k: 'red', icon: 'flame', title: 'Galley fire alarm', desc: 'The fire panel shows a smoke detector in the galley.', drop: true, pin: true },
+    resume:   { area: 'radio', k: 'blue', icon: 'radio', title: 'Terminal on the radio', desc: '"Leak stopped? Can we reset the ESD and resume loading now?"', ask: [['resume', 'Resume'], ['wait', 'Not yet']] }
+  };
+  var CREW = [
+    { id: 'co', ini: 'CO', name: 'Chief Officer', short: 'Chief Off.', loc: 'ccr' },
+    { id: 'bo', ini: 'BO', name: 'Bosun', loc: 'free' },
+    { id: 'a1', ini: 'A1', name: 'AB 1', loc: 'free' },
+    { id: 'a2', ini: 'A2', name: 'AB 2', loc: 'free' },
+    { id: 'os', ini: 'OS', name: 'OS', loc: 'free' },
+    { id: 'pm', ini: 'PM', name: 'Pumpman', loc: 'free' }
+  ];
+  CREW.forEach(function (c) { c.ba = false; c.down = false; });
+  var WHERE = { free: 'standing by', ccr: 'in cargo control', ba: 'kitting up', leak: 'at the manifold', casualty: 'at the shelter door', galley: 'to the galley', down: 'casualty' };
+
+  /* ---- the state; what happens below is the scenario's rules, not an answer list ----- */
+  var turn = 1, cards = {}, pins = {}, answer = {};
+  var esdTurn = 0, alarmTurn = 0, ventTurn = 0, autoEsd = '', rate = 600, gas = 18, isolated = false, gasInside = false;
+  var rescued = false, rescueTurn = 0, unprotected = false, victims = ['3rd Engineer'], q1102 = 0;
+  var galleyDone = 0, galleyAge = 0, ccrGap = [], busy = false;
+
+  var stage = document.getElementById('stage'), scene = document.getElementById('scene'), deck = document.getElementById('deck');
+  function crewAt(loc) { return CREW.filter(function (c) { return c.loc === loc && !c.down; }); }
+  function stopped() { return !!esdTurn || !!autoEsd; }
+  function names(list) {
+    var n = list.map(function (c) { return c.name; });
+    return n.length < 2 ? n.join('') : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1];
+  }
+
+  /* ---- the CCR panel: gas detection and ESD, as on the simulator (13.2, 13.3.2) ---------- */
+  var hm = GBHMI.create(document.getElementById('console'), { page: 'CCR · GAS DETECTION / ESD', box: [340, 176] });
+  hm.readout('Q-MAN', { x: 60, y: 58, unit: '%LEL', digits: 0, w: 100, ah: 20, alarm: 'gas at the cargo manifold' });
+  hm.readout('Q1102', { x: 170, y: 58, unit: '%LEL', digits: 0, w: 100, ah: 20, alarm: 'compressor shelter 1 bottom' });
+  hm.readout('Q8101', { x: 280, y: 58, unit: '%LEL', digits: 0, w: 100, ah: 20, alarm: 'accommodation air inlet' });
+  hm.esd({ x: 60, y: 120, onPress: function () { pressEsd(); } });
+  var NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs, parent) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
+  function svgTxt(parent, x, y, s, cls) { var t = svgEl('text', { x: x, y: y, 'class': cls, 'text-anchor': 'middle' }, parent); t.textContent = s; return t; }
+  svgTxt(hm.svg, 60, 170, 'ESD No 18', 'hm-tag');
+  var ga = svgEl('g', { 'class': 'hm-obj tr-ga', 'data-tag': 'GA', 'data-tap': '1', id: 'ga' }, hm.svg);
+  svgEl('circle', { cx: 170, cy: 120, r: 40, 'class': 'hm-hit' }, ga);
+  svgEl('circle', { cx: 170, cy: 120, r: 30 }, ga);
+  svgTxt(ga, 170, 125, 'GA', 'l');
+  svgTxt(hm.svg, 170, 170, 'GEN. ALARM', 'hm-tag');
+  var vent = svgEl('g', { 'class': 'hm-obj tr-vent', 'data-tag': 'VENT-ACC', 'data-tap': '1', id: 'vent' }, hm.svg);
+  svgEl('circle', { cx: 280, cy: 120, r: 40, 'class': 'hm-hit' }, vent);
+  svgEl('rect', { x: 236, y: 102, width: 88, height: 36, rx: 7, 'class': 'b' }, vent);
+  var ventT = svgTxt(vent, 280, 125, 'RUNNING', 'l');
+  svgTxt(hm.svg, 280, 170, 'VENT ACC.', 'hm-tag');
+
+  // a pop-up for the two buttons the kit does not have, built exactly like its own panels
+  var pop = null;
+  function closePop() { if (pop && pop.parentNode) pop.parentNode.removeChild(pop); pop = null; }
+  function openPop(x, y, title, what, label, cls, fn) {
+    hm.closePanel(); closePop();
+    pop = GBLab.el('div', 'hm-panel', '<button type="button" class="hm-x" aria-label="Close">&times;</button><h4>' + title + '</h4>' +
+      '<p class="hm-what">' + what + '</p><div class="hm-row"><button type="button" class="hm-b ' + cls + '">' + label + '</button></div>');
+    hm.root.appendChild(pop);
+    pop.querySelector('.hm-x').addEventListener('click', closePop);
+    pop.querySelector('.hm-b').addEventListener('click', function () { closePop(); fn(); });
+    var m = hm.svg.getScreenCTM(), rr = hm.root.getBoundingClientRect();
+    var sx = m.a * x + m.e - rr.left, sy = m.d * y + m.f - rr.top, pw = pop.offsetWidth, ph = pop.offsetHeight;
+    pop.style.left = Math.max(6, Math.min(rr.width - pw - 6, sx - pw / 2)) + 'px';
+    pop.style.top = Math.max(40, Math.min(rr.height - ph - 6, sy - ph / 2)) + 'px';
+  }
+  hm.root.addEventListener('click', function (e) {
+    if (pop && !pop.contains(e.target) && e.target.closest && !e.target.closest('#ga, #vent')) closePop();
+  }, true);
+  ga.addEventListener('click', function (e) {
+    e.stopPropagation(); GBLab.sfx('tap');
+    if (alarmTurn) return openPop(170, 120, 'GENERAL ALARM', 'Sounded in situation ' + alarmTurn + '. The crew is mustering.', 'SOUND AGAIN', 'esd', playAlarm);
+    openPop(170, 120, 'GENERAL ALARM', 'Seven or more short blasts and one long: all crew to their emergency stations.', 'SOUND GENERAL ALARM', 'esd', pressAlarm);
+  });
+  vent.addEventListener('click', function (e) {
+    e.stopPropagation(); GBLab.sfx('tap');
+    if (ventTurn) return openPop(280, 120, 'VENT ACC.', 'Accommodation ventilation stopped, doors shut (situation ' + ventTurn + ').', 'KEEP STOPPED', '', function () {});
+    openPop(280, 120, 'VENT ACC.', 'Accommodation ventilation fans and fire dampers.', 'STOP · SHUT DOORS', 'stop', pressVent);
+  });
+
+  function pressEsd() {
+    if (esdTurn) return;
+    esdTurn = turn;
+    GBLab.sound.play([[196, 600, 0, 'sawtooth']], 0.05);
+    GBLab.toast('ESD activated: pumps tripped, manifold ESD valves closing, loading stopped.', 'info');
+    render();
+  }
+  function pressAlarm() { if (alarmTurn) return; alarmTurn = turn; playAlarm(); GBLab.toast('General alarm: the crew musters at the emergency stations.', 'info'); render(); }
+  function pressVent() { if (ventTurn) return; ventTurn = turn; GBLab.toast('Accommodation ventilation stopped, outside doors shut.', 'info'); render(); }
+  function playAlarm() {
+    var s = [], i;
+    for (i = 0; i < 7; i++) s.push([466, 240, 170, 'square']);
+    s.push([466, 1500, 0, 'square']);
+    GBLab.sound.play(s, 0.05);
+  }
+  // the gas detection system trips the ESD by itself (13.1); here at the A2 level, 40 % LEL - VERIFY
+  function gasTrip(why) {
+    if (stopped()) return false;
+    autoEsd = why;
+    var e = hm.obj('ESD');
+    if (e) { e.tripped = true; e.g.setAttribute('class', 'hm-obj hm-esd tripped'); }
+    hm.alarm('ESD', 'ESD ACTIVATED - ' + why);
+    return true;
+  }
+
+  /* ---- cards and pins ------------------------------------------------------------- */
+  function addCard(id) {
+    var e = EV[id], c = GBLab.el('div', 'tr-card k-' + e.k + ' tr-a-' + e.area + (e.ask ? ' tr-radio' : '') + ' tr-drop');
+    c.setAttribute('data-t', id);
+    var h = '<div class="tr-ct"><span class="tr-ico">' + ICON[e.icon] + '</span><span>' + e.title + '</span></div>' +
+      '<div class="tr-desc">' + GBLab.esc(e.desc) + '</div>';
+    if (e.drop) h += '<div class="tr-foot"><span class="tr-stat"></span><div class="tr-crew"></div></div>';
+    if (e.ask) {
+      h += '<div class="tr-ans-row">';
+      e.ask.forEach(function (a) { h += '<button type="button" class="tl-btn tr-ans" data-a="' + a[0] + '">' + a[1] + '</button>'; });
+      h += '</div>';
+    }
+    c.innerHTML = h;
+    deck.appendChild(c);
+    cards[id] = c;
+    if (pins[id]) pins[id].className = 'tl-pin tr-pin tr-drop on k-' + e.k + (e.pin ? ' ev' : '');
+  }
+  function removeCard(id) {
+    if (!cards[id]) return;
+    CREW.forEach(function (c) { if (c.loc === id && !c.down) c.loc = 'free'; });
+    deck.removeChild(cards[id]);
+    delete cards[id];
+    if (pins[id]) pins[id].className = 'tl-pin tr-pin';
+  }
+  Object.keys(PINS).forEach(function (id) {
+    var p = GBLab.el('div', 'tl-pin tr-pin', '<i>' + ICON[EV[id].icon] + '</i><b></b>');
+    p.setAttribute('data-t', id);
+    p.style.left = PINS[id][0] + '%'; p.style.top = PINS[id][1] + '%';
+    scene.appendChild(p);
+    pins[id] = p;
+  });
+
+  deck.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.tr-ans') : null;
+    if (!b || busy) return;
+    var card = b.parentNode.parentNode;
+    answer[card.getAttribute('data-t')] = b.getAttribute('data-a');
+    render();
+  });
+
+  /* ---- paint everything from the state ----------------------------------------------- */
+  var crewBox = document.getElementById('crew');
+  function render() {
+    var h = '';
+    CREW.forEach(function (c) {
+      var loc = c.down ? 'down' : c.loc, w = WHERE[loc];
+      if (loc === 'ba' && c.ba) w = 'BA on, ready';
+      h += '<div class="tr-p' + (c.down ? ' down' : '') + '" data-drag data-p="' + c.id + '"' + (c.down ? ' aria-disabled="true"' : '') + '>' +
+        '<i class="tr-ini' + (c.ba && !c.down ? ' ba' : '') + '">' + c.ini + '</i><span><b>' + (c.short || c.name) + '</b><em>' + w + '</em></span></div>';
+    });
+    crewBox.innerHTML = h;
+    var able = CREW.filter(function (c) { return !c.down; }).length;
+    document.getElementById('crewh').textContent = 'Crew · ' + able + ' of 6 able';
+
+    Object.keys(cards).forEach(function (id) {
+      var c = cards[id], box = c.querySelector('.tr-crew'), st = c.querySelector('.tr-stat'), list = crewAt(id);
+      if (box) {
+        box.innerHTML = list.length ? list.map(function (p) { return '<span class="tr-chip' + (p.ba ? ' ba' : '') + '">' + p.ini + '</span>'; }).join('')
+          : '<em>' + (id === 'casualty' ? 'rescue team here' : 'send crew') + '</em>';
+      }
+      if (st) {
+        var s = '';
+        if (id === 'leak') s = 'Q-MAN ' + gas + ' %LEL · ' + (stopped() ? 'cargo stopped' : 'rising');
+        if (id === 'casualty') s = victims.length > 1 ? victims.length + ' people down' : 'Q1102 over range';
+        if (id === 'galley') s = galleyAge ? 'still ringing, smoke' : 'not yet checked';
+        if (id === 'ba') s = 'sets free: ' + (2 - CREW.filter(function (p) { return p.ba || p.loc === 'ba'; }).length);
+        if (id === 'ccr') s = list.length ? 'manned' : 'EMPTY';
+        st.textContent = s;
+      }
+      [].forEach.call(c.querySelectorAll('.tr-ans'), function (b) { b.className = 'tl-btn tr-ans' + (answer[id] === b.getAttribute('data-a') ? ' on' : ''); });
+      if (pins[id]) pins[id].querySelector('b').textContent = list.length ? String(list.length) : '';
+    });
+
+    hm.set('Q-MAN', gas);
+    hm.set('Q1102', q1102);
+    hm.set('Q8101', gasInside ? Math.round(gas / 2) : 0);
+    ga.setAttribute('class', 'hm-obj tr-ga' + (alarmTurn ? ' on' : ''));
+    vent.setAttribute('class', 'hm-obj tr-vent' + (ventTurn ? ' off' : ''));
+    ventT.textContent = ventTurn ? 'STOPPED' : 'RUNNING';
+
+    // what the plant is doing right now - not what to do
+    var n = [];
+    n.push(stopped() ? 'Cargo <b>stopped</b> - ' + (esdTurn ? 'ESD pressed' : 'ESD tripped by gas detection') + '.' : 'Loading <b class="tr-rate">' + rate + ' m³/h</b> into the tanks.');
+    if (cards.leak) n.push('Manifold flange leaking, gas ' + gas + ' %LEL.');
+    if (cards.casualty) n.push(victims.length > 1 ? victims.length + ' people down in the compressor shelter.' : 'A man down in the compressor shelter.');
+    if (cards.galley) n.push('Galley fire alarm ringing.');
+    if (cards.rate || cards.resume) n.push('The terminal is waiting for an answer.');
+    n.push(alarmTurn ? 'General alarm sounded.' : 'No general alarm.');
+    document.getElementById('now').innerHTML = n.join(' ');
+    document.getElementById('sit').textContent = 'Now · situation ' + turn + ' of 4';
+  }
+
+  /* ---- moving people: drag, or tap the person then the place --------------------- */
+  GBLab.drag({
+    items: '.tr-p', targets: '.tr-drop, #scene',
+    onDrop: function (it, t, pt) {
+      if (busy) return;
+      var c = null, to = t.getAttribute('data-t');
+      CREW.forEach(function (x) { if (x.id === it.getAttribute('data-p')) c = x; });
+      if (!c || c.down) return;
+      if (t === scene) { // let go on the photo: the nearest place that is in use, if one is close
+        var p = GBLab.toScene(pt, scene), list = [];
+        Object.keys(PINS).forEach(function (k) { if (cards[k]) list.push({ id: k, x: PINS[k][0], y: PINS[k][1] }); });
+        var n = GBLab.nearest(p, list, 12);
+        if (!n) return GBLab.toast('Put them on a card or a pin - nothing is happening there.', 'hint');
+        to = n.id;
+      }
+      if (c.loc === to) return;
+      if (to === 'rate' || to === 'resume') return GBLab.toast('That is a radio call - answer it with the buttons on the card.', 'hint');
+      if (to === 'ba' && !c.ba && CREW.filter(function (q) { return q.ba || q.loc === 'ba'; }).length >= 2)
+        return GBLab.toast('Both BA sets are taken.', 'hint');
+      c.loc = to;
+      render();
+    }
+  });
+
+  /* ---- layout: wide = cards float over the photo; narrow = photo on top, cards under ---- */
+  function layout() {
+    var w = stage.clientWidth, h = stage.clientHeight, tall = w < 600 || h > w * 1.05;
+    stage.classList.toggle('tr-tall', tall);
+    stage.classList.toggle('tr-tight', w < 560);
+    if (tall) scene.setAttribute('data-align', 'top'); else scene.removeAttribute('data-align');
+    GBLab.fitScenes();
+    deck.style.top = tall ? (scene.offsetHeight + 8) + 'px' : '';
+    if (hm.fit) hm.fit();
+  }
+  window.addEventListener('resize', function () { setTimeout(layout, 0); });
+  window.addEventListener('load', layout);
+
+  /* ---- five minutes pass: the scenario's rules decide what happens ------------------ */
+  function resolve() {
+    var L = [], head = null, bad = false, img = null;
+    function line(kind, text, pic) { L.push([kind, text]); if (kind === 'no') { bad = true; if (!img && pic) img = pic; } }
+
+    if (turn === 1) {
+      if (right('TR1-rate', answer.rate)) line('ok', 'You told the terminal: no rate increase - we have a leak.');
+      else { if (!stopped()) rate = 900; line('no', 'You agreed to 900 m³/h with a flange leaking: more pressure and more liquid at the leak.', IMG + 'flange_leak.jpg'); }
+    }
+    if (esdTurn === turn) line('ok', 'ESD: cargo pumps tripped, manifold ESD valves shut, the terminal stopped its pumps.');
+    else if (turn === 1 && !stopped()) line('no', 'No ESD: the cargo kept flowing to a leaking flange.', IMG + 'flange_leak.jpg');
+    if (alarmTurn === turn) line('ok', 'General alarm sounded: the crew mustered and the emergency teams formed.');
+
+    var kit = crewAt('ba').filter(function (c) { return !c.ba; });
+    kit.forEach(function (c) { c.ba = true; });
+    if (kit.length) line('ok', names(kit) + (kit.length > 1 ? ' are' : ' is') + ' now in breathing apparatus, sets checked.');
+
+    if (cards.leak && !isolated) {
+      var lk = crewAt('leak');
+      if (stopped()) {
+        if (lk.length) {
+          isolated = true; gas = 4;
+          line('ok', names(lk) + ' closed the manifold valve and put water spray on the flange: the drip stops, gas falls to 4 %LEL. The liquid trapped between shut valves is protected by the line relief valve as it warms.');
+        } else { gas = Math.max(10, gas - 6); line('info', 'Cargo is stopped, but nobody went to the flange - it still drips. Gas ' + gas + ' %LEL.'); }
+      } else {
+        gas += rate > 600 ? 34 : 20;
+        line('no', 'Loading went on through a leaking flange: gas at the manifold ' + gas + ' %LEL.', IMG + 'flange_leak.jpg');
+        if (lk.length) line('no', names(lk) + ' worked at a flange still under loading pressure, standing in the vapour.');
+        if (gas >= 40 && gasTrip('gas detection Q-MAN')) {
+          lk.forEach(function (c) { c.loc = 'free'; });
+          head = { img: IMG + 'vapour_cloud.jpg', tag: 'Gas detection ESD', title: 'The gas detection shut you down',
+            text: 'Gas at the manifold reached <b>' + gas + ' %LEL</b>. Propane vapour is heavier than air: it ran along the deck, over the side and onto the jetty. ' +
+              'The gas detection tripped the ESD and the terminal ordered everyone away from the manifold. One spark in that cloud is a fire on the ship and the jetty at once.' };
+        }
+      }
+    }
+    // gas on deck, ventilation still running: the accommodation draws it in (ICS 9.3.2; Q8101 is the inlet sensor)
+    if (gas >= 30 && !ventTurn) { gasInside = true; line('no', 'Q8101 at the accommodation air inlet picked up gas: the ventilation is drawing it inside.'); }
+
+    if (cards.casualty && !rescued) {
+      var cs = crewAt('casualty');
+      var un = cs.filter(function (c) { return !c.ba; }), pr = cs.filter(function (c) { return c.ba; });
+      if (un.length) {
+        unprotected = true;
+        un.forEach(function (c) { c.down = true; c.loc = 'down'; victims.push(c.name); });
+        line('no', names(un) + ' went in without breathing apparatus and collapsed.');
+        head = { img: IMG + 'second_casualty.jpg', tag: 'Second casualty', title: un.length > 1 ? 'The rescuers collapsed too' : 'The rescuer collapsed too',
+          text: names(un) + ' went in without breathing apparatus. The detector Q1102 was over range: the air that dropped the engineer dropped ' + (un.length > 1 ? 'them' : 'him') +
+            ' within a few breaths. Now <b>' + victims.length + ' people</b> are down inside. More than half of those who die in enclosed spaces were trying to rescue someone.' };
+      }
+      if (pr.length >= 2) {
+        rescued = true; rescueTurn = turn;
+        line('ok', names(pr) + ', in breathing apparatus, brought out ' + (victims.length > 1 ? 'all ' + victims.length + ' casualties' : 'the 3rd Engineer') + '. First aid on deck, in fresh air.');
+        if (!head && !bad) head = { img: IMG + 'ba_rescue.jpg', tag: 'Rescue', title: 'Brought out by a BA team', text: 'Two in breathing apparatus, kitted before they were needed: the casualty is out in fresh air and breathing.' };
+      } else if (pr.length === 1) line('info', pr[0].name + ' is in BA but alone - entry needs a partner, so he waits at the door.');
+      else if (!un.length) line('no', 'The 3rd Engineer is still lying in the compressor shelter.');
+    }
+
+    if (cards.galley && !galleyDone) {
+      var gl = crewAt('galley');
+      if (gl.length) { galleyDone = turn; line('ok', names(gl) + ' found a pan burning on the galley stove and smothered it with the fire blanket. Alarm reset.'); }
+      else if (!galleyAge) { galleyAge = 1; line('no', 'Nobody checked the galley fire alarm. It is still ringing.'); }
+      else {
+        galleyAge = 2; line('no', 'The galley fire spread into the extractor duct.');
+        if (!head) head = { tag: 'Fire', title: 'The galley fire spread',
+          text: 'It was a pan on the stove. Left alone for ten minutes, the fire reached the grease in the extractor duct. Smoke is in the accommodation corridors - and a naked flame is the one thing that must not exist while gas is about.' };
+      }
+    }
+
+    var cc = crewAt('ccr');
+    if (cc.length) line('ok', names(cc) + ' kept the cargo control watch.');
+    else { ccrGap.push(turn); line('no', 'Nobody in the cargo control room: levels, pressures and the gas panel went unwatched for five minutes.', IMG + 'ccr_empty.jpg'); }
+
+    if (turn === 2 && !alarmTurn) line('no', 'No general alarm yet: a man is down and a flange is leaking, and most of the crew do not know.');
+
+    if (turn === 4) {
+      if (right('TR1-resume', answer.resume)) line('ok', 'You told the terminal: not yet - first find out why the flange leaked.');
+      else {
+        line('no', 'The ESD was reset and loading resumed with the cause of the leak unknown.', IMG + 'flange_leak.jpg');
+        if (!head) head = { img: IMG + 'flange_leak.jpg', tag: 'Leak again', title: 'The flange leaked again',
+          text: 'Nobody had found out why the flange leaked. With loading pressure back on the line it opened up again - the second leak in twenty minutes, with a casualty just brought out.' };
+      }
+    }
+
+    var ul = GBLab.el('ul', 'tr-out');
+    L.forEach(function (x) {
+      ul.appendChild(GBLab.el('li', x[0], '<i>' + (x[0] === 'ok' ? '✓' : x[0] === 'no' ? '✕' : '•') + '</i><span>' + GBLab.esc(x[1]) + '</span>'));
+    });
+    var last = turn >= 4, o = {
+      kind: bad ? 'no' : 'ok',
+      tag: head ? head.tag : 'Situation ' + turn + ' - five minutes later',
+      title: head ? head.title : (bad ? 'Five minutes later - not everything held' : 'Five minutes later - under control'),
+      text: head ? head.text : '', node: ul,
+      buttons: [{ label: last ? 'See my result' : 'Next situation', fn: last ? result : nextTurn }]
+    };
+    var pic = head ? head.img : img;
+    if (pic) o.img = pic;
+    GBLab.show(o);
+    render();
+    return bad;
+  }
+
+  function nextTurn() {
+    turn++;
+    // what is over leaves the board, and its people come back to stand by
+    removeCard('rate');
+    if (isolated) removeCard('leak');
+    if (rescued) removeCard('casualty');
+    if (galleyDone) removeCard('galley');
+    var news = '';
+    if (turn === 2) {
+      addCard('casualty'); q1102 = 100;
+      news = 'Gas alarm Q1102, compressor shelter: a man is down inside.';
+      if (gasTrip('gas detection Q1102')) news += ' The gas detection tripped the ESD.';
+    }
+    if (turn === 3) { addCard('galley'); news = 'Fire alarm: smoke detector in the galley.'; }
+    if (turn === 4) { addCard('resume'); news = 'The terminal is calling again.'; }
+    GBLab.sound.play([[880, 90, 70, 'sine'], [1175, 150, 0, 'sine']], 0.07);
+    GBLab.toast(news, 'info');
+    busy = false;
+    GBLab.go('Next 5 minutes', commit);
+    render();
+    layout();
+  }
+
+  function commit() {
+    if (busy) return;
+    if (cards.rate && !answer.rate) return GBLab.toast('The terminal is waiting for an answer about the loading rate.', 'hint');
+    if (cards.resume && !answer.resume) return GBLab.toast('The terminal is waiting for an answer about resuming.', 'hint');
+    busy = true;
+    hm.closePanel(); closePop();
+    GBLab.go('Five minutes passing...', null);
+    GBLab.sure(function (lvl) { var bad = resolve(); GBLab.sureNote(lvl, !bad); });
+  }
+
+  function result() {
+    var esdOpt = esdTurn ? String(esdTurn) : 'never', alOpt = alarmTurn ? String(alarmTurn) : 'never';
+    GBLab.finish({ items: [
+      { t: 'Cargo stopped with the ESD in the first five minutes', ok: right('TR1-esd', esdOpt),
+        a: esdTurn ? 'ESD in situation ' + esdTurn : (autoEsd ? 'tripped by ' + autoEsd : 'never pressed'), c: 'ESD in situation 1',
+        w: 'On a leak alongside the ship acts first: ESD, cargo stopped, liquid valves shut (ICS TSG(LG) 9.3.2). Every minute of loading feeds the leak.' },
+      { t: 'No pressure put back on the leaking line', ok: right('TR1-rate', answer.rate) && right('TR1-resume', answer.resume),
+        a: (answer.rate === 'accept' ? 'rate raised' : 'rate refused') + ', ' + (answer.resume === 'resume' ? 'resumed' : 'not resumed'), c: 'rate refused, not resumed',
+        w: 'A higher rate or a restart puts the same flange back under pressure before anyone knows why it leaked.' },
+      { t: 'General alarm sounded by the time the man was found down', ok: right('TR1-alarm', alOpt),
+        a: alarmTurn ? 'in situation ' + alarmTurn : 'never sounded', c: 'situation 1 or 2',
+        w: 'A cargo spill and a person overcome both call for the general alarm and the rescue team (ICS TSG(LG) 9.3.2, 9.3.6).' },
+      { t: 'Nobody entered the compressor shelter without breathing apparatus', ok: !unprotected,
+        a: unprotected ? 'entry without BA' : 'no entry without BA', c: 'BA on before entry',
+        w: 'Do not enter: sound the alarm and prepare an organised entry. More than half of those who die in enclosed spaces were trying to rescue someone.' },
+      { t: 'The casualty brought out by a two-person BA team', ok: rescued,
+        a: rescued ? 'rescued in situation ' + rescueTurn : 'still inside', c: 'two in BA, kitted early',
+        w: 'Kitting up takes time. Send two people to the BA locker as soon as an entry might be needed.' },
+      { t: 'Accommodation ventilation stopped and doors shut', ok: ventTurn > 0 && ventTurn <= 2 && !gasInside,
+        a: ventTurn ? 'in situation ' + ventTurn : 'left running', c: 'in situation 1 or 2',
+        w: 'With cargo vapour on deck the accommodation is the gas-safe place - only while its doors are shut and its ventilation stopped (ICS TSG(LG) 9.3.2).' },
+      { t: 'Cargo control room manned in every situation', ok: !ccrGap.length,
+        a: ccrGap.length ? 'empty in situation ' + ccrGap.join(', ') : 'always manned', c: 'always manned',
+        w: 'In an emergency the cargo plant is still live: someone must watch levels, pressures and the gas detection panel.' },
+      { t: 'Galley fire alarm checked when it rang', ok: galleyDone === 3,
+        a: galleyDone ? 'checked in situation ' + galleyDone : 'never checked', c: 'checked in situation 3',
+        w: 'A fire alarm is a fire until someone has looked - and a naked flame must not exist while gas is about.' }
+    ] });
+  }
+
+  addCard('ccr'); addCard('ba'); addCard('leak'); addCard('rate');
+  GBLab.go('Next 5 minutes', commit);
+  render();
+  layout();
+  setTimeout(function () {
+    layout();
+    GBLab.hand('drag-crew', document.querySelector('[data-p="pm"]'), cards.leak);
+  }, 600);
+})();
+</script>
+</body>
+</html>

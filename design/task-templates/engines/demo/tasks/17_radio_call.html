@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>RC1 — Ship–shore radio call</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<style>
+  /* a handheld VHF in the cargo control room: the channel, the incoming call, the reply built from radio phrases */
+  .rc { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; gap: 12px; padding: 14px;
+    background: radial-gradient(120% 90% at 50% 0%, #0B2140 0%, #050E1C 72%); }
+  .rc-set { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 16px; background: rgba(3,10,22,.8); border: 1px solid var(--tl-line); }
+  .rc-ch { font: 800 30px var(--tl-mono, monospace); color: #8BF0C3; text-shadow: 0 0 12px rgba(120,255,170,.4); }
+  .rc-ch small { display: block; font-size: 11px; letter-spacing: .14em; color: var(--tl-dim); }
+  .rc-wave { flex: 1; height: 44px; display: flex; align-items: center; gap: 3px; }
+  .rc-wave i { flex: 1; height: 6px; border-radius: 3px; background: rgba(46,182,248,.35); transition: height .08s linear; }
+  .rc-rx { font: 800 12px var(--tl-mono, monospace); letter-spacing: .14em; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.06); color: var(--tl-dim); }
+  .rc-rx.on { background: #1F7A50; color: #DFFBEA; }
+  .rc-rx.tx { background: #7A1F1A; color: #FFE1DD; }
+  .rc-log { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px; }
+  .rc-msg { max-width: 82%; padding: 10px 14px; border-radius: 14px; font-size: 16px; line-height: 1.45; animation: tl-up .3s ease both; }
+  .rc-msg b { display: block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 2px; opacity: .8; }
+  .rc-msg.them { align-self: flex-start; background: rgba(255,255,255,.08); }
+  .rc-msg.me { align-self: flex-end; background: rgba(46,182,248,.18); border: 1px solid rgba(46,182,248,.4); }
+  .rc-msg.alarm { align-self: center; background: rgba(255,59,48,.2); border: 1px solid #FF6B5E; color: #FFD0CB; font-weight: 700; }
+  .rc-replay { margin-top: 6px; min-height: 44px; padding: 0 12px; border: 1px solid var(--tl-line); border-radius: 10px; background: rgba(255,255,255,.06); color: var(--tl-text); font: 700 13px var(--tl-font, sans-serif); cursor: pointer; }
+  .rc-build { min-height: 64px; padding: 10px; border-radius: 14px; border: 1.5px dashed rgba(140,190,255,.35); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .rc-build:empty::before { content: 'Tap the phrases in the order you would say them'; color: var(--tl-faint); font-size: 15px; padding: 0 6px; }
+  .rc-tiles { display: flex; flex-wrap: wrap; gap: 8px; }
+  .rc-t { min-height: 52px; padding: 8px 14px; border-radius: 12px; border: 1.5px solid var(--tl-line); background: rgba(255,255,255,.07); color: var(--tl-text);
+    font: 650 15.5px/1.25 var(--tl-font, sans-serif); cursor: pointer; }
+  .rc-t:active { transform: scale(.97); }
+  .rc-build .rc-t { background: rgba(46,182,248,.16); border-color: rgba(46,182,248,.5); }
+  .rc-t[disabled] { opacity: .3; }
+  .rc-status div { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--tl-line); font-size: 15px; }
+  .rc-status div:first-of-type { border-top: 0; }
+  .rc-status b { font: 700 15px var(--tl-mono, monospace); color: var(--tl-accent); }
+  .rc-status b.hi { color: var(--tl-bad); animation: tl-pulse .6s steps(2, start) infinite; }
+  .rc { padding-top: 80px; } /* the line saying what to do now, and the hint, have their own row */
+  @media (max-aspect-ratio: 1/1) { .rc-ch { font-size: 22px; } .rc-msg { font-size: 15px; max-width: 92%; } }
+  @media (max-width: 600px) { .rc { padding-top: 64px; } }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye">Radio · Ship–shore · loading alongside</span>You are the officer on cargo watch, on the agreed ship–shore channel.
+    <small>The highlighted line always says what to do next.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage">
+      <div class="rc">
+        <div class="rc-set">
+          <div class="rc-ch"><small>VHF · SHIP–SHORE</small>CH 14</div>
+          <div class="rc-wave" id="wave"></div>
+          <span class="rc-rx" id="rx">STANDBY</span>
+        </div>
+        <div class="rc-log" id="log"></div>
+        <div class="rc-build" id="build"></div>
+        <div class="rc-tiles" id="tiles"></div>
+      </div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card dark rc-status">
+        <h3>Nordic Star · loading propane</h3>
+        <div><span>Loading rate</span><b id="s-rate">600 m³/h</b></div>
+        <div><span>Tank 3 level</span><b id="s-t3">94.1 %</b></div>
+        <div><span>Topping off tank 3</span><b>in about 20 min</b></div>
+        <div><span>Agreed rate, topping off</span><b>300 m³/h</b></div>
+        <div><span>Gas at manifold</span><b id="s-gas">0 % LEL</b></div>
+      </div>
+      <div class="tl-card"><h3>What happened</h3><p style="margin:0;font-size:15.5px;line-height:1.45" id="coach">Press Start the watch.</p></div>
+      <button type="button" class="tl-btn" id="clear">Clear my reply</button>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Start the watch</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'RC1', title: 'Ship–shore radio call', mode: 'self' });
+  /* Sources: Hand Out 8.4.4 (ship/shore communications during transfer; adjustments by agreement;
+     stopping under agreed controlled conditions); ICS TSG(LG) 2018 A8.3 item 3 (agreed ship/shore
+     communication system operative, with backup); Hand Out 5.1.1 (ESD; the ship may actuate the
+     terminal's ESD to halt cargo flow); LNG Shipping Knowledge p.321-322 (topping off: notice to the
+     terminal, rate reduced per the cargo plan).
+     VERIFY: the exact radio wording (procedure words, "stop, stop, stop") against the terminal's own
+     ship/shore agreement and SMCP; the rates and the 30 % LEL reading are demo values.
+     Voices: the Windows "Zira" voice for now - an ElevenLabs voice replaces it later. Right replies are keys. */
+  var TILES = {
+    tc: 'Terminal Control', tc2: 'Terminal Control, Terminal Control', me: 'this is Nordic Star', loud: 'reading you loud and clear',
+    neg: 'negative', aff: 'affirmative', topping: 'we are topping off tank three', reduce: 'request you reduce the rate to three hundred',
+    ready900: 'ready for nine hundred', stop3: 'emergency - stop, stop, stop', leak: 'gas leak at the manifold', check: 'we will check and call you back',
+    esdok: 'understood, ESD activated', over: 'over', out: 'out', overout: 'over and out', again: 'say again'
+  };
+  var STEPS = [
+    { id: 'r1', play: '../img/p5_term1.wav', text: 'Nordic Star, Nordic Star, this is Terminal Control. Radio check on channel one four. Over.',
+      tiles: ['tc', 'me', 'loud', 'over', 'out', 'again', 'overout'], key: '66180291', why: 'Answer a radio check: who you call, who you are, how you read them - and over, because you expect a reply.' },
+    { id: 'r2', play: '../img/p5_term2.wav', text: 'Nordic Star, this is Terminal Control. We will raise the loading rate to nine hundred cubic metres per hour in five minutes. Over.',
+      tiles: ['tc', 'me', 'neg', 'aff', 'topping', 'reduce', 'ready900', 'over', 'out'], key: 'fa9748cb', ack: '../img/p5_term4.wav',
+      ackText: 'Nordic Star, Terminal Control. Understood, rate three hundred for topping off. Over.',
+      why: 'Tank 3 is topping off: the rate comes down to the agreed 300, never up. Say no, say why, say what you need.' },
+    { id: 'r3', alarm: true, text: 'GAS ALARM - manifold detector 30 % LEL',
+      tiles: ['tc2', 'me', 'stop3', 'leak', 'check', 'over', 'out', 'aff'], key: '7eb5ea91', reply: '../img/p5_term3.wav',
+      replyText: 'Nordic Star, Terminal Control. Shore pumps stopped. ESD activated. Standing by. Over.',
+      why: 'An emergency call is short and loud: call twice, say who you are, STOP three times, say what and where.' },
+    { id: 'r4', tiles: ['tc', 'me', 'esdok', 'over', 'out', 'overout', 'again'], key: '3fa2e5a2',
+      why: 'Confirm what the terminal did and close the exchange with out - "over and out" contradicts itself.' }
+  ];
+  var k = -1, built = [], got = [], alarmAt = 0, emergencySecs = null;
+  var logEl = document.getElementById('log'), buildEl = document.getElementById('build'), tilesEl = document.getElementById('tiles');
+
+  /* ---- the radio: received audio through a VHF-like filter, with squelch ---------------------- */
+  var ac = null, bars = [];
+  for (var b = 0; b < 28; b++) { var i0 = document.createElement('i'); document.getElementById('wave').appendChild(i0); bars.push(i0); }
+  function radio(src, done) {
+    var A = window.AudioContext || window.webkitAudioContext;
+    if (!ac && A) ac = new A();
+    var el = new Audio(src);
+    rx('RECEIVING', 'on');
+    if (ac) {
+      if (ac.state === 'suspended') ac.resume();
+      var s = ac.createMediaElementSource(el), hp = ac.createBiquadFilter(), lp = ac.createBiquadFilter(), sh = ac.createWaveShaper(), an = ac.createAnalyser(), g = ac.createGain();
+      hp.type = 'highpass'; hp.frequency.value = 350; lp.type = 'lowpass'; lp.frequency.value = 2800;
+      var curve = new Float32Array(256); for (var j = 0; j < 256; j++) { var x = j / 128 - 1; curve[j] = Math.tanh(2.2 * x); } sh.curve = curve;
+      g.gain.value = 0.9; an.fftSize = 64;
+      s.connect(hp); hp.connect(lp); lp.connect(sh); sh.connect(g); g.connect(an); an.connect(ac.destination);
+      var data = new Uint8Array(an.frequencyBinCount);
+      (function meter() { if (el.ended || el.paused && el.currentTime > 0) { bars.forEach(function (x) { x.style.height = '6px'; }); return; }
+        an.getByteFrequencyData(data); bars.forEach(function (x, n) { x.style.height = (6 + data[n % data.length] / 255 * 38) + 'px'; }); requestAnimationFrame(meter); })();
+    }
+    GBLab.sound.play([[1400, 60, 0, 'square']], 0.02);   // squelch opening
+    el.addEventListener('ended', function () { GBLab.sound.play([[900, 90, 0, 'sawtooth']], 0.015); rx('STANDBY', ''); if (done) done(); });
+    var p = el.play(); if (p && p.catch) p.catch(function () { rx('STANDBY', ''); if (done) done(); });
+  }
+  function rx(t, c) { var e = document.getElementById('rx'); e.textContent = t; e.className = 'rc-rx' + (c ? ' ' + c : ''); }
+
+  function msg(who, text, cls, replaySrc) {
+    var m = document.createElement('div'); m.className = 'rc-msg ' + cls;
+    m.innerHTML = '<b>' + who + '</b>' + GBLab.esc(text);
+    if (replaySrc) { var r = document.createElement('button'); r.type = 'button'; r.className = 'rc-replay'; r.textContent = 'Play again';
+      r.addEventListener('click', function () { radio(replaySrc); }); m.appendChild(r); }
+    logEl.appendChild(m); logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  /* ---- building a reply: tap a phrase to add it, tap it in the reply to take it back ------------ */
+  function tiles(ids) {
+    tilesEl.innerHTML = ''; buildEl.innerHTML = ''; built = [];
+    ids.slice().sort(function () { return Math.random() - 0.5; }).forEach(function (id) {
+      var t = document.createElement('button'); t.type = 'button'; t.className = 'rc-t'; t.textContent = TILES[id]; t.setAttribute('data-id', id);
+      t.addEventListener('click', function () { if (t.disabled) return; add(id, t); });
+      tilesEl.appendChild(t);
+    });
+  }
+  function add(id, src) {
+    built.push(id); src.disabled = true;
+    var c = document.createElement('button'); c.type = 'button'; c.className = 'rc-t'; c.textContent = TILES[id];
+    c.addEventListener('click', function () { built.splice(built.indexOf(id), 1); buildEl.removeChild(c); src.disabled = false; ready(); });
+    buildEl.appendChild(c); ready();
+  }
+  function ready() { GBLab.go('Press to talk - send', built.length ? send : null); guide(); }
+
+  /* ---- always clear: what to do now, a hint, the opening card ---------------------------------------- */
+  var over = false;
+  function guide() {
+    var s = STEPS[k], n = '', st = '';
+    if (k < 0) n = 'Press <b>Start the watch</b>';
+    else if (over) { n = 'Watch over - press <b>See my result</b>'; st = 'done'; }
+    else if (!tilesEl.children.length) n = 'Terminal Control is talking - listen';
+    else if (s.alarm && !built.length) { n = 'GAS ALARM - call the terminal now: tap the phrases'; st = 'warn'; }
+    else if (!built.length) n = 'Your turn: tap the phrases <b>in the order you would say them</b>';
+    else n = 'Add more, or press <b>Press to talk</b> to send';
+    GBLab.now(n, st); GBLab.goReady(k < 0 || over || built.length > 0);
+  }
+  GBLab.hint(function () {
+    var s = STEPS[k];
+    if (k < 0) return 'Press Start the watch. Terminal Control will call you.';
+    if (!tilesEl.children.length) return 'Listen. You can play any call again with Play again in the log.';
+    return { r1: 'First who you are calling, then who you are. Say how you hear them. End with over - you expect an answer.',
+      r2: 'Look at the ship status: tank 3 is topping off. Can the rate go up? Say no, say why, say what you need.',
+      r3: 'Emergency: call the terminal twice, say who you are, STOP three times, then what and where.',
+      r4: 'Repeat back what the terminal did. "Over and out" contradicts itself - pick one.' }[s.id];
+  });
+  GBLab.intro({ tag: 'Ship–shore radio', title: 'Loading propane. You have the radio.',
+    text: 'Terminal Control calls you on channel 14. Answer the way it is done on a real ship–shore radio.',
+    steps: ['Press <b>Start the watch</b> and listen to the terminal.', 'Tap the radio phrases in the order you would say them.', 'Press <b>Press to talk</b> to send.', 'Keep an eye on the ship’s status - it matters.'],
+    start: 'Start' });
+  document.getElementById('clear').addEventListener('click', function () {
+    built = []; buildEl.innerHTML = ''; [].forEach.call(tilesEl.children, function (t) { t.disabled = false; }); ready();
+  });
+
+  /* ---- the watch -------------------------------------------------------------------------------- */
+  function step() {
+    k++;
+    var s = STEPS[k];
+    if (!s) return finish();
+    GBLab.go('Listening…', null); guide();
+    if (s.alarm) {
+      document.getElementById('s-gas').textContent = '30 % LEL'; document.getElementById('s-gas').className = 'hi';
+      msg('Alarm', s.text, 'alarm');
+      GBLab.sound.play([[740, 240, 90, 'square'], [740, 240, 90, 'square'], [740, 240, 0, 'square']], 0.06);
+      alarmAt = Date.now();
+      document.getElementById('coach').textContent = 'Gas alarm at the manifold. You call the terminal now.';
+      tiles(s.tiles); ready(); return;
+    }
+    if (s.play) {
+      document.getElementById('coach').textContent = 'Terminal Control is calling…';
+      msg('Terminal Control', s.text, 'them', s.play);
+      radio(s.play, function () { document.getElementById('coach').textContent = 'Your turn: build the reply, then press to talk.'; tiles(s.tiles); ready(); });
+    } else { document.getElementById('coach').textContent = 'Your turn: close the exchange.'; tiles(s.tiles); ready(); }
+  }
+  function send() {
+    var s = STEPS[k], said = built.map(function (id) { return TILES[id]; }).join(', ');
+    var ok = GBLab.key('RC1-' + s.id, built.join(' '), 1) === s.key;
+    if (s.alarm) emergencySecs = (Date.now() - alarmAt) / 1000;
+    got[k] = { ok: ok, said: said };
+    msg('Nordic Star (you)', said + '.', 'me');
+    rx('TRANSMIT', 'tx'); GBLab.sound.play([[1200, 40, 0, 'square']], 0.03);
+    setTimeout(function () { rx('STANDBY', ''); }, 700);
+    tilesEl.innerHTML = ''; buildEl.innerHTML = ''; built = []; guide();
+    if (!ok) GBLab.toast('Not how it should go: ' + s.why, 'hint');
+    if (s.id === 'r1' && got[k].ok === false) document.getElementById('coach').textContent = 'The terminal carries on.';
+    var after = s.ack || s.reply, afterText = s.ackText || s.replyText;
+    if (s.id === 'r2') { document.getElementById('s-rate').textContent = ok ? '300 m³/h' : '900 m³/h'; document.getElementById('s-rate').className = ok ? '' : 'hi'; }
+    if (after) setTimeout(function () { msg('Terminal Control', afterText, 'them', after); radio(after, step); }, 900);
+    else setTimeout(step, 900);
+  }
+  function finish() {
+    over = true; guide();
+    GBLab.go('See my result', function () {
+      GBLab.sure(function (lvl) {
+        var all = got.every(function (g) { return g && g.ok; });
+        GBLab.sureNote(lvl, all);
+        GBLab.finish({ items: STEPS.map(function (s, n) {
+          return { t: ['Radio check answered properly', 'Refused the rate rise and asked for 300', 'Emergency call: stop, what and where', 'Closed the exchange with out'][n], ok: !!(got[n] && got[n].ok), a: got[n] ? got[n].said : '-', c: 'see why', w: s.why };
+        }).concat([{ t: 'Called the emergency stop quickly', ok: emergencySecs !== null && emergencySecs < 25, a: emergencySecs === null ? '-' : Math.round(emergencySecs) + ' s', c: 'under 25 s', w: 'Every second at full rate feeds the leak. VERIFY: the time the course expects.' }]) });
+      });
+    });
+  }
+  GBLab.go('Start the watch', function () { GBLab.sound.play([[600, 40, 0, 'sine']], 0.02); step(); });
+  guide();
+})();
+</script>
+</body>
+</html>

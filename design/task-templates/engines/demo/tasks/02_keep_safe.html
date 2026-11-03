@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>KS1 — Keep it in the safe band</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<link rel="stylesheet" href="../../gb_hmi.css">
+<!-- SOURCES
+     Simulator: Wärtsilä LCHS TechSim LPG Tanker, Trainee Manual
+       §7.1    two cargo compressors C-1001 / C-2001 (motors CM-1001 / CM-2001), suction separator V-1001,
+               LPG condenser E-1001; capacity depends on suction pressure and on condensing (sea water) temperature
+       §7.2    CMS display: CM-1001 READY / TRIP, P1004 suction, T1006 2nd stage discharge, PD1014 lube oil
+       §7.3.1  precautions: suction valve nearly shut at start, open slowly (liquid trap in the suction line);
+               start on 0 %, 50 % once running and oil pressure is established, 100 % as necessary;
+               never run on 0 % for more than 3 minutes; a warm suction line raises discharge temperature
+       §7.4.1  LCP alarms: P1004 SUCT.PRESS.L < -0.05 bar; T1006 DISCH.TEMP.H 2nd stage > 150 °C;
+               L1001 LEVEL H suction drum; P1014 DIFF.PRESS.L LUBE OIL
+       §7.4.2  manual suction valve PV-1003 on the compressor indicators panel
+       §7.4.3  CAPACITY SELECTOR 0 / 50 / 100 %
+       §15.7.1 the plant keeps the cargo below the relief valve set pressure
+       §15.6   "on no account should relief valves be allowed to lift"
+     Hand Out §3.1.1: independent type A tanks (fully refrigerated LPG), MARVS below 0.7 bar.
+     VERIFY: the tank band (AL 50 / AH 200 mbar, relief valves 250 mbar), the heat loads per leg, the oil
+     pressure build-up time, the C-2001 tags (T2006, PD2014 by analogy with C-1001), and which faults trip
+     the compressor (carry-over on L1001, low lube oil differential on PD1014) - the manual lists the alarms,
+     not the trip logic. -->
+<style>
+  .ks-screen { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  /* the compressor: the simulator's symbol, a tap opens its local panel */
+  .ks-cmp .ks-body { fill: #0A1A30; stroke: #9DB3CC; stroke-width: 2.5; transition: fill .2s ease, stroke .2s ease; }
+  .ks-cmp .ks-sym { fill: none; stroke: #9DB3CC; stroke-width: 2; }
+  .ks-cmp.run .ks-body { fill: #1E5BB8; stroke: #7DD3FC; filter: drop-shadow(0 0 8px rgba(125,211,252,.8)); }
+  .ks-cmp.run .ks-sym { stroke: #EAF3FF; }
+  .ks-cmp.trip .ks-body { fill: #5A1410; stroke: #FF6B5E; }
+  .ks-cap { font: 800 14px var(--tl-mono, monospace); fill: #FFE2A3; }
+  .ks-vessel { fill: #091A2F; stroke: #4C7DB0; stroke-width: 2; }
+  .ks-vname { font: 700 11px var(--tl-mono, monospace); fill: #7FA3C8; }
+  /* the trend window of the same screen */
+  .ks-frame { fill: rgba(3,10,22,.55); stroke: rgba(46,182,248,.3); stroke-width: 1.2; }
+  .ks-title { font: 800 14px var(--tl-mono, monospace); fill: #EAF3FF; letter-spacing: .06em; }
+  .ks-z-vent { fill: rgba(255,107,94,.16); } .ks-z-alarm { fill: rgba(242,179,61,.13); }
+  .ks-z-band { fill: rgba(61,220,151,.09); } .ks-z-low { fill: rgba(255,107,94,.16); }
+  .ks-now { fill: rgba(46,182,248,.12); }
+  .ks-grid { stroke: rgba(140,190,255,.14); stroke-width: 1; }
+  .ks-tick { font: 600 13px var(--tl-mono, monospace); fill: #9DB3CC; }
+  .ks-leg { font: 800 13px var(--tl-mono, monospace); fill: #6E86A3; }
+  .ks-leg.cur { fill: #EAF3FF; }
+  .ks-lim { stroke-width: 2; fill: none; }
+  .ks-lim.relief { stroke: #FF6B5E; } .ks-lim.alarm { stroke: #F2B33D; stroke-dasharray: 8 6; }
+  .ks-lim.low { stroke: #FF6B5E; stroke-dasharray: 8 6; } .ks-lim.target { stroke: #2EB6F8; stroke-dasharray: 4 5; stroke-width: 3; }
+  .ks-lbl { font: 800 13px var(--tl-font, sans-serif); }
+  .ks-lbl.relief, .ks-lbl.low { fill: #FF6B5E; } .ks-lbl.alarm { fill: #F2B33D; } .ks-lbl.band { fill: #3DDC97; } .ks-lbl.target { fill: #2EB6F8; }
+  .ks-glow { fill: none; stroke: #2EB6F8; stroke-width: 12; stroke-opacity: .18; stroke-linejoin: round; stroke-linecap: round; }
+  .ks-line { fill: none; stroke: #2EB6F8; stroke-width: 4; stroke-linejoin: round; stroke-linecap: round; }
+  .ks-dot { fill: #F2F7FD; stroke: #2EB6F8; stroke-width: 4; }
+  .ks-mark { fill: #FF6B5E; }
+  /* the compressor's own panel, in the screen's panel style */
+  .ks-panel { left: auto; right: 10px; top: 44px; width: 310px; max-width: calc(100% - 20px); }
+  .ks-panel .ks-st { margin: 0 0 8px; font: 700 14px var(--tl-mono, monospace); color: #8BF0C3; }
+  .ks-panel .ks-st.bad { color: #FF8C82; }
+  .ks-panel .ks-lab { margin: 10px 0 6px; font: 800 11px var(--tl-mono, monospace); letter-spacing: .14em; color: #9DB3CC; }
+  .ks-panel .hm-b { min-width: 0; }
+  /* side panel */
+  .ks-ev { border-left: 4px solid var(--tl-amber, #F2B33D); }
+  .ks-ev.fresh { animation: ks-flash 1.4s ease 1; }
+  @keyframes ks-flash { 0% { box-shadow: 0 0 0 0 rgba(242,179,61,.55); } 100% { box-shadow: 0 0 0 14px rgba(242,179,61,0); } }
+  .ks-evt { display: block; font-size: 18px; font-weight: 800; color: var(--tl-text, #F2F7FD); margin-bottom: 4px; }
+  .ks-coach { margin: 0; font-size: 15.5px; line-height: 1.45; color: var(--tl-text, #F2F7FD); }
+  .ks-big { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .ks-big > div { background: rgba(3,10,22,.7); border: 1px solid var(--tl-line, rgba(140,190,255,.16)); border-radius: 12px; padding: 8px 10px; }
+  .ks-big span { display: block; font-size: 12.5px; color: var(--tl-dim, #9DB3CC); }
+  .ks-big b { display: block; font: 700 20px/1.2 var(--tl-mono, monospace); color: var(--tl-accent, #2EB6F8); }
+  .ks-big b.hi { color: var(--tl-bad, #FF6B5E); } .ks-big b.ok { color: var(--tl-good, #3DDC97); }
+  .ks-big small { font-size: 12px; color: var(--tl-dim, #9DB3CC); }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye">Live system · Reliquefaction</span>Hold cargo tank 1 inside its pressure band for the whole voyage.
+    <small>Tap a compressor or a suction valve on the screen to work it, then sail 4 hours. Read each event first.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage"><div class="ks-screen" id="screen"></div></div>
+    <aside class="tl-side">
+      <div class="tl-card ks-ev" id="ev">
+        <h3 id="ev-h">Leg 1 of 6</h3>
+        <span class="ks-evt" id="ev-t"></span>
+        <p id="ev-p"></p>
+      </div>
+      <div class="tl-card dark">
+        <div class="ks-big">
+          <div><span>P0001</span><b id="b-p">130</b></div>
+          <div><span>Last 4 h</span><b id="b-tr">–</b></div>
+          <div><span>Sea</span><b id="b-sea">15 <small>°C</small></b></div>
+        </div>
+      </div>
+      <div class="tl-card"><h3>On the screen now</h3><p class="ks-coach" id="coach"></p></div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Sail 4 hours</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script src="../../gb_hmi.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'KS1', title: 'Keep it in the safe band', mode: 'self' });
+  var NS = 'http://www.w3.org/2000/svg';
+  function $(id) { return document.getElementById(id); }
+  function sv(tag, a, p) { var e = document.createElementNS(NS, tag); for (var k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+  function tx(p, x, y, s, cls, anchor) { var t = sv('text', { x: x, y: y, 'class': cls, 'text-anchor': anchor || 'middle' }, p); t.textContent = s; return t; }
+
+  /* ---- the tank band (mbar g) - VERIFY, see the sources in the head ---------------------- */
+  var LOW = 50, HIGH = 200, RELIEF = 250, SUCT_L = -50, TOP = 300, BOT = -50, CAP = 40, START = 130, N = 8;
+  var OIL_OK = 2.5; // lube oil pressure taken as "established" (bar) - VERIFY
+
+  /* each leg: heat in (H, mbar per 4 h with no plant) and plant effectiveness (E): warmer sea water
+     condenses less (§7.1), so each compressor takes out less. A simulation - graded as physics. */
+  var LEGS = [
+    { name: 'Temperate sea', short: 'L1', img: 'sea', sea: 15, H: 45, E: 1.0,
+      text: 'Loaded with propane and sailing. Sea 15 °C, calm. C-1001 is running at 100 %; C-2001 is stopped and ready.' },
+    { name: 'Warmer sea', short: 'L2', img: 'warm', sea: 28, H: 60, E: 0.8,
+      text: 'Into warmer water, sea 28 °C. More heat comes through the insulation, and the warmer cooling water makes each compressor take out less.' },
+    { name: 'Heavy weather', short: 'L3', img: 'rolling', sea: 28, H: 90, E: 0.8, hot2: true,
+      text: 'Heavy weather: the ship rolls, the cargo sloshes and boil-off rises. The engineer warns that T2006, the C-2001 discharge temperature, is creeping up.' },
+    { name: 'C-2001 trips', short: 'L4', img: 'trip', sea: 28, H: 64, E: 0.8, out2: true,
+      text: 'C-2001 has tripped on T2006 DISCH.TEMP.H. The repair takes about four hours. Still rolling, sea 28 °C.' },
+    { name: 'Cool night', short: 'L5', img: 'night', sea: 20, H: 10, E: 1.15,
+      text: 'C-2001 is repaired and ready to start again. Calm night, sea 20 °C: little heat comes in and the plant works well.' },
+    { name: 'Arrival', short: 'L6', img: 'arrival', sea: 18, H: 30, E: 1.0, target: 150,
+      text: 'Approaching the discharge terminal, which asks for 150 mbar or less on arrival - but never below the low limit.' }
+  ];
+
+  var leg = 0, P = START, hist = [[0, START]], marks = [], busy = false, sureAt = null, lastTrend = null;
+  var legs = [], everLift = false, everLow = false;
+  var R = { proc: 0, procWhy: '', clean: false };
+
+  /* ---- the ship's screen ---------------------------------------------------------------- */
+  var h = GBHMI.create($('screen'), { page: 'CMS · RELIQUEFACTION · C 1001 / C 2001', box: [1000, 500] });
+  h.pipe('vap', 'M50 300 V30 H270 V300', 'vapour');
+  h.tank('T-0001', { x: 16, y: 300, w: 220, h: 180, name: 'TANK 1', level: 96, subText: 'propane · 96 %' });
+  h.readout('P0001', { x: 150, y: 262, unit: 'mbar', digits: 0, al: LOW, ah: HIGH, alarm: 'tank 1 pressure', w: 120 });
+  var ROWS = { 'C-1001': 90, 'C-2001': 300 };
+  var C = {};
+  ['C-1001', 'C-2001'].forEach(function (tag) {
+    var n = tag.charAt(2), r = ROWS[tag], cm = 'CM-' + n + '001', pv = 'PV-' + n + '003';
+    h.pipe('suc' + n, 'M270 ' + r + ' H382 M418 ' + r + ' H450', 'vapour');
+    h.pipe('dis' + n, 'M510 ' + r + ' H560', 'vapour');
+    h.pipe('con' + n, 'M596 ' + r + ' H630' + (n === '1' ? ' V440 H236' : ''), 'condensate');
+    h.valve(pv, { x: 320, y: r, kind: 'reg', travel: 5, label: 'below', what: 'Compressor suction valve (manual) - open slowly after the start' });
+    // V-1001 suction separator (the liquid trap) and E-1001 LPG condenser, as on the CMS display
+    sv('rect', { x: 382, y: r - 26, width: 36, height: 52, rx: 12, 'class': 'ks-vessel' }, h.svg);
+    tx(h.svg, 400, r + 42, 'V-' + n + '001', 'ks-vname');
+    sv('rect', { x: 560, y: r - 24, width: 36, height: 48, rx: 4, 'class': 'ks-vessel' }, h.svg);
+    tx(h.svg, 578, r + 40, 'E-' + n + '001', 'ks-vname');
+    var g = sv('g', { 'class': 'hm-obj ks-cmp', 'data-tag': tag, 'data-tap': '1' }, h.svg);
+    sv('circle', { cx: 480, cy: r, r: 44, 'class': 'hm-hit' }, g);
+    sv('circle', { cx: 480, cy: r, r: 26, 'class': 'ks-body' }, g);
+    sv('path', { d: 'M462 ' + (r - 18) + ' L498 ' + (r - 9) + ' M462 ' + (r + 18) + ' L498 ' + (r + 9), 'class': 'ks-sym' }, g);
+    var cap = tx(g, 480, r - 36, 'CAP 0 %', 'ks-cap');
+    tx(g, 480, r + 46, tag, 'hm-tag');
+    tx(g, 480, r + 60, cm, 'hm-sub');
+    var lb = sv('g', { 'class': 'hm-lampbox' }, g), lamps = {};
+    ['READY', 'RUN', 'TRIP'].forEach(function (s, i) {
+      lamps[s] = sv('rect', { x: 405 + i * 52, y: r + 66, width: 46, height: 18, rx: 4 }, lb);
+      tx(lb, 428 + i * 52, r + 79, s, '');
+    });
+    h.readout('T' + n + '006', { x: 430, y: r + 146, unit: '°C', digits: 0, ah: 150, w: 96 });
+    h.readout('PD' + n + '014', { x: 535, y: r + 146, unit: 'bar', digits: 1, w: 96 });
+    C[tag] = { tag: tag, n: n, cm: cm, pv: pv, g: g, capT: cap, lamps: lamps, run: false, cap: 0, oil: 0, td: 40, trip: '', out: false, tripAt: 0, tripWhy: '' };
+    g.addEventListener('click', function (e) { e.stopPropagation(); openPanel(C[tag]); });
+  });
+  // at departure C-1001 is already running loaded, its suction open
+  C['C-1001'].run = true; C['C-1001'].cap = 100; C['C-1001'].oil = 3.5; C['C-1001'].td = 105;
+  h.setPos('PV-1003', 100);
+
+  /* ---- the trend window, part of the same screen ---------------------------------------- */
+  var trend = sv('g', {}, h.svg);
+  var TL = 720, TR = 984, TT = 60, TB = 448;
+  function X(t) { return TL + t / 24 * (TR - TL); }
+  function Y(p) { return TT + (TOP - p) / (TOP - BOT) * (TB - TT); }
+  function drawTrend() {
+    var s = '<rect class="ks-frame" x="676" y="8" width="318" height="484" rx="8"/>', i, p;
+    s += '<text class="ks-title" x="690" y="32">P0001 TREND · 24 h · SEA ' + LEGS[Math.min(leg, 5)].sea + ' °C</text>';
+    function rc(y1, y2, c) { return '<rect class="' + c + '" x="' + TL + '" y="' + Y(y1).toFixed(1) + '" width="' + (TR - TL) + '" height="' + (Y(y2) - Y(y1)).toFixed(1) + '"/>'; }
+    s += rc(TOP, RELIEF, 'ks-z-vent') + rc(RELIEF, HIGH, 'ks-z-alarm') + rc(HIGH, LOW, 'ks-z-band') + rc(LOW, BOT, 'ks-z-low');
+    if (leg < 6) s += '<rect class="ks-now" x="' + X(leg * 4) + '" y="' + TT + '" width="' + (X(4) - X(0)) + '" height="' + (TB - TT) + '"/>';
+    for (p = 0; p <= TOP; p += 50) s += '<line class="ks-grid" x1="' + TL + '" y1="' + Y(p) + '" x2="' + TR + '" y2="' + Y(p) + '"/><text class="ks-tick" x="' + (TL - 6) + '" y="' + (Y(p) + 4) + '" text-anchor="end">' + p + '</text>';
+    for (i = 0; i <= 6; i++) {
+      s += '<line class="ks-grid" x1="' + X(i * 4) + '" y1="' + TT + '" x2="' + X(i * 4) + '" y2="' + TB + '"/>';
+      if (i % 2 === 0) s += '<text class="ks-tick" x="' + X(i * 4) + '" y="' + (TB + 20) + '" text-anchor="middle">' + i * 4 + ' h</text>';
+      if (i < 6) s += '<text class="ks-leg' + (i === leg ? ' cur' : '') + '" x="' + X(i * 4 + 2) + '" y="52" text-anchor="middle">' + LEGS[i].short + '</text>';
+    }
+    function lim(v, c, label, dy) { return '<line class="ks-lim ' + c + '" x1="' + TL + '" y1="' + Y(v) + '" x2="' + TR + '" y2="' + Y(v) + '"/><text class="ks-lbl ' + c + '" x="' + (TL + 8) + '" y="' + (Y(v) + dy) + '">' + label + '</text>'; }
+    s += lim(RELIEF, 'relief', 'Relief valves ' + RELIEF, -6) + lim(HIGH, 'alarm', 'AH ' + HIGH, -6) + lim(LOW, 'low', 'AL ' + LOW, 18);
+    s += '<text class="ks-lbl band" x="' + (TL + 8) + '" y="' + (Y(HIGH) + 20) + '">Band</text>';
+    s += '<line class="ks-lim target" x1="' + X(20) + '" y1="' + Y(150) + '" x2="' + X(24) + '" y2="' + Y(150) + '"/>';
+    var d = '';
+    for (i = 0; i < hist.length; i++) d += (i ? ' L' : 'M') + X(hist[i][0]).toFixed(1) + ' ' + Y(hist[i][1]).toFixed(1);
+    s += '<path class="ks-glow" d="' + d + '"/><path class="ks-line" d="' + d + '"/>';
+    marks.forEach(function (m) { var x = X(m[0]), y = Y(m[1]); s += '<circle class="ks-mark" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="7"/>'; });
+    var last = hist[hist.length - 1];
+    s += '<circle class="ks-dot" cx="' + X(last[0]).toFixed(1) + '" cy="' + Y(last[1]).toFixed(1) + '" r="7"/>';
+    trend.innerHTML = s;
+  }
+
+  /* ---- the compressor's local panel (LCP + capacity selector, §7.4.1 and §7.4.3) ---------- */
+  var panel = null, sel = null;
+  function closePanel() { if (panel && panel.parentNode) panel.parentNode.removeChild(panel); panel = null; sel = null; }
+  function status(c) {
+    if (c.out) return ['UNDER REPAIR - not available this leg', true];
+    if (c.trip) return ['TRIP - ' + c.trip, true];
+    if (!c.run) return ['READY · stopped', false];
+    return ['RUNNING · CAP ' + c.cap + ' % · lube oil ' + c.oil.toFixed(1) + ' bar' + (c.oil < OIL_OK ? ' (building)' : ''), false];
+  }
+  function openPanel(c) {
+    if (GBLab.sheetOpen()) return;
+    h.closePanel(); closePanel();
+    GBLab.sfx('tap');
+    sel = c;
+    panel = document.createElement('div');
+    panel.className = 'hm-panel ks-panel';
+    h.root.appendChild(panel);
+    paintPanel();
+  }
+  function paintPanel() {
+    if (!panel || !sel) return;
+    var c = sel, st = status(c), dis = busy || c.out ? ' disabled' : '';
+    panel.innerHTML = '<button type="button" class="hm-x" aria-label="Close">&times;</button>' +
+      '<h4>' + c.cm + '</h4><p class="hm-what">Cargo compressor ' + c.tag + ' · local control panel</p>' +
+      '<p class="ks-st' + (st[1] ? ' bad' : '') + '">' + st[0] + '</p>' +
+      '<div class="hm-row"><button type="button" class="hm-b go" data-run="1"' + dis + '>START</button><button type="button" class="hm-b stop" data-run="0"' + dis + '>STOP</button></div>' +
+      '<p class="ks-lab">CAPACITY SELECTOR</p>' +
+      '<div class="hm-row">' + [0, 50, 100].map(function (v) { return '<button type="button" class="hm-b' + (c.cap === v ? ' on' : '') + '" data-cap="' + v + '"' + dis + '>' + v + ' %</button>'; }).join('') + '</div>';
+    panel.querySelector('.hm-x').addEventListener('click', function (e) { e.stopPropagation(); closePanel(); });
+    [].forEach.call(panel.querySelectorAll('[data-run]'), function (b) {
+      b.addEventListener('click', function (e) { e.stopPropagation(); if (b.getAttribute('data-run') === '1') start(c); else stop(c); paintPanel(); });
+    });
+    [].forEach.call(panel.querySelectorAll('[data-cap]'), function (b) {
+      b.addEventListener('click', function (e) { e.stopPropagation(); setCap(c, +b.getAttribute('data-cap')); paintPanel(); });
+    });
+  }
+  h.root.addEventListener('click', function (e) {
+    if (panel && !panel.contains(e.target) && !(e.target.closest && e.target.closest('.ks-cmp'))) closePanel();
+  });
+
+  /* ---- the precautions are physics here (§7.3.1); the trip logic itself is VERIFY ---------- */
+  function start(c) {
+    if (busy || c.out || c.run) return;
+    c.trip = ''; h.clear(c.cm + '-trip');
+    c.run = true; c.oil = 0; c.started = Date.now();
+    GBLab.sound.play([[90, 700, 0, 'sawtooth']], 0.03);
+    if (h.pos(c.pv) > 30) { c.tripAt = Date.now() + 1600; c.tripWhy = 'carry'; }       // suction wide open: liquid carried over
+    else if (c.cap > 0) { c.tripAt = Date.now() + 1300; c.tripWhy = 'oil'; }           // started loaded, before oil pressure
+    paintCmp(c);
+  }
+  function stop(c) { if (busy || !c.run) return; c.run = false; c.tripAt = 0; paintCmp(c); }
+  function setCap(c, v) {
+    if (busy || c.out) return;
+    c.cap = v;
+    if (c.run && v > 0 && c.oil < OIL_OK && !c.tripAt) { c.tripAt = Date.now() + 1300; c.tripWhy = 'oil'; }
+    if (c.run && v > 0 && c.oil >= OIL_OK && h.pos(c.pv) <= 30) R.clean = true;   // the manual's start, step by step
+    GBLab.sound.play([[440, 50, 0, 'triangle']], 0.04);
+    paintCmp(c);
+  }
+  function tripNow(c, why, text) {
+    c.run = false; c.cap = 0; c.trip = why; c.tripAt = 0;
+    h.alarm(c.cm + '-trip', c.cm + ' TRIPPED - ' + why);
+    paintCmp(c); paintPanel();
+  }
+  var WHY = {
+    carry: { why: 'L' + '{n}' + '001 LEVEL H SUC.D.', title: 'Liquid reached the suction separator',
+      text: '{pv} was open when {cm} started. The sudden suction pulled cargo liquid with the vapour; it collected in the suction separator V-{n}001, the level switch L{n}001 tripped the compressor before liquid could reach the cylinders. Start with the suction valve nearly shut and open it slowly (manual 7.3.1).' },
+    oil: { why: 'PD{n}014 DIFF.PRESS.L LUBE OIL', title: 'Loaded before the oil pressure was up',
+      text: '{cm} was put on load before its lube oil pressure was established, and it tripped on low oil differential pressure PD{n}014. Start on 0 %, wait for the oil pressure, then 50 %, then 100 % as needed (manual 7.3.1).' }
+  };
+  function fill(s, c) { return s.replace(/\{n\}/g, c.n).replace(/\{pv\}/g, c.pv).replace(/\{cm\}/g, c.cm); }
+  function procTrip(c) {
+    var w = WHY[c.tripWhy];
+    R.proc++; R.procWhy = c.tripWhy;
+    tripNow(c, fill(w.why, c));
+    closePanel();
+    GBLab.show({ img: '../img/02_keep_safe_trip.jpg', tag: c.cm + ' tripped', kind: 'no', title: w.title, text: fill(w.text, c),
+      buttons: [{ label: 'Reset and carry on', fn: function () { coachNow(); } }] });
+  }
+
+  function paintCmp(c) {
+    c.g.setAttribute('class', 'hm-obj ks-cmp' + (c.run ? ' run' : '') + (c.trip || c.out ? ' trip' : ''));
+    c.capT.textContent = c.run ? 'CAP ' + c.cap + ' %' : '';
+    c.lamps.READY.setAttribute('class', !c.run && !c.trip && !c.out ? 'on' : '');
+    c.lamps.RUN.setAttribute('class', c.run ? 'on' : '');
+    c.lamps.TRIP.setAttribute('class', c.trip || c.out ? 'bad' : '');
+    h.setPipe('suc' + c.n, { flow: c.run && h.pos(c.pv) > 2 && c.cap > 0 });
+    h.setPipe('dis' + c.n, { flow: c.run && c.cap > 0 });
+    h.setPipe('con' + c.n, { flow: c.run && c.cap > 0 });
+  }
+
+  /* ---- a quick live loop: oil pressure, discharge temperature, the readouts ---------------- */
+  var lastT = Date.now();
+  setInterval(function () {
+    var now = Date.now(), dt = Math.min(0.5, (now - lastT) / 1000), L = LEGS[Math.min(leg, 5)];
+    lastT = now;
+    ['C-1001', 'C-2001'].forEach(function (k) {
+      var c = C[k];
+      c.oil += ((c.run ? 3.5 : 0) - c.oil) * Math.min(1, dt * 1.4);
+      var tdT = c.run ? 60 + c.cap * 0.45 + (L.sea - 15) * 1.2 + (L.hot2 && k === 'C-2001' && c.cap > 0 ? 14 : 0) : 40;
+      if (!c.out) c.td += (tdT - c.td) * Math.min(1, dt * 0.5);
+      h.set('T' + c.n + '006', c.td);
+      h.set('PD' + c.n + '014', c.oil);
+      if (c.tripAt && now >= c.tripAt && !GBLab.sheetOpen()) procTrip(c);
+      if (sel === c && panel) { var st = panel.querySelector('.ks-st'), s = status(c); if (st) { st.textContent = s[0]; st.className = 'ks-st' + (s[1] ? ' bad' : ''); } }
+    });
+    h.setPipe('vap', { flow: running().length > 0 });
+    if (!busy) coachNow();
+  }, 200);
+
+  function running() { return ['C-1001', 'C-2001'].filter(function (k) { return C[k].run; }).map(function (k) { return C[k]; }); }
+  function cooling(L) { // what the plant takes out per 4 h at the settings now (physics, §7.1)
+    var s = 0;
+    running().forEach(function (c) { s += CAP * L.E * (c.cap / 100) * (h.pos(c.pv) / 100); });
+    return s;
+  }
+
+  var lastCoach = '';
+  function coachNow() {
+    var parts = ['C-1001', 'C-2001'].map(function (k) {
+      var c = C[k];
+      if (c.out) return k + ' tripped, under repair.';
+      if (c.trip) return k + ' tripped (' + c.trip + ').';
+      if (!c.run) return k + ' stopped, ready' + (h.pos(c.pv) > 30 ? ' - suction ' + c.pv + ' is ' + Math.round(h.pos(c.pv)) + ' % open.' : '.');
+      if (c.cap === 0) return k + ' running unloaded - lube oil ' + c.oil.toFixed(1) + ' bar' + (c.oil >= OIL_OK ? ', established.' : ', building.');
+      return k + ' running at ' + c.cap + ' %, suction ' + c.pv + ' ' + Math.round(h.pos(c.pv)) + ' %.';
+    });
+    var s = parts.join(' ') + ' Tank 1 at ' + Math.round(P) + ' mbar.';
+    if (s !== lastCoach) { lastCoach = s; $('coach').textContent = s; }
+  }
+
+  function paintSide() {
+    var L = LEGS[Math.min(leg, 5)];
+    h.set('P0001', P);
+    h.level('T-0001', 96, 'propane · ' + Math.round(P) + ' mbar');
+    $('b-p').textContent = Math.round(P);
+    $('b-p').className = P > HIGH || P < LOW ? 'hi' : 'ok';
+    $('b-tr').textContent = lastTrend == null ? '–' : (lastTrend > 0 ? '+' : '') + Math.round(lastTrend);
+    $('b-sea').innerHTML = L.sea + ' <small>°C</small>';
+  }
+  function eventCard() {
+    var L = LEGS[leg], card = $('ev');
+    $('ev-h').textContent = 'Leg ' + (leg + 1) + ' of 6 · hours ' + leg * 4 + '–' + (leg * 4 + 4);
+    $('ev-t').textContent = L.name;
+    $('ev-p').textContent = L.text;
+    card.className = 'tl-card ks-ev'; void card.offsetWidth; card.className = 'tl-card ks-ev fresh';
+  }
+
+  /* ---- sail one leg, eight half-hour steps; the screen pans to the trend on a phone -------- */
+  var scroller = h.root.querySelector('.hm-scroll');
+  function ask() {
+    if (busy) return;
+    var idle = running().filter(function (c) { return c.cap === 0; })[0];
+    if (idle) return GBLab.toast(idle.tag + ' is running unloaded. It must not run on 0 % for more than 3 minutes: load it to 50 % or stop it.', 'hint');
+    var soft = running().filter(function (c) { return c.oil < OIL_OK; })[0];
+    if (soft) return GBLab.toast(soft.tag + ': wait for the lube oil pressure before sailing on.', 'hint');
+    GBLab.sure(sail);
+  }
+  function sail(level) {
+    sureAt = level; busy = true;
+    h.closePanel(); closePanel();
+    GBLab.go('Sailing…', null);
+    if (scroller) scroller.scrollLeft = scroller.scrollWidth;
+    var L = LEGS[leg], t0 = leg * 4, sub = 0, start0 = P, lift = false, low = false, tripped = false;
+    var cool = cooling(L);
+    var tick = setInterval(function () {
+      sub++;
+      P += (L.H - (tripped ? 0 : cool)) / N;
+      if (P >= RELIEF) { if (!lift) { marks.push([t0 + sub * 4 / N, RELIEF]); h.alarm('RV', 'P0001 RELIEF VALVES LIFTING - cargo vented'); } P = RELIEF; lift = true; }
+      if (P < LOW && !low) { low = true; marks.push([t0 + sub * 4 / N, LOW]); }
+      if (P <= SUCT_L && !tripped) { // P1004 SUCT.PRESS.L < -0.05 bar (§7.4.1): the compressors trip
+        P = SUCT_L; tripped = true;
+        running().forEach(function (c) { tripNow(c, 'P' + c.n + '004 SUCT.PRESS.L'); });
+      }
+      hist.push([t0 + sub * 4 / N, P]);
+      drawTrend(); paintSide();
+      if (sub >= N) { clearInterval(tick); endLeg(start0, lift, low); }
+    }, 190);
+  }
+
+  function endLeg(start0, lift, low) {
+    var L = LEGS[leg], hi = L.target || HIGH;
+    var ok = !lift && !low && P >= LOW && P <= hi;
+    lastTrend = P - start0;
+    legs.push({ end: P, lift: lift, low: low, ok: ok });
+    if (lift) everLift = true;
+    if (low) everLow = true;
+    if (sureAt) { GBLab.sureNote(sureAt, ok); sureAt = null; }
+    h.clear('RV');
+    paintSide();
+    if (lift) return GBLab.show({ img: '../img/02_keep_safe_vent.jpg', tag: 'Relief valves lifted', kind: 'no', title: 'Cargo vented at the mast',
+      text: 'P0001 reached the relief valve set pressure, ' + RELIEF + ' mbar. The relief valves lifted and propane vapour went up the vent mast: cargo lost, a flammable plume above the deck, an incident to report. The pressure only stops rising when the plant takes out more heat than comes in.' +
+        (L.out2 ? '<br><br>With C-2001 out, C-1001 alone could not keep up. The margin had to be built on the earlier legs, while both could run.' : ''),
+      buttons: [{ label: 'Continue the voyage', fn: function () { nextLeg(''); } }] });
+    if (low) return GBLab.show({ img: '../img/02_keep_safe_low.jpg', tag: 'Low pressure', kind: 'no', title: 'The tank was over-cooled',
+      text: 'The compressors kept drawing vapour off after the heat load fell, and P0001 went below the ' + LOW + ' mbar low alarm. Kept running, they pull the tank towards vacuum and trip on low suction pressure P1004; a refrigerated tank is not built for vacuum, and its vacuum protection would let air or inert gas in. Take a compressor off, or down to 50 %, before the pressure gets here.',
+      buttons: [{ label: 'Continue the voyage', fn: function () { nextLeg(''); } }] });
+    GBLab.sound.play(ok ? [[660, 90, 30, 'sine'], [880, 120, 0, 'sine']] : [[392, 160, 0, 'sine']], 0.06);
+    var note = 'Leg ' + (leg + 1) + ' ended at <b>' + Math.round(P) + ' mbar</b>' + (ok ? ', inside the band.' :
+      P > hi ? (L.target ? ', above what the terminal asked for.' : ', above AH ' + HIGH + ' - less margin for what comes next.') : ', below the low alarm.');
+    setTimeout(function () { nextLeg(note); }, 700);
+  }
+
+  function nextLeg(note) {
+    leg++;
+    busy = false;
+    if (scroller) scroller.scrollLeft = 0;
+    if (leg >= 6) {
+      drawTrend();
+      GBLab.go('See my result', result);
+      return GBLab.show({ img: '../img/02_keep_safe_arrival.jpg', tag: 'Arrived', title: 'All fast at the terminal', text: (note ? note + '<br><br>' : '') + 'The voyage is over.',
+        buttons: [{ label: 'See my result', fn: result }] });
+    }
+    var L = LEGS[leg], c2 = C['C-2001'];
+    if (L.out2) { tripNow(c2, 'T2006 DISCH.TEMP.H 2nd STAGE'); c2.out = true; c2.td = 152; }
+    else if (c2.out) { c2.out = false; c2.trip = ''; h.clear('CM-2001-trip'); c2.td = 60; }
+    paintCmp(c2);
+    eventCard(); drawTrend(); paintSide(); coachNow();
+    GBLab.go('Sail 4 hours', ask);
+    GBLab.show({ img: '../img/02_keep_safe_' + L.img + '.jpg', tag: 'Leg ' + (leg + 1) + ' of 6', title: L.name,
+      text: (note ? note + '<br><br>' : '') + L.text, buttons: [{ label: 'Set the plant' }] });
+  }
+
+  /* ---- the result ---------------------------------------------------------------------------- */
+  var LW = [
+    'Warm sea water: more heat in, weaker condensers - one compressor no longer matches the boil-off.',
+    'More boil-off and a warning on C-2001: both compressors now, to build a margin while you can.',
+    'One compressor cannot hold this heat load; only the margin made earlier keeps the relief valves shut.',
+    'Little heat comes in at night: two compressors at full load pull the pressure down fast.',
+    'Low enough for the terminal, not below the low alarm: the plant matched to a small heat load.'
+  ];
+  function result() {
+    var items = [];
+    for (var i = 1; i < 6; i++) {
+      var g = legs[i], L = LEGS[i];
+      if (!g) continue;
+      items.push({ t: 'Leg ' + (i + 1) + ', ' + L.name.toLowerCase() + ': ' + (L.target ? 'arrived at ' + LOW + '-' + L.target + ' mbar' : 'held inside the band'),
+        ok: g.ok, a: Math.round(g.end) + ' mbar' + (g.lift ? ', relief valves lifted' : '') + (g.low ? ', below the low alarm' : ''),
+        c: LOW + '-' + (L.target || HIGH) + ' mbar', w: LW[i - 1] });
+    }
+    items.push({ t: 'Relief valves never lifted', ok: !everLift, a: everLift ? 'lifted, cargo vented' : 'never lifted', c: 'never lifted',
+      w: 'On no account should relief valves be allowed to lift (manual 15.6): it is cargo vented to the atmosphere.' });
+    items.push({ t: 'Never below the low alarm', ok: !everLow, a: everLow ? 'below ' + LOW + ' mbar' : 'stayed above', c: 'above ' + LOW + ' mbar',
+      w: 'Over-cooling pulls the tank towards vacuum and trips the compressors on low suction pressure. Match the plant to the heat load.' });
+    items.push({ t: 'A compressor started the manual\'s way: 0 %, oil pressure, 50 %', ok: R.clean && !R.proc,
+      a: R.proc ? R.proc + ' trip(s) at start' : R.clean ? 'started by the book' : 'C-2001 never started', c: 'suction nearly shut, 0 %, oil up, 50 %, open slowly',
+      w: 'Start on 0 % with the suction valve nearly shut; load to 50 % once oil pressure is established, then open the suction slowly (manual 7.3.1).' });
+    GBLab.finish({ items: items });
+  }
+
+  /* ---- start --------------------------------------------------------------------------------- */
+  paintCmp(C['C-1001']); paintCmp(C['C-2001']);
+  eventCard(); drawTrend(); paintSide(); coachNow();
+  GBLab.go('Sail 4 hours', ask);
+  setTimeout(function () { GBLab.hand('tap-compressor', document.querySelector('[data-tag="C-2001"] .ks-body')); }, 1200);
+})();
+</script>
+</body>
+</html>

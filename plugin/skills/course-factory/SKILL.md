@@ -510,7 +510,10 @@ course photo catalogue (`scripts/photo_catalogue.py`). A placeholder never ships
 
 When a new module reaches visual production, **route it to `course-module-ui`** — it owns the look,
 and this skill restates none of it. Its `scripts/design_system.py install` copies the style files
-(never read them); its `references/vocabulary.md` is what to read. GAS BASIC **Module_01 is the canonical visual reference** for the look, and
+(never read them); its `references/vocabulary.md` is what to read. **To choose and fill a screen, read one file:
+`course-module-ui/knowledge/blueprints.json`** - every slide and task screen, what information it is for, where its
+Title, Text, Info, Picture, Animation and 3D go and what fills each, and its live reference (`design/slide-templates`,
+`design/task-templates`). Its empty layouts are `design/template-blueprints/index.html`. GAS BASIC **Module_01 is the canonical visual reference** for the look, and
 **not** a template: there is no canonical screen count, and low visible density is not low
 learning depth. `build-order.json` step 8, `no_fixed_slide_count` and `density_is_not_depth` are
 the contract; the reasoning is in `references/routing-notes.md`.

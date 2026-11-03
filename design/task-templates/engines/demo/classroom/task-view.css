@@ -1,0 +1,261 @@
+/* COPY for the demo gallery only - novikontas-training-app admin/classroom/shared/task-view.css at a515a44 (2026-10-06).
+   The classroom injects this into every task frame; the gallery does the same so a demo is seen as the trainee sees it.
+   Never edit it here: refresh it from the app. */
+/* ==========================================================================
+   The trainee's view of a task page, injected by the classroom into the task
+   frame. The course files are never changed: this only decides how the page is
+   presented when the CLASS opens it on a phone or a tablet.
+
+   Three rules:
+     1. Nothing above the first question that the class bar already says.
+     2. A thumb reaches everything: 56 px targets, the submit button in reach.
+     3. Nothing off the side of a 360 px screen.
+   ========================================================================== */
+
+/* ---- 1. chrome the classroom already provides ------------------------- */
+header.task-head, .brandchip, .th-links, .th-meta, .th-top,
+.gbt-topback, .gbt-back, #gb-home, #gb-deck, .back, .foot,
+a[href*="START_HERE"], a[href*="presentation/index"], a[href*="module.html"] { display: none !important; }
+/* In a TASK the page's own title repeats the bar above it. A handout keeps its title:
+   the trainee is reading it, not answering it. */
+html.nc-task .wrap > h1, html.nc-task main > h1, html.nc-task body > h1 { display: none !important; }
+
+html, body { margin: 0 !important; padding-top: 0 !important; }
+body { padding-bottom: 24px !important; -webkit-text-size-adjust: 100%; }
+
+/* ---- 2. the work starts at the top ------------------------------------ */
+.wrap, main { max-width: 900px; margin: 0 auto; padding: 10px 12px 28px !important; }
+.lead, .act-inst { font-size: 16px !important; line-height: 1.45; margin: 0 0 10px !important; }
+
+/* the state strip stays, compact, and keeps its place while scrolling */
+.state, .rail { position: sticky; top: 0; z-index: 30; padding: 8px 12px !important; }
+.state .part, .state .got { font-size: 14px !important; }
+
+/* a row of sample or item codes is a reference, not the task: it may be small */
+.samples { gap: 6px !important; grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)) !important; margin: 0 0 12px !important; }
+.samples span { padding: 7px 4px !important; font-size: 14px !important; }
+
+/* ---- 3. a thumb reaches everything ------------------------------------ */
+.q, .part { padding: 12px !important; border-radius: 14px !important; margin-bottom: 12px !important; }
+.q .stem, .part-head { font-size: 17px !important; line-height: 1.4 !important; }
+.opt, .pick-row button, .chips button, .lab { min-height: 56px !important; font-size: 17px !important; border-radius: 12px !important; }
+.opts { gap: 10px !important; }
+.why { font-size: 15.5px !important; line-height: 1.5 !important; }
+
+/* The answer button is big and stays in its own card. It must NOT be sticky: every question
+   is on the same page, so several buttons would pin themselves over the next question. */
+.sub { min-height: 58px !important; font-size: 18px !important; margin-top: 12px !important; }
+
+/* ---- 4. nothing off the side ------------------------------------------ */
+img, svg, canvas, video, table, pre { max-width: 100% !important; height: auto; }
+table { display: block; overflow-x: auto; }
+* { overflow-wrap: anywhere; }
+
+@media (max-width: 420px) {
+  .wrap, main { padding: 8px 10px 24px !important; }
+  .q, .part { padding: 10px !important; }
+  .samples { grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)) !important; }
+  .samples span { font-size: 13px !important; }
+}
+
+
+/* ==========================================================================
+   THE TEST, AS THE TRAINEE MEETS IT                         (added 2026-09-22)
+
+   The questions were correct and plain: grey rows of facts, white buttons, a
+   line of text at the bottom telling you what to do next. Nothing was wrong
+   with it and nobody wanted to look at it.
+
+   This gives the work a shape. A part announces itself. A data card reads like
+   an instrument panel, because that is what it is: the figures line up, the
+   labels stay quiet. An answer is a real target with a mark on it, and once it
+   is judged it says so in colour, with the reason under it. The submit bar sits
+   where the thumb already is.
+
+   It changes nothing a task says or scores; the course files are untouched.
+   Every rule is under html.nc-task, so this is the classroom's view only.
+   ========================================================================== */
+
+html.nc-task {
+  --nc-ink: #0b1b2b;
+  --nc-dim: #5a6b7c;
+  --nc-line: #dbe3ec;
+  --nc-navy: #0a2463;
+  --nc-ok: #12855c;
+  --nc-ok-bg: #e7f7f0;
+  --nc-no: #c0281f;
+  --nc-no-bg: #fdecea;
+  --nc-card: #ffffff;
+}
+html.nc-task body { background: #eef3f8 !important; }
+
+/* ---- the part: a heading you cannot miss ------------------------------- */
+html.nc-task .part {
+  background: var(--nc-card) !important;
+  border: 1px solid var(--nc-line) !important;
+  border-radius: 18px !important;
+  padding: 0 0 14px !important;
+  margin: 0 0 18px !important;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(10, 36, 99, .07);
+}
+html.nc-task .part-head {
+  display: flex !important; align-items: center; flex-wrap: wrap; gap: 10px;
+  padding: 14px 16px !important;
+  background: linear-gradient(180deg, #0a2463, #123a8f);
+  color: #fff;
+}
+html.nc-task .part-head h2 { color: #fff !important; font-size: 19px !important; margin: 0 !important; flex: 1 1 auto; }
+html.nc-task .part-n {
+  background: rgba(255, 255, 255, .16) !important; color: #fff !important;
+  border-radius: 999px !important; padding: 5px 12px !important;
+  font-size: 11px !important; letter-spacing: .14em; text-transform: uppercase; font-weight: 700;
+}
+html.nc-task .gbs-chip {
+  background: #ffd400 !important; color: #23262b !important; border: 0 !important;
+  border-radius: 999px !important; padding: 6px 12px !important; font-size: 12.5px !important; font-weight: 700;
+}
+html.nc-task .part-sub { padding: 12px 16px 0 !important; margin: 0 !important; color: var(--nc-dim) !important; }
+
+/* ---- a data card reads like an instrument panel ------------------------ */
+html.nc-task .ship {
+  border: 1px solid var(--nc-line) !important; border-radius: 14px !important;
+  margin: 14px 16px !important; overflow: hidden; background: var(--nc-card) !important;
+}
+html.nc-task .ship-top {
+  display: flex !important; align-items: center; gap: 10px;
+  padding: 12px 14px !important; background: #f4f7fb; border-bottom: 1px solid var(--nc-line);
+  font-size: 17px !important;
+}
+html.nc-task .ship-id {
+  width: 34px !important; height: 34px !important; border-radius: 50% !important;
+  display: inline-flex !important; align-items: center; justify-content: center;
+  background: var(--nc-navy) !important; color: #fff !important; font-weight: 700; font-size: 16px !important;
+}
+html.nc-task .ship dl { display: grid !important; grid-template-columns: minmax(7.5em, 1.05fr) minmax(6em, 1fr); margin: 0 !important; }
+html.nc-task .ship dt,
+html.nc-task .ship dd { padding: 10px 14px !important; margin: 0 !important; border-top: 1px solid #eef2f7; font-size: 15px !important; }
+html.nc-task .ship dt { color: var(--nc-dim) !important; }
+html.nc-task .ship dd { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+html.nc-task .ship dl > dt:nth-of-type(odd),
+html.nc-task .ship dl > dd:nth-of-type(odd) { background: #fafcfe; }
+
+/* ---- an answer is a target, and it says what happened to it ------------ */
+html.nc-task .lab {
+  display: block !important; min-height: 0 !important;
+  font-size: 11.5px !important; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--nc-dim) !important; font-weight: 700; margin: 14px 0 8px !important;
+}
+html.nc-task .chips { display: grid !important; gap: 10px !important; }
+html.nc-task .chip {
+  position: relative; text-align: left !important;
+  min-height: 58px !important; padding: 14px 16px 14px 50px !important;
+  border: 1.5px solid var(--nc-line) !important; border-radius: 14px !important;
+  background: var(--nc-card) !important; color: var(--nc-ink) !important;
+  font-size: 16.5px !important; line-height: 1.35; font-weight: 600;
+  transition: border-color .15s ease, background .15s ease, transform .08s ease;
+}
+html.nc-task .chip::before {
+  content: ""; position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
+  width: 21px; height: 21px; border-radius: 50%; border: 2px solid #c7d3e1;
+}
+html.nc-task .chip:active { transform: scale(.995); }
+html.nc-task .chip.sel { border-color: var(--nc-navy) !important; background: #f3f7ff !important; }
+html.nc-task .chip.sel::before { border-color: var(--nc-navy); background: var(--nc-navy); box-shadow: inset 0 0 0 3.5px #fff; }
+html.nc-task .chip.right { border-color: var(--nc-ok) !important; background: var(--nc-ok-bg) !important; color: #0c5b40 !important; }
+html.nc-task .chip.right::before { border-color: var(--nc-ok); background: var(--nc-ok); }
+html.nc-task .chip.right::after {
+  content: "\2713"; position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+  color: #fff; font-size: 14px; font-weight: 700; line-height: 1;
+}
+html.nc-task .chip.wrong { border-color: var(--nc-no) !important; background: var(--nc-no-bg) !important; color: #8e1f18 !important; }
+html.nc-task .chip.wrong::before { border-color: var(--nc-no); background: var(--nc-no); }
+html.nc-task .chip.wrong::after {
+  content: "\2715"; position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+  color: #fff; font-size: 13px; font-weight: 700; line-height: 1;
+}
+html.nc-task .pick, html.nc-task .pick-row { padding: 0 14px 4px !important; }
+
+/* ---- the reason, which is the part worth reading ----------------------- */
+html.nc-task .why,
+html.nc-task .verdict {
+  border-left: 4px solid var(--nc-navy) !important;
+  background: #f4f7fb !important; border-radius: 0 12px 12px 0 !important;
+  padding: 12px 14px !important; margin: 12px 16px !important;
+  font-size: 15.5px !important; line-height: 1.5 !important; color: var(--nc-ink) !important;
+  animation: ncIn .18s ease-out;
+}
+html.nc-task .why.ok, html.nc-task .verdict.ok { border-left-color: var(--nc-ok) !important; background: var(--nc-ok-bg) !important; }
+html.nc-task .why.no, html.nc-task .verdict.no { border-left-color: var(--nc-no) !important; background: var(--nc-no-bg) !important; }
+@keyframes ncIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+/* ---- the question blocks of the other task kinds ----------------------- */
+html.nc-task .q {
+  background: var(--nc-card) !important; border: 1px solid var(--nc-line) !important;
+  border-radius: 16px !important; padding: 16px !important; margin: 0 0 14px !important;
+  box-shadow: 0 4px 14px rgba(10, 36, 99, .05);
+}
+html.nc-task .q-n {
+  display: inline-block; background: var(--nc-navy) !important; color: #fff !important;
+  border-radius: 999px !important; padding: 4px 11px !important;
+  font-size: 11.5px !important; letter-spacing: .1em; font-weight: 700; margin-bottom: 8px !important;
+}
+html.nc-task .q-t { font-size: 17.5px !important; line-height: 1.35 !important; font-weight: 700 !important; }
+
+/* ---- the submit bar sits where the thumb is ---------------------------- */
+html.nc-task .gbs-foot {
+  position: sticky; bottom: 0; z-index: 20;
+  display: flex !important; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 14px 0 0 !important; padding: 12px 16px !important;
+  background: rgba(255, 255, 255, .96); border-top: 1px solid var(--nc-line);
+  backdrop-filter: blur(6px);
+}
+html.nc-task .gbs-state { flex: 1 1 140px; color: var(--nc-dim) !important; font-size: 14px !important; }
+html.nc-task .gbs-submit {
+  min-height: 52px !important; padding: 0 22px !important; border-radius: 13px !important;
+  background: var(--nc-navy) !important; color: #fff !important; border: 0 !important;
+  font-size: 16px !important; font-weight: 700 !important; letter-spacing: .02em;
+}
+html.nc-task .gbs-submit:disabled { background: #b9c6d6 !important; color: #f4f7fb !important; }
+html.nc-task .gbs-fb { margin: 10px 16px !important; font-size: 15px !important; }
+
+
+/* ---- two attempts, and then the part is closed ------------------------- */
+/* The chosen answer and the judgement are two different marks on the same
+   button, and the chosen one must not survive the judgement: a pick that turned
+   out wrong was still showing the navy "this is my answer" dot underneath the
+   red one. The judgement wins, always. */
+html.nc-task .chip.sel.right::before,
+html.nc-task .chip.sel.wrong::before { box-shadow: none !important; }
+html.nc-task .chip.sel.wrong { border-color: var(--nc-no) !important; background: var(--nc-no-bg) !important; }
+html.nc-task .chip.sel.right { border-color: var(--nc-ok) !important; background: var(--nc-ok-bg) !important; }
+
+/* The right answer revealed beside a wrong pick is not the trainee's answer, so
+   it is outlined rather than filled: green, but plainly not what they chose. */
+html.nc-task .gbs-closed .chip.right:not(.sel) { background: #fff !important; border-style: dashed !important; }
+html.nc-task .gbs-closed .chip.right:not(.sel)::after { content: "\2713"; }
+
+/* Everything they neither chose nor needed steps back out of the way. */
+html.nc-task .gbs-closed .chip:not(.sel):not(.right) { opacity: .45; }
+
+/* A closed part says so once, at the top, instead of leaving the trainee to
+   work out why nothing responds to a tap any more. */
+html.nc-task .part.gbs-closed .part-head::after {
+  content: "CLOSED";
+  order: 9; flex: 0 0 auto;
+  background: rgba(255, 255, 255, .16); color: #fff;
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 11px; letter-spacing: .14em; font-weight: 700;
+}
+html.nc-task .part.gbs-closed .gbs-foot { background: #f4f7fb; }
+html.nc-task .part.gbs-closed .gbs-state { color: var(--nc-ink) !important; font-weight: 600; }
+
+/* The verdict that comes with a closed answer carries the reason, so it reads as
+   the point of the exercise rather than as an error message. */
+html.nc-task .verdict .tag {
+  display: inline-block; border-radius: 6px; padding: 2px 8px; margin-right: 8px;
+  font-size: 11px; letter-spacing: .12em; font-weight: 700; text-transform: uppercase;
+  background: var(--nc-navy); color: #fff;
+}
+html.nc-task .verdict.no .tag { background: var(--nc-no); }
+html.nc-task .verdict.ok .tag { background: var(--nc-ok); }

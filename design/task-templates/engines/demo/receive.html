@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Picture receiver</title>
+<style>body{font:16px "Segoe UI",sans-serif;background:#0A182E;color:#F2F7FD;padding:24px}li{margin:4px 0}</style></head>
+<body>
+<h2>Picture receiver</h2>
+<p>Keep this tab open. A picture made in another tab (Gemini) is posted here and saved into <code>demo/img/</code> by the local demo server.</p>
+<ul id="log"></ul>
+<script>
+// A generator page cannot reach the local server itself (its own security rules block it), but it
+// may hand a picture to this page with postMessage; this page is on the local server and saves it.
+window.addEventListener('message', function (e) {
+  var d = e.data || {};
+  if (d.type !== 'gb-save' || !d.blob || !d.name) return;
+  fetch('/save?name=' + encodeURIComponent(d.name), { method: 'POST', body: d.blob })
+    .then(function (r) { return r.text(); })
+    .then(function (t) { log(t); e.source.postMessage({ type: 'gb-saved', name: d.name, result: t }, '*'); })
+    .catch(function (err) { log('ERR ' + err); e.source.postMessage({ type: 'gb-saved', name: d.name, result: 'ERR ' + err }, '*'); });
+});
+function log(t) { var li = document.createElement('li'); li.textContent = new Date().toLocaleTimeString() + '  ' + t; document.getElementById('log').appendChild(li); }
+if (window.opener) window.opener.postMessage({ type: 'gb-receiver-ready' }, '*');
+</script>
+</body></html>

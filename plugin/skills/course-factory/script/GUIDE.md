@@ -130,6 +130,7 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   | just before a self-check | `"before"` on its task slide: 2-4 things to check, one a line | the list on the task slide |
   | before the module check, every second or third module | `"drill"`: `quick-fire` (lines `"prompt \| answer"`), `say-it` (the situation, `"ask"`, `"reveal"`) or `find-it` (lines "Point to ...", `"spots"`); `"seconds"` 5-120 | a quick drill |
 
+  Each template's slots and what fills them, in one line: `course-module-ui/knowledge/blueprints.json`.
   A picture and a short explanation, two pictures, numbered steps and three parts of one system keep the templates
   they had (`compile/GUIDE.md` §2, §2h). Never the same look twice in a row (L62) - two claims or two scenarios side
   by side are a problem; 60-80 % of the slides with interactive 3D; no flat drawings (L67). A drill comes after the

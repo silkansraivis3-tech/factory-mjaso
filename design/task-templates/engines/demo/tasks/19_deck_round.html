@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>DR1 — Deck round before cargo</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<style>
+  #scene { cursor: pointer; }
+  #scene .tl-photo { transition: opacity .25s ease; }
+  #scene.turning .tl-photo { opacity: .1; }
+  /* what was tapped: a ring on the photo */
+  .dw-mark { position: absolute; z-index: 2; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; pointer-events: none;
+    border: 3px solid var(--tl-good); background: rgba(61,220,151,.22); box-shadow: 0 0 16px rgba(61,220,151,.7); animation: dw-pop .35s ease-out; }
+  .dw-mark span { position: absolute; left: 50%; top: 48px; transform: translateX(-50%); white-space: nowrap; padding: 3px 9px; border-radius: 8px;
+    background: rgba(3,10,22,.85); color: #EAF3FF; font: 700 13px var(--tl-font, sans-serif); }
+  .dw-mark.miss { width: 26px; height: 26px; margin: -13px 0 0 -13px; border: 2px dashed var(--tl-amber); background: none; box-shadow: none; }
+  .dw-mark.bad { border-color: var(--tl-bad); background: rgba(255,107,94,.25); box-shadow: 0 0 16px rgba(255,107,94,.8); }
+  @keyframes dw-pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  /* the round: four places, one after the other */
+  .dw-steps { display: grid; gap: 8px; }
+  .dw-step { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 6px 12px; border-radius: 12px; text-align: left;
+    border: 1px solid var(--tl-line); background: rgba(255,255,255,.03); color: var(--tl-dim); font: 600 15px var(--tl-font, sans-serif); touch-action: manipulation; }
+  .dw-step b { flex: 0 0 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.08); color: #EAF3FF; font-size: 15px; }
+  .dw-step em { margin-left: auto; font-style: normal; font-size: 14px; white-space: nowrap; }
+  .dw-step.on { border-color: var(--tl-accent); background: rgba(46,182,248,.12); color: #EAF3FF; box-shadow: 0 0 12px rgba(46,182,248,.3); }
+  .dw-step.on b { background: var(--tl-accent); color: #04121F; }
+  .dw-step.ok b { background: var(--tl-good); color: #04121F; }
+  .dw-step:disabled { opacity: .45; }
+  .dw-help { margin: 0 0 10px; font-size: 15px; line-height: 1.45; color: var(--tl-dim); }
+  .dw-misses { margin: 10px 0 0; font-size: 14px; color: var(--tl-dim); } .dw-misses b { color: var(--tl-amber); }
+  /* the choice */
+  .dw-ch { display: grid; gap: 10px; margin-top: 6px; }
+  .dw-ch .tl-btn { text-align: left; min-height: 56px; }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye">Deck round · LPG carrier at the berth · before the cargo hose goes on</span>You are the officer on deck. Check 4 places before cargo starts.
+    <small>The highlighted line always says what to do next.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage">
+      <div class="tl-scene" id="scene" data-aspect="1024:572"><img class="tl-photo" id="photo" src="../img/p4_walk_manifold.jpg" alt=""></div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card">
+        <h3>Your round</h3>
+        <div class="dw-steps" id="steps"></div>
+        <p class="dw-misses" id="misses"></p>
+      </div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Next place</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'DR1', title: 'Deck round before cargo', mode: 'self' });
+  /* Sources:
+     - drip tray: Hand Out 5.1 (p.54) "a drip tray must be placed under the manifold flanges"; ICS TSG(LG) 2018
+       Ship/Shore Safety Checklist item 10 (p.317, p.330); cold cargo and brittle fracture ICS TSG 9.3.2 (p.145-146).
+     - hose: ICS TSG pre-arrival checks (p.99-100) flexible hoses supported, no excessive bending or strain on the
+       manifold; SIGTTO Liquefied Gas Handling Principles 5.2.1 (p.246) hose cradle.
+     - gangway: ICS TSG 2.5.1 (p.38) access secured with an effective safety net, lifebuoy close by;
+       Hand Out 8.4.5 (p.139) strong safety net beneath, lifebuoy at the gangway.
+     - gas bottles: COSWP 2021 24.9.1 compressed gas cylinders properly secured and stored.
+     - fire hose: Hand Out 8.5 (p.140) fire hoses laid out with nozzles attached; ICS TSG checklist item 5 (p.316, p.328).
+     Photographs: Gemini, one fault planted in each. VERIFY with an instructor that each photo reads as intended.
+     Tap zones: circles [x %, y %, r %] of the photo, r in % of its width. */
+  var STOPS = [
+    { id: 'manifold', name: 'The manifold', src: '../img/p4_walk_manifold.jpg' },
+    { id: 'aft', name: 'The deck, looking aft', src: '../img/p4_walk_aft.jpg' },
+    { id: 'gangway', name: 'The gangway', src: '../img/p4_walk_gangway.jpg' },
+    { id: 'store', name: 'The deck store', src: '../img/p4_walk_store.jpg' }
+  ];
+  var FIND = [
+    { id: 'drip', hint: 'Look at the deck right under the flange connection.', stop: 'manifold', name: 'No drip tray under the manifold flanges', label: 'No drip tray',
+      zones: [[60, 48, 6], [68, 48, 6], [62, 70, 8], [72, 75, 7], [56, 79, 7], [80, 68, 7]],
+      what: 'Bare deck under the manifold connection. Anything from the flanges falls straight onto the deck plating.',
+      ch: ['Put a drip tray under the manifold flanges before connecting', 'Nothing - spilt LPG just boils off', 'Cover the deck there with a tarpaulin'],
+      w: 'A drip tray must be under the manifold flanges: cold cargo on the steel can crack it (Hand Out p.54; ICS TSG checklist item 10).' },
+    { id: 'hose', hint: 'Follow the hose from the flange down to the deck.', stop: 'aft', name: 'Hose lying on deck, kinked at the flange', label: 'Hose on deck',
+      zones: [[14, 66, 6], [28, 59, 6], [42, 60, 6], [44, 72, 6], [51, 86, 6], [58, 79, 6], [62, 61, 6], [66, 47, 6], [73, 41, 6], [78, 40, 6]],
+      what: 'The hose drops from the flange onto the deck, loops across the walkway and is bent tight right at the connection. Nothing carries it.',
+      ch: ['Support it in a saddle: no tight bend, no weight on the manifold', 'Leave it on deck - it cannot fall from there', 'Tighten the flange bolts more'],
+      w: 'Hoses are supported, not bent tighter than allowed and not straining the manifold (ICS TSG p.99-100; SIGTTO 5.2.1).' },
+    { id: 'gangway', hint: 'Look under the gangway, and at its top end.', stop: 'gangway', name: 'Gangway with no safety net and no lifebuoy', label: 'No net',
+      zones: [[18, 50, 8], [35, 45, 8], [50, 38, 8], [62, 31, 7], [68, 39, 7], [25, 75, 9], [40, 72, 9], [52, 59, 7]],
+      what: 'Open water between the ship and the jetty under the gangway - no net to catch anyone who slips, and no lifebuoy at the top.',
+      ch: ['Rig a safety net under it and put a lifebuoy at the top before anyone uses it', 'Tell everyone to hold the handrail', 'Nothing - the jetty is close'],
+      w: 'Access is secured with an effective safety net and a lifebuoy close by (ICS TSG 2.5.1 p.38; Hand Out 8.4.5 p.139).' },
+    { id: 'bottles', hint: 'Look at what stands against the bulkhead by the door.', stop: 'store', name: 'Gas bottles standing loose on deck', label: 'Loose bottles',
+      zones: [[55, 58, 5], [60, 61, 5], [57, 40, 5], [59, 79, 5]],
+      what: 'An oxygen and an acetylene bottle stand on the open deck by the store door - no rack, no chain, nothing to stop them falling.',
+      ch: ['Have them taken to their proper store and secured there', 'Lay them flat on the deck so they cannot fall', 'Leave them - they are not cargo'],
+      w: 'Compressed gas bottles are properly secured and stored where their use allows (COSWP 24.9.1).' },
+    { id: 'firehose', hint: 'Look inside the red box on the bulkhead.', stop: 'store', name: 'Fire hose still rolled up in its box', label: 'Fire hose in box',
+      zones: [[73, 47, 7], [79, 54, 7], [87, 59, 7], [70, 66, 6]],
+      what: 'The fire hose is rolled up in the box. Before cargo starts it should already be out and ready at the manifold.',
+      ch: ['Lay it out towards the manifold with the nozzle fitted, ready to use', 'Close the box door so the hose stays clean', 'Nothing - in the box it is ready'],
+      w: 'Fire hoses are laid out with nozzles attached and ready for immediate use (Hand Out p.140; ICS TSG checklist item 5).' }
+  ];
+  // the right fix of each, keyed the way the classroom keys answers (FNV-1a)
+  var KEYS = { drip: 'f5ef80b6', hose: '3b185a3f', gangway: '09c52abe', bottles: '845aea46', firehose: '1688bcbb' };
+  var S = { at: 0, reached: 0, found: {}, choice: {}, right: {}, hinted: {}, marks: [], misses: 0, over: false };
+  var scene = document.getElementById('scene'), photo = document.getElementById('photo');
+  function here(stop) { return FIND.filter(function (f) { return f.stop === (stop || STOPS[S.at].id); }); }
+  function left(stop) { return here(stop).filter(function (f) { return !S.found[f.id]; }); }
+  STOPS.forEach(function (s) { var im = new Image(); im.src = s.src; }); // ready before the trainee walks there
+
+  /* ---- the round, one place after the other ------------------------------------------------------- */
+  var steps = document.getElementById('steps');
+  STOPS.forEach(function (s, i) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'dw-step'; b.setAttribute('data-stop', s.id);
+    b.addEventListener('click', function () { if (i <= S.reached) show(i); });
+    steps.appendChild(b);
+  });
+  function show(i, now) {
+    if (GBLab.sheetOpen() || (i === S.at && !now)) return;
+    S.at = i; S.reached = Math.max(S.reached, i);
+    if (now) return draw();
+    scene.classList.add('turning');
+    setTimeout(function () { draw(); scene.classList.remove('turning'); }, 180);
+  }
+  function draw() {
+    var s = STOPS[S.at];
+    photo.src = s.src; GBLab.fitScenes();
+    [].forEach.call(scene.querySelectorAll('.dw-mark'), function (m) { m.parentNode.removeChild(m); });
+    S.marks.forEach(function (m) { if (m.stop === s.id) ring(m); });
+    side();
+  }
+  function side() {
+    var l = left(), last = S.at === STOPS.length - 1, place = '<b>Place ' + (S.at + 1) + ' of ' + STOPS.length + '</b> · ' + GBLab.esc(STOPS[S.at].name) + ' - ';
+    if (S.over) GBLab.now('');
+    else if (!l.length) GBLab.now(place + 'all found. Press <b>' + (last ? 'Finish the round' : 'Next place') + '</b>', 'done');
+    else GBLab.now(place + 'find <b>' + l.length + ' problem' + (l.length > 1 ? 's' : '') + '</b> and tap ' + (l.length > 1 ? 'them' : 'it'));
+    [].forEach.call(steps.children, function (b, i) {
+      var h = here(STOPS[i].id), f = h.filter(function (x) { return S.found[x.id]; }).length;
+      b.className = 'dw-step' + (i === S.at ? ' on' : '') + (f === h.length ? ' ok' : '');
+      b.disabled = i > S.reached;
+      b.innerHTML = '<b>' + (f === h.length ? '✓' : i + 1) + '</b>' + GBLab.esc(STOPS[i].name) + (i <= S.reached ? '<em>' + f + ' of ' + h.length + '</em>' : '');
+    });
+    document.getElementById('misses').innerHTML = S.misses ? '<b>' + S.misses + '</b> tap' + (S.misses > 1 ? 's' : '') + ' on things that were fine' : '';
+    GBLab.go(last ? 'Finish the round' : 'Next place  →', last ? finishRound : function () { show(S.at + 1); });
+    GBLab.goReady(!l.length && !S.over);
+  }
+  function ring(m) {
+    var e = document.createElement('div'); e.className = 'dw-mark ' + (m.cls || '');
+    e.style.left = m.x + '%'; e.style.top = m.y + '%';
+    if (m.label) e.innerHTML = '<span>' + GBLab.esc(m.label) + '</span>';
+    scene.appendChild(e);
+  }
+
+  /* ---- a tap on the photo ------------------------------------------------------------------------ */
+  scene.addEventListener('click', function (ev) {
+    if (S.over || GBLab.sheetOpen()) return;
+    var p = GBLab.toScene(ev, scene); if (!p.inside) return;
+    var stop = STOPS[S.at].id, k = 572 / 1024, best = null, bd = 1e9;
+    here().forEach(function (f) {
+      f.zones.forEach(function (z) {
+        var dx = p.x - z[0], dy = (p.y - z[1]) * k, d = Math.sqrt(dx * dx + dy * dy);
+        if (d <= z[2] && d < bd) { bd = d; best = f; }
+      });
+    });
+    if (!best) {
+      S.misses++; S.marks.push({ stop: stop, x: p.x, y: p.y, cls: 'miss' }); ring(S.marks[S.marks.length - 1]);
+      GBLab.sfx('tap'); GBLab.toast('That one is fine. Keep looking.', 'hint');
+      return side();
+    }
+    if (S.found[best.id]) return GBLab.toast('Already found: ' + best.name.toLowerCase() + '.', 'info');
+    S.found[best.id] = true;
+    S.marks.push({ stop: stop, x: p.x, y: p.y, label: best.label }); ring(S.marks[S.marks.length - 1]);
+    GBLab.sfx('good'); side(); decide(best);
+  });
+  GBLab.hint(function () {
+    var l = left();
+    if (!l.length) return 'Everything here is found - press ' + (S.at === STOPS.length - 1 ? 'Finish the round.' : 'Next place.');
+    S.hinted[l[0].id] = true; return l[0].hint;
+  });
+
+  function decide(f) {
+    var box = document.createElement('div'), sh = null; box.className = 'dw-ch';
+    f.ch.map(function (c, i) { return i; }).sort(function () { return Math.random() - .5; }).forEach(function (i) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'tl-btn'; b.textContent = f.ch[i];
+      b.setAttribute('data-ch', f.id + ':' + i);
+      b.addEventListener('click', function () {
+        if (S.choice[f.id] != null) return;
+        S.choice[f.id] = f.ch[i];
+        S.right[f.id] = GBLab.key('DR1-' + f.id, f.ch[i], 1) === KEYS[f.id];
+        sh.close(); side();
+        var more = left().length;
+        GBLab.toast((S.right[f.id] ? 'Right. ' : 'Noted - see your result at the end. ') +
+          (more ? more + ' more problem' + (more > 1 ? 's' : '') + ' here.' : S.at < STOPS.length - 1 ? 'All found here - go to the next place.' : 'All found - finish the round.'), S.right[f.id] ? 'ok' : 'info');
+      });
+      box.appendChild(b);
+    });
+    sh = GBLab.show({ tag: 'Problem found', title: f.name, text: GBLab.esc(f.what) + '<br><b>What do you do?</b>', node: box, buttons: [] });
+  }
+
+  /* ---- the opening card ---------------------------------------------------------------------------- */
+  show(0, true);
+  GBLab.intro({ tag: 'Deck round', title: 'Cargo starts soon. Walk the deck first.',
+    text: 'The ship is alongside and the hose goes on next. Some things on deck are not ready. Find them and put them right.',
+    steps: ['Look at the photo of the place.', 'Tap the problem you see - right on it.', 'Choose what you do about it.', 'Press <b>Next place</b>. Four places in all.'],
+    start: 'Start at the manifold' });
+
+  /* ---- the end: what was walked past, then the result ---------------------------------------------- */
+  function finishRound() {
+    var missed = FIND.filter(function (f) { return !S.found[f.id]; });
+    GBLab.sure(function (lvl) {
+      GBLab.sureNote(lvl, !missed.length && FIND.every(function (f) { return S.right[f.id]; }));
+      S.over = true; walk(missed, 0);
+    });
+  }
+  function walk(missed, i) {
+    if (i >= missed.length) return result();
+    var f = missed[i], z = f.zones[0], at = 0;
+    STOPS.forEach(function (s, j) { if (s.id === f.stop) at = j; });
+    S.marks.push({ stop: f.stop, x: z[0], y: z[1], cls: 'bad', label: f.label });
+    show(at, true);
+    GBLab.show({ tag: 'Walked past', kind: 'no', title: f.name, text: GBLab.esc(f.what),
+      buttons: [{ label: i + 1 < missed.length ? 'Next' : 'See my result', fn: function () { walk(missed, i + 1); } }] });
+  }
+  function result() {
+    var items = [];
+    FIND.forEach(function (f) { items.push({ t: 'Found: ' + f.name, ok: !!S.found[f.id], a: S.found[f.id] ? (S.hinted[f.id] ? 'found with a hint' : 'found') : 'walked past', c: 'found', w: f.w }); });
+    FIND.forEach(function (f) { items.push({ t: 'Put right: ' + f.name, ok: !!S.right[f.id], a: S.choice[f.id] || 'not decided', c: f.ch[0], w: f.w }); });
+    items.push({ t: 'Few false alarms (3 or fewer)', ok: S.misses <= 3, a: S.misses + ' tap' + (S.misses === 1 ? '' : 's') + ' on fine things', c: '3 or fewer',
+      w: 'A round looks at everything - but a report full of non-faults hides the real one.' });
+    GBLab.finish({ items: items });
+  }
+})();
+</script>
+</body>
+</html>

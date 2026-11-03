@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>AL1 — Listen and identify</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<style>
+  /* the stage: a photo of the real thing (fitted whole by the shell), the big Play button and a live scope over it */
+  .al-shade { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none;
+    background: linear-gradient(90deg, rgba(5,13,26,.5), rgba(5,13,26,.1) 45%, rgba(5,13,26,.55)); }
+  .al-top, .al-playbtn, .al-scope { z-index: 3; }
+  .al-top { position: absolute; left: 20px; top: 16px; display: flex; align-items: center; gap: 12px; font: 800 15px var(--font, sans-serif); letter-spacing: .12em; text-transform: uppercase; color: var(--tl-text, #F2F7FD); text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+  .al-dots i { display: inline-block; width: 11px; height: 11px; margin-right: 6px; border-radius: 50%; border: 2px solid var(--tl-text, #F2F7FD); opacity: .7; }
+  .al-dots i.done { background: var(--tl-text, #F2F7FD); opacity: .7; }
+  .al-dots i.now { background: var(--tl-amber, #F2B33D); border-color: var(--tl-amber, #F2B33D); opacity: 1; }
+
+  /* the big round Play button - replay as often as wanted */
+  .al-playbtn {
+    position: absolute; left: 21%; top: 52%; width: 176px; height: 176px; margin: -88px 0 0 -88px; border-radius: 50%;
+    border: 4px solid rgba(242,247,253,.85); background: radial-gradient(circle at 50% 38%, #1B7FD6, #0A2463);
+    color: var(--tl-text, #F2F7FD); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    box-shadow: 0 14px 34px rgba(0,0,0,.45); font: 800 17px var(--font, sans-serif); letter-spacing: .06em; text-transform: uppercase;
+    transition: transform .08s ease;
+  }
+  .al-playbtn:active { transform: scale(.96); }
+  .al-playbtn svg { width: 64px; height: 64px; }
+  .al-playbtn .al-ic-wave { display: none; }
+  .al-on .al-playbtn .al-ic-play { display: none; }
+  .al-on .al-playbtn .al-ic-wave { display: block; }
+  .al-on .al-playbtn { animation: al-ring 1.1s ease-out infinite; }
+  @keyframes al-ring { 0% { box-shadow: 0 0 0 0 rgba(46,182,248,.65), 0 14px 34px rgba(0,0,0,.45); } 100% { box-shadow: 0 0 0 46px rgba(46,182,248,0), 0 14px 34px rgba(0,0,0,.45); } }
+
+  /* the live scope: it moves only while the signal plays */
+  .al-scope {
+    position: absolute; left: 63%; right: 16px; top: 64px; bottom: 20px; border-radius: 16px; padding: 12px 14px 10px;
+    background: var(--tl-glass, rgba(10,26,51,.72)); border: 1px solid var(--tl-line, rgba(140,190,255,.16)); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); display: flex; flex-direction: column;
+  }
+  .al-scope h3 { margin: 0 0 6px; font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--tl-dim, #9DB3CC); }
+  .al-scope svg { flex: 1 1 auto; width: 100%; min-height: 0; height: 100%; display: block; }
+  .al-grid { stroke: rgba(162,183,207,.14); stroke-width: 1; }
+  .al-trace { fill: none; stroke: var(--tl-accent, #2EB6F8); stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .al-bar { fill: var(--tl-accent, #2EB6F8); opacity: .85; }
+  .al-scope .al-ax { display: flex; justify-content: space-between; font-size: 12px; color: var(--tl-faint, #6E86A3); }
+
+  /* portrait: Play on top, the scope underneath */
+  @media (max-aspect-ratio: 1/1) {
+    .al-playbtn { left: 21%; top: 50%; width: 150px; height: 150px; margin: -75px 0 0 -75px; }
+    .al-playbtn svg { width: 52px; height: 52px; }
+    .al-scope { left: 63%; right: 12px; top: 52px; bottom: 12px; padding: 10px; }
+    .al-top { left: 14px; top: 12px; font-size: 13px; }
+  }
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) {
+    .al-playbtn { width: 116px; height: 116px; margin: -58px 0 0 -58px; left: 20%; top: 52%; font-size: 14px; }
+    .al-scope { left: 62%; right: 8px; top: 44px; bottom: 8px; padding: 8px; }
+    .al-scope .al-ax { display: none; }
+    .al-playbtn svg { width: 44px; height: 44px; }
+  }
+
+  /* the side: the question, the signal cards, part 2 */
+  .al-q { margin: 0 0 4px; font-size: 18.5px; font-weight: 700; line-height: 1.35; color: var(--tl-text, #F2F7FD); }
+  .al-note { margin: 0 0 10px; font-size: 14.5px; color: var(--tl-dim, #9DB3CC); line-height: 1.4; }
+  .al-list { display: grid; gap: 8px; }
+  .al-card { position: relative; }
+  .al-card .al-ct { flex: 1 1 auto; display: block; }
+  .al-card .al-ct b { display: block; font-weight: 700; }
+  .al-pat-w { display: none; margin-top: 6px; }
+  .al-shown .al-pat-w { display: block; }
+  .al-pat { display: block; width: 100%; height: 22px; }
+  .al-pat rect { fill: var(--tl-accent, #2EB6F8); }
+  .al-pat-w em { display: block; font-style: normal; font-size: 14px; font-weight: 500; color: var(--tl-dim, #9DB3CC); margin-top: 3px; }
+  .al-mark { flex: 0 0 auto; font-style: normal; font-weight: 800; font-size: 20px; }
+  .al-card.good .al-mark { color: var(--tl-good, #3DDC97); }
+  .al-card.bad .al-mark { color: var(--tl-bad, #FF6B5E); }
+  .al-sum { font-size: 15.5px; }
+  .al-sum em { font-style: normal; color: var(--tl-dim, #9DB3CC); font-weight: 500; }
+  .al-phones { display: flex; align-items: center; gap: 10px; }
+  .al-phones svg { flex: 0 0 auto; width: 30px; height: 30px; }
+  .al-now { margin-top: 6px !important; font-size: 14.5px !important; color: var(--tl-accent, #2EB6F8) !important; }
+</style>
+</head>
+<body>
+<!--
+  AL1 - Listen and identify. The sound is made by the page (GBLab.sound), nothing is loaded.
+  SOURCES: general emergency alarm - SOLAS ch. III reg. 6.4.2 (general emergency alarm system) and the LSA Code 7.2.1:
+           seven or more short blasts followed by one long blast (SOLAS 2020 consolidated edition, in the knowledge base);
+           "proceed to stations as per the emergency plan" - STS manual 11.2; muster lists displayed and understood by
+           all - SIGTTO Liquefied Gas Handling Principles 9.11.5 and Handout 4, 9.2.
+           The simulator manual (LCHS TechSim LPG, 16.1-16.2) lists CMS alarms (P0003 Low, L0002 High High, Q5101 LEL
+           High ...) but no audible patterns, so every pattern except the general alarm stays "as on the training ship".
+  VERIFY: the general emergency alarm is SOLAS (seven or more short blasts + one long) - certain.
+          The lengths used here (short 0.6 s, long 3 s) are a demo choice - check against the training ship.
+  VERIFY: cargo gas detection alarm = intermittent two-tone - as on the training ship? ship-specific.
+  VERIFY: fire alarm = continuous tone - as on the training ship? ship-specific.
+  VERIFY: cargo tank high-level alarm = rapid beeps - as on the training ship? ship-specific.
+  VERIFY: man overboard = three long blasts - as in the training ship's muster list? ship-specific.
+  Photos: ../img/13_listen_alarm_column.jpg (column at x 43-59 %: Play sits left of it, the scope right of it), ../img/13_listen_muster_station.jpg.
+  The result-sheet photos (13_listen_missed_muster/gas_on_deck/overfill_esd/engine_room_fire) show only once the files exist.
+-->
+<div class="tl" id="tl">
+  <div class="tl-ask" id="ask"><span class="tl-eye">Listen · Alarm signals</span>Listen to the alarm and say which signal it is.
+    <small>Tap the round button to play it - as often as you like. The patterns are as on the training ship.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage dark" id="stage">
+      <div class="tl-scene" id="scene" data-aspect="1024:572">
+        <img class="tl-photo" alt="" src="../img/13_listen_alarm_column.jpg" onerror="this.remove()">
+      </div>
+      <div class="al-shade"></div>
+      <div class="al-top"><span id="ind">Signal 1 of 4</span><span class="al-dots" id="dots"></span></div>
+      <button type="button" class="al-playbtn" id="play" aria-label="Play the signal">
+        <svg class="al-ic-play" viewBox="0 0 64 64" aria-hidden="true"><path d="M22 14 L52 32 L22 50 Z" fill="#fff"/></svg>
+        <svg class="al-ic-wave" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 32h6M20 20v24M30 12v40M40 22v20M50 28v8M56 32h2" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/></svg>
+        <span id="cap">Play</span>
+      </button>
+      <div class="al-scope">
+        <h3>Live signal</h3>
+        <svg id="scope" viewBox="0 0 520 240" preserveAspectRatio="none" aria-hidden="true">
+          <path class="al-grid" d="M0 70 H520 M0 20 H520 M0 120 H520 M130 10 V130 M260 10 V130 M390 10 V130"/>
+          <path id="trace" class="al-trace" d="M0 70 H520"/>
+          <g id="bars"></g>
+        </svg>
+        <div class="al-ax"><span>low pitch</span><span>level by pitch</span><span>high pitch</span></div>
+      </div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card dark al-phones">
+        <svg viewBox="0 0 30 30" aria-hidden="true"><path d="M5 18v-3a10 10 0 0 1 20 0v3" fill="none" stroke="#9DB3CC" stroke-width="2.4"/><rect x="3" y="17" width="6" height="9" rx="2" fill="#2EB6F8"/><rect x="21" y="17" width="6" height="9" rx="2" fill="#2EB6F8"/></svg>
+        <div><p style="font-size:14.5px">Headphones in class. Patterns as on the training ship - your ship's muster list may differ.</p>
+        <p class="al-now" id="now">On the screen now: quiet. The signal plays when you tap the round button.</p></div>
+      </div>
+      <div class="tl-card" id="choose">
+        <p class="al-q">Which signal is it?</p>
+        <p class="al-note">The pattern of each signal shows after you check.</p>
+        <div class="al-list" id="cards"></div>
+      </div>
+      <div class="tl-card" id="p2" style="display:none">
+        <p class="al-q" id="p2q">What do you do?</p>
+        <p class="al-note" id="p2n">You are in the mess room when you hear it.</p>
+        <div class="al-list" id="p2opts"></div>
+      </div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Check my answer</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'AL1', title: 'Listen and identify', mode: 'self' });
+
+  /* ---- signal patterns: steps [hz, ms, gapMs, type] for GBLab.sound.play ------------ */
+  function rep(s, n) { var a = [], i; for (i = 0; i < n; i++) a.push(s.slice()); return a; }
+  function alt(h, l, ms, gap, n, ty) { var a = [], i; for (i = 0; i < n; i++) { a.push([h, ms, 0, ty]); a.push([l, ms, gap, ty]); } return a; }
+
+  /* The cards. Rightness is not stored: each round keeps only a hash of its right card's name. */
+  var SIG = {
+    GEN: { name: 'General emergency alarm', desc: '7 or more short, then 1 long',
+      steps: rep([470, 600, 400, 'square'], 7).concat([[470, 3000, 0, 'square']]), // SOLAS - lengths VERIFY
+      meaning: 'Seven or more short blasts and one long blast. Everyone goes to the muster station with a lifejacket - and an immersion suit if the muster list says so - and is counted.',
+      missed: 'Everyone else went to the muster station and was counted. One name was missing - yours. Two crew were sent back into the accommodation to look for you instead of dealing with the emergency.',
+      why: 'Seven or more short and one long is the same on every ship: go to your muster station.', img: '../img/05_draw_route_muster.jpg' },
+    GAS: { name: 'Cargo gas detection alarm', desc: 'two tones, high-low, repeating',
+      steps: alt(960, 640, 320, 260, 6, 'square'), // VERIFY: as on the training ship
+      meaning: 'On the training ship this two-tone alarm comes from the cargo gas detection panel: a detector point has found cargo vapour. The officer reads which point before anyone goes near it.',
+      missed: 'A flange at the manifold was leaking. Propane vapour, heavier than air, was spreading low along the deck. Taking it for another alarm, a crew member walked to the manifold without a portable detector - into the vapour.',
+      why: 'Gas alarm: find which detector point, keep people away, no ignition - propane vapour lies low.', img: '../img/13_listen_gas_on_deck.jpg' },
+    FIRE: { name: 'Fire alarm', desc: 'one continuous tone',
+      steps: [[760, 4500, 0, 'triangle']], // VERIFY: as on the training ship
+      meaning: 'On the training ship a continuous tone is the fire alarm: a detector has found fire or smoke. The bridge confirms where, and the fire party goes to its station as the muster list says.',
+      missed: 'A smoke detector in the engine room had alarmed. Nobody acted for two minutes, and a fire one extinguisher could have stopped needed the fixed system and the whole crew.',
+      why: 'Fire alarm: report, confirm where, fire party to its station - minutes decide the size of a fire.' },
+    HLA: { name: 'Cargo tank high-level alarm', desc: 'rapid short beeps',
+      steps: rep([1250, 110, 110, 'square'], 18), // VERIFY: as on the training ship
+      meaning: 'On the training ship rapid beeps mean a cargo tank has reached its high-level setting. Loading into that tank is slowed or stopped before the overfill protection trips.',
+      missed: 'Loading into tank 2 went on at full rate. The level reached the overfill trip, the emergency shutdown stopped the transfer suddenly, and the tank was fuller than its loading limit.',
+      why: 'High level: slow or stop loading into that tank now - next comes overfill and an emergency shutdown.', img: '../img/09_scenario_state_esd.jpg' },
+    MOB: { name: 'Man overboard signal', desc: '3 long blasts',
+      steps: rep([430, 1500, 600, 'square'], 3), // VERIFY: as in the training ship's muster list
+      meaning: 'Three long blasts: a person is in the water.', missed: '', why: '' }
+  };
+  var ORDER = ['GEN', 'GAS', 'FIRE', 'HLA', 'MOB'];
+  var NAMES = ORDER.map(function (k) { return SIG[k].name; });
+
+  /* The rounds. A listening task has to carry its own sound; what the page does not carry is
+     which card is right - only a hash, checked by GBLab.key(round id, card name, 1). */
+  var ROUNDS = [
+    { id: 'AL1-r1', h: 'a2d4a68a', play: rep([1250, 110, 110, 'square'], 18) },
+    { id: 'AL1-r2', h: 'cdceb3b5', play: rep([470, 600, 400, 'square'], 7).concat([[470, 3000, 0, 'square']]) },
+    { id: 'AL1-r3', h: 'fba41ebd', play: alt(960, 640, 320, 260, 6, 'square') },
+    { id: 'AL1-r4', h: 'd7f492ba', play: [[760, 4500, 0, 'triangle']] }
+  ];
+  /* part 2 comes after the round with the general alarm (round 2) */
+  var FLOW = [0, 1, 'act', 2, 3];
+
+  var ACT = [
+    'Stay at your work and wait to be told what has happened',
+    'Take your lifejacket (immersion suit if required) and go to your muster station',
+    'Go straight to the lifeboat and start to lower it',
+    'Go out on deck to find out what the emergency is'
+  ];
+  var ACT_SAYS = [
+    'At the muster station the officer counted the crew: one missing - you. Two crew went back into the accommodation to search for you instead of dealing with the emergency.',
+    'You were counted at the muster station within minutes, and the master could give every person a task.',
+    'Nobody had ordered abandon ship. The boat, lowered by one person, swung against the hull and was damaged - now it is not there if the order does come.',
+    'The emergency was a gas release on deck. Going to look, you walked into the vapour - and you were not on the muster list count either.'
+  ];
+  var WHY = [
+    'At the muster station the crew is counted and given its emergency tasks',
+    'The alarm means abandon ship, so the boats must be ready at once',
+    'Seeing what is happening first stops you walking into danger',
+    'Staying at your post keeps the cargo operation under control'
+  ];
+  var H_ACT = '2ef60fc5', H_WHY = '62941c30';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var stage = $('stage'), fi = 0, picked = null, judged = false, plays = 0, res = [], actPick = null, whyPick = null, sureAt = null;
+
+  function rightOf(id, h, list) {
+    for (var i = 0; i < list.length; i++) if (GBLab.key(id, list[i], 1) === h) return i;
+    return -1;
+  }
+
+  /* ---- the photo, fitted whole by the shell (1024:572) ---- */
+  var curPhoto = '../img/13_listen_alarm_column.jpg';
+  function photo(src, label) {
+    if (src === curPhoto) return;
+    curPhoto = src;
+    $('scene').innerHTML = '<img class="tl-photo" alt="' + GBLab.esc(label) + '" src="' + src + '" onerror="this.remove()">';
+    var bl = stage.querySelector('.tl-blur');
+    if (bl) bl.parentNode.removeChild(bl);
+    GBLab.fitScenes();
+  }
+  /* sheet photographs: only files that exist in demo/img (a missing one would be a 404) */
+  function shot(src) { return src || null; }
+
+  /* ---- the live scope ---------------------------------------------------------------- */
+  var NB = 16, bars = [], i;
+  for (i = 0; i < NB; i++) {
+    var r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    r.setAttribute('class', 'al-bar');
+    r.setAttribute('x', 8 + i * 32.1); r.setAttribute('width', 24); r.setAttribute('rx', 3);
+    $('bars').appendChild(r);
+    bars.push(r);
+  }
+  var sched = [], t0 = 0, endAt = 0, playing = false, raf = 0, lvl = 0, hz = 600, phase = 0;
+  function drawScope() {
+    var d = 'M0 70', x, amp = 3 + lvl * 52, cyc = hz / 70;
+    phase += 0.55;
+    for (x = 0; x <= 520; x += 4) {
+      var w = Math.sin(Math.PI * x / 520);
+      d += ' L' + x + ' ' + (70 + amp * w * Math.sin(x / 520 * cyc * 2 * Math.PI + phase) + (Math.random() - .5) * 2).toFixed(1);
+    }
+    $('trace').setAttribute('d', d);
+    var c = (Math.log(hz) - Math.log(300)) / (Math.log(1600) - Math.log(300)) * (NB - 1);
+    for (var b = 0; b < NB; b++) {
+      var h = 3 + lvl * 92 * Math.exp(-(b - c) * (b - c) / 3) * (0.85 + Math.random() * 0.15) + Math.random() * 3;
+      bars[b].setAttribute('y', (236 - h).toFixed(1));
+      bars[b].setAttribute('height', h.toFixed(1));
+    }
+  }
+  function frame() {
+    raf = 0;
+    var e = Date.now() - t0, seg = null, k;
+    for (k = 0; k < sched.length; k++) if (e >= sched[k][0] && e < sched[k][1]) { seg = sched[k]; break; }
+    lvl += ((playing && seg ? 1 : 0) - lvl) * 0.45;
+    if (seg) hz = seg[2];
+    drawScope();
+    if (playing && e > endAt + 150) {
+      playing = false;
+      stage.className = stage.className.replace(' al-on', '');
+      $('cap').textContent = 'Play again';
+      $('now').textContent = 'On the screen now: quiet. Played ' + plays + (plays === 1 ? ' time' : ' times') + ' - play it again whenever you like.';
+    }
+    if (playing || lvl > 0.02) raf = window.requestAnimationFrame(frame);
+  }
+  function curSteps() { var f = FLOW[Math.min(fi, FLOW.length - 1)]; return f === 'act' ? ROUNDS[1].play : ROUNDS[f].play; }
+  function play() {
+    var steps = curSteps(), t = 50;
+    if (playing) GBLab.sound.stop();
+    var len = GBLab.sound.play(steps, 0.16);
+    if (!len) GBLab.toast('This tablet gives no sound here - ask the instructor to play it to the room.', 'hint');
+    sched = [];
+    steps.forEach(function (s) { sched.push([t, t + s[1], s[0]]); t += s[1] + (s[2] || 0); });
+    endAt = t; t0 = Date.now(); plays++;
+    if (!playing) stage.className += ' al-on';
+    playing = true;
+    $('cap').textContent = 'Playing';
+    $('now').textContent = 'On the screen now: the signal is sounding (' + Math.round((endAt - 50) / 100) / 10 + ' s).';
+    if (!raf) raf = window.requestAnimationFrame(frame);
+  }
+  $('play').addEventListener('click', play);
+
+  /* ---- the cards ----------------------------------------------------------------------- */
+  function patSvg(steps) {
+    var T = 0, hzs = [], top;
+    steps.forEach(function (s) { T += s[1] + (s[2] || 0); if (hzs.indexOf(s[0]) < 0) hzs.push(s[0]); });
+    T -= steps[steps.length - 1][2] || 0;
+    top = Math.max.apply(null, hzs);
+    var sc = 236 / T, x = 2, h = '<svg class="al-pat" viewBox="0 0 240 22" preserveAspectRatio="none" aria-hidden="true">';
+    steps.forEach(function (s) {
+      var y = 3, hh = 16;
+      if (hzs.length > 1) { hh = 8; y = s[0] === top ? 2 : 12; }
+      h += '<rect x="' + x.toFixed(1) + '" y="' + y + '" width="' + Math.max(2, s[1] * sc).toFixed(1) + '" height="' + hh + '" rx="2"/>';
+      x += (s[1] + (s[2] || 0)) * sc;
+    });
+    return h + '</svg>';
+  }
+  var cards = [];
+  ORDER.forEach(function (k, n) {
+    var b = GBLab.el('button', 'tl-btn al-card');
+    b.type = 'button';
+    b.innerHTML = '<span class="al-ct"><b>' + SIG[k].name + '</b><span class="al-pat-w">' + patSvg(SIG[k].steps) +
+      '<em>' + SIG[k].desc + '</em></span></span><i class="al-mark"></i>';
+    b.addEventListener('click', function () {
+      if (judged) return;
+      if (!plays) return GBLab.toast('Play the signal first - tap the round button.', 'hint');
+      picked = n;
+      cards.forEach(function (c, m) { c.className = 'tl-btn al-card' + (m === n ? ' on' : ''); });
+      GBLab.goEnabled(true);
+    });
+    $('cards').appendChild(b);
+    cards.push(b);
+  });
+
+  function dots() {
+    var h = '', n;
+    for (n = 0; n < ROUNDS.length; n++) {
+      var at = FLOW.indexOf(n);
+      h += '<i class="' + (at < fi ? 'done' : at === fi ? 'now' : '') + '"></i>';
+    }
+    $('dots').innerHTML = h;
+  }
+
+  /* ---- a round ------------------------------------------------------------------------- */
+  function startRound() {
+    var r = FLOW[fi];
+    judged = false; picked = null; plays = 0;
+    $('choose').style.display = ''; $('p2').style.display = 'none';
+    $('choose').className = 'tl-card';
+    cards.forEach(function (c) { c.className = 'tl-btn al-card'; c.querySelector('.al-mark').textContent = ''; });
+    $('ind').textContent = 'Signal ' + (r + 1) + ' of ' + ROUNDS.length;
+    $('now').textContent = 'On the screen now: quiet. The signal plays when you tap the round button.';
+    $('cap').textContent = 'Play';
+    $('ask').innerHTML = '<span class="tl-eye">Listen · Alarm signals</span>Listen to the alarm and say which signal it is.<small>Tap the round button to play it - as often as you like. The patterns are as on the training ship.</small>';
+    photo('../img/13_listen_alarm_column.jpg', "an alarm signal column on a ship's bulkhead");
+    dots();
+    GBLab.go('Check my answer', askRound);
+    GBLab.goEnabled(false);
+  }
+  function askRound() {
+    if (picked == null) return;
+    GBLab.sure(function (lvl) { sureAt = lvl; judgeRound(); });
+  }
+  function judgeRound() {
+    var R = ROUNDS[FLOW[fi]], right = rightOf(R.id, R.h, NAMES), ok = picked === right;
+    var S = SIG[ORDER[right]], P = SIG[ORDER[picked]];
+    judged = true;
+    GBLab.sureNote(sureAt, ok);
+    res.push({ t: 'Signal ' + (FLOW[fi] + 1) + ': ' + S.name.toLowerCase() + ' recognised', ok: ok, a: P.name, c: S.name, w: S.why });
+    $('choose').className = 'tl-card al-shown';
+    cards.forEach(function (c, m) {
+      c.className = 'tl-btn al-card' + (m === right ? ' good' : m === picked ? ' bad' : '');
+      c.querySelector('.al-mark').textContent = m === right ? '✓' : m === picked ? '✕' : '';
+    });
+    var nx = nextLabel();
+    GBLab.go(nx, next);
+    GBLab.show({
+      img: ok ? null : shot(S.img),
+      tag: ok ? 'Recognised' : 'What happened', kind: ok ? 'ok' : 'no',
+      title: ok ? S.name : 'It was the ' + S.name.toLowerCase(),
+      text: ok ? S.meaning : S.missed + '<br><br>You took it for the ' + P.name.toLowerCase() + '. ' + S.meaning,
+      buttons: [{ label: nx, fn: next }, { label: 'Listen again and compare', primary: false }]
+    });
+  }
+  function nextLabel() {
+    var n = FLOW[fi + 1];
+    return n == null ? 'See my result' : n === 'act' ? 'Next: what do you do?' : 'Next signal';
+  }
+  function next() {
+    if (playing) { GBLab.sound.stop(); playing = false; stage.className = stage.className.replace(' al-on', ''); }
+    fi++;
+    if (fi >= FLOW.length) return result();
+    if (FLOW[fi] === 'act') startAct(); else startRound();
+  }
+
+  /* ---- part 2: the action, then the reason -------------------------------------------- */
+  function startAct() {
+    actPick = null; whyPick = null; judged = false;
+    $('choose').style.display = 'none'; $('p2').style.display = '';
+    $('ind').textContent = 'The general alarm';
+    $('cap').textContent = 'Play';
+    $('ask').innerHTML = '<span class="tl-eye">Listen · General alarm</span>The general emergency alarm is sounding. What do you do - and why?<small>Pick what you do, then the reason. Play the alarm again whenever you like.</small>';
+    photo('../img/13_listen_muster_station.jpg', 'a muster station on deck, with its sign and lifejackets');
+    dots();
+    GBLab.go('Check action and reason', askAct);
+    GBLab.goEnabled(false);
+    drawAct();
+  }
+  function opt(text, on, fn) {
+    var b = GBLab.el('button', 'tl-btn' + (on ? ' on' : ''));
+    b.type = 'button'; b.textContent = text;
+    b.addEventListener('click', function () { if (!judged) fn(); });
+    return b;
+  }
+  function drawAct() {
+    var box = $('p2opts');
+    box.innerHTML = '';
+    if (actPick == null) {
+      $('p2q').textContent = 'What do you do?';
+      $('p2n').textContent = 'You are in the mess room when you hear it.';
+      ACT.forEach(function (t, n) { box.appendChild(opt(t, false, function () { actPick = n; drawAct(); })); });
+      return;
+    }
+    $('p2q').textContent = 'Why?';
+    $('p2n').textContent = 'Your action is kept - tap it to change it.';
+    var s = opt('', true, function () { actPick = null; whyPick = null; GBLab.goEnabled(false); drawAct(); });
+    s.className += ' al-sum';
+    s.innerHTML = '<span><em>You do: </em>' + GBLab.esc(ACT[actPick]) + '</span>';
+    box.appendChild(s);
+    WHY.forEach(function (t, n) { box.appendChild(opt(t, whyPick === n, function () { whyPick = n; GBLab.goEnabled(true); drawAct(); })); });
+  }
+  function askAct() {
+    if (actPick == null || whyPick == null) return;
+    GBLab.sure(function (lvl) { sureAt = lvl; judgeAct(); });
+  }
+  function judgeAct() {
+    var ra = rightOf('AL1-act', H_ACT, ACT), rw = rightOf('AL1-why', H_WHY, WHY);
+    var aOk = actPick === ra, wOk = whyPick === rw, ok = aOk && wOk;
+    judged = true;
+    GBLab.sureNote(sureAt, ok);
+    res.push({
+      t: 'General alarm: muster with lifejacket - the action and the reason', ok: ok,
+      a: ACT[actPick] + ' / ' + WHY[whyPick], c: ACT[ra] + ' / ' + WHY[rw],
+      w: 'The muster station is where the crew is counted and given tasks; nobody is left to be searched for.'
+    });
+    var bs = $('p2opts').querySelectorAll('.tl-btn');
+    // after the summary button come the reasons
+    for (var k = 1; k < bs.length; k++) bs[k].className = 'tl-btn' + (k - 1 === rw ? ' good' : k - 1 === whyPick ? ' bad' : '');
+    bs[0].className = 'tl-btn al-sum ' + (aOk ? 'good' : 'bad');
+    var nx = nextLabel();
+    GBLab.go(nx, next);
+    GBLab.show({
+      img: shot(ok ? '../img/05_draw_route_muster.jpg' : aOk ? null : '../img/13_listen_muster_station.jpg'),
+      tag: ok ? 'Mustered' : aOk ? 'Right action, other reason' : 'What happened',
+      kind: ok ? 'ok' : aOk ? 'hint' : 'no',
+      title: aOk ? 'You went to your muster station' : 'You did not go to your muster station',
+      text: ACT_SAYS[actPick] + (wOk ? '' : '<br><br>The reason: ' + WHY[rw].charAt(0).toLowerCase() + WHY[rw].slice(1) +
+        '. Abandon ship is ordered by the master, by word of mouth - the general alarm is the call to muster.') +
+        (aOk ? '' : '<br><br>What to do: ' + ACT[ra].charAt(0).toLowerCase() + ACT[ra].slice(1) + '.'),
+      buttons: [{ label: nx, fn: next }]
+    });
+  }
+
+  function result() { GBLab.finish({ items: res }); }
+
+  /* ---- first open: headphones, then show the tap once -------------------------------- */
+  function hand() { setTimeout(function () { GBLab.hand('tap-play', $('play')); }, 300); }
+  var seen = false;
+  try { seen = !!window.localStorage.getItem('gblab-al1-phones'); window.localStorage.setItem('gblab-al1-phones', '1'); } catch (e) {}
+  drawScope();
+  startRound();
+  if (!seen) {
+    GBLab.show({
+      tag: 'Sound', title: 'Use headphones in class',
+      text: 'This task plays ship alarm signals. Put your headphones on, so you hear the pattern clearly and do not sound an alarm across the classroom.',
+      buttons: [{ label: 'Headphones on - start', fn: hand }]
+    });
+  } else hand();
+})();
+</script>
+</body>
+</html>

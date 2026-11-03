@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="task-mode" content="team">
+<meta name="task-roles" content="Gauges|Valves|Procedure">
+<meta name="task-scope" content="team">
+<title>TS1 — Split information (team)</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<link rel="stylesheet" href="../../gb_hmi.css">
+<style>
+  /* the stage: three parts of one cargo control room - the Gauges screen, the Valves screen (both gb_hmi,
+     the simulator's conventions) and the procedures binder. Tabs above; each part keeps its photograph
+     as a dimmed backdrop. */
+  .ts-stage { display: flex; flex-direction: column; gap: 10px; padding: 10px; }
+  .ts-tabs { flex: 0 0 auto; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; position: relative; z-index: 3; }
+  .ts-tab {
+    min-height: 56px; border: 1px solid var(--tl-line, rgba(140,190,255,.16)); border-radius: 14px; background: rgba(255,255,255,.06); cursor: pointer;
+    font: 700 16.5px/1.2 var(--tl-font, sans-serif); color: var(--tl-text, #F2F7FD); padding: 6px 10px;
+  }
+  .ts-tab small { display: block; font-size: 12.5px; font-weight: 600; color: var(--tl-dim, #9DB3CC); margin-top: 2px; }
+  .ts-tab.on { border-color: var(--tl-accent, #2EB6F8); background: rgba(46,182,248,.18); box-shadow: 0 0 0 1px var(--tl-accent, #2EB6F8); }
+  .ts-tab.ts-lock { border-style: dashed; color: var(--tl-faint, #6E86A3); background: rgba(255,255,255,.02); }
+  .ts-tab.ts-lock small { color: var(--tl-faint, #6E86A3); }
+  .ts-area { flex: 1 1 auto; min-height: 0; position: relative; z-index: 2; }
+  .ts-pane { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: none; overflow: hidden; }
+  .ts-pane.on { display: block; }
+  .ts-sw { position: relative; height: 100%; overflow: hidden; border-radius: 16px; }
+  .ts-sw .tl-photo { filter: brightness(.38) saturate(.8); }
+  .ts-hm { position: absolute; left: 1.2%; top: 1.6%; width: 97.6%; height: 96.8%; z-index: 2; }
+
+  /* the gauges screen steps one reading a minute, at the trainee's pace */
+  .ts-log { position: absolute; z-index: 4; right: 2.4%; bottom: 3.4%; width: 31%; padding: 10px 12px; border-radius: 14px;
+    background: rgba(3,10,22,.86); border: 1px solid var(--tl-line, rgba(140,190,255,.16)); }
+  .ts-log p { margin: 0 0 8px; font: 600 13px/1.4 var(--tl-mono, monospace); color: var(--tl-dim, #9DB3CC); }
+  .ts-log p b { color: var(--tl-bad, #FF6B5E); }
+  .ts-log .tl-btn { min-height: 56px; justify-content: center; text-align: center; background: var(--tl-glass-hi, rgba(20,44,82,.82)); }
+  .ts-gpane .ts-hm { }
+
+  /* the procedure: print on the two blank pages of the binder photo. Dark ink here is on purpose -
+     it sits on the photographed white paper, not on the page's dark surface. A tap opens the full text. */
+  .ts-paper {
+    position: absolute; z-index: 2; top: 32%; height: 43%; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer;
+    overflow: hidden; text-align: left; color: #1B2533; font: 500 .74em/1.3 var(--tl-font, sans-serif);
+  }
+  .ts-pl { left: 22.5%; width: 24%; }
+  .ts-pr { left: 53%; width: 22%; }
+  .ts-paper h4 { margin: 0 0 .3em; font-size: .9em; letter-spacing: .08em; text-transform: uppercase; color: #8A2A1E; }
+  .ts-paper p { margin: 0 0 .45em; }
+  .ts-paper table { width: 100%; border-collapse: collapse; display: table; margin-bottom: .4em; }
+  .ts-paper td { padding: .1em 0; border-top: 1px solid rgba(27,37,51,.18); }
+  .ts-paper td + td { text-align: right; font-weight: 800; white-space: nowrap; }
+  .ts-paper:active { opacity: .8; }
+  .ts-tip { position: absolute; left: 1.5%; top: 3%; z-index: 2; padding: .3em .8em; border-radius: 999px; background: rgba(3,10,22,.86); color: var(--tl-text, #F2F7FD); font-size: .85em; font-weight: 700; }
+  .ts-page { display: none; margin-top: 10px; padding: 14px 16px; border-radius: 14px; background: var(--tl-glass, rgba(10,26,51,.72)); border: 1px solid var(--tl-line, rgba(140,190,255,.16)); color: var(--tl-text, #F2F7FD); font-size: 15.5px; line-height: 1.4; }
+  .ts-page h4, .ts-sheetproc h4 { margin: 0 0 6px; font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--tl-amber, #F2B33D); }
+  .ts-page p, .ts-sheetproc p { margin: 0 0 10px; font-size: 16px; }
+  .ts-page table, .ts-sheetproc table { width: 100%; border-collapse: collapse; margin: 0 0 10px; display: table; }
+  .ts-page td, .ts-sheetproc td { padding: 5px 4px; border-top: 1px solid var(--tl-line, rgba(140,190,255,.16)); }
+  .ts-page td + td, .ts-sheetproc td + td { text-align: right; font-weight: 700; white-space: nowrap; color: var(--tl-accent, #2EB6F8); font-family: var(--tl-mono, monospace); }
+  .ts-page ol, .ts-sheetproc ol { margin: 0 0 10px; padding-left: 20px; }
+  .ts-sheetproc { margin-bottom: 8px; font-size: 16px; line-height: 1.45; color: var(--tl-text, #F2F7FD); }
+  .ts-sheetproc small { color: var(--tl-dim, #9DB3CC); }
+
+  /* the side: role, what is on the screen now, the questions */
+  .ts-role { display: inline-block; margin-right: 8px; padding: 4px 11px; border-radius: 999px; font-size: 13px; font-weight: 800; color: var(--tl-text, #F2F7FD); border: 1.5px solid var(--tl-text, #F2F7FD); vertical-align: 3px; }
+  .ts-q { margin: 0 0 8px; font-size: 18.5px; font-weight: 700; line-height: 1.35; color: var(--tl-text, #F2F7FD); }
+  .ts-note { margin: 0 0 10px; font-size: 15px; color: var(--tl-dim, #9DB3CC); line-height: 1.4; }
+  .ts-now { margin: 0; font-size: 15.5px; line-height: 1.45; color: var(--tl-text, #F2F7FD); }
+  .ts-list { display: grid; gap: 8px; }
+  .ts-pills { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+  .ts-pill { min-height: 56px; border-radius: 12px; border: 1px solid var(--tl-line, rgba(140,190,255,.16)); background: rgba(255,255,255,.06); font: 700 15px var(--tl-font, sans-serif); color: var(--tl-text, #F2F7FD); cursor: pointer; }
+  .ts-pill.on { border-color: var(--tl-accent, #2EB6F8); box-shadow: 0 0 0 1px var(--tl-accent, #2EB6F8); }
+  .ts-pill.got { background: rgba(46,182,248,.16); }
+  .ts-tell { margin: 0; padding-left: 18px; font-size: 16px; line-height: 1.45; color: var(--tl-text, #F2F7FD); }
+  .ts-tell li { margin-bottom: 6px; }
+  .ts-qs { margin: 0; padding-left: 20px; font-size: 16px; line-height: 1.45; color: var(--tl-text, #F2F7FD); }
+  .ts-fix { margin: 0 0 10px; font: 700 15px/1.4 var(--tl-mono, monospace); color: var(--tl-dim, #9DB3CC); }
+  .ts-fix.ok { color: var(--tl-good, #3DDC97); }
+
+  /* a phone: more room for the ship's screens, the gauges log becomes a strip under the screen */
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) {
+    .tl-stage { flex: 1 1 62%; }
+    .tl-side { flex: 0 1 38%; }
+    .ts-stage { padding: 6px; gap: 6px; }
+    .ts-tab { min-height: 44px; font-size: 14.5px; padding: 4px 6px; }
+    .ts-tab small { display: none; }
+    .ts-hm { left: 0; top: 0; width: 100%; height: 100%; }
+    .ts-log { left: auto; right: 6px; bottom: 6px; width: auto; padding: 0; background: transparent; border: 0; }
+    .ts-log p { display: none; }
+    .ts-log .tl-btn { width: auto; min-height: 44px; padding: 6px 12px; font-size: 14px; }
+    .ts-ppane .ts-sw { height: 52vw; }
+    .ts-ppane { overflow-y: auto; }
+    .ts-ppane .ts-page { display: block; }
+    .ts-tip { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+<!--
+  TS1 - Split information (team). Classroom rulebook: team_task (classroom-system.json).
+  The pages of a team do NOT sync. The design is for talking: each tablet sees one part of the cargo control
+  room (Gauges, Valves, Procedure); only the Valves tablet hands in, with scope:'team', and the classroom
+  records it for every member. No gb-team within about 2 s: one trainee, all three parts as tabs.
+  A team smaller than three: roles go round in order (Gauges, Valves, Procedure), and a part nobody
+  holds opens for everyone - so a team of 2 can still finish.
+
+  SOURCES (LCHS TechSim LPG Tanker, Trainee Manual):
+    15.6.3 Loading with shore vapour return - line-up: No.2 tank filling PL0017, PL0018 (5 % at start);
+      No.2 tank vapour suction PV0008, PV0009; No.2 vapour line to aft vapour manifold PV0134, PV0133;
+      No.2 liquid line to aft liquid manifold PL0145; step 2 "open the aft vapour manifold valve (port side
+      alongside) PV0129 and the respective blank"; step 3 "slowly open liquid manifold valves PL0126";
+      step 7 "monitor the cargo tank pressures and ensure that the pressure rise is not too rapid".
+      THE FAULT OF THE DAY: step 2 missed - PV0129 left shut, so the displaced vapour has nowhere to go.
+    6.9  HVK-0101 releases PL0126, PV0129 (port crossover); P0107 / T0107 liquid and P0108 vapour on the
+      crossover II screen.   6.4.1  HVK-0001 for the tank 1 valves; HVK-0002 for tank 2 by analogy (VERIFY).
+    6.4 / 6.6 screens - P0002 tank 1 pressure, P0009 tank 2 pressure, L0002 tank 2 level, T-0002.
+    7.2  CM-2001 cargo compressor 2 motor.   15.6.1 d) relief valves: throttle the flow so they do not lift.
+  Handout 4, 1.3 - the vapour return line balances ship and shore: vapour trapped above the incoming liquid
+    and compressed is returned. Handout 4, 5.1.1 and CDI LPG 5.19.13 - surge pressure when a valve shuts
+    during loading.
+  VERIFY: every number (0.42 bar rising 0.02 bar/min, alarm 0.45, stop 0.50, shore 0.04 bar, 400 m3/h,
+    -42 degC, 4.8 bar) - demo values in the simulator's ranges; terminal rules on venting cargo vapour in port.
+  Photos: ../img/14_team_console.jpg, 14_team_mimic.jpg (dimmed backdrops behind the ship's screens),
+    14_team_binder.jpg (print on its two blank pages); sheets: 01_deck_manifold.jpg, 02_keep_safe_vent.jpg,
+    09_scenario_state_esd.jpg.
+-->
+<div class="tl" id="tl">
+  <div class="tl-ask" id="ask"><span class="tl-eye">Team · Loading · simulator 15.6.3</span>Tank 2 pressure is rising during loading. Find the cause and put it right.
+    <small>Three tabs, one cargo control room. Tap a valve on the Valves screen to operate it.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage ts-stage" id="stage">
+      <div class="ts-tabs" id="tabs"></div>
+      <div class="ts-area" id="area">
+        <div class="ts-pane ts-gpane" id="pane-Gauges"><div class="ts-sw">
+          <div class="tl-scene" data-aspect="1024:572"><img class="tl-photo" alt="" src="../img/14_team_console.jpg" onerror="this.remove()"></div>
+          <div class="ts-hm" id="hm-g"></div>
+          <div class="ts-log"><p id="log"></p><button type="button" class="tl-btn" id="step">Next reading (1 min later)</button></div>
+        </div></div>
+        <div class="ts-pane" id="pane-Valves"><div class="ts-sw">
+          <div class="tl-scene" data-aspect="1024:572"><img class="tl-photo" alt="" src="../img/14_team_mimic.jpg" onerror="this.remove()"></div>
+          <div class="ts-hm" id="hm-v"></div>
+        </div></div>
+        <div class="ts-pane ts-ppane" id="pane-Procedure"><div class="ts-sw" id="psw">
+          <div class="tl-scene" id="pscene" data-aspect="1024:572"><img class="tl-photo" alt="The procedures binder" src="../img/14_team_binder.jpg" onerror="this.remove()" style="filter:none"></div>
+        </div></div>
+      </div>
+    </div>
+    <aside class="tl-side" id="side"></aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Hand in</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script src="../../gb_hmi.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'TS1', title: 'Split information (team)', mode: 'self' });
+
+  var ROLES = ['Gauges', 'Valves', 'Procedure'];
+  var $ = function (id) { return document.getElementById(id); };
+  var NS = 'http://www.w3.org/2000/svg';
+  function svgText(h, x, y, s, cls, anchor) {
+    var e = document.createElementNS(NS, 'text');
+    e.setAttribute('x', x); e.setAttribute('y', y); e.setAttribute('class', cls); e.setAttribute('text-anchor', anchor || 'middle');
+    e.textContent = s; h.svg.appendChild(e);
+  }
+
+  /* ---- the VALVES screen: CMS, tank 2 to cross over II, port side (15.6.3 line-up, 6.9 tags) ---- */
+  var V = GBHMI.create($('hm-v'), { page: 'CMS · TANK 0002 → CROSS OVER II (PS)', sub: 'LOADING · VAPOUR RETURN', box: [1000, 600] });
+  V.pipe('vdome', 'M150 400 V110', 'vapour');
+  V.pipe('vline', 'M150 110 H700', 'vapour');
+  V.pipe('vman', 'M700 110 H960', 'vapour');
+  V.pipe('lman', 'M960 220 H300', 'liquid');
+  V.pipe('lfill', 'M300 220 V400', 'liquid');
+  V.tank('T-0002', { x: 60, y: 400, w: 300, h: 160, name: 'T-0002', level: 58, subText: 'propane · loading' });
+  V.valve('PV0009', { x: 150, y: 335, dir: 'v', hvk: 'HVK-0002', travel: 4, label: 'right', what: 'No.2 tank vapour suction valve (dome)', pos: 100 });
+  V.valve('PV0008', { x: 150, y: 245, dir: 'v', hvk: 'HVK-0002', travel: 4, label: 'right', what: 'No.2 tank vapour suction valve', pos: 100 });
+  V.valve('PV0134', { x: 380, y: 110, travel: 4, label: 'below', what: 'No.2 vapour line to aft vapour manifold', pos: 100 });
+  V.valve('PV0133', { x: 530, y: 110, travel: 4, label: 'below', what: 'No.2 vapour line to aft vapour manifold', pos: 100 });
+  V.valve('PV0129', { x: 770, y: 110, hvk: 'HVK-0101', travel: 4, label: 'below', what: 'Aft vapour manifold valve, port side' });
+  V.blank('BL-V-PS', { x: 880, y: 110, open: true, label: 'below', what: 'Spectacle blank on the port vapour manifold' });
+  V.valve('PL0126', { x: 830, y: 220, hvk: 'HVK-0101', travel: 4, label: 'below', what: 'Aft liquid manifold valve, port side', pos: 100 });
+  V.valve('PL0145', { x: 580, y: 220, travel: 4, label: 'below', what: 'No.2 liquid line to aft liquid manifold', pos: 100 });
+  V.valve('PL0017', { x: 300, y: 282, dir: 'v', hvk: 'HVK-0002', kind: 'reg', travel: 5, label: 'right', what: 'No.2 tank filling valve', pos: 100 });
+  V.valve('PL0018', { x: 300, y: 358, dir: 'v', hvk: 'HVK-0002', kind: 'reg', travel: 5, label: 'right', what: 'No.2 tank filling valve', pos: 100 });
+  V.hvk('HVK-0002', { x: 520, y: 470, on: true, what: 'Hydraulic pressure for the tank 2 valves (PV0008, PV0009, PL0017, PL0018)' });
+  V.hvk('HVK-0101', { x: 690, y: 470, on: true, what: 'Hydraulic pressure for the port crossover valves (PL0126, PV0129)' });
+  svgText(V, 960, 92, 'SHORE', 'hm-tag', 'end'); svgText(V, 960, 150, 'vapour', 'hm-sub', 'end');
+  svgText(V, 960, 202, 'SHORE', 'hm-tag', 'end'); svgText(V, 960, 260, 'liquid', 'hm-sub', 'end');
+
+  /* ---- the GAUGES screen: the same plant, readouts only (value over tag, AL / AH lamps) ---------- */
+  var Gs = GBHMI.create($('hm-g'), { page: 'CMS · TANK 0001 / 0002 · CROSS OVER II', sub: 'READING 10:32', box: [1000, 600] });
+  Gs.pipe('gl', 'M985 170 H470 V380', 'liquid');
+  Gs.pipe('gv', 'M420 380 V60 H985', 'vapour');
+  Gs.tank('T-0001', { x: 40, y: 380, w: 260, h: 170, name: 'T-0001', level: 96, subText: 'loaded · 96 %' });
+  Gs.tank('T-0002', { x: 340, y: 380, w: 260, h: 170, name: 'T-0002', level: 58, subText: 'L0002 58 %' });
+  Gs.readout('CM-2001', { x: 170, y: 150, w: 128, what: 'cargo compressor 2' });
+  Gs.readout('P0002', { x: 170, y: 330, unit: 'bar', digits: 2, ah: 0.45, what: 'tank 1' });
+  Gs.readout('P0009', { x: 545, y: 330, unit: 'bar', digits: 2, ah: 0.45, alarm: 'tank 2 pressure' });
+  Gs.readout('T0107', { x: 780, y: 130, unit: '°C', digits: 0, what: 'liquid, cross over II' });
+  Gs.readout('P0107', { x: 780, y: 236, unit: 'bar', digits: 1, what: 'liquid, cross over II' });
+  Gs.readout('P0108', { x: 780, y: 345, unit: 'bar', digits: 2, ah: 0.45, alarm: 'vapour cross over', what: 'vapour, cross over II' });
+  Gs.readout('SHORE RATE', { x: 920, y: 236, unit: 'm³/h', digits: 0, w: 120, what: 'from terminal' });
+  Gs.readout('SHORE VAP', { x: 920, y: 345, unit: 'bar', digits: 2, w: 120, what: 'from terminal' });
+
+  /* ---- the plant: worked out from what is open on the Valves screen. Physics, not answers. ------ */
+  var VAP = [['t2', 'd1', 'PV0009'], ['d1', 'd2', 'PV0008'], ['d2', 'h1', 'PV0134'], ['h1', 'h2', 'PV0133'], ['h2', 'm', 'PV0129'], ['m', 'shore', 'BL-V-PS']];
+  var LIQ = [['shore', 'a', 'PL0126'], ['a', 'b', 'PL0145'], ['b', 'c', 'PL0017'], ['c', 't2', 'PL0018']];
+  var TIMES = ['10:32', '10:33', '10:34', '10:35', '10:36', '10:37', '10:38', '10:39', '10:40'];
+  var G = { m: 0, p2: 0.42, hist: [0.30, 0.34, 0.38, 0.42], lvl: 58, shoreV: 0.04 };
+  var R = { surge: false, stopped: false };
+  var halted = false, finished = false;
+
+  function vapOut() { return !!V.reach('t2', VAP).shore; }
+  function toHdr() { return !!V.reach('t2', VAP).h2; }
+  function liqIn() { return !!V.reach('shore', LIQ).t2; }
+  function hdr() { return vapOut() ? G.shoreV + (G.p2 - G.shoreV) * 0.3 : toHdr() ? G.p2 - 0.01 : 0.05; }
+
+  function paint() {
+    var load = liqIn() && !halted, out = vapOut();
+    V.setPipe('lman', { flow: load, cold: true }); V.setPipe('lfill', { flow: load, cold: true });
+    V.setPipe('vdome', { live: toHdr(), flow: load && out }); V.setPipe('vline', { live: toHdr(), flow: load && out });
+    V.setPipe('vman', { live: out, flow: load && out });
+    V.level('T-0002', G.lvl, 'propane · ' + Math.round(G.lvl) + ' %');
+    Gs.setPipe('gl', { flow: load, cold: true });
+    Gs.setPipe('gv', { live: true, flow: load && out });
+    Gs.set('CM-2001', 'STOPPED');
+    Gs.set('P0002', 0.15);
+    Gs.set('P0009', G.p2);
+    Gs.set('T0107', -42);
+    Gs.set('P0107', load ? 4.8 : 0.4);
+    Gs.set('P0108', hdr());
+    Gs.set('SHORE RATE', load ? 400 : 0);
+    Gs.set('SHORE VAP', G.shoreV);
+    Gs.level('T-0002', G.lvl, 'L0002 ' + Math.round(G.lvl) + ' %');
+    var sub = Gs.root.querySelector('.hm-top span:nth-of-type(2)');
+    if (sub) sub.textContent = 'READING ' + TIMES[Math.min(G.m, TIMES.length - 1)];
+    var hs = G.hist.slice(-4).map(function (v) { return v.toFixed(2); });
+    $('log').innerHTML = 'P0009 last readings: ' + hs.slice(0, -1).join(' · ') + ' · <b>' + hs[hs.length - 1] + '</b> bar';
+    coach();
+  }
+
+  // one reading a minute, when the trainee asks for it
+  function stepMinute() {
+    if (halted || finished) return;
+    if (G.m >= TIMES.length - 1) return GBLab.toast('That is the last reading of this watch. Tell your team what it shows.', 'hint');
+    G.m++;
+    if (liqIn()) {
+      if (vapOut()) G.p2 += (0.10 - G.p2) * 0.45;   // the vapour return balances ship and shore (Handout 4, 1.3)
+      else G.p2 += 0.02;                            // displaced vapour has nowhere to go
+      G.lvl += 1;
+    }
+    G.hist.push(G.p2);
+    paint();
+    if (G.p2 >= 0.495) return consequence('stop');
+    if (G.p2 >= 0.45 && !vapOut()) GBLab.toast('P0009 is in high alarm. ACK it on the screen - and tell your team.', 'hint');
+  }
+  var stepBtn = $('step');
+  stepBtn.addEventListener('click', stepMinute);
+
+  // a liquid valve closed while cargo is coming in: the flow is stopped against a closed valve
+  V.on('change', function (tag) {
+    if (halted || finished) return;
+    // loading is under way from the start of the task, so any liquid valve shut is shut against the flow
+    var isLiq = LIQ.some(function (e) { return e[2] === tag; });
+    if (isLiq && !V.isOpen(tag)) { lastShut = tag; return consequence('surge'); }
+    paint();
+  });
+  var lastShut = '';
+
+  var WHAT = {
+    surge: { img: '../img/09_scenario_state_esd.jpg', tag: 'Surge pressure', title: 'A valve was shut against the liquid flow',
+      text: function () { return '<b>' + lastShut + '</b> closed while the shore pump was sending cargo. The moving liquid hit a closed valve: a pressure surge ran back up the shore line and the terminal stopped the transfer with its emergency shutdown. The terminal stops first, then valves move (Handout 4, 5.1.1).'; } },
+    stop: { img: '../img/09_scenario_state_esd.jpg', tag: 'Loading stopped', title: 'Tank 2 reached the stop limit',
+      text: function () { return 'P0009 reached 0.50 bar. The vapour pushed out by the incoming liquid had nowhere to go, the high-pressure alarm sounded and the loading was stopped with tank 2 part full. Relief valves are never the plan (15.6.1 d).'; } }
+  };
+  function consequence(k) {
+    halted = true;
+    if (k === 'surge') R.surge = true; else R.stopped = true;
+    paint();
+    GBLab.show({ img: WHAT[k].img, tag: WHAT[k].tag, kind: 'no', title: WHAT[k].title, text: WHAT[k].text(),
+      buttons: [{ label: 'Reset and carry on', fn: resetAfter }] });
+  }
+  function resetAfter() {
+    LIQ.forEach(function (e) { if (!V.isOpen(e[2])) V.setPos(e[2], 100); });
+    if (G.p2 > 0.44) { G.p2 = 0.42; G.hist.push(G.p2); }
+    halted = false;
+    paint();
+    GBLab.toast('The instructor reset the plant. Loading carries on from here.', 'info');
+  }
+
+  /* ---- the procedure (15.6.3), as print on the binder and in full on a tap --------------------- */
+  var PAGE_L = '<h4>Loading with shore vapour return · 15.6.3</h4>' +
+    '<p>Line-up: filling PL0017, PL0018 (5 % at start) · vapour suction PV0008, PV0009 · vapour line to aft manifold PV0134, PV0133.</p>' +
+    '<p><b>Step 2:</b> open aft vapour manifold valve PV0129 and its blank.</p><p><b>Step 3:</b> slowly open liquid manifold PL0126.</p>';
+  var PAGE_R = '<h4>While loading</h4><p><b>Step 7:</b> watch the tank pressures - the rise must not be too rapid.</p>' +
+    '<table><tr><td>High alarm</td><td>0.45</td></tr><tr><td>Stop loading</td><td>0.50 bar</td></tr></table>' +
+    '<h4>Never</h4><p>shut a valve against the liquid flow - surge</p><p>Working: P0108 falls toward the shore pressure.</p>';
+  var PROC = '<h4>Loading with shore vapour return (simulator 15.6.3)</h4><ol>' +
+    '<li>Line up: No.2 tank filling PL0017, PL0018 open 5 %; No.2 tank vapour suction PV0008, PV0009 open; No.2 vapour line to the aft vapour manifold PV0134, PV0133 open. Release the hydraulic valves with their HVK. All drains checked shut.</li>' +
+    '<li>Open the aft vapour manifold valve (port side alongside) <b>PV0129</b> and the respective blank.</li>' +
+    '<li>Slowly open liquid manifold valve PL0126.</li>' +
+    '<li>Start loading at the minimum rate; check for leaks; watch the liquid line temperatures.</li>' +
+    '<li>Watch the cargo tank pressures - the rise must not be too rapid. Once they steady, open the filling valves up and increase the rate.</li></ol>' +
+    '<h4>Limits for this exercise</h4><table><tr><td>Tank pressure high alarm</td><td>0.45 bar</td></tr><tr><td>Stop loading</td><td>0.50 bar</td></tr>' +
+    '<tr><td>Relief valves must not lift - throttle the flow (15.6.1 d)</td><td></td></tr></table>' +
+    '<h4>Never</h4><p>Shut a valve against the liquid flow: the surge runs back up the shore line (Handout 4, 5.1.1). The terminal stops first, then valves move.</p>' +
+    '<h4>Working again when</h4><p>the vapour cross over pressure P0108 falls toward the shore vapour return pressure, and tank 2 follows it down.</p>' +
+    '<p><small>Limits marked for this exercise are demo values - the ship\'s own cargo manual gives the real ones.</small></p>';
+  var psc = $('pscene');
+  psc.insertAdjacentHTML('beforeend', '<div class="ts-tip">Tap a page to read it full size</div>');
+  [['ts-paper ts-pl', PAGE_L], ['ts-paper ts-pr', PAGE_R]].forEach(function (x) {
+    var b = GBLab.el('button', x[0], x[1]);
+    b.type = 'button';
+    b.addEventListener('click', readProc);
+    psc.appendChild(b);
+  });
+  $('pane-Procedure').appendChild(GBLab.el('div', 'ts-page', PROC));
+  function readProc() {
+    GBLab.show({ tag: 'Procedure', title: 'Cargo procedures binder', node: GBLab.el('div', 'ts-sheetproc', PROC), buttons: [{ label: 'Back to the binder' }] });
+  }
+
+  /* ---- the four decisions. Only hashes of the right options are kept: GBLab.key(id, option, 1).
+     The third is done on the Valves screen and judged by the plant itself. ------------------------- */
+  var Q = [
+    { id: 'TS1-q1', h: 'c5a6cd95', q: 'What is wrong?', o: [
+      'Tank 2 is close to full',
+      'The cargo is warmer than planned and boiling off',
+      'Vapour cannot get ashore: PV0129 is shut',
+      'The cargo compressor CM-2001 has stopped'],
+      says: [
+        'L0002 showed tank 2 at 58 % - nowhere near full. Looking at the level, the team missed the shut valve.',
+        'The liquid came in at -42 °C (T0107), as planned. The vapour was normal; it simply had nowhere to go.',
+        'With PV0129 shut, the vapour pushed out by the incoming liquid had nowhere to go.',
+        'CM-2001 was stopped on purpose: this loading sends the vapour ashore through the vapour return (15.6.3).'],
+      t: 'Cause: PV0129 shut - the vapour return to shore blocked',
+      w: 'Gauges saw P0108 high and the shore side low; Valves saw PV0129 shut; Procedure had step 2: open PV0129 and its blank.' },
+    { id: 'TS1-q2', h: '80706388', q: 'What do you do first?', o: [
+      'Carry on at full rate until the cause is found',
+      'Ask the terminal to reduce the loading rate',
+      'Release tank 2 vapour through the vent mast',
+      'Close the tank 2 filling valves PL0017 and PL0018 at once'],
+      says: [
+        'At full rate the pressure climbed straight on toward the stop limit while the team looked for the cause.',
+        'The terminal slowed the loading, and the pressure climbed more slowly while the team worked.',
+        'Propane vapour went up the vent mast beside the terminal - a flammable cloud over the berth - and the terminal stopped the transfer.',
+        'Closing the filling valves against the flow sent a pressure surge back up the shore line, and the terminal stopped with its emergency shutdown.'],
+      t: 'First: slow the loading - before working on the valves',
+      w: 'Less liquid in means less vapour pushed out. Procedure step 7: the rise must not be too rapid; never shut a valve against the flow.' },
+    { id: 'fix', q: 'Put it right on the Valves screen', o: [] },
+    { id: 'TS1-q4', h: 'ccb41964', q: 'Which reading shows it worked?', o: [
+      'P0108 falls toward the shore vapour return pressure',
+      'Tank 2 level L0002 stops rising',
+      'Tank 1 pressure P0002 rises',
+      'CM-2001 shows RUNNING'],
+      says: [
+        'P0108 fell toward the shore vapour return pressure, and tank 2 followed it down.',
+        'The level goes on rising while loading goes on - that is the point of loading. It says nothing about the vapour.',
+        'Tank 1 is isolated; P0002 stays where it is whatever the tank 2 vapour line does.',
+        'The compressor is not part of this plan - it stays stopped.'],
+      t: 'Proof: P0108 falls toward the shore vapour return pressure',
+      w: 'Gauges has both readings; Procedure says it: when the vapour return works, the ship side falls toward the shore side.' }
+  ];
+
+  /* ---- state, tabs and the side panel -------------------------------------------------------- */
+  var team = null, role = null, open = {}, canHand = true, view = 'Gauges';
+  var ans = [null, null, null, null], qi = 0, sureAt = null, handShown = false;
+  var panes = { Gauges: $('pane-Gauges'), Valves: $('pane-Valves'), Procedure: $('pane-Procedure') };
+
+  function drawTabs() {
+    var t = $('tabs');
+    t.innerHTML = '';
+    ROLES.forEach(function (r) {
+      var b = GBLab.el('button', 'ts-tab' + (r === view ? ' on' : '') + (open[r] ? '' : ' ts-lock'));
+      b.type = 'button';
+      b.innerHTML = r + '<small>' + (role === r ? 'your part' : open[r] ? (role ? 'open - no one holds it' : 'tap to look') : "on a team-mate's tablet") + '</small>';
+      b.addEventListener('click', function () {
+        if (!open[r]) return GBLab.toast('The ' + r + ' part is on a team-mate\'s tablet - ask them to read it out.', 'hint');
+        view = r; drawTabs(); showPane(); drawSide();
+      });
+      t.appendChild(b);
+    });
+  }
+  function showPane() {
+    ROLES.forEach(function (r) { panes[r].className = 'ts-pane' + (r === 'Gauges' ? ' ts-gpane' : r === 'Procedure' ? ' ts-ppane' : '') + (r === view ? ' on' : ''); });
+    GBLab.fitScenes();
+    V.fit(); Gs.fit();
+    var w = parseFloat(psc.style.width) || 0;
+    if (w) psc.style.fontSize = Math.max(12, Math.min(18, w / 56)) + 'px';
+  }
+
+  function nowText() {
+    var load = liqIn() && !halted, out = vapOut(), parts = [];
+    if (!role || role === 'Gauges' || view === 'Gauges') parts.push('P0009 ' + G.p2.toFixed(2) + ' bar' + (load && !out ? ', rising about 0.02 bar a minute' : out && load ? ', falling' : '') + ' (last: ' + G.hist.slice(-4, -1).map(function (v) { return v.toFixed(2); }).join(', ') + '); P0108 ' + hdr().toFixed(2) + ' bar; shore vapour ' + G.shoreV.toFixed(2) + ' bar.');
+    if (!role || role === 'Valves') parts.push(load ? 'Liquid from shore is flowing into T-0002. ' + (out ? 'Vapour is flowing from T-0002 to shore.' : 'No vapour is moving in the vapour line.') : 'No liquid is moving.');
+    if (role === 'Procedure') parts.push('Tank 2 is loading with shore vapour return - the binder is open at 15.6.3.');
+    return parts.join(' ');
+  }
+  function coach() { var c = $('now'); if (c) c.textContent = nowText(); var f = $('fixst'); if (f) paintFix(f); }
+  function paintFix(f) {
+    var out = vapOut();
+    f.className = 'ts-fix' + (out ? ' ok' : '');
+    f.textContent = out ? 'Vapour line: flowing to shore.' : 'Vapour line: no flow.';
+  }
+
+  var TELL = {
+    Gauges: ['Which tank pressure is rising, and how fast - take the next reading.', 'P0108 on the ship side and the shore vapour return pressure: where does the pressure drop?', 'The compressor, the tank levels and the liquid temperature.'],
+    Procedure: ['What step 2 of 15.6.3 says about the vapour manifold.', 'The limits: when the alarm comes, when loading stops.', 'What is never done while cargo flows.']
+  };
+  function drawSide() {
+    var s = $('side'), h = '<div class="tl-card dark"><h3>On the screen now</h3><p class="ts-now" id="now"></p></div>';
+    if (role && TELL[role]) h += '<div class="tl-card dark"><h3>Tell your team</h3><ul class="ts-tell">' + TELL[role].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul></div>';
+    if (!canHand) {
+      h += '<div class="tl-card"><p class="ts-q">Valves hands in for the team</p><p class="ts-note">They answer these and put it right on their screen. Say what your part shows.</p><ol class="ts-qs">' +
+        Q.map(function (q) { return '<li>' + q.q + '</li>'; }).join('') + '</ol></div>';
+      s.innerHTML = h; coach();
+      return;
+    }
+    s.innerHTML = h + '<div class="tl-card"><div class="ts-pills" id="pills"></div><p class="ts-q" id="qq"></p><div class="ts-list" id="opts"></div></div>';
+    coach(); drawQ();
+  }
+  function answered(n) { return n === 2 ? vapOut() : ans[n] != null; }
+  function drawQ() {
+    var pills = $('pills'), opts = $('opts'), q = Q[qi];
+    if (!pills) return;
+    pills.innerHTML = '';
+    Q.forEach(function (x, n) {
+      var b = GBLab.el('button', 'ts-pill' + (n === qi ? ' on' : '') + (answered(n) ? ' got' : ''), (n === 2 ? 'Fix' : n + 1) + (answered(n) ? ' ✓' : ''));
+      b.type = 'button';
+      b.setAttribute('aria-label', 'Question ' + (n + 1));
+      b.addEventListener('click', function () { qi = n; drawQ(); });
+      pills.appendChild(b);
+    });
+    $('qq').textContent = (qi + 1) + '. ' + q.q;
+    opts.innerHTML = '';
+    if (q.id === 'fix') {
+      opts.innerHTML = '<p class="ts-note">Do it on the ship\'s screen: tap a valve to open its panel - the plant answers. Then check the readings.</p><p class="ts-fix" id="fixst"></p>';
+      paintFix($('fixst'));
+      if (view !== 'Valves' && open.Valves) {
+        var sv = GBLab.el('button', 'tl-btn', 'Show the Valves screen');
+        sv.type = 'button';
+        sv.addEventListener('click', function () { view = 'Valves'; drawTabs(); showPane(); });
+        opts.appendChild(sv);
+      }
+      var nx = GBLab.el('button', 'tl-btn', 'Next question');
+      nx.type = 'button';
+      nx.addEventListener('click', function () { qi = 3; drawQ(); });
+      opts.appendChild(nx);
+      return;
+    }
+    q.o.forEach(function (t, n) {
+      var b = GBLab.el('button', 'tl-btn' + (ans[qi] === n ? ' on' : ''));
+      b.type = 'button'; b.textContent = t;
+      b.addEventListener('click', function () {
+        if (finished) return;
+        ans[qi] = n;
+        qi = qi === 0 ? 1 : qi === 1 ? 2 : qi;
+        drawQ();
+        GBLab.goEnabled(ready());
+      });
+      opts.appendChild(b);
+    });
+  }
+  function ready() { return ans[0] != null && ans[1] != null && ans[3] != null; }
+
+  /* ---- the team, as the classroom sends it ---------------------------------------------------- */
+  function inkOn(hex) {
+    var m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+    if (!m) return '#03121F';
+    var n = parseInt(m[1], 16), r = n >> 16 & 255, g = n >> 8 & 255, b = n & 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#03121F' : '#F2F7FD';
+  }
+  var EYE = '<span class="tl-eye">Team · Loading · simulator 15.6.3</span>';
+  function render(t) {
+    team = t || null;
+    role = team && ROLES.indexOf(team.role) >= 0 ? team.role : null;
+    // roles go round in order; a part nobody in the team holds is open to everyone
+    var size = team && team.members && team.members.length ? team.members.length : 3;
+    open = {};
+    ROLES.forEach(function (r, i) { open[r] = !role || r === role || i >= size; });
+    canHand = open.Valves;
+    if (role) view = role; else if (!open[view]) view = 'Gauges';
+    var ask = $('ask');
+    if (team) {
+      ask.innerHTML = EYE + '<span class="tl-team" style="background:' + GBLab.esc(team.colour || '#34E0C4') + ';color:' + inkOn(team.colour) + '">' +
+        GBLab.esc(team.name || 'Team') + '</span>' + (role ? '<span class="ts-role">' + role + '</span>' : '') +
+        'Tank 2 pressure is rising during loading. Talk to your team - each of you sees one part.' +
+        '<small>' + (role === 'Valves' ? 'You see the valves. Ask for the readings and the procedure, put it right, then hand in for the team.'
+          : role ? 'You see the ' + role.toLowerCase() + '. Read it out - Valves puts it right and hands in for the team.'
+          : 'Share what each part shows - one tablet hands in for the team.') + '</small>';
+    } else {
+      ask.innerHTML = EYE + 'Tank 2 pressure is rising during loading. Find the cause and put it right.' +
+        '<small>Three tabs, one cargo control room. Tap a valve on the Valves screen to operate it.</small>';
+    }
+    drawTabs(); showPane(); drawSide();
+    if (!finished) {
+      if (canHand) { GBLab.go(team ? 'Hand in for the team' : 'Hand in', handIn); GBLab.goEnabled(ready()); }
+      else GBLab.go('Valves hands in for the team', null);
+    }
+    if (!handShown) {
+      handShown = true;
+      setTimeout(function () {
+        var b = view === 'Gauges' ? stepBtn : document.querySelector('#opts .tl-btn');
+        if (b) GBLab.hand('tap-step', b);
+      }, 500);
+    }
+  }
+
+  /* ---- hand in ------------------------------------------------------------------------------- */
+  function handIn() {
+    if (finished || !ready()) return;
+    GBLab.sure(function (lvl) { sureAt = lvl; judge(); });
+  }
+  function rightOf(q) {
+    for (var i = 0; i < q.o.length; i++) if (GBLab.key(q.id, q.o[i], 1) === q.h) return i;
+    return -1;
+  }
+  var SHOTS = { ok: '../img/01_deck_manifold.jpg', vent: '../img/02_keep_safe_vent.jpg', esd: '../img/09_scenario_state_esd.jpg' };
+  function judge() {
+    var r1 = rightOf(Q[0]), r2 = rightOf(Q[1]), r4 = rightOf(Q[3]);
+    var fixed = vapOut();                 // judged by the plant: is there a vapour route from tank 2 to shore
+    var ok1 = ans[0] === r1, ok2 = ans[1] === r2, ok4 = ans[3] === r4;
+    var items = [
+      { t: Q[0].t, ok: ok1, a: Q[0].o[ans[0]], c: Q[0].o[r1], w: Q[0].w },
+      { t: Q[1].t, ok: ok2, a: Q[1].o[ans[1]], c: Q[1].o[r2], w: Q[1].w },
+      { t: 'Fix: PV0129 opened on the screen - vapour back to shore', ok: fixed, a: fixed ? 'vapour route to shore open' : 'vapour line still blocked', c: 'HVK-0101 released, PV0129 open, blank open', w: '15.6.3 step 2: the aft vapour manifold valve PV0129 and its blank are opened before loading.' },
+      { t: 'No valve shut against the liquid flow', ok: !R.surge, a: R.surge ? 'a liquid valve shut while loading' : 'liquid valves left open', c: 'terminal stops first, then valves move', w: 'A valve shut against moving liquid sends a pressure surge back up the shore line (Handout 4, 5.1.1).' },
+      { t: Q[3].t, ok: ok4, a: Q[3].o[ans[3]], c: Q[3].o[r4], w: Q[3].w },
+      { t: 'Tank 2 kept below the stop limit', ok: !R.stopped, a: R.stopped ? 'reached 0.50 bar - loading stopped' : 'stayed below 0.50 bar', c: 'below 0.50 bar', w: 'Slow the rate and restore the vapour return before the pressure reaches the stop limit.' }
+    ];
+    var all = items.every(function (x) { return x.ok; });
+    GBLab.sureNote(sureAt, all);
+    finished = true;
+    var fin = team ? { items: items, scope: 'team' } : { items: items };
+    var label = team ? "See the team's result" : 'See my result';
+    GBLab.go('Finished', null);
+    if (all) {
+      return GBLab.show({ img: SHOTS.ok, tag: 'Pressure falling', kind: 'ok', title: 'The vapour goes ashore again',
+        text: 'The terminal slowed the loading. With PV0129 open the vapour flowed ashore: P0108 fell toward the shore vapour return pressure and tank 2 followed it down. Loading went back to full rate.' +
+          (team ? ' Handed in for ' + GBLab.esc(team.name || 'the team') + '.' : ''),
+        buttons: [{ label: label, fn: function () { GBLab.finish(fin); } }] });
+    }
+    // the most serious thing first: what was done, the fix on the screen, the cause, the proof
+    var title, text, img = null;
+    if (!ok2) { title = 'First move: ' + Q[1].o[ans[1]].charAt(0).toLowerCase() + Q[1].o[ans[1]].slice(1); text = Q[1].says[ans[1]]; img = ans[1] === 2 ? SHOTS.vent : ans[1] === 3 ? SHOTS.esd : null; }
+    else if (!fixed) { title = 'The vapour line stayed blocked'; text = 'Nothing opened a route for the vapour: P0009 went on rising toward 0.50 bar, the high-pressure alarm sounded and the loading was stopped with tank 2 part full.'; img = SHOTS.esd; }
+    else if (!ok1) { title = 'The cause: ' + Q[0].o[ans[0]].charAt(0).toLowerCase() + Q[0].o[ans[0]].slice(1); text = Q[0].says[ans[0]] + ' The screen was put right - but the report gave another cause.'; }
+    else if (!ok4) { title = 'The proof: ' + Q[3].o[ans[3]].charAt(0).toLowerCase() + Q[3].o[ans[3]].slice(1); text = Q[3].says[ans[3]]; }
+    else { title = 'It works now - after a stop on the way'; text = 'The vapour goes ashore again, but on the way ' + (R.surge ? 'a valve was shut against the flow' : 'tank 2 reached the stop limit') + '. The result shows each step.'; }
+    var n = items.filter(function (x) { return !x.ok; }).length;
+    GBLab.show({ img: img, tag: 'What happened', kind: 'no', title: title,
+      text: text + (n > 1 ? '<br><br>' + (n - 1) + ' more of the six points went another way - the result shows each one, and who in the team could see it.' : ''),
+      buttons: [{ label: label, fn: function () { GBLab.finish(fin); } }] });
+  }
+
+  paint();
+  render(null);
+  GBLab.on('team', function (t) { render(t); });
+  window.addEventListener('resize', showPane);
+  window.addEventListener('load', showPane);
+})();
+</script>
+</body>
+</html>

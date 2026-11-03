@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>PP1 — Dress, then buddy-check</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<style>
+  /* the rack: every item is a tile that can be dragged onto the crew member */
+  .pp-off {
+    display: flex; align-items: center; justify-content: center; min-height: 56px; margin-bottom: 10px; padding: 8px 12px;
+    border: 1.5px dashed var(--tl-line, rgba(140,190,255,.16)); border-radius: 14px;
+    font: 600 15.5px/1.3 var(--tl-font, sans-serif); color: var(--tl-dim, #9DB3CC); text-align: center;
+  }
+  .pp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pp-kit {
+    position: relative; display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 8px 10px;
+    border: 1px solid var(--tl-line, rgba(140,190,255,.16)); border-radius: 14px; background: rgba(255,255,255,.06);
+    color: var(--tl-text, #F2F7FD); font: 650 16px/1.2 var(--tl-font, sans-serif);
+    transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, opacity .18s ease;
+  }
+  .pp-kit span { overflow-wrap: normal; word-break: normal; }
+  @media (min-aspect-ratio: 1/1) { .tl-side { flex: 0 0 392px; } }
+  /* a phone: the stage is as tall as the photo, the panel gets the rest and scrolls in its own box */
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) {
+    .tl-stage { flex: 0 0 auto; height: calc((100vw - 20px) * 0.75); }
+    .tl-side { flex: 1 1 auto; }
+    .pp-cap { display: none; }
+  }
+  .pp-list { list-style: none; margin: 0 0 14px; padding: 0; }
+  .pp-list li { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; font-size: 16px; line-height: 1.35; border-top: 1px solid var(--tl-line, rgba(140,190,255,.16)); }
+  .pp-list li:first-child { border-top: 0; }
+  .pp-list i { flex: 0 0 auto; font-style: normal; font-weight: 800; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+  .pp-list .g { color: var(--tl-good, #3DDC97); } .pp-list .b { color: var(--tl-bad, #FF6B5E); } .pp-list .n { color: var(--tl-dim, #9DB3CC); }
+  .pp-kit.pp-on { border-color: var(--tl-accent, #2EB6F8); background: rgba(46,182,248,.14); box-shadow: 0 0 0 1px var(--tl-accent, #2EB6F8); }
+  .pp-kit.pp-on::after {
+    content: 'ON'; position: absolute; top: -8px; right: -6px; padding: 2px 7px; border-radius: 999px;
+    font: 800 11px/1.3 var(--tl-font, sans-serif); letter-spacing: .1em; color: #03121F; background: var(--tl-accent, #2EB6F8);
+  }
+  .pp-kit.tl-ghost { z-index: 80; }
+
+  /* what the crew member wears: a glowing dot on the body, and a label beside him */
+  .pp-dot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; z-index: 2; pointer-events: none;
+    background: var(--tl-accent, #2EB6F8); box-shadow: 0 0 0 3px rgba(46,182,248,.3), 0 0 16px var(--tl-accent, #2EB6F8); animation: tl-up .3s ease both; }
+  .pp-tag { position: absolute; z-index: 3; max-width: 30%; padding: 6px 11px; border-radius: 11px; pointer-events: none;
+    background: rgba(3,10,22,.8); border: 1px solid var(--tl-line, rgba(140,190,255,.16)); color: var(--tl-text, #F2F7FD);
+    font: 700 16px/1.25 var(--tl-font, sans-serif); animation: tl-up .3s ease both; }
+  .pp-tag small { display: block; font: 800 11px/1.3 var(--tl-font, sans-serif); letter-spacing: .14em; text-transform: uppercase; color: var(--tl-dim, #9DB3CC); }
+  .pp-tag.l { transform: translate(-100%, -50%); text-align: right; }
+  .pp-tag.r { transform: translate(0, -50%); }
+  .pp-ovl { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+  .pp-ovl line { stroke: var(--tl-accent, #2EB6F8); stroke-width: .25; opacity: .8; }
+  /* a phone shows him small: the labels give way, the rack says what is on */
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) { .pp-tag, .pp-ovl { display: none; } }
+
+  /* part 2: the places on the colleague that can be marked (invisible on the photo until marked) */
+  .pp-spot { width: 60px; height: 60px; border-radius: 50%; cursor: pointer; z-index: 3; pointer-events: none;
+    transition: box-shadow .18s ease, background .18s ease; }
+  .pp-spot.pp-mark { background: rgba(242,179,61,.16); box-shadow: inset 0 0 0 3px var(--tl-amber, #F2B33D), 0 0 18px rgba(242,179,61,.6); }
+  .pp-spot.pp-found { background: rgba(61,220,151,.16); box-shadow: inset 0 0 0 3px var(--tl-good, #3DDC97), 0 0 18px rgba(61,220,151,.6); }
+  .pp-spot.pp-miss { background: rgba(255,107,94,.12); box-shadow: inset 0 0 0 3px var(--tl-bad, #FF6B5E), 0 0 18px rgba(255,107,94,.6); animation: tl-pulse 1.2s ease 3; }
+  .pp-spot.pp-false { background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 2px var(--tl-dim, #9DB3CC); }
+  .pp-cap { position: absolute; z-index: 4; transform: translate(-50%, 36px); max-width: 34%; padding: 5px 10px; border-radius: 10px; pointer-events: none;
+    font: 700 15px/1.25 var(--tl-font, sans-serif); text-align: center; background: rgba(3,10,22,.86); color: var(--tl-text, #F2F7FD); }
+  .pp-cap.g { box-shadow: inset 0 0 0 1.5px var(--tl-good, #3DDC97); }
+  .pp-cap.b { box-shadow: inset 0 0 0 1.5px var(--tl-bad, #FF6B5E); }
+  .pp-cap.n { color: var(--tl-dim, #9DB3CC); }
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) { .pp-spot { width: 46px; height: 46px; } }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<!-- SOURCES (knowledge base):
+     ICS Tanker Safety Guide (Liquefied Gas) 3rd ed. 2018, 3.11.2: suits, gloves, boots, goggles and face shields suitable
+       for the cargo; gloves when handling cold equipment and valves; face protection against liquid contact. For very cold
+       liquids: goggles AND a face shield; loose-fitting insulated gloves that can be thrown off quickly; boots, with the
+       trousers worn over them so liquid cannot run in; no liquid trapped in pockets or cuffs.
+     COSWP 31.4.3: for cargo operations as a minimum coveralls, safety helmet, safety boots, eyewear and gloves.
+     ICS TSG(LG) 5.6.6 and Ship/Shore Safety Checklist A8.4: mobile telephones not used in hazardous areas unless
+       approved; SIGTTO Liquefied Gas Handling Principles: mobile telephones can ignite flammable vapours.
+     Propane boils at about -42 C at atmospheric pressure.
+     VERIFY: flame-retardant AND antistatic coverall, the polyester fleece as a static / melting hazard, and the personal
+       gas detector as part of the kit - against the ship's own PPE matrix (ICS TSG(LG) Appendix 10 is an example only). -->
+<div class="tl" id="tl">
+  <div class="tl-ask" id="ask"><span class="tl-eye">Dress &amp; check · Personal protection</span>Dress him to connect a cargo hose on an LPG carrier.
+    <small>Drag each item onto him, or tap it and then tap him. To take something off, drag it back to the rack. Not everything on the rack belongs.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage pp-drop" id="stage">
+      <div class="tl-scene" id="scene" data-aspect="1024:765"></div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card pp-rack" id="rackCard">
+        <h3>PPE rack</h3>
+        <div class="pp-off">Drop here to take it off</div>
+        <div class="pp-grid" id="rack"></div>
+      </div>
+      <div class="tl-card dark" id="buddyCard" hidden>
+        <h3>Buddy check</h3>
+        <p>He says: "Ready to connect." Three things on him are wrong. Tap each one; tap again to clear a mark.</p>
+        <div class="tl-read" style="margin-top:12px"><span>Marked</span><b id="marks">0 <small>of 3</small></b></div>
+      </div>
+      <div class="tl-card" id="whyCard" hidden>
+        <h3>What you found</h3>
+        <ul class="pp-list" id="found"></ul>
+        <h3>One more</h3>
+        <p style="margin-bottom:12px">Why must his gloves stay on while the hose is connected?</p>
+        <div id="whys" style="display:grid;gap:8px"></div>
+      </div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">I'm ready</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'PP1', title: 'Dress, then buddy-check', mode: 'self' });
+
+  /* ---- DATA: positions in % of the photograph (x from the left, y from the top), fitted to
+     07_ppe_buddy_crew.jpg and 07_ppe_buddy_colleague.jpg (both 1024 x 765, one man, full length, facing you). */
+  var ASPECT = 765 / 1024;                               // height / width (data-aspect 1024:765)
+  var PHOTO1 = '../img/07_ppe_buddy_crew.jpg';           // part 1: T-shirt, jeans, trainers - nothing on yet
+  var PHOTO2 = '../img/07_ppe_buddy_colleague.jpg';      // part 2: the colleague, dressed, three faults
+  var ALT1 = 'A crew member in a T-shirt, jeans and trainers stands on the cargo deck of a gas carrier';
+  var ALT2 = 'A colleague in an orange coverall and helmet stands on deck by the cargo pipes, ready to connect';
+  var SLOTS = [                                          // where a worn item shows on him; label left or right
+    { id: 'head', t: 'Head', pts: [[50, 19]], lx: 38, ly: 15, side: 'l' },
+    { id: 'face', t: 'Face and eyes', pts: [[50, 24]], lx: 38, ly: 25, side: 'l' },
+    { id: 'chest', t: 'Chest', pts: [[47, 36]], lx: 38, ly: 36, side: 'l' },
+    { id: 'body', t: 'Body', pts: [[53, 47]], lx: 63, ly: 45, side: 'r' },
+    { id: 'hands', t: 'Hands', pts: [[43, 59], [58, 59]], lx: 63, ly: 60, side: 'r' },
+    { id: 'feet', t: 'Feet', pts: [[45, 90], [55, 90]], lx: 63, ly: 86, side: 'r' }
+  ];
+  var KIT = [                                            // s = short name on him; slot = where it goes
+    { id: 'helmet', n: 'Safety helmet', s: 'Helmet', slot: 'head' },
+    { id: 'fleece', n: 'Fleece jacket, polyester', s: 'Fleece jacket', slot: 'body' },
+    { id: 'cryo', n: 'Cryogenic gauntlet gloves', s: 'Cryogenic gloves', slot: 'hands' },
+    { id: 'sun', n: 'Sunglasses', s: 'Sunglasses', slot: 'face' },
+    { id: 'coverall', n: 'Coverall, flame-retardant and antistatic', s: 'FR coverall', slot: 'body' },
+    { id: 'phone', n: 'Mobile phone', s: 'Mobile phone', slot: 'chest' },
+    { id: 'shield', n: 'Face shield (helmet visor)', s: 'Face shield', slot: 'face' },
+    { id: 'goggles', n: 'Safety goggles', s: 'Goggles', slot: 'face' },
+    { id: 'cotton', n: 'Cotton work gloves', s: 'Cotton gloves', slot: 'hands' },
+    { id: 'det', n: 'Personal gas detector', s: 'Gas detector', slot: 'chest' },
+    { id: 'boots', n: 'Safety boots', s: 'Safety boots', slot: 'feet' }
+  ];
+  // needed for the job or not: only hashes (GBLab.key, value 1 = needed)
+  var KEY = { coverall: 'bda629eb', boots: '751c2b2b', cryo: 'c4e5ec43', cotton: '92b606df', shield: '6a33b763',
+    sun: 'dd7c6bc4', goggles: 'aa4be01d', helmet: '6994ceb1', det: 'abcc395b', fleece: '28541917', phone: '61ef7132' };
+  var SPOTS = [                                          // part 2: what can be tapped on the colleague
+    { id: 'helmet', x: 50.5, y: 5, d: 'Helmet on', w: 'A helmet guards against loading arms, hoses and valve wheels overhead.' },
+    { id: 'face', x: 50.5, y: 15, d: 'Face shield raised, safety glasses only', w: 'A visor only protects when it is down: a spurt of liquid comes when a flange is cracked.' },
+    { id: 'det', x: 45.6, y: 30, d: 'Gas detector at the chest pocket', w: 'Worn near the breathing zone, the personal detector warns him of vapour he cannot see.' },
+    { id: 'pocket', x: 55.5, y: 34, d: 'Mobile phone in the breast pocket', w: 'A phone that is not certified for a gas-dangerous zone is a spark source at the manifold.' },
+    { id: 'body', x: 49, y: 45, d: 'Coverall closed, sleeves down', w: 'Closed, with the sleeves down, the coverall keeps a splash of liquid off the skin.' },
+    { id: 'hands', x: 54, y: 56, d: 'Gloves hanging at his belt', w: 'Gloves at the belt protect nothing: liquid gas on bare skin causes a cold burn.' },
+    { id: 'hands', x: 41, y: 60, d: 'Bare hands', w: '' },
+    { id: 'hands', x: 61, y: 59, d: 'Bare hands', w: '' },
+    { id: 'legs', x: 56, y: 80, d: 'Coverall legs over the boot tops', w: 'ICS Tanker Safety Guide 3.11.2: trousers over the boots, so spilled liquid cannot run in.' },
+    { id: 'boots', x: 44, y: 94, d: 'Safety boots', w: 'Toe caps under heavy couplings, and soles that grip a wet deck.' },
+    { id: 'boots', x: 58, y: 94, d: 'Safety boots', w: '' }
+  ];
+  var SPOTKEY = { helmet: '17832a88', face: 'cf9de6eb', det: '7409b43e', pocket: 'b1fbef0d', hands: 'bc2ef8f5',
+    body: '7269fc66', legs: '72c36124', boots: '64a70572' };
+  var WHYS = ['Gloves stop oil and grease marking the flange faces',
+    'Liquid gas on bare skin causes cold burns within seconds',
+    'Gloves give a better grip on the hose spanner'];
+  var WHYKEY = ['9721608e', '1731ce3d', 'ba24bdab'];
+  var SHOT = {                                           // the photograph on top of each consequence sheet
+    flash: null, cold: '../img/07_ppe_buddy_cold_glove.jpg',
+    face: '../img/07_ppe_buddy_face_spray.jpg', phone: '../img/07_ppe_buddy_phone.jpg',
+    kit: '../img/07_ppe_buddy_manifold.jpg', ready: '../img/07_ppe_buddy_ready.jpg'
+  };
+  var STORY = {                                          // what happens at the manifold, per item worn wrongly or missing
+    fleece: ['flash', 'The polyester fleece builds a static charge as he moves - and in a flash fire it melts into the skin.'],
+    coverall: ['flash', 'Without the flame-retardant coverall, ordinary clothes catch and keep burning in a flash fire.'],
+    cotton: ['cold', 'A few drops of liquid propane, about -42 °C, land on the cotton glove. The cotton soaks them up and holds them on the skin: cold burns to the fingers.'],
+    cryo: ['cold', 'Bare hands on a flange at about -42 °C: the skin freezes to the steel.'],
+    sun: ['face', 'Sunglasses leave the cheeks and the sides of the eyes open. The spurt of liquid when the flange is cracked reaches them.'],
+    goggles: ['face', 'The visor alone leaves a gap under its edge; with very cold liquid the guide asks for goggles AND a face shield.'],
+    shield: ['face', 'Nothing covers his face when the flange is cracked and a spurt of liquid and vapour comes out.'],
+    phone: ['phone', 'The phone rings at the manifold. It is not certified for a gas-dangerous zone - a possible spark where vapour may be.'],
+    helmet: ['kit', 'Loading arms, hoses and valve wheels overhead - and a bare head.'],
+    boots: ['kit', 'Ordinary shoes: no toe cap under a hose coupling, and soles that slip on a wet deck.'],
+    det: ['kit', 'No personal detector: he only knows he is standing in vapour when he smells it - or not at all.']
+  };
+  /* ------------------------------------------------------------------------------------------------ */
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var scene = document.getElementById('scene'), rack = document.getElementById('rack');
+  var worn = {}, need = {}, byId = {}, part1 = [], dressed = false, started = false, tapHint = false, layer, ovl;
+  KIT.forEach(function (k) { byId[k.id] = k; need[k.id] = GBLab.key('PP1-kit-' + k.id, k.n, 1) === KEY[k.id]; });
+
+  function build(photo, alt) {
+    scene.innerHTML = '<img class="tl-photo" src="' + photo + '" alt="' + GBLab.esc(alt) + '">' +
+      '<svg class="pp-ovl" viewBox="0 0 100 ' + (100 * ASPECT) + '" preserveAspectRatio="none"></svg><div id="layer"></div>';
+    layer = document.getElementById('layer');
+    ovl = scene.querySelector('.pp-ovl');
+    var blur = document.querySelector('.tl-blur');
+    if (blur) blur.style.backgroundImage = 'url("' + photo + '")';
+    GBLab.fitScenes();
+  }
+
+  /* ================================ PART 1: dress him ================================ */
+  build(PHOTO1, ALT1);
+
+  KIT.forEach(function (k) {
+    var e = document.createElement('div');
+    e.className = 'pp-kit';
+    e.setAttribute('data-drag', '');
+    e.setAttribute('data-id', k.id);
+    e.innerHTML = '<span>' + GBLab.esc(k.n) + '</span>';
+    rack.appendChild(e);
+  });
+
+  function paint() {
+    var h = '', lines = '';
+    SLOTS.forEach(function (s) {
+      var on = KIT.filter(function (k) { return k.slot === s.id && worn[k.id]; });
+      if (!on.length) return;
+      s.pts.forEach(function (p) {
+        h += '<span class="pp-dot" style="left:' + p[0] + '%;top:' + p[1] + '%"></span>';
+        lines += '<line x1="' + p[0] + '" y1="' + p[1] * ASPECT + '" x2="' + s.lx + '" y2="' + s.ly * ASPECT + '"/>';
+      });
+      h += '<span class="pp-tag ' + s.side + '" style="left:' + s.lx + '%;top:' + s.ly + '%"><small>' + s.t + '</small>' +
+        on.map(function (k) { return GBLab.esc(k.s); }).join(', ') + '</span>';
+    });
+    layer.innerHTML = h;
+    ovl.innerHTML = lines;
+    [].forEach.call(rack.children, function (e) { e.className = 'pp-kit' + (worn[e.getAttribute('data-id')] ? ' pp-on' : ''); });
+  }
+
+  /* how the kit goes on: the visor clips onto the helmet, and one pair of gloves at a time (physics, not grading) */
+  function wear(id) {
+    if (worn[id]) return;
+    if (id === 'shield' && !worn.helmet) return GBLab.toast('This visor clips onto a safety helmet - the helmet goes on first.', 'hint');
+    var other = id === 'cryo' ? 'cotton' : id === 'cotton' ? 'cryo' : null;
+    if (other && worn[other]) { worn[other] = false; GBLab.toast('One pair of gloves at a time - the ' + byId[other].s.toLowerCase() + ' went back on the rack.', 'info'); }
+    worn[id] = true;
+    paint();
+  }
+  function takeOff(id) {
+    if (!worn[id]) return;
+    worn[id] = false;
+    if (id === 'helmet' && worn.shield) { worn.shield = false; GBLab.toast('The face shield came off with the helmet.', 'info'); }
+    paint();
+  }
+
+  var dragger = GBLab.drag({
+    items: '.pp-kit',
+    targets: '.pp-drop, .pp-rack',
+    onPick: function (it) {
+      if (!tapHint) { tapHint = true; GBLab.toast(worn[it.getAttribute('data-id')] ? 'Now tap the rack to take it off.' : 'Now tap him to put it on.', 'hint'); }
+    },
+    onDrop: function (it, t) {
+      if (dressed) return;
+      var id = it.getAttribute('data-id');
+      if (t.classList.contains('pp-rack')) takeOff(id); else wear(id);
+    }
+  });
+
+  function ready() {
+    if (!KIT.some(function (k) { return worn[k.id]; })) return GBLab.toast('Nothing on him yet - drag the kit from the rack.', 'hint');
+    GBLab.sure(judge1);
+  }
+
+  var GROUPS = [
+    { ids: ['coverall', 'fleece'], t: 'Body: flame-retardant, antistatic coverall, no synthetic layer',
+      w: 'FR/antistatic cloth does not build a static charge or melt. A polyester fleece does both - in a flash fire it melts into the skin.' },
+    { ids: ['cryo', 'cotton'], t: 'Hands: gloves made for liquid gas',
+      w: 'Liquid propane is about -42 °C. Loose insulated gauntlets keep it off the skin and can be thrown off at once; cotton soaks it up and holds it there.' },
+    { ids: ['shield', 'goggles', 'sun'], t: 'Face and eyes: goggles and a face shield, no sunglasses',
+      w: 'ICS Tanker Safety Guide 3.11.2: against a splash of very cold liquid, goggles and a face shield together. Sunglasses leave skin and the sides of the eyes open.' },
+    { ids: ['helmet', 'boots', 'det', 'phone'], t: 'Helmet, safety boots and gas detector on; no phone',
+      w: 'Overhead arms and hoses, heavy couplings, vapour you cannot see - and a phone that is not certified is a spark source.' }
+  ];
+  function names(ids) { return ids.length ? ids.map(function (id) { return byId[id].s; }).join(', ') : 'nothing'; }
+
+  function judge1(level) {
+    if (dressed) return;
+    dressed = true;
+    dragger.clear();
+    var all = true;
+    part1 = GROUPS.map(function (g) {
+      var ok = g.ids.every(function (id) { return !!worn[id] === need[id]; });
+      if (!ok) all = false;
+      return { t: g.t, ok: ok, w: g.w,
+        a: names(g.ids.filter(function (id) { return worn[id]; })),
+        c: names(g.ids.filter(function (id) { return need[id]; })) };
+    });
+    GBLab.sureNote(level, all);
+    // the wrong things he put on first, then what he is missing
+    var bad = KIT.filter(function (k) { return worn[k.id] && !need[k.id]; }).concat(KIT.filter(function (k) { return !worn[k.id] && need[k.id]; }));
+    var told = bad.slice(0, 2).map(function (k) { return STORY[k.id]; });
+    var next = [{ label: 'Part 2: check your buddy', fn: startPart2 }];
+    if (all) GBLab.show({ img: SHOT.ready, tag: 'Hose connection', kind: 'ok', title: 'Dressed for the job',
+      text: 'He walks to the manifold with every item doing a job: flame and static, cold liquid, a spurt in the face, falling objects - and a detector that tells him about vapour before he smells it.', buttons: next });
+    else GBLab.show({ img: SHOT[told[0][0]], tag: 'Hose connection', kind: 'no', title: 'What happens at the manifold',
+      text: told.map(function (x) { return x[1]; }).join('<br><br>') + (bad.length > 2 ? '<br><br>...and ' + (bad.length - 2) + ' more in your result.' : ''), buttons: next });
+    GBLab.go('Part 2: check your buddy', startPart2);
+  }
+
+  /* ================================ PART 2: buddy check ================================ */
+  var marks = {}, nMarks = 0, revealed = false, emptyHint = false;
+  function flaw(id) { return GBLab.key('PP1-spot-' + id, id, 1) === SPOTKEY[id]; }
+
+  function startPart2() {
+    if (!dressed || started) return;
+    started = true;
+    document.getElementById('ask').innerHTML = '<span class="tl-eye">Dress &amp; check · Buddy check</span>Your colleague is about to connect the hose. Check him.' +
+      '<small>Three things on him are wrong. Tap each one on the photo; tap again to clear a mark.</small>';
+    document.getElementById('rackCard').hidden = true;
+    document.getElementById('buddyCard').hidden = false;
+    build(PHOTO2, ALT2);
+    SPOTS.forEach(function (s, i) {
+      var e = document.createElement('div');
+      e.className = 'pp-spot tl-pin';
+      e.setAttribute('data-s', s.id);
+      e.setAttribute('role', 'button');
+      e.setAttribute('aria-label', s.d);
+      e.style.left = s.x + '%';
+      e.style.top = s.y + '%';
+      layer.appendChild(e);
+    });
+    // a tap marks the nearest place on him: on a phone the places sit close, the nearest centre decides
+    scene.addEventListener('click', function (ev) {
+      if (revealed) return;
+      var s = GBLab.nearest(GBLab.toScene(ev, scene), SPOTS, 8);
+      if (s) return toggle(s.id);
+      if (emptyHint) return;
+      emptyHint = true;
+      GBLab.toast('Nothing to mark there. Look him over from helmet to boots.', 'hint');
+    });
+    GBLab.go('These are the three', commit2);
+    setTimeout(function () { GBLab.hand('pp1-tap', layer.querySelector('.pp-spot')); }, 600);
+  }
+
+  function spotsOf(id) { return [].filter.call(layer.querySelectorAll('.pp-spot'), function (e) { return e.getAttribute('data-s') === id; }); }
+  function toggle(id) {
+    if (revealed) return;
+    if (!marks[id] && nMarks >= 3) return GBLab.toast('Three marks already - tap one to clear it first.', 'hint');
+    marks[id] = !marks[id];
+    nMarks += marks[id] ? 1 : -1;
+    spotsOf(id).forEach(function (e) { e.className = 'pp-spot tl-pin' + (marks[id] ? ' pp-mark' : ''); });
+    document.getElementById('marks').innerHTML = nMarks + ' <small>of 3</small>';
+  }
+
+  function commit2() {
+    if (!nMarks) return GBLab.toast('Tap what is wrong on him first.', 'hint');
+    GBLab.sure(reveal);
+  }
+  var found = [];
+  function reveal(level) {
+    revealed = true;
+    var ids = [], seen = {}, h = '';
+    SPOTS.forEach(function (s) { if (!seen[s.id]) { seen[s.id] = true; ids.push(s); } });
+    var hits = 0, wrong = 0;
+    ids.forEach(function (s) {
+      var f = flaw(s.id), m = !!marks[s.id], cls = f ? (m ? 'pp-found' : 'pp-miss') : (m ? 'pp-false' : '');
+      if (f) found.push({ s: s, ok: m });
+      if (f && m) hits++;
+      if (!f && m) wrong++;
+      spotsOf(s.id).forEach(function (e) { e.className = 'pp-spot tl-pin' + (cls ? ' ' + cls : ''); });
+      if (f || m) h += '<span class="pp-cap ' + (f ? (m ? 'g' : 'b') : 'n') + '" style="left:' + s.x + '%;top:' + s.y + '%">' +
+        (f ? '' : 'Fine: ') + GBLab.esc(s.d) + '</span>';
+    });
+    layer.insertAdjacentHTML('beforeend', h);
+    document.getElementById('found').innerHTML = ids.filter(function (s) { return flaw(s.id) || marks[s.id]; }).map(function (s) {
+      var f = flaw(s.id), m = !!marks[s.id];
+      return '<li><i class="' + (f ? (m ? 'g">Found' : 'b">Missed') : 'n">Fine') + '</i><span>' + GBLab.esc(s.d) + '</span></li>';
+    }).join('');
+    GBLab.sureNote(level, hits === 3 && !wrong);
+    GBLab.toast('You found ' + hits + ' of 3' + (wrong ? ', and marked ' + wrong + ' that was fine.' : '.'), hits === 3 ? 'ok' : 'info');
+    document.getElementById('buddyCard').hidden = true;
+    document.getElementById('whyCard').hidden = false;
+    var box = document.getElementById('whys');
+    WHYS.forEach(function (t, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tl-btn';
+      b.textContent = t;
+      b.addEventListener('click', function () { why(i, b); });
+      box.appendChild(b);
+    });
+    GBLab.go('Pick a reason', null);
+  }
+
+  var whyOk = null;
+  function why(i, b) {
+    if (whyOk !== null) return;
+    whyOk = GBLab.key('PP1-why', WHYS[i], 1) === WHYKEY[i];
+    [].forEach.call(document.querySelectorAll('#whys .tl-btn'), function (x, j) {
+      if (GBLab.key('PP1-why', WHYS[j], 1) === WHYKEY[j]) x.className = 'tl-btn good';
+      else if (x === b) x.className = 'tl-btn bad';
+      x.disabled = x !== b && x.className === 'tl-btn';
+    });
+    GBLab.show({ img: SHOT.cold, tag: 'Cold burn', kind: whyOk ? 'ok' : 'no', title: 'What liquid gas does to skin',
+      text: 'Liquid propane boils at about -42 °C. On bare skin it draws the heat out so fast that the skin freezes - a cold burn, as damaging as a burn from heat. ' +
+        'Gloves made for liquid gas keep it off the skin; in his belt they protect nothing.',
+      buttons: [{ label: 'See my result', fn: result }] });
+    GBLab.go('See my result', result);
+  }
+
+  function result() {
+    var items = part1.slice();
+    found.forEach(function (f) {
+      items.push({ t: 'Buddy check: ' + f.s.d.charAt(0).toLowerCase() + f.s.d.slice(1), ok: f.ok, a: f.ok ? 'marked' : 'not marked', c: 'marked', w: f.s.w });
+    });
+    items.push({ t: 'Why the gloves stay on during the connection', ok: !!whyOk, a: whyOk ? 'cold burns' : 'another reason', c: 'liquid gas causes cold burns',
+      w: 'Liquid propane at about -42 °C freezes skin in seconds. Grip and clean flanges matter, but they are not why the gloves stay on.' });
+    GBLab.finish({ items: items });
+  }
+
+  GBLab.go("I'm ready", ready);
+  setTimeout(function () { GBLab.hand('pp1-dress', rack.firstChild, scene); }, 700);
+})();
+</script>
+</body>
+</html>

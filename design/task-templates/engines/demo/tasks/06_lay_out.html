@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>LO1 — Lay out the deck</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<style>
+  /* the tray: every piece of equipment is a token that can be dragged onto the photograph */
+  .lo-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  .lo-tok {
+    display: flex; align-items: center; gap: 8px; min-height: 60px; min-width: 0; padding: 8px 8px;
+    border: 1px solid var(--tl-line, rgba(140,190,255,.16)); border-radius: 14px;
+    background: rgba(255,255,255,.06); color: var(--tl-text, #F2F7FD);
+    transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+  }
+  .lo-ab {
+    flex: 0 0 auto; position: relative; overflow: hidden; width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(46,182,248,.18); color: var(--tl-accent, #2EB6F8); box-shadow: inset 0 0 0 1.5px var(--tl-accent, #2EB6F8);
+    font: 800 12px/36px var(--tl-font, sans-serif); text-align: center; font-style: normal; letter-spacing: .02em;
+  }
+  .lo-n { min-width: 0; font: 650 16px/1.2 var(--tl-font, sans-serif); overflow-wrap: normal; word-break: normal; hyphens: manual; }
+  /* a wider panel on the tablet, so every name fits its tile without breaking a word */
+  @media (min-aspect-ratio: 1/1) { .tl-side { flex: 0 0 392px; } }
+  /* a phone: the stage is as tall as the photo, the tray gets the rest and scrolls in its own box */
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) {
+    .tl-stage { flex: 0 0 auto; height: calc((100vw - 20px) * 0.56); }
+    .tl-side { flex: 1 1 auto; }
+    .lo-tok.lo-on { width: 44px; height: 44px; }
+    .lo-on .lo-ab { width: 38px; height: 38px; line-height: 38px; font-size: 12px; }
+  }
+  .lo-s { display: none; }
+  .lo-note { margin-top: 10px !important; font-size: 14.5px !important; color: var(--tl-dim, #9DB3CC) !important; }
+
+  /* a token standing on the deck: a pin on the photograph, 56 px to touch */
+  .lo-tok.lo-on {
+    width: 56px; height: 56px; min-height: 0; padding: 0; justify-content: center; border-radius: 50%; z-index: 3;
+    background: rgba(3,10,22,.82); border: 2px solid var(--tl-accent, #2EB6F8);
+    box-shadow: 0 6px 16px rgba(0,0,0,.5), 0 0 18px rgba(46,182,248,.35);
+  }
+  .lo-on .lo-ab { width: 48px; height: 48px; line-height: 48px; font-size: 14px; box-shadow: none; background: transparent; }
+  .lo-on .lo-n { display: none; }
+  .lo-on .lo-s {
+    display: block; position: absolute; top: 58px; left: 50%; transform: translateX(-50%); white-space: nowrap; pointer-events: none;
+    font: 700 16px/1.2 var(--tl-font, sans-serif); color: var(--tl-text, #F2F7FD);
+    background: rgba(3,10,22,.78); padding: 3px 9px; border-radius: 8px;
+  }
+  .lo-on.lo-ok { border-color: var(--tl-good, #3DDC97); box-shadow: 0 0 0 3px rgba(61,220,151,.3), 0 0 22px rgba(61,220,151,.5); }
+  .lo-on.lo-no { border-color: var(--tl-bad, #FF6B5E); box-shadow: 0 0 0 3px rgba(255,107,94,.3), 0 0 22px rgba(255,107,94,.5); }
+  .lo-on.lo-ok::after, .lo-on.lo-no::after {
+    content: '\2713'; position: absolute; top: -9px; right: -9px; width: 24px; height: 24px; border-radius: 50%;
+    font: 800 14px/24px var(--tl-font, sans-serif); text-align: center; color: #03121F; background: var(--tl-good, #3DDC97);
+  }
+  .lo-on.lo-no::after { content: '\2715'; color: #fff; background: var(--tl-bad, #FF6B5E); }
+  /* the dragged copy follows the finger, not the pin's centring */
+  .lo-tok.tl-ghost { position: fixed; pointer-events: none; z-index: 80; }
+  .lo-on.tl-picked { transform: translate(-50%, -50%) scale(1.1); }
+  .lo-tok[aria-disabled="true"] { cursor: default; }
+  /* a phone shows the deck small: names off the photo, they stay readable in the tray */
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) { .lo-on .lo-s { display: none; } }
+
+  /* vector only for what moves or is worked out over the photograph: wind, the drifting leak, reach */
+  .lo-ovl { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; overflow: visible; }
+  .lo-wind .lo-wu { stroke: rgba(3,10,22,.3); stroke-width: .7; stroke-linecap: round; fill: none; }
+  .lo-wind .lo-wl { stroke: var(--tl-accent, #2EB6F8); stroke-width: .45; stroke-linecap: round; fill: none; stroke-dasharray: 3 2.4; animation: lo-blow 1.1s linear infinite; }
+  .lo-wind path { fill: var(--tl-accent, #2EB6F8); }
+  @keyframes lo-blow { to { stroke-dashoffset: -5.4; } }
+  .lo-plume { fill: rgba(242,179,61,.28); stroke: rgba(242,179,61,.75); stroke-width: .3; opacity: 0; transition: opacity 1s ease; }
+  .lo-plume.on { opacity: 1; }
+  .lo-z { fill: none; stroke-width: .35; stroke-dasharray: 1.4 1; opacity: 0; transition: opacity .5s ease; }
+  .lo-z.on { opacity: 1; }
+  .lo-z.g { stroke: var(--tl-good, #3DDC97); fill: rgba(61,220,151,.07); }
+  .lo-z.b { stroke: var(--tl-bad, #FF6B5E); fill: rgba(255,107,94,.07); }
+  .lo-jet { stroke-width: .5; stroke-dasharray: none; fill: none; }
+  .lo-pt { font: 700 2.1px var(--tl-font, sans-serif); fill: var(--tl-text, #F2F7FD); }
+
+
+  .lo-key { list-style: none; margin: 0; padding: 0; }
+  .lo-key li { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 15.5px; line-height: 1.35; color: var(--tl-text, #F2F7FD); }
+  .lo-key i { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; }
+  .lo-key .k1 { background: rgba(242,179,61,.35); box-shadow: inset 0 0 0 2px rgba(242,179,61,.8); }
+  .lo-key .k2 { box-shadow: inset 0 0 0 2px var(--tl-dim, #9DB3CC); border: 1px dashed var(--tl-dim, #9DB3CC); }
+  .lo-key .k3 { background: var(--tl-good, #3DDC97); }
+  .lo-key .k4 { background: var(--tl-bad, #FF6B5E); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<!-- SOURCES (knowledge base):
+     ICS Tanker Safety Guide (Liquefied Gas), 3rd ed. 2018, 5.9.1: fire hoses uncoiled, connected to the fire main,
+       at least two placed near the manifold, one forward and one aft; a portable dry powder extinguisher placed
+       conveniently for use near the manifold.
+     ICS Tanker Safety Guide (IMO model course copy) 3.8.1: ... or a hose from a fixed dry powder monitor uncoiled and
+       placed upwind of the manifold.
+     LNG Shipping Knowledge, fire-fighting notes: fire should always be fought from upwind.
+     ICS TSG(LG) 1.7.2: suitable drip trays arranged beneath manifold connections when transferring cargo.
+     GAS BASIC Hand Out 5.1: a drip tray under the manifold flanges prevents cold cargo spill on the hull plates.
+     ICS TSG(LG) 2.6.2: temporary notices at points of access - NO NAKED LIGHTS, NO SMOKING, NO UNAUTHORISED PERSONS,
+       TURN OFF MOBILE PHONES.
+     GAS BASIC Hand Out 8.5 (Ship/Shore Safety Check List guidelines): the international shore fire connection made
+       available for use at short notice; the fire-fighting and safety plan in a container near the gangway.
+     ICS TSG(LG) 5.6 (portable electrical equipment): only approved safety torches or hand lamps; local regulations
+       may prohibit any portable electrical equipment.
+     VERIFY: every distance in RULE (what "near the manifold" means in metres); the ISC kept at the gangway on the
+       berth side; the portable detector on the downwind side of the manifold (logic of vapour drift, not a cited rule);
+       the photo scale M_PER_PCT. -->
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye">Lay out · Manifold safety</span>Lay out the safety equipment at the manifold before the propane transfer starts.
+    <small>Drag each piece onto the deck, or tap it and then tap the spot. Drag it back to the tray to take it away. Not everything in the tray belongs on deck.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage lo-drop" id="stage">
+      <div class="tl-scene" id="scene" data-aspect="1024:572">
+        <img class="tl-photo" id="photo" src="../img/06_lay_out_manifold.jpg"
+             alt="Drone view from above: the manifold of a gas carrier alongside a jetty, loading arms connected, gangway to the quay">
+        <svg class="lo-ovl" id="ovl" viewBox="0 0 100 55.859375" preserveAspectRatio="none">
+          <g class="lo-wind" id="wind"></g>
+          <g id="drawn"></g>
+        </svg>
+      </div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card dark">
+        <h3>On deck now</h3>
+        <div class="tl-read">
+          <span>Wind from</span><b id="w-from">-</b>
+          <span>Wind speed</span><b>14 <small>kn</small></b>
+          <span>Cargo</span><b>Propane</b>
+          <span>Transfer</span><b id="w-st">Not started</b>
+        </div>
+      </div>
+      <div class="tl-card lo-tray" id="trayCard">
+        <h3>Equipment</h3>
+        <div class="lo-grid" id="tray"></div>
+        <p class="lo-note">Drop a piece back here to take it off the deck.</p>
+      </div>
+      <div class="tl-card" id="legend" hidden>
+        <h3>What the check drew</h3>
+        <ul class="lo-key">
+          <li><i class="k1"></i>Where a leak at the manifold drifts</li>
+          <li><i class="k2"></i>Near the manifold; where a piece belongs</li>
+          <li><i class="k3"></i>Rule met</li>
+          <li><i class="k4"></i>Rule not met</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Check my layout</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'LO1', title: 'Lay out the deck', mode: 'self' });
+
+  /* ---- DATA: everything that sits on the photograph, in % of the photo (x from the left, y from the top).
+     Fitted to 06_lay_out_manifold.jpg (1024 x 572, drone view from above): the deck fills the top, the
+     ship's side runs across at y 56, water below it, the quay along the bottom. Forward is taken as LEFT,
+     the sea side as the TOP edge. ------------------------------------------------------------------- */
+  var ASPECT = 572 / 1024;                 // height / width of the photo (data-aspect 1024:572)
+  var M_PER_PCT = 0.5;                     // metres per 1 % of the photo's width (gangway ~16 m)   VERIFY
+  var P = {
+    manifold: { x: 56, y: 42 },            // where the loading arms meet the ship's manifold connections
+    gangway: { x: 22.5, y: 41 }            // head of the gangway, on deck
+  };
+  var DECK = { x0: 2, y0: 4, x1: 98, y1: 54 };   // where equipment can be put down (the deck)
+  var RULE = {                                   // metres - all VERIFY (the sources say "near", not how near)
+    hoseNear: 15, standOff: 3, dpNear: 15, detNear: 8, trayNear: 3.5, gangNear: 5, iscNear: 12
+  };
+  var WINDS = [                                  // blowing TOWARDS (x, y); one is drawn at random each opening
+    { from: 'Ahead', to: 'aft along the deck', v: [0.99, 0.12] },
+    { from: 'Astern', to: 'forward along the deck', v: [-0.99, 0.12] },
+    { from: 'Sea side', to: 'across the deck towards the quay', v: [0.2, 0.98] }
+  ];
+  var TOK = [
+    { id: 'hose1', n: 'Fire hose, charged', s: 'Hose 1', ab: 'H1' },
+    { id: 'dp', n: 'Dry-powder extinguisher', s: 'Dry powder', ab: 'DP' },
+    { id: 'lamp', n: 'Hand lamp, 230 V', s: 'Hand lamp', ab: 'HL' },
+    { id: 'det', n: 'Portable gas detector', s: 'Gas detector', ab: 'GD' },
+    { id: 'hose2', n: 'Fire hose, charged', s: 'Hose 2', ab: 'H2' },
+    { id: 'tray', n: 'Drip tray', s: 'Drip tray', ab: 'DT' },
+    { id: 'sign', n: 'Warning notice: no naked lights, no smoking', s: 'Notice', ab: 'WN' },
+    { id: 'reel', n: 'Cable reel, 230 V', s: 'Cable reel', ab: 'CR' },
+    { id: 'isc', n: 'International shore connection', s: 'ISC', ab: 'ISC' },
+    { id: 'plan', n: 'Fire control plan in its container', s: 'Fire plan', ab: 'FP' }
+  ];
+  // whether a piece belongs on deck: only hashes are stored (GBLab.key, value 1 = belongs)
+  var KEY = { hose1: '4b2fa597', hose2: '093919e8', dp: 'faa54a7c', det: '7d2cd07b', tray: '203144a9',
+    sign: 'af2482e3', isc: '17f427e8', plan: '163ed8cd', lamp: '782822a3', reel: 'c784ac65' };
+  var SHOT = {                                   // the photograph on top of each consequence sheet
+    ignition: '../img/06_lay_out_ignition.jpg', noalarm: '../img/06_lay_out_no_alarm.jpg',
+    cold: '../img/06_lay_out_cold_deck.jpg', leak: '../img/06_lay_out_leak.jpg', good: '../img/06_lay_out_good.jpg'
+  };
+  /* ------------------------------------------------------------------------------------------------ */
+
+  var WIND = WINDS[Math.floor(Math.random() * WINDS.length)];
+  var NS = 'http://www.w3.org/2000/svg';
+  var scene = document.getElementById('scene');
+  var tray = document.getElementById('tray'), drawn = document.getElementById('drawn');
+  var pos = {}, byId = {}, locked = false, tapHint = false;
+
+  function belongs(t) { return GBLab.key('LO1-tok-' + t.id, t.n, 1) === KEY[t.id]; }
+  function U(p) { return { x: p.x, y: p.y * ASPECT }; }        // % of the photo -> overlay units (1 = 1 % of width)
+  function MU(m) { return m / M_PER_PCT; }                     // metres -> overlay units
+  function rel(p, q) {                                          // distance in metres, and how far p is downwind of q
+    var a = U(p), b = U(q), dx = a.x - b.x, dy = a.y - b.y, d = Math.sqrt(dx * dx + dy * dy);
+    return { d: d * M_PER_PCT, cos: d ? (dx * WIND.v[0] + dy * WIND.v[1]) / d : 0 };
+  }
+  function svg(tag, at, parent) {
+    var e = document.createElementNS(NS, tag), k;
+    for (k in at) e.setAttribute(k, at[k]);
+    (parent || drawn).appendChild(e);
+    return e;
+  }
+
+  /* ---- the wind: three moving streamlines across the deck --------------------------------------- */
+  document.getElementById('w-from').textContent = WIND.from;
+  (function () {
+    var g = document.getElementById('wind'), c = { x: 80, y: 16 }, v = WIND.v, n = [-v[1], v[0]], k;
+    for (k = -1; k <= 1; k++) {
+      var mx = c.x + n[0] * k * 9, my = c.y + n[1] * k * 9, L = 15;
+      var x1 = mx - v[0] * L, y1 = my - v[1] * L, x2 = mx + v[0] * L, y2 = my + v[1] * L;
+      svg('line', { x1: x1, y1: y1, x2: x2, y2: y2, 'class': 'lo-wu' }, g);
+      svg('line', { x1: x1, y1: y1, x2: x2, y2: y2, 'class': 'lo-wl' }, g);
+      svg('path', { d: 'M' + (x2 + v[0] * 1.8) + ' ' + (y2 + v[1] * 1.8) + ' L' + (x2 + n[0] * 1.2) + ' ' + (y2 + n[1] * 1.2) +
+        ' L' + (x2 - n[0] * 1.2) + ' ' + (y2 - n[1] * 1.2) + ' Z' }, g);
+    }
+  })();
+
+  /* ---- the tray --------------------------------------------------------------------------------- */
+  TOK.forEach(function (t, i) {
+    var e = document.createElement('div');
+    e.className = 'lo-tok';
+    e.setAttribute('data-drag', '');
+    e.setAttribute('data-id', t.id);
+    e.setAttribute('data-i', i);
+    e.innerHTML = '<i class="lo-ab">' + t.ab + '</i><span class="lo-n">' + GBLab.esc(t.n) + '</span><span class="lo-s">' + GBLab.esc(t.s) + '</span>';
+    tray.appendChild(e);
+    byId[t.id] = t;
+  });
+
+  function place(e, x, y) {
+    var id = e.getAttribute('data-id');
+    x = Math.max(DECK.x0, Math.min(DECK.x1, x));
+    y = Math.max(DECK.y0, Math.min(DECK.y1, y));
+    pos[id] = { x: x, y: y };
+    if (e.parentNode !== scene) scene.appendChild(e);
+    e.className = 'lo-tok lo-on tl-pin';
+    e.style.left = x + '%';
+    e.style.top = y + '%';
+  }
+  function home(e) {
+    var id = e.getAttribute('data-id'), i = +e.getAttribute('data-i'), kids = tray.children, k, before = null;
+    pos[id] = null;
+    e.className = 'lo-tok';
+    e.style.left = e.style.top = '';
+    for (k = 0; k < kids.length; k++) if (+kids[k].getAttribute('data-i') > i) { before = kids[k]; break; }
+    tray.insertBefore(e, before);
+  }
+
+  var dragger = GBLab.drag({
+    items: '.lo-tok',
+    targets: '.lo-drop, .lo-tray',
+    onPick: function (it) {
+      if (!tapHint && it.parentNode === tray) { tapHint = true; GBLab.toast('Now tap the spot on the deck where it goes.', 'hint'); }
+    },
+    onDrop: function (it, t, pt) {
+      if (locked) return;
+      if (t.classList.contains('lo-tray')) { if (it.parentNode !== tray) home(it); return; }
+      if (!pt) return;
+      var p = GBLab.toScene({ clientX: pt.x, clientY: pt.y }, scene);
+      place(it, p.x, p.y);
+    }
+  });
+
+  /* ---- the check: physics and geometry, not an answer key. Distances in metres and the wind vector
+     decide each rule; which pieces belong at all is the hashed KEY above. ------------------------- */
+  function side(cos) { return cos > 0.3 ? 'downwind' : 'crosswind'; }
+  function near(id, q, m) { var k = pos[id] ? rel(pos[id], q) : null; return k && k.d <= m ? k : null; }
+  function judge() {
+    var M = P.manifold, G = P.gangway, r = {}, k;
+    // ICS TSG(LG) 5.9.1: at least two hoses near the manifold, one forward and one aft (forward = left)
+    function hose(id) {
+      var p = pos[id];
+      if (!p) return { why: 'not laid out' };
+      var q = rel(p, M);
+      if (q.d > RULE.hoseNear) return { why: Math.round(q.d) + ' m away', end: p.x < M.x ? 'f' : 'a' };
+      if (q.d < RULE.standOff) return { why: 'on the manifold itself' };
+      return { end: p.x < M.x ? 'f' : 'a', ok: true };
+    }
+    var h1 = hose('hose1'), h2 = hose('hose2');
+    var both = h1.ok && h2.ok, split = both && h1.end !== h2.end;
+    function say(h) { return h.ok ? (h.end === 'f' ? 'forward' : 'aft') + ' of the manifold' : h.why; }
+    r.hose1 = h1.ok && split; r.hose2 = h2.ok && split;
+    r.hoses = { ok: split, a: 'Hose 1 ' + say(h1) + '; hose 2 ' + say(h2) + (both && !split ? ' - both on one side' : '') };
+
+    // ICS TSG(LG) 5.9.1 near the manifold; TSG 3.8.1 and "fought from upwind": on the upwind side
+    k = pos.dp ? rel(pos.dp, M) : null;
+    r.dp = { ok: !!k && k.d <= RULE.dpNear && k.cos <= -0.3,
+      a: !k ? 'not placed' : k.d > RULE.dpNear ? Math.round(k.d) + ' m from the manifold' : k.cos > -0.3 ? side(k.cos) : 'upwind, near the manifold' };
+
+    // VERIFY: downwind of the connections is where a leak drifts - logic, not a cited rule
+    k = pos.det ? rel(pos.det, M) : null;
+    r.det = { ok: !!k && k.d <= RULE.detNear && (k.cos >= -0.2 || k.d < 2),
+      a: !k ? 'not placed' : k.d > RULE.detNear ? Math.round(k.d) + ' m from the manifold' : (k.cos < -0.2 && k.d >= 2) ? 'upwind of the manifold' : 'at the manifold, downwind side' };
+
+    k = pos.tray ? rel(pos.tray, M) : null;                    // ICS TSG(LG) 1.7.2
+    r.tray = { ok: !!k && k.d <= RULE.trayNear, a: !k ? 'not placed' : k.d <= RULE.trayNear ? 'under the connections' : Math.round(k.d) + ' m from the connections' };
+
+    k = pos.sign ? rel(pos.sign, G) : null;                    // ICS TSG(LG) 2.6.2 - at points of access
+    r.sign = { ok: !!k && k.d <= RULE.gangNear, a: !k ? 'not placed' : k.d <= RULE.gangNear ? 'at the gangway' : Math.round(k.d) + ' m from the gangway' };
+
+    k = pos.plan ? rel(pos.plan, G) : null;                    // Hand Out 8.5 - in a container near the gangway
+    r.plan = { ok: !!k && k.d <= RULE.gangNear, a: !k ? 'not placed' : k.d <= RULE.gangNear ? 'at the gangway' : Math.round(k.d) + ' m from the gangway' };
+
+    k = pos.isc ? rel(pos.isc, G) : null;                      // Hand Out 8.5 - ready at short notice; place VERIFY
+    var mid = (DECK.y0 + DECK.y1) / 2;
+    r.isc = { ok: !!k && k.d <= RULE.iscNear && pos.isc.y >= mid,
+      a: !k ? 'not placed' : k.d > RULE.iscNear ? Math.round(k.d) + ' m from the gangway' : pos.isc.y < mid ? 'on the sea side' : 'at the gangway, berth side' };
+
+    var bad = TOK.filter(function (t) { return pos[t.id] && !belongs(t); });   // ICS TSG(LG) 5.6
+    r.safe = { ok: !bad.length, bad: bad, a: bad.length ? bad.map(function (t) { return t.n; }).join(', ') + ' on deck' : 'nothing unsafe on deck' };
+    return r;
+  }
+
+  /* ---- what the check draws over the photograph ------------------------------------------------- */
+  function circle(p, metres, ok) {
+    var u = U(p);
+    return svg('circle', { cx: u.x, cy: u.y, r: MU(metres), 'class': 'lo-z ' + (ok ? 'g' : 'b') });
+  }
+  function sector(c, metres, upwind, ok) {    // the half of a circle that lies upwind or downwind of c
+    var m = U(c), v = WIND.v, a0 = Math.atan2(v[1], v[0]) + (upwind ? Math.PI : 0), sp = Math.acos(upwind ? -0.3 : -0.2), R = MU(metres);
+    return svg('path', { 'class': 'lo-z ' + (ok ? 'g' : 'b'), d:
+      'M' + m.x + ' ' + m.y + ' L' + (m.x + R * Math.cos(a0 - sp)) + ' ' + (m.y + R * Math.sin(a0 - sp)) +
+      ' A' + R + ' ' + R + ' 0 ' + (sp > Math.PI / 2 ? 1 : 0) + ' 1 ' + (m.x + R * Math.cos(a0 + sp)) + ' ' + (m.y + R * Math.sin(a0 + sp)) + ' Z' });
+  }
+  function draw(r) {
+    var m = U(P.manifold), v = WIND.v, n = [-v[1], v[0]], L = 40, w0 = 1, w1 = 11;
+    var plume = svg('path', { 'class': 'lo-plume', d:
+      'M' + (m.x + n[0] * w0) + ' ' + (m.y + n[1] * w0) +
+      ' L' + (m.x + v[0] * L + n[0] * w1) + ' ' + (m.y + v[1] * L + n[1] * w1) +
+      ' Q' + (m.x + v[0] * (L + 9)) + ' ' + (m.y + v[1] * (L + 9)) + ' ' + (m.x + v[0] * L - n[0] * w1) + ' ' + (m.y + v[1] * L - n[1] * w1) +
+      ' L' + (m.x - n[0] * w0) + ' ' + (m.y - n[1] * w0) + ' Z' });
+    var later = [];
+    later.push(circle(P.manifold, RULE.hoseNear, r.hoses.ok));
+    later.push(svg('line', { x1: m.x, y1: U({ y: DECK.y0 }).y, x2: m.x, y2: U({ y: DECK.y1 }).y, 'class': 'lo-z ' + (r.hoses.ok ? 'g' : 'b') }));
+    ['hose1', 'hose2', 'dp'].forEach(function (id) {
+      if (!pos[id]) return;
+      var ok = id === 'dp' ? r.dp.ok : r[id], u = U(pos[id]);
+      later.push(svg('line', { x1: u.x, y1: u.y, x2: m.x, y2: m.y, 'class': 'lo-z lo-jet ' + (ok ? 'g' : 'b') }));
+    });
+    later.push(sector(P.manifold, RULE.dpNear, true, r.dp.ok));
+    later.push(sector(P.manifold, RULE.detNear, false, r.det.ok));
+    later.push(circle(P.manifold, RULE.trayNear, r.tray.ok));
+    later.push(circle(P.gangway, RULE.gangNear, r.sign.ok && r.plan.ok));
+    later.push(circle(P.gangway, RULE.iscNear, r.isc.ok));
+
+    setTimeout(function () { plume.setAttribute('class', 'lo-plume on'); }, 60);
+    setTimeout(function () {
+      later.forEach(function (e) { e.setAttribute('class', e.getAttribute('class') + ' on'); });
+      Object.keys(pos).forEach(function (id) {
+        if (!pos[id]) return;
+        var t = byId[id], ok = !belongs(t) ? false :
+          id === 'hose1' || id === 'hose2' ? r[id] : r[id] ? r[id].ok : true;
+        var e = scene.querySelector('[data-id="' + id + '"]');
+        if (e) e.className += ok ? ' lo-ok' : ' lo-no';
+      });
+    }, 700);
+  }
+
+  /* ---- what happens with this layout: a gasket weeps at the manifold ------------------------------ */
+  function story(r) {
+    var s = [], img = null;
+    function add(key, text) { if (!img) img = SHOT[key]; s.push(text); }
+    if (!r.safe.ok) add('ignition', 'A gasket weeps at the vapour connection. The cloud drifts ' + WIND.to + ' and reaches the <b>' +
+      r.safe.bad.map(function (t) { return GBLab.esc(t.n.toLowerCase()); }).join('</b> and the <b>') +
+      '</b> on deck - not an approved type for a gas-dangerous zone. An ignition source in the cloud.');
+    if (!r.det.ok) add('noalarm', pos.det
+      ? 'Your gas detector is ' + r.det.a + '; the cloud drifts ' + WIND.to + ', away from it. Nobody knows until someone sees frost on the flange.'
+      : 'No gas detector at the manifold. Propane vapour is heavier than air and creeps low along the deck - nobody sees it in time.');
+    if (!r.hoses.ok) add('leak', 'With the wind from ' + WIND.from.toLowerCase() + ', the crew must attack the leak from upwind - so one hose must be forward of the manifold and one aft. Yours: ' + GBLab.esc(r.hoses.a) + '.');
+    if (!r.tray.ok) add('cold', 'Liquid propane drips onto the deck at about -42 °C. Nothing catches it, and ordinary deck steel can turn brittle and crack.');
+    if (!r.dp.ok) add('leak', 'If the vapour ignites at the flange, dry powder is what puts out the gas fire - from upwind. Yours is ' + r.dp.a + '.');
+    if (!r.sign.ok) add('leak', 'Shore staff and visitors come up the gangway with no notice telling them: no naked lights, no smoking.');
+    if (!r.plan.ok) add('leak', 'The shore fire brigade arrives at the gangway and finds no fire control plan waiting for them there.');
+    if (!r.isc.ok) add('leak', 'The shore fire brigade wants to feed your fire main, and the international shore connection is not ready at the gangway.');
+    return { text: s.slice(0, 2).join('<br><br>'), img: img };
+  }
+
+  function check() {
+    if (locked) return;
+    if (!Object.keys(pos).some(function (k) { return pos[k]; })) return GBLab.toast('Put the equipment on the deck first - drag it from the tray.', 'hint');
+    GBLab.sure(run);
+  }
+  function run(level) {
+    if (locked) return;
+    locked = true;
+    dragger.clear();
+    [].forEach.call(document.querySelectorAll('.lo-tok'), function (e) { e.setAttribute('aria-disabled', 'true'); e.removeAttribute('data-drag'); });
+    GBLab.go('A gasket weeps at the manifold...', null);
+    document.getElementById('w-st').textContent = 'Leak';
+    document.getElementById('w-st').className = 'hi';
+    var r = judge(), all = r.hoses.ok && r.dp.ok && r.det.ok && r.tray.ok && r.sign.ok && r.plan.ok && r.isc.ok && r.safe.ok;
+    draw(r);
+    document.getElementById('trayCard').hidden = true;
+    document.getElementById('legend').hidden = false;
+    if (r.det.ok) setTimeout(function () {
+      GBLab.sound.play([[1400, 160, 90], [1400, 160, 90], [1400, 160, 0]], 0.07);
+      GBLab.toast('Gas detector alarm at the manifold - transfer stopped.', 'no');
+      document.getElementById('w-st').textContent = 'Stopped';
+    }, 1100);
+    setTimeout(function () {
+      GBLab.sureNote(level, all);
+      var st = story(r);
+      GBLab.show(all ? {
+        img: SHOT.good, tag: 'Leak caught', kind: 'ok', title: 'The leak is caught at once',
+        text: 'The detector downwind alarms within seconds and the transfer is stopped. The upwind hose lays water spray with the wind at the crew\'s backs, dry powder stands ready upwind, and nothing on deck can ignite the cloud.',
+        buttons: [{ label: 'See my result', fn: result }, { label: 'Look at the deck first', primary: false, fn: later }]
+      } : {
+        img: st.img, tag: 'Leak at the manifold', kind: 'no', title: 'What happens with your layout', text: st.text,
+        buttons: [{ label: 'See my result', fn: result }, { label: 'Look at the deck first', primary: false, fn: later }]
+      });
+    }, 2300);
+    var R = r;
+    function later() { GBLab.go('See my result', result); }
+    function result() {
+      GBLab.finish({ items: [
+        { t: 'Two charged hoses near the manifold, one forward and one aft', ok: R.hoses.ok, a: R.hoses.a, c: 'one forward, one aft, within ' + RULE.hoseNear + ' m',
+          w: 'ICS Tanker Safety Guide (Liquefied Gas) 5.9.1. Whatever the wind, one hose is then upwind - and a fire is fought from upwind.' },
+        { t: 'Dry powder near the manifold, on the upwind side', ok: R.dp.ok, a: R.dp.a, c: 'upwind, within ' + RULE.dpNear + ' m',
+          w: 'Dry powder is what puts out a gas fire at a flange. It is placed near the manifold and upwind, so it can be used without crossing the cloud.' },
+        { t: 'Drip tray under the manifold connections', ok: R.tray.ok, a: R.tray.a, c: 'under the connections',
+          w: 'Liquid gas is far below 0 °C. A drip tray under the flanges keeps a cold spill off the deck and hull plates, which it can make brittle.' },
+        { t: 'Gas detector at the manifold, on the downwind side', ok: R.det.ok, a: R.det.a, c: 'within ' + RULE.detNear + ' m, downwind',
+          w: 'A leak drifts with the wind, and propane vapour is heavier than air and stays low. A detector downwind of the flange sees it first.' },
+        { t: 'Warning notice at the gangway', ok: R.sign.ok, a: R.sign.a, c: 'at the gangway',
+          w: 'Notices go at the points of access: no naked lights, no smoking, no unauthorised persons, mobile phones off.' },
+        { t: 'Fire control plan in its container at the gangway', ok: R.plan.ok, a: R.plan.a, c: 'at the gangway',
+          w: 'The shore fire brigade comes aboard by the gangway; the plan waits for them there, up to date, with the crew list.' },
+        { t: 'International shore connection ready at the gangway', ok: R.isc.ok, a: R.isc.a, c: 'berth side, near the gangway',
+          w: 'It lets the shore fire brigade feed your fire main, so it is made available for use at short notice.' },
+        { t: 'Nothing unsafe put on deck', ok: R.safe.ok, a: R.safe.a, c: 'no unapproved electrical equipment',
+          w: 'An ordinary 230 V lamp or cable reel can spark. Only approved safety lamps are used, and a terminal may forbid any portable electrics.' }
+      ] });
+    }
+  }
+
+  GBLab.go('Check my layout', check);
+  setTimeout(function () { GBLab.hand('lo1-place', tray.firstChild, scene); }, 700);
+})();
+</script>
+</body>
+</html>

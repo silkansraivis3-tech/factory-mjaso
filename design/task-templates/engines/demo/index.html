@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tablet task lab</title>
+<link rel="stylesheet" href="../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<style>
+  :root { --bg: #E9EEF4; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); font-family: var(--font, "Segoe UI", sans-serif); color: var(--ink, #011111); display: grid; grid-template-columns: 330px 1fr 300px; overflow: hidden; }
+  aside, section { min-height: 0; overflow: auto; }
+  .list { background: var(--deep, #0A182E); color: var(--txt-d, #F3F8FD); padding: 18px 14px; }
+  .list h1 { font-size: 19px; margin: 0 0 4px; }
+  .list p.k { margin: 0 0 14px; font-size: 13px; color: var(--dim-d, #A2B7CF); line-height: 1.45; }
+  .fam { margin: 16px 4px 6px; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--amber, #E9A51E); font-weight: 800; }
+  .t { display: block; width: 100%; text-align: left; border: 0; border-radius: 12px; padding: 10px 12px; margin: 0 0 6px; background: rgba(255,255,255,.04); color: inherit; cursor: pointer; font: inherit; }
+  .t:hover { background: rgba(46,182,248,.12); }
+  .t.on { background: rgba(46,182,248,.22); box-shadow: inset 3px 0 0 var(--blue, #2EB6F8); }
+  .t b { display: block; font-size: 15px; }
+  .t span { display: block; font-size: 12.5px; color: var(--dim-d, #A2B7CF); margin-top: 2px; line-height: 1.35; }
+  .t i { font-style: normal; display: inline-block; margin-top: 5px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: rgba(255,255,255,.1); }
+  .t i.wait { background: rgba(233,165,30,.25); }
+  .t.missing { opacity: .45; }
+  .stagearea { display: flex; flex-direction: column; padding: 14px 18px; gap: 10px; }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .tools button, .tools label { border: 1px solid var(--line-l, #D3DBE5); background: #fff; border-radius: 10px; padding: 8px 12px; font: 600 13.5px var(--font, sans-serif); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+  .tools button.on { background: var(--navy, #0A2463); color: #fff; border-color: var(--navy, #0A2463); }
+  .tools .sp { flex: 1; }
+  .what { background: #fff; border-radius: 14px; padding: 12px 16px; font-size: 14.5px; line-height: 1.5; border: 1px solid var(--line-l, #D3DBE5); }
+  .what b { color: var(--navy, #0A2463); }
+  .fit { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; }
+  .device { position: absolute; transform-origin: 50% 50%; background: #10151d; border-radius: 34px; padding: 22px; box-shadow: 0 30px 60px rgba(10,24,46,.3); }
+  .device iframe { display: block; border: 0; background: #fff; border-radius: 10px; }
+  .side { background: #fff; padding: 16px; border-left: 1px solid var(--line-l, #D3DBE5); font-size: 13.5px; }
+  .side h2 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--steel, #415C8F); margin: 0 0 8px; }
+  .side pre { background: #0C1E3A; color: #CFE6FF; border-radius: 10px; padding: 10px; font-size: 11.5px; white-space: pre-wrap; word-break: break-word; max-height: 55vh; overflow: auto; }
+  .side p { line-height: 1.5; color: var(--dim-l, #41556A); }
+  .team { display: none; gap: 6px; flex-wrap: wrap; }
+  .team.on { display: flex; }
+  /* a narrow window: the list narrows, the receipt becomes a card that appears only with a result */
+  @media (max-width: 1150px) {
+    body { grid-template-columns: 250px 1fr; }
+    .t span { display: none; }
+    .side { position: fixed; right: 12px; bottom: 12px; width: 300px; max-height: 60vh; border-radius: 14px; box-shadow: 0 16px 40px rgba(10,24,46,.3); display: none; z-index: 5; }
+    .side.has { display: block; }
+    .side .x { display: block; }
+  }
+  .side .x { display: none; float: right; border: 0; background: none; font-size: 20px; cursor: pointer; }
+</style>
+</head>
+<body>
+<aside class="list">
+  <h1>Tablet task lab</h1>
+  <p class="k">Higher-level tasks for the trainee tablets: proposals to try, not yet part of any course. Demo content only - real words always come from the approved content script.</p>
+  <div id="list"></div>
+</aside>
+
+<section class="stagearea">
+  <div class="tools">
+    <button data-dev="tab-l" class="on">Tablet · landscape</button>
+    <button data-dev="tab-p">Tablet · portrait</button>
+    <button data-dev="phone">Phone</button>
+    <label><input type="checkbox" id="cls" checked> Classroom view</label>
+    <span class="sp"></span>
+    <span class="team" id="teambar">Send team role:
+      <button data-role="Gauges">Gauges</button><button data-role="Valves">Valves</button><button data-role="Procedure">Procedure</button>
+    </span>
+    <button id="reload">Start again</button>
+  </div>
+  <div class="what" id="what"></div>
+  <div class="fit" id="fit"><div class="device" id="device"><iframe id="frame" title="task"></iframe></div></div>
+</section>
+
+<aside class="side" id="side">
+  <button class="x" id="x" aria-label="Close">&times;</button>
+  <h2>What the classroom receives</h2>
+  <p id="none">Finish a task: the result it reports (<code>gb-task-done</code>) shows here, exactly as the classroom would record it.</p>
+  <pre id="out" hidden></pre>
+  <h2>Classroom view</h2>
+  <p>On: the page gets the classroom's own injected stylesheet (a copy of the app's <code>task-view.css</code>), as on the tablets. Off: the page as built.</p>
+</aside>
+
+<script>
+(function () {
+  'use strict';
+  var TASKS = [
+    ['Live systems - the screen answers back', [
+      ['01_live_system', 'Discharge with vapour return', 'The simulator’s own procedure 15.8.2 on its cargo screen: hydraulics, line-up, a drain to find, pump on recirculation, cool the line, vapour from shore, up to rate.', 'Apply · Analyse'],
+      ['02_keep_safe', 'Keep it in the safe band', 'Sail the voyage step by step and hold tank pressure inside the band with the plant you have.', 'Apply'],
+      ['03_predict_curve', 'Predict, then run', 'Draw with a finger how the pressure will move; the simulation then lays the real curve over yours.', 'Analyse'],
+      ['09_scenario_state', 'A watch that remembers', 'A scenario whose readings and options change with every earlier choice.', 'Evaluate']
+    ]],
+    ['On the plan - draw, place, survey', [
+      ['04_survey_space', 'Survey before entry', 'Take readings where you choose, then decide: enter or not, and which reading decides it.', 'Analyse · Evaluate'],
+      ['05_draw_route', 'Draw the escape route', 'Draw the route on the deck plan; it is judged against the gas cloud and the muster station.', 'Apply · Analyse'],
+      ['06_lay_out', 'Lay out the deck', 'Place detectors, hoses and the water curtain; the plan is checked for coverage.', 'Create'],
+      ['07_ppe_buddy', 'Dress, then buddy-check', 'Kit up the crew member in order, then find what is wrong on a colleague.', 'Apply · Evaluate']
+    ]],
+    ['Judge and build', [
+      ['08_triage', 'Triage', 'Problems arrive; put your limited crew where it matters and see what follows.', 'Evaluate'],
+      ['10_build_procedure', 'Build the procedure, then test it', 'Assemble a decision chart; the page runs real cases through it and shows where it fails.', 'Create'],
+      ['11_connect_system', 'Connect the system, then run it', 'Join tank, pump, manifold and relief valve; press Run to see whether it works.', 'Create']
+    ]],
+    ['New prototypes - 16 October', [
+      ['19_deck_round', 'Deck round before cargo', 'Walk four spots round the manifold - swipe from one to the next. Tap what is not right before cargo starts, then say how to put it right.', 'Analyse · Evaluate'],
+      ['18_ba_check', '3D breathing apparatus check', 'Turn a real 3D set with a finger and check it as ICS asks: air on the gauge, the low-pressure whistle, the mask seal - one hidden fault per run.', 'Apply · Evaluate'],
+      ['17_radio_call', 'Ship–shore radio call', 'Listen to the terminal on the radio, build each reply from radio phrases and press to talk: radio check, refuse a rate rise while topping off, emergency stop.', 'Apply · Evaluate'],
+      ['16_stop_it', 'Stop it!', 'A real clip of the manifold during loading: press STOP the moment something goes wrong, point at it, say what you do first.', 'Analyse · Evaluate'],
+      ['15_gas_detector', 'A real gas detector in your hands', 'Its own buttons and live screen: self test, fresh-air zero, bump test with span gas on the inlet - then decide if it can be trusted.', 'Apply · Evaluate']
+    ]],
+    ['Senses, self-awareness, team', [
+      ['12_confidence', 'How sure are you?', 'The add-on for every task - including the simple ones - and the end screen that flags sure-but-wrong.', 'any level'],
+      ['13_listen', 'Listen and identify', 'Real alarm patterns, made by the page itself. Headphones in class.', 'Remember · Analyse'],
+      ['14_team_split', 'Split information (team)', 'Loading with vapour return (simulator 15.6.3): one tablet has the gauges, one the live valve screen, one the procedure - the team finds the shut valve by talking.', 'Analyse · Evaluate', 'team']
+    ]]
+  ];
+  var DEV = { 'tab-l': [1333, 784], 'tab-p': [800, 1333], phone: [390, 844] };
+  var dev = 'tab-l', cur = null, frame = document.getElementById('frame');
+
+  var list = document.getElementById('list');
+  TASKS.forEach(function (f) {
+    var h = document.createElement('div'); h.className = 'fam'; h.textContent = f[0]; list.appendChild(h);
+    f[1].forEach(function (t) {
+      var b = document.createElement('button');
+      b.className = 't'; b.setAttribute('data-id', t[0]);
+      b.innerHTML = '<b>' + t[1] + '</b><span>' + t[2] + '</span><i>' + t[3] + '</i>' + (t[4] ? ' <i class="wait">needs team support in the app</i>' : '');
+      b.addEventListener('click', function () { open(t); });
+      list.appendChild(b);
+      // grey out what is not built yet
+      var x = new XMLHttpRequest(); x.open('HEAD', 'tasks/' + t[0] + '.html');
+      x.onload = function () { if (x.status !== 200) b.className += ' missing'; };
+      x.send();
+    });
+  });
+
+  function open(t) {
+    cur = t;
+    [].forEach.call(document.querySelectorAll('.t'), function (b) { b.classList.toggle('on', b.getAttribute('data-id') === t[0]); });
+    document.getElementById('what').innerHTML = '<b>' + t[1] + '</b> - ' + t[2] + ' <i>(' + t[3] + ')</i>';
+    document.getElementById('teambar').className = 'team' + (t[4] ? ' on' : '');
+    try { location.hash = t[0]; } catch (e) {}
+    load();
+  }
+  function load() {
+    try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('gblab-') === 0) localStorage.removeItem(k); }); } catch (e) {}
+    document.getElementById('out').hidden = true; document.getElementById('none').hidden = false; document.getElementById('side').classList.remove('has');
+    frame.src = 'tasks/' + cur[0] + '.html?t=' + Date.now();
+  }
+  frame.addEventListener('load', function () {
+    if (!document.getElementById('cls').checked) return;
+    try {
+      var d = frame.contentDocument;
+      d.documentElement.classList.add('nc-task');
+      var l = d.createElement('link'); l.rel = 'stylesheet'; l.href = new URL('classroom/task-view.css', location.href).href;
+      d.head.appendChild(l);
+    } catch (e) {}
+  });
+  window.addEventListener('message', function (e) {
+    if (e.source !== frame.contentWindow || !e.data || e.data.type !== 'gb-task-done') return;
+    var o = document.getElementById('out');
+    o.textContent = JSON.stringify(e.data, null, 2); o.hidden = false; document.getElementById('none').hidden = true;
+    document.getElementById('side').classList.add('has');
+  });
+
+  function fit() {
+    var s = DEV[dev], box = document.getElementById('fit').getBoundingClientRect(), d = document.getElementById('device');
+    frame.style.width = s[0] + 'px'; frame.style.height = s[1] + 'px';
+    var k = Math.min((box.width - 10) / (s[0] + 44), (box.height - 10) / (s[1] + 44), 1);
+    d.style.transform = 'scale(' + k + ')';
+  }
+  [].forEach.call(document.querySelectorAll('[data-dev]'), function (b) {
+    b.addEventListener('click', function () {
+      dev = b.getAttribute('data-dev');
+      [].forEach.call(document.querySelectorAll('[data-dev]'), function (x) { x.classList.toggle('on', x === b); });
+      fit();
+    });
+  });
+  [].forEach.call(document.querySelectorAll('[data-role]'), function (b) {
+    b.addEventListener('click', function () {
+      frame.contentWindow.postMessage({ type: 'gb-team', team: { name: 'Team A', colour: '#4fd1c5', members: ['Anna', 'Jānis', 'Olena'], me: 'You', role: b.getAttribute('data-role') } }, '*');
+    });
+  });
+  document.getElementById('x').addEventListener('click', function () { document.getElementById('side').classList.remove('has'); });
+  document.getElementById('reload').addEventListener('click', function () { if (cur) load(); });
+  document.getElementById('cls').addEventListener('change', function () { if (cur) load(); });
+  window.addEventListener('resize', fit);
+  fit();
+  var first = location.hash.slice(1), all = [];
+  TASKS.forEach(function (f) { all = all.concat(f[1]); });
+  open(all.filter(function (t) { return t[0] === first; })[0] || all[0]);
+})();
+</script>
+</body>
+</html>

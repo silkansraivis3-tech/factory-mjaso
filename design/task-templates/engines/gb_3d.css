@@ -1,0 +1,39 @@
+/* gb_3d.css - the 3D object and the 360-degree view (gb_3d.js). Finger-sized everything. */
+.g3 { position: relative; overflow: hidden; touch-action: none; }
+.g3-canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; max-width: none !important; display: block; touch-action: none; }
+.g3-loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 12px 18px; border-radius: 12px;
+  background: rgba(3,10,22,.8); color: var(--tl-dim, #9DB3CC); font-size: 15px; }
+
+/* the turn / tilt / zoom buttons - always there, so a finger drag is never the only way */
+.g3-bar { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 4; display: flex; gap: 8px; padding: 6px;
+  border-radius: 18px; background: rgba(3,10,22,.72); border: 1px solid var(--tl-line, rgba(140,190,255,.16));
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.g3-b { width: 56px; height: 56px; border: 0; border-radius: 14px; background: rgba(255,255,255,.08); color: #EAF3FF;
+  font: 700 22px/56px var(--tl-font, sans-serif); cursor: pointer; touch-action: manipulation; }
+.g3-b:active { background: rgba(46,182,248,.3); transform: scale(.96); }
+@media (max-width: 600px) { .g3-b { width: 44px; height: 44px; line-height: 44px; font-size: 18px; border-radius: 12px; } .g3-bar { gap: 5px; padding: 5px; } }
+
+/* points on the object: 56 px to touch, the dot in the middle; hidden when behind */
+.g3-pins { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 3; }
+.g3-pin, .g3-mark { position: absolute; left: 0; top: 0; width: 56px; height: 56px; margin: -28px 0 0 -28px; border: 0; padding: 0;
+  background: none; cursor: pointer; pointer-events: auto; transition: opacity .2s ease; }
+.g3-mark { pointer-events: none; }
+.g3-pin i, .g3-mark i { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%;
+  background: rgba(46,182,248,.25); border: 3px solid #2EB6F8; box-shadow: 0 0 16px rgba(46,182,248,.8); animation: g3-breathe 1.8s ease-in-out infinite; }
+.g3-pin span, .g3-mark span { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); white-space: nowrap; padding: 3px 9px; border-radius: 8px;
+  background: rgba(3,10,22,.82); color: #EAF3FF; font: 700 13px var(--tl-font, sans-serif); pointer-events: none; }
+.g3-pin.done i, .g3-mark.done i { background: rgba(61,220,151,.35); border-color: #3DDC97; box-shadow: 0 0 16px rgba(61,220,151,.8); animation: none; }
+.g3-pin.bad i, .g3-mark.bad i { background: rgba(255,107,94,.35); border-color: #FF6B5E; box-shadow: 0 0 16px rgba(255,107,94,.8); animation: none; }
+.g3-mark.miss i { background: none; border-style: dashed; border-color: #F2B33D; box-shadow: none; animation: none; }
+.g3-pin.behind { opacity: .5; }
+.g3-pin.behind i { animation: none; transform: scale(.8); box-shadow: none; }
+.g3-pin.hid, .g3-mark.hid { opacity: 0; pointer-events: none; }
+@keyframes g3-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+
+/* tall narrow screen (a phone held upright): the buttons get their own strip under the picture,
+   so they never cover the lower part of the object or the points on it */
+@media (max-aspect-ratio: 1/1) {
+  .g3-canvas { height: calc(100% - 62px) !important; border-radius: 0 0 14px 14px; }
+  .g3-pins { bottom: 62px; overflow: hidden; }
+  .g3-bar { bottom: 5px; padding: 4px; }
+}

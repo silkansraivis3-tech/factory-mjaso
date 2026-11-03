@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>LS1 — Discharge with shore vapour return</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<link rel="stylesheet" href="../../gb_hmi.css">
+<style>
+  /* the console photograph first; the ship's screen then opens out of its monitor */
+  .ls-screen { position: absolute; z-index: 3; opacity: 0;
+    transition: left .9s cubic-bezier(.2,.8,.2,1), top .9s cubic-bezier(.2,.8,.2,1), width .9s cubic-bezier(.2,.8,.2,1), height .9s cubic-bezier(.2,.8,.2,1), opacity .4s ease; }
+  .ls-screen.on { opacity: 1; }
+  .stage-photo { transition: filter 1.2s ease; }
+  .stage-photo.dim { filter: brightness(.45) saturate(.85); }
+  .ls-big { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ls-big > div { background: rgba(3,10,22,.7); border: 1px solid var(--tl-line); border-radius: 12px; padding: 8px 10px; }
+  .ls-big span { display: block; font-size: 12.5px; color: var(--tl-dim); }
+  .ls-big b { display: block; font: 700 22px/1.2 var(--tl-mono, monospace); color: var(--tl-accent); text-shadow: 0 0 12px rgba(46,182,248,.45); }
+  .ls-big b.hi { color: var(--tl-bad); text-shadow: 0 0 12px rgba(255,107,94,.6); }
+  .ls-big b.ok { color: var(--tl-good); text-shadow: 0 0 12px rgba(61,220,151,.5); }
+  .ls-big small { font-size: 13px; color: var(--tl-dim); }
+  .ls-coach { margin: 0; font-size: 15.5px; line-height: 1.45; color: var(--tl-text); min-height: 44px; }
+  .ls-shore { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 15px; }
+  .ls-shore i { flex: 0 0 12px; height: 12px; border-radius: 50%; background: #5F7896; }
+  .ls-shore i.on { background: var(--tl-good); box-shadow: 0 0 10px var(--tl-good); }
+  .ls-target { font-size: 14px; color: var(--tl-dim); margin: 6px 0 0; }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye">Live system · Cargo discharge · simulator procedure 15.8.2</span>Discharge cargo tank 1 ashore with shore vapour return.
+    <small>Tap any valve, pump or button on the cargo screen to operate it. Reach a steady 400 m³/h, then report.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage">
+      <div class="tl-scene" id="scene" data-aspect="1024:572">
+        <img class="tl-photo stage-photo" id="ccr" src="../img/01_ccr.jpg" alt="The cargo control room console">
+      </div>
+      <div class="ls-screen" id="screen"></div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card dark">
+        <h3>Discharge</h3>
+        <div class="ls-big">
+          <div><span>Flow ashore</span><b id="b-f">0 <small>m³/h</small></b></div>
+          <div><span>Tank 1 pressure</span><b id="b-p">0.80 <small>bar</small></b></div>
+          <div><span>Liquid line T0107</span><b id="b-t">15 <small>°C</small></b></div>
+          <div><span>Pump PM-0001</span><b id="b-a">0 <small>A</small></b></div>
+        </div>
+        <p class="ls-target">Target: 400 m³/h, steady, tank pressure held.</p>
+      </div>
+      <div class="tl-card">
+        <h3>Ship–shore link</h3>
+        <div class="ls-shore"><i id="s-lamp"></i><span id="s-text">Shore vapour supply: standby</span></div>
+        <button type="button" class="tl-btn" id="s-btn">Ask shore to start vapour supply</button>
+      </div>
+      <div class="tl-card"><h3>On the screen now</h3><p class="ls-coach" id="coach">The valves are hydraulic. Nothing moves until hydraulic pressure is released.</p></div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Report: discharge running</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script src="../../gb_hmi.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'LS1', title: 'Discharge with shore vapour return', mode: 'self' });
+
+  /* Tags and the line-up follow the training simulator (LCHS TechSim LPG Tanker, Trainee Manual
+     §6.4, §6.9, §15.8.2). Simplified to one tank, one pump and the port aft crossover.
+     Figures (0.8 bar, -42 °C, 400 m³/h) are demo values in the simulator's ranges.
+     VERIFY: the drain tag PL0150 and every number against the course's own simulator exercise. */
+  var screen = document.getElementById('screen');
+  var h = GBHMI.create(screen, { page: 'CMS · TANK 0001 → CROSS OVER (PS)', box: [1000, 600] });
+
+  // liquid: pump riser, recirculation (filling) line back to the tank, the line to the manifold, a drain
+  h.pipe('riser', 'M190 500 V200', 'liquid');
+  h.pipe('fill', 'M190 200 H330 V362', 'liquid');
+  h.pipe('line', 'M330 200 H900', 'liquid');
+  h.pipe('drain', 'M640 200 V318', 'liquid');
+  // vapour: tank dome to the vapour manifold and the shore vapour arm
+  h.pipe('vap', 'M110 362 V90 H900', 'vapour');
+
+  h.tank('T-0001', { x: 40, y: 362, w: 300, h: 196, name: 'TANK 1', level: 92, subText: 'propane · 92 %' });
+  h.pump('PM-0001', { x: 190, y: 515, what: 'Deepwell cargo pump, tank 1', lampsAt: [362, 486],
+    onStart: function () { pumpStarted(); }, onStop: function () { G.amps = 0; } });
+
+  h.valve('PL0007', { x: 190, y: 290, dir: 'v', kind: 'reg', hvk: 'HVK-0001', travel: 6, label: 'right', what: 'Pump discharge valve - regulating' });
+  h.valve('PL0004', { x: 330, y: 290, dir: 'v', kind: 'reg', hvk: 'HVK-0001', travel: 6, label: 'right', what: 'Tank 1 filling valve (recirculation)' });
+  h.valve('PL0001', { x: 440, y: 200, kind: 'onoff', hvk: 'HVK-0001', travel: 4, label: 'below', what: 'No.1 liquid line valve' });
+  h.valve('PL0150', { x: 640, y: 262, dir: 'v', kind: 'onoff', travel: 1.5, label: 'right', what: 'Liquid line drain - hand valve' });
+  h.valve('PL0126', { x: 770, y: 200, kind: 'reg', hvk: 'HVK-0101', travel: 6, label: 'below', what: 'Aft liquid manifold valve, port' });
+  h.valve('PV0002', { x: 110, y: 250, dir: 'v', kind: 'onoff', hvk: 'HVK-0001', travel: 4, label: 'left', what: 'No.1 tank vapour valve' });
+  h.valve('PV0131', { x: 440, y: 90, kind: 'onoff', hvk: 'HVK-0101', travel: 4, label: 'below', what: 'No.1 vapour line to aft vapour manifold' });
+  h.valve('PV0129', { x: 770, y: 90, kind: 'onoff', hvk: 'HVK-0101', travel: 4, label: 'below', what: 'Aft vapour manifold valve, port' });
+  h.blank('BL-V-PS', { x: 885, y: 90, label: 'below', what: 'Spectacle blank on the port vapour manifold' });
+
+  h.hvk('HVK-0001', { x: 500, y: 440, what: 'Hydraulic pressure for the tank 1 valves (PL0007, PL0004, PL0001, PV0002)' });
+  h.hvk('HVK-0101', { x: 640, y: 440, what: 'Hydraulic pressure for the port crossover valves (PL0126, PV0129, PV0131)' });
+  h.esd({ x: 905, y: 450, onPress: function () { esdTrip('ESD pressed on the cargo screen'); } });
+
+  h.readout('P0001', { x: 530, y: 330, unit: 'bar', digits: 2, al: 0.3, alarm: 'tank 1 pressure low' });
+  h.readout('P0006', { x: 255, y: 150, unit: 'bar', digits: 1, ah: 12, alarm: 'pump discharge pressure' });
+  h.readout('T0107', { x: 560, y: 155, unit: '°C', digits: 0 });
+  h.readout('P0107', { x: 700, y: 330, unit: 'bar', digits: 1, ah: 10, alarm: 'manifold pressure' });
+  h.readout('F0001', { x: 860, y: 250, unit: 'm³/h', digits: 0, w: 120 });
+  [['SHORE', 905, 70, 'end'], ['vapour', 905, 125, 'end'], ['SHORE', 905, 180, 'end'], ['liquid', 905, 225, 'end']].forEach(function (t) {
+    var e = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    e.setAttribute('x', t[1] + 80); e.setAttribute('y', t[2]); e.setAttribute('text-anchor', t[3]);
+    e.setAttribute('class', t[0] === 'SHORE' ? 'hm-tag' : 'hm-sub'); e.textContent = t[0];
+    h.svg.appendChild(e);
+  });
+  h.setPos('PL0150', 100); // the trap of the day: a drain left open after the last line wash
+
+  /* ---- the plant: worked out from what is open, every quarter of a second --------- */
+  var G = { p: 0.8, t: 15, lvl: 92, flow: 0, recirc: 0, pd: 0, pm: 0, amps: 0, esd: false, shoreVap: false };
+  var R = { leak: false, warm: false, low: false, overcurrent: false, deadhead: false, firstStart: null, starts: 0, esdUsed: false };
+  var LIQ = [['pump', 'hdr', 'PL0007'], ['hdr', 'tank', 'PL0004'], ['hdr', 'line', 'PL0001'], ['line', 'drain', 'PL0150'], ['line', 'shore', 'PL0126']];
+  var VAP = [['dome', 'vl', 'PV0002'], ['vl', 'vm', 'PV0131'], ['vm', 'vb', 'PV0129'], ['vb', 'shore', 'BL-V-PS']];
+  var dead = 0, overT = 0, steady = 0, lastCoach = '', shownWarm = false;
+
+  function coach(s) { if (s !== lastCoach) { lastCoach = s; document.getElementById('coach').textContent = s; } }
+
+  function pumpStarted() {
+    R.starts++;
+    var d = h.pos('PL0007');
+    if (R.firstStart == null) R.firstStart = d;
+    overT = d > 30 ? 1.4 : 0; // a deepwell pump started against a wide-open discharge valve overloads its motor
+    coach(d > 30 ? 'Pump starting against PL0007 at ' + Math.round(d) + ' % - watch the motor current.' : 'Pump started against PL0007 at ' + Math.round(d) + ' %.');
+  }
+
+  function step(dt) {
+    var run = h.running('PM-0001'), d = h.pos('PL0007') / 100;
+    var a = h.reach('pump', LIQ), v = h.reach('dome', VAP);
+    var outShore = !!a.shore, outTank = !!a.tank, outDrain = !!a.drain;
+    var cap = run ? 520 * Math.max(d, 0) : 0;            // m³/h the pump gives through PL0007
+    var fillShare = outTank ? h.pos('PL0004') / 100 : 0, manShare = outShore ? h.pos('PL0126') / 100 : 0;
+    var paths = fillShare + manShare + (outDrain ? 0.15 : 0);
+    G.recirc = paths > 0 ? cap * fillShare / paths : 0;
+    G.flow = paths > 0 ? cap * manShare / paths : 0;
+    // discharge pressure: rises fast when the pump runs with nowhere to go
+    var target = run ? (paths > 0.05 && d > 0.03 ? 6 + 4 * (1 - Math.min(1, paths)) : 14) : 0;
+    G.pd += (target - G.pd) * Math.min(1, dt * 1.6);
+    G.amps = run ? 38 + 70 * d + (overT > 0 ? 70 : 0) : 0;
+    G.pm = outShore && run ? 2 + 7 * manShare * d : 0;
+
+    // the line cools only with liquid moving through it; fast through a warm line = surge and flashing
+    if (G.flow > 1) G.t += (-40 - G.t) * Math.min(1, dt * (0.06 + G.flow / 1700));
+    else G.t += (15 - G.t) * dt * 0.004;
+    if (G.flow > 160 && G.t > -30) { G.pm = 11 + Math.random(); if (!R.warm) { R.warm = true; return consequence('warm'); } }
+
+    // tank pressure: liquid leaves; only vapour coming back from shore keeps it up
+    var vapIn = G.shoreVap && v.shore ? Math.min(G.flow * 1.05 + 10, 600) : 0;
+    G.p += (vapIn - G.flow) * 0.00006 * dt * 4;
+    G.p = Math.max(0.05, Math.min(1.2, G.p));
+    G.lvl = Math.max(1, G.lvl - G.flow * dt * 0.0012);
+    if (G.p < 0.3 && run) R.low = true;
+    if (G.p < 0.15 && run) return consequence('low');
+
+    // the drain: liquid at the drain is a release of cargo
+    if (outDrain && run && cap > 5) { dead += dt; if (dead > 1.2) { R.leak = true; return consequence('leak'); } } else dead = 0;
+    if (run && G.pd > 12.5) { R.deadhead = true; return consequence('deadhead'); }
+    if (overT > 0) { overT -= dt; if (overT <= 0) { R.overcurrent = true; return consequence('overcurrent'); } }
+
+    paint();
+    // steady at rate: 380 m³/h or more, cold line, pressure held
+    steady = G.flow >= 380 && G.t <= -35 && G.p >= 0.5 ? steady + dt : 0;
+    coachState(run, outShore, outTank);
+  }
+
+  function coachState(run, outShore, outTank) {
+    if (!h.obj('HVK-0001').on && !h.obj('HVK-0101').on) return coach('The valves are hydraulic. Nothing moves until hydraulic pressure is released.');
+    if (!run) return coach(h.isOpen('PL0150') ? 'Pump stopped. Check every drain before liquid moves.' : 'Pump stopped. Line up first, then start against a nearly shut discharge valve.');
+    if (G.recirc > 1 && G.flow < 1) return coach('Pump running on recirculation - the cargo goes back into the tank.');
+    if (G.flow > 1 && G.t > -35) return coach('Liquid going ashore. Line T0107 cooling: ' + Math.round(G.t) + ' °C. Keep the rate low until it is cold.');
+    if (G.flow > 1 && G.p < 0.6) return coach('Tank 1 pressure is falling - liquid is leaving and no vapour is coming back.');
+    if (steady > 0) return coach('Steady discharge at ' + Math.round(G.flow) + ' m³/h. Report when ready.');
+    if (G.flow > 1) return coach('Line cold. Open up slowly to the discharge rate.');
+  }
+
+  function paint() {
+    var cold = G.t < -20;
+    h.setPipe('riser', { flow: h.running('PM-0001') && G.flow + G.recirc > 1, cold: cold });
+    h.setPipe('fill', { flow: G.recirc > 1, cold: cold });
+    h.setPipe('line', { flow: G.flow > 1, cold: cold });
+    h.setPipe('drain', { flow: false });
+    h.setPipe('vap', { flow: G.shoreVap && h.reach('dome', VAP).shore && G.flow > 1, rev: true });
+    h.set('P0001', G.p); h.set('P0006', G.pd); h.set('T0107', G.t); h.set('P0107', G.pm); h.set('F0001', G.flow);
+    h.level('T-0001', G.lvl, 'propane · ' + Math.round(G.lvl) + ' %');
+    function big(id, txt, cls) { var b = document.getElementById(id); b.innerHTML = txt; b.className = cls || ''; }
+    big('b-f', Math.round(G.flow) + ' <small>m³/h</small>', G.flow >= 380 ? 'ok' : '');
+    big('b-p', G.p.toFixed(2) + ' <small>bar</small>', G.p < 0.4 ? 'hi' : '');
+    big('b-t', Math.round(G.t) + ' <small>°C</small>', G.t <= -35 ? 'ok' : '');
+    big('b-a', Math.round(G.amps) + ' <small>A</small>', G.amps > 100 ? 'hi' : '');
+  }
+
+  var WHAT = {
+    leak: { img: '../img/01_drain_leak.jpg', tag: 'ESD tripped', title: 'Cargo came out of the drain', text: 'Drain <b>PL0150</b> on the liquid line was open. Liquid propane sprayed out, the gas detector alarmed and the emergency shutdown stopped the discharge. Every drain is checked shut before liquid moves.' },
+    deadhead: { tag: 'Pump tripped', title: 'The pump had nowhere to send the cargo', text: 'Discharge pressure <b>P0006</b> climbed past 12 bar and the pump tripped. A deepwell pump needs an open route - recirculation through <b>PL0004</b> or the line ashore - and its discharge valve a little open.' },
+    overcurrent: { tag: 'Motor tripped', title: 'Started against a wide-open discharge valve', text: 'The motor current went far over normal and the pump tripped. Each pump is started against a discharge valve about 10 % open, then opened up slowly (procedure 15.8.2, step 10).' },
+    warm: { tag: 'Manifold pressure high', title: 'Full rate into a warm line', text: 'Cargo at -42 °C hit warm pipework: it flashed to vapour, the manifold pressure surged and the shore stopped the transfer. The lines are cooled at a minimum rate first (15.8.2, steps 4-8).' },
+    low: { tag: 'Pump tripped', title: 'Tank 1 pressure fell too low', text: 'Liquid left the tank and no vapour came back to take its place, so the pressure fell towards a vacuum and the pump was stopped. Vapour return from shore is lined up and started before the rate goes up (15.8.2, steps 2 and 6).' }
+  };
+
+  function esdTrip(why) {
+    G.esd = true; R.esdUsed = true;
+    h.trip('PM-0001', 'ESD');
+    ['PL0007', 'PL0004', 'PL0001', 'PL0126', 'PV0002', 'PV0131', 'PV0129'].forEach(function (t) { h.move(t, 0); });
+    coach('ESD: the pump is stopped and the remote valves are shutting.');
+  }
+
+  var halted = false;
+  function consequence(k) {
+    halted = true;
+    if (k === 'leak') esdTrip('drain'); else { h.trip('PM-0001', k === 'overcurrent' ? 'OVERCURRENT' : k === 'deadhead' ? 'HIGH DISCHARGE PRESSURE' : k === 'low' ? 'LOW TANK PRESSURE' : 'SHORE STOP'); }
+    if (k === 'warm') h.alarm('P0107', 'P0107 HIGH - manifold pressure');
+    G.flow = 0; G.recirc = 0; overT = 0; dead = 0;
+    paint();
+    if (sureAt) { GBLab.sureNote(sureAt, false); sureAt = null; }
+    GBLab.show({ img: WHAT[k].img, tag: WHAT[k].tag, kind: 'no', title: WHAT[k].title, text: WHAT[k].text,
+      buttons: [{ label: 'Reset and carry on', fn: resetAfter }] });
+  }
+  function resetAfter() {
+    halted = false;
+    G.esd = false; if (G.p < 0.5) G.p = 0.8; G.pd = 0;
+    var e = h.obj('ESD'); if (e) { e.tripped = false; e.g.setAttribute('class', 'hm-obj hm-esd'); }
+    h.clear('ESD'); h.clear('PM-0001-trip'); h.clear('P0107');
+    coach('System reset by the instructor. Carry on from where you are.');
+  }
+
+  /* ---- the ship-shore link ---------------------------------------------------- */
+  var sBtn = document.getElementById('s-btn');
+  sBtn.addEventListener('click', function () {
+    G.shoreVap = !G.shoreVap;
+    document.getElementById('s-lamp').className = G.shoreVap ? 'on' : '';
+    document.getElementById('s-text').textContent = 'Shore vapour supply: ' + (G.shoreVap ? 'supplying' : 'standby');
+    sBtn.textContent = G.shoreVap ? 'Ask shore to stop vapour supply' : 'Ask shore to start vapour supply';
+    GBLab.toast(G.shoreVap ? (h.reach('dome', VAP).shore ? 'Shore: vapour supply started.' : 'Shore: vapour supply started - but your vapour line is not open to it.') : 'Shore: vapour supply stopped.', G.shoreVap ? 'ok' : 'info');
+  });
+
+  /* ---- report ------------------------------------------------------------------- */
+  var sureAt = null;
+  function report() {
+    if (steady < 3) {
+      return GBLab.toast(G.flow < 1 ? 'Nothing is going ashore yet.' : 'Not steady yet: ' + Math.round(G.flow) + ' m³/h, line ' + Math.round(G.t) + ' °C, tank ' + G.p.toFixed(2) + ' bar.', 'hint');
+    }
+    GBLab.sure(function (lvl) {
+      sureAt = lvl;
+      var ok = !R.leak && !R.warm && !R.low && !R.overcurrent && !R.deadhead;
+      GBLab.sureNote(lvl, ok);
+      sureAt = null;
+      GBLab.go('Finished', null);
+      GBLab.show({ img: '../img/01_deck_manifold.jpg', tag: 'Discharging', kind: 'ok', title: 'Steady discharge with vapour return',
+        text: 'Liquid ashore through PL0007, PL0001 and PL0126 at ' + Math.round(G.flow) + ' m³/h; vapour from shore through the blank, PV0129, PV0131 and PV0002 holds tank 1 at ' + G.p.toFixed(2) + ' bar.',
+        buttons: [{ label: 'See my result', fn: result }] });
+    });
+  }
+  function result() {
+    var acked = h.acked();
+    GBLab.finish({ items: [
+      { t: 'Drain checked shut before liquid moved', ok: !R.leak, a: R.leak ? 'PL0150 open' : 'PL0150 shut', c: 'PL0150 shut', w: 'An open drain on a liquid line releases cargo on deck.' },
+      { t: 'Pump started against a nearly shut discharge valve', ok: R.firstStart != null && R.firstStart >= 3 && R.firstStart <= 25 && !R.overcurrent, a: R.firstStart == null ? 'not started' : 'PL0007 at ' + Math.round(R.firstStart) + ' %', c: 'about 10 %', w: 'Started wide open, the motor overloads and trips (15.8.2 step 10).' },
+      { t: 'An open route before the pump ran', ok: !R.deadhead, a: R.deadhead ? 'pump dead-headed' : 'route open', c: 'recirculation or line open', w: 'With nowhere to go the discharge pressure climbs until the pump trips.' },
+      { t: 'Lines cooled before the rate went up', ok: !R.warm, a: R.warm ? 'full rate into a warm line' : 'cooled first', c: 'cool at minimum rate', w: 'Cold cargo flashes in warm pipes and the pressure surges.' },
+      { t: 'Vapour return kept the tank pressure up', ok: !R.low, a: R.low ? 'pressure fell below 0.3 bar' : 'pressure held', c: 'shore vapour lined up and supplying', w: 'Liquid out, vapour in - or the tank heads towards a vacuum.' },
+      { t: 'Every alarm acknowledged', ok: acked, a: acked ? 'all acknowledged' : 'alarm left flashing', c: 'ACK every alarm', w: 'An unacknowledged alarm hides the next one.' }
+    ] });
+  }
+  GBLab.go('Report: discharge running', report);
+
+  var last = 0;
+  setInterval(function () {
+    var now = Date.now(), dt = last ? Math.min(0.5, (now - last) / 1000) : 0.25;
+    last = now;
+    if (!halted && !GBLab.sheetOpen()) step(dt);
+  }, 250);
+  paint();
+
+  /* ---- the screen opens out of the console monitor (where it is in the photograph, in %) */
+  var MONITOR = { x: 37.1, y: 47.6, w: 25.9, h: 27.6 }, opened = false;
+  function place(isOpen) {
+    var st = document.getElementById('stage').getBoundingClientRect(), sc = document.getElementById('scene').getBoundingClientRect();
+    var r = isOpen
+      ? { l: st.width * 0.015, t: st.height * 0.02, w: st.width * 0.97, h: st.height * 0.96 }
+      : { l: sc.left - st.left + sc.width * MONITOR.x / 100, t: sc.top - st.top + sc.height * MONITOR.y / 100, w: sc.width * MONITOR.w / 100, h: sc.height * MONITOR.h / 100 };
+    screen.style.left = r.l + 'px'; screen.style.top = r.t + 'px'; screen.style.width = r.w + 'px'; screen.style.height = r.h + 'px';
+  }
+  function snap() { screen.style.transition = 'none'; place(opened); void screen.offsetWidth; screen.style.transition = ''; }
+  function intro() {
+    GBLab.fitScenes();
+    snap();
+    screen.className = 'ls-screen on';
+    setTimeout(function () {
+      opened = true; place(true);
+      document.getElementById('ccr').className += ' dim';
+    }, 1000);
+    setTimeout(function () { GBLab.hand('tap-hmi', document.querySelector('[data-tag="HVK-0001"] .hm-btn')); }, 2100);
+  }
+  window.addEventListener('resize', function () { GBLab.fitScenes(); snap(); });
+  if (document.readyState === 'complete') intro(); else window.addEventListener('load', intro);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>CF1 — How sure are you?</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<style>
+  /* progress: dots, never "1 of 4" */
+  .cf-dots { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; gap: 14px;
+    padding: 9px 16px; border-radius: 999px; background: rgba(3,10,22,.7); border: 1px solid var(--tl-line, rgba(140,190,255,.16)); }
+  .cf-dots i { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,.2); transition: all .3s ease; }
+  .cf-dots i.now { background: var(--tl-accent, #2EB6F8); box-shadow: 0 0 12px var(--tl-accent, #2EB6F8); transform: scale(1.35); }
+  .cf-dots i.ok { background: var(--tl-good, #3DDC97); }
+  .cf-dots i.no { background: var(--tl-bad, #FF6B5E); }
+
+  .cf-qt { font-size: 19px !important; line-height: 1.4 !important; font-weight: 700; }
+  .cf-step { margin: 2px 2px 0; font-size: 13px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--tl-amber, #F2B33D); }
+  .cf-choices { display: flex; flex-direction: column; gap: 10px; }
+  .cf-choices .tl-btn { animation: tl-up .35s cubic-bezier(.2,.8,.2,1) both; }
+  .cf-done { opacity: .75; }
+  .cf-done small { display: block; font-size: 13px; font-weight: 500; color: var(--tl-dim, #9DB3CC); }
+
+  /* readings floated on the gas meter photograph */
+  .cf-read { padding: 6px 12px; border-radius: 10px; background: rgba(3,10,22,.82); border: 1px solid var(--tl-line, rgba(140,190,255,.16));
+    white-space: nowrap; font-size: 15px; color: var(--tl-dim, #9DB3CC); }
+  .cf-read b { font: 700 26px/1.1 var(--tl-mono, monospace); color: var(--tl-accent, #2EB6F8); text-shadow: 0 0 14px rgba(46,182,248,.55); margin: 0 6px; }
+
+  /* hotspots on the manifold photograph: the nearest one to the finger is picked */
+  .cf-scene-tap { cursor: pointer; }
+  .cf-at { position: absolute; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; }
+  .cf-hot { width: 56px; height: 56px; border-radius: 50%; pointer-events: none; border: 3px solid rgba(255,255,255,.85);
+    background: rgba(3,10,22,.35); box-shadow: 0 0 0 4px rgba(46,182,248,.25); transition: transform .15s ease, background .15s ease; }
+  .cf-hot.on { transform: translate(-50%, -50%) scale(1.2); border-color: var(--tl-amber, #F2B33D); background: rgba(242,179,61,.35); box-shadow: 0 0 22px var(--tl-amber, #F2B33D); }
+  .cf-hot.good { border-color: var(--tl-good, #3DDC97); box-shadow: 0 0 22px var(--tl-good, #3DDC97); }
+  .cf-hot.bad { border-color: var(--tl-bad, #FF6B5E); box-shadow: 0 0 22px var(--tl-bad, #FF6B5E); }
+  .cf-leak { width: 70px; height: 70px; border-radius: 50%; pointer-events: none; border: 3px solid var(--tl-amber, #F2B33D);
+    animation: tl-pulse 1.4s ease infinite; box-shadow: 0 0 24px rgba(242,179,61,.6); }
+  .cf-tag.cf-side { transform: translate(44px, -50%); }
+  .cf-tag { transform: translate(-50%, 34px); padding: 4px 9px; border-radius: 8px; font-size: 13px; font-weight: 700; white-space: nowrap;
+    background: rgba(3,10,22,.85); color: var(--tl-text, #F2F7FD); animation: tl-up .35s ease both; pointer-events: none; }
+
+  /* the order board */
+  .cf-board { position: absolute; top: 62px; left: 50%; transform: translateX(-50%); width: min(660px, 94%); display: flex; flex-direction: column; gap: 10px; }
+  .cf-slot { display: flex; align-items: stretch; gap: 8px; min-height: 72px; padding: 4px; border-radius: 16px;
+    border: 2px dashed var(--tl-line, rgba(140,190,255,.16)); background: rgba(255,255,255,.03); }
+  .cf-num { flex: 0 0 56px; display: flex; align-items: center; justify-content: center; border-radius: 12px;
+    font: 800 24px var(--tl-mono, monospace); color: var(--tl-accent, #2EB6F8); background: rgba(46,182,248,.08); }
+  .cf-card { flex: 0 0 auto; display: flex; align-items: center; min-height: 62px; padding: 11px 14px; border-radius: 13px;
+    background: var(--tl-glass-hi, rgba(20,44,82,.82)); border: 1px solid var(--tl-line, rgba(140,190,255,.16));
+    font: 650 16.5px/1.3 var(--tl-font, sans-serif); color: var(--tl-text, #F2F7FD); box-shadow: 0 6px 16px rgba(0,0,0,.3); }
+  .cf-slot .cf-card { flex: 1 1 auto; }
+  .cf-card.good { border-color: var(--tl-good, #3DDC97); box-shadow: 0 0 0 1px var(--tl-good, #3DDC97); }
+  .cf-card.bad { border-color: var(--tl-bad, #FF6B5E); box-shadow: 0 0 0 1px var(--tl-bad, #FF6B5E); }
+
+  /* how sure x how right: the add-on made visible */
+  .cf-mx { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 6px; font-size: 14px; }
+  .cf-mx span { color: var(--tl-dim, #9DB3CC); display: flex; align-items: center; }
+  .cf-mx .hd { justify-content: center; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; }
+  .cf-mx div { min-height: 36px; border-radius: 10px; background: rgba(255,255,255,.05); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; padding: 4px; }
+  .cf-mx div.danger { border: 1px solid rgba(255,107,94,.55); background: rgba(255,107,94,.08); }
+  .cf-mx div.learn { border: 1px solid rgba(242,179,61,.5); background: rgba(242,179,61,.07); }
+  .cf-mx em { font-style: normal; font: 800 13px var(--tl-mono, monospace); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: var(--tl-accent, #2EB6F8); color: #03121F; animation: tl-up .35s ease both; }
+  .cf-note { margin-top: 10px !important; font-size: 14px !important; color: var(--tl-dim, #9DB3CC) !important; }
+
+  @media (max-aspect-ratio: 1/1) {
+    .tl-stage { flex: 1 1 56%; }
+    .tl-side { flex: 0 1 44%; }
+    .cf-board { top: 52px; gap: 8px; }
+    .cf-slot { min-height: 58px; padding: 3px; }
+    .cf-card { min-height: 50px; padding: 7px 12px; }
+    .cf-num { flex-basis: 48px; }
+  }
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) {
+    .cf-hot { width: 44px; height: 44px; }
+    .cf-read { font-size: 12px; } .cf-read b { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye">Any level · confidence</span>Four quick questions - and before each Check, say how sure you are.
+    <small>Tap to choose. To put steps in order, drag a step onto another number to swap them - or tap the step, then the number.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage">
+      <div class="cf-dots" id="dots"><i></i><i></i><i></i><i></i></div>
+      <div id="view" style="position:absolute;top:0;right:0;bottom:0;left:0"></div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card"><h3 id="qtype">Choose one</h3><p class="cf-qt" id="qtext"></p></div>
+      <div class="cf-choices" id="choices"></div>
+      <div class="tl-card dark">
+        <h3>How sure x how right</h3>
+        <div class="cf-mx" id="mx">
+          <span></span><span class="hd">Right</span><span class="hd">Wrong</span>
+          <span>Sure</span><div id="c-sure-1"></div><div id="c-sure-0" class="danger"></div>
+          <span>I think so</span><div id="c-think-1"></div><div id="c-think-0"></div>
+          <span>Guessing</span><div id="c-guess-1" class="learn"></div><div id="c-guess-0"></div>
+        </div>
+        <p class="cf-note">Sure and wrong is the dangerous corner: on board you would act on it.</p>
+      </div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Check</button></div>
+</div>
+
+<!-- VERIFY: gas readings are illustrative; toxic shown as % of OEL for the lesson (meters usually show ppm). -->
+<!-- VERIFY: pre-entry order per the company SMS / enclosed space entry procedure. -->
+<!-- VERIFY: ESD valve recognised by its actuator; arrangement of ESD and manual valve differs between ships. -->
+<script src="../../gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'CF1', title: 'How sure are you?', mode: 'self' });
+  function $(id) { return document.getElementById(id); }
+  var esc = GBLab.esc;
+
+  /* answer keys: hashes only - GBLab.key(id, text, 1) must match */
+  var K = { 'CF1-a': '02c18004', 'CF1-b1': '002d482c', 'CF1-b2': '60df2a57',
+            'CF1-c1': '48ee2297', 'CF1-c2': '295a30fb', 'CF1-c3': 'e7f0ed63', 'CF1-c4': 'ce601f4f', 'CF1-d': '1fbf346a' };
+  function right(id, text) { return GBLab.key(id, text, 1) === K[id]; }
+  function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+  var A_OPTS = shuffle(['It sinks and spreads low - into drains, hatches and openings at deck level',
+    'It rises and clears quickly above the deck', 'It hangs at the height of the leak until the wind moves it']);
+  var B_ACT = shuffle(['Enter - the oxygen is normal and there is no fire risk', 'Do not enter - keep ventilating and test again',
+    'Enter for a short look only, close to the hatch']);
+  var B_WHY = shuffle(['Toxic: 62 % OEL', 'Flammable: 0.4 % LFL', 'Oxygen: 21.0 %']);
+  var B_READ = [ // the readings, floated over the dark tank opening right of the meter (% of the photo)
+    { x: 66, y: 54, n: 'O₂', v: '21.0', u: '% vol' }, { x: 66, y: 64, n: 'Flam.', v: '0.4', u: '% LFL' }, { x: 66, y: 74, n: 'Toxic', v: '62', u: '% OEL' }];
+  var A_MARK = { x: 68, y: 59 }; // the leaking flange on 12_conf_leak.jpg
+  var C_CARDS = shuffle(['Isolate the tank and ventilate it', 'Test the air from outside: top, middle, bottom',
+    'Issue the permit; post a standby at the entrance', 'Enter, and keep testing while inside']);
+  var D_HOT = [ // hotspots on the manifold photograph, % of the photo
+    { id: 'm1', x: 32, y: 43, n: 'manual valve (hand wheel)' }, { id: 'm2', x: 50, y: 28, n: 'ESD valve (actuator)' },
+    { id: 'm3', x: 56, y: 60, n: 'pressure gauge' }, { id: 'm4', x: 60, y: 82, n: 'drip tray' },
+    { id: 'm5', x: 77, y: 68, n: 'presentation flange (blanked)' }];
+  // the purge cock (about 59/68) is left out: it sits too close to the gauge for a finger
+
+  var Q = [
+    { type: 'Choose one', q: 'Propane leaks from a flange on deck. Where does the vapour go?', key: 'CF1-a',
+      photo: '12_conf_leak.jpg', ph: 'Photo: a small propane leak at a flange on deck - white vapour, an open hatch and a deck drain close by',
+      t: 'Propane vapour is heavier than air - it collects low',
+      w: 'Propane vapour is about one and a half times heavier than air: it flows down into drains, hatches and openings and stays there until ventilated out.',
+      okT: 'Down it goes', noT: 'The vapour went down, not up', noImg: '01_drain_leak.jpg',
+      noX: 'From the leak the vapour flowed along the deck and down an open hatch, where it collected out of sight - a flammable atmosphere waiting for a spark.' },
+    { type: 'Action, then reason', q: 'Cargo tank 2 has been ventilated. The meter shows the highest readings from top, middle and bottom. What do you do?',
+      photo: '12_conf_meter.jpg', ph: 'Photo: a portable multi-gas meter held at a tank hatch, its screen dark',
+      t: 'Entry needs all three: O2 21 %, flammable < 1 % LFL, toxic < 50 % OEL',
+      w: 'IMO Res. A.1050(27): oxygen 21 % by volume, flammable vapour below 1 % LFL and toxic gas below 50 % OEL - all three before anyone enters.',
+      okT: 'No entry - and the right reason', noT: 'Not yet safe to enter',
+      noX: 'Oxygen and flammable gas were within limits, but toxic gas was above 50 % of its OEL. Entering would expose the team to it. Keep ventilating, test again, and enter only when all three limits are met.' },
+    { type: 'Put in order', q: 'Put the steps before entering a cargo tank in order.',
+      t: 'Before entry: ventilate, test, permit and standby, then keep testing',
+      w: 'Ventilate first, then test - the test shows what the ventilation achieved. The permit rests on those results and a standby person, and testing goes on while people are inside.',
+      okT: 'Safe order', noT: 'The order matters', noX: '' },
+    { type: 'Tap the place', q: 'Tap the emergency shutdown (ESD) valve on this manifold.', key: 'CF1-d',
+      photo: '12_conf_manifold.jpg', ph: 'Photo: a gas carrier liquid manifold seen from the side - ESD valve, manual valve, gauge, purge cock, presentation flange, drip tray',
+      t: 'Recognise the ESD valve - the one with the actuator',
+      w: 'The ESD valve has an actuator: it closes by itself when the emergency shutdown is triggered, from the ship or the terminal, without anyone turning a wheel.',
+      okT: 'That is the ESD valve', noT: 'Not the ESD valve', noX: 'The ESD valve is the one with the actuator on it - it closes on its own when the emergency shutdown is triggered.' }
+  ];
+
+  var qi = 0, ans = null, res = [], sureAt = null, locked = false, handDone = {};
+
+  function dots() {
+    var d = $('dots').children, i;
+    for (i = 0; i < d.length; i++) d[i].className = i === qi && !locked ? 'now' : (res[i] ? (res[i].ok ? 'ok' : 'no') : '');
+  }
+  function scene(photo, ph, inner, cls) {
+    return '<div class="tl-scene ' + (cls || '') + '" id="scene" data-aspect="1024:572">' +
+      '<img class="tl-photo" src="../img/' + photo + '" alt="' + esc(ph) + '">' + (inner || '') + '</div>';
+  }
+  function choice(list, sel, onPick, cls) {
+    return list.map(function (t, i) { return '<button type="button" class="tl-btn ' + (cls || '') + (sel === t ? ' on' : '') + '" data-i="' + i + '">' + esc(t) + '</button>'; }).join('');
+  }
+  function bind(sel, list, fn) {
+    [].forEach.call($('choices').querySelectorAll(sel), function (b) {
+      b.addEventListener('click', function () { if (!locked) { GBLab.sfx('tap'); fn(list[+b.getAttribute('data-i')]); } });
+    });
+  }
+
+  /* ---- one question at a time -------------------------------------------------------------- */
+  function render() {
+    var q = Q[qi];
+    locked = false; ans = qi === 1 ? { act: null, why: null } : null;
+    $('qtype').textContent = q.type; $('qtext').textContent = q.q;
+    var old = document.querySelector('.tl-blur'); if (old) old.parentNode.removeChild(old);
+    if (qi === 0) {
+      $('view').innerHTML = scene(q.photo, q.ph, '<div class="cf-at cf-leak" style="left:' + A_MARK.x + '%;top:' + A_MARK.y + '%"></div>' +
+        '<div class="cf-at cf-tag cf-side" style="left:' + A_MARK.x + '%;top:' + A_MARK.y + '%">leak</div>');
+      sideA();
+    }
+    if (qi === 1) {
+      $('view').innerHTML = scene(q.photo, q.ph, B_READ.map(function (r) {
+        return '<div class="cf-at cf-read" style="left:' + r.x + '%;top:' + r.y + '%">' + r.n + '<b>' + r.v + '</b>' + r.u + '</div>'; }).join(''));
+      sideB();
+    }
+    if (qi === 2) { boardC(); $('choices').innerHTML = ''; }
+    if (qi === 3) {
+      $('view').innerHTML = scene(q.photo, q.ph, D_HOT.map(function (h) {
+        return '<div class="tl-pin cf-hot" data-tap="1" data-h="' + h.id + '" style="left:' + h.x + '%;top:' + h.y + '%"></div>'; }).join(''), 'cf-scene-tap');
+      $('choices').innerHTML = '';
+      $('scene').addEventListener('pointerup', tapD);
+      setTimeout(function () { GBLab.hand('tap-photo', document.querySelector('[data-h="m3"]')); }, 600);
+    }
+    GBLab.fitScenes();
+    GBLab.go('Check', ask); GBLab.goEnabled(qi === 2); // the order question always has an answer on screen
+    dots();
+  }
+
+  function sideA() {
+    $('choices').innerHTML = choice(A_OPTS, ans);
+    bind('.tl-btn', A_OPTS, function (t) { ans = t; sideA(); GBLab.goEnabled(true); });
+  }
+  function sideB() {
+    var h = '<div class="cf-step">1 · What do you do?</div>';
+    if (!ans.act) h += choice(B_ACT, null, null, 'cf-act');
+    else h += '<button type="button" class="tl-btn on cf-done cf-redo">' + esc(ans.act) + '<small>tap to change</small></button>' +
+      '<div class="cf-step">2 · Which reading decides it?</div>' + choice(B_WHY, ans.why, null, 'cf-rsn');
+    $('choices').innerHTML = h;
+    bind('.cf-act', B_ACT, function (t) { ans.act = t; sideB(); });
+    bind('.cf-rsn', B_WHY, function (t) { ans.why = t; sideB(); GBLab.goEnabled(true); });
+    var r = $('choices').querySelector('.cf-redo');
+    if (r) r.addEventListener('click', function () { if (!locked) { ans.act = null; ans.why = null; GBLab.goEnabled(false); sideB(); } });
+  }
+
+  /* ---- put in order: drag, or tap then tap (GBLab.drag gives both) --------------------------- */
+  function boardC() {
+    // every step already sits in a numbered place; the trainee swaps them into order
+    var cards = C_CARDS.slice(), allRight = true, h = '<div class="cf-board">';
+    cards.forEach(function (t, i) { if (!right('CF1-c' + (i + 1), t)) allRight = false; });
+    if (allRight) cards.push(cards.shift());          // never start in the safe order
+    cards.forEach(function (t, i) {
+      h += '<div class="cf-slot" data-slot="' + (i + 1) + '"><span class="cf-num">' + (i + 1) + '</span><div class="cf-card" data-drag>' + esc(t) + '</div></div>';
+    });
+    $('view').innerHTML = h + '</div>';
+    GBLab.goEnabled(true);
+    setTimeout(function () { GBLab.hand('drag-card', document.querySelector('.cf-card'), document.querySelector('.cf-slot[data-slot="3"] .cf-num')); }, 600);
+  }
+  function slotsC() { return [].slice.call(document.querySelectorAll('.cf-slot')); }
+  GBLab.drag({
+    items: '.cf-card', targets: '.cf-slot',
+    onDrop: function (card, target) {        // a swap: the card that was there goes where this one came from
+      if (locked || qi !== 2) return;
+      var from = card.parentNode, occ = target.querySelector('.cf-card');
+      if (occ === card || !from || !from.classList.contains('cf-slot')) return;
+      target.appendChild(card);
+      if (occ) from.appendChild(occ);
+      GBLab.sfx('tap');
+    }
+  });
+
+  /* ---- tap the place: the nearest hotspot to the finger is the pick ------------------------- */
+  function tapD(e) {
+    if (locked) return;
+    var r = $('scene').getBoundingClientRect(), best = null, bd = 1e9;
+    D_HOT.forEach(function (h) {
+      var dx = r.left + r.width * h.x / 100 - e.clientX, dy = r.top + r.height * h.y / 100 - e.clientY, d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = h; }
+    });
+    if (!best || bd > 90 * 90) return GBLab.toast('Tap on one of the marked points.', 'hint');
+    ans = best.id;
+    [].forEach.call(document.querySelectorAll('.cf-hot'), function (p) { p.className = 'tl-pin cf-hot' + (p.getAttribute('data-h') === ans ? ' on' : ''); });
+    GBLab.sfx('tap');
+    GBLab.goEnabled(true);
+  }
+
+  /* ---- check: how sure first, then judge ------------------------------------------------------ */
+  function ask() { if (!locked) GBLab.sure(function (lvl) { sureAt = lvl; judge(); }); }
+
+  function judge() {
+    var q = Q[qi], ok = false, a = '', c = '', extra = '';
+    locked = true;
+    if (qi === 0) {
+      ok = right('CF1-a', ans); a = ans;
+      A_OPTS.forEach(function (t) { if (right('CF1-a', t)) c = t; });
+      mark('.tl-btn', A_OPTS, function (t) { return right('CF1-a', t); }, ans);
+    }
+    if (qi === 1) {
+      var ra = right('CF1-b1', ans.act), rw = right('CF1-b2', ans.why);
+      ok = ra && rw; a = ans.act + ' / ' + ans.why;
+      var ca = '', cw = '';
+      B_ACT.forEach(function (t) { if (right('CF1-b1', t)) ca = t; });
+      B_WHY.forEach(function (t) { if (right('CF1-b2', t)) cw = t; });
+      c = ca + ' / ' + cw;
+      mark('.cf-rsn', B_WHY, function (t) { return right('CF1-b2', t); }, ans.why);
+      var d = $('choices').querySelector('.cf-redo'); if (d) d.className = 'tl-btn cf-done ' + (ra ? 'good' : 'bad');
+      if (ra && !rw) extra = 'Not entering was right - but the reason matters, because next time the numbers are different. ';
+    }
+    if (qi === 2) {
+      var order = [], inPlace = 0, safe = [];
+      slotsC().forEach(function (s, i) {
+        var card = s.querySelector('.cf-card'), t = card.textContent, r = right('CF1-c' + (i + 1), t);
+        order.push(t); if (r) inPlace++;
+        card.className = 'cf-card ' + (r ? 'good' : 'bad'); card.setAttribute('aria-disabled', 'true');
+        C_CARDS.forEach(function (x) { if (right('CF1-c' + (i + 1), x)) safe[i] = x; });
+      });
+      ok = inPlace === 4; a = order.join(' > '); c = safe.join(' > ');
+      extra = (ok ? '' : inPlace + ' of 4 in the right place. The safe order: ' + safe.map(function (x, i) { return '<b>' + (i + 1) + '.</b> ' + esc(x); }).join(' ') + '. ');
+    }
+    if (qi === 3) {
+      ok = right('CF1-d', ans);
+      D_HOT.forEach(function (h) {
+        if (h.id === ans) a = 'the ' + h.n;
+        if (right('CF1-d', h.id)) c = 'the ' + h.n;
+        $('scene').insertAdjacentHTML('beforeend', '<div class="cf-at cf-tag" style="left:' + h.x + '%;top:' + h.y + '%">' + esc(h.n) + '</div>');
+      });
+      [].forEach.call(document.querySelectorAll('.cf-hot'), function (p) {
+        var id = p.getAttribute('data-h');
+        p.className = 'tl-pin cf-hot' + (right('CF1-d', id) ? ' good' : (id === ans ? ' bad' : ''));
+      });
+      if (!ok) extra = 'You tapped ' + esc(a) + '. ';
+    }
+    GBLab.sureNote(sureAt, ok);
+    res[qi] = { ok: ok, a: a, c: c };
+    var cell = $('c-' + sureAt + '-' + (ok ? 1 : 0));
+    if (cell) cell.insertAdjacentHTML('beforeend', '<em>' + (qi + 1) + '</em>');
+    dots();
+
+    var last = qi === Q.length - 1;
+    var o = { tag: ok ? 'Right' : 'What happens', kind: ok ? 'ok' : 'no', title: ok ? q.okT : q.noT,
+      text: extra + (ok ? q.w : (q.noX ? q.noX + ' ' : '') + (qi === 2 ? q.w : '')) +
+        (sureAt === 'sure' && !ok ? ' <b>You were sure</b> - that is the answer to read twice.' : ''),
+      buttons: [{ label: last ? 'See my result' : 'Next question', fn: last ? result : next }] };
+    GBLab.go(last ? 'See my result' : 'Next question', last ? result : next);
+    if (!ok && q.noImg) o.img = '../img/' + q.noImg; // only photographs that exist
+    GBLab.show(o);
+  }
+  function mark(sel, list, isRight, chosen) {
+    [].forEach.call($('choices').querySelectorAll(sel), function (b) {
+      var t = list[+b.getAttribute('data-i')];
+      b.className = 'tl-btn ' + (isRight(t) ? 'good' : (t === chosen ? 'bad' : '')) + (sel === '.cf-rsn' ? ' cf-rsn' : '');
+    });
+  }
+  function next() { if (qi < Q.length - 1) { qi++; render(); } }
+
+  function result() {
+    GBLab.finish({ items: Q.map(function (q, i) {
+      var r = res[i] || { ok: false, a: 'not answered', c: '' };
+      return { t: q.t, ok: r.ok, a: r.a, c: r.c, w: q.w };
+    }) });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

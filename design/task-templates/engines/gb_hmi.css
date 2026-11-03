@@ -1,0 +1,141 @@
+/* ==========================================================================
+   gb_hmi.css - the ship's own screens inside a task: a cargo mimic that
+   follows the training simulator's conventions (Wärtsilä LCHS TechSim LPG,
+   Trainee Manual §4.2) in the factory's dark look (owner, 2026-10-15).
+
+     pipe colour = what flows in it   liquid blue · vapour purple ·
+                                      condensate teal · nitrogen grey · sea water green
+     valve body  = can it be moved    dim red: no hydraulic pressure (HVK not released)
+     valve fill  = where it is        green open · outlined shut · amber moving (%)
+     a tag under every object         PL0126, PV0129, P0107, T0107, PM-0001, HVK-0001
+     readout     = value over tag     AL / AH lamps grey, red when in alarm
+     a tap on any object opens its own small panel - never a hidden gesture
+
+   Everything is prefixed hm- so neither the task shell nor the classroom's
+   injected stylesheet reaches it.
+   ========================================================================== */
+
+.hm { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 14px;
+  background:
+    linear-gradient(rgba(120,170,230,.045) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, rgba(120,170,230,.045) 1px, transparent 1px) 0 0 / 28px 28px,
+    radial-gradient(120% 90% at 50% 0%, #0B2140 0%, #050E1C 72%);
+  border: 1px solid rgba(46,182,248,.32);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.6), 0 0 36px rgba(46,182,248,.12);
+  font-family: var(--tl-mono, "Cascadia Code", Consolas, monospace); color: #DCE8F7; }
+
+/* the screen's own header: page name, and the alarm line */
+.hm-top { position: absolute; top: 0; left: 0; right: 0; height: 50px; z-index: 4; display: flex; align-items: center; gap: 10px;
+  padding: 0 12px; background: rgba(3,10,22,.86); border-bottom: 1px solid rgba(46,182,248,.22);
+  font-size: 12px; font-weight: 700; letter-spacing: .12em; color: #8FB8E0; white-space: nowrap; }
+.hm-top .hm-page { color: #EAF3FF; }
+.hm-top .hm-dot { width: 9px; height: 9px; border-radius: 50%; background: #3DDC97; box-shadow: 0 0 9px #3DDC97; flex: 0 0 9px; }
+.hm-alarm { margin-left: auto; display: none; align-items: center; gap: 10px; height: 42px; padding: 0 6px 0 12px; border-radius: 8px;
+  background: rgba(255,59,48,.18); border: 1px solid rgba(255,107,94,.7); color: #FFD0CB; letter-spacing: .04em; max-width: 70%; }
+.hm-alarm.on { display: flex; }
+.hm-alarm.unack { animation: hm-flash .7s steps(2, start) infinite; }
+.hm-alarm b { overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
+.hm-alarm button { height: 40px; min-width: 64px; padding: 0 12px; border: 0; border-radius: 8px; background: #FF6B5E; color: #2A0300;
+  font: 800 13px/40px var(--tl-mono, monospace); letter-spacing: .1em; cursor: pointer; }
+.hm-alarm .hm-n { color: #FF8C82; }
+@keyframes hm-flash { 0% { background: rgba(255,59,48,.55); } 100% { background: rgba(255,59,48,.12); } }
+
+/* the drawing area; on a narrow screen it keeps a size a finger can use and scrolls sideways */
+.hm-scroll { position: absolute; top: 50px; left: 0; right: 0; bottom: 0; overflow: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.hm svg.hm-svg { display: block; width: 100% !important; height: 100% !important; max-width: none !important; }
+.hm.narrow svg.hm-svg { width: var(--hm-w) !important; height: var(--hm-h) !important; }
+/* on a phone the drawing is smaller: every touch area grows so it stays 44 px or more */
+.hm.narrow .hm-hit { r: 52px; }
+
+/* pipes */
+.hm-pipe { fill: none; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; opacity: .38; transition: opacity .3s ease; }
+.hm-pipe.liquid { stroke: #3B82F6; } .hm-pipe.vapour { stroke: #A855F7; } .hm-pipe.condensate { stroke: #14B8A6; }
+.hm-pipe.nitrogen { stroke: #94A3B8; } .hm-pipe.water { stroke: #22C55E; }
+.hm-pipe.live { opacity: 1; }
+.hm-pipe.cold.liquid { stroke: #7DD3FC; filter: drop-shadow(0 0 5px rgba(125,211,252,.7)); }
+.hm-flow { fill: none; stroke: rgba(255,255,255,.75); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 3 18; opacity: 0; }
+.hm-flow.on { opacity: 1; animation: hm-run .8s linear infinite; }
+.hm-flow.on.rev { animation-direction: reverse; }
+@keyframes hm-run { to { stroke-dashoffset: -21; } }
+
+/* valves */
+.hm-obj { cursor: pointer; }
+.hm-hit { fill: transparent; }
+.hm-v .hm-body { stroke-width: 2.4; transition: fill .2s ease, stroke .2s ease; }
+.hm-v.locked .hm-body { fill: rgba(180,60,52,.55); stroke: #FF8C82; }
+.hm-v.shut .hm-body { fill: #0A1A30; stroke: #DCE8F7; }
+.hm-v.open .hm-body { fill: #3DDC97; stroke: #B8F5D8; filter: drop-shadow(0 0 6px rgba(61,220,151,.85)); }
+.hm-v.part .hm-body { fill: #2EB6F8; stroke: #BDE9FF; }
+.hm-v.moving .hm-body { fill: #F2B33D; stroke: #FFE2A3; animation: hm-blink .5s ease infinite alternate; }
+.hm-v .hm-act { fill: none; stroke: #9DB3CC; stroke-width: 2; }
+.hm-v .hm-lamp { stroke: #0A1A30; stroke-width: 1.5; fill: #2A3A50; }
+.hm-v.open .hm-lamp, .hm-v.part .hm-lamp { fill: #3DDC97; }
+.hm-v.fault .hm-body { stroke: #FF3B30; stroke-width: 3.5; }
+@keyframes hm-blink { from { opacity: 1; } to { opacity: .45; } }
+.hm-tag { font: 700 13px var(--tl-mono, monospace); fill: #CFE2F7; letter-spacing: .03em; }
+.hm-sub { font: 600 11px var(--tl-mono, monospace); fill: #7FA3C8; }
+.hm-pct { font: 800 12px var(--tl-mono, monospace); fill: #FFE2A3; }
+.hm-sel .hm-ring { stroke: #F2B33D; stroke-width: 2.5; fill: none; stroke-dasharray: 5 4; }
+
+/* readouts: value box over tag box, as on the ship */
+.hm-ro rect.hm-val { fill: #0B2A1F; stroke: #2F7D5B; stroke-width: 1.2; }
+.hm-ro.alarm rect.hm-val { fill: #3A0D0B; stroke: #FF6B5E; }
+.hm-ro text.hm-v1 { font: 700 15px var(--tl-mono, monospace); fill: #8BF0C3; }
+.hm-ro.alarm text.hm-v1 { fill: #FFB4AC; }
+.hm-ro rect.hm-tagbox { fill: #0E1B2E; stroke: #33507A; stroke-width: 1; }
+.hm-ro .hm-l { fill: #2A3A50; stroke: #0A1A30; stroke-width: 1; }
+.hm-ro .hm-l.on { fill: #FF3B30; filter: drop-shadow(0 0 4px #FF3B30); }
+.hm-ro .hm-lt { font: 800 9px var(--tl-mono, monospace); fill: #9DB3CC; }
+
+/* tanks */
+.hm-tank { fill: #091A2F; stroke: #4C7DB0; stroke-width: 2.5; }
+.hm-lvl { transition: y .6s ease, height .6s ease; }
+.hm-name { font: 800 18px var(--tl-font, sans-serif); fill: #EAF3FF; letter-spacing: .04em; }
+
+/* pump, HVK, ESD, blank */
+.hm-pump circle.hm-m { fill: #0A1A30; stroke: #9DB3CC; stroke-width: 2.5; }
+.hm-pump.run circle.hm-m { fill: #1E5BB8; stroke: #7DD3FC; filter: drop-shadow(0 0 8px rgba(125,211,252,.8)); }
+.hm-pump.trip circle.hm-m { fill: #5A1410; stroke: #FF6B5E; }
+.hm-pump text.hm-mt { font: 800 15px var(--tl-font, sans-serif); fill: #EAF3FF; }
+.hm-lampbox rect { fill: #142338; stroke: #33507A; stroke-width: 1; }
+.hm-lampbox rect.on { fill: #3DDC97; stroke: #B8F5D8; }
+.hm-lampbox rect.bad { fill: #FF3B30; stroke: #FFB4AC; }
+.hm-lampbox text { font: 800 10px var(--tl-mono, monospace); fill: #9DB3CC; }
+.hm-lampbox rect.on + text, .hm-lampbox rect.bad + text { fill: #04121F; }
+.hm-hvk rect.hm-btn { fill: #142338; stroke: #4C7DB0; stroke-width: 1.5; }
+.hm-hvk.on rect.hm-btn { fill: #1F7A50; stroke: #3DDC97; }
+.hm-hvk text { font: 800 11px var(--tl-mono, monospace); fill: #CFE2F7; }
+.hm-esd circle:not(.hm-hit) { fill: #C0281F; stroke: #FFD400; stroke-width: 4; filter: drop-shadow(0 0 8px rgba(255,59,48,.7)); }
+.hm-esd text { font: 900 12px var(--tl-font, sans-serif); fill: #fff; letter-spacing: .06em; }
+.hm-esd.tripped circle:not(.hm-hit) { animation: hm-blink .4s ease infinite alternate; }
+.hm-blank .hm-bl { stroke: #DCE8F7; stroke-width: 3; fill: #0A1A30; }
+.hm-blank.open .hm-bl { fill: none; stroke-dasharray: 4 3; }
+
+/* a control panel that opens next to what was tapped */
+.hm-panel { position: absolute; z-index: 6; min-width: 210px; padding: 12px; border-radius: 14px;
+  background: rgba(10,26,51,.97); border: 1px solid rgba(140,190,255,.35); box-shadow: 0 18px 40px rgba(0,0,0,.6);
+  font-family: var(--tl-font, sans-serif); color: #EAF3FF; animation: hm-pop .16s ease-out; }
+@keyframes hm-pop { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+.hm-panel h4 { margin: 0 34px 2px 0; font: 800 15px var(--tl-mono, monospace); letter-spacing: .06em; }
+.hm-panel .hm-what { margin: 0 0 10px; font-size: 13px; color: #9DB3CC; }
+.hm-panel .hm-x { position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; border: 0; border-radius: 10px; background: rgba(255,255,255,.07);
+  color: #EAF3FF; font-size: 22px; line-height: 44px; cursor: pointer; }
+.hm-panel .hm-row { display: flex; gap: 8px; }
+.hm-panel .hm-b { flex: 1 1 0; min-height: 56px; min-width: 88px; border: 1.5px solid rgba(140,190,255,.3); border-radius: 12px; cursor: pointer;
+  background: rgba(255,255,255,.06); color: #EAF3FF; font: 800 15px var(--tl-font, sans-serif); letter-spacing: .06em; }
+.hm-panel .hm-b:active { transform: scale(.97); }
+.hm-panel .hm-b.go { background: #1F7A50; border-color: #3DDC97; }
+.hm-panel .hm-b.stop { background: #7A1F1A; border-color: #FF6B5E; }
+.hm-panel .hm-b.esd { background: #C0281F; border-color: #FFD400; color: #fff; }
+.hm-panel .hm-b.on { box-shadow: 0 0 0 2px #F2B33D inset; }
+.hm-panel .hm-b[disabled] { opacity: .4; }
+.hm-panel .hm-pos { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.hm-panel .hm-pos b { font: 800 22px var(--tl-mono, monospace); color: #8BF0C3; min-width: 74px; text-align: right; }
+.hm-panel .hm-bar { flex: 1; height: 10px; border-radius: 5px; background: rgba(255,255,255,.1); overflow: hidden; }
+.hm-panel .hm-bar i { display: block; height: 100%; background: linear-gradient(90deg, #2EB6F8, #3DDC97); }
+.hm-panel .hm-note { margin: 8px 0 0; font-size: 13px; color: #FFCF7A; line-height: 1.4; }
+
+@media (max-aspect-ratio: 1/1) and (max-width: 600px) {
+  .hm-top { font-size: 10px; letter-spacing: .06em; }
+  .hm-panel { min-width: 180px; }
+}

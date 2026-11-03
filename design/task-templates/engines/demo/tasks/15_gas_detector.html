@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>GD1 — Get the gas detector ready</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<style>
+  /* the instrument fills the stage; its screen is live and its three buttons are real, finger-sized */
+  .gd-lcd { position: absolute; left: 34.6%; top: 26.2%; width: 30.6%; height: 30.6%; border-radius: 6px; overflow: hidden;
+    background: linear-gradient(180deg, #0D1F14, #071209); box-shadow: inset 0 0 0 2px rgba(0,0,0,.6), inset 0 0 26px rgba(0,0,0,.6);
+    font-family: var(--tl-mono, "Cascadia Code", Consolas, monospace); color: #B9F5C9; display: flex; flex-direction: column; }
+  .gd-lcd.off { background: #050807; }
+  .gd-lcd.off > * { visibility: hidden; }
+  .gd-lcd.lit { background: linear-gradient(180deg, #16402A, #0C2618); }
+  .gd-head { display: flex; justify-content: space-between; padding: 4% 6% 0; font-size: clamp(9px, 1.1vw, 13px); color: #7FCB97; letter-spacing: .06em; }
+  .gd-main { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 2% 6%; padding: 4% 7%; align-content: center; }
+  .gd-cell span { display: block; font-size: clamp(9px, 1.05vw, 12px); color: #7FCB97; letter-spacing: .08em; }
+  .gd-cell b { display: block; font-size: clamp(16px, 2.6vw, 30px); line-height: 1.05; color: #D7FFE2; text-shadow: 0 0 10px rgba(120,255,170,.35); }
+  .gd-cell b.al { color: #FF9C8F; text-shadow: 0 0 12px rgba(255,90,70,.6); animation: tl-pulse .5s steps(2, start) infinite; }
+  .gd-msg { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 6%; gap: 6%; }
+  .gd-msg b { font-size: clamp(14px, 2.2vw, 26px); letter-spacing: .06em; color: #D7FFE2; }
+  .gd-msg small { font-size: clamp(10px, 1.2vw, 14px); color: #9FDAB0; line-height: 1.35; }
+  .gd-menu { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 4% 8%; gap: 5%; font-size: clamp(11px, 1.5vw, 18px); }
+  .gd-menu div { padding: 3% 4%; border-radius: 4px; }
+  .gd-menu div.on { background: #B9F5C9; color: #072012; font-weight: 800; }
+  .gd-foot { display: flex; justify-content: space-between; padding: 0 6% 4%; font-size: clamp(9px, 1.05vw, 12px); color: #7FCB97; }
+
+  /* the three hardware buttons: the photograph's own buttons, with a touch area of at least 64 px */
+  .gd-key { position: absolute; transform: translate(-50%, -50%); width: 12%; height: 12%; min-width: 64px; min-height: 64px; border-radius: 50%;
+    border: 0; background: rgba(255,255,255,0); cursor: pointer; }
+  .gd-key:active { background: rgba(255,255,255,.14); box-shadow: inset 0 0 0 3px rgba(255,255,255,.25); }
+  .gd-cap { position: absolute; transform: translate(-50%, 0); padding: 3px 8px; border-radius: 6px; background: rgba(3,10,22,.78);
+    font: 800 12px var(--tl-mono, monospace); letter-spacing: .1em; color: #EAF3FF; pointer-events: none; white-space: nowrap; }
+  .gd-led { position: absolute; width: 7.5%; height: 3.4%; border-radius: 4px; transform: translate(-50%, -50%); pointer-events: none; }
+  .gd-led.on { background: rgba(255,59,48,.85); box-shadow: 0 0 22px 6px rgba(255,59,48,.75); animation: tl-pulse .35s steps(2, start) infinite; }
+  .gd-inlet { position: absolute; left: 49.8%; top: 14.6%; width: 15%; height: 12%; min-width: 72px; min-height: 64px; transform: translate(-50%, -50%);
+    border-radius: 18px; border: 2px dashed rgba(46,182,248,0); transition: border-color .2s ease; }
+  .gd-inlet.wait { border-color: rgba(46,182,248,.85); box-shadow: 0 0 22px rgba(46,182,248,.45); }
+  .gd-cap-on { position: absolute; left: 49.8%; top: 11%; width: 12%; transform: translate(-50%, -50%); display: none; pointer-events: none;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+  .gd-cap-on.on { display: block; }
+  .gd-cap-on img { width: 100% !important; height: auto; border-radius: 10px; }
+
+  /* the side panel: where you are, the test gas, the decision */
+  .gd-where { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .gd-cyl { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 14px; border: 1.5px solid var(--tl-line); background: rgba(255,255,255,.05); }
+  .gd-cyl img { flex: 0 0 64px; width: 64px !important; height: 64px; object-fit: cover; border-radius: 10px; }
+  .gd-cyl b { display: block; font-size: 15px; }
+  .gd-cyl small { display: block; font-size: 13px; color: var(--tl-dim); line-height: 1.35; }
+  .gd-cyl.attached { border-color: var(--tl-good); box-shadow: 0 0 0 1px var(--tl-good); }
+  .gd-coach { margin: 0; font-size: 15.5px; line-height: 1.45; min-height: 44px; }
+  .gd-dec { display: grid; gap: 8px; }
+  @media (max-aspect-ratio: 1/1) { .gd-cap { font-size: 10px; } }
+  @media (min-aspect-ratio: 1/1) { .tl-now { max-width: 28%; } } /* keep clear of the gas inlet on top */
+  /* a phone: the instrument is shown larger, so its three keys stay finger-sized and apart */
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) { #scene { transform: scale(1.32); } .gd-key { min-width: 46px; min-height: 46px; }
+    .gd-cap { font-size: 8px; letter-spacing: 0; padding: 2px 4px; } }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye">Instrument · Portable gas detector · before an enclosed-space entry</span>Get the gas detector ready for the entry - and decide if it can be trusted.
+    <small>Press its real buttons. The highlighted line always says what to do next.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage">
+      <div class="tl-scene" id="scene" data-aspect="1:1">
+        <img class="tl-photo" src="../img/p3_detector_front.jpg" alt="A handheld four-gas detector, front view">
+        <div class="gd-led" id="led1" style="left:40.4%;top:13.1%"></div>
+        <div class="gd-led" id="led2" style="left:59.6%;top:13.1%"></div>
+        <div class="gd-inlet" id="inlet" data-drop="inlet"></div>
+        <div class="gd-cap-on" id="capOn"><img src="../img/p3_bumpgas.jpg" alt=""></div>
+        <div class="gd-lcd off" id="lcd"></div>
+        <button type="button" class="gd-key" id="k1" style="left:38.6%;top:69.8%" aria-label="Power / back"></button>
+        <button type="button" class="gd-key" id="k2" style="left:50%;top:69.8%" aria-label="Menu / OK"></button>
+        <button type="button" class="gd-key" id="k3" style="left:61.5%;top:69.8%" aria-label="Next"></button>
+        <span class="gd-cap" style="left:38.6%;top:76.6%">POWER</span>
+        <span class="gd-cap" style="left:50%;top:76.6%">MENU · OK</span>
+        <span class="gd-cap" style="left:61.5%;top:76.6%">NEXT</span>
+      </div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card">
+        <h3>Where you are</h3>
+        <div class="gd-where">
+          <button type="button" class="tl-btn on" id="w-store">Deck store<br><small style="font-weight:500;color:var(--tl-dim)">fresh air</small></button>
+          <button type="button" class="tl-btn" id="w-hatch">At the tank hatch<br><small style="font-weight:500;color:var(--tl-dim)">the entry point</small></button>
+        </div>
+      </div>
+      <div class="tl-card">
+        <h3>Test gas</h3>
+        <div class="gd-cyl" id="cyl" data-drag="1">
+          <img src="../img/p3_bumpgas.jpg" alt="">
+          <div><b>Span gas · drag the hose</b><small>Propane 30 % LEL in nitrogen, with O₂ 18 %, H₂S 25 ppm, CO 100 ppm. Pass window on the label: LEL 26-34 %.</small></div>
+        </div>
+        <button type="button" class="tl-btn" id="reg" style="margin-top:8px">Open the regulator</button>
+      </div>
+      <div class="tl-card"><h3>What happened</h3><p class="gd-coach" id="coach">The detector is switched off.</p></div>
+      <div class="tl-card" id="decCard">
+        <h3>Your decision</h3>
+        <div class="gd-dec">
+          <button type="button" class="tl-btn" data-dec="fit">Fit for use - take it to the entry</button>
+          <button type="button" class="tl-btn" data-dec="unfit">Not fit - tag it out, use another</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Hand the detector over</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'GD1', title: 'Get the gas detector ready', mode: 'self' });
+  /* Sources: Hand Out 7.1 (catalytic instruments: check with a calibration gas, the reading must fall within the
+     manufacturer's range - it proves the filament); Hand Out 7.1.2 (oxygen analysers spanned with fresh air, 21 %);
+     Hand Out 1.3 (span gas on gas tankers usually 30 % LEL of the product in nitrogen); ICS TSG(LG) 2018 p.290
+     (doubt about readings: check with calibration gas or use another meter).
+     VERIFY: the multi-gas content of the cylinder (O2 18 %, H2S 25 ppm, CO 100 ppm), the 26-34 % window, the
+     alarm set points (A1 10 % LEL, A2 20 % LEL, O2 19.5 %, H2S 10 ppm, CO 30 ppm) and the menu - the course's
+     own detector manual decides. */
+  var variant = /[?&]v=(pass|fail)/.exec(location.search);
+  var FAIL = variant ? variant[1] === 'fail' : Math.random() < 0.5;   // a poisoned catalytic filament: LEL reads low
+  var A = { lel1: 10, lel2: 20, o2: 19.5, h2s: 10, co: 30 };
+
+  var S = { on: false, mode: 'off', where: 'store', zeroed: false, zeroWhere: null, offs: { lel: 3, co: 4, h2s: 1, o2: -0.4 },
+            hose: false, reg: false, bump: null, bumpRead: null, alarm: false, menuI: 0, decision: null, bumpBeforeZero: false };
+  var lcd = document.getElementById('lcd');
+
+  function air() { // what the sensors are exposed to, before the detector's own zero
+    var g = S.hose && S.reg ? { o2: 18.0, lel: FAIL ? 14 : 30, h2s: 25, co: 100 }
+          : S.where === 'hatch' ? { o2: 20.6, lel: 4, h2s: 0, co: 0 } : { o2: 20.9, lel: 0, h2s: 0, co: 0 };
+    return g;
+  }
+  var R = { o2: 20.9, lel: 0, h2s: 0, co: 0 }, z = { o2: 0, lel: 0, h2s: 0, co: 0 };
+  function readings() { // drifted sensors minus the stored zero; they settle towards the true value
+    var g = air();
+    ['o2', 'lel', 'h2s', 'co'].forEach(function (k) {
+      var target = g[k] + S.offs[k] - z[k];
+      R[k] += (target - R[k]) * 0.35;
+      if (k !== 'o2' && R[k] < 0) R[k] = 0;
+    });
+  }
+
+  function cell(lbl, v, unit, al) { return '<div class="gd-cell"><span>' + lbl + '</span><b class="' + (al ? 'al' : '') + '">' + v + '<small style="font-size:45%"> ' + unit + '</small></b></div>'; }
+  function paint() {
+    lcd.className = 'gd-lcd' + (S.on ? '' : ' off') + (S.mode === 'test' ? ' lit' : '');
+    if (!S.on) { lcd.innerHTML = ''; return; }
+    var head = '<div class="gd-head"><span>' + (S.mode === 'bump' ? 'BUMP TEST' : S.mode === 'menu' ? 'MENU' : 'MEASURE') + '</span><span>&#9646;&#9646;&#9646;&#9647;</span></div>';
+    if (S.mode === 'test') return (lcd.innerHTML = '<div class="gd-msg"><b>SELF TEST</b><small>' + S.testLine + '</small></div>');
+    if (S.mode === 'warm') return (lcd.innerHTML = '<div class="gd-msg"><b>WARM UP</b><small>' + S.warm + ' s</small><small>CAL 02.09.2026</small></div>');
+    if (S.mode === 'menu') {
+      var items = ['FRESH AIR ZERO', 'BUMP TEST', 'EXIT'];
+      return (lcd.innerHTML = head + '<div class="gd-menu">' + items.map(function (t, i) { return '<div class="' + (i === S.menuI ? 'on' : '') + '">' + t + '</div>'; }).join('') + '</div><div class="gd-foot"><span>NEXT</span><span>OK</span></div>');
+    }
+    if (S.mode === 'zero') return (lcd.innerHTML = '<div class="gd-msg"><b>ZERO…</b><small>keep it in clean air</small></div>');
+    if (S.mode === 'zerook') return (lcd.innerHTML = '<div class="gd-msg"><b>ZERO OK</b><small>' + (S.where === 'store' ? 'fresh air' : 'zero set at this point') + '</small></div>');
+    if (S.mode === 'bumpwait') return (lcd.innerHTML = head + '<div class="gd-msg"><b>APPLY GAS</b><small>' + (S.hose ? (S.reg ? 'gas flowing…' : 'open the regulator') : 'fit the cap on the inlet') + '</small></div>');
+    if (S.mode === 'bumpres') return (lcd.innerHTML = head + '<div class="gd-msg"><b>' + (S.bump ? 'BUMP PASS' : 'BUMP FAIL') + '</b><small>' + (S.bump ? 'all sensors in window' : 'LEL ' + Math.round(S.bumpRead.lel) + ' % · window 26-34') + '</small><small>OK to continue</small></div>');
+    var al = { o2: R.o2 < A.o2, lel: R.lel >= A.lel1, h2s: R.h2s >= A.h2s, co: R.co >= A.co };
+    lcd.innerHTML = head + '<div class="gd-main">' + cell('O₂', R.o2.toFixed(1), '%', al.o2) + cell('LEL', Math.round(R.lel), '%', al.lel) +
+      cell('H₂S', Math.round(R.h2s), 'ppm', al.h2s) + cell('CO', Math.round(R.co), 'ppm', al.co) + '</div>' +
+      '<div class="gd-foot"><span>' + (S.bump === null ? '<b style="color:#FFCF7A">BUMP DUE</b>' : S.bump ? 'BUMP OK' : '<b style="color:#FF9C8F">BUMP FAIL</b>') + '</span><span>MENU</span></div>';
+    var alarm = al.o2 || al.lel || al.h2s || al.co;
+    if (alarm !== S.alarm) { S.alarm = alarm; leds(alarm); }
+  }
+  var paint0 = paint; paint = function () { paint0(); step(); };
+  var hornT = 0;
+  function leds(on) {
+    document.getElementById('led1').className = 'gd-led' + (on ? ' on' : '');
+    document.getElementById('led2').className = 'gd-led' + (on ? ' on' : '');
+    clearInterval(hornT);
+    if (on) { var h = function () { GBLab.sound.play([[2900, 120, 60, 'square'], [2900, 120, 0, 'square']], 0.04); }; h(); hornT = setInterval(h, 700); }
+  }
+
+  /* ---- start-up: the instrument proves its display, its alarms and its sensors ------------------ */
+  function powerOn() {
+    S.on = true; S.mode = 'test';
+    var lines = ['DISPLAY ✓', 'ALARM: BEEP · LIGHT · VIBRATE', 'SENSORS ✓'], i = 0;
+    (function nextLine() {
+      if (!S.on) return;
+      if (i < lines.length) {
+        S.testLine = lines[i]; paint();
+        if (i === 1) { leds(true); setTimeout(function () { leds(false); }, 900); }
+        i++; return setTimeout(nextLine, 1000);
+      }
+      S.mode = 'warm'; S.warm = 6;
+      (function tick() { if (!S.on) return; paint(); if (S.warm-- > 0) return setTimeout(tick, 500); S.mode = 'meas'; coach('Measuring. The display shows BUMP DUE - it has not been tested with gas today.'); paint(); })();
+    })();
+    coach('Self test: watch the display, the alarm lights and the beeper.');
+  }
+  function powerOff() { S.on = false; S.mode = 'off'; leds(false); paint(); coach('The detector is switched off.'); }
+
+  /* ---- the three keys ------------------------------------------------------------------------- */
+  document.getElementById('k1').addEventListener('click', function () {
+    if (!S.on) return powerOn();
+    if (S.mode === 'menu' || S.mode === 'bumpwait') { S.mode = 'meas'; paint(); return; }
+    if (S.mode === 'meas') powerOff();
+  });
+  document.getElementById('k2').addEventListener('click', function () {
+    if (!S.on || S.mode === 'test' || S.mode === 'warm' || S.mode === 'zero') return;
+    if (S.mode === 'meas') { S.mode = 'menu'; S.menuI = 0; paint(); return; }
+    if (S.mode === 'zerook' || S.mode === 'bumpres') { S.mode = 'meas'; paint(); return; }
+    if (S.mode === 'menu') {
+      if (S.menuI === 0) return zero();
+      if (S.menuI === 1) { S.mode = 'bumpwait'; if (!S.zeroed) S.bumpBeforeZero = true; coach('Bump test armed: apply the test gas to the inlet.'); paint(); return; }
+      S.mode = 'meas'; paint();
+    }
+  });
+  document.getElementById('k3').addEventListener('click', function () {
+    if (S.mode === 'menu') { S.menuI = (S.menuI + 1) % 3; paint(); }
+  });
+  [].forEach.call(document.querySelectorAll('.gd-key'), function (k) { k.addEventListener('pointerdown', function () { GBLab.sound.play([[1800, 30, 0, 'square']], 0.03); }); });
+
+  function zero() {
+    S.mode = 'zero'; paint();
+    setTimeout(function () {
+      // the zero is whatever the sensors see now: in clean air that is right, at the hatch it hides gas
+      var g = air();
+      z = { o2: g.o2 + S.offs.o2 - 20.9, lel: g.lel + S.offs.lel, h2s: g.h2s + S.offs.h2s, co: g.co + S.offs.co };
+      S.zeroed = true; S.zeroWhere = S.where; S.mode = 'zerook'; paint();
+      coach(S.where === 'store' ? 'Zeroed in fresh air: O₂ 20.9, everything else 0.' : 'Zero set at the tank hatch.');
+    }, 1800);
+  }
+
+  /* ---- where you are ----------------------------------------------------------------------------- */
+  function where(w) {
+    S.where = w;
+    document.getElementById('w-store').className = 'tl-btn' + (w === 'store' ? ' on' : '');
+    document.getElementById('w-hatch').className = 'tl-btn' + (w === 'hatch' ? ' on' : '');
+    coach(w === 'store' ? 'In the deck store - fresh air.' : 'At the tank hatch, ready for the entry checks.');
+  }
+  document.getElementById('w-store').addEventListener('click', function () { where('store'); });
+  document.getElementById('w-hatch').addEventListener('click', function () { where('hatch'); });
+
+  /* ---- the test gas: hose onto the inlet, regulator open ------------------------------------------ */
+  GBLab.drag({ items: '#cyl', targets: '#inlet', onDrop: function () { attach(true); } });
+  function attach(on) {
+    S.hose = on;
+    document.getElementById('capOn').className = 'gd-cap-on' + (on ? ' on' : '');
+    document.getElementById('cyl').className = 'gd-cyl' + (on ? ' attached' : '');
+    document.getElementById('cyl').querySelector('b').textContent = on ? 'Cap on the inlet · tap to take off' : 'Span gas · drag the hose';
+    if (!on && S.reg) toggleReg();
+    coach(on ? 'Test cap on the gas inlet.' : 'Test cap off.'); step();
+  }
+  document.getElementById('cyl').addEventListener('click', function () { if (S.hose) attach(false); });
+  function toggleReg() {
+    S.reg = !S.reg;
+    document.getElementById('reg').textContent = S.reg ? 'Close the regulator' : 'Open the regulator';
+    document.getElementById('reg').className = 'tl-btn' + (S.reg ? ' on' : '');
+    if (S.reg) GBLab.sound.play([[200, 600, 0, 'sawtooth']], 0.012);
+    if (S.reg && !S.hose) coach('Gas is flowing - into the air. The cap is not on the detector.');
+    step();
+  }
+  document.getElementById('reg').addEventListener('click', toggleReg);
+  var bumpT = 0;
+
+  /* ---- the instrument's own clock: readings settle, a bump test runs while gas flows -------------- */
+  setInterval(function () {
+    if (!S.on || S.mode === 'off' || S.mode === 'test' || S.mode === 'warm') return;
+    readings();
+    if (S.mode === 'bumpwait' && S.hose && S.reg) {
+      bumpT += 0.4;
+      if (bumpT > 4) {
+        S.bumpRead = { lel: R.lel, o2: R.o2 };
+        S.bump = R.lel >= 26 && R.lel <= 34 && R.o2 < 19.5 && R.h2s >= 10 && R.co >= 30;
+        S.mode = 'bumpres'; bumpT = 0;
+        coach(S.bump ? 'Bump test passed: every sensor answered inside its window and the alarms went off.' : 'Bump test failed: LEL read ' + Math.round(R.lel) + ' % against a 26-34 % window.');
+      }
+    } else bumpT = 0;
+    paint();
+  }, 400);
+
+  function coach(s) { document.getElementById('coach').textContent = s; }
+
+  /* ---- always clear: what to do now, and a hint for this moment ---------------------------------- */
+  function step() {
+    var n = '', st = '';
+    if (!S.on) n = S.bump === null ? 'Switch it on: press <b>POWER</b>' : 'Switched off. Press <b>POWER</b> to switch it on';
+    else if (S.mode === 'test' || S.mode === 'warm') n = 'Self test - watch the screen, the lights and the beeper';
+    else if (S.mode === 'zero') n = 'Zeroing - hold it still';
+    else if (S.mode === 'zerook') n = 'Zero done - press <b>OK</b>';
+    else if (S.mode === 'menu') n = '<b>NEXT</b> moves down, <b>OK</b> chooses - pick <b>' + (!S.zeroed ? 'FRESH AIR ZERO' : S.bump === null ? 'BUMP TEST' : 'EXIT') + '</b>';
+    else if (S.mode === 'bumpwait') n = !S.hose ? 'Drag the <b>test gas</b> onto the dashed box on top' : !S.reg ? 'Press <b>Open the regulator</b>' : 'Gas flowing - watch the readings';
+    else if (S.mode === 'bumpres') n = 'Read the result, then press <b>OK</b>';
+    else if (!S.zeroed) n = 'Zero it in fresh air: press <b>MENU · OK</b>';
+    else if (S.bump === null) n = 'Bump test: press <b>MENU · OK</b>, then BUMP TEST';
+    else if (S.reg) n = 'Gas off: press <b>Close the regulator</b>';
+    else if (S.hose) n = 'Take the cap off: tap the <b>test gas</b> card';
+    else if (!S.decision) { n = 'Decide: <b>fit for use</b>, or not'; st = 'warn'; }
+    else { n = 'Ready - hand the detector over'; st = 'done'; }
+    GBLab.now(n, st); GBLab.goReady(st === 'done');
+  }
+  GBLab.hint(function () {
+    if (!S.on) return 'POWER is the left key under the screen.';
+    if (S.mode === 'menu') return 'NEXT moves the highlight down the list; MENU · OK picks the highlighted line.';
+    if (!S.zeroed) return 'A zero is done in clean air - the deck store, never at the tank hatch.';
+    if (S.mode === 'bumpwait' && !S.hose) return 'Drag the test-gas card from the side onto the dashed box on top of the detector - or tap the card, then the box.';
+    if (S.bump === null) return 'The bump test is in the menu: MENU · OK, NEXT to BUMP TEST, then OK.';
+    if (!S.decision) return 'Compare the bump result with the window on the label: LEL 26-34 %.';
+    return 'Everything is done - press Hand the detector over.';
+  });
+  GBLab.intro({ tag: 'Gas detector', title: 'Nobody goes in until this detector is proven.',
+    text: 'You have the ship’s four-gas detector and a test-gas bottle. Get it ready the way the real one is used.',
+    steps: ['Switch it on and watch its self test.', 'Zero it in fresh air.', 'Bump-test it: put test gas on the inlet.', 'Decide: can it be trusted for the entry?'],
+    start: 'Start' });
+
+  /* ---- the decision and the hand-over --------------------------------------------------------------- */
+  [].forEach.call(document.querySelectorAll('[data-dec]'), function (b) {
+    b.addEventListener('click', function () {
+      S.decision = b.getAttribute('data-dec');
+      [].forEach.call(document.querySelectorAll('[data-dec]'), function (x) { x.className = 'tl-btn' + (x === b ? ' on' : ''); });
+      step();
+    });
+  });
+  function handOver() {
+    if (!S.decision) return GBLab.toast('Decide first: fit for use, or not.', 'hint');
+    GBLab.sure(function (lvl) {
+      var right = S.bump === null ? false : (S.bump ? S.decision === 'fit' : S.decision === 'unfit');
+      GBLab.sureNote(lvl, right && S.zeroWhere === 'store');
+      if (S.decision === 'fit' && S.bump !== true) {
+        GBLab.show({ img: '../img/04_survey_space_alarm.jpg', tag: 'At the entry', kind: 'no', title: S.bump === false ? 'An instrument that failed its test went in' : 'An untested instrument went in',
+          text: S.bump === false ? 'Its LEL sensor read about half of the test gas. Inside, half the real gas looks like a safe reading. A failed instrument is tagged out and another one used.' : 'It had not seen test gas today - nobody knows if its sensors still answer. Readings from it cannot be trusted for an entry.',
+          buttons: [{ label: 'See my result', fn: result }] });
+      } else if (S.zeroWhere === 'hatch') {
+        GBLab.show({ tag: 'Zeroed in gas', kind: 'no', title: 'The zero was set at the tank hatch',
+          text: 'The air at the hatch held about 4 % LEL. Zeroing there taught the detector that 4 % is nothing - every reading in the space is now 4 % too low. A zero is only ever done in clean, fresh air.',
+          buttons: [{ label: 'See my result', fn: result }] });
+      } else result();
+    });
+  }
+  function result() {
+    var right = S.bump !== null && (S.bump ? S.decision === 'fit' : S.decision === 'unfit');
+    GBLab.finish({ items: [
+      { t: 'Watched the start-up self test', ok: S.on || S.zeroed, a: S.zeroed ? 'self test seen' : 'never switched on', c: 'display, alarms, sensors', w: 'The self test proves the display, the alarm lights and the beeper work.' },
+      { t: 'Zeroed in fresh air, not at the hatch', ok: S.zeroWhere === 'store', a: S.zeroWhere ? 'zeroed at the ' + (S.zeroWhere === 'store' ? 'deck store' : 'tank hatch') : 'no zero', c: 'fresh air', w: 'A zero in gas makes every later reading too low (Hand Out 7.1.2: span with fresh air).' },
+      { t: 'Bump-tested with gas through the cap', ok: S.bump !== null, a: S.bump === null ? 'no gas test' : 'gas through the cap', c: 'span gas to the inlet', w: 'Only test gas proves the sensors still answer (Hand Out 7.1, ICS TSG p.290).' },
+      { t: 'Zero first, then the bump test', ok: S.bump !== null && !S.bumpBeforeZero, a: S.bumpBeforeZero ? 'bump before zero' : 'zero then bump', c: 'zero then bump', w: 'A bump test on a drifted zero can pass or fail for the wrong reason.' },
+      { t: 'Gas off and cap removed after the test', ok: !S.reg && !S.hose && S.bump !== null, a: S.reg ? 'regulator left open' : S.hose ? 'cap left on' : 'gas off, cap off', c: 'gas off, cap off', w: 'A cap left on the inlet would hide the real atmosphere.' },
+      { t: 'The right decision on the instrument', ok: right, a: S.decision === 'fit' ? 'fit for use' : S.decision === 'unfit' ? 'not fit' : 'none', c: S.bump === false ? 'not fit' : 'fit for use', w: S.bump === false ? 'LEL outside its window: the filament is poisoned - tag it out.' : 'Inside every window: it can be trusted for the entry.' }
+    ] });
+  }
+  GBLab.go('Hand the detector over', handOver);
+  paint();
+})();
+</script>
+</body>
+</html>

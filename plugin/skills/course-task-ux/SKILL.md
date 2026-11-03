@@ -167,6 +167,10 @@ halves count - a task that is clear but dull fails, and so does one that is impr
 
 ## 2 · How a trainee answers
 
+The task screens' layouts - where the question, its picture, the answers and the side cards go - are in
+`course-module-ui/knowledge/blueprints.json` "tasks", with their live references in `design/task-templates` (the
+twelve quick-check screens in `live/`, the nineteen richer tasks in `engines/`, both themes by `themes.py`).
+
 **Self-checks and module checks: choosing, not writing.** Allowed: **tap to choose** · **tap to
 locate** (§6) · **order / sequence** · **match** · **choose-and-justify** (pick the action, then the
 reason from a set — both must be right).

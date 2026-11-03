@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>BA1 — Breathing apparatus pre-use check</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<link rel="stylesheet" href="../../gb_3d.css">
+<style>
+  #view { position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(80% 70% at 50% 35%, #183A66 0%, #07142A 75%); }
+  .ba-gauge { display: flex; align-items: center; gap: 14px; }
+  .ba-gauge svg { flex: 0 0 120px; width: 120px !important; height: 120px; }
+  .ba-gauge b { font: 800 30px var(--tl-mono, monospace); color: var(--tl-accent); text-shadow: 0 0 12px rgba(46,182,248,.5); }
+  .ba-gauge b.hi { color: var(--tl-bad); }
+  .ba-gauge small { display: block; font-size: 13px; color: var(--tl-dim); }
+  .ba-acts { display: grid; gap: 8px; }
+  .ba-part { margin: 0 0 8px; font-size: 16px; font-weight: 800; }
+  .ba-note { margin: 8px 0 0; font-size: 15px; line-height: 1.45; color: var(--tl-dim); min-height: 22px; }
+  .ba-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .ba-list li { display: flex; gap: 10px; align-items: center; font-size: 15px; }
+  .ba-list li i { flex: 0 0 22px; height: 22px; border-radius: 50%; border: 2px solid var(--tl-line); }
+  .ba-list li.done i { background: var(--tl-good); border-color: var(--tl-good); }
+  /* the point the next check needs */
+  .g3-pin.next i { border-color: var(--tl-amber); background: rgba(242,179,61,.3); box-shadow: 0 0 18px rgba(242,179,61,.9); }
+  .g3-pin.next span { background: #5A3F08; color: #FFE7B0; }
+  /* a phone held upright: more of the screen for the set, and the part's actions first under it */
+  @media (max-aspect-ratio: 1/1) { .tl-stage { flex: 1 1 62%; } .tl-side { flex: 0 1 38%; } #partCard { order: -1; } }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye">3D · Breathing apparatus · before an enclosed-space entry</span>Check this breathing apparatus before it is used - and decide if it is fit.
+    <small>The highlighted line always says what to do next. The point to tap glows amber.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage"><div id="view"></div></div>
+    <aside class="tl-side">
+      <div class="tl-card dark">
+        <h3>Shoulder gauge</h3>
+        <div class="ba-gauge">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle cx="60" cy="60" r="54" fill="#0A1A30" stroke="#4C7DB0" stroke-width="4"/>
+            <path d="M24 92 A48 48 0 1 1 96 92" fill="none" stroke="#2A3A50" stroke-width="8"/>
+            <path d="M24 92 A48 48 0 0 1 30 40" fill="none" stroke="#FF6B5E" stroke-width="8"/>
+            <line id="needle" x1="60" y1="60" x2="60" y2="16" stroke="#F2F7FD" stroke-width="4" stroke-linecap="round" transform="rotate(-135 60 60)"/>
+            <circle cx="60" cy="60" r="6" fill="#F2F7FD"/>
+          </svg>
+          <div><b id="bar">0</b><small>bar · full 300</small></div>
+        </div>
+      </div>
+      <div class="tl-card" id="partCard">
+        <p class="ba-part" id="part">Tap a point on the set</p>
+        <div class="ba-acts" id="acts"></div>
+        <p class="ba-note" id="note">The checks: air supply and its gauge, the low-pressure warning, the face mask.</p>
+      </div>
+      <div class="tl-card"><h3>Checked</h3><ul class="ba-list" id="list"></ul></div>
+      <div class="tl-card">
+        <h3>Your decision</h3>
+        <div class="ba-acts">
+          <button type="button" class="tl-btn" data-dec="fit">Fit for use</button>
+          <button type="button" class="tl-btn" data-dec="unfit">Not fit - tag it out</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Hand the set over</button></div>
+</div>
+
+<script src="../../vendor/three-0.147.0/three.min.js"></script>
+<script src="../../vendor/three-0.147.0/GLTFLoader.js"></script>
+<script src="../../vendor/three-0.147.0/OrbitControls.js"></script>
+<script src="../../gb_lab.js"></script>
+<script src="../../gb_3d.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'BA1', title: 'Breathing apparatus pre-use check', mode: 'self' });
+  /* Sources: ICS TSG(LG) 2018, enclosed-space entry checklist, Section III (p.359): breathing
+     apparatus tested for "gauge and capacity of air supply; low pressure audible alarm, if fitted;
+     face mask - under positive pressure and not leaking". Hand Out 7.4.2: only fully charged units
+     are used; low-pressure cylinders are recharged.
+     VERIFY: 300 bar working pressure, the "fully charged" acceptance (here 270 bar = 90 %), the
+     whistle point (about 55 bar), and the order of the checks - the set maker's manual decides.
+     3D model: Hunyuan3D-2 shape from a Gemini reference picture, simplified for the tablet. */
+  var vm = /[?&]v=(ok|low|whistle|leak)/.exec(location.search);
+  var FAULT = vm ? vm[1] : ['ok', 'low', 'whistle', 'leak'][Math.floor(Math.random() * 4)];
+  var FULL = FAULT === 'low' ? 180 : 296, WHISTLE = 55;
+  var S = { valve: false, p: 0, line: 0, read: null, vented: false, whistle: null, mask: null, harness: false, label: false, dec: null };
+  var PINS = [
+    { id: 'cylvalve', at: [0.676, -0.343, -0.091], label: 'Cylinder valve' },
+    { id: 'gauge', at: [-0.233, -0.06, -0.533], label: 'Gauge' },
+    { id: 'demand', at: [0.353, -0.545, 0.537], label: 'Demand valve' },
+    { id: 'mask', at: [0.44, -0.245, 0.462], label: 'Face mask' },
+    { id: 'cylinder', at: [0.709, 0.377, -0.174], label: 'Cylinder' },
+    { id: 'belt', at: [-0.538, -0.605, -0.429], label: 'Harness' }
+  ];
+  var m = GB3D.model(document.getElementById('view'), { src: '../img/p1_ba_set_web.glb', pins: PINS, onPin: pick,
+    onReady: function (o) {
+      o.traverse(function (x) { if (x.isMesh) { x.geometry.computeVertexNormals(); x.material = new THREE.MeshStandardMaterial({ color: 0x2f343b, roughness: .42, metalness: .4 }); } });
+    } });
+
+  /* ---- the air: cylinder valve open fills the line; closed and purged, the line empties ------- */
+  var hiss = 0;
+  setInterval(function () {
+    var target = S.valve ? FULL : S.line;
+    if (S.valve) S.line += (FULL - S.line) * 0.35;
+    if (!S.valve && S.purge) {
+      S.line = Math.max(0, S.line - 9);
+      if (S.whistle === null && S.line <= WHISTLE) {
+        S.whistle = FAULT !== 'whistle';
+        if (S.whistle) GBLab.sound.play([[3100, 900, 0, 'sine']], 0.06);
+        note(S.whistle ? 'The whistle sounds at ' + Math.round(S.line) + ' bar.' : 'The gauge went below ' + WHISTLE + ' bar - and nothing sounded.');
+      }
+      if (S.line <= 0) { S.purge = false; S.vented = true; mark('whistle'); note(S.whistle ? 'Line empty. The low-pressure warning works.' : 'Line empty. No warning sounded at all.'); acts(); }
+    }
+    gauge(S.line); guide();
+  }, 120);
+  function gauge(p) {
+    document.getElementById('needle').setAttribute('transform', 'rotate(' + (-135 + 270 * Math.min(p, 330) / 330) + ' 60 60)');
+    var b = document.getElementById('bar'); b.textContent = Math.round(p); b.className = p > 1 && p < 270 ? 'hi' : '';
+  }
+
+  /* ---- each part has its own actions ----------------------------------------------------------- */
+  var cur = null;
+  function pick(id) {
+    cur = id; m.focus(id); acts();
+    // on a phone the actions are under the set: bring them into sight inside the side panel
+    var c = document.getElementById('partCard'), side = c.parentNode;
+    if (side.scrollHeight > side.clientHeight + 4) side.scrollTop = Math.max(0, c.offsetTop - side.offsetTop - 4);
+  }
+  function note(s) { document.getElementById('note').textContent = s; }
+  function acts() {
+    var box = document.getElementById('acts'), P = { cylvalve: 'Cylinder valve', gauge: 'Shoulder gauge', demand: 'Demand valve', mask: 'Face mask', cylinder: 'Cylinder', belt: 'Harness and straps' };
+    document.getElementById('part').textContent = cur ? P[cur] : 'Tap a point on the set';
+    var A = [];
+    if (cur === 'cylvalve') A = S.valve ? [['Close the cylinder valve', function () { S.valve = false; note('Valve closed. The air in the line stays until it is let out.'); acts(); }]]
+                                        : [['Open the cylinder valve fully', function () { S.valve = true; GBLab.sound.play([[180, 700, 0, 'sawtooth']], 0.02); note('Air into the line - watch the gauge.'); acts(); }]];
+    if (cur === 'gauge') A = [['Read the gauge', function () {
+      if (!S.valve && S.line < 5) return note('It reads zero: the cylinder valve is shut.');
+      S.read = Math.round(S.line); mark('gauge');
+      note('Reading ' + S.read + ' bar of 300. ' + (S.read >= 270 ? 'Fully charged.' : 'Not fully charged.'));
+    }]];
+    if (cur === 'demand') A = [['Press the purge button - let the air out slowly', function () {
+      if (S.valve) return note('Air keeps coming from the cylinder. To test the warning, close the cylinder valve first.');
+      if (S.line < 5) return note('Nothing in the line to let out.');
+      S.purge = true; note('Venting slowly - watch the gauge fall and listen.'); acts();
+    }]];
+    if (cur === 'mask') A = [['Put it on, breathe in, then hold your breath', function () {
+      if (S.line < 20) return note('No air to the mask - open the cylinder valve first.');
+      S.mask = FAULT !== 'leak'; mark('mask');
+      if (!S.mask) GBLab.sound.play([[5000, 1200, 0, 'sawtooth']], 0.008);
+      note(S.mask ? 'The mask stays under positive pressure - no leak.' : 'A hiss at the seal: air is leaking out. The mask does not hold pressure.');
+    }]];
+    if (cur === 'cylinder') A = [['Check the cylinder', function () { S.label = true; mark('cylinder'); note('Test date stamped 03/2024, next test 03/2029. No damage.'); }]];
+    if (cur === 'belt') A = [['Check straps and buckles', function () { S.harness = true; mark('belt'); note('Straps whole, buckles close and hold.'); }]];
+    box.innerHTML = '';
+    A.forEach(function (a) { var b = document.createElement('button'); b.type = 'button'; b.className = 'tl-btn'; b.textContent = a[0]; b.addEventListener('click', a[1]); box.appendChild(b); });
+  }
+  var CHECKS = [['gauge', 'Air supply read on the gauge'], ['whistle', 'Low-pressure warning tested'], ['mask', 'Face mask tested'], ['cylinder', 'Cylinder looked at'], ['belt', 'Harness looked at']];
+  function mark(id) { S['_' + id] = true; m.pinState(id === 'whistle' ? 'demand' : id, 'done'); list(); }
+  function list() { document.getElementById('list').innerHTML = CHECKS.map(function (c) { return '<li class="' + (S['_' + c[0]] ? 'done' : '') + '"><i></i>' + c[1] + '</li>'; }).join(''); }
+  list();
+
+  [].forEach.call(document.querySelectorAll('[data-dec]'), function (b) {
+    b.addEventListener('click', function () { S.dec = b.getAttribute('data-dec'); [].forEach.call(document.querySelectorAll('[data-dec]'), function (x) { x.className = 'tl-btn' + (x === b ? ' on' : ''); }); guide(); });
+  });
+  function handOver() {
+    if (!S.dec) return GBLab.toast('Decide first: fit for use, or not.', 'hint');
+    var faultFound = FAULT === 'low' ? S.read !== null : FAULT === 'whistle' ? S.whistle === false : FAULT === 'leak' ? S.mask === false : true;
+    var right = (FAULT === 'ok') === (S.dec === 'fit');
+    GBLab.sure(function (lvl) {
+      GBLab.sureNote(lvl, right && faultFound);
+      if (S.dec === 'fit' && FAULT !== 'ok') {
+        var why = { low: 'The cylinder held only ' + FULL + ' bar of 300 - far less time to work and to get out.', whistle: 'The low-pressure warning never sounded - the wearer would not know the air is running out.', leak: 'The mask leaked at the seal - in a toxic or oxygen-poor space the wearer breathes what is outside.' }[FAULT];
+        return GBLab.show({ img: '../img/04_survey_space_alarm.jpg', tag: 'In the space', kind: 'no', title: 'A faulty set went into the space', text: why + ' A set that fails any check is tagged out and another one used.', buttons: [{ label: 'See my result', fn: result }] });
+      }
+      result();
+    });
+  }
+  /* ---- always clear: the next check, where it is, a hint, the opening card ------------------------- */
+  function next() { // [what to do now, the point it needs, state]
+    if (S.read === null) return S.valve ? ['Tap <b>Gauge</b> and read it', 'gauge'] : ['Tap <b>Cylinder valve</b> and open it', 'cylvalve'];
+    if (S.mask === null) return ['Tap <b>Face mask</b> and test it', 'mask'];
+    if (S.whistle === null) return S.valve ? ['Close the <b>Cylinder valve</b> - then test the warning', 'cylvalve']
+      : S.purge ? ['Venting - watch the gauge and listen', null] : ['Tap <b>Demand valve</b> and let the air out slowly', 'demand'];
+    if (!S.label) return ['Tap <b>Cylinder</b> and look it over', 'cylinder'];
+    if (!S.harness) return ['Tap <b>Harness</b> and check it', 'belt'];
+    if (!S.dec) return ['Decide: <b>fit for use</b>, or not', null, 'warn'];
+    return ['Ready - hand the set over', null, 'done'];
+  }
+  function guide() {
+    var n = next();
+    GBLab.now(n[0], n[2] || ''); GBLab.goReady(n[2] === 'done');
+    [].forEach.call(document.querySelectorAll('.g3-pin'), function (p) { p.classList.toggle('next', p.getAttribute('data-pin') === n[1]); });
+  }
+  GBLab.hint(function () {
+    var n = next(), see = ' Can’t see it? Turn the set - or tap a faded point and the set turns to it.';
+    if (S.read === null) return (S.valve ? 'With the valve open, read the gauge: a full set shows about 300 bar.' : 'The gauge shows nothing until the cylinder valve is open.') + see;
+    if (S.mask === null) return 'Put the mask on, breathe in, hold your breath - it must stay sealed.' + see;
+    if (S.whistle === null) return S.valve ? 'To test the warning the cylinder valve is closed first, then the air in the line is let out slowly.' : 'Watch the gauge fall - the whistle should sound at about 55 bar.';
+    if (!S.label || !S.harness) return 'Look at the cylinder test date and for damage; check the straps and buckles.' + see;
+    if (!S.dec) return 'Did any check fail? Then the set is not fit.';
+    return 'Everything is done - press Hand the set over.';
+  });
+  GBLab.intro({ tag: 'Breathing apparatus', title: 'Someone goes into a tank wearing this set.',
+    text: 'Check it the way it is done before every use, then decide if it is fit.',
+    steps: ['Turn the set with one finger, or with the buttons under it.', 'Tap a point on the set - its checks appear on the right.', 'Do each check: air, warning whistle, mask, cylinder, harness.', 'Decide: fit for use, or tag it out.'],
+    start: 'Start' });
+
+  function result() {
+    var right = (FAULT === 'ok') === (S.dec === 'fit');
+    GBLab.finish({ items: [
+      { t: 'Air supply checked on the gauge with the valve open', ok: S.read !== null, a: S.read !== null ? S.read + ' bar' : 'not read', c: 'read the gauge', w: 'Gauge and capacity of air supply (ICS TSG p.359); only fully charged sets are used (Hand Out 7.4.2).' },
+      { t: 'Low-pressure warning tested: valve shut, line vented', ok: S.whistle !== null, a: S.whistle === null ? 'not tested' : S.whistle ? 'whistle sounded' : 'no whistle', c: 'vent and listen', w: 'The audible alarm tells the wearer the air is running out (ICS TSG p.359).' },
+      { t: 'Face mask tested under positive pressure', ok: S.mask !== null, a: S.mask === null ? 'not tested' : S.mask ? 'held' : 'leaked', c: 'positive pressure, no leak', w: 'A mask that does not hold pressure lets the outside air in (ICS TSG p.359).' },
+      { t: 'Cylinder and harness looked at', ok: S.label && S.harness, a: (S.label ? 'cylinder' : '') + (S.harness ? ' harness' : ''), c: 'both', w: 'A damaged cylinder or a strap that gives way is a failure too.' },
+      { t: 'The right decision on the set', ok: right, a: S.dec === 'fit' ? 'fit' : 'not fit', c: FAULT === 'ok' ? 'fit' : 'not fit', w: FAULT === 'ok' ? 'Every check passed.' : 'One check failed - the set is tagged out.' }
+    ] });
+  }
+  GBLab.go('Hand the set over', handOver);
+})();
+</script>
+</body>
+</html>

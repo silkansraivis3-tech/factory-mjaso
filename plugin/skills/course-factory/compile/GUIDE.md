@@ -174,7 +174,8 @@ to the tablets. Write a fragment as the deck sees it: its links start `../assets
 
 ## 2 · How a slide is laid out — the same in every module
 
-**Every slide is one of the owner's layout templates (L61, 2.52.0; twenty of them).** The compiler chooses it from the rows
+**Every slide is one of the owner's layout templates (L61, 2.52.0; twenty of them).** Each one's slots, what fills them and
+its live reference, one line a template: `course-module-ui/knowledge/blueprints.json`. The compiler chooses it from the rows
 below and names it on the slide: `data-template="explain-figure.v1"` `data-variant="figure-right"`
 (`course-module-ui/knowledge/layout-templates.json`). `gb_layouts.css` gives it the owner's look in the brandbook's
 colours, the official logo top right, Raleway bundled. What the compiler chooses on its own:

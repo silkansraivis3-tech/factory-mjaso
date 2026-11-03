@@ -139,6 +139,7 @@ the self-check list, short points with full notes) is the next step.
 | You are doing | Read |
 |---|---|
 | Starting a new deck | `scripts/design_system.py install <module> --start-deck` — the script copies the files; do not open, retype or re-derive them |
+| Choosing and filling a slide or a task screen | `knowledge/blueprints.json` — one line a template: what it is for, its slots, what fills them, its reference. The empty layouts: `design/template-blueprints/index.html` (`scripts/blueprints.py` writes it) |
 | Deciding how a screen should be laid out | `references/vocabulary.md` §1 — pick a composition, do not invent one |
 | Choosing any colour, radius, shadow, font | `references/vocabulary.md` §8 (the names); `knowledge/tokens.json` only when a value itself is the question |
 | Building the header band, a card, a pill, a photo screen, a takeaway | `references/vocabulary.md`; `references/anatomy.md` only when building or changing a component itself |

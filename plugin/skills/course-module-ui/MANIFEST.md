@@ -103,6 +103,13 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## The blueprints — 2.91.0 (2026-11-03)
+
+`knowledge/blueprints.json`: every slide template and variant and every task screen as slots of six kinds (Title, Text,
+Info, Picture, Animation, 3D) on a grid, what fills each, and its live reference. `scripts/blueprints.py` writes the
+empty catalogue `design/template-blueprints/index.html` from it and checks it (`--check`); `scripts/test_blueprints.py`
+holds the file, the catalogue and the references in `design/slide-templates` and `design/task-templates` together.
+
 ## Seven templates for kinds of information — 2.90.0 (2026-11-03)
 
 `knowledge/layout-templates.json` names seven more templates - worked-example, true-false, scenario, name-parts,

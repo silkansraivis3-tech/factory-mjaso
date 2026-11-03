@@ -7,6 +7,17 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.91.0 · The blueprints, and the live templates kept as references (2026-11-03)
+
+- **Why.** The owner: a template of the templates with no words, only where the Title, Text, Info, Picture, Animation and
+  3D go - for the team and for the factory, in a form Claude reads cheaply and still builds right; the live proposals
+  kept as the references tests use.
+- **What.** `course-module-ui/knowledge/blueprints.json` (the one file to read to choose and fill a screen),
+  `course-module-ui/scripts/blueprints.py` (the empty catalogue `design/template-blueprints/index.html`, and `--check`),
+  `design/task-templates/` (`live/`, `engines/`, `themes.py`, `shots/`). The guides point at the file.
+- **Next.** The factory's task pages in this style: the task frame, picture answers, the order rail, match lines, the
+  gauge, the paper document, the knob, the result ring, both themes picked per screen.
+
 ## 2.90.0 · The information decides the slide (2026-11-03)
 
 - **Why.** The owner: the factory has to pick the right slide for each new course's information; the templates are

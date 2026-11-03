@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>CS1 — Connect the system, then run it</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<link rel="stylesheet" href="../../gb_hmi.css">
+<style>
+  /* the parts are studio photographs (1024x572, navy ground); a soft radial fade melts the navy
+     edge into the stage. Only the pipes - which appear, carry flow and move - are vector lines. */
+  .cs-at { position: absolute; transform: translate(-50%, -50%); }
+  .cs-tile { z-index: 1; pointer-events: none; }
+  .cs-tile img {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; -webkit-user-drag: none;
+    -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, rgba(0,0,0,0) 100%);
+    mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, rgba(0,0,0,0) 100%);
+    filter: drop-shadow(0 10px 18px rgba(0,0,0,.45));
+  }
+  .cs-tile.mirror img { transform: scaleX(-1); }
+  /* the simulator's convention: a tag under every object */
+  .cs-tag { position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); white-space: nowrap; text-align: center;
+    padding: 2px 8px; border-radius: 6px; background: rgba(3,10,22,.82); border: 1px solid rgba(46,182,248,.3);
+    font: 700 13px/1.25 var(--tl-mono, monospace); letter-spacing: .03em; color: #CFE2F7; }
+  .cs-tag.top { top: -4px; bottom: auto; transform: translate(-50%, -100%); }
+  .cs-tag.topr { top: -4px; bottom: auto; left: auto; right: 0; transform: translateY(-100%); }
+  .cs-tag.side { top: 62%; bottom: auto; left: 66%; transform: none; }
+  .cs-tag em { display: block; font: 500 11px/1.2 var(--tl-font, sans-serif); font-style: normal; color: var(--tl-dim, #9DB3CC); letter-spacing: 0; }
+  .cs-badge { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); padding: 3px 10px; border-radius: 999px; display: none;
+    font: 800 12px var(--tl-mono, monospace); letter-spacing: .1em; white-space: nowrap;
+    background: rgba(3,10,22,.88); color: var(--tl-text, #F2F7FD); border: 1px solid var(--tl-line, rgba(140,190,255,.16)); }
+  .cs-badge.on { display: block; }
+  .cs-badge.open, .cs-badge.run { color: var(--tl-good, #3DDC97); border-color: var(--tl-good, #3DDC97); }
+  .cs-badge.shut { color: var(--tl-bad, #FF6B5E); border-color: var(--tl-bad, #FF6B5E); }
+  .cs-badge.lift { color: var(--tl-amber, #F2B33D); border-color: var(--tl-amber, #F2B33D); animation: tl-pulse .8s ease infinite; }
+  /* the local gauge's own reading, glowing on its face */
+  .cs-dial { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); padding: 4px 9px; border-radius: 10px; display: none;
+    font: 700 17px/1.1 var(--tl-mono, monospace); color: var(--tl-accent, #2EB6F8); background: rgba(3,10,22,.85);
+    text-shadow: 0 0 12px rgba(46,182,248,.6); white-space: nowrap; }
+  .cs-dial.on { display: block; }
+  .cs-dial.hi { color: var(--tl-bad, #FF6B5E); text-shadow: 0 0 12px rgba(255,107,94,.7); }
+
+  /* pipes: an SVG over the tiles, in the scene's own units */
+  .cs-pipes { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; overflow: visible; }
+  .cs-stub { fill: none; stroke: #9FB0C4; stroke-width: 8; stroke-linecap: round; }
+  .cs-pipe-o { fill: none; stroke: rgba(3,10,22,.85); stroke-width: 15; stroke-linecap: round; stroke-linejoin: round; }
+  .cs-pipe { fill: none; stroke: #C9D6E6; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; transition: stroke .4s ease; }
+  .cs-pipe.liq { stroke: #3B82F6; }
+  .cs-pipe.warm { stroke: var(--tl-amber, #F2B33D); animation: cs-warm 1.1s ease-in-out infinite; }
+  @keyframes cs-warm { 50% { stroke: var(--tl-bad, #FF6B5E); } }
+  .cs-hitp { fill: none; stroke: transparent; stroke-width: 30; pointer-events: stroke; cursor: pointer; }
+  .cs-flow { fill: none; stroke: rgba(255,255,255,.85); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 4 18; animation: cs-run .8s linear infinite; }
+  .cs-flow.relief { stroke: var(--tl-amber, #F2B33D); stroke-width: 5; }
+  @keyframes cs-run { to { stroke-dashoffset: -22; } }
+  .cs-rubber { fill: none; stroke: var(--tl-accent, #2EB6F8); stroke-width: 5; stroke-dasharray: 8 8; }
+  /* what happens - a moving effect, not a drawing of equipment */
+  .cs-cloud { fill: #E8EEF5; opacity: 0; filter: blur(7px); transform-box: fill-box; transform-origin: center; animation: cs-grow 1.8s ease-out forwards; }
+  @keyframes cs-grow { from { opacity: 0; transform: scale(.2); } to { opacity: .85; transform: scale(1); } }
+  .cs-flash { fill: none; stroke: var(--tl-bad, #FF6B5E); stroke-width: 5; transform-box: fill-box; transform-origin: center; animation: cs-ring 1s ease-out infinite; }
+  @keyframes cs-ring { from { opacity: 1; transform: scale(.3); } to { opacity: 0; transform: scale(1.6); } }
+
+  /* ports: the ring shows where; the scene itself takes the touch and picks the nearest port */
+  .cs-port { width: 56px; height: 56px; z-index: 4; border-radius: 50%; pointer-events: none;
+    background: rgba(3,10,22,.55); border: 3px solid var(--tl-accent, #2EB6F8); box-shadow: 0 0 14px rgba(46,182,248,.55);
+    transition: background .15s ease, transform .15s ease; }
+  .cs-port i { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--tl-accent, #2EB6F8); }
+  .cs-port.used { background: rgba(46,182,248,.85); }
+  .cs-port.used i { background: #03121F; }
+  .cs-port.tee { border-color: var(--tl-accent2, #34E0C4); }
+  .cs-port.sel { transform: translate(-50%, -50%) scale(1.15); background: var(--tl-amber, #F2B33D); border-color: #fff; animation: tl-pulse 1s ease infinite; }
+  .cs-port.cand { transform: translate(-50%, -50%) scale(1.12); border-color: #fff; }
+  .cs-scene-in { touch-action: none; }
+
+  .cs-cap { position: absolute; top: 12px; left: 50%; transform: translate(-50%, -8px); z-index: 6; max-width: 92%;
+    padding: 10px 18px; border-radius: 14px; font-size: 16.5px; font-weight: 700; line-height: 1.35; text-align: center;
+    background: rgba(3,10,22,.88); color: var(--tl-text, #F2F7FD); border: 1px solid var(--tl-line, rgba(140,190,255,.16));
+    opacity: 0; transition: opacity .3s ease, transform .3s ease; pointer-events: none; }
+  .cs-cap.on { opacity: 1; transform: translate(-50%, 0); }
+  .cs-sun { position: absolute; z-index: 5; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; opacity: 0; pointer-events: none;
+    background: radial-gradient(circle, #FFE29A 0%, #F2B33D 45%, rgba(242,179,61,0) 70%); transition: opacity .6s ease; }
+  .cs-sun.on { opacity: 1; animation: tl-pulse 2.4s ease infinite; }
+
+  /* the cargo control screen of this line (gb_hmi) */
+  .cs-hmi { position: relative; height: 216px; }
+  .cs-card-hmi { padding: 10px; }
+  .cs-coach { margin: 0; font-size: 15.5px !important; line-height: 1.45; min-height: 44px; }
+  .cs-count { display: flex; align-items: center; gap: 10px; }
+  .cs-count b { font: 700 22px var(--tl-mono, monospace); color: var(--tl-accent, #2EB6F8); }
+  .cs-count span { font-size: 15px; color: var(--tl-dim, #9DB3CC); flex: 1; }
+  .cs-count .tl-btn { width: auto; flex: 0 0 auto; }
+
+  @media (max-aspect-ratio: 1/1) {
+    .tl-stage { flex: 1 1 62%; }
+    .tl-side { flex: 0 1 38%; }
+    .cs-hmi { height: 176px; }
+  }
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) {
+    .cs-tag { font-size: 11px; padding: 1px 6px; }
+    .cs-tag em { display: none; }
+    .cs-port { width: 44px; height: 44px; }
+    .cs-cap { font-size: 14px; padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye">Create · cargo line · IGC Code 5.5.6</span>Pipe the parts so PM-0001 sends cargo ashore - and so the line stays safe once it is shut in.
+    <small>Tap a round port, then another port, to lay a pipe - or drag from port to port. Tap a pipe to remove it. Then press Run it.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage">
+      <div class="tl-scene cs-scene-in" id="scene" data-aspect="1024:572">
+        <div id="tiles"></div>
+        <svg class="cs-pipes" id="pipes" viewBox="0 0 1000 558.6" preserveAspectRatio="none">
+          <g id="g-stubs"></g><g id="g-pipes"></g><g id="g-fx"></g><path id="rubber" class="cs-rubber" d=""/>
+        </svg>
+        <div id="ports"></div>
+        <div class="cs-sun" id="sun"></div>
+      </div>
+      <div class="cs-cap" id="cap"></div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card dark cs-card-hmi"><div class="cs-hmi" id="hmi"></div></div>
+      <div class="tl-card"><h3>On the screen now</h3><p class="cs-coach" id="coach"></p></div>
+      <div class="tl-card cs-count"><b id="count">0</b><span>pipes laid</span><button type="button" class="tl-btn" id="clear">Remove all</button></div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Run it</button></div>
+</div>
+
+<!-- SOURCES
+     IGC Code 2016 5.5.6: "All pipelines or components which may be isolated in a liquid full condition shall be protected
+       with relief valves for thermal expansion and evaporation." (also quoted in SIGTTO Liquefied Gas Handling Principles 4.1.1)
+     ICS Tanker Safety Guide (Liquefied Gas) 3rd ed. 7.2.7 / Tanker Safety Guide 5.3.7: avoid trapping liquid between adjacent
+       valves - excessive pressure may build up if the trapped liquid heats up.
+     LNG Shipping Knowledge, Pipelines (p.29, p.31): relief valves discharging liquid from the cargo piping discharge into the
+       cargo tanks; pipeline relief valves are not permitted to relieve to mast risers.
+     IGC Code 2016 18.10.2.1: provisions for trapped liquid when the ESD valve and the manual manifold valve are both closed.
+     Simulator tags (LCHS TechSim LPG Trainee Manual 15.x line-ups, 6.4): PL0001 No.1 liquid line valve, PL0126 aft liquid
+       manifold valve (port), PM-0001 cargo pump tank 1, P0006 pump discharge, P0107 / T0107 liquid line, F0001 flow.
+     VERIFY: relief set point 18 bar, AH 16 bar, discharge pressure 8 bar, 420 m³/h and the rate of pressure rise with
+       temperature are demo values only - replace with the ship's / simulator exercise figures.
+     VERIFY: some designs pipe line relief valves to the vent and drain system (IMO model course 1.35, 2.8) - here: to the tank. -->
+<script src="../../gb_lab.js"></script>
+<script src="../../gb_hmi.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'CS1', title: 'Connect the system, then run it', mode: 'self' });
+
+  function $(id) { return document.getElementById(id); }
+  var scene = $('scene'), stage = $('stage'), svgP = $('pipes');
+  var SET = 18, AH = 16; // VERIFY demo set point and high-pressure alarm (bar)
+
+  /* ---- the parts and their ports ---------------------------------------------------
+     line: a port on the cargo line - up to 3 pipes may meet there (a tee). Others take one. */
+  var PM = {
+    P:   { c: 'tank', n: 'PM-0001 discharge', line: 1 },
+    R:   { c: 'tank', n: 'Tank 1 return nozzle' },
+    V1a: { c: 'V1', n: 'PL0001', line: 1 },
+    V1b: { c: 'V1', n: 'PL0001', line: 1 },
+    V2a: { c: 'V2', n: 'PL0126', line: 1 },
+    V2b: { c: 'V2', n: 'PL0126', line: 1 },
+    M:   { c: 'man', n: 'Manifold', line: 1 },
+    RVi: { c: 'rv', n: 'Relief valve inlet' },
+    RVo: { c: 'rv', n: 'Relief valve outlet' },
+    G:   { c: 'pg', n: 'Local gauge' }
+  };
+  var VT = { V1: 'PL0001', V2: 'PL0126' };
+  var TILES = {
+    tank: { img: 'tank', tag: 'T-0001 · PM-0001', what: 'Tank 1, deepwell pump' },
+    V1:   { img: 'valve', tag: 'PL0001', what: 'No.1 liquid line valve' },
+    V2:   { img: 'valve', tag: 'PL0126', what: 'Aft manifold valve (PS)' },
+    rv:   { img: 'relief', tag: 'Line relief valve', what: 'set ' + SET + ' bar (demo)', top: 1, tall: 'topr', short: 'Relief valve' },
+    pg:   { img: 'gauge', tag: 'Local gauge', what: '0 - 40 bar', top: 1, tall: 'side', short: 'Gauge' },
+    man:  { img: 'manifold', tag: 'Aft manifold (PS)', what: 'to shore' }
+  };
+  /* where each flange really is on its photograph (fraction of the 1024x572 photo) and which way
+     it faces - read off the pictures */
+  var PHOTO = 572 / 1024;
+  var FL = {
+    P: ['tank', 0.74, 0.32, 'r'], R: ['tank', 0.245, 0.565, 'l'],
+    V1a: ['V1', 0.33, 0.695, 'l'], V1b: ['V1', 0.665, 0.695, 'r'],
+    V2a: ['V2', 0.33, 0.695, 'l'], V2b: ['V2', 0.665, 0.695, 'r'],
+    M: ['man', 0.02, 0.56, 'l'],
+    RVi: ['rv', 0.5, 0.89, 'd'], RVo: ['rv', 0.613, 0.66, 'r'],
+    G: ['pg', 0.5, 0.91, 'd']
+  };
+  /* two arrangements of the same parts: wide, and tall for a phone held upright.
+     tiles: [cx, cy, width, mirrored] in scene units; a short stub leads from each flange to its port */
+  var LAY = {
+    wide: { W: 1000, H: 558.6, aspect: '1024:572', sun: [540, 110], stub: 26,
+      tiles: { tank: [165, 397.6, 300, 0], V1: [420, 342.4, 230, 0], V2: [640, 342.4, 230, 0], rv: [200, 115, 240, 1], pg: [860, 110, 180, 0], man: [900, 360.7, 200, 0] } },
+    tall: { W: 600, H: 800, aspect: '3:4', sun: [520, 250], stub: 40,
+      tiles: { pg: [115, 75, 200, 0], man: [460, 112.6, 260, 0], V2: [300, 300, 300, 0], rv: [480, 430, 240, 0], V1: [300, 520, 300, 0], tank: [330, 700, 320, 1] } }
+  };
+  var DIR = { l: [-1, 0], r: [1, 0], u: [0, -1], d: [0, 1] };
+  var mode = '', L = null;
+  var pipes = [], sel = null, busy = false, attempts = 0, firstGood = false, mistakes = {}, sureAt = null, timer = 0, lastCfg = null;
+
+  /* ---- the cargo control screen of this line: simulator tags, value over tag, AH lamp ---- */
+  var hm = GBHMI.create($('hmi'), { page: 'CMS · No.1 LIQUID LINE', box: [420, 210] });
+  hm.pipe('A', 'M60 120 V95 H125', 'liquid');
+  hm.pipe('B', 'M165 95 H285', 'liquid');
+  hm.pipe('C', 'M325 95 H412', 'liquid');
+  hm.tank('T-0001', { x: 8, y: 120, w: 104, h: 80, name: 'TANK 1', level: 70, subText: 'propane' });
+  ['PL0001', 'PL0126'].forEach(function (t, i) {
+    var v = hm.valve(t, { x: i ? 305 : 145, y: 95, kind: 'onoff', label: 'below', what: i ? 'Aft liquid manifold valve, port' : 'No.1 liquid line valve' });
+    // a status picture only: the valves are worked by the run, not from this small screen
+    v.g.removeAttribute('data-tap'); v.g.style.pointerEvents = 'none';
+  });
+  hm.readout('P0006', { x: 60, y: 62, unit: 'bar', digits: 1, w: 84 });
+  hm.readout('P0107', { x: 225, y: 62, unit: 'bar', digits: 1, ah: AH, w: 96, alarm: 'liquid line pressure' });
+  hm.readout('T0107', { x: 225, y: 160, unit: '°C', digits: 0, w: 84 });
+  hm.readout('F0001', { x: 374, y: 160, unit: 'm³/h', digits: 0, w: 76 });
+  (function () {
+    var t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', 414); t.setAttribute('y', 82); t.setAttribute('text-anchor', 'end'); t.setAttribute('class', 'hm-tag'); t.textContent = 'SHORE';
+    hm.svg.appendChild(t);
+  })();
+  function plant(o) {
+    hm.set('P0006', o.pA); hm.set('P0107', o.pB); hm.set('T0107', o.t); hm.set('F0001', o.f);
+    hm.setPos('PL0001', o.open ? 100 : 0); hm.setPos('PL0126', o.open ? 100 : 0);
+    ['A', 'B', 'C'].forEach(function (k) { hm.setPipe(k, { live: !!(o.live && o.live[k]), flow: !!(o.flow && o.flow[k]) }); });
+  }
+  function coach(s) { $('coach').textContent = s; }
+  function idle() {
+    plant({ pA: 0, pB: 0, t: 15, f: 0, open: false });
+    coach('PM-0001 stopped, PL0001 and PL0126 shut. ' + (pipes.length ? pipes.length + (pipes.length > 1 ? ' pipes laid on deck.' : ' pipe laid on deck.') : 'No pipework connected yet.'));
+  }
+
+  /* ---- build the scene for one arrangement ------------------------------------------- */
+  function pct(v, of) { return (v / of * 100).toFixed(3) + '%'; }
+  function pickMode() {
+    var r = stage.getBoundingClientRect();
+    return (r.width < 620 && r.height > r.width * 0.9) ? 'tall' : 'wide';
+  }
+  function place(lay) { // flange points and port positions from the tiles
+    var k, fl = {}, ports = {}, flip = { l: 'r', r: 'l', u: 'u', d: 'd' };
+    for (k in FL) {
+      var f = FL[k], t = lay.tiles[f[0]], w = t[2], h = w * PHOTO, fx = t[3] ? 1 - f[1] : f[1], dir = t[3] ? flip[f[3]] : f[3];
+      var x = t[0] - w / 2 + fx * w, y = t[1] - h / 2 + f[2] * h, n = DIR[dir];
+      fl[k] = [x, y];
+      ports[k] = [x + n[0] * lay.stub, y + n[1] * lay.stub, dir];
+    }
+    lay.fl = fl; lay.ports = ports;
+  }
+  function build() {
+    mode = pickMode(); L = LAY[mode];
+    if (!L.ports) place(L);
+    scene.setAttribute('data-aspect', L.aspect);
+    svgP.setAttribute('viewBox', '0 0 ' + L.W + ' ' + L.H);
+    var h = '', k;
+    for (k in L.tiles) {
+      var t = L.tiles[k], d = TILES[k];
+      h += '<div class="cs-at cs-tile' + (t[3] ? ' mirror' : '') + '" id="t-' + k + '" style="left:' + pct(t[0], L.W) + ';top:' + pct(t[1], L.H) +
+        ';width:' + pct(t[2], L.W) + ';height:' + pct(t[2] * PHOTO, L.H) + '">' +
+        '<img src="../img/11_connect_' + d.img + '.jpg" alt="">' +
+        '<span class="cs-tag' + (mode === 'tall' && d.tall ? ' ' + d.tall : (d.top ? ' top' : '')) + '">' + (mode === 'tall' && d.short ? d.short : d.tag) + '<em>' + d.what + '</em></span><span class="cs-badge" id="b-' + k + '"></span>' +
+        (k === 'pg' ? '<span class="cs-dial" id="dial"></span>' : '') + '</div>';
+    }
+    $('tiles').innerHTML = h;
+    h = '';
+    for (k in L.fl) h += '<path class="cs-stub" d="M' + L.fl[k][0].toFixed(1) + ' ' + L.fl[k][1].toFixed(1) + ' L' + L.ports[k][0].toFixed(1) + ' ' + L.ports[k][1].toFixed(1) + '"/>';
+    $('g-stubs').innerHTML = h;
+    h = '';
+    for (k in L.ports) h += '<div class="cs-at cs-port" data-tap="1" data-port="' + k + '" style="left:' + pct(L.ports[k][0], L.W) + ';top:' + pct(L.ports[k][1], L.H) + '"><i></i></div>';
+    $('ports').innerHTML = h;
+    $('sun').style.left = pct(L.sun[0], L.W); $('sun').style.top = pct(L.sun[1], L.H);
+    drawPipes();
+    GBLab.fitScenes();
+  }
+  function portEl(id) { return document.querySelector('[data-port="' + id + '"]'); }
+
+  /* ---- orthogonal pipe routing between two ports ---------------------------------------- */
+  function pinfo(id, other) {
+    var q = L.ports[id], n = q[2];
+    // a branch (relief, gauge, return) joins a line port from above or below, as a tee
+    if (PM[id].line && !PM[other].line) n = L.ports[other][1] < q[1] ? 'u' : 'd';
+    return { x: q[0], y: q[1], n: DIR[n] };
+  }
+  function sgn(v) { return v > 0.5 ? 1 : (v < -0.5 ? -1 : 0); }
+  function route(a, b) {
+    var A = pinfo(a, b), B = pinfo(b, a), S = 24;
+    var a1 = [A.x + A.n[0] * S, A.y + A.n[1] * S], b1 = [B.x + B.n[0] * S, B.y + B.n[1] * S];
+    var pts = [[A.x, A.y], a1], ah = A.n[0] !== 0, bh = B.n[0] !== 0;
+    function same(ax) { // both ends face along the same axis: ax 0 = horizontal, 1 = vertical
+      var o = 1 - ax, na = A.n[ax], nb = B.n[ax], dir = sgn(b1[ax] - a1[ax]), p, m;
+      function P(u, v) { var r = []; r[ax] = u; r[o] = v; return r; }
+      if (na === -nb && (dir === na || dir === 0)) {          // facing each other: a Z
+        m = (a1[ax] + b1[ax]) / 2;
+        pts.push(P(m, a1[o]), P(m, b1[o]));
+      } else if (na === nb) {                                   // facing the same way: a C
+        m = na > 0 ? Math.max(a1[ax], b1[ax]) : Math.min(a1[ax], b1[ax]);
+        if (Math.abs(a1[o] - b1[o]) < 1) { p = a1[o] + 72; pts.push(P(a1[ax], p), P(b1[ax], p)); }
+        else pts.push(P(m, a1[o]), P(m, b1[o]));
+      } else {                                                  // facing away: go round
+        p = Math.abs(a1[o] - b1[o]) > 60 ? (a1[o] + b1[o]) / 2 : Math.max(a1[o], b1[o]) + 72;
+        pts.push(P(a1[ax], p), P(b1[ax], p));
+      }
+    }
+    if (ah && bh) same(0);
+    else if (!ah && !bh) same(1);
+    else if (ah) {
+      if ((sgn(b1[0] - a1[0]) === A.n[0] || sgn(b1[0] - a1[0]) === 0) && (sgn(b1[1] - a1[1]) === -B.n[1] || sgn(b1[1] - a1[1]) === 0)) pts.push([b1[0], a1[1]]);
+      else pts.push([a1[0], b1[1]]);
+    } else {
+      if ((sgn(b1[1] - a1[1]) === A.n[1] || sgn(b1[1] - a1[1]) === 0) && (sgn(b1[0] - a1[0]) === -B.n[0] || sgn(b1[0] - a1[0]) === 0)) pts.push([a1[0], b1[1]]);
+      else pts.push([b1[0], a1[1]]);
+    }
+    pts.push(b1, [B.x, B.y]);
+    var out = [], i;   // drop repeated and in-line points
+    for (i = 0; i < pts.length; i++) {
+      var p = pts[i], q = out[out.length - 1], r = out[out.length - 2];
+      if (q && Math.abs(q[0] - p[0]) < 0.5 && Math.abs(q[1] - p[1]) < 0.5) continue;
+      if (q && r && ((Math.abs(r[0] - q[0]) < 0.5 && Math.abs(q[0] - p[0]) < 0.5) || (Math.abs(r[1] - q[1]) < 0.5 && Math.abs(q[1] - p[1]) < 0.5))) out.pop();
+      out.push(p);
+    }
+    return out;
+  }
+  function pathD(pts) { return pts.map(function (p, i) { return (i ? 'L' : 'M') + Math.round(p[0]) + ' ' + Math.round(p[1]); }).join(' '); }
+
+  /* ---- the network: who is joined to whom ---------------------------------------------- */
+  function deg(id) { var n = 0; pipes.forEach(function (p) { if (p.a === id || p.b === id) n++; }); return n; }
+  function maxPipes(id) { return PM[id].line ? 3 : 1; }
+  function secMap() { // ports joined by pipes form one section of line
+    var par = {}, k;
+    for (k in PM) par[k] = k;
+    function f(x) { while (par[x] !== x) x = par[x] = par[par[x]]; return x; }
+    pipes.forEach(function (p) { par[f(p.a)] = f(p.b); });
+    var m = {};
+    for (k in PM) m[k] = f(k);
+    return m;
+  }
+  function reach(start, openV) { // breadth-first through pipes and through open valves
+    var dist = {}, q = [start];
+    dist[start] = 0;
+    while (q.length) {
+      var n = q.shift(), nb = [];
+      pipes.forEach(function (p) { if (p.a === n) nb.push(p.b); if (p.b === n) nb.push(p.a); });
+      if (n.length === 3 && n.charAt(0) === 'V' && openV[n.slice(0, 2)]) nb.push(n.slice(0, 2) + (n.charAt(2) === 'a' ? 'b' : 'a'));
+      nb.forEach(function (m) { if (dist[m] == null) { dist[m] = dist[n] + 1; q.push(m); } });
+    }
+    return dist;
+  }
+  function sections(s) {
+    var A = s.P, C = s.M, B = null;
+    ['V1a', 'V1b'].forEach(function (p) { ['V2a', 'V2b'].forEach(function (q) {
+      if (deg(p) && s[p] === s[q] && s[p] !== A && s[p] !== C) B = s[p];
+    }); });
+    return { A: A, B: B, C: C };
+  }
+  function onLine(s, id) { for (var k in PM) if (PM[k].line && k !== id && s[k] === s[id] && deg(k)) return true; return false; }
+
+  /* What the pipework does. Graded by physics and rules, not by a stored answer: the pump must
+     reach the manifold through both valves in series, with no open flange on the way. */
+  function analyse() {
+    if (!deg('P')) return { out: 'nopump', port: 'P' };
+    var dist = reach('P', { V1: 1, V2: 1 }), oe = null;
+    ['V1a', 'V1b', 'V2a', 'V2b'].forEach(function (p) { if (!oe && dist[p] != null && !deg(p)) oe = p; });
+    if (oe) return { out: 'openend', port: oe, dist: dist };
+    if (dist.R != null) return { out: 'totank', dist: dist };
+    if (dist.M == null) return { out: 'deadhead', dist: dist };
+    var by = null;
+    ['V1', 'V2'].forEach(function (v) { var o = { V1: 1, V2: 1 }; o[v] = 0; if (!by && reach('P', o).M != null) by = v; });
+    if (by) return { out: 'bypass', valve: by, dist: dist };
+    return { out: 'good', dist: dist };
+  }
+  function config() {
+    var s = secMap(), sec = sections(s), rvOnB = !!(deg('RVi') && sec.B && s.RVi === sec.B);
+    var rvOut = !deg('RVo') ? 'open' : (s.RVo === s.R ? 'tank' : (sec.B && s.RVo === sec.B ? 'self' : 'closed'));
+    var g = deg('G') && onLine(s, 'G');
+    var rvWhere = !deg('RVi') ? 'not fitted' : rvOnB ? 'between PL0001 and PL0126' : s.RVi === sec.A ? 'between the pump and the first valve'
+      : s.RVi === sec.C ? 'between the last valve and the manifold' : 'not on the cargo line';
+    return { s: s, sec: sec, rvOnB: rvOnB, rvOut: rvOut, gOnLine: !!g, gOnB: !!(g && sec.B && s.G === sec.B), rvWhere: rvWhere };
+  }
+
+  /* ---- drawing the pipes ------------------------------------------------------------------- */
+  function drawPipes() {
+    var h = '';
+    pipes.forEach(function (p, i) {
+      var d = pathD(route(p.a, p.b));
+      h += '<path class="cs-pipe-o" d="' + d + '"/><path class="cs-pipe" id="pp' + i + '" d="' + d + '"/><path class="cs-hitp" data-i="' + i + '" d="' + d + '"/>';
+    });
+    $('g-pipes').innerHTML = h;
+    for (var k in PM) {
+      var e = portEl(k), n = deg(k);
+      if (e) e.className = 'cs-at cs-port' + (n ? ' used' : '') + (n > 1 ? ' tee' : '') + (sel === k ? ' sel' : '');
+    }
+    $('count').textContent = pipes.length;
+    if (!busy) idle();
+  }
+  function select(id) { sel = id; drawPipes(); }
+
+  function connect(a, b) {
+    if (a === b) return;
+    if (PM[a].c === PM[b].c) return GBLab.toast('Both ports are on the same part - lay the pipe to another part.', 'hint');
+    for (var i = 0; i < pipes.length; i++) {
+      var p = pipes[i];
+      if ((p.a === a && p.b === b) || (p.a === b && p.b === a)) return GBLab.toast('Those two are already joined.', 'hint');
+    }
+    if (deg(a) >= maxPipes(a) || deg(b) >= maxPipes(b)) {
+      var full = deg(a) >= maxPipes(a) ? a : b;
+      return GBLab.toast(PM[full].line ? 'Three pipes already meet at that port.' : PM[full].n + ' already has its pipe - tap the pipe to remove it first.', 'hint');
+    }
+    pipes.push({ a: a, b: b });
+    GBLab.sound.play([[520, 40, 10, 'sine'], [780, 60, 0, 'sine']], 0.05);
+    drawPipes();
+  }
+  function removePipe(i) {
+    pipes.splice(i, 1);
+    GBLab.sound.play([[300, 60, 0, 'triangle']], 0.05);
+    drawPipes();
+    GBLab.toast('Pipe removed.', 'info');
+  }
+
+  /* ---- touch: tap a port then a port, or drag port to port; tap a pipe to remove it ----------
+     One finger only; a cancelled touch, a second finger or a lost window drops the drag. */
+  function toU(e) {
+    var r = scene.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width * L.W, y: (e.clientY - r.top) / r.height * L.H, k: r.width / L.W };
+  }
+  function nearest(u) { // the nearest port wins - so the touch area is as large as the gaps allow
+    var best = null, bd = 1e9, R = Math.max(40, 34 / u.k), k;
+    for (k in L.ports) {
+      var dx = L.ports[k][0] - u.x, dy = L.ports[k][1] - u.y, d = Math.sqrt(dx * dx + dy * dy);
+      if (d < bd) { bd = d; best = k; }
+    }
+    return bd <= R ? best : null;
+  }
+  var down = null, cand = null, tips = 0;
+  function setCand(id) {
+    if (cand === id) return;
+    if (cand && portEl(cand)) portEl(cand).classList.remove('cand');
+    cand = id;
+    if (cand && portEl(cand)) portEl(cand).classList.add('cand');
+  }
+  function dropDown() { down = null; $('rubber').setAttribute('d', ''); setCand(null); }
+  scene.addEventListener('pointerdown', function (e) {
+    if (down) { dropDown(); return; }                       // a second finger: drop everything
+    if (busy) { GBLab.toast('Wait - the system is running.', 'hint'); return; }
+    var u = toU(e), port = nearest(u), hp = e.target.closest ? e.target.closest('.cs-hitp') : null;
+    if (port && hp) { // on a pipe: the port only wins when the finger is on its ring
+      var q = L.ports[port], dx = (q[0] - u.x) * u.k, dy = (q[1] - u.y) * u.k;
+      if (dx * dx + dy * dy > 26 * 26) port = null;
+    }
+    down = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false, port: port, pipe: !port && hp ? +hp.getAttribute('data-i') : null };
+    if (port) e.preventDefault();
+  });
+  document.addEventListener('pointermove', function (e) {
+    if (!down || e.pointerId !== down.id || !down.port) return;
+    var dx = e.clientX - down.x, dy = e.clientY - down.y;
+    if (!down.moved && dx * dx + dy * dy < 81) return;
+    down.moved = true;
+    var u = toU(e), q = L.ports[down.port], t = nearest(u);
+    $('rubber').setAttribute('d', 'M' + q[0] + ' ' + q[1] + ' L' + Math.round(u.x) + ' ' + Math.round(u.y));
+    setCand(t && t !== down.port ? t : null);
+  });
+  document.addEventListener('pointerup', function (e) {
+    if (!down || e.pointerId !== down.id) return;
+    var d = down;
+    dropDown();
+    if (busy) return;
+    if (d.port) {
+      if (d.moved) {
+        var t = nearest(toU(e));
+        sel = null;
+        if (t && t !== d.port) connect(d.port, t); else drawPipes();
+      } else if (!sel) {
+        select(d.port);
+        if (tips < 2) { tips++; GBLab.toast('Now tap the port this pipe goes to.', 'info'); }
+      } else if (sel === d.port) select(null);
+      else { var a = sel; sel = null; connect(a, d.port); drawPipes(); }
+    } else if (d.pipe != null) {
+      var dx = e.clientX - d.x, dy = e.clientY - d.y;
+      if (dx * dx + dy * dy < 81 && pipes[d.pipe]) removePipe(d.pipe);
+    } else if (sel) select(null);
+  });
+  document.addEventListener('pointercancel', function (e) { if (down && e.pointerId === down.id) dropDown(); });
+  window.addEventListener('blur', dropDown);
+
+  $('clear').addEventListener('click', function () {
+    if (busy || !pipes.length || GBLab.sheetOpen && GBLab.sheetOpen()) return;
+    GBLab.show({ title: 'Remove all ' + pipes.length + ' pipes?', text: 'The parts stay where they are.',
+      buttons: [{ label: 'Remove all', fn: function () { pipes = []; sel = null; drawPipes(); } }, { label: 'Keep them', primary: false }] });
+  });
+
+  /* ---- the run ----------------------------------------------------------------------------- */
+  function badge(k, txt, cls) { var b = $('b-' + k); if (!b) return; b.textContent = txt || ''; b.className = 'cs-badge' + (txt ? ' on ' + (cls || '') : ''); }
+  function cap(txt) { var c = $('cap'); c.textContent = txt || ''; c.className = 'cs-cap' + (txt ? ' on' : ''); }
+  function gauge(p) { // the local gauge reads its own section only
+    var d = $('dial');
+    if (!d) return;
+    if (p == null) { d.className = 'cs-dial'; return; }
+    d.textContent = p >= 40 ? '> 40 bar' : p.toFixed(1) + ' bar'; d.className = 'cs-dial on' + (p >= AH ? ' hi' : '');
+  }
+  function pipeCls(i, cls) { var e = $('pp' + i); if (e) e.setAttribute('class', 'cs-pipe' + (cls ? ' ' + cls : '')); }
+  function flowOn(i, from, cls) {
+    var p = pipes[i], pts = route(p.a, p.b);
+    if (from !== p.a) pts = pts.slice().reverse();
+    var e = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    e.setAttribute('class', 'cs-flow' + (cls ? ' ' + cls : ''));
+    e.setAttribute('d', pathD(pts));
+    $('g-fx').appendChild(e);
+  }
+  function fxAt(x, y, burst) { // a cold vapour cloud rolling out low - propane vapour is heavier than air
+    var h = '<g transform="translate(' + x + ' ' + y + ')">' +
+      (burst ? '<circle class="cs-flash" r="34"/>' : '') +
+      '<ellipse class="cs-cloud" cx="0" cy="10" rx="46" ry="26"/>' +
+      '<ellipse class="cs-cloud" cx="-40" cy="44" rx="70" ry="24" style="animation-delay:.3s"/>' +
+      '<ellipse class="cs-cloud" cx="44" cy="52" rx="80" ry="22" style="animation-delay:.6s"/></g>';
+    $('g-fx').insertAdjacentHTML('beforeend', h);
+  }
+  function midOf(i) { // the middle of a pipe, where it gives way
+    var pts = route(pipes[i].a, pipes[i].b), len = 0, j, seg = [];
+    for (j = 1; j < pts.length; j++) { var l = Math.abs(pts[j][0] - pts[j - 1][0]) + Math.abs(pts[j][1] - pts[j - 1][1]); seg.push(l); len += l; }
+    var half = len / 2;
+    for (j = 1; j < pts.length; j++) {
+      if (half <= seg[j - 1]) { var f = seg[j - 1] ? half / seg[j - 1] : 0; return [pts[j - 1][0] + (pts[j][0] - pts[j - 1][0]) * f, pts[j - 1][1] + (pts[j][1] - pts[j - 1][1]) * f, len]; }
+      half -= seg[j - 1];
+    }
+    return [pts[0][0], pts[0][1], 0];
+  }
+
+  function ask() {
+    if (busy) return;
+    if (!pipes.length) return GBLab.toast('Lay the pipes first - tap a port, then another port.', 'hint');
+    GBLab.sure(function (lvl) { if (!busy) { sureAt = lvl; run(); } });
+  }
+
+  function run() {
+    busy = true; attempts++; sel = null; drawPipes();
+    var an = analyse();
+    GBLab.go('Running...', null);
+    badge('V1', 'OPEN', 'open'); badge('V2', 'OPEN', 'open'); badge('tank', 'PM-0001 RUNNING', 'run');
+    cap('PM-0001 started - PL0001 and PL0126 open.');
+    var dist = an.dist || {};
+    pipes.forEach(function (p, i) {
+      if (dist[p.a] == null || dist[p.b] == null) return;
+      var branch = /^(RVi|RVo|G)$/.test(p.a) || /^(RVi|RVo|G)$/.test(p.b);
+      pipeCls(i, 'liq');
+      if (!branch) flowOn(i, dist[p.a] <= dist[p.b] ? p.a : p.b);
+    });
+    var gOn = deg('G') && dist.G != null, t = 0, flow = 0, pd = 8;
+    var good = an.out === 'good' || an.out === 'bypass';
+    if (an.out === 'nopump' || an.out === 'openend') {
+      var q = L.ports[an.port];
+      setTimeout(function () { fxAt(q[0], q[1], false); GBLab.sound.play([[160, 500, 0, 'sawtooth']], 0.04); hm.alarm('gas', 'GAS DETECTED - CARGO DECK'); }, 500);
+    }
+    timer = setInterval(function () {
+      t++;
+      if (good) flow = Math.min(420, flow + 90);
+      if (an.out === 'totank') flow = 0;
+      if (an.out === 'deadhead') pd = Math.min(16, pd + 1.6);
+      var lineB = good || an.out === 'totank';
+      plant({ pA: pd, pB: lineB ? 8 : 0, t: 15, f: flow, open: true,
+        live: { A: an.out !== 'nopump', B: lineB, C: good }, flow: { A: an.out !== 'nopump' && an.out !== 'deadhead', B: good, C: good } });
+      coach(an.out === 'deadhead' ? 'PM-0001 running against a closed end: P0006 climbing, F0001 zero.'
+        : 'PM-0001 running, PL0001 and PL0126 open. F0001 ' + flow + ' m³/h ashore.');
+      gauge(gOn ? (an.out === 'deadhead' ? pd : 8) : (deg('G') ? 0 : null));
+      if (t >= (an.out === 'good' ? 7 : 6)) {
+        clearInterval(timer);
+        if (an.out === 'good') setTimeout(phase2, 500); else stop1(an);
+      }
+    }, 330);
+  }
+
+  var WHAT = {
+    nopump: { tag: 'Release on deck', title: 'The pump discharged into nothing', img: '01_drain_leak.jpg',
+      text: 'Nothing was connected to the PM-0001 discharge. The pump pushed liquid propane straight out of the open flange. It boiled off into a cold white cloud that rolled along the deck - propane vapour is heavier than air - and the gas detection alarm went.' },
+    openend: { tag: 'Release on deck', title: 'Cargo came out of an open flange', img: '01_drain_leak.jpg',
+      text: 'With the valve open, the line ended at a flange with nothing on it (<b>{p}</b>). Liquid propane sprayed out, a heavy vapour cloud spread low over the deck and the gas detection alarm went. Every open end on a cargo line is a release waiting to happen.' },
+    totank: { tag: 'Wrong route', title: 'The cargo went back into the tank', img: '',
+      text: 'The tank return nozzle was piped onto the cargo line, so the pump circulated cargo back into its own tank instead of sending it ashore - through a route that no valve controls. The return is for the relief valve only.' },
+    deadhead: { tag: 'Pump tripped', title: 'The pump pushed against a closed end', img: '',
+      text: 'The line from PM-0001 never reached the manifold. P0006 climbed with nowhere for the cargo to go, and the pump tripped on high pressure.' },
+    bypass: { tag: 'No isolation', title: '{v} was not in the cargo route', img: '',
+      text: 'Cargo reached shore, but a pipe went round <b>{v}</b> (or it was not in the line at all), so shutting it would not stop the flow. Both valves must sit in the line one after the other, so that either of them can stop it.' }
+  };
+  function stop1(an) {
+    var w = WHAT[an.out], v = an.valve ? VT[an.valve] : '';
+    finishRun(false, an.out);
+    var o = { tag: w.tag, kind: 'no', title: w.title.replace('{v}', v),
+      text: w.text.replace('{p}', an.port ? PM[an.port].n : '').replace('{v}', v), buttons: againButtons() };
+    if (w.img) o.img = '../img/' + w.img;
+    GBLab.show(o);
+  }
+
+  /* phase two plays by itself: the transfer ends, both valves shut, the sun warms the line
+     (IGC Code 5.5.6; ICS TSG(LG) 7.2.7 - trapped liquid that heats up builds excessive pressure) */
+  function phase2() {
+    var c = config(), s = c.s, B = c.sec.B, outcome;
+    outcome = !c.rvOnB ? 'burst' : c.rvOut === 'tank' ? 'lift' : c.rvOut === 'open' ? 'deck' : c.rvOut === 'self' ? 'burst' : 'wrongout';
+    $('g-fx').innerHTML = '';
+    badge('V1', 'SHUT', 'shut'); badge('V2', 'SHUT', 'shut'); badge('tank', '');
+    cap('Discharge finished: PM-0001 stopped, PL0001 and PL0126 shut. The sun warms the deck line...');
+    $('sun').className = 'cs-sun on';
+    var bPipes = [];
+    pipes.forEach(function (p, i) {
+      if (s[p.a] === B) { pipeCls(i, 'warm'); if (PM[p.a].line && PM[p.b].line) bPipes.push(i); }
+      else pipeCls(i, '');
+    });
+    var t = 0, temp = 15, P = 8, lifted = false, gs = deg('G') ? s.G : null;
+    function gRead() { return gs == null || !c.gOnLine ? (deg('G') ? 0 : null) : gs === B ? P : (gs === c.sec.A ? 2 : 0); }
+    function show() {
+      plant({ pA: 2, pB: Math.min(P, 99), t: temp, f: 0, open: false, live: { B: true } });
+      gauge(gRead());
+    }
+    show();
+    coach('PL0001 and PL0126 shut with liquid between them. T0107 rising in the sun.');
+    setTimeout(function () {
+      timer = setInterval(function () {
+        t++;
+        temp = Math.min(42, temp + 2.5);
+        if (outcome === 'burst') P += 3.4;
+        else if (!lifted) { P = Math.min(SET, P + 3.4); if (P >= SET) lift(); }
+        else P = SET - 0.4 + (t % 2) * 0.5;
+        show();
+        if (P > AH && !lifted) coach('P0107 above ' + AH + ' bar - high-pressure alarm. The trapped liquid is expanding.');
+        if (outcome === 'burst' && P >= 42) {
+          clearInterval(timer);
+          var m = bPipes.length ? midOf(bPipes[0]) : null;
+          bPipes.forEach(function (i) { var x = midOf(i); if (m && x[2] > m[2]) m = x; });
+          if (m) fxAt(m[0], m[1], true);
+          GBLab.sound.play([[110, 260, 0, 'sawtooth'], [70, 500, 0, 'square']], 0.08);
+          hm.alarm('gas', 'GAS DETECTED - CARGO DECK');
+          coach('Line rupture between PL0001 and PL0126 - liquid propane on deck.');
+          cap('');
+          return setTimeout(function () { stop2(outcome, c); }, 1300);
+        }
+        if (outcome !== 'burst' && t >= 11) { clearInterval(timer); cap(''); stop2(outcome, c); }
+      }, 340);
+    }, 1400);
+    function lift() {
+      lifted = true;
+      badge('rv', 'LIFTING', 'lift');
+      coach('Line relief valve lifting at ' + SET + ' bar' + (outcome === 'lift' ? ' - liquid going back to tank 1.' : '.'));
+      GBLab.sound.play([[340, 500, 0, 'sawtooth']], 0.025);
+      pipes.forEach(function (p, i) {
+        if (p.a === 'RVo' || p.b === 'RVo') { flowOn(i, 'RVo', 'relief'); pipeCls(i, 'liq'); }
+        else if (outcome === 'wrongout' && s[p.a] === s.RVo) pipeCls(i, 'warm');
+      });
+      if (outcome === 'deck') { var q = L.ports.RVo; fxAt(q[0], q[1], false); hm.alarm('gas', 'GAS DETECTED - CARGO DECK'); }
+    }
+  }
+
+  function stop2(outcome, c) {
+    var good = outcome === 'lift';
+    finishRun(good, outcome);
+    var gNote = c.gOnB ? ' Your local gauge showed the pressure rise.' :
+      ' Your local gauge ' + (c.gOnLine ? 'was on another section, so it showed nothing of this.' : 'was not on the line, so nobody on deck saw the pressure rise.');
+    if (good) {
+      if (attempts === 1) firstGood = true;
+      GBLab.go('See my result', result);
+      return GBLab.show({ tag: 'Relief valve lifted', kind: 'ok', title: 'The trapped liquid went safely back to the tank',
+        text: 'With PL0001 and PL0126 shut, the liquid between them had nowhere to expand. The sun warmed it, P0107 rose to the relief valve set point, and the valve lifted a little liquid back into tank 1. The line held - as IGC Code 5.5.6 intends.' + gNote +
+          (attempts > 1 ? ' It took you ' + attempts + ' runs.' : ' First run.'),
+        buttons: [{ label: 'See my result', fn: result }] });
+    }
+    var T = {
+      burst: { tag: 'Line rupture', title: 'The trapped liquid burst the line', img: '',
+        text: 'Liquid propane was shut in between PL0001 and PL0126. As the sun warmed it, it expanded with nowhere to go and the pressure rose far beyond what the line is built for. A flange gasket blew out and liquid propane sprayed onto the deck.' + gNote +
+          ' IGC Code 5.5.6: every section that can be isolated full of liquid needs a relief valve. Yours was ' + c.rvWhere + (c.rvOut === 'self' ? ', and its outlet led back into the same section' : '') + '.' },
+      deck: { tag: 'Relief to deck', title: 'The relief valve lifted - onto the deck', img: '01_drain_leak.jpg',
+        text: 'The relief valve was in the right place and lifted at its set point - but its outlet was open. Liquid propane came out on deck and a cold, heavy vapour cloud spread low along it. A line relief valve discharges back into a cargo tank.' },
+      wrongout: { tag: 'Relief into a shut line', title: 'The relief valve lifted into a closed line', img: '',
+        text: 'The relief valve lifted, but its outlet led into another closed part of the system, not back to the tank. That part filled and its pressure rose too. A line relief valve discharges back into a cargo tank.' }
+    }[outcome];
+    var o = { tag: T.tag, kind: 'no', title: T.title, text: T.text, buttons: againButtons() };
+    if (T.img) o.img = '../img/' + T.img;
+    GBLab.show(o);
+  }
+
+  function finishRun(ok, outcome) {
+    if (sureAt) { GBLab.sureNote(sureAt, ok); sureAt = null; }
+    if (!ok) mistakes[outcome] = true;
+    lastCfg = config();
+  }
+  function againButtons() {
+    var b = [{ label: 'Back to the pipework', fn: reset }];
+    if (attempts >= 3) b.push({ label: 'See my result', primary: false, fn: function () { reset(); result(); } });
+    return b;
+  }
+  function reset() {
+    clearInterval(timer);
+    busy = false;
+    $('g-fx').innerHTML = '';
+    ['V1', 'V2', 'tank', 'rv'].forEach(function (k) { badge(k, ''); });
+    cap(''); $('sun').className = 'cs-sun';
+    hm.clear('gas'); hm.clear('P0107');
+    gauge(deg('G') ? 0 : null);
+    if (pickMode() !== mode) build(); else drawPipes();
+    GBLab.go('Run it', ask);
+  }
+
+  var finished = false;
+  function result() {
+    if (finished) return;
+    finished = true;
+    var c = lastCfg || config();
+    var routeOk = !mistakes.deadhead && !mistakes.bypass && !mistakes.totank && analyse().out === 'good';
+    var openOk = !mistakes.nopump && !mistakes.openend;
+    var rvOk = c.rvOnB && !mistakes.burst;
+    var outOk = c.rvOut === 'tank' && !mistakes.deck && !mistakes.wrongout;
+    GBLab.finish({ items: [
+      { t: 'One route: PM-0001, PL0001, PL0126, manifold', ok: routeOk, a: routeOk ? 'complete route' : 'route broken, bypassed or back to the tank',
+        c: 'pump → PL0001 → PL0126 → manifold', w: 'Cargo goes only where a pipe leads. Both valves in the line, one after the other, so either one can stop the flow.' },
+      { t: 'No open ends - the pump never discharged into nothing', ok: openOk, a: openOk ? 'no open flange' : 'an open flange on the route',
+        c: 'every flange on the route connected', w: 'An unconnected flange on a line under pressure is a release of liquid cargo onto the deck.' },
+      { t: 'Relief valve on the section that can be trapped', ok: rvOk, a: c.rvWhere, c: 'between PL0001 and PL0126',
+        w: 'IGC Code 5.5.6: every line that can be isolated full of liquid has a relief valve. Trapped liquid that warms expands and can burst the line.' },
+      { t: 'Relief valve outlet led back to the tank', ok: outOk, a: c.rvOut === 'tank' ? 'to the tank' : (c.rvOut === 'open' ? 'left open' : 'into a closed line'),
+        c: 'back into the cargo tank', w: 'Liquid a line relief valve lets go is discharged into a cargo tank - not onto the deck, not into another shut line.' },
+      { t: 'Local pressure gauge on the cargo line', ok: c.gOnLine, a: c.gOnB ? 'between PL0001 and PL0126' : (c.gOnLine ? 'on the line' : 'not on the line'),
+        c: 'on the line - most useful between the valves', w: 'A gauge where the liquid can be trapped shows the pressure rise before anything lifts or bursts.' },
+      { t: 'Safe at the first run', ok: firstGood, a: attempts + (attempts === 1 ? ' run' : ' runs'), c: '1 run',
+        w: 'On board the first run is the real one - check the pipework before the pump starts.' }
+    ] });
+  }
+
+  window.addEventListener('resize', function () { if (!busy && pickMode() !== mode) build(); });
+  build();
+  GBLab.go('Run it', ask);
+  setTimeout(function () { GBLab.hand('connect-ports', portEl('P'), portEl('V1a')); }, 700);
+})();
+</script>
+</body>
+</html>

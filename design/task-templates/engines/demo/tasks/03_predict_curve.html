@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>PC1 — Predict, then run</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<!-- SOURCES
+     Simulator trainee manual (Wärtsilä LCHS TechSim LPG Tanker):
+       §7.1    the refrigeration capacity of the cargo compressors depends on the suction pressure / temperature
+               and on the condensing (sea water) temperature - so the fall in case 2 slows as the pressure falls
+       §15.7.1 the plant keeps the cargo below the relief valve set pressure - without it the pressure rises (case 1)
+       §15.6   "on no account should relief valves be allowed to lift"
+     ICS Tanker Safety Guide (Liquefied Gas) §6.8: boil-off must be handled to stay below the relief valve set pressure.
+     Hand Out §3.1.1: independent type A tanks (fully refrigerated LPG), MARVS below 0.7 bar.
+     VERIFY: the numbers (start 120 / 230 mbar, AH 200, AL 50, relief valves 250 mbar) and the exact shape of both
+     simulated curves are generic; the operator replaces them with the course simulator's own trend. -->
+<style>
+  /* the grid is a ship's own trend screen, drawn in CSS pixels (viewBox = stage size) */
+  .tl-stage > svg.pc-chart { z-index: 1; }
+  .pc-chart { touch-action: none; cursor: crosshair; }
+  .pc-chart text { font-family: var(--tl-font, sans-serif); }
+  .pc-plot { fill: rgba(3,10,22,.45); }
+  .pc-col { fill: rgba(140,190,255,.05); }
+  .pc-grid { stroke: rgba(140,190,255,.14); stroke-width: 1; }
+  .pc-tick { font-size: 14px; fill: var(--tl-dim, #9DB3CC); font-weight: 600; }
+  .pc-lim { stroke-width: 2; }
+  .pc-lim.relief { stroke: var(--tl-bad, #FF6B5E); }
+  .pc-lim.alarm { stroke: var(--tl-amber, #F2B33D); stroke-dasharray: 8 6; }
+  .pc-lim.low { stroke: var(--tl-bad, #FF6B5E); stroke-dasharray: 8 6; }
+  .pc-lbl { font-size: 14.5px; font-weight: 800; }
+  .pc-lbl.relief, .pc-lbl.low { fill: var(--tl-bad, #FF6B5E); }
+  .pc-lbl.alarm { fill: var(--tl-amber, #F2B33D); }
+  .pc-mine { fill: none; stroke: var(--tl-text, #F2F7FD); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+  .pc-pt { fill: var(--tl-text, #F2F7FD); stroke: #0A1A33; stroke-width: 3; }
+  .pc-start { fill: var(--tl-dim, #9DB3CC); stroke: #0A1A33; stroke-width: 3; }
+  .pc-hit { fill: rgba(0,0,0,0); cursor: crosshair; }
+  .pc-empty { fill: none; stroke: var(--tl-faint, #6E86A3); stroke-width: 2; stroke-dasharray: 4 4; }
+  .pc-trueglow { fill: none; stroke: var(--tl-accent, #2EB6F8); stroke-width: 14; stroke-opacity: .2; stroke-linecap: round; stroke-linejoin: round; }
+  .pc-true { fill: none; stroke: var(--tl-accent, #2EB6F8); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+  .pc-gap { fill: rgba(242,179,61,.28); }
+  .pc-ghost { font-size: 18px; font-weight: 700; fill: var(--tl-faint, #6E86A3); }
+  .pc-key { display: grid; grid-template-columns: 34px 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .pc-key i { display: block; height: 5px; border-radius: 3px; }
+  .pc-key i.mine { background: var(--tl-text, #F2F7FD); }
+  .pc-key i.true { background: var(--tl-accent, #2EB6F8); box-shadow: 0 0 10px var(--tl-accent, #2EB6F8); }
+  .pc-key i.gap { height: 16px; border-radius: 4px; background: rgba(242,179,61,.35); }
+  .pc-case p { font-size: 17px; }
+  .pc-clear { justify-content: center; }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask" id="ask"><span class="tl-eye">Live system · Predict the trend</span>Predict: how will the tank pressure move over the next 24 hours?
+    <small>Draw the line with your finger, or tap one point in each time column. Then press Run it.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage">
+      <svg class="tl-fill pc-chart" id="chart" viewBox="0 0 900 560" aria-label="Pressure prediction grid"></svg>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card pc-case">
+        <h3 id="case-h">Case 1 of 2</h3>
+        <p id="case-p"></p>
+      </div>
+      <div class="tl-card dark">
+        <h3>Your prediction</h3>
+        <div class="tl-read">
+          <span>Start</span><b id="r-s">–</b>
+          <span>Your value at 24 h</span><b id="r-e">–</b>
+          <span>Columns set</span><b id="r-n">0 of 6</b>
+        </div>
+      </div>
+      <div class="tl-card">
+        <div class="pc-key">
+          <i class="mine"></i><span>Your line</span>
+          <i class="true"></i><span>What really happens</span>
+          <i class="gap"></i><span>The gap between them</span>
+        </div>
+      </div>
+      <button type="button" class="tl-btn pc-clear" id="clear">Clear my line</button>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Run it</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'PC1', title: 'Predict, then run', mode: 'self' });
+
+  var TOP = 320, RELIEF = 250, HIGH = 200, LOW = 50, HOURS = [0, 4, 8, 12, 16, 20, 24];
+
+  /* The simulated curves (values at 0, 4 ... 24 h). Grading compares the trainee's line with
+     these by geometry - direction, end value, shape - so it is physics, not a hidden answer key. */
+  var CASES = [
+    { text: 'A fully refrigerated propane tank at 120 mbar. The reliquefaction plant is stopped. The ship is sailing into the tropics: sea and air get warmer every hour.',
+      truth: [120, 140, 165, 195, 228, 250, 250], dir: 1, img: 'vent.jpg',
+      okTitle: 'Rising, then held at the relief valve', title: 'The pressure climbed until the relief valves lifted',
+      why: 'With no reliquefaction, heat leaking in keeps boiling cargo and the vapour has nowhere to go, so the pressure rises - a little faster as the sea warms. At ' + RELIEF + ' mbar the relief valves lift and hold it there by venting cargo up the mast. The flat top is cargo being lost.' },
+    { text: 'The same tank at 230 mbar after a hot day. Both compressors are started at full load. The sea is temperate.',
+      truth: [230, 182, 148, 124, 108, 98, 92], dir: -1, img: 'compressors.jpg',
+      okTitle: 'Falling fast, then levelling off', title: 'The pressure fell fast, then levelled off',
+      why: 'The compressors take vapour off faster than the cargo boils, so the pressure falls. As it falls the vapour gets thinner, each compressor stroke moves less of it, and the fall slows until removal matches the heat coming in. Left running long enough the tank is over-cooled - watch the low limit.' }
+  ]; // VERIFY: curve shapes and values
+
+  var IMG = '../img/03_predict_curve_';
+  /* load a photograph first; a sheet gets it only if it exists, so a missing file never shows as a hole */
+  function pic(src, fn) {
+    var im = new Image(), done = false;
+    function out(v) { if (!done) { done = true; fn(v); } }
+    im.onload = function () { out(src); };
+    im.onerror = function () { out(null); };
+    setTimeout(function () { out(null); }, 1500);
+    im.src = src;
+  }
+
+  var round = 0, pts = [], running = false, revealed = false, sureAt = null, items = [], frac = 0;
+
+  var svg = document.getElementById('chart'), stage = document.getElementById('stage');
+  var G = {};
+
+  /* monotone cubic through (xs, ys) - a smooth line with no overshoot */
+  function smooth(xs, ys) {
+    var n = xs.length, d = [], m = [], i;
+    for (i = 0; i < n - 1; i++) d.push((ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]));
+    m[0] = d[0]; m[n - 1] = d[n - 2];
+    for (i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;
+    for (i = 0; i < n - 1; i++) {
+      if (d[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+      var a = m[i] / d[i], b = m[i + 1] / d[i], s = a * a + b * b;
+      if (s > 9) { var t = 3 / Math.sqrt(s); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i]; }
+    }
+    return function (x) {
+      var k = 0;
+      while (k < n - 2 && x > xs[k + 1]) k++;
+      var h = xs[k + 1] - xs[k], t = (x - xs[k]) / h, t2 = t * t, t3 = t2 * t;
+      return (2 * t3 - 3 * t2 + 1) * ys[k] + (t3 - 2 * t2 + t) * h * m[k] + (-2 * t3 + 3 * t2) * ys[k + 1] + (t3 - t2) * h * m[k + 1];
+    };
+  }
+  function sample(f, from, to) { var a = [], t; for (t = from; t <= to + 1e-9; t += 0.25) a.push([t, f(t)]); return a; }
+
+  function mine() { // the trainee's curve, as far as it goes without a gap
+    var xs = [0], ys = [CASES[round].truth[0]], i;
+    for (i = 1; i < HOURS.length; i++) { if (pts[i] == null) break; xs.push(HOURS[i]); ys.push(pts[i]); }
+    return xs.length > 1 ? { f: smooth(xs, ys), to: xs[xs.length - 1] } : null;
+  }
+
+  function draw() {
+    var w = stage.clientWidth || 900, h = stage.clientHeight || 560, narrow = w < 620;
+    var L = narrow ? 42 : 62, R = narrow ? 26 : 26, T = 24, B = 36, pw = w - L - R, ph = h - T - B;
+    G = { L: L, T: T, pw: pw, ph: ph };
+    function X(t) { return L + t / 24 * pw; }
+    function Y(p) { return T + (1 - p / TOP) * ph; }
+    G.X = X; G.Y = Y;
+    svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+    var s = '<rect class="pc-plot" x="' + L + '" y="' + T + '" width="' + pw + '" height="' + ph + '"/>', i, p;
+    for (i = 1; i < HOURS.length; i += 2) s += '<rect class="pc-col" x="' + X(HOURS[i] - 2) + '" y="' + T + '" width="' + (X(4) - X(0)) + '" height="' + ph + '"/>';
+    for (p = 0; p <= 300; p += 50) {
+      s += '<line class="pc-grid" x1="' + L + '" y1="' + Y(p) + '" x2="' + (L + pw) + '" y2="' + Y(p) + '"/>';
+      s += '<text class="pc-tick" x="' + (L - 8) + '" y="' + (Y(p) + 5) + '" text-anchor="end">' + p + '</text>';
+    }
+    for (i = 0; i < HOURS.length; i++) {
+      s += '<line class="pc-grid" x1="' + X(HOURS[i]) + '" y1="' + T + '" x2="' + X(HOURS[i]) + '" y2="' + (T + ph) + '"/>';
+      s += '<text class="pc-tick" x="' + X(HOURS[i]) + '" y="' + (h - 10) + '" text-anchor="middle">' + HOURS[i] + ' h</text>';
+    }
+    s += '<line class="pc-lim relief" x1="' + L + '" y1="' + Y(RELIEF) + '" x2="' + (L + pw) + '" y2="' + Y(RELIEF) + '"/>';
+    s += '<text class="pc-lbl relief" x="' + (L + 10) + '" y="' + (Y(RELIEF) - 8) + '">Relief valves set ' + RELIEF + '</text>';
+    s += '<line class="pc-lim alarm" x1="' + L + '" y1="' + Y(HIGH) + '" x2="' + (L + pw) + '" y2="' + Y(HIGH) + '"/>';
+    s += '<text class="pc-lbl alarm" x="' + (L + 10) + '" y="' + (Y(HIGH) - 8) + '">High alarm ' + HIGH + '</text>';
+    s += '<line class="pc-lim low" x1="' + L + '" y1="' + Y(LOW) + '" x2="' + (L + pw) + '" y2="' + Y(LOW) + '"/>';
+    s += '<text class="pc-lbl low" x="' + (L + 10) + '" y="' + (Y(LOW) + 22) + '">Low limit ' + LOW + '</text>';
+    s += '<text class="pc-tick" x="' + (L - 8) + '" y="' + (T - 8) + '" text-anchor="end">mbar</text>';
+
+    var c = CASES[round], m = mine(), set = 0;
+    // reveal: the gap first, then the true line over it
+    if (revealed && m) {
+      var tf = smooth(HOURS, c.truth), a = sample(m.f, 0, 24), b = sample(tf, 0, 24), poly = '';
+      a.forEach(function (q) { poly += X(q[0]).toFixed(1) + ',' + Y(q[1]).toFixed(1) + ' '; });
+      b.reverse().forEach(function (q) { poly += X(q[0]).toFixed(1) + ',' + Y(q[1]).toFixed(1) + ' '; });
+      s += '<polygon class="pc-gap" points="' + poly + '" style="opacity:' + Math.min(1, frac * 1.4).toFixed(2) + '"/>';
+    }
+    if (m) {
+      var d = '';
+      sample(m.f, 0, m.to).forEach(function (q, k) { d += (k ? ' L' : 'M') + X(q[0]).toFixed(1) + ' ' + Y(Math.max(0, Math.min(TOP, q[1]))).toFixed(1); });
+      s += '<path class="pc-mine" d="' + d + '"/>';
+    }
+    if (revealed) {
+      var tf2 = smooth(HOURS, c.truth), dt = '';
+      sample(tf2, 0, 24 * frac).forEach(function (q, k) { dt += (k ? ' L' : 'M') + X(q[0]).toFixed(1) + ' ' + Y(q[1]).toFixed(1); });
+      if (dt) s += '<path class="pc-trueglow" d="' + dt + '"/><path class="pc-true" d="' + dt + '"/>';
+    }
+    s += '<circle class="pc-start" cx="' + X(0) + '" cy="' + Y(c.truth[0]) + '" r="9"/>';
+    for (i = 1; i < HOURS.length; i++) {
+      if (pts[i] != null) { set++; s += '<circle class="pc-pt" cx="' + X(HOURS[i]) + '" cy="' + Y(pts[i]) + '" r="10"/>'; }
+      else s += '<circle class="pc-empty" cx="' + X(HOURS[i]) + '" cy="' + Y(c.truth[0]) + '" r="10"/>';
+      // invisible anchors so the hand can show the gesture
+      s += '<rect id="pc-a' + i + '" x="' + (X(HOURS[i]) - 1) + '" y="' + (Y(160) - 1) + '" width="2" height="2" fill="none"/>';
+    }
+    // one tap area per time column - the tap-per-column way, as big as the column itself
+    if (!revealed) for (i = 1; i < HOURS.length; i++) {
+      var x0 = X(HOURS[i] - 2), x1 = Math.min(X(HOURS[i] + 2), w);
+      s += '<rect class="pc-hit" data-tap="1" data-col="' + i + '" x="' + x0.toFixed(1) + '" y="' + T + '" width="' + (x1 - x0).toFixed(1) + '" height="' + ph + '"/>';
+    }
+    if (!set && !revealed) s += '<text class="pc-ghost" x="' + (L + pw / 2) + '" y="' + (T + ph * 0.86) + '" text-anchor="middle">Draw here</text>';
+    svg.innerHTML = s;
+
+    document.getElementById('r-s').innerHTML = c.truth[0] + ' <small>mbar</small>';
+    document.getElementById('r-e').innerHTML = pts[6] != null ? pts[6] + ' <small>mbar</small>' : '–';
+    document.getElementById('r-n').textContent = set + ' of 6';
+    if (!running && !revealed) GBLab.goEnabled(set === 6);
+  }
+
+  /* ---- input: a finger drawing sets every column it crosses; a tap sets one column ------- */
+  function at(e) {
+    var r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    var x = (e.clientX - r.left) * vb.width / r.width, y = (e.clientY - r.top) * vb.height / r.height;
+    var t = (x - G.L) / G.pw * 24, p = (1 - (y - G.T) / G.ph) * TOP;
+    return { t: t, p: Math.max(0, Math.min(TOP, Math.round(p / 5) * 5)) };
+  }
+  function setAt(e, lastT) {
+    var q = at(e), col = Math.round(q.t / 4);
+    if (col < 1 || col > 6 || q.t < 2) return lastT;
+    // a fast stroke can skip a column: fill the skipped ones on the way
+    if (lastT != null && Math.abs(col - lastT) > 1) {
+      var dir = col > lastT ? 1 : -1, c, prev = pts[lastT];
+      for (c = lastT + dir; c !== col; c += dir) pts[c] = prev != null ? Math.round((prev + (q.p - prev) * (c - lastT) / (col - lastT)) / 5) * 5 : q.p;
+    }
+    pts[col] = q.p;
+    draw();
+    return col;
+  }
+  /* one finger draws. A second finger is ignored; a touch the system cancels, a lost capture, the
+     window losing focus or going to the background all end the stroke cleanly, as GBLab.drag does. */
+  var finger = null, lastCol = null;
+  svg.addEventListener('pointerdown', function (e) {
+    if (running || revealed || GBLab.sheetOpen()) return;
+    if (finger !== null || e.isPrimary === false) return;
+    finger = e.pointerId;
+    try { svg.setPointerCapture(e.pointerId); } catch (x) {}
+    lastCol = setAt(e, null);
+  });
+  svg.addEventListener('pointermove', function (e) {
+    if (finger === null || e.pointerId !== finger || running || revealed) return;
+    lastCol = setAt(e, lastCol);
+  });
+  function up(e) {
+    if (finger === null || (e && e.pointerId != null && e.pointerId !== finger)) return;
+    finger = null;
+    lastCol = null;
+    if (running || revealed) return;
+    var n = 0, i;
+    for (i = 1; i <= 6; i++) if (pts[i] != null) n++;
+    if (n && n < 6) GBLab.toast((6 - n) + ' column' + (6 - n > 1 ? 's' : '') + ' still empty - tap in each one, or draw across.', 'hint');
+  }
+  svg.addEventListener('pointerup', up);
+  svg.addEventListener('pointercancel', up);
+  svg.addEventListener('lostpointercapture', up);
+  window.addEventListener('blur', function () { up(null); });
+  document.addEventListener('visibilitychange', function () { up(null); });
+  document.getElementById('clear').addEventListener('click', function () { if (!running && !revealed) { pts = []; draw(); } });
+
+  /* ---- run: the simulation draws over the prediction ----------------------------------- */
+  function run(level) {
+    sureAt = level;
+    running = true;
+    revealed = true;
+    GBLab.go('Running…', null);
+    var t0 = null;
+    GBLab.sound.play([[392, 90, 20, 'sine'], [523, 90, 0, 'sine']], 0.05);
+    function step(ts) {
+      if (!t0) t0 = ts;
+      frac = Math.min(1, (ts - t0) / 2200);
+      draw();
+      if (frac < 1) return window.requestAnimationFrame(step);
+      judge();
+    }
+    window.requestAnimationFrame(step);
+  }
+
+  /* geometry, not a key: direction, end value, and the one feature of each curve that matters */
+  function judge() {
+    var c = CASES[round], u = [c.truth[0]].concat(pts.slice(1, 7)), v = c.truth, i, gap = 0, mx = 0;
+    for (i = 1; i <= 6; i++) { gap += Math.abs(u[i] - v[i]); mx = Math.max(mx, u[i]); }
+    gap = Math.round(gap / 6);
+    var dirOk = c.dir > 0 ? u[6] - u[0] > 20 : u[6] - u[0] < -20;
+    var endOk = Math.abs(u[6] - v[6]) <= 30;
+    var shapeOk, shapeT, shapeW, shapeA;
+    if (round === 0) {
+      shapeOk = mx <= RELIEF + 15;
+      shapeT = 'Case 1: the line stops at the relief valve setting';
+      shapeA = 'your highest point ' + mx + ' mbar';
+      shapeW = 'The relief valves hold the tank at their set point by venting cargo - the pressure cannot climb past them. A flat top on this curve means cargo going up the mast.';
+    } else {
+      shapeOk = (u[0] - u[3]) > (u[3] - u[6]) + 10;
+      shapeT = 'Case 2: the fall is fast at first, then slows';
+      shapeA = 'first 12 h ' + (u[0] - u[3]) + ', last 12 h ' + (u[3] - u[6]) + ' mbar';
+      shapeW = 'Thinner vapour at lower pressure means each compressor stroke moves less of it, so the pressure falls more slowly as it drops.';
+    }
+    var cs = 'Case ' + (round + 1) + ': ';
+    items.push({ t: cs + (c.dir > 0 ? 'pressure rises with the plant stopped' : 'pressure falls with both compressors on'), ok: dirOk,
+      a: 'yours ' + (u[6] - u[0] > 20 ? 'rises' : u[6] - u[0] < -20 ? 'falls' : 'stays level'), c: c.dir > 0 ? 'rises' : 'falls',
+      w: c.dir > 0 ? 'Heat always leaks in through the insulation. With nothing taking the boil-off away, the vapour pressure can only go up.' : 'Two compressors at full load remove more vapour than the cargo makes, so the pressure goes down.' });
+    items.push({ t: shapeT, ok: shapeOk, a: shapeA, c: round === 0 ? 'no higher than ' + RELIEF + ' mbar' : 'faster first half', w: shapeW });
+    items.push({ t: cs + 'value after 24 h within 30 mbar', ok: endOk, a: u[6] + ' mbar', c: v[6] + ' mbar', w: c.why });
+    var all = dirOk && endOk && shapeOk;
+    if (sureAt) { GBLab.sureNote(sureAt, all); sureAt = null; }
+    running = false;
+    var last = round === CASES.length - 1;
+    var next = last ? { label: 'See my result', fn: result } : { label: 'Next case', fn: nextRound };
+    pic(IMG + c.img, function (img) {
+      GBLab.go(next.label, next.fn);
+      GBLab.show({
+        img: img, tag: all ? 'Close prediction' : 'Prediction and reality differ', kind: all ? 'ok' : 'no',
+        title: all ? c.okTitle : c.title,
+        text: c.why + '<br><br>Your line was on average <b>' + gap + ' mbar</b> from the simulated one.' +
+          (!dirOk ? ' The direction was wrong - start with that.' : !shapeOk ? ' The direction was right; look at the shape.' : !endOk ? ' The direction and shape were right; the end value was off.' : ''),
+        buttons: [{ label: 'Look at the curves', primary: false }, next]
+      });
+    });
+  }
+
+  function nextRound() {
+    if (!revealed || running) return; // the sheet and the bar both offer it: act once
+    round++;
+    pts = []; revealed = false; frac = 0;
+    setCase();
+    GBLab.go('Run it', ask);
+    draw();
+  }
+  function setCase() {
+    document.getElementById('case-h').textContent = 'Case ' + (round + 1) + ' of ' + CASES.length;
+    document.getElementById('case-p').textContent = CASES[round].text;
+  }
+  function result() { GBLab.finish({ items: items }); }
+  function ask() { if (!running && !revealed) GBLab.sure(run); }
+
+  setCase();
+  GBLab.go('Run it', ask);
+  draw();
+  window.addEventListener('resize', draw);
+  setTimeout(function () {
+    var a = document.getElementById('pc-a1'), b = document.getElementById('pc-a6');
+    if (a && b) GBLab.hand('draw-curve', a, b);
+  }, 600);
+})();
+</script>
+</body>
+</html>

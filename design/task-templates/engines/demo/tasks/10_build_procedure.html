@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>BP1 — Build the procedure, then test it</title>
+<link rel="stylesheet" href="../../../../../plugin/skills/course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../gb_lab.css">
+<!-- SOURCES: entry criteria IMO Res. A.1050(27) (oxygen 21 % by volume, flammable vapour below 1 % LFL, toxic gas
+     below 50 % of the OEL), matched by ICS Tanker Safety Guide (Liquefied Gas) 3rd ed. 2018, 8.4 Testing Before Entry:
+     nominal 21 % oxygen, below 21 % not entered until the reason is known; flammable below 1 % LFL before entry;
+     toxic within the OEL; heavier-than-air vapour found at the bottom; testing continued while people are inside.
+     VERIFY: the oxygen meter tolerance (21.0 +/- 0.2 % taken as "21 %") and the four test cases are demo values;
+     the operator sets the real ones. -->
+<style>
+  /* ---- the chart: premium dark glass, not a diagram tool ----------------------- */
+  .bp-chart { position: absolute; z-index: 1; top: 12px; left: 12px; right: 12px; bottom: calc(36% + 14px); }
+  .bp-wires { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .bp-wires .w { fill: none; stroke: rgba(157,179,204,.32); stroke-width: 3; stroke-linecap: round; }
+  .bp-wires .w.run { stroke: var(--tl-accent, #2EB6F8); stroke-dasharray: 10 9; animation: bp-flow .5s linear infinite;
+    filter: drop-shadow(0 0 6px rgba(46,182,248,.8)); }
+  @keyframes bp-flow { to { stroke-dashoffset: -19; } }
+  .bp-wires .hd { fill: rgba(157,179,204,.5); }
+  .bp-wires .lb { font: 800 12.5px var(--tl-font, sans-serif); letter-spacing: .14em; }
+  .bp-wires .lb.y { fill: var(--tl-good, #3DDC97); } .bp-wires .lb.n { fill: var(--tl-bad, #FF6B5E); }
+
+  .bp-node, .bp-slot { position: absolute; }
+  .bp-start {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-radius: 999px;
+    background: linear-gradient(140deg, #1B7FD6, #2EB6F8 60%, #34E0C4); color: #03121F;
+    box-shadow: 0 10px 26px rgba(46,182,248,.35), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .bp-start b { font-size: 16.5px; font-weight: 800; }
+  .bp-start small { font-size: 12px; font-weight: 700; opacity: .75; }
+
+  /* a decision: a six-sided glass chip, glowing when it holds a question */
+  .bp-q { filter: drop-shadow(0 10px 22px rgba(0,0,0,.35)); }
+  .bp-sh, .bp-sh2 { position: absolute; display: block;
+    -webkit-clip-path: polygon(0 50%, 13% 0, 87% 0, 100% 50%, 87% 100%, 13% 100%);
+    clip-path: polygon(0 50%, 13% 0, 87% 0, 100% 50%, 87% 100%, 13% 100%); transition: background .25s ease; }
+  .bp-sh { top: 0; left: 0; right: 0; bottom: 0; background: rgba(140,190,255,.26); }
+  .bp-sh2 { top: 2px; left: 3px; right: 3px; bottom: 2px; background: linear-gradient(170deg, rgba(20,44,82,.92), rgba(6,16,32,.95)); }
+  .bp-q.full .bp-sh { background: linear-gradient(120deg, var(--tl-accent, #2EB6F8), var(--tl-accent2, #34E0C4)); }
+  .bp-q.full { filter: drop-shadow(0 0 14px rgba(46,182,248,.35)) drop-shadow(0 10px 20px rgba(0,0,0,.35)); }
+  .bp-q.yes .bp-sh { background: var(--tl-good, #3DDC97); }
+  .bp-q.no .bp-sh { background: var(--tl-bad, #FF6B5E); }
+  .bp-q.yes { filter: drop-shadow(0 0 18px rgba(61,220,151,.6)); }
+  .bp-q.no { filter: drop-shadow(0 0 18px rgba(255,107,94,.6)); }
+  .bp-q.tl-over, .bp-a.tl-over { outline: none; }
+  .bp-q.tl-over .bp-sh { background: var(--tl-accent, #2EB6F8); }
+
+  /* an action: a rounded glass tile */
+  .bp-a {
+    border-radius: 16px; background: linear-gradient(170deg, rgba(20,44,82,.85), rgba(6,16,32,.9));
+    border: 1.5px dashed rgba(140,190,255,.3); box-shadow: 0 10px 22px rgba(0,0,0,.3); transition: border-color .2s ease, box-shadow .25s ease;
+  }
+  .bp-a.full { border: 1.5px solid rgba(52,224,196,.65); box-shadow: 0 0 16px rgba(52,224,196,.22), 0 10px 22px rgba(0,0,0,.3); }
+  .bp-a.tl-over { border: 2px solid var(--tl-accent, #2EB6F8); box-shadow: 0 0 22px rgba(46,182,248,.5); }
+  .bp-a.hit-ok { border: 2px solid var(--tl-good, #3DDC97); box-shadow: 0 0 24px rgba(61,220,151,.55); }
+  .bp-a.hit-no { border: 2px solid var(--tl-bad, #FF6B5E); box-shadow: 0 0 24px rgba(255,107,94,.55); }
+  .bp-a.flag { border: 2px dashed var(--tl-amber, #F2B33D); }
+
+  .bp-in { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 6px 10px; }
+  .bp-q .bp-in { padding: 6px 15%; }
+  .bp-in em { font-style: normal; font-size: 14.5px; color: var(--tl-faint, #6E86A3); }
+  .bp-num { position: absolute; z-index: 2; top: -9px; left: 50%; margin-left: -12px; width: 24px; height: 24px; border-radius: 50%;
+    font: 800 12.5px/24px var(--tl-font, sans-serif); text-align: center; color: #03121F; background: var(--tl-text, #F2F7FD); }
+  .bp-badge { position: absolute; z-index: 2; right: 8%; bottom: -10px; padding: 3px 10px; border-radius: 999px; display: none;
+    font: 800 12px var(--tl-font, sans-serif); letter-spacing: .14em; color: #03121F; }
+  .bp-q.yes .bp-badge { display: block; background: var(--tl-good, #3DDC97); }
+  .bp-q.no .bp-badge { display: block; background: var(--tl-bad, #FF6B5E); color: #fff; }
+
+  /* the travelling token: moves, so it may glow */
+  .bp-token { position: absolute; z-index: 5; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; opacity: 0;
+    background: radial-gradient(circle at 35% 35%, #fff, var(--tl-accent, #2EB6F8) 60%); box-shadow: 0 0 0 4px rgba(46,182,248,.25), 0 0 22px var(--tl-accent, #2EB6F8);
+    transition: left .45s cubic-bezier(.4,0,.2,1), top .45s cubic-bezier(.4,0,.2,1), opacity .2s ease; pointer-events: none; }
+  .bp-token.on { opacity: 1; }
+  .bp-token.jump { transition: opacity .2s ease; }
+
+  /* ---- blocks ------------------------------------------------------------------------ */
+  .bp-blk {
+    display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 13px; border-radius: 14px;
+    background: rgba(255,255,255,.06); border: 1px solid var(--tl-line, rgba(140,190,255,.16));
+    font: 650 16px/1.3 var(--tl-font, sans-serif); color: var(--tl-text, #F2F7FD); transition: transform .1s ease, background .18s ease;
+  }
+  .bp-blk:active { transform: scale(.97); }
+  .bp-blk i { flex: 0 0 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-style: normal;
+    font: 800 13px var(--tl-font, sans-serif); color: #03121F; border-radius: 8px; background: var(--tl-accent, #2EB6F8); }
+  .bp-blk.bp-isa i { border-radius: 50%; background: var(--tl-accent2, #34E0C4); }
+  .bp-blk.in { width: 100%; height: 100%; min-height: 0; padding: 0; border: 0; background: none; justify-content: center;
+    text-align: center; font-weight: 750; font-size: 16.5px; }
+  .bp-blk.in i { display: none; }
+  .bp-list { display: grid; gap: 8px; margin-bottom: 14px; }
+  .bp-list:last-child { margin-bottom: 0; }
+  .bp-empty { font-size: 14.5px; color: var(--tl-faint, #6E86A3); padding: 6px 2px; }
+
+  /* ---- the test cases: four gas-meter cards ---------------------------------------- */
+  .bp-cases { position: absolute; z-index: 2; left: 12px; right: 12px; bottom: 12px; height: 36%; display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .bp-case {
+    position: relative; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 16px; min-height: 0; overflow: hidden;
+    background: rgba(3,10,22,.78); border: 1px solid var(--tl-line, rgba(140,190,255,.16)); transition: border-color .25s ease, box-shadow .25s ease;
+  }
+  .bp-case.now { border-color: var(--tl-accent, #2EB6F8); box-shadow: 0 0 22px rgba(46,182,248,.4); }
+  .bp-case.pass { border-color: rgba(61,220,151,.7); }
+  .bp-case.fail { border-color: rgba(255,107,94,.8); }
+  .bp-ch { display: flex; align-items: baseline; gap: 7px; font-size: 16px; line-height: 1.2; }
+  .bp-ch b { font-weight: 800; }
+  .bp-ch small { color: var(--tl-dim, #9DB3CC); font-size: 13.5px; }
+  .bp-cn { flex: 0 0 22px; height: 22px; border-radius: 50%; text-align: center; font: 800 12px/22px var(--tl-font, sans-serif);
+    color: #03121F; background: var(--tl-dim, #9DB3CC); align-self: center; }
+  .bp-lcd { display: grid; grid-template-columns: auto 1fr auto; gap: 1px 8px; align-items: baseline; padding: 6px 9px; border-radius: 10px;
+    background: linear-gradient(180deg, #06182A, #04101D); box-shadow: inset 0 0 0 1px rgba(46,182,248,.18); }
+  .bp-lcd span { font-size: 13.5px; color: var(--tl-dim, #9DB3CC); }
+  .bp-lcd b { font: 700 19px/1.15 var(--tl-mono, monospace); color: var(--tl-accent, #2EB6F8); text-align: right; text-shadow: 0 0 10px rgba(46,182,248,.5); }
+  .bp-lcd em { font-style: normal; font-size: 12.5px; color: var(--tl-faint, #6E86A3); }
+  .bp-note { font-size: 13.5px; color: var(--tl-dim, #9DB3CC); line-height: 1.3; }
+  .bp-res { margin-top: auto; font: 800 12.5px var(--tl-font, sans-serif); letter-spacing: .12em; text-transform: uppercase; color: var(--tl-faint, #6E86A3); }
+  .bp-case.pass .bp-res { color: var(--tl-good, #3DDC97); }
+  .bp-case.fail .bp-res { color: var(--tl-bad, #FF6B5E); }
+
+  /* what the test showed */
+  .bp-out { list-style: none; margin: 0 0 6px; padding: 0; }
+  .bp-out li { display: grid; grid-template-columns: 28px 1fr; gap: 8px; padding: 10px 0; border-top: 1px solid var(--tl-line, rgba(140,190,255,.16)); font-size: 16px; line-height: 1.45; }
+  .bp-out li i { font-style: normal; font-weight: 800; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
+  .bp-out li.ok i { color: var(--tl-good, #3DDC97); background: rgba(61,220,151,.18); }
+  .bp-out li.no i { color: var(--tl-bad, #FF6B5E); background: rgba(255,107,94,.18); }
+
+  /* taller than wide: the chart stands up, the cases move under the block bank */
+  .bp-tall .bp-chart { bottom: 12px; }
+  .bp-tall .bp-q .bp-in { padding: 4px 12%; }
+  .bp-tall .bp-num { left: 6%; margin-left: 0; }
+  .bp-tall .bp-start small { display: none; }
+  .bp-tall .bp-blk.in { line-height: 1.2; }
+  .tl-side .bp-cases { position: static; height: auto; grid-template-columns: 1fr 1fr; }
+  @media (max-aspect-ratio: 1/1) { .tl-stage { flex: 1 1 66%; } .tl-side { flex: 0 1 34%; } }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye">Build and test · enclosed space entry</span>Build the chart that decides: may we enter this enclosed space?
+    <small>Drag a question into each six-sided box and an action into each end box (or tap, then tap). Blocks can be moved again. Then test the chart on the four spaces.</small></div>
+  <div class="tl-body">
+    <div class="tl-stage" id="stage">
+      <div class="bp-chart" id="chart">
+        <svg class="bp-wires" id="wires" aria-hidden="true"></svg>
+        <div class="bp-node bp-start" data-n="S"><b>Start</b><small>before entry</small></div>
+        <div class="bp-token" id="token"></div>
+      </div>
+      <div class="bp-cases" id="cases"></div>
+    </div>
+    <aside class="tl-side" id="side">
+      <div class="tl-card bp-drop" id="bank" data-s="bank">
+        <h3>Questions</h3><div class="bp-list" id="bank-q"></div>
+        <h3>Actions</h3><div class="bp-list" id="bank-a"></div>
+      </div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Test my chart</button></div>
+</div>
+
+<script src="../../gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  GBLab.init({ code: 'BP1', title: 'Build the procedure, then test it', mode: 'self' });
+
+  /* ---- where the boxes sit: [left, top, width, height] in % of the chart area,
+     one layout for a wide stage and one for a tall (portrait phone) stage ------------- */
+  var LAYOUT = {
+    wide: { S: [0.5, 11, 8.5, 22], D1: [12, 4, 19, 36], D2: [35, 4, 19, 36], D3: [58, 4, 19, 36], A4: [81, 4, 18.5, 36],
+            A1: [12, 60, 19, 36], A2: [35, 60, 19, 36], A3: [58, 60, 19, 36] },
+    tall: { S: [2, 0, 48, 8], D1: [2, 12, 48, 18], D2: [2, 34, 48, 18], D3: [2, 56, 48, 18], A4: [2, 79, 48, 20],
+            A1: [59, 12, 40, 18], A2: [59, 34, 40, 18], A3: [59, 56, 40, 18] }
+  };
+  // [from, to, label, direction on a wide stage, direction on a tall stage]
+  var EDGES = [['S', 'D1', '', 'h', 'v'], ['D1', 'D2', 'yes', 'h', 'v'], ['D2', 'D3', 'yes', 'h', 'v'], ['D3', 'A4', 'yes', 'h', 'v'],
+               ['D1', 'A1', 'no', 'v', 'h'], ['D2', 'A2', 'no', 'v', 'h'], ['D3', 'A3', 'no', 'v', 'h']];
+  var NO = { D1: 'A1', D2: 'A2', D3: 'A3' };
+
+  /* ---- the blocks. Which are right is kept only as hashes of GBLab.key('BP1-blk', text, 1|0) */
+  var TEXT = {
+    'q-o2': 'Oxygen 21 %?', 'q-lfl': 'Flammable vapour below 1 % LFL?', 'q-tox': 'Toxic gas below 50 % OEL?',
+    'q-last': 'Did the last entry go fine?', 'q-smell': 'No smell of gas?',
+    'a-enter': 'Enter under permit, keep monitoring', 'a-vent': 'Ventilate, then test again',
+    'a-report': 'Do not enter - report', 'a-buddy': 'Enter quickly with a buddy'
+  };
+  var HB = { 'q-o2': '35a0dd10', 'q-lfl': '55546611', 'q-tox': '839ba4a7', 'q-last': '8ea48821', 'q-smell': '31a0a861',
+             'a-enter': '80ff420b', 'a-vent': '2fe82378', 'a-report': '161b0092', 'a-buddy': 'cc453589' };
+  function rightBlock(id) { return GBLab.key('BP1-blk', TEXT[id], 1) === HB[id]; }
+  var QS = ['q-o2', 'q-last', 'q-lfl', 'q-smell', 'q-tox'], AS = ['a-enter', 'a-buddy', 'a-vent', 'a-report'];
+
+  /* ---- running the chart is physics, not a key: each question reads one thing on the meter
+     card, and each action either sends someone in or keeps them out ----------------------- */
+  var ASK = {
+    'q-o2': function (c) { return Math.abs(c.o2 - 21) <= 0.2; },
+    'q-lfl': function (c) { return c.lfl < 1; },
+    'q-tox': function (c) { return c.tox < 50; },
+    'q-last': function (c) { return c.last; },
+    'q-smell': function (c) { return c.smell; }
+  };
+  var GOES_IN = { 'a-enter': true, 'a-buddy': true, 'a-vent': false, 'a-report': false };
+  /* Four spaces, readings kept physically consistent with each other:
+     propane LFL 2.1 % vol, so 1 % LFL = 210 ppm; propane OEL taken as 1000 ppm, so case 3 (4 % LFL = 840 ppm)
+     reads 84 % of the OEL; VCM OEL taken as 1 ppm, so 0.8 ppm = 80 % OEL reads 0 % LFL and is far below its
+     smell threshold. Low oxygen in a long-closed void: rusting steel (ICS TSG(LG) 8.4).
+     VERIFY: the OEL values (propane 1000 ppm, VCM 1 ppm) and "no smell" for VCM at 0.8 ppm. */
+  var CASES = [
+    { name: 'Cargo tank 2', sub: 'propane, gas-freed', o2: 21.0, lfl: 0, tox: 5, toxGas: 'propane', short: 'tank 2, all readings in limits',
+      w: 'All three entry tests met: entry is allowed under a permit, with the air monitored while people are inside (A.1050(27); ICS TSG(LG) 8.4).' },
+    { name: 'Void space aft', sub: 'shut 3 months', o2: 18.5, lfl: 0, tox: 0, toxGas: 'H2S', short: 'void space, oxygen 18.5 %',
+      w: 'Below 21 % oxygen the space is not entered until the reason is known - rusting steel in a closed void uses the oxygen up. Ventilate, test again.' },
+    { name: 'Cargo tank 3', sub: 'propane, bottom reading', o2: 21.0, lfl: 4, tox: 84, toxGas: 'propane', short: 'tank 3, flammable 4 % LFL',
+      w: 'Propane is heavier than air and stays at the bottom. 4 % LFL is above the 1 % limit (and the same vapour is 84 % of its OEL). Keep ventilating; test again.' },
+    { name: 'Cargo tank 1', sub: 'last cargo VCM', o2: 21.0, lfl: 0, tox: 80, toxGas: 'VCM', short: 'tank 1, toxic VCM 80 % of OEL',
+      w: 'Toxic gas at 50 % of the OEL or more is over the entry limit - even when the flammable reading is 0 and nobody can smell it.' }
+  ];
+  CASES.forEach(function (c) { c.last = true; c.smell = true; });
+  function crit(c) { return !ASK['q-o2'](c) ? 'o2' : !ASK['q-lfl'](c) ? 'lfl' : !ASK['q-tox'](c) ? 'tox' : null; }
+  var CRIT_Q = { o2: 'q-o2', lfl: 'q-lfl', tox: 'q-tox' };
+  function danger(c, k) {
+    if (k === 'o2') return 'oxygen is only ' + c.o2.toFixed(1) + ' % - something has used it up, and a person can collapse without warning';
+    if (k === 'lfl') return 'flammable vapour is at ' + c.lfl + ' % LFL - cargo vapour is still in the space, above the 1 % limit';
+    return c.toxGas + ' is at ' + c.tox + ' % of its OEL - above the 50 % limit';
+  }
+
+  /* ---- build the stage ------------------------------------------------------------- */
+  var stage = document.getElementById('stage'), chart = document.getElementById('chart'), side = document.getElementById('side');
+  var wires = document.getElementById('wires'), token = document.getElementById('token'), casesEl = document.getElementById('cases');
+  var slot = { D1: null, D2: null, D3: null, A1: null, A2: null, A3: null, A4: null }, nodes = { S: chart.querySelector('[data-n="S"]') };
+  Object.keys(slot).forEach(function (s) {
+    var q = s.charAt(0) === 'D', d = GBLab.el('div', 'bp-slot bp-drop ' + (q ? 'bp-q' : 'bp-a'),
+      (q ? '<i class="bp-sh"></i><i class="bp-sh2"></i><span class="bp-num">' + s.charAt(1) + '</span><span class="bp-badge"></span>' : '') + '<div class="bp-in"></div>');
+    d.setAttribute('data-s', s);
+    chart.insertBefore(d, token);
+    nodes[s] = d;
+  });
+  CASES.forEach(function (c, i) {
+    var e = GBLab.el('div', 'bp-case',
+      '<div class="bp-ch"><span class="bp-cn">' + (i + 1) + '</span><span><b>' + c.name + '</b> <small>' + c.sub + '</small></span></div>' +
+      '<div class="bp-lcd"><span>O<sub>2</sub></span><b>' + c.o2.toFixed(1) + '</b><em>% vol</em>' +
+      '<span>Flammable</span><b>' + c.lfl + '</b><em>% LFL</em><span>Toxic</span><b>' + c.tox + '</b><em>% OEL</em></div>' +
+      '<div class="bp-note">Last entry fine · no smell</div><div class="bp-res">Not tested yet</div>');
+    casesEl.appendChild(e);
+    c.el = e;
+  });
+
+  function blockEl(id, from) {
+    var q = id.charAt(0) === 'q';
+    return '<div class="bp-blk ' + (q ? 'bp-isq' : 'bp-isa') + (from !== 'bank' ? ' in' : '') + '" data-drag data-b="' + id + '" data-from="' + from + '">' +
+      '<i>' + (q ? '?' : '›') + '</i><span>' + GBLab.esc(TEXT[id]) + '</span></div>';
+  }
+  function placed(id) { var k; for (k in slot) if (slot[k] === id) return k; return null; }
+  function render() {
+    var free = QS.filter(function (q) { return !placed(q); });
+    document.getElementById('bank-q').innerHTML = free.length ? free.map(function (q) { return blockEl(q, 'bank'); }).join('') : '<div class="bp-empty">All questions are in the chart.</div>';
+    document.getElementById('bank-a').innerHTML = AS.map(function (a) { return blockEl(a, 'bank'); }).join('');
+    Object.keys(slot).forEach(function (s) {
+      var n = nodes[s], q = s.charAt(0) === 'D';
+      n.querySelector('.bp-in').innerHTML = slot[s] ? blockEl(slot[s], s) : '<em>' + (q ? 'drop a question' : 'drop an action') + '</em>';
+      n.className = 'bp-slot bp-drop ' + (q ? 'bp-q' : 'bp-a') + (slot[s] ? ' full' : '');
+    });
+  }
+
+  /* ---- placing blocks: drag, or tap the block then the box ----------------------- */
+  var testing = false;
+  GBLab.drag({
+    items: '.bp-blk', targets: '.bp-drop',
+    onDrop: function (it, t) {
+      if (testing) return;
+      var b = it.getAttribute('data-b'), from = it.getAttribute('data-from'), to = t.getAttribute('data-s');
+      if (to === 'bank') { if (from !== 'bank') slot[from] = null; clearMarks(); return render(); }
+      var isQ = b.charAt(0) === 'q';
+      if (isQ !== (to.charAt(0) === 'D')) {
+        return GBLab.toast(isQ ? 'A question goes in a six-sided decision box.' : 'An action goes in a box at the end of a branch.', 'hint');
+      }
+      if (from === to) return;
+      var old = slot[to];
+      slot[to] = b;                          // an action from the bank is a copy - the bank keeps it
+      if (from !== 'bank') slot[from] = old; // moved inside the chart: the two swap places
+      clearMarks();
+      render();
+    }
+  });
+
+  /* ---- layout: place boxes from the table and draw the connectors -------------------- */
+  var mode = 'wide';
+  function layout() {
+    var tall = stage.clientWidth < 600 || stage.clientHeight > stage.clientWidth * 1.05;
+    mode = tall ? 'tall' : 'wide';
+    stage.classList.toggle('bp-tall', tall);
+    if (tall && casesEl.parentNode !== side) side.appendChild(casesEl);
+    if (!tall && casesEl.parentNode !== stage) stage.appendChild(casesEl);
+    var L = LAYOUT[mode];
+    Object.keys(nodes).forEach(function (k) {
+      var p = L[k], s = nodes[k].style;
+      s.left = p[0] + '%'; s.top = p[1] + '%'; s.width = p[2] + '%'; s.height = p[3] + '%';
+    });
+    drawWires();
+  }
+  function box(k) { var n = nodes[k]; return { l: n.offsetLeft, t: n.offsetTop, r: n.offsetLeft + n.offsetWidth, b: n.offsetTop + n.offsetHeight,
+    cx: n.offsetLeft + n.offsetWidth / 2, cy: n.offsetTop + n.offsetHeight / 2 }; }
+  function drawWires(runs) {
+    var h = '', tall = mode === 'tall';
+    EDGES.forEach(function (e) {
+      var a = box(e[0]), b = box(e[1]), dir = tall ? e[4] : e[3], x1, y1, x2, y2, lx, ly, hd;
+      if (dir === 'h') { x1 = a.r; y1 = a.cy; x2 = b.l - 3; y2 = b.cy; lx = x1 + 8; ly = y1 - 9;
+        hd = 'M' + x2 + ' ' + y2 + ' l-9 -6 v12 z'; }
+      else { x1 = a.cx; y1 = a.b; x2 = b.cx; y2 = b.t - 3; lx = x1 + 9; ly = (y1 + y2) / 2 + 5;
+        hd = 'M' + x2 + ' ' + y2 + ' l-6 -9 h12 z'; }
+      var on = runs && runs[e[0] + e[1]];
+      h += '<path class="w' + (on ? ' run' : '') + '" d="M' + x1 + ' ' + y1 + ' L' + x2 + ' ' + y2 + '"/><path class="hd" d="' + hd + '"/>';
+      if (e[2]) h += '<text class="lb ' + (e[2] === 'yes' ? 'y' : 'n') + '" x="' + lx + '" y="' + ly + '">' + e[2].toUpperCase() + '</text>';
+    });
+    wires.innerHTML = h;
+  }
+  window.addEventListener('resize', function () { setTimeout(layout, 0); });
+  window.addEventListener('load', layout);
+
+  function clearMarks() {
+    Object.keys(slot).forEach(function (s) { nodes[s].classList.remove('yes', 'no', 'hit-ok', 'hit-no', 'flag'); });
+    drawWires();
+  }
+
+  /* ---- the test: each case runs through the chart as built --------------------------- */
+  var tests = 0, first = null, lastAll = false, wrongQ = {}, wrongA = {};
+  function trace(c) {
+    var path = [], k, s;
+    for (k = 1; k <= 3; k++) {
+      s = 'D' + k;
+      var yes = ASK[slot[s]](c);
+      path.push({ s: s, yes: yes });
+      if (!yes) { path.push({ s: NO[s] }); return path; }
+    }
+    path.push({ s: 'A4' });
+    return path;
+  }
+  function judge(c, path) {
+    var end = path[path.length - 1].s, act = slot[end], k = crit(c), expIn = !k, inside = GOES_IN[act];
+    var pass = inside === expIn && rightBlock(act), stopQ = path[path.length - 2] && path[path.length - 2].s, text;
+    if (pass) text = expIn ? 'All three readings within the limits: entry under permit, meter running.'
+      : 'Stopped at "' + TEXT[slot[stopQ]] + '" - ' + danger(c, k) + '. Nobody goes in.';
+    else if (expIn && act === 'a-buddy') text = 'All readings were fine, but "' + TEXT[act] + '" skips the permit and the monitoring - the air can change once work starts.';
+    else if (expIn) text = 'Every reading was within the limits, but the chart ended at "' + TEXT[act] + '" - the job never gets done. The all-yes end should allow entry under permit.';
+    else if (!placed(CRIT_Q[k])) {
+      var wq = ['D1', 'D2', 'D3'].map(function (s) { return slot[s]; }).filter(function (q) { return !rightBlock(q); });
+      text = 'Your chart sent someone in, but ' + danger(c, k) + '. The chart never asks about it' +
+        (wq.length ? ' - "' + TEXT[wq[0]] + '" was answered yes, and says nothing about this air.' : '.');
+    } else text = 'The chart caught it at "' + TEXT[CRIT_Q[k]] + '", but that no branch ends at "' + TEXT[act] + '" - someone goes in where ' + danger(c, k) + '.';
+    return { pass: pass, act: act, end: end, expIn: expIn, inside: inside, text: text };
+  }
+
+  function point(s) { var b = box(s); token.style.left = b.cx + 'px'; token.style.top = b.cy + 'px'; }
+  function run(lvl) {
+    testing = true; tests++;
+    GBLab.go('Testing...', null);
+    clearMarks();
+    ['D1', 'D2', 'D3'].forEach(function (s) { if (!rightBlock(slot[s])) wrongQ[slot[s]] = true; });
+    ['A1', 'A2', 'A3', 'A4'].forEach(function (s) { if (!rightBlock(slot[s])) wrongA[slot[s]] = true; });
+    CASES.forEach(function (c) { c.el.className = 'bp-case'; c.el.querySelector('.bp-res').textContent = 'Waiting'; });
+    var res = [], i = 0;
+    function nextCase() {
+      if (i >= CASES.length) return done(res, lvl);
+      var c = CASES[i], path = trace(c), k = 0, runs = {}, prev = 'S';
+      c.el.className = 'bp-case now';
+      c.el.querySelector('.bp-res').textContent = 'Running';
+      if (c.el.scrollIntoView && mode === 'tall') c.el.scrollIntoView({ block: 'nearest' });
+      token.className = 'bp-token jump on'; point('S');
+      setTimeout(function () { token.className = 'bp-token on'; step(); }, 120);
+      function step() {
+        if (k >= path.length) return endCase();
+        var p = path[k++];
+        runs[prev + p.s] = true; prev = p.s;
+        drawWires(runs);
+        point(p.s);
+        setTimeout(function () {
+          if (p.s.charAt(0) === 'D') {
+            nodes[p.s].classList.add(p.yes ? 'yes' : 'no');
+            nodes[p.s].querySelector('.bp-badge').textContent = p.yes ? 'YES' : 'NO';
+          }
+          setTimeout(step, 220);
+        }, 470);
+      }
+      function endCase() {
+        var r = judge(c, path);
+        res.push(r);
+        nodes[r.end].classList.add(r.pass ? 'hit-ok' : 'hit-no');
+        c.el.className = 'bp-case ' + (r.pass ? 'pass' : 'fail');
+        c.el.querySelector('.bp-res').textContent = r.pass ? 'Right' : (r.inside ? 'Sent someone in' : 'Kept out - wrongly');
+        GBLab.sfx(r.pass ? 'good' : 'bad');
+        setTimeout(function () {
+          token.className = 'bp-token';
+          ['D1', 'D2', 'D3', 'A1', 'A2', 'A3', 'A4'].forEach(function (s) { nodes[s].classList.remove('yes', 'no', 'hit-ok', 'hit-no'); });
+          drawWires();
+          i++; nextCase();
+        }, 950);
+      }
+    }
+    nextCase();
+  }
+
+  function done(res, lvl) {
+    testing = false;
+    var n = 0, harm = false;
+    res.forEach(function (r) { if (r.pass) n++; else { nodes[r.end].classList.add('flag'); if (r.inside && !r.expIn) harm = true; } });
+    lastAll = n === CASES.length;
+    if (!first) first = res;
+    GBLab.sureNote(lvl, lastAll);
+    var ul = GBLab.el('ul', 'bp-out');
+    res.forEach(function (r, i) {
+      ul.appendChild(GBLab.el('li', r.pass ? 'ok' : 'no', '<i>' + (r.pass ? '✓' : '✕') + '</i><span><b>' + (i + 1) + '. ' +
+        GBLab.esc(CASES[i].name) + '</b> - ' + GBLab.esc(r.text) + '</span>'));
+    });
+    var o = {
+      kind: lastAll ? 'ok' : 'no', tag: 'Test ' + tests,
+      img: lastAll ? '../img/10_build_procedure_permit_ok.jpg' : null,
+      title: lastAll ? 'All four cases came out right' : n + ' of 4 cases came out right',
+      text: lastAll ? 'Your chart lets people in only when oxygen, flammable vapour and toxic gas all pass - and keeps them out otherwise.'
+        : (harm ? 'Your chart sent someone into air that can kill. On board, the chart is the last thing between the person and the space.' : 'Nobody was put at risk, but the chart does not do its job yet.'),
+      node: ul
+    };
+    o.buttons = lastAll ? [{ label: 'See my result', fn: result }]
+      : [{ label: 'Fix my chart', fn: function () { GBLab.go('Test my chart', test); } }, { label: 'See my result', primary: false, fn: result }];
+    var s = GBLab.show(o), im = s.sheet.querySelector('.tl-shot img');
+    if (im) { // a photo not yet made is simply left out
+      var drop = function () { var sh = im.parentNode; if (sh && sh.parentNode) sh.parentNode.removeChild(sh); };
+      im.onerror = drop;
+      if (im.complete && !im.naturalWidth) drop();
+    }
+    GBLab.go(lastAll ? 'See my result' : 'Test my chart', lastAll ? result : test);
+  }
+
+  function test() {
+    if (testing) return;
+    var empty = Object.keys(slot).filter(function (s) { return !slot[s]; });
+    if (empty.length) {
+      empty.forEach(function (s) { var n = nodes[s]; n.classList.remove('tl-shake'); void n.offsetWidth; n.classList.add('tl-shake'); });
+      return GBLab.toast('Fill every box first - ' + empty.length + ' still empty.', 'hint');
+    }
+    GBLab.sure(function (lvl) { run(lvl); });
+  }
+
+  function result() {
+    var items = CASES.map(function (c, i) {
+      var r = first[i];
+      return { t: 'First test, case ' + (i + 1) + ': ' + c.short + ' - ' + (r.expIn ? 'entry under permit' : 'nobody enters'), ok: r.pass,
+        a: TEXT[r.act], c: r.expIn ? TEXT['a-enter'] : 'Ventilate, then test again (or report)', w: c.w };
+    });
+    var wq = Object.keys(wrongQ), wa = Object.keys(wrongA);
+    items.push({ t: 'Only the three entry tests used as questions', ok: !wq.length,
+      a: wq.length ? 'also used: ' + wq.map(function (q) { return TEXT[q]; }).join(' / ') : 'oxygen, flammable, toxic', c: 'oxygen, flammable, toxic',
+      w: 'A good last entry or no smell says nothing about the air today - cargo vapour may have no smell at all.' });
+    // VERIFY: "cargo vapour may have no smell" - LPG cargoes are often not odourised; operator to confirm wording.
+    items.push({ t: 'No shortcut entry anywhere in the chart', ok: !wa.length,
+      a: wa.length ? 'used: ' + wa.map(function (a) { return TEXT[a]; }).join(' / ') : 'none used', c: 'none',
+      w: 'Entry is under a permit with the air monitored. A buddy is not a permit, and two people can collapse as easily as one.' });
+    items.push({ t: 'The chart passes all four cases in the end', ok: lastAll, a: lastAll ? 'all four right after ' + tests + ' test(s)' : 'not all right',
+      c: 'all four right', w: 'A procedure is tested before it is needed - not during the entry.' });
+    GBLab.finish({ items: items });
+  }
+
+  GBLab.go('Test my chart', test);
+  render();
+  layout();
+  setTimeout(function () {
+    layout();
+    GBLab.hand('drag-block', document.querySelector('#bank-q .bp-blk'), nodes.D1);
+  }, 600);
+})();
+</script>
+</body>
+</html>
