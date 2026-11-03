@@ -142,6 +142,11 @@ TASKS = ("self-check", "module-check", "final")          # trainee tablet - one 
 INSTRUCTOR = ("slide", "task-slide", "activity")          # instructor tablet - the classroom screen
 SLIDE_FIELDS = ("title", "text", "visual_kind", "visual", "notes", "minutes")
 TASK_SLIDE_FIELDS = ("title", "text", "notes", "minutes")
+# the words a slide's own template needs (course-module-ui layout-templates.json "picking"): only the ones a slide
+# has are its boxes, and every one is approved like its text
+SLIDE_EXTRA = ("points", "asks", "claim", "claim_is", "ask", "choices", "why", "right", "reveal", "drill", "seconds")
+TASK_SLIDE_EXTRA = ("before",)
+DRILLS = ("quick-fire", "say-it", "find-it")
 FAIL, NOTE = slide_text.FAIL, slide_text.NOTE
 
 # how a trainee answers (L38) - which parts of a task each mechanic uses; knowledge/media-and-tasks.json names them
@@ -332,6 +337,9 @@ def fields_of(screen, lang="en"):
         for f in names:
             v = screen.get(f, "")
             out.append((f, kind_label(v, lang) if f == "visual_kind" else ("" if v is None else str(v))))
+        for f in TASK_SLIDE_EXTRA if screen["kind"] == "task-slide" else SLIDE_EXTRA:
+            if screen.get(f) not in (None, ""):
+                out.append((f, str(screen[f])))
     return out
 
 
@@ -355,9 +363,9 @@ def set_field(screen, f, value):
         opts[i] = value
     elif f == "visual_kind":
         screen[f] = parse_kind(value)
-    elif f == "minutes" and isinstance(value, (int, float)) and not isinstance(value, bool):
+    elif f in ("minutes", "seconds") and isinstance(value, (int, float)) and not isinstance(value, bool):
         screen[f] = value
-    elif f == "minutes":
+    elif f in ("minutes", "seconds"):
         try:
             screen[f] = float(value) if "." in value else int(value)
         except ValueError:
@@ -688,11 +696,105 @@ def validate(script):
             first = kinds.index("module-check")
             if any(k in ("slide", "activity") for k in kinds[first:]):
                 probs.append("a slide comes after the module check starts - the module check is the end of the module")
+    probs += shape_problems(script)
     alloc = script.get("minutes_allocated")
     if alloc:
         got = sum(minutes(s) for s in screens if s.get("kind") in INSTRUCTOR)
         if abs(got - float(alloc)) > 0.5:
             probs.append("the minutes add up to %g, the programme gives this module %g - they must be equal (L1)" % (got, float(alloc)))
+    return probs
+
+
+def cells(x):
+    return [c.strip() for c in x.split(" | ")]
+
+
+def shape_of(s):
+    """what a slide's own words make of it - the compiler builds the same (compile_module.shaped_template)"""
+    if s.get("kind") != "slide":
+        return None
+    if s.get("drill"):
+        return "drill " + str(s["drill"])
+    for f, k in (("claim", "true-false"), ("choices", "scenario"), ("points", "points")):
+        if s.get(f):
+            return k
+    if s.get("active") == "worked-example" and (s.get("ask") or s.get("reveal")):
+        return "worked-example"
+    return None
+
+
+def shape_problems(script):
+    """L61, L62 - the new words each template needs, and where it may stand"""
+    probs, prev = [], None
+    screens = script.get("screens", [])
+    sets = plan_of(script)[2]
+    for i, s in enumerate(screens):
+        sid, k, ls = s.get("id"), s.get("kind"), lines_of(s.get("text"))
+        L = lambda f: lines_of(s.get(f))
+        if k == "slide":
+            for f in ("before",):
+                if s.get(f):
+                    probs.append("%s: \"%s\" is for the task slide that opens a self-check" % (sid, f))
+            if s.get("asks"):
+                if not s.get("recap"):
+                    probs.append("%s: \"asks\" are the summary's questions - this is not the summary (\"recap\": true)" % sid)
+                elif len(L("asks")) != len(ls):
+                    probs.append("%s: the summary has %d lines and %d questions in \"asks\" - one question for each line"
+                                 % (sid, len(ls), len(L("asks"))))
+            if s.get("points"):
+                pts = L("points")
+                if not 2 <= len(pts) <= 6:
+                    probs.append("%s: \"points\" are 2-6 short points, one a line - it has %d" % (sid, len(pts)))
+                if any(wc(x) > 14 for x in pts):
+                    probs.append("%s: a point is short - 14 words or fewer; the full words stay in the text, for the instructor" % sid)
+                if wc(*pts) >= wc(s.get("text", "")):
+                    probs.append("%s: the points say as much as the text - they are the short version of it" % sid)
+                if (s.get("visual_kind") or "none") == "none":
+                    probs.append("%s: short points go beside a picture (a 3D model or a photograph) - plan one in visual_kind" % sid)
+            if s.get("claim"):
+                if str(s.get("claim_is", "")).strip().lower() not in ("true", "false"):
+                    probs.append("%s: \"claim_is\" says whether the claim is true or false - \"true\" or \"false\"" % sid)
+                if not ls:
+                    probs.append("%s: a true-or-false slide's text says why - it has none" % sid)
+            if s.get("choices"):
+                ch = L("choices")
+                if s.get("active") != "scenario":
+                    probs.append("%s: a slide with choices is a scenario - \"active\": \"scenario\"" % sid)
+                if not 2 <= len(ch) <= 4:
+                    probs.append("%s: a scenario has 2-4 choices, one a line - it has %d" % (sid, len(ch)))
+                if len(L("why")) != len(ch):
+                    probs.append("%s: \"why\" has one line for each choice - %d choices, %d lines" % (sid, len(ch), len(L("why"))))
+                if (s.get("right") or "").strip().upper() not in letters(len(ch)):
+                    probs.append("%s: \"right\" is the letter of the right choice (%s)" % (sid, ", ".join(letters(len(ch)))))
+                if not s.get("ask"):
+                    probs.append("%s: a scenario asks the room something - \"ask\"" % sid)
+            if s.get("active") == "worked-example" and bool(s.get("ask")) != bool(s.get("reveal")):
+                probs.append("%s: the room's turn needs both its question (\"ask\") and its answer (\"reveal\")" % sid)
+            if s.get("drill"):
+                d = s["drill"]
+                if d not in DRILLS:
+                    probs.append("%s: unknown drill %r - use one of: %s" % (sid, d, ", ".join(DRILLS)))
+                if d == "quick-fire" and not (ls and all(len(cells(x)) == 2 for x in ls)):
+                    probs.append("%s: a quick-fire drill's lines are \"prompt | answer\"" % sid)
+                if d == "say-it" and not (s.get("ask") and s.get("reveal") and ls):
+                    probs.append("%s: a say-it drill needs the situation (text), what to say (\"ask\") and the answer (\"reveal\")" % sid)
+                sec = s.get("seconds")
+                if sec not in (None, "") and not (isinstance(sec, int) and not isinstance(sec, bool) and 5 <= sec <= 120):
+                    probs.append("%s: \"seconds\" is a whole number from 5 to 120" % sid)
+                if any(x.get("kind") == "slide" and not x.get("drill") and not x.get("recap") for x in screens[i + 1:]):
+                    probs.append("%s: a drill comes after the module's last teaching slide - only drills, the summary and the "
+                                 "module check may follow it" % sid)
+        elif k == "task-slide" and s.get("before"):
+            st = sets.get(s.get("opens"))
+            if not st or st["kind"] != "self-check":
+                probs.append("%s: \"before\" is the list for a self-check - this task slide opens %s" % (sid, s.get("opens")))
+            if not 2 <= len(L("before")) <= 4:
+                probs.append("%s: \"before\" is 2-4 short things to check, one a line" % sid)
+        sh = shape_of(s)
+        if sh and sh == prev:
+            probs.append("%s: the slide before it is built the same way (%s) - never the same look twice in a row (L62)" % (sid, sh))
+        if k in ("slide", "task-slide", "activity"):
+            prev = sh
     return probs
 
 
@@ -1844,6 +1946,9 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
                 e(T(script, "s_layout")), e((MEDIA["layouts"].get(s.get("layout") or "split") or {}).get(script.get("operator_language", "en"), s.get("layout", ""))),
                 e(T(script, "s_minutes")), e(s.get("minutes", "—")),
                 e(T(script, "s_words")), e(T(script, "s_words_n", a=wc(s.get("title", ""), s.get("text", "")), b=wc(s.get("notes", ""))))))
+        extra = [f for f in (TASK_SLIDE_EXTRA if k == "task-slide" else SLIDE_EXTRA) if s.get(f) not in (None, "")]
+        if extra:                    # the words of the slide's own template, approved with the rest
+            o.append("<dl>%s</dl>" % "".join("<dt>%s</dt><dd>%s</dd>" % (e(T(script, "s_" + f)), V(str(s[f]))) for f in extra))
         if s.get("active"):          # L49 - the trainees do something on this slide
             o.append('<p class="note"><b>%s:</b> %s</p>' % (e(T(script, "s_active")), e(T(script, "tech_" + s["active"]))))
         if s.get("from_old"):        # L41 - where in the old course this slide comes from, and what changed
@@ -1950,6 +2055,7 @@ def build_docx(course, script):
     names = {"title": "s_title", "text": "s_text", "visual": "s_visual", "notes": "s_notes", "minutes": "s_minutes",
              "question": "s_question", "correct": "s_correct", "feedback": "s_feedback", "mechanic": "s_mechanic",
              "visual_kind": "s_visual_kind", "answer": "s_answer"}
+    names.update({f: "s_" + f for f in SLIDE_EXTRA + TASK_SLIDE_EXTRA})
     slide_no, sets, set_of = plan_of(script)
 
     def boxes(s):

@@ -494,8 +494,8 @@
 .lt-vote button{flex:1;padding:min(1.8vmin,14px);border-radius:min(1.6vmin,13px);border:2px solid var(--lt-line);background:var(--lt-white);font:800 var(--lt-fs-lead)/1 inherit;
   color:var(--lt-navy);cursor:pointer;transition:all .3s;box-shadow:0 10px 24px -14px var(--up-a1036994)}
 .lt-vote button.picked{border-color:var(--lt-blue);background:var(--up-e6f2fa);transform:translateY(-2px)}
-.slide[data-last] .lt-vote button[data-v="f"]{border-color:var(--up-2fb980);background:var(--up-e3f8ef);color:var(--up-14684a)}
-.slide[data-last] .lt-vote button[data-v="t"]{opacity:.45;text-decoration:line-through}
+.slide[data-last] .lt-vote button.ok{border-color:var(--up-2fb980);background:var(--up-e3f8ef);color:var(--up-14684a)}
+.slide[data-last] .lt-vote button:not(.ok){opacity:.45;text-decoration:line-through}
 .lt-why{display:none;gap:min(1.6vmin,13px);align-items:flex-start;padding:min(1.8vmin,14px) min(2.2vmin,18px);border-radius:min(1.6vmin,13px);background:var(--lt-white);
   border:1.5px solid var(--lt-line);box-shadow:0 14px 30px -16px var(--up-a10369945)}
 .lt-why.cur{display:flex;animation:lt-rise .5s both}
@@ -641,9 +641,9 @@
 .lt-qf-list li.cur{opacity:1;transform:none;pointer-events:auto}
 .lt-qf-list .pr{margin:0;padding:0 min(4vmin,32px);font-size:clamp(22px,4.6vmin,48px);font-weight:800;line-height:1.15;color:var(--lt-navy)}
 .lt-qf-list .an{font-size:clamp(30px,8vmin,80px);font-weight:900;color:var(--lt-blue);letter-spacing:-.02em;line-height:1;opacity:0;transform:scale(.6)}
-.lt-qf-list li.cur .an{animation:lt-pop2 .45s cubic-bezier(.2,.8,.3,1.5) 6s forwards}
+.lt-qf-list li.cur .an{animation:lt-pop2 .45s cubic-bezier(.2,.8,.3,1.5) var(--qf-s,6s) forwards}
 .lt-qf-list .bar{position:absolute;left:0;right:0;bottom:0;height:min(1.2vmin,10px);background:var(--lt-blue);transform-origin:0 50%;transform:scaleX(1)}
-.lt-qf-list li.cur .bar{animation:lt-drain 6s linear forwards}
+.lt-qf-list li.cur .bar{animation:lt-drain var(--qf-s,6s) linear forwards}
 @keyframes lt-drain{to{transform:scaleX(0);background:var(--up-ff3b30)}}
 
 /* find it: the order on the photograph, a small clock; the spot shows when the clock ends */
@@ -688,3 +688,26 @@
 .slide[data-template^="compare-two."] .lt-cmp .lt-boxes{flex:none;justify-content:flex-start}
 /* the large figure in two columns: a figure's own box fills its column */
 .slide[data-template^="figure-stage."] .lt-col > figure > div{width:100%;height:100%}
+/* name the parts on a framed picture: its numbers stay on, the picture holds still so they stay on their parts */
+.lt-pic .lt-spots{position:absolute;inset:0;pointer-events:none}
+.slide[data-template^="name-parts."] .lt-pic > img{animation:none}
+.slide[data-template^="name-parts."] .lt-spot i{transform:scale(1);width:3.4vmin;height:3.4vmin;left:-1.7vmin;top:-1.7vmin;display:grid;place-items:center;
+  font-style:normal;font-weight:800;font-size:clamp(12px,1.9vmin,20px);color:var(--lt-white)}
+.slide[data-template^="name-parts."] .lt-spot.lit i{background:var(--lt-navy)}
+.slide[data-template^="name-parts."] .lt-spot i::after{display:none}
+.slide[data-template^="name-parts."] .lt-spot.cur i::after{display:block}
+/* the before-the-self-check list on a task slide: what the trainee checks before picking up the tablet */
+.lt-task2 .lt-path{flex-wrap:wrap;row-gap:min(1.4vmin,11px)}
+/* the worked example, the choices and the say-it drill on the light ground (their first design was on the dark one) */
+.slide:not(.dark):not(.photo) .lt-work li,.slide:not(.dark):not(.photo) .lt-opt,.slide:not(.dark):not(.photo) .lt-acts li{background:var(--lt-white);border-color:var(--up-dce7f3)}
+.slide:not(.dark):not(.photo) .lt-work li b,.slide:not(.dark):not(.photo) .lt-opt b,.slide:not(.dark):not(.photo) .lt-acts li,
+.slide:not(.dark):not(.photo) .lt-do,.slide[data-last]:not(.dark):not(.photo) .lt-work li.you .ans{color:var(--lt-navy)}
+.slide:not(.dark):not(.photo) .lt-work li div > span,.slide:not(.dark):not(.photo) .lt-sit{color:var(--lt-steel)}
+.slide:not(.dark):not(.photo) .lt-work li .n,.slide:not(.dark):not(.photo) .lt-opt .l{background:var(--up-e6f2fa);color:var(--lt-navy)}
+.slide:not(.dark):not(.photo) .lt-work li.cur,.slide:not(.dark):not(.photo) .lt-opt.picked{background:var(--up-e6f2fa);border-color:var(--lt-blue)}
+.slide:not(.dark):not(.photo) .lt-work li.you{border-color:var(--up-a10369935)}
+.slide[data-last]:not(.dark):not(.photo) .lt-work li.you,.slide[data-last]:not(.dark):not(.photo) .lt-opt.ok{background:var(--up-e3f8ef);border-color:var(--up-2fb980)}
+.slide[data-last]:not(.dark):not(.photo) .lt-opt.ok .fb{color:var(--up-14684a)}
+.slide[data-last]:not(.dark):not(.photo) .lt-opt.no .fb{color:var(--up-b4281e)}
+.slide[data-last]:not(.dark):not(.photo) .lt-opt.no .l{color:var(--up-b4281e)}
+.lt-why > div{display:flex;flex-direction:column;gap:.3em}

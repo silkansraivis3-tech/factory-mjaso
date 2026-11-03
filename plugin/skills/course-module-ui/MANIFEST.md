@@ -103,6 +103,15 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## Seven templates for kinds of information — 2.90.0 (2026-11-03)
+
+`knowledge/layout-templates.json` names seven more templates - worked-example, true-false, scenario, name-parts,
+key-numbers, before-after, drill - and long-explanation's `points` variant, and holds the owner's "picking" table: which
+information gets which slide. `templates/gb_upgrade.css`: the true-or-false answer marked by a class (`button.ok`, not
+the button's value), the quick-fire seconds from the slide (`--qf-s`), numbered spots on a framed picture (name the
+parts), the worked example, the choices and the say-it drill on the light ground, the why of a true-or-false stacked.
+The reference deck `design/slide-templates/` carries the same files.
+
 ## The compiler writes the upgraded bodies — 2.89.0 (2026-11-03)
 
 `course-factory/compile/scripts/compile_module.py` now writes, for the classes of vocabulary §0b: the summary that opens

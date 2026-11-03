@@ -174,7 +174,7 @@ to the tablets. Write a fragment as the deck sees it: its links start `../assets
 
 ## 2 · How a slide is laid out — the same in every module
 
-**Every slide is one of the owner's thirteen layout templates (L61, 2.52.0).** The compiler chooses it from the rows
+**Every slide is one of the owner's layout templates (L61, 2.52.0; twenty of them).** The compiler chooses it from the rows
 below and names it on the slide: `data-template="explain-figure.v1"` `data-variant="figure-right"`
 (`course-module-ui/knowledge/layout-templates.json`). `gb_layouts.css` gives it the owner's look in the brandbook's
 colours, the official logo top right, Raleway bundled. What the compiler chooses on its own:
@@ -196,8 +196,11 @@ the audit measures it.
 | lines whose cells are separated by ` \| ` | `reference-table` - one row a line, the separator kept in the line (hidden) |
 | a short slide with no picture | `explain-figure` `text-only` |
 | the opener / the recap / a task slide or room activity | `opening` / `recap` / `task-launch` (`tablet`, `check`, `room`) |
+| a slide whose own words ask for it: `"claim"`, `"choices"`, a worked example's `"ask"` and `"reveal"`, `"points"`, `"drill"` | `true-false`, `scenario`, `worked-example`, `long-explanation` `points`, `drill` |
+| `"ask"` and the build sheet's `"spots"` / lines `"value \| meaning"`, no picture / `"figure_b"` and lines `"A \| B"`, `"what \| A \| B"` | `name-parts` / `key-numbers` / `before-after` |
 
-Asked for by name in the build sheet: `"template"` (any of the thirteen; `compare-two` needs `"blocks": [[1, 2], [3, 4]]`
+Asked for by name in the build sheet: `"template"` (any of the first thirteen - the last seven come from the slide's
+own words, `script/GUIDE.md` §1; `compare-two` needs `"blocks": [[1, 2], [3, 4]]`
 and `"figure_b"`, `three-content-blocks` needs three `"blocks"`), `"variant"`, `"split": 0.5`-`0.6` (the text's share),
 `"parts": [[1, 4], [5, 9]]`, `"panel": "light"` (a drawing made for a white page; the panel is Navy otherwise). An
 unknown or unsuitable template or variant is a problem with the slide's id.

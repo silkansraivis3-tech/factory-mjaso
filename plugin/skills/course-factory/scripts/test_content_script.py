@@ -563,6 +563,40 @@ def main():
         check("a correct answer that is not an option is caught", "the correct answer 'D'" in out, out)
         check("... and approval is refused", cs_run("approve", cb2, "--module", "1", "--by", "x")[0] == 1)
 
+        print("\n-- the words a slide's own template needs - drafted by the factory, approved like the text")
+        good = copy.deepcopy(SCRIPT)
+        screen(good, "s04")["asks"] = "\n".join("Question %d?" % (i + 1) for i in range(len(cs.lines_of(RECAP_TEXT))))
+        screen(good, "t01")["before"] = "Why gas is carried cold\nWhich ship carries what"
+        screen(good, "s03")["points"] = "Four ways to hold the cargo\nMembrane tanks lean on the hull"
+        check("the summary's questions, the self-check list and short points are valid where they belong", cs.shape_problems(good) == [],
+              cs.shape_problems(good))
+        check("... and only the fields a slide has are its boxes", ("asks", screen(good, "s04")["asks"]) in cs.fields_of(screen(good, "s04"))
+              and not [f for f, _ in cs.fields_of(screen(good, "s01")) if f in cs.SLIDE_EXTRA])
+        cb5 = new_course(tmp, "shapes", good)
+        cs_run("render", cb5, "--module", "1")
+        rpage = io.open(cs.paths(cb5, 1)["review"], encoding="utf-8").read()
+        check("the review page shows them for approval, in the operator's language",
+              html.escape(LV["s_asks"]) in rpage and "Question 2?" in rpage and html.escape(LV["s_before"]) in rpage
+              and html.escape(LV["s_points"]) in rpage and "Membrane tanks lean on the hull" in rpage)
+        bad = copy.deepcopy(good)
+        screen(bad, "s04")["asks"] = "Only one?"
+        screen(bad, "s01").update(asks="Not a summary?", claim="Gas tankers are like oil tankers.", claim_is="false")
+        screen(bad, "t02")["before"] = "Everything"
+        screen(bad, "s02").update(claim="Propane is carried warm.", claim_is="maybe")
+        screen(bad, "s03").update(choices="Go in\nStop", why="No", right="C", claim="Cold is safe.", claim_is="false")
+        pb = cs.shape_problems(bad)
+        for what, word in (("a summary question for each line", "one question for each line"), ("questions only on the summary", "this is not the summary"),
+                           ("the self-check list only for a self-check", "is the list for a self-check"), ("true or false said", "\"claim_is\""),
+                           ("a scenario marked active", "\"active\": \"scenario\""), ("a why for each choice", "one line for each choice"),
+                           ("the right letter one of the choices", "\"right\" is the letter"), ("never the same look twice in a row", "(L62)")):
+            check("... caught: %s" % what, any(word in x for x in pb), pb)
+        dr = copy.deepcopy(SCRIPT)
+        dr["screens"].insert(5, {"id": "s05", "kind": "slide", "title": "Quick fire", "drill": "quick-fire", "text": "No answer here",
+                                 "notes": "", "minutes": 0, "seconds": 500})
+        pb = cs.shape_problems(dr)
+        check("a drill: its lines \"prompt | answer\", its seconds 5-120, and after the module's last teaching slide",
+              any("prompt | answer" in x for x in pb) and any("5 to 120" in x for x in pb) and any("last teaching slide" in x for x in pb), pb)
+
         print("\n-- the operator edits the Word file - read, and do NOT apply")
         def edits(doc):
             m = box(doc, "s03.text")

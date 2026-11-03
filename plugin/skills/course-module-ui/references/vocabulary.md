@@ -18,7 +18,7 @@ Values (the exact colours, sizes, radii) live in `knowledge/tokens.json` and the
 
 ## 0 · The owner's layout templates — every compiled slide is one (L61, `gb_layouts.css`)
 
-Since 2.52.0 a compiled slide also names one of thirteen templates in `data-template` (the template's name and its
+Since 2.52.0 a compiled slide also names one of the twenty templates in `data-template` (the template's name and its
 version, e.g. explain-figure, version 1) and `data-variant` - and `gb_layouts.css` (loaded after `gb_compose.css`) gives
 it the owner-reviewed look of `design/course-layout-templates/`: the top line and the official logo, the large title,
 numbered points, the Navy figure panel, 55 / 45 split slides, the thin bottom line - in the brandbook's colours only,
@@ -60,7 +60,7 @@ the ones before `.lit`; the slide gets `data-at`, `data-last`, and `data-stops` 
 | `.lt-split` (its columns set on it) · `.lt-points` · `.lt-rail` (`.tight`) · `.lt-ask` | words beside a picture box: short numbered points, or a rail of stops (3D fly-through, predict then play) |
 | `.lt-3dbox` (`data-lt-scene`) · `.lt-tag` (`data-tag`, `data-at`, `.ok` `.hz` `.big` `.r` `.num`) | a live 3D scene box and the name tags that follow its parts |
 | `.lt-link` · `.spot` · `.hs` | reading with figure: a line and its part light together |
-| `.lt-spots` · `.lt-spot` (`data-x`, `data-y` in the photo's pixels) | a photo's parts light up one a stop |
+| `.lt-spots` · `.lt-spot` (`data-x`, `data-y` in the photo's pixels; `data-px-w` on the photo: the width they were given in, before it was enlarged) | a photo's parts light up one a stop - also on a framed picture (`.lt-pic`) |
 | `.lt-zoom` · `.lt-ring` (lines carry `data-z`, `data-x`, `data-y`) | a split photo zooms to the part each line names |
 | `.lt-qa` · `.lt-qcol` · `.lt-think` · `.lt-ans` · `.lt-qfig` | opening question: think first, then the answer opens beside it |
 | `.lt-pts` · `.lt-pt` · `.lt-ptabs` | words in parts, each part a tab that names it |

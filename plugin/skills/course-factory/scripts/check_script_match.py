@@ -95,6 +95,8 @@ class Collect(HTMLParser):
         a = dict(attrs)
         if "data-script" in a:
             self.screens.setdefault(a["data-script"], {"fields": {}, "flags": {}, "loose": [], "ignored": 0})
+            if a.get("data-cue"):
+                self.screens[a["data-script"]]["cue"] = a["data-cue"]
         if "data-script-ignore" in a:
             sid = self._ctx()[0] or a.get("data-script")
             if sid in self.screens:
@@ -228,6 +230,24 @@ def main(argv=None):
             # a line starting with "•" is a list item; the bullet is drawn by the list, so the built line may omit it (2.25.0)
             want_lines = [unbullet(x) for x in (s.get("text") or "").split("\n") if unbullet(x)]
             got_lines = [unbullet(x) for x in fields.get("text", []) if unbullet(x)]
+            if s.get("points") and not got_lines:
+                # short points on the slide: the full approved words are the instructor's, in the slide's notes
+                cue = norm(got.get("cue"))
+                if all(norm(x) in cue for x in want_lines):
+                    got_lines = want_lines
+            for f in cs.TASK_SLIDE_EXTRA if s["kind"] == "task-slide" else cs.SLIDE_EXTRA:
+                if f in ("claim_is", "right", "drill", "seconds") or not s.get(f):
+                    continue
+                want_f, got_f = [norm(x) for x in cs.lines_of(str(s[f]))], [x for x in fields.get(f, []) if x]
+                if f in ("ask", "claim", "reveal") and len(got_f) == 1:
+                    want_f = [" ".join(want_f)]
+                if want_f != got_f:
+                    probs.append("%s in %s: %s says \"%s\" - approved: \"%s\"" % (where, got["file"], f, " / ".join(got_f) or "(missing)",
+                                                                                   " / ".join(want_f)))
+            if s.get("choices") and s.get("right"):
+                marked = [L for L, fl in zip(cs.letters(len(got["flags"].get("choices", []))), got["flags"].get("choices", [])) if fl[0] == "true"]
+                if marked != [s["right"].strip().upper()]:
+                    probs.append("%s in %s: the choice marked right is %s - approved: %s" % (where, got["file"], ", ".join(marked) or "none", s["right"]))
             if want_lines != got_lines:
                 probs.append("%s in %s: the slide text does not match the approved words - approved: \"%s\" / built: \"%s\"" % (
                     where, got["file"], " / ".join(want_lines), " / ".join(got_lines) or "(missing)"))

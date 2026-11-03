@@ -7,6 +7,21 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.90.0 · The information decides the slide (2026-11-03)
+
+- **Why.** The owner: the factory has to pick the right slide for each new course's information; the templates are
+  golden standards with no words of their own.
+- **What.** `scripts/content_script.py`: the new approved fields (`SLIDE_EXTRA`, `TASK_SLIDE_EXTRA`) and their checks
+  (`shape_problems`); `knowledge/page-labels.json` their labels in en / lv / ru. `compile/scripts/compile_module.py`:
+  `shaped_template` and `shaped_html` build worked-example, true-false, scenario, name-parts, key-numbers, before-after
+  and drill, the short points (long-explanation `points`), the summary's questions and the self-check list; `spot_width`
+  keeps spots on a photo the build enlarged. `scripts/check_script_match.py` compares the new fields. script/GUIDE.md
+  §1 "Pick the slide for the information" is the factory's table for drafting them; compile/GUIDE.md §2 names the new
+  templates. The compiler's new words (True / False, What is it?, Say in full:, the clock) are in `LANDING`,
+  PROVISIONAL, listed in compile/TRANSLATIONS_REVIEW.md §5.
+- **Next.** Every second or third module's drills are the factory's to plan (the guide says so; no check across
+  modules yet).
+
 ## 2.89.0 · The compiler writes the upgraded slide bodies (2026-11-03)
 
 - **Why.** 2.88.0 put the upgraded templates' look and step engine in every deck, but the compiler still wrote the old

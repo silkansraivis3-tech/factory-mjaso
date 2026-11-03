@@ -14,7 +14,7 @@ Pinned:
   * a deck changed by hand, or built by hand before the compiler, is never overwritten without --force;
   * a missing picture file is reported, never invented;
   * no link inside a slide (L35: the deck never navigates away);
-  * L61 (2.52.0): every slide is one of the owner's thirteen layout templates, chosen from the slide or asked for by name;
+  * L61 (2.52.0): every slide is one of the owner's layout templates (twenty of them), chosen from the slide or asked for by name;
     the owner's rules - 55 / 45, dense text has a picture, never three teaching slides in a row without one, long words
     in parts - are problems with the slide's id;
   * L62 (2.53.0): two slides in a row never look the same (shape and ground); a drawing made for a white page keeps
@@ -202,6 +202,140 @@ def recap_part(tmp):
     code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
     check("... and check_script_match finds exactly the approved words on it", code == 0, out)
     long_layouts_part(tmp)
+
+
+SHAPED_SCREENS = [
+    {"id": "s30", "kind": "slide", "title": "True or false?", "visual_kind": "photo", "visual": "The ship at sea.",
+     "claim": "If you cannot see the cloud, there is no gas.", "claim_is": "false",
+     "text": "The white cloud is water in the air.\nThe gas spreads past it, invisible.", "notes": "- Hands up first.", "minutes": 2},
+    {"id": "s31", "kind": "slide", "title": "Numbers to remember", "visual_kind": "none",
+     "text": "-162 °C | LNG is stored as a liquid\n5-15 % | methane burns in air\n20 % LEL | the gas alarm", "notes": "- Let the room say it.", "minutes": 2},
+    {"id": "s32", "kind": "slide", "title": "What would you do?", "visual_kind": "none", "active": "scenario",
+     "text": "Bunkering is under way. The detector alarms.", "ask": "What do you do first?",
+     "choices": "Go in and find the leak.\nStop the bunkering and tell the bridge.\nWait for the valve to close.",
+     "why": "No - not without a permit and a second person.\nYes - stop, report, keep everyone out.\nNo - the alarm is your warning.",
+     "right": "B", "notes": "- Pairs agree on one letter.", "minutes": 2},
+    {"id": "s33", "kind": "slide", "title": "From % in air to % LEL", "visual_kind": "none", "active": "worked-example",
+     "text": "Methane burns from 5 % in air. | That is 100 % LEL.\nThe detector reads 1 % in air. | 1 ÷ 5 = 0.2",
+     "ask": "Your turn: it reads 2 %.", "reveal": "2 ÷ 5 = 0.4 - 40 % LEL: the gas valve closes.", "notes": "- 30 seconds for the room.", "minutes": 3},
+    {"id": "s34", "kind": "slide", "title": "The tank connection space", "visual_kind": "photo", "visual": "A ship taking gas.",
+     "text": "The tank connection space surrounds every pipe, valve and instrument that joins the fuel tank, and it is gas-tight to the "
+             "ship around it.\nIts ventilation runs all the time and changes the air at least 30 times an hour.",
+     "points": "Gas-tight round the tank's pipes\nVentilated all the time", "notes": "- Point at the space.", "minutes": 3},
+    {"id": "s35", "kind": "slide", "title": "Name the parts", "visual_kind": "photo", "visual": "The ship at sea.",
+     "ask": "Name each number.", "text": "Vent mast\nEngine room", "notes": "- Pairs write the names first.", "minutes": 2},
+    {"id": "s36", "kind": "slide", "title": "Spot the difference", "visual_kind": "photo", "visual": "A ship taking gas.",
+     "text": "Gas safe | ESD-protected\nThe gas pipe | inside an outer pipe | a single wall\nA leak | is held in the outer pipe | reaches the room",
+     "notes": "- Drag the line.", "minutes": 2},
+    {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the new spaces", "before": "The two barriers\nThe gas alarm",
+     "text": "Self-check on your tablet now.", "notes": "- Press OPEN TASK.", "minutes": 4},
+    {"id": "q01", "kind": "self-check", "set": "SC1", "question": "Where is the fuel prepared?", "options": ["Fuel preparation room", "Bridge"],
+     "correct": "A", "feedback": "Pumps and vaporizers are there.", "mechanic": "single_choice"},
+    {"id": "s37", "kind": "slide", "title": "Quick fire", "visual_kind": "none", "drill": "quick-fire", "seconds": 6,
+     "text": "LNG is stored at | -162 °C\nThe gas alarm sounds at | 20 % LEL", "notes": "- Keep the pace high.", "minutes": 1},
+    {"id": "s38", "kind": "slide", "title": "Gas alarm - 30 seconds", "visual_kind": "none", "drill": "say-it",
+     "text": "The detector alarms. You are at the bunkering station.", "ask": "Say your first three actions - out loud, now.",
+     "reveal": "Stop the transfer\nTell the bridge\nKeep everyone out", "notes": "- Next starts the clock.", "minutes": 1},
+    {"id": "s39", "kind": "slide", "recap": True, "title": "What to take away", "visual_kind": "none",
+     "text": "Kept liquid - cold, under pressure, or both.\nTwo barriers - between the gas and people.",
+     "asks": "How is the gas kept liquid?\nWhat stands between the gas and people?", "notes": "- Ask the room first.", "minutes": 2},
+    {"id": "t02", "kind": "task-slide", "opens": "MC", "title": "Module check - Module 1",
+     "text": "Module check on your tablet now.", "notes": "- Press OPEN TASK.", "minutes": 5},
+    {"id": "m01", "kind": "module-check", "set": "MC", "question": "Which space surrounds the tank valves?", "options": ["Tank connection space", "Galley"],
+     "correct": "A", "feedback": "It holds every tank connection.", "mechanic": "single_choice"}]
+
+
+def shapes_part(tmp):
+    """the information decides the slide: a slide's own approved words (a claim, choices, a worked example and the
+    room's turn, short points, a drill, the summary's questions, the self-check list) and the shape of its lines (numbers,
+    two states, parts to name) build it in its own template; check_script_match still finds exactly the approved words"""
+    print("\n-- the information decides the slide")
+    os.makedirs(os.path.join(tmp, "sh"))
+    sc = script(screens=SHAPED_SCREENS)
+    check("the fixture script is valid: every new field in its place", not cs.validate(sc), cs.validate(sc))
+    c, md = new_course(os.path.join(tmp, "sh"), sc, build=False)
+    io.open(os.path.join(md, "assets", "img", "ship2.jpg"), "wb").write(b"\xff\xd8\xff\xd9")
+    cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"),
+            dict(PHOTO_META, **{"ship2.jpg": dict(PHOTO_META["ship.jpg"], description="The ship at sea."),
+                                "parts.jpg": dict(PHOTO_META["ship.jpg"], description="The fuel preparation room.")}))
+    try:
+        from PIL import Image
+        Image.new("RGB", (1000, 760), (10, 36, 99)).save(os.path.join(md, "assets", "img", "parts.jpg"), "JPEG")
+    except ImportError:
+        Image = None
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "s30": {"figure": "assets/img/ship2.jpg"}, "s34": {"figure": "assets/img/ship.jpg"},
+        "s35": {"figure": "assets/img/parts.jpg", "spots": {"1": [300, 400], "2": [700, 500]}},
+        "s36": {"figure": "assets/img/ship.jpg", "figure_b": "assets/img/ship2.jpg"}, "t01": {"try_tablet": False}}})
+    code, out = run(COMPILE, c, "--module", "1")
+    page = deck(md) if os.path.isfile(os.path.join(md, "presentation", "index.html")) else ""
+    check("the fixture deck is built", code in (0, 1) and page, out[-1500:])
+    if not page:
+        return
+    tpl = lambda sid: (re.search(r'data-template="([\w-]+)\.v1" data-variant="([\w-]+)"', section(page, sid)) or re.search("$^", ""))
+    want = {"s30": ("true-false", "picture"), "s31": ("key-numbers", "cards"), "s32": ("scenario", "text-only"),
+            "s33": ("worked-example", "text-only"), "s34": ("long-explanation", "points"), "s35": ("name-parts", "picture"),
+            "s36": ("before-after", "slider"), "s37": ("drill", "quick-fire"), "s38": ("drill", "say-it")}
+    got = {k: tpl(k) and tpl(k).groups() for k in want}
+    check("each kind of information gets its template: a claim, numbers, a situation, a worked example, short points, parts to "
+          "name, two states, the drills", got == want, got)
+    t = section(page, "s30")
+    check("true or false: the claim, the room's vote (the right button marked), why after Next, the stamp outside the approved words",
+          'data-script-field="claim">If you cannot see the cloud' in t and '<button type="button" data-v="f" class="ok">False</button>' in t
+          and 'class="lt-why" data-k="1"><span class="stamp" data-script-ignore>False</span>' in t and 'src="../assets/img/ship2.jpg"' in t, t[:1400])
+    k = section(page, "s31")
+    check("numbers to remember: the number first (outside the words), the card says the approved line",
+          k.count('<div class="fc" data-script-ignore>') == 3 and
+          'data-script-field="text" data-i="2"><b>5-15 %</b><span class="lt-sep"> | </span><span>methane burns in air</span>' in k, k[:1400])
+    o = section(page, "s32")
+    check("what would you do: the situation, the question, the choices with why; the right one marked for the check",
+          'data-script-field="ask">What do you do first?' in o and o.count('data-script-field="choices"') == 3
+          and 'data-correct="true">Stop the bunkering' in o and 'data-stops="2"' in o and 'class="lt-opt ok" data-v="B"' in o, o[:1600])
+    w = section(page, "s33")
+    check("worked example: the steps light one by one, then the room's turn and its answer on the last Next",
+          w.count('<li data-k=') == 3 and 'class="you"' in w and 'data-script-field="reveal">2 ÷ 5 = 0.4' in w and 'data-stops="4"' in w, w[:1600])
+    p = section(page, "s34")
+    check("short points beside the picture; the full approved words in the instructor's notes, not on the slide",
+          p.count('data-script-field="points"') == 2 and 'data-script-field="text"' not in p
+          and re.search(r'data-cue="Say in full: The tank connection space surrounds every pipe[^"]*30 times an hour\.', p), p[:1400])
+    n = section(page, "s35")
+    check("name the parts: numbered spots on the picture, the names open one by one",
+          '<figure class="lt-pic' in n and n.count('class="lt-spot"') == 2 and 'data-script-field="ask">Name each number.' in n
+          and '<b data-script-field="text" data-i="2">Engine room</b>' in n, n[:1600])
+    if Image:
+        code, out = run(COMPILE, c, "--module", "1")           # again: the photo is now enlarged, its original kept
+        n2 = section(deck(md), "s35")
+        check("the spots are in the picture's own pixels: the page says the width they were given in, after the photo is "
+              "enlarged to 1600 px too (gb_steps.js scales them)", 'data-px-w="1000"' in n and 'data-px-w="1000"' in n2
+              and Image.open(os.path.join(md, "assets", "img", "parts.jpg")).size[0] == 1600, n2[:900])
+    b = section(page, "s36")
+    check("spot the difference: one picture over the other with the line between, the two names and the differences beside it",
+          'class="lt-ba' in b and '<img class="b" src="../assets/img/ship2.jpg"' in b and 'data-x="50 80 50"' in b
+          and 'class="lt-diff-h" data-script-field="text" data-i="1"' in b and b.count('data-script-field="text"') == 3, b[:1600])
+    q = section(page, "s37")
+    check("quick-fire drill: the prompts one by one, the answer when the bar runs out (its seconds on the slide)",
+          "lt-drill" in q and "--qf-s:6s" in q and q.count('<p class="pr">') == 2 and 'data-kind="Drill"' in q, q[:1200])
+    y = section(page, "s38")
+    check("say-it drill: the situation, what to say, the clock (its words outside the approved ones), the answer after it",
+          '<div class="lt-timer" data-secs="30" data-run="1" data-script-ignore>' in y and 'class="lt-acts" data-k="2"' in y
+          and y.count('data-script-field="reveal"') == 3, y[:1400])
+    r = section(page, "s39")
+    check("the summary asks first: each card its question, then the approved line",
+          r.count('class="lt-q2" data-script-field="asks"') == 2 and "How is the gas kept liquid?</span>" in r, r[:1200])
+    t1 = section(page, "t01")
+    check("before the self-check: what to check, ticked off on the way to the set",
+          'class="lt-path"' in t1 and t1.count('data-script-field="before"') == 2 and "<i>SC1</i>" in t1, t1[:1600])
+    code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
+    check("... and check_script_match finds exactly the approved words on every one of them", code == 0, out[-1800:])
+    sc2 = json.loads(json.dumps(sc))
+    by = {x["id"]: x for x in sc2["screens"]}
+    by["s32"]["right"] = "C"
+    by["s30"]["claim"] = "A cloud means gas."
+    sc2.update(approved_hash=cs.content_hash(sc2))
+    cs.save(os.path.join(c, "working_claude", "script", "M01.json"), sc2)
+    code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
+    check("... and it finds a claim or a right choice that is not the approved one", code == 1 and "claim says" in out
+          and "the choice marked right is B - approved: C" in out, out[-1500:])
 
 
 def upgrade_part(tmp):
@@ -938,8 +1072,8 @@ def layouts_part(tmp):
     slides = re.findall(r'<section [^>]*>', page)
     named = [(re.search(r'data-template="([\w-]+)\.v(\d+)"', x), re.search(r'data-variant="([\w-]+)"', x)) for x in slides]
     check("every slide names its template and variant", slides and all(t and v for t, v in named), [x[:160] for x in slides])
-    check("... and each is one of the catalogue's thirteen, with one of its variants",
-          len(LAYOUTS["templates"]) == 13 and all(t.group(1) in LAYOUTS["templates"] and v.group(1) in LAYOUTS["templates"][t.group(1)]["variants"]
+    check("... and each is one of the catalogue's templates, with one of its variants",
+          len(LAYOUTS["templates"]) == 20 and all(t.group(1) in LAYOUTS["templates"] and v.group(1) in LAYOUTS["templates"][t.group(1)]["variants"]
                                                    for t, v in named if t and v), [(t.group(0), v.group(0)) for t, v in named if t and v])
     want = {"s01": ("photo-explain", "full"), "s02": ("explain-figure", "figure-right"), "s03": ("figure-stage", "figure"),
             "t01": ("task-launch", "tablet"), "t02": ("task-launch", "check")}
@@ -3152,6 +3286,7 @@ def main():
         prefill_part(tmp)
         recap_part(tmp)
         upgrade_part(tmp)
+        shapes_part(tmp)
         tasks_part(tmp)
         figures_part(tmp)
         every_way_part(tmp)

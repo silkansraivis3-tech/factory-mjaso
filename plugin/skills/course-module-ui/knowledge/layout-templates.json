@@ -26,10 +26,34 @@
     "task-launch":          {"version": 1, "name": "Task opening", "variants": ["tablet", "room", "check"], "needs": "a task slide or a room activity", "auto": "every task slide and room activity"},
     "recap":                {"version": 1, "name": "Summary", "variants": ["cards"], "needs": "the module's closing slide (\"recap\": true)", "auto": "the recap slide - one design for every module (L51)"},
     "opening":              {"version": 1, "name": "Module opening", "variants": ["statement", "photo"], "needs": "composition opener", "auto": "the opener composition"},
-    "long-explanation":     {"version": 1, "name": "Long explanation + 3D", "variants": ["model", "figure-left"], "needs": "a 3D figure and more than 60 words", "auto": "a 3D slide with dense text"},
+    "long-explanation":     {"version": 1, "name": "Long explanation + 3D", "variants": ["model", "figure-left", "points"], "needs": "a 3D figure and more than 60 words; points: the script's \"points\"", "auto": "a 3D slide with dense text; points: a slide with \"points\" - the short points beside the picture, the full words in the instructor's notes"},
     "three-content-blocks": {"version": 1, "name": "Three content blocks", "variants": ["with-figure", "figure-left"], "needs": "figure + \"blocks\": three line ranges", "auto": "never - asked for in the build sheet"},
     "reference-table":      {"version": 1, "name": "Table + conclusion", "variants": ["with-figure", "figure-left"], "needs": "figure + lines with cells separated by \" | \"", "auto": "a slide whose lines are table rows"},
     "reading-with-figure":  {"version": 1, "name": "A lot of text + figure", "variants": ["figure-right", "figure-left"], "needs": "figure and more than 60 words", "auto": "a split or column layout with a picture and dense text"},
-    "content-in-parts":     {"version": 1, "name": "One slide, several parts", "variants": ["with-figure", "figure-left"], "needs": "figure; \"parts\": line ranges, or more than 135 words", "auto": "a slide with a picture and more than 135 words"}
-  }
+    "content-in-parts":     {"version": 1, "name": "One slide, several parts", "variants": ["with-figure", "figure-left"], "needs": "figure; \"parts\": line ranges, or more than 135 words", "auto": "a slide with a picture and more than 135 words"},
+    "worked-example":       {"version": 1, "name": "Worked example, then your turn", "variants": ["figure", "text-only"], "needs": "\"active\": \"worked-example\", the steps as lines (\"what you do | what you get\"), \"ask\" and \"reveal\"", "auto": "a worked example with the room's turn"},
+    "true-false":           {"version": 1, "name": "True or false, then why", "variants": ["picture", "text-only"], "needs": "\"claim\", \"claim_is\"; the lines say why", "auto": "a slide with a claim"},
+    "scenario":             {"version": 1, "name": "What would you do?", "variants": ["picture-left", "text-only"], "needs": "the situation as lines, \"ask\", \"choices\", \"why\", \"right\"", "auto": "a slide with choices"},
+    "name-parts":           {"version": 1, "name": "Name the parts", "variants": ["picture"], "needs": "a static 3D render or a photograph, \"ask\", the names as lines, the build sheet's \"spots\" for every line", "auto": "a slide with \"ask\" and spots"},
+    "key-numbers":          {"version": 1, "name": "Numbers to remember", "variants": ["cards"], "needs": "3-8 lines \"value | what it means\", no picture", "auto": "lines that are numbers and their meaning"},
+    "before-after":         {"version": 1, "name": "Spot the difference", "variants": ["slider"], "needs": "two pictures (\"figure\", \"figure_b\"); the first line names the two states \"A | B\", each line after it \"what | in A | in B\"", "auto": "two pictures and lines in that shape"},
+    "drill":                {"version": 1, "name": "Quick drill", "variants": ["quick-fire", "say-it", "find-it"], "needs": "\"drill\"; quick-fire: lines \"prompt | answer\"; say-it: the situation as lines, \"ask\", \"reveal\"; find-it: a photograph and \"spots\"", "auto": "a slide with \"drill\", just before the module check"}
+  },
+  "picking": {"_why": "The templates hold no words of their own; the factory picks the right one for each piece of a new course's information. It reads what each piece of the module's information is and writes the script so (content script fields) and the build sheet so (pictures); the compiler then builds the template. Read by the script guide (script/GUIDE.md section 5c) and the compiler (shaped_template, auto_template). Always: never the same look twice in a row (L62), 60-80 % of the slides with interactive 3D, no flat drawings (L67).",
+    "rows": [
+      {"info": "a picture and a short explanation", "template": "explain-figure", "how": "the lines beside a 3D model or a photograph"},
+      {"info": "two pictures to compare", "template": "figure-stage / compare-two", "how": "build sheet \"figure_b\" (and \"blocks\")"},
+      {"info": "numbered steps", "template": "procedure", "how": "lines \"1 ...\", \"2 ...\" - step boxes when there is no picture"},
+      {"info": "three parts of one system", "template": "three-content-blocks", "how": "build sheet \"template\" and \"blocks\": three line ranges, one 3D scene"},
+      {"info": "a long explanation", "template": "long-explanation (points)", "how": "\"points\": 3-5 short points on the slide; \"text\" keeps the full words for the instructor"},
+      {"info": "a calculation or a reading", "template": "worked-example", "how": "\"active\": \"worked-example\", the steps as lines, \"ask\" the room's turn, \"reveal\" its answer"},
+      {"info": "a common wrong belief", "template": "true-false", "how": "\"claim\" the belief, \"claim_is\" false (or true), the lines why"},
+      {"info": "what to do when something happens", "template": "scenario", "how": "\"active\": \"scenario\", the lines the situation, \"ask\", \"choices\", \"why\", \"right\""},
+      {"info": "parts of equipment taught earlier", "template": "name-parts", "how": "\"ask\", the part names as lines; the build sheet's \"spots\" on a static 3D render or a photograph"},
+      {"info": "several limits or values", "template": "key-numbers", "how": "lines \"value | what it means\", no picture"},
+      {"info": "two states of the same thing", "template": "before-after", "how": "lines \"A | B\" then \"what | in A | in B\"; build sheet \"figure\" and \"figure_b\""},
+      {"info": "the end of the module", "template": "recap", "how": "\"recap\": true, and \"asks\": one question for each line"},
+      {"info": "just before a self-check", "template": "task-launch", "how": "\"before\" on the task slide that opens it: 2-4 things to check"},
+      {"info": "before the module check, every second or third module", "template": "drill", "how": "\"drill\": quick-fire, say-it or find-it, after the module's last teaching slide"}
+    ]}
 }

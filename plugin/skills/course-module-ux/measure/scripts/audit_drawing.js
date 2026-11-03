@@ -1141,7 +1141,7 @@
         });
         return sleep(CONFIG.settleMs).then(function () {
           var s = slides[i], where = "slide " + (i + 1) + (s.id ? " (" + s.id + ")" : "");
-          qa(s, "svg").filter(function (v) { return !v.ownerSVGElement && shown(v, v) && !v.closest("button, .mediabar, .slide-kind"); })
+          qa(s, "svg").filter(function (v) { return !v.ownerSVGElement && shown(v, v) && !v.closest("button, .mediabar, .slide-kind, .lt-timer"); })
             .forEach(function (v) {
               count++;
               checkSvg(v, where, out, s);

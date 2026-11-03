@@ -549,7 +549,8 @@ the script's top-level `"photo_wanted"`) is never the pick and never the recomme
 **L61 · Every slide is one of the owner's layout templates, in the brandbook's colours, with the official logo.** The
 owner, 2026-10-20: *"Implement the layout templates. All slides for all modules that will be made need to be in this style, it's a RULE. Configure the compiler so it does this style - of course the logo should be our official one, and the colours from the brandbook."* The thirteen owner-reviewed templates of `design/course-layout-templates/` (explain-figure,
 figure-stage, photo-explain, compare-two, procedure, task-launch, recap, opening, long-explanation, three-content-blocks,
-reference-table, reading-with-figure, content-in-parts) are a production contract; every compiled slide names its
+reference-table, reading-with-figure, content-in-parts) are a production contract - and seven more, each
+for one kind of information (worked-example, true-false, scenario, name-parts, key-numbers, before-after, drill; `layout-templates.json` "picking"); every compiled slide names its
 template and variant, chosen from the approved script and the build sheet or asked for by name, and an unknown or
 unsuitable one is a problem. The look is `gb_layouts.css`: brandbook colours only (the reference's amber is Novikontas
 Blue), the official logo file top right (a white plate on dark slides), Raleway bundled for the offline classroom. The

@@ -162,6 +162,22 @@ ru *пробел*.
 (2.63.0: the stats chips - minutes, screens, self-checks, module check - are gone from the landing card, the instructors'
 review of 2026-10-21; their words went with them.)
 
+The same table holds the slides' own few words (the task slide's chips and the summary's tap mark; the
+true-or-false buttons and stamp, the number card's question, the notes' lead-in for short points, the drill's clock):
+
+| key | English | Latvian (lv) | Russian (ru) |
+|---|---|---|---|
+| minutes | {n} min | {n} min | {n} мин |
+| questions | Questions: {n} | Jautājumi: {n} | Вопросов: {n} |
+| alone | On your own | Patstāvīgi | Самостоятельно |
+| team | In teams of {n} | Komandās pa {n} | В командах по {n} |
+| tap | Tap to open | Pieskaries, lai atvērtu | Нажмите, чтобы открыть |
+| true / false | True / False | Patiesi / Nepatiesi | Верно / Неверно |
+| what | What is it? | Kas tas ir? | Что это? |
+| full (the instructor's notes, before the full words of a short-points slide) | Say in full: | Pastāstiet pilnībā: | Расскажите полностью: |
+| seconds | seconds | sekundes | секунд |
+| clock | Next starts the clock | Tālāk - sākas laiks | «Далее» запускает время |
+
 ## 6 · Added in 2.46.0 — the engine's "missed" words and the instructor's answer key
 
 `course-task-ux/assets/gb_answer.js` LANG (choose all that are right, answered wrong: a right one not chosen):

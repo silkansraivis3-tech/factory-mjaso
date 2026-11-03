@@ -12,9 +12,11 @@
   function q(s, r) { return (r || d).querySelector(s); }
   function qa(s, r) { return (r || d).querySelectorAll(s); }
 
-  /* a point on a photograph (its own pixels) to a point in its box, as object-fit: cover draws it */
+  /* a point on a photograph (its own pixels; data-px-w: the width they were given in, before the photo was enlarged) to a
+     point in its box, as object-fit: cover draws it */
   function cover(img, px, py) {
     var box = img.parentNode, iw = img.naturalWidth || 1600, ih = img.naturalHeight || 1000, W = box.clientWidth, Hh = box.clientHeight, sc = Math.max(W / iw, Hh / ih);
+    var k = iw / (+img.getAttribute('data-px-w') || iw); px *= k; py *= k;
     return { x: (W - iw * sc) / 2 + px * sc, y: (Hh - ih * sc) / 2 + py * sc, ox: (W - iw * sc) / 2, oy: (Hh - ih * sc) / 2, dw: iw * sc, dh: ih * sc, W: W, H: Hh };
   }
 
@@ -22,7 +24,7 @@
   var PARTS = [
     /* photo spots: placed on the photograph's own pixels */
     function (s) {
-      var img = q('.photo-wrap img', s), spots = qa('.lt-spot', s);
+      var img = q('.photo-wrap img, .lt-pic > img', s), spots = qa('.lt-spot', s);
       if (!img || !spots.length) { return null; }
       var place = function () { each(spots, function (sp) { var c = cover(img, +sp.getAttribute('data-x'), +sp.getAttribute('data-y')); sp.style.left = c.x + 'px'; sp.style.top = c.y + 'px'; }); };
       if (img.complete) { place(); } else { img.addEventListener('load', place); }

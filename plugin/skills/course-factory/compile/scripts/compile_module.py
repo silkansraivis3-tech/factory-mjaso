@@ -53,9 +53,10 @@ TWO FILES IN, ONE PAGE OUT
   module like gb_deck.js, and assets/kit_parts.js too when the course has added parts of its own.
 
 EVERY SLIDE IS ONE OF THE OWNER'S LAYOUT TEMPLATES (L61, 2.52.0)
-  course-module-ui/knowledge/layout-templates.json names thirteen templates (explain-figure, figure-stage, photo-explain,
+  course-module-ui/knowledge/layout-templates.json names the templates (explain-figure, figure-stage, photo-explain,
   compare-two, procedure, task-launch, recap, opening, long-explanation, three-content-blocks, reference-table,
-  reading-with-figure, content-in-parts). Each slide carries data-template="<id>.v1" and data-variant, chosen from the
+  reading-with-figure, content-in-parts) - and worked-example, true-false, scenario, name-parts, key-numbers, before-after, drill, built from the slide's own words
+  (shaped_template). Each slide carries data-template="<id>.v1" and data-variant, chosen from the
   layout below - or asked for in the build sheet: "template": "reference-table", "variant": "figure-left",
   "split": 0.55 (text share, 0.5-0.6), "blocks": [[1, 3], [4, 6]] (compare-two, three-content-blocks), "parts":
   [[1, 4], [5, 9]] (content-in-parts), "figure_b" (compare-two's second picture). An unknown or unsuitable template is
@@ -185,7 +186,8 @@ TOP_WORDS = LAYOUTS["variety"]["picture_top_max_words"]
 VARIETY_WINDOW = LAYOUTS["variety"]["window"]
 DARK_SHARE = 0.2            # 2.62.1 - 80 / 20 (owner, 2026-10-21): at most a fifth of a module's slides on the dark ground
 PHOTO_LONG, PHOTO_LOW = 1600, 800        # L62: a photograph is shipped at 1600 px on its long side or more; under 800 is low
-FIGURE_FREE = {("explain-figure", "text-only"), ("procedure", "text-only"), ("opening", "statement")}
+FIGURE_FREE = {("explain-figure", "text-only"), ("procedure", "text-only"), ("opening", "statement"), ("key-numbers", "cards"),
+               ("drill", "quick-fire"), ("true-false", "text-only"), ("scenario", "text-only"), ("worked-example", "text-only")}
 FIGURE_FREE_IDS = {"opening"}
 RECORD = "compiled.json"
 FINAL_SET = re.compile(r"^F[A-Z]$")           # 2.49.2 - a final assessment's set: FA, and FB when it has a second variant
@@ -290,11 +292,14 @@ NATIVE = {"latviešu": "lv", "latviesu": "lv", "русский": "ru", "english"
 # the deck's landing card: the compiler's own words beside the engine's (gb_deck.js LANG). PROVISIONAL (2.41.0) - written
 # by Claude, to be checked by a native speaker: compile/TRANSLATIONS_REVIEW.md. Counts as "label: n" - no plural forms.
 LANDING = {"en": {"module": "Module {n}", "minutes": "{n} min", "questions": "Questions: {n}", "alone": "On your own",
-                  "team": "In teams of {n}", "tap": "Tap to open"},
+                  "team": "In teams of {n}", "tap": "Tap to open", "true": "True", "false": "False", "what": "What is it?",
+                  "full": "Say in full:", "seconds": "seconds", "clock": "Next starts the clock"},
            "lv": {"module": "{n}. modulis", "minutes": "{n} min", "questions": "Jautājumi: {n}", "alone": "Patstāvīgi",
-                  "team": "Komandās pa {n}", "tap": "Pieskaries, lai atvērtu"},
+                  "team": "Komandās pa {n}", "tap": "Pieskaries, lai atvērtu", "true": "Patiesi", "false": "Nepatiesi",
+                  "what": "Kas tas ir?", "full": "Pastāstiet pilnībā:", "seconds": "sekundes", "clock": "Tālāk - sākas laiks"},
            "ru": {"module": "Модуль {n}", "minutes": "{n} мин", "questions": "Вопросов: {n}", "alone": "Самостоятельно",
-                  "team": "В командах по {n}", "tap": "Нажмите, чтобы открыть"}}
+                  "team": "В командах по {n}", "tap": "Нажмите, чтобы открыть", "true": "Верно", "false": "Неверно",
+                  "what": "Что это?", "full": "Расскажите полностью:", "seconds": "секунд", "clock": "«Далее» запускает время"}}
 assert all(set(LANDING[k]) == set(LANDING["en"]) for k in LANDING), "every language has every word"
 
 
@@ -2180,7 +2185,9 @@ def table_html(lines, idx=None):
 
 def shape_of(tid, variant, left=False):
     """the shape the eye sees (L62) - two templates that look alike are one shape"""
-    if tid in ("task-launch", "recap", "opening", "compare-two"):
+    if tid == "drill":
+        return "drill " + variant                  # a quick-fire and a say-it drill do not look alike
+    if tid in ("task-launch", "recap", "opening", "compare-two") + SHAPED:
         return tid
     if variant == "text-only":
         return "text"
@@ -2215,7 +2222,7 @@ def layout_options(tid, variant, is_photo, words, b, comp, own_left, own_dark, d
     own = {"tid": tid, "variant": variant, "comp": None, "first": own_left, "dark": own_dark,
            "key": (shape_of(tid, variant, own_left), "dark" if own_dark or comp == "photo" else "light")}
     opts = [own]
-    if tid in ("compare-two", "opening", "recap", "task-launch"):
+    if tid in ("compare-two", "opening", "recap", "task-launch") + SHAPED:
         return opts
     if variant == "text-only":                                   # no picture: the other ground is all there is
         return opts + [dict(own, dark=not own_dark, key=("text", "light" if own_dark else "dark"))]
@@ -2386,6 +2393,235 @@ def photo_points(b, nlines, key, probs, where, z=False):
     return out
 
 
+# The information decides the slide: a slide's own approved fields say what it holds - a claim
+# to judge, a situation and its choices, a worked example and the room's turn, short points with the full words for the
+# instructor, a drill - and the shape of its lines says the rest: numbers to remember, two states side by side, the parts to
+# name on a picture. layout-templates.json "picking" is the table. The words are the approved ones; what the compiler adds
+# (a number, a stamp, the clock) is data-script-ignore or a control.
+DRILLS = ("quick-fire", "say-it", "find-it")
+NUM_CELL = re.compile(r"^[-−–+~≈<>≤≥]?\s*\d")
+SHAPED = ("drill", "true-false", "scenario", "worked-example", "name-parts", "before-after", "key-numbers")
+
+
+def cells(x):
+    return [c.strip() for c in x.split(" | ")]
+
+
+def is_numbers(lines):
+    """numbers to remember: every line "value | what it means", the value a number"""
+    return 3 <= len(lines) <= 8 and all(len(cells(x)) == 2 and NUM_CELL.match(cells(x)[0]) for x in lines)
+
+
+def is_two_states(lines):
+    """two states of one thing: the first line names them ("Gas safe | ESD-protected"), each line after it "what | in the
+    first | in the second\""""
+    return len(lines) >= 3 and len(cells(lines[0])) == 2 and all(len(cells(x)) == 3 for x in lines[1:])
+
+
+def shaped_template(s, b, lines):
+    """the template a slide's own fields or the shape of its lines ask for; None for every other slide"""
+    if s.get("drill"):
+        return "drill", s["drill"] if s["drill"] in DRILLS else "say-it"
+    if s.get("claim"):
+        return "true-false", "picture"
+    if s.get("choices"):
+        return "scenario", "picture-left"
+    if s.get("active") == "worked-example" and s.get("ask") and s.get("reveal"):
+        return "worked-example", "figure"
+    if s.get("points"):
+        return "long-explanation", "points"
+    if s.get("ask") and b.get("spots"):
+        return "name-parts", "picture"
+    if b.get("figure_b") and is_two_states(lines):
+        return "before-after", "slider"
+    if is_numbers(lines) and not b.get("figure"):
+        return "key-numbers", "cards"
+    return None
+
+
+def joined(parts, tags):
+    """a line's cells, each in its own element ("b", "span a" = a span of class a); the separator stays, hidden, so the line
+    still says its approved words"""
+    out = []
+    for t, x in zip(tags, parts):
+        tag, _, cls = t.partition(" ")
+        out.append("<%s%s>%s</%s>" % (tag, ' class="%s"' % cls if cls else "", e(x), tag))
+    return '<span class="lt-sep"> | </span>'.join(out)
+
+
+def img_tag(fig):
+    m = re.search(r"<img\b[^>]*>", fig or "")
+    return m.group(0) if m else ""
+
+
+def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir, figdir, probs, where, vkind):
+    """the slide built in the template its information asks for - None when it cannot be (the slide is then built as before)"""
+    w = words_of(script)
+    lt = lambda f: cs.lines_of(s.get(f))
+    side = fill(fig).replace('class="fill', 'class="lt-in fill', 1) if fig else ""
+    if fig and 'style="' not in side.split(">", 1)[0]:
+        side = side.replace(">", ' style="--i:1">', 1)
+    d = {"class": "slide" + (" dark" if b.get("dark") else ""), "data-title": s.get("title"), "data-kind": "Theory",
+         "data-block": "%s · %d" % (m, n), "data-visual": vkind}
+    d.update(base)
+    head = '  <div class="slide-kind"><b>Theory</b> · %s · %d / %d</div>' % (m, n, total)
+    h2 = '<h2 data-script-field="title">%s</h2>' % e(s.get("title"))
+    body = None
+
+    if tid == "long-explanation":
+        # short points on the slide, the full approved words in the instructor's notes (data-cue) - said, never cut
+        if not fig:
+            probs.append("%s: \"points\" go beside the slide's picture (a 3D model, a photograph) - it has none, so its points "
+                         "stand alone" % where)
+        d["data-cue"] = "\n".join(x for x in ("%s %s" % (w["full"], " ".join(lines)), base.get("data-cue")) if x and x.strip())
+        pts = "".join('\n        <li data-k="%d" data-script-field="points">%s</li>' % (j, marked(x)) for j, x in enumerate(lt("points")))
+        body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy lt-in" style="--i:0"><ul class="lt-points">%s\n      </ul></div>%s</div>'
+                % ("42fr 58fr" if fig else "1fr", pts, "\n    " + side if fig else ""))
+
+    elif tid == "true-false":
+        # the claim, the room votes, then Next opens why (the approved text) and the stamp says which it was
+        right = "t" if str(s.get("claim_is", "")).strip().lower() in ("true", "yes", "1") else "f"
+        why = "".join('<p data-script-field="text" data-i="%d">%s</p>' % (i, marked(x, False)) for i, x in enumerate(lines, 1))
+        vote = "".join('<button type="button" data-v="%s"%s>%s</button>' % (v, ' class="ok"' if v == right else "", e(w[k]))
+                       for v, k in (("t", "true"), ("f", "false")))
+        variant = "picture" if fig else "text-only"
+        body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy lt-tf">\n      <p class="lt-claim lt-in" style="--i:1" '
+                'data-script-field="claim">%s</p>\n      <div class="lt-vote lt-in" style="--i:2">%s</div>\n      <div class="lt-why" data-k="1">'
+                '<span class="stamp" data-script-ignore>%s</span><div>%s</div></div></div>%s</div>'
+                % ("48fr 52fr" if fig else "1fr", e(s.get("claim")), vote, e(w["true" if right == "t" else "false"]), why,
+                   "\n    " + side if fig else ""))
+
+    elif tid == "scenario":
+        # the situation and the question, the choices the room picks from; Next shows why each, the right one green
+        ch, why, right = lt("choices"), lt("why"), (s.get("right") or "").strip().upper()
+        opts = "".join('\n        <li class="lt-opt %s" data-v="%s"><span class="l" data-script-ignore>%s</span><div><b data-script-field="choices"%s>%s</b>'
+                       '<span class="fb" data-script-field="why">%s</span></div></li>'
+                       % ("ok" if L == right else "no", L, L, ' data-correct="true"' if L == right else "", e(c), e(f))
+                       for L, c, f in zip(cs.letters(len(ch)), ch, why + [""] * len(ch)))
+        sit = "".join('<p class="lt-sit lt-in" style="--i:1" data-script-field="text" data-i="%d">%s</p>' % (i, e(x)) for i, x in enumerate(lines, 1))
+        d["data-stops"] = "2"
+        variant = "picture-left" if fig else "text-only"
+        body = ('<div class="slide-body lt-split" style="--cols:%s">%s<div class="copy lt-dcopy">%s<p class="lt-ask lt-in" style="--i:2" '
+                'data-script-field="ask">%s</p><ol class="lt-opts lt-in" style="--i:3">%s\n      </ol></div></div>'
+                % ("46fr 54fr" if fig else "1fr", side.replace("--i:1", "--i:0") + "\n    " if fig else "", sit, e(s.get("ask")), opts))
+
+    elif tid == "worked-example":
+        # each step of the worked example lights on Next; then the room's turn, and its answer on the last Next
+        steps = "".join('\n        <li data-k="%d"><span class="n" data-script-ignore>%d</span><div data-script-field="text" data-i="%d">%s</div></li>'
+                        % (j, j + 1, j + 1, joined(cells(x), ("b", "span")) if " | " in x else "<b>%s</b>" % e(x)) for j, x in enumerate(lines))
+        you = ('\n        <li data-k="%d" class="you"><span class="n" data-script-ignore>?</span><div><b data-script-field="ask">%s</b>'
+               '<span class="ans" data-script-field="reveal">%s</span></div></li>' % (len(lines), e(s.get("ask")), e(" ".join(lt("reveal")))))
+        d["data-stops"] = str(len(lines) + 2)
+        variant = "figure" if fig else "text-only"
+        body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy"><ol class="lt-work">%s%s\n      </ol></div>%s</div>'
+                % ("46fr 54fr" if fig else "1fr", steps, you, "\n    " + side if fig else ""))
+
+    elif tid == "name-parts":
+        # the room names each numbered part on the picture first; Next shows the names one by one
+        img = img_tag(spot_width(fig, mdir, m, (b.get("figure") or "").replace("\\", "/")))
+        spots = photo_points(b, len(lines), "spots", probs, where)
+        if not img or len(spots) != len(lines):
+            probs.append("%s: naming the parts needs a picture (a static 3D render or a photograph) and a \"spots\" point for every "
+                         "line - %s" % (where, "it has no picture" if not img else "%d of %d lines have one" % (len(spots), len(lines))))
+            return None
+        names = "".join('\n        <li data-k="%d"><span class="n" data-script-ignore>%d</span><span class="blank"></span>'
+                        '<b data-script-field="text" data-i="%d">%s</b></li>' % (i, i, i, e(x)) for i, x in enumerate(lines, 1))
+        marks = "".join('<span class="lt-spot" data-k="%d" data-x="%g" data-y="%g"><i>%d</i></span>' % (i, x, y, i) for i, (x, y) in sorted(spots.items()))
+        body = ('<div class="slide-body lt-split" style="--cols:38fr 62fr"><div class="copy"><p class="lt-ask lt-in" style="--i:0" '
+                'data-script-field="ask">%s</p>\n      <ol class="lt-name lt-in" style="--i:1">%s\n      </ol></div>\n    '
+                '<figure class="lt-pic lt-in" style="--i:1">%s<div class="lt-spots" data-script-ignore>%s</div></figure></div>'
+                % (e(s.get("ask")), names, img, marks))
+
+    elif tid == "before-after":
+        # one picture over the other, a line between them that Next (or a finger) moves; the differences light beside it
+        fig_b = figure_html(mdir, figdir, s, dict(b, figure=b.get("figure_b")), probs, where)[0]
+        one, two = img_tag(fig), img_tag(fig_b)
+        if not (one and two):
+            probs.append("%s: spot the difference needs two pictures of the same thing (static 3D renders or photographs) - "
+                         "\"figure\" and \"figure_b\"" % where)
+            return None
+        a_, b_ = cells(lines[0])
+        xs = " ".join(["50"] + ["80" if j % 2 == 0 else "20" for j in range(len(lines) - 2)] + ["50"])
+        rows = "".join('\n        <li data-k="%d" data-script-field="text" data-i="%d">%s</li>' % (i - 1, i, joined(cells(x), ("b", "span a", "span b")))
+                       for i, x in enumerate(lines[1:], 2))
+        body = ('<div class="slide-body lt-split" style="--cols:58fr 42fr"><div class="lt-ba lt-in" style="--i:0;--x:50%%" data-x="%s">%s%s'
+                '<span class="side l" data-script-ignore>%s</span><span class="side r" data-script-ignore>%s</span><span class="bar"><i></i></span></div>\n    '
+                '<div class="copy"><div class="lt-diff-h" data-script-field="text" data-i="1"><span></span>%s</div><ol class="lt-diff">%s\n      </ol></div></div>'
+                % (xs, one, two.replace("<img ", '<img class="b" ', 1), e(a_), e(b_), joined([a_, b_], ("span a", "span b")), rows))
+
+    elif tid == "key-numbers":
+        # the number first, the room says what it means, Next turns the card
+        cards = "".join('\n      <li data-k="%d" class="lt-in" style="--i:%d"><div class="fc" data-script-ignore><b>%s</b><span class="q">%s</span></div>'
+                        '<div class="bc" data-script-field="text" data-i="%d">%s</div></li>'
+                        % (i, i, e(cells(x)[0]), e(w["what"]), i, joined(cells(x), ("b", "span"))) for i, x in enumerate(lines, 1))
+        body = '<div class="slide-body lt-nbody"><ol class="lt-nums">%s\n    </ol></div>' % cards
+
+    elif tid == "drill":
+        # a short timed drill before the module check: the clock runs, and at zero the answer shows by itself
+        d["class"] += " lt-drill"
+        d["data-kind"] = "Drill"
+        head = head.replace("<b>Theory</b>", "<b>Drill</b>")
+        secs = int(s.get("seconds") or {"quick-fire": 6, "say-it": 30, "find-it": 20}[variant])
+        clock = lambda small=False, run="1": ('<div class="lt-timer%s" data-secs="%d" data-run="%s" data-script-ignore><svg viewBox="0 0 120 120">'
+                                              '<circle class="tr" cx="60" cy="60" r="54"/><circle class="tf" cx="60" cy="60" r="54"/></svg>'
+                                              '<b>%d</b><span>%s</span></div>' % (" sm" if small else "", secs, run, secs, e(w["seconds"])))
+        if variant == "quick-fire":
+            d["class"] = d["class"].replace(" dark", "")
+            d["style"] = "--qf-s:%ds" % secs
+            dots = "".join('<i data-k="%d"></i>' % j for j in range(len(lines)))
+            items = "".join('\n      <li data-k="%d" data-script-field="text" data-i="%d">%s<i class="bar"></i></li>'
+                            % (j, j + 1, joined(cells(x), ("p pr", "b an"))) for j, x in enumerate(lines))
+            body = '<div class="slide-body lt-qf"><div class="lt-qf-dots">%s</div><ol class="lt-qf-list">%s\n    </ol></div>' % (dots, items)
+        elif variant == "say-it":
+            acts = "".join('<li style="--i:%d"><i data-script-ignore>%d</i><span data-script-field="reveal">%s</span></li>' % (j, j + 1, e(x))
+                           for j, x in enumerate(lt("reveal")))
+            sit = "".join('<p class="lt-sit lt-in" style="--i:1" data-script-field="text" data-i="%d">%s</p>' % (i, e(x)) for i, x in enumerate(lines, 1))
+            body = ('<div class="slide-body lt-split" style="--cols:%s">%s<div class="copy lt-dcopy">%s\n      <p class="lt-do lt-in" style="--i:2" '
+                    'data-script-field="ask">%s</p>\n      <div class="lt-trow">%s<span class="lt-hint" data-k="0" data-script-ignore>%s</span></div>\n      '
+                    '<ol class="lt-acts" data-k="2">%s</ol></div></div>'
+                    % ("52fr 48fr" if fig else "1fr", side.replace("--i:1", "--i:0") + "\n    " if fig else "", sit, e(s.get("ask")),
+                       clock(), e(w["clock"]), acts))
+        else:
+            # find it on the photograph: each line asks for a part; the clock runs, then its spot shows
+            img = img_tag(spot_width(fig, mdir, m, (b.get("figure") or "").replace("\\", "/")))
+            spots = photo_points(b, len(lines), "spots", probs, where)
+            if not img or len(spots) != len(lines):
+                probs.append("%s: \"find-it\" needs a photograph (or a static 3D render) and a \"spots\" point for every line"
+                             % where)
+                return None
+            d["class"] = "slide photo lt-drill lt-find"
+            d["data-stops"] = str(3 * len(lines))
+            sp = "".join('<span class="lt-spot" data-k="%d" data-x="%g" data-y="%g"><i></i></span>' % (3 * (i - 1) + 2, x, y)
+                         for i, (x, y) in sorted(spots.items()))
+            asks = "".join('\n    <p class="lead head lt-ask2" data-k="%s" data-script-field="text" data-i="%d">%s</p>'
+                           % (" ".join(str(3 * (i - 1) + k) for k in range(3)), i, marked(x, False)) for i, x in enumerate(lines, 1))
+            hint = " ".join(str(3 * j) for j in range(len(lines)))
+            run = " ".join(str(3 * j + 1) for j in range(len(lines)))
+            template_attrs(d, tid, variant)
+            return ('<section %s>\n  <div class="photo-wrap">%s<div class="lt-spots" data-script-ignore>%s</div></div>\n  <div class="photo-scrim"></div>\n%s\n'
+                    '  <div class="photo-copy">\n    %s%s\n    <div class="lt-trow">%s<span class="lt-hint" data-k="%s" data-script-ignore>%s</span></div>\n  </div>\n</section>'
+                    % (attrs(d), img, sp, head, h2, asks, clock(True, run), hint, e(w["clock"])))
+    if body is None:
+        return None
+    template_attrs(d, tid, variant)
+    return '<section %s>\n%s\n  %s\n  %s\n</section>' % (attrs(d), head, h2, body)
+
+
+def spot_width(fig, mdir, m, rel):
+    """the build sheet's spots and zoom are in the photograph's own pixels - the original's, before L62 enlarged it to
+    PHOTO_LONG px: the picture says that width (data-px-w), so gb_steps.js puts each point where it was meant"""
+    try:
+        from PIL import Image
+        here = Image.open(os.path.join(mdir, rel)).size
+        keep = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(mdir))), "working_claude", "photo_originals", m,
+                            os.path.basename(rel))
+        was = Image.open(keep).size if os.path.isfile(keep) else here
+    except (OSError, ValueError, ImportError):
+        return fig
+    w = was[0] if was[0] < here[0] and abs(was[0] / float(was[1]) - here[0] / float(here[1])) < 0.02 else here[0]
+    return re.sub(r"<img\b", '<img data-px-w="%d"' % w, fig, count=1)
+
+
 def recap_html(s, base, m, n, total, lines, dark=False, tap="Tap to open"):
     """L51 - the module's closing slide, "what to take away", in the one shared design (gb_compose.css 15): one box
     per approved line, "Short title - one sentence"; the numbers are drawn by CSS, so the slide says exactly the
@@ -2395,12 +2631,13 @@ def recap_html(s, base, m, n, total, lines, dark=False, tap="Tap to open"):
          "data-block": "%s · %d" % (m, n), "data-visual": "none"}
     d.update(base)
     template_attrs(d, "recap", "cards")
-    items = []
+    items, asks = [], cs.lines_of(s.get("asks"))
     # 2.89.0: the cards open one by one (Next or a tap), the instructor asking the room first; the tap mark's words are
     # an attribute, so the card holds only its approved line
     for k, x in enumerate(lines, 1):
         t, sep, rest = x.partition(" - ")
         items.append('<li class="rc-item" data-script-field="text" data-k="%d">' % k
+                     + ('<span class="lt-q2" data-script-field="asks">%s</span>' % e(asks[k - 1]) if k <= len(asks) else "")
                      + ('<b class="rc-t">%s</b><span class="rc-sep"> - </span><span class="rc-d">%s</span>' % (e(t), e(rest))
                         if sep else '<span class="rc-d">%s</span>' % e(x))
                      + '<span class="lt-shine"></span><span class="lt-tap" data-label="%s"><i>%s</i></span></li>' % (a(tap), TAP_SVG))
@@ -2555,6 +2792,11 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
             left = ([] if pic else [icon]) + body + ['<div class="act-lines">'] + \
                    ['  <p class="act-inst" data-script-field="text">%s</p>' % e(x) for x in lines] + ["</div>"] + \
                    ['<div class="lt-chips" data-script-ignore>%s</div>' % "".join("<span>%s</span>" % e(c) for c in chips)]
+            before = cs.lines_of(s.get("before"))
+            if before:          # the few things to check before the self-check, ticked off on the way to it
+                left.append('<div class="lt-path">%s<div class="st mc" style="--d:%d" data-script-ignore><i>%s</i></div></div>' % (
+                    "".join('<div class="st" style="--d:%d"><i data-script-ignore>✓</i><span data-script-field="before">%s</span></div>'
+                            '<div class="bar" style="--d:%d"></div>' % (j, e(x), j) for j, x in enumerate(before)), len(before), e(code)))
             right = ('<div class="lt-tab3d lt-3dbox lt-photo lt-in" style="--i:1">%s</div>' % pic if pic else
                      '<div class="lt-tab3d lt-3dbox clear lt-in" style="--i:1"><img class="lt-tabimg" src="../assets/%s" alt="" data-no-zoom></div>' % TABLET_PIC)
             return ('<section %s>\n  <div class="slide-kind"><b>%s</b> · %s · %s</div>\n  <div class="slide-body lt-task2">\n'
@@ -2576,8 +2818,18 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     # what picture was BUILT (2.54.0) - its own name: `kind` stays the slide's kind, which L61's dense rule below reads
     # (the merge of 2.52.0 and 2.54.0 had both under one name, so a dense slide with no picture went uncaught)
     vkind = built_kind(s, fig, is_photo, photo_meta(mdir, (b.get("figure") or "").replace("\\", "/")) if is_photo else None)
-    if not str(b.get("cue_kept") or "").strip():       # the operator kept the cue as it is, with their reason
+    shaped = kind == "slide" and shaped_template(s, b, lines)
+    # what the cue asks the room to do on a slide of its own template (vote, pick, drag the line) is the template's to do
+    if not str(b.get("cue_kept") or "").strip() and not shaped:       # the operator kept the cue as it is, with their reason
         probs += cue_problems(s, fig, vkind, is_photo, build or {}, mdir, where)
+    if shaped:
+        want_t = (b.get("template") or "").split(".v")[0]
+        if want_t and want_t != shaped[0]:
+            probs.append("%s: the build sheet asks for the template %s, and the slide's own words ask for %s - take \"template\" "
+                         "out, or change the words (L61)" % (where, want_t, shaped[0]))
+        out = shaped_html(script, s, b, shaped[0], shaped[1], fig, lines, base, m, n, total, mdir, figdir, probs, where, vkind)
+        if out:
+            return out
     comp = composition(s, b, is_photo, bool(fig))
     if comp not in COMPOSITIONS + ("photo",):
         probs.append("%s: the build sheet asks for the layout \"%s\" - the layouts are %s" % (where, comp, ", ".join(COMPOSITIONS)))
@@ -2748,6 +3000,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         if b.get("zoom") and not split_photo:
             probs.append("%s: \"zoom\" is for a photograph beside its words (photo-explain split) - use \"spots\" on a full photograph" % where)
         if spots or zoom:
+            fig = spot_width(fig, mdir, m, (b.get("figure") or "").replace("\\", "/"))
             words = step_marks(words, dict((i, ' data-x="%g" data-y="%g" data-z="%g"' % tuple(v)) for i, v in zoom.items()))
             if spots:
                 layer = '<div class="lt-spots">%s</div>' % "".join('<span class="lt-spot" data-k="%d" data-x="%g" data-y="%g"><i></i></span>'

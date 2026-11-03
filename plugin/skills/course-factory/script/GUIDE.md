@@ -111,6 +111,30 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   The review page shows plain theory against active minutes (aim: 20 / 80). To get there, **keep every
   theory slide** and give the plain ones fewer minutes - the words stay to be read - and the minutes to
   activity; never shorten or remove good theory. Theory may be added.
+- **Pick the slide for the information.** The templates hold no words of their own. Read what each
+  piece of the module's information is, and write it in the shape its template needs - the compiler then builds that
+  template (`course-module-ui/knowledge/layout-templates.json` "picking"). Every new word is drafted from this course's
+  own material (its slides, its sources, the operator's facts) and goes on the review page for approval like the text;
+  none is a stock phrase.
+
+  | The information | Write it as | The slide |
+  |---|---|---|
+  | a long explanation beside a 3D model or a photo | `"points"`: 3-5 short points (14 words or fewer, shorter than the text); `text` keeps the full words - the instructor says them (`data-cue`) | short points + the picture |
+  | a calculation or a reading | `"active": "worked-example"`, lines `"what you do \| what you get"`, `"ask"` the room's turn, `"reveal"` its answer | worked example, then your turn |
+  | a common wrong belief | `"claim"` the belief, `"claim_is"`: `"false"` (or `"true"`), the lines say why | true or false, then why |
+  | what to do when something happens | `"active": "scenario"`, the lines the situation, `"ask"`, `"choices"` (2-4, one a line), `"why"` (one for each), `"right"` (its letter) | what would you do? |
+  | parts of equipment taught earlier | `"ask"` ("Name each number."), the part names as lines; the build sheet's `"spots"` on a static 3D render or a photo | name the parts |
+  | several limits or values | 3-8 lines `"value \| what it means"`, no picture | numbers to remember |
+  | two states of the same thing | the first line `"A \| B"`, each line after it `"what \| in A \| in B"`; build sheet `"figure"` and `"figure_b"` | spot the difference |
+  | the end of the module | the recap, and `"asks"`: one question for each of its lines | the summary asks first |
+  | just before a self-check | `"before"` on its task slide: 2-4 things to check, one a line | the list on the task slide |
+  | before the module check, every second or third module | `"drill"`: `quick-fire` (lines `"prompt \| answer"`), `say-it` (the situation, `"ask"`, `"reveal"`) or `find-it` (lines "Point to ...", `"spots"`); `"seconds"` 5-120 | a quick drill |
+
+  A picture and a short explanation, two pictures, numbered steps and three parts of one system keep the templates
+  they had (`compile/GUIDE.md` §2, §2h). Never the same look twice in a row (L62) - two claims or two scenarios side
+  by side are a problem; 60-80 % of the slides with interactive 3D; no flat drawings (L67). A drill comes after the
+  module's last teaching slide; minutes are the module's as before (L1). `content_script.py` checks each shape
+  (`shape_problems`).
 - **3D and AI pictures - planned unasked (2.49.0, operator 2026-10-16: "make it so they add 3D + AI generated photos
   when needed").** Before the review page is shown, plan them yourself - the operator never has to ask:
   - **3D:** where a slide's lesson is a shape, an inside or a layout in space (a tank and its barriers, a space and
