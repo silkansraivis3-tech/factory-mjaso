@@ -475,7 +475,9 @@ comes from the approved script, and `scripts/check_script_match.py` proves the b
 exactly those words. **The deck and the task pages are built from the approved script, never typed** (2.25.0,
 2.34.0): `compile/GUIDE.md`, `compile/scripts/compile_module.py`; **the course's own pages** - `COURSE.html`,
 `course_map.js`, every module's two start pages - by `compile/scripts/compile_course.py`, once for the course
-(2.37.0). A module agent therefore reads the script lane, `compile/GUIDE.md` and the picture lanes - not the HTML
+(2.37.0), with **the additional materials** beside it: `course\additional-materials\` (the ACP in Word and HTML,
+every task as PDF and Word, the day's simulator and equipment papers) and the two plan pages on the instructor's
+tablet (`compile/GUIDE.md` §5b). A module agent therefore reads the script lane, `compile/GUIDE.md` and the picture lanes - not the HTML
 rules of `course-module-ux`, `course-module-ui` and `course-task-ux`, which the compiler builds to.
 **One command builds and checks a module (2.50.0):** `compile/scripts/build_module.py <course> --module N` - every
 figure at once, the compile, every check, and the visual review's sheets; it prints only what fails. Start at the

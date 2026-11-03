@@ -20,6 +20,8 @@ beside them, and inside it into three places (owner, 2026-10-02 - "it was chaos 
                              each module's content script (page and Word file), the instructor notes, a pattern
                              draft - one place, nothing else in it
             modules\\         the finished modules, one complete folder each (L43)
+            additional-materials\\  the paper beside the tablets, written by every course build: the ACP, every
+                             task as PDF and Word, the day's simulator and equipment papers (compile/GUIDE.md 5b)
             working_claude\\  everything only the factory uses: COURSE_STATE.md, FEEDBACK_LOG.md, factory-notes.md,
                              programme.json, architecture.json, the scripts' own data, intake, the knowledge-base
                              decisions, the old-course inventory and pictures, research, retrieval - all kept
@@ -39,6 +41,7 @@ WORK = "course"
 REVIEW = "to_review"
 CLAUDE = "working_claude"
 MODULES = "modules"
+ADDITIONAL = "additional-materials"
 # what marks a folder as the factory's own work folder
 WORK_MARKS = (REVIEW, CLAUDE, "COURSE_STATE.md", "FEEDBACK_LOG.md", "_factory", "architecture.json", "programme.json")
 # what marks a folder as the operator's master folder - the material the course is made from
@@ -163,7 +166,7 @@ def tidy(work):
             _move(p, os.path.join(work, REVIEW if n.endswith(".draft.md") else CLAUDE, n), moved)
     for old, new in LEGACY_DIRS.items():
         _move(os.path.join(work, old), os.path.join(work, new), moved)
-    left = sorted(n for n in os.listdir(work) if n not in (REVIEW, CLAUDE, MODULES))
+    left = sorted(n for n in os.listdir(work) if n not in (REVIEW, CLAUDE, MODULES, ADDITIONAL))
     return moved, left
 
 

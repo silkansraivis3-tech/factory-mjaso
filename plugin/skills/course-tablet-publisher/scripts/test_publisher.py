@@ -297,6 +297,11 @@ def main() -> int:
                                   "/r/" + shell) == "INSTRUCTOR")
         check("2.83.0 ... while the ILO map's own working file, ilo_map.json, stays internal",
               _gates.classify("/r", plat, "/r/app/src/instructor/assets/instructor_terminal/courses/c/working_claude/ilo_map.json") == "INTERNAL")
+        ib = "/r/app/src/instructor/assets/instructor_terminal/courses/c/"
+        check("the additional materials (the office's paper) never ship; the two plan pages ship, instructor-side",
+              _gates.classify("/r", plat, ib + "additional-materials/acp/ACP_c.docx") == "INTERNAL"
+              and _gates.classify("/r", plat, ib + "modules/_course_shell/advanced_course_plan.html") == "INSTRUCTOR"
+              and _gates.classify("/r", plat, ib + "modules/module01/instructor/advanced_module_plan.html") == "INSTRUCTOR")
 
         # ---- 5 · gitpub commit / push on a real repository (2.49.4) ----------
         pr = os.path.join(tmp, "pubrepo")

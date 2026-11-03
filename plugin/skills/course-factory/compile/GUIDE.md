@@ -660,6 +660,50 @@ from what is already approved and built, nothing new:
 - A module agent never runs it: two agents writing `COURSE.html` is a lost write no test catches
   (`orchestration/GUIDE.md` Rule 3).
 
+## 5b · The additional materials - the paper beside the tablets
+
+Every course build (`compile_course.py`, or `compile/scripts/additional_materials.py <course>` on its own) writes the
+paper an auditor, the office and the instructor need, from what is already approved - nothing in it is new content:
+
+```
+course\
+  additional-materials\                     beside modules\ - never on a tablet (the publisher sorts it internal)
+    INDEX.html                              every file below, linked - the office's way in
+    acp\ACP_<course>.docx                   the Advanced Course Plan for the auditor
+    acp\ACP_<course>.html                   the same plan to read
+    practical-tasks\pdf\MNN_<code>_<title>.pdf     one per task: every self-check, team task, module check and room,
+    practical-tasks\docx\MNN_<code>_<title>.docx   simulator or equipment exercise - what the trainee does, the right
+                                                    answers and feedback, the instructor's notes, the marking
+    simulator-and-equipment\Day_N\          what the instructor prints at the start of day N:
+      MNN_<code>_<title>_TRAINEE.pdf / .docx       the trainee card - no answer, no instructor note
+      MNN_<code>_<title>_INSTRUCTOR.pdf            the instructor sheet - the full description
+  modules\_course_shell\advanced_course_plan.html      the ACP on the instructor's tablet
+  modules\moduleNN\instructor\advanced_module_plan.html   the module explained step by step, for the tablet
+```
+
+- **The ACP** follows the school's ACP: the course's facts (programme, standard, model course, hours and days, group,
+  rooms, equipment, final assessment), the Main ILOs, then **day by day** - the day's training objectives (its modules'
+  Main ILOs, word for word), and per module its number, topic, training method (presentation, self-checks, team tasks,
+  the exercises with where they run, the module check), its Sub-ILOs and its used material (each source by its title),
+  the questions to check the day (its module checks' first two), literature, films and the line for the person
+  responsible (`course.build.json` `"responsible"`).
+- **The days**: `course.build.json` `"days": [[1, 2, 3, {"module": 4, "minutes": 200}], [4, 5, 6]]` - delivery, like
+  `"module_order"`; a module without minutes takes what is left of it. Without it, the modules in the course's order
+  fill each day up to `programme.json` `max_hours_per_day`, a module split where the day ends. Set it from the
+  programme's timetable when that splits a module differently.
+- **A task's kind on paper**: simulator / equipment / room, from its own words and its practical's equipment
+  (`architecture.json` `"practicals"`); `course.build.json` `"paper_tasks": {"M09.A02": "equipment"}` when the words
+  mislead. Only simulator and equipment exercises go into `simulator-and-equipment\`.
+- **The two tablet pages stand alone** - their style inline, no stylesheet, script or link out - so the instructor
+  panel can open them over itself and close them again. Both are instructor-only by their folder.
+- **PDF** is printed by the hidden Chrome or Edge (`browser_slots`) from a copy kept in
+  `working_claude\additional_materials\`, and only when its page changed (`working_claude\additional_materials.json`):
+  the first build of a 21-module course about 2 minutes, a rebuild seconds. `--no-pdf` skips it (said as a problem).
+  A file it made before and no longer makes is moved to `working_claude\additional_materials\old\`, never deleted.
+- A module whose script is not approved gets nothing, and is said. `additional_materials.py <course> --check` says
+  what is missing or out of date. The headings and labels are English only so far; a course in another language is
+  told so on every build (the course's own words are as approved).
+
 **Languages (2.40.0, L19; the deck 2.41.0).** The words the factory itself puts on a task page (`task_pages.py` WORDS,
 the engine's in `gb_answer.js`), on the deck (the deck engine's in `gb_deck.js` LANG, the landing card's in
 `compile_module.py` LANDING) and on the start pages (`compile_course.py` WORDS) exist in English, Latvian and Russian, chosen by

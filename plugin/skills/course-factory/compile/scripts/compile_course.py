@@ -6,6 +6,7 @@
                                                     START_HERE_EXTENDED.html in every module folder
     compile_course.py <course folder> --module 3    the course files and module 3's start pages only
     compile_course.py <course folder> --force       overwrite a page that was changed by hand
+    compile_course.py <course folder> --no-pdf      the additional materials without their PDF files (no browser)
 
 WHY THIS EXISTS
 classroom-system.json says the factory writes these files, and until 2.37 no script did: every course got them typed by
@@ -18,6 +19,9 @@ them is new content:
   the hours                 working_claude\\programme.json (total_row.total, academic_hour_min)
   the tasks of a module     its built deck: every task slide's data-activity / data-title / data-task-href
   the instructor's files    what is in the module folder: instructor\\*.html, assessment\\*answer_key*.html, handout\\
+  the additional materials  course\\additional-materials\\ (the ACP, every task on paper, the day's simulator and
+                            equipment papers), _course_shell\\advanced_course_plan.html and every module's
+                            instructor\\advanced_module_plan.html - additional_materials.py
   the trainee's handout     handout\\index.html - every slide's title, lines and photographs, from the approved script
                             (handout.py, 2.69.0: the one button on the trainee's tablet)
   how the course is named   working_claude\\course.build.json - delivery, not content (like M01.build.json):
@@ -55,6 +59,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import compile_module as cm  # noqa: E402
+import additional_materials  # noqa: E402
 import handout  # noqa: E402
 import content_script as cs  # noqa: E402
 import ilo_coverage  # noqa: E402
@@ -363,6 +368,7 @@ def main(argv=None):
     ap.add_argument("--module", help="only this module's start pages (the course files are always built)")
     ap.add_argument("--force", action="store_true", help="overwrite a page that was changed by hand")
     ap.add_argument("--retitle", action="store_true", help="accept a new course title - the classroom will see a NEW course")
+    ap.add_argument("--no-pdf", action="store_true", help="the additional materials without their PDF files")
     o = ap.parse_args(argv)
     course = workspace.work_folder(o.course, create=False)
     root = os.path.join(course, workspace.MODULES)
@@ -454,6 +460,13 @@ def main(argv=None):
     put(cp, course_page(title, infos, planned, sheet, prog, lang, w, credits=bool(crows)), rec, "COURSE.html")
     rec["title"] = title
     cs.save(rec_p, rec)
+    # the paper beside the tablets - the auditor's ACP, every task on paper, the day's simulator and equipment papers - and
+    # the two plan pages the instructor opens on the tablet; before the start pages, which list the module's plan
+    am_written, am_probs = additional_materials.build(course, infos, title, pdf=not o.no_pdf)
+    built += am_written
+    if am_written:
+        print("Built %d file(s) of the additional materials (%s)" % (len(am_written), additional_materials.FOLDER))
+    probs += am_probs
 
     # every module's two start pages
     for info in infos:

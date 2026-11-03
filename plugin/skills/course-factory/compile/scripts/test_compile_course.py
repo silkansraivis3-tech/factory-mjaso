@@ -68,6 +68,10 @@ def main():
 
         code, out = run(COURSE, c)
         check("built from the approved architecture, script and deck", code == 0, out)
+        check("the build writes the additional materials and the module's step-by-step plan, which its start page lists",
+              os.path.isfile(os.path.join(c, "additional-materials", "INDEX.html"))
+              and os.path.isfile(os.path.join(c, "additional-materials", "practical-tasks", "docx", "M01_SC1_the_new_spaces.docx"))
+              and 'href="instructor/advanced_module_plan.html"' in read(md, "START_HERE_EXTENDED.html"), out)
         # 2.83.0 - the ILO coverage the admin reads is written with the course files, when the course has an ILO map
         cov_p = os.path.join(root, "_course_shell", "ilo_coverage.json")
         check("2.83.0 no ILO map yet: a line says so, no ilo_coverage.json, the build is not stopped",
