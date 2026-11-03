@@ -170,6 +170,10 @@ halves count - a task that is clear but dull fails, and so does one that is impr
 The task screens' layouts - where the question, its picture, the answers and the side cards go - are in
 `course-module-ui/knowledge/blueprints.json` "tasks", with their live references in `design/task-templates` (the
 twelve quick-check screens in `live/`, the nineteen richer tasks in `engines/`, both themes by `themes.py`).
+Every compiled task page has that look: `assets/gb_task_look.css` loads last and gives each question's screen the white
+or the Navy theme - the other one than the screen before, or the build sheet's `"theme"` - and changes no size, place
+or typeface weight of `gb_answer.css`, so every fit and tap area stands. Each question names its picture (a static 3D
+render or a photograph, build sheet `"figure"`); a screen without one is said at build.
 
 **Self-checks and module checks: choosing, not writing.** Allowed: **tap to choose** · **tap to
 locate** (§6) · **order / sequence** · **match** · **choose-and-justify** (pick the action, then the

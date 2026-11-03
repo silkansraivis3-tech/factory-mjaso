@@ -14,6 +14,7 @@
     {"name": "gb_page.css",         "from": "course-module-ui/templates/gb_page.css",     "for": "document pages and the frame of task pages"},
     {"name": "gb_task.css",         "from": "course-task-ux/assets/gb_task.css",          "for": "task controls, on top of gb_page.css"},
     {"name": "gb_answer.css",       "from": "course-task-ux/assets/gb_answer.css",        "for": "the screens of every compiled task page - choose, tap the picture, drag and drop, the result ring"},
+    {"name": "gb_task_look.css",    "from": "course-task-ux/assets/gb_task_look.css",     "for": "the task screens in the brandbook's look: the white and the Navy theme, one a screen; loads last, changes no size"},
     {"name": "gb_answer.js",        "from": "course-task-ux/assets/gb_answer.js",         "for": "the one shared engine of every compiled task page - grading by data-key, gb-task-done, gb-timer (L38, L42)"},
     {"name": "gb_interact.js",      "from": "course-task-ux/assets/gb_interact.js",       "for": "the interactive task types beside gb_answer.js (2.74.0) - true or false, check a colleague, work it out, predict, explore, investigate, line it up (3D), inspection round (3D / 360), take it apart (3D), test before entry"},
     {"name": "gb_interact.css",     "from": "course-task-ux/assets/gb_interact.css",      "for": "the interactive task types' look (2.74.0)"},

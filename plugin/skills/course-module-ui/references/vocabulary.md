@@ -254,12 +254,13 @@ colours in the set; adding one is an owner decision (`knowledge/tokens.json` § 
 | `.two-col.photo-col` > `.fill.photo-col` | (`gb_compose.css`, 2.49.1) a photo slide laid out `wide-left` / `wide-right` in the build sheet: a real column layout, the photo cropped to fill its column, its credit line kept - so long words get the room `photo split` cannot give them. Written by the compiler, never by hand |
 | `.photo-strip` > `.pthumb` | (`gb_compose.css` 16, L57) the real photos of what a drawing shows, in a row under it, each numbered like the drawing and opening full screen with its record - written by the compiler, never by hand |
 | `gb_answer.js` + `gb_answer.css` | the one shared engine and screens of every compiled task page - choose, tap the picture, drag and drop, label the drawing, the result ring; grading by `data-key`, `gb-task-done`, `gb-timer` (`course-factory/compile/scripts/task_pages.py`) |
+| `gb_task_look.css` | the task screens in the brandbook's look, loaded last: each question's screen marked th-w (white, the NA pattern at its right edge) or th-n (Navy), picked by `task_pages.py` so neighbouring screens do not repeat (build sheet `"theme"`); the page round it follows the screen on show. Changes no size or place of `gb_answer.css` |
 | `kbd_escape.js` + `kbd_escape.css` | the three ways out of the soft keyboard (`course-task-ux` §5) |
 | `task_complete.js` + `task_complete.css` | the one shared ending for every task (`course-task-ux` §9) |
 | `novikontas_logo.svg` | the logo for the landing screen, and the top right of every light slide |
 | `novikontas_logo_white.svg` | the same official logo, its one colour switched to white: the top right of every dark (blue) or photo slide, no plate (owner, 2026-10-21) |
 | `task_tablet.png` | a task slide's picture when the exercise has no photograph: the tablet in 3D with an empty task screen, no words (2.89.0) |
-| `na_pattern_on_light.svg` · `na_pattern_on_navy.svg` | the brandbook's NA pattern, only where nobody reads: the opening, task, check and summary slides, the start screen (2.88.0) |
+| `na_pattern_on_light.svg` · `na_pattern_on_navy.svg` | the brandbook's NA pattern, only where nobody reads: the opening, task, check and summary slides, the start screen (2.88.0), the right edge of a task screen |
 | `gb_upgrade.css` | the upgraded templates' bodies (§0b), after `gb_layouts.css` - loaded by every compiled deck |
 | `gb_steps.js` | Next walks an upgraded slide's stops and drives its scene, photo, meter, slider or clock (§0b) - before `gb_deck.js` in every compiled deck |
 | `gb_scene.js` | a picture box's live 3D scene (three.js r128): one shared canvas, draws only while its slide is up, still for reduced motion; the scenes are the course's own file (`course-visuals/scene/examples/m01_scenes.js` is the reference) |

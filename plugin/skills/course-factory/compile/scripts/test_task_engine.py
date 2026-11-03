@@ -1674,6 +1674,94 @@ def hand_box_part():
           len(got) == 1 and '"insulation"' in got[0] and '"hold space"' in got[0], got)
 
 
+THEME_LOOK = ("document.body.style.transition='none';var a=[].slice.call(document.querySelectorAll('section.scr[data-script]')),r=[];a.slice(0,3).forEach(function(x){"
+              "a.forEach(function(y){y.classList.remove('on');});x.classList.add('on');var o=x.querySelector('.opt');"
+              "r.push([x.className.replace('scr ','').replace(' on',''),getComputedStyle(document.body).backgroundColor,"
+              "getComputedStyle(document.getElementById('go')).backgroundColor,o?getComputedStyle(o).borderTopLeftRadius:'']);});out.theme=r;")
+
+
+CONTRAST = r"""var nt=document.createElement('style');nt.textContent='*,*::before,*::after{transition:none!important;animation:none!important}';document.head.appendChild(nt);
+function rgb(s){var m=s.match(/[\d.]+/g)||[0,0,0,0];return {r:+m[0],g:+m[1],b:+m[2],a:m.length>3?+m[3]:1};}
+function lum(c){return [c.r,c.g,c.b].map(function(v){v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);}).reduce(function(s,v,i){return s+v*[.2126,.7152,.0722][i];},0);}
+function over(top,bot){return {r:top.r*top.a+bot.r*(1-top.a),g:top.g*top.a+bot.g*(1-top.a),b:top.b*top.a+bot.b*(1-top.a),a:1};}
+function ground(e){var st=[];for(var x=e;x&&x.nodeType===1;x=x.parentElement){var cx=getComputedStyle(x),c=rgb(cx.backgroundColor);
+  var gi=cx.backgroundImage.match(/rgba?\([^)]*\)/);if(c.a===0&&gi){c=rgb(gi[0]);}   /* a gradient: its first colour */
+  if(c.a>0){st.push(c);if(c.a>=1)break;}}
+  var b=rgb(getComputedStyle(document.body).backgroundColor);for(var i=st.length-1;i>=0;i--){b=over(st[i],b);}return b;}
+var bad=[],seen=0;[].forEach.call(document.querySelectorAll('section.scr'),function(s){var own=/th-n/.test(s.className)?'th-n':'th-w';
+  (s.hasAttribute('data-script')?['th-w','th-n']:[own]).forEach(function(th){
+  [].forEach.call(document.querySelectorAll('section.scr'),function(y){y.classList.remove('on');});s.classList.remove('th-w','th-n');s.classList.add('on',th);
+  var w=document.createTreeWalker(s,NodeFilter.SHOW_TEXT);for(var n=w.nextNode();n;n=w.nextNode()){if(!n.nodeValue.trim())continue;var e=n.parentElement;
+    var r=e.getBoundingClientRect(),cs=getComputedStyle(e);if(!r.width||cs.visibility==='hidden'||+cs.opacity===0||e.closest('svg,.vh,[hidden]'))continue;
+    var f=rgb(cs.color),g=ground(e);f=over(f,g);var L1=lum(f),L2=lum(g),cr=(Math.max(L1,L2)+.05)/(Math.min(L1,L2)+.05);seen++;
+    if(cr<3)bad.push([s.getAttribute('data-script')||s.id,th,n.nodeValue.trim().slice(0,30),Math.round(cr*10)/10,e.tagName.toLowerCase()+'.'+(e.className||'').toString().replace(/ /g,'.'),(e.parentElement.className||'').toString()]);}});});
+out.contrast={seen:seen,bad:bad};"""
+
+
+def look_part(exe, page, tmp):
+    """the task screens in the brandbook's look (gb_task_look.css, loaded last): each question's screen white or Navy, picked
+    so neighbouring screens do not repeat, the page round it following the screen on show; a build sheet may ask for one"""
+    print("\n-- the task screens in the brandbook's look: white and Navy, one a screen")
+    text = io.open(page, encoding="utf-8").read()
+    css = re.findall(r'href="\.\./assets/([\w.]+\.css)"', text)
+    check("the page loads the look last, and the module carries the factory's own copy",
+          css and css[-1] == "gb_task_look.css" and io.open(os.path.join(os.path.dirname(page), "..", "assets", "gb_task_look.css"), "rb").read()
+          == io.open(os.path.join(tcm.SKILLS, "course-task-ux", "assets", "gb_task_look.css"), "rb").read(), css)
+    themes = re.findall(r'<section class="scr (th-[wn])" data-script="', text)
+    check("every question's screen is white or Navy, and no two neighbours look the same",
+          len(themes) == 10 and all(x != y for x, y in zip(themes, themes[1:])), themes)
+    check("... the result is on Navy", '<section class="scr th-n" id="resScr">' in text)
+    r = drive(exe, page, [["eval", THEME_LOOK]], tmp, look=False)
+    got = r.get("theme") or []
+    navy, white = [x for x in got if x[0] == "th-n"], [x for x in got if x[0] == "th-w"]
+    check("on a Navy screen the page is Navy, on a white one white, and the big button follows the screen",
+          navy and white and all(x[1] == "rgb(10, 36, 99)" for x in navy) and all(x[1] == "rgb(247, 248, 250)" for x in white)
+          and {x[2] for x in navy}.isdisjoint({x[2] for x in white}), got)
+    pages = [page]
+    for name, screens in (("cr", REVIEW), ("cf", FIXES)):       # the other ways of answering: order, match, sort, tap, label ...
+        os.makedirs(os.path.join(tmp, name))
+        c, md = tcm.new_course(os.path.join(tmp, name), tcm.script(screens=screens), build=False)
+        if name == "cf":
+            io.open(os.path.join(md, "assets", "fig", "prep.svg"), "w", encoding="utf-8").write(PREP)
+            io.open(os.path.join(md, "assets", "fig", "ga.svg"), "w", encoding="utf-8").write(tcm.GA)
+        tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": dict(
+            {"t01": {"try_tablet": False}, "t02": {"try_tablet": False}},
+            **({"q01": {"figure": "assets/fig/prep.svg"}, "m01": {"figure": "assets/fig/ga.svg"}} if name == "cf" else {}))})
+        tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+        pages += [os.path.join(md, d, f) for d in ("tasks", "assessment") if os.path.isdir(os.path.join(md, d))
+                  for f in sorted(os.listdir(os.path.join(md, d))) if f.endswith(".html") and "answer_key" not in f]
+    import test_interact_types as tit                          # the ten interactive types
+    c, md, _, _ = tit.course(os.path.join(tmp, "ci"))
+    pages += [os.path.join(md, "tasks", f) for f in sorted(os.listdir(os.path.join(md, "tasks"))) if f.endswith(".html")]
+    bad, seen = [], 0
+    for pg in pages:
+        con = drive(exe, pg, [["eval", CONTRAST]], tmp, look=False).get("contrast") or {}
+        seen += con.get("seen", 0)
+        bad += [[os.path.basename(pg)] + x for x in con.get("bad") or []]
+    for x in bad[:80]:
+        print("    " + " | ".join(str(v) for v in x))
+    check("every word on every screen of every way of answering, each tried white AND Navy, stands out from what is behind it "
+          "(contrast 3:1 or more) - on a Navy screen a part on its own pale card keeps dark words, and a table drops its white",
+          len(pages) >= 5 and seen > 300 and not bad, bad[:30] or (len(pages), seen))
+    css_look = io.open(os.path.join(tcm.SKILLS, "course-task-ux", "assets", "gb_task_look.css"), encoding="utf-8").read()
+    rules = re.sub(r":root\{[^}]*\}", "", re.sub(r"/\*.*?\*/", "", css_look, flags=re.S))
+    check("the look changes no size or place - no width, height, padding, margin, grid, position, font size or weight of "
+          "gb_answer.css (a bolder word wraps another way and moves a drawing's tap areas); only the pattern layer is placed", not re.search(r"(?<![-\w])(width|height|min-height|padding|margin|grid-template[\w-]*|"
+                                                               r"display|position|top|left|font-size|font-weight|letter-spacing|font-family|border(-[a-z]+)?-width|"
+                                                               r"border(-top|-bottom|-left|-right)?)\s*:", re.sub(r"body::before\{[^}]*\}", "", rules)))
+    os.makedirs(os.path.join(tmp, "th"))
+    c, md = tcm.new_course(os.path.join(tmp, "th"), tcm.script(screens=tcm.EVERY_WAY), build=False)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "t01": {"try_tablet": False}, "q01": {"theme": "navy"}, "q02": {"theme": "navy"}, "q03": {"theme": "purple"}}})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    t2 = io.open(os.path.join(md, "tasks", "sc1_every_way.html"), encoding="utf-8").read() if code in (0, 1) else ""
+    th2 = re.findall(r'<section class="scr (th-[wn])" data-script="', t2)
+    check("a question's build sheet may ask for its theme; a theme that is not white or Navy is reported",
+          th2[:2] == ["th-n", "th-n"] and '"theme": \'purple\'' in out, (th2, out[-600:]))
+    check("a screen that shows no picture, or a flat drawing as its picture, is said at build (blueprints.json, L67)",
+          re.search(r"Note: q01 \(cloze\) has no picture", out) and "Note: q04" not in out and "Note: q10" not in out, out[-1500:])
+
+
 def main():
     hand_box_part()
     exe = drawing_check.find_browser()
@@ -1714,6 +1802,7 @@ def main():
         check("a wrong value shows the band of right values", "wrong" in look.get("dial", "") and not look.get("dial", "").endswith("|"), look)
         check("a card that does not belong goes back to the bank; the one that belongs is put in its slot",
               "fixed" in look.get("cargo", "") and look.get("cargo", "").endswith("|tray") and look.get("permit", "").endswith("|3"), look)
+        look_part(exe, page, tmp)
         blind_part(exe, page, tmp)
         review_part(exe, tmp)
         deck_fit_part(exe, tmp)
