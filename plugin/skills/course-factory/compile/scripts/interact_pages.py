@@ -68,10 +68,13 @@ def question_html(n, q, b, mdir, figdir, probs, w, shuffle, opt_buttons):
         return [], ""
     out, extra = [], ' data-lab-type="%s"' % m
     if m == "true_false":
+        import task_pages as tp
+        pics = tp.answer_pictures(q, b, [c["text"] for c in d["cards"]], mdir, probs, where)   # a picture behind each card's claim
         out.append('    <div class="lab gi-swipe" data-lab="swipe">')
         for c in shuffle(sid, d["cards"], key=lambda x: x["text"]):
-            out.append('      <div class="sw-card" data-key="%s"><p class="sw-st" data-script-field="answer">%s</p>%s</div>'
-                       % (k(sid, c["text"], "true" if c["true"] else "false"), e(c["text"]),
+            out.append('      <div class="sw-card%s" data-key="%s">%s<p class="sw-st" data-script-field="answer">%s</p>%s</div>'
+                       % (" pic" if pics else "", k(sid, c["text"], "true" if c["true"] else "false"),
+                          pics.get(c["text"], "").replace('class="tl-img"', 'class="sw-img"'), e(c["text"]),
                           '<p class="sw-why" data-script-field="answer">%s</p>' % e(c["why"]) if c["why"] else ""))
         out.append("    </div>")
     elif m == "critique":

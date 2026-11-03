@@ -6,6 +6,12 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.93.0 · Answers that are pictures, the rail, the match line, the knob (2026-11-03)
+
+The answers of a choose one / choose all can be pictures to tap (build sheet `"figures"`, a tile each, the same answer
+button underneath); a true-or-false card can carry its picture behind the claim; the places to put in order sit on one
+rail; a match's names are joined to their places; set the value has a knob a finger turns (`mkDial`, pointer events).
+
 ## 2.92.0 · Every task page in the brandbook's look (2026-11-03)
 
 `assets/gb_task_look.css`, loaded last on every compiled task page: the white or the Navy theme for each question's

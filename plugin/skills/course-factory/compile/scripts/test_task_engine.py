@@ -1698,6 +1698,87 @@ var bad=[],seen=0;[].forEach.call(document.querySelectorAll('section.scr'),funct
 out.contrast={seen:seen,bad:bad};"""
 
 
+TILES_TAP = ("var s=document.querySelector('.scr[data-script=\"q02\"]');[].forEach.call(document.querySelectorAll('.scr'),function(x){x.classList.remove('on');});"
+             "s.classList.add('on');var t=[].slice.call(s.querySelectorAll('.opt.tile'));t.forEach(function(b){if(b.textContent.trim()!=='Coal'){b.click();}});"
+             "out.tiles=t.map(function(b){return [b.textContent.trim(),/\\bsel\\b/.test(b.className),!!b.querySelector('img.tl-img')];});")
+KNOB_TURN = ("var s=document.querySelector('.scr[data-script=\"q04\"]');[].forEach.call(document.querySelectorAll('.scr'),function(x){x.classList.remove('on');});"
+             "s.classList.add('on');var k=s.querySelector('.dial-knob'),r=k.getBoundingClientRect(),v=s.querySelector('.dial-val');"
+             "var before=v.textContent,o={bubbles:true,pointerId:1,clientX:r.left+r.width,clientY:r.top+r.height/2};"
+             "k.dispatchEvent(new PointerEvent('pointerdown',o));k.dispatchEvent(new PointerEvent('pointerup',o));"
+             "out.knob=[before,v.textContent,k.style.getPropertyValue('--turn')];")
+
+
+def widgets_part(exe, tmp):
+    """the answer looks of the live references: the answers as pictures to tap (build sheet "figures"), the numbered places
+    on a rail, a match's names joined to their places, a knob that turns the value, a picture behind each true-or-false
+    card - the grading unchanged"""
+    print("\n-- the answer looks: pictures to tap, the rail, the match line, the knob, the cards' pictures")
+    os.makedirs(os.path.join(tmp, "wg"))
+    c, md = tcm.new_course(os.path.join(tmp, "wg"), tcm.script(screens=FIXES), build=False)
+    meta = dict(tcm.PHOTO_META)
+    for f in ("lng.jpg", "cng.jpg", "coal.jpg"):
+        io.open(os.path.join(md, "assets", "img", f), "wb").write(b"\xff\xd8\xff\xd9")
+        meta[f] = dict(tcm.PHOTO_META["ship.jpg"], description="A static 3D render.")
+    tcm.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
+    io.open(os.path.join(md, "assets", "fig", "prep.svg"), "w", encoding="utf-8").write(PREP)
+    io.open(os.path.join(md, "assets", "fig", "ga.svg"), "w", encoding="utf-8").write(tcm.GA)
+    figs = {"LNG": "assets/img/lng.jpg", "CNG": "assets/img/cng.jpg", "Coal": "assets/img/coal.jpg"}
+    sheet = {"t01": {"try_tablet": False}, "t02": {"try_tablet": False}, "q01": {"figure": "assets/fig/prep.svg"},
+             "m01": {"figure": "assets/fig/ga.svg"}, "q02": {"figures": figs}}
+    bp = os.path.join(c, "working_claude", "script", "M01.build.json")
+    tcm.cs.save(bp, {"module": 1, "screens": sheet})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    page = os.path.join(md, "tasks", "sc1_the_room.html")
+    text = io.open(page, encoding="utf-8").read() if os.path.isfile(page) else ""
+    q02 = re.search(r'<section[^>]*data-script="q02".*?</section>', text, re.S)
+    q02 = q02.group(0) if q02 else ""
+    check("the answers are pictures to tap: each a tile with its picture and its words, the tiles as many as the answers",
+          'class="opts multi tiles" style="--n:3"' in q02 and q02.count('class="opt tile"') == 3 and q02.count('class="tl-img"') == 3
+          and '<span class="tl">LNG</span>' in q02 and "data-no-zoom" in q02 and 'data-tiles="1"' in q02, q02[:900])
+    code_m, out_m = tcm.run(tcm.MATCH, c, "--module", "1", "--part", "trainee")
+    check("... and the tiles say exactly the approved words (check_script_match)", code_m == 0, out_m[-800:])
+    r = drive(exe, page, [["eval", TILES_TAP]], tmp, look=False)
+    check("... a tap on a tile chooses it, as on any answer: the engine's own grading", r.get("tiles") and all(
+        (w != "Coal") == sel and pic for w, sel, pic in r["tiles"]), r.get("tiles") or r.get("errors"))
+    r = drive(exe, page, [["eval", CONTRAST]], tmp, look=False)
+    check("... and every word on them stands out, white and Navy", not (r.get("contrast") or {}).get("bad"), (r.get("contrast") or {}).get("bad"))
+    sheet["q02"] = {"figures": {"LNG": "assets/img/lng.jpg", "Petrol": "assets/img/cng.jpg"}}
+    tcm.cs.save(bp, {"module": 1, "screens": sheet})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    check("a picture missing for an answer, or a picture for words that are not an answer, is reported",
+          '"CNG" has none' in out and '"Petrol", which is not one of its answers' in out, out[-1200:])
+    os.makedirs(os.path.join(tmp, "wk"))
+    c, md = tcm.new_course(os.path.join(tmp, "wk"), tcm.script(screens=tcm.EVERY_WAY), build=False)
+    tcm.cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {"t01": {"try_tablet": False}}})
+    tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    page = os.path.join(md, "tasks", "sc1_every_way.html")
+    r = drive(exe, page, [["eval", KNOB_TURN]], tmp, look=False)
+    k = r.get("knob") or []
+    check("set the value: a knob beside the number - a finger on it turns the value, and the knob turns with it",
+          len(k) == 3 and k[0] != k[1] and k[2].endswith("deg") and k[2] != "-135deg", k or r.get("errors"))
+    import test_interact_types as tit
+    c, md, _, _ = tit.course(os.path.join(tmp, "wt"))
+    sc = tcm.cs.load(os.path.join(c, "working_claude", "script", "M01.json"))
+    import interact_pages as ip_
+    cards = [x["text"] for x in ip_.fm.parse("true_false", next(x for x in sc["screens"] if x["id"] == "q20"))[1]["cards"]]
+    meta = tcm.cs.load(os.path.join(md, "assets", "img", "_photo_meta.json")) if os.path.isfile(os.path.join(md, "assets", "img", "_photo_meta.json")) else {}
+    for i, _ in enumerate(cards):
+        io.open(os.path.join(md, "assets", "img", "tf%d.jpg" % i), "wb").write(b"\xff\xd8\xff\xd9")
+        meta["tf%d.jpg" % i] = dict(tcm.PHOTO_META["ship.jpg"], description="A static 3D render.")
+    tcm.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
+    bp = os.path.join(c, "working_claude", "script", "M01.build.json")
+    b = tcm.cs.load(bp)
+    b.setdefault("screens", {}).setdefault("q20", {})["figures"] = {t: "assets/img/tf%d.jpg" % i for i, t in enumerate(cards)}
+    tcm.cs.save(bp, b)
+    tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    tf = io.open(os.path.join(md, "tasks", "sc2_cargo_hazards.html"), encoding="utf-8").read()
+    check("true or false: a picture behind each card's claim", tf.count('class="sw-card pic"') == len(cards) and tf.count('class="sw-img"') == len(cards),
+          len(cards))
+    css = io.open(os.path.join(tcm.SKILLS, "course-task-ux", "assets", "gb_answer.css"), encoding="utf-8").read()
+    check("put in order: the numbered places on one rail; match: a line and a dot join each name to its place",
+          ".rows.order::before" in css and ".rows:not(.order) .row .name::after" in css and ".rows:not(.order) .row .slot::before" in css)
+
+
 def look_part(exe, page, tmp):
     """the task screens in the brandbook's look (gb_task_look.css, loaded last): each question's screen white or Navy, picked
     so neighbouring screens do not repeat, the page round it following the screen on show; a build sheet may ask for one"""
@@ -1803,6 +1884,7 @@ def main():
         check("a card that does not belong goes back to the bank; the one that belongs is put in its slot",
               "fixed" in look.get("cargo", "") and look.get("cargo", "").endswith("|tray") and look.get("permit", "").endswith("|3"), look)
         look_part(exe, page, tmp)
+        widgets_part(exe, tmp)
         blind_part(exe, page, tmp)
         review_part(exe, tmp)
         deck_fit_part(exe, tmp)

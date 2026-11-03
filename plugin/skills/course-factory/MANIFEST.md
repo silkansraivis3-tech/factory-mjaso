@@ -7,6 +7,15 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.93.0 · The answer looks of the live references (2026-11-03)
+
+- **Why.** The owner: the new answer looks next.
+- **What.** `compile/scripts/task_pages.py` (`answer_pictures`, tiles in `opt_buttons`, the knob in `dial`),
+  `compile/scripts/interact_pages.py` (pictures behind true-or-false cards), `course-task-ux/assets/gb_answer.css`
+  (tiles, the order rail, the match line, the knob), `gb_answer.js` (the knob turns the value), `gb_interact.css`. Build
+  sheet `"figures"`. Test: `test_task_engine.py` "the answer looks".
+- **Next.** The nineteen richer tasks compiled from `design/task-templates/engines`.
+
 ## 2.92.0 · Every task page in the brandbook's look (2026-11-03)
 
 - **Why.** The owner: every next course in this style; the factory picks the theme so the screens do not repeat.
