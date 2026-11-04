@@ -40,7 +40,7 @@ the programme's practical share, which is Track A and is never changed. Where th
 allocates little practical time, the theory hours are delivered as active learning. A theory
 block with no trainee activity in it is a defect. Theory is never removed; it is delivered as
 activity — self-check, explain-then-reveal (no typing), predict-then-reveal, worked example then own
-attempt (owner, 2026-09-30). → `course-factory`
+attempt (owner, 2026-09-30). Active means every trainee commits to an output before anyone speaks (L68, R4). → `course-factory`
 
 **L6 · Tablet-first, touch-first, offline.**
 An 800×1280 portrait finger target first, then landscape, then the projector. Targets ≥ 44 px, no
@@ -648,8 +648,28 @@ where nobody reads. → `course-module-ui` (`templates/gb_upgrade.css`, `referen
 `course-module-ux` (`assets/gb_steps.js`), `course-visuals` (`scene/gb_scene.js`), 2.88.0; the compiler writes the
 upgraded bodies (`course-factory/compile/GUIDE.md` §2h), 2.89.0
 
-**All sixty-seven laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L67 are enforced first through `course-factory/SKILL.md`'s
+**L68 · Every instructor-led module meets the Instructor-Led Course Development Guideline.** The guideline's twelve rules,
+its TLA pool and its review checklist are `course-factory/knowledge/instructor-led.json`; it adds no parallel set of
+documents - it sets what the factory's outputs contain - and four paper items. **Active** means every trainee commits to
+an output (a written answer, a card vote, a tablet answer, a pair answer, a performed step); the instructor taking three
+or four answers from the room is passive (R4, L5 sharpened). **Passive** theory runs at most 15 minutes, then a trainee
+output (R5), and is at most 20 % of the theory minutes or justified in one line, which the reviewer may reject (R6, L49
+made a review item). Every drill, simulator run and team scenario runs brief (3-5 min), show on first exposure, do,
+debrief (15-20 min for a team, 5-10 alone) inside its own minutes (R8, L1 kept); the recorded run is a later run under a
+changed condition after at least two practice runs (R9); the instructor watches and stays quiet, the stop word on the
+pre-brief card (R10); a recorded run is assessed on a form of 8-12 critical steps with a stop criterion, a global rating
+and Yes / Not yet (R12). Per course, the factory writes `working_claude/instructor_led.json` - the outcome register's
+task type, must-know and evidence per Sub-ILO, each practical's cycle and cards, the final's must-pass questions, the
+employer sheet, the one-line justifications - and the operator approves it. Main ILOs, hours and facts are never changed
+by it (L1, L2, L4). Course documents claim behaviour change, never accident reduction. Not yet the factory's: the final
+test on the trainees' phones, the assessment form filled on the instructor's tablet and a must-pass question failing a
+candidate (the training app's), and the guideline's ban on decorative photographs against L52 and L67 (a decision).
+→ `course-factory` (`instructor-led/GUIDE.md`, `scripts/instructor_led.py` check, `compile/scripts/module_plan.py` the
+passive share, the cycle rows and the register's columns, `compile/scripts/additional_materials.py` the practical kit),
+2.97.0
+
+**All sixty-eight laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L68 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

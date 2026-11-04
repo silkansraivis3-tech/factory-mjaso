@@ -4,6 +4,7 @@
   "rules": [
     "At least one proposal per programme sub-topic that carries theory - or a line saying why it stays plain (\"technique\": \"plain\", with \"why\").",
     "The theory is never removed. A proposal takes MINUTES from plain theory, not slides: the slides stay, the instructor moves through them faster, their words stay to be read.",
+    "Active means every trainee commits to an output before anyone speaks: a written answer, a card vote, a tablet answer, a pair answer or a performed step. The instructor asking the room and taking three or four answers is not active (law L68, knowledge/instructor-led.json R4) - the proposal says what every trainee produces.",
     "Written for a maritime expert who knows nothing about IT: what the trainees DO, in one or two plain sentences, in the operator's language. No technique names, no file or tool names.",
     "Each proposal names its minutes, and what it needs that the factory cannot make alone (a photo of the real panel, the simulator, a piece of equipment) - in \"needs\".",
     "Nothing is built from a proposal until the operator keeps it. A struck proposal stays in the file, marked struck, and is never proposed again for that sub-topic unless the operator asks.",
@@ -13,7 +14,7 @@
   "patterns": {
     "predict-then-reveal": {
       "fits": "a process, a cause and its effect, a physical property - what happens when something changes",
-      "does": "The trainees predict what happens, on the tablet or aloud; then the slide or animation shows it, and they compare.",
+      "does": "Every trainee commits to a prediction first - writes it, votes a card or answers on the tablet - before anyone speaks; then the slide or animation shows it, and they compare.",
       "example": "Before the slide on boil-off: 'The tank is cooled to -162 °C and the ship sails into the tropics. What happens to the pressure, and why?' - then the process animation runs.",
       "minutes": [3, 8]
     },
@@ -31,13 +32,13 @@
     },
     "scenario": {
       "fits": "a decision, an emergency, a procedure under changing conditions - what the officer does",
-      "does": "A real situation unfolds step by step; at each step the trainees decide what to do and why, and see what follows.",
+      "does": "A real situation unfolds step by step; at each step every trainee writes or votes what to do and why before anyone speaks, and sees what follows.",
       "example": "Gas alarm in the compressor room during loading: what first, who is told, what is closed - three decisions, each with its consequence.",
       "minutes": [8, 20]
     },
     "explore": {
       "fits": "equipment, a structure, a system - what has a shape, an inside or a layout in space",
-      "does": "The trainees turn, open and search the 3D model or interactive drawing themselves, and find the parts the instructor names.",
+      "does": "The trainees turn, open and search the 3D model or interactive drawing themselves, and each writes down or taps the parts the instructor names - turning the model with no answer to give is not active.",
       "example": "The four tank types in a hull section: each trainee opens them and finds which one leans on the hull for its strength.",
       "minutes": [5, 12]
     },

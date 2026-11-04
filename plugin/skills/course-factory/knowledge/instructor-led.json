@@ -1,0 +1,149 @@
+{
+  "_authority": "The Instructor-Led Course Development Guideline: the teaching rules every Novikontas instructor-led module must meet - STCW, GWO, OPITO and in-house, in the classroom, at the drill ground, on the simulator and in team training. It sets what the factory's outputs must contain and adds four paper items: the pre-brief card, the debrief card, the observation card and the employer sheet. Law L68. Read by scripts/instructor_led.py, compile/scripts/module_plan.py and compile/scripts/additional_materials.py. How the course's own file is written: instructor-led/GUIDE.md. Edit this file, not the scripts.",
+  "_freeze": "The guideline changes only when a real module fails without the change. A failure found in the field is logged against the rule that caused it, and only then is the rule changed. The same holds here: a limit in this file moves only with a module that failed without it.",
+  "_claims": "Almost none of the guideline's evidence was measured on seafarers or wind technicians: numbers are quoted as 'in comparable training', and course documents claim behaviour change, never accident reduction.",
+
+  "rules": {
+    "R1": {"rule": "Never reword a regulator's outcome. Add sub-outcomes beside it, each with a verb an assessor can see: checks, decides, orders, dons, reports, refuses - never 'understands' or 'is familiar with'.", "test": "Original wording copied verbatim; every sub-outcome verb is observable.", "where": "L2; ilo_map.py; bloom.json 'weak'; instructor_led.py check"},
+    "R2": {"rule": "Every sub-outcome has one dominant task type: fixed sequence, decision, real-time judgement or team behaviour. It picks the TLA. A blended exercise stays whole; split it only if two parts need different TLAs.", "test": "One dominant task type per row of the outcome register.", "where": "the course's instructor_led.json 'register'; module plan; instructor_led.py check"},
+    "R3": {"rule": "A fact is must-know only if, when it matters on board, there is no aid at hand or no time to use it. Everything else is practised with the aid in hand: SDS, checklist, manual.", "test": "Must-know facts are listed; every other fact names its aid.", "where": "'register' must_know / lookup; instructor_led.py check"},
+    "R4": {"rule": "Active means every trainee commits to an output: a written answer, a card vote, a tablet answer, a pair answer or a performed step. The instructor asking the room and taking three or four answers is passive.", "test": "Every active row names the output and who produces it.", "where": "L5; active-learning.json; instructor_led.py check (the slide's notes)"},
+    "R5": {"rule": "Passive segment: one concept, then one trainee output. 15 minutes maximum.", "test": "No passive run in the plan is longer than 15 minutes.", "where": "L49; instructor_led.py check; module plan face"},
+    "R6": {"rule": "At least 80 % of theory minutes are active. Below 80 % the plan carries a one-line justification, which the reviewer may reject. Novices meeting a concept for the first time and second-language groups are valid reasons.", "test": "The plan shows the passive % and, if over 20 %, the justification.", "where": "L5, L49; module plan face; 'justify'"},
+    "R7": {"rule": "Active theory counts as theory hours. A tablet task counts as a practical hour only where the detailed plan lists a practical hour for that topic. The programme sets the minimum hours per topic; Novikontas sets the theory/practical split in its detailed plan.", "test": "Hours in the module plan match the theory/practical split per topic.", "where": "L1, L3, L34; module plan face"},
+    "R8": {"rule": "Every drill, simulator run and scenario runs brief, then show (first exposure only), then do, then debrief, all inside the allocated minutes. Pre-brief 3-5 min. Debrief 15-20 min per team drill or simulator run. A simple motor error gets a 30-second correction, not a full debrief.", "test": "Brief and debrief appear as timed rows.", "where": "'practicals' cycle; module plan running order; instructor_led.py check"},
+    "R9": {"rule": "Every trainee performs every critical skill personally, at least twice after the first correct run. The recorded run is a later run under a changed condition, ideally the next day.", "test": "Practice runs and the recorded run are separate rows.", "where": "'practicals' recorded / practice_of / changed_condition; instructor_led.py check"},
+    "R10": {"rule": "During a run the instructor watches, records and stays quiet. Exceptions: the safety stop (anyone, any time, the stop word on the pre-brief card); freeze and restart when the run has left its objective; role-play voices that drive the scenario; short stop-and-go coaching on a novice's first runs of a drill sequence.", "test": "Each run's card states the intervention rule.", "where": "'practicals' prebrief.intervention / stop_word; the pre-brief card"},
+    "R11": {"rule": "Tablet tasks can use any HTML interaction. Each item makes the trainee commit to a decision, marked automatically the same way every time. Revealing, rotating or dragging content with no answer does not count.", "test": "Every tablet item names its decision and how it is marked.", "where": "L38; the build grades every item (review_sheets.mjs, 2.74.1)"},
+    "R12": {"rule": "Practicals are assessed by observation on the assessment form. Written items are vignettes or key-feature problems. Six to eight must-pass items per course. The final test meets the programme's minimum item count and the 70 % pass mark.", "test": "Assessment form attached; must-pass items marked in the key.", "where": "'practicals' form; 'must_pass'; instructor_led.py check; the final's pass mark (L27)"}
+  },
+
+  "limits": {
+    "passive_run_max_min": 15,
+    "passive_share_max": 0.2,
+    "brief_min": [3, 5],
+    "debrief_team_min": [15, 20],
+    "debrief_individual_min": [5, 10],
+    "must_observe_items": [2, 3],
+    "critical_steps": [8, 12],
+    "sub_outcomes_per_outcome_max": 5,
+    "sub_outcomes_per_hour": 1,
+    "_sub_outcomes": "A house convention, not an evidence-based figure: about one sub-outcome per allocated hour, 3-5 per outcome. More than five per outcome means criteria are being written as sub-outcomes - merge them. Flagged when a module's sub-outcomes are more than 1.5 per allocated hour, rounded up.",
+    "must_pass_per_course": [6, 8],
+    "surface_variants": 3,
+    "pass_mark": 70,
+    "_cycle": "brief and debrief are rows inside the exercise's own minutes: the cycle's rows add up to the exercise screen's minutes exactly (R8). A debrief is a team debrief when the practical is 'team': true."
+  },
+
+  "task_types": {
+    "fixed_sequence": {"label": "Fixed sequence", "produces": "Steps done with the hands, in order", "evidence": "Real equipment or a part-task trainer", "never": "One run each; watching counts as nothing"},
+    "decision": {"label": "Decision", "produces": "What to check, refuse or call", "evidence": "The cheapest that works: tablet, cards, vignette, paper tabletop", "never": "Clicking or revealing with no committed answer"},
+    "real_time_judgement": {"label": "Real-time judgement", "produces": "Action ahead of a slow, lagging system", "evidence": "Full-mission simulator", "never": "Free play; coaching mid-run; full-replay debrief"},
+    "team_behaviour": {"label": "Team behaviour", "produces": "What people say and do to each other", "evidence": "Simulator or live scenario; role-play if none", "never": "A lecture on teamwork"}
+  },
+
+  "commit": {
+    "_what": "R4 on a slide marked active: what makes it count. A slide whose own fields ask every trainee for an answer (a vote between choices, a true-or-false claim, a quick drill) commits by itself. Otherwise the instructor notes must say what every trainee produces - one of the 'yes' words - and a note that only asks the room ('no' words, with no 'yes' word) is the passive kind the guideline found. Words in the course language; matched case-insensitively as the start of a word. 'Predict' alone is not a yes: a class can predict aloud.",
+    "fields": ["choices", "claim", "drill"],
+    "yes": {
+      "en": ["write", "writes", "written", "jot", "note down", "vote", "card", "tablet", "each trainee", "every trainee", "everyone", "all trainees", "in pairs", "pairs", "pair", "each pair", "each group", "groups of", "hold up", "show of hands", "tick", "sketch", "draw", "fill", "perform", "performs", "demonstrate", "teach-back", "teaches back", "commit", "neighbour", "neighbor", "team", "teams", "on their own", "alone", "trainees decide", "trainees answer", "trainees explain", "trainees name", "trainees sort", "trainees find", "trainees work", "trainees choose", "trainees check", "trainees list", "trainees calculate", "trainees do"],
+      "lv": ["raksta", "uzraksta", "pieraksta", "balso", "kartīt", "planšet", "katrs", "visi", "pār", "grup", "atzīmē", "uzzīmē", "aizpilda", "izpilda", "kaimiņ", "komand", "patstāvīgi", "kursanti izlemj", "kursanti atbild", "kursanti paskaidro", "kursanti nosauc"],
+      "ru": ["пиш", "запиш", "голос", "карточ", "планшет", "кажд", "все ", "пар", "групп", "отмет", "нарисуй", "заполн", "выполн", "сосед", "команд", "самостоятельно", "слушатели решают", "слушатели отвечают", "слушатели объясняют", "слушатели называют"]
+    },
+    "no": {
+      "en": ["aloud", "out loud", "ask the room", "ask the class", "ask the group", "take three", "take two", "take a few", "take some answers", "take answers", "a few answers", "invite answers", "volunteer", "who can tell", "anyone"],
+      "lv": ["skaļi", "pajautā auditorijai", "jautā grupai", "dažas atbildes", "brīvprātīg"],
+      "ru": ["вслух", "спросите аудиторию", "спросите группу", "несколько ответов", "добровол"]
+    }
+  },
+
+  "claims": {
+    "_what": "Course documents claim behaviour change, never accident reduction. A slide, note or employer-sheet line matching one of these is reported.",
+    "no": ["reduc\\w* (?:the )?(?:number of )?accidents", "accident reduction", "prevent\\w* (?:all )?accidents", "fewer accidents", "eliminat\\w* accidents"]
+  },
+
+  "tla_pool": {
+    "_what": "The TLA Pool and Modality Matrix: 28 teaching and learning activities, at most five per Bloom level, indexed by task type with Bloom as a tag. A TLA enters only when a real module fails without it, and one leaves when one enters. Route: Practice = feedback only; Scored = counts toward pass or fail. In-class TLAs are Practice; the same formats become Scored only in the recorded run or the final paper. Every TLA that feeds a scored item has a refresher version for experienced trainees: the scenario first, the foundations skipped, a teach-back role. The names go into the method column of the detailed plan.",
+    "decision": [
+      {"tla": "Decision-worded retrieval round, with the answer and reason given straight after", "produces": "A committed yes/no plus a reason", "modality": "Cards; tablet, choose one", "route": "Practice", "min": "10, daily", "bloom": "Remember"},
+      {"tla": "Confusable-set sort", "produces": "Mixed items sorted into categories", "modality": "Cards; tablet, sort into groups", "route": "Practice", "min": "10", "bloom": "Remember"},
+      {"tla": "Number drill: each critical number recalled correctly three times, retested on a later day", "produces": "The dozen numbers the ship uses daily", "modality": "Tablet, number entry", "route": "Practice", "min": "10 x 2 days", "bloom": "Remember"},
+      {"tla": "Vocabulary block from the glossary", "produces": "Term-meaning pairs (EN/LV/RU)", "modality": "Cards; tablet, matching", "route": "Practice", "min": "10", "bloom": "Remember"},
+      {"tla": "Explain-why question after each concept block", "produces": "A written explanation in own words, checked aloud", "modality": "Paper", "route": "Practice", "min": "5", "bloom": "Understand"},
+      {"tla": "Predict-then-reveal incident case", "produces": "A written prediction, then a decision", "modality": "Half-page form; tablet, choose the prediction", "route": "Practice", "min": "20-25", "bloom": "Understand"},
+      {"tla": "Refutation card ('many think ... this is wrong because ... in fact ...')", "produces": "The misconception applied to a new case", "modality": "Paper; tablet, choose one", "route": "Practice", "min": "10", "bloom": "Understand"},
+      {"tla": "Contrast pair: two cases, 'what do they share?'", "produces": "A shared principle, then a third case classified", "modality": "Paper", "route": "Practice", "min": "15", "bloom": "Understand"},
+      {"tla": "Teach-back by an experienced trainee", "produces": "A two-minute explanation to a pair, with one check question", "modality": "Live", "route": "Practice", "min": "10", "bloom": "Understand"},
+      {"tla": "Worked example, then faded steps, then solo", "produces": "A completed calculation or procedure", "modality": "Paper; tablet, number entry", "route": "Practice", "min": "20", "bloom": "Apply"},
+      {"tla": "Procedure walk-through with the aid in hand", "produces": "A completed checklist or permit", "modality": "Paper tabletop", "route": "Practice", "min": "20", "bloom": "Apply"},
+      {"tla": "Key-feature problem", "produces": "The step where people usually go wrong, answered with a verb (check, order, decide)", "modality": "Tablet, choose one or several; paper", "route": "Scored (final)", "min": "10", "bloom": "Analyse"},
+      {"tla": "Hazard-chain map, built across the week", "produces": "Property -> hazard -> control", "modality": "Paper, whiteboard", "route": "Practice", "min": "20 per day", "bloom": "Analyse"},
+      {"tla": "Case dilemma to a go/no-go", "produces": "A decision plus the reason", "modality": "Tablet, branching scenario", "route": "Scored (final)", "min": "15", "bloom": "Evaluate"},
+      {"tla": "Write the plan or brief (only where the outcome says prepare, plan or draft)", "produces": "A permit, toolbox talk or pre-transfer brief", "modality": "Paper", "route": "Scored (checklist)", "min": "20", "bloom": "Create"}
+    ],
+    "fixed_sequence": [
+      {"tla": "Sequence rebuild", "produces": "The steps in the right order", "modality": "Cards; tablet, put in order", "route": "Practice", "min": "5", "bloom": "Remember"},
+      {"tla": "Demonstration-performance (Peyton four-step)", "produces": "The skill performed and narrated", "modality": "Real equipment, part-task trainer", "route": "Practice", "min": "20-30 at 1:6", "bloom": "Apply"},
+      {"tla": "Desktop simulation task", "produces": "Correct instrument use and reading", "modality": "Desktop simulator", "route": "Practice", "min": "15", "bloom": "Apply"},
+      {"tla": "Planted-defect inspection", "produces": "The defect found and why it fails", "modality": "Real equipment", "route": "Practice; Scored in the recorded run", "min": "10", "bloom": "Analyse"},
+      {"tla": "Rewrite the procedure after a failed run", "produces": "The corrected procedure and what changed", "modality": "Paper", "route": "Practice", "min": "15", "bloom": "Create"}
+    ],
+    "real_time_judgement": [
+      {"tla": "Fault-finding scenario", "produces": "The cause located and the fix chosen", "modality": "Simulator, part-task trainer", "route": "Practice; Scored in the recorded run", "min": "20-30", "bloom": "Analyse"},
+      {"tla": "Scenario run with two to four planned critical events", "produces": "Decisions under the events, then a self-assessment", "modality": "Simulator, team drill", "route": "Practice runs; Scored (must-pass events + global rating) in the recorded run", "min": "45-90", "bloom": "Evaluate"},
+      {"tla": "Contrastive critique of two performances", "produces": "Which is safer and the moment that decided it", "modality": "Two track plots or plans", "route": "Practice", "min": "15", "bloom": "Evaluate"},
+      {"tla": "Design the next scenario (experienced trainees)", "produces": "An event set: trigger, distracter, what good looks like", "modality": "Paper", "route": "Practice", "min": "20", "bloom": "Create"}
+    ],
+    "team_behaviour": [
+      {"tla": "Closed-loop communication drill", "produces": "Order -> readback -> confirmation, every time", "modality": "Role-play, simulator", "route": "Practice; observed in the recorded run", "min": "10", "bloom": "Apply"},
+      {"tla": "Structured observer role during another team's run", "produces": "A filled observation card and a debrief contribution", "modality": "Simulator, drill", "route": "Practice", "min": "run length", "bloom": "Analyse"},
+      {"tla": "Challenge-and-response against a senior who pushes back", "produces": "The scripted challenge, and the senior's response", "modality": "Role-play, simulator", "route": "Practice; observed in the recorded run", "min": "10 per pair", "bloom": "Evaluate"},
+      {"tla": "Trainee-led debrief segment", "produces": "The team's own analysis of one named behaviour", "modality": "Debrief room", "route": "Practice", "min": "10", "bloom": "Evaluate"}
+    ]
+  },
+
+  "cards": {
+    "_what": "The four paper items (guideline 5.3, 5.4, 5.5 and 5.6), one page each, made by additional_materials.py from the course's approved instructor_led.json into course\\additional-materials\\practical-kit\\. One pre-brief card, debrief card and observation card per drill, simulator run or team scenario (role-play included) - not for tablet tasks, cases or classroom discussions. An assessment form per recorded run. One employer sheet per course.",
+    "intervention_default": "I will watch and stay quiet. I stop the run only for safety or if it leaves its objective.",
+    "debrief_default": {
+      "reactions": "\"How did that go?\" The trainees speak first, juniors before seniors.",
+      "prompt_1": "\"At [time or step], what did you see, and what did you decide?\"",
+      "prompt_2": "\"What did the standard require there?\"",
+      "feedback": "Name the behaviour, the standard and the next action. Never praise or rank the person.",
+      "close": "\"One change for the next run.\" Each trainee says theirs."
+    },
+    "global_rating": ["1 Needs retraining", "2 Needs prompting", "3 Performs safely unprompted", "4 Performs safely and adapts"],
+    "decision": "Yes / Not yet. One sentence of justification for any Not yet.",
+    "run_details": "Practice runs completed (count) · the changed condition of this recorded run · attempt 1 / 2 / 3 (two re-attempts at most) · assessor (not the trainer, where possible) · date · signatures",
+    "decay_default": "In comparable training, procedural accuracy loses about half its gain in 6.5 months."
+  },
+
+  "checklist": [
+    {"id": "C1", "group": "Outcomes", "item": "Every regulator outcome is copied verbatim, with its source and theory/practical hours", "rules": "R1, R7", "how": "elsewhere", "by": "L2 - ilo_map.py and the Stage 2 page"},
+    {"id": "C2", "group": "Outcomes", "item": "Every sub-outcome has an observable verb and one dominant task type", "rules": "R1, R2", "how": "auto"},
+    {"id": "C3", "group": "Outcomes", "item": "Must-know facts are few and listed; everything else is practised with the aid in hand", "rules": "R3", "how": "auto"},
+    {"id": "C4", "group": "Outcomes", "item": "Sub-outcome count is within budget: about one per allocated hour, 3-5 per outcome", "rules": "", "how": "auto"},
+    {"id": "C5", "group": "Outcomes", "item": "Every sub-outcome passes the job and evidence tests, and its evidence is named", "rules": "", "how": "auto", "by_hand": "the job test"},
+    {"id": "C6", "group": "Outcomes", "item": "Every must-pass criterion has its own form step", "rules": "R12", "how": "auto"},
+    {"id": "C7", "group": "Running order", "item": "Minutes add up to the allocation, and the header shows the passive %", "rules": "R5, R6", "how": "auto"},
+    {"id": "C8", "group": "Running order", "item": "Every Active row names the output and states that every trainee produces it", "rules": "R4", "how": "auto"},
+    {"id": "C9", "group": "Running order", "item": "No passive segment is longer than 15 min, and each is followed by an output", "rules": "R5", "how": "auto"},
+    {"id": "C10", "group": "Running order", "item": "Passive share is 20 % or less, or a one-line justification is given", "rules": "R6", "how": "auto"},
+    {"id": "C11", "group": "Running order", "item": "Tablet tasks counted as practical only where the programme lists practical hours for that outcome", "rules": "R7", "how": "elsewhere", "by": "L49 - tablet tasks are theory minutes taught by doing; the programme's practical hours are never changed"},
+    {"id": "C12", "group": "Running order", "item": "Every drill, run and scenario has timed Brief and Debrief rows, and Show on first exposure", "rules": "R8", "how": "auto"},
+    {"id": "C13", "group": "Running order", "item": "Practice runs and the recorded run are separate; the recorded run is later and under a changed condition", "rules": "R9", "how": "auto"},
+    {"id": "C14", "group": "Running order", "item": "Every run's card states the intervention rule and the stop word", "rules": "R10", "how": "auto"},
+    {"id": "C15", "group": "Running order", "item": "Theory days open with decision-worded retrieval, and each concept block ends with a why-question", "rules": "", "how": "hand"},
+    {"id": "C16", "group": "Running order", "item": "Every known misconception is refuted with a case; every demonstration has a written prediction first", "rules": "", "how": "hand"},
+    {"id": "C17", "group": "Running order", "item": "No decorative photos or sea stories; slides carry key terms, not the spoken text", "rules": "", "how": "hand"},
+    {"id": "C18", "group": "Tablet tasks and assessment", "item": "Every tablet item names the decision it asks for and how it is marked", "rules": "R11", "how": "elsewhere", "by": "L38 - the build grades every question right and wrong (review_sheets.mjs)"},
+    {"id": "C19", "group": "Tablet tasks and assessment", "item": "Every assessed practical has an assessment form: 8-12 critical steps including stop criteria, global rating, Yes / Not yet", "rules": "R12", "how": "auto"},
+    {"id": "C20", "group": "Tablet tasks and assessment", "item": "Written items are vignette or key-feature items; must-pass items are marked; three surface variants per decision", "rules": "R12", "how": "auto", "by_hand": "vignette or key-feature; the three surface variants"},
+    {"id": "C21", "group": "Tablet tasks and assessment", "item": "No scored item depends on written English beyond the terms the job requires", "rules": "", "how": "hand"},
+    {"id": "C22", "group": "Tablet tasks and assessment", "item": "No AI or peer score counts toward pass or fail", "rules": "", "how": "elsewhere", "by": "L27 - only the final assessment is graded"},
+    {"id": "C23", "group": "Kit and transfer", "item": "Pre-brief, debrief and observation cards exist for every drill, run and scenario", "rules": "R8, R10", "how": "auto"},
+    {"id": "C24", "group": "Kit and transfer", "item": "Glossary and misconception list are updated with this module's entries", "rules": "", "how": "auto", "by_hand": "the glossary"},
+    {"id": "C25", "group": "Kit and transfer", "item": "The employer sheet names the fastest-decaying skills and one on-board drill", "rules": "", "how": "auto"},
+    {"id": "C26", "group": "Kit and transfer", "item": "Course documents claim behaviour change, not accident reduction", "rules": "", "how": "auto"}
+  ]
+}

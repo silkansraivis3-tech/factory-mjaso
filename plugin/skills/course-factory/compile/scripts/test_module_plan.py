@@ -282,6 +282,43 @@ def main():
         check("... a draft script: the plan is a marked preview, exit 1", code == 1 and "DRAFT – the script is not approved" in plan_of(md7)
               and "DRAFT - NOT APPROVED" in plan_of(md7), (code, out[-300:]))
 
+        print("\n-- the Instructor-Led Course Development Guideline's layer (L68)")
+        page = plan_of(md)                                     # the course as corrected above: slide 1 is 4 min, 22 allocated
+        txt = text_of(page)
+        check("the face shows the passive share of the theory minutes and the longest passive run - the active slide whose notes "
+              "only say 'predict' counts as passive",
+              "Passive 47 % of the theory minutes · longest passive run 8 min" in txt, txt[:700])
+        check("... over 20 % with no justification: a warning card says what to do",
+              '<div class="card warn"><p>Passive theory is over 20 %' in page and "instructor_led.json" in page, page[:2500])
+        check("... and the running order marks that slide", "counted passive: the notes name no output every trainee produces" in txt)
+        check("no outcome-register columns and no cycle rows while the course has no instructor_led.json",
+              "<th>Task type</th>" not in page and "&#8627;" not in page)
+        cs.save(os.path.join(c, "working_claude", "instructor_led.json"), {
+            "register": {"1.1": {"task_type": "decision", "must_know": ["O2 21 % for entry"],
+                                 "lookup": [{"fact": "Each cargo's limit", "aid": "the SDS"}],
+                                 "evidence": {"practice": ["retrieval round"], "scored": ["final must-pass item"]}}},
+            "practicals": {"M01.P01": {"cycle": [{"kind": "brief", "min": 1}, {"kind": "run", "min": 3, "what": "Pairs walk the line"},
+                                                 {"kind": "debrief", "min": 1}]}},
+            "justify": {"M01": {"R6": "Novices meeting gas fuel for the first time"}}})
+        code, out = run(t.COMPILE, c, "--module", "1", "--only", "plan")
+        page = plan_of(md)
+        txt = text_of(page)
+        check("a justification turns the card good and shows the line", code == 0 and
+              '<div class="card good"><p>Passive theory is over 20 % of the theory minutes - justified: Novices meeting gas fuel' in page,
+              (code, out[-300:], page[:2500]))
+        check("the outcome register's columns: task type, must know (with the aid of a looked-up fact), evidence",
+              "<th>Task type</th><th>Must know</th><th>Evidence</th>" in page
+              and re.search(r'<tr><td class="n">1\.1</td>.*?Decision.*?O2 21 % for entry.*?Each cargo&#x27;s limit: lookup with the SDS'
+                            r'.*?Practice:.*?retrieval round.*?Scored:.*?final must-pass item.*?</tr>', page.replace("'", "&#x27;"), re.S),
+              page[page.find("<th>Sub-ILO"):][:1500])
+        check("... a Sub-ILO with no register row has dashes, never a guess",
+              re.search(r'<tr><td class="n">1\.2</td>(?:.(?!</tr>))*?<td>–</td><td>–</td><td>–</td></tr>', page, re.S),
+              page[page.find('<td class="n">1.2'):][:600])
+        check("the exercise's brief, run and debrief are rows inside its minutes, from its start minute",
+              re.search(r'<tr class="c"><td></td><td class="m">8</td><td>&#8627; Brief</td><td class="m">1</td>', page)
+              and re.search(r'<td class="m">9</td><td>&#8627; Run</td><td class="m">3</td><td>Run</td><td>Pairs walk the line</td>', page)
+              and re.search(r'<td class="m">12</td><td>&#8627; Debrief</td><td class="m">1</td>', page), page[page.find("Walk the plant"):][:1200])
+
         print("\n-- without an ILO map or an architecture")
         os.makedirs(os.path.join(tmp, "bare"))
         c8, md8 = plan_course(os.path.join(tmp, "bare"), arch=False)

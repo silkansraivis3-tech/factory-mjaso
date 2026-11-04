@@ -7,6 +7,26 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.97.0 · The Instructor-Led Course Development Guideline - L68 (2026-11-04)
+
+- **Why.** The course director's guideline sets the teaching rules every instructor-led module must meet and adds four
+  paper items. The owner: add to the factory everything that can be added, test everything that can be tested.
+- **What.** `knowledge/instructor-led.json` (rules, limits, task types, TLA pool, card defaults, the review checklist);
+  `scripts/instructor_led.py` (draft / check / approve / status) over the course's `working_claude/instructor_led.json`;
+  `compile/scripts/module_plan.py` (passive share on the face, cycle rows, register columns); `compile/scripts/
+  additional_materials.py` (`practical-kit\`: pre-brief, debrief + observation cards, assessment form, employer sheet);
+  `active-learning.json` R4 wording; lane `instructor-led/GUIDE.md`; L68 in `docs/FACTORY_LAWS.md`, `SKILL.md`,
+  `references/laws-in-full.md`. Tests: `scripts/test_instructor_led.py`; new blocks in `test_module_plan.py` and
+  `test_additional_materials.py`.
+- **Decisions that will look odd.** The guideline's layer lives in its own per-course file, not in the content script:
+  the script's schema belongs to `content_script.py`, and the cards are about how a practical is run, not what is said.
+  An active slide that names no output for every trainee is counted passive in the guideline's share (R4 applied), so the
+  plan's passive % can be higher than L49's plain-theory share. R4 is read from the instructor notes by word lists in the
+  course language - a heuristic: a slide's own vote, true-or-false claim or drill commits by itself. Nothing here stops a
+  build: the checklist is a review item that is fixed or justified in one line, as the guideline says.
+- **Open.** The final on phones, the assessment form on the instructor's tablet and must-pass marking (the training app);
+  "no decorative photos" against L52 / L67 (the owner's decision); the kit's headings in Latvian and Russian; three surface
+  variants per decision in the final's bank (by hand).
 ## 2.96.0 · Dress for the job, then check a buddy - the second richer task (2026-11-04)
 
 - **Why.** The owner: the three richer tasks first - deck round (2.95.0), dress a buddy, lay out.

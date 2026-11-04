@@ -32,6 +32,7 @@ import os
 import compile_module as cm
 import content_script as cs
 import ilo_map
+import instructor_led as il
 import task_pages as tp
 import workspace
 
@@ -157,6 +158,45 @@ WORDS = {"en": {
     "made": "Сделано из утверждённого сценария ({m}.json, утвердил(а) {by}, {on}), course-factory {v}. Не править вручную: "
             "исправьте сценарий (content_script.py propose) и скомпилируйте снова.",
     "draft": "ЧЕРНОВИК – сценарий не утверждён; этот план – предпросмотр, его не выдают."}}
+# the Instructor-Led Course Development Guideline's layer (L68): the passive share on the face, the practical cycle in the
+# running order, the outcome register's columns - from the course's instructor_led.json (scripts/instructor_led.py)
+WORDS["en"].update({
+    "passive": "Passive {p} % of the theory minutes · longest passive run {l} min",
+    "passive_why": "Passive theory is over {t} % of the theory minutes - justified: {why}",
+    "passive_over": "Passive theory is over {t} % of the theory minutes, with no justification. Turn a passive block into one "
+                    "where every trainee produces something, or give the reason in one line (instructor_led.json \"justify\").",
+    "weak": "counted passive: the notes name no output every trainee produces",
+    "reg_cols": ["Task type", "Must know", "Evidence"], "lookup": "{fact}: lookup with {aid}",
+    "practice": "Practice", "scored": "Scored",
+    "task_types": {"fixed_sequence": "Fixed sequence", "decision": "Decision", "real_time_judgement": "Real-time judgement",
+                   "team_behaviour": "Team behaviour"},
+    "cycle": {"brief": "Brief", "show": "Show", "diagnostic": "Diagnostic", "run": "Run", "debrief": "Debrief"},
+    "recorded": "recorded run"})
+# PROVISIONAL - written by Claude, to be checked by a native speaker: compile/TRANSLATIONS_REVIEW.md
+WORDS["lv"].update({
+    "passive": "Pasīvi {p} % no teorijas minūtēm · garākais pasīvais posms {l} min",
+    "passive_why": "Pasīvā teorija pārsniedz {t} % no teorijas minūtēm - pamatojums: {why}",
+    "passive_over": "Pasīvā teorija pārsniedz {t} % no teorijas minūtēm, un pamatojuma nav. Pārveidojiet pasīvu bloku tā, lai katrs "
+                    "kursants kaut ko paveic, vai ierakstiet iemeslu vienā rindā (instructor_led.json \"justify\").",
+    "weak": "skaitās pasīvs: piezīmēs nav nosaukts, ko paveic katrs kursants",
+    "reg_cols": ["Uzdevuma veids", "Jāzina", "Pierādījumi"], "lookup": "{fact}: skatīt {aid}",
+    "practice": "Prakse", "scored": "Vērtē",
+    "task_types": {"fixed_sequence": "Noteikta secība", "decision": "Lēmums", "real_time_judgement": "Spriešana reāllaikā",
+                   "team_behaviour": "Komandas darbs"},
+    "cycle": {"brief": "Instruktāža", "show": "Demonstrācija", "diagnostic": "Diagnostika", "run": "Izpilde", "debrief": "Izvērtēšana"},
+    "recorded": "vērtētā izpilde"})
+WORDS["ru"].update({
+    "passive": "Пассивно {p} % теоретических минут · самый длинный пассивный отрезок {l} мин",
+    "passive_why": "Пассивная теория превышает {t} % теоретических минут - обоснование: {why}",
+    "passive_over": "Пассивная теория превышает {t} % теоретических минут, обоснования нет. Сделайте пассивный блок таким, где каждый "
+                    "слушатель что-то делает, или укажите причину одной строкой (instructor_led.json \"justify\").",
+    "weak": "считается пассивным: в заметках не сказано, что делает каждый слушатель",
+    "reg_cols": ["Тип задачи", "Знать наизусть", "Доказательства"], "lookup": "{fact}: смотреть {aid}",
+    "practice": "Практика", "scored": "Оценивается",
+    "task_types": {"fixed_sequence": "Фиксированная последовательность", "decision": "Решение",
+                   "real_time_judgement": "Суждение в реальном времени", "team_behaviour": "Работа в команде"},
+    "cycle": {"brief": "Брифинг", "show": "Показ", "diagnostic": "Диагностика", "run": "Выполнение", "debrief": "Разбор"},
+    "recorded": "оцениваемое выполнение"})
 assert all(set(WORDS[k]) == set(WORDS["en"]) for k in WORDS), "every language has every word"
 assert all(set(WORDS[k]["tech"]) == set(WORDS["en"]["tech"]) for k in WORDS), "every language names every technique"
 
@@ -241,6 +281,11 @@ def plan_page(script, build, mdir, course, version, approved, probs):
         face.append(txt)
     face.append("%s (%s)" % (w["built"].format(m=num(built)), w["built_of"].format(n=len(screens))))
     face.append(w["split"].format(t=num(split["plain"]), a=num(split["active_slides"]), k=num(split["tasks"]), r=num(split["practice"])))
+    guide = il.load(course) if course else {}
+    pv = il.passive(script)
+    weak = {i for i, _ in pv["weak"]}
+    if pv["theory"]:
+        face.append(w["passive"].format(p="%.0f" % (100 * pv["share"]), l=num(pv["longest"]["min"])))
     if alloc is None:
         verdict = ("warn", w["no_alloc"])
     elif abs(alloc - built) > EPS:
@@ -267,6 +312,12 @@ def plan_page(script, build, mdir, course, version, approved, probs):
             '  <div class="meta">%s</div>' % "".join("<span>%s</span>" % e(x) for x in face),
             '  <div class="card %s">%s<p>%s</p></div>' % (
                 verdict[0], ("<h3>%s</h3>" % e(w["mismatch_h"])) if verdict[0] == "warn" else "", e(verdict[1]))]
+    if pv["theory"] and pv["share"] > il.LIM["passive_share_max"] + EPS:
+        why = next((((guide.get("justify") or {}).get(m) or {}).get(k) for k in ("C10", "R6")
+                    if ((guide.get("justify") or {}).get(m) or {}).get(k)), None)
+        lim = "%.0f" % (100 * il.LIM["passive_share_max"])
+        body.append('  <div class="card %s"><p>%s</p></div>' % ("good" if why else "warn", e(
+            w["passive_why"].format(t=lim, why=why) if why else w["passive_over"].format(t=lim))))
     # ---- what the module owes: the Main ILO and the Sub-ILOs
     rows = sub_rows(course, script)
     taught, checked = {}, {}
@@ -305,14 +356,19 @@ def plan_page(script, build, mdir, course, version, approved, probs):
             if len(card) > 2:
                 body += card
             leaves = set(ilo_map.leaves(rows))
-            body += ['  <div class="scroll"><table>', "    <tr>%s</tr>" % "".join("<th>%s</th>" % e(c) for c in w["sub_cols"])]
+            reg = guide.get("register") or {}
+            has_reg = any(x in reg for x in leaves)                # the outcome register's columns (L68), once the course has them
+            body += ['  <div class="scroll"><table>', "    <tr>%s</tr>" % "".join(
+                "<th>%s</th>" % e(c) for c in w["sub_cols"] + (w["reg_cols"] if has_reg else []))]
             for r in rows:
                 sid = str(r.get("sub_ilo_id"))
                 if sid in leaves:
                     t_, c_ = where_taught(sid) or w["nothing"], where_checked(sid) or w["nothing"]
                     cells = "<td>%s</td><td>%s</td>" % (e(t_), e(c_))
+                    if has_reg:
+                        cells += register_cells(reg.get(sid) or {}, w)
                 else:
-                    cells = '<td colspan="2">%s</td>' % e(w["through"])
+                    cells = '<td colspan="%d">%s</td>' % (5 if has_reg else 2, e(w["through"]))
                 body.append('    <tr><td class="n">%s</td><td>%s</td>%s</tr>' % (e(sid), e(r.get("sub_ilo")), cells))
             body.append("  </table></div>")
         else:
@@ -343,6 +399,8 @@ def plan_page(script, build, mdir, course, version, approved, probs):
         built_k = cm.slide_visual(s, sheet.get(s["id"]) or {}, mdir, figdir) if s.get("visual_kind") else ""
         vk = cs.kind_label(built_k, wl).split(" (")[0].split(" - ")[0] if built_k and built_k != "none" else ""
         kind_html = e(kind) + ("<br><small>%s</small>" % e(vk) if vk and vk != kind else "")
+        if s["id"] in weak:
+            kind_html += "<br><small>%s</small>" % e(w["weak"])
         do = bullets(s.get("notes"))
         if k == "task-slide":
             st = set_of.get(s.get("opens"))
@@ -355,6 +413,16 @@ def plan_page(script, build, mdir, course, version, approved, probs):
         body.append('    <tr%s><td class="n">%d</td><td class="m">%s</td><td>%s</td><td class="m">%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (
             ' class="p"' if k == "task-slide" else "", slide_no[s["id"]], num(start[s["id"]]), e(s.get("title")), num(cs.minutes(s)),
             kind_html, cell_list(do), e(", ".join(cs.sub_ilos_of(s)))))
+        if k == "activity":                                    # brief, show, run, debrief inside the exercise's minutes (R8)
+            entry = (guide.get("practicals") or {}).get(il.key(m, s["id"])) or {}
+            at = start[s["id"]]
+            for row in il.cycle_rows(entry):
+                label = w["cycle"].get(row.get("kind"), str(row.get("kind")))
+                if row.get("kind") == "run" and entry.get("recorded"):
+                    label += " · " + w["recorded"]
+                body.append('    <tr class="c"><td></td><td class="m">%s</td><td>&#8627; %s</td><td class="m">%s</td><td>%s</td><td>%s</td>'
+                            '<td></td></tr>' % (num(at), e(label), num(float(row.get("min") or 0)), e(label), e(row.get("what") or "")))
+                at += float(row.get("min") or 0)
     body.append('    <tr><td></td><td></td><td><b>%s</b></td><td class="m"><b>%s</b></td><td></td><td></td><td></td></tr>'
                 % (e(w["total"]), num(built)))
     body.append("  </table></div>")
@@ -414,6 +482,16 @@ def plan_page(script, build, mdir, course, version, approved, probs):
     body += ['  <p class="src">%s</p>' % e(x) for x in srcs] if srcs else ["  <p>%s</p>" % e(w["no_src"])]
     body += ["", '  <div class="foot"><p>%s</p></div>' % e(made), "</div>", "</body>", "</html>", ""]
     return path(mdir, script.get("module")), "\n".join(body)
+
+
+def register_cells(r, w):
+    """the outcome register's task type, must-know and evidence of one Sub-ILO - three <td>"""
+    tt = w["task_types"].get(r.get("task_type"), r.get("task_type") or w["nothing"])
+    know = [e(x) for x in r.get("must_know") or []] + [e(w["lookup"].format(fact=x.get("fact", ""), aid=x.get("aid", "")))
+                                                       for x in r.get("lookup") or [] if isinstance(x, dict)]
+    ev = r.get("evidence") or {}
+    evid = ["<b>%s:</b> %s" % (e(w[k]), e("; ".join(ev.get(k)))) for k in ("practice", "scored") if ev.get(k)]
+    return "<td>%s</td><td>%s</td><td>%s</td>" % (e(tt), cell_list(know) or e(w["nothing"]), cell_list(evid) or e(w["nothing"]))
 
 
 def set_code(q):

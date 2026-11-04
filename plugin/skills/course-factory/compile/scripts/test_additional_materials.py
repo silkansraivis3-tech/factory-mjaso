@@ -14,7 +14,10 @@ Pinned:
     alone - no stylesheet, script or link out - so the instructor panel can open them over itself;
   * days come from course.build.json "days" (a module, or a module's part in minutes) or fill the programme's day;
   * --check finds a missing file; a second build changes nothing; a task that is no longer made is moved aside, never
-    deleted; an unapproved module gets nothing and is said.
+    deleted; an unapproved module gets nothing and is said;
+  * the practical kit (L68) comes only from an approved instructor_led.json: by day, the pre-brief card (the stop word,
+    the intervention rule), the debrief card with the observation card, the assessment form of a recorded run (its stop
+    criterion marked, the changed condition), and the employer sheet with the honest decay figure.
 """
 from __future__ import annotations
 
@@ -188,6 +191,61 @@ def main():
         code, out = run(TOOL, c, "--check")
         check("--check finds a missing PDF, and writes nothing", code == 1 and "M01_SC1_the_new_spaces.pdf" in out
               and not os.path.isfile(os.path.join(root, "practical-tasks", "pdf", "M01_SC1_the_new_spaces.pdf")), out)
+
+        # ---- the practical kit (L68): cards, assessment form, employer sheet - from the approved instructor_led.json
+        k = course(os.path.join(tmp, "kit"), minutes=30)
+        kroot = os.path.join(k, am.FOLDER)
+        guide = {"practicals": {"M01.A01": {
+            "cycle": [{"kind": "brief", "min": 3}, {"kind": "show", "min": 4}, {"kind": "run", "min": 8}, {"kind": "debrief", "min": 5}],
+            "practice_runs": 2, "prebrief": {"objective": "Line up the bunker station and start the transfer.", "roles": "Pairs.",
+                                             "safety": ["The ESD link is tested first."], "stop_word": "STOP"},
+            "debrief": {"must_observe": ["ESD link tested first", "Hoses purged before connection"]}}},
+            "employer": {"can_do": ["Line up a bunker station", "Test the ESD link", "Start a transfer"],
+                         "decays": "The line-up order.", "drill": "15 minutes: the ESD test with the ship's own link.",
+                         "watch_for": ["The ESD link tested every time", "A standby who says no"], "refresher": "Revalidation does not retrain it."}}
+        cs.save(il_path := os.path.join(k, "working_claude", "instructor_led.json"), guide)
+        code, out = run(TOOL, k, "--no-pdf")
+        check("instructor_led.json not approved: no kit, and it is said", "practical kit (cards, assessment forms, employer sheet) waits" in out
+              and not os.path.isdir(os.path.join(kroot, "practical-kit")), out)
+        approve = lambda d: cs.save(il_path, dict(d, status="approved", approved_by="Test", approved_hash=am.il.content_hash(d)))
+        approve(guide)
+        code, out = run(TOOL, k, "--no-pdf")
+        kit_files = sorted(os.path.relpath(os.path.join(dp, f), kroot).replace("\\", "/") for dp, _, fs in os.walk(kroot) for f in fs
+                           if "practical-kit" in dp)
+        stem = "M01_A01_practical_bunkering_on_the_simulator"
+        check("the simulator exercise's pre-brief and debrief cards in its day's folder, the employer sheet - no assessment form "
+              "for a practice run", any(re.match(r"practical-kit/Day_\d/%s_PREBRIEF\.docx$" % stem, x) for x in kit_files)
+              and any(x.endswith(stem + "_DEBRIEF.docx") for x in kit_files) and not any("ASSESSMENT" in x for x in kit_files)
+              and "practical-kit/EMPLOYER_SHEET_basic_training_for_ships_subject_to_the_igf_code.docx" in kit_files, kit_files)
+        kd = lambda suffix: docx_text(os.path.join(kroot, next(x for x in kit_files if x.endswith(suffix))))
+        pb = kd("_PREBRIEF.docx")
+        check("the pre-brief card: objective, practice, roles, safety, the stop word, the intervention rule (R10)",
+              all(x in pb for x in ("Line up the bunker station", "Today is practice. Nothing is marked.", "Pairs.",
+                                    "The ESD link is tested first.", "STOP. Anyone says it", "I will watch and stay quiet",
+                                    "read aloud before the run, 3 min")), pb)
+        db = kd("_DEBRIEF.docx")
+        check("the debrief card: reactions first, the must-observe items, the two prompts, the close - and the observation card",
+              all(x in db for x in ("Reactions (2 min)", "1. ESD link tested first", "2. Hoses purged", "what did you see, and what did you decide",
+                                    "One change for the next run", "Observation card", "Time / step", "5 min, after the run")), db)
+        emp = kd("EMPLOYER_SHEET_basic_training_for_ships_subject_to_the_igf_code.docx")
+        check("the employer sheet: can do, decays (with the honest figure in comparable training), drill, watch for, refresher",
+              all(x in emp for x in ("Line up a bunker station", "The line-up order.", "In comparable training", "15 minutes: the ESD test",
+                                     "A standby who says no", "Revalidation does not retrain it.")), emp)
+        check("INDEX.html lists the kit by day", "Practical kit" in read(kroot, "INDEX.html")
+              and stem + "_PREBRIEF.pdf" in read(kroot, "INDEX.html"))
+        rec = json.loads(json.dumps(guide))
+        rec["practicals"]["M01.A01"].update(recorded=True, practice_of="M00.A01", changed_condition="the ESD link fails on the first test",
+                                            form={"critical": [{"step": "Tests the ESD link", "stop": False},
+                                                               {"step": "Stops the transfer when the link fails", "stop": True}]})
+        approve(rec)
+        code, out = run(TOOL, k, "--no-pdf")
+        form = docx_text(os.path.join(kroot, "practical-kit", "Day_1", stem + "_ASSESSMENT.docx")) \
+            if os.path.isfile(os.path.join(kroot, "practical-kit", "Day_1", stem + "_ASSESSMENT.docx")) else ""
+        check("a recorded run gets its assessment form: critical steps with the stop criterion marked, global rating, decision, "
+              "run details with the changed condition",
+              all(x in form for x in ("A. Critical steps", "Tests the ESD link", "STOP: Stops the transfer", "3 Performs safely unprompted",
+                                      "Yes / Not yet", "two re-attempts at most", "the ESD link fails on the first test")), form or out)
+        check("... and its pre-brief card says it is recorded", "This run is recorded on the assessment form" in kd("_PREBRIEF.docx"))
 
         s = cs.load(os.path.join(c, "working_claude", "script", "M01.json"))
         s["screens"] = [x for x in s["screens"] if x["id"] != "a02"]

@@ -677,6 +677,11 @@ course\
     simulator-and-equipment\Day_N\          what the instructor prints at the start of day N:
       MNN_<code>_<title>_TRAINEE.pdf / .docx       the trainee card - no answer, no instructor note
       MNN_<code>_<title>_INSTRUCTOR.pdf            the instructor sheet - the full description
+    practical-kit\Day_N\                    the guideline's paper (L68), only from an approved instructor_led.json:
+      MNN_<code>_<title>_PREBRIEF.pdf / .docx      the pre-brief card, read aloud before the run
+      MNN_<code>_<title>_DEBRIEF.pdf / .docx       the debrief card, the observation card under it
+      MNN_<code>_<title>_ASSESSMENT.pdf / .docx    the assessment form of a recorded run, one per candidate
+    practical-kit\EMPLOYER_SHEET_<course>.pdf / .docx   one page for the company (`instructor-led/GUIDE.md`)
   modules\_course_shell\advanced_course_plan.html      the ACP on the instructor's tablet
   modules\moduleNN\instructor\advanced_module_plan.html   the module explained step by step, for the tablet
 ```

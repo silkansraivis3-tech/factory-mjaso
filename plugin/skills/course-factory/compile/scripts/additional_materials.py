@@ -20,6 +20,12 @@ WHAT IT WRITES
       simulator-and-equipment\\Day_2\\             what the instructor prints at the start of the day for every
           M04_A01_<title>_TRAINEE.pdf / .docx     simulator and real-equipment exercise of that day: the trainee card
           M04_A01_<title>_INSTRUCTOR.pdf          (no answers) and the instructor sheet (the full description)
+      practical-kit\\Day_2\\                       the guideline's paper (L68), from the approved instructor_led.json, one
+          M04_A01_<title>_PREBRIEF.pdf / .docx    page each: the pre-brief card read aloud before the run, the debrief card
+          M04_A01_<title>_DEBRIEF.pdf / .docx     with the observation card under it, and for a recorded run the
+          M05_A01_<title>_ASSESSMENT.pdf / .docx  assessment form, one per candidate
+      practical-kit\\EMPLOYER_SHEET_<course>.pdf / .docx   one page for the company: what the trainee can now do, what decays
+                                                  fastest, an on-board drill at 1-3 months, what to watch for
   course\\modules\\_course_shell\\advanced_course_plan.html   the same plan for the instructor's tablet
   course\\modules\\moduleNN\\instructor\\advanced_module_plan.html   one module explained step by step, for the tablet
   The two tablet pages are self-contained (their style inline, no link out, no script): the instructor panel opens them
@@ -73,6 +79,7 @@ import answer_key as ak  # noqa: E402
 import compile_module as cm  # noqa: E402
 import content_script as cs  # noqa: E402
 import ilo_map  # noqa: E402
+import instructor_led as il  # noqa: E402
 import task_pages as tp  # noqa: E402
 import workspace  # noqa: E402
 
@@ -137,6 +144,25 @@ W = {
     "i_tasks": "Practical task descriptions - {n} tasks, each as PDF and Word",
     "i_sim": "Simulator and equipment exercises to print, by day", "i_none": "This course has no simulator or equipment exercise.",
     "i_plans": "On the instructor's tablet: the course plan (_course_shell) and each module's step-by-step plan (instructor)",
+    # the practical kit (L68)
+    "i_kit": "Practical kit - pre-brief, debrief and observation cards, assessment forms, by day; the employer sheet",
+    "i_kit_none": "No practical kit: the course's instructor_led.json names no practical, or is not approved.",
+    "prebrief": "Pre-brief card", "prebrief_sub": "{code} - read aloud before the run, {m} min",
+    "objective": "Objective", "p_or_r": "Practice or recorded", "practice_v": "Today is practice. Nothing is marked.",
+    "recorded_v": "This run is recorded on the assessment form. Changed condition: {c}.", "roles": "Roles",
+    "safety": "Safety rules", "stop_word": "Stop word", "stop_v": "{w}. Anyone says it, everyone stops and hands off.",
+    "will_do": "What I will do",
+    "debrief": "Debrief card", "debrief_sub": "{code} - {m} min, after the run", "stage": "Stage", "script": "Script",
+    "reactions": "Reactions (2 min)", "observe_items": "Must-observe items", "prompt_1": "Analysis prompt 1",
+    "prompt_2": "Analysis prompt 2", "feedback_form": "Feedback", "close": "Close",
+    "obs": "Observation card - filled by the observers, practice only", "obs_cols": ["Watch for", "Time / step", "What was said or done"],
+    "form": "Assessment form", "form_sub": "{code} - one per candidate, filled by the assessor during the recorded run",
+    "candidate": "Candidate", "assessor": "Assessor", "blank": "______________________________",
+    "critical": "A. Critical steps", "crit_cols": ["#", "Critical step", "Done", "Not done", "Not observed"],
+    "crit_rule": "One Not done = Not yet.", "stop": "STOP", "global": "B. Global rating", "decision_h": "C. Decision",
+    "gwo": "D. Standard levels", "gwo_v": "GWO 0-3: ____", "details": "Run details", "changed": "Changed condition: {c}",
+    "employer": "Employer sheet", "can_now": "What the trainee can now do", "decays": "What decays fastest",
+    "drill": "On-board drill at 1-3 months", "watch": "What to watch for", "refresher": "Refresher position",
 }
 
 
@@ -718,6 +744,91 @@ def task_paper(m, t, course_title, subs, trainee=False):
     return blocks + [("h3", w["marking"]), ("p", mark)]
 
 
+# ------------------------------------------------------------------ the practical kit (L68)
+def kit(course, title, mods, days, root, probs):
+    """the pre-brief, debrief and observation cards and the assessment forms of every practical the approved
+    instructor_led.json names, by day, and the employer sheet - [(path, kind, payload)]"""
+    data = il.load(course)
+    if not data:
+        return []
+    if not il.approved(data):
+        probs.append("instructor_led.json is not approved - the practical kit (cards, assessment forms, employer sheet) waits for it")
+        return []
+    pracs = data.get("practicals") or {}
+    out = []
+    pair = lambda path, name, doc: [(path + ".pdf", "pdf", to_html(name, doc)), (path + ".docx", "docx", doc)]
+    for m in mods:
+        for t in m["tasks"]:
+            entry = pracs.get(il.key(m["mid"], t["slide"]["id"])) if t["slide"].get("kind") == "activity" else None
+            if not entry:
+                continue
+            base = os.path.join(root, "practical-kit", "Day_%d" % day_of(days, m, t["start"]), t["stem"])
+            code = "%s %s - %s" % (m["mid"], t["code"], t["title"])
+            out += pair(base + "_PREBRIEF", "%s - %s" % (W["prebrief"], code), prebrief_card(entry, code))
+            out += pair(base + "_DEBRIEF", "%s - %s" % (W["debrief"], code), debrief_card(entry, code))
+            if entry.get("recorded"):
+                out += pair(base + "_ASSESSMENT", "%s - %s" % (W["form"], code), assessment_form(entry, code))
+    emp = data.get("employer") or {}
+    if any(emp.get(k) for k in ("can_do", "decays", "drill", "watch_for", "refresher")):
+        out += pair(os.path.join(root, "practical-kit", "EMPLOYER_SHEET_" + cm.slug(title)), "%s - %s" % (W["employer"], title),
+                    employer_sheet(emp, title))
+    return out
+
+
+def _rows_min(entry, kind):
+    return sum(float(r.get("min") or 0) for r in il.cycle_rows(entry) if r.get("kind") == kind)
+
+
+def prebrief_card(entry, code):
+    pb = entry.get("prebrief") or {}
+    pr = W["recorded_v"].format(c=entry.get("changed_condition") or "-") if entry.get("recorded") else W["practice_v"]
+    safety = pb.get("safety") or []
+    facts = [(W["objective"], pb.get("objective") or ""), (W["p_or_r"], pb.get("practice_or_recorded") or pr),
+             (W["roles"], pb.get("roles") or ""), (W["safety"], safety if isinstance(safety, list) else [safety]),
+             (W["stop_word"], W["stop_v"].format(w=pb.get("stop_word") or "STOP")),
+             (W["will_do"], pb.get("intervention") or il.KNOW["cards"]["intervention_default"])]
+    return [("h1", W["prebrief"]), ("p", b_(code)), ("p", W["prebrief_sub"].format(code=code.split(" - ")[0], m=num(_rows_min(entry, "brief")))),
+            ("facts", facts)]
+
+
+def debrief_card(entry, code):
+    db = entry.get("debrief") or {}
+    d = il.KNOW["cards"]["debrief_default"]
+    items = [x for x in db.get("must_observe") or [] if str(x).strip()]
+    rows = [[W["reactions"], db.get("reactions") or d["reactions"]], [W["observe_items"], ["%d. %s" % (i, x) for i, x in enumerate(items, 1)]],
+            [W["prompt_1"], db.get("prompt_1") or d["prompt_1"]], [W["prompt_2"], db.get("prompt_2") or d["prompt_2"]],
+            [W["feedback_form"], db.get("feedback") or d["feedback"]], [W["close"], db.get("close") or d["close"]]]
+    watch = [x for x in entry.get("observe") or items if str(x).strip()]
+    return [("h1", W["debrief"]), ("p", b_(code)), ("p", W["debrief_sub"].format(code=code.split(" - ")[0], m=num(_rows_min(entry, "debrief")))),
+            ("table", [W["stage"], W["script"]], rows),
+            ("h2", W["obs"]), ("table", W["obs_cols"], [[x, "", ""] for x in watch])]
+
+
+def assessment_form(entry, code):
+    cards = il.KNOW["cards"]
+    crit = [c for c in (entry.get("form") or {}).get("critical") or [] if isinstance(c, dict) and str(c.get("step") or "").strip()]
+    rows = [[str(i), ("%s: %s" % (W["stop"], c["step"])) if c.get("stop") else c["step"], "☐", "☐", "☐"] for i, c in enumerate(crit, 1)]
+    blocks = [("h1", W["form"]), ("p", b_(code)), ("p", W["form_sub"].format(code=code.split(" - ")[0])),
+              ("facts", [(W["candidate"], W["blank"]), (W["assessor"], W["blank"])]),
+              ("h2", W["critical"]), ("table", W["crit_cols"], rows), ("small", W["crit_rule"]),
+              ("h2", W["global"]), ("ul", ["☐ " + x for x in cards["global_rating"]]),
+              ("h2", W["decision_h"]), ("p", cards["decision"])]
+    if entry.get("gwo"):
+        blocks += [("h2", W["gwo"]), ("p", W["gwo_v"])]
+    details = [cards["run_details"]] + ([W["changed"].format(c=entry["changed_condition"])] if entry.get("changed_condition") else [])
+    return blocks + [("h2", W["details"]), ("ul", details), ("p", W["sign"])]
+
+
+def employer_sheet(emp, title):
+    lst = lambda x: x if isinstance(x, list) else [x]
+    decays = emp.get("decays") or ""
+    if decays and "comparable training" not in decays:
+        decays = [decays, il.KNOW["cards"]["decay_default"]]
+    facts = [(W["can_now"], lst(emp.get("can_do") or [])), (W["decays"], decays), (W["drill"], emp.get("drill") or ""),
+             (W["watch"], lst(emp.get("watch_for") or [])), (W["refresher"], emp.get("refresher") or "")]
+    return [("h1", W["employer"]), ("p", b_(title)), ("facts", facts)]
+
+
 # ------------------------------------------------------------------ the PDF
 def browser():
     import measure_slides
@@ -782,6 +893,7 @@ def plan(course, infos, title, probs):
                 out.append((os.path.join(dd, t["stem"] + "_TRAINEE.pdf"), "pdf", to_html("%s %s - %s" % (m["mid"], t["code"], W["trainee_card"]), card)))
                 out.append((os.path.join(dd, t["stem"] + "_TRAINEE.docx"), "docx", card))
                 out.append((os.path.join(dd, t["stem"] + "_INSTRUCTOR.pdf"), "pdf", to_html("%s %s - %s" % (m["mid"], t["code"], t["title"]), doc)))
+    out += kit(course, title, mods, days, root, probs)
     if mods:
         out.append((os.path.join(root, "INDEX.html"), "html", to_html(W["index"], index_blocks(title, root, out, mods))))
     return out, mods, days
@@ -808,6 +920,17 @@ def index_blocks(title, root, out, mods):
             blocks += [("h3", d), ("ul", items)]
     else:
         blocks.append(("p", W["i_none"]))
+    kit_ = {}
+    for p, k, _ in out:
+        if rel(p).startswith("practical-kit/"):
+            parts = rel(p).split("/")
+            kit_.setdefault(parts[1].replace("_", " ") if len(parts) > 2 else "", []).append(link(p))
+    blocks += [("h2", W["i_kit"])]
+    if kit_:
+        for d, items in sorted(kit_.items()):
+            blocks += ([("h3", d)] if d else []) + [("ul", items)]
+    else:
+        blocks.append(("p", W["i_kit_none"]))
     blocks += [("h2", W["i_tasks"].format(n=len(tasks))), ("table", ["Module", "Task", "Title", "Kind", "Files"], rows),
                ("small", W["i_plans"])]
     return blocks
