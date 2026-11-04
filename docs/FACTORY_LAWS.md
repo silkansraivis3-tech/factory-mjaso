@@ -672,8 +672,20 @@ passive share, the cycle rows and the register's columns, `compile/scripts/addit
 → `course-factory` (`scripts/pedagogy_review.py` draft / check / render, `bloom/GUIDE.md` §5,
 `scripts/make_architecture_page.py --approve`, `scripts/course_portal.py`), 2.99.0, 2.100.0, 2.101.0
 
-**All sixty-nine laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L69 are enforced first through `course-factory/SKILL.md`'s
+**L70 · Built after the expert's Ready.** The experts' answers in the training app's editor are the course's approval.
+For each learning outcome the expert keeps it as now, takes the proposal - the revised Sub-ILO wording (a Main ILO is
+never re-worded, L2) and the teaching and learning activity - or decides with Claude, with a note when a detail is to
+be fixed. Ready on the pedagogy, signed with their name and surname, queues the whole course: at once when the office set
+the course to build after its expert, or after somebody in the office has looked at the answers in editor mode and
+pressed Build course (the default). The office PC builds it unattended (`course_portal.py watch --once`, a scheduled task
+every 10 minutes): every expert note carried out, every STOP passed with the expert's signature, no question asked (they
+go to OPEN_EXPERT_QUESTIONS.md), no paid picture made, nothing pushed. The result is imported into the staging editor as a
+draft release; the office publishes it. A build that stops says why in the editor.
+→ `course-factory` (`scripts/course_portal.py` watch / import / install-task, `scripts/course_import.mjs`, SKILL.md
+*Auto build*; the training app's course-prep and course-import functions, migrations 032-033), 2.102.0
+
+**All seventy laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L70 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:

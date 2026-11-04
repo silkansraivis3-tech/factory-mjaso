@@ -160,5 +160,7 @@ writes an OK into the row's `expert_review`, a note into its `expert_notes` (the
 whole course's for the summaries and upgrades; `about` says when it is about the activities or upgrades) and
 FEEDBACK_LOG.md, and Ready into `ready`. Carry out every note and write in its `done` what was changed -
 `check` stops until each one has it, and the editor shows it to the expert - then `render` (it signs the documents
-with the Ready) and `push` again: the rows not changed keep their answers. An expert who cannot use the editor still
+with the Ready) and `push` again: the rows not changed keep their answers.
+
+**The revised outcome.** When a Sub-ILO is lifted above the level its verb names, write `revised_outcome`: the same Sub-ILO with a verb at the proposed level, in the programme's language - what it is about, its subject and its standard unchanged. A Main ILO is never re-worded (L2). The expert's Take proposed, or a decision with Claude that re-words it, ratifies it into the architecture as re-expressed, the programme's words kept beside it. After Ready the course is built by L70 (SKILL.md *Auto build*). An expert who cannot use the editor still
 gets the Word files and signs them.

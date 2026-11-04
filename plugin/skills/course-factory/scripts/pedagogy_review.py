@@ -104,9 +104,12 @@ def modules(prog, arch):
     for am in sorted(arch.get("modules", []), key=lambda m: int(m.get("module", 0))):
         if str(am.get("module")) == fa:
             continue
-        rows = [{"id": s["id"], "text": s["text"], "asks": s["level"]} for s in bloom_map._sub_ilos(prog, arch, am)]
+        rows = [{"id": s["id"], "text": s["text"], "asks": s["level"], "main": False, "lang": s["lang"],
+                 "programme_text": s.get("programme_text") or s["text"], "programme_lang": s.get("programme_lang") or s["lang"],
+                 "status": s.get("status")} for s in bloom_map._sub_ilos(prog, arch, am)]
         if not rows:
-            rows = [{"id": i, "text": main.get(i, ""), "asks": bloom_map.ilo_level(main.get(i, ""))["level"]}
+            rows = [{"id": i, "text": main.get(i, ""), "asks": bloom_map.ilo_level(main.get(i, ""))["level"], "main": True,
+                     "lang": "en", "programme_text": main.get(i, ""), "programme_lang": "en", "status": "original"}
                     for i in (str(x) for x in am.get("main_ilos", []))]
         out.append({"n": int(am["module"]), "title": am.get("title", ""), "rows": rows,
                     "active": [a for a in (am.get("active_learning") or []) if isinstance(a, dict)]})
@@ -216,6 +219,12 @@ def check(course):
             if b == 6:
                 notes.append("%s: Create is reached by a practical exercise, not a tablet task - say which one" % where)
             probs += open_notes(x, where)
+            rw = (new.get("revised_outcome") or "").strip()
+            if rw and r["main"]:
+                probs.append("%s: a Main ILO is never re-worded (L2) - empty its 'revised_outcome'" % where)
+            elif not rw and not r["main"] and isinstance(b, int) and r["asks"] and b > r["asks"] and not new.get("expert"):
+                notes.append("%s: proposed %s is above the outcome's verb (%s) - say it in 'revised_outcome', the same "
+                             "Sub-ILO with a verb at that level, in the programme's language" % (where, level(b), level(r["asks"])))
     for n, m in mods.items():
         for i in (m or {}).get("rows") or {}:
             if (str(n), i) not in known:
@@ -478,16 +487,15 @@ def view(course):
             d = decision(now, new, r["asks"])
             tally[d] = tally.get(d, 0) + 1
             t = {"item": item_key(m["n"], r["id"]), "id": r["id"], "outcome": r["text"], "asks": level(r["asks"]),
+                 **outcome_columns(r, new),
                  "now": {"level": level(now.get("level")), "how": now.get("how") or "not judged yet",
                          "checked": now.get("checked") or "-", "where": now.get("where") or "-"},
                  "proposed": {"level": level(new.get("level")), "change": "%s -> %s" % (level(now.get("level")), level(new.get("level"))),
                               "decision": d, "how": new.get("how") or "not judged yet", "why": proposed_why(r, now, new)},
-                 "activities": [a for a in acts if str(a["topic"]) == str(r["id"])], "changes_made": _done(x),
-                 "activity_changes": _done(x, "activities")}
-            items[t["item"]] = _hash([t["outcome"], t["asks"], t["now"], t["proposed"], t["changes_made"]])
-            if t["activities"]:
-                t["act_item"] = "act/" + t["item"]
-                items[t["act_item"]] = _hash([t["outcome"], t["activities"], t["activity_changes"]])
+                 "activities": [a for a in acts if str(a["topic"]) == str(r["id"])],
+                 "changes_made": _done(x) + _done(x, "activities")}
+            items[t["item"]] = _hash([t["intended"], t["revised"], t["asks"], t["now"], t["proposed"], t["activities"],
+                                      t["changes_made"]])
             topics.append(t)
         mod = {"n": m["n"], "title": m["title"], "note": got.get("note") or "", "topics": topics,
                "module_activities": [a for a in acts if a["topic"] == "module"], "activity_changes": _done(got, "activities")}
@@ -500,12 +508,55 @@ def view(course):
     return {"content": out, "items": items, "fingerprint": _hash([out, items])}
 
 
+def verb_of(text, lang, lvl=None):
+    """'describe · 2 Understand' - the verb that leads the outcome and the level it names (or the level taught)."""
+    info = bloom_map.ilo_level(text or "", lang or "en")
+    if not info["verb"] and (lang or "en") != "en":           # an English Sub-ILO in a course whose programme is not
+        info = bloom_map.ilo_level(text or "", "en")
+    n = lvl if lvl else info["level"]
+    v = info["verb"]
+    return ("%s · %s" % (v, level(n)) if v and n else v or (level(n) if n else "-"))
+
+
+def outcome_columns(r, new):
+    """Intended learning outcome | existing verb | revised learning outcome | revised verb, as the experts read them.
+    The intended outcome is the programme's words; a Sub-ILO may be re-worded (L2: proposed, ratified by the expert),
+    a Main ILO never."""
+    rw = "" if r["main"] else ((new.get("revised_outcome") or "").strip()
+                               or (r["text"] if r.get("status") == "re-expressed" and r["text"] != r["programme_text"] else ""))
+    return {"main": r["main"], "intended": r["programme_text"],
+            "existing_verb": verb_of(r["programme_text"], r.get("programme_lang")),
+            "revised": rw, "revised_verb": verb_of(rw, r.get("lang"), new.get("level")) if rw else "",
+            "tla": new.get("how") or "not judged yet"}
+
+
+def ratify(course, module, sub_id, text, by):
+    """A Sub-ILO's new wording, taken by an expert: written into the architecture as re-expressed, the programme's own
+    words kept beside it (L2). False when the row is a Main ILO or not in the architecture."""
+    from datetime import date
+    f = files(course)
+    arch = _load(f["arch"])
+    for am in (arch or {}).get("modules", []):
+        if str(am.get("module")) != str(module):
+            continue
+        for s in am.get("sub_ilos") or []:
+            if isinstance(s, dict) and str(s.get("id")) == str(sub_id):
+                if not s.get("programme_text") and s.get("status", "original") == "original":
+                    prog = _load(f["prog"], {}) or {}
+                    s["programme_text"] = (prog.get("outcomes") or {}).get(str(sub_id)) or s.get("text") or ""
+                s.update(status="re-expressed", text=text.strip(), ratified={"by": by, "on": date.today().isoformat()})
+                _save(f["arch"], arch)
+                return True
+    return False
+
+
 def carry_out(row, lvl, said, by, how="", why=None):
     """An expert's decision on one topic, carried out as it is: their level, their words, and the 'how' they agreed to
     (empty, for the factory to write, when they gave none)."""
     from datetime import date
     new = row.setdefault("proposed", {})
     new.update(level=lvl, how=how, limit="", above_why="", expert={"by": by.strip(), "on": date.today().isoformat(), "said": said.strip()})
+    new.pop("revised_outcome", None)
     if why:
         new["why"] = why
 

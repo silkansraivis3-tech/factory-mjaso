@@ -7,6 +7,17 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.102.0 · Built after the expert's Ready - L70; intended and revised outcomes (2026-11-04)
+
+- **Why.** The owner's boss wants the outcomes as intended and as revised, with their verbs and the activity; the owner
+  wants the course built from the expert's answers without anybody starting it, unless the office chose to check first.
+- **What.** `pedagogy_review.py`: `outcome_columns`, `verb_of`, `ratify` (a taken Sub-ILO wording goes into the
+  architecture as re-expressed), `revised_outcome` checked against L2. `course_portal.py`: the PC's course list
+  (`%APPDATA%\novikontas\courses.json`), `import` (`course_import.mjs`), `watch --once`, `install-task`; a note with
+  Keep or Take becomes an expert note. SKILL.md *Auto build* is what the unattended run follows.
+- **Safety.** The run accepts edits inside the course folder only, refuses paid pictures and git push, and its import is
+  a draft; the office publishes. A stopped build says why in the editor and is not taken again until the office asks.
+
 ## 2.101.0 · Now beside proposed; keep, take or fix with Claude (2026-11-04)
 
 - **Why.** The owner found OK / needs change on Bloom now pointless: the expert chooses between the old course and the

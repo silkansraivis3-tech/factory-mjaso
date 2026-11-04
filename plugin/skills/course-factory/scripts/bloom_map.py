@@ -198,12 +198,14 @@ def _sub_ilos(prog, arch, am):
             continue
         st = s.get("status", "original")
         own = st in ("re-expressed", "added") and s.get("text")
-        text = s["text"] if own else (s.get("programme_text") or outcomes.get(str(s.get("id"))) or s.get("text") or "")
+        given = s.get("programme_text") or outcomes.get(str(s.get("id"))) or ("" if own else s.get("text")) or ""
+        text = s["text"] if own else given
         lg = cl if own else pl
         info = ilo_level(text, lg)
         if s.get("bloom"):
             info = dict(info, level=int(s["bloom"]), stated=True)
-        out.append({"id": str(s.get("id", "?")), "text": text, "lang": lg, "status": st, **info})
+        out.append({"id": str(s.get("id", "?")), "text": text, "lang": lg, "status": st, "programme_text": given,
+                    "programme_lang": pl, **info})
     return out
 
 

@@ -115,6 +115,10 @@ class Server:
                              ready_at="2026-11-04T11:30:00Z")
 
 
+def workspace_master(c):
+    return cp.workspace.master_of(c)
+
+
 def out_of(fn, *a):
     buf, old = io.StringIO(), sys.stdout
     sys.stdout = buf
@@ -127,6 +131,8 @@ def out_of(fn, *a):
 
 def main():
     tmp = tempfile.mkdtemp(prefix="portal_")
+    real_appdata = os.environ.get("APPDATA")
+    os.environ["APPDATA"] = os.path.join(tmp, "appdata")      # the PC's own course list, lock and log stay untouched
     try:
         arch = copy.deepcopy(tap.ARCH)
         c = tap.write_course(os.path.join(tmp, "course"), tap.PROGRAMME, arch)
@@ -258,6 +264,99 @@ def main():
         check("sent again, the topic shows the expert's decision", t13["proposed"]["decision"] == "the expert's decision"
               and any("They should analyse a real loading." in w for w in t13["proposed"]["why"]), t13["proposed"])
 
+        print("\n-- intended and revised learning outcomes")
+        mods = {m["n"]: {t["id"]: t for t in m["topics"]} for m in v["content"]["modules"]}
+        t1a, t31 = mods[1]["1.1.a"], mods[3]["1"]
+        check("a Sub-ILO the factory re-expressed: the programme's words as intended, the new words as revised, each with its verb",
+              t1a["intended"].startswith("Identificēt") and t1a["revised"].startswith("Identify the cargo containment")
+              and t1a["revised_verb"].startswith("identify") and not t1a["main"], t1a)
+        check("a Main ILO is shown as it is, never revised", t31["main"] and t31["revised"] == "" and t31["intended"], t31)
+        check("the proposed teaching and learning activity is the row's own", t1a["tla"] == t1a["proposed"]["how"])
+        rev = json.load(io.open(pr.files(c)["review"], encoding="utf-8"))
+        rev["modules"]["3"]["rows"]["1"]["proposed"]["revised_outcome"] = "Operate the whole cargo plant"
+        io.open(pr.files(c)["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
+        check("check refuses a re-worded Main ILO (L2)", any("module 3, topic 1: a Main ILO is never re-worded" in x for x in pr.check(c)[0]))
+        del rev["modules"]["3"]["rows"]["1"]["proposed"]["revised_outcome"]
+        rev["modules"]["1"]["rows"]["1.1"]["proposed"]["revised_outcome"] = "Operate the cargo containment system of a gas tanker"
+        for m in rev.get("modules", {}).values():
+            m.pop("expert_notes", None)
+        io.open(pr.files(c)["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
+        out_of(cp.cmd_push_pedagogy, c)
+        srv.answer("anna.liepa@novikontas.org", "1/1.1", "ok")
+        srv.answer("anna.liepa@novikontas.org", "1/1.1.b", "decision", decision={
+            "choice": "claude", "level": 3, "how": "Trainees name the tank type on five photographs and say why.",
+            "why": "They must know their own ship's tanks.", "said": "Make it practical.", "revised_outcome": "Identify the tank type on a photograph"})
+        out_of(cp.cmd_pull, c)
+        arch = json.load(io.open(pr.files(c)["arch"], encoding="utf-8"))
+        subs = {s["id"]: s for s in arch["modules"][0]["sub_ilos"]}
+        check("Take proposed ratifies the revised Sub-ILO into the architecture, the programme's words kept beside it",
+              subs["1.1"]["status"] == "re-expressed" and subs["1.1"]["text"].startswith("Operate the cargo")
+              and subs["1.1"]["programme_text"].startswith("Identificēt") and subs["1.1"]["ratified"]["by"] == "Anna Liepa", subs["1.1"])
+        check("a decision with Claude that re-words the Sub-ILO is ratified the same way",
+              subs["1.1.b"]["text"] == "Identify the tank type on a photograph" and subs["1.1.b"]["ratified"]["by"] == "Anna Liepa", subs["1.1.b"])
+        t11 = {t["id"]: t for t in pr.view(c)["content"]["modules"][0]["topics"]}["1.1"]
+        check("sent again, the topic shows the programme's words as intended and the ratified ones as revised",
+              t11["intended"].startswith("Identificēt") and t11["revised"].startswith("Operate the cargo"), t11)
+
+        print("\n-- the build after Ready, on the office PC")
+        old_env = dict(os.environ)
+        stub = os.path.join(tmp, "stub_claude.py")
+        io.open(stub, "w", encoding="utf-8").write(
+            "import os, sys, json\n"
+            "json.dump(sys.argv[1:], open(os.path.join(os.environ['STUB_OUT'], 'args.json'), 'w'))\n"
+            "open(os.path.join(os.environ['STUB_OUT'], 'cwd.txt'), 'w').write(os.getcwd())\n"
+            "if os.environ.get('STUB_FAIL'):\n    print('AUTO BUILD STOPPED: no simulator manual'); sys.exit(0)\n"
+            "os.makedirs('modules', exist_ok=True); open('modules/COURSE.html', 'w').write('<title>GAS BASIC 3</title>')\n"
+            "print('working...'); print('AUTO BUILD DONE')\n")
+        imp = os.path.join(tmp, "stub_import.py")
+        io.open(imp, "w", encoding="utf-8").write(
+            "import sys, json\nprint(json.dumps({'ok': True, 'release': {'version': '1.0.0', 'args': sys.argv[2:]}}))\n")
+        os.environ.update(NOVIKONTAS_CLAUDE_CMD=json.dumps([sys.executable, stub]), NOVIKONTAS_NODE=json.dumps([sys.executable, imp]),
+                          STUB_OUT=tmp)
+        queue = []
+        orig = srv.__call__
+
+        def build_server(action, p):
+            if action == "build-next":
+                return {"course": queue[0] if queue else None}
+            if action == "build-claim":
+                queue[0]["stage"] = "building"
+                return {"course": queue[0]}
+            if action == "build-done":
+                srv.done = p
+                return {"course": {}}
+            return orig(action, p)
+        cp.CALL = build_server
+        try:
+            check("nothing queued: watch does nothing", cp.cmd_watch_once() == 0 and not os.path.isfile(os.path.join(tmp, "args.json")))
+            out_of(cp.cmd_create, c)
+            queue.append({"id": "gas-basic-3", "title": "GAS BASIC 3", "stage": "build_requested", "build_requested_by": "Anna Liepa"})
+            srv.done = None
+            code = cp.cmd_watch_once()
+            args = json.load(io.open(os.path.join(tmp, "args.json"), encoding="utf-8"))
+            check("a queued course: claimed, Claude Code runs unattended in the course folder with the expert's name",
+                  code == 0 and queue[0]["stage"] == "building" and args[0] == "-p" and "Anna Liepa (Ready in editor)" in args[1]
+                  and os.path.samefile(io.open(os.path.join(tmp, "cwd.txt")).read(), workspace_master(c)), (code, args[:2]))
+            check("... edits accepted without asking, paid pictures and git push refused",
+                  "acceptEdits" in args and "mcp__plugin_nano-banana_nano-banana__generate_image" in args and "Bash(git push:*)" in args, args)
+            check("... and the built course is imported as a draft; nothing is marked stopped", srv.done is None)
+            logs = os.listdir(os.path.join(c, "auto_build")) if os.path.isdir(os.path.join(c, "auto_build")) else \
+                os.listdir(os.path.join(c, "working_claude", "auto_build"))
+            check("the run's words are kept in the course's auto_build log", logs, logs)
+            os.environ["STUB_FAIL"] = "1"
+            queue[0]["stage"] = "build_requested"
+            cp.cmd_watch_once()
+            check("a run that stops says why in the editor", srv.done and "no simulator manual" in srv.done["error"], srv.done)
+            lock = os.path.join(os.environ["APPDATA"], "novikontas", "watch.lock")
+            io.open(lock, "w").write("1")
+            srv.done = None
+            check("one watch at a time: while a build runs, the next watch leaves at once", cp.cmd_watch_once() == 0 and srv.done is None)
+            os.remove(lock)
+        finally:
+            cp.CALL = srv
+            os.environ.clear()
+            os.environ.update(old_env)
+
         print("\n-- the key and the address")
         src = io.open(os.path.join(HERE, "course_portal.py"), encoding="utf-8").read()
         check("the client knows only the staging project", "mgkhdbkxfaldfxyvfqrl" in src and "vapnxststhoxadhhdyty" not in src)
@@ -281,6 +380,10 @@ def main():
         check("remove takes the course out and forgets it", code == 0 and not cp.portal(c) and "gas-basic-3" not in srv.preps, out)
     finally:
         cp.CALL = cp._http
+        if real_appdata is None:
+            os.environ.pop("APPDATA", None)
+        else:
+            os.environ["APPDATA"] = real_appdata
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
     return 1 if FAIL else 0

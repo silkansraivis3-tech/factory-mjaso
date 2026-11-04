@@ -140,6 +140,7 @@ seems to collide with it. The record behind the rows: `references/laws-in-full.m
 | **L67** | **A picture is 3D or a photograph, never a flat line drawing; every slide moves on Next** - the illustration on a slide or task is live 3D, a static 3D render or a photograph, never the figure kit's line drawing; 60-80 % of slides step through 3D, the rest may be static 3D; Navy, never Pitch Black. The upgraded templates: `design/slide-templates/`, `course-module-ui/templates/gb_upgrade.css`, `gb_steps.js`, `gb_scene.js` | styles and engines (2.88.0); the compiler writes the summary, task slide, step boxes, compare boxes, two-column figure, photo spots and zoom (2.89.0, compile/GUIDE.md §2h); the content script's new words next |
 | **L68** | **Every instructor-led module meets the Instructor-Led Course Development Guideline** - active means every trainee commits to an output (the room's three answers are passive); passive runs at most 15 min and 20 % of theory or a one-line justification; every drill, simulator run and scenario briefs, shows, runs and debriefs inside its own minutes; a recorded run is later, under a changed condition, on an assessment form; the pre-brief, debrief and observation cards and the employer sheet. The course's `working_claude/instructor_led.json` is written by the factory and approved by the operator; read `instructor-led/GUIDE.md` after the exercises are written, run `scripts/instructor_led.py check` before handover | now (2.97.0) |
 | **L69** | **The experts get the pedagogy first** - before any content script, three documents topic by topic and module by module: the Bloom level the old course reached, each topic kept or lifted - to the level its outcome asks, never just higher, Remember kept where it belongs -, the teaching and learning activities and the course-wide upgrades (`scripts/pedagogy_review.py`, `bloom/GUIDE.md` §5). The Stage 2 page is not approved without them; the outcomes' words are never in them to change | now |
+| **L70** | **Built after the expert's Ready** - the expert's answers in the training app's editor are the approval: Ready on the pedagogy queues the whole course, at once for an expert the office trusts or after the office checked the answers and pressed Build course; the office PC builds it unattended (`course_portal.py watch --once`, every 10 minutes) and imports it into the staging editor as a draft. Unattended, the factory never stops to ask, makes no paid picture and never pushes - see *Auto build* below | now |
 | **L41** | **The old course is the foundation.** Read it whole at intake (`scripts/old_course.py inventory`, `images`); at Stage 2 every module says what it **keeps**, **modernises** and **adds** | now |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
@@ -494,6 +495,24 @@ rules of `course-module-ux`, `course-module-ui` and `course-task-ux`, which the 
 figure at once, the compile, every check, and the visual review's sheets; it prints only what fails. Start at the
 **Quickstart** at the top of `compile/GUIDE.md`, and write figure specs from `course-visuals/kit/CATALOGUE.md`, never
 from `kit.js`.
+
+## Auto build — the course built after the expert's Ready (L70)
+
+A run started by `course_portal.py watch --once` on the office PC (its prompt says so, and `NOVIKONTAS_AUTO_BUILD=1`
+is set) has nobody to answer. The expert's answers, already pulled into `working_claude`, are the approval, signed with
+the name they gave at Ready:
+
+- Carry out every expert note (`pedagogy_review.py check` lists them) and write its `done`; render the documents.
+- Every STOP is passed with the expert's signature: Stage 2 `make_architecture_page.py --approve --by "<expert> (Ready in
+  editor)"`, each module's content script `content_script.py approve <course> --module N --by "<expert> (Ready in editor)"`. The
+  build plan question is answered with its first option. Do not wait for "next".
+- Never ask. A question for a person goes into `working_claude/OPEN_EXPERT_QUESTIONS.md` with the choice the factory
+  made, and the build carries on with that choice.
+- No paid pictures or videos (they are refused): leave each picture brief and its place on the slide.
+- Build every module, compile COURSE.html under the course's name, run the factory's checks and fix what they find.
+- Never push to git and never change a file outside the course folder.
+- End with one line: `AUTO BUILD DONE`, or `AUTO BUILD STOPPED: <why>` when something only a person can fix stops it.
+  The watch then imports `modules\` into the staging editor as a draft, or shows the reason in the editor.
 
 ## Build order
 

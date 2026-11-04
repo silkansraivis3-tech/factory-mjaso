@@ -8,6 +8,10 @@
     course_portal.py pull   --course <course>                 the experts' answers and their Ready back into the files
     course_portal.py status --course <course>                 the stage, how much is answered, who said Ready
     course_portal.py remove --course <course> --yes           a course in preparation that was never built
+    course_portal.py import --course <course>                 the built course into the staging editor as a draft release
+    course_portal.py watch  --once                            the office PC: a course whose Ready asked for its build is
+                                                              built unattended and imported (the scheduled task runs this)
+    course_portal.py install-task                             the scheduled task: watch --once every 10 minutes
 
 WHY THIS EXISTS
 The experts used to get the pedagogy documents and the content scripts as Word files by email, and their answers came
@@ -26,6 +30,14 @@ WHAT GOES WHERE
   The course's id in the training app is the slug of its name (COURSE.html's title), so two courses with one name
   would become one there: create refuses a name already used, by a course or by a course in preparation.
 
+THE BUILD AFTER READY (L70)
+The expert's Ready on the pedagogy queues the course for its build. Every 10 minutes the scheduled task on the office PC
+runs watch --once: it takes the oldest queued course (one PC at a time), pulls the answers, and starts Claude Code
+unattended in that course's folder (claude -p, the course-factory skill, SKILL.md "Auto build"). When the run says
+AUTO BUILD DONE, the course's modules\\ folder is imported into the staging editor as a draft release
+(course_import.mjs). A build that stops says why in the editor and waits until the office starts it again. The course
+folders this PC knows are in %APPDATA%\\novikontas\\courses.json (create and push write it).
+
 THE KEY
 The factory signs with a key kept on the office PC only: the environment variable NOVIKONTAS_FACTORY_KEY, or the file
 %APPDATA%\\novikontas\\factory.key. The server keeps its SHA-256 (secret FACTORY_KEY_SHA256). The key is never in a
@@ -36,13 +48,16 @@ Standard library only.
 from __future__ import annotations
 
 import argparse
+import glob
 import io
 import json
 import os
+import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
-from datetime import date
+from datetime import date, datetime
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -64,9 +79,36 @@ class PortalError(Exception):
         self.status, self.data = status, data
 
 
+def home():
+    return os.path.join(os.environ.get("APPDATA") or os.path.join(os.path.expanduser("~"), ".config"), "novikontas")
+
+
 def key_file():
-    base = os.environ.get("APPDATA") or os.path.join(os.path.expanduser("~"), ".config")
-    return os.path.join(base, "novikontas", "factory.key")
+    return os.path.join(home(), "factory.key")
+
+
+def register(course_id, course):
+    """This PC's list of its courses in preparation and their folders - how watch finds a course to build."""
+    f = os.path.join(home(), "courses.json")
+    reg = _load(f, {}) or {}
+    if reg.get(course_id) != os.path.abspath(course):
+        reg[course_id] = os.path.abspath(course)
+        _save(f, reg)
+
+
+def folder_of(course_id):
+    reg = _load(os.path.join(home(), "courses.json"), {}) or {}
+    if reg.get(course_id) and os.path.isdir(reg[course_id]):
+        return reg[course_id]
+    # a course made before the list existed: its portal.json somewhere under the Desktop
+    desk = os.path.join(os.path.expanduser("~"), "Desktop")
+    for depth in ("*", "*/*", "*/*/*", "*/*/*/*"):
+        for pj in glob.glob(os.path.join(desk, depth, "working_claude", FILE)):
+            if (_load(pj, {}) or {}).get("course_id") == course_id:
+                work = os.path.dirname(os.path.dirname(pj))
+                register(course_id, work)
+                return work
+    return None
 
 
 def factory_key():
@@ -154,6 +196,7 @@ def cmd_create(course, title=None):
     c = r["course"]
     _save(workspace.claude_path(course, FILE), {"course_id": c["id"], "title": c["title"], "editor": EDITOR % c["id"],
                                                 "created_on": date.today().isoformat()})
+    register(c["id"], course)
     print("In preparation in the training app: %s (%s)\n  The experts' link: %s" % (c["title"], c["id"], EDITOR % c["id"]))
     return 0
 
@@ -177,6 +220,7 @@ def cmd_push_pedagogy(course):
             print("  - " + x)
         return 2
     v = pr.view(course)
+    register(p["course_id"], course)
     r = call("push", course_id=p["course_id"], kind="pedagogy", content=v["content"], items=v["items"], fingerprint=v["fingerprint"])
     if r.get("unchanged"):
         print("Nothing new: the editor already has these words (version %d)." % r["document"]["version"])
@@ -218,6 +262,7 @@ def pull_pedagogy(course, answers, ready):
     v = pr.view(course)
     # the editor's row -> (where it is written, the log's place, what it is about)
     where_of = {"course": (rev, "2 · course · summaries", None), "upgrades": (rev, "2 · course · upgrades", "upgrades")}
+    topic_of = {}            # the editor's topic row -> (module, Sub-ILO id, is a Main ILO)
     for m in v["content"]["modules"]:
         mod = rev.setdefault("modules", {}).setdefault(str(m["n"]), {})
         rows = mod.setdefault("rows", {})
@@ -226,9 +271,15 @@ def pull_pedagogy(course, answers, ready):
         for t in m["topics"]:
             if t["id"] in rows:
                 where_of[t["item"]] = (rows[t["id"]], "2 · M%02d · %s" % (m["n"], t["id"]), None)
-                if t.get("act_item"):
-                    where_of[t["act_item"]] = (rows[t["id"]], "2 · M%02d · %s activities" % (m["n"], t["id"]), "activities")
+                topic_of[t["item"]] = (m["n"], t["id"], t["main"])
     took, docs, log, said = [], [], [], []
+
+    def reword(item, text, who):
+        """A Sub-ILO's new wording the expert took: ratified into the architecture (L2); a Main ILO is never re-worded."""
+        n, sid, main = topic_of[item]
+        if text and not main and pr.ratify(course, n, sid, text, who):
+            return "; Sub-ILO re-worded: " + text
+        return ""
     for a in answers:
         target = where_of.get(a["item"])
         if not target:
@@ -244,6 +295,9 @@ def pull_pedagogy(course, answers, ready):
         d = a.get("decision") or {}
         if a["verdict"] == "ok":
             row["expert_review"].append(dict(base, ok=True, **({"note": a["note"]} if a.get("note") else {})))
+            rw = reword(a["item"], ((row.get("proposed") or {}).get("revised_outcome") or "").strip(), _who(a)) if a["item"] in topic_of else ""
+            if rw:
+                log.append((where, "Take proposed [%s, editor mode]" % _who(a), rw[2:]))
         elif a["verdict"] == "change":
             row["expert_notes"].append(dict(base, said=(a.get("note") or "") + older, done=""))
             log.append((where, "%s [%s, editor mode]" % (a.get("note") or "", _who(a)), "to do"))
@@ -257,11 +311,19 @@ def pull_pedagogy(course, answers, ready):
             else:
                 pr.carry_out(row, int(d["level"]), d.get("said") or "", _who(a), how=d.get("how") or "", why=d.get("why") or None)
                 what = "set with Claude to %s: %s" % (pr.level(int(d["level"])), d.get("how") or "")
+                rw = (d.get("revised_outcome") or "").strip()
+                if rw and not topic_of[a["item"]][2]:
+                    row["proposed"]["revised_outcome"] = rw
+                    what += reword(a["item"], rw, _who(a))
             row["expert_review"].append(dict(base, decision=d["choice"], level=row["proposed"]["level"]))
             log.append((where, "%s [%s, editor mode]" % (d.get("said") or "", _who(a)), what + older))
         else:
             said.append("%s: an answer of a kind this version cannot take in (%s) - left in the editor" % (where, a["verdict"]))
             continue
+        # "take it / keep it, with a note on what to fix": the note is carried out like any other
+        if a["verdict"] in ("ok", "decision") and (a.get("note") or "").strip():
+            row["expert_notes"].append(dict(base, said=a["note"].strip() + older, done=""))
+            log.append((where, "%s [%s, editor mode]" % (a["note"].strip(), _who(a)), "to do"))
         for k in ("expert_review", "expert_notes"):
             if not row[k]:
                 del row[k]
@@ -339,12 +401,169 @@ def cmd_remove(course, yes):
     return 0
 
 
+# ------------------------------------------------------------------ the build after Ready (L70)
+AUTO_PROMPT = """You are the NOVIKONTAS course factory, running unattended on the office PC (auto build, SKILL.md "Auto build").
+The course in this folder - "{title}" ({course_id}) - was answered in the training app's editor, and {expert} pressed
+Ready on its pedagogy. Their answers are already in working_claude (pedagogy_review.json, architecture.json,
+FEEDBACK_LOG.md). Use the course-factory skill and build the whole course now, by its "Auto build" rules: carry out every
+expert note and write its done, render the pedagogy documents, approve Stage 2 and every module's content script with
+--by "{expert} (Ready in editor)", build every module, compile COURSE.html and run the factory's checks, fixing what they
+find. Nobody is there to answer: never stop to ask - write the question in working_claude/OPEN_EXPERT_QUESTIONS.md and
+carry on with the factory's best choice. Generate no paid pictures or videos: leave their picture briefs. Never push to
+git and never change a file outside this folder. End with one line: AUTO BUILD DONE, or AUTO BUILD STOPPED: <why>."""
+ALLOWED = ["Bash", "PowerShell", "Read", "Write", "Edit", "Glob", "Grep", "Skill", "Agent", "WebSearch", "WebFetch", "TodoWrite"]
+DENIED = ["Bash(git push:*)", "PowerShell(git push:*)", "mcp__plugin_nano-banana_nano-banana__generate_image",
+          "mcp__plugin_nano-banana_nano-banana__generate_video"]
+
+
+def claude_command(prompt):
+    """The unattended run: edits are taken without asking inside the course folder (files outside it are refused),
+    shell commands run, paid pictures and git push are refused. NOVIKONTAS_CLAUDE_CMD replaces the program (tests)."""
+    exe = os.environ.get("NOVIKONTAS_CLAUDE_CMD")
+    base = json.loads(exe) if exe else ["claude"]
+    return base + ["-p", prompt, "--permission-mode", "acceptEdits", "--allowedTools", *ALLOWED, "--disallowedTools", *DENIED]
+
+
+def modules_folder(course):
+    m = os.path.join(course, "modules")
+    return m if os.path.isfile(os.path.join(m, "COURSE.html")) else None
+
+
+def cmd_import(course):
+    p = _need_portal(course)
+    if not p:
+        return 2, None
+    folder = modules_folder(course)
+    if not folder:
+        print("Stopped - there is no built course to import: modules\\COURSE.html is missing.")
+        return 2, None
+    node = json.loads(os.environ["NOVIKONTAS_NODE"]) if os.environ.get("NOVIKONTAS_NODE") else ["node"]
+    run = subprocess.run(node + [os.path.join(HERE, "course_import.mjs"), folder, p["course_id"]], capture_output=True,
+                         text=True, encoding="utf-8", errors="replace")
+    last = (run.stdout.strip().splitlines() or ["{}"])[-1]
+    try:
+        r = json.loads(last)
+    except ValueError:
+        r = {"ok": False, "error": (run.stderr or run.stdout or "no answer")[-500:]}
+    if r.get("ok"):
+        rel = r.get("release") or {}
+        print("Imported into the staging editor as draft %s of %s." % (rel.get("version"), p["course_id"]))
+        return 0, r
+    print("Stopped - the import did not go through: %s" % r.get("error"))
+    return 2, r
+
+
+def _log(line):
+    os.makedirs(home(), exist_ok=True)
+    with io.open(os.path.join(home(), "watch.log"), "a", encoding="utf-8") as f:
+        f.write("%s  %s\n" % (datetime.now().isoformat(timespec="seconds"), line))
+
+
+def _locked():
+    """One watch at a time on this PC: a build runs for hours, and the task fires every 10 minutes."""
+    lock = os.path.join(home(), "watch.lock")
+    if os.path.isfile(lock) and time.time() - os.path.getmtime(lock) < 20 * 3600:
+        return None
+    os.makedirs(home(), exist_ok=True)
+    io.open(lock, "w", encoding="utf-8").write(str(os.getpid()))
+    return lock
+
+
+def cmd_watch_once():
+    lock = _locked()
+    if not lock:
+        return 0
+    try:
+        nxt = call("build-next").get("course")
+        if not nxt:
+            return 0
+        cid = nxt["id"]
+        course = folder_of(cid)
+        if not course:
+            call("build-done", course_id=cid, error="The office PC does not know this course's folder. Open the course's "
+                 "factory session once and run course_portal.py push.")
+            _log("%s: no folder on this PC" % cid)
+            return 2
+        call("build-claim", course_id=cid)
+        _log("%s: building in %s" % (cid, course))
+        cmd_pull(course)
+        expert = nxt.get("build_requested_by") or "the expert"
+        logdir = workspace.claude_path(course, "auto_build")
+        os.makedirs(logdir, exist_ok=True)
+        logf = os.path.join(logdir, datetime.now().strftime("%Y%m%d-%H%M") + ".log")
+        prompt = AUTO_PROMPT.format(title=nxt.get("title") or cid, course_id=cid, expert=expert)
+        env = dict(os.environ, NOVIKONTAS_AUTO_BUILD="1")
+        with io.open(logf, "w", encoding="utf-8") as out:
+            run = subprocess.run(claude_command(prompt), cwd=workspace.master_of(course), stdout=out, stderr=subprocess.STDOUT,
+                                 text=True, encoding="utf-8", errors="replace", env=env, timeout=20 * 3600,
+                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        said = io.open(logf, encoding="utf-8", errors="replace").read()
+        last = [l for l in said.strip().splitlines() if l.strip()][-1:] or [""]
+        if run.returncode != 0 or "AUTO BUILD DONE" not in said:
+            why = last[0][:500] if "AUTO BUILD STOPPED" in last[0] else "the build ended without AUTO BUILD DONE (exit %d) - see %s" % (run.returncode, logf)
+            call("build-done", course_id=cid, error=why)
+            _log("%s: stopped - %s" % (cid, why))
+            return 2
+        code, r = cmd_import(course)
+        if code:
+            call("build-done", course_id=cid, error="built, but the import failed: %s" % ((r or {}).get("error") or "see the log"))
+            _log("%s: import failed" % cid)
+            return 2
+        _log("%s: built and imported as draft %s" % (cid, ((r or {}).get("release") or {}).get("version")))
+        return 0
+    except PortalError as e:
+        _log("stopped: %s" % e)
+        return 3
+    except subprocess.TimeoutExpired:
+        call("build-done", course_id=cid, error="the build ran for 20 hours and was stopped")
+        return 2
+    finally:
+        os.remove(lock)
+
+
+LAUNCHER = """# The NOVIKONTAS course factory's watch, run by the scheduled task: the newest installed course-factory plugin's
+# course_portal.py watch --once (the plugin's folder changes with every version).
+import glob, os, subprocess, sys
+base = os.path.join(os.path.expanduser("~"), ".claude", "plugins", "cache", "novikontas-course-factory", "course-factory")
+def ver(p):
+    try:
+        return tuple(int(x) for x in os.path.basename(p).split("."))
+    except ValueError:
+        return (0,)
+found = sorted(glob.glob(os.path.join(base, "*")), key=ver)
+if found:
+    sys.exit(subprocess.call([sys.executable, os.path.join(found[-1], "skills", "course-factory", "scripts", "course_portal.py"),
+                              "watch", "--once"], creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)))
+"""
+TASK = "NOVIKONTAS course factory - build after Ready"
+
+
+def cmd_install_task():
+    """The scheduled task: every 10 minutes, while this user is signed in to the PC, with no window."""
+    os.makedirs(home(), exist_ok=True)
+    launcher = os.path.join(home(), "watch.py")
+    io.open(launcher, "w", encoding="utf-8", newline="\n").write(LAUNCHER)
+    pyw = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
+    py = pyw if os.path.isfile(pyw) else sys.executable
+    run = subprocess.run(["schtasks", "/Create", "/F", "/TN", TASK, "/SC", "MINUTE", "/MO", "10",
+                          "/TR", '"%s" "%s"' % (py, launcher)], capture_output=True, text=True, errors="replace")
+    if run.returncode:
+        print("Stopped - the scheduled task was not made: %s" % (run.stderr or run.stdout).strip())
+        return 2
+    print("Scheduled: '%s' every 10 minutes - it builds a course once its expert presses Ready.\n  Log: %s"
+          % (TASK, os.path.join(home(), "watch.log")))
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("name")
     s.add_argument("--title", required=True)
-    for name in ("create", "push", "pull", "status", "remove"):
+    sub.add_parser("install-task")
+    s = sub.add_parser("watch")
+    s.add_argument("--once", action="store_true", required=True)
+    for name in ("create", "push", "pull", "status", "remove", "import"):
         s = sub.add_parser(name)
         s.add_argument("--course", required=True)
         if name == "create":
@@ -357,6 +576,10 @@ def main(argv=None):
     try:
         if x.cmd == "name":
             return cmd_name(x.title)
+        if x.cmd == "watch":
+            return cmd_watch_once()
+        if x.cmd == "install-task":
+            return cmd_install_task()
         course = workspace.work_folder(x.course)
         if x.cmd == "create":
             return cmd_create(course, x.title)
@@ -366,6 +589,8 @@ def main(argv=None):
             return cmd_pull(course)
         if x.cmd == "status":
             return cmd_status(course)
+        if x.cmd == "import":
+            return cmd_import(course)[0]
         return cmd_remove(course, x.yes)
     except PortalError as e:
         print("Stopped - %s" % e)
