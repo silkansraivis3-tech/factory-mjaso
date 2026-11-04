@@ -378,9 +378,12 @@ def main(argv=None):
               "  module list come from it (Stage 2).")
         return 2
     arch = cs.load(arch_p)
-    title = ((arch.get("course") or {}).get("title") or "").strip()
+    # the name asked at intake, unique in the classroom; an older course without one keeps the programme's title
+    title = (str(load_or(workspace.claude_path(course, "intake.json"), {}).get("course_name") or "").strip()
+             or ((arch.get("course") or {}).get("title") or "").strip())
     if not title:
-        print("Stopped - architecture.json has no course.title; the classroom makes the course ID from it.")
+        print("Stopped - no course name: intake.json has no course_name and architecture.json no course.title; the "
+              "classroom makes the course ID from it.")
         return 2
     mods = sorted(d for d in (os.listdir(root) if os.path.isdir(root) else []) if MODULE.match(d) and os.path.isdir(os.path.join(root, d)))
     # 2.49.2 (F7) - a module built with --draft carries cm.DRAFT_MARK: a preview, not part of the classroom package. It gets no
@@ -400,7 +403,7 @@ def main(argv=None):
     cp = os.path.join(root, "COURSE.html")
     had = rec.get("title") or (page_title(cp, "") if os.path.isfile(cp) else "")
     if had and had != title and not o.retitle:
-        print("Stopped - nothing was written.\n\n  The course is called\n    %s\n  and architecture.json now says\n    %s\n"
+        print("Stopped - nothing was written.\n\n  The course is called\n    %s\n  and the course now says (intake.json course_name, else architecture.json)\n    %s\n"
               "  The classroom makes the course ID from this title: a new title is a NEW course there, and the results of\n"
               "  the old one stay filed apart. If that is really wanted (the course was never added to the classroom), build\n"
               "  again with --retitle." % (had, title))

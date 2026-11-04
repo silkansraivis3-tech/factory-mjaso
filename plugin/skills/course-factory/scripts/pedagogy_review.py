@@ -5,14 +5,17 @@
     pedagogy_review.py draft  --course <course>             add an empty row for every topic not judged yet
     pedagogy_review.py check  --course <course>             what is missing or wrong; exit 2 when something is
     pedagogy_review.py render --course <course> [--no-pdf]  write the three documents into to_review\\pedagogy\\
+    pedagogy_review.py expert --course <course> --module 4 --topic 4.1 --level 4 --said "<their words>" --by "<name>"
+                                                            an expert's decision on a topic's level, carried out as it is
 
 WHY THIS EXISTS
 The course experts decide how a course is taught. Before a single module is built they get, topic by topic and module
 by module:
   1. BLOOM NOW       - the level each learning outcome asks for, and the level the old course actually reached: how it
                        taught the topic and how, if at all, it checked it;
-  2. BLOOM PROPOSED  - the level the new course proposes for each topic, how the trainee reaches it on the tablet, the
-                       simulator or the equipment, and why;
+  2. BLOOM PROPOSED  - each topic kept or lifted, to the level its outcome asks for (above it only with the task on
+                       board that needs it, `above_why`), how the trainee reaches it on the tablet, the simulator or the
+                       equipment, and why;
   3. ACTIVITIES      - the teaching and learning activities proposed for each topic (architecture.json
                        "active_learning", the same proposals the Stage 2 page shows) and the course-wide upgrades.
 Each as Word (to review and sign), HTML and PDF. make_architecture_page.py --approve records no Stage 2 approval
@@ -109,9 +112,21 @@ def modules(prog, arch):
     return out
 
 
+def decision(now, new, asks):
+    """kept, lifted, above the outcome or the expert's decision - what the experts read first"""
+    a, b = (now or {}).get("level"), (new or {}).get("level")
+    if not (isinstance(a, int) and isinstance(b, int)):
+        return "-"
+    if (new or {}).get("expert"):
+        return "the expert's decision"
+    if b <= a:
+        return "kept"
+    return "above the outcome" if asks and b > max(a, asks) else "lifted"
+
+
 def _blank():
     return {"now": {"level": None, "how": "", "checked": "", "where": ""},
-            "proposed": {"level": None, "how": "", "why": ""}}
+            "proposed": {"level": None, "how": "", "why": "", "limit": "", "above_why": ""}}
 
 
 def draft(course):
@@ -183,8 +198,20 @@ def check(course):
             a, b = now.get("level"), new.get("level")
             if isinstance(a, int) and isinstance(b, int) and b < a:
                 probs.append("%s: the proposal (%s) is below what the old course reached (%s)" % (where, level(b), level(a)))
-            if isinstance(b, int) and r["asks"] and b < r["asks"]:
-                notes.append("%s: proposed %s is still below what the outcome asks (%s)" % (where, level(b), level(r["asks"])))
+            if new.get("expert"):
+                pass                          # the expert's decision is carried out as it is (record_expert)
+            elif isinstance(a, int) and isinstance(b, int) and b > a and not r["asks"]:
+                probs.append("%s: a lift needs the level the outcome asks for - write it on the Sub-ILO (\"bloom\": n)" % where)
+            elif isinstance(a, int) and isinstance(b, int) and b > max(a, r["asks"] or 0) and not _filled(new.get("above_why")):
+                probs.append("%s: %s is above what the outcome asks (%s) - keep it at %s, or say in 'above_why' which task on "
+                             "board needs it" % (where, level(b), level(r["asks"]), level(max(a, r["asks"]))))
+            if isinstance(b, int) and r["asks"] and b < r["asks"] and not new.get("expert"):
+                if _filled(new.get("limit")):
+                    notes.append("%s: proposed %s stays below what the outcome asks (%s) - %s"
+                                 % (where, level(b), level(r["asks"]), new["limit"]))
+                else:
+                    probs.append("%s: proposed %s is below what the outcome asks (%s) - lift it, or say in 'limit' what stops "
+                                 "this course reaching it" % (where, level(b), level(r["asks"])))
             if b == 6:
                 notes.append("%s: Create is reached by a practical exercise, not a tablet task - say which one" % where)
     for n, m in mods.items():
@@ -274,6 +301,20 @@ def doc_proposed(title, mods, rev):
           ("table", ["Module", "Topic", "Outcomes ask", "Now", "Proposed"], _glance(mods, rev, 5),
            [900, 3538, 1800, 1700, 1700]),
           ("p", rev.get("proposed_summary") or "")]
+    tally, now_n, new_n = {}, {}, {}
+    for m in mods:
+        got = (rev.get("modules") or {}).get(str(m["n"]), {}).get("rows", {})
+        for r in m["rows"]:
+            x = got.get(r["id"]) or {}
+            d = decision(x.get("now"), x.get("proposed"), r["asks"])
+            tally[d] = tally.get(d, 0) + 1
+            for side, box in (("now", now_n), ("proposed", new_n)):
+                lv = (x.get(side) or {}).get("level")
+                box[lv] = box.get(lv, 0) + 1
+    b.append(("table", ["", "Topics"], [[k.capitalize(), str(tally.get(k, 0))] for k in ("kept", "lifted", "above the outcome", "the expert's decision")],
+              [5000, 4638]))
+    b.append(("table", ["Level", "Old course", "Proposed"],
+              [[level(n), str(now_n.get(n, 0)), str(new_n.get(n, 0))] for n in range(0, 7)], [3600, 3000, 3038]))
     for m in mods:
         got = (rev.get("modules") or {}).get(str(m["n"]), {}).get("rows", {})
         b.append(("h2", "Module %d - %s" % (m["n"], m["title"])))
@@ -281,8 +322,16 @@ def doc_proposed(title, mods, rev):
         for r in m["rows"]:
             x = got.get(r["id"]) or {}
             now, new = x.get("now") or {}, x.get("proposed") or {}
-            rows.append([r["id"], r["text"], level(r["asks"]), "%s -> %s" % (level(now.get("level")), level(new.get("level"))),
-                         new.get("how") or "not judged yet", new.get("why") or "-"])
+            ex = new.get("expert") or {}
+            met = decision(now, new, r["asks"]) == "kept" and r["asks"] and now.get("level", 0) >= r["asks"]
+            why = ((["Kept because the old course already reaches what the outcome asks (%s)." % level(r["asks"])] if met else [])
+                   + ["On board: " + (new.get("why") or "-")]
+                   + (["Not higher because: " + new["limit"]] if _filled(new.get("limit")) else [])
+                   + (["Above the outcome: " + new["above_why"]] if _filled(new.get("above_why")) else [])
+                   + (["The expert (%s, %s): %s" % (ex.get("by", ""), ex.get("on", ""), ex.get("said", ""))] if ex else []))
+            rows.append([r["id"], r["text"], level(r["asks"]),
+                         ["%s -> %s" % (level(now.get("level")), level(new.get("level"))), decision(now, new, r["asks"])],
+                         new.get("how") or "not judged yet", why])
         b.append(("table", ["Topic", "Learning outcome", "Asks", "Now -> proposed", "How the trainee reaches it", "Why"],
                   rows, [650, 2400, 1000, 1500, 2600, 1488]))
     return b + _signoff()
@@ -349,18 +398,45 @@ def render(course, pdf=True):
     return 2 if probs else 0
 
 
+def record_expert(course, module, topic, lvl, said, by):
+    """An expert's decision on a topic's level - carried out whatever the keep-or-lift rules say. 'how' is emptied, so
+    check asks the factory to write what the trainee does at the new level before the documents are written again."""
+    f = files(course)
+    rev = _load(f["review"])
+    row = ((rev or {}).get("modules", {}).get(str(module), {}).get("rows", {}) or {}).get(str(topic))
+    if not row:
+        print("Stopped - module %s has no topic %s in %s." % (module, topic, f["review"]))
+        return 2
+    if not (1 <= lvl <= 6 and said.strip() and by.strip()):
+        print("Stopped - nothing was recorded: a level 1-6, the expert's own words (--said) and who (--by) are needed.")
+        return 2
+    from datetime import date
+    new = row.setdefault("proposed", {})
+    new.update(level=lvl, how="", expert={"by": by.strip(), "on": date.today().isoformat(), "said": said.strip()})
+    _save(f["review"], rev)
+    print("Recorded: module %s, topic %s at %s, by %s. Write what the trainee does at that level ('how'), then render."
+          % (module, topic, level(lvl), by.strip()))
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("draft", "check", "render"):
+    for name in ("draft", "check", "render", "expert"):
         s = sub.add_parser(name)
         s.add_argument("--course", required=True)
         if name == "render":
             s.add_argument("--no-pdf", action="store_true")
+        if name == "expert":
+            for a in ("--module", "--topic", "--said", "--by"):
+                s.add_argument(a, required=True)
+            s.add_argument("--level", type=int, required=True)
     x = ap.parse_args(argv)
     course = workspace.work_folder(x.course)
     if x.cmd == "draft":
         return draft(course)
+    if x.cmd == "expert":
+        return record_expert(course, x.module, x.topic, x.level, x.said, x.by)
     if x.cmd == "render":
         return render(course, pdf=not x.no_pdf)
     probs, notes = check(course)

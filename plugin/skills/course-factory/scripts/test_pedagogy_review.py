@@ -10,7 +10,12 @@ Pinned:
   * check stops on: a topic not judged, a level outside 0-6 now / 1-6 proposed, an empty how / checked / where / why, a
     proposal below what the old course reached, a row for a topic the architecture no longer has, empty summaries,
     no upgrade or an upgrade without its why;
-  * check only notes: a proposal still below what the outcome asks, Create, a module with no activity proposed;
+  * keep or lift: a proposal above both the old course and what the outcome asks is refused without 'above_why' (the
+    task on board that needs it); a lift on an outcome whose level is unknown is refused; keeping the old level, also
+    Remember, is always allowed;
+  * a proposal below what the outcome asks is refused until 'limit' says what stops the course reaching it; an expert's
+    decision (pedagogy_review.py expert) is carried out as it is, and asks for what the trainee does at that level;
+  * check only notes: a proposal below the outcome with its limit, Create, a module with no activity proposed;
   * render writes the three documents as Word and HTML, the outcomes' words read from the architecture, never from the
     judgement file; the activities with the experts' status; a sign-off block; level 0 says "not taught";
   * the Stage 2 approval is refused until the documents are clean and written from the current files, and an edit to the
@@ -56,10 +61,11 @@ def complete(course):
     rev.update(now_summary="Slides read out, a final test of recall questions.",
                proposed_summary="Every topic is done on the tablet or the simulator.",
                upgrades=[{"what": "Every self-check in two parts", "why": "recall first, then a harder task", "modules": "all"}])
-    for m in rev["modules"].values():
-        for r in m["rows"].values():
+    asks = {(str(m["n"]), r["id"]): r["asks"] for m in pr.modules(pr._load(f["prog"], {}), pr._load(f["arch"])) for r in m["rows"]}
+    for n, m in rev["modules"].items():
+        for i, r in m["rows"].items():
             r["now"] = {"level": 1, "how": "slides", "checked": "final test Q1", "where": "deck S1-S5"}
-            r["proposed"] = {"level": 3, "how": "sets the value on the panel", "why": "it is what the job needs"}
+            r["proposed"] = {"level": max(1, asks[(n, i)] or 1), "how": "sets the value on the panel", "why": "it is what the job needs"}
     io.open(f["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
     pr.render(course, pdf=False)
     return rev
@@ -122,13 +128,60 @@ def main():
         check("stops on an upgrade without its why", any("upgrade 2 needs" in p for p in probs), probs)
         low = copy.deepcopy(rev)
         low["modules"]["2"]["rows"]["1.3"]["proposed"]["level"] = 1
-        low["modules"]["3"]["rows"]["1"]["proposed"]["level"] = 6
+        low["modules"]["1"]["rows"]["1.1.a"]["proposed"].update(level=6, above_why="the officer writes the containment plan")
         low["modules"]["1"]["rows"]["1.1.b"]["now"] = {"level": 0, "how": "not in the old course", "checked": "not checked", "where": "-"}
         io.open(f["review"], "w", encoding="utf-8").write(json.dumps(low, ensure_ascii=False))
         probs, notes = pr.check(c)
-        check("below what the outcome asks and Create are notes, never stops; level 0 is allowed now",
-              probs == [] and any("still below what the outcome asks" in n for n in notes)
+        check("below what the outcome asks is refused until 'limit' says what stops it",
+              any("1.3: proposed 1 Remember is below what the outcome asks" in p for p in probs), probs)
+        low["modules"]["2"]["rows"]["1.3"]["proposed"]["limit"] = "no detector to hand in the classroom"
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(low, ensure_ascii=False))
+        probs, notes = pr.check(c)
+        check("... with its limit, and Create, only notes; level 0 is allowed now",
+              probs == [] and any("stays below what the outcome asks" in n and "no detector" in n for n in notes)
               and any("Create is reached by a practical exercise" in n for n in notes), (probs, notes))
+        unknown = copy.deepcopy(rev)
+        unknown["modules"]["3"]["rows"]["1"]["proposed"]["level"] = 3
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(unknown, ensure_ascii=False))
+        check("a lift on an outcome whose level is unknown is refused", any("module 3, topic 1: a lift needs the level" in p
+                                                                           for p in pr.check(c)[0]), pr.check(c)[0])
+
+        print("\n-- keep or lift")
+        asks = {r["id"]: r["asks"] for m in pr.modules(tap.PROGRAMME, arch) for r in m["rows"]}
+        up = copy.deepcopy(low)
+        top = up["modules"]["2"]["rows"]["1.3"]
+        top["proposed"]["level"] = (asks["1.3"] or 1) + 1
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(up, ensure_ascii=False))
+        probs, _ = pr.check(c)
+        check("above what the outcome asks is refused without above_why",
+              any("1.3" in p and "above what the outcome asks" in p for p in probs), probs)
+        top["proposed"]["above_why"] = "the officer zeroes the meter before every entry"
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(up, ensure_ascii=False))
+        check("... and allowed with the task on board that needs it", pr.check(c)[0] == [], pr.check(c)[0])
+        keep = copy.deepcopy(low)
+        keep["modules"]["2"]["rows"]["1.3"]["now"]["level"] = 1
+        keep["modules"]["2"]["rows"]["1.3"]["proposed"]["level"] = 1
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(keep, ensure_ascii=False))
+        check("keeping Remember is allowed, with what stops more", not any("1.3" in p for p in pr.check(c)[0]), pr.check(c)[0])
+        check("the decision is read the same way the documents say it",
+              (pr.decision({"level": 2}, {"level": 2}, 3), pr.decision({"level": 1}, {"level": 2}, 2),
+               pr.decision({"level": 1}, {"level": 4}, 2)) == ("kept", "lifted", "above the outcome"))
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(up, ensure_ascii=False))
+        code, out = run("expert", "--course", c, "--module", "1", "--topic", "1.1.b", "--level", "5", "--said", "", "--by", "Anna")
+        check("an expert's decision without their words records nothing", code == 2 and "nothing was recorded" in out, out)
+        code, out = run("expert", "--course", c, "--module", "1", "--topic", "1.1.b", "--level", "5",
+                        "--said", "They can judge a real loading plan here", "--by", "Anna")
+        probs, _ = pr.check(c)
+        ex = json.load(io.open(f["review"], encoding="utf-8"))["modules"]["1"]["rows"]["1.1.b"]["proposed"]
+        check("the expert's decision is recorded and asks for what the trainee does at that level",
+              code == 0 and ex["level"] == 5 and ex["expert"]["by"] == "Anna" and any("1.1.b: proposed 'how' is empty" in p for p in probs), (out, probs))
+        up = json.load(io.open(f["review"], encoding="utf-8"))
+        up["modules"]["1"]["rows"]["1.1.b"]["proposed"]["how"] = "judges a real loading plan and marks what is wrong"
+        met = up["modules"]["1"]["rows"]["1.1"]
+        met["now"]["level"] = met["proposed"]["level"] = asks["1.1"]
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(up, ensure_ascii=False))
+        check("... and is carried out as it is: no keep-or-lift rule stops it", pr.check(c)[0] == [], pr.check(c)[0])
+        low = up
 
         print("\n-- render")
         code, out = run("render", "--course", c, "--no-pdf")
@@ -140,8 +193,16 @@ def main():
               tap.SUB_NEW in now and "slides" in now and "Checked: final test Q1" in now and "deck S1-S5" in now)
         check("... level 0 reads 'not taught'", "not taught" in now)
         new = io.open(os.path.join(f["out"], "2_BLOOM_PROPOSED.html"), encoding="utf-8").read()
-        check("Bloom proposed: now -> proposed, how and why", "1 Remember -&gt; 3 Apply" in new and "sets the value on the panel" in new
-              and "it is what the job needs" in new, new[:200])
+        check("Bloom proposed: now -> proposed with its decision, how, why and the reason above the outcome",
+              "-&gt;" in new and "kept" in new and "above the outcome" in new and "sets the value on the panel" in new
+              and "it is what the job needs" in new and "Above the outcome: the officer zeroes the meter" in new, new[:200])
+        check("the expert's decision shows with their words; a kept topic shows why it is kept",
+              "the expert's decision" in new and "They can judge a real loading plan here" in new
+              and "Kept because the old course already reaches what the outcome asks" in new and "Not higher because: no detector" in new,
+              [x for x in ("the expert's decision", "They can judge", "Kept because the old course", "Not higher because")
+               if x not in new])
+        check("... and the course's count of kept, lifted and above, and of each level before and after",
+              "<td>Kept</td>" in new and "<td>Lifted</td>" in new and "<td>Above the outcome</td>" in new and "Old course" in new)
         act = docx_text(os.path.join(f["out"], "3_TEACHING_ACTIVITIES.docx"))
         check("activities: what the trainees do, its kind, kept or struck, and the upgrades",
               "finds the tank that leans on the hull" in act and "Predict then reveal" in act and "kept" in act

@@ -42,7 +42,8 @@ level of the tasks up to what the ILOs ask, and above *Remember* wherever the co
 
 ## 3 · Lifting a task — the tablet patterns
 
-Lift one level at a time, to the Sub-ILO's level — and above *Remember* wherever the content allows.
+Lift one level at a time, to the Sub-ILO's level and no further without a reason on board (section 5); what the outcome
+asks to know by heart keeps its recall question.
 
 | From | To | How, on the tablet |
 |---|---|---|
@@ -101,10 +102,35 @@ that calculates or carries out the procedure is Apply; a simulator run judged by
 `where` the file and slides ("Topic 4 deck S3-S20; final test 02C-1 Q12-14"). A topic the old course never taught is
 level 0, with `how` saying so.
 
-**Proposed - what the new course makes the trainee do.** At least the level the outcome asks for wherever the content
-allows (section 3 says how the tablet reaches each level); never below *now*; Create (6) only through a practical
-exercise, named. `how` is what the trainee does - the task, the activity, the simulator or equipment exercise, in
-plain words; `why` is what it changes for the work on board.
+**Proposed - keep or lift, decided topic by topic.** Lifting the Bloom level is the aim of this step: every topic the
+old course teaches below its outcome is lifted unless something real stops it. The target is the level the outcome
+asks for - not the highest level there is; raising numbers is not the goal, teaching what the job needs is.
+
+- **Keep** only with a reason. When the old course already reaches what the outcome asks, the documents say so
+  themselves ("Kept because the old course already reaches ...") - lifting further would be overdoing it. When a topic
+  stays **below** its outcome - kept or lifted only part of the way - `limit` says what stops this course reaching it:
+  no simulator for it, no equipment, no time in the programme's hours. Without `limit` the check refuses it. `how` still says what gets better at that level
+  (a photograph instead of a slide of text, the recall moved into the self-check), or "kept as it is".
+- **Lift** when the old course falls short: up to the outcome's level - one step is often enough, the next course can
+  take the next - or as high as this course can honestly reach on its tablets, simulators and equipment, with `why`
+  saying what stops it. A lift never removes the recall: what must be known by heart is still asked as a recall
+  question in the self-check's first part.
+- **Above the outcome** only when the work on board needs it and the outcome's verb undersells it - the officer must
+  operate what the outcome only asks to describe. Then `above_why` names that task on board. Without it the proposal is
+  refused. Never above just to raise the course's numbers.
+- **Remember is a right answer.** Limits, definitions, the names of the codes and their chapters, alarm meanings,
+  emergency numbers: when the outcome asks for them by heart, they stay at Remember or Understand, taught well.
+- **Create (6)** only when the outcome asks for it and a practical exercise produces the plan or the procedure - name
+  the exercise. A course whose equipment cannot reach it says so in `why` and stops at Evaluate.
+- **Never below the old course.** A level the old course reached is kept.
+- **The expert's decision wins.** When an expert says a topic can go higher (or must stay), record it -
+  `pedagogy_review.py expert --module 4 --topic 4.1 --level 4 --said "<their words>" --by "<name>"` - and carry it out
+  as it is: the rules above no longer apply to that topic; write what the trainee does at that level (`how`, emptied by
+  the record) and render again. A Fix with Claude in the editor will record it the same way.
+
+`how` is what the trainee does - the task, the activity, the simulator or equipment exercise - in plain words; `why` is
+what it changes for the work on board (shown as "On board"). The documents show each topic's decision (kept, lifted, above the outcome) and
+the course's count of each, so the experts see at once where the course changes and where it stays.
 
 **The summaries and the upgrades.** `now_summary` and `proposed_summary`: two or three plain sentences each.
 `upgrades`: the course-wide changes in teaching - each `{"what", "why", "modules": "all" or [4, 5]}`, three to seven of

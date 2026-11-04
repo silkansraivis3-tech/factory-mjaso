@@ -11,7 +11,8 @@ Pinned:
     module's instructor files - and nothing outside the module (L43);
   * a task slide whose page is missing is reported (the worst failure in the room);
   * the same input gives the same bytes; a page changed by hand is not overwritten without --force;
-  * the course title - the classroom's course ID - never changes without --retitle, also against a hand-made page;
+  * the course title - the classroom's course ID - is intake.json course_name, else the architecture's; it never changes
+    without --retitle, also against a hand-made page;
   * check_course_package.py finds nothing wrong with the course files and the start pages.
 """
 from __future__ import annotations
@@ -189,6 +190,14 @@ def main():
               and "<title>%s</title>" % TITLE in read(root, "COURSE.html"), out)
         code, out = run(COURSE, c, "--retitle")
         check("... --retitle accepts it", "<title>A new name</title>" in read(root, "COURSE.html"), out)
+        cs.save(os.path.join(wc, "intake.json"), {"course_name": "GAS BASIC - IGF ships 2026"})
+        code, out = run(COURSE, c, "--retitle")
+        check("the name asked at intake is the classroom's title, before the programme's own",
+              "<title>GAS BASIC - IGF ships 2026</title>" in read(root, "COURSE.html"), out)
+        cs.save(os.path.join(wc, "intake.json"), {"course_name": "GAS BASIC - another"})
+        code, out = run(COURSE, c)
+        check("... and a changed name stops the build like any new title", code == 2 and "GAS BASIC - another" in out
+              and "<title>GAS BASIC - IGF ships 2026</title>" in read(root, "COURSE.html"), out)
 
         # F7 (2.49.2) - a module built with --draft is a preview: marked, left out of the package, and said so
         base = os.path.join(tmp, "draft")

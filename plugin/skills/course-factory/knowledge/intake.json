@@ -46,7 +46,11 @@
      "rule": "Record the answer with kb_tool.py decide. From then on the factory cites only the current edition; a search leaves the other out."},
     {"n": 8, "id": "expert_edits", "header": "Hand edits", "ask_when": "retrofit only, and only when retrofit/scripts/detect_expert_edits.py says nothing-to-go-on (L24)",
      "question": "Has anyone changed this module by hand since it was made?",
-     "options": ["No - nobody touched it", "Yes - I will say which screens"]}
+     "options": ["No - nobody touched it", "Yes - I will say which screens"]},
+    {"n": 9, "id": "course_name", "header": "Course name", "ask_when": "always, in the first pop-up, unless the operator already gave the name",
+     "question": "What should this course be called in the training system? It must differ from every course already there - the same programme is often built again.",
+     "options": "two suggestions: the programme's title with what makes this one different - the year, the client, the ship type or the edition, e.g. 'GAS BASIC - IGF ships 2026' - the likelier first; the operator types another with Other",
+     "rule": "The classroom makes the course's ID from this name at the first build, and two courses with one name become one course there, their results mixed. Recorded as course_name; compile_course.py gives COURSE.html this title, and it never changes after the first build without --retitle. The programme's own title stays in the architecture and on every document for the auditor."}
   ],
 
   "never_ask": ["the module split", "the screen count", "the task codes", "the pass marks", "the file layout", "which lane or skill to load", "whether the school has an instrument or simulator the IMO model course lists - it is assumed available (L28)"],
@@ -66,6 +70,7 @@
       "course_language": "as L19",
       "equipment": "assumed: everything the IMO model course lists - or the operator's stated exceptions",
       "editions": "written by kb_tool.py decide",
+      "course_name": "the course's name in the training system, unique there (question 9) - COURSE.html's title",
       "asked": "every question put to the operator, with the answer and the date - so nothing is asked twice",
       "found_on_disk": "what was found without asking, with the path"
     }

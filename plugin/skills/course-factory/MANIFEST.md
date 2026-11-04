@@ -7,6 +7,20 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.99.1 · Keep or lift, never just higher; the course's own name (2026-11-04)
+
+- **Why.** The first sample proposed 41 of 101 topics above what their outcome asks and left no topic at Remember. The
+  owner: decide per topic, Create is not always possible, Remember is not to be removed.
+- **What.** `bloom/GUIDE.md` §5: kept / lifted / above the outcome (`above_why`). `check` refuses above-the-outcome
+  without `above_why` and a lift where the outcome's level is unknown; `decision()` labels each row; the proposed
+  document counts them and the levels before and after.
+- **Lifting stays the aim.** A topic below its outcome needs `limit` (what stops it); `pedagogy_review.py expert` records
+  an expert's decision that no rule stops, and empties 'how' so the factory writes the new task. The editor's Fix with
+  Claude is to write the same record.
+- **The course's name.** Intake question 9 (`knowledge/intake.json`): the name in the training system, unique there,
+  `intake.json` `course_name` - COURSE.html's title in `compile/scripts/compile_course.py`, so two builds of one
+  programme never become one course in the classroom.
+
 ## 2.99.0 · The experts get the pedagogy first - L69 (2026-11-04)
 
 - **Why.** The owner: before any module script, the experts receive what the Bloom level was in the old course, what
