@@ -81,7 +81,7 @@
     {"id": "predict-curve", "for": "predict, then see", "frame": "engine", "fill": {"s": ["Animation", "the chart to draw on"], "i": ["Info", "the case (3D card), your prediction"]}, "ref": "engines#03_predict_curve"},
     {"id": "survey-space", "for": "test an atmosphere point by point", "frame": "engine", "fill": {"s": ["Picture", "the space, its points"], "i": ["Info", "the meter's display, readings"]}, "ref": "engines#04_survey_space"},
     {"id": "draw-route", "for": "draw the way out", "frame": "engine", "fill": {"s": ["Picture", "the ship from above"], "i": ["Info", "the door, the route"]}, "ref": "engines#05_draw_route"},
-    {"id": "lay-out", "for": "place the equipment", "frame": "engine", "fill": {"s": ["Picture", "the deck from above"], "i": ["Info", "on deck now, the tray"]}, "ref": "engines#06_lay_out"},
+    {"id": "lay-out", "for": "place the equipment, mind the wind - built by the factory: lay_out (a framed task)", "frame": "engine", "fill": {"s": ["Picture", "the deck from above"], "i": ["Info", "on deck now, the tray"]}, "ref": "engines#06_lay_out"},
     {"id": "ppe-buddy", "for": "dress for a job, then check a colleague - built by the factory: dress_for_job (a framed task)", "frame": "engine", "fill": {"s": ["Picture", "the colleague"], "i": ["Info", "the rack"]}, "ref": "engines#07_ppe_buddy"},
     {"id": "triage", "for": "put people where they matter", "frame": "engine", "fill": {"s": ["Picture", "the ship, the events"], "i": ["Info", "the crew, the panel"]}, "ref": "engines#08_triage"},
     {"id": "scenario-state", "for": "decisions that change the situation", "frame": "engine", "fill": {"s": ["Picture", "the place, its state"], "i": ["Info", "the watch so far, the decision"]}, "ref": "engines#09_scenario_state"},

@@ -6,6 +6,12 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.98.0 · Lay out the equipment (2026-11-04)
+
+`engines/lay_out.html`: the tray's pieces put on a photograph from above, each rule judged by metres and the wind drawn at
+opening, the zones drawn over the photo after the check, the stories of what is not met - the prototype 06_lay_out with
+the course's data and rules.
+
 ## 2.96.0 · Dress for the job, then check a buddy (2026-11-04)
 
 `engines/dress_for_job.html`: the rack put on a crew member's photograph, judged group by group with what happens at

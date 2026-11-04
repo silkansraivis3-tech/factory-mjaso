@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>{{TITLE}}</title>
+<link rel="stylesheet" href="../assets/gb_tokens.css">
+<link rel="stylesheet" href="../assets/{{LAB_CSS}}">
+<style>
+  /* the tray: every piece of equipment is a token that can be dragged onto the photograph */
+  .lo-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  .lo-tok {
+    display: flex; align-items: center; gap: 8px; min-height: 60px; min-width: 0; padding: 8px 8px;
+    border: 1px solid var(--tl-line, rgba(140,190,255,.16)); border-radius: 14px;
+    background: rgba(255,255,255,.06); color: var(--tl-text, #F2F7FD);
+    transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+  }
+  .lo-ab {
+    flex: 0 0 auto; position: relative; overflow: hidden; width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(46,182,248,.18); color: var(--tl-accent, #2EB6F8); box-shadow: inset 0 0 0 1.5px var(--tl-accent, #2EB6F8);
+    font: 800 12px/36px var(--tl-font, sans-serif); text-align: center; font-style: normal; letter-spacing: .02em;
+  }
+  .lo-n { min-width: 0; font: 650 16px/1.2 var(--tl-font, sans-serif); overflow-wrap: normal; word-break: normal; hyphens: manual; }
+  /* a wider panel on the tablet, so every name fits its tile without breaking a word */
+  @media (min-aspect-ratio: 1/1) { .tl-side { flex: 0 0 392px; } }
+  /* a phone: the stage is as tall as the photo, the tray gets the rest and scrolls in its own box */
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) {
+    .tl-stage { flex: 0 0 auto; height: calc((100vw - 20px) * 0.56); }
+    .tl-side { flex: 1 1 auto; }
+    .lo-tok.lo-on { width: 44px; height: 44px; }
+    .lo-on .lo-ab { width: 38px; height: 38px; line-height: 38px; font-size: 12px; }
+  }
+  .lo-s { display: none; }
+  .lo-note { margin-top: 10px !important; font-size: 14.5px !important; color: var(--tl-dim, #9DB3CC) !important; }
+
+  /* a token standing on the deck: a pin on the photograph, 56 px to touch */
+  .lo-tok.lo-on {
+    width: 56px; height: 56px; min-height: 0; padding: 0; justify-content: center; border-radius: 50%; z-index: 3;
+    background: rgba(3,10,22,.82); border: 2px solid var(--tl-accent, #2EB6F8);
+    box-shadow: 0 6px 16px rgba(0,0,0,.5), 0 0 18px rgba(46,182,248,.35);
+  }
+  .lo-on .lo-ab { width: 48px; height: 48px; line-height: 48px; font-size: 14px; box-shadow: none; background: transparent; }
+  .lo-on .lo-n { display: none; }
+  .lo-on .lo-s {
+    display: block; position: absolute; top: 58px; left: 50%; transform: translateX(-50%); white-space: nowrap; pointer-events: none;
+    font: 700 16px/1.2 var(--tl-font, sans-serif); color: var(--tl-text, #F2F7FD);
+    background: rgba(3,10,22,.78); padding: 3px 9px; border-radius: 8px;
+  }
+  .lo-on.lo-ok { border-color: var(--tl-good, #3DDC97); box-shadow: 0 0 0 3px rgba(61,220,151,.3), 0 0 22px rgba(61,220,151,.5); }
+  .lo-on.lo-no { border-color: var(--tl-bad, #FF6B5E); box-shadow: 0 0 0 3px rgba(255,107,94,.3), 0 0 22px rgba(255,107,94,.5); }
+  .lo-on.lo-ok::after, .lo-on.lo-no::after {
+    content: '\2713'; position: absolute; top: -9px; right: -9px; width: 24px; height: 24px; border-radius: 50%;
+    font: 800 14px/24px var(--tl-font, sans-serif); text-align: center; color: #03121F; background: var(--tl-good, #3DDC97);
+  }
+  .lo-on.lo-no::after { content: '\2715'; color: #fff; background: var(--tl-bad, #FF6B5E); }
+  /* the dragged copy follows the finger, not the pin's centring */
+  .lo-tok.tl-ghost { position: fixed; pointer-events: none; z-index: 80; }
+  .lo-on.tl-picked { transform: translate(-50%, -50%) scale(1.1); }
+  .lo-tok[aria-disabled="true"] { cursor: default; }
+  /* a phone shows the deck small: names off the photo, they stay readable in the tray */
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) { .lo-on .lo-s { display: none; } }
+
+  /* vector only for what moves or is worked out over the photograph: wind, the drifting leak, reach */
+  .lo-ovl { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; overflow: visible; }
+  .lo-wind .lo-wu { stroke: rgba(3,10,22,.3); stroke-width: .7; stroke-linecap: round; fill: none; }
+  .lo-wind .lo-wl { stroke: var(--tl-accent, #2EB6F8); stroke-width: .45; stroke-linecap: round; fill: none; stroke-dasharray: 3 2.4; animation: lo-blow 1.1s linear infinite; }
+  .lo-wind path { fill: var(--tl-accent, #2EB6F8); }
+  @keyframes lo-blow { to { stroke-dashoffset: -5.4; } }
+  .lo-plume { fill: rgba(242,179,61,.28); stroke: rgba(242,179,61,.75); stroke-width: .3; opacity: 0; transition: opacity 1s ease; }
+  .lo-plume.on { opacity: 1; }
+  .lo-z { fill: none; stroke-width: .35; stroke-dasharray: 1.4 1; opacity: 0; transition: opacity .5s ease; }
+  .lo-z.on { opacity: 1; }
+  .lo-z.g { stroke: var(--tl-good, #3DDC97); fill: rgba(61,220,151,.07); }
+  .lo-z.b { stroke: var(--tl-bad, #FF6B5E); fill: rgba(255,107,94,.07); }
+  .lo-jet { stroke-width: .5; stroke-dasharray: none; fill: none; }
+
+  .lo-key { list-style: none; margin: 0; padding: 0; }
+  .lo-key li { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 15.5px; line-height: 1.35; color: var(--tl-text, #F2F7FD); }
+  .lo-key i { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; }
+  .lo-key .k1 { background: rgba(242,179,61,.35); box-shadow: inset 0 0 0 2px rgba(242,179,61,.8); }
+  .lo-key .k2 { box-shadow: inset 0 0 0 2px var(--tl-dim, #9DB3CC); border: 1px dashed var(--tl-dim, #9DB3CC); }
+  .lo-key .k3 { background: var(--tl-good, #3DDC97); }
+  .lo-key .k4 { background: var(--tl-bad, #FF6B5E); }
+  [hidden] { display: none !important; }
+  /* in a set's frame the set page shows the question above the frame: the task does not say it again */
+  .framed .tl-ask { display: none; }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye" id="eye"></span><span id="ask"></span></div>
+  <div class="tl-body">
+    <div class="tl-stage lo-drop" id="stage">
+      <div class="tl-scene" id="scene">
+        <img class="tl-photo" id="photo" alt="">
+        <svg class="lo-ovl" id="ovl" preserveAspectRatio="none">
+          <g class="lo-wind" id="wind"></g>
+          <g id="drawn"></g>
+        </svg>
+      </div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card dark">
+        <h3>On deck now</h3>
+        <div class="tl-read" id="read"><span>Wind from</span><b id="w-from">-</b></div>
+      </div>
+      <div class="tl-card lo-tray" id="trayCard">
+        <h3>Equipment</h3>
+        <div class="lo-grid" id="tray"></div>
+        <p class="lo-note">Drag each piece onto the deck, or tap it and then tap the spot. Drop it back here to take it off the deck. Not everything belongs on deck.</p>
+      </div>
+      <div class="tl-card" id="legend" hidden>
+        <h3>What the check drew</h3>
+        <ul class="lo-key">
+          <li><i class="k1"></i>Where the leak drifts</li>
+          <li><i class="k2"></i>Where a piece belongs</li>
+          <li><i class="k3"></i>Rule met</li>
+          <li><i class="k4"></i>Rule not met</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">Check my layout</button></div>
+</div>
+<!-- the approved words of this task, for check_script_match: built from the same data as the task below -->
+{{WORDS}}
+<script type="application/json" id="task-data">{{DATA}}</script>
+<script src="../assets/gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  /* lay out the equipment: the tray's pieces put on a photograph from above, each rule judged by metres and the wind - near
+     a place, upwind or downwind of it, on one side of it, two pieces one each side. The course's words, places, winds and
+     rules come from #task-data (the factory writes it from the approved script and the build sheet); which pieces belong
+     on deck and which pieces a rule judges are known only by their keys. A wind is drawn at each opening. */
+  var T = JSON.parse(document.getElementById('task-data').textContent);
+  if (window.parent !== window) document.documentElement.className += ' framed';
+  GBLab.init({ code: T.id, title: T.title, mode: 'self' });
+  document.getElementById('eye').textContent = T.eye || '';
+  document.getElementById('ask').textContent = T.ask;
+
+  var a = T.photo.aspect.split(':'), ASPECT = +a[1] / +a[0], MPP = T.scale;
+  var DECK = { x0: T.deck[0], y0: T.deck[1], x1: T.deck[2], y1: T.deck[3] };
+  var WIND = T.winds[Math.floor(Math.random() * T.winds.length)];
+  var NS = 'http://www.w3.org/2000/svg';
+  var scene = document.getElementById('scene'), photo = document.getElementById('photo');
+  var tray = document.getElementById('tray'), drawn = document.getElementById('drawn');
+  var pos = {}, byId = {}, place = {}, locked = false, tapHint = false;
+  scene.setAttribute('data-aspect', T.photo.aspect);
+  photo.src = T.photo.src; photo.alt = T.photo.alt;
+  document.getElementById('ovl').setAttribute('viewBox', '0 0 100 ' + 100 * ASPECT);
+  T.places.forEach(function (p) { place[p.id] = p; });
+
+  function belongs(t) { return GBLab.key(T.id, 'on deck ' + t.name, 1) === t.key; }
+  function judged(r) { return T.items.filter(function (t) { return r.who.indexOf(GBLab.key(T.id, r.title + ' => ' + t.name, 1)) >= 0; }); }
+  function lc(s) { return s.charAt(0).toLowerCase() + s.slice(1); }
+  function U(p) { return { x: p.x, y: p.y * ASPECT }; }        // % of the photo -> overlay units (1 = 1 % of width)
+  function MU(m) { return m / MPP; }                           // metres -> overlay units
+  function rel(p, q, v) {                                       // distance in metres, and how far p lies along v from q
+    var A = U(p), B = U(q), dx = A.x - B.x, dy = A.y - B.y, d = Math.sqrt(dx * dx + dy * dy);
+    v = v || WIND.v;
+    return { d: d * MPP, cos: d ? (dx * v[0] + dy * v[1]) / d : 0 };
+  }
+  function svg(tag, at, parent) {
+    var e = document.createElementNS(NS, tag), k;
+    for (k in at) e.setAttribute(k, at[k]);
+    (parent || drawn).appendChild(e);
+    return e;
+  }
+
+  /* ---- what the trainee is told: the wind, the readings ------------------------------------------- */
+  document.getElementById('w-from').textContent = WIND.from;
+  T.readings.forEach(function (r) {
+    var s = document.createElement('span'), b = document.createElement('b');
+    s.textContent = r.name; b.textContent = r.value;
+    document.getElementById('read').appendChild(s); document.getElementById('read').appendChild(b);
+  });
+  (function () {                                                // three moving streamlines across the deck
+    var g = document.getElementById('wind'), v = WIND.v, n = [-v[1], v[0]], k;
+    var c = { x: DECK.x0 + (DECK.x1 - DECK.x0) * 0.8, y: (DECK.y0 + (DECK.y1 - DECK.y0) * 0.25) * ASPECT };
+    for (k = -1; k <= 1; k++) {
+      var mx = c.x + n[0] * k * 9, my = c.y + n[1] * k * 9, L = 15;
+      var x1 = mx - v[0] * L, y1 = my - v[1] * L, x2 = mx + v[0] * L, y2 = my + v[1] * L;
+      svg('line', { x1: x1, y1: y1, x2: x2, y2: y2, 'class': 'lo-wu' }, g);
+      svg('line', { x1: x1, y1: y1, x2: x2, y2: y2, 'class': 'lo-wl' }, g);
+      svg('path', { d: 'M' + (x2 + v[0] * 1.8) + ' ' + (y2 + v[1] * 1.8) + ' L' + (x2 + n[0] * 1.2) + ' ' + (y2 + n[1] * 1.2) +
+        ' L' + (x2 - n[0] * 1.2) + ' ' + (y2 - n[1] * 1.2) + ' Z' }, g);
+    }
+  })();
+
+  /* ---- the tray --------------------------------------------------------------------------------- */
+  T.items.forEach(function (t, i) {
+    var e = document.createElement('div');
+    e.className = 'lo-tok';
+    e.setAttribute('data-drag', '');
+    e.setAttribute('data-id', t.id);
+    e.setAttribute('data-i', i);
+    e.innerHTML = '<i class="lo-ab">' + GBLab.esc(t.ab) + '</i><span class="lo-n">' + GBLab.esc(t.name) + '</span><span class="lo-s">' + GBLab.esc(t.short) + '</span>';
+    tray.appendChild(e);
+    byId[t.id] = t;
+  });
+
+  function put(e, x, y) {
+    var id = e.getAttribute('data-id');
+    x = Math.max(DECK.x0, Math.min(DECK.x1, x));
+    y = Math.max(DECK.y0, Math.min(DECK.y1, y));
+    pos[id] = { x: x, y: y };
+    if (e.parentNode !== scene) scene.appendChild(e);
+    e.className = 'lo-tok lo-on tl-pin';
+    e.style.left = x + '%';
+    e.style.top = y + '%';
+  }
+  function home(e) {
+    var id = e.getAttribute('data-id'), i = +e.getAttribute('data-i'), kids = tray.children, k, before = null;
+    pos[id] = null;
+    e.className = 'lo-tok';
+    e.style.left = e.style.top = '';
+    for (k = 0; k < kids.length; k++) if (+kids[k].getAttribute('data-i') > i) { before = kids[k]; break; }
+    tray.insertBefore(e, before);
+  }
+
+  var dragger = GBLab.drag({
+    items: '.lo-tok',
+    targets: '.lo-drop, .lo-tray',
+    onPick: function (it) {
+      if (!tapHint && it.parentNode === tray) { tapHint = true; GBLab.toast('Now tap the spot on the deck where it goes.', 'hint'); }
+    },
+    onDrop: function (it, t, pt) {
+      if (locked) return;
+      if (t.classList.contains('lo-tray')) { if (it.parentNode !== tray) home(it); return; }
+      if (!pt) return;
+      var p = GBLab.toScene({ clientX: pt.x, clientY: pt.y }, scene);
+      put(it, p.x, p.y);
+    }
+  });
+
+  /* ---- the check: metres and the wind decide each rule ------------------------------------------- */
+  function sideWord(s) { return s === 'upwind' || s === 'downwind' ? s : 'on the ' + s; }
+  function inSide(s, q, p, P) {
+    if (s === 'upwind') return q.cos <= -0.3;
+    if (s === 'downwind') return q.cos >= -0.2 || q.d < 2;
+    return rel(p, P, T.sides[s]).cos > 0;
+  }
+  function judge(r) {
+    var P = place[r.place], its = judged(r), at = lc(P.name), out = [], ok = true;
+    function one(t, s) {
+      var p = pos[t.id];
+      if (!p) return { ok: false, a: t.short + ': not placed' };
+      var q = rel(p, P);
+      if (q.d > r.hi) return { ok: false, a: t.short + ': ' + Math.round(q.d) + ' m from ' + at };
+      if (q.d < r.lo) return { ok: false, a: t.short + ': on ' + at + ' itself' };
+      if (s && !inSide(s, q, p, P)) return { ok: false, a: t.short + ': ' + (s === 'upwind' ? (q.cos > 0.3 ? 'downwind' : 'crosswind') : s === 'downwind' ? 'upwind' : 'not ' + sideWord(s)) + ' of ' + at };
+      return { ok: true, a: t.short + ': ' + Math.round(q.d) + ' m from ' + at + (s ? ', ' + sideWord(s) : '') };
+    }
+    if (its.length === 2 && r.side.length === 2) {             // two pieces, one each side
+      var x = one(its[0], r.side[0]), y = one(its[1], r.side[1]);
+      if (!(x.ok && y.ok)) { var x2 = one(its[0], r.side[1]), y2 = one(its[1], r.side[0]); if (x2.ok && y2.ok) { x = x2; y = y2; } }
+      if (!(x.ok && y.ok) && pos[its[0].id] && pos[its[1].id] && one(its[0]).ok && one(its[1]).ok) {
+        out.push(its[0].short + ' and ' + its[1].short + ': both on one side of ' + at); ok = false;
+      } else { out.push(x.a, y.a); ok = x.ok && y.ok; }
+    } else its.forEach(function (t) { var z = one(t, r.side[0]); out.push(z.a); ok = ok && z.ok; });
+    return { ok: ok, a: out.join('; '), its: its,
+      c: 'within ' + (r.lo ? r.lo + ' to ' : '') + r.hi + ' m of ' + at + (r.side.length === 2 ? ', one each side: ' + r.side.join(' / ') : r.side.length ? ', ' + sideWord(r.side[0]) : '') };
+  }
+
+  /* ---- what the check draws over the photograph ------------------------------------------------- */
+  function circle(p, metres, ok) { var u = U(p); return svg('circle', { cx: u.x, cy: u.y, r: MU(metres), 'class': 'lo-z ' + (ok ? 'g' : 'b') }); }
+  function sector(c, metres, v, spread, ok) {                   // the part of a circle around direction v
+    var m = U(c), a0 = Math.atan2(v[1], v[0]), R = MU(metres);
+    return svg('path', { 'class': 'lo-z ' + (ok ? 'g' : 'b'), d:
+      'M' + m.x + ' ' + m.y + ' L' + (m.x + R * Math.cos(a0 - spread)) + ' ' + (m.y + R * Math.sin(a0 - spread)) +
+      ' A' + R + ' ' + R + ' 0 ' + (spread > Math.PI / 2 ? 1 : 0) + ' 1 ' + (m.x + R * Math.cos(a0 + spread)) + ' ' + (m.y + R * Math.sin(a0 + spread)) + ' Z' });
+  }
+  function zone(r, j) {
+    var P = place[r.place], s = r.side, v = WIND.v, later = [];
+    if (s.length === 2) {
+      var m = U(P), w = T.sides[s[0]] || v, n = [-w[1], w[0]], R = MU(r.hi);
+      later.push(circle(P, r.hi, j.ok));
+      later.push(svg('line', { x1: m.x - n[0] * R, y1: m.y - n[1] * R, x2: m.x + n[0] * R, y2: m.y + n[1] * R, 'class': 'lo-z ' + (j.ok ? 'g' : 'b') }));
+    } else if (s[0] === 'upwind') later.push(sector(P, r.hi, [-v[0], -v[1]], Math.acos(0.3), j.ok));
+    else if (s[0] === 'downwind') later.push(sector(P, r.hi, v, Math.acos(-0.2), j.ok));
+    else if (s[0]) later.push(sector(P, r.hi, T.sides[s[0]], Math.PI / 2, j.ok));
+    else later.push(circle(P, r.hi, j.ok));
+    j.its.forEach(function (t) {
+      if (!pos[t.id]) return;
+      var u = U(pos[t.id]), m2 = U(P);
+      later.push(svg('line', { x1: u.x, y1: u.y, x2: m2.x, y2: m2.y, 'class': 'lo-z lo-jet ' + (j.ok ? 'g' : 'b') }));
+    });
+    return later;
+  }
+  function draw(js) {
+    var m = U(place[T.leak.place]), v = WIND.v, n = [-v[1], v[0]], L = 40, w0 = 1, w1 = 11;
+    var plume = svg('path', { 'class': 'lo-plume', d:
+      'M' + (m.x + n[0] * w0) + ' ' + (m.y + n[1] * w0) +
+      ' L' + (m.x + v[0] * L + n[0] * w1) + ' ' + (m.y + v[1] * L + n[1] * w1) +
+      ' Q' + (m.x + v[0] * (L + 9)) + ' ' + (m.y + v[1] * (L + 9)) + ' ' + (m.x + v[0] * L - n[0] * w1) + ' ' + (m.y + v[1] * L - n[1] * w1) +
+      ' L' + (m.x - n[0] * w0) + ' ' + (m.y - n[1] * w0) + ' Z' });
+    var later = [];
+    T.rules.forEach(function (r, i) { later = later.concat(zone(r, js[i])); });
+    setTimeout(function () { plume.setAttribute('class', 'lo-plume on'); }, 60);
+    setTimeout(function () {
+      later.forEach(function (e) { e.setAttribute('class', e.getAttribute('class') + ' on'); });
+      Object.keys(pos).forEach(function (id) {
+        if (!pos[id]) return;
+        var t = byId[id], ok = belongs(t) && T.rules.every(function (r, i) { return js[i].its.indexOf(t) < 0 || js[i].ok; });
+        var e = scene.querySelector('[data-id="' + id + '"]');
+        if (e) e.className += ok ? ' lo-ok' : ' lo-no';
+      });
+    }, 700);
+  }
+
+  function check() {
+    if (locked) return;
+    if (!Object.keys(pos).some(function (k) { return pos[k]; })) return GBLab.toast('Put the equipment on the deck first - drag it from the tray.', 'hint');
+    GBLab.sure(run);
+  }
+  function run(level) {
+    if (locked) return;
+    locked = true;
+    dragger.clear();
+    [].forEach.call(document.querySelectorAll('.lo-tok'), function (e) { e.setAttribute('aria-disabled', 'true'); e.removeAttribute('data-drag'); });
+    GBLab.go(T.leak.say, null);
+    var js = T.rules.map(judge), bad = T.items.filter(function (t) { return pos[t.id] && !belongs(t); });
+    var safe = { ok: !bad.length, a: bad.length ? bad.map(function (t) { return t.short; }).join(', ') + ' on deck' : 'nothing else on deck' };
+    var all = safe.ok && js.every(function (j) { return j.ok; });
+    draw(js);
+    document.getElementById('trayCard').hidden = true;
+    document.getElementById('legend').hidden = false;
+    // what happens with this layout: the stories of what is not met, the pieces that do not belong first
+    var told = (T.unsafe && !safe.ok ? [T.unsafe] : []).concat(T.rules.filter(function (r, i) { return !js[i].ok; }));
+    function say(s) { return GBLab.esc(s).replace(/\{wind\}/g, GBLab.esc(WIND.to)); }
+    setTimeout(function () {
+      GBLab.sureNote(level, all);
+      var btns = [{ label: 'See my result', fn: result }, { label: 'Look at the deck first', primary: false, fn: function () { GBLab.go('See my result', result); } }];
+      GBLab.show(all ? { img: T.ready.pic, tag: place[T.leak.place].name, kind: 'ok', title: T.ready.title, text: say(T.ready.text), buttons: btns }
+        : { img: (told.filter(function (x) { return x.pic; })[0] || {}).pic || null, tag: place[T.leak.place].name, kind: 'no', title: 'What happens with your layout',
+            text: told.slice(0, 2).map(function (x) { return say(x.story); }).join('<br><br>') +
+              (told.length > 2 ? '<br><br>...and ' + (told.length - 2) + ' more in your result.' : ''), buttons: btns });
+    }, 2300);
+    function result() {
+      var items = T.rules.map(function (r, i) { return { t: r.title, ok: js[i].ok, a: js[i].a, c: js[i].c, w: r.why }; });
+      if (T.unsafe) items.push({ t: T.unsafe.title, ok: safe.ok, a: safe.a, c: 'left in the tray', w: T.unsafe.why });
+      GBLab.finish({ items: items });
+    }
+  }
+
+  GBLab.go('Check my layout', check);
+  GBLab.intro({ tag: 'Lay out', title: T.intro.title, text: T.intro.text,
+    steps: ['Look at the wind on the photo: it is from ' + GBLab.esc(lc(WIND.from)) + '.', 'Drag each piece onto the deck, or tap it and then tap the spot.',
+            'Not everything in the tray belongs on deck.', 'Press <b>Check my layout</b> - see what a leak does with it.'],
+    start: 'Start', onStart: function () { setTimeout(function () { GBLab.hand('lo1-place', tray.firstChild, scene); }, 300); } });
+})();
+</script>
+</body>
+</html>

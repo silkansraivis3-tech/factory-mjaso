@@ -1997,6 +1997,149 @@ def dress_part(exe, tmp):
           and "the place 'Chest' needs where it shows" in out, out[-1200:])
 
 
+LAY = """context: Lay out · Manifold safety
+intro: Lay out the deck before the transfer | Put the safety equipment where it works if a gasket weeps - mind the wind.
+reading: Cargo | Propane
+place: The manifold
+place: The gangway
+wind: Ahead | aft along the deck
+wind: Sea side | across the deck towards the quay
+item: Fire hose, charged | Hose 1 | H1
+item: Fire hose, charged | Hose 2 | H2
+item: Dry-powder extinguisher | Dry powder | DP
+item: Portable gas detector | Gas detector | GD
+item: Drip tray | Drip tray | DT
+item: Warning notice | Notice | WN
+item: Hand lamp, 230 V | Hand lamp | HL
+leak: The manifold | A gasket weeps at the manifold...
+rule: Two hoses near the manifold, one forward and one aft | Hose 1; Hose 2 | The manifold | 3 to 15 m | forward / aft
+why: Whatever the wind, one hose is then upwind.
+story: The crew must attack the leak from upwind.
+rule: Dry powder near the manifold, upwind | Dry powder | The manifold | 15 m | upwind
+why: A gas fire is fought from upwind.
+story: The vapour ignites and the dry powder is not where it can be used.
+rule: Gas detector at the manifold, downwind | Gas detector | The manifold | 8 m | downwind
+why: A leak drifts with the wind.
+story: The cloud drifts {wind}, away from your gas detector.
+rule: Drip tray under the connections | Drip tray | The manifold | 3.5 m
+why: Cold liquid makes deck steel brittle.
+story: Liquid propane drips onto the bare deck.
+rule: Warning notice at the gangway | Notice | The gangway | 5 m
+why: Notices go at the points of access.
+story: Visitors come up the gangway with no notice.
+unsafe: Nothing unsafe put on deck | An ordinary 230 V lamp can spark.
+story: The cloud drifts {wind} and reaches an ignition source on deck.
+ready: The leak is caught at once | Every piece does its job."""
+LAY_SHEET = {"photo": "assets/img/deck.png", "scale": 0.5, "deck": [2, 4, 98, 54], "places": {"The manifold": [56, 42], "The gangway": [22.5, 41]},
+             "winds": {"Ahead": [0.99, 0.12], "Sea side": [0.2, 0.98]}, "sides": {"forward": [-1, 0], "aft": [1, 0]},
+             "stories": {"Nothing unsafe put on deck": "assets/img/fire.png"}}
+# places every piece a rule names where the rule is met, for the wind drawn at opening; extra: put on deck too; skip: left
+# in the tray; same: the two pieces of a pair both on its first side
+LAY_SOLVE = r"""function solve(extra, skip, same) {
+  var T = JSON.parse(document.getElementById('task-data').textContent), wf = document.getElementById('w-from').textContent;
+  var W = T.winds.filter(function (w) { return w.from === wf; })[0], a = T.photo.aspect.split(':'), A = +a[1] / +a[0];
+  var sc = document.getElementById('scene'), pl = {};
+  T.places.forEach(function (p) { pl[p.id] = p; });
+  function judged(r) { return T.items.filter(function (t) { return r.who.indexOf(GBLab.key(T.id, r.title + ' => ' + t.name, 1)) >= 0; }); }
+  function at(P, v, m) { return { x: P.x + v[0] * m / T.scale, y: P.y + v[1] * m / T.scale / A }; }
+  function drop(t, p) {
+    if (skip.indexOf(t.short) >= 0) return;
+    var it = document.querySelector('.lo-tok[data-id="' + t.id + '"]'), r = it.getBoundingClientRect();
+    var o = { bubbles: true, isPrimary: true, pointerId: 1, clientX: r.left + 5, clientY: r.top + 5 };
+    it.dispatchEvent(new PointerEvent('pointerdown', o)); it.dispatchEvent(new PointerEvent('pointerup', o));
+    var s = sc.getBoundingClientRect();
+    sc.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: s.left + s.width * p.x / 100, clientY: s.top + s.height * p.y / 100 }));
+  }
+  T.rules.forEach(function (r, i) {
+    var P = pl[r.place], its = judged(r), m = r.lo ? (r.lo + r.hi) / 2 : r.hi / 2, s = r.side[0];
+    if (its.length === 2) { drop(its[0], at(P, T.sides[r.side[0]], m)); drop(its[1], at(P, T.sides[r.side[same ? 0 : 1]], m + 2)); return; }
+    var v = s === 'upwind' ? [-W.v[0], -W.v[1]] : s === 'downwind' ? W.v : s ? T.sides[s] : [Math.cos(i * 1.1 - 1.6), Math.sin(i * 1.1 - 1.6)];
+    drop(its[0], at(P, v, m));
+  });
+  T.items.forEach(function (t, i) { if (extra.indexOf(t.short) >= 0) drop(t, { x: 10 + i * 6, y: 10 }); });
+}"""
+LAY_PLAY = ("window.__rep=null;addEventListener('message',function(e){if(e.data&&e.data.type==='gb-task-done')window.__rep=e.data;});"
+            "document.querySelector('.tl-sheet .tl-go').click();" + LAY_SOLVE + "solve(%s);"
+            "out.pins=document.querySelectorAll('#scene .lo-tok.lo-on').length;out.wind=document.getElementById('w-from').textContent;"
+            "document.querySelector('.tl-bar .tl-go').click();")
+LAY_SURE = "var b=document.querySelector('.tl-sure .tl-btn:last-child');out.sure=!!b;if(b)b.click();"
+LAY_SHEET_READ = ("var s=document.querySelector('.tl-sheet');out.sheet=s?[s.className,s.querySelector('h2').textContent,s.querySelector('p').textContent,"
+                  "!!s.querySelector('.tl-shot')]:null;out.marks=[document.querySelectorAll('.lo-ok').length,document.querySelectorAll('.lo-no').length];"
+                  "out.zones=document.querySelectorAll('#drawn .lo-z.on').length;if(s)s.querySelector('.tl-go').click();")
+LAY_DONE = "out.rep=window.__rep&&[window.__rep.ok,window.__rep.total,window.__rep.items.map(function(i){return [i.t,i.ok,i.a];})];"
+
+
+def lay_out_part(exe, tmp):
+    """the third richer task built by the factory: lay out the equipment - the operator's rules in metres, upwind or
+    downwind, a side, two pieces one each side; the photograph, its scale, the places and the winds in the build sheet;
+    played through in the browser with whichever wind is drawn"""
+    print("\n-- a richer task built by the factory: lay out the equipment")
+    screens = json.loads(json.dumps(tcm.SCREENS))
+    at = [i for i, s in enumerate(screens) if s["id"] == "q01"][0]
+    screens.insert(at + 1, {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "lay_out", "answer": LAY,
+                            "question": "Lay out the safety equipment at the manifold.", "feedback": "Every piece where it works."})
+    sc = tcm.script(screens=screens)
+    check("the operator's text is a valid lay out", not [x for x in tcm.cs.validate(sc) if "q02" in x], tcm.cs.validate(sc))
+    os.makedirs(os.path.join(tmp, "lo"))
+    c, md = tcm.new_course(os.path.join(tmp, "lo"), sc, build=False)
+    meta = dict(tcm.PHOTO_META)
+    for f in ("deck.png", "fire.png"):
+        io.open(os.path.join(md, "assets", "img", f), "wb").write(PNG(1024, 572))
+        meta[f] = dict(tcm.PHOTO_META["ship.jpg"], description="A deck from above.")
+    tcm.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
+    sheet = {"t01": {"try_tablet": False}, "s01": {"figure": "assets/img/ship.jpg"}, "q02": json.loads(json.dumps(LAY_SHEET))}
+    bp = os.path.join(c, "working_claude", "script", "M01.build.json")
+    tcm.cs.save(bp, {"module": 1, "screens": sheet})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    page, frame = os.path.join(md, "tasks", "sc1_the_new_spaces.html"), os.path.join(md, "tasks", "frame_q02.html")
+    text = io.open(page, encoding="utf-8").read() if os.path.isfile(page) else ""
+    fr = io.open(frame, encoding="utf-8").read() if os.path.isfile(frame) else ""
+    check("lay out is its own page, in a frame on its question's screen, with the course's words",
+          code == 0 and 'iframe src="../tasks/frame_q02.html"' in text and "Portable gas detector" in fr and "{{" not in fr
+          and "Cable reel" not in fr, out[-800:])
+    data = json.loads(re.search(r'id="task-data">(.*?)</script>', fr, re.S).group(1).replace("<\\/", "</")) if fr else {}
+    check("... no answer readable in the page: which pieces belong and which a rule judges are only keys", data
+          and all(len(x["key"]) == 8 for x in data["items"]) and all(len(w) == 8 for r in data["rules"] for w in r["who"])
+          and not any("items" in r or "belongs" in json.dumps(r) for r in data["rules"]) and "belongs" not in json.dumps(data["items"]), data)
+    code_m, out_m = tcm.run(tcm.MATCH, c, "--module", "1", "--part", "trainee")
+    check("check_script_match finds exactly the approved words of the task on its screen", code_m == 0, out_m[-900:])
+    pause = [["eval", "out.wait=1;"]] * 18
+    late = [["eval", "out.wait=1;"]] * 85                         # the sheet comes 2.3 s after the check
+    r = drive(exe, frame, [["eval", LAY_PLAY % "[], [], false"]] + pause + [["eval", LAY_SURE]] + late + [["eval", LAY_SHEET_READ],
+                           ["eval", "out.wait=1;"], ["eval", LAY_DONE]], tmp, look=False)
+    rep = r.get("rep") or [0, 0, []]
+    check("in the browser, with the wind drawn (%s): every piece where its rule says - the leak is caught, each pin and zone "
+          "drawn green, one report all right" % r.get("wind"), r.get("pins") == 6 and (r.get("sheet") or ["", ""])[1] == "The leak is caught at once"
+          and r.get("marks") == [6, 0] and r.get("zones", 0) >= 7 and rep[0] == rep[1] == 6, r)
+    r = drive(exe, frame, [["eval", LAY_PLAY % "['Hand lamp'], ['Gas detector'], true"]] + pause + [["eval", LAY_SURE]] + late +
+              [["eval", LAY_SHEET_READ], ["eval", "out.wait=1;"], ["eval", LAY_DONE]], tmp, look=False)
+    sh, rep = r.get("sheet") or ["", "", "", False], r.get("rep") or [0, 0, []]
+    got = {t: (ok, a) for t, ok, a in rep[2]}
+    wind_to = {"Ahead": "aft along the deck", "Sea side": "across the deck towards the quay"}.get(r.get("wind"), "?")
+    check("laid out wrongly: what happens, the wind's own words in the story (%s), the story's picture" % r.get("wind"),
+          "no" in sh[0] and "reaches an ignition source" in sh[2] and wind_to in sh[2] and "{wind}" not in sh[2]
+          and (data.get("unsafe") or {}).get("pic") == "../assets/img/fire.png", sh)
+    check("... the report says what is wrong: a piece that does not belong on deck, one not placed, two hoses on one side",
+          rep[1] == 6 and got.get("Nothing unsafe put on deck", (1, ""))[0] is False and "Hand lamp" in got["Nothing unsafe put on deck"][1]
+          and got.get("Gas detector at the manifold, downwind", (1, ""))[1] == "Gas detector: not placed"
+          and "both on one side" in got.get("Two hoses near the manifold, one forward and one aft", (1, ""))[1]
+          and got.get("Dry powder near the manifold, upwind", (0,))[0] is True, rep)
+    v = tcm.cs.validate(dict(sc, screens=[dict(s, answer=LAY.replace("| Notice | The gangway | 5 m", "| Sign | The gangway | five m")
+                                               .replace("unsafe: Nothing unsafe put on deck | An ordinary 230 V lamp can spark.\n", "")
+                                               .replace("story: The cloud drifts {wind} and reaches an ignition source on deck.\n", ""))
+                                        if s["id"] == "q02" else s for s in sc["screens"]]))
+    check("a rule naming a piece not in the tray, a distance that is not one, a piece no rule names with no unsafe: - caught before the build",
+          any("names 'Sign'" in x for x in v) and any("'five m' is not a distance" in x for x in v)
+          and any("Notice, Hand lamp no rule names" in x for x in v), v)
+    del sheet["q02"]["places"]["The gangway"]
+    del sheet["q02"]["winds"]["Sea side"]
+    del sheet["q02"]["sides"]["aft"]
+    tcm.cs.save(bp, {"module": 1, "screens": sheet})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    check("a place, a wind or a side the build sheet does not give is reported", "the place 'The gangway' needs where it is" in out
+          and "the wind 'Sea side' needs where it blows" in out and "the side 'aft' needs its direction" in out, out[-1500:])
+
+
 def look_part(exe, page, tmp):
     """the task screens in the brandbook's look (gb_task_look.css, loaded last): each question's screen white or Navy, picked
     so neighbouring screens do not repeat, the page round it following the screen on show; a build sheet may ask for one"""
@@ -2105,6 +2248,7 @@ def main():
         widgets_part(exe, tmp)
         framed_part(exe, tmp)
         dress_part(exe, tmp)
+        lay_out_part(exe, tmp)
         blind_part(exe, page, tmp)
         review_part(exe, tmp)
         deck_fit_part(exe, tmp)

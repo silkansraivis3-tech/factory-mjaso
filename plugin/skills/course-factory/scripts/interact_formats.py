@@ -49,6 +49,17 @@ The richer tasks (design/task-templates/engines), each a framed task of its own 
                      spot: what can be seen on the colleague | why     (one per line, the faults marked *)
                      ask: the closing question            reason: one answer per line, the right one marked *
                      explain: title | the answer explained  (the photos and the places on them: the build sheet)
+    lay_out          context: where and when                intro: title | what the trainee is told
+                     reading: name | value                (what the side card shows: the cargo, the wind speed ...)
+                     place: name                          a fixed point on the photo (the manifold, the gangway)
+                     wind: where it blows from | where it carries a leak     (one per line; one is drawn each opening)
+                     item: name | short name | letters on its pin            (every piece in the tray)
+                     leak: place | what happens there when the layout is checked
+                     rule: what is judged | short name; short name | place | 15 m (or 3 to 15 m) | side
+                           side: upwind, downwind, a side of the build sheet, or two of them for two pieces (forward / aft)
+                     why: the reason (under its rule)     story: what happens when it is not met - {wind}: where the leak goes
+                     unsafe: what is judged | why          and its story: - the pieces no rule names must stay in the tray
+                     ready: title | what happens when every rule is met
 """
 from __future__ import annotations
 
@@ -57,12 +68,12 @@ import json
 import re
 
 TYPES = ("true_false", "critique", "calculate", "predict", "explore", "investigate", "line_up", "inspect_round",
-         "take_apart", "test_atmosphere", "deck_round", "dress_for_job")
-FRAMED = ("deck_round", "dress_for_job")      # a framed task: its own page in the set's screen (interact_pages.framed)
+         "take_apart", "test_atmosphere", "deck_round", "dress_for_job", "lay_out")
+FRAMED = ("deck_round", "dress_for_job", "lay_out")   # a framed task: its own page in the set's screen (interact_pages.framed)
 USES = {"true_false": {"answer"}, "critique": {"answer"}, "calculate": {"answer"}, "predict": {"answer"},
         "explore": {"answer"}, "investigate": {"options", "answer"}, "line_up": {"answer", "visual"},
         "inspect_round": {"answer", "visual"}, "take_apart": {"answer", "visual"}, "test_atmosphere": {"answer"},
-        "deck_round": {"answer"}, "dress_for_job": {"answer"}}
+        "deck_round": {"answer"}, "dress_for_job": {"answer"}, "lay_out": {"answer"}}
 NUM = r"-?\d+(?:[.,]\d+)?"
 OPEN_WORDS = {"open", "opened", "atvērts", "atverts", "открыт", "открыто", "on"}
 SHUT_WORDS = {"shut", "closed", "close", "aizvērts", "aizverts", "закрыт", "закрыто", "off"}
@@ -637,9 +648,120 @@ def _dress_for_job(sid, ls, q, probs):
         [w for s in d["spots"] for w in (s["seen"], s["why"])] + [d["ask"]] + d["reasons"] + [d["explain"]["title"], d["explain"]["text"]]
     right = [x["name"] for x in d["items"] if x["need"]] + [s["seen"] for s in d["spots"] if s["fault"]] + ([d["right"]] if d["right"] else [])
     wrong = [x["name"] for x in d["items"] if not x["need"]] + [r for r in d["reasons"] if r != d["right"]]
+    return probs, d, right, wrong, unique(words)
+
+
+def unique(words):
     seen, out = set(), []
     for w in words:
         if w and w not in seen:
             seen.add(w)
             out.append(w)
-    return probs, d, right, wrong, out
+    return out
+
+
+LAY_KEYS = ("context", "intro", "reading", "place", "wind", "item", "leak", "rule", "why", "story", "unsafe", "ready")
+SIDES_OF_WIND = ("upwind", "downwind")
+
+
+def metres(s):
+    """'15 m' -> (0, 15); '3 to 15 m' -> (3, 15); None when it is not one"""
+    m = re.match(r"^\s*(?:(%s)\s*(?:to|-|–)\s*)?(%s)\s*m?\s*$" % (NUM, NUM), s or "")
+    if not m:
+        return None
+    lo, hi = num(m.group(1)) if m.group(1) else 0.0, num(m.group(2))
+    return (lo, hi) if 0 <= lo < hi else None
+
+
+def _lay_out(sid, ls, q, probs):
+    """lay out the equipment: the tray's pieces put on a photograph from above, each rule judged by metres and the wind
+    (near a place, upwind or downwind of it, on one side of it, two pieces one each side); a leak shows what each rule
+    not met means"""
+    d = {"context": "", "intro": {"title": "", "text": ""}, "readings": [], "places": [], "winds": [], "items": [], "leak": None,
+         "rules": [], "unsafe": None, "ready": {"title": "", "text": ""}}
+    r = None
+
+    def parts(rest):
+        return [x.strip() for x in rest.split("|")]
+    for ln in ls:
+        key, sep, rest = ln.partition(":")
+        k, rest = key.strip().lower(), rest.strip()
+        if not sep or k not in LAY_KEYS:
+            probs.append("%s: a lay-out line starts with %s - not %r" % (sid, ", ".join(x + ":" for x in LAY_KEYS), ln))
+            continue
+        p = parts(rest)
+        if k == "context":
+            d["context"] = rest
+        elif k in ("intro", "ready"):
+            d[k] = {"title": p[0], "text": " | ".join(p[1:])}
+        elif k == "reading":
+            d["readings"].append({"name": p[0], "value": " | ".join(p[1:])})
+        elif k == "place":
+            d["places"].append(rest)
+        elif k == "wind":
+            d["winds"].append({"from": p[0], "to": " | ".join(p[1:])})
+        elif k == "item":
+            if len(p) not in (2, 3) or not all(p):
+                probs.append("%s: an item is item: name | short name | letters on its pin - not %r" % (sid, rest))
+                continue
+            d["items"].append({"name": p[0], "short": p[1], "ab": p[2] if len(p) == 3 else p[1][:2].upper()})
+        elif k == "leak":
+            d["leak"] = {"place": p[0], "say": " | ".join(p[1:])}
+        elif k == "rule":
+            if len(p) not in (4, 5):
+                probs.append("%s: a rule is rule: what is judged | short name; ... | place | 15 m | side - not %r" % (sid, rest))
+                r = None
+                continue
+            r = {"title": p[0], "items": [x.strip() for x in p[1].split(";") if x.strip()], "place": p[2], "at": metres(p[3]),
+                 "dist": p[3], "side": [x.strip() for x in (p[4] if len(p) == 5 else "").split("/") if x.strip()], "why": "", "story": ""}
+            d["rules"].append(r)
+        elif k == "unsafe":
+            r = {"title": p[0], "why": " | ".join(p[1:]), "story": ""}
+            d["unsafe"] = r
+        elif r is None:
+            probs.append("%s: %s: comes before any rule: or unsafe: - it belongs to the one above it" % (sid, k))
+        elif k == "why":
+            r["why"] = rest
+        else:
+            r["story"] = rest
+    shorts = [x["short"] for x in d["items"]]
+    if len(d["items"]) < 4:
+        probs.append("%s: lay out needs at least four pieces in the tray (item: ...)" % sid)
+    if len(set(shorts)) != len(shorts):
+        probs.append("%s: two items have the same short name - the rules name the items by it" % sid)
+    if not d["places"] or not d["winds"]:
+        probs.append("%s: lay out needs at least one place: and one wind: where it blows from | where it carries a leak" % sid)
+    if not d["rules"]:
+        probs.append("%s: lay out needs its rules: rule: what is judged | short name | place | 15 m | side" % sid)
+    named = set()
+    for x in d["rules"]:
+        bad = [i for i in x["items"] if i not in shorts]
+        named.update(x["items"])
+        if not x["items"] or bad:
+            probs.append("%s: the rule %r names %s - not a short name of an item in the tray" % (sid, x["title"], ", ".join(map(repr, bad)) or "no item"))
+        if x["place"] not in d["places"]:
+            probs.append("%s: the rule %r is at %r - not a place:" % (sid, x["title"], x["place"]))
+        if not x["at"]:
+            probs.append("%s: the rule %r: %r is not a distance - 15 m, or 3 to 15 m" % (sid, x["title"], x["dist"]))
+        if len(x["side"]) > 2 or (len(x["side"]) == 2) != (len(x["items"]) == 2) or len(x["items"]) > 2:
+            probs.append("%s: the rule %r: one piece has one side or none; two pieces have two sides, one each (forward / aft)" % (sid, x["title"]))
+        for need in ("why", "story"):
+            if not x[need]:
+                probs.append("%s: the rule %r needs its %s:" % (sid, x["title"], need))
+    loose = [i for i in shorts if i not in named]
+    if loose and not d["unsafe"]:
+        probs.append("%s: %s no rule names - they must stay in the tray: say why with unsafe: what is judged | why, and its story:"
+                     % (sid, ", ".join(loose)))
+    if d["unsafe"] and not (loose and d["unsafe"]["why"] and d["unsafe"]["story"]):
+        probs.append("%s: unsafe: needs its why and story:, and pieces in the tray that no rule names" % sid)
+    if not d["leak"] or d["leak"]["place"] not in d["places"] or not d["leak"]["say"]:
+        probs.append("%s: lay out needs leak: place | what happens there when the layout is checked" % sid)
+    if not d["intro"]["title"] or not d["ready"]["title"]:
+        probs.append("%s: lay out needs intro: title | text and ready: title | text" % sid)
+    for x in d["items"]:
+        x["belongs"] = x["short"] in named
+    rules = d["rules"] + ([d["unsafe"]] if d["unsafe"] else [])
+    words = [d["context"], d["intro"]["title"], d["intro"]["text"]] + [w for x in d["readings"] for w in (x["name"], x["value"])] + \
+        d["places"] + [w for x in d["winds"] for w in (x["from"], x["to"])] + [w for x in d["items"] for w in (x["name"], x["short"], x["ab"])] + \
+        [(d["leak"] or {}).get("say", "")] + [w for x in rules for w in (x["title"], x["why"], x["story"])] + [d["ready"]["title"], d["ready"]["text"]]
+    return probs, d, [x["name"] for x in d["items"] if x["belongs"]], [x["name"] for x in d["items"] if not x["belongs"]], unique(words)

@@ -7,6 +7,19 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.98.0 · Lay out the equipment - the third richer task (2026-11-04)
+
+- **Why.** The owner: the three richer tasks first - deck round (2.95.0), dress a buddy (2.96.0), lay out.
+- **What.** `scripts/interact_formats.py` (`lay_out`, `metres`, `unique`), `knowledge/media-and-tasks.json`,
+  `compile/scripts/interact_pages.py` (`lay_out_data`, `vector_of`), `course-task-ux/engines/lay_out.html`.
+  Test: `test_task_engine.py` "lay out the equipment" (played through in the browser with the wind drawn).
+- **Decisions that will look odd.** The rules are the operator's words, the geometry the engine's: upwind is the wind's
+  direction within about 72 degrees, downwind anything not upwind (as the prototype); a named side is the half of the deck
+  its direction points to from the place. A wind is drawn at each opening, so the same layout can be right on one tablet
+  and wrong on another only where a rule depends on the wind - that is the task. The keys: `on deck <item>` 1 or 0,
+  `<rule> => <item>` for the pieces a rule judges.
+- **Next.** The other sixteen prototypes; the tasks' own words in Latvian and Russian.
+
 ## 2.97.0 · The Instructor-Led Course Development Guideline - L68 (2026-11-04)
 
 - **Why.** The course director's guideline sets the teaching rules every instructor-led module must meet and adds four

@@ -180,7 +180,7 @@ on one rail, a match's names are joined to their places, and set the value has a
 The richer tasks become ways of answering one at a time: each a template in `engines/` (the reference's logic, the course's
 data in one JSON block, no right answer readable - only its key), built in its screen's theme (`scripts/engine_theme.py`)
 and shown in a frame on its question's screen, the set page counting its report as the answer. Built so far: the deck
-round (`deck_round`), dress for the job then check a buddy (`dress_for_job`).
+round (`deck_round`), dress for the job then check a buddy (`dress_for_job`), lay out the equipment (`lay_out`).
 
 **Self-checks and module checks: choosing, not writing.** Allowed: **tap to choose** · **tap to
 locate** (§6) · **order / sequence** · **match** · **choose-and-justify** (pick the action, then the

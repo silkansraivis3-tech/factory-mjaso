@@ -20,7 +20,11 @@ What the operator's text cannot say is the build sheet's, per question (working_
                      "slots": {"where it is worn": {"at": [[x %, y %], ...], "label": [x %, y %, "l" | "r"]}} - on "photo",
                      "spots": {"what is seen": [[x %, y %], ...]} - on "buddy", and pictures on the sheets when there are:
                      "stories": {"item": "assets/img/x.jpg"}, "ready": ..., "explain": ...
-A framed task (deck_round, dress_for_job - fm.FRAMED) is its own page, tasks/frame_<id>.html, built from course-task-ux/engines/<type>.html in
+    lay_out          "photo": the deck from above, "scale": metres per 1 % of its width, "deck": [x0 %, y0 %, x1 %, y1 %] (where
+                     pieces can be put down), "places": {"place": [x %, y %]}, "winds": {"wind": [x, y]} (where it blows towards),
+                     "sides": {"forward": [x, y]} (a side of the rules, as a direction), and pictures on the sheets when there are:
+                     "stories": {"rule": "assets/img/x.jpg"}, "ready": ...
+A framed task (deck_round, dress_for_job, lay_out - fm.FRAMED) is its own page, tasks/frame_<id>.html, built from course-task-ux/engines/<type>.html in
 its screen's theme (engine_theme.py) and shown in a frame on its question's screen; it reports to the set page, which counts
 it as the question's answer (gb_interact.js LAB.frame).
 A 3D scene is a 3D-kit spec (course-visuals/kit3d/SPEC.md) - the same parts and look as the deck's 3D slides.
@@ -367,7 +371,69 @@ def dress_for_job_data(q, b, d, mdir, probs, where, shuffle):
                     "title": d["explain"]["title"], "text": d["explain"]["text"], "pic": pic(b.get("explain"), "the answer's sheet (\"explain\")")}}
 
 
-FRAMED_DATA = {"deck_round": deck_round_data, "dress_for_job": dress_for_job_data}
+def vector_of(v):
+    try:
+        x, y = float(v[0]), float(v[1])
+    except (TypeError, ValueError, IndexError, KeyError):
+        return None
+    n = (x * x + y * y) ** .5
+    return [round(x / n, 4), round(y / n, 4)] if n and len(v) == 2 else None
+
+
+def lay_out_data(q, b, d, mdir, probs, where, shuffle):
+    sid = q["id"]
+    ph = photo_of(b.get("photo"), mdir, probs, where, "the deck from above (\"photo\")")
+    stories = b.get("stories") or {}
+
+    def pic(rel, what):
+        p = photo_of(rel, mdir, probs, where, what) if rel else None
+        return p[0] if p else None
+    scale, deck = b.get("scale"), b.get("deck") or [0, 0, 100, 100]
+    if not isinstance(scale, (int, float)) or scale <= 0:
+        probs.append("%s: lay out needs the photo's scale - \"scale\": metres per 1 %% of its width" % where)
+    if not points_of([deck[:2], deck[2:]]) or len(deck) != 4 or deck[0] >= deck[2] or deck[1] >= deck[3]:
+        probs.append("%s: \"deck\": [x0 %%, y0 %%, x1 %%, y1 %%] - where pieces can be put down" % where)
+    at, places = b.get("places") or {}, []
+    for n, name in enumerate(d["places"], 1):
+        p = points_of([at.get(name)]) if at.get(name) is not None else None
+        if not p:
+            probs.append("%s: the place %r needs where it is on the photograph - \"places\": {\"%s\": [x %%, y %%]}" % (where, name, name))
+            continue
+        places.append({"id": "p%d" % n, "name": name, "x": p[0][0], "y": p[0][1]})
+    pid = {p["name"]: p["id"] for p in places}
+    wv, winds = b.get("winds") or {}, []
+    for w in d["winds"]:
+        v = vector_of(wv.get(w["from"]))
+        if not v:
+            probs.append("%s: the wind %r needs where it blows towards on the photograph - \"winds\": {\"%s\": [x, y]}" % (where, w["from"], w["from"]))
+            continue
+        winds.append(dict(w, v=v))
+    sv, sides = b.get("sides") or {}, {}
+    for x in d["rules"]:
+        for s in x["side"]:
+            if s in fm.SIDES_OF_WIND or s in sides:
+                continue
+            v = vector_of(sv.get(s))
+            if v:
+                sides[s] = v
+            else:
+                probs.append("%s: the side %r needs its direction on the photograph - \"sides\": {\"%s\": [x, y]}" % (where, s, s))
+    byshort = {x["short"]: x for x in d["items"]}
+    items = [{"id": "i%d" % n, "name": x["name"], "short": x["short"], "ab": x["ab"], "key": k(sid, "on deck " + x["name"], 1 if x["belongs"] else 0)}
+             for n, x in enumerate(shuffle(sid + " tray", d["items"], key=lambda x: x["name"]), 1)]
+    rules = [{"title": x["title"], "who": [k(sid, x["title"] + " => " + byshort[i]["name"], 1) for i in x["items"] if i in byshort],
+              "place": pid.get(x["place"], ""), "lo": (x["at"] or (0, 0))[0], "hi": (x["at"] or (0, 0))[1], "side": x["side"],
+              "why": x["why"], "story": x["story"], "pic": pic(stories.get(x["title"]), "the story of %r" % x["title"])} for x in d["rules"]]
+    u = d["unsafe"]
+    return {"id": sid, "title": q.get("question", ""), "eye": d["context"], "ask": q.get("question", ""), "intro": d["intro"],
+            "photo": ph and {"src": ph[0], "aspect": ph[1], "alt": d["intro"]["title"]}, "scale": scale, "deck": deck,
+            "readings": d["readings"], "places": places, "winds": winds, "sides": sides, "items": items, "rules": rules,
+            "unsafe": u and dict(u, pic=pic(stories.get(u["title"]), "the story of %r" % u["title"])),
+            "leak": d["leak"] and {"place": pid.get(d["leak"]["place"], ""), "say": d["leak"]["say"]},
+            "ready": dict(d["ready"], pic=pic(b.get("ready"), "the ready sheet (\"ready\")"))}
+
+
+FRAMED_DATA = {"deck_round": deck_round_data, "dress_for_job": dress_for_job_data, "lay_out": lay_out_data}
 
 
 def framed(q, b, d, mdir, probs, where, shuffle, words):
