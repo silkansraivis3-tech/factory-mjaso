@@ -7,6 +7,17 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.101.0 · Now beside proposed; keep, take or fix with Claude (2026-11-04)
+
+- **Why.** The owner found OK / needs change on Bloom now pointless: the expert chooses between the old course and the
+  proposal, or decides something else with Claude.
+- **What.** One card per topic in the editor, now beside proposed: Keep as now, Take proposed, Fix with Claude. The
+  activities and upgrades stay OK / note, on their own rows (`act/...`, `upgrades`). `pull` carries out keep and Claude
+  decisions with `pedagogy_review.carry_out` (also used by `pedagogy_review.py expert`); `limit` and `above_why` are
+  cleared, since the expert's decision needs neither.
+- **Claude** runs in the training app's course-prep function (`claude` / `claude-accept` / `claude-discard`); its
+  answer has a level, how, why and a reply, never an outcome.
+
 ## 2.100.0 · The experts review the pedagogy in the editor (2026-11-04)
 
 - **Why.** The owner: experts never handle files. The factory puts each stage into the training app's editor; the

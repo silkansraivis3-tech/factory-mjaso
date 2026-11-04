@@ -99,14 +99,14 @@ class Server:
         raise AssertionError(action)
 
     # what an expert does in the editor
-    def answer(self, who, item, verdict, note=None):
+    def answer(self, who, item, verdict, note=None, decision=None):
         d = self.docs[-1]
         mine = [a for a in self.answers if a["by_email"] == who and a["item"] == item and a["item_hash"] == d["items"][item]]
         if mine:
-            mine[0].update(verdict=verdict, note=note, pulled=False)
+            mine[0].update(verdict=verdict, note=note, decision=decision, pulled=False)
             return mine[0]
         a = dict(id=str(uuid.uuid4()), kind="pedagogy", module="", item=item, item_hash=d["items"][item], verdict=verdict,
-                 note=note, by_name=who.split("@")[0].replace(".", " ").title(), by_email=who, updated_at="2026-11-04T11:00:00Z")
+                 note=note, decision=decision, by_name=who.split("@")[0].replace(".", " ").title(), by_email=who, updated_at="2026-11-04T11:00:00Z")
         self.answers.append(a)
         return a
 
@@ -166,7 +166,7 @@ def main():
         code, out = out_of(cp.cmd_push_pedagogy, c)
         d = srv.docs[-1] if srv.docs else {}
         check("push sends the pedagogy: version 1, a row for the course and one per topic",
-              code == 0 and d.get("version") == 1 and set(d["items"]) == {"course", "1/1.1", "1/1.1.a", "1/1.1.b", "2/1.3", "3/1"}, (out, d.get("items")))
+              code == 0 and d.get("version") == 1 and set(d["items"]) == {"course", "upgrades", "1/1.1", "1/1.1.a", "1/1.1.b", "act/1/module", "2/1.3", "3/1"}, (out, d.get("items")))
         t = d["content"]["modules"][0]["topics"][0]
         check("... in the Word files' words: the outcome from the architecture, now, proposed with its decision and why",
               t["outcome"] and t["now"]["checked"] == "final test Q1" and "->" in t["proposed"]["change"]
@@ -195,7 +195,7 @@ def main():
         log = io.open(os.path.join(c, "FEEDBACK_LOG.md"), encoding="utf-8").read()
         check("FEEDBACK_LOG.md has each change asked and the Ready",
               "| 2 | " in log and "2 · M02 · 1.3 | They set it on the real panel" in log and "[Anna Liepa, editor mode] | to do" in log
-              and "2 · course · summaries and upgrades" in log and "Ready - signed Anna Liepa" in log, log[-700:])
+              and "2 · course · summaries |" in log and "Ready - signed Anna Liepa" in log, log[-700:])
         check("what was taken is acknowledged", all(a.get("pulled") for a in srv.answers) and srv.docs[-1].get("ready_pulled"))
         probs, _ = pr.check(c)
         check("check stops until every change asked is carried out",
@@ -203,7 +203,7 @@ def main():
               and any("the whole course: Janis Berzins asked" in x for x in probs), probs)
         n = len(log)
         code, out = out_of(cp.cmd_pull, c)
-        check("pulled again: nothing taken twice", "0 answer(s)" in out and len(io.open(os.path.join(c, "FEEDBACK_LOG.md"), encoding="utf-8").read()) == n, out)
+        check("pulled again: nothing taken twice", "0 answer(s) - 0 OK" in out and len(io.open(os.path.join(c, "FEEDBACK_LOG.md"), encoding="utf-8").read()) == n, out)
 
         srv.answer("anna.liepa@novikontas.org", "2/1.3", "ok")
         out_of(cp.cmd_pull, c)
@@ -224,6 +224,39 @@ def main():
         code, out = out_of(cp.cmd_push_pedagogy, c)
         check("the changed words go back as version 2; the topics not changed keep their answers",
               srv.docs[-1]["version"] == 2 and srv.docs[0]["status"] == "superseded" and "2 answers kept" in out, out)
+
+        print("\n-- keep as now, a decision made with Claude, a note on the activities")
+        rev = json.load(io.open(pr.files(c)["review"], encoding="utf-8"))
+        now11 = rev["modules"]["1"]["rows"]["1.1"]["now"]
+        srv.answer("anna.liepa@novikontas.org", "1/1.1", "decision", decision={"choice": "keep", "level": now11["level"],
+                                                                                "said": "Keep it as the old course teaches it."})
+        srv.answer("anna.liepa@novikontas.org", "2/1.3", "decision", decision={
+            "choice": "claude", "level": 4, "how": "Trainees find the fault in a recorded loading on the simulator.",
+            "why": "On board they must see what went wrong before the alarm.", "said": "They should analyse a real loading."})
+        srv.answer("janis.berzins@novikontas.org", "act/1/module", "change", "Give the 3D section ten minutes more.")
+        code, out = out_of(cp.cmd_pull, c)
+        rev = json.load(io.open(pr.files(c)["review"], encoding="utf-8"))
+        p11, p13 = rev["modules"]["1"]["rows"]["1.1"]["proposed"], rev["modules"]["2"]["rows"]["1.3"]["proposed"]
+        check("keep as now: the old course's level, how it is taught kept, carried out as the expert's decision",
+              p11["level"] == now11["level"] and p11["how"].startswith("Kept as the old course teaches it: ")
+              and p11["expert"]["by"] == "Anna Liepa", p11)
+        check("a decision with Claude: its level, what the trainee does and why, the expert's words",
+              p13["level"] == 4 and p13["how"].startswith("Trainees find the fault") and p13["why"].startswith("On board they must")
+              and p13["expert"]["said"] == "They should analyse a real loading." and not p13.get("above_why"), p13)
+        m1 = rev["modules"]["1"]
+        check("a note on the module's activities goes to the module, about the activities",
+              m1.get("expert_notes") and m1["expert_notes"][0]["about"] == "activities", m1.get("expert_notes"))
+        probs, _ = pr.check(c)
+        check("check: the decisions pass every keep-or-lift rule; the activity note waits for its 'done'",
+              probs and all("module 1: Janis Berzins asked" in x for x in probs), probs)
+        log = io.open(os.path.join(c, "FEEDBACK_LOG.md"), encoding="utf-8").read()
+        check("FEEDBACK_LOG.md says what each decision changed",
+              "kept as the old course, at" in log and "set with Claude to 4 Analyse: Trainees find the fault" in log
+              and "2 · M01 · activities | Give the 3D section ten minutes more." in log, log[-900:])
+        v = pr.view(c)
+        t13 = v["content"]["modules"][1]["topics"][0]
+        check("sent again, the topic shows the expert's decision", t13["proposed"]["decision"] == "the expert's decision"
+              and any("They should analyse a real loading." in w for w in t13["proposed"]["why"]), t13["proposed"])
 
         print("\n-- the key and the address")
         src = io.open(os.path.join(HERE, "course_portal.py"), encoding="utf-8").read()

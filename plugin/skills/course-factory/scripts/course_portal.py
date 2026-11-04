@@ -216,38 +216,59 @@ def pull_pedagogy(course, answers, ready):
     if rev is None:
         return [], [], [], ["there is no pedagogy_review.json to write the answers into"]
     v = pr.view(course)
-    where_of = {"course": (rev, "2 · course · summaries and upgrades")}
+    # the editor's row -> (where it is written, the log's place, what it is about)
+    where_of = {"course": (rev, "2 · course · summaries", None), "upgrades": (rev, "2 · course · upgrades", "upgrades")}
     for m in v["content"]["modules"]:
-        rows = rev.setdefault("modules", {}).setdefault(str(m["n"]), {}).setdefault("rows", {})
+        mod = rev.setdefault("modules", {}).setdefault(str(m["n"]), {})
+        rows = mod.setdefault("rows", {})
+        if m.get("act_item"):
+            where_of[m["act_item"]] = (mod, "2 · M%02d · activities" % m["n"], "activities")
         for t in m["topics"]:
             if t["id"] in rows:
-                where_of[t["item"]] = (rows[t["id"]], "2 · M%02d · %s" % (m["n"], t["id"]))
+                where_of[t["item"]] = (rows[t["id"]], "2 · M%02d · %s" % (m["n"], t["id"]), None)
+                if t.get("act_item"):
+                    where_of[t["act_item"]] = (rows[t["id"]], "2 · M%02d · %s activities" % (m["n"], t["id"]), "activities")
     took, docs, log, said = [], [], [], []
     for a in answers:
         target = where_of.get(a["item"])
         if not target:
-            said.append("%s answered %s, which is not a topic of the architecture any more - left in the editor" % (_who(a), a["item"]))
+            said.append("%s answered %s, which is not a row of the documents any more - left in the editor" % (_who(a), a["item"]))
             continue
-        row, where = target
+        row, where, about = target
         older = " (on words sent before)" if v["items"].get(a["item"]) != a.get("item_hash") else ""
         # one answer is one row in the editor: sent again, it replaces what it said before
         row["expert_review"] = [x for x in row.get("expert_review") or [] if x.get("answer") != a["id"]]
         row["expert_notes"] = [x for x in row.get("expert_notes") or [] if x.get("answer") != a["id"] or pr._filled(x.get("done"))]
-        base = {"answer": a["id"], "by": _who(a), "email": a.get("by_email") or "", "on": (a.get("updated_at") or "")[:10]}
+        base = dict({"answer": a["id"], "by": _who(a), "email": a.get("by_email") or "", "on": (a.get("updated_at") or "")[:10]},
+                    **({"about": about} if about else {}))
+        d = a.get("decision") or {}
         if a["verdict"] == "ok":
             row["expert_review"].append(dict(base, ok=True, **({"note": a["note"]} if a.get("note") else {})))
         elif a["verdict"] == "change":
             row["expert_notes"].append(dict(base, said=(a.get("note") or "") + older, done=""))
             log.append((where, "%s [%s, editor mode]" % (a.get("note") or "", _who(a)), "to do"))
+        elif a["verdict"] == "decision" and about is None and row is not rev and d.get("choice") in ("keep", "claude"):
+            now = row.get("now") or {}
+            if d["choice"] == "keep":
+                lvl = now.get("level") if isinstance(now.get("level"), int) and now.get("level") >= 1 else d.get("level")
+                pr.carry_out(row, lvl, d.get("said") or "Keep it as the old course teaches it.", _who(a),
+                             how="Kept as the old course teaches it: " + (now.get("how") or ""))
+                what = "kept as the old course, at %s" % pr.level(lvl)
+            else:
+                pr.carry_out(row, int(d["level"]), d.get("said") or "", _who(a), how=d.get("how") or "", why=d.get("why") or None)
+                what = "set with Claude to %s: %s" % (pr.level(int(d["level"])), d.get("how") or "")
+            row["expert_review"].append(dict(base, decision=d["choice"], level=row["proposed"]["level"]))
+            log.append((where, "%s [%s, editor mode]" % (d.get("said") or "", _who(a)), what + older))
         else:
-            said.append("%s: a decision with Claude is not taken in by this version - left in the editor" % where)
+            said.append("%s: an answer of a kind this version cannot take in (%s) - left in the editor" % (where, a["verdict"]))
             continue
         for k in ("expert_review", "expert_notes"):
             if not row[k]:
                 del row[k]
         took.append(a["id"])
     for d in ready:
-        changes = sum(1 for _, (row, _w) in where_of.items() for n in row.get("expert_notes") or [] if not pr._filled(n.get("done")))
+        targets = {id(t[0]): t[0] for t in where_of.values()}.values()
+        changes = sum(1 for row in targets for n in row.get("expert_notes") or [] if not pr._filled(n.get("done")))
         rev["ready"] = {"by": d.get("ready_by_name") or "", "email": d.get("ready_by_email") or "",
                         "on": (d.get("ready_at") or "")[:10], "version": d.get("version"), "changes": changes}
         log.append(("2 · pedagogy · Ready", "Ready - signed %s [editor mode]" % rev["ready"]["by"],
@@ -269,9 +290,11 @@ def cmd_pull(course):
     logged = _feedback(course, log)
     if took or docs:
         call("ack", course_id=p["course_id"], answer_ids=took, document_ids=docs, read_at=r.get("read_at"))
-    n_change = sum(1 for a in answers if a["id"] in took and a["verdict"] == "change")
-    print("Taken from the editor: %d answer(s) - %d OK, %d asking for a change%s."
-          % (len(took), len(took) - n_change, n_change, "; Ready, signed %s" % ", ".join(d.get("ready_by_name") or "" for d in ready) if ready else ""))
+    kinds = [a["verdict"] if a["verdict"] != "decision" else (a.get("decision") or {}).get("choice") for a in answers if a["id"] in took]
+    n_change = kinds.count("change")
+    print("Taken from the editor: %d answer(s) - %d OK, %d kept as now, %d decided with Claude, %d asking for a change%s."
+          % (len(took), kinds.count("ok"), kinds.count("keep"), kinds.count("claude"), n_change,
+             "; Ready, signed %s" % ", ".join(d.get("ready_by_name") or "" for d in ready) if ready else ""))
     if log and not logged:
         print("  (there is no FEEDBACK_LOG.md to log them in)")
     for s in said:

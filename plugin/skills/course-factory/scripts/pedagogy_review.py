@@ -220,6 +220,8 @@ def check(course):
         for i in (m or {}).get("rows") or {}:
             if (str(n), i) not in known:
                 probs.append("module %s, topic %s: not a topic of the architecture any more - remove the row" % (n, i))
+    for n, m in mods.items():
+        probs += open_notes(m or {}, "module %s" % n)
     probs += open_notes(rev, "the whole course")
     return probs, notes
 
@@ -431,10 +433,11 @@ def _hash(x):
     return hashlib.sha256(json.dumps(x, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 
 
-def _done(x):
-    """The changes an expert asked in editor mode and what the factory changed - shown on the row, so they see it."""
+def _done(x, about=None):
+    """The changes an expert asked in editor mode and what the factory changed - shown on the row, so they see it.
+    about: None for the Bloom row (or the course summary), "activities" or "upgrades" for those rows."""
     return [{"by": n.get("by", ""), "said": n.get("said", ""), "done": n["done"]} for n in (x.get("expert_notes") or [])
-            if isinstance(n, dict) and _filled(n.get("done"))]
+            if isinstance(n, dict) and _filled(n.get("done")) and n.get("about") == about]
 
 
 def item_key(module, topic):
@@ -443,8 +446,9 @@ def item_key(module, topic):
 
 def view(course):
     """The three documents as the training app's editor shows them (course_portal.py push --pedagogy): the same words
-    as the Word files, topic by topic, and a hash for every row the experts answer - the course-wide part ("course")
-    and each topic ("4/4.1"). A row whose words do not change keeps its answers when the documents are sent again."""
+    as the Word files, topic by topic, and a hash for every row the experts answer - the summaries ("course"), the
+    upgrades ("upgrades"), each topic's Bloom level ("4/4.1"), each topic's activities ("act/4/4.1") and the module's
+    own ("act/4/module"). A row whose words do not change keeps its answers when the documents are sent again."""
     f = files(course)
     arch = _load(f["arch"])
     if not arch:
@@ -459,8 +463,9 @@ def view(course):
                          else (u.get("modules") or "all modules")} for u in rev.get("upgrades") or []],
            "glance": [dict(zip(("module", "title", "asks", "now", "proposed"), g)) for g in _glance(mods, rev, 5)],
            "modules": []}
-    out["changes_made"] = _done(rev)
-    items = {"course": _hash([out["now_summary"], out["proposed_summary"], out["upgrades"], out["changes_made"]])}
+    out["changes_made"], out["upgrade_changes"] = _done(rev), _done(rev, "upgrades")
+    items = {"course": _hash([out["now_summary"], out["proposed_summary"], out["glance"], out["changes_made"]]),
+             "upgrades": _hash([out["upgrades"], out["upgrade_changes"]])}
     tally = {}
     for m in mods:
         got = (rev.get("modules") or {}).get(str(m["n"]), {})
@@ -477,14 +482,32 @@ def view(course):
                          "checked": now.get("checked") or "-", "where": now.get("where") or "-"},
                  "proposed": {"level": level(new.get("level")), "change": "%s -> %s" % (level(now.get("level")), level(new.get("level"))),
                               "decision": d, "how": new.get("how") or "not judged yet", "why": proposed_why(r, now, new)},
-                 "activities": [a for a in acts if str(a["topic"]) == str(r["id"])], "changes_made": _done(x)}
-            items[t["item"]] = _hash([t["outcome"], t["asks"], t["now"], t["proposed"], t["activities"], t["changes_made"]])
+                 "activities": [a for a in acts if str(a["topic"]) == str(r["id"])], "changes_made": _done(x),
+                 "activity_changes": _done(x, "activities")}
+            items[t["item"]] = _hash([t["outcome"], t["asks"], t["now"], t["proposed"], t["changes_made"]])
+            if t["activities"]:
+                t["act_item"] = "act/" + t["item"]
+                items[t["act_item"]] = _hash([t["outcome"], t["activities"], t["activity_changes"]])
             topics.append(t)
-        out["modules"].append({"n": m["n"], "title": m["title"], "note": got.get("note") or "", "topics": topics,
-                               "module_activities": [a for a in acts if a["topic"] == "module"]})
+        mod = {"n": m["n"], "title": m["title"], "note": got.get("note") or "", "topics": topics,
+               "module_activities": [a for a in acts if a["topic"] == "module"], "activity_changes": _done(got, "activities")}
+        if mod["module_activities"]:
+            mod["act_item"] = "act/%s/module" % m["n"]
+            items[mod["act_item"]] = _hash([mod["module_activities"], mod["activity_changes"]])
+        out["modules"].append(mod)
     out["decisions"] = [{"decision": k, "topics": tally.get(k, 0)} for k in ("kept", "lifted", "above the outcome", "the expert's decision")]
     out["active_minutes"] = sum(int(a.get("minutes") or 0) for m in mods for a in m["active"] if a.get("status") != "struck")
     return {"content": out, "items": items, "fingerprint": _hash([out, items])}
+
+
+def carry_out(row, lvl, said, by, how="", why=None):
+    """An expert's decision on one topic, carried out as it is: their level, their words, and the 'how' they agreed to
+    (empty, for the factory to write, when they gave none)."""
+    from datetime import date
+    new = row.setdefault("proposed", {})
+    new.update(level=lvl, how=how, limit="", above_why="", expert={"by": by.strip(), "on": date.today().isoformat(), "said": said.strip()})
+    if why:
+        new["why"] = why
 
 
 def record_expert(course, module, topic, lvl, said, by):
@@ -499,9 +522,7 @@ def record_expert(course, module, topic, lvl, said, by):
     if not (1 <= lvl <= 6 and said.strip() and by.strip()):
         print("Stopped - nothing was recorded: a level 1-6, the expert's own words (--said) and who (--by) are needed.")
         return 2
-    from datetime import date
-    new = row.setdefault("proposed", {})
-    new.update(level=lvl, how="", expert={"by": by.strip(), "on": date.today().isoformat(), "said": said.strip()})
+    carry_out(row, lvl, said, by)
     _save(f["review"], rev)
     print("Recorded: module %s, topic %s at %s, by %s. Write what the trainee does at that level ('how'), then render."
           % (module, topic, level(lvl), by.strip()))

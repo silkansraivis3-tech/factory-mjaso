@@ -150,11 +150,15 @@ python scripts/course_portal.py pull   --course <course>             # the exper
 python scripts/course_portal.py status --course <course>
 ```
 
-Tell the operator the link `push` prints; the office sends it to the experts. In the editor the expert reads the three
-documents as tables and answers each topic, **OK** or **Needs change** with a note, then presses **Ready**, signed with
-their name and surname; what they leave unanswered goes ahead as proposed. `pull` writes an OK into the row's
-`expert_review`, a change asked into its `expert_notes` (the whole course's for the summaries and upgrades) and
-FEEDBACK_LOG.md, and Ready into `ready`. Carry out every change asked and write in the note's `done` what was changed -
+Tell the operator the link `push` prints; the office sends it to the experts. In the editor each topic is one card, how
+the old course teaches it beside the proposal, and the expert chooses: **Keep as now**, **Take proposed** or **Fix with
+Claude** - they say what they want, Claude proposes the level, what the trainee does and why, and they use it or send
+only their words as a note. The activities and the upgrades are answered OK or with a note. Then **Ready**, signed with
+their name and surname; what they leave unanswered goes ahead as proposed. `pull` carries out a keep (the old course's
+level and teaching) and a Claude decision (its level, how and why) as the expert's decision, past every rule above;
+writes an OK into the row's `expert_review`, a note into its `expert_notes` (the module's for its own activities, the
+whole course's for the summaries and upgrades; `about` says when it is about the activities or upgrades) and
+FEEDBACK_LOG.md, and Ready into `ready`. Carry out every note and write in its `done` what was changed -
 `check` stops until each one has it, and the editor shows it to the expert - then `render` (it signs the documents
 with the Ready) and `push` again: the rows not changed keep their answers. An expert who cannot use the editor still
 gets the Word files and signs them.
