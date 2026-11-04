@@ -138,4 +138,23 @@ them, the ones an expert would argue about (the self-check's two parts, a simula
 the debrief starting from certain-but-wrong answers, ...).
 
 Plain words for a ship's officer, not for a pedagogue: no level jargon beyond the six names, no technique names in
-`how`. Tell the operator where the documents are and that the experts sign the Word files.
+`how`.
+
+**The experts review them in the editor, not in files.** Once `render` is clean, put the course into the staging
+training app and send the documents there:
+
+```
+python scripts/course_portal.py create --course <course>             # once: the course in preparation, under intake's course_name
+python scripts/course_portal.py push   --course <course> --pedagogy  # the same words as the Word files, topic by topic
+python scripts/course_portal.py pull   --course <course>             # the experts' answers and their Ready
+python scripts/course_portal.py status --course <course>
+```
+
+Tell the operator the link `push` prints; the office sends it to the experts. In the editor the expert reads the three
+documents as tables and answers each topic, **OK** or **Needs change** with a note, then presses **Ready**, signed with
+their name and surname; what they leave unanswered goes ahead as proposed. `pull` writes an OK into the row's
+`expert_review`, a change asked into its `expert_notes` (the whole course's for the summaries and upgrades) and
+FEEDBACK_LOG.md, and Ready into `ready`. Carry out every change asked and write in the note's `done` what was changed -
+`check` stops until each one has it, and the editor shows it to the expert - then `render` (it signs the documents
+with the Ready) and `push` again: the rows not changed keep their answers. An expert who cannot use the editor still
+gets the Word files and signs them.

@@ -40,6 +40,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -214,11 +215,21 @@ def check(course):
                                  "this course reaching it" % (where, level(b), level(r["asks"])))
             if b == 6:
                 notes.append("%s: Create is reached by a practical exercise, not a tablet task - say which one" % where)
+            probs += open_notes(x, where)
     for n, m in mods.items():
         for i in (m or {}).get("rows") or {}:
             if (str(n), i) not in known:
                 probs.append("module %s, topic %s: not a topic of the architecture any more - remove the row" % (n, i))
+    probs += open_notes(rev, "the whole course")
     return probs, notes
+
+
+def open_notes(x, where):
+    """An expert's 'needs change' from editor mode is carried out before the stage goes on: until its 'done' says
+    what the factory changed, it stops the approval."""
+    return ["%s: %s asked in editor mode: \"%s\" - carry it out, then write in its 'done' what was changed"
+            % (where, n.get("by") or "the expert", n.get("said", "")) for n in (x.get("expert_notes") or [])
+            if isinstance(n, dict) and not _filled(n.get("done"))]
 
 
 def fingerprint(course):
@@ -269,9 +280,35 @@ def _intro(title, which):
              [2000, 7638])]
 
 
-def _signoff():
+def _signoff(rev=None):
+    """The expert's Ready from editor mode signs it with their name; without one, blank lines to sign on paper."""
+    r = (rev or {}).get("ready") or {}
+    if r.get("by"):
+        return [("h2", "Expert's review"),
+                ("facts", [("Reviewed by", r["by"]), ("Date", r.get("on") or " "),
+                           ("Agreed / changes asked", "Ready, in editor mode%s" % (" - %d change(s) asked" % r["changes"]
+                                                                                   if r.get("changes") else "")),
+                           ("Signature", r["by"])])]
     return [("h2", "Expert's review"),
             ("facts", [("Reviewed by", " "), ("Date", " "), ("Agreed / changes asked", " "), ("Signature", " ")])]
+
+
+def proposed_why(r, now, new):
+    """The 'Why' cell of Bloom proposed: what the experts read beside each decision."""
+    ex = new.get("expert") or {}
+    met = decision(now, new, r["asks"]) == "kept" and r["asks"] and (now.get("level") or 0) >= r["asks"]
+    return ((["Kept because the old course already reaches what the outcome asks (%s)." % level(r["asks"])] if met else [])
+            + ["On board: " + (new.get("why") or "-")]
+            + (["Not higher because: " + new["limit"]] if _filled(new.get("limit")) else [])
+            + (["Above the outcome: " + new["above_why"]] if _filled(new.get("above_why")) else [])
+            + (["The expert (%s, %s): %s" % (ex.get("by", ""), ex.get("on", ""), ex.get("said", ""))] if ex else []))
+
+
+def activity_row(a, ids):
+    return {"topic": a.get("subtopic") if str(a.get("subtopic")) in ids else "module", "does": a.get("does") or "",
+            "kind": technique(a.get("technique")), "minutes": str(a.get("minutes") or "-"),
+            "instead_of": a.get("instead_of") or "-", "needs": a.get("needs") or "-",
+            "status": STATUS.get(a.get("status"), a.get("status") or "proposed")}
 
 
 def doc_now(title, mods, rev):
@@ -292,7 +329,7 @@ def doc_now(title, mods, rev):
                      "Checked: " + (((got.get(r["id"]) or {}).get("now") or {}).get("checked") or "-")],
                     ((got.get(r["id"]) or {}).get("now") or {}).get("where") or "-"] for r in m["rows"]],
                   [650, 2600, 1000, 1000, 3000, 1388]))
-    return b + _signoff()
+    return b + _signoff(rev)
 
 
 def doc_proposed(title, mods, rev):
@@ -322,19 +359,12 @@ def doc_proposed(title, mods, rev):
         for r in m["rows"]:
             x = got.get(r["id"]) or {}
             now, new = x.get("now") or {}, x.get("proposed") or {}
-            ex = new.get("expert") or {}
-            met = decision(now, new, r["asks"]) == "kept" and r["asks"] and now.get("level", 0) >= r["asks"]
-            why = ((["Kept because the old course already reaches what the outcome asks (%s)." % level(r["asks"])] if met else [])
-                   + ["On board: " + (new.get("why") or "-")]
-                   + (["Not higher because: " + new["limit"]] if _filled(new.get("limit")) else [])
-                   + (["Above the outcome: " + new["above_why"]] if _filled(new.get("above_why")) else [])
-                   + (["The expert (%s, %s): %s" % (ex.get("by", ""), ex.get("on", ""), ex.get("said", ""))] if ex else []))
             rows.append([r["id"], r["text"], level(r["asks"]),
                          ["%s -> %s" % (level(now.get("level")), level(new.get("level"))), decision(now, new, r["asks"])],
-                         new.get("how") or "not judged yet", why])
+                         new.get("how") or "not judged yet", proposed_why(r, now, new)])
         b.append(("table", ["Topic", "Learning outcome", "Asks", "Now -> proposed", "How the trainee reaches it", "Why"],
                   rows, [650, 2400, 1000, 1500, 2600, 1488]))
-    return b + _signoff()
+    return b + _signoff(rev)
 
 
 def doc_activities(title, mods, rev):
@@ -353,12 +383,10 @@ def doc_activities(title, mods, rev):
         b.append(("h2", "Module %d - %s" % (m["n"], m["title"])))
         ids = {r["id"] for r in m["rows"]}
         b.append(("table", ["Topic", "What the trainees do", "Kind", "Min", "Instead of", "Needs", "Status"],
-                  [[a.get("subtopic") if str(a.get("subtopic")) in ids else "module", a.get("does") or "",
-                    technique(a.get("technique")), str(a.get("minutes") or "-"), a.get("instead_of") or "-",
-                    a.get("needs") or "-", STATUS.get(a.get("status"), a.get("status") or "proposed")]
-                   for a in m["active"]] or [["-", "none proposed", "-", "-", "-", "-", "-"]],
+                  [list(activity_row(a, ids).values()) for a in m["active"]]
+                  or [["-", "none proposed", "-", "-", "-", "-", "-"]],
                   [650, 3300, 1300, 600, 1700, 1300, 788]))
-    return b + _signoff()
+    return b + _signoff(rev)
 
 
 def render(course, pdf=True):
@@ -396,6 +424,67 @@ def render(course, pdf=True):
     for n in notes:
         print("  note: " + n)
     return 2 if probs else 0
+
+
+# ------------------------------------------------------------------ the same documents in editor mode
+def _hash(x):
+    return hashlib.sha256(json.dumps(x, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+
+
+def _done(x):
+    """The changes an expert asked in editor mode and what the factory changed - shown on the row, so they see it."""
+    return [{"by": n.get("by", ""), "said": n.get("said", ""), "done": n["done"]} for n in (x.get("expert_notes") or [])
+            if isinstance(n, dict) and _filled(n.get("done"))]
+
+
+def item_key(module, topic):
+    return ("%s/%s" % (module, re.sub(r"[^A-Za-z0-9._-]+", "-", str(topic)).strip("-")))[:60]
+
+
+def view(course):
+    """The three documents as the training app's editor shows them (course_portal.py push --pedagogy): the same words
+    as the Word files, topic by topic, and a hash for every row the experts answer - the course-wide part ("course")
+    and each topic ("4/4.1"). A row whose words do not change keeps its answers when the documents are sent again."""
+    f = files(course)
+    arch = _load(f["arch"])
+    if not arch:
+        return None
+    rev = _load(f["review"], {}) or {}
+    mods = modules(_load(f["prog"], {}) or {}, arch)
+    out = {"title": course_title(arch, course),
+           "levels": [{"level": level(n), "means": (bloom_map.LEVELS[n].get("means") or {}).get("en", "")} for n in range(1, 7)],
+           "now_summary": rev.get("now_summary") or "", "proposed_summary": rev.get("proposed_summary") or "",
+           "upgrades": [{"what": u.get("what", ""), "why": u.get("why", ""),
+                         "where": ", ".join("M%s" % x for x in u["modules"]) if isinstance(u.get("modules"), list)
+                         else (u.get("modules") or "all modules")} for u in rev.get("upgrades") or []],
+           "glance": [dict(zip(("module", "title", "asks", "now", "proposed"), g)) for g in _glance(mods, rev, 5)],
+           "modules": []}
+    out["changes_made"] = _done(rev)
+    items = {"course": _hash([out["now_summary"], out["proposed_summary"], out["upgrades"], out["changes_made"]])}
+    tally = {}
+    for m in mods:
+        got = (rev.get("modules") or {}).get(str(m["n"]), {})
+        ids = {r["id"] for r in m["rows"]}
+        acts = [activity_row(a, ids) for a in m["active"]]
+        topics = []
+        for r in m["rows"]:
+            x = (got.get("rows") or {}).get(r["id"]) or {}
+            now, new = x.get("now") or {}, x.get("proposed") or {}
+            d = decision(now, new, r["asks"])
+            tally[d] = tally.get(d, 0) + 1
+            t = {"item": item_key(m["n"], r["id"]), "id": r["id"], "outcome": r["text"], "asks": level(r["asks"]),
+                 "now": {"level": level(now.get("level")), "how": now.get("how") or "not judged yet",
+                         "checked": now.get("checked") or "-", "where": now.get("where") or "-"},
+                 "proposed": {"level": level(new.get("level")), "change": "%s -> %s" % (level(now.get("level")), level(new.get("level"))),
+                              "decision": d, "how": new.get("how") or "not judged yet", "why": proposed_why(r, now, new)},
+                 "activities": [a for a in acts if str(a["topic"]) == str(r["id"])], "changes_made": _done(x)}
+            items[t["item"]] = _hash([t["outcome"], t["asks"], t["now"], t["proposed"], t["activities"], t["changes_made"]])
+            topics.append(t)
+        out["modules"].append({"n": m["n"], "title": m["title"], "note": got.get("note") or "", "topics": topics,
+                               "module_activities": [a for a in acts if a["topic"] == "module"]})
+    out["decisions"] = [{"decision": k, "topics": tally.get(k, 0)} for k in ("kept", "lifted", "above the outcome", "the expert's decision")]
+    out["active_minutes"] = sum(int(a.get("minutes") or 0) for m in mods for a in m["active"] if a.get("status") != "struck")
+    return {"content": out, "items": items, "fingerprint": _hash([out, items])}
 
 
 def record_expert(course, module, topic, lvl, said, by):

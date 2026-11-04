@@ -388,7 +388,8 @@ three documents, topic by topic and module by module: **Bloom now** (what the ol
 **Bloom proposed** (what the new course will) and **Teaching and learning activities** (the `active_learning`
 proposals and the course-wide upgrades) - Word, HTML and PDF in `to_review\pedagogy\`. Judge every topic in
 `working_claude\pedagogy_review.json` by `bloom/GUIDE.md` §5, then `scripts/pedagogy_review.py check` and `render`.
-The page cannot be approved until they are clean and written from the current files.
+The page cannot be approved until they are clean and written from the current files. The experts review them in the
+training app's editor: `scripts/course_portal.py create`, `push --pedagogy`, then `pull` their answers back (GUIDE §5).
 
 Then the operator reviews it as **one page**:
 

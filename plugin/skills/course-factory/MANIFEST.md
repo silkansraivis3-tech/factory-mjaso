@@ -7,6 +7,19 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.100.0 · The experts review the pedagogy in the editor (2026-11-04)
+
+- **Why.** The owner: experts never handle files. The factory puts each stage into the training app's editor; the
+  expert answers there and signs Ready with their name and surname; what they leave goes ahead as proposed.
+- **What.** `scripts/course_portal.py` (name, create, push --pedagogy, pull, status, remove) against the staging app's
+  `course-prep` function (training app migration 032). `pedagogy_review.py view` is the editor's copy of the three
+  documents, a hash per row. `pull` writes `expert_review`, `expert_notes` (with `done`, which `check` waits for) and
+  `ready` into `pedagogy_review.json`, and FEEDBACK_LOG.md rows; render signs with `ready`.
+- **The key.** `%APPDATA%\novikontas\factory.key` or `NOVIKONTAS_FACTORY_KEY` on the office PC; the server keeps
+  its SHA-256 in `FACTORY_KEY_SHA256`. Never in the repository (a test looks).
+- **Next.** The scripts in the editor, Fix with Claude per row (recorded like `pedagogy_review.py expert`), and the
+  owner/editor build button that the office PC's scheduled task picks up.
+
 ## 2.99.1 · Keep or lift, never just higher; the course's own name (2026-11-04)
 
 - **Why.** The first sample proposed 41 of 101 topics above what their outcome asks and left no topic at Remember. The
