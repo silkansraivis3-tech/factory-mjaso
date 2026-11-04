@@ -139,6 +139,7 @@ seems to collide with it. The record behind the rows: `references/laws-in-full.m
 | **L66** | **Every item a simulator can train is trained on one** - every advanced course (Oil, Chemical, Gas, IGF Advanced) and any whose programme names a simulator, unasked, at Stage 2 before the gate: `SIM_MAP.md` from the simulators' manuals (with pages), `SIM_COVERAGE.json` / `.md` - every syllabus item COVERED / PARTLY / GAP / NOT-SIM - and every GAP in a task drafted as an exercise (Trainee card + Instructor sheet, paper is fine) in `to_review\exercises\sim_drafts\`. ILOs and hours unchanged. `coverage/SIMULATORS.md`, `coverage/scripts/sim_coverage.py check` | now (2.82.0) |
 | **L67** | **A picture is 3D or a photograph, never a flat line drawing; every slide moves on Next** - the illustration on a slide or task is live 3D, a static 3D render or a photograph, never the figure kit's line drawing; 60-80 % of slides step through 3D, the rest may be static 3D; Navy, never Pitch Black. The upgraded templates: `design/slide-templates/`, `course-module-ui/templates/gb_upgrade.css`, `gb_steps.js`, `gb_scene.js` | styles and engines (2.88.0); the compiler writes the summary, task slide, step boxes, compare boxes, two-column figure, photo spots and zoom (2.89.0, compile/GUIDE.md §2h); the content script's new words next |
 | **L68** | **Every instructor-led module meets the Instructor-Led Course Development Guideline** - active means every trainee commits to an output (the room's three answers are passive); passive runs at most 15 min and 20 % of theory or a one-line justification; every drill, simulator run and scenario briefs, shows, runs and debriefs inside its own minutes; a recorded run is later, under a changed condition, on an assessment form; the pre-brief, debrief and observation cards and the employer sheet. The course's `working_claude/instructor_led.json` is written by the factory and approved by the operator; read `instructor-led/GUIDE.md` after the exercises are written, run `scripts/instructor_led.py check` before handover | now (2.97.0) |
+| **L69** | **The experts get the pedagogy first** - before any content script, three documents topic by topic and module by module: the Bloom level the old course reached, the level proposed and how, the teaching and learning activities and the course-wide upgrades (`scripts/pedagogy_review.py`, `bloom/GUIDE.md` §5). The Stage 2 page is not approved without them; the outcomes' words are never in them to change | now |
 | **L41** | **The old course is the foundation.** Read it whole at intake (`scripts/old_course.py inventory`, `images`); at Stage 2 every module says what it **keeps**, **modernises** and **adds** | now |
 
 Theory is delivered as active learning (L5): self-check, **explain-then-reveal** (no typing),
@@ -380,8 +381,16 @@ could.
 
 ## The gate — approved before anything is built
 
-Changing a table row is free. Changing eight built modules is not. This is **Stage 2 → STOP**, and
-the operator reviews it as **one page**:
+Changing a table row is free. Changing eight built modules is not. This is **Stage 2 → STOP**.
+
+**First, the experts' documents (L69).** Before the page is shown and before any content script, the course experts get
+three documents, topic by topic and module by module: **Bloom now** (what the old course really made the trainee do),
+**Bloom proposed** (what the new course will) and **Teaching and learning activities** (the `active_learning`
+proposals and the course-wide upgrades) - Word, HTML and PDF in `to_review\pedagogy\`. Judge every topic in
+`working_claude\pedagogy_review.json` by `bloom/GUIDE.md` §5, then `scripts/pedagogy_review.py check` and `render`.
+The page cannot be approved until they are clean and written from the current files.
+
+Then the operator reviews it as **one page**:
 
     python scripts/make_architecture_page.py --course <course folder>
 

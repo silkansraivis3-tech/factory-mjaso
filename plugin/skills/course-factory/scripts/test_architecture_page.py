@@ -299,6 +299,10 @@ def main():
         check("before approval the gate is shut, and says how to record the approval",
               len(probs) == 1 and "--approve --by" in probs[0], probs)
         code, out = run("--course", g, "--approve", "--by", "Anna Bērziņa")
+        check("... nor before the experts' pedagogy documents are written", code == 2 and "pedagogy documents" in out, out)
+        import test_pedagogy_review
+        test_pedagogy_review.complete(g)
+        code, out = run("--course", g, "--approve", "--by", "Anna Bērziņa")
         arch_now = json.load(io.open(os.path.join(g, "architecture.json"), encoding="utf-8"))
         ok = course_gate.approval(arch_now)
         check("--approve records who and when, with the ILO map's fingerprint", code == 0 and ok and ok["by"] == "Anna Bērziņa"

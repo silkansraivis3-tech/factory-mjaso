@@ -920,3 +920,9 @@ to take away from this module, and all modules should be same closing slide desi
 
 → `course-factory` (`instructor-led/GUIDE.md`, `scripts/instructor_led.py` check, `compile/scripts/module_plan.py` the passive share, the cycle rows and the register's columns, `compile/scripts/additional_materials.py` the practical kit), 2.97.0 
 The rules, limits, TLA pool and checklist are data in `knowledge/instructor-led.json`; how the course's file is written and checked is `instructor-led/GUIDE.md`. The guideline's own freeze rule holds for the factory too: a limit moves only when a real module fails without the change.
+
+## L69 - the experts get the pedagogy first (2.99.0)
+
+**L69 · The experts get the pedagogy first.** Before any content script is written, the course experts receive three documents, topic by topic and module by module: **Bloom now** - the level each learning outcome asks for and the level the old course really reached, how it taught the topic and how, if at all, it checked it, with the file and slides; **Bloom proposed** - the level the new course proposes, how the trainee reaches it on the tablet, the simulator or the equipment, and why, never below the old course; **Teaching and learning activities** - the `active_learning` proposals of each topic with their status, and the course-wide pedagogy upgrades - each as Word (to review and sign), HTML and PDF in `to_review\pedagogy\`. The judgement is `working_claude/pedagogy_review.json`; the outcomes' words are read from the architecture and never written there, so no document can change one (L1, L2). The Stage 2 page is not approved until the documents are clean and written from the current files. A proposal below what the outcome asks, and Create, are notes, never stops (L48).
+
+→ `course-factory` (`scripts/pedagogy_review.py`, `bloom/GUIDE.md` §5, `scripts/make_architecture_page.py --approve`)

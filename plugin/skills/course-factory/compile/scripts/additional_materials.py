@@ -381,7 +381,7 @@ def day_of(days, m, minute):
 
 # ------------------------------------------------------------------ one document, two formats
 # A document is a list of blocks: ("h1"|"h2"|"h3"|"p"|"small", text), ("facts", [(label, value)]), ("ul"|"ol", [items]),
-# ("table", [head], [[cells]]). Text is plain; a cell or item may be a list of lines. "<b>" from answer_key is kept bold.
+# ("table", [head], [[cells]] (, [Word column widths])). Text is plain; a cell or item may be a list of lines. "<b>" from answer_key is kept bold.
 def inline_html(x):
     if isinstance(x, (list, tuple)):
         return "<br>".join(inline_html(y) for y in x)
@@ -469,7 +469,7 @@ def to_docx(blocks, out):
             body += [_p(x if not isinstance(x, (list, tuple)) else x[0], num_id=1 if k == "ul" else 1 + ols) for x in b[1]]
         elif k == "table":
             n = len(b[1])
-            widths = [full // n] * n if n != 4 else [700, 2600, 2400, full - 5700]
+            widths = b[3] if len(b) > 3 else [full // n] * n if n != 4 else [700, 2600, 2400, full - 5700]
             body.append(_table([b[1]] + list(b[2]), widths))
     doc = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="%s"><w:body>%s'
            '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" '

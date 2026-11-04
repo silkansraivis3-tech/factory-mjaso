@@ -76,3 +76,40 @@ architecture page and on each Stage 3 review page. To link a question to the Sub
 Tell the operator plainly (L25): where the course is now ("most questions are Remember"), where it
 can go ("the module check could have the trainee line up the valves — Apply"), and what it needs from
 them (approve a re-expressed Sub-ILO, or a picture of the panel).
+
+## 5 · The experts' documents — the first thing a course gives its experts
+
+Before any content script is written, the course experts get three documents, topic by topic and module by module:
+**Bloom now** (the old course), **Bloom proposed** (the new course) and **Teaching and learning activities**. They are
+written at Stage 2, once the architecture has its Sub-ILOs and its `active_learning` proposals, and the Stage 2 page
+cannot be approved without them (`make_architecture_page.py --approve`).
+
+```
+python scripts/pedagogy_review.py draft  --course <course>    # one empty row per topic, in working_claude/pedagogy_review.json
+python scripts/pedagogy_review.py check  --course <course>    # what is missing; exit 2 until it is clean
+python scripts/pedagogy_review.py render --course <course>    # to_review\pedagogy\: 1_BLOOM_NOW, 2_BLOOM_PROPOSED,
+                                                              # 3_TEACHING_ACTIVITIES - each .docx, .html and .pdf
+```
+
+The outcomes' words are read from the architecture, never written in this file: the documents cannot change one.
+
+**Now - what the old course really made the trainee do.** For each topic, read its deck, exercises and tests
+(`OLD_COURSE_INVENTORY.md`, the old course's own files). The level is the highest one the old course *both* taught and
+asked the trainee to do - slides read out and a recall question are Remember, however hard the fact; a paper exercise
+that calculates or carries out the procedure is Apply; a simulator run judged by its result is Apply or Analyse.
+`how` says how it was taught, `checked` which test question or exercise checked it ("not checked" when none did),
+`where` the file and slides ("Topic 4 deck S3-S20; final test 02C-1 Q12-14"). A topic the old course never taught is
+level 0, with `how` saying so.
+
+**Proposed - what the new course makes the trainee do.** At least the level the outcome asks for wherever the content
+allows (section 3 says how the tablet reaches each level); never below *now*; Create (6) only through a practical
+exercise, named. `how` is what the trainee does - the task, the activity, the simulator or equipment exercise, in
+plain words; `why` is what it changes for the work on board.
+
+**The summaries and the upgrades.** `now_summary` and `proposed_summary`: two or three plain sentences each.
+`upgrades`: the course-wide changes in teaching - each `{"what", "why", "modules": "all" or [4, 5]}`, three to seven of
+them, the ones an expert would argue about (the self-check's two parts, a simulator exercise for every syllabus gap,
+the debrief starting from certain-but-wrong answers, ...).
+
+Plain words for a ship's officer, not for a pedagogue: no level jargon beyond the six names, no technique names in
+`how`. Tell the operator where the documents are and that the experts sign the Word files.

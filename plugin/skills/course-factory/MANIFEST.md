@@ -7,6 +7,20 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.99.0 · The experts get the pedagogy first - L69 (2026-11-04)
+
+- **Why.** The owner: before any module script, the experts receive what the Bloom level was in the old course, what
+  is proposed instead, and the teaching and learning activities - topic by topic, module by module.
+- **What.** `scripts/pedagogy_review.py` (draft / check / render) writes `to_review\pedagogy\` 1_BLOOM_NOW,
+  2_BLOOM_PROPOSED, 3_TEACHING_ACTIVITIES (Word, HTML, PDF) from `working_claude/pedagogy_review.json` and the
+  architecture. The judgement file never holds an outcome's words. `make_architecture_page.py --approve` refuses until
+  the documents are clean and current (`approval_problems`, a fingerprint of architecture.json + the judgement file).
+- **How to judge.** `bloom/GUIDE.md` §5. Level 0 now = never taught. A proposal below the old course is a problem;
+  below the outcome, Create and a module with no activity are notes (L48, L49 stay suggestions).
+- **Also.** bloom.json: deck_round 4, dress_for_job 3, lay_out 3. `additional_materials.to_docx`: a table block may carry
+  its own Word widths.
+- **Tests.** `scripts/test_pedagogy_review.py`; `test_architecture_page.py` approves only after the documents.
+
 ## 2.98.0 · Lay out the equipment - the third richer task (2026-11-04)
 
 - **Why.** The owner: the three richer tasks first - deck round (2.95.0), dress a buddy (2.96.0), lay out.

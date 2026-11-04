@@ -811,6 +811,8 @@ def approve(x, prog, arch, a, g, P, arch_path):
     if a["waiting"]:
         lines.append("%d theory-as-activity proposal(s) are still waiting for Keep or Strike - record them first "
                      "(scripts/active_plan.py decide)." % len(a["waiting"]))
+    import pedagogy_review
+    lines += pedagogy_review.approval_problems(x.course)
     if lines:
         print("Stopped - the approval was NOT recorded. The page cannot be approved while:\n%s"
               % "\n".join("  - " + s for s in lines))

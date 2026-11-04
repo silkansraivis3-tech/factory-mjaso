@@ -90,7 +90,10 @@
     "line_up":            {"typical": 4, "ceiling": 4, "higher": ""},
     "inspect_round":      {"typical": 4, "ceiling": 4, "higher": ""},
     "take_apart":         {"typical": 3, "ceiling": 3, "higher": "ask what a part does from where it sits, then operate it"},
-    "test_atmosphere":    {"typical": 3, "ceiling": 4, "higher": "follow it with the entry decision as its own question"}
+    "test_atmosphere":    {"typical": 3, "ceiling": 4, "higher": "follow it with the entry decision as its own question"},
+    "deck_round":         {"typical": 4, "ceiling": 4, "higher": ""},
+    "dress_for_job":      {"typical": 3, "ceiling": 5, "higher": "the buddy check judges a colleague's choice - ask why one fault matters most"},
+    "lay_out":            {"typical": 3, "ceiling": 4, "higher": "change the wind and ask what has to move"}
   },
 
   "floors": {

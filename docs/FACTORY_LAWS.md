@@ -668,8 +668,12 @@ candidate (the training app's), and the guideline's ban on decorative photograph
 passive share, the cycle rows and the register's columns, `compile/scripts/additional_materials.py` the practical kit),
 2.97.0
 
-**All sixty-eight laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
-`course-visuals` was built; L26–L68 are enforced first through `course-factory/SKILL.md`'s
+**L69 · The experts get the pedagogy first.** Before any content script is written, the course experts receive three documents, topic by topic and module by module: **Bloom now** - the level each learning outcome asks for and the level the old course really reached, how it taught the topic and how, if at all, it checked it, with the file and slides; **Bloom proposed** - the level the new course proposes, how the trainee reaches it on the tablet, the simulator or the equipment, and why, never below the old course; **Teaching and learning activities** - the `active_learning` proposals of each topic with their status, and the course-wide pedagogy upgrades - each as Word (to review and sign), HTML and PDF in `to_review\pedagogy\`. The judgement is `working_claude/pedagogy_review.json`; the outcomes' words are read from the architecture and never written there, so no document can change one (L1, L2). The Stage 2 page is not approved until the documents are clean and written from the current files. A proposal below what the outcome asks, and Create, are notes, never stops (L48).
+→ `course-factory` (`scripts/pedagogy_review.py` draft / check / render, `bloom/GUIDE.md` §5,
+`scripts/make_architecture_page.py --approve`), 2.99.0
+
+**All sixty-nine laws name an enforcing skill.** L12 and L13 gained theirs in Phase 3, when
+`course-visuals` was built; L26–L69 are enforced first through `course-factory/SKILL.md`'s
 "Owner decisions in force" block, and each is built out in the step named beside it.
 
 Organisation-skill dependencies and their fallbacks:
