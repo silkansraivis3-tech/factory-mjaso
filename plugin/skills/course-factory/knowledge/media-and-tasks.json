@@ -124,7 +124,10 @@
                            "answer": "space: name | depth m; levels: depth; depth; depth (± band); one reading per line: name unit | value @ depth; ... | below N or above N (its alarm)"},
     "deck_round":         {"family": "locate",      "hands_on": true,  "part": "challenge", "en": "Deck round - walk the places, find what is wrong, put it right", "lv": "Klāja apgaita - apej vietas, atrodi kļūdas, izlabo", "ru": "Обход палубы - пройди места, найди неполадки, исправь",
                            "answer": "context: where and when; intro: title | what the trainee is told; then per place: place: name, and under it per fault: fault: name | label, see: what is there, hint: where to look, do: the right action *, do: a wrong one, why: the reason",
-                           "build_sheet": "places: {place: photo}, zones: {fault: [[x %, y %, r %], ...]} - the tap zones on that place's photo"}
+                           "build_sheet": "places: {place: photo}, zones: {fault: [[x %, y %, r %], ...]} - the tap zones on that place's photo"},
+    "dress_for_job":      {"family": "locate",      "hands_on": true,  "part": "challenge", "en": "Dress for the job, then check your buddy", "lv": "Saģērbies darbam, tad pārbaudi kolēģi", "ru": "Оденься для работы, затем проверь напарника",
+                           "answer": "context: where and when; intro: title | what the trainee is told; per group: group: what is judged together | why, and under it per item: item: name | short name | where it is worn (* = needed), story: what happens when it is wrong; needs: item => item it goes onto | what is said; one at a time: item; item | what is said; ready: title | text; check: what is asked | what the colleague says; spot: what is seen | why (faults *); ask: the closing question; reason: one per line (right *); explain: title | text",
+                           "build_sheet": "photo, buddy: the two photos; slots: {where worn: {at: [[x %, y %]], label: [x %, y %, l|r]}}; spots: {what is seen: [[x %, y %]]}; stories, ready, explain: pictures on the sheets"}
   },
 
   "trainee_tablet_experience": {

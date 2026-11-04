@@ -39,6 +39,16 @@ The richer tasks (design/task-templates/engines), each a framed task of its own 
                      place: name                          and under it, for each fault to find on its photograph:
                      fault: name | label on the photo     see: what is there   hint: where to look
                      do: what to do* | do: a wrong one    why: the reason      (the photos and tap zones: the build sheet)
+    dress_for_job    context: where and when                intro: title | what the trainee is told
+                     group: what is judged together | why   and under it, one per item on the rack:
+                     item: name | short name | where it is worn *  (* = needed for the job)
+                     story: what happens at the job when this item is worn wrongly or missing (under its item)
+                     needs: item => item it goes onto | what is said     one at a time: item; item | what is said
+                     ready: title | what happens when every item is right
+                     check: what the buddy check asks | what the colleague says
+                     spot: what can be seen on the colleague | why     (one per line, the faults marked *)
+                     ask: the closing question            reason: one answer per line, the right one marked *
+                     explain: title | the answer explained  (the photos and the places on them: the build sheet)
 """
 from __future__ import annotations
 
@@ -47,12 +57,12 @@ import json
 import re
 
 TYPES = ("true_false", "critique", "calculate", "predict", "explore", "investigate", "line_up", "inspect_round",
-         "take_apart", "test_atmosphere", "deck_round")
-FRAMED = ("deck_round",)          # a framed task: its own page in the set's screen (interact_pages.framed)
+         "take_apart", "test_atmosphere", "deck_round", "dress_for_job")
+FRAMED = ("deck_round", "dress_for_job")      # a framed task: its own page in the set's screen (interact_pages.framed)
 USES = {"true_false": {"answer"}, "critique": {"answer"}, "calculate": {"answer"}, "predict": {"answer"},
         "explore": {"answer"}, "investigate": {"options", "answer"}, "line_up": {"answer", "visual"},
         "inspect_round": {"answer", "visual"}, "take_apart": {"answer", "visual"}, "test_atmosphere": {"answer"},
-        "deck_round": {"answer"}}
+        "deck_round": {"answer"}, "dress_for_job": {"answer"}}
 NUM = r"-?\d+(?:[.,]\d+)?"
 OPEN_WORDS = {"open", "opened", "atvērts", "atverts", "открыт", "открыто", "on"}
 SHUT_WORDS = {"shut", "closed", "close", "aizvērts", "aizverts", "закрыт", "закрыто", "off"}
@@ -528,3 +538,108 @@ def _deck_round(sid, ls, q, probs):
         [w for x in d["faults"] for w in [x["name"], x["label"], x["see"], x["hint"]] + x["do"] + [x["why"]]]
     return probs, d, [x["right"] for x in d["faults"] if x["right"]], \
         [o for x in d["faults"] for o in x["do"] if o != x["right"]], [w for w in words if w]
+
+
+DRESS_KEYS = ("context", "intro", "group", "item", "story", "needs", "one at a time", "ready", "check", "spot", "ask", "reason",
+              "explain")
+
+
+def _dress_for_job(sid, ls, q, probs):
+    """dress for the job, then check a buddy: the items on a rack put on a crew member's photograph, judged group by group
+    with what happens at the job for each item wrong; then the faults on a colleague's photograph; then one question why"""
+    d = {"context": "", "intro": {"title": "", "text": ""}, "groups": [], "items": [], "needs": [], "one": [],
+         "ready": {"title": "", "text": ""}, "check": {"ask": "", "says": ""}, "spots": [], "ask": "", "reasons": [],
+         "right": None, "explain": {"title": "", "text": ""}}
+    it = None
+
+    def two(rest):
+        a, _, b = rest.partition("|")
+        return a.strip(), b.strip()
+    for ln in ls:
+        key, sep, rest = ln.partition(":")
+        k, rest = key.strip().lower(), rest.strip()
+        if not sep or k not in DRESS_KEYS:
+            probs.append("%s: a dress-for-the-job line starts with %s - not %r" % (sid, ", ".join(x + ":" for x in DRESS_KEYS), ln))
+            continue
+        if k in ("context", "ask"):
+            d[k] = rest
+        elif k in ("intro", "ready", "explain"):
+            d[k]["title"], d[k]["text"] = two(rest)
+        elif k == "check":
+            d["check"]["ask"], d["check"]["says"] = two(rest)
+        elif k == "group":
+            t, why = two(rest)
+            d["groups"].append({"title": t, "why": why})
+        elif k == "item":
+            if not d["groups"]:
+                probs.append("%s: the item %r comes before any group: - each item is judged with the group above it" % (sid, rest))
+                continue
+            need = starred(rest)
+            parts = [x.strip() for x in unstar(rest).split("|")]
+            if len(parts) != 3 or not all(parts):
+                probs.append("%s: an item is item: name | short name | where it is worn - not %r" % (sid, rest))
+                continue
+            it = {"group": d["groups"][-1]["title"], "name": parts[0], "short": parts[1], "slot": parts[2], "need": need, "story": ""}
+            d["items"].append(it)
+        elif k == "story":
+            if it is None:
+                probs.append("%s: story: comes before any item: - it belongs to the item above it" % sid)
+            else:
+                it["story"] = rest
+        elif k == "needs":
+            pair, say = two(rest)
+            a, _, b = pair.partition("=>")
+            d["needs"].append({"item": a.strip(), "on": b.strip(), "say": say})
+        elif k == "one at a time":
+            names, say = two(rest)
+            d["one"].append({"items": [x.strip() for x in names.split(";") if x.strip()], "say": say})
+        elif k == "spot":
+            seen, why = two(rest)
+            d["spots"].append({"seen": unstar(seen), "fault": starred(seen), "why": why})
+        elif k == "reason":
+            if starred(rest):
+                d["right"] = unstar(rest)
+            d["reasons"].append(unstar(rest))
+    names = [x["name"] for x in d["items"]]
+    if len(d["items"]) < 4 or not any(x["need"] for x in d["items"]) or all(x["need"] for x in d["items"]):
+        probs.append("%s: dress for the job needs at least four items on the rack, some needed (marked *) and some not" % sid)
+    if len(set(names)) != len(names):
+        probs.append("%s: two items have the same name" % sid)
+    for g in d["groups"]:
+        if not any(x["group"] == g["title"] for x in d["items"]):
+            probs.append("%s: the group %r has no item under it" % (sid, g["title"]))
+        if not g["why"]:
+            probs.append("%s: the group %r needs its why: group: what is judged | why" % (sid, g["title"]))
+    for x in d["items"]:
+        if not x["story"]:
+            probs.append("%s: the item %r needs its story: - what happens at the job when it is worn wrongly or missing" % (sid, x["name"]))
+    for r in d["needs"]:
+        if r["item"] not in names or r["on"] not in names or not r["say"]:
+            probs.append("%s: needs: is item => item it goes onto | what is said, both items on the rack - not %r" % (sid, r))
+    for r in d["one"]:
+        if len(r["items"]) < 2 or any(x not in names for x in r["items"]) or not r["say"]:
+            probs.append("%s: one at a time: is two or more items on the rack, split by ; then | what is said - not %r" % (sid, r))
+    if not d["intro"]["title"] or not d["ready"]["title"] or not d["check"]["ask"]:
+        probs.append("%s: dress for the job needs intro: title | text, ready: title | text and check: what is asked | what is said" % sid)
+    if len(d["spots"]) < 3 or not any(s["fault"] for s in d["spots"]) or all(s["fault"] for s in d["spots"]):
+        probs.append("%s: the buddy check needs at least three spot: lines, the faults marked * and some that are fine" % sid)
+    for s in d["spots"]:
+        if s["fault"] and not s["why"]:
+            probs.append("%s: the fault %r needs its why: spot: what is seen * | why" % (sid, s["seen"]))
+    if len(set(s["seen"] for s in d["spots"])) != len(d["spots"]):
+        probs.append("%s: two spot: lines say the same" % sid)
+    if not d["ask"] or len(d["reasons"]) < 2 or sum(1 for r in d["reasons"] if r == d["right"]) != 1 or not d["explain"]["title"]:
+        probs.append("%s: it closes with ask: the question, two or more reason: lines with exactly one marked *, and explain: title | text" % sid)
+    words = [d["context"], d["intro"]["title"], d["intro"]["text"]] + \
+        [w for g in d["groups"] for w in (g["title"], g["why"])] + \
+        [w for x in d["items"] for w in (x["name"], x["short"], x["slot"], x["story"])] + \
+        [r["say"] for r in d["needs"] + d["one"]] + [d["ready"]["title"], d["ready"]["text"], d["check"]["ask"], d["check"]["says"]] + \
+        [w for s in d["spots"] for w in (s["seen"], s["why"])] + [d["ask"]] + d["reasons"] + [d["explain"]["title"], d["explain"]["text"]]
+    right = [x["name"] for x in d["items"] if x["need"]] + [s["seen"] for s in d["spots"] if s["fault"]] + ([d["right"]] if d["right"] else [])
+    wrong = [x["name"] for x in d["items"] if not x["need"]] + [r for r in d["reasons"] if r != d["right"]]
+    seen, out = set(), []
+    for w in words:
+        if w and w not in seen:
+            seen.add(w)
+            out.append(w)
+    return probs, d, right, wrong, out

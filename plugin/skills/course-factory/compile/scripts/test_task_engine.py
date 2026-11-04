@@ -1868,6 +1868,135 @@ def framed_part(exe, tmp):
           and "needs its tap zones" in out, out[-1200:])
 
 
+DRESS = """context: Dress and check · Personal protection
+intro: Dress for the hose connection | Put on what the job needs, then check your buddy.
+group: Hands: gloves made for liquid gas | Liquid propane is about -42 °C; cotton soaks it up and holds it on the skin.
+item: Cryogenic gauntlet gloves | Cryogenic gloves | Hands *
+story: Bare hands on a flange at about -42 °C: the skin freezes to the steel.
+item: Cotton work gloves | Cotton gloves | Hands
+story: The cotton glove soaks up the liquid and holds it on the skin.
+group: Head and face: helmet and face shield | Overhead arms, and a spurt of liquid when a flange is cracked.
+item: Safety helmet | Helmet | Head *
+story: Loading arms overhead - and a bare head.
+item: Face shield (helmet visor) | Face shield | Face and eyes *
+story: Nothing covers the face when the flange is cracked.
+item: Sunglasses | Sunglasses | Face and eyes
+story: Sunglasses leave the cheeks and the sides of the eyes open.
+group: No phone at the manifold | A phone that is not certified is a spark source.
+item: Mobile phone | Phone | Chest
+story: The phone rings at the manifold: a possible spark where vapour may be.
+needs: Face shield (helmet visor) => Safety helmet | This visor clips onto a safety helmet - the helmet goes on first.
+one at a time: Cryogenic gauntlet gloves; Cotton work gloves | One pair of gloves at a time
+ready: Dressed for the job | Every item does a job at the manifold.
+check: Your colleague is about to connect the hose. | He says: "Ready to connect."
+spot: Helmet on | A helmet guards against loading arms overhead.
+spot: Face shield raised * | A visor only protects when it is down.
+spot: Mobile phone in the breast pocket * | A phone is a spark source at the manifold.
+spot: Safety boots | Toe caps under heavy couplings.
+ask: Why must the gloves stay on while the hose is connected?
+reason: Gloves stop grease marking the flange faces
+reason: Liquid gas on bare skin causes cold burns within seconds *
+reason: Gloves give a better grip on the spanner
+explain: What liquid gas does to skin | Liquid propane boils at about -42 °C and freezes skin in seconds."""
+DRESS_SHEET = {"photo": "assets/img/crew.png", "buddy": "assets/img/buddy.png",
+               "slots": {"Hands": {"at": [[43, 59], [58, 59]], "label": [63, 60, "r"]}, "Head": {"at": [[50, 19]], "label": [38, 15, "l"]},
+                         "Face and eyes": {"at": [[50, 24]], "label": [38, 25, "l"]}, "Chest": {"at": [[47, 36]], "label": [38, 36, "l"]}},
+               "spots": {"Helmet on": [[50, 8]], "Face shield raised": [[50, 20]], "Mobile phone in the breast pocket": [[56, 36]],
+                         "Safety boots": [[44, 90], [58, 90]]},
+               "stories": {"Cotton work gloves": "assets/img/cold.png"}, "explain": "assets/img/cold.png"}
+# plays the task as a trainee: the intro, then the rules of the rack, then dressed as `wear` says ("right": by the keys)
+DRESS_PLAY = ("var T=JSON.parse(document.getElementById('task-data').textContent);window.__rep=null;"
+              "addEventListener('message',function(e){if(e.data&&e.data.type==='gb-task-done')window.__rep=e.data;});"
+              "document.querySelector('.tl-sheet .tl-go').click();var sc=document.getElementById('scene');"
+              "function kit(n){return [].filter.call(document.querySelectorAll('.pp-kit'),function(e){return e.textContent===n;})[0];}"
+              "function put(n){var it=kit(n),r=it.getBoundingClientRect(),o={bubbles:true,isPrimary:true,pointerId:1,clientX:r.left+5,clientY:r.top+5};"
+              "it.dispatchEvent(new PointerEvent('pointerdown',o));it.dispatchEvent(new PointerEvent('pointerup',o));sc.click();}"
+              "function on(){return [].map.call(document.querySelectorAll('.pp-kit.pp-on'),function(e){return e.textContent;}).sort();}"
+              "put('Face shield (helmet visor)');out.shieldFirst=on();put('Cotton work gloves');put('Cryogenic gauntlet gloves');out.gloves=on();"
+              "put('Cryogenic gauntlet gloves');var need=T.items.filter(function(k){return GBLab.key(T.id,'wear '+k.name,1)===k.key;}).map(function(k){return k.name;});"
+              "out.need=need.slice().sort();var wear=%s;if(wear==='right'){wear=need.filter(function(n){return n.indexOf('visor')<0;}).concat(need.filter(function(n){return n.indexOf('visor')>=0;}));}"
+              "[].forEach.call(document.querySelectorAll('.pp-kit.pp-on'),function(e){var it=e,r=it.getBoundingClientRect(),o={bubbles:true,isPrimary:true,pointerId:1,clientX:r.left+5,clientY:r.top+5};"
+              "it.dispatchEvent(new PointerEvent('pointerdown',o));it.dispatchEvent(new PointerEvent('pointerup',o));document.getElementById('rackCard').click();});"
+              "wear.forEach(put);out.on=on();out.tags=document.querySelectorAll('.pp-tag').length;document.querySelector('.tl-bar .tl-go').click();")
+DRESS_SURE = ("var b=document.querySelector('.tl-sure .tl-btn:last-child');out.sure=!!b;if(b)b.click();var s=document.querySelector('.tl-sheet');"
+              "out.sheet=s?[s.className,s.querySelector('h2').textContent,s.querySelector('p').textContent,!!s.querySelector('.tl-shot')]:null;")
+DRESS_CHECK = ("document.querySelector('.tl-sheet .tl-go').click();var T=JSON.parse(document.getElementById('task-data').textContent),sc=document.getElementById('scene');"
+               "var r=sc.getBoundingClientRect();T.spots.forEach(function(s){if(GBLab.key(T.id,'fault '+s.seen,1)!==s.key)return;"
+               "sc.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:r.left+r.width*s.pts[0][0]/100,clientY:r.top+r.height*s.pts[0][1]/100}));});"
+               "out.marks=document.getElementById('marks').textContent;out.part2=[!document.getElementById('buddyCard').hidden,document.getElementById('checkHow').textContent];"
+               "document.querySelector('.tl-bar .tl-go').click();")
+DRESS_WHY = ("document.querySelector('.tl-sure .tl-btn:last-child').click();var T=JSON.parse(document.getElementById('task-data').textContent);"
+             "out.found=document.getElementById('found').textContent;var bs=[].slice.call(document.querySelectorAll('#whys .tl-btn'));"
+             "out.right=bs.filter(function(b){return GBLab.key(T.id,'why => '+b.textContent,1)===T.why.key;}).length;"
+             "bs.filter(function(b){return GBLab.key(T.id,'why => '+b.textContent,1)===T.why.key;})[0].click();"
+             "out.explain=document.querySelector('.tl-sheet h2').textContent;document.querySelector('.tl-sheet .tl-go').click();")
+DRESS_DONE = "out.rep=window.__rep&&[window.__rep.ok,window.__rep.total,window.__rep.items.map(function(i){return i.t;})];"
+
+
+def dress_part(exe, tmp):
+    """the second richer task built by the factory: dress for the job, then check a buddy - the operator's text with its
+    items, rules, groups and stories, the photographs and places in the build sheet; played through in the browser"""
+    print("\n-- a richer task built by the factory: dress for the job, then check a buddy")
+    screens = json.loads(json.dumps(tcm.SCREENS))
+    at = [i for i, s in enumerate(screens) if s["id"] == "q01"][0]
+    screens.insert(at + 1, {"id": "q02", "kind": "self-check", "set": "SC1", "mechanic": "dress_for_job", "answer": DRESS,
+                            "question": "Dress for the hose connection, then check your buddy.", "feedback": "Every item has a job."})
+    sc = tcm.script(screens=screens)
+    check("the operator's text is a valid dress for the job", not [x for x in tcm.cs.validate(sc) if "q02" in x], tcm.cs.validate(sc))
+    os.makedirs(os.path.join(tmp, "dr"))
+    c, md = tcm.new_course(os.path.join(tmp, "dr"), sc, build=False)
+    meta = dict(tcm.PHOTO_META)
+    for f in ("crew.png", "buddy.png", "cold.png"):
+        io.open(os.path.join(md, "assets", "img", f), "wb").write(PNG(1024, 765))
+        meta[f] = dict(tcm.PHOTO_META["ship.jpg"], description="A photograph on deck.")
+    tcm.cs.save(os.path.join(md, "assets", "img", "_photo_meta.json"), meta)
+    sheet = {"t01": {"try_tablet": False}, "s01": {"figure": "assets/img/ship.jpg"}, "q02": json.loads(json.dumps(DRESS_SHEET))}
+    bp = os.path.join(c, "working_claude", "script", "M01.build.json")
+    tcm.cs.save(bp, {"module": 1, "screens": sheet})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    page, frame = os.path.join(md, "tasks", "sc1_the_new_spaces.html"), os.path.join(md, "tasks", "frame_q02.html")
+    text = io.open(page, encoding="utf-8").read() if os.path.isfile(page) else ""
+    fr = io.open(frame, encoding="utf-8").read() if os.path.isfile(frame) else ""
+    check("dress for the job is its own page, in a frame on its question's screen, with the course's words",
+          code == 0 and 'iframe src="../tasks/frame_q02.html"' in text and "Cryogenic gauntlet gloves" in fr and "{{" not in fr
+          and "Fleece" not in fr, out[-800:])
+    data = json.loads(re.search(r'id="task-data">(.*?)</script>', fr, re.S).group(1).replace("<\\/", "</")) if fr else {}
+    check("... no answer readable in the page: what is needed, what is a fault, the right reason - only keys", data and "*" not in json.dumps(data)
+          and all(len(x["key"]) == 8 for x in data["items"] + data["spots"]) and len(data["why"]["key"]) == 8
+          and "need" not in json.dumps(data["items"]) and data.get("faults") == 2, data)
+    code_m, out_m = tcm.run(tcm.MATCH, c, "--module", "1", "--part", "trainee")
+    check("check_script_match finds exactly the approved words of the task on its screen", code_m == 0, out_m[-900:])
+    pause = [["eval", "out.wait=1;"]] * 18                        # the big button takes one press in 450 ms; a step is 30 ms
+    plan = [["eval", DRESS_PLAY % "'right'"], ["eval", DRESS_SURE]] + pause + [["eval", DRESS_CHECK]] + pause +         [["eval", DRESS_WHY], ["eval", "out.wait=1;"], ["eval", DRESS_DONE]]
+    r = drive(exe, frame, plan, tmp, look=False)
+    check("in the browser: the visor waits for the helmet, and one pair of gloves at a time", r.get("shieldFirst") == []
+          and r.get("gloves") == ["Cryogenic gauntlet gloves"], r)
+    check("... the keys say what is needed - and dressed in it the trainee sees it on the photo, then 'ready'",
+          r.get("need") == ["Cryogenic gauntlet gloves", "Face shield (helmet visor)", "Safety helmet"] and r.get("on") == r.get("need")
+          and r.get("tags") == 3 and (r.get("sheet") or ["", ""])[1] == "Dressed for the job" and "ok" in (r.get("sheet") or [""])[0], r)
+    check("... the buddy check: the colleague's photo, the faults marked, then the closing question with one right reason",
+          r.get("marks", "").startswith("2") and (r.get("part2") or [0])[0] and "2 things" in (r.get("part2") or ["", ""])[1]
+          and "Found" in r.get("found", "") and r.get("right") == 1 and r.get("explain") == "What liquid gas does to skin", r)
+    rep = r.get("rep") or [0, 0, []]
+    check("... and one report: every group, every fault and the reason, all right", rep[0] == rep[1] == 6
+          and "No phone at the manifold" in rep[2] and "Face shield raised" in rep[2], r)
+    r = drive(exe, frame, [["eval", DRESS_PLAY % "['Cotton work gloves','Mobile phone']"], ["eval", "out.wait=1;"], ["eval", DRESS_SURE]], tmp, look=False)
+    sh = r.get("sheet") or ["", "", "", False]
+    check("dressed wrongly: what happens at the job, item by item, with the story's own picture",
+          "no" in sh[0] and "soaks up the liquid" in sh[2] and "The phone rings" in sh[2] and sh[3], r)
+    sc["screens"][at + 1]["answer"] = DRESS.replace("story: Sunglasses leave the cheeks and the sides of the eyes open.\n", "") \
+        .replace("needs: Face shield (helmet visor) => Safety helmet", "needs: Face shield (helmet visor) => Hard hat")
+    v = tcm.cs.validate(sc)
+    check("an item without its story, a rule naming an item not on the rack, are caught before the build",
+          any("'Sunglasses' needs its story" in x for x in v) and any("needs: is item => item" in x for x in v), v)
+    del sheet["q02"]["spots"]["Safety boots"]
+    del sheet["q02"]["slots"]["Chest"]
+    tcm.cs.save(bp, {"module": 1, "screens": sheet})
+    code, out = tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    check("a place on the photo the build sheet does not give is reported", "'Safety boots' needs where it is" in out
+          and "the place 'Chest' needs where it shows" in out, out[-1200:])
+
+
 def look_part(exe, page, tmp):
     """the task screens in the brandbook's look (gb_task_look.css, loaded last): each question's screen white or Navy, picked
     so neighbouring screens do not repeat, the page round it following the screen on show; a build sheet may ask for one"""
@@ -1975,6 +2104,7 @@ def main():
         look_part(exe, page, tmp)
         widgets_part(exe, tmp)
         framed_part(exe, tmp)
+        dress_part(exe, tmp)
         blind_part(exe, page, tmp)
         review_part(exe, tmp)
         deck_fit_part(exe, tmp)

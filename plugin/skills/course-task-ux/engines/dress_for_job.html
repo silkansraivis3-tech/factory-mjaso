@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>{{TITLE}}</title>
+<link rel="stylesheet" href="../assets/gb_tokens.css">
+<link rel="stylesheet" href="../assets/{{LAB_CSS}}">
+<style>
+  /* the rack: every item is a tile that can be dragged onto the crew member */
+  .pp-off {
+    display: flex; align-items: center; justify-content: center; min-height: 56px; margin-bottom: 10px; padding: 8px 12px;
+    border: 1.5px dashed var(--tl-line, rgba(140,190,255,.16)); border-radius: 14px;
+    font: 600 15.5px/1.3 var(--tl-font, sans-serif); color: var(--tl-dim, #9DB3CC); text-align: center;
+  }
+  .pp-how { margin: 0 0 10px; font-size: 14.5px; line-height: 1.35; color: var(--tl-dim, #9DB3CC); }
+  .pp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pp-kit {
+    position: relative; display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 8px 10px;
+    border: 1px solid var(--tl-line, rgba(140,190,255,.16)); border-radius: 14px; background: rgba(255,255,255,.06);
+    color: var(--tl-text, #F2F7FD); font: 650 16px/1.2 var(--tl-font, sans-serif);
+    transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, opacity .18s ease;
+  }
+  .pp-kit span { overflow-wrap: normal; word-break: normal; }
+  @media (min-aspect-ratio: 1/1) { .tl-side { flex: 0 0 392px; } }
+  /* a phone: the stage is as tall as the photo, the panel gets the rest and scrolls in its own box */
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) {
+    .tl-stage { flex: 0 0 auto; height: calc((100vw - 20px) * 0.75); }
+    .tl-side { flex: 1 1 auto; }
+    .pp-cap { display: none; }
+  }
+  .pp-list { list-style: none; margin: 0 0 14px; padding: 0; }
+  .pp-list li { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; font-size: 16px; line-height: 1.35; border-top: 1px solid var(--tl-line, rgba(140,190,255,.16)); }
+  .pp-list li:first-child { border-top: 0; }
+  .pp-list i { flex: 0 0 auto; font-style: normal; font-weight: 800; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+  .pp-list .g { color: var(--tl-good, #3DDC97); } .pp-list .b { color: var(--tl-bad, #FF6B5E); } .pp-list .n { color: var(--tl-dim, #9DB3CC); }
+  .pp-kit.pp-on { border-color: var(--tl-accent, #2EB6F8); background: rgba(46,182,248,.14); box-shadow: 0 0 0 1px var(--tl-accent, #2EB6F8); }
+  .pp-kit.pp-on::after {
+    content: 'ON'; position: absolute; top: -8px; right: -6px; padding: 2px 7px; border-radius: 999px;
+    font: 800 11px/1.3 var(--tl-font, sans-serif); letter-spacing: .1em; color: #03121F; background: var(--tl-accent, #2EB6F8);
+  }
+  .pp-kit.tl-ghost { z-index: 80; }
+
+  /* what the crew member wears: a glowing dot on the body, and a label beside it */
+  .pp-dot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; z-index: 2; pointer-events: none;
+    background: var(--tl-accent, #2EB6F8); box-shadow: 0 0 0 3px rgba(46,182,248,.3), 0 0 16px var(--tl-accent, #2EB6F8); animation: tl-up .3s ease both; }
+  .pp-tag { position: absolute; z-index: 3; max-width: 30%; padding: 6px 11px; border-radius: 11px; pointer-events: none;
+    background: rgba(3,10,22,.8); border: 1px solid var(--tl-line, rgba(140,190,255,.16)); color: var(--tl-text, #F2F7FD);
+    font: 700 16px/1.25 var(--tl-font, sans-serif); animation: tl-up .3s ease both; }
+  .pp-tag small { display: block; font: 800 11px/1.3 var(--tl-font, sans-serif); letter-spacing: .14em; text-transform: uppercase; color: var(--tl-dim, #9DB3CC); }
+  .pp-tag.l { transform: translate(-100%, -50%); text-align: right; }
+  .pp-tag.r { transform: translate(0, -50%); }
+  .pp-ovl { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+  .pp-ovl line { stroke: var(--tl-accent, #2EB6F8); stroke-width: .25; opacity: .8; }
+  /* a phone shows the photo small: the labels give way, the rack says what is on */
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) { .pp-tag, .pp-ovl { display: none; } }
+
+  /* part 2: the places on the colleague that can be marked (invisible on the photo until marked) */
+  .pp-spot { width: 60px; height: 60px; border-radius: 50%; cursor: pointer; z-index: 3; pointer-events: none;
+    transition: box-shadow .18s ease, background .18s ease; }
+  .pp-spot.pp-mark { background: rgba(242,179,61,.16); box-shadow: inset 0 0 0 3px var(--tl-amber, #F2B33D), 0 0 18px rgba(242,179,61,.6); }
+  .pp-spot.pp-found { background: rgba(61,220,151,.16); box-shadow: inset 0 0 0 3px var(--tl-good, #3DDC97), 0 0 18px rgba(61,220,151,.6); }
+  .pp-spot.pp-miss { background: rgba(255,107,94,.12); box-shadow: inset 0 0 0 3px var(--tl-bad, #FF6B5E), 0 0 18px rgba(255,107,94,.6); animation: tl-pulse 1.2s ease 3; }
+  .pp-spot.pp-false { background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 2px var(--tl-dim, #9DB3CC); }
+  .pp-cap { position: absolute; z-index: 4; transform: translate(-50%, 36px); max-width: 34%; padding: 5px 10px; border-radius: 10px; pointer-events: none;
+    font: 700 15px/1.25 var(--tl-font, sans-serif); text-align: center; background: rgba(3,10,22,.86); color: var(--tl-text, #F2F7FD); }
+  .pp-cap.g { box-shadow: inset 0 0 0 1.5px var(--tl-good, #3DDC97); }
+  .pp-cap.b { box-shadow: inset 0 0 0 1.5px var(--tl-bad, #FF6B5E); }
+  .pp-cap.n { color: var(--tl-dim, #9DB3CC); }
+  @media (max-aspect-ratio: 1/1) and (max-width: 600px) { .pp-spot { width: 46px; height: 46px; } }
+
+  [hidden] { display: none !important; }
+  /* in a set's frame the set page shows the question above the frame: the task does not say it again */
+  .framed .tl-ask { display: none; }
+</style>
+</head>
+<body>
+<div class="tl" id="tl">
+  <div class="tl-ask"><span class="tl-eye" id="eye"></span><span id="ask"></span></div>
+  <div class="tl-body">
+    <div class="tl-stage pp-drop" id="stage">
+      <div class="tl-scene" id="scene"></div>
+    </div>
+    <aside class="tl-side">
+      <div class="tl-card pp-rack" id="rackCard">
+        <h3>The rack</h3>
+        <p class="pp-how">Drag each item onto the photo, or tap it and then tap the photo. Not everything on the rack belongs.</p>
+        <div class="pp-off">Drop here to take it off</div>
+        <div class="pp-grid" id="rack"></div>
+      </div>
+      <div class="tl-card dark" id="buddyCard" hidden>
+        <h3>Buddy check</h3>
+        <p><b id="checkAsk"></b> <span id="checkSays"></span></p>
+        <p id="checkHow"></p>
+        <div class="tl-read" style="margin-top:12px"><span>Marked</span><b id="marks"></b></div>
+      </div>
+      <div class="tl-card" id="whyCard" hidden>
+        <h3>What you found</h3>
+        <ul class="pp-list" id="found"></ul>
+        <h3>One more</h3>
+        <p style="margin-bottom:12px" id="whyAsk"></p>
+        <div id="whys" style="display:grid;gap:8px"></div>
+      </div>
+    </aside>
+  </div>
+  <div class="tl-bar"><button type="button" class="tl-go">I'm ready</button></div>
+</div>
+<!-- the approved words of this task, for check_script_match: built from the same data as the task below -->
+{{WORDS}}
+<script type="application/json" id="task-data">{{DATA}}</script>
+<script src="../assets/gb_lab.js"></script>
+<script>
+(function () {
+  'use strict';
+  /* dress for the job, then check a buddy: the rack's items put on a crew member's photograph, judged group by group, with
+     what happens at the job for each item wrong; then the faults on a colleague's photograph; then one question why. The
+     course's words and places come from #task-data (the factory writes it from the approved script and the build sheet);
+     what is needed, what is a fault and the right reason are known only by their keys. */
+  var T = JSON.parse(document.getElementById('task-data').textContent);
+  if (window.parent !== window) document.documentElement.className += ' framed';
+  GBLab.init({ code: T.id, title: T.title, mode: 'self' });
+  document.getElementById('eye').textContent = T.eye || '';
+  document.getElementById('ask').textContent = T.ask;
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var scene = document.getElementById('scene'), rack = document.getElementById('rack');
+  var worn = {}, need = {}, byId = {}, part1 = [], dressed = false, started = false, tapHint = false, layer, ovl, aspect = 1;
+  T.items.forEach(function (k) { byId[k.id] = k; need[k.id] = GBLab.key(T.id, 'wear ' + k.name, 1) === k.key; });
+  [T.photo.src, T.buddy.src].forEach(function (s) { var im = new Image(); im.src = s; });   // ready before part 2
+
+  function build(ph) {
+    var a = ph.aspect.split(':');
+    aspect = +a[1] / +a[0];
+    scene.setAttribute('data-aspect', ph.aspect);
+    scene.innerHTML = '<img class="tl-photo" src="' + GBLab.esc(ph.src) + '" alt="' + GBLab.esc(ph.alt) + '">' +
+      '<svg class="pp-ovl" viewBox="0 0 100 ' + (100 * aspect) + '" preserveAspectRatio="none"></svg><div id="layer"></div>';
+    layer = document.getElementById('layer');
+    ovl = scene.querySelector('.pp-ovl');
+    var blur = document.querySelector('.tl-blur');
+    if (blur) blur.style.backgroundImage = 'url("' + ph.src + '")';
+    GBLab.fitScenes();
+  }
+
+  /* ================================ PART 1: dress for the job ================================ */
+  build(T.photo);
+
+  T.items.forEach(function (k) {
+    var e = document.createElement('div');
+    e.className = 'pp-kit';
+    e.setAttribute('data-drag', '');
+    e.setAttribute('data-id', k.id);
+    e.innerHTML = '<span>' + GBLab.esc(k.name) + '</span>';
+    rack.appendChild(e);
+  });
+
+  function paint() {
+    var h = '', lines = '';
+    T.slots.forEach(function (s) {
+      var on = T.items.filter(function (k) { return k.slot === s.name && worn[k.id]; });
+      if (!on.length) return;
+      s.pts.forEach(function (p) {
+        h += '<span class="pp-dot" style="left:' + p[0] + '%;top:' + p[1] + '%"></span>';
+        lines += '<line x1="' + p[0] + '" y1="' + p[1] * aspect + '" x2="' + s.lx + '" y2="' + s.ly * aspect + '"/>';
+      });
+      h += '<span class="pp-tag ' + s.side + '" style="left:' + s.lx + '%;top:' + s.ly + '%"><small>' + GBLab.esc(s.name) + '</small>' +
+        on.map(function (k) { return GBLab.esc(k.short); }).join(', ') + '</span>';
+    });
+    layer.innerHTML = h;
+    ovl.innerHTML = lines;
+    [].forEach.call(rack.children, function (e) { e.className = 'pp-kit' + (worn[e.getAttribute('data-id')] ? ' pp-on' : ''); });
+  }
+
+  /* how the kit goes on: what clips onto what, and what is worn one at a time (how things are worn, not grading) */
+  function wear(id) {
+    if (worn[id]) return;
+    var r = T.needs.filter(function (x) { return x.item === id && !worn[x.on]; })[0];
+    if (r) return GBLab.toast(r.say, 'hint');
+    T.one.forEach(function (o) {
+      if (o.items.indexOf(id) < 0) return;
+      o.items.forEach(function (x) {
+        if (x === id || !worn[x]) return;
+        worn[x] = false;
+        GBLab.toast(o.say + ' - ' + byId[x].short + ': back on the rack.', 'info');
+      });
+    });
+    worn[id] = true;
+    paint();
+  }
+  function takeOff(id) {
+    if (!worn[id]) return;
+    worn[id] = false;
+    T.needs.forEach(function (x) {
+      if (x.on === id && worn[x.item]) { worn[x.item] = false; GBLab.toast(byId[x.item].short + ' came off with it.', 'info'); }
+    });
+    paint();
+  }
+
+  var dragger = GBLab.drag({
+    items: '.pp-kit',
+    targets: '.pp-drop, .pp-rack',
+    onPick: function (it) {
+      if (!tapHint) { tapHint = true; GBLab.toast(worn[it.getAttribute('data-id')] ? 'Now tap the rack to take it off.' : 'Now tap the photo to put it on.', 'hint'); }
+    },
+    onDrop: function (it, t) {
+      if (dressed) return;
+      var id = it.getAttribute('data-id');
+      if (t.classList.contains('pp-rack')) takeOff(id); else wear(id);
+    }
+  });
+
+  function ready() {
+    if (!T.items.some(function (k) { return worn[k.id]; })) return GBLab.toast('Nothing on yet - drag the kit from the rack.', 'hint');
+    GBLab.sure(judge1);
+  }
+
+  function names(ids) { return ids.length ? ids.map(function (id) { return byId[id].short; }).join(', ') : 'nothing'; }
+
+  function judge1(level) {
+    if (dressed) return;
+    dressed = true;
+    dragger.clear();
+    var all = true;
+    part1 = T.groups.map(function (g) {
+      var ok = g.items.every(function (id) { return !!worn[id] === need[id]; });
+      if (!ok) all = false;
+      return { t: g.title, ok: ok, w: g.why,
+        a: names(g.items.filter(function (id) { return worn[id]; })),
+        c: names(g.items.filter(function (id) { return need[id]; })) };
+    });
+    GBLab.sureNote(level, all);
+    // the wrong things put on first, then what is missing
+    var bad = T.items.filter(function (k) { return worn[k.id] && !need[k.id]; }).concat(T.items.filter(function (k) { return !worn[k.id] && need[k.id]; }));
+    var told = bad.slice(0, 2);
+    var next = [{ label: 'Part 2: check your buddy', fn: startPart2 }];
+    if (all) GBLab.show({ img: T.ready.pic, tag: T.intro.title, kind: 'ok', title: T.ready.title, text: GBLab.esc(T.ready.text), buttons: next });
+    else GBLab.show({ img: (told.filter(function (k) { return k.pic; })[0] || {}).pic || null, tag: T.intro.title, kind: 'no', title: 'What happens at the job',
+      text: told.map(function (k) { return GBLab.esc(k.story); }).join('<br><br>') + (bad.length > 2 ? '<br><br>...and ' + (bad.length - 2) + ' more in your result.' : ''), buttons: next });
+    GBLab.go('Part 2: check your buddy', startPart2);
+  }
+
+  /* ================================ PART 2: buddy check ================================ */
+  var marks = {}, nMarks = 0, revealed = false, emptyHint = false, places = [];
+  function flaw(s) { return GBLab.key(T.id, 'fault ' + s.seen, 1) === s.key; }
+  function howMany() { return T.faults + ' thing' + (T.faults > 1 ? 's' : '') + ' on the photo ' + (T.faults > 1 ? 'are' : 'is') + ' wrong.'; }
+
+  function startPart2() {
+    if (!dressed || started) return;
+    started = true;
+    document.getElementById('ask').textContent = T.check.ask;
+    document.getElementById('checkAsk').textContent = T.check.ask;
+    document.getElementById('checkSays').textContent = T.check.says;
+    document.getElementById('checkHow').textContent = howMany() + ' Tap each one on the photo; tap again to clear a mark.';
+    document.getElementById('marks').innerHTML = '0 <small>of ' + T.faults + '</small>';
+    document.getElementById('rackCard').hidden = true;
+    document.getElementById('buddyCard').hidden = false;
+    build(T.buddy);
+    T.spots.forEach(function (s) {
+      s.pts.forEach(function (p) {
+        var e = document.createElement('div');
+        e.className = 'pp-spot tl-pin';
+        e.setAttribute('data-s', s.id);
+        e.setAttribute('role', 'button');
+        e.setAttribute('aria-label', s.seen);
+        e.style.left = p[0] + '%';
+        e.style.top = p[1] + '%';
+        layer.appendChild(e);
+        places.push({ id: s.id, x: p[0], y: p[1] });
+      });
+    });
+    // a tap marks the nearest place on the photo: on a phone the places sit close, the nearest centre decides
+    scene.addEventListener('click', function (ev) {
+      if (revealed) return;
+      var s = GBLab.nearest(GBLab.toScene(ev, scene), places, 8);
+      if (s) return toggle(s.id);
+      if (emptyHint) return;
+      emptyHint = true;
+      GBLab.toast('Nothing to mark there. Look from head to foot.', 'hint');
+    });
+    GBLab.go('These are the ones', commit2);
+    setTimeout(function () { GBLab.hand('pp1-tap', layer.querySelector('.pp-spot')); }, 600);
+  }
+
+  function spotsOf(id) { return [].filter.call(layer.querySelectorAll('.pp-spot'), function (e) { return e.getAttribute('data-s') === id; }); }
+  function toggle(id) {
+    if (revealed) return;
+    if (!marks[id] && nMarks >= T.faults) return GBLab.toast(T.faults + ' marks already - tap one to clear it first.', 'hint');
+    marks[id] = !marks[id];
+    nMarks += marks[id] ? 1 : -1;
+    spotsOf(id).forEach(function (e) { e.className = 'pp-spot tl-pin' + (marks[id] ? ' pp-mark' : ''); });
+    document.getElementById('marks').innerHTML = nMarks + ' <small>of ' + T.faults + '</small>';
+  }
+
+  function commit2() {
+    if (!nMarks) return GBLab.toast('Tap what is wrong on the photo first.', 'hint');
+    GBLab.sure(reveal);
+  }
+  var found = [];
+  function reveal(level) {
+    revealed = true;
+    var h = '', hits = 0, wrong = 0;
+    T.spots.forEach(function (s) {
+      var f = flaw(s), m = !!marks[s.id], cls = f ? (m ? 'pp-found' : 'pp-miss') : (m ? 'pp-false' : ''), p = s.pts[0];
+      if (f) found.push({ s: s, ok: m });
+      if (f && m) hits++;
+      if (!f && m) wrong++;
+      spotsOf(s.id).forEach(function (e) { e.className = 'pp-spot tl-pin' + (cls ? ' ' + cls : ''); });
+      if (f || m) h += '<span class="pp-cap ' + (f ? (m ? 'g' : 'b') : 'n') + '" style="left:' + p[0] + '%;top:' + p[1] + '%">' +
+        (f ? '' : 'Fine: ') + GBLab.esc(s.seen) + '</span>';
+    });
+    layer.insertAdjacentHTML('beforeend', h);
+    document.getElementById('found').innerHTML = T.spots.filter(function (s) { return flaw(s) || marks[s.id]; }).map(function (s) {
+      var f = flaw(s), m = !!marks[s.id];
+      return '<li><i class="' + (f ? (m ? 'g">Found' : 'b">Missed') : 'n">Fine') + '</i><span>' + GBLab.esc(s.seen) + '</span></li>';
+    }).join('');
+    GBLab.sureNote(level, hits === T.faults && !wrong);
+    GBLab.toast('You found ' + hits + ' of ' + T.faults + (wrong ? ', and marked ' + wrong + ' that ' + (wrong > 1 ? 'were' : 'was') + ' fine.' : '.'), hits === T.faults ? 'ok' : 'info');
+    document.getElementById('buddyCard').hidden = true;
+    document.getElementById('whyCard').hidden = false;
+    document.getElementById('whyAsk').textContent = T.why.ask;
+    var box = document.getElementById('whys');
+    T.why.ch.forEach(function (t) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tl-btn';
+      b.textContent = t;
+      b.addEventListener('click', function () { why(t, b); });
+      box.appendChild(b);
+    });
+    GBLab.go('Pick a reason', null);
+  }
+
+  var whyOk = null, whyPick = '';
+  function rightWhy(t) { return GBLab.key(T.id, 'why => ' + t, 1) === T.why.key; }
+  function why(t, b) {
+    if (whyOk !== null) return;
+    whyOk = rightWhy(t);
+    whyPick = t;
+    [].forEach.call(document.querySelectorAll('#whys .tl-btn'), function (x) {
+      if (rightWhy(x.textContent)) x.className = 'tl-btn good';
+      else if (x === b) x.className = 'tl-btn bad';
+      x.disabled = x !== b && x.className === 'tl-btn';
+    });
+    GBLab.show({ img: T.why.pic, tag: T.intro.title, kind: whyOk ? 'ok' : 'no', title: T.why.title, text: GBLab.esc(T.why.text),
+      buttons: [{ label: 'See my result', fn: result }] });
+    GBLab.go('See my result', result);
+  }
+
+  function result() {
+    var items = part1.slice(), right = T.why.ch.filter(rightWhy)[0] || '';
+    found.forEach(function (f) {
+      items.push({ t: f.s.seen, ok: f.ok, a: f.ok ? 'marked' : 'not marked', c: 'marked', w: f.s.why });
+    });
+    items.push({ t: T.why.ask, ok: !!whyOk, a: whyPick || 'not answered', c: right, w: T.why.text });
+    GBLab.finish({ items: items });
+  }
+
+  GBLab.go("I'm ready", ready);
+  GBLab.intro({ tag: 'Dress and check', title: T.intro.title, text: T.intro.text,
+    steps: ['Put on what the job needs: drag it from the rack onto the photo.', 'Press <b>I\'m ready</b> - see what happens at the job.',
+            'Check your buddy: tap what is wrong on the photo.', 'Answer one last question.'],
+    start: 'Start', onStart: function () { setTimeout(function () { GBLab.hand('pp1-dress', rack.firstChild, scene); }, 300); } });
+})();
+</script>
+</body>
+</html>

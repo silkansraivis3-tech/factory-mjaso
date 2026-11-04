@@ -16,7 +16,11 @@ What the operator's text cannot say is the build sheet's, per question (working_
                      "xray": ["part id"], "operate": {"label", "states": {"open": {"rot": {"ball": 0}}, "closed": {...}}, "start": "open"}
     test_atmosphere  "hose": 4 (m of hose on deck), "delay": 0.28 (s per m)
     deck_round       "places": {"place": "assets/img/x.jpg"}, "zones": {"fault": [[x %, y %, r %], ...]} - its tap zones on its place's photo
-A framed task (deck_round, fm.FRAMED) is its own page, tasks/frame_<id>.html, built from course-task-ux/engines/<type>.html in
+    dress_for_job    "photo": the crew member to dress, "buddy": the colleague to check (both "assets/img/x.jpg"),
+                     "slots": {"where it is worn": {"at": [[x %, y %], ...], "label": [x %, y %, "l" | "r"]}} - on "photo",
+                     "spots": {"what is seen": [[x %, y %], ...]} - on "buddy", and pictures on the sheets when there are:
+                     "stories": {"item": "assets/img/x.jpg"}, "ready": ..., "explain": ...
+A framed task (deck_round, dress_for_job - fm.FRAMED) is its own page, tasks/frame_<id>.html, built from course-task-ux/engines/<type>.html in
 its screen's theme (engine_theme.py) and shown in a frame on its question's screen; it reports to the set page, which counts
 it as the question's answer (gb_interact.js LAB.frame).
 A 3D scene is a 3D-kit spec (course-visuals/kit3d/SPEC.md) - the same parts and look as the deck's 3D slides.
@@ -311,7 +315,59 @@ def deck_round_data(q, b, d, mdir, probs, where, shuffle):
             "places": places, "faults": faults}
 
 
-FRAMED_DATA = {"deck_round": deck_round_data}
+def points_of(v):
+    try:
+        p = [[float(x) for x in c] for c in v]
+    except (TypeError, ValueError):
+        return None
+    return p if p and all(len(c) == 2 and 0 <= c[0] <= 100 and 0 <= c[1] <= 100 for c in p) else None
+
+
+def dress_for_job_data(q, b, d, mdir, probs, where, shuffle):
+    sid = q["id"]
+    first = photo_of(b.get("photo"), mdir, probs, where, "the crew member to dress (\"photo\")")
+    second = photo_of(b.get("buddy"), mdir, probs, where, "the colleague to check (\"buddy\")")
+    stories = b.get("stories") or {}
+
+    def pic(rel, what):                                      # a picture on a sheet: there when the build sheet names one
+        p = photo_of(rel, mdir, probs, where, what) if rel else None
+        return p[0] if p else None
+    slots, sheet = [], b.get("slots") or {}
+    for name in dict.fromkeys(x["slot"] for x in d["items"]):
+        s, lab = sheet.get(name) or {}, (sheet.get(name) or {}).get("label") or []
+        pts = points_of(s.get("at"))
+        if not pts or len(lab) != 3 or lab[2] not in ("l", "r") or not points_of([lab[:2]]):
+            probs.append("%s: the place %r needs where it shows on the photograph - \"slots\": {\"%s\": {\"at\": [[x %%, y %%]], "
+                         "\"label\": [x %%, y %%, \"l\" or \"r\"]}}" % (where, name, name))
+            continue
+        slots.append({"name": name, "pts": pts, "lx": float(lab[0]), "ly": float(lab[1]), "side": lab[2]})
+    iid = {x["name"]: "i%d" % n for n, x in enumerate(d["items"], 1)}
+    items = [{"id": iid[x["name"]], "name": x["name"], "short": x["short"], "slot": x["slot"], "story": x["story"],
+              "pic": pic(stories.get(x["name"]), "the story of %r" % x["name"]), "key": k(sid, "wear " + x["name"], 1 if x["need"] else 0)}
+             for x in shuffle(sid + " rack", d["items"], key=lambda x: x["name"])]
+    spots, at = [], b.get("spots") or {}
+    for n, s in enumerate(d["spots"], 1):
+        pts = points_of(at.get(s["seen"]))
+        if not pts:
+            probs.append("%s: %r needs where it is on the colleague's photograph - \"spots\": {\"%s\": [[x %%, y %%], ...]}"
+                         % (where, s["seen"], s["seen"]))
+            continue
+        spots.append({"id": "s%d" % n, "seen": s["seen"], "why": s["why"], "pts": pts, "key": k(sid, "fault " + s["seen"], 1 if s["fault"] else 0)})
+    return {"id": sid, "title": q.get("question", ""), "eye": d["context"], "ask": q.get("question", ""), "intro": d["intro"],
+            "photo": first and {"src": first[0], "aspect": first[1], "alt": d["intro"]["title"]},
+            "buddy": second and {"src": second[0], "aspect": second[1], "alt": d["check"]["ask"]},
+            "slots": slots, "items": items,
+            "groups": [{"title": g["title"], "why": g["why"], "items": [iid[x["name"]] for x in d["items"] if x["group"] == g["title"]]}
+                       for g in d["groups"]],
+            "needs": [{"item": iid[r["item"]], "on": iid[r["on"]], "say": r["say"]} for r in d["needs"]],
+            "one": [{"items": [iid[x] for x in r["items"]], "say": r["say"]} for r in d["one"]],
+            "ready": dict(d["ready"], pic=pic(b.get("ready"), "the ready sheet (\"ready\")")),
+            "check": d["check"], "faults": sum(1 for s in d["spots"] if s["fault"]), "spots": spots,
+            "why": {"ask": d["ask"], "ch": shuffle(sid + " why", d["reasons"], key=lambda x: x), "key": k(sid, "why => " + d["right"], 1),
+                    "title": d["explain"]["title"], "text": d["explain"]["text"], "pic": pic(b.get("explain"), "the answer's sheet (\"explain\")")}}
+
+
+FRAMED_DATA = {"deck_round": deck_round_data, "dress_for_job": dress_for_job_data}
 
 
 def framed(q, b, d, mdir, probs, where, shuffle, words):

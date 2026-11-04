@@ -7,6 +7,17 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.96.0 · Dress for the job, then check a buddy - the second richer task (2026-11-04)
+
+- **Why.** The owner: the three richer tasks first - deck round (2.95.0), dress a buddy, lay out.
+- **What.** `scripts/interact_formats.py` (`dress_for_job`, `DRESS_KEYS`), `knowledge/media-and-tasks.json`,
+  `compile/scripts/interact_pages.py` (`dress_for_job_data`, `points_of`), `course-task-ux/engines/dress_for_job.html`.
+  Test: `test_task_engine.py` "dress for the job, then check a buddy" (played through in the browser).
+- **Decisions that will look odd.** What clips onto what and what is worn one at a time are how things are worn, not
+  grading: the rack refuses or swaps and says why, the operator's words. The groups are what is judged: a group is right
+  when every item in it is worn as needed. The keys: `wear <item>`, `fault <spot>` with 1 or 0, `why => <reason>`.
+- **Next.** Lay out the equipment; the tasks' own words in Latvian and Russian.
+
 ## 2.95.0 · The deck round, the first richer task built by the factory (2026-11-03)
 
 - **Why.** The owner: the nineteen prototypes as factory templates, starting with deck round, dress a buddy, lay out.

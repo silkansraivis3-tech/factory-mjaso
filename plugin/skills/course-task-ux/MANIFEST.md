@@ -6,6 +6,12 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.96.0 · Dress for the job, then check a buddy (2026-11-04)
+
+`engines/dress_for_job.html`: the rack put on a crew member's photograph, judged group by group with what happens at
+the job for each item wrong, then the faults on a colleague's photograph, then one question why - the prototype
+07_ppe_buddy with the course's data.
+
 ## 2.95.0 · The richer tasks, framed (2026-11-03)
 
 `engines/` holds the richer tasks as templates: the reference's logic, the course's data in one JSON block. Built so far:
