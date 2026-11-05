@@ -9,6 +9,9 @@
     course_portal.py status --course <course>                 the stage, how much is answered, who said Ready
     course_portal.py remove --course <course> --yes           a course in preparation that was never built
     course_portal.py import --course <course>                 the built course into the staging editor as a draft release
+    course_portal.py upload --course <course>                 after an attended build or fix.py rebuild: imported once only
+                                                              picture spaces still to fill stop it, else the editor's
+                                                              stop message says what still does (fix.py rebuild runs it)
     course_portal.py watch  --once                            the office PC: a course whose Ready asked for its build is
                                                               built unattended and imported (the scheduled task runs this)
     course_portal.py install-task                             the scheduled task: watch --once every 10 minutes
@@ -55,10 +58,28 @@ import os
 import subprocess
 import sys
 import time
+import traceback
 import urllib.error
 import urllib.request
 from datetime import date, datetime
 
+
+def home():
+    return os.path.join(os.environ.get("APPDATA") or os.path.join(os.path.expanduser("~"), ".config"), "novikontas")
+
+
+def no_console():
+    """pythonw.exe (the scheduled task) has no console: sys.stdout and sys.stderr are None, and the first reconfigure or
+    write ends the run with exit 1 before anything is logged. Then what is printed goes nowhere and what goes wrong goes,
+    with its traceback, to watch.log."""
+    if sys.stdout is None:
+        sys.stdout = io.open(os.devnull, "w", encoding="utf-8")
+    if sys.stderr is None:
+        os.makedirs(home(), exist_ok=True)
+        sys.stderr = io.open(os.path.join(home(), "watch.log"), "a", encoding="utf-8", errors="replace")
+
+
+no_console()
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -77,10 +98,6 @@ class PortalError(Exception):
     def __init__(self, message, status=0, data=None):
         super().__init__(message)
         self.status, self.data = status, data
-
-
-def home():
-    return os.path.join(os.environ.get("APPDATA") or os.path.join(os.path.expanduser("~"), ".config"), "novikontas")
 
 
 def key_file():
@@ -409,8 +426,10 @@ FEEDBACK_LOG.md). Use the course-factory skill and build the whole course now, b
 expert note and write its done, render the pedagogy documents, approve Stage 2 and every module's content script with
 --by "{expert} (Ready in editor)", build every module, compile COURSE.html and run the factory's checks, fixing what they
 find. Nobody is there to answer: never stop to ask - write the question in working_claude/OPEN_EXPERT_QUESTIONS.md and
-carry on with the factory's best choice. Generate no paid pictures or videos: leave their picture briefs. Never push to
-git and never change a file outside this folder. End with one line: AUTO BUILD DONE, or AUTO BUILD STOPPED: <why>."""
+carry on with the factory's best choice. Generate no paid pictures or videos. Fill the picture spaces from the free
+sources, in the order of SKILL.md "Auto build"; a space nobody could fill keeps its brief and does not stop the build.
+Never push to git and never change a file outside this folder. End with one line: AUTO BUILD DONE (AUTO BUILD DONE -
+PICTURES PENDING: <n> when only picture spaces are left), or AUTO BUILD STOPPED: <why>."""
 ALLOWED = ["Bash", "PowerShell", "Read", "Write", "Edit", "Glob", "Grep", "Skill", "Agent", "WebSearch", "WebFetch", "TodoWrite"]
 DENIED = ["Bash(git push:*)", "PowerShell(git push:*)", "mcp__plugin_nano-banana_nano-banana__generate_image",
           "mcp__plugin_nano-banana_nano-banana__generate_video"]
@@ -429,7 +448,7 @@ def modules_folder(course):
     return m if os.path.isfile(os.path.join(m, "COURSE.html")) else None
 
 
-def cmd_import(course):
+def cmd_import(course, pending=()):
     p = _need_portal(course)
     if not p:
         return 2, None
@@ -438,8 +457,11 @@ def cmd_import(course):
         print("Stopped - there is no built course to import: modules\\COURSE.html is missing.")
         return 2, None
     node = json.loads(os.environ["NOVIKONTAS_NODE"]) if os.environ.get("NOVIKONTAS_NODE") else ["node"]
+    notes = (["Pictures pending: %d picture space(s) still hold a Phase A placeholder - fill them and import again before "
+              "this draft is published" % len(pending)] + list(pending)[:40]) if pending else []
     run = subprocess.run(node + [os.path.join(HERE, "course_import.mjs"), folder, p["course_id"]], capture_output=True,
-                         text=True, encoding="utf-8", errors="replace")
+                         text=True, encoding="utf-8", errors="replace", env=dict(os.environ, NOVIKONTAS_IMPORT_NOTES=json.dumps(notes)),
+                         stdin=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     last = (run.stdout.strip().splitlines() or ["{}"])[-1]
     try:
         r = json.loads(last)
@@ -447,10 +469,56 @@ def cmd_import(course):
         r = {"ok": False, "error": (run.stderr or run.stdout or "no answer")[-500:]}
     if r.get("ok"):
         rel = r.get("release") or {}
-        print("Imported into the staging editor as draft %s of %s." % (rel.get("version"), p["course_id"]))
+        print("Imported into the staging editor as draft %s of %s%s." % (rel.get("version"), p["course_id"],
+              " - pictures pending: %d" % len(pending) if pending else ""))
         return 0, r
     print("Stopped - the import did not go through: %s" % r.get("error"))
     return 2, r
+
+
+def blockers(course):
+    """what stops the built course going into the editor as a draft, from the course package check: (the picture spaces
+    still holding a Phase A placeholder, everything else). A placeholder alone does not stop a draft - it never reaches
+    the tablets, and the draft says how many are pending."""
+    folder = modules_folder(course)
+    if not folder:
+        return [], ["modules\\COURSE.html is missing - the course is not compiled"]
+    import check_course_package
+    probs = check_course_package.check(folder)[0]
+    pics = [x for x in probs if "is a Phase A placeholder" in x]
+    return pics, [x for x in probs if x not in pics]
+
+
+def _stop_message(cid, why):
+    """the editor's 'Build stopped' message replaced by the course's state now - only where one is shown: a course
+    waiting in the queue without one would be held back by it"""
+    c = call("status", course_id=cid).get("course") or {}
+    if c.get("stage") == "build_requested" and c.get("build_error"):
+        call("build-done", course_id=cid, error=why)
+        return True
+    return False
+
+
+def cmd_upload(course):
+    """after an attended build, or a rebuild (fix.py rebuild ends with this): once nothing but picture spaces still to
+    fill stops it, the built course goes into the staging editor as a draft and the editor's old stop message goes with
+    it (the import marks the course built); while something else stops it, the stop message says what, today. Unasked."""
+    p = portal(course)
+    if not p:
+        print("Not uploaded - this course is not in the training app (course_portal.py create).")
+        return 0
+    if os.environ.get("NOVIKONTAS_AUTO_BUILD") == "1":
+        print("Not uploaded yet - this is the unattended build: the watch uploads it when the run ends.")
+        return 0
+    pics, other = blockers(course)
+    if other:
+        why = "Not uploaded after the session of %s - %d thing(s) still stop it: %s" % (
+            date.today().isoformat(), len(other), "; ".join(other[:3]) + (" ..." if len(other) > 3 else ""))
+        print(why)
+        if _stop_message(p["course_id"], why[:2000]):
+            print("  The editor's stop message now says this.")
+        return 1
+    return cmd_import(course, pics)[0]
 
 
 def _log(line):
@@ -499,17 +567,20 @@ def cmd_watch_once():
                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         said = io.open(logf, encoding="utf-8", errors="replace").read()
         last = [l for l in said.strip().splitlines() if l.strip()][-1:] or [""]
+        pics, other = blockers(course)
         if run.returncode != 0 or "AUTO BUILD DONE" not in said:
             why = last[0][:500] if "AUTO BUILD STOPPED" in last[0] else "the build ended without AUTO BUILD DONE (exit %d) - see %s" % (run.returncode, logf)
-            call("build-done", course_id=cid, error=why)
-            _log("%s: stopped - %s" % (cid, why))
-            return 2
-        code, r = cmd_import(course)
+            if other or not pics:                     # a run stopped on pictures alone still goes up, as pictures pending
+                call("build-done", course_id=cid, error=why)
+                _log("%s: stopped - %s" % (cid, why))
+                return 2
+        code, r = cmd_import(course, pics)
         if code:
             call("build-done", course_id=cid, error="built, but the import failed: %s" % ((r or {}).get("error") or "see the log"))
             _log("%s: import failed" % cid)
             return 2
-        _log("%s: built and imported as draft %s" % (cid, ((r or {}).get("release") or {}).get("version")))
+        _log("%s: built and imported as draft %s%s" % (cid, ((r or {}).get("release") or {}).get("version"),
+                                                        " - pictures pending: %d" % len(pics) if pics else ""))
         return 0
     except PortalError as e:
         _log("stopped: %s" % e)
@@ -517,23 +588,39 @@ def cmd_watch_once():
     except subprocess.TimeoutExpired:
         call("build-done", course_id=cid, error="the build ran for 20 hours and was stopped")
         return 2
+    except Exception:
+        _log("stopped - an error in the watch:\n" + traceback.format_exc())
+        return 4
     finally:
         os.remove(lock)
 
 
 LAUNCHER = """# The NOVIKONTAS course factory's watch, run by the scheduled task: the newest installed course-factory plugin's
-# course_portal.py watch --once (the plugin's folder changes with every version).
-import glob, os, subprocess, sys
+# course_portal.py watch --once (the plugin's folder changes with every version). pythonw has no console: what goes
+# wrong is written, with its traceback, to watch.log beside this file.
+import datetime, glob, os, subprocess, sys, traceback
+here = os.path.dirname(os.path.abspath(__file__))
+def log(line):
+    with open(os.path.join(here, "watch.log"), "a", encoding="utf-8") as f:
+        f.write("%s  %s\\n" % (datetime.datetime.now().isoformat(timespec="seconds"), line))
 base = os.path.join(os.path.expanduser("~"), ".claude", "plugins", "cache", "novikontas-course-factory", "course-factory")
 def ver(p):
     try:
         return tuple(int(x) for x in os.path.basename(p).split("."))
     except ValueError:
         return (0,)
-found = sorted(glob.glob(os.path.join(base, "*")), key=ver)
-if found:
+try:
+    found = sorted(glob.glob(os.path.join(base, "*")), key=ver)
+    if not found:
+        log("watch: no course-factory plugin in %s" % base)
+        sys.exit(5)
     sys.exit(subprocess.call([sys.executable, os.path.join(found[-1], "skills", "course-factory", "scripts", "course_portal.py"),
-                              "watch", "--once"], creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)))
+                              "watch", "--once"], stdin=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)))
+except SystemExit:
+    raise
+except BaseException:
+    log("watch: the launcher stopped:\\n" + traceback.format_exc())
+    sys.exit(4)
 """
 TASK = "NOVIKONTAS course factory - build after Ready"
 
@@ -563,7 +650,7 @@ def main(argv=None):
     sub.add_parser("install-task")
     s = sub.add_parser("watch")
     s.add_argument("--once", action="store_true", required=True)
-    for name in ("create", "push", "pull", "status", "remove", "import"):
+    for name in ("create", "push", "pull", "status", "remove", "import", "upload"):
         s = sub.add_parser(name)
         s.add_argument("--course", required=True)
         if name == "create":
@@ -591,6 +678,8 @@ def main(argv=None):
             return cmd_status(course)
         if x.cmd == "import":
             return cmd_import(course)[0]
+        if x.cmd == "upload":
+            return cmd_upload(course)
         return cmd_remove(course, x.yes)
     except PortalError as e:
         print("Stopped - %s" % e)

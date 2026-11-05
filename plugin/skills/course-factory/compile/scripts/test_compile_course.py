@@ -13,7 +13,9 @@ Pinned:
   * the same input gives the same bytes; a page changed by hand is not overwritten without --force;
   * the course title - the classroom's course ID - is intake.json course_name, else the architecture's; it never changes
     without --retitle, also against a hand-made page;
-  * check_course_package.py finds nothing wrong with the course files and the start pages.
+  * check_course_package.py finds nothing wrong with the course files and the start pages;
+  * L19: a programme in Latvian - the course plan and the module plan the build writes show its Main ILOs and Sub-ILOs
+    in English; a rendering missing is said, never silently shown in Latvian.
 """
 from __future__ import annotations
 
@@ -235,6 +237,38 @@ def main():
         io.open(os.path.join(c2, "modules", "COURSE.html"), "w", encoding="utf-8").write("<title>The hand-made name</title>")
         code, out = run(COURSE, c2, "--force")
         check("... a hand-made COURSE.html's title counts too, even with --force", code == 2 and "The hand-made name" in out, out)
+
+        # L19 - the programme is in Latvian, everything the build writes into the course is English
+        base = os.path.join(tmp, "lv_programme")
+        os.makedirs(base)
+        sc = t.script()
+        sc["screens"][0]["sub_ilo"] = "1.1"
+        sc.update(approved_hash=cs.content_hash(sc))
+        cv, mdv = t.new_course(base, sc)
+        run(t.COMPILE, cv, "--module", "1")
+        wv = os.path.join(cv, "working_claude")
+        main_lv, out_lv = "Veicināt drošas bunkurēšanas operācijas", "Nosaukt jaunās telpas uz kuģa, kas izmanto gāzi kā degvielu"
+        arch_lv = dict(ARCH, main_ilos=[{"id": "1", "text": main_lv, "text_en": "Contribute to safe bunkering operations"}],
+                       modules=[dict(ARCH["modules"][0], main_ilos=["1"], topic_en="Ships using gas as fuel",
+                                     sub_ilos=[{"id": "1.1", "status": "original", "text_en": "Name the new spaces of a gas-fuelled ship"}]),
+                                ARCH["modules"][1]])
+        cs.save(os.path.join(wv, "architecture.json"), arch_lv)
+        cs.save(os.path.join(wv, "programme.json"), {"language": "Latvian", "academic_hour_min": 45, "total_row": {"total": 26},
+                                                     "main_ilos": {"1": main_lv}, "outcomes": {"1.1": out_lv},
+                                                     "topics": {"1": {"title": "Kuģi, kas izmanto gāzi kā degvielu"}}})
+        import ilo_map
+        ilo_map.build(cv, quiet=True)
+        code, out = run(COURSE, cv, "--no-pdf")
+        rv = os.path.dirname(mdv)
+        plans = read(rv, "_course_shell", "advanced_course_plan.html") + read(mdv, "instructor", "advanced_module_plan.html")
+        check("L19: the course plan and the module plan the build writes show the Main ILO and the Sub-ILO in English",
+              "Contribute to safe bunkering operations" in plans and "Name the new spaces of a gas-fuelled ship" in plans
+              and main_lv not in plans and out_lv not in plans and "English rendering" not in out, (out[-500:], plans[:1500]))
+        del arch_lv["main_ilos"][0]["text_en"]
+        cs.save(os.path.join(wv, "architecture.json"), arch_lv)
+        code, out = run(COURSE, cv, "--no-pdf")
+        check("... a rendering missing stops it being handed over: said, never silent (exit 1)",
+              code == 1 and "the programme is in Latvian and Main ILO 1 has no English rendering" in out, out[-800:])
 
         # L19 - the start pages in the course language: lv and ru (PROVISIONAL, compile/TRANSLATIONS_REVIEW.md)
         want = {"Latvian": ("lv", "Viss šim modulim", "Kursantu uzdevumi", "26 akad. st. (45 min)", "Moduļa pārbaude"),

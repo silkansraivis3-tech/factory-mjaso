@@ -773,6 +773,9 @@ def cells(x):
     return [c.strip() for c in x.split(" | ")]
 
 
+REVEALS = ("worked-example", "explain-then-reveal", "predict-then-reveal")   # built with the room's turn (compile_module.shaped_template)
+
+
 def shape_of(s):
     """what a slide's own words make of it - the compiler builds the same (compile_module.shaped_template)"""
     if s.get("kind") != "slide":
@@ -782,7 +785,7 @@ def shape_of(s):
     for f, k in (("claim", "true-false"), ("choices", "scenario"), ("points", "points")):
         if s.get(f):
             return k
-    if s.get("active") == "worked-example" and (s.get("ask") or s.get("reveal")):
+    if (s.get("active") in REVEALS and (s.get("ask") or s.get("reveal"))) or (s.get("ask") and s.get("reveal")):
         return "worked-example"
     return None
 
@@ -832,7 +835,7 @@ def shape_problems(script):
                     probs.append("%s: \"right\" is the letter of the right choice (%s)" % (sid, ", ".join(letters(len(ch)))))
                 if not s.get("ask"):
                     probs.append("%s: a scenario asks the room something - \"ask\"" % sid)
-            if s.get("active") == "worked-example" and bool(s.get("ask")) != bool(s.get("reveal")):
+            if (s.get("active") in REVEALS or s.get("points")) and bool(s.get("ask")) != bool(s.get("reveal")):
                 probs.append("%s: the room's turn needs both its question (\"ask\") and its answer (\"reveal\")" % sid)
             if s.get("drill"):
                 d = s["drill"]
@@ -2717,8 +2720,20 @@ def cmd_discard(course, module):
     return 0
 
 
+def unattended_signer(course):
+    """the one approval an unattended run may record (L70): the expert's own Ready, signed by name in the training
+    app's editor and pulled into pedagogy_review.json - "<name> (Ready in editor)". None when there is none."""
+    rev = workspace.claude_path(course, "pedagogy_review.json")
+    by = (((load(rev) if os.path.isfile(rev) else {}) or {}).get("ready") or {}).get("by", "").strip()
+    return "%s (Ready in editor)" % by if by else None
+
+
 def cmd_approve(course, module, by, despite=False):
     p = paths(course, module)
+    if os.environ.get("NOVIKONTAS_AUTO_BUILD") == "1" and by != unattended_signer(course):
+        print("Not approved - an unattended run approves only with the expert's own Ready from the editor: --by \"%s\". "
+              "Build --draft and say which scripts wait (script/GUIDE.md §4)." % (unattended_signer(course) or "nobody pressed Ready"))
+        return 1
     script = load(p["script"])
     if os.path.isfile(p["pending"]):
         print("Not approved - there are understood changes waiting. Apply them (after the operator confirms) or discard them first.")

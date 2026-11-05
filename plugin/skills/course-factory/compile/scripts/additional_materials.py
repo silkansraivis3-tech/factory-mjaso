@@ -35,6 +35,8 @@ EVERY WORD IS FROM AN APPROVED FILE, NOTHING IS TYPED
   the course, its hours, days, rooms, equipment, literature, films, group and assessment   programme.json
   the Main ILOs and the modules                                                          architecture.json
   the Sub-ILOs                                                                           ilo_map.json (else the ids)
+  the Main ILOs and Sub-ILOs in English (L19): a programme in another language by the rendering written beside its
+                                    words at Stage 2 (ilo_map.english) - a missing one shows the programme's words and is said
   every screen, task, question, answer, feedback and instructor note                     working_claude\\script\\MNN.json
   the exercise's equipment and place                                                     architecture.json "practicals"
   which day a module falls on       course.build.json "days": [[1, 2, 3, 4], [4, 5, 6]] - delivery, like module_order;
@@ -215,17 +217,20 @@ def approved(script):
     return script.get("status") == "approved" and script.get("approved_hash") == cs.content_hash(script)
 
 
-def sub_ilo_texts(course, arch):
-    """{sub-ILO id: its words} - the ILO map first, then the architecture's added Sub-ILOs"""
+def sub_ilo_texts(course, arch, no_en=None):
+    """{sub-ILO id: its words in English (L19)} - the ILO map first, then the architecture's added Sub-ILOs; one with no
+    English rendering keeps the programme's words, and is named in no_en"""
     out = {}
     for am in arch.get("modules") or []:
         for s in am.get("sub_ilos") or []:
             if isinstance(s, dict) and s.get("text"):
-                out[str(s.get("id"))] = s["text"]
+                out[str(s.get("id"))] = s.get("text_en") or s["text"]
     m = ilo_map.read(course)
-    for r in (m or {}).get("rows") or []:
-        if isinstance(r, dict) and r.get("sub_ilo"):
-            out[str(r.get("sub_ilo_id"))] = r["sub_ilo"]
+    for r in ilo_map.with_english(course, [r for r in (m or {}).get("rows") or [] if isinstance(r, dict)]):
+        if r.get("sub_ilo"):
+            out[str(r.get("sub_ilo_id"))] = r.get("sub_ilo_en") or r["sub_ilo"]
+            if not r.get("sub_ilo_en") and r.get("sub_ilo_status") != "main" and no_en is not None:   # a Main ILO is said as one
+                no_en.append("Sub-ILO %s" % r.get("sub_ilo_id"))
     return out
 
 
@@ -546,9 +551,11 @@ def course_plan(course, title, arch, prog, sheet, mods, days, subs, v, today):
         facts.append((w["assessment"], w["assessment_v"].format(q=fa["questions"], p=fa.get("pass_mark", "-"))))
     blocks = [("h1", w["acp"]), ("p", b_(title)), ("facts", facts)]
     mains = arch.get("main_ilos") or []
+    en = ilo_map.english(prog, arch)["main"]
+    said = lambda x: en.get(str(x.get("id"))) or x.get("text")         # L19: English, the programme's words when it has none
     if mains:
-        blocks += [("h2", w["main_ilos"]), ("ol", [x.get("text") for x in mains])]
-    main_by = {str(x.get("id")): x.get("text") for x in mains}
+        blocks += [("h2", w["main_ilos"]), ("ol", [said(x) for x in mains])]
+    main_by = {str(x.get("id")): said(x) for x in mains}
     for d, row in enumerate(days, 1):
         blocks.append(("h2", w["day"].format(n=d)))
         objs = []
@@ -863,7 +870,15 @@ def plan(course, infos, title, probs):
     if (cm.lang_code(lang) or lang.lower()) != "en":           # said on every build, not a stop: the course's words are
         print("Note: the course is in %s - the additional materials' headings and labels exist in English only so far; "
               "the course's own words are as approved" % lang)
-    subs = sub_ilo_texts(course, arch)
+    no_en = []
+    subs = sub_ilo_texts(course, arch, no_en)
+    en = ilo_map.english(prog, arch)["main"]
+    no_en = ["Main ILO %s" % x.get("id") for x in arch.get("main_ilos") or [] if not en.get(str(x.get("id")))] + no_en
+    if no_en:
+        probs.append("the programme is in %s and %s %s no English rendering - the ACP and the module plans show the programme's "
+                     "words. Write the English in architecture.json beside them (\"text_en\" of a Main ILO or Sub-ILO), then build "
+                     "again (L19: everything in the course is English)"
+                     % (prog.get("language"), ", ".join(no_en), "has" if len(no_en) == 1 else "have"))
     mods = modules_of(course, arch, infos, probs)
     for m in mods:
         m["hour"] = float(prog.get("academic_hour_min") or 45)

@@ -433,6 +433,24 @@ def main():
             check("measure_slides finds a module's deck in presentation\\index.html",
                   ms.deck_of(os.path.dirname(d)) == os.path.abspath(os.path.join(d, "index.html")))
         regressions(os.path.join(tmp, "reg"))
+
+        print("\n-- a rebuild ends by putting the course into the training app's editor, unasked")
+        import fix as fix_py
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            fix_py.upload(c)
+        check("a course not in the training app: nothing is said or sent", buf.getvalue() == "", buf.getvalue())
+        io.open(os.path.join(c, "working_claude", "portal.json"), "w", encoding="utf-8").write(json.dumps({"course_id": "gas-basic-3"}))
+        os.environ["NOVIKONTAS_AUTO_BUILD"] = "1"        # course_portal.py upload in its own process, with no server behind it
+        try:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                fix_py.upload(c)
+        finally:
+            del os.environ["NOVIKONTAS_AUTO_BUILD"]
+        check("a course in the training app: course_portal.py upload runs and its answer is shown",
+              "The training app's editor:" in buf.getvalue() and "the watch uploads it" in buf.getvalue(), buf.getvalue())
+        check("... and cmd_rebuild ends with it", "    upload(course)\n" in io.open(os.path.join(HERE, "fix.py"), encoding="utf-8").read())
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n" + "=" * 72)

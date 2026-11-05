@@ -17,6 +17,8 @@ a Latvian-speaking operator. Pinned (owner, 2026-09-30 - L34, L35, L36):
   * programme text appears exactly as written, marked with the programme's language; module titles
     with the course language; headings in the operator's language; Sub-ILOs beside the programme
     wording, kept / re-expressed / added;
+  * L19: the programme's words also in English beside them (Main ILO and kept Sub-ILO "text_en", the
+    module's "topic_en"), as the course will show them; one missing stops the approval;
   * merged topics, teaching inside the assessment, a missing module check, an assessment that is not
     last, hours that do not match, a total that does not match, and the older checks are all caught;
   * the page is one file, fetches nothing, has a print layout, and never ships to a tablet.
@@ -43,6 +45,8 @@ PASS, FAIL = [], []
 
 MAIN1 = "Veicināt drošas kravas operācijas uz sašķidrinātās gāzes tankkuģiem"
 OUT11 = "Identificēt sašķidrinātās gāzes tankkuģu tipus un aprakstīt to uzbūvi"
+MAIN1_EN = "Contribute to safe cargo operations on liquefied gas tankers"
+OUT11_EN = "Identify the types of liquefied gas tankers and describe their construction"
 SUB_NEW = "Identify the cargo containment system of a liquefied gas tanker from its general arrangement plan"
 
 PROGRAMME = {
@@ -59,10 +63,10 @@ ARCH = {
     "course": {"title": "Basic training for liquefied gas tanker cargo operations", "course_language": "English",
                "operator_language": "lv", "course_type": "NEW_ENTRANT", "programme_file": "source_files/programme.pdf",
                "model_course": "IMO model course 1.04"},
-    "main_ilos": [{"id": "1", "text": MAIN1, "ref": "p. 2"}],
+    "main_ilos": [{"id": "1", "text": MAIN1, "text_en": MAIN1_EN, "ref": "p. 2"}],
     "modules": [
-        {"module": 1, "title": "Gas tankers", "main_ilos": ["1"],
-         "sub_ilos": [{"id": "1.1", "status": "original"},
+        {"module": 1, "title": "Gas tankers", "topic_en": "Liquefied gas tankers", "main_ilos": ["1"],
+         "sub_ilos": [{"id": "1.1", "status": "original", "text_en": OUT11_EN},
                       {"id": "1.1.a", "status": "re-expressed", "programme_text": OUT11, "text": SUB_NEW,
                        "why": "Lai to varētu apgūt praktiski, pie rasējuma"},
                       {"id": "1.1.b", "status": "added", "text": "Recognise the tank type from a photograph", "why": "Operatora lūgums"}],
@@ -72,13 +76,14 @@ ARCH = {
          "self_checks": [{"questions": 4, "after": "after 1.1", "mechanics": ["single_choice", "categorise"]},
                          {"questions": 4, "mechanics": ["hotspot", "order"]}],
          "module_check": {"questions": 6, "mechanics": ["match", "hotspot", "single_choice"]}},
-        {"module": 2, "title": "Gas measuring instruments", "main_ilos": ["1"],
-         "sub_ilos": [{"id": "1.3", "status": "original"}],
+        {"module": 2, "title": "Gas measuring instruments", "topic_en": "Gas measuring instruments", "main_ilos": ["1"],
+         "sub_ilos": [{"id": "1.3", "status": "original", "text_en": "Describe the physical properties of liquefied gases"}],
          "practicals": [{"task": "Take an oxygen reading", "equipment": "Pārnēsājamais skābekļa mēraparāts", "place": "bench", "minutes": 40}],
          "media": [{"kind": "model_3d_scan", "what": "the portable gas detector used at Novikontas"},
                    {"kind": "step_animation", "what": "how the sensor reading rises"}],
          "self_checks": 1, "module_check": {"questions": 5, "mechanics": ["read_instrument", "set_value", "single_choice"]}},
-        {"module": 3, "title": "Extinguishing agents", "main_ilos": ["1"], "media": [{"kind": "comparison", "what": "foam, powder and water on a gas fire"}],
+        {"module": 3, "title": "Extinguishing agents", "topic_en": "Fire-extinguishing agents", "main_ilos": ["1"],
+         "media": [{"kind": "comparison", "what": "foam, powder and water on a gas fire"}],
          "module_check": {"questions": 5}}],
     "final_assessment": {"questions": 30, "pass_mark": "70 %", "graded": True, "ref": "3. p. 4"},
     "notes": ["Piezīme operatoram."]}
@@ -208,6 +213,47 @@ def main():
         row = re.search(r"<tr><td>1\.1\.b</td>.*?</tr>", page, re.S)
         check("an added Sub-ILO is marked added, with its reason",
               row and LV["status_added"] in row.group(0) and "Operatora lūgums" in row.group(0))
+        print("\n-- L19: the programme's words in English beside them, as the course will show them")
+        main_row = re.search(r"<tr><td>1</td><td>.*?</tr>", page[page.find(html.escape(LV["main_ilos_title"])):], re.S)
+        check("a Main ILO: the programme's words, and under them the English the course shows",
+              main_row and '<span class="verb" lang="lv">%s</span>' % MAIN1 in main_row.group(0)
+              and '%s: <span class="verb" lang="en">%s</span>' % (LV["en_label"], MAIN1_EN) in main_row.group(0),
+              main_row and main_row.group(0))
+        check("a programme topic: in English under the module's heading", '%s: <span class="verb" lang="en">Liquefied gas tankers</span>'
+              % LV["en_label"] in m1, m1[:900])
+        row = re.search(r"<tr><td>1\.1</td>.*?</tr>", page, re.S)
+        check("a kept Sub-ILO: the programme's wording, and 'as it will be taught' in English",
+              row and '<span class="verb" lang="lv">%s</span>' % OUT11 in row.group(0)
+              and '<span class="verb" lang="en">%s</span>' % OUT11_EN in row.group(0), row and row.group(0))
+        im = page[page.find('id="ilo-map"'):]
+        check("... and in the ILO map", '<span class="verb" lang="en">%s</span>' % OUT11_EN in im[:im.find("</table>")])
+        ne = copy.deepcopy(ARCH); ne["course"]["operator_language"] = "en"
+        del ne["main_ilos"][0]["text_en"], ne["modules"][0]["topic_en"], ne["modules"][0]["sub_ilos"][0]["text_en"]
+        cn = write_course(os.path.join(tmp, "no_en"), PROGRAMME, ne)
+        code, out = run("--course", cn, "--check")
+        check("caught: a Latvian programme's Main ILO, topic and kept Sub-ILO with no English rendering",
+              code == 1 and en("p_en_main", i="1", lang="Latvian") in out and en("p_en_topic", m=1, lang="Latvian") in out
+              and en("p_en_sub", m=1, s="1.1", lang="Latvian") in out and en("p_en_topic", m=2, lang="Latvian") not in out, out)
+        check("... a re-expressed or added Sub-ILO is the factory's own English - never asked for",
+              "Sub-ILO 1.1.a" not in out and "Sub-ILO 1.1.b" not in out, out)
+        rl = copy.deepcopy(ARCH); rl["course"]["operator_language"] = "en"
+        rl["modules"][0]["sub_ilos"][1]["text"] = "Atšķirt sašķidrinātās gāzes tankkuģu tipus un analizēt to uzbūvi"
+        code, out = run("--course", write_course(os.path.join(tmp, "re_lv"), PROGRAMME, rl), "--check")
+        check("caught: a re-expressed Sub-ILO still in the programme's language (an older revised outcome)",
+              code == 1 and en("p_en_sub", m=1, s="1.1.a", lang="Latvian") in out, out)
+        rl["modules"][0]["sub_ilos"][1]["text_en"] = "Distinguish the types of liquefied gas tankers and analyse their construction"
+        code, out = run("--course", write_course(os.path.join(tmp, "re_lv2"), PROGRAMME, rl), "--check")
+        check("... with its English beside it, it passes", code == 0, out)
+        run("--course", cn)
+        check("... the page shows where the English is missing", EN["en_missing"] in page_of(cn))
+        import test_pedagogy_review
+        test_pedagogy_review.complete(cn)
+        code, out = run("--course", cn, "--approve", "--by", "Anna")
+        check("... and the page cannot be approved while one is missing", code == 2 and "NOT recorded" in out
+              and en("p_en_main", i="1", lang="Latvian") in out, out)
+        pe = copy.deepcopy(PROGRAMME); pe["language"] = "English"
+        code, out = run("--course", write_course(os.path.join(tmp, "prog_en"), pe, ne), "--check")
+        check("an English programme needs no rendering - its own words are the course's", code == 0 and "text_en" not in out, out)
         a2 = copy.deepcopy(ARCH); a2["course"]["operator_language"] = "en"
         c2 = write_course(os.path.join(tmp, "en"), PROGRAMME, a2)
         run("--course", c2)
@@ -284,6 +330,9 @@ def main():
         check("each row carries the Main ILO and the programme topic verbatim (L2), the re-expressed one its own words",
               r0["main_ilo"] == MAIN1 and r0["topic"] == PROGRAMME["topics"]["1"]["title"] and r0["sub_ilo"] == OUT11
               and m["rows"][1]["sub_ilo"] == SUB_NEW and m["rows"][1]["programme_wording"] == OUT11, r0)
+        check("... and the same in English, as the course shows them (L19)",
+              (r0["main_ilo_en"], r0["topic_en"], r0["sub_ilo_en"], m["rows"][1]["sub_ilo_en"], m["rows"][4]["sub_ilo_en"])
+              == (MAIN1_EN, "Liquefied gas tankers", OUT11_EN, SUB_NEW, MAIN1_EN), r0)
         check("a module with no Sub-ILO of its own is mapped to its Main ILO", m["rows"][4]["sub_ilo"] == MAIN1)
         check("ilo_map.py: a Sub-ILO with children is met through them",
               ilo_map.leaves(ilo_map.module_rows(m, 1)) == ["1.1.a", "1.1.b"])

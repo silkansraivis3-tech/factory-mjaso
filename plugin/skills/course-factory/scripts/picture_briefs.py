@@ -6,6 +6,9 @@
     picture_briefs.py save <course> --module 1 --slide s03 --brief <brief.json>
     picture_briefs.py done <course> --module 1 --slide s03 --file <picture> --approved "<the person's words>"
     picture_briefs.py queue <course> --module 1 [--all]
+    picture_briefs.py place <course> --module 1 --slide q04 --file <picture> --rights <state> [--credit ..] [--source ..]
+                            [--license ..] [--author ..] [--generated --prompt ..] [--areas <json>]
+    picture_briefs.py areas <course> --module 1 --slide q04 --areas <json>
 
 WHY THIS EXISTS
 Every generated picture is billed to the NOVIKONTAS Google account - about EUR 0.10 each, a video clip much more
@@ -29,6 +32,15 @@ and generates only after their yes - the nano-banana tools refuse to run without
          exact file it is saved to (the build sheet's "figure", else assets/img/m01_s03_<title>.png in the module
          folder). Nothing to decide afterwards: show the list once, take corrections, then make them in order.
          Written to working_claude/picture_briefs/M01.gemini.json. --all lists places already made too.
+         Every Phase A placeholder of the module is in it - each file in assets/img whose _photo_meta.json record says
+         "placeholder": true, the task and check pictures (q.., m..) too - saved under its own name, never over the
+         placeholder.
+  place  one found or generated picture into a placeholder's place: copied into assets/img under the slot's own name,
+         its _photo_meta.json record (rights_state, credit, source, licence; generated, with its prompt), every
+         reference in the build sheet moved from the placeholder to it, and the placeholder and its record gone. On a
+         tap question the Phase A grid of answer boxes stays until --areas puts each box on its thing.
+  areas  the answer boxes of a tap question on the real picture: [x, y, w, h] in % of the picture, a list in the order
+         of the build sheet's answers or {"answer": [x, y, w, h]}.
 
 Everything is kept in working_claude/picture_briefs/M01.json, so a redo next week does not ask everything again.
 Exit 0, or 2 on bad input.
@@ -40,6 +52,7 @@ import io
 import json
 import os
 import re
+import shutil
 import sys
 import time
 
@@ -136,7 +149,7 @@ def place_as(s):
     return "inset" if cs.parse_kind(s.get("visual_kind", "")) in BESIDE["kinds"] else ""
 
 
-def draft_prompt(s, answers, comp, beside=False):
+def draft_prompt(s, answers, comp, beside=False, aspect=None):
     """the prompt from the person's answers, else from the script's own words - same input, same prompt"""
     style = (answers.get("style") or "").lower()
     default = (BESIDE["style_by_kind"].get(cs.parse_kind(s.get("visual_kind", "")), BESIDE["style"]) if beside
@@ -150,7 +163,7 @@ def draft_prompt(s, answers, comp, beside=False):
         if not answers.get("subject"):
             subject = (s.get("title") or subject).strip().rstrip(".")
         comp = "beside_drawing"
-    aspect = GEM["aspect_by_composition"].get(comp, GEM["aspect_by_composition"]["default"])
+    aspect = aspect or GEM["aspect_by_composition"].get(comp, GEM["aspect_by_composition"]["default"])
     first = subject.split(" ")[0]
     if first and not (first.isupper() and len(first) > 1):        # "The cargo control room" -> "the ...", "LNG" stays
         subject = subject[:1].lower() + subject[1:]
@@ -168,54 +181,232 @@ def draft_prompt(s, answers, comp, beside=False):
     return " ".join(parts), aspect
 
 
+PLACEHOLDER_TEXT = "Placeholder - the picture still to come: "
+
+
+def img_meta(mdir):
+    p = os.path.join(mdir, "assets", "img", "_photo_meta.json")
+    return p, (json.load(io.open(p, encoding="utf-8")) if os.path.isfile(p) else {})
+
+
+def placeholders(mdir):
+    """{slot: record} - every file in the module's assets/img whose _photo_meta.json record says it is a placeholder"""
+    _, meta = img_meta(mdir)
+    out = {}
+    for name, rec in meta.items():
+        m = re.match(r"^_placeholder_(.+)\.png$", name)
+        if m and isinstance(rec, dict) and rec.get("placeholder") is True and os.path.isfile(os.path.join(mdir, "assets", "img", name)):
+            out[m.group(1)] = rec
+    return out
+
+
+def aspect_of(w, h):
+    r = float(w or 4) / float(h or 3)
+    return min(("16:9", 16 / 9.0), ("4:3", 4 / 3.0), ("1:1", 1.0), ("3:4", 0.75), key=lambda x: abs(x[1] - r))[0]
+
+
+def is_placeholder_ref(rel):
+    return os.path.basename(rel or "").startswith("_placeholder_")
+
+
 def cmd_queue(course, module, script, store, every):
     screens = {s["id"]: s for s in script.get("screens", [])}
     _, build = build_sheet(course, module)
     sheet = build.get("screens") or {}
+    mdir = module_dir(course, module)
+    holders = placeholders(mdir)
     places = [s["id"] for s in script.get("screens", []) if place_as(s) and "video" not in s.get("visual_kind", "")
               and s.get("kind", "slide") == "slide" and not (sheet.get(s["id"]) or {}).get("no_picture")]
     places += [sid for sid in store if sid not in places and sid in screens]
-    mdir = module_dir(course, module)
+    places += [sid for sid in holders if sid not in places]
     out = []
     for sid in places:
-        s, b = screens[sid], store.get(sid, {})
+        s, b = screens.get(sid) or {"id": sid}, store.get(sid, {})
         bs = sheet.get(sid) or {}
+        hold = holders.get(sid)
+        if hold:                                          # the placeholder says what it holds, and its shape
+            s = dict(s, visual=s.get("visual") or (hold.get("description") or "").replace(PLACEHOLDER_TEXT, ""))
         how = place_as(s) or "figure"
         have = (bs.get("inset") or {}).get("photo") if how == "inset" else ""
-        if (b.get("made") or have) and not every:
+        fig = (have or (bs.get("figure") if how == "figure" else "") or "").replace("\\", "/")
+        if is_placeholder_ref(have):
+            have = ""
+        real = fig and not is_placeholder_ref(fig) and os.path.isfile(os.path.join(mdir, fig))
+        if (b.get("made") or have or real) and not hold and not every:
             continue
         comp = bs.get("composition") or "photo"          # a generated picture with no layout of its own fills the slide
-        prompt, aspect = draft_prompt(s, b.get("answers") or {}, comp, beside=how == "inset")
+        prompt, aspect = draft_prompt(s, b.get("answers") or {}, comp, beside=how == "inset",
+                                      aspect=aspect_of(hold.get("width"), hold.get("height")) if hold else None)
         if b.get("prompt"):
             prompt = b["prompt"]
-        fig = (have or (bs.get("figure") if how == "figure" else "") or "").replace("\\", "/")
-        rel = fig if fig.lower().endswith((".png", ".jpg", ".jpeg", ".webp")) else \
-            "assets/img/%s_%s_%s%s.png" % (cs.mid(module).lower(), sid, slug(s.get("title")), "_3d" if how == "inset" else "")
-        out.append({"slide": sid, "place": cs.place(script, sid), "title": s.get("title") or "", "aspect": aspect,
+        rel = fig if fig.lower().endswith((".png", ".jpg", ".jpeg", ".webp")) and not is_placeholder_ref(fig) else \
+            "assets/img/%s_%s_%s%s.png" % (cs.mid(module).lower(), sid, slug(s.get("title") or s.get("question") or s.get("visual")),
+                                           "_3d" if how == "inset" else "")
+        out.append({"slide": sid, "place": cs.place(script, sid) if sid in screens else hold.get("used_in") or sid,
+                    "title": s.get("title") or s.get("question") or "", "aspect": aspect,
                     "place_as": "under the drawing (inset)" if how == "inset" else "the slide's picture",
                     "prompt": prompt, "prompt_from": "the builder (%s) - show it to the person" % b["refined"]
                     if b.get("prompt") and b.get("refined") else "the person" if b.get("prompt") else
                     ("drafted from the title - say in one line what the real thing looks like if the title is not a "
                      "thing on a ship" if how == "inset" and not (b.get("answers") or {}).get("subject") else "drafted from the script"),
                     "about": (s.get("visual") or s.get("title") or "").strip(), "rel": rel,
-                    "save_as": os.path.normpath(os.path.join(mdir, rel)), "made": len(b.get("made", []))})
+                    "save_as": os.path.normpath(os.path.join(mdir, rel)), "made": len(b.get("made", [])),
+                    "placeholder": "assets/img/_placeholder_%s.png" % sid if hold else ""})
     qp = os.path.join(os.path.dirname(store_path(course, module)), "%s.gemini.json" % cs.mid(module))
     os.makedirs(os.path.dirname(qp), exist_ok=True)
     io.open(qp, "w", encoding="utf-8").write(json.dumps(out, ensure_ascii=False, indent=1))
-    print("Module %s: %d picture(s) to make in the Gemini app - no cost per picture (Google AI Pro), nothing left to decide."
-          % (module, len(out)))
+    print("Module %s: %d picture(s) to make in the Gemini app - no cost per picture (Google AI Pro), nothing left to decide "
+          "(%d placeholder(s) in the module)." % (module, len(out), len(holders)))
     for i, q in enumerate(out, 1):
         print("\n%d. %s (%s) \"%s\" -> %s  [%s, %s, prompt %s]\n   %s" % (i, q["place"], q["slide"], q["title"], q["rel"],
                                                                     q["place_as"], q["aspect"], q["prompt_from"], q["prompt"]))
     print("\nShow this list once; a correction to a line is saved with: save --slide <id> --brief <json>. Then make them in "
-          "order with nano-banana gemini-browser.\n    %s" % qp)
+          "order with nano-banana gemini-browser, and put each in its place with: place --slide <id> --file <picture>.\n    %s" % qp)
+    return 0
+
+
+def size_of(path):
+    try:
+        from PIL import Image
+        with Image.open(path) as im:
+            return im.size
+    except Exception:
+        return None, None
+
+
+def boxes(text, keys):
+    """--areas: a list in the order of the answers, or {"answer": box} - each [x, y, w, h] in % of the picture"""
+    got = json.loads(text)
+    if isinstance(got, list):
+        if len(got) != len(keys):
+            raise ValueError("%d box(es) for %d answer(s): %s" % (len(got), len(keys), ", ".join(keys)))
+        got = dict(zip(keys, got))
+    if not isinstance(got, dict) or set(got) != set(keys):
+        raise ValueError("one box for each answer, by its own words: %s" % ", ".join(keys))
+    for k, v in got.items():
+        if not (isinstance(v, list) and len(v) == 4 and all(isinstance(x, (int, float)) for x in v)
+                and v[0] >= 0 and v[1] >= 0 and v[2] > 0 and v[3] > 0 and v[0] + v[2] <= 100.5 and v[1] + v[3] <= 100.5):
+            raise ValueError("the box of \"%s\" is not [x, y, w, h] inside the picture, in %%: %s" % (k, v))
+    return {k: [round(float(x), 1) for x in got[k]] for k in keys}
+
+
+GRID_NOTE = ("picture placed %s; the answer boxes are still the Phase A grid - put each on its thing: picture_briefs.py "
+             "areas <course> --module %s --slide %s --areas <json>")
+
+
+def set_areas(entry, text, module, sid):
+    """the slot's tap areas from --areas, or the note that they are still the grid - True when they are set"""
+    if not isinstance(entry.get("areas"), dict) or not entry["areas"]:
+        entry.pop("_placeholder", None)
+        entry.pop("placeholder", None)
+        return None
+    if text:
+        entry["areas"] = boxes(text, list(entry["areas"]))
+        entry.pop("_placeholder", None)
+        entry.pop("placeholder", None)
+        return True
+    entry["_placeholder"] = GRID_NOTE % (time.strftime("%Y-%m-%d"), module, sid)
+    return False
+
+
+def cmd_place(course, module, a):
+    """a found or generated picture into the place of the slot's placeholder"""
+    mdir = module_dir(course, module)
+    if not os.path.isfile(a.file):
+        print("Stopped - there is no picture at %s" % a.file)
+        return 2
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "course-visuals", "scripts"))
+    import check_assets
+    rights = "GENERATED" if a.generated else (a.rights or "").upper()
+    if rights not in check_assets.VALID_RIGHTS or rights == "REJECTED":
+        print("Stopped - --rights is one of: %s" % ", ".join(sorted(check_assets.VALID_RIGHTS - {"REJECTED"})))
+        return 2
+    if a.generated:
+        if not (a.prompt or "").strip():
+            print("Stopped - a generated picture keeps the prompt it was made from (--prompt)")
+            return 2
+    elif rights == "ATTRIBUTION_REQUIRED" and not (a.credit and a.author):
+        print("Stopped - ATTRIBUTION_REQUIRED needs --credit and --author: the credit line has to say something")
+        return 2
+    bp, build = build_sheet(course, module)
+    holders = placeholders(mdir)
+    old = "assets/img/_placeholder_%s.png" % a.slide
+    hold = holders.get(a.slide)
+    entry = (build.get("screens") or {}).get(a.slide)
+    if not hold and entry is None:
+        print("Stopped - module %s has no placeholder and no build-sheet place for %s" % (module, a.slide))
+        return 2
+    script = cs.load(cs.paths(course, module)["script"])
+    s = next((x for x in script.get("screens", []) if x["id"] == a.slide), {})
+    shows = ((hold or {}).get("description") or "").replace(PLACEHOLDER_TEXT, "") or s.get("visual") or s.get("title") or ""
+    ext = os.path.splitext(a.file)[1].lower()
+    ext = ".jpg" if ext == ".jpeg" else ext
+    if ext not in (".png", ".jpg", ".webp"):
+        print("Stopped - a picture is .png, .jpg or .webp: %s" % a.file)
+        return 2
+    rel = "assets/img/%s_%s_%s%s" % (cs.mid(module).lower(), a.slide, slug(s.get("title") or s.get("question") or shows), ext)
+    dest = os.path.join(mdir, rel.replace("/", os.sep))
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    if os.path.abspath(a.file) != os.path.abspath(dest):
+        shutil.copy2(a.file, dest)
+    w, h = size_of(dest)
+    rec = {"title": (s.get("title") or shows[:1].upper() + shows[1:])[:120], "description": shows,
+           "width": w, "height": h, "used_in": (hold or {}).get("used_in") or a.slide, "rights_state": rights,
+           "credit": a.credit, "source": a.source, "license": a.license, "author": a.author, "placed": time.strftime("%Y-%m-%d")}
+    if a.generated:
+        rec.update(generated=True, origin="generated illustration", generation_prompt=a.prompt.strip(),
+                   generated_by=a.generated_by or "Gemini app (browser), Nano Banana", license=a.license or "generated for this course")
+    mp, meta = img_meta(mdir)
+    meta[os.path.basename(rel)] = {k: v for k, v in rec.items() if v not in (None, "")}
+    io.open(mp, "w", encoding="utf-8", newline="\n").write(json.dumps(meta, ensure_ascii=False, indent=2) + "\n")
+    if hold:
+        sys.path.insert(0, os.path.join(os.path.dirname(HERE), "compile", "scripts"))
+        import placeholder
+        placeholder.remove(mdir, a.slide)
+    text = json.dumps(build, ensure_ascii=False)
+    moved = text.count(json.dumps(old)[1:-1])
+    build = json.loads(text.replace(json.dumps(old)[1:-1], json.dumps(rel)[1:-1]))
+    entry = build.setdefault("screens", {}).get(a.slide)
+    if not moved and not (entry or {}).get("figure"):
+        entry = build["screens"].setdefault(a.slide, {})
+        entry["figure"] = rel
+    try:
+        tapped = set_areas(entry, a.areas, module, a.slide) if entry is not None else None
+    except ValueError as e:
+        print("Stopped - %s" % e)
+        return 2
+    build.setdefault("module", int(module))
+    cs.save(bp, build)
+    print("Placed %s in %s (%s): %s, %s%s; the build sheet points to it in %d place(s)%s." % (
+        os.path.basename(a.file), cs.mid(module), a.slide, rel, rights, " (generated)" if a.generated else "", max(moved, 1),
+        "" if tapped is None else " - its answer boxes are on the picture" if tapped else
+        " - its answer boxes are still the Phase A grid: put each on its thing with areas --slide %s" % a.slide))
+    print("Build the module again (fix.py rebuild) for the slides to show it.")
+    return 0
+
+
+def cmd_areas(course, module, a):
+    bp, build = build_sheet(course, module)
+    entry = (build.get("screens") or {}).get(a.slide)
+    if not entry or not isinstance(entry.get("areas"), dict) or not entry["areas"]:
+        print("Stopped - %s %s is not a tap question: its build sheet has no \"areas\"" % (cs.mid(module), a.slide))
+        return 2
+    try:
+        set_areas(entry, a.areas, module, a.slide)
+    except ValueError as e:
+        print("Stopped - %s" % e)
+        return 2
+    cs.save(bp, build)
+    for k, v in entry["areas"].items():
+        print("  %s  %s" % (v, k))
+    print("The answer boxes of %s %s are on the picture." % (cs.mid(module), a.slide))
     return 0
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("list", "save", "done", "queue"):
+    for name in ("list", "save", "done", "queue", "place", "areas"):
         s = sub.add_parser(name)
         s.add_argument("course")
         s.add_argument("--module", required=True)
@@ -223,6 +414,14 @@ def main(argv=None):
             s.add_argument("--all", action="store_true")
         elif name != "list":
             s.add_argument("--slide", required=True)
+        if name == "place":
+            s.add_argument("--file", required=True)
+            s.add_argument("--rights", default="")
+            for k in ("--credit", "--source", "--license", "--author", "--prompt", "--generated-by"):
+                s.add_argument(k)
+            s.add_argument("--generated", action="store_true")
+        if name in ("place", "areas"):
+            s.add_argument("--areas", required=name == "areas")
         if name == "save":
             s.add_argument("--brief", required=True)
         if name == "done":
@@ -241,6 +440,10 @@ def main(argv=None):
         return cmd_list(course, a.module, script, store)
     if a.cmd == "queue":
         return cmd_queue(course, a.module, script, store, a.all)
+    if a.cmd == "place":
+        return cmd_place(course, a.module, a)
+    if a.cmd == "areas":
+        return cmd_areas(course, a.module, a)
     if a.slide not in {s["id"] for s in script.get("screens", [])}:
         print("Stopped - module %s has no screen %s" % (a.module, a.slide))
         return 2

@@ -16,6 +16,8 @@ Pinned:
   * a proposal below what the outcome asks is refused until 'limit' says what stops the course reaching it; an expert's
     decision (pedagogy_review.py expert) is carried out as it is, and asks for what the trainee does at that level;
   * check only notes: a proposal below the outcome with its limit, Create, a module with no activity proposed;
+  * L19: a revised outcome is written in English - one in the programme's language (Latvian) stops the check; the
+    documents show the programme's own words beside it;
   * render writes the three documents as Word and HTML, the outcomes' words read from the architecture, never from the
     judgement file; the activities with the experts' status; a sign-off block; level 0 says "not taught";
   * the Stage 2 approval is refused until the documents are clean and written from the current files, and an edit to the
@@ -41,6 +43,7 @@ import pedagogy_review as pr  # noqa: E402
 import test_architecture_page as tap  # noqa: E402
 
 PASS, FAIL = [], []
+REVISED = "Apply the physical properties of liquefied gases to choose a safe cargo-handling step"
 
 
 def check(name, ok, detail=""):
@@ -158,6 +161,15 @@ def main():
         top["proposed"]["above_why"] = "the officer zeroes the meter before every entry"
         io.open(f["review"], "w", encoding="utf-8").write(json.dumps(up, ensure_ascii=False))
         check("... and allowed with the task on board that needs it", pr.check(c)[0] == [], pr.check(c)[0])
+        check("L19: a lift above the outcome's verb asks for the revised outcome in English",
+              any("1.3" in n and "'revised_outcome'" in n and "in English" in n for n in pr.check(c)[1]), pr.check(c)[1])
+        top["proposed"]["revised_outcome"] = "Pielietot zināšanas par sašķidrināto gāzu fizikālajām īpašībām"
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(up, ensure_ascii=False))
+        check("... a revised outcome in the programme's language (Latvian) stops the check",
+              any("1.3: 'revised_outcome' is in the programme's language" in p for p in pr.check(c)[0]), pr.check(c)[0])
+        top["proposed"]["revised_outcome"] = REVISED
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(up, ensure_ascii=False))
+        check("... in English it passes", pr.check(c)[0] == [], pr.check(c)[0])
         keep = copy.deepcopy(low)
         keep["modules"]["2"]["rows"]["1.3"]["now"]["level"] = 1
         keep["modules"]["2"]["rows"]["1.3"]["proposed"]["level"] = 1
@@ -201,6 +213,10 @@ def main():
               and "Kept because the old course already reaches what the outcome asks" in new and "Not higher because: no detector" in new,
               [x for x in ("the expert's decision", "They can judge", "Kept because the old course", "Not higher because")
                if x not in new])
+        t13 = next((t for m in pr.view(c)["content"]["modules"] for t in m["topics"] if t["id"] == "1.3"), {})
+        check("L19: the experts read the revised outcome in English, the programme's own words beside it",
+              (t13.get("revised"), t13.get("intended")) == (REVISED, "Aprakstīt sašķidrināto gāzu vielu fizikālās īpašības")
+              and t13.get("revised_verb", "").startswith("apply"), t13)
         check("... and the course's count of kept, lifted and above, and of each level before and after",
               "<td>Kept</td>" in new and "<td>Lifted</td>" in new and "<td>Above the outcome</td>" in new and "Old course" in new)
         act = docx_text(os.path.join(f["out"], "3_TEACHING_ACTIVITIES.docx"))

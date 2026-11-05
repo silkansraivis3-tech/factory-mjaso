@@ -29,7 +29,8 @@ WHAT IS READ, WHAT IS WRITTEN
                                                     the old course (OLD_COURSE_INVENTORY.md, its tests and exercises)
                                                     and bloom/GUIDE.md section 5
 The outcomes' words are never in pedagogy_review.json: they are read from the architecture, so a document can never
-change one. The documents are English only so far.
+change one. The documents are English only so far; the outcomes are shown in the programme's own words, and a
+revised outcome is written in English, as the course will show it (L19).
 
 Standard library only (the PDF is printed by the same hidden browser as the additional materials).
 """
@@ -114,6 +115,11 @@ def modules(prog, arch):
         out.append({"n": int(am["module"]), "title": am.get("title", ""), "rows": rows,
                     "active": [a for a in (am.get("active_learning") or []) if isinstance(a, dict)]})
     return out
+
+
+def not_english(text, lang):
+    """True when the words lead with a verb of the programme's language and none of English - not written in English"""
+    return lang != "en" and bool(bloom_map.ilo_level(text, lang)["verb"]) and not bloom_map.ilo_level(text, "en")["verb"]
 
 
 def decision(now, new, asks):
@@ -222,9 +228,12 @@ def check(course):
             rw = (new.get("revised_outcome") or "").strip()
             if rw and r["main"]:
                 probs.append("%s: a Main ILO is never re-worded (L2) - empty its 'revised_outcome'" % where)
+            elif rw and not_english(rw, r["programme_lang"]):
+                probs.append("%s: 'revised_outcome' is in the programme's language - write it in English, as the course will "
+                             "show it; the programme's own words stay beside it (L19)" % where)
             elif not rw and not r["main"] and isinstance(b, int) and r["asks"] and b > r["asks"] and not new.get("expert"):
                 notes.append("%s: proposed %s is above the outcome's verb (%s) - say it in 'revised_outcome', the same "
-                             "Sub-ILO with a verb at that level, in the programme's language" % (where, level(b), level(r["asks"])))
+                             "Sub-ILO with a verb at that level, in English (L19)" % (where, level(b), level(r["asks"])))
     for n, m in mods.items():
         for i in (m or {}).get("rows") or {}:
             if (str(n), i) not in known:

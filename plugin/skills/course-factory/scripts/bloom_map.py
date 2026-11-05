@@ -124,6 +124,8 @@ def ilo_level(text, lang="en"):
     leads = set(B["lead_words"].get(lang, [])) | set(B["lead_words"]["en"][:2])
 
     def leading(pos):
+        if pos > 1 and low[pos - 1] in "-–—" and low[pos - 2].isalnum():
+            return False                      # "pre-planned", "well-designed": part of a word, not a clause of its own
         before = low[:pos].rstrip()
         if not before or before[-1] in ",;:(•-–—" or re.search(r"(?:^|\s)\d+(?:\.\d+)*[.)]?$", before):
             return True

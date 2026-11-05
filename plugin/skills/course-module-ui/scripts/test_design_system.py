@@ -92,6 +92,28 @@ def css_px(expr, w, h):
         return None
 
 
+def contrast(fg, bg):
+    """WCAG contrast of two #rrggbb colours"""
+    def lum(h):
+        c = [int(h.lstrip("#")[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        c = [x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    a, b = sorted((lum(fg), lum(bg)), reverse=True)
+    return (a + 0.05) / (b + 0.05)
+
+
+def rule_colours(selector):
+    """(color, background) of the rule written for `selector` in the style files, var() followed to its #rrggbb"""
+    text = "".join(re.sub(r"/\*.*?\*/", "", io.open(p, encoding="utf-8").read(), flags=re.S) for p in STYLE_FILES + [TOKENS])
+    toks = dict(re.findall(r"(--[\w-]+)\s*:\s*(#[0-9a-fA-F]{6})\b", text))
+    body = next((b for s, b in re.findall(r"([^{}]+)\{([^{}]*)\}", text) if s.strip() == selector), "")
+    def val(prop):
+        m = re.search(r"(?<![\w-])%s\s*:\s*([^;]+)" % prop, body)
+        v = m.group(1).strip() if m else ""
+        return toks.get(re.sub(r"^var\((--[\w-]+)\)$", r"\1", v), v)
+    return val("color"), val("background")
+
+
 def touch_floor_misses():
     """[(file, selector, value, px)] for every touch rule's min-height under 44 px at 1280x800 or 1024x768"""
     out = []
@@ -283,6 +305,10 @@ def main():
           'data-at="' not in up and "#p" not in re.sub(r"#[0-9a-fA-F]{3,8}\b", "", up))
     check("no flat-drawing motion left in the upgraded bodies - a picture box is a live scene, a render or a photograph",
           not re.search(r"\.lt-show\s*>\s*svg|\.lt-show \.(gas|wave|fan|air|flow|wheel)\b", up))
+    fg, bg = rule_colours(".lt-why .stamp")
+    check("the True / False stamp's white on its red is at least 4.5:1 (it was 4.27:1 on #d9473b)",
+          fg.startswith("#") and bg.startswith("#") and contrast(fg, bg) >= 4.5,
+          (fg, bg, round(contrast(fg, bg), 2) if fg.startswith("#") and bg.startswith("#") else None))
     check("gb_steps.js finds a slide by its marks, not by its id",
           "getElementById" not in steps and "[data-stop]" in steps and "data-stops" in steps)
     node = shutil.which("node")

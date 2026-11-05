@@ -519,6 +519,32 @@ def main():
         code, out = cs_run("approve", nc, "--module", "1", "--by", "Raivis")
         check("... and after the operator chose so, having heard the risk, it is - the choice named, no --despite-findings needed",
               code == 0 and "the operator's choice S1" in out, out)
+        for kind in ("explain-then-reveal", "predict-then-reveal"):
+            sl = {"id": "s09", "kind": "slide", "active": kind, "text": "x", "ask": "What happens next?", "reveal": "It boils."}
+            check("%s with ask and reveal is the worked example's look, as the compiler builds it (L62)" % kind,
+                  cs.shape_of(sl) == "worked-example", cs.shape_of(sl))
+            lone = dict(sl, reveal="")
+            check("... and an ask with no reveal is a problem there too - a lone one is never built",
+                  any("needs both its question" in x for x in cs.shape_problems({"screens": [lone]})))
+        check("a points slide with an ask needs its reveal as well",
+              any("needs both its question" in x for x in cs.shape_problems({"screens": [{"id": "s10", "kind": "slide", "text": "x",
+                                                                                           "points": "a\nb\nc", "ask": "Why?"}]})))
+        os.environ["NOVIKONTAS_AUTO_BUILD"] = "1"
+        try:
+            code, out = cs_run("approve", nc, "--module", "1", "--by", "Raivis")
+            check("an unattended run never approves on a name it was given (script/GUIDE.md §4)",
+                  code == 1 and "nobody pressed Ready" in out, out)
+            rp = os.path.join(nc, "working_claude", "pedagogy_review.json")
+            rev = json.load(io.open(rp, encoding="utf-8")) if os.path.isfile(rp) else {}
+            rev["ready"] = {"by": "Anna Liepa", "on": "2026-11-04"}
+            io.open(rp, "w", encoding="utf-8").write(json.dumps(rev))
+            code, out = cs_run("approve", nc, "--module", "1", "--by", "Raivis (Ready in editor)")
+            check("... only with the expert's own Ready from the editor (L70), by the name they signed it with",
+                  code == 1 and "Anna Liepa (Ready in editor)" in out, out)
+            code, out = cs_run("approve", nc, "--module", "1", "--by", "Anna Liepa (Ready in editor)")
+            check("... which it records", code == 0 and "approved by Anna Liepa (Ready in editor)" in out, out)
+        finally:
+            del os.environ["NOVIKONTAS_AUTO_BUILD"]
 
         print("\n-- 2.18.1: the instructor notes are short, and live in their own .md file for the instructor's panel")
         code, out = cs_run("render", c, "--module", "1")

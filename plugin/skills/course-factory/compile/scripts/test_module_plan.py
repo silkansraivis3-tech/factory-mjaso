@@ -12,6 +12,8 @@ Pinned:
     the instructor does (the script's notes) and its Sub-ILO; every task set and every question is listed with its code,
     way of answering, Sub-ILO and the set's pass mark; the room activities carry their link hints;
   * the Main ILO and Sub-ILOs come from the ILO map, each with the slides that teach it and the questions that check it;
+  * L19: a programme in Latvian - the Main ILO, the programme topic and a kept Sub-ILO are shown in English, by the
+    rendering beside them in architecture.json; one missing shows the programme's words, marked lv, and is reported;
     the equipment comes from the architecture; the sources are the script's;
   * a word corrected in the script is corrected in the plan on the next build;
   * a plan changed by hand - or made before the compiler - is never overwritten without --force;
@@ -65,6 +67,15 @@ ARCH = {"course": {"title": "Test course", "course_language": "English", "operat
                      "practicals": [{"task": "Dress for bunkering", "equipment": "cryogenic gloves, face shield",
                                      "place": "the safety area", "minutes": 15}]}],
         "final_assessment": {"topic": "99", "graded": True}}
+MAIN_LV = "Veicināt drošas kravas operācijas uz sašķidrinātās gāzes tankkuģiem"
+OUT_LV = "Identificēt sašķidrinātās gāzes tankkuģu tipus un aprakstīt to uzbūvi"
+TOPIC_LV = "Sašķidrinātās gāzes tankkuģi"
+LV_PROG = {"language": "Latvian", "academic_hour_min": 40, "topics": {"1": {"title": TOPIC_LV, "theory": 0.5, "practical": 0}},
+           "main_ilos": {"1": MAIN_LV}, "outcomes": {"1.1": OUT_LV}}
+LV_ARCH = dict(ARCH, main_ilos=[{"id": "1", "text": MAIN_LV, "text_en": "Contribute to safe cargo operations on liquefied gas tankers"}],
+               modules=[dict(ARCH["modules"][0], topic_en="Liquefied gas tankers", sub_ilos=[
+                   {"id": "1.1", "status": "original", "text_en": "Identify the types of liquefied gas tankers and describe their construction"},
+                   gate_fixture.DEFAULT_SUBS[1]])])
 
 
 def check(name, ok, detail=""):
@@ -318,6 +329,30 @@ def main():
               re.search(r'<tr class="c"><td></td><td class="m">8</td><td>&#8627; Brief</td><td class="m">1</td>', page)
               and re.search(r'<td class="m">9</td><td>&#8627; Run</td><td class="m">3</td><td>Run</td><td>Pairs walk the line</td>', page)
               and re.search(r'<td class="m">12</td><td>&#8627; Debrief</td><td class="m">1</td>', page), page[page.find("Walk the plant"):][:1200])
+
+        print("\n-- L19: the programme is in Latvian, the plan is in English")
+        os.makedirs(os.path.join(tmp, "lv_prog"))
+        cp, mdp = plan_course(os.path.join(tmp, "lv_prog"), arch=False)
+        cs.save(os.path.join(cp, "working_claude", "programme.json"), LV_PROG)
+        cs.save(os.path.join(cp, "working_claude", "architecture.json"), LV_ARCH)
+        gate_fixture.open_gate(cp)
+        code, out = run(t.COMPILE, cp, "--module", "1", "--only", "plan")
+        pg = plan_of(mdp)
+        check("the Main ILO, the programme topic and the kept Sub-ILO are in English - the rendering written at Stage 2",
+              code == 0 and "Contribute to safe cargo operations on liquefied gas tankers" in pg and "Liquefied gas tankers" in pg
+              and "Identify the types of liquefied gas tankers and describe their construction" in pg, (code, out[-400:]))
+        check("... no word of the programme's Latvian is on the plan", not any(x in pg for x in (MAIN_LV, OUT_LV, TOPIC_LV))
+              and 'lang="lv"' not in pg, [x for x in (MAIN_LV, OUT_LV, TOPIC_LV) if x in pg])
+        check("... and the map's table alone - never the ids-only table beside it", "The ILO map is not in the course yet" not in pg)
+        na = json.loads(json.dumps(LV_ARCH))
+        del na["main_ilos"][0]["text_en"], na["modules"][0]["sub_ilos"][0]["text_en"]
+        cs.save(os.path.join(cp, "working_claude", "architecture.json"), na)
+        code, out = run(t.COMPILE, cp, "--module", "1", "--only", "plan")
+        pg = plan_of(mdp)
+        check("a rendering missing: the programme's words, marked lv - never silent: the compiler reports it (exit 1)",
+              code == 1 and '<span lang="lv">%s</span>' % MAIN_LV in pg and '<span lang="lv">%s</span>' % OUT_LV in pg
+              and "Liquefied gas tankers" in pg and "the programme is in Latvian and the Main ILO, Sub-ILO 1.1 have no English rendering" in out,
+              (code, out[-600:]))
 
         print("\n-- without an ILO map or an architecture")
         os.makedirs(os.path.join(tmp, "bare"))

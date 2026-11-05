@@ -18,11 +18,20 @@ One row per Sub-ILO, per module, in the programme's order:
      "main_ilo" (programme, verbatim - L2), "sub_ilo_id": "4.a",
      "sub_ilo_status": "original | re-expressed | added | main", "sub_ilo" (as it is taught),
      "programme_wording" (the programme's own words beside a re-expressed one),
+     "topic_en", "main_ilo_en", "sub_ilo_en" (the same words in English, as the course shows them - L19),
      "model_course": ["4.1.2", ...]  (optional - from the Sub-ILO's own "model_course" in architecture.json)}
 A module with no Sub-ILO of its own gets one row per Main ILO it serves ("main") - it is written against
 that.
 Plus "model_course_items": {"M04": [...]} - every item of the model course's syllabus under that
 programme topic (coverage/GUIDE.md §1), when the syllabus has been transcribed.
+
+THE PROGRAMME'S WORDS IN ENGLISH (L19)
+Everything in the course is English; the programme may not be (GAS BASIC's is Latvian), and it stays as it is.
+Its words are quoted verbatim only on the review pages. Where the course shows them - the module plans, the
+ACP - it shows their English rendering, written at Stage 2 in architecture.json beside the verbatim text: a
+Main ILO's "text_en", a module's "topic_en" (its programme topic), a kept Sub-ILO's "text_en". A re-expressed
+or added Sub-ILO is the factory's own words, written in English. english() says what the course shows - ""
+where the rendering is missing, and the Stage 2 page stops on it.
 
 The core fields are rebuilt from architecture.json every time. Anything else on a row (how it is
 taught, where, how it is assessed - the IGF pilot's own tool adds those) and any other top-level key
@@ -59,7 +68,9 @@ sys.path.insert(0, HERE)
 import workspace  # noqa: E402
 
 FILE = "ilo_map.json"
-CORE = ("module", "module_title", "topic", "main_ilo_ids", "main_ilo", "sub_ilo_id", "sub_ilo_status", "sub_ilo", "programme_wording")
+CORE = ("module", "module_title", "topic", "main_ilo_ids", "main_ilo", "sub_ilo_id", "sub_ilo_status", "sub_ilo", "programme_wording",
+        "topic_en", "main_ilo_en", "sub_ilo_en")
+EN_OF = {"topic_en": "topic", "main_ilo_en": "main_ilo", "sub_ilo_en": "sub_ilo"}
 
 
 def load(p):
@@ -111,6 +122,51 @@ def find_syllabus(course):
     return None
 
 
+def is_english(prog):
+    """True when the programme is written in English (or does not say) - its own words are then the course's."""
+    return str((prog or {}).get("language") or "English").strip().lower() in ("en", "english")
+
+
+def english(prog, arch):
+    """The programme's words in English, as the course shows them (L19): {"main": {id: text}, "topic": {module: text},
+    "sub": {(module, id): text}}. An English programme's own words; else the rendering written beside them at Stage 2
+    (architecture.json main_ilos "text_en", a module's "topic_en", a Sub-ILO's "text_en") - "" where it is missing.
+    A re-expressed or added Sub-ILO is the factory's own words, already English."""
+    prog, arch = prog or {}, arch or {}
+    same = is_english(prog)
+    topics = {str(k): v for k, v in (prog.get("topics") or {}).items()}
+    outcomes = {str(k): v for k, v in (prog.get("outcomes") or {}).items()}
+    words = {str(k): v for k, v in (prog.get("main_ilos") or {}).items()}
+    main = {i: (v if same else "") for i, v in words.items()}
+    for i in arch.get("main_ilos", []) or []:
+        k = str(i.get("id"))
+        main[k] = i.get("text_en") or ((words.get(k) or i.get("text", "")) if same else "")
+    topic, sub = {}, {}
+    for am in arch.get("modules", []) or []:
+        n = mkey(am.get("module"))
+        topic[n] = am.get("topic_en") or ((topics.get(str(n)) or {}).get("title", "") if same else "")
+        for s in am.get("sub_ilos", []) or []:
+            sid, st = str(s.get("id", "")), s.get("status", "original")
+            own = st in ("re-expressed", "added") and s.get("text")
+            wording = s.get("programme_text") or outcomes.get(sid) or s.get("text", "")
+            sub[(n, sid)] = s.get("text_en") or (s["text"] if own else wording if same else "")
+    return {"main": main, "topic": topic, "sub": sub}
+
+
+def with_english(course, rows):
+    """The rows with their English words from the current programme.json and architecture.json - a rendering written
+    after the map was made is shown too. An English programme's rows fall back on their own words; any other's never."""
+    prog, arch = course_files(course) if course else (None, None)
+    fresh = {(r["module"], r["sub_ilo_id"]): r for r in derive(prog, arch)[0]} if arch else {}
+    same = is_english(prog)
+    out = []
+    for r in rows:
+        k = (mname(r.get("module")) if mkey(r.get("module")) is not None else r.get("module"), str(r.get("sub_ilo_id")))
+        d = fresh.get(k) or r
+        out.append(dict(r, **{f: d.get(f) or ((r.get(v) or "") if same else "") for f, v in EN_OF.items()}))
+    return out
+
+
 def final_topic(arch):
     return str((arch.get("final_assessment") or {}).get("topic") or "")
 
@@ -123,6 +179,7 @@ def derive(prog, arch, syllabus=None):
     mains = {str(i.get("id")): i.get("text", "") for i in arch.get("main_ilos", []) or []}
     mains.update({str(k): v for k, v in (prog.get("main_ilos") or {}).items()})      # the programme's words win (L2)
     fa = final_topic(arch)
+    en = english(prog, arch)
     rows, owed = [], {}
     # a "final" row sorts last - comparing it with the numbers raised TypeError
     order = lambda m: (lambda n: n if isinstance(n, int) else 10 ** 9)(mkey(m.get("module")))
@@ -133,13 +190,16 @@ def derive(prog, arch, syllabus=None):
         M = mname(n)
         t = topics.get(str(n)) or {}
         mids = [str(x) for x in am.get("main_ilos", []) or []]
+        ens = [en["main"].get(i, "") for i in mids if mains.get(i)]
+        main_en = " | ".join(ens) if all(ens) else ""
         for s in am.get("sub_ilos", []) or []:
             sid, st = str(s.get("id", "")), s.get("status", "original")
             wording = s.get("programme_text") or outcomes.get(sid) or ""
             text = s["text"] if st in ("re-expressed", "added") and s.get("text") else (wording or s.get("text", ""))
             row = {"module": M, "module_title": am.get("title", ""), "topic": t.get("title", ""), "main_ilo_ids": mids,
                    "main_ilo": " | ".join(mains.get(i, "") for i in mids if mains.get(i)), "sub_ilo_id": sid,
-                   "sub_ilo_status": st, "sub_ilo": text, "programme_wording": wording if st != "added" else ""}
+                   "sub_ilo_status": st, "sub_ilo": text, "programme_wording": wording if st != "added" else "",
+                   "topic_en": en["topic"].get(n, ""), "main_ilo_en": main_en, "sub_ilo_en": en["sub"].get((n, sid), "")}
             if s.get("model_course"):
                 row["model_course"] = list(s["model_course"]) if isinstance(s["model_course"], list) else [s["model_course"]]
             rows.append(row)
@@ -147,7 +207,8 @@ def derive(prog, arch, syllabus=None):
             for i in mids:
                 rows.append({"module": M, "module_title": am.get("title", ""), "topic": t.get("title", ""), "main_ilo_ids": mids,
                              "main_ilo": mains.get(i, ""), "sub_ilo_id": i, "sub_ilo_status": "main", "sub_ilo": mains.get(i, ""),
-                             "programme_wording": mains.get(i, "")})
+                             "programme_wording": mains.get(i, ""), "topic_en": en["topic"].get(n, ""),
+                             "main_ilo_en": en["main"].get(i, ""), "sub_ilo_en": en["main"].get(i, "")})
         if syllabus:
             items = (syllabus.get("items_by_topic") or {}).get(str(n)) or []
             owed[M] = [str(i.get("id")) for i in items if i.get("id")]

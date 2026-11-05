@@ -26,6 +26,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import uuid
@@ -310,7 +311,8 @@ def main():
             "print('working...'); print('AUTO BUILD DONE')\n")
         imp = os.path.join(tmp, "stub_import.py")
         io.open(imp, "w", encoding="utf-8").write(
-            "import sys, json\nprint(json.dumps({'ok': True, 'release': {'version': '1.0.0', 'args': sys.argv[2:]}}))\n")
+            "import os, sys, json\nprint(json.dumps({'ok': True, 'release': {'version': '1.0.0', 'args': sys.argv[2:], "
+            "'notes': json.loads(os.environ.get('NOVIKONTAS_IMPORT_NOTES') or '[]')}}))\n")
         os.environ.update(NOVIKONTAS_CLAUDE_CMD=json.dumps([sys.executable, stub]), NOVIKONTAS_NODE=json.dumps([sys.executable, imp]),
                           STUB_OUT=tmp)
         queue = []
@@ -352,6 +354,82 @@ def main():
             srv.done = None
             check("one watch at a time: while a build runs, the next watch leaves at once", cp.cmd_watch_once() == 0 and srv.done is None)
             os.remove(lock)
+
+            log = os.path.join(os.environ["APPDATA"], "novikontas", "watch.log")
+            real_blockers = cp.blockers
+            pic = "module01/assets/img/_placeholder_s05.png is a Phase A placeholder, not a picture - fill its slot"
+            try:
+                cp.blockers = lambda course: ([pic], [])
+                queue[0]["stage"] = "build_requested"
+                srv.done = None
+                code = cp.cmd_watch_once()
+                check("a run that stopped on picture spaces alone still goes up, as a draft with its pictures pending",
+                      code == 0 and srv.done is None and "pictures pending: 1" in io.open(log, encoding="utf-8").read(), (code, srv.done))
+                del os.environ["STUB_FAIL"]
+                code, r = cp.cmd_import(c, [pic])
+                notes = ((r or {}).get("release") or {}).get("notes") or []
+                check("... the draft itself says how many pictures are pending, each one named",
+                      code == 0 and notes[0].startswith("Pictures pending: 1") and pic in notes, notes)
+
+                print("\n-- after an attended session: the course goes up unasked, the old stop message goes")
+                srv.preps["gas-basic-3"].update(stage="build_requested", build_error="AUTO BUILD STOPPED: 218 picture spaces")
+                code, out = out_of(cp.cmd_upload, c)
+                check("only pictures left: imported as a draft, pictures pending (the import marks it built - the stop "
+                      "message goes)", code == 0 and "Imported into the staging editor" in out and "pictures pending: 1" in out, out)
+                cp.blockers = lambda course: ([], ["module03/deck.html uses assets/img/x.png, which is not there"])
+                srv.done = None
+                code, out = out_of(cp.cmd_upload, c)
+                check("something else still stops it: not uploaded, and the editor's stop message now says what, today",
+                      code == 1 and srv.done and "module03/deck.html" in srv.done["error"] and "still stop it" in srv.done["error"]
+                      and "Imported" not in out, (out, srv.done))
+                srv.preps["gas-basic-3"].update(build_error=None)
+                srv.done = None
+                out_of(cp.cmd_upload, c)
+                check("... a course waiting in the queue with no stop message is not held back by one", srv.done is None, srv.done)
+                os.environ["NOVIKONTAS_AUTO_BUILD"] = "1"
+                code, out = out_of(cp.cmd_upload, c)
+                check("inside the unattended build the watch uploads, not the build's own steps",
+                      code == 0 and "the watch uploads it" in out and srv.done is None, out)
+                del os.environ["NOVIKONTAS_AUTO_BUILD"]
+            finally:
+                cp.blockers = real_blockers
+            check("a course not compiled yet is stopped by that, not by a crash",
+                  cp.blockers(os.path.join(tmp, "nowhere")) == ([], ["modules\\COURSE.html is missing - the course is not compiled"]))
+
+            print("\n-- the scheduled task runs pythonw: no console")
+
+            def boom(action, p):
+                raise RuntimeError("the server's answer was not understood")
+            cp.CALL = boom
+            check("an error nobody expected: the watch ends with its own code, the traceback in watch.log",
+                  cp.cmd_watch_once() == 4 and "Traceback" in io.open(log, encoding="utf-8").read()
+                  and "the server's answer was not understood" in io.open(log, encoding="utf-8").read()
+                  and not os.path.isfile(lock))
+            cp.CALL = build_server
+            noconsole = ("import runpy, sys\nsys.stdout = sys.stderr = None\nsys.argv = [sys.argv[1]] + sys.argv[2:]\n"
+                         "runpy.run_path(sys.argv[0], run_name='__main__')\n")
+            env = dict(os.environ, APPDATA=os.path.join(tmp, "nokey"), USERPROFILE=os.path.join(tmp, "nokey"), HOME=os.path.join(tmp, "nokey"))
+            env.pop("NOVIKONTAS_FACTORY_KEY", None)
+            run = subprocess.run([sys.executable, "-c", noconsole, os.path.join(HERE, "course_portal.py"), "watch", "--once"],
+                                 env=env, capture_output=True, text=True)
+            nlog = os.path.join(tmp, "nokey", "novikontas", "watch.log")
+            said = io.open(nlog, encoding="utf-8").read() if os.path.isfile(nlog) else ""
+            check("with no console (pythonw) the watch runs to its end - no key here, so it says that in watch.log, exit 3, "
+                  "not exit 1 at its first print", run.returncode == 3 and "no factory key" in said, (run.returncode, said, run.stderr[-300:]))
+            launcher = os.path.join(tmp, "nokey", "novikontas", "watch.py")
+            io.open(launcher, "w", encoding="utf-8").write(cp.LAUNCHER)
+            run = subprocess.run([sys.executable, "-c", noconsole, launcher], env=env, capture_output=True, text=True)
+            said = io.open(nlog, encoding="utf-8").read()
+            check("the scheduled task's launcher with no console: no plugin installed is said in watch.log",
+                  run.returncode == 5 and "no course-factory plugin" in said, (run.returncode, said, run.stderr[-300:]))
+            plug = os.path.join(tmp, "nokey", ".claude", "plugins", "cache", "novikontas-course-factory", "course-factory", "9.9.9",
+                                "skills", "course-factory", "scripts")
+            os.makedirs(plug)
+            io.open(os.path.join(plug, "course_portal.py"), "w", encoding="utf-8").write(
+                "import sys\nprint('nothing queued')\nsys.exit(0)\n")
+            run = subprocess.run([sys.executable, "-c", noconsole, launcher], env=env, capture_output=True, text=True)
+            check("... and runs the newest plugin's watch, ending 0 when nothing is queued (the task's Last Result 0)",
+                  run.returncode == 0, (run.returncode, run.stderr[-300:]))
         finally:
             cp.CALL = srv
             os.environ.clear()

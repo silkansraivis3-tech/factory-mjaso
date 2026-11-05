@@ -204,7 +204,7 @@ the audit measures it.
 | lines whose cells are separated by ` \| ` | `reference-table` - one row a line, the separator kept in the line (hidden) |
 | a short slide with no picture | `explain-figure` `text-only` |
 | the opener / the recap / a task slide or room activity | `opening` / `recap` / `task-launch` (`tablet`, `check`, `room`) |
-| a slide whose own words ask for it: `"claim"`, `"choices"`, a worked example's `"ask"` and `"reveal"`, `"points"`, `"drill"` | `true-false`, `scenario`, `worked-example`, `long-explanation` `points`, `drill` |
+| a slide whose own words ask for it: `"claim"`, `"choices"`, the `"ask"` and `"reveal"` of a worked example, an explain-then-reveal or a predict-then-reveal slide, `"points"` (with an `"ask"` and `"reveal"`, the room's turn under the points), `"drill"` | `true-false`, `scenario`, `worked-example`, `long-explanation` `points`, `drill` |
 | `"ask"` and the build sheet's `"spots"` / lines `"value \| meaning"`, no picture / `"figure_b"` and lines `"A \| B"`, `"what \| A \| B"` | `name-parts` / `key-numbers` / `before-after` |
 
 Asked for by name in the build sheet: `"template"` (any of the first thirteen - the last seven come from the slide's
@@ -508,6 +508,9 @@ are the factory's one shared engine, `gb_answer.js` + `gb_answer.css` (course-ta
   (`--only plan` builds it alone) - allocated against built minutes on its face (a mismatch is shown and reported), the
   Main ILO and Sub-ILOs with where each is taught and checked, every screen with its minute and the script's notes, every
   task set with its pass mark and questions, the room activities with their link hints, the equipment and the sources.
+  The Main ILO, the programme topic and the Sub-ILOs are in English (L19): a programme in another language by the
+  rendering written at Stage 2 beside its words (`architecture.json` `"text_en"`, `"topic_en"`); a missing one shows the
+  programme's words and is reported (exit 1). The ACP and the two tablet plans (`additional_materials.py`) the same.
   Never typed: correct the script and compile again. A plan changed by hand (or made before the compiler) is kept until
   `--force`.
 - **Layouts the engine picks by itself** (2.46.0): a drawing to tap that is not wide (width / height < 1.8) takes the
@@ -695,7 +698,7 @@ course\
 
 - **The ACP** follows the school's ACP: the course's facts (programme, standard, model course, hours and days, group,
   rooms, equipment, final assessment), the Main ILOs, then **day by day** - the day's training objectives (its modules'
-  Main ILOs, word for word), and per module its number, topic, training method (presentation, self-checks, team tasks,
+  Main ILOs, word for word - in English, L19), and per module its number, topic, training method (presentation, self-checks, team tasks,
   the exercises with where they run, the module check), its Sub-ILOs and its used material (each source by its title),
   the questions to check the day (its module checks' first two), literature, films and the line for the person
   responsible (`course.build.json` `"responsible"`).

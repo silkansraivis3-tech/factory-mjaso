@@ -74,7 +74,9 @@ try {
   const errors = [...new Set([...prepared.errors, ...core.validateDescriptor(m, prepared.files)])];
   if (errors.length) done({ ok: false, error: 'The course did not pass the import checks: ' + errors.slice(0, 10).join(' | ') });
   const files = prepared.files.map(({ path: p, size, sha256 }) => ({ path: p, size, sha256 }));
-  const job = await call({ action: 'begin', manifest: m, files, warnings: prepared.warnings.slice(0, 300) });
+  // the factory's own notes first: a draft that still has picture spaces to fill says so (course_portal.py upload)
+  const notes = JSON.parse(process.env.NOVIKONTAS_IMPORT_NOTES || '[]');
+  const job = await call({ action: 'begin', manifest: m, files, warnings: [...notes, ...prepared.warnings].slice(0, 300) });
   const chunks = core.batches(prepared.files);
   for (let index = 0; index < chunks.length; index++) {
     if (chunks[index].length === 1 && chunks[index][0].size > core.LIMITS.part) {

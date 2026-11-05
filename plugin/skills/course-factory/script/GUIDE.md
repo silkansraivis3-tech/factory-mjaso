@@ -141,7 +141,7 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   | two states of the same thing | the first line `"A \| B"`, each line after it `"what \| in A \| in B"`; build sheet `"figure"` and `"figure_b"` | spot the difference |
   | the end of the module | the recap, and `"asks"`: one question for each of its lines | the summary asks first |
   | just before a self-check | `"before"` on its task slide: 2-4 things to check, one a line | the list on the task slide |
-  | a guess or a finding before the answer | `"active": "predict-then-reveal"` or `"explain-then-reveal"`, the lines the situation, `"ask"`, `"reveal"` (one line or several) | the lines, then the question, the answer on the last Next (the worked-example template) |
+  | a guess or a finding before the answer | `"active": "predict-then-reveal"` or `"explain-then-reveal"`, the lines the situation, `"ask"`, `"reveal"` (one line or several; both, never one - on a `"points"` slide the room's turn shows under the points) | the lines, then the question, the answer on the last Next (the worked-example template) |
   | before the module check, every second or third module | `"drill"`: `quick-fire` (lines `"prompt \| answer"`), `say-it` (the situation, `"ask"`, `"reveal"`) or `find-it` (lines "Point to ...", `"spots"`); `"seconds"` 5-120 | a quick drill |
 
   Each template's slots and what fills them, in one line: `course-module-ui/knowledge/blueprints.json`.
@@ -367,6 +367,10 @@ factory has no switch around it, by design. So:
 
 - **Unattended runs** (overnight, a module agent, a batch): build with `compile_module.py --draft` and stop
   at the draft. Say in the report which scripts wait for approval; never try to approve them.
+- **The one exception is the build after the expert's Ready (L70)**: the expert's Ready, signed with their
+  name in the training app's editor, is their own act, so that run approves with `--by "<their name> (Ready in
+  editor)"` - the name `pedagogy_review.json` has from the pull, and no other (`approve` refuses any other
+  name while `NOVIKONTAS_AUTO_BUILD=1` is set, and any name when nobody pressed Ready).
 - **The operator approves in their own session**, after reading the review page or the Word file:
   `content_script.py approve <course> --module N --by "<their name>"` (they may ask an agent in that
   same session to run it, having just said yes there). The compiler then builds the real module.

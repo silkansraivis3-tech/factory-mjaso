@@ -213,6 +213,14 @@ def main():
             check("before any decision, both MARPOL editions are found", "MARPOL-2022.pdf" in txt and "marpol.pdf" in txt, txt[:400])
             check("an exact copy is never cited twice", txt.count("SIGTTO liquified gas handling principles.pdf") == 0, txt[:300])
 
+            code, out = run("decide", course, "--keep", "nothing-like-it.pdf")
+            check("a name that is no member is said, never recorded silently as 0 decisions",
+                  code == 2 and "Not matched" in out and "nothing-like-it.pdf" in out, out)
+            code, out = run("decide", course, "--keep", "MARPOL-2022.pdf")
+            intake = json.load(io.open(os.path.join(course, "working_claude", "intake.json"), encoding="utf-8"))
+            check("a bare file name is enough when it names one member",
+                  code == 0 and "Recorded 1 decision(s)" in out and any(d.get("current") and d["current"][0].endswith("MARPOL-2022.pdf")
+                                                                     for d in intake["editions"].values()), out)
             code, out = run("decide", course, "--keep", q["members"][[i for i, m in enumerate(q["members"]) if m.endswith("MARPOL-2022.pdf")][0]])
             intake = json.load(io.open(os.path.join(course, "working_claude", "intake.json"), encoding="utf-8"))
             check("the operator's answer is recorded in intake.json",

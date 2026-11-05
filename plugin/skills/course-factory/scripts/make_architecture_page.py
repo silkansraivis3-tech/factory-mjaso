@@ -39,6 +39,12 @@ Programme text is shown exactly as written, marked with the programme's language
 explanations around them are in the operator's language (architecture.json "operator_language":
 en | lv | ru), from knowledge/page-labels.json.
 
+THE PROGRAMME'S WORDS IN ENGLISH (L19)
+Everything in the course is English. When the programme is not, the course shows its words by the
+English rendering written beside them in architecture.json - a Main ILO's "text_en", a module's
+"topic_en", a kept Sub-ILO's "text_en" (ilo_map.english) - and this page shows each one under the
+programme's own words. A missing one is a problem, and the page cannot be approved while it is.
+
 INPUTS - in the course folder unless given
   programme.json     "academic_hour_min", "language", "source", "total_row", "main_ilos",
                      "outcomes" (the programme's own numbered learning outcomes, verbatim), and
@@ -55,7 +61,8 @@ Making the page also writes working_claude/ilo_map.json (scripts/ilo_map.py) - o
 module - and the page shows it, with the knowledge-base decision from intake (a declined one stays on
 the page). --approve --by records the operator's "next" in architecture.json "approved", with a
 fingerprint of the ILO map. It is refused while no knowledge-base decision is recorded, a teaching
-module has nothing in the map, a Main ILO is not verbatim, or a theory-as-activity proposal waits.
+module has nothing in the map, a Main ILO is not verbatim, a programme text the course shows has no English
+rendering (L19), or a theory-as-activity proposal waits.
 No module's content script starts before it (scripts/course_gate.py).
 """
 from __future__ import annotations
@@ -277,6 +284,19 @@ def analyse(prog, arch, plan=None):
         if prog_ilos and prog_ilos.get(i) != text:
             problems.append(("p_main_not_verbatim", {"i": i}))
     outcomes = {str(k): v for k, v in (prog.get("outcomes") or {}).items()}
+    if not ilo_map.is_english(prog):                     # L19 - the course shows the programme's words in English
+        import pedagogy_review
+        en, lang = ilo_map.english(prog, arch), prog.get("language")
+        problems += [("p_en_main", {"i": i, "lang": lang}) for i in arch_ilos if not en["main"].get(i)]
+        for m in modules:
+            if m["assessment"] or not m["arch"]:
+                continue
+            if not en["topic"].get(m["n"]):
+                problems.append(("p_en_topic", {"m": m["n"], "lang": lang}))
+            # a re-expressed one is the factory's own words - an older one may still be in the programme's language
+            problems += [("p_en_sub", {"m": m["n"], "s": s.get("id", "?"), "lang": lang}) for s in m["arch"].get("sub_ilos", [])
+                         if not en["sub"].get((m["n"], str(s.get("id", "")))) or (s.get("status") == "re-expressed"
+                         and not s.get("text_en") and pedagogy_review.not_english(s.get("text") or "", lang))]
     for m in modules:
         a = m["arch"]
         for i in a.get("main_ilos", []):
@@ -325,7 +345,7 @@ def gate_of(course, prog, arch):
             "fresh": bool(ok) and ok["ilo_map_hash"] == h, "problems": problems}
 
 
-def gate_html(e, V, VP, P, g):
+def gate_html(e, V, VP, P, g, EN=None):
     """The approval line, the knowledge base and the ILO map - on the page the operator approves."""
     ok = g["approved"]
     out = ['<div class="card %s"><h3>%s</h3><p>%s</p></div>' % (
@@ -352,7 +372,8 @@ def gate_html(e, V, VP, P, g):
             mc = (mc + " · " if mc else "") + P.t("im_owed", n=len(owed))
         body.append("<tr><td class=\"n\">%s</td><td><b>%s</b></td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
             e(r["module"] if first else ""), e(r["sub_ilo_id"]), e(P.t("status_" + st)),
-            (V(r["sub_ilo"]) if st in ("re-expressed", "added") else VP(r["sub_ilo"])), e(mc) or "—"))
+            (V(r["sub_ilo"]) if st in ("re-expressed", "added") else VP(r["sub_ilo"]) + (EN(r.get("sub_ilo_en")) if EN else "")),
+            e(mc) or "—"))
     out.append('<h2 id="ilo-map">%s</h2><p class="note">%s</p><table><tr><th>%s</th><th>%s</th><th>%s</th><th></th><th>%s</th></tr>%s</table>' % (
         e(P.t("im_title")), e(P.t("im_intro")), e(P.t("im_h_module")), e(P.t("im_h_sub")), e(P.t("im_h_status")),
         e(P.t("im_h_mc")), "".join(body)))
@@ -443,10 +464,11 @@ def build(prog, arch, a, g=None):
     """architecture.json:
     {"course": {"title", "course_language", "operator_language", "course_type", "programme_file",
                 "model_course"},
-     "main_ilos": [{"id", "text" (verbatim), "ref"}],
+     "main_ilos": [{"id", "text" (verbatim), "text_en" (L19 - when the programme is not English), "ref"}],
      "modules": [{"module": 1 (= the programme topic number), "title" (in the course language),
-                  "main_ilos": ["1"],
-                  "sub_ilos": [{"id", "status": "original|re-expressed|added", "programme_text", "text", "why"}],
+                  "topic_en" (the programme topic in English - when the programme is not), "main_ilos": ["1"],
+                  "sub_ilos": [{"id", "status": "original|re-expressed|added", "programme_text", "text", "why",
+                                "text_en" (a kept one in English - when the programme is not)}],
                   "active_learning": [{"id": "A1.1", "subtopic": "1.1", "does", "technique", "minutes", "instead_of",
                                        "needs", "status": "proposed|approved|struck", "why", "note"}],   # L49, active/GUIDE.md
                   "practicals": [{"task", "equipment", "place", "minutes"}],
@@ -463,6 +485,8 @@ def build(prog, arch, a, g=None):
     e = lambda s: html.escape(str(s if s is not None else ""))
     V = lambda s, lang=None: '<span class="verb" lang="%s">%s</span>' % (lang or cl, e(s)) if s else ""
     VP = lambda s: V(s, pl)
+    en = ilo_map.english(prog, arch) if not ilo_map.is_english(prog) else None     # L19 - beside the programme's words
+    EN = lambda s: '<div class="own">%s: %s</div>' % (e(P.t("en_label")), V(s, "en") if s else "<i>%s</i>" % e(P.t("en_missing")))
     L = P.lang
     kl = lambda k: (MEDIA["visual_kinds"].get(k) or {}).get(L) or (MEDIA["visual_kinds"].get(k) or {}).get("en") or str(k)
     ml = lambda x: (MEDIA["mechanics"].get(x) or {}).get(L) or (MEDIA["mechanics"].get(x) or {}).get("en") or str(x)
@@ -503,7 +527,7 @@ def build(prog, arch, a, g=None):
         e(P.t("approves_tests")), e(P.t("approves_media")), e(P.t("approves_tablets")), e(P.t("approves_practice"))))
     out.append('<p class="note">%s %s</p>' % (VP("Aa"), e(P.t("verbatim_note"))))
     if g:                                                # 2.42.0 - approved with the page: the ILO map and the knowledge base
-        out.append(gate_html(e, V, VP, P, g))
+        out.append(gate_html(e, V, VP, P, g, EN if en else None))
 
     ctype = c.get("course_type", "")
     out.append("<table>")
@@ -607,7 +631,8 @@ def build(prog, arch, a, g=None):
     # ---- Main ILOs, verbatim
     out.append("<h2>%s</h2><table>" % e(P.t("main_ilos_title")))
     for i in arch.get("main_ilos", []):
-        out.append("<tr><td>%s</td><td>%s</td><td>%s</td></tr>" % (e(i.get("id")), VP(i.get("text")), e(i.get("ref", ""))))
+        out.append("<tr><td>%s</td><td>%s%s</td><td>%s</td></tr>" % (
+            e(i.get("id")), VP(i.get("text")), EN(en["main"].get(str(i.get("id")))) if en else "", e(i.get("ref", ""))))
     out.append("</table>")
 
     # ---- Bloom: what level the ILOs ask for, what the planned tasks reach (L48) - suggestions only
@@ -625,6 +650,8 @@ def build(prog, arch, a, g=None):
             e(P.t("from_programme", t=m["topic"])), e(P.t("col_theory_short")), fmt_h(m["th"]),
             e(P.t("col_practical_short")), fmt_h(m["pr"]), m["alloc"], e(P.t("minutes")),
             (" <span class=\"note\">(%s)</span>" % e(m["ref"])) if m["ref"] else ""))
+        if en and not m["assessment"] and am:
+            out.append(EN(en["topic"].get(m["n"])))
         if m["subtopics"]:
             out.append('<ul class="subs">%s</ul>' % "".join("<li>%s %s</li>" % (e(s.get("ref", "")), VP(s.get("title", "")))
                                                             for s in m["subtopics"]))
@@ -667,6 +694,9 @@ def build(prog, arch, a, g=None):
                 wording = s.get("programme_text") or a["outcomes"].get(str(s.get("id")))
                 prog_txt = VP(wording) if wording else "<i>%s</i>" % e(P.t("no_programme_wording"))
                 new_txt = V(s.get("text") or wording or "") if st != "original" else VP(wording or "")
+                if en:                                   # L19 - as the course will show it, in English
+                    said = en["sub"].get((m["n"], str(s.get("id", ""))))
+                    new_txt = V(said, "en") if said else "<i>%s</i>" % e(P.t("en_missing"))
                 out.append('<tr><td>%s</td><td><span class="badge b-%s">%s</span></td><td>%s</td><td>%s</td><td>%s</td></tr>' % (
                     e(s.get("id")), e(st), e(P.t("status_" + st)), prog_txt, new_txt, e(s.get("why", "")) or "—"))
             out.append("</table>")
@@ -806,7 +836,8 @@ def approve(x, prog, arch, a, g, P, arch_path):
     if not (x.by or "").strip():
         print("Stopped - nothing was recorded. Say who approved the page: --approve --by \"<their name>\".")
         return 2
-    must = list(g["problems"]) + [(k, kw) for k, kw in a["problems"] if k in ("p_main_not_verbatim", "p_main_unknown")]
+    must = list(g["problems"]) + [(k, kw) for k, kw in a["problems"]
+                                  if k in ("p_main_not_verbatim", "p_main_unknown", "p_en_main", "p_en_topic", "p_en_sub")]
     lines = [P.t(k, **kw) for k, kw in must]
     if a["waiting"]:
         lines.append("%d theory-as-activity proposal(s) are still waiting for Keep or Strike - record them first "

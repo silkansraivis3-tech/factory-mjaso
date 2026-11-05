@@ -2426,12 +2426,12 @@ def shaped_template(s, b, lines):
         return "true-false", "picture"
     if s.get("choices"):
         return "scenario", "picture-left"
+    if s.get("points"):
+        return "long-explanation", "points"
     # the room's turn and its answer: a worked example, and any slide with an "ask" and a "reveal" (predict- or
     # explain-then-reveal) - its lines first, then the question, the answer on the last Next. Never built without them.
     if s.get("ask") and s.get("reveal") and (s.get("active") == "worked-example" or not b.get("spots")):
         return "worked-example", "figure"
-    if s.get("points"):
-        return "long-explanation", "points"
     if s.get("ask") and b.get("spots"):
         return "name-parts", "picture"
     if b.get("figure_b") and is_two_states(lines):
@@ -2449,6 +2449,12 @@ def joined(parts, tags):
         tag, _, cls = t.partition(" ")
         out.append("<%s%s>%s</%s>" % (tag, ' class="%s"' % cls if cls else "", e(x), tag))
     return '<span class="lt-sep"> | </span>'.join(out)
+
+
+def room_turn(s, k):
+    """the room's turn: its question, and its answer on the slide's last Next"""
+    return ('\n        <li data-k="%d" class="you"><span class="n" data-script-ignore>?</span><div><b data-script-field="ask">%s</b>%s</div></li>'
+            % (k, e(s.get("ask")), "".join('<span class="ans" data-script-field="reveal">%s</span>' % e(x) for x in cs.lines_of(s.get("reveal")))))
 
 
 def img_tag(fig):
@@ -2477,8 +2483,12 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
                          "stand alone" % where)
         d["data-cue"] = "\n".join(x for x in ("%s %s" % (w["full"], " ".join(lines)), base.get("data-cue")) if x and x.strip())
         pts = "".join('\n        <li data-k="%d" data-script-field="points">%s</li>' % (j, marked(x)) for j, x in enumerate(lt("points")))
-        body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy lt-in" style="--i:0"><ul class="lt-points">%s\n      </ul></div>%s</div>'
-                % ("42fr 58fr" if fig else "1fr", pts, "\n    " + side if fig else ""))
+        you = ""
+        if s.get("ask") and s.get("reveal"):        # the points, then the room's turn under them
+            you = '<ol class="lt-work">%s\n      </ol>' % room_turn(s, len(lt("points")))
+            d["data-stops"] = str(len(lt("points")) + 2)
+        body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy lt-in" style="--i:0"><ul class="lt-points">%s\n      </ul>%s</div>%s</div>'
+                % ("42fr 58fr" if fig else "1fr", pts, you, "\n    " + side if fig else ""))
 
     elif tid == "true-false":
         # the claim, the room votes, then Next opens why (the approved text) and the stamp says which it was
@@ -2511,8 +2521,7 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         # each step of the worked example lights on Next; then the room's turn, and its answer on the last Next
         steps = "".join('\n        <li data-k="%d"><span class="n" data-script-ignore>%d</span><div data-script-field="text" data-i="%d">%s</div></li>'
                         % (j, j + 1, j + 1, joined(cells(x), ("b", "span")) if " | " in x else "<b>%s</b>" % e(x)) for j, x in enumerate(lines))
-        you = ('\n        <li data-k="%d" class="you"><span class="n" data-script-ignore>?</span><div><b data-script-field="ask">%s</b>%s</div></li>'
-               % (len(lines), e(s.get("ask")), "".join('<span class="ans" data-script-field="reveal">%s</span>' % e(x) for x in lt("reveal"))))
+        you = room_turn(s, len(lines))
         d["data-stops"] = str(len(lines) + 2)
         variant = "figure" if fig else "text-only"
         body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy"><ol class="lt-work">%s%s\n      </ol></div>%s</div>'
@@ -2795,15 +2804,17 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                    ['  <p class="act-inst" data-script-field="text">%s</p>' % e(x) for x in lines] + ["</div>"] + \
                    ['<div class="lt-chips" data-script-ignore>%s</div>' % "".join("<span>%s</span>" % e(c) for c in chips)]
             before = cs.lines_of(s.get("before"))
-            if before:          # the few things to check before the self-check, ticked off on the way to it
-                left.append('<div class="lt-path">%s<div class="st mc" style="--d:%d" data-script-ignore><i>%s</i></div></div>' % (
-                    "".join('<div class="st" style="--d:%d"><i data-script-ignore>✓</i><span data-script-field="before">%s</span></div>'
-                            '<div class="bar" style="--d:%d"></div>' % (j, e(x), j) for j, x in enumerate(before)), len(before), e(code)))
+            # the few things to check before the self-check, ticked off on the way to it - under both columns, so its
+            # words have the slide's width (in the words' column they wrapped to six lines and the slide scrolled)
+            path = ('    <div class="lt-path">%s<div class="st mc" style="--d:%d" data-script-ignore><i>%s</i></div></div>\n' % (
+                "".join('<div class="st" style="--d:%d"><i data-script-ignore>✓</i><span data-script-field="before">%s</span></div>'
+                        '<div class="bar" style="--d:%d"></div>' % (j, e(x), j) for j, x in enumerate(before)), len(before), e(code))
+                    if before else "")
             right = ('<div class="lt-tab3d lt-3dbox lt-photo lt-in" style="--i:1">%s</div>' % pic if pic else
                      '<div class="lt-tab3d lt-3dbox clear lt-in" style="--i:1"><img class="lt-tabimg" src="../assets/%s" alt="" data-no-zoom></div>' % TABLET_PIC)
             return ('<section %s>\n  <div class="slide-kind"><b>%s</b> · %s · %s</div>\n  <div class="slide-body lt-task2">\n'
-                    '    <div class="lt-tcopy lt-in" style="--i:0">\n      %s\n    </div>\n    %s\n  </div>\n</section>'
-                    % (attrs(d), d["data-kind"], m, code, "\n      ".join(left), right))
+                    '    <div class="lt-tcopy lt-in" style="--i:0">\n      %s\n    </div>\n    %s\n%s  </div>\n</section>'
+                    % (attrs(d), d["data-kind"], m, code, "\n      ".join(left), right, path))
         body.append(pic or icon)
         body.append('<div class="act-lines">')
         body += ['  <p class="act-inst" data-script-field="text">%s</p>' % e(x) for x in lines]

@@ -120,7 +120,9 @@ Mandatory in every mode. Course-facing output — slides, tasks, handout, assess
 instructor cues, practical cards, START_HERE, run script — stays in COURSE_LANGUAGE unless
 translation is explicitly requested. The chat report, companion file, comments and validator output
 follow the operator. A Latvian request to redesign an English module produces a Latvian report and
-an English module. → `course-factory` (`retrofit/scripts/check_language.py`)
+an English module. The programme may be in another language and stays as it is; the course quotes it in English
+(the Stage 2 rendering, `text_en` / `topic_en`), its own words only on the review pages. → `course-factory`
+(`retrofit/scripts/check_language.py`, `make_architecture_page.py`)
 
 **L20 · A figure that claims to teach a dynamic idea is proven to be alive, and a probe
 that cannot see is never read as a verdict.**

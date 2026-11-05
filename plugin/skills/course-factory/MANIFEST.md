@@ -7,6 +7,40 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.104.0 · What the GAS BASIC auto build ran into - eleven fixes (2026-11-05)
+
+- **Why.** The first course through the build after Ready (GAS BASIC 04/11 NEWEST EDITION, office PC) stopped with
+  218 empty picture spaces, and the factory notes of that run (sections 3 and 4) list what the factory itself did wrong.
+- **The scheduled task never ran.** Under pythonw `sys.stdout` / `sys.stderr` are None and `course_portal.py` died at
+  its `reconfigure` (exit 1, nothing logged). `course_portal.no_console`; `cmd_watch_once` writes any error with its
+  traceback to watch.log; the launcher (`LAUNCHER`, watch.py) logs its own. Run again `install-task` on the office PC.
+- **Uploaded after an attended session.** `course_portal.py upload`: the course package check splits picture spaces
+  from everything else; only pictures left -> imported as a draft (the import marks it built, so the old stop message
+  goes), else the editor's stop message is replaced by what still stops it. `fix.py rebuild` ends with it
+  (`fix.upload`); SKILL.md asks it as the last step of an attended build. Inside the unattended run it waits for the watch.
+- **Pictures in the unattended run.** The order: free-licensed photos, the old course and the KB, then Gemini in the
+  browser, never the paid API. A run that stopped on pictures alone still goes up, as pictures pending - the draft's
+  warnings say how many and which (`course_import.mjs` reads `NOVIKONTAS_IMPORT_NOTES`).
+- **`picture_briefs.py queue`** lists every `_photo_meta.json` placeholder (q.., m.. and photo slots too; 218 of 218 on
+  GAS BASIC, was 88), saved under its own name, never over the placeholder. **`place`** puts a found or generated picture
+  into the slot (file, record, every build-sheet reference, placeholder gone); **`areas`** puts a tap question's boxes on
+  the real things. The operator's place.py / set_areas.py, made the factory's.
+- **English in the course (L19).** Stage 2 writes `text_en` / `topic_en` beside a programme not in English; the
+  architecture page shows them and refuses approval without them; `ilo_map` rows carry `*_en`; module plans, ACP and
+  tablet plans show only the English; `revised_outcome` is English (`pedagogy_review.not_english`).
+- **Task-launch slide** (t01-t03) fits at 1280x800, 1024x768 and 1280x720: the "before" list runs under both columns,
+  text 13 px or more, the tablet picture whole while it rises (`compile_module.slide_html`, `gb_upgrade.css`).
+- **True / False stamp** `#d04439` (4.60:1, was 4.27:1).
+- **Reveal slides.** On top of 2.103.1 (any slide with ask and reveal built like the worked example): a points slide
+  keeps its points and shows the room's turn under them (`compile_module.shaped_template`, `room_turn`);
+  `content_script.shape_of` and `shape_problems` agree with the compiler, so the L62 look check sees the same.
+- **Smaller.** `kb_tool.py decide --keep` takes a bare file name naming one member and says what it could not match;
+  `bloom_map` reads no verb inside a hyphenated word ("pre-planned"); an unattended run approves a script only with the
+  expert's own Ready name (`content_script.unattended_signer`, script/GUIDE.md §4 names the L70 exception). The
+  catalogue's blanket OWNER_CLEARED is L33, as meant - unchanged.
+- **Not done.** `ilo_coverage.py` (a copy of the training app's tool) still writes the programme's words; programme
+  section names cited in a final's sources; room-activity launch slides with many lines still overflow; the training
+  app should refuse to publish a draft whose warnings say pictures pending.
 ## 2.103.1 · Fixes from the Project Management build (2026-11-05)
 
 - **Task slides.** The tablet picture is whole: its row is the body's height and it fades in (it rose from 19 px below

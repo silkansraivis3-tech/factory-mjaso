@@ -9,6 +9,8 @@ Pinned:
     sheet of every simulator and equipment exercise; INDEX.html links every one of them;
   * the ACP goes day by day: the day's objectives (the Main ILOs, word for word), each module's topic, method, Sub-ILOs
     and used material, a module split across two days in both;
+  * L19: a programme in Latvian - the ACP and the two tablet pages show its Main ILOs and Sub-ILOs in English, by the
+    rendering beside them in architecture.json; one missing shows the programme's words and is said (exit 1);
   * the trainee card carries no answer and no instructor note; the task description carries both;
   * the two tablet pages (_course_shell\\advanced_course_plan.html, moduleNN\\instructor\\advanced_module_plan.html) stand
     alone - no stylesheet, script or link out - so the instructor panel can open them over itself;
@@ -41,6 +43,7 @@ TOOL = os.path.join(HERE, "additional_materials.py")
 PASS, FAIL = [], []
 TITLE = "Basic training for ships subject to the IGF Code"
 MAIN = [{"id": "1", "text": "Pārzināt gāzes kā degvielas īpašības;"}, {"id": "2", "text": "Droši veikt bunkurēšanu;"}]
+OUT_LV = "Nosaukt jaunās telpas uz kuģa, kas izmanto gāzi kā degvielu"
 SIM = {"id": "a01", "kind": "activity", "sub_ilo": ["1.1"], "title": "Practical - bunkering on the simulator",
        "text": "Liquid cargo simulator, room K2.\nPart 1 - line up the bunker station.\nPart 2 - start the transfer.",
        "notes": "- Key: the ESD link is tested first.", "minutes": 20}
@@ -246,6 +249,34 @@ def main():
               all(x in form for x in ("A. Critical steps", "Tests the ESD link", "STOP: Stops the transfer", "3 Performs safely unprompted",
                                       "Yes / Not yet", "two re-attempts at most", "the ESD link fails on the first test")), form or out)
         check("... and its pre-brief card says it is recorded", "This run is recorded on the assessment form" in kd("_PREBRIEF.docx"))
+
+        # ---- L19: the programme is in Latvian, the course is in English
+        lv = course(os.path.join(tmp, "lv"), minutes=30)
+        wl = os.path.join(lv, "working_claude")
+        prog = cs.load(os.path.join(wl, "programme.json"))
+        cs.save(os.path.join(wl, "programme.json"), dict(prog, language="Latvian", outcomes={"1.1": OUT_LV}))
+        arch = cs.load(os.path.join(wl, "architecture.json"))
+        arch["main_ilos"] = [dict(x, text_en=en) for x, en in zip(MAIN, ("Know the properties of gas as fuel", "Bunker safely"))]
+        arch["modules"][0]["sub_ilos"] = [{"id": "1.1", "status": "original", "text_en": "Name the new spaces of a gas-fuelled ship"}]
+        cs.save(os.path.join(wl, "architecture.json"), arch)
+        am.ilo_map.build(lv, quiet=True)
+        code, out = run(TOOL, lv, "--no-pdf")
+        lroot = os.path.join(lv, am.FOLDER)
+        acp_lv = docx_text(os.path.join(lroot, want[1]))
+        tab = read(lv, "modules", "_course_shell", "advanced_course_plan.html") + read(lv, "modules", "module01", "instructor",
+                                                                                      "advanced_module_plan.html")
+        check("the ACP and the tablet's two plans: the Main ILOs and the kept Sub-ILO in English - the rendering written at Stage 2",
+              "English rendering" not in out and all(x in acp_lv + tab for x in ("Know the properties of gas as fuel", "Bunker safely",
+                                                             "1.1 Name the new spaces of a gas-fuelled ship"))
+              and "Name the new spaces of a gas-fuelled ship" in tab, (code, out[-500:], acp_lv[:900]))
+        check("... and no word of the programme's Latvian", not any(x in acp_lv + tab for x in (MAIN[0]["text"], MAIN[1]["text"], OUT_LV)),
+              [x for x in (MAIN[0]["text"], MAIN[1]["text"], OUT_LV) if x in acp_lv + tab])
+        del arch["main_ilos"][1]["text_en"], arch["modules"][0]["sub_ilos"][0]["text_en"]
+        cs.save(os.path.join(wl, "architecture.json"), arch)
+        code, out = run(TOOL, lv, "--no-pdf")
+        check("a rendering missing: the programme's words are shown, and it is said - never silent (exit 1)",
+              code == 1 and MAIN[1]["text"] in docx_text(os.path.join(lroot, want[1]))
+              and "the programme is in Latvian and Main ILO 2, Sub-ILO 1.1 have no English rendering" in out, (code, out[-600:]))
 
         s = cs.load(os.path.join(c, "working_claude", "script", "M01.json"))
         s["screens"] = [x for x in s["screens"] if x["id"] != "a02"]

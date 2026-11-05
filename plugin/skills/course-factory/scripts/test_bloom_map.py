@@ -65,6 +65,8 @@ def main():
             ("Evaluate the risk before entering an enclosed space", "en", 5),
             ("Describe the use of cargo pumps", "en", 2),
             ("Plan the cargo loading sequence", "en", 6),
+            ("Describe the pre-planned emergency procedures on a gas tanker", "en", 2),
+            ("Explain the emergency plan - plan the muster of the crew", "en", 6),
             ("Identificēt sašķidrinātās gāzes tankkuģu tipus un aprakstīt to uzbūvi", "lv", 2),
             ("Kursants spēj darbināt kravas sūkni", "lv", 3),
             ("Описать порядок выполнения грузовых операций", "ru", 2),

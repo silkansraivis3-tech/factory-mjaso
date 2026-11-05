@@ -11,8 +11,10 @@ EVERY BLOCK IS FROM AN APPROVED FILE, NOTHING IS TYPED
                       against built minutes (the sum of every screen's minutes) - a mismatch is shown in red, in words,
                       and is reported by the compiler (exit 1); the minutes split into plain theory, active slides,
                       tasks and room activities (content_script.split_of)
-  what it owes        the Main ILO (verbatim, in the programme's language) and the Sub-ILOs of the module's rows of the
-                      ILO map (ilo_map.json) - each with the slides that teach it and the questions that check it
+  what it owes        the Main ILO, the programme topic and the Sub-ILOs of the module's rows of the ILO map
+                      (ilo_map.json), in English (L19) - a programme in another language by the rendering written at
+                      Stage 2 beside its words (ilo_map.english); a missing one shows the programme's words and is
+                      reported - each with the slides that teach it and the questions that check it
   the timeline        every screen in order: from which minute, its minutes, theory or active (and the technique), what it
                       shows, what the instructor does (the script's notes), the Sub-ILO it serves
   the tasks           every set the tablets open: its code, which slide opens it, how many questions, the pass mark, and
@@ -218,9 +220,9 @@ def load_json(course, name):
 
 
 def sub_rows(course, script):
-    """the module's rows of the ILO map - [] when the course has none yet"""
+    """the module's rows of the ILO map, with their English words - [] when the course has none yet"""
     m = ilo_map.read(course) if course else None
-    return ilo_map.module_rows(m, script.get("module")) if m else []
+    return ilo_map.with_english(course, ilo_map.module_rows(m, script.get("module"))) if m else []
 
 
 def practicals(course, script):
@@ -340,6 +342,15 @@ def plan_page(script, build, mdir, course, version, approved, probs):
 
     prog_lang = cm.lang_code((prog or {}).get("language")) if (prog or {}).get("language") else None
     pl = ' lang="%s"' % a(prog_lang) if prog_lang and prog_lang != lc else ""
+    no_en = []
+
+    def shown(r, k, what):
+        """the row's words in English (L19); the programme's own, marked with its language, only when that is missing"""
+        if r.get(k + "_en"):
+            return e(r[k + "_en"])
+        if r.get(k):
+            no_en.append(what)
+        return "<span%s>%s</span>" % (pl, e(r.get(k)))
     ids = []
     for s in script.get("screens", []):
         ids += [x for x in cs.sub_ilos_of(s) if x not in ids]
@@ -349,9 +360,9 @@ def plan_page(script, build, mdir, course, version, approved, probs):
             r0 = rows[0]
             card = ['  <div class="card key">']
             if r0.get("main_ilo"):
-                card.append("    <p><b>%s:</b> <span%s>%s</span></p>" % (e(w["main"]), pl, e(r0["main_ilo"])))
+                card.append("    <p><b>%s:</b> %s</p>" % (e(w["main"]), shown(r0, "main_ilo", "the Main ILO")))
             if r0.get("topic"):
-                card.append("    <p><b>%s:</b> <span%s>%s</span></p>" % (e(w["topic"]), pl, e(r0["topic"])))
+                card.append("    <p><b>%s:</b> %s</p>" % (e(w["topic"]), shown(r0, "topic", "the programme topic")))
             card.append("  </div>")
             if len(card) > 2:
                 body += card
@@ -369,7 +380,7 @@ def plan_page(script, build, mdir, course, version, approved, probs):
                         cells += register_cells(reg.get(sid) or {}, w)
                 else:
                     cells = '<td colspan="%d">%s</td>' % (5 if has_reg else 2, e(w["through"]))
-                body.append('    <tr><td class="n">%s</td><td>%s</td>%s</tr>' % (e(sid), e(r.get("sub_ilo")), cells))
+                body.append('    <tr><td class="n">%s</td><td>%s</td>%s</tr>' % (e(sid), shown(r, "sub_ilo", "Sub-ILO " + sid), cells))
             body.append("  </table></div>")
         else:
             body += ['  <p class="note">%s</p>' % e(w["ids_only"]), '  <div class="scroll"><table>',
@@ -378,6 +389,11 @@ def plan_page(script, build, mdir, course, version, approved, probs):
                 body.append('    <tr><td class="n">%s</td><td>%s</td><td>%s</td></tr>'
                             % (e(sid), e(where_taught(sid) or w["nothing"]), e(where_checked(sid) or w["nothing"])))
             body.append("  </table></div>")
+    if no_en:
+        probs.append("%s plan: the programme is in %s and %s %s no English rendering - the plan shows the programme's words. "
+                     "Write the English in architecture.json beside them (\"text_en\" of a Main ILO or Sub-ILO, \"topic_en\" of "
+                     "the module), then compile again (L19: everything in the course is English)"
+                     % (m, (prog or {}).get("language"), ", ".join(no_en), "has" if len(no_en) == 1 else "have"))
     # ---- the timeline: every screen
     body += ["", "  <h2>%s</h2>" % e(w["time_h"]), '  <div class="scroll"><table>',
              "    <colgroup>%s</colgroup>" % "".join('<col style="width:%s%%">' % x for x in (4, 6, 19, 5, 15, 43, 8)),

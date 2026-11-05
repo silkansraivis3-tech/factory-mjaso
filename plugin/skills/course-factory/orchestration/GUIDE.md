@@ -80,9 +80,18 @@ official topic → allocated minutes (theory / practical) → what the module te
 the practicals and their equipment. The minutes sum to the programme total or the reader has not
 finished.
 
+**The programme's words in English (L19).** The course is English; the programme may not be
+(`programme.json` `"language"`), and it stays as it is. When it is not English, the reader writes the
+English beside every programme text the course quotes, in `architecture.json`: a Main ILO's
+`"text_en"`, a module's `"topic_en"` (its programme topic), a kept Sub-ILO's `"text_en"` - a faithful
+rendering, the verb, subject and standard unchanged; the verbatim `"text"` stays the programme's. A
+re-expressed or added Sub-ILO is written in English. The Stage 2 page shows each rendering under the
+programme's words and is not approved while one is missing; the module plans and the ACP show the
+English, the review pages the programme's own words.
+
 **`working_claude/ilo_map.json`** — the ILO map, written by `make_architecture_page.py` with the page
-(`scripts/ilo_map.py`): for every module, its Main ILO verbatim and every Sub-ILO it owes, one row each,
-with the model-course items under its topic. `ilo_map.py show <course> --module N` prints one module's rows.
+(`scripts/ilo_map.py`): for every module, its Main ILO verbatim and in English, and every Sub-ILO it owes,
+one row each, with the model-course items under its topic. `ilo_map.py show <course> --module N` prints one module's rows.
 
 And when `kb_tool.py find` finds no knowledge base, the factory's **suggestion to make one**, word for
 word - the operator decides, and `kb_tool.py decision` records it. `scripts/course_gate.py` stops every

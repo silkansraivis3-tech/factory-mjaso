@@ -345,6 +345,53 @@ def shapes_part(tmp):
           and "the choice marked right is B - approved: C" in out, out[-1500:])
 
 
+REVEAL_SCREENS = [
+    {"id": "s40", "kind": "slide", "title": "Why no secondary barrier?", "visual_kind": "none", "active": "explain-then-reveal",
+     "text": "A type C tank is a pressure vessel.\nIt is built to the pressure vessel rules.", "ask": "In pairs: why does it need no secondary barrier?",
+     "reveal": "It is designed so that a crack does not grow into a leak.", "notes": "- Two minutes in pairs.", "minutes": 3},
+    {"id": "s41", "kind": "slide", "title": "The fuel tank", "visual_kind": "none",
+     "text": "The fuel tank holds LNG at -162 °C.\nIts valves sit in the tank connection space.", "notes": "- Point at the valves.", "minutes": 2},
+    {"id": "s42", "kind": "slide", "title": "Into the tropics", "visual_kind": "none", "active": "predict-then-reveal",
+     "text": "The tank is cooled to -162 °C.\nThe ship sails into the tropics.", "ask": "Write it: what happens to the tank pressure?",
+     "reveal": "It rises: the heat boils off more gas.\nThe plant keeps it down.", "notes": "- Every trainee writes first.", "minutes": 3},
+    {"id": "s43", "kind": "slide", "title": "Tank pressure is rising - may we vent?", "visual_kind": "photo", "visual": "A ship taking gas.",
+     "active": "predict-then-reveal",
+     "text": "A loaded ship at anchor. The tank pressure is rising towards the alarm.\nThe vent mast could release the vapour to the air "
+             "in seconds.\nVenting the cargo to keep the tank pressure is not acceptable except in an emergency.",
+     "points": "The pressure is rising\nThe vent mast is there", "ask": "Vote: may the ship vent the vapour to the air?",
+     "reveal": "No - the reliquefaction plant keeps the pressure down.", "notes": "- Every trainee votes first.", "minutes": 3},
+] + [x for x in SCREENS if x["id"] in ("t01", "q01", "t02", "m01")]
+
+
+def reveal_part(tmp):
+    """an explain-then-reveal or predict-then-reveal slide carries the room's question ("ask") and its answer ("reveal")
+    as a worked example does - the script lane allows them there, and the compiler printed them only for a worked example
+    (GAS BASIC: 52 slides relabelled); short points with the room's turn show both (M21 s08 lost its points)"""
+    print("\n-- explain-then-reveal, predict-then-reveal and points with the room's turn")
+    os.makedirs(os.path.join(tmp, "rv"))
+    sc = script(screens=REVEAL_SCREENS)
+    check("the fixture script is valid", not cs.validate(sc), cs.validate(sc))
+    c, md = new_course(os.path.join(tmp, "rv"), sc, build=False)
+    cs.save(os.path.join(c, "working_claude", "script", "M01.build.json"), {"module": 1, "screens": {
+        "s43": {"figure": "assets/img/ship.jpg"}, "t01": {"try_tablet": False}}})
+    code, out = run(COMPILE, c, "--module", "1")
+    page = deck(md) if os.path.isfile(os.path.join(md, "presentation", "index.html")) else ""
+    check("the fixture deck is built", code in (0, 1) and page, out[-1500:])
+    if not page:
+        return
+    for sid in ("s40", "s42"):
+        x = section(page, sid)
+        check("%s (%s): its lines, then the room's question and its answer on the last Next" % (sid, "explain" if sid == "s40" else "predict"),
+              'data-template="worked-example.v1"' in x and 'class="you"' in x and 'data-script-field="ask">' in x
+              and 'data-script-field="reveal">' in x and 'data-stops="4"' in x, x[:1600])
+    p = section(page, "s43")
+    check("short points and the room's turn under them: both on the slide, the answer on the last Next",
+          'data-variant="points"' in p and p.count('data-script-field="points"') == 2 and 'data-script-field="ask">Vote: may' in p
+          and 'data-script-field="reveal">No - the reliquefaction' in p and 'data-stops="4"' in p, p[:1600])
+    code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
+    check("... and check_script_match finds every approved word on them - the ask and the reveal too", code == 0, out[-1500:])
+
+
 def upgrade_part(tmp):
     """2.89.0 (L67) - the compiler writes the upgraded bodies of gb_upgrade.css: Next walks their stops (gb_steps.js) and the
     approved words stay exactly as they are; a slide without the build sheet's new fields is built as before"""
@@ -1538,6 +1585,41 @@ def light_part(tmp):
     code, out = run(COMPILE, c, "--module", "1", "--force")
     check("... one asked dark is within it - and is dark", "dark ground" not in out and 'class="slide dark activity"' in section(deck(md), "t01"),
           [x for x in out.splitlines() if "dark ground" in x] or out[-300:])
+
+
+def launch_fit_part(tmp):
+    """the task slide that opens a self-check, with the longest words the script allows on it (GAS BASIC M06 SC1: a title of
+    three lines, two lines of instructions, three things to check before it), fits at every delivery size: no scroll, no
+    text under 12.5 px, the tablet picture whole (it scrolled 36-50 px at 1280 x 800, its list was 11.5-12.2 px and the
+    picture was cut 19-97 px in every module)"""
+    print("\n-- the task slide fits at 1280 x 800, 1024 x 768 and 1280 x 720")
+    os.makedirs(os.path.join(tmp, "fit"))
+    screens = json.loads(json.dumps(SCREENS))
+    by = {x["id"]: x for x in screens}
+    by["t01"].update(title="Self-check 1 - preparing tanks, static and ventilation",
+                     text="Self-check on your tablet now.\nPart A: what was just taught. Part B: one harder decision to work out yourself.",
+                     before="The reading that ends drying, inerting and gassing-up\nWhy the cargo system is bonded to the hull\n"
+                            "What is closed and stopped when vapour may reach the accommodation")
+    c, md = new_course(os.path.join(tmp, "fit"), script(screens=screens))
+    build_of(c, lambda b: b["screens"].update(t01={"try_tablet": False}))
+    code, out = run(COMPILE, c, "--module", "1")
+    t = section(deck(md), "t01")
+    check("the list before the self-check runs under both columns: after the picture, not in the words' column",
+          re.search(r'</div>\s*<div class="lt-tab3d[^\n]*</div>\s*<div class="lt-path">', t) is not None
+          and t.count('data-script-field="before"') == 3, t[:1800])
+    sys.path.insert(0, HERE)
+    import drawing_check
+    if not drawing_check.find_browser():
+        print("  skip  no Chrome or Edge found - the task slide was not measured")
+        return
+    audits = os.path.join(SKILLS, "course-module-ux", "measure", "scripts", "run_audits.py")
+    code_a, aout = run(audits, os.path.join(md, "presentation", "index.html"), "--viewport", "1024x768", "--viewport", "1280x720")
+    bad = [x for x in aout.splitlines() if "(t01)" in x]
+    check("... measured at 1280 x 800, 1024 x 768 and 1280 x 720: no scroll, no small text, nothing spilling on it",
+          "1024x768" in aout and "1280x720" in aout and not bad, bad or aout[-800:])
+    code_d, dout = run(os.path.join(HERE, "drawing_check.py"), os.path.join(md, "presentation", "index.html"))
+    bad = [x for x in dout.splitlines() if "(t01)" in x]
+    check("... and its tablet picture is whole, also while it rises in", "did not run" not in dout and not bad, bad or dout[-800:])
 
 
 def look_part(tmp):
@@ -3373,6 +3455,7 @@ def main():
         recap_part(tmp)
         upgrade_part(tmp)
         shapes_part(tmp)
+        reveal_part(tmp)
         tasks_part(tmp)
         figures_part(tmp)
         every_way_part(tmp)
@@ -3390,6 +3473,7 @@ def main():
         variety_part(tmp)
         look_part(tmp)
         light_part(tmp)
+        launch_fit_part(tmp)
         exercise_part(tmp)
         practical_part(tmp)
         sme_figures_part(tmp)

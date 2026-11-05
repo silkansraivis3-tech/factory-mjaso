@@ -695,9 +695,19 @@ def cmd_rebuild(course, modules, force=False):
         print("\nFor the full build: module(s) %s - build_module.py <course> --module N for each; its figure stage and its "
               "layout retry settle a drawing that no longer fits or a slide that scrolls. A module already built is not "
               "stopped there by the small pictures it already has (notes)." % ", ".join(str(m) for m in full_build))
+    upload(course)
     import cf_timing                                 # the gold standard: 20 min for a module's fixes (owner, 2026-10-26)
     print(cf_timing.fix_line(time.time() - t0))
     return 0 if not (stopped or full_build or rc_layout or rc_pkg) else 1
+
+
+def upload(course):
+    """a course in the training app goes into the staging editor as a draft after its rebuild, unasked, once only picture
+    spaces still to fill stop it - and the editor's old 'Build stopped' message goes with it (course_portal.py upload)"""
+    if not os.path.isfile(workspace.claude_path(course, "portal.json")):
+        return
+    rc, out = run([os.path.join(HERE, "course_portal.py"), "upload", "--course", course])
+    print("\nThe training app's editor:\n" + "\n".join("  " + x for x in out.splitlines()))
 
 
 # ---------------------------------------------------------------- the course's house decisions

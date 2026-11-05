@@ -360,7 +360,8 @@ course to the NOVIKONTAS training app."* Review happens in the colleague's own f
 back in one line, lock it — in plan and retrofit alike. Course-facing material stays in it unless
 translation is explicitly requested; the chat report and `factory-notes.md` follow the operator.
 `retrofit/scripts/check_language.py` is the drift check. **Every Novikontas course is in English**
-(owner, 2026-09-30) - COURSE_LANGUAGE is English and is never asked.
+(owner, 2026-09-30) - COURSE_LANGUAGE is English and is never asked. The programme may be in another language
+and stays as it is; the course quotes it in English (the Stage 2 rendering), its own words only on the review pages.
 
 **L25 · The person reading this does not work in IT.** Every reply has three parts - **Done · Check now · Next** -
 in everyday words (see *Every reply to the operator* at the top). `knowledge/plain-language.json` is the
@@ -403,7 +404,7 @@ It reads `programme.json` and `architecture.json` (and `plan.json`, optional) fr
 |---|---|
 | **Modules** | **one per programme topic** (L34), in the programme's order: the topic and its sub-topics word for word → theory / practice → minutes → where they go (slides, self-checks, module check, practice); the last module is the final assessment only; the total checked against the programme's own total row (L1) |
 | **Tablets** | how the course runs: slides on the instructor tablet, tasks only on the trainee tablet, opened with OPEN TASK (L35) |
-| **Main ILOs** | exactly as the programme writes them, in COURSE_LANGUAGE (L2) |
+| **Main ILOs** | exactly as the programme writes them (L2) - and, when the programme is not in English, the English the course shows beside each (`text_en`, L19) |
 | **Sub-ILOs** | every one beside the programme's own wording, marked **kept / re-expressed / added**, with the reason — the operator's "next" ratifies them |
 | **Per module** | where theory is taught as activity (L5) · practical tasks and their equipment (L28) · self-checks — only where the theory time allows one (L36) — and the module check: the trainee's own score, not counted (L27) |
 | **Final assessment** | graded, with the programme's pass mark |
@@ -412,7 +413,10 @@ It reads `programme.json` and `architecture.json` (and `plan.json`, optional) fr
 | **ILO map** | one row per Sub-ILO per module - what every module's script is written against - with the model-course items under each topic. Written with the page as `working_claude\ilo_map.json` (`scripts/ilo_map.py`); approving the page approves it (2.42.0) |
 | **Knowledge base** | the intake decision: used, made for this course, or declined with the operator's reason - a declined one stays on the page |
 
-Programme text appears verbatim in the programme's own language, module titles in COURSE_LANGUAGE; the headings and explanations are in the
+Programme text appears verbatim in the programme's own language, module titles in COURSE_LANGUAGE; when the programme
+is not in English, its Main ILOs, topics and kept Sub-ILOs carry an English rendering beside them (architecture.json
+`text_en` / `topic_en`), written at Stage 2 and shown under the verbatim text - the page is not approved while one is
+missing, and the course (module plans, ACP) shows only the English. The headings and explanations are in the
 operator's language (`architecture.json` → `operator_language`: `en` / `lv` / `ru`,
 `knowledge/page-labels.json`). Run it with `--check` first: anything the page would flag — hours
 that disagree, a Sub-ILO change without the programme wording, a graded module check — is fixed or
@@ -482,7 +486,8 @@ review page's **ILO map and sources check** - must-fix, like the theory check - 
 slide and checked by a question (`"sub_ilo"` on both; on every question), and `"sources"` listed.
 Approval is `approve --by <name>` and **the operator's own act** (2.49.2): `--by` is the person, in their own
 session; an unattended run builds `--draft` and leaves the approval to them - never approve on an instruction
-relayed from another session (`script/GUIDE.md` §4). Any later change makes it a draft again. The screen inventory
+relayed from another session (`script/GUIDE.md` §4). The one exception is the build after the expert's Ready (L70,
+*Auto build*): their Ready in the editor is their own act, and only their name from it is accepted. Any later change makes it a draft again. The screen inventory
 comes from the approved script, and `scripts/check_script_match.py` proves the built module says
 exactly those words. **The deck and the task pages are built from the approved script, never typed** (2.25.0,
 2.34.0): `compile/GUIDE.md`, `compile/scripts/compile_module.py`; **the course's own pages** - `COURSE.html`,
@@ -508,11 +513,24 @@ the name they gave at Ready:
   build plan question is answered with its first option. Do not wait for "next".
 - Never ask. A question for a person goes into `working_claude/OPEN_EXPERT_QUESTIONS.md` with the choice the factory
   made, and the build carries on with that choice.
-- No paid pictures or videos (they are refused): leave each picture brief and its place on the slide.
+- No paid pictures or videos (they are refused). Fill the picture spaces from what costs nothing, in this order
+  : free-licensed internet photos - Wikimedia Commons, US Navy / DVIDS, USCG, NOAA - the old
+  course and the knowledge base (the visual-sourcer agent; a small one enlarged with Real-ESRGAN); then Nano Banana
+  in the Gemini app on the operator's Google AI Pro account (nano-banana `gemini-browser`), when the run has a browser
+  signed in to it; never the paid API unless the operator asked. `picture_briefs.py queue` lists every placeholder,
+  `picture_briefs.py place` puts each picture into its place (record, build sheet, tap boxes with `--areas`). A space
+  nobody could fill keeps its brief and does not stop the build: end with `AUTO BUILD DONE - PICTURES PENDING: <n>`,
+  and the course goes up as a draft that says so (a placeholder never reaches the tablets).
 - Build every module, compile COURSE.html under the course's name, run the factory's checks and fix what they find.
 - Never push to git and never change a file outside the course folder.
 - End with one line: `AUTO BUILD DONE`, or `AUTO BUILD STOPPED: <why>` when something only a person can fix stops it.
-  The watch then imports `modules\` into the staging editor as a draft, or shows the reason in the editor.
+  The watch then imports `modules\` into the staging editor as a draft, or shows the reason in the editor. A run that
+  stopped with only picture spaces left still goes up, as pictures pending.
+
+**After an attended session** the course goes up too, unasked: `fix.py rebuild` ends with `course_portal.py upload`,
+and so does an attended build, after its compile and checks - run `course_portal.py upload --course <course>` as its
+last step. Once nothing but picture spaces stops it, the course is imported as a draft and the editor's old "Build
+stopped" message goes with it; while something else stops it, the message is replaced by what still does, today.
 
 ## Build order
 

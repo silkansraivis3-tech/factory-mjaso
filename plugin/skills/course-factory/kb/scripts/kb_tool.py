@@ -379,6 +379,18 @@ def cmd_decide(course, keep, different):
     intake = load_json(ip) if os.path.isfile(ip) else {}
     ed = intake.setdefault("editions", {})
     done = []
+    every = [m for g in rep["edition_groups"] for m in g["members"]]
+    name = lambda m: os.path.basename(m.replace("\\", "/")).lower()
+    keep, unmatched = set(keep), []
+    for k in list(keep):                 # a bare file name is enough when it names one member
+        if k not in every:
+            hits = [m for m in every if name(m) == name(k)]
+            keep.discard(k)
+            if len(hits) == 1:
+                keep.add(hits[0])
+            else:
+                unmatched.append("%s (%s)" % (k, "%d members have that name: %s" % (len(hits), ", ".join(hits)) if hits
+                                              else "no member of any edition group"))
     for g in rep["edition_groups"]:
         members = g["members"]
         if g["id"] in different:
@@ -396,6 +408,9 @@ def cmd_decide(course, keep, different):
         f.write("\n")
     print("Recorded %d decision(s) in %s.%s" % (len(done), ip,
           ("\n  Still open: %s" % ", ".join(open_)) if open_ else "\n  Every edition question is answered."))
+    if unmatched:
+        print("  Not matched - give the member's path as kb_sources.json lists it:\n" + "\n".join("    - " + x for x in unmatched))
+        return 2
     return 0
 
 
