@@ -97,6 +97,19 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
 ```
 
 - `text` is the **exact visible words** of the slide, not a description of them. One line per line.
+- **Groups of trainees (2.103.0).** When one class holds two or more groups that learn the same theory but are
+  checked differently (ship technicians and ship navigators), the script says so at the top:
+  `"groups": {"T": "Ship technicians", "N": "Ship navigators"}` - any ids, two or more, each with the name the
+  trainee taps (in the course language). A `self-check`, `module-check` or `final` question with `"group": "T"` is
+  asked only of that group; a question with no `group` is asked of everyone. Slides, task slides and activities never
+  carry a group - they are the same for all. On the tablet the set opens on *Which group are you in?* (one big
+  button per group); the choice is kept on that tablet for the course and can be changed until the first Check; the
+  trainee is numbered and scored over the questions they saw, and the result the instructor gets carries the group.
+  The task rules are counted **per group** - each group's own path through a set (the questions for everyone plus
+  its own) must have the self-check's and module check's question counts and ways of answering, Part A then Part B,
+  single choice at most 40 % and a hands-on question in the module; every group has a question in every set. The
+  review page and the Word file mark each question *Only for: <group>*. A final with groups is one blind page per
+  variant that branches the same way (FA, FB stay re-sit variants - see `compile/GUIDE.md`).
 - **The recap closes the module (L51, 2.30.0).** The slide straight before the module check's task slide is the
   recap: `{"id": "s24", "kind": "slide", "recap": true, "title": "What to take away", "text": "Kept liquid - cold,
   under pressure, or both

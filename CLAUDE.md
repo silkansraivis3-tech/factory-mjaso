@@ -22,5 +22,8 @@ a built course that the factory itself should do differently. The issue says wha
 
 ## Writing
 
+English only: new words the factory writes (task-page and answer-key words, page labels, engine words) go in English;
+add no Latvian or Russian translations - a language table without a word falls back to English.
+
 Plain words, no source or authorship notes in code comments (no "owner, <date>", no version stamps beside code): the
 version records hold the history. Learning outcomes and course facts are never changed by the factory's code.

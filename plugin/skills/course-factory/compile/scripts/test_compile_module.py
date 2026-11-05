@@ -963,6 +963,59 @@ def team_part(tmp):
           not re.search(r"tt[12]_|data-team-size|task-scope|gb-team", out), out)
 
 
+GROUPED = SCREENS[:6] + [
+    {"id": "q02", "kind": "self-check", "set": "SC1", "group": "T", "question": "Where is the main engine?",
+     "options": ["Engine room", "Bridge"], "correct": "A", "feedback": "Below, aft.", "mechanic": "single_choice"},
+    {"id": "q03", "kind": "self-check", "set": "SC1", "group": "N", "question": "Where is the ECDIS?",
+     "options": ["Bridge", "Engine room"], "correct": "A", "feedback": "On the bridge.", "mechanic": "single_choice"},
+] + SCREENS[6:] + [
+    {"id": "m02", "kind": "module-check", "set": "MC", "group": "N", "question": "Who keeps the navigational watch?",
+     "options": ["The officer of the watch", "The engineer"], "correct": "A", "feedback": "The OOW.", "mechanic": "single_choice"},
+]
+
+
+def groups_part(tmp):
+    """groups of trainees: one page per set, the group asked first, each question marked for its group"""
+    print("\n-- groups of trainees")
+    os.makedirs(os.path.join(tmp, "grp"))
+    sc = script(approved=False, screens=GROUPED)
+    sc["groups"] = {"T": "Ship technicians", "N": "Ship navigators"}
+    sc.update(status="approved", approved_hash=cs.content_hash(sc), approved_by="Test")
+    c, md = new_course(os.path.join(tmp, "grp"), sc)
+    code, out = run(COMPILE, c, "--module", "1", "--only", "tasks")
+    p = os.path.join(md, "tasks", "sc1_the_new_spaces.html")
+    page = io.open(p, encoding="utf-8").read() if os.path.isfile(p) else ""
+    check("a set with grouped questions opens on the group screen, a big button per group in the script's order",
+          code == 0 and re.findall(r'data-pick="(\w)"[^>]*>.*?<span class="grp-name">([^<]*)<', page) == [("T", "Ship technicians"), ("N", "Ship navigators")]
+          and page.index('id="grpScr"') < page.index('id="tryScr"'), out + page[:400])
+    check("each question for one group says so (data-group), one for everyone does not; the top bar has the group label",
+          'data-script="q02" data-group="T"' in page and 'data-script="q03" data-group="N"' in page
+          and not re.search(r'data-script="q01"[^>]*data-group', page) and 'id="grpLbl" hidden' in page, page[:1500])
+    mc = io.open(os.path.join(md, "assessment", "check.html"), encoding="utf-8").read()
+    check("the module check asks the group too, its navigators' question marked",
+          'id="grpScr"' in mc and 'data-script="m02" data-group="N"' in mc, mc[:300])
+    key = io.open(os.path.join(md, "assessment", "check_answer_key.html"), encoding="utf-8").read()
+    check("the answer key marks each question's group and each group's count", key.count("Only for: Ship navigators") == 2
+          and "Ship technicians: 1; Ship navigators: 2" in key and "Ship technicians: 2; Ship navigators: 2" in key,
+          re.sub(r"\s+", " ", key)[-1500:])
+    code, out = run(MATCH, c, "--module", "1", "--part", "trainee")
+    check("check_script_match --part trainee passes on the grouped pages", code == 0, out)
+    io.open(p, "w", encoding="utf-8").write(page.replace('data-script="q02" data-group="T"', 'data-script="q02" data-group="N"'))
+    code, out = run(MATCH, c, "--module", "1", "--part", "trainee")
+    check("... and fails a question built for the wrong group", code == 1 and 'built for the group "N" - approved: "T"' in out, out)
+    io.open(p, "w", encoding="utf-8").write(page.replace(">Ship navigators<", ">Deck cadets<", 1))
+    code, out = run(MATCH, c, "--module", "1", "--part", "trainee")
+    check("... and a group button that is not the script's", code == 1 and "group buttons" in out, out)
+    sys.path.insert(0, HERE)
+    import task_pages as tp
+    intro = tp.intro_screen({"text": "Final\nAnswer every question."}, "Final", 5, 70, tp.WORDS["en"], {"T": 4, "N": 5})
+    check("a graded final with groups: one blind page, the pass line of each group's own count (the chosen one is shown)",
+          '<p data-grp="T"><span class="pass">Pass mark 70 % – 3 of 4 right' in intro
+          and '<p data-grp="N"><span class="pass">Pass mark 70 % – 4 of 5 right' in intro, intro)
+    check("a language with no word for the group screen shows the English one (new words are English only)",
+          tp.WORDS["lv"]["grp_ask"] == tp.WORDS["en"]["grp_ask"] and tp.WORDS["lv"]["back"] != tp.WORDS["en"]["back"])
+
+
 IN_LANGUAGE = {
     "Latvian": [
         {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Paškontrole 1 - vārsti", "text": "Paškontrole planšetē tagad.", "minutes": 4},
@@ -3291,6 +3344,7 @@ def main():
         figures_part(tmp)
         every_way_part(tmp)
         team_part(tmp)
+        groups_part(tmp)
         language_part(tmp)
         fixes_part(tmp)
         v2492_part(tmp)

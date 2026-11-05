@@ -454,6 +454,22 @@ body.handed .wrap{opacity:.55}
   visibility:hidden}
 .try-hello.on{visibility:visible;color:var(--good)}
 
+/* ---- which group: before a set whose questions differ per group ---------- */
+.grp{display:grid;gap:18px;max-width:900px;margin:18px auto 0}
+.grp-pick{display:flex;align-items:center;gap:18px;min-height:110px;padding:18px 28px;border:2px solid var(--blue);
+  border-radius:var(--r-l);background:var(--white);box-shadow:var(--sh);color:var(--navy);font:inherit;
+  font-size:28px;font-weight:700;text-align:left;cursor:pointer}
+.grp-pick:active{transform:scale(.98);background:var(--blue-wash-l)}
+.grp-pick .grp-dot{flex:0 0 auto;width:56px;height:56px;border-radius:50%;background:var(--blue)}
+.grp-note{margin:4px 0 0;text-align:center;font-size:19px;color:var(--steel)}
+.state .grp-lbl{display:inline-flex;align-items:center;gap:10px;min-height:56px;margin:0 0 0 18px;padding:4px 16px;
+  border:2px solid var(--blue);border-radius:99px;background:var(--white);color:var(--navy);font:inherit;
+  font-size:16px;font-weight:700;cursor:pointer}
+.state .grp-lbl[hidden]{display:none}
+.state .grp-lbl .grp-chg{font-weight:400;color:var(--blue);text-decoration:underline}
+.state .grp-lbl.fixed{border-color:var(--line-l);cursor:default}
+.state .grp-lbl.fixed .grp-chg{display:none}
+
 /* ---- start of a check ---------------------------------------------------- */
 .intro{max-width:900px;margin:18px auto 0;padding:22px 28px;border:2px solid var(--line-l);
   border-radius:var(--r-l);background:var(--white);font-size:20px;line-height:1.55}

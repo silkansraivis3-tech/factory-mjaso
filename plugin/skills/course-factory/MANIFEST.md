@@ -7,6 +7,22 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.103.0 · Groups of trainees - the trainee picks their group on the task page (2026-11-05)
+
+- **Why.** The Project Management course teaches ship technicians and ship navigators in one classroom: the slides
+  and theory are the same, the self-checks, module checks, class exercises and final differ per group. The classroom
+  app has no trainee group; the course office chose "the trainee picks the group on the task page" over printed cards.
+- **What.** Script: top-level `"groups": {"T": "Ship technicians", "N": "Ship navigators"}`, a question's `"group"`.
+  `content_script.py`: `groups_of`, `group_of`, `for_group`, `group_problems` (declared, 2+, slides carry none, every
+  group in every set), `by_group` - the task rules (`GROUP_RULES`) counted over each group's path, never over the mix;
+  the review page and Word file mark *Only for: <group>*. `task_pages.py`: the group screen, the top-bar label,
+  `data-group`, a final's pass line per group. `answer_key.py`: each question's group, each group's count.
+  `check_script_match.py`: the built group and the group buttons against the script. The engine: `course-task-ux`.
+- **Final.** One blind page per variant that branches by group; FA / FB stay re-sit forms. Mapping groups onto A/B
+  would have taken away the re-sit and made the instructor open the right variant for each trainee.
+- **Words.** New words are English only; a language table without one falls back to English (`WORDS` in
+  `task_pages.py` and `answer_key.py`; `T()` already did for page-labels.json).
+
 ## 2.102.0 · Built after the expert's Ready - L70; intended and revised outcomes (2026-11-04)
 
 - **Why.** The owner's boss wants the outcomes as intended and as revised, with their verbs and the activity; the owner

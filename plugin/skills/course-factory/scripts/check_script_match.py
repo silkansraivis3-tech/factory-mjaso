@@ -38,7 +38,8 @@ WHAT IT CHECKS
   2  every screen in the script is built somewhere in the module folder, and nothing else claims a
      script id the script does not have
   3  every marked field says exactly the approved words (spacing aside); a slide's text lines match
-     in order; the answer marked data-correct is the approved correct answer
+     in order; the answer marked data-correct is the approved correct answer; a question is built for the
+     group the script gives it (data-group, none = everyone), and its page's group buttons are the script's groups
   4  a slide carries no visible words outside its marked fields - except its header band, the
      source and credit lines, the text inside a drawing, controls, instructor cues, and anything
      marked data-script-ignore, which is counted in the report so QA can look at it
@@ -49,6 +50,7 @@ from __future__ import annotations
 import argparse
 import glob
 import hashlib
+import html
 import io
 import json
 import os
@@ -97,6 +99,8 @@ class Collect(HTMLParser):
             self.screens.setdefault(a["data-script"], {"fields": {}, "flags": {}, "loose": [], "ignored": 0})
             if a.get("data-cue"):
                 self.screens[a["data-script"]]["cue"] = a["data-cue"]
+            if "data-group" in a:
+                self.screens[a["data-script"]]["group"] = a["data-group"]
         if "data-script-ignore" in a:
             sid = self._ctx()[0] or a.get("data-script")
             if sid in self.screens:
@@ -192,6 +196,9 @@ def main(argv=None):
         got = found[sid]
         fields = {k: [norm(x) for x in v] for k, v in got["fields"].items()}
         if s["kind"] in cs.TASKS:
+            if got.get("group", "") != cs.group_of(s):     # a question shown to the wrong trainees is not what was approved
+                probs.append("%s in %s: built for the group \"%s\" - approved: \"%s\"" % (
+                    where, got["file"], got.get("group", "") or "everyone", cs.group_of(s) or "everyone"))
             want = {"question": s.get("question", ""), "feedback": s.get("feedback", "")}
             if cs.uses(s, "options"):
                 for L, o in zip(cs.letters(len(s.get("options", []))), s.get("options", [])):
@@ -256,6 +263,15 @@ def main(argv=None):
                     where, got["file"], " / ".join(got["loose"])[:300]))
         if got["ignored"]:
             notes.append("%s in %s: %d element(s) marked data-script-ignore - look at them" % (where, got["file"], got["ignored"]))
+    # a page with questions for one group asks the trainee their group with the script's own names, every group once
+    groups = cs.groups_of(script)
+    for rel in sorted({v["file"] for v in found.values() if v.get("group")}):
+        page = io.open(os.path.join(mdir, rel), encoding="utf-8", errors="replace").read()
+        shown = [(g, norm(html.unescape(n))) for g, n in re.findall(
+            r'data-pick="([^"]*)"[^>]*>.*?<span class="grp-name">(.*?)</span>', page, re.S)]
+        if shown != [(g, norm(n)) for g, n in groups.items()]:
+            probs.append("%s: its group buttons are %s - approved: %s" % (
+                rel, ", ".join("%s %s" % x for x in shown) or "(none)", ", ".join("%s %s" % x for x in groups.items())))
     if probs:
         print("The built module does not say exactly what the operator approved:\n")
         for x in probs:

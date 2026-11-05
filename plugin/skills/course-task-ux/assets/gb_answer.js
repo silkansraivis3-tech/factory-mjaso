@@ -31,7 +31,12 @@
    (window.parent === window): inside it, one opening gives one result. Never under the debrief rule or on a blind final:
    those are answered once (2.74.2).
    The words on the controls are in the page's language (<html lang>: en, lv, ru - LANG below); a page may still
-   override any of them with window.GB_ANSWER_TEXT. */
+   override any of them with window.GB_ANSWER_TEXT.
+   Groups (classroom-system.json task_page.groups): a set whose questions differ per group of trainees opens on #grpScr,
+   one big button per group (data-pick). A question with data-group is for that group only, one without is for all;
+   the trainee sees, is numbered and scored over theirs. The choice is kept on the tablet for the course, shown in the
+   top bar (#grpLbl) and can be changed there until the first Check. The report carries group, groupName, and the
+   group's name in its title. */
 (function () {
   'use strict';
   var D = document, W = window;
@@ -124,6 +129,7 @@
         var msg = { type: 'gb-task-done', code: r.code, title: r.title, ok: r.ok, total: r.total,
           head: r.head, items: r.items, answered: r.answered, of: r.of, timeout: r.timeout === true };
         if (r.detail) { msg.detail = r.detail; }     /* 2.67.0 - each item whole: asked, picked, right, why */
+        if (r.group) { msg.group = r.group; msg.groupName = r.groupName; }     /* the trainee's group, on a page that has groups */
         if (TEAM.handsIn()) {                        /* one answer for the team: the classroom records it for every member */
           var t = { scope: 'team', team: TEAM.team.name, by: TEAM.team.me }, k;
           for (k in t) { if (t.hasOwnProperty(k)) { msg[k] = t[k]; } }
@@ -1020,6 +1026,7 @@
     killHand();
     p.ok = grade(p);
     p.done = true;
+    grpFix();
     if (!BLIND) { p.fix = snap(p); }                   /* before the reveal moves the cards (2.63.2) */
     lock(p);
     if (BLIND) {                                       /* recorded, never shown: straight on to the next part or question */
@@ -1116,8 +1123,9 @@
       items.push(it);
     });
     buildResult(t, timeout);
-    CR.send({ code: CODE, title: TITLE, ok: t.ok, total: t.total, head: head(t), items: items, detail: 2,
-      answered: t.answered, of: t.total, timeout: !!timeout });
+    /* the group's name in the title too: the classroom keeps the title, so the instructor's list says the group */
+    CR.send({ code: CODE, title: GROUP_NAME ? TITLE + ' (' + GROUP_NAME + ')' : TITLE, ok: t.ok, total: t.total, head: head(t),
+      items: items, detail: 2, answered: t.answered, of: t.total, timeout: !!timeout, group: GROUP, groupName: GROUP_NAME });
   }
   function buildResult(t, timeout) {
     if (!resScr) { return; }
@@ -1281,9 +1289,86 @@
       o.setAttribute('data-l', String.fromCharCode(64 + c.__gbn));
     });
   }
+  /* ---------------------------------------------------------------- the trainee's group */
+  var grpScr = $('#grpScr'), grpLbl = $('#grpLbl'), GROUP = '', GROUP_NAME = '', allQs = [], tryOn = false;
+  function picks() { return grpScr ? $$('[data-pick]', grpScr) : []; }
+  /* one choice per course on this tablet: the course folder (two up from the page, as ../assets is one up) and the ids */
+  function grpKey() {
+    var a = D.createElement('a'), ids = [];
+    a.href = '../../';
+    each(picks(), function (b) { ids.push(b.getAttribute('data-pick')); });
+    return 'gb-group|' + a.href + '|' + ids.join(',');
+  }
+  function grpRead() { try { return W.localStorage.getItem(grpKey()) || ''; } catch (e) { return ''; } }
+  function grpSave(g) { try { W.localStorage.setItem(grpKey(), g); } catch (e) { /* no storage: asked again on the next task */ } }
+  function grpBtn(g) { var b = null; each(picks(), function (x) { if (x.getAttribute('data-pick') === g) { b = x; } }); return b; }
+  function grpUse(g) {
+    GROUP = g;
+    GROUP_NAME = txt($('.grp-name', grpBtn(g)) || grpBtn(g));
+    qs = allQs.filter(function (q) { return !q.group || q.group === g; });
+    each(qs, function (q, i) { var n = $('.num', q.sec); if (n) { n.textContent = String(i + 1); } });
+    each($$('[data-grp]'), function (el) { el.style.display = el.getAttribute('data-grp') === g ? '' : 'none'; });
+    if (grpLbl) {
+      $('#grpName').textContent = GROUP_NAME;
+      grpLbl.removeAttribute('hidden');
+    }
+  }
+  /* changed only before the first Check: after it, the label only says the group */
+  function grpFix() { if (grpLbl && !grpLbl.disabled) { grpLbl.disabled = true; add(grpLbl, 'fixed'); } }
+  function grpAsk() {
+    killHand();
+    screensOff();
+    started = false; cur = -1;
+    add(grpScr, 'on');
+    add(dock, 'off');
+    if (grpLbl) { grpLbl.setAttribute('hidden', ''); }
+    setPart('');
+    if (gotEl) { gotEl.textContent = ''; }
+    setBar(0);
+    toTop();
+  }
+  function initGroups() {
+    each(allQs, function (q) { q.group = q.sec.getAttribute('data-group') || ''; });
+    qs = allQs.filter(function (q) { return !q.group; });      /* until a group is chosen: the questions for everyone */
+    each(picks(), function (b) {
+      b.addEventListener('click', function () {
+        var g = b.getAttribute('data-pick');
+        grpSave(g);
+        grpUse(g);
+        del(grpScr, 'on');
+        del(dock, 'off');
+        begin();
+      }, false);
+    });
+    if (grpLbl) {
+      grpLbl.addEventListener('click', function () { if (!grpLbl.disabled && !ended) { grpAsk(); } }, false);
+    }
+    var kept = grpRead();
+    if (kept && grpBtn(kept)) { grpUse(kept); begin(); } else { grpAsk(); }
+  }
+  /* the set's first screen: try the tablet, the check's start, or the first question */
+  function begin() {
+    if (tryScr) {
+      screensOff();
+      add(tryScr, 'on');
+      setPart(say('tryFirst'));
+      setBar(0);
+      setBtn(say('startSelf'), 'go');
+      if (!tryOn) { tryOn = true; initTry(); }
+    } else if (introScr) {
+      screensOff();
+      add(introScr, 'on');
+      setPart(say('moduleCheck'));
+      setBar(0);
+      setBtn(say('startCheck'), 'go');
+    } else {
+      started = true; showQ(0);
+    }
+  }
   function init() {
     letterAll();
     each($$('.scr[data-script]'), function (s) { qs.push(mkQ(s)); });
+    allQs = qs;
     TEAM.onDone = handedElsewhere;
     if (TEAM.done) { handedElsewhere(TEAM.done); }
     go.addEventListener('click', onGo, false);
@@ -1294,20 +1379,7 @@
       if (inFrame || LATER || BLIND) { again.parentNode.removeChild(again); }
       else { again.addEventListener('click', function () { W.location.reload(); }, false); }
     }
-    if (tryScr) {
-      add(tryScr, 'on');
-      setPart(say('tryFirst'));
-      setBar(0);
-      setBtn(say('startSelf'), 'go');
-      initTry();
-    } else if (introScr) {
-      add(introScr, 'on');
-      setPart(say('moduleCheck'));
-      setBar(0);
-      setBtn(say('startCheck'), 'go');
-    } else {
-      started = true; showQ(0);
-    }
+    if (grpScr && picks().length) { initGroups(); } else { begin(); }
   }
   init();
 }());

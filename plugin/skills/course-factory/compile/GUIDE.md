@@ -143,6 +143,13 @@ planned, so `module16`); with no architecture to count in, give `--module-dir`.
 **A final with two variants** (FA, FB) is two graded pages: `assessment\final_a.html`, `assessment\final_b.html`
 (PASSED / NOT PASSED, the pass mark, one answer-key section each; the deck's slides are Check slides, the landing card
 and the start page say "Final assessment A / B"). A single variant stays `assessment\final.html`.
+**Groups of trainees** (the script's `"groups"`, a question's `"group"`, 2.103.0) are not variants: every set page -
+self-check, module check, each final variant - is one page for the whole class that opens on *Which group are you
+in?* and then shows the questions for everyone and the trainee's group's own (`data-group` on the question's
+section, `#grpScr`, `#grpLbl`; gb_answer.js). A final stays blind (L27): the group screen tells nothing about the
+answers, and the pass line on its start screen is each group's own count (`data-grp`). FA / FB keep their meaning
+- the second form for a re-sit - so groups and variants combine: FA and FB may both carry grouped questions. The
+answer key marks each question's group and each group's count.
 **A draft** (`--draft`, script not approved) writes `DRAFT_NOT_PACKAGED.txt` into the module folder: its preview stays
 viewable where its assets are, but `compile_course.py` and `check_course_package.py` leave it out - COURSE.html, the
 module list, every check and the importer's run - and say `moduleNN: draft - not packaged`. Building the approved script

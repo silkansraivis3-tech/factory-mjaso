@@ -189,6 +189,50 @@ def lv(key, **kw):
     return html.escape(LV[key].format(**kw) if kw else LV[key])
 
 
+def groups_part():
+    """groups of trainees: slides the same for all, a question with "group" for that group only; the task rules per group"""
+    print("\n-- groups of trainees")
+    g = json.loads(json.dumps(SCRIPT))
+    g["groups"] = {"T": "Ship technicians", "N": "Ship navigators"}
+    check("a script with groups and no grouped question is valid, and its findings are those of the same script without groups",
+          not cs.group_problems(g) and sorted(f["detail"] for f in cs.all_findings(g)) == sorted(f["detail"] for f in cs.all_findings(SCRIPT)))
+    for sid in ("m01", "m03", "m05"):
+        screen(g, sid)["group"] = "N"
+    probs = cs.validate(g)
+    check("questions for one group: valid when each group is declared and has a question in every set", not cs.group_problems(g), probs)
+    found = cs.all_findings(g)
+    tech = [f for f in found if "Ship technicians" in f["detail"]]
+    check("the module check is counted per group: the technicians' path (two single-choice questions) has too few questions, "
+          "too few ways of answering and too much single choice - the navigators' path none of that",
+          {"t_mc_small", "m_too_much_choice"} <= {f["rule"] for f in tech}
+          and not [f for f in found if "Ship navigators" in f["detail"] and f["rule"] in ("t_mc_small", "m_mix")], [(f["rule"], f["detail"]) for f in found])
+    check("... which the whole set, the mix no trainee sees, would never have shown",
+          not {"t_mc_small", "m_too_much_choice"} & {f["rule"] for f in cs.theory_check(g)[0] + cs.media_check(g)}, found)
+    bad = json.loads(json.dumps(g))
+    screen(bad, "q01")["group"] = "X"
+    screen(bad, "s01")["group"] = "T"
+    probs = cs.group_problems(bad)
+    check("a group not declared, and a slide with a group, are problems", any("'X'" in p for p in probs) and any(p.startswith("s01:") for p in probs), probs)
+    one = json.loads(json.dumps(g))
+    one["groups"] = {"T": "Ship technicians"}
+    check("one group is not groups", any("two or more" in p for p in cs.group_problems(one)), cs.group_problems(one))
+    alone = json.loads(json.dumps(g))
+    for sid in ("q01", "q02", "q03"):
+        screen(alone, sid)["group"] = "T"
+    check("a set with no question for a group is a problem - every group answers every set",
+          any("Ship navigators" in p and "no question" in p for p in cs.group_problems(alone)), cs.group_problems(alone))
+    g["operator_language"] = "en"
+    tmp = tempfile.mkdtemp()
+    try:
+        page = cs.render_html(tmp, g)
+        doc, labels = cs.build_docx(tmp, g)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    check("the review page says who the groups are and marks each question's group",
+          "Ship technicians (T)" in page and page.count("Only for: Ship navigators") == 3, page[-2000:])
+    check("the Word file marks each question's group too", sum("Only for: Ship navigators" in x for x in labels) == 3, labels[-12:])
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="cs_")
     try:
@@ -1068,6 +1112,7 @@ def main():
     col2.feed('<section data-script="s05"><p data-script-field="text"><b>Fuel</b><i>tank</i></p></section>')
     check("... and only a space the page has: words glued in the page still read glued (the check is not loosened)",
           [csm.norm(x) for x in col2.screens["s05"]["fields"]["text"]] == ["Fueltank"], col2.screens["s05"])
+    groups_part()
     print("\n" + "=" * 72)
     print("%d passed, %d failed" % (len(PASS), len(FAIL)))
     if FAIL:

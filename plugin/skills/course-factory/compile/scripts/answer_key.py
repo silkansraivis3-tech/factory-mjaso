@@ -48,7 +48,11 @@ WORDS = {"en": {
     "draft": "DRAFT – the script is not approved; this key is a preview and is never handed over.",
     "accepts": "the dial accepts {vals}", "stop": "Then tap where it should have stopped: {x}",
     "out": "Stays out of the plan: {x}", "because": "Why: {x}", "step": "Step {n}: {x}", "fault": "The faulty part: {x}",
-    "wrong_lines": "The wrong lines:", "places": "Each label on its place: {x}", "ends": "{c}: {s}"},
+    "wrong_lines": "The wrong lines:", "places": "Each label on its place: {x}", "ends": "{c}: {s}",
+    "grp": "Only for: {group}",
+    "grp_set": "{name} – each trainee answers the questions for everyone and those of their group, and is scored over "
+               "them. Questions per group: {counts}.",
+    "grp_count": "{group}: {total}", "grp_pass": "{group}: {need} of {total} right = PASSED"},
     # PROVISIONAL (2.46.0) - written by Claude, to be checked by a native speaker: compile/TRANSLATIONS_REVIEW.md
     "lv": {
     "title": "Atbilžu atslēga – {n}. modulis", "title_final": "Atbilžu atslēga – noslēguma pārbaudījums", "back": "Atpakaļ",
@@ -93,7 +97,9 @@ WORDS = {"en": {
     "accepts": "шкала принимает {vals}", "stop": "Затем коснуться места, где надо было остановить: {x}",
     "out": "Не входит в план: {x}", "because": "Почему: {x}", "step": "Шаг {n}: {x}", "fault": "Неисправный узел: {x}",
     "wrong_lines": "Строки с ошибкой:", "places": "Каждая надпись на своём месте: {x}", "ends": "{c}: {s}"}}
-assert all(set(WORDS[k]) == set(WORDS["en"]) for k in WORDS), "every language has every word"
+# new words are written in English only: a language without one shows the English word
+assert all(set(WORDS[k]) <= set(WORDS["en"]) for k in WORDS), "a language has only words English has"
+WORDS = {k: dict(WORDS["en"], **v) for k, v in WORDS.items()}
 
 
 def lettered(q, shown=True):
@@ -211,11 +217,17 @@ def key_page(script, build, mdir, version, approved, probs):
     how = []
     if any(c.startswith("SC") for _, c, _ in found):
         how.append(w["self"])
+    groups = cs.groups_of(script)
     for (slide, code, qs), name in zip(found, names):
+        pm = tp.pass_mark_for(script, build, code) if cm.is_check(code) else 0     # 2.63.0: the final's only
         if cm.is_check(code):
-            pm = tp.pass_mark_for(script, build, code)          # 2.63.0: the final's only
             how.append(w["check"].format(name=name, **{"pass": pm, "need": -(-len(qs) * pm // 100), "total": len(qs)}) if pm
                        else w["check_nopass"].format(name=name))
+        if groups and any(cs.group_of(q) for q in qs):  # each group is scored over its own questions
+            per = tp.counts_by_group(qs, groups)
+            how.append(w["grp_set"].format(name=name, counts="; ".join(
+                w["grp_pass"].format(group=groups[g], need=-(-k * pm // 100), total=k) if pm else
+                w["grp_count"].format(group=groups[g], total=k) for g, k in per.items())))
     how += [w["timer"], w["shown"]]
     m = cs.mid(script.get("module"))
     made = w["made"].format(m=m, by=script.get("approved_by") or "", on=script.get("approved_on") or "", v=version) if approved else w["draft"]
@@ -237,8 +249,9 @@ def key_page(script, build, mdir, version, approved, probs):
                  "    <tr>%s</tr>" % "".join("<th>%s</th>" % e(c) for c in w["cols"])]
         for n, q in enumerate(qs, 1):
             b = sheet.get(q["id"]) or {}
-            body.append('    <tr><td class="n">%d<br><small>%s</small></td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (
-                n, e(q["id"]), e(cs.mech_label(cs.mech(q), code_l or "en")), e(q.get("question")),
+            body.append('    <tr><td class="n">%d<br><small>%s</small>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (
+                n, e(q["id"]), "<br><small>%s</small>" % e(w["grp"].format(group=cs.group_label(script, q))) if cs.group_of(q) else "",
+                e(cs.mech_label(cs.mech(q), code_l or "en")), e(q.get("question")),
                 "<br>".join(right_answer(q, b, w)), e(q.get("feedback"))))
         body.append("  </table></div>")
     body += ["", '  <div class="foot"><p>%s</p></div>' % e(made), "</div>", "</body>", "</html>", ""]

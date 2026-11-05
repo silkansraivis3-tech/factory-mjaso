@@ -6,6 +6,13 @@ Maintainer file. **Never read at runtime.** It exists so a session six months fr
 with no memory of why any of this is the way it is — can pick the skill up cold.
 
 ## 0 · What changed in v2, and why
+## 2.103.0 · Which group are you in? (2026-11-05)
+
+`assets/gb_answer.js` and `gb_answer.css`: a set page with grouped questions opens on `#grpScr` (one `.grp-pick` button
+per group), keeps the choice in localStorage per course folder, shows it in `#grpLbl` (changeable until the first Check),
+filters, renumbers and scores the questions by `data-group`, and reports `group`, `groupName` and the name in the title.
+SKILL.md §0 item 1. Tested in a real browser by `course-factory/compile/scripts/test_task_engine.py` (groups_part).
+
 ## 2.98.0 · Lay out the equipment (2026-11-04)
 
 `engines/lay_out.html`: the tray's pieces put on a photograph from above, each rule judged by metres and the wind drawn at

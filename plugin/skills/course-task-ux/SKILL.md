@@ -125,6 +125,11 @@ halves count - a task that is clear but dull fails, and so does one that is impr
 
 1. **A first try, before the first task.** The course's first task opens with a 20-second *"try the tablet"*
    screen - tap this, drag this here - with a friendly check mark. Not scored, never repeated.
+   **Which group, before a set that differs per group (2.103.0).** When the script has `"groups"` and a set has a
+   question for one group, its page opens on *Which group are you in?* - one big button per group (110 px high, the
+   name in 28 px), nothing else to press, no typing, no timer. The tablet keeps the choice for the course, so later
+   tasks open straight on their questions; a small label in the top bar names the group and, until the first Check,
+   takes the trainee back to choose again. They see, are numbered and scored over their own questions.
 2. **Only tap and drag.** Every drag also works as *tap the item, then tap where it goes*. Never double-tap,
    long-press, swipe-to-move-on or pinch as the only way; a 3D model has turn and zoom buttons as well as gestures.
 3. **Show, don't tell.** The first time a kind of task appears, a short animated hand shows the gesture once, then

@@ -124,7 +124,9 @@ WORDS = {"en": {
     "timeline_order": "1. Put the events in the order they happened.",
     "timeline_stop": "2. Now tap the event where it should have been stopped.",
     "panel_say": "Put every control in the position it must end in.",
-    "sure_ask": "How sure are you?", "sure0": "Guessing", "sure1": "Fairly sure", "sure2": "Certain"},
+    "sure_ask": "How sure are you?", "sure0": "Guessing", "sure1": "Fairly sure", "sure2": "Certain",
+    "grp_ask": "Which group are you in?", "grp_note": "Tap your group. You get the questions for your group.",
+    "grp_change": "Change"},
     # PROVISIONAL (2.40.0) - written by Claude, to be checked by a native speaker: compile/TRANSLATIONS_REVIEW.md
     "lv": {
     "back": "Atpakaļ", "try_title": "Vispirms izmēģini planšeti", "try_tap": "Pieskaries šeit",
@@ -168,7 +170,9 @@ WORDS = {"en": {
     "timeline_stop": "2. Теперь коснись события, на котором его надо было остановить.",
     "panel_say": "Установи каждый орган управления в положение, в котором он должен остаться.",
     "sure_ask": "Насколько ты уверен?", "sure0": "Угадываю", "sure1": "Довольно уверен", "sure2": "Уверен"}}
-assert all(set(WORDS[k]) == set(WORDS["en"]) for k in WORDS), "every language has every word"
+# new words are written in English only: a language without one shows the English word
+assert all(set(WORDS[k]) <= set(WORDS["en"]) for k in WORDS), "a language has only words English has"
+WORDS = {k: dict(WORDS["en"], **v) for k, v in WORDS.items()}
 e, a = cm.e, cm.a
 
 
@@ -1406,12 +1410,32 @@ def try_screen(w):
         "  </section>"])
 
 
-def intro_screen(slide, title, n, pass_mark, w):
-    need = -(-n * pass_mark // 100)
+def group_screen(groups, w):
+    """before a set whose questions differ per group: one big button per group (gb_answer.js keeps the choice)"""
+    return "\n".join([
+        '  <!-- which group: the trainee sees the questions for everyone and those of their group -->',
+        '  <section class="scr th-w" id="grpScr">',
+        '    <h1 class="q"><span class="stem">%s</span></h1>' % e(w["grp_ask"]),
+        '    <div class="grp">'] + [
+        '      <button type="button" class="grp-pick" data-pick="%s"><span class="grp-dot"></span><span class="grp-name">%s</span></button>'
+        % (a(g), e(name)) for g, name in groups.items()] + [
+        "    </div>",
+        '    <p class="grp-note">%s</p>' % e(w["grp_note"]),
+        "  </section>"])
+
+
+def counts_by_group(qs, groups):
+    """{group id: how many questions that group's trainee answers} - the questions for everyone and the group's own"""
+    return {g: sum(1 for q in qs if cs.group_of(q) in ("", g)) for g in groups}
+
+
+def intro_screen(slide, title, n, pass_mark, w, per_group=None):
     lines = cs.lines_of(slide.get("text"))[1:] or [""]
     body = ['    <p>%s</p>' % e(lines[0])]
     if pass_mark:                                       # the final assessment's only (2.63.0)
-        body.append('    <p><span class="pass">%s</span></p>' % e(w["pass"].format(**{"pass": pass_mark, "need": need, "total": n})))
+        for g, k in (per_group or {"": n}).items():     # each group's own count: the line of the chosen group is shown
+            body.append('    <p%s><span class="pass">%s</span></p>' % (' data-grp="%s"' % a(g) if g else "", e(w["pass"].format(
+                **{"pass": pass_mark, "need": -(-k * pass_mark // 100), "total": k}))))
     body += ['    <p>%s</p>' % e(x) for x in lines[1:]]
     return "\n".join(['  <!-- before the first question: what this is%s -->' % (" and the pass mark" if pass_mark else ""),
                       '  <section class="scr th-w" id="introScr">',
@@ -1507,6 +1531,8 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
         # a framed task's page takes its screen's theme and the course's language
         html_q = question_html(n, q, dict(sheet.get(q["id"]) or {}, _theme=last, _lang=lang), mdir, figdir, figs, probs, w)
         html_q = html_q.replace('<section class="scr"', '<section class="scr %s"' % last, 1)
+        if cs.group_of(q):                              # for one group only: the engine shows it to that group's trainees
+            html_q = html_q.replace(' data-script="%s"' % q["id"], ' data-script="%s" data-group="%s"' % (q["id"], a(cs.group_of(q))), 1)
         picture_notes(q, html_q)
         sections.append(("  <!-- %s : %s -->\n" % (q["id"], cs.mech(q))) + html_q)
     pictures = any(not k.startswith("_") for k in figs) or figs.get("_pic") or any(cs.mech(q) == "read_instrument" for q in qs)
@@ -1535,7 +1561,11 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
     head += ['<link rel="stylesheet" href="../assets/%s">' % x for x in PAGE_CSS[:-1] + (("gb_zoom.css",) if pictures else ()) + (("kit.css",) if kit else ())
              + (("kit3d.css",) if three else ()) + PAGE_CSS[-1:]]         # the look last: it outranks nothing's sizes, only colours
     head.append("</head>")
-    first = try_screen(w) if try_tablet else intro_screen(slide, short, len(qs), pass_mark, w) if is_check else ""
+    groups = cs.groups_of(script) if any(cs.group_of(q) for q in qs) else {}
+    first = try_screen(w) if try_tablet else intro_screen(slide, short, len(qs), pass_mark, w,
+                                                          counts_by_group(qs, groups) if groups else None) if is_check else ""
+    if groups:                                          # asked before anything else, once per course on the tablet
+        first = group_screen(groups, w) + ("\n\n" + first if first else "")
     # 2.60.0 - a final assessment variant (FA, FB) is blind: the engine records each answer and moves on, and shows only
     # the score at the end - no right answer, no why, no verdict between questions (L27/L45; the module check is unchanged)
     blind = ' data-blind="1"' if cm.FINAL_SET.match(code or "") else ""
@@ -1547,8 +1577,9 @@ def page_html(script, slide, code, qs, build, mdir, figdir, version, approved, f
     if team:                                            # filled by the engine from the classroom's gb-team
         body += ['<div class="teambar" id="teamBar" hidden><span class="tname" id="teamName"></span><span class="trole" id="teamRole">'
                  '</span><span class="tnote" id="teamNote"></span><span class="tdone" id="teamDone"></span></div>', ""]
-    body += ['<header class="state">',
-            '  <span class="part" id="partLbl"></span>', '  <span class="got" id="gotLbl"></span>',
+    body += ['<header class="state">', '  <span class="part" id="partLbl"></span>'] + ([
+            '  <button type="button" class="grp-lbl" id="grpLbl" hidden><span id="grpName"></span><span class="grp-chg">%s</span></button>'
+            % e(w["grp_change"])] if groups else []) + ['  <span class="got" id="gotLbl"></span>',
             '  <div class="bar"><i id="barFill"></i></div>', "</header>", "", '<main class="wrap">', ""]
     if first:
         body += [first, ""]

@@ -138,12 +138,14 @@ def check(name, ok, detail=""):
     print(("  ok    " if ok else "  FAIL  ") + name + (("  -> " + str(detail)[:600]) if detail and not ok else ""))
 
 
-def drive(exe, page, plan, tmp, look=True, size=None, blind=False):
-    """size=(w, h): the page's viewport exactly that tablet's size, as probe() opens it; blind: the page as a final's"""
+def drive(exe, page, plan, tmp, look=True, size=None, blind=False, pre=""):
+    """size=(w, h): the page's viewport exactly that tablet's size, as probe() opens it; blind: the page as a final's;
+    pre: a script run in the head, before the engine"""
     text = io.open(page, encoding="utf-8").read()
     if blind:
         text = text.replace("<body ", '<body data-blind="1" ', 1)
-    text = re.sub(r"<head>", '<head><base href="%s/">' % Path(os.path.dirname(page)).as_uri(), text, count=1)
+    text = re.sub(r"<head>", '<head><base href="%s/">%s' % (Path(os.path.dirname(page)).as_uri(), "<script>%s</script>" % pre if pre else ""),
+                  text, count=1)
     i = text.rfind("</body>")
     text = text[:i] + "<script>%s</script>" % (DRIVER % (json.dumps(plan, ensure_ascii=False), "true" if look else "false")) + text[i:]
     w = os.path.join(tmp, "drive.html")
@@ -188,6 +190,54 @@ def team_part(exe, tmp):
     rep, bar = r.get("report") or {}, (r.get("team") or {}).get("text", "")
     check("scope member, no roles: everyone reports as usual; the team is still shown, no role is invented",
           rep.get("ok") == 1 and "scope" not in rep and "Team A" in bar and "You are" not in bar, r)
+
+
+GROUP_KEY = "var a = document.createElement('a'); a.href = '../../'; var K = 'gb-group|' + a.href + '|T,N';"
+GRP_LOOK = ("var l = document.getElementById('grpLbl'), g = document.getElementById('grpScr');"
+            "out.grp = out.grp || []; out.grp.push({ask: g.className.indexOf('on') >= 0, dock: document.getElementById('dock').className,"
+            " label: l.hasAttribute('hidden') ? null : l.textContent, fixed: l.disabled,"
+            " nums: [].map.call(document.querySelectorAll('.scr.on .num'), function (n) { return n.textContent; })});")
+
+
+def groups_part(exe, tmp):
+    """groups of trainees: asked once per course on the tablet, the trainee's own questions, the score and report over them"""
+    print("\n-- groups of trainees")
+    os.makedirs(os.path.join(tmp, "grp"))
+    sc = tcm.script(approved=False, screens=tcm.GROUPED)
+    sc["groups"] = {"T": "Ship technicians", "N": "Ship navigators"}
+    sc.update(status="approved", approved_hash=tcm.cs.content_hash(sc), approved_by="Test")
+    c, md = tcm.new_course(os.path.join(tmp, "grp"), sc)
+    tcm.run(tcm.COMPILE, c, "--module", "1", "--only", "tasks")
+    page = os.path.join(md, "tasks", "sc1_the_new_spaces.html")
+    pick = lambda g: ["eval", "out.steps.push('pick'); document.querySelector('[data-pick=\"%s\"]').click();" % g]
+    start = ["eval", "out.steps.push('start:' + document.getElementById('go').textContent); document.getElementById('go').click();"]
+    r = drive(exe, page, [["eval", GRP_LOOK], pick("T"), start, ["eval", GRP_LOOK],
+                          ["q01", [["tap", ".opt", "Fuel preparation room"]]], ["eval", GRP_LOOK],
+                          ["q02", [["tap", ".opt", "Engine room"]]], ["eval", GROUP_KEY + "out.kept = localStorage.getItem(K);"]], tmp, look=False)
+    rep, grp = r.get("report") or {}, r.get("grp") or [{}] * 3
+    check("no group kept yet: the page opens on the group screen, nothing on the dock to press",
+          not r.get("errors") and grp[0].get("ask") and "off" in grp[0].get("dock", "") and grp[0].get("label") is None, r)
+    check("tapped: the try-the-tablet screen next, then the questions; the label says the group and offers a change",
+          "start:Start the self-check" in r.get("steps", []) and "Ship technicians" in (grp[1].get("label") or "")
+          and "Change" in grp[1].get("label", "") and grp[1].get("fixed") is False, grp)
+    check("after the first Check the group is fixed, and the technicians' question is numbered 2 of their 2",
+          grp[2].get("fixed") is True and grp[2].get("nums") == ["2"] and r.get("kept") == "T", r)
+    check("the report: scored over the questions the trainee saw, with the group and its name (also in the title)",
+          rep.get("ok") == 2 and rep.get("total") == 2 and [i.get("q") for i in rep.get("items", [])] == ["q01", "q02"]
+          and rep.get("group") == "T" and rep.get("groupName") == "Ship technicians"
+          and rep.get("title", "").endswith("(Ship technicians)"), rep)
+    r = drive(exe, page, [["eval", GRP_LOOK], start, ["eval", GRP_LOOK],
+                          ["eval", "document.getElementById('grpLbl').click();"], ["eval", GRP_LOOK], pick("N"), start,
+                          ["q01", [["tap", ".opt", "Bridge"]]], ["q03", [["tap", ".opt", "Bridge"]]]],
+              tmp, look=False, pre=GROUP_KEY + "localStorage.setItem(K, 'T');")
+    rep, grp = r.get("report") or {}, r.get("grp") or [{}] * 3
+    check("a group kept on the tablet for the course: the next task opens without asking",
+          not r.get("errors") and not grp[0].get("ask") and "Ship technicians" in (grp[0].get("label") or ""), r)
+    check("before the first Check the label takes the trainee back to choose again",
+          len(grp) > 2 and grp[2].get("ask") and grp[2].get("label") is None, grp)
+    check("... and the other group's questions are the ones asked and scored",
+          rep.get("group") == "N" and rep.get("total") == 2 and rep.get("ok") == 1
+          and [i.get("q") for i in rep.get("items", [])] == ["q01", "q03"], rep)
 
 
 def language_part(exe, tmp):
@@ -2267,6 +2317,7 @@ def main():
         steps_part(exe, tmp)
         patterns_part(exe, tmp)
         team_part(exe, tmp)
+        groups_part(exe, tmp)
         language_part(exe, tmp)
         deck_language_part(exe, tmp)
     finally:

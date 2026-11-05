@@ -266,6 +266,60 @@ def plan_of(script):
     return slide_no, sets, set_of
 
 
+def groups_of(script):
+    """the script's groups of trainees, {id: name} in the script's order - {} for a script with none. Slides are the same
+    for every group; a trainee-tablet question with "group" is for that group only, one without is for all"""
+    g = script.get("groups")
+    return {str(k).strip(): str(v).strip() for k, v in g.items()} if isinstance(g, dict) else {}
+
+
+def group_of(s):
+    return str(s.get("group") or "").strip()
+
+
+def for_group(script, g):
+    """the script as the trainees of group g go through it: the questions of the other groups left out"""
+    out = dict(script)
+    out["screens"] = [s for s in script.get("screens", []) if group_of(s) in ("", g)]
+    return out
+
+
+def group_problems(script):
+    """the groups are declared once, two or more, and every question's group is one of them; slides carry none"""
+    probs, groups = [], groups_of(script)
+    g = script.get("groups")
+    if g is not None and (not isinstance(g, dict) or len(groups) < 2 or any(not k or not v for k, v in groups.items())):
+        probs.append("\"groups\" is two or more groups, each an id and the name the trainee taps - {\"T\": \"Ship technicians\", "
+                     "\"N\": \"Ship navigators\"}")
+    for s in script.get("screens", []):
+        gid = group_of(s)
+        if not gid:
+            continue
+        if s.get("kind") not in TASKS:
+            probs.append("%s: a %s is the same for every group - only a trainee-tablet question (self-check, module check, "
+                         "final) carries \"group\"" % (s.get("id"), s.get("kind")))
+        elif gid not in groups:
+            probs.append("%s: its group %r is not one of the script's \"groups\" (%s)" % (
+                s.get("id"), gid, ", ".join(groups) or "none declared"))
+    _, sets, _ = plan_of(script)
+    for st in sets:
+        for gid, name in groups.items():
+            if st["questions"] and not any(group_of(q) in ("", gid) for q in st["questions"]):
+                probs.append("%s has no question for the group %s - every group answers every set" % (set_name(script, st), name))
+    return probs
+
+
+def group_label(script, s):
+    """'Ship technicians' for a question of one group, '' for a question for everyone"""
+    gid = group_of(s)
+    return groups_of(script).get(gid, gid) if gid else ""
+
+
+def groups_line(script):
+    """the review page's and Word file's one line on the groups: who they are and how a question is marked"""
+    return T(script, "s_groups", groups=", ".join("%s (%s)" % (n, g) for g, n in groups_of(script).items()))
+
+
 def set_name(script, st):
     if st["kind"] == "self-check":
         return T(script, "s_sc_name", k=st.get("no", "?"))
@@ -697,6 +751,7 @@ def validate(script):
             if any(k in ("slide", "activity") for k in kinds[first:]):
                 probs.append("a slide comes after the module check starts - the module check is the end of the module")
     probs += shape_problems(script)
+    probs += group_problems(script)
     alloc = script.get("minutes_allocated")
     if alloc:
         got = sum(minutes(s) for s in screens if s.get("kind") in INSTRUCTOR)
@@ -856,7 +911,38 @@ def slide_terms(s):
     return terms("%s\n%s\n%s" % (s.get("title", ""), s.get("text", ""), s.get("notes", "")))
 
 
+# the task rules that are about a set or a module's questions as a trainee goes through them: with groups, each group's
+# path (the questions for everyone and the group's own) must meet them, never the mix of all groups no trainee sees
+GROUP_RULES = ("t_sc_small", "t_sc_big", "t_no_challenge", "t_ab_order", "t_not_spaced", "t_mc_small", "m_mix",
+               "m_too_much_choice", "m_no_hands_on", "m_same_in_a_row")
+
+
+def by_group(script, found, check):
+    """found as it stands for a script with no grouped questions; else the GROUP_RULES findings worked out again over each
+    group's path by check(sub-script), said once when every group has it and with the group's name when only some do"""
+    groups = groups_of(script)
+    if not groups or not any(group_of(s) for s in script.get("screens", [])):
+        return found
+    per = {}
+    for gid, name in groups.items():
+        for f in check(for_group(script, gid)):
+            if f["rule"] in GROUP_RULES:
+                per.setdefault((f["rule"], f["screen"], f["field"], f["level"], f["detail"]), []).append(name)
+    out = [f for f in found if f["rule"] not in GROUP_RULES]
+    for (rule, sid, field, level, detail), names in per.items():
+        out.append({"where": place(script, sid) if sid else T(script, "s_the_module"), "screen": sid, "field": field,
+                    "level": level, "rule": rule, "fix": "", "detail": detail if len(names) == len(groups) else
+                    T(script, "g_for_group", group=", ".join(names), detail=detail)})
+    return out
+
+
 def theory_findings(script):
+    """theory_check's findings, the task rules counted per group (by_group), and the slides that teach each answer"""
+    found, taught_on = theory_check(script)
+    return by_group(script, found, lambda sub: theory_check(sub)[0]), taught_on
+
+
+def theory_check(script):
     """Everything L36 asks, as findings shown at the top of the review page. Also returns, for every
     question, the slide(s) that teach its answer - the page shows them beside the question."""
     R = RULES
@@ -1149,6 +1235,11 @@ def build_findings(course, script):
 
 
 def media_findings(script):
+    """media_check's findings, the task rules counted per group (by_group)"""
+    return by_group(script, media_check(script), media_check)
+
+
+def media_check(script):
     """L37, L38 - every slide leaves room for a named visual, a module moves where it can, and the tasks are
     varied and hands-on. Floors: knowledge/media-and-tasks.json."""
     F = MEDIA["floors"]
@@ -1850,6 +1941,7 @@ dl{display:grid;grid-template-columns:12em 1fr;gap:6px 14px;margin:8px 0 0} dt{c
 .step{border-left:3px solid var(--line-l);padding-left:10px;margin:8px 0}
 .mech{display:inline-block;padding:.15em .6em;border-radius:var(--r-s);font-size:13px;font-weight:700;background:var(--blue-wash-l);color:var(--navy)}
 .mech.hands{background:var(--amber-wash-l);color:var(--amber-ink)}
+.grp{display:inline-block;padding:.15em .6em;border-radius:var(--r-s);font-size:13px;font-weight:700;border:1px solid var(--navy);color:var(--navy)}
 h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.slidebox{grid-template-columns:1fr}} @media print{body{background:#fff}.card{box-shadow:none}}
 """
     status = (T(script, "s_status_approved", by=script.get("approved_by", ""), on=script.get("approved_on", ""))
@@ -1960,6 +2052,8 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
 
     # ---- part 2: the trainee tablet
     o.append('<div class="part"><h2>%s</h2><p class="note">%s</p></div>' % (e(T(script, "s_part2")), e(T(script, "s_part2_intro"))))
+    if groups_of(script):
+        o.append('<p class="note">%s</p>' % e(groups_line(script)))
     for st in sets:
         opener = st["opened_by"]
         o.append('<h2>%s <span class="kind k-%s">%s</span></h2><p class="note">%s</p>' % (
@@ -1968,9 +2062,10 @@ h1,h2{color:var(--navy)} @media (max-width:640px){dl{grid-template-columns:1fr}.
             e(T(script, "s_set_intro", slide=slide_no.get(opener, "?"), q=len(st["questions"])))))
         for qn, s in enumerate(st["questions"], 1):
             hands = MEDIA["mechanics"].get(mech(s), {}).get("hands_on")
-            o.append('<div class="card screen"><h3>%s <span class="mech%s">%s</span> <span class="sid">%s</span></h3>' % (
+            o.append('<div class="card screen"><h3>%s <span class="mech%s">%s</span>%s <span class="sid">%s</span></h3>' % (
                 e(T(script, "s_question_n", q=qn, of=len(st["questions"]))), " hands" if hands else "",
-                e(mech_label(mech(s), script.get("operator_language", "en"))), e(s["id"])))
+                e(mech_label(mech(s), script.get("operator_language", "en"))),
+                ' <span class="grp">%s</span>' % e(T(script, "s_group", group=group_label(script, s))) if group_of(s) else "", e(s["id"])))
             o.append('<div class="tablet"><p><b>%s</b></p>%s</div>' % (V(s.get("question")), task_body(e, V, script, s)))
             tn = taught_on.get(s["id"])
             o.append('<dl>%s<dt>%s</dt><dd>%s</dd><dt>%s</dt><dd>%s</dd>%s</dl></div>' % (
@@ -2083,11 +2178,14 @@ def build_docx(course, script):
         boxes(s)
     label(T(script, "s_part2"), style="Title")
     label(T(script, "s_part2_intro"), color="41556A")
+    if groups_of(script):
+        label(groups_line(script), color="41556A")
     for st in sets:
         label(set_name(script, st), style="Heading1")
         label(T(script, "s_set_intro", slide=slide_no.get(st["opened_by"], "?"), q=len(st["questions"])), color="41556A")
         for qn, s in enumerate(st["questions"], 1):
-            label("%s · %s · %s" % (T(script, "s_question_n", q=qn, of=len(st["questions"])), mech_label(mech(s), lang), s["id"]), bold=True)
+            label("%s · %s · %s%s" % (T(script, "s_question_n", q=qn, of=len(st["questions"])), mech_label(mech(s), lang), s["id"],
+                                      (" · " + T(script, "s_group", group=group_label(script, s))) if group_of(s) else ""), bold=True)
             if uses(s, "answer"):
                 label("%s %s" % (T(script, "s_answer_how"), T(script, "fmt_" + mech(s))), color="41556A")
             if st["kind"] != "final":
