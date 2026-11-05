@@ -2426,7 +2426,9 @@ def shaped_template(s, b, lines):
         return "true-false", "picture"
     if s.get("choices"):
         return "scenario", "picture-left"
-    if s.get("active") == "worked-example" and s.get("ask") and s.get("reveal"):
+    # the room's turn and its answer: a worked example, and any slide with an "ask" and a "reveal" (predict- or
+    # explain-then-reveal) - its lines first, then the question, the answer on the last Next. Never built without them.
+    if s.get("ask") and s.get("reveal") and (s.get("active") == "worked-example" or not b.get("spots")):
         return "worked-example", "figure"
     if s.get("points"):
         return "long-explanation", "points"
@@ -2509,8 +2511,8 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         # each step of the worked example lights on Next; then the room's turn, and its answer on the last Next
         steps = "".join('\n        <li data-k="%d"><span class="n" data-script-ignore>%d</span><div data-script-field="text" data-i="%d">%s</div></li>'
                         % (j, j + 1, j + 1, joined(cells(x), ("b", "span")) if " | " in x else "<b>%s</b>" % e(x)) for j, x in enumerate(lines))
-        you = ('\n        <li data-k="%d" class="you"><span class="n" data-script-ignore>?</span><div><b data-script-field="ask">%s</b>'
-               '<span class="ans" data-script-field="reveal">%s</span></div></li>' % (len(lines), e(s.get("ask")), e(" ".join(lt("reveal")))))
+        you = ('\n        <li data-k="%d" class="you"><span class="n" data-script-ignore>?</span><div><b data-script-field="ask">%s</b>%s</div></li>'
+               % (len(lines), e(s.get("ask")), "".join('<span class="ans" data-script-field="reveal">%s</span>' % e(x) for x in lt("reveal"))))
         d["data-stops"] = str(len(lines) + 2)
         variant = "figure" if fig else "text-only"
         body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy"><ol class="lt-work">%s%s\n      </ol></div>%s</div>'

@@ -7,6 +7,15 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.103.1 · Fixes from the Project Management build (2026-11-05)
+
+- **Task slides.** The tablet picture is whole: its row is the body's height and it fades in (it rose from 19 px below
+  the body's edge, cut off); the chips are at least 14 px (`course-module-ui/templates/gb_upgrade.css`).
+- **Pass mark.** `content_script.percent`: 70, "70", "70%", "70 %" are 70 - `task_pages.pass_mark_of` and
+  `propose {"script_field": "pass_mark"}` both read it; an unreadable one is a build problem, never a crash.
+- **Ask and reveal.** `shaped_template`: a slide with `ask` and `reveal` (predict- or explain-then-reveal too) is built
+  in the worked-example template; each reveal line is its own field, so check_script_match compares them line by line.
+
 ## 2.103.0 · Groups of trainees - the trainee picks their group on the task page (2026-11-05)
 
 - **Why.** The Project Management course teaches ship technicians and ship navigators in one classroom: the slides

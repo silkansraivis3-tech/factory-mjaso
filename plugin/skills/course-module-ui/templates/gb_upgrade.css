@@ -363,7 +363,11 @@
 
 /* ------------------------------------------------ task: the tablet, in 3D, the room is about to pick up */
 /* the words on the left; the tablet, large, takes the right half */
-.slide[data-template^="task-launch."] .slide-body.lt-task2{display:grid;grid-template-columns:44fr 56fr;gap:var(--lt-gap);align-items:center;flex:1;min-height:0}
+/* the row is the body's height: long words never stretch the tablet past the slide; the tablet fades in where it stands
+   (rising, it started 19 px below the body's edge and was cut off) */
+.slide[data-template^="task-launch."] .slide-body.lt-task2{display:grid;grid-template-columns:44fr 56fr;grid-template-rows:minmax(0,1fr);gap:var(--lt-gap);align-items:center;flex:1;min-height:0}
+.slide.active .lt-task2 .lt-tab3d.lt-in{animation-name:lt-fade}
+@keyframes lt-fade{from{opacity:0}to{opacity:1}}
 .lt-task2 .lt-tcopy{display:flex;flex-direction:column;gap:min(1.6vmin,13px);min-width:0}
 .slide[data-template^="task-launch."] .lt-task2 .act-code{text-align:left;justify-self:start;align-self:start;margin:0;font-size:clamp(48px,13vmin,130px);line-height:1;font-weight:900;letter-spacing:-.04em;color:var(--lt-navy)}
 .slide[data-template^="task-launch."] .lt-task2 .act-title{color:var(--lt-navy);font-size:clamp(22px,4.6vmin,48px)}
@@ -372,7 +376,7 @@
 .slide[data-template^="task-launch."] .slide-body.lt-task2{overflow:hidden}
 .lt-chips{display:flex;flex-wrap:wrap;gap:min(1vmin,8px);margin-top:min(2vmin,16px)}
 .lt-chips span{display:inline-flex;align-items:center;gap:.5em;padding:.4em .9em;border-radius:99px;background:var(--lt-white);border:1.5px solid var(--lt-line);
-  color:var(--lt-navy);font-weight:700;font-size:clamp(12px,1.7vmin,18px);box-shadow:0 8px 20px -12px var(--up-a1036994)}
+  color:var(--lt-navy);font-weight:700;font-size:clamp(14px,2vmin,18px);box-shadow:0 8px 20px -12px var(--up-a1036994)}
 .lt-chips span b{color:var(--lt-blue)}
 .slide.active .lt-chips span{animation:lt-rise .5s cubic-bezier(.2,.7,.2,1) both}
 .slide.active .lt-chips span:nth-child(2){animation-delay:.12s}.slide.active .lt-chips span:nth-child(3){animation-delay:.24s}

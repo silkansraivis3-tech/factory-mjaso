@@ -227,6 +227,9 @@ SHAPED_SCREENS = [
     {"id": "s36", "kind": "slide", "title": "Spot the difference", "visual_kind": "photo", "visual": "A ship taking gas.",
      "text": "Gas safe | ESD-protected\nThe gas pipe | inside an outer pipe | a single wall\nA leak | is held in the outer pipe | reaches the room",
      "notes": "- Drag the line.", "minutes": 2},
+    {"id": "s40", "kind": "slide", "title": "Put the bunkering in order", "visual_kind": "none", "active": "predict-then-reveal",
+     "text": "The ship takes LNG from a truck tomorrow morning.", "ask": "Put the four steps in order.",
+     "reveal": "1 Safety meeting\n2 Connect the hose\n3 Transfer\n4 Disconnect", "notes": "- Pairs agree first.", "minutes": 2},
     {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - the new spaces", "before": "The two barriers\nThe gas alarm",
      "text": "Self-check on your tablet now.", "notes": "- Press OPEN TASK.", "minutes": 4},
     {"id": "q01", "kind": "self-check", "set": "SC1", "question": "Where is the fuel prepared?", "options": ["Fuel preparation room", "Bridge"],
@@ -294,6 +297,10 @@ def shapes_part(tmp):
     w = section(page, "s33")
     check("worked example: the steps light one by one, then the room's turn and its answer on the last Next",
           w.count('<li data-k=') == 3 and 'class="you"' in w and 'data-script-field="reveal">2 ÷ 5 = 0.4' in w and 'data-stops="4"' in w, w[:1600])
+    v = section(page, "s40")
+    check("predict then reveal: the slide's ask and every line of its reveal are built (they were dropped), the answer on the last Next",
+          tpl("s40") and tpl("s40").group(1) == "worked-example" and 'data-script-field="ask">Put the four steps in order.' in v
+          and v.count('data-script-field="reveal"') == 4 and 'data-script-field="reveal">4 Disconnect' in v, v[:1600])
     p = section(page, "s34")
     check("short points beside the picture; the full approved words in the instructor's notes, not on the slide",
           p.count('data-script-field="points"') == 2 and 'data-script-field="text"' not in p
@@ -616,6 +623,21 @@ def tasks_part(tmp):
         bad.replace('<rect x="2" y="150"', '<rect data-may-cross x="2" y="150"'))
     code, out = run(COMPILE, c, "--module", "1", "--only", "tasks", "--force", "--drawing-check")
     check("a crossing marked as meant (data-may-cross) is not a finding", "every drawing whole and clean" in out, out)
+    # the task-launch slide (Project Management build, 2.103.0): the tablet rose from 19 px below the body's edge and was cut
+    # off on every task slide; long words stretched it 99 px past the slide; its chips were 12.2 px at 1280 x 720
+    sp_ = os.path.join(c, "working_claude", "script", "M01.json")
+    long_ = cs.load(sp_)
+    for x in long_["screens"]:
+        if x["id"] == "t01":
+            x["before"] = "\n".join("Point %d to check before the self-check" % k for k in range(1, 9))
+    long_.update(approved_hash=cs.content_hash(long_))
+    cs.save(sp_, long_)
+    code, out = run(COMPILE, c, "--module", "1", "--only", "deck", "--force", "--drawing-check")
+    check("task slides: the tablet picture is whole - never cut off rising in, nor stretched past the slide by long words",
+          "Traceback" not in out and not re.search(r"\(t0\d\): cut off - img", out), out[-1500:])
+    up = io.open(os.path.join(SKILLS, "course-module-ui", "templates", "gb_upgrade.css"), encoding="utf-8").read()
+    chip = re.search(r"\.lt-chips span\{[^}]*font-size:clamp\((\d+(?:\.\d+)?)px", up)
+    check("... and its chips never under the 12.5 px floor", chip and float(chip.group(1)) >= 12.5, chip and chip.group(0))
 
     # ---- finding 13: a kit figure's part coloured for a light slide cannot be seen on its dark panel - the same check
     kit_page = os.path.join(md, "kit_contrast.html")
@@ -1900,6 +1922,17 @@ def v2492_part(tmp):
     key = io.open(os.path.join(mf, "assessment", "check_answer_key.html"), encoding="utf-8").read()
     check("F6: the instructor's key lists both variants and names their pages",
           "final_a.html" in key and "final_b.html" in key and "Final assessment A" in key and "Final assessment B" in key, key[:600])
+    os.makedirs(os.path.join(tmp, "v5p"))
+    sp = final_script(("FA",))
+    sp.update(pass_mark="75 %")                       # as script/GUIDE.md and the review page write it
+    sp.update(approved_hash=cs.content_hash(sp))
+    cp = final_course(os.path.join(tmp, "v5p"), "f", sp)
+    code, out = run(COMPILE, cp, "--module", "final")
+    fp = os.path.join(cp, "modules", "module03", "assessment", "final.html")
+    check("a pass mark written \"75 %\" builds the final (no crash) and is applied as 75",
+          "Traceback" not in out and os.path.isfile(fp) and 'data-pass="75"' in io.open(fp, encoding="utf-8").read(), out[-1500:])
+    check("... and 70, \"70\", \"70%\", \"70 %\" are all 70; \"seventy\", 0 and 101 are none",
+          [cs.percent(x) for x in (70, "70", "70%", "70 %", "seventy", 0, 101)] == [70, 70, 70, 70, None, None, None])
     os.makedirs(os.path.join(tmp, "v6"))
     c1 = final_course(os.path.join(tmp, "v6"), "f", final_script(("FA",)))
     code, out = run(COMPILE, c1, "--module", "final")

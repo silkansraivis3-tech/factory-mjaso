@@ -103,6 +103,13 @@ screenshots are identical pixel for pixel. A deliberate one-shade change to one 
 both (2) and (3). `test_design_system.py` now asserts the strict check passes on a freshly set-up
 module, so this cannot quietly return.
 
+## The task slide's tablet and chips — 2.103.1 (2026-11-05)
+
+`templates/gb_upgrade.css`, the `task-launch` template: the row is the body's height (`grid-template-rows:minmax(0,1fr)`)
+and the tablet fades in (`lt-fade`) - rising, it started 19 px below the body's edge and the L54 drawing check found it
+cut off on every task slide; long words stretched it 99 px past the slide. The chips are `clamp(14px,2vmin,18px)` - they
+were 12.2 px at 1280 x 720, under the 12.5 px floor. Tested in `course-factory/compile/scripts/test_compile_module.py`.
+
 ## The blueprints — 2.91.0 (2026-11-03)
 
 `knowledge/blueprints.json`: every slide template and variant and every task screen as slots of six kinds (Title, Text,

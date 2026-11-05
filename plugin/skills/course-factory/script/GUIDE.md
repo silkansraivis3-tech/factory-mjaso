@@ -141,6 +141,7 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   | two states of the same thing | the first line `"A \| B"`, each line after it `"what \| in A \| in B"`; build sheet `"figure"` and `"figure_b"` | spot the difference |
   | the end of the module | the recap, and `"asks"`: one question for each of its lines | the summary asks first |
   | just before a self-check | `"before"` on its task slide: 2-4 things to check, one a line | the list on the task slide |
+  | a guess or a finding before the answer | `"active": "predict-then-reveal"` or `"explain-then-reveal"`, the lines the situation, `"ask"`, `"reveal"` (one line or several) | the lines, then the question, the answer on the last Next (the worked-example template) |
   | before the module check, every second or third module | `"drill"`: `quick-fire` (lines `"prompt \| answer"`), `say-it` (the situation, `"ask"`, `"reveal"`) or `find-it` (lines "Point to ...", `"spots"`); `"seconds"` 5-120 | a quick drill |
 
   Each template's slots and what fills them, in one line: `course-module-ui/knowledge/blueprints.json`.
@@ -313,7 +314,7 @@ Besides editing one field of a screen it can add a screen, remove one, or change
 ```
 
 `add_screen` takes `"after"` or `"before"` (a screen id; neither = at the end) and needs a new `id` and a
-`kind`. `script_field` may be `title`, `minutes_allocated`, `sources`, `pass_mark` (a whole number 1-100)
+`kind`. `script_field` may be `title`, `minutes_allocated`, `sources`, `pass_mark` (a whole number 1-100; `70`, `"70"`, `"70%"` and `"70 %"` are all 70)
 or `operator_facts`; anything else (`status`, approval, `module`, `screens`) is refused — "Stopped -", exit 2,
 nothing written. Problems the changed script would have that it does not have now (a self-check left
 without its task slide, minutes that no longer add up) are listed under the changes, not blocking.

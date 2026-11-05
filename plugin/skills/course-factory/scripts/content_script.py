@@ -266,6 +266,15 @@ def plan_of(script):
     return slide_no, sets, set_of
 
 
+def percent(v):
+    """a pass mark as a whole number 1-100 - 70, 70.0, "70", "70%" and "70 %" are all 70; anything else None"""
+    if isinstance(v, bool):
+        return None
+    m = re.match(r"^\s*(\d+(?:[.,]0+)?)\s*%?\s*$", str(v)) if isinstance(v, (int, float, str)) else None
+    n = int(float(m.group(1).replace(",", "."))) if m else None
+    return n if n is not None and 1 <= n <= 100 else None
+
+
 def groups_of(script):
     """the script's groups of trainees, {id: name} in the script's order - {} for a script with none. Slides are the same
     for every group; a trainee-tablet question with "group" is for that group only, one without is for all"""
@@ -2499,9 +2508,9 @@ def check_script_field(name, v):
                    "screens are added, removed or edited one at a time" % (name, ", ".join(SCRIPT_FIELDS)))
     num = isinstance(v, (int, float)) and not isinstance(v, bool)
     if name == "pass_mark":
-        if not num or float(v) != int(v) or not 1 <= int(v) <= 100:
+        if percent(v) is None:
             raise Stop("pass_mark must be a whole number from 1 to 100, not %r" % (v,))
-        return int(v)
+        return percent(v)
     if name == "minutes_allocated":
         if not num or v < 0:
             raise Stop("minutes_allocated must be a number, not %r" % (v,))

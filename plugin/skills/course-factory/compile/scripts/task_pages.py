@@ -1479,11 +1479,15 @@ def pass_mark_for(script, build, code, probs=None):
 def pass_mark_of(script, build, probs=None):
     """the check's pass mark in %: the approved script's "pass_mark" (2.46.0 - the operator corrects it like any
     other word of the script: content_script.py propose {"script_field": "pass_mark"}), else the build sheet's, else 70"""
-    s, b = script.get("pass_mark"), build.get("pass_mark")
-    if s and b and int(s) != int(b) and probs is not None and not any("pass mark" in x and "build sheet" in x for x in probs):
+    raw = [(w, x) for w, x in (("script", script.get("pass_mark")), ("build sheet", build.get("pass_mark"))) if x not in (None, "")]
+    for w, x in raw:                                   # "70 %" as the script guide writes it, 70, "70%": all 70
+        if cs.percent(x) is None and probs is not None and not any("pass mark" in y and repr(x) in y for y in probs):
+            probs.append("the %s's pass mark %r is not a whole number from 1 to 100 (70, or \"70 %%\") - 70 %% was used" % (w, x))
+    s, b = (cs.percent(dict(raw).get(w)) for w in ("script", "build sheet"))
+    if s and b and s != b and probs is not None and not any("pass mark" in x and "build sheet" in x for x in probs):
         probs.append("the script's pass mark is %s %%, the build sheet still says %s %% - the script's is used; take "
                      "\"pass_mark\" out of the build sheet" % (s, b))
-    return int(s or b or DEFAULT_PASS)
+    return s or b or DEFAULT_PASS
 
 
 def theme_of(q, b, last, probs):
