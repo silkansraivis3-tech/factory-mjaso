@@ -7,6 +7,14 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.107.1 · A true-or-false why opens over the picture (2026-11-06)
+
+- **Found by the first factory trial** (M01 s04, Raivis's screenshot): the why opened under the claim and the vote and was
+  cut; `fit_gate.py` had failed the slide at all three sizes.
+- **Fix.** Beside a picture the `.lt-why` box is built inside the picture's column and fills it (`position:absolute;
+  inset:0`); `.cur` shows it as before. Text-only true-or-false slides are unchanged.
+- **Script.** `t_long_answer` (`theory-rules.json` `answer.max_words` 70) on a true-or-false's text and on any `reveal`.
+
 ## 2.107.0 · The factory trial; the law rows one line each (2026-11-06)
 
 - **Why.** Testing a release meant building a whole course, and two runs answered other questions and made other choices,

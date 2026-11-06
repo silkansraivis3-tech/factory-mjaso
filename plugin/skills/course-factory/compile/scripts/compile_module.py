@@ -2510,11 +2510,16 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         vote = "".join('<button type="button" data-v="%s"%s>%s</button>' % (v, ' class="ok"' if v == right else "", e(w[k]))
                        for v, k in (("t", "true"), ("f", "false")))
         variant = "picture" if fig else "text-only"
+        why_box = ('<div class="lt-why" data-k="1"><span class="stamp" data-script-ignore>%s</span><div>%s</div></div>'
+                   % (e(w["true" if right == "t" else "false"]), why))
+        if fig:
+            # beside a picture, why opens over the picture's column: under the claim and the vote it had a third of the
+            # slide, and a why of three lines was cut (the factory trial, M01 s04)
+            i = side.rfind("</")
+            side, why_box = side[:i] + why_box + side[i:], ""
         body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy lt-tf">\n      <p class="lt-claim lt-in" style="--i:1" '
-                'data-script-field="claim">%s</p>\n      <div class="lt-vote lt-in" style="--i:2">%s</div>\n      <div class="lt-why" data-k="1">'
-                '<span class="stamp" data-script-ignore>%s</span><div>%s</div></div></div>%s</div>'
-                % ("48fr 52fr" if fig else "1fr", e(s.get("claim")), vote, e(w["true" if right == "t" else "false"]), why,
-                   "\n    " + side if fig else ""))
+                'data-script-field="claim">%s</p>\n      <div class="lt-vote lt-in" style="--i:2">%s</div>\n      %s</div>%s</div>'
+                % ("48fr 52fr" if fig else "1fr", e(s.get("claim")), vote, why_box, "\n    " + side if fig else ""))
 
     elif tid == "scenario":
         # the situation and the question, the choices the room picks from; Next shows why each, the right one green

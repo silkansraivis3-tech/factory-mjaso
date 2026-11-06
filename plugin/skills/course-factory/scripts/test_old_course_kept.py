@@ -129,6 +129,15 @@ def main():
         sc["screens"][1], sc["screens"][2] = sc["screens"][2], sc["screens"][1]
         got = [f for f in cs.theory_check(sc)[0] if f["rule"] == "t_room_not_taught"]
         check("... asked after the slide that teaches it, it is fine", not got, got)
+        long_why = " ".join(["Type C tanks are pressure vessels and need no refrigeration plant at all."] * 6)
+        tf = {"module": 1, "operator_language": "en", "screens": [
+            slide("s01", "Type C tanks are pressure vessels.", ""),
+            slide("s02", long_why, "", claim="A fully pressurised ship needs a reliquefaction plant.", claim_is="false"),
+            slide("s03", "Short.", "", ask="Why?", reveal=long_why)]}
+        got = sorted((f["screen"], f["field"]) for f in cs.theory_check(tf)[0] if f["rule"] == "t_long_answer")
+        check("a true-or-false why or a revealed answer past 70 words is theory hidden in a reveal - a must-fix (the factory "
+              "trial: M01 s04, 82 words, cut)", got == [("s02", "text"), ("s03", "reveal")], got)
+        check("... and its words are in Latvian and Russian too", cs.LABELS["lv"].get("t_long_answer") and cs.LABELS["ru"].get("t_long_answer"))
         check("the words on screen: the points of a slide of short points, never its notes",
               "insulation" in cs.shown_text({"title": "T", "text": "long words", "points": "insulation", "notes": "secret"})
               and "secret" not in cs.shown_text({"title": "T", "text": "x", "notes": "secret"})

@@ -22,6 +22,10 @@
     "_cycles": "Owner, 2026-10-15 (L49, 2.26.0): short cycles - about 5 minutes of theory, then the trainees do something. It was 10 minutes and 250 words, which pushed the class toward long plain theory. Active slides count as theory taught here: they teach. That every answer is taught before its question (answers_taught_first) is unchanged.",
     "_why": "A self-check comes only after a block of new theory: at least this many minutes of slides and this many words (slides + notes) since the module began or since the last task. A module whose theory is shorter than this has no self-check - its module check covers it."
   },
+  "answer": {
+    "max_words": 70,
+    "_why": "An answer the room's question opens, or the why a true-or-false opens after the vote, is the answer - two or three sentences. Past this it is new theory hidden in a reveal, and it does not fit: it opens over the picture's column, about 120 words at 1280 x 800 and fewer on a 1024 x 768 tablet. The rest is taught on a slide before."
+  },
   "answers_taught_first": {
     "min_share": 0.6,
     "_why": "Every question's correct answer must be found in the slides the trainee has already seen - in their text or the instructor notes - before the task opens. The check compares the correct answer's key words (numbers exactly, words by their first five letters, so Latvian and Russian endings still match) with those slides; under this share of them, the question asks for something not yet taught (must fix). The review page shows, for every question, the slide that teaches its answer."

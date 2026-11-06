@@ -1022,6 +1022,9 @@ def theory_check(script):
                                                                 set().union(*[shown_terms(x)[1] for x in before])))
                 if share is not None and share < R["answers_taught_first"]["min_share"]:
                     add(s["id"], "reveal", FAIL, "t_room_not_taught", share="%d" % round(share * 100))
+            for field, said in (("reveal", as_text(s.get("reveal"))), ("text", s.get("text", "") if s.get("claim") else "")):
+                if wc(said) > R["answer"]["max_words"]:
+                    add(s["id"], field, FAIL, "t_long_answer", w=wc(said), max=R["answer"]["max_words"])
             seen_slides.append(s)
             block_subs |= set(sub_ilos_of(s))
         elif k == "task-slide":

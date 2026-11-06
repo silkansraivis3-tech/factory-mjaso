@@ -522,6 +522,10 @@
 .lt-why{display:none;gap:min(1.6vmin,13px);align-items:flex-start;padding:min(1.8vmin,14px) min(2.2vmin,18px);border-radius:min(1.6vmin,13px);background:var(--lt-white);
   border:1.5px solid var(--lt-line);box-shadow:0 14px 30px -16px var(--up-a10369945)}
 .lt-why.cur{display:flex;animation:lt-rise .5s both}
+/* beside a picture, why opens over the picture's column - the whole column is its room */
+.lt-split > .fig:has(> .lt-why){position:relative}
+.lt-split > .fig > .lt-why{position:absolute;inset:0;z-index:3;flex-direction:column;justify-content:center;overflow:hidden;
+  padding:min(3.4vmin,27px) min(3.6vmin,29px);border-radius:inherit;box-shadow:none}
 .lt-why .stamp{flex:none;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--lt-white);background:var(--up-d04439);padding:.4em .7em;border-radius:8px;transform:rotate(-4deg);
   font-size:clamp(13px,1.9vmin,21px);animation:lt-stamp .45s cubic-bezier(.2,.8,.3,1.4) both}
 .lt-why p{margin:0;font-size:var(--lt-fs);line-height:1.4;color:var(--lt-steel)}.lt-why p b{color:var(--lt-navy)}

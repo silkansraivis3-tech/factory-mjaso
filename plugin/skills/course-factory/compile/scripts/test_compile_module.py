@@ -286,6 +286,9 @@ def shapes_part(tmp):
     check("true or false: the claim, the room's vote (the right button marked), why after Next, the stamp outside the approved words",
           'data-script-field="claim">If you cannot see the cloud' in t and '<button type="button" data-v="f" class="ok">False</button>' in t
           and 'class="lt-why" data-k="1"><span class="stamp" data-script-ignore>False</span>' in t and 'src="../assets/img/ship2.jpg"' in t, t[:1400])
+    check("... beside a picture, why opens over the picture's column, not under the vote (the factory trial: M01 s04's why cut)",
+          re.search(r'<div class="lt-in fill fig[^"]*"[^>]*>.*<div class="lt-why" data-k="1">', t, re.S) is not None
+          and '<div class="copy lt-tf">' in t and t.split('<div class="copy lt-tf">', 1)[1].split("</div>\n")[0].count("lt-why") == 0, t[:1400])
     k = section(page, "s31")
     check("numbers to remember: the number first (outside the words), the card says the approved line",
           k.count('<div class="fc" data-script-ignore>') == 3 and
