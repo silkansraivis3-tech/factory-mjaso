@@ -7,6 +7,27 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.108.0 · The rules as checks, the laws on one page (2026-11-06)
+
+- **Why.** Raivis: the factory does not follow its rules, and the rules are too long. The first factory trial: decks 0-8 % 3D
+  and full of kit drawings, self-checks of 3-4 mostly choose and match, four modules ending on FAIL and reported built.
+- **3D share.** `media-and-tasks.json` `three_d`: `min_share` 0.6, `max_share` 0.8, `count_from` 3 teaching slides.
+  `content_script.py` (`v_3d_share`) and `check_course_package.py` stop outside it; `make_architecture_page.py` suggests
+  (`p_3d_many`). `v_3d_in_a_row` is gone: at 60-80 % runs are normal. The operator may keep another share as a design
+  choice (`three-d-share`). The example module's s02 is a 3D model now (two of three).
+- **Self-check mix.** `theory-rules.json` `self_check`: `basic_max` 2 (families choose, arrange), `rich_min` 3 (the
+  `rich` list: 3D, animation, panel types); a set needs min(3, questions - 2) rich. `t_sc_mix`, a group rule.
+- **No PASS, not done.** `build_course.js` `oneModule`: `reachedPass` from the builder's or the fix build's report; without
+  it the module is `blocking`, classification `NOT DONE`. `course_portal.failed_builds` adds each module whose last
+  `_build/MNN_answer.txt` line is a FAIL (not the course package) to `blockers`.
+- **The first hook.** `plugin/hooks/hooks.json` → `guard_writes.py` on Write / Edit / MultiEdit / NotebookEdit: a path under
+  a `workspace.MASTER_MARKS` folder whose parent holds `course\` is denied. `test_guard_writes.py`.
+- **SKILL.md 51 -> 30 KB.** One law table L1-L71 (the old *Owner decisions* table and *The laws* prose merged; L3, L4, L6,
+  L8-L17, L20, L22, L23 added as one line each); intake, gate, Stage 3, building and auto build each a short list. The
+  full texts stay in `references/`. The sign-off list gains `instructor_led.py check` and `sim_coverage.py check`.
+- **Waiting.** L67's flat-drawing finding (`v_3d_flat_figure`) stays a note until the visuals session settles what a
+  slide shows instead of a kit drawing.
+
 ## 2.107.1 · A true-or-false why opens over the picture (2026-11-06)
 
 - **Found by the first factory trial** (M01 s04, Raivis's screenshot): the why opened under the claim and the vote and was
