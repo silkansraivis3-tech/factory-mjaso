@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2D kit - more parts</title>
+<link rel="stylesheet" href="../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="kit2d.css">
+<style>
+@font-face{font-family:"Raleway";src:url("../../course-module-ui/templates/fonts/raleway-variable.ttf") format("truetype");font-weight:100 900;font-display:block}
+:root{--cat-1:#2EB6F8;--cat-2:#3CC8B4;--cat-3:#A596F5;--cat-4:#EE93B6;--cat-5:#A8BBD0}
+body{margin:0;background:var(--deep);color:var(--txt-d);font-family:var(--font)}
+section{padding:26px 28px 30px;border-bottom:1px solid var(--line-d)}
+.kind{font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--blue)}
+h2{font-size:28px;margin:6px 0 4px}p.lead{margin:0 0 16px;color:var(--dim-d);font-size:17px;max-width:900px}
+.host{height:600px}
+.demo-note{font-size:13px;color:var(--faint-d);margin-top:10px}
+</style></head><body>
+
+<section id="m-bars">
+  <div class="kind">Graph · bars</div>
+  <h2>Where the fuel goes</h2>
+  <p class="lead">One consumer takes most of it - that is where saving pays.</p>
+  <div class="host" data-kit2d="#spec-bars"></div>
+  <div class="demo-note">Demo values, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-bars">
+{ "label": "Fuel used a day by each consumer on board: the main engine takes most.",
+  "size": [1000, 600], "state": {"grow": 0, "pick": 0, "tshow": 0}, "rates": {"grow": 2.4},
+  "parts": [
+    {"id": "B", "type": "bars", "x": 120, "y": 70, "w": 820, "h": 400, "max": 40, "step": 10, "unit": "t/day", "grow": "@grow", "pick": "@pick",
+     "items": [{"label": "Main engine", "value": 30}, {"label": "Generators", "value": 7}, {"label": "Boiler", "value": 3}, {"label": "Other", "value": 1.5}],
+     "decimals": 1, "target": {"value": 25, "label": "Target for the main engine", "show": "@tshow"}}
+  ],
+  "steps": [
+    {"title": "Fuel a day, by consumer", "set": {"grow": 1}},
+    {"title": "The main engine takes three quarters", "set": {"pick": 1}},
+    {"title": "The target: 25 t a day", "set": {"tshow": 1}}
+  ]
+}
+</script>
+
+<section id="m-pyr">
+  <div class="kind">Concept · pyramid</div>
+  <h2>The hierarchy of controls</h2>
+  <p class="lead">Start at the top: remove the hazard if you can. Protective equipment is the last line, not the first.</p>
+  <div class="host" data-kit2d="#spec-pyr"></div>
+</section>
+<script type="application/json" id="spec-pyr">
+{ "label": "The hierarchy of controls: elimination, substitution, engineering controls, administrative controls, personal protective equipment.",
+  "size": [1000, 600], "state": {"at": 0, "pick": 0}, "rates": {"at": 4},
+  "parts": [
+    {"id": "P", "type": "pyramid", "x": 200, "y": 40, "w": 560, "h": 520, "at": "@at", "pick": "@pick", "top": "Most effective", "bottom": "Least effective",
+     "levels": [{"name": "Eliminate"}, {"name": "Substitute"}, {"name": "Engineering controls"}, {"name": "Administrative controls"}, {"name": "PPE"}]}
+  ],
+  "steps": [
+    {"title": "Eliminate: take the hazard away", "set": {"at": 1}},
+    {"title": "Substitute: something less dangerous", "set": {"at": 2}},
+    {"title": "Engineering: keep people away from it", "set": {"at": 3}},
+    {"title": "Administrative: change how people work", "set": {"at": 4}},
+    {"title": "PPE: the last line of defence", "set": {"at": 5, "pick": 5}}
+  ]
+}
+</script>
+
+<section id="m-bal">
+  <div class="kind">Concept · balance</div>
+  <h2>Controls against hazards</h2>
+  <p class="lead">A job goes ahead when the controls outweigh the hazards.</p>
+  <div class="host" data-kit2d="#spec-bal"></div>
+</section>
+<script type="application/json" id="spec-bal">
+{ "label": "A balance: hazards on one side, controls on the other; the beam tips towards the heavier side.",
+  "size": [1000, 600], "state": {"hz": 0, "ct": 0},
+  "parts": [
+    {"id": "S", "type": "balance", "x": 500, "y": 170, "w": 560, "k": 5,
+     "left": {"label": "Hazards", "weight": "@hz", "items": ["Hot work", "Fuel vapour", "Confined space"]},
+     "right": {"label": "Controls", "weight": "@ct", "items": ["Gas test", "Fire watch", "Permit signed", "Ventilation"]}}
+  ],
+  "steps": [
+    {"title": "The hazards of the job", "set": {"hz": 3}},
+    {"title": "Gas test and fire watch", "set": {"ct": 2}},
+    {"title": "Permit and ventilation: now it can go ahead", "set": {"ct": 4}}
+  ]
+}
+</script>
+
+<section id="m-ev">
+  <div class="kind">Timeline · events</div>
+  <h2>Twenty minutes in the engine room</h2>
+  <p class="lead">What happened, in the order it happened.</p>
+  <div class="host" data-kit2d="#spec-ev"></div>
+  <div class="demo-note">A made-up sequence for the demo.</div>
+</section>
+<script type="application/json" id="spec-ev">
+{ "label": "An incident time line: the alarm, the pump stopped, the leak found, the fuel isolated, the all clear.",
+  "size": [1000, 600], "state": {"t": 0}, "rates": {"t": 2.6},
+  "parts": [
+    {"id": "E", "type": "events", "x": 80, "y": 300, "w": 840, "start": 0, "end": 20, "step": 5, "tick": "{v} min", "cursor": "@t",
+     "events": [{"at": 1, "label": "Gas alarm", "sub": "02:10"}, {"at": 4, "label": "Pump stopped", "sub": "02:13"},
+                {"at": 9, "label": "Leak found", "sub": "at the flange"}, {"at": 13, "label": "Fuel isolated", "sub": "02:22"},
+                {"at": 19, "label": "All clear", "sub": "02:29"}]}
+  ],
+  "steps": [
+    {"title": "The alarm", "set": {"t": 2}},
+    {"title": "The pump is stopped", "set": {"t": 5}},
+    {"title": "The leak is found", "set": {"t": 10}},
+    {"title": "Fuel isolated, then the all clear", "set": {"t": 20}}
+  ]
+}
+</script>
+
+<section id="m-cmp">
+  <div class="kind">Concept · compare</div>
+  <h2>Two ways to protect the engine room</h2>
+  <p class="lead">The same question, two answers, row by row.</p>
+  <div class="host" data-kit2d="#spec-cmp"></div>
+</section>
+<script type="application/json" id="spec-cmp">
+{ "label": "Gas safe and ESD-protected machinery spaces compared.",
+  "size": [1000, 600], "state": {"r": 0}, "rates": {"r": 5},
+  "parts": [
+    {"id": "C", "type": "compare", "x": 40, "y": 30, "w": 920, "h": 540, "at": "@r",
+     "cols": [{"title": "Gas safe", "cat": 1}, {"title": "ESD-protected", "cat": 3}],
+     "rows": [{"cells": ["A single failure cannot release gas into the space", "A single failure may release gas into the space"], "marks": [1, 0]},
+              {"cells": ["The gas pipe runs inside an outer pipe or duct", "Single-walled gas pipe allowed"], "marks": [null, null]},
+              {"cells": ["A leak is held, ventilated and detected", "Gas detected: ignition sources shut down"], "marks": [1, 1]}]}
+  ],
+  "steps": [
+    {"title": "If something fails", "set": {"r": 1}},
+    {"title": "How the gas pipe is built", "set": {"r": 2}},
+    {"title": "What happens to a leak", "set": {"r": 3}}
+  ]
+}
+</script>
+
+<section id="m-ppl">
+  <div class="kind">People</div>
+  <h2>Closed-loop communication</h2>
+  <p class="lead">An order is not done until it has been repeated back and confirmed.</p>
+  <div class="host" data-kit2d="#spec-ppl"></div>
+</section>
+<script type="application/json" id="spec-ppl">
+{ "label": "Closed-loop communication between the master and the officer of the watch.",
+  "size": [1000, 600], "state": {"a": 0, "b": 0, "c": 0},
+  "parts": [
+    {"type": "person", "x": 230, "y": 470, "scale": 1.15, "name": "Master", "role": "gives the order", "cat": 1, "say": "Port twenty.", "sayShow": "@a", "side": "up", "bubbleW": 230, "bubbleH": 66},
+    {"type": "person", "x": 760, "y": 470, "scale": 1.15, "name": "Officer of the watch", "role": "repeats it back", "cat": 2, "say": "Port twenty, sir.", "sayShow": "@b", "side": "up", "bubbleW": 250, "bubbleH": 66},
+    {"type": "callout", "at": [500, 300], "text": "Master: \"Correct.\"", "sub": "the loop is closed", "side": "up", "dist": 4, "lead": false, "show": "@c"}
+  ],
+  "steps": [
+    {"title": "The order", "set": {"a": 1}},
+    {"title": "Repeated back, word for word", "set": {"b": 1}},
+    {"title": "Confirmed: the loop is closed", "set": {"c": 1}}
+  ]
+}
+</script>
+
+<section id="m-tank">
+  <div class="kind">Object · pump, pipe, tank</div>
+  <h2>Filling a tank</h2>
+  <p class="lead">The pump turns, the liquid moves along the pipe, the level rises.</p>
+  <div class="host" data-kit2d="#spec-tank"></div>
+  <div class="demo-note">Demo values, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-tank">
+{ "label": "A centrifugal pump fills a tank through a pipe: the impeller turns, the flow moves, the level rises.",
+  "size": [1000, 600], "state": {"s": 0, "lv": 0.15}, "rates": {"s": 3, "lv": 1.2},
+  "parts": [
+    {"id": "L", "type": "pipe", "pts": [[330, 280], [620, 280], [620, 140], [710, 140]], "r": 22, "wall": 8, "flow": "U.flow", "speed": 160},
+    {"id": "U", "type": "pump", "x": 230, "y": 380, "r": 82, "speed": "@s", "label": "Pump", "sub": "the impeller turns"},
+    {"id": "T", "type": "tank", "x": 700, "y": 110, "w": 190, "h": 400, "level": "@lv", "label": "Tank"}
+  ],
+  "steps": [
+    {"title": "The pump starts", "set": {"s": 1}},
+    {"title": "The tank fills", "set": {"lv": 0.85}},
+    {"title": "Full: the pump stops", "set": {"s": 0}}
+  ],
+  "controls": [{"type": "slider", "state": "s", "min": 0, "max": 1, "step": 0.01, "scale": 100, "label": "Pump speed", "unit": "%"}],
+  "readouts": [{"label": "Level", "value": "T.level", "scale": 100, "unit": "%"}, {"label": "Flow", "value": "U.flow", "scale": 100, "unit": "%"}]
+}
+</script>
+<script src="kit2d.js"></script>
+</body></html>

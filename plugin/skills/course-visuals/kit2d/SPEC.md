@@ -2,7 +2,8 @@
 
 The 2D kit (`kit2d.js`, `kit2d.css`) draws a 2D teaching figure from a short JSON spec, the way the 3D kit draws a
 scene: a graph, an object in motion (a cutaway with its flow), or a concept (a cycle, a timeline, a matrix, a process).
-Plain SVG, no library. Open `demos.html` and `pm.html` to see every part step by step.
+Plain SVG, no library. Open `demos.html`, `pm.html` and `more.html` to see every part step by step;
+`scripts/test_kit2d.py` walks them all and runs the overlap check at every step.
 
 The figure kit (`../kit/`) stays for what is a control screen (panels, gauges, alarm lists - an HMI the trainee reads)
 and for courses already built with it. A new 2D figure is a 2D-kit spec.
@@ -24,7 +25,7 @@ and for courses already built with it. A new 2D figure is a 2D-kit spec.
 - **The deck.** Inside a slide the deck's Next and Back walk the steps (GB_HOOKS); a step's `line` lights the
   slide's line. Outside a deck the kit draws its own step bar.
 - **The overlap check.** `KIT2D.audit(figure)` lists words over words, words that spill out of the box they are written
-  in, words or shapes cut at the edge and labels lying on a line. A box's words wrap to its width at their grown size. `fit_gate.py` runs it at the end of every step it walks; a finding fails the gate.
+  in, words or shapes cut at the edge and labels lying on a line, and boxes on each other; a word is out of its box when it leaves the shape itself (a triangle's tip, a diamond's corner), not only its bounding box. A box's words wrap to its width at their grown size. `fit_gate.py` runs it at the end of every step it walks; a finding fails the gate.
 
 ## Where it goes
 
@@ -69,6 +70,7 @@ Steps, sliders, toggles and drags all write the same states, so they never fight
 | `curve` | `on` (chart), `fn` (`{"kind": "power", "a", "n", "b"}`, `poly` `{"c": [...]}`, `exp` `{"a", "k", "b"}`) or `pts` (joined smoothly), `cat`, `draw` (0..1 drawn in, a bright tip leading), `area`, `label` |
 | `point` | `on`, `curve`, `x`, `tagx` / `tagy` (`"{x} kn"`, `"{y} t"`), `dx` / `dy` decimals, `show`, `drag` (the state a drag writes), `snap`, `min` / `max`, `ghost: {x, show}` - publishes `x`, `y` |
 | `span` | `on`, `curve`, `from`, `to`, `show`, `text` (`"{pct} % less fuel"`) - the band and bracket between two points |
+| `bars` | `x y w h`, `items: [{label, value, cat}]`, `max step unit decimals suffix`, `grow` (0..1, one after another), `pick` (k picks out the k-th), `target: {value, label, show}` |
 
 **Objects in motion**
 
@@ -77,6 +79,8 @@ Steps, sliders, toggles and drags all write the same states, so they never fight
 | `pipe` | `pts` (straight runs), `r` (bore), `wall`, `flow` (0..1), `speed`, `n`, `gate: {x, open}` - cut along its length, the flow as streaks that follow it, faster through a gap, stopped when nothing flows |
 | `gate_valve` | `x y` (the pipe's axis), `r`, `open`, `turns`, `pressure: [open, shut]`, `label`, `sub` - publishes `flow`, `open`, `pressure` |
 | `gauge` | `x y r min max step value unit label stem` |
+| `tank` | `x y w h`, `level` (0..1), `label`, `sub`, `scale`, `unit` - cut open, the liquid rising and falling, its level on a tag; publishes `level` |
+| `pump` | `x y` (the shaft), `r`, `speed` (0..1; the impeller stops at 0), `rpm`, `vanes`, `label`, `sub` - a centrifugal pump cut open; publishes `flow`, `speed` |
 
 **Concepts**
 
@@ -89,6 +93,11 @@ Steps, sliders, toggles and drags all write the same states, so they never fight
 | `node` | `id x y w h kind` (`box` / `decision` / `end`), `text sub cat show lit` |
 | `arrow` | `id from to label draw via` (`h` / `v`) - right-angled, drawn on |
 | `token` | `route: [arrow ids]`, `at` (k = the end of the k-th arrow), `show` |
+| `pyramid` | `x y w h`, `levels: [{name, cat}]` (top first), `at` (levels shown from the top), `pick`, `top` / `bottom` (the side note) |
+| `balance` | `x y` (the pivot), `w`, `left` / `right`: `{label, items: [names], weight, cat}`, `k`, `max` - the beam tips on a spring; a pan shows as many items as its weight |
+| `events` | `x y w start end step tick`, `events: [{at, label, sub, cat}]`, `cursor`, `cursorTag` - each comes in as the cursor reaches it |
+| `compare` | `x y w h`, `cols: [{title, cat}]`, `rows: [{cells: [..], marks: [1, 0, null]}]` (a tick, a cross, none), `at` (rows shown) |
+| `person` | `x y` (feet), `scale`, `name`, `role`, `cat`, `say`, `sayShow`, `side` (`up` / `right` / `left`: the bubble), `bubbleW`, `bubbleH`, `show`, `lit` |
 | `callout` | `at: [x, y]`, `text`, `sub`, `side`, `dist`, `show` |
 
 A part the kit does not have yet is made in `kit2d.js` with `KIT2D.define(type, function (f, p) {...})`: its colours

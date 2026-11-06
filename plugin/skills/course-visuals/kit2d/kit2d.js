@@ -1174,6 +1174,389 @@
     };
   });
 
+  /* a box's words on as many lines as its width needs, centred on (x, y) - at the type's grown size (run from a fit) */
+  function wrapText(t, text, x, y, room) {
+    var words = String(text || '').split(/\s+/), rows = [], cur = '', probe;
+    t.textContent = '';
+    probe = el('tspan', {}, t);
+    words.forEach(function (wd) {
+      var q = cur ? cur + ' ' + wd : wd;
+      probe.textContent = q;
+      if (cur && probe.getComputedTextLength() > room) { rows.push(cur); cur = wd; } else { cur = q; }
+    });
+    if (cur) { rows.push(cur); }
+    t.removeChild(probe);
+    var fs = parseFloat(w.getComputedStyle(t).fontSize) || 16, y0 = y - (rows.length - 1) * fs * 0.58 + fs * 0.34;
+    rows.forEach(function (r, i) { el('tspan', { x: x, y: (y0 + i * fs * 1.16).toFixed(1) }, t, r); });
+    return rows.length;
+  }
+  function holds(g, shape) { g.setAttribute('data-k2-holds', ''); shape.setAttribute('data-k2-shape', ''); }
+
+  /* bars - a value for each thing, side by side: the bars grow in one after another, one can be picked out, a target
+     line can cross them. {x, y, w, h, items: [{label, value, cat}], max, step, unit, decimals, grow: "@g", pick: "@p"
+     (k picks out the k-th, 0 none), target: {value, label, show}} */
+  define('bars', function (f, p) {
+    var It = p.items || [], n = It.length, x0 = p.x, y0 = p.y, W = p.w, H = p.h, mx = p.max || 1, g = el('g', {}, f.L.back), v;
+    var Y = function (val) { return y0 + H - clamp(val / mx, 0, 1.05) * H; }, ty = [];
+    for (v = 0; v <= mx + 1e-9; v += (p.step || mx / 4)) {
+      el('line', { x1: x0, y1: Y(v), x2: x0 + W, y2: Y(v), 'class': 'k2-grid' }, g);
+      ty.push({ n: el('text', { x: x0 - 12, y: Y(v) + 5, 'text-anchor': 'end', 'class': 'k2-t-tick' }, g, num(v, 0)), at: Y(v) });
+    }
+    f.thin(ty, 'y');
+    el('line', { x1: x0, y1: y0 + H, x2: x0 + W, y2: y0 + H, 'class': 'k2-axis' }, g);
+    if (p.unit) { el('text', { x: x0 - 12, y: y0 - 18, 'class': 'k2-t-axis' }, g, p.unit); }
+    var slot = W / n, bw = Math.min(110, slot * 0.6);
+    var bars = It.map(function (it, i) {
+      var cx = x0 + slot * (i + 0.5), bg = el('g', {}, f.L.hero), cat = it.cat || (i % 5) + 1;
+      var ol = el('rect', { x: cx - bw / 2 - 3, width: bw + 6, rx: 10, 'class': 'k2-outline' }, bg);
+      var bar = el('rect', { x: cx - bw / 2, width: bw, rx: 8, fill: f.url('solid-cat-' + cat) }, bg);
+      var ed = el('rect', { x: cx - bw / 2, width: bw, rx: 8, 'class': 'k2-edge' }, bg);
+      var val = el('text', { x: cx, 'text-anchor': 'middle', 'class': 'k2-t-lbl k2-t-big k2-halo' }, f.L.lbl);
+      var lab = el('text', { x: cx, y: y0 + H + 30, 'text-anchor': 'middle', 'class': 'k2-t-lbl k2-halo' }, f.L.lbl, it.label || '');
+      return { it: it, bg: bg, ol: ol, bar: bar, ed: ed, val: val, lab: lab, cx: cx };
+    });
+    (f.fits = f.fits || []).push(function () { bars.forEach(function (b) { wrapText(b.lab, b.it.label, b.cx, y0 + H + 30, slot - 14); }); });
+    var tg = p.target ? { line: el('path', { 'class': 'k2-finish' }, f.L.front), t: el('text', { 'class': 'k2-t-note k2-t-amber k2-halo', 'text-anchor': 'end' }, f.L.front, p.target.label || '') } : null;
+    f.solid(function () { return { x: x0, y: y0, x2: x0 + W, y2: y0 + H }; });
+    var lastPick = f.target(p.pick, 0);
+    return {
+      onStep: function (n2, instant) {
+        var k = Math.round(f.target(p.pick, 0));
+        if (!instant && k && k !== lastPick && bars[k - 1]) { var b = bars[k - 1]; f.pulse(b.cx, Y(f.target(b.it.value, 0)), { delay: 300, r: 50 }); }
+        lastPick = k;
+      },
+      draw: function () {
+        var gr = clamp(f.get(p.grow, 1), 0, 1), pk = f.get(p.pick, 0);
+        bars.forEach(function (b, i) {
+          var k = clamp(gr * (n * 0.5 + 1) - i * 0.5, 0, 1), e = k * k * (3 - 2 * k), vv = f.get(b.it.value, 0), top = Y(vv * e), hh = y0 + H - top;
+          [b.bar, b.ed].forEach(function (r) { r.setAttribute('y', top.toFixed(1)); r.setAttribute('height', Math.max(0, hh).toFixed(1)); });
+          b.ol.setAttribute('y', (top - 3).toFixed(1)); b.ol.setAttribute('height', Math.max(0, hh + 3).toFixed(1)); setOp(b.ol, e > 0.01 ? 1 : 0);
+          b.val.textContent = num(vv * e, p.decimals || 0) + (p.suffix || ''); b.val.setAttribute('y', (top - 12).toFixed(1)); setOp(b.val, clamp(e * 2 - 1, 0, 1));
+          var on = pk < 0.5 ? 1 : clamp(1 - Math.abs(pk - (i + 1)), 0, 1);
+          setOp(b.bg, 0.35 + 0.65 * on); setOp(b.lab, 0.5 + 0.5 * on);
+        });
+        if (tg) {
+          var tv = f.get(p.target.value, 0), yy = Y(tv), so = clamp(f.get(p.target.show, 1), 0, 1);
+          tg.line.setAttribute('d', 'M' + x0 + ' ' + yy.toFixed(1) + ' H' + (x0 + W)); setOp(tg.line, so);
+          tg.t.setAttribute('x', x0 + W); tg.t.setAttribute('y', (yy - 10).toFixed(1)); setOp(tg.t, so);
+        }
+      }
+    };
+  });
+
+  /* pyramid - levels from the top down (a hierarchy of controls, of needs, of command): each comes in as a step
+     reaches it, one can be picked out; a side note can run along it ("most effective" .. "least effective").
+     {x, y, w, h, levels: [{name, cat}], at: "@k" (levels shown, from the top), pick: "@p", top: text, bottom: text} */
+  define('pyramid', function (f, p) {
+    var Lv = p.levels || [], n = Lv.length, x0 = p.x, y0 = p.y, W = p.w, H = p.h, gap = 8, bh = (H - gap * (n - 1)) / n, cx = x0 + W / 2;
+    function half(yy) { return (yy - y0) / H * W / 2; }
+    var bands = Lv.map(function (lv, i) {
+      var ya = y0 + i * (bh + gap), yb = ya + bh, a = half(ya), b = half(yb), cat = lv.cat || (i % 5) + 1;
+      var d = i === 0 ? 'M' + cx + ' ' + ya + ' L' + (cx + b) + ' ' + yb + ' L' + (cx - b) + ' ' + yb + ' Z'
+        : 'M' + (cx - a) + ' ' + ya + ' L' + (cx + a) + ' ' + ya + ' L' + (cx + b) + ' ' + yb + ' L' + (cx - b) + ' ' + yb + ' Z';
+      var g = el('g', {}, f.L.hero), inner = el('g', {}, g);
+      var lit = el('path', { d: d, 'class': 'k2-lit' }, inner);
+      var ol = el('path', { d: d, 'class': 'k2-outline-s', 'stroke-width': 6, 'stroke-linejoin': 'round' }, inner);
+      el('path', { d: d, fill: f.url('solid-cat-' + cat) }, inner);
+      el('path', { d: d, 'class': 'k2-edge' }, inner);
+      var t = el('text', { 'text-anchor': 'middle', 'class': 'k2-t-oncat' }, inner);
+      holds(inner, ol);
+      return { g: g, inner: inner, lit: lit, t: t, lv: lv, ym: (ya + yb) / 2, room: i === 0 ? b * 0.9 : (a + b) * 0.82, top: i === 0, ya: ya, yb: yb };
+    });
+    (f.fits = f.fits || []).push(function () {
+      bands.forEach(function (b) {
+        if (!b.top) { wrapText(b.t, b.lv.name, cx, b.ym, b.room); return; }
+        var fs = parseFloat(w.getComputedStyle(b.t).fontSize) || 17, ty = b.yb - fs * 0.9;
+        wrapText(b.t, b.lv.name, cx, ty, 2 * half(ty - fs * 0.6) - 16);
+      });
+    });
+    if (p.top || p.bottom) {
+      var ax = x0 + W + 34, ar = el('g', {}, f.L.back);
+      el('path', { d: 'M' + ax + ' ' + (y0 + H - 6) + ' V' + (y0 + 14), 'class': 'k2-arrow' }, ar);
+      el('path', { d: 'M ' + ax + ' ' + (y0 + 4) + ' l -8 14 h 16 Z', 'class': 'k2-arrow-head' }, ar);
+      if (p.top) { el('text', { x: ax + 16, y: y0 + 18, 'class': 'k2-t-note k2-halo' }, f.L.lbl, p.top); }
+      if (p.bottom) { el('text', { x: ax + 16, y: y0 + H - 4, 'class': 'k2-t-sub k2-halo' }, f.L.lbl, p.bottom); }
+    }
+    f.solid(function () { return { x: x0, y: y0, x2: x0 + W, y2: y0 + H }; });
+    var last = f.target(p.pick, 0);
+    return {
+      onStep: function (n2, instant) { var k = Math.round(f.target(p.pick, 0)); if (!instant && k && k !== last && bands[k - 1]) { f.pulse(cx, bands[k - 1].ym, { delay: 250, r: 70 }); } last = k; },
+      draw: function () {
+        var at = f.get(p.at, n), pk = f.get(p.pick, 0);
+        bands.forEach(function (b, i) {
+          var k = clamp(at - i, 0, 1), e = k * k * (3 - 2 * k);
+          b.inner.setAttribute('transform', 'translate(' + cx + ' ' + b.ym + ') scale(' + (0.85 + 0.15 * e).toFixed(3) + ') translate(' + (-cx) + ' ' + (-b.ym) + ')');
+          setOp(b.g, e * (pk < 0.5 ? 1 : 0.4 + 0.6 * clamp(1 - Math.abs(pk - (i + 1)), 0, 1)));
+          setOp(b.lit, pk < 0.5 ? 0 : clamp(1 - Math.abs(pk - (i + 1)), 0, 1));
+        });
+      }
+    };
+  });
+
+  /* balance - two things weighed against each other: the beam tips towards the heavier side on a spring, each pan holds
+     its things as blocks. {x, y (the pivot), w (the beam), left: {label, items: [names], weight: "@l"}, right: {...},
+     max: the most it tips (degrees, 14)} - a pan shows as many of its items as its weight */
+  define('balance', function (f, p) {
+    var cx = p.x, cy = p.y, L = (p.w || 520) / 2, mx = p.max || 14;
+    var chain = p.chain || Math.max(90, Math.max(((p.left || {}).items || []).length, ((p.right || {}).items || []).length) * 38 + 46);
+    f.shadow(cx, cy + 190, 150, 14);
+    var post = el('g', {}, f.L.hero);
+    var pd = 'M' + (cx - 16) + ' ' + (cy + 182) + ' L' + (cx - 7) + ' ' + (cy + 6) + ' L' + (cx + 7) + ' ' + (cy + 6) + ' L' + (cx + 16) + ' ' + (cy + 182) + ' Z';
+    el('path', { d: pd, 'class': 'k2-outline-s', 'stroke-width': 6 }, post); el('path', { d: pd, fill: f.url('metal') }, post);
+    var bd = 'M' + (cx - 90) + ' ' + (cy + 196) + ' H' + (cx + 90) + ' L' + (cx + 70) + ' ' + (cy + 180) + ' H' + (cx - 70) + ' Z';
+    el('path', { d: bd, 'class': 'k2-outline-s', 'stroke-width': 6 }, post); el('path', { d: bd, fill: f.url('metal') }, post);
+    var beam = el('g', {}, f.L.hero);
+    el('rect', { x: cx - L - 4, y: cy - 9, width: 2 * L + 8, height: 18, rx: 9, 'class': 'k2-outline' }, beam);
+    el('rect', { x: cx - L, y: cy - 6, width: 2 * L, height: 12, rx: 6, fill: f.url('metalv') }, beam);
+    el('circle', { cx: cx, cy: cy, r: 13, 'class': 'k2-outline' }, f.L.front); el('circle', { cx: cx, cy: cy, r: 10, fill: f.url('metal') }, f.L.front);
+    function pan(side, sgn) {
+      var g = el('g', {}, f.L.front), ch = el('path', { 'class': 'k2-chain' }, g), dish = el('g', {}, g), pw = 150;
+      var dd = 'M' + (-pw / 2) + ' 0 Q 0 ' + 46 + ' ' + (pw / 2) + ' 0 Z';
+      el('path', { d: dd, 'class': 'k2-outline-s', 'stroke-width': 6 }, dish); el('path', { d: dd, fill: f.url('metal') }, dish);
+      var blocks = (side.items || []).map(function (nm, i) {
+        var bg = el('g', {}, dish), cat = side.cat || (sgn < 0 ? 4 : 2), bwid = pw - 40, bh = 34;
+        var r = el('rect', { x: -bwid / 2, y: -(i + 1) * (bh + 4), width: bwid, height: bh, rx: 8, fill: f.url('solid-cat-' + cat) }, bg);
+        var o = el('rect', { x: -bwid / 2, y: -(i + 1) * (bh + 4), width: bwid, height: bh, rx: 8, 'class': 'k2-outline-s', 'stroke-width': 3 }, bg);
+        var t = el('text', { x: 0, y: -(i + 1) * (bh + 4) + bh / 2, 'text-anchor': 'middle', 'class': 'k2-t-oncat-sub' }, bg);
+        holds(bg, o);
+        return { g: bg, t: t, nm: nm, y: -(i + 1) * (bh + 4) + bh / 2, room: bwid - 14 };
+      });
+      var lab = el('text', { 'text-anchor': 'middle', 'class': 'k2-t-lbl k2-t-big k2-halo' }, f.L.lbl, side.label || '');
+      return { g: g, ch: ch, dish: dish, blocks: blocks, lab: lab, side: side, sgn: sgn };
+    }
+    var pans = [pan(p.left || {}, -1), pan(p.right || {}, 1)];
+    (f.fits = f.fits || []).push(function () { pans.forEach(function (q) { q.blocks.forEach(function (b) { wrapText(b.t, b.nm, 0, b.y, b.room); }); }); });
+    var ang = new Spring(0), moving = false;
+    function tilt(to) { var l = to ? f.target(p.left && p.left.weight, 0) : f.get(p.left && p.left.weight, 0), r = to ? f.target(p.right && p.right.weight, 0) : f.get(p.right && p.right.weight, 0); return clamp((r - l) * (p.k || 5), -mx, mx); }
+    f.solid(function () { return { x: cx - L - 80, y: cy - 30, x2: cx + L + 80, y2: cy + chain + 60 }; });
+    return {
+      draw: function (dt, snap) {
+        moving = ang.go(tilt(true), dt, snap);
+        var a = ang.x * Math.PI / 180;
+        beam.setAttribute('transform', 'rotate(' + ang.x.toFixed(2) + ' ' + cx + ' ' + cy + ')');
+        pans.forEach(function (q) {
+          var ex = cx + q.sgn * L * Math.cos(a), ey = cy + q.sgn * L * Math.sin(a), py = ey + chain;
+          q.ch.setAttribute('d', 'M' + ex.toFixed(1) + ' ' + ey.toFixed(1) + ' L' + (ex - 74).toFixed(1) + ' ' + py.toFixed(1) + ' M' + ex.toFixed(1) + ' ' + ey.toFixed(1) + ' L' + (ex + 74).toFixed(1) + ' ' + py.toFixed(1));
+          q.dish.setAttribute('transform', 'translate(' + ex.toFixed(1) + ' ' + py.toFixed(1) + ')');
+          var wgt = f.get(q.side.weight, 0);
+          q.blocks.forEach(function (b, i) { var k = clamp(wgt - i, 0, 1); setOp(b.g, k); b.g.setAttribute('transform', 'translate(0 ' + ((1 - k) * -30).toFixed(1) + ')'); });
+          q.lab.setAttribute('x', ex.toFixed(1)); q.lab.setAttribute('y', (py + 76).toFixed(1));
+        });
+      },
+      live: function () { return moving; }
+    };
+  });
+
+  /* events - things that happened along a time line: each comes in as the cursor reaches it, above and below the
+     line in turn. {x, y, w, start, end, step, tick: "{v}", events: [{at, label, sub, cat}], cursor: "@t", cursorTag: "{v}"} */
+  define('events', function (f, p) {
+    var x0 = p.x, y0 = p.y, W = p.w, t0 = p.start, t1 = p.end, E = p.events || [], g = el('g', {}, f.L.back), t, ticks = [];
+    function X(tt) { return x0 + (tt - t0) / (t1 - t0) * W; }
+    el('rect', { x: x0 - 6, y: y0 - 5, width: W + 12, height: 10, rx: 5, 'class': 'k2-outline' }, g);
+    el('rect', { x: x0 - 4, y: y0 - 3, width: W + 8, height: 6, rx: 3, fill: f.url('metalv') }, g);
+    var done = el('rect', { x: x0 - 4, y: y0 - 3, height: 6, rx: 3, 'class': 'k2-done-line' }, g);
+    for (t = t0; t <= t1 + 1e-9; t += (p.step || 1)) {
+      el('line', { x1: X(t), y1: y0 + 8, x2: X(t), y2: y0 + 16, 'class': 'k2-axis' }, g);
+      ticks.push({ n: el('text', { x: X(t), y: y0 + 36, 'text-anchor': 'middle', 'class': 'k2-t-tick' }, g, tpl(p.tick || '{v}', { v: t }, 0)), at: X(t) });
+    }
+    f.thin(ticks, 'x');
+    var evs = E.map(function (e, i) {
+      var up = i % 2 === 0, ex = X(e.at), len = p.stem || 92, cat = e.cat || (i % 5) + 1, eg = el('g', {}, f.L.front);
+      el('path', { d: 'M' + ex + ' ' + y0 + ' V' + (y0 + (up ? -len : len)), 'class': 'k2-stem' }, eg);
+      el('circle', { cx: ex, cy: y0, r: 11, 'class': 'k2-outline' }, eg);
+      el('circle', { cx: ex, cy: y0, r: 8, fill: f.url('solid-cat-' + cat) }, eg);
+      var tg = el('g', { 'text-anchor': 'middle' }, eg), ty = y0 + (up ? -len - 12 : len + 24);
+      el('text', { x: ex, y: ty - (up && e.sub ? 22 : 0), 'class': 'k2-t-lbl k2-halo' }, tg, e.label || '');
+      if (e.sub) { el('text', { x: ex, y: ty + (up ? 0 : 22), 'class': 'k2-t-sub k2-halo' }, tg, e.sub); }
+      return { e: e, g: eg, x: ex, y: ty };
+    });
+    var cur = el('g', {}, f.L.front), cg = el('circle', { r: 22, 'class': 'k2-marker-glow' }, cur), cm = el('circle', { r: 10, 'class': 'k2-marker' }, cur);
+    var ctag = p.cursorTag ? el('text', { 'text-anchor': 'middle', 'class': 'k2-t-note k2-halo' }, cur) : null;
+    f.solid(function () { return { x: x0, y: y0 - 8, x2: x0 + W, y2: y0 + 40 }; });
+    var seen = {};
+    return {
+      draw: function () {
+        var tc = f.get(p.cursor, t1), cx2 = X(clamp(tc, t0, t1)), on = tc > t0 + 1e-6 ? 1 : 0;
+        done.setAttribute('width', Math.max(0, cx2 - x0 + 4).toFixed(1));
+        [cg, cm].forEach(function (c) { c.setAttribute('cx', cx2.toFixed(1)); c.setAttribute('cy', y0); });
+        setOp(cur, on);
+        if (ctag) { ctag.textContent = tpl(p.cursorTag, { v: tc }, 0); ctag.setAttribute('x', cx2.toFixed(1)); ctag.setAttribute('y', y0 + 60); }
+        evs.forEach(function (o, i) {
+          var k = clamp((tc - o.e.at) / ((t1 - t0) * 0.03) + 1, 0, 1);
+          setOp(o.g, k); o.g.setAttribute('transform', 'translate(0 ' + ((1 - k) * (i % 2 ? 14 : -14)).toFixed(1) + ')');
+          if (k > 0.5 && !seen[i]) { seen[i] = 1; f.pulse(o.x, y0, { r: 34 }); } else if (k < 0.1) { seen[i] = 0; }
+        });
+      }
+    };
+  });
+
+  /* compare - two or three things side by side, row by row (gas safe / ESD-protected, before / after): each row comes
+     in as a step reaches it, a tick or a cross where the row says. {x, y, w, h, cols: [{title, cat}], rows: [{cells:
+     [text, text], marks: [1, 0] (1 a tick, 0 a cross, null none)}], at: "@r" (rows shown)} */
+  define('compare', function (f, p) {
+    var C = p.cols || [], R = p.rows || [], x0 = p.x, y0 = p.y, W = p.w, H = p.h, nc = C.length, cw = (W - 16 * (nc - 1)) / nc, hh = 58;
+    var rh = Math.min(p.rowH || 96, (H - hh - 12) / Math.max(1, R.length));
+    C.forEach(function (c, j) {
+      var x = x0 + j * (cw + 16), hg = el('g', {}, f.L.hero), cat = c.cat || j * 2 + 1;
+      var o = el('rect', { x: x, y: y0, width: cw, height: hh, rx: 14, 'class': 'k2-outline-s', 'stroke-width': 5 }, hg);
+      el('rect', { x: x, y: y0, width: cw, height: hh, rx: 14, fill: f.url('solid-cat-' + cat) }, hg);
+      el('text', { x: x + cw / 2, y: y0 + hh / 2 + 7, 'text-anchor': 'middle', 'class': 'k2-t-oncat' }, hg, c.title || '');
+      holds(hg, o);
+    });
+    var rows = R.map(function (r, i) {
+      var y = y0 + hh + 12 + i * rh, rg = el('g', {}, f.L.front), cells = [];
+      (r.cells || []).forEach(function (txt, j) {
+        var x = x0 + j * (cw + 16), cg = el('g', {}, rg), mk = r.marks ? r.marks[j] : null;
+        var o = el('rect', { x: x, y: y, width: cw, height: rh - 10, rx: 12, 'class': 'k2-cell' }, cg);
+        var t = el('text', { 'text-anchor': 'middle', 'class': 'k2-t-lbl' }, cg);
+        if (mk === 1 || mk === 0) {
+          var ix = x + 30, iy = y + (rh - 10) / 2;
+          el('circle', { cx: ix, cy: iy, r: 14, 'class': mk ? 'k2-mark-good' : 'k2-mark-warn' }, cg);
+          el('path', { d: mk ? 'M' + (ix - 7) + ' ' + iy + ' l 5 5 l 9 -10' : 'M' + (ix - 6) + ' ' + (iy - 6) + ' l 12 12 M' + (ix + 6) + ' ' + (iy - 6) + ' l -12 12', 'class': 'k2-mark-ink' }, cg);
+        }
+        holds(cg, o);
+        cells.push({ t: t, txt: txt, x: x + cw / 2 + (mk === 1 || mk === 0 ? 18 : 0), y: y + (rh - 10) / 2, room: cw - (mk === 1 || mk === 0 ? 70 : 28) });
+      });
+      return { g: rg, cells: cells, y: y };
+    });
+    (f.fits = f.fits || []).push(function () { rows.forEach(function (r) { r.cells.forEach(function (c) { wrapText(c.t, c.txt, c.x, c.y, c.room); }); }); });
+    f.solid(function () { return { x: x0, y: y0, x2: x0 + W, y2: y0 + H }; });
+    return {
+      draw: function () {
+        var at = f.get(p.at, R.length);
+        rows.forEach(function (r, i) { var k = clamp(at - i, 0, 1), e = k * k * (3 - 2 * k); setOp(r.g, e); r.g.setAttribute('transform', 'translate(0 ' + ((1 - e) * 16).toFixed(1) + ')'); });
+      }
+    };
+  });
+
+  /* person - someone in the story (a role at work: master, officer, sponsor), drawn simply with depth, a name under
+     them, and what they say in a bubble that a step brings in. {x, y (feet), scale, name, role, cat, say, sayShow,
+     side: "right" | "left" (where the bubble goes), show, lit} */
+  define('person', function (f, p) {
+    var x = p.x, y = p.y, k = p.scale || 1, cat = p.cat || 1, g = el('g', {}, f.L.hero), inner = el('g', {}, g);
+    var body = 'M' + (x - 46 * k) + ' ' + y + ' Q' + (x - 46 * k) + ' ' + (y - 92 * k) + ' ' + x + ' ' + (y - 96 * k) + ' Q' + (x + 46 * k) + ' ' + (y - 92 * k) + ' ' + (x + 46 * k) + ' ' + y + ' Z';
+    f.shadow(x, y + 4, 60 * k, 10);
+    var lit = el('path', { d: body, 'class': 'k2-lit' }, inner);
+    el('path', { d: body, 'class': 'k2-outline-s', 'stroke-width': 6 }, inner);
+    el('path', { d: body, fill: f.url('solid-cat-' + cat) }, inner);
+    el('path', { d: body, 'class': 'k2-edge' }, inner);
+    el('circle', { cx: x, cy: y - 126 * k, r: 30 * k, 'class': 'k2-outline' }, inner);
+    el('circle', { cx: x, cy: y - 126 * k, r: 27 * k, 'class': 'k2-skin' }, inner);
+    el('circle', { cx: x - 8 * k, cy: y - 134 * k, r: 9 * k, 'class': 'k2-skin-hi' }, inner);
+    var nm = el('g', { 'text-anchor': 'middle' }, f.L.lbl);
+    el('text', { x: x, y: y + 30, 'class': 'k2-t-lbl k2-halo' }, nm, p.name || '');
+    if (p.role) { el('text', { x: x, y: y + 52, 'class': 'k2-t-sub k2-halo' }, nm, p.role); }
+    var bub = null;
+    if (p.say) {
+      var up = p.side === 'up', right = p.side !== 'left', bw = p.bubbleW || 260, bh = p.bubbleH || 84;
+      var bx = up ? x - bw / 2 : right ? x + 50 * k : x - 50 * k - bw, by = up ? y - 170 * k - bh - 30 : y - 190 * k - bh / 2;
+      var tx = up ? x + 8 : right ? bx + 26 : bx + bw - 26;
+      var bd = 'M' + (bx + 14) + ' ' + by + ' H' + (bx + bw - 14) + ' Q' + (bx + bw) + ' ' + by + ' ' + (bx + bw) + ' ' + (by + 14) + ' V' + (by + bh - 14) +
+        ' Q' + (bx + bw) + ' ' + (by + bh) + ' ' + (bx + bw - 14) + ' ' + (by + bh) + ' H' + (tx + 14) + ' L' + (up ? x : right ? x + 18 * k : x - 18 * k) + ' ' + (by + bh + 26) + ' L' + (tx - 4) + ' ' + (by + bh) +
+        ' H' + (bx + 14) + ' Q' + bx + ' ' + (by + bh) + ' ' + bx + ' ' + (by + bh - 14) + ' V' + (by + 14) + ' Q' + bx + ' ' + by + ' ' + (bx + 14) + ' ' + by + ' Z';
+      bub = el('g', {}, f.L.front);
+      var bo = el('path', { d: bd, 'class': 'k2-outline-s', 'stroke-width': 5, 'stroke-linejoin': 'round' }, bub);
+      el('path', { d: bd, 'class': 'k2-bubble' }, bub);
+      var bt = el('text', { 'text-anchor': 'middle', 'class': 'k2-t-face' }, bub);
+      holds(bub, bo);
+      (f.fits = f.fits || []).push(function () { wrapText(bt, p.say, bx + bw / 2, by + bh / 2, bw - 30); });
+      f.solid(function () { return { x: bx, y: by, x2: bx + bw, y2: by + bh + 26 }; });
+      bub.__o = [bx + bw / 2, by + bh];
+    }
+    f.solid(function () { return { x: x - 50 * k, y: y - 160 * k, x2: x + 50 * k, y2: y + 56 }; });
+    var sp = new Spring(f.target(p.sayShow, 1)), moving = false;
+    return {
+      draw: function (dt, snap) {
+        setOp(g, f.get(p.show, 1)); setOp(nm, f.get(p.show, 1)); setOp(lit, clamp(f.get(p.lit, 0), 0, 1));
+        if (bub) {
+          moving = sp.go(f.target(p.sayShow, 1), dt, snap);
+          var s2 = clamp(f.get(p.sayShow, 1), 0, 1), sc = 0.6 + 0.4 * Math.max(0, sp.x), o = bub.__o;
+          bub.setAttribute('transform', 'translate(' + o[0] + ' ' + o[1] + ') scale(' + sc.toFixed(3) + ') translate(' + (-o[0]) + ' ' + (-o[1]) + ')'); setOp(bub, s2);
+        }
+      },
+      live: function () { return moving; }
+    };
+  });
+
+  /* tank - a tank cut open: its walls hatched, the liquid in it rising and falling with its level, a scale beside it
+     and the level read on a tag. {x, y, w, h, level: "@l" (0..1), label, scale: true, unit: "%"} - publishes level */
+  define('tank', function (f, p) {
+    var x = p.x, y = p.y, W = p.w || 200, H = p.h || 300, wall = 14, r = Math.min(40, W / 4);
+    var outer = 'M' + x + ' ' + (y + r) + ' Q' + x + ' ' + y + ' ' + (x + r) + ' ' + y + ' H' + (x + W - r) + ' Q' + (x + W) + ' ' + y + ' ' + (x + W) + ' ' + (y + r) +
+      ' V' + (y + H - r) + ' Q' + (x + W) + ' ' + (y + H) + ' ' + (x + W - r) + ' ' + (y + H) + ' H' + (x + r) + ' Q' + x + ' ' + (y + H) + ' ' + x + ' ' + (y + H - r) + ' Z';
+    var ix = x + wall, iy = y + wall, iw = W - 2 * wall, ih = H - 2 * wall, ir = Math.max(6, r - wall);
+    var inner = 'M' + ix + ' ' + (iy + ir) + ' Q' + ix + ' ' + iy + ' ' + (ix + ir) + ' ' + iy + ' H' + (ix + iw - ir) + ' Q' + (ix + iw) + ' ' + iy + ' ' + (ix + iw) + ' ' + (iy + ir) +
+      ' V' + (iy + ih - ir) + ' Q' + (ix + iw) + ' ' + (iy + ih) + ' ' + (ix + iw - ir) + ' ' + (iy + ih) + ' H' + (ix + ir) + ' Q' + ix + ' ' + (iy + ih) + ' ' + ix + ' ' + (iy + ih - ir) + ' Z';
+    f.shadow(x + W / 2, y + H + 10, W * 0.7, 14);
+    el('path', { d: inner, 'class': 'k2-cavity' }, f.L.back);
+    var cid = f.id + '-tk' + (++UID), clip = el('clipPath', { id: cid }, f.defs);
+    el('path', { d: inner }, clip);
+    var liq = el('rect', { x: ix, width: iw, fill: f.band('liquid', iy, iy + ih), 'clip-path': 'url(#' + cid + ')' }, f.L.contents);
+    var surf = el('line', { x1: ix + 2, x2: ix + iw - 2, 'class': 'k2-surface', 'clip-path': 'url(#' + cid + ')' }, f.L.contents);
+    el('path', { d: outer, 'class': 'k2-outline-s', 'stroke-width': 6 }, f.L.hero);
+    el('path', { d: outer + ' ' + inner, 'fill-rule': 'evenodd', fill: f.url('metal') }, f.L.hero);
+    el('path', { d: outer + ' ' + inner, 'fill-rule': 'evenodd', fill: f.url('hatch') }, f.L.hero);
+    el('path', { d: outer, 'class': 'k2-edge' }, f.L.hero);
+    var tag = el('g', {}, f.L.front), tr = el('rect', { rx: 8, height: 30, 'class': 'k2-tag' }, tag), tt = el('text', { 'dominant-baseline': 'central', 'class': 'k2-t-tag' }, tag);
+    if (p.scale !== false) {
+      var sg = el('g', {}, f.L.back), sx = x + W + 14;
+      for (var q = 0; q <= 4; q++) { var yy = iy + ih - q / 4 * ih; el('line', { x1: sx, y1: yy, x2: sx + (q % 2 ? 8 : 14), y2: yy, 'class': 'k2-axis' }, sg); }
+    }
+    if (p.label) { f.label({ text: p.label, sub: p.sub, at: function () { return [x + W / 2, y]; }, side: 'up', dist: 14 }); }
+    f.solid(function () { return { x: x - 4, y: y - 4, x2: x + W + 4, y2: y + H + 4 }; });
+    return {
+      calc: function () { f.publish(p.id, 'level', clamp(f.get(p.level, 0), 0, 1)); },
+      draw: function () {
+        var lv = clamp(f.get(p.level, 0), 0, 1), top = iy + ih * (1 - lv);
+        liq.setAttribute('y', top.toFixed(1)); liq.setAttribute('height', (ih * lv + 1).toFixed(1));
+        surf.setAttribute('y1', top.toFixed(1)); surf.setAttribute('y2', top.toFixed(1)); setOp(surf, lv > 0.01 && lv < 0.99 ? 1 : 0);
+        tt.textContent = num(lv * 100, 0) + ' ' + (p.unit || '%');
+        var bb = tt.getBBox(), tw = bb.width + 18, th = Math.max(30, bb.height + 8);
+        tr.setAttribute('width', tw.toFixed(1)); tr.setAttribute('height', th.toFixed(1)); tt.setAttribute('x', 9); tt.setAttribute('y', (th / 2).toFixed(1));
+        tag.setAttribute('transform', 'translate(' + (x + W + 30) + ' ' + (top - th / 2).toFixed(1) + ')');
+      }
+    };
+  });
+
+  /* pump - a centrifugal pump cut open: the volute casing hatched, the impeller turning as fast as its speed (it stops
+     when the speed is 0), the eye where the liquid comes in. Publishes flow = speed. {x, y (the shaft), r, speed: "@s",
+     label, sub, vanes} */
+  define('pump', function (f, p) {
+    var cx = p.x, cy = p.y, R = p.r || 90, i, d = '', N = 48;
+    for (i = 0; i <= N; i++) {                    /* the volute: a spiral that widens over one turn, then the outlet */
+      var a = -Math.PI / 2 + i / N * 2 * Math.PI, rr = R * (1 + 0.32 * i / N);
+      d += (i ? ' L' : 'M') + pt([cx + rr * Math.cos(a), cy + rr * Math.sin(a)]);
+    }
+    var R2 = R * 1.32, casing = d + ' L' + pt([cx + R2 * 1.25, cy - R2]) + ' L' + pt([cx + R2 * 1.25, cy - R2 * 0.55]) + ' L' + pt([cx + R * 0.95, cy - R * 0.32]);
+    f.shadow(cx, cy + R2 + 18, R2 * 1.1, 14);
+    var base = 'M' + (cx - R2 * 0.9) + ' ' + (cy + R2 + 14) + ' H' + (cx + R2 * 0.9) + ' L' + (cx + R2 * 0.6) + ' ' + (cy + R * 0.6) + ' H' + (cx - R2 * 0.6) + ' Z';
+    el('path', { d: base, 'class': 'k2-outline-s', 'stroke-width': 6 }, f.L.back); el('path', { d: base, fill: f.url('metal') }, f.L.back);
+    el('path', { d: casing + ' Z', 'class': 'k2-outline' }, f.L.hero);
+    el('path', { d: casing + ' Z', fill: f.url('metal') }, f.L.hero);
+    el('path', { d: casing + ' Z', fill: f.url('hatch') }, f.L.hero);
+    el('circle', { cx: cx, cy: cy, r: R * 1.06, fill: f.url('liquid') }, f.L.hero);
+    el('path', { d: casing + ' Z', 'class': 'k2-edge' }, f.L.hero);
+    var imp = el('g', {}, f.L.hero), nv = p.vanes || 6;
+    el('circle', { cx: cx, cy: cy, r: R * 0.82, 'class': 'k2-outline' }, imp);
+    el('circle', { cx: cx, cy: cy, r: R * 0.78, fill: f.url('metal') }, imp);
+    for (i = 0; i < nv; i++) {
+      var a0 = i / nv * 2 * Math.PI, p1 = [cx + R * 0.22 * Math.cos(a0), cy + R * 0.22 * Math.sin(a0)], p2 = [cx + R * 0.74 * Math.cos(a0 + 0.9), cy + R * 0.74 * Math.sin(a0 + 0.9)];
+      var c1 = [cx + R * 0.55 * Math.cos(a0 + 0.15), cy + R * 0.55 * Math.sin(a0 + 0.15)];
+      el('path', { d: 'M' + pt(p1) + ' Q' + pt(c1) + ' ' + pt(p2), 'class': 'k2-vane' }, imp);
+    }
+    el('circle', { cx: cx, cy: cy, r: R * 0.2, 'class': 'k2-outline' }, imp);
+    el('circle', { cx: cx, cy: cy, r: R * 0.17, fill: f.url('liquid') }, imp);
+    el('circle', { cx: cx, cy: cy, r: R * 0.07, 'class': 'k2-hub' }, f.L.front);
+    if (p.label) { f.label({ text: p.label, sub: p.sub, at: function () { return [cx - R2 * 0.7, cy - R2 * 0.7]; }, side: 'upleft', dist: 20 }); }
+    f.solid(function () { return { x: cx - R2, y: cy - R2 - 4, x2: cx + R2 * 1.3, y2: cy + R2 + 16 }; });
+    var ang = 0, sp = 0;
+    return {
+      calc: function () { sp = clamp(f.get(p.speed, 0), 0, 1); f.publish(p.id, 'flow', sp); f.publish(p.id, 'speed', sp); },
+      draw: function (dt) { ang = (ang + sp * (p.rpm || 220) * (dt || 0)) % 360; imp.setAttribute('transform', 'rotate(' + ang.toFixed(1) + ' ' + cx + ' ' + cy + ')'); },
+      live: function () { return sp > 0.001 && !f.hidden; }
+    };
+  });
+
   /* ------------------------------------------------------------------------------------------------ in a deck */
   function hook(id, fns) {
     if (!id) { return; }
@@ -1244,13 +1627,30 @@
     [].forEach.call(svg.querySelectorAll('[data-k2-holds]'), function (g) {
       var sh = g.querySelector('[data-k2-shape]');
       if (!sh || shown(g, svg) < 0.15) { return; }
-      var b = sh.getBoundingClientRect(), pad = 3;
+      var m = sh.getScreenCTM(), inv = m && m.inverse();
       [].forEach.call(g.querySelectorAll('text'), function (t) {
-        var r = t.getBoundingClientRect();
-        if (t.textContent.trim() && (r.left < b.left + pad || r.right > b.right - pad || r.top < b.top + pad || r.bottom > b.bottom - pad)) {
-          found.push('words spill out of their box: "' + t.textContent.trim().slice(0, 30) + '"');
-        }
+        if (!t.textContent.trim() || !inv) { return; }
+        [].forEach.call(t.getClientRects().length > 1 ? t.querySelectorAll('tspan') : [t], function (row) {
+          var r = row.getBoundingClientRect(), ih = r.height * 0.2, bad = false;
+          [[r.left + 1, r.top + ih], [r.right - 1, r.top + ih], [r.left + 1, r.bottom - ih], [r.right - 1, r.bottom - ih]].forEach(function (c) {
+            var q = svg.createSVGPoint(); q.x = c[0]; q.y = c[1]; q = q.matrixTransform(inv);
+            if (sh.isPointInFill && !sh.isPointInFill(q)) { bad = true; }
+          });
+          if (bad) { found.push('words spill out of their box: "' + t.textContent.trim().slice(0, 30) + '"'); }
+        });
       });
+    });
+    var boxes = [].filter.call(svg.querySelectorAll('[data-k2-holds]'), function (g) { return shown(g, svg) > 0.15; }).map(function (g) {
+      var r = g.querySelector('[data-k2-shape]').getBoundingClientRect(); return { g: g, x: r.left, y: r.top, x2: r.right, y2: r.bottom };
+    });
+    boxes.forEach(function (a, i) {
+      for (var j = i + 1; j < boxes.length; j++) {
+        var b = boxes[j];
+        if (a.g.contains(b.g) || b.g.contains(a.g)) { continue; }
+        if (Math.min(a.x2, b.x2) - Math.max(a.x, b.x) > 4 && Math.min(a.y2, b.y2) - Math.max(a.y, b.y) > 4) {
+          found.push('boxes on each other: "' + (a.g.textContent || '').trim().slice(0, 24) + '" and "' + (b.g.textContent || '').trim().slice(0, 24) + '"');
+        }
+      }
     });
     /* a shape in the hero or the front layer cut by the picture's edge (a pipe that runs on off the picture is drawn in
        the back on purpose) */

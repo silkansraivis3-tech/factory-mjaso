@@ -19,9 +19,10 @@
   --k2-l-outline:#1E2C3E;--k2-l-metal-hi:#D5DEE8;--k2-l-metal-mid:#8D9FB5;--k2-l-metal-lo:#4B5E78;--k2-l-hatch:#2A3A50;
   --k2-l-cavity:#1B2A40;--k2-l-glow:rgba(26,111,168,.10);--k2-l-shadow:rgba(10,24,46,.28);
   /* the course tokens a rule needs, each with its fallback */
-  --k2-on-cat:var(--k2-on-cat);--k2-frame-hi:var(--k2-frame-hi);--k2-card-l:#FFFFFF;--k2-line-l:var(--line-l,#D3DBE5);
+  --k2-on-cat:var(--on-blue,#04263A);--k2-frame-hi:var(--blue2,#53A7DB);--k2-card-l:#FFFFFF;--k2-line-l:var(--line-l,#D3DBE5);
   --k2-btn:var(--white,#FFFFFF);--k2-btn-ink:var(--navy,#0A2463);--k2-heat-warn:var(--warn,#B4453A);
   --k2-line-d:var(--line-d,rgba(46,182,248,.18));--k2-line-d2:var(--line-d,rgba(46,182,248,.3));
+  --k2-skin:#C8977A;
   --k2-hi:#FFFFFF}
 .k2-light{--k2-ink:var(--k2-l-ink);--k2-dim:var(--k2-l-dim);--k2-faint:var(--k2-l-faint);--k2-halo:var(--k2-l-halo);--k2-panel-hi:var(--k2-l-panel-hi);--k2-panel-lo:var(--k2-l-panel-lo);--k2-grid:var(--k2-l-grid);--k2-blue:var(--k2-l-blue);--k2-amber:var(--k2-l-amber);--k2-warn:var(--k2-l-warn);--k2-good:var(--k2-l-good);--k2-cat-1:var(--k2-l-cat-1);--k2-cat-2:var(--k2-l-cat-2);--k2-cat-3:var(--k2-l-cat-3);--k2-cat-4:var(--k2-l-cat-4);--k2-cat-5:var(--k2-l-cat-5);--k2-outline:var(--k2-l-outline);--k2-metal-hi:var(--k2-l-metal-hi);--k2-metal-mid:var(--k2-l-metal-mid);--k2-metal-lo:var(--k2-l-metal-lo);--k2-hatch:var(--k2-l-hatch);--k2-cavity:var(--k2-l-cavity);--k2-glow:var(--k2-l-glow);--k2-shadow:var(--k2-l-shadow)}
 
@@ -153,3 +154,14 @@
 
 /* in a deck: the figure fills its picture box */
 .kit2d-stage{width:100%;height:100%;min-height:0}
+
+/* bars, pyramid, balance, events, compare, person, tank, pump */
+.k2-chain{fill:none;stroke:var(--k2-metal-mid);stroke-width:3}
+.k2-stem{fill:none;stroke:var(--k2-dim);stroke-width:2.5}
+.k2-done-line{fill:var(--k2-blue)}
+.k2-cell{fill:var(--k2-hi);fill-opacity:.07;stroke:var(--k2-grid);stroke-width:1.5}
+.k2-mark-good{fill:var(--k2-good)}.k2-mark-warn{fill:var(--k2-warn)}.k2-mark-ink{fill:none;stroke:var(--k2-on-cat);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
+.k2-skin{fill:var(--k2-skin)}.k2-skin-hi{fill:var(--k2-hi);opacity:.18}
+.k2-bubble{fill:var(--k2-face)}
+.k2-surface{stroke:var(--k2-particle);stroke-width:2.5;opacity:.8}
+.k2-vane{fill:none;stroke:var(--k2-metal-lo);stroke-width:7;stroke-linecap:round}

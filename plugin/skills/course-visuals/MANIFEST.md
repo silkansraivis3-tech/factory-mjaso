@@ -128,8 +128,9 @@ course; the figure kit stays for control screens). Built from the owner's refere
 repository): one hero, the cause moves the picture, depth from layers, words beside with a halo, colour that means
 something. Measured, not judged by eye: a frame-by-frame probe found no jump in any figure after the motion rewrite;
 `KIT2D.audit` is clean at every step of the seven demo figures at both tablet sizes, and caught the week labels and
-the Today tag colliding inside a compiled deck before they were fixed. Not yet: a light-page review, gallery cards per
-part, its own test file, and the layout chooser that gives a wide figure a wide box.
+the Today tag colliding inside a compiled deck before they were fixed. 2.109.0: more parts (bars, pyramid, balance,
+events, compare, person, tank, pump) and `kit2d/scripts/test_kit2d.py`, which walks every demo figure through the audit.
+Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 
 ## Known limits
 
