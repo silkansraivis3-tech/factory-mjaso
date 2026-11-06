@@ -106,6 +106,10 @@ def is_fragment(raw: str) -> bool:
 def check_file(path: str, raw: str) -> None:
     if is_fragment(raw):
         return
+    # A page that declares it stands alone in the instructor's viewer (the course and module plans,
+    # additional_materials.py) has no link on purpose - the viewer closes it. Not a trap.
+    if re.search(r'<meta\s+name="gb-standalone"', raw[:4000], re.I):
+        return
     text = strip_comments(raw)
     js = scripts_of(text)
     body = re.sub(r"<script\b[^>]*>.*?</script>", " ", text, flags=re.S | re.I)
