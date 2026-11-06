@@ -1,0 +1,20 @@
+{
+ "size": [416, 340],
+ "label": "The triple constraint: scope, time and cost are the corners of one triangle; one more job with the same end date pulls the cost corner out; safety and rules are a fixed frame around it.",
+ "idle": "Press Next step",
+ "example": ["ship in dry dock"],
+ "parts": [
+  {"id": "T", "type": "tradeoff", "x": 0, "y": 0, "w": 416, "h": 340,
+   "frame": "Fixed: safety and rules", "centre": "quality",
+   "corners": [
+    {"name": "Scope", "note": "+1 job", "pull": [36, -4]},
+    {"name": "Time", "note": "same end date", "lock": true},
+    {"name": "Cost", "note": "+30 %", "pull": [34, 0]}
+   ]}
+ ],
+ "steps": [
+  {"title": "Scope, time and cost are linked", "line": 2, "play": [["T", 1, 600]]},
+  {"title": "Extra work, same end date: more cost or drop it", "line": 3, "play": [["T", 2, 900]]},
+  {"title": "Safety and rules are fixed limits", "line": 4, "play": [["T", 3, 600]]}
+ ]
+}

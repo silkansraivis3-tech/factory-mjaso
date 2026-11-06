@@ -277,6 +277,17 @@ check("2.75.2 a slow screen at 1.5x (frames of 40 ms) goes lite before it loses 
       pl.get("before") is False and la.get("lite") is True and la.get("dpr") == 1.5 and not la.get("env") and not la.get("sh")
       and la.get("mem") == "1", pl)
 
+# ---------------------------------------------------------------- a label whose point is just past the picture's edge
+EDGE = ("(function(){var S=k3.scene,l=S.labels.filter(function(x){return x.shown;})[0];"
+        "l.v=new THREE.Vector3(0,1.04,0.5).unproject(S.camera);S.updateLabels();"
+        "var p=l.pill.getBoundingClientRect(),w=S.wrap.getBoundingClientRect();"
+        "return JSON.stringify({text:l.text,shown:l.shown,cut:l.shown&&p.top<w.top-1});})()")
+r = run([{"url": STUDIO % ("m01_hull", 1280, 720), "wait": "window.k3ready", "do": HELP, "settle": 500, "probe": EDGE}],
+        "--w=1280", "--h=720")
+ed = r[0].get("probe") or {}
+check("a label whose point is just above the picture is hidden, not cut at the box's edge (the factory trial: a step that "
+      "framed one tank left its neighbour's name cut off)", ed.get("text") and ed.get("shown") is False, (ed, r[0].get("errors")))
+
 # ---------------------------------------------------------------- every example spec passes the checker
 specs = sorted(glob.glob(os.path.join(KIT, "examples", "*.kit3d.json")))
 p = subprocess.run([sys.executable, "-I", os.path.join(HERE, "check_kit3d.py"), "spec"] + specs, capture_output=True, text=True)

@@ -491,8 +491,7 @@ figure{margin:0}
 .slide:not(.dark) .mediabar .fbtn{border-color:var(--line-l);background:var(--blue-wash-l);
   color:var(--navy)}
 .mediabar .fbtn.primary{background:var(--navy);color:var(--white);border-color:var(--navy)}
-.mediabar .fbtn:active{transform:translateY(1px)}
-.dots{display:flex;gap:6px}
+.mediabar .fbtn:active{transform:translateY(1px)}.dots{display:flex;gap:6px}
 .dots i{width:9px;height:9px;border-radius:50%;background:var(--cmp-white-16);display:block;
   transition:background .3s ease}
 .slide:not(.dark) .dots i{background:var(--line-l)}

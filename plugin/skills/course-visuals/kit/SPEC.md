@@ -265,6 +265,29 @@ exist yet, the part is added to its family here, never drawn once on a slide.
 | 5 | Gas, fire and machinery | gas_cloud (grows, drifts), cylinder, flame, fire (pool, jet), spray, fan, gas_cylinder, static_charge, spill, wind, lamp, spark; a tank that ruptures (tank `burst`) | **built** | M01 · M02 · M03 · M05 · M06 · M10 · M11 · M13 · M15 |
 | 6 | Charts | scale, bands, curve_chart, flammability, range_bar, composition_bar | **built** | M01 s02 · M02 s11 · M04 · M06 · M07 |
 | 7 | Procedures | step_track (steps, checklist), tree, person; flowchart, cause-and-effect matrix still planned | **started** | M03 · M05 · M10 · M11 · M14 · M15 |
+| 8 | Concepts | tradeoff (three limits that pull on each other, inside a fixed frame), cycle (work that goes round), timeline (work that starts and ends) | **started** | Project Management M01 s03, s05 |
+
+## Ideas, not machines - the Concepts family (2.108.0)
+A course with no machinery (project management, leadership, law) still gets drawings, never a table in a figure panel:
+the Project Management build drew nine of M01's eleven figures as tables (`grid_table`), its triple constraint as three
+number boxes around a ship, and its earned-value sum as nine readouts. An idea is drawn as **its shape**: a trade-off is a
+triangle that stretches inside a frame that does not; routine work is a loop; a project is a line to a flag. Patterns
+`routine_vs_project` and `triple_constraint` are the PM figures rebuilt; a slide that names them starts from them.
+- **The look:** a figure made only of Concepts parts is shown on the **light panel** (white, `lt-light`, the kit's light
+  tokens) - the compiler does it; `"theme": "dark"` keeps the Navy one. Blue is the idea, **amber what changed**, a dashed
+  red frame what is never traded. Machinery, ships and screens stay on the Navy panel.
+- **An idea carries its real example** (Aigars, reviewing the rebuilt slides: drawn ideas "turn into just arrows and
+  lines"): a figure made only of Concepts parts names the real thing(s) it is about in `"example"`
+  (`["watch round", "ship in dry dock"]`) - **NO REAL EXAMPLE** is refused without it. The compiler treats each as a
+  drawn thing (L57): the course's photograph of it goes under the drawing, tappable; with none it goes on
+  `PHOTOS_TO_TAKE.md`. Shapes explain the idea, the photo keeps it on board.
+- **No step buttons** under a figure: the deck's Next walks its steps with the slide's lines (`gb_deck.js`); a lit line is
+  still a tap target that plays its step.
+- **`check_kit.py` refuses** (a build FAIL): **WORDS ONLY** - every part is words or a number in a box (a readout with a
+  `unit` or `marks` is an instrument, not words); **STEPS SHOW ONLY WORDS** - no step moves anything drawn; **DECORATION** -
+  a ship drawn small with nothing on it beside words and number boxes; **BROKEN CHARACTERS** - "Â·" for "·". And a new
+  part that draws only boxes and words (`check_part`): that is a table, which the slide's own layouts show.
+- Nothing fits and no photo shows it? **Make the part** (PARTS.md) - the shape of the idea, in the Concepts family.
 
 **Task mode (2.43.0, built).** The same spec drawn on a trainee task page, so a slide and the task built from it
 ("the GA from slide 4, no labels") can never drift apart: `<svg data-kit="#spec" data-kit-step="3">` is drawn still at

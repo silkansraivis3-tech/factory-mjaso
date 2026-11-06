@@ -185,7 +185,6 @@ def main():
                              ("a module check with fewer than three ways", en("p_mc_mix", m=1, lo=3)),
                              ("a module with nothing hands-on", en("p_no_hands_on", m=2)),
                              ("a module with no pictures planned", en("p_no_media", m=3)),
-                             ("2.22.0: two of three pictures planned in 3D - at most half (L46)", en("p_3d_many", m=2, n=2, tot=3, pct="67", max="50")),
                              ("a way of answering the factory does not know", en("p_mech_unknown", m=3, x="guess"))):
             check("caught: " + what, needle in out, out)
 

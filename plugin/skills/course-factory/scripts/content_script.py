@@ -938,7 +938,7 @@ def shown_terms(s):
 
 # the task rules that are about a set or a module's questions as a trainee goes through them: with groups, each group's
 # path (the questions for everyone and the group's own) must meet them, never the mix of all groups no trainee sees
-GROUP_RULES = ("t_sc_small", "t_sc_big", "t_no_challenge", "t_ab_order", "t_not_spaced", "t_mc_small", "m_mix",
+GROUP_RULES = ("t_sc_small", "t_sc_big", "t_sc_mix", "t_no_challenge", "t_ab_order", "t_not_spaced", "t_mc_small", "m_mix",
                "m_too_much_choice", "m_no_hands_on", "m_same_in_a_row")
 
 
@@ -967,6 +967,31 @@ def theory_findings(script):
     return by_group(script, found, lambda sub: theory_check(sub)[0]), taught_on
 
 
+# the words an active slide shows besides its title and lines: they count toward its floor, so a situation can be
+# trimmed to fit without the slide turning thin
+SHOWN_TOO = ("ask", "reveal", "claim", "choices", "why")
+
+
+def active_shape(s):
+    return bool(s.get("choices") or s.get("claim") or (s.get("ask") and s.get("reveal")))
+
+
+def overfull(s):
+    """[(the part, its words, the most it holds)] of a scenario or a worked example beside a picture: what the template
+    holds on a 1024 x 768 tablet (theory-rules.json "beside_picture")"""
+    B = RULES["beside_picture"]
+    if picture_of(s)["kind"] in ("", "none"):
+        return []
+    if s.get("choices"):
+        parts = (("t_part_situation", wc(s.get("text", "")), B["situation"]),
+                 ("t_part_choices", wc(*[as_text(s.get(f)) for f in ("ask", "choices", "why")]), B["choices"]))
+    elif s.get("ask") and s.get("reveal") and not s.get("claim"):
+        parts = (("t_part_steps", wc(s.get("text", ""), as_text(s.get("ask"))), B["steps"]),)
+    else:
+        return []
+    return [(p, w, most) for p, w, most in parts if w > most]
+
+
 def theory_check(script):
     """Everything L36 asks, as findings shown at the top of the review page. Also returns, for every
     question, the slide(s) that teach its answer - the page shows them beside the question."""
@@ -986,15 +1011,18 @@ def theory_check(script):
             continue
         w_slide = wc(s.get("title", ""), s.get("text", ""))
         w_notes = wc(s.get("notes", ""))
+        w_floor = w_slide + (wc(*[as_text(s.get(f)) for f in SHOWN_TOO]) if active_shape(s) else 0)
         if not s.get("active"):              # L49: the density is of PLAIN theory; an active slide's minutes are what the trainees do
             th_words += w_slide + w_notes
             th_min += minutes(s)
         if s.get("recap"):
             pass                              # L51: a recap is short on purpose - recap_findings checks its points
-        elif w_slide < R["slide"]["min_words"]:
-            add(s["id"], "text", FAIL, "t_thin_slide", w=w_slide, min=R["slide"]["min_words"])
+        elif w_floor < R["slide"]["min_words"]:
+            add(s["id"], "text", FAIL, "t_thin_slide", w=w_floor, min=R["slide"]["min_words"])
         elif w_slide > R["slide"]["max_words"]:
             add(s["id"], "text", NOTE, "t_long_slide", w=w_slide, max=R["slide"]["max_words"])
+        for part, w, most in overfull(s):
+            add(s["id"], "text", FAIL, "t_overfull", part=T(script, part), w=w, max=most)
         if w_notes < R["notes"]["min_words"]:
             add(s["id"], "notes", FAIL, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
         elif w_notes > R["notes"]["max_words"]:
@@ -1039,6 +1067,12 @@ def theory_check(script):
                     add(s["id"], "", FAIL, "t_sc_small", set=set_name(script, st), q=n, lo=R["self_check"]["min_questions"])
                 elif n > R["self_check"]["max_questions"]:
                     add(s["id"], "", NOTE, "t_sc_big", set=set_name(script, st), q=n, hi=R["self_check"]["max_questions"])
+                RS = R["self_check"]        # owner: of five, three rich tasks (3D, animation, a panel) and two basic
+                rich = sum(1 for q in st["questions"] if mech(q) in RS["rich"])
+                basic = sum(1 for q in st["questions"] if MEDIA["mechanics"].get(mech(q), {}).get("family") in RS["basic_families"])
+                need = min(RS["rich_min"], max(0, n - RS["basic_max"]))
+                if basic > RS["basic_max"] or rich < need:
+                    add(s["id"], "", FAIL, "t_sc_mix", set=set_name(script, st), b=basic, r=rich, q=n, lo=need)
                 # 2.74.0 (owner, 2026-10-28) - a self-check is Part A, checking what was taught before it in the module (Bloom
                 # 1-2), then Part B, a harder task the trainee solves alone (Bloom 3 or higher). Suggestions, never blocking.
                 lv = [bloom_map.task_level(mech(q), q.get("bloom"))["level"] for q in st["questions"]]
@@ -1320,19 +1354,14 @@ def media_check(script):
                 or any(w in (s.get("visual") or "").lower() for w in F["real_photo_words"])]
         if teach and len(real) < F["real_photo_min_share"] * len(teach):
             add(None, "visual_kind", NOTE, "v_few_photos", n=len(real), tot=len(teach))
-        # L46 (owner, 2026-10-07): 3D where it makes sense, at most half of the pictures - quality, not quantity
+        # L67: 60-80 % of the teaching slides step through interactive 3D, the rest a static render or a photograph
         TD = MEDIA["three_d"]
         is3d = lambda s: MEDIA["visual_kinds"].get(parse_kind(s.get("visual_kind", "")), {}).get("family") in TD["families"]
         three = [s for s in slides if is3d(s)]
         teach = [s for s in slides if not s.get("recap")]       # the recap closes the module; it teaches nothing new (L51)
-        if len(three) >= TD["count_from"] and len(three) > TD["max_share"] * len(teach):      # half of the presentation's teaching slides
+        if len(teach) >= TD["count_from"] and not TD["min_share"] * len(teach) <= len(three) <= TD["max_share"] * len(teach):
             add(None, "visual_kind", FAIL, "v_3d_share", n=len(three), tot=len(teach), pct="%.0f" % (100.0 * len(three) / len(teach)),
-                max="%.0f" % (100 * TD["max_share"]))
-        run = 0
-        for s in slides:
-            run = run + 1 if is3d(s) else 0
-            if run == TD["max_in_a_row"] + 1:
-                add(s["id"], "visual_kind", NOTE, "v_3d_in_a_row", n=run)
+                min="%.0f" % (100 * TD["min_share"]), max="%.0f" % (100 * TD["max_share"]))
         for s in three:
             said = " %s %s " % (s.get("visual", ""), s.get("title", ""))
             word = next((x for x in TD["flat_words"] if re.search(r"(?i)\b%s\b" % re.escape(x), said)), None)
@@ -3006,12 +3035,18 @@ def unanswered(rev):
 
 def cmd_approve(course, module, by, despite=False):
     p = paths(course, module)
-    if os.environ.get("NOVIKONTAS_AUTO_BUILD") == "1" and by != unattended_signer(course):
+    signer = unattended_signer(course) if os.environ.get("NOVIKONTAS_AUTO_BUILD") == "1" else None
+    if signer and by != signer:
+        # the run has its signer: the refusal names it, not the expert's Ready (a factory trial's writers were told the
+        # expert had left every row unanswered, which hid the script's own findings)
+        print("Not approved - an unattended run approves with --by \"%s\" only." % signer)
+        return 1
+    if os.environ.get("NOVIKONTAS_AUTO_BUILD") == "1" and not signer:
         rp = workspace.claude_path(course, "pedagogy_review.json")
         rows, left = unanswered(load(rp) if os.path.isfile(rp) else {})
         why = ("the expert pressed Ready with %d of %d topic rows unanswered (%s%s) - a Ready is a review only when every row "
                "has the expert's answer" % (len(left), rows, ", ".join(left[:6]), " ..." if len(left) > 6 else "")) if left else \
-            "--by \"%s\"" % (unattended_signer(course) or "nobody pressed Ready")
+            "nobody pressed Ready"
         print("Not approved - an unattended run approves only with the expert's own Ready from the editor: %s. "
               "Build --draft and say which scripts wait (script/GUIDE.md §4)." % why)
         return 1

@@ -7,6 +7,63 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.111.0 · The picture's box (2026-11-06)
+
+- **Why.** The factory did not respect the blueprints: every picture beside words had one box (45 %, a 3D model 58 % by a
+  constant), so a drawing or animation with many names was squeezed - its labels too small, cut or colliding - and the
+  layout solver could only widen the words' column or put the words in parts. Nothing decided whether the picture was
+  worth more room or should be another kind of picture.
+- **Boxes.** `course-module-ui/knowledge/layout-templates.json` `"boxes"`: `text-wide` (words 60 %), `even` (55 %, the
+  default), `picture-wide` (42 %), `picture-large` (35 %), each with its words budget (even measured, the others in
+  proportion); `"need"` the picture's share by the names it shows (0-6, 7-10, 11-15, 16-22, 23+), `"three_d"` 0.58,
+  `"wide_aspect"` 2.2, `"extra_parts"` 1. `blueprints.json` rules name them.
+- **The chooser.** `compile/scripts/layout_fit.py`: `names_shown` (a kit spec's labelled parts and its markers / limits,
+  a 3D scene's `labels`, spots, else an SVG's words), `demand`, `choose` -> box / parts / stage / swap. `compile_module`
+  calls it for a non-photo picture beside words (`two-col`): the box's `--lt-text`, the parts sized to the box
+  (`auto_parts(part_words)`), the budget note per box, the stage when the picture needs the whole slide and the words
+  are 45 or fewer; a swap is a compile problem naming what to make instead. Build sheet `"box"` wins; slides carry
+  `data-box`. `SPLIT_3D` is gone.
+- **The solver.** `build_module.room_tries` / `solve_layouts(room=...)` phase 1b: a slide whose audit says its drawing's
+  words are too small or its labels collide, or that the last fit gate saw shown in part (`_build/MNN_room_misses.json`,
+  read by `last_room`, measured first by the pre-check), gets the next larger box - taken when the words still fit,
+  nothing is worse and fewer of its picture's findings are left.
+- **Tests.** `test_layout_fit.py` (new), `test_compile_module.py` `boxes_part`, `test_build_module.py` (solver: too
+  small -> picture-wide, fit gate -> larger box, the fit gate's lines parsed).
+
+## 2.110.0 · The rules as checks, the laws on one page (2026-11-06)
+
+- **Why.** Raivis: the factory does not follow its rules, and the rules are too long. The first factory trial: decks 0-8 % 3D
+  and full of kit drawings, self-checks of 3-4 mostly choose and match, four modules ending on FAIL and reported built.
+- **3D share.** `media-and-tasks.json` `three_d`: `min_share` 0.6, `max_share` 0.8, `count_from` 3 teaching slides.
+  `content_script.py` (`v_3d_share`) and `check_course_package.py` stop outside it; `make_architecture_page.py` suggests
+  (`p_3d_many`). `v_3d_in_a_row` is gone: at 60-80 % runs are normal. The operator may keep another share as a design
+  choice (`three-d-share`). The example module's s02 is a 3D model now (two of three).
+- **Self-check mix.** `theory-rules.json` `self_check`: `basic_max` 2 (families choose, arrange), `rich_min` 3 (the
+  `rich` list: 3D, animation, panel types); a set needs min(3, questions - 2) rich. `t_sc_mix`, a group rule.
+- **No PASS, not done.** `build_course.js` `oneModule`: `reachedPass` from the builder's or the fix build's report; without
+  it the module is `blocking`, classification `NOT DONE`. `course_portal.failed_builds` adds each module whose last
+  `_build/MNN_answer.txt` line is a FAIL (not the course package) to `blockers`.
+- **The first hook.** `plugin/hooks/hooks.json` → `guard_writes.py` on Write / Edit / MultiEdit / NotebookEdit: a path under
+  a `workspace.MASTER_MARKS` folder whose parent holds `course\` is denied. `test_guard_writes.py`.
+- **SKILL.md 51 -> 30 KB.** One law table L1-L71 (the old *Owner decisions* table and *The laws* prose merged; L3, L4, L6,
+  L8-L17, L20, L22, L23 added as one line each); intake, gate, Stage 3, building and auto build each a short list. The
+  full texts stay in `references/`. The sign-off list gains `instructor_led.py check` and `sim_coverage.py check`.
+- **Waiting.** L67's flat-drawing finding (`v_3d_flat_figure`) stays a note until the visuals session settles what a
+  slide shows instead of a kit drawing.
+
+## 2.109.0 · What the second factory trial found (2026-11-06)
+
+- **Scenario beside a picture:** the situation under the picture, the question, choices and whys in the other column
+  (`.lt-scol`; `grid-template-rows:minmax(0,1fr)` so an overfull column never stretches the other).
+- **Worked example:** `--cols:56fr 44fr` - the steps take the wider column; the answer opens over the picture.
+- **Task launch:** `.lt-task2` `align-items:safe center`, `.act-code` 11vmin - the code stays on the slide.
+- **3D labels:** a point off the picture hides its label; a pill past the box's edge counts three touches (`kit3d.js`,
+  `min/kit3d.js` rebuilt).
+- **Script:** `t_overfull` against `theory-rules.json` `beside_picture`; the floor of an active slide counts its question,
+  choices, whys and answer.
+- **Build:** `--auto` fills after a failed build; `phase_a.py` refuses a module outside the running run;
+  `cmd_approve` names the unattended signer; `photo_catalogue.as_words`.
+
 ## 2.107.1 · A true-or-false why opens over the picture (2026-11-06)
 
 - **Found by the first factory trial** (M01 s04, Raivis's screenshot): the why opened under the claim and the vote and was

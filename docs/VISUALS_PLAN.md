@@ -23,7 +23,7 @@ and the like). Shown to the owner as swatches before any figure uses them.
 
 ## Build order
 
-- **A. A new 2D kit** (`course-visuals/kit2d/`, 2.108.0), not a layer on the old figure kit (owner: "i dont like how 2d
+- **A. A new 2D kit** (`course-visuals/kit2d/`, 2.112.0), not a layer on the old figure kit (owner: "i dont like how 2d
   kit was before"). Built from the owner's reference: graphs, objects in motion, concepts; smooth motion; an overlap
   check the fit gate runs on every step; wired into the compiler. Next: more parts (bars, pyramid, balance, events,
   people, more objects), a light-page review, gallery cards and its own test file.

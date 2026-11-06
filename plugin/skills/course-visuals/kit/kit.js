@@ -7697,4 +7697,217 @@ KIT.define('workstation', function (fig, part, g, p) {
     steps: [ { title: 'The screens come on', play: [['W', 1, 1200]] } ] }
 });
 /* end kit-part */
+/* kit-part: tradeoff */
+/* three limits as the corners of one shape: pull one corner and the shape changes; what may never be traded is the
+   frame around it. Corners: [{ name, note, pull: [dx, dy], lock }], the top corner first */
+KIT.define('tradeoff', function (fig, part, g, p) {
+  var h = KIT.h, W = p.w || 400, H = p.h || 240, cs = (p.corners || []).slice(0, 3), base = null;
+  while (cs.length < 3) cs.push({ name: '' });
+  var frame = null, frameT = null;
+  if (p.frame) {
+    frame = h.el('rect', { x: 1, y: 1, width: W - 2, height: H - 2, rx: 12, 'class': 'kit-tradeoff-frame' }, g);
+    frameT = h.label(fig, g, { x: 16, y: 26, 'class': 'kit-cap kit-tradeoff-fixed' }, p.frame, { fixed: true });
+  }
+  var was = h.el('polygon', { 'class': 'kit-tradeoff-was' }, g);
+  var now = h.el('polygon', { 'class': 'kit-tradeoff-now', 'data-kit-fills': '' }, g);
+  var mid = p.centre ? h.label(fig, g, { x: 0, y: 0, 'text-anchor': 'middle', 'class': 'kit-cap kit-tradeoff-mid' }, p.centre, { fixed: true }) : null;
+  var made = cs.map(function (c, i) {
+    var top = i === 0, cg = h.el('g', { 'class': 'kit-tradeoff-corner' + (c.lock ? ' kit-tradeoff-locked' : '') }, g);
+    h.el('circle', { r: 7, 'class': 'kit-tradeoff-dot' }, cg);
+    var at = top ? { x: 0, y: -14, 'text-anchor': 'middle', 'class': 'kit-h' } : { x: 0, y: 30, 'text-anchor': 'middle', 'class': 'kit-h' };
+    var lw = h.label(fig, cg, at, c.name || '', { fixed: true });
+    var note = c.note ? h.el('text', { x: 0, y: 48, 'text-anchor': top ? 'start' : 'middle',
+                                       'class': 'kit-h kit-tradeoff-note' }, lw, c.note) : null;
+    var pull = c.pull || [0, 0];
+    return { g: cg, lw: lw, note: note, top: top, pull: [+pull[0] || 0, +pull[1] || 0], moves: !!(+pull[0] || +pull[1]) };
+  });
+  function wide(m) {
+    var t = m.lw.querySelector('text'), w = t ? h.widest(t, [t.textContent]) : 0;
+    if (m.note) w = Math.max(w, h.widest(m.note, [m.note.textContent]));
+    return w;
+  }
+  fig.fit(function (k) {
+    made.forEach(function (m) {              // the top corner's words above its dot, the note beside the name: clear of both edges
+      var t = m.lw.querySelector('text'), y = m.top ? -13 - 5 * k : 16 + 14 * k;
+      if (t) t.setAttribute('y', y.toFixed(1));
+      if (m.note && m.top) {
+        m.note.setAttribute('x', ((t ? h.widest(t, [t.textContent]) : 0) / 2 + 8 * k).toFixed(1));
+        m.note.setAttribute('y', y.toFixed(1));
+      } else if (m.note) m.note.setAttribute('y', (y + 18 * k).toFixed(1));
+    });
+    var notes = made[1].note || made[2].note;
+    var mt = (p.frame ? 38 * k : 4) + 18 + 16 * k + Math.max(0, -made[0].pull[1]);
+    var mb = 16 + 14 * k + (notes ? 18 * k : 0) + 20 * k + Math.max(0, made[1].pull[1], made[2].pull[1]);
+    var l = wide(made[1]) / 2 + 20 + Math.max(0, -made[1].pull[0]);
+    var r = wide(made[2]) / 2 + 20 + Math.max(0, made[2].pull[0]);
+    base = [[(l + W - r) / 2, mt], [l, H - mb], [W - r, H - mb]];
+    part.render(part.v);
+  });
+  function pts(a) { return a.map(function (q) { return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' '); }
+  part.render = function (v) {
+    if (!base) return;
+    var show = h.clamp(v, 0, 1), t = h.clamp(v - 1, 0, 1), f = h.clamp(v - 2, 0, 1);
+    var at = base.map(function (b, i) { return [b[0] + made[i].pull[0] * t, b[1] + made[i].pull[1] * t]; });
+    now.setAttribute('points', pts(at));
+    was.setAttribute('points', pts(base));
+    was.style.opacity = t > 0.02 ? '1' : '0';
+    now.style.opacity = (0.35 + 0.65 * show).toFixed(2);
+    made.forEach(function (m, i) {
+      m.g.setAttribute('transform', 'translate(' + at[i][0].toFixed(1) + ' ' + at[i][1].toFixed(1) + ')');
+      m.g.style.opacity = (0.75 + 0.25 * show).toFixed(2);
+      m.g.classList.toggle('kit-tradeoff-moved', m.moves && t > 0.5);
+      if (m.note) m.note.style.opacity = t.toFixed(2);
+    });
+    if (mid) mid.setAttribute('transform', 'translate(' + ((at[0][0] + at[1][0] + at[2][0]) / 3).toFixed(1) + ' ' +
+                                            ((at[0][1] + at[1][1] + at[2][1]) / 3 + 5).toFixed(1) + ')');
+    if (frame) {
+      frame.classList.toggle('kit-tradeoff-lit', f > 0.5);
+      frame.style.opacity = (0.55 + 0.45 * f).toFixed(2);
+      frameT.style.opacity = (0.7 + 0.3 * f).toFixed(2);
+    }
+  };
+}, {
+  family: 'concepts',
+  status: 'kit',
+  look: 'diagram',
+  course: 'Project Management', module: 'M01', made: '2026-11-06',
+  why: 'M01 s05 the triple constraint: scope, time and cost pull on each other inside a fixed frame of safety and rules; it was drawn as three number boxes around a ship',
+  value: '0..1 shape · 1..2 corners pulled, notes shown · 2..3 frame picked out',
+  css: '.kit-tradeoff-frame{fill:none;stroke:var(--warn-d);stroke-width:1.5;stroke-dasharray:7 5}.kit-tradeoff-frame.kit-tradeoff-lit{stroke-width:2.5}' +
+    '.kit-cap.kit-tradeoff-fixed{fill:var(--warn-d);font-weight:700}' +
+    '.kit-tradeoff-was{fill:none;stroke:var(--dim-d);stroke-width:1.5;stroke-dasharray:5 5}' +
+    '.kit-tradeoff-now{fill:var(--blue-wash-d);stroke:var(--blue);stroke-width:2.5;stroke-linejoin:round}' +
+    '.kit-tradeoff-dot{fill:var(--txt-d);stroke:var(--deep);stroke-width:2}.kit-tradeoff-locked .kit-tradeoff-dot{fill:var(--dim-d)}' +
+    '.kit-tradeoff-moved .kit-tradeoff-dot{fill:var(--amber)}.kit-cap.kit-tradeoff-mid{fill:var(--txt-d)}' +
+    '.kit-h.kit-tradeoff-note{font-weight:500}.kit-tradeoff-moved .kit-h.kit-tradeoff-note{fill:var(--amber);font-weight:700}',
+  example: { size: [416, 254], parts: [
+    { id: 'T', type: 'tradeoff', x: 0, y: 0, w: 416, h: 254, frame: 'Fixed: safety and rules', centre: 'quality',
+      corners: [ { name: 'Scope', note: '+1 job', pull: [34, -6] }, { name: 'Time', note: 'same end date', lock: true },
+                 { name: 'Cost', note: '+30 %', pull: [30, 0] } ] } ],
+    steps: [ { title: 'Scope, time and cost are linked', play: [['T', 1, 600]] },
+             { title: 'One more job, same end date: the cost goes up', play: [['T', 2, 900]] },
+             { title: 'Safety and rules are never traded', play: [['T', 3, 600]] } ] }
+});
+/* end kit-part */
+/* kit-part: cycle */
+/* work that goes round and has no planned end: a loop with an arrow, a dot going round it once per unit of value */
+KIT.define('cycle', function (fig, part, g, p) {
+  var h = KIT.h, r = p.r || 60, n = p.ticks == null ? 3 : p.ticks;
+  var cg = h.el('g', { 'class': 'kit-cycle' + (p.tone === 'amber' ? ' kit-cycle-amber' : '') }, g);
+  function pt(a, rr) { var t = (a - 90) * Math.PI / 180; return [r + rr * Math.cos(t), r + rr * Math.sin(t)]; }
+  function xy(q) { return q[0].toFixed(1) + ' ' + q[1].toFixed(1); }
+  var A0 = 20, SW = 320;
+  var arc = h.el('path', { d: 'M' + xy(pt(A0, r)) + ' A' + r + ' ' + r + ' 0 1 1 ' + xy(pt(A0 + SW, r)), pathLength: 100,
+                           'class': 'kit-cycle-arc', 'data-kit-fills': '' }, cg);    // the round is the drawing, its middle too
+  var head = h.el('path', { d: 'M' + xy(pt(A0 + SW - 8, r - 8)) + ' L' + xy(pt(A0 + SW + 6, r)) + ' L' + xy(pt(A0 + SW - 8, r + 8)) + ' Z',
+                            'class': 'kit-cycle-head' }, cg);
+  var ticks = [];
+  for (var i = 0; i < n; i++) {
+    var q = pt(A0 + (i + 1) * SW / (n + 1), r);
+    ticks.push(h.el('circle', { cx: q[0].toFixed(1), cy: q[1].toFixed(1), r: 5, 'class': 'kit-cycle-tick' }, cg));
+  }
+  var runner = h.el('circle', { r: 6, 'class': 'kit-cycle-runner' }, cg);
+  var inside = p.inside ? h.label(fig, cg, { x: r, y: r, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.inside, { fixed: true }) : null;
+  var name = p.name ? h.label(fig, cg, { x: r, y: 2 * r + 30, 'text-anchor': 'middle', 'class': 'kit-h kit-cycle-name' }, p.name, { fixed: true }) : null;
+  var note = name && p.note ? h.el('text', { x: r, y: 2 * r + 48, 'text-anchor': 'middle', 'class': 'kit-cap' }, name, p.note) : null;
+  fig.fit(function (k) {
+    if (inside) {
+      var t = inside.querySelector('text'), rows = String(p.inside).split('\n').length;
+      t.setAttribute('y', (r - (rows - 1) * 8 * k + 4 * k).toFixed(1));
+    }
+    var y = p.nameAt != null ? +p.nameAt : 2 * r + 14 + 12 * k;
+    if (name) name.querySelector('text').setAttribute('y', y.toFixed(1));
+    if (note) note.setAttribute('y', (y + 18 * k).toFixed(1));
+  });
+  part.render = function (v) {
+    var d = h.clamp(v, 0, 1), run = v > 1 ? (v - 1) % 1 : -1;
+    arc.setAttribute('stroke-dashoffset', (100 - 100 * d).toFixed(1));
+    arc.style.opacity = d > 0.005 ? '1' : '0';           // its round cap is a dot before the loop has started
+    head.style.opacity = d > 0.97 ? '1' : '0';
+    runner.style.opacity = run >= 0 ? '1' : '0';
+    if (run >= 0) {
+      var q = pt(A0 + run * SW, r);
+      runner.setAttribute('cx', q[0].toFixed(1)); runner.setAttribute('cy', q[1].toFixed(1));
+    }
+    ticks.forEach(function (t, i) {                   // a tick shows once the loop has reached it: no dots floating on nothing
+      var on = d >= (i + 1) / (n + 1);
+      t.classList.toggle('kit-lit', on);
+      t.style.opacity = on ? '1' : '0';
+    });
+  };
+}, {
+  family: 'concepts',
+  status: 'kit',
+  look: 'diagram',
+  course: 'Project Management', module: 'M01', made: '2026-11-06',
+  why: 'M01 s03 routine work goes round with no planned end (a watch, a noon report) - beside a timeline, a project that ends; it was a five-row table',
+  value: '0..1 the loop drawn · above 1 a dot goes round once per unit',
+  css: '.kit-cycle-arc{fill:none;stroke:var(--blue);stroke-width:5;stroke-linecap:round;stroke-dasharray:100}.kit-cycle-head{fill:var(--blue)}' +
+    '.kit-cycle-tick{fill:var(--deep);stroke:var(--faint-d);stroke-width:2}.kit-cycle-tick.kit-lit{fill:var(--blue);stroke:var(--blue)}' +
+    '.kit-cycle-runner{fill:var(--txt-d)}.kit-cycle .kit-cap{fill:var(--txt-d)}' +
+    '.kit-cycle-amber .kit-cycle-arc{stroke:var(--amber)}.kit-cycle-amber .kit-cycle-head{fill:var(--amber)}' +
+    '.kit-cycle-amber .kit-cycle-tick.kit-lit{fill:var(--amber);stroke:var(--amber)}.kit-cycle-amber .kit-h.kit-cycle-name{fill:var(--amber)}',
+  example: { size: [220, 230], parts: [
+    { id: 'C', type: 'cycle', x: 40, y: 14, r: 70, inside: 'every watch', name: 'Routine work', note: 'no end' } ],
+    steps: [ { title: 'It goes round', play: [['C', 1, 1200]] }, { title: 'And round again', play: [['C', 2, 1600, 0, 'linear']] } ] }
+});
+/* end kit-part */
+/* kit-part: timeline */
+/* work that starts and ends: a line from a start to a flag at the end, its stops lit as it passes them */
+KIT.define('timeline', function (fig, part, g, p) {
+  var h = KIT.h, w = p.w || 300, stops = p.stops || [];
+  var tg = h.el('g', { 'class': 'kit-timeline' + (p.tone === 'blue' ? '' : ' kit-timeline-amber') }, g);
+  h.el('line', { x1: 0, y1: 0, x2: w, y2: 0, 'class': 'kit-timeline-rail' }, tg);
+  var run = h.el('line', { x1: 0, y1: 0, x2: 0, y2: 0, 'class': 'kit-timeline-run' }, tg);
+  var head = h.el('path', { 'class': 'kit-timeline-head' }, tg);
+  h.el('circle', { r: 7, 'class': 'kit-timeline-start' }, tg);
+  var flag = h.el('g', { transform: 'translate(' + w + ' 0)', 'class': 'kit-timeline-flag' }, tg);
+  h.el('line', { x1: 0, y1: 8, x2: 0, y2: -34, 'class': 'kit-timeline-pole' }, flag);
+  h.el('path', { d: 'M0 -34 H22 L16 -27 L22 -20 H0 Z', 'class': 'kit-timeline-cloth' }, flag);
+  var caps = [], made = stops.map(function (s, i) {
+    var x = w * (i + 1) / (stops.length + 1);
+    caps.push(h.label(fig, tg, { x: x, y: 30, 'text-anchor': 'middle', 'class': 'kit-cap' }, s, { fixed: true }));
+    return { x: x, dot: h.el('circle', { cx: x.toFixed(1), cy: 0, r: 5, 'class': 'kit-timeline-stop' }, tg) };
+  });
+  if (p.start) caps.push(h.label(fig, tg, { x: -7, y: 30, 'class': 'kit-cap' }, p.start, { fixed: true }));
+  if (p.end) caps.push(h.label(fig, tg, { x: w + 22, y: 30, 'text-anchor': 'end', 'class': 'kit-cap' }, p.end, { fixed: true }));
+  if (p.title) h.label(fig, tg, { x: w / 2, y: -18, 'text-anchor': 'middle', 'class': 'kit-cap' }, p.title, { fixed: true });
+  var cx = (w + 22) / 2;                              // the middle of what is drawn: the line and the flag's cloth
+  var name = p.name ? h.label(fig, tg, { x: cx, y: 60, 'text-anchor': 'middle', 'class': 'kit-h kit-timeline-name' }, p.name, { fixed: true }) : null;
+  var note = name && p.note ? h.el('text', { x: cx, y: 78, 'text-anchor': 'middle', 'class': 'kit-cap' }, name, p.note) : null;
+  fig.fit(function (k) {
+    caps.forEach(function (c) { c.querySelector('text').setAttribute('y', (14 + 12 * k).toFixed(1)); });
+    var y = p.nameAt != null ? +p.nameAt : (caps.length ? 14 + 12 * k + 18 * k : 14) + 12 * k;
+    if (name) name.querySelector('text').setAttribute('y', y.toFixed(1));
+    if (note) note.setAttribute('y', (y + 18 * k).toFixed(1));
+  });
+  part.render = function (v) {
+    var d = h.clamp(v, 0, 1), x = w * d;
+    run.setAttribute('x2', x.toFixed(1));
+    head.setAttribute('d', 'M' + (x - 9).toFixed(1) + ' -7 L' + x.toFixed(1) + ' 0 L' + (x - 9).toFixed(1) + ' 7');
+    head.style.opacity = d > 0.04 && d < 0.97 ? '1' : '0';
+    flag.classList.toggle('kit-lit', d >= 0.97);
+    made.forEach(function (m) { m.dot.classList.toggle('kit-lit', x >= m.x - 0.5); });
+  };
+}, {
+  family: 'concepts',
+  status: 'kit',
+  look: 'diagram',
+  course: 'Project Management', module: 'M01', made: '2026-11-06',
+  why: 'M01 s03 a project starts, ends and leaves a new result - beside a cycle, routine work that goes round; it was a five-row table',
+  value: '0..1 the line runs to the flag, lighting its stops',
+  css: '.kit-timeline-rail{stroke:var(--faint-d);stroke-width:2;stroke-dasharray:3 6;stroke-linecap:round}' +
+    '.kit-timeline-run{stroke:var(--blue);stroke-width:5;stroke-linecap:round}' +
+    '.kit-timeline-head{fill:none;stroke:var(--blue);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}' +
+    '.kit-timeline .kit-cap{fill:var(--txt-d)}.kit-timeline-start{fill:var(--txt-d)}.kit-timeline-pole{stroke:var(--txt-d);stroke-width:2.5}.kit-timeline-cloth{fill:var(--faint-d)}' +
+    '.kit-timeline-flag.kit-lit .kit-timeline-cloth{fill:var(--blue)}' +
+    '.kit-timeline-stop{fill:var(--deep);stroke:var(--faint-d);stroke-width:2}.kit-timeline-stop.kit-lit{fill:var(--blue);stroke:var(--blue)}' +
+    '.kit-timeline-amber .kit-timeline-run{stroke:var(--amber)}.kit-timeline-amber .kit-timeline-head{stroke:var(--amber)}' +
+    '.kit-timeline-amber .kit-timeline-flag.kit-lit .kit-timeline-cloth{fill:var(--amber)}' +
+    '.kit-timeline-amber .kit-timeline-stop.kit-lit{fill:var(--amber);stroke:var(--amber)}.kit-timeline-amber .kit-h.kit-timeline-name{fill:var(--amber)}',
+  example: { size: [320, 170], parts: [
+    { id: 'L', type: 'timeline', x: 30, y: 60, w: 240, title: 'dry dock', end: 'end', name: 'Project' } ],
+    steps: [ { title: 'It starts, runs and ends', play: [['L', 1, 1400]] } ] }
+});
+/* end kit-part */
 /* kit-parts: end */

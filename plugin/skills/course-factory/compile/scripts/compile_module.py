@@ -58,7 +58,7 @@ EVERY SLIDE IS ONE OF THE OWNER'S LAYOUT TEMPLATES (L61, 2.52.0)
   reading-with-figure, content-in-parts) - and worked-example, true-false, scenario, name-parts, key-numbers, before-after, drill, built from the slide's own words
   (shaped_template). Each slide carries data-template="<id>.v1" and data-variant, chosen from the
   layout below - or asked for in the build sheet: "template": "reference-table", "variant": "figure-left",
-  "split": 0.55 (text share, 0.5-0.6), "blocks": [[1, 3], [4, 6]] (compare-two, three-content-blocks), "parts":
+  "split": 0.55 (text share, 0.5-0.6), "box": "picture-wide" (the picture's box, layout_fit.py), "blocks": [[1, 3], [4, 6]] (compare-two, three-content-blocks), "parts":
   [[1, 4], [5, 9]] (content-in-parts), "figure_b" (compare-two's second picture). An unknown or unsuitable template is
   a problem with the slide's id. gb_layouts.css gives every template the owner's look, in the brandbook's colours,
   with the official logo. The owner's rules are checked here: a dense slide (more than 60 words) always has a picture
@@ -120,6 +120,7 @@ sys.path.insert(0, os.path.join(SKILL, "scripts"))
 if HERE not in sys.path:                                       # 2.49.1 - `python -I` leaves the script's own folder off
     sys.path.insert(0, HERE)                                   # sys.path: task_pages, module_plan, answer_key, label_layout
 import content_script as cs  # noqa: E402
+import layout_fit  # noqa: E402
 import workspace  # noqa: E402
 
 SHELL = os.path.join(SKILLS, "course-module-ui", "templates", "gb_shell.html")
@@ -148,9 +149,6 @@ TEMPLATES = LAYOUTS["templates"]
 DENSE_WORDS = LAYOUTS["dense"]["words"]
 PARTS_FROM, PART_WORDS = LAYOUTS["parts"]["auto_from_words"], LAYOUTS["parts"]["part_words"]
 SPLIT_LO, SPLIT_HI = LAYOUTS["split"]["text"]
-# 2.69.0 - a 3D model beside words takes at least 58 % of the width: at the owner's 50-60 % text share it had 40-50 % (gas M01
-# s26 at 1280x720: 640 x 440, nine names and six buttons over the model - owner: "all 3d models is almost invisible")
-SPLIT_3D = 0.42
 NO_VISUAL_RUN = LAYOUTS["sequence"]["max_without_visual_in_a_row"]
 FRAMED_PHOTO_WORDS = LAYOUTS["variety"]["photo_framed_max_words"]
 # 2.63.0 - the words each layout holds, measured at 1024 x 768 with the real templates (layout-templates.json "budgets")
@@ -646,10 +644,37 @@ def kit_svg_attrs(spec, view=None):
                                                ' viewBox="%s"' % " ".join("%g" % v for v in vb) if len(vb) == 4 else "")
 
 
+_FAMILY = {}
+
+
+def kit_family(t):
+    """the family kit.js gives a part type (its meta's family:), read once"""
+    if not _FAMILY:
+        try:
+            src = open(os.path.join(SKILLS, "course-visuals", "kit", "kit.js"), encoding="utf-8").read()
+        except OSError:
+            src = ""
+        for m in re.finditer(r"/\*\s*kit-part:\s*(\w+)\s*\*/(.*?)/\*\s*end kit-part\s*\*/", src, re.S):
+            f = re.search(r"\bfamily\s*:\s*['\"]([\w-]+)['\"]", m.group(2))
+            _FAMILY[m.group(1)] = f.group(1) if f else ""
+        _FAMILY.setdefault("", "")
+    return _FAMILY.get(t, "")
+
+
+def kit_light(spec):
+    """an idea drawn with the Concepts family (tradeoff, cycle, timeline ...) is shown on the light panel, like a page of a
+    book; machinery, ships and screens stay on the Navy panel. "theme": "dark" in the spec keeps the Navy one"""
+    if spec.get("theme") == "dark":
+        return False
+    types = [p.get("type") for p in spec.get("parts") or [] if isinstance(p, dict) and p.get("type") != "text"]
+    return bool(types) and all(kit_family(t) == "concepts" for t in types)
+
+
 def kit_figure(text, s, probs, where):
     """a figure made from the figure kit (course-visuals/kit): its spec goes into the page as it is, and
-    kit.js draws it there. The step buttons are the deck's own .mediabar. course-visuals/kit/scripts/
-    check_kit.py checks the spec itself; here only what would stop the page from drawing it."""
+    kit.js draws it there. It has no buttons of its own: the deck's Next walks its steps with the slide's lines
+    (gb_deck.js lockFor). course-visuals/kit/scripts/check_kit.py checks the spec itself; here only what would stop the
+    page from drawing it."""
     try:
         spec = json.loads(text)
     except ValueError as err:
@@ -662,18 +687,9 @@ def kit_figure(text, s, probs, where):
         spec["label"] = first_sentence(s.get("visual")) or s.get("title") or ""
     sid = "kit-" + s["id"]
     data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-    out = ['<div class="fill fig kit-fig" data-kit-scope>',
+    out = ['<div class="fill fig kit-fig%s" data-kit-scope>' % (' lt-light" data-kit-theme="light' if kit_light(spec) else ""),
            '<div class="kit-screen"><svg data-kit="#%s"%s></svg></div>' % (sid, kit_svg_attrs(spec)),
-           '<script type="application/json" id="%s">%s</script>' % (sid, data)]
-    if spec.get("steps"):
-        chev = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="%s"/></svg>'
-        out.append('<div class="mediabar">'
-                   '<button class="fbtn" type="button" data-act="prev">%s Previous step</button>'
-                   '<span class="dots"></span>'
-                   '<button class="fbtn primary" type="button" data-act="next">Next step %s</button>'
-                   '<button class="fbtn" type="button" data-act="replay">Replay</button></div>'
-                   % (chev % "M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z", chev % "M8.6 16.6 10 18l6-6-6-6-1.4 1.4L13.2 12z"))
-    out.append("</div>")
+           '<script type="application/json" id="%s">%s</script>' % (sid, data), "</div>"]
     return "".join(out)
 
 
@@ -1181,8 +1197,24 @@ def drawn_labels(fig):
             continue
         for p in spec.get("parts") or [] if isinstance(spec, dict) else []:
             out += [p[k] for k in ("label", "text") if isinstance(p.get(k), str)]
+    out += figure_examples(fig)
     out += [re.sub(r"<[^>]+>", " ", m.group(1)) for m in SVG_TEXT.finditer(JSON_DATA.sub("", fig))]
     return [" ".join(html.unescape(x).split()) for x in out]
+
+
+def figure_examples(fig):
+    """the real things an idea drawn with the Concepts family stands for - its spec's "example" (2.108.0, Aigars: drawn
+    ideas "turn into just arrows and lines"): each gets its photograph beside the drawing like a drawn part (L57), or goes
+    on the list of pictures still missing"""
+    out = []
+    for m in JSON_DATA.finditer(fig):
+        try:
+            spec = json.loads(m.group(1).replace("<\\/", "</"))
+        except ValueError:
+            continue
+        ex = spec.get("example") if isinstance(spec, dict) else None
+        out += [x for x in ([ex] if isinstance(ex, str) else ex or []) if isinstance(x, str) and x.strip()]
+    return [" ".join(x.split()) for x in out]
 
 
 def step_numbers(fig):
@@ -1564,19 +1596,23 @@ def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None, refu
     `not_things` (build sheet "not_things", 2.49.1): words the drawing writes that are no real thing - an axis, a line
     of a chart - are left off the list altogether (`refuse` = "no photo fits", which stays on it)"""
     strip, taps, taken = [], [], taken if taken is not None else {}
+    examples = figure_examples(fig)
+
+    def thing(name):                                      # an idea's named example is a real thing by its spec's word
+        return is_thing(name) or any(same_thing(name, x) for x in examples)
     for num, name in drawn_parts(lines, fig):
         if any(same_thing(name, x) for x in not_things):
             continue
         if any("assets/img/" + n in on_slide and any(shows_it(x, name) for x in m.get("shows") or []) for n, m, _, _ in pool):
             continue                                      # its photograph is already on the slide
         if any(same_thing(name, x) for x in refuse):
-            if is_thing(name):                            # the build sheet says no photo we have fits how it is drawn here
+            if thing(name):                               # the build sheet says no photo we have fits how it is drawn here
                 notes.append((where, num, name))
             continue
         hit = next(((n, m, d, pid) for n, m, d, pid in pool if pid not in taken
                     and any(shows_it(x, name) for x in m.get("shows") or [])), None)
         if not hit:
-            if is_thing(name):
+            if thing(name):
                 notes.append((where, num, name))
             continue
         # 2.63.0 (the instructors' review of IGF Basic: "a clickable vessel - tap Engine room, FPR, TCS, bunkering station,
@@ -2169,10 +2205,11 @@ def pick_template(s, b, comp, is_photo, has_fig, lines, split_photo, photo_col, 
     return tid, var
 
 
-def auto_parts(lines, ranges=None):
-    """the slide's lines in readable parts, in order: the build sheet's "parts", or about PART_WORDS words each - the script's
-    own rule (content_script.parts_of, 2.73.0: no part over the budget when the lines allow it)"""
-    return cs.parts_of(lines, ranges, PART_WORDS)
+def auto_parts(lines, ranges=None, part_words=None):
+    """the slide's lines in readable parts, in order: the build sheet's "parts", or about PART_WORDS words each (fewer
+    beside a larger picture box) - the script's own rule (content_script.parts_of, 2.73.0: no part over the budget when the
+    lines allow it)"""
+    return cs.parts_of(lines, ranges, part_words or PART_WORDS)
 
 
 def parts_html(lines, parts, emph):
@@ -2557,9 +2594,13 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         sit = "".join('<p class="lt-sit lt-in" style="--i:1" data-script-field="text" data-i="%d">%s</p>' % (i, e(x)) for i, x in enumerate(lines, 1))
         d["data-stops"] = "2"
         variant = "picture-left" if fig else "text-only"
+        if fig:
+            # the situation under the picture, the question and its choices beside them: in one column with the whys
+            # open, every scenario of the first factory trial ran 50 to 290 px past the slide
+            side, sit = '<div class="lt-scol">%s%s</div>\n    ' % (side.replace("--i:1", "--i:0"), sit), ""
         body = ('<div class="slide-body lt-split" style="--cols:%s">%s<div class="copy lt-dcopy">%s<p class="lt-ask lt-in" style="--i:2" '
                 'data-script-field="ask">%s</p><ol class="lt-opts lt-in" style="--i:3">%s\n      </ol></div></div>'
-                % ("46fr 54fr" if fig else "1fr", side.replace("--i:1", "--i:0") + "\n    " if fig else "", sit, e(s.get("ask")), opts))
+                % ("46fr 54fr" if fig else "1fr", side if fig else "", sit, e(s.get("ask")), opts))
 
     elif tid == "worked-example":
         # each step of the worked example lights on Next; then the room's turn, and its answer on the last Next
@@ -2570,7 +2611,7 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         variant = "figure" if fig else "text-only"
         side = answer_over(side, s)
         body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy"><ol class="lt-work">%s%s\n      </ol></div>%s</div>'
-                % ("46fr 54fr" if fig else "1fr", steps, you, "\n    " + side if fig else ""))
+                % ("56fr 44fr" if fig else "1fr", steps, you, "\n    " + side if fig else ""))
 
     elif tid == "name-parts":
         # the room names each numbered part on the picture first; Next shows the names one by one
@@ -2910,7 +2951,22 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
         comp = "photo"
     # L61 - the slide's template, and the owner's rules for it
     # 2.67.0 - build_module.py measured this slide's own layout spilling (its words unchanged since): its words go in parts
-    in_parts = wants_parts(avoid, s, b)
+    # the picture's box (layout-templates.json "boxes", layout_fit.py): the box the picture needs to be read, the words
+    # beside it or in parts, the picture alone on the stage - or, when no box beside these words can show it, a problem:
+    # the picture is to be made another kind
+    fitc, want_t = None, (b.get("template") or "").split(".v")[0]
+    if fig and not is_photo and comp == "two-col":
+        if b.get("box") and b["box"] not in layout_fit.ORDER:
+            probs.append("%s: \"box\": %s - the picture's boxes are %s (layout-templates.json \"boxes\")"
+                         % (where, b["box"], ", ".join(layout_fit.ORDER)))
+        need = layout_fit.demand(fig, is_3d(s) or "data-3d-box" in fig, len(b.get("spots") or []))
+        fitc = layout_fit.choose(cs.wc(" ".join(lines)), need, b.get("box") if b.get("box") in layout_fit.ORDER else None)
+        if fitc["action"] == "stage" and not own_comp and not want_t:
+            comp = "stage"
+        elif fitc["action"] == "swap" and not want_t:
+            probs.append("%s: %s - no box beside the words shows it readably; %s (L61, L71)"
+                         % (where, fitc["why"], layout_fit.SWAP_ADVICE))
+    in_parts = wants_parts(avoid, s, b) or bool(fitc and fitc["parts"] > 1 and not want_t)
     tid, variant = pick_template(s, b, comp, is_photo, bool(fig), lines, split_photo, photo_col, probs, where, in_parts)
     nwords_all = cs.wc(" ".join(lines))
     if kind == "slide" and not fig and nwords_all > DENSE_WORDS:
@@ -2928,8 +2984,14 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
             split = None
     if tid == "compare-two" and comp not in ("photo",):
         comp = "compare"
-    if (is_3d(s) or "data-3d-box" in (fig or "")) and TEMPLATE_COMPOSITION.get(tid) == "two-col" and variant != "text-only"             and (split is None or split > SPLIT_3D):
-        split = SPLIT_3D                                    # the model's room comes first; words past it go in parts
+    part_w = None
+    if fitc and fitc["box"] and TEMPLATE_COMPOSITION.get(tid) == "two-col" and variant != "text-only":
+        dflt = layout_fit.BOX["default"]
+        grown = layout_fit.picture_share(fitc["box"]) > layout_fit.picture_share(dflt)
+        if b.get("box") in layout_fit.ORDER or (split is None and fitc["box"] != dflt) \
+                or (grown and split is not None and split > fitc["text"]):
+            split = fitc["text"]                            # the picture's room comes first; words past it go in parts
+        part_w = layout_fit.PART_WORDS * layout_fit.BOX[fitc["box"]]["words"] / float(layout_fit.BOX[dflt]["words"])
     if tid == "opening" and variant == "photo":            # the opening's photograph is the screen, the title over it
         comp = "photo"
     # L62 (owner, 2026-10-21) - never the same look on two slides in a row: built another way when it would repeat
@@ -3000,11 +3062,17 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
                      "or lay it over a blank part of a kit drawing (\"over\")" % (where, nwords, cap, round((nwords - cap) * 4.5)))
     # 2.63.0 - an early warning, before the audit measures it: the slide's words past the measured budget of its layout
     bud = word_budget(tid, variant, bool(inset))
+    if bud and part_w and not inset and fitc["box"] != layout_fit.BOX["default"]:
+        # beside a picture box of another size: that box's words
+        if tid == "content-in-parts":
+            bud = (int(part_w), "in a part beside the %s box" % fitc["box"])
+        elif bud[1] == "beside a picture":
+            bud = (layout_fit.BOX[fitc["box"]]["words"], "beside the %s picture box" % fitc["box"])
     if bud and not (inset and cap and nwords > cap):
         many = nwords
         if tid == "content-in-parts":
             rr = line_ranges(b.get("parts"), len(lines)) if b.get("parts") else None
-            many = max(cs.wc(" ".join(lines[i - 1] for i in ix)) for ix in auto_parts(lines, rr))
+            many = max(cs.wc(" ".join(lines[i - 1] for i in ix)) for ix in auto_parts(lines, rr, part_w))
         if many > bud[0]:
             note_once("Note: %s - %d words %s; the layout holds about %d at 1024 x 768 (measured, layout-templates.json "
                       "\"budgets\"): expect the audit to find it spilling - %s" % (where, many, bud[1], bud[0],
@@ -3026,6 +3094,8 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
     if b.get("photo_badges") is False:          # 2.63.2: a part's camera badge is recommended, a builder may turn it off
         d["data-photo-badges"] = "off"
     template_attrs(d, tid, variant, split)
+    if fitc and fitc["box"] and TEMPLATE_COMPOSITION.get(tid) == "two-col" and variant != "text-only":
+        d["data-box"] = fitc["box"] if (split or layout_fit.BOX[layout_fit.BOX["default"]]["text"]) == fitc["text"] else "own"
     if varied:              # built another way for L62: build_module.py measures it out if the audit finds it does not fit
         d["data-varied"] = "%s|%s|%s" % (varied[0], varied[1], wkey)
     label = "Theory"
@@ -3119,7 +3189,7 @@ def slide_html(script, s, n, total, b, mdir, figdir, foot, probs, notes=None, po
             if ranges and sum(hi - lo + 1 for lo, hi in ranges) != len(lines):
                 probs.append("%s: \"parts\" leave out some lines - every approved line is in a part (L61)" % where)
                 ranges = None
-            reading = copy(parts_html(lines, auto_parts(lines, ranges), emph), 4)
+            reading = copy(parts_html(lines, auto_parts(lines, ranges, part_w), emph), 4)
         elif tid == "reference-table":
             reading = copy(table_html(lines), 4)
         else:
@@ -3569,6 +3639,8 @@ PATTERNS = (
                       "tank connection space", "fuel preparation")], 3),
     ("vent_system", [("vent mast", "relief valve", "venting", "vent line", "outlet"), ("tank",)], 2),
     ("fuel_types", [("lng", "cng", "lpg", "methanol", "ammonia", "hydrogen", "ethanol")], 4),
+    ("triple_constraint", [("triple constraint", "scope", "cost", "budget", "schedule", "end date", "time")], 3),
+    ("routine_vs_project", [("routine", "operations", "repeat"), ("project",)], 1),
 )
 
 
@@ -3927,7 +3999,7 @@ def starter_track(script, s, lines, variant="v"):
                      "draws. Draw the real thing if it has one; else keep the track and check every step's words"}
 
 
-# 2.108.1 - a drawing slide about an idea, a sequence or numbers starts from the 2D kit (course-visuals/kit2d), drawn to
+# a drawing slide about an idea, a sequence or numbers starts from the 2D kit (course-visuals/kit2d), drawn to
 # the two-col figure column's shape. Equipment (schematic, cutaway) and a slide one of the tested IGF patterns or a
 # molecule / curve starter fits keep the figure kit's starter until they become 3D (L67).
 KIT2D_STARTER_KINDS = ("chart", "comparison", "step_animation", "flow_animation", "process_animation", "interactive_diagram")
@@ -4042,7 +4114,7 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
         two_d = s["id"] in fallback
         if not two_d and (s["id"] in skip or cs.parse_kind(s.get("visual_kind", "")) not in STARTER_FIGURE_KINDS):
             continue
-        spec = starter_kit2d(script, s) if kit2d_slide(script, s) else None    # 2.108.1: an idea, a sequence or numbers
+        spec = starter_kit2d(script, s) if kit2d_slide(script, s) else None    # an idea, a sequence or numbers: the 2D kit
         spec = spec or starter_figure(script, s, pool, taken)
         if not spec:
             continue

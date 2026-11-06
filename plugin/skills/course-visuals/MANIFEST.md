@@ -90,7 +90,11 @@ kit/                            the figure kit (L55): a figure is a spec of part
   GALLERY.html                      every part moving, on the dark or the light panel (switch at the top)
   scripts/studio.py                 the figure studio: one spec on its real slide, every step, 1280x800 + 1024x768,
                                     every drawing audit, a screenshot - in seconds, no module compile
-  scripts/check_kit.py · kit_parts.py   spec and part checks; list / promote a course's parts into kit.js
+  scripts/check_kit.py · kit_parts.py   spec and part checks; list / promote a course's parts into kit.js (--pr: the
+                                    branch, commit, push and pull request too); 2.108.0 a figure is a drawing: WORDS
+                                    ONLY, STEPS SHOW ONLY WORDS, DECORATION, BROKEN CHARACTERS, a part of boxes and words
+  patterns/ · Concepts family       2.108.0 tradeoff, cycle, timeline - an idea drawn as its shape, on the light panel;
+                                    routine_vs_project, triple_constraint (Project Management M01 rebuilt)
   scripts/kit_meaning.py            what a figure MEANS (every build); BOX (2.77.0): a box labelled with a machine
                                     (knowledge/figure-truths.json "equipment") with none drawn in it fails - the
                                     gas valve unit, switchboard, motor, propeller and LNG truck are kit parts now;
@@ -121,14 +125,14 @@ kit3d/                          the 3D kit: a 3D scene is a spec of parts, label
 - **Level 3 of the pipeline is not automated.** Judging whether a source is technically credible is
   not a regex. It belongs to the `visual-sourcer` agent.
 
-## The 2D kit (2.108.0)
+## The 2D kit (2.112.0)
 
 `kit2d/` replaced the figure kit for new 2D figures (owner, 2026-11-06: the 2D kit was "awful", made for one gas
 course; the figure kit stays for control screens). Built from the owner's reference (`2d-kit-reference/`, outside the
 repository): one hero, the cause moves the picture, depth from layers, words beside with a halo, colour that means
 something. Measured, not judged by eye: a frame-by-frame probe found no jump in any figure after the motion rewrite;
 `KIT2D.audit` is clean at every step of the seven demo figures at both tablet sizes, and caught the week labels and
-the Today tag colliding inside a compiled deck before they were fixed. 2.109.0: more parts (bars, pyramid, balance,
+the Today tag colliding inside a compiled deck before they were fixed. 2.113.0: more parts (bars, pyramid, balance,
 events, compare, person, tank, pump) and `kit2d/scripts/test_kit2d.py`, which walks every demo figure through the audit.
 Not yet: a light-page review, gallery cards per part, and the layout chooser that gives a wide figure a wide box.
 
