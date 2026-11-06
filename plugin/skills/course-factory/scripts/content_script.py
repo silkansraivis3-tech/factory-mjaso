@@ -938,7 +938,7 @@ def shown_terms(s):
 
 # the task rules that are about a set or a module's questions as a trainee goes through them: with groups, each group's
 # path (the questions for everyone and the group's own) must meet them, never the mix of all groups no trainee sees
-GROUP_RULES = ("t_sc_small", "t_sc_big", "t_no_challenge", "t_ab_order", "t_not_spaced", "t_mc_small", "m_mix",
+GROUP_RULES = ("t_sc_small", "t_sc_big", "t_sc_mix", "t_no_challenge", "t_ab_order", "t_not_spaced", "t_mc_small", "m_mix",
                "m_too_much_choice", "m_no_hands_on", "m_same_in_a_row")
 
 
@@ -1039,6 +1039,12 @@ def theory_check(script):
                     add(s["id"], "", FAIL, "t_sc_small", set=set_name(script, st), q=n, lo=R["self_check"]["min_questions"])
                 elif n > R["self_check"]["max_questions"]:
                     add(s["id"], "", NOTE, "t_sc_big", set=set_name(script, st), q=n, hi=R["self_check"]["max_questions"])
+                RS = R["self_check"]        # owner: of five, three rich tasks (3D, animation, a panel) and two basic
+                rich = sum(1 for q in st["questions"] if mech(q) in RS["rich"])
+                basic = sum(1 for q in st["questions"] if MEDIA["mechanics"].get(mech(q), {}).get("family") in RS["basic_families"])
+                need = min(RS["rich_min"], max(0, n - RS["basic_max"]))
+                if basic > RS["basic_max"] or rich < need:
+                    add(s["id"], "", FAIL, "t_sc_mix", set=set_name(script, st), b=basic, r=rich, q=n, lo=need)
                 # 2.74.0 (owner, 2026-10-28) - a self-check is Part A, checking what was taught before it in the module (Bloom
                 # 1-2), then Part B, a harder task the trainee solves alone (Bloom 3 or higher). Suggestions, never blocking.
                 lv = [bloom_map.task_level(mech(q), q.get("bloom"))["level"] for q in st["questions"]]
@@ -1320,19 +1326,14 @@ def media_check(script):
                 or any(w in (s.get("visual") or "").lower() for w in F["real_photo_words"])]
         if teach and len(real) < F["real_photo_min_share"] * len(teach):
             add(None, "visual_kind", NOTE, "v_few_photos", n=len(real), tot=len(teach))
-        # L46 (owner, 2026-10-07): 3D where it makes sense, at most half of the pictures - quality, not quantity
+        # L67: 60-80 % of the teaching slides step through interactive 3D, the rest a static render or a photograph
         TD = MEDIA["three_d"]
         is3d = lambda s: MEDIA["visual_kinds"].get(parse_kind(s.get("visual_kind", "")), {}).get("family") in TD["families"]
         three = [s for s in slides if is3d(s)]
         teach = [s for s in slides if not s.get("recap")]       # the recap closes the module; it teaches nothing new (L51)
-        if len(three) >= TD["count_from"] and len(three) > TD["max_share"] * len(teach):      # half of the presentation's teaching slides
+        if len(teach) >= TD["count_from"] and not TD["min_share"] * len(teach) <= len(three) <= TD["max_share"] * len(teach):
             add(None, "visual_kind", FAIL, "v_3d_share", n=len(three), tot=len(teach), pct="%.0f" % (100.0 * len(three) / len(teach)),
-                max="%.0f" % (100 * TD["max_share"]))
-        run = 0
-        for s in slides:
-            run = run + 1 if is3d(s) else 0
-            if run == TD["max_in_a_row"] + 1:
-                add(s["id"], "visual_kind", NOTE, "v_3d_in_a_row", n=run)
+                min="%.0f" % (100 * TD["min_share"]), max="%.0f" % (100 * TD["max_share"]))
         for s in three:
             said = " %s %s " % (s.get("visual", ""), s.get("title", ""))
             word = next((x for x in TD["flat_words"] if re.search(r"(?i)\b%s\b" % re.escape(x), said)), None)

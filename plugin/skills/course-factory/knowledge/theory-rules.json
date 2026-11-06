@@ -34,7 +34,14 @@
     "min_questions": 3,
     "max_questions": 6,
     "minutes_per_question": 1,
-    "_why": "Enough questions for the trainee's own score to mean something, few enough that the lesson keeps its pace."
+    "_why": "Enough questions for the trainee's own score to mean something, few enough that the lesson keeps its pace.",
+    "basic_max": 2,
+    "rich_min": 3,
+    "basic_families": ["choose", "arrange"],
+    "rich": ["hotspot", "label_diagram", "spot_the_hazard", "read_instrument", "set_value", "panel_operate", "find_the_fault",
+             "predict", "explore", "investigate", "line_up", "inspect_round", "take_apart", "test_atmosphere", "deck_round",
+             "dress_for_job", "lay_out"],
+    "_rich": "Owner: a self-check of five is three of the richest tasks (3D, animation, a control panel) and two basic (match, order, choose) - at most two basic questions (the choose and arrange families), and the rest rich up to three: a set of five 3 + 2, of three 1 + 2. A must-fix."
   },
   "module_check": {
     "min_questions": 5,

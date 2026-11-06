@@ -116,7 +116,7 @@ seems to collide with it. The record behind the rows: `references/laws-in-full.m
 | **L43** | **Every module in its own folder**, offline. `scripts/check_module_folder.py` | steps 6-10 |
 | **L44** | **Three places in `course\`:** `to_review\`, `modules\`, `working_claude\`. `workspace.py tidy` | now |
 | **L45** | **The classroom system's own rules** - `knowledge/classroom-system.json`, checked by `scripts/check_course_package.py` | steps 6-10 |
-| **L46** | **3D where shape, inside or layout in space teaches** - at most half the teaching slides, smooth on the tablet | now; step 9 |
+| **L46** | **3D at full quality, smooth on the tablet** - its share is L67's 60-80 % | now; step 9 |
 | **L47** | **A generated picture only within the budget the operator said yes to** - one yes per course at Stage 2 (`intake.json` `picture_budget`) | now |
 | **L48** | **Bloom measured, lifted by the tablet** - `bloom/GUIDE.md`, `scripts/bloom_map.py`; one level a course (L71) | now |
 | **L49** | **20 / 80 in class, every theory slide kept** - `active/GUIDE.md` at Stage 2; a suggestion, never a stop | now |

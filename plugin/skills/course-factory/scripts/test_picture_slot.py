@@ -49,6 +49,7 @@ def main():
         x.pop("picture", None)
     check("a script from before 2.73.0: no must-fix, each slide reminded to write its slot",
           all(lv == cs.NOTE for _, lv in rules(sc)) and ("p_missing", cs.NOTE) in rules(sc, "s01"), rules(sc))
+    screen(sc, "s02")["visual_kind"] = "chart"
     check("... and its slot is read from visual_kind: a photo, a chart is a figure, model_3d is 3d, the recap has none",
           [cs.picture_of(screen(sc, x))["kind"] for x in ("s01", "s02", "s03")] == ["photo", "figure", "3d"]
           and not cs.on_picture(screen(sc, "s04")))

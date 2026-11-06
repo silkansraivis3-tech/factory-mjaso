@@ -94,9 +94,9 @@ SCRIPT = {
     "screens": [
         {"id": "s01", "sub_ilo": "1.1", "kind": "slide", "title": "Why gas tankers are different", "text": S01_TEXT, "visual_kind": "photo",
          "visual": "Photograph of a membrane LNG carrier alongside", "picture": {"kind": "photo", "aspect": "4:3", "shows": "A membrane LNG carrier alongside"}, "notes": S01_NOTES, "minutes": 5},
-        {"id": "s02", "sub_ilo": "1.1", "kind": "slide", "title": "Three ways to keep the cargo liquid", "text": S02_TEXT, "visual_kind": "chart",
-         "visual": "Pressure-temperature line for propane with the three ship types marked",
-         "picture": {"kind": "figure", "aspect": "4:3", "shows": "The propane line with the three ship types marked"}, "notes": S02_NOTES, "minutes": 5},
+        {"id": "s02", "sub_ilo": "1.1", "kind": "slide", "title": "Three ways to keep the cargo liquid", "text": S02_TEXT, "visual_kind": "model_3d",
+         "visual": "3D model of a semi-refrigerated tank - turn it and cut it open to see its insulation and its cooling coil",
+         "picture": {"kind": "3d", "aspect": "4:3", "shows": "A semi-refrigerated tank, cut open"}, "notes": S02_NOTES, "minutes": 5},
         {"id": "t01", "kind": "task-slide", "opens": "SC1", "title": "Self-check 1 - keeping the cargo liquid",
          "text": "A short self-check opens on your tablet now: three questions on why gas is carried cold or under pressure.",
          "notes": "Press OPEN TASK. Give three minutes and watch who hesitates.", "minutes": 3},
@@ -336,6 +336,17 @@ def main():
         small["screens"] = [s for s in small["screens"] if s["id"] not in ("q03", "m05")]
         rs = rules_of(small)
         check("a self-check or module check with too few questions is found", "t_sc_small" in rs and "t_mc_small" in rs, rs)
+        check("the example self-check, two basic and one rich, meets the mix", "t_sc_mix" not in rules_of(SCRIPT), rules_of(SCRIPT))
+        plain = copy.deepcopy(SCRIPT)
+        screen(plain, "q03").update(mechanic="single_choice", options=["About -104 °C", "About -42 °C"], correct="A")
+        check("three basic questions in one self-check must be fixed (the first trial: mostly choose and match)",
+              any(f["rule"] == "t_sc_mix" and f["level"] == cs.FAIL for f in cs.theory_findings(plain)[0]), rules_of(plain))
+        five = copy.deepcopy(SCRIPT)
+        at = next(i for i, x in enumerate(five["screens"]) if x["id"] == "q03") + 1
+        five["screens"][at:at] = [dict(screen(SCRIPT, "q03"), id=i, mechanic=m) for i, m in (("q06", "critique"), ("q07", "panel_operate"))]
+        check("... of five, two basic and two rich and a critique must be fixed - three rich", "t_sc_mix" in rules_of(five), rules_of(five))
+        screen(five, "q06")["mechanic"] = "read_instrument"
+        check("... two basic and three rich is the owner's mix", "t_sc_mix" not in rules_of(five), rules_of(five))
         cb = new_course(tmp, "thin", thin)
         code, out = cs_run("render", cb, "--module", "1")
         tpage = io.open(cs.paths(cb, 1)["review"], encoding="utf-8").read()
@@ -386,7 +397,8 @@ def main():
             screen(many, x)["picture"] = {"kind": "photo" if x != "s03" else "figure", "aspect": "4:3"}   # 2.73.0: the slot follows
         f = [x for x in cs.media_findings(many) if x["rule"] == "v_few_kinds"]
         check("six slides with only two kinds of picture is suggested, not blocked", f and f[0]["level"] == cs.NOTE, f)
-        check("... so a module with only suggestions can still be approved", not cs.blocking(cs.media_findings(many)), cs.blocking(cs.media_findings(many)))
+        two_kinds = [x for x in cs.blocking(cs.media_findings(many)) if x["rule"] != "v_3d_share"]    # no 3D at all is L67's own must-fix
+        check("... so the kinds of picture alone never block approval", not two_kinds, two_kinds)
 
         print("\n-- 2.23.0: team tasks, planned with the words (classroom rulebook 4b)")
         tm = copy.deepcopy(SCRIPT)
@@ -403,25 +415,30 @@ def main():
         check("caught: no team or member scope", any("\"scope\": \"team\"" in x for x in pb), pb)
         check("caught: the module check as a team task - each trainee answers it alone", any("t02" in x and "answered by each trainee alone" in x for x in pb), pb)
 
-        print("\n-- 2.22.0: 3D where it makes sense - at most half of the pictures, quality not quantity (L46)")
-        check("the test module: one 3D slide of three is fine", not [x for x in cs.media_findings(SCRIPT) if x["rule"].startswith("v_3d")],
-              [x for x in cs.media_findings(SCRIPT) if x["rule"].startswith("v_3d")])
+        print("\n-- L67: 60-80 % of the teaching slides step through interactive 3D")
+        share = lambda sc: [x for x in cs.media_findings(sc) if x["rule"] == "v_3d_share"]
+        check("the test module: two 3D slides of three (67 %) are fine", not share(SCRIPT), share(SCRIPT))
+        one = copy.deepcopy(SCRIPT)
+        screen(one, "s02")["visual_kind"] = "chart"
+        check("... one of three is too few - must be fixed", share(one) and share(one)[0]["level"] == cs.FAIL, share(one))
         d3 = copy.deepcopy(SCRIPT)
         for x in ("s01", "s02", "s03"):
             screen(d3, x)["visual_kind"] = "model_3d"
         screen(d3, "s02")["visual"] = "A 3D vapour-pressure chart of the three cargoes"
         f3 = {x["rule"]: x for x in cs.media_findings(d3)}
-        check("three slides of three in 3D must be fixed - at most half", f3.get("v_3d_share", {}).get("level") == cs.FAIL
-              and "3 of the 3" in cs.T(dict(d3, operator_language="en"), "v_3d_share", n=3, tot=3, pct="100", max="50"), f3.get("v_3d_share"))
-        check("... three in a row is a suggestion, on the third", f3.get("v_3d_in_a_row", {}).get("level") == cs.NOTE and f3["v_3d_in_a_row"]["screen"] == "s03", f3.get("v_3d_in_a_row"))
+        check("three slides of three in 3D is over 80 % - must be fixed", f3.get("v_3d_share", {}).get("level") == cs.FAIL
+              and "3 of the 3" in cs.T(dict(d3, operator_language="en"), "v_3d_share", n=3, tot=3, pct="100", min="60", max="80"), f3.get("v_3d_share"))
+        check("... three in a row is not flagged: 60-80 % makes runs normal", "v_3d_in_a_row" not in f3, f3.get("v_3d_in_a_row"))
         check("... a 3D model of a chart is a suggestion: it is flat", f3.get("v_3d_flat", {}).get("level") == cs.NOTE and f3["v_3d_flat"]["screen"] == "s02", f3.get("v_3d_flat"))
-        two = copy.deepcopy(SCRIPT)
+        two = copy.deepcopy(one)
         screen(two, "s01")["visual_kind"] = "model_3d_scan"
-        f2 = [x for x in cs.media_findings(two) if x["rule"] == "v_3d_share"]
-        check("two of three in 3D (a scan counts too) is over half - must be fixed", f2 and f2[0]["level"] == cs.FAIL, f2)
-        half = copy.deepcopy(two)
-        half["screens"][1:1] = [dict(screen(SCRIPT, "s02"), id="s0%d" % i, visual_kind="photo") for i in (4, 5)]
-        check("... two of five is fine", not [x for x in cs.media_findings(half) if x["rule"] == "v_3d_share"])
+        check("two of three in 3D (a scan counts too) is 67 % - fine", not share(two), share(two))
+        five = copy.deepcopy(two)
+        five["screens"][1:1] = [dict(screen(SCRIPT, "s02"), id="s0%d" % i, visual_kind="photo") for i in (4, 5)]
+        check("... two of five is 40 % - too few", share(five) and share(five)[0]["level"] == cs.FAIL, share(five))
+        short = copy.deepcopy(SCRIPT)
+        short["screens"] = [x for x in short["screens"] if x.get("id") not in ("s02", "s03")]
+        check("a module under 3 teaching slides is not counted", not share(short), share(short))
 
         print("\n-- 2.49.0: 3D and AI pictures proposed unasked, slide by slide - kept or struck")
         prop = lambda sc, r: [x for x in cs.media_findings(sc) if x["rule"] == r]
@@ -603,7 +620,7 @@ def main():
             [{"field": "s02.visual_kind", "new": cs.MEDIA["visual_kinds"]["flow_animation"]["lv"]}], ensure_ascii=False))
         cs_run("render", cb3, "--module", "1")
         code, out = cs_run("propose", cb3, "--module", "1", "--changes", os.path.join(tmp, "k.json"))
-        check("the kind of picture is changed in the operator's own words", "the kind of picture becomes" in out, out)
+        check("the kind of picture is changed in the operator's own words", "the kind of picture" in out and "Plūsmas animācija" in out, out)
         cs_run("apply", cb3, "--module", "1", "--confirmed")
         check("... and stored as the kind the factory builds", screen(cs.load(cs.paths(cb3, 1)["script"]), "s02")["visual_kind"] == "flow_animation")
         kd = zipfile.ZipFile(cs.paths(cb3, 1)["docx"]).read("word/document.xml").decode("utf-8")

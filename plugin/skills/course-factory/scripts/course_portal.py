@@ -484,9 +484,21 @@ def blockers(course):
     if not folder:
         return [], ["modules\\COURSE.html is missing - the course is not compiled"]
     import check_course_package
-    probs = check_course_package.check(folder)[0]
+    probs = check_course_package.check(folder)[0] + failed_builds(course)
     pics = [x for x in probs if "is a Phase A placeholder" in x]
     return pics, [x for x in probs if x not in pics]
+
+
+def failed_builds(course):
+    """each module whose last build ended on FAIL: a module with no PASS is not built, whatever a report says"""
+    out = []
+    logdir = workspace.claude_path(workspace.work_folder(course, create=False), "_build")
+    for ans in sorted(glob.glob(os.path.join(logdir, "*_answer.txt"))):
+        said = [x.strip() for x in io.open(ans, encoding="utf-8", errors="replace").read().splitlines()
+                if x.startswith(("PASS ", "FAIL "))]
+        if said and said[-1].startswith("FAIL ") and " - course package" not in said[-1]:
+            out.append("%s - its last build did not pass" % said[-1][:120])
+    return out
 
 
 def _stop_message(cid, why):
