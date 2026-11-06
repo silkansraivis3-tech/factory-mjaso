@@ -110,6 +110,13 @@ and the tablet fades in (`lt-fade`) - rising, it started 19 px below the body's 
 cut off on every task slide; long words stretched it 99 px past the slide. The chips are `clamp(14px,2vmin,18px)` - they
 were 12.2 px at 1280 x 720, under the 12.5 px floor. Tested in `course-factory/compile/scripts/test_compile_module.py`.
 
+## The picture's box — 2.109.0 (2026-11-06)
+
+`knowledge/layout-templates.json` `"boxes"`: a picture beside words is one of four boxes - text-wide, even (the
+default), picture-wide, picture-large (40, 45, 58, 65 % of the width) - with each box's words budget and the share a
+picture needs by the names it shows. The compiler's `compile/scripts/layout_fit.py` chooses the box, the words' parts,
+the stage, or says to make the picture another kind; `gb_layouts.css` needs nothing new (`--lt-text` takes any share).
+
 ## The blueprints — 2.91.0 (2026-11-03)
 
 `knowledge/blueprints.json`: every slide template and variant and every task screen as slots of six kinds (Title, Text,

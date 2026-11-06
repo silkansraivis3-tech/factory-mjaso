@@ -461,6 +461,11 @@ def l62_pairs(deck_html):
 
 
 FIT_WORDS = re.compile(r"\b(scrolls|spills|over-filled)\b")
+# a picture that needs more room than its box gives it: its drawing's words under the floor, or the picture shown only in
+# part (fit_gate.py) - the layout solver gives it the next larger picture box (layout-templates.json "boxes")
+ROOM = re.compile(r"drawing text too small|drawn at [\d.]+ px - the floor|labels collide|shows \d+ % of itself|"
+                  r"of its box is seen")
+FIT_GATE_PICTURE = re.compile(r"^\s+(\w+) step [\d,]+\s+picture\s", re.M)
 
 
 def slide_audit(got, deck_html):
@@ -565,10 +570,23 @@ def fit_tries(s, b, have, sec):
     return out
 
 
-def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, pairs=None, tries=SOLVE_TRIES, known=None):
+def room_tries(have, sec):
+    """the solver's tries for a slide whose picture needs more room: the next larger picture boxes, [(what, the record's
+    "set")] - the words stay beside it, or go in parts when they no longer fit (compile_module, layout_fit.choose)"""
+    import layout_fit as lf
+    m = re.search(r'\bdata-box="([\w-]+)"', sec)
+    if not m or m.group(1) not in lf.ORDER:
+        return []
+    return [("the picture's box %s (%d %% of the width, \"box\": \"%s\")" % (nb, round(100 * lf.picture_share(nb)), nb),
+             dict(have, box=nb)) for nb in lf.ORDER[lf.ORDER.index(m.group(1)) + 1:]]
+
+
+def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, pairs=None, tries=SOLVE_TRIES, known=None,
+                  room=None):
     """-> (avoid as it settled, [log lines], {sid: how it settled}, {sid: section_sha} of the slides a taken try measured
     with no finding at all - checked fitting as they are now). fit: the slides whose words do not fit as the pre-check
     measured them, {sid: their other findings}; the L62 repeats are found in the deck laid out (pairs: only these).
+    room: the slides whose picture needs more room, {sid: those findings} - given the next larger picture box.
     Nothing is written here"""
     import copy
     import compile_module as cm
@@ -718,6 +736,35 @@ def solve_layouts(script, build, mdir, figdir, avoid, last, fit, audit, sizes, p
                              "stand on the task slide; its script plans one (%s): give it its \"figure\" in the build sheet "
                              "(a kit spec) and it is laid out beside it, its words in parts" % (
                                  sid, len(cm.cs.lines_of(s.get("text"))), s.get("visual_kind")))
+    # 1b - a picture that needs more room: the next larger picture box, taken when the slide's words still fit, nothing is
+    # left worse and fewer of its picture's findings are left
+    for sid in [x for x in (room or {}) if x in screens and x not in done]:
+        a0 = rec(copy.deepcopy(av), sid)
+        tried = set(a0.get("tried") or [])
+        before = max(1, len([x for x in room[sid] if ROOM.search(x)]))
+        for what, st in room_tries(a0.get("set") or {}, sec_of(deck, sid)):
+            if what in tried:
+                continue
+            if budget[0] <= 0:
+                lines.append("%s: no tries left in this build (%d) - the next build goes on" % (sid, tries))
+                break
+            pre, why = screen(with_set(sid, st))
+            if pre is None:
+                lines.append("tried %s on %s (laid out, not audited): %s" % (what, sid, why))
+                continue
+            f = measure(pre, [sid])
+            if f is None:
+                return av, lines, done, fits
+            why = judge(pre, f, [sid])
+            left = len([x for x in (f.get(sid) or {}).get("other") or [] if ROOM.search(x)])
+            if not why and left < before:
+                av, deck, probs = with_set(sid, st), pre[0], pre[1]
+                taken((pre[0], None, f, pre[2]), [sid])
+                done[sid] = what
+                lines.append("settled: %s - its picture needed more room; %s" % (sid, what))
+                break
+            lines.append("tried %s on %s: %s" % (what, sid, why or "its picture's findings are no fewer"))
+            rec(av, sid).setdefault("tried", []).append(what)
     # 2 - an L62 repeat: the slide before it built its next way; then (the 2.72.5 run's M02 s04 / s05: s04's other side did
     # not fit, s05 an activity that never varies) a wider words' column or parts on either, so a side measured out beside
     # the old column may be built again
@@ -770,6 +817,14 @@ def last_misses(logdir, m):
         return "all"
 
 
+def last_room(logdir, m):
+    """the slides whose picture the last build's fit gate found shown only in part (MNN_room_misses.json)"""
+    try:
+        return set(json.load(io.open(os.path.join(logdir, "%s_room_misses.json" % m), encoding="utf-8")))
+    except (OSError, ValueError):
+        return set()
+
+
 def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None, extra=None):
     """-> ([log lines], {sid: (shape, ground)} measured out). audit(deck path, size, [slide index]) -> (result, error):
     run_audits.measure by default (the test passes its own). extra (2.72.7): slides to audit in the first round besides
@@ -793,6 +848,8 @@ def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None, extra=No
     except (OSError, ValueError):
         fitted = {}
     lines, out, seen, nofit, known = [], {}, set(), {}, {}
+    if extra != "all":                             # the pictures the last fit gate saw in part are measured first too
+        extra = set(extra or ()) | last_room(logdir, m)
     if audit is None:
         audit = browser_audit()
         if audit is None:
@@ -856,11 +913,15 @@ def layout_precheck(course, module, mdir, logdir, m, sizes, audit=None, extra=No
                     fitted[sid] = section_sha(deck, sid)
             lines.append("measured again as now built: %s%s" % (", ".join(sorted(moved)), "; did not fit: " + ", ".join(
                 sorted(x for x in moved if x in bad)) if set(moved) & set(bad) else " - every one fits"))
-    if bad or l62_pairs(deck):
+    room = {sid: [x for x in (f.get("other") or []) if ROOM.search(x)] for sid, f in known.items()}
+    room = {sid: v for sid, v in room.items() if v}
+    for sid in last_room(logdir, m):
+        room.setdefault(sid, ["the last build's fit gate: its picture shown in part"])
+    if bad or l62_pairs(deck) or room:
         t = time.time()
         av, said, done, fits = solve_layouts(script, build, mdir, figdir, avoid, last,
                                              {sid: bad[sid] for _, sid, _ in slide_order(deck) if sid in bad}, audit, sizes,
-                                             known=known)
+                                             known=known, room=room)
         lines += said
         fitted.update(fits)
         if av != avoid:
@@ -1503,6 +1564,13 @@ def main(argv=None):
         try:
             io.open(os.path.join(logdir, "%s_fit_misses.json" % m), "w", encoding="utf-8").write(
                 json.dumps(fit_misses(io.open(deck, encoding="utf-8").read(), results[ak][1])))
+        except OSError:
+            pass
+    fk = [k for k in jobs if k.startswith("fit ") and k in results]
+    if fk:                                         # the pictures the fit gate saw in part: the next pre-check grows their box
+        try:
+            io.open(os.path.join(logdir, "%s_room_misses.json" % m), "w", encoding="utf-8").write(
+                json.dumps(sorted(set(sum((FIT_GATE_PICTURE.findall(results[k][1]) for k in fk), [])))))
         except OSError:
             pass
     stages += [("  " + k, took[k]) for k in list(jobs) + ["course package"] if k in took]
