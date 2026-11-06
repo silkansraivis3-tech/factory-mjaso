@@ -7,6 +7,12 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.111.1 · The 2D kit's minified copy rebuilt (2026-11-06)
+
+- `course-visuals/kit/min/kit.js` rebuilt with `course-module-ui/scripts/minify_engines.py`: 2.108.0 changed `kit.js`
+  without it, so every module shipped the 569 KB source. `test_minify_engines.py` is the check that catches it - run it
+  after any change to `kit.js` or `kit3d.js`.
+
 ## 2.111.0 · The picture's box (2026-11-06)
 
 - **Why.** The factory did not respect the blueprints: every picture beside words had one box (45 %, a 3D model 58 % by a
