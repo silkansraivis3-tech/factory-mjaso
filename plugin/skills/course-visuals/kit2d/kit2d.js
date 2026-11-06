@@ -126,6 +126,7 @@
       ['blue', 'amber', 'good', 'cat-1', 'cat-2', 'cat-3', 'cat-4', 'cat-5'].forEach(function (c) {
         stops(el('linearGradient', { id: id + '-fill-' + c, x1: 0, y1: 0, x2: 0, y2: 1 }, D),
           [[0, 'k2-s-' + c, 0.5], [0.6, 'k2-s-' + c, 0.2], [1, 'k2-s-' + c, 0.06]]);
+        stops(el('linearGradient', { id: id + '-solid-' + c, x1: 0, y1: 0, x2: 0.35, y2: 1 }, D), [[0, 'k2-s-' + c, 1], [1, 'k2-s-' + c, 0.62]]);
       });
     },
     url: function (name) { return 'url(#' + this.id + '-' + name + ')'; },
@@ -218,7 +219,7 @@
     frame: function (instant, dt) {
       var f = this, busy = false, k, t = now();
       dt = dt || 0;
-      f.pending = (f.pending || []).filter(function (q) { if (t >= q.at || instant) { f.T[q.k] = q.v; return false; } busy = true; return true; });
+      f.pending = (f.pending || []).filter(function (q) { if (t >= q.at || instant) { f.T[q.k] = q.v; f.syncControls(); return false; } busy = true; return true; });
       for (k in f.T) {
         if (f.S[k] == null || instant || reduce) { f.S[k] = f.T[k]; f.V[k] = 0; continue; }
         var om = f.rate[k] || 7, x = f.S[k], v = f.V[k] || 0, to = f.T[k], eps = 1e-4 * (1 + Math.abs(to)), n2, h;
@@ -228,6 +229,7 @@
       }
       f.parts.forEach(function (q) { if (q.calc) { q.calc(dt); } });
       f.parts.forEach(function (q) { if (q.draw) { q.draw(dt, instant || reduce); } if (q.live && q.live()) { busy = true; } });
+      for (k in (f.charts || {})) { f.charts[k].clear(); }
       f.fx = (f.fx || []).filter(function (e) {           /* one-shot effects: a ring where something has just changed */
         var k2 = (t - e.t0) / e.ms;
         if (k2 < 0) { busy = true; return true; }
@@ -269,15 +271,27 @@
       return L;
     },
     solid: function (fn) { this.solids.push(fn); },
+    /* a line that words keep clear of: fn returns its points; each straight piece becomes a thin box */
+    line: function (fn) {
+      var f = this;
+      f.solids.push(function () {
+        var ps = fn(), out = [], i;
+        for (i = 1; i < ps.length; i++) {
+          var a = ps[i - 1], b = ps[i];
+          out.push({ x: Math.min(a[0], b[0]) - 5, y: Math.min(a[1], b[1]) - 5, x2: Math.max(a[0], b[0]) + 5, y2: Math.max(a[1], b[1]) + 5 });
+        }
+        return out;
+      });
+    },
     layout: function () {
       var f = this, placed = [], solids = [], i;
-      for (i = 0; i < f.solids.length; i++) { solids.push(f.solids[i]()); }
+      for (i = 0; i < f.solids.length; i++) { solids = solids.concat(f.solids[i]()); }
       f.labels.forEach(function (L) {
         var at = L.o.at(), b = L.t.getBBox(), bw = b.width, bh = b.height, best = null, bestCost = 1e9;
         if (!bw) { return; }
         var sides = L.o.side ? [L.o.side] : [];
         sides = sides.concat(['right', 'left', 'up', 'down', 'upright', 'upleft', 'downright', 'downleft']);
-        var dists = L.o.fixed ? [L.o.dist || 16] : [L.o.dist || 16, 46, 80];
+        var dists = L.o.fixed ? [L.o.dist || 16] : [L.o.dist || 16, 34, 56, 84];
         dists.forEach(function (dist, di) {
           sides.forEach(function (s, si) {
             var dx = /right/.test(s) ? 1 : /left/.test(s) ? -1 : 0, dy = /up/.test(s) ? -1 : /down/.test(s) ? 1 : 0;
@@ -285,7 +299,8 @@
             var y = at[1] + dy * dist + (dy < 0 ? -bh : dy === 0 ? -bh / 2 : 0);
             var R = { x: x, y: y, x2: x + bw, y2: y + bh }, cost = di * 40 + si * 3;
             if (R.x < 6 || R.y < 6 || R.x2 > f.W - 6 || R.y2 > f.H - 6) { cost += 500; }
-            placed.concat(solids).forEach(function (o) { if (o && R.x < o.x2 && o.x < R.x2 && R.y < o.y2 && o.y < R.y2) { cost += 200; } });
+            placed.forEach(function (o) { if (R.x < o.x2 && o.x < R.x2 && R.y < o.y2 && o.y < R.y2) { cost += 400; } });
+            solids.forEach(function (o) { if (o && R.x < o.x2 && o.x < R.x2 && R.y < o.y2 && o.y < R.y2) { cost += 200; } });
             if (cost < bestCost) { bestCost = cost; best = { R: R, dist: dist, di: di }; }
           });
           if (L.o.fixed) { return; }
@@ -309,9 +324,10 @@
         var show = L.o.show ? L.o.show() : 1;
         setOp(L.g, show);
         if (L.far) {
-          var ex = clamp(at[0], x, x + L.bw), ey = clamp(at[1], y, y + L.bh);
-          L.lead.setAttribute('d', 'M' + pt(at) + ' L' + pt([ex, ey]));
-          L.dot.setAttribute('cx', at[0].toFixed(1)); L.dot.setAttribute('cy', at[1].toFixed(1));
+          var ex = clamp(at[0], x, x + L.bw), ey = clamp(at[1], y, y + L.bh), r0 = L.o.r || 0, dl = Math.hypot(ex - at[0], ey - at[1]) || 1;
+          var st = [at[0] + (ex - at[0]) / dl * r0, at[1] + (ey - at[1]) / dl * r0];
+          L.lead.setAttribute('d', 'M' + pt(st) + ' L' + pt([ex, ey]));
+          L.dot.setAttribute('cx', st[0].toFixed(1)); L.dot.setAttribute('cy', st[1].toFixed(1));
           L.lead.style.display = L.dot.style.display = '';
         } else { L.lead.style.display = L.dot.style.display = 'none'; }
         if (L.o.text && L.o.live) { L.t.firstChild.textContent = L.o.live(); }
@@ -406,17 +422,28 @@
       X: function (v) { return x0 + (v - X.min) / (X.max - X.min) * W; },
       Y: function (v) { return y0 + H - (v - Y.min) / (Y.max - Y.min) * H; },
       vx: function (px) { return X.min + (px - x0) / W * (X.max - X.min); },
-      box: { x: x0, y: y0, w: W, h: H }, xaxis: X, yaxis: Y
+      box: { x: x0, y: y0, w: W, h: H }, xaxis: X, yaxis: Y, tx: [], ty: [], cover: [],
+      /* the tags over each axis this frame: [axis, centre, half size, how shown]; the ticks under them fade */
+      clear: function () {
+        [['x', C.tx], ['y', C.ty]].forEach(function (A) {
+          A[1].forEach(function (t) {
+            var op = 1;
+            C.cover.forEach(function (c) { if (c[0] === A[0]) { op = Math.min(op, 1 - c[3] * (1 - clamp((Math.abs(t.at - c[1]) - c[2]) / 10, 0, 1))); } });
+            setOp(t.n, op);
+          });
+        });
+        C.cover = [];
+      }
     };
     f.charts = f.charts || {}; f.charts[p.id] = C;
     var g = el('g', {}, f.L.back), v;
     for (v = X.min; v <= X.max + 1e-9; v += X.step) {
       el('line', { x1: C.X(v), y1: y0, x2: C.X(v), y2: y0 + H, 'class': 'k2-grid' }, g);
-      el('text', { x: C.X(v), y: y0 + H + 24, 'text-anchor': 'middle', 'class': 'k2-t-tick' }, g, num(v, X.decimals));
+      C.tx.push({ n: el('text', { x: C.X(v), y: y0 + H + 24, 'text-anchor': 'middle', 'class': 'k2-t-tick' }, g, num(v, X.decimals)), at: C.X(v) });
     }
     for (v = Y.min; v <= Y.max + 1e-9; v += Y.step) {
       el('line', { x1: x0, y1: C.Y(v), x2: x0 + W, y2: C.Y(v), 'class': 'k2-grid' }, g);
-      el('text', { x: x0 - 12, y: C.Y(v) + 5, 'text-anchor': 'end', 'class': 'k2-t-tick' }, g, num(v, Y.decimals));
+      C.ty.push({ n: el('text', { x: x0 - 12, y: C.Y(v) + 5, 'text-anchor': 'end', 'class': 'k2-t-tick' }, g, num(v, Y.decimals)), at: C.Y(v) });
     }
     el('path', { d: 'M' + x0 + ' ' + y0 + ' V' + (y0 + H) + ' H' + (x0 + W), 'class': 'k2-axis' }, g);
     if (X.label) { el('text', { x: x0 + W, y: y0 + H + 52, 'text-anchor': 'end', 'class': 'k2-t-axis' }, g, X.label + (X.unit ? ' (' + X.unit + ')' : '')); }
@@ -463,6 +490,7 @@
       return [lerp(ps[j - 1][0], ps[j][0], t), lerp(ps[j - 1][1], ps[j][1], t)];
     }
     var end = ps[N];
+    f.line(function () { var q = [], j; for (j = 0; j <= N; j += 7) { q.push(ps[j]); } q.push(ps[N]); return q; });
     f.fns = f.fns || {}; f.fns[p.id] = { fn: fn, chart: C };
     var L = p.label ? f.label({ text: p.label, at: function () { return end; }, side: 'upleft', show: function () { return f.get(p.draw, 1) > 0.9 ? 1 : 0; } }) : null;
     return {
@@ -485,7 +513,7 @@
       var t = el('g', {}, parent), r = el('rect', { rx: 8, height: 28, 'class': 'k2-tag' }, t), tx = el('text', { 'class': 'k2-t-tag', y: 20 }, t);
       return { g: t, r: r, t: tx, set: function (s, x, y, anchor) {
         tx.textContent = s; var bw = tx.getComputedTextLength() + 18, h = 28;
-        r.setAttribute('width', bw.toFixed(1)); tx.setAttribute('x', 9);
+        r.setAttribute('width', bw.toFixed(1)); tx.setAttribute('x', 9); this.w = bw;
         var ox = anchor === 'end' ? x - bw : anchor === 'middle' ? x - bw / 2 : x;
         t.setAttribute('transform', 'translate(' + ox.toFixed(1) + ' ' + (y - h / 2).toFixed(1) + ')');
       } };
@@ -511,12 +539,15 @@
         dot.setAttribute('cx', px.toFixed(1)); dot.setAttribute('cy', py.toFixed(1));
         tx.set(tpl(p.tagx || '{x}', { x: x }, p.dx == null ? 0 : p.dx), px, b.y + b.h + 24, 'middle');
         ty.set(tpl(p.tagy || '{y}', { y: y }, p.dy == null ? 0 : p.dy), b.x - 8, py, 'end');
+        var shw = f.get(p.show, 1);
+        C.cover.push(['x', px, tx.w / 2 + 6, shw], ['y', py, 24, shw]);
         setOp(g, f.get(p.show, 1));
         if (ghost) {
           var gx = f.get(p.ghost.x), gy = F(gx), gpx = C.X(gx), gpy = C.Y(gy);
           ghost.drop.setAttribute('d', 'M' + pt([b.x, gpy]) + ' H' + gpx.toFixed(1) + ' V' + (b.y + b.h).toFixed(1));
           ghost.dot.setAttribute('cx', gpx.toFixed(1)); ghost.dot.setAttribute('cy', gpy.toFixed(1));
           ghost.ty.set(tpl(p.tagy || '{y}', { y: gy }, p.dy == null ? 0 : p.dy), b.x - 8, gpy, 'end');
+          C.cover.push(['y', gpy, 24, f.get(p.ghost.show, 1)]);
           setOp(gg, f.get(p.ghost.show, 1));
         }
       }
@@ -808,6 +839,289 @@
     };
   });
 
+  /* cycle - stages round a ring, each an arrow into the next (plan-do-check-act, a maintenance cycle, a watch routine).
+     at: "@stage" - k lights stage k; between two the light passes on; past the last it goes round again, and a marker
+     runs round the ring with it. {x, y, r, band, stages: [{name, sub, cat}], at, center: {text, sub}} */
+  define('cycle', function (f, p) {
+    var St = p.stages || [], n = St.length, cx = p.x, cy = p.y, R = p.r || 150, B = p.band || 42, seg = 2 * Math.PI / n;
+    var gap = 0.045, tip = Math.min(0.17, seg * 0.2), a00 = -Math.PI / 2;
+    function P(a, rr) { return [cx + rr * Math.cos(a), cy + rr * Math.sin(a)]; }
+    var g = el('g', {}, f.L.hero), items;
+    el('circle', { cx: cx, cy: cy, r: R - B / 2 - 14, 'class': 'k2-hub-disc' }, f.L.back);
+    items = St.map(function (st, j) {
+      var a0 = a00 + j * seg + gap, a1 = a00 + (j + 1) * seg - gap, ro = R + B / 2, ri = R - B / 2, cat = st.cat || (j % 5) + 1, big = a1 - a0 > Math.PI ? 1 : 0;
+      var d = 'M' + pt(P(a0, ro)) + ' A' + ro + ' ' + ro + ' 0 ' + big + ' 1 ' + pt(P(a1, ro)) + ' L' + pt(P(a1 + tip, R)) + ' L' + pt(P(a1, ri)) +
+        ' A' + ri + ' ' + ri + ' 0 ' + big + ' 0 ' + pt(P(a0, ri)) + ' L' + pt(P(a0 + tip, R)) + ' Z';
+      var sg = el('g', {}, g);
+      el('path', { d: d, 'class': 'k2-outline-s', 'stroke-width': 6, 'stroke-linejoin': 'round' }, sg);
+      el('path', { d: d, fill: f.url('solid-cat-' + cat) }, sg);
+      el('path', { d: d, 'class': 'k2-edge' }, sg);
+      var mid = (a0 + a1) / 2, c = Math.cos(mid), sn = Math.sin(mid), lp = P(mid, ro + 22);
+      var anchor = c > 0.25 ? 'start' : c < -0.25 ? 'end' : 'middle';
+      var wg = el('g', { 'text-anchor': anchor }, f.L.lbl);
+      var dy = sn < -0.5 ? -26 : sn > 0.5 ? 18 : -6;
+      el('text', { x: lp[0], y: lp[1] + dy, 'class': 'k2-t-lbl k2-t-big k2-halo' }, wg, st.name || '');
+      if (st.sub) { el('text', { x: lp[0], y: lp[1] + dy + 24, 'class': 'k2-t-sub k2-halo' }, wg, st.sub); }
+      return { g: sg, mid: mid, words: wg };
+    });
+    var glow = el('circle', { r: 26, 'class': 'k2-marker-glow' }, f.L.front), mark = el('circle', { r: 12, 'class': 'k2-marker' }, f.L.front);
+    if (p.center) {
+      el('text', { x: cx, y: cy + (p.center.sub ? -2 : 10), 'text-anchor': 'middle', 'class': 'k2-t-val k2-halo' }, f.L.lbl, p.center.text || '');
+      if (p.center.sub) { el('text', { x: cx, y: cy + 28, 'text-anchor': 'middle', 'class': 'k2-t-sub k2-halo' }, f.L.lbl, p.center.sub); }
+    }
+    f.solid(function () { return { x: cx - R - B, y: cy - R - B, x2: cx + R + B, y2: cy + R + B }; });
+    var last = f.target(p.at, 0);
+    return {
+      onStep: function (n2, instant) {
+        var a = f.target(p.at, 0);
+        if (!instant && a >= 1 && Math.round(a) !== Math.round(last)) { var q = P(a00 + (a - 0.5) * seg, R); f.pulse(q[0], q[1], { delay: 520, r: 54 }); }
+        last = a;
+      },
+      draw: function () {
+        var at = f.get(p.at, 0), on = clamp(at * 2 - 1, 0, 1), cyc = at - 1;
+        items.forEach(function (it, j) {
+          var dd = Math.abs(((cyc - j) % n + n + n / 2) % n - n / 2), lit = on * clamp(1 - dd, 0, 1), e = lit * lit * (3 - 2 * lit);
+          setOp(it.g, 0.34 + 0.66 * Math.max(e, 1 - on));
+          it.g.setAttribute('transform', 'translate(' + (Math.cos(it.mid) * 10 * e).toFixed(1) + ' ' + (Math.sin(it.mid) * 10 * e).toFixed(1) + ')');
+          setOp(it.words, 0.5 + 0.5 * Math.max(e, 1 - on));
+        });
+        var q = P(a00 + (at - 0.5) * seg, R);
+        mark.setAttribute('cx', q[0].toFixed(1)); mark.setAttribute('cy', q[1].toFixed(1)); setOp(mark, on);
+        glow.setAttribute('cx', q[0].toFixed(1)); glow.setAttribute('cy', q[1].toFixed(1)); setOp(glow, on * 0.4);
+      }
+    };
+  });
+
+  /* gantt - tasks on a time line, each bar starting when the tasks before it end: a slip pushes everything after it,
+     the critical path lights, the finish moves (or holds, when the slip had slack), today's line shows what is done.
+     {x, y, w, h, nameW, start, end, step, tick: "W{v}", tasks: [{id, name, d, after: [ids], slip: "@x", crit, cat}],
+      draw: "@d", crit: "@c", today: "@t", finish: "Finish {v}"} */
+  define('gantt', function (f, p) {
+    var T = p.tasks || [], n = T.length, x0 = p.x, y0 = p.y, W = p.w, H = p.h, nw = p.nameW || 210, tx = x0 + nw, tw = W - nw - 10;
+    var t0 = p.start || 0, t1 = p.end, head = 40, rh = Math.min(p.rowH || 74, (H - head - 60) / n), bh = Math.round(rh * 0.56);
+    function X(t) { return tx + (t - t0) / (t1 - t0) * tw; }
+    var g = el('g', {}, f.L.back), t, heads = [];
+    for (t = t0; t <= t1 + 1e-9; t += (p.step || 1)) {
+      el('line', { x1: X(t), y1: y0 + head - 6, x2: X(t), y2: y0 + head + n * rh, 'class': 'k2-grid' }, g);
+      if (t < t1) { heads.push({ n: el('text', { x: (X(t) + X(t + (p.step || 1))) / 2, y: y0 + 24, 'text-anchor': 'middle', 'class': 'k2-t-tick' }, g, tpl(p.tick || '{v}', { v: t + 1 }, 0)), at: (X(t) + X(t + (p.step || 1))) / 2 }); }
+    }
+    var rows = T.map(function (k, i) {
+      var cy = y0 + head + i * rh + rh / 2;
+      if (i % 2 === 0) { el('rect', { x: x0, y: cy - rh / 2, width: W, height: rh, rx: 8, 'class': 'k2-row' }, g); }
+      el('text', { x: x0 + 12, y: cy + 6, 'class': 'k2-t-lbl k2-halo' }, f.L.lbl, k.name || k.id);
+      var bg = el('g', {}, f.L.hero), cat = k.cat || 1;
+      var crit = el('rect', { y: cy - bh / 2 - 5, height: bh + 10, rx: 12, 'class': 'k2-crit' }, bg);
+      var ol = el('rect', { y: cy - bh / 2 - 2.5, height: bh + 5, rx: 10, 'class': 'k2-outline' }, bg);
+      var bar = el('rect', { y: cy - bh / 2, height: bh, rx: 8, fill: f.url('solid-cat-' + cat) }, bg);
+      var done = el('rect', { y: cy - bh / 2, height: bh, rx: 8, 'class': 'k2-bar-done' }, bg);
+      var slipR = el('rect', { y: cy - bh / 2, height: bh, rx: 8, 'class': 'k2-bar-slip' }, bg);
+      var lab = el('text', { y: cy + 6, 'class': 'k2-t-inbar' }, bg);
+      return { k: k, cy: cy, crit: crit, ol: ol, bar: bar, done: done, slipR: slipR, lab: lab, deps: (k.after || []).map(function () { return { path: el('path', { 'class': 'k2-dep' }, f.L.back), head: el('path', { 'class': 'k2-dep-head' }, f.L.back) }; }) };
+    });
+    var byId = {}; rows.forEach(function (r) { byId[r.k.id] = r; });
+    var fy = y0 + head + n * rh + 10, finLine = el('path', { 'class': 'k2-finish' }, f.L.front), finTag = el('g', {}, f.L.front);
+    var finR = el('rect', { rx: 8, height: 30, 'class': 'k2-tag-amber' }, finTag), finT = new Roller(finTag, { y: 21, x: 10, 'class': 'k2-t-tag' });
+    var tdLine = el('path', { 'class': 'k2-today' }, f.L.front), tdTag = el('g', {}, f.L.front);
+    el('rect', { rx: 8, height: 28, width: 70, x: -35, y: -34, 'class': 'k2-tag' }, tdTag); el('text', { y: -14, 'text-anchor': 'middle', 'class': 'k2-t-tag' }, tdTag, p.todayLabel || 'Today');
+    var lastFin = null;
+    function plan(to) {
+      var S = {}, E = {}, end = t0;
+      T.forEach(function (k) {
+        var st = k.s != null ? k.s : t0;
+        (k.after || []).forEach(function (a) { st = Math.max(st, E[a]); });
+        S[k.id] = st; E[k.id] = st + k.d + (to ? f.target(k.slip, 0) : f.get(k.slip, 0)); end = Math.max(end, E[k.id]);
+      });
+      return { S: S, E: E, end: end };
+    }
+    f.solid(function () { return { x: x0, y: y0, x2: x0 + W, y2: fy + 40 }; });
+    return {
+      onStep: function (n2, instant) {
+        var e = plan(true).end;
+        if (!instant && lastFin != null && Math.abs(e - lastFin) > 0.01) { f.pulse(X(e), fy + 15, { delay: 700, tone: 'amber', r: 50 }); }
+        lastFin = e;
+      },
+      calc: function () { var q = plan(); f.publish(p.id, 'finish', q.end); },
+      draw: function () {
+        var q = plan(), dr = clamp(f.get(p.draw, 1), 0, 1), cr = clamp(f.get(p.crit, 0), 0, 1), today = f.get(p.today, t0);
+        rows.forEach(function (r, i) {
+          var k = r.k, s0 = q.S[k.id], e0 = q.E[k.id], grow = clamp(dr * (n * 0.55 + 1) - i * 0.55, 0, 1), ge = grow * grow * (3 - 2 * grow);
+          var xs = X(s0), wfull = X(e0) - xs, w0 = Math.max(0, wfull * ge), slip = f.get(k.slip, 0), ws = X(e0) - X(e0 - slip);
+          [r.bar, r.done, r.slipR].forEach(function (b) { b.setAttribute('x', xs.toFixed(1)); });
+          r.bar.setAttribute('width', w0.toFixed(1));
+          r.ol.setAttribute('x', (xs - 2.5).toFixed(1)); r.ol.setAttribute('width', (w0 + 5).toFixed(1)); setOp(r.ol, ge > 0.01 ? 1 : 0);
+          r.crit.setAttribute('x', (xs - 5).toFixed(1)); r.crit.setAttribute('width', (w0 + 10).toFixed(1)); setOp(r.crit, k.crit ? cr * ge : 0);
+          r.done.setAttribute('width', clamp(X(today) - xs, 0, w0).toFixed(1));
+          r.slipR.setAttribute('x', (xs + w0 - Math.min(ws, w0)).toFixed(1)); r.slipR.setAttribute('width', Math.min(ws, w0).toFixed(1)); setOp(r.slipR, slip > 0.02 ? 1 : 0);
+          r.lab.textContent = tpl(p.dur || '{v} wk', { v: k.d + slip }, 0); r.lab.setAttribute('x', (xs + 12).toFixed(1)); setOp(r.lab, w0 > 70 ? ge : 0);
+          (k.after || []).forEach(function (a, j) {
+            var pr = byId[a]; if (!pr) { return; }
+            var ex = X(q.E[a]) - 12, ey = pr.cy + bh / 2 + 2, sy = r.cy, dep = r.deps[j], up = sy < ey;
+            dep.path.setAttribute('d', 'M' + ex.toFixed(1) + ' ' + (up ? pr.cy - bh / 2 - 2 : ey).toFixed(1) + ' V' + sy.toFixed(1) + ' H' + (xs - 9).toFixed(1));
+            dep.head.setAttribute('d', 'M' + (xs - 1).toFixed(1) + ' ' + sy.toFixed(1) + ' l -10 -6 v 12 Z');
+            var hot = k.crit && pr.k.crit ? cr : 0;
+            dep.path.setAttribute('class', hot > 0.5 ? 'k2-dep k2-dep-crit' : 'k2-dep'); dep.head.setAttribute('class', hot > 0.5 ? 'k2-dep-head k2-dep-head-crit' : 'k2-dep-head');
+            setOp(dep.path, ge); setOp(dep.head, ge);
+          });
+        });
+        var fx = X(q.end), fo = clamp(dr * 2 - 1, 0, 1);
+        finLine.setAttribute('d', 'M' + fx.toFixed(1) + ' ' + (y0 + head - 6) + ' V' + fy); setOp(finLine, fo);
+        finT.set(q.end, p.finish || 'Finish {v}', 0);
+        var fwid = 150; finR.setAttribute('width', fwid); finR.setAttribute('x', 0);
+        finTag.setAttribute('transform', 'translate(' + (fx - fwid / 2).toFixed(1) + ' ' + fy + ')'); setOp(finTag, fo);
+        var to = clamp((today - t0) * 3, 0, 1);
+        tdLine.setAttribute('d', 'M' + X(today).toFixed(1) + ' ' + (y0 + head - 4) + ' V' + (y0 + head + n * rh)); setOp(tdLine, to);
+        tdTag.setAttribute('transform', 'translate(' + X(today).toFixed(1) + ' ' + (y0 + head - 4) + ')'); setOp(tdTag, to);
+        heads.forEach(function (hd) { setOp(hd.n, 1 - to * (1 - clamp((Math.abs(hd.at - X(today)) - 52) / 10, 0, 1))); });
+      }
+    };
+  });
+
+  /* matrix - a grid of rows and columns (a risk matrix, a stakeholder grid, urgent / important), its cells coloured by
+     how high and how far right they are, and items that move from cell to cell; where an item started stays as a
+     ghost with an arrow to where it is now. {x, y, w, h, rows: [top .. bottom], cols: [left .. right], xlabel, ylabel,
+     heat: true, items: [{name, r: "@r1", c: "@c1", dx, dy, show}]} - r and c count from 0 at the top left */
+  define('matrix', function (f, p) {
+    var Rw = p.rows || [], Cl = p.cols || [], x0 = p.x, y0 = p.y, W = p.w, H = p.h, cw = W / Cl.length, ch = H / Rw.length, g = el('g', {}, f.L.back);
+    Rw.forEach(function (rl, r) {
+      Cl.forEach(function (cl, c) {
+        var sc = ((Rw.length - 1 - r) / Math.max(1, Rw.length - 1) + c / Math.max(1, Cl.length - 1)) / 2;
+        var tone = p.heat === false ? 'plain' : sc < 0.38 ? 'good' : sc < 0.68 ? 'amber' : 'warn';
+        el('rect', { x: x0 + c * cw + 3, y: y0 + r * ch + 3, width: cw - 6, height: ch - 6, rx: 10, 'class': 'k2-heat k2-heat-' + tone }, g);
+      });
+      el('text', { x: x0 - 14, y: y0 + (r + 0.5) * ch + 5, 'text-anchor': 'end', 'class': 'k2-t-tick' }, g, rl);
+    });
+    Cl.forEach(function (cl, c) { el('text', { x: x0 + (c + 0.5) * cw, y: y0 + H + 24, 'text-anchor': 'middle', 'class': 'k2-t-tick' }, g, cl); });
+    if (p.xlabel) { el('text', { x: x0 + W / 2, y: y0 + H + 54, 'text-anchor': 'middle', 'class': 'k2-t-axis' }, g, p.xlabel + ' →'); }
+    if (p.ylabel) { el('text', { x: x0 - 14, y: y0 - 16, 'text-anchor': 'end', 'class': 'k2-t-axis' }, g, p.ylabel + ' ↑'); }
+    function at(r, c, it) { return [x0 + (c + 0.5) * cw + (it.dx || 0), y0 + (r + 0.5) * ch + (it.dy || 0)]; }
+    var its = (p.items || []).map(function (it, i) {
+      var gh = el('g', {}, f.L.back), trail = el('path', { 'class': 'k2-trail' }, gh), ghost = el('circle', { r: 19, 'class': 'k2-pt-ghost' }, gh);
+      var gi = el('g', {}, f.L.front), cat = it.cat || (i % 5) + 1;
+      el('circle', { r: 22, 'class': 'k2-outline' }, gi);
+      el('circle', { r: 19, fill: f.url('solid-cat-' + cat) }, gi);
+      el('text', { y: 6, 'text-anchor': 'middle', 'class': 'k2-t-badge' }, gi, String(it.n || i + 1));
+      var p0 = at(f.rest(it.r, 0), f.rest(it.c, 0), it);
+      var o = { it: it, gh: gh, trail: trail, ghost: ghost, gi: gi, p0: p0, last: [f.target(it.r, 0), f.target(it.c, 0)], sx: new Spring(p0[0]), sy: new Spring(p0[1]) };
+      f.solid(function () { return { x: o.sx.x - 23, y: o.sy.x - 23, x2: o.sx.x + 23, y2: o.sy.x + 23 }; });
+      f.line(function () { return Math.hypot(o.sx.x - o.p0[0], o.sy.x - o.p0[1]) > 30 ? [o.p0, [o.sx.x, o.sy.x]] : []; });
+      f.solid(function () { return { x: o.p0[0] - 20, y: o.p0[1] - 20, x2: o.p0[0] + 20, y2: o.p0[1] + 20 }; });
+      if (it.name) { f.label({ text: it.name, at: function () { return [o.sx.x, o.sy.x]; }, r: 22, side: 'right', dist: 28, show: function () { return f.get(it.show, 1); } }); }
+      return o;
+    });
+    var moving = false;
+    return {
+      onStep: function (n2, instant) {
+        its.forEach(function (o) {
+          var r = f.target(o.it.r, 0), c = f.target(o.it.c, 0);
+          if (!instant && (r !== o.last[0] || c !== o.last[1])) { var q = at(r, c, o.it); f.pulse(q[0], q[1], { delay: 480, r: 44 }); }
+          o.last = [r, c];
+        });
+      },
+      draw: function (dt, snap) {
+        moving = false;
+        its.forEach(function (o) {
+          var q = at(f.target(o.it.r, 0), f.target(o.it.c, 0), o.it);
+          moving = o.sx.go(q[0], dt, snap) || moving; moving = o.sy.go(q[1], dt, snap) || moving;
+          var x = o.sx.x, y = o.sy.x, sh = clamp(f.get(o.it.show, 1), 0, 1), dist = Math.hypot(x - o.p0[0], y - o.p0[1]);
+          o.gi.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') scale(' + (0.6 + 0.4 * sh).toFixed(3) + ')'); setOp(o.gi, sh);
+          o.ghost.setAttribute('cx', o.p0[0]); o.ghost.setAttribute('cy', o.p0[1]);
+          var ux = (x - o.p0[0]) / (dist || 1), uy = (y - o.p0[1]) / (dist || 1);
+          o.trail.setAttribute('d', 'M' + (o.p0[0] + ux * 22).toFixed(1) + ' ' + (o.p0[1] + uy * 22).toFixed(1) + ' L' + (x - ux * 26).toFixed(1) + ' ' + (y - uy * 26).toFixed(1));
+          setOp(o.gh, sh * clamp((dist - 30) / 40, 0, 1));
+        });
+      },
+      live: function () { return moving; }
+    };
+  });
+
+  /* node - a box in a process: a step (box), a decision (diamond) or where it starts and ends (pill). It pops in when
+     shown and glows when lit. {id, x, y (its middle), w, h, kind: box | decision | end, text, sub, cat, show, lit} */
+  define('node', function (f, p) {
+    var x = p.x, y = p.y, w = p.w || 200, h = p.h || 74, kind = p.kind || 'box', d;
+    if (kind === 'decision') { d = 'M' + x + ' ' + (y - h / 2 - 14) + ' L' + (x + w / 2 + 10) + ' ' + y + ' L' + x + ' ' + (y + h / 2 + 14) + ' L' + (x - w / 2 - 10) + ' ' + y + ' Z'; }
+    else { var rr = kind === 'end' ? h / 2 : 14; d = 'M' + (x - w / 2 + rr) + ' ' + (y - h / 2) + ' H' + (x + w / 2 - rr) + ' A' + rr + ' ' + rr + ' 0 0 1 ' + (x + w / 2) + ' ' + (y - h / 2 + rr) +
+      ' V' + (y + h / 2 - rr) + ' A' + rr + ' ' + rr + ' 0 0 1 ' + (x + w / 2 - rr) + ' ' + (y + h / 2) + ' H' + (x - w / 2 + rr) + ' A' + rr + ' ' + rr + ' 0 0 1 ' + (x - w / 2) + ' ' + (y + h / 2 - rr) +
+      ' V' + (y - h / 2 + rr) + ' A' + rr + ' ' + rr + ' 0 0 1 ' + (x - w / 2 + rr) + ' ' + (y - h / 2) + ' Z'; }
+    var g = el('g', {}, f.L.hero), inner = el('g', {}, g);
+    var lit = el('path', { d: d, 'class': 'k2-lit' }, inner);
+    el('path', { d: d, 'class': 'k2-outline-s', 'stroke-width': 7, 'stroke-linejoin': 'round' }, inner);
+    el('path', { d: d, fill: p.cat ? f.url('solid-cat-' + p.cat) : f.url('metal'), 'class': p.cat ? null : 'k2-node-plain' }, inner);
+    el('path', { d: d, 'class': 'k2-node-face' + (p.cat ? ' k2-node-face-cat' : '') }, inner);
+    el('path', { d: d, 'class': 'k2-edge' }, inner);
+    var tc = p.cat ? 'k2-t-oncat' : 'k2-t-lbl';
+    el('text', { x: x, y: y + (p.sub ? -3 : 6), 'text-anchor': 'middle', 'class': tc }, inner, p.text || '');
+    if (p.sub) { el('text', { x: x, y: y + 20, 'text-anchor': 'middle', 'class': p.cat ? 'k2-t-oncat-sub' : 'k2-t-sub' }, inner, p.sub); }
+    (f.nodes = f.nodes || {})[p.id] = { x: x, y: y, w: kind === 'decision' ? w + 20 : w, h: kind === 'decision' ? h + 28 : h };
+    var sp = new Spring(f.target(p.show, 1)), moving = false, wasLit = f.target(p.lit, 0);
+    f.solid(function () { return { x: x - w / 2 - 12, y: y - h / 2 - 16, x2: x + w / 2 + 12, y2: y + h / 2 + 16 }; });
+    return {
+      onStep: function (n, instant) { var l = f.target(p.lit, 0); if (!instant && l > 0.5 && wasLit < 0.5) { f.pulse(x, y, { delay: 250, r: Math.max(w, h) * 0.7 }); } wasLit = l; },
+      draw: function (dt, snap) {
+        moving = sp.go(f.target(p.show, 1), dt, snap);
+        var sh = clamp(f.get(p.show, 1), 0, 1), sc = 0.7 + 0.3 * Math.max(0, sp.x);
+        inner.setAttribute('transform', 'translate(' + x + ' ' + y + ') scale(' + sc.toFixed(3) + ') translate(' + (-x) + ' ' + (-y) + ')');
+        setOp(g, sh); setOp(lit, clamp(f.get(p.lit, 0), 0, 1));
+      },
+      live: function () { return moving; }
+    };
+  });
+
+  /* arrow - from one node to another, right-angled where they do not line up, drawn on as it appears.
+     {id, from, to, label, draw: "@d", via: "h" | "v" (which way it leaves)} */
+  define('arrow', function (f, p) {
+    var A = f.nodes[p.from], B = f.nodes[p.to], ps;
+    var dx = B.x - A.x, dy = B.y - A.y, hz = p.via ? p.via === 'h' : Math.abs(dx) >= Math.abs(dy);
+    if (hz) {
+      var sx = A.x + Math.sign(dx || 1) * A.w / 2, ex = B.x - Math.sign(dx || 1) * (B.w / 2 + 6);
+      ps = Math.abs(dy) < 4 ? [[sx, A.y], [ex, B.y]] : (p.via === 'h' ? [[sx, A.y], [B.x, A.y], [B.x, B.y - Math.sign(dy) * (B.h / 2 + 6)]] : [[sx, A.y], [(sx + ex) / 2, A.y], [(sx + ex) / 2, B.y], [ex, B.y]]);
+    } else {
+      var sy = A.y + Math.sign(dy || 1) * A.h / 2, ey = B.y - Math.sign(dy || 1) * (B.h / 2 + 6);
+      ps = Math.abs(dx) < 4 ? [[A.x, sy], [B.x, ey]] : (p.via === 'v' ? [[A.x, sy], [A.x, B.y], [B.x - Math.sign(dx) * (B.w / 2 + 6), B.y]] : [[A.x, sy], [A.x, (sy + ey) / 2], [B.x, (sy + ey) / 2], [B.x, ey]]);
+    }
+    var line = el('path', { d: poly(ps), 'class': 'k2-arrow', pathLength: 1, 'stroke-dasharray': '0 1' }, f.L.back);
+    var e = ps[ps.length - 1], b = ps[ps.length - 2], ang = Math.atan2(e[1] - b[1], e[0] - b[0]) * 180 / Math.PI;
+    var head = el('path', { d: 'M 0 0 L -14 -8 L -14 8 Z', 'class': 'k2-arrow-head', transform: 'translate(' + pt([e[0] + Math.cos(ang * Math.PI / 180) * 4, e[1] + Math.sin(ang * Math.PI / 180) * 4]) + ') rotate(' + ang.toFixed(1) + ')' }, f.L.back);
+    (f.routes = f.routes || {})[p.id] = ps;
+    var lab = null;
+    f.line(function () { return ps; });
+    if (p.label) {
+      var li = 0, best = 0;                                  /* beside the longest straight piece */
+      for (var q2 = 1; q2 < ps.length; q2++) { var ll = Math.hypot(ps[q2][0] - ps[q2 - 1][0], ps[q2][1] - ps[q2 - 1][1]); if (ll > best) { best = ll; li = q2; } }
+      var m = ps[li - 1], m2 = ps[li], mid = [(m[0] + m2[0]) / 2, (m[1] + m2[1]) / 2], vert = Math.abs(m2[0] - m[0]) < 1;
+      lab = f.label({ text: p.label, cls: 'k2-t-note', at: function () { return mid; }, side: vert ? 'right' : 'up', dist: 10, lead: false,
+        show: function () { return clamp(f.get(p.draw, 1) * 3 - 2, 0, 1); } });
+    }
+    return {
+      draw: function () {
+        var k = clamp(f.get(p.draw, 1), 0, 1);
+        line.setAttribute('stroke-dasharray', k.toFixed(4) + ' 1'); setOp(head, clamp(k * 8 - 7, 0, 1));
+      }
+    };
+  });
+
+  /* token - a glowing dot that travels the arrows in order, the way a case goes through a process.
+     {route: [arrow ids], at: "@t" - 0 at the start of the first, k at the end of the k-th} */
+  define('token', function (f, p) {
+    var legs = (p.route || []).map(function (id) {
+      var ps = f.routes[id], L = 0, seg = [];
+      for (var i = 1; i < ps.length; i++) { var l = Math.hypot(ps[i][0] - ps[i - 1][0], ps[i][1] - ps[i - 1][1]); seg.push([ps[i - 1], ps[i], L, l]); L += l; }
+      return { seg: seg, L: L };
+    });
+    var glow = el('circle', { r: 22, 'class': 'k2-marker-glow' }, f.L.front), dot = el('circle', { r: 10, 'class': 'k2-marker' }, f.L.front);
+    function where(t) {
+      var i = clamp(Math.floor(t), 0, legs.length - 1), fr = clamp(t - i, 0, 1), lg = legs[i], d = fr * lg.L;
+      for (var j = 0; j < lg.seg.length; j++) { var s2 = lg.seg[j]; if (d <= s2[2] + s2[3] || j === lg.seg.length - 1) { var u = (d - s2[2]) / (s2[3] || 1); return [lerp(s2[0][0], s2[1][0], u), lerp(s2[0][1], s2[1][1], u)]; } }
+      return [0, 0];
+    }
+    return {
+      draw: function () {
+        var t = f.get(p.at, 0), q = where(t), on = clamp(f.get(p.show, t > 0.001 ? 1 : 0), 0, 1);
+        [glow, dot].forEach(function (c) { c.setAttribute('cx', q[0].toFixed(1)); c.setAttribute('cy', q[1].toFixed(1)); });
+        setOp(dot, on); setOp(glow, on * 0.45);
+      }
+    };
+  });
+
   /* ------------------------------------------------------------------------------------------------ in a deck */
   function hook(id, fns) {
     if (!id) { return; }
@@ -837,6 +1151,55 @@
       }
     });
   }
+  function shown(n, svg) {
+    var o = 1;
+    for (var x = n; x && x !== svg; x = x.parentNode) {
+      if (x.style && x.style.display === 'none') { return 0; }
+      var a = x.getAttribute && x.getAttribute('opacity'); if (a != null) { o *= +a; }
+      if (x.style && x.style.opacity !== '') { o *= +x.style.opacity; }
+    }
+    return o;
+  }
+  /* every word on the figure as it stands now: no two overlap, none is cut by the picture's edge, no label lies on a
+     line. Returns the findings in plain words (an empty list is clean). The demo checks and the studio call it at
+     the end of every step. */
+  function audit(f) {
+    var svg = f.svg, sr = svg.getBoundingClientRect(), found = [], vb = svg.viewBox.baseVal, k = Math.min(sr.width / vb.width, sr.height / vb.height);
+    var ox = sr.left + (sr.width - vb.width * k) / 2, oy = sr.top + (sr.height - vb.height * k) / 2;
+    var T = [].filter.call(svg.querySelectorAll('text'), function (t) { return t.textContent.trim() && shown(t, svg) > 0.15; }).map(function (t) {
+      var r = t.getBoundingClientRect(), ih = r.height * 0.2;
+      return { t: t, w: t.textContent.trim().slice(0, 30), x: r.left, y: r.top + ih, x2: r.right, y2: r.bottom - ih, lbl: !!(t.closest && t.closest('.k2-lbl')) };
+    });
+    T.forEach(function (a, i) {
+      if (a.x < ox - 1 || a.y < oy - 1 || a.x2 > ox + vb.width * k + 1 || a.y2 > oy + vb.height * k + 1) { found.push('words cut at the edge: "' + a.w + '"'); }
+      for (var j = i + 1; j < T.length; j++) {
+        var b = T[j], w = Math.min(a.x2, b.x2) - Math.max(a.x, b.x), h = Math.min(a.y2, b.y2) - Math.max(a.y, b.y);
+        if (w > 1.5 && h > 1.5) { found.push('words over words: "' + a.w + '" and "' + b.w + '"'); }
+      }
+    });
+    [].forEach.call(svg.querySelectorAll('.k2-arrow, .k2-dep, .k2-curve, .k2-axis, .k2-trail, .k2-pt-ghost'), function (ln) {
+      if (shown(ln, svg) < 0.15 || !ln.getTotalLength) { return; }
+      var L = ln.getTotalLength(), m = ln.getScreenCTM(), d0 = ln.getAttribute('stroke-dasharray'), drawn = d0 && /^[\d.]+ 1$/.test(d0) ? +d0.split(' ')[0] : 1;
+      if (!m) { return; }
+      T.forEach(function (a) {
+        if (!a.lbl) { return; }
+        for (var s2 = 0; s2 <= L * drawn; s2 += 3) {
+          var q = ln.getPointAtLength(s2), X = q.x * m.a + q.y * m.c + m.e, Y = q.x * m.b + q.y * m.d + m.f;
+          if (X > a.x + 1 && X < a.x2 - 1 && Y > a.y + 1 && Y < a.y2 - 1) { found.push('words on a line: "' + a.w + '"'); break; }
+        }
+      });
+    });
+    /* a shape in the hero or the front layer cut by the picture's edge (a pipe that runs on off the picture is drawn in
+       the back on purpose) */
+    [].forEach.call(svg.querySelectorAll('.k2-l-hero *, .k2-l-front *'), function (n) {
+      if (!n.getBBox || /^(g|tspan|stop)$/i.test(n.tagName) || shown(n, svg) < 0.15 || n.classList.contains('k2-hit')) { return; }
+      var r = n.getBoundingClientRect();
+      if (r.width && (r.left < ox - 2 || r.top < oy - 2 || r.right > ox + vb.width * k + 2 || r.bottom > oy + vb.height * k + 2)) {
+        found.push('a shape cut at the edge: ' + n.tagName + (n.getAttribute('class') ? '.' + n.getAttribute('class').split(' ')[0] : ''));
+      }
+    });
+    return found.filter(function (x, i, A) { return A.indexOf(x) === i; });
+  }
   function mount(host, spec) { var f = new Fig(host, spec); figs.push(f); return f; }
   function auto() {
     [].forEach.call(d.querySelectorAll('[data-kit2d]'), function (host) {
@@ -850,7 +1213,7 @@
       if (slide && slide.id) { deck(host.__k2, slide); }
     });
   }
-  w.KIT2D = { mount: mount, define: define, types: TYPES, figures: figs,
+  w.KIT2D = { mount: mount, define: define, types: TYPES, figures: figs, audit: audit,
     h: { el: el, clamp: clamp, lerp: lerp, approach: approach, num: num, tpl: tpl, pt: pt, poly: poly, setOp: setOp, textLines: textLines } };
   if (d.readyState === 'loading') { d.addEventListener('DOMContentLoaded', auto); } else { setTimeout(auto, 0); }
 }(window));

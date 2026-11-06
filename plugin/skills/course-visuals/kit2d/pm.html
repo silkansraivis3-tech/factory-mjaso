@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2D kit - project management</title>
+<link rel="stylesheet" href="../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="kit2d.css">
+<style>
+@font-face{font-family:"Raleway";src:url("../../course-module-ui/templates/fonts/raleway-variable.ttf") format("truetype");font-weight:100 900;font-display:block}
+:root{--cat-1:#2EB6F8;--cat-2:#3CC8B4;--cat-3:#A596F5;--cat-4:#EE93B6;--cat-5:#A8BBD0}
+body{margin:0;background:var(--deep);color:var(--txt-d);font-family:var(--font)}
+section{padding:26px 28px 30px;border-bottom:1px solid var(--line-d)}
+.kind{font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--blue)}
+h2{font-size:28px;margin:6px 0 4px}p.lead{margin:0 0 16px;color:var(--dim-d);font-size:17px;max-width:900px}
+.host{height:600px}
+.demo-note{font-size:13px;color:var(--faint-d);margin-top:10px}
+</style></head><body>
+
+<section id="p-cycle">
+  <div class="kind">Cycle</div>
+  <h2>Plan, do, check, act - and round again</h2>
+  <p class="lead">Improvement comes in rounds. Each round starts from what the last one learned.</p>
+  <div class="host" data-kit2d="#spec-cycle"></div>
+</section>
+<script type="application/json" id="spec-cycle">
+{ "label": "The plan-do-check-act cycle: four stages round a ring, each leading into the next, and round again.",
+  "size": [1000, 600], "glow": {"x": 500, "y": 300, "rx": 330, "ry": 280},
+  "state": {"stage": 0}, "rates": {"stage": 3.4},
+  "parts": [
+    {"id": "C", "type": "cycle", "x": 500, "y": 300, "r": 170, "band": 52, "at": "@stage",
+     "center": {"text": "PDCA", "sub": "improve in rounds"},
+     "stages": [{"name": "Plan", "sub": "set the goal and the measure"}, {"name": "Do", "sub": "try it on a small scale"},
+                {"name": "Check", "sub": "measure against the goal"}, {"name": "Act", "sub": "keep what works"}]}
+  ],
+  "steps": [
+    {"title": "Plan: set the goal and how you will measure it", "set": {"stage": 1}},
+    {"title": "Do: try it on a small scale", "set": {"stage": 2}},
+    {"title": "Check: measure the result against the goal", "set": {"stage": 3}},
+    {"title": "Act: keep what works, change what does not", "set": {"stage": 4}},
+    {"title": "And round again, from a better start", "set": {"stage": 5}}
+  ]
+}
+</script>
+
+<section id="p-gantt">
+  <div class="kind">Timeline</div>
+  <h2>The critical path decides the finish</h2>
+  <p class="lead">A task with slack can slip and nothing else moves. A task on the critical path slips, and the finish slips with it.</p>
+  <div class="host" data-kit2d="#spec-gantt"></div>
+  <div class="demo-note">Demo values, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-gantt">
+{ "label": "A project plan on a time line: steel delivery, fabrication, installation and testing form the critical path; a slip on it moves the finish, a slip on the electrics does not.",
+  "size": [1120, 600], "glow": {"x": 600, "y": 300, "rx": 520, "ry": 300},
+  "state": {"draw": 0, "crit": 0, "slipE": 0, "slipS": 0, "today": 0}, "rates": {"draw": 3, "slipE": 4, "slipS": 4, "today": 4, "crit": 5},
+  "parts": [
+    {"id": "G", "type": "gantt", "x": 30, "y": 20, "w": 1060, "h": 560, "nameW": 200, "start": 0, "end": 16, "tick": "W{v}",
+     "draw": "@draw", "crit": "@crit", "today": "@today", "finish": "Finish: week {v}", "dur": "{v} wk",
+     "tasks": [
+       {"id": "D", "name": "Design", "d": 3, "crit": true, "cat": 1},
+       {"id": "O", "name": "Order steel", "d": 4, "after": ["D"], "crit": true, "cat": 2, "slip": "@slipS"},
+       {"id": "F", "name": "Fabricate", "d": 3, "after": ["O"], "crit": true, "cat": 2},
+       {"id": "E", "name": "Electrics", "d": 4, "after": ["D"], "cat": 3, "slip": "@slipE"},
+       {"id": "I", "name": "Install", "d": 2, "after": ["F", "E"], "crit": true, "cat": 1},
+       {"id": "T", "name": "Test", "d": 1, "after": ["I"], "crit": true, "cat": 4}
+     ]}
+  ],
+  "steps": [
+    {"title": "The plan: each task starts when the tasks before it end", "set": {"draw": 1}},
+    {"title": "The critical path: no slack, every week counts", "set": {"crit": 1}},
+    {"title": "Electrics two weeks late: the finish holds - they had slack", "set": {"slipE": 2}},
+    {"title": "Steel two weeks late: the chain moves, and the finish with it", "set": {"slipS": 2}},
+    {"title": "Week 6: what should be done by now", "set": {"today": 6}}
+  ]
+}
+</script>
+
+<section id="p-risk">
+  <div class="kind">Matrix</div>
+  <h2>Mitigation moves a risk - it does not delete it</h2>
+  <p class="lead">Rate each risk by how likely it is and how bad it would be. Every measure moves it to a safer cell.</p>
+  <div class="host" data-kit2d="#spec-risk"></div>
+  <div class="demo-note">Demo values, not from a course source.</div>
+</section>
+<script type="application/json" id="spec-risk">
+{ "label": "A five by five risk matrix: late steel becomes unlikely with a second supplier, a crane breakdown costs less with a spare crane on call.",
+  "size": [1120, 620], "glow": {"x": 560, "y": 300, "rx": 480, "ry": 300},
+  "state": {"show": 0, "r1": 1, "c1": 3, "r2": 2, "c2": 4}, "rates": {"show": 6},
+  "parts": [
+    {"id": "M", "type": "matrix", "x": 250, "y": 60, "w": 620, "h": 450, "xlabel": "Impact", "ylabel": "Likelihood",
+     "rows": ["Almost certain", "Likely", "Possible", "Unlikely", "Rare"], "cols": ["Minor", "Moderate", "Major", "Severe", "Critical"],
+     "items": [
+       {"name": "Late steel", "r": "@r1", "c": "@c1", "show": "@show"},
+       {"name": "Crane breakdown", "r": "@r2", "c": "@c2", "show": "@show"},
+       {"name": "Key person leaves", "r": 2, "c": 1, "show": "@show"}
+     ]}
+  ],
+  "steps": [
+    {"title": "Rate each risk: how likely, how bad", "set": {"show": 1}},
+    {"title": "A second supplier: late steel becomes unlikely", "set": {"r1": 3}},
+    {"title": "A spare crane on call: a breakdown costs less", "set": {"c2": 2}}
+  ]
+}
+</script>
+
+<section id="p-flow">
+  <div class="kind">Process</div>
+  <h2>From a change request to a decision</h2>
+  <p class="lead">A small change is approved by the project manager. A big one goes to the sponsor first. Follow each one through.</p>
+  <div class="host" data-kit2d="#spec-flow"></div>
+</section>
+<script type="application/json" id="spec-flow">
+{ "label": "A change request process: assess the impact, decide whether it is within the budget, approve it or escalate it to the sponsor, then update the plan.",
+  "size": [1120, 560], "glow": {"x": 560, "y": 260, "rx": 520, "ry": 280},
+  "state": {"n": 0, "a": 0, "y": 1, "t1": 0, "t2": 0, "litD": 0}, "rates": {"t1": 1.5, "t2": 1.5, "n": 6, "a": 3.5},
+  "parts": [
+    {"id": "S", "type": "node", "kind": "end", "x": 140, "y": 130, "w": 220, "h": 64, "text": "Change requested", "show": "@n"},
+    {"id": "A", "type": "node", "x": 420, "y": 130, "w": 230, "h": 80, "text": "Assess the impact", "sub": "cost, time, risk", "show": "@n", "cat": 1},
+    {"id": "D", "type": "node", "kind": "decision", "x": 720, "y": 130, "w": 210, "h": 76, "text": "Within budget?", "show": "@n", "lit": "@litD"},
+    {"id": "N", "type": "node", "x": 990, "y": 130, "w": 200, "h": 80, "text": "Escalate", "sub": "to the sponsor", "show": "@n", "cat": 4},
+    {"id": "Y", "type": "node", "x": 720, "y": 400, "w": 230, "h": 80, "text": "Approve", "sub": "the project manager", "show": "@n", "cat": 2},
+    {"id": "E", "type": "node", "kind": "end", "x": 420, "y": 400, "w": 220, "h": 64, "text": "Update the plan", "show": "@n"},
+    {"id": "a1", "type": "arrow", "from": "S", "to": "A", "draw": "@a"},
+    {"id": "a2", "type": "arrow", "from": "A", "to": "D", "draw": "@a"},
+    {"id": "a3", "type": "arrow", "from": "D", "to": "Y", "label": "Yes", "draw": "@a"},
+    {"id": "a4", "type": "arrow", "from": "D", "to": "N", "label": "No", "draw": "@a"},
+    {"id": "a5", "type": "arrow", "from": "N", "to": "Y", "via": "v", "label": "Approved", "draw": "@a"},
+    {"id": "a6", "type": "arrow", "from": "Y", "to": "E", "draw": "@a"},
+    {"type": "token", "route": ["a1", "a2", "a3", "a6"], "at": "@t1", "show": "@y"},
+    {"type": "token", "route": ["a1", "a2", "a4", "a5", "a6"], "at": "@t2"}
+  ],
+  "steps": [
+    {"title": "The steps a change goes through", "set": {"n": 1, "a": 1}, "after": {"a": 350}},
+    {"title": "A small change: within budget, approved and planned", "set": {"t1": 4, "litD": 1}},
+    {"title": "A big change: the sponsor decides first", "set": {"y": 0, "t2": 5, "litD": 0}}
+  ]
+}
+</script>
+<script src="kit2d.js"></script>
+</body></html>
