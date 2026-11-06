@@ -47,6 +47,16 @@
     if (Math.abs(to - this.x) < 0.02 && Math.abs(this.v) < 0.05) { this.x = to; this.v = 0; return false; }
     return true;
   };
+  function Roller(parent, attrs) {
+    this.a = el('text', attrs, parent); this.b = el('text', attrs, parent);
+  }
+  Roller.prototype.set = function (v, fmt, dec) {
+    if (dec) { this.a.textContent = tpl(fmt, { v: v }, dec); this.b.textContent = ''; this.a.removeAttribute('transform'); this.a.removeAttribute('opacity'); return; }
+    var lo = Math.floor(v + 1e-6), fr = v - lo, e = fr * fr * (3 - 2 * fr);
+    this.a.textContent = tpl(fmt, { v: lo }, 0); this.b.textContent = fr > 0.001 ? tpl(fmt, { v: lo + 1 }, 0) : '';
+    this.a.setAttribute('transform', 'translate(0 ' + (-18 * e).toFixed(1) + ')'); setOp(this.a, 1 - e);
+    this.b.setAttribute('transform', 'translate(0 ' + (18 * (1 - e)).toFixed(1) + ')'); setOp(this.b, e);
+  };
   function setOp(n, v) { n.setAttribute('opacity', clamp(v, 0, 1).toFixed(3)); }
   function textLines(parent, attrs, rows) {
     var t = el('text', attrs, parent);
@@ -65,7 +75,7 @@
     var f = this;
     f.spec = spec; f.host = host; f.id = 'k2-' + (++UID);
     f.W = (spec.size || [960, 540])[0]; f.H = (spec.size || [960, 540])[1];
-    f.T = {}; f.S = {}; f.fx = []; f.pending = []; f.out = {}; f.parts = []; f.byId = {}; f.labels = []; f.solids = []; f.rate = spec.rates || {};
+    f.T = {}; f.S = {}; f.V = {}; f.fx = []; f.pending = []; f.out = {}; f.parts = []; f.byId = {}; f.labels = []; f.solids = []; f.rate = spec.rates || {};
     f.step = 0; f.steps = [{ title: spec.idle || '' }].concat(spec.steps || []);
     var k;
     for (k in (spec.state || {})) { f.T[k] = f.S[k] = +spec.state[k]; }
@@ -190,7 +200,7 @@
       if (instant) { f.frame(true); }
     },
     next: function () { if (this.step < this.steps.length - 1) { this.goStep(this.step + 1); } },
-    prev: function () { if (this.step > 0) { this.goStep(this.step - 1, true); } },
+    prev: function () { if (this.step > 0) { this.goStep(this.step - 1); } },
     replay: function () { if (this.step > 0) { this.goStep(this.step - 1, true); this.goStep(this.step + 1); } },
 
     /* ---- the frame loop: draws only while something moves */
@@ -210,10 +220,11 @@
       dt = dt || 0;
       f.pending = (f.pending || []).filter(function (q) { if (t >= q.at || instant) { f.T[q.k] = q.v; return false; } busy = true; return true; });
       for (k in f.T) {
-        if (f.S[k] == null || instant || reduce) { f.S[k] = f.T[k]; continue; }
-        if (Math.abs(f.S[k] - f.T[k]) > 1e-4 * (1 + Math.abs(f.T[k]))) {
-          f.S[k] = approach(f.S[k], f.T[k], dt, f.rate[k] || 6); busy = true;
-        } else { f.S[k] = f.T[k]; }
+        if (f.S[k] == null || instant || reduce) { f.S[k] = f.T[k]; f.V[k] = 0; continue; }
+        var om = f.rate[k] || 7, x = f.S[k], v = f.V[k] || 0, to = f.T[k], eps = 1e-4 * (1 + Math.abs(to)), n2, h;
+        for (n2 = 0; n2 < 2; n2++) { h = dt / 2; v += (om * om * (to - x) - 2 * om * v) * h; x += v * h; }
+        if (Math.abs(to - x) < eps && Math.abs(v) < eps * om) { x = to; v = 0; } else { busy = true; }
+        f.S[k] = x; f.V[k] = v;
       }
       f.parts.forEach(function (q) { if (q.calc) { q.calc(dt); } });
       f.parts.forEach(function (q) { if (q.draw) { q.draw(dt, instant || reduce); } if (q.live && q.live()) { busy = true; } });
@@ -224,8 +235,8 @@
         e.go(k2); busy = true; return true;
       });
       f.readouts();
-      f.follow();
-      if (!busy && f.relayout) { f.relayout = false; f.layout(); }
+      if (f.follow(instant ? 0 : dt)) { busy = true; }
+      if (!busy && f.relayout) { f.relayout = false; f.layout(); if (f.follow(0, true)) { busy = true; f.kick(); } }
       return busy;
     },
     show: function () { this.hidden = false; this.kick(); },
@@ -240,6 +251,8 @@
       f.scale = scale;
       f.frame(true);
       f.layout();
+      this.labels.forEach(function (L) { if (L.goal) { L.off = L.goal.slice(); } });
+      f.follow(0);
     },
 
     /* ---- labels: words for a place, beside it, clear of the others and of the solids */
@@ -277,14 +290,20 @@
           });
           if (L.o.fixed) { return; }
         });
-        L.off = [best.R.x - at[0], best.R.y - at[1]]; L.far = (best.di > 0 || best.dist > 30) && L.o.lead !== false; L.bw = bw; L.bh = bh; L.by = b.y;
+        L.goal = [best.R.x - at[0], best.R.y - at[1]]; if (!L.off) { L.off = L.goal.slice(); } L.far = (best.di > 0 || best.dist > 30) && L.o.lead !== false; L.bw = bw; L.bh = bh; L.by = b.y;
         placed.push({ x: best.R.x - 4, y: best.R.y - 4, x2: best.R.x2 + 4, y2: best.R.y2 + 4 });
       });
       f.follow();
     },
-    follow: function () {
+    follow: function (dt, keep) {
+      var moving = false;
       this.labels.forEach(function (L) {
         if (!L.off) { return; }
+        if (L.goal && !keep) {
+          var gx = L.goal[0] - L.off[0], gy = L.goal[1] - L.off[1];
+          if (Math.abs(gx) + Math.abs(gy) > 0.3 && dt && !reduce) { var k = 1 - Math.exp(-dt * 9); L.off[0] += gx * k; L.off[1] += gy * k; moving = true; }
+          else { L.off[0] = L.goal[0]; L.off[1] = L.goal[1]; }
+        } else if (L.goal && keep) { moving = moving || Math.abs(L.goal[0] - L.off[0]) + Math.abs(L.goal[1] - L.off[1]) > 0.3; }
         var at = L.o.at(), x = at[0] + L.off[0], y = at[1] + L.off[1];
         L.box.setAttribute('transform', 'translate(' + (x).toFixed(1) + ' ' + (y - L.by).toFixed(1) + ')');
         var show = L.o.show ? L.o.show() : 1;
@@ -297,6 +316,7 @@
         } else { L.lead.style.display = L.dot.style.display = 'none'; }
         if (L.o.text && L.o.live) { L.t.firstChild.textContent = L.o.live(); }
       });
+      return moving;
     },
 
     /* ---- the side panel: controls write the same targets the steps do */
@@ -727,11 +747,11 @@
       var end = c.side === 'left' ? 'end' : 'start';
       var words = el('g', { 'text-anchor': end }, f.L.lbl);
       el('text', { x: 0, y: -8, 'class': 'k2-t-name k2-halo' }, words, c.name || '');
-      var val = el('text', { x: 0, y: 30, 'class': 'k2-t-val k2-halo' }, words);
-      var valA = el('text', { x: 0, y: 30, 'class': 'k2-t-val k2-t-amber k2-halo' }, words);
+      var vg = el('g', {}, words), vgA = el('g', {}, words);
+      var val = new Roller(vg, { x: 0, y: 30, 'class': 'k2-t-val k2-halo' }), valA = new Roller(vgA, { x: 0, y: 30, 'class': 'k2-t-val k2-t-amber k2-halo' });
       var note = c.note ? el('text', { x: 0, y: 58, 'class': 'k2-t-note k2-halo' }, words, c.note) : null;
       var at = corner(c, 'to');
-      return { g: g, ra: ra, lock: lock, words: words, val: val, valA: valA, note: note,
+      return { g: g, ra: ra, lock: lock, words: words, val: val, valA: valA, vg: vg, vgA: vgA, note: note,
                sx: new Spring(at[0]), sy: new Spring(at[1]), sl: new Spring(f.target(c.hold, 0)), to: at, hold: f.target(c.hold, 0) };
     });
     var moving = false;
@@ -772,8 +792,8 @@
           N.lock.setAttribute('transform', 'translate(' + pt(at) + ') scale(' + (0.2 + 0.8 * pop).toFixed(3) + ')'); setOp(N.lock, hold);
           var dx = c.side === 'left' ? -28 : 30, oy = c.dy != null ? c.dy : 0;
           N.words.setAttribute('transform', 'translate(' + (at[0] + dx).toFixed(1) + ' ' + (at[1] + oy).toFixed(1) + ')');
-          var v = f.get(c.value, 0), txt = tpl(c.fmt || '{v}', { v: v }, c.decimals || 0);
-          N.val.textContent = txt; N.valA.textContent = txt; setOp(N.valA, hot); setOp(N.val, 1 - hot);
+          var v = f.get(c.value, 0);
+          N.val.set(v, c.fmt || '{v}', c.decimals || 0); N.valA.set(v, c.fmt || '{v}', c.decimals || 0); setOp(N.vgA, hot); setOp(N.vg, 1 - hot);
           if (N.note) {                                                  /* a note rises into place as it appears */
             var ns = clamp(f.get(c.noteShow, 1), 0, 1);
             setOp(N.note, ns); N.note.setAttribute('transform', 'translate(0 ' + ((1 - ns) * 14).toFixed(1) + ')');

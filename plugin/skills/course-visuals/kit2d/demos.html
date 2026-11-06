@@ -24,7 +24,7 @@ h2{font-size:28px;margin:6px 0 4px}p.lead{margin:0 0 16px;color:var(--dim-d);fon
 <script type="application/json" id="spec-chart">
 { "label": "Fuel burned a day against ship speed: the curve rises with the cube of speed; slowing from 14 to 10 knots more than halves the fuel.",
   "size": [960, 540], "glow": {"x": 520, "y": 260},
-  "state": {"draw": 0, "speed": 14, "pt": 0, "slow": 0}, "rates": {"draw": 2.4},
+  "state": {"draw": 0, "speed": 14, "pt": 0, "slow": 0}, "rates": {"draw": 3.6, "speed": 5},
   "parts": [
     {"id": "C", "type": "chart", "x": 120, "y": 70, "w": 740, "h": 380,
      "xaxis": {"min": 0, "max": 20, "step": 2, "label": "Ship speed", "unit": "kn"},
@@ -55,7 +55,7 @@ h2{font-size:28px;margin:6px 0 4px}p.lead{margin:0 0 16px;color:var(--dim-d);fon
 <script type="application/json" id="spec-valve">
 { "label": "A gate valve cut through on a pipe: as the handwheel turns the gate slides down across the bore, the flow squeezes under it and stops when it is shut.",
   "size": [960, 540], "glow": {"x": 560, "y": 300, "rx": 380, "ry": 260},
-  "state": {"open": 1}, "rates": {"open": 2.6},
+  "state": {"open": 1}, "rates": {"open": 4},
   "parts": [
     {"id": "P", "type": "pipe", "pts": [[-20, 392], [980, 392]], "r": 38, "wall": 11, "flow": "V.flow", "speed": 150, "gate": {"x": 560, "open": "@open"}},
     {"id": "V", "type": "gate_valve", "x": 560, "y": 392, "r": 38, "open": "@open", "turns": 4, "pressure": [2, 8], "label": "Handwheel", "sub": "turns the stem"},
@@ -83,7 +83,7 @@ h2{font-size:28px;margin:6px 0 4px}p.lead{margin:0 0 16px;color:var(--dim-d);fon
 <script type="application/json" id="spec-tri">
 { "label": "Project triangle: scope, time and cost are linked inside a fixed frame of safety and rules. More scope with the same end date pulls the cost corner out.",
   "size": [1120, 640], "glow": {"x": 560, "y": 360, "rx": 420, "ry": 280},
-  "state": {"scope": 3, "cost": 100, "extra": 0, "same": 0, "strain": 0, "frame": 0}, "rates": {"frame": 2.2, "strain": 3},
+  "state": {"scope": 3, "cost": 100, "extra": 0, "same": 0, "strain": 0, "frame": 0}, "rates": {"frame": 3.6, "strain": 5, "cost": 5, "scope": 5},
   "parts": [
     {"id": "T", "type": "triangle", "strain": "@strain",
      "frame": {"label": "Fixed frame: safety and rules", "show": "@frame"},
