@@ -276,7 +276,8 @@ triangle that stretches inside a frame that does not; routine work is a loop; a 
 - **The look:** a figure made only of Concepts parts is shown on the **light panel** (white, `lt-light`, the kit's light
   tokens) - the compiler does it; `"theme": "dark"` keeps the Navy one. Blue is the idea, **amber what changed**, a dashed
   red frame what is never traded. Machinery, ships and screens stay on the Navy panel.
-- **The step bar** under a figure is quiet: Back and Replay round icons, Next the one filled button, 44 px each.
+- **No step buttons** under a figure: the deck's Next walks its steps with the slide's lines (`gb_deck.js`); a lit line is
+  still a tap target that plays its step.
 - **`check_kit.py` refuses** (a build FAIL): **WORDS ONLY** - every part is words or a number in a box (a readout with a
   `unit` or `marks` is an instrument, not words); **STEPS SHOW ONLY WORDS** - no step moves anything drawn; **DECORATION** -
   a ship drawn small with nothing on it beside words and number boxes; **BROKEN CHARACTERS** - "Â·" for "·". And a new

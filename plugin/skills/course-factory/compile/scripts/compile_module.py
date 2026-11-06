@@ -670,21 +670,11 @@ def kit_light(spec):
     return bool(types) and all(kit_family(t) == "concepts" for t in types)
 
 
-STEP_BAR = ('<div class="mediabar">'
-            '<button class="fbtn ico" type="button" data-act="prev" aria-label="Previous step" title="Previous step">%s</button>'
-            '<span class="dots"></span>'
-            '<button class="fbtn primary" type="button" data-act="next">Next step %s</button>'
-            '<button class="fbtn ico" type="button" data-act="replay" aria-label="Replay" title="Replay">%s</button></div>'
-            % ('<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>',
-               '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8.6 16.6 10 18l6-6-6-6-1.4 1.4L13.2 12z"/></svg>',
-               '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" '
-               'stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v5h5"/></svg>'))
-
-
 def kit_figure(text, s, probs, where):
     """a figure made from the figure kit (course-visuals/kit): its spec goes into the page as it is, and
-    kit.js draws it there. The step buttons are the deck's own .mediabar. course-visuals/kit/scripts/
-    check_kit.py checks the spec itself; here only what would stop the page from drawing it."""
+    kit.js draws it there. It has no buttons of its own: the deck's Next walks its steps with the slide's lines
+    (gb_deck.js lockFor). course-visuals/kit/scripts/check_kit.py checks the spec itself; here only what would stop the
+    page from drawing it."""
     try:
         spec = json.loads(text)
     except ValueError as err:
@@ -699,10 +689,7 @@ def kit_figure(text, s, probs, where):
     data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     out = ['<div class="fill fig kit-fig%s" data-kit-scope>' % (' lt-light" data-kit-theme="light' if kit_light(spec) else ""),
            '<div class="kit-screen"><svg data-kit="#%s"%s></svg></div>' % (sid, kit_svg_attrs(spec)),
-           '<script type="application/json" id="%s">%s</script>' % (sid, data)]
-    if spec.get("steps"):
-        out.append(STEP_BAR)
-    out.append("</div>")
+           '<script type="application/json" id="%s">%s</script>' % (sid, data), "</div>"]
     return "".join(out)
 
 

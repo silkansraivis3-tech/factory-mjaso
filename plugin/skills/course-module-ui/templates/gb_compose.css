@@ -491,19 +491,7 @@ figure{margin:0}
 .slide:not(.dark) .mediabar .fbtn{border-color:var(--line-l);background:var(--blue-wash-l);
   color:var(--navy)}
 .mediabar .fbtn.primary{background:var(--navy);color:var(--white);border-color:var(--navy)}
-.mediabar .fbtn:active{transform:translateY(1px)}
-/* the figure's step bar is quiet: Back and Replay are round icons, Next the one filled button - a 44 px tap target each,
-   no taller than that, the words no bigger than the slide's captions */
-.kit-fig > .mediabar{gap:8px}
-.kit-fig > .mediabar .fbtn{min-height:44px;padding:0 1em;font-size:clamp(12.5px,1.35vmin,15px);border-radius:22px;gap:6px}
-.kit-fig > .mediabar .fbtn.ico{width:44px;padding:0;justify-content:center;background:transparent;border-color:transparent;color:var(--dim-d)}
-.slide:not(.dark) .kit-fig > .mediabar .fbtn.ico,.kit-fig.lt-light > .mediabar .fbtn.ico{background:transparent;border-color:transparent;color:var(--navy)}
-.kit-fig > .mediabar .fbtn.ico:hover{background:var(--line-d)}
-.kit-fig > .mediabar .fbtn:disabled{opacity:.35;cursor:default}
-.slide .kit-fig > .mediabar .fbtn.primary{background:var(--navy);color:var(--white);border-color:var(--navy)}
-.slide.dark .kit-fig:not(.lt-light) > .mediabar .fbtn.primary{background:var(--blue);color:var(--on-blue);border-color:var(--blue)}
-.kit-fig.lt-light .dots i{background:var(--line-l)}.kit-fig.lt-light .dots i.on{background:var(--navy)}
-.dots{display:flex;gap:6px}
+.mediabar .fbtn:active{transform:translateY(1px)}.dots{display:flex;gap:6px}
 .dots i{width:9px;height:9px;border-radius:50%;background:var(--cmp-white-16);display:block;
   transition:background .3s ease}
 .slide:not(.dark) .dots i{background:var(--line-l)}

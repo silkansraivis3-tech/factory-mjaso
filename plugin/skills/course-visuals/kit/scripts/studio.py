@@ -272,8 +272,8 @@ def generic_slide(spec, panel):
                  % (100 * x / sw, 100 * y / sh, 100 * w / sw))
         svg = '<div class="kit-holder">%s%s</div>' % (svg, photo)
     fig = ('<div class="fill fig kit-fig%s" data-kit-scope><div class="kit-screen">%s</div>'
-           '<script type="application/json" id="kit-studio">%s</script>%s</div>'
-           % (' lt-light" data-kit-theme="light' if cm.kit_light(spec) else "", svg, data, cm.STEP_BAR if spec.get("steps") else ""))
+           '<script type="application/json" id="kit-studio">%s</script></div>'
+           % (' lt-light" data-kit-theme="light' if cm.kit_light(spec) else "", svg, data))
     if panel == "task":
         return ('<div class="studio-task"><div class="ga" style="--ar:%.3f"><svg class="taskfig" data-kit="#kit-studio" '
                 'data-kit-step="final"></svg><script type="application/json" id="kit-studio">%s</script></div></div>'

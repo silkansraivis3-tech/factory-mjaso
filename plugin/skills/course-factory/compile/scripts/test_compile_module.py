@@ -3426,8 +3426,8 @@ def main():
         check("2.60.0: the empty kit <svg> already says what kit.js will - role img, the spec's label, a viewBox - so "
               "check_visuals.py does not warn on it", tag and 'role="img"' in tag.group(0) and 'aria-label="A valve closes on a pipe."' in tag.group(0)
               and re.search(r'viewBox="0 0 [\d.]+ [\d.]+"', tag.group(0)), tag.group(0) if tag else k4[:400])
-        check("... with the deck's own step buttons (.mediabar, prev / next / replay)",
-              'class="mediabar"' in k4 and 'data-act="next"' in k4 and 'data-act="replay"' in k4, k4[-600:])
+        check("2.108.0 ... and no step buttons of its own: the deck's Next walks its steps (Aigars: \"the next steps go\")",
+              'class="mediabar"' not in k4 and 'data-act="next"' not in k4, k4[-600:])
         check("... a '</script>' inside the spec cannot end the page's script early", "valve <\\/script>" in k4, k4)
         check("kit.css and kit.js are loaded, kit.js before GBDeck.init so its slide hooks are seen",
               '<link rel="stylesheet" href="../assets/kit.css">' in p7
