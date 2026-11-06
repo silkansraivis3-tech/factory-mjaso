@@ -252,8 +252,10 @@ in place of a structured technical schematic.**
 > 2. **A part is missing?** Make it to `kit/PARTS.md` in the module's `assets/kit_parts.js` (status `new`, kit helpers,
 >    tokens only, an `example` spec), run `kit/scripts/check_kit.py module <module> --figures <figures/MNN>`, use it.
 > 3. **The module is complete** (QA passed, deck compiled) → `kit/scripts/kit_parts.py promote <module> --factory
->    <factory-mjaso clone>`; it prints the branch, commit, push and merge-request steps - **ask the operator before the
->    push**; the owner merges. In an orchestrated build module agents never touch the factory's `kit.js` - the
+>    <factory-mjaso clone>`; **ask the operator once**, then the same command with `--pr` makes the branch, the commit,
+>    the push and the pull request itself; the owner merges.
+>    A part is the thing, or the shape of an idea (the Concepts family, `kit/SPEC.md`) - never a table: an idea with no
+>    kit part and no photo gets a new part, not a `grid_table`. In an orchestrated build module agents never touch the factory's `kit.js` - the
 >    orchestrator promotes every module's parts together at assembly and merges duplicates.
 > 4. **Review surface:** `kit/GALLERY.html` shows every part moving; a promoted part shows there with its example.
 

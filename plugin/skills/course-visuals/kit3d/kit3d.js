@@ -1063,7 +1063,9 @@
       if (s) {
         tmpV.copy(l.v).project(S.camera);
         l.sx = (tmpV.x * 0.5 + 0.5) * W; l.sy = (-tmpV.y * 0.5 + 0.5) * H;
-        if (tmpV.z > 1 || l.sx < -40 || l.sx > W + 40 || l.sy < -40 || l.sy > H + 40) { s = false; }   /* behind the camera, or off the picture */
+        /* behind the camera, or off the picture: a point past the edge has no place for its pill inside the picture, and
+           the pill was cut (a step that frames one tank left its neighbour's point just above the top) */
+        if (tmpV.z > 1 || l.sx < 0 || l.sx > W || l.sy < 0 || l.sy > H) { s = false; }
       }
       l.shown = s;
       setCls(l.el, 'k3-off', !s);
@@ -1148,7 +1150,8 @@
     function confl(l) {
       var n = 0, p = pillR(l), s = stemR(l), j, b, bp;
       for (j = 0; j < res.length; j++) { if (hit(p, res[j], 4) || hit(s, res[j], 0)) { n++; } }
-      if (p.y1 < 4 || p.y2 > H - 4 || p.x1 < 4 || p.x2 > W - 4) { n++; }
+      /* a pill past the box's edge is cut, its name unread: worse than touching another pill (fit gate, 1024 x 768) */
+      if (p.y1 < 4 || p.y2 > H - 4 || p.x1 < 4 || p.x2 > W - 4) { n += 3; }
       for (j = 0; j < shown.length; j++) {
         b = shown[j];
         if (b === l) { continue; }

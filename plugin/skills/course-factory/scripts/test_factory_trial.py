@@ -106,6 +106,14 @@ def main():
         check("without NOVIKONTAS_TRIAL the trial signs nothing", cs.unattended_signer(course) != "Factory trial")
         os.environ["NOVIKONTAS_TRIAL"] = "1"
         check("with it and the marker, every STOP is signed \"Factory trial\"", cs.unattended_signer(course) == "Factory trial")
+        os.environ["NOVIKONTAS_AUTO_BUILD"] = "1"
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = cs.cmd_approve(course, 1, "a writer")
+        check("an approval by another name is refused with the name to use, not with the expert's Ready (the factory trial's "
+              "writers were told every row was unanswered)", code == 1 and '--by "Factory trial"' in buf.getvalue()
+              and "Ready" not in buf.getvalue(), buf.getvalue())
+        os.environ.pop("NOVIKONTAS_AUTO_BUILD", None)
         os.environ.pop("NOVIKONTAS_TRIAL", None)
         import course_portal
         buf = io.StringIO()

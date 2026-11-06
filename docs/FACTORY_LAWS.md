@@ -368,7 +368,7 @@ classroom: COURSE.html, `_course_shell\course_map.js`, `module01\` ... with `pre
 pages report `gb-task-done`; module checks PASSED / NOT PASSED for understanding, not an official grade. Proved by the
 classroom's own importer. → `course-factory` (`knowledge/classroom-system.json`, `scripts/check_course_package.py`, 2.21.0)
 
-**L46 · 3D where it makes sense - at most half of the presentation - at full quality, and smooth on the tablet.** *(Its share is L67's since 2.108.0: 60-80 % interactive 3D; the cap of half is gone.)*
+**L46 · 3D where it makes sense - at most half of the presentation - at full quality, and smooth on the tablet.** *(Its share is L67's since 2.110.0: 60-80 % interactive 3D; the cap of half is gone.)*
 Owner, 2026-10-07: not on every slide, never at a lower quality, only where it makes sense. 3D for what has a shape, an
 inside or a layout in space; at most half of a presentation's teaching slides; speed from how scenes run - one shared
 renderer, scenes built and freed with their slide, no frame while nothing moves, shadows worked out once while still -

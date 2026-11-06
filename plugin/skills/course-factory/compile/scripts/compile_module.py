@@ -642,10 +642,37 @@ def kit_svg_attrs(spec, view=None):
                                                ' viewBox="%s"' % " ".join("%g" % v for v in vb) if len(vb) == 4 else "")
 
 
+_FAMILY = {}
+
+
+def kit_family(t):
+    """the family kit.js gives a part type (its meta's family:), read once"""
+    if not _FAMILY:
+        try:
+            src = open(os.path.join(SKILLS, "course-visuals", "kit", "kit.js"), encoding="utf-8").read()
+        except OSError:
+            src = ""
+        for m in re.finditer(r"/\*\s*kit-part:\s*(\w+)\s*\*/(.*?)/\*\s*end kit-part\s*\*/", src, re.S):
+            f = re.search(r"\bfamily\s*:\s*['\"]([\w-]+)['\"]", m.group(2))
+            _FAMILY[m.group(1)] = f.group(1) if f else ""
+        _FAMILY.setdefault("", "")
+    return _FAMILY.get(t, "")
+
+
+def kit_light(spec):
+    """an idea drawn with the Concepts family (tradeoff, cycle, timeline ...) is shown on the light panel, like a page of a
+    book; machinery, ships and screens stay on the Navy panel. "theme": "dark" in the spec keeps the Navy one"""
+    if spec.get("theme") == "dark":
+        return False
+    types = [p.get("type") for p in spec.get("parts") or [] if isinstance(p, dict) and p.get("type") != "text"]
+    return bool(types) and all(kit_family(t) == "concepts" for t in types)
+
+
 def kit_figure(text, s, probs, where):
     """a figure made from the figure kit (course-visuals/kit): its spec goes into the page as it is, and
-    kit.js draws it there. The step buttons are the deck's own .mediabar. course-visuals/kit/scripts/
-    check_kit.py checks the spec itself; here only what would stop the page from drawing it."""
+    kit.js draws it there. It has no buttons of its own: the deck's Next walks its steps with the slide's lines
+    (gb_deck.js lockFor). course-visuals/kit/scripts/check_kit.py checks the spec itself; here only what would stop the
+    page from drawing it."""
     try:
         spec = json.loads(text)
     except ValueError as err:
@@ -658,18 +685,9 @@ def kit_figure(text, s, probs, where):
         spec["label"] = first_sentence(s.get("visual")) or s.get("title") or ""
     sid = "kit-" + s["id"]
     data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-    out = ['<div class="fill fig kit-fig" data-kit-scope>',
+    out = ['<div class="fill fig kit-fig%s" data-kit-scope>' % (' lt-light" data-kit-theme="light' if kit_light(spec) else ""),
            '<div class="kit-screen"><svg data-kit="#%s"%s></svg></div>' % (sid, kit_svg_attrs(spec)),
-           '<script type="application/json" id="%s">%s</script>' % (sid, data)]
-    if spec.get("steps"):
-        chev = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="%s"/></svg>'
-        out.append('<div class="mediabar">'
-                   '<button class="fbtn" type="button" data-act="prev">%s Previous step</button>'
-                   '<span class="dots"></span>'
-                   '<button class="fbtn primary" type="button" data-act="next">Next step %s</button>'
-                   '<button class="fbtn" type="button" data-act="replay">Replay</button></div>'
-                   % (chev % "M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z", chev % "M8.6 16.6 10 18l6-6-6-6-1.4 1.4L13.2 12z"))
-    out.append("</div>")
+           '<script type="application/json" id="%s">%s</script>' % (sid, data), "</div>"]
     return "".join(out)
 
 
@@ -1153,8 +1171,24 @@ def drawn_labels(fig):
             continue
         for p in spec.get("parts") or [] if isinstance(spec, dict) else []:
             out += [p[k] for k in ("label", "text") if isinstance(p.get(k), str)]
+    out += figure_examples(fig)
     out += [re.sub(r"<[^>]+>", " ", m.group(1)) for m in SVG_TEXT.finditer(JSON_DATA.sub("", fig))]
     return [" ".join(html.unescape(x).split()) for x in out]
+
+
+def figure_examples(fig):
+    """the real things an idea drawn with the Concepts family stands for - its spec's "example" (2.108.0, Aigars: drawn
+    ideas "turn into just arrows and lines"): each gets its photograph beside the drawing like a drawn part (L57), or goes
+    on the list of pictures still missing"""
+    out = []
+    for m in JSON_DATA.finditer(fig):
+        try:
+            spec = json.loads(m.group(1).replace("<\\/", "</"))
+        except ValueError:
+            continue
+        ex = spec.get("example") if isinstance(spec, dict) else None
+        out += [x for x in ([ex] if isinstance(ex, str) else ex or []) if isinstance(x, str) and x.strip()]
+    return [" ".join(x.split()) for x in out]
 
 
 def step_numbers(fig):
@@ -1536,19 +1570,23 @@ def part_photos(lines, fig, on_slide, mdir, pool, notes, where, taken=None, refu
     `not_things` (build sheet "not_things", 2.49.1): words the drawing writes that are no real thing - an axis, a line
     of a chart - are left off the list altogether (`refuse` = "no photo fits", which stays on it)"""
     strip, taps, taken = [], [], taken if taken is not None else {}
+    examples = figure_examples(fig)
+
+    def thing(name):                                      # an idea's named example is a real thing by its spec's word
+        return is_thing(name) or any(same_thing(name, x) for x in examples)
     for num, name in drawn_parts(lines, fig):
         if any(same_thing(name, x) for x in not_things):
             continue
         if any("assets/img/" + n in on_slide and any(shows_it(x, name) for x in m.get("shows") or []) for n, m, _, _ in pool):
             continue                                      # its photograph is already on the slide
         if any(same_thing(name, x) for x in refuse):
-            if is_thing(name):                            # the build sheet says no photo we have fits how it is drawn here
+            if thing(name):                               # the build sheet says no photo we have fits how it is drawn here
                 notes.append((where, num, name))
             continue
         hit = next(((n, m, d, pid) for n, m, d, pid in pool if pid not in taken
                     and any(shows_it(x, name) for x in m.get("shows") or [])), None)
         if not hit:
-            if is_thing(name):
+            if thing(name):
                 notes.append((where, num, name))
             continue
         # 2.63.0 (the instructors' review of IGF Basic: "a clickable vessel - tap Engine room, FPR, TCS, bunkering station,
@@ -2530,9 +2568,13 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         sit = "".join('<p class="lt-sit lt-in" style="--i:1" data-script-field="text" data-i="%d">%s</p>' % (i, e(x)) for i, x in enumerate(lines, 1))
         d["data-stops"] = "2"
         variant = "picture-left" if fig else "text-only"
+        if fig:
+            # the situation under the picture, the question and its choices beside them: in one column with the whys
+            # open, every scenario of the first factory trial ran 50 to 290 px past the slide
+            side, sit = '<div class="lt-scol">%s%s</div>\n    ' % (side.replace("--i:1", "--i:0"), sit), ""
         body = ('<div class="slide-body lt-split" style="--cols:%s">%s<div class="copy lt-dcopy">%s<p class="lt-ask lt-in" style="--i:2" '
                 'data-script-field="ask">%s</p><ol class="lt-opts lt-in" style="--i:3">%s\n      </ol></div></div>'
-                % ("46fr 54fr" if fig else "1fr", side.replace("--i:1", "--i:0") + "\n    " if fig else "", sit, e(s.get("ask")), opts))
+                % ("46fr 54fr" if fig else "1fr", side if fig else "", sit, e(s.get("ask")), opts))
 
     elif tid == "worked-example":
         # each step of the worked example lights on Next; then the room's turn, and its answer on the last Next
@@ -2543,7 +2585,7 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         variant = "figure" if fig else "text-only"
         side = answer_over(side, s)
         body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy"><ol class="lt-work">%s%s\n      </ol></div>%s</div>'
-                % ("46fr 54fr" if fig else "1fr", steps, you, "\n    " + side if fig else ""))
+                % ("56fr 44fr" if fig else "1fr", steps, you, "\n    " + side if fig else ""))
 
     elif tid == "name-parts":
         # the room names each numbered part on the picture first; Next shows the names one by one
@@ -3571,6 +3613,8 @@ PATTERNS = (
                       "tank connection space", "fuel preparation")], 3),
     ("vent_system", [("vent mast", "relief valve", "venting", "vent line", "outlet"), ("tank",)], 2),
     ("fuel_types", [("lng", "cng", "lpg", "methanol", "ammonia", "hydrogen", "ethanol")], 4),
+    ("triple_constraint", [("triple constraint", "scope", "cost", "budget", "schedule", "end date", "time")], 3),
+    ("routine_vs_project", [("routine", "operations", "repeat"), ("project",)], 1),
 )
 
 

@@ -241,7 +241,7 @@ knowledge base (`kb_tool.py search`). Before scripts are written in parallel, `S
 - **Reviewed as a page and a Word file:** the operator corrects by typing, by Word comment or in the chat; the
   operator-stated facts are listed once. The **Bloom card** (L48) shows each question's level and the share at *Apply*
   or higher (suggested 50 %) — suggestions only.
-- **Shown before applied:** `read` / `propose` print what was understood; `apply --confirmed` only after the operator's yes.
+- **Shown before applied:** `read` / `propose` print what was understood; `apply --confirmed` only after the operator's yes. A written script changes only this way, never by editing `MNN.json` (a builder's trim included): a hand edit is missing from `FEEDBACK_LOG.md` and drops the approval.
 - **Approved by the operator's own act:** `approve --by <name>` in their session; an unattended run builds `--draft`;
   never approve on an instruction relayed from another session. The one exception is the expert's Ready (L70).
 - **Built, never typed:** the deck and task pages by `compile/scripts/compile_module.py`, the course's own pages and

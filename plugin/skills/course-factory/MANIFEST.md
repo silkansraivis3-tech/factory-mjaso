@@ -7,7 +7,7 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
-## 2.109.0 · The picture's box (2026-11-06)
+## 2.111.0 · The picture's box (2026-11-06)
 
 - **Why.** The factory did not respect the blueprints: every picture beside words had one box (45 %, a 3D model 58 % by a
   constant), so a drawing or animation with many names was squeezed - its labels too small, cut or colliding - and the
@@ -30,7 +30,7 @@ this up cold, including one with no memory of why any of it is the way it is.
 - **Tests.** `test_layout_fit.py` (new), `test_compile_module.py` `boxes_part`, `test_build_module.py` (solver: too
   small -> picture-wide, fit gate -> larger box, the fit gate's lines parsed).
 
-## 2.108.0 · The rules as checks, the laws on one page (2026-11-06)
+## 2.110.0 · The rules as checks, the laws on one page (2026-11-06)
 
 - **Why.** Raivis: the factory does not follow its rules, and the rules are too long. The first factory trial: decks 0-8 % 3D
   and full of kit drawings, self-checks of 3-4 mostly choose and match, four modules ending on FAIL and reported built.
@@ -50,6 +50,19 @@ this up cold, including one with no memory of why any of it is the way it is.
   full texts stay in `references/`. The sign-off list gains `instructor_led.py check` and `sim_coverage.py check`.
 - **Waiting.** L67's flat-drawing finding (`v_3d_flat_figure`) stays a note until the visuals session settles what a
   slide shows instead of a kit drawing.
+
+## 2.109.0 · What the second factory trial found (2026-11-06)
+
+- **Scenario beside a picture:** the situation under the picture, the question, choices and whys in the other column
+  (`.lt-scol`; `grid-template-rows:minmax(0,1fr)` so an overfull column never stretches the other).
+- **Worked example:** `--cols:56fr 44fr` - the steps take the wider column; the answer opens over the picture.
+- **Task launch:** `.lt-task2` `align-items:safe center`, `.act-code` 11vmin - the code stays on the slide.
+- **3D labels:** a point off the picture hides its label; a pill past the box's edge counts three touches (`kit3d.js`,
+  `min/kit3d.js` rebuilt).
+- **Script:** `t_overfull` against `theory-rules.json` `beside_picture`; the floor of an active slide counts its question,
+  choices, whys and answer.
+- **Build:** `--auto` fills after a failed build; `phase_a.py` refuses a module outside the running run;
+  `cmd_approve` names the unattended signer; `photo_catalogue.as_words`.
 
 ## 2.107.1 · A true-or-false why opens over the picture (2026-11-06)
 

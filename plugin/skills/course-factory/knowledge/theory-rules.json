@@ -26,6 +26,12 @@
     "max_words": 70,
     "_why": "An answer the room's question opens, or the why a true-or-false opens after the vote, is the answer - two or three sentences. Past this it is new theory hidden in a reveal, and it does not fit: it opens over the picture's column, about 120 words at 1280 x 800 and fewer on a 1024 x 768 tablet. The rest is taught on a slide before."
   },
+  "beside_picture": {
+    "situation": 60,
+    "choices": 85,
+    "steps": 85,
+    "_why": "What a slide with a picture beside its words holds on a 1024 x 768 tablet, measured by the fit gate on the first factory trial's four modules. A scenario: its situation under the picture (situation), its question, choices and whys in the other column (choices). A worked example: its steps and the room's question (steps); the answer opens over the picture. Past these the words are cut on the tablet (must fix): trim the lines, or move a part to the slide before. An active slide's question, choices, whys and answer count toward the slide's min_words, so trimming never makes it thin."
+  },
   "answers_taught_first": {
     "min_share": 0.6,
     "_why": "Every question's correct answer must be found in the slides the trainee has already seen - in their text or the instructor notes - before the task opens. The check compares the correct answer's key words (numbers exactly, words by their first five letters, so Latvian and Russian endings still match) with those slides; under this share of them, the question asks for something not yet taught (must fix). The review page shows, for every question, the slide that teaches its answer."

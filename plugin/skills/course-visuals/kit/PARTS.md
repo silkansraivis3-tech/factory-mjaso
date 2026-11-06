@@ -20,7 +20,7 @@ module needs X ── kit has X? ── yes ──► write the spec (figures/MN
      2  check_kit.py parts …/kit_parts.js              colours, type, helpers, example - must pass
      3  use X in the module's specs; compile; QA       the module ships with X working
      4  module complete ► kit_parts.py promote         X goes into the factory's kit.js, status "kit"
-     5  ask the operator ► push the branch ► open the merge request for Raivis
+     5  ask the operator ► kit_parts.py promote … --pr   branch, commit, push, pull request for Raivis (never merged)
 ```
 
 Steps 1-3 never wait for anyone: the module is built and taught with the new part. Step 4 runs **only after
@@ -36,6 +36,9 @@ If two modules made the same thing, it merges them into one part.
 2. **Check that a real photo isn't the answer** (course-visuals choice order). Equipment a trainee must recognise
    is a photograph. The kit is for systems, states, flows and sequences.
 3. **Name it for what it is, not where it is used:** `drip_tray`, not `m03_tray`. Use lower case and `_`.
+4. **Draw the thing, or the shape of the idea - never a table.** A part that draws only boxes and words (`rect` and
+   `text`) is refused: a table, a card or a list is what the slide's own layouts show at reading size. An idea gets its
+   shape - a loop, a line to an end, a triangle that stretches (family `concepts`, SPEC.md).
 
 ## The template
 
@@ -52,7 +55,7 @@ KIT.define('oil_tray', function (fig, part, g, p) {
     pool.setAttribute('y', 16 - d); pool.setAttribute('height', d);
   };
 }, {
-  family: 'piping',                 // instruments | piping | spaces | cutaways | gas-fire-machinery | charts | procedures
+  family: 'piping',                 // instruments | piping | spaces | cutaways | gas-fire-machinery | charts | procedures | concepts
   status: 'new',                    // "new" until merged; promote sets "kit"
   look: 'equipment',                // equipment (a physical thing) | screen (an ISA-101 HMI) | diagram - L63, below
   course: 'IGF Basic', module: 'M03', made: '2026-10-15',
