@@ -547,6 +547,9 @@ def review_part():
               '"--base=" + reviewed_dir(out_dir)' in src and '"%s_shots" % m' in src)
         check("a parallel build promotes at module clean (only the course package left)",
               'clean = passed or (o.no_course_pages and fails == ["course package"])' in src)
+        check("--auto fills the picture slots after a failed build too, not only at PHASE A CLEAN (the factory trial: every "
+              "builder lost a run, then filled them by hand)",
+              "    if slots_left and o.auto and not o.auto_round:" in src and "if passed and slots_left and o.auto" not in src)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

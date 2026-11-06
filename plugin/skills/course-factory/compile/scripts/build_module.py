@@ -1625,7 +1625,9 @@ def main(argv=None):
             needs = visual_needs.write(course, o.module)
         except Exception as why:                         # noqa: BLE001 - the needs file is a help, never a stop
             needs = "the needs file could not be written: %s" % why
-    if passed and slots_left and o.auto and not o.auto_round:
+    # the picks go in whether or not the other checks passed: a slide cut on the tablet does not need its picture any
+    # less, and a builder who waited for PHASE A CLEAN lost a run and filled them by hand (the factory trial)
+    if slots_left and o.auto and not o.auto_round:
         import visual_needs
         filled = visual_needs.fill(course, o.module)
         if filled:

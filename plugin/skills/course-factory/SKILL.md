@@ -474,7 +474,8 @@ screen that names what the ship lacks. Every slide's script carries its picture 
 
 **Every correction is shown before it is applied.** `read` / `propose` only print what was
 understood and leave it pending; show that list, and `apply --confirmed` only after the operator says
-yes. The theory check (L36 — thin slides, thin notes, words that do not fill the minutes, a self-check
+yes. A written script changes only this way, never by editing `MNN.json`, a builder's trim included:
+an edit by hand is missing from `FEEDBACK_LOG.md` and drops the approval. The theory check (L36 — thin slides, thin notes, words that do not fill the minutes, a self-check
 after too little theory, an answer not yet taught, a task written onto a slide) and the slide-text
 check (L22) run on the script first, and their findings head the review page; every question shows
 the slide that teaches its answer;

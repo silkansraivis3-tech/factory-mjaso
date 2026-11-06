@@ -967,6 +967,31 @@ def theory_findings(script):
     return by_group(script, found, lambda sub: theory_check(sub)[0]), taught_on
 
 
+# the words an active slide shows besides its title and lines: they count toward its floor, so a situation can be
+# trimmed to fit without the slide turning thin
+SHOWN_TOO = ("ask", "reveal", "claim", "choices", "why")
+
+
+def active_shape(s):
+    return bool(s.get("choices") or s.get("claim") or (s.get("ask") and s.get("reveal")))
+
+
+def overfull(s):
+    """[(the part, its words, the most it holds)] of a scenario or a worked example beside a picture: what the template
+    holds on a 1024 x 768 tablet (theory-rules.json "beside_picture")"""
+    B = RULES["beside_picture"]
+    if picture_of(s)["kind"] in ("", "none"):
+        return []
+    if s.get("choices"):
+        parts = (("t_part_situation", wc(s.get("text", "")), B["situation"]),
+                 ("t_part_choices", wc(*[as_text(s.get(f)) for f in ("ask", "choices", "why")]), B["choices"]))
+    elif s.get("ask") and s.get("reveal") and not s.get("claim"):
+        parts = (("t_part_steps", wc(s.get("text", ""), as_text(s.get("ask"))), B["steps"]),)
+    else:
+        return []
+    return [(p, w, most) for p, w, most in parts if w > most]
+
+
 def theory_check(script):
     """Everything L36 asks, as findings shown at the top of the review page. Also returns, for every
     question, the slide(s) that teach its answer - the page shows them beside the question."""
@@ -986,15 +1011,18 @@ def theory_check(script):
             continue
         w_slide = wc(s.get("title", ""), s.get("text", ""))
         w_notes = wc(s.get("notes", ""))
+        w_floor = w_slide + (wc(*[as_text(s.get(f)) for f in SHOWN_TOO]) if active_shape(s) else 0)
         if not s.get("active"):              # L49: the density is of PLAIN theory; an active slide's minutes are what the trainees do
             th_words += w_slide + w_notes
             th_min += minutes(s)
         if s.get("recap"):
             pass                              # L51: a recap is short on purpose - recap_findings checks its points
-        elif w_slide < R["slide"]["min_words"]:
-            add(s["id"], "text", FAIL, "t_thin_slide", w=w_slide, min=R["slide"]["min_words"])
+        elif w_floor < R["slide"]["min_words"]:
+            add(s["id"], "text", FAIL, "t_thin_slide", w=w_floor, min=R["slide"]["min_words"])
         elif w_slide > R["slide"]["max_words"]:
             add(s["id"], "text", NOTE, "t_long_slide", w=w_slide, max=R["slide"]["max_words"])
+        for part, w, most in overfull(s):
+            add(s["id"], "text", FAIL, "t_overfull", part=T(script, part), w=w, max=most)
         if w_notes < R["notes"]["min_words"]:
             add(s["id"], "notes", FAIL, "t_thin_notes", w=w_notes, min=R["notes"]["min_words"])
         elif w_notes > R["notes"]["max_words"]:
@@ -3006,12 +3034,18 @@ def unanswered(rev):
 
 def cmd_approve(course, module, by, despite=False):
     p = paths(course, module)
-    if os.environ.get("NOVIKONTAS_AUTO_BUILD") == "1" and by != unattended_signer(course):
+    signer = unattended_signer(course) if os.environ.get("NOVIKONTAS_AUTO_BUILD") == "1" else None
+    if signer and by != signer:
+        # the run has its signer: the refusal names it, not the expert's Ready (a factory trial's writers were told the
+        # expert had left every row unanswered, which hid the script's own findings)
+        print("Not approved - an unattended run approves with --by \"%s\" only." % signer)
+        return 1
+    if os.environ.get("NOVIKONTAS_AUTO_BUILD") == "1" and not signer:
         rp = workspace.claude_path(course, "pedagogy_review.json")
         rows, left = unanswered(load(rp) if os.path.isfile(rp) else {})
         why = ("the expert pressed Ready with %d of %d topic rows unanswered (%s%s) - a Ready is a review only when every row "
                "has the expert's answer" % (len(left), rows, ", ".join(left[:6]), " ..." if len(left) > 6 else "")) if left else \
-            "--by \"%s\"" % (unattended_signer(course) or "nobody pressed Ready")
+            "nobody pressed Ready"
         print("Not approved - an unattended run approves only with the expert's own Ready from the editor: %s. "
               "Build --draft and say which scripts wait (script/GUIDE.md §4)." % why)
         return 1

@@ -200,7 +200,7 @@ def main():
             found = os.path.join(work, "working_claude", "photos_found", "M02")
             photo(os.path.join(found, "found_s09.jpg"), 1800, 1200, shade=200)
             cs.save(os.path.join(found, "_photo_meta.json"), {"found_s09.jpg": {"title": "Truck-to-ship LNG bunkering",
-                     "shows": "bunkering", "source": "Wikimedia Commons", "author": "X", "license": "CC BY 4.0",
+                     "shows": ["bunkering", "a truck alongside"], "source": "Wikimedia Commons", "author": "X", "license": "CC BY 4.0",
                      "url_or_origin": "https://commons.example/x.jpg", "rights_state": "CLEARED", "found_for": "M02 s09"}})
             pc.index(work)
             _, plan, _ = pc.assign(work)
@@ -225,6 +225,17 @@ def main():
                   sheet["screens"]["q02"]["figure"] == "assets/img/_placeholder_q02.png")
             needs = io.open(os.path.join(c, "working_claude", "visuals", "M01_VISUAL_NEEDS.md"), encoding="utf-8").read()
             check("... and the needs file lists the auto pick for the visual review", "Picked with no agent" in needs and "s01" in needs)
+        import contextlib
+        import phase_a
+        res_p, run_p = phase_a.status_paths(c)
+        io.open(run_p, "w", encoding="utf-8").write(json.dumps({"pid": os.getpid(), "modules": [4], "jobs": 1}))
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = phase_a.main([c, "--modules", "1"])
+        check("a module asked for while another Phase A run goes is refused by name, never joined and lost (the factory "
+              "trial: M01 started while M04's run was going was never built)", code == 2 and "1 is not in that run" in buf.getvalue(),
+              (code, buf.getvalue()))
+        os.remove(run_p)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n%s" % ("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS)))

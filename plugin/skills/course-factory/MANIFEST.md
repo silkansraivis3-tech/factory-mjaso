@@ -7,6 +7,19 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.109.0 · What the second factory trial found (2026-11-06)
+
+- **Scenario beside a picture:** the situation under the picture, the question, choices and whys in the other column
+  (`.lt-scol`; `grid-template-rows:minmax(0,1fr)` so an overfull column never stretches the other).
+- **Worked example:** `--cols:56fr 44fr` - the steps take the wider column; the answer opens over the picture.
+- **Task launch:** `.lt-task2` `align-items:safe center`, `.act-code` 11vmin - the code stays on the slide.
+- **3D labels:** a point off the picture hides its label; a pill past the box's edge counts three touches (`kit3d.js`,
+  `min/kit3d.js` rebuilt).
+- **Script:** `t_overfull` against `theory-rules.json` `beside_picture`; the floor of an active slide counts its question,
+  choices, whys and answer.
+- **Build:** `--auto` fills after a failed build; `phase_a.py` refuses a module outside the running run;
+  `cmd_approve` names the unattended signer; `photo_catalogue.as_words`.
+
 ## 2.107.1 · A true-or-false why opens over the picture (2026-11-06)
 
 - **Found by the first factory trial** (M01 s04, Raivis's screenshot): the why opened under the claim and the vote and was

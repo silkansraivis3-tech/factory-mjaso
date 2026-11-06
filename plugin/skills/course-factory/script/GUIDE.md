@@ -155,7 +155,9 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   they had (`compile/GUIDE.md` §2, §2h). Never the same look twice in a row (L62) - two claims or two scenarios side
   by side are a problem; 60-80 % of the slides with interactive 3D; no flat drawings (L67). A drill comes after the
   module's last teaching slide; minutes are the module's as before (L1). `content_script.py` checks each shape
-  (`shape_problems`).
+  (`shape_problems`). Beside a picture a scenario's situation holds 60 words and its question, choices and whys 85;
+  a worked example's lines and question 85 (`theory-rules.json` `beside_picture`, `t_overfull`) - an active slide's
+  question, choices, whys and answer count toward its 50 words, so trim the situation, not the teaching.
 - **3D and AI pictures - planned unasked (2.49.0, operator 2026-10-16: "make it so they add 3D + AI generated photos
   when needed").** Before the review page is shown, plan them yourself - the operator never has to ask:
   - **3D:** where a slide's lesson is a shape, an inside or a layout in space (a tank and its barriers, a space and

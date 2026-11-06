@@ -2569,9 +2569,13 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         sit = "".join('<p class="lt-sit lt-in" style="--i:1" data-script-field="text" data-i="%d">%s</p>' % (i, e(x)) for i, x in enumerate(lines, 1))
         d["data-stops"] = "2"
         variant = "picture-left" if fig else "text-only"
+        if fig:
+            # the situation under the picture, the question and its choices beside them: in one column with the whys
+            # open, every scenario of the first factory trial ran 50 to 290 px past the slide
+            side, sit = '<div class="lt-scol">%s%s</div>\n    ' % (side.replace("--i:1", "--i:0"), sit), ""
         body = ('<div class="slide-body lt-split" style="--cols:%s">%s<div class="copy lt-dcopy">%s<p class="lt-ask lt-in" style="--i:2" '
                 'data-script-field="ask">%s</p><ol class="lt-opts lt-in" style="--i:3">%s\n      </ol></div></div>'
-                % ("46fr 54fr" if fig else "1fr", side.replace("--i:1", "--i:0") + "\n    " if fig else "", sit, e(s.get("ask")), opts))
+                % ("46fr 54fr" if fig else "1fr", side if fig else "", sit, e(s.get("ask")), opts))
 
     elif tid == "worked-example":
         # each step of the worked example lights on Next; then the room's turn, and its answer on the last Next
@@ -2582,7 +2586,7 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         variant = "figure" if fig else "text-only"
         side = answer_over(side, s)
         body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy"><ol class="lt-work">%s%s\n      </ol></div>%s</div>'
-                % ("46fr 54fr" if fig else "1fr", steps, you, "\n    " + side if fig else ""))
+                % ("56fr 44fr" if fig else "1fr", steps, you, "\n    " + side if fig else ""))
 
     elif tid == "name-parts":
         # the room names each numbered part on the picture first; Next shows the names one by one
