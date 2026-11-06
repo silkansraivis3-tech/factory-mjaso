@@ -2331,6 +2331,28 @@ def kit2d_part(tmp):
           and "assets/kit.js" not in p, p[-800:])
     kit2d_dir = os.path.join(SKILLS, "course-visuals", "kit2d")
     same = lambda a, b: os.path.isfile(a) and os.path.isfile(b) and io.open(a, "rb").read() == io.open(b, "rb").read()
+    # 2.108.1 - the starter of a drawing slide about an idea, a sequence or numbers is a 2D-kit spec from the slide's words
+    proc = {"id": "s05", "kind": "slide", "visual_kind": "process_animation", "title": "Handling a change",
+            "visual": "The steps of a change request.", "text": "Request - the change is written down.\nAssess - cost, time and risk.\nDecide - approve or escalate.\nPlan - the plan is updated."}
+    st = cm.starter_kit2d({"module": 1}, proc)
+    nodes = [x for x in st["parts"] if x["type"] == "node"]
+    check("starter_kit2d: a process slide - one box per line in the line's own name, an arrow between each and the next, a step per "
+          "line bringing its box in and lighting it, the column's shape, no \"_todo\" (nothing to invent)",
+          cm.kit2d_slide({"module": 1}, proc) and [x["text"] for x in nodes] == ["Request", "Assess", "Decide", "Plan"]
+          and len([x for x in st["parts"] if x["type"] == "arrow"]) == 3 and [x["line"] for x in st["steps"]] == [1, 2, 3, 4]
+          and st["size"] == list(cm.KIT2D_SIZE) and "_todo" not in st and st.get("_k2"), st)
+    cyc = dict(proc, id="s06", text="Plan - set the goal.\nDo - try it.\nCheck - measure it.\nAct - keep what works, and round again.")
+    sc = cm.starter_kit2d({"module": 1}, cyc)
+    check("... a slide whose words say it goes round is a cycle of its lines' names",
+          sc["parts"][0]["type"] == "cycle" and [x["name"] for x in sc["parts"][0]["stages"]] == ["Plan", "Do", "Check", "Act"], sc)
+    ch = cm.starter_kit2d({"module": 1}, dict(proc, id="s07", visual_kind="chart"))
+    bad2 = []
+    cm.kit2d_figure(json.dumps({k: v for k, v in ch.items() if k != "_k2"}), proc, bad2, "s07")
+    check("... a chart cannot take its numbers from the slide's words: its \"_todo\" says so, and the compile reports it until it is gone",
+          ch["parts"][0]["type"] == "chart" and "sources" in ch["_todo"] and len(bad2) == 1 and "_todo" in bad2[0], (ch, bad2))
+    lay = dict(proc, id="s08", visual_kind="interactive_diagram", text="Fuel tank.\nTank connection space.\nFuel preparation room.")
+    check("... a slide whose lines are mostly equipment and spaces (a layout) keeps the figure kit's starter",
+          not cm.kit2d_slide({"module": 1}, lay) and not cm.kit2d_slide({"module": 1}, dict(proc, visual_kind="schematic")))
     check("... the module holds the factory's kit2d.js and kit2d.css, byte for byte (design_system.py ships them)",
           same(os.path.join(md, "assets", "kit2d.js"), os.path.join(kit2d_dir, "kit2d.js"))
           and same(os.path.join(md, "assets", "kit2d.css"), os.path.join(kit2d_dir, "kit2d.css")), out)

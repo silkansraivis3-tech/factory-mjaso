@@ -321,6 +321,12 @@ own line: `document.querySelector('#s04 [data-i="2"]')`. A figure script registe
   show every part), named as the slide's `"figure": "sNN.kit2d.json"`. The compile ships `kit2d.js` and `kit2d.css`; the
   deck's Next walks its steps; `fit_gate.py` fails a step where its words overlap, are cut at the edge or lie on a line.
   Give the spec's `size` the shape of the slide's picture box: a wide figure in a tall box is shown small.
+  `--init-build` writes the starter itself (2.108.1) for a chart, comparison, animation or interactive-diagram slide
+  whose lines are not mostly equipment and spaces: the steps of a process (a box per line, an arrow to the next, a step
+  bringing each in), a cycle when the words go round, a timeline or a grid when they name one, a chart. Where the
+  slide's words cannot give the values (a chart's points, a task's weeks, a grid's rows) its `"_todo"` says so, and the
+  compile reports it until the values from the course's sources are in and the key is gone. Equipment layouts and the
+  tested IGF patterns keep the figure kit's starter.
 - **A `model_3d` slide (2.49.0, L46) - drawn with the 3D kit.** Do not write three.js. Write the scene as a short
   JSON spec, `working_claude\figures\MNN\sNN.kit3d.json` (parts, labels, steps: `course-visuals\kit3d\SPEC.md` is the
   format, `PARTS.md` lists every part; the finished IGF scenes are ported in `course-visuals\kit3d\examples\`), and

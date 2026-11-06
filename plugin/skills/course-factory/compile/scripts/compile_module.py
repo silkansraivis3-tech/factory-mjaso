@@ -717,6 +717,8 @@ def kit2d_figure(text, s, probs, where):
     if not isinstance(spec, dict) or not spec.get("parts"):
         probs.append("%s: its 2D kit figure has no parts" % where)
         return ""
+    if spec.get("_todo"):                              # --init-build's starter, its values still placeholders
+        probs.append("%s: its 2D kit figure is still the starter (\"_todo\": %s) - then delete the \"_todo\" key" % (where, spec["_todo"]))
     if not spec.get("label"):
         spec["label"] = first_sentence(s.get("visual")) or s.get("title") or ""
     sid = "k2-" + s["id"]
@@ -1781,7 +1783,7 @@ def unsupported_facts(script, build, figdir, mdir, course):
     for sid, b in sorted((build.get("screens") or {}).items()):
         cited = {re.sub(r"\s+", "", k.lower()) for k in (b.get("facts") or {})}
         for rel in (b.get("figure"), b.get("aside")):
-            if not rel or not str(rel).lower().endswith((".kit.json", ".svg", ".html")):
+            if not rel or not str(rel).lower().endswith((".kit.json", ".kit2d.json", ".svg", ".html")):
                 continue
             raw, err = read_figure(mdir, rel, figdir)
             if err or not raw:
@@ -3925,6 +3927,109 @@ def starter_track(script, s, lines, variant="v"):
                      "draws. Draw the real thing if it has one; else keep the track and check every step's words"}
 
 
+# 2.108.1 - a drawing slide about an idea, a sequence or numbers starts from the 2D kit (course-visuals/kit2d), drawn to
+# the two-col figure column's shape. Equipment (schematic, cutaway) and a slide one of the tested IGF patterns or a
+# molecule / curve starter fits keep the figure kit's starter until they become 3D (L67).
+KIT2D_STARTER_KINDS = ("chart", "comparison", "step_animation", "flow_animation", "process_animation", "interactive_diagram")
+KIT2D_SIZE = (960, int(round(960 * STARTER_PANEL[1] / STARTER_PANEL[0])))
+KIT2D_CYCLE = re.compile(r"(?i)\b(cycles?|round again|loop|repeats?|pdca|plan[- ]do)\b")
+KIT2D_TIME = re.compile(r"(?i)\b(schedule|timeline|time line|gantt|critical path|milestones?)\b")
+KIT2D_GRID = re.compile(r"(?i)\b(matrix|likelihood|quadrants?|grid)\b")
+
+
+def kit2d_items(lines):
+    """each line's name (the term before " - " or ": ", else the line) and the rest of it"""
+    out = []
+    for line in lines:
+        m = TERM.match(line)
+        out.append((m.group(1).strip(), line[m.end():].strip()) if m else (line.strip().rstrip("."), ""))
+    return out
+
+
+def starter_kit2d(script, s):
+    """the starter 2D-kit spec of a drawing slide, from its own words: a cycle, a timeline, a grid, a graph or - most often -
+    the steps of a process, one box per line, each step bringing its box in and lighting it. Nothing is invented: where the
+    slide's words cannot give the values (a graph's points, a task's weeks, a grid's rows) the spec says so in "_todo",
+    which the compile reports until it is gone. None when the slide has no lines."""
+    lines = cs.lines_of(s.get("text"))
+    if not lines:
+        return None
+    W, H = KIT2D_SIZE
+    kind = cs.parse_kind(s.get("visual_kind", ""))
+    words = " ".join([s.get("title") or "", s.get("visual") or ""] + lines)
+    items = kit2d_items(lines)
+    label = first_sentence(s.get("visual")) or s.get("title") or ""
+    spec = {"label": label, "size": [W, H], "_k2": True}
+    if kind == "chart":
+        spec.update({"state": {"draw": 0}, "rates": {"draw": 3.6},
+                     "parts": [{"id": "C", "type": "chart", "x": 110, "y": 60, "w": W - 200, "h": H - 150,
+                                "xaxis": {"min": 0, "max": 10, "step": 2, "label": "", "unit": ""},
+                                "yaxis": {"min": 0, "max": 10, "step": 2, "label": "", "unit": ""}},
+                               {"id": "F", "type": "curve", "on": "C", "pts": [[0, 0], [10, 10]], "draw": "@draw", "label": items[0][0]}],
+                     "steps": [{"title": lines[0], "set": {"draw": 1}, "line": 1}],
+                     "_todo": "the axes and the curve's points from the course's sources (SPEC.md: chart, curve, point, span)"})
+        return spec
+    if KIT2D_CYCLE.search(words) and 3 <= len(items) <= 6:
+        spec.update({"state": {"stage": 0}, "rates": {"stage": 3.4},
+                     "parts": [{"id": "C", "type": "cycle", "x": W / 2, "y": H / 2, "r": min(W, H) * 0.3, "band": 48, "at": "@stage",
+                                "stages": [{"name": t, "sub": ""} for t, _ in items]}],
+                     "steps": [{"title": lines[i], "set": {"stage": i + 1}, "line": i + 1} for i in range(len(items))]})
+        return spec
+    if KIT2D_TIME.search(words):
+        tasks = [{"id": "T%d" % (i + 1), "name": t, "d": 1, "after": ["T%d" % i] if i else [], "cat": i % 5 + 1} for i, (t, _) in enumerate(items[:8])]
+        spec.update({"state": {"draw": 0}, "rates": {"draw": 3},
+                     "parts": [{"id": "G", "type": "gantt", "x": 20, "y": 10, "w": W - 40, "h": H - 20, "start": 0, "end": len(tasks) + 2,
+                                "tick": "{v}", "draw": "@draw", "tasks": tasks}],
+                     "steps": [{"title": lines[0], "set": {"draw": 1}, "line": 1}],
+                     "_todo": "each task's length and what it waits for, from the course's sources (SPEC.md: gantt)"})
+        return spec
+    if KIT2D_GRID.search(words):
+        spec.update({"state": {"show": 0},
+                     "parts": [{"id": "M", "type": "matrix", "x": 220, "y": 40, "w": W - 320, "h": H - 130, "rows": ["", "", ""], "cols": ["", "", ""],
+                                "items": [{"name": t, "r": 1, "c": 1, "show": "@show", "dy": (i - len(items) / 2.0) * 30} for i, (t, _) in enumerate(items[:5])]}],
+                     "steps": [{"title": lines[0], "set": {"show": 1}, "line": 1}],
+                     "_todo": "the rows, the columns and where each item stands, from the course's sources (SPEC.md: matrix)"})
+        return spec
+    # the steps of a process: up to four boxes a row, a second row running back, one arrow between each and the next
+    its = items[:8]
+    n = len(its)
+    per = n if n <= 4 else (n + 1) // 2
+    gap = (W - 40) / float(per)
+    bw = min(220, gap - 50)
+    rows = 1 if n <= 4 else 2
+    ys = [H / 2.0] if rows == 1 else [H * 0.3, H * 0.72]
+    parts, state, steps = [], {}, []
+    for i, (t, rest) in enumerate(its):
+        r, c = divmod(i, per)
+        col = c if r == 0 else per - 1 - c
+        nid = "N%d" % (i + 1)
+        state["n%d" % (i + 1)] = 0
+        state["l%d" % (i + 1)] = 0
+        parts.append({"id": nid, "type": "node", "x": round(20 + gap * (col + 0.5)), "y": round(ys[r]), "w": round(bw), "h": 74,
+                      "text": t, "show": "@n%d" % (i + 1), "lit": "@l%d" % (i + 1), "cat": i % 5 + 1})
+    for i in range(1, n):
+        state["a%d" % i] = 0
+        parts.append({"id": "A%d" % i, "type": "arrow", "from": "N%d" % i, "to": "N%d" % (i + 1), "draw": "@a%d" % i})
+    for i in range(n):
+        st = {"n%d" % (i + 1): 1, "l%d" % (i + 1): 1}
+        if i:
+            st.update({"a%d" % i: 1, "l%d" % i: 0})
+        steps.append({"title": lines[i], "set": st, "line": i + 1, "after": {"n%d" % (i + 1): 300} if i else {}})
+    spec.update({"state": state, "rates": {"a%d" % i: 4 for i in range(1, n)}, "parts": parts, "steps": steps})
+    return spec
+
+
+def kit2d_slide(script, s):
+    """a drawing slide the 2D kit starts: its kind is an idea, a sequence or numbers, no tested pattern or molecule / curve
+    starter fits it, and its lines are not mostly the names of equipment and spaces the figure kit draws (a layout)"""
+    kind = cs.parse_kind(s.get("visual_kind", ""))
+    lines = cs.lines_of(s.get("text")) or []
+    if kind not in KIT2D_STARTER_KINDS or not lines or pattern_starter(s) or starter_special(script, s, lines):
+        return False
+    things = sum(1 for t, _ in kit2d_items(lines) if KIT_WORD.search(t))
+    return kind == "chart" or things * 2 < len(lines)
+
+
 def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(), pool=None, taken=None):
     """the starter figure of every slide whose picture the kit can draw - written into `out` ({slide id: spec}) when its
     file is not there yet (never overwritten) - and the slide's entry in `build_screens` set to name it.
@@ -3937,10 +4042,11 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
         two_d = s["id"] in fallback
         if not two_d and (s["id"] in skip or cs.parse_kind(s.get("visual_kind", "")) not in STARTER_FIGURE_KINDS):
             continue
-        spec = starter_figure(script, s, pool, taken)
+        spec = starter_kit2d(script, s) if kit2d_slide(script, s) else None    # 2.108.1: an idea, a sequence or numbers
+        spec = spec or starter_figure(script, s, pool, taken)
         if not spec:
             continue
-        name = "%s.kit.json" % s["id"]
+        name = "%s%s" % (s["id"], KIT2D_SPEC if spec.get("_k2") else ".kit.json")
         entry = build_screens[s["id"]]
         note = spec.pop("_note", None)                 # 2.67.0 - what the starter was made from: the build sheet says it
         if two_d:
@@ -3957,7 +4063,9 @@ def starter_figures(script, build_screens, figdir, skip=(), out=None, fallback=(
             # 2.72.0: "replace the placeholder parts ... try it with studio.py before compiling" sent the first 2.72.0 proof
             # run's builders into redrawing every figure by hand before one build (50 min, nothing built). (merge) a starter
             # made from the slide's words or the figure library says what it was made from (2.67.0 "_note"), then the same rule
-            entry["_figure"] = ((note.rstrip(". ") + ". ") if note else
+            entry["_figure"] = (("starter written by --init-build with the 2D kit (course-visuals\\kit2d\\SPEC.md; demos.html, pm.html) "
+                                 "from the slide's lines%s. " % (" - its \"_todo\" first: " + spec["_todo"] if spec.get("_todo") else ""))
+                                if spec.get("_k2") else (note.rstrip(". ") + ". ") if note else
                                 ("starter = the %s pattern (a tested, physically correct figure): keep it - change only its words "
                                  "to the script's and its steps' lines. " % spec["_pattern"].split(" ")[0]) if spec.get("_pattern") else
                                 "starter written by --init-build: one part per thing the script names, its steps lighting the "
@@ -4905,9 +5013,10 @@ def main(argv=None):
         sheet_screens = cs.load(bp).get("screens") or {}
         exercise_proposal(o.course, script)             # 2.63.2: a module's practical exercise gets its slide, unasked
         for sid, spec in specs.items():                 # 2.50.0: starter figure-kit specs - edited, never written from nothing
-            cs.save(os.path.join(figdir, "%s.kit.json" % sid), spec)
-            print("  starter figure: figures\\%s\\%s.kit.json - %d parts, %d steps (edit it: the parts are placed on a grid)%s"
-                  % (cs.mid(o.module), sid, len(spec["parts"]), len(spec["steps"]),
+            ext = KIT2D_SPEC if spec.pop("_k2", False) else ".kit.json"
+            cs.save(os.path.join(figdir, "%s%s" % (sid, ext)), spec)
+            print("  starter figure: figures\\%s\\%s%s - %d parts, %d steps (edit it: the parts are placed on a grid)%s"
+                  % (cs.mid(o.module), sid, ext, len(spec["parts"]), len(spec["steps"]),
                      " - the 2D figure if the 3D scene is declined" if (sheet_screens.get(sid) or {}).get("_2d") else ""))
         for sid, spec in specs3.items():                # the 3D kit's starter scenes - placed as on board, never written from nothing
             cs.save(os.path.join(figdir, "%s%s" % (sid, KIT3D_SPEC)), spec)

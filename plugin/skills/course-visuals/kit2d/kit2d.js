@@ -259,6 +259,7 @@
       f.svg.style.setProperty('--k2-up', up.toFixed(3));
       f.scale = scale;
       f.thinNow();
+      (f.fits || []).forEach(function (fn) { fn(); });
       f.frame(true);
       f.layout();
       this.labels.forEach(function (L) { if (L.goal) { L.off = L.goal.slice(); } });
@@ -1081,8 +1082,27 @@
     el('path', { d: d, 'class': 'k2-node-face' + (p.cat ? ' k2-node-face-cat' : '') }, inner);
     el('path', { d: d, 'class': 'k2-edge' }, inner);
     var tc = p.cat ? 'k2-t-oncat' : 'k2-t-lbl';
-    el('text', { x: x, y: y + (p.sub ? -3 : 6), 'text-anchor': 'middle', 'class': tc }, inner, p.text || '');
-    if (p.sub) { el('text', { x: x, y: y + 20, 'text-anchor': 'middle', 'class': p.cat ? 'k2-t-oncat-sub' : 'k2-t-sub' }, inner, p.sub); }
+    inner.setAttribute('data-k2-holds', '');
+    inner.querySelector('.k2-outline-s').setAttribute('data-k2-shape', '');
+    var name = el('text', { x: x, 'text-anchor': 'middle', 'class': tc }, inner), subT = null;
+    if (p.sub) { subT = el('text', { x: x, 'text-anchor': 'middle', 'class': p.cat ? 'k2-t-oncat-sub' : 'k2-t-sub' }, inner, p.sub); }
+    /* the name on as many lines as the box's width needs (a decision's diamond is narrower where its words are) */
+    (f.fits = f.fits || []).push(function () {
+      var room = (kind === 'decision' ? w * 0.72 : w - 26), words = String(p.text || '').split(/\s+/), rows = [], cur = '';
+      name.textContent = '';
+      var probe = el('tspan', {}, name);
+      words.forEach(function (wd) {
+        var t = cur ? cur + ' ' + wd : wd;
+        probe.textContent = t;
+        if (cur && probe.getComputedTextLength() > room) { rows.push(cur); cur = wd; } else { cur = t; }
+      });
+      if (cur) { rows.push(cur); }
+      name.removeChild(probe);
+      var fs = parseFloat((name.ownerDocument.defaultView.getComputedStyle(name).fontSize) || 17);
+      var total = rows.length * fs * 1.15 + (subT ? fs * 1.1 : 0), y0 = y - total / 2 + fs * 0.85;
+      rows.forEach(function (r, i) { el('tspan', { x: x, y: (y0 + i * fs * 1.15).toFixed(1) }, name, r); });
+      if (subT) { subT.setAttribute('y', (y0 + rows.length * fs * 1.15 + fs * 0.05).toFixed(1)); }
+    });
     (f.nodes = f.nodes || {})[p.id] = { x: x, y: y, w: kind === 'decision' ? w + 20 : w, h: kind === 'decision' ? h + 28 : h };
     var sp = new Spring(f.target(p.show, 1)), moving = false, wasLit = f.target(p.lit, 0);
     f.solid(function () { return { x: x - w / 2 - 12, y: y - h / 2 - 16, x2: x + w / 2 + 12, y2: y + h / 2 + 16 }; });
@@ -1218,6 +1238,17 @@
         for (var s2 = 0; s2 <= L * drawn; s2 += 3) {
           var q = ln.getPointAtLength(s2), X = q.x * m.a + q.y * m.c + m.e, Y = q.x * m.b + q.y * m.d + m.f;
           if (X > a.x + 1 && X < a.x2 - 1 && Y > a.y + 1 && Y < a.y2 - 1) { found.push('words on a line: "' + a.w + '"'); break; }
+        }
+      });
+    });
+    [].forEach.call(svg.querySelectorAll('[data-k2-holds]'), function (g) {
+      var sh = g.querySelector('[data-k2-shape]');
+      if (!sh || shown(g, svg) < 0.15) { return; }
+      var b = sh.getBoundingClientRect(), pad = 3;
+      [].forEach.call(g.querySelectorAll('text'), function (t) {
+        var r = t.getBoundingClientRect();
+        if (t.textContent.trim() && (r.left < b.left + pad || r.right > b.right - pad || r.top < b.top + pad || r.bottom > b.bottom - pad)) {
+          found.push('words spill out of their box: "' + t.textContent.trim().slice(0, 30) + '"');
         }
       });
     });

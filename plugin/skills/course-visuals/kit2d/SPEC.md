@@ -23,8 +23,8 @@ and for courses already built with it. A new 2D figure is a 2D-kit spec.
   the slide; on a light ground the kit takes its light set (`.k2-light`, or `"theme": "light"`).
 - **The deck.** Inside a slide the deck's Next and Back walk the steps (GB_HOOKS); a step's `line` lights the
   slide's line. Outside a deck the kit draws its own step bar.
-- **The overlap check.** `KIT2D.audit(figure)` lists words over words, words or shapes cut at the edge and labels
-  lying on a line. `fit_gate.py` runs it at the end of every step it walks; a finding fails the gate.
+- **The overlap check.** `KIT2D.audit(figure)` lists words over words, words that spill out of the box they are written
+  in, words or shapes cut at the edge and labels lying on a line. A box's words wrap to its width at their grown size. `fit_gate.py` runs it at the end of every step it walks; a finding fails the gate.
 
 ## Where it goes
 
@@ -36,7 +36,9 @@ In a course the build sheet names the spec as the slide's figure: `"s05": {"figu
 <script type="application/json" id="k2-s05">{ ...the spec... }</script></div>
 ```
 
-and ships `kit2d.js` and `kit2d.css` with the module. Alone: `KIT2D.mount(element, spec)` returns the figure
+and ships `kit2d.js` and `kit2d.css` with the module. `--init-build` writes a starter from the slide's lines (a
+process, a cycle, a timeline, a grid or a chart); its `"_todo"`, when it has one, names the values only the course's
+sources can give, and the compile reports it until it is gone. Alone: `KIT2D.mount(element, spec)` returns the figure
 (`goStep(n)`, `next()`, `prev()`, `idle()`).
 
 ## Top level
