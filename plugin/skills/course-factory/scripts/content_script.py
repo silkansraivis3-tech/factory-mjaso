@@ -2979,6 +2979,8 @@ def cmd_discard(course, module):
 def unattended_signer(course):
     """the one approval an unattended run may record (L70): the expert's own Ready, signed by name in the training
     app's editor and pulled into pedagogy_review.json - "<name> (Ready in editor)". None when there is none."""
+    if os.environ.get("NOVIKONTAS_TRIAL") == "1" and os.path.isfile(os.path.join(workspace.master_of(course), "FACTORY_TRIAL.json")):
+        return "Factory trial"                 # a factory trial (factory_trial.py) has no expert; it signs its own STOPs
     rev = workspace.claude_path(course, "pedagogy_review.json")
     data = (load(rev) if os.path.isfile(rev) else {}) or {}
     by = (data.get("ready") or {}).get("by", "").strip()

@@ -251,3 +251,28 @@ Advanced - 332 items of MC 7.14, 69 COVERED, 43 PARTLY, 18 GAP (fire the biggest
 **Built out in:** now (2.19.0)
 
 **The old course is the foundation.** Read it whole at intake (`scripts/old_course.py inventory`, and `images` for its pictures); at the Stage 2 STOP every module says what it **keeps**, what it **modernises and makes digital**, and what it **adds**
+
+## L67
+**Built out in:** styles and engines (2.88.0); the compiler writes the summary, task slide, step boxes, compare boxes, two-column figure, photo spots and zoom (2.89.0, compile/GUIDE.md §2h); the content script's new words next
+
+**A picture is 3D or a photograph, never a flat line drawing; every slide moves on Next** - the illustration on a slide or task is live 3D, a static 3D render or a photograph, never the figure kit's line drawing; 60-80 % of slides step through 3D, the rest may be static 3D; Navy, never Pitch Black. The upgraded templates: `design/slide-templates/`, `course-module-ui/templates/gb_upgrade.css`, `gb_steps.js`, `gb_scene.js`
+
+## L68
+**Built out in:** now (2.97.0)
+
+**Every instructor-led module meets the Instructor-Led Course Development Guideline** - active means every trainee commits to an output (the room's three answers are passive); passive runs at most 15 min and 20 % of theory or a one-line justification; every drill, simulator run and scenario briefs, shows, runs and debriefs inside its own minutes; a recorded run is later, under a changed condition, on an assessment form; the pre-brief, debrief and observation cards and the employer sheet. The course's `working_claude/instructor_led.json` is written by the factory and approved by the operator; read `instructor-led/GUIDE.md` after the exercises are written, run `scripts/instructor_led.py check` before handover
+
+## L69
+**Built out in:** now
+
+**The experts get the pedagogy first** - before any content script, three documents topic by topic and module by module: the Bloom level the old course reached, each topic kept or lifted - to the level its outcome asks, never just higher, Remember kept where it belongs -, the teaching and learning activities and the course-wide upgrades (`scripts/pedagogy_review.py`, `bloom/GUIDE.md` §5). The Stage 2 page is not approved without them; the outcomes' words are never in them to change
+
+## L70
+**Built out in:** now
+
+**Built after the expert's Ready** - the expert's answers in the training app's editor are the approval: Ready on the pedagogy queues the whole course, at once for an expert the office trusts or after the office checked the answers and pressed Build course; the office PC builds it unattended (`course_portal.py watch --once`, every 10 minutes) and imports it into the staging editor as a draft. Unattended, the factory never stops to ask, makes no paid picture and never pushes - see *Auto build* below
+
+## L71
+**Built out in:** now
+
+**Kept, lifted one level, seen whole** - a course rebuilt from an old one keeps its order and its explanations (`moved_why`, `dropped_old`, at least 60 % of the old words); one Bloom level a course, more only by the expert; outcomes never re-worded by the factory; a question asks only what the slides showed; every value from a source the course holds, every claim proved by the `fact-checker` agent; one photograph, one thing (`picture.items`, `place --seen`); the build walks every Next in a browser and stops on anything cut (`fit_gate.py`); a Ready over unanswered rows approves nothing

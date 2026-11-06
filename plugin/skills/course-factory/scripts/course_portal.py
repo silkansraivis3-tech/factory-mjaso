@@ -668,6 +668,9 @@ def main(argv=None):
         if x.cmd == "install-task":
             return cmd_install_task()
         course = workspace.work_folder(x.course)
+        if os.environ.get("NOVIKONTAS_TRIAL") == "1" or os.path.isfile(os.path.join(workspace.master_of(course), "FACTORY_TRIAL.json")):
+            print("Stopped - this is a factory trial (factory_trial.py): a trial never goes to the training app")
+            return 2
         if x.cmd == "create":
             return cmd_create(course, x.title)
         if x.cmd == "push":

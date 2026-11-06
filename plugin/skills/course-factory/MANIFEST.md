@@ -7,6 +7,23 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.107.0 · The factory trial; the law rows one line each (2026-11-06)
+
+- **Why.** Testing a release meant building a whole course, and two runs answered other questions and made other choices,
+  so they could not be compared. Raivis asked for a mock course of 3-4 modules rebuilt from scratch after each update.
+- **Inputs stay where they are.** source_files and the old course are linked (a junction on Windows, no rights needed);
+  `remove_run` unlinks links before `rmtree` and deletes only a folder with FACTORY_TRIAL.json. The knowledge base is
+  read by its path from the copied intake.
+- **Same decisions every run.** intake.json and kb_sources.json are copied at setup, the course named FACTORY TRIAL.
+  Stage 1 and 2 still run for the whole programme; only the trial modules are scripted and built.
+- **Signing.** `content_script.unattended_signer` returns "Factory trial" only with NOVIKONTAS_TRIAL=1 and the marker;
+  `course_portal.py` refuses a trial course for every command but `name`, `watch`, `install-task`.
+- **The score** (`score_module`) reads what is on disk; `compare` says better or worse per number (LOWER_IS_BETTER).
+  `--no-browser` skips the fit gate.
+- **SKILL.md.** The 45 law rows were 16 KB; each is now one operative line pointing to its file or check. The full rows
+  are `references/owner-decisions.md` (L67-L71 added there). The tests that pin SKILL.md text pass.
+- **Open.** The rest of SKILL.md (51 KB) and compile/GUIDE.md (73 KB) - measure with the trial before cutting more.
+
 ## 2.106.0 · The fact-checker agent - every claim proved in the sources (2026-11-06)
 
 - **Why.** Raivis: an agent that proves the scripts' information is in source_files / the knowledge base and cuts the

@@ -1,6 +1,6 @@
 # NOVIKONTAS Course Factory — read me first
 
-**`course-factory` 2.106.0 + `nano-banana` 1.4.0 · Phase 5 in progress (2026-11-06).**
+**`course-factory` 2.107.0 + `nano-banana` 1.4.0 · Phase 5 in progress (2026-11-06).**
 The current state, step by step: [`_claude/CONTEXT.md`](_claude/CONTEXT.md).
 The current plan and the owner's decisions: [`docs/PHASE5_GAP_REPORT.md`](docs/PHASE5_GAP_REPORT.md).
 
