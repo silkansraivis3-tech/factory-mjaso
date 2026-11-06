@@ -644,6 +644,43 @@ def kit_svg_attrs(spec, view=None):
                                                ' viewBox="%s"' % " ".join("%g" % v for v in vb) if len(vb) == 4 else "")
 
 
+_FAMILY = {}
+
+
+def kit_family(t):
+    """the family kit.js gives a part type (its meta's family:), read once"""
+    if not _FAMILY:
+        try:
+            src = open(os.path.join(SKILLS, "course-visuals", "kit", "kit.js"), encoding="utf-8").read()
+        except OSError:
+            src = ""
+        for m in re.finditer(r"/\*\s*kit-part:\s*(\w+)\s*\*/(.*?)/\*\s*end kit-part\s*\*/", src, re.S):
+            f = re.search(r"\bfamily\s*:\s*['\"]([\w-]+)['\"]", m.group(2))
+            _FAMILY[m.group(1)] = f.group(1) if f else ""
+        _FAMILY.setdefault("", "")
+    return _FAMILY.get(t, "")
+
+
+def kit_light(spec):
+    """an idea drawn with the Concepts family (tradeoff, cycle, timeline ...) is shown on the light panel, like a page of a
+    book; machinery, ships and screens stay on the Navy panel. "theme": "dark" in the spec keeps the Navy one"""
+    if spec.get("theme") == "dark":
+        return False
+    types = [p.get("type") for p in spec.get("parts") or [] if isinstance(p, dict) and p.get("type") != "text"]
+    return bool(types) and all(kit_family(t) == "concepts" for t in types)
+
+
+STEP_BAR = ('<div class="mediabar">'
+            '<button class="fbtn ico" type="button" data-act="prev" aria-label="Previous step" title="Previous step">%s</button>'
+            '<span class="dots"></span>'
+            '<button class="fbtn primary" type="button" data-act="next">Next step %s</button>'
+            '<button class="fbtn ico" type="button" data-act="replay" aria-label="Replay" title="Replay">%s</button></div>'
+            % ('<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>',
+               '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8.6 16.6 10 18l6-6-6-6-1.4 1.4L13.2 12z"/></svg>',
+               '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" '
+               'stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v5h5"/></svg>'))
+
+
 def kit_figure(text, s, probs, where):
     """a figure made from the figure kit (course-visuals/kit): its spec goes into the page as it is, and
     kit.js draws it there. The step buttons are the deck's own .mediabar. course-visuals/kit/scripts/
@@ -660,17 +697,11 @@ def kit_figure(text, s, probs, where):
         spec["label"] = first_sentence(s.get("visual")) or s.get("title") or ""
     sid = "kit-" + s["id"]
     data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-    out = ['<div class="fill fig kit-fig" data-kit-scope>',
+    out = ['<div class="fill fig kit-fig%s" data-kit-scope>' % (' lt-light" data-kit-theme="light' if kit_light(spec) else ""),
            '<div class="kit-screen"><svg data-kit="#%s"%s></svg></div>' % (sid, kit_svg_attrs(spec)),
            '<script type="application/json" id="%s">%s</script>' % (sid, data)]
     if spec.get("steps"):
-        chev = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="%s"/></svg>'
-        out.append('<div class="mediabar">'
-                   '<button class="fbtn" type="button" data-act="prev">%s Previous step</button>'
-                   '<span class="dots"></span>'
-                   '<button class="fbtn primary" type="button" data-act="next">Next step %s</button>'
-                   '<button class="fbtn" type="button" data-act="replay">Replay</button></div>'
-                   % (chev % "M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z", chev % "M8.6 16.6 10 18l6-6-6-6-1.4 1.4L13.2 12z"))
+        out.append(STEP_BAR)
     out.append("</div>")
     return "".join(out)
 
@@ -3543,6 +3574,8 @@ PATTERNS = (
                       "tank connection space", "fuel preparation")], 3),
     ("vent_system", [("vent mast", "relief valve", "venting", "vent line", "outlet"), ("tank",)], 2),
     ("fuel_types", [("lng", "cng", "lpg", "methanol", "ammonia", "hydrogen", "ethanol")], 4),
+    ("triple_constraint", [("triple constraint", "scope", "cost", "budget", "schedule", "end date", "time")], 3),
+    ("routine_vs_project", [("routine", "operations", "repeat"), ("project",)], 1),
 )
 
 

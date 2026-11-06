@@ -32,7 +32,7 @@ import kit_relate  # noqa: E402
 
 KIT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KIT_JS = os.path.join(KIT, "kit.js")
-FAMILIES = ("instruments", "piping", "spaces", "cutaways", "gas-fire-machinery", "charts", "procedures")
+FAMILIES = ("instruments", "piping", "spaces", "cutaways", "gas-fire-machinery", "charts", "procedures", "concepts")
 KINDS = ("alarm", "trip", "limit")
 # a second value on one part: "<id>.fill" (a pipe or hose filling), "<id>.burst" (a tank that ruptures, tank "burst"),
 # "<id>.drift" (a gas cloud carried off, gas_cloud "drift")
@@ -50,6 +50,11 @@ LOOKS = ("equipment", "screen", "diagram")
 FLAT_BODIES = ("kit-shell", "kit-block", "kit-head", "kit-act")
 # a token that, as a part's own fill, paints a flat grey or blue body - equipment takes a material (var(--kit-*), --mat-*)
 FLAT_FILLS = ("--deep-3", "--steel", "--dim-d", "--faint-d", "--grey", "--navy")
+# a figure is a drawing: parts that are only words or a number in a box (a table, a board of readouts) are what the slide's
+# own layouts show; and a file read in the wrong encoding prints "Â·" for "·" (PM M03 s09)
+WORDS_ONLY = ("text", "readout", "grid_table")
+MOJIBAKE = re.compile("Â|Ã|â€")
+BOX_TAGS = {"g", "rect", "text", "tspan"}
 MATERIAL = re.compile(r"\bh\.(?:body|flange)\(|KIT\.h\.(?:body|flange)\(|['\" ]kit-ms?-[a-z]")
 
 
@@ -128,6 +133,12 @@ def check_part(name, block):
             probs.append("%s: says no %s - write it in the meta, the reviewer reads it" % (name, key))
     if not re.search(r"\bexample\s*:\s*\{", body):
         probs.append("%s: has no example spec - it is the gallery card the merge is reviewed on" % name)
+    tags = set(re.findall(r"\bh\.el\(\s*['\"](\w+)['\"]", body_no_css))
+    if (tags and tags <= BOX_TAGS and not MATERIAL.search(body_no_css) and fam != "charts" and meta_field(block, "look") != "screen"
+            and meta_field(block, "status") == "new"):
+        probs.append("%s: draws only boxes and words - that is a table or a card, which the slide's layouts show at reading size; "
+                     "a part draws the thing itself, or the shape of the idea (a loop, a line to an end, a triangle that "
+                     "stretches - the Concepts family)" % name)
     look = meta_field(block, "look")
     if look not in LOOKS:
         probs.append("%s: say what it is drawn as - look: 'equipment' (a physical thing: in its material, PARTS.md), "
@@ -306,6 +317,8 @@ def check_spec(spec, types, where, meaning=True):
         for ln in ([] if s.get("line") is None else [s["line"]] if not isinstance(s["line"], list) else s["line"]):
             if not isinstance(ln, int) or ln < 1:
                 bad("%s lights line %r - a line number from 1" % (what, ln))
+    for msg in what_it_is(spec, parts):
+        bad(msg)
     last = last_step_dims_all(spec)
     if last:
         bad(last)
@@ -314,6 +327,62 @@ def check_spec(spec, types, where, meaning=True):
     if meaning and not probs:
         probs += kit_meaning.check(spec, where)
     return probs
+
+
+def _strings(x):
+    if isinstance(x, str):
+        yield x
+    elif isinstance(x, dict):
+        for v in x.values():
+            yield from _strings(v)
+    elif isinstance(x, list):
+        for v in x:
+            yield from _strings(v)
+
+
+def what_it_is(spec, parts):
+    """a figure that is not a drawing (PM M01: nine tables, M03 s09 a board of nine readouts), a ship drawn small with
+    nothing on it beside an idea (M01 s05), steps that only show words, and characters broken by a wrong encoding"""
+    out = []
+    ps = [p for p in parts if isinstance(p, dict)]
+
+    def wordy(p):              # a readout with a unit or alarm marks is an instrument; without, a number in a box
+        return p.get("type") in WORDS_ONLY and not (p.get("type") == "readout" and (p.get("unit") or p.get("marks")))
+    kinds = {p.get("id"): ("words" if wordy(p) else p.get("type")) for p in ps if p.get("id")}
+    drawn = [p for p in ps if not wordy(p)]
+    if ps and not drawn:
+        out.append("WORDS ONLY - every part is words or a number in a box (%s): that is a table or a list, which the slide's "
+                   "own layouts show at reading size. Draw what the words describe - a kit part (SPEC.md; an idea has the "
+                   "Concepts family: tradeoff, cycle, timeline), a new part (PARTS.md) or a real photo"
+                   % ", ".join(sorted({p.get("type") or "?" for p in ps})))
+    steps = spec.get("steps") or []
+    moved = [[(a[0] if isinstance(a, list) and a else "") for a in (s.get("play") or [])] + list((s.get("set") or {}).keys())
+             for s in steps if isinstance(s, dict)]
+    if drawn and steps and all(m and all(kinds.get(str(r).partition(".")[0]) == "words" for r in m) for m in moved):
+        out.append("STEPS SHOW ONLY WORDS - no step moves anything drawn, they only bring words in: let the slide's own lines "
+                   "do that (they light one by one), and give the steps a change in the drawing")
+    for g in (p for p in ps if p.get("type") == "ga"):
+        try:
+            gx, gy, gw, gh = (float(g.get(k)) for k in ("x", "y", "w", "h"))
+            fw, fh = (float(v) for v in spec.get("size"))
+        except (TypeError, ValueError):
+            continue
+        gid = g.get("id") or "\0"
+        on = [p for p in ps if p is not g and (
+              (isinstance(p.get("x"), (int, float)) and isinstance(p.get("y"), (int, float))
+               and gx <= p["x"] <= gx + gw and gy <= p["y"] <= gy + gh)
+              or any(s == gid or s.startswith(gid + ".") for s in _strings({k: v for k, v in p.items() if k != "id"})))]
+        bare = all(p is g or p.get("type") in WORDS_ONLY + ("wire", "badge") or (p.get("type") == "space" and p.get("style") == "enclosure")
+                   for p in ps)                                      # nothing else in the figure is a thing on board
+        if gw * gh < 0.25 * fw * fh and not on and bare:
+            out.append("DECORATION - the ship %s is drawn small (%d %% of the figure) with nothing on it or in it: a ship that "
+                       "shows nothing is decoration. Draw the idea itself, or put on the ship what the words name"
+                       % (g.get("id") or "", round(100 * gw * gh / (fw * fh))))
+    broken = sorted({s for s in _strings(spec) if MOJIBAKE.search(s)})
+    if broken:
+        out.append("BROKEN CHARACTERS - %r: the words were read in the wrong encoding (\"Â·\" for \"·\"); "
+                   "read and write the spec as UTF-8" % broken[0][:60])
+    return out
 
 
 # 2.63.2 (item 12, IGF M02 s10 "Getting into the fuel spaces": "everything greyed out on the last step"): the parts whose

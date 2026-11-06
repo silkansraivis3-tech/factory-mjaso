@@ -259,6 +259,8 @@ def real_slide(ctx):
 
 def generic_slide(spec, panel):
     """a slide frame of the panel kind with the spec in it - the compiler's markup for a kit figure"""
+    sys.path.insert(0, COMPILE)
+    import compile_module as cm
     data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     svg = '<svg data-kit="#kit-studio"></svg>'
     if INSET_OVER and panel != "task":      # a photo laid over a blank part of the drawing, as the compiler's "over" does (F4)
@@ -269,11 +271,9 @@ def generic_slide(spec, panel):
                  'fill=%%27%%23556%%27/%%3E%%3C/svg%%3E"><figcaption>a photograph</figcaption></figure>'
                  % (100 * x / sw, 100 * y / sh, 100 * w / sw))
         svg = '<div class="kit-holder">%s%s</div>' % (svg, photo)
-    fig = ('<div class="fill fig kit-fig" data-kit-scope><div class="kit-screen">%s</div>'
+    fig = ('<div class="fill fig kit-fig%s" data-kit-scope><div class="kit-screen">%s</div>'
            '<script type="application/json" id="kit-studio">%s</script>%s</div>'
-           % (svg, data,'<div class="mediabar"><button class="fbtn" type="button" data-act="prev">Previous step</button>'
-                    '<span class="dots"></span><button class="fbtn primary" type="button" data-act="next">Next step</button>'
-                    '<button class="fbtn" type="button" data-act="replay">Replay</button></div>' if spec.get("steps") else ""))
+           % (' lt-light" data-kit-theme="light' if cm.kit_light(spec) else "", svg, data, cm.STEP_BAR if spec.get("steps") else ""))
     if panel == "task":
         return ('<div class="studio-task"><div class="ga" style="--ar:%.3f"><svg class="taskfig" data-kit="#kit-studio" '
                 'data-kit-step="final"></svg><script type="application/json" id="kit-studio">%s</script></div></div>'
@@ -397,11 +397,16 @@ def sheet_html(spec, parts_js, size, split=False, ks=None):
     steps = spec.get("steps") or []
     ks = list(range(len(steps) + 1)) if ks is None else list(ks)
     cw, cols, pw, ph, ch = sheet_size(spec, size, split, len(ks))
+    sys.path.insert(0, COMPILE)
+    import compile_module as cm
+    light = (' data-kit-theme="light" style="background:var(--white);box-shadow:0 0 0 1px var(--line-l)"'
+             if cm.kit_light(spec) else "")                       # the panel the deck shows it on
     cells = ""
     for k in ks:
         title = "Start" if k == 0 else (steps[k - 1].get("title") or "")
-        cells += ('<div class="sheet-cell"><div class="sheet-cap">%s</div><div class="kit-screen"><svg data-kit="#kit-sheet" '
-                  'data-sheet-step="%d"></svg></div></div>' % (html.escape("%s" % title if k == 0 else "Step %d - %s" % (k, title)), k))
+        cells += ('<div class="sheet-cell"><div class="sheet-cap">%s</div><div class="kit-screen"%s><svg data-kit="#kit-sheet" '
+                  'data-sheet-step="%d"></svg></div></div>'
+                  % (html.escape("%s" % title if k == 0 else "Step %d - %s" % (k, title)), light, k))
     data = json.dumps(spec, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     scripts = [os.path.join(KIT, "kit.js")] + ([parts_js] if parts_js else [])
     # each cell is a normal figure (the frame grows as in a deck), moved to its step once it is drawn

@@ -1,0 +1,16 @@
+{
+ "size": [480, 300],
+ "label": "Routine work is a loop that goes round every watch with no planned end; a project is a line from a start to a flag at its end, a dry-dock overhaul that leaves a new result.",
+ "idle": "Press Next step",
+ "parts": [
+  {"id": "C", "type": "cycle", "x": 14, "y": 8, "r": 98, "inside": "every watch,\nevery day",
+   "name": "Routine work", "note": "no planned end", "nameAt": 232},
+  {"id": "L", "type": "timeline", "x": 258, "y": 106, "w": 180, "title": "dry-dock overhaul", "start": "start", "end": "end",
+   "name": "Project", "note": "ends with a new result", "nameAt": 134}
+ ],
+ "steps": [
+  {"title": "Routine work against a project", "line": 2, "play": [["C", 1, 1200], ["L", 0.6, 1200]]},
+  {"title": "The test: finished? done the same way before?", "line": 3, "play": [["C", 2, 1600, 0, "linear"], ["L", 1, 900]]},
+  {"title": "Operations keep the ship running. Projects change it.", "line": 4, "play": [["C", 3, 1600, 0, "linear"]]}
+ ]
+}

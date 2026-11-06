@@ -90,7 +90,11 @@ kit/                            the figure kit (L55): a figure is a spec of part
   GALLERY.html                      every part moving, on the dark or the light panel (switch at the top)
   scripts/studio.py                 the figure studio: one spec on its real slide, every step, 1280x800 + 1024x768,
                                     every drawing audit, a screenshot - in seconds, no module compile
-  scripts/check_kit.py · kit_parts.py   spec and part checks; list / promote a course's parts into kit.js
+  scripts/check_kit.py · kit_parts.py   spec and part checks; list / promote a course's parts into kit.js (--pr: the
+                                    branch, commit, push and pull request too); 2.108.0 a figure is a drawing: WORDS
+                                    ONLY, STEPS SHOW ONLY WORDS, DECORATION, BROKEN CHARACTERS, a part of boxes and words
+  patterns/ · Concepts family       2.108.0 tradeoff, cycle, timeline - an idea drawn as its shape, on the light panel;
+                                    routine_vs_project, triple_constraint (Project Management M01 rebuilt)
   scripts/kit_meaning.py            what a figure MEANS (every build); BOX (2.77.0): a box labelled with a machine
                                     (knowledge/figure-truths.json "equipment") with none drawn in it fails - the
                                     gas valve unit, switchboard, motor, propeller and LNG truck are kit parts now;
