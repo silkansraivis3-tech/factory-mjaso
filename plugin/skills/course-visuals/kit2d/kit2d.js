@@ -39,6 +39,14 @@
   }
   function pt(p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }
   function poly(ps, close) { return ps.map(function (p, i) { return (i ? 'L' : 'M') + pt(p); }).join(' ') + (close ? ' Z' : ''); }
+  function Spring(x) { this.x = x; this.v = 0; }
+  Spring.prototype.go = function (to, dt, snap) {
+    if (snap || reduce) { this.x = to; this.v = 0; return false; }
+    var a = 120 * (to - this.x) - 13 * this.v;
+    this.v += a * dt; this.x += this.v * dt;
+    if (Math.abs(to - this.x) < 0.02 && Math.abs(this.v) < 0.05) { this.x = to; this.v = 0; return false; }
+    return true;
+  };
   function setOp(n, v) { n.setAttribute('opacity', clamp(v, 0, 1).toFixed(3)); }
   function textLines(parent, attrs, rows) {
     var t = el('text', attrs, parent);
@@ -57,7 +65,7 @@
     var f = this;
     f.spec = spec; f.host = host; f.id = 'k2-' + (++UID);
     f.W = (spec.size || [960, 540])[0]; f.H = (spec.size || [960, 540])[1];
-    f.T = {}; f.S = {}; f.out = {}; f.parts = []; f.byId = {}; f.labels = []; f.solids = []; f.rate = spec.rates || {};
+    f.T = {}; f.S = {}; f.fx = []; f.pending = []; f.out = {}; f.parts = []; f.byId = {}; f.labels = []; f.solids = []; f.rate = spec.rates || {};
     f.step = 0; f.steps = [{ title: spec.idle || '' }].concat(spec.steps || []);
     var k;
     for (k in (spec.state || {})) { f.T[k] = f.S[k] = +spec.state[k]; }
@@ -135,6 +143,25 @@
       if (typeof ref === 'string' && ref.charAt(0) === '@') { var v = (this.spec.state || {})[ref.slice(1)]; return v == null ? dflt : +v; }
       return this.get(ref, dflt);
     },
+    target: function (ref, dflt) {                      /* where a value is going - a part that springs aims there */
+      if (typeof ref === 'string' && ref.charAt(0) === '@') {
+        var k = ref.slice(1), v = this.T[k];
+        (this.pending || []).forEach(function (q) { if (q.k === k) { v = q.v; } });
+        return v == null ? dflt : v;
+      }
+      return this.get(ref, dflt);
+    },
+    /* a ring that grows from a point and fades, once, where something has just changed (never a loop) */
+    pulse: function (x, y, o) {
+      o = o || {};
+      if (reduce) { return; }
+      var c = el('circle', { cx: x, cy: y, r: 0, 'class': 'k2-pulse' + (o.tone ? ' k2-pulse-' + o.tone : '') }, this.L.lbl), R = o.r || 46;
+      this.L.lbl.insertBefore(c, this.L.lbl.firstChild);
+      this.fx.push({ t0: now() + (o.delay || 0), ms: o.ms || 750,
+        go: function (k) { var e = 1 - Math.pow(1 - k, 3); c.setAttribute('r', (R * e).toFixed(1)); setOp(c, 0.9 * (1 - k)); },
+        done: function () { if (c.parentNode) { c.parentNode.removeChild(c); } } });
+      this.kick();
+    },
     publish: function (id, key, v) { (this.out[id] = this.out[id] || {})[key] = v; },
     setT: function (name, v, now0) { this.T[name] = v; if (now0) { this.S[name] = v; } this.kick(); },
 
@@ -145,10 +172,16 @@
       for (i = 1; i <= n; i++) { for (k in (this.steps[i].set || {})) { T[k] = +this.steps[i].set[k]; } }
       return T;
     },
+    /* a step's "after": {"strain": 350} - that state starts moving 350 ms later, so a step tells its story in order
+       (the corner moves, then the strain shows) */
     goStep: function (n, instant) {
-      var f = this, T = f.targets(n), k;
-      f.step = n;
-      for (k in T) { f.T[k] = T[k]; if (instant || reduce) { f.S[k] = T[k]; } }
+      var f = this, T = f.targets(n), k, after = (!instant && !reduce && f.steps[n].after) || {}, t = now();
+      f.step = n; f.pending = [];
+      for (k in T) {
+        if (after[k] && T[k] !== f.T[k]) { f.pending.push({ k: k, v: T[k], at: t + after[k] }); continue; }
+        f.T[k] = T[k]; if (instant || reduce) { f.S[k] = T[k]; }
+      }
+      f.parts.forEach(function (q) { if (q.onStep) { q.onStep(n, instant || reduce); } });
       f.syncControls();
       if (f.onStep) { f.onStep(n); }
       f.showBar();
@@ -173,8 +206,9 @@
       });
     },
     frame: function (instant, dt) {
-      var f = this, busy = false, k;
+      var f = this, busy = false, k, t = now();
       dt = dt || 0;
+      f.pending = (f.pending || []).filter(function (q) { if (t >= q.at || instant) { f.T[q.k] = q.v; return false; } busy = true; return true; });
       for (k in f.T) {
         if (f.S[k] == null || instant || reduce) { f.S[k] = f.T[k]; continue; }
         if (Math.abs(f.S[k] - f.T[k]) > 1e-4 * (1 + Math.abs(f.T[k]))) {
@@ -182,7 +216,13 @@
         } else { f.S[k] = f.T[k]; }
       }
       f.parts.forEach(function (q) { if (q.calc) { q.calc(dt); } });
-      f.parts.forEach(function (q) { if (q.draw) { q.draw(dt); } if (q.live && q.live()) { busy = true; } });
+      f.parts.forEach(function (q) { if (q.draw) { q.draw(dt, instant || reduce); } if (q.live && q.live()) { busy = true; } });
+      f.fx = (f.fx || []).filter(function (e) {           /* one-shot effects: a ring where something has just changed */
+        var k2 = (t - e.t0) / e.ms;
+        if (k2 < 0) { busy = true; return true; }
+        if (k2 >= 1 || instant) { e.done(); return false; }
+        e.go(k2); busy = true; return true;
+      });
       f.readouts();
       f.follow();
       if (!busy && f.relayout) { f.relayout = false; f.layout(); }
@@ -391,17 +431,27 @@
   define('curve', function (f, p) {
     var C = f.charts[p.on], fn = curveFn(p), X = C.xaxis, cat = p.cat || 1, ps = [], i, N = 140;
     for (i = 0; i <= N; i++) { var xv = X.min + (X.max - X.min) * i / N; ps.push([C.X(xv), C.Y(clamp(fn(xv), C.yaxis.min, C.yaxis.max))]); }
+    var cid = f.id + '-clip' + (++UID), clip = el('rect', { x: C.box.x, y: C.box.y - 40, width: 0, height: C.box.h + 40 }, el('clipPath', { id: cid }, f.defs));
     var area = p.area !== false ? el('path', { d: poly(ps) + ' L' + pt([C.X(X.max), C.Y(C.yaxis.min)]) + ' L' + pt([C.X(X.min), C.Y(C.yaxis.min)]) + ' Z',
-      fill: f.url('fill-cat-' + cat) }, f.L.back) : null;
+      fill: f.url('fill-cat-' + cat), 'clip-path': 'url(#' + cid + ')' }, f.L.back) : null;
     var line = el('path', { d: poly(ps), 'class': 'k2-curve k2-c-' + cat, pathLength: 1, 'stroke-dasharray': '0 1' }, f.L.hero);
+    var tipGlow = el('circle', { r: 16, 'class': 'k2-tip-glow k2-f-' + cat }, f.L.hero), tip = el('circle', { r: 6.5, 'class': 'k2-tip' }, f.L.hero);
+    var cum = [0]; for (i = 1; i <= N; i++) { cum.push(cum[i - 1] + Math.hypot(ps[i][0] - ps[i - 1][0], ps[i][1] - ps[i - 1][1])); }
+    function along(k) {                                       /* the point a fraction k of the way along the line */
+      var L0 = k * cum[N], j = 1; while (j < N && cum[j] < L0) { j++; }
+      var t = (L0 - cum[j - 1]) / Math.max(1e-6, cum[j] - cum[j - 1]);
+      return [lerp(ps[j - 1][0], ps[j][0], t), lerp(ps[j - 1][1], ps[j][1], t)];
+    }
     var end = ps[N];
     f.fns = f.fns || {}; f.fns[p.id] = { fn: fn, chart: C };
     var L = p.label ? f.label({ text: p.label, at: function () { return end; }, side: 'upleft', show: function () { return f.get(p.draw, 1) > 0.9 ? 1 : 0; } }) : null;
     return {
       draw: function () {
-        var k = clamp(f.get(p.draw, 1), 0, 1);
+        var k = clamp(f.get(p.draw, 1), 0, 1), at = along(k), on = k > 0.005 && k < 0.995 ? 1 : 0;
         line.setAttribute('stroke-dasharray', k.toFixed(4) + ' 1');
-        if (area) { setOp(area, k); }
+        clip.setAttribute('width', Math.max(0, at[0] - C.box.x).toFixed(1));
+        tip.setAttribute('cx', at[0].toFixed(1)); tip.setAttribute('cy', at[1].toFixed(1)); setOp(tip, on);
+        tipGlow.setAttribute('cx', at[0].toFixed(1)); tipGlow.setAttribute('cy', at[1].toFixed(1)); setOp(tipGlow, on * 0.35);
       }
     };
   });
@@ -426,7 +476,14 @@
     }
     var drop = el('path', { 'class': 'k2-drop' }, g), tx = tag(g), ty = tag(g);
     var dot = el('circle', { r: 10, 'class': 'k2-pt k2-c-' + cat }, g);
+    var lastX = f.target(p.x, X.min), lastShow = f.target(p.show, 1), lastGhost = p.ghost ? f.target(p.ghost.show, 1) : 0;
     var self = {
+      onStep: function (n, instant) {
+        var x = f.target(p.x, X.min), sh = f.target(p.show, 1), gs = p.ghost ? f.target(p.ghost.show, 1) : 0;
+        if (!instant && sh > 0.5 && (Math.abs(x - lastX) > 1e-6 || lastShow < 0.5)) { f.pulse(C.X(x), C.Y(F(x)), { delay: lastShow < 0.5 ? 150 : 600 }); }
+        if (!instant && p.ghost && gs > 0.5 && lastGhost < 0.5) { var gx = f.get(p.ghost.x); f.pulse(C.X(gx), C.Y(F(gx)), { r: 30 }); }
+        lastX = x; lastShow = sh; lastGhost = gs;
+      },
       calc: function () { var x = f.get(p.x, X.min); f.publish(p.id, 'x', x); f.publish(p.id, 'y', F(x)); if (p.ghost) { f.publish(p.id, 'y0', F(f.get(p.ghost.x))); } },
       draw: function () {
         var x = f.get(p.x, X.min), y = F(x), px = C.X(x), py = C.Y(y), b = C.box;
@@ -509,7 +566,7 @@
     f.solid(function () { var xs = P.map(function (q) { return q[0]; }); return { x: Math.min.apply(null, xs), y: yTop - R, x2: Math.max.apply(null, xs), y2: yBot + R }; });
     var n = p.n || Math.round(len / 9), parts = [], g = el('g', {}, f.L.fx), seed = 7;
     function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
-    for (i = 0; i < n; i++) { parts.push({ s: rnd() * len, o: rnd() * 2 - 1, k: 0.75 + rnd() * 0.5, c: el('circle', { r: (2.2 + rnd() * 1.6).toFixed(1), 'class': 'k2-particle' }, g) }); }
+    for (i = 0; i < n; i++) { parts.push({ s: rnd() * len, o: rnd() * 2 - 1, k: 0.75 + rnd() * 0.5, c: el('line', { 'stroke-width': (4.4 + rnd() * 3.2).toFixed(1), 'class': 'k2-particle-s' }, g) }); }
     function at(s) {
       for (var j = 0; j < segs.length; j++) { if (s <= segs[j].s + segs[j].l || j === segs.length - 1) { var q = segs[j], t = s - q.s; return [q.a[0] + q.ux * t, q.a[1] + q.uy * t, -q.uy, q.ux]; } }
       return [0, 0, 0, 1];
@@ -525,8 +582,13 @@
           if (q.s > len) { q.s -= len; } else if (q.s < 0) { q.s += len; }
           c = at(q.s); near = G ? clamp(1 - Math.abs(c[0] - G.x) / band, 0, 1) : 0; sm = near * near * (3 - 2 * near);
           var o = q.o * 0.82, o2 = 1 - (1 - o) * open;                    /* under the gate: squeezed into the open part */
-          var off = lerp(o, o2, sm) * r;
-          q.c.setAttribute('cx', (c[0] + c[2] * off).toFixed(1)); q.c.setAttribute('cy', (c[1] + c[3] * off).toFixed(1));
+          var off = lerp(o, o2, sm) * r, X1 = c[0] + c[2] * off, Y1 = c[1] + c[3] * off;
+          var vx = q.x == null || !dt ? 0 : (X1 - q.x) / dt, vy = q.x == null || !dt ? 0 : (Y1 - q.y) / dt, sp = Math.hypot(vx, vy);
+          if (sp > 2500) { vx = vy = sp = 0; }                              /* it wrapped round to the start */
+          var tail = Math.min(34, sp * 0.045) / Math.max(sp, 1e-6);         /* a streak: as long as it is fast */
+          q.c.setAttribute('x1', (X1 - vx * tail).toFixed(1)); q.c.setAttribute('y1', (Y1 - vy * tail).toFixed(1));
+          q.c.setAttribute('x2', X1.toFixed(1)); q.c.setAttribute('y2', Y1.toFixed(1));
+          q.x = X1; q.y = Y1;
         });
       },
       live: function () { return flow > 0.001 && !f.hidden; }
@@ -572,7 +634,13 @@
     el('rect', { x: x - 10, y: wy - 10, width: 20, height: 20, rx: 4, fill: f.url('metal') }, wheel);
     f.solid(function () { return { x: x - bw - 4, y: wy - 14, x2: x + bw + 4, y2: yb + 6 }; });
     if (p.label) { f.label({ text: p.label, sub: p.sub, at: function () { return [x + wr, wy]; }, side: 'right', dist: 18 }); }
+    var lastO = f.target(p.open, 1);
     return {
+      onStep: function (n, instant) {
+        var o = f.target(p.open, 1);
+        if (!instant && o < 0.01 && lastO >= 0.01) { f.pulse(x, y + r + 6, { delay: 900, tone: 'amber', r: 60 }); }
+        lastO = o;
+      },
       calc: function () {
         var o = clamp(f.get(p.open, 1), 0, 1), pr = p.pressure;
         f.publish(p.id, 'flow', o); f.publish(p.id, 'open', o);
@@ -628,13 +696,14 @@
                  note, noteShow: "@extra", side: left|right, hold: "@same", strain: true}],
       strain: "@strain", frame: {label, show: "@frame", inset}} */
   define('triangle', function (f, p) {
-    var Cs = p.corners, frame = p.frame, i;
+    var Cs = p.corners, frame = p.frame, i, fb, fon, fl;
     if (frame) {
-      var fi = frame.inset || 26;
-      f.frameLine = el('rect', { x: fi, y: fi, width: f.W - 2 * fi, height: f.H - 2 * fi, rx: 24, 'class': 'k2-frame' }, f.L.back);
-      var fb = el('rect', { x: fi + 9, y: fi + 9, width: f.W - 2 * fi - 18, height: f.H - 2 * fi - 18, rx: 18, fill: 'none', stroke: f.url('hatch'), 'stroke-width': 14 }, f.L.back);
-      var fon = el('rect', { x: fi, y: fi, width: f.W - 2 * fi, height: f.H - 2 * fi, rx: 24, 'class': 'k2-frame-on' }, f.L.back);
-      var fl = el('text', { x: fi + 40, y: fi + 6, 'class': 'k2-t-lbl k2-halo k2-halo-wide' }, f.L.lbl, frame.label || '');
+      var fi = frame.inset || 26, fw = f.W - 2 * fi, fh = f.H - 2 * fi;
+      f.frameLine = el('rect', { x: fi, y: fi, width: fw, height: fh, rx: 24, 'class': 'k2-frame' }, f.L.back);
+      fb = el('rect', { x: fi + 9, y: fi + 9, width: fw - 18, height: fh - 18, rx: 18, fill: 'none', stroke: f.url('hatch'), 'stroke-width': 14 }, f.L.back);
+      /* the frame closes round the shape: its line is drawn on, from the corner its words stand at */
+      fon = el('rect', { x: fi, y: fi, width: fw, height: fh, rx: 24, 'class': 'k2-frame-on', pathLength: 1, 'stroke-dasharray': '0 1' }, f.L.back);
+      fl = el('text', { x: fi + 40, y: fi + 6, 'class': 'k2-t-lbl k2-halo k2-halo-wide' }, f.L.lbl, frame.label || '');
     }
     var ghost = el('path', { 'class': 'k2-ghost' }, f.L.back);
     var hero = el('g', {}, f.L.hero);
@@ -642,6 +711,10 @@
     var sides = [], sidesA = [];
     for (i = 0; i < 3; i++) { sides.push(el('path', { 'class': 'k2-side-blue' }, hero)); sidesA.push(el('path', { 'class': 'k2-side-amber' }, hero)); }
     var edge = el('path', { 'class': 'k2-edge', 'stroke-linejoin': 'round' }, hero);
+    function corner(c, how) {
+      var v = how === 'rest' ? f.rest(c.push, 0) : how === 'to' ? f.target(c.push, 0) : f.get(c.push, 0), b = f.rest(c.base, 0), k = c.k || 50;
+      return [c.at[0] + c.dir[0] * (v - b) * k, c.at[1] + c.dir[1] * (v - b) * k];
+    }
     var nodes = Cs.map(function (c) {
       var g = el('g', {}, f.L.front);
       el('circle', { r: 11, 'class': 'k2-node' }, g);
@@ -657,38 +730,61 @@
       var val = el('text', { x: 0, y: 30, 'class': 'k2-t-val k2-halo' }, words);
       var valA = el('text', { x: 0, y: 30, 'class': 'k2-t-val k2-t-amber k2-halo' }, words);
       var note = c.note ? el('text', { x: 0, y: 58, 'class': 'k2-t-note k2-halo' }, words, c.note) : null;
-      return { g: g, ra: ra, lock: lock, words: words, val: val, valA: valA, note: note };
+      var at = corner(c, 'to');
+      return { g: g, ra: ra, lock: lock, words: words, val: val, valA: valA, note: note,
+               sx: new Spring(at[0]), sy: new Spring(at[1]), sl: new Spring(f.target(c.hold, 0)), to: at, hold: f.target(c.hold, 0) };
     });
-    function corner(c, rest) {
-      var v = rest ? f.rest(c.push, 0) : f.get(c.push, 0), b = f.rest(c.base, 0), k = c.k || 50;
-      return [c.at[0] + c.dir[0] * (v - b) * k, c.at[1] + c.dir[1] * (v - b) * k];
-    }
-    f.solid(function () { var q = Cs.map(function (c) { return corner(c); }); var xs = q.map(function (a) { return a[0]; }), ys = q.map(function (a) { return a[1]; });
+    var moving = false;
+    f.solid(function () { var q = nodes.map(function (N) { return [N.sx.x, N.sy.x]; }); var xs = q.map(function (a) { return a[0]; }), ys = q.map(function (a) { return a[1]; });
       return { x: Math.min.apply(null, xs), y: Math.min.apply(null, ys), x2: Math.max.apply(null, xs), y2: Math.max.apply(null, ys) }; });
     return {
-      draw: function () {
-        var q = Cs.map(function (c) { return corner(c); }), q0 = Cs.map(function (c) { return corner(c, true); });
+      /* a ring where a corner is about to land, or where a corner is held */
+      onStep: function (n, instant) {
+        if (instant) { return; }
+        Cs.forEach(function (c, j) {
+          var N = nodes[j], to = corner(c, 'to'), h = f.target(c.hold, 0);
+          if (Math.hypot(to[0] - N.to[0], to[1] - N.to[1]) > 2) { f.pulse(to[0], to[1], { delay: 380, tone: c.strain ? 'amber' : null }); }
+          if (h > N.hold + 0.5) { f.pulse(to[0], to[1], { delay: 120 }); }
+          N.to = to; N.hold = h;
+        });
+      },
+      draw: function (dt, snap) {
+        var q0 = Cs.map(function (c) { return corner(c, 'rest'); }), m = false;
+        var q = Cs.map(function (c, j) {
+          var N = nodes[j], to = corner(c, 'to');
+          m = N.sx.go(to[0], dt, snap) || m; m = N.sy.go(to[1], dt, snap) || m;
+          m = N.sl.go(f.target(c.hold, 0), dt, snap) || m;
+          return [N.sx.x, N.sy.x];
+        });
+        moving = m;
         var tri = poly(q, true), s = clamp(f.get(p.strain, 0), 0, 1);
         fill.setAttribute('d', tri); warm.setAttribute('d', tri); setOp(warm, s); edge.setAttribute('d', tri);
-        var moved = q.some(function (a, j) { return Math.hypot(a[0] - q0[j][0], a[1] - q0[j][1]) > 1; });
-        ghost.setAttribute('d', poly(q0, true)); setOp(ghost, moved ? 1 : 0);
+        var moved = q0.map(function (a, j) { return Math.hypot(corner(Cs[j])[0] - a[0], corner(Cs[j])[1] - a[1]); }).reduce(function (x, y) { return Math.max(x, y); }, 0);
+        ghost.setAttribute('d', poly(q0, true)); setOp(ghost, clamp(moved / 20, 0, 1));
         for (var j = 0; j < 3; j++) {
           var a = q[j], b = q[(j + 1) % 3], dd = 'M' + pt(a) + ' L' + pt(b);
           var hot = Cs[j].strain || Cs[(j + 1) % 3].strain;                /* a side to a strained corner warms */
           sides[j].setAttribute('d', dd); sidesA[j].setAttribute('d', dd); setOp(sidesA[j], hot ? s : 0);
         }
         Cs.forEach(function (c, j) {
-          var N = nodes[j], at = q[j], hold = clamp(f.get(c.hold, 0), 0, 1), hot = c.strain ? s : 0;
+          var N = nodes[j], at = q[j], hold = clamp(f.get(c.hold, 0), 0, 1), pop = Math.max(0, N.sl.x), hot = c.strain ? s : 0;
           N.g.setAttribute('transform', 'translate(' + pt(at) + ')'); setOp(N.g, 1 - hold); setOp(N.ra, hot);
-          N.lock.setAttribute('transform', 'translate(' + pt(at) + ') scale(' + lerp(0.6, 1, hold).toFixed(3) + ')'); setOp(N.lock, hold);
+          N.lock.setAttribute('transform', 'translate(' + pt(at) + ') scale(' + (0.2 + 0.8 * pop).toFixed(3) + ')'); setOp(N.lock, hold);
           var dx = c.side === 'left' ? -28 : 30, oy = c.dy != null ? c.dy : 0;
           N.words.setAttribute('transform', 'translate(' + (at[0] + dx).toFixed(1) + ' ' + (at[1] + oy).toFixed(1) + ')');
           var v = f.get(c.value, 0), txt = tpl(c.fmt || '{v}', { v: v }, c.decimals || 0);
           N.val.textContent = txt; N.valA.textContent = txt; setOp(N.valA, hot); setOp(N.val, 1 - hot);
-          if (N.note) { setOp(N.note, f.get(c.noteShow, 1)); }
+          if (N.note) {                                                  /* a note rises into place as it appears */
+            var ns = clamp(f.get(c.noteShow, 1), 0, 1);
+            setOp(N.note, ns); N.note.setAttribute('transform', 'translate(0 ' + ((1 - ns) * 14).toFixed(1) + ')');
+          }
         });
-        if (frame) { var fo = clamp(f.get(frame.show, 0), 0, 1); setOp(fb, fo); setOp(fon, fo); setOp(f.frameLine, 1 - fo); }
-      }
+        if (frame) {
+          var fo = clamp(f.get(frame.show, 0), 0, 1);
+          fon.setAttribute('stroke-dasharray', fo.toFixed(4) + ' 1'); setOp(fb, clamp(fo * 2 - 1, 0, 1)); setOp(f.frameLine, 1 - fo * 0.7);
+        }
+      },
+      live: function () { return moving; }
     };
   });
 

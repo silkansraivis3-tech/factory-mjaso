@@ -37,7 +37,7 @@ h2{font-size:28px;margin:6px 0 4px}p.lead{margin:0 0 16px;color:var(--dim-d);fon
   "steps": [
     {"title": "Fuel rises with the cube of speed", "set": {"draw": 1}},
     {"title": "At 14 knots", "set": {"pt": 1}},
-    {"title": "Slow down to 12 knots", "set": {"slow": 1, "speed": 12}},
+    {"title": "Slow down to 12 knots", "set": {"slow": 1, "speed": 12}, "after": {"speed": 450}},
     {"title": "Slow steaming at 10 knots", "set": {"speed": 10}}
   ],
   "controls": [{"type": "slider", "state": "speed", "min": 6, "max": 20, "step": 0.5, "label": "Ship speed", "unit": "kn", "decimals": 1}],
@@ -83,7 +83,7 @@ h2{font-size:28px;margin:6px 0 4px}p.lead{margin:0 0 16px;color:var(--dim-d);fon
 <script type="application/json" id="spec-tri">
 { "label": "Project triangle: scope, time and cost are linked inside a fixed frame of safety and rules. More scope with the same end date pulls the cost corner out.",
   "size": [1120, 640], "glow": {"x": 560, "y": 360, "rx": 420, "ry": 280},
-  "state": {"scope": 3, "cost": 100, "extra": 0, "same": 0, "strain": 0, "frame": 0},
+  "state": {"scope": 3, "cost": 100, "extra": 0, "same": 0, "strain": 0, "frame": 0}, "rates": {"frame": 2.2, "strain": 3},
   "parts": [
     {"id": "T", "type": "triangle", "strain": "@strain",
      "frame": {"label": "Fixed frame: safety and rules", "show": "@frame"},
@@ -96,7 +96,7 @@ h2{font-size:28px;margin:6px 0 4px}p.lead{margin:0 0 16px;color:var(--dim-d);fon
   "steps": [
     {"title": "Extra work", "set": {"scope": 4, "extra": 1}},
     {"title": "Same end date", "set": {"same": 1}},
-    {"title": "Cost 130 %", "set": {"cost": 130, "strain": 1}},
+    {"title": "Cost 130 %", "set": {"cost": 130, "strain": 1}, "after": {"strain": 380}},
     {"title": "Fixed frame: safety and rules", "set": {"frame": 1}}
   ]
 }

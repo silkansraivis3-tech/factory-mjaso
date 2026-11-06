@@ -61,6 +61,9 @@
 .k2-tick{stroke:var(--k2-face-ink);stroke-width:2}.k2-tick-major{stroke:var(--k2-face-ink);stroke-width:3}
 .k2-needle{fill:var(--k2-warn)}.k2-hub{fill:var(--k2-face-ink)}
 .k2-particle{fill:var(--k2-particle)}
+.k2-particle-s{stroke:var(--k2-particle);stroke-linecap:round;fill:none}
+.k2-pulse{fill:none;stroke:var(--k2-blue);stroke-width:3.5}.k2-pulse-amber{stroke:var(--k2-amber)}.k2-pulse-good{stroke:var(--k2-good)}
+.k2-tip{fill:var(--k2-hi)}.k2-tip-glow{stroke:none}
 .k2-edge{fill:none;stroke:var(--k2-hi);stroke-opacity:.22;stroke-width:1.5}
 .k2-spoke{fill:var(--k2-metal-lo)}
 
