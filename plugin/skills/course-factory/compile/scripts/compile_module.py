@@ -2453,8 +2453,20 @@ def joined(parts, tags):
 
 def room_turn(s, k):
     """the room's turn: its question, and its answer on the slide's last Next"""
-    return ('\n        <li data-k="%d" class="you"><span class="n" data-script-ignore>?</span><div><b data-script-field="ask">%s</b>%s</div></li>'
+    return ('\n        <li data-k="%d" class="you"><span class="n" data-script-ignore>?</span><div><b class="ask" data-script-field="ask">%s</b>%s</div></li>'
             % (k, e(s.get("ask")), "".join('<span class="ans" data-script-field="reveal">%s</span>' % e(x) for x in cs.lines_of(s.get("reveal")))))
+
+
+def answer_over(side, s):
+    """the room's answer over the picture on the last Next: beside the words, the picture's column is the slide's largest
+    room. The answer stays in the list too, for the word check; on screen the question stays and the answer opens over
+    the picture, so the steps above keep their place (GAS BASIC: 37 of 37 answers cut at 1280 x 800 when the answer was
+    added under them)"""
+    if not side or not (s.get("ask") and s.get("reveal")):
+        return side
+    i = side.rfind("</")
+    panel = '<div class="lt-ans-over" data-script-ignore>%s</div>' % "".join("<p>%s</p>" % e(x) for x in cs.lines_of(s.get("reveal")))
+    return side[:i] + panel + side[i:]
 
 
 def img_tag(fig):
@@ -2487,6 +2499,7 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         if s.get("ask") and s.get("reveal"):        # the points, then the room's turn under them
             you = '<ol class="lt-work">%s\n      </ol>' % room_turn(s, len(lt("points")))
             d["data-stops"] = str(len(lt("points")) + 2)
+            side = answer_over(side, s)
         body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy lt-in" style="--i:0"><ul class="lt-points">%s\n      </ul>%s</div>%s</div>'
                 % ("42fr 58fr" if fig else "1fr", pts, you, "\n    " + side if fig else ""))
 
@@ -2524,6 +2537,7 @@ def shaped_html(script, s, b, tid, variant, fig, lines, base, m, n, total, mdir,
         you = room_turn(s, len(lines))
         d["data-stops"] = str(len(lines) + 2)
         variant = "figure" if fig else "text-only"
+        side = answer_over(side, s)
         body = ('<div class="slide-body lt-split" style="--cols:%s"><div class="copy"><ol class="lt-work">%s%s\n      </ol></div>%s</div>'
                 % ("46fr 54fr" if fig else "1fr", steps, you, "\n    " + side if fig else ""))
 
@@ -4156,6 +4170,15 @@ def fill_slots(script, sheet, mdir):
         if kind == "slide" and cs.on_picture(s) and p["kind"] != "none":
             e = screens.setdefault(sid, {"figure": "", "visual_kind": s.get("visual_kind") or "none"})
             if (e.get("figure") or "").strip() or e.get("tiles"):
+                continue
+            if p["items"]:
+                # one picture a thing (picture.items): a placeholder each, shown as tiles; each is queued, found or made and
+                # placed on its own (picture_briefs.py place --slide s02_1)
+                e["tiles"] = [placeholder.write(mdir, "%s_%d" % (sid, k), "4:3", x) for k, x in enumerate(p["items"], 1)]
+                e["placeholder"] = p["kind"]
+                e["_placeholder"] = ("Phase A placeholders, one a thing (%d): replace each with its own real picture - "
+                                     "working_claude\\visuals\\%s_VISUAL_NEEDS.md" % (len(p["items"]), cs.mid(script.get("module"))))
+                done.append((sid, "%d pictures, one a thing" % len(p["items"])))
                 continue
             e["figure"] = placeholder.write(mdir, sid, p["aspect"], p["shows"])
             e["placeholder"] = p["kind"]

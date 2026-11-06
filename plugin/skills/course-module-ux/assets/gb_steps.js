@@ -13,9 +13,11 @@
   function qa(s, r) { return (r || d).querySelectorAll(s); }
 
   /* a point on a photograph (its own pixels; data-px-w: the width they were given in, before the photo was enlarged) to a
-     point in its box, as object-fit: cover draws it */
+     point in its box, as the photo's object-fit draws it: contain (the whole picture) or cover (cropped to the box) */
   function cover(img, px, py) {
-    var box = img.parentNode, iw = img.naturalWidth || 1600, ih = img.naturalHeight || 1000, W = box.clientWidth, Hh = box.clientHeight, sc = Math.max(W / iw, Hh / ih);
+    var box = img.parentNode, iw = img.naturalWidth || 1600, ih = img.naturalHeight || 1000, W = box.clientWidth, Hh = box.clientHeight;
+    var whole = (w.getComputedStyle ? w.getComputedStyle(img).objectFit : '') === 'contain';
+    var sc = whole ? Math.min(W / iw, Hh / ih) : Math.max(W / iw, Hh / ih);
     var k = iw / (+img.getAttribute('data-px-w') || iw); px *= k; py *= k;
     return { x: (W - iw * sc) / 2 + px * sc, y: (Hh - ih * sc) / 2 + py * sc, ox: (W - iw * sc) / 2, oy: (Hh - ih * sc) / 2, dw: iw * sc, dh: ih * sc, W: W, H: Hh };
   }

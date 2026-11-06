@@ -7,6 +7,39 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.105.0 · Kept, lifted one level, seen whole - L71 (2026-11-06)
+
+- **Why.** Raivis went through the built GAS BASIC (2.102.0): the last "?" answer of a slide cut in half, pictures cropped,
+  "four kinds of ship" shown as one ship four times, Module 1's first task not answerable from the slides before it, and
+  the old course's good order rebuilt. Two read-only audits (the course with Playwright, the factory) found the causes.
+- **The answer cut.** `compile_module.room_turn` wrote the question without class `ask`; `gb_upgrade.css` hides
+  `.lt-work li.you .ask` on the last Next, so the answer was added under the question. Fixed, and beside a picture the
+  answer opens over the picture's column (`answer_over` -> `.lt-ans-over`, `data-script-ignore`; the answer stays in
+  the list for the word check).
+- **Why no check caught it.** `run_audits.py` measures each slide as it opens; nothing pressed Next to the answer.
+  `fit_gate.py` (Python Playwright, driving the Chrome or Edge already installed - `python -m pip install playwright`, no
+  browser download) presses Start and every Next and runs `fit_probe.js` at each step. `build_module.py` runs it at
+  1280x800 and the build's other sizes. Measuring "hidden overflow" was dropped: decorative parts (the recap cards'
+  shine) gave false findings; cut words cover it. A step still moving is measured again after 1.5 s.
+- **Pictures.** Teaching pictures `object-fit: contain` in gb_layouts / gb_compose / gb_upgrade (the photo column, figure
+  stage, `.lt-pic`, tiles, cards, insets); `.lt-ba` and the thumbnail strip stay cropped and the probe treats them as
+  backdrops. `gb_steps.js` maps photo spots for contain or cover. The design gallery's copies of gb_steps.js and
+  gb_layouts.css were the same files and are copied again.
+- **One photograph, one thing.** `picture.items` (2-6, different); `many_things` reads a `shows` that asks for several of a
+  sort (three or more with one head noun, "side by side", "A to F", "six gas carriers") on a photo slot - drawings name
+  their parts and are not checked. `fill_slots` writes a placeholder a thing as `tiles`; the queue lists each; `place
+  --slide s02_1` fills it. `place --seen` is required: the asked words must be in what was seen (a short ask whole, a long
+  description three quarters) and two tiles of one slide may not show the same.
+- **The old course.** `from_old` is parsed ("<deck>.pptx, slides 16-18 and 20"), against `old_course_inventory.json`
+  (which now keeps each slide's words). Every module's script counts for "cited". Thresholds in `OLD_RULES`.
+- **Bloom.** `LIFT_MAX = 1` in `pedagogy_review.py`; a topic the old course did not teach (level 0) is not capped.
+  `revised_outcome` only with an expert's decision. The memory note on keep-or-lift was written before the cap.
+- **Ready.** `content_script.unanswered` counts the rows without expert_review, expert_notes or an expert decision.
+- **Open.** A slide too full at 1024x768, or a scenario's choices and feedback (GAS M01 s21), now stop the build and are
+  named - the factory does not yet split such a slide by itself. The training app should refuse to publish a draft with
+  pictures pending. The experts do not yet review the content scripts in the editor - the unattended build still writes
+  them itself after the pedagogy Ready.
+
 ## 2.104.0 · What the GAS BASIC auto build ran into - eleven fixes (2026-11-05)
 
 - **Why.** The first course through the build after Ready (GAS BASIC 04/11 NEWEST EDITION, office PC) stopped with

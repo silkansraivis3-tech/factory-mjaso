@@ -166,6 +166,9 @@ def _filled(x):
     return isinstance(x, str) and x.strip()
 
 
+LIFT_MAX = 1                           # levels a topic is lifted in one course, unless the expert decides more
+
+
 def check(course):
     """(problems, notes) - a problem stops the Stage 2 approval; a note is said and never stops it."""
     f = files(course)
@@ -210,13 +213,20 @@ def check(course):
                 probs.append("%s: the proposal (%s) is below what the old course reached (%s)" % (where, level(b), level(a)))
             if new.get("expert"):
                 pass                          # the expert's decision is carried out as it is (record_expert)
+            elif isinstance(a, int) and isinstance(b, int) and a >= 1 and b > a + LIFT_MAX:
+                # one level a course: GAS BASIC lifted 33 topics two or three levels at once and thinned its theory
+                probs.append("%s: %s to %s lifts it %d levels - a course lifts a topic one level (to %s); the expert can "
+                             "decide more (pedagogy_review.py expert)" % (where, level(a), level(b), b - a, level(a + LIFT_MAX)))
             elif isinstance(a, int) and isinstance(b, int) and b > a and not r["asks"]:
                 probs.append("%s: a lift needs the level the outcome asks for - write it on the Sub-ILO (\"bloom\": n)" % where)
             elif isinstance(a, int) and isinstance(b, int) and b > max(a, r["asks"] or 0) and not _filled(new.get("above_why")):
                 probs.append("%s: %s is above what the outcome asks (%s) - keep it at %s, or say in 'above_why' which task on "
                              "board needs it" % (where, level(b), level(r["asks"]), level(max(a, r["asks"]))))
             if isinstance(b, int) and r["asks"] and b < r["asks"] and not new.get("expert"):
-                if _filled(new.get("limit")):
+                if isinstance(a, int) and a >= 1 and b == a + LIFT_MAX:
+                    notes.append("%s: proposed %s, one level above the old course - the outcome asks %s; the next course, or the "
+                                 "expert, takes it further" % (where, level(b), level(r["asks"])))
+                elif _filled(new.get("limit")):
                     notes.append("%s: proposed %s stays below what the outcome asks (%s) - %s"
                                  % (where, level(b), level(r["asks"]), new["limit"]))
                 else:
@@ -228,12 +238,13 @@ def check(course):
             rw = (new.get("revised_outcome") or "").strip()
             if rw and r["main"]:
                 probs.append("%s: a Main ILO is never re-worded (L2) - empty its 'revised_outcome'" % where)
+            elif rw and not new.get("expert"):
+                # the outcomes are the programme's: a proposal never re-words one, only an expert's decision may
+                probs.append("%s: the outcome is the programme's - a proposal never re-words it; empty its 'revised_outcome' "
+                             "(an expert who wants it re-worded says so, and it is recorded as their decision)" % where)
             elif rw and not_english(rw, r["programme_lang"]):
                 probs.append("%s: 'revised_outcome' is in the programme's language - write it in English, as the course will "
                              "show it; the programme's own words stay beside it (L19)" % where)
-            elif not rw and not r["main"] and isinstance(b, int) and r["asks"] and b > r["asks"] and not new.get("expert"):
-                notes.append("%s: proposed %s is above the outcome's verb (%s) - say it in 'revised_outcome', the same "
-                             "Sub-ILO with a verb at that level, in English (L19)" % (where, level(b), level(r["asks"])))
     for n, m in mods.items():
         for i in (m or {}).get("rows") or {}:
             if (str(n), i) not in known:

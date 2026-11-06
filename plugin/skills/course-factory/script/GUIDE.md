@@ -26,7 +26,13 @@ Then, before the first screen is written, read — in this order, and only these
    `coverage/GUIDE.md` §1), the items listed by `ilo_map.py show`. They are the outcomes *inside* the topic;
    `coverage/` checks them later against everything built.
 3. **The old course's keep / modernise / add for this module (L41)** — `architecture.json` →
-   `from_old_course`, and `OLD_COURSE_INVENTORY.md` for the slides and pictures it names.
+   `from_old_course`, and `OLD_COURSE_INVENTORY.md` for the slides and pictures it names. **A course rebuilt from an
+   old one keeps the old course's order and what each old slide explained** (`old_course_inventory.json` holds each
+   slide's words): write the module in the old order, keep the old explanation in sentences and lift the Bloom level and
+   the delivery around it. The check says it (`old_course_findings`): a slide earlier than the old order needs
+   `"moved_why"` with the expert's reason; an old slide that taught something and is left out goes in the script's
+   `"dropped_old"` (`[{"from": "<deck>.pptx, slide 27", "why": "..."}]`); the slides must show at least 60 % of the
+   old slides' words.
 4. **The subject library first, when the course is on its subject** (2.52.0; `intake.json` →
    `subject_library`; the Gas Library for every gas course): `python <course-visuals>/scripts/subject_library.py
    find "<the slide's subject>"` — the shared topic and which module of each course teaches it, the
@@ -208,13 +214,23 @@ tablets (L35, owner 2026-09-30), and the script says which screen is where:
   slide must teach (`course-visuals`, `decide/knowledge/learning-needs.json`): what moves or changes state
   is animated; what has an inside is a cutaway or a 3D model; what must be recognised on board is the course's own
   photograph (reused, enlarged) or a photorealistic generated one - never a photo to take (L33, owner 2026-10-28).
-- `"from_old"` (optional, L41) — where in the old course the slide comes from and what changed: *"1. Liquefied Gas
-  tankers.pptx, slides 37-40 - the photographs became a 3D model"*. Shown on the review page.
+- `"from_old"` (L41; on every slide of a course rebuilt from an old one) — where in the old course the slide comes
+  from and what changed: *"1. Liquefied Gas tankers.pptx, slides 37-40 - the photographs became a 3D model"*, the deck's
+  file name and its slide numbers as written there. Shown on the review page and read by the order check.
+- **What a question asks, a slide has shown.** A task's answer, and the answer to the room's own question (`ask` /
+  `reveal`), must be in the words the slides up to it put on screen - their lines, or the points of a slide of short
+  points. The instructor's notes do not count: the trainee never sees them.
+- **Every value from a source the course holds (L4).** A number with its unit on a slide (a pressure, a temperature, a
+  limit) must be in the course's retrieval packs, its knowledge base, the old course, the programme or the operator's
+  stated facts - `fact_findings` refuses one found in none of them. Search first (`kb_tool.py search`, the subject
+  library's `find`), then write the source's value.
 - `"visual"` — what it shows and why, in one or two sentences; `"layout"` — `split` (text left, picture
   right), `visual_wide` or `visual_full`.
 - **`"picture"` — the slot, fixed here (2.73.0):** `{"kind": "photo|figure|3d|none", "aspect": "4:3", "shows": "<what it
   must show>"}` on every slide but the recap, and on every question answered on a picture. The kind follows the visual:
-  a real picture (photo, document drawing, film still, generated) is `photo`; a schematic, cutaway, chart, comparison or
+  a real picture (photo, document drawing, film still, generated) is `photo`; **one photo shows one thing** - several
+  of a sort (four kinds of gas carrier, ships A to F) go in `"items": ["LPG carrier", "Moss LNG carrier", ...]`, each
+  found or made on its own and shown as a tile; a schematic, cutaway, chart, comparison or
   animation is `figure`; `model_3d*` is `3d`. It decides the slide's layout before anything is built, so the build's first
   phase needs no agent (placeholders of this shape, compile/GUIDE.md 2g), and the course photo catalogue matches photos
   to it by `shows`. Must fix: an unknown kind, a kind the visual does not need, a photo or figure with no aspect, nothing

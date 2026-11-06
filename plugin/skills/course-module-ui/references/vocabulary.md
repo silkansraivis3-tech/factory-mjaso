@@ -68,7 +68,7 @@ the ones before `.lit`; the slide gets `data-at`, `data-last`, and `data-stops` 
 | `.lt-task2` · `.lt-tcopy` · `.lt-tab3d` (`.lt-photo`) · `.lt-tabimg` · `.lt-chips` | task opening: the words left with time, questions and alone / in teams as chips; on the right the exercise's photograph or the tablet render |
 | `.lt-path` | module check opening: the module's topics tick off towards the check |
 | `.lt-ask4` · `.lt-q2` · `.lt-tap` (its words in `data-label`) · `.lt-shine` | the summary: white cards on the pattern, each a question that opens on Next or a tap |
-| `.lt-work` · `.lt-meter` (`data-meter`, `data-max`) | worked example, then the room's turn, beside a meter that counts |
+| `.lt-work` · `.lt-meter` (`data-meter`, `data-max`) · `.lt-ans-over` | worked example, then the room's turn, beside a meter that counts; beside a picture the answer opens over it on the last Next (`.lt-ans-over`) |
 | `.lt-tf` · `.lt-claim` · `.lt-vote` · `.lt-why` · `.lt-pic` | true or false, then why |
 | `.lt-opts` · `.lt-opt` (`.ok` / `.no`, `.fb`) | what would you do: a situation and its choices, then why each |
 | `.lt-name` | name the parts on a live scene (`.lt-tag.num`) |

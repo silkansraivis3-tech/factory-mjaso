@@ -7,7 +7,7 @@
     picture_briefs.py done <course> --module 1 --slide s03 --file <picture> --approved "<the person's words>"
     picture_briefs.py queue <course> --module 1 [--all]
     picture_briefs.py place <course> --module 1 --slide q04 --file <picture> --rights <state> [--credit ..] [--source ..]
-                            [--license ..] [--author ..] [--generated --prompt ..] [--areas <json>]
+                            [--license ..] [--author ..] [--generated --prompt ..] [--areas <json>] --seen "<what it shows>"
     picture_briefs.py areas <course> --module 1 --slide q04 --areas <json>
 
 WHY THIS EXISTS
@@ -216,7 +216,12 @@ def cmd_queue(course, module, script, store, every):
     mdir = module_dir(course, module)
     holders = placeholders(mdir)
     places = [s["id"] for s in script.get("screens", []) if place_as(s) and "video" not in s.get("visual_kind", "")
-              and s.get("kind", "slide") == "slide" and not (sheet.get(s["id"]) or {}).get("no_picture")]
+              and s.get("kind", "slide") == "slide" and not (sheet.get(s["id"]) or {}).get("no_picture")
+              and not cs.picture_of(s)["items"]]                 # one picture a thing: its items are queued, not the slide
+    try:                                                         # each slot's real size at the tablets' 1280 x 800 (the build's audit)
+        slots = json.load(io.open(workspace.claude_path(course, "_build", "%s_slots.json" % cs.mid(module)), encoding="utf-8")).get("1280x800") or {}
+    except (OSError, ValueError):
+        slots = {}
     places += [sid for sid in store if sid not in places and sid in screens]
     places += [sid for sid in holders if sid not in places]
     out = []
@@ -235,8 +240,11 @@ def cmd_queue(course, module, script, store, every):
         if (b.get("made") or have or real) and not hold and not every:
             continue
         comp = bs.get("composition") or "photo"          # a generated picture with no layout of its own fills the slide
+        # the picture is made in the shape of the box it fills, so the box shows all of it (GAS BASIC: 16:9 pictures in
+        # near-square columns showed 52-57 % of themselves)
+        box = slots.get(sid) if how == "figure" else None
         prompt, aspect = draft_prompt(s, b.get("answers") or {}, comp, beside=how == "inset",
-                                      aspect=aspect_of(hold.get("width"), hold.get("height")) if hold else None)
+                                      aspect=aspect_of(*box) if box else aspect_of(hold.get("width"), hold.get("height")) if hold else None)
         if b.get("prompt"):
             prompt = b["prompt"]
         rel = fig if fig.lower().endswith((".png", ".jpg", ".jpeg", ".webp")) and not is_placeholder_ref(fig) else \
@@ -309,6 +317,24 @@ def set_areas(entry, text, module, sid):
     return False
 
 
+PLAIN = set("a an the of and or with without in on at to for from by its their real photo photograph picture render image view "
+            "showing shows seen one two three four five six side close up".split())
+
+
+def missing_words(asked, seen):
+    """the words that name what was asked and are not in what is seen ([] when it matches) - a word counts by its first five
+    letters, so "carriers" is "carrier" and "refrigerated" is "refrigeration"; the small words and the picture's own kind
+    are not counted. A short ask (up to five such words: "Moss LNG carrier") must be seen whole; a long description may
+    miss a quarter of its words"""
+    def stems(t):
+        return [(w[:-1] if w.endswith("s") and not w.endswith("ss") and len(w) > 4 else w)[:5]
+                for w in re.findall(r"[a-zA-Z0-9]+", (t or "").lower()) if len(w) > 2 and w not in PLAIN]
+    have = set(stems(seen))
+    want = list(dict.fromkeys(stems(re.sub(r"\([^)]*\)", "", asked or ""))))
+    miss = [w for w in want if w not in have]
+    return miss if miss and (len(want) <= 5 or len(miss) > len(want) / 4.0) else []
+
+
 def cmd_place(course, module, a):
     """a found or generated picture into the place of the slot's placeholder"""
     mdir = module_dir(course, module)
@@ -339,6 +365,29 @@ def cmd_place(course, module, a):
     script = cs.load(cs.paths(course, module)["script"])
     s = next((x for x in script.get("screens", []) if x["id"] == a.slide), {})
     shows = ((hold or {}).get("description") or "").replace(PLACEHOLDER_TEXT, "") or s.get("visual") or s.get("title") or ""
+    # what the picture really shows, written after opening it, against what was asked: GAS BASIC M01 s02 asked for a Moss
+    # LNG carrier and placed a second LPG carrier, its own record saying so - nothing compared the two
+    seen = (a.seen or "").strip()
+    if len(seen.split()) < 3:
+        print("Stopped - open the picture and say in a few words what it really shows (--seen \"...\"): it is checked "
+              "against what was asked (%s)" % (shows or a.slide))
+        return 2
+    miss = missing_words(shows, seen)
+    if miss:
+        print("Stopped - the picture does not show what was asked.\n  asked: %s\n  seen:  %s\n  not in it: %s\n"
+              "Find or make another one. If the ask itself is wrong, change the script's \"shows\" (or its \"items\")."
+              % (shows, seen, ", ".join(miss)))
+        return 2
+    owner, _, k = a.slide.rpartition("_")
+    if owner and k.isdigit():
+        _, meta0 = img_meta(mdir)
+        for name, rec in meta0.items():
+            other = str((rec or {}).get("used_in") or "")
+            if other.startswith(owner + "_") and other != a.slide and rec.get("seen") and not missing_words(seen, rec["seen"]) \
+                    and not missing_words(rec["seen"], seen):
+                print("Stopped - %s shows the same as %s on this slide (%s): each picture of a slide is a different thing"
+                      % (a.slide, other, rec["seen"]))
+                return 2
     ext = os.path.splitext(a.file)[1].lower()
     ext = ".jpg" if ext == ".jpeg" else ext
     if ext not in (".png", ".jpg", ".webp"):
@@ -351,7 +400,7 @@ def cmd_place(course, module, a):
         shutil.copy2(a.file, dest)
     w, h = size_of(dest)
     rec = {"title": (s.get("title") or shows[:1].upper() + shows[1:])[:120], "description": shows,
-           "width": w, "height": h, "used_in": (hold or {}).get("used_in") or a.slide, "rights_state": rights,
+           "width": w, "height": h, "used_in": (hold or {}).get("used_in") or a.slide, "seen": seen, "rights_state": rights,
            "credit": a.credit, "source": a.source, "license": a.license, "author": a.author, "placed": time.strftime("%Y-%m-%d")}
     if a.generated:
         rec.update(generated=True, origin="generated illustration", generation_prompt=a.prompt.strip(),
@@ -370,6 +419,11 @@ def cmd_place(course, module, a):
     if not moved and not (entry or {}).get("figure"):
         entry = build["screens"].setdefault(a.slide, {})
         entry["figure"] = rel
+    tiles_of = build["screens"].get(owner) if owner and k.isdigit() else None
+    if isinstance(tiles_of, dict) and tiles_of.get("tiles") and not any(is_placeholder_ref(t if isinstance(t, str) else (t or {}).get("photo"))
+                                                                         for t in tiles_of["tiles"]):
+        tiles_of.pop("placeholder", None)                 # the slide's last tile is in: it holds no stand-in now
+        tiles_of.pop("_placeholder", None)
     try:
         tapped = set_areas(entry, a.areas, module, a.slide) if entry is not None else None
     except ValueError as e:
@@ -417,7 +471,7 @@ def main(argv=None):
         if name == "place":
             s.add_argument("--file", required=True)
             s.add_argument("--rights", default="")
-            for k in ("--credit", "--source", "--license", "--author", "--prompt", "--generated-by"):
+            for k in ("--credit", "--source", "--license", "--author", "--prompt", "--generated-by", "--seen"):
                 s.add_argument(k)
             s.add_argument("--generated", action="store_true")
         if name in ("place", "areas"):

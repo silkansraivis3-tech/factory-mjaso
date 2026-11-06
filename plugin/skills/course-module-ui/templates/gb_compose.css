@@ -223,7 +223,7 @@
 .trio figure{display:flex;flex-direction:column;border-radius:var(--r-m);overflow:hidden;
   border:1px solid var(--line-l);box-shadow:var(--sh);background:var(--white);min-height:0;margin:0}
 .slide.dark .trio figure{background:var(--deep-2);border-color:var(--line-d);box-shadow:var(--sh-d)}
-.trio img,.trio svg{width:100%;flex:1;object-fit:cover;min-height:0}
+.trio img,.trio svg{width:100%;flex:1;object-fit:contain;min-height:0}
 .trio figcaption{padding:min(1.7vmin,17px) min(1.8vmin,18px);
   font-size:clamp(12.5px,1.55vmin,21.4px);line-height:1.45;color:var(--dim-l)}
 .slide.dark .trio figcaption{color:var(--dim-d)}
@@ -235,7 +235,7 @@
    screen; the copy sits on it. Never a photograph in a box with text below.
    ========================================================================== */
 .photo-wrap{position:absolute;inset:0;overflow:hidden}
-.photo-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-wrap img{width:100%;height:100%;object-fit:contain;display:block}
 .photo-scrim{position:absolute;inset:0;
   background:linear-gradient(90deg,rgba(6,14,28,.92) 0%,rgba(6,14,28,.62) 34%,rgba(6,14,28,.05) 62%),
              linear-gradient(0deg,rgba(6,14,28,.72),transparent 42%)}
@@ -570,7 +570,7 @@ figure{margin:0}
 .copy div.box > p:first-child{font-weight:700;margin:0 0 .35em}
 /* a real photograph under the words, beside the drawing */
 .copy .inset,.fill .inset{display:flex;gap:min(2vmin,18px);align-items:center;margin:min(1vmin,8px) 0 0;width:100%}
-.copy .inset img,.fill .inset img{width:44%;flex:0 0 44%;max-height:min(26vh,230px);object-fit:cover;border-radius:var(--r-m);
+.copy .inset img,.fill .inset img{width:44%;flex:0 0 44%;max-height:min(26vh,230px);object-fit:contain;border-radius:var(--r-m);
   box-shadow:var(--sh)}
 .slide.dark .copy .inset img,.slide.dark .fill .inset img{box-shadow:var(--sh-d)}
 .copy .inset figcaption,.fill .inset figcaption{font-size:clamp(12.5px,1.5vmin,19px);line-height:1.4;color:var(--dim-l)}
@@ -607,13 +607,13 @@ figure{margin:0}
 .slide-body.two-col.fig-wide > .fill{max-height:100%}
 .slide-body.two-col.fig-wide.fig-first{grid-template-columns:1.2fr .8fr}
 /* a photograph in a real column (wide-left / wide-right, 2.49.1): the words are as wide as the layout says, the photo
-   fills its own column to the slide's height, cropped to it - its credit line stays on the slide (.credit) */
+   fills its own column to the slide's height, shown whole in it - its credit line stays on the slide (.credit) */
 .slide-body.two-col.photo-col{grid-template-rows:minmax(0,1fr);align-items:stretch}
 .slide-body.two-col.photo-col > .fill.photo-col{position:relative;display:block;min-height:0;max-height:none;
   border-radius:var(--r-l);overflow:hidden}
 .slide-body.two-col.photo-col > .fill.photo-col > img{position:absolute;inset:0;width:100%;height:100%;max-height:none;
-  object-fit:cover}
-/* 2.60.0 - its credit is the column's own foot strip: the photo above it takes what is left, cropped to it */
+  object-fit:contain}
+/* 2.60.0 - its credit is the column's own foot strip: the photo above it takes what is left, shown whole */
 .slide-body.two-col.photo-col > .fill.photo-col:has(> .credit){display:flex;flex-direction:column}
 .slide-body.two-col.photo-col > .fill.photo-col:has(> .credit) > img{position:relative;inset:auto;flex:1 1 0;min-height:0;height:auto}
 .fill.photo-col > .credit{align-self:stretch;margin:0;max-width:none;border-radius:0;flex:0 0 auto}
@@ -666,7 +666,7 @@ figure{margin:0}
    .photo-copy, so the inset ran at its natural size and spilled 74 px off the slide. Here it is a compact row under the
    words, small enough that the centred column keeps inside the slide */
 .photo-copy .inset{display:flex;gap:min(1.6vmin,14px);align-items:center;margin:min(1.2vmin,10px) 0 0;width:100%}
-.photo-copy .inset img{width:34%;flex:0 0 34%;height:auto;max-height:min(16vh,150px);object-fit:cover;
+.photo-copy .inset img{width:34%;flex:0 0 34%;height:auto;max-height:min(16vh,150px);object-fit:contain;
   border-radius:var(--r-m);box-shadow:var(--sh-d)}
 .photo-copy .inset figcaption{font-size:clamp(12.5px,1.4vmin,17px);line-height:1.35;color:var(--dim-d)}
 /* small drawings that belong with the words (two mini figures beside a photo): compact, side by side.

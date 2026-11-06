@@ -106,6 +106,7 @@ from __future__ import annotations
 import argparse
 import copy
 import difflib
+import glob
 import hashlib
 import html
 import io
@@ -923,6 +924,18 @@ def slide_terms(s):
     return terms("%s\n%s\n%s" % (s.get("title", ""), s.get("text", ""), s.get("notes", "")))
 
 
+def shown_text(s):
+    """the words a slide puts in front of the trainee: its title, its lines - or, on a slide of short points, only the
+    points (its lines go to the instructor's notes) - and the room's question and its answer. Never the notes: GAS BASIC
+    M01's first task passed as "taught" on words only the instructor's notes held"""
+    body = s.get("points") if s.get("points") else s.get("text", "")
+    return "\n".join(as_text(x) for x in (s.get("title", ""), body, s.get("ask"), s.get("reveal")) if x)
+
+
+def shown_terms(s):
+    return terms(shown_text(s))
+
+
 # the task rules that are about a set or a module's questions as a trainee goes through them: with groups, each group's
 # path (the questions for everyone and the group's own) must meet them, never the mix of all groups no trainee sees
 GROUP_RULES = ("t_sc_small", "t_sc_big", "t_no_challenge", "t_ab_order", "t_not_spaced", "t_mc_small", "m_mix",
@@ -1001,6 +1014,14 @@ def theory_check(script):
         if k == "slide":
             since_min += minutes(s)
             since_words += wc(s.get("title", ""), s.get("text", ""), s.get("notes", ""))
+            if s.get("ask") and s.get("reveal") and not final:
+                # the room's own question: its answer comes from this slide's lines and the slides before it
+                # (GAS BASIC M01 s05 asked what cooling gains a ship one slide before semi-refrigerated ships were taught)
+                before = seen_slides + [dict(s, ask="", reveal="")]
+                share = taught_share(as_text(s.get("reveal")), (set().union(*[shown_terms(x)[0] for x in before]),
+                                                                set().union(*[shown_terms(x)[1] for x in before])))
+                if share is not None and share < R["answers_taught_first"]["min_share"]:
+                    add(s["id"], "reveal", FAIL, "t_room_not_taught", share="%d" % round(share * 100))
             seen_slides.append(s)
             block_subs |= set(sub_ilos_of(s))
         elif k == "task-slide":
@@ -1047,9 +1068,9 @@ def theory_check(script):
                             applying = int(q.get("bloom") or 0) >= 3      # applies a taught rule to new cases: judge words, not new numbers
                         except (TypeError, ValueError):
                             applying = False
-                        each = [(taught_share(answer, slide_terms(x), others, applying) or 0, x) for x in seen_slides]
-                        union = (set().union(*[slide_terms(x)[0] for x in seen_slides]) if seen_slides else set(),
-                                 set().union(*[slide_terms(x)[1] for x in seen_slides]) if seen_slides else set())
+                        each = [(taught_share(answer, shown_terms(x), others, applying) or 0, x) for x in seen_slides]
+                        union = (set().union(*[shown_terms(x)[0] for x in seen_slides]) if seen_slides else set(),
+                                 set().union(*[shown_terms(x)[1] for x in seen_slides]) if seen_slides else set())
                         share = taught_share(answer, union, others, applying)
                         best = sorted([e for e in each if e[0] >= 0.3], key=lambda e: -e[0])[:2]
                         taught_on[q["id"]] = sorted(slide_no[x["id"]] for _, x in best)
@@ -1377,8 +1398,29 @@ def picture_of(s):
     kind = str(p.get("kind") or "").strip().lower() or slot_kind(s.get("visual_kind"))
     if kind == "none" and s.get("kind") in TASKS and on_picture(s):
         kind = "figure"
+    items = [str(x).strip() for x in (p.get("items") or []) if str(x).strip()] if isinstance(p.get("items"), list) else []
     return {"kind": kind, "aspect": str(p.get("aspect") or DEFAULT_ASPECT.get(kind) or ""),
-            "shows": str(p.get("shows") or s.get("visual") or "").strip(), "declared": bool(p)}
+            "shows": str(p.get("shows") or s.get("visual") or "").strip(), "declared": bool(p), "items": items}
+
+
+SIDE_BY_SIDE = re.compile(r"(?i:\bside by side\b|\bin a row\b)|\b[A-F] ?(?:to|-) ?[B-F]\b")
+COUNTED = re.compile(r"\b(?:two|three|four|five|six|seven|eight|[2-8])\s+(?:[\w-]+\s+){0,3}?(?:ships|carriers|tankers|vessels)\b",
+                     re.I)
+
+
+def many_things(shows):
+    """the things one photograph is asked to show at once, when they are several of one sort ("LPG carrier, ethylene carrier,
+    Moss LNG carrier and small chemical carrier side by side", "six gas carriers A-F") - [] when it is one thing. One
+    picture asked for four kinds of ship came back as one ship four times (GAS BASIC M01 s02): each is its own picture"""
+    text = re.sub(r"\([^)]*\)", "", shows or "")
+    parts = [x.strip(" .") for x in re.split(r",|;|\band\b|\bvs\.?|\bversus\b", SIDE_BY_SIDE.sub("", text)) if x.strip(" .")]
+    heads = [re.split(r"\s+(?:with|of|in|on|at|for|from|carrying)\s+", x, 1)[0].split()[-1].lower().rstrip("s") for x in parts if x.split()]
+    if len(parts) >= 2 and SIDE_BY_SIDE.search(text):
+        return parts
+    if len(parts) >= 3 and max(heads.count(h) for h in heads) >= 3:      # three or more of one sort: carrier, carrier, carrier
+        return parts
+    m = COUNTED.search(text)
+    return [m.group(0)] if m else []
 
 
 def aspect_of(text):
@@ -1473,6 +1515,13 @@ def picture_findings(script):
                 add(s["id"], "picture", FAIL, "p_aspect", aspect=p["aspect"] or "-")
             if p["kind"] != "none" and not p["shows"]:
                 add(s["id"], "picture", FAIL, "p_shows")
+            # one picture, one thing: several of a sort are each their own picture, shown as tiles
+            if p["items"]:
+                seen = [x.lower() for x in p["items"]]
+                if len(p["items"]) < 2 or len(p["items"]) > 6 or len(set(seen)) < len(seen):
+                    add(s["id"], "picture", FAIL, "p_items", n=len(p["items"]))
+            elif p["kind"] == "photo" and many_things(p["shows"]):
+                add(s["id"], "picture", FAIL, "p_many", n=len(many_things(p["shows"])), things="; ".join(many_things(p["shows"])))
         if s.get("kind") == "slide" and p["kind"] != "none":
             lines = lines_of(s.get("text"))
             for i, x in enumerate(lines, 1):
@@ -1523,6 +1572,193 @@ def ship_findings(course, script):
             if re.search(r"(?i)(?<![\w-])%ss?(?![\w-])" % re.escape(t), said):
                 found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "", "level": NOTE, "rule": "sp_absent",
                               "detail": T(script, "sp_absent", term=t, ship=have or "-"), "fix": ""})
+    return found
+
+
+# ------------------------------------------------------------------ a retrofit keeps the old course
+# a course rebuilt from an old one: the new module follows the old course's order, keeps every slide that taught
+# something, and carries at least as much theory - the old order was good and only its Bloom level needed lifting
+OLD_REF = re.compile(r"([^;]+?\.pptx)\s*,?\s*slides?\s+([0-9][0-9\s,\-\u2013]*(?:\s*and\s*[0-9]+)*)", re.I)
+OLD_RULES = {"back": 2, "content_words": 20, "thin_fail": 0.6, "thin_note": 0.8, "new_share": 0.3, "min_old_words": 200}
+
+
+def old_refs(text):
+    """{deck file name (lower case): [slide numbers]} from a "from_old" line: "1. Liquefied Gas tankers.pptx, slides 16-18
+    and 20 - ..." (several decks split by ";")"""
+    out = {}
+    for deck, nums in OLD_REF.findall(text or ""):
+        got = []
+        for a, b in re.findall(r"(\d+)(?:\s*[-\u2013]\s*(\d+))?", nums):
+            lo, hi = int(a), int(b or a)
+            got += list(range(lo, min(hi, lo + 200) + 1))
+        out.setdefault(deck.strip().split("/")[-1].lower(), []).extend(got)
+    return out
+
+
+def old_decks(course):
+    """{deck file name (lower case): {slide number: (title, words)}} from working_claude/old_course_inventory.json - None when
+    the course has no old course"""
+    try:
+        inv = json.load(io.open(workspace.claude_path(course, "old_course_inventory.json"), encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+    out = {}
+    for sec in inv.get("sections") or []:
+        for f in sec.get("files") or []:
+            if f.get("slides"):
+                out[str(f.get("file", "")).split("/")[-1].lower()] = {x["n"]: (x.get("title", ""), x.get("words", 0)) for x in f["slides"]}
+    return out
+
+
+def old_course_findings(course, script):
+    """the old course, kept: a slide that moves earlier than the old order (MUST, unless "moved_why" says the expert agreed),
+    an old slide that taught something and no module cites (MUST, unless the script's "dropped_old" says why), theory thinner
+    than the old slides it replaces (MUST under 60 %, a note under 80 %), and a note when many slides are new"""
+    decks = old_decks(course) if course else None
+    if not decks or str(script.get("module")).lower() == "final":
+        return []
+    R = OLD_RULES
+    found = []
+
+    def add(sid, level, key, **kw):
+        found.append({"where": place(script, sid) if sid else T(script, "s_the_module"), "screen": sid or "", "field": "from_old",
+                      "level": level, "rule": key, "detail": T(script, key, **kw), "fix": ""})
+
+    slides = [x for x in script.get("screens", []) if x.get("kind") == "slide"]
+    refs = {x["id"]: old_refs(as_text(x.get("from_old"))) for x in slides}
+    furthest = {}
+    for x in slides:
+        for deck, nums in refs[x["id"]].items():
+            first = min(nums)
+            if first < furthest.get(deck, 0) - R["back"] and not str(x.get("moved_why") or "").strip():
+                add(x["id"], FAIL, "o_moved", deck=deck, n=first, after=furthest[deck])
+            furthest[deck] = max(furthest.get(deck, 0), first)
+    # every module's citations count: a slide another module took is not dropped
+    cited = {}
+    try:
+        others = [load(p) for p in sorted(glob.glob(os.path.join(os.path.dirname(paths(course, script.get("module"))["script"]), "M*.json")))
+                  if re.match(r"M\w+\.json$", os.path.basename(p))]          # each module's script, not its build sheet or drafts
+    except (OSError, ValueError, KeyError):
+        others = []
+    others = [x for x in others if str(x.get("module")) != str(script.get("module"))]   # this module as it is now, not as saved
+    for sc in others + [script]:
+        for y in sc.get("screens", []):
+            for deck, nums in old_refs(as_text(y.get("from_old"))).items():
+                cited.setdefault(deck, set()).update(nums)
+        for d in sc.get("dropped_old") or []:
+            if str((d or {}).get("why") or "").strip():
+                for deck, nums in old_refs(as_text(d.get("from"))).items():
+                    cited.setdefault(deck, set()).update(nums)
+    mine = {}
+    for r in refs.values():
+        for deck, nums in r.items():
+            mine.setdefault(deck, set()).update(nums)
+    old_words = 0
+    for deck, nums in mine.items():
+        have = decks.get(deck)
+        if not have:
+            continue
+        old_words += sum(have[n][1] for n in nums if n in have)
+        for n in range(min(nums), max(nums) + 1):
+            if n in have and have[n][1] >= R["content_words"] and n not in cited.get(deck, ()):
+                add(None, FAIL, "o_dropped", deck=deck, n=n, title=have[n][0][:60], w=have[n][1])
+    new_words = sum(wc(shown_text(x)) for x in slides if refs[x["id"]])
+    if old_words >= R["min_old_words"]:
+        share = new_words / float(old_words)
+        if share < R["thin_fail"]:
+            add(None, FAIL, "o_thinner", new=new_words, old=old_words, pct=round(share * 100))
+        elif share < R["thin_note"]:
+            add(None, NOTE, "o_thinner", new=new_words, old=old_words, pct=round(share * 100))
+    fresh = [x["id"] for x in slides if not refs[x["id"]]]
+    if slides and len(fresh) > R["new_share"] * len(slides):
+        add(None, NOTE, "o_new_share", n=len(fresh), all=len(slides), ids=", ".join(fresh[:8]))
+    return found
+
+
+# ------------------------------------------------------------------ every number from a source the course holds
+# A value on a slide - a pressure, a temperature, a limit - is found in the course's own sources: its retrieval packs, its
+# knowledge base, the old course, the programme and model course, the operator's stated facts. A number found in none of
+# them was written from memory, and a ship's officer learns it as a fact (L4: no source, no claim).
+MEASURE = re.compile(r"(?<![\w.])(\d{1,3}(?:[ ,]\d{3})+|\d+(?:[.,]\d+)?)\s*(?:(?:-|\u2013|to)\s*(?:\d{1,3}(?:[ ,]\d{3})+|\d+(?:[.,]\d+)?)\s*)?"
+                     r"(bar|\u00b0C|\u00baC|%|m3|m\u00b3|ppm|kPa|MPa|kg|kW|tonnes|mm|mg|mbar|vol)(?![\w])", re.I)
+
+
+def plain_number(n):
+    """"7,500" and "7 500" are 7500; "0,5" is 0.5"""
+    n = n.strip()
+    if re.fullmatch(r"\d{1,3}(?:[ ,]\d{3})+", n):
+        return n.replace(",", "").replace(" ", "")
+    return n.replace(",", ".")
+
+
+def numbers_in(text):
+    """every number in a text as plain_number writes it - "7,500 m3" and "7500" are the same number"""
+    return {plain_number(x) for x in re.findall(r"\d{1,3}(?:[ ,]\d{3})+(?!\d)|\d+(?:[.,]\d+)?", text or "")}
+
+
+def course_sources_text(course):
+    """the words of every source the course holds, but its knowledge base: retrieval packs, the old course's slides, the
+    programme and the model course the factory transcribed, the feedback log's operator facts"""
+    parts = []
+    for p in glob.glob(workspace.claude_path(course, "retrieval", "*.md")):
+        try:
+            parts.append(io.open(p, encoding="utf-8").read())
+        except OSError:
+            pass
+    for name in ("old_course_inventory.json", "programme.json", "model_course_syllabus.json", "FEEDBACK_LOG.md", "STANDARDS.md"):
+        try:
+            parts.append(io.open(workspace.claude_path(course, name), encoding="utf-8").read())
+        except (OSError, TypeError):
+            pass
+    return "\n".join(parts)
+
+
+def kb_numbers(course):
+    """every number in the course's knowledge base (its search index's pieces) - read only when a slide's number is not in
+    the smaller sources"""
+    try:
+        src = json.load(io.open(workspace.claude_path(course, "kb_sources.json"), encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return set()
+    kbs = [x.get("knowledge_base") for x in (src if isinstance(src, list) else src.get("entries") or [src]) if isinstance(x, dict)]
+    out = set()
+    for kb in [k for k in kbs if k]:
+        for p in glob.glob(os.path.join(kb, "search_index", "chunks.jsonl")) + glob.glob(os.path.join(kb, "*", "chunks.jsonl")):
+            try:
+                for line in io.open(p, encoding="utf-8"):
+                    try:
+                        out |= numbers_in(json.loads(line).get("text", ""))
+                    except ValueError:
+                        pass
+            except OSError:
+                pass
+    return out
+
+
+def fact_findings(course, script):
+    """MUST: a measured value on a slide (a number with its unit) that no source of the course holds - checked only when the
+    course has its sources (a knowledge base or retrieval packs); a value the operator stated is in the script's
+    operator_facts"""
+    if not course:
+        return []
+    known = course_sources_text(course) + "\n" + "\n".join(as_text(f.get("fact")) for f in script.get("operator_facts") or [])
+    have = numbers_in(known)
+    kb = None
+    found = []
+    for s in script.get("screens", []):
+        if s.get("kind") != "slide":
+            continue
+        for m in MEASURE.finditer(shown_text(s)):
+            nums = [plain_number(x) for x in re.findall(r"\d{1,3}(?:[ ,]\d{3})+(?!\d)|\d+(?:[.,]\d+)?", m.group(0))]
+            missing = [n for n in nums if n not in have]
+            if missing and kb is None:
+                kb = kb_numbers(course)
+                if not kb and not glob.glob(workspace.claude_path(course, "retrieval", "*.md")):
+                    return []                          # a course with no sources of its own: nothing to check against
+            missing = [n for n in missing if n not in (kb or set())]
+            if missing:
+                found.append({"where": place(script, s["id"]), "screen": s["id"], "field": "text", "level": FAIL, "rule": "f_untraced",
+                              "detail": T(script, "f_untraced", value=m.group(0).strip()), "fix": ""})
     return found
 
 
@@ -1686,7 +1922,8 @@ def clauses(text):
 
 def all_findings(script, course=None):
     th, _ = theory_findings(script)
-    return th + media_findings(script) + text_findings(script) + ilo_findings(course, script) + ship_findings(course, script)
+    return th + media_findings(script) + text_findings(script) + ilo_findings(course, script) + ship_findings(course, script) \
+        + old_course_findings(course, script) + fact_findings(course, script)
 
 
 def blocking(findings):
@@ -2724,15 +2961,35 @@ def unattended_signer(course):
     """the one approval an unattended run may record (L70): the expert's own Ready, signed by name in the training
     app's editor and pulled into pedagogy_review.json - "<name> (Ready in editor)". None when there is none."""
     rev = workspace.claude_path(course, "pedagogy_review.json")
-    by = (((load(rev) if os.path.isfile(rev) else {}) or {}).get("ready") or {}).get("by", "").strip()
-    return "%s (Ready in editor)" % by if by else None
+    data = (load(rev) if os.path.isfile(rev) else {}) or {}
+    by = (data.get("ready") or {}).get("by", "").strip()
+    rows, answered = unanswered(data)
+    # a Ready over rows nobody answered is not a review (GAS BASIC: Ready with 0 of 124 rows answered approved every script)
+    return "%s (Ready in editor)" % by if by and rows and not answered else None
+
+
+def unanswered(rev):
+    """(rows, [module/topic not answered]) - every topic row of the experts' documents, and the ones the expert gave no
+    answer on: no OK, no note, no decision of their own"""
+    rows, left = 0, []
+    for n, m in sorted(((rev or {}).get("modules") or {}).items()):
+        for i, x in sorted(((m or {}).get("rows") or {}).items()):
+            rows += 1
+            if not (x.get("expert_review") or x.get("expert_notes") or ((x.get("proposed") or {}).get("expert"))):
+                left.append("%s/%s" % (n, i))
+    return rows, left
 
 
 def cmd_approve(course, module, by, despite=False):
     p = paths(course, module)
     if os.environ.get("NOVIKONTAS_AUTO_BUILD") == "1" and by != unattended_signer(course):
-        print("Not approved - an unattended run approves only with the expert's own Ready from the editor: --by \"%s\". "
-              "Build --draft and say which scripts wait (script/GUIDE.md §4)." % (unattended_signer(course) or "nobody pressed Ready"))
+        rp = workspace.claude_path(course, "pedagogy_review.json")
+        rows, left = unanswered(load(rp) if os.path.isfile(rp) else {})
+        why = ("the expert pressed Ready with %d of %d topic rows unanswered (%s%s) - a Ready is a review only when every row "
+               "has the expert's answer" % (len(left), rows, ", ".join(left[:6]), " ..." if len(left) > 6 else "")) if left else \
+            "--by \"%s\"" % (unattended_signer(course) or "nobody pressed Ready")
+        print("Not approved - an unattended run approves only with the expert's own Ready from the editor: %s. "
+              "Build --draft and say which scripts wait (script/GUIDE.md §4)." % why)
         return 1
     script = load(p["script"])
     if os.path.isfile(p["pending"]):

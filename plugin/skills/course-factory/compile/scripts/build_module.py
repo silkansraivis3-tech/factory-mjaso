@@ -104,7 +104,7 @@ def run_checks(jobs, pkg_cmd, retry=None):
         live.pop(k, None)
         took[k] = time.time() - s
         return r
-    with cf.ThreadPoolExecutor(max_workers=7) as ex:
+    with cf.ThreadPoolExecutor(max_workers=10) as ex:
         futs = {ex.submit(run_timed, k, c): k for k, c in jobs.items()}
         pkg = None
         for f in cf.as_completed(futs):
@@ -1472,6 +1472,10 @@ def main(argv=None):
         for v in sizes:
             a += ["--viewport", v]
         jobs["audits 1280x800 %s" % " ".join(sizes)] = a
+        # the deck walked with Next to every slide's last step (fit_gate.py, Playwright): the audits measure each slide as
+        # it opens, and an answer or a last line that arrives later was never measured - one job a size, side by side
+        for v in ["1280x800"] + sizes:
+            jobs["fit %s (every Next)" % v] = [PY, os.path.join(MEASURE, "fit_gate.py"), deck, "--viewport", v]
 
     if not o.no_course_pages:
         jobs["course pages (compile_course.py)"] = [PY, os.path.join(HERE, "compile_course.py"), course]

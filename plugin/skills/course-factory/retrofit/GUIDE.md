@@ -26,7 +26,7 @@ do not re-derive it here. The short form:
 
 | Locked — needs explicit authorisation | Free — redesign on the evidence |
 |---|---|
-| technical meaning · programme requirements · ILOs · **official hours** · assessment intent · intended practical exercises · course terminology · source-supported facts · **COURSE_LANGUAGE** | screen count · screen order · HTML · layouts · card arrangements · density · progressive disclosure · visual implementation · animation · interactive mechanics · task presentation · navigation · CSS/JS · hierarchy · composition |
+| technical meaning · programme requirements · ILOs · **official hours** · assessment intent · intended practical exercises · course terminology · source-supported facts · **COURSE_LANGUAGE** · **the old course's order and explanations** | screen count · splitting or merging screens inside the old order · HTML · layouts · card arrangements · density · progressive disclosure · visual implementation · animation · interactive mechanics · task presentation · navigation · CSS/JS · hierarchy · composition |
 
 ---
 

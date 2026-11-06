@@ -82,7 +82,7 @@
 .slide[data-template^="figure-stage."] .lt-col > figure{margin:0;position:relative;min-height:0;max-height:none;border-radius:min(2.2vmin,18px);overflow:hidden;
   background:radial-gradient(ellipse at 50% 46%,rgba(83,167,219,.16) 0,transparent 70%),#0A2463;display:flex;align-items:center;justify-content:center}
 .slide[data-template^="figure-stage."] .lt-col > figure > svg{width:100%;height:100%;max-height:none;display:block}
-.slide[data-template^="figure-stage."] .lt-col > figure > img{width:100%;height:100%;max-height:none;object-fit:cover;display:block}
+.slide[data-template^="figure-stage."] .lt-col > figure > img{width:100%;height:100%;max-height:none;object-fit:contain;display:block}
 .slide[data-template^="figure-stage."] .lt-col > figure > .kind{position:absolute;left:min(1.6vmin,13px);bottom:min(1.4vmin,11px);font-size:clamp(11px,1.3vmin,15px);
   letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--lt-white);background:var(--up-a1171755);padding:.45em .7em;border-radius:6px}
 /* each column is one card: the visual on top, a blue rule, then its words in a box with a soft shadow, centred both ways */
@@ -454,7 +454,7 @@
 /* Six new layouts, each a different way of learning, in the deck's frame (title, logo, top and bottom lines). Next walks
    each one's stops (proposals.js); everything settles for prefers-reduced-motion. */
 .slide .lt-pic{position:relative;margin:0;min-height:0;min-width:0;border-radius:min(2.2vmin,18px);overflow:hidden;background:var(--lt-navy);box-shadow:0 14px 34px -10px var(--up-a10369945)}
-.slide .lt-pic > img{width:100%;height:100%;object-fit:cover;display:block}
+.slide .lt-pic > img{width:100%;height:100%;object-fit:contain;display:block}
 .slide.active .lt-pic > img{animation:lt-kb 20s ease-out both}
 .slide .lt-pic .kind,.slide .lt-ba .kind{position:absolute;left:min(1.6vmin,13px);bottom:min(1.4vmin,11px);font-size:clamp(10px,1.2vmin,13px);letter-spacing:.16em;
   text-transform:uppercase;font-weight:700;color:var(--lt-white);background:var(--up-a1171755);padding:.45em .7em;border-radius:6px}
@@ -477,6 +477,15 @@
 .slide[data-last] .lt-work li.you .ans{display:block;color:var(--lt-white);font-weight:600;animation:lt-rise .5s both}
 .slide[data-last] .lt-work li.you .ask{display:none}
 .slide[data-last] .lt-work li.you{opacity:1;border-style:solid;border-color:var(--up-4fd6a0);background:var(--up-a7921416012)}
+/* beside a picture the answer opens over it, and the question stays where it was: the steps above keep their room */
+.lt-split > .fig:has(> .lt-ans-over){position:relative}
+.lt-ans-over{position:absolute;inset:0;z-index:3;display:none;flex-direction:column;justify-content:center;gap:.6em;overflow:hidden;
+  padding:min(3.4vmin,27px) min(3.6vmin,29px);border-radius:inherit;background:linear-gradient(var(--up-a7921416012),var(--up-a7921416012)),var(--lt-navy);
+  border:2px solid var(--up-4fd6a0);color:var(--lt-white);font-size:var(--lt-fs);font-weight:600;line-height:1.38}
+.lt-ans-over p{margin:0}
+.slide[data-last] .lt-ans-over{display:flex;animation:lt-rise .5s both}
+.slide[data-last] .lt-split:has(.lt-ans-over) .lt-work li.you .ask{display:block}
+.slide[data-last] .lt-split:has(.lt-ans-over) .lt-work li.you .ans{display:none}
 .lt-meter{display:flex;align-items:center;justify-content:center;min-height:0}
 .lt-meter .dev{width:100%;max-width:min(64vmin,520px);padding:min(3vmin,24px);border-radius:min(3vmin,24px);background:linear-gradient(160deg,#e9eef5,#b9c8d8);
   box-shadow:0 30px 60px -20px var(--up-a0006),inset 0 2px 0 var(--lt-white),inset 0 -3px 0 var(--up-a10369925)}
@@ -682,7 +691,7 @@
 .lt-ask4 .lt-tap::after{content:attr(data-label)}
 /* the task slide's picture: the tablet render whole, or the exercise's photograph filling the box */
 .lt-tab3d .lt-tabimg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 26px 30px rgba(10,36,99,.28))}
-.lt-tab3d.lt-photo > img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.lt-tab3d.lt-photo > img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .lt-task2 .act-ico{width:min(10vmin,80px);height:auto;color:var(--lt-blue)}
 .slide.dark .lt-task2 .act-code,.slide.dark .lt-task2 .act-title{color:var(--lt-white)}
 .slide.dark .lt-task2 .act-inst{color:var(--lt-dim-d)}

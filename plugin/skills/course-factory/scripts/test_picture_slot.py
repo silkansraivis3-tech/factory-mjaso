@@ -71,6 +71,28 @@ def main():
     check("aspects read as width / height", abs(cs.aspect_of("16:9") - 16 / 9.0) < 1e-9 and cs.aspect_of("4 : 3") and
           cs.aspect_of("wide") is None and cs.aspect_of("1:0") is None)
 
+    # one picture, one thing (GAS BASIC M01 s02: four kinds of ship asked of one picture came back as one ship four times)
+    sc = copy.deepcopy(SCRIPT)
+    screen(sc, "s01")["picture"] = {"kind": "photo", "aspect": "16:9",
+                                    "shows": "LPG carrier, ethylene carrier, LNG carrier, chemical gas carrier side by side"}
+    check("one photograph asked to show four kinds of ship is a must-fix", ("p_many", cs.FAIL) in rules(sc, "s01"), rules(sc, "s01"))
+    for t in ("six gas carriers A-F with capacity and tank shape", "fully pressurised and semi-refrigerated tanks side by side",
+              "Six real ships, A to F"):
+        check("... and so is \"%s\"" % t, bool(cs.many_things(t)))
+    for t in ("The cargo control room, its mimic panel and the ESD button", "Deck of an LPG carrier with manifold, vapour line and "
+              "liquid line", "A Type C tank on deck", "four 15-minute STEL peaks on the exposure chart"):
+        check("one thing with its parts is one picture: \"%s\"" % t, not cs.many_things(t))
+    screen(sc, "s02")["picture"] = {"kind": "figure", "aspect": "4:3", "shows": "vapour line, liquid line and spray line side by side"}
+    check("a drawing names its parts - the rule is for photographs", ("p_many", cs.FAIL) not in rules(sc, "s02"), rules(sc, "s02"))
+    screen(sc, "s01")["picture"]["items"] = ["LPG carrier", "Ethylene carrier with bilobe tanks", "Moss LNG carrier", "Chemical gas carrier"]
+    check("the same slide with each kind in \"items\": nothing to say", not [r for r in rules(sc, "s01") if r[0].startswith("p_")],
+          rules(sc, "s01"))
+    check("... and the items are read with the slot", cs.picture_of(screen(sc, "s01"))["items"][2] == "Moss LNG carrier")
+    screen(sc, "s01")["picture"]["items"] = ["LPG carrier", "lpg carrier"]
+    check("two items that are the same thing are a must-fix", ("p_items", cs.FAIL) in rules(sc, "s01"), rules(sc, "s01"))
+    screen(sc, "s01")["picture"]["items"] = ["LPG carrier"]
+    check("one item is not a set of pictures - a must-fix", ("p_items", cs.FAIL) in rules(sc, "s01"), rules(sc, "s01"))
+
     # the words a layout holds
     sc = copy.deepcopy(SCRIPT)
     long_line = " ".join(["word"] * 80) + "."

@@ -15,9 +15,12 @@ Pinned:
     Remember, is always allowed;
   * a proposal below what the outcome asks is refused until 'limit' says what stops the course reaching it; an expert's
     decision (pedagogy_review.py expert) is carried out as it is, and asks for what the trainee does at that level;
+  * one level a course: a lift of two or more levels is refused unless the expert decided it; a topic lifted one level
+    and still below its outcome needs no 'limit' (the cap is the limit) - it is a note;
   * check only notes: a proposal below the outcome with its limit, Create, a module with no activity proposed;
-  * L19: a revised outcome is written in English - one in the programme's language (Latvian) stops the check; the
-    documents show the programme's own words beside it;
+  * the outcomes are the programme's: a proposal never re-words one ('revised_outcome' stops the check); an expert's
+    decision may, in English - one in the programme's language (Latvian) stops the check (L19); the documents show the
+    programme's own words beside it;
   * render writes the three documents as Word and HTML, the outcomes' words read from the architecture, never from the
     judgement file; the activities with the experts' status; a sign-off block; level 0 says "not taught";
   * the Stage 2 approval is refused until the documents are clean and written from the current files, and an edit to the
@@ -68,7 +71,7 @@ def complete(course):
     for n, m in rev["modules"].items():
         for i, r in m["rows"].items():
             r["now"] = {"level": 1, "how": "slides", "checked": "final test Q1", "where": "deck S1-S5"}
-            r["proposed"] = {"level": max(1, asks[(n, i)] or 1), "how": "sets the value on the panel", "why": "it is what the job needs"}
+            r["proposed"] = {"level": min(2, max(1, asks[(n, i)] or 1)), "how": "sets the value on the panel", "why": "it is what the job needs"}
     io.open(f["review"], "w", encoding="utf-8").write(json.dumps(rev, ensure_ascii=False))
     pr.render(course, pdf=False)
     return rev
@@ -131,6 +134,7 @@ def main():
         check("stops on an upgrade without its why", any("upgrade 2 needs" in p for p in probs), probs)
         low = copy.deepcopy(rev)
         low["modules"]["2"]["rows"]["1.3"]["proposed"]["level"] = 1
+        low["modules"]["1"]["rows"]["1.1.a"]["now"]["level"] = 5
         low["modules"]["1"]["rows"]["1.1.a"]["proposed"].update(level=6, above_why="the officer writes the containment plan")
         low["modules"]["1"]["rows"]["1.1.b"]["now"] = {"level": 0, "how": "not in the old course", "checked": "not checked", "where": "-"}
         io.open(f["review"], "w", encoding="utf-8").write(json.dumps(low, ensure_ascii=False))
@@ -144,7 +148,7 @@ def main():
               probs == [] and any("stays below what the outcome asks" in n and "no detector" in n for n in notes)
               and any("Create is reached by a practical exercise" in n for n in notes), (probs, notes))
         unknown = copy.deepcopy(rev)
-        unknown["modules"]["3"]["rows"]["1"]["proposed"]["level"] = 3
+        unknown["modules"]["3"]["rows"]["1"]["proposed"]["level"] = 2
         io.open(f["review"], "w", encoding="utf-8").write(json.dumps(unknown, ensure_ascii=False))
         check("a lift on an outcome whose level is unknown is refused", any("module 3, topic 1: a lift needs the level" in p
                                                                            for p in pr.check(c)[0]), pr.check(c)[0])
@@ -153,6 +157,7 @@ def main():
         asks = {r["id"]: r["asks"] for m in pr.modules(tap.PROGRAMME, arch) for r in m["rows"]}
         up = copy.deepcopy(low)
         top = up["modules"]["2"]["rows"]["1.3"]
+        top["now"]["level"] = asks["1.3"] or 1
         top["proposed"]["level"] = (asks["1.3"] or 1) + 1
         io.open(f["review"], "w", encoding="utf-8").write(json.dumps(up, ensure_ascii=False))
         probs, _ = pr.check(c)
@@ -161,15 +166,52 @@ def main():
         top["proposed"]["above_why"] = "the officer zeroes the meter before every entry"
         io.open(f["review"], "w", encoding="utf-8").write(json.dumps(up, ensure_ascii=False))
         check("... and allowed with the task on board that needs it", pr.check(c)[0] == [], pr.check(c)[0])
-        check("L19: a lift above the outcome's verb asks for the revised outcome in English",
-              any("1.3" in n and "'revised_outcome'" in n and "in English" in n for n in pr.check(c)[1]), pr.check(c)[1])
+        check("a lift above the outcome's verb never asks to re-word the outcome",
+              not any("revised_outcome" in n for n in pr.check(c)[1]), pr.check(c)[1])
+        top["proposed"]["revised_outcome"] = REVISED
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(up, ensure_ascii=False))
+        check("the outcomes are the programme's: a proposal that re-words one stops the check (GAS BASIC: 7 re-worded)",
+              any("1.3: the outcome is the programme's" in p for p in pr.check(c)[0]), pr.check(c)[0])
+        top["proposed"]["expert"] = {"by": "Anna", "said": "Say it as it is done on board.", "on": "2026-11-06"}
         top["proposed"]["revised_outcome"] = "Pielietot zināšanas par sašķidrināto gāzu fizikālajām īpašībām"
         io.open(f["review"], "w", encoding="utf-8").write(json.dumps(up, ensure_ascii=False))
-        check("... a revised outcome in the programme's language (Latvian) stops the check",
+        check("... an expert's decision may, but one in the programme's language (Latvian) stops the check (L19)",
               any("1.3: 'revised_outcome' is in the programme's language" in p for p in pr.check(c)[0]), pr.check(c)[0])
         top["proposed"]["revised_outcome"] = REVISED
         io.open(f["review"], "w", encoding="utf-8").write(json.dumps(up, ensure_ascii=False))
         check("... in English it passes", pr.check(c)[0] == [], pr.check(c)[0])
+
+        print("\n-- one level a course (GAS BASIC: 33 topics lifted two or three levels at once)")
+        cap = copy.deepcopy(up)
+        row = cap["modules"]["2"]["rows"]["1.3"]
+        row["now"]["level"], row["proposed"]["level"] = 1, 3
+        for k in ("above_why", "expert", "revised_outcome"):
+            row["proposed"].pop(k, None)
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(cap, ensure_ascii=False))
+        check("a lift of two levels is refused", any("1.3: 1 Remember to 3 Apply lifts it 2 levels" in p for p in pr.check(c)[0]),
+              pr.check(c)[0])
+        row["proposed"]["level"] = 2
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(cap, ensure_ascii=False))
+        real_modules = pr.modules
+
+        def asks_analyse(prog, arch_):                  # the outcome of 1.3 asks Analyse: one level up stays below it
+            out = real_modules(prog, arch_)
+            for m in out:
+                for r in m["rows"]:
+                    if r["id"] == "1.3":
+                        r["asks"] = 4
+            return out
+        pr.modules = asks_analyse
+        try:
+            probs, notes = pr.check(c)
+        finally:
+            pr.modules = real_modules
+        check("... one level is the lift, and below the outcome it needs no 'limit' - a note says the next course or the expert "
+              "takes it further", not any("1.3" in p for p in probs) and any("1.3: proposed 2 Understand, one level above" in n
+                                                                            for n in notes), (probs, notes))
+        row["proposed"].update(level=4, expert={"by": "Anna", "said": "They run this on the simulator already.", "on": "2026-11-06"})
+        io.open(f["review"], "w", encoding="utf-8").write(json.dumps(cap, ensure_ascii=False))
+        check("... and the expert's decision lifts it further", not any("1.3" in p for p in pr.check(c)[0]), pr.check(c)[0])
         keep = copy.deepcopy(low)
         keep["modules"]["2"]["rows"]["1.3"]["now"]["level"] = 1
         keep["modules"]["2"]["rows"]["1.3"]["proposed"]["level"] = 1

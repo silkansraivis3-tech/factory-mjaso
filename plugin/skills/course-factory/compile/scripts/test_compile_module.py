@@ -388,6 +388,15 @@ def reveal_part(tmp):
     check("short points and the room's turn under them: both on the slide, the answer on the last Next",
           'data-variant="points"' in p and p.count('data-script-field="points"') == 2 and 'data-script-field="ask">Vote: may' in p
           and 'data-script-field="reveal">No - the reliquefaction' in p and 'data-stops="4"' in p, p[:1600])
+    # the question carries class "ask", so the last Next can hide it or keep it (gb_upgrade.css .lt-work li.you .ask) - without
+    # it the answer was added under the question and cut on all 37 GAS BASIC reveals at 1280 x 800
+    check("the room's question carries class \"ask\" (the stylesheet's hook for the last Next)",
+          all('<b class="ask" data-script-field="ask">' in section(page, x) for x in ("s40", "s42", "s43")), p[:1600])
+    check("beside a picture the answer opens over the picture on the last Next (lt-ans-over), its words as approved",
+          '<div class="lt-ans-over" data-script-ignore><p>No - the reliquefaction plant keeps the pressure down.</p></div>' in p, p[:2000])
+    css = io.open(os.path.join(SKILLS, "course-module-ui", "templates", "gb_upgrade.css"), encoding="utf-8").read()
+    check("... and the stylesheet shows it only on the last Next, the question kept",
+          ".slide[data-last] .lt-ans-over{display:flex" in css and ".slide[data-last] .lt-split:has(.lt-ans-over) .lt-work li.you .ask{display:block}" in css)
     code, out = run(MATCH, c, "--module", "1", "--part", "instructor")
     check("... and check_script_match finds every approved word on them - the ask and the reveal too", code == 0, out[-1500:])
 
@@ -1827,8 +1836,9 @@ def fixes_part(tmp):
           and 'data-credit="Photo: Jane Doe' in d2, d2)
     check("C9: a photograph inside a figure fragment: its credit in the full-screen view only", 'class="credit"' not in d3 and "data-credit=" in d3, d3)
     css = io.open(os.path.join(md, "assets", "gb_compose.css"), encoding="utf-8").read()
-    check("C8: the column layout is styled - the photo is cropped to its column, which has the slide's height",
-          ".slide-body.two-col.photo-col{grid-template-rows:minmax(0,1fr)" in css and "object-fit:cover" in css.split(".photo-col > .fill.photo-col > img")[1][:200], css[:100])
+    check("C8: the column layout is styled - the photo is shown whole in its column, which has the slide's height (GAS BASIC: "
+          "photos cropped to 41-57 % of themselves)",
+          ".slide-body.two-col.photo-col{grid-template-rows:minmax(0,1fr)" in css and "object-fit:contain" in css.split(".photo-col > .fill.photo-col > img")[1][:200], css[:100])
     code, out = run(COMPILE, c, "--module", "1", "--force")
     build_of(c, lambda s: s["screens"].update(s02={"figure": "assets/img/ship.jpg", "composition": "two-col"}, s03={}))
     run(COMPILE, c, "--module", "1", "--force")

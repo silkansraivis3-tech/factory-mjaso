@@ -207,7 +207,8 @@ def main():
         except ImportError:
             io.open(pic, "wb").write(b"\xff\xd8\xff\xd9")
         code, out = run("place", ph, "--module", "1", "--slide", "q01", "--file", pic, "--rights", "PUBLIC_DOMAIN",
-                        "--source", "https://commons.wikimedia.org/wiki/File:Membrane.jpg", "--credit", "US Navy")
+                        "--source", "https://commons.wikimedia.org/wiki/File:Membrane.jpg", "--credit", "US Navy",
+                        "--seen", "membrane tank 3D section, cut open, layers without labels")
         b = json.load(io.open(os.path.join(sd, "M01.build.json"), encoding="utf-8"))
         meta = json.load(io.open(os.path.join(mdir, "assets", "img", "_photo_meta.json"), encoding="utf-8"))
         new = b["screens"]["q01"]["figure"]
@@ -232,14 +233,15 @@ def main():
               code == 0 and b["screens"]["q01"]["areas"] == {"Primary membrane": [10.0, 20.0, 30.0, 40.0], "Secondary barrier": [50.0, 22.2, 25.0, 30.0]}
               and "_placeholder" not in b["screens"]["q01"] and "placeholder" not in b["screens"]["q01"], b["screens"]["q01"])
         code, out = run("place", ph, "--module", "1", "--slide", "m01", "--file", pic, "--generated", "--prompt", "Four hull sections",
-                        "--areas", json.dumps({"A": [1, 1, 20, 20], "B": [50, 50, 20, 20]}))
+                        "--areas", json.dumps({"A": [1, 1, 20, 20], "B": [50, 50, 20, 20]}), "--seen", "four hull sections, unlabelled")
         b = json.load(io.open(os.path.join(sd, "M01.build.json"), encoding="utf-8"))
         meta = json.load(io.open(os.path.join(mdir, "assets", "img", "_photo_meta.json"), encoding="utf-8"))
         rec = meta.get(os.path.basename(b["screens"]["m01"]["figure"]), {})
         check("a generated picture is recorded as generated, with its prompt, and its boxes set at once",
               code == 0 and rec.get("generated") is True and rec.get("rights_state") == "GENERATED"
               and rec.get("generation_prompt") == "Four hull sections" and b["screens"]["m01"]["areas"]["B"] == [50.0, 50.0, 20.0, 20.0], (out, rec))
-        code, out = run("place", ph, "--module", "1", "--slide", "s09b", "--file", pic, "--rights", "PROJECT_OWNED")
+        code, out = run("place", ph, "--module", "1", "--slide", "s09b", "--file", pic, "--rights", "PROJECT_OWNED",
+                        "--seen", "an inset photo the script does not name")
         b = json.load(io.open(os.path.join(sd, "M01.build.json"), encoding="utf-8"))
         check("a placeholder held deeper in the sheet (an inset) is replaced where it is, not added as a figure",
               code == 0 and b["screens"]["s02"]["inset"]["photo"].startswith("assets/img/m01_s09b_") and "s09b" not in b["screens"], b["screens"])
@@ -250,6 +252,57 @@ def main():
         code, out = run("queue", ph, "--module", "1")
         check("what is placed is not queued again", code == 0 and "1 picture(s) to make" in out and "(s01)" in out, out)
         check("... and the course package check has one placeholder left", placeholder.found(mdir) == [rels["s01"]], placeholder.found(mdir))
+
+        print("\n-- what is placed is what was asked, one thing a picture")
+        code, out = run("place", ph, "--module", "1", "--slide", "s01", "--file", pic, "--rights", "PROJECT_OWNED")
+        check("place without saying what the picture shows (--seen) is refused", code == 2 and "--seen" in out, out)
+        import compile_module as cm
+        sc5 = {"module": 1, "screens": [{"id": "s05", "kind": "slide", "title": "Kinds of gas carrier", "text": "x", "visual_kind": "photo",
+                                          "picture": {"kind": "photo", "aspect": "16:9", "shows": "four kinds of gas carrier",
+                                                      "items": ["Moss LNG carrier", "LPG carrier", "LPG carrier at sea"]}}]}
+        sheet5 = {"screens": {}}
+        done = cm.fill_slots(sc5, sheet5, mdir)
+        tiles = sheet5["screens"]["s05"]["tiles"]
+        check("a slide with picture.items gets a placeholder a thing, as tiles - never one picture of all of them",
+              len(tiles) == 3 and all("_placeholder_s05_%d" % k in t for k, t in enumerate(tiles, 1))
+              and done == [("s05", "3 pictures, one a thing")], (tiles, done))
+        b = json.load(io.open(os.path.join(sd, "M01.build.json"), encoding="utf-8"))
+        b["screens"]["s05"] = sheet5["screens"]["s05"]
+        io.open(os.path.join(sd, "M01.build.json"), "w", encoding="utf-8").write(json.dumps(b))
+        code, out = run("queue", ph, "--module", "1")
+        q = {x["slide"]: x for x in json.load(io.open(os.path.join(ph, "course", "working_claude", "picture_briefs", "M01.gemini.json"),
+                                                         encoding="utf-8"))}
+        check("... each is queued on its own, its prompt naming its one thing",
+              all(k in q for k in ("s05_1", "s05_2", "s05_3")) and "moss lng carrier" in q["s05_1"]["prompt"].lower(), sorted(q))
+        code, out = run("place", ph, "--module", "1", "--slide", "s05_1", "--file", pic, "--rights", "PROJECT_OWNED",
+                        "--seen", "a small LNG carrier, 3D render, membrane tanks")
+        check("a picture that does not show what was asked is refused - asked a Moss LNG carrier, it shows another (GAS BASIC M01 s02)",
+              code == 2 and "not in it: moss" in out, out)
+        code, out = run("place", ph, "--module", "1", "--slide", "s05_1", "--file", pic, "--rights", "PROJECT_OWNED",
+                        "--seen", "Moss LNG carrier with four spheres above the deck")
+        check("... the right one is placed", code == 0, out)
+        meta = json.load(io.open(os.path.join(mdir, "assets", "img", "_photo_meta.json"), encoding="utf-8"))
+        check("... and what it shows is kept in its record", any(r.get("seen", "").startswith("Moss LNG") for r in meta.values()), meta)
+        code, out = run("place", ph, "--module", "1", "--slide", "s05_2", "--file", pic, "--rights", "PROJECT_OWNED",
+                        "--seen", "LPG carrier at sea, under way")
+        check("... a different thing on the same slide is placed", code == 0, out)
+        code, out = run("place", ph, "--module", "1", "--slide", "s05_3", "--file", pic, "--rights", "PROJECT_OWNED",
+                        "--seen", "LPG carrier at sea, under way")
+        check("... the same ship again on the same slide is refused", code == 2 and "shows the same as s05_2" in out, out)
+        code, out = run("place", ph, "--module", "1", "--slide", "s05_3", "--file", pic, "--rights", "PROJECT_OWNED",
+                        "--seen", "LPG carrier at sea in heavy weather, fully refrigerated, another hull")
+        b = json.load(io.open(os.path.join(sd, "M01.build.json"), encoding="utf-8"))
+        os.makedirs(os.path.join(ph, "course", "working_claude", "_build"), exist_ok=True)
+        io.open(os.path.join(ph, "course", "working_claude", "_build", "M01_slots.json"), "w", encoding="utf-8").write(
+            json.dumps({"1280x800": {"s01": [500, 520]}}))
+        code, out = run("queue", ph, "--module", "1")
+        q = {x["slide"]: x for x in json.load(io.open(os.path.join(ph, "course", "working_claude", "picture_briefs", "M01.gemini.json"),
+                                                         encoding="utf-8"))}
+        check("a picture is made in the shape of the box the build measured it in (a near-square column: 1:1, not 16:9)",
+              q["s01"]["aspect"] == "1:1" and "1:1" in q["s01"]["prompt"], q.get("s01"))
+        check("... and the slide whose items are queued is not queued as one picture too", "s05" not in q, sorted(q))
+        check("... and once every tile is in, the slide holds no stand-in", code == 0 and "placeholder" not in b["screens"]["s05"]
+              and not any("_placeholder_" in t for t in b["screens"]["s05"]["tiles"]), (out, b["screens"]["s05"]))
 
         print("\n-- the questions are there for every operator language")
         qs = cs.MEDIA["generation_brief"]["questions"]

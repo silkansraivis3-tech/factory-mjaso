@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture - what fits only until the last Next</title>
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_tokens.css">
+<link rel="stylesheet" href="../../../../course-module-ui/templates/gb_shell.css">
+<style>
+  .box{height:90px;max-width:520px;overflow:hidden;border:1px solid #888;font-size:20px;line-height:1.4}
+  .ans{display:none}
+  .slide.open .ans{display:block}
+  .pic{width:240px;height:240px}
+  .pic img{width:100%;height:100%;object-fit:cover;display:block}
+</style>
+</head>
+<body>
+<!-- Regression fixture for fit_gate.py.
+     f1: fits at every step.
+     f2: fits as it opens; its last step (the step hook adds .open) shows an answer the box cuts - the GAS BASIC reveal.
+         Only a walk that presses Next sees it.
+     f3: a wide picture cropped into a square box (fails), and the same picture as a backdrop, data-fit="cover" (allowed). -->
+<div id="landing"><button id="startBtn" type="button">Start</button></div>
+<div id="progress"></div>
+<div id="blockTag"></div>
+<div id="overview"><button class="fbtn" id="ovClose" type="button">Close</button><div class="ov-grid" id="ovGrid"></div></div>
+<div id="cue"></div>
+<div id="chrome">
+  <button class="cbtn" id="btnPrev" type="button" aria-label="Back">&lt;</button>
+  <span id="counter"><b>1</b> / 1</span>
+  <button class="cbtn" id="btnNext" type="button" aria-label="Next">&gt;</button>
+</div>
+<main id="stage">
+  <section class="slide" id="f1" data-title="Fits">
+    <h2>Fits</h2>
+    <div class="slide-body"><p>One short line.</p></div>
+  </section>
+  <section class="slide" id="f2" data-title="Fits until the answer">
+    <h2>Fits until the answer</h2>
+    <div class="slide-body"><div class="box">
+      <p>Why does the fully pressurised ship stay small?</p>
+      <p class="ans">Pressure alone keeps the cargo liquid, so the tank walls must be thick: heavy tanks, poor use of the hull,
+        fewer tonnes carried. Cooled cargo has a lower vapour pressure: thinner, lighter, cheaper tanks and more cargo for the
+        same tank size - paid for with insulation and a reliquefaction plant.</p>
+    </div></div>
+  </section>
+  <section class="slide" id="f3" data-title="Pictures">
+    <h2>Pictures</h2>
+    <div class="slide-body" style="display:flex;gap:20px">
+      <div class="pic"><img src="wide.png" alt="a wide picture"></div>
+      <div class="pic" data-fit="cover"><img src="wide.png" alt="a backdrop"></div>
+    </div>
+  </section>
+</main>
+<script src="../../../assets/gb_deck.js"></script>
+<script>
+var f2 = document.getElementById("f2");
+GBDeck.init({ hooks: {
+  f2: { enter: function () { f2.classList.remove("open"); },
+        step: function (dir) {
+          if (dir > 0 && !f2.classList.contains("open")) { f2.classList.add("open"); return true; }
+          if (dir < 0 && f2.classList.contains("open")) { f2.classList.remove("open"); return true; }
+          return false;
+        } }
+} });
+</script>
+</body></html>

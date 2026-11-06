@@ -203,14 +203,14 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .lt-strips .lt-tile{flex:1 1 0}
 .slide[data-template] .lt-tile{position:relative;margin:0;display:flex;flex-direction:column;min-height:0;min-width:0;
   background:var(--lt-white);border:1px solid var(--lt-line);border-radius:min(1.5vmin,12px);overflow:hidden;cursor:zoom-in}
-.slide[data-template] .lt-tile img{display:block;width:100%;flex:1 1 auto;min-height:0;object-fit:cover}
+.slide[data-template] .lt-tile img{display:block;width:100%;flex:1 1 auto;min-height:0;object-fit:contain}
 .slide[data-template] .lt-strips .lt-tile img{object-fit:contain}
 .slide[data-template] .lt-tile figcaption{padding:min(.8vmin,6px) min(1.2vmin,10px);font-size:clamp(16px,2vmin,22px);
   line-height:1.2;font-weight:600;color:var(--lt-navy)}
 .slide[data-template] .lt-tile .lt-n{position:absolute;top:min(.8vmin,6px);left:min(.8vmin,6px);min-width:1.7em;height:1.7em;
   border-radius:50%;background:var(--lt-navy);color:var(--lt-white);font-size:clamp(16px,2vmin,22px);display:flex;
   align-items:center;justify-content:center}
-.slide[data-template] .fill.fig > img:only-child{width:100%;height:100%;object-fit:cover;border-radius:min(2.2vmin,18px)}
+.slide[data-template] .fill.fig > img:only-child{width:100%;height:100%;object-fit:contain;border-radius:min(2.2vmin,18px)}
 
 /* ---------------------------------------------------------------- split slides: text 55 % / picture 45 % */
 .slide[data-template] .slide-body.two-col,
@@ -376,7 +376,7 @@ body:has(.slide[data-template]) #progress{background:var(--lt-blue)}
 .slide[data-template] .slide-body.lt-compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:min(3vmin,24px);align-items:stretch}
 .slide[data-template] .lt-card{display:flex;flex-direction:column;border:1px solid var(--lt-line);background:var(--lt-white);border-radius:min(2vmin,16px);overflow:hidden;min-height:0}
 .slide[data-template] .lt-card-visual{flex:0 0 46%;min-height:0;background:var(--lt-panel);display:flex;align-items:center;justify-content:center;overflow:hidden}
-.slide[data-template] .lt-card-visual > svg,.slide[data-template] .lt-card-visual > img{width:100%;height:100%;object-fit:cover}
+.slide[data-template] .lt-card-visual > svg,.slide[data-template] .lt-card-visual > img{width:100%;height:100%;object-fit:contain}
 .slide[data-template] .lt-card-visual > svg{object-fit:contain;padding:min(1.6vmin,12px) min(4vmin,32px)}
 .slide[data-template] .lt-card-copy{padding:min(3vmin,24px) min(3.5vmin,28px);display:flex;flex-direction:column;gap:min(1.4vmin,12px)}
 .slide[data-template] .lt-card-copy > .lead:first-child{font-weight:700;color:var(--lt-navy);font-size:clamp(18px,3.4vmin,40px);line-height:1.2}

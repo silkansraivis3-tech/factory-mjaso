@@ -18,7 +18,8 @@ It reads only. It writes working_claude/old_course_inventory.json and OLD_COURSE
 folder (internal - never shipped). Standard library, plus pypdf for PDF page counts when it is installed.
 
 WHAT IS READ, AND HOW
-  .pptx   every slide: its title, its word count, its pictures, its speaker notes' word count
+  .pptx   every slide: its title, its words (the script keeps what each explained), its word count, its pictures, its
+          speaker notes' word count
   .docx   its headings and its word count
   .pdf    its page count (pypdf), else its size
   video   its name, type and size - it is listed as a possible "real video" for a slide (L37)
@@ -97,7 +98,8 @@ def read_pptx(path):
                 nw = 0
                 if notes in names:
                     nw = words(" ".join((r.text or "") for r in ET.fromstring(z.read(notes)).iter(A + "t")))
-                out["slides"].append({"n": int(no), "title": title[:140], "words": words(" ".join(texts)) + words(title),
+                out["slides"].append({"n": int(no), "title": title[:140], "text": " ".join(texts)[:3000],
+                                      "words": words(" ".join(texts)) + words(title),
                                       "pictures": pics, "video": media, "notes_words": nw})
     except (zipfile.BadZipFile, ET.ParseError, KeyError, OSError) as err:
         out["error"] = str(err)

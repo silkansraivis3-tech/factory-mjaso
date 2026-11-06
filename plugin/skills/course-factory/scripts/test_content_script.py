@@ -537,6 +537,16 @@ def main():
             rp = os.path.join(nc, "working_claude", "pedagogy_review.json")
             rev = json.load(io.open(rp, encoding="utf-8")) if os.path.isfile(rp) else {}
             rev["ready"] = {"by": "Anna Liepa", "on": "2026-11-04"}
+            rev["modules"] = {"1": {"rows": {"1.1": {"proposed": {"level": 3}}, "1.2": {"proposed": {"level": 2}}}}}
+            io.open(rp, "w", encoding="utf-8").write(json.dumps(rev))
+            code, out = cs_run("approve", nc, "--module", "1", "--by", "Anna Liepa (Ready in editor)")
+            check("a Ready over topic rows the expert never answered is not a review: no approval (GAS BASIC: 0 of 124 answered)",
+                  code == 1 and "2 of 2 topic rows unanswered (1/1.1, 1/1.2)" in out, out)
+            rev["modules"]["1"]["rows"]["1.1"]["expert_review"] = {"verdict": "ok", "by": "Anna Liepa"}
+            io.open(rp, "w", encoding="utf-8").write(json.dumps(rev))
+            code, out = cs_run("approve", nc, "--module", "1", "--by", "Anna Liepa (Ready in editor)")
+            check("... nor over some of them", code == 1 and "1 of 2 topic rows unanswered (1/1.2)" in out, out)
+            rev["modules"]["1"]["rows"]["1.2"]["expert_notes"] = [{"said": "Lift it to Apply.", "done": ""}]
             io.open(rp, "w", encoding="utf-8").write(json.dumps(rev))
             code, out = cs_run("approve", nc, "--module", "1", "--by", "Raivis (Ready in editor)")
             check("... only with the expert's own Ready from the editor (L70), by the name they signed it with",

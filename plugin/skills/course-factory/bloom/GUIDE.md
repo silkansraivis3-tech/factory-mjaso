@@ -42,8 +42,9 @@ level of the tasks up to what the ILOs ask, and above *Remember* wherever the co
 
 ## 3 · Lifting a task — the tablet patterns
 
-Lift one level at a time, to the Sub-ILO's level and no further without a reason on board (section 5); what the outcome
-asks to know by heart keeps its recall question.
+Lift one level a course - Remember to Understand, Understand to Apply - and never past the Sub-ILO's level without a
+reason on board (section 5); more than one level only when the expert decides it. What the outcome asks to know by heart
+keeps its recall question.
 
 | From | To | How, on the tablet |
 |---|---|---|
@@ -109,11 +110,12 @@ asks for - not the highest level there is; raising numbers is not the goal, teac
 - **Keep** only with a reason. When the old course already reaches what the outcome asks, the documents say so
   themselves ("Kept because the old course already reaches ...") - lifting further would be overdoing it. When a topic
   stays **below** its outcome - kept or lifted only part of the way - `limit` says what stops this course reaching it:
-  no simulator for it, no equipment, no time in the programme's hours. Without `limit` the check refuses it. `how` still says what gets better at that level
+  no simulator for it, no equipment, no time in the programme's hours. Without `limit` the check refuses it - except
+  when the topic is lifted its one level and the outcome asks more: the one-level rule is the limit. `how` still says what gets better at that level
   (a photograph instead of a slide of text, the recall moved into the self-check), or "kept as it is".
-- **Lift** when the old course falls short: up to the outcome's level - one step is often enough, the next course can
-  take the next - or as high as this course can honestly reach on its tablets, simulators and equipment, with `why`
-  saying what stops it. A lift never removes the recall: what must be known by heart is still asked as a recall
+- **Lift** when the old course falls short: **one level**, toward the outcome's level - the next course takes the next
+  (`pedagogy_review.py check` refuses two or more: GAS BASIC lifted 33 topics two or three levels and its theory
+  thinned to fit the tasks). Only the expert's decision lifts further. A lift never removes the recall: what must be known by heart is still asked as a recall
   question in the self-check's first part.
 - **Above the outcome** only when the work on board needs it and the outcome's verb undersells it - the officer must
   operate what the outcome only asks to describe. Then `above_why` names that task on board. Without it the proposal is
@@ -162,5 +164,5 @@ FEEDBACK_LOG.md, and Ready into `ready`. Carry out every note and write in its `
 `check` stops until each one has it, and the editor shows it to the expert - then `render` (it signs the documents
 with the Ready) and `push` again: the rows not changed keep their answers.
 
-**The revised outcome.** When a Sub-ILO is lifted above the level its verb names, write `revised_outcome`: the same Sub-ILO with a verb at the proposed level, in English (L19: the course is English, whatever the programme's language) - what it is about, its subject and its standard unchanged. The experts read it beside the programme's own words; one in the programme's language stops `check`. A Main ILO is never re-worded (L2). The expert's Take proposed, or a decision with Claude that re-words it, ratifies it into the architecture as re-expressed, the programme's words kept beside it. After Ready the course is built by L70 (SKILL.md *Auto build*). An expert who cannot use the editor still
+**The outcomes stay the programme's.** The documents never propose a re-worded outcome: `revised_outcome` in a proposal stops `check`. Only an expert who says the outcome should read differently re-words a Sub-ILO - recorded as their decision (`pedagogy_review.py expert`), in English (L19; one in the programme's language stops `check`), its subject and standard unchanged, the programme's own words beside it. A Main ILO is never re-worded (L2). The expert's Take proposed, or a decision with Claude that re-words it, ratifies it into the architecture as re-expressed. After Ready the course is built by L70 (SKILL.md *Auto build*). An expert who cannot use the editor still
 gets the Word files and signs them.

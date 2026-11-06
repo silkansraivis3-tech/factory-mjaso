@@ -38,6 +38,10 @@
         "note": "L4 - no source, no claim. A retrofit never upgrades a fact's authority tier"
       },
       {
+        "what": "the old course's teaching order and explanations",
+        "note": "a course rebuilt from an old one follows its order and keeps what each old slide explained; it lifts the Bloom level and the delivery. A slide moves only with the expert's reason (\"moved_why\"), an old slide is left out only with one (\"dropped_old\") - content_script.py old_course_findings checks both and that the theory is not thinner than the old slides'"
+      },
+      {
         "what": "authoritative course language",
         "note": "COURSE_LANGUAGE - see routing.json. Course-facing output does not change language because the request arrived in another one"
       }
@@ -47,7 +51,7 @@
     "_rule": "Redesign these on the evidence, without asking. The operator asked for the module to be made good; these are how.",
     "items": [
       "screen count - split an overloaded screen, merge two redundant ones, add a dedicated visual or debrief screen",
-      "presentation screen order inside the teaching flow",
+      "splitting, merging or adding screens inside the old course's order",
       "HTML structure",
       "existing layouts and card arrangements",
       "information density and progressive disclosure",
