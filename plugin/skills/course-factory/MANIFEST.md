@@ -7,6 +7,26 @@ this up cold, including one with no memory of why any of it is the way it is.
 
 ---
 
+## 2.106.0 · The fact-checker agent - every claim proved in the sources (2026-11-06)
+
+- **Why.** Raivis: an agent that proves the scripts' information is in source_files / the knowledge base and cuts the
+  nonsense, with rules small enough that it does not forget half of them.
+- **Split.** Everything mechanical is `scripts/fact_check.py` (claims, BM25 search over the course's own index, the
+  word-for-word proof, the quote check, the change list); the agent only reads a claim and its passages. Its file loads
+  no skill - `skills: course-factory` would have put SKILL.md's 60 KB in front of it.
+- **A claim is known by its words** (`claim_id` = screen, field, normalised text): an unchanged line keeps its verdict,
+  `next` runs `prepare` first, so a changed line is judged again.
+- **Nothing proved from memory.** `judge` accepts a quote only when it is in the claim's passages or in a fresh search,
+  spaces and case aside. A correction is recorded as proved with its quote when `fixes` writes it.
+- **Not a claim.** The first real run (GAS M01) judged instructions ("Write your six answers on your card"), a scenario's
+  situation, the photo key A-F and statements meant to be false as facts, and would have cut or "corrected" them.
+  `INSTRUCTION` drops instructions, a scenario's lines are its situation (its why lines are claims), and `not_a_claim`
+  with a why sets the rest aside, listed by `status` for the person.
+- **Questions** (answer, feedback) are never changed by `fixes`, only listed.
+- **Unattended** (`NOVIKONTAS_AUTO_BUILD=1`): `fixes --apply` proposes and applies, confirmed by "fact-checker,
+  unattended", logged in FEEDBACK_LOG.md.
+- **Cost.** GAS M01: 153 claims, 23 proved by the words, the rest by the agent in about 7 minutes (sonnet).
+
 ## 2.105.0 · Kept, lifted one level, seen whole - L71 (2026-11-06)
 
 - **Why.** Raivis went through the built GAS BASIC (2.102.0): the last "?" answer of a slide cut in half, pictures cropped,

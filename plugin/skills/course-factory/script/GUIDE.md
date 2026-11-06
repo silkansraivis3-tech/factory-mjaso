@@ -295,6 +295,9 @@ detector display for a reading, the GA drawing for "where is it".
 
 ## 2 · Show it to the operator
 
+**First, proved in the sources (L4).** Once a module's script is written, the `fact-checker` agent (one per module, in parallel) proves every claim in the course's knowledge base: `scripts/fact_check.py` finds the claims and proves what a source says word for word, the agent judges the rest found / partly / not found from the source passages only, and leaves a change list that cuts what no source says and corrects what it says otherwise - proposed with `content_script.py propose`, shown like any correction (an unattended build applies it itself, `fixes --apply`, each change logged for the expert). Approval is refused while a claim is not judged or one not proved is still in the script (a course with no knowledge base is not checked).
+
+
 ```
 python scripts/content_script.py render <course> --module 1
 ```

@@ -1762,6 +1762,25 @@ def fact_findings(course, script):
     return found
 
 
+def proof_findings(course, script):
+    """MUST, in a course with a knowledge base: every claim of the script judged by the fact-checker (fact_check.py), and
+    none judged not found or partly still in it - the change list cuts or corrects them"""
+    if not course or str(script.get("module")).lower() == "final":
+        return []
+    import fact_check
+    if not fact_check.course_kbs(course):
+        return []
+    st = fact_check.status(course, script.get("module"), script)
+    found = []
+    if st["unchecked"]:
+        found.append({"where": T(script, "s_the_module"), "screen": "", "field": "", "level": FAIL, "rule": "c_unchecked",
+                      "detail": T(script, "c_unchecked", n=len(st["unchecked"]), all=st["claims"], m=script.get("module")), "fix": ""})
+    for sid, text, verdict in st["unproven"]:
+        found.append({"where": place(script, sid), "screen": sid, "field": "", "level": FAIL, "rule": "c_unproven",
+                      "detail": T(script, "c_unproven", text=text[:120], verdict=verdict.replace("_", " ")), "fix": ""})
+    return found
+
+
 def recap_findings(script):
     """L51 (owner, 2026-10-15) - every teaching module closes with ONE recap slide ("what to take away"),
     straight before the task slide that opens the module check: 3-6 points, one line each, read at a
@@ -1923,7 +1942,7 @@ def clauses(text):
 def all_findings(script, course=None):
     th, _ = theory_findings(script)
     return th + media_findings(script) + text_findings(script) + ilo_findings(course, script) + ship_findings(course, script) \
-        + old_course_findings(course, script) + fact_findings(course, script)
+        + old_course_findings(course, script) + fact_findings(course, script) + proof_findings(course, script)
 
 
 def blocking(findings):
