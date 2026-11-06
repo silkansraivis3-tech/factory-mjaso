@@ -48,6 +48,16 @@
       w.addEventListener('resize', function () { if (s.classList.contains('active')) { at(+s.getAttribute('data-at') || 0); } });
       return at;
     },
+    /* a carousel of photographs: each line may carry data-photo (its own photo, data-ph on the <img>); the photo shown is the
+       one of the latest line up to this stop, the first photo (data-ph 0) before any - a line with none keeps the previous */
+    function (s) {
+      var imgs = qa('.photo-wrap img[data-ph]', s); if (imgs.length < 2) { return null; }
+      return function (k) {
+        var want = '0';
+        for (var j = 1; j <= k; j++) { var st = q('[data-k="' + j + '"][data-photo]', s); if (st) { want = st.getAttribute('data-photo'); } }
+        each(imgs, function (im) { im.classList.toggle('on', im.getAttribute('data-ph') === want); });
+      };
+    },
     /* a question first; the answer opens beside it */
     function (s) { var qa2 = q('.lt-qa', s); return qa2 ? function (k) { qa2.classList.toggle('open', k >= 1); } : null; },
     /* the reading slide: a spot moves to the part the line names, and a part is a way to its line */
